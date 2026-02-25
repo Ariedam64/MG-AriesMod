@@ -8,6 +8,7 @@ import { installPetHutchKeybindsOnce } from "../services/petHutchKeybind";
 import { installJournalKeybindsOnce } from "../services/journalKeybind";
 import { installDecorShedKeybindsOnce } from "../services/decorShedKeybind";
 import { installSeedSiloKeybindsOnce } from "../services/seedSiloKeybind";
+import { installFeedingTroughKeybindsOnce } from "../services/feedingTroughKeybind";
 import { PetAlertService } from "../services/pet-alerts";
 import {
   getKeybind,
@@ -18,6 +19,7 @@ import {
   type KeybindId,
 } from "../services/keybinds";
 import { renderOverlay } from "./menus/notificationOverlay";
+import { startInstantFeedButton } from "../utils/instantFeedButton";
 import { renderCommunityHub } from "./menus/communityHub";
 import { getSpriteWarmupState, onSpriteWarmupProgress } from "./spriteIconCache";
 import { setupBuyAll, startReorderObserver } from "../utils/shopUtility";
@@ -1073,6 +1075,7 @@ export function initWatchers(){
     installJournalKeybindsOnce();
     installSeedSiloKeybindsOnce();
     installDecorShedKeybindsOnce();
+    installFeedingTroughKeybindsOnce();
 
     const bootToolbar = async () => {
       try { await renderOverlay(); } catch (e) { console.error("[HUD] renderOverlay failed:", e); }
@@ -1108,6 +1111,7 @@ export function initWatchers(){
       startDecorPickupLockIndicator();
       startEggHatchLockIndicator();
       startInjectSellAllPets();
+      startInstantFeedButton();
       startSelectedInventoryQuantityLogger();
       startInventorySortingObserver();
       startModalObserver({ intervalMs: 60_000, log: true });

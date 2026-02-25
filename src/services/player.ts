@@ -151,6 +151,87 @@ function diffPetsSnapshot(prev: PetsSnapshot, next: PetsSnapshot): PetsDiff {
   return { added, updated, removed, changes };
 }
 
+type PrimitivePetSlot = {
+  id?: string;
+  petId?: string;
+  petItemId?: string;
+  itemId?: string;
+  petSpecies?: string;
+  species?: string;
+  name?: string | null;
+  petName?: string | null;
+  xp?: number;
+  hunger?: number;
+  mutations?: string[];
+  targetScale?: number;
+  abilities?: string[];
+  position?: XY | null;
+  slot?: Partial<PetSlot> | null;
+};
+
+function toPetInfoFromPrimitive(entry: PrimitivePetSlot | null | undefined): PetInfo | null {
+  if (!entry || typeof entry !== "object") return null;
+  if (entry.slot && typeof entry.slot === "object" && entry.slot.id) {
+    return entry as unknown as PetInfo;
+  }
+
+  const id =
+    String(
+      entry.id ??
+        entry.petId ??
+        entry.petItemId ??
+        entry.itemId ??
+        entry.slot?.id ??
+        "",
+    ).trim();
+  if (!id) return null;
+
+  const species =
+    String(entry.petSpecies ?? entry.species ?? entry.slot?.petSpecies ?? "").trim();
+  const name = entry.name ?? entry.petName ?? entry.slot?.name ?? null;
+
+  const slot: PetSlot = {
+    id,
+    petSpecies: species,
+    name,
+    xp: Number.isFinite(entry.xp as number) ? Number(entry.xp) : undefined,
+    hunger: Number.isFinite(entry.hunger as number) ? Number(entry.hunger) : undefined,
+    mutations: Array.isArray(entry.mutations) ? entry.mutations.slice() : undefined,
+    targetScale: Number.isFinite(entry.targetScale as number) ? Number(entry.targetScale) : undefined,
+    abilities: Array.isArray(entry.abilities) ? entry.abilities.slice() : undefined,
+  };
+
+  const info: PetInfo = { slot };
+  const pos = entry.position;
+  if (pos && Number.isFinite(pos.x as number) && Number.isFinite(pos.y as number)) {
+    info.position = { x: Number(pos.x), y: Number(pos.y) };
+  }
+  return info;
+}
+
+function normalizePetsState(petInfosRaw: unknown, primitiveRaw: unknown): PetState {
+  const infos = Array.isArray(petInfosRaw) ? (petInfosRaw as PetInfo[]) : null;
+  if (infos && infos.length) return infos;
+
+  const prim = Array.isArray(primitiveRaw) ? (primitiveRaw as PrimitivePetSlot[]) : null;
+  if (prim && prim.length) {
+    const mapped = prim.map(toPetInfoFromPrimitive).filter(Boolean) as PetInfo[];
+    if (mapped.length) return mapped;
+  }
+  return infos;
+}
+
+function petsStateSig(state: PetState): string {
+  if (!Array.isArray(state)) return "null";
+  if (!state.length) return "empty";
+  return state
+    .map((p) => {
+      const id = String(p?.slot?.id ?? "");
+      return `${id}:${petSig(p as PetInfo)}`;
+    })
+    .join("|");
+}
+
 /* =========================== Types Crop Inventory ========================= */
 
 export type CropItem = {
@@ -323,6 +404,38 @@ export const PlayerService = {
     try { sendToGame({ type: "PutItemInStorage", itemId, storageId, ...(toStorageIndex !== undefined && { toStorageIndex }) }) } catch (err) { }
   },
 
+  async putItemInFeedingTrough(
+    itemId: string = "61b1dfd3-c550-4ed2-9b50-c58de4e17c2f",
+    toStorageIndex: number = 0,
+    scopePath: string[] = ["Room", "Quinoa"],
+  ){
+    try {
+      sendToGame({
+        scopePath,
+        type: "PutItemInStorage",
+        itemId,
+        storageId: "FeedingTrough",
+        toStorageIndex,
+      });
+    } catch (err) { }
+  },
+
+  async retrieveItemFromFeedingTrough(
+    itemId: string = "25eb1a47-5956-4aa9-a74e-924b6585d09b",
+    toInventoryIndex: number = 34,
+    scopePath: string[] = ["Room", "Quinoa"],
+  ){
+    try {
+      sendToGame({
+        scopePath,
+        type: "RetrieveItemFromStorage",
+        itemId,
+        storageId: "FeedingTrough",
+        toInventoryIndex,
+      });
+    } catch (err) { }
+  },
+
 
   async petPositions(petPositions: Record<string, XY | null | undefined>) {
     const entries = Object.entries(petPositions ?? {});
@@ -472,34 +585,73 @@ export const PlayerService = {
   /* ------------------------------------ Pets ------------------------------------ */
 
   async getPets(): Promise<PetState> {
-    const arr = await Atoms.pets.myPetInfos.get();
-    return Array.isArray(arr) ? (arr as PetInfo[]) : null;
+    const infos = await Atoms.pets.myPetInfos.get();
+    const primitives = await Atoms.pets.myPrimitivePetSlots.get();
+    return normalizePetsState(infos, primitives);
   },
 
   onPetsChange(cb: (pets: PetState) => void) {
-    let prev: PetState = null;
-    return Atoms.pets.myPetInfos.onChange((next) => {
-      if (next !== prev) {
-        prev = next as PetState;
-        cb(prev);
+    let prevSig: string | null = null;
+    let lastInfos: unknown = null;
+    let lastPrimitives: unknown = null;
+    const emit = () => {
+      const next = normalizePetsState(lastInfos, lastPrimitives);
+      const sig = petsStateSig(next);
+      if (sig !== prevSig) {
+        prevSig = sig;
+        cb(next);
       }
+    };
+
+    const unsubInfos = Atoms.pets.myPetInfos.onChange((next) => {
+      lastInfos = next;
+      emit();
     });
+    const unsubPrimitives = Atoms.pets.myPrimitivePetSlots.onChange((next) => {
+      lastPrimitives = next;
+      emit();
+    });
+
+    return () => {
+      try { unsubInfos?.(); } catch {}
+      try { unsubPrimitives?.(); } catch {}
+    };
   },
 
   async onPetsChangeNow(cb: (pets: PetState) => void) {
-    let prev: PetState = await this.getPets();
-    cb(prev);
-    return Atoms.pets.myPetInfos.onChange((next) => {
-      if (next !== prev) {
-        prev = next as PetState;
-        cb(prev);
+    let lastInfos: unknown = await Atoms.pets.myPetInfos.get();
+    let lastPrimitives: unknown = await Atoms.pets.myPrimitivePetSlots.get();
+    let prevSig: string | null = null;
+
+    const emit = () => {
+      const next = normalizePetsState(lastInfos, lastPrimitives);
+      const sig = petsStateSig(next);
+      if (sig !== prevSig) {
+        prevSig = sig;
+        cb(next);
       }
+    };
+
+    emit();
+
+    const unsubInfos = Atoms.pets.myPetInfos.onChange((next) => {
+      lastInfos = next;
+      emit();
     });
+    const unsubPrimitives = Atoms.pets.myPrimitivePetSlots.onChange((next) => {
+      lastPrimitives = next;
+      emit();
+    });
+
+    return () => {
+      try { unsubInfos?.(); } catch {}
+      try { unsubPrimitives?.(); } catch {}
+    };
   },
 
   onPetsDiff(cb: (pets: PetState, diff: PetsDiff) => void) {
     let prevSnap: PetsSnapshot = snapshotPets(null);
-    return Atoms.pets.myPetInfos.onChange((state) => {
+    return this.onPetsChange((state) => {
       const nextSnap = snapshotPets(state as PetState);
       const d = diffPetsSnapshot(prevSnap, nextSnap);
       if (d.added.length || d.updated.length || d.removed.length) {
@@ -519,7 +671,7 @@ export const PlayerService = {
 
     prevSnap = nextSnap;
 
-    return Atoms.pets.myPetInfos.onChange((state) => {
+    return this.onPetsChange((state) => {
       nextSnap = snapshotPets(state as PetState);
       const d = diffPetsSnapshot(prevSnap, nextSnap);
       if (d.added.length || d.updated.length || d.removed.length) {

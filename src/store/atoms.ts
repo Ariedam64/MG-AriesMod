@@ -118,9 +118,11 @@ export const myEggInventory = makeAtom<ToolInventoryState>("myEggInventoryAtom")
 export const myDecorInventory = makeAtom<DecorInventoryState>("myDecorInventoryAtom");
 export const mySeedSiloItems = makeAtom<SeedInventoryState>("mySeedSiloItemsAtom");
 export const myDecorShedItems = makeAtom<DecorInventoryState>("myDecorShedItemsAtom");
+export const myFeedingTroughItems = makeAtom<CropInventoryState>("myFeedingTroughItemsAtom");
 export const myPetInfos = makeAtom<PetState>("myPetInfosAtom");
 export const myPetSlotInfos = makeAtom<any>("myPetSlotInfosAtom");
 export const myPrimitivePetSlots = makeAtom<any[]>("myPrimitivePetSlotsAtom");
+export const myPetIdOnSameTile = makeAtom<string | null>("myPetIdOnSameTileAtom");
 export const totalPetSellPrice = makeAtom<number>("totalPetSellPriceAtom")
 export const myCropItemsToSell = makeAtom<any>("myCropItemsToSellAtom")
 export const myPetHutchPetItems = makeAtom<any>("myPetHutchPetItemsAtom")
@@ -136,6 +138,7 @@ export const totalCropSellPrice = makeAtom<number>("totalCropSellPriceAtom");
 export const myValidatedSelectedItemIndex = makeAtom<number | null>("myValidatedSelectedItemIndexAtom");
 export const setSelectedIndexToEnd = makeAtom<number | null>("setSelectedIndexToEndAtom");
 export const mySelectedItemName = makeAtom<any>("mySelectedItemNameAtom");
+export const mySelectedItemId = makeAtom<string | null>("mySelectedItemIdAtom");
 export const myPossiblyNoLongerValidSelectedItemIndex = makeAtom<number | null>("myPossiblyNoLongerValidSelectedItemIndexAtom");
 
 export const myCurrentGardenObject = makeAtom<CurrentGardenObject>("myCurrentGardenObjectAtom");
@@ -150,6 +153,7 @@ export const mySelectedItemRotation = makeAtom<any>("mySelectedItemRotationAtom"
 export const weather = makeAtom<string | null>("weatherAtom")
 
 export const activeModal = makeAtom<string | null>("activeModalAtom");
+export const inventoryModalIsActive = makeAtom<boolean>("inventoryModalIsActiveAtom");
 export const avatarTriggerAnimationAtom = makeAtom<AvatarTriggerAnimation | null>("avatarTriggerAnimationAtom")
 
 export const friendBonusMultiplier = makeAtom<any>("friendBonusMultiplierAtom")
@@ -321,7 +325,7 @@ export const myPetsAbilitiesTrigger = {
  * Registry (lecture seule)
  * ==========================================================================*/
 export const Atoms = {
-  ui: { activeModal },
+  ui: { activeModal, inventoryModalIsActive },
   server: { numPlayers, friendBonusMultiplier },
   player: { 
     position, 
@@ -357,8 +361,10 @@ export const Atoms = {
     myDecorInventory,
     mySeedSiloItems,
     myDecorShedItems,
+    myFeedingTroughItems,
     favoriteIds,
     mySelectedItemName,
+    mySelectedItemId,
     mySelectedItemRotation,
     myPossiblyNoLongerValidSelectedItemIndex,
     myValidatedSelectedItemIndex,
@@ -370,6 +376,7 @@ export const Atoms = {
     myPetInfos,
     myPetSlotInfos,
     myPrimitivePetSlots,
+    myPetIdOnSameTile,
     totalPetSellPrice,
   },
   shop: {

@@ -504,6 +504,7 @@ const formatNum = (n: number) => NF_US.format(Math.max(0, Math.floor(n || 0)));
 
 async function clearUiSelectionAtoms() {
   try { await Atoms.inventory.mySelectedItemName.set(null); } catch {}
+  try { await Atoms.inventory.mySelectedItemId.set(null); } catch {}
   try { await Atoms.inventory.myValidatedSelectedItemIndex.set(null); } catch {}
   try { await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.set(null); } catch {}
 }

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.3
+// @version      3.1.35
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -1262,7 +1262,7 @@
     const arr = await favoriteIds.get();
     return new Set(Array.isArray(arr) ? arr : []);
   }
-  var position, state, map, player, action, myData, myInventory, gardensWithBackfills, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myPetInfos, myPetSlotInfos, myPrimitivePetSlots, totalPetSellPrice, myCropItemsToSell, myPetHutchPetItems, isMyInventoryAtMaxLength, myNumPetHutchItems, shops, myShopPurchases, numPlayers, totalCropSellPrice, myValidatedSelectedItemIndex, setSelectedIndexToEnd, mySelectedItemName, myPossiblyNoLongerValidSelectedItemIndex, myCurrentGardenObject, myCurrentSortedGrowSlotIndices, myCurrentGrowSlotIndex, myOwnCurrentGardenObject, isCurrentGrowSlotMature, myOwnCurrentDirtTileIndex, mySelectedItemRotation, weather, activeModal, avatarTriggerAnimationAtom, friendBonusMultiplier, garden, gardenTileObjects, favoriteIds, playerId, playerDatabaseUserId, myOwnCurrentGardenObjectType, stateChild, stateChildData, stateShops, stateUserSlots, statePlayers, myActivityLog, seedShop, toolShop, eggShop, decorShop, GardenSlotsSig, PetsByIdSig, PetsByIdStableSig, FavoriteIdsSig, Atoms;
+  var position, state, map, player, action, myData, myInventory, gardensWithBackfills, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myFeedingTroughItems, myPetInfos, myPetSlotInfos, myPrimitivePetSlots, myPetIdOnSameTile, totalPetSellPrice, myCropItemsToSell, myPetHutchPetItems, isMyInventoryAtMaxLength, myNumPetHutchItems, shops, myShopPurchases, numPlayers, totalCropSellPrice, myValidatedSelectedItemIndex, setSelectedIndexToEnd, mySelectedItemName, mySelectedItemId, myPossiblyNoLongerValidSelectedItemIndex, myCurrentGardenObject, myCurrentSortedGrowSlotIndices, myCurrentGrowSlotIndex, myOwnCurrentGardenObject, isCurrentGrowSlotMature, myOwnCurrentDirtTileIndex, mySelectedItemRotation, weather, activeModal, inventoryModalIsActive, avatarTriggerAnimationAtom, friendBonusMultiplier, garden, gardenTileObjects, favoriteIds, playerId, playerDatabaseUserId, myOwnCurrentGardenObjectType, stateChild, stateChildData, stateShops, stateUserSlots, statePlayers, myActivityLog, seedShop, toolShop, eggShop, decorShop, GardenSlotsSig, PetsByIdSig, PetsByIdStableSig, FavoriteIdsSig, Atoms;
   var init_atoms = __esm({
     "src/store/atoms.ts"() {
       init_hub();
@@ -1281,9 +1281,11 @@
       myDecorInventory = makeAtom("myDecorInventoryAtom");
       mySeedSiloItems = makeAtom("mySeedSiloItemsAtom");
       myDecorShedItems = makeAtom("myDecorShedItemsAtom");
+      myFeedingTroughItems = makeAtom("myFeedingTroughItemsAtom");
       myPetInfos = makeAtom("myPetInfosAtom");
       myPetSlotInfos = makeAtom("myPetSlotInfosAtom");
       myPrimitivePetSlots = makeAtom("myPrimitivePetSlotsAtom");
+      myPetIdOnSameTile = makeAtom("myPetIdOnSameTileAtom");
       totalPetSellPrice = makeAtom("totalPetSellPriceAtom");
       myCropItemsToSell = makeAtom("myCropItemsToSellAtom");
       myPetHutchPetItems = makeAtom("myPetHutchPetItemsAtom");
@@ -1296,6 +1298,7 @@
       myValidatedSelectedItemIndex = makeAtom("myValidatedSelectedItemIndexAtom");
       setSelectedIndexToEnd = makeAtom("setSelectedIndexToEndAtom");
       mySelectedItemName = makeAtom("mySelectedItemNameAtom");
+      mySelectedItemId = makeAtom("mySelectedItemIdAtom");
       myPossiblyNoLongerValidSelectedItemIndex = makeAtom("myPossiblyNoLongerValidSelectedItemIndexAtom");
       myCurrentGardenObject = makeAtom("myCurrentGardenObjectAtom");
       myCurrentSortedGrowSlotIndices = makeAtom("myCurrentSortedGrowSlotIndicesAtom");
@@ -1306,6 +1309,7 @@
       mySelectedItemRotation = makeAtom("mySelectedItemRotationAtom");
       weather = makeAtom("weatherAtom");
       activeModal = makeAtom("activeModalAtom");
+      inventoryModalIsActive = makeAtom("inventoryModalIsActiveAtom");
       avatarTriggerAnimationAtom = makeAtom("avatarTriggerAnimationAtom");
       friendBonusMultiplier = makeAtom("friendBonusMultiplierAtom");
       garden = makeView("myDataAtom", { path: "garden" });
@@ -1345,7 +1349,7 @@
         sig: () => "1"
       });
       Atoms = {
-        ui: { activeModal },
+        ui: { activeModal, inventoryModalIsActive },
         server: { numPlayers, friendBonusMultiplier },
         player: {
           position,
@@ -1381,8 +1385,10 @@
           myDecorInventory,
           mySeedSiloItems,
           myDecorShedItems,
+          myFeedingTroughItems,
           favoriteIds,
           mySelectedItemName,
+          mySelectedItemId,
           mySelectedItemRotation,
           myPossiblyNoLongerValidSelectedItemIndex,
           myValidatedSelectedItemIndex,
@@ -1393,6 +1399,7 @@
           myPetInfos,
           myPetSlotInfos,
           myPrimitivePetSlots,
+          myPetIdOnSameTile,
           totalPetSellPrice
         },
         shop: {
@@ -1573,12 +1580,16 @@
   async function openModal(modalId) {
     try {
       await Atoms.ui.activeModal.set(modalId);
+      await Atoms.ui.inventoryModalIsActive.set(modalId === "inventory");
     } catch (err) {
     }
   }
   async function closeModal(_modalId) {
     try {
       await Atoms.ui.activeModal.set(null);
+      if (_modalId === "inventory" || !_modalId) {
+        await Atoms.ui.inventoryModalIsActive.set(false);
+      }
     } catch (err) {
     }
   }
@@ -5505,6 +5516,8 @@
     ColoredStringLightsSideways: "sprite/decor/ColoredStringLightsSideways",
     DecorShed: "sprite/decor/DecorShed",
     HayBale: "sprite/decor/HayBale",
+    FeedingTrough: "sprite/decor/FeedingTrough",
+    FeedingTroughCover: "sprite/decor/FeedingTroughCover",
     HayBaleSideways: "sprite/decor/HayBaleSideways",
     LargeGravestone: "sprite/decor/LargeGravestone",
     LargeGravestoneSideways: "sprite/decor/LargeGravestoneSideways",
@@ -6911,7 +6924,7 @@
   var eggCatalog = {
     CommonEgg: { tileRef: tileRefsPets.CommonEgg, name: "Common Egg", coinPrice: 1e5, creditPrice: 19, rarity: rarity.Common, initialTileScale: 0.3, baseTileScale: 0.8, secondsToHatch: 600, faunaSpawnWeights: { Worm: 60, Snail: 35, Bee: 5 } },
     UncommonEgg: { tileRef: tileRefsPets.UncommonEgg, name: "Uncommon Egg", coinPrice: 1e6, creditPrice: 48, rarity: rarity.Uncommon, initialTileScale: 0.3, baseTileScale: 0.8, secondsToHatch: 3600, faunaSpawnWeights: { Chicken: 65, Bunny: 25, Dragonfly: 10 } },
-    RareEgg: { tileRef: tileRefsPets.RareEgg, name: "Rare Egg", coinPrice: 1e7, creditPrice: 99, rarity: rarity.Rare, initialTileScale: 0.3, baseTileScale: 0.8, secondsToHatch: 21600, faunaSpawnWeights: { Pig: 90, Cow: 10 } },
+    RareEgg: { tileRef: tileRefsPets.RareEgg, name: "Rare Egg", coinPrice: 1e7, creditPrice: 99, rarity: rarity.Rare, initialTileScale: 0.3, baseTileScale: 0.8, secondsToHatch: 21600, faunaSpawnWeights: { Pig: 80, Cow: 15, Turkey: 5 } },
     LegendaryEgg: { tileRef: tileRefsPets.LegendaryEgg, name: "Legendary Egg", coinPrice: 1e8, creditPrice: 249, rarity: rarity.Legendary, initialTileScale: 0.3, baseTileScale: 0.8, secondsToHatch: 43200, faunaSpawnWeights: { Squirrel: 60, Turtle: 30, Goat: 10 } },
     MythicalEgg: { tileRef: tileRefsPets.MythicalEgg, name: "Mythical Egg", coinPrice: 1e9, creditPrice: 599, rarity: rarity.Mythic, initialTileScale: 0.3, baseTileScale: 0.8, secondsToHatch: 86400, faunaSpawnWeights: { Butterfly: 75, Capybara: 5, Peacock: 20 } },
     WinterEgg: {
@@ -8206,6 +8219,17 @@
       baseTileScale: 2.1,
       isOneTimePurchase: true,
       nudgeY: -0.45
+    },
+    FeedingTrough: {
+      tileRef: tileRefsDecor.FeedingTrough,
+      name: "Feeding Trough",
+      coinPrice: 1e7,
+      creditPrice: 199,
+      rarity: rarity.Rare,
+      baseTileScale: 1.05,
+      nudgeY: -0.45,
+      isOneTimePurchase: true,
+      avatarNudgeY: -0.25
     },
     DecorShed: {
       tileRef: tileRefsDecor.DecorShed,
@@ -10418,6 +10442,52 @@
     }
     return { added, updated, removed, changes };
   }
+  function toPetInfoFromPrimitive(entry) {
+    if (!entry || typeof entry !== "object") return null;
+    if (entry.slot && typeof entry.slot === "object" && entry.slot.id) {
+      return entry;
+    }
+    const id = String(
+      entry.id ?? entry.petId ?? entry.petItemId ?? entry.itemId ?? entry.slot?.id ?? ""
+    ).trim();
+    if (!id) return null;
+    const species = String(entry.petSpecies ?? entry.species ?? entry.slot?.petSpecies ?? "").trim();
+    const name = entry.name ?? entry.petName ?? entry.slot?.name ?? null;
+    const slot = {
+      id,
+      petSpecies: species,
+      name,
+      xp: Number.isFinite(entry.xp) ? Number(entry.xp) : void 0,
+      hunger: Number.isFinite(entry.hunger) ? Number(entry.hunger) : void 0,
+      mutations: Array.isArray(entry.mutations) ? entry.mutations.slice() : void 0,
+      targetScale: Number.isFinite(entry.targetScale) ? Number(entry.targetScale) : void 0,
+      abilities: Array.isArray(entry.abilities) ? entry.abilities.slice() : void 0
+    };
+    const info = { slot };
+    const pos = entry.position;
+    if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.y)) {
+      info.position = { x: Number(pos.x), y: Number(pos.y) };
+    }
+    return info;
+  }
+  function normalizePetsState(petInfosRaw, primitiveRaw) {
+    const infos = Array.isArray(petInfosRaw) ? petInfosRaw : null;
+    if (infos && infos.length) return infos;
+    const prim = Array.isArray(primitiveRaw) ? primitiveRaw : null;
+    if (prim && prim.length) {
+      const mapped = prim.map(toPetInfoFromPrimitive).filter(Boolean);
+      if (mapped.length) return mapped;
+    }
+    return infos;
+  }
+  function petsStateSig(state3) {
+    if (!Array.isArray(state3)) return "null";
+    if (!state3.length) return "empty";
+    return state3.map((p) => {
+      const id = String(p?.slot?.id ?? "");
+      return `${id}:${petSig(p)}`;
+    }).join("|");
+  }
   function cropSig(it) {
     const muts = Array.isArray(it.mutations) ? it.mutations.slice().sort().join(",") : "";
     const scale = Number.isFinite(it.scale) ? Math.round(it.scale * 1e3) : 0;
@@ -10598,6 +10668,30 @@
       } catch (err) {
       }
     },
+    async putItemInFeedingTrough(itemId = "61b1dfd3-c550-4ed2-9b50-c58de4e17c2f", toStorageIndex = 0, scopePath = ["Room", "Quinoa"]) {
+      try {
+        sendToGame({
+          scopePath,
+          type: "PutItemInStorage",
+          itemId,
+          storageId: "FeedingTrough",
+          toStorageIndex
+        });
+      } catch (err) {
+      }
+    },
+    async retrieveItemFromFeedingTrough(itemId = "25eb1a47-5956-4aa9-a74e-924b6585d09b", toInventoryIndex = 34, scopePath = ["Room", "Quinoa"]) {
+      try {
+        sendToGame({
+          scopePath,
+          type: "RetrieveItemFromStorage",
+          itemId,
+          storageId: "FeedingTrough",
+          toInventoryIndex
+        });
+      } catch (err) {
+      }
+    },
     async petPositions(petPositions) {
       const entries = Object.entries(petPositions ?? {});
       if (!entries.length) {
@@ -10743,31 +10837,76 @@
     },
     /* ------------------------------------ Pets ------------------------------------ */
     async getPets() {
-      const arr = await Atoms.pets.myPetInfos.get();
-      return Array.isArray(arr) ? arr : null;
+      const infos = await Atoms.pets.myPetInfos.get();
+      const primitives = await Atoms.pets.myPrimitivePetSlots.get();
+      return normalizePetsState(infos, primitives);
     },
     onPetsChange(cb) {
-      let prev = null;
-      return Atoms.pets.myPetInfos.onChange((next) => {
-        if (next !== prev) {
-          prev = next;
-          cb(prev);
+      let prevSig = null;
+      let lastInfos = null;
+      let lastPrimitives = null;
+      const emit = () => {
+        const next = normalizePetsState(lastInfos, lastPrimitives);
+        const sig = petsStateSig(next);
+        if (sig !== prevSig) {
+          prevSig = sig;
+          cb(next);
         }
+      };
+      const unsubInfos = Atoms.pets.myPetInfos.onChange((next) => {
+        lastInfos = next;
+        emit();
       });
+      const unsubPrimitives = Atoms.pets.myPrimitivePetSlots.onChange((next) => {
+        lastPrimitives = next;
+        emit();
+      });
+      return () => {
+        try {
+          unsubInfos?.();
+        } catch {
+        }
+        try {
+          unsubPrimitives?.();
+        } catch {
+        }
+      };
     },
     async onPetsChangeNow(cb) {
-      let prev = await this.getPets();
-      cb(prev);
-      return Atoms.pets.myPetInfos.onChange((next) => {
-        if (next !== prev) {
-          prev = next;
-          cb(prev);
+      let lastInfos = await Atoms.pets.myPetInfos.get();
+      let lastPrimitives = await Atoms.pets.myPrimitivePetSlots.get();
+      let prevSig = null;
+      const emit = () => {
+        const next = normalizePetsState(lastInfos, lastPrimitives);
+        const sig = petsStateSig(next);
+        if (sig !== prevSig) {
+          prevSig = sig;
+          cb(next);
         }
+      };
+      emit();
+      const unsubInfos = Atoms.pets.myPetInfos.onChange((next) => {
+        lastInfos = next;
+        emit();
       });
+      const unsubPrimitives = Atoms.pets.myPrimitivePetSlots.onChange((next) => {
+        lastPrimitives = next;
+        emit();
+      });
+      return () => {
+        try {
+          unsubInfos?.();
+        } catch {
+        }
+        try {
+          unsubPrimitives?.();
+        } catch {
+        }
+      };
     },
     onPetsDiff(cb) {
       let prevSnap = snapshotPets(null);
-      return Atoms.pets.myPetInfos.onChange((state3) => {
+      return this.onPetsChange((state3) => {
         const nextSnap = snapshotPets(state3);
         const d = diffPetsSnapshot(prevSnap, nextSnap);
         if (d.added.length || d.updated.length || d.removed.length) {
@@ -10783,7 +10922,7 @@
       const first = diffPetsSnapshot(prevSnap, nextSnap);
       cb(cur, first);
       prevSnap = nextSnap;
-      return Atoms.pets.myPetInfos.onChange((state3) => {
+      return this.onPetsChange((state3) => {
         nextSnap = snapshotPets(state3);
         const d = diffPetsSnapshot(prevSnap, nextSnap);
         if (d.added.length || d.updated.length || d.removed.length) {
@@ -11347,6 +11486,10 @@
   async function clearUiSelectionAtoms() {
     try {
       await Atoms.inventory.mySelectedItemName.set(null);
+    } catch {
+    }
+    try {
+      await Atoms.inventory.mySelectedItemId.set(null);
     } catch {
     }
     try {
@@ -15386,6 +15529,12 @@
         {
           id: "game.seed-silo",
           label: "\u{1F33E} Seed Silo",
+          defaultHotkey: null,
+          allowClear: true
+        },
+        {
+          id: "game.feeding-trough",
+          label: "\u{1F356} Feeding trough",
           defaultHotkey: null,
           allowClear: true
         },
@@ -21081,6 +21230,7 @@
   init_fakeModal();
   init_atoms();
   var PATH_PETS_OVERRIDES = "pets.overrides";
+  var PATH_PETS_INSTANT_FEED = "pets.instantFeed";
   var PATH_PETS_UI = "pets.ui";
   var PATH_PETS_TEAMS = "pets.teams";
   var PATH_PETS_TEAM_SEARCH = "pets.teamSearch";
@@ -21572,6 +21722,10 @@
     } catch (err) {
     }
     try {
+      await Atoms.inventory.mySelectedItemId.set(null);
+    } catch (err) {
+    }
+    try {
       await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.set(null);
     } catch (err) {
     }
@@ -21608,6 +21762,7 @@
   var AUTOF_FEED_MIN_INTERVAL_MS = 2e3;
   var DEFAULT_OVERRIDE = { enabled: false, thresholdPct: 10, crops: {} };
   var DEFAULT_UI = { selectedPetId: null };
+  var DEFAULT_INSTANT_FEED = { crops: {} };
   var _currentPets = [];
   var _userTriggerCb = null;
   function saveOverrides(map2) {
@@ -21615,6 +21770,13 @@
   }
   function loadOverrides() {
     const obj = readAriesPath(PATH_PETS_OVERRIDES);
+    return obj && typeof obj === "object" ? obj : {};
+  }
+  function saveInstantFeedOverrides(map2) {
+    writeAriesPath(PATH_PETS_INSTANT_FEED, map2);
+  }
+  function loadInstantFeedOverrides() {
+    const obj = readAriesPath(PATH_PETS_INSTANT_FEED);
     return obj && typeof obj === "object" ? obj : {};
   }
   function saveUIState(next) {
@@ -21630,6 +21792,12 @@
     return {
       enabled: !!src.enabled,
       thresholdPct: Math.min(100, Math.max(1, Number(src.thresholdPct) || DEFAULT_OVERRIDE.thresholdPct)),
+      crops: { ...src.crops || {} }
+    };
+  }
+  function cloneInstantFeedOverride(o) {
+    const src = o ?? DEFAULT_INSTANT_FEED;
+    return {
       crops: { ...src.crops || {} }
     };
   }
@@ -21827,6 +21995,37 @@
       }
       return allowed;
     },
+    /* ------------------------- Instant feed (per-species) ------------------------- */
+    getInstantFeedOverride(species) {
+      const key2 = _canonicalSpecies(String(species || ""));
+      const all = loadInstantFeedOverrides();
+      return cloneInstantFeedOverride(all[key2]);
+    },
+    isInstantFeedCropAllowed(species, crop) {
+      const ov = this.getInstantFeedOverride(species);
+      const rule = ov.crops[crop];
+      return rule ? !!rule.allowed : true;
+    },
+    setInstantFeedCropAllowed(species, crop, allowed) {
+      const key2 = _canonicalSpecies(String(species || ""));
+      const all = loadInstantFeedOverrides();
+      const cur = cloneInstantFeedOverride(all[key2]);
+      cur.crops[crop] = { allowed: !!allowed };
+      all[key2] = cur;
+      saveInstantFeedOverrides(all);
+      return cloneInstantFeedOverride(cur);
+    },
+    getInstantFeedAllowedCrops(species) {
+      const key2 = _canonicalSpecies(String(species || ""));
+      const compatibles = this.getCompatibleCropsForSpecies(key2);
+      const ov = this.getInstantFeedOverride(key2);
+      const allowed = /* @__PURE__ */ new Set();
+      for (const c of compatibles) {
+        const rule = ov.crops[c];
+        if (rule ? !!rule.allowed : true) allowed.add(c);
+      }
+      return allowed;
+    },
     getCompatibleCropsForSpecies(species) {
       return getCompatibleCropsFromData(species);
     },
@@ -22012,15 +22211,13 @@
       });
       const payload = searchOverride && searchOverride.trim().length ? await this.buildFilteredInventoryByQuery(searchOverride, { excludeIds: exclude }) : await this.buildFilteredInventoryForTeam(teamId, { excludeIds: exclude });
       const items = Array.isArray(payload?.items) ? payload.items : [];
-      try {
-        const rawHutch = await myPetHutchPetItems.get();
-        const hutchArr = Array.isArray(rawHutch) ? rawHutch : [];
-        let hutchPets = hutchArr.map((it) => _inventoryItemToPet(it)).filter((p) => !!p);
-        const teamSearch = this.getTeamSearch(teamId) || "";
+      const teamSearch = this.getTeamSearch(teamId) || "";
+      const applyFilters = async (list) => {
+        let out = Array.isArray(list) ? list : [];
         if (searchOverride && searchOverride.trim().length) {
           const q = searchOverride.toLowerCase().trim();
           if (q) {
-            hutchPets = hutchPets.filter(
+            out = out.filter(
               (p) => _s(p.id).includes(q) || _s(p.petSpecies).includes(q) || _s(p.name).includes(q) || Array.isArray(p.abilities) && p.abilities.some((a) => _s(a).includes(q) || _s(_abilityName(a)).includes(q)) || Array.isArray(p.mutations) && p.mutations.some((m) => _s(m).includes(q))
             );
           }
@@ -22028,24 +22225,44 @@
           const { mode, value } = _parseTeamSearch(teamSearch);
           if (mode === "ability" && value) {
             const idSet = await _abilityNameToPresentIds(value);
-            hutchPets = idSet.size ? hutchPets.filter((p) => Array.isArray(p.abilities) && p.abilities.some((a) => idSet.has(a))) : [];
+            out = idSet.size ? out.filter((p) => Array.isArray(p.abilities) && p.abilities.some((a) => idSet.has(a))) : [];
           } else if (mode === "species" && value) {
             const vv = value.toLowerCase();
-            hutchPets = hutchPets.filter((p) => (p.petSpecies || "").toLowerCase() === vv);
+            out = out.filter((p) => (p.petSpecies || "").toLowerCase() === vv);
           } else if (value) {
             const q = value.toLowerCase();
-            hutchPets = hutchPets.filter(
+            out = out.filter(
               (p) => _s(p.id).includes(q) || _s(p.petSpecies).includes(q) || _s(p.name).includes(q) || Array.isArray(p.abilities) && p.abilities.some((a) => _s(a).includes(q) || _s(_abilityName(a)).includes(q)) || Array.isArray(p.mutations) && p.mutations.some((m) => _s(m).includes(q))
             );
           }
         }
-        if (exclude.size) hutchPets = hutchPets.filter((p) => !exclude.has(p.id));
+        if (exclude.size) out = out.filter((p) => !exclude.has(p.id));
+        return out;
+      };
+      try {
+        const rawHutch = await myPetHutchPetItems.get();
+        const hutchArr = Array.isArray(rawHutch) ? rawHutch : [];
+        let hutchPets = hutchArr.map((it) => _inventoryItemToPet(it)).filter((p) => !!p);
+        hutchPets = await applyFilters(hutchPets);
         const seen = new Set(items.map((it) => String(it?.id ?? "")));
         for (const p of hutchPets) {
           if (!seen.has(p.id)) {
             items.push(_invPetToRawItem(p));
             seen.add(p.id);
           }
+        }
+        try {
+          const rawActive = await this.getPets();
+          const list = Array.isArray(rawActive) ? rawActive : [];
+          let activePets = list.map((p) => _activeSlotToPet(p)).filter((p) => !!p);
+          activePets = await applyFilters(activePets);
+          for (const p of activePets) {
+            if (!seen.has(p.id)) {
+              items.push(_invPetToRawItem(p));
+              seen.add(p.id);
+            }
+          }
+        } catch {
         }
       } catch {
       }
@@ -22920,7 +23137,7 @@
   }
 
   // src/services/shops.ts
-  init_atoms();
+  init_fakeModal();
   var SHOP_KEYBINDS = [
     { id: "shops.seeds", modal: "seedShop" },
     { id: "shops.eggs", modal: "eggShop" },
@@ -22939,7 +23156,7 @@
           if (!eventMatchesKeybind(id, event)) continue;
           event.preventDefault();
           event.stopPropagation();
-          void Atoms.ui.activeModal.set(modal);
+          void openModal(modal);
           break;
         }
       },
@@ -24387,14 +24604,18 @@
 
   // src/services/petHutchKeybind.ts
   init_atoms();
+  init_fakeModal();
   var ACTION_ID = "game.pet-hutch";
   var PET_HUTCH_MODAL_ID = "petHutch";
   var petHutchKeybindsInstalled = false;
   async function togglePetHutchModal() {
     try {
       const current = await Atoms.ui.activeModal.get();
-      const next = current === PET_HUTCH_MODAL_ID ? null : PET_HUTCH_MODAL_ID;
-      await Atoms.ui.activeModal.set(next);
+      if (current === PET_HUTCH_MODAL_ID) {
+        await closeModal(PET_HUTCH_MODAL_ID);
+        return;
+      }
+      await openModal(PET_HUTCH_MODAL_ID);
     } catch {
     }
   }
@@ -24422,8 +24643,11 @@
   async function toggleJournalModal() {
     try {
       const current = await Atoms.ui.activeModal.get();
-      const next = current === JOURNAL_MODAL_ID ? null : JOURNAL_MODAL_ID;
-      await Atoms.ui.activeModal.set(next);
+      if (current === JOURNAL_MODAL_ID) {
+        await closeModal(JOURNAL_MODAL_ID);
+        return;
+      }
+      await openModal(JOURNAL_MODAL_ID);
     } catch {
     }
   }
@@ -24445,14 +24669,18 @@
 
   // src/services/decorShedKeybind.ts
   init_atoms();
+  init_fakeModal();
   var ACTION_ID3 = "game.decor-shed";
   var DECOR_SHED_MODAL_ID = "decorShed";
   var decorShedKeybindsInstalled = false;
   async function toggleDecorShedModal() {
     try {
       const current = await Atoms.ui.activeModal.get();
-      const next = current === DECOR_SHED_MODAL_ID ? null : DECOR_SHED_MODAL_ID;
-      await Atoms.ui.activeModal.set(next);
+      if (current === DECOR_SHED_MODAL_ID) {
+        await closeModal(DECOR_SHED_MODAL_ID);
+        return;
+      }
+      await openModal(DECOR_SHED_MODAL_ID);
     } catch {
     }
   }
@@ -24474,14 +24702,18 @@
 
   // src/services/seedSiloKeybind.ts
   init_atoms();
+  init_fakeModal();
   var ACTION_ID4 = "game.seed-silo";
   var SEED_SILO_MODAL_ID = "seedSilo";
   var seedSiloKeybindsInstalled = false;
   async function toggleSeedSiloModal() {
     try {
       const current = await Atoms.ui.activeModal.get();
-      const next = current === SEED_SILO_MODAL_ID ? null : SEED_SILO_MODAL_ID;
-      await Atoms.ui.activeModal.set(next);
+      if (current === SEED_SILO_MODAL_ID) {
+        await closeModal(SEED_SILO_MODAL_ID);
+        return;
+      }
+      await openModal(SEED_SILO_MODAL_ID);
     } catch {
     }
   }
@@ -24496,6 +24728,39 @@
         event.preventDefault();
         event.stopPropagation();
         void toggleSeedSiloModal();
+      },
+      true
+    );
+  }
+
+  // src/services/feedingTroughKeybind.ts
+  init_atoms();
+  init_fakeModal();
+  var ACTION_ID5 = "game.feeding-trough";
+  var FEEDING_TROUGH_MODAL_ID = "feedingTrough";
+  var feedingTroughKeybindsInstalled = false;
+  async function toggleFeedingTroughModal() {
+    try {
+      const current = await Atoms.ui.activeModal.get();
+      if (current === FEEDING_TROUGH_MODAL_ID) {
+        await closeModal(FEEDING_TROUGH_MODAL_ID);
+        return;
+      }
+      await openModal(FEEDING_TROUGH_MODAL_ID);
+    } catch {
+    }
+  }
+  function installFeedingTroughKeybindsOnce() {
+    if (feedingTroughKeybindsInstalled || typeof window === "undefined") return;
+    feedingTroughKeybindsInstalled = true;
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (shouldIgnoreKeydown(event)) return;
+        if (!eventMatchesKeybind(ACTION_ID5, event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        void toggleFeedingTroughModal();
       },
       true
     );
@@ -26732,7 +26997,7 @@
 
   // src/utils/toolbarButton.ts
   var KNOWN_ARIA = ["Chat", "Leaderboard", "Stats", "Open Activity Log"];
-  var TOOLBAR_FALLBACK_CLASS = "css-13izacw";
+  var TOOLBAR_FALLBACK_CLASS = "css-14caowy";
   var OWN_BTN_SEL = '[data-qws-btn="true"]';
   function startInjectGamePanelButton(opts) {
     const { onClick, iconUrl = "", ariaLabel = "" } = opts;
@@ -27618,6 +27883,269 @@
     };
   }
 
+  // src/core/dom.ts
+  var ready = new Promise((res) => {
+    if (document.readyState !== "loading") res();
+    else addEventListener("DOMContentLoaded", () => res(), { once: true });
+  });
+  function addStyle(css3) {
+    const s = document.createElement("style");
+    s.textContent = css3;
+    document.head.appendChild(s);
+    return s;
+  }
+  function toPredicate(selOrFn) {
+    if (typeof selOrFn === "function") return selOrFn;
+    if (typeof selOrFn === "string") return (el2) => el2.matches?.(selOrFn) ?? false;
+    throw new Error("Selector or predicate required");
+  }
+  function onAdded(selOrFn, cb, { root = document, callForExisting = true } = {}) {
+    const pred = toPredicate(selOrFn);
+    const seen = /* @__PURE__ */ new WeakSet();
+    const consider = (el2) => {
+      if (seen.has(el2)) return;
+      if (pred(el2)) {
+        seen.add(el2);
+        cb(el2);
+      }
+    };
+    if (callForExisting && "querySelectorAll" in root) {
+      root.querySelectorAll("*").forEach(consider);
+    }
+    const obs = new MutationObserver((muts) => {
+      for (const m of muts) for (const n of Array.from(m.addedNodes)) {
+        if (n.nodeType !== 1) continue;
+        const el2 = n;
+        consider(el2);
+        el2.querySelectorAll?.("*").forEach(consider);
+      }
+    });
+    obs.observe(root, { childList: true, subtree: true });
+    return { disconnect: () => obs.disconnect() };
+  }
+
+  // src/utils/instantFeedButton.ts
+  init_atoms();
+  var INSTANT_FEED_ATTR = "data-instant-feed";
+  var INSTANT_FEED_BOUND_ATTR = "data-instant-feed-bound";
+  var INSTANT_FEED_LABEL = "Instant Feed";
+  var FEED_BTN_BASE_CLASS = "chakra-button";
+  var FEED_BTN_CLASS_A = "css-1sqevwu";
+  var FEED_BTN_CLASS_B = "css-18p13xh";
+  var started2 = false;
+  function startInstantFeedButton() {
+    if (started2) return;
+    started2 = true;
+    if (typeof document === "undefined") return;
+    onAdded(
+      (el2) => isPetPanelFeedButton(el2),
+      (el2) => {
+        if (!(el2 instanceof HTMLButtonElement)) return;
+        replaceFeedButton(el2);
+      }
+    );
+  }
+  function isPetPanelFeedButton(el2) {
+    if (!(el2 instanceof HTMLButtonElement)) return false;
+    if (el2.getAttribute(INSTANT_FEED_BOUND_ATTR) === "1") return false;
+    if (!el2.classList.contains(FEED_BTN_BASE_CLASS) || !el2.classList.contains(FEED_BTN_CLASS_A) && !el2.classList.contains(FEED_BTN_CLASS_B)) {
+      return false;
+    }
+    const grid = el2.closest(".McGrid");
+    if (!grid) return false;
+    const columns = Array.from(grid.children).filter(
+      (child) => child instanceof HTMLElement
+    );
+    if (columns.length < 2) return false;
+    if (!columns[0].classList.contains("McFlex")) return false;
+    if (!columns[1].classList.contains("McFlex")) return false;
+    const leftButtons = Array.from(columns[0].querySelectorAll("button")).filter(
+      (btn) => btn instanceof HTMLButtonElement
+    );
+    const rightButtons = Array.from(columns[1].querySelectorAll("button")).filter(
+      (btn) => btn instanceof HTMLButtonElement
+    );
+    if (!leftButtons.length || !rightButtons.length) return false;
+    const candidate = leftButtons.find((btn) => btn.querySelector("div[style*='scaleX']")) ?? leftButtons[0] ?? null;
+    return candidate === el2;
+  }
+  function replaceFeedButton(original) {
+    const alreadyInstant = original.getAttribute(INSTANT_FEED_ATTR) === "1";
+    const target = alreadyInstant ? original : original.cloneNode(true);
+    const nameBlock = target.querySelector(".McFlex.css-1rdk3wo");
+    if (nameBlock) nameBlock.remove();
+    target.setAttribute(INSTANT_FEED_ATTR, "1");
+    target.setAttribute(INSTANT_FEED_BOUND_ATTR, "1");
+    setButtonLabel(target, INSTANT_FEED_LABEL);
+    target.addEventListener(
+      "click",
+      (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        ev.stopImmediatePropagation?.();
+        void handleInstantFeed(target);
+      },
+      true
+    );
+    if (!alreadyInstant) {
+      original.replaceWith(target);
+    }
+  }
+  function setButtonLabel(btn, label2) {
+    let textNode = null;
+    for (const node of Array.from(btn.childNodes)) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        textNode = node;
+        break;
+      }
+    }
+    if (textNode) {
+      textNode.textContent = label2;
+      return;
+    }
+    btn.appendChild(document.createTextNode(label2));
+  }
+  async function getPetIdOnSameTile() {
+    try {
+      const raw = await Atoms.pets.myPetIdOnSameTile.get();
+      const id = String(raw || "").trim();
+      return id ? id : null;
+    } catch {
+      return null;
+    }
+  }
+  async function findPetById2(petId) {
+    try {
+      const list = await PetsService.getPets();
+      const arr = Array.isArray(list) ? list : [];
+      return arr.find((p) => String(p?.slot?.id || "") === petId) ?? null;
+    } catch (err) {
+      console.warn("[InstantFeed] Failed to fetch pets", err);
+      return null;
+    }
+  }
+  async function handleInstantFeed(btn) {
+    const prevDisabled = btn.disabled;
+    btn.disabled = true;
+    try {
+      const petId = await getPetIdOnSameTile();
+      if (!petId) {
+        await toastSimple("Instant feed", "No pet detected on the same tile.", "error");
+        return;
+      }
+      const pet = await findPetById2(petId);
+      if (!pet) {
+        await toastSimple("Instant feed", "Unable to resolve expanded pet.", "error");
+        return;
+      }
+      const species = String(pet?.slot?.petSpecies || "");
+      const compatibleList = PetsService.getCompatibleCropsForSpecies(species) ?? [];
+      const compatible = new Set(compatibleList.map((item) => String(item || "")));
+      if (!compatible.size) {
+        await toastSimple("Instant feed", "No compatible crops for this pet.", "info");
+        return;
+      }
+      const inventory = await PlayerService.getCropInventoryState();
+      const items = Array.isArray(inventory) ? inventory : [];
+      const favoriteSet = await PlayerService.getFavoriteIdSet().catch(() => /* @__PURE__ */ new Set());
+      const chosen = items.find((item) => {
+        const speciesId = String(item?.species || "");
+        if (!speciesId || !compatible.has(speciesId)) return false;
+        const id = String(item?.id || "");
+        return id && !favoriteSet.has(id);
+      });
+      const chosenId = String(chosen?.id || "");
+      if (!chosenId) {
+        await toastSimple(
+          "Instant feed",
+          "No compatible crops in inventory (excluding favorites).",
+          "info"
+        );
+        return;
+      }
+      const previousHungerPct = getHungerPctForPet(pet);
+      await PlayerService.feedPet(petId, chosenId);
+      const hungerPct = await waitForHungerIncrease(petId, previousHungerPct, {
+        initialDelay: 150
+      });
+      const hungerSuffix = hungerPct != null ? ` Hunger: ${formatHungerPct(hungerPct)}%.` : "";
+      const cropName = String(chosen?.species || "crop");
+      const petLabel = pet?.slot?.name || species || petId;
+      await toastSimple(
+        "Instant feed",
+        `Fed ${petLabel} with ${cropName}.${hungerSuffix}`,
+        "success"
+      );
+    } catch (err) {
+      console.error("[InstantFeed] Failed to feed pet", err);
+      await toastSimple(
+        "Instant feed",
+        err instanceof Error ? err.message : "Failed to feed pet.",
+        "error"
+      );
+    } finally {
+      btn.disabled = prevDisabled;
+    }
+  }
+  function formatHungerPct(pct) {
+    if (!Number.isFinite(pct)) return "";
+    const clamped = Math.max(0, Math.min(100, pct));
+    const rounded = Math.round(clamped * 10) / 10;
+    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+  }
+  var HUNGER_EPSILON = 0.05;
+  var HUNGER_TIMEOUT_MS = 4e3;
+  var HUNGER_POLL_INTERVAL_MS = 120;
+  function isPetInfo(value) {
+    if (!value || typeof value !== "object") return false;
+    const slot = value.slot;
+    return !!slot && typeof slot === "object";
+  }
+  function getHungerPctForPet(pet) {
+    if (!isPetInfo(pet)) return null;
+    try {
+      const hungerPct = PetsService.getHungerPctFor(pet);
+      return typeof hungerPct === "number" && Number.isFinite(hungerPct) ? hungerPct : null;
+    } catch {
+      return null;
+    }
+  }
+  async function getPetHungerPct(petId) {
+    try {
+      const updatedPet = await findPetById2(petId);
+      return getHungerPctForPet(updatedPet);
+    } catch {
+      return null;
+    }
+  }
+  async function waitForHungerIncrease(petId, previousPct, options = {}) {
+    const { initialDelay = 0, timeout = HUNGER_TIMEOUT_MS, interval = HUNGER_POLL_INTERVAL_MS } = options;
+    if (initialDelay > 0) {
+      await delay3(initialDelay);
+    }
+    const start2 = typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
+    let lastResult = null;
+    while (true) {
+      const pct = await getPetHungerPct(petId);
+      if (pct != null) {
+        lastResult = pct;
+        if (previousPct == null || pct >= Math.min(100, previousPct + HUNGER_EPSILON) || pct >= 99.9) {
+          return pct;
+        }
+      }
+      const now2 = typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
+      if (now2 - start2 >= timeout) {
+        return lastResult;
+      }
+      if (interval > 0) {
+        await delay3(interval);
+      }
+    }
+  }
+  function delay3(ms) {
+    return new Promise((resolve2) => setTimeout(resolve2, ms));
+  }
+
   // src/ui/menus/communityHub/shared.ts
   var style2 = (el2, s) => Object.assign(el2.style, s);
   var CH_EVENTS = {
@@ -28206,9 +28734,9 @@
     let backoff = 1e3;
     let inFlight = null;
     let knownServerSessionId = null;
-    const schedule = (delay3) => {
+    const schedule = (delay4) => {
       if (closed || paused) return;
-      setTimeout(poll, delay3);
+      setTimeout(poll, delay4);
     };
     const poll = async () => {
       if (closed || paused || running) return;
@@ -31774,6 +32302,10 @@
       await Atoms.inventory.mySelectedItemName.set(null);
     } catch {
     }
+    try {
+      await Atoms.inventory.mySelectedItemId.set(null);
+    } catch {
+    }
     while (performance.now() - start2 < timeoutMs) {
       try {
         const modalVal = await Atoms.ui.activeModal.get();
@@ -32041,6 +32573,10 @@
       }
       try {
         await Atoms.inventory.mySelectedItemName.set(null);
+      } catch {
+      }
+      try {
+        await Atoms.inventory.mySelectedItemId.set(null);
       } catch {
       }
       await fakeInventoryHide();
@@ -41364,14 +41900,14 @@
     return inner.querySelector("span.qpm-crop-size");
   }
   var DEFAULTS3 = {
-    rootSelector: ".McFlex.css-fsggty",
+    rootSelector: ".McFlex.css-fsggty, .McFlex.css-6prrn",
     innerSelector: ".McFlex.css-1l3zq7, .McFlex.css-11dqzw",
     markerClass: "tm-crop-price"
   };
   var OMA_SEL = ".McFlex.css-1l3zq7, .McFlex.css-11dqzw";
   var ICON_CLASS = "tm-crop-price-icon";
   var LABEL_CLASS = "tm-crop-price-label";
-  var LOCK_TEXT_SELECTOR = ":scope > .chakra-text.css-1uvlb8k";
+  var LOCK_TEXT_SELECTOR = ":scope > .chakra-text.css-1jc0opy";
   var LOCK_EMOJI = "\u{1F512}";
   var LOCK_BORDER_STYLE = "2px solid rgb(188, 53, 215)";
   var LOCK_BORDER_RADIUS = "15px";
@@ -41408,7 +41944,7 @@
     forEachInner(root, selectors, (inner) => {
       if (shouldSkipInner(inner, markerClass)) {
         removeMarker(inner, markerClass);
-        updateLockEmoji(inner, false);
+        updateLockEmoji(inner, locked);
         return;
       }
       updateLockEmoji(inner, locked);
@@ -42260,7 +42796,7 @@
 
   // src/utils/inventorySelectionLogger.ts
   init_atoms();
-  var started2 = false;
+  var started3 = false;
   var cachedItems = [];
   var currentIndex = null;
   var lastLoggedQuantity = void 0;
@@ -42317,7 +42853,7 @@
       }
       return existing;
     };
-    const setButtonLabel = (label2) => {
+    const setButtonLabel2 = (label2) => {
       const contentNode = Array.from(button.childNodes).find((node) => {
         if (quantityContainer && node === quantityContainer) return false;
         const text = node.textContent ?? "";
@@ -42338,12 +42874,12 @@
     }
     if (quantity == null) {
       button.dataset.lastQuantity = "";
-      setButtonLabel(baseLabel);
+      setButtonLabel2(baseLabel);
       return;
     }
     const labelWithQuantity = baseLabel ? `${baseLabel} \xD7${quantity}` : `\xD7${quantity}`;
     button.dataset.lastQuantity = String(quantity);
-    setButtonLabel(labelWithQuantity);
+    setButtonLabel2(labelWithQuantity);
   }
   function ensureButtonVisibilityObserver(button) {
     if (typeof IntersectionObserver === "undefined") return;
@@ -42420,8 +42956,8 @@
     }
   }
   async function startSelectedInventoryQuantityLogger() {
-    if (started2) return;
-    started2 = true;
+    if (started3) return;
+    started3 = true;
     cachedItems = normalizeItems(await readInventory());
     currentIndex = await readSelectedIndex();
     logQuantity(true);
@@ -45270,47 +45806,6 @@
   };
   shareGlobal("CheckModal", exposed);
 
-  // src/core/dom.ts
-  var ready = new Promise((res) => {
-    if (document.readyState !== "loading") res();
-    else addEventListener("DOMContentLoaded", () => res(), { once: true });
-  });
-  function addStyle(css3) {
-    const s = document.createElement("style");
-    s.textContent = css3;
-    document.head.appendChild(s);
-    return s;
-  }
-  function toPredicate(selOrFn) {
-    if (typeof selOrFn === "function") return selOrFn;
-    if (typeof selOrFn === "string") return (el2) => el2.matches?.(selOrFn) ?? false;
-    throw new Error("Selector or predicate required");
-  }
-  function onAdded(selOrFn, cb, { root = document, callForExisting = true } = {}) {
-    const pred = toPredicate(selOrFn);
-    const seen = /* @__PURE__ */ new WeakSet();
-    const consider = (el2) => {
-      if (seen.has(el2)) return;
-      if (pred(el2)) {
-        seen.add(el2);
-        cb(el2);
-      }
-    };
-    if (callForExisting && "querySelectorAll" in root) {
-      root.querySelectorAll("*").forEach(consider);
-    }
-    const obs = new MutationObserver((muts) => {
-      for (const m of muts) for (const n of Array.from(m.addedNodes)) {
-        if (n.nodeType !== 1) continue;
-        const el2 = n;
-        consider(el2);
-        el2.querySelectorAll?.("*").forEach(consider);
-      }
-    });
-    obs.observe(root, { childList: true, subtree: true });
-    return { disconnect: () => obs.disconnect() };
-  }
-
   // src/utils/activityLogFilter.ts
   var FILTER_STORAGE_KEY = "activityLog.filter";
   var STYLE_ID3 = "mg-activity-log-filter-style";
@@ -45463,11 +45958,11 @@
     { key: "refund", re: /\b(refund|refunded)\b/i },
     { key: "boost", re: /\b(boost|potion|refund|growth|restock|spin)\b/i }
   ];
-  var started3 = false;
+  var started4 = false;
   var activeFilter = loadPersistedFilter() ?? "all";
   function startActivityLogFilter() {
-    if (started3 || typeof document === "undefined") return;
-    started3 = true;
+    if (started4 || typeof document === "undefined") return;
+    started4 = true;
     ensureStyles();
     onAdded(
       (el2) => el2 instanceof HTMLElement && el2.matches("p.chakra-text") && /activity\s*log/i.test(el2.textContent || ""),
@@ -46854,6 +47349,7 @@
     installJournalKeybindsOnce();
     installSeedSiloKeybindsOnce();
     installDecorShedKeybindsOnce();
+    installFeedingTroughKeybindsOnce();
     const bootToolbar = async () => {
       try {
         await renderOverlay();
@@ -46915,6 +47411,7 @@
       startDecorPickupLockIndicator();
       startEggHatchLockIndicator();
       startInjectSellAllPets();
+      startInstantFeedButton();
       startSelectedInventoryQuantityLogger();
       startInventorySortingObserver();
       startModalObserver({ intervalMs: 6e4, log: true });
@@ -56043,6 +56540,40 @@ next: ${next}`;
     let invCacheMap = null;
     const lastRenderedSlotIds = [null, null, null];
     const miniSpriteCache = /* @__PURE__ */ new Map();
+    async function buildPetRenderMap() {
+      let inv = await PetsService.getInventoryPets().catch(() => null);
+      if (!inv || inv.length === 0) {
+      } else {
+        invCacheMap = /* @__PURE__ */ new Map();
+        for (const p of inv) {
+          const id = p?.id != null ? String(p.id) : "";
+          if (id) invCacheMap.set(id, p);
+        }
+      }
+      const map2 = new Map(invCacheMap ?? /* @__PURE__ */ new Map());
+      try {
+        const pets = await PetsService.getPets();
+        const list = Array.isArray(pets) ? pets : [];
+        for (const p of list) {
+          const slot = p?.slot ?? null;
+          const id = String(slot?.id || "");
+          if (!id || map2.has(id)) continue;
+          map2.set(id, {
+            id,
+            itemType: "Pet",
+            petSpecies: String(slot?.petSpecies || "").trim(),
+            name: slot?.name ?? null,
+            xp: Number.isFinite(slot?.xp) ? Number(slot.xp) : 0,
+            hunger: Number.isFinite(slot?.hunger) ? Number(slot.hunger) : 0,
+            mutations: Array.isArray(slot?.mutations) ? slot.mutations.slice() : [],
+            targetScale: Number.isFinite(slot?.targetScale) ? Number(slot.targetScale) : void 0,
+            abilities: Array.isArray(slot?.abilities) ? slot.abilities.slice() : []
+          });
+        }
+      } catch {
+      }
+      return map2;
+    }
     const mkMiniIcon = (pet) => {
       const size = 18;
       const holder = document.createElement("div");
@@ -56277,6 +56808,7 @@ next: ${next}`;
       if (!skipDetectActive) {
         await refreshActiveIds();
       }
+      const renderMap = await buildPetRenderMap();
       clearLiveTransforms();
       draggingIdx = null;
       overInsertIdx = null;
@@ -56331,10 +56863,9 @@ next: ${next}`;
         minis.style.gap = "4px";
         minis.style.alignItems = "center";
         minis.style.marginLeft = "auto";
-        const map2 = invCacheMap ?? /* @__PURE__ */ new Map();
         const slots = Array.isArray(t.slots) ? t.slots.slice(0, 3) : [];
         slots.forEach((id) => {
-          const pet = id != null ? map2.get(String(id)) ?? null : null;
+          const pet = id != null ? renderMap.get(String(id)) ?? null : null;
           minis.appendChild(mkMiniIcon(pet));
         });
         if (slots.length < 3) {
@@ -56855,16 +57386,7 @@ next: ${next}`;
     async function repaintSlots(sourceTeam) {
       const t = sourceTeam ?? getSelectedTeam();
       if (!t) return;
-      let inv = await PetsService.getInventoryPets().catch(() => null);
-      if (!inv || inv.length === 0) {
-      } else {
-        invCacheMap = /* @__PURE__ */ new Map();
-        for (const p of inv) {
-          const id = p?.id != null ? String(p.id) : "";
-          if (id) invCacheMap.set(id, p);
-        }
-      }
-      const map2 = invCacheMap ?? /* @__PURE__ */ new Map();
+      const map2 = await buildPetRenderMap();
       [0, 1, 2].forEach((i) => {
         const id = t.slots[i] || null;
         if (!id) {
@@ -56875,10 +57397,26 @@ next: ${next}`;
           return;
         }
         const pet = map2.get(id);
-        if (!pet) return;
-        if (lastRenderedSlotIds[i] === id) return;
-        secSlots.rows[i].update(pet);
-        lastRenderedSlotIds[i] = id;
+        if (!pet) {
+          if (lastRenderedSlotIds[i] !== id) {
+            secSlots.rows[i].update({
+              id,
+              itemType: "Pet",
+              petSpecies: "",
+              name: null,
+              xp: 0,
+              hunger: 0,
+              mutations: [],
+              abilities: []
+            });
+            lastRenderedSlotIds[i] = id;
+          }
+          return;
+        }
+        if (lastRenderedSlotIds[i] !== id) {
+          secSlots.rows[i].update(pet);
+          lastRenderedSlotIds[i] = id;
+        }
       });
     }
     async function hydrateEditor(team) {
@@ -56926,20 +57464,18 @@ next: ${next}`;
       const t = getSelectedTeam();
       if (!t) return;
       try {
-        const arr = await PetsService.getPets();
-        const list = Array.isArray(arr) ? arr : [];
-        const ids = list.map((p) => String(p?.slot?.id || "")).filter((x) => !!x).slice(0, 3);
+        const ids = await PetsService.getActivePetIds();
         const nextSlots = [ids[0] || null, ids[1] || null, ids[2] || null];
-        PetsService.saveTeam({ id: t.id, slots: nextSlots });
-        await repaintSlots(t);
+        const saved = PetsService.saveTeam({ id: t.id, slots: nextSlots });
+        await repaintSlots(saved ?? getSelectedTeam());
       } catch {
       }
     };
     secSlots.btnClear.onclick = async () => {
       const t = getSelectedTeam();
       if (!t) return;
-      PetsService.saveTeam({ id: t.id, slots: [null, null, null] });
-      await repaintSlots(t);
+      const saved = PetsService.saveTeam({ id: t.id, slots: [null, null, null] });
+      await repaintSlots(saved ?? getSelectedTeam());
     };
     function sameSet(a, b) {
       if (a.length !== b.length) return false;

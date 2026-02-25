@@ -210,6 +210,43 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
 
   const miniSpriteCache = new Map<string, string>();
 
+  async function buildPetRenderMap(): Promise<Map<string, InventoryPet>> {
+    let inv = await PetsService.getInventoryPets().catch(() => null) as InventoryPet[] | null;
+    if (!inv || inv.length === 0) {
+      // keep previous cache (if any)
+    } else {
+      invCacheMap = new Map<string, InventoryPet>();
+      for (const p of inv) {
+        const id = p?.id != null ? String(p.id) : "";
+        if (id) invCacheMap.set(id, p);
+      }
+    }
+
+    const map = new Map<string, InventoryPet>(invCacheMap ?? new Map());
+    try {
+      const pets = await PetsService.getPets();
+      const list = Array.isArray(pets) ? pets : [];
+      for (const p of list) {
+        const slot = (p as any)?.slot ?? null;
+        const id = String(slot?.id || "");
+        if (!id || map.has(id)) continue;
+        map.set(id, {
+          id,
+          itemType: "Pet",
+          petSpecies: String(slot?.petSpecies || "").trim(),
+          name: slot?.name ?? null,
+          xp: Number.isFinite(slot?.xp as number) ? Number(slot.xp) : 0,
+          hunger: Number.isFinite(slot?.hunger as number) ? Number(slot.hunger) : 0,
+          mutations: Array.isArray(slot?.mutations) ? slot.mutations.slice() : [],
+          targetScale: Number.isFinite(slot?.targetScale as number) ? Number(slot.targetScale) : undefined,
+          abilities: Array.isArray(slot?.abilities) ? slot.abilities.slice() : [],
+        });
+      }
+    } catch {}
+
+    return map;
+  }
+
   const mkMiniIcon = (pet: InventoryPet | null): HTMLElement => {
     const size = 18;
     const holder = document.createElement("div");
@@ -469,6 +506,7 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
     if (!skipDetectActive) {
       await refreshActiveIds();
     }
+    const renderMap = await buildPetRenderMap();
     clearLiveTransforms();
     draggingIdx = null;
     overInsertIdx = null;
@@ -528,10 +566,9 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
       minis.style.gap = "4px";
       minis.style.alignItems = "center";
       minis.style.marginLeft = "auto";
-      const map = invCacheMap ?? new Map<string, InventoryPet>();
       const slots = Array.isArray(t.slots) ? t.slots.slice(0, 3) : [];
       slots.forEach((id) => {
-        const pet = id != null ? map.get(String(id)) ?? null : null;
+        const pet = id != null ? renderMap.get(String(id)) ?? null : null;
         minis.appendChild(mkMiniIcon(pet));
       });
       if (slots.length < 3) {
@@ -1132,17 +1169,7 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
   async function repaintSlots(sourceTeam?: PetTeam | null) {
     const t = sourceTeam ?? getSelectedTeam();
     if (!t) return;
-    let inv = await PetsService.getInventoryPets().catch(() => null) as InventoryPet[] | null;
-    if (!inv || inv.length === 0) {
-      // keep previous cache (if any)
-    } else {
-      invCacheMap = new Map<string, InventoryPet>();
-      for (const p of inv) {
-        const id = p?.id != null ? String(p.id) : "";
-        if (id) invCacheMap.set(id, p);
-      }
-    }
-    const map = invCacheMap ?? new Map<string, InventoryPet>();
+    const map = await buildPetRenderMap();
     [0, 1, 2].forEach((i) => {
       const id = (t.slots[i] || null) as string | null;
       if (!id) {
@@ -1153,10 +1180,26 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
         return;
       }
       const pet = map.get(id);
-      if (!pet) return;
-      if (lastRenderedSlotIds[i] === id) return;
-      secSlots.rows[i].update(pet);
-      lastRenderedSlotIds[i] = id;
+      if (!pet) {
+        if (lastRenderedSlotIds[i] !== id) {
+          secSlots.rows[i].update({
+            id,
+            itemType: "Pet",
+            petSpecies: "",
+            name: null,
+            xp: 0,
+            hunger: 0,
+            mutations: [],
+            abilities: [],
+          });
+          lastRenderedSlotIds[i] = id;
+        }
+        return;
+      }
+      if (lastRenderedSlotIds[i] !== id) {
+        secSlots.rows[i].update(pet);
+        lastRenderedSlotIds[i] = id;
+      }
     });
   }
 
@@ -1216,12 +1259,10 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
     const t = getSelectedTeam();
     if (!t) return;
     try {
-      const arr = await PetsService.getPets();
-      const list = Array.isArray(arr) ? arr : [];
-      const ids = list.map(p => String(p?.slot?.id || "")).filter(x => !!x).slice(0, 3);
+      const ids = await PetsService.getActivePetIds();
       const nextSlots: (string | null)[] = [ids[0] || null, ids[1] || null, ids[2] || null];
-      PetsService.saveTeam({ id: t.id, slots: nextSlots });
-      await repaintSlots(t);
+      const saved = PetsService.saveTeam({ id: t.id, slots: nextSlots });
+      await repaintSlots(saved ?? getSelectedTeam());
     } catch {}
   };
 
@@ -1229,8 +1270,8 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
   secSlots.btnClear.onclick = async () => {
     const t = getSelectedTeam();
     if (!t) return;
-    PetsService.saveTeam({ id: t.id, slots: [null, null, null] });
-    await repaintSlots(t);
+    const saved = PetsService.saveTeam({ id: t.id, slots: [null, null, null] });
+    await repaintSlots(saved ?? getSelectedTeam());
   };
 
   function sameSet(a: string[], b: string[]) {

@@ -23,6 +23,7 @@ export type FakeModalOptions = {
 export async function openModal(modalId: ModalId) {
   try {
     await Atoms.ui.activeModal.set(modalId);
+    await Atoms.ui.inventoryModalIsActive.set(modalId === "inventory");
   } catch (err) {
   }
 }
@@ -31,6 +32,9 @@ export async function closeModal(_modalId?: ModalId) {
   // NB: activeModal est unique -> on le remet juste à null
   try {
     await Atoms.ui.activeModal.set(null);
+    if (_modalId === "inventory" || !_modalId) {
+      await Atoms.ui.inventoryModalIsActive.set(false);
+    }
   } catch (err) {
   }
 }
@@ -324,3 +328,5 @@ export async function fakeActivityLogHide() {
   await fakeHide(SHARED_MYDATA_PATCH.label);
   await closeActivityLogModal();
 }
+
+

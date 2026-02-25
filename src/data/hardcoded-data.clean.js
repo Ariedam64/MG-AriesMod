@@ -282,6 +282,8 @@ export const tileRefsDecor = {
     ColoredStringLightsSideways: "sprite/decor/ColoredStringLightsSideways",
     DecorShed: "sprite/decor/DecorShed",
     HayBale: "sprite/decor/HayBale",
+    FeedingTrough: "sprite/decor/FeedingTrough",
+    FeedingTroughCover: "sprite/decor/FeedingTroughCover",
     HayBaleSideways: "sprite/decor/HayBaleSideways",
     LargeGravestone: "sprite/decor/LargeGravestone",
     LargeGravestoneSideways: "sprite/decor/LargeGravestoneSideways",
@@ -1740,7 +1742,7 @@ export const mutationCatalog = {
 export const eggCatalog = {
   CommonEgg: { tileRef: tileRefsPets.CommonEgg, name: "Common Egg", coinPrice: 1e5, creditPrice: 19, rarity: rarity.Common, initialTileScale: 0.3, baseTileScale: 0.8, secondsToHatch: 600, faunaSpawnWeights: { Worm: 60, Snail: 35, Bee: 5 } },
   UncommonEgg: { tileRef: tileRefsPets.UncommonEgg, name: "Uncommon Egg", coinPrice: 1e6, creditPrice: 48, rarity: rarity.Uncommon, initialTileScale: 0.3, baseTileScale: 0.8, secondsToHatch: 3600, faunaSpawnWeights: { Chicken: 65, Bunny: 25, Dragonfly: 10 } },
-  RareEgg: { tileRef: tileRefsPets.RareEgg, name: "Rare Egg", coinPrice: 1e7, creditPrice: 99, rarity: rarity.Rare, initialTileScale: 0.3, baseTileScale: 0.8, secondsToHatch: 21600, faunaSpawnWeights: { Pig: 90, Cow: 10 } },
+  RareEgg: { tileRef: tileRefsPets.RareEgg, name: "Rare Egg", coinPrice: 1e7, creditPrice: 99, rarity: rarity.Rare, initialTileScale: 0.3, baseTileScale: 0.8, secondsToHatch: 21600, faunaSpawnWeights: { Pig: 80, Cow: 15, Turkey: 5 } },
   LegendaryEgg: { tileRef: tileRefsPets.LegendaryEgg, name: "Legendary Egg", coinPrice: 1e8, creditPrice: 249, rarity: rarity.Legendary, initialTileScale: 0.3, baseTileScale: 0.8, secondsToHatch: 43200, faunaSpawnWeights: { Squirrel: 60, Turtle: 30, Goat: 10 } },
   MythicalEgg: { tileRef: tileRefsPets.MythicalEgg, name: "Mythical Egg", coinPrice: 1e9, creditPrice: 599, rarity: rarity.Mythic, initialTileScale: 0.3, baseTileScale: 0.8, secondsToHatch: 86400, faunaSpawnWeights: { Butterfly: 75, Capybara: 5, Peacock: 20 } },
   WinterEgg: {
@@ -2874,6 +2876,12 @@ export const decorCatalog = {
     coinPrice: 80000000000, creditPrice: 499, rarity: rarity.Divine,
     baseTileScale: 2.1, isOneTimePurchase: true, nudgeY: -0.45
   },
+  FeedingTrough: {
+        tileRef: tileRefsDecor.FeedingTrough,
+        name: "Feeding Trough",
+        coinPrice: 1e7,creditPrice: 199,rarity: rarity.Rare,
+        baseTileScale: 1.05,nudgeY: -.45,isOneTimePurchase: true,avatarNudgeY: -.25
+    },
   DecorShed: {
     tileRef: tileRefsDecor.DecorShed,
     name: "Decor Shed",
@@ -3097,12 +3105,12 @@ export const weatherCatalog = {
     stacking: { compatible: ['Gold','Rainbow'], incompatible: ['Amberlit','Dawnlit'] },
     screenEffect: 'Sunrise glow (purple)',
     notes: ['1 fois / 4h', 'Ne se cumule pas avec Amberglow']},
-    Thunderstorm:{
+  Thunderstorm:{
       atomValue:'Thunderstorm',
       mutations: [
       { name: 'Thunderstruck', multiplier: 5 }
     ]
-    }
+  }
 
 }
 

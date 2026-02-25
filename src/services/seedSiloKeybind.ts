@@ -1,4 +1,5 @@
 import { Atoms } from "../store/atoms";
+import { closeModal, openModal } from "./fakeModal";
 import { eventMatchesKeybind, type KeybindId } from "./keybinds";
 import { shouldIgnoreKeydown } from "../utils/keyboard";
 
@@ -10,8 +11,11 @@ let seedSiloKeybindsInstalled = false;
 async function toggleSeedSiloModal(): Promise<void> {
   try {
     const current = await Atoms.ui.activeModal.get();
-    const next = current === SEED_SILO_MODAL_ID ? null : SEED_SILO_MODAL_ID;
-    await Atoms.ui.activeModal.set(next);
+    if (current === SEED_SILO_MODAL_ID) {
+      await closeModal(SEED_SILO_MODAL_ID);
+      return;
+    }
+    await openModal(SEED_SILO_MODAL_ID);
   } catch {
     // ignore failures
   }

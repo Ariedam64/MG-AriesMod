@@ -18,8 +18,8 @@ function getQpmSizeSpan(inner: Element): HTMLElement | null {
 }
 
 export interface AppendOptions {
-  rootSelector?: string;   // default: '.McFlex.css-fsggty'
-  innerSelector?: string;  // default: '.McFlex.css-1omaybc, .McFlex.css-1c3sifn'
+  rootSelector?: string;   // default: '.McFlex.css-fsggty, .McFlex.css-6prrn'
+  innerSelector?: string;  // default: '.McFlex.css-1l3zq7, .McFlex.css-11dqzw'
   markerClass?: string;    // default: 'tm-crop-price'
   root?: ParentNode;       // default: document
   log?: boolean | ((...args: unknown[]) => void);
@@ -27,7 +27,7 @@ export interface AppendOptions {
 export interface AppendController { stop(): void; runOnce(): void; isRunning(): boolean; }
 
 export const DEFAULTS = {
-  rootSelector: ".McFlex.css-fsggty",
+  rootSelector: ".McFlex.css-fsggty, .McFlex.css-6prrn",
   innerSelector: ".McFlex.css-1l3zq7, .McFlex.css-11dqzw",
   markerClass: "tm-crop-price",
 } as const;
@@ -38,7 +38,7 @@ const OMA_SEL = ".McFlex.css-1l3zq7, .McFlex.css-11dqzw";
 // Classes internes de notre bloc marqueur
 const ICON_CLASS = "tm-crop-price-icon";
 const LABEL_CLASS = "tm-crop-price-label";
-const LOCK_TEXT_SELECTOR = ":scope > .chakra-text.css-1uvlb8k";
+const LOCK_TEXT_SELECTOR = ":scope > .chakra-text.css-1jc0opy";
 
 const LOCK_EMOJI = "🔒";
 const LOCK_BORDER_STYLE = "2px solid rgb(188, 53, 215)";
@@ -101,7 +101,7 @@ function updatePanels(
   forEachInner(root, selectors, (inner) => {
     if (shouldSkipInner(inner, markerClass)) {
       removeMarker(inner, markerClass);
-      updateLockEmoji(inner, false);
+      updateLockEmoji(inner, locked);
       return;
     }
     updateLockEmoji(inner, locked);

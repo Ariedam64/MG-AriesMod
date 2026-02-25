@@ -9,7 +9,7 @@ type Options = {
 };
 
 const KNOWN_ARIA = ["Chat", "Leaderboard", "Stats", "Open Activity Log"];
-const TOOLBAR_FALLBACK_CLASS = "css-13izacw";
+const TOOLBAR_FALLBACK_CLASS = "css-14caowy";
 const OWN_BTN_SEL = '[data-qws-btn="true"]';
 
 export function startInjectGamePanelButton(opts: Options): () => void {

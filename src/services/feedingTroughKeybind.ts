@@ -3,27 +3,27 @@ import { closeModal, openModal } from "./fakeModal";
 import { eventMatchesKeybind, type KeybindId } from "./keybinds";
 import { shouldIgnoreKeydown } from "../utils/keyboard";
 
-const ACTION_ID: KeybindId = "game.pet-hutch";
-const PET_HUTCH_MODAL_ID = "petHutch";
+const ACTION_ID: KeybindId = "game.feeding-trough";
+const FEEDING_TROUGH_MODAL_ID = "feedingTrough";
 
-let petHutchKeybindsInstalled = false;
+let feedingTroughKeybindsInstalled = false;
 
-async function togglePetHutchModal(): Promise<void> {
+async function toggleFeedingTroughModal(): Promise<void> {
   try {
     const current = await Atoms.ui.activeModal.get();
-    if (current === PET_HUTCH_MODAL_ID) {
-      await closeModal(PET_HUTCH_MODAL_ID);
+    if (current === FEEDING_TROUGH_MODAL_ID) {
+      await closeModal(FEEDING_TROUGH_MODAL_ID);
       return;
     }
-    await openModal(PET_HUTCH_MODAL_ID);
+    await openModal(FEEDING_TROUGH_MODAL_ID);
   } catch {
     // ignore failures
   }
 }
 
-export function installPetHutchKeybindsOnce(): void {
-  if (petHutchKeybindsInstalled || typeof window === "undefined") return;
-  petHutchKeybindsInstalled = true;
+export function installFeedingTroughKeybindsOnce(): void {
+  if (feedingTroughKeybindsInstalled || typeof window === "undefined") return;
+  feedingTroughKeybindsInstalled = true;
 
   window.addEventListener(
     "keydown",
@@ -33,7 +33,7 @@ export function installPetHutchKeybindsOnce(): void {
 
       event.preventDefault();
       event.stopPropagation();
-      void togglePetHutchModal();
+      void toggleFeedingTroughModal();
     },
     true
   );

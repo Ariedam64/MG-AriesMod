@@ -63,6 +63,12 @@ export type PetOverride = {
 
 export type PetOverridesMap = Record<string, PetOverride>;
 
+export type InstantFeedOverride = {
+  crops: Record<string, { allowed: boolean }>;
+};
+
+export type InstantFeedOverridesMap = Record<string, InstantFeedOverride>;
+
 export type PetsUIState = {
   selectedPetId: string | null;
 };
@@ -71,6 +77,7 @@ type PetImgEntry = { img64?: { normal?: string; gold?: string; rainbow?: string 
 type PetCatalogLoose = Record<string, PetImgEntry>;
 
 const PATH_PETS_OVERRIDES = "pets.overrides";
+const PATH_PETS_INSTANT_FEED = "pets.instantFeed";
 const PATH_PETS_UI = "pets.ui";
 const PATH_PETS_TEAMS = "pets.teams";
 const PATH_PETS_TEAM_SEARCH = "pets.teamSearch";
@@ -653,6 +660,7 @@ async function _ensureInventoryWatchersStarted() {
 
 export async function clearHandSelection(): Promise<void> {
   try { await Atoms.inventory.setSelectedIndexToEnd.set(null); } catch (err) { }
+  try { await Atoms.inventory.mySelectedItemId.set(null); } catch (err) { }
   try { await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.set(null); } catch (err) {  }
   try { await PlayerService.setSelectedItem(null); } catch (err) {  }
   try { await PlayerService.dropObject(); } catch (err) {  }
@@ -681,6 +689,7 @@ const _belowThreshold = new Map<string, boolean>(); // tracks pets that were bel
 const AUTOF_FEED_MIN_INTERVAL_MS = 2000;
 const DEFAULT_OVERRIDE: PetOverride = { enabled: false, thresholdPct: 10, crops: {} };
 const DEFAULT_UI: PetsUIState = { selectedPetId: null };
+const DEFAULT_INSTANT_FEED: InstantFeedOverride = { crops: {} };
 
 let _currentPets: PetInfo[] = [];
 let _userTriggerCb: ((t: AutofeedTrigger) => void) | null = null;
@@ -690,6 +699,13 @@ function saveOverrides(map: PetOverridesMap) {
 }
 function loadOverrides(): PetOverridesMap {
   const obj = readAriesPath<PetOverridesMap>(PATH_PETS_OVERRIDES);
+  return obj && typeof obj === "object" ? obj : {};
+}
+function saveInstantFeedOverrides(map: InstantFeedOverridesMap) {
+  writeAriesPath(PATH_PETS_INSTANT_FEED, map);
+}
+function loadInstantFeedOverrides(): InstantFeedOverridesMap {
+  const obj = readAriesPath<InstantFeedOverridesMap>(PATH_PETS_INSTANT_FEED);
   return obj && typeof obj === "object" ? obj : {};
 }
 function saveUIState(next: PetsUIState) {
@@ -705,6 +721,12 @@ function cloneOverride(o?: PetOverride): PetOverride {
   return {
     enabled: !!src.enabled,
     thresholdPct: Math.min(100, Math.max(1, Number(src.thresholdPct) || DEFAULT_OVERRIDE.thresholdPct)),
+    crops: { ...(src.crops || {}) },
+  };
+}
+function cloneInstantFeedOverride(o?: InstantFeedOverride): InstantFeedOverride {
+  const src = o ?? DEFAULT_INSTANT_FEED;
+  return {
     crops: { ...(src.crops || {}) },
   };
 }
@@ -890,6 +912,38 @@ export const PetsService = {
     for (const c of compatibles) {
       const rule = ov.crops[c];
       if (rule ? !!rule.allowed : true) allowed.add(c); // default: allowed
+    }
+    return allowed;
+  },
+
+  /* ------------------------- Instant feed (per-species) ------------------------- */
+  getInstantFeedOverride(species: string): InstantFeedOverride {
+    const key = _canonicalSpecies(String(species || ""));
+    const all = loadInstantFeedOverrides();
+    return cloneInstantFeedOverride(all[key]);
+  },
+  isInstantFeedCropAllowed(species: string, crop: string): boolean {
+    const ov = this.getInstantFeedOverride(species);
+    const rule = ov.crops[crop];
+    return rule ? !!rule.allowed : true;
+  },
+  setInstantFeedCropAllowed(species: string, crop: string, allowed: boolean): InstantFeedOverride {
+    const key = _canonicalSpecies(String(species || ""));
+    const all = loadInstantFeedOverrides();
+    const cur = cloneInstantFeedOverride(all[key]);
+    cur.crops[crop] = { allowed: !!allowed };
+    all[key] = cur;
+    saveInstantFeedOverrides(all);
+    return cloneInstantFeedOverride(cur);
+  },
+  getInstantFeedAllowedCrops(species: string): Set<string> {
+    const key = _canonicalSpecies(String(species || ""));
+    const compatibles = this.getCompatibleCropsForSpecies(key);
+    const ov = this.getInstantFeedOverride(key);
+    const allowed = new Set<string>();
+    for (const c of compatibles) {
+      const rule = ov.crops[c];
+      if (rule ? !!rule.allowed : true) allowed.add(c);
     }
     return allowed;
   },
@@ -1083,65 +1137,85 @@ export const PetsService = {
         ? await this.buildFilteredInventoryByQuery(searchOverride, { excludeIds: exclude })
         : await this.buildFilteredInventoryForTeam(teamId, { excludeIds: exclude });
 
-    const items: any[] = Array.isArray(payload?.items) ? payload.items : [];
-
-    // Append Pet Hutch pets to the selection list
-    try {
-      const rawHutch = await myPetHutchPetItems.get();
-      const hutchArr = Array.isArray(rawHutch) ? rawHutch : [];
-
-      // Convert to InventoryPet objects
-      let hutchPets: InventoryPet[] = hutchArr
-        .map((it: any) => _inventoryItemToPet(it))
-        .filter((p: InventoryPet | null): p is InventoryPet => !!p);
-
-      // Apply same filtering rules as the base list
+      const items: any[] = Array.isArray(payload?.items) ? payload.items : [];
       const teamSearch = this.getTeamSearch(teamId) || "";
-      if (searchOverride && searchOverride.trim().length) {
-        const q = searchOverride.toLowerCase().trim();
-        if (q) {
-          hutchPets = hutchPets.filter(p =>
-            _s(p.id).includes(q) ||
-            _s(p.petSpecies).includes(q) ||
-            _s(p.name).includes(q) ||
-            (Array.isArray(p.abilities) && p.abilities.some(a => _s(a).includes(q) || _s(_abilityName(a)).includes(q))) ||
-            (Array.isArray(p.mutations) && p.mutations.some(m => _s(m).includes(q)))
-          );
-        }
-      } else if (teamSearch && teamSearch.trim().length) {
-        const { mode, value } = _parseTeamSearch(teamSearch);
-        if (mode === "ability" && value) {
-          const idSet = await _abilityNameToPresentIds(value);
-          hutchPets = idSet.size
-            ? hutchPets.filter(p => Array.isArray(p.abilities) && p.abilities.some(a => idSet.has(a)))
-            : [];
-        } else if (mode === "species" && value) {
-          const vv = value.toLowerCase();
-          hutchPets = hutchPets.filter(p => (p.petSpecies || "").toLowerCase() === vv);
-        } else if (value) {
-          const q = value.toLowerCase();
-          hutchPets = hutchPets.filter(p =>
-            _s(p.id).includes(q) ||
-            _s(p.petSpecies).includes(q) ||
-            _s(p.name).includes(q) ||
-            (Array.isArray(p.abilities) && p.abilities.some(a => _s(a).includes(q) || _s(_abilityName(a)).includes(q))) ||
-            (Array.isArray(p.mutations) && p.mutations.some(m => _s(m).includes(q)))
-          );
-        }
-      }
 
-      // Exclude pets already assigned to other slots
-      if (exclude.size) hutchPets = hutchPets.filter(p => !exclude.has(p.id));
-
-      // Merge unique IDs into the raw items list
-      const seen = new Set(items.map(it => String((it as any)?.id ?? "")));
-      for (const p of hutchPets) {
-        if (!seen.has(p.id)) {
-          items.push(_invPetToRawItem(p));
-          seen.add(p.id);
+      const applyFilters = async (list: InventoryPet[]): Promise<InventoryPet[]> => {
+        let out = Array.isArray(list) ? list : [];
+        if (searchOverride && searchOverride.trim().length) {
+          const q = searchOverride.toLowerCase().trim();
+          if (q) {
+            out = out.filter(p =>
+              _s(p.id).includes(q) ||
+              _s(p.petSpecies).includes(q) ||
+              _s(p.name).includes(q) ||
+              (Array.isArray(p.abilities) && p.abilities.some(a => _s(a).includes(q) || _s(_abilityName(a)).includes(q))) ||
+              (Array.isArray(p.mutations) && p.mutations.some(m => _s(m).includes(q)))
+            );
+          }
+        } else if (teamSearch && teamSearch.trim().length) {
+          const { mode, value } = _parseTeamSearch(teamSearch);
+          if (mode === "ability" && value) {
+            const idSet = await _abilityNameToPresentIds(value);
+            out = idSet.size
+              ? out.filter(p => Array.isArray(p.abilities) && p.abilities.some(a => idSet.has(a)))
+              : [];
+          } else if (mode === "species" && value) {
+            const vv = value.toLowerCase();
+            out = out.filter(p => (p.petSpecies || "").toLowerCase() === vv);
+          } else if (value) {
+            const q = value.toLowerCase();
+            out = out.filter(p =>
+              _s(p.id).includes(q) ||
+              _s(p.petSpecies).includes(q) ||
+              _s(p.name).includes(q) ||
+              (Array.isArray(p.abilities) && p.abilities.some(a => _s(a).includes(q) || _s(_abilityName(a)).includes(q))) ||
+              (Array.isArray(p.mutations) && p.mutations.some(m => _s(m).includes(q)))
+            );
+          }
         }
-      }
-    } catch {}
+
+        if (exclude.size) out = out.filter(p => !exclude.has(p.id));
+        return out;
+      };
+
+      // Append Pet Hutch pets to the selection list
+      try {
+        const rawHutch = await myPetHutchPetItems.get();
+        const hutchArr = Array.isArray(rawHutch) ? rawHutch : [];
+
+        // Convert to InventoryPet objects
+        let hutchPets: InventoryPet[] = hutchArr
+          .map((it: any) => _inventoryItemToPet(it))
+          .filter((p: InventoryPet | null): p is InventoryPet => !!p);
+
+        hutchPets = await applyFilters(hutchPets);
+
+        const seen = new Set(items.map(it => String((it as any)?.id ?? "")));
+        for (const p of hutchPets) {
+          if (!seen.has(p.id)) {
+            items.push(_invPetToRawItem(p));
+            seen.add(p.id);
+          }
+        }
+
+        // Append ACTIVE pets (from primitive atom via PlayerService.getPets)
+        try {
+          const rawActive = await this.getPets();
+          const list = Array.isArray(rawActive) ? rawActive : [];
+          let activePets: InventoryPet[] = list
+            .map((p: any) => _activeSlotToPet(p))
+            .filter((p: InventoryPet | null): p is InventoryPet => !!p);
+
+          activePets = await applyFilters(activePets);
+          for (const p of activePets) {
+            if (!seen.has(p.id)) {
+              items.push(_invPetToRawItem(p));
+              seen.add(p.id);
+            }
+          }
+        } catch {}
+      } catch {}
     if (!items.length) return null;
 
     await fakeInventoryShow(payload, { open: true });

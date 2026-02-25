@@ -1,7 +1,7 @@
 // src/services/shops.ts
 // Service d'accès aux shops (Seeds / Tools / Eggs / Decor) + helpers d'achats et d'inventaire.
 
-import { Atoms } from "../store/atoms";
+import { openModal } from "./fakeModal";
 import { eventMatchesKeybind, type KeybindId } from "./keybinds";
 import { shouldIgnoreKeydown } from "../utils/keyboard";
 import { StatsService} from "./stats";
@@ -39,7 +39,7 @@ export function installShopKeybindsOnce(): void {
 
         event.preventDefault();
         event.stopPropagation();
-        void Atoms.ui.activeModal.set(modal);
+        void openModal(modal);
         break;
       }
     },

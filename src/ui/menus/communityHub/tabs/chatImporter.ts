@@ -1317,6 +1317,7 @@ async function waitForItemSelection(timeoutMs = 120_000): Promise<number | null>
   try { await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.set(null); } catch {}
   try { await Atoms.inventory.myValidatedSelectedItemIndex.set(null); } catch {}
   try { await Atoms.inventory.mySelectedItemName.set(null); } catch {}
+  try { await Atoms.inventory.mySelectedItemId.set(null); } catch {}
 
   while (performance.now() - start < timeoutMs) {
     // If the modal was closed, bail out
@@ -1652,10 +1653,11 @@ async function openItemImportModal(onAttach: (token: GemToken) => void): Promise
       }
     }
 
-    // Clear selection atoms
-    try { await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.set(null); } catch {}
-    try { await Atoms.inventory.myValidatedSelectedItemIndex.set(null); } catch {}
-    try { await Atoms.inventory.mySelectedItemName.set(null); } catch {}
+  // Clear selection atoms
+  try { await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.set(null); } catch {}
+  try { await Atoms.inventory.myValidatedSelectedItemIndex.set(null); } catch {}
+  try { await Atoms.inventory.mySelectedItemName.set(null); } catch {}
+  try { await Atoms.inventory.mySelectedItemId.set(null); } catch {}
 
     // Disable the fake so real inventory data is restored
     await fakeInventoryHide();

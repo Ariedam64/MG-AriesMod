@@ -1,5 +1,5 @@
 import { Atoms } from "../store/atoms";
-import { JOURNAL_MODAL_ID } from "./fakeModal";
+import { closeModal, JOURNAL_MODAL_ID, openModal } from "./fakeModal";
 import { eventMatchesKeybind, type KeybindId } from "./keybinds";
 import { shouldIgnoreKeydown } from "../utils/keyboard";
 
@@ -10,8 +10,11 @@ let journalKeybindsInstalled = false;
 async function toggleJournalModal(): Promise<void> {
   try {
     const current = await Atoms.ui.activeModal.get();
-    const next = current === JOURNAL_MODAL_ID ? null : JOURNAL_MODAL_ID;
-    await Atoms.ui.activeModal.set(next);
+    if (current === JOURNAL_MODAL_ID) {
+      await closeModal(JOURNAL_MODAL_ID);
+      return;
+    }
+    await openModal(JOURNAL_MODAL_ID);
   } catch {
     // ignore errors
   }

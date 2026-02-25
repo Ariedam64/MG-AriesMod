@@ -20,6 +20,7 @@ export type KeybindId =
   | "game.pet-hutch"
   | "game.decor-shed"
   | "game.seed-silo"
+  | "game.feeding-trough"
   | "game.move-up"
   | "game.move-down"
   | "game.move-left"
@@ -176,6 +177,12 @@ const SECTION_CONFIG: KeybindSectionConfig[] = [
       {
         id: "game.seed-silo",
         label: "🌾 Seed Silo",
+        defaultHotkey: null,
+        allowClear: true,
+      },
+      {
+        id: "game.feeding-trough",
+        label: "🍖 Feeding trough",
         defaultHotkey: null,
         allowClear: true,
       },
