@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.36
+// @version      3.1.361
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -28157,13 +28157,17 @@
   var DEFAULT_LABEL = "Instant Feed";
   var MAX_BUTTONS = 3;
   var ICON_SIZE = 18;
+  var GLOBAL_START_FLAG = "__qws_instant_feed_btn_started";
   var started2 = false;
   var activePets = [];
   var roots = /* @__PURE__ */ new Set();
   function startInstantFeedButton() {
+    if (typeof document === "undefined") return;
+    const win = globalThis;
+    if (win[GLOBAL_START_FLAG]) return;
+    win[GLOBAL_START_FLAG] = true;
     if (started2) return;
     started2 = true;
-    if (typeof document === "undefined") return;
     const syncRoots = () => {
       for (const root of Array.from(roots)) {
         if (!root.isConnected) continue;

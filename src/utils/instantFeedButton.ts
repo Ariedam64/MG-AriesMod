@@ -12,6 +12,7 @@ const BTN_INDEX_ATTR = "data-instant-feed-idx";
 const DEFAULT_LABEL = "Instant Feed";
 const MAX_BUTTONS = 3;
 const ICON_SIZE = 18;
+const GLOBAL_START_FLAG = "__qws_instant_feed_btn_started";
 
 type ActivePetSlot = {
   id: string;
@@ -25,10 +26,12 @@ let activePets: ActivePetSlot[] = [];
 const roots = new Set<HTMLElement>();
 
 export function startInstantFeedButton(): void {
+  if (typeof document === "undefined") return;
+  const win = globalThis as any;
+  if (win[GLOBAL_START_FLAG]) return;
+  win[GLOBAL_START_FLAG] = true;
   if (started) return;
   started = true;
-
-  if (typeof document === "undefined") return;
 
   const syncRoots = () => {
     for (const root of Array.from(roots)) {
