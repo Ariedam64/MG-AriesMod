@@ -100,12 +100,13 @@ const DEFAULT_THEME: ThemeColors = {
 };
 
 export const DEFAULTS = {
-  rootSelector: '.McFlex.css-wqzc3n',
-  // gate inchangé : bloc qui contient le bouton
-  checkSelector: '.McFlex.css-bvyqr8',
+  // conteneur principal du panel (tooltip + boutons)
+  rootSelector: '.McFlex.css-1svwxx0',
+  // gate : bloc qui contient le bouton
+  checkSelector: '.McGrid.css-1n1dtdw',
   // nouveau bouton "Sell Pet"
-  buttonSelectorWide: 'button.chakra-button.css-o7uz17, button.chakra-button, button.css-o7uz17',
-  buttonSelectorStrict: 'button.chakra-button.css-o7uz17',
+  buttonSelectorWide: 'button.chakra-button.css-1glc7hj, button.chakra-button, button.css-1glc7hj',
+  buttonSelectorStrict: 'button.chakra-button.css-1glc7hj',
   targetText: 'Sell Pet', // Back-compat only
   injectText: 'Sell all Pets',
   injectedClass: 'tm-injected-sell-all',
@@ -766,7 +767,7 @@ function ensureInjectedNextTo(
   }
 
   injected.addEventListener('click', (ev) => onClick(ev, {
-    host: targetBtn.closest('.McFlex.css-1wu1jyg'),
+    host: targetBtn.closest(DEFAULTS.rootSelector),
     targetBtn,
     injectedBtn: injected!,
   }));
