@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.364
+// @version      3.1.365
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -28166,6 +28166,7 @@
   var allowInject = true;
   var modalOpen = false;
   var inventoryCardOpen = false;
+  var activePetsSig = "";
   var roots = /* @__PURE__ */ new Set();
   function startInstantFeedButton() {
     if (typeof document === "undefined") return;
@@ -28196,7 +28197,11 @@
       recomputeAllowInject();
     };
     const updateActivePets = (next) => {
-      activePets = normalizeActivePets(next);
+      const normalized = normalizeActivePets(next);
+      const sig = buildActivePetsSignature(normalized);
+      if (sig === activePetsSig) return;
+      activePetsSig = sig;
+      activePets = normalized;
       syncRoots();
     };
     void (async () => {
@@ -28441,6 +28446,16 @@
       if (out.length >= MAX_BUTTONS) break;
     }
     return out;
+  }
+  function buildActivePetsSignature(list) {
+    if (!list.length) return "";
+    return list.map((pet) => {
+      const id = String(pet.id ?? "");
+      const species = String(pet.petSpecies ?? "");
+      const name = String(pet.name ?? "");
+      const muts = Array.isArray(pet.mutations) ? pet.mutations.map((m) => String(m ?? "").trim()).filter(Boolean).sort().join(",") : "";
+      return `${id}|${species}|${name}|${muts}`;
+    }).join(";");
   }
   async function findPetById2(petId) {
     try {
