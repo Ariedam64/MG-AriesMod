@@ -4,7 +4,7 @@ import { PlayerService, type PetInfo } from "../services/player";
 import { Store } from "../store/api";
 import { Atoms } from "../store/atoms";
 import { toastSimple } from "../ui/toast";
-import { attachSpriteIcon } from "../ui/spriteIconCache";
+import { attachSpriteIcon, getSpriteWarmupState, onSpriteWarmupProgress } from "../ui/spriteIconCache";
 
 const ROOT_CLASS = "css-pb842o";
 const BAR_ATTR = "data-instant-feed-bar";
@@ -47,6 +47,13 @@ export function startInstantFeedButton(): void {
     }
   };
 
+  let spriteWarmupComplete = false;
+  const notifyWarmupComplete = () => {
+    if (spriteWarmupComplete) return;
+    spriteWarmupComplete = true;
+    syncRoots();
+  };
+
   const recomputeAllowInject = () => {
     const next = !(modalOpen || inventoryCardOpen);
     if (next === allowInject) return;
@@ -74,6 +81,20 @@ export function startInstantFeedButton(): void {
   };
 
   void (async () => {
+    try {
+      const warmup = getSpriteWarmupState();
+      if (warmup?.completed) {
+        notifyWarmupComplete();
+      } else {
+        const unsub = onSpriteWarmupProgress((state) => {
+          if (state.completed) {
+            try { unsub(); } catch {}
+            notifyWarmupComplete();
+          }
+        });
+      }
+    } catch {}
+
     try {
       setAllowInjectFromModal(await Atoms.ui.activeModal.get());
     } catch {}

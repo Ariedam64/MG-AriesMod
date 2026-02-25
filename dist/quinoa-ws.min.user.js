@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.365
+// @version      3.1.366
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -28182,6 +28182,12 @@
         renderBar(root);
       }
     };
+    let spriteWarmupComplete = false;
+    const notifyWarmupComplete = () => {
+      if (spriteWarmupComplete) return;
+      spriteWarmupComplete = true;
+      syncRoots();
+    };
     const recomputeAllowInject = () => {
       const next = !(modalOpen || inventoryCardOpen);
       if (next === allowInject) return;
@@ -28205,6 +28211,23 @@
       syncRoots();
     };
     void (async () => {
+      try {
+        const warmup = getSpriteWarmupState();
+        if (warmup?.completed) {
+          notifyWarmupComplete();
+        } else {
+          const unsub = onSpriteWarmupProgress((state3) => {
+            if (state3.completed) {
+              try {
+                unsub();
+              } catch {
+              }
+              notifyWarmupComplete();
+            }
+          });
+        }
+      } catch {
+      }
       try {
         setAllowInjectFromModal(await Atoms.ui.activeModal.get());
       } catch {
