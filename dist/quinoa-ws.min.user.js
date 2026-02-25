@@ -754,9 +754,9 @@
     const hook = pageWindow.__REACT_DEVTOOLS_GLOBAL_HOOK__;
     if (!hook?.renderers?.size) return null;
     for (const [rid] of hook.renderers) {
-      const roots = hook.getFiberRoots?.(rid);
-      if (!roots) continue;
-      for (const root of roots) {
+      const roots2 = hook.getFiberRoots?.(rid);
+      if (!roots2) continue;
+      for (const root of roots2) {
         const seen = /* @__PURE__ */ new Set();
         const stack = [root.current];
         while (stack.length) {
@@ -11277,6 +11277,32 @@
   };
   var seedKeyFromItem = (item) => normalizeStorageKey(item?.species);
   var decorKeyFromItem = (item) => normalizeStorageKey(item?.decorId);
+  var AUTO_STORE_LOG_PREFIX = "[Misc][AutoStore]";
+  var logAutoStore = (...args) => {
+    try {
+      console.log(AUTO_STORE_LOG_PREFIX, ...args);
+    } catch {
+    }
+  };
+  var AUTO_STORE_DEBOUNCE_MS = 800;
+  var AUTO_STORE_RECENT_REMOVE_MS = 2e3;
+  var diffSet = (prev, next) => {
+    const added = [];
+    const removed = [];
+    for (const key2 of next) if (!prev.has(key2)) added.push(key2);
+    for (const key2 of prev) if (!next.has(key2)) removed.push(key2);
+    return { added, removed };
+  };
+  var pruneRecentMap = (map2, now2, maxAgeMs = AUTO_STORE_RECENT_REMOVE_MS * 4) => {
+    for (const [key2, ts] of map2) {
+      if (now2 - ts > maxAgeMs) map2.delete(key2);
+    }
+  };
+  var summarizeQtyDelta = (prev, next, keys) => keys.map((key2) => ({
+    key: key2,
+    before: prev.get(key2) ?? 0,
+    after: next.get(key2) ?? 0
+  }));
   var autoSeedSiloEnabled = readAutoStoreSeedSiloEnabled(false);
   var autoDecorShedEnabled = readAutoStoreDecorShedEnabled(false);
   var seedSiloItems = /* @__PURE__ */ new Set();
@@ -11285,15 +11311,48 @@
   var seedSiloBusy = false;
   var seedInvUnsub = null;
   var seedSiloUnsub = null;
+  var seedPendingKeys = /* @__PURE__ */ new Set();
+  var seedPendingTimer = null;
+  var seedSiloRemovedAt = /* @__PURE__ */ new Map();
   var decorShedItems = /* @__PURE__ */ new Set();
   var decorInventoryQty = /* @__PURE__ */ new Map();
   var decorShedQueue = /* @__PURE__ */ new Set();
   var decorShedBusy = false;
   var decorInvUnsub = null;
   var decorShedUnsub = null;
+  var decorPendingKeys = /* @__PURE__ */ new Set();
+  var decorPendingTimer = null;
+  var decorShedRemovedAt = /* @__PURE__ */ new Map();
   function queueSeedSiloStore(keys) {
     for (const key2 of keys) if (key2) seedSiloQueue.add(key2);
+    if (keys.length) {
+      logAutoStore("seed queue add", { keys, queueSize: seedSiloQueue.size });
+    }
     void flushSeedSiloQueue();
+  }
+  function queueSeedSiloStoreDebounced(keys) {
+    for (const key2 of keys) if (key2) seedPendingKeys.add(key2);
+    if (!seedPendingKeys.size) return;
+    if (seedPendingTimer != null) return;
+    seedPendingTimer = window.setTimeout(() => {
+      seedPendingTimer = null;
+      const now2 = Date.now();
+      const pending = Array.from(seedPendingKeys);
+      seedPendingKeys.clear();
+      pruneRecentMap(seedSiloRemovedAt, now2);
+      const filtered = [];
+      const skipped = [];
+      for (const key2 of pending) {
+        const removedAt = seedSiloRemovedAt.get(key2) ?? 0;
+        if (removedAt && now2 - removedAt <= AUTO_STORE_RECENT_REMOVE_MS) {
+          skipped.push(key2);
+        } else {
+          filtered.push(key2);
+        }
+      }
+      logAutoStore("seed pending flush", { pending, filtered, skipped });
+      if (filtered.length) queueSeedSiloStore(filtered);
+    }, AUTO_STORE_DEBOUNCE_MS);
   }
   async function flushSeedSiloQueue() {
     if (seedSiloBusy || !autoSeedSiloEnabled) return;
@@ -11302,12 +11361,18 @@
       while (seedSiloQueue.size && autoSeedSiloEnabled) {
         const batch = Array.from(seedSiloQueue);
         seedSiloQueue.clear();
+        logAutoStore("seed flush start", { batchSize: batch.length, batch });
         for (const species of batch) {
           if (!autoSeedSiloEnabled) return;
-          if (!seedSiloItems.has(species)) continue;
+          if (!seedSiloItems.has(species)) {
+            logAutoStore("seed skip (not in silo)", { species, siloSize: seedSiloItems.size });
+            continue;
+          }
           try {
             await PlayerService.putItemInStorage(species, "SeedSilo");
-          } catch {
+            logAutoStore("seed stored", { species });
+          } catch (err) {
+            logAutoStore("seed store failed", { species, err });
           }
         }
       }
@@ -11326,9 +11391,20 @@
       seedInventoryQty = buildQtyMap(await Atoms.inventory.mySeedInventory.get(), seedKeyFromItem);
     } catch {
     }
+    logAutoStore("seed auto-store start", { siloSize: seedSiloItems.size, inventoryKeys: seedInventoryQty.size });
     try {
       seedSiloUnsub = await mySeedSiloItems.onChange((next) => {
-        seedSiloItems = buildKeySet(next, seedKeyFromItem);
+        const prev = seedSiloItems;
+        const nextSet = buildKeySet(next, seedKeyFromItem);
+        seedSiloItems = nextSet;
+        const diff = diffSet(prev, nextSet);
+        if (diff.added.length || diff.removed.length) {
+          if (diff.removed.length) {
+            const now2 = Date.now();
+            for (const key2 of diff.removed) seedSiloRemovedAt.set(key2, now2);
+          }
+          logAutoStore("seed silo items updated", { size: nextSet.size, added: diff.added, removed: diff.removed });
+        }
       });
     } catch {
       seedSiloUnsub = null;
@@ -11336,10 +11412,17 @@
     try {
       seedInvUnsub = await Atoms.inventory.mySeedInventory.onChange((next) => {
         if (!autoSeedSiloEnabled) return;
+        const prevMap = seedInventoryQty;
         const nextMap = buildQtyMap(next, seedKeyFromItem);
-        const increased = diffIncreases(seedInventoryQty, nextMap);
+        const increased = diffIncreases(prevMap, nextMap);
         seedInventoryQty = nextMap;
-        if (increased.length) queueSeedSiloStore(increased);
+        if (increased.length) {
+          logAutoStore("seed inventory increased", {
+            changes: summarizeQtyDelta(prevMap, nextMap, increased),
+            siloSize: seedSiloItems.size
+          });
+          queueSeedSiloStoreDebounced(increased);
+        }
       });
     } catch {
       seedInvUnsub = null;
@@ -11360,10 +11443,44 @@
     seedSiloBusy = false;
     seedSiloItems.clear();
     seedInventoryQty.clear();
+    seedPendingKeys.clear();
+    if (seedPendingTimer != null) {
+      clearTimeout(seedPendingTimer);
+      seedPendingTimer = null;
+    }
+    seedSiloRemovedAt.clear();
+    logAutoStore("seed auto-store stopped");
   }
   function queueDecorShedStore(keys) {
     for (const key2 of keys) if (key2) decorShedQueue.add(key2);
+    if (keys.length) {
+      logAutoStore("decor queue add", { keys, queueSize: decorShedQueue.size });
+    }
     void flushDecorShedQueue();
+  }
+  function queueDecorShedStoreDebounced(keys) {
+    for (const key2 of keys) if (key2) decorPendingKeys.add(key2);
+    if (!decorPendingKeys.size) return;
+    if (decorPendingTimer != null) return;
+    decorPendingTimer = window.setTimeout(() => {
+      decorPendingTimer = null;
+      const now2 = Date.now();
+      const pending = Array.from(decorPendingKeys);
+      decorPendingKeys.clear();
+      pruneRecentMap(decorShedRemovedAt, now2);
+      const filtered = [];
+      const skipped = [];
+      for (const key2 of pending) {
+        const removedAt = decorShedRemovedAt.get(key2) ?? 0;
+        if (removedAt && now2 - removedAt <= AUTO_STORE_RECENT_REMOVE_MS) {
+          skipped.push(key2);
+        } else {
+          filtered.push(key2);
+        }
+      }
+      logAutoStore("decor pending flush", { pending, filtered, skipped });
+      if (filtered.length) queueDecorShedStore(filtered);
+    }, AUTO_STORE_DEBOUNCE_MS);
   }
   async function flushDecorShedQueue() {
     if (decorShedBusy || !autoDecorShedEnabled) return;
@@ -11372,12 +11489,18 @@
       while (decorShedQueue.size && autoDecorShedEnabled) {
         const batch = Array.from(decorShedQueue);
         decorShedQueue.clear();
+        logAutoStore("decor flush start", { batchSize: batch.length, batch });
         for (const decorId of batch) {
           if (!autoDecorShedEnabled) return;
-          if (!decorShedItems.has(decorId)) continue;
+          if (!decorShedItems.has(decorId)) {
+            logAutoStore("decor skip (not in shed)", { decorId, shedSize: decorShedItems.size });
+            continue;
+          }
           try {
             await PlayerService.putItemInStorage(decorId, "DecorShed");
-          } catch {
+            logAutoStore("decor stored", { decorId });
+          } catch (err) {
+            logAutoStore("decor store failed", { decorId, err });
           }
         }
       }
@@ -11396,9 +11519,20 @@
       decorInventoryQty = buildQtyMap(await Atoms.inventory.myDecorInventory.get(), decorKeyFromItem);
     } catch {
     }
+    logAutoStore("decor auto-store start", { shedSize: decorShedItems.size, inventoryKeys: decorInventoryQty.size });
     try {
       decorShedUnsub = await myDecorShedItems.onChange((next) => {
-        decorShedItems = buildKeySet(next, decorKeyFromItem);
+        const prev = decorShedItems;
+        const nextSet = buildKeySet(next, decorKeyFromItem);
+        decorShedItems = nextSet;
+        const diff = diffSet(prev, nextSet);
+        if (diff.added.length || diff.removed.length) {
+          if (diff.removed.length) {
+            const now2 = Date.now();
+            for (const key2 of diff.removed) decorShedRemovedAt.set(key2, now2);
+          }
+          logAutoStore("decor shed items updated", { size: nextSet.size, added: diff.added, removed: diff.removed });
+        }
       });
     } catch {
       decorShedUnsub = null;
@@ -11406,10 +11540,17 @@
     try {
       decorInvUnsub = await Atoms.inventory.myDecorInventory.onChange((next) => {
         if (!autoDecorShedEnabled) return;
+        const prevMap = decorInventoryQty;
         const nextMap = buildQtyMap(next, decorKeyFromItem);
-        const increased = diffIncreases(decorInventoryQty, nextMap);
+        const increased = diffIncreases(prevMap, nextMap);
         decorInventoryQty = nextMap;
-        if (increased.length) queueDecorShedStore(increased);
+        if (increased.length) {
+          logAutoStore("decor inventory increased", {
+            changes: summarizeQtyDelta(prevMap, nextMap, increased),
+            shedSize: decorShedItems.size
+          });
+          queueDecorShedStoreDebounced(increased);
+        }
       });
     } catch {
       decorInvUnsub = null;
@@ -11430,6 +11571,13 @@
     decorShedBusy = false;
     decorShedItems.clear();
     decorInventoryQty.clear();
+    decorPendingKeys.clear();
+    if (decorPendingTimer != null) {
+      clearTimeout(decorPendingTimer);
+      decorPendingTimer = null;
+    }
+    decorShedRemovedAt.clear();
+    logAutoStore("decor auto-store stopped");
   }
   function setAutoStoreSeedSiloEnabled(on) {
     const next = !!on;
@@ -11438,11 +11586,15 @@
       writeAriesPath(PATH_AUTO_STORE_SEED_SILO_ENABLED, next);
     } catch {
     }
+    logAutoStore("seed auto-store toggle", { enabled: next });
     if (next) {
       void (async () => {
         await startSeedSiloAutoStore();
         const keys = Array.from(seedInventoryQty.keys()).filter((k) => seedSiloItems.has(k));
-        if (keys.length) queueSeedSiloStore(keys);
+        if (keys.length) {
+          logAutoStore("seed auto-store initial queue", { keys });
+          queueSeedSiloStore(keys);
+        }
       })();
     } else {
       stopSeedSiloAutoStore();
@@ -11455,11 +11607,15 @@
       writeAriesPath(PATH_AUTO_STORE_DECOR_SHED_ENABLED, next);
     } catch {
     }
+    logAutoStore("decor auto-store toggle", { enabled: next });
     if (next) {
       void (async () => {
         await startDecorShedAutoStore();
         const keys = Array.from(decorInventoryQty.keys()).filter((k) => decorShedItems.has(k));
-        if (keys.length) queueDecorShedStore(keys);
+        if (keys.length) {
+          logAutoStore("decor auto-store initial queue", { keys });
+          queueDecorShedStore(keys);
+        }
       })();
     } else {
       stopDecorShedAutoStore();
@@ -21229,6 +21385,7 @@
   // src/services/pets.ts
   init_fakeModal();
   init_atoms();
+  init_page_context();
   var PATH_PETS_OVERRIDES = "pets.overrides";
   var PATH_PETS_INSTANT_FEED = "pets.instantFeed";
   var PATH_PETS_UI = "pets.ui";
@@ -21556,11 +21713,11 @@
     };
   }
   function _activeSlotToPet(entry) {
-    const slot = entry?.slot;
+    const slot = entry?.slot ?? entry;
     if (!slot || typeof slot !== "object") return null;
     const id = _s(slot.id);
     if (!id) return null;
-    const speciesRaw = slot.petSpecies;
+    const speciesRaw = slot.petSpecies ?? slot.species;
     return {
       id,
       itemType: "Pet",
@@ -21654,6 +21811,22 @@
   async function _startActivePetsWatcher() {
     const unsub = await (async () => {
       try {
+        const curPrim = await Atoms.pets.myPrimitivePetSlots.get();
+        if (Array.isArray(curPrim)) {
+          _activeSig = _buildActiveSig(curPrim);
+          _activeRaw = curPrim;
+          _rebuildInvPets();
+          return Atoms.pets.myPrimitivePetSlots.onChange((list) => {
+            const nextSig = _buildActiveSig(list);
+            if (_mapsEqual(_activeSig, nextSig)) return;
+            _activeSig = nextSig;
+            _activeRaw = Array.isArray(list) ? list : [];
+            _rebuildInvPets();
+          });
+        }
+      } catch {
+      }
+      try {
         const cur = await Atoms.pets.myPetInfos.get();
         _activeSig = _buildActiveSig(cur);
         _activeRaw = Array.isArray(cur) ? cur : [];
@@ -21701,11 +21874,19 @@
     if (!_hutchUnsub) await _startHutchWatcher();
     if (!_invPetsCache.length) {
       try {
-        const [inv, active, hutch] = await Promise.all([
-          Atoms.inventory.myInventory.get(),
-          Atoms.pets.myPetInfos.get(),
-          myPetHutchPetItems.get()
-        ]);
+        const inv = await Atoms.inventory.myInventory.get();
+        let active = null;
+        try {
+          active = await Atoms.pets.myPrimitivePetSlots.get();
+        } catch {
+        }
+        if (!Array.isArray(active)) {
+          try {
+            active = await Atoms.pets.myPetInfos.get();
+          } catch {
+          }
+        }
+        const hutch = await myPetHutchPetItems.get();
         _invSig = _buildInvSigFromInventory(inv);
         _activeSig = _buildActiveSig(active);
         _invRaw = inv;
@@ -22254,9 +22435,9 @@
         try {
           const rawActive = await this.getPets();
           const list = Array.isArray(rawActive) ? rawActive : [];
-          let activePets = list.map((p) => _activeSlotToPet(p)).filter((p) => !!p);
-          activePets = await applyFilters(activePets);
-          for (const p of activePets) {
+          let activePets2 = list.map((p) => _activeSlotToPet(p)).filter((p) => !!p);
+          activePets2 = await applyFilters(activePets2);
+          for (const p of activePets2) {
             if (!seen.has(p.id)) {
               items.push(_invPetToRawItem(p));
               seen.add(p.id);
@@ -22391,7 +22572,10 @@
       }
     },
     async startAbilityLogsWatcher() {
-      await _ensureInventoryWatchersStarted();
+      try {
+        await _ensureInventoryWatchersStarted();
+      } catch {
+      }
       const indexInfosByPetId = (list) => {
         const out = {};
         const arr = Array.isArray(list) ? list : [];
@@ -22400,6 +22584,25 @@
           if (id) out[id] = e;
         }
         return out;
+      };
+      const normalizeSlotInfoMap = (src) => {
+        if (!src) return {};
+        if (Array.isArray(src)) {
+          const out = {};
+          for (const it of src) {
+            if (!it || typeof it !== "object") continue;
+            const id = String(it?.id ?? it?.petId ?? it?.petItemId ?? it?.itemId ?? it?.slot?.id ?? "");
+            if (!id || out[id]) continue;
+            out[id] = {
+              ...it,
+              lastAbilityTrigger: it.lastAbilityTrigger ?? it.slot?.lastAbilityTrigger ?? it.data?.lastAbilityTrigger ?? null,
+              position: it.position ?? it.slot?.position ?? null
+            };
+          }
+          return out;
+        }
+        if (typeof src === "object") return src;
+        return {};
       };
       let myInfosMap = {};
       try {
@@ -22418,12 +22621,12 @@
       }
       const extractFlat = (src) => {
         const out = {};
-        if (!src || typeof src !== "object") return out;
-        const obj = src;
+        const obj = normalizeSlotInfoMap(src);
+        if (!obj || typeof obj !== "object") return out;
         for (const petId of Object.keys(obj)) {
           const entry = obj[petId] ?? {};
-          const lat = entry.lastAbilityTrigger ?? null;
-          let rawH = entry.hungerPct ?? entry.hunger_percentage ?? entry.hunger ?? entry.stats?.hungerPct ?? entry.stats?.hunger?.pct ?? entry.stats?.hunger?.percent ?? null;
+          const lat = entry.lastAbilityTrigger ?? entry.slot?.lastAbilityTrigger ?? entry.data?.lastAbilityTrigger ?? null;
+          let rawH = entry.hungerPct ?? entry.hunger_percentage ?? entry.hunger ?? entry.slot?.hungerPct ?? entry.slot?.hunger_percentage ?? entry.slot?.hunger ?? entry.stats?.hungerPct ?? entry.stats?.hunger?.pct ?? entry.stats?.hunger?.percent ?? null;
           if (rawH == null) {
             const info = myInfosMap[petId];
             rawH = info?.hungerPct ?? info?.hunger_percentage ?? info?.hunger ?? info?.slot?.hungerPct ?? info?.slot?.hunger ?? info?.stats?.hungerPct ?? info?.stats?.hunger?.pct ?? info?.stats?.hunger?.percent ?? null;
@@ -22435,7 +22638,7 @@
             abilityId: lat?.abilityId ?? null,
             performedAt: Number.isFinite(lat?.performedAt) ? lat.performedAt : null,
             data: lat?.data ?? null,
-            position: entry.position ?? null,
+            position: entry.position ?? entry.slot?.position ?? entry.data?.position ?? null,
             hungerPct
           };
         }
@@ -22445,15 +22648,38 @@
         this._ingestAbilityMap(extractFlat(await Atoms.pets.myPetSlotInfos.get()));
       } catch {
       }
-      const stopSlots = await Atoms.pets.myPetSlotInfos.onChange((src) => {
-        try {
-          this._ingestAbilityMap(extractFlat(src));
-        } catch {
-        }
-      });
+      try {
+        this._ingestAbilityMap(extractFlat(await Atoms.pets.myPrimitivePetSlots.get()));
+      } catch {
+      }
+      let stopSlots = null;
+      try {
+        const res = await Atoms.pets.myPetSlotInfos.onChange((src) => {
+          try {
+            this._ingestAbilityMap(extractFlat(src));
+          } catch {
+          }
+        });
+        if (typeof res === "function") stopSlots = res;
+      } catch {
+      }
+      let stopPrimitives = null;
+      try {
+        stopPrimitives = await Atoms.pets.myPrimitivePetSlots.onChange((src) => {
+          try {
+            this._ingestAbilityMap(extractFlat(src));
+          } catch {
+          }
+        });
+      } catch {
+      }
       return () => {
         try {
           stopSlots();
+        } catch {
+        }
+        try {
+          stopPrimitives?.();
         } catch {
         }
         try {
@@ -22758,7 +22984,6 @@
           }
         }
       };
-      const EPS = 1e-6;
       for (const petId of Object.keys(map2)) {
         const entry = map2[petId];
         if (!entry || typeof entry !== "object") continue;
@@ -22768,12 +22993,6 @@
         const prev = this._seenPerfByPet.get(petId) || 0;
         if (performedAtNum <= prev) continue;
         if (this._logsCutoffMs && performedAtNum < this._logsCutoffMs - this._logsCutoffSkewMs) {
-          this._seenPerfByPet.set(petId, performedAtNum);
-          continue;
-        }
-        let hungerPct = Number.isFinite(Number(entry.hungerPct)) ? Number(entry.hungerPct) : null;
-        if (hungerPct != null && hungerPct > 0 && hungerPct <= 1) hungerPct *= 100;
-        if (hungerPct != null && hungerPct <= EPS) {
           this._seenPerfByPet.set(petId, performedAtNum);
           continue;
         }
@@ -22805,6 +23024,11 @@
   };
   try {
     PetsService._restoreAbilityLogsFromStorage();
+  } catch {
+  }
+  try {
+    shareGlobal("QWS_PetsService", PetsService);
+    shareGlobal("QWS_Atoms", Atoms);
   } catch {
   }
   var _HUTCH_MAX = 25;
@@ -27926,93 +28150,255 @@
 
   // src/utils/instantFeedButton.ts
   init_atoms();
-  var INSTANT_FEED_ATTR = "data-instant-feed";
-  var INSTANT_FEED_BOUND_ATTR = "data-instant-feed-bound";
-  var INSTANT_FEED_LABEL = "Instant Feed";
-  var FEED_BTN_BASE_CLASS = "chakra-button";
-  var FEED_BTN_CLASS_A = "css-1sqevwu";
-  var FEED_BTN_CLASS_B = "css-18p13xh";
+  var ROOT_CLASS = "css-pb842o";
+  var BAR_ATTR = "data-instant-feed-bar";
+  var BTN_ATTR = "data-instant-feed-btn";
+  var BTN_INDEX_ATTR = "data-instant-feed-idx";
+  var DEFAULT_LABEL = "Instant Feed";
+  var MAX_BUTTONS = 3;
+  var ICON_SIZE = 18;
   var started2 = false;
+  var activePets = [];
+  var roots = /* @__PURE__ */ new Set();
   function startInstantFeedButton() {
     if (started2) return;
     started2 = true;
     if (typeof document === "undefined") return;
+    const syncRoots = () => {
+      for (const root of Array.from(roots)) {
+        if (!root.isConnected) continue;
+        renderBar(root);
+      }
+    };
+    const updateActivePets = (next) => {
+      activePets = normalizeActivePets(next);
+      syncRoots();
+    };
+    void (async () => {
+      try {
+        updateActivePets(await Atoms.pets.myPrimitivePetSlots.get());
+      } catch {
+      }
+      try {
+        await Atoms.pets.myPrimitivePetSlots.onChange((next) => {
+          updateActivePets(next);
+        });
+      } catch {
+      }
+    })();
     onAdded(
-      (el2) => isPetPanelFeedButton(el2),
+      (el2) => isInstantFeedRoot(el2),
       (el2) => {
-        if (!(el2 instanceof HTMLButtonElement)) return;
-        replaceFeedButton(el2);
+        if (!(el2 instanceof HTMLElement)) return;
+        roots.add(el2);
+        renderBar(el2);
       }
     );
   }
-  function isPetPanelFeedButton(el2) {
-    if (!(el2 instanceof HTMLButtonElement)) return false;
-    if (el2.getAttribute(INSTANT_FEED_BOUND_ATTR) === "1") return false;
-    if (!el2.classList.contains(FEED_BTN_BASE_CLASS) || !el2.classList.contains(FEED_BTN_CLASS_A) && !el2.classList.contains(FEED_BTN_CLASS_B)) {
-      return false;
-    }
-    const grid = el2.closest(".McGrid");
-    if (!grid) return false;
-    const columns = Array.from(grid.children).filter(
-      (child) => child instanceof HTMLElement
-    );
-    if (columns.length < 2) return false;
-    if (!columns[0].classList.contains("McFlex")) return false;
-    if (!columns[1].classList.contains("McFlex")) return false;
-    const leftButtons = Array.from(columns[0].querySelectorAll("button")).filter(
-      (btn) => btn instanceof HTMLButtonElement
-    );
-    const rightButtons = Array.from(columns[1].querySelectorAll("button")).filter(
-      (btn) => btn instanceof HTMLButtonElement
-    );
-    if (!leftButtons.length || !rightButtons.length) return false;
-    const candidate = leftButtons.find((btn) => btn.querySelector("div[style*='scaleX']")) ?? leftButtons[0] ?? null;
-    return candidate === el2;
+  function isInstantFeedRoot(el2) {
+    if (!(el2 instanceof HTMLElement)) return false;
+    if (!el2.classList.contains("McFlex")) return false;
+    if (el2.classList.contains(ROOT_CLASS)) return true;
+    const hasTopNav = !!el2.querySelector(".McGrid.css-8i2u7l");
+    const hasPetActions = !!el2.querySelector(".McGrid.css-1n1dtdw");
+    return hasTopNav && hasPetActions;
   }
-  function replaceFeedButton(original) {
-    const alreadyInstant = original.getAttribute(INSTANT_FEED_ATTR) === "1";
-    const target = alreadyInstant ? original : original.cloneNode(true);
-    const nameBlock = target.querySelector(".McFlex.css-1rdk3wo");
-    if (nameBlock) nameBlock.remove();
-    target.setAttribute(INSTANT_FEED_ATTR, "1");
-    target.setAttribute(INSTANT_FEED_BOUND_ATTR, "1");
-    setButtonLabel(target, INSTANT_FEED_LABEL);
-    target.addEventListener(
-      "click",
-      (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        ev.stopImmediatePropagation?.();
-        void handleInstantFeed(target);
-      },
-      true
-    );
-    if (!alreadyInstant) {
-      original.replaceWith(target);
-    }
+  function renderBar(root) {
+    if (!root.isConnected) return;
+    const bar = ensureBar(root);
+    const buttons = ensureButtons(root, bar);
+    updateButtons(buttons);
   }
-  function setButtonLabel(btn, label2) {
-    let textNode = null;
-    for (const node of Array.from(btn.childNodes)) {
-      if (node.nodeType === Node.TEXT_NODE) {
-        textNode = node;
-        break;
+  function ensureBar(root) {
+    const { host, anchor, stackWithNav } = findBarHost(root);
+    if (stackWithNav) {
+      host.style.display = "flex";
+      host.style.flexDirection = "column";
+      host.style.alignItems = "center";
+      host.style.gap = "6px";
+      host.style.width = "100%";
+    }
+    let bar = root.querySelector(`[${BAR_ATTR}="1"]`);
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.setAttribute(BAR_ATTR, "1");
+      bar.style.display = "grid";
+      bar.style.gridTemplateColumns = `repeat(${MAX_BUTTONS}, max-content)`;
+      bar.style.justifyContent = "center";
+      bar.style.alignItems = "center";
+      bar.style.gap = "6px";
+      bar.style.marginTop = stackWithNav ? "0" : "6px";
+      bar.style.width = "100%";
+      if (anchor && anchor.parentElement === host) {
+        anchor.insertAdjacentElement("afterend", bar);
+      } else {
+        host.appendChild(bar);
+      }
+    } else if (bar.parentElement !== host) {
+      if (anchor && anchor.parentElement === host) {
+        anchor.insertAdjacentElement("afterend", bar);
+      } else {
+        host.appendChild(bar);
+      }
+    } else if (anchor && bar.previousElementSibling !== anchor) {
+      anchor.insertAdjacentElement("afterend", bar);
+    } else if (!anchor && host.lastChild !== bar) {
+      host.appendChild(bar);
+    }
+    return bar;
+  }
+  function findBarHost(root) {
+    const navContainer = root.querySelector(".McFlex.css-1vtdcnr");
+    if (navContainer) {
+      const navGrid2 = navContainer.querySelector(".McGrid.css-8i2u7l");
+      return { host: navContainer, anchor: navGrid2, stackWithNav: true };
+    }
+    const host = root;
+    const navGrid = root.querySelector(".McGrid.css-8i2u7l");
+    const gridAnchor = navGrid ? findDirectChild(host, navGrid) : null;
+    return { host, anchor: gridAnchor, stackWithNav: false };
+  }
+  function findDirectChild(root, node) {
+    let current = node;
+    while (current && current.parentElement && current.parentElement !== root) {
+      current = current.parentElement;
+    }
+    if (current && current.parentElement === root) return current;
+    return null;
+  }
+  function ensureButtons(root, bar) {
+    const existing = Array.from(
+      bar.querySelectorAll(`button[${BTN_ATTR}="1"]`)
+    );
+    for (let i = existing.length; i < MAX_BUTTONS; i++) {
+      const btn = createButton2(root, i);
+      bar.appendChild(btn);
+      existing.push(btn);
+    }
+    while (existing.length > MAX_BUTTONS) {
+      const btn = existing.pop();
+      if (btn) btn.remove();
+    }
+    return existing;
+  }
+  function createButton2(root, index) {
+    const ref = findReferenceButton(root);
+    const btn = ref ? ref.cloneNode(false) : document.createElement("button");
+    if (!btn.classList.contains("chakra-button")) {
+      btn.classList.add("chakra-button");
+    }
+    btn.type = "button";
+    btn.removeAttribute("id");
+    btn.setAttribute(BTN_ATTR, "1");
+    btn.setAttribute(BTN_INDEX_ATTR, String(index));
+    btn.style.display = "inline-flex";
+    btn.style.alignItems = "center";
+    btn.style.justifyContent = "center";
+    btn.style.gap = "6px";
+    btn.style.width = "auto";
+    btn.style.flex = "0 0 auto";
+    btn.style.whiteSpace = "nowrap";
+    btn.style.backgroundColor = "#6D3A88";
+    btn.style.color = "#ffffff";
+    btn.style.pointerEvents = "auto";
+    btn.setAttribute("aria-label", DEFAULT_LABEL);
+    btn.title = DEFAULT_LABEL;
+    ensureButtonContent(btn).label.textContent = DEFAULT_LABEL;
+    btn.addEventListener("click", (ev) => {
+      const target = ev.currentTarget;
+      if (!target) return;
+      const petId = target.dataset.petId || "";
+      if (!petId) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      ev.stopImmediatePropagation?.();
+      void handleInstantFeedForPet(petId, target);
+    });
+    return btn;
+  }
+  function findReferenceButton(root) {
+    const btn = root.querySelector("button.chakra-button");
+    return btn ?? null;
+  }
+  function updateButtons(buttons) {
+    for (let i = 0; i < buttons.length; i++) {
+      const btn = buttons[i];
+      const pet = activePets[i] ?? null;
+      const label2 = DEFAULT_LABEL;
+      const title = pet ? buildButtonTitle(pet) : DEFAULT_LABEL;
+      const parts = ensureButtonContent(btn);
+      parts.label.textContent = label2;
+      btn.setAttribute("aria-label", title);
+      btn.title = title;
+      btn.dataset.petId = pet?.id ?? "";
+      btn.disabled = !pet;
+      btn.style.opacity = pet ? "" : "0.6";
+      if (pet) {
+        parts.icon.textContent = "";
+        const candidates = [pet.petSpecies ?? "", pet.name ?? ""].filter(Boolean);
+        const mutations = Array.isArray(pet.mutations) && pet.mutations.length ? pet.mutations : void 0;
+        attachSpriteIcon(parts.icon, ["pet"], candidates, ICON_SIZE, "instant-feed-btn", {
+          mutations,
+          onNoSpriteFound: () => {
+            parts.icon.textContent = (pet.name || pet.petSpecies || "?").charAt(0).toUpperCase();
+          }
+        });
+      } else {
+        parts.icon.replaceChildren();
       }
     }
-    if (textNode) {
-      textNode.textContent = label2;
-      return;
-    }
-    btn.appendChild(document.createTextNode(label2));
   }
-  async function getPetIdOnSameTile() {
-    try {
-      const raw = await Atoms.pets.myPetIdOnSameTile.get();
-      const id = String(raw || "").trim();
-      return id ? id : null;
-    } catch {
-      return null;
+  function buildButtonTitle(pet) {
+    const name = String(pet.name ?? pet.petSpecies ?? "").trim();
+    return name ? `${DEFAULT_LABEL}: ${name}` : DEFAULT_LABEL;
+  }
+  function ensureButtonContent(btn) {
+    let content = btn.querySelector('[data-instant-feed-content="1"]');
+    let icon = btn.querySelector('[data-instant-feed-icon="1"]');
+    let label2 = btn.querySelector('[data-instant-feed-label="1"]');
+    if (!content || !icon || !label2) {
+      content = document.createElement("span");
+      content.dataset.instantFeedContent = "1";
+      content.style.display = "inline-flex";
+      content.style.alignItems = "center";
+      content.style.justifyContent = "center";
+      content.style.gap = "6px";
+      content.style.pointerEvents = "none";
+      icon = document.createElement("span");
+      icon.dataset.instantFeedIcon = "1";
+      icon.style.display = "inline-flex";
+      icon.style.alignItems = "center";
+      icon.style.justifyContent = "center";
+      icon.style.width = `${ICON_SIZE}px`;
+      icon.style.height = `${ICON_SIZE}px`;
+      icon.style.flex = "0 0 auto";
+      icon.style.pointerEvents = "none";
+      icon.textContent = "";
+      label2 = document.createElement("span");
+      label2.dataset.instantFeedLabel = "1";
+      label2.style.pointerEvents = "none";
+      label2.textContent = DEFAULT_LABEL;
+      content.append(icon, label2);
+      btn.replaceChildren(content);
     }
+    return { icon, label: label2 };
+  }
+  function normalizeActivePets(value) {
+    const list = Array.isArray(value) ? value : [];
+    const out = [];
+    for (const entry of list) {
+      if (!entry || typeof entry !== "object") continue;
+      const raw = entry;
+      const id = String(raw?.id ?? raw?.slot?.id ?? "").trim();
+      if (!id) continue;
+      const name = raw?.name ?? raw?.petName ?? raw?.slot?.name ?? null;
+      const petSpecies = raw?.petSpecies ?? raw?.species ?? raw?.slot?.petSpecies ?? null;
+      const mutationsRaw = raw?.mutations ?? raw?.slot?.mutations ?? raw?.data?.mutations ?? raw?.slot?.data?.mutations ?? raw?.pet?.mutations ?? null;
+      const mutations = Array.isArray(mutationsRaw) ? mutationsRaw.map((m) => String(m ?? "").trim()).filter(Boolean) : void 0;
+      out.push({ id, name, petSpecies, mutations });
+      if (out.length >= MAX_BUTTONS) break;
+    }
+    return out;
   }
   async function findPetById2(petId) {
     try {
@@ -28024,18 +28410,15 @@
       return null;
     }
   }
-  async function handleInstantFeed(btn) {
+  async function handleInstantFeedForPet(petId, btn) {
+    if (!petId) return;
     const prevDisabled = btn.disabled;
+    const expectedPetId = petId;
     btn.disabled = true;
     try {
-      const petId = await getPetIdOnSameTile();
-      if (!petId) {
-        await toastSimple("Instant feed", "No pet detected on the same tile.", "error");
-        return;
-      }
       const pet = await findPetById2(petId);
       if (!pet) {
-        await toastSimple("Instant feed", "Unable to resolve expanded pet.", "error");
+        await toastSimple("Instant feed", "Unable to resolve selected pet.", "error");
         return;
       }
       const species = String(pet?.slot?.petSpecies || "");
@@ -28084,7 +28467,9 @@
         "error"
       );
     } finally {
-      btn.disabled = prevDisabled;
+      if (btn.dataset.petId === expectedPetId) {
+        btn.disabled = prevDisabled;
+      }
     }
   }
   function formatHungerPct(pct) {
@@ -41493,7 +41878,7 @@
     style3.textContent = css3;
     document.head.appendChild(style3);
   }
-  function createButton2(templateBtn) {
+  function createButton3(templateBtn) {
     const btn = document.createElement("button");
     btn.type = "button";
     if (templateBtn?.className) {
@@ -41583,7 +41968,7 @@
     if (btns.length < 2) return;
     let middle = row.querySelector(`button.${BTN_CLASS}`);
     if (!middle) {
-      middle = createButton2(btns[0]);
+      middle = createButton3(btns[0]);
       row.insertBefore(middle, btns[1]);
     }
     const disabled = isItemDisabled(itemEl);
@@ -42853,7 +43238,7 @@
       }
       return existing;
     };
-    const setButtonLabel2 = (label2) => {
+    const setButtonLabel = (label2) => {
       const contentNode = Array.from(button.childNodes).find((node) => {
         if (quantityContainer && node === quantityContainer) return false;
         const text = node.textContent ?? "";
@@ -42874,12 +43259,12 @@
     }
     if (quantity == null) {
       button.dataset.lastQuantity = "";
-      setButtonLabel2(baseLabel);
+      setButtonLabel(baseLabel);
       return;
     }
     const labelWithQuantity = baseLabel ? `${baseLabel} \xD7${quantity}` : `\xD7${quantity}`;
     button.dataset.lastQuantity = String(quantity);
-    setButtonLabel2(labelWithQuantity);
+    setButtonLabel(labelWithQuantity);
   }
   function ensureButtonVisibilityObserver(button) {
     if (typeof IntersectionObserver === "undefined") return;
@@ -46013,7 +46398,7 @@
         btn.addEventListener("click", () => {
           activeFilter = action2;
           persistFilter(action2);
-          updateButtons(buttons);
+          updateButtons2(buttons);
           applyFilter(entriesContainer, activeFilter);
         });
         buttons.appendChild(btn);
@@ -46029,7 +46414,7 @@
       if (!counts.has(activeFilter) && activeFilter !== "all") {
         activeFilter = "all";
         persistFilter(activeFilter);
-        updateButtons(buttons);
+        updateButtons2(buttons);
       }
       applyFilter(entriesContainer, activeFilter);
     };
@@ -46113,7 +46498,7 @@
       entry.style.display = visible ? "" : "none";
     }
   }
-  function updateButtons(buttons) {
+  function updateButtons2(buttons) {
     buttons.querySelectorAll(`.${BUTTON_CLASS}`).forEach((btn) => {
       if (!(btn instanceof HTMLButtonElement)) return;
       const action2 = btn.dataset.action;
@@ -54392,7 +54777,7 @@ next: ${next}`;
   }
 
   // src/ui/menus/calculator.ts
-  var ROOT_CLASS = "mg-crop-simulation";
+  var ROOT_CLASS2 = "mg-crop-simulation";
   var SIZE_MIN = 50;
   var SIZE_MAX = 100;
   var SCALE_MIN = 1;
@@ -54457,7 +54842,7 @@ next: ${next}`;
     "moonbinderpod"
   ]);
   var CROP_SIMULATION_CSS = `
-.${ROOT_CLASS} {
+.${ROOT_CLASS2} {
   display: none;
   width: min(100%, 500px);
   padding: 12px 14px;
@@ -54470,36 +54855,36 @@ next: ${next}`;
   z-index: 2000;
   pointer-events: auto;
 }
-.${ROOT_CLASS} .mg-crop-simulation__header {
+.${ROOT_CLASS2} .mg-crop-simulation__header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
 }
-.${ROOT_CLASS} .mg-crop-simulation__title {
+.${ROOT_CLASS2} .mg-crop-simulation__title {
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: #f8fafc;
 }
-.${ROOT_CLASS} .mg-crop-simulation__crop-name {
+.${ROOT_CLASS2} .mg-crop-simulation__crop-name {
   font-size: 13px;
   font-weight: 600;
   color: #5eead4;
   text-transform: capitalize;
 }
-.${ROOT_CLASS} .mg-crop-simulation__sprite-section {
+.${ROOT_CLASS2} .mg-crop-simulation__sprite-section {
   display: flex;
   flex-direction: column;
 }
-.${ROOT_CLASS} .mg-crop-simulation__sprite-box {
+.${ROOT_CLASS2} .mg-crop-simulation__sprite-box {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 12px;
 }
-.${ROOT_CLASS} .mg-crop-simulation__sprite {
+.${ROOT_CLASS2} .mg-crop-simulation__sprite {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -54511,54 +54896,54 @@ next: ${next}`;
   transform-origin: center;
   transform: scale(var(--mg-crop-simulation-scale));
 }
-.${ROOT_CLASS} .mg-crop-simulation__sprite-layer,
-.${ROOT_CLASS} .mg-crop-simulation__sprite-fallback {
+.${ROOT_CLASS2} .mg-crop-simulation__sprite-layer,
+.${ROOT_CLASS2} .mg-crop-simulation__sprite-fallback {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.${ROOT_CLASS} .mg-crop-simulation__sprite-layer img {
+.${ROOT_CLASS2} .mg-crop-simulation__sprite-layer img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   image-rendering: pixelated;
 }
-.${ROOT_CLASS} .mg-crop-simulation__sprite-layer--base {
+.${ROOT_CLASS2} .mg-crop-simulation__sprite-layer--base {
   z-index: 1;
 }
-.${ROOT_CLASS} .mg-crop-simulation__sprite-layer--overlay {
+.${ROOT_CLASS2} .mg-crop-simulation__sprite-layer--overlay {
   z-index: 2;
   transform: translateY(-4px);
 }
-.${ROOT_CLASS} .mg-crop-simulation__sprite-layer--overlay-lighting {
+.${ROOT_CLASS2} .mg-crop-simulation__sprite-layer--overlay-lighting {
   transform: translateY(-30px);
 }
-.${ROOT_CLASS} .mg-crop-simulation__sprite-fallback {
+.${ROOT_CLASS2} .mg-crop-simulation__sprite-fallback {
   z-index: 0;
   font-size: 42px;
 }
-.${ROOT_CLASS} .mg-crop-simulation__sprite[data-mg-has-sprite="1"] .mg-crop-simulation__sprite-fallback {
+.${ROOT_CLASS2} .mg-crop-simulation__sprite[data-mg-has-sprite="1"] .mg-crop-simulation__sprite-fallback {
   opacity: 0;
 }
-.${ROOT_CLASS} .mg-crop-simulation__slider-container {
+.${ROOT_CLASS2} .mg-crop-simulation__slider-container {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
 }
-.${ROOT_CLASS} .mg-crop-simulation__slider-row {
+.${ROOT_CLASS2} .mg-crop-simulation__slider-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.${ROOT_CLASS} .mg-crop-simulation__slider-label {
+.${ROOT_CLASS2} .mg-crop-simulation__slider-label {
   font-size: 12px;
   color: rgba(226, 232, 240, 0.82);
   flex: 0 0 auto;
 }
-.${ROOT_CLASS} .mg-crop-simulation__slider-value {
+.${ROOT_CLASS2} .mg-crop-simulation__slider-value {
   margin-left: auto;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -54569,19 +54954,19 @@ next: ${next}`;
   flex: 0 0 4ch;
   white-space: nowrap;
 }
-.${ROOT_CLASS} .mg-crop-simulation__slider-weight {
+.${ROOT_CLASS2} .mg-crop-simulation__slider-weight {
   font-size: 11px;
   color: rgba(148, 163, 184, 0.82);
   font-variant-numeric: tabular-nums;
   text-align: center;
   white-space: nowrap;
 }
-.${ROOT_CLASS} .mg-crop-simulation__slider {
+.${ROOT_CLASS2} .mg-crop-simulation__slider {
   flex: 1 1 auto;
   min-width: 0;
   accent-color: #5eead4;
 }
-.${ROOT_CLASS} .mg-crop-simulation__price {
+.${ROOT_CLASS2} .mg-crop-simulation__price {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -54591,7 +54976,7 @@ next: ${next}`;
   align-self: flex-start;
   margin-top: auto;
 }
-.${ROOT_CLASS} .mg-crop-simulation__price-icon {
+.${ROOT_CLASS2} .mg-crop-simulation__price-icon {
   width: 20px;
   height: 20px;
   flex: 0 0 auto;
@@ -54599,19 +54984,19 @@ next: ${next}`;
   user-select: none;
   pointer-events: none;
 }
-.${ROOT_CLASS} .mg-crop-simulation__price-value {
+.${ROOT_CLASS2} .mg-crop-simulation__price-value {
   line-height: 1;
 }
-.${ROOT_CLASS} .mg-crop-simulation__section-title {
+.${ROOT_CLASS2} .mg-crop-simulation__section-title {
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: rgba(148, 163, 184, 0.9);
 }
-.${ROOT_CLASS}.mg-crop-simulation--calculator {
+.${ROOT_CLASS2}.mg-crop-simulation--calculator {
   align-items: center;
 }
-.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__layout {
+.${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-calculator__layout {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -54619,7 +55004,7 @@ next: ${next}`;
   width: min(440px, 100%);
   margin: 0 auto;
 }
-.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__section {
+.${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-calculator__section {
   display: grid;
   gap: 10px;
   padding: 12px;
@@ -54629,7 +55014,7 @@ next: ${next}`;
   box-shadow: none;
   justify-items: stretch;
 }
-.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__section-heading {
+.${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-calculator__section-heading {
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -54637,32 +55022,32 @@ next: ${next}`;
   font-weight: 600;
   text-align: center;
 }
-.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__section--preview {
+.${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-calculator__section--preview {
   justify-items: center;
   text-align: center;
 }
-.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__section--preview .mg-crop-simulation__slider-row {
+.${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-calculator__section--preview .mg-crop-simulation__slider-row {
   width: 100%;
 }
-.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__mutations-weather {
+.${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-calculator__mutations-weather {
   display: grid;
   gap: 8px;
 }
-.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__mutations-heading {
+.${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-calculator__mutations-heading {
   font-size: 10px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: rgba(148, 163, 184, 0.82);
   text-align: center;
 }
-.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-simulation__price {
+.${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-simulation__price {
   margin-top: 0;
 }
-.${ROOT_CLASS} .mg-crop-simulation__segmented {
+.${ROOT_CLASS2} .mg-crop-simulation__segmented {
   display: flex;
   width: 100%;
 }
-.${ROOT_CLASS} .mg-crop-simulation__segmented-control {
+.${ROOT_CLASS2} .mg-crop-simulation__segmented-control {
   --qmm-bg-soft: rgba(11, 15, 19, 0.8);
   --qmm-border-2: rgba(148, 163, 184, 0.28);
   --qmm-text: #e2e8f0;
@@ -54674,7 +55059,7 @@ next: ${next}`;
   min-width: 0;
   width: 100%;
 }
-.${ROOT_CLASS} .mg-crop-simulation__segmented-control .qmm-seg__btn {
+.${ROOT_CLASS2} .mg-crop-simulation__segmented-control .qmm-seg__btn {
   font-size: 11px;
   letter-spacing: 0.02em;
   font-weight: 600;
@@ -54685,17 +55070,17 @@ next: ${next}`;
   text-align: center;
   min-width: 0;
 }
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="none"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="none"].active {
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="none"],
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="none"].active {
   color: rgba(148, 163, 184, 0.92);
 }
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="gold"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="gold"].active {
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="gold"],
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="gold"].active {
   color: #facc15;
   font-weight: 700;
 }
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="gold"] .qmm-seg__btn-label,
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="gold"].active .qmm-seg__btn-label {
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="gold"] .qmm-seg__btn-label,
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="gold"].active .qmm-seg__btn-label {
   color: transparent;
   background-image: linear-gradient(90deg, #fef08a, #facc15, #fef08a);
   background-clip: text;
@@ -54704,13 +55089,13 @@ next: ${next}`;
   background-size: 100% 100%;
   background-repeat: no-repeat;
 }
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="rainbow"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="rainbow"].active {
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="rainbow"],
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="rainbow"].active {
   color: #fbbf24;
   font-weight: 700;
 }
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="rainbow"] .qmm-seg__btn-label,
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="rainbow"].active .qmm-seg__btn-label {
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="rainbow"] .qmm-seg__btn-label,
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="rainbow"].active .qmm-seg__btn-label {
   color: transparent;
   background-image: linear-gradient(90deg, #f87171, #fbbf24, #34d399, #5eead4, #c084fc);
   background-clip: text;
@@ -54719,53 +55104,53 @@ next: ${next}`;
   background-size: 100% 100%;
   background-repeat: no-repeat;
 }
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="none"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="none"].active,
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="none"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="none"].active {
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="none"],
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="none"].active,
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="none"],
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="none"].active {
   color: rgba(148, 163, 184, 0.92);
 }
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="wet"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="wet"].active {
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="wet"],
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="wet"].active {
   color: #5AF6F5;
   font-weight: 700;
 }
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="chilled"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="chilled"].active {
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="chilled"],
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="chilled"].active {
   color: #AFE0F6;
   font-weight: 700;
 }
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="frozen"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="frozen"].active {
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="frozen"],
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="frozen"].active {
   color: #AABEFF;
   font-weight: 700;
 }
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="thunderstruck"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="thunderstruck"].active {
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="thunderstruck"],
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="thunderstruck"].active {
   color: rgb(16, 141, 163);
   font-weight: 700;
 }
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="dawnlit"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="dawnlit"].active {
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="dawnlit"],
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="dawnlit"].active {
   color: #7864B4;
   font-weight: 700;
 }
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="dawnbound"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="dawnbound"].active {
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="dawnbound"],
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="dawnbound"].active {
   color: #9785CB;
   font-weight: 700;
 }
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="amberlit"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="amberlit"].active {
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="amberlit"],
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="amberlit"].active {
   color: #A04632;
   font-weight: 700;
 }
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="amberbound"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="amberbound"].active {
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="amberbound"],
+.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="amberbound"].active {
   color: #F06E50;
   font-weight: 700;
 }
-.${ROOT_CLASS} .mg-crop-simulation__mutations-section {
+.${ROOT_CLASS2} .mg-crop-simulation__mutations-section {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -54887,19 +55272,19 @@ next: ${next}`;
     ensureCropSimulationStyles();
     if (calculatorStyleEl) return;
     calculatorStyleEl = addStyle(`
-    .${ROOT_CLASS}.mg-crop-simulation--calculator {
+    .${ROOT_CLASS2}.mg-crop-simulation--calculator {
       width: 100%;
       max-width: none;
       min-width: 0;
       position: relative;
     }
-    .${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-simulation__price {
+    .${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-simulation__price {
       justify-content: center;
       margin: 0 0 12px;
       font-size: 20px;
       gap: 10px;
     }
-    .${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-simulation__price-value {
+    .${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-simulation__price-value {
       font-size: 20px;
     }
     .mg-crop-calculator__placeholder {
@@ -55153,7 +55538,7 @@ next: ${next}`;
       });
       right.appendChild(detailScroll);
       const simulationRoot = document.createElement("div");
-      simulationRoot.className = `${ROOT_CLASS} mg-crop-simulation--visible mg-crop-simulation--calculator`;
+      simulationRoot.className = `${ROOT_CLASS2} mg-crop-simulation--visible mg-crop-simulation--calculator`;
       const detailLayout = document.createElement("div");
       detailLayout.className = "mg-crop-calculator__layout";
       const createSection = (title, extraClass) => {
@@ -55683,8 +56068,8 @@ next: ${next}`;
       activePetsRaw = null;
     }
     const items = getInventoryItems(inventory);
-    const activePets = Array.isArray(activePetsRaw) ? activePetsRaw : [];
-    if (items.length === 0 && activePets.length === 0) return;
+    const activePets2 = Array.isArray(activePetsRaw) ? activePetsRaw : [];
+    if (items.length === 0 && activePets2.length === 0) return;
     const countsBySpecies = /* @__PURE__ */ new Map();
     for (const item of items) {
       if (!isPlainRecord(item)) continue;
@@ -55699,7 +56084,7 @@ next: ${next}`;
       counts[rarityKey] = (counts[rarityKey] ?? 0) + 1;
       countsBySpecies.set(key2, counts);
     }
-    for (const entry of activePets) {
+    for (const entry of activePets2) {
       if (!isPlainRecord(entry)) continue;
       const slot = isPlainRecord(entry.slot) ? entry.slot : null;
       if (!slot) continue;
@@ -60776,7 +61161,7 @@ next: ${next}`;
         btn.setAttribute("aria-disabled", (!enabled).toString());
       }
     };
-    const updateButtons2 = (current) => {
+    const updateButtons3 = (current) => {
       const hasHotkey = hotkeyToString(current).length > 0;
       if (clearBtn) {
         setButtonEnabled(clearBtn, hasHotkey);
@@ -60791,7 +61176,7 @@ next: ${next}`;
         setKeybind(action2.id, null);
         const refreshed = getKeybind(action2.id);
         button.refreshHotkey(refreshed);
-        updateButtons2(refreshed);
+        updateButtons3(refreshed);
       });
     }
     if (resetBtn) {
@@ -60799,14 +61184,14 @@ next: ${next}`;
         resetKeybind(action2.id);
         const refreshed = getKeybind(action2.id);
         button.refreshHotkey(refreshed);
-        updateButtons2(refreshed);
+        updateButtons3(refreshed);
       });
     }
     controls.appendChild(actionsWrap);
-    updateButtons2(getKeybind(action2.id));
+    updateButtons3(getKeybind(action2.id));
     const stop2 = onKeybindChange(action2.id, (hk) => {
       button.refreshHotkey(hk);
-      updateButtons2(hk);
+      updateButtons3(hk);
     });
     ui.on("unmounted", stop2);
     if (detachHoldListener) ui.on("unmounted", detachHoldListener);

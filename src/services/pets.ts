@@ -23,6 +23,7 @@ import {
 import { shouldIgnoreKeydown } from "../utils/keyboard";
 import { StatsService } from "./stats";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
+import { shareGlobal } from "../utils/page-context";
 
 /* ----------------------------- Types & constants ----------------------------- */
 
@@ -476,7 +477,7 @@ async function _syncLastUsedFromActive(): Promise<void> {
 /* --------------------------------- Inventory cache/watchers -------------------------------- */
 
 let _invRaw: any = null;      // myInventory snapshot
-let _activeRaw: any[] = [];   // myPetInfos snapshot
+let _activeRaw: any[] = [];   // active pets snapshot (primitive preferred)
 let _hutchRaw: any[] = [];    // myPetHutchPetItems snapshot
 let _invPetsCache: InventoryPet[] = [];
 
@@ -507,11 +508,11 @@ function _inventoryItemToPet(x: any): InventoryPet | null {
   };
 }
 function _activeSlotToPet(entry: any): InventoryPet | null {
-  const slot = entry?.slot;
+  const slot = entry?.slot ?? entry;
   if (!slot || typeof slot !== "object") return null;
   const id = _s(slot.id);
   if (!id) return null;
-  const speciesRaw = slot.petSpecies;
+  const speciesRaw = slot.petSpecies ?? slot.species;
   return {
     id,
     itemType: "Pet",
@@ -535,6 +536,7 @@ function _petSigStableNoXpNoHunger(p: InventoryPet): string {
     abilities: Array.isArray(p.abilities) ? p.abilities : [],
   });
 }
+
 function _buildInvSigFromInventory(inv: any): Map<string, string> {
   const out = new Map<string, string>();
   const items: any[] =
@@ -605,6 +607,21 @@ async function _startInventoryWatcher() {
 async function _startActivePetsWatcher() {
   const unsub = await (async () => {
     try {
+      const curPrim = await Atoms.pets.myPrimitivePetSlots.get();
+      if (Array.isArray(curPrim)) {
+        _activeSig = _buildActiveSig(curPrim);
+        _activeRaw = curPrim;
+        _rebuildInvPets();
+        return Atoms.pets.myPrimitivePetSlots.onChange((list: any) => {
+          const nextSig = _buildActiveSig(list);
+          if (_mapsEqual(_activeSig, nextSig)) return;
+          _activeSig = nextSig;
+          _activeRaw = Array.isArray(list) ? list : [];
+          _rebuildInvPets();
+        });
+      }
+    } catch {}
+    try {
       const cur = await Atoms.pets.myPetInfos.get();
       _activeSig = _buildActiveSig(cur);
       _activeRaw = Array.isArray(cur) ? cur : [];
@@ -641,11 +658,13 @@ async function _ensureInventoryWatchersStarted() {
 
   if (!_invPetsCache.length) {
     try {
-      const [inv, active, hutch] = await Promise.all([
-        Atoms.inventory.myInventory.get(),
-        Atoms.pets.myPetInfos.get(),
-        myPetHutchPetItems.get(),
-      ]);
+      const inv = await Atoms.inventory.myInventory.get();
+      let active: any = null;
+      try { active = await Atoms.pets.myPrimitivePetSlots.get(); } catch {}
+      if (!Array.isArray(active)) {
+        try { active = await Atoms.pets.myPetInfos.get(); } catch {}
+      }
+      const hutch = await myPetHutchPetItems.get();
       _invSig    = _buildInvSigFromInventory(inv);
       _activeSig = _buildActiveSig(active);
       _invRaw    = inv;
@@ -1388,7 +1407,7 @@ export const PetsService = {
   },
 
   async startAbilityLogsWatcher(): Promise<() => void> {
-    await _ensureInventoryWatchersStarted();
+    try { await _ensureInventoryWatchersStarted(); } catch {}
 
     const indexInfosByPetId = (list: any): Record<string, any> => {
       const out: Record<string, any> = {};
@@ -1398,6 +1417,30 @@ export const PetsService = {
         if (id) out[id] = e;
       }
       return out;
+    };
+
+    const normalizeSlotInfoMap = (src: any): Record<string, any> => {
+      if (!src) return {};
+      if (Array.isArray(src)) {
+        const out: Record<string, any> = {};
+        for (const it of src) {
+          if (!it || typeof it !== "object") continue;
+          const id = String((it as any)?.id ?? (it as any)?.petId ?? (it as any)?.petItemId ?? (it as any)?.itemId ?? (it as any)?.slot?.id ?? "");
+          if (!id || out[id]) continue;
+          out[id] = {
+            ...(it as any),
+            lastAbilityTrigger:
+              (it as any).lastAbilityTrigger ??
+              (it as any).slot?.lastAbilityTrigger ??
+              (it as any).data?.lastAbilityTrigger ??
+              null,
+            position: (it as any).position ?? (it as any).slot?.position ?? null,
+          };
+        }
+        return out;
+      }
+      if (typeof src === "object") return src as Record<string, any>;
+      return {};
     };
 
     let myInfosMap: Record<string, any> = {};
@@ -1412,17 +1455,24 @@ export const PetsService = {
 
     const extractFlat = (src: any): Record<string, FlatAbilityEntry | null> => {
       const out: Record<string, FlatAbilityEntry | null> = {};
-      if (!src || typeof src !== "object") return out;
-      const obj = src as Record<string, any>;
+      const obj = normalizeSlotInfoMap(src);
+      if (!obj || typeof obj !== "object") return out;
 
       for (const petId of Object.keys(obj)) {
         const entry = obj[petId] ?? {};
-        const lat   = entry.lastAbilityTrigger ?? null;
+        const lat =
+          entry.lastAbilityTrigger ??
+          entry.slot?.lastAbilityTrigger ??
+          entry.data?.lastAbilityTrigger ??
+          null;
 
         let rawH =
           entry.hungerPct ??
           entry.hunger_percentage ??
           entry.hunger ??
+          entry.slot?.hungerPct ??
+          entry.slot?.hunger_percentage ??
+          entry.slot?.hunger ??
           entry.stats?.hungerPct ??
           entry.stats?.hunger?.pct ??
           entry.stats?.hunger?.percent ??
@@ -1445,7 +1495,7 @@ export const PetsService = {
           abilityId: lat?.abilityId ?? null,
           performedAt: Number.isFinite(lat?.performedAt) ? lat.performedAt : null,
           data: lat?.data ?? null,
-          position: entry.position ?? null,
+          position: entry.position ?? entry.slot?.position ?? entry.data?.position ?? null,
           hungerPct,
         };
       }
@@ -1453,12 +1503,25 @@ export const PetsService = {
     };
 
     try { this._ingestAbilityMap(extractFlat(await Atoms.pets.myPetSlotInfos.get())); } catch {}
-    const stopSlots = await Atoms.pets.myPetSlotInfos.onChange((src) => {
-      try { this._ingestAbilityMap(extractFlat(src)); } catch {}
-    });
+    try { this._ingestAbilityMap(extractFlat(await Atoms.pets.myPrimitivePetSlots.get())); } catch {}
+
+    let stopSlots: (() => void) | null = null;
+    try {
+      const res = await Atoms.pets.myPetSlotInfos.onChange((src) => {
+        try { this._ingestAbilityMap(extractFlat(src)); } catch {}
+      });
+      if (typeof res === "function") stopSlots = res;
+    } catch {}
+    let stopPrimitives: (() => void) | null = null;
+    try {
+      stopPrimitives = await Atoms.pets.myPrimitivePetSlots.onChange((src) => {
+        try { this._ingestAbilityMap(extractFlat(src)); } catch {}
+      });
+    } catch {}
 
     return () => {
       try { stopSlots(); } catch {}
+      try { stopPrimitives?.(); } catch {}
       try { stopInfos?.(); } catch {}
     };
   },
@@ -1790,7 +1853,6 @@ export const PetsService = {
       }
     };
 
-    const EPS = 1e-6;
     for (const petId of Object.keys(map)) {
       const entry = map[petId];
       if (!entry || typeof entry !== "object") continue;
@@ -1808,14 +1870,8 @@ export const PetsService = {
         continue;
       }
 
-      let hungerPct = Number.isFinite(Number((entry as any).hungerPct))
-        ? Number((entry as any).hungerPct)
-        : null;
-      if (hungerPct != null && hungerPct > 0 && hungerPct <= 1) hungerPct *= 100;
-      if (hungerPct != null && hungerPct <= EPS) {
-        this._seenPerfByPet.set(petId, performedAtNum);
-        continue;
-      }
+      // NOTE: Some game versions no longer provide hungerPct in slot infos.
+      // We no longer gate logs on hungerPct to avoid dropping valid triggers.
 
       const pet = _invPetsCache.find(p => String(p.id) === String(petId)) || null;
       const abilityIdStr = String(abilityId);
@@ -1851,6 +1907,12 @@ export const PetsService = {
 
 try {
   PetsService._restoreAbilityLogsFromStorage();
+} catch {}
+
+// Debug helper: expose for console inspection when needed.
+try {
+  shareGlobal("QWS_PetsService", PetsService);
+  shareGlobal("QWS_Atoms", Atoms);
 } catch {}
 
 /* -------------------------- Types for ability logs -------------------------- */
