@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.222
+// @version      3.1.3
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -1262,7 +1262,7 @@
     const arr = await favoriteIds.get();
     return new Set(Array.isArray(arr) ? arr : []);
   }
-  var position, state, map, player, action, myData, myInventory, gardensWithBackfills, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myPetInfos, myPetSlotInfos, totalPetSellPrice, expandedPetSlotId, myCropItemsToSell, myPetHutchPetItems, isMyInventoryAtMaxLength, myNumPetHutchItems, shops, myShopPurchases, numPlayers, totalCropSellPrice, myValidatedSelectedItemIndex, setSelectedIndexToEnd, mySelectedItemName, myPossiblyNoLongerValidSelectedItemIndex, myCurrentGardenObject, myCurrentSortedGrowSlotIndices, myCurrentGrowSlotIndex, myOwnCurrentGardenObject, isCurrentGrowSlotMature, myOwnCurrentDirtTileIndex, mySelectedItemRotation, weather, activeModal, avatarTriggerAnimationAtom, friendBonusMultiplier, garden, gardenTileObjects, favoriteIds, playerId, playerDatabaseUserId, myOwnCurrentGardenObjectType, stateChild, stateChildData, stateShops, stateUserSlots, statePlayers, myActivityLog, seedShop, toolShop, eggShop, decorShop, GardenSlotsSig, PetsByIdSig, PetsByIdStableSig, FavoriteIdsSig, Atoms;
+  var position, state, map, player, action, myData, myInventory, gardensWithBackfills, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myPetInfos, myPetSlotInfos, myPrimitivePetSlots, totalPetSellPrice, myCropItemsToSell, myPetHutchPetItems, isMyInventoryAtMaxLength, myNumPetHutchItems, shops, myShopPurchases, numPlayers, totalCropSellPrice, myValidatedSelectedItemIndex, setSelectedIndexToEnd, mySelectedItemName, myPossiblyNoLongerValidSelectedItemIndex, myCurrentGardenObject, myCurrentSortedGrowSlotIndices, myCurrentGrowSlotIndex, myOwnCurrentGardenObject, isCurrentGrowSlotMature, myOwnCurrentDirtTileIndex, mySelectedItemRotation, weather, activeModal, avatarTriggerAnimationAtom, friendBonusMultiplier, garden, gardenTileObjects, favoriteIds, playerId, playerDatabaseUserId, myOwnCurrentGardenObjectType, stateChild, stateChildData, stateShops, stateUserSlots, statePlayers, myActivityLog, seedShop, toolShop, eggShop, decorShop, GardenSlotsSig, PetsByIdSig, PetsByIdStableSig, FavoriteIdsSig, Atoms;
   var init_atoms = __esm({
     "src/store/atoms.ts"() {
       init_hub();
@@ -1283,8 +1283,8 @@
       myDecorShedItems = makeAtom("myDecorShedItemsAtom");
       myPetInfos = makeAtom("myPetInfosAtom");
       myPetSlotInfos = makeAtom("myPetSlotInfosAtom");
+      myPrimitivePetSlots = makeAtom("myPrimitivePetSlotsAtom");
       totalPetSellPrice = makeAtom("totalPetSellPriceAtom");
-      expandedPetSlotId = makeAtom("expandedPetSlotIdAtom");
       myCropItemsToSell = makeAtom("myCropItemsToSellAtom");
       myPetHutchPetItems = makeAtom("myPetHutchPetItemsAtom");
       isMyInventoryAtMaxLength = makeAtom("isMyInventoryAtMaxLengthAtom");
@@ -1392,8 +1392,8 @@
         pets: {
           myPetInfos,
           myPetSlotInfos,
-          totalPetSellPrice,
-          expandedPetSlotId
+          myPrimitivePetSlots,
+          totalPetSellPrice
         },
         shop: {
           shops,
@@ -10562,6 +10562,12 @@
       } catch (err) {
       }
     },
+    async plantEgg(slot, eggId) {
+      try {
+        sendToGame({ type: "PlantEgg", slot, eggId });
+      } catch (err) {
+      }
+    },
     async placeDecor(tileType, localTileIndex, decorId, rotation) {
       try {
         sendToGame({ type: "PlaceDecor", tileType, localTileIndex, decorId, rotation });
@@ -10580,15 +10586,15 @@
       } catch (err) {
       }
     },
-    async retrieveItemFromStorage(itemId, storageId) {
+    async retrieveItemFromStorage(itemId, storageId, toInventoryIndex) {
       try {
-        sendToGame({ type: "RetrieveItemFromStorage", itemId, storageId });
+        sendToGame({ type: "RetrieveItemFromStorage", itemId, storageId, ...toInventoryIndex !== void 0 && { toInventoryIndex } });
       } catch (err) {
       }
     },
-    async putItemInStorage(itemId, storageId) {
+    async putItemInStorage(itemId, storageId, toStorageIndex) {
       try {
-        sendToGame({ type: "PutItemInStorage", itemId, storageId });
+        sendToGame({ type: "PutItemInStorage", itemId, storageId, ...toStorageIndex !== void 0 && { toStorageIndex } });
       } catch (err) {
       }
     },
@@ -10613,9 +10619,9 @@
       } catch (err) {
       }
     },
-    async storePet(itemId) {
+    async storePet(petId) {
       try {
-        sendToGame({ type: "StorePet", itemId });
+        sendToGame({ type: "PickupPet", petId });
       } catch (err) {
       }
     },
@@ -21075,7 +21081,6 @@
   init_fakeModal();
   init_atoms();
   var PATH_PETS_OVERRIDES = "pets.overrides";
-  var PATH_PETS_INSTANT_FEED = "pets.instantFeed";
   var PATH_PETS_UI = "pets.ui";
   var PATH_PETS_TEAMS = "pets.teams";
   var PATH_PETS_TEAM_SEARCH = "pets.teamSearch";
@@ -21603,7 +21608,6 @@
   var AUTOF_FEED_MIN_INTERVAL_MS = 2e3;
   var DEFAULT_OVERRIDE = { enabled: false, thresholdPct: 10, crops: {} };
   var DEFAULT_UI = { selectedPetId: null };
-  var DEFAULT_INSTANT_FEED = { crops: {} };
   var _currentPets = [];
   var _userTriggerCb = null;
   function saveOverrides(map2) {
@@ -21611,13 +21615,6 @@
   }
   function loadOverrides() {
     const obj = readAriesPath(PATH_PETS_OVERRIDES);
-    return obj && typeof obj === "object" ? obj : {};
-  }
-  function saveInstantFeedOverrides(map2) {
-    writeAriesPath(PATH_PETS_INSTANT_FEED, map2);
-  }
-  function loadInstantFeedOverrides() {
-    const obj = readAriesPath(PATH_PETS_INSTANT_FEED);
     return obj && typeof obj === "object" ? obj : {};
   }
   function saveUIState(next) {
@@ -21633,12 +21630,6 @@
     return {
       enabled: !!src.enabled,
       thresholdPct: Math.min(100, Math.max(1, Number(src.thresholdPct) || DEFAULT_OVERRIDE.thresholdPct)),
-      crops: { ...src.crops || {} }
-    };
-  }
-  function cloneInstantFeedOverride(o) {
-    const src = o ?? DEFAULT_INSTANT_FEED;
-    return {
       crops: { ...src.crops || {} }
     };
   }
@@ -21829,37 +21820,6 @@
       const pet = await findPetById(petId);
       const species = pet?.slot?.petSpecies || "";
       const compatibles = this.getCompatibleCropsForSpecies(species);
-      const allowed = /* @__PURE__ */ new Set();
-      for (const c of compatibles) {
-        const rule = ov.crops[c];
-        if (rule ? !!rule.allowed : true) allowed.add(c);
-      }
-      return allowed;
-    },
-    /* ------------------------- Instant feed (per-species) ------------------------- */
-    getInstantFeedOverride(species) {
-      const key2 = _canonicalSpecies(String(species || ""));
-      const all = loadInstantFeedOverrides();
-      return cloneInstantFeedOverride(all[key2]);
-    },
-    isInstantFeedCropAllowed(species, crop) {
-      const ov = this.getInstantFeedOverride(species);
-      const rule = ov.crops[crop];
-      return rule ? !!rule.allowed : true;
-    },
-    setInstantFeedCropAllowed(species, crop, allowed) {
-      const key2 = _canonicalSpecies(String(species || ""));
-      const all = loadInstantFeedOverrides();
-      const cur = cloneInstantFeedOverride(all[key2]);
-      cur.crops[crop] = { allowed: !!allowed };
-      all[key2] = cur;
-      saveInstantFeedOverrides(all);
-      return cloneInstantFeedOverride(cur);
-    },
-    getInstantFeedAllowedCrops(species) {
-      const key2 = _canonicalSpecies(String(species || ""));
-      const compatibles = this.getCompatibleCropsForSpecies(key2);
-      const ov = this.getInstantFeedOverride(key2);
       const allowed = /* @__PURE__ */ new Set();
       for (const c of compatibles) {
         const rule = ov.crops[c];
@@ -22164,7 +22124,6 @@
           return num(data["sellPrice"] ?? 0);
         case "ProduceScaleBoost":
         case "ProduceScaleBoostII":
-        case "ProduceScaleBoostIII":
         case "SnowyCropSizeBoost": {
           const inc = data["scaleIncreasePercentage"] ?? data["cropScaleIncreasePercentage"] ?? base["scaleIncreasePercentage"] ?? 0;
           return num(inc);
@@ -22178,42 +22137,34 @@
         }
         case "PlantGrowthBoost":
         case "PlantGrowthBoostII":
-        case "PlantGrowthBoostIII":
-        case "SnowyPlantGrowthBoost":
-        case "DawnPlantGrowthBoost":
-        case "AmberPlantGrowthBoost": {
+        case "SnowyPlantGrowthBoost": {
           const minutes = data["minutesReduced"] ?? data["reductionMinutes"] ?? data["plantGrowthReductionMinutes"] ?? base["plantGrowthReductionMinutes"] ?? 0;
           return num(minutes) * 60 * 1e3;
         }
         case "PetXpBoost":
         case "SnowyPetXpBoost":
-        case "PetXpBoostII":
-        case "PetXpBoostIII": {
+        case "PetXpBoostII": {
           const xp = data["bonusXp"] ?? base["bonusXp"] ?? 0;
           return num(xp);
         }
         case "PetAgeBoost":
-        case "PetAgeBoostII":
-        case "PetAgeBoostIII": {
+        case "PetAgeBoostII": {
           const xp = data["bonusXp"] ?? base["bonusXp"] ?? 0;
           return num(xp);
         }
         case "PetHatchSizeBoost":
-        case "PetHatchSizeBoostII":
-        case "PetHatchSizeBoostIII": {
+        case "PetHatchSizeBoostII": {
           const strength = data["strengthIncrease"] ?? 0;
           return num(strength);
         }
         case "HungerRestore":
         case "HungerRestoreII":
-        case "HungerRestoreIII":
         case "SnowyHungerRestore": {
           const amount = data["hungerRestoreAmount"] ?? data["hungerRestoredPercentage"] ?? base["hungerRestorePercentage"] ?? 0;
           return num(amount);
         }
         case "HungerBoost":
         case "HungerBoostII":
-        case "HungerBoostIII":
         case "SnowyHungerBoost": {
           const pct = data["hungerDepletionRateDecreasePercentage"] ?? base["hungerDepletionRateDecreasePercentage"] ?? 0;
           return num(pct);
@@ -22518,9 +22469,9 @@
           case "ProduceMutationBoost":
           case "ProduceMutationBoostII":
           case "ProduceMutationBoostIII":
-          case "SnowyCropMutationBoost":
           case "DawnBoost":
           case "AmberMoonBoost":
+          case "SnowyCropMutationBoost":
           case "PetMutationBoost":
           case "PetMutationBoostII":
           case "PetMutationBoostIII": {
@@ -22537,9 +22488,9 @@
           case "PlantGrowthBoost":
           case "PlantGrowthBoostII":
           case "PlantGrowthBoostIII":
-          case "SnowyPlantGrowthBoost":
           case "DawnPlantGrowthBoost":
-          case "AmberPlantGrowthBoost": {
+          case "AmberPlantGrowthBoost":
+          case "SnowyPlantGrowthBoost": {
             const mins = d["minutesReduced"] ?? d["reductionMinutes"] ?? base["plantGrowthReductionMinutes"];
             return mins != null ? `- ${fmtMin1(mins)}` : "Plant growth reduced";
           }
@@ -22639,154 +22590,51 @@
     PetsService._restoreAbilityLogsFromStorage();
   } catch {
   }
+  var _HUTCH_MAX = 25;
+  async function _findFreeInventoryIndex() {
+    try {
+      const inv = await Atoms.inventory.myInventory.get();
+      const items = Array.isArray(inv?.items) ? inv.items : Array.isArray(inv) ? inv : [];
+      for (let i = 0; i < items.length; i++) {
+        if (!items[i]) return i;
+      }
+      return items.length;
+    } catch {
+      return void 0;
+    }
+  }
+  async function _findFreeHutchIndex() {
+    try {
+      const hutch = await myPetHutchPetItems.get();
+      const items = Array.isArray(hutch) ? hutch : [];
+      const hasStorageIndices = items.some((it) => typeof it?.storageIndex === "number");
+      if (hasStorageIndices) {
+        const used = new Set(items.filter((it) => typeof it?.storageIndex === "number").map((it) => it.storageIndex));
+        for (let i = 0; i < _HUTCH_MAX; i++) {
+          if (!used.has(i)) return i;
+        }
+        return _HUTCH_MAX;
+      }
+      for (let i = 0; i < items.length; i++) {
+        if (!items[i]) return i;
+      }
+      return items.length;
+    } catch {
+      return void 0;
+    }
+  }
   async function _getActivePetSlotIds() {
     try {
+      const primitives = await Atoms.pets.myPrimitivePetSlots.get();
+      const primList = Array.isArray(primitives) ? primitives : [];
+      const primIds = primList.map((p) => String(p?.id || "")).filter((id) => !!id).slice(0, 3);
+      if (primIds.length) return primIds;
       const arr = await PlayerService.getPets();
       const list = Array.isArray(arr) ? arr : [];
       return list.map((p) => String(p?.slot?.id || "")).filter((id) => !!id).slice(0, 3);
     } catch {
       return [];
     }
-  }
-  async function _waitForActivePetsMatch(targetIds, timeoutMs = 5e3) {
-    const wanted = new Set(targetIds.map((id) => String(id || "")).filter(Boolean));
-    if (!wanted.size) return true;
-    const snapshotMatches = async () => {
-      try {
-        const cur = await Atoms.pets.myPetInfos.get();
-        const set3 = new Set((Array.isArray(cur) ? cur : []).map((p) => String(p?.slot?.id || "")).filter(Boolean));
-        return [...wanted].every((id) => set3.has(id));
-      } catch {
-        return false;
-      }
-    };
-    if (await snapshotMatches()) return true;
-    return new Promise((resolve2) => {
-      const deadline = Date.now() + timeoutMs;
-      let unsub = null;
-      let pendingUnsub = null;
-      let stopped = false;
-      const doUnsub = (fn) => {
-        if (fn) {
-          try {
-            fn();
-          } catch {
-          }
-        }
-      };
-      const stop2 = (ok) => {
-        if (stopped) return;
-        stopped = true;
-        if (unsub) {
-          doUnsub(unsub);
-        } else if (pendingUnsub) {
-          pendingUnsub.then((fn) => doUnsub(fn)).catch(() => {
-          });
-        }
-        resolve2(ok);
-      };
-      const check = async (state3) => {
-        const set3 = new Set((Array.isArray(state3) ? state3 : []).map((p) => String(p?.slot?.id || "")).filter(Boolean));
-        if ([...wanted].every((id) => set3.has(id))) {
-          stop2(true);
-        } else if (Date.now() >= deadline) {
-          stop2(false);
-        }
-      };
-      try {
-        const res = Atoms.pets.myPetInfos.onChange((state3) => {
-          void check(state3);
-        });
-        if (typeof res === "function") {
-          unsub = res;
-        } else if (res && typeof res.then === "function") {
-          pendingUnsub = res;
-          pendingUnsub.then((fn) => {
-            unsub = fn;
-            if (stopped) {
-              doUnsub(fn);
-            }
-          }).catch(() => {
-          });
-        }
-      } catch {
-        stop2(false);
-        return;
-      }
-      void check();
-      setTimeout(() => stop2(false), timeoutMs + 50);
-    });
-  }
-  async function _waitForInventoryState(predicate, timeoutMs = 4e3) {
-    const snapshotMatches = async () => {
-      try {
-        const cur = await Atoms.inventory.myInventory.get();
-        const set3 = new Set(
-          (Array.isArray(cur?.items) ? cur.items : Array.isArray(cur) ? cur : []).map((p) => String(p?.id || "")).filter(Boolean)
-        );
-        return predicate(set3);
-      } catch {
-        return false;
-      }
-    };
-    if (await snapshotMatches()) return true;
-    return new Promise((resolve2) => {
-      const deadline = Date.now() + timeoutMs;
-      let unsub = null;
-      let pendingUnsub = null;
-      let stopped = false;
-      const doUnsub = (fn) => {
-        if (fn) {
-          try {
-            fn();
-          } catch {
-          }
-        }
-      };
-      const stop2 = (ok) => {
-        if (stopped) return;
-        stopped = true;
-        if (unsub) {
-          doUnsub(unsub);
-        } else if (pendingUnsub) {
-          pendingUnsub.then((fn) => doUnsub(fn)).catch(() => {
-          });
-        }
-        resolve2(ok);
-      };
-      const check = async (state3) => {
-        const set3 = new Set(
-          (Array.isArray(state3?.items) ? state3.items : Array.isArray(state3) ? state3 : []).map((p) => String(p?.id || "")).filter(Boolean)
-        );
-        if (predicate(set3)) {
-          stop2(true);
-        } else if (Date.now() >= deadline) {
-          stop2(false);
-        }
-      };
-      try {
-        const res = Atoms.inventory.myInventory.onChange((state3) => {
-          void check(state3);
-        });
-        if (typeof res === "function") {
-          unsub = res;
-        } else if (res && typeof res.then === "function") {
-          pendingUnsub = res;
-          pendingUnsub.then((fn) => {
-            unsub = fn;
-            if (stopped) {
-              doUnsub(fn);
-            }
-          }).catch(() => {
-          });
-        }
-      } catch {
-        stop2(false);
-        return;
-      }
-      void check();
-      setTimeout(() => stop2(false), timeoutMs + 50);
-    });
   }
   async function _waitForHutchState(predicate, timeoutMs = 4e3) {
     const snapshotMatches = async () => {
@@ -22934,7 +22782,8 @@
                 return id && !hutchItemsSet.has(id) && !activeSlots.includes(id) && !targetSet.has(id);
               });
               if (invPet) {
-                await PlayerService.putItemInStorage(invPet.id, "PetHutch");
+                const hutIdx = await _findFreeHutchIndex();
+                await PlayerService.putItemInStorage(invPet.id, "PetHutch", hutIdx);
                 freeHutch = Math.max(0, freeHutch - 1);
                 void _waitForHutchState((set3) => set3.has(String(invPet.id)), 3e3);
               } else {
@@ -22963,7 +22812,8 @@
           }
         }
         try {
-          await PlayerService.retrieveItemFromStorage(invId, "PetHutch");
+          const invIdx = await _findFreeInventoryIndex();
+          await PlayerService.retrieveItemFromStorage(invId, "PetHutch", invIdx);
           hutchItemsSet.delete(invId);
           freeHutch = Math.min(25, freeHutch + 1);
         } catch {
@@ -22978,7 +22828,8 @@
           swapped++;
           if (freeHutch > 0) {
             try {
-              await PlayerService.putItemInStorage(offTargetActive, "PetHutch");
+              const hutIdx = await _findFreeHutchIndex();
+              await PlayerService.putItemInStorage(offTargetActive, "PetHutch", hutIdx);
               freeHutch = Math.max(0, freeHutch - 1);
             } catch {
             }
@@ -23014,7 +22865,8 @@
         if (freeHutch <= 0) break;
         try {
           await PlayerService.storePet(slotId);
-          await PlayerService.putItemInStorage(slotId, "PetHutch");
+          const hutIdx = await _findFreeHutchIndex();
+          await PlayerService.putItemInStorage(slotId, "PetHutch", hutIdx);
           freeHutch = Math.max(0, freeHutch - 1);
           activeSlots = activeSlots.filter((x) => x !== slotId);
           void _waitForHutchState((set3) => set3.has(String(slotId)), 3e3);
@@ -23024,18 +22876,7 @@
     } catch {
     }
     const res = await _applyTeam(targetInvIds);
-    try {
-      await _waitForActivePetsMatch(targetInvIds, 5e3);
-    } catch {
-    }
-    try {
-      await _waitForInventoryState((set3) => targetInvIds.every((id) => set3.has(id)), 3e3);
-    } catch {
-    }
-    try {
-      await _waitForHutchState((set3) => targetInvIds.every((id) => !set3.has(id)), 3e3);
-    } catch {
-    }
+    await new Promise((r) => setTimeout(r, 300));
     if (shouldMark) markTeamAsUsed(markResolved);
     return res;
   }
@@ -28365,9 +28206,9 @@
     let backoff = 1e3;
     let inFlight = null;
     let knownServerSessionId = null;
-    const schedule = (delay4) => {
+    const schedule = (delay3) => {
       if (closed || paused) return;
-      setTimeout(poll, delay4);
+      setTimeout(poll, delay3);
     };
     const poll = async () => {
       if (closed || paused || running) return;
@@ -41391,513 +41232,6 @@
     };
   }
 
-  // src/core/dom.ts
-  var ready = new Promise((res) => {
-    if (document.readyState !== "loading") res();
-    else addEventListener("DOMContentLoaded", () => res(), { once: true });
-  });
-  function addStyle(css3) {
-    const s = document.createElement("style");
-    s.textContent = css3;
-    document.head.appendChild(s);
-    return s;
-  }
-  function toPredicate(selOrFn) {
-    if (typeof selOrFn === "function") return selOrFn;
-    if (typeof selOrFn === "string") return (el2) => el2.matches?.(selOrFn) ?? false;
-    throw new Error("Selector or predicate required");
-  }
-  function onAdded(selOrFn, cb, { root = document, callForExisting = true } = {}) {
-    const pred = toPredicate(selOrFn);
-    const seen = /* @__PURE__ */ new WeakSet();
-    const consider = (el2) => {
-      if (seen.has(el2)) return;
-      if (pred(el2)) {
-        seen.add(el2);
-        cb(el2);
-      }
-    };
-    if (callForExisting && "querySelectorAll" in root) {
-      root.querySelectorAll("*").forEach(consider);
-    }
-    const obs = new MutationObserver((muts) => {
-      for (const m of muts) for (const n of Array.from(m.addedNodes)) {
-        if (n.nodeType !== 1) continue;
-        const el2 = n;
-        consider(el2);
-        el2.querySelectorAll?.("*").forEach(consider);
-      }
-    });
-    obs.observe(root, { childList: true, subtree: true });
-    return { disconnect: () => obs.disconnect() };
-  }
-
-  // src/utils/petPanelEnhancer.ts
-  init_atoms();
-  init_fakeModal();
-  var PANEL_SELECTOR = ".css-1rszi55";
-  var FEED_BUTTON_CLASS = "tm-feed-from-inventory-btn";
-  var FEED_FROM_INVENTORY_BUTTON_CLASS = "tm-feed-from-inventory-select-btn";
-  var FEED_ROW_CLASS = "tm-feed-from-inventory-row";
-  var PATH_PETS_PANEL_BUTTONS = "pets.panelButtons";
-  var DEFAULT_PANEL_BUTTONS = {
-    instantFeed: true,
-    feedFromInventory: true
-  };
-  var started2 = false;
-  function startPetPanelEnhancer() {
-    if (started2) return;
-    started2 = true;
-    if (typeof document === "undefined") {
-      return;
-    }
-    onAdded(PANEL_SELECTOR, (node) => {
-      if (!(node instanceof HTMLElement)) return;
-      enhancePanel(node);
-    });
-  }
-  function getPetPanelButtonSettings() {
-    const raw = readAriesPath(PATH_PETS_PANEL_BUTTONS);
-    return {
-      instantFeed: raw?.instantFeed !== false,
-      feedFromInventory: raw?.feedFromInventory !== false
-    };
-  }
-  function setPetPanelButtonSettings(patch2) {
-    const merged = {
-      ...DEFAULT_PANEL_BUTTONS,
-      ...getPetPanelButtonSettings(),
-      ...patch2 || {}
-    };
-    writeAriesPath(PATH_PETS_PANEL_BUTTONS, merged);
-    return merged;
-  }
-  function applyPetPanelButtonVisibility(scope) {
-    if (typeof document === "undefined") return;
-    const root = scope ?? document;
-    const { instantFeed, feedFromInventory } = getPetPanelButtonSettings();
-    const instantBtn = root.querySelector(`.${FEED_BUTTON_CLASS}`);
-    if (instantBtn) instantBtn.style.display = instantFeed ? "" : "none";
-    const inventoryBtn = root.querySelector(`.${FEED_FROM_INVENTORY_BUTTON_CLASS}`);
-    if (inventoryBtn) inventoryBtn.style.display = feedFromInventory ? "" : "none";
-    const row = root.querySelector(`.${FEED_ROW_CLASS}`);
-    if (row) row.style.display = instantFeed || feedFromInventory ? "" : "none";
-  }
-  function enhancePanel(root) {
-    try {
-      ensureFeedButton(root);
-    } catch (err) {
-      console.warn("[PetPanel] Failed to inject feed button", err);
-    }
-  }
-  function ensureFeedButton(root) {
-    if (root.querySelector(`.${FEED_BUTTON_CLASS}`)) {
-      applyPetPanelButtonVisibility(root);
-      return;
-    }
-    const templateBtn = root.querySelector("button.chakra-button");
-    const btn = createStyledButton(templateBtn, "INSTANT FEED");
-    btn.classList.add(FEED_BUTTON_CLASS);
-    btn.setAttribute("aria-label", "Feed pet from inventory");
-    btn.title = "Feed pet from inventory";
-    btn.style.width = "100%";
-    btn.style.minWidth = "100%";
-    btn.style.alignContent = "center";
-    btn.style.alignItems = "center";
-    btn.style.padding = "6px 14px";
-    btn.style.fontSize = "13px";
-    btn.style.border = "2px solid #FFC83D";
-    btn.style.color = "rgb(205 200 193)";
-    btn.style.borderRadius = "10px";
-    btn.style.height = "40px";
-    btn.addEventListener("click", () => {
-      void handleFeedClick(btn);
-    });
-    const row = document.createElement("div");
-    row.classList.add("McFlex", FEED_ROW_CLASS);
-    row.style.marginTop = "8px";
-    row.style.justifyContent = "center";
-    row.style.width = "100%";
-    row.style.flexDirection = "column";
-    row.style.alignItems = "stretch";
-    row.style.gap = "8px";
-    row.appendChild(btn);
-    const feedFromInventoryBtn = createStyledButton(
-      templateBtn,
-      "FEED FROM INVENTORY"
-    );
-    feedFromInventoryBtn.classList.add(FEED_FROM_INVENTORY_BUTTON_CLASS);
-    feedFromInventoryBtn.style.width = "100%";
-    feedFromInventoryBtn.style.minWidth = "100%";
-    feedFromInventoryBtn.style.alignContent = "center";
-    feedFromInventoryBtn.style.alignItems = "center";
-    feedFromInventoryBtn.style.marginTop = "8px";
-    feedFromInventoryBtn.style.padding = "6px 14px";
-    feedFromInventoryBtn.style.fontSize = "13px";
-    feedFromInventoryBtn.style.border = "2px solid #BA5E1E";
-    feedFromInventoryBtn.style.color = "rgb(205 200 193)";
-    feedFromInventoryBtn.style.borderRadius = "10px";
-    feedFromInventoryBtn.style.height = "40px";
-    row.appendChild(feedFromInventoryBtn);
-    feedFromInventoryBtn.addEventListener("click", () => {
-      void handleInventoryPreviewClick(feedFromInventoryBtn);
-    });
-    const actions = root.querySelector(".McFlex.css-cabebk");
-    const abilities = root.querySelector(".McFlex.css-1hd05pq");
-    if (actions && abilities && abilities.parentElement === actions.parentElement) {
-      abilities.parentElement.insertBefore(row, abilities);
-    } else if (actions?.parentElement) {
-      actions.parentElement.insertBefore(row, actions.nextSibling);
-    } else {
-      root.appendChild(row);
-    }
-    applyPetPanelButtonVisibility(root);
-  }
-  function createStyledButton(template, label2) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    if (template?.className) {
-      btn.className = template.className;
-    } else {
-      btn.className = "chakra-button";
-    }
-    const wrapper = document.createElement("div");
-    wrapper.className = template?.firstElementChild instanceof HTMLElement ? template.firstElementChild.className : "McFlex";
-    const textEl = document.createElement("p");
-    const templateText = template?.querySelector(".chakra-text");
-    textEl.className = templateText instanceof HTMLElement ? templateText.className : "chakra-text";
-    textEl.textContent = label2;
-    wrapper.appendChild(textEl);
-    btn.appendChild(wrapper);
-    return btn;
-  }
-  async function handleFeedClick(btn) {
-    const prevDisabled = btn.disabled;
-    btn.disabled = true;
-    try {
-      const petId = await getExpandedPetId();
-      if (!petId) {
-        await toastSimple("Feed from inventory", "No expanded pet detected.", "error");
-        return;
-      }
-      const pet = await findPetById2(petId);
-      if (!pet) {
-        await toastSimple("Feed from inventory", "Unable to resolve expanded pet.", "error");
-        return;
-      }
-      const species = String(pet?.slot?.petSpecies || "");
-      const allowed = PetsService.getInstantFeedAllowedCrops(species);
-      if (!allowed.size) {
-        await toastSimple(
-          "Feed from inventory",
-          "No allowed crops for this pet. Check the Feeding tab.",
-          "info"
-        );
-        return;
-      }
-      const inventory = await PlayerService.getCropInventoryState();
-      const items = Array.isArray(inventory) ? inventory : [];
-      const favoriteSet = await PlayerService.getFavoriteIdSet().catch(() => /* @__PURE__ */ new Set());
-      const chosen = items.find((item) => {
-        const speciesId = String(item?.species || "");
-        if (!speciesId || !allowed.has(speciesId)) return false;
-        const id = String(item?.id || "");
-        return id && !favoriteSet.has(id);
-      });
-      const chosenId = String(chosen?.id || "");
-      if (!chosenId) {
-        await toastSimple(
-          "Feed from inventory",
-          "No compatible crops in inventory (excluding favorites).",
-          "info"
-        );
-        return;
-      }
-      const previousHungerPct = getHungerPctForPet(pet);
-      await PlayerService.feedPet(petId, chosenId);
-      const hungerPct = await waitForHungerIncrease(petId, previousHungerPct, {
-        initialDelay: 150
-      });
-      const hungerSuffix = hungerPct != null ? ` Hunger: ${formatHungerPct(hungerPct)}%.` : "";
-      const cropName = String(chosen?.species || "crop");
-      const petLabel = pet?.slot?.name || species || petId;
-      await toastSimple(
-        "Feed from inventory",
-        `Fed ${petLabel} with ${cropName}.${hungerSuffix}`,
-        "success"
-      );
-    } catch (err) {
-      console.error("[Pet panel] Failed to feed pet from inventory", err);
-      await toastSimple(
-        "Feed from inventory",
-        err instanceof Error ? err.message : "Failed to feed pet.",
-        "error"
-      );
-    } finally {
-      btn.disabled = prevDisabled;
-    }
-  }
-  async function handleInventoryPreviewClick(btn) {
-    const prevDisabled = btn.disabled;
-    let shouldCloseInventory = false;
-    btn.disabled = true;
-    try {
-      const petId = await getExpandedPetId();
-      if (!petId) {
-        await toastSimple("Feed from inventory", "No expanded pet detected.", "error");
-        return;
-      }
-      const pet = await findPetById2(petId);
-      if (!pet) {
-        await toastSimple("Feed from inventory", "Unable to resolve expanded pet.", "error");
-        return;
-      }
-      const species = String(pet?.slot?.petSpecies || "");
-      let lastKnownHungerPct = getHungerPctForPet(pet);
-      const allowed = await getAllowedCrops(petId, species);
-      if (!allowed.size) {
-        await toastSimple("Feed from inventory", "No compatible crops for this pet.", "info");
-        return;
-      }
-      const inventory = await PlayerService.getCropInventoryState();
-      const items = Array.isArray(inventory) ? inventory : [];
-      const favoriteSet = await PlayerService.getFavoriteIdSet().catch(() => /* @__PURE__ */ new Set());
-      const filtered = items.filter((item) => {
-        const speciesId = String(item?.species || "");
-        if (!speciesId || !allowed.has(speciesId)) return false;
-        const id = String(item?.id || "");
-        return id && !favoriteSet.has(id);
-      });
-      if (!filtered.length) {
-        await toastSimple("Feed from inventory", "No compatible crops in inventory.", "info");
-        return;
-      }
-      const computeFavoritedIds = (items2) => {
-        const allowedIds = /* @__PURE__ */ new Set();
-        for (const item of items2) {
-          const id = String(item?.id || "");
-          if (id) allowedIds.add(id);
-        }
-        return Array.from(favoriteSet).filter((id) => allowedIds.has(id));
-      };
-      await clearHandSelection().catch(() => {
-      });
-      let visibleItems = filtered.slice();
-      let favoritedItemIds = computeFavoritedIds(visibleItems);
-      await fakeInventoryShow({ items: visibleItems, favoritedItemIds }, { open: true });
-      const label2 = pet?.slot?.name || species || petId;
-      await toastSimple(
-        "Feed from inventory",
-        `Showing ${visibleItems.length} compatible crop(s) for ${label2}. Select a crop to feed it immediately.`,
-        "info"
-      );
-      while (true) {
-        const selectedIndex = await waitForFakeInventorySelection(2e4);
-        if (selectedIndex == null) {
-          await toastSimple("Feed from inventory", "No crop selected.", "info");
-          break;
-        }
-        if (selectedIndex < 0 || selectedIndex >= visibleItems.length) {
-          await toastSimple("Feed from inventory", "Invalid crop selection.", "error");
-          await clearHandSelection().catch(() => {
-          });
-          continue;
-        }
-        const chosen = visibleItems[selectedIndex];
-        const chosenId = String(chosen?.id || "");
-        if (!chosenId) {
-          await toastSimple("Feed from inventory", "Invalid crop selection.", "error");
-          await clearHandSelection().catch(() => {
-          });
-          continue;
-        }
-        const hungerPctBeforeFeed = lastKnownHungerPct;
-        await PlayerService.feedPet(petId, chosenId);
-        const hungerPct = await waitForHungerIncrease(petId, hungerPctBeforeFeed, {
-          initialDelay: 200
-        });
-        if (hungerPct != null) {
-          lastKnownHungerPct = hungerPct;
-        }
-        const hungerSuffix = hungerPct != null ? ` Hunger: ${formatHungerPct(hungerPct)}%.` : "";
-        const cropName = String(chosen?.species || "crop");
-        const petLabel = pet?.slot?.name || species || petId;
-        await toastSimple(
-          "Feed from inventory",
-          `Fed ${petLabel} with ${cropName}.${hungerSuffix}`,
-          "success"
-        );
-        const hungerFull = hungerPct != null && hungerPct >= 99.9;
-        if (hungerFull) {
-          shouldCloseInventory = true;
-          try {
-            await closeInventoryPanel();
-          } catch {
-          }
-          break;
-        }
-        let invItems = null;
-        try {
-          const nextInventory = await PlayerService.getCropInventoryState();
-          invItems = Array.isArray(nextInventory) ? nextInventory : null;
-        } catch {
-          invItems = null;
-        }
-        let nextVisible = invItems?.filter((item) => {
-          const speciesId = String(item?.species || "");
-          if (!speciesId || !allowed.has(speciesId)) return false;
-          const id = String(item?.id || "");
-          return id && !favoriteSet.has(id);
-        }) ?? null;
-        const removeChosenLocally = () => visibleItems.filter((item) => String(item?.id || "") !== chosenId);
-        if (!nextVisible) {
-          nextVisible = removeChosenLocally();
-        } else {
-          const stillContainsChosen = nextVisible.some(
-            (item) => String(item?.id || "") === chosenId
-          );
-          if (stillContainsChosen) {
-            nextVisible = removeChosenLocally();
-          }
-        }
-        visibleItems = nextVisible;
-        if (!visibleItems.length) {
-          await toastSimple("Feed from inventory", "No compatible crops in inventory.", "info");
-          shouldCloseInventory = true;
-          try {
-            await closeInventoryPanel();
-          } catch {
-          }
-          break;
-        }
-        favoritedItemIds = computeFavoritedIds(visibleItems);
-        await fakeInventoryShow({ items: visibleItems, favoritedItemIds }, { open: false });
-        await clearHandSelection().catch(() => {
-        });
-      }
-    } catch (err) {
-      console.error("[Pet panel] Failed to handle inventory feed", err);
-      await toastSimple(
-        "Feed from inventory",
-        err instanceof Error ? err.message : "Failed to feed pet from inventory.",
-        "error"
-      );
-    } finally {
-      try {
-        await clearHandSelection();
-      } catch {
-      }
-      if (shouldCloseInventory) {
-        try {
-          await closeInventoryPanel();
-        } catch {
-        }
-      }
-      btn.disabled = prevDisabled;
-    }
-  }
-  async function getExpandedPetId() {
-    try {
-      const raw = await Atoms.pets.expandedPetSlotId.get();
-      const id = typeof raw === "string" ? raw.trim() : "";
-      return id.length ? id : null;
-    } catch {
-      return null;
-    }
-  }
-  async function findPetById2(petId) {
-    try {
-      const list = await PetsService.getPets();
-      const arr = Array.isArray(list) ? list : [];
-      return arr.find((p) => String(p?.slot?.id || "") === petId) ?? null;
-    } catch (err) {
-      console.warn("[Pet panel] Failed to fetch pets", err);
-      return null;
-    }
-  }
-  async function getAllowedCrops(petId, species) {
-    const defaults = PetsService.getCompatibleCropsForSpecies(species) ?? [];
-    return new Set(defaults);
-  }
-  function formatHungerPct(pct) {
-    if (!Number.isFinite(pct)) return "";
-    const clamped = Math.max(0, Math.min(100, pct));
-    const rounded = Math.round(clamped * 10) / 10;
-    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
-  }
-  var HUNGER_EPSILON = 0.05;
-  var HUNGER_TIMEOUT_MS = 4e3;
-  var HUNGER_POLL_INTERVAL_MS = 120;
-  function isPetInfo(value) {
-    if (!value || typeof value !== "object") return false;
-    const slot = value.slot;
-    return !!slot && typeof slot === "object";
-  }
-  function getHungerPctForPet(pet) {
-    if (!isPetInfo(pet)) return null;
-    try {
-      const hungerPct = PetsService.getHungerPctFor(pet);
-      return typeof hungerPct === "number" && Number.isFinite(hungerPct) ? hungerPct : null;
-    } catch {
-      return null;
-    }
-  }
-  async function getPetHungerPct(petId) {
-    try {
-      const updatedPet = await findPetById2(petId);
-      return getHungerPctForPet(updatedPet);
-    } catch {
-      return null;
-    }
-  }
-  async function waitForHungerIncrease(petId, previousPct, options = {}) {
-    const { initialDelay = 0, timeout = HUNGER_TIMEOUT_MS, interval = HUNGER_POLL_INTERVAL_MS } = options;
-    if (initialDelay > 0) {
-      await delay3(initialDelay);
-    }
-    const start2 = typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
-    let lastResult = null;
-    while (true) {
-      const pct = await getPetHungerPct(petId);
-      if (pct != null) {
-        lastResult = pct;
-        if (previousPct == null || pct >= Math.min(100, previousPct + HUNGER_EPSILON) || pct >= 99.9) {
-          return pct;
-        }
-      }
-      const now2 = typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
-      if (now2 - start2 >= timeout) {
-        return lastResult;
-      }
-      if (interval > 0) {
-        await delay3(interval);
-      }
-    }
-  }
-  function delay3(ms) {
-    return new Promise((resolve2) => setTimeout(resolve2, ms));
-  }
-  async function waitForFakeInventorySelection(timeoutMs = 2e4) {
-    const start2 = performance.now();
-    while (performance.now() - start2 < timeoutMs) {
-      try {
-        const modalVal = await Atoms.ui.activeModal.get();
-        if (!isInventoryOpen(modalVal)) return null;
-      } catch {
-        return null;
-      }
-      try {
-        const value = await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.get();
-        if (typeof value === "number" && Number.isInteger(value) && value >= 0) {
-          return value;
-        }
-      } catch {
-      }
-      await new Promise((resolve2) => setTimeout(resolve2, 80));
-    }
-    return null;
-  }
-
   // src/utils/cropPrice.ts
   init_atoms();
   var isPlantObject2 = (o) => !!o && o.objectType === "plant";
@@ -42926,7 +42260,7 @@
 
   // src/utils/inventorySelectionLogger.ts
   init_atoms();
-  var started3 = false;
+  var started2 = false;
   var cachedItems = [];
   var currentIndex = null;
   var lastLoggedQuantity = void 0;
@@ -43086,8 +42420,8 @@
     }
   }
   async function startSelectedInventoryQuantityLogger() {
-    if (started3) return;
-    started3 = true;
+    if (started2) return;
+    started2 = true;
     cachedItems = normalizeItems(await readInventory());
     currentIndex = await readSelectedIndex();
     logQuantity(true);
@@ -45936,6 +45270,47 @@
   };
   shareGlobal("CheckModal", exposed);
 
+  // src/core/dom.ts
+  var ready = new Promise((res) => {
+    if (document.readyState !== "loading") res();
+    else addEventListener("DOMContentLoaded", () => res(), { once: true });
+  });
+  function addStyle(css3) {
+    const s = document.createElement("style");
+    s.textContent = css3;
+    document.head.appendChild(s);
+    return s;
+  }
+  function toPredicate(selOrFn) {
+    if (typeof selOrFn === "function") return selOrFn;
+    if (typeof selOrFn === "string") return (el2) => el2.matches?.(selOrFn) ?? false;
+    throw new Error("Selector or predicate required");
+  }
+  function onAdded(selOrFn, cb, { root = document, callForExisting = true } = {}) {
+    const pred = toPredicate(selOrFn);
+    const seen = /* @__PURE__ */ new WeakSet();
+    const consider = (el2) => {
+      if (seen.has(el2)) return;
+      if (pred(el2)) {
+        seen.add(el2);
+        cb(el2);
+      }
+    };
+    if (callForExisting && "querySelectorAll" in root) {
+      root.querySelectorAll("*").forEach(consider);
+    }
+    const obs = new MutationObserver((muts) => {
+      for (const m of muts) for (const n of Array.from(m.addedNodes)) {
+        if (n.nodeType !== 1) continue;
+        const el2 = n;
+        consider(el2);
+        el2.querySelectorAll?.("*").forEach(consider);
+      }
+    });
+    obs.observe(root, { childList: true, subtree: true });
+    return { disconnect: () => obs.disconnect() };
+  }
+
   // src/utils/activityLogFilter.ts
   var FILTER_STORAGE_KEY = "activityLog.filter";
   var STYLE_ID3 = "mg-activity-log-filter-style";
@@ -46088,11 +45463,11 @@
     { key: "refund", re: /\b(refund|refunded)\b/i },
     { key: "boost", re: /\b(boost|potion|refund|growth|restock|spin)\b/i }
   ];
-  var started4 = false;
+  var started3 = false;
   var activeFilter = loadPersistedFilter() ?? "all";
   function startActivityLogFilter() {
-    if (started4 || typeof document === "undefined") return;
-    started4 = true;
+    if (started3 || typeof document === "undefined") return;
+    started3 = true;
     ensureStyles();
     onAdded(
       (el2) => el2 instanceof HTMLElement && el2.matches("p.chakra-text") && /activity\s*log/i.test(el2.textContent || ""),
@@ -47540,7 +46915,6 @@
       startDecorPickupLockIndicator();
       startEggHatchLockIndicator();
       startInjectSellAllPets();
-      startPetPanelEnhancer();
       startSelectedInventoryQuantityLogger();
       startInventorySortingObserver();
       startModalObserver({ intervalMs: 6e4, log: true });
@@ -57725,46 +57099,6 @@ next: ${next}`;
     right.style.gap = "10px";
     right.style.minHeight = "0";
     wrap.appendChild(right);
-    const panelCard = document.createElement("div");
-    panelCard.style.border = "1px solid #4445";
-    panelCard.style.borderRadius = "10px";
-    panelCard.style.padding = "10px";
-    panelCard.style.background = "#0f1318";
-    panelCard.style.display = "flex";
-    panelCard.style.flexDirection = "column";
-    panelCard.style.gap = "8px";
-    right.appendChild(panelCard);
-    const panelTitle = document.createElement("div");
-    panelTitle.textContent = "Pet panel buttons";
-    panelTitle.style.fontWeight = "600";
-    panelCard.appendChild(panelTitle);
-    const panelBody = document.createElement("div");
-    panelBody.style.display = "flex";
-    panelBody.style.flexDirection = "column";
-    panelBody.style.gap = "6px";
-    panelCard.appendChild(panelBody);
-    const settings = getPetPanelButtonSettings();
-    const addToggle = (label2, key2, checked) => {
-      const row = document.createElement("div");
-      row.style.display = "flex";
-      row.style.alignItems = "center";
-      row.style.justifyContent = "space-between";
-      row.style.gap = "10px";
-      row.style.padding = "4px 0";
-      const text = document.createElement("div");
-      text.textContent = label2;
-      text.style.fontSize = "13px";
-      const sw = ui.switch(checked);
-      sw.addEventListener("change", () => {
-        const next = setPetPanelButtonSettings({ [key2]: sw.checked });
-        sw.checked = next[key2];
-        applyPetPanelButtonVisibility();
-      });
-      row.append(text, sw);
-      panelBody.appendChild(row);
-    };
-    addToggle("Show Instant Feed button", "instantFeed", settings.instantFeed);
-    addToggle("Show Feed from Inventory button", "feedFromInventory", settings.feedFromInventory);
     const card2 = document.createElement("div");
     card2.style.border = "1px solid #4445";
     card2.style.borderRadius = "10px";

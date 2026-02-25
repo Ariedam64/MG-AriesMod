@@ -120,8 +120,8 @@ export const mySeedSiloItems = makeAtom<SeedInventoryState>("mySeedSiloItemsAtom
 export const myDecorShedItems = makeAtom<DecorInventoryState>("myDecorShedItemsAtom");
 export const myPetInfos = makeAtom<PetState>("myPetInfosAtom");
 export const myPetSlotInfos = makeAtom<any>("myPetSlotInfosAtom");
+export const myPrimitivePetSlots = makeAtom<any[]>("myPrimitivePetSlotsAtom");
 export const totalPetSellPrice = makeAtom<number>("totalPetSellPriceAtom")
-export const expandedPetSlotId = makeAtom<string>("expandedPetSlotIdAtom")
 export const myCropItemsToSell = makeAtom<any>("myCropItemsToSellAtom")
 export const myPetHutchPetItems = makeAtom<any>("myPetHutchPetItemsAtom")
 export const isMyInventoryAtMaxLength = makeAtom<any>("isMyInventoryAtMaxLengthAtom")
@@ -369,8 +369,8 @@ export const Atoms = {
   pets: {
     myPetInfos,
     myPetSlotInfos,
+    myPrimitivePetSlots,
     totalPetSellPrice,
-    expandedPetSlotId
   },
   shop: {
     shops,

@@ -63,12 +63,6 @@ export type PetOverride = {
 
 export type PetOverridesMap = Record<string, PetOverride>;
 
-export type InstantFeedOverride = {
-  crops: Record<string, { allowed: boolean }>;
-};
-
-export type InstantFeedOverridesMap = Record<string, InstantFeedOverride>;
-
 export type PetsUIState = {
   selectedPetId: string | null;
 };
@@ -77,7 +71,6 @@ type PetImgEntry = { img64?: { normal?: string; gold?: string; rainbow?: string 
 type PetCatalogLoose = Record<string, PetImgEntry>;
 
 const PATH_PETS_OVERRIDES = "pets.overrides";
-const PATH_PETS_INSTANT_FEED = "pets.instantFeed";
 const PATH_PETS_UI = "pets.ui";
 const PATH_PETS_TEAMS = "pets.teams";
 const PATH_PETS_TEAM_SEARCH = "pets.teamSearch";
@@ -688,7 +681,6 @@ const _belowThreshold = new Map<string, boolean>(); // tracks pets that were bel
 const AUTOF_FEED_MIN_INTERVAL_MS = 2000;
 const DEFAULT_OVERRIDE: PetOverride = { enabled: false, thresholdPct: 10, crops: {} };
 const DEFAULT_UI: PetsUIState = { selectedPetId: null };
-const DEFAULT_INSTANT_FEED: InstantFeedOverride = { crops: {} };
 
 let _currentPets: PetInfo[] = [];
 let _userTriggerCb: ((t: AutofeedTrigger) => void) | null = null;
@@ -698,13 +690,6 @@ function saveOverrides(map: PetOverridesMap) {
 }
 function loadOverrides(): PetOverridesMap {
   const obj = readAriesPath<PetOverridesMap>(PATH_PETS_OVERRIDES);
-  return obj && typeof obj === "object" ? obj : {};
-}
-function saveInstantFeedOverrides(map: InstantFeedOverridesMap) {
-  writeAriesPath(PATH_PETS_INSTANT_FEED, map);
-}
-function loadInstantFeedOverrides(): InstantFeedOverridesMap {
-  const obj = readAriesPath<InstantFeedOverridesMap>(PATH_PETS_INSTANT_FEED);
   return obj && typeof obj === "object" ? obj : {};
 }
 function saveUIState(next: PetsUIState) {
@@ -720,12 +705,6 @@ function cloneOverride(o?: PetOverride): PetOverride {
   return {
     enabled: !!src.enabled,
     thresholdPct: Math.min(100, Math.max(1, Number(src.thresholdPct) || DEFAULT_OVERRIDE.thresholdPct)),
-    crops: { ...(src.crops || {}) },
-  };
-}
-function cloneInstantFeedOverride(o?: InstantFeedOverride): InstantFeedOverride {
-  const src = o ?? DEFAULT_INSTANT_FEED;
-  return {
     crops: { ...(src.crops || {}) },
   };
 }
@@ -911,38 +890,6 @@ export const PetsService = {
     for (const c of compatibles) {
       const rule = ov.crops[c];
       if (rule ? !!rule.allowed : true) allowed.add(c); // default: allowed
-    }
-    return allowed;
-  },
-
-  /* ------------------------- Instant feed (per-species) ------------------------- */
-  getInstantFeedOverride(species: string): InstantFeedOverride {
-    const key = _canonicalSpecies(String(species || ""));
-    const all = loadInstantFeedOverrides();
-    return cloneInstantFeedOverride(all[key]);
-  },
-  isInstantFeedCropAllowed(species: string, crop: string): boolean {
-    const ov = this.getInstantFeedOverride(species);
-    const rule = ov.crops[crop];
-    return rule ? !!rule.allowed : true;
-  },
-  setInstantFeedCropAllowed(species: string, crop: string, allowed: boolean): InstantFeedOverride {
-    const key = _canonicalSpecies(String(species || ""));
-    const all = loadInstantFeedOverrides();
-    const cur = cloneInstantFeedOverride(all[key]);
-    cur.crops[crop] = { allowed: !!allowed };
-    all[key] = cur;
-    saveInstantFeedOverrides(all);
-    return cloneInstantFeedOverride(cur);
-  },
-  getInstantFeedAllowedCrops(species: string): Set<string> {
-    const key = _canonicalSpecies(String(species || ""));
-    const compatibles = this.getCompatibleCropsForSpecies(key);
-    const ov = this.getInstantFeedOverride(key);
-    const allowed = new Set<string>();
-    for (const c of compatibles) {
-      const rule = ov.crops[c];
-      if (rule ? !!rule.allowed : true) allowed.add(c);
     }
     return allowed;
   },
@@ -1287,7 +1234,6 @@ export const PetsService = {
 
       case "ProduceScaleBoost":
       case "ProduceScaleBoostII":
-      case "ProduceScaleBoostIII":
       case "SnowyCropSizeBoost": {
         const inc =
           data["scaleIncreasePercentage"] ??
@@ -1312,10 +1258,7 @@ export const PetsService = {
 
       case "PlantGrowthBoost":
       case "PlantGrowthBoostII":
-      case "PlantGrowthBoostIII":
-      case "SnowyPlantGrowthBoost":
-      case "DawnPlantGrowthBoost":
-      case "AmberPlantGrowthBoost": {
+      case "SnowyPlantGrowthBoost": {
         const minutes =
           data["minutesReduced"] ??
           data["reductionMinutes"] ??
@@ -1327,29 +1270,25 @@ export const PetsService = {
 
       case "PetXpBoost":
       case "SnowyPetXpBoost":
-      case "PetXpBoostII":
-      case "PetXpBoostIII": {
+      case "PetXpBoostII": {
         const xp = data["bonusXp"] ?? base["bonusXp"] ?? 0;
         return num(xp);
       }
 
       case "PetAgeBoost":
-      case "PetAgeBoostII":
-      case "PetAgeBoostIII": {
+      case "PetAgeBoostII": {
         const xp = data["bonusXp"] ?? base["bonusXp"] ?? 0;
         return num(xp);
       }
 
       case "PetHatchSizeBoost":
-      case "PetHatchSizeBoostII":
-      case "PetHatchSizeBoostIII": {
+      case "PetHatchSizeBoostII": {
         const strength = data["strengthIncrease"] ?? 0;
         return num(strength);
       }
 
       case "HungerRestore":
       case "HungerRestoreII":
-      case "HungerRestoreIII":
       case "SnowyHungerRestore": {
         const amount =
           data["hungerRestoreAmount"] ??
@@ -1361,7 +1300,6 @@ export const PetsService = {
 
       case "HungerBoost":
       case "HungerBoostII":
-      case "HungerBoostIII":
       case "SnowyHungerBoost": {
         const pct =
           data["hungerDepletionRateDecreasePercentage"] ??
@@ -1695,9 +1633,9 @@ export const PetsService = {
         case "ProduceMutationBoost":
         case "ProduceMutationBoostII":
         case "ProduceMutationBoostIII":
-        case "SnowyCropMutationBoost":
         case "DawnBoost":
         case "AmberMoonBoost":
+        case "SnowyCropMutationBoost":
         case "PetMutationBoost":
         case "PetMutationBoostII":
         case "PetMutationBoostIII": {
@@ -1718,9 +1656,9 @@ export const PetsService = {
         case "PlantGrowthBoost":
         case "PlantGrowthBoostII":
         case "PlantGrowthBoostIII":
-        case "SnowyPlantGrowthBoost":
         case "DawnPlantGrowthBoost":
-        case "AmberPlantGrowthBoost": {
+        case "AmberPlantGrowthBoost":
+        case "SnowyPlantGrowthBoost": {
           const mins = d["minutesReduced"] ?? d["reductionMinutes"] ?? base["plantGrowthReductionMinutes"];
           return mins != null ? `- ${fmtMin1(mins)}` : "Plant growth reduced";
         }
@@ -1864,9 +1802,53 @@ type FlatAbilityEntry = {
   hungerPct?: any;
 };
 
+/* --------------------------------- Helpers: free slot finders -------------------------------- */
+const _HUTCH_MAX = 25;
+
+async function _findFreeInventoryIndex(): Promise<number | undefined> {
+  try {
+    const inv = await Atoms.inventory.myInventory.get();
+    const items: any[] = Array.isArray(inv?.items) ? inv.items : Array.isArray(inv) ? inv : [];
+    for (let i = 0; i < items.length; i++) {
+      if (!items[i]) return i;
+    }
+    return items.length;
+  } catch {
+    return undefined;
+  }
+}
+
+async function _findFreeHutchIndex(): Promise<number | undefined> {
+  try {
+    const hutch = await myPetHutchPetItems.get();
+    const items: any[] = Array.isArray(hutch) ? hutch : [];
+    const hasStorageIndices = items.some(it => typeof it?.storageIndex === "number");
+    if (hasStorageIndices) {
+      const used = new Set(items.filter(it => typeof it?.storageIndex === "number").map(it => it.storageIndex as number));
+      for (let i = 0; i < _HUTCH_MAX; i++) {
+        if (!used.has(i)) return i;
+      }
+      return _HUTCH_MAX;
+    }
+    for (let i = 0; i < items.length; i++) {
+      if (!items[i]) return i;
+    }
+    return items.length;
+  } catch {
+    return undefined;
+  }
+}
+
 /* --------------------------------- Helpers: active pets -------------------------------- */
 async function _getActivePetSlotIds(): Promise<string[]> {
   try {
+    // myPrimitivePetSlotsAtom = new atom (game update), items have .id directly
+    const primitives = await Atoms.pets.myPrimitivePetSlots.get();
+    const primList = Array.isArray(primitives) ? primitives : [];
+    const primIds = primList.map((p: any) => String(p?.id || "")).filter((id: string) => !!id).slice(0, 3);
+    if (primIds.length) return primIds;
+
+    // Fallback: old myPetInfosAtom format with { slot: { id } } wrapper
     const arr = await PlayerService.getPets();
     const list = Array.isArray(arr) ? arr : [];
     return list
@@ -1874,107 +1856,6 @@ async function _getActivePetSlotIds(): Promise<string[]> {
       .filter(id => !!id)
       .slice(0, 3);
   } catch { return []; }
-}
-
-async function _waitForActivePetsMatch(targetIds: string[], timeoutMs = 5000): Promise<boolean> {
-  const wanted = new Set(targetIds.map(id => String(id || "")).filter(Boolean));
-  if (!wanted.size) return true;
-  const snapshotMatches = async () => {
-    try {
-      const cur = await Atoms.pets.myPetInfos.get();
-      const set = new Set<string>((Array.isArray(cur) ? cur : []).map((p: any) => String(p?.slot?.id || "")).filter(Boolean));
-      return [...wanted].every(id => set.has(id));
-    } catch { return false; }
-  };
-  if (await snapshotMatches()) return true;
-
-  return new Promise<boolean>((resolve) => {
-    const deadline = Date.now() + timeoutMs;
-    let unsub: (() => void) | null = null;
-    let pendingUnsub: Promise<(() => void)> | null = null;
-    let stopped = false;
-    const doUnsub = (fn?: (() => void) | null) => { if (fn) { try { fn(); } catch {} } };
-    const stop = (ok: boolean) => {
-      if (stopped) return;
-      stopped = true;
-      if (unsub) { doUnsub(unsub); }
-      else if (pendingUnsub) { pendingUnsub.then(fn => doUnsub(fn)).catch(() => {}); }
-      resolve(ok);
-    };
-    const check = async (state?: any) => {
-      const set = new Set<string>((Array.isArray(state) ? state : []).map((p: any) => String(p?.slot?.id || "")).filter(Boolean));
-      if ([...wanted].every(id => set.has(id))) { stop(true); }
-      else if (Date.now() >= deadline) { stop(false); }
-    };
-    try {
-      const res = Atoms.pets.myPetInfos.onChange((state: any) => { void check(state); });
-      if (typeof res === "function") { unsub = res; }
-      else if (res && typeof (res as any).then === "function") {
-        pendingUnsub = res as Promise<() => void>;
-        pendingUnsub.then(fn => { unsub = fn; if (stopped) { doUnsub(fn); } }).catch(() => {});
-      }
-    } catch {
-      stop(false);
-      return;
-    }
-    void check();
-    setTimeout(() => stop(false), timeoutMs + 50);
-  });
-}
-
-async function _waitForInventoryState(
-  predicate: (ids: Set<string>) => boolean,
-  timeoutMs = 4000
-): Promise<boolean> {
-  const snapshotMatches = async () => {
-    try {
-      const cur = await Atoms.inventory.myInventory.get();
-      const set = new Set<string>(
-        (Array.isArray(cur?.items) ? cur.items : Array.isArray(cur) ? cur : [])
-          .map((p: any) => String(p?.id || ""))
-          .filter(Boolean),
-      );
-      return predicate(set);
-    } catch { return false; }
-  };
-  if (await snapshotMatches()) return true;
-
-  return new Promise<boolean>((resolve) => {
-    const deadline = Date.now() + timeoutMs;
-    let unsub: (() => void) | null = null;
-    let pendingUnsub: Promise<(() => void)> | null = null;
-    let stopped = false;
-    const doUnsub = (fn?: (() => void) | null) => { if (fn) { try { fn(); } catch {} } };
-    const stop = (ok: boolean) => {
-      if (stopped) return;
-      stopped = true;
-      if (unsub) { doUnsub(unsub); }
-      else if (pendingUnsub) { pendingUnsub.then(fn => doUnsub(fn)).catch(() => {}); }
-      resolve(ok);
-    };
-    const check = async (state?: any) => {
-      const set = new Set<string>(
-        (Array.isArray(state?.items) ? state.items : Array.isArray(state) ? state : [])
-          .map((p: any) => String(p?.id || ""))
-          .filter(Boolean),
-      );
-      if (predicate(set)) { stop(true); }
-      else if (Date.now() >= deadline) { stop(false); }
-    };
-    try {
-      const res = Atoms.inventory.myInventory.onChange((state: any) => { void check(state); });
-      if (typeof res === "function") { unsub = res; }
-      else if (res && typeof (res as any).then === "function") {
-        pendingUnsub = res as Promise<() => void>;
-        pendingUnsub.then(fn => { unsub = fn; if (stopped) { doUnsub(fn); } }).catch(() => {});
-      }
-    } catch {
-      stop(false);
-      return;
-    }
-    void check();
-    setTimeout(() => stop(false), timeoutMs + 50);
-  });
 }
 
 async function _waitForHutchState(
@@ -2107,7 +1988,8 @@ async function _equipPetIds(
                 return id && !hutchItemsSet.has(id) && !activeSlots.includes(id) && !targetSet.has(id);
               });
               if (invPet) {
-              await PlayerService.putItemInStorage(invPet.id, "PetHutch");
+              const hutIdx = await _findFreeHutchIndex();
+              await PlayerService.putItemInStorage(invPet.id, "PetHutch", hutIdx);
               freeHutch = Math.max(0, freeHutch - 1);
               void _waitForHutchState(set => set.has(String(invPet.id)), 3000);
               } else {
@@ -2129,7 +2011,12 @@ async function _equipPetIds(
         }
 
       // Retrieve from Hutch (this increases available Hutch space by 1)
-      try { await PlayerService.retrieveItemFromStorage(invId, "PetHutch"); hutchItemsSet.delete(invId); freeHutch = Math.min(25, freeHutch + 1); } catch { continue; }
+      try {
+        const invIdx = await _findFreeInventoryIndex();
+        await PlayerService.retrieveItemFromStorage(invId, "PetHutch", invIdx);
+        hutchItemsSet.delete(invId);
+        freeHutch = Math.min(25, freeHutch + 1);
+      } catch { continue; }
       void _waitForHutchState(set => !set.has(String(invId)), 3000);
     }
 
@@ -2141,7 +2028,11 @@ async function _equipPetIds(
         swapped++;
         // After swap, offTargetActive becomes inventory item; move it into Hutch if possible to keep flow
         if (freeHutch > 0) {
-          try { await PlayerService.putItemInStorage(offTargetActive, "PetHutch"); freeHutch = Math.max(0, freeHutch - 1); } catch {}
+          try {
+            const hutIdx = await _findFreeHutchIndex();
+            await PlayerService.putItemInStorage(offTargetActive, "PetHutch", hutIdx);
+            freeHutch = Math.max(0, freeHutch - 1);
+          } catch {}
           void _waitForHutchState(set => set.has(String(offTargetActive)), 3000);
         }
         // Update active set snapshot
@@ -2168,7 +2059,8 @@ async function _equipPetIds(
         if (freeHutch <= 0) break;
         try {
           await PlayerService.storePet(slotId);
-          await PlayerService.putItemInStorage(slotId, "PetHutch");
+          const hutIdx = await _findFreeHutchIndex();
+          await PlayerService.putItemInStorage(slotId, "PetHutch", hutIdx);
           freeHutch = Math.max(0, freeHutch - 1);
           activeSlots = activeSlots.filter(x => x !== slotId);
           void _waitForHutchState(set => set.has(String(slotId)), 3000);
@@ -2180,9 +2072,7 @@ async function _equipPetIds(
 
   // Final tidy pass to ensure exact targets are active (handles pets already in inventory)
   const res = await _applyTeam(targetInvIds);
-  try { await _waitForActivePetsMatch(targetInvIds, 5000); } catch {}
-  try { await _waitForInventoryState(set => targetInvIds.every(id => set.has(id)), 3000); } catch {}
-  try { await _waitForHutchState(set => targetInvIds.every(id => !set.has(id)), 3000); } catch {}
+  await new Promise(r => setTimeout(r, 300));
   if (shouldMark) markTeamAsUsed(markResolved);
   return res;
 }
@@ -2219,8 +2109,13 @@ async function _applyTeam(targetInvIds: string[]): Promise<{ swapped: number; pl
   for (const invId of toDo) {
     const slotId = activeSlots.shift();
     try {
-      if (slotId) { await PlayerService.swapPet(slotId, invId); swapped++; }
-      else        { await PlayerService.placePet(invId, { x: 0, y: 0 }, "Boardwalk", 64); placed++; }
+      if (slotId) {
+        await PlayerService.swapPet(slotId, invId);
+        swapped++;
+      } else {
+        await PlayerService.placePet(invId, { x: 0, y: 0 }, "Boardwalk", 64);
+        placed++;
+      }
     } catch {}
   }
 

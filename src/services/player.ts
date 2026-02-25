@@ -299,6 +299,10 @@ export const PlayerService = {
     try { sendToGame({ type: "HatchEgg", slot }); } catch (err) {  }
   },
 
+  async plantEgg(slot: number, eggId: string) {
+    try { sendToGame({ type: "PlantEgg", slot, eggId }); } catch (err) {  }
+  },
+
   async placeDecor(tileType: "Dirt" | "Boardwalk", localTileIndex: number, decorId: string, rotation: 0) {
     try { sendToGame({ type: "PlaceDecor", tileType, localTileIndex, decorId, rotation}); } catch (err) {  }
   },
@@ -311,12 +315,12 @@ export const PlayerService = {
     try { sendToGame({ type: "PlacePet", itemId, position, tileType, localTileIndex }); } catch (err) {  }
   },
 
-  async retrieveItemFromStorage(itemId: string, storageId: string){
-    try { sendToGame({ type: "RetrieveItemFromStorage", itemId, storageId}) } catch (err) { }
+  async retrieveItemFromStorage(itemId: string, storageId: string, toInventoryIndex?: number){
+    try { sendToGame({ type: "RetrieveItemFromStorage", itemId, storageId, ...(toInventoryIndex !== undefined && { toInventoryIndex }) }) } catch (err) { }
   },
 
-  async putItemInStorage(itemId: string, storageId: string){
-    try { sendToGame({ type: "PutItemInStorage", itemId, storageId}) } catch (err) { }
+  async putItemInStorage(itemId: string, storageId: string, toStorageIndex?: number){
+    try { sendToGame({ type: "PutItemInStorage", itemId, storageId, ...(toStorageIndex !== undefined && { toStorageIndex }) }) } catch (err) { }
   },
 
 
@@ -343,8 +347,8 @@ export const PlayerService = {
     try { sendToGame({ type: "PetPositions", petPositions: sanitized }); } catch (err) { }
   },
 
-  async storePet(itemId: string) {
-    try { sendToGame({ type: "StorePet", itemId }); } catch (err) {  }
+  async storePet(petId: string) {
+    try { sendToGame({ type: "PickupPet", petId }); } catch (err) {  }
   },
 
   async wish(itemId: string) {

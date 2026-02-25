@@ -21,7 +21,6 @@ import { renderOverlay } from "./menus/notificationOverlay";
 import { renderCommunityHub } from "./menus/communityHub";
 import { getSpriteWarmupState, onSpriteWarmupProgress } from "./spriteIconCache";
 import { setupBuyAll, startReorderObserver } from "../utils/shopUtility";
-import { startPetPanelEnhancer } from "../utils/petPanelEnhancer";
 import { startCropValuesObserverFromGardenAtom } from "../utils/cropValues";
 import { startInjectSellAllPets } from "../utils/sellAllPets";
 import { startSellCropsLockWatcher } from "../utils/sellCropsLock";
@@ -1109,7 +1108,6 @@ export function initWatchers(){
       startDecorPickupLockIndicator();
       startEggHatchLockIndicator();
       startInjectSellAllPets();
-      startPetPanelEnhancer();
       startSelectedInventoryQuantityLogger();
       startInventorySortingObserver();
       startModalObserver({ intervalMs: 60_000, log: true });

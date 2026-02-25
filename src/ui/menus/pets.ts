@@ -10,11 +10,6 @@ import type { PetInfo } from "../../services/player";
 import type { PetTeam } from "../../services/pets";
 import { onActivePetsStructuralChangeNow } from "../../store/atoms";
 import { attachSpriteIcon } from "../spriteIconCache";
-import {
-  applyPetPanelButtonVisibility,
-  getPetPanelButtonSettings,
-  setPetPanelButtonSettings,
-} from "../../utils/petPanelEnhancer";
 import { rarityBadge } from "./notifier";
 import { petCatalog, plantCatalog } from "../../data/hardcoded-data.clean";
 
@@ -1412,58 +1407,6 @@ function renderFeedingTab(view: HTMLElement, ui: Menu) {
   right.style.gap = "10px";
   right.style.minHeight = "0";
   wrap.appendChild(right);
-
-  const panelCard = document.createElement("div");
-  panelCard.style.border = "1px solid #4445";
-  panelCard.style.borderRadius = "10px";
-  panelCard.style.padding = "10px";
-  panelCard.style.background = "#0f1318";
-  panelCard.style.display = "flex";
-  panelCard.style.flexDirection = "column";
-  panelCard.style.gap = "8px";
-  right.appendChild(panelCard);
-
-  const panelTitle = document.createElement("div");
-  panelTitle.textContent = "Pet panel buttons";
-  panelTitle.style.fontWeight = "600";
-  panelCard.appendChild(panelTitle);
-
-  const panelBody = document.createElement("div");
-  panelBody.style.display = "flex";
-  panelBody.style.flexDirection = "column";
-  panelBody.style.gap = "6px";
-  panelCard.appendChild(panelBody);
-
-  const settings = getPetPanelButtonSettings();
-  const addToggle = (
-    label: string,
-    key: "instantFeed" | "feedFromInventory",
-    checked: boolean,
-  ) => {
-    const row = document.createElement("div");
-    row.style.display = "flex";
-    row.style.alignItems = "center";
-    row.style.justifyContent = "space-between";
-    row.style.gap = "10px";
-    row.style.padding = "4px 0";
-
-    const text = document.createElement("div");
-    text.textContent = label;
-    text.style.fontSize = "13px";
-
-    const sw = ui.switch(checked) as HTMLInputElement;
-    sw.addEventListener("change", () => {
-      const next = setPetPanelButtonSettings({ [key]: sw.checked });
-      sw.checked = next[key];
-      applyPetPanelButtonVisibility();
-    });
-
-    row.append(text, sw);
-    panelBody.appendChild(row);
-  };
-
-  addToggle("Show Instant Feed button", "instantFeed", settings.instantFeed);
-  addToggle("Show Feed from Inventory button", "feedFromInventory", settings.feedFromInventory);
 
   const card = document.createElement("div");
   card.style.border = "1px solid #4445";
