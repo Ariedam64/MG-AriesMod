@@ -23,6 +23,7 @@ type ActivePetSlot = {
 
 let started = false;
 let activePets: ActivePetSlot[] = [];
+let allowInject = true;
 const roots = new Set<HTMLElement>();
 
 export function startInstantFeedButton(): void {
@@ -34,10 +35,18 @@ export function startInstantFeedButton(): void {
   started = true;
 
   const syncRoots = () => {
+    if (!allowInject) return;
     for (const root of Array.from(roots)) {
       if (!root.isConnected) continue;
       renderBar(root);
     }
+  };
+
+  const setAllowInjectFromModal = (value: unknown) => {
+    const next = value == null;
+    if (next === allowInject) return;
+    allowInject = next;
+    if (allowInject) syncRoots();
   };
 
   const updateActivePets = (next: unknown) => {
@@ -46,6 +55,15 @@ export function startInstantFeedButton(): void {
   };
 
   void (async () => {
+    try {
+      setAllowInjectFromModal(await Atoms.ui.activeModal.get());
+    } catch {}
+    try {
+      await Atoms.ui.activeModal.onChange((next) => {
+        setAllowInjectFromModal(next);
+      });
+    } catch {}
+
     try {
       updateActivePets(await Atoms.pets.myPrimitivePetSlots.get());
     } catch {}
@@ -62,6 +80,7 @@ export function startInstantFeedButton(): void {
     (el) => {
       if (!(el instanceof HTMLElement)) return;
       roots.add(el);
+      if (!allowInject) return;
       renderBar(el);
     },
   );

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.361
+// @version      3.1.362
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -1387,8 +1387,8 @@
           myDecorShedItems,
           myFeedingTroughItems,
           favoriteIds,
-          mySelectedItemName,
           mySelectedItemId,
+          mySelectedItemName,
           mySelectedItemRotation,
           myPossiblyNoLongerValidSelectedItemIndex,
           myValidatedSelectedItemIndex,
@@ -28160,6 +28160,7 @@
   var GLOBAL_START_FLAG = "__qws_instant_feed_btn_started";
   var started2 = false;
   var activePets = [];
+  var allowInject = true;
   var roots = /* @__PURE__ */ new Set();
   function startInstantFeedButton() {
     if (typeof document === "undefined") return;
@@ -28169,16 +28170,33 @@
     if (started2) return;
     started2 = true;
     const syncRoots = () => {
+      if (!allowInject) return;
       for (const root of Array.from(roots)) {
         if (!root.isConnected) continue;
         renderBar(root);
       }
+    };
+    const setAllowInjectFromModal = (value) => {
+      const next = value == null;
+      if (next === allowInject) return;
+      allowInject = next;
+      if (allowInject) syncRoots();
     };
     const updateActivePets = (next) => {
       activePets = normalizeActivePets(next);
       syncRoots();
     };
     void (async () => {
+      try {
+        setAllowInjectFromModal(await Atoms.ui.activeModal.get());
+      } catch {
+      }
+      try {
+        await Atoms.ui.activeModal.onChange((next) => {
+          setAllowInjectFromModal(next);
+        });
+      } catch {
+      }
       try {
         updateActivePets(await Atoms.pets.myPrimitivePetSlots.get());
       } catch {
@@ -28195,6 +28213,7 @@
       (el2) => {
         if (!(el2 instanceof HTMLElement)) return;
         roots.add(el2);
+        if (!allowInject) return;
         renderBar(el2);
       }
     );

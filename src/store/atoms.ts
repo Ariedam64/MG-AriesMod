@@ -138,7 +138,7 @@ export const totalCropSellPrice = makeAtom<number>("totalCropSellPriceAtom");
 export const myValidatedSelectedItemIndex = makeAtom<number | null>("myValidatedSelectedItemIndexAtom");
 export const setSelectedIndexToEnd = makeAtom<number | null>("setSelectedIndexToEndAtom");
 export const mySelectedItemName = makeAtom<any>("mySelectedItemNameAtom");
-export const mySelectedItemId = makeAtom<string | null>("mySelectedItemIdAtom");
+export const mySelectedItemId = makeAtom<any>("mySelectedItemIdAtom");
 export const myPossiblyNoLongerValidSelectedItemIndex = makeAtom<number | null>("myPossiblyNoLongerValidSelectedItemIndexAtom");
 
 export const myCurrentGardenObject = makeAtom<CurrentGardenObject>("myCurrentGardenObjectAtom");
@@ -363,8 +363,8 @@ export const Atoms = {
     myDecorShedItems,
     myFeedingTroughItems,
     favoriteIds,
-    mySelectedItemName,
     mySelectedItemId,
+    mySelectedItemName,
     mySelectedItemRotation,
     myPossiblyNoLongerValidSelectedItemIndex,
     myValidatedSelectedItemIndex,
