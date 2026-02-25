@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.366
+// @version      3.1.367
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -28154,13 +28154,14 @@
   init_atoms();
   var ROOT_CLASS = "css-pb842o";
   var BAR_ATTR = "data-instant-feed-bar";
+  var BAR_INSTANCE_ATTR = "data-instant-feed-instance";
   var BTN_ATTR = "data-instant-feed-btn";
-  var BTN_INDEX_ATTR = "data-instant-feed-idx";
   var DEFAULT_LABEL = "Instant Feed";
   var MAX_BUTTONS = 3;
   var ICON_SIZE = 18;
   var GLOBAL_START_FLAG = "__qws_instant_feed_btn_started";
   var INVENTORY_CARD_ATOM = "inventoryCardIsOpenAtom";
+  var INSTANCE_ID = Math.random().toString(36).slice(2, 9);
   var started2 = false;
   var activePets = [];
   var allowInject = true;
@@ -28168,6 +28169,8 @@
   var inventoryCardOpen = false;
   var activePetsSig = "";
   var roots = /* @__PURE__ */ new Set();
+  var sharedBar = null;
+  var pinnedRoot = null;
   function startInstantFeedButton() {
     if (typeof document === "undefined") return;
     const win = globalThis;
@@ -28275,12 +28278,19 @@
   }
   function renderBar(root) {
     if (!root.isConnected) return;
-    const bar = ensureBar(root);
-    const buttons = ensureButtons(root, bar);
+    const activeRoot = pinnedRoot && pinnedRoot.isConnected ? pinnedRoot : pinnedRoot = root;
+    let bar = ensureBar(activeRoot);
+    if (!bar && activeRoot !== root) {
+      pinnedRoot = root;
+      bar = ensureBar(root);
+    }
+    if (!bar) return;
+    const buttons = ensureButtons(activeRoot, bar);
     updateButtons(buttons);
   }
   function ensureBar(root) {
     const { host, anchor, stackWithNav } = findBarHost(root);
+    if (!host) return null;
     if (stackWithNav) {
       host.style.display = "flex";
       host.style.flexDirection = "column";
@@ -28288,10 +28298,30 @@
       host.style.gap = "6px";
       host.style.width = "100%";
     }
-    let bar = root.querySelector(`[${BAR_ATTR}="1"]`);
+    let bar = sharedBar;
+    if (!bar) {
+      const existingBars = Array.from(
+        document.querySelectorAll(`[${BAR_ATTR}="1"]`)
+      );
+      if (existingBars.length) {
+        const owned = existingBars.find(
+          (candidate) => candidate.getAttribute(BAR_INSTANCE_ATTR) === INSTANCE_ID
+        );
+        if (owned) {
+          bar = owned;
+          sharedBar = bar;
+          for (const candidate of existingBars) {
+            if (candidate !== owned) candidate.remove();
+          }
+        } else {
+          for (const candidate of existingBars) candidate.remove();
+        }
+      }
+    }
     if (!bar) {
       bar = document.createElement("div");
       bar.setAttribute(BAR_ATTR, "1");
+      bar.setAttribute(BAR_INSTANCE_ATTR, INSTANCE_ID);
       bar.style.display = "grid";
       bar.style.gridTemplateColumns = `repeat(${MAX_BUTTONS}, max-content)`;
       bar.style.justifyContent = "center";
@@ -28299,11 +28329,14 @@
       bar.style.gap = "6px";
       bar.style.marginTop = stackWithNav ? "0" : "6px";
       bar.style.width = "100%";
+      sharedBar = bar;
       if (anchor && anchor.parentElement === host) {
         anchor.insertAdjacentElement("afterend", bar);
       } else {
         host.appendChild(bar);
       }
+    } else if (!bar.hasAttribute(BAR_INSTANCE_ATTR)) {
+      bar.setAttribute(BAR_INSTANCE_ATTR, INSTANCE_ID);
     } else if (bar.parentElement !== host) {
       if (anchor && anchor.parentElement === host) {
         anchor.insertAdjacentElement("afterend", bar);
@@ -28320,8 +28353,8 @@
   function findBarHost(root) {
     const navContainer = root.querySelector(".McFlex.css-1vtdcnr");
     if (navContainer) {
-      const navGrid2 = navContainer.querySelector(".McGrid.css-8i2u7l");
-      return { host: navContainer, anchor: navGrid2, stackWithNav: true };
+      const navGridLegacy = navContainer.querySelector(".McGrid.css-8i2u7l");
+      return { host: navContainer, anchor: navGridLegacy, stackWithNav: true };
     }
     const host = root;
     const navGrid = root.querySelector(".McGrid.css-8i2u7l");
@@ -28354,26 +28387,9 @@
   function createButton2(root, index) {
     const ref = findReferenceButton(root);
     const btn = ref ? ref.cloneNode(false) : document.createElement("button");
-    if (!btn.classList.contains("chakra-button")) {
-      btn.classList.add("chakra-button");
-    }
-    btn.type = "button";
+    applyButtonBaseStyles(btn);
     btn.removeAttribute("id");
     btn.setAttribute(BTN_ATTR, "1");
-    btn.setAttribute(BTN_INDEX_ATTR, String(index));
-    btn.style.display = "inline-flex";
-    btn.style.alignItems = "center";
-    btn.style.justifyContent = "center";
-    btn.style.gap = "6px";
-    btn.style.width = "auto";
-    btn.style.flex = "0 0 auto";
-    btn.style.whiteSpace = "nowrap";
-    btn.style.backgroundColor = "#6D3A88";
-    btn.style.color = "#ffffff";
-    btn.style.pointerEvents = "auto";
-    btn.setAttribute("aria-label", DEFAULT_LABEL);
-    btn.title = DEFAULT_LABEL;
-    ensureButtonContent(btn).label.textContent = DEFAULT_LABEL;
     btn.addEventListener("click", (ev) => {
       const target = ev.currentTarget;
       if (!target) return;
@@ -28393,6 +28409,7 @@
   function updateButtons(buttons) {
     for (let i = 0; i < buttons.length; i++) {
       const btn = buttons[i];
+      applyButtonBaseStyles(btn);
       const pet = activePets[i] ?? null;
       const label2 = DEFAULT_LABEL;
       const title = pet ? buildButtonTitle(pet) : DEFAULT_LABEL;
@@ -28417,6 +28434,22 @@
         parts.icon.replaceChildren();
       }
     }
+  }
+  function applyButtonBaseStyles(btn) {
+    if (!btn.classList.contains("chakra-button")) {
+      btn.classList.add("chakra-button");
+    }
+    btn.type = "button";
+    btn.style.display = "inline-flex";
+    btn.style.alignItems = "center";
+    btn.style.justifyContent = "center";
+    btn.style.gap = "6px";
+    btn.style.width = "auto";
+    btn.style.flex = "0 0 auto";
+    btn.style.whiteSpace = "nowrap";
+    btn.style.backgroundColor = "#6D3A88";
+    btn.style.color = "#ffffff";
+    btn.style.pointerEvents = "auto";
   }
   function buildButtonTitle(pet) {
     const name = String(pet.name ?? pet.petSpecies ?? "").trim();

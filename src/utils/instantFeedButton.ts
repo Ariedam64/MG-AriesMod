@@ -8,13 +8,14 @@ import { attachSpriteIcon, getSpriteWarmupState, onSpriteWarmupProgress } from "
 
 const ROOT_CLASS = "css-pb842o";
 const BAR_ATTR = "data-instant-feed-bar";
+const BAR_INSTANCE_ATTR = "data-instant-feed-instance";
 const BTN_ATTR = "data-instant-feed-btn";
-const BTN_INDEX_ATTR = "data-instant-feed-idx";
 const DEFAULT_LABEL = "Instant Feed";
 const MAX_BUTTONS = 3;
 const ICON_SIZE = 18;
 const GLOBAL_START_FLAG = "__qws_instant_feed_btn_started";
 const INVENTORY_CARD_ATOM = "inventoryCardIsOpenAtom";
+const INSTANCE_ID = Math.random().toString(36).slice(2, 9);
 
 type ActivePetSlot = {
   id: string;
@@ -30,6 +31,8 @@ let modalOpen = false;
 let inventoryCardOpen = false;
 let activePetsSig = "";
 const roots = new Set<HTMLElement>();
+let sharedBar: HTMLDivElement | null = null;
+let pinnedRoot: HTMLElement | null = null;
 
 export function startInstantFeedButton(): void {
   if (typeof document === "undefined") return;
@@ -145,13 +148,21 @@ function isInstantFeedRoot(el: Element): el is HTMLElement {
 
 function renderBar(root: HTMLElement): void {
   if (!root.isConnected) return;
-  const bar = ensureBar(root);
-  const buttons = ensureButtons(root, bar);
+  const activeRoot =
+    pinnedRoot && pinnedRoot.isConnected ? pinnedRoot : (pinnedRoot = root);
+  let bar = ensureBar(activeRoot);
+  if (!bar && activeRoot !== root) {
+    pinnedRoot = root;
+    bar = ensureBar(root);
+  }
+  if (!bar) return;
+  const buttons = ensureButtons(activeRoot, bar);
   updateButtons(buttons);
 }
 
-function ensureBar(root: HTMLElement): HTMLDivElement {
+function ensureBar(root: HTMLElement): HTMLDivElement | null {
   const { host, anchor, stackWithNav } = findBarHost(root);
+  if (!host) return null;
   if (stackWithNav) {
     host.style.display = "flex";
     host.style.flexDirection = "column";
@@ -159,10 +170,30 @@ function ensureBar(root: HTMLElement): HTMLDivElement {
     host.style.gap = "6px";
     host.style.width = "100%";
   }
-  let bar = root.querySelector<HTMLDivElement>(`[${BAR_ATTR}="1"]`);
+  let bar = sharedBar;
+  if (!bar) {
+    const existingBars = Array.from(
+      document.querySelectorAll<HTMLDivElement>(`[${BAR_ATTR}="1"]`),
+    );
+    if (existingBars.length) {
+      const owned = existingBars.find(
+        (candidate) => candidate.getAttribute(BAR_INSTANCE_ATTR) === INSTANCE_ID,
+      );
+      if (owned) {
+        bar = owned;
+        sharedBar = bar;
+        for (const candidate of existingBars) {
+          if (candidate !== owned) candidate.remove();
+        }
+      } else {
+        for (const candidate of existingBars) candidate.remove();
+      }
+    }
+  }
   if (!bar) {
     bar = document.createElement("div");
     bar.setAttribute(BAR_ATTR, "1");
+    bar.setAttribute(BAR_INSTANCE_ATTR, INSTANCE_ID);
     bar.style.display = "grid";
     bar.style.gridTemplateColumns = `repeat(${MAX_BUTTONS}, max-content)`;
     bar.style.justifyContent = "center";
@@ -170,11 +201,14 @@ function ensureBar(root: HTMLElement): HTMLDivElement {
     bar.style.gap = "6px";
     bar.style.marginTop = stackWithNav ? "0" : "6px";
     bar.style.width = "100%";
+    sharedBar = bar;
     if (anchor && anchor.parentElement === host) {
       anchor.insertAdjacentElement("afterend", bar);
     } else {
       host.appendChild(bar);
     }
+  } else if (!bar.hasAttribute(BAR_INSTANCE_ATTR)) {
+    bar.setAttribute(BAR_INSTANCE_ATTR, INSTANCE_ID);
   } else if (bar.parentElement !== host) {
     if (anchor && anchor.parentElement === host) {
       anchor.insertAdjacentElement("afterend", bar);
@@ -190,14 +224,14 @@ function ensureBar(root: HTMLElement): HTMLDivElement {
 }
 
 function findBarHost(root: HTMLElement): {
-  host: HTMLElement;
+  host: HTMLElement | null;
   anchor: HTMLElement | null;
   stackWithNav: boolean;
 } {
   const navContainer = root.querySelector<HTMLElement>(".McFlex.css-1vtdcnr");
   if (navContainer) {
-    const navGrid = navContainer.querySelector<HTMLElement>(".McGrid.css-8i2u7l");
-    return { host: navContainer, anchor: navGrid, stackWithNav: true };
+    const navGridLegacy = navContainer.querySelector<HTMLElement>(".McGrid.css-8i2u7l");
+    return { host: navContainer, anchor: navGridLegacy, stackWithNav: true };
   }
 
   const host = root;
@@ -238,27 +272,9 @@ function createButton(root: HTMLElement, index: number): HTMLButtonElement {
   const ref = findReferenceButton(root);
   const btn = ref ? (ref.cloneNode(false) as HTMLButtonElement) : document.createElement("button");
 
-  if (!btn.classList.contains("chakra-button")) {
-    btn.classList.add("chakra-button");
-  }
-
-  btn.type = "button";
+  applyButtonBaseStyles(btn);
   btn.removeAttribute("id");
   btn.setAttribute(BTN_ATTR, "1");
-  btn.setAttribute(BTN_INDEX_ATTR, String(index));
-  btn.style.display = "inline-flex";
-  btn.style.alignItems = "center";
-  btn.style.justifyContent = "center";
-  btn.style.gap = "6px";
-  btn.style.width = "auto";
-  btn.style.flex = "0 0 auto";
-  btn.style.whiteSpace = "nowrap";
-  btn.style.backgroundColor = "#6D3A88";
-  btn.style.color = "#ffffff";
-  btn.style.pointerEvents = "auto";
-  btn.setAttribute("aria-label", DEFAULT_LABEL);
-  btn.title = DEFAULT_LABEL;
-  ensureButtonContent(btn).label.textContent = DEFAULT_LABEL;
 
   btn.addEventListener("click", (ev) => {
     const target = ev.currentTarget as HTMLButtonElement | null;
@@ -282,6 +298,7 @@ function findReferenceButton(root: HTMLElement): HTMLButtonElement | null {
 function updateButtons(buttons: HTMLButtonElement[]): void {
   for (let i = 0; i < buttons.length; i++) {
     const btn = buttons[i];
+    applyButtonBaseStyles(btn);
     const pet = activePets[i] ?? null;
     const label = DEFAULT_LABEL;
     const title = pet ? buildButtonTitle(pet) : DEFAULT_LABEL;
@@ -307,6 +324,23 @@ function updateButtons(buttons: HTMLButtonElement[]): void {
       parts.icon.replaceChildren();
     }
   }
+}
+
+function applyButtonBaseStyles(btn: HTMLButtonElement): void {
+  if (!btn.classList.contains("chakra-button")) {
+    btn.classList.add("chakra-button");
+  }
+  btn.type = "button";
+  btn.style.display = "inline-flex";
+  btn.style.alignItems = "center";
+  btn.style.justifyContent = "center";
+  btn.style.gap = "6px";
+  btn.style.width = "auto";
+  btn.style.flex = "0 0 auto";
+  btn.style.whiteSpace = "nowrap";
+  btn.style.backgroundColor = "#6D3A88";
+  btn.style.color = "#ffffff";
+  btn.style.pointerEvents = "auto";
 }
 
 function buildButtonTitle(pet: ActivePetSlot): string {
