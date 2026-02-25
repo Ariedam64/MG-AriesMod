@@ -1,6 +1,7 @@
 import { onAdded } from "../core/dom";
 import { PetsService } from "../services/pets";
 import { PlayerService, type PetInfo } from "../services/player";
+import { Store } from "../store/api";
 import { Atoms } from "../store/atoms";
 import { toastSimple } from "../ui/toast";
 import { attachSpriteIcon } from "../ui/spriteIconCache";
@@ -13,6 +14,7 @@ const DEFAULT_LABEL = "Instant Feed";
 const MAX_BUTTONS = 3;
 const ICON_SIZE = 18;
 const GLOBAL_START_FLAG = "__qws_instant_feed_btn_started";
+const INVENTORY_CARD_ATOM = "inventoryCardIsOpenAtom";
 
 type ActivePetSlot = {
   id: string;
@@ -24,6 +26,8 @@ type ActivePetSlot = {
 let started = false;
 let activePets: ActivePetSlot[] = [];
 let allowInject = true;
+let modalOpen = false;
+let inventoryCardOpen = false;
 const roots = new Set<HTMLElement>();
 
 export function startInstantFeedButton(): void {
@@ -42,11 +46,21 @@ export function startInstantFeedButton(): void {
     }
   };
 
-  const setAllowInjectFromModal = (value: unknown) => {
-    const next = value == null;
+  const recomputeAllowInject = () => {
+    const next = !(modalOpen || inventoryCardOpen);
     if (next === allowInject) return;
     allowInject = next;
     if (allowInject) syncRoots();
+  };
+
+  const setAllowInjectFromModal = (value: unknown) => {
+    modalOpen = value != null;
+    recomputeAllowInject();
+  };
+
+  const setAllowInjectFromInventoryCard = (value: unknown) => {
+    inventoryCardOpen = value === true;
+    recomputeAllowInject();
   };
 
   const updateActivePets = (next: unknown) => {
@@ -61,6 +75,12 @@ export function startInstantFeedButton(): void {
     try {
       await Atoms.ui.activeModal.onChange((next) => {
         setAllowInjectFromModal(next);
+      });
+    } catch {}
+
+    try {
+      await Store.subscribeImmediate<boolean>(INVENTORY_CARD_ATOM, (next) => {
+        setAllowInjectFromInventoryCard(next);
       });
     } catch {}
 

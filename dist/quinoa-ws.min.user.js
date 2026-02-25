@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.362
+// @version      3.1.363
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -28149,6 +28149,7 @@
   }
 
   // src/utils/instantFeedButton.ts
+  init_api();
   init_atoms();
   var ROOT_CLASS = "css-pb842o";
   var BAR_ATTR = "data-instant-feed-bar";
@@ -28158,9 +28159,12 @@
   var MAX_BUTTONS = 3;
   var ICON_SIZE = 18;
   var GLOBAL_START_FLAG = "__qws_instant_feed_btn_started";
+  var INVENTORY_CARD_ATOM = "inventoryCardIsOpenAtom";
   var started2 = false;
   var activePets = [];
   var allowInject = true;
+  var modalOpen = false;
+  var inventoryCardOpen = false;
   var roots = /* @__PURE__ */ new Set();
   function startInstantFeedButton() {
     if (typeof document === "undefined") return;
@@ -28176,11 +28180,19 @@
         renderBar(root);
       }
     };
-    const setAllowInjectFromModal = (value) => {
-      const next = value == null;
+    const recomputeAllowInject = () => {
+      const next = !(modalOpen || inventoryCardOpen);
       if (next === allowInject) return;
       allowInject = next;
       if (allowInject) syncRoots();
+    };
+    const setAllowInjectFromModal = (value) => {
+      modalOpen = value != null;
+      recomputeAllowInject();
+    };
+    const setAllowInjectFromInventoryCard = (value) => {
+      inventoryCardOpen = value === true;
+      recomputeAllowInject();
     };
     const updateActivePets = (next) => {
       activePets = normalizeActivePets(next);
@@ -28194,6 +28206,12 @@
       try {
         await Atoms.ui.activeModal.onChange((next) => {
           setAllowInjectFromModal(next);
+        });
+      } catch {
+      }
+      try {
+        await Store.subscribeImmediate(INVENTORY_CARD_ATOM, (next) => {
+          setAllowInjectFromInventoryCard(next);
         });
       } catch {
       }
