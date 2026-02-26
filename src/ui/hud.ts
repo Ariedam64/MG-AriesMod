@@ -21,7 +21,6 @@ import {
 import { renderOverlay } from "./menus/notificationOverlay";
 import { startInstantFeedButton } from "../utils/instantFeedButton";
 import { renderCommunityHub } from "./menus/communityHub";
-import { startInventoryPetStrengthBadge } from "../utils/inventoryPetStrengthBadge";
 import { getSpriteWarmupState, onSpriteWarmupProgress } from "./spriteIconCache";
 import { setupBuyAll, startReorderObserver } from "../utils/shopUtility";
 import { startCropValuesObserverFromGardenAtom } from "../utils/cropValues";
@@ -1115,7 +1114,6 @@ export function initWatchers(){
       startInstantFeedButton();
       startSelectedInventoryQuantityLogger();
       startInventorySortingObserver();
-      startInventoryPetStrengthBadge();
       startModalObserver({ intervalMs: 60_000, log: true });
   })();
 }
