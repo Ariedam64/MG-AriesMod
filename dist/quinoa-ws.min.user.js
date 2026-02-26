@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.401
+// @version      3.1.402
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -41658,12 +41658,8 @@
   init_page_context();
   var GLOBAL_FLAG = "__qws_inv_pet_strength_badge_started";
   var DEBUG_FLAG = "__qws_inv_pet_strength_badge_debug";
-  var POLL_INTERVAL_MS = 400;
+  var SYNC_INTERVAL_MS = 500;
   var RESOLVE_INTERVAL_MS = 1e3;
-  var ALWAYS_SYNC = true;
-  var PET_CACHE_INTERVAL_MS = 1200;
-  var NON_MAX_SCALE = 0.86;
-  var MAX_LEVEL_SCALE = 0.92;
   var LEVEL_TEXT_RE = /^(?:STR\s*)?(\d{1,4})(?:\s*\/\s*(\d{1,4}))?(?:\s*MAX)?$/i;
   var QUANTITY_TEXT_RE = /^[x\u00D7]\s*\d[\d,\.]*$/i;
   var ITEM_VIEW_ID_RE = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
@@ -41678,24 +41674,19 @@
   var activeModalId = null;
   var syncTimer = null;
   var resolveTimer = null;
-  var lastInventoryOpen = null;
-  var lastVisualCount = -1;
-  var lastMissingCount = -1;
-  var overlayLayer = null;
-  var overlayMap = /* @__PURE__ */ new Map();
-  var scaleCache = /* @__PURE__ */ new Map();
-  var tickerAttached = false;
-  var trackedNodes = /* @__PURE__ */ new Map();
-  var syncGeneration = 0;
-  var petCacheTimer = null;
   var petById = /* @__PURE__ */ new Map();
   var petIdSet = /* @__PURE__ */ new Set();
   var petLabelSet = /* @__PURE__ */ new Set();
   var inventoryItemsSnapshot = [];
+  var nodeTextMap = /* @__PURE__ */ new Map();
+  var tickerAttached = false;
+  var pixiApp = null;
+  var syncDirty = true;
+  var sigInventory = "";
+  var sigHutch = "";
+  var sigPrimSlots = "";
   function isDebugEnabled() {
-    const shared = readSharedGlobal(DEBUG_FLAG);
-    if (typeof shared === "boolean") return shared;
-    return globalThis[DEBUG_FLAG] === true;
+    return readSharedGlobal(DEBUG_FLAG) === true || globalThis[DEBUG_FLAG] === true;
   }
   function debugLog(...args) {
     if (!isDebugEnabled()) return;
@@ -41721,133 +41712,32 @@
     if (Array.isArray(c) && c.length) return c;
     return null;
   }
-  function safeBounds(node) {
-    if (!node || typeof node.getBounds !== "function") return null;
-    try {
-      const b = node.getBounds(true);
-      if (!b || !Number.isFinite(b.width) || !Number.isFinite(b.height)) return null;
-      return { x: b.x, y: b.y, width: b.width, height: b.height };
-    } catch {
-      return null;
-    }
+  function isTargetVisualLabel(label2) {
+    if (!label2) return false;
+    if (label2 === "InventoryItemVisual") return true;
+    if (label2.includes("Hutch") && (label2.includes("ItemVisual") || label2.includes("ItemView")))
+      return true;
+    if (label2.includes("PetHutch") && label2.includes("Item")) return true;
+    if (label2.includes("Pet") && (label2.includes("Slot") || label2.includes("Card") || label2.includes("View") || label2.includes("Visual"))) return true;
+    return false;
   }
-  function ensureOverlayLayer(app) {
-    if (overlayLayer && overlayLayer.parent) return overlayLayer;
-    if (!app?.stage) return null;
-    const P = app?.renderer?.PIXI ?? globalThis.PIXI;
-    const Container = P?.Container ?? app.stage.constructor;
-    if (!Container) return null;
-    overlayLayer = new Container();
-    overlayLayer.label = "__qws_inv_pet_strength_overlay";
-    overlayLayer.eventMode = "none";
-    overlayLayer.sortableChildren = true;
-    overlayLayer.zIndex = 999999;
-    overlayLayer.renderable = true;
-    overlayLayer.visible = true;
-    try {
-      app.stage.sortableChildren = true;
-    } catch {
-    }
-    try {
-      app.stage.addChild(overlayLayer);
-    } catch {
-    }
-    return overlayLayer;
-  }
-  function cloneStyle(src) {
-    if (!src) return void 0;
-    if (src.style) return src.style;
-    if (src._style) return src._style;
-    return void 0;
-  }
-  function createOverlayText(sourceNode, text) {
-    const app = resolvePixiApp();
-    if (!app?.stage) return null;
-    const P = app?.renderer?.PIXI ?? globalThis.PIXI;
-    const TextCtor = sourceNode?.constructor ?? P?.Text;
-    const FallbackCtor = P?.Text;
-    if (!TextCtor && !FallbackCtor) return null;
-    let overlay;
-    try {
-      if (TextCtor) overlay = new TextCtor(text, cloneStyle(sourceNode));
-    } catch {
-    }
-    if (!overlay && FallbackCtor && FallbackCtor !== TextCtor) {
-      try {
-        overlay = new FallbackCtor(text, cloneStyle(sourceNode));
-      } catch {
+  function findInventoryVisuals(stage) {
+    if (!stage) return [];
+    const out = [];
+    const stack = [stage];
+    const seen = /* @__PURE__ */ new Set();
+    while (stack.length) {
+      const node = stack.pop();
+      if (!node || seen.has(node)) continue;
+      seen.add(node);
+      const label2 = String(node.label ?? node.name ?? "");
+      if (isTargetVisualLabel(label2)) out.push(node);
+      const kids = getChildren(node);
+      if (kids) {
+        for (let i = kids.length - 1; i >= 0; i--) stack.push(kids[i]);
       }
     }
-    if (!overlay) return null;
-    overlay.label = "__qws_inv_pet_strength_text";
-    overlay.eventMode = "none";
-    overlay.renderable = true;
-    overlay.visible = true;
-    overlay.zIndex = 999999;
-    try {
-      overlay.anchor?.set?.(0, 0);
-    } catch {
-    }
-    try {
-      if (sourceNode?.scale && overlay.scale?.set) {
-        overlay.scale.set(sourceNode.scale.x ?? 1, sourceNode.scale.y ?? 1);
-      }
-    } catch {
-    }
-    return overlay;
-  }
-  function ensureOverlayFor(node, text) {
-    const layer = ensureOverlayLayer(resolvePixiApp());
-    if (!layer) return null;
-    let overlay = overlayMap.get(node);
-    if (!overlay || overlay.destroyed) {
-      overlay = createOverlayText(node, text);
-      if (!overlay) return null;
-      layer.addChild(overlay);
-      overlayMap.set(node, overlay);
-    } else if (String(overlay.text) !== text) {
-      overlay.text = text;
-      try {
-        overlay.updateText?.();
-      } catch {
-      }
-    }
-    return overlay;
-  }
-  function applyLevelScale(node, isMax) {
-    if (!node?.scale) return;
-    if (!scaleCache.has(node)) {
-      scaleCache.set(node, { x: Number(node.scale.x ?? 1), y: Number(node.scale.y ?? 1) });
-    }
-    const base = scaleCache.get(node) ?? { x: 1, y: 1 };
-    const mult = isMax ? MAX_LEVEL_SCALE : NON_MAX_SCALE;
-    if (node.scale?.set) {
-      node.scale.set(base.x * mult, base.y * mult);
-    } else {
-      node.scale.x = base.x * mult;
-      node.scale.y = base.y * mult;
-    }
-  }
-  function restoreScale(node) {
-    const base = scaleCache.get(node);
-    if (!base || !node?.scale) return;
-    if (node.scale?.set) node.scale.set(base.x, base.y);
-    else {
-      node.scale.x = base.x;
-      node.scale.y = base.y;
-    }
-    scaleCache.delete(node);
-  }
-  function cleanupNode(node) {
-    const overlay = overlayMap.get(node);
-    restoreScale(node);
-    if (overlay) {
-      try {
-        overlay.destroy?.();
-      } catch {
-      }
-      overlayMap.delete(node);
-    }
+    return out;
   }
   function collectTextNodes(root) {
     const out = [];
@@ -41858,15 +41748,66 @@
       if (!node || seen.has(node)) continue;
       seen.add(node);
       const text = node.text;
-      if (typeof text === "string" || typeof text === "number") {
-        out.push(node);
-      }
+      if (typeof text === "string" || typeof text === "number") out.push(node);
       const kids = getChildren(node);
-      if (Array.isArray(kids)) {
-        for (let i = kids.length - 1; i >= 0; i -= 1) stack.push(kids[i]);
+      if (kids) {
+        for (let i = kids.length - 1; i >= 0; i--) stack.push(kids[i]);
       }
     }
     return out;
+  }
+  function getVisualInfo(visual) {
+    let slotName = null;
+    let slotIndex = null;
+    let hasSlot = false;
+    let hasPet = false;
+    let hasInventory = false;
+    let inPetSlots = false;
+    let itemId = null;
+    let cur = visual;
+    for (let i = 0; i < 12 && cur; i++) {
+      const label2 = String(cur.label ?? cur.name ?? "").trim();
+      if (label2) {
+        if (!slotName) {
+          const m = SLOT_LABEL_NAME_RE.exec(label2);
+          if (m?.[1]) slotName = m[1].trim();
+        }
+        if (slotIndex == null) {
+          const m = SLOT_INDEX_RE.exec(label2);
+          if (m?.[1]) {
+            const idx = Number(m[1]);
+            if (Number.isFinite(idx) && idx >= 0) slotIndex = idx;
+          }
+        }
+        if (!hasSlot && SLOT_LABEL_RE.test(label2)) hasSlot = true;
+        if (!hasPet && PET_LABEL_RE.test(label2)) hasPet = true;
+        if (!hasInventory && INVENTORY_LABEL_RE.test(label2)) hasInventory = true;
+        if (!inPetSlots && PET_SLOTS_CONTAINER_RE.test(label2)) inPetSlots = true;
+        if (itemId === null && i < 10) {
+          const m = ITEM_VIEW_ID_RE.exec(label2);
+          if (m?.[1] && petIdSet.has(m[1])) itemId = m[1];
+        }
+      }
+      if (itemId === null && i < 10) {
+        const directId = cur?.itemId;
+        if (typeof directId === "string" && directId.trim() && petIdSet.has(directId.trim()))
+          itemId = directId.trim();
+      }
+      cur = cur.parent;
+    }
+    return { slotName, slotIndex, hasSlot, hasPet, hasInventory, inPetSlots, itemId };
+  }
+  function isAllowedContext(info) {
+    if (info.hasInventory || info.hasPet) return true;
+    if (info.hasSlot) return false;
+    return true;
+  }
+  function isNonPetInventorySlot(slotIndex) {
+    if (slotIndex == null) return false;
+    const item = inventoryItemsSnapshot?.[slotIndex];
+    if (!item || typeof item !== "object") return false;
+    const type = String(item.itemType ?? item.data?.itemType ?? "");
+    return type !== "" && type !== "Pet";
   }
   function normalizePetLabel(value) {
     const raw = String(value ?? "").trim();
@@ -41889,158 +41830,7 @@
       targetScale: Number(source?.targetScale ?? source?.data?.targetScale ?? 1)
     };
   }
-  function getVisualContext(visual) {
-    let slotName = null;
-    let slotIndex = null;
-    let hasSlot = false;
-    let hasPet = false;
-    let hasInventory = false;
-    let inPetSlots = false;
-    let cur = visual;
-    for (let i = 0; i < 12 && cur; i += 1) {
-      const label2 = String(cur.label ?? cur.name ?? "").trim();
-      if (label2) {
-        if (!slotName) {
-          const m = SLOT_LABEL_NAME_RE.exec(label2);
-          if (m?.[1]) slotName = m[1].trim();
-        }
-        if (slotIndex == null) {
-          const m = SLOT_INDEX_RE.exec(label2);
-          if (m?.[1]) {
-            const idx = Number(m[1]);
-            if (Number.isFinite(idx) && idx >= 0) slotIndex = idx;
-          }
-        }
-        if (!hasSlot && SLOT_LABEL_RE.test(label2)) hasSlot = true;
-        if (!hasPet && PET_LABEL_RE.test(label2)) hasPet = true;
-        if (!hasInventory && INVENTORY_LABEL_RE.test(label2)) hasInventory = true;
-        if (!inPetSlots && PET_SLOTS_CONTAINER_RE.test(label2)) inPetSlots = true;
-      }
-      cur = cur.parent;
-    }
-    return { slotName, slotIndex, hasSlot, hasPet, hasInventory, inPetSlots };
-  }
-  function isAllowedContext(ctx2) {
-    if (ctx2.hasInventory || ctx2.hasPet) return true;
-    if (ctx2.hasSlot) return false;
-    return true;
-  }
-  function isNonPetInventorySlot(slotIndex) {
-    if (slotIndex == null) return false;
-    const item = inventoryItemsSnapshot?.[slotIndex];
-    if (!item || typeof item !== "object") return false;
-    const type = String(item.itemType ?? item.data?.itemType ?? "");
-    if (!type) return false;
-    return type !== "Pet";
-  }
-  function isTargetVisualLabel(label2) {
-    if (!label2) return false;
-    if (label2 === "InventoryItemVisual") return true;
-    if (label2.includes("Hutch") && (label2.includes("ItemVisual") || label2.includes("ItemView"))) {
-      return true;
-    }
-    if (label2.includes("PetHutch") && label2.includes("Item")) return true;
-    if (label2.includes("Pet") && /(Slot|Card|View|Visual)/i.test(label2)) return true;
-    return false;
-  }
-  function findInventoryVisuals(stage) {
-    if (!stage) return [];
-    const out = [];
-    const stack = [stage];
-    const seen = /* @__PURE__ */ new Set();
-    while (stack.length) {
-      const node = stack.pop();
-      if (!node || seen.has(node)) continue;
-      seen.add(node);
-      const label2 = String(node.label ?? node.name ?? "");
-      if (isTargetVisualLabel(label2)) out.push(node);
-      const kids = getChildren(node);
-      if (Array.isArray(kids)) {
-        for (let i = kids.length - 1; i >= 0; i -= 1) stack.push(kids[i]);
-      }
-    }
-    return out;
-  }
-  function parseLevelText(text) {
-    const m = LEVEL_TEXT_RE.exec(text.trim());
-    if (!m) return null;
-    const current = Number(m[1]);
-    if (!Number.isFinite(current)) return null;
-    const max = m[2] != null ? Number(m[2]) : null;
-    return {
-      current,
-      max: Number.isFinite(max) ? max : null
-    };
-  }
-  function isQuantityTextValue(raw) {
-    return QUANTITY_TEXT_RE.test(raw);
-  }
-  function collectQuantityTextBounds(root) {
-    const out = [];
-    const stack = [root];
-    const seen = /* @__PURE__ */ new Set();
-    while (stack.length) {
-      const node = stack.pop();
-      if (!node || seen.has(node)) continue;
-      seen.add(node);
-      const text = node.text;
-      if (typeof text === "string" || typeof text === "number") {
-        const raw = String(text ?? "").trim();
-        if (raw && isQuantityTextValue(raw)) {
-          const b = safeBounds(node);
-          if (b) out.push(b);
-        }
-      }
-      const kids = getChildren(node);
-      if (Array.isArray(kids)) {
-        for (let i = kids.length - 1; i >= 0; i -= 1) stack.push(kids[i]);
-      }
-    }
-    return out;
-  }
-  function intersects(a, b) {
-    return a.x <= b.x + b.width && a.x + a.width >= b.x && a.y <= b.y + b.height && a.y + a.height >= b.y;
-  }
-  function pickLevelTextNode(texts, itemBounds) {
-    let best = null;
-    let fallback = null;
-    for (const node of texts) {
-      const raw = String(node.text ?? "");
-      if (!parseLevelText(raw)) continue;
-      const b = safeBounds(node);
-      if (!b) continue;
-      const relX = (b.x - itemBounds.x) / itemBounds.width;
-      const relY = (b.y - itemBounds.y) / itemBounds.height;
-      const area = b.width * b.height;
-      if (!fallback || area < fallback.area) fallback = { node, area };
-      if (relX < -0.1 || relY < -0.1) continue;
-      if (relX > 0.55 || relY > 0.55) continue;
-      if (b.width > itemBounds.width * 0.6) continue;
-      if (!best || area < best.area) best = { node, area };
-    }
-    return best?.node ?? fallback?.node ?? null;
-  }
-  function getItemIdFromVisual(visual, allowed) {
-    let cur = visual;
-    for (let i = 0; i < 10 && cur; i += 1) {
-      const label2 = String(cur.label ?? cur.name ?? "").trim();
-      if (label2) {
-        const m = ITEM_VIEW_ID_RE.exec(label2);
-        if (m?.[1]) {
-          const id = m[1];
-          if (!allowed || allowed.has(id)) return id;
-        }
-      }
-      const directId = cur?.itemId;
-      if (typeof directId === "string" && directId.trim()) {
-        const id = directId.trim();
-        if (!allowed || allowed.has(id)) return id;
-      }
-      cur = cur.parent;
-    }
-    return null;
-  }
-  function getStrengthDisplayForId(id) {
+  function getStrengthDisplay(id) {
     const info = petById.get(id);
     if (!info) return null;
     const current = Math.round(info.strength);
@@ -42048,204 +41838,107 @@
     if (!Number.isFinite(current) || !Number.isFinite(max) || max <= 0) return null;
     return { current, max, isMax: current >= max };
   }
-  function matchesDisplayedStrength(node, info) {
-    const raw = String(node?.text ?? "").trim();
-    const parsed = parseLevelText(raw);
-    if (!parsed) return false;
-    const cur = parsed.current;
-    const max = parsed.max;
-    const within = (a, b, tol = 2) => Math.abs(a - b) <= tol;
-    if (within(cur, info.current)) return true;
-    if (Number.isFinite(max) && within(max, info.max)) return true;
-    return false;
+  function parseLevelText(text) {
+    const m = LEVEL_TEXT_RE.exec(text.trim());
+    if (!m) return null;
+    const current = Number(m[1]);
+    if (!Number.isFinite(current)) return null;
+    const max = m[2] != null ? Number(m[2]) : null;
+    return { current, max: Number.isFinite(max) ? max : null };
   }
-  function applyLevelText(node, next, allowOverlay = true) {
-    if (!node || !next) return false;
-    const raw = String(node?.text ?? "");
-    if (raw !== next) {
-      try {
-        node.text = next;
-        try {
-          node.updateText?.();
-        } catch {
-        }
-        try {
-          node.invalidate?.();
-        } catch {
-        }
-      } catch {
-      }
+  function pickLevelTextNode(texts) {
+    for (const node of texts) {
+      if (parseLevelText(String(node.text ?? ""))) return node;
     }
-    if (String(node?.text ?? "") === next) return true;
-    if (!allowOverlay) return false;
-    const overlay = ensureOverlayFor(node, next);
-    return !!overlay;
+    return null;
   }
   function applyLevelDisplay(node, info) {
     const text = info.isMax ? `${info.current} MAX` : `${info.current}/${info.max}`;
-    const ok = applyLevelText(node, text, true);
-    applyLevelScale(node, info.isMax);
-    const overlay = overlayMap.get(node);
-    if (overlay) applyLevelScale(overlay, info.isMax);
-    return ok;
+    if (String(node?.text ?? "") === text) return;
+    try {
+      node.text = text;
+      try {
+        node.updateText?.();
+      } catch {
+      }
+      try {
+        node.invalidate?.();
+      } catch {
+      }
+    } catch {
+    }
   }
   function syncOnce(app) {
-    if (!app?.stage) return;
-    syncGeneration += 1;
-    const gen = syncGeneration;
+    if (!app?.stage || petById.size === 0) return;
+    if (!syncDirty && nodeTextMap.size > 0) return;
+    syncDirty = false;
     const open = isInventoryOpen2();
-    if (open !== lastInventoryOpen) {
-      lastInventoryOpen = open;
-      debugLog("inventory open:", open);
-    }
-    if (!open && !ALWAYS_SYNC) return;
     const visuals = findInventoryVisuals(app.stage);
-    if (visuals.length !== lastVisualCount) {
-      lastVisualCount = visuals.length;
-      debugLog("InventoryItemVisual count:", visuals.length);
-    }
     if (!visuals.length) return;
-    const quantityBounds = open ? [] : collectQuantityTextBounds(app.stage);
-    let found = 0;
-    let updated = 0;
-    let missing = 0;
-    const seen = /* @__PURE__ */ new Set();
+    let skipContext = 0, skipNonPet = 0, skipLabel = 0, skipNoId = 0, skipNoDisplay = 0, skipNoTexts = 0, skipQty = 0, skipNoNode = 0, applied = 0;
+    const nextNodeTextMap = /* @__PURE__ */ new Map();
     for (const visual of visuals) {
-      const ctx2 = getVisualContext(visual);
-      if (!isAllowedContext(ctx2)) {
-        missing += 1;
+      const info = getVisualInfo(visual);
+      if (!isAllowedContext(info)) {
+        skipContext++;
         continue;
       }
-      if (!open && !ctx2.inPetSlots && isNonPetInventorySlot(ctx2.slotIndex)) {
-        missing += 1;
+      if (!open && !info.inPetSlots && isNonPetInventorySlot(info.slotIndex)) {
+        skipNonPet++;
         continue;
       }
-      if (ctx2.slotName && petLabelSet.size > 0) {
-        const norm3 = normalizePetLabel(ctx2.slotName);
+      if (info.slotName && petLabelSet.size > 0) {
+        const norm3 = normalizePetLabel(info.slotName);
         if (!norm3 || !petLabelSet.has(norm3)) {
-          missing += 1;
+          skipLabel++;
           continue;
         }
       }
-      const itemId = getItemIdFromVisual(visual, petIdSet);
+      const itemId = info.itemId;
       if (!itemId) {
-        missing += 1;
+        skipNoId++;
         continue;
       }
-      const display = getStrengthDisplayForId(itemId);
+      const display = getStrengthDisplay(itemId);
       if (!display) {
-        missing += 1;
+        skipNoDisplay++;
         continue;
-      }
-      const visualBounds = safeBounds(visual);
-      if (!visualBounds) {
-        missing += 1;
-        continue;
-      }
-      if (quantityBounds.length) {
-        let hitQty = false;
-        for (const qb of quantityBounds) {
-          if (intersects(qb, visualBounds)) {
-            hitQty = true;
-            break;
-          }
-        }
-        if (hitQty) {
-          missing += 1;
-          continue;
-        }
       }
       const texts = collectTextNodes(visual);
       if (!texts.length) {
-        missing += 1;
+        skipNoTexts++;
         continue;
       }
-      let hasQty = false;
-      for (const t of texts) {
-        const raw = String(t.text ?? "").trim();
-        if (raw && isQuantityTextValue(raw)) {
-          hasQty = true;
-          break;
-        }
-      }
+      const hasQty = texts.some(
+        (t) => QUANTITY_TEXT_RE.test(String(t.text ?? "").trim())
+      );
       if (hasQty) {
-        missing += 1;
+        skipQty++;
         continue;
       }
-      const node = pickLevelTextNode(texts, visualBounds);
+      const node = pickLevelTextNode(texts);
       if (!node) {
-        missing += 1;
+        skipNoNode++;
         continue;
       }
-      if (!matchesDisplayedStrength(node, display)) {
-        missing += 1;
-        continue;
-      }
-      found += 1;
-      if (applyLevelDisplay(node, display)) updated += 1;
-      seen.add(node);
-      trackedNodes.set(node, { id: itemId, gen });
-      const b = safeBounds(node);
-      const overlay = overlayMap.get(node);
-      if (b && overlay) {
-        overlay.position.set(b.x, b.y);
-      }
+      const wantedText = display.isMax ? `${display.current} MAX` : `${display.current}/${display.max}`;
+      nextNodeTextMap.set(node, wantedText);
+      applyLevelDisplay(node, display);
+      applied++;
     }
-    for (const [node, overlay] of Array.from(overlayMap.entries())) {
-      if (seen.has(node)) continue;
-      try {
-        overlay.destroy?.();
-      } catch {
-      }
-      overlayMap.delete(node);
-    }
-    for (const node of Array.from(scaleCache.keys())) {
-      if (seen.has(node)) continue;
-      restoreScale(node);
-    }
-    for (const [node, entry] of Array.from(trackedNodes.entries())) {
-      if (entry.gen !== gen || !seen.has(node) || node?.destroyed || !node?.parent) {
-        cleanupNode(node);
-        trackedNodes.delete(node);
-      }
-    }
-    if (missing !== lastMissingCount || updated > 0) {
-      lastMissingCount = missing;
-      debugLog("sync", { visuals: visuals.length, found, updated, missing });
-    }
-  }
-  function startSyncLoop(app) {
-    if (syncTimer) return;
-    debugLog("start sync loop");
-    syncTimer = window.setInterval(() => syncOnce(app), POLL_INTERVAL_MS);
-  }
-  function startTickerLoop(app) {
-    if (tickerAttached) return;
-    const ticker = app?.ticker ?? app?.renderer?.ticker;
-    if (!ticker || typeof ticker.add !== "function") return;
-    debugLog("attach ticker loop");
-    tickerAttached = true;
-    ticker.add(() => {
-      if (!ALWAYS_SYNC && !isInventoryOpen2()) return;
-      if (!trackedNodes.size) return;
-      const toRemove = [];
-      for (const [node, entry] of trackedNodes.entries()) {
-        if (!node || node.destroyed || !node.parent) {
-          toRemove.push(node);
-          continue;
-        }
-        if (entry.gen !== syncGeneration) continue;
-        const display = getStrengthDisplayForId(entry.id);
-        if (!display || !matchesDisplayedStrength(node, display)) {
-          toRemove.push(node);
-          continue;
-        }
-        applyLevelDisplay(node, display);
-      }
-      for (const node of toRemove) {
-        cleanupNode(node);
-        trackedNodes.delete(node);
-      }
+    nodeTextMap = nextNodeTextMap;
+    debugLog("sync", {
+      visuals: visuals.length,
+      applied,
+      tracked: nodeTextMap.size,
+      skipContext,
+      skipNonPet,
+      skipLabel,
+      skipNoId,
+      skipNoDisplay,
+      skipNoTexts,
+      skipQty,
+      skipNoNode
     });
   }
   async function refreshPetCache() {
@@ -42257,23 +41950,23 @@
         Atoms.pets.myPetInfos.get().catch(() => null)
       ]);
       const items = Array.isArray(rawInv?.items) ? rawInv.items : Array.isArray(rawInv) ? rawInv : [];
-      inventoryItemsSnapshot = Array.isArray(items) ? items : [];
+      inventoryItemsSnapshot = items;
       const hutchItems = Array.isArray(rawHutch) ? rawHutch : [];
       const activeList = Array.isArray(rawActivePrim) ? rawActivePrim : Array.isArray(rawActiveInfo) ? rawActiveInfo : [];
       const next = /* @__PURE__ */ new Map();
       const nextLabels = /* @__PURE__ */ new Set();
       for (const item of items) {
         if (!item || typeof item !== "object") continue;
-        const type = typeof item.itemType === "string" ? item.itemType : "";
-        if (type !== "Pet") continue;
-        const id = String(item.id ?? item.pet?.id ?? item.slot?.id ?? "").trim();
+        if (item.itemType !== "Pet") continue;
+        const id = String(
+          item.id ?? item.pet?.id ?? item.slot?.id ?? ""
+        ).trim();
         if (!id) continue;
         const petLike = buildPetLike(item, nextLabels);
         if (!petLike) continue;
         const maxStrength = getPetMaxStrength(petLike);
         if (!Number.isFinite(maxStrength) || maxStrength <= 0) continue;
-        const strength = getPetStrength(petLike);
-        next.set(id, { strength, maxStrength });
+        next.set(id, { strength: getPetStrength(petLike), maxStrength });
       }
       for (const item of hutchItems) {
         if (!item || typeof item !== "object") continue;
@@ -42285,8 +41978,7 @@
         if (!petLike) continue;
         const maxStrength = getPetMaxStrength(petLike);
         if (!Number.isFinite(maxStrength) || maxStrength <= 0) continue;
-        const strength = getPetStrength(petLike);
-        next.set(id, { strength, maxStrength });
+        next.set(id, { strength: getPetStrength(petLike), maxStrength });
       }
       for (const entry of activeList) {
         const slot = entry?.slot ?? entry;
@@ -42297,69 +41989,171 @@
         if (!petLike) continue;
         const maxStrength = getPetMaxStrength(petLike);
         if (!Number.isFinite(maxStrength) || maxStrength <= 0) continue;
-        const strength = getPetStrength(petLike);
-        next.set(id, { strength, maxStrength });
+        next.set(id, { strength: getPetStrength(petLike), maxStrength });
       }
       petById = next;
       petIdSet = new Set(next.keys());
       petLabelSet = nextLabels;
-      debugLog("pet cache", { pets: petById.size, labels: petLabelSet.size });
+      debugLog("pet cache updated", { pets: petById.size, labels: petLabelSet.size });
     } catch {
     }
   }
-  function startPetCacheLoop() {
-    if (petCacheTimer) return;
+  function petLikeSig(id, petSpecies, xp, targetScale) {
+    const petLike = { petSpecies, xp, targetScale };
+    const strength = Math.round(getPetStrength(petLike));
+    const maxStrength = Math.round(getPetMaxStrength(petLike));
+    return `${id}|${strength}|${maxStrength}`;
+  }
+  function computeSigInventory(raw) {
+    const items = Array.isArray(raw?.items) ? raw.items : Array.isArray(raw) ? raw : [];
+    return items.filter((item) => item?.itemType === "Pet").map(
+      (item) => petLikeSig(
+        String(item.id ?? item.pet?.id ?? item.slot?.id ?? ""),
+        String(item.petSpecies ?? item.data?.petSpecies ?? ""),
+        Number(item.xp ?? item.data?.xp ?? 0),
+        Number(item.targetScale ?? item.data?.targetScale ?? 1)
+      )
+    ).sort().join(";");
+  }
+  function computeSigHutch(raw) {
+    const items = Array.isArray(raw) ? raw : [];
+    return items.map((item) => {
+      const src = item?.pet ?? item?.slot ?? item;
+      return petLikeSig(
+        String(src?.id ?? ""),
+        String(src?.petSpecies ?? ""),
+        Number(src?.xp ?? 0),
+        Number(src?.targetScale ?? 1)
+      );
+    }).sort().join(";");
+  }
+  function computeSigPrimSlots(raw) {
+    const items = Array.isArray(raw) ? raw : [];
+    return items.map((entry) => {
+      const slot = entry?.slot ?? entry;
+      return petLikeSig(
+        String(slot?.id ?? ""),
+        String(slot?.petSpecies ?? ""),
+        Number(slot?.xp ?? 0),
+        Number(slot?.targetScale ?? 1)
+      );
+    }).sort().join(";");
+  }
+  var refreshCount = 0;
+  function triggerPetCacheRefresh(source) {
+    syncDirty = true;
+    refreshCount++;
+    debugLog(`refreshPetCache #${refreshCount} (source: ${source})`);
+    refreshPetCache().then(() => {
+      const app = pixiApp;
+      if (!app) return;
+      if (typeof requestIdleCallback !== "undefined") {
+        requestIdleCallback(() => syncOnce(app), { timeout: 500 });
+      } else {
+        setTimeout(() => syncOnce(app), 0);
+      }
+    }).catch(() => {
+    });
+  }
+  function setupReactivePetCache() {
     refreshPetCache().catch(() => {
     });
-    petCacheTimer = window.setInterval(() => {
-      refreshPetCache().catch(() => {
-      });
-    }, PET_CACHE_INTERVAL_MS);
+    void (async () => {
+      try {
+        await Atoms.inventory.myInventory.onChange((next) => {
+          const sig = computeSigInventory(next);
+          if (sig === sigInventory) return;
+          sigInventory = sig;
+          triggerPetCacheRefresh("inventory");
+        });
+      } catch {
+      }
+      try {
+        await myPetHutchPetItems.onChange((next) => {
+          const sig = computeSigHutch(next);
+          if (sig === sigHutch) return;
+          sigHutch = sig;
+          triggerPetCacheRefresh("hutch");
+        });
+      } catch {
+      }
+      try {
+        await Atoms.pets.myPrimitivePetSlots.onChange((next) => {
+          const sig = computeSigPrimSlots(next);
+          if (sig === sigPrimSlots) return;
+          sigPrimSlots = sig;
+          triggerPetCacheRefresh("primSlots");
+        });
+      } catch {
+      }
+    })();
+  }
+  function ensureTickerLoop(app) {
+    if (tickerAttached) return;
+    const ticker = app?.ticker ?? app?.renderer?.ticker;
+    if (!ticker || typeof ticker.add !== "function") return;
+    tickerAttached = true;
+    ticker.add(() => {
+      for (const [node, text] of nodeTextMap) {
+        if (!node || node.destroyed || !node.parent) {
+          nodeTextMap.delete(node);
+          continue;
+        }
+        if (node.text === text) continue;
+        try {
+          node.text = text;
+          node.updateText?.();
+        } catch {
+          nodeTextMap.delete(node);
+        }
+      }
+    });
+    debugLog("ticker attached");
+  }
+  function startSyncLoop(app) {
+    if (syncTimer) return;
+    pixiApp = app;
+    debugLog("start sync loop");
+    ensureTickerLoop(app);
+    window.addEventListener("wheel", () => {
+      syncDirty = true;
+    }, { passive: true });
+    syncTimer = window.setInterval(() => syncOnce(app), SYNC_INTERVAL_MS);
   }
   function stopResolveLoop() {
-    if (resolveTimer) {
-      clearInterval(resolveTimer);
-      resolveTimer = null;
-      debugLog("stop resolve loop");
-    }
+    if (!resolveTimer) return;
+    clearInterval(resolveTimer);
+    resolveTimer = null;
   }
   function startResolveLoop() {
     if (resolveTimer) return;
-    debugLog("start resolve loop");
+    debugLog("start resolve loop (waiting for Pixi app)");
     resolveTimer = window.setInterval(() => {
       const app = resolvePixiApp();
       if (!app) return;
       stopResolveLoop();
       startSyncLoop(app);
-      startTickerLoop(app);
     }, RESOLVE_INTERVAL_MS);
   }
   function attachModalWatchers() {
     const setActiveModal = (value) => {
       const next = typeof value === "string" ? value : null;
-      if (next !== activeModalId) {
-        activeModalId = next;
-        debugLog("activeModal:", activeModalId);
-        if (activeModalId) {
-          refreshPetCache().catch(() => {
-          });
-          const app = resolvePixiApp();
-          if (app) syncOnce(app);
-        }
+      if (next === activeModalId) return;
+      activeModalId = next;
+      debugLog("activeModal:", activeModalId);
+      if (next === "petHutch" || next === "inventory") {
+        triggerPetCacheRefresh("activeModal");
+      } else if (next === null) {
+        nodeTextMap = /* @__PURE__ */ new Map();
+        triggerPetCacheRefresh("activeModal:close");
       }
     };
     const setInventoryModal = (value) => {
       const next = value === true;
-      if (next !== inventoryModalOpen) {
-        inventoryModalOpen = next;
-        debugLog("inventoryModalIsActive:", inventoryModalOpen);
-        if (inventoryModalOpen) {
-          refreshPetCache().catch(() => {
-          });
-          const app = resolvePixiApp();
-          if (app) syncOnce(app);
-        }
-      }
+      if (next === inventoryModalOpen) return;
+      inventoryModalOpen = next;
+      debugLog("inventoryModalIsActive:", inventoryModalOpen);
+      if (inventoryModalOpen) triggerPetCacheRefresh("inventoryModal");
     };
     void (async () => {
       try {
@@ -42380,11 +42174,23 @@
       }
     })();
   }
+  function attachSpriteReadyHook() {
+    const tryAttach = () => {
+      const service = readSharedGlobal("__MG_SPRITE_SERVICE__");
+      if (!service?.ready?.then) return false;
+      service.ready.then(() => triggerPetCacheRefresh("spriteCatalog")).catch(() => {
+      });
+      return true;
+    };
+    if (tryAttach()) return;
+    const poll = window.setInterval(() => {
+      if (tryAttach()) clearInterval(poll);
+    }, 500);
+  }
   function startInventoryPetStrengthBadge() {
     if (typeof document === "undefined") return;
     const win = globalThis;
-    const alreadyStarted = readSharedGlobal(GLOBAL_FLAG) ?? win[GLOBAL_FLAG];
-    if (alreadyStarted) return;
+    if (readSharedGlobal(GLOBAL_FLAG) ?? win[GLOBAL_FLAG]) return;
     win[GLOBAL_FLAG] = true;
     try {
       shareGlobal(GLOBAL_FLAG, true);
@@ -42394,12 +42200,12 @@
     started3 = true;
     debugLog("startInventoryPetStrengthBadge");
     attachModalWatchers();
-    startPetCacheLoop();
+    attachSpriteReadyHook();
+    setupReactivePetCache();
     const app = resolvePixiApp();
     if (app) {
-      debugLog("pixi app resolved");
+      debugLog("pixi app resolved immediately");
       startSyncLoop(app);
-      startTickerLoop(app);
     } else {
       debugLog("pixi app not ready, polling");
       startResolveLoop();
@@ -42407,11 +42213,14 @@
   }
   try {
     shareGlobal("QWS_startInventoryPetStrengthBadge", startInventoryPetStrengthBadge);
-    shareGlobal("QWS_enableInventoryPetStrengthBadgeDebug", (value = true) => {
-      const on = value !== false;
-      shareGlobal(DEBUG_FLAG, on);
-      return on;
-    });
+    shareGlobal(
+      "QWS_enableInventoryPetStrengthBadgeDebug",
+      (value = true) => {
+        const on = value !== false;
+        shareGlobal(DEBUG_FLAG, on);
+        return on;
+      }
+    );
     shareGlobal("QWS_forceInventoryPetStrengthBadgeSync", () => {
       const app = resolvePixiApp();
       if (!app) return { ok: false, reason: "no app" };
@@ -42428,7 +42237,6 @@
         activeModalId,
         syncTimer: !!syncTimer,
         resolveTimer: !!resolveTimer,
-        tickerAttached,
         appReady: !!app,
         visuals: visuals.length,
         inventoryOpen: isInventoryOpen2(),
