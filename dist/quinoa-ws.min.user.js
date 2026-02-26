@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.367
+// @version      3.1.400
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -41653,6 +41653,529 @@
     };
   }
 
+  // src/utils/inventoryPetStrengthBadge.ts
+  init_atoms();
+  init_page_context();
+  var GLOBAL_FLAG = "__qws_inv_pet_strength_badge_started";
+  var DEBUG_FLAG = "__qws_inv_pet_strength_badge_debug";
+  var POLL_INTERVAL_MS = 400;
+  var RESOLVE_INTERVAL_MS = 1e3;
+  var ALWAYS_SYNC = true;
+  var PET_CACHE_INTERVAL_MS = 1200;
+  var LEVEL_TEXT_RE = /^(?:STR\s*)?(\d{1,4})(?:\s*\/\s*(\d{1,4}))?$/i;
+  var ITEM_VIEW_ID_RE = /InventoryItemView\s*[([:]*\s*([\w-]{6,})\s*[)\]]?/i;
+  var started3 = false;
+  var inventoryModalOpen = false;
+  var activeModalId = null;
+  var syncTimer = null;
+  var resolveTimer = null;
+  var lastInventoryOpen = null;
+  var lastVisualCount = -1;
+  var lastMissingCount = -1;
+  var overlayLayer = null;
+  var overlayMap = /* @__PURE__ */ new Map();
+  var tickerAttached = false;
+  var trackedNodes = /* @__PURE__ */ new Map();
+  var petCacheTimer = null;
+  var petById = /* @__PURE__ */ new Map();
+  function isDebugEnabled() {
+    const shared = readSharedGlobal(DEBUG_FLAG);
+    if (typeof shared === "boolean") return shared;
+    return globalThis[DEBUG_FLAG] === true;
+  }
+  function debugLog(...args) {
+    if (!isDebugEnabled()) return;
+    console.log("[InvPetSTR]", ...args);
+  }
+  function isInventoryOpen2() {
+    return inventoryModalOpen || activeModalId === "inventory";
+  }
+  function resolvePixiApp() {
+    const g = globalThis;
+    const getShared = (key2) => readSharedGlobal(key2) ?? g[key2];
+    const spriteState = getShared("__MG_SPRITE_STATE__");
+    const quinoaEngine = getShared("__QUINOA_ENGINE__") ?? getShared("magiccircle_quinoaEngine");
+    return spriteState?.app || getShared("__PIXI_APP__") || getShared("PIXI_APP") || getShared("app") || quinoaEngine?.app || null;
+  }
+  function getChildren(node) {
+    if (!node) return null;
+    const a = node.children;
+    if (Array.isArray(a) && a.length) return a;
+    const b = node.renderLayerChildren;
+    if (Array.isArray(b) && b.length) return b;
+    const c = node.renderGroupChildren;
+    if (Array.isArray(c) && c.length) return c;
+    return null;
+  }
+  function safeBounds(node) {
+    if (!node || typeof node.getBounds !== "function") return null;
+    try {
+      const b = node.getBounds(true);
+      if (!b || !Number.isFinite(b.width) || !Number.isFinite(b.height)) return null;
+      return { x: b.x, y: b.y, width: b.width, height: b.height };
+    } catch {
+      return null;
+    }
+  }
+  function ensureOverlayLayer(app) {
+    if (overlayLayer && overlayLayer.parent) return overlayLayer;
+    if (!app?.stage) return null;
+    const P = app?.renderer?.PIXI ?? globalThis.PIXI;
+    const Container = P?.Container ?? app.stage.constructor;
+    if (!Container) return null;
+    overlayLayer = new Container();
+    overlayLayer.label = "__qws_inv_pet_strength_overlay";
+    overlayLayer.eventMode = "none";
+    overlayLayer.sortableChildren = true;
+    overlayLayer.zIndex = 999999;
+    overlayLayer.renderable = true;
+    overlayLayer.visible = true;
+    try {
+      app.stage.sortableChildren = true;
+    } catch {
+    }
+    try {
+      app.stage.addChild(overlayLayer);
+    } catch {
+    }
+    return overlayLayer;
+  }
+  function cloneStyle(src) {
+    if (!src) return void 0;
+    if (src.style) return src.style;
+    if (src._style) return src._style;
+    return void 0;
+  }
+  function createOverlayText(sourceNode, text) {
+    const app = resolvePixiApp();
+    if (!app?.stage) return null;
+    const P = app?.renderer?.PIXI ?? globalThis.PIXI;
+    const TextCtor = sourceNode?.constructor ?? P?.Text;
+    const FallbackCtor = P?.Text;
+    if (!TextCtor && !FallbackCtor) return null;
+    let overlay;
+    try {
+      if (TextCtor) overlay = new TextCtor(text, cloneStyle(sourceNode));
+    } catch {
+    }
+    if (!overlay && FallbackCtor && FallbackCtor !== TextCtor) {
+      try {
+        overlay = new FallbackCtor(text, cloneStyle(sourceNode));
+      } catch {
+      }
+    }
+    if (!overlay) return null;
+    overlay.label = "__qws_inv_pet_strength_text";
+    overlay.eventMode = "none";
+    overlay.renderable = true;
+    overlay.visible = true;
+    overlay.zIndex = 999999;
+    try {
+      overlay.anchor?.set?.(0, 0);
+    } catch {
+    }
+    try {
+      if (sourceNode?.scale && overlay.scale?.set) {
+        overlay.scale.set(sourceNode.scale.x ?? 1, sourceNode.scale.y ?? 1);
+      }
+    } catch {
+    }
+    return overlay;
+  }
+  function ensureOverlayFor(node, text) {
+    const layer = ensureOverlayLayer(resolvePixiApp());
+    if (!layer) return null;
+    let overlay = overlayMap.get(node);
+    if (!overlay || overlay.destroyed) {
+      overlay = createOverlayText(node, text);
+      if (!overlay) return null;
+      layer.addChild(overlay);
+      overlayMap.set(node, overlay);
+    } else if (String(overlay.text) !== text) {
+      overlay.text = text;
+      try {
+        overlay.updateText?.();
+      } catch {
+      }
+    }
+    return overlay;
+  }
+  function collectTextNodes(root) {
+    const out = [];
+    const stack = [root];
+    const seen = /* @__PURE__ */ new Set();
+    while (stack.length) {
+      const node = stack.pop();
+      if (!node || seen.has(node)) continue;
+      seen.add(node);
+      const text = node.text;
+      if (typeof text === "string" || typeof text === "number") {
+        out.push(node);
+      }
+      const kids = getChildren(node);
+      if (Array.isArray(kids)) {
+        for (let i = kids.length - 1; i >= 0; i -= 1) stack.push(kids[i]);
+      }
+    }
+    return out;
+  }
+  function isTargetVisualLabel(label2) {
+    if (!label2) return false;
+    if (label2 === "InventoryItemVisual") return true;
+    if (label2.includes("Hutch") && (label2.includes("ItemVisual") || label2.includes("ItemView"))) {
+      return true;
+    }
+    if (label2.includes("PetHutch") && label2.includes("Item")) return true;
+    return false;
+  }
+  function findInventoryVisuals(stage) {
+    if (!stage) return [];
+    const out = [];
+    const stack = [stage];
+    const seen = /* @__PURE__ */ new Set();
+    while (stack.length) {
+      const node = stack.pop();
+      if (!node || seen.has(node)) continue;
+      seen.add(node);
+      const label2 = String(node.label ?? node.name ?? "");
+      if (isTargetVisualLabel(label2)) out.push(node);
+      const kids = getChildren(node);
+      if (Array.isArray(kids)) {
+        for (let i = kids.length - 1; i >= 0; i -= 1) stack.push(kids[i]);
+      }
+    }
+    return out;
+  }
+  function parseLevelText(text) {
+    const m = LEVEL_TEXT_RE.exec(text.trim());
+    if (!m) return null;
+    const current = Number(m[1]);
+    if (!Number.isFinite(current)) return null;
+    const max = m[2] != null ? Number(m[2]) : null;
+    return {
+      current,
+      max: Number.isFinite(max) ? max : null
+    };
+  }
+  function pickLevelTextNode(visual) {
+    const itemBounds = safeBounds(visual);
+    if (!itemBounds) return null;
+    const texts = collectTextNodes(visual);
+    let best = null;
+    let fallback = null;
+    for (const node of texts) {
+      const raw = String(node.text ?? "");
+      if (!parseLevelText(raw)) continue;
+      const b = safeBounds(node);
+      if (!b) continue;
+      const relX = (b.x - itemBounds.x) / itemBounds.width;
+      const relY = (b.y - itemBounds.y) / itemBounds.height;
+      const area = b.width * b.height;
+      if (!fallback || area < fallback.area) fallback = { node, area };
+      if (relX < -0.1 || relY < -0.1) continue;
+      if (relX > 0.55 || relY > 0.55) continue;
+      if (b.width > itemBounds.width * 0.6) continue;
+      if (!best || area < best.area) best = { node, area };
+    }
+    return best?.node ?? fallback?.node ?? null;
+  }
+  function getItemIdFromVisual(visual) {
+    let cur = visual;
+    for (let i = 0; i < 10 && cur; i += 1) {
+      const label2 = String(cur.label ?? cur.name ?? "").trim();
+      if (label2) {
+        const m = ITEM_VIEW_ID_RE.exec(label2);
+        if (m?.[1]) return m[1];
+      }
+      const directId = cur?.itemId ?? cur?.id;
+      if (typeof directId === "string" && directId.trim()) return directId.trim();
+      cur = cur.parent;
+    }
+    return null;
+  }
+  function getStrengthDisplayForId(id) {
+    const info = petById.get(id);
+    if (!info) return null;
+    const current = Math.round(info.strength);
+    const max = Math.round(info.maxStrength);
+    if (!Number.isFinite(current) || !Number.isFinite(max) || max <= 0) return null;
+    if (current >= max) return String(current);
+    return `${current}/${max}`;
+  }
+  function applyLevelText(node, next) {
+    if (!node || !next) return false;
+    const raw = String(node?.text ?? "");
+    if (raw !== next) {
+      try {
+        node.text = next;
+        try {
+          node.updateText?.();
+        } catch {
+        }
+        try {
+          node.invalidate?.();
+        } catch {
+        }
+      } catch {
+      }
+    }
+    if (String(node?.text ?? "") === next) return true;
+    const overlay = ensureOverlayFor(node, next);
+    return !!overlay;
+  }
+  function syncOnce(app) {
+    if (!app?.stage) return;
+    const open = isInventoryOpen2();
+    if (open !== lastInventoryOpen) {
+      lastInventoryOpen = open;
+      debugLog("inventory open:", open);
+    }
+    if (!open && !ALWAYS_SYNC) return;
+    const visuals = findInventoryVisuals(app.stage);
+    if (visuals.length !== lastVisualCount) {
+      lastVisualCount = visuals.length;
+      debugLog("InventoryItemVisual count:", visuals.length);
+    }
+    if (!visuals.length) return;
+    let found = 0;
+    let updated = 0;
+    let missing = 0;
+    const seen = /* @__PURE__ */ new Set();
+    for (const visual of visuals) {
+      const node = pickLevelTextNode(visual);
+      if (!node) {
+        missing += 1;
+        continue;
+      }
+      const itemId = getItemIdFromVisual(visual);
+      if (!itemId) {
+        missing += 1;
+        continue;
+      }
+      const display = getStrengthDisplayForId(itemId);
+      if (!display) {
+        missing += 1;
+        continue;
+      }
+      found += 1;
+      if (applyLevelText(node, display)) updated += 1;
+      seen.add(node);
+      trackedNodes.set(node, itemId);
+      const b = safeBounds(node);
+      const overlay = overlayMap.get(node);
+      if (b && overlay) {
+        overlay.position.set(b.x, b.y);
+      }
+    }
+    for (const [node, overlay] of Array.from(overlayMap.entries())) {
+      if (seen.has(node)) continue;
+      try {
+        overlay.destroy?.();
+      } catch {
+      }
+      overlayMap.delete(node);
+    }
+    for (const node of Array.from(trackedNodes.keys())) {
+      if (!seen.has(node) || node?.destroyed || !node?.parent) {
+        trackedNodes.delete(node);
+      }
+    }
+    if (missing !== lastMissingCount || updated > 0) {
+      lastMissingCount = missing;
+      debugLog("sync", { visuals: visuals.length, found, updated, missing });
+    }
+  }
+  function startSyncLoop(app) {
+    if (syncTimer) return;
+    debugLog("start sync loop");
+    syncTimer = window.setInterval(() => syncOnce(app), POLL_INTERVAL_MS);
+  }
+  function startTickerLoop(app) {
+    if (tickerAttached) return;
+    const ticker = app?.ticker ?? app?.renderer?.ticker;
+    if (!ticker || typeof ticker.add !== "function") return;
+    debugLog("attach ticker loop");
+    tickerAttached = true;
+    ticker.add(() => {
+      if (!ALWAYS_SYNC && !isInventoryOpen2()) return;
+      if (!trackedNodes.size) return;
+      const toRemove = [];
+      for (const [node, itemId] of trackedNodes.entries()) {
+        if (!node || node.destroyed || !node.parent) {
+          toRemove.push(node);
+          continue;
+        }
+        const display = getStrengthDisplayForId(itemId);
+        if (!display) continue;
+        applyLevelText(node, display);
+      }
+      for (const node of toRemove) trackedNodes.delete(node);
+    });
+  }
+  async function refreshPetCache() {
+    try {
+      const rawInv = await Atoms.inventory.myInventory.get();
+      const rawHutch = await myPetHutchPetItems.get().catch(() => []);
+      const items = Array.isArray(rawInv?.items) ? rawInv.items : Array.isArray(rawInv) ? rawInv : [];
+      const hutchItems = Array.isArray(rawHutch) ? rawHutch : [];
+      const next = /* @__PURE__ */ new Map();
+      const all = items.concat(hutchItems);
+      for (const item of all) {
+        if (!item || typeof item !== "object") continue;
+        const type = typeof item.itemType === "string" ? item.itemType : "";
+        const isPet = type === "Pet" || item.pet || item.slot;
+        if (!isPet) continue;
+        const id = String(item.id ?? item.pet?.id ?? item.slot?.id ?? "").trim();
+        if (!id) continue;
+        const source = item.pet ?? item.slot ?? item;
+        const petSpecies = source?.petSpecies ?? source?.data?.petSpecies ?? source?.species ?? source?.name ?? "";
+        if (!petSpecies) continue;
+        const petLike = {
+          petSpecies: String(petSpecies),
+          xp: Number(source?.xp ?? source?.data?.xp ?? 0),
+          targetScale: Number(source?.targetScale ?? source?.data?.targetScale ?? 1)
+        };
+        const maxStrength = getPetMaxStrength(petLike);
+        if (!Number.isFinite(maxStrength) || maxStrength <= 0) continue;
+        const strength = getPetStrength(petLike);
+        next.set(id, { strength, maxStrength });
+      }
+      petById = next;
+      debugLog("pet cache", { pets: petById.size });
+    } catch {
+    }
+  }
+  function startPetCacheLoop() {
+    if (petCacheTimer) return;
+    refreshPetCache().catch(() => {
+    });
+    petCacheTimer = window.setInterval(() => {
+      refreshPetCache().catch(() => {
+      });
+    }, PET_CACHE_INTERVAL_MS);
+  }
+  function stopResolveLoop() {
+    if (resolveTimer) {
+      clearInterval(resolveTimer);
+      resolveTimer = null;
+      debugLog("stop resolve loop");
+    }
+  }
+  function startResolveLoop() {
+    if (resolveTimer) return;
+    debugLog("start resolve loop");
+    resolveTimer = window.setInterval(() => {
+      const app = resolvePixiApp();
+      if (!app) return;
+      stopResolveLoop();
+      startSyncLoop(app);
+      startTickerLoop(app);
+    }, RESOLVE_INTERVAL_MS);
+  }
+  function attachModalWatchers() {
+    const setActiveModal = (value) => {
+      const next = typeof value === "string" ? value : null;
+      if (next !== activeModalId) {
+        activeModalId = next;
+        debugLog("activeModal:", activeModalId);
+        if (activeModalId) {
+          refreshPetCache().catch(() => {
+          });
+          const app = resolvePixiApp();
+          if (app) syncOnce(app);
+        }
+      }
+    };
+    const setInventoryModal = (value) => {
+      const next = value === true;
+      if (next !== inventoryModalOpen) {
+        inventoryModalOpen = next;
+        debugLog("inventoryModalIsActive:", inventoryModalOpen);
+        if (inventoryModalOpen) {
+          refreshPetCache().catch(() => {
+          });
+          const app = resolvePixiApp();
+          if (app) syncOnce(app);
+        }
+      }
+    };
+    void (async () => {
+      try {
+        setActiveModal(await Atoms.ui.activeModal.get());
+      } catch {
+      }
+      try {
+        await Atoms.ui.activeModal.onChange((next) => setActiveModal(next));
+      } catch {
+      }
+      try {
+        setInventoryModal(await Atoms.ui.inventoryModalIsActive.get());
+      } catch {
+      }
+      try {
+        await Atoms.ui.inventoryModalIsActive.onChange((next) => setInventoryModal(next));
+      } catch {
+      }
+    })();
+  }
+  function startInventoryPetStrengthBadge() {
+    if (typeof document === "undefined") return;
+    const win = globalThis;
+    const alreadyStarted = readSharedGlobal(GLOBAL_FLAG) ?? win[GLOBAL_FLAG];
+    if (alreadyStarted) return;
+    win[GLOBAL_FLAG] = true;
+    try {
+      shareGlobal(GLOBAL_FLAG, true);
+    } catch {
+    }
+    if (started3) return;
+    started3 = true;
+    debugLog("startInventoryPetStrengthBadge");
+    attachModalWatchers();
+    startPetCacheLoop();
+    const app = resolvePixiApp();
+    if (app) {
+      debugLog("pixi app resolved");
+      startSyncLoop(app);
+      startTickerLoop(app);
+    } else {
+      debugLog("pixi app not ready, polling");
+      startResolveLoop();
+    }
+  }
+  try {
+    shareGlobal("QWS_startInventoryPetStrengthBadge", startInventoryPetStrengthBadge);
+    shareGlobal("QWS_enableInventoryPetStrengthBadgeDebug", (value = true) => {
+      const on = value !== false;
+      shareGlobal(DEBUG_FLAG, on);
+      return on;
+    });
+    shareGlobal("QWS_forceInventoryPetStrengthBadgeSync", () => {
+      const app = resolvePixiApp();
+      if (!app) return { ok: false, reason: "no app" };
+      syncOnce(app);
+      if (!syncTimer) startSyncLoop(app);
+      return { ok: true };
+    });
+    shareGlobal("QWS_debugInventoryPetStrengthBadge", () => {
+      const app = resolvePixiApp();
+      const visuals = app?.stage ? findInventoryVisuals(app.stage) : [];
+      return {
+        started: started3,
+        inventoryModalOpen,
+        activeModalId,
+        syncTimer: !!syncTimer,
+        resolveTimer: !!resolveTimer,
+        tickerAttached,
+        appReady: !!app,
+        visuals: visuals.length,
+        inventoryOpen: isInventoryOpen2(),
+        petCache: petById.size
+      };
+    });
+  } catch {
+  }
+
   // src/utils/shopUtility.ts
   init_atoms();
   var SHOP_TYPES = ["plant", "egg", "tool", "decor"];
@@ -43294,7 +43817,7 @@
 
   // src/utils/inventorySelectionLogger.ts
   init_atoms();
-  var started3 = false;
+  var started4 = false;
   var cachedItems = [];
   var currentIndex = null;
   var lastLoggedQuantity = void 0;
@@ -43454,8 +43977,8 @@
     }
   }
   async function startSelectedInventoryQuantityLogger() {
-    if (started3) return;
-    started3 = true;
+    if (started4) return;
+    started4 = true;
     cachedItems = normalizeItems(await readInventory());
     currentIndex = await readSelectedIndex();
     logQuantity(true);
@@ -46456,11 +46979,11 @@
     { key: "refund", re: /\b(refund|refunded)\b/i },
     { key: "boost", re: /\b(boost|potion|refund|growth|restock|spin)\b/i }
   ];
-  var started4 = false;
+  var started5 = false;
   var activeFilter = loadPersistedFilter() ?? "all";
   function startActivityLogFilter() {
-    if (started4 || typeof document === "undefined") return;
-    started4 = true;
+    if (started5 || typeof document === "undefined") return;
+    started5 = true;
     ensureStyles();
     onAdded(
       (el2) => el2 instanceof HTMLElement && el2.matches("p.chakra-text") && /activity\s*log/i.test(el2.textContent || ""),
@@ -47912,6 +48435,7 @@
       startInstantFeedButton();
       startSelectedInventoryQuantityLogger();
       startInventorySortingObserver();
+      startInventoryPetStrengthBadge();
       startModalObserver({ intervalMs: 6e4, log: true });
     })();
   }
