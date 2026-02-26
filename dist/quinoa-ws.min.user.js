@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.400
+// @version      3.1.401
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -41662,8 +41662,17 @@
   var RESOLVE_INTERVAL_MS = 1e3;
   var ALWAYS_SYNC = true;
   var PET_CACHE_INTERVAL_MS = 1200;
-  var LEVEL_TEXT_RE = /^(?:STR\s*)?(\d{1,4})(?:\s*\/\s*(\d{1,4}))?$/i;
-  var ITEM_VIEW_ID_RE = /InventoryItemView\s*[([:]*\s*([\w-]{6,})\s*[)\]]?/i;
+  var NON_MAX_SCALE = 0.86;
+  var MAX_LEVEL_SCALE = 0.92;
+  var LEVEL_TEXT_RE = /^(?:STR\s*)?(\d{1,4})(?:\s*\/\s*(\d{1,4}))?(?:\s*MAX)?$/i;
+  var QUANTITY_TEXT_RE = /^[x\u00D7]\s*\d[\d,\.]*$/i;
+  var ITEM_VIEW_ID_RE = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
+  var SLOT_LABEL_RE = /\bslot-\d+\b/i;
+  var SLOT_LABEL_NAME_RE = /(?:^|\b)(.+?)\s+slot-\d+\b/i;
+  var SLOT_INDEX_RE = /slot-(\d+)/i;
+  var INVENTORY_LABEL_RE = /(InventoryItemVisual|InventoryItemView|InventoryCardVisual|InventorySelectedItemLayer)/i;
+  var PET_LABEL_RE = /pet/i;
+  var PET_SLOTS_CONTAINER_RE = /PetSlots/i;
   var started3 = false;
   var inventoryModalOpen = false;
   var activeModalId = null;
@@ -41674,10 +41683,15 @@
   var lastMissingCount = -1;
   var overlayLayer = null;
   var overlayMap = /* @__PURE__ */ new Map();
+  var scaleCache = /* @__PURE__ */ new Map();
   var tickerAttached = false;
   var trackedNodes = /* @__PURE__ */ new Map();
+  var syncGeneration = 0;
   var petCacheTimer = null;
   var petById = /* @__PURE__ */ new Map();
+  var petIdSet = /* @__PURE__ */ new Set();
+  var petLabelSet = /* @__PURE__ */ new Set();
+  var inventoryItemsSnapshot = [];
   function isDebugEnabled() {
     const shared = readSharedGlobal(DEBUG_FLAG);
     if (typeof shared === "boolean") return shared;
@@ -41800,6 +41814,41 @@
     }
     return overlay;
   }
+  function applyLevelScale(node, isMax) {
+    if (!node?.scale) return;
+    if (!scaleCache.has(node)) {
+      scaleCache.set(node, { x: Number(node.scale.x ?? 1), y: Number(node.scale.y ?? 1) });
+    }
+    const base = scaleCache.get(node) ?? { x: 1, y: 1 };
+    const mult = isMax ? MAX_LEVEL_SCALE : NON_MAX_SCALE;
+    if (node.scale?.set) {
+      node.scale.set(base.x * mult, base.y * mult);
+    } else {
+      node.scale.x = base.x * mult;
+      node.scale.y = base.y * mult;
+    }
+  }
+  function restoreScale(node) {
+    const base = scaleCache.get(node);
+    if (!base || !node?.scale) return;
+    if (node.scale?.set) node.scale.set(base.x, base.y);
+    else {
+      node.scale.x = base.x;
+      node.scale.y = base.y;
+    }
+    scaleCache.delete(node);
+  }
+  function cleanupNode(node) {
+    const overlay = overlayMap.get(node);
+    restoreScale(node);
+    if (overlay) {
+      try {
+        overlay.destroy?.();
+      } catch {
+      }
+      overlayMap.delete(node);
+    }
+  }
   function collectTextNodes(root) {
     const out = [];
     const stack = [root];
@@ -41819,6 +41868,71 @@
     }
     return out;
   }
+  function normalizePetLabel(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw) return null;
+    return raw.replace(/\s+/g, " ").toLowerCase();
+  }
+  function addPetLabel(set3, value) {
+    const norm3 = normalizePetLabel(value);
+    if (norm3) set3.add(norm3);
+  }
+  function buildPetLike(source, labels) {
+    if (!source || typeof source !== "object") return null;
+    const petSpecies = source?.petSpecies ?? source?.data?.petSpecies ?? source?.species ?? source?.name ?? "";
+    if (!petSpecies) return null;
+    addPetLabel(labels, source?.name ?? source?.petName ?? source?.slot?.name);
+    addPetLabel(labels, petSpecies);
+    return {
+      petSpecies: String(petSpecies),
+      xp: Number(source?.xp ?? source?.data?.xp ?? 0),
+      targetScale: Number(source?.targetScale ?? source?.data?.targetScale ?? 1)
+    };
+  }
+  function getVisualContext(visual) {
+    let slotName = null;
+    let slotIndex = null;
+    let hasSlot = false;
+    let hasPet = false;
+    let hasInventory = false;
+    let inPetSlots = false;
+    let cur = visual;
+    for (let i = 0; i < 12 && cur; i += 1) {
+      const label2 = String(cur.label ?? cur.name ?? "").trim();
+      if (label2) {
+        if (!slotName) {
+          const m = SLOT_LABEL_NAME_RE.exec(label2);
+          if (m?.[1]) slotName = m[1].trim();
+        }
+        if (slotIndex == null) {
+          const m = SLOT_INDEX_RE.exec(label2);
+          if (m?.[1]) {
+            const idx = Number(m[1]);
+            if (Number.isFinite(idx) && idx >= 0) slotIndex = idx;
+          }
+        }
+        if (!hasSlot && SLOT_LABEL_RE.test(label2)) hasSlot = true;
+        if (!hasPet && PET_LABEL_RE.test(label2)) hasPet = true;
+        if (!hasInventory && INVENTORY_LABEL_RE.test(label2)) hasInventory = true;
+        if (!inPetSlots && PET_SLOTS_CONTAINER_RE.test(label2)) inPetSlots = true;
+      }
+      cur = cur.parent;
+    }
+    return { slotName, slotIndex, hasSlot, hasPet, hasInventory, inPetSlots };
+  }
+  function isAllowedContext(ctx2) {
+    if (ctx2.hasInventory || ctx2.hasPet) return true;
+    if (ctx2.hasSlot) return false;
+    return true;
+  }
+  function isNonPetInventorySlot(slotIndex) {
+    if (slotIndex == null) return false;
+    const item = inventoryItemsSnapshot?.[slotIndex];
+    if (!item || typeof item !== "object") return false;
+    const type = String(item.itemType ?? item.data?.itemType ?? "");
+    if (!type) return false;
+    return type !== "Pet";
+  }
   function isTargetVisualLabel(label2) {
     if (!label2) return false;
     if (label2 === "InventoryItemVisual") return true;
@@ -41826,6 +41940,7 @@
       return true;
     }
     if (label2.includes("PetHutch") && label2.includes("Item")) return true;
+    if (label2.includes("Pet") && /(Slot|Card|View|Visual)/i.test(label2)) return true;
     return false;
   }
   function findInventoryVisuals(stage) {
@@ -41857,10 +41972,36 @@
       max: Number.isFinite(max) ? max : null
     };
   }
-  function pickLevelTextNode(visual) {
-    const itemBounds = safeBounds(visual);
-    if (!itemBounds) return null;
-    const texts = collectTextNodes(visual);
+  function isQuantityTextValue(raw) {
+    return QUANTITY_TEXT_RE.test(raw);
+  }
+  function collectQuantityTextBounds(root) {
+    const out = [];
+    const stack = [root];
+    const seen = /* @__PURE__ */ new Set();
+    while (stack.length) {
+      const node = stack.pop();
+      if (!node || seen.has(node)) continue;
+      seen.add(node);
+      const text = node.text;
+      if (typeof text === "string" || typeof text === "number") {
+        const raw = String(text ?? "").trim();
+        if (raw && isQuantityTextValue(raw)) {
+          const b = safeBounds(node);
+          if (b) out.push(b);
+        }
+      }
+      const kids = getChildren(node);
+      if (Array.isArray(kids)) {
+        for (let i = kids.length - 1; i >= 0; i -= 1) stack.push(kids[i]);
+      }
+    }
+    return out;
+  }
+  function intersects(a, b) {
+    return a.x <= b.x + b.width && a.x + a.width >= b.x && a.y <= b.y + b.height && a.y + a.height >= b.y;
+  }
+  function pickLevelTextNode(texts, itemBounds) {
     let best = null;
     let fallback = null;
     for (const node of texts) {
@@ -41879,16 +42020,22 @@
     }
     return best?.node ?? fallback?.node ?? null;
   }
-  function getItemIdFromVisual(visual) {
+  function getItemIdFromVisual(visual, allowed) {
     let cur = visual;
     for (let i = 0; i < 10 && cur; i += 1) {
       const label2 = String(cur.label ?? cur.name ?? "").trim();
       if (label2) {
         const m = ITEM_VIEW_ID_RE.exec(label2);
-        if (m?.[1]) return m[1];
+        if (m?.[1]) {
+          const id = m[1];
+          if (!allowed || allowed.has(id)) return id;
+        }
       }
-      const directId = cur?.itemId ?? cur?.id;
-      if (typeof directId === "string" && directId.trim()) return directId.trim();
+      const directId = cur?.itemId;
+      if (typeof directId === "string" && directId.trim()) {
+        const id = directId.trim();
+        if (!allowed || allowed.has(id)) return id;
+      }
       cur = cur.parent;
     }
     return null;
@@ -41899,10 +42046,20 @@
     const current = Math.round(info.strength);
     const max = Math.round(info.maxStrength);
     if (!Number.isFinite(current) || !Number.isFinite(max) || max <= 0) return null;
-    if (current >= max) return String(current);
-    return `${current}/${max}`;
+    return { current, max, isMax: current >= max };
   }
-  function applyLevelText(node, next) {
+  function matchesDisplayedStrength(node, info) {
+    const raw = String(node?.text ?? "").trim();
+    const parsed = parseLevelText(raw);
+    if (!parsed) return false;
+    const cur = parsed.current;
+    const max = parsed.max;
+    const within = (a, b, tol = 2) => Math.abs(a - b) <= tol;
+    if (within(cur, info.current)) return true;
+    if (Number.isFinite(max) && within(max, info.max)) return true;
+    return false;
+  }
+  function applyLevelText(node, next, allowOverlay = true) {
     if (!node || !next) return false;
     const raw = String(node?.text ?? "");
     if (raw !== next) {
@@ -41920,11 +42077,22 @@
       }
     }
     if (String(node?.text ?? "") === next) return true;
+    if (!allowOverlay) return false;
     const overlay = ensureOverlayFor(node, next);
     return !!overlay;
   }
+  function applyLevelDisplay(node, info) {
+    const text = info.isMax ? `${info.current} MAX` : `${info.current}/${info.max}`;
+    const ok = applyLevelText(node, text, true);
+    applyLevelScale(node, info.isMax);
+    const overlay = overlayMap.get(node);
+    if (overlay) applyLevelScale(overlay, info.isMax);
+    return ok;
+  }
   function syncOnce(app) {
     if (!app?.stage) return;
+    syncGeneration += 1;
+    const gen = syncGeneration;
     const open = isInventoryOpen2();
     if (open !== lastInventoryOpen) {
       lastInventoryOpen = open;
@@ -41937,17 +42105,29 @@
       debugLog("InventoryItemVisual count:", visuals.length);
     }
     if (!visuals.length) return;
+    const quantityBounds = open ? [] : collectQuantityTextBounds(app.stage);
     let found = 0;
     let updated = 0;
     let missing = 0;
     const seen = /* @__PURE__ */ new Set();
     for (const visual of visuals) {
-      const node = pickLevelTextNode(visual);
-      if (!node) {
+      const ctx2 = getVisualContext(visual);
+      if (!isAllowedContext(ctx2)) {
         missing += 1;
         continue;
       }
-      const itemId = getItemIdFromVisual(visual);
+      if (!open && !ctx2.inPetSlots && isNonPetInventorySlot(ctx2.slotIndex)) {
+        missing += 1;
+        continue;
+      }
+      if (ctx2.slotName && petLabelSet.size > 0) {
+        const norm3 = normalizePetLabel(ctx2.slotName);
+        if (!norm3 || !petLabelSet.has(norm3)) {
+          missing += 1;
+          continue;
+        }
+      }
+      const itemId = getItemIdFromVisual(visual, petIdSet);
       if (!itemId) {
         missing += 1;
         continue;
@@ -41957,10 +42137,54 @@
         missing += 1;
         continue;
       }
+      const visualBounds = safeBounds(visual);
+      if (!visualBounds) {
+        missing += 1;
+        continue;
+      }
+      if (quantityBounds.length) {
+        let hitQty = false;
+        for (const qb of quantityBounds) {
+          if (intersects(qb, visualBounds)) {
+            hitQty = true;
+            break;
+          }
+        }
+        if (hitQty) {
+          missing += 1;
+          continue;
+        }
+      }
+      const texts = collectTextNodes(visual);
+      if (!texts.length) {
+        missing += 1;
+        continue;
+      }
+      let hasQty = false;
+      for (const t of texts) {
+        const raw = String(t.text ?? "").trim();
+        if (raw && isQuantityTextValue(raw)) {
+          hasQty = true;
+          break;
+        }
+      }
+      if (hasQty) {
+        missing += 1;
+        continue;
+      }
+      const node = pickLevelTextNode(texts, visualBounds);
+      if (!node) {
+        missing += 1;
+        continue;
+      }
+      if (!matchesDisplayedStrength(node, display)) {
+        missing += 1;
+        continue;
+      }
       found += 1;
-      if (applyLevelText(node, display)) updated += 1;
+      if (applyLevelDisplay(node, display)) updated += 1;
       seen.add(node);
-      trackedNodes.set(node, itemId);
+      trackedNodes.set(node, { id: itemId, gen });
       const b = safeBounds(node);
       const overlay = overlayMap.get(node);
       if (b && overlay) {
@@ -41975,8 +42199,13 @@
       }
       overlayMap.delete(node);
     }
-    for (const node of Array.from(trackedNodes.keys())) {
-      if (!seen.has(node) || node?.destroyed || !node?.parent) {
+    for (const node of Array.from(scaleCache.keys())) {
+      if (seen.has(node)) continue;
+      restoreScale(node);
+    }
+    for (const [node, entry] of Array.from(trackedNodes.entries())) {
+      if (entry.gen !== gen || !seen.has(node) || node?.destroyed || !node?.parent) {
+        cleanupNode(node);
         trackedNodes.delete(node);
       }
     }
@@ -42000,48 +42229,81 @@
       if (!ALWAYS_SYNC && !isInventoryOpen2()) return;
       if (!trackedNodes.size) return;
       const toRemove = [];
-      for (const [node, itemId] of trackedNodes.entries()) {
+      for (const [node, entry] of trackedNodes.entries()) {
         if (!node || node.destroyed || !node.parent) {
           toRemove.push(node);
           continue;
         }
-        const display = getStrengthDisplayForId(itemId);
-        if (!display) continue;
-        applyLevelText(node, display);
+        if (entry.gen !== syncGeneration) continue;
+        const display = getStrengthDisplayForId(entry.id);
+        if (!display || !matchesDisplayedStrength(node, display)) {
+          toRemove.push(node);
+          continue;
+        }
+        applyLevelDisplay(node, display);
       }
-      for (const node of toRemove) trackedNodes.delete(node);
+      for (const node of toRemove) {
+        cleanupNode(node);
+        trackedNodes.delete(node);
+      }
     });
   }
   async function refreshPetCache() {
     try {
-      const rawInv = await Atoms.inventory.myInventory.get();
-      const rawHutch = await myPetHutchPetItems.get().catch(() => []);
+      const [rawInv, rawHutch, rawActivePrim, rawActiveInfo] = await Promise.all([
+        Atoms.inventory.myInventory.get(),
+        myPetHutchPetItems.get().catch(() => []),
+        Atoms.pets.myPrimitivePetSlots.get().catch(() => null),
+        Atoms.pets.myPetInfos.get().catch(() => null)
+      ]);
       const items = Array.isArray(rawInv?.items) ? rawInv.items : Array.isArray(rawInv) ? rawInv : [];
+      inventoryItemsSnapshot = Array.isArray(items) ? items : [];
       const hutchItems = Array.isArray(rawHutch) ? rawHutch : [];
+      const activeList = Array.isArray(rawActivePrim) ? rawActivePrim : Array.isArray(rawActiveInfo) ? rawActiveInfo : [];
       const next = /* @__PURE__ */ new Map();
-      const all = items.concat(hutchItems);
-      for (const item of all) {
+      const nextLabels = /* @__PURE__ */ new Set();
+      for (const item of items) {
         if (!item || typeof item !== "object") continue;
         const type = typeof item.itemType === "string" ? item.itemType : "";
-        const isPet = type === "Pet" || item.pet || item.slot;
-        if (!isPet) continue;
+        if (type !== "Pet") continue;
         const id = String(item.id ?? item.pet?.id ?? item.slot?.id ?? "").trim();
         if (!id) continue;
+        const petLike = buildPetLike(item, nextLabels);
+        if (!petLike) continue;
+        const maxStrength = getPetMaxStrength(petLike);
+        if (!Number.isFinite(maxStrength) || maxStrength <= 0) continue;
+        const strength = getPetStrength(petLike);
+        next.set(id, { strength, maxStrength });
+      }
+      for (const item of hutchItems) {
+        if (!item || typeof item !== "object") continue;
         const source = item.pet ?? item.slot ?? item;
-        const petSpecies = source?.petSpecies ?? source?.data?.petSpecies ?? source?.species ?? source?.name ?? "";
-        if (!petSpecies) continue;
-        const petLike = {
-          petSpecies: String(petSpecies),
-          xp: Number(source?.xp ?? source?.data?.xp ?? 0),
-          targetScale: Number(source?.targetScale ?? source?.data?.targetScale ?? 1)
-        };
+        if (!source) continue;
+        const id = String(source?.id ?? "").trim();
+        if (!id) continue;
+        const petLike = buildPetLike(source, nextLabels);
+        if (!petLike) continue;
+        const maxStrength = getPetMaxStrength(petLike);
+        if (!Number.isFinite(maxStrength) || maxStrength <= 0) continue;
+        const strength = getPetStrength(petLike);
+        next.set(id, { strength, maxStrength });
+      }
+      for (const entry of activeList) {
+        const slot = entry?.slot ?? entry;
+        if (!slot || typeof slot !== "object") continue;
+        const id = String(slot?.id ?? "").trim();
+        if (!id) continue;
+        const petLike = buildPetLike(slot, nextLabels);
+        if (!petLike) continue;
         const maxStrength = getPetMaxStrength(petLike);
         if (!Number.isFinite(maxStrength) || maxStrength <= 0) continue;
         const strength = getPetStrength(petLike);
         next.set(id, { strength, maxStrength });
       }
       petById = next;
-      debugLog("pet cache", { pets: petById.size });
+      petIdSet = new Set(next.keys());
+      petLabelSet = nextLabels;
+      debugLog("pet cache", { pets: petById.size, labels: petLabelSet.size });
     } catch {
     }
   }
@@ -42170,7 +42432,8 @@
         appReady: !!app,
         visuals: visuals.length,
         inventoryOpen: isInventoryOpen2(),
-        petCache: petById.size
+        petCache: petById.size,
+        petLabels: petLabelSet.size
       };
     });
   } catch {
