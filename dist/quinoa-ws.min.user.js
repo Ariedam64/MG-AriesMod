@@ -28530,17 +28530,11 @@
     btn.disabled = true;
     try {
       const pet = await findPetById2(petId);
-      if (!pet) {
-        await toastSimple("Instant feed", "Unable to resolve selected pet.", "error");
-        return;
-      }
+      if (!pet) return;
       const species = String(pet?.slot?.petSpecies || "");
       const compatibleList = PetsService.getCompatibleCropsForSpecies(species) ?? [];
       const compatible = new Set(compatibleList.map((item) => String(item || "")));
-      if (!compatible.size) {
-        await toastSimple("Instant feed", "No compatible crops for this pet.", "info");
-        return;
-      }
+      if (!compatible.size) return;
       const inventory = await PlayerService.getCropInventoryState();
       const items = Array.isArray(inventory) ? inventory : [];
       const favoriteSet = await PlayerService.getFavoriteIdSet().catch(() => /* @__PURE__ */ new Set());
@@ -28551,97 +28545,15 @@
         return id && !favoriteSet.has(id);
       });
       const chosenId = String(chosen?.id || "");
-      if (!chosenId) {
-        await toastSimple(
-          "Instant feed",
-          "No compatible crops in inventory (excluding favorites).",
-          "info"
-        );
-        return;
-      }
-      const previousHungerPct = getHungerPctForPet(pet);
+      if (!chosenId) return;
       await PlayerService.feedPet(petId, chosenId);
-      const hungerPct = await waitForHungerIncrease(petId, previousHungerPct, {
-        initialDelay: 150
-      });
-      const hungerSuffix = hungerPct != null ? ` Hunger: ${formatHungerPct(hungerPct)}%.` : "";
-      const cropName = String(chosen?.species || "crop");
-      const petLabel = pet?.slot?.name || species || petId;
-      await toastSimple(
-        "Instant feed",
-        `Fed ${petLabel} with ${cropName}.${hungerSuffix}`,
-        "success"
-      );
     } catch (err) {
       console.error("[InstantFeed] Failed to feed pet", err);
-      await toastSimple(
-        "Instant feed",
-        err instanceof Error ? err.message : "Failed to feed pet.",
-        "error"
-      );
     } finally {
       if (btn.dataset.petId === expectedPetId) {
         btn.disabled = prevDisabled;
       }
     }
-  }
-  function formatHungerPct(pct) {
-    if (!Number.isFinite(pct)) return "";
-    const clamped = Math.max(0, Math.min(100, pct));
-    const rounded = Math.round(clamped * 10) / 10;
-    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
-  }
-  var HUNGER_EPSILON = 0.05;
-  var HUNGER_TIMEOUT_MS = 4e3;
-  var HUNGER_POLL_INTERVAL_MS = 120;
-  function isPetInfo(value) {
-    if (!value || typeof value !== "object") return false;
-    const slot = value.slot;
-    return !!slot && typeof slot === "object";
-  }
-  function getHungerPctForPet(pet) {
-    if (!isPetInfo(pet)) return null;
-    try {
-      const hungerPct = PetsService.getHungerPctFor(pet);
-      return typeof hungerPct === "number" && Number.isFinite(hungerPct) ? hungerPct : null;
-    } catch {
-      return null;
-    }
-  }
-  async function getPetHungerPct(petId) {
-    try {
-      const updatedPet = await findPetById2(petId);
-      return getHungerPctForPet(updatedPet);
-    } catch {
-      return null;
-    }
-  }
-  async function waitForHungerIncrease(petId, previousPct, options = {}) {
-    const { initialDelay = 0, timeout = HUNGER_TIMEOUT_MS, interval = HUNGER_POLL_INTERVAL_MS } = options;
-    if (initialDelay > 0) {
-      await delay3(initialDelay);
-    }
-    const start2 = typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
-    let lastResult = null;
-    while (true) {
-      const pct = await getPetHungerPct(petId);
-      if (pct != null) {
-        lastResult = pct;
-        if (previousPct == null || pct >= Math.min(100, previousPct + HUNGER_EPSILON) || pct >= 99.9) {
-          return pct;
-        }
-      }
-      const now2 = typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
-      if (now2 - start2 >= timeout) {
-        return lastResult;
-      }
-      if (interval > 0) {
-        await delay3(interval);
-      }
-    }
-  }
-  function delay3(ms) {
-    return new Promise((resolve2) => setTimeout(resolve2, ms));
   }
 
   // src/ui/menus/communityHub/shared.ts
@@ -29232,9 +29144,9 @@
     let backoff = 1e3;
     let inFlight = null;
     let knownServerSessionId = null;
-    const schedule = (delay4) => {
+    const schedule = (delay3) => {
       if (closed || paused) return;
-      setTimeout(poll, delay4);
+      setTimeout(poll, delay3);
     };
     const poll = async () => {
       if (closed || paused || running) return;

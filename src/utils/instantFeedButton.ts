@@ -1,9 +1,8 @@
 import { onAdded } from "../core/dom";
 import { PetsService } from "../services/pets";
-import { PlayerService, type PetInfo } from "../services/player";
+import { PlayerService } from "../services/player";
 import { Store } from "../store/api";
 import { Atoms } from "../store/atoms";
-import { toastSimple } from "../ui/toast";
 import { attachSpriteIcon, getSpriteWarmupState, onSpriteWarmupProgress } from "../ui/spriteIconCache";
 
 const ROOT_CLASS = "css-pb842o";
@@ -449,19 +448,13 @@ async function handleInstantFeedForPet(petId: string, btn: HTMLButtonElement): P
   btn.disabled = true;
   try {
     const pet = await findPetById(petId);
-    if (!pet) {
-      await toastSimple("Instant feed", "Unable to resolve selected pet.", "error");
-      return;
-    }
+    if (!pet) return;
 
     const species = String(pet?.slot?.petSpecies || "");
     const compatibleList = PetsService.getCompatibleCropsForSpecies(species) ?? [];
     const compatible = new Set(compatibleList.map((item) => String(item || "")));
 
-    if (!compatible.size) {
-      await toastSimple("Instant feed", "No compatible crops for this pet.", "info");
-      return;
-    }
+    if (!compatible.size) return;
 
     const inventory = await PlayerService.getCropInventoryState();
     const items = Array.isArray(inventory) ? inventory : [];
@@ -475,39 +468,11 @@ async function handleInstantFeedForPet(petId: string, btn: HTMLButtonElement): P
     }) as any;
 
     const chosenId = String(chosen?.id || "");
-    if (!chosenId) {
-      await toastSimple(
-        "Instant feed",
-        "No compatible crops in inventory (excluding favorites).",
-        "info",
-      );
-      return;
-    }
-
-    const previousHungerPct = getHungerPctForPet(pet);
+    if (!chosenId) return;
 
     await PlayerService.feedPet(petId, chosenId);
-
-    const hungerPct = await waitForHungerIncrease(petId, previousHungerPct, {
-      initialDelay: 150,
-    });
-    const hungerSuffix =
-      hungerPct != null ? ` Hunger: ${formatHungerPct(hungerPct)}%.` : "";
-
-    const cropName = String(chosen?.species || "crop");
-    const petLabel = pet?.slot?.name || species || petId;
-    await toastSimple(
-      "Instant feed",
-      `Fed ${petLabel} with ${cropName}.${hungerSuffix}`,
-      "success",
-    );
   } catch (err) {
     console.error("[InstantFeed] Failed to feed pet", err);
-    await toastSimple(
-      "Instant feed",
-      err instanceof Error ? err.message : "Failed to feed pet.",
-      "error",
-    );
   } finally {
     if (btn.dataset.petId === expectedPetId) {
       btn.disabled = prevDisabled;
@@ -515,90 +480,3 @@ async function handleInstantFeedForPet(petId: string, btn: HTMLButtonElement): P
   }
 }
 
-function formatHungerPct(pct: number): string {
-  if (!Number.isFinite(pct)) return "";
-  const clamped = Math.max(0, Math.min(100, pct));
-  const rounded = Math.round(clamped * 10) / 10;
-  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
-}
-
-const HUNGER_EPSILON = 0.05;
-const HUNGER_TIMEOUT_MS = 4000;
-const HUNGER_POLL_INTERVAL_MS = 120;
-
-function isPetInfo(value: unknown): value is PetInfo {
-  if (!value || typeof value !== "object") return false;
-  const slot = (value as { slot?: unknown }).slot;
-  return !!slot && typeof slot === "object";
-}
-
-function getHungerPctForPet(pet: unknown): number | null {
-  if (!isPetInfo(pet)) return null;
-  try {
-    const hungerPct = PetsService.getHungerPctFor(pet);
-    return typeof hungerPct === "number" && Number.isFinite(hungerPct)
-      ? hungerPct
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-async function getPetHungerPct(petId: string): Promise<number | null> {
-  try {
-    const updatedPet = await findPetById(petId);
-    return getHungerPctForPet(updatedPet);
-  } catch {
-    return null;
-  }
-}
-
-async function waitForHungerIncrease(
-  petId: string,
-  previousPct: number | null,
-  options: { initialDelay?: number; timeout?: number; interval?: number } = {},
-): Promise<number | null> {
-  const { initialDelay = 0, timeout = HUNGER_TIMEOUT_MS, interval = HUNGER_POLL_INTERVAL_MS } =
-    options;
-
-  if (initialDelay > 0) {
-    await delay(initialDelay);
-  }
-
-  const start =
-    typeof performance !== "undefined" && typeof performance.now === "function"
-      ? performance.now()
-      : Date.now();
-
-  let lastResult: number | null = null;
-
-  while (true) {
-    const pct = await getPetHungerPct(petId);
-    if (pct != null) {
-      lastResult = pct;
-      if (
-        previousPct == null ||
-        pct >= Math.min(100, previousPct + HUNGER_EPSILON) ||
-        pct >= 99.9
-      ) {
-        return pct;
-      }
-    }
-
-    const now =
-      typeof performance !== "undefined" && typeof performance.now === "function"
-        ? performance.now()
-        : Date.now();
-    if (now - start >= timeout) {
-      return lastResult;
-    }
-
-    if (interval > 0) {
-      await delay(interval);
-    }
-  }
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
