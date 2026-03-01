@@ -290,10 +290,20 @@ export function appendSpanToAll(opts: Omit<AppendOptions, "log"> = {}): void {
 
 /* ================= helpers ================= */
 
-/** true si inner est un bloc cible avec **exactement 1** enfant élément réel (hors span marqueur) */
+/** true si inner est un bloc cible avec **exactement 1** enfant élément réel (hors span marqueur),
+ *  ou si un enfant direct correspond au même sélecteur (conteneur parent, e.g. css-11dqzw > css-11dqzw). */
 function shouldSkipInner(inner: Element, markerClass: string): boolean {
   if (!(inner instanceof Element)) return false;
   if (!inner.matches(OMA_SEL)) return false;
+
+  // Skip si un enfant direct du même type est lui-même un leaf valide (2+ enfants réels).
+  // Cas Pine Tree : outer css-11dqzw → inner css-11dqzw avec 2 enfants → outer est un wrapper.
+  // Cas Aloe : outer css-11dqzw → inner css-11dqzw avec 1 enfant → inner sera skippé → outer garde le prix.
+  const matchedSel = [".McFlex.css-1l3zq7", ".McFlex.css-11dqzw"].find(s => inner.matches(s));
+  if (matchedSel) {
+    const sameTypeChild = Array.from(inner.children).find(c => c.matches(matchedSel));
+    if (sameTypeChild && getRealElementChildren(sameTypeChild, markerClass).length > 1) return true;
+  }
 
   const realChildren = getRealElementChildren(inner, markerClass);
   return realChildren.length === 1;

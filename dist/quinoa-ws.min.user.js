@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.403
+// @version      3.1.404
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -42509,6 +42509,11 @@
   function shouldSkipInner(inner, markerClass) {
     if (!(inner instanceof Element)) return false;
     if (!inner.matches(OMA_SEL)) return false;
+    const matchedSel = [".McFlex.css-1l3zq7", ".McFlex.css-11dqzw"].find((s) => inner.matches(s));
+    if (matchedSel) {
+      const sameTypeChild = Array.from(inner.children).find((c) => c.matches(matchedSel));
+      if (sameTypeChild && getRealElementChildren(sameTypeChild, markerClass).length > 1) return true;
+    }
     const realChildren = getRealElementChildren(inner, markerClass);
     return realChildren.length === 1;
   }
