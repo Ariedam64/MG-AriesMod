@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.404
+// @version      3.1.405
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -5319,6 +5319,8 @@
     Chrysanthemum: "sprite/plant/Chrysanthemum",
     Coconut: "sprite/plant/Coconut",
     Corn: "sprite/plant/Corn",
+    Date: "sprite/plant/Date",
+    DatePalm: "sprite/plant/DatePalm",
     Daffodil: "sprite/plant/Daffodil",
     DawnCelestialCrop: "sprite/plant/DawnCelestialCrop",
     Delphinium: "sprite/plant/Delphinium",
@@ -5390,6 +5392,7 @@
     Chrysanthemum: "sprite/seed/Chrysanthemum",
     Coconut: "sprite/seed/Coconut",
     Corn: "sprite/seed/Corn",
+    Date: "sprite/seed/Date",
     Daffodil: "sprite/seed/Daffodil",
     DawnCelestial: "sprite/seed/DawnCelestial",
     Delphinium: "sprite/seed/Delphinium",
@@ -5515,6 +5518,10 @@
     ColoredStringLights: "sprite/decor/ColoredStringLights",
     ColoredStringLightsSideways: "sprite/decor/ColoredStringLightsSideways",
     DecorShed: "sprite/decor/DecorShed",
+    FanousLantern: "sprite/decor/FanousLantern",
+    FanousLanternLit: "sprite/decor/FanousLanternLit",
+    FanousLanternSideways: "sprite/decor/FanousLanternSideways",
+    FanousLanternSidewaysLit: "sprite/decor/FanousLanternSidewaysLit",
     HayBale: "sprite/decor/HayBale",
     FeedingTrough: "sprite/decor/FeedingTrough",
     FeedingTroughCover: "sprite/decor/FeedingTroughCover",
@@ -6534,6 +6541,46 @@
         baseWeight: 0.01,
         baseTileScale: 0.3,
         maxScale: 2.75
+      }
+    },
+    Date: {
+      seed: {
+        tileRef: tileRefsSeeds.Date,
+        name: "Date Seed",
+        coinPrice: 75e4,
+        creditPrice: 580,
+        rarity: rarity.Mythic
+        // expiryDate: $B, // TODO: fill in actual expiry date from game source
+      },
+      plant: {
+        tileRef: tileRefsPlants.DatePalm,
+        name: "Date Palm",
+        harvestType: harvestType.Multiple,
+        slotOffsets: [
+          { x: -0.2, y: -0.55, rotation: -10 },
+          { x: -0.19, y: -0.7, rotation: 10 },
+          { x: 0.1, y: -0.52, rotation: -56 },
+          { x: 0.15, y: -0.63, rotation: -76 },
+          { x: 0.26, y: -0.64, rotation: -96 },
+          { x: -0.11, y: -0.42, rotation: -21 },
+          { x: -0.09, y: -0.62, rotation: -16 },
+          { x: 0.24, y: -0.47, rotation: -56 },
+          { x: -0.33, y: -0.54, rotation: -16 },
+          { x: -0.23, y: -0.38, rotation: -16 },
+          { x: 0.19, y: -0.37, rotation: -56 }
+        ],
+        secondsToMature: 1080 * 60,
+        baseTileScale: 2.8,
+        rotateSlotOffsetsRandomly: false,
+        tileTransformOrigin: "bottom"
+      },
+      crop: {
+        tileRef: tileRefsPlants.Date,
+        name: "Date",
+        baseSellPrice: 15e3,
+        baseWeight: 0.02,
+        baseTileScale: 0.25,
+        maxScale: 2
       }
     },
     Grape: {
@@ -8342,6 +8389,29 @@
       baseTileScale: 1,
       isOneTimePurchase: false
       // expiryDate: A6, // TODO: fill in actual expiry date from game source
+    },
+    FanousLantern: {
+      tileRef: tileRefsDecor.FanousLantern,
+      rotationVariants: {
+        90: {
+          tileRef: tileRefsDecor.FanousLanternSideways,
+          flipH: true
+        },
+        180: {
+          tileRef: tileRefsDecor.FanousLantern,
+          flipH: true
+        },
+        270: {
+          tileRef: tileRefsDecor.FanousLanternSideways
+        }
+      },
+      name: "Fanous Lantern",
+      coinPrice: 9e3,
+      creditPrice: 13,
+      rarity: rarity.Common,
+      baseTileScale: 1,
+      isOneTimePurchase: false
+      // expiryDate: $B, // TODO: fill in actual expiry date from game source
     },
     SmallGravestone: {
       tileRef: tileRefsDecor.SmallGravestone,
@@ -28532,8 +28602,7 @@
       const pet = await findPetById2(petId);
       if (!pet) return;
       const species = String(pet?.slot?.petSpecies || "");
-      const compatibleList = PetsService.getCompatibleCropsForSpecies(species) ?? [];
-      const compatible = new Set(compatibleList.map((item) => String(item || "")));
+      const compatible = PetsService.getInstantFeedAllowedCrops(species);
       if (!compatible.size) return;
       const inventory = await PlayerService.getCropInventoryState();
       const items = Array.isArray(inventory) ? inventory : [];

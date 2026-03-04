@@ -451,8 +451,7 @@ async function handleInstantFeedForPet(petId: string, btn: HTMLButtonElement): P
     if (!pet) return;
 
     const species = String(pet?.slot?.petSpecies || "");
-    const compatibleList = PetsService.getCompatibleCropsForSpecies(species) ?? [];
-    const compatible = new Set(compatibleList.map((item) => String(item || "")));
+    const compatible = PetsService.getInstantFeedAllowedCrops(species);
 
     if (!compatible.size) return;
 

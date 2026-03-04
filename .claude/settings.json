@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/Romann/.claude/projects/c--Users-Romann-Desktop-Codage-magicGarden---Copie/memory/**)"
+    ]
+  }
+}
