@@ -1,6 +1,6 @@
 // src/ui/menus/calculator.ts
 import { addStyle } from "../../core/dom";
-import { coin, plantCatalog, petAbilities, petCatalog } from "../../data/hardcoded-data.clean";
+import { coin, plantCatalog, petAbilities, petCatalog } from "../../data";
 import { DefaultPricing, estimateProduceValue } from "../../utils/calculators";
 import { getPetMaxStrength, getPetStrength } from "../../utils/petCalcul";
 import {

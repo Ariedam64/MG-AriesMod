@@ -6,7 +6,7 @@ import {
   type CropItem,
   type CropInventoryState,
 } from "./player";
-import { petCatalog, petAbilities, plantCatalog } from "../data/hardcoded-data.clean.js";
+import { petCatalog, petAbilities, plantCatalog } from "../data";
 import { fakeInventoryShow, closeInventoryPanel, isInventoryOpen } from "./fakeModal.ts";
 import { Atoms, myPetHutchPetItems, myNumPetHutchItems, isMyInventoryAtMaxLength } from "../store/atoms";
 import { toastSimple } from "../ui/toast";

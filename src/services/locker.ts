@@ -11,7 +11,7 @@ import {
   type CurrentGardenObject,
   type PlantSlotTiming,
 } from "../store/atoms";
-import { plantCatalog } from "../data/hardcoded-data.clean";
+import { plantCatalog } from "../data";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
 
 /** Référence des mutations visuelles reconnues par le locker. */
@@ -105,6 +105,7 @@ export type LockerSettingsPersisted = {
   minInventory: number;
   avoidNormal: boolean;
   includeNormal?: boolean;
+  highlightEnabled?: boolean;
   visualMutations: VisualTag[];
   weatherMode: WeatherMode;
   weatherSelected: WeatherTag[];
@@ -632,6 +633,7 @@ function defaultSettings(): LockerSettingsPersisted {
     minInventory: 91,
     avoidNormal: false,
     includeNormal: true,
+    highlightEnabled: false,
     visualMutations: [],
     weatherMode: "ANY",
     weatherSelected: [],
@@ -700,6 +702,7 @@ function sanitizeSettings(raw: any): LockerSettingsPersisted {
     base.avoidNormal = raw?.includeNormal === false;
   }
   base.includeNormal = !base.avoidNormal;
+  base.highlightEnabled = raw?.highlightEnabled === true;
 
   base.visualMutations = Array.isArray(raw?.visualMutations)
     ? Array.from(new Set(raw.visualMutations.filter((m: any) => VISUAL_MUTATIONS.has(m)))) as VisualTag[]
@@ -755,6 +758,7 @@ function cloneSettings(settings: LockerSettingsPersisted): LockerSettingsPersist
     minInventory: settings.minInventory,
     avoidNormal: settings.avoidNormal,
     includeNormal: settings.includeNormal,
+    highlightEnabled: settings.highlightEnabled === true,
     visualMutations: settings.visualMutations.slice(),
     weatherMode: settings.weatherMode,
     weatherSelected: settings.weatherSelected.slice(),

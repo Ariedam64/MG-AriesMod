@@ -4,7 +4,7 @@ import {
   eggCatalog,
   plantCatalog,
   toolCatalog,
-} from "../data/hardcoded-data.clean.js";
+} from "../data";
 import type { Unsubscribe } from "../store/api";
 import { getPetInfo } from "./petCalcul";
 import { estimateProduceValue, valueFromInventoryProduce } from "./calculators";

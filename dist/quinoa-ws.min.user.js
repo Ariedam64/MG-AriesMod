@@ -2323,7 +2323,7 @@
   async function isEmpty(db) {
     return !await get(db, STORE_KEYVALUE, KEY_URL);
   }
-  async function hasData(db, url, eTag) {
+  async function hasData2(db, url, eTag) {
     const [oldETag, oldUrl] = await Promise.all([KEY_ETAG, KEY_URL].map((key2) => get(db, STORE_KEYVALUE, key2)));
     return oldETag === eTag && oldUrl === url;
   }
@@ -2679,7 +2679,7 @@
         eTag = await jsonChecksum(emojiData);
       }
     }
-    if (await hasData(db, dataSource, eTag)) ;
+    if (await hasData2(db, dataSource, eTag)) ;
     else {
       if (!emojiData) {
         const eTagAndData = await getETagAndData(dataSource);
@@ -5850,6 +5850,840 @@
 
   // src/services/locker.ts
   init_atoms();
+
+  // src/data/dynamic/state.ts
+  init_page_context();
+  var pageContext = pageWindow;
+  var NativeObject = pageContext.Object ?? Object;
+  var originalObjectKeys = NativeObject.keys;
+  var originalObjectValues = NativeObject.values;
+  var originalObjectEntries = NativeObject.entries;
+  var visitedObjects = /* @__PURE__ */ new WeakSet();
+  function createInitialState2() {
+    return {
+      data: {
+        items: null,
+        decor: null,
+        mutations: null,
+        eggs: null,
+        pets: null,
+        abilities: null,
+        plants: null,
+        weather: null
+      },
+      isHookInstalled: false,
+      scanInterval: null,
+      scanAttempts: 0,
+      weatherPollingTimer: null,
+      weatherPollAttempts: 0,
+      colorPollingTimer: null,
+      colorPollAttempts: 0
+    };
+  }
+  var STATE_GLOBAL_KEY = "__MG_DATA_STATE__";
+  var captureState = pageWindow[STATE_GLOBAL_KEY] || createInitialState2();
+  if (!pageWindow[STATE_GLOBAL_KEY]) {
+    pageWindow[STATE_GLOBAL_KEY] = captureState;
+  }
+
+  // src/data/dynamic/logic/constants.ts
+  var SIGNATURE_KEYS = {
+    items: ["WateringCan", "PlanterPot", "Shovel"],
+    decor: ["SmallRock", "MediumRock", "LargeRock", "WoodBench", "StoneBench", "MarbleBench"],
+    mutations: ["Gold", "Rainbow", "Wet", "Chilled", "Frozen"],
+    eggs: ["CommonEgg", "UncommonEgg", "RareEgg"],
+    pets: ["Worm", "Snail", "Bee", "Chicken", "Bunny"],
+    abilities: ["ProduceScaleBoost", "DoubleHarvest", "SeedFinderI", "CoinFinderI"],
+    plants: ["Carrot", "Strawberry", "Aloe", "Blueberry", "Apple"]
+  };
+  var WEATHER_IDS = ["Rain", "Frost", "Thunderstorm", "Dawn", "AmberMoon"];
+  var MAIN_BUNDLE_PATTERN = /main-[^/]+\.js(\?|$)/;
+  var MAX_SCAN_DEPTH = 6;
+  var MAX_SCAN_ATTEMPTS = 150;
+  var PULSE_SCAN_INTERVAL_MS = 2e3;
+  var MAX_WEATHER_POLL_ATTEMPTS = 200;
+  var WEATHER_POLL_INTERVAL_MS = 50;
+  var MAX_COLOR_POLL_ATTEMPTS = 10;
+  var COLOR_POLL_INTERVAL_MS = 1e3;
+  var ABILITY_COLOR_ANCHOR = "ProduceScaleBoost";
+
+  // src/data/dynamic/logic/capture.ts
+  var containsAllKeys = (objectKeys, requiredKeys2) => requiredKeys2.every((key2) => objectKeys.includes(key2));
+  function setCapturedData(key2, value) {
+    if (captureState.data[key2] != null) return;
+    captureState.data[key2] = value;
+    if (isAllDataCaptured()) {
+      restoreObjectHooks();
+    }
+  }
+  function isAllDataCaptured() {
+    return Object.values(captureState.data).every((v) => v != null);
+  }
+  function scanObjectForData(obj, depth) {
+    if (!obj || typeof obj !== "object" || visitedObjects.has(obj)) return;
+    visitedObjects.add(obj);
+    let keys;
+    try {
+      keys = originalObjectKeys(obj);
+    } catch {
+      return;
+    }
+    if (!keys || keys.length === 0) return;
+    const record = obj;
+    let sample;
+    if (!captureState.data.items && containsAllKeys(keys, SIGNATURE_KEYS.items)) {
+      sample = record.WateringCan;
+      if (sample && typeof sample === "object" && "coinPrice" in sample && "creditPrice" in sample) {
+        setCapturedData("items", record);
+      }
+    }
+    if (!captureState.data.decor && containsAllKeys(keys, SIGNATURE_KEYS.decor)) {
+      sample = record.SmallRock;
+      if (sample && typeof sample === "object" && "coinPrice" in sample && "creditPrice" in sample) {
+        setCapturedData("decor", record);
+      }
+    }
+    if (!captureState.data.mutations && containsAllKeys(keys, SIGNATURE_KEYS.mutations)) {
+      sample = record.Gold;
+      if (sample && typeof sample === "object" && "baseChance" in sample && "coinMultiplier" in sample) {
+        setCapturedData("mutations", record);
+      }
+    }
+    if (!captureState.data.eggs && containsAllKeys(keys, SIGNATURE_KEYS.eggs)) {
+      sample = record.CommonEgg;
+      if (sample && typeof sample === "object" && "faunaSpawnWeights" in sample && "secondsToHatch" in sample) {
+        setCapturedData("eggs", record);
+      }
+    }
+    if (!captureState.data.pets && containsAllKeys(keys, SIGNATURE_KEYS.pets)) {
+      sample = record.Worm;
+      if (sample && typeof sample === "object" && "coinsToFullyReplenishHunger" in sample && "diet" in sample && Array.isArray(sample.diet)) {
+        setCapturedData("pets", record);
+      }
+    }
+    if (!captureState.data.abilities && containsAllKeys(keys, SIGNATURE_KEYS.abilities)) {
+      sample = record.ProduceScaleBoost;
+      if (sample && typeof sample === "object" && "trigger" in sample && "baseParameters" in sample) {
+        setCapturedData("abilities", record);
+      }
+    }
+    if (!captureState.data.plants && containsAllKeys(keys, SIGNATURE_KEYS.plants)) {
+      sample = record.Carrot;
+      if (sample && typeof sample === "object" && "seed" in sample && "plant" in sample && "crop" in sample) {
+        setCapturedData("plants", record);
+      }
+    }
+    if (depth >= MAX_SCAN_DEPTH) return;
+    for (const key2 of keys) {
+      let child;
+      try {
+        child = record[key2];
+      } catch {
+        continue;
+      }
+      if (child && typeof child === "object") {
+        scanObjectForData(child, depth + 1);
+      }
+    }
+  }
+  function tryCapture(target) {
+    try {
+      scanObjectForData(target, 0);
+    } catch {
+    }
+  }
+
+  // src/data/dynamic/logic/hooks.ts
+  function installObjectHooks() {
+    if (captureState.isHookInstalled) return;
+    if (NativeObject.__MG_HOOKED__) {
+      captureState.isHookInstalled = true;
+      return;
+    }
+    NativeObject.__MG_HOOKED__ = true;
+    captureState.isHookInstalled = true;
+    try {
+      NativeObject.keys = function hookedKeys(target) {
+        tryCapture(target);
+        return originalObjectKeys.apply(this, arguments);
+      };
+      if (originalObjectValues) {
+        NativeObject.values = function hookedValues(target) {
+          tryCapture(target);
+          return originalObjectValues.apply(this, arguments);
+        };
+      }
+      if (originalObjectEntries) {
+        NativeObject.entries = function hookedEntries(target) {
+          tryCapture(target);
+          return originalObjectEntries.apply(this, arguments);
+        };
+      }
+    } catch {
+    }
+  }
+  function restoreObjectHooks() {
+    if (!captureState.isHookInstalled) return;
+    try {
+      NativeObject.keys = originalObjectKeys;
+      if (originalObjectValues) NativeObject.values = originalObjectValues;
+      if (originalObjectEntries) NativeObject.entries = originalObjectEntries;
+    } catch {
+    }
+    captureState.isHookInstalled = false;
+  }
+
+  // src/data/dynamic/logic/scanning.ts
+  init_page_context();
+  function startPulseScanning() {
+    if (captureState.scanInterval || isAllDataCaptured()) return;
+    const runPulse = () => {
+      if (isAllDataCaptured() || captureState.scanAttempts > MAX_SCAN_ATTEMPTS) {
+        stopPulseScanning();
+        return;
+      }
+      captureState.scanAttempts++;
+      try {
+        originalObjectKeys(pageWindow).forEach((key2) => {
+          try {
+            tryCapture(pageWindow[key2]);
+          } catch {
+          }
+        });
+      } catch {
+      }
+    };
+    runPulse();
+    captureState.scanInterval = setInterval(runPulse, PULSE_SCAN_INTERVAL_MS);
+  }
+  function stopPulseScanning() {
+    if (captureState.scanInterval) {
+      clearInterval(captureState.scanInterval);
+      captureState.scanInterval = null;
+    }
+  }
+
+  // src/data/dynamic/logic/bundleParser.ts
+  init_page_context();
+  var pageContext2 = pageWindow;
+  function findMainBundleUrl() {
+    const docs = [
+      pageContext2.document,
+      typeof document !== "undefined" ? document : null
+    ].filter(Boolean);
+    for (const doc of docs) {
+      try {
+        const scripts = doc.querySelectorAll("script[src]");
+        for (const script of scripts) {
+          const src = script.src || "";
+          if (MAIN_BUNDLE_PATTERN.test(src)) return src;
+        }
+      } catch {
+      }
+      try {
+        const links = doc.querySelectorAll('link[rel="modulepreload"]');
+        for (const link of links) {
+          const href = link.href || "";
+          if (MAIN_BUNDLE_PATTERN.test(href)) return href;
+        }
+      } catch {
+      }
+    }
+    const perfs = [
+      pageContext2.performance,
+      typeof performance !== "undefined" ? performance : null
+    ].filter(Boolean);
+    for (const perf of perfs) {
+      try {
+        for (const entry of perf.getEntriesByType?.("resource") || []) {
+          const name = entry?.name ? String(entry.name) : "";
+          if (MAIN_BUNDLE_PATTERN.test(name)) return name;
+        }
+      } catch {
+      }
+    }
+    return null;
+  }
+  function findAllIndices(haystack, needle) {
+    const out = [];
+    let idx = haystack.indexOf(needle);
+    while (idx !== -1) {
+      out.push(idx);
+      idx = haystack.indexOf(needle, idx + needle.length);
+    }
+    return out;
+  }
+  function extractBalancedBlock(text, openBraceIndex) {
+    let depth = 0;
+    let quote = "";
+    let escaped = false;
+    for (let i = openBraceIndex; i < text.length; i++) {
+      const ch = text[i];
+      if (quote) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (ch === "\\") {
+          escaped = true;
+          continue;
+        }
+        if (ch === quote) quote = "";
+        continue;
+      }
+      if (ch === '"' || ch === "'" || ch === "`") {
+        quote = ch;
+        continue;
+      }
+      if (ch === "{") depth++;
+      else if (ch === "}" && --depth === 0) return text.slice(openBraceIndex, i + 1);
+    }
+    return null;
+  }
+  function extractBalancedObjectLiteral(text, anchorIndex) {
+    const declStart = Math.max(
+      text.lastIndexOf("const ", anchorIndex),
+      text.lastIndexOf("let ", anchorIndex),
+      text.lastIndexOf("var ", anchorIndex)
+    );
+    if (declStart < 0) return null;
+    const eq2 = text.indexOf("=", declStart);
+    if (eq2 < 0 || eq2 > anchorIndex) return null;
+    const braceStart = text.indexOf("{", eq2);
+    if (braceStart < 0 || braceStart > anchorIndex) return null;
+    return extractBalancedBlock(text, braceStart);
+  }
+  var bundleCache = null;
+  var bundleFetchInFlight = null;
+  async function fetchMainBundle() {
+    if (bundleCache) return bundleCache;
+    if (bundleFetchInFlight) return bundleFetchInFlight;
+    bundleFetchInFlight = (async () => {
+      const MAX_RETRIES = 30;
+      const RETRY_INTERVAL = 500;
+      let url = null;
+      for (let i = 0; i < MAX_RETRIES; i++) {
+        url = findMainBundleUrl();
+        if (url) break;
+        await new Promise((r) => setTimeout(r, RETRY_INTERVAL));
+      }
+      if (!url) {
+        console.warn("[MGData] Could not find main bundle URL after retries");
+        return null;
+      }
+      try {
+        const res = await fetch(url, { credentials: "include" });
+        if (!res.ok) return null;
+        const text = await res.text();
+        bundleCache = text;
+        return text;
+      } catch {
+        return null;
+      } finally {
+        bundleFetchInFlight = null;
+      }
+    })();
+    return bundleFetchInFlight;
+  }
+
+  // src/data/dynamic/logic/weather.ts
+  function buildWeather(data) {
+    const out = {};
+    let found = false;
+    for (const id of WEATHER_IDS) {
+      const blueprint = data?.[id];
+      if (!blueprint || typeof blueprint !== "object") continue;
+      const spriteId = blueprint.iconSpriteKey || null;
+      const { iconSpriteKey: _, ...rest } = blueprint;
+      out[id] = { weatherId: id, spriteId, ...rest };
+      found = true;
+    }
+    if (!out.Sunny) {
+      out.Sunny = {
+        weatherId: "Sunny",
+        name: "Sunny",
+        spriteId: "sprite/ui/SunnyIcon",
+        type: "primary"
+      };
+    }
+    if (!found) return null;
+    const rain = out.Rain;
+    const mutator = rain?.mutator;
+    if (rain && mutator?.mutation !== "Wet") return null;
+    return out;
+  }
+  function extractWeatherObject(text, anchorPos) {
+    const searchStart = Math.max(0, anchorPos - 3e3);
+    const searchArea = text.substring(searchStart, anchorPos);
+    const rainPattern = /(?:Rain:\{|\[[A-Za-z_$][\w$]*\.Rain\]\s*:\s*\{)/;
+    const match = searchArea.match(rainPattern);
+    if (!match || match.index === void 0) return null;
+    const rainStart = searchStart + match.index;
+    let objStart = -1;
+    for (let i = rainStart - 1; i >= Math.max(0, rainStart - 200); i--) {
+      if (text[i] === "{") {
+        objStart = i;
+        break;
+      }
+    }
+    if (objStart < 0) return null;
+    return extractBalancedBlock(text, objStart);
+  }
+  function normalizeWeatherLiteral(literal) {
+    return literal.replace(/\[([A-Za-z_$][\w$]*)\.(Rain|Frost|Dawn|AmberMoon|Thunderstorm)\]/g, '"$2"').replace(/\b[A-Za-z_$][\w$]*\.(Hydro|Lunar)\b/g, '"$1"').replace(/\b[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*\.([A-Za-z_$][\w$]*Icon)\b/g, '"$1"').replace(/\b[A-Za-z_$][\w$]*\.(Rain|Frost|Dawn|AmberMoon|Thunderstorm)\b/g, '"$1"').replace(/\b[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*){2,}\b/g, (match) => {
+      const last = match.split(".").pop() || match;
+      return `"${last}"`;
+    });
+  }
+  async function loadWeatherFromBundle() {
+    if (captureState.data.weather) return true;
+    const bundleText = await fetchMainBundle();
+    if (!bundleText) return false;
+    const anchors = [];
+    const amberIdx = bundleText.indexOf('name:"Amber Moon"');
+    if (amberIdx >= 0) anchors.push(amberIdx);
+    const amberIdx2 = bundleText.indexOf('name:"Amber Moon"');
+    if (amberIdx2 >= 0 && amberIdx2 !== amberIdx) anchors.push(amberIdx2);
+    const cpIdx = bundleText.indexOf("chancePerMinutePerCrop");
+    if (cpIdx >= 0) anchors.push(cpIdx);
+    const mutIdx = bundleText.indexOf("mutator");
+    if (mutIdx >= 0) anchors.push(mutIdx);
+    for (const anchor of anchors) {
+      const literal = extractBalancedObjectLiteral(bundleText, anchor) ?? extractWeatherObject(bundleText, anchor);
+      if (!literal) continue;
+      const fixedLiteral = normalizeWeatherLiteral(literal);
+      let weatherDex;
+      try {
+        weatherDex = Function('"use strict";return(' + fixedLiteral + ")")();
+      } catch {
+        continue;
+      }
+      const weatherCatalog3 = buildWeather(weatherDex);
+      if (!weatherCatalog3) continue;
+      captureState.data.weather = weatherCatalog3;
+      return true;
+    }
+    return false;
+  }
+  function startWeatherPolling() {
+    if (captureState.weatherPollingTimer) return;
+    captureState.weatherPollAttempts = 0;
+    const timer = setInterval(async () => {
+      const success = await loadWeatherFromBundle();
+      if (success || ++captureState.weatherPollAttempts > MAX_WEATHER_POLL_ATTEMPTS) {
+        clearInterval(timer);
+        captureState.weatherPollingTimer = null;
+      }
+    }, WEATHER_POLL_INTERVAL_MS);
+    captureState.weatherPollingTimer = timer;
+  }
+  function stopWeatherPolling() {
+    if (captureState.weatherPollingTimer) {
+      clearInterval(captureState.weatherPollingTimer);
+      captureState.weatherPollingTimer = null;
+    }
+  }
+
+  // src/data/dynamic/logic/abilityColors.ts
+  var DEFAULT_COLOR = {
+    bg: "rgba(100, 100, 100, 0.9)",
+    hover: "rgba(150, 150, 150, 1)"
+  };
+  function findAbilityColorSwitchBlock(bundleText) {
+    const indices = findAllIndices(bundleText, ABILITY_COLOR_ANCHOR);
+    if (!indices.length) return null;
+    for (const pos of indices) {
+      const winStart = Math.max(0, pos - 4e3);
+      const winEnd = Math.min(bundleText.length, pos + 4e3);
+      const windowText = bundleText.slice(winStart, winEnd);
+      const relSwitch = windowText.lastIndexOf("switch(");
+      if (relSwitch === -1) continue;
+      const absSwitch = winStart + relSwitch;
+      const braceAfterSwitch = bundleText.indexOf("{", absSwitch);
+      if (braceAfterSwitch === -1) continue;
+      const block = extractBalancedBlock(bundleText, braceAfterSwitch);
+      if (!block) continue;
+      if (block.includes(ABILITY_COLOR_ANCHOR) && (block.includes('bg:"') || block.includes("bg:'"))) {
+        return block;
+      }
+    }
+    return null;
+  }
+  function parseAbilityColorsFromSwitch(switchBlock) {
+    const colors = {};
+    const pending = [];
+    const tokenRe = /case\s*(['"])([^'"]+)\1\s*:|default\s*:|return\s*\{/g;
+    const findProp = (segment, prop) => {
+      const propRe = new RegExp(`${prop}\\s*:\\s*(['"])([\\s\\S]*?)\\1`);
+      const propMatch = segment.match(propRe);
+      return propMatch ? propMatch[2] : null;
+    };
+    let match;
+    while ((match = tokenRe.exec(switchBlock)) !== null) {
+      if (match[2]) {
+        pending.push(match[2]);
+        continue;
+      }
+      const token = match[0];
+      if (token.startsWith("default")) {
+        pending.length = 0;
+        continue;
+      }
+      if (!token.startsWith("return")) continue;
+      const braceIndex = switchBlock.indexOf("{", match.index);
+      if (braceIndex === -1) {
+        pending.length = 0;
+        continue;
+      }
+      const literal = extractBalancedBlock(switchBlock, braceIndex);
+      if (!literal) {
+        pending.length = 0;
+        continue;
+      }
+      const bg = findProp(literal, "bg");
+      if (!bg) {
+        pending.length = 0;
+        continue;
+      }
+      const hover = findProp(literal, "hover") || bg;
+      for (const id of pending) {
+        if (!colors[id]) colors[id] = { bg, hover };
+      }
+      pending.length = 0;
+    }
+    return Object.keys(colors).length ? colors : null;
+  }
+  async function loadAbilityColorsFromBundle() {
+    const bundleText = await fetchMainBundle();
+    if (!bundleText) return null;
+    const switchBlock = findAbilityColorSwitchBlock(bundleText);
+    if (!switchBlock) return null;
+    return parseAbilityColorsFromSwitch(switchBlock);
+  }
+  function isAlreadyEnriched(abilities) {
+    const sample = abilities[ABILITY_COLOR_ANCHOR];
+    return sample != null && typeof sample === "object" && "color" in sample;
+  }
+  async function enrichAbilitiesWithColors() {
+    if (!captureState.data.abilities) return false;
+    const abilities = captureState.data.abilities;
+    if (isAlreadyEnriched(abilities)) return true;
+    const map2 = await loadAbilityColorsFromBundle();
+    if (!map2) return false;
+    const enriched = {};
+    for (const [abilityId, abilityData] of Object.entries(abilities)) {
+      const colors = map2[abilityId] || DEFAULT_COLOR;
+      enriched[abilityId] = {
+        ...abilityData,
+        color: {
+          bg: colors.bg,
+          hover: colors.hover
+        }
+      };
+    }
+    captureState.data.abilities = enriched;
+    return true;
+  }
+  function startColorPolling() {
+    if (captureState.colorPollingTimer) return;
+    captureState.colorPollAttempts = 0;
+    const timer = setInterval(async () => {
+      const success = await enrichAbilitiesWithColors();
+      if (success || ++captureState.colorPollAttempts > MAX_COLOR_POLL_ATTEMPTS) {
+        clearInterval(timer);
+        captureState.colorPollingTimer = null;
+      }
+    }, COLOR_POLL_INTERVAL_MS);
+    captureState.colorPollingTimer = timer;
+  }
+  function stopColorPolling() {
+    if (captureState.colorPollingTimer) {
+      clearInterval(captureState.colorPollingTimer);
+      captureState.colorPollingTimer = null;
+    }
+  }
+
+  // src/data/dynamic/logic/sprites.ts
+  init_page_context();
+  function getSpriteService2() {
+    const svc = pageWindow.__MG_SPRITE_SERVICE__;
+    if (svc && typeof svc === "object") return svc;
+    return null;
+  }
+  function spriteHas(category, id) {
+    const svc = getSpriteService2();
+    if (!svc || typeof svc.has !== "function") return false;
+    try {
+      return !!svc.has(category, id);
+    } catch {
+      return false;
+    }
+  }
+  function spriteGetIdPath(category, id) {
+    const svc = getSpriteService2();
+    if (!svc || typeof svc.getIdPath !== "function") return null;
+    try {
+      return svc.getIdPath(category, id);
+    } catch {
+      return null;
+    }
+  }
+  function spriteListIds(prefix) {
+    const svc = getSpriteService2();
+    if (!svc || typeof svc.listIds !== "function") return [];
+    try {
+      return svc.listIds(prefix) || [];
+    } catch {
+      return [];
+    }
+  }
+  function normalizeNameForSprite(input) {
+    return String(input || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9]/g, "").trim();
+  }
+  function catCandidates(cat, extras = []) {
+    const list = /* @__PURE__ */ new Set();
+    const add = (s) => {
+      const v = String(s || "").trim();
+      if (v) list.add(v);
+    };
+    add(cat);
+    for (const e of extras) add(e);
+    for (const c of Array.from(list.values())) {
+      if (c.endsWith("s")) add(c.slice(0, -1));
+      else add(`${c}s`);
+      if (c.endsWith("es")) add(c.slice(0, -2));
+    }
+    return Array.from(list.values()).filter(Boolean);
+  }
+  function pickSpriteId(cat, idHint, nameHint, extraCats = [], idFallbacks = []) {
+    if (!getSpriteService2()) return null;
+    const cats = catCandidates(cat, extraCats);
+    if (!cats.length) return null;
+    const idCandidates = [idHint, ...idFallbacks].filter((v) => typeof v === "string");
+    const tryCandidate = (candidate) => {
+      const c = String(candidate || "").trim();
+      if (!c) return null;
+      for (const category of cats) {
+        try {
+          if (spriteHas(category, c)) return spriteGetIdPath(category, c);
+        } catch {
+        }
+      }
+      return null;
+    };
+    for (const cand of idCandidates) {
+      const hit = tryCandidate(cand);
+      if (hit) return hit;
+    }
+    const normName = normalizeNameForSprite(nameHint || "");
+    const fromName = tryCandidate(normName || nameHint || "");
+    if (fromName) return fromName;
+    try {
+      for (const category of cats) {
+        const ids = spriteListIds(`sprite/${category}/`);
+        const idLcList = idCandidates.map((x) => String(x || "").toLowerCase());
+        const nameLc = String(nameHint || normName || "").toLowerCase();
+        for (const k of ids) {
+          const leaf = k.split("/").pop() || "";
+          const leafLc = leaf.toLowerCase();
+          if (idLcList.some((c) => c && c === leafLc)) return k;
+          if (leafLc === nameLc) return k;
+        }
+        for (const k of ids) {
+          const leaf = k.split("/").pop() || "";
+          const leafLc = leaf.toLowerCase();
+          if (idLcList.some((c) => c && (leafLc.includes(c) || c.includes(leafLc)))) return k;
+          if (nameLc && (leafLc.includes(nameLc) || nameLc.includes(leafLc))) return k;
+        }
+      }
+    } catch {
+    }
+    return null;
+  }
+  function applySpriteId(target, catHint, idHint, nameHint, extraCats = [], idFallbacks = []) {
+    if (!target || typeof target !== "object") return;
+    const tileRef = target.tileRef;
+    if (!tileRef || typeof tileRef !== "object") return;
+    const category = String(tileRef.spritesheet || catHint || "").trim();
+    const spriteId = pickSpriteId(category, idHint, nameHint, extraCats, idFallbacks);
+    if (spriteId) {
+      try {
+        target.spriteId = spriteId;
+      } catch {
+      }
+    }
+    const rv = target.rotationVariants;
+    if (rv && typeof rv === "object") {
+      for (const v of Object.values(rv)) {
+        applySpriteId(v, category, idHint, nameHint);
+      }
+    }
+    if (target.immatureTileRef) {
+      const wrapper = { tileRef: target.immatureTileRef };
+      applySpriteId(wrapper, category, idHint, nameHint);
+      if (wrapper.spriteId) target.immatureSpriteId = wrapper.spriteId;
+    }
+    if (target.topmostLayerTileRef) {
+      const wrapper = { tileRef: target.topmostLayerTileRef };
+      applySpriteId(wrapper, category, idHint, nameHint);
+      if (wrapper.spriteId) target.topmostLayerSpriteId = wrapper.spriteId;
+    }
+    if (target.activeState && typeof target.activeState === "object") {
+      const activeState = target.activeState;
+      applySpriteId(activeState, category, idHint, activeState.name || nameHint);
+    }
+  }
+  function resolveSpriteIdByHints(category, hints, nameHint, extraCats = []) {
+    if (!Array.isArray(hints) || hints.length === 0) return null;
+    const primary = hints[0];
+    const fallbacks = hints.slice(1);
+    return pickSpriteId(category, primary, nameHint ?? null, extraCats, fallbacks);
+  }
+  function resolveAllSprites(bag) {
+    for (const [id, entry] of Object.entries(bag.items || {})) {
+      applySpriteId(entry, "items", id, entry?.name, ["item"]);
+    }
+    for (const [id, entry] of Object.entries(bag.decor || {})) {
+      applySpriteId(entry, "decor", id, entry?.name);
+    }
+    for (const [id, entry] of Object.entries(bag.mutations || {})) {
+      applySpriteId(entry, "mutations", id, entry?.name, ["mutation"]);
+      const overlay = resolveSpriteIdByHints(
+        "mutation-overlay",
+        [`${id}TallPlant`, `${id}TallPlantIcon`, id],
+        entry?.name,
+        ["mutation-overlay"]
+      );
+      if (overlay) {
+        try {
+          entry.overlaySpriteId = overlay;
+        } catch {
+        }
+      }
+    }
+    for (const [id, entry] of Object.entries(bag.eggs || {})) {
+      applySpriteId(entry, "pets", id, entry?.name, ["pet"]);
+    }
+    for (const [id, entry] of Object.entries(bag.pets || {})) {
+      applySpriteId(entry, "pets", id, entry?.name, ["pet"]);
+    }
+    for (const [id, entry] of Object.entries(bag.plants || {})) {
+      const plant = entry;
+      const seed = plant.seed;
+      const plantObj = plant.plant;
+      const crop = plant.crop;
+      if (seed) {
+        const seedTileRef = seed.tileRef;
+        applySpriteId(
+          seed,
+          seedTileRef?.spritesheet || "seeds",
+          `${id}Seed`,
+          seed.name || `${id} Seed`,
+          ["seed", "plant", "plants"],
+          [id]
+        );
+      }
+      if (plantObj) {
+        const plantTileRef = plantObj.tileRef;
+        applySpriteId(
+          plantObj,
+          plantTileRef?.spritesheet || "plants",
+          `${id}Plant`,
+          plantObj.name || `${id} Plant`,
+          ["plant", "plants", "tallplants"],
+          [id]
+        );
+      }
+      if (crop) {
+        const cropTileRef = crop.tileRef;
+        applySpriteId(
+          crop,
+          cropTileRef?.spritesheet || "plants",
+          id,
+          crop.name || id,
+          ["plant", "plants"],
+          [`${id}Crop`]
+        );
+      }
+    }
+  }
+  function resolveSprites() {
+    try {
+      resolveAllSprites(captureState.data);
+    } catch (err) {
+      try {
+        console.warn("[MGData] sprite resolution failed", err);
+      } catch {
+      }
+    }
+  }
+
+  // src/data/dynamic/logic/accessors.ts
+  var DEFAULT_WAIT_TIMEOUT_MS = 5e3;
+  var WAIT_POLL_INTERVAL_MS = 50;
+  function sleep2(ms) {
+    return new Promise((resolve2) => setTimeout(resolve2, ms));
+  }
+  function getData(key2) {
+    return captureState.data[key2];
+  }
+  function getAllData() {
+    return { ...captureState.data };
+  }
+  function hasData(key2) {
+    return captureState.data[key2] != null;
+  }
+  async function waitForData(key2, timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, intervalMs = WAIT_POLL_INTERVAL_MS) {
+    const start2 = Date.now();
+    while (Date.now() - start2 < timeoutMs) {
+      const value = captureState.data[key2];
+      if (value != null) return value;
+      await sleep2(intervalMs);
+    }
+    throw new Error(`MGData.waitFor: timeout waiting for "${key2}"`);
+  }
+  async function waitForAnyData(timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, intervalMs = WAIT_POLL_INTERVAL_MS) {
+    const start2 = Date.now();
+    while (Date.now() - start2 < timeoutMs) {
+      if (Object.values(captureState.data).some((v) => v != null)) {
+        return { ...captureState.data };
+      }
+      await sleep2(intervalMs);
+    }
+    throw new Error("MGData.waitForAnyData: timeout");
+  }
+
+  // src/data/dynamic/index.ts
+  var MGData = {
+    /** Initialize module (install hooks, start scanning, weather and color polling) */
+    init() {
+      installObjectHooks();
+      startPulseScanning();
+      startWeatherPolling();
+      startColorPolling();
+    },
+    /** Check if all data has been captured */
+    isReady: isAllDataCaptured,
+    /** Get captured data for a specific key */
+    get: getData,
+    /** Get all captured data */
+    getAll: getAllData,
+    /** Check if data exists for a specific key */
+    has: hasData,
+    /** Wait for specific data to be captured */
+    waitFor: waitForData,
+    /** Wait for any data to be captured */
+    waitForAny: waitForAnyData,
+    /** Resolve sprite IDs for all captured data (call after sprite system is ready) */
+    resolveSprites,
+    /** Cleanup (restore hooks and stop scanning) */
+    cleanup() {
+      restoreObjectHooks();
+      stopPulseScanning();
+      stopWeatherPolling();
+      stopColorPolling();
+    }
+  };
 
   // src/data/hardcoded-data.clean.js
   var rarity = {
@@ -9131,6 +9965,55 @@
     img64: "data:image/png;base64,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"
   };
 
+  // src/data/index.ts
+  function makeCatalogProxy(dynamicKey, staticObj) {
+    return new Proxy(/* @__PURE__ */ Object.create(null), {
+      get(_target, prop, receiver) {
+        if (typeof prop === "symbol") return void 0;
+        const dynamic = MGData.get(dynamicKey);
+        if (dynamic && prop in dynamic) return dynamic[prop];
+        if (prop in staticObj) return staticObj[prop];
+        return void 0;
+      },
+      has(_target, prop) {
+        if (typeof prop === "symbol") return false;
+        const dynamic = MGData.get(dynamicKey);
+        if (dynamic && prop in dynamic) return true;
+        return prop in staticObj;
+      },
+      ownKeys() {
+        const dynamic = MGData.get(dynamicKey);
+        const staticKeys = Object.keys(staticObj);
+        if (!dynamic) return staticKeys;
+        const merged = /* @__PURE__ */ new Set([...Object.keys(dynamic), ...staticKeys]);
+        return Array.from(merged);
+      },
+      getOwnPropertyDescriptor(_target, prop) {
+        if (typeof prop === "symbol") return void 0;
+        const dynamic = MGData.get(dynamicKey);
+        if (dynamic && prop in dynamic) {
+          return { configurable: true, enumerable: true, value: dynamic[prop] };
+        }
+        if (prop in staticObj) {
+          return { configurable: true, enumerable: true, value: staticObj[prop] };
+        }
+        return void 0;
+      }
+    });
+  }
+  var plantCatalog2 = makeCatalogProxy("plants", plantCatalog);
+  var petCatalog2 = makeCatalogProxy("pets", petCatalog);
+  var petAbilities2 = makeCatalogProxy("abilities", petAbilities);
+  var mutationCatalog2 = makeCatalogProxy("mutations", mutationCatalog);
+  var eggCatalog2 = makeCatalogProxy("eggs", eggCatalog);
+  var toolCatalog2 = makeCatalogProxy("items", toolCatalog);
+  var decorCatalog2 = makeCatalogProxy("decor", decorCatalog);
+  var weatherCatalog2 = makeCatalogProxy("weather", weatherCatalog);
+  var rarity2 = rarity;
+  var coin2 = coin;
+  var tileRefsMutations2 = tileRefsMutations;
+  var tileRefsMutationLabels2 = tileRefsMutationLabels;
+
   // src/services/locker.ts
   init_localStorage();
   var VISUAL_MUTATIONS = /* @__PURE__ */ new Set(["Gold", "Rainbow"]);
@@ -9195,7 +10078,7 @@
       if (!normalized || map2.has(normalized)) return;
       map2.set(normalized, value);
     };
-    for (const [species, entry] of Object.entries(plantCatalog)) {
+    for (const [species, entry] of Object.entries(plantCatalog2)) {
       const maxScale = Number(entry?.crop?.maxScale);
       if (!Number.isFinite(maxScale) || maxScale <= 0) continue;
       register(species, maxScale);
@@ -9593,6 +10476,7 @@
       minInventory: 91,
       avoidNormal: false,
       includeNormal: true,
+      highlightEnabled: false,
       visualMutations: [],
       weatherMode: "ANY",
       weatherSelected: [],
@@ -9643,6 +10527,7 @@
       base.avoidNormal = raw?.includeNormal === false;
     }
     base.includeNormal = !base.avoidNormal;
+    base.highlightEnabled = raw?.highlightEnabled === true;
     base.visualMutations = Array.isArray(raw?.visualMutations) ? Array.from(new Set(raw.visualMutations.filter((m) => VISUAL_MUTATIONS.has(m)))) : [];
     const mode = raw?.weatherMode;
     base.weatherMode = mode === "ALL" || mode === "RECIPES" ? mode : "ANY";
@@ -9678,6 +10563,7 @@
       minInventory: settings.minInventory,
       avoidNormal: settings.avoidNormal,
       includeNormal: settings.includeNormal,
+      highlightEnabled: settings.highlightEnabled === true,
       visualMutations: settings.visualMutations.slice(),
       weatherMode: settings.weatherMode,
       weatherSelected: settings.weatherSelected.slice(),
@@ -10198,15 +11084,15 @@
   };
   function createDefaultStats(createdAt = Date.now()) {
     const hatchedByType = {};
-    for (const species of Object.keys(petCatalog)) {
+    for (const species of Object.keys(petCatalog2)) {
       hatchedByType[species.toLowerCase()] = { normal: 0, gold: 0, rainbow: 0 };
     }
     const abilities = {};
-    for (const abilityId of Object.keys(petAbilities)) {
+    for (const abilityId of Object.keys(petAbilities2)) {
       abilities[abilityId] = { triggers: 0, totalValue: 0 };
     }
     const weather2 = {};
-    for (const key2 of Object.keys(weatherCatalog)) {
+    for (const key2 of Object.keys(weatherCatalog2)) {
       weather2[key2.toLowerCase()] = { triggers: 0 };
     }
     return {
@@ -10427,13 +11313,13 @@
   };
   var StatsDefaults = {
     rarityOrder: [
-      rarity.Common,
-      rarity.Uncommon,
-      rarity.Rare,
-      rarity.Legendary,
-      rarity.Mythic,
-      rarity.Divine,
-      rarity.Celestial
+      rarity2.Common,
+      rarity2.Uncommon,
+      rarity2.Rare,
+      rarity2.Legendary,
+      rarity2.Mythic,
+      rarity2.Divine,
+      rarity2.Celestial
     ],
     createEmpty() {
       return createDefaultStats();
@@ -12022,13 +12908,13 @@
   var OVERLAY_DECOR_ID = "qws-decordeleter-overlay";
   var LIST_DECOR_ID = "qws-decordeleter-list";
   var SUMMARY_DECOR_ID = "qws-decordeleter-summary";
-  function sleep2(ms) {
+  function sleep3(ms) {
     return new Promise((r) => setTimeout(r, ms));
   }
   function buildDisplayNameToSpeciesFromCatalog() {
     const map2 = /* @__PURE__ */ new Map();
     try {
-      const cat = plantCatalog;
+      const cat = plantCatalog2;
       for (const species of Object.keys(cat || {})) {
         const seedName = cat?.[species]?.seed?.name && String(cat?.[species]?.seed?.name) || `${species} Seed`;
         const arr = map2.get(seedName) ?? [];
@@ -12053,7 +12939,7 @@
     let candidates = nameToSpecies.get(requested.name) ?? [];
     if (!candidates.length && / seed$/i.test(requested.name)) {
       const fallbackSpecies = requested.name.replace(/\s+seed$/i, "");
-      if (plantCatalog?.[fallbackSpecies]) candidates = [fallbackSpecies];
+      if (plantCatalog2?.[fallbackSpecies]) candidates = [fallbackSpecies];
     }
     if (!candidates.length || remaining <= 0) return [];
     const ranked = candidates.map((sp) => ({ sp, available: speciesStock.get(sp) ?? 0 })).filter((x) => x.available > 0).sort((a, b) => b.available - a.available);
@@ -12151,7 +13037,7 @@
             }));
           } catch {
           }
-          if (delayMs > 0 && remaining > 0) await sleep2(delayMs);
+          if (delayMs > 0 && remaining > 0) await sleep3(delayMs);
         }
       }
       if (!opts.keepSelection) selectedMap.clear();
@@ -12224,7 +13110,7 @@
   }
   function seedDisplayNameFromSpecies(species) {
     try {
-      const node = plantCatalog?.[species];
+      const node = plantCatalog2?.[species];
       const n = node?.seed?.name;
       if (typeof n === "string" && n) return n;
     } catch {
@@ -12258,7 +13144,7 @@
   }
   function decorDisplayNameFromId(decorId) {
     try {
-      const node = decorCatalog?.[decorId];
+      const node = decorCatalog2?.[decorId];
       const n = node?.name;
       if (typeof n === "string" && n) return n;
     } catch {
@@ -12960,12 +13846,12 @@
             await PlayerService.placeDecor(emptySlot.tileType, emptySlot.index, t.decorId, 0);
           } catch {
           }
-          if (delayMs > 0) await sleep2(delayMs);
+          if (delayMs > 0) await sleep3(delayMs);
           try {
             await PlayerService.removeGardenObject(emptySlot.index, emptySlot.tileType);
           } catch {
           }
-          if (delayMs > 0) await sleep2(delayMs);
+          if (delayMs > 0) await sleep3(delayMs);
           done += 1;
           remaining -= 1;
           try {
@@ -17412,19 +18298,19 @@
   }
   function getSideEntries() {
     if (currentSideMode === "decor") {
-      return Object.entries(decorCatalog || {}).map(([decorId, val]) => ({
+      return Object.entries(decorCatalog2 || {}).map(([decorId, val]) => ({
         id: decorId,
         label: String(val?.name || decorId)
       }));
     }
-    return Object.entries(plantCatalog || {}).map(([species, val]) => ({
+    return Object.entries(plantCatalog2 || {}).map(([species, val]) => ({
       id: species,
       label: String(val?.crop?.name || val?.seed?.name || species)
     }));
   }
   function getSideEntry(id) {
     if (!id) return null;
-    return currentSideMode === "decor" ? decorCatalog?.[id] : plantCatalog?.[id];
+    return currentSideMode === "decor" ? decorCatalog2?.[id] : plantCatalog2?.[id];
   }
   function getSideEntryLabel(id, entry) {
     if (currentSideMode === "decor") return entry?.name || id;
@@ -17665,11 +18551,11 @@
   function getGardenObjectLabel(obj) {
     if (!obj || typeof obj !== "object") return "Unknown";
     if (obj.objectType === "plant") {
-      const entry = plantCatalog[obj.species];
+      const entry = plantCatalog2[obj.species];
       return entry?.crop?.name || entry?.seed?.name || obj.species || "Plant";
     }
     if (obj.objectType === "decor") {
-      const entry = decorCatalog[obj.decorId];
+      const entry = decorCatalog2[obj.decorId];
       return entry?.name || obj.decorId || "Decor";
     }
     return String(obj.objectType || "Item");
@@ -17677,11 +18563,11 @@
   function getInventoryItemLabel(item) {
     if (!item || typeof item !== "object") return "Item";
     if (item.itemType === "Plant") {
-      const entry = plantCatalog[item.species];
+      const entry = plantCatalog2[item.species];
       return entry?.crop?.name || entry?.seed?.name || item.species || "Plant";
     }
     if (item.itemType === "Decor") {
-      const entry = decorCatalog[item.decorId];
+      const entry = decorCatalog2[item.decorId];
       return entry?.name || item.decorId || "Decor";
     }
     return String(item.itemType || "Item");
@@ -17742,7 +18628,7 @@
               if (mutList.length) {
                 for (const mutId of mutList) {
                   const tag = document.createElement("span");
-                  tag.textContent = mutationCatalog[mutId]?.name?.charAt(0)?.toUpperCase() || mutId.charAt(0)?.toUpperCase() || "?";
+                  tag.textContent = mutationCatalog2[mutId]?.name?.charAt(0)?.toUpperCase() || mutId.charAt(0)?.toUpperCase() || "?";
                   tag.style.fontWeight = "900";
                   tag.style.fontSize = "12px";
                   tag.style.padding = "4px 8px";
@@ -18195,7 +19081,7 @@
       mutRow.style.gap = "6px";
       mutRow.style.alignItems = "center";
       const mutations = Array.isArray(slot?.mutations) ? slot.mutations.slice() : [];
-      const mutationKeys = Object.keys(mutationCatalog || {});
+      const mutationKeys = Object.keys(mutationCatalog2 || {});
       const applyMutationsPatch = (nextMutations) => {
         const copy2 = nextMutations.slice();
         mutations.length = 0;
@@ -18229,7 +19115,7 @@
         }
       };
       const getLetter = (mutId) => {
-        const def = mutationCatalog[mutId] || {};
+        const def = mutationCatalog2[mutId] || {};
         const src = def.name || mutId || "?";
         return String(src).charAt(0).toUpperCase();
       };
@@ -18293,7 +19179,7 @@
       dropdown.style.borderRadius = "8px";
       dropdown.style.background = "rgba(8,12,18,0.9)";
       for (const mutKey of mutationKeys) {
-        const def = mutationCatalog[mutKey] || {};
+        const def = mutationCatalog2[mutKey] || {};
         const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
         const isActive = Array.isArray(slot.mutations) && slot.mutations.includes(storedId);
         if (isActive) continue;
@@ -18964,7 +19850,7 @@
         mutDropdown.style.border = "1px solid #2c3643";
         mutDropdown.style.borderRadius = "8px";
         mutDropdown.style.background = "rgba(8,12,18,0.9)";
-        const mutationKeys = Object.keys(mutationCatalog || {});
+        const mutationKeys = Object.keys(mutationCatalog2 || {});
         const renderActiveTags = () => {
           activeRow.innerHTML = "";
           const active = Array.isArray(cfg.mutations) ? cfg.mutations : [];
@@ -18984,7 +19870,7 @@
             }
           };
           const getLetter = (mutId) => {
-            const def = mutationCatalog[mutId] || {};
+            const def = mutationCatalog2[mutId] || {};
             const src = def.name || mutId || "?";
             return String(src).charAt(0).toUpperCase();
           };
@@ -19038,7 +19924,7 @@
           setDropdownOpen(!isOpen);
         };
         for (const mutKey of mutationKeys) {
-          const def = mutationCatalog[mutKey] || {};
+          const def = mutationCatalog2[mutKey] || {};
           const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
           const isActive = Array.isArray(cfg.mutations) && cfg.mutations.includes(storedId);
           if (isActive) continue;
@@ -19399,7 +20285,7 @@
       const slotData = slotMatch.matchSlot.data || {};
       const inv = slotData.inventory;
       const items = Array.isArray(inv?.items) ? inv.items.slice() : [];
-      const entry = plantCatalog?.[species] ?? {};
+      const entry = plantCatalog2?.[species] ?? {};
       const plantDef = entry?.plant ?? {};
       const isMultipleHarvest = plantDef?.harvestType === "Multiple";
       console.log("[EditorService] plant before add", { itemsLen: items.length, isMultipleHarvest });
@@ -20412,7 +21298,7 @@
   }
   function getScaleBoundsForSpecies(species) {
     if (!species) return { minScale: 1, maxScale: 1 };
-    const entry = plantCatalog[species];
+    const entry = plantCatalog2[species];
     const maxScaleRaw = Number(entry?.crop?.maxScale);
     const maxScale = Number.isFinite(maxScaleRaw) && maxScaleRaw > 1 ? maxScaleRaw : 1;
     return { minScale: 1, maxScale };
@@ -20454,7 +21340,7 @@
     applyAll: false
   };
   function getMaxSlotsForSpecies(species) {
-    const entry = plantCatalog[species];
+    const entry = plantCatalog2[species];
     const plantDef = entry?.plant ?? {};
     const isMultipleHarvest = plantDef?.harvestType === "Multiple";
     const slotOffsets = Array.isArray(plantDef.slotOffsets) ? plantDef.slotOffsets : [];
@@ -21389,9 +22275,9 @@
         const newPets = extractNewPets(nextPets, previousMap);
         if (!newPets.length) return;
         for (const pet of newPets) {
-          const rarity2 = inferPetRarity(pet.mutations);
+          const rarity3 = inferPetRarity(pet.mutations);
           if (pet.species) {
-            StatsService.incrementPetHatched(pet.species, rarity2);
+            StatsService.incrementPetHatched(pet.species, rarity3);
           }
         }
       })();
@@ -21918,7 +22804,7 @@
     );
     window[FLAG] = true;
   }
-  var _AB = petAbilities ?? {};
+  var _AB = petAbilities2 ?? {};
   function _abilityName(id) {
     const key2 = String(id ?? "");
     const raw = typeof _AB?.[key2]?.name === "string" && _AB[key2].name.trim() ? _AB[key2].name : key2;
@@ -21953,16 +22839,16 @@
   var _n = (v) => Number.isFinite(v) ? v : 0;
   var _sArr = (v) => Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
   var _petCatalogKeyByLc = new Map(
-    Object.keys(petCatalog).map((k) => [k.toLowerCase(), k])
+    Object.keys(petCatalog2).map((k) => [k.toLowerCase(), k])
   );
   function _canonicalSpecies(s) {
     if (!s) return s;
-    if (petCatalog[s]) return s;
+    if (petCatalog2[s]) return s;
     const lc = s.toLowerCase();
     const found = _petCatalogKeyByLc.get(lc);
     if (found) return found;
     const t = s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-    return petCatalog[t] ? t : s;
+    return petCatalog2[t] ? t : s;
   }
   function _invPetToRawItem(p) {
     return {
@@ -22351,14 +23237,14 @@
     return Math.max(0, Math.min(100, n));
   }
   function getCompatibleCropsFromData(species) {
-    const PC = petCatalog;
+    const PC = petCatalog2;
     const entry = PC?.[species];
     const raw = entry?.diet ?? entry?.compatibleCrops ?? entry?.crops ?? [];
     const arr = Array.isArray(raw) ? raw : [];
     return arr.filter((c) => typeof c === "string" && c.length > 0);
   }
   function getMaxHungerFromData(species) {
-    const v = petCatalog?.[species]?.coinsToFullyReplenishHunger;
+    const v = petCatalog2?.[species]?.coinsToFullyReplenishHunger;
     if (typeof v === "number" && Number.isFinite(v) && v > 0) return v;
     return 3e3;
   }
@@ -22867,7 +23753,7 @@
         return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
       };
       const data = rawData ?? {};
-      const base = petAbilities[abilityId]?.baseParameters ?? {};
+      const base = petAbilities2[abilityId]?.baseParameters ?? {};
       switch (abilityId) {
         case "CoinFinderI":
         case "CoinFinderII":
@@ -23166,7 +24052,7 @@
     _ingestAbilityMap(map2) {
       if (!map2 || typeof map2 !== "object") return;
       const abilityDisplayName = (abilityId) => {
-        const def = petAbilities[abilityId];
+        const def = petAbilities2[abilityId];
         return def?.name && def.name.trim() || abilityId;
       };
       const fmtTime12 = (ms) => new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
@@ -23175,7 +24061,7 @@
       const fmtMin1 = (n) => `${Number.isFinite(Number(n)) ? Number(n).toFixed(1) : "0.0"} min`;
       const formatDetails = (abilityId, data) => {
         const d = data ?? {};
-        const base = petAbilities[abilityId]?.baseParameters ?? {};
+        const base = petAbilities2[abilityId]?.baseParameters ?? {};
         const label2 = (value, fallback) => {
           const s = typeof value === "string" ? value.trim() : "";
           return s || fallback;
@@ -23188,7 +24074,7 @@
           const key2 = species.trim();
           const variants = [key2, key2.charAt(0).toUpperCase() + key2.slice(1), key2.toLowerCase()];
           for (const v of variants) {
-            const name = plantCatalog?.[v]?.crop?.name;
+            const name = plantCatalog2?.[v]?.crop?.name;
             if (typeof name === "string" && name.trim()) return name;
           }
           return null;
@@ -23343,7 +24229,7 @@
           case "DawnKisser":
             return "Dawn mutations empowered";
           default: {
-            const meta = petAbilities[abilityId];
+            const meta = petAbilities2[abilityId];
             if (d && typeof d === "object" && Object.keys(d).length) return JSON.stringify(d);
             return meta?.description || "\u2014";
           }
@@ -23819,12 +24705,12 @@
   var BASE_STRENGTH_FLOOR = 30;
   var getCatalogEntry = (species) => {
     if (!species) return null;
-    const entry = petCatalog[species];
+    const entry = petCatalog2[species];
     return entry ?? null;
   };
   var getMutationEntry = (mutation) => {
     if (!mutation) return null;
-    const entry = mutationCatalog[mutation];
+    const entry = mutationCatalog2[mutation];
     return entry ?? null;
   };
   var getTargetScale = (pet) => {
@@ -23898,7 +24784,7 @@
   function resolveSpeciesKey(species) {
     const wanted = key(species).toLowerCase();
     if (!wanted) return null;
-    for (const k of Object.keys(plantCatalog)) {
+    for (const k of Object.keys(plantCatalog2)) {
       if (k.toLowerCase() === wanted) return k;
     }
     return null;
@@ -23934,7 +24820,7 @@
   function defaultGetBasePrice(species) {
     const spKey = resolveSpeciesKey(species);
     if (!spKey) return null;
-    const node = plantCatalog[spKey];
+    const node = plantCatalog2[spKey];
     const cands = [
       node?.produce?.baseSellPrice,
       node?.crop?.baseSellPrice,
@@ -23964,8 +24850,8 @@
   }
   var MUTATION_MULTIPLIER_BY_KEY = (() => {
     const map2 = {};
-    if (!mutationCatalog || typeof mutationCatalog !== "object") return map2;
-    for (const [rawKey, rawValue] of Object.entries(mutationCatalog)) {
+    if (!mutationCatalog2 || typeof mutationCatalog2 !== "object") return map2;
+    for (const [rawKey, rawValue] of Object.entries(mutationCatalog2)) {
       const mult = Number(rawValue?.coinMultiplier);
       if (!Number.isFinite(mult)) continue;
       const name = key(rawValue?.name);
@@ -24172,7 +25058,7 @@
       identifierKey: "species",
       resolveCoinPrice: (identifier) => {
         if (!identifier) return null;
-        const entry = plantCatalog[identifier];
+        const entry = plantCatalog2[identifier];
         const price = entry?.seed?.coinPrice;
         return getFiniteNumber(price);
       },
@@ -24190,7 +25076,7 @@
       identifierKey: "toolId",
       resolveCoinPrice: (identifier) => {
         if (!identifier) return null;
-        const entry = toolCatalog[identifier];
+        const entry = toolCatalog2[identifier];
         const price = entry?.coinPrice;
         return getFiniteNumber(price);
       },
@@ -24208,7 +25094,7 @@
       identifierKey: "eggId",
       resolveCoinPrice: (identifier) => {
         if (!identifier) return null;
-        const entry = eggCatalog[identifier];
+        const entry = eggCatalog2[identifier];
         const price = entry?.coinPrice;
         return getFiniteNumber(price);
       },
@@ -24226,7 +25112,7 @@
       identifierKey: "decorId",
       resolveCoinPrice: (identifier) => {
         if (!identifier) return null;
-        const entry = decorCatalog[identifier];
+        const entry = decorCatalog2[identifier];
         const price = entry?.coinPrice;
         return getFiniteNumber(price);
       },
@@ -24799,7 +25685,7 @@
       const maxStrength = getPetInfo(pet)?.maxStrength;
       const strongEnough = checkMaxStr && typeof maxStrength === "number" && Number.isFinite(maxStrength) ? maxStrength >= maxStrThreshold : false;
       const petSpecies = String(pet.petSpecies || "").trim();
-      const petEntry = petSpecies ? petCatalog[petSpecies] : null;
+      const petEntry = petSpecies ? petCatalog2[petSpecies] : null;
       const petRarity = petEntry?.rarity ?? "";
       const hasProtectedRarity = protectedRarities.size > 0 && petRarity !== "" && protectedRarities.has(petRarity);
       if (!hasMutation && !strongEnough && !hasProtectedRarity) continue;
@@ -26537,13 +27423,13 @@
   var PATH_NOTIFIER_WEATHER = "notifier.weatherPrefs";
   var PATH_NOTIFIER_DEFAULTS = "notifier.loopDefaults";
   var DISPLAY_RARITY = {
-    [rarity.Common]: "Common",
-    [rarity.Uncommon]: "Uncommon",
-    [rarity.Rare]: "Rare",
-    [rarity.Legendary]: "Legendary",
-    [rarity.Mythic]: "Mythical",
-    [rarity.Divine]: "Divine",
-    [rarity.Celestial]: "Celestial"
+    [rarity2.Common]: "Common",
+    [rarity2.Uncommon]: "Uncommon",
+    [rarity2.Rare]: "Rare",
+    [rarity2.Legendary]: "Legendary",
+    [rarity2.Mythic]: "Mythical",
+    [rarity2.Divine]: "Divine",
+    [rarity2.Celestial]: "Celestial"
   };
   var norm2 = (s) => String(s ?? "").toLowerCase();
   var formatRuleSummary = (rule) => {
@@ -26649,7 +27535,7 @@
   };
   var WEATHER_DEFS = (() => {
     const entries = [];
-    for (const [rawName, rawValue] of Object.entries(weatherCatalog ?? {})) {
+    for (const [rawName, rawValue] of Object.entries(weatherCatalog2 ?? {})) {
       const safeName = String(rawName || "").trim();
       if (!safeName) continue;
       const rawDisplayName = typeof rawValue?.displayName === "string" ? String(rawValue.displayName).trim() : "";
@@ -26686,7 +27572,7 @@
   function buildStaticMeta() {
     if (_staticMeta) return _staticMeta;
     const map2 = /* @__PURE__ */ new Map();
-    for (const [species, entry] of Object.entries(plantCatalog)) {
+    for (const [species, entry] of Object.entries(plantCatalog2)) {
       if (entry?.seed) {
         const id = `Seed:${species}`;
         map2.set(id, {
@@ -26696,7 +27582,7 @@
         });
       }
     }
-    for (const [eggId, entry] of Object.entries(eggCatalog)) {
+    for (const [eggId, entry] of Object.entries(eggCatalog2)) {
       const id = `Egg:${eggId}`;
       map2.set(id, {
         type: "Egg",
@@ -26704,7 +27590,7 @@
         rarity: DISPLAY_RARITY[entry.rarity] ?? entry.rarity
       });
     }
-    for (const [toolId, entry] of Object.entries(toolCatalog)) {
+    for (const [toolId, entry] of Object.entries(toolCatalog2)) {
       const id = `Tool:${toolId}`;
       map2.set(id, {
         type: "Tool",
@@ -26712,7 +27598,7 @@
         rarity: DISPLAY_RARITY[entry.rarity] ?? entry.rarity
       });
     }
-    for (const [decorId, entry] of Object.entries(decorCatalog)) {
+    for (const [decorId, entry] of Object.entries(decorCatalog2)) {
       const id = `Decor:${decorId}`;
       map2.set(id, {
         type: "Decor",
@@ -27579,17 +28465,17 @@
   };
 
   // src/utils/catalogIndex.ts
-  function seedNameFromSpecies(species, cat = plantCatalog) {
+  function seedNameFromSpecies(species, cat = plantCatalog2) {
     const e = cat?.[species];
     return e?.seed?.name ?? e?.plant?.name ?? e?.crop?.name ?? void 0;
   }
-  function eggNameFromId(eggId, cat = eggCatalog) {
+  function eggNameFromId(eggId, cat = eggCatalog2) {
     return cat?.[eggId]?.name ?? void 0;
   }
-  function toolNameFromId(toolId, cat = toolCatalog) {
+  function toolNameFromId(toolId, cat = toolCatalog2) {
     return cat?.[toolId]?.name ?? void 0;
   }
-  function decorNameFromId(decorId, cat = decorCatalog) {
+  function decorNameFromId(decorId, cat = decorCatalog2) {
     return cat?.[decorId]?.name ?? void 0;
   }
 
@@ -35396,7 +36282,7 @@
 
   // src/utils/mgCommon.ts
   var ORIGIN = "https://magicgarden.gg";
-  var sleep3 = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
+  var sleep4 = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
 
   // src/utils/mgVersion.ts
   var VERSION_PATH = "/platform/v1/version";
@@ -35516,7 +36402,7 @@
       init(document);
       const v = getCachedVersion() ?? cachedVersion;
       if (v) return v;
-      await sleep3(50);
+      await sleep4(50);
     }
     throw new Error("MGVersion timeout (gameVersion not found)");
   }
@@ -43208,7 +44094,7 @@
       icon.style.backgroundPosition = "center";
       span.insertBefore(icon, span.firstChild);
     }
-    const bg = `url("${coin.img64}")`;
+    const bg = `url("${coin2.img64}")`;
     if (icon.style.backgroundImage !== bg) {
       icon.style.backgroundImage = bg;
     }
@@ -43558,7 +44444,7 @@
   var DECOR_LABELS = (() => {
     const labels = /* @__PURE__ */ new Set();
     try {
-      Object.entries(decorCatalog).forEach(([decorId, entry]) => {
+      Object.entries(decorCatalog2).forEach(([decorId, entry]) => {
         if (decorId) labels.add(decorId.toLowerCase());
         const name = entry?.name;
         if (typeof name === "string" && name) {
@@ -43909,7 +44795,7 @@
     if (typeof abilityId !== "string") return null;
     const trimmedId = abilityId.trim();
     if (!trimmedId) return null;
-    const ability = petAbilities[trimmedId] ?? null;
+    const ability = petAbilities2[trimmedId] ?? null;
     const name = ability?.name;
     if (typeof name !== "string") return null;
     const trimmedName = name.trim();
@@ -44050,7 +44936,7 @@
   var VALUE_SUMMARY_ICON_CLASS = "tm-value-toggle__summary-icon";
   var VALUE_SUMMARY_TEXT_CLASS = "tm-value-toggle__summary-text";
   var VALUE_SUMMARY_ICON_SRC = (() => {
-    const src = coin?.img64 ?? "";
+    const src = coin2?.img64 ?? "";
     if (typeof src !== "string" || !src) {
       return "";
     }
@@ -44157,13 +45043,13 @@
     }
   };
   var RARITY_ORDER = [
-    rarity.Common,
-    rarity.Uncommon,
-    rarity.Rare,
-    rarity.Legendary,
-    rarity.Mythic,
-    rarity.Divine,
-    rarity.Celestial
+    rarity2.Common,
+    rarity2.Uncommon,
+    rarity2.Rare,
+    rarity2.Legendary,
+    rarity2.Mythic,
+    rarity2.Divine,
+    rarity2.Celestial
   ].filter(Boolean);
   var RARITY_RANK = (() => {
     const entries = /* @__PURE__ */ new Map();
@@ -44173,7 +45059,7 @@
         entries.set(key2, index);
       }
     });
-    const mythicIndex = entries.get(normalize(rarity.Mythic));
+    const mythicIndex = entries.get(normalize(rarity2.Mythic));
     if (typeof mythicIndex === "number") {
       entries.set(normalize("Mythic"), mythicIndex);
     }
@@ -44201,7 +45087,7 @@
       if (!normalized || map2.has(normalized)) return;
       map2.set(normalized, value);
     };
-    for (const [species, entry] of Object.entries(plantCatalog)) {
+    for (const [species, entry] of Object.entries(plantCatalog2)) {
       const maxScale = Number(entry?.crop?.maxScale);
       if (!Number.isFinite(maxScale) || maxScale <= 0) continue;
       register(species, maxScale);
@@ -44954,11 +45840,11 @@
     }
     return "";
   };
-  var plantCatalogEntry = (identifier) => plantCatalog[identifier];
-  var petCatalogEntry = (identifier) => petCatalog[identifier];
-  var eggCatalogEntry = (identifier) => eggCatalog[identifier];
-  var toolCatalogEntry = (identifier) => toolCatalog[identifier];
-  var decorCatalogEntry = (identifier) => decorCatalog[identifier];
+  var plantCatalogEntry = (identifier) => plantCatalog2[identifier];
+  var petCatalogEntry = (identifier) => petCatalog2[identifier];
+  var eggCatalogEntry = (identifier) => eggCatalog2[identifier];
+  var toolCatalogEntry = (identifier) => toolCatalog2[identifier];
+  var decorCatalogEntry = (identifier) => decorCatalog2[identifier];
   var SEED_NAME_PATHS = [
     ["seed", "name"],
     ["plant", "name"],
@@ -45222,7 +46108,7 @@
       if (!normalized || map2.has(normalized)) return;
       map2.set(normalized, { maxScale, hoursToMature });
     };
-    for (const [species, entry] of Object.entries(petCatalog)) {
+    for (const [species, entry] of Object.entries(petCatalog2)) {
       const maxScale = Number(entry?.maxScale);
       const hoursToMature = Number(entry?.hoursToMature);
       if (!Number.isFinite(maxScale) || maxScale <= 1) continue;
@@ -49637,7 +50523,7 @@ next: ${next}`;
   var MAX_VISIBLE_SPRITES = 400;
   var SPRITE_ICON_SIZE = 96;
   var spriteServicePromise = null;
-  var sleep4 = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
+  var sleep5 = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
   function resolveGlobalSpriteService() {
     const root = globalThis.unsafeWindow || globalThis;
     return root?.__MG_SPRITE_SERVICE__ ?? null;
@@ -49656,7 +50542,7 @@ next: ${next}`;
         }
         return svc;
       }
-      await sleep4(200);
+      await sleep5(200);
     }
     return null;
   }
@@ -50553,9 +51439,9 @@ next: ${next}`;
     return el2;
   };
   function rarityBadge(raw) {
-    const rarity2 = String(raw || "").trim();
+    const rarity3 = String(raw || "").trim();
     const key2 = (() => {
-      const k = rarity2.toLowerCase();
+      const k = rarity3.toLowerCase();
       if (k === "mythical") return "Mythical";
       if (k === "celestial") return "Celestial";
       if (k === "divine") return "Divine";
@@ -50563,7 +51449,7 @@ next: ${next}`;
       if (k === "rare") return "Rare";
       if (k === "uncommon") return "Uncommon";
       if (k === "common") return "Common";
-      return rarity2 || "\u2014";
+      return rarity3 || "\u2014";
     })();
     const COLORS = {
       Common: "#E7E7E7",
@@ -52746,7 +53632,7 @@ next: ${next}`;
     "\u{1F52E}"
   ];
   var lockerSeedOptions = Object.entries(
-    plantCatalog
+    plantCatalog2
   ).map(([key2, def]) => ({
     key: key2,
     seedName: def?.seed?.name ?? "",
@@ -52775,9 +53661,9 @@ next: ${next}`;
     if (!spaced) return key2;
     return spaced.charAt(0).toUpperCase() + spaced.slice(1);
   }
-  var WEATHER_MUTATION_LABELS = tileRefsMutationLabels ?? {};
+  var WEATHER_MUTATION_LABELS = tileRefsMutationLabels2 ?? {};
   var WEATHER_MUTATIONS = Object.entries(
-    tileRefsMutations
+    tileRefsMutations2
   ).filter((entry) => {
     const [key2, value] = entry;
     if (key2 === "Puddle" || key2 === "ThunderstruckGround") {
@@ -55728,7 +56614,7 @@ next: ${next}`;
     return Number.isFinite(value) && value > 0 ? value : null;
   }
   function getMaxScaleForSpecies(key2) {
-    const entry = plantCatalog[key2];
+    const entry = plantCatalog2[key2];
     const candidates = [entry?.crop?.maxScale, entry?.plant?.maxScale, entry?.seed?.maxScale];
     for (const candidate of candidates) {
       const numeric = typeof candidate === "number" ? candidate : Number(candidate);
@@ -55739,7 +56625,7 @@ next: ${next}`;
     return null;
   }
   function getBaseWeightForSpecies(key2) {
-    const entry = plantCatalog[key2];
+    const entry = plantCatalog2[key2];
     const candidates = [
       entry?.produce?.baseWeight,
       entry?.crop?.baseWeight,
@@ -55832,7 +56718,7 @@ next: ${next}`;
       priceRow.className = "mg-crop-simulation__price";
       const priceIcon = document.createElement("img");
       priceIcon.className = "mg-crop-simulation__price-icon";
-      priceIcon.src = coin.img64;
+      priceIcon.src = coin2.img64;
       priceIcon.alt = "";
       priceIcon.decoding = "async";
       priceIcon.loading = "lazy";
@@ -56481,22 +57367,22 @@ next: ${next}`;
     numeric: "auto"
   });
   var RARITY_ORDER2 = [
-    rarity.Common,
-    rarity.Uncommon,
-    rarity.Rare,
-    rarity.Legendary,
-    rarity.Mythic,
-    rarity.Divine,
-    rarity.Celestial
+    rarity2.Common,
+    rarity2.Uncommon,
+    rarity2.Rare,
+    rarity2.Legendary,
+    rarity2.Mythic,
+    rarity2.Divine,
+    rarity2.Celestial
   ];
   var RARITY_BORDER_COLORS = {
-    [rarity.Common]: "#E7E7E7",
-    [rarity.Uncommon]: "#67BD4D",
-    [rarity.Rare]: "#0071C6",
-    [rarity.Legendary]: "#FFC734",
-    [rarity.Mythic]: "#9944A7",
-    [rarity.Divine]: "#FF7835",
-    [rarity.Celestial]: "#7C2AE8"
+    [rarity2.Common]: "#E7E7E7",
+    [rarity2.Uncommon]: "#67BD4D",
+    [rarity2.Rare]: "#0071C6",
+    [rarity2.Legendary]: "#FFC734",
+    [rarity2.Mythic]: "#9944A7",
+    [rarity2.Divine]: "#FF7835",
+    [rarity2.Celestial]: "#7C2AE8"
   };
   function createCollapsibleCard(ui, title, opts = {}) {
     const card2 = ui.card(title, { tone: "muted", align: "stretch", subtitle: opts.subtitle, icon: opts.icon });
@@ -56823,9 +57709,9 @@ next: ${next}`;
     for (const rarityKey of RARITY_ORDER2) {
       map2.set(rarityKey, []);
     }
-    for (const species of Object.keys(petCatalog)) {
-      const info = petCatalog[species];
-      const rarityValue = info?.rarity ?? rarity.Common;
+    for (const species of Object.keys(petCatalog2)) {
+      const info = petCatalog2[species];
+      const rarityValue = info?.rarity ?? rarity2.Common;
       const list = map2.get(rarityValue) ?? [];
       list.push(species);
       map2.set(rarityValue, list);
@@ -56932,9 +57818,9 @@ next: ${next}`;
       subtitle: "Trigger counts",
       storageId: "abilities"
     });
-    const abilityIds = Object.keys(petAbilities).sort((a, b) => {
-      const nameA = petAbilities[a]?.name ?? a;
-      const nameB = petAbilities[b]?.name ?? b;
+    const abilityIds = Object.keys(petAbilities2).sort((a, b) => {
+      const nameA = petAbilities2[a]?.name ?? a;
+      const nameB = petAbilities2[b]?.name ?? b;
       return nameA.localeCompare(nameB);
     });
     const columns = [
@@ -56944,7 +57830,7 @@ next: ${next}`;
     ];
     const rows = [];
     for (const id of abilityIds) {
-      const info = petAbilities[id];
+      const info = petAbilities2[id];
       const statsEntry = stats.abilities[id] ?? { triggers: 0, totalValue: 0 };
       const formatted = formatAbilityTotalValue(id, statsEntry.totalValue);
       rows.push([
@@ -56966,8 +57852,8 @@ next: ${next}`;
       { label: "TOTAL", align: "right", width: "1fr" }
     ];
     const rows = [];
-    const weatherEntries = Object.keys(weatherCatalog).map((key2) => {
-      const info = weatherCatalog[key2];
+    const weatherEntries = Object.keys(weatherCatalog2).map((key2) => {
+      const info = weatherCatalog2[key2];
       const label2 = info?.atomValue ?? key2;
       const lower = key2.toLowerCase();
       const entry = stats.weather[lower] ?? { triggers: 0 };
@@ -58305,8 +59191,8 @@ next: ${next}`;
         titleEl.style.overflow = "hidden";
         titleEl.style.textOverflow = "ellipsis";
         textWrap.appendChild(titleEl);
-        const rarity2 = String(item.rarity || "").trim();
-        const badge = rarity2 ? rarityBadge(rarity2) : null;
+        const rarity3 = String(item.rarity || "").trim();
+        const badge = rarity3 ? rarityBadge(rarity3) : null;
         if (badge) {
           badge.style.margin = "0";
           badge.style.alignSelf = "center";
@@ -61330,7 +62216,7 @@ next: ${next}`;
       (hk) => setKeybind(action2.id, hk),
       {
         emptyLabel: "Unassigned",
-        listeningLabel: "Press a key\xE2\u20AC\xA6",
+        listeningLabel: "Press a key",
         clearable: true,
         allowModifierOnly: action2.allowModifierOnly
       }

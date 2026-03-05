@@ -8,7 +8,7 @@ import { computeInventoryItemValue } from "./inventoryValue";
 import { getPetInfo } from "./petCalcul";
 import { attachSpriteIcon } from "../ui/spriteIconCache";
 import { lockerRestrictionsService } from "../services/lockerRestrictions";
-import { petCatalog } from "../data/hardcoded-data.clean.js";
+import { petCatalog } from "../data";
 
 /* =============================================================================
  * Inject a styled "Sell all Pets" button next to a detected "Sell X" button

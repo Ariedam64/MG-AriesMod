@@ -1,5 +1,5 @@
 // src/utils/catalogIndex.ts
-import { plantCatalog, eggCatalog, toolCatalog, decorCatalog } from "../data/hardcoded-data.clean";
+import { plantCatalog, eggCatalog, toolCatalog, decorCatalog } from "../data";
 
 /* ============================== Types & utils ============================== */
 

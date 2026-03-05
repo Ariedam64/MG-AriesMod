@@ -1,6 +1,6 @@
 // src/services/misc.ts
 import { PlayerService } from "./player";
-import { decorCatalog, plantCatalog } from "../data/hardcoded-data.clean";
+import { decorCatalog, plantCatalog } from "../data";
 import { Atoms, myDecorShedItems, mySeedSiloItems } from "../store/atoms";
 import { fakeInventoryShow, isInventoryPanelOpen, waitInventoryPanelClosed, fakeInventoryHide } from "./fakeModal";
 import { toastSimple } from "../ui/toast";

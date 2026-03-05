@@ -11,7 +11,7 @@ import {
   plantCatalog,
   rarity as rarityMap,
   toolCatalog,
-} from "../data/hardcoded-data.clean.js";
+} from "../data";
 import {
   computeInventoryItemValue,
   ensureInventoryValueWatcher,

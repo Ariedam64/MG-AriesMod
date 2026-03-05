@@ -1,6 +1,6 @@
 // appendSpanAtEnd.ts
 import { startCropPriceWatcherViaGardenObject } from "./cropPrice";
-import { coin } from "../data/hardcoded-data.clean";
+import { coin } from "../data";
 import { lockerService } from "../services/locker";
 import { readSharedGlobal } from "./page-context";
 

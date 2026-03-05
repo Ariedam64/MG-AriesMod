@@ -6,7 +6,7 @@
 
 import { Atoms, type GardenState } from "../store/atoms";
 
-import { plantCatalog, decorCatalog, mutationCatalog } from "../data/hardcoded-data.clean";
+import { plantCatalog, decorCatalog, mutationCatalog } from "../data";
 
 import { ensureStore, getAtomByLabel } from "../store/jotai";
 

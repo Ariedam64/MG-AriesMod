@@ -25,7 +25,7 @@ function createKeybindRow(ui: Menu, action: KeybindAction) {
     (hk) => setKeybind(action.id, hk),
     {
       emptyLabel: "Unassigned",
-      listeningLabel: "Press a keyâ€¦",
+      listeningLabel: "Press a key",
       clearable: true,
       allowModifierOnly: action.allowModifierOnly,
     }

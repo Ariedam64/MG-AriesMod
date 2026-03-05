@@ -1,4 +1,4 @@
-import { decorCatalog } from "../data/hardcoded-data.clean";
+import { decorCatalog } from "../data";
 import { lockerRestrictionsService } from "../services/lockerRestrictions";
 
 const CONTAINER_SELECTOR = ".css-502lyi";

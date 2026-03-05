@@ -6,7 +6,7 @@ import {
   petAbilities,
   rarity,
   weatherCatalog,
-} from "../../data/hardcoded-data.clean";
+} from "../../data";
 import { formatPrice } from "../../utils/format";
 import { StatsService } from "../../services/stats";
 import type { StatsSnapshot } from "../../services/stats";

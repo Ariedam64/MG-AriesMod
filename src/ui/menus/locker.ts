@@ -4,7 +4,7 @@ import {
   plantCatalog,
   tileRefsMutations,
   tileRefsMutationLabels,
-} from "../../data/hardcoded-data.clean";
+} from "../../data";
 import {
   lockerService,
   type LockerSettingsPersisted,

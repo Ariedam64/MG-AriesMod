@@ -14,7 +14,7 @@ import {
   decorCatalog,
   rarity as rarityMap,
   weatherCatalog,
-} from "../data/hardcoded-data.clean";
+} from "../data";
 import { audio, type PlaybackMode, type TriggerOverrides } from "../utils/audio";
 import { StatsService } from "./stats";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";

@@ -1,4 +1,4 @@
-import { petCatalog, mutationCatalog } from "../data/hardcoded-data.clean.js";
+import { petCatalog, mutationCatalog } from "../data";
 
 export type PetLike = {
   petSpecies: string;

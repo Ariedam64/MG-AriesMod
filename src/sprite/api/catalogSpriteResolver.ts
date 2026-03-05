@@ -6,7 +6,7 @@ import {
   petCatalog,
   plantCatalog,
   weatherCatalog,
-} from '../../data/hardcoded-data.clean';
+} from '../../data';
 import type { SpriteState } from '../types';
 
 const hasTex = (state: SpriteState, key: string) => state.tex.has(key);

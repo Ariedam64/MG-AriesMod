@@ -6,7 +6,7 @@ import {
   petCatalog,
   rarity,
   weatherCatalog,
-} from "../data/hardcoded-data.clean.js";
+} from "../data";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
 
 type GardenStats = {

@@ -1,5 +1,5 @@
 // src/utils/calculators.ts
-import { plantCatalog, mutationCatalog } from "../data/hardcoded-data.clean.js";
+import { plantCatalog, mutationCatalog } from "../data";
 
 export type ColorMutation = "Gold" | "Rainbow";
 export type WeatherMutation = "Wet" | "Chilled" | "Frozen" | "Thunderstruck";
