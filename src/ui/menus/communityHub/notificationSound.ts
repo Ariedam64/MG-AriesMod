@@ -3,7 +3,7 @@
 
 import { getAudioUrlSafe } from "../../../utils/discordCsp";
 import { readAriesPath, writeAriesPath } from "../../../utils/localStorage";
-import { getTotalFriendUnreadCount, getTotalGroupUnreadCount, getIncomingRequestsCount } from "../../../ariesModAPI";
+import { getTotalFriendUnreadCount, getTotalGroupUnreadCount, getCachedGroupConversations, getIncomingRequestsCount } from "../../../ariesModAPI";
 
 const NOTIFICATION_SOUND_URL = "https://cdn.pixabay.com/audio/2025/09/09/audio_3023b9bde2.mp3";
 const NOTIFICATION_VOLUME = 0.2; // 20%
@@ -105,11 +105,25 @@ export function playNotificationSound(): void {
 }
 
 /**
+ * Returns the total unread count for unmuted groups only.
+ */
+export function getUnmutedGroupUnreadCount(): number {
+  const mutedIds = getMutedGroupIds();
+  if (mutedIds.length === 0) return getTotalGroupUnreadCount();
+  const conversations = getCachedGroupConversations();
+  return conversations.reduce((sum, c) => {
+    if (mutedIds.includes(c.groupId)) return sum;
+    return sum + (c.unreadCount ?? 0);
+  }, 0);
+}
+
+/**
  * Checks if notification counts have increased and plays sound if so.
  * Call this when conversation/request data refreshes.
+ * Muted groups are excluded from the sound trigger.
  *
  * @param friendUnread - Current friend messages unread count
- * @param groupUnread - Current group messages unread count
+ * @param groupUnread - Current group messages unread count (unmuted only)
  * @param requestsCount - Current incoming requests count
  */
 export function checkAndPlayNotificationSound(
@@ -130,6 +144,39 @@ export function checkAndPlayNotificationSound(
   lastFriendUnreadCount = friendUnread;
   lastGroupUnreadCount = groupUnread;
   lastRequestsCount = requestsCount;
+}
+
+// ── Muted groups ─────────────────────────────────────────────────────────────
+
+const MUTED_GROUPS_PATH = "notifications.mutedGroupIds";
+
+/**
+ * Returns the list of muted group IDs.
+ */
+export function getMutedGroupIds(): number[] {
+  return readAriesPath<number[]>(MUTED_GROUPS_PATH, []) ?? [];
+}
+
+/**
+ * Returns whether a specific group is muted.
+ */
+export function isGroupMuted(groupId: number): boolean {
+  return getMutedGroupIds().includes(groupId);
+}
+
+/**
+ * Toggles mute state for a group. Returns the new muted state.
+ */
+export function toggleGroupMute(groupId: number): boolean {
+  const current = getMutedGroupIds();
+  const index = current.indexOf(groupId);
+  if (index === -1) {
+    writeAriesPath(MUTED_GROUPS_PATH, [...current, groupId]);
+    return true;
+  } else {
+    writeAriesPath(MUTED_GROUPS_PATH, current.filter((id) => id !== groupId));
+    return false;
+  }
 }
 
 /**

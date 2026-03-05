@@ -25,6 +25,7 @@ import type { CachedFriendConversation, CachedGroupConversation, CachedDirectMes
 import type { DirectMessage, GroupMessage } from "../../../../ariesModAPI/types";
 import { createImportButton, createAttachmentState, parseGemTokens, createTokenCardsContainer, createTeamSelectionView, buildTeamToken } from "./chatImporter";
 import { isDiscordSurface } from "../../../../utils/api";
+import { isGroupMuted, toggleGroupMute } from "../notificationSound";
 
 declare const GM_openInTab:
   | ((url: string, opts?: { active?: boolean; insert?: boolean; setParent?: boolean }) => void)
@@ -199,7 +200,43 @@ export function createMessagesTab() {
   });
 
   threadInfo.append(threadNameRow, threadStatus);
-  threadHeader.append(threadAvatar, threadInfo);
+
+  // SVG icons for mute button (Lucide style, stroke-based)
+  const BELL_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`;
+  const BELL_OFF_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.7 3A6 6 0 0 1 18 8c0 2.1.5 3.8 1.1 5.2"/><path d="M3.7 3.7 2 2"/><path d="m22 22-1.7-1.7"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="M4 12.3c0 1 .2 1.9.5 2.7H3s3-2 3-9a5.97 5.97 0 0 1 .8-3"/></svg>`;
+
+  // Mute button (visible only for group threads)
+  const muteBtn = document.createElement("button");
+  muteBtn.title = "Mute notifications";
+  style(muteBtn, {
+    display: "none",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "30px",
+    height: "30px",
+    borderRadius: "8px",
+    border: "1px solid rgba(255,255,255,0.06)",
+    background: "rgba(255,255,255,0.03)",
+    cursor: "pointer",
+    marginLeft: "auto",
+    flexShrink: "0",
+    transition: "all 150ms ease",
+    color: "rgba(226,232,240,0.5)",
+    padding: "0",
+    outline: "none",
+  });
+  muteBtn.innerHTML = BELL_SVG;
+  muteBtn.onmouseenter = () => {
+    muteBtn.style.background = "rgba(255,255,255,0.08)";
+    muteBtn.style.borderColor = "rgba(255,255,255,0.12)";
+  };
+  muteBtn.onmouseleave = () => {
+    const muted = muteBtn.dataset.muted === "true";
+    muteBtn.style.background = muted ? "rgba(94,234,212,0.08)" : "rgba(255,255,255,0.03)";
+    muteBtn.style.borderColor = muted ? "rgba(94,234,212,0.2)" : "rgba(255,255,255,0.06)";
+  };
+
+  threadHeader.append(threadAvatar, threadInfo, muteBtn);
 
   // Thread body (messages)
   const threadBody = document.createElement("div");
@@ -786,6 +823,14 @@ export function createMessagesTab() {
     });
     nameEl.textContent = group.groupName || "Group";
 
+    // Muted indicator in conversation list
+    if (isGroupMuted(group.groupId)) {
+      const mutedIcon = document.createElement("span");
+      mutedIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8.7 3A6 6 0 0 1 18 8c0 2.1.5 3.8 1.1 5.2"/><path d="M3.7 3.7 2 2"/><path d="m22 22-1.7-1.7"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="M4 12.3c0 1 .2 1.9.5 2.7H3s3-2 3-9a5.97 5.97 0 0 1 .8-3"/></svg>`;
+      style(mutedIcon, { display: "inline-flex", alignItems: "center", marginLeft: "4px", color: "rgba(94,234,212,0.45)", flexShrink: "0", verticalAlign: "middle" });
+      nameEl.appendChild(mutedIcon);
+    }
+
     const rightSection = document.createElement("div");
     style(rightSection, { display: "flex", alignItems: "center", gap: "6px", flexShrink: "0" });
 
@@ -1063,6 +1108,7 @@ export function createMessagesTab() {
     threadBody.innerHTML = "";
     threadBody.appendChild(emptyState);
     style(threadAvatar, { display: "none" });
+    style(muteBtn, { display: "none" });
     threadName.textContent = "Select a conversation";
     threadStatus.textContent = "";
     setInputEnabled(false);
@@ -1077,6 +1123,23 @@ export function createMessagesTab() {
 
   function scrollToBottom(): void {
     requestAnimationFrame(() => { threadBody.scrollTop = threadBody.scrollHeight; });
+  }
+
+  function updateMuteButton(groupId: number): void {
+    const muted = isGroupMuted(groupId);
+    muteBtn.innerHTML = muted ? BELL_OFF_SVG : BELL_SVG;
+    muteBtn.title = muted ? "Unmute notifications" : "Mute notifications";
+    muteBtn.dataset.muted = String(muted);
+    style(muteBtn, {
+      color: muted ? "#5eead4" : "rgba(226,232,240,0.5)",
+      background: muted ? "rgba(94,234,212,0.08)" : "rgba(255,255,255,0.03)",
+      border: muted ? "1px solid rgba(94,234,212,0.2)" : "1px solid rgba(255,255,255,0.06)",
+    });
+    // Update status text to show muted explanation
+    threadStatus.textContent = muted ? "Notifications muted for this group" : "";
+    style(threadStatus, {
+      color: muted ? "rgba(94,234,212,0.5)" : "rgba(226,232,240,0.5)",
+    });
   }
 
   function updateThreadHeader(avatarUrl: string | null | undefined, displayName: string, statusText: string | null, isGroup: boolean, badges?: string[] | null): void {
@@ -1095,6 +1158,20 @@ export function createMessagesTab() {
     }
     threadName.textContent = displayName;
     threadStatus.textContent = statusText || "";
+
+    // Show mute button for groups
+    if (isGroup && selectedId) {
+      const groupId = Number(selectedId);
+      style(muteBtn, { display: "flex" });
+      updateMuteButton(groupId);
+      muteBtn.onclick = () => {
+        toggleGroupMute(groupId);
+        updateMuteButton(groupId);
+      };
+    } else {
+      style(muteBtn, { display: "none" });
+      muteBtn.onclick = null;
+    }
 
     // Update badges
     threadBadgesContainer.innerHTML = "";

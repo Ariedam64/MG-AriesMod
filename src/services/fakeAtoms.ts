@@ -142,6 +142,24 @@ async function _ensureFakeInstalled<T = any>(config: FakeConfig<T>): Promise<Fak
   return state;
 }
 
+/* ========================= Prime (force re-eval) ======================== */
+
+/**
+ * Force Jotai to re-evaluate all patched atoms via store.get().
+ * This registers the gate dependency in Jotai's graph AND caches
+ * the current (possibly fake) value so React picks it up instantly.
+ */
+async function _primePatched(st: FakeState) {
+  const store = await ensureStore();
+  for (const atom of st.patched.keys()) {
+    try {
+      store.get(atom);
+    } catch {
+      // Ignore prewarm errors
+    }
+  }
+}
+
 /* =============================== API =============================== */
 
 
@@ -159,6 +177,12 @@ export async function fakeShow<T = any>(
     // @ts-ignore – fallback: sans merge custom, on remplace simplement
     config.merge = (_real: any, fake: any) => fake;
   }
+
+  // Prime: force Jotai to re-evaluate patched atoms so the gate
+  // dependency is registered and the fake value is cached in the store.
+  // This eliminates the delay between modal open and data display.
+  await _primePatched(st);
+
   if (options?.openGate && config.gate?.openAction) await config.gate.openAction();
 
   if (st.autoTimer) {

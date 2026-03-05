@@ -1649,7 +1649,7 @@ export const PetsService = {
     const fmtMin1 = (n: unknown): string =>
       `${Number.isFinite(Number(n)) ? Number(n).toFixed(1) : '0.0'} min`;
 
-    const formatDetails = (abilityId: string, data: any): string => {
+    const formatDetails = (abilityId: string, data: any): string | null => {
       const d = (data ?? {}) as Record<string, unknown>;
       const base = (petAbilities as Record<string, any>)[abilityId]?.baseParameters ?? {};
       const label = (value: unknown, fallback: string): string => {
@@ -1732,9 +1732,11 @@ export const PetsService = {
         case "GoldGranter":
         case "RainbowGranter": {
           const cropFromSlot = cropNameFromGrowSlot(d["growSlot"]);
-          const crop = label(d["cropName"], cropFromSlot ?? "crop");
-          const mut = abilityId === "GoldGranter" ? "Gold" : "Rainbow";
-          return `${crop}`;
+          const cropName = typeof d["cropName"] === "string" && d["cropName"].trim()
+            ? d["cropName"].trim()
+            : cropFromSlot;
+          if (!cropName) return null;
+          return cropName;
         }
         case "RainDance": {
           const cropFromSlot = cropNameFromGrowSlot(d["growSlot"]);
@@ -1876,6 +1878,14 @@ export const PetsService = {
       const pet = _invPetsCache.find(p => String(p.id) === String(petId)) || null;
       const abilityIdStr = String(abilityId);
 
+      const details = formatDetails(abilityIdStr, (entry as any).data);
+
+      // Skip phantom procs (e.g. GoldGranter/RainbowGranter with no resolved crop)
+      if (details === null) {
+        this._seenPerfByPet.set(petId, performedAtNum);
+        continue;
+      }
+
       const logLine: AbilityLogEntry = {
         petId,
         species: pet?.petSpecies || undefined,
@@ -1885,7 +1895,7 @@ export const PetsService = {
           : undefined,
         abilityId: abilityIdStr,
         abilityName: abilityDisplayName(abilityId),
-        data: formatDetails(abilityIdStr, (entry as any).data),
+        data: details,
         performedAt: performedAtNum,
         time12: fmtTime12(performedAtNum),
       };

@@ -55,6 +55,42 @@ export type AriesStorage = {
   };
   notifications?: {
     soundEnabled?: boolean;
+    mutedGroupIds?: number[];
+  };
+  eggAutomation?: {
+    config?: unknown;
+    enabled?: boolean;
+    hatchPetTeamId?: unknown;
+    sellPetTeamId?: unknown;
+    idlePetTeamId?: unknown;
+    autoFav?: unknown;
+  };
+  workflowStudio?: unknown;
+  weatherTeams?: {
+    enabled?: boolean;
+    [weatherKey: string]: unknown;
+  };
+  workflow?: {
+    enabled?: boolean;
+    plants?: string[];
+    stepOrder?: string[];
+    stepsEnabled?: Record<string, boolean>;
+    growthTeamId?: string;
+    growthMaturity?: number;
+    sizeTeamId?: string;
+    colorTeamId?: string;
+    harvestTeamId?: string;
+    sellTeamId?: string;
+    sellState?: {
+      phase: string;
+      originalRoomId: string;
+      resumeAtStep?: string;
+    };
+    sellLog?: string[];
+    weatherMutations?: Record<string, {
+      enabled?: boolean;
+      teamId?: string;
+    }>;
   };
 };
 
@@ -330,6 +366,22 @@ function coerceLegacyAggregate(raw: unknown): AriesStorage {
       ...(out.friends ?? {}),
       ...(data.friends as Record<string, unknown>),
     };
+  }
+
+  if ("eggAutomation" in data && typeof (data as any).eggAutomation === "object") {
+    out.eggAutomation = mergeSection(out.eggAutomation, data.eggAutomation as Record<string, unknown>);
+  }
+
+  if ("weatherTeams" in data && typeof (data as any).weatherTeams === "object") {
+    out.weatherTeams = mergeSection(out.weatherTeams, data.weatherTeams as Record<string, unknown>);
+  }
+
+  if ("workflowStudio" in data) {
+    out.workflowStudio = (data as any).workflowStudio;
+  }
+
+  if ("workflow" in data && typeof (data as any).workflow === "object") {
+    out.workflow = mergeSection(out.workflow, data.workflow as Record<string, unknown>);
   }
 
   return out;

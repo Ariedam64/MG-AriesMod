@@ -294,10 +294,14 @@ export async function viewActivityLog(player: PlayerView): Promise<void> {
     waitActivityLogModalClosed,
     fakeActivityLogHide,
   } = await import("../../../../services/fakeModal");
+  const { skipNextActivityLogHistoryReopen } = await import("../../../../services/activityLogHistory");
 
   try {
     // Close community hub
     window.dispatchEvent(new CustomEvent(CH_EVENTS.CLOSE));
+
+    // Prevent the history watcher from overriding the friend's logs with local ones
+    skipNextActivityLogHistoryReopen();
 
     // Show the activity log modal with player's data
     await fakeActivityLogShow(state.activityLog, { open: true });

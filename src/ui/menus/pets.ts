@@ -12,6 +12,7 @@ import { onActivePetsStructuralChangeNow } from "../../store/atoms";
 import { attachSpriteIcon } from "../spriteIconCache";
 import { rarityBadge } from "./notifier";
 import { petCatalog, plantCatalog } from "../../data/hardcoded-data.clean";
+import { getPetStrength, getPetMaxStrength } from "../../utils/petCalcul";
 
 /* ================== petits helpers UI (mêmes vibes que garden) ================== */
 
@@ -965,7 +966,16 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
       root.style.padding = "8px 10px";
       root.style.background = "#0f1318";
 
-      // icon
+      // icon container — flex colonne : sprite au-dessus, badge en dessous
+      const iconContainer = document.createElement("div");
+      Object.assign(iconContainer.style, {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "2px",
+        flexShrink: "0",
+      });
+
       const iconWrap = document.createElement("div");
       Object.assign(iconWrap.style, {
         width: `${ICON}px`,
@@ -974,6 +984,22 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
         alignItems: "center",
         justifyContent: "center",
       });
+
+      // STR badge — en dessous du sprite, hors du iconWrap
+      const strBadge = document.createElement("div");
+      Object.assign(strBadge.style, {
+        fontSize: "9px",
+        fontWeight: "700",
+        lineHeight: "1",
+        padding: "1px 4px",
+        borderRadius: "4px",
+        background: "rgba(0,0,0,0.75)",
+        color: "#fff",
+        whiteSpace: "nowrap",
+        display: "none",
+        pointerEvents: "none",
+      });
+      iconContainer.append(iconWrap, strBadge);
 
       const useEmojiFallback = () => {
         iconWrap.replaceChildren();
@@ -1062,12 +1088,13 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
       btnClear.title = "Remove this pet";
       btnClear.setAttribute("aria-label", "Remove this pet");
 
-      root.append(iconWrap, left, btnChoose, btnClear);
+      root.append(iconContainer, left, btnChoose, btnClear);
 
       function update(p: InventoryPet | null) {
         if (!p) {
           nameEl.textContent = "None";
           setIcon(undefined);
+          strBadge.style.display = "none";
           const fresh = abilitiesBadge([]);
           (fresh as any).style.display = "inline-block";
           left.replaceChild(fresh, left.children[1]);
@@ -1078,6 +1105,16 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
         const muts = Array.isArray(p.mutations) ? p.mutations : [];
 
         setIcon(species, muts);
+
+        const str = getPetStrength(p);
+        const maxStr = getPetMaxStrength(p);
+        if (maxStr > 0) {
+          strBadge.textContent = str >= maxStr ? `${maxStr}` : `${str}/${maxStr}`;
+          strBadge.style.color = str >= maxStr ? "#facc15" : "#fff";
+          strBadge.style.display = "block";
+        } else {
+          strBadge.style.display = "none";
+        }
 
         const speciesLabel = species ? species.charAt(0).toUpperCase() + species.slice(1) : "";
         nameEl.textContent = (p.name?.trim() || speciesLabel || "Pet");
@@ -1109,8 +1146,8 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
         if (!t) return;
         const next = t.slots.slice(0, 3);
         next[idx] = null;
-        PetsService.saveTeam({ id: t.id, slots: next });
-        await repaintSlots(t);
+        const saved = PetsService.saveTeam({ id: t.id, slots: next });
+        await repaintSlots(saved ?? getSelectedTeam());
       };
 
       return { root, nameEl, abilitiesEl: abilitiesEl as HTMLSpanElement, btnChoose, btnClear, update };
