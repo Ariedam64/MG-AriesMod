@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.410
+// @version      3.1.411
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -22644,6 +22644,17 @@
   var PATH_PETS_TEAM_SEARCH = "pets.teamSearch";
   var PATH_PETS_HOTKEYS = "pets.hotkeys";
   var PATH_PETS_ABILITY_LOGS = "pets.abilityLogs";
+  var WEATHER_MUTATION_BOOST_IDS = /* @__PURE__ */ new Set([
+    "ProduceMutationBoost",
+    "ProduceMutationBoostII",
+    "ProduceMutationBoostIII",
+    "DawnBoost",
+    "AmberMoonBoost",
+    "SnowyCropMutationBoost",
+    "PetMutationBoost",
+    "PetMutationBoostII",
+    "PetMutationBoostIII"
+  ]);
   var TEAM_HK_MAP = /* @__PURE__ */ new Map();
   var TEAM_HK_UNSUBS = /* @__PURE__ */ new Map();
   var hkNextTeam = null;
@@ -24241,6 +24252,10 @@
         const abilityId = entry.abilityId ?? null;
         const performedAtNum = Number(entry.performedAt) || 0;
         if (!abilityId || !performedAtNum) continue;
+        if (WEATHER_MUTATION_BOOST_IDS.has(String(abilityId))) {
+          this._seenPerfByPet.set(petId, performedAtNum);
+          continue;
+        }
         const prev = this._seenPerfByPet.get(petId) || 0;
         if (performedAtNum <= prev) continue;
         if (this._logsCutoffMs && performedAtNum < this._logsCutoffMs - this._logsCutoffSkewMs) {
