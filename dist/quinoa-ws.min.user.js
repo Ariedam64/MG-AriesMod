@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.411
+// @version      3.1.412
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -29766,11 +29766,12 @@
     for (const entry of list) {
       if (!entry || typeof entry !== "object") continue;
       const raw = entry;
-      const id = String(raw?.id ?? raw?.slot?.id ?? "").trim();
+      const slot = raw?.slot && typeof raw.slot === "object" ? raw.slot : raw;
+      const id = String(slot?.id ?? "").trim();
       if (!id) continue;
-      const name = raw?.name ?? raw?.petName ?? raw?.slot?.name ?? null;
-      const petSpecies = raw?.petSpecies ?? raw?.species ?? raw?.slot?.petSpecies ?? null;
-      const mutationsRaw = raw?.mutations ?? raw?.slot?.mutations ?? raw?.data?.mutations ?? raw?.slot?.data?.mutations ?? raw?.pet?.mutations ?? null;
+      const name = slot?.name ?? raw?.name ?? raw?.petName ?? null;
+      const petSpecies = slot?.petSpecies ?? raw?.petSpecies ?? raw?.species ?? null;
+      const mutationsRaw = slot?.mutations ?? raw?.mutations ?? raw?.data?.mutations ?? raw?.slot?.data?.mutations ?? raw?.pet?.mutations ?? null;
       const mutations = Array.isArray(mutationsRaw) ? mutationsRaw.map((m) => String(m ?? "").trim()).filter(Boolean) : void 0;
       out.push({ id, name, petSpecies, mutations });
       if (out.length >= MAX_BUTTONS) break;

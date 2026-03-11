@@ -393,15 +393,17 @@ function normalizeActivePets(value: unknown): ActivePetSlot[] {
   for (const entry of list) {
     if (!entry || typeof entry !== "object") continue;
     const raw = entry as any;
-    const id = String(raw?.id ?? raw?.slot?.id ?? "").trim();
+    // Prefer slot.id when a slot wrapper exists (matches _activeSlotToPet in pets.ts)
+    const slot = raw?.slot && typeof raw.slot === "object" ? raw.slot : raw;
+    const id = String(slot?.id ?? "").trim();
     if (!id) continue;
-    const name = (raw?.name ?? raw?.petName ?? raw?.slot?.name ?? null) as string | null;
-    const petSpecies = (raw?.petSpecies ?? raw?.species ?? raw?.slot?.petSpecies ?? null) as
+    const name = (slot?.name ?? raw?.name ?? raw?.petName ?? null) as string | null;
+    const petSpecies = (slot?.petSpecies ?? raw?.petSpecies ?? raw?.species ?? null) as
       | string
       | null;
     const mutationsRaw =
+      slot?.mutations ??
       raw?.mutations ??
-      raw?.slot?.mutations ??
       raw?.data?.mutations ??
       raw?.slot?.data?.mutations ??
       raw?.pet?.mutations ??
