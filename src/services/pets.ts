@@ -85,6 +85,19 @@ const PATH_PETS_TEAM_SEARCH = "pets.teamSearch";
 const PATH_PETS_HOTKEYS = "pets.hotkeys";
 const PATH_PETS_ABILITY_LOGS = "pets.abilityLogs";
 
+/** Abilities that boost mutation chance based on weather — excluded from the pets logs. */
+const WEATHER_MUTATION_BOOST_IDS = new Set([
+  "ProduceMutationBoost",
+  "ProduceMutationBoostII",
+  "ProduceMutationBoostIII",
+  "DawnBoost",
+  "AmberMoonBoost",
+  "SnowyCropMutationBoost",
+  "PetMutationBoost",
+  "PetMutationBoostII",
+  "PetMutationBoostIII",
+]);
+
 /* -------------------------------- HOTKEYS ----------------------------------- */
 
 const TEAM_HK_MAP = new Map<string, Hotkey>();
@@ -1862,6 +1875,11 @@ export const PetsService = {
       const abilityId = (entry as any).abilityId ?? null;
       const performedAtNum = Number((entry as any).performedAt) || 0;
       if (!abilityId || !performedAtNum) continue;
+
+      if (WEATHER_MUTATION_BOOST_IDS.has(String(abilityId))) {
+        this._seenPerfByPet.set(petId, performedAtNum);
+        continue;
+      }
 
       const prev = this._seenPerfByPet.get(petId) || 0;
       if (performedAtNum <= prev) continue;
