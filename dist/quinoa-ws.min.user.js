@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.412
+// @version      3.1.415
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -4697,6 +4697,71 @@
       img.src = url;
     });
   }
+  function isKtx2Path(path) {
+    return typeof path === "string" && path.toLowerCase().endsWith(".ktx2");
+  }
+  function matchesManagedTexture(bt, imgName) {
+    if (!bt) return false;
+    const needle = imgName.toLowerCase();
+    if (typeof bt.label === "string" && bt.label.toLowerCase().includes(needle)) return true;
+    if (typeof bt.cacheId === "string" && bt.cacheId.toLowerCase().includes(needle)) return true;
+    const resUrl = bt.resource?.url || bt.resource?.src || bt.source?.url || bt.source?.src || "";
+    if (typeof resUrl === "string" && resUrl.toLowerCase().includes(needle)) return true;
+    if (Array.isArray(bt.textureCacheIds)) {
+      for (const id of bt.textureCacheIds) {
+        if (typeof id === "string" && id.toLowerCase().includes(needle)) return true;
+      }
+    }
+    return false;
+  }
+  function getManagedTextures(renderer) {
+    const candidates = [
+      renderer?.textureGC?.managedTextures,
+      renderer?.texture?.managedTextures,
+      renderer?.texture?._managedTextures,
+      renderer?.textureSystem?.managedTextures
+    ];
+    for (const list of candidates) {
+      if (Array.isArray(list) && list.length) return list;
+    }
+    return [];
+  }
+  async function loadKtx2AsTexture(imgName, renderer, ctors, timeoutMs = 15e3) {
+    const root = globalThis.unsafeWindow || globalThis;
+    const PIXI = root.PIXI;
+    if (PIXI?.Assets?.load) {
+      try {
+        return await PIXI.Assets.load({ src: imgName, loadParser: "loadTextures" });
+      } catch {
+      }
+    }
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const managed = getManagedTextures(renderer);
+      for (const bt of managed) {
+        if (matchesManagedTexture(bt, imgName)) {
+          if (ctors?.Texture && typeof bt.frame === "undefined" && typeof bt.width === "number") {
+            try {
+              return new ctors.Texture(bt);
+            } catch {
+            }
+          }
+          return bt;
+        }
+      }
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    if (ctors?.Texture?.from) {
+      for (const alias of [imgName, imgName.replace(/^.*\//, "")]) {
+        try {
+          const cached = ctors.Texture.from(alias);
+          if (cached && cached !== ctors.Texture.EMPTY) return cached;
+        } catch {
+        }
+      }
+    }
+    throw new Error(`KTX2 base texture not found in renderer for "${imgName}"`);
+  }
   function extractAtlasJsons(manifest) {
     const jsons = /* @__PURE__ */ new Set();
     for (const bundle of manifest.bundles || []) {
@@ -4740,10 +4805,15 @@
   }
   function mkSubTex(Texture, baseTex, frame, orig, trim, rotate, anchor) {
     let t;
+    const src = baseTex?.source ?? baseTex?.baseTexture ?? baseTex;
     try {
-      t = new Texture({ source: baseTex.source, frame, orig, trim: trim || void 0, rotate: rotate || 0 });
+      t = new Texture({ source: src, frame, orig, trim: trim || void 0, rotate: rotate || 0 });
     } catch {
-      t = new Texture(baseTex.baseTexture ?? baseTex, frame, orig, trim || void 0, rotate || 0);
+      try {
+        t = new Texture(src, frame, orig, trim || void 0, rotate || 0);
+      } catch {
+        t = new Texture(baseTex, frame, orig, trim || void 0, rotate || 0);
+      }
     }
     try {
       if (t && !t.label) t.label = frame?.width && frame?.height ? `sub:${frame.width}x${frame.height}` : "subtex";
@@ -5383,6 +5453,7 @@
       const frames = data.frames || {};
       if (!frames || !Object.keys(frames).length) continue;
       const imgPath = relPath(path, data.meta.image);
+      if (isKtx2Path(imgPath)) continue;
       const blob = blobs.get(imgPath);
       if (!blob) continue;
       let img;
@@ -5494,6 +5565,7 @@
       for (const [path, data] of Object.entries(atlasJsons)) {
         if (!isAtlas(data)) continue;
         const imgPath = relPath(path, data.meta.image);
+        if (isKtx2Path(imgPath)) continue;
         try {
           const blob = await getBlob(joinPath(base, imgPath));
           blobs.set(imgPath, blob);
@@ -5532,9 +5604,15 @@
     for (const [path, data] of Object.entries(atlasJsons)) {
       if (!isAtlas(data)) continue;
       const imgPath = relPath(path, data.meta.image);
-      const blob = usePrefetched?.blobs.get(imgPath) ?? usePrefetched?.blobs.get(relPath(path, data.meta.image)) ?? await getBlob(joinPath(base, imgPath));
-      const img = await blobToImage(blob);
-      const baseTex = ctors.Texture.from(img);
+      let baseTex;
+      if (isKtx2Path(imgPath)) {
+        const loaded = await loadKtx2AsTexture(imgPath, ctx.state.renderer, ctors);
+        baseTex = loaded;
+      } else {
+        const blob = usePrefetched?.blobs.get(imgPath) ?? await getBlob(joinPath(base, imgPath));
+        const img = await blobToImage(blob);
+        baseTex = ctors.Texture.from(img);
+      }
       buildAtlasTextures(data, baseTex, ctx.state.tex, ctx.state.atlasBases, {
         Texture: ctors.Texture,
         Rectangle: ctors.Rectangle

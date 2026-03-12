@@ -102,5 +102,5 @@ export interface SpriteContext {
 }
 
 export interface ManifestBundle {
-  bundles?: { assets?: { src?: string[] }[] }[];
+  bundles?: { name?: string; assets?: { alias?: string[]; src?: string[]; data?: Record<string, unknown> }[] }[];
 }

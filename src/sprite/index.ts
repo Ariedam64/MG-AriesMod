@@ -2,7 +2,7 @@ import { DEFAULT_CFG } from './settings';
 import { createSpriteContext } from './state';
 import { createPixiHooks, waitForPixi } from './pixi/hooks';
 import { getCtors } from './utils/pixi';
-import { getJSON, getBlob, blobToImage, loadAtlasJsons } from './data/assetFetcher';
+import { getJSON, getBlob, blobToImage, loadAtlasJsons, isKtx2Path, loadKtx2AsTexture } from './data/assetFetcher';
 import { buildAtlasTextures, isAtlas } from './pixi/atlasToTextures';
 import { buildItemsFromTextures } from './data/catalogIndexer';
 import { joinPath, relPath } from './utils/path';
@@ -71,6 +71,8 @@ async function warmupSpritesFromAtlases(
     const frames = data.frames || {};
     if (!frames || !Object.keys(frames).length) continue;
     const imgPath = relPath(path, data.meta.image);
+    // KTX2 blobs cannot be decoded to HTMLImageElement — skip canvas warmup for these.
+    if (isKtx2Path(imgPath)) continue;
     const blob = blobs.get(imgPath);
     if (!blob) continue;
     let img: HTMLImageElement;
@@ -195,9 +197,11 @@ async function prefetchAtlas(base: string): Promise<PrefetchedAtlas | null> {
     const atlasJsons = await loadAtlasJsons(base, manifest);
     const blobs = new Map<string, Blob>();
     // Fetch atlas images early (network is the heavy part; decoding happens later in loadTextures).
+    // KTX2 images are skipped here — they need PIXI's GPU pipeline and are loaded in loadTextures.
     for (const [path, data] of Object.entries<any>(atlasJsons)) {
       if (!isAtlas(data)) continue;
       const imgPath = relPath(path, data.meta.image);
+      if (isKtx2Path(imgPath)) continue;
       try {
         const blob = await getBlob(joinPath(base, imgPath));
         blobs.set(imgPath, blob);
@@ -243,12 +247,21 @@ async function loadTextures(base: string, prefetched?: PrefetchedAtlas | null) {
   for (const [path, data] of Object.entries<any>(atlasJsons)) {
     if (!isAtlas(data)) continue;
     const imgPath = relPath(path, data.meta.image);
-    const blob =
-      usePrefetched?.blobs.get(imgPath) ??
-      usePrefetched?.blobs.get(relPath(path, data.meta.image)) ??
-      (await getBlob(joinPath(base, imgPath)));
-    const img = await blobToImage(blob);
-    const baseTex = ctors.Texture.from(img);
+
+    let baseTex: any;
+    if (isKtx2Path(imgPath)) {
+      // KTX2 compressed texture — find the game's already-loaded base texture from the renderer.
+      const loaded: any = await loadKtx2AsTexture(imgPath, ctx.state.renderer, ctors);
+      baseTex = loaded;
+    } else {
+      // Standard image (webp/png) — existing blob → Image → Texture.from path.
+      const blob =
+        usePrefetched?.blobs.get(imgPath) ??
+        (await getBlob(joinPath(base, imgPath)));
+      const img = await blobToImage(blob);
+      baseTex = ctors.Texture.from(img);
+    }
+
     buildAtlasTextures(data, baseTex, ctx.state.tex, ctx.state.atlasBases, {
       Texture: ctors.Texture,
       Rectangle: ctors.Rectangle,

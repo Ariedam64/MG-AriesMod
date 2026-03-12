@@ -9,10 +9,16 @@ export function mkRect(Rectangle: any, x: number, y: number, w: number, h: numbe
 
 export function mkSubTex(Texture: any, baseTex: any, frame: any, orig: any, trim: any, rotate: number, anchor?: { x: number; y: number }) {
   let t: SpriteTexture;
+  // Resolve the TextureSource: baseTex may be a Texture (v7/v8), a BaseTexture (v7), or a TextureSource (v8).
+  const src = baseTex?.source ?? baseTex?.baseTexture ?? baseTex;
   try {
-    t = new Texture({ source: baseTex.source, frame, orig, trim: trim || undefined, rotate: rotate || 0 }) as any;
+    t = new Texture({ source: src, frame, orig, trim: trim || undefined, rotate: rotate || 0 }) as any;
   } catch {
-    t = new Texture(baseTex.baseTexture ?? baseTex, frame, orig, trim || undefined, rotate || 0) as any;
+    try {
+      t = new Texture(src, frame, orig, trim || undefined, rotate || 0) as any;
+    } catch {
+      t = new Texture(baseTex, frame, orig, trim || undefined, rotate || 0) as any;
+    }
   }
   try {
     if (t && !t.label) t.label = frame?.width && frame?.height ? `sub:${frame.width}x${frame.height}` : 'subtex';
