@@ -1,11 +1,11 @@
 // src/data/dynamic/logic/bundleParser.ts
 
 import { pageWindow } from "../../../utils/page-context";
-import { MAIN_BUNDLE_PATTERN } from "./constants";
+import { MAIN_BUNDLE_PATTERN, QUINOA_VIEW_PATTERN } from "./constants";
 
 const pageContext = pageWindow as Window & typeof globalThis;
 
-export function findMainBundleUrl(): string | null {
+function findBundleUrl(pattern: RegExp): string | null {
   // Try multiple document references (sandbox vs page context)
   const docs = [
     pageContext.document,
@@ -18,7 +18,7 @@ export function findMainBundleUrl(): string | null {
       const scripts = doc.querySelectorAll("script[src]");
       for (const script of scripts) {
         const src = (script as HTMLScriptElement).src || "";
-        if (MAIN_BUNDLE_PATTERN.test(src)) return src;
+        if (pattern.test(src)) return src;
       }
     } catch { }
 
@@ -27,12 +27,12 @@ export function findMainBundleUrl(): string | null {
       const links = doc.querySelectorAll('link[rel="modulepreload"]');
       for (const link of links) {
         const href = (link as HTMLLinkElement).href || "";
-        if (MAIN_BUNDLE_PATTERN.test(href)) return href;
+        if (pattern.test(href)) return href;
       }
     } catch { }
   }
 
-  // 3) Performance entries (works cross-context)
+  // 3) Performance entries (works cross-context; catches dynamically imported chunks too)
   const perfs = [
     pageContext.performance,
     typeof performance !== "undefined" ? performance : null,
@@ -42,12 +42,20 @@ export function findMainBundleUrl(): string | null {
     try {
       for (const entry of perf.getEntriesByType?.("resource") || []) {
         const name = entry?.name ? String(entry.name) : "";
-        if (MAIN_BUNDLE_PATTERN.test(name)) return name;
+        if (pattern.test(name)) return name;
       }
     } catch { }
   }
 
   return null;
+}
+
+export function findMainBundleUrl(): string | null {
+  return findBundleUrl(MAIN_BUNDLE_PATTERN);
+}
+
+export function findQuinoaViewUrl(): string | null {
+  return findBundleUrl(QUINOA_VIEW_PATTERN);
 }
 
 export function findAllIndices(haystack: string, needle: string): number[] {
@@ -109,32 +117,28 @@ export function extractBalancedObjectLiteral(text: string, anchorIndex: number):
   return extractBalancedBlock(text, braceStart);
 }
 
-let bundleCache: string | null = null;
-let bundleFetchInFlight: Promise<string | null> | null = null;
+async function fetchBundleByFinder(
+  findUrl: () => string | null,
+  cache: { value: string | null; inFlight: Promise<string | null> | null },
+  label: string,
+): Promise<string | null> {
+  if (cache.value) return cache.value;
+  if (cache.inFlight) return cache.inFlight;
 
-/**
- * Fetch main bundle text (cached).
- * Retries finding the URL up to several seconds since the game script
- * may not yet be in the DOM when the mod initializes.
- */
-export async function fetchMainBundle(): Promise<string | null> {
-  if (bundleCache) return bundleCache;
-  if (bundleFetchInFlight) return bundleFetchInFlight;
-
-  bundleFetchInFlight = (async () => {
-    // Retry finding the URL for up to 15s (script may load late)
+  cache.inFlight = (async () => {
+    // Retry finding the URL for up to 15s (script may load late / lazy-loaded chunk)
     const MAX_RETRIES = 30;
     const RETRY_INTERVAL = 500;
     let url: string | null = null;
 
     for (let i = 0; i < MAX_RETRIES; i++) {
-      url = findMainBundleUrl();
+      url = findUrl();
       if (url) break;
       await new Promise((r) => setTimeout(r, RETRY_INTERVAL));
     }
 
     if (!url) {
-      console.warn("[MGData] Could not find main bundle URL after retries");
+      console.warn(`[MGData] Could not find ${label} URL after retries`);
       return null;
     }
 
@@ -142,14 +146,30 @@ export async function fetchMainBundle(): Promise<string | null> {
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) return null;
       const text = await res.text();
-      bundleCache = text;
+      cache.value = text;
       return text;
     } catch {
       return null;
     } finally {
-      bundleFetchInFlight = null;
+      cache.inFlight = null;
     }
   })();
 
-  return bundleFetchInFlight;
+  return cache.inFlight;
+}
+
+const mainBundleCache = { value: null as string | null, inFlight: null as Promise<string | null> | null };
+const quinoaViewCache = { value: null as string | null, inFlight: null as Promise<string | null> | null };
+
+export function fetchMainBundle(): Promise<string | null> {
+  return fetchBundleByFinder(findMainBundleUrl, mainBundleCache, "main bundle");
+}
+
+/**
+ * Fetch QuinoaView chunk text (cached).
+ * This chunk is lazily loaded by the game — it appears in performance resource
+ * entries once the game view has rendered. Retries for up to 15 s.
+ */
+export function fetchQuinoaViewBundle(): Promise<string | null> {
+  return fetchBundleByFinder(findQuinoaViewUrl, quinoaViewCache, "QuinoaView bundle");
 }

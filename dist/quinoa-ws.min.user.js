@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.415
+// @version      3.1.420
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -4499,6 +4499,39 @@
   }
 
   // src/sprite/pixi/hooks.ts
+  function mkSyntheticApp(renderer) {
+    const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
+    const listeners5 = /* @__PURE__ */ new Set();
+    let rafId = 0;
+    let last = 0;
+    const tick = (now2) => {
+      const delta = last ? (now2 - last) / (1e3 / 60) : 1;
+      last = now2;
+      for (const fn of listeners5) {
+        try {
+          fn(delta);
+        } catch {
+        }
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+    const ticker = {
+      add(fn) {
+        if (!listeners5.size) {
+          rafId = requestAnimationFrame(tick);
+        }
+        listeners5.add(fn);
+      },
+      remove(fn) {
+        listeners5.delete(fn);
+        if (!listeners5.size) {
+          cancelAnimationFrame(rafId);
+        }
+      },
+      deltaMS: 16.67
+    };
+    return { renderer, stage, ticker };
+  }
   function createPixiHooks() {
     let appResolver;
     let rdrResolver;
@@ -4507,6 +4540,20 @@
     let APP = null;
     let RDR = null;
     let PIXI_VER = null;
+    const resolveApp = (a) => {
+      if (!APP) {
+        APP = a;
+        appResolver(a);
+      }
+    };
+    const resolveRdr = (r, v) => {
+      if (!RDR) {
+        RDR = r;
+        if (v) PIXI_VER = v;
+        rdrResolver(r);
+      }
+      resolveApp(APP ?? mkSyntheticApp(r));
+    };
     const hook = (name, cb) => {
       const root = globalThis.unsafeWindow || globalThis;
       const prev = root[name];
@@ -4524,34 +4571,24 @@
       };
     };
     hook("__PIXI_APP_INIT__", (a, v) => {
-      if (!APP) {
-        APP = a;
-        PIXI_VER = v;
-        appResolver(a);
-      }
+      if (v) PIXI_VER = v;
+      resolveApp(a);
     });
-    hook("__PIXI_RENDERER_INIT__", (r, v) => {
-      if (!RDR) {
-        RDR = r;
-        PIXI_VER = v;
-        rdrResolver(r);
-      }
-    });
+    hook("__PIXI_RENDERER_INIT__", (r, v) => resolveRdr(r, v));
     const tryResolveExisting = () => {
       const root = globalThis.unsafeWindow || globalThis;
+      const devtools = root.__PIXI_DEVTOOLS__;
+      if (devtools?.renderers?.size > 0) {
+        const rdr = [...devtools.renderers][0];
+        if (rdr) resolveRdr(rdr);
+      }
       if (!APP) {
         const maybeApp = root.__PIXI_APP__ || root.PIXI_APP || root.app;
-        if (maybeApp) {
-          APP = maybeApp;
-          appResolver(APP);
-        }
+        if (maybeApp?.renderer) resolveApp(maybeApp);
       }
       if (!RDR) {
-        const maybeRdr = root.__PIXI_RENDERER__ || root.PIXI_RENDERER__ || root.renderer || APP?.renderer;
-        if (maybeRdr) {
-          RDR = maybeRdr;
-          rdrResolver(RDR);
-        }
+        const maybeRdr = root.__PIXI_RENDERER__ || root.renderer || APP?.renderer;
+        if (maybeRdr) resolveRdr(maybeRdr);
       }
     };
     tryResolveExisting();
@@ -4604,14 +4641,10 @@
     }
     return null;
   }
-  function getCtors(app) {
-    const P = globalThis.PIXI || globalThis.unsafeWindow?.PIXI;
-    if (P?.Texture && P?.Sprite && P?.Container && P?.Rectangle) {
-      return { Container: P.Container, Sprite: P.Sprite, Texture: P.Texture, Rectangle: P.Rectangle, Text: P.Text || null };
-    }
-    const stage = app?.stage;
+  function ctorsFromStage(stage) {
+    if (!stage) return null;
     const anySpr = findAny(stage, (x) => x?.texture?.frame && x?.constructor && x?.texture?.constructor && x?.texture?.frame?.constructor);
-    if (!anySpr) throw new Error("No Sprite found (ctors).");
+    if (!anySpr) return null;
     const anyTxt = findAny(stage, (x) => (typeof x?.text === "string" || typeof x?.text === "number") && x?.style);
     return {
       Container: stage.constructor,
@@ -4620,6 +4653,19 @@
       Rectangle: anySpr.texture.frame.constructor,
       Text: anyTxt?.constructor || null
     };
+  }
+  function getCtors(app) {
+    const root = globalThis.unsafeWindow || globalThis;
+    const P = root.PIXI;
+    if (P?.Texture && P?.Sprite && P?.Container && P?.Rectangle) {
+      return { Container: P.Container, Sprite: P.Sprite, Texture: P.Texture, Rectangle: P.Rectangle, Text: P.Text || null };
+    }
+    const renderer = app?.renderer ?? app;
+    for (const candidate of [app?.stage, renderer?.lastObjectRendered, renderer?.stage]) {
+      const hit = ctorsFromStage(candidate);
+      if (hit) return hit;
+    }
+    throw new Error("No Sprite found (ctors) \u2014 PIXI not exposed and stage not yet rendered.");
   }
   var baseTexOf = (tex) => tex?.baseTexture ?? tex?.source?.baseTexture ?? tex?.source ?? tex?._baseTexture ?? null;
   function rememberBaseTex(tex, atlasBases) {
@@ -5682,8 +5728,21 @@
     }
     const { app, renderer: _renderer, version: pixiVersion } = await resolvePixiFast();
     await ensureDocumentReady();
-    ctx.state.ctors = getCtors(app);
     const renderer = _renderer || app?.renderer || app?.render || null;
+    ctx.state.ctors = await (async () => {
+      const deadline = Date.now() + 1e4;
+      while (Date.now() < deadline) {
+        try {
+          return getCtors(app);
+        } catch {
+        }
+        if (app && !app.stage && renderer?.lastObjectRendered) {
+          app.stage = renderer.lastObjectRendered;
+        }
+        await delay(100);
+      }
+      return getCtors(app);
+    })();
     ctx.state.app = app;
     ctx.state.renderer = renderer;
     ctx.state.version = pixiVersion || version || version === "" ? pixiVersion ?? version : detectGameVersion();
@@ -5976,6 +6035,7 @@
   };
   var WEATHER_IDS = ["Rain", "Frost", "Thunderstorm", "Dawn", "AmberMoon"];
   var MAIN_BUNDLE_PATTERN = /main-[^/]+\.js(\?|$)/;
+  var QUINOA_VIEW_PATTERN = /QuinoaView-[^/]+\.js(\?|$)/;
   var MAX_SCAN_DEPTH = 6;
   var MAX_SCAN_ATTEMPTS = 150;
   var PULSE_SCAN_INTERVAL_MS = 2e3;
@@ -6144,7 +6204,7 @@
   // src/data/dynamic/logic/bundleParser.ts
   init_page_context();
   var pageContext2 = pageWindow;
-  function findMainBundleUrl() {
+  function findBundleUrl(pattern) {
     const docs = [
       pageContext2.document,
       typeof document !== "undefined" ? document : null
@@ -6154,7 +6214,7 @@
         const scripts = doc.querySelectorAll("script[src]");
         for (const script of scripts) {
           const src = script.src || "";
-          if (MAIN_BUNDLE_PATTERN.test(src)) return src;
+          if (pattern.test(src)) return src;
         }
       } catch {
       }
@@ -6162,7 +6222,7 @@
         const links = doc.querySelectorAll('link[rel="modulepreload"]');
         for (const link of links) {
           const href = link.href || "";
-          if (MAIN_BUNDLE_PATTERN.test(href)) return href;
+          if (pattern.test(href)) return href;
         }
       } catch {
       }
@@ -6175,12 +6235,18 @@
       try {
         for (const entry of perf.getEntriesByType?.("resource") || []) {
           const name = entry?.name ? String(entry.name) : "";
-          if (MAIN_BUNDLE_PATTERN.test(name)) return name;
+          if (pattern.test(name)) return name;
         }
       } catch {
       }
     }
     return null;
+  }
+  function findMainBundleUrl() {
+    return findBundleUrl(MAIN_BUNDLE_PATTERN);
+  }
+  function findQuinoaViewUrl() {
+    return findBundleUrl(QUINOA_VIEW_PATTERN);
   }
   function findAllIndices(haystack, needle) {
     const out = [];
@@ -6231,37 +6297,43 @@
     if (braceStart < 0 || braceStart > anchorIndex) return null;
     return extractBalancedBlock(text, braceStart);
   }
-  var bundleCache = null;
-  var bundleFetchInFlight = null;
-  async function fetchMainBundle() {
-    if (bundleCache) return bundleCache;
-    if (bundleFetchInFlight) return bundleFetchInFlight;
-    bundleFetchInFlight = (async () => {
+  async function fetchBundleByFinder(findUrl, cache2, label2) {
+    if (cache2.value) return cache2.value;
+    if (cache2.inFlight) return cache2.inFlight;
+    cache2.inFlight = (async () => {
       const MAX_RETRIES = 30;
       const RETRY_INTERVAL = 500;
       let url = null;
       for (let i = 0; i < MAX_RETRIES; i++) {
-        url = findMainBundleUrl();
+        url = findUrl();
         if (url) break;
         await new Promise((r) => setTimeout(r, RETRY_INTERVAL));
       }
       if (!url) {
-        console.warn("[MGData] Could not find main bundle URL after retries");
+        console.warn(`[MGData] Could not find ${label2} URL after retries`);
         return null;
       }
       try {
         const res = await fetch(url, { credentials: "include" });
         if (!res.ok) return null;
         const text = await res.text();
-        bundleCache = text;
+        cache2.value = text;
         return text;
       } catch {
         return null;
       } finally {
-        bundleFetchInFlight = null;
+        cache2.inFlight = null;
       }
     })();
-    return bundleFetchInFlight;
+    return cache2.inFlight;
+  }
+  var mainBundleCache = { value: null, inFlight: null };
+  var quinoaViewCache = { value: null, inFlight: null };
+  function fetchMainBundle() {
+    return fetchBundleByFinder(findMainBundleUrl, mainBundleCache, "main bundle");
+  }
+  function fetchQuinoaViewBundle() {
+    return fetchBundleByFinder(findQuinoaViewUrl, quinoaViewCache, "QuinoaView bundle");
   }
 
   // src/data/dynamic/logic/weather.ts
@@ -6307,21 +6379,32 @@
     if (objStart < 0) return null;
     return extractBalancedBlock(text, objStart);
   }
+  var Q_CATEGORY_PATH = {
+    Animation: "animation",
+    Decor: "decor",
+    Item: "item",
+    MutationOverlay: "mutation-overlay",
+    Mutation: "mutation",
+    Object: "object",
+    Pet: "pet",
+    Plant: "plant",
+    Ui: "ui"
+  };
   function normalizeWeatherLiteral(literal) {
-    return literal.replace(/\[([A-Za-z_$][\w$]*)\.(Rain|Frost|Dawn|AmberMoon|Thunderstorm)\]/g, '"$2"').replace(/\b[A-Za-z_$][\w$]*\.(Hydro|Lunar)\b/g, '"$1"').replace(/\b[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*\.([A-Za-z_$][\w$]*Icon)\b/g, '"$1"').replace(/\b[A-Za-z_$][\w$]*\.(Rain|Frost|Dawn|AmberMoon|Thunderstorm)\b/g, '"$1"').replace(/\b[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*){2,}\b/g, (match) => {
+    return literal.replace(/\[([A-Za-z_$][\w$]*)\.(Rain|Frost|Dawn|AmberMoon|Thunderstorm)\]/g, '"$2"').replace(/\b[A-Za-z_$][\w$]*\.(Hydro|Lunar)\b/g, '"$1"').replace(
+      /\bq\.(Animation|Decor|Item|MutationOverlay|Mutation|Object|Pet|Plant|Ui)\.([A-Za-z_$][\w$]*)\b/g,
+      (_, cat, name) => `"sprite/${Q_CATEGORY_PATH[cat] ?? cat.toLowerCase()}/${name}"`
+    ).replace(/\b[A-Za-z_$][\w$]*\.(Rain|Frost|Dawn|AmberMoon|Thunderstorm)\b/g, '"$1"').replace(/\b[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*){2,}\b/g, (match) => {
       const last = match.split(".").pop() || match;
       return `"${last}"`;
     });
   }
-  async function loadWeatherFromBundle() {
-    if (captureState.data.weather) return true;
-    const bundleText = await fetchMainBundle();
-    if (!bundleText) return false;
+  function tryExtractWeatherFromText(bundleText) {
     const anchors = [];
-    const amberIdx = bundleText.indexOf('name:"Amber Moon"');
-    if (amberIdx >= 0) anchors.push(amberIdx);
-    const amberIdx2 = bundleText.indexOf('name:"Amber Moon"');
-    if (amberIdx2 >= 0 && amberIdx2 !== amberIdx) anchors.push(amberIdx2);
+    for (const needle of ['name:"Amber Moon"', "name:`Amber Moon`"]) {
+      const idx = bundleText.indexOf(needle);
+      if (idx >= 0) anchors.push(idx);
+    }
     const cpIdx = bundleText.indexOf("chancePerMinutePerCrop");
     if (cpIdx >= 0) anchors.push(cpIdx);
     const mutIdx = bundleText.indexOf("mutator");
@@ -6340,6 +6423,17 @@
       if (!weatherCatalog3) continue;
       captureState.data.weather = weatherCatalog3;
       return true;
+    }
+    return false;
+  }
+  async function loadWeatherFromBundle() {
+    if (captureState.data.weather) return true;
+    const [quinoaText, mainText] = await Promise.all([
+      fetchQuinoaViewBundle(),
+      fetchMainBundle()
+    ]);
+    for (const text of [quinoaText, mainText]) {
+      if (text && tryExtractWeatherFromText(text)) return true;
     }
     return false;
   }
@@ -53725,30 +53819,44 @@ next: ${next}`;
     "\u{1F506}",
     "\u{1F52E}"
   ];
-  var lockerSeedOptions = Object.entries(
-    plantCatalog2
-  ).map(([key2, def]) => ({
-    key: key2,
-    seedName: def?.seed?.name ?? "",
-    cropName: def?.crop?.name ?? ""
-  }));
-  var lockerSeedEmojiByKey = /* @__PURE__ */ new Map();
-  var lockerSeedEmojiBySeedName = /* @__PURE__ */ new Map();
-  lockerSeedOptions.forEach((opt, index) => {
-    const emoji = SEED_EMOJIS[index % SEED_EMOJIS.length];
-    lockerSeedEmojiByKey.set(opt.key, emoji);
-    if (opt.seedName) {
-      lockerSeedEmojiBySeedName.set(opt.seedName, emoji);
+  function buildLockerSeedOptions() {
+    return Object.entries(plantCatalog2).map(([key2, def]) => ({
+      key: key2,
+      seedName: def?.seed?.name ?? "",
+      cropName: def?.crop?.name ?? ""
+    }));
+  }
+  function buildLockerEmojiMaps(options) {
+    const byKey = /* @__PURE__ */ new Map();
+    const bySeedName = /* @__PURE__ */ new Map();
+    options.forEach((opt, index) => {
+      const emoji = SEED_EMOJIS[index % SEED_EMOJIS.length];
+      byKey.set(opt.key, emoji);
+      if (opt.seedName) bySeedName.set(opt.seedName, emoji);
+    });
+    return { byKey, bySeedName };
+  }
+  var _lockerOptionsCache = null;
+  var _lockerEmojiByKey = null;
+  var _lockerEmojisBySeedName = null;
+  function getLockerCache() {
+    const options = buildLockerSeedOptions();
+    if (!_lockerOptionsCache || options.length !== _lockerOptionsCache.length) {
+      _lockerOptionsCache = options;
+      const maps = buildLockerEmojiMaps(options);
+      _lockerEmojiByKey = maps.byKey;
+      _lockerEmojisBySeedName = maps.bySeedName;
     }
-  });
-  var getLockerSeedOptions = () => lockerSeedOptions;
+    return { options: _lockerOptionsCache, byKey: _lockerEmojiByKey, bySeedName: _lockerEmojisBySeedName };
+  }
+  var getLockerSeedOptions = () => getLockerCache().options;
   var getLockerSeedEmojiForKey = (key2) => {
     if (!key2) return void 0;
-    return lockerSeedEmojiByKey.get(key2) ?? "\u2022";
+    return getLockerCache().byKey.get(key2) ?? "\u2022";
   };
   var getLockerSeedEmojiForSeedName = (name) => {
     if (!name) return void 0;
-    return lockerSeedEmojiBySeedName.get(name) ?? "\u2022";
+    return getLockerCache().bySeedName.get(name) ?? "\u2022";
   };
   function formatMutationLabel(key2) {
     const spaced = key2.replace(/_/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/\s+/g, " ").trim();

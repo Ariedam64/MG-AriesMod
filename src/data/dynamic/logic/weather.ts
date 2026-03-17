@@ -2,7 +2,7 @@
 
 import { captureState } from "../state";
 import { WEATHER_IDS, MAX_WEATHER_POLL_ATTEMPTS, WEATHER_POLL_INTERVAL_MS } from "./constants";
-import { fetchMainBundle, extractBalancedBlock, extractBalancedObjectLiteral } from "./bundleParser";
+import { fetchMainBundle, fetchQuinoaViewBundle, extractBalancedBlock, extractBalancedObjectLiteral } from "./bundleParser";
 
 function buildWeather(data: Record<string, unknown>): Record<string, unknown> | null {
   const out: Record<string, unknown> = {};
@@ -57,14 +57,31 @@ function extractWeatherObject(text: string, anchorPos: number): string | null {
   return extractBalancedBlock(text, objStart);
 }
 
+// Maps the q sprite registry category names to their atlas path segments.
+const Q_CATEGORY_PATH: Record<string, string> = {
+  Animation: "animation",
+  Decor: "decor",
+  Item: "item",
+  MutationOverlay: "mutation-overlay",
+  Mutation: "mutation",
+  Object: "object",
+  Pet: "pet",
+  Plant: "plant",
+  Ui: "ui",
+};
+
 function normalizeWeatherLiteral(literal: string): string {
   return literal
     // Computed property keys: [ze.Rain] → "Rain"
     .replace(/\[([A-Za-z_$][\w$]*)\.(Rain|Frost|Dawn|AmberMoon|Thunderstorm)\]/g, '"$2"')
     // groupId enum refs: Id.Hydro → "Hydro", Id.Lunar → "Lunar"
     .replace(/\b[A-Za-z_$][\w$]*\.(Hydro|Lunar)\b/g, '"$1"')
-    // Sprite key refs: R.Ui.RainIcon → "RainIcon" (multi-level property access)
-    .replace(/\b[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*\.([A-Za-z_$][\w$]*Icon)\b/g, '"$1"')
+    // q sprite registry refs: q.Ui.RainIcon → "sprite/ui/RainIcon"
+    // MutationOverlay must be listed before Mutation to avoid partial match.
+    .replace(
+      /\bq\.(Animation|Decor|Item|MutationOverlay|Mutation|Object|Pet|Plant|Ui)\.([A-Za-z_$][\w$]*)\b/g,
+      (_, cat, name) => `"sprite/${Q_CATEGORY_PATH[cat] ?? cat.toLowerCase()}/${name}"`,
+    )
     // Any remaining single-level weather enum refs: ze.Rain → "Rain"
     .replace(/\b[A-Za-z_$][\w$]*\.(Rain|Frost|Dawn|AmberMoon|Thunderstorm)\b/g, '"$1"')
     // Catch-all: any remaining identifier.identifier.identifier that would break eval
@@ -75,20 +92,15 @@ function normalizeWeatherLiteral(literal: string): string {
     });
 }
 
-async function loadWeatherFromBundle(): Promise<boolean> {
-  if (captureState.data.weather) return true;
-
-  const bundleText = await fetchMainBundle();
-  if (!bundleText) return false;
-
+function tryExtractWeatherFromText(bundleText: string): boolean {
   // Try multiple anchor strategies to find the weather object
   const anchors: number[] = [];
 
-  // Strategy 1: find "Amber Moon" (unique to weather)
-  const amberIdx = bundleText.indexOf('name:"Amber Moon"');
-  if (amberIdx >= 0) anchors.push(amberIdx);
-  const amberIdx2 = bundleText.indexOf("name:\"Amber Moon\"");
-  if (amberIdx2 >= 0 && amberIdx2 !== amberIdx) anchors.push(amberIdx2);
+  // Strategy 1: find "Amber Moon" (unique to weather) — double-quoted or template literal
+  for (const needle of ['name:"Amber Moon"', "name:`Amber Moon`"]) {
+    const idx = bundleText.indexOf(needle);
+    if (idx >= 0) anchors.push(idx);
+  }
 
   // Strategy 2: find chancePerMinutePerCrop (unique to weather mutator)
   const cpIdx = bundleText.indexOf("chancePerMinutePerCrop");
@@ -118,6 +130,23 @@ async function loadWeatherFromBundle(): Promise<boolean> {
 
     captureState.data.weather = weatherCatalog;
     return true;
+  }
+
+  return false;
+}
+
+async function loadWeatherFromBundle(): Promise<boolean> {
+  if (captureState.data.weather) return true;
+
+  // Fetch both bundles in parallel — weather data may be in either one depending on game version.
+  // QuinoaView is a lazily-loaded chunk; it appears in performance entries once rendered.
+  const [quinoaText, mainText] = await Promise.all([
+    fetchQuinoaViewBundle(),
+    fetchMainBundle(),
+  ]);
+
+  for (const text of [quinoaText, mainText]) {
+    if (text && tryExtractWeatherFromText(text)) return true;
   }
 
   return false;

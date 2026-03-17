@@ -14,6 +14,7 @@ export const SIGNATURE_KEYS: Record<CapturedDataKey, readonly string[]> = {
 
 export const WEATHER_IDS = ["Rain", "Frost", "Thunderstorm", "Dawn", "AmberMoon"] as const;
 export const MAIN_BUNDLE_PATTERN = /main-[^/]+\.js(\?|$)/;
+export const QUINOA_VIEW_PATTERN = /QuinoaView-[^/]+\.js(\?|$)/;
 
 export const MAX_SCAN_DEPTH = 6;
 export const MAX_SCAN_ATTEMPTS = 150;

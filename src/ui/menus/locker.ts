@@ -70,35 +70,53 @@ const SEED_EMOJIS = [
   "🔮",
 ];
 
-const lockerSeedOptions: LockerSeedOption[] = Object.entries(
-  plantCatalog as Record<string, any>,
-).map(([key, def]) => ({
-  key,
-  seedName: def?.seed?.name ?? "",
-  cropName: def?.crop?.name ?? "",
-}));
+function buildLockerSeedOptions(): LockerSeedOption[] {
+  return Object.entries(plantCatalog as Record<string, any>).map(([key, def]) => ({
+    key,
+    seedName: def?.seed?.name ?? "",
+    cropName: def?.crop?.name ?? "",
+  }));
+}
 
-const lockerSeedEmojiByKey = new Map<string, string>();
-const lockerSeedEmojiBySeedName = new Map<string, string>();
+function buildLockerEmojiMaps(options: LockerSeedOption[]): {
+  byKey: Map<string, string>;
+  bySeedName: Map<string, string>;
+} {
+  const byKey = new Map<string, string>();
+  const bySeedName = new Map<string, string>();
+  options.forEach((opt, index) => {
+    const emoji = SEED_EMOJIS[index % SEED_EMOJIS.length];
+    byKey.set(opt.key, emoji);
+    if (opt.seedName) bySeedName.set(opt.seedName, emoji);
+  });
+  return { byKey, bySeedName };
+}
 
-lockerSeedOptions.forEach((opt, index) => {
-  const emoji = SEED_EMOJIS[index % SEED_EMOJIS.length];
-  lockerSeedEmojiByKey.set(opt.key, emoji);
-  if (opt.seedName) {
-    lockerSeedEmojiBySeedName.set(opt.seedName, emoji);
+let _lockerOptionsCache: LockerSeedOption[] | null = null;
+let _lockerEmojiByKey: Map<string, string> | null = null;
+let _lockerEmojisBySeedName: Map<string, string> | null = null;
+
+function getLockerCache(): { options: LockerSeedOption[]; byKey: Map<string, string>; bySeedName: Map<string, string> } {
+  const options = buildLockerSeedOptions();
+  if (!_lockerOptionsCache || options.length !== _lockerOptionsCache.length) {
+    _lockerOptionsCache = options;
+    const maps = buildLockerEmojiMaps(options);
+    _lockerEmojiByKey = maps.byKey;
+    _lockerEmojisBySeedName = maps.bySeedName;
   }
-});
+  return { options: _lockerOptionsCache, byKey: _lockerEmojiByKey!, bySeedName: _lockerEmojisBySeedName! };
+}
 
-export const getLockerSeedOptions = (): LockerSeedOption[] => lockerSeedOptions;
+export const getLockerSeedOptions = (): LockerSeedOption[] => getLockerCache().options;
 
 export const getLockerSeedEmojiForKey = (key: string | undefined): string | undefined => {
   if (!key) return undefined;
-  return lockerSeedEmojiByKey.get(key) ?? "•";
+  return getLockerCache().byKey.get(key) ?? "•";
 };
 
 export const getLockerSeedEmojiForSeedName = (name: string | undefined): string | undefined => {
   if (!name) return undefined;
-  return lockerSeedEmojiBySeedName.get(name) ?? "•";
+  return getLockerCache().bySeedName.get(name) ?? "•";
 };
 
 type LockerSettingsState = {

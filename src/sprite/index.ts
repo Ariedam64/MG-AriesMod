@@ -348,8 +348,22 @@ async function start() {
   const { app, renderer: _renderer, version: pixiVersion } = await resolvePixiFast();
   await ensureDocumentReady();
 
-  ctx.state.ctors = getCtors(app);
   const renderer = _renderer || (app as any)?.renderer || (app as any)?.render || null;
+
+  // getCtors needs at least one rendered frame (lastObjectRendered) when the game
+  // uses a bare Renderer without Application.  Retry for up to 10 s.
+  ctx.state.ctors = await (async () => {
+    const deadline = Date.now() + 10_000;
+    while (Date.now() < deadline) {
+      try { return getCtors(app); } catch { /* stage not ready yet */ }
+      // Update synthetic app.stage from renderer so the next try finds it.
+      if (app && !app.stage && renderer?.lastObjectRendered) {
+        app.stage = renderer.lastObjectRendered;
+      }
+      await delay(100);
+    }
+    return getCtors(app); // final attempt — throws if still failing
+  })();
   ctx.state.app = app;
   ctx.state.renderer = renderer;
   ctx.state.version = pixiVersion || version || version === '' ? (pixiVersion ?? version) : detectGameVersion();
