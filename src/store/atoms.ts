@@ -143,7 +143,7 @@ export const myPossiblyNoLongerValidSelectedItemIndex = makeAtom<number | null>(
 
 export const myCurrentGardenObject = makeAtom<CurrentGardenObject>("myCurrentGardenObjectAtom");
 export const myCurrentSortedGrowSlotIndices = makeAtom<number[] | null>("myCurrentSortedGrowSlotIndicesAtom");
-export const myCurrentGrowSlotIndex = makeAtom<number | null>("myCurrentGrowSlotIndexAtom");
+export const myCurrentGrowSlotIndex = makeAtom<number | null>("mySelectedSlotIdAtom");
 
 export const myOwnCurrentGardenObject = makeAtom<any>("myOwnCurrentGardenObjectAtom")
 export const isCurrentGrowSlotMature = makeAtom<any>("isCurrentGrowSlotMatureAtom")

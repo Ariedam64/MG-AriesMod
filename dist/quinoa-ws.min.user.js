@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.420
+// @version      3.1.421
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -1302,7 +1302,7 @@
       myPossiblyNoLongerValidSelectedItemIndex = makeAtom("myPossiblyNoLongerValidSelectedItemIndexAtom");
       myCurrentGardenObject = makeAtom("myCurrentGardenObjectAtom");
       myCurrentSortedGrowSlotIndices = makeAtom("myCurrentSortedGrowSlotIndicesAtom");
-      myCurrentGrowSlotIndex = makeAtom("myCurrentGrowSlotIndexAtom");
+      myCurrentGrowSlotIndex = makeAtom("mySelectedSlotIdAtom");
       myOwnCurrentGardenObject = makeAtom("myOwnCurrentGardenObjectAtom");
       isCurrentGrowSlotMature = makeAtom("isCurrentGrowSlotMatureAtom");
       myOwnCurrentDirtTileIndex = makeAtom("myOwnCurrentDirtTileIndexAtom");
