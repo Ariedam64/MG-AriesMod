@@ -22,6 +22,8 @@ import { EditorService } from "./services/editor";
 
 import { initGameVersion } from "./utils/gameVersion";
 import { MGVersion } from "./utils/mgVersion";
+import { MGData } from "./data/dynamic";
+import { shareGlobal } from "./utils/page-context";
 
 import { warmupSpriteCache } from "./ui/spriteIconCache";
 import { tos } from "./utils/tileObjectSystemApi";
@@ -47,6 +49,8 @@ import {
   }
 
   installPageWebSocketHook();
+  MGData.init();
+  shareGlobal("MGData", MGData);
   initGameVersion();
   MGVersion.prefetch();
 

@@ -2792,6 +2792,12 @@ function createOverridesTabRenderer(ui: Menu, store: LockerMenuStore): LockerTab
 
   const unsubscribe = store.subscribe(refresh);
 
+  const onDataUpdated = (e: Event) => {
+    const key = (e as CustomEvent<{ key: string }>).detail?.key;
+    if (key === "plants") renderList();
+  };
+  window.addEventListener("gemini:data-updated", onDataUpdated);
+
   const render = (view: HTMLElement) => {
     view.innerHTML = "";
     view.append(layout);
@@ -2800,7 +2806,10 @@ function createOverridesTabRenderer(ui: Menu, store: LockerMenuStore): LockerTab
 
   return {
     render,
-    destroy: () => unsubscribe(),
+    destroy: () => {
+      unsubscribe();
+      window.removeEventListener("gemini:data-updated", onDataUpdated);
+    },
   };
 }
 

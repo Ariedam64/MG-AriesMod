@@ -1052,8 +1052,6 @@ export async function renderCalculatorMenu(container: HTMLElement) {
 
     const states = new Map<string, CalculatorState>();
     const optionByKey = new Map<string, LockerSeedOption>();
-    const options = getLockerSeedOptions();
-    options.forEach(opt => optionByKey.set(opt.key, opt));
 
     const getStateForKey = (key: string): CalculatorState => {
       const existing = states.get(key);
@@ -1249,6 +1247,9 @@ export async function renderCalculatorMenu(container: HTMLElement) {
     });
 
     function renderList(): void {
+      const options = getLockerSeedOptions();
+      optionByKey.clear();
+      options.forEach(opt => optionByKey.set(opt.key, opt));
       const previous = list.scrollTop;
       list.innerHTML = "";
       listButtons.clear();
@@ -1264,12 +1265,12 @@ export async function renderCalculatorMenu(container: HTMLElement) {
       }
 
       if (selectedKey && !options.some(opt => opt.key === selectedKey)) {
-        selectedKey = options[0].key;
+        selectedKey = options[0]!.key;
         currentMaxScale = getMaxScaleForSpecies(selectedKey);
       }
 
       if (!selectedKey) {
-        selectedKey = options[0].key;
+        selectedKey = options[0]!.key;
         currentMaxScale = getMaxScaleForSpecies(selectedKey);
       }
 
@@ -1330,6 +1331,12 @@ export async function renderCalculatorMenu(container: HTMLElement) {
     }
 
     renderList();
+
+    const onDataUpdated = (e: Event) => {
+      const key = (e as CustomEvent<{ key: string }>).detail?.key;
+      if (key === "plants") renderList();
+    };
+    window.addEventListener("gemini:data-updated", onDataUpdated);
   });
 
   ui.mount(container);

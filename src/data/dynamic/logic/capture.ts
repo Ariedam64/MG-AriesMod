@@ -12,6 +12,12 @@ function setCapturedData(key: CapturedDataKey, value: Record<string, unknown>): 
   if (captureState.data[key] != null) return;
   captureState.data[key] = value;
 
+  try {
+    window.dispatchEvent(new CustomEvent("gemini:data-updated", { detail: { key } }));
+  } catch {
+    /* ignore in non-browser contexts */
+  }
+
   if (isAllDataCaptured()) {
     restoreObjectHooks();
   }

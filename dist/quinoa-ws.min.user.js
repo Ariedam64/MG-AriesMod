@@ -6050,6 +6050,10 @@
   function setCapturedData(key2, value) {
     if (captureState.data[key2] != null) return;
     captureState.data[key2] = value;
+    try {
+      window.dispatchEvent(new CustomEvent("gemini:data-updated", { detail: { key: key2 } }));
+    } catch {
+    }
     if (isAllDataCaptured()) {
       restoreObjectHooks();
     }
@@ -56096,6 +56100,11 @@ next: ${next}`;
       renderDetail();
     };
     const unsubscribe2 = store.subscribe(refresh);
+    const onDataUpdated = (e) => {
+      const key2 = e.detail?.key;
+      if (key2 === "plants") renderList();
+    };
+    window.addEventListener("gemini:data-updated", onDataUpdated);
     const render2 = (view) => {
       view.innerHTML = "";
       view.append(layout);
@@ -56103,7 +56112,10 @@ next: ${next}`;
     };
     return {
       render: render2,
-      destroy: () => unsubscribe2()
+      destroy: () => {
+        unsubscribe2();
+        window.removeEventListener("gemini:data-updated", onDataUpdated);
+      }
     };
   }
   async function renderLockerMenu(container) {
@@ -57004,8 +57016,6 @@ next: ${next}`;
       };
       const states = /* @__PURE__ */ new Map();
       const optionByKey = /* @__PURE__ */ new Map();
-      const options = getLockerSeedOptions();
-      options.forEach((opt) => optionByKey.set(opt.key, opt));
       const getStateForKey = (key2) => {
         const existing = states.get(key2);
         if (existing) return existing;
@@ -57172,6 +57182,9 @@ next: ${next}`;
         updateOutputs();
       });
       function renderList() {
+        const options = getLockerSeedOptions();
+        optionByKey.clear();
+        options.forEach((opt) => optionByKey.set(opt.key, opt));
         const previous = list.scrollTop;
         list.innerHTML = "";
         listButtons.clear();
@@ -57242,6 +57255,11 @@ next: ${next}`;
         renderDetail();
       }
       renderList();
+      const onDataUpdated = (e) => {
+        const key2 = e.detail?.key;
+        if (key2 === "plants") renderList();
+      };
+      window.addEventListener("gemini:data-updated", onDataUpdated);
     });
     ui.mount(container);
   }
@@ -64025,6 +64043,7 @@ next: ${next}`;
   }
 
   // src/main.ts
+  init_page_context();
   (async function() {
     "use strict";
     if (initAuthBridgeIfNeeded()) return;
@@ -64032,6 +64051,8 @@ next: ${next}`;
       installEmojiDataFetchInterceptor();
     }
     installPageWebSocketHook();
+    MGData.init();
+    shareGlobal("MGData", MGData);
     initGameVersion();
     MGVersion.prefetch();
     try {
