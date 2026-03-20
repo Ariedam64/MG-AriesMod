@@ -214,6 +214,17 @@ export const tos = {
     return { ok: !!(state.engine && state.tos), engine: state.engine, tos: state.tos };
   },
 
+  /** Get tile object by global index (same index used in WS HarvestCrop slot field). */
+  getTileObjectByIndex(gidx: number): { tileObject: any } | null {
+    if (!state.tos) return null;
+    try {
+      const tv = state.tos.tileViews?.get?.(gidx) ?? null;
+      return tv ? { tileObject: tv.tileObject } : null;
+    } catch {
+      return null;
+    }
+  },
+
   getTileObject(tx: number, ty: number, opts: TileOpts = {}): GetTileResult {
     assertReady();
 

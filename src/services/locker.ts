@@ -473,6 +473,11 @@ export function startLockerSlotWatcherViaGardenObject(): LockerSlotWatcher {
     const sizePercent = slot ? extractSizePercent(slot) : null;
     const mutations = slot ? sanitizeMutations(slot.mutations) : [];
 
+    // If the slot has its own species (e.g. "FourLeafClover" from a Clover plant),
+    // prefer it as the seedKey so per-crop overrides resolve correctly.
+    const slotSpecies = slot ? extractSeedKey(slot as any) : null;
+    const effectiveSeedKey = slotSpecies ?? seedKey;
+
     return {
       isPlant: true,
       originalIndex: typeof originalIndex === "number" ? originalIndex : null,
@@ -480,7 +485,7 @@ export function startLockerSlotWatcherViaGardenObject(): LockerSlotWatcher {
       totalSlots: slotCount,
       availableSlotCount: availableCount,
       slot: slot ?? null,
-      seedKey,
+      seedKey: effectiveSeedKey,
       sizePercent,
       mutations,
     };

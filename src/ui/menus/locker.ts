@@ -36,6 +36,8 @@ export type LockerSeedOption = {
   key: string;
   seedName: string;
   cropName: string;
+  /** Raw sprite path from catalog e.g. "sprite/plant/CloverFourLeaf" */
+  spriteKey?: string;
 };
 
 const SEED_EMOJIS = [
@@ -75,6 +77,7 @@ function buildLockerSeedOptions(): LockerSeedOption[] {
     key,
     seedName: def?.seed?.name ?? "",
     cropName: def?.crop?.name ?? "",
+    spriteKey: def?.crop?.sprite ?? def?.plant?.sprite ?? undefined,
   }));
 }
 
@@ -141,6 +144,8 @@ type LockerOverrideState = {
 type IconOptions = {
   size?: number;
   fallback?: string;
+  /** Raw sprite path from catalog e.g. "sprite/plant/CloverFourLeaf" */
+  spriteKey?: string;
 };
 
 type WeatherIconFactory = (options?: IconOptions) => HTMLElement;
@@ -292,7 +297,10 @@ function createSeedIcon(seedKey: string, options: IconOptions = {}): HTMLSpanEle
     justifyContent: "center",
   });
   wrap.appendChild(createEmojiIcon(fallback, size));
-  attachSpriteIcon(wrap, ["plant", "tallplant", "crop"], seedKey, size, "plant");
+  const spriteBaseName = options.spriteKey?.split("/").pop();
+  // Use the exact sprite base name first to avoid fuzzy-match collisions (e.g. "Clover" → "CloverFourLeaf")
+  const candidates = spriteBaseName ? [spriteBaseName, seedKey] : seedKey;
+  attachSpriteIcon(wrap, ["plant", "tallplant", "crop"], candidates, size, "plant");
   return wrap;
 }
 
@@ -2640,7 +2648,7 @@ function createOverridesTabRenderer(ui: Menu, store: LockerMenuStore): LockerTab
       label.className = "label";
       label.textContent = opt.cropName || opt.key;
 
-      const icon = createSeedIcon(opt.key, { size: 24 });
+      const icon = createSeedIcon(opt.key, { size: 24, spriteKey: opt.spriteKey });
 
       button.append(dot, label, icon);
       listButtons.set(opt.key, { button, dot });
@@ -2710,7 +2718,7 @@ function createOverridesTabRenderer(ui: Menu, store: LockerMenuStore): LockerTab
     title.style.fontWeight = "600";
     title.style.fontSize = "15px";
 
-    const icon = createSeedIcon(seed.key, { size: 32 });
+    const icon = createSeedIcon(seed.key, { size: 32, spriteKey: seed.spriteKey });
     titleWrap.append(icon, title);
 
     const toggleWrap = ui.flexRow({ gap: 8, align: "center" });

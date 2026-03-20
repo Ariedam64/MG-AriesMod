@@ -18,6 +18,7 @@ import type { GardenState, PlantSlotTiming } from "../store/atoms";
 import { detectEnvironment } from "../utils/api";
 import { MiscService } from "../services/misc";
 import { EditorService } from "../services/editor";
+import { tos } from "../utils/tileObjectSystemApi";
 
 type WsCloseListener = (ev: CloseEvent, ws: WebSocket) => void;
 
@@ -471,6 +472,7 @@ function installHarvestCropInterceptor() {
   if (readSharedGlobal<boolean>("__tmHarvestHookInstalled")) return;
 
   let latestGardenState: GardenState | null = null;
+  let latestCurrentGardenObject: any = null;
   let friendBonusPercent: number | null = null;
   let friendBonusFromPlayers: number | null = null;
   let latestEggId: string | null = null;
@@ -527,10 +529,12 @@ function installHarvestCropInterceptor() {
     } catch {}
     try {
       const initialObj = await Atoms.data.myCurrentGardenObject.get();
+      latestCurrentGardenObject = initialObj;
       latestEggId = extractEggId(initialObj);
     } catch {}
     try {
       await Atoms.data.myCurrentGardenObject.onChange((next) => {
+        latestCurrentGardenObject = next;
         latestEggId = extractEggId(next);
       });
     } catch {}
@@ -582,7 +586,18 @@ function installHarvestCropInterceptor() {
 
     const garden = latestGardenState;
     const tileObjects = garden?.tileObjects;
-    const tile = tileObjects ? (tileObjects[String(slot)] as any) : undefined;
+    let tile: any = tileObjects ? (tileObjects[String(slot)] as any) : undefined;
+
+    // In editor mode the tile view is updated directly (bypassing the garden atom),
+    // so fall back to TOS which always reflects the current visual state.
+    if ((!tile || typeof tile !== "object") && EditorService.isEnabled()) {
+      try {
+        const tosTile = tos.getTileObjectByIndex(slot as number);
+        if (tosTile?.tileObject && typeof tosTile.tileObject === "object") {
+          tile = tosTile.tileObject;
+        }
+      } catch {}
+    }
 
     if (!tile || typeof tile !== "object" || tile.objectType !== "plant") {
       return;
@@ -595,7 +610,17 @@ function installHarvestCropInterceptor() {
       return;
     }
 
-    const seedKey = extractSeedKey(tile);
+    // myCurrentGardenObject has enriched slot data (species per slot) that the raw
+    // garden atom lacks. Use it to get the correct seedKey (e.g. "FourLeafClover"
+    // instead of "Clover") when the slot index matches.
+    const currentObjSlots = Array.isArray(latestCurrentGardenObject?.slots)
+      ? latestCurrentGardenObject.slots
+      : [];
+    const currentObjSlot = currentObjSlots[slotsIndex as number];
+    const seedKey =
+      extractSeedKey(currentObjSlot) ??
+      extractSeedKey(cropSlot as any) ??
+      extractSeedKey(tile);
     const sizePercent = extractSizePercent(cropSlot as PlantSlotTiming);
     const mutations = sanitizeMutations((cropSlot as PlantSlotTiming)?.mutations);
 

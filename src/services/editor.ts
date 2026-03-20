@@ -235,6 +235,7 @@ function createSelectionIcon(
   label: string,
   size = 32,
   rawId?: string | null,
+  spriteKey?: string | null,
 ): HTMLElement {
   const wrap = document.createElement("span");
   Object.assign(wrap.style, {
@@ -256,7 +257,12 @@ function createSelectionIcon(
     }
   };
 
-  const candidates = buildSpriteCandidates(rawId, label);
+  // Use the actual sprite atlas key first (e.g. "CloverFourLeaf") to avoid
+  // fuzzy-match collisions with the catalog key (e.g. "FourLeafClover").
+  const spriteBaseName = spriteKey?.split("/").pop() ?? null;
+  const candidates = spriteBaseName
+    ? [spriteBaseName, ...buildSpriteCandidates(rawId, label)]
+    : buildSpriteCandidates(rawId, label);
   let categories: string[] = kind === "decor" ? ["decor"] : ["plant"];
   if (kind !== "decor" && /bamboo|cactus/i.test(String(rawId ?? label ?? ""))) {
     categories = ["tallplant", "tallPlant", "plant"];
@@ -1121,11 +1127,15 @@ function renderCurrentItemOverlay() {
 
 
 
+          const _selSpecies = selected.itemType === "Plant" ? (selected as any)?.species : null;
+          const _selCatalogEntry = _selSpecies ? (plantCatalog as any)[_selSpecies] : null;
+          const _selSpriteKey = _selCatalogEntry?.crop?.sprite ?? _selCatalogEntry?.plant?.sprite ?? null;
           const icon = createSelectionIcon(
             selected.itemType === "Decor" ? "decor" : "plants",
             getInventoryItemLabel(selected),
             40,
-            selected.itemType === "Decor" ? (selected as any)?.decorId : (selected as any)?.species,
+            selected.itemType === "Decor" ? (selected as any)?.decorId : _selSpecies,
+            _selSpriteKey,
           );
 
 
@@ -1321,11 +1331,15 @@ function renderCurrentItemOverlay() {
 
 
 
+  const _tileSpecies = tileObject.objectType === "plant" ? (tileObject.species || tileKey || name) : null;
+  const _tileCatalogEntry = _tileSpecies ? (plantCatalog as any)[_tileSpecies] : null;
+  const _tileSpriteKey = _tileCatalogEntry?.crop?.sprite ?? _tileCatalogEntry?.plant?.sprite ?? null;
   const icon = createSelectionIcon(
     tileObject.objectType === "decor" ? "decor" : "plants",
     name,
     48,
-    tileObject.objectType === "decor" ? tileObject.decorId || tileKey || name : tileObject.species || tileKey || name,
+    tileObject.objectType === "decor" ? tileObject.decorId || tileKey || name : _tileSpecies,
+    _tileSpriteKey,
   );
 
 
@@ -2824,11 +2838,15 @@ function renderSideList() {
       cursor: "pointer",
     } as Partial<CSSStyleDeclaration>);
     applySelectionStyle(btn, selected);
+    const _listKind = getSideSpriteKind();
+    const _listCatalogEntry = _listKind !== "Decor" ? (plantCatalog as any)[key] : null;
+    const _listSpriteKey = _listCatalogEntry?.crop?.sprite ?? _listCatalogEntry?.plant?.sprite ?? null;
     const icon = createSelectionIcon(
-      getSideSpriteKind() === "Decor" ? "decor" : "plants",
+      _listKind === "Decor" ? "decor" : "plants",
       label,
       26,
       key,
+      _listSpriteKey,
     );
 
     const labelEl = document.createElement("span");
@@ -2955,11 +2973,15 @@ function renderSideDetails() {
     existingIcon && existingInfo?.dataset.selId === selId
       ? existingIcon
       : (() => {
+          const _infoKind = getSideSpriteKind();
+          const _infoCatalogEntry = _infoKind !== "Decor" ? (plantCatalog as any)[selId] : null;
+          const _infoSpriteKey = _infoCatalogEntry?.crop?.sprite ?? _infoCatalogEntry?.plant?.sprite ?? null;
           const el = createSelectionIcon(
-            getSideSpriteKind() === "Decor" ? "decor" : "plants",
+            _infoKind === "Decor" ? "decor" : "plants",
             label,
             48,
             selId,
+            _infoSpriteKey,
           );
           el.dataset.editorInfoIcon = "true";
           return el;

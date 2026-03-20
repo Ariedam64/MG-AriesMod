@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.422
+// @version      3.1.423
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -10507,6 +10507,8 @@
       const slot = typeof originalIndex === "number" ? slots[originalIndex] ?? null : null;
       const sizePercent = slot ? extractSizePercent(slot) : null;
       const mutations = slot ? sanitizeMutations2(slot.mutations) : [];
+      const slotSpecies = slot ? extractSeedKey(slot) : null;
+      const effectiveSeedKey = slotSpecies ?? seedKey;
       return {
         isPlant: true,
         originalIndex: typeof originalIndex === "number" ? originalIndex : null,
@@ -10514,7 +10516,7 @@
         totalSlots: slotCount,
         availableSlotCount: availableCount,
         slot: slot ?? null,
-        seedKey,
+        seedKey: effectiveSeedKey,
         sizePercent,
         mutations
       };
@@ -18228,6 +18230,16 @@
     getStatus() {
       return { ok: !!(state2.engine && state2.tos), engine: state2.engine, tos: state2.tos };
     },
+    /** Get tile object by global index (same index used in WS HarvestCrop slot field). */
+    getTileObjectByIndex(gidx) {
+      if (!state2.tos) return null;
+      try {
+        const tv = state2.tos.tileViews?.get?.(gidx) ?? null;
+        return tv ? { tileObject: tv.tileObject } : null;
+      } catch {
+        return null;
+      }
+    },
     getTileObject(tx, ty, opts = {}) {
       assertReady();
       const ensureView = opts.ensureView !== false;
@@ -18383,7 +18395,7 @@
   var stateOriginalValue = null;
   var friendGardenPreviewActive = false;
   var friendGardenBackup = null;
-  function createSelectionIcon(kind, label2, size = 32, rawId) {
+  function createSelectionIcon(kind, label2, size = 32, rawId, spriteKey) {
     const wrap = document.createElement("span");
     Object.assign(wrap.style, {
       width: `${size}px`,
@@ -18402,7 +18414,8 @@
         wrap.textContent = fallback;
       }
     };
-    const candidates = buildSpriteCandidates(rawId, label2);
+    const spriteBaseName = spriteKey?.split("/").pop() ?? null;
+    const candidates = spriteBaseName ? [spriteBaseName, ...buildSpriteCandidates(rawId, label2)] : buildSpriteCandidates(rawId, label2);
     let categories = kind === "decor" ? ["decor"] : ["plant"];
     if (kind !== "decor" && /bamboo|cactus/i.test(String(rawId ?? label2 ?? ""))) {
       categories = ["tallplant", "tallPlant", "plant"];
@@ -18780,11 +18793,15 @@
             nameEl2.style.textOverflow = "ellipsis";
             nameEl2.style.whiteSpace = "nowrap";
             nameEl2.style.textAlign = "center";
+            const _selSpecies = selected.itemType === "Plant" ? selected?.species : null;
+            const _selCatalogEntry = _selSpecies ? plantCatalog2[_selSpecies] : null;
+            const _selSpriteKey = _selCatalogEntry?.crop?.sprite ?? _selCatalogEntry?.plant?.sprite ?? null;
             const icon2 = createSelectionIcon(
               selected.itemType === "Decor" ? "decor" : "plants",
               getInventoryItemLabel(selected),
               40,
-              selected.itemType === "Decor" ? selected?.decorId : selected?.species
+              selected.itemType === "Decor" ? selected?.decorId : _selSpecies,
+              _selSpriteKey
             );
             infoRow.append(icon2, nameEl2);
             content.appendChild(infoRow);
@@ -18870,11 +18887,15 @@
       nameEl.style.textOverflow = "ellipsis";
       nameEl.style.whiteSpace = "nowrap";
       nameEl.style.textAlign = "center";
+      const _tileSpecies = tileObject.objectType === "plant" ? tileObject.species || tileKey || name : null;
+      const _tileCatalogEntry = _tileSpecies ? plantCatalog2[_tileSpecies] : null;
+      const _tileSpriteKey = _tileCatalogEntry?.crop?.sprite ?? _tileCatalogEntry?.plant?.sprite ?? null;
       const icon = createSelectionIcon(
         tileObject.objectType === "decor" ? "decor" : "plants",
         name,
         48,
-        tileObject.objectType === "decor" ? tileObject.decorId || tileKey || name : tileObject.species || tileKey || name
+        tileObject.objectType === "decor" ? tileObject.decorId || tileKey || name : _tileSpecies,
+        _tileSpriteKey
       );
       header.append(icon, nameEl);
       content.appendChild(header);
@@ -19550,11 +19571,15 @@
         cursor: "pointer"
       });
       applySelectionStyle(btn, selected);
+      const _listKind = getSideSpriteKind();
+      const _listCatalogEntry = _listKind !== "Decor" ? plantCatalog2[key2] : null;
+      const _listSpriteKey = _listCatalogEntry?.crop?.sprite ?? _listCatalogEntry?.plant?.sprite ?? null;
       const icon = createSelectionIcon(
-        getSideSpriteKind() === "Decor" ? "decor" : "plants",
+        _listKind === "Decor" ? "decor" : "plants",
         label2,
         26,
-        key2
+        key2,
+        _listSpriteKey
       );
       const labelEl = document.createElement("span");
       labelEl.textContent = label2;
@@ -19621,11 +19646,15 @@
     const existingIcon = existingInfo?.querySelector("[data-editor-info-icon]");
     const existingLabel = existingInfo?.querySelector("[data-editor-info-label]");
     const icon = existingIcon && existingInfo?.dataset.selId === selId ? existingIcon : (() => {
+      const _infoKind = getSideSpriteKind();
+      const _infoCatalogEntry = _infoKind !== "Decor" ? plantCatalog2[selId] : null;
+      const _infoSpriteKey = _infoCatalogEntry?.crop?.sprite ?? _infoCatalogEntry?.plant?.sprite ?? null;
       const el2 = createSelectionIcon(
-        getSideSpriteKind() === "Decor" ? "decor" : "plants",
+        _infoKind === "Decor" ? "decor" : "plants",
         label2,
         48,
-        selId
+        selId,
+        _infoSpriteKey
       );
       el2.dataset.editorInfoIcon = "true";
       return el2;
@@ -22194,6 +22223,7 @@
   function installHarvestCropInterceptor() {
     if (readSharedGlobal("__tmHarvestHookInstalled")) return;
     let latestGardenState = null;
+    let latestCurrentGardenObject = null;
     let friendBonusPercent = null;
     let friendBonusFromPlayers = null;
     let latestEggId = null;
@@ -22245,11 +22275,13 @@
       }
       try {
         const initialObj = await Atoms.data.myCurrentGardenObject.get();
+        latestCurrentGardenObject = initialObj;
         latestEggId = extractEggId(initialObj);
       } catch {
       }
       try {
         await Atoms.data.myCurrentGardenObject.onChange((next) => {
+          latestCurrentGardenObject = next;
           latestEggId = extractEggId(next);
         });
       } catch {
@@ -22302,7 +22334,16 @@
       }
       const garden2 = latestGardenState;
       const tileObjects = garden2?.tileObjects;
-      const tile = tileObjects ? tileObjects[String(slot)] : void 0;
+      let tile = tileObjects ? tileObjects[String(slot)] : void 0;
+      if ((!tile || typeof tile !== "object") && EditorService.isEnabled()) {
+        try {
+          const tosTile = tos.getTileObjectByIndex(slot);
+          if (tosTile?.tileObject && typeof tosTile.tileObject === "object") {
+            tile = tosTile.tileObject;
+          }
+        } catch {
+        }
+      }
       if (!tile || typeof tile !== "object" || tile.objectType !== "plant") {
         return;
       }
@@ -22311,7 +22352,9 @@
       if (!cropSlot || typeof cropSlot !== "object") {
         return;
       }
-      const seedKey = extractSeedKey2(tile);
+      const currentObjSlots = Array.isArray(latestCurrentGardenObject?.slots) ? latestCurrentGardenObject.slots : [];
+      const currentObjSlot = currentObjSlots[slotsIndex];
+      const seedKey = extractSeedKey2(currentObjSlot) ?? extractSeedKey2(cropSlot) ?? extractSeedKey2(tile);
       const sizePercent = extractSizePercent2(cropSlot);
       const mutations = sanitizeMutations(cropSlot?.mutations);
       const lockerEnabled = (() => {
@@ -53827,7 +53870,8 @@ next: ${next}`;
     return Object.entries(plantCatalog2).map(([key2, def]) => ({
       key: key2,
       seedName: def?.seed?.name ?? "",
-      cropName: def?.crop?.name ?? ""
+      cropName: def?.crop?.name ?? "",
+      spriteKey: def?.crop?.sprite ?? def?.plant?.sprite ?? void 0
     }));
   }
   function buildLockerEmojiMaps(options) {
@@ -53975,7 +54019,9 @@ next: ${next}`;
       justifyContent: "center"
     });
     wrap.appendChild(createEmojiIcon(fallback, size));
-    attachSpriteIcon(wrap, ["plant", "tallplant", "crop"], seedKey, size, "plant");
+    const spriteBaseName = options.spriteKey?.split("/").pop();
+    const candidates = spriteBaseName ? [spriteBaseName, seedKey] : seedKey;
+    attachSpriteIcon(wrap, ["plant", "tallplant", "crop"], candidates, size, "plant");
     return wrap;
   }
   function createEggIcon(eggId, label2, size = 32) {
@@ -55977,7 +56023,7 @@ next: ${next}`;
         const label2 = document.createElement("span");
         label2.className = "label";
         label2.textContent = opt.cropName || opt.key;
-        const icon = createSeedIcon(opt.key, { size: 24 });
+        const icon = createSeedIcon(opt.key, { size: 24, spriteKey: opt.spriteKey });
         button.append(dot, label2, icon);
         listButtons.set(opt.key, { button, dot });
         button.onmouseenter = () => button.style.borderColor = "rgba(94,234,212,0.35)";
@@ -56035,7 +56081,7 @@ next: ${next}`;
       title.textContent = seed.cropName || seed.key;
       title.style.fontWeight = "600";
       title.style.fontSize = "15px";
-      const icon = createSeedIcon(seed.key, { size: 32 });
+      const icon = createSeedIcon(seed.key, { size: 32, spriteKey: seed.spriteKey });
       titleWrap.append(icon, title);
       const toggleWrap = ui.flexRow({ gap: 8, align: "center" });
       toggleWrap.style.flexWrap = "nowrap";
@@ -56546,6 +56592,8 @@ next: ${next}`;
     if (option) {
       addCandidate(option.seedName);
       addCandidate(option.cropName);
+      const spriteBaseName = option.spriteKey?.split("/").pop();
+      if (spriteBaseName) addCandidate(spriteBaseName);
     }
     const baseCandidates = Array.from(candidates).map((value) => value.replace(/icon$/i, "")).filter(Boolean);
     const expanded = Array.from(

@@ -455,6 +455,9 @@ function buildSpriteCandidates(primary: string, option?: LockerSeedOption | null
   if (option) {
     addCandidate(option.seedName);
     addCandidate(option.cropName);
+    // Use the actual sprite path from catalog data (e.g. "sprite/plant/CloverFourLeaf" → "CloverFourLeaf")
+    const spriteBaseName = option.spriteKey?.split("/").pop();
+    if (spriteBaseName) addCandidate(spriteBaseName);
   }
   const baseCandidates = Array.from(candidates)
     .map(value => value.replace(/icon$/i, ""))
