@@ -36,7 +36,7 @@ export type LockerSeedOption = {
   key: string;
   seedName: string;
   cropName: string;
-  /** Raw sprite path from catalog e.g. "sprite/plant/CloverFourLeaf" */
+  /** Raw sprite path from game data e.g. "sprite/plant/CloverFourLeaf" */
   spriteKey?: string;
 };
 

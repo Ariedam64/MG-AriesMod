@@ -3,15 +3,6 @@
 import type { CaptureState } from "./types";
 import { pageWindow } from "../../utils/page-context";
 
-const pageContext = pageWindow as Window & typeof globalThis;
-
-export const NativeObject = pageContext.Object ?? Object;
-export const originalObjectKeys = NativeObject.keys;
-export const originalObjectValues = NativeObject.values;
-export const originalObjectEntries = NativeObject.entries;
-
-export const visitedObjects = new WeakSet<object>();
-
 function createInitialState(): CaptureState {
   return {
     data: {
@@ -24,11 +15,8 @@ function createInitialState(): CaptureState {
       plants: null,
       weather: null,
     },
-    isHookInstalled: false,
-    scanInterval: null,
-    scanAttempts: 0,
-    weatherPollingTimer: null,
-    weatherPollAttempts: 0,
+    fetchStarted: false,
+    fetchComplete: false,
     colorPollingTimer: null,
     colorPollAttempts: 0,
   };

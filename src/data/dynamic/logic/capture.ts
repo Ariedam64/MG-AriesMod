@@ -1,14 +1,25 @@
 // src/data/dynamic/logic/capture.ts
+// Fetches all game data from the mg-api.ariedam.fr API.
 
 import type { CapturedDataKey } from "../types";
-import { captureState, visitedObjects, originalObjectKeys } from "../state";
-import { SIGNATURE_KEYS, MAX_SCAN_DEPTH } from "./constants";
-import { restoreObjectHooks } from "./hooks";
+import { captureState } from "../state";
+import { getJSON } from "../../../utils/mgCommon";
+import { withDiscordPollPause } from "../../../ariesModAPI/client/events";
 
-const containsAllKeys = (objectKeys: string[], requiredKeys: readonly string[]) =>
-  requiredKeys.every((key) => objectKeys.includes(key));
+const API_BASE = "https://mg-api.ariedam.fr";
 
-function setCapturedData(key: CapturedDataKey, value: Record<string, unknown>): void {
+interface ApiData {
+  plants: Record<string, unknown>;
+  pets: Record<string, unknown>;
+  items: Record<string, unknown>;
+  decors: Record<string, unknown>;
+  eggs: Record<string, unknown>;
+  mutations: Record<string, unknown>;
+  abilities: Record<string, unknown>;
+  weathers: Record<string, unknown>;
+}
+
+function setCapturedData(key: CapturedDataKey | "weather", value: Record<string, unknown>): void {
   if (captureState.data[key] != null) return;
   captureState.data[key] = value;
 
@@ -17,99 +28,42 @@ function setCapturedData(key: CapturedDataKey, value: Record<string, unknown>): 
   } catch {
     /* ignore in non-browser contexts */
   }
-
-  if (isAllDataCaptured()) {
-    restoreObjectHooks();
-  }
 }
 
 export function isAllDataCaptured(): boolean {
   return Object.values(captureState.data).every((v) => v != null);
 }
 
-function scanObjectForData(obj: unknown, depth: number): void {
-  if (!obj || typeof obj !== "object" || visitedObjects.has(obj)) return;
-  visitedObjects.add(obj);
+export async function fetchAllData(): Promise<void> {
+  if (captureState.fetchStarted) return;
+  captureState.fetchStarted = true;
 
-  let keys: string[];
   try {
-    keys = originalObjectKeys(obj);
-  } catch {
-    return;
-  }
-  if (!keys || keys.length === 0) return;
+    const data = await withDiscordPollPause(() => getJSON<ApiData>(`${API_BASE}/data`));
 
-  const record = obj as Record<string, unknown>;
-  let sample: unknown;
+    if (data.plants) setCapturedData("plants", data.plants);
+    if (data.pets) setCapturedData("pets", data.pets);
+    if (data.items) setCapturedData("items", data.items);
+    if (data.decors) setCapturedData("decor", data.decors);
+    if (data.eggs) setCapturedData("eggs", data.eggs);
+    if (data.mutations) setCapturedData("mutations", data.mutations);
+    if (data.abilities) setCapturedData("abilities", data.abilities);
+    if (data.weathers) setCapturedData("weather", data.weathers);
 
-  if (!captureState.data.items && containsAllKeys(keys, SIGNATURE_KEYS.items)) {
-    sample = record.WateringCan;
-    if (sample && typeof sample === "object" && "coinPrice" in sample && "creditPrice" in sample) {
-      setCapturedData("items", record);
-    }
-  }
-
-  if (!captureState.data.decor && containsAllKeys(keys, SIGNATURE_KEYS.decor)) {
-    sample = record.SmallRock;
-    if (sample && typeof sample === "object" && "coinPrice" in sample && "creditPrice" in sample) {
-      setCapturedData("decor", record);
-    }
-  }
-
-  if (!captureState.data.mutations && containsAllKeys(keys, SIGNATURE_KEYS.mutations)) {
-    sample = record.Gold;
-    if (sample && typeof sample === "object" && "baseChance" in sample && "coinMultiplier" in sample) {
-      setCapturedData("mutations", record);
-    }
-  }
-
-  if (!captureState.data.eggs && containsAllKeys(keys, SIGNATURE_KEYS.eggs)) {
-    sample = record.CommonEgg;
-    if (sample && typeof sample === "object" && "faunaSpawnWeights" in sample && "secondsToHatch" in sample) {
-      setCapturedData("eggs", record);
-    }
-  }
-
-  if (!captureState.data.pets && containsAllKeys(keys, SIGNATURE_KEYS.pets)) {
-    sample = record.Worm;
-    if (sample && typeof sample === "object" && "coinsToFullyReplenishHunger" in sample && "diet" in sample && Array.isArray((sample as Record<string, unknown>).diet)) {
-      setCapturedData("pets", record);
-    }
-  }
-
-  if (!captureState.data.abilities && containsAllKeys(keys, SIGNATURE_KEYS.abilities)) {
-    sample = record.ProduceScaleBoost;
-    if (sample && typeof sample === "object" && "trigger" in sample && "baseParameters" in sample) {
-      setCapturedData("abilities", record);
-    }
-  }
-
-  if (!captureState.data.plants && containsAllKeys(keys, SIGNATURE_KEYS.plants)) {
-    sample = record.Carrot;
-    if (sample && typeof sample === "object" && "seed" in sample && "plant" in sample && "crop" in sample) {
-      setCapturedData("plants", record);
-    }
-  }
-
-  if (depth >= MAX_SCAN_DEPTH) return;
-
-  for (const key of keys) {
-    let child: unknown;
-    try {
-      child = record[key];
-    } catch {
-      continue;
-    }
-    if (child && typeof child === "object") {
-      scanObjectForData(child, depth + 1);
-    }
-  }
-}
-
-export function tryCapture(target: unknown): void {
-  try {
-    scanObjectForData(target, 0);
-  } catch {
-    // Ignore capture errors
+    captureState.fetchComplete = true;
+    console.log("[MGData] all data loaded from API", {
+      plants: Object.keys(data.plants || {}).length,
+      pets: Object.keys(data.pets || {}).length,
+      items: Object.keys(data.items || {}).length,
+      decor: Object.keys(data.decors || {}).length,
+      eggs: Object.keys(data.eggs || {}).length,
+      mutations: Object.keys(data.mutations || {}).length,
+      abilities: Object.keys(data.abilities || {}).length,
+      weathers: Object.keys(data.weathers || {}).length,
+    });
+  } catch (err) {
+    console.error("[MGData] failed to fetch data from API", err);
+    // Allow retry
+    captureState.fetchStarted = false;
   }
 }

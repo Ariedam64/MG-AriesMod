@@ -70,6 +70,15 @@ const state = {
   tos: null as any,
   origBind: Function.prototype.bind as AnyFn,
   bindPatched: false,
+  highlight: {
+    gfx: null as any,
+    tile: null as { tx: number; ty: number } | null,
+    parent: null as any,
+  },
+  hoverDebug: {
+    enabled: false,
+    cleanup: null as null | (() => void),
+  },
 };
 
 function looksLikeEngine(o: any): boolean {
@@ -197,6 +206,175 @@ function patchPlantSlot(slot: any, slotPatch: PlantSlotPatch) {
   }
 }
 
+type PointerTileInfo = {
+  tx: number;
+  ty: number;
+  gidx: number | null;
+  world: { x: number; y: number };
+  inside: boolean;
+  canvas: HTMLCanvasElement | null;
+  ev: PointerEvent;
+};
+
+type PointerTileListener = (info: PointerTileInfo) => void;
+
+type PointerToTileOpts = {
+  tileSize?: number;
+  clamp?: boolean;
+};
+
+type HighlightOpts = {
+  color?: number;
+  alpha?: number;
+  thickness?: number;
+  padding?: number;
+  tileSize?: number;
+};
+
+function getCanvas(): HTMLCanvasElement | null {
+  return (state.engine as any)?.app?.view
+    || (state.engine as any)?.app?.renderer?.view
+    || null;
+}
+
+function defaultTileSize(): number {
+  const t = state.tos as any;
+  const m = t?.map || {};
+  const candidates = [m.tileSize, m.tileW, m.tileWidth, t?.tileSize, t?.tileW, 64];
+  for (const c of candidates) {
+    if (Number.isFinite(c) && c > 0) return Number(c);
+  }
+  return 64;
+}
+
+function pointerToTile(ev: PointerEvent, opts: PointerToTileOpts = {}): PointerTileInfo | null {
+  assertReady();
+  const canvas = getCanvas();
+  if (!canvas) return null;
+
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+  const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+  const x = (ev.clientX - rect.left) * scaleX;
+  const y = (ev.clientY - rect.top) * scaleY;
+
+  const tileSize = opts.tileSize ?? defaultTileSize();
+  if (!Number.isFinite(tileSize) || tileSize <= 0) return null;
+
+  const tx = Math.floor(x / tileSize);
+  const ty = Math.floor(y / tileSize);
+  const cols = (state.tos as any)?.map?.cols;
+  const rows = (state.tos as any)?.map?.rows;
+  const inside =
+    Number.isFinite(tx) && Number.isFinite(ty)
+    && (!opts.clamp
+      ? true
+      : (!Number.isFinite(cols) || (tx >= 0 && tx < cols))
+      && (!Number.isFinite(rows) || (ty >= 0 && ty < rows)));
+
+  return {
+    tx,
+    ty,
+    gidx: inside ? globalIndexFromXY(tx, ty) : null,
+    world: { x, y },
+    inside,
+    canvas,
+    ev,
+  };
+}
+
+function onPointerTile(listener: PointerTileListener, opts: PointerToTileOpts = {}): () => void {
+  assertReady();
+  const canvas = getCanvas();
+  if (!canvas) throw new Error("Canvas not available on engine");
+
+  const onMove = (ev: PointerEvent) => {
+    const info = pointerToTile(ev, opts);
+    if (info) listener(info);
+  };
+  const onLeave = (ev: PointerEvent) => {
+    const info = pointerToTile(ev, opts);
+    if (info) listener({ ...info, inside: false });
+  };
+
+  canvas.addEventListener("pointermove", onMove);
+  canvas.addEventListener("pointerleave", onLeave);
+
+  return () => {
+    canvas.removeEventListener("pointermove", onMove);
+    canvas.removeEventListener("pointerleave", onLeave);
+  };
+}
+
+function clearHighlight() {
+  try { state.highlight.gfx?.parent?.removeChild?.(state.highlight.gfx); } catch {}
+  state.highlight.gfx?.destroy?.();
+  state.highlight.gfx = null;
+  state.highlight.tile = null;
+  state.highlight.parent = null;
+}
+
+function highlightTile(tx: number, ty: number, color = 0x00ff00, opts: HighlightOpts = {}) {
+  const info = tos.getTileObject(tx, ty, { ensureView: true });
+  const tv = info.tileView as any;
+  if (!tv) throw new Error("TileView not available");
+
+  const parent = tv.root || tv.container || tv;
+  if (!parent?.addChild) throw new Error("TileView is not a display container");
+
+  const PIXI = (state.engine as any)?.app?.renderer?.PIXI ?? (window as any).PIXI;
+  const Graphics = PIXI?.Graphics;
+  if (!Graphics) throw new Error("PIXI.Graphics not available");
+
+  const gfx = state.highlight.gfx ?? new Graphics();
+  const alpha = opts.alpha ?? 0.8;
+  const thickness = opts.thickness ?? 2;
+  const padding = opts.padding ?? 0;
+  const tileSize = opts.tileSize ?? defaultTileSize();
+
+  gfx.clear();
+  gfx.lineStyle(thickness, color, alpha);
+  const w = (parent as any)?.width ?? tileSize;
+  const h = (parent as any)?.height ?? tileSize;
+  gfx.drawRect(-padding, -padding, w + padding * 2, h + padding * 2);
+  gfx.zIndex = 9999;
+
+  if (gfx.parent !== parent) {
+    try { gfx.parent?.removeChild?.(gfx); } catch {}
+    parent.addChild(gfx);
+  }
+
+  state.highlight.gfx = gfx;
+  state.highlight.tile = { tx, ty };
+  state.highlight.parent = parent;
+  return { tx, ty, gidx: info.gidx, color, alpha, thickness };
+}
+
+function setDebugHoverHighlight(enabled: boolean, opts: HighlightOpts & PointerToTileOpts = {}) {
+  if (!enabled) {
+    state.hoverDebug.cleanup?.();
+    state.hoverDebug.cleanup = null;
+    state.hoverDebug.enabled = false;
+    clearHighlight();
+    return false;
+  }
+
+  assertReady();
+  if (state.hoverDebug.enabled) return true;
+
+  const cleanup = onPointerTile((info) => {
+    if (!info.inside || info.tx == null || info.ty == null) {
+      clearHighlight();
+      return;
+    }
+    try { highlightTile(info.tx, info.ty, opts.color ?? 0x00ff00, opts); } catch {}
+  }, opts);
+
+  state.hoverDebug.cleanup = cleanup;
+  state.hoverDebug.enabled = true;
+  return true;
+}
+
 export const tos = {
   /** À appeler une fois dans le main, le plus tôt possible */
   init(): HookStatus {
@@ -320,4 +498,19 @@ export const tos = {
 
     return applyTileObject(Number(tx), Number(ty), next, opts);
   },
+
+  /** Convertit un événement pointeur en coordonnées de tile (tx, ty) */
+  pointerToTile,
+
+  /** Écoute les mouvements pointeur sur le canvas et appelle le callback avec les infos de tile */
+  onPointerTile,
+
+  /** Dessine un contour autour d'une tile donnée */
+  highlightTile,
+
+  /** Supprime le contour actif */
+  clearHighlight,
+
+  /** Active/désactive un mode debug qui highlight la tile sous le pointeur en temps réel */
+  setDebugHoverHighlight,
 };

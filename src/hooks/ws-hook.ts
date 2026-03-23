@@ -4,7 +4,7 @@ import { pageWindow, readSharedGlobal, shareGlobal } from "../utils/page-context
 import { parseWSData } from "../core/parse";
 import { Atoms } from "../store/atoms";
 import { lockerService } from "../services/locker";
-import { plantCatalog } from "../data/hardcoded-data.clean";
+import { plantCatalog } from "../data";
 import { StatsService } from "../services/stats";
 import {
   friendBonusPercentFromMultiplier,
@@ -28,6 +28,12 @@ let autoRecoTimer: number | null = null;
 let autoRecoCountdownInterval: number | null = null;
 type AutoRecoOverlay = { update: (ms: number) => void; destroy: () => void };
 let autoRecoOverlay: AutoRecoOverlay | null = null;
+
+/** When true, auto-reconnect is suppressed (e.g. sell flow navigating to another room). */
+let suppressAutoReco = false;
+export function setSuppressAutoReco(value: boolean): void {
+  suppressAutoReco = value;
+}
 
 function onWebSocketClose(cb: WsCloseListener): () => void {
   wsCloseListeners.push(cb);

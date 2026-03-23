@@ -1,13 +1,9 @@
 // src/data/dynamic/index.ts
-// MGData - Dynamic game data capture module
+// MGData - Game data module (fetched from mg-api.ariedam.fr)
 
-import { installObjectHooks, restoreObjectHooks } from "./logic/hooks";
-import { startPulseScanning, stopPulseScanning } from "./logic/scanning";
-import { startWeatherPolling, stopWeatherPolling } from "./logic/weather";
 import { startColorPolling, stopColorPolling } from "./logic/abilityColors";
-import { resolveSprites } from "./logic/sprites";
 import { getData, getAllData, hasData, waitForData, waitForAnyData } from "./logic/accessors";
-import { isAllDataCaptured } from "./logic/capture";
+import { isAllDataCaptured, fetchAllData } from "./logic/capture";
 
 export type { CapturedDataKey, DataKey, DataBag } from "./types";
 export type { AbilityColor } from "./logic/abilityColors";
@@ -15,40 +11,37 @@ export type { ActivityLogEntry, PetAbilityAction } from "./logic/abilityFormatte
 export { formatAbilityLog, filterPetAbilityLogs, isPetAbilityAction, PET_ABILITY_ACTIONS } from "./logic/abilityFormatter";
 
 export const MGData = {
-  /** Initialize module (install hooks, start scanning, weather and color polling) */
+  /** Initialize module: fetch all data from API, start ability color polling */
   init(): void {
-    installObjectHooks();
-    startPulseScanning();
-    startWeatherPolling();
+    fetchAllData();
     startColorPolling();
   },
 
-  /** Check if all data has been captured */
+  /** Check if all data has been loaded */
   isReady: isAllDataCaptured,
 
-  /** Get captured data for a specific key */
+  /** Get data for a specific key */
   get: getData,
 
-  /** Get all captured data */
+  /** Get all data */
   getAll: getAllData,
 
   /** Check if data exists for a specific key */
   has: hasData,
 
-  /** Wait for specific data to be captured */
+  /** Wait for specific data to be available */
   waitFor: waitForData,
 
-  /** Wait for any data to be captured */
+  /** Wait for any data to be available */
   waitForAny: waitForAnyData,
 
-  /** Resolve sprite IDs for all captured data (call after sprite system is ready) */
-  resolveSprites,
+  /** No-op (sprites now come from the API with URLs included) */
+  resolveSprites(): void {
+    /* no-op — API data already includes sprite URLs */
+  },
 
-  /** Cleanup (restore hooks and stop scanning) */
+  /** Cleanup */
   cleanup(): void {
-    restoreObjectHooks();
-    stopPulseScanning();
-    stopWeatherPolling();
     stopColorPolling();
   },
 };

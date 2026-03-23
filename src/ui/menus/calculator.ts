@@ -10,7 +10,7 @@ import {
   type LockerSeedOption,
 } from "./locker";
 import { Menu } from "../menu";
-import { attachSpriteIcon } from "../spriteIconCache";
+import { attachSpriteIcon, getSpriteObjectUrlByName } from "../spriteIconCache";
 
 const ROOT_CLASS = "mg-crop-simulation";
 const SIZE_MIN = 50;
@@ -442,6 +442,15 @@ function ensureCropSimulationStyles(): void {
   cropSimulationStyleEl = addStyle(CROP_SIMULATION_CSS);
 }
 
+function extractSpriteNameFromUrl(urlOrPath: string): string | null {
+  const str = String(urlOrPath || "").trim();
+  if (!str) return null;
+  // Extract filename from URL or path
+  const filename = str.split("/").pop() || "";
+  // Strip file extension and query params (e.g. "CloverFourLeaf.png?v=163" → "CloverFourLeaf")
+  return filename.replace(/\.[a-z0-9]+(\?.*)?$/i, "") || null;
+}
+
 function buildSpriteCandidates(primary: string, option?: LockerSeedOption | null): string[] {
   const candidates = new Set<string>();
   const addCandidate = (value?: string | null) => {
@@ -451,13 +460,15 @@ function buildSpriteCandidates(primary: string, option?: LockerSeedOption | null
     candidates.add(trimmed);
     candidates.add(trimmed.replace(/\W+/g, ""));
   };
+  // Sprite name from API data is the most accurate candidate — add it first
+  if (option?.spriteKey) {
+    const spriteName = extractSpriteNameFromUrl(option.spriteKey);
+    if (spriteName) addCandidate(spriteName);
+  }
   addCandidate(primary);
   if (option) {
-    addCandidate(option.seedName);
     addCandidate(option.cropName);
-    // Use the actual sprite path from catalog data (e.g. "sprite/plant/CloverFourLeaf" → "CloverFourLeaf")
-    const spriteBaseName = option.spriteKey?.split("/").pop();
-    if (spriteBaseName) addCandidate(spriteBaseName);
+    addCandidate(option.seedName);
   }
   const baseCandidates = Array.from(candidates)
     .map(value => value.replace(/icon$/i, ""))
@@ -760,6 +771,20 @@ function sizePercentToScale(sizePercent: number, maxScale: number | null): numbe
   return Number.isFinite(scale) ? scale : SCALE_MIN;
 }
 
+/** Map from mutation label → UI sprite name in the sprite index */
+const MUTATION_UI_SPRITE_NAMES: Record<string, string> = {
+  Gold: "MutationGold",
+  Rainbow: "MutationRainbow",
+  Wet: "MutationWet",
+  Chilled: "MutationChilled",
+  Frozen: "MutationFrozen",
+  Thunderstruck: "MutationThunderstruck",
+  Dawnlit: "MutationDawnlit",
+  Amberlit: "MutationAmberlit",
+  Dawnbound: "MutationDawncharged",
+  Amberbound: "MutationAmbercharged",
+};
+
 function createSegmentedControl<T extends string>(
   labels: readonly T[],
   selectedLabel: string,
@@ -776,6 +801,33 @@ function createSegmentedControl<T extends string>(
     { ariaLabel, fullWidth: true },
   );
   segmented.classList.add("mg-crop-simulation__segmented-control");
+
+  // Replace mutation text labels with UI sprite icons
+  const buttons = segmented.querySelectorAll<HTMLButtonElement>(".qmm-seg__btn");
+  buttons.forEach(button => {
+    const label = button.dataset.value || button.textContent?.trim() || "";
+    const spriteName = MUTATION_UI_SPRITE_NAMES[label];
+    if (!spriteName) return; // "None" and others keep text label
+    const labelSpan = button.querySelector<HTMLSpanElement>(".qmm-seg__btn-label");
+    if (!labelSpan) return;
+    getSpriteObjectUrlByName(["ui"], spriteName).then(url => {
+      if (!url) return;
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = label;
+      img.title = label;
+      img.width = 20;
+      img.height = 20;
+      img.style.width = "20px";
+      img.style.height = "20px";
+      img.style.objectFit = "contain";
+      img.style.display = "block";
+      img.draggable = false;
+      labelSpan.textContent = "";
+      labelSpan.appendChild(img);
+    });
+  });
+
   return segmented;
 }
 

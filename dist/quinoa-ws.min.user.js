@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.423
+// @version      3.1.430
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -11,7 +11,7 @@
 // @inject-into  page
 // @grant        GM_xmlhttpRequest
 // @grant        GM_info
-// @grant        GM_openInTab 
+// @grant        GM_openInTab
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_registerMenuCommand
@@ -19,6 +19,7 @@
 // @connect      raw.githubusercontent.com
 // @connect      api.github.com
 // @connect      ariesmod-api.ariedam.fr
+// @connect      mg-api.ariedam.fr
 // @connect      ariedam.fr
 // @connect      cdn.pixabay.com
 // @connect      cdn.jsdelivr.net
@@ -638,33 +639,306 @@
     }
   });
 
-  // src/utils/page-context.ts
-  function shareGlobal(name, value) {
-    try {
-      pageWin[name] = value;
-    } catch {
+  // src/utils/friendSettingsSchema.ts
+  var DEFAULT_FRIEND_SETTINGS;
+  var init_friendSettingsSchema = __esm({
+    "src/utils/friendSettingsSchema.ts"() {
+      DEFAULT_FRIEND_SETTINGS = {
+        showOnlineFriendsOnly: false,
+        hideRoomFromPublicList: false,
+        messageSoundEnabled: true,
+        friendRequestSoundEnabled: true,
+        showGarden: true,
+        showInventory: true,
+        showCoins: true,
+        showActivityLog: true,
+        showJournal: true,
+        showStats: true
+      };
     }
-    if (isIsolatedContext) {
-      try {
-        sandboxWin[name] = value;
-      } catch {
+  });
+
+  // src/utils/localStorage.ts
+  function getHostStorage() {
+    if (typeof window === "undefined") return null;
+    try {
+      if (typeof window.localStorage === "undefined") return null;
+      return window.localStorage;
+    } catch {
+      return null;
+    }
+  }
+  function parseSafe(raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return raw;
+    }
+  }
+  function mergeSection(existing, next) {
+    const base = { ...existing ?? {} };
+    for (const [k, v] of Object.entries(next)) {
+      if (base[k] === void 0) {
+        base[k] = v;
       }
     }
+    return base;
   }
-  function readSharedGlobal(name) {
-    if (isIsolatedContext) {
-      const sandboxValue = sandboxWin[name];
-      if (sandboxValue !== void 0) return sandboxValue;
+  function unwrapNestedSnapshot(raw) {
+    let cur = raw;
+    let guard = 0;
+    while (guard++ < 10 && cur && typeof cur === "object" && "snapshot" in cur && typeof cur.snapshot === "object") {
+      cur = cur.snapshot;
     }
-    return pageWin[name];
+    return cur ?? raw;
   }
-  var sandboxWin, pageWin, pageWindow, isIsolatedContext;
-  var init_page_context = __esm({
-    "src/utils/page-context.ts"() {
-      sandboxWin = window;
-      pageWin = typeof unsafeWindow !== "undefined" && unsafeWindow ? unsafeWindow : sandboxWin;
-      pageWindow = pageWin;
-      isIsolatedContext = pageWin !== sandboxWin;
+  function coerceLegacyAggregate(raw) {
+    const out = { ...DEFAULT_ARIES_STORAGE };
+    if (!raw || typeof raw !== "object") return out;
+    const data = raw;
+    if (typeof data.version === "number") out.version = data.version;
+    if (typeof data.migratedAt === "number") out.migratedAt = data.migratedAt;
+    if ("stats" in data) out.stats = unwrapNestedSnapshot(data.stats);
+    if ("customRooms" in data) out.room = mergeSection(out.room, { customRooms: data.customRooms });
+    if ("pets" in data && typeof data.pets === "object") {
+      out.pets = mergeSection(out.pets, data.pets);
+    }
+    if ("petsOverrides" in data) out.pets = mergeSection(out.pets, { overrides: data.petsOverrides });
+    if ("petsUI" in data) out.pets = mergeSection(out.pets, { ui: data.petsUI });
+    if ("petTeams" in data) out.pets = mergeSection(out.pets, { teams: data.petTeams });
+    if ("petTeamSearch" in data) out.pets = mergeSection(out.pets, { teamSearch: data.petTeamSearch });
+    if ("petTeamHotkeys" in data) out.pets = mergeSection(out.pets, { hotkeys: data.petTeamHotkeys });
+    if ("petAlerts" in data) out.pets = mergeSection(out.pets, { alerts: data.petAlerts });
+    if ("notifier" in data && typeof data.notifier === "object") {
+      out.notifier = mergeSection(out.notifier, data.notifier);
+    }
+    if ("notifierPrefs" in data) out.notifier = mergeSection(out.notifier, { prefs: data.notifierPrefs });
+    if ("notifierRules" in data) out.notifier = mergeSection(out.notifier, { rules: data.notifierRules });
+    if ("weatherNotifierPrefs" in data) out.notifier = mergeSection(out.notifier, { weatherPrefs: data.weatherNotifierPrefs });
+    if ("notifierLoopDefaults" in data) out.notifier = mergeSection(out.notifier, { loopDefaults: data.notifierLoopDefaults });
+    if ("misc" in data && typeof data.misc === "object") {
+      out.misc = mergeSection(out.misc, data.misc);
+    }
+    if ("ghostMode" in data) out.misc = mergeSection(out.misc, { ghostMode: data.ghostMode });
+    if ("ghostDelayMs" in data) out.misc = mergeSection(out.misc, { ghostDelayMs: data.ghostDelayMs });
+    if ("autoRecoEnabled" in data) out.misc = mergeSection(out.misc, { autoRecoEnabled: data.autoRecoEnabled });
+    if ("autoRecoDelayMs" in data) out.misc = mergeSection(out.misc, { autoRecoDelayMs: data.autoRecoDelayMs });
+    if ("locker" in data && typeof data.locker === "object") {
+      out.locker = mergeSection(out.locker, data.locker);
+    }
+    if ("lockerRestrictions" in data) out.locker = mergeSection(out.locker, { restrictions: data.lockerRestrictions });
+    if ("lockerState" in data) out.locker = mergeSection(out.locker, { state: data.lockerState });
+    if ("keybinds" in data && typeof data.keybinds === "object") {
+      out.keybinds = mergeSection(out.keybinds, data.keybinds);
+    }
+    if ("editorSavedGardens" in data) out.editor = mergeSection(out.editor, { savedGardens: data.editorSavedGardens });
+    if ("editor" in data && typeof data.editor === "object") {
+      out.editor = mergeSection(out.editor, data.editor);
+    }
+    if ("activityLog" in data && typeof data.activityLog === "object") {
+      out.activityLog = mergeSection(out.activityLog, data.activityLog);
+    }
+    if ("activityLogHistory" in data) out.activityLog = mergeSection(out.activityLog, { history: data.activityLogHistory });
+    if ("activityLogFilter" in data) out.activityLog = mergeSection(out.activityLog, { filter: data.activityLogFilter });
+    if ("hud" in data && typeof data.hud === "object") {
+      out.hud = mergeSection(out.hud, data.hud);
+    }
+    if ("menu" in data && typeof data.menu === "object") {
+      out.menu = mergeSection(out.menu, data.menu);
+    }
+    if ("inventory" in data && typeof data.inventory === "object") {
+      out.inventory = mergeSection(out.inventory, data.inventory);
+    }
+    if ("audio" in data && typeof data.audio === "object") {
+      out.audio = mergeSection(out.audio, data.audio);
+    }
+    if ("audioSettings" in data) out.audio = mergeSection(out.audio, { settings: data.audioSettings });
+    if ("audioLibrary" in data) out.audio = mergeSection(out.audio, { library: data.audioLibrary });
+    if ("soundEffectsVolumeAtom" in data) out.audio = mergeSection(out.audio, { sfxVolumeAtom: data.soundEffectsVolumeAtom });
+    if ("friends" in data && typeof data.friends === "object") {
+      out.friends = {
+        ...out.friends ?? {},
+        ...data.friends
+      };
+    }
+    if ("eggAutomation" in data && typeof data.eggAutomation === "object") {
+      out.eggAutomation = mergeSection(out.eggAutomation, data.eggAutomation);
+    }
+    if ("weatherTeams" in data && typeof data.weatherTeams === "object") {
+      out.weatherTeams = mergeSection(out.weatherTeams, data.weatherTeams);
+    }
+    if ("workflowStudio" in data) {
+      out.workflowStudio = data.workflowStudio;
+    }
+    if ("workflow" in data && typeof data.workflow === "object") {
+      out.workflow = mergeSection(out.workflow, data.workflow);
+    }
+    return out;
+  }
+  function loadAriesStorage() {
+    const storage = getHostStorage();
+    if (!storage) return { ...DEFAULT_ARIES_STORAGE };
+    const raw = storage.getItem(ARIES_STORAGE_KEY);
+    if (raw) {
+      const parsed = parseSafe(raw);
+      if (parsed && typeof parsed === "object") {
+        return coerceLegacyAggregate(parsed);
+      }
+    }
+    return { ...DEFAULT_ARIES_STORAGE };
+  }
+  function persistAriesStorage(data) {
+    const storage = getHostStorage();
+    if (!storage) return;
+    try {
+      storage.setItem(ARIES_STORAGE_KEY, JSON.stringify(data));
+    } catch {
+    }
+  }
+  function getValueAtPath(obj, path) {
+    let cur = obj;
+    for (const segment of path) {
+      if (!cur || typeof cur !== "object") return void 0;
+      cur = cur[segment];
+    }
+    return cur;
+  }
+  function setValueAtPath(obj, path, value) {
+    if (!path.length) return;
+    let cur = obj;
+    for (let i = 0; i < path.length - 1; i++) {
+      const key2 = path[i];
+      if (!cur[key2] || typeof cur[key2] !== "object") {
+        cur[key2] = {};
+      }
+      cur = cur[key2];
+    }
+    const last = path[path.length - 1];
+    if (value === void 0) {
+      if (cur && typeof cur === "object") {
+        delete cur[last];
+      }
+    } else {
+      cur[last] = value;
+    }
+  }
+  function getAriesStorage() {
+    return loadAriesStorage();
+  }
+  function saveAriesStorage(data) {
+    persistAriesStorage(data);
+  }
+  function updateAriesStorage(mutator) {
+    const current = loadAriesStorage();
+    mutator(current);
+    current.version = ARIES_STORAGE_VERSION;
+    persistAriesStorage(current);
+    return current;
+  }
+  function readAriesPath(path, fallback) {
+    const parts = path.split(".").filter(Boolean);
+    const value = getValueAtPath(loadAriesStorage(), parts);
+    if (value === void 0) return fallback;
+    return value;
+  }
+  function writeAriesPath(path, value) {
+    return updateAriesStorage((state3) => {
+      setValueAtPath(state3, path.split(".").filter(Boolean), value);
+    });
+  }
+  function updateAriesPath(path, updater) {
+    return updateAriesStorage((state3) => {
+      const parts = path.split(".").filter(Boolean);
+      const currentValue = getValueAtPath(state3, parts);
+      const next = updater(currentValue);
+      setValueAtPath(state3, parts, next);
+    });
+  }
+  function setApiKey(apiKey) {
+    try {
+      if (typeof GM_setValue === "function") {
+        GM_setValue(API_KEY_STORAGE_KEY, apiKey);
+        return;
+      }
+      getHostStorage()?.setItem(API_KEY_STORAGE_KEY, apiKey);
+    } catch (e) {
+      console.error("Failed to store API key:", e);
+    }
+  }
+  function getApiKey() {
+    try {
+      if (typeof GM_getValue === "function") {
+        return GM_getValue(API_KEY_STORAGE_KEY, null) ?? null;
+      }
+      return getHostStorage()?.getItem(API_KEY_STORAGE_KEY) ?? null;
+    } catch (e) {
+      console.error("Failed to retrieve API key:", e);
+      return null;
+    }
+  }
+  function hasApiKey() {
+    const key2 = getApiKey();
+    return key2 !== null && key2.length > 0;
+  }
+  function hasSeenRoomPrivacyNotice() {
+    try {
+      if (typeof GM_getValue === "function") {
+        const raw = GM_getValue(SEEN_ROOM_PRIVACY_NOTICE_KEY, null);
+        if (raw == null) return false;
+        if (typeof raw === "boolean") return raw;
+        return String(raw).trim() === "1";
+      }
+      return getHostStorage()?.getItem(SEEN_ROOM_PRIVACY_NOTICE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+  function markRoomPrivacyNoticeSeen() {
+    try {
+      if (typeof GM_setValue === "function") {
+        GM_setValue(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
+        return;
+      }
+      getHostStorage()?.setItem(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
+    } catch {
+    }
+  }
+  function setDeclinedApiAuth(declined) {
+    try {
+      if (declined) {
+        if (typeof GM_setValue === "function") {
+          GM_setValue(AUTH_DECLINED_STORAGE_KEY, "1");
+          return;
+        }
+        getHostStorage()?.setItem(AUTH_DECLINED_STORAGE_KEY, "1");
+        return;
+      }
+      if (typeof GM_deleteValue === "function") {
+        GM_deleteValue(AUTH_DECLINED_STORAGE_KEY);
+        return;
+      }
+      getHostStorage()?.removeItem(AUTH_DECLINED_STORAGE_KEY);
+    } catch {
+    }
+  }
+  var ARIES_STORAGE_KEY, ARIES_STORAGE_VERSION, API_KEY_STORAGE_KEY, AUTH_DECLINED_STORAGE_KEY, SEEN_ROOM_PRIVACY_NOTICE_KEY, DEFAULT_ARIES_STORAGE;
+  var init_localStorage = __esm({
+    "src/utils/localStorage.ts"() {
+      init_friendSettingsSchema();
+      ARIES_STORAGE_KEY = "aries_mod";
+      ARIES_STORAGE_VERSION = 1;
+      API_KEY_STORAGE_KEY = "aries_api_key";
+      AUTH_DECLINED_STORAGE_KEY = "aries_auth_declined";
+      SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice";
+      DEFAULT_ARIES_STORAGE = {
+        version: ARIES_STORAGE_VERSION,
+        friends: {
+          settings: DEFAULT_FRIEND_SETTINGS
+        },
+        notifications: {
+          soundEnabled: true
+        }
+      };
     }
   });
 
@@ -737,6 +1011,36 @@
         const parts = key2.split("/").filter(Boolean);
         return parts[parts.length - 1] || "";
       };
+    }
+  });
+
+  // src/utils/page-context.ts
+  function shareGlobal(name, value) {
+    try {
+      pageWin[name] = value;
+    } catch {
+    }
+    if (isIsolatedContext) {
+      try {
+        sandboxWin[name] = value;
+      } catch {
+      }
+    }
+  }
+  function readSharedGlobal(name) {
+    if (isIsolatedContext) {
+      const sandboxValue = sandboxWin[name];
+      if (sandboxValue !== void 0) return sandboxValue;
+    }
+    return pageWin[name];
+  }
+  var sandboxWin, pageWin, pageWindow, isIsolatedContext;
+  var init_page_context = __esm({
+    "src/utils/page-context.ts"() {
+      sandboxWin = window;
+      pageWin = typeof unsafeWindow !== "undefined" && unsafeWindow ? unsafeWindow : sandboxWin;
+      pageWindow = pageWin;
+      isIsolatedContext = pageWin !== sandboxWin;
     }
   });
 
@@ -1410,309 +1714,6 @@
           toolShop,
           eggShop,
           decorShop
-        }
-      };
-    }
-  });
-
-  // src/utils/friendSettingsSchema.ts
-  var DEFAULT_FRIEND_SETTINGS;
-  var init_friendSettingsSchema = __esm({
-    "src/utils/friendSettingsSchema.ts"() {
-      DEFAULT_FRIEND_SETTINGS = {
-        showOnlineFriendsOnly: false,
-        hideRoomFromPublicList: false,
-        messageSoundEnabled: true,
-        friendRequestSoundEnabled: true,
-        showGarden: true,
-        showInventory: true,
-        showCoins: true,
-        showActivityLog: true,
-        showJournal: true,
-        showStats: true
-      };
-    }
-  });
-
-  // src/utils/localStorage.ts
-  function getHostStorage() {
-    if (typeof window === "undefined") return null;
-    try {
-      if (typeof window.localStorage === "undefined") return null;
-      return window.localStorage;
-    } catch {
-      return null;
-    }
-  }
-  function parseSafe(raw) {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return raw;
-    }
-  }
-  function mergeSection(existing, next) {
-    const base = { ...existing ?? {} };
-    for (const [k, v] of Object.entries(next)) {
-      if (base[k] === void 0) {
-        base[k] = v;
-      }
-    }
-    return base;
-  }
-  function unwrapNestedSnapshot(raw) {
-    let cur = raw;
-    let guard = 0;
-    while (guard++ < 10 && cur && typeof cur === "object" && "snapshot" in cur && typeof cur.snapshot === "object") {
-      cur = cur.snapshot;
-    }
-    return cur ?? raw;
-  }
-  function coerceLegacyAggregate(raw) {
-    const out = { ...DEFAULT_ARIES_STORAGE };
-    if (!raw || typeof raw !== "object") return out;
-    const data = raw;
-    if (typeof data.version === "number") out.version = data.version;
-    if (typeof data.migratedAt === "number") out.migratedAt = data.migratedAt;
-    if ("stats" in data) out.stats = unwrapNestedSnapshot(data.stats);
-    if ("customRooms" in data) out.room = mergeSection(out.room, { customRooms: data.customRooms });
-    if ("pets" in data && typeof data.pets === "object") {
-      out.pets = mergeSection(out.pets, data.pets);
-    }
-    if ("petsOverrides" in data) out.pets = mergeSection(out.pets, { overrides: data.petsOverrides });
-    if ("petsUI" in data) out.pets = mergeSection(out.pets, { ui: data.petsUI });
-    if ("petTeams" in data) out.pets = mergeSection(out.pets, { teams: data.petTeams });
-    if ("petTeamSearch" in data) out.pets = mergeSection(out.pets, { teamSearch: data.petTeamSearch });
-    if ("petTeamHotkeys" in data) out.pets = mergeSection(out.pets, { hotkeys: data.petTeamHotkeys });
-    if ("petAlerts" in data) out.pets = mergeSection(out.pets, { alerts: data.petAlerts });
-    if ("notifier" in data && typeof data.notifier === "object") {
-      out.notifier = mergeSection(out.notifier, data.notifier);
-    }
-    if ("notifierPrefs" in data) out.notifier = mergeSection(out.notifier, { prefs: data.notifierPrefs });
-    if ("notifierRules" in data) out.notifier = mergeSection(out.notifier, { rules: data.notifierRules });
-    if ("weatherNotifierPrefs" in data) out.notifier = mergeSection(out.notifier, { weatherPrefs: data.weatherNotifierPrefs });
-    if ("notifierLoopDefaults" in data) out.notifier = mergeSection(out.notifier, { loopDefaults: data.notifierLoopDefaults });
-    if ("misc" in data && typeof data.misc === "object") {
-      out.misc = mergeSection(out.misc, data.misc);
-    }
-    if ("ghostMode" in data) out.misc = mergeSection(out.misc, { ghostMode: data.ghostMode });
-    if ("ghostDelayMs" in data) out.misc = mergeSection(out.misc, { ghostDelayMs: data.ghostDelayMs });
-    if ("autoRecoEnabled" in data) out.misc = mergeSection(out.misc, { autoRecoEnabled: data.autoRecoEnabled });
-    if ("autoRecoDelayMs" in data) out.misc = mergeSection(out.misc, { autoRecoDelayMs: data.autoRecoDelayMs });
-    if ("locker" in data && typeof data.locker === "object") {
-      out.locker = mergeSection(out.locker, data.locker);
-    }
-    if ("lockerRestrictions" in data) out.locker = mergeSection(out.locker, { restrictions: data.lockerRestrictions });
-    if ("lockerState" in data) out.locker = mergeSection(out.locker, { state: data.lockerState });
-    if ("keybinds" in data && typeof data.keybinds === "object") {
-      out.keybinds = mergeSection(out.keybinds, data.keybinds);
-    }
-    if ("editorSavedGardens" in data) out.editor = mergeSection(out.editor, { savedGardens: data.editorSavedGardens });
-    if ("editor" in data && typeof data.editor === "object") {
-      out.editor = mergeSection(out.editor, data.editor);
-    }
-    if ("activityLog" in data && typeof data.activityLog === "object") {
-      out.activityLog = mergeSection(out.activityLog, data.activityLog);
-    }
-    if ("activityLogHistory" in data) out.activityLog = mergeSection(out.activityLog, { history: data.activityLogHistory });
-    if ("activityLogFilter" in data) out.activityLog = mergeSection(out.activityLog, { filter: data.activityLogFilter });
-    if ("hud" in data && typeof data.hud === "object") {
-      out.hud = mergeSection(out.hud, data.hud);
-    }
-    if ("menu" in data && typeof data.menu === "object") {
-      out.menu = mergeSection(out.menu, data.menu);
-    }
-    if ("inventory" in data && typeof data.inventory === "object") {
-      out.inventory = mergeSection(out.inventory, data.inventory);
-    }
-    if ("audio" in data && typeof data.audio === "object") {
-      out.audio = mergeSection(out.audio, data.audio);
-    }
-    if ("audioSettings" in data) out.audio = mergeSection(out.audio, { settings: data.audioSettings });
-    if ("audioLibrary" in data) out.audio = mergeSection(out.audio, { library: data.audioLibrary });
-    if ("soundEffectsVolumeAtom" in data) out.audio = mergeSection(out.audio, { sfxVolumeAtom: data.soundEffectsVolumeAtom });
-    if ("friends" in data && typeof data.friends === "object") {
-      out.friends = {
-        ...out.friends ?? {},
-        ...data.friends
-      };
-    }
-    if ("eggAutomation" in data && typeof data.eggAutomation === "object") {
-      out.eggAutomation = mergeSection(out.eggAutomation, data.eggAutomation);
-    }
-    if ("weatherTeams" in data && typeof data.weatherTeams === "object") {
-      out.weatherTeams = mergeSection(out.weatherTeams, data.weatherTeams);
-    }
-    if ("workflowStudio" in data) {
-      out.workflowStudio = data.workflowStudio;
-    }
-    if ("workflow" in data && typeof data.workflow === "object") {
-      out.workflow = mergeSection(out.workflow, data.workflow);
-    }
-    return out;
-  }
-  function loadAriesStorage() {
-    const storage = getHostStorage();
-    if (!storage) return { ...DEFAULT_ARIES_STORAGE };
-    const raw = storage.getItem(ARIES_STORAGE_KEY);
-    if (raw) {
-      const parsed = parseSafe(raw);
-      if (parsed && typeof parsed === "object") {
-        return coerceLegacyAggregate(parsed);
-      }
-    }
-    return { ...DEFAULT_ARIES_STORAGE };
-  }
-  function persistAriesStorage(data) {
-    const storage = getHostStorage();
-    if (!storage) return;
-    try {
-      storage.setItem(ARIES_STORAGE_KEY, JSON.stringify(data));
-    } catch {
-    }
-  }
-  function getValueAtPath(obj, path) {
-    let cur = obj;
-    for (const segment of path) {
-      if (!cur || typeof cur !== "object") return void 0;
-      cur = cur[segment];
-    }
-    return cur;
-  }
-  function setValueAtPath(obj, path, value) {
-    if (!path.length) return;
-    let cur = obj;
-    for (let i = 0; i < path.length - 1; i++) {
-      const key2 = path[i];
-      if (!cur[key2] || typeof cur[key2] !== "object") {
-        cur[key2] = {};
-      }
-      cur = cur[key2];
-    }
-    const last = path[path.length - 1];
-    if (value === void 0) {
-      if (cur && typeof cur === "object") {
-        delete cur[last];
-      }
-    } else {
-      cur[last] = value;
-    }
-  }
-  function getAriesStorage() {
-    return loadAriesStorage();
-  }
-  function saveAriesStorage(data) {
-    persistAriesStorage(data);
-  }
-  function updateAriesStorage(mutator) {
-    const current = loadAriesStorage();
-    mutator(current);
-    current.version = ARIES_STORAGE_VERSION;
-    persistAriesStorage(current);
-    return current;
-  }
-  function readAriesPath(path, fallback) {
-    const parts = path.split(".").filter(Boolean);
-    const value = getValueAtPath(loadAriesStorage(), parts);
-    if (value === void 0) return fallback;
-    return value;
-  }
-  function writeAriesPath(path, value) {
-    return updateAriesStorage((state3) => {
-      setValueAtPath(state3, path.split(".").filter(Boolean), value);
-    });
-  }
-  function updateAriesPath(path, updater) {
-    return updateAriesStorage((state3) => {
-      const parts = path.split(".").filter(Boolean);
-      const currentValue = getValueAtPath(state3, parts);
-      const next = updater(currentValue);
-      setValueAtPath(state3, parts, next);
-    });
-  }
-  function setApiKey(apiKey) {
-    try {
-      if (typeof GM_setValue === "function") {
-        GM_setValue(API_KEY_STORAGE_KEY, apiKey);
-        return;
-      }
-      getHostStorage()?.setItem(API_KEY_STORAGE_KEY, apiKey);
-    } catch (e) {
-      console.error("Failed to store API key:", e);
-    }
-  }
-  function getApiKey() {
-    try {
-      if (typeof GM_getValue === "function") {
-        return GM_getValue(API_KEY_STORAGE_KEY, null) ?? null;
-      }
-      return getHostStorage()?.getItem(API_KEY_STORAGE_KEY) ?? null;
-    } catch (e) {
-      console.error("Failed to retrieve API key:", e);
-      return null;
-    }
-  }
-  function hasApiKey() {
-    const key2 = getApiKey();
-    return key2 !== null && key2.length > 0;
-  }
-  function hasSeenRoomPrivacyNotice() {
-    try {
-      if (typeof GM_getValue === "function") {
-        const raw = GM_getValue(SEEN_ROOM_PRIVACY_NOTICE_KEY, null);
-        if (raw == null) return false;
-        if (typeof raw === "boolean") return raw;
-        return String(raw).trim() === "1";
-      }
-      return getHostStorage()?.getItem(SEEN_ROOM_PRIVACY_NOTICE_KEY) === "1";
-    } catch {
-      return false;
-    }
-  }
-  function markRoomPrivacyNoticeSeen() {
-    try {
-      if (typeof GM_setValue === "function") {
-        GM_setValue(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
-        return;
-      }
-      getHostStorage()?.setItem(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
-    } catch {
-    }
-  }
-  function setDeclinedApiAuth(declined) {
-    try {
-      if (declined) {
-        if (typeof GM_setValue === "function") {
-          GM_setValue(AUTH_DECLINED_STORAGE_KEY, "1");
-          return;
-        }
-        getHostStorage()?.setItem(AUTH_DECLINED_STORAGE_KEY, "1");
-        return;
-      }
-      if (typeof GM_deleteValue === "function") {
-        GM_deleteValue(AUTH_DECLINED_STORAGE_KEY);
-        return;
-      }
-      getHostStorage()?.removeItem(AUTH_DECLINED_STORAGE_KEY);
-    } catch {
-    }
-  }
-  var ARIES_STORAGE_KEY, ARIES_STORAGE_VERSION, API_KEY_STORAGE_KEY, AUTH_DECLINED_STORAGE_KEY, SEEN_ROOM_PRIVACY_NOTICE_KEY, DEFAULT_ARIES_STORAGE;
-  var init_localStorage = __esm({
-    "src/utils/localStorage.ts"() {
-      init_friendSettingsSchema();
-      ARIES_STORAGE_KEY = "aries_mod";
-      ARIES_STORAGE_VERSION = 1;
-      API_KEY_STORAGE_KEY = "aries_api_key";
-      AUTH_DECLINED_STORAGE_KEY = "aries_auth_declined";
-      SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice";
-      DEFAULT_ARIES_STORAGE = {
-        version: ARIES_STORAGE_VERSION,
-        friends: {
-          settings: DEFAULT_FRIEND_SETTINGS
-        },
-        notifications: {
-          soundEnabled: true
         }
       };
     }
@@ -5020,29 +5021,1078 @@
   // src/sprite/index.ts
   init_variantBuilder();
 
+  // src/utils/mgCommon.ts
+  var ORIGIN = "https://magicgarden.gg";
+  var sleep2 = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
+  function gmGet(url, responseType = "text") {
+    return new Promise((resolve2, reject) => {
+      if (typeof GM_xmlhttpRequest !== "function") {
+        reject(new Error("GM_xmlhttpRequest not available"));
+        return;
+      }
+      GM_xmlhttpRequest({
+        method: "GET",
+        url,
+        responseType,
+        onload: (r) => {
+          if (r.status >= 200 && r.status < 300) resolve2(r);
+          else reject(new Error(`HTTP ${r.status} for ${url}`));
+        },
+        onerror: () => reject(new Error(`Network error for ${url}`)),
+        ontimeout: () => reject(new Error(`Timeout for ${url}`))
+      });
+    });
+  }
+  var getJSON2 = async (url) => JSON.parse((await gmGet(url, "text")).responseText);
+  var getBlob2 = async (url) => (await gmGet(url, "blob")).response;
+  function blobToImage2(blob) {
+    return new Promise((resolve2, reject) => {
+      const u = URL.createObjectURL(blob);
+      const img = new Image();
+      img.decoding = "async";
+      img.onload = () => {
+        URL.revokeObjectURL(u);
+        resolve2(img);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(u);
+        reject(new Error("Image decode failed"));
+      };
+      img.src = u;
+    });
+  }
+
+  // src/utils/discordCsp.ts
+  function isDiscordActivityContext() {
+    try {
+      return window.location.hostname.endsWith("discordsays.com");
+    } catch {
+      return false;
+    }
+  }
+  var _SAFE_IMG_HOSTS = ["cdn.discordapp.com", "media.discordapp.net"];
+  var _gmImgCache = /* @__PURE__ */ new Map();
+  var _gmImgPending = /* @__PURE__ */ new Map();
+  var _extMimeMap = {
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    gif: "image/gif",
+    webp: "image/webp",
+    svg: "image/svg+xml"
+  };
+  function _isImgUrlSafe(url) {
+    if (!url || url.startsWith("blob:") || url.startsWith("data:") || url.startsWith("/")) return true;
+    try {
+      const { hostname } = new URL(url);
+      return _SAFE_IMG_HOSTS.some((h) => hostname === h || hostname.endsWith("." + h));
+    } catch {
+      return true;
+    }
+  }
+  function setImageSafe(img, url) {
+    if (!url) return;
+    if (!isDiscordActivityContext()) {
+      img.src = url;
+      return;
+    }
+    if (_isImgUrlSafe(url)) {
+      img.src = url;
+      return;
+    }
+    const cached = _gmImgCache.get(url);
+    if (cached) {
+      img.src = cached;
+      return;
+    }
+    const pending = _gmImgPending.get(url);
+    if (pending) {
+      pending.push(img);
+      return;
+    }
+    _gmImgPending.set(url, [img]);
+    GM_xmlhttpRequest({
+      method: "GET",
+      url,
+      headers: {},
+      responseType: "arraybuffer",
+      onload: (res) => {
+        const imgs = _gmImgPending.get(url) ?? [];
+        _gmImgPending.delete(url);
+        if (!res.response) {
+          for (const el2 of imgs) el2.src = url;
+          return;
+        }
+        const ext = url.split(".").pop()?.toLowerCase().split("?")[0] ?? "png";
+        const mime = _extMimeMap[ext] ?? "image/png";
+        const blob = new Blob([res.response], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        _gmImgCache.set(url, blobUrl);
+        for (const el2 of imgs) el2.src = blobUrl;
+      },
+      onerror: () => {
+        const imgs = _gmImgPending.get(url) ?? [];
+        _gmImgPending.delete(url);
+        for (const el2 of imgs) el2.src = url;
+      }
+    });
+  }
+  var _gmAudioCache = /* @__PURE__ */ new Map();
+  var _gmAudioPending = /* @__PURE__ */ new Map();
+  function getAudioUrlSafe(url) {
+    return new Promise((resolve2) => {
+      if (!url) {
+        resolve2(url);
+        return;
+      }
+      if (!isDiscordActivityContext()) {
+        resolve2(url);
+        return;
+      }
+      const cached = _gmAudioCache.get(url);
+      if (cached) {
+        resolve2(cached);
+        return;
+      }
+      const pending = _gmAudioPending.get(url);
+      if (pending) {
+        pending.push(resolve2);
+        return;
+      }
+      _gmAudioPending.set(url, [resolve2]);
+      GM_xmlhttpRequest({
+        method: "GET",
+        url,
+        headers: {},
+        responseType: "arraybuffer",
+        onload: (res) => {
+          const callbacks = _gmAudioPending.get(url) ?? [];
+          _gmAudioPending.delete(url);
+          if (!res.response) {
+            for (const cb of callbacks) cb(url);
+            return;
+          }
+          const ext = url.split(".").pop()?.toLowerCase().split("?")[0] ?? "mp3";
+          const audioMimeMap = {
+            mp3: "audio/mpeg",
+            ogg: "audio/ogg",
+            wav: "audio/wav",
+            m4a: "audio/mp4"
+          };
+          const mime = audioMimeMap[ext] ?? "audio/mpeg";
+          const blob = new Blob([res.response], { type: mime });
+          const blobUrl = URL.createObjectURL(blob);
+          _gmAudioCache.set(url, blobUrl);
+          for (const cb of callbacks) cb(blobUrl);
+        },
+        onerror: () => {
+          const callbacks = _gmAudioPending.get(url) ?? [];
+          _gmAudioPending.delete(url);
+          for (const cb of callbacks) cb(url);
+        }
+      });
+    });
+  }
+  var EMOJI_DATA_CDN_PREFIX = "https://cdn.jsdelivr.net/npm/emoji-picker-element-data";
+  var _emojiJson = null;
+  var _emojiPending = [];
+  var _emojiInterceptorInstalled = false;
+  function _emojiMakeResponse(json, method) {
+    if (method === "HEAD") {
+      return new Response(null, {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    return new Response(json, {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+  function installEmojiDataFetchInterceptor() {
+    if (_emojiInterceptorInstalled) return;
+    _emojiInterceptorInstalled = true;
+    const _origFetch = window.fetch.bind(window);
+    window.fetch = function(input, init2) {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (!url.startsWith(EMOJI_DATA_CDN_PREFIX)) {
+        return _origFetch(input, init2);
+      }
+      const method = (init2?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
+      if (_emojiJson) {
+        return Promise.resolve(_emojiMakeResponse(_emojiJson, method));
+      }
+      return new Promise((resolve2) => {
+        _emojiPending.push((json) => {
+          resolve2(
+            json ? _emojiMakeResponse(json, method) : new Response(null, { status: 503 })
+          );
+        });
+      });
+    };
+    void withDiscordPollPause(async () => {
+      return new Promise((resolve2) => {
+        GM_xmlhttpRequest({
+          method: "GET",
+          url: `${EMOJI_DATA_CDN_PREFIX}@^1/en/emojibase/data.json`,
+          headers: {},
+          onload: (res) => {
+            if (res.status >= 200 && res.status < 300 && res.responseText) {
+              _emojiJson = res.responseText;
+              for (const cb of _emojiPending) cb(_emojiJson);
+            } else {
+              console.error("[discordCsp] emoji fetch failed:", res.status);
+              for (const cb of _emojiPending) cb(null);
+            }
+            _emojiPending = [];
+            resolve2();
+          },
+          onerror: (err) => {
+            console.error("[discordCsp] emoji fetch error:", err);
+            for (const cb of _emojiPending) cb(null);
+            _emojiPending = [];
+            resolve2();
+          }
+        });
+      });
+    });
+  }
+
+  // src/ariesModAPI/client/sse.ts
+  init_localStorage();
+
+  // src/ariesModAPI/client/http.ts
+  init_localStorage();
+
+  // src/ariesModAPI/config.ts
+  var API_BASE_URL = "https://ariesmod-api.ariedam.fr/";
+  var API_ORIGIN = API_BASE_URL.replace(/\/$/, "");
+  var SSE_RECONNECT_DELAY = 5e3;
+  var LONG_POLL_TIMEOUT = 25e3;
+  var LONG_POLL_BACKOFF_MAX = 3e4;
+  var MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND = 5;
+  var DEFAULT_HEARTBEAT_INTERVAL = 6e4;
+
+  // src/ariesModAPI/client/http.ts
+  function buildUrl(path, query) {
+    const url = new URL(path, API_BASE_URL);
+    if (query) {
+      for (const [key2, value] of Object.entries(query)) {
+        if (value === void 0) continue;
+        url.searchParams.set(key2, String(value));
+      }
+    }
+    return url.toString();
+  }
+  function gmRequest(method, url, body) {
+    return new Promise((resolve2) => {
+      const apiKey = getApiKey();
+      const headers = {};
+      if (apiKey) {
+        headers["Authorization"] = `Bearer ${apiKey}`;
+      }
+      if (body !== void 0) {
+        headers["Content-Type"] = "application/json";
+      }
+      GM_xmlhttpRequest({
+        method,
+        url,
+        headers,
+        data: body !== void 0 ? JSON.stringify(body) : void 0,
+        onload: (res) => {
+          if (res.status >= 200 && res.status < 300) {
+            try {
+              const parsed = res.responseText ? JSON.parse(res.responseText) : null;
+              resolve2({ status: res.status, data: parsed });
+            } catch {
+              resolve2({ status: res.status, data: null });
+            }
+          } else {
+            resolve2({ status: res.status, data: null });
+          }
+        },
+        onerror: () => {
+          resolve2({ status: 0, data: null });
+        }
+      });
+    });
+  }
+  async function fetchRequest(method, url, body) {
+    try {
+      const apiKey = getApiKey();
+      const headers = {};
+      if (apiKey) {
+        headers["Authorization"] = `Bearer ${apiKey}`;
+      }
+      const options = {
+        method,
+        headers,
+        credentials: "omit"
+      };
+      if (body !== void 0) {
+        headers["Content-Type"] = "application/json";
+        options.body = JSON.stringify(body);
+      }
+      const res = await fetch(url, options);
+      const text = await res.text();
+      let parsed = null;
+      if (text) {
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+        }
+      }
+      return { status: res.status, data: parsed };
+    } catch {
+      return { status: 0, data: null };
+    }
+  }
+  async function request(method, path, options) {
+    return withDiscordPollPause(async () => {
+      const url = buildUrl(path, options?.query);
+      if (isDiscordActivityContext()) {
+        return gmRequest(method, url, options?.body);
+      }
+      try {
+        return await fetchRequest(method, url, options?.body);
+      } catch {
+        return gmRequest(method, url, options?.body);
+      }
+    });
+  }
+  async function httpGet(path, query) {
+    return request("GET", path, { query });
+  }
+  async function httpPost(path, body) {
+    return request("POST", path, { body });
+  }
+  async function httpPatch(path, body) {
+    return request("PATCH", path, { body });
+  }
+  async function httpDelete(path, body) {
+    return request("DELETE", path, { body });
+  }
+
+  // src/ariesModAPI/client/sse.ts
+  var MIN_STABLE_STREAM_MS = 1e4;
+  function openSSEStream(path, onEvent, onError) {
+    let closed = false;
+    let running = false;
+    let wasConnected = false;
+    let abortController = null;
+    let reconnectTimer = null;
+    let backoff = SSE_RECONNECT_DELAY;
+    let knownServerSessionId = null;
+    const url = buildUrl(path);
+    const scheduleReconnect = () => {
+      if (closed) return;
+      if (reconnectTimer !== null) {
+        clearTimeout(reconnectTimer);
+      }
+      reconnectTimer = setTimeout(startStream, backoff);
+      backoff = Math.min(LONG_POLL_BACKOFF_MAX, Math.floor(backoff * 1.5));
+    };
+    const notifyDisconnect = () => {
+      if (!wasConnected) return;
+      wasConnected = false;
+      onError?.();
+    };
+    const startStream = async () => {
+      reconnectTimer = null;
+      if (closed || running) return;
+      running = true;
+      const apiKey = getApiKey();
+      const headers = {};
+      if (apiKey) {
+        headers["Authorization"] = `Bearer ${apiKey}`;
+      }
+      abortController = new AbortController();
+      try {
+        const response = await fetch(url, {
+          headers,
+          signal: abortController.signal
+        });
+        if (!response.ok || !response.body) {
+          running = false;
+          notifyDisconnect();
+          scheduleReconnect();
+          return;
+        }
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let currentEventType = "";
+        let currentEventData = "";
+        const streamStartedAt = Date.now();
+        const processLine = (line) => {
+          if (!line.trim()) {
+            if (currentEventType && currentEventData) {
+              wasConnected = true;
+              if (currentEventType === "connected") {
+                try {
+                  const payload = JSON.parse(currentEventData);
+                  if (payload.serverSessionId) {
+                    if (knownServerSessionId !== null && payload.serverSessionId !== knownServerSessionId) {
+                      console.log(
+                        "[SSE] \u{1F504} Server restart detected! Session changed from",
+                        knownServerSessionId,
+                        "to",
+                        payload.serverSessionId
+                      );
+                      knownServerSessionId = payload.serverSessionId;
+                    } else if (knownServerSessionId === null) {
+                      knownServerSessionId = payload.serverSessionId;
+                    }
+                  }
+                } catch (e) {
+                  console.error("[SSE] Error parsing connected event:", e);
+                }
+              }
+              try {
+                onEvent(currentEventType, currentEventData);
+              } catch (e) {
+                console.error(`[SSE] Handler error for "${currentEventType}":`, e);
+              }
+            }
+            currentEventType = "";
+            currentEventData = "";
+            return;
+          }
+          if (line.startsWith("event:")) {
+            currentEventType = line.substring(6).trim();
+          } else if (line.startsWith("data:")) {
+            const data = line.substring(5).trim();
+            currentEventData += (currentEventData ? "\n" : "") + data;
+          }
+        };
+        while (!closed) {
+          const { done, value } = await reader.read();
+          if (done || closed) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) {
+            processLine(line);
+          }
+        }
+        running = false;
+        if (wasConnected && Date.now() - streamStartedAt > MIN_STABLE_STREAM_MS) {
+          backoff = SSE_RECONNECT_DELAY;
+        }
+        if (!closed) {
+          notifyDisconnect();
+          scheduleReconnect();
+        }
+      } catch (err) {
+        running = false;
+        if (!closed) {
+          notifyDisconnect();
+          scheduleReconnect();
+        }
+      }
+    };
+    startStream();
+    return {
+      close: () => {
+        closed = true;
+        running = false;
+        wasConnected = false;
+        if (reconnectTimer !== null) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        }
+        try {
+          abortController?.abort();
+        } catch {
+        }
+        abortController = null;
+      }
+    };
+  }
+
+  // src/ariesModAPI/client/longPoll.ts
+  init_localStorage();
+  function gmLongPoll(url) {
+    let aborted = false;
+    let req = null;
+    const apiKey = getApiKey();
+    const headers = {};
+    if (apiKey) {
+      headers["Authorization"] = `Bearer ${apiKey}`;
+    }
+    const promise2 = new Promise((resolve2) => {
+      req = GM_xmlhttpRequest({
+        method: "GET",
+        url,
+        headers,
+        onload: (res) => {
+          if (res.status >= 200 && res.status < 300) {
+            try {
+              const parsed = res.responseText ? JSON.parse(res.responseText) : null;
+              resolve2({ status: res.status, data: parsed });
+            } catch {
+              resolve2({ status: res.status, data: null });
+            }
+          } else {
+            resolve2({ status: res.status, data: null });
+          }
+        },
+        onerror: () => {
+          if (aborted) {
+            resolve2({ status: 0, data: null, aborted: true });
+            return;
+          }
+          resolve2({ status: 0, data: null });
+        }
+      });
+    });
+    return {
+      abort: () => {
+        aborted = true;
+        try {
+          req?.abort();
+        } catch {
+        }
+      },
+      promise: promise2
+    };
+  }
+  function startLongPollStream(onEvent, onConnected, onError) {
+    let closed = false;
+    let paused = false;
+    let running = false;
+    let token = 0;
+    let lastEventId = 0;
+    let backoff = 1e3;
+    let inFlight = null;
+    let knownServerSessionId = null;
+    const schedule = (delay3) => {
+      if (closed || paused) return;
+      setTimeout(poll, delay3);
+    };
+    const poll = async () => {
+      if (closed || paused || running) return;
+      running = true;
+      const currentToken = ++token;
+      const url = buildUrl("events/poll", {
+        since: lastEventId,
+        timeoutMs: LONG_POLL_TIMEOUT
+      });
+      const pollReq = gmLongPoll(url);
+      inFlight = { abort: pollReq.abort };
+      const { status, data, aborted } = await pollReq.promise;
+      inFlight = null;
+      running = false;
+      if (closed || paused || aborted || currentToken !== token) return;
+      if (status === 200 && data) {
+        if (knownServerSessionId !== null && data.serverSessionId !== knownServerSessionId) {
+          console.log(
+            "[Long Poll] \u{1F504} Server restart detected! Session changed from",
+            knownServerSessionId,
+            "to",
+            data.serverSessionId
+          );
+          lastEventId = 0;
+          knownServerSessionId = data.serverSessionId;
+          backoff = 1e3;
+          schedule(0);
+          return;
+        }
+        if (knownServerSessionId === null) {
+          knownServerSessionId = data.serverSessionId;
+        }
+        const eventId = Number(data.lastEventId);
+        if (Number.isFinite(eventId)) {
+          lastEventId = eventId;
+        }
+        onConnected?.({
+          playerId: data.playerId,
+          lastEventId
+        });
+        if (Array.isArray(data.events)) {
+          for (const evt of data.events) {
+            if (!evt || typeof evt.type !== "string") continue;
+            onEvent(evt);
+          }
+        }
+        backoff = 1e3;
+        schedule(0);
+        return;
+      }
+      onError?.();
+      schedule(backoff);
+      backoff = Math.min(LONG_POLL_BACKOFF_MAX, Math.floor(backoff * 1.7));
+    };
+    poll();
+    return {
+      close: () => {
+        closed = true;
+        token += 1;
+        running = false;
+        inFlight?.abort();
+      },
+      getLastEventId: () => lastEventId,
+      pause: () => {
+        paused = true;
+        token += 1;
+        running = false;
+        inFlight?.abort();
+      },
+      resume: () => {
+        if (closed) return;
+        paused = false;
+        if (!running) {
+          poll();
+        }
+      },
+      kick: () => {
+        if (closed || paused || running) return;
+        poll();
+      }
+    };
+  }
+
+  // src/ariesModAPI/client/events.ts
+  var _unifiedConnections = /* @__PURE__ */ new Map();
+  function safeJsonParse(value) {
+    if (value === null || value === void 0) return value;
+    if (typeof value !== "string") return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
+  function notifyConnected(conn, payload) {
+    if (conn.connectedNotified) return;
+    conn.connectedNotified = true;
+    for (const sub of conn.subscribers) {
+      sub.onConnected?.(payload);
+    }
+  }
+  function dispatchUnifiedEvent(conn, eventName, data) {
+    for (const sub of conn.subscribers) {
+      sub.onEvent(eventName, data);
+    }
+  }
+  function startUnifiedSSE(conn) {
+    conn.handle = openSSEStream(
+      "events/stream",
+      (eventName, raw) => {
+        const data = safeJsonParse(raw);
+        if (eventName === "connected") {
+          const payload = data && typeof data === "object" ? data : { playerId: conn.playerId };
+          const lastId = Number(payload.lastEventId);
+          if (Number.isFinite(lastId)) {
+            conn.lastEventId = Math.max(conn.lastEventId, lastId);
+          }
+          notifyConnected(conn, {
+            playerId: payload.playerId ?? conn.playerId,
+            lastEventId: Number.isFinite(lastId) ? lastId : void 0
+          });
+          return;
+        }
+        dispatchUnifiedEvent(conn, eventName, data);
+      },
+      () => {
+        conn.connectedNotified = false;
+        for (const sub of conn.subscribers) {
+          sub.onError?.(new Event("error"));
+        }
+      }
+    );
+  }
+  function startUnifiedLongPoll(conn) {
+    const pollHandle = startLongPollStream(
+      (evt) => {
+        dispatchUnifiedEvent(conn, evt.type, evt.data);
+      },
+      (payload) => {
+        conn.lastEventId = payload.lastEventId;
+        notifyConnected(conn, {
+          playerId: payload.playerId,
+          lastEventId: payload.lastEventId
+        });
+      },
+      () => {
+        for (const sub of conn.subscribers) {
+          sub.onError?.(new Event("error"));
+        }
+      }
+    );
+    conn.handle = {
+      close: () => {
+        conn.closed = true;
+        pollHandle.close();
+      }
+    };
+    conn.pollAbort = () => pollHandle.pause();
+    conn.pollKick = () => pollHandle.resume();
+  }
+  function openUnifiedEvents(playerId2, subscriber) {
+    let conn = _unifiedConnections.get(playerId2);
+    if (!conn) {
+      const mode = isDiscordActivityContext() ? "poll" : "sse";
+      conn = {
+        playerId: playerId2,
+        mode,
+        subscribers: /* @__PURE__ */ new Set(),
+        handle: null,
+        lastEventId: 0,
+        connectedNotified: false,
+        closed: false,
+        pollPaused: false,
+        pollRunning: false,
+        pollToken: 0
+      };
+      _unifiedConnections.set(playerId2, conn);
+      if (conn.mode === "poll") {
+        startUnifiedLongPoll(conn);
+      } else {
+        startUnifiedSSE(conn);
+      }
+    }
+    conn.subscribers.add(subscriber);
+    return {
+      close: () => {
+        conn.subscribers.delete(subscriber);
+        if (conn.subscribers.size === 0) {
+          conn.closed = true;
+          conn.handle?.close();
+          _unifiedConnections.delete(playerId2);
+        }
+      }
+    };
+  }
+  var _pollPauseDepth = 0;
+  function pauseDiscordLongPolls() {
+    if (!isDiscordActivityContext()) return;
+    _pollPauseDepth += 1;
+    for (const conn of _unifiedConnections.values()) {
+      if (conn.mode !== "poll") continue;
+      conn.pollPaused = true;
+      conn.pollToken += 1;
+      conn.pollRunning = false;
+      conn.pollAbort?.();
+    }
+  }
+  function resumeDiscordLongPolls() {
+    if (!isDiscordActivityContext()) return;
+    _pollPauseDepth = Math.max(0, _pollPauseDepth - 1);
+    if (_pollPauseDepth > 0) return;
+    for (const conn of _unifiedConnections.values()) {
+      if (conn.mode !== "poll") continue;
+      conn.pollPaused = false;
+      conn.pollKick?.();
+    }
+  }
+  async function withDiscordPollPause(fn) {
+    if (!isDiscordActivityContext()) return await fn();
+    pauseDiscordLongPolls();
+    try {
+      return await fn();
+    } finally {
+      resumeDiscordLongPolls();
+    }
+  }
+
   // src/ui/spriteIconCache.ts
-  init_page_context();
-  var SPRITE_PRELOAD_CATEGORIES = [
-    "plant",
-    "tallplant",
-    "decor",
-    "item",
-    "pet",
-    "seed",
-    "ui",
-    "mutation",
-    "mutation-overlay"
-  ];
+  var API_BASE = "https://mg-api.ariedam.fr";
+  var indexEntries = [];
+  var nameIndex = /* @__PURE__ */ new Map();
+  var indexReady = null;
+  var normalize = (value) => {
+    let str = String(value || "").trim();
+    if (str.includes("/")) {
+      str = str.split("/").pop() || str;
+    }
+    str = str.replace(/\.[a-z0-9]+(\?.*)?$/i, "");
+    return str.toLowerCase().replace(/[^a-z0-9]/g, "");
+  };
+  var INTERNAL_TO_API = {
+    plant: "plants",
+    tallplant: "tallPlants",
+    seed: "seeds",
+    pet: "pets",
+    item: "items",
+    decor: "decor",
+    mutation: "mutations",
+    "mutation-overlay": "mutations",
+    ui: "ui",
+    weather: "weather",
+    objects: "objects",
+    tiles: "tiles",
+    animations: "animations",
+    winter: "winter"
+  };
+  var SEARCH_CATS = {
+    plant: ["plant", "tallplant"],
+    tallplant: ["tallplant", "plant"],
+    crop: ["plant", "tallplant"],
+    seed: ["seed"],
+    pet: ["pet"],
+    item: ["item"],
+    decor: ["decor"],
+    mutation: ["mutation", "mutation-overlay"],
+    "mutation-overlay": ["mutation-overlay", "mutation"],
+    ui: ["ui"],
+    weather: ["ui", "weather", "mutation"]
+  };
+  function fetchIndex() {
+    if (indexReady) return indexReady;
+    indexReady = withDiscordPollPause(
+      () => getJSON2(
+        `${API_BASE}/assets/sprite-data?flat=1`
+      )
+    ).then((data) => {
+      const items = data.items || [];
+      for (const item of items) {
+        const parts = item.id.split("/").filter(Boolean);
+        const start2 = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
+        const internalCat = parts[start2] || "";
+        const apiCat = INTERNAL_TO_API[internalCat] || internalCat;
+        const entry = { id: item.id, name: item.name, internalCat, apiCat };
+        indexEntries.push(entry);
+        const norm3 = normalize(item.name);
+        const arr = nameIndex.get(norm3) || [];
+        arr.push(entry);
+        nameIndex.set(norm3, arr);
+      }
+      console.log("[SpriteIconCache] sprite index loaded", { count: indexEntries.length });
+    }).catch((err) => {
+      console.error("[SpriteIconCache] failed to fetch sprite index", err);
+      indexReady = null;
+    });
+    return indexReady;
+  }
+  fetchIndex();
+  function spriteUrl(entry) {
+    return `${API_BASE}/assets/sprites/${entry.apiCat}/${entry.name}.png`;
+  }
+  function findSprite(categories, candidateId) {
+    const norm3 = normalize(candidateId);
+    const entries = nameIndex.get(norm3);
+    if (!entries?.length) {
+      return findSpriteFuzzy(categories, norm3);
+    }
+    const internalCats = /* @__PURE__ */ new Set();
+    for (const cat of categories) {
+      const expanded = SEARCH_CATS[cat] || [cat];
+      for (const catName of expanded) internalCats.add(catName);
+    }
+    for (const entry of entries) {
+      if (internalCats.has(entry.internalCat)) return entry;
+    }
+    return findSpriteFuzzy(categories, norm3);
+  }
+  function findSpriteFuzzy(categories, normTarget) {
+    if (!normTarget) return null;
+    const internalCats = /* @__PURE__ */ new Set();
+    for (const cat of categories) {
+      const expanded = SEARCH_CATS[cat] || [cat];
+      for (const catName of expanded) internalCats.add(catName);
+    }
+    for (const [norm3, entries] of nameIndex) {
+      if (norm3.includes(normTarget) || normTarget.includes(norm3)) {
+        for (const entry of entries) {
+          if (internalCats.has(entry.internalCat)) return entry;
+        }
+      }
+    }
+    for (const [norm3, entries] of nameIndex) {
+      if (norm3.includes(normTarget) || normTarget.includes(norm3)) {
+        return entries[0];
+      }
+    }
+    return null;
+  }
+  var MUTATION_ICONS = {
+    // Ground-level icons (anchor.y ≈ 0.5 — drawn at plant base)
+    Wet: { url: `${API_BASE}/assets/sprites/mutations/Wet.png`, anchor: { x: 0.5, y: 0.487 } },
+    Chilled: { url: `${API_BASE}/assets/sprites/mutations/Chilled.png`, anchor: { x: 0.502, y: 0.543 } },
+    Frozen: { url: `${API_BASE}/assets/sprites/mutations/Frozen.png`, anchor: { x: 0.5, y: 0.474 } },
+    Thunderstruck: { url: `${API_BASE}/assets/sprites/mutations/Thunderstruck.png`, anchor: { x: 0.495, y: 0.525 } },
+    // Floating icons (anchor.y ≈ 0.8 — drawn above the plant)
+    Dawnlit: { url: `${API_BASE}/assets/sprites/mutations/Dawnlit.png`, anchor: { x: 0.506, y: 0.809 } },
+    Ambershine: { url: `${API_BASE}/assets/sprites/mutations/Amberlit.png`, anchor: { x: 0.5, y: 0.82 } },
+    Dawncharged: { url: `${API_BASE}/assets/sprites/mutations/Dawncharged.png`, anchor: { x: 0.519, y: 0.796 } },
+    Ambercharged: { url: `${API_BASE}/assets/sprites/mutations/Ambercharged.png`, anchor: { x: 0.501, y: 0.795 } }
+  };
+  var MUTATION_FILTERS = {
+    Gold: { op: "source-atop", colors: ["rgb(235,200,0)"], a: 0.7 },
+    Rainbow: { op: "color", colors: ["#FF1744", "#FF9100", "#FFEA00", "#00E676", "#2979FF", "#D500F9"], ang: 130, masked: true },
+    Wet: { op: "source-atop", colors: ["rgb(50,180,200)"], a: 0.25 },
+    Chilled: { op: "source-atop", colors: ["rgb(100,160,210)"], a: 0.45 },
+    Frozen: { op: "source-atop", colors: ["rgb(100,130,220)"], a: 0.5 },
+    Thunderstruck: { op: "source-atop", colors: ["rgb(16, 141, 163)"], a: 0.45 },
+    Dawnlit: { op: "source-atop", colors: ["rgb(209,70,231)"], a: 0.5 },
+    Ambershine: { op: "source-atop", colors: ["rgb(190,100,40)"], a: 0.5 },
+    Dawncharged: { op: "source-atop", colors: ["rgb(140,80,200)"], a: 0.5 },
+    Ambercharged: { op: "source-atop", colors: ["rgb(170,60,25)"], a: 0.5 }
+  };
+  function normalizeMutations(list) {
+    const names = [...new Set(list.filter((mutName) => MUTATION_FILTERS[mutName]))];
+    if (!names.length) return [];
+    if (names.includes("Gold")) return ["Gold"];
+    if (names.includes("Rainbow")) return ["Rainbow"];
+    const warm = ["Ambershine", "Dawnlit", "Dawncharged", "Ambercharged"];
+    if (names.some((name) => warm.includes(name))) {
+      return names.filter((name) => !["Wet", "Chilled", "Frozen", "Thunderstruck"].includes(name));
+    }
+    return names;
+  }
+  var SUPPORTED_BLEND_OPS2 = (() => {
+    try {
+      const canvas = document.createElement("canvas");
+      const ctx2 = canvas.getContext("2d");
+      if (!ctx2) return /* @__PURE__ */ new Set();
+      const ops = ["color", "hue", "saturation", "luminosity", "overlay", "screen", "lighter", "source-atop"];
+      const ok = /* @__PURE__ */ new Set();
+      for (const op of ops) {
+        ctx2.globalCompositeOperation = op;
+        if (ctx2.globalCompositeOperation === op) ok.add(op);
+      }
+      return ok;
+    } catch {
+      return /* @__PURE__ */ new Set();
+    }
+  })();
+  function pickBlendOp2(desired) {
+    if (SUPPORTED_BLEND_OPS2.has(desired)) return desired;
+    if (SUPPORTED_BLEND_OPS2.has("overlay")) return "overlay";
+    if (SUPPORTED_BLEND_OPS2.has("screen")) return "screen";
+    if (SUPPORTED_BLEND_OPS2.has("lighter")) return "lighter";
+    return "source-atop";
+  }
+  function fillGrad2(ctx2, width, height, filter) {
+    const cols = filter.colors?.length ? filter.colors : ["#fff"];
+    let gradient;
+    if (filter.ang != null) {
+      const rad = (filter.ang - 90) * Math.PI / 180;
+      const cx = width / 2;
+      const cy = height / 2;
+      const radius = Math.min(width, height) / 2;
+      gradient = ctx2.createLinearGradient(
+        cx - Math.cos(rad) * radius,
+        cy - Math.sin(rad) * radius,
+        cx + Math.cos(rad) * radius,
+        cy + Math.sin(rad) * radius
+      );
+    } else {
+      gradient = ctx2.createLinearGradient(0, 0, 0, height);
+    }
+    if (cols.length === 1) {
+      gradient.addColorStop(0, cols[0]);
+      gradient.addColorStop(1, cols[0]);
+    } else {
+      cols.forEach((color, idx) => gradient.addColorStop(idx / (cols.length - 1), color));
+    }
+    ctx2.fillStyle = gradient;
+    ctx2.fillRect(0, 0, width, height);
+  }
+  async function applyMutationFilters(img, mutations) {
+    const allMuts = [...new Set(mutations.filter((m) => MUTATION_FILTERS[m]))];
+    const colorMuts = normalizeMutations(mutations);
+    if (!colorMuts.length && !allMuts.length) return img.src;
+    const width = img.naturalWidth || img.width;
+    const height = img.naturalHeight || img.height;
+    if (!width || !height) return img.src;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx2 = canvas.getContext("2d");
+    if (!ctx2) return img.src;
+    ctx2.imageSmoothingEnabled = false;
+    ctx2.drawImage(img, 0, 0);
+    for (const name of colorMuts) {
+      const filter = MUTATION_FILTERS[name];
+      if (!filter) continue;
+      if (filter.masked) {
+        const gradCanvas = document.createElement("canvas");
+        gradCanvas.width = width;
+        gradCanvas.height = height;
+        const gctx = gradCanvas.getContext("2d");
+        if (!gctx) continue;
+        gctx.imageSmoothingEnabled = false;
+        fillGrad2(gctx, width, height, filter);
+        gctx.globalCompositeOperation = "destination-in";
+        gctx.drawImage(img, 0, 0);
+        ctx2.save();
+        ctx2.globalCompositeOperation = pickBlendOp2(filter.op);
+        if (filter.a != null) ctx2.globalAlpha = filter.a;
+        ctx2.drawImage(gradCanvas, 0, 0);
+        ctx2.restore();
+      } else {
+        const colorCanvas = document.createElement("canvas");
+        colorCanvas.width = width;
+        colorCanvas.height = height;
+        const cctx = colorCanvas.getContext("2d");
+        if (!cctx) continue;
+        cctx.imageSmoothingEnabled = false;
+        cctx.drawImage(img, 0, 0);
+        cctx.globalCompositeOperation = "source-in";
+        fillGrad2(cctx, width, height, filter);
+        ctx2.save();
+        ctx2.globalCompositeOperation = "source-over";
+        if (filter.a != null) ctx2.globalAlpha = filter.a;
+        ctx2.drawImage(colorCanvas, 0, 0);
+        ctx2.restore();
+      }
+    }
+    const plantAnchorX = 0.5;
+    const plantAnchorY = 0.85;
+    const baseX = width * plantAnchorX;
+    const baseY = height * plantAnchorY;
+    for (const name of allMuts) {
+      const iconDef = MUTATION_ICONS[name];
+      if (!iconDef) continue;
+      try {
+        const iconImg = await loadImage(iconDef.url);
+        const iconW = iconImg.naturalWidth || iconImg.width;
+        const iconH = iconImg.naturalHeight || iconImg.height;
+        if (!iconW || !iconH) continue;
+        const iconScale = width * 0.5 / iconW;
+        const drawW = iconW * iconScale;
+        const drawH = iconH * iconScale;
+        const drawX = baseX - drawW * iconDef.anchor.x;
+        const drawY = baseY - drawH * iconDef.anchor.y;
+        ctx2.save();
+        ctx2.globalAlpha = 1;
+        ctx2.globalCompositeOperation = "source-over";
+        ctx2.drawImage(iconImg, drawX, drawY, drawW, drawH);
+        ctx2.restore();
+      } catch {
+      }
+    }
+    return canvas.toDataURL("image/png");
+  }
+  var imageCache = /* @__PURE__ */ new Map();
+  function loadImage(url) {
+    let promise2 = imageCache.get(url);
+    if (promise2) return promise2;
+    promise2 = withDiscordPollPause(() => getBlob2(url)).then((blob) => blobToImage2(blob));
+    imageCache.set(url, promise2);
+    return promise2;
+  }
+  var objectUrlCache = /* @__PURE__ */ new Map();
+  function getSpriteObjectUrl(apiUrl) {
+    let promise2 = objectUrlCache.get(apiUrl);
+    if (promise2) return promise2;
+    promise2 = withDiscordPollPause(() => getBlob2(apiUrl)).then((blob) => URL.createObjectURL(blob));
+    objectUrlCache.set(apiUrl, promise2);
+    return promise2;
+  }
   var spriteDataUrlCache = /* @__PURE__ */ new Map();
   var spriteDataUrlResolved = /* @__PURE__ */ new Map();
-  var spriteWarmupQueued = false;
-  var spriteWarmupStarted = false;
+  function cacheKeyFor(category, spriteId, mutationKey) {
+    return `${category}:${normalize(spriteId)}${mutationKey ?? ""}`;
+  }
+  function mutationKeyStr(mutations) {
+    const list = [...new Set((mutations ?? []).map((val) => String(val ?? "").trim()).filter(Boolean))];
+    if (!list.length) return "";
+    return "|m=" + list.map(normalize).filter(Boolean).sort().join(",");
+  }
   var warmupState = { total: 0, done: 0, completed: false };
-  var prefetchedWarmupKeys = [];
-  var warmupCompletedKeys = /* @__PURE__ */ new Set();
-  var WARMUP_RETRY_MS = 100;
-  var WARMUP_DELAY_MS = 8;
-  var WARMUP_BATCH = 3;
   var warmupListeners = /* @__PURE__ */ new Set();
   function notifyWarmup(state3) {
     warmupState = state3;
@@ -5066,366 +6116,126 @@
       warmupListeners.delete(listener);
     };
   }
-  function primeWarmupKeys(keys) {
-    prefetchedWarmupKeys.push(...keys);
+  function primeSpriteData(_category, _spriteId, _dataUrl) {
   }
-  function primeSpriteData(category, spriteId, dataUrl) {
-    const cacheKey = cacheKeyFor(category, spriteId);
-    if (!spriteDataUrlCache.has(cacheKey)) {
-      spriteDataUrlCache.set(cacheKey, Promise.resolve(dataUrl));
-    }
-    spriteDataUrlResolved.set(cacheKey, dataUrl);
-    if (!warmupCompletedKeys.has(cacheKey)) {
-      warmupCompletedKeys.add(cacheKey);
-      const nextDone = warmupState.done + 1;
-      const completed = warmupState.total > 0 ? nextDone >= warmupState.total : false;
-      notifyWarmup({ total: Math.max(warmupState.total, nextDone), done: nextDone, completed });
-    }
+  function primeWarmupKeys(_keys) {
   }
-  var normalizeSpriteId = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-  var baseNameFromKey = (key2) => {
-    const parts = key2.split("/").filter(Boolean);
-    return parts[parts.length - 1] ?? key2;
-  };
-  var normalizeMutationList = (mutations) => {
-    const list = Array.from(
-      new Set((mutations ?? []).map((value) => String(value ?? "").trim()).filter(Boolean))
-    );
-    if (!list.length) {
-      return { list, key: "" };
-    }
-    const key2 = list.map((val) => normalizeSpriteId(val)).filter(Boolean).sort().join(",");
-    return { list, key: key2 ? `|m=${key2}` : "" };
-  };
-  var cacheKeyFor = (category, spriteId, mutationKey) => `${category}:${normalizeSpriteId(spriteId)}${mutationKey ?? ""}`;
-  var scheduleNonBlocking = (cb) => {
-    return new Promise((resolve2) => {
-      const runner = () => {
-        Promise.resolve().then(cb).then(resolve2).catch(() => resolve2(cb()));
-      };
-      if (typeof window.requestIdleCallback === "function") {
-        window.requestIdleCallback(runner, { timeout: 50 });
-      } else if (typeof requestAnimationFrame === "function") {
-        requestAnimationFrame(runner);
-      } else {
-        setTimeout(runner, 0);
-      }
+  function warmupSpriteCache() {
+    fetchIndex().then(() => {
+      const total = indexEntries.length;
+      notifyWarmup({ total, done: total, completed: true });
     });
-  };
-  function getSpriteService() {
-    const win = pageWindow ?? globalThis;
-    return win?.__MG_SPRITE_SERVICE__ ?? win?.unsafeWindow?.__MG_SPRITE_SERVICE__ ?? null;
   }
-  var parseKeyToCategoryId = (key2) => {
-    const parts = key2.split("/").filter(Boolean);
-    if (!parts.length) return null;
-    const start2 = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
-    const category = parts[start2] ?? "";
-    const id = parts.slice(start2 + 1).join("/") || parts[parts.length - 1] || "";
-    if (!category || !id) return null;
-    return { category, id };
-  };
-  function whenServiceReady(handle) {
-    if (!handle || !handle.ready || typeof handle.ready.then !== "function") {
-      return Promise.resolve();
-    }
-    return handle.ready.then(
-      () => {
-      },
-      () => {
-      }
-    );
+  function createSpriteImg(src, size, spriteKey, category, spriteId) {
+    const img = document.createElement("img");
+    img.src = src;
+    img.width = size;
+    img.height = size;
+    img.alt = "";
+    img.decoding = "async";
+    img.loading = "lazy";
+    img.draggable = false;
+    img.style.width = `${size}px`;
+    img.style.height = `${size}px`;
+    img.style.objectFit = "contain";
+    img.style.imageRendering = "auto";
+    img.style.display = "block";
+    img.dataset.spriteKey = spriteKey;
+    img.dataset.spriteCategory = category;
+    img.dataset.spriteId = spriteId;
+    return img;
   }
-  async function ensureSpriteDataCached(service, category, spriteId, logTag, options) {
-    if (!service?.renderToCanvas) {
-      return null;
-    }
-    const { list: mutationList, key: mutationKey } = normalizeMutationList(options?.mutations);
-    const cacheKey = cacheKeyFor(category, spriteId, mutationKey);
-    let promise2 = spriteDataUrlCache.get(cacheKey);
-    if (!promise2) {
-      promise2 = scheduleNonBlocking(async () => {
-        try {
-          const canvas = service.renderToCanvas?.({
-            category,
-            id: spriteId,
-            mutations: mutationList
-          });
-          if (!canvas) return null;
-          const dataUrl = canvas.toDataURL("image/png");
-          if (dataUrl) {
-            spriteDataUrlResolved.set(cacheKey, dataUrl);
-          }
-          return dataUrl;
-        } catch (error) {
-          console.error("[SpriteIconCache]", "failed to cache sprite", { category, spriteId, logTag, error });
-          return null;
-        }
-      });
-      spriteDataUrlCache.set(cacheKey, promise2);
-    }
-    return promise2;
-  }
-  var spriteMatchCache = /* @__PURE__ */ new Map();
-  function getMatchCacheKey(categories, id) {
-    const normalizedCategories = categories.map((category) => category.toLowerCase()).join("|");
-    return `${normalizedCategories}|${normalizeSpriteId(id)}`;
-  }
-  function findCachedSpriteMatch(categories, candidateIds) {
-    for (const candidate of candidateIds) {
-      const cacheKey = getMatchCacheKey(categories, candidate);
-      if (!spriteMatchCache.has(cacheKey)) continue;
-      const match = spriteMatchCache.get(cacheKey);
-      if (match) {
-        return { match, candidate };
-      }
-    }
-    return null;
-  }
-  function findSpriteMatch(service, categories, id) {
-    if (!service.list) return null;
-    const cacheKey = getMatchCacheKey(categories, id);
-    if (spriteMatchCache.has(cacheKey)) {
-      return spriteMatchCache.get(cacheKey) ?? null;
-    }
-    const normalizedTarget = normalizeSpriteId(id);
-    const categoryLists = categories.map((category) => ({
-      category,
-      items: service.list?.(category) ?? []
-    }));
-    let matched = null;
-    const tryMatch = (category, base) => {
-      if (normalizeSpriteId(base) === normalizedTarget) {
-        matched = { category, spriteId: base };
-        return true;
-      }
-      return false;
-    };
-    for (const { category, items } of categoryLists) {
-      for (const it of items) {
-        const key2 = typeof it?.key === "string" ? it.key : "";
-        if (!key2) continue;
-        const base = baseNameFromKey(key2);
-        if (tryMatch(category, base)) {
-          spriteMatchCache.set(cacheKey, matched);
-          return matched;
-        }
-      }
-    }
-    for (const { category, items } of categoryLists) {
-      for (const it of items) {
-        const key2 = typeof it?.key === "string" ? it.key : "";
-        if (!key2) continue;
-        const base = baseNameFromKey(key2);
-        const normBase = normalizeSpriteId(base);
-        if (!normBase) continue;
-        if (normalizedTarget.includes(normBase) || normBase.includes(normalizedTarget) || normBase.startsWith(normalizedTarget) || normalizedTarget.startsWith(normBase)) {
-          matched = { category, spriteId: base };
-          spriteMatchCache.set(cacheKey, matched);
-          return matched;
-        }
-      }
-    }
-    spriteMatchCache.set(cacheKey, null);
-    return null;
-  }
-  function attachSpriteIcon(target, categories, id, size, logTag, options) {
+  function attachSpriteIcon(target, categories, id, size, _logTag, options) {
     const candidateIds = Array.isArray(id) ? id.map((value) => String(value ?? "").trim()).filter(Boolean) : [String(id ?? "").trim()].filter(Boolean);
     if (!candidateIds.length) return;
-    const cachedMatch = findCachedSpriteMatch(categories, candidateIds);
-    if (cachedMatch) {
-      const { match, candidate } = cachedMatch;
-      const { key: mutationKey } = normalizeMutationList(options?.mutations);
-      const spriteKey = `${match.category}:${match.spriteId}${mutationKey}`;
-      const cacheKey = cacheKeyFor(match.category, match.spriteId, mutationKey);
-      const cachedUrl = spriteDataUrlResolved.get(cacheKey);
-      const existingImg = target.querySelector("img[data-sprite-key]");
-      if (existingImg && existingImg.dataset.spriteKey === spriteKey) {
+    const mutKey = mutationKeyStr(options?.mutations);
+    const hasMutations = !!options?.mutations?.length;
+    fetchIndex().then(() => {
+      let selectedEntry = null;
+      let selectedCandidate = "";
+      for (const candidate of candidateIds) {
+        const entry2 = findSprite(categories, candidate);
+        if (entry2) {
+          selectedEntry = entry2;
+          selectedCandidate = candidate;
+          break;
+        }
+      }
+      if (!selectedEntry) {
+        options?.onNoSpriteFound?.({ categories, candidates: candidateIds });
         return;
       }
-      if (cachedUrl) {
-        const img = document.createElement("img");
-        img.src = cachedUrl;
-        img.width = size;
-        img.height = size;
-        img.alt = "";
-        img.decoding = "async";
-        img.loading = "lazy";
-        img.draggable = false;
-        img.style.width = `${size}px`;
-        img.style.height = `${size}px`;
-        img.style.objectFit = "contain";
-        img.style.imageRendering = "auto";
-        img.style.display = "block";
-        img.dataset.spriteKey = spriteKey;
-        img.dataset.spriteCategory = match.category;
-        img.dataset.spriteId = match.spriteId;
-        target.replaceChildren(img);
-        options?.onSpriteApplied?.(img, {
-          category: match.category,
-          spriteId: match.spriteId,
-          candidate
+      const entry = selectedEntry;
+      const url = spriteUrl(entry);
+      const spriteKey = `${entry.internalCat}:${entry.name}${mutKey}`;
+      const existing = target.querySelector("img[data-sprite-key]");
+      if (existing && existing.dataset.spriteKey === spriteKey) return;
+      if (!hasMutations) {
+        getSpriteObjectUrl(url).then((objectUrl) => {
+          const img = createSpriteImg(objectUrl, size, spriteKey, entry.internalCat, entry.name);
+          requestAnimationFrame(() => {
+            if (!target.isConnected) return;
+            target.replaceChildren(img);
+            options?.onSpriteApplied?.(img, {
+              category: entry.internalCat,
+              spriteId: entry.name,
+              candidate: selectedCandidate
+            });
+          });
+        }).catch(() => {
         });
         return;
       }
-    }
-    const service = getSpriteService();
-    if (!service?.renderToCanvas) return;
-    void whenServiceReady(service).then(
-      () => scheduleNonBlocking(async () => {
-        let selected = null;
-        for (const candidate of candidateIds) {
-          const match = findSpriteMatch(service, categories, candidate);
-          if (match) {
-            selected = { match, candidate };
-            break;
-          }
-        }
-        if (!selected) {
-          options?.onNoSpriteFound?.({ categories, candidates: candidateIds });
-          return;
-        }
-        const resolved = selected;
-        const { key: mutationKey } = normalizeMutationList(options?.mutations);
-        const spriteKey = `${resolved.match.category}:${resolved.match.spriteId}${mutationKey}`;
-        const existingImg = target.querySelector("img[data-sprite-key]");
-        if (existingImg && existingImg.dataset.spriteKey === spriteKey) {
-          return;
-        }
-        const dataUrl = await ensureSpriteDataCached(
-          service,
-          resolved.match.category,
-          resolved.match.spriteId,
-          logTag,
-          {
-            mutations: options?.mutations
-          }
-        );
-        if (!dataUrl) return;
-        const img = document.createElement("img");
-        img.src = dataUrl;
-        img.width = size;
-        img.height = size;
-        img.alt = "";
-        img.decoding = "async";
-        img.loading = "lazy";
-        img.draggable = false;
-        img.style.width = `${size}px`;
-        img.style.height = `${size}px`;
-        img.style.objectFit = "contain";
-        img.style.imageRendering = "auto";
-        img.style.display = "block";
-        img.dataset.spriteKey = spriteKey;
-        img.dataset.spriteCategory = resolved.match.category;
-        img.dataset.spriteId = resolved.match.spriteId;
+      const ck = cacheKeyFor(entry.internalCat, entry.name, mutKey);
+      const cached = spriteDataUrlResolved.get(ck);
+      if (cached) {
+        const img = createSpriteImg(cached, size, spriteKey, entry.internalCat, entry.name);
         requestAnimationFrame(() => {
           target.replaceChildren(img);
           options?.onSpriteApplied?.(img, {
-            category: resolved.match.category,
-            spriteId: resolved.match.spriteId,
-            candidate: resolved.candidate
+            category: entry.internalCat,
+            spriteId: entry.name,
+            candidate: selectedCandidate
           });
         });
-      })
-    );
+        return;
+      }
+      let promise2 = spriteDataUrlCache.get(ck);
+      if (!promise2) {
+        promise2 = loadImage(url).then(async (imgEl) => {
+          const dataUrl = await applyMutationFilters(imgEl, options?.mutations ?? []);
+          spriteDataUrlResolved.set(ck, dataUrl);
+          return dataUrl;
+        }).catch(() => null);
+        spriteDataUrlCache.set(ck, promise2);
+      }
+      promise2.then((dataUrl) => {
+        if (!dataUrl) return;
+        const img = createSpriteImg(dataUrl, size, spriteKey, entry.internalCat, entry.name);
+        requestAnimationFrame(() => {
+          target.replaceChildren(img);
+          options?.onSpriteApplied?.(img, {
+            category: entry.internalCat,
+            spriteId: entry.name,
+            candidate: selectedCandidate
+          });
+        });
+      });
+    });
   }
   function attachWeatherSpriteIcon(target, tag, size) {
     if (tag === "NoWeatherEffect") return;
-    attachSpriteIcon(target, ["mutation"], tag, size, "weather");
+    attachSpriteIcon(target, ["mutation", "ui", "weather"], tag, size, "weather");
   }
-  function warmupSpriteCache() {
-    if (spriteWarmupQueued || spriteWarmupStarted || typeof window === "undefined") return;
-    spriteWarmupQueued = true;
-    notifyWarmup({ total: warmupState.total, done: warmupState.done, completed: false });
-    const scheduleRetry = () => {
-      window.setTimeout(() => {
-        spriteWarmupQueued = false;
-        warmupSpriteCache();
-      }, WARMUP_RETRY_MS);
-    };
-    let service = getSpriteService();
-    if (!service && prefetchedWarmupKeys.length === 0) {
-      scheduleRetry();
-      return;
+  async function getSpriteObjectUrlByName(categories, name) {
+    await fetchIndex();
+    const entry = findSprite(categories, name);
+    if (!entry) return null;
+    try {
+      return await getSpriteObjectUrl(spriteUrl(entry));
+    } catch {
+      return null;
     }
-    const tasks = [];
-    const seen = new Set(warmupCompletedKeys);
-    if (service?.list) {
-      SPRITE_PRELOAD_CATEGORIES.forEach((category) => {
-        const items = service.list?.(category) ?? [];
-        items.forEach((item) => {
-          const key2 = typeof item?.key === "string" ? item.key : "";
-          if (!key2) return;
-          const base = baseNameFromKey(key2);
-          if (!base) return;
-          const k = `${category}:${base.toLowerCase()}`;
-          if (seen.has(k)) return;
-          seen.add(k);
-          tasks.push({ category, id: base });
-        });
-      });
-    }
-    if (prefetchedWarmupKeys.length) {
-      prefetchedWarmupKeys.forEach((key2) => {
-        const parsed = parseKeyToCategoryId(key2);
-        if (!parsed) return;
-        const k = `${parsed.category}:${parsed.id.toLowerCase()}`;
-        if (seen.has(k)) return;
-        seen.add(k);
-        tasks.push(parsed);
-      });
-      prefetchedWarmupKeys = [];
-    }
-    if (!tasks.length) {
-      if (warmupState.completed) {
-        spriteWarmupQueued = false;
-        return;
-      }
-      scheduleRetry();
-      return;
-    }
-    spriteWarmupStarted = true;
-    const total = Math.max(warmupState.total, tasks.length);
-    const startingDone = Math.min(warmupState.done, total);
-    notifyWarmup({ total, done: startingDone, completed: total === 0 || startingDone >= total });
-    const processNext = () => {
-      service = service || getSpriteService();
-      if (!service?.renderToCanvas || !service?.list) {
-        setTimeout(processNext, WARMUP_RETRY_MS);
-        return;
-      }
-      if (!tasks.length) {
-        spriteWarmupQueued = false;
-        console.log("[SpriteIconCache]", "warmup complete", {
-          categories: SPRITE_PRELOAD_CATEGORIES,
-          totalCached: spriteDataUrlCache.size
-        });
-        notifyWarmup({ total, done: warmupState.done, completed: true });
-        return;
-      }
-      let processed = 0;
-      const batch = tasks.splice(0, WARMUP_BATCH);
-      batch.forEach((entry) => {
-        ensureSpriteDataCached(service, entry.category, entry.id, "warmup").then((result) => {
-          if (result == null && !service?.renderToCanvas) {
-            tasks.unshift(entry);
-            return;
-          }
-          const completionKey = cacheKeyFor(entry.category, entry.id);
-          if (!warmupCompletedKeys.has(completionKey)) {
-            warmupCompletedKeys.add(completionKey);
-            const nextDone = Math.min(warmupState.done + 1, total);
-            notifyWarmup({ total, done: nextDone, completed: nextDone >= total });
-          }
-        }).finally(() => {
-          processed += 1;
-          if (processed >= batch.length) {
-            setTimeout(processNext, WARMUP_DELAY_MS);
-          }
-        });
-      });
-    };
-    processNext();
   }
 
   // src/utils/gameVersion.ts
@@ -5990,12 +6800,6 @@
 
   // src/data/dynamic/state.ts
   init_page_context();
-  var pageContext = pageWindow;
-  var NativeObject = pageContext.Object ?? Object;
-  var originalObjectKeys = NativeObject.keys;
-  var originalObjectValues = NativeObject.values;
-  var originalObjectEntries = NativeObject.entries;
-  var visitedObjects = /* @__PURE__ */ new WeakSet();
   function createInitialState2() {
     return {
       data: {
@@ -6008,11 +6812,8 @@
         plants: null,
         weather: null
       },
-      isHookInstalled: false,
-      scanInterval: null,
-      scanAttempts: 0,
-      weatherPollingTimer: null,
-      weatherPollAttempts: 0,
+      fetchStarted: false,
+      fetchComplete: false,
       colorPollingTimer: null,
       colorPollAttempts: 0
     };
@@ -6024,193 +6825,17 @@
   }
 
   // src/data/dynamic/logic/constants.ts
-  var SIGNATURE_KEYS = {
-    items: ["WateringCan", "PlanterPot", "Shovel"],
-    decor: ["SmallRock", "MediumRock", "LargeRock", "WoodBench", "StoneBench", "MarbleBench"],
-    mutations: ["Gold", "Rainbow", "Wet", "Chilled", "Frozen"],
-    eggs: ["CommonEgg", "UncommonEgg", "RareEgg"],
-    pets: ["Worm", "Snail", "Bee", "Chicken", "Bunny"],
-    abilities: ["ProduceScaleBoost", "DoubleHarvest", "SeedFinderI", "CoinFinderI"],
-    plants: ["Carrot", "Strawberry", "Aloe", "Blueberry", "Apple"]
-  };
-  var WEATHER_IDS = ["Rain", "Frost", "Thunderstorm", "Dawn", "AmberMoon"];
   var MAIN_BUNDLE_PATTERN = /main-[^/]+\.js(\?|$)/;
-  var QUINOA_VIEW_PATTERN = /QuinoaView-[^/]+\.js(\?|$)/;
-  var MAX_SCAN_DEPTH = 6;
-  var MAX_SCAN_ATTEMPTS = 150;
-  var PULSE_SCAN_INTERVAL_MS = 2e3;
-  var MAX_WEATHER_POLL_ATTEMPTS = 200;
-  var WEATHER_POLL_INTERVAL_MS = 50;
   var MAX_COLOR_POLL_ATTEMPTS = 10;
   var COLOR_POLL_INTERVAL_MS = 1e3;
   var ABILITY_COLOR_ANCHOR = "ProduceScaleBoost";
 
-  // src/data/dynamic/logic/capture.ts
-  var containsAllKeys = (objectKeys, requiredKeys2) => requiredKeys2.every((key2) => objectKeys.includes(key2));
-  function setCapturedData(key2, value) {
-    if (captureState.data[key2] != null) return;
-    captureState.data[key2] = value;
-    try {
-      window.dispatchEvent(new CustomEvent("gemini:data-updated", { detail: { key: key2 } }));
-    } catch {
-    }
-    if (isAllDataCaptured()) {
-      restoreObjectHooks();
-    }
-  }
-  function isAllDataCaptured() {
-    return Object.values(captureState.data).every((v) => v != null);
-  }
-  function scanObjectForData(obj, depth) {
-    if (!obj || typeof obj !== "object" || visitedObjects.has(obj)) return;
-    visitedObjects.add(obj);
-    let keys;
-    try {
-      keys = originalObjectKeys(obj);
-    } catch {
-      return;
-    }
-    if (!keys || keys.length === 0) return;
-    const record = obj;
-    let sample;
-    if (!captureState.data.items && containsAllKeys(keys, SIGNATURE_KEYS.items)) {
-      sample = record.WateringCan;
-      if (sample && typeof sample === "object" && "coinPrice" in sample && "creditPrice" in sample) {
-        setCapturedData("items", record);
-      }
-    }
-    if (!captureState.data.decor && containsAllKeys(keys, SIGNATURE_KEYS.decor)) {
-      sample = record.SmallRock;
-      if (sample && typeof sample === "object" && "coinPrice" in sample && "creditPrice" in sample) {
-        setCapturedData("decor", record);
-      }
-    }
-    if (!captureState.data.mutations && containsAllKeys(keys, SIGNATURE_KEYS.mutations)) {
-      sample = record.Gold;
-      if (sample && typeof sample === "object" && "baseChance" in sample && "coinMultiplier" in sample) {
-        setCapturedData("mutations", record);
-      }
-    }
-    if (!captureState.data.eggs && containsAllKeys(keys, SIGNATURE_KEYS.eggs)) {
-      sample = record.CommonEgg;
-      if (sample && typeof sample === "object" && "faunaSpawnWeights" in sample && "secondsToHatch" in sample) {
-        setCapturedData("eggs", record);
-      }
-    }
-    if (!captureState.data.pets && containsAllKeys(keys, SIGNATURE_KEYS.pets)) {
-      sample = record.Worm;
-      if (sample && typeof sample === "object" && "coinsToFullyReplenishHunger" in sample && "diet" in sample && Array.isArray(sample.diet)) {
-        setCapturedData("pets", record);
-      }
-    }
-    if (!captureState.data.abilities && containsAllKeys(keys, SIGNATURE_KEYS.abilities)) {
-      sample = record.ProduceScaleBoost;
-      if (sample && typeof sample === "object" && "trigger" in sample && "baseParameters" in sample) {
-        setCapturedData("abilities", record);
-      }
-    }
-    if (!captureState.data.plants && containsAllKeys(keys, SIGNATURE_KEYS.plants)) {
-      sample = record.Carrot;
-      if (sample && typeof sample === "object" && "seed" in sample && "plant" in sample && "crop" in sample) {
-        setCapturedData("plants", record);
-      }
-    }
-    if (depth >= MAX_SCAN_DEPTH) return;
-    for (const key2 of keys) {
-      let child;
-      try {
-        child = record[key2];
-      } catch {
-        continue;
-      }
-      if (child && typeof child === "object") {
-        scanObjectForData(child, depth + 1);
-      }
-    }
-  }
-  function tryCapture(target) {
-    try {
-      scanObjectForData(target, 0);
-    } catch {
-    }
-  }
-
-  // src/data/dynamic/logic/hooks.ts
-  function installObjectHooks() {
-    if (captureState.isHookInstalled) return;
-    if (NativeObject.__MG_HOOKED__) {
-      captureState.isHookInstalled = true;
-      return;
-    }
-    NativeObject.__MG_HOOKED__ = true;
-    captureState.isHookInstalled = true;
-    try {
-      NativeObject.keys = function hookedKeys(target) {
-        tryCapture(target);
-        return originalObjectKeys.apply(this, arguments);
-      };
-      if (originalObjectValues) {
-        NativeObject.values = function hookedValues(target) {
-          tryCapture(target);
-          return originalObjectValues.apply(this, arguments);
-        };
-      }
-      if (originalObjectEntries) {
-        NativeObject.entries = function hookedEntries(target) {
-          tryCapture(target);
-          return originalObjectEntries.apply(this, arguments);
-        };
-      }
-    } catch {
-    }
-  }
-  function restoreObjectHooks() {
-    if (!captureState.isHookInstalled) return;
-    try {
-      NativeObject.keys = originalObjectKeys;
-      if (originalObjectValues) NativeObject.values = originalObjectValues;
-      if (originalObjectEntries) NativeObject.entries = originalObjectEntries;
-    } catch {
-    }
-    captureState.isHookInstalled = false;
-  }
-
-  // src/data/dynamic/logic/scanning.ts
-  init_page_context();
-  function startPulseScanning() {
-    if (captureState.scanInterval || isAllDataCaptured()) return;
-    const runPulse = () => {
-      if (isAllDataCaptured() || captureState.scanAttempts > MAX_SCAN_ATTEMPTS) {
-        stopPulseScanning();
-        return;
-      }
-      captureState.scanAttempts++;
-      try {
-        originalObjectKeys(pageWindow).forEach((key2) => {
-          try {
-            tryCapture(pageWindow[key2]);
-          } catch {
-          }
-        });
-      } catch {
-      }
-    };
-    runPulse();
-    captureState.scanInterval = setInterval(runPulse, PULSE_SCAN_INTERVAL_MS);
-  }
-  function stopPulseScanning() {
-    if (captureState.scanInterval) {
-      clearInterval(captureState.scanInterval);
-      captureState.scanInterval = null;
-    }
-  }
-
   // src/data/dynamic/logic/bundleParser.ts
   init_page_context();
-  var pageContext2 = pageWindow;
+  var pageContext = pageWindow;
   function findBundleUrl(pattern) {
     const docs = [
-      pageContext2.document,
+      pageContext.document,
       typeof document !== "undefined" ? document : null
     ].filter(Boolean);
     for (const doc of docs) {
@@ -6232,7 +6857,7 @@
       }
     }
     const perfs = [
-      pageContext2.performance,
+      pageContext.performance,
       typeof performance !== "undefined" ? performance : null
     ].filter(Boolean);
     for (const perf of perfs) {
@@ -6248,9 +6873,6 @@
   }
   function findMainBundleUrl() {
     return findBundleUrl(MAIN_BUNDLE_PATTERN);
-  }
-  function findQuinoaViewUrl() {
-    return findBundleUrl(QUINOA_VIEW_PATTERN);
   }
   function findAllIndices(haystack, needle) {
     const out = [];
@@ -6288,19 +6910,6 @@
     }
     return null;
   }
-  function extractBalancedObjectLiteral(text, anchorIndex) {
-    const declStart = Math.max(
-      text.lastIndexOf("const ", anchorIndex),
-      text.lastIndexOf("let ", anchorIndex),
-      text.lastIndexOf("var ", anchorIndex)
-    );
-    if (declStart < 0) return null;
-    const eq2 = text.indexOf("=", declStart);
-    if (eq2 < 0 || eq2 > anchorIndex) return null;
-    const braceStart = text.indexOf("{", eq2);
-    if (braceStart < 0 || braceStart > anchorIndex) return null;
-    return extractBalancedBlock(text, braceStart);
-  }
   async function fetchBundleByFinder(findUrl, cache2, label2) {
     if (cache2.value) return cache2.value;
     if (cache2.inFlight) return cache2.inFlight;
@@ -6332,132 +6941,8 @@
     return cache2.inFlight;
   }
   var mainBundleCache = { value: null, inFlight: null };
-  var quinoaViewCache = { value: null, inFlight: null };
   function fetchMainBundle() {
     return fetchBundleByFinder(findMainBundleUrl, mainBundleCache, "main bundle");
-  }
-  function fetchQuinoaViewBundle() {
-    return fetchBundleByFinder(findQuinoaViewUrl, quinoaViewCache, "QuinoaView bundle");
-  }
-
-  // src/data/dynamic/logic/weather.ts
-  function buildWeather(data) {
-    const out = {};
-    let found = false;
-    for (const id of WEATHER_IDS) {
-      const blueprint = data?.[id];
-      if (!blueprint || typeof blueprint !== "object") continue;
-      const spriteId = blueprint.iconSpriteKey || null;
-      const { iconSpriteKey: _, ...rest } = blueprint;
-      out[id] = { weatherId: id, spriteId, ...rest };
-      found = true;
-    }
-    if (!out.Sunny) {
-      out.Sunny = {
-        weatherId: "Sunny",
-        name: "Sunny",
-        spriteId: "sprite/ui/SunnyIcon",
-        type: "primary"
-      };
-    }
-    if (!found) return null;
-    const rain = out.Rain;
-    const mutator = rain?.mutator;
-    if (rain && mutator?.mutation !== "Wet") return null;
-    return out;
-  }
-  function extractWeatherObject(text, anchorPos) {
-    const searchStart = Math.max(0, anchorPos - 3e3);
-    const searchArea = text.substring(searchStart, anchorPos);
-    const rainPattern = /(?:Rain:\{|\[[A-Za-z_$][\w$]*\.Rain\]\s*:\s*\{)/;
-    const match = searchArea.match(rainPattern);
-    if (!match || match.index === void 0) return null;
-    const rainStart = searchStart + match.index;
-    let objStart = -1;
-    for (let i = rainStart - 1; i >= Math.max(0, rainStart - 200); i--) {
-      if (text[i] === "{") {
-        objStart = i;
-        break;
-      }
-    }
-    if (objStart < 0) return null;
-    return extractBalancedBlock(text, objStart);
-  }
-  var Q_CATEGORY_PATH = {
-    Animation: "animation",
-    Decor: "decor",
-    Item: "item",
-    MutationOverlay: "mutation-overlay",
-    Mutation: "mutation",
-    Object: "object",
-    Pet: "pet",
-    Plant: "plant",
-    Ui: "ui"
-  };
-  function normalizeWeatherLiteral(literal) {
-    return literal.replace(/\[([A-Za-z_$][\w$]*)\.(Rain|Frost|Dawn|AmberMoon|Thunderstorm)\]/g, '"$2"').replace(/\b[A-Za-z_$][\w$]*\.(Hydro|Lunar)\b/g, '"$1"').replace(
-      /\bq\.(Animation|Decor|Item|MutationOverlay|Mutation|Object|Pet|Plant|Ui)\.([A-Za-z_$][\w$]*)\b/g,
-      (_, cat, name) => `"sprite/${Q_CATEGORY_PATH[cat] ?? cat.toLowerCase()}/${name}"`
-    ).replace(/\b[A-Za-z_$][\w$]*\.(Rain|Frost|Dawn|AmberMoon|Thunderstorm)\b/g, '"$1"').replace(/\b[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*){2,}\b/g, (match) => {
-      const last = match.split(".").pop() || match;
-      return `"${last}"`;
-    });
-  }
-  function tryExtractWeatherFromText(bundleText) {
-    const anchors = [];
-    for (const needle of ['name:"Amber Moon"', "name:`Amber Moon`"]) {
-      const idx = bundleText.indexOf(needle);
-      if (idx >= 0) anchors.push(idx);
-    }
-    const cpIdx = bundleText.indexOf("chancePerMinutePerCrop");
-    if (cpIdx >= 0) anchors.push(cpIdx);
-    const mutIdx = bundleText.indexOf("mutator");
-    if (mutIdx >= 0) anchors.push(mutIdx);
-    for (const anchor of anchors) {
-      const literal = extractBalancedObjectLiteral(bundleText, anchor) ?? extractWeatherObject(bundleText, anchor);
-      if (!literal) continue;
-      const fixedLiteral = normalizeWeatherLiteral(literal);
-      let weatherDex;
-      try {
-        weatherDex = Function('"use strict";return(' + fixedLiteral + ")")();
-      } catch {
-        continue;
-      }
-      const weatherCatalog3 = buildWeather(weatherDex);
-      if (!weatherCatalog3) continue;
-      captureState.data.weather = weatherCatalog3;
-      return true;
-    }
-    return false;
-  }
-  async function loadWeatherFromBundle() {
-    if (captureState.data.weather) return true;
-    const [quinoaText, mainText] = await Promise.all([
-      fetchQuinoaViewBundle(),
-      fetchMainBundle()
-    ]);
-    for (const text of [quinoaText, mainText]) {
-      if (text && tryExtractWeatherFromText(text)) return true;
-    }
-    return false;
-  }
-  function startWeatherPolling() {
-    if (captureState.weatherPollingTimer) return;
-    captureState.weatherPollAttempts = 0;
-    const timer = setInterval(async () => {
-      const success = await loadWeatherFromBundle();
-      if (success || ++captureState.weatherPollAttempts > MAX_WEATHER_POLL_ATTEMPTS) {
-        clearInterval(timer);
-        captureState.weatherPollingTimer = null;
-      }
-    }, WEATHER_POLL_INTERVAL_MS);
-    captureState.weatherPollingTimer = timer;
-  }
-  function stopWeatherPolling() {
-    if (captureState.weatherPollingTimer) {
-      clearInterval(captureState.weatherPollingTimer);
-      captureState.weatherPollingTimer = null;
-    }
   }
 
   // src/data/dynamic/logic/abilityColors.ts
@@ -6579,225 +7064,10 @@
     }
   }
 
-  // src/data/dynamic/logic/sprites.ts
-  init_page_context();
-  function getSpriteService2() {
-    const svc = pageWindow.__MG_SPRITE_SERVICE__;
-    if (svc && typeof svc === "object") return svc;
-    return null;
-  }
-  function spriteHas(category, id) {
-    const svc = getSpriteService2();
-    if (!svc || typeof svc.has !== "function") return false;
-    try {
-      return !!svc.has(category, id);
-    } catch {
-      return false;
-    }
-  }
-  function spriteGetIdPath(category, id) {
-    const svc = getSpriteService2();
-    if (!svc || typeof svc.getIdPath !== "function") return null;
-    try {
-      return svc.getIdPath(category, id);
-    } catch {
-      return null;
-    }
-  }
-  function spriteListIds(prefix) {
-    const svc = getSpriteService2();
-    if (!svc || typeof svc.listIds !== "function") return [];
-    try {
-      return svc.listIds(prefix) || [];
-    } catch {
-      return [];
-    }
-  }
-  function normalizeNameForSprite(input) {
-    return String(input || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9]/g, "").trim();
-  }
-  function catCandidates(cat, extras = []) {
-    const list = /* @__PURE__ */ new Set();
-    const add = (s) => {
-      const v = String(s || "").trim();
-      if (v) list.add(v);
-    };
-    add(cat);
-    for (const e of extras) add(e);
-    for (const c of Array.from(list.values())) {
-      if (c.endsWith("s")) add(c.slice(0, -1));
-      else add(`${c}s`);
-      if (c.endsWith("es")) add(c.slice(0, -2));
-    }
-    return Array.from(list.values()).filter(Boolean);
-  }
-  function pickSpriteId(cat, idHint, nameHint, extraCats = [], idFallbacks = []) {
-    if (!getSpriteService2()) return null;
-    const cats = catCandidates(cat, extraCats);
-    if (!cats.length) return null;
-    const idCandidates = [idHint, ...idFallbacks].filter((v) => typeof v === "string");
-    const tryCandidate = (candidate) => {
-      const c = String(candidate || "").trim();
-      if (!c) return null;
-      for (const category of cats) {
-        try {
-          if (spriteHas(category, c)) return spriteGetIdPath(category, c);
-        } catch {
-        }
-      }
-      return null;
-    };
-    for (const cand of idCandidates) {
-      const hit = tryCandidate(cand);
-      if (hit) return hit;
-    }
-    const normName = normalizeNameForSprite(nameHint || "");
-    const fromName = tryCandidate(normName || nameHint || "");
-    if (fromName) return fromName;
-    try {
-      for (const category of cats) {
-        const ids = spriteListIds(`sprite/${category}/`);
-        const idLcList = idCandidates.map((x) => String(x || "").toLowerCase());
-        const nameLc = String(nameHint || normName || "").toLowerCase();
-        for (const k of ids) {
-          const leaf = k.split("/").pop() || "";
-          const leafLc = leaf.toLowerCase();
-          if (idLcList.some((c) => c && c === leafLc)) return k;
-          if (leafLc === nameLc) return k;
-        }
-        for (const k of ids) {
-          const leaf = k.split("/").pop() || "";
-          const leafLc = leaf.toLowerCase();
-          if (idLcList.some((c) => c && (leafLc.includes(c) || c.includes(leafLc)))) return k;
-          if (nameLc && (leafLc.includes(nameLc) || nameLc.includes(leafLc))) return k;
-        }
-      }
-    } catch {
-    }
-    return null;
-  }
-  function applySpriteId(target, catHint, idHint, nameHint, extraCats = [], idFallbacks = []) {
-    if (!target || typeof target !== "object") return;
-    const tileRef = target.tileRef;
-    if (!tileRef || typeof tileRef !== "object") return;
-    const category = String(tileRef.spritesheet || catHint || "").trim();
-    const spriteId = pickSpriteId(category, idHint, nameHint, extraCats, idFallbacks);
-    if (spriteId) {
-      try {
-        target.spriteId = spriteId;
-      } catch {
-      }
-    }
-    const rv = target.rotationVariants;
-    if (rv && typeof rv === "object") {
-      for (const v of Object.values(rv)) {
-        applySpriteId(v, category, idHint, nameHint);
-      }
-    }
-    if (target.immatureTileRef) {
-      const wrapper = { tileRef: target.immatureTileRef };
-      applySpriteId(wrapper, category, idHint, nameHint);
-      if (wrapper.spriteId) target.immatureSpriteId = wrapper.spriteId;
-    }
-    if (target.topmostLayerTileRef) {
-      const wrapper = { tileRef: target.topmostLayerTileRef };
-      applySpriteId(wrapper, category, idHint, nameHint);
-      if (wrapper.spriteId) target.topmostLayerSpriteId = wrapper.spriteId;
-    }
-    if (target.activeState && typeof target.activeState === "object") {
-      const activeState = target.activeState;
-      applySpriteId(activeState, category, idHint, activeState.name || nameHint);
-    }
-  }
-  function resolveSpriteIdByHints(category, hints, nameHint, extraCats = []) {
-    if (!Array.isArray(hints) || hints.length === 0) return null;
-    const primary = hints[0];
-    const fallbacks = hints.slice(1);
-    return pickSpriteId(category, primary, nameHint ?? null, extraCats, fallbacks);
-  }
-  function resolveAllSprites(bag) {
-    for (const [id, entry] of Object.entries(bag.items || {})) {
-      applySpriteId(entry, "items", id, entry?.name, ["item"]);
-    }
-    for (const [id, entry] of Object.entries(bag.decor || {})) {
-      applySpriteId(entry, "decor", id, entry?.name);
-    }
-    for (const [id, entry] of Object.entries(bag.mutations || {})) {
-      applySpriteId(entry, "mutations", id, entry?.name, ["mutation"]);
-      const overlay = resolveSpriteIdByHints(
-        "mutation-overlay",
-        [`${id}TallPlant`, `${id}TallPlantIcon`, id],
-        entry?.name,
-        ["mutation-overlay"]
-      );
-      if (overlay) {
-        try {
-          entry.overlaySpriteId = overlay;
-        } catch {
-        }
-      }
-    }
-    for (const [id, entry] of Object.entries(bag.eggs || {})) {
-      applySpriteId(entry, "pets", id, entry?.name, ["pet"]);
-    }
-    for (const [id, entry] of Object.entries(bag.pets || {})) {
-      applySpriteId(entry, "pets", id, entry?.name, ["pet"]);
-    }
-    for (const [id, entry] of Object.entries(bag.plants || {})) {
-      const plant = entry;
-      const seed = plant.seed;
-      const plantObj = plant.plant;
-      const crop = plant.crop;
-      if (seed) {
-        const seedTileRef = seed.tileRef;
-        applySpriteId(
-          seed,
-          seedTileRef?.spritesheet || "seeds",
-          `${id}Seed`,
-          seed.name || `${id} Seed`,
-          ["seed", "plant", "plants"],
-          [id]
-        );
-      }
-      if (plantObj) {
-        const plantTileRef = plantObj.tileRef;
-        applySpriteId(
-          plantObj,
-          plantTileRef?.spritesheet || "plants",
-          `${id}Plant`,
-          plantObj.name || `${id} Plant`,
-          ["plant", "plants", "tallplants"],
-          [id]
-        );
-      }
-      if (crop) {
-        const cropTileRef = crop.tileRef;
-        applySpriteId(
-          crop,
-          cropTileRef?.spritesheet || "plants",
-          id,
-          crop.name || id,
-          ["plant", "plants"],
-          [`${id}Crop`]
-        );
-      }
-    }
-  }
-  function resolveSprites() {
-    try {
-      resolveAllSprites(captureState.data);
-    } catch (err) {
-      try {
-        console.warn("[MGData] sprite resolution failed", err);
-      } catch {
-      }
-    }
-  }
-
   // src/data/dynamic/logic/accessors.ts
   var DEFAULT_WAIT_TIMEOUT_MS = 5e3;
   var WAIT_POLL_INTERVAL_MS = 50;
-  function sleep2(ms) {
+  function sleep3(ms) {
     return new Promise((resolve2) => setTimeout(resolve2, ms));
   }
   function getData(key2) {
@@ -6814,7 +7084,7 @@
     while (Date.now() - start2 < timeoutMs) {
       const value = captureState.data[key2];
       if (value != null) return value;
-      await sleep2(intervalMs);
+      await sleep3(intervalMs);
     }
     throw new Error(`MGData.waitFor: timeout waiting for "${key2}"`);
   }
@@ -6824,39 +7094,78 @@
       if (Object.values(captureState.data).some((v) => v != null)) {
         return { ...captureState.data };
       }
-      await sleep2(intervalMs);
+      await sleep3(intervalMs);
     }
     throw new Error("MGData.waitForAnyData: timeout");
   }
 
+  // src/data/dynamic/logic/capture.ts
+  var API_BASE2 = "https://mg-api.ariedam.fr";
+  function setCapturedData(key2, value) {
+    if (captureState.data[key2] != null) return;
+    captureState.data[key2] = value;
+    try {
+      window.dispatchEvent(new CustomEvent("gemini:data-updated", { detail: { key: key2 } }));
+    } catch {
+    }
+  }
+  function isAllDataCaptured() {
+    return Object.values(captureState.data).every((v) => v != null);
+  }
+  async function fetchAllData() {
+    if (captureState.fetchStarted) return;
+    captureState.fetchStarted = true;
+    try {
+      const data = await withDiscordPollPause(() => getJSON2(`${API_BASE2}/data`));
+      if (data.plants) setCapturedData("plants", data.plants);
+      if (data.pets) setCapturedData("pets", data.pets);
+      if (data.items) setCapturedData("items", data.items);
+      if (data.decors) setCapturedData("decor", data.decors);
+      if (data.eggs) setCapturedData("eggs", data.eggs);
+      if (data.mutations) setCapturedData("mutations", data.mutations);
+      if (data.abilities) setCapturedData("abilities", data.abilities);
+      if (data.weathers) setCapturedData("weather", data.weathers);
+      captureState.fetchComplete = true;
+      console.log("[MGData] all data loaded from API", {
+        plants: Object.keys(data.plants || {}).length,
+        pets: Object.keys(data.pets || {}).length,
+        items: Object.keys(data.items || {}).length,
+        decor: Object.keys(data.decors || {}).length,
+        eggs: Object.keys(data.eggs || {}).length,
+        mutations: Object.keys(data.mutations || {}).length,
+        abilities: Object.keys(data.abilities || {}).length,
+        weathers: Object.keys(data.weathers || {}).length
+      });
+    } catch (err) {
+      console.error("[MGData] failed to fetch data from API", err);
+      captureState.fetchStarted = false;
+    }
+  }
+
   // src/data/dynamic/index.ts
   var MGData = {
-    /** Initialize module (install hooks, start scanning, weather and color polling) */
+    /** Initialize module: fetch all data from API, start ability color polling */
     init() {
-      installObjectHooks();
-      startPulseScanning();
-      startWeatherPolling();
+      fetchAllData();
       startColorPolling();
     },
-    /** Check if all data has been captured */
+    /** Check if all data has been loaded */
     isReady: isAllDataCaptured,
-    /** Get captured data for a specific key */
+    /** Get data for a specific key */
     get: getData,
-    /** Get all captured data */
+    /** Get all data */
     getAll: getAllData,
     /** Check if data exists for a specific key */
     has: hasData,
-    /** Wait for specific data to be captured */
+    /** Wait for specific data to be available */
     waitFor: waitForData,
-    /** Wait for any data to be captured */
+    /** Wait for any data to be available */
     waitForAny: waitForAnyData,
-    /** Resolve sprite IDs for all captured data (call after sprite system is ready) */
-    resolveSprites,
-    /** Cleanup (restore hooks and stop scanning) */
+    /** No-op (sprites now come from the API with URLs included) */
+    resolveSprites() {
+    },
+    /** Cleanup */
     cleanup() {
-      restoreObjectHooks();
-      stopPulseScanning();
-      stopWeatherPolling();
       stopColorPolling();
     }
   };
@@ -13086,7 +13395,7 @@
   var OVERLAY_DECOR_ID = "qws-decordeleter-overlay";
   var LIST_DECOR_ID = "qws-decordeleter-list";
   var SUMMARY_DECOR_ID = "qws-decordeleter-summary";
-  function sleep3(ms) {
+  function sleep4(ms) {
     return new Promise((r) => setTimeout(r, ms));
   }
   function buildDisplayNameToSpeciesFromCatalog() {
@@ -13215,7 +13524,7 @@
             }));
           } catch {
           }
-          if (delayMs > 0 && remaining > 0) await sleep3(delayMs);
+          if (delayMs > 0 && remaining > 0) await sleep4(delayMs);
         }
       }
       if (!opts.keepSelection) selectedMap.clear();
@@ -14024,12 +14333,12 @@
             await PlayerService.placeDecor(emptySlot.tileType, emptySlot.index, t.decorId, 0);
           } catch {
           }
-          if (delayMs > 0) await sleep3(delayMs);
+          if (delayMs > 0) await sleep4(delayMs);
           try {
             await PlayerService.removeGardenObject(emptySlot.index, emptySlot.tileType);
           } catch {
           }
-          if (delayMs > 0) await sleep3(delayMs);
+          if (delayMs > 0) await sleep4(delayMs);
           done += 1;
           remaining -= 1;
           try {
@@ -18112,7 +18421,16 @@
     engine: null,
     tos: null,
     origBind: Function.prototype.bind,
-    bindPatched: false
+    bindPatched: false,
+    highlight: {
+      gfx: null,
+      tile: null,
+      parent: null
+    },
+    hoverDebug: {
+      enabled: false,
+      cleanup: null
+    }
   };
   function looksLikeEngine(o) {
     return !!(o && typeof o === "object" && typeof o.start === "function" && typeof o.destroy === "function" && o.app && o.app.stage && o.app.renderer && o.systems && typeof o.systems.values === "function");
@@ -18216,6 +18534,129 @@
       slot.mutations = p.mutations.slice();
     }
   }
+  function getCanvas() {
+    return state2.engine?.app?.view || state2.engine?.app?.renderer?.view || null;
+  }
+  function defaultTileSize() {
+    const t = state2.tos;
+    const m = t?.map || {};
+    const candidates = [m.tileSize, m.tileW, m.tileWidth, t?.tileSize, t?.tileW, 64];
+    for (const c of candidates) {
+      if (Number.isFinite(c) && c > 0) return Number(c);
+    }
+    return 64;
+  }
+  function pointerToTile(ev, opts = {}) {
+    assertReady();
+    const canvas = getCanvas();
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+    const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+    const x = (ev.clientX - rect.left) * scaleX;
+    const y = (ev.clientY - rect.top) * scaleY;
+    const tileSize = opts.tileSize ?? defaultTileSize();
+    if (!Number.isFinite(tileSize) || tileSize <= 0) return null;
+    const tx = Math.floor(x / tileSize);
+    const ty = Math.floor(y / tileSize);
+    const cols = state2.tos?.map?.cols;
+    const rows = state2.tos?.map?.rows;
+    const inside = Number.isFinite(tx) && Number.isFinite(ty) && (!opts.clamp ? true : (!Number.isFinite(cols) || tx >= 0 && tx < cols) && (!Number.isFinite(rows) || ty >= 0 && ty < rows));
+    return {
+      tx,
+      ty,
+      gidx: inside ? globalIndexFromXY(tx, ty) : null,
+      world: { x, y },
+      inside,
+      canvas,
+      ev
+    };
+  }
+  function onPointerTile(listener, opts = {}) {
+    assertReady();
+    const canvas = getCanvas();
+    if (!canvas) throw new Error("Canvas not available on engine");
+    const onMove = (ev) => {
+      const info = pointerToTile(ev, opts);
+      if (info) listener(info);
+    };
+    const onLeave = (ev) => {
+      const info = pointerToTile(ev, opts);
+      if (info) listener({ ...info, inside: false });
+    };
+    canvas.addEventListener("pointermove", onMove);
+    canvas.addEventListener("pointerleave", onLeave);
+    return () => {
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerleave", onLeave);
+    };
+  }
+  function clearHighlight() {
+    try {
+      state2.highlight.gfx?.parent?.removeChild?.(state2.highlight.gfx);
+    } catch {
+    }
+    state2.highlight.gfx?.destroy?.();
+    state2.highlight.gfx = null;
+    state2.highlight.tile = null;
+    state2.highlight.parent = null;
+  }
+  function highlightTile(tx, ty, color = 65280, opts = {}) {
+    const info = tos.getTileObject(tx, ty, { ensureView: true });
+    const tv = info.tileView;
+    if (!tv) throw new Error("TileView not available");
+    const parent = tv.root || tv.container || tv;
+    if (!parent?.addChild) throw new Error("TileView is not a display container");
+    const PIXI = state2.engine?.app?.renderer?.PIXI ?? window.PIXI;
+    const Graphics = PIXI?.Graphics;
+    if (!Graphics) throw new Error("PIXI.Graphics not available");
+    const gfx = state2.highlight.gfx ?? new Graphics();
+    const alpha = opts.alpha ?? 0.8;
+    const thickness = opts.thickness ?? 2;
+    const padding = opts.padding ?? 0;
+    const tileSize = opts.tileSize ?? defaultTileSize();
+    gfx.clear();
+    gfx.lineStyle(thickness, color, alpha);
+    const w = parent?.width ?? tileSize;
+    const h = parent?.height ?? tileSize;
+    gfx.drawRect(-padding, -padding, w + padding * 2, h + padding * 2);
+    gfx.zIndex = 9999;
+    if (gfx.parent !== parent) {
+      try {
+        gfx.parent?.removeChild?.(gfx);
+      } catch {
+      }
+      parent.addChild(gfx);
+    }
+    state2.highlight.gfx = gfx;
+    state2.highlight.tile = { tx, ty };
+    state2.highlight.parent = parent;
+    return { tx, ty, gidx: info.gidx, color, alpha, thickness };
+  }
+  function setDebugHoverHighlight(enabled, opts = {}) {
+    if (!enabled) {
+      state2.hoverDebug.cleanup?.();
+      state2.hoverDebug.cleanup = null;
+      state2.hoverDebug.enabled = false;
+      clearHighlight();
+      return false;
+    }
+    assertReady();
+    if (state2.hoverDebug.enabled) return true;
+    const cleanup2 = onPointerTile((info) => {
+      if (!info.inside || info.tx == null || info.ty == null) {
+        clearHighlight();
+        return;
+      }
+      try {
+        highlightTile(info.tx, info.ty, opts.color ?? 65280, opts);
+      } catch {
+      }
+    }, opts);
+    state2.hoverDebug.cleanup = cleanup2;
+    state2.hoverDebug.enabled = true;
+    return true;
+  }
   var tos = {
     /** À appeler une fois dans le main, le plus tôt possible */
     init() {
@@ -18313,7 +18754,17 @@
       if ("plantedAt" in p) next.plantedAt = Number(p.plantedAt);
       if ("maturedAt" in p) next.maturedAt = Number(p.maturedAt);
       return applyTileObject(Number(tx), Number(ty), next, opts);
-    }
+    },
+    /** Convertit un événement pointeur en coordonnées de tile (tx, ty) */
+    pointerToTile,
+    /** Écoute les mouvements pointeur sur le canvas et appelle le callback avec les infos de tile */
+    onPointerTile,
+    /** Dessine un contour autour d'une tile donnée */
+    highlightTile,
+    /** Supprime le contour actif */
+    clearHighlight,
+    /** Active/désactive un mode debug qui highlight la tile sous le pointeur en temps réel */
+    setDebugHoverHighlight
   };
 
   // src/services/editor.ts
@@ -22585,7 +23036,7 @@
       if (!normalized || map2.has(normalized)) return;
       map2.set(normalized, value);
     };
-    for (const [species, entry] of Object.entries(plantCatalog)) {
+    for (const [species, entry] of Object.entries(plantCatalog2)) {
       const maxScale = Number(entry?.crop?.maxScale);
       if (!Number.isFinite(maxScale) || maxScale <= 0) continue;
       register(species, maxScale);
@@ -27751,7 +28202,7 @@
     if (periodMinutes !== void 0) meta.periodMinutes = periodMinutes;
     return meta;
   };
-  var normalizeMutations = (raw) => {
+  var normalizeMutations2 = (raw) => {
     if (!Array.isArray(raw)) return [];
     const items = [];
     for (const entry of raw) {
@@ -27779,7 +28230,7 @@
       const description = typeof rawValue?.description === "string" ? String(rawValue.description).trim() : null;
       const weightInCycle = normalizeNumber(rawValue?.weightInCycle);
       const cycle = normalizeCycle(rawValue?.cycle);
-      const mutations = normalizeMutations(rawValue?.mutations);
+      const mutations = normalizeMutations2(rawValue?.mutations);
       entries.push({
         id: `Weather:${safeName}`,
         name: displayName || safeName,
@@ -28051,12 +28502,12 @@
     });
   }
   function _handleWeatherUpdate(raw, opts = {}) {
-    const normalize3 = (value) => {
+    const normalize4 = (value) => {
       if (value == null) return "";
       if (typeof value === "string") return value.trim();
       return String(value || "").trim();
     };
-    const nextValue = normalize3(raw);
+    const nextValue = normalize4(raw);
     if (!opts.force && _currentWeatherValue === nextValue) return;
     const lookupKey = nextValue.toLowerCase();
     let def = WEATHER_BY_ATOM.get(lookupKey) || WEATHER_BY_NAME.get(lookupKey);
@@ -30334,738 +30785,6 @@
         window.removeEventListener("keyup", handler, true);
       }
     };
-  }
-
-  // src/ariesModAPI/config.ts
-  var API_BASE_URL = "https://ariesmod-api.ariedam.fr/";
-  var API_ORIGIN = API_BASE_URL.replace(/\/$/, "");
-  var SSE_RECONNECT_DELAY = 5e3;
-  var LONG_POLL_TIMEOUT = 25e3;
-  var LONG_POLL_BACKOFF_MAX = 3e4;
-  var MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND = 5;
-  var DEFAULT_HEARTBEAT_INTERVAL = 6e4;
-
-  // src/ariesModAPI/client/sse.ts
-  init_localStorage();
-
-  // src/ariesModAPI/client/http.ts
-  init_localStorage();
-  function buildUrl(path, query) {
-    const url = new URL(path, API_BASE_URL);
-    if (query) {
-      for (const [key2, value] of Object.entries(query)) {
-        if (value === void 0) continue;
-        url.searchParams.set(key2, String(value));
-      }
-    }
-    return url.toString();
-  }
-  function gmRequest(method, url, body) {
-    return new Promise((resolve2) => {
-      const apiKey = getApiKey();
-      const headers = {};
-      if (apiKey) {
-        headers["Authorization"] = `Bearer ${apiKey}`;
-      }
-      if (body !== void 0) {
-        headers["Content-Type"] = "application/json";
-      }
-      GM_xmlhttpRequest({
-        method,
-        url,
-        headers,
-        data: body !== void 0 ? JSON.stringify(body) : void 0,
-        onload: (res) => {
-          if (res.status >= 200 && res.status < 300) {
-            try {
-              const parsed = res.responseText ? JSON.parse(res.responseText) : null;
-              resolve2({ status: res.status, data: parsed });
-            } catch {
-              resolve2({ status: res.status, data: null });
-            }
-          } else {
-            resolve2({ status: res.status, data: null });
-          }
-        },
-        onerror: () => {
-          resolve2({ status: 0, data: null });
-        }
-      });
-    });
-  }
-  async function fetchRequest(method, url, body) {
-    try {
-      const apiKey = getApiKey();
-      const headers = {};
-      if (apiKey) {
-        headers["Authorization"] = `Bearer ${apiKey}`;
-      }
-      const options = {
-        method,
-        headers,
-        credentials: "omit"
-      };
-      if (body !== void 0) {
-        headers["Content-Type"] = "application/json";
-        options.body = JSON.stringify(body);
-      }
-      const res = await fetch(url, options);
-      const text = await res.text();
-      let parsed = null;
-      if (text) {
-        try {
-          parsed = JSON.parse(text);
-        } catch {
-        }
-      }
-      return { status: res.status, data: parsed };
-    } catch {
-      return { status: 0, data: null };
-    }
-  }
-  async function request(method, path, options) {
-    return withDiscordPollPause(async () => {
-      const url = buildUrl(path, options?.query);
-      if (isDiscordActivityContext()) {
-        return gmRequest(method, url, options?.body);
-      }
-      try {
-        return await fetchRequest(method, url, options?.body);
-      } catch {
-        return gmRequest(method, url, options?.body);
-      }
-    });
-  }
-  async function httpGet(path, query) {
-    return request("GET", path, { query });
-  }
-  async function httpPost(path, body) {
-    return request("POST", path, { body });
-  }
-  async function httpPatch(path, body) {
-    return request("PATCH", path, { body });
-  }
-  async function httpDelete(path, body) {
-    return request("DELETE", path, { body });
-  }
-
-  // src/ariesModAPI/client/sse.ts
-  var MIN_STABLE_STREAM_MS = 1e4;
-  function openSSEStream(path, onEvent, onError) {
-    let closed = false;
-    let running = false;
-    let wasConnected = false;
-    let abortController = null;
-    let reconnectTimer = null;
-    let backoff = SSE_RECONNECT_DELAY;
-    let knownServerSessionId = null;
-    const url = buildUrl(path);
-    const scheduleReconnect = () => {
-      if (closed) return;
-      if (reconnectTimer !== null) {
-        clearTimeout(reconnectTimer);
-      }
-      reconnectTimer = setTimeout(startStream, backoff);
-      backoff = Math.min(LONG_POLL_BACKOFF_MAX, Math.floor(backoff * 1.5));
-    };
-    const notifyDisconnect = () => {
-      if (!wasConnected) return;
-      wasConnected = false;
-      onError?.();
-    };
-    const startStream = async () => {
-      reconnectTimer = null;
-      if (closed || running) return;
-      running = true;
-      const apiKey = getApiKey();
-      const headers = {};
-      if (apiKey) {
-        headers["Authorization"] = `Bearer ${apiKey}`;
-      }
-      abortController = new AbortController();
-      try {
-        const response = await fetch(url, {
-          headers,
-          signal: abortController.signal
-        });
-        if (!response.ok || !response.body) {
-          running = false;
-          notifyDisconnect();
-          scheduleReconnect();
-          return;
-        }
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let currentEventType = "";
-        let currentEventData = "";
-        const streamStartedAt = Date.now();
-        const processLine = (line) => {
-          if (!line.trim()) {
-            if (currentEventType && currentEventData) {
-              wasConnected = true;
-              if (currentEventType === "connected") {
-                try {
-                  const payload = JSON.parse(currentEventData);
-                  if (payload.serverSessionId) {
-                    if (knownServerSessionId !== null && payload.serverSessionId !== knownServerSessionId) {
-                      console.log(
-                        "[SSE] \u{1F504} Server restart detected! Session changed from",
-                        knownServerSessionId,
-                        "to",
-                        payload.serverSessionId
-                      );
-                      knownServerSessionId = payload.serverSessionId;
-                    } else if (knownServerSessionId === null) {
-                      knownServerSessionId = payload.serverSessionId;
-                    }
-                  }
-                } catch (e) {
-                  console.error("[SSE] Error parsing connected event:", e);
-                }
-              }
-              try {
-                onEvent(currentEventType, currentEventData);
-              } catch (e) {
-                console.error(`[SSE] Handler error for "${currentEventType}":`, e);
-              }
-            }
-            currentEventType = "";
-            currentEventData = "";
-            return;
-          }
-          if (line.startsWith("event:")) {
-            currentEventType = line.substring(6).trim();
-          } else if (line.startsWith("data:")) {
-            const data = line.substring(5).trim();
-            currentEventData += (currentEventData ? "\n" : "") + data;
-          }
-        };
-        while (!closed) {
-          const { done, value } = await reader.read();
-          if (done || closed) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-          for (const line of lines) {
-            processLine(line);
-          }
-        }
-        running = false;
-        if (wasConnected && Date.now() - streamStartedAt > MIN_STABLE_STREAM_MS) {
-          backoff = SSE_RECONNECT_DELAY;
-        }
-        if (!closed) {
-          notifyDisconnect();
-          scheduleReconnect();
-        }
-      } catch (err) {
-        running = false;
-        if (!closed) {
-          notifyDisconnect();
-          scheduleReconnect();
-        }
-      }
-    };
-    startStream();
-    return {
-      close: () => {
-        closed = true;
-        running = false;
-        wasConnected = false;
-        if (reconnectTimer !== null) {
-          clearTimeout(reconnectTimer);
-          reconnectTimer = null;
-        }
-        try {
-          abortController?.abort();
-        } catch {
-        }
-        abortController = null;
-      }
-    };
-  }
-
-  // src/ariesModAPI/client/longPoll.ts
-  init_localStorage();
-  function gmLongPoll(url) {
-    let aborted = false;
-    let req = null;
-    const apiKey = getApiKey();
-    const headers = {};
-    if (apiKey) {
-      headers["Authorization"] = `Bearer ${apiKey}`;
-    }
-    const promise2 = new Promise((resolve2) => {
-      req = GM_xmlhttpRequest({
-        method: "GET",
-        url,
-        headers,
-        onload: (res) => {
-          if (res.status >= 200 && res.status < 300) {
-            try {
-              const parsed = res.responseText ? JSON.parse(res.responseText) : null;
-              resolve2({ status: res.status, data: parsed });
-            } catch {
-              resolve2({ status: res.status, data: null });
-            }
-          } else {
-            resolve2({ status: res.status, data: null });
-          }
-        },
-        onerror: () => {
-          if (aborted) {
-            resolve2({ status: 0, data: null, aborted: true });
-            return;
-          }
-          resolve2({ status: 0, data: null });
-        }
-      });
-    });
-    return {
-      abort: () => {
-        aborted = true;
-        try {
-          req?.abort();
-        } catch {
-        }
-      },
-      promise: promise2
-    };
-  }
-  function startLongPollStream(onEvent, onConnected, onError) {
-    let closed = false;
-    let paused = false;
-    let running = false;
-    let token = 0;
-    let lastEventId = 0;
-    let backoff = 1e3;
-    let inFlight = null;
-    let knownServerSessionId = null;
-    const schedule = (delay3) => {
-      if (closed || paused) return;
-      setTimeout(poll, delay3);
-    };
-    const poll = async () => {
-      if (closed || paused || running) return;
-      running = true;
-      const currentToken = ++token;
-      const url = buildUrl("events/poll", {
-        since: lastEventId,
-        timeoutMs: LONG_POLL_TIMEOUT
-      });
-      const pollReq = gmLongPoll(url);
-      inFlight = { abort: pollReq.abort };
-      const { status, data, aborted } = await pollReq.promise;
-      inFlight = null;
-      running = false;
-      if (closed || paused || aborted || currentToken !== token) return;
-      if (status === 200 && data) {
-        if (knownServerSessionId !== null && data.serverSessionId !== knownServerSessionId) {
-          console.log(
-            "[Long Poll] \u{1F504} Server restart detected! Session changed from",
-            knownServerSessionId,
-            "to",
-            data.serverSessionId
-          );
-          lastEventId = 0;
-          knownServerSessionId = data.serverSessionId;
-          backoff = 1e3;
-          schedule(0);
-          return;
-        }
-        if (knownServerSessionId === null) {
-          knownServerSessionId = data.serverSessionId;
-        }
-        const eventId = Number(data.lastEventId);
-        if (Number.isFinite(eventId)) {
-          lastEventId = eventId;
-        }
-        onConnected?.({
-          playerId: data.playerId,
-          lastEventId
-        });
-        if (Array.isArray(data.events)) {
-          for (const evt of data.events) {
-            if (!evt || typeof evt.type !== "string") continue;
-            onEvent(evt);
-          }
-        }
-        backoff = 1e3;
-        schedule(0);
-        return;
-      }
-      onError?.();
-      schedule(backoff);
-      backoff = Math.min(LONG_POLL_BACKOFF_MAX, Math.floor(backoff * 1.7));
-    };
-    poll();
-    return {
-      close: () => {
-        closed = true;
-        token += 1;
-        running = false;
-        inFlight?.abort();
-      },
-      getLastEventId: () => lastEventId,
-      pause: () => {
-        paused = true;
-        token += 1;
-        running = false;
-        inFlight?.abort();
-      },
-      resume: () => {
-        if (closed) return;
-        paused = false;
-        if (!running) {
-          poll();
-        }
-      },
-      kick: () => {
-        if (closed || paused || running) return;
-        poll();
-      }
-    };
-  }
-
-  // src/ariesModAPI/client/events.ts
-  var _unifiedConnections = /* @__PURE__ */ new Map();
-  function safeJsonParse(value) {
-    if (value === null || value === void 0) return value;
-    if (typeof value !== "string") return value;
-    try {
-      return JSON.parse(value);
-    } catch {
-      return value;
-    }
-  }
-  function notifyConnected(conn, payload) {
-    if (conn.connectedNotified) return;
-    conn.connectedNotified = true;
-    for (const sub of conn.subscribers) {
-      sub.onConnected?.(payload);
-    }
-  }
-  function dispatchUnifiedEvent(conn, eventName, data) {
-    for (const sub of conn.subscribers) {
-      sub.onEvent(eventName, data);
-    }
-  }
-  function startUnifiedSSE(conn) {
-    conn.handle = openSSEStream(
-      "events/stream",
-      (eventName, raw) => {
-        const data = safeJsonParse(raw);
-        if (eventName === "connected") {
-          const payload = data && typeof data === "object" ? data : { playerId: conn.playerId };
-          const lastId = Number(payload.lastEventId);
-          if (Number.isFinite(lastId)) {
-            conn.lastEventId = Math.max(conn.lastEventId, lastId);
-          }
-          notifyConnected(conn, {
-            playerId: payload.playerId ?? conn.playerId,
-            lastEventId: Number.isFinite(lastId) ? lastId : void 0
-          });
-          return;
-        }
-        dispatchUnifiedEvent(conn, eventName, data);
-      },
-      () => {
-        conn.connectedNotified = false;
-        for (const sub of conn.subscribers) {
-          sub.onError?.(new Event("error"));
-        }
-      }
-    );
-  }
-  function startUnifiedLongPoll(conn) {
-    const pollHandle = startLongPollStream(
-      (evt) => {
-        dispatchUnifiedEvent(conn, evt.type, evt.data);
-      },
-      (payload) => {
-        conn.lastEventId = payload.lastEventId;
-        notifyConnected(conn, {
-          playerId: payload.playerId,
-          lastEventId: payload.lastEventId
-        });
-      },
-      () => {
-        for (const sub of conn.subscribers) {
-          sub.onError?.(new Event("error"));
-        }
-      }
-    );
-    conn.handle = {
-      close: () => {
-        conn.closed = true;
-        pollHandle.close();
-      }
-    };
-    conn.pollAbort = () => pollHandle.pause();
-    conn.pollKick = () => pollHandle.resume();
-  }
-  function openUnifiedEvents(playerId2, subscriber) {
-    let conn = _unifiedConnections.get(playerId2);
-    if (!conn) {
-      const mode = isDiscordActivityContext() ? "poll" : "sse";
-      conn = {
-        playerId: playerId2,
-        mode,
-        subscribers: /* @__PURE__ */ new Set(),
-        handle: null,
-        lastEventId: 0,
-        connectedNotified: false,
-        closed: false,
-        pollPaused: false,
-        pollRunning: false,
-        pollToken: 0
-      };
-      _unifiedConnections.set(playerId2, conn);
-      if (conn.mode === "poll") {
-        startUnifiedLongPoll(conn);
-      } else {
-        startUnifiedSSE(conn);
-      }
-    }
-    conn.subscribers.add(subscriber);
-    return {
-      close: () => {
-        conn.subscribers.delete(subscriber);
-        if (conn.subscribers.size === 0) {
-          conn.closed = true;
-          conn.handle?.close();
-          _unifiedConnections.delete(playerId2);
-        }
-      }
-    };
-  }
-  var _pollPauseDepth = 0;
-  function pauseDiscordLongPolls() {
-    if (!isDiscordActivityContext()) return;
-    _pollPauseDepth += 1;
-    for (const conn of _unifiedConnections.values()) {
-      if (conn.mode !== "poll") continue;
-      conn.pollPaused = true;
-      conn.pollToken += 1;
-      conn.pollRunning = false;
-      conn.pollAbort?.();
-    }
-  }
-  function resumeDiscordLongPolls() {
-    if (!isDiscordActivityContext()) return;
-    _pollPauseDepth = Math.max(0, _pollPauseDepth - 1);
-    if (_pollPauseDepth > 0) return;
-    for (const conn of _unifiedConnections.values()) {
-      if (conn.mode !== "poll") continue;
-      conn.pollPaused = false;
-      conn.pollKick?.();
-    }
-  }
-  async function withDiscordPollPause(fn) {
-    if (!isDiscordActivityContext()) return await fn();
-    pauseDiscordLongPolls();
-    try {
-      return await fn();
-    } finally {
-      resumeDiscordLongPolls();
-    }
-  }
-
-  // src/utils/discordCsp.ts
-  function isDiscordActivityContext() {
-    try {
-      return window.location.hostname.endsWith("discordsays.com");
-    } catch {
-      return false;
-    }
-  }
-  var _SAFE_IMG_HOSTS = ["cdn.discordapp.com", "media.discordapp.net"];
-  var _gmImgCache = /* @__PURE__ */ new Map();
-  var _gmImgPending = /* @__PURE__ */ new Map();
-  var _extMimeMap = {
-    png: "image/png",
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    gif: "image/gif",
-    webp: "image/webp",
-    svg: "image/svg+xml"
-  };
-  function _isImgUrlSafe(url) {
-    if (!url || url.startsWith("blob:") || url.startsWith("data:") || url.startsWith("/")) return true;
-    try {
-      const { hostname } = new URL(url);
-      return _SAFE_IMG_HOSTS.some((h) => hostname === h || hostname.endsWith("." + h));
-    } catch {
-      return true;
-    }
-  }
-  function setImageSafe(img, url) {
-    if (!url) return;
-    if (!isDiscordActivityContext()) {
-      img.src = url;
-      return;
-    }
-    if (_isImgUrlSafe(url)) {
-      img.src = url;
-      return;
-    }
-    const cached = _gmImgCache.get(url);
-    if (cached) {
-      img.src = cached;
-      return;
-    }
-    const pending = _gmImgPending.get(url);
-    if (pending) {
-      pending.push(img);
-      return;
-    }
-    _gmImgPending.set(url, [img]);
-    GM_xmlhttpRequest({
-      method: "GET",
-      url,
-      headers: {},
-      responseType: "arraybuffer",
-      onload: (res) => {
-        const imgs = _gmImgPending.get(url) ?? [];
-        _gmImgPending.delete(url);
-        if (!res.response) {
-          for (const el2 of imgs) el2.src = url;
-          return;
-        }
-        const ext = url.split(".").pop()?.toLowerCase().split("?")[0] ?? "png";
-        const mime = _extMimeMap[ext] ?? "image/png";
-        const blob = new Blob([res.response], { type: mime });
-        const blobUrl = URL.createObjectURL(blob);
-        _gmImgCache.set(url, blobUrl);
-        for (const el2 of imgs) el2.src = blobUrl;
-      },
-      onerror: () => {
-        const imgs = _gmImgPending.get(url) ?? [];
-        _gmImgPending.delete(url);
-        for (const el2 of imgs) el2.src = url;
-      }
-    });
-  }
-  var _gmAudioCache = /* @__PURE__ */ new Map();
-  var _gmAudioPending = /* @__PURE__ */ new Map();
-  function getAudioUrlSafe(url) {
-    return new Promise((resolve2) => {
-      if (!url) {
-        resolve2(url);
-        return;
-      }
-      if (!isDiscordActivityContext()) {
-        resolve2(url);
-        return;
-      }
-      const cached = _gmAudioCache.get(url);
-      if (cached) {
-        resolve2(cached);
-        return;
-      }
-      const pending = _gmAudioPending.get(url);
-      if (pending) {
-        pending.push(resolve2);
-        return;
-      }
-      _gmAudioPending.set(url, [resolve2]);
-      GM_xmlhttpRequest({
-        method: "GET",
-        url,
-        headers: {},
-        responseType: "arraybuffer",
-        onload: (res) => {
-          const callbacks = _gmAudioPending.get(url) ?? [];
-          _gmAudioPending.delete(url);
-          if (!res.response) {
-            for (const cb of callbacks) cb(url);
-            return;
-          }
-          const ext = url.split(".").pop()?.toLowerCase().split("?")[0] ?? "mp3";
-          const audioMimeMap = {
-            mp3: "audio/mpeg",
-            ogg: "audio/ogg",
-            wav: "audio/wav",
-            m4a: "audio/mp4"
-          };
-          const mime = audioMimeMap[ext] ?? "audio/mpeg";
-          const blob = new Blob([res.response], { type: mime });
-          const blobUrl = URL.createObjectURL(blob);
-          _gmAudioCache.set(url, blobUrl);
-          for (const cb of callbacks) cb(blobUrl);
-        },
-        onerror: () => {
-          const callbacks = _gmAudioPending.get(url) ?? [];
-          _gmAudioPending.delete(url);
-          for (const cb of callbacks) cb(url);
-        }
-      });
-    });
-  }
-  var EMOJI_DATA_CDN_PREFIX = "https://cdn.jsdelivr.net/npm/emoji-picker-element-data";
-  var _emojiJson = null;
-  var _emojiPending = [];
-  var _emojiInterceptorInstalled = false;
-  function _emojiMakeResponse(json, method) {
-    if (method === "HEAD") {
-      return new Response(null, {
-        status: 200,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
-    return new Response(json, {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
-  }
-  function installEmojiDataFetchInterceptor() {
-    if (_emojiInterceptorInstalled) return;
-    _emojiInterceptorInstalled = true;
-    const _origFetch = window.fetch.bind(window);
-    window.fetch = function(input, init2) {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      if (!url.startsWith(EMOJI_DATA_CDN_PREFIX)) {
-        return _origFetch(input, init2);
-      }
-      const method = (init2?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
-      if (_emojiJson) {
-        return Promise.resolve(_emojiMakeResponse(_emojiJson, method));
-      }
-      return new Promise((resolve2) => {
-        _emojiPending.push((json) => {
-          resolve2(
-            json ? _emojiMakeResponse(json, method) : new Response(null, { status: 503 })
-          );
-        });
-      });
-    };
-    void withDiscordPollPause(async () => {
-      return new Promise((resolve2) => {
-        GM_xmlhttpRequest({
-          method: "GET",
-          url: `${EMOJI_DATA_CDN_PREFIX}@^1/en/emojibase/data.json`,
-          headers: {},
-          onload: (res) => {
-            if (res.status >= 200 && res.status < 300 && res.responseText) {
-              _emojiJson = res.responseText;
-              for (const cb of _emojiPending) cb(_emojiJson);
-            } else {
-              console.error("[discordCsp] emoji fetch failed:", res.status);
-              for (const cb of _emojiPending) cb(null);
-            }
-            _emojiPending = [];
-            resolve2();
-          },
-          onerror: (err) => {
-            console.error("[discordCsp] emoji fetch error:", err);
-            for (const cb of _emojiPending) cb(null);
-            _emojiPending = [];
-            resolve2();
-          }
-        });
-      });
-    });
   }
 
   // src/ariesModAPI/auth/core.ts
@@ -36515,10 +36234,6 @@
     hidePreviewModal();
   }
 
-  // src/utils/mgCommon.ts
-  var ORIGIN = "https://magicgarden.gg";
-  var sleep4 = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
-
   // src/utils/mgVersion.ts
   var VERSION_PATH = "/platform/v1/version";
   var VERSION_CACHE_TTL = 60 * 1e3;
@@ -36637,7 +36352,7 @@
       init(document);
       const v = getCachedVersion() ?? cachedVersion;
       if (v) return v;
-      await sleep4(50);
+      await sleep2(50);
     }
     throw new Error("MGVersion timeout (gameVersion not found)");
   }
@@ -45206,11 +44921,11 @@
     return r.width > 0 && r.height > 0;
   }
   var labelIsChecked = (el2) => el2.matches("[data-checked]") || !!el2.querySelector("[data-checked]");
-  var normalize = (s) => (s ?? "").trim().toLowerCase();
+  var normalize2 = (s) => (s ?? "").trim().toLowerCase();
   var createFilterContextKey = (filters, search) => {
-    const normalizedFilters = filters.map((value) => normalize(value)).filter((value) => value && value !== "all");
+    const normalizedFilters = filters.map((value) => normalize2(value)).filter((value) => value && value !== "all");
     normalizedFilters.sort();
-    const normalizedSearch = normalize(search);
+    const normalizedSearch = normalize2(search);
     return `${normalizedFilters.join("|")}::${normalizedSearch}`;
   };
   var areSetsEqual = (a, b) => {
@@ -45231,7 +44946,7 @@
   var setCachedItemTypesForKey = (contextKey, types) => {
     const normalizedTypes = /* @__PURE__ */ new Set();
     types.forEach((type) => {
-      const normalizedType = normalize(type);
+      const normalizedType = normalize2(type);
       if (normalizedType) {
         normalizedTypes.add(normalizedType);
       }
@@ -45252,7 +44967,7 @@
     const input = getInventorySearchInput(grid);
     return typeof input?.value === "string" ? input.value : "";
   };
-  var getNormalizedInventorySearchQuery = (grid) => normalize(getInventorySearchQuery(grid));
+  var getNormalizedInventorySearchQuery = (grid) => normalize2(getInventorySearchQuery(grid));
   var logFilteredInventorySearchResults = async (grid, filters, searchQuery) => {
     if (!grid) return;
     try {
@@ -45289,19 +45004,19 @@
   var RARITY_RANK = (() => {
     const entries = /* @__PURE__ */ new Map();
     RARITY_ORDER.forEach((label2, index) => {
-      const key2 = normalize(label2);
+      const key2 = normalize2(label2);
       if (key2) {
         entries.set(key2, index);
       }
     });
-    const mythicIndex = entries.get(normalize(rarity2.Mythic));
+    const mythicIndex = entries.get(normalize2(rarity2.Mythic));
     if (typeof mythicIndex === "number") {
-      entries.set(normalize("Mythic"), mythicIndex);
+      entries.set(normalize2("Mythic"), mythicIndex);
     }
     return entries;
   })();
   var getRarityRank = (value) => {
-    const key2 = normalize(value);
+    const key2 = normalize2(value);
     if (!key2) return RARITY_ORDER.length;
     return RARITY_RANK.get(key2) ?? RARITY_ORDER.length;
   };
@@ -45439,7 +45154,7 @@
     const mapping = /* @__PURE__ */ new Map();
     for (const [filterKey, itemTypes] of Object.entries(FILTER_LABEL_TO_ITEM_TYPES)) {
       for (const itemType of itemTypes) {
-        const normalizedType = normalize(itemType);
+        const normalizedType = normalize2(itemType);
         if (!normalizedType) continue;
         const set3 = mapping.get(normalizedType) ?? /* @__PURE__ */ new Set();
         set3.add(filterKey);
@@ -45470,7 +45185,7 @@
     return [];
   };
   var getExtrasForItemType = (itemType, mapExtraByFilter) => {
-    const normalizedType = normalize(itemType);
+    const normalizedType = normalize2(itemType);
     if (!normalizedType) return [];
     const extras = /* @__PURE__ */ new Set();
     const direct = mapExtraByFilter[normalizedType];
@@ -45487,7 +45202,7 @@
     return Array.from(extras);
   };
   function filterLabelToItemTypes(filter) {
-    const key2 = normalize(filter);
+    const key2 = normalize2(filter);
     if (!key2 || key2 === "all") return [];
     const mapped = FILTER_LABEL_TO_ITEM_TYPES[key2];
     if (mapped) return mapped;
@@ -45502,10 +45217,10 @@
     const matchesValue = (value) => {
       if (value == null) return false;
       if (typeof value === "string") {
-        return normalize(value).includes(normalizedQuery);
+        return normalize2(value).includes(normalizedQuery);
       }
       if (typeof value === "number" || typeof value === "boolean") {
-        return normalize(String(value)).includes(normalizedQuery);
+        return normalize2(String(value)).includes(normalizedQuery);
       }
       if (Array.isArray(value)) {
         for (const entry of value) {
@@ -45572,7 +45287,7 @@
     }
   }
   function filterInventoryItems(items, filters, searchQuery) {
-    const normalizedFilters = filters.map((f) => normalize(f)).filter(Boolean);
+    const normalizedFilters = filters.map((f) => normalize2(f)).filter(Boolean);
     const itemTypes = /* @__PURE__ */ new Set();
     let recognized = false;
     for (const filter of normalizedFilters) {
@@ -45589,7 +45304,7 @@
       const type = typeof item?.itemType === "string" ? item.itemType.trim() : "";
       return type ? itemTypes.has(type) : false;
     });
-    const normalizedSearch = normalize(searchQuery);
+    const normalizedSearch = normalize2(searchQuery);
     const filteredItems = normalizedSearch ? filteredByType.filter((item) => inventoryItemMatchesSearchQuery(item, normalizedSearch)) : filteredByType;
     attachItemValues(filteredItems);
     const detectedItemTypes = /* @__PURE__ */ new Set();
@@ -46234,13 +45949,13 @@
     }
     return null;
   };
-  var getPetCardName = (card2) => normalize(card2.querySelector(PET_NAME_SELECTOR)?.textContent ?? "");
+  var getPetCardName = (card2) => normalize2(card2.querySelector(PET_NAME_SELECTOR)?.textContent ?? "");
   var getPetNameCandidates = (item) => {
     const candidates = /* @__PURE__ */ new Set();
     const name = readNestedStringField(item, "name");
-    if (name) candidates.add(normalize(name));
+    if (name) candidates.add(normalize2(name));
     const species = readNestedStringField(item, "petSpecies") ?? readNestedStringField(item, "species");
-    if (species) candidates.add(normalize(species));
+    if (species) candidates.add(normalize2(species));
     return Array.from(candidates);
   };
   var isPetItem = (item) => {
@@ -46704,7 +46419,7 @@
   }
   function computeSortOptions(activeFilters, labelByValue = LABEL_BY_VALUE_DEFAULT, mapExtraByFilter = MAP_EXTRA_BY_FILTER_DEFAULT, searchQuery = "") {
     const normalizedFilters = activeFilters.map((value) => (value ?? "").trim().toLowerCase()).filter(Boolean);
-    const normalizedSearch = normalize(searchQuery);
+    const normalizedSearch = normalize2(searchQuery);
     const intersectSets = (sets) => {
       if (!sets.length) return null;
       let intersection = new Set(sets[0]);
@@ -47697,7 +47412,7 @@
     intervalMs: 6e4,
     log: false
   };
-  var normalize2 = (s) => (s || "").replace(/\s+/g, " ").trim();
+  var normalize3 = (s) => (s || "").replace(/\s+/g, " ").trim();
   var reGameUpdate = /game\s*update\s+ava?ilab?le/i;
   var reDailyBread = /your\s+daily\s+bread/i;
   var log = (enabled, ...args) => {
@@ -47733,7 +47448,7 @@
     );
     for (const sec of sections) {
       const header = sec.querySelector("header.chakra-modal__header");
-      const txt = normalize2(header?.textContent || sec.textContent || "");
+      const txt = normalize3(header?.textContent || sec.textContent || "");
       if (reGameUpdate.test(txt)) return sec;
     }
     return null;
@@ -47743,12 +47458,12 @@
       'section.chakra-modal__content[role="dialog"], section.chakra-modal__content[role="alertdialog"]'
     );
     for (const sec of sections) {
-      const txt = normalize2(sec.textContent || "");
+      const txt = normalize3(sec.textContent || "");
       if (!reDailyBread.test(txt)) continue;
       let btn = sec.querySelector("button.chakra-button.css-1o32am8");
       if (!btn) {
         const candidates = sec.querySelectorAll("button");
-        btn = Array.from(candidates).find((b) => /claim/i.test(normalize2(b.textContent))) ?? null;
+        btn = Array.from(candidates).find((b) => /claim/i.test(normalize3(b.textContent))) ?? null;
       }
       if (btn) return { section: sec, button: btn };
     }
@@ -56579,6 +56294,12 @@ next: ${next}`;
     if (cropSimulationStyleEl) return;
     cropSimulationStyleEl = addStyle(CROP_SIMULATION_CSS);
   }
+  function extractSpriteNameFromUrl(urlOrPath) {
+    const str = String(urlOrPath || "").trim();
+    if (!str) return null;
+    const filename = str.split("/").pop() || "";
+    return filename.replace(/\.[a-z0-9]+(\?.*)?$/i, "") || null;
+  }
   function buildSpriteCandidates3(primary, option) {
     const candidates = /* @__PURE__ */ new Set();
     const addCandidate = (value) => {
@@ -56588,12 +56309,14 @@ next: ${next}`;
       candidates.add(trimmed);
       candidates.add(trimmed.replace(/\W+/g, ""));
     };
+    if (option?.spriteKey) {
+      const spriteName = extractSpriteNameFromUrl(option.spriteKey);
+      if (spriteName) addCandidate(spriteName);
+    }
     addCandidate(primary);
     if (option) {
-      addCandidate(option.seedName);
       addCandidate(option.cropName);
-      const spriteBaseName = option.spriteKey?.split("/").pop();
-      if (spriteBaseName) addCandidate(spriteBaseName);
+      addCandidate(option.seedName);
     }
     const baseCandidates = Array.from(candidates).map((value) => value.replace(/icon$/i, "")).filter(Boolean);
     const expanded = Array.from(
@@ -56828,6 +56551,18 @@ next: ${next}`;
     const scale = SCALE_MIN + normalized * (safeMax - SCALE_MIN);
     return Number.isFinite(scale) ? scale : SCALE_MIN;
   }
+  var MUTATION_UI_SPRITE_NAMES = {
+    Gold: "MutationGold",
+    Rainbow: "MutationRainbow",
+    Wet: "MutationWet",
+    Chilled: "MutationChilled",
+    Frozen: "MutationFrozen",
+    Thunderstruck: "MutationThunderstruck",
+    Dawnlit: "MutationDawnlit",
+    Amberlit: "MutationAmberlit",
+    Dawnbound: "MutationDawncharged",
+    Amberbound: "MutationAmbercharged"
+  };
   function createSegmentedControl(labels, selectedLabel, interactive, onSelect, ariaLabel) {
     const coerced = coerceLabel(selectedLabel, labels);
     const items = labels.map((label2) => ({ value: label2, label: label2, disabled: !interactive }));
@@ -56838,6 +56573,30 @@ next: ${next}`;
       { ariaLabel, fullWidth: true }
     );
     segmented.classList.add("mg-crop-simulation__segmented-control");
+    const buttons = segmented.querySelectorAll(".qmm-seg__btn");
+    buttons.forEach((button) => {
+      const label2 = button.dataset.value || button.textContent?.trim() || "";
+      const spriteName = MUTATION_UI_SPRITE_NAMES[label2];
+      if (!spriteName) return;
+      const labelSpan = button.querySelector(".qmm-seg__btn-label");
+      if (!labelSpan) return;
+      getSpriteObjectUrlByName(["ui"], spriteName).then((url) => {
+        if (!url) return;
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = label2;
+        img.title = label2;
+        img.width = 20;
+        img.height = 20;
+        img.style.width = "20px";
+        img.style.height = "20px";
+        img.style.objectFit = "contain";
+        img.style.display = "block";
+        img.draggable = false;
+        labelSpan.textContent = "";
+        labelSpan.appendChild(img);
+      });
+    });
     return segmented;
   }
   function applySegmentedButtonMetadata(segmented, metadata) {

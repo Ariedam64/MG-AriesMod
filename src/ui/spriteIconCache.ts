@@ -1,44 +1,411 @@
-import { pageWindow } from "../utils/page-context";
+// spriteIconCache.ts — API-backed sprite icons (mg-api.ariedam.fr)
+// Replaces the old PIXI/canvas-based sprite service with direct API image URLs.
+// Mutation color filters are applied client-side via Canvas 2D.
+// Uses GM_xmlhttpRequest (via mgCommon helpers) to bypass CORS restrictions.
 
-type SpriteServiceHandle = {
-  ready?: Promise<unknown>;
-  renderToCanvas?: (params: { category: string; id: string; mutations?: string[] }) => HTMLCanvasElement | null;
-  list?: (category?: string) => Array<{ key?: string }>;
+import { getJSON, getBlob, blobToImage } from "../utils/mgCommon";
+import { withDiscordPollPause } from "../ariesModAPI/client/events";
+
+const API_BASE = "https://mg-api.ariedam.fr";
+
+// ─── Sprite Index ──────────────────────────────────────────────────────────────
+
+type SpriteIndexEntry = {
+  id: string;          // e.g. "sprite/plant/Bamboo"
+  name: string;        // e.g. "Bamboo"
+  internalCat: string; // e.g. "plant" (extracted from id)
+  apiCat: string;      // e.g. "plants" (for URL construction)
 };
 
-const SPRITE_PRELOAD_CATEGORIES = [
-  "plant",
-  "tallplant",
-  "decor",
-  "item",
-  "pet",
-  "seed",
-  "ui",
-  "mutation",
-  "mutation-overlay",
-] as const;
+const indexEntries: SpriteIndexEntry[] = [];
+const nameIndex = new Map<string, SpriteIndexEntry[]>();
+let indexReady: Promise<void> | null = null;
+
+const normalize = (value: string): string => {
+  let str = String(value || "").trim();
+  // If it looks like a URL or path, extract just the filename
+  if (str.includes("/")) {
+    str = str.split("/").pop() || str;
+  }
+  // Strip file extensions and query params (e.g. "Carrot.png?v=163" → "Carrot")
+  str = str.replace(/\.[a-z0-9]+(\?.*)?$/i, "");
+  return str.toLowerCase().replace(/[^a-z0-9]/g, "");
+};
+
+/** Map from internal sprite-id category → API URL path segment */
+const INTERNAL_TO_API: Record<string, string> = {
+  plant: "plants",
+  tallplant: "tallPlants",
+  seed: "seeds",
+  pet: "pets",
+  item: "items",
+  decor: "decor",
+  mutation: "mutations",
+  "mutation-overlay": "mutations",
+  ui: "ui",
+  weather: "weather",
+  objects: "objects",
+  tiles: "tiles",
+  animations: "animations",
+  winter: "winter",
+};
+
+/** Map from the categories used in attachSpriteIcon calls → internal cats to search */
+const SEARCH_CATS: Record<string, string[]> = {
+  plant: ["plant", "tallplant"],
+  tallplant: ["tallplant", "plant"],
+  crop: ["plant", "tallplant"],
+  seed: ["seed"],
+  pet: ["pet"],
+  item: ["item"],
+  decor: ["decor"],
+  mutation: ["mutation", "mutation-overlay"],
+  "mutation-overlay": ["mutation-overlay", "mutation"],
+  ui: ["ui"],
+  weather: ["ui", "weather", "mutation"],
+};
+
+function fetchIndex(): Promise<void> {
+  if (indexReady) return indexReady;
+  indexReady = withDiscordPollPause(() =>
+    getJSON<{ items: Array<{ id: string; name: string }> }>(
+      `${API_BASE}/assets/sprite-data?flat=1`,
+    ),
+  )
+    .then((data) => {
+      const items = data.items || [];
+      for (const item of items) {
+        const parts = item.id.split("/").filter(Boolean);
+        const start = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
+        const internalCat = parts[start] || "";
+        const apiCat = INTERNAL_TO_API[internalCat] || internalCat;
+        const entry: SpriteIndexEntry = { id: item.id, name: item.name, internalCat, apiCat };
+        indexEntries.push(entry);
+        const norm = normalize(item.name);
+        const arr = nameIndex.get(norm) || [];
+        arr.push(entry);
+        nameIndex.set(norm, arr);
+      }
+      console.log("[SpriteIconCache] sprite index loaded", { count: indexEntries.length });
+    })
+    .catch(err => {
+      console.error("[SpriteIconCache] failed to fetch sprite index", err);
+      // Allow retry on next call
+      indexReady = null;
+    });
+  return indexReady;
+}
+
+// Start fetching the sprite index immediately at module load time.
+// This ensures it's ready before any menu opens, avoiding race conditions
+// where DOM elements get replaced before async sprite loading completes.
+fetchIndex();
+
+function spriteUrl(entry: SpriteIndexEntry): string {
+  return `${API_BASE}/assets/sprites/${entry.apiCat}/${entry.name}.png`;
+}
+
+function findSprite(categories: string[], candidateId: string): SpriteIndexEntry | null {
+  const norm = normalize(candidateId);
+  const entries = nameIndex.get(norm);
+  if (!entries?.length) {
+    return findSpriteFuzzy(categories, norm);
+  }
+
+  const internalCats = new Set<string>();
+  for (const cat of categories) {
+    const expanded = SEARCH_CATS[cat] || [cat];
+    for (const catName of expanded) internalCats.add(catName);
+  }
+
+  for (const entry of entries) {
+    if (internalCats.has(entry.internalCat)) return entry;
+  }
+
+  // No category match — try fuzzy search instead of returning wrong category
+  return findSpriteFuzzy(categories, norm);
+}
+
+function findSpriteFuzzy(categories: string[], normTarget: string): SpriteIndexEntry | null {
+  if (!normTarget) return null;
+
+  const internalCats = new Set<string>();
+  for (const cat of categories) {
+    const expanded = SEARCH_CATS[cat] || [cat];
+    for (const catName of expanded) internalCats.add(catName);
+  }
+
+  for (const [norm, entries] of nameIndex) {
+    if (norm.includes(normTarget) || normTarget.includes(norm)) {
+      for (const entry of entries) {
+        if (internalCats.has(entry.internalCat)) return entry;
+      }
+    }
+  }
+
+  for (const [norm, entries] of nameIndex) {
+    if (norm.includes(normTarget) || normTarget.includes(norm)) {
+      return entries[0];
+    }
+  }
+
+  return null;
+}
+
+// ─── Mutation Icon Sprites ──────────────────────────────────────────────────────
+// Mutations that have an icon sprite overlay (from the API /data/mutations)
+
+type MutationIconDef = {
+  url: string;
+  /** Anchor from sprite-data — determines how the icon is drawn relative to its placement point */
+  anchor: { x: number; y: number };
+};
+
+const MUTATION_ICONS: Record<string, MutationIconDef> = {
+  // Ground-level icons (anchor.y ≈ 0.5 — drawn at plant base)
+  Wet:           { url: `${API_BASE}/assets/sprites/mutations/Wet.png`,           anchor: { x: 0.5, y: 0.487 } },
+  Chilled:       { url: `${API_BASE}/assets/sprites/mutations/Chilled.png`,       anchor: { x: 0.502, y: 0.543 } },
+  Frozen:        { url: `${API_BASE}/assets/sprites/mutations/Frozen.png`,        anchor: { x: 0.5, y: 0.474 } },
+  Thunderstruck: { url: `${API_BASE}/assets/sprites/mutations/Thunderstruck.png`, anchor: { x: 0.495, y: 0.525 } },
+  // Floating icons (anchor.y ≈ 0.8 — drawn above the plant)
+  Dawnlit:       { url: `${API_BASE}/assets/sprites/mutations/Dawnlit.png`,       anchor: { x: 0.506, y: 0.809 } },
+  Ambershine:    { url: `${API_BASE}/assets/sprites/mutations/Amberlit.png`,      anchor: { x: 0.5, y: 0.820 } },
+  Dawncharged:   { url: `${API_BASE}/assets/sprites/mutations/Dawncharged.png`,   anchor: { x: 0.519, y: 0.796 } },
+  Ambercharged:  { url: `${API_BASE}/assets/sprites/mutations/Ambercharged.png`,  anchor: { x: 0.501, y: 0.795 } },
+};
+
+// ─── Mutation Color Filters ────────────────────────────────────────────────────
+// Ported from src/sprite/mutations/variantBuilder.ts
+
+type FilterDef = {
+  op: string;
+  colors: string[];
+  a?: number;
+  ang?: number;
+  masked?: boolean;
+};
+
+const MUTATION_FILTERS: Record<string, FilterDef> = {
+  Gold: { op: "source-atop", colors: ["rgb(235,200,0)"], a: 0.7 },
+  Rainbow: { op: "color", colors: ["#FF1744", "#FF9100", "#FFEA00", "#00E676", "#2979FF", "#D500F9"], ang: 130, masked: true },
+  Wet: { op: "source-atop", colors: ["rgb(50,180,200)"], a: 0.25 },
+  Chilled: { op: "source-atop", colors: ["rgb(100,160,210)"], a: 0.45 },
+  Frozen: { op: "source-atop", colors: ["rgb(100,130,220)"], a: 0.5 },
+  Thunderstruck: { op: "source-atop", colors: ["rgb(16, 141, 163)"], a: 0.45 },
+  Dawnlit: { op: "source-atop", colors: ["rgb(209,70,231)"], a: 0.5 },
+  Ambershine: { op: "source-atop", colors: ["rgb(190,100,40)"], a: 0.5 },
+  Dawncharged: { op: "source-atop", colors: ["rgb(140,80,200)"], a: 0.5 },
+  Ambercharged: { op: "source-atop", colors: ["rgb(170,60,25)"], a: 0.5 },
+};
+
+function normalizeMutations(list: string[]): string[] {
+  const names = [...new Set(list.filter(mutName => MUTATION_FILTERS[mutName]))];
+  if (!names.length) return [];
+  if (names.includes("Gold")) return ["Gold"];
+  if (names.includes("Rainbow")) return ["Rainbow"];
+  const warm = ["Ambershine", "Dawnlit", "Dawncharged", "Ambercharged"];
+  if (names.some(name => warm.includes(name))) {
+    return names.filter(name => !["Wet", "Chilled", "Frozen", "Thunderstruck"].includes(name));
+  }
+  return names;
+}
+
+const SUPPORTED_BLEND_OPS = (() => {
+  try {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return new Set<string>();
+    const ops = ["color", "hue", "saturation", "luminosity", "overlay", "screen", "lighter", "source-atop"];
+    const ok = new Set<string>();
+    for (const op of ops) {
+      ctx.globalCompositeOperation = op as GlobalCompositeOperation;
+      if (ctx.globalCompositeOperation === op) ok.add(op);
+    }
+    return ok;
+  } catch {
+    return new Set<string>();
+  }
+})();
+
+function pickBlendOp(desired: string): GlobalCompositeOperation {
+  if (SUPPORTED_BLEND_OPS.has(desired)) return desired as GlobalCompositeOperation;
+  if (SUPPORTED_BLEND_OPS.has("overlay")) return "overlay";
+  if (SUPPORTED_BLEND_OPS.has("screen")) return "screen";
+  if (SUPPORTED_BLEND_OPS.has("lighter")) return "lighter";
+  return "source-atop";
+}
+
+function fillGrad(ctx: CanvasRenderingContext2D, width: number, height: number, filter: FilterDef): void {
+  const cols = filter.colors?.length ? filter.colors : ["#fff"];
+  let gradient: CanvasGradient;
+  if (filter.ang != null) {
+    const rad = (filter.ang - 90) * Math.PI / 180;
+    const cx = width / 2;
+    const cy = height / 2;
+    const radius = Math.min(width, height) / 2;
+    gradient = ctx.createLinearGradient(
+      cx - Math.cos(rad) * radius, cy - Math.sin(rad) * radius,
+      cx + Math.cos(rad) * radius, cy + Math.sin(rad) * radius,
+    );
+  } else {
+    gradient = ctx.createLinearGradient(0, 0, 0, height);
+  }
+  if (cols.length === 1) {
+    gradient.addColorStop(0, cols[0]);
+    gradient.addColorStop(1, cols[0]);
+  } else {
+    cols.forEach((color, idx) => gradient.addColorStop(idx / (cols.length - 1), color));
+  }
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+}
+
+async function applyMutationFilters(img: HTMLImageElement, mutations: string[]): Promise<string> {
+  const allMuts = [...new Set(mutations.filter(m => MUTATION_FILTERS[m]))];
+  const colorMuts = normalizeMutations(mutations);
+  if (!colorMuts.length && !allMuts.length) return img.src;
+
+  const width = img.naturalWidth || img.width;
+  const height = img.naturalHeight || img.height;
+  if (!width || !height) return img.src;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return img.src;
+  ctx.imageSmoothingEnabled = false;
+
+  // 1) Draw base sprite
+  ctx.drawImage(img, 0, 0);
+
+  // 2) Apply color filters
+  for (const name of colorMuts) {
+    const filter = MUTATION_FILTERS[name];
+    if (!filter) continue;
+
+    if (filter.masked) {
+      const gradCanvas = document.createElement("canvas");
+      gradCanvas.width = width;
+      gradCanvas.height = height;
+      const gctx = gradCanvas.getContext("2d");
+      if (!gctx) continue;
+      gctx.imageSmoothingEnabled = false;
+      fillGrad(gctx, width, height, filter);
+      gctx.globalCompositeOperation = "destination-in";
+      gctx.drawImage(img, 0, 0);
+
+      ctx.save();
+      ctx.globalCompositeOperation = pickBlendOp(filter.op);
+      if (filter.a != null) ctx.globalAlpha = filter.a;
+      ctx.drawImage(gradCanvas, 0, 0);
+      ctx.restore();
+    } else {
+      const colorCanvas = document.createElement("canvas");
+      colorCanvas.width = width;
+      colorCanvas.height = height;
+      const cctx = colorCanvas.getContext("2d");
+      if (!cctx) continue;
+      cctx.imageSmoothingEnabled = false;
+      cctx.drawImage(img, 0, 0);
+      cctx.globalCompositeOperation = "source-in";
+      fillGrad(cctx, width, height, filter);
+
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      if (filter.a != null) ctx.globalAlpha = filter.a;
+      ctx.drawImage(colorCanvas, 0, 0);
+      ctx.restore();
+    }
+  }
+
+  // 3) Overlay mutation icon sprites (all selected mutations, not just color-filtered ones)
+  // Plant anchor is typically at bottom-center (~0.5, ~0.85-0.95).
+  // We place the icon at the plant's base, offset by the icon's own anchor.
+  const plantAnchorX = 0.5;
+  const plantAnchorY = 0.85;
+  const baseX = width * plantAnchorX;
+  const baseY = height * plantAnchorY;
+
+  for (const name of allMuts) {
+    const iconDef = MUTATION_ICONS[name];
+    if (!iconDef) continue;
+    try {
+      const iconImg = await loadImage(iconDef.url);
+      const iconW = iconImg.naturalWidth || iconImg.width;
+      const iconH = iconImg.naturalHeight || iconImg.height;
+      if (!iconW || !iconH) continue;
+      // Scale icon to ~50% of base sprite width, keep aspect ratio
+      const iconScale = (width * 0.5) / iconW;
+      const drawW = iconW * iconScale;
+      const drawH = iconH * iconScale;
+      // Position using the icon's anchor point relative to the plant base
+      // anchor defines where the icon's "origin" is within itself
+      const drawX = baseX - drawW * iconDef.anchor.x;
+      const drawY = baseY - drawH * iconDef.anchor.y;
+      ctx.save();
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      ctx.drawImage(iconImg, drawX, drawY, drawW, drawH);
+      ctx.restore();
+    } catch {
+      /* icon load failed — skip silently */
+    }
+  }
+
+  return canvas.toDataURL("image/png");
+}
+
+// ─── Image Loading (via mgCommon GM helpers) ───────────────────────────────────
+
+const imageCache = new Map<string, Promise<HTMLImageElement>>();
+
+/** Load an image via GM blob fetch → blobToImage (same pattern as mgCommon) */
+function loadImage(url: string): Promise<HTMLImageElement> {
+  let promise = imageCache.get(url);
+  if (promise) return promise;
+  promise = withDiscordPollPause(() => getBlob(url)).then(blob => blobToImage(blob));
+  imageCache.set(url, promise);
+  return promise;
+}
+
+// ─── Object URL cache for non-mutated sprites ─────────────────────────────────
+
+const objectUrlCache = new Map<string, Promise<string>>();
+
+function getSpriteObjectUrl(apiUrl: string): Promise<string> {
+  let promise = objectUrlCache.get(apiUrl);
+  if (promise) return promise;
+  promise = withDiscordPollPause(() => getBlob(apiUrl)).then(blob => URL.createObjectURL(blob));
+  objectUrlCache.set(apiUrl, promise);
+  return promise;
+}
+
+// ─── Caches ────────────────────────────────────────────────────────────────────
 
 const spriteDataUrlCache = new Map<string, Promise<string | null>>();
 const spriteDataUrlResolved = new Map<string, string>();
-let spriteWarmupQueued = false;
-let spriteWarmupStarted = false;
+
+function cacheKeyFor(category: string, spriteId: string, mutationKey?: string): string {
+  return `${category}:${normalize(spriteId)}${mutationKey ?? ""}`;
+}
+
+function mutationKeyStr(mutations?: string[]): string {
+  const list = [...new Set((mutations ?? []).map(val => String(val ?? "").trim()).filter(Boolean))];
+  if (!list.length) return "";
+  return "|m=" + list.map(normalize).filter(Boolean).sort().join(",");
+}
+
+// ─── Warmup State ──────────────────────────────────────────────────────────────
+
 type SpriteWarmupState = { total: number; done: number; completed: boolean };
 let warmupState: SpriteWarmupState = { total: 0, done: 0, completed: false };
-let prefetchedWarmupKeys: string[] = [];
-const warmupCompletedKeys = new Set<string>();
-const WARMUP_RETRY_MS = 100;
-const WARMUP_DELAY_MS = 8;
-const WARMUP_BATCH = 3;
 const warmupListeners = new Set<(state: SpriteWarmupState) => void>();
 
 function notifyWarmup(state: SpriteWarmupState): void {
   warmupState = state;
   warmupListeners.forEach(listener => {
-    try {
-      listener(warmupState);
-    } catch {
-      /* ignore listener errors */
-    }
+    try { listener(warmupState); } catch { /* ignore */ }
   });
 }
 
@@ -50,235 +417,55 @@ export function onSpriteWarmupProgress(
   listener: (state: SpriteWarmupState) => void,
 ): () => void {
   warmupListeners.add(listener);
-  // Immediately emit current state to the new subscriber
-  try {
-    listener(warmupState);
-  } catch {
-    /* ignore */
-  }
-  return () => {
-    warmupListeners.delete(listener);
-  };
+  try { listener(warmupState); } catch { /* ignore */ }
+  return () => { warmupListeners.delete(listener); };
 }
 
-export function primeWarmupKeys(keys: string[]): void {
-  prefetchedWarmupKeys.push(...keys);
+// Legacy exports kept for backward compatibility (sprite/index.ts calls these)
+export function primeSpriteData(_category: string, _spriteId: string, _dataUrl: string): void {
+  /* no-op — sprites now come from the API */
 }
 
-function bumpWarmupTotal(total: number): void {
-  if (total > warmupState.total) {
-    notifyWarmup({ ...warmupState, total, completed: warmupState.completed && warmupState.done >= total });
-  }
+export function primeWarmupKeys(_keys: string[]): void {
+  /* no-op — warmup is handled by fetching the sprite index */
 }
 
-export function primeSpriteData(category: string, spriteId: string, dataUrl: string): void {
-  const cacheKey = cacheKeyFor(category, spriteId);
-  if (!spriteDataUrlCache.has(cacheKey)) {
-    spriteDataUrlCache.set(cacheKey, Promise.resolve(dataUrl));
-  }
-  spriteDataUrlResolved.set(cacheKey, dataUrl);
-  if (!warmupCompletedKeys.has(cacheKey)) {
-    warmupCompletedKeys.add(cacheKey);
-    const nextDone = warmupState.done + 1;
-    const completed = warmupState.total > 0 ? nextDone >= warmupState.total : false;
-    notifyWarmup({ total: Math.max(warmupState.total, nextDone), done: nextDone, completed });
-  }
-}
-
-const normalizeSpriteId = (value: string): string =>
-  String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-
-const baseNameFromKey = (key: string): string => {
-  const parts = key.split("/").filter(Boolean);
-  return parts[parts.length - 1] ?? key;
-};
-
-type SpriteCacheOptions = {
-  mutations?: string[];
-};
-
-const normalizeMutationList = (mutations?: string[]): { list: string[]; key: string } => {
-  const list = Array.from(
-    new Set((mutations ?? []).map(value => String(value ?? "").trim()).filter(Boolean)),
-  );
-  if (!list.length) {
-    return { list, key: "" };
-  }
-  const key = list
-    .map(val => normalizeSpriteId(val))
-    .filter(Boolean)
-    .sort()
-    .join(",");
-  return { list, key: key ? `|m=${key}` : "" };
-};
-
-const cacheKeyFor = (category: string, spriteId: string, mutationKey?: string): string =>
-  `${category}:${normalizeSpriteId(spriteId)}${mutationKey ?? ""}`;
-
-const scheduleNonBlocking = <T>(cb: () => T | Promise<T>): Promise<T> => {
-  return new Promise(resolve => {
-    const runner = () => {
-      Promise.resolve()
-        .then(cb)
-        .then(resolve)
-        .catch(() => resolve(cb() as any));
-    };
-    if (typeof (window as any).requestIdleCallback === "function") {
-      (window as any).requestIdleCallback(runner, { timeout: 50 });
-    } else if (typeof requestAnimationFrame === "function") {
-      requestAnimationFrame(runner);
-    } else {
-      setTimeout(runner, 0);
-    }
+export function warmupSpriteCache(): void {
+  fetchIndex().then(() => {
+    const total = indexEntries.length;
+    notifyWarmup({ total, done: total, completed: true });
   });
-};
-
-function getSpriteService(): SpriteServiceHandle | null {
-  const win: any = pageWindow ?? (globalThis as any);
-  return win?.__MG_SPRITE_SERVICE__ ?? win?.unsafeWindow?.__MG_SPRITE_SERVICE__ ?? null;
 }
 
-const parseKeyToCategoryId = (key: string): { category: string; id: string } | null => {
-  const parts = key.split("/").filter(Boolean);
-  if (!parts.length) return null;
-  // Accept keys like "sprite/plant/Carrot" or "plant/Carrot"
-  const start = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
-  const category = parts[start] ?? "";
-  const id = parts.slice(start + 1).join("/") || parts[parts.length - 1] || "";
-  if (!category || !id) return null;
-  return { category, id };
-};
+// ─── Helpers ───────────────────────────────────────────────────────────────────
 
-function whenServiceReady(handle: SpriteServiceHandle | null): Promise<void> {
-  if (!handle || !handle.ready || typeof handle.ready.then !== "function") {
-    return Promise.resolve();
-  }
-  return handle.ready.then(
-    () => {},
-    () => {},
-  );
-}
-
-async function ensureSpriteDataCached(
-  service: SpriteServiceHandle,
+function createSpriteImg(
+  src: string,
+  size: number,
+  spriteKey: string,
   category: string,
   spriteId: string,
-  logTag: string,
-  options?: SpriteCacheOptions,
-): Promise<string | null> {
-  if (!service?.renderToCanvas) {
-    return null;
-  }
-  const { list: mutationList, key: mutationKey } = normalizeMutationList(options?.mutations);
-  const cacheKey = cacheKeyFor(category, spriteId, mutationKey);
-  let promise = spriteDataUrlCache.get(cacheKey);
-  if (!promise) {
-    promise = scheduleNonBlocking(async () => {
-      try {
-        const canvas = service.renderToCanvas?.({
-          category,
-          id: spriteId,
-          mutations: mutationList,
-        });
-        if (!canvas) return null;
-        const dataUrl = canvas.toDataURL("image/png");
-        if (dataUrl) {
-          spriteDataUrlResolved.set(cacheKey, dataUrl);
-        }
-        return dataUrl;
-      } catch (error) {
-        console.error("[SpriteIconCache]", "failed to cache sprite", { category, spriteId, logTag, error });
-        return null;
-      }
-    });
-    spriteDataUrlCache.set(cacheKey, promise);
-  }
-  return promise;
+): HTMLImageElement {
+  const img = document.createElement("img");
+  img.src = src;
+  img.width = size;
+  img.height = size;
+  img.alt = "";
+  img.decoding = "async";
+  (img as any).loading = "lazy";
+  img.draggable = false;
+  img.style.width = `${size}px`;
+  img.style.height = `${size}px`;
+  img.style.objectFit = "contain";
+  img.style.imageRendering = "auto";
+  img.style.display = "block";
+  img.dataset.spriteKey = spriteKey;
+  img.dataset.spriteCategory = category;
+  img.dataset.spriteId = spriteId;
+  return img;
 }
 
-const spriteMatchCache = new Map<string, { category: string; spriteId: string } | null>();
-
-function getMatchCacheKey(categories: string[], id: string): string {
-  const normalizedCategories = categories.map(category => category.toLowerCase()).join("|");
-  return `${normalizedCategories}|${normalizeSpriteId(id)}`;
-}
-
-function findCachedSpriteMatch(
-  categories: string[],
-  candidateIds: string[],
-): { match: { category: string; spriteId: string }; candidate: string } | null {
-  for (const candidate of candidateIds) {
-    const cacheKey = getMatchCacheKey(categories, candidate);
-    if (!spriteMatchCache.has(cacheKey)) continue;
-    const match = spriteMatchCache.get(cacheKey);
-    if (match) {
-      return { match, candidate };
-    }
-  }
-  return null;
-}
-
-function findSpriteMatch(
-  service: SpriteServiceHandle,
-  categories: string[],
-  id: string,
-): { category: string; spriteId: string } | null {
-  if (!service.list) return null;
-  const cacheKey = getMatchCacheKey(categories, id);
-  if (spriteMatchCache.has(cacheKey)) {
-    return spriteMatchCache.get(cacheKey) ?? null;
-  }
-
-  const normalizedTarget = normalizeSpriteId(id);
-  const categoryLists = categories.map(category => ({
-    category,
-    items: service.list?.(category) ?? [],
-  }));
-
-  let matched: { category: string; spriteId: string } | null = null;
-  const tryMatch = (category: string, base: string): boolean => {
-    if (normalizeSpriteId(base) === normalizedTarget) {
-      matched = { category, spriteId: base };
-      return true;
-    }
-    return false;
-  };
-
-  for (const { category, items } of categoryLists) {
-    for (const it of items) {
-      const key = typeof it?.key === "string" ? it.key : "";
-      if (!key) continue;
-      const base = baseNameFromKey(key);
-      if (tryMatch(category, base)) {
-        spriteMatchCache.set(cacheKey, matched);
-        return matched;
-      }
-    }
-  }
-
-  for (const { category, items } of categoryLists) {
-    for (const it of items) {
-      const key = typeof it?.key === "string" ? it.key : "";
-      if (!key) continue;
-      const base = baseNameFromKey(key);
-      const normBase = normalizeSpriteId(base);
-      if (!normBase) continue;
-      if (
-        normalizedTarget.includes(normBase) ||
-        normBase.includes(normalizedTarget) ||
-        normBase.startsWith(normalizedTarget) ||
-        normalizedTarget.startsWith(normBase)
-      ) {
-        matched = { category, spriteId: base };
-        spriteMatchCache.set(cacheKey, matched);
-        return matched;
-      }
-    }
-  }
-
-  spriteMatchCache.set(cacheKey, null);
-  return null;
-}
+// ─── Public API ────────────────────────────────────────────────────────────────
 
 type AttachSpriteIconOptions = {
   mutations?: string[];
@@ -294,7 +481,7 @@ export function attachSpriteIcon(
   categories: string[],
   id: string | string[],
   size: number,
-  logTag: string,
+  _logTag: string,
   options?: AttachSpriteIconOptions,
 ): void {
   const candidateIds = Array.isArray(id)
@@ -302,219 +489,112 @@ export function attachSpriteIcon(
     : [String(id ?? "").trim()].filter(Boolean);
   if (!candidateIds.length) return;
 
-  const cachedMatch = findCachedSpriteMatch(categories, candidateIds);
-  if (cachedMatch) {
-    const { match, candidate } = cachedMatch;
-    const { key: mutationKey } = normalizeMutationList(options?.mutations);
-    const spriteKey = `${match.category}:${match.spriteId}${mutationKey}`;
-    const cacheKey = cacheKeyFor(match.category, match.spriteId, mutationKey);
-    const cachedUrl = spriteDataUrlResolved.get(cacheKey);
-    const existingImg = target.querySelector<HTMLImageElement>("img[data-sprite-key]");
-    if (existingImg && existingImg.dataset.spriteKey === spriteKey) {
+  const mutKey = mutationKeyStr(options?.mutations);
+  const hasMutations = !!(options?.mutations?.length);
+
+  fetchIndex().then(() => {
+    let selectedEntry: SpriteIndexEntry | null = null;
+    let selectedCandidate = "";
+
+    for (const candidate of candidateIds) {
+      const entry = findSprite(categories, candidate);
+      if (entry) {
+        selectedEntry = entry;
+        selectedCandidate = candidate;
+        break;
+      }
+    }
+
+    if (!selectedEntry) {
+      options?.onNoSpriteFound?.({ categories, candidates: candidateIds });
       return;
     }
-    if (cachedUrl) {
-      const img = document.createElement("img");
-      img.src = cachedUrl;
-      img.width = size;
-      img.height = size;
-      img.alt = "";
-      img.decoding = "async";
-      (img as any).loading = "lazy";
-      img.draggable = false;
-      img.style.width = `${size}px`;
-      img.style.height = `${size}px`;
-      img.style.objectFit = "contain";
-      img.style.imageRendering = "auto";
-      img.style.display = "block";
-      img.dataset.spriteKey = spriteKey;
-      img.dataset.spriteCategory = match.category;
-      img.dataset.spriteId = match.spriteId;
-      target.replaceChildren(img);
-      options?.onSpriteApplied?.(img, {
-        category: match.category,
-        spriteId: match.spriteId,
-        candidate,
-      });
+
+    const entry = selectedEntry;
+    const url = spriteUrl(entry);
+    const spriteKey = `${entry.internalCat}:${entry.name}${mutKey}`;
+
+    const existing = target.querySelector<HTMLImageElement>("img[data-sprite-key]");
+    if (existing && existing.dataset.spriteKey === spriteKey) return;
+
+    if (!hasMutations) {
+      getSpriteObjectUrl(url).then(objectUrl => {
+        const img = createSpriteImg(objectUrl, size, spriteKey, entry.internalCat, entry.name);
+        requestAnimationFrame(() => {
+          if (!target.isConnected) return;
+          target.replaceChildren(img);
+          options?.onSpriteApplied?.(img, {
+            category: entry.internalCat,
+            spriteId: entry.name,
+            candidate: selectedCandidate,
+          });
+        });
+      }).catch(() => { /* silent fail */ });
       return;
     }
-  }
 
-  const service = getSpriteService();
-  if (!service?.renderToCanvas) return;
-  void whenServiceReady(service).then(() =>
-    scheduleNonBlocking(async () => {
-      let selected:
-        | {
-            match: { category: string; spriteId: string };
-            candidate: string;
-          }
-        | null = null;
-      for (const candidate of candidateIds) {
-        const match = findSpriteMatch(service, categories, candidate);
-        if (match) {
-          selected = { match, candidate };
-          break;
-        }
-      }
-      if (!selected) {
-        options?.onNoSpriteFound?.({ categories, candidates: candidateIds });
-        return;
-      }
-      const resolved = selected;
-      const { key: mutationKey } = normalizeMutationList(options?.mutations);
-      const spriteKey = `${resolved.match.category}:${resolved.match.spriteId}${mutationKey}`;
-
-      const existingImg = target.querySelector<HTMLImageElement>("img[data-sprite-key]");
-      if (existingImg && existingImg.dataset.spriteKey === spriteKey) {
-        // Already showing the right sprite; avoid flicker/replacement.
-        return;
-      }
-
-      const dataUrl = await ensureSpriteDataCached(
-        service,
-        resolved.match.category,
-        resolved.match.spriteId,
-        logTag,
-        {
-          mutations: options?.mutations,
-        },
-      );
-      if (!dataUrl) return;
-      const img = document.createElement("img");
-      img.src = dataUrl;
-      img.width = size;
-      img.height = size;
-      img.alt = "";
-      img.decoding = "async";
-      (img as any).loading = "lazy";
-      img.draggable = false;
-      img.style.width = `${size}px`;
-      img.style.height = `${size}px`;
-      img.style.objectFit = "contain";
-      img.style.imageRendering = "auto";
-      img.style.display = "block";
-      img.dataset.spriteKey = spriteKey;
-      img.dataset.spriteCategory = resolved.match.category;
-      img.dataset.spriteId = resolved.match.spriteId;
+    const ck = cacheKeyFor(entry.internalCat, entry.name, mutKey);
+    const cached = spriteDataUrlResolved.get(ck);
+    if (cached) {
+      const img = createSpriteImg(cached, size, spriteKey, entry.internalCat, entry.name);
       requestAnimationFrame(() => {
         target.replaceChildren(img);
         options?.onSpriteApplied?.(img, {
-          category: resolved.match.category,
-          spriteId: resolved.match.spriteId,
-          candidate: resolved.candidate,
+          category: entry.internalCat,
+          spriteId: entry.name,
+          candidate: selectedCandidate,
         });
       });
-    }),
-  );
+      return;
+    }
+
+    let promise = spriteDataUrlCache.get(ck);
+    if (!promise) {
+      promise = loadImage(url)
+        .then(async imgEl => {
+          const dataUrl = await applyMutationFilters(imgEl, options?.mutations ?? []);
+          spriteDataUrlResolved.set(ck, dataUrl);
+          return dataUrl;
+        })
+        .catch(() => null);
+      spriteDataUrlCache.set(ck, promise);
+    }
+
+    promise.then(dataUrl => {
+      if (!dataUrl) return;
+      const img = createSpriteImg(dataUrl, size, spriteKey, entry.internalCat, entry.name);
+      requestAnimationFrame(() => {
+        target.replaceChildren(img);
+        options?.onSpriteApplied?.(img, {
+          category: entry.internalCat,
+          spriteId: entry.name,
+          candidate: selectedCandidate,
+        });
+      });
+    });
+  });
 }
 
 export function attachWeatherSpriteIcon(target: HTMLElement, tag: string, size: number): void {
   if (tag === "NoWeatherEffect") return;
-  attachSpriteIcon(target, ["mutation"], tag, size, "weather");
+  attachSpriteIcon(target, ["mutation", "ui", "weather"], tag, size, "weather");
 }
 
-export function warmupSpriteCache(): void {
-  if (spriteWarmupQueued || spriteWarmupStarted || typeof window === "undefined") return;
-  spriteWarmupQueued = true;
-  notifyWarmup({ total: warmupState.total, done: warmupState.done, completed: false });
-
-  const scheduleRetry = () => {
-    window.setTimeout(() => {
-      spriteWarmupQueued = false;
-      warmupSpriteCache();
-    }, WARMUP_RETRY_MS);
-  };
-
-  let service = getSpriteService();
-  if (!service && prefetchedWarmupKeys.length === 0) {
-    scheduleRetry();
-    return;
+/**
+ * Get an object URL for a sprite by name and categories.
+ * Waits for the sprite index to load, finds the entry, fetches the PNG via GM.
+ * Returns null if the sprite is not found.
+ */
+export async function getSpriteObjectUrlByName(
+  categories: string[],
+  name: string,
+): Promise<string | null> {
+  await fetchIndex();
+  const entry = findSprite(categories, name);
+  if (!entry) return null;
+  try {
+    return await getSpriteObjectUrl(spriteUrl(entry));
+  } catch {
+    return null;
   }
-
-  const tasks: Array<{ category: string; id: string }> = [];
-  const seen = new Set<string>(warmupCompletedKeys);
-  if (service?.list) {
-    SPRITE_PRELOAD_CATEGORIES.forEach(category => {
-      const items = service.list?.(category) ?? [];
-      items.forEach(item => {
-        const key = typeof item?.key === "string" ? item.key : "";
-        if (!key) return;
-        const base = baseNameFromKey(key);
-        if (!base) return;
-        const k = `${category}:${base.toLowerCase()}`;
-        if (seen.has(k)) return;
-        seen.add(k);
-        tasks.push({ category, id: base });
-      });
-    });
-  }
-  if (prefetchedWarmupKeys.length) {
-    prefetchedWarmupKeys.forEach(key => {
-      const parsed = parseKeyToCategoryId(key);
-      if (!parsed) return;
-      const k = `${parsed.category}:${parsed.id.toLowerCase()}`;
-      if (seen.has(k)) return;
-      seen.add(k);
-      tasks.push(parsed);
-    });
-    prefetchedWarmupKeys = [];
-  }
-  if (!tasks.length) {
-    if (warmupState.completed) {
-      spriteWarmupQueued = false;
-      return;
-    }
-    scheduleRetry();
-    return;
-  }
-
-  spriteWarmupStarted = true;
-  const total = Math.max(warmupState.total, tasks.length);
-  const startingDone = Math.min(warmupState.done, total);
-  notifyWarmup({ total, done: startingDone, completed: total === 0 || startingDone >= total });
-
-  const processNext = () => {
-    service = service || getSpriteService();
-    if (!service?.renderToCanvas || !service?.list) {
-      setTimeout(processNext, WARMUP_RETRY_MS);
-      return;
-    }
-
-    if (!tasks.length) {
-      spriteWarmupQueued = false;
-      console.log("[SpriteIconCache]", "warmup complete", {
-        categories: SPRITE_PRELOAD_CATEGORIES,
-        totalCached: spriteDataUrlCache.size,
-      });
-      notifyWarmup({ total, done: warmupState.done, completed: true });
-      return;
-    }
-
-    let processed = 0;
-    const batch = tasks.splice(0, WARMUP_BATCH);
-    batch.forEach(entry => {
-      ensureSpriteDataCached(service!, entry.category, entry.id, "warmup")
-        .then(result => {
-          if (result == null && !service?.renderToCanvas) {
-            tasks.unshift(entry);
-            return;
-          }
-          const completionKey = cacheKeyFor(entry.category, entry.id);
-          if (!warmupCompletedKeys.has(completionKey)) {
-            warmupCompletedKeys.add(completionKey);
-            const nextDone = Math.min(warmupState.done + 1, total);
-            notifyWarmup({ total, done: nextDone, completed: nextDone >= total });
-          }
-        })
-        .finally(() => {
-          processed += 1;
-          if (processed >= batch.length) {
-            setTimeout(processNext, WARMUP_DELAY_MS);
-          }
-        });
-    });
-  };
-
-  processNext();
 }
