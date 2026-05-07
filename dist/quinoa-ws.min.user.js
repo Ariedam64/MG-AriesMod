@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.450
+// @version      3.1.460
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -28671,16 +28671,14 @@
   var _subs = /* @__PURE__ */ new Set();
   var _toolInv = /* @__PURE__ */ new Map();
   var _unsubToolInv = null;
-  var TOOL_CAPS = {
-    Shovel: 1,
-    WateringCan: 99,
-    CropCleanser: 99
-  };
   function _isToolCapReached(toolId) {
-    const cap = TOOL_CAPS[toolId];
-    if (!cap) return false;
+    const meta = toolCatalog2[toolId];
+    if (!meta) return false;
     const q = _toolInv.get(toolId) || 0;
-    return q >= cap;
+    if (meta.isOneTimePurchase && q >= 1) return true;
+    const max = Number(meta.maxInventoryQuantity);
+    if (Number.isFinite(max) && max > 0 && q >= max) return true;
+    return false;
   }
   function _updateToolInv(raw) {
     try {
