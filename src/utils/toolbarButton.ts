@@ -9,7 +9,8 @@ type Options = {
 };
 
 const KNOWN_ARIA = ["Chat", "Leaderboard", "Stats", "Open Activity Log"];
-const TOOLBAR_FALLBACK_CLASS = "css-14caowy";
+const KNOWN_TESTIDS = ["weather-status-button", "friend-bonus-button"];
+const TOOLBAR_FALLBACK_CLASS = "css-1xlus6i";
 const OWN_BTN_SEL = '[data-qws-btn="true"]';
 
 export function startInjectGamePanelButton(opts: Options): () => void {
@@ -33,23 +34,26 @@ export function startInjectGamePanelButton(opts: Options): () => void {
   };
 
   function findToolbarRoot(): HTMLElement | null {
-    // 1) Try known English aria-labels
-    const selector = KNOWN_ARIA.map(a => `button[aria-label="${esc(a)}"]`).join(",");
-    const knownBtn = document.querySelector(selector);
+    // Language-agnostic anchors (data-testid stays the same across locales)
+    // combined with English aria-labels for back-compat.
+    const ariaSelectors = KNOWN_ARIA.map(a => `button[aria-label="${esc(a)}"]`);
+    const testidSelectors = KNOWN_TESTIDS.map(t => `[data-testid="${esc(t)}"]`);
+    const anchorSelector = [...ariaSelectors, ...testidSelectors].join(",");
 
-    if (knownBtn) {
-      let parent = knownBtn.parentElement;
+    const countAnchors = (el: HTMLElement): number =>
+      ariaSelectors.reduce((acc, sel) => acc + el.querySelectorAll(sel).length, 0) +
+      testidSelectors.reduce((acc, sel) => acc + el.querySelectorAll(sel).length, 0);
+
+    const anchor = document.querySelector<HTMLElement>(anchorSelector);
+    if (anchor) {
+      let parent = anchor.parentElement;
       while (parent && parent !== document.body) {
-        const count = KNOWN_ARIA.reduce(
-          (acc, a) => acc + parent!.querySelectorAll(`button[aria-label="${esc(a)}"]`).length,
-          0,
-        );
-        if (count >= 2) return parent;
+        if (countAnchors(parent) >= 2) return parent;
         parent = parent.parentElement;
       }
     }
 
-    // 2) Fallback: game toolbar CSS class
+    // Fallback: game toolbar CSS class (changes between builds, last resort)
     return document.querySelector<HTMLElement>(`.${TOOLBAR_FALLBACK_CLASS}`) ?? null;
   }
 

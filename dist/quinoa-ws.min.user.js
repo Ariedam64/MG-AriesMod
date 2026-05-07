@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.430
+// @version      3.1.450
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -24557,7 +24557,8 @@
         if (!obj || typeof obj !== "object") return out;
         for (const petId of Object.keys(obj)) {
           const entry = obj[petId] ?? {};
-          const lat = entry.lastAbilityTrigger ?? entry.slot?.lastAbilityTrigger ?? entry.data?.lastAbilityTrigger ?? null;
+          const evt = entry.lastActionEvent ?? entry.slot?.lastActionEvent ?? entry.data?.lastActionEvent ?? entry.lastAbilityTrigger ?? entry.slot?.lastAbilityTrigger ?? entry.data?.lastAbilityTrigger ?? null;
+          const lat = evt && (evt.action == null || evt.action === "ability") ? evt : null;
           let rawH = entry.hungerPct ?? entry.hunger_percentage ?? entry.hunger ?? entry.slot?.hungerPct ?? entry.slot?.hunger_percentage ?? entry.slot?.hunger ?? entry.stats?.hungerPct ?? entry.stats?.hunger?.pct ?? entry.stats?.hunger?.percent ?? null;
           if (rawH == null) {
             const info = myInfosMap[petId];
@@ -29166,7 +29167,8 @@
 
   // src/utils/toolbarButton.ts
   var KNOWN_ARIA = ["Chat", "Leaderboard", "Stats", "Open Activity Log"];
-  var TOOLBAR_FALLBACK_CLASS = "css-14caowy";
+  var KNOWN_TESTIDS = ["weather-status-button", "friend-bonus-button"];
+  var TOOLBAR_FALLBACK_CLASS = "css-1xlus6i";
   var OWN_BTN_SEL = '[data-qws-btn="true"]';
   function startInjectGamePanelButton(opts) {
     const { onClick, iconUrl = "", ariaLabel = "" } = opts;
@@ -29183,16 +29185,15 @@
       }
     };
     function findToolbarRoot() {
-      const selector = KNOWN_ARIA.map((a) => `button[aria-label="${esc(a)}"]`).join(",");
-      const knownBtn = document.querySelector(selector);
-      if (knownBtn) {
-        let parent = knownBtn.parentElement;
+      const ariaSelectors = KNOWN_ARIA.map((a) => `button[aria-label="${esc(a)}"]`);
+      const testidSelectors = KNOWN_TESTIDS.map((t) => `[data-testid="${esc(t)}"]`);
+      const anchorSelector = [...ariaSelectors, ...testidSelectors].join(",");
+      const countAnchors = (el2) => ariaSelectors.reduce((acc, sel) => acc + el2.querySelectorAll(sel).length, 0) + testidSelectors.reduce((acc, sel) => acc + el2.querySelectorAll(sel).length, 0);
+      const anchor = document.querySelector(anchorSelector);
+      if (anchor) {
+        let parent = anchor.parentElement;
         while (parent && parent !== document.body) {
-          const count = KNOWN_ARIA.reduce(
-            (acc, a) => acc + parent.querySelectorAll(`button[aria-label="${esc(a)}"]`).length,
-            0
-          );
-          if (count >= 2) return parent;
+          if (countAnchors(parent) >= 2) return parent;
           parent = parent.parentElement;
         }
       }

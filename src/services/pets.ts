@@ -1473,11 +1473,15 @@ export const PetsService = {
 
       for (const petId of Object.keys(obj)) {
         const entry = obj[petId] ?? {};
-        const lat =
+        const evt =
+          entry.lastActionEvent ??
+          entry.slot?.lastActionEvent ??
+          entry.data?.lastActionEvent ??
           entry.lastAbilityTrigger ??
           entry.slot?.lastAbilityTrigger ??
           entry.data?.lastAbilityTrigger ??
           null;
+        const lat = evt && (evt.action == null || evt.action === "ability") ? evt : null;
 
         let rawH =
           entry.hungerPct ??
