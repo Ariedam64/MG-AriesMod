@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.500
+// @version      3.1.501
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -28711,15 +28711,44 @@
   }
   var _purchasesSubs = /* @__PURE__ */ new Set();
   function _coercePurchases(raw) {
-    const co = (sec) => ({
-      createdAt: Number(sec?.createdAt) || 0,
-      purchases: sec?.purchases && typeof sec.purchases === "object" ? sec.purchases : {}
-    });
+    const seedP = {};
+    const eggP = {};
+    const toolP = {};
+    const decorP = {};
+    const kindOf = (itemId) => {
+      if (itemId in plantCatalog2) return "seed";
+      if (itemId in eggCatalog2) return "egg";
+      if (itemId in toolCatalog2) return "tool";
+      if (itemId in decorCatalog2) return "decor";
+      return null;
+    };
+    const targetFor = (k) => k === "seed" ? seedP : k === "egg" ? eggP : k === "tool" ? toolP : decorP;
+    const directKind = {
+      seed: "seed",
+      egg: "egg",
+      tool: "tool",
+      decor: "decor"
+    };
+    if (raw && typeof raw === "object") {
+      for (const shopKey of Object.keys(raw)) {
+        const sec = raw[shopKey];
+        if (!sec || typeof sec !== "object") continue;
+        const purch = sec.purchases;
+        if (!purch || typeof purch !== "object") continue;
+        for (const [itemId, count] of Object.entries(purch)) {
+          const n = Number(count) || 0;
+          const kind = directKind[shopKey] ?? kindOf(itemId);
+          if (!kind) continue;
+          const target = targetFor(kind);
+          target[itemId] = (target[itemId] ?? 0) + n;
+        }
+      }
+    }
     return {
-      seed: co(raw?.seed),
-      egg: co(raw?.egg),
-      tool: co(raw?.tool),
-      decor: co(raw?.decor)
+      seed: { createdAt: Number(raw?.seed?.createdAt) || 0, purchases: seedP },
+      egg: { createdAt: Number(raw?.egg?.createdAt) || 0, purchases: eggP },
+      tool: { createdAt: Number(raw?.tool?.createdAt) || 0, purchases: toolP },
+      decor: { createdAt: Number(raw?.decor?.createdAt) || 0, purchases: decorP }
     };
   }
   function _notifyPurchases(raw) {
@@ -28733,15 +28762,30 @@
   }
   var _shopsSubs = /* @__PURE__ */ new Set();
   function _coerceSnap(raw) {
-    const co = (sec) => ({
-      inventory: Array.isArray(sec?.inventory) ? sec.inventory : [],
-      secondsUntilRestock: Number(sec?.secondsUntilRestock) || 0
-    });
+    const seedInv = [];
+    const eggInv = [];
+    const toolInv = [];
+    const decorInv = [];
+    if (raw && typeof raw === "object") {
+      for (const shopKey of Object.keys(raw)) {
+        const shop = raw[shopKey];
+        if (!shop || typeof shop !== "object") continue;
+        const inv = Array.isArray(shop.inventory) ? shop.inventory : [];
+        for (const item of inv) {
+          if (!item || typeof item !== "object") continue;
+          const t = item.itemType;
+          if (t === "Seed") seedInv.push(item);
+          else if (t === "Egg") eggInv.push(item);
+          else if (t === "Tool") toolInv.push(item);
+          else if (t === "Decor") decorInv.push(item);
+        }
+      }
+    }
     return {
-      seed: co(raw?.seed),
-      egg: co(raw?.egg),
-      tool: co(raw?.tool),
-      decor: co(raw?.decor)
+      seed: { inventory: seedInv, secondsUntilRestock: Number(raw?.seed?.secondsUntilRestock) || 0 },
+      egg: { inventory: eggInv, secondsUntilRestock: Number(raw?.egg?.secondsUntilRestock) || 0 },
+      tool: { inventory: toolInv, secondsUntilRestock: Number(raw?.tool?.secondsUntilRestock) || 0 },
+      decor: { inventory: decorInv, secondsUntilRestock: Number(raw?.decor?.secondsUntilRestock) || 0 }
     };
   }
   function _notifyShops(raw) {

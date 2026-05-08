@@ -948,18 +948,45 @@ function _computeSig(ids: string[]): string {
 const _purchasesSubs = new Set<(p: PurchasesSnapshot) => void>();
 
 function _coercePurchases(raw: any): PurchasesSnapshot {
-  const co = (sec: any) => ({
-    createdAt: Number(sec?.createdAt) || 0,
-    purchases:
-      sec?.purchases && typeof sec.purchases === "object"
-        ? (sec.purchases as Record<string, number>)
-        : {},
-  });
+  const seedP: Record<string, number> = {};
+  const eggP:  Record<string, number> = {};
+  const toolP: Record<string, number> = {};
+  const decorP: Record<string, number> = {};
+
+  const kindOf = (itemId: string): "seed" | "egg" | "tool" | "decor" | null => {
+    if (itemId in (plantCatalog as any)) return "seed";
+    if (itemId in (eggCatalog   as any)) return "egg";
+    if (itemId in (toolCatalog  as any)) return "tool";
+    if (itemId in (decorCatalog as any)) return "decor";
+    return null;
+  };
+  const targetFor = (k: "seed" | "egg" | "tool" | "decor") =>
+    k === "seed" ? seedP : k === "egg" ? eggP : k === "tool" ? toolP : decorP;
+  const directKind: Record<string, "seed" | "egg" | "tool" | "decor"> = {
+    seed: "seed", egg: "egg", tool: "tool", decor: "decor",
+  };
+
+  if (raw && typeof raw === "object") {
+    for (const shopKey of Object.keys(raw)) {
+      const sec = (raw as any)[shopKey];
+      if (!sec || typeof sec !== "object") continue;
+      const purch = (sec as any).purchases;
+      if (!purch || typeof purch !== "object") continue;
+      for (const [itemId, count] of Object.entries(purch)) {
+        const n = Number(count) || 0;
+        const kind = directKind[shopKey] ?? kindOf(itemId);
+        if (!kind) continue;
+        const target = targetFor(kind);
+        target[itemId] = (target[itemId] ?? 0) + n;
+      }
+    }
+  }
+
   return {
-    seed: co(raw?.seed),
-    egg: co(raw?.egg),
-    tool: co(raw?.tool),
-    decor: co(raw?.decor),
+    seed:  { createdAt: Number(raw?.seed?.createdAt)  || 0, purchases: seedP  },
+    egg:   { createdAt: Number(raw?.egg?.createdAt)   || 0, purchases: eggP   },
+    tool:  { createdAt: Number(raw?.tool?.createdAt)  || 0, purchases: toolP  },
+    decor: { createdAt: Number(raw?.decor?.createdAt) || 0, purchases: decorP },
   };
 }
 
@@ -975,15 +1002,32 @@ function _notifyPurchases(raw: any) {
 const _shopsSubs = new Set<(s: ShopsSnapshot) => void>();
 
 function _coerceSnap(raw: any): ShopsSnapshot {
-  const co = (sec: any) => ({
-    inventory: Array.isArray(sec?.inventory) ? sec.inventory : [],
-    secondsUntilRestock: Number(sec?.secondsUntilRestock) || 0,
-  });
+  const seedInv:  any[] = [];
+  const eggInv:   any[] = [];
+  const toolInv:  any[] = [];
+  const decorInv: any[] = [];
+
+  if (raw && typeof raw === "object") {
+    for (const shopKey of Object.keys(raw)) {
+      const shop = (raw as any)[shopKey];
+      if (!shop || typeof shop !== "object") continue;
+      const inv = Array.isArray((shop as any).inventory) ? (shop as any).inventory : [];
+      for (const item of inv) {
+        if (!item || typeof item !== "object") continue;
+        const t = (item as any).itemType;
+        if (t === "Seed")       seedInv.push(item);
+        else if (t === "Egg")   eggInv.push(item);
+        else if (t === "Tool")  toolInv.push(item);
+        else if (t === "Decor") decorInv.push(item);
+      }
+    }
+  }
+
   return {
-    seed: co(raw?.seed),
-    egg: co(raw?.egg),
-    tool: co(raw?.tool),
-    decor: co(raw?.decor),
+    seed:  { inventory: seedInv,  secondsUntilRestock: Number(raw?.seed?.secondsUntilRestock)  || 0 },
+    egg:   { inventory: eggInv,   secondsUntilRestock: Number(raw?.egg?.secondsUntilRestock)   || 0 },
+    tool:  { inventory: toolInv,  secondsUntilRestock: Number(raw?.tool?.secondsUntilRestock)  || 0 },
+    decor: { inventory: decorInv, secondsUntilRestock: Number(raw?.decor?.secondsUntilRestock) || 0 },
   };
 }
 
