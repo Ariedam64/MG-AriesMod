@@ -3,6 +3,7 @@
 
 import { sendToGame } from "../core/webSocketBridge";
 import { Atoms, onFavoriteIds, onFavoriteIdsNow, getFavoriteIdSet } from "../store/atoms";
+import { ShopsService } from "./shops";
 
 export type XY = { x: number; y: number };
 
@@ -469,19 +470,19 @@ export const PlayerService = {
   },
 
   async purchaseSeed(species: string) {
-    try { sendToGame({ type: "PurchaseShopItem", shop: "seed", item: { itemType: "Seed", species } }); } catch (err) {  }
+    try { await ShopsService.buyOne("seeds", { species }); } catch (err) {  }
   },
 
   async purchaseDecor(decorId: string) {
-    try { sendToGame({ type: "PurchaseShopItem", shop: "decor", item: { itemType: "Decor", decorId } }); } catch (err) {  }
+    try { await ShopsService.buyOne("decor", { decorId }); } catch (err) {  }
   },
 
   async purchaseEgg(eggId: string) {
-    try { sendToGame({ type: "PurchaseShopItem", shop: "egg", item: { itemType: "Egg", eggId } }); } catch (err) {  }
+    try { await ShopsService.buyOne("eggs", { eggId }); } catch (err) {  }
   },
 
   async purchaseTool(toolId: string) {
-    try { sendToGame({ type: "PurchaseShopItem", shop: "tool", item: { itemType: "Tool", toolId } }); } catch (err) {  }
+    try { await ShopsService.buyOne("tools", { toolId }); } catch (err) {  }
   },
 
   async triggerAnimation(playerId: string, animation: string){
