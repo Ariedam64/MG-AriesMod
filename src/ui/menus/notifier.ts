@@ -1847,9 +1847,36 @@ style.textContent = `
     });
 
     const sub = document.createElement("div");
-    sub.textContent = row.type;
     sub.style.opacity = "0.7";
     sub.style.fontSize = "12px";
+    sub.style.display = "flex";
+    sub.style.alignItems = "center";
+    sub.style.gap = "6px";
+
+    const sectionLabel = document.createElement("span");
+    sectionLabel.textContent = row.type;
+    sub.appendChild(sectionLabel);
+
+    if (row.weathers?.length || row.weatherOnly) {
+      const weathers = row.weathers && row.weathers.length ? row.weathers : [];
+      for (const w of weathers) {
+        const badge = document.createElement("span");
+        badge.textContent = w;
+        Object.assign(badge.style, {
+          padding: "1px 6px",
+          borderRadius: "999px",
+          fontSize: "10px",
+          fontWeight: "600",
+          background: row.weatherOnly ? "rgba(250, 204, 21, 0.18)" : "rgba(96, 165, 250, 0.18)",
+          color: row.weatherOnly ? "#facc15" : "#60a5fa",
+          border: row.weatherOnly ? "1px solid rgba(250, 204, 21, 0.35)" : "1px solid rgba(96, 165, 250, 0.35)",
+        });
+        badge.title = row.weatherOnly
+          ? `Only available during ${w}`
+          : `Also available during ${w}`;
+        sub.appendChild(badge);
+      }
+    }
 
     const ruleHint = document.createElement("div");
     ruleHint.dataset.role = "rule-hint";

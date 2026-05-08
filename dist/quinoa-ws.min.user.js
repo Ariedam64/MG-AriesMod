@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.480
+// @version      3.1.490
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -28276,47 +28276,6 @@
     WEATHER_BY_ATOM.set(def.atomValue.toLowerCase(), def);
     WEATHER_BY_NAME.set(def.id.slice("Weather:".length).toLowerCase(), def);
   }
-  var _staticMeta = null;
-  function buildStaticMeta() {
-    if (_staticMeta) return _staticMeta;
-    const map2 = /* @__PURE__ */ new Map();
-    for (const [species, entry] of Object.entries(plantCatalog2)) {
-      if (entry?.seed) {
-        const id = `Seed:${species}`;
-        map2.set(id, {
-          type: "Seed",
-          name: entry.seed.name,
-          rarity: DISPLAY_RARITY[entry.seed.rarity] ?? entry.seed.rarity
-        });
-      }
-    }
-    for (const [eggId, entry] of Object.entries(eggCatalog2)) {
-      const id = `Egg:${eggId}`;
-      map2.set(id, {
-        type: "Egg",
-        name: entry.name,
-        rarity: DISPLAY_RARITY[entry.rarity] ?? entry.rarity
-      });
-    }
-    for (const [toolId, entry] of Object.entries(toolCatalog2)) {
-      const id = `Tool:${toolId}`;
-      map2.set(id, {
-        type: "Tool",
-        name: entry.name,
-        rarity: DISPLAY_RARITY[entry.rarity] ?? entry.rarity
-      });
-    }
-    for (const [decorId, entry] of Object.entries(decorCatalog2)) {
-      const id = `Decor:${decorId}`;
-      map2.set(id, {
-        type: "Decor",
-        name: entry.name,
-        rarity: DISPLAY_RARITY[entry.rarity] ?? entry.rarity
-      });
-    }
-    _staticMeta = map2;
-    return map2;
-  }
   var _prefs = /* @__PURE__ */ new Map();
   var _weatherPrefs = /* @__PURE__ */ new Map();
   var _weatherPrefsLoaded = false;
@@ -28692,14 +28651,27 @@
   var _unsubPurchases = null;
   var _subs = /* @__PURE__ */ new Set();
   var _toolInv = /* @__PURE__ */ new Map();
+  var _decorInv = /* @__PURE__ */ new Map();
   var _unsubToolInv = null;
-  function _isToolCapReached(toolId) {
-    const meta = toolCatalog2[toolId];
+  var _unsubDecorInv = null;
+  function _isCapReachedForCatalog(catalog, inv, itemId) {
+    const meta = catalog[itemId];
     if (!meta) return false;
-    const q = _toolInv.get(toolId) || 0;
+    const q = inv.get(itemId) || 0;
     if (meta.isOneTimePurchase && q >= 1) return true;
     const max = Number(meta.maxInventoryQuantity);
     if (Number.isFinite(max) && max > 0 && q >= max) return true;
+    return false;
+  }
+  function _isToolCapReached(toolId) {
+    return _isCapReachedForCatalog(toolCatalog2, _toolInv, toolId);
+  }
+  function _isDecorCapReached(decorId) {
+    return _isCapReachedForCatalog(decorCatalog2, _decorInv, decorId);
+  }
+  function _isRowCapReached(id) {
+    if (id.startsWith("Tool:")) return _isToolCapReached(id.slice(5));
+    if (id.startsWith("Decor:")) return _isDecorCapReached(id.slice(6));
     return false;
   }
   function _updateToolInv(raw) {
@@ -28711,9 +28683,28 @@
     }
     _recomputeFromCacheAndNotify();
   }
+  function _updateDecorInv(raw) {
+    try {
+      const arr = Array.isArray(raw) ? raw : [];
+      const next = /* @__PURE__ */ new Map();
+      for (const it of arr) {
+        const id = String(it?.decorId ?? it?.id ?? "");
+        if (!id) continue;
+        next.set(id, Number(it?.quantity) || 0);
+      }
+      _decorInv = next;
+    } catch {
+      _decorInv = /* @__PURE__ */ new Map();
+    }
+    _recomputeFromCacheAndNotify();
+  }
   function _resolveToolInvAtom() {
     const a = Atoms;
     return a.inventory?.myToolInventory ?? a.shop?.myToolInventory ?? a.myToolInventoryAtom ?? null;
+  }
+  function _resolveDecorInvAtom() {
+    const a = Atoms;
+    return a.inventory?.myDecorInventory ?? a.shop?.myDecorInventory ?? a.myDecorInventoryAtom ?? null;
   }
   function _computeSig(ids) {
     return ids.slice().sort().join("|");
@@ -28762,40 +28753,69 @@
       }
     });
   }
-  function _recomputeFromRaw(raw) {
-    const staticMeta = buildStaticMeta();
-    const sections = [
-      { key: "seed", type: "Seed" },
-      { key: "egg", type: "Egg" },
-      { key: "tool", type: "Tool" },
-      { key: "decor", type: "Decor" }
-    ];
+  var BASE_SHOPS_SET = /* @__PURE__ */ new Set(["Seed", "Egg", "Tool", "Decor"]);
+  function _splitEligibleShops(shops2) {
+    const arr = Array.isArray(shops2) ? shops2.map((s) => String(s ?? "").trim()).filter(Boolean) : [];
+    let base = null;
+    const weathers = [];
+    for (const s of arr) {
+      if (BASE_SHOPS_SET.has(s)) base = s;
+      else weathers.push(s);
+    }
+    return { base, weathers };
+  }
+  function _buildRowsFromCatalogs() {
+    const out = [];
     const seen = /* @__PURE__ */ new Set();
-    for (const { key: key2, type } of sections) {
-      const sec = raw?.[key2] ?? {};
-      const inv = Array.isArray(sec?.inventory) ? sec.inventory : [];
-      for (const entry of inv) {
-        const id = type === "Seed" ? `Seed:${entry.species}` : type === "Egg" ? `Egg:${entry.eggId}` : type === "Tool" ? `Tool:${entry.toolId}` : `Decor:${entry.decorId}`;
-        seen.add(id);
-        const meta = staticMeta.get(id);
-        const bits = _getPrefBits(id);
-        const popup = !!(bits & 1);
-        const row = {
-          id,
-          type,
-          name: meta?.name ?? id.split(":")[1] ?? id,
-          rarity: meta?.rarity,
-          popup,
-          followed: popup
-          // compat
-        };
-        _rowsById.set(id, row);
+    const addRow = (id, type, name, rarity3, weathers, weatherOnly) => {
+      if (seen.has(id)) return;
+      seen.add(id);
+      const bits = _getPrefBits(id);
+      const popup = !!(bits & 1);
+      out.push({
+        id,
+        type,
+        name,
+        rarity: rarity3,
+        popup,
+        followed: popup,
+        weatherOnly: weatherOnly || void 0,
+        weathers: weathers.length ? weathers : void 0
+      });
+    };
+    const sources = [
+      { catalog: plantCatalog2, naturalSection: "Seed", pickEntry: (raw) => raw?.seed ?? raw },
+      { catalog: eggCatalog2, naturalSection: "Egg", pickEntry: (raw) => raw },
+      { catalog: toolCatalog2, naturalSection: "Tool", pickEntry: (raw) => raw },
+      { catalog: decorCatalog2, naturalSection: "Decor", pickEntry: (raw) => raw }
+    ];
+    for (const { catalog, naturalSection, pickEntry } of sources) {
+      if (!catalog || typeof catalog !== "object") continue;
+      for (const key2 of Object.keys(catalog)) {
+        const entry = pickEntry(catalog[key2]);
+        if (!entry || typeof entry !== "object") continue;
+        const { base, weathers } = _splitEligibleShops(entry.eligibleShops);
+        if (!base && weathers.length === 0) continue;
+        const section = base ?? naturalSection;
+        const id = `${section}:${key2}`;
+        const name = typeof entry.name === "string" && entry.name.trim() ? String(entry.name) : key2;
+        const rawRarity = typeof entry.rarity === "string" ? entry.rarity : void 0;
+        const rarity3 = rawRarity ? DISPLAY_RARITY[rawRarity] ?? rawRarity : void 0;
+        addRow(id, section, name, rarity3, weathers, !base);
       }
     }
-    for (const id of Array.from(_rowsById.keys())) {
-      if (!seen.has(id)) _rowsById.delete(id);
+    return out;
+  }
+  var _onDataUpdated = (_evt) => {
+    try {
+      _recomputeRowsFromCatalogs();
+    } catch {
     }
-    const rows = Array.from(_rowsById.values());
+  };
+  function _recomputeRowsFromCatalogs() {
+    const rows = _buildRowsFromCatalogs();
+    _rowsById.clear();
+    for (const row of rows) _rowsById.set(row.id, row);
     const followed = rows.reduce((n, r) => n + (r.followed ? 1 : 0), 0);
     const next = {
       updatedAt: Date.now(),
@@ -28808,7 +28828,6 @@
     if (changed) {
       _lastSig = sig;
       _notify();
-    } else {
     }
   }
   function _recomputeFromCacheAndNotify() {
@@ -28816,12 +28835,7 @@
     for (const [id, row] of _rowsById) {
       const bits = _getPrefBits(id);
       let popup = !!(bits & 1);
-      if (id.startsWith("Tool:")) {
-        const toolId = id.slice(5);
-        if (_isToolCapReached(toolId)) {
-          popup = false;
-        }
-      }
+      if (_isRowCapReached(id)) popup = false;
       row.popup = popup;
       row.followed = popup;
     }
@@ -28854,17 +28868,20 @@
     _loadPrefs();
     _ensureRulesLoaded();
     try {
+      _recomputeRowsFromCatalogs();
+    } catch {
+    }
+    try {
+      window.addEventListener("gemini:data-updated", _onDataUpdated);
+    } catch {
+    }
+    try {
       const cur = await Atoms.shop.shops.get();
-      _recomputeFromRaw(cur);
       _notifyShops(cur);
     } catch (err) {
     }
     try {
       _unsubShops = await Atoms.shop.shops.onChange((next) => {
-        try {
-          _recomputeFromRaw(next);
-        } catch {
-        }
         try {
           _notifyShops(next);
         } catch {
@@ -28906,6 +28923,25 @@
     } catch (err) {
     }
     try {
+      const decorAtom = _resolveDecorInvAtom();
+      if (decorAtom) {
+        try {
+          _updateDecorInv(await decorAtom.get());
+        } catch {
+        }
+        try {
+          _unsubDecorInv = await decorAtom.onChange((next) => {
+            try {
+              _updateDecorInv(next);
+            } catch {
+            }
+          });
+        } catch {
+        }
+      }
+    } catch {
+    }
+    try {
       const weatherAtom = Atoms.data?.weather;
       if (weatherAtom) {
         try {
@@ -28928,6 +28964,10 @@
   }
   function _stop() {
     try {
+      window.removeEventListener("gemini:data-updated", _onDataUpdated);
+    } catch {
+    }
+    try {
       _unsubShops?.();
     } catch {
     }
@@ -28942,6 +28982,11 @@
     } catch {
     }
     _unsubToolInv = null;
+    try {
+      _unsubDecorInv?.();
+    } catch {
+    }
+    _unsubDecorInv = null;
     try {
       _unsubWeather?.();
     } catch {
@@ -28966,7 +29011,10 @@
     async get() {
       await _ensureStarted();
       if (!_state) {
-        _recomputeFromRaw(await Atoms.shop.shops.get().catch(() => null));
+        try {
+          _recomputeRowsFromCatalogs();
+        } catch {
+        }
       }
       return _state;
     },
@@ -28981,7 +29029,7 @@
       if (_state) cb(_state);
       else {
         try {
-          _recomputeFromRaw(await Atoms.shop.shops.get());
+          _recomputeRowsFromCatalogs();
         } catch {
         }
         if (_state) cb(_state);
@@ -29076,18 +29124,15 @@
     },
     // prefs (popup only)
     getPref(id) {
-      if (id.startsWith("Tool:")) {
-        const toolId = id.slice(5);
-        if (_isToolCapReached(toolId)) {
-          return { popup: false, followed: false };
-        }
+      if (_isRowCapReached(id)) {
+        return { popup: false, followed: false };
       }
       const bits = _getPrefBits(id);
       const popup = !!(bits & 1);
       return { popup, followed: popup };
     },
     setPopup(id, enabled) {
-      if (enabled && id.startsWith("Tool:") && _isToolCapReached(id.slice(5))) {
+      if (enabled && _isRowCapReached(id)) {
         return;
       }
       const bits = _getPrefBits(id);
@@ -29104,8 +29149,7 @@
       _setPrefBits(id, 0);
     },
     isIdCapped(id) {
-      if (!id.startsWith("Tool:")) return false;
-      return _isToolCapReached(id.slice(5));
+      return _isRowCapReached(id);
     },
     // pure filter util (no side-effects)
     filterRows(rows, f) {
@@ -52824,9 +52868,32 @@ next: ${next}`;
         whiteSpace: "nowrap"
       });
       const sub = document.createElement("div");
-      sub.textContent = row.type;
       sub.style.opacity = "0.7";
       sub.style.fontSize = "12px";
+      sub.style.display = "flex";
+      sub.style.alignItems = "center";
+      sub.style.gap = "6px";
+      const sectionLabel3 = document.createElement("span");
+      sectionLabel3.textContent = row.type;
+      sub.appendChild(sectionLabel3);
+      if (row.weathers?.length || row.weatherOnly) {
+        const weathers = row.weathers && row.weathers.length ? row.weathers : [];
+        for (const w of weathers) {
+          const badge = document.createElement("span");
+          badge.textContent = w;
+          Object.assign(badge.style, {
+            padding: "1px 6px",
+            borderRadius: "999px",
+            fontSize: "10px",
+            fontWeight: "600",
+            background: row.weatherOnly ? "rgba(250, 204, 21, 0.18)" : "rgba(96, 165, 250, 0.18)",
+            color: row.weatherOnly ? "#facc15" : "#60a5fa",
+            border: row.weatherOnly ? "1px solid rgba(250, 204, 21, 0.35)" : "1px solid rgba(96, 165, 250, 0.35)"
+          });
+          badge.title = row.weatherOnly ? `Only available during ${w}` : `Also available during ${w}`;
+          sub.appendChild(badge);
+        }
+      }
       const ruleHint = document.createElement("div");
       ruleHint.dataset.role = "rule-hint";
       ruleHint.style.display = "none";

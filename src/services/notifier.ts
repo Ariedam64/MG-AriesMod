@@ -28,6 +28,10 @@ export type NotifierRow = {
   rarity?: string;
   popup: boolean;
   followed: boolean; // == popup (compat)
+  /** Item only purchasable during a weather event (no base shop in eligibleShops). */
+  weatherOnly?: boolean;
+  /** Weather shops in which this item is also available (e.g. ["Dawn"]). */
+  weathers?: string[];
 };
 
 export type NotifierState = {
@@ -418,57 +422,6 @@ for (const def of WEATHER_DEFS) {
   WEATHER_BY_NAME.set(def.name.toLowerCase(), def);
   WEATHER_BY_ATOM.set(def.atomValue.toLowerCase(), def);
   WEATHER_BY_NAME.set(def.id.slice("Weather:".length).toLowerCase(), def);
-}
-
-// ---------- static meta built once ----------
-type StaticMeta = { type: SectionType; name: string; rarity?: string };
-let _staticMeta: Map<string, StaticMeta> | null = null;
-
-function buildStaticMeta(): Map<string, StaticMeta> {
-  if (_staticMeta) return _staticMeta;
-  const map = new Map<string, StaticMeta>();
-
-  // Seeds
-  for (const [species, entry] of Object.entries(plantCatalog)) {
-    if (entry?.seed) {
-      const id = `Seed:${species}`;
-      map.set(id, {
-        type: "Seed",
-        name: entry.seed.name,
-        rarity: DISPLAY_RARITY[entry.seed.rarity] ?? entry.seed.rarity,
-      });
-    }
-  }
-  // Eggs
-  for (const [eggId, entry] of Object.entries(eggCatalog)) {
-    const id = `Egg:${eggId}`;
-    map.set(id, {
-      type: "Egg",
-      name: entry.name,
-      rarity: DISPLAY_RARITY[entry.rarity] ?? entry.rarity,
-    });
-  }
-  // Tools
-  for (const [toolId, entry] of Object.entries(toolCatalog)) {
-    const id = `Tool:${toolId}`;
-    map.set(id, {
-      type: "Tool",
-      name: entry.name,
-      rarity: DISPLAY_RARITY[entry.rarity] ?? entry.rarity,
-    });
-  }
-  // Decor
-  for (const [decorId, entry] of Object.entries(decorCatalog)) {
-    const id = `Decor:${decorId}`;
-    map.set(id, {
-      type: "Decor",
-      name: entry.name,
-      rarity: DISPLAY_RARITY[entry.rarity] ?? entry.rarity,
-    });
-  }
-
-  _staticMeta = map;
-  return map;
 }
 
 // ---------- prefs (LS) ----------
@@ -912,15 +865,35 @@ let _unsubPurchases: null | (() => void) = null;
 const _subs = new Set<(s: NotifierState) => void>();
 
 let _toolInv = new Map<string, number>();
+let _decorInv = new Map<string, number>();
 let _unsubToolInv: null | (() => void) = null;
+let _unsubDecorInv: null | (() => void) = null;
 
-function _isToolCapReached(toolId: string): boolean {
-  const meta = (toolCatalog as Record<string, any>)[toolId];
+function _isCapReachedForCatalog(
+  catalog: Record<string, any>,
+  inv: Map<string, number>,
+  itemId: string,
+): boolean {
+  const meta = catalog[itemId];
   if (!meta) return false;
-  const q = _toolInv.get(toolId) || 0;
+  const q = inv.get(itemId) || 0;
   if (meta.isOneTimePurchase && q >= 1) return true;
   const max = Number(meta.maxInventoryQuantity);
   if (Number.isFinite(max) && max > 0 && q >= max) return true;
+  return false;
+}
+
+function _isToolCapReached(toolId: string): boolean {
+  return _isCapReachedForCatalog(toolCatalog as Record<string, any>, _toolInv, toolId);
+}
+
+function _isDecorCapReached(decorId: string): boolean {
+  return _isCapReachedForCatalog(decorCatalog as Record<string, any>, _decorInv, decorId);
+}
+
+function _isRowCapReached(id: string): boolean {
+  if (id.startsWith("Tool:")) return _isToolCapReached(id.slice(5));
+  if (id.startsWith("Decor:")) return _isDecorCapReached(id.slice(6));
   return false;
 }
 
@@ -931,16 +904,38 @@ function _updateToolInv(raw: any) {
   } catch {
     _toolInv = new Map();
   }
-  // Répercute sur les rows (désactive popup si cap atteint) et notifie
   _recomputeFromCacheAndNotify();
 }
 
-// Essaie plusieurs emplacements possibles pour l’atome d’inventaire
+function _updateDecorInv(raw: any) {
+  try {
+    const arr = Array.isArray(raw) ? raw : [];
+    const next = new Map<string, number>();
+    for (const it of arr) {
+      const id = String((it as any)?.decorId ?? (it as any)?.id ?? "");
+      if (!id) continue;
+      next.set(id, Number((it as any)?.quantity) || 0);
+    }
+    _decorInv = next;
+  } catch {
+    _decorInv = new Map();
+  }
+  _recomputeFromCacheAndNotify();
+}
+
 function _resolveToolInvAtom(): any {
   const a: any = Atoms as any;
   return a.inventory?.myToolInventory
       ?? a.shop?.myToolInventory
       ?? a.myToolInventoryAtom
+      ?? null;
+}
+
+function _resolveDecorInvAtom(): any {
+  const a: any = Atoms as any;
+  return a.inventory?.myDecorInventory
+      ?? a.shop?.myDecorInventory
+      ?? a.myDecorInventoryAtom
       ?? null;
 }
 
@@ -1001,57 +996,95 @@ function _notifyShops(raw: any) {
   });
 }
 
-function _recomputeFromRaw(raw: any) {
-  const staticMeta = buildStaticMeta();
+const BASE_SHOPS_SET = new Set(["Seed", "Egg", "Tool", "Decor"]);
 
-  const sections: Array<{ key: "seed" | "egg" | "tool" | "decor"; type: SectionType }> = [
-    { key: "seed", type: "Seed" },
-    { key: "egg", type: "Egg" },
-    { key: "tool", type: "Tool" },
-    { key: "decor", type: "Decor" },
-  ];
+function _splitEligibleShops(shops: unknown): { base: SectionType | null; weathers: string[] } {
+  const arr = Array.isArray(shops) ? shops.map((s) => String(s ?? "").trim()).filter(Boolean) : [];
+  let base: SectionType | null = null;
+  const weathers: string[] = [];
+  for (const s of arr) {
+    if (BASE_SHOPS_SET.has(s)) base = s as SectionType;
+    else weathers.push(s);
+  }
+  return { base, weathers };
+}
 
+/** Build the alert catalog from MGData (or hardcoded fallback) instead of from
+ * the live shopsAtom. This way weather-only items (e.g. Daisy/DawnEgg) are
+ * always listed in the menu so the user can pre-configure popup prefs on them. */
+function _buildRowsFromCatalogs(): NotifierRow[] {
+  const out: NotifierRow[] = [];
   const seen = new Set<string>();
 
-  for (const { key, type } of sections) {
-    const sec = raw?.[key] ?? {};
-    const inv = Array.isArray(sec?.inventory) ? sec.inventory : [];
-    for (const entry of inv) {
-      const id =
-        type === "Seed"
-          ? `Seed:${entry.species}`
-          : type === "Egg"
-          ? `Egg:${entry.eggId}`
-          : type === "Tool"
-          ? `Tool:${entry.toolId}`
-          : `Decor:${entry.decorId}`;
+  const addRow = (
+    id: string,
+    type: SectionType,
+    name: string,
+    rarity: string | undefined,
+    weathers: string[],
+    weatherOnly: boolean,
+  ): void => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    const bits = _getPrefBits(id);
+    const popup = !!(bits & 1);
+    out.push({
+      id,
+      type,
+      name,
+      rarity,
+      popup,
+      followed: popup,
+      weatherOnly: weatherOnly || undefined,
+      weathers: weathers.length ? weathers : undefined,
+    });
+  };
 
-      seen.add(id);
+  type SourceSpec = {
+    catalog: Record<string, any>;
+    naturalSection: SectionType;
+    pickEntry: (raw: any) => any;
+  };
 
-      const meta = staticMeta.get(id);
+  const sources: SourceSpec[] = [
+    { catalog: plantCatalog as Record<string, any>, naturalSection: "Seed", pickEntry: (raw) => raw?.seed ?? raw },
+    { catalog: eggCatalog   as Record<string, any>, naturalSection: "Egg",  pickEntry: (raw) => raw },
+    { catalog: toolCatalog  as Record<string, any>, naturalSection: "Tool", pickEntry: (raw) => raw },
+    { catalog: decorCatalog as Record<string, any>, naturalSection: "Decor",pickEntry: (raw) => raw },
+  ];
 
-      const bits = _getPrefBits(id);
-      const popup = !!(bits & 1);
-
-      const row: NotifierRow = {
-        id,
-        type,
-        name: meta?.name ?? id.split(":")[1] ?? id,
-        rarity: meta?.rarity,
-        popup,
-        followed: popup, // compat
-      };
-      _rowsById.set(id, row);
+  for (const { catalog, naturalSection, pickEntry } of sources) {
+    if (!catalog || typeof catalog !== "object") continue;
+    for (const key of Object.keys(catalog)) {
+      const entry = pickEntry(catalog[key]);
+      if (!entry || typeof entry !== "object") continue;
+      const { base, weathers } = _splitEligibleShops(entry.eligibleShops);
+      // Source of truth: eligibleShops. The `purchasable` flag refers to the
+      // base shop only — items like Daisy (purchasable=false, eligibleShops=["Dawn"])
+      // are still buyable from the weather shop.
+      if (!base && weathers.length === 0) continue; // not buyable anywhere
+      const section: SectionType = base ?? naturalSection;
+      const id = `${section}:${key}`;
+      const name = typeof entry.name === "string" && entry.name.trim() ? String(entry.name) : key;
+      const rawRarity = typeof entry.rarity === "string" ? entry.rarity : undefined;
+      const rarity = rawRarity ? (DISPLAY_RARITY[rawRarity] ?? rawRarity) : undefined;
+      addRow(id, section, name, rarity, weathers, !base);
     }
   }
 
-  // prune rows not present anymore
-  for (const id of Array.from(_rowsById.keys())) {
-    if (!seen.has(id)) _rowsById.delete(id);
-  }
+  return out;
+}
 
-  // build rows & counts
-  const rows = Array.from(_rowsById.values());
+const _onDataUpdated = (_evt: Event) => {
+  try { _recomputeRowsFromCatalogs(); } catch {}
+};
+
+function _recomputeRowsFromCatalogs() {
+  const rows = _buildRowsFromCatalogs();
+
+  _rowsById.clear();
+  for (const row of rows) _rowsById.set(row.id, row);
+
   const followed = rows.reduce((n, r) => n + (r.followed ? 1 : 0), 0);
   const next: NotifierState = {
     updatedAt: Date.now(),
@@ -1059,14 +1092,12 @@ function _recomputeFromRaw(raw: any) {
     counts: { items: rows.length, followed },
   };
 
-  // notify only if struct changed (membership)
   const sig = _computeSig(rows.map((r) => r.id));
   const changed = sig !== _lastSig;
   _state = next;
   if (changed) {
     _lastSig = sig;
     _notify();
-  } else {
   }
 }
 
@@ -1076,13 +1107,8 @@ function _recomputeFromCacheAndNotify() {
     const bits = _getPrefBits(id);
     let popup = !!(bits & 1);
 
-    // Clamp si tool cap atteint
-    if (id.startsWith("Tool:")) {
-      const toolId = id.slice(5);
-      if (_isToolCapReached(toolId)) {
-        popup = false;
-      }
-    }
+    // Clamp si cap atteint (Tool ou Decor one-time / max stack)
+    if (_isRowCapReached(id)) popup = false;
 
     row.popup = popup;
     row.followed = popup;
@@ -1119,17 +1145,21 @@ async function _ensureStarted() {
   _loadPrefs();
   _ensureRulesLoaded();
 
-  // prime + subscribe shops
+  // build catalog rows from MGData (independent of live shopsAtom)
+  try { _recomputeRowsFromCatalogs(); } catch {}
+  try {
+    window.addEventListener("gemini:data-updated", _onDataUpdated);
+  } catch {}
+
+  // prime + subscribe shops (only for live snapshot forwarding to overlay)
   try {
     const cur = await Atoms.shop.shops.get();
-    _recomputeFromRaw(cur);
     _notifyShops(cur);
   } catch (err) {
   }
 
   try {
     _unsubShops = await Atoms.shop.shops.onChange((next) => {
-      try { _recomputeFromRaw(next); } catch {}
       try { _notifyShops(next); } catch {}
     });
   } catch (err) {
@@ -1164,6 +1194,19 @@ async function _ensureStarted() {
   } catch (err) {
   }
 
+  // decor inventory (caps for one-time / max stack decors)
+  try {
+    const decorAtom = _resolveDecorInvAtom();
+    if (decorAtom) {
+      try { _updateDecorInv(await decorAtom.get()); } catch {}
+      try {
+        _unsubDecorInv = await decorAtom.onChange((next: any) => {
+          try { _updateDecorInv(next); } catch {}
+        });
+      } catch {}
+    }
+  } catch {}
+
   // weather
   try {
     const weatherAtom = (Atoms.data as any)?.weather;
@@ -1185,12 +1228,15 @@ async function _ensureStarted() {
 }
 
 function _stop() {
+  try { window.removeEventListener("gemini:data-updated", _onDataUpdated); } catch {}
   try { _unsubShops?.(); } catch {}
   _unsubShops = null;
   try { _unsubPurchases?.(); } catch {}
   _unsubPurchases = null;
   try { _unsubToolInv?.(); } catch {}
   _unsubToolInv = null;
+  try { _unsubDecorInv?.(); } catch {}
+  _unsubDecorInv = null;
   try { _unsubWeather?.(); } catch {}
   _unsubWeather = null;
   if (_currentWeatherId) {
@@ -1213,7 +1259,7 @@ export const NotifierService = {
   async get(): Promise<NotifierState> {
     await _ensureStarted();
     if (!_state) {
-      _recomputeFromRaw(await Atoms.shop.shops.get().catch(() => null));
+      try { _recomputeRowsFromCatalogs(); } catch {}
     }
     return _state as NotifierState;
   },
@@ -1229,7 +1275,7 @@ export const NotifierService = {
     await _ensureStarted();
     if (_state) cb(_state);
     else {
-      try { _recomputeFromRaw(await Atoms.shop.shops.get()); } catch {}
+      try { _recomputeRowsFromCatalogs(); } catch {}
       if (_state) cb(_state);
     }
     return this.onChange(cb);
@@ -1328,11 +1374,8 @@ export const NotifierService = {
   // prefs (popup only)
   getPref(id: string): { popup: boolean; followed: boolean } {
     // Clamp côté lecture (utile pour l’overlay)
-    if (id.startsWith("Tool:")) {
-      const toolId = id.slice(5);
-      if (_isToolCapReached(toolId)) {
-        return { popup: false, followed: false };
-      }
+    if (_isRowCapReached(id)) {
+      return { popup: false, followed: false };
     }
     const bits = _getPrefBits(id);
     const popup = !!(bits & 1);
@@ -1340,7 +1383,7 @@ export const NotifierService = {
   },
 
   setPopup(id: string, enabled: boolean) {
-    if (enabled && id.startsWith("Tool:") && _isToolCapReached(id.slice(5))) {
+    if (enabled && _isRowCapReached(id)) {
       return; // on ignore l’activation si cap atteint
     }
     const bits = _getPrefBits(id);
@@ -1360,8 +1403,7 @@ export const NotifierService = {
   },
 
   isIdCapped(id: string): boolean {
-    if (!id.startsWith("Tool:")) return false;
-    return _isToolCapReached(id.slice(5));
+    return _isRowCapReached(id);
   },
 
   // pure filter util (no side-effects)
