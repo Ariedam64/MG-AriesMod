@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.490
+// @version      3.1.500
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -7120,7 +7120,7 @@
       if (data.plants) setCapturedData("plants", data.plants);
       if (data.pets) setCapturedData("pets", data.pets);
       if (data.items) setCapturedData("items", data.items);
-      if (data.decors) setCapturedData("decor", data.decors);
+      if (data.decor) setCapturedData("decor", data.decor);
       if (data.eggs) setCapturedData("eggs", data.eggs);
       if (data.mutations) setCapturedData("mutations", data.mutations);
       if (data.abilities) setCapturedData("abilities", data.abilities);
@@ -7130,7 +7130,7 @@
         plants: Object.keys(data.plants || {}).length,
         pets: Object.keys(data.pets || {}).length,
         items: Object.keys(data.items || {}).length,
-        decor: Object.keys(data.decors || {}).length,
+        decor: Object.keys(data.decor || {}).length,
         eggs: Object.keys(data.eggs || {}).length,
         mutations: Object.keys(data.mutations || {}).length,
         abilities: Object.keys(data.abilities || {}).length,

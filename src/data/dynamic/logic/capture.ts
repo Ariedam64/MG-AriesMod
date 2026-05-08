@@ -12,7 +12,7 @@ interface ApiData {
   plants: Record<string, unknown>;
   pets: Record<string, unknown>;
   items: Record<string, unknown>;
-  decors: Record<string, unknown>;
+  decor: Record<string, unknown>;
   eggs: Record<string, unknown>;
   mutations: Record<string, unknown>;
   abilities: Record<string, unknown>;
@@ -44,7 +44,7 @@ export async function fetchAllData(): Promise<void> {
     if (data.plants) setCapturedData("plants", data.plants);
     if (data.pets) setCapturedData("pets", data.pets);
     if (data.items) setCapturedData("items", data.items);
-    if (data.decors) setCapturedData("decor", data.decors);
+    if (data.decor) setCapturedData("decor", data.decor);
     if (data.eggs) setCapturedData("eggs", data.eggs);
     if (data.mutations) setCapturedData("mutations", data.mutations);
     if (data.abilities) setCapturedData("abilities", data.abilities);
@@ -55,7 +55,7 @@ export async function fetchAllData(): Promise<void> {
       plants: Object.keys(data.plants || {}).length,
       pets: Object.keys(data.pets || {}).length,
       items: Object.keys(data.items || {}).length,
-      decor: Object.keys(data.decors || {}).length,
+      decor: Object.keys(data.decor || {}).length,
       eggs: Object.keys(data.eggs || {}).length,
       mutations: Object.keys(data.mutations || {}).length,
       abilities: Object.keys(data.abilities || {}).length,
