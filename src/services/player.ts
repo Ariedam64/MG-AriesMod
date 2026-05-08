@@ -469,19 +469,19 @@ export const PlayerService = {
   },
 
   async purchaseSeed(species: string) {
-    try { sendToGame({ type: "PurchaseSeed", species }); } catch (err) {  }
+    try { sendToGame({ type: "PurchaseShopItem", shop: "seed", item: { itemType: "Seed", species } }); } catch (err) {  }
   },
 
   async purchaseDecor(decorId: string) {
-    try { sendToGame({ type: "PurchaseDecor", decorId }); } catch (err) {  }
+    try { sendToGame({ type: "PurchaseShopItem", shop: "decor", item: { itemType: "Decor", decorId } }); } catch (err) {  }
   },
 
   async purchaseEgg(eggId: string) {
-    try { sendToGame({ type: "PurchaseEgg", eggId }); } catch (err) {  }
+    try { sendToGame({ type: "PurchaseShopItem", shop: "egg", item: { itemType: "Egg", eggId } }); } catch (err) {  }
   },
 
   async purchaseTool(toolId: string) {
-    try { sendToGame({ type: "PurchaseTool", toolId }); } catch (err) {  }
+    try { sendToGame({ type: "PurchaseShopItem", shop: "tool", item: { itemType: "Tool", toolId } }); } catch (err) {  }
   },
 
   async triggerAnimation(playerId: string, animation: string){

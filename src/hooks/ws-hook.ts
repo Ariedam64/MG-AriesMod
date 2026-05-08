@@ -700,40 +700,35 @@ function installHarvestCropInterceptor() {
     StatsService.incrementGardenStat("totalPlanted");
   });
 
-  registerMessageInterceptor("PurchaseDecor", (message) => {
-    const decorId = message?.decorId ?? message?.id;
-    if (shouldBlockPurchase("decor", decorId)) {
-      console.log("[PurchaseDecor] Blocked by inventory reserve", { decorId });
-      return { kind: "drop" };
-    }
-    StatsService.incrementShopStat("decorBought");
-  });
+  registerMessageInterceptor("PurchaseShopItem", (message) => {
+    const shop: string | undefined = message?.shop;
+    const item: any = message?.item ?? {};
 
-  registerMessageInterceptor("PurchaseSeed", (message) => {
-    const species = message?.species ?? message?.id;
-    if (shouldBlockPurchase("seed", species)) {
-      console.log("[PurchaseSeed] Blocked by inventory reserve", { species });
-      return { kind: "drop" };
-    }
-    StatsService.incrementShopStat("seedsBought");
-  });
+    let kind: "seed" | "egg" | "tool" | "decor" | null = null;
+    let id: string | undefined;
+    let stat: "seedsBought" | "eggsBought" | "toolsBought" | "decorBought" | null = null;
 
-  registerMessageInterceptor("PurchaseEgg", (message) => {
-    const eggId = message?.eggId ?? message?.id;
-    if (shouldBlockPurchase("egg", eggId)) {
-      console.log("[PurchaseEgg] Blocked by inventory reserve", { eggId });
-      return { kind: "drop" };
+    if (shop === "seed") {
+      kind = "seed"; stat = "seedsBought";
+      id = item.species ?? message?.species ?? message?.id;
+    } else if (shop === "egg") {
+      kind = "egg"; stat = "eggsBought";
+      id = item.eggId ?? message?.eggId ?? message?.id;
+    } else if (shop === "tool") {
+      kind = "tool"; stat = "toolsBought";
+      id = item.toolId ?? message?.toolId ?? message?.id;
+    } else if (shop === "decor") {
+      kind = "decor"; stat = "decorBought";
+      id = item.decorId ?? message?.decorId ?? message?.id;
     }
-    StatsService.incrementShopStat("eggsBought");
-  });
 
-  registerMessageInterceptor("PurchaseTool", (message) => {
-    const toolId = message?.toolId ?? message?.id;
-    if (shouldBlockPurchase("tool", toolId)) {
-      console.log("[PurchaseTool] Blocked by inventory reserve", { toolId });
+    if (!kind) return;
+
+    if (shouldBlockPurchase(kind, id)) {
+      console.log(`[PurchaseShopItem:${shop}] Blocked by inventory reserve`, { id });
       return { kind: "drop" };
     }
-    StatsService.incrementShopStat("toolsBought");
+    if (stat) StatsService.incrementShopStat(stat);
   });
 
   registerMessageInterceptor("PickupObject", () => {

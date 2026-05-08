@@ -52,7 +52,7 @@ export const ShopsService = {
     if (kind === "seeds") {
       const species = it.species ?? it.name;
       if (species) {
-        try { sendToGame({ type: "PurchaseSeed", species }); StatsService.incrementShopStat("seedsBought");}
+        try { sendToGame({ type: "PurchaseShopItem", shop: "seed", item: { itemType: "Seed", species } }); StatsService.incrementShopStat("seedsBought"); }
         catch (err) {  }
       }
       return;
@@ -60,7 +60,7 @@ export const ShopsService = {
     if (kind === "tools") {
       const toolId = it.toolId ?? it.id;
       if (toolId) {
-        try { sendToGame({ type: "PurchaseTool", toolId }); StatsService.incrementShopStat("toolsBought"); }
+        try { sendToGame({ type: "PurchaseShopItem", shop: "tool", item: { itemType: "Tool", toolId } }); StatsService.incrementShopStat("toolsBought"); }
         catch (err) { }
       }
       return;
@@ -68,7 +68,7 @@ export const ShopsService = {
     if (kind === "eggs") {
       const eggId = it.eggId ?? it.id;
       if (eggId) {
-        try { sendToGame({ type: "PurchaseEgg", eggId }); StatsService.incrementShopStat("eggsBought"); }
+        try { sendToGame({ type: "PurchaseShopItem", shop: "egg", item: { itemType: "Egg", eggId } }); StatsService.incrementShopStat("eggsBought"); }
         catch (err) { }
       }
       return;
@@ -76,7 +76,7 @@ export const ShopsService = {
     if (kind === "decor") {
       const decorId = it.decorId ?? it.id;
       if (decorId) {
-        try { sendToGame({ type: "PurchaseDecor", decorId }); StatsService.incrementShopStat("decorBought"); }
+        try { sendToGame({ type: "PurchaseShopItem", shop: "decor", item: { itemType: "Decor", decorId } }); StatsService.incrementShopStat("decorBought"); }
         catch (err) { }
       }
       return;

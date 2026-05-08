@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.460
+// @version      3.1.470
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -12458,25 +12458,25 @@
     },
     async purchaseSeed(species) {
       try {
-        sendToGame({ type: "PurchaseSeed", species });
+        sendToGame({ type: "PurchaseShopItem", shop: "seed", item: { itemType: "Seed", species } });
       } catch (err) {
       }
     },
     async purchaseDecor(decorId) {
       try {
-        sendToGame({ type: "PurchaseDecor", decorId });
+        sendToGame({ type: "PurchaseShopItem", shop: "decor", item: { itemType: "Decor", decorId } });
       } catch (err) {
       }
     },
     async purchaseEgg(eggId) {
       try {
-        sendToGame({ type: "PurchaseEgg", eggId });
+        sendToGame({ type: "PurchaseShopItem", shop: "egg", item: { itemType: "Egg", eggId } });
       } catch (err) {
       }
     },
     async purchaseTool(toolId) {
       try {
-        sendToGame({ type: "PurchaseTool", toolId });
+        sendToGame({ type: "PurchaseShopItem", shop: "tool", item: { itemType: "Tool", toolId } });
       } catch (err) {
       }
     },
@@ -22864,37 +22864,35 @@
     registerMessageInterceptor("PlantSeed", (message) => {
       StatsService.incrementGardenStat("totalPlanted");
     });
-    registerMessageInterceptor("PurchaseDecor", (message) => {
-      const decorId = message?.decorId ?? message?.id;
-      if (shouldBlockPurchase("decor", decorId)) {
-        console.log("[PurchaseDecor] Blocked by inventory reserve", { decorId });
+    registerMessageInterceptor("PurchaseShopItem", (message) => {
+      const shop = message?.shop;
+      const item = message?.item ?? {};
+      let kind = null;
+      let id;
+      let stat = null;
+      if (shop === "seed") {
+        kind = "seed";
+        stat = "seedsBought";
+        id = item.species ?? message?.species ?? message?.id;
+      } else if (shop === "egg") {
+        kind = "egg";
+        stat = "eggsBought";
+        id = item.eggId ?? message?.eggId ?? message?.id;
+      } else if (shop === "tool") {
+        kind = "tool";
+        stat = "toolsBought";
+        id = item.toolId ?? message?.toolId ?? message?.id;
+      } else if (shop === "decor") {
+        kind = "decor";
+        stat = "decorBought";
+        id = item.decorId ?? message?.decorId ?? message?.id;
+      }
+      if (!kind) return;
+      if (shouldBlockPurchase(kind, id)) {
+        console.log(`[PurchaseShopItem:${shop}] Blocked by inventory reserve`, { id });
         return { kind: "drop" };
       }
-      StatsService.incrementShopStat("decorBought");
-    });
-    registerMessageInterceptor("PurchaseSeed", (message) => {
-      const species = message?.species ?? message?.id;
-      if (shouldBlockPurchase("seed", species)) {
-        console.log("[PurchaseSeed] Blocked by inventory reserve", { species });
-        return { kind: "drop" };
-      }
-      StatsService.incrementShopStat("seedsBought");
-    });
-    registerMessageInterceptor("PurchaseEgg", (message) => {
-      const eggId = message?.eggId ?? message?.id;
-      if (shouldBlockPurchase("egg", eggId)) {
-        console.log("[PurchaseEgg] Blocked by inventory reserve", { eggId });
-        return { kind: "drop" };
-      }
-      StatsService.incrementShopStat("eggsBought");
-    });
-    registerMessageInterceptor("PurchaseTool", (message) => {
-      const toolId = message?.toolId ?? message?.id;
-      if (shouldBlockPurchase("tool", toolId)) {
-        console.log("[PurchaseTool] Blocked by inventory reserve", { toolId });
-        return { kind: "drop" };
-      }
-      StatsService.incrementShopStat("toolsBought");
+      if (stat) StatsService.incrementShopStat(stat);
     });
     registerMessageInterceptor("PickupObject", () => {
       if (shouldBlockNewInventoryEntry()) {
@@ -25335,7 +25333,7 @@
         const species = it.species ?? it.name;
         if (species) {
           try {
-            sendToGame({ type: "PurchaseSeed", species });
+            sendToGame({ type: "PurchaseShopItem", shop: "seed", item: { itemType: "Seed", species } });
             StatsService.incrementShopStat("seedsBought");
           } catch (err) {
           }
@@ -25346,7 +25344,7 @@
         const toolId = it.toolId ?? it.id;
         if (toolId) {
           try {
-            sendToGame({ type: "PurchaseTool", toolId });
+            sendToGame({ type: "PurchaseShopItem", shop: "tool", item: { itemType: "Tool", toolId } });
             StatsService.incrementShopStat("toolsBought");
           } catch (err) {
           }
@@ -25357,7 +25355,7 @@
         const eggId = it.eggId ?? it.id;
         if (eggId) {
           try {
-            sendToGame({ type: "PurchaseEgg", eggId });
+            sendToGame({ type: "PurchaseShopItem", shop: "egg", item: { itemType: "Egg", eggId } });
             StatsService.incrementShopStat("eggsBought");
           } catch (err) {
           }
@@ -25368,7 +25366,7 @@
         const decorId = it.decorId ?? it.id;
         if (decorId) {
           try {
-            sendToGame({ type: "PurchaseDecor", decorId });
+            sendToGame({ type: "PurchaseShopItem", shop: "decor", item: { itemType: "Decor", decorId } });
             StatsService.incrementShopStat("decorBought");
           } catch (err) {
           }
