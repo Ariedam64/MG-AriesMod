@@ -100,10 +100,10 @@ const DEFAULT_THEME: ThemeColors = {
 };
 
 export const DEFAULTS = {
-  // conteneur principal du panel (tooltip + boutons)
+  // conteneur principal du panel modal pet sell
   rootSelector: '.McFlex.css-1svwxx0',
-  // gate : bloc qui contient le bouton
-  checkSelector: '.McGrid.css-1n1dtdw',
+  // gate : bloc qui contient le bouton (hash de classe instable côté Chakra)
+  checkSelector: '.McGrid',
   // nouveau bouton "Sell Pet"
   buttonSelectorWide: 'button.chakra-button.css-1glc7hj, button.chakra-button, button.css-1glc7hj',
   buttonSelectorStrict: 'button.chakra-button.css-1glc7hj',
@@ -725,7 +725,11 @@ function findTargetButton(
   const target = all.find((b) => {
     const label = getLabel(b);
     if (/crops/i.test(label)) return false; // do not inject next to "Sell Crops"
-    return isSellTwoWordLabel(label);
+    // Cas A (legacy) : bouton "Sell <petName>" du panel modal pet sell (2 mots)
+    if (isSellTwoWordLabel(label)) return true;
+    // Cas B (nouveau format) : bouton "Sell" + <canvas> (icône du pet) dans le modal
+    if (/^sell$/i.test(label.trim()) && b.querySelector("canvas")) return true;
+    return false;
   });
   return target ?? null;
 }

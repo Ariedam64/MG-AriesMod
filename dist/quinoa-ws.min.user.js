@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.501
+// @version      3.1.502
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -26133,10 +26133,10 @@
     ring: "var(--chakra-ring-color, rgba(66,153,225,0.6))"
   };
   var DEFAULTS = {
-    // conteneur principal du panel (tooltip + boutons)
+    // conteneur principal du panel modal pet sell
     rootSelector: ".McFlex.css-1svwxx0",
-    // gate : bloc qui contient le bouton
-    checkSelector: ".McGrid.css-1n1dtdw",
+    // gate : bloc qui contient le bouton (hash de classe instable côté Chakra)
+    checkSelector: ".McGrid",
     // nouveau bouton "Sell Pet"
     buttonSelectorWide: "button.chakra-button.css-1glc7hj, button.chakra-button, button.css-1glc7hj",
     buttonSelectorStrict: "button.chakra-button.css-1glc7hj",
@@ -26649,7 +26649,9 @@
     const target = all.find((b) => {
       const label2 = getLabel(b);
       if (/crops/i.test(label2)) return false;
-      return isSellTwoWordLabel(label2);
+      if (isSellTwoWordLabel(label2)) return true;
+      if (/^sell$/i.test(label2.trim()) && b.querySelector("canvas")) return true;
+      return false;
     });
     return target ?? null;
   }
