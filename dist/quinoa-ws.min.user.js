@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.502
+// @version      3.1.503
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -22899,13 +22899,14 @@
         return;
       }
       const slots = Array.isArray(tile.slots) ? tile.slots : [];
-      const cropSlot = slots[slotsIndex];
+      const findBySlotId = (list) => list.find((s) => s && typeof s === "object" && s.slotId === slotsIndex) ?? null;
+      const cropSlot = findBySlotId(slots) ?? slots[slotsIndex] ?? null;
       if (!cropSlot || typeof cropSlot !== "object") {
         return;
       }
       const currentObjSlots = Array.isArray(latestCurrentGardenObject?.slots) ? latestCurrentGardenObject.slots : [];
-      const currentObjSlot = currentObjSlots[slotsIndex];
-      const seedKey = extractSeedKey2(currentObjSlot) ?? extractSeedKey2(cropSlot) ?? extractSeedKey2(tile);
+      const currentObjSlot = findBySlotId(currentObjSlots) ?? currentObjSlots[slotsIndex];
+      const seedKey = extractSeedKey2(cropSlot) ?? extractSeedKey2(currentObjSlot) ?? extractSeedKey2(tile);
       const sizePercent = extractSizePercent2(cropSlot);
       const mutations = sanitizeMutations(cropSlot?.mutations);
       const lockerEnabled = (() => {
@@ -22943,7 +22944,8 @@
           const garden3 = await Atoms.data.garden.get();
           const tileObjects2 = garden3?.tileObjects ?? null;
           const tile2 = tileObjects2 ? tileObjects2[String(slot)] : void 0;
-          const cropSlot2 = Array.isArray(tile2?.slots) ? tile2.slots?.[slotsIndex] : void 0;
+          const subList = Array.isArray(tile2?.slots) ? tile2.slots : [];
+          const cropSlot2 = subList.find((s) => s && typeof s === "object" && s.slotId === slotsIndex) ?? subList[slotsIndex];
           console.log("[HarvestCrop]", {
             slot,
             slotsIndex,

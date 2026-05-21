@@ -609,23 +609,32 @@ function installHarvestCropInterceptor() {
       return;
     }
 
+    // `slotsIndex` in the HarvestCrop message is the sub-slot's `slotId`
+    // (sourced from mySelectedSlotIdAtom in the game), NOT its position in the
+    // slots[] array. Sparse plants (Clover after harvest, Daisy, ...) have non-
+    // contiguous slotIds (e.g. 0,2,3,4,5,7,10,12,15,18), so indexing the array
+    // by slotsIndex returns the wrong sub or undefined.
     const slots = Array.isArray(tile.slots) ? tile.slots : [];
-    const cropSlot = slots[slotsIndex];
+    const findBySlotId = (list: any[]): any =>
+      list.find((s) => s && typeof s === "object" && s.slotId === slotsIndex) ?? null;
+    const cropSlot = findBySlotId(slots) ?? slots[slotsIndex as number] ?? null;
 
     if (!cropSlot || typeof cropSlot !== "object") {
       return;
     }
 
-    // myCurrentGardenObject has enriched slot data (species per slot) that the raw
-    // garden atom lacks. Use it to get the correct seedKey (e.g. "FourLeafClover"
-    // instead of "Clover") when the slot index matches.
+    // The garden atom now exposes per-sub species (e.g. "FourLeafClover" inside
+    // a Clover tile), so use the actual sub-slot first. Fall back to
+    // myCurrentGardenObject only when standing on the same tile (auto-harvest
+    // fires from a distance — using the player's current tile data would resolve
+    // a completely unrelated species, bypassing the locker).
     const currentObjSlots = Array.isArray(latestCurrentGardenObject?.slots)
       ? latestCurrentGardenObject.slots
       : [];
-    const currentObjSlot = currentObjSlots[slotsIndex as number];
+    const currentObjSlot = findBySlotId(currentObjSlots) ?? currentObjSlots[slotsIndex as number];
     const seedKey =
-      extractSeedKey(currentObjSlot) ??
       extractSeedKey(cropSlot as any) ??
+      extractSeedKey(currentObjSlot) ??
       extractSeedKey(tile);
     const sizePercent = extractSizePercent(cropSlot as PlantSlotTiming);
     const mutations = sanitizeMutations((cropSlot as PlantSlotTiming)?.mutations);
@@ -670,7 +679,10 @@ function installHarvestCropInterceptor() {
         const garden = await Atoms.data.garden.get();
         const tileObjects = (garden as any)?.tileObjects ?? null;
         const tile = tileObjects ? tileObjects[String(slot)] : undefined;
-        const cropSlot = Array.isArray(tile?.slots) ? tile.slots?.[slotsIndex] : undefined;
+        const subList = Array.isArray(tile?.slots) ? tile.slots : [];
+        const cropSlot =
+          subList.find((s: any) => s && typeof s === "object" && s.slotId === slotsIndex) ??
+          subList[slotsIndex as number];
         console.log("[HarvestCrop]", {
           slot,
           slotsIndex,
