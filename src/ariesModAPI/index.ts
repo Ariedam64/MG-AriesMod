@@ -29,6 +29,11 @@ export type {
   LeaderboardRow,
   LeaderboardCategoryData,
   LeaderboardData,
+  LeaderboardPetJournalResponse,
+  PlayerJournalResponse,
+  PlayerJournalPetEntry,
+  PlayerJournalVariantEntry,
+  PlayerJournalAbilityEntry,
   ModPlayerSummary,
 } from "./types";
 
@@ -51,6 +56,9 @@ export {
   fetchLeaderboardEggsHatched,
   fetchLeaderboardCoinsRank,
   fetchLeaderboardEggsHatchedRank,
+  fetchLeaderboardPetJournal,
+  fetchLeaderboardPetJournalRank,
+  fetchPlayerJournal,
 } from "./endpoints/leaderboard";
 export { searchPlayersByName, searchRoomsByPlayerName, fetchModPlayers } from "./endpoints/search";
 export {
@@ -124,6 +132,8 @@ export {
   updateCachedGroupMembers,
   getCachedLeaderboard,
   updateLeaderboardCache,
+  getCachedTotalPets,
+  setCachedTotalPets,
 } from "./cache/welcome";
 export type { CachedFriendConversation, CachedGroupConversation, CachedDirectMessage, CachedGroupMessage, MessageStatus } from "./cache/conversations";
 export {

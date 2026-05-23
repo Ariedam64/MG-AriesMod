@@ -1,5 +1,6 @@
 // src/ui/menus/communityHub/tabs/playerViewActions.ts
 import type { PlayerView } from "../../../../ariesModAPI";
+import { fetchPlayerJournal } from "../../../../ariesModAPI";
 import { style, ensureSharedStyles, CH_EVENTS } from "../shared";
 
 // ===== Preview Modal Management =====
@@ -352,6 +353,65 @@ export async function viewJournal(player: PlayerView): Promise<void> {
     console.error("[PlayerViewActions] Error viewing journal:", error);
     // Ensure community hub reopens on error
     window.dispatchEvent(new CustomEvent(CH_EVENTS.OPEN));
+  }
+}
+
+/**
+ * Result returned by viewJournalById so callers can show a contextual error.
+ */
+export type ViewJournalByIdResult =
+  | { ok: true }
+  | { ok: false; reason: "private" | "not_found" | "error"; status?: number };
+
+/**
+ * View a player's journal directly from their playerId (no preloaded PlayerView state required).
+ *
+ * Fetches /get-player-journal then opens the in-game journal modal via fakeJournalShow,
+ * with the same close/reopen-community-hub lifecycle as viewJournal.
+ *
+ * Returns an `ok: false` result on 403 (private) / 404 (not found) / other errors so the
+ * caller can display an appropriate inline message. The community hub is only closed once
+ * we know the fetch succeeded — on error we leave it open.
+ */
+export async function viewJournalById(playerId: string): Promise<ViewJournalByIdResult> {
+  if (!playerId || playerId === "null") {
+    return { ok: false, reason: "not_found" };
+  }
+
+  const result = await fetchPlayerJournal(playerId);
+  if (!result.ok) {
+    console.warn(
+      `[PlayerViewActions] Cannot view journal for ${playerId}: ${result.reason} (status ${result.status})`,
+    );
+    return { ok: false, reason: result.reason, status: result.status };
+  }
+
+  const journal = result.data?.journal;
+  if (!journal) {
+    return { ok: false, reason: "error" };
+  }
+
+  const {
+    fakeJournalShow,
+    waitJournalModalClosed,
+    fakeJournalHide,
+  } = await import("../../../../services/fakeModal");
+
+  try {
+    // Close community hub before opening the in-game modal
+    window.dispatchEvent(new CustomEvent(CH_EVENTS.CLOSE));
+
+    await fakeJournalShow(journal, { open: true });
+    await waitJournalModalClosed();
+    await fakeJournalHide();
+
+    // Reopen community hub after the user closes the journal
+    window.dispatchEvent(new CustomEvent(CH_EVENTS.OPEN));
+    return { ok: true };
+  } catch (error) {
+    console.error("[PlayerViewActions] Error viewing journal by id:", error);
+    window.dispatchEvent(new CustomEvent(CH_EVENTS.OPEN));
+    return { ok: false, reason: "error" };
   }
 }
 

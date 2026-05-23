@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.503
+// @version      3.1.510
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -31556,6 +31556,38 @@
     if (status !== 200 || !data || !Array.isArray(data.rows)) return { rows: [], myRank: null };
     return { rows: data.rows, myRank: data.myRank ?? null };
   }
+  async function fetchLeaderboardPetJournal(params) {
+    const { query, limit = 15, offset = 0, myPlayerId } = params || {};
+    const queryParams = { limit, offset };
+    if (query && query.trim()) {
+      queryParams.query = query.trim();
+    }
+    if (myPlayerId) {
+      queryParams.myPlayerId = myPlayerId;
+    }
+    const { status, data } = await httpGet(
+      "leaderboard/pet-journal",
+      queryParams
+    );
+    if (status !== 200 || !data || !Array.isArray(data.rows)) {
+      return { rows: [], myRank: null, totalPets: null };
+    }
+    return {
+      rows: data.rows,
+      myRank: data.myRank ?? null,
+      totalPets: data.meta?.totalPets ?? null
+    };
+  }
+  async function fetchPlayerJournal(playerId2) {
+    if (!playerId2) return { ok: false, status: 400, reason: "error" };
+    const { status, data } = await httpGet("get-player-journal", {
+      playerId: playerId2
+    });
+    if (status === 200 && data) return { ok: true, data };
+    if (status === 403) return { ok: false, status, reason: "private" };
+    if (status === 404) return { ok: false, status, reason: "not_found" };
+    return { ok: false, status, reason: "error" };
+  }
 
   // src/ariesModAPI/endpoints/search.ts
   async function fetchModPlayers(options) {
@@ -31943,6 +31975,12 @@
   }
   function updateLeaderboardCache(data) {
     _cachedLeaderboard = data;
+  }
+  var _cachedTotalPets = null;
+  function setCachedTotalPets(value) {
+    if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+      _cachedTotalPets = value;
+    }
   }
 
   // src/ariesModAPI/cache/conversations.ts
@@ -36312,6 +36350,39 @@
     } catch (error) {
       console.error("[PlayerViewActions] Error viewing journal:", error);
       window.dispatchEvent(new CustomEvent(CH_EVENTS.OPEN));
+    }
+  }
+  async function viewJournalById(playerId2) {
+    if (!playerId2 || playerId2 === "null") {
+      return { ok: false, reason: "not_found" };
+    }
+    const result = await fetchPlayerJournal(playerId2);
+    if (!result.ok) {
+      console.warn(
+        `[PlayerViewActions] Cannot view journal for ${playerId2}: ${result.reason} (status ${result.status})`
+      );
+      return { ok: false, reason: result.reason, status: result.status };
+    }
+    const journal = result.data?.journal;
+    if (!journal) {
+      return { ok: false, reason: "error" };
+    }
+    const {
+      fakeJournalShow: fakeJournalShow2,
+      waitJournalModalClosed: waitJournalModalClosed2,
+      fakeJournalHide: fakeJournalHide2
+    } = await Promise.resolve().then(() => (init_fakeModal(), fakeModal_exports));
+    try {
+      window.dispatchEvent(new CustomEvent(CH_EVENTS.CLOSE));
+      await fakeJournalShow2(journal, { open: true });
+      await waitJournalModalClosed2();
+      await fakeJournalHide2();
+      window.dispatchEvent(new CustomEvent(CH_EVENTS.OPEN));
+      return { ok: true };
+    } catch (error) {
+      console.error("[PlayerViewActions] Error viewing journal by id:", error);
+      window.dispatchEvent(new CustomEvent(CH_EVENTS.OPEN));
+      return { ok: false, reason: "error" };
     }
   }
   async function stopAnyPreview() {
@@ -40835,6 +40906,14 @@
   }
 
   // src/ui/menus/communityHub/tabs/leaderboardTab.ts
+  var PET_JOURNAL_CATEGORY = "petJournal";
+  function formatLeaderboardValue(value, category) {
+    if (category === PET_JOURNAL_CATEGORY) {
+      const safe = Number.isFinite(value) ? value : 0;
+      return `${safe.toFixed(2)}%`;
+    }
+    return formatPrice(value) ?? String(value);
+  }
   function createLeaderboardTab() {
     ensureSharedStyles();
     const root = document.createElement("div");
@@ -40856,6 +40935,7 @@
     });
     const coinsTab = createCategoryTab("Coins", "coins");
     const eggsTab = createCategoryTab("Eggs Hatched", "eggsHatched");
+    const petJournalTab = createCategoryTab("Pet Journal", "petJournal");
     function createCategoryTab(label2, category) {
       const tab = document.createElement("button");
       tab.textContent = label2;
@@ -40898,6 +40978,7 @@
           updateTabStyle();
           updateCategoryTab(coinsTab, "coins");
           updateCategoryTab(eggsTab, "eggsHatched");
+          updateCategoryTab(petJournalTab, "petJournal");
           searchBar.value = "";
           renderLeaderboard();
         }
@@ -40918,7 +40999,7 @@
         });
       }
     }
-    tabsContainer.append(coinsTab, eggsTab);
+    tabsContainer.append(coinsTab, eggsTab, petJournalTab);
     const controlsContainer = document.createElement("div");
     style2(controlsContainer, {
       display: "flex",
@@ -40979,6 +41060,25 @@
       await performRefresh();
     };
     controlsContainer.append(searchBar, refreshButton);
+    const errorBanner = document.createElement("div");
+    style2(errorBanner, {
+      display: "none",
+      padding: "10px 12px",
+      background: "rgba(239,68,68,0.1)",
+      border: "1px solid rgba(239,68,68,0.3)",
+      borderRadius: "8px",
+      fontSize: "12px",
+      color: "#fca5a5"
+    });
+    let errorBannerTimer = null;
+    const showErrorBanner = (message) => {
+      if (errorBannerTimer) clearTimeout(errorBannerTimer);
+      errorBanner.textContent = message;
+      errorBanner.style.display = "block";
+      errorBannerTimer = setTimeout(() => {
+        errorBanner.style.display = "none";
+      }, 4e3);
+    };
     const leaderboardList = document.createElement("div");
     leaderboardList.className = "qws-ch-scrollable";
     style2(leaderboardList, {
@@ -41014,7 +41114,7 @@
           });
           rows = result.rows;
           myRank = result.myRank;
-        } else {
+        } else if (activeCategory === "eggsHatched") {
           const result = await fetchLeaderboardEggsHatched({
             query: query || void 0,
             limit: 15,
@@ -41022,12 +41122,22 @@
           });
           rows = result.rows;
           myRank = result.myRank;
+        } else {
+          const result = await fetchLeaderboardPetJournal({
+            query: query || void 0,
+            limit: 15,
+            myPlayerId
+          });
+          rows = result.rows;
+          myRank = result.myRank;
+          setCachedTotalPets(result.totalPets);
         }
         const cachedData = getCachedLeaderboard();
         if (cachedData) {
           const updatedData = {
             coins: activeCategory === "coins" ? { top: rows, myRank: myRank ?? cachedData.coins.myRank } : cachedData.coins,
-            eggsHatched: activeCategory === "eggsHatched" ? { top: rows, myRank: myRank ?? cachedData.eggsHatched.myRank } : cachedData.eggsHatched
+            eggsHatched: activeCategory === "eggsHatched" ? { top: rows, myRank: myRank ?? cachedData.eggsHatched.myRank } : cachedData.eggsHatched,
+            petJournal: activeCategory === "petJournal" ? { top: rows, myRank: myRank ?? cachedData.petJournal.myRank } : cachedData.petJournal
           };
           updateLeaderboardCache(updatedData);
         }
@@ -41053,9 +41163,13 @@
         if (activeCategory === "coins") {
           const result = await fetchLeaderboardCoins({ query, limit: 15 });
           rows = result.rows;
-        } else {
+        } else if (activeCategory === "eggsHatched") {
           const result = await fetchLeaderboardEggsHatched({ query, limit: 15 });
           rows = result.rows;
+        } else {
+          const result = await fetchLeaderboardPetJournal({ query, limit: 15 });
+          rows = result.rows;
+          setCachedTotalPets(result.totalPets);
         }
         isLoading = false;
         renderLeaderboard(rows);
@@ -41100,7 +41214,7 @@
         rows = searchResults;
       } else {
         if (cachedData) {
-          const categoryData = activeCategory === "coins" ? cachedData.coins : cachedData.eggsHatched;
+          const categoryData = activeCategory === "coins" ? cachedData.coins : activeCategory === "eggsHatched" ? cachedData.eggsHatched : cachedData.petJournal;
           rows = categoryData.top || [];
           myRank = categoryData.myRank;
         }
@@ -41133,8 +41247,36 @@
         }
       }
     };
+    let isOpeningJournal = false;
+    const openJournalForRow = async (row, card2) => {
+      if (isOpeningJournal) return;
+      if (!row.playerId || row.playerId === "null") return;
+      isOpeningJournal = true;
+      const originalCursor = card2.style.cursor;
+      card2.style.cursor = "wait";
+      card2.style.opacity = "0.7";
+      try {
+        const result = await viewJournalById(row.playerId);
+        if (!result.ok) {
+          const playerName = row.playerName || "This player";
+          if (result.reason === "private") {
+            showErrorBanner(`${playerName} has hidden their journal.`);
+          } else if (result.reason === "not_found") {
+            showErrorBanner(`${playerName}'s journal is not available.`);
+          } else {
+            showErrorBanner("Could not open the journal. Please try again.");
+          }
+        }
+      } finally {
+        isOpeningJournal = false;
+        card2.style.cursor = originalCursor;
+        card2.style.opacity = "1";
+      }
+    };
     function createLeaderboardRow(row, category, isMyRank = false) {
       const card2 = document.createElement("div");
+      const isAnonymous = row.playerId === "null" || row.playerName === "anonymous";
+      const isClickable = category === PET_JOURNAL_CATEGORY && !isAnonymous && !!row.playerId;
       style2(card2, {
         padding: "10px 12px",
         background: isMyRank ? "rgba(94,234,212,0.08)" : "rgba(255,255,255,0.02)",
@@ -41143,12 +41285,13 @@
         display: "flex",
         alignItems: "center",
         gap: "12px",
-        transition: "all 120ms ease"
+        transition: "all 120ms ease",
+        cursor: isClickable ? "pointer" : "default"
       });
       if (!isMyRank) {
         card2.onmouseenter = () => {
           style2(card2, {
-            background: "rgba(255,255,255,0.05)",
+            background: isClickable ? "rgba(94,234,212,0.08)" : "rgba(255,255,255,0.05)",
             borderColor: "rgba(94,234,212,0.15)"
           });
         };
@@ -41157,6 +41300,11 @@
             background: "rgba(255,255,255,0.02)",
             borderColor: "rgba(255,255,255,0.06)"
           });
+        };
+      }
+      if (isClickable) {
+        card2.onclick = () => {
+          void openJournalForRow(row, card2);
         };
       }
       const rankChange = row.rankChange;
@@ -41200,7 +41348,6 @@
       });
       rankBadge.textContent = `#${row.rank}`;
       const avatar2 = document.createElement("div");
-      const isAnonymous = row.playerId === "null" || row.playerName === "anonymous";
       style2(avatar2, {
         width: "36px",
         height: "36px",
@@ -41247,7 +41394,7 @@
         color: "#5eead4",
         flexShrink: "0"
       });
-      total.textContent = formatPrice(row.total) ?? String(row.total);
+      total.textContent = formatLeaderboardValue(row.total, category);
       if (rankChangeIndicator) {
         card2.append(rankChangeIndicator, rankBadge, avatar2, nameGroup, total);
       } else {
@@ -41260,13 +41407,18 @@
       if (data.leaderboard) {
         const leaderboardData = {
           coins: data.leaderboard.coins || { top: [], myRank: null },
-          eggsHatched: data.leaderboard.eggsHatched || { top: [], myRank: null }
+          eggsHatched: data.leaderboard.eggsHatched || { top: [], myRank: null },
+          petJournal: data.leaderboard.petJournal || { top: [], myRank: null }
         };
         updateLeaderboardCache(leaderboardData);
+        const welcomeTotalPets = data.leaderboard.petJournal?.meta?.totalPets;
+        if (typeof welcomeTotalPets === "number") {
+          setCachedTotalPets(welcomeTotalPets);
+        }
         renderLeaderboard();
       }
     });
-    root.append(tabsContainer, controlsContainer, leaderboardList, footer);
+    root.append(tabsContainer, controlsContainer, errorBanner, leaderboardList, footer);
     return {
       id: "leaderboard",
       root,
@@ -41275,6 +41427,7 @@
       destroy: () => {
         keyBlocker.detach();
         if (debounceTimer) clearTimeout(debounceTimer);
+        if (errorBannerTimer) clearTimeout(errorBannerTimer);
         unsubWelcome();
         root.remove();
       }

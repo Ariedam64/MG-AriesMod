@@ -588,7 +588,39 @@ export interface WelcomePayload {
       top: LeaderboardRow[];
       myRank: LeaderboardRow | null;
     };
+    petJournal?: {
+      top: LeaderboardRow[];
+      myRank: LeaderboardRow | null;
+      meta?: { totalPets?: number };
+    };
   };
+}
+
+// ========== AI Chat Types ==========
+
+export interface AiMessage {
+  id: number;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: string;
+}
+
+export interface AiChatResponse {
+  userMessageId: number;
+  assistantMessageId: number;
+  response: string;
+  createdAt: string;
+}
+
+export interface AiHistoryResponse {
+  messages: AiMessage[];
+}
+
+export interface AiMessageEvent {
+  userMessageId: number;
+  assistantMessageId: number;
+  response: string;
+  createdAt: string;
 }
 
 // ========== Internal Types ==========
@@ -634,4 +666,38 @@ export interface LeaderboardCategoryData {
 export interface LeaderboardData {
   coins: LeaderboardCategoryData;
   eggsHatched: LeaderboardCategoryData;
+  petJournal: LeaderboardCategoryData;
+}
+
+export interface LeaderboardPetJournalResponse {
+  rows: LeaderboardRow[];
+  myRank?: LeaderboardRow | null;
+  meta?: { totalPets?: number };
+}
+
+export interface PlayerJournalVariantEntry {
+  variant: string;
+  createdAt: number;
+}
+
+export interface PlayerJournalAbilityEntry {
+  ability: string;
+  createdAt: number;
+}
+
+export interface PlayerJournalPetEntry {
+  variantsLogged: PlayerJournalVariantEntry[];
+  abilitiesLogged?: PlayerJournalAbilityEntry[];
+}
+
+export interface PlayerJournalResponse {
+  journal: {
+    pets?: Record<string, PlayerJournalPetEntry>;
+    produce?: Record<string, unknown>;
+  };
+  score?: {
+    total: number;
+    rank: number;
+  };
+  meta?: { totalPets?: number };
 }

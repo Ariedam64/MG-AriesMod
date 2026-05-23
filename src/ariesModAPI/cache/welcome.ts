@@ -215,3 +215,17 @@ export function getCachedLeaderboard(): import("../types").LeaderboardData | nul
 export function updateLeaderboardCache(data: import("../types").LeaderboardData): void {
   _cachedLeaderboard = data;
 }
+
+// ========== Total Pets Cache (used by pet-journal leaderboard) ==========
+
+let _cachedTotalPets: number | null = null;
+
+export function getCachedTotalPets(): number | null {
+  return _cachedTotalPets;
+}
+
+export function setCachedTotalPets(value: number | null): void {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    _cachedTotalPets = value;
+  }
+}

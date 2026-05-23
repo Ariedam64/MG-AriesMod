@@ -3,14 +3,27 @@ import {
   updateLeaderboardCache,
   fetchLeaderboardCoins,
   fetchLeaderboardEggsHatched,
+  fetchLeaderboardPetJournal,
   onWelcome,
   getCachedMyProfile,
+  setCachedTotalPets,
 } from "../../../../ariesModAPI";
 import type { LeaderboardRow, LeaderboardData } from "../../../../ariesModAPI";
-import { style, CH_EVENTS, ensureSharedStyles, createKeyBlocker, createPlayerBadges } from "../shared";
+import { style, ensureSharedStyles, createKeyBlocker, createPlayerBadges } from "../shared";
 import { formatPrice } from "../../../../utils/format";
+import { viewJournalById } from "./playerViewActions";
 
-type LeaderboardCategory = "coins" | "eggsHatched";
+type LeaderboardCategory = "coins" | "eggsHatched" | "petJournal";
+
+const PET_JOURNAL_CATEGORY: LeaderboardCategory = "petJournal";
+
+function formatLeaderboardValue(value: number, category: LeaderboardCategory): string {
+  if (category === PET_JOURNAL_CATEGORY) {
+    const safe = Number.isFinite(value) ? value : 0;
+    return `${safe.toFixed(2)}%`;
+  }
+  return formatPrice(value) ?? String(value);
+}
 
 export function createLeaderboardTab() {
   ensureSharedStyles();
@@ -39,6 +52,7 @@ export function createLeaderboardTab() {
 
   const coinsTab = createCategoryTab("Coins", "coins");
   const eggsTab = createCategoryTab("Eggs Hatched", "eggsHatched");
+  const petJournalTab = createCategoryTab("Pet Journal", "petJournal");
 
   function createCategoryTab(label: string, category: LeaderboardCategory): HTMLElement {
     const tab = document.createElement("button");
@@ -86,6 +100,7 @@ export function createLeaderboardTab() {
         updateTabStyle();
         updateCategoryTab(coinsTab, "coins");
         updateCategoryTab(eggsTab, "eggsHatched");
+        updateCategoryTab(petJournalTab, "petJournal");
         searchBar.value = "";
         renderLeaderboard();
       }
@@ -109,7 +124,7 @@ export function createLeaderboardTab() {
     }
   }
 
-  tabsContainer.append(coinsTab, eggsTab);
+  tabsContainer.append(coinsTab, eggsTab, petJournalTab);
 
   // Search bar + refresh button container
   const controlsContainer = document.createElement("div");
@@ -183,6 +198,27 @@ export function createLeaderboardTab() {
 
   controlsContainer.append(searchBar, refreshButton);
 
+  // Error/toast banner — used for click-modal errors (private journal, not found, etc.)
+  const errorBanner = document.createElement("div");
+  style(errorBanner, {
+    display: "none",
+    padding: "10px 12px",
+    background: "rgba(239,68,68,0.1)",
+    border: "1px solid rgba(239,68,68,0.3)",
+    borderRadius: "8px",
+    fontSize: "12px",
+    color: "#fca5a5",
+  });
+  let errorBannerTimer: ReturnType<typeof setTimeout> | null = null;
+  const showErrorBanner = (message: string) => {
+    if (errorBannerTimer) clearTimeout(errorBannerTimer);
+    errorBanner.textContent = message;
+    errorBanner.style.display = "block";
+    errorBannerTimer = setTimeout(() => {
+      errorBanner.style.display = "none";
+    }, 4000);
+  };
+
   // Leaderboard list container
   const leaderboardList = document.createElement("div");
   leaderboardList.className = "qws-ch-scrollable";
@@ -226,7 +262,7 @@ export function createLeaderboardTab() {
         });
         rows = result.rows;
         myRank = result.myRank;
-      } else {
+      } else if (activeCategory === "eggsHatched") {
         const result = await fetchLeaderboardEggsHatched({
           query: query || undefined,
           limit: 15,
@@ -234,6 +270,15 @@ export function createLeaderboardTab() {
         });
         rows = result.rows;
         myRank = result.myRank;
+      } else {
+        const result = await fetchLeaderboardPetJournal({
+          query: query || undefined,
+          limit: 15,
+          myPlayerId,
+        });
+        rows = result.rows;
+        myRank = result.myRank;
+        setCachedTotalPets(result.totalPets);
       }
 
       // Update cache with new data (including refreshed myRank)
@@ -248,6 +293,10 @@ export function createLeaderboardTab() {
             activeCategory === "eggsHatched"
               ? { top: rows, myRank: myRank ?? cachedData.eggsHatched.myRank }
               : cachedData.eggsHatched,
+          petJournal:
+            activeCategory === "petJournal"
+              ? { top: rows, myRank: myRank ?? cachedData.petJournal.myRank }
+              : cachedData.petJournal,
         };
         updateLeaderboardCache(updatedData);
       }
@@ -280,9 +329,13 @@ export function createLeaderboardTab() {
       if (activeCategory === "coins") {
         const result = await fetchLeaderboardCoins({ query, limit: 15 });
         rows = result.rows;
-      } else {
+      } else if (activeCategory === "eggsHatched") {
         const result = await fetchLeaderboardEggsHatched({ query, limit: 15 });
         rows = result.rows;
+      } else {
+        const result = await fetchLeaderboardPetJournal({ query, limit: 15 });
+        rows = result.rows;
+        setCachedTotalPets(result.totalPets);
       }
 
       isLoading = false;
@@ -337,7 +390,12 @@ export function createLeaderboardTab() {
     } else {
       // Cached top 15
       if (cachedData) {
-        const categoryData = activeCategory === "coins" ? cachedData.coins : cachedData.eggsHatched;
+        const categoryData =
+          activeCategory === "coins"
+            ? cachedData.coins
+            : activeCategory === "eggsHatched"
+              ? cachedData.eggsHatched
+              : cachedData.petJournal;
         rows = categoryData.top || [];
         myRank = categoryData.myRank;
       }
@@ -376,6 +434,35 @@ export function createLeaderboardTab() {
     }
   };
 
+  // Open a player's pet journal modal. Uses the same in-game journal modal as the
+  // "Journal" button in the player detail view, but fetches the data on demand.
+  let isOpeningJournal = false;
+  const openJournalForRow = async (row: LeaderboardRow, card: HTMLElement) => {
+    if (isOpeningJournal) return;
+    if (!row.playerId || row.playerId === "null") return;
+    isOpeningJournal = true;
+    const originalCursor = card.style.cursor;
+    card.style.cursor = "wait";
+    card.style.opacity = "0.7";
+    try {
+      const result = await viewJournalById(row.playerId);
+      if (!result.ok) {
+        const playerName = row.playerName || "This player";
+        if (result.reason === "private") {
+          showErrorBanner(`${playerName} has hidden their journal.`);
+        } else if (result.reason === "not_found") {
+          showErrorBanner(`${playerName}'s journal is not available.`);
+        } else {
+          showErrorBanner("Could not open the journal. Please try again.");
+        }
+      }
+    } finally {
+      isOpeningJournal = false;
+      card.style.cursor = originalCursor;
+      card.style.opacity = "1";
+    }
+  };
+
   // Create a leaderboard row
   function createLeaderboardRow(
     row: LeaderboardRow,
@@ -383,6 +470,8 @@ export function createLeaderboardTab() {
     isMyRank = false,
   ): HTMLElement {
     const card = document.createElement("div");
+    const isAnonymous = row.playerId === "null" || row.playerName === "anonymous";
+    const isClickable = category === PET_JOURNAL_CATEGORY && !isAnonymous && !!row.playerId;
     style(card, {
       padding: "10px 12px",
       background: isMyRank ? "rgba(94,234,212,0.08)" : "rgba(255,255,255,0.02)",
@@ -394,12 +483,13 @@ export function createLeaderboardTab() {
       alignItems: "center",
       gap: "12px",
       transition: "all 120ms ease",
+      cursor: isClickable ? "pointer" : "default",
     });
 
     if (!isMyRank) {
       card.onmouseenter = () => {
         style(card, {
-          background: "rgba(255,255,255,0.05)",
+          background: isClickable ? "rgba(94,234,212,0.08)" : "rgba(255,255,255,0.05)",
           borderColor: "rgba(94,234,212,0.15)",
         });
       };
@@ -408,6 +498,12 @@ export function createLeaderboardTab() {
           background: "rgba(255,255,255,0.02)",
           borderColor: "rgba(255,255,255,0.06)",
         });
+      };
+    }
+
+    if (isClickable) {
+      card.onclick = () => {
+        void openJournalForRow(row, card);
       };
     }
 
@@ -468,7 +564,6 @@ export function createLeaderboardTab() {
 
     // Avatar
     const avatar = document.createElement("div");
-    const isAnonymous = row.playerId === "null" || row.playerName === "anonymous";
     style(avatar, {
       width: "36px",
       height: "36px",
@@ -528,7 +623,7 @@ export function createLeaderboardTab() {
       color: "#5eead4",
       flexShrink: "0",
     });
-    total.textContent = formatPrice(row.total) ?? String(row.total);
+    total.textContent = formatLeaderboardValue(row.total, category);
 
     if (rankChangeIndicator) {
       card.append(rankChangeIndicator, rankBadge, avatar, nameGroup, total);
@@ -547,13 +642,18 @@ export function createLeaderboardTab() {
       const leaderboardData: LeaderboardData = {
         coins: data.leaderboard.coins || { top: [], myRank: null },
         eggsHatched: data.leaderboard.eggsHatched || { top: [], myRank: null },
+        petJournal: data.leaderboard.petJournal || { top: [], myRank: null },
       };
       updateLeaderboardCache(leaderboardData);
+      const welcomeTotalPets = data.leaderboard.petJournal?.meta?.totalPets;
+      if (typeof welcomeTotalPets === "number") {
+        setCachedTotalPets(welcomeTotalPets);
+      }
       renderLeaderboard();
     }
   });
 
-  root.append(tabsContainer, controlsContainer, leaderboardList, footer);
+  root.append(tabsContainer, controlsContainer, errorBanner, leaderboardList, footer);
 
   return {
     id: "leaderboard" as const,
@@ -563,6 +663,7 @@ export function createLeaderboardTab() {
     destroy: () => {
       keyBlocker.detach();
       if (debounceTimer) clearTimeout(debounceTimer);
+      if (errorBannerTimer) clearTimeout(errorBannerTimer);
       unsubWelcome();
       root.remove();
     },
