@@ -43,7 +43,7 @@ const LOCK_TEXT_SELECTOR = ":scope > .chakra-text.css-1jc0opy";
 const LOCK_EMOJI = "🔒";
 const LOCK_BORDER_STYLE = "2px solid rgb(188, 53, 215)";
 const LOCK_BORDER_RADIUS = "15px";
-const TOOLTIP_ROOT_CLASS = "css-502lyi";
+const TOOLTIP_ROOT_CLASS = "css-129757o";
 const LOCK_ICON_CLASS = "tm-locker-tooltip-lock-icon";
 
 const DATASET_KEY_COLOR = "tmLockerOriginalColor";
@@ -354,6 +354,14 @@ function updateLockEmoji(inner: Element, locked: boolean): void {
     inner.querySelector<HTMLElement>(":scope > .chakra-text");
 
   const tooltipRoot = getTooltipRoot(inner);
+
+  // Nettoie les anciennes ancres (v3.1.511 utilisait .css-502lyi qui englobait
+  // les flèches Prev/Next dans l'inventaire).
+  const legacyOuter = inner.closest<HTMLElement>(".css-502lyi");
+  if (legacyOuter && legacyOuter !== tooltipRoot) {
+    restoreTooltipStyles(legacyOuter);
+    removeLockIcon(legacyOuter);
+  }
 
   if (!locked) {
     if (textTarget) {

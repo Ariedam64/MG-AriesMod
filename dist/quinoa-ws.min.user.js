@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.511
+// @version      3.1.512
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -43898,7 +43898,7 @@
   var LOCK_EMOJI = "\u{1F512}";
   var LOCK_BORDER_STYLE = "2px solid rgb(188, 53, 215)";
   var LOCK_BORDER_RADIUS = "15px";
-  var TOOLTIP_ROOT_CLASS = "css-502lyi";
+  var TOOLTIP_ROOT_CLASS = "css-129757o";
   var LOCK_ICON_CLASS = "tm-locker-tooltip-lock-icon";
   var DATASET_KEY_COLOR = "tmLockerOriginalColor";
   var DATASET_KEY_DISPLAY = "tmLockerOriginalDisplay";
@@ -44122,6 +44122,11 @@
     cleanupLegacyLockIcons();
     const textTarget = inner.querySelector(LOCK_TEXT_SELECTOR) ?? inner.querySelector(":scope > .chakra-text");
     const tooltipRoot = getTooltipRoot(inner);
+    const legacyOuter = inner.closest(".css-502lyi");
+    if (legacyOuter && legacyOuter !== tooltipRoot) {
+      restoreTooltipStyles(legacyOuter);
+      removeLockIcon(legacyOuter);
+    }
     if (!locked) {
       if (textTarget) {
         restoreTextContent(textTarget);
