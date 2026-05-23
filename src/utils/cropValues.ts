@@ -43,7 +43,7 @@ const LOCK_TEXT_SELECTOR = ":scope > .chakra-text.css-1jc0opy";
 const LOCK_EMOJI = "🔒";
 const LOCK_BORDER_STYLE = "2px solid rgb(188, 53, 215)";
 const LOCK_BORDER_RADIUS = "15px";
-const TOOLTIP_ROOT_CLASS = "css-qnqsp4";
+const TOOLTIP_ROOT_CLASS = "css-502lyi";
 const LOCK_ICON_CLASS = "tm-locker-tooltip-lock-icon";
 
 const DATASET_KEY_COLOR = "tmLockerOriginalColor";
@@ -326,15 +326,10 @@ function removeMarker(inner: Element, markerClass: string): void {
   markers.forEach((m) => m.remove());
 }
 
-/**
- * Nettoie les vieux 🔒 ajoutés au mauvais endroit (par l’ancienne version),
- * typiquement accroché sur `.css-502lyi` au lieu du panel.
- */
 function cleanupLegacyLockIcons(): void {
   if (typeof document === "undefined") return;
   const all = document.querySelectorAll<HTMLElement>(`span.${LOCK_ICON_CLASS}`);
   all.forEach(icon => {
-    // Si le lock n’est pas dans un vrai panel `.css-qnqsp4`, on le vire
     if (!icon.closest(`.${TOOLTIP_ROOT_CLASS}`)) {
       icon.remove();
     }
@@ -359,14 +354,6 @@ function updateLockEmoji(inner: Element, locked: boolean): void {
     inner.querySelector<HTMLElement>(":scope > .chakra-text");
 
   const tooltipRoot = getTooltipRoot(inner);
-
-  // 🔧 IMPORTANT : on nettoie systématiquement le container .css-502lyi
-  // si on l’avait déjà locké avant (bordure violette + icône dessus).
-  const outerContainer = inner.closest<HTMLElement>(".css-502lyi");
-  if (outerContainer && outerContainer !== tooltipRoot) {
-    restoreTooltipStyles(outerContainer);
-    removeLockIcon(outerContainer);
-  }
 
   if (!locked) {
     if (textTarget) {
