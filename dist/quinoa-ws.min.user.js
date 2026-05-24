@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.512
+// @version      3.1.513
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -31578,6 +31578,20 @@
       totalPets: data.meta?.totalPets ?? null
     };
   }
+  async function fetchLeaderboardItems(params) {
+    const { type, id, query, limit = 50, offset = 0, myPlayerId } = params;
+    if (!type || !id) return { rows: [], myRank: null };
+    const queryParams = { type, id, limit, offset };
+    if (query && query.trim()) {
+      queryParams.query = query.trim();
+    }
+    if (myPlayerId) {
+      queryParams.myPlayerId = myPlayerId;
+    }
+    const { status, data } = await httpGet("leaderboard/items", queryParams);
+    if (status !== 200 || !data || !Array.isArray(data.rows)) return { rows: [], myRank: null };
+    return { rows: data.rows, myRank: data.myRank ?? null };
+  }
   async function fetchPlayerJournal(playerId2) {
     if (!playerId2) return { ok: false, status: 400, reason: "error" };
     const { status, data } = await httpGet("get-player-journal", {
@@ -40907,6 +40921,63 @@
 
   // src/ui/menus/communityHub/tabs/leaderboardTab.ts
   var PET_JOURNAL_CATEGORY = "petJournal";
+  var ITEMS_CATEGORY = "items";
+  var ITEM_TYPES = ["Seed", "Egg", "Tool", "Decor"];
+  var ITEM_TYPE_LABELS = {
+    Seed: "Seeds",
+    Egg: "Eggs",
+    Tool: "Tools",
+    Decor: "Decors"
+  };
+  var ITEMS_LIMIT = 50;
+  var itemsCacheKey = (type, id) => `${type}:${id}`;
+  function getItemListForType(type) {
+    const out = [];
+    switch (type) {
+      case "Seed": {
+        const cat = plantCatalog2;
+        for (const id of Object.keys(cat)) {
+          const e = cat[id];
+          if (!e || typeof e !== "object") continue;
+          const name = e.seed && typeof e.seed === "object" && typeof e.seed.name === "string" && e.seed.name || (typeof e.name === "string" ? e.name : id);
+          out.push({ id, name, spriteCats: ["seed"] });
+        }
+        break;
+      }
+      case "Egg": {
+        const cat = eggCatalog2;
+        for (const id of Object.keys(cat)) {
+          const e = cat[id];
+          if (!e || typeof e !== "object") continue;
+          const name = typeof e.name === "string" && e.name ? e.name : id;
+          out.push({ id, name, spriteCats: ["pet"] });
+        }
+        break;
+      }
+      case "Tool": {
+        const cat = toolCatalog2;
+        for (const id of Object.keys(cat)) {
+          const e = cat[id];
+          if (!e || typeof e !== "object") continue;
+          if (e.type != null && String(e.type).toLowerCase() !== "tool") continue;
+          const name = typeof e.name === "string" && e.name ? e.name : id;
+          out.push({ id, name, spriteCats: ["item"] });
+        }
+        break;
+      }
+      case "Decor": {
+        const cat = decorCatalog2;
+        for (const id of Object.keys(cat)) {
+          const e = cat[id];
+          if (!e || typeof e !== "object") continue;
+          const name = typeof e.name === "string" && e.name ? e.name : id;
+          out.push({ id, name, spriteCats: ["decor"] });
+        }
+        break;
+      }
+    }
+    return out;
+  }
   function formatLeaderboardValue(value, category) {
     if (category === PET_JOURNAL_CATEGORY) {
       const safe = Number.isFinite(value) ? value : 0;
@@ -40926,6 +40997,9 @@
     let activeCategory = "coins";
     let isLoading = false;
     let debounceTimer = null;
+    let activeItemType = "Seed";
+    let activeItemId = null;
+    const itemsCache = /* @__PURE__ */ new Map();
     const tabsContainer = document.createElement("div");
     style2(tabsContainer, {
       display: "flex",
@@ -40936,6 +41010,7 @@
     const coinsTab = createCategoryTab("Coins", "coins");
     const eggsTab = createCategoryTab("Eggs Hatched", "eggsHatched");
     const petJournalTab = createCategoryTab("Pet Journal", "petJournal");
+    const itemsTab = createCategoryTab("Items", "items");
     function createCategoryTab(label2, category) {
       const tab = document.createElement("button");
       tab.textContent = label2;
@@ -40979,8 +41054,16 @@
           updateCategoryTab(coinsTab, "coins");
           updateCategoryTab(eggsTab, "eggsHatched");
           updateCategoryTab(petJournalTab, "petJournal");
+          updateCategoryTab(itemsTab, "items");
           searchBar.value = "";
-          renderLeaderboard();
+          updateItemsToolbarVisibility();
+          if (activeCategory === "items") {
+            ensureItemsSelection();
+            renderItemPickerButton();
+            loadItemsForCurrentSelection();
+          } else {
+            renderLeaderboard();
+          }
         }
       };
       updateTabStyle();
@@ -40999,7 +41082,286 @@
         });
       }
     }
-    tabsContainer.append(coinsTab, eggsTab, petJournalTab);
+    tabsContainer.append(coinsTab, eggsTab, petJournalTab, itemsTab);
+    const itemsToolbar = document.createElement("div");
+    style2(itemsToolbar, {
+      display: "none",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: "8px"
+    });
+    const typePillsRow = document.createElement("div");
+    style2(typePillsRow, {
+      display: "flex",
+      gap: "6px",
+      flexShrink: "0"
+    });
+    const typePillByType = /* @__PURE__ */ new Map();
+    const updateTypePillStyles = () => {
+      for (const [type, pill] of typePillByType) {
+        const isActive = activeItemType === type;
+        style2(pill, {
+          background: isActive ? "rgba(94,234,212,0.15)" : "rgba(255,255,255,0.04)",
+          color: isActive ? "#5eead4" : "rgba(226,232,240,0.7)",
+          borderColor: isActive ? "rgba(94,234,212,0.35)" : "rgba(255,255,255,0.08)"
+        });
+      }
+    };
+    for (const type of ITEM_TYPES) {
+      const pill = document.createElement("button");
+      pill.textContent = ITEM_TYPE_LABELS[type];
+      style2(pill, {
+        padding: "6px 12px",
+        border: "1px solid rgba(255,255,255,0.08)",
+        borderRadius: "999px",
+        background: "rgba(255,255,255,0.04)",
+        color: "rgba(226,232,240,0.7)",
+        fontSize: "12px",
+        fontWeight: "600",
+        cursor: "pointer",
+        transition: "all 120ms ease"
+      });
+      pill.onmouseenter = () => {
+        if (activeItemType !== type) {
+          style2(pill, { background: "rgba(255,255,255,0.08)" });
+        }
+      };
+      pill.onmouseleave = () => updateTypePillStyles();
+      pill.onclick = () => {
+        if (activeItemType === type) return;
+        activeItemType = type;
+        activeItemId = null;
+        ensureItemsSelection();
+        updateTypePillStyles();
+        renderItemPickerButton();
+        closeItemPicker();
+        loadItemsForCurrentSelection();
+      };
+      typePillByType.set(type, pill);
+      typePillsRow.appendChild(pill);
+    }
+    updateTypePillStyles();
+    const pickerWrapper = document.createElement("div");
+    style2(pickerWrapper, {
+      position: "relative",
+      display: "flex",
+      alignItems: "stretch",
+      flex: "1",
+      minWidth: "0"
+    });
+    const pickerButton = document.createElement("button");
+    style2(pickerButton, {
+      flex: "1",
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      padding: "8px 12px",
+      border: "1px solid rgba(255,255,255,0.12)",
+      borderRadius: "10px",
+      background: "rgba(255,255,255,0.04)",
+      color: "#e7eef7",
+      fontSize: "13px",
+      fontWeight: "600",
+      cursor: "pointer",
+      transition: "border-color 150ms ease",
+      textAlign: "left"
+    });
+    pickerButton.onmouseenter = () => style2(pickerButton, { borderColor: "rgba(94,234,212,0.35)" });
+    pickerButton.onmouseleave = () => style2(pickerButton, { borderColor: "rgba(255,255,255,0.12)" });
+    const pickerIcon = document.createElement("div");
+    style2(pickerIcon, {
+      width: "28px",
+      height: "28px",
+      flexShrink: "0",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: "6px",
+      background: "rgba(255,255,255,0.06)",
+      border: "1px solid rgba(255,255,255,0.08)"
+    });
+    const pickerLabel = document.createElement("div");
+    style2(pickerLabel, {
+      flex: "1",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    });
+    const pickerChevron = document.createElement("span");
+    pickerChevron.textContent = "\u25BE";
+    style2(pickerChevron, {
+      color: "rgba(226,232,240,0.5)",
+      fontSize: "12px",
+      flexShrink: "0"
+    });
+    pickerButton.append(pickerIcon, pickerLabel, pickerChevron);
+    const pickerPopover = document.createElement("div");
+    style2(pickerPopover, {
+      position: "absolute",
+      top: "calc(100% + 4px)",
+      right: "0",
+      width: "260px",
+      maxWidth: "calc(100vw - 32px)",
+      maxHeight: "260px",
+      display: "none",
+      flexDirection: "column",
+      background: "rgba(15,23,42,0.98)",
+      border: "1px solid rgba(94,234,212,0.25)",
+      borderRadius: "10px",
+      boxShadow: "0 10px 24px rgba(0,0,0,0.45)",
+      zIndex: "10",
+      overflow: "hidden"
+    });
+    const pickerSearchInput = document.createElement("input");
+    pickerSearchInput.type = "text";
+    pickerSearchInput.placeholder = "Search item...";
+    style2(pickerSearchInput, {
+      padding: "8px 10px",
+      border: "none",
+      borderBottom: "1px solid rgba(255,255,255,0.08)",
+      background: "rgba(255,255,255,0.03)",
+      color: "#e7eef7",
+      fontSize: "12px",
+      outline: "none"
+    });
+    const pickerKeyBlocker = createKeyBlocker(() => document.activeElement === pickerSearchInput);
+    pickerKeyBlocker.attach();
+    const pickerOptionsList = document.createElement("div");
+    pickerOptionsList.className = "qws-ch-scrollable";
+    style2(pickerOptionsList, {
+      flex: "1",
+      overflowY: "auto",
+      display: "flex",
+      flexDirection: "column"
+    });
+    pickerPopover.append(pickerSearchInput, pickerOptionsList);
+    pickerWrapper.append(pickerButton, pickerPopover);
+    let isPickerOpen = false;
+    const openItemPicker = () => {
+      if (isPickerOpen) return;
+      isPickerOpen = true;
+      style2(pickerPopover, { display: "flex" });
+      pickerSearchInput.value = "";
+      renderPickerOptions("");
+      requestAnimationFrame(() => pickerSearchInput.focus());
+    };
+    const closeItemPicker = () => {
+      if (!isPickerOpen) return;
+      isPickerOpen = false;
+      style2(pickerPopover, { display: "none" });
+    };
+    pickerButton.onclick = (ev) => {
+      ev.stopPropagation();
+      if (isPickerOpen) closeItemPicker();
+      else openItemPicker();
+    };
+    pickerSearchInput.oninput = () => renderPickerOptions(pickerSearchInput.value.trim());
+    const outsideClickHandler = (ev) => {
+      if (!isPickerOpen) return;
+      const target = ev.target;
+      if (target && !pickerWrapper.contains(target)) closeItemPicker();
+    };
+    document.addEventListener("click", outsideClickHandler, true);
+    function renderPickerOptions(filter) {
+      pickerOptionsList.innerHTML = "";
+      const items = getItemListForType(activeItemType);
+      const needle = filter.toLowerCase();
+      const filtered = needle ? items.filter((it) => it.name.toLowerCase().includes(needle) || it.id.toLowerCase().includes(needle)) : items;
+      if (filtered.length === 0) {
+        const empty = document.createElement("div");
+        style2(empty, {
+          padding: "12px",
+          textAlign: "center",
+          color: "rgba(226,232,240,0.5)",
+          fontSize: "12px"
+        });
+        empty.textContent = items.length === 0 ? "No items available (data loading...)" : "No matches";
+        pickerOptionsList.appendChild(empty);
+        return;
+      }
+      for (const it of filtered) {
+        const row = document.createElement("button");
+        const isSelected = it.id === activeItemId;
+        style2(row, {
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          padding: "6px 10px",
+          border: "none",
+          background: isSelected ? "rgba(94,234,212,0.12)" : "transparent",
+          color: "#e7eef7",
+          cursor: "pointer",
+          textAlign: "left",
+          fontSize: "12px",
+          transition: "background 100ms ease"
+        });
+        row.onmouseenter = () => {
+          if (it.id !== activeItemId) style2(row, { background: "rgba(255,255,255,0.05)" });
+        };
+        row.onmouseleave = () => {
+          if (it.id !== activeItemId) style2(row, { background: "transparent" });
+        };
+        const iconBox = document.createElement("div");
+        style2(iconBox, {
+          width: "24px",
+          height: "24px",
+          flexShrink: "0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: "5px",
+          background: "rgba(255,255,255,0.06)"
+        });
+        attachSpriteIcon(iconBox, it.spriteCats, [it.id], 22, "items-picker");
+        const nameSpan = document.createElement("div");
+        nameSpan.textContent = it.name;
+        style2(nameSpan, {
+          flex: "1",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap"
+        });
+        row.append(iconBox, nameSpan);
+        row.onclick = () => {
+          if (activeItemId === it.id) {
+            closeItemPicker();
+            return;
+          }
+          activeItemId = it.id;
+          renderItemPickerButton();
+          closeItemPicker();
+          loadItemsForCurrentSelection();
+        };
+        pickerOptionsList.appendChild(row);
+      }
+    }
+    function renderItemPickerButton() {
+      const items = getItemListForType(activeItemType);
+      const selected = items.find((it) => it.id === activeItemId) || null;
+      pickerIcon.innerHTML = "";
+      if (selected) {
+        attachSpriteIcon(pickerIcon, selected.spriteCats, [selected.id], 24, "items-current");
+        pickerLabel.textContent = selected.name;
+        style2(pickerLabel, { color: "#e7eef7" });
+      } else {
+        pickerLabel.textContent = items.length === 0 ? "No items available" : "Select an item...";
+        style2(pickerLabel, { color: "rgba(226,232,240,0.5)" });
+      }
+    }
+    function ensureItemsSelection() {
+      const items = getItemListForType(activeItemType);
+      if (!items.length) {
+        activeItemId = null;
+        return;
+      }
+      if (!activeItemId || !items.some((it) => it.id === activeItemId)) {
+        activeItemId = items[0].id;
+      }
+    }
+    function updateItemsToolbarVisibility() {
+      style2(itemsToolbar, { display: activeCategory === ITEMS_CATEGORY ? "flex" : "none" });
+    }
+    itemsToolbar.append(typePillsRow, pickerWrapper);
     const controlsContainer = document.createElement("div");
     style2(controlsContainer, {
       display: "flex",
@@ -41099,6 +41461,11 @@
     });
     const performRefresh = async () => {
       if (isLoading) return;
+      if (activeCategory === ITEMS_CATEGORY) {
+        itemsCache.delete(itemsCacheKey(activeItemType, activeItemId ?? ""));
+        await loadItemsForCurrentSelection({ force: true });
+        return;
+      }
       isLoading = true;
       renderLeaderboard();
       const query = searchBar.value.trim();
@@ -41149,8 +41516,82 @@
         renderLeaderboard();
       }
     };
+    async function loadItemsForCurrentSelection(opts) {
+      if (activeCategory !== ITEMS_CATEGORY) return;
+      ensureItemsSelection();
+      if (!activeItemId) {
+        renderLeaderboard();
+        scheduleItemsDataRetry();
+        return;
+      }
+      const query = searchBar.value.trim();
+      const cacheKey = itemsCacheKey(activeItemType, activeItemId);
+      const useCache = !opts?.force && !query;
+      if (useCache) {
+        const cached = itemsCache.get(cacheKey);
+        if (cached) {
+          renderLeaderboard();
+          return;
+        }
+      }
+      if (isLoading) return;
+      isLoading = true;
+      renderLeaderboard();
+      const myPlayerId = getCachedMyProfile()?.playerId;
+      const requestedType = activeItemType;
+      const requestedId = activeItemId;
+      try {
+        const result = await fetchLeaderboardItems({
+          type: requestedType,
+          id: requestedId,
+          query: query || void 0,
+          limit: ITEMS_LIMIT,
+          myPlayerId
+        });
+        if (activeCategory === ITEMS_CATEGORY && activeItemType === requestedType && activeItemId === requestedId && searchBar.value.trim() === query) {
+          if (!query) {
+            itemsCache.set(cacheKey, { rows: result.rows, myRank: result.myRank });
+          }
+          isLoading = false;
+          if (query) {
+            renderLeaderboard(result.rows);
+          } else {
+            renderLeaderboard();
+          }
+        } else {
+          isLoading = false;
+        }
+      } catch (error) {
+        console.error("[Leaderboard] Items load failed:", error);
+        isLoading = false;
+        renderLeaderboard();
+      }
+    }
+    let itemsRetryTimer = null;
+    let itemsRetryAttempts = 0;
+    function scheduleItemsDataRetry() {
+      if (itemsRetryTimer) return;
+      if (itemsRetryAttempts >= 20) return;
+      itemsRetryTimer = setTimeout(() => {
+        itemsRetryTimer = null;
+        itemsRetryAttempts += 1;
+        if (activeCategory !== ITEMS_CATEGORY) return;
+        const items = getItemListForType(activeItemType);
+        if (items.length) {
+          ensureItemsSelection();
+          renderItemPickerButton();
+          loadItemsForCurrentSelection();
+        } else {
+          scheduleItemsDataRetry();
+        }
+      }, 500);
+    }
     const performSearch = async () => {
       const query = searchBar.value.trim();
+      if (activeCategory === ITEMS_CATEGORY) {
+        await loadItemsForCurrentSelection();
+        return;
+      }
       if (!query) {
         renderLeaderboard();
         return;
@@ -41207,12 +41648,33 @@
         leaderboardList.appendChild(loading);
         return;
       }
-      const cachedData = getCachedLeaderboard();
       let rows = [];
       let myRank = null;
-      if (searchResults !== void 0) {
+      if (activeCategory === ITEMS_CATEGORY) {
+        if (searchResults !== void 0) {
+          rows = searchResults;
+        } else if (activeItemId) {
+          const cached = itemsCache.get(itemsCacheKey(activeItemType, activeItemId));
+          rows = cached?.rows ?? [];
+          myRank = cached?.myRank ?? null;
+        } else {
+          const waiting = document.createElement("div");
+          style2(waiting, {
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100%",
+            color: "rgba(226,232,240,0.5)",
+            fontSize: "13px"
+          });
+          waiting.textContent = "Waiting for game data...";
+          leaderboardList.appendChild(waiting);
+          return;
+        }
+      } else if (searchResults !== void 0) {
         rows = searchResults;
       } else {
+        const cachedData = getCachedLeaderboard();
         if (cachedData) {
           const categoryData = activeCategory === "coins" ? cachedData.coins : activeCategory === "eggsHatched" ? cachedData.eggsHatched : cachedData.petJournal;
           rows = categoryData.top || [];
@@ -41239,8 +41701,8 @@
       if (myRank && searchResults === void 0) {
         const myProfile = getCachedMyProfile();
         const myPlayerId = myProfile?.playerId;
-        const isInTop15 = rows.some((r) => r.playerId === myPlayerId);
-        if (!isInTop15) {
+        const isInTop = rows.some((r) => r.playerId === myPlayerId);
+        if (!isInTop) {
           footer.innerHTML = "";
           footer.appendChild(createLeaderboardRow(myRank, activeCategory, true));
           footer.style.display = "block";
@@ -41418,7 +41880,7 @@
         renderLeaderboard();
       }
     });
-    root.append(tabsContainer, controlsContainer, errorBanner, leaderboardList, footer);
+    root.append(tabsContainer, itemsToolbar, controlsContainer, errorBanner, leaderboardList, footer);
     return {
       id: "leaderboard",
       root,
@@ -41426,8 +41888,11 @@
       hide: () => style2(root, { display: "none" }),
       destroy: () => {
         keyBlocker.detach();
+        pickerKeyBlocker.detach();
+        document.removeEventListener("click", outsideClickHandler, true);
         if (debounceTimer) clearTimeout(debounceTimer);
         if (errorBannerTimer) clearTimeout(errorBannerTimer);
+        if (itemsRetryTimer) clearTimeout(itemsRetryTimer);
         unsubWelcome();
         root.remove();
       }

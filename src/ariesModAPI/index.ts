@@ -30,6 +30,7 @@ export type {
   LeaderboardCategoryData,
   LeaderboardData,
   LeaderboardPetJournalResponse,
+  ItemLeaderboardType,
   PlayerJournalResponse,
   PlayerJournalPetEntry,
   PlayerJournalVariantEntry,
@@ -58,6 +59,7 @@ export {
   fetchLeaderboardEggsHatchedRank,
   fetchLeaderboardPetJournal,
   fetchLeaderboardPetJournalRank,
+  fetchLeaderboardItems,
   fetchPlayerJournal,
 } from "./endpoints/leaderboard";
 export { searchPlayersByName, searchRoomsByPlayerName, fetchModPlayers } from "./endpoints/search";

@@ -4,18 +4,107 @@ import {
   fetchLeaderboardCoins,
   fetchLeaderboardEggsHatched,
   fetchLeaderboardPetJournal,
+  fetchLeaderboardItems,
   onWelcome,
   getCachedMyProfile,
   setCachedTotalPets,
 } from "../../../../ariesModAPI";
-import type { LeaderboardRow, LeaderboardData } from "../../../../ariesModAPI";
+import type {
+  LeaderboardRow,
+  LeaderboardData,
+  ItemLeaderboardType,
+} from "../../../../ariesModAPI";
 import { style, ensureSharedStyles, createKeyBlocker, createPlayerBadges } from "../shared";
 import { formatPrice } from "../../../../utils/format";
 import { viewJournalById } from "./playerViewActions";
+import {
+  plantCatalog,
+  eggCatalog,
+  toolCatalog,
+  decorCatalog,
+} from "../../../../data";
+import { attachSpriteIcon } from "../../../spriteIconCache";
 
-type LeaderboardCategory = "coins" | "eggsHatched" | "petJournal";
+type LeaderboardCategory = "coins" | "eggsHatched" | "petJournal" | "items";
 
 const PET_JOURNAL_CATEGORY: LeaderboardCategory = "petJournal";
+const ITEMS_CATEGORY: LeaderboardCategory = "items";
+
+type SelectableItemType = Exclude<ItemLeaderboardType, "Produce">;
+const ITEM_TYPES: readonly SelectableItemType[] = ["Seed", "Egg", "Tool", "Decor"] as const;
+const ITEM_TYPE_LABELS: Record<SelectableItemType, string> = {
+  Seed: "Seeds",
+  Egg: "Eggs",
+  Tool: "Tools",
+  Decor: "Decors",
+};
+
+const ITEMS_LIMIT = 50;
+
+interface ItemOption {
+  id: string;
+  name: string;
+  spriteCats: string[];
+}
+
+interface ItemsCacheEntry {
+  rows: LeaderboardRow[];
+  myRank: LeaderboardRow | null;
+}
+
+const itemsCacheKey = (type: ItemLeaderboardType, id: string) => `${type}:${id}`;
+
+/** Build the list of selectable items for a given leaderboard type, pulled from MGData catalogs. */
+function getItemListForType(type: SelectableItemType): ItemOption[] {
+  const out: ItemOption[] = [];
+  switch (type) {
+    case "Seed": {
+      const cat = plantCatalog as Record<string, any>;
+      for (const id of Object.keys(cat)) {
+        const e = cat[id];
+        if (!e || typeof e !== "object") continue;
+        const name = (e.seed && typeof e.seed === "object" && typeof e.seed.name === "string" && e.seed.name)
+          || (typeof e.name === "string" ? e.name : id);
+        out.push({ id, name, spriteCats: ["seed"] });
+      }
+      break;
+    }
+    case "Egg": {
+      const cat = eggCatalog as Record<string, any>;
+      for (const id of Object.keys(cat)) {
+        const e = cat[id];
+        if (!e || typeof e !== "object") continue;
+        const name = typeof e.name === "string" && e.name ? e.name : id;
+        out.push({ id, name, spriteCats: ["pet"] });
+      }
+      break;
+    }
+    case "Tool": {
+      const cat = toolCatalog as Record<string, any>;
+      for (const id of Object.keys(cat)) {
+        const e = cat[id];
+        if (!e || typeof e !== "object") continue;
+        // The dynamic items catalog contains non-tools too; filter on `type` when present.
+        if (e.type != null && String(e.type).toLowerCase() !== "tool") continue;
+        const name = typeof e.name === "string" && e.name ? e.name : id;
+        out.push({ id, name, spriteCats: ["item"] });
+      }
+      break;
+    }
+    case "Decor": {
+      const cat = decorCatalog as Record<string, any>;
+      for (const id of Object.keys(cat)) {
+        const e = cat[id];
+        if (!e || typeof e !== "object") continue;
+        const name = typeof e.name === "string" && e.name ? e.name : id;
+        out.push({ id, name, spriteCats: ["decor"] });
+      }
+      break;
+    }
+  }
+  // Keep MGData's natural order (rarity-grouped) instead of alphabetical.
+  return out;
+}
 
 function formatLeaderboardValue(value: number, category: LeaderboardCategory): string {
   if (category === PET_JOURNAL_CATEGORY) {
@@ -41,6 +130,11 @@ export function createLeaderboardTab() {
   let isLoading = false;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // Items leaderboard state
+  let activeItemType: SelectableItemType = "Seed";
+  let activeItemId: string | null = null;
+  const itemsCache = new Map<string, ItemsCacheEntry>();
+
   // Category tabs container
   const tabsContainer = document.createElement("div");
   style(tabsContainer, {
@@ -53,6 +147,7 @@ export function createLeaderboardTab() {
   const coinsTab = createCategoryTab("Coins", "coins");
   const eggsTab = createCategoryTab("Eggs Hatched", "eggsHatched");
   const petJournalTab = createCategoryTab("Pet Journal", "petJournal");
+  const itemsTab = createCategoryTab("Items", "items");
 
   function createCategoryTab(label: string, category: LeaderboardCategory): HTMLElement {
     const tab = document.createElement("button");
@@ -101,8 +196,16 @@ export function createLeaderboardTab() {
         updateCategoryTab(coinsTab, "coins");
         updateCategoryTab(eggsTab, "eggsHatched");
         updateCategoryTab(petJournalTab, "petJournal");
+        updateCategoryTab(itemsTab, "items");
         searchBar.value = "";
-        renderLeaderboard();
+        updateItemsToolbarVisibility();
+        if (activeCategory === "items") {
+          ensureItemsSelection();
+          renderItemPickerButton();
+          loadItemsForCurrentSelection();
+        } else {
+          renderLeaderboard();
+        }
       }
     };
 
@@ -124,7 +227,319 @@ export function createLeaderboardTab() {
     }
   }
 
-  tabsContainer.append(coinsTab, eggsTab, petJournalTab);
+  tabsContainer.append(coinsTab, eggsTab, petJournalTab, itemsTab);
+
+  // ─── Items sub-toolbar (type pills + searchable item picker, single row) ────
+  const itemsToolbar = document.createElement("div");
+  style(itemsToolbar, {
+    display: "none",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: "8px",
+  });
+
+  const typePillsRow = document.createElement("div");
+  style(typePillsRow, {
+    display: "flex",
+    gap: "6px",
+    flexShrink: "0",
+  });
+
+  const typePillByType = new Map<SelectableItemType, HTMLButtonElement>();
+  const updateTypePillStyles = () => {
+    for (const [type, pill] of typePillByType) {
+      const isActive = activeItemType === type;
+      style(pill, {
+        background: isActive ? "rgba(94,234,212,0.15)" : "rgba(255,255,255,0.04)",
+        color: isActive ? "#5eead4" : "rgba(226,232,240,0.7)",
+        borderColor: isActive ? "rgba(94,234,212,0.35)" : "rgba(255,255,255,0.08)",
+      });
+    }
+  };
+
+  for (const type of ITEM_TYPES) {
+    const pill = document.createElement("button");
+    pill.textContent = ITEM_TYPE_LABELS[type];
+    style(pill, {
+      padding: "6px 12px",
+      border: "1px solid rgba(255,255,255,0.08)",
+      borderRadius: "999px",
+      background: "rgba(255,255,255,0.04)",
+      color: "rgba(226,232,240,0.7)",
+      fontSize: "12px",
+      fontWeight: "600",
+      cursor: "pointer",
+      transition: "all 120ms ease",
+    });
+    pill.onmouseenter = () => {
+      if (activeItemType !== type) {
+        style(pill, { background: "rgba(255,255,255,0.08)" });
+      }
+    };
+    pill.onmouseleave = () => updateTypePillStyles();
+    pill.onclick = () => {
+      if (activeItemType === type) return;
+      activeItemType = type;
+      activeItemId = null;
+      ensureItemsSelection();
+      updateTypePillStyles();
+      renderItemPickerButton();
+      closeItemPicker();
+      loadItemsForCurrentSelection();
+    };
+    typePillByType.set(type, pill);
+    typePillsRow.appendChild(pill);
+  }
+  updateTypePillStyles();
+
+  // Item picker (button + popover)
+  const pickerWrapper = document.createElement("div");
+  style(pickerWrapper, {
+    position: "relative",
+    display: "flex",
+    alignItems: "stretch",
+    flex: "1",
+    minWidth: "0",
+  });
+
+  const pickerButton = document.createElement("button");
+  style(pickerButton, {
+    flex: "1",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    padding: "8px 12px",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: "10px",
+    background: "rgba(255,255,255,0.04)",
+    color: "#e7eef7",
+    fontSize: "13px",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "border-color 150ms ease",
+    textAlign: "left",
+  });
+  pickerButton.onmouseenter = () => style(pickerButton, { borderColor: "rgba(94,234,212,0.35)" });
+  pickerButton.onmouseleave = () => style(pickerButton, { borderColor: "rgba(255,255,255,0.12)" });
+
+  const pickerIcon = document.createElement("div");
+  style(pickerIcon, {
+    width: "28px",
+    height: "28px",
+    flexShrink: "0",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "6px",
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.08)",
+  });
+
+  const pickerLabel = document.createElement("div");
+  style(pickerLabel, {
+    flex: "1",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  });
+
+  const pickerChevron = document.createElement("span");
+  pickerChevron.textContent = "▾";
+  style(pickerChevron, {
+    color: "rgba(226,232,240,0.5)",
+    fontSize: "12px",
+    flexShrink: "0",
+  });
+
+  pickerButton.append(pickerIcon, pickerLabel, pickerChevron);
+
+  // Popover — anchored to the right edge of the picker, extends leftward so
+  // item names stay readable even when the picker is narrow next to the pills.
+  const pickerPopover = document.createElement("div");
+  style(pickerPopover, {
+    position: "absolute",
+    top: "calc(100% + 4px)",
+    right: "0",
+    width: "260px",
+    maxWidth: "calc(100vw - 32px)",
+    maxHeight: "260px",
+    display: "none",
+    flexDirection: "column",
+    background: "rgba(15,23,42,0.98)",
+    border: "1px solid rgba(94,234,212,0.25)",
+    borderRadius: "10px",
+    boxShadow: "0 10px 24px rgba(0,0,0,0.45)",
+    zIndex: "10",
+    overflow: "hidden",
+  });
+
+  const pickerSearchInput = document.createElement("input");
+  pickerSearchInput.type = "text";
+  pickerSearchInput.placeholder = "Search item...";
+  style(pickerSearchInput, {
+    padding: "8px 10px",
+    border: "none",
+    borderBottom: "1px solid rgba(255,255,255,0.08)",
+    background: "rgba(255,255,255,0.03)",
+    color: "#e7eef7",
+    fontSize: "12px",
+    outline: "none",
+  });
+  const pickerKeyBlocker = createKeyBlocker(() => document.activeElement === pickerSearchInput);
+  pickerKeyBlocker.attach();
+
+  const pickerOptionsList = document.createElement("div");
+  pickerOptionsList.className = "qws-ch-scrollable";
+  style(pickerOptionsList, {
+    flex: "1",
+    overflowY: "auto",
+    display: "flex",
+    flexDirection: "column",
+  });
+
+  pickerPopover.append(pickerSearchInput, pickerOptionsList);
+  pickerWrapper.append(pickerButton, pickerPopover);
+
+  let isPickerOpen = false;
+  const openItemPicker = () => {
+    if (isPickerOpen) return;
+    isPickerOpen = true;
+    style(pickerPopover, { display: "flex" });
+    pickerSearchInput.value = "";
+    renderPickerOptions("");
+    requestAnimationFrame(() => pickerSearchInput.focus());
+  };
+  const closeItemPicker = () => {
+    if (!isPickerOpen) return;
+    isPickerOpen = false;
+    style(pickerPopover, { display: "none" });
+  };
+
+  pickerButton.onclick = (ev) => {
+    ev.stopPropagation();
+    if (isPickerOpen) closeItemPicker();
+    else openItemPicker();
+  };
+  pickerSearchInput.oninput = () => renderPickerOptions(pickerSearchInput.value.trim());
+  // Click outside closes
+  const outsideClickHandler = (ev: MouseEvent) => {
+    if (!isPickerOpen) return;
+    const target = ev.target as Node | null;
+    if (target && !pickerWrapper.contains(target)) closeItemPicker();
+  };
+  document.addEventListener("click", outsideClickHandler, true);
+
+  function renderPickerOptions(filter: string): void {
+    pickerOptionsList.innerHTML = "";
+    const items = getItemListForType(activeItemType);
+    const needle = filter.toLowerCase();
+    const filtered = needle
+      ? items.filter((it) => it.name.toLowerCase().includes(needle) || it.id.toLowerCase().includes(needle))
+      : items;
+
+    if (filtered.length === 0) {
+      const empty = document.createElement("div");
+      style(empty, {
+        padding: "12px",
+        textAlign: "center",
+        color: "rgba(226,232,240,0.5)",
+        fontSize: "12px",
+      });
+      empty.textContent = items.length === 0 ? "No items available (data loading...)" : "No matches";
+      pickerOptionsList.appendChild(empty);
+      return;
+    }
+
+    for (const it of filtered) {
+      const row = document.createElement("button");
+      const isSelected = it.id === activeItemId;
+      style(row, {
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        padding: "6px 10px",
+        border: "none",
+        background: isSelected ? "rgba(94,234,212,0.12)" : "transparent",
+        color: "#e7eef7",
+        cursor: "pointer",
+        textAlign: "left",
+        fontSize: "12px",
+        transition: "background 100ms ease",
+      });
+      row.onmouseenter = () => {
+        if (it.id !== activeItemId) style(row, { background: "rgba(255,255,255,0.05)" });
+      };
+      row.onmouseleave = () => {
+        if (it.id !== activeItemId) style(row, { background: "transparent" });
+      };
+
+      const iconBox = document.createElement("div");
+      style(iconBox, {
+        width: "24px",
+        height: "24px",
+        flexShrink: "0",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "5px",
+        background: "rgba(255,255,255,0.06)",
+      });
+      attachSpriteIcon(iconBox, it.spriteCats, [it.id], 22, "items-picker");
+
+      const nameSpan = document.createElement("div");
+      nameSpan.textContent = it.name;
+      style(nameSpan, {
+        flex: "1",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+      });
+
+      row.append(iconBox, nameSpan);
+      row.onclick = () => {
+        if (activeItemId === it.id) {
+          closeItemPicker();
+          return;
+        }
+        activeItemId = it.id;
+        renderItemPickerButton();
+        closeItemPicker();
+        loadItemsForCurrentSelection();
+      };
+      pickerOptionsList.appendChild(row);
+    }
+  }
+
+  function renderItemPickerButton(): void {
+    const items = getItemListForType(activeItemType);
+    const selected = items.find((it) => it.id === activeItemId) || null;
+    pickerIcon.innerHTML = "";
+    if (selected) {
+      attachSpriteIcon(pickerIcon, selected.spriteCats, [selected.id], 24, "items-current");
+      pickerLabel.textContent = selected.name;
+      style(pickerLabel, { color: "#e7eef7" });
+    } else {
+      pickerLabel.textContent = items.length === 0 ? "No items available" : "Select an item...";
+      style(pickerLabel, { color: "rgba(226,232,240,0.5)" });
+    }
+  }
+
+  function ensureItemsSelection(): void {
+    const items = getItemListForType(activeItemType);
+    if (!items.length) {
+      activeItemId = null;
+      return;
+    }
+    if (!activeItemId || !items.some((it) => it.id === activeItemId)) {
+      activeItemId = items[0].id;
+    }
+  }
+
+  function updateItemsToolbarVisibility(): void {
+    style(itemsToolbar, { display: activeCategory === ITEMS_CATEGORY ? "flex" : "none" });
+  }
+
+  itemsToolbar.append(typePillsRow, pickerWrapper);
 
   // Search bar + refresh button container
   const controlsContainer = document.createElement("div");
@@ -244,6 +659,13 @@ export function createLeaderboardTab() {
   // Refresh the active category from API
   const performRefresh = async () => {
     if (isLoading) return;
+
+    if (activeCategory === ITEMS_CATEGORY) {
+      itemsCache.delete(itemsCacheKey(activeItemType, activeItemId ?? ""));
+      await loadItemsForCurrentSelection({ force: true });
+      return;
+    }
+
     isLoading = true;
     renderLeaderboard(); // Show loading state
 
@@ -310,9 +732,104 @@ export function createLeaderboardTab() {
     }
   };
 
+  // ─── Items leaderboard loader ───────────────────────────────────────────────
+  // Fires when the items tab activates, the type/item changes, or the user types
+  // in the player search bar (so query is applied server-side).
+  async function loadItemsForCurrentSelection(opts?: { force?: boolean }): Promise<void> {
+    if (activeCategory !== ITEMS_CATEGORY) return;
+    ensureItemsSelection();
+    if (!activeItemId) {
+      // MGData not ready yet — show waiting state and retry shortly.
+      renderLeaderboard();
+      scheduleItemsDataRetry();
+      return;
+    }
+    const query = searchBar.value.trim();
+    const cacheKey = itemsCacheKey(activeItemType, activeItemId);
+    const useCache = !opts?.force && !query;
+
+    if (useCache) {
+      const cached = itemsCache.get(cacheKey);
+      if (cached) {
+        renderLeaderboard();
+        return;
+      }
+    }
+
+    if (isLoading) return;
+    isLoading = true;
+    renderLeaderboard();
+
+    const myPlayerId = getCachedMyProfile()?.playerId;
+    const requestedType = activeItemType;
+    const requestedId = activeItemId;
+    try {
+      const result = await fetchLeaderboardItems({
+        type: requestedType,
+        id: requestedId,
+        query: query || undefined,
+        limit: ITEMS_LIMIT,
+        myPlayerId,
+      });
+      // Only commit if user hasn't switched selection meanwhile (and search hasn't changed).
+      if (
+        activeCategory === ITEMS_CATEGORY &&
+        activeItemType === requestedType &&
+        activeItemId === requestedId &&
+        searchBar.value.trim() === query
+      ) {
+        if (!query) {
+          itemsCache.set(cacheKey, { rows: result.rows, myRank: result.myRank });
+        }
+        isLoading = false;
+        // For a player-search query, render the search-result rows directly; the
+        // cached entry (if any) is preserved for the unfiltered view.
+        if (query) {
+          renderLeaderboard(result.rows);
+        } else {
+          renderLeaderboard();
+        }
+      } else {
+        isLoading = false;
+      }
+    } catch (error) {
+      console.error("[Leaderboard] Items load failed:", error);
+      isLoading = false;
+      renderLeaderboard();
+    }
+  }
+
+  // MGData catalogs populate async; if the picker has no options at activation
+  // time, poll a few times so the user doesn't have to manually re-click.
+  let itemsRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  let itemsRetryAttempts = 0;
+  function scheduleItemsDataRetry(): void {
+    if (itemsRetryTimer) return;
+    if (itemsRetryAttempts >= 20) return; // ~10s cap
+    itemsRetryTimer = setTimeout(() => {
+      itemsRetryTimer = null;
+      itemsRetryAttempts += 1;
+      if (activeCategory !== ITEMS_CATEGORY) return;
+      const items = getItemListForType(activeItemType);
+      if (items.length) {
+        ensureItemsSelection();
+        renderItemPickerButton();
+        loadItemsForCurrentSelection();
+      } else {
+        scheduleItemsDataRetry();
+      }
+    }, 500);
+  }
+
   // Search with debounce
   const performSearch = async () => {
     const query = searchBar.value.trim();
+
+    if (activeCategory === ITEMS_CATEGORY) {
+      // For the items category, the query is part of the same request — re-fetch.
+      await loadItemsForCurrentSelection();
+      return;
+    }
 
     if (!query) {
       // Empty search → show cached top 15
@@ -380,15 +897,37 @@ export function createLeaderboardTab() {
       return;
     }
 
-    const cachedData = getCachedLeaderboard();
     let rows: LeaderboardRow[] = [];
     let myRank: LeaderboardRow | null = null;
 
-    if (searchResults !== undefined) {
+    if (activeCategory === ITEMS_CATEGORY) {
+      if (searchResults !== undefined) {
+        rows = searchResults;
+      } else if (activeItemId) {
+        const cached = itemsCache.get(itemsCacheKey(activeItemType, activeItemId));
+        rows = cached?.rows ?? [];
+        myRank = cached?.myRank ?? null;
+      } else {
+        // Waiting for MGData
+        const waiting = document.createElement("div");
+        style(waiting, {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+          color: "rgba(226,232,240,0.5)",
+          fontSize: "13px",
+        });
+        waiting.textContent = "Waiting for game data...";
+        leaderboardList.appendChild(waiting);
+        return;
+      }
+    } else if (searchResults !== undefined) {
       // Search results
       rows = searchResults;
     } else {
       // Cached top 15
+      const cachedData = getCachedLeaderboard();
       if (cachedData) {
         const categoryData =
           activeCategory === "coins"
@@ -420,13 +959,13 @@ export function createLeaderboardTab() {
       leaderboardList.appendChild(createLeaderboardRow(row, activeCategory));
     }
 
-    // Show footer with "Your rank" if not in top 15
+    // Show footer with "Your rank" if not in top N
     if (myRank && searchResults === undefined) {
       const myProfile = getCachedMyProfile();
       const myPlayerId = myProfile?.playerId;
-      const isInTop15 = rows.some((r) => r.playerId === myPlayerId);
+      const isInTop = rows.some((r) => r.playerId === myPlayerId);
 
-      if (!isInTop15) {
+      if (!isInTop) {
         footer.innerHTML = "";
         footer.appendChild(createLeaderboardRow(myRank, activeCategory, true));
         footer.style.display = "block";
@@ -653,7 +1192,7 @@ export function createLeaderboardTab() {
     }
   });
 
-  root.append(tabsContainer, controlsContainer, errorBanner, leaderboardList, footer);
+  root.append(tabsContainer, itemsToolbar, controlsContainer, errorBanner, leaderboardList, footer);
 
   return {
     id: "leaderboard" as const,
@@ -662,8 +1201,11 @@ export function createLeaderboardTab() {
     hide: () => style(root, { display: "none" }),
     destroy: () => {
       keyBlocker.detach();
+      pickerKeyBlocker.detach();
+      document.removeEventListener("click", outsideClickHandler, true);
       if (debounceTimer) clearTimeout(debounceTimer);
       if (errorBannerTimer) clearTimeout(errorBannerTimer);
+      if (itemsRetryTimer) clearTimeout(itemsRetryTimer);
       unsubWelcome();
       root.remove();
     },

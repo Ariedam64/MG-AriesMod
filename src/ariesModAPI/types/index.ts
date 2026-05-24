@@ -669,6 +669,12 @@ export interface LeaderboardData {
   petJournal: LeaderboardCategoryData;
 }
 
+/**
+ * Types d'items supportés par le leaderboard `/leaderboard/items`.
+ * Note: `Seed` et `Produce` partagent `species` mais sont distingués via `itemType` côté serveur.
+ */
+export type ItemLeaderboardType = "Seed" | "Egg" | "Tool" | "Decor" | "Produce";
+
 export interface LeaderboardPetJournalResponse {
   rows: LeaderboardRow[];
   myRank?: LeaderboardRow | null;

@@ -8,6 +8,7 @@ import type {
   LeaderboardRankResponse,
   LeaderboardPetJournalResponse,
   PlayerJournalResponse,
+  ItemLeaderboardType,
 } from "../types";
 
 /**
@@ -146,6 +147,33 @@ export async function fetchLeaderboardPetJournalRank(
   );
   if (status !== 200 || !data) return null;
   return data;
+}
+
+/**
+ * Récupère le leaderboard du stock détenu d'un item (graine, œuf, outil, décor, produce).
+ * @param params - type + id requis, autres optionnels (query, limit, offset, myPlayerId)
+ * @returns Entrées du leaderboard + rang du joueur si myPlayerId fourni
+ */
+export async function fetchLeaderboardItems(params: {
+  type: ItemLeaderboardType;
+  id: string;
+  query?: string;
+  limit?: number;
+  offset?: number;
+  myPlayerId?: string;
+}): Promise<{ rows: LeaderboardRow[]; myRank: LeaderboardRow | null }> {
+  const { type, id, query, limit = 50, offset = 0, myPlayerId } = params;
+  if (!type || !id) return { rows: [], myRank: null };
+  const queryParams: Record<string, string | number> = { type, id, limit, offset };
+  if (query && query.trim()) {
+    queryParams.query = query.trim();
+  }
+  if (myPlayerId) {
+    queryParams.myPlayerId = myPlayerId;
+  }
+  const { status, data } = await httpGet<LeaderboardResponse>("leaderboard/items", queryParams);
+  if (status !== 200 || !data || !Array.isArray(data.rows)) return { rows: [], myRank: null };
+  return { rows: data.rows, myRank: data.myRank ?? null };
 }
 
 /**
