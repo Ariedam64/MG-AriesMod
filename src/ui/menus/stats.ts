@@ -892,18 +892,45 @@ function renderShopSection(ui: Menu, root: HTMLElement, stats: StatsSnapshot) {
   root.appendChild(card.root);
 }
 
-function createPetRarityGroups(): Map<PetRarity, string[]> {
+// MGData's API returns "Mythic" while the hardcoded `rarity` constant uses "Mythical".
+// Without this normalization, all Mythic pets vanish from the Stats UI as soon as
+// the dynamic catalog is loaded (map.get("Mythic") is undefined).
+function normalizePetRarity(raw: unknown): PetRarity {
+  if (typeof raw !== "string") return rarity.Common as PetRarity;
+  if (raw === "Mythic") return rarity.Mythic as PetRarity;
+  return raw as PetRarity;
+}
+
+function createPetRarityGroups(stats: StatsSnapshot): Map<PetRarity, string[]> {
   const map = new Map<PetRarity, string[]>();
   for (const rarityKey of RARITY_ORDER) {
     map.set(rarityKey, []);
   }
+
+  // Track species we've already added (by lowercased key) so a pet present in both
+  // the catalog and the stats payload isn't displayed twice.
+  const seen = new Set<string>();
+
   for (const species of Object.keys(petCatalog)) {
+    const lower = species.toLowerCase();
+    if (seen.has(lower)) continue;
+    seen.add(lower);
     const info = petCatalog[species as keyof typeof petCatalog];
-    const rarityValue = (info?.rarity ?? rarity.Common) as PetRarity;
-    const list = map.get(rarityValue) ?? [];
-    list.push(species);
-    map.set(rarityValue, list);
+    const rarityValue = normalizePetRarity(info?.rarity);
+    map.get(rarityValue)?.push(species);
   }
+
+  // Include pets the player has stats for but that aren't in the catalog yet
+  // (newer game pets not in dynamic API nor hardcoded fallback). Without this,
+  // these pets are invisible in the Stats menu even though their counts exist.
+  for (const speciesKey of Object.keys(stats.pets?.hatchedByType ?? {})) {
+    const lower = speciesKey.toLowerCase();
+    if (seen.has(lower)) continue;
+    seen.add(lower);
+    const display = speciesKey.charAt(0).toUpperCase() + speciesKey.slice(1);
+    map.get(rarity.Common as PetRarity)?.push(display);
+  }
+
   for (const list of map.values()) {
     list.sort((a, b) => a.localeCompare(b));
   }
@@ -948,7 +975,7 @@ function renderPetSection(ui: Menu, root: HTMLElement, stats: StatsSnapshot) {
     subtitle: "Hatching overview",
     storageId: "pets",
   });
-  const groups = createPetRarityGroups();
+  const groups = createPetRarityGroups(stats);
 
   for (const rarityKey of RARITY_ORDER) {
     const speciesList = groups.get(rarityKey) ?? [];

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.513
+// @version      3.1.514
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -1862,6 +1862,7 @@
     closeStatsModal: () => closeStatsModal,
     fakeActivityLogHide: () => fakeActivityLogHide,
     fakeActivityLogShow: () => fakeActivityLogShow,
+    fakeInventoryDisable: () => fakeInventoryDisable,
     fakeInventoryHide: () => fakeInventoryHide,
     fakeInventoryShow: () => fakeInventoryShow,
     fakeJournalHide: () => fakeJournalHide,
@@ -1898,10 +1899,14 @@
     } catch (err) {
     }
   }
-  async function closeModal(_modalId) {
+  async function closeModal(modalId) {
     try {
+      if (modalId) {
+        const current = await Atoms.ui.activeModal.get();
+        if (current !== modalId) return;
+      }
       await Atoms.ui.activeModal.set(null);
-      if (_modalId === "inventory" || !_modalId) {
+      if (modalId === "inventory" || !modalId) {
         await Atoms.ui.inventoryModalIsActive.set(false);
       }
     } catch (err) {
@@ -1993,6 +1998,10 @@
     await fakeHide(INVENTORY_ATOM_PATCH.label);
     await fakeHide(SHARED_MYDATA_PATCH.label);
     await closeInventoryPanel();
+  }
+  async function fakeInventoryDisable() {
+    await fakeHide(INVENTORY_ATOM_PATCH.label);
+    await fakeHide(SHARED_MYDATA_PATCH.label);
   }
   async function openJournalModal() {
     return openModal(JOURNAL_MODAL_ID);
@@ -24482,8 +24491,12 @@
       if (!items.length) return null;
       await fakeInventoryShow(payload, { open: true });
       const selIndex = await _waitValidatedInventoryIndex(2e4);
-      await closeInventoryPanel();
-      if (selIndex == null || selIndex < 0 || selIndex >= items.length) return null;
+      if (selIndex != null && selIndex >= 0 && selIndex < items.length) {
+        await closeInventoryPanel();
+      } else {
+        await fakeInventoryDisable();
+        return null;
+      }
       const chosenPet = _inventoryItemToPet(items[selIndex]);
       if (!chosenPet) return null;
       const next = team.slots.slice(0, 3);
@@ -24501,8 +24514,12 @@
       if (!items.length) return null;
       await fakeInventoryShow(payload, { open: true });
       const selIndex = await _waitValidatedInventoryIndex(2e4);
-      await closeInventoryPanel();
-      if (selIndex == null || selIndex < 0 || selIndex >= items.length) return null;
+      if (selIndex != null && selIndex >= 0 && selIndex < items.length) {
+        await closeInventoryPanel();
+      } else {
+        await fakeInventoryDisable();
+        return null;
+      }
       await clearHandSelection();
       return _inventoryItemToPet(items[selIndex]);
     },
@@ -58485,17 +58502,31 @@ next: ${next}`;
     card2.body.appendChild(createMetricGrid(rows));
     root.appendChild(card2.root);
   }
-  function createPetRarityGroups() {
+  function normalizePetRarity(raw) {
+    if (typeof raw !== "string") return rarity2.Common;
+    if (raw === "Mythic") return rarity2.Mythic;
+    return raw;
+  }
+  function createPetRarityGroups(stats) {
     const map2 = /* @__PURE__ */ new Map();
     for (const rarityKey of RARITY_ORDER2) {
       map2.set(rarityKey, []);
     }
+    const seen = /* @__PURE__ */ new Set();
     for (const species of Object.keys(petCatalog2)) {
+      const lower = species.toLowerCase();
+      if (seen.has(lower)) continue;
+      seen.add(lower);
       const info = petCatalog2[species];
-      const rarityValue = info?.rarity ?? rarity2.Common;
-      const list = map2.get(rarityValue) ?? [];
-      list.push(species);
-      map2.set(rarityValue, list);
+      const rarityValue = normalizePetRarity(info?.rarity);
+      map2.get(rarityValue)?.push(species);
+    }
+    for (const speciesKey of Object.keys(stats.pets?.hatchedByType ?? {})) {
+      const lower = speciesKey.toLowerCase();
+      if (seen.has(lower)) continue;
+      seen.add(lower);
+      const display = speciesKey.charAt(0).toUpperCase() + speciesKey.slice(1);
+      map2.get(rarity2.Common)?.push(display);
     }
     for (const list of map2.values()) {
       list.sort((a, b) => a.localeCompare(b));
@@ -58533,7 +58564,7 @@ next: ${next}`;
       subtitle: "Hatching overview",
       storageId: "pets"
     });
-    const groups2 = createPetRarityGroups();
+    const groups2 = createPetRarityGroups(stats);
     for (const rarityKey of RARITY_ORDER2) {
       const speciesList = groups2.get(rarityKey) ?? [];
       if (!speciesList.length) continue;

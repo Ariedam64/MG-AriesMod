@@ -7,7 +7,7 @@ import {
   type CropInventoryState,
 } from "./player";
 import { petCatalog, petAbilities, plantCatalog } from "../data";
-import { fakeInventoryShow, closeInventoryPanel, isInventoryOpen } from "./fakeModal.ts";
+import { fakeInventoryShow, fakeInventoryDisable, closeInventoryPanel, isInventoryOpen } from "./fakeModal.ts";
 import { Atoms, myPetHutchPetItems, myNumPetHutchItems, isMyInventoryAtMaxLength } from "../store/atoms";
 import { toastSimple } from "../ui/toast";
 import { Hotkey, matchHotkey, stringToHotkey } from "../ui/menu.ts";
@@ -1252,9 +1252,17 @@ export const PetsService = {
 
     await fakeInventoryShow(payload, { open: true });
     const selIndex = await _waitValidatedInventoryIndex(20000);
-    await closeInventoryPanel();
 
-    if (selIndex == null || selIndex < 0 || selIndex >= items.length) return null;
+    // Si l'user a validé une sélection → on ferme la modal (qu'il a finie d'utiliser).
+    // Sinon (timeout ou nav ailleurs) → on désactive juste les fakes sans yank la modal :
+    // soit il est encore dedans (il verra ses vraies données), soit il est ailleurs et
+    // le guard de closeModal aurait été un no-op de toute façon.
+    if (selIndex != null && selIndex >= 0 && selIndex < items.length) {
+      await closeInventoryPanel();
+    } else {
+      await fakeInventoryDisable();
+      return null;
+    }
 
     const chosenPet = _inventoryItemToPet(items[selIndex]);
     if (!chosenPet) return null;
@@ -1274,8 +1282,13 @@ export const PetsService = {
 
     await fakeInventoryShow(payload, { open: true });
     const selIndex = await _waitValidatedInventoryIndex(20000);
-    await closeInventoryPanel();
-    if (selIndex == null || selIndex < 0 || selIndex >= items.length) return null;
+
+    if (selIndex != null && selIndex >= 0 && selIndex < items.length) {
+      await closeInventoryPanel();
+    } else {
+      await fakeInventoryDisable();
+      return null;
+    }
 
     await clearHandSelection();
     return _inventoryItemToPet(items[selIndex]);

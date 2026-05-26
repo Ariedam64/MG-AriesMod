@@ -28,11 +28,17 @@ export async function openModal(modalId: ModalId) {
   }
 }
 
-export async function closeModal(_modalId?: ModalId) {
-  // NB: activeModal est unique -> on le remet juste à null
+export async function closeModal(modalId?: ModalId) {
+  // Si on cible une modal précise, on ne ferme QUE si elle est toujours active.
+  // Évite de tuer une modal que l'utilisateur a ouverte entretemps. Sans argument,
+  // on garde le comportement "force close" (auth gate, etc.).
   try {
+    if (modalId) {
+      const current = await Atoms.ui.activeModal.get();
+      if (current !== modalId) return;
+    }
     await Atoms.ui.activeModal.set(null);
-    if (_modalId === "inventory" || !_modalId) {
+    if (modalId === "inventory" || !modalId) {
       await Atoms.ui.inventoryModalIsActive.set(false);
     }
   } catch (err) {
@@ -200,6 +206,17 @@ export async function fakeInventoryHide() {
   await fakeHide(INVENTORY_ATOM_PATCH.label);
   await fakeHide(SHARED_MYDATA_PATCH.label);
   await closeInventoryPanel();
+}
+
+/**
+ * Désactive les fakes d'inventaire SANS fermer la modal.
+ * Utile quand le mod a fini son flow mais que l'utilisateur est encore
+ * potentiellement en train de regarder l'inventaire — on lui rend la vraie
+ * donnée sous les yeux au lieu de lui yank la modal.
+ */
+export async function fakeInventoryDisable() {
+  await fakeHide(INVENTORY_ATOM_PATCH.label);
+  await fakeHide(SHARED_MYDATA_PATCH.label);
 }
 
 /* =============================== Spécifique JOURNAL =============================== */
