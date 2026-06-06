@@ -178,6 +178,8 @@ function startAutoReconnectOnSuperseded() {
     if (rcSocket && ws && ws !== rcSocket) {
       return;
     }
+    // Temporarily disabled at the request of the game developers.
+    if (MiscService.AUTO_RECO_TEMPORARILY_DISABLED) return;
     if (!MiscService.readAutoRecoEnabled(false)) return;
 
     if (autoRecoTimer !== null) {

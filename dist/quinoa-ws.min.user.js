@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.514
+// @version      3.1.515
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -903,6 +903,29 @@
     } catch {
     }
   }
+  function hasSeenAutoRecoDisabledNotice() {
+    try {
+      if (typeof GM_getValue === "function") {
+        const raw = GM_getValue(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, null);
+        if (raw == null) return false;
+        if (typeof raw === "boolean") return raw;
+        return String(raw).trim() === "1";
+      }
+      return getHostStorage()?.getItem(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+  function markAutoRecoDisabledNoticeSeen() {
+    try {
+      if (typeof GM_setValue === "function") {
+        GM_setValue(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
+        return;
+      }
+      getHostStorage()?.setItem(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
+    } catch {
+    }
+  }
   function setDeclinedApiAuth(declined) {
     try {
       if (declined) {
@@ -921,7 +944,7 @@
     } catch {
     }
   }
-  var ARIES_STORAGE_KEY, ARIES_STORAGE_VERSION, API_KEY_STORAGE_KEY, AUTH_DECLINED_STORAGE_KEY, SEEN_ROOM_PRIVACY_NOTICE_KEY, DEFAULT_ARIES_STORAGE;
+  var ARIES_STORAGE_KEY, ARIES_STORAGE_VERSION, API_KEY_STORAGE_KEY, AUTH_DECLINED_STORAGE_KEY, SEEN_ROOM_PRIVACY_NOTICE_KEY, SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, DEFAULT_ARIES_STORAGE;
   var init_localStorage = __esm({
     "src/utils/localStorage.ts"() {
       init_friendSettingsSchema();
@@ -930,6 +953,7 @@
       API_KEY_STORAGE_KEY = "aries_api_key";
       AUTH_DECLINED_STORAGE_KEY = "aries_auth_declined";
       SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice";
+      SEEN_AUTO_RECO_DISABLED_NOTICE_KEY = "aries_seen_autoreco_disabled_notice";
       DEFAULT_ARIES_STORAGE = {
         version: ARIES_STORAGE_VERSION,
         friends: {
@@ -16378,6 +16402,7 @@
   var AUTO_RECO_MIN_MS = 0;
   var AUTO_RECO_MAX_MS = 5 * 6e4;
   var AUTO_RECO_DEFAULT_MS = 6e4;
+  var AUTO_RECO_TEMPORARILY_DISABLED = true;
   var PATH_KEEP_INVENTORY_SLOT_FREE = "misc.keepInventorySlotFree";
   var PATH_AUTO_STORE_SEED_SILO_ENABLED = "misc.autoStoreSeedSiloEnabled";
   var PATH_AUTO_STORE_DECOR_SHED_ENABLED = "misc.autoStoreDecorShedEnabled";
@@ -18065,6 +18090,7 @@
     getGhostDelayMs,
     setGhostDelayMs,
     createGhostController,
+    AUTO_RECO_TEMPORARILY_DISABLED,
     readAutoRecoEnabled,
     writeAutoRecoEnabled,
     getAutoRecoDelayMs,
@@ -22483,8 +22509,8 @@
     return ev.code === 4300 || ev.code === 4250 && (/superseded/i.test(reason) || /newer user session/i.test(reason));
   }
   function ensureAutoRecoOverlayStyle() {
-    const STYLE_ID6 = "mgAutoRecoOverlayStyle";
-    if (document.getElementById(STYLE_ID6)) return;
+    const STYLE_ID7 = "mgAutoRecoOverlayStyle";
+    if (document.getElementById(STYLE_ID7)) return;
     const css3 = `
     #mgAutoRecoOverlay { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #mgAutoRecoOverlay .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; border: 1px solid rgba(255,255,255,.15); }
@@ -22494,7 +22520,7 @@
     #mgAutoRecoOverlay .btn:focus { outline: 2px solid #7aa2ff; outline-offset: 2px; }
   `;
     const style3 = document.createElement("style");
-    style3.id = STYLE_ID6;
+    style3.id = STYLE_ID7;
     style3.textContent = css3;
     document.documentElement.appendChild(style3);
   }
@@ -22557,6 +22583,7 @@
       if (rcSocket && ws && ws !== rcSocket) {
         return;
       }
+      if (MiscService.AUTO_RECO_TEMPORARILY_DISABLED) return;
       if (!MiscService.readAutoRecoEnabled(false)) return;
       if (autoRecoTimer !== null) {
         clearTimeout(autoRecoTimer);
@@ -26708,8 +26735,8 @@
     root.querySelectorAll(`.${injectedClass}`).forEach((n) => n.remove());
   }
   function ensureStyle(injectedClass, theme) {
-    const STYLE_ID6 = `${injectedClass}-style`;
-    if (document.getElementById(STYLE_ID6)) return;
+    const STYLE_ID7 = `${injectedClass}-style`;
+    if (document.getElementById(STYLE_ID7)) return;
     const css3 = `
 .${injectedClass}{
   font-synthesis: none;
@@ -26764,7 +26791,7 @@
 }
 `.trim();
     const s = document.createElement("style");
-    s.id = STYLE_ID6;
+    s.id = STYLE_ID7;
     s.textContent = css3;
     document.head.appendChild(s);
   }
@@ -60597,7 +60624,11 @@ next: ${next}`;
         subtitle: "Reconnect automatically when the session is kicked."
       });
       styleCard(card2);
-      const toggle = ui.switch(MiscService.readAutoRecoEnabled(false));
+      const featureDisabled = MiscService.AUTO_RECO_TEMPORARILY_DISABLED;
+      const toggle = ui.switch(
+        featureDisabled ? false : MiscService.readAutoRecoEnabled(false)
+      );
+      if (featureDisabled) toggle.disabled = true;
       const toggleRow = createSettingRow(
         "Enabled",
         "Attempts to log back in after a session conflict.",
@@ -60628,6 +60659,12 @@ next: ${next}`;
       hint.style.lineHeight = "1.35";
       const clampSeconds = (value) => Math.max(0, Math.min(300, Math.round(value / 30) * 30));
       const syncToggle = () => {
+        if (featureDisabled) {
+          toggle.checked = false;
+          slider.disabled = true;
+          hint.textContent = "Auto reconnect has been temporarily disabled at the request of the game developers. It will most likely come back later.";
+          return;
+        }
         const on = !!toggle.checked;
         slider.disabled = !on;
         MiscService.writeAutoRecoEnabled(on);
@@ -64636,6 +64673,60 @@ next: ${next}`;
 
   // src/main.ts
   init_page_context();
+
+  // src/ui/autoRecoDisabledNotice.ts
+  init_localStorage();
+  var OVERLAY_ID2 = "mgAutoRecoDisabledNotice";
+  var STYLE_ID6 = "mgAutoRecoDisabledNoticeStyle";
+  function ensureStyle2() {
+    if (document.getElementById(STYLE_ID6)) return;
+    const style3 = document.createElement("style");
+    style3.id = STYLE_ID6;
+    style3.textContent = `
+    #${OVERLAY_ID2} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    #${OVERLAY_ID2} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; width: 420px; border: 1px solid rgba(255,255,255,.15); }
+    #${OVERLAY_ID2} .title { font-size: 20px; font-weight: 900; letter-spacing: .02em; margin: 0 0 10px 0; }
+    #${OVERLAY_ID2} .body { font-size: 14px; line-height: 1.5; opacity: .9; margin: 0 0 18px 0; }
+    #${OVERLAY_ID2} .btn { padding: 10px 18px; border-radius: 999px; border: 1px solid #7aa2ff; background: #1a2644; color: #fff; font-weight: 700; cursor: pointer; }
+    #${OVERLAY_ID2} .btn:focus { outline: 2px solid #7aa2ff; outline-offset: 2px; }
+  `;
+    document.head.appendChild(style3);
+  }
+  function dismiss(overlay) {
+    markAutoRecoDisabledNoticeSeen();
+    try {
+      overlay.remove();
+    } catch {
+    }
+  }
+  function showAutoRecoDisabledNoticeOnce() {
+    if (typeof document === "undefined" || !document.body) return;
+    if (hasSeenAutoRecoDisabledNotice()) return;
+    if (document.getElementById(OVERLAY_ID2)) return;
+    ensureStyle2();
+    const overlay = document.createElement("div");
+    overlay.id = OVERLAY_ID2;
+    overlay.innerHTML = `
+    <div class="box" role="dialog" aria-label="Auto reconnect disabled">
+      <div class="title">Auto reconnect disabled</div>
+      <div class="body">
+        The auto-reconnect option has been temporarily disabled at the request
+        of the game developers. It will most likely come back later.
+      </div>
+      <button class="btn" type="button">Got it</button>
+    </div>
+  `;
+    const close = () => dismiss(overlay);
+    const button = overlay.querySelector(".btn");
+    button?.addEventListener("click", close);
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) close();
+    });
+    document.body.appendChild(overlay);
+    button?.focus();
+  }
+
+  // src/main.ts
   (async function() {
     "use strict";
     if (initAuthBridgeIfNeeded()) return;
@@ -64670,6 +64761,7 @@ next: ${next}`;
       }
     });
     initWatchers();
+    showAutoRecoDisabledNoticeOnce();
     const antiAfk = createAntiAfkController({
       getPosition: () => PlayerService.getPosition(),
       move: (x, y) => PlayerService.move(x, y)

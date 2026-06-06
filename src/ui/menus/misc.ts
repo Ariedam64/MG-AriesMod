@@ -172,7 +172,12 @@ export async function renderMiscMenu(container: HTMLElement) {
     });
     styleCard(card);
 
-    const toggle = ui.switch(MiscService.readAutoRecoEnabled(false)) as HTMLInputElement;
+    const featureDisabled = MiscService.AUTO_RECO_TEMPORARILY_DISABLED;
+
+    const toggle = ui.switch(
+      featureDisabled ? false : MiscService.readAutoRecoEnabled(false),
+    ) as HTMLInputElement;
+    if (featureDisabled) toggle.disabled = true;
     const toggleRow = createSettingRow(
       "Enabled",
       "Attempts to log back in after a session conflict.",
@@ -210,6 +215,13 @@ export async function renderMiscMenu(container: HTMLElement) {
       Math.max(0, Math.min(300, Math.round(value / 30) * 30));
 
     const syncToggle = () => {
+      if (featureDisabled) {
+        toggle.checked = false;
+        slider.disabled = true;
+        hint.textContent =
+          "Auto reconnect has been temporarily disabled at the request of the game developers. It will most likely come back later.";
+        return;
+      }
       const on = !!toggle.checked;
       slider.disabled = !on;
       MiscService.writeAutoRecoEnabled(on);

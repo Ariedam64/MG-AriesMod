@@ -18,6 +18,10 @@ const PATH_AUTO_RECO_DELAY = "misc.autoRecoDelayMs";
 const AUTO_RECO_MIN_MS = 0;
 const AUTO_RECO_MAX_MS = 5 * 60_000;
 const AUTO_RECO_DEFAULT_MS = 60_000;
+
+// Auto-reconnect temporarily disabled at the request of the game developers.
+// Set back to false to restore the feature (UI toggle + reconnect behaviour).
+export const AUTO_RECO_TEMPORARILY_DISABLED = true;
 const PATH_KEEP_INVENTORY_SLOT_FREE = "misc.keepInventorySlotFree";
 const PATH_AUTO_STORE_SEED_SILO_ENABLED = "misc.autoStoreSeedSiloEnabled";
 const PATH_AUTO_STORE_DECOR_SHED_ENABLED = "misc.autoStoreDecorShedEnabled";
@@ -1909,6 +1913,7 @@ export const MiscService = {
   getGhostDelayMs,
   setGhostDelayMs,
   createGhostController,
+  AUTO_RECO_TEMPORARILY_DISABLED,
   readAutoRecoEnabled,
   writeAutoRecoEnabled,
   getAutoRecoDelayMs,

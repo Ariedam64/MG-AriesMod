@@ -26,6 +26,7 @@ import { MGData } from "./data/dynamic";
 import { shareGlobal } from "./utils/page-context";
 
 import { warmupSpriteCache } from "./ui/spriteIconCache";
+import { showAutoRecoDisabledNoticeOnce } from "./ui/autoRecoDisabledNotice";
 import { tos } from "./utils/tileObjectSystemApi";
 import { installEmojiDataFetchInterceptor, isDiscordActivityContext } from "./utils/discordCsp";
 
@@ -77,6 +78,9 @@ import {
   });
 
   initWatchers()
+
+  // One-time notice: auto-reconnect temporarily disabled at devs' request.
+  showAutoRecoDisabledNoticeOnce();
 
   const antiAfk = createAntiAfkController({
     getPosition: () => PlayerService.getPosition(),

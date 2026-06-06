@@ -17,6 +17,7 @@ const ARIES_STORAGE_VERSION = 1;
 const API_KEY_STORAGE_KEY = "aries_api_key";
 const AUTH_DECLINED_STORAGE_KEY = "aries_auth_declined";
 const SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice";
+const SEEN_AUTO_RECO_DISABLED_NOTICE_KEY = "aries_seen_autoreco_disabled_notice";
 
 export type AriesStorage = {
   version: number;
@@ -724,6 +725,34 @@ export function markRoomPrivacyNoticeSeen(): void {
       return;
     }
     getHostStorage()?.setItem(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+// ---------- Auto-reconnect disabled notice seen flag ----------
+
+export function hasSeenAutoRecoDisabledNotice(): boolean {
+  try {
+    if (typeof GM_getValue === "function") {
+      const raw = GM_getValue(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, null);
+      if (raw == null) return false;
+      if (typeof raw === "boolean") return raw;
+      return String(raw).trim() === "1";
+    }
+    return getHostStorage()?.getItem(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function markAutoRecoDisabledNoticeSeen(): void {
+  try {
+    if (typeof GM_setValue === "function") {
+      GM_setValue(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
+      return;
+    }
+    getHostStorage()?.setItem(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
   } catch {
     /* ignore */
   }
