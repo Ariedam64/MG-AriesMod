@@ -104,6 +104,17 @@ function tryCaptureFromKnownGlobals(): void {
   if (!state.engine && w.__QUINOA_ENGINE__) state.engine = w.__QUINOA_ENGINE__;
   if (!state.tos && w.__TILE_OBJECT_SYSTEM__) state.tos = w.__TILE_OBJECT_SYSTEM__;
   if (state.engine && !state.tos) state.tos = findTileObjectSystem(state.engine);
+  publishCapturedGlobals();
+}
+
+// Share the captured engine/TOS with other mods (Arie's Mod / Community Hub):
+// only one bind-patch capture needs to win, the others read these globals.
+function publishCapturedGlobals(): void {
+  try {
+    const w = window as any;
+    if (state.engine && !w.__QUINOA_ENGINE__) w.__QUINOA_ENGINE__ = state.engine;
+    if (state.tos && !w.__TILE_OBJECT_SYSTEM__) w.__TILE_OBJECT_SYSTEM__ = state.tos;
+  } catch {}
 }
 
 function armCapture(): void {
@@ -119,6 +130,7 @@ function armCapture(): void {
       if (!state.engine && looksLikeEngine(thisArg)) {
         state.engine = thisArg;
         state.tos = findTileObjectSystem(thisArg);
+        publishCapturedGlobals();
 
         // Restore bind ASAP (one-shot)
         Function.prototype.bind = state.origBind;
@@ -385,6 +397,7 @@ export const tos = {
   },
 
   isReady(): boolean {
+    if (!state.engine || !state.tos) tryCaptureFromKnownGlobals();
     return !!(state.engine && state.tos);
   },
 

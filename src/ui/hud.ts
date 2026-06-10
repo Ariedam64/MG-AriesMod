@@ -20,7 +20,6 @@ import {
 } from "../services/keybinds";
 import { renderOverlay } from "./menus/notificationOverlay";
 import { startInstantFeedWidget } from "../utils/instantFeedWidget";
-import { renderCommunityHub } from "./menus/communityHub";
 import { getSpriteWarmupState, onSpriteWarmupProgress } from "./spriteIconCache";
 import { setupBuyAll, startReorderObserver } from "../utils/shopUtility";
 import { startCropValuesObserverFromGardenAtom } from "../utils/cropValues";
@@ -1100,7 +1099,6 @@ export function initWatchers(){
 
     const bootToolbar = async () => {
       try { await renderOverlay(); } catch (e) { console.error("[HUD] renderOverlay failed:", e); }
-      try { await renderCommunityHub(); } catch (e) { console.error("[HUD] renderCommunityHub failed:", e); }
     };
     if (document.head) {
       bootToolbar();

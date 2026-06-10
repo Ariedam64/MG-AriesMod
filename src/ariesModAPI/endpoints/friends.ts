@@ -24,7 +24,7 @@ import {
   removeFriendFromCache,
 } from "../cache/friends";
 import { optimistic } from "../optimistic";
-import { CH_EVENTS } from "../../ui/menus/communityHub/shared";
+import { CH_EVENTS } from "../events";
 
 /**
  * Envoie une demande d'ami à un joueur (optimistic)

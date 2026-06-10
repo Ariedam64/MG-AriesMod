@@ -137,14 +137,9 @@ export function forceRestartStreams(): void {
   startAllStreams();
 }
 
-// Écouter les événements de connexion/déconnexion
-window.addEventListener("qws-friend-overlay-auth-update", () => {
-  if (hasApiKey() && !_manager.initialized) {
-    initializeStreamsWhenReady();
-  } else if (!hasApiKey() && _manager.initialized) {
-    stopAllStreams();
-  }
-});
+// NOTE: streams are no longer auto-started on "qws-friend-overlay-auth-update".
+// The standalone Community Hub userscript owns the backend streams now; this
+// module is kept for its exports but must stay passive in Arie's Mod.
 
 // Nettoyer les streams lors de la déconnexion
 window.addEventListener("beforeunload", () => {

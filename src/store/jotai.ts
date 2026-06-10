@@ -3,6 +3,7 @@
 // Safe to import once; idempotent. No toasts, no fakes, no feature logic.
 
 import { pageWindow } from "../utils/page-context";
+import { acquireSharedStore } from "./bridge";
 
 export type JotaiStore = {
   get: (atom: any) => any;
@@ -190,7 +191,16 @@ async function captureViaWriteOnce(): Promise<JotaiStore> {
   };
 }
 
-/** Ensure we have a store captured (fiber → write → polyfill). */
+const STORE_OWNER = "aries-mod";
+
+/** Raw local capture: fiber scan first, write-once fallback. */
+async function rawCapture(): Promise<JotaiStore> {
+  const viaFiber = findStoreViaFiber();
+  if (viaFiber) return viaFiber;
+  return captureViaWriteOnce();
+}
+
+/** Ensure we have a store captured (bridge → fiber → write → polyfill). */
 export async function ensureStore(): Promise<JotaiStore> {
   // If we previously only had a polyfill, allow re-attempts
   if (_store && !_store.__polyfill) return _store;
@@ -208,15 +218,12 @@ export async function ensureStore(): Promise<JotaiStore> {
 
   _captureInProgress = true;
   try {
-    const viaFiber = findStoreViaFiber();
-    if (viaFiber) {
-      _store = viaFiber;
-      return _store;
-    }
-    const viaWrite = await captureViaWriteOnce();
-    // If we ended up with a polyfill, don't "lock" it forever:
-    // keep it as a temp but allow future ensureStore() calls to retry.
-    _store = viaWrite;
+    // Route through the cross-mod bridge: if the standalone Community Hub (or
+    // any other mod speaking the protocol) already captured the store on this
+    // page, reuse it instead of running a second capture.
+    // If we ended up with a polyfill, don't "lock" it forever: the bridge
+    // releases its slot and future ensureStore() calls retry.
+    _store = await acquireSharedStore(STORE_OWNER, rawCapture);
     return _store;
   } catch (e) {
     _captureError = e;

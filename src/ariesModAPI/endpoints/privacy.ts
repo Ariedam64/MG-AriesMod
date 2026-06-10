@@ -4,7 +4,7 @@
 import { httpGet, httpPost } from "../client/http";
 import type { PlayerPrivacyPayload } from "../types";
 import { optimistic } from "../optimistic";
-import { CH_EVENTS } from "../../ui/menus/communityHub/shared";
+import { CH_EVENTS } from "../events";
 import { getCachedMyProfile, updateCachedMyProfilePrivacy } from "../cache/welcome";
 
 /**
