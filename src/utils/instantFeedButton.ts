@@ -16,6 +16,10 @@ const GLOBAL_START_FLAG = "__qws_instant_feed_btn_started";
 const INVENTORY_CARD_ATOM = "inventoryCardIsOpenAtom";
 const INSTANCE_ID = Math.random().toString(36).slice(2, 9);
 
+// Temporarily disabled at the request of the game developers.
+// Set back to false to restore instant-feed button injection.
+const INSTANT_FEED_TEMPORARILY_DISABLED = true;
+
 type ActivePetSlot = {
   id: string;
   name?: string | null;
@@ -35,6 +39,7 @@ let pinnedRoot: HTMLElement | null = null;
 
 export function startInstantFeedButton(): void {
   if (typeof document === "undefined") return;
+  if (INSTANT_FEED_TEMPORARILY_DISABLED) return;
   const win = globalThis as any;
   if (win[GLOBAL_START_FLAG]) return;
   win[GLOBAL_START_FLAG] = true;

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.1.515
+// @version      3.1.516
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -30263,6 +30263,7 @@
   var GLOBAL_START_FLAG = "__qws_instant_feed_btn_started";
   var INVENTORY_CARD_ATOM = "inventoryCardIsOpenAtom";
   var INSTANCE_ID = Math.random().toString(36).slice(2, 9);
+  var INSTANT_FEED_TEMPORARILY_DISABLED = true;
   var started2 = false;
   var activePets = [];
   var allowInject = true;
@@ -30274,6 +30275,7 @@
   var pinnedRoot = null;
   function startInstantFeedButton() {
     if (typeof document === "undefined") return;
+    if (INSTANT_FEED_TEMPORARILY_DISABLED) return;
     const win = globalThis;
     if (win[GLOBAL_START_FLAG]) return;
     win[GLOBAL_START_FLAG] = true;
