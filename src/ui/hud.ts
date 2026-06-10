@@ -19,7 +19,7 @@ import {
   type KeybindId,
 } from "../services/keybinds";
 import { renderOverlay } from "./menus/notificationOverlay";
-import { startInstantFeedButton } from "../utils/instantFeedButton";
+import { startInstantFeedWidget } from "../utils/instantFeedWidget";
 import { renderCommunityHub } from "./menus/communityHub";
 import { getSpriteWarmupState, onSpriteWarmupProgress } from "./spriteIconCache";
 import { setupBuyAll, startReorderObserver } from "../utils/shopUtility";
@@ -847,6 +847,27 @@ export function mountHUD(opts?: HUDOptions) {
   // Permet au code appelant d’enregistrer ses fenêtres (la liste est affichée en permanence)
   try { opts?.onRegister?.(register); } catch {}
 
+  // Ouvre une fenêtre enregistrée depuis n'importe où (ex: widget instant feed)
+  window.addEventListener("qws:open-panel", (ev: Event) => {
+    const id = String((ev as CustomEvent).detail?.id || "");
+    if (!id) return;
+    const entry = registry.find((r) => r.id === id);
+    if (!entry) return;
+    const w = windows.get(id);
+    if (w) {
+      w.el.style.display = "";
+      bumpZ(w.el);
+      ensureOnScreen(w.el);
+      setLaunchState(id, true);
+      return;
+    }
+    openWindow(id, entry.title, (root) => {
+      const el = root.closest(".qws-win") as HTMLElement;
+      if (el) restoreWinPos(id, el);
+      entry.render(root);
+    });
+  });
+
   // Protéger le HUD principal
   patchInputsKeyTrap(box);
 
@@ -1111,7 +1132,7 @@ export function initWatchers(){
       startDecorPickupLockIndicator();
       startEggHatchLockIndicator();
       startInjectSellAllPets();
-      startInstantFeedButton();
+      startInstantFeedWidget();
       startSelectedInventoryQuantityLogger();
       startInventorySortingObserver();
       startModalObserver({ intervalMs: 60_000, log: true });

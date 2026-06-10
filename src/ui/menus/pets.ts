@@ -11,8 +11,12 @@ import type { PetTeam } from "../../services/pets";
 import { onActivePetsStructuralChangeNow } from "../../store/atoms";
 import { attachSpriteIcon } from "../spriteIconCache";
 import { rarityBadge } from "./notifier";
-import { petCatalog, plantCatalog } from "../../data/hardcoded-data.clean";
+import { petCatalog, plantCatalog } from "../../data";
 import { getPetStrength, getPetMaxStrength } from "../../utils/petCalcul";
+import {
+  isInstantFeedWidgetEnabled,
+  setInstantFeedWidgetEnabled,
+} from "../../utils/instantFeedWidget";
 
 /* ================== petits helpers UI (mêmes vibes que garden) ================== */
 
@@ -1514,6 +1518,25 @@ function renderFeedingTab(view: HTMLElement, ui: Menu) {
   subtitle.style.fontSize = "12px";
   header.appendChild(subtitle);
 
+  const widgetRow = document.createElement("label");
+  widgetRow.style.display = "flex";
+  widgetRow.style.alignItems = "center";
+  widgetRow.style.gap = "8px";
+  widgetRow.style.marginTop = "6px";
+  widgetRow.style.cursor = "pointer";
+
+  const widgetSwitch = ui.switch(isInstantFeedWidgetEnabled()) as HTMLInputElement;
+  widgetSwitch.addEventListener("change", () => {
+    setInstantFeedWidgetEnabled(widgetSwitch.checked);
+  });
+
+  const widgetLabel = document.createElement("span");
+  widgetLabel.textContent = "Show floating Instant Feed widget";
+  widgetLabel.style.fontSize = "13px";
+
+  widgetRow.append(widgetSwitch, widgetLabel);
+  header.appendChild(widgetRow);
+
   const body = document.createElement("div");
   body.style.display = "flex";
   body.style.flexDirection = "column";
@@ -1977,6 +2000,8 @@ function renderLogsTab(view: HTMLElement, ui: Menu) {
 }
 
 /* ================== Entrée ================== */
+let detachPetsOpenTabListener: (() => void) | null = null;
+
 export function renderPetsMenu(root: HTMLElement) {
   const ui = new Menu({ id: "pets", compact: true, windowSelector: ".qws-win" });
   ui.mount(root);
@@ -1984,4 +2009,13 @@ export function renderPetsMenu(root: HTMLElement) {
   ui.addTab("manager", "🧰 Manager", (view) => renderManagerTab(view, ui));
   ui.addTab("feeding", "🍖 Feeding", (view) => renderFeedingTab(view, ui));
   ui.addTab("logs", "📝 Logs", (view) => renderLogsTab(view, ui));
+
+  const knownTabs = new Set(["manager", "feeding", "logs"]);
+  const onOpenTab = (ev: Event) => {
+    const tab = String((ev as CustomEvent).detail?.tab || "");
+    if (knownTabs.has(tab)) ui.switchTo(tab);
+  };
+  detachPetsOpenTabListener?.();
+  window.addEventListener("qws:pets-open-tab", onOpenTab);
+  detachPetsOpenTabListener = () => window.removeEventListener("qws:pets-open-tab", onOpenTab);
 }

@@ -31,6 +31,10 @@ export type AriesStorage = {
     hotkeys?: Record<string, string>;
     alerts?: unknown;
     abilityLogs?: unknown;
+    instantFeedWidget?: {
+      enabled?: boolean;
+      pos?: { left: number; top: number };
+    };
   };
   room?: { customRooms?: unknown };
   locker?: { restrictions?: unknown; state?: unknown };

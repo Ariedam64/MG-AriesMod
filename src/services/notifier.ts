@@ -129,6 +129,8 @@ const DISPLAY_RARITY: Record<string, string> = {
   [rarityMap.Rare]: "Rare",
   [rarityMap.Legendary]: "Legendary",
   [rarityMap.Mythic]: "Mythical",
+  // MGData's API returns "Mythic" while rarityMap.Mythic is "Mythical".
+  Mythic: "Mythical",
   [rarityMap.Divine]: "Divine",
   [rarityMap.Celestial]: "Celestial",
 };

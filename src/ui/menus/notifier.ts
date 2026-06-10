@@ -197,7 +197,8 @@ export function rarityBadge(raw: string) {
   const rarity = String(raw || "").trim();
   const key = (() => {
     const k = rarity.toLowerCase();
-    if (k === "mythical") return "Mythical";
+    // MGData's API returns "Mythic" while the hardcoded catalog uses "Mythical".
+    if (k === "mythic" || k === "mythical") return "Mythical";
     if (k === "celestial") return "Celestial";
     if (k === "divine") return "Divine";
     if (k === "legendary") return "Legendary";
