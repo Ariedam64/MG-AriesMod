@@ -17,6 +17,7 @@ import {
   isInstantFeedWidgetEnabled,
   setInstantFeedWidgetEnabled,
 } from "../../utils/instantFeedWidget";
+import { renderHatchTab } from "./petsHatch";
 
 /* ================== petits helpers UI (mêmes vibes que garden) ================== */
 
@@ -2008,9 +2009,10 @@ export function renderPetsMenu(root: HTMLElement) {
 
   ui.addTab("manager", "🧰 Manager", (view) => renderManagerTab(view, ui));
   ui.addTab("feeding", "🍖 Feeding", (view) => renderFeedingTab(view, ui));
+  ui.addTab("hatch", "🥚 Hatch", (view) => renderHatchTab(view, ui));
   ui.addTab("logs", "📝 Logs", (view) => renderLogsTab(view, ui));
 
-  const knownTabs = new Set(["manager", "feeding", "logs"]);
+  const knownTabs = new Set(["manager", "feeding", "hatch", "logs"]);
   const onOpenTab = (ev: Event) => {
     const tab = String((ev as CustomEvent).detail?.tab || "");
     if (knownTabs.has(tab)) ui.switchTo(tab);

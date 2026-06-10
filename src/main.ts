@@ -6,7 +6,6 @@ import { mountHUD, initWatchers } from "./ui/hud";
 import { renderDebugDataMenu } from "./ui/menus/debug-data";
 import { renderLockerMenu } from "./ui/menus/locker";
 import { renderCalculatorMenu } from "./ui/menus/calculator";
-import { renderStatsMenu } from "./ui/menus/stats";
 import { renderPetsMenu } from "./ui/menus/pets";
 import { renderMiscMenu } from "./ui/menus/misc";
 import { renderSettingsMenu } from "./ui/menus/settings";
@@ -68,7 +67,6 @@ import {
       register('calculator', '🤓 Calculator', renderCalculatorMenu);
       register('room', '🏠 Room', renderRoomMenu);
       register('editor', '📝 Editor', renderEditorMenu);
-      register('stats', '📊 Stats', renderStatsMenu);
       register('misc', '🧩 Misc', renderMiscMenu);
       register('keybinds', '⌨️ Keybinds', renderKeybindsMenu);
       register('tools', '🛠️ Tools', renderToolsMenu);
