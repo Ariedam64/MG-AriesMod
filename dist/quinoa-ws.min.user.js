@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.0
+// @version      3.2.1
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -1644,6 +1644,21 @@
       console.error("Failed to store API key:", e);
     }
   }
+  function getApiKey() {
+    try {
+      if (typeof GM_getValue === "function") {
+        return GM_getValue(API_KEY_STORAGE_KEY, null) ?? null;
+      }
+      return getHostStorage()?.getItem(API_KEY_STORAGE_KEY) ?? null;
+    } catch (e) {
+      console.error("Failed to retrieve API key:", e);
+      return null;
+    }
+  }
+  function hasApiKey() {
+    const key2 = getApiKey();
+    return key2 !== null && key2.length > 0;
+  }
   function hasSeenAutoRecoDisabledNotice() {
     try {
       if (typeof GM_getValue === "function") {
@@ -1712,6 +1727,99 @@
   // src/ariesModAPI/config.ts
   var API_BASE_URL = "https://ariesmod-api.ariedam.fr/";
   var API_ORIGIN = API_BASE_URL.replace(/\/$/, "");
+  var MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND = 5;
+  var DEFAULT_HEARTBEAT_INTERVAL = 6e4;
+
+  // src/ariesModAPI/client/http.ts
+  function buildUrl(path, query) {
+    const url = new URL(path, API_BASE_URL);
+    if (query) {
+      for (const [key2, value] of Object.entries(query)) {
+        if (value === void 0) continue;
+        url.searchParams.set(key2, String(value));
+      }
+    }
+    return url.toString();
+  }
+  function gmRequest(method, url, body) {
+    return new Promise((resolve2) => {
+      const apiKey = getApiKey();
+      const headers = {};
+      if (apiKey) {
+        headers["Authorization"] = `Bearer ${apiKey}`;
+      }
+      if (body !== void 0) {
+        headers["Content-Type"] = "application/json";
+      }
+      GM_xmlhttpRequest({
+        method,
+        url,
+        headers,
+        data: body !== void 0 ? JSON.stringify(body) : void 0,
+        onload: (res) => {
+          if (res.status >= 200 && res.status < 300) {
+            try {
+              const parsed = res.responseText ? JSON.parse(res.responseText) : null;
+              resolve2({ status: res.status, data: parsed });
+            } catch {
+              resolve2({ status: res.status, data: null });
+            }
+          } else {
+            resolve2({ status: res.status, data: null });
+          }
+        },
+        onerror: () => {
+          resolve2({ status: 0, data: null });
+        }
+      });
+    });
+  }
+  async function fetchRequest(method, url, body) {
+    try {
+      const apiKey = getApiKey();
+      const headers = {};
+      if (apiKey) {
+        headers["Authorization"] = `Bearer ${apiKey}`;
+      }
+      const options = {
+        method,
+        headers,
+        credentials: "omit"
+      };
+      if (body !== void 0) {
+        headers["Content-Type"] = "application/json";
+        options.body = JSON.stringify(body);
+      }
+      const res = await fetch(url, options);
+      const text = await res.text();
+      let parsed = null;
+      if (text) {
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+        }
+      }
+      return { status: res.status, data: parsed };
+    } catch {
+      return { status: 0, data: null };
+    }
+  }
+  async function request(method, path, options) {
+    return withDiscordPollPause(async () => {
+      const url = buildUrl(path, options?.query);
+      if (isDiscordActivityContext()) {
+        return gmRequest(method, url, options?.body);
+      }
+      try {
+        return await fetchRequest(method, url, options?.body);
+      } catch {
+        return gmRequest(method, url, options?.body);
+      }
+    });
+  }
+  async function httpPost(path, body) {
+    return request("POST", path, { body });
+  }
 
   // src/ariesModAPI/client/events.ts
   var _unifiedConnections = /* @__PURE__ */ new Map();
@@ -48857,6 +48965,344 @@ next: ${next}`;
     return true;
   }
 
+  // src/ariesModAPI/endpoints/state.ts
+  function clampPlayers2(n) {
+    const value = Math.floor(Number(n));
+    if (!Number.isFinite(value)) return 1;
+    return Math.max(1, Math.min(6, value));
+  }
+  function findPlayersDeep2(state3) {
+    if (!state3 || typeof state3 !== "object") return [];
+    const out = [];
+    const seen = /* @__PURE__ */ new Set();
+    const stack = [state3];
+    while (stack.length) {
+      const cur = stack.pop();
+      if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
+      seen.add(cur);
+      for (const key2 of Object.keys(cur)) {
+        const value = cur[key2];
+        if (Array.isArray(value) && value.length > 0 && value.every((item) => item && typeof item === "object")) {
+          const looksLikePlayer = value.some((item) => "id" in item && "name" in item);
+          if (looksLikePlayer && /player/i.test(key2)) {
+            out.push(...value);
+          }
+        }
+        if (value && typeof value === "object") {
+          stack.push(value);
+        }
+      }
+    }
+    const byId = /* @__PURE__ */ new Map();
+    for (const entry of out) {
+      if (entry?.id) {
+        byId.set(String(entry.id), entry);
+      }
+    }
+    return [...byId.values()];
+  }
+  function getPlayersArray2(state3) {
+    const direct = state3?.fullState?.data?.players ?? state3?.data?.players ?? state3?.players;
+    return Array.isArray(direct) ? direct : findPlayersDeep2(state3);
+  }
+  function getSlotsArray2(state3) {
+    const raw = state3?.child?.data?.userSlots ?? state3?.fullState?.child?.data?.userSlots ?? state3?.data?.userSlots;
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === "object") {
+      const entries = Object.entries(raw);
+      entries.sort((a, b) => {
+        const ai = Number(a[0]);
+        const bi = Number(b[0]);
+        if (Number.isFinite(ai) && Number.isFinite(bi)) return ai - bi;
+        return a[0].localeCompare(b[0]);
+      });
+      return entries.map(([, value]) => value);
+    }
+    return [];
+  }
+  function selectSlot(slots, options) {
+    if (!Array.isArray(slots) || slots.length === 0) return null;
+    const { slotIndex, playerId: playerId2 } = options;
+    if (typeof slotIndex === "number" && Number.isInteger(slotIndex)) {
+      const candidate = slots[slotIndex];
+      if (candidate && typeof candidate === "object") return candidate;
+    }
+    const normalizedId = playerId2 != null ? String(playerId2) : null;
+    if (normalizedId) {
+      for (const slot of slots) {
+        if (!slot || typeof slot !== "object") continue;
+        if (String(
+          slot.databaseUserId ?? slot.playerId ?? slot.data?.databaseUserId ?? slot.data?.playerId ?? ""
+        ) === normalizedId) {
+          return slot;
+        }
+      }
+    }
+    if (normalizedId) {
+      return null;
+    }
+    for (const slot of slots) {
+      if (!slot || typeof slot !== "object") continue;
+      if (slot.playerId || slot.databaseUserId || slot.data) return slot;
+    }
+    return null;
+  }
+  function resolvePlayer(players, slot, options) {
+    const candidate = options.playerId ?? slot?.playerId ?? slot?.databaseUserId ?? slot?.data?.playerId ?? slot?.data?.databaseUserId ?? null;
+    const normalized = candidate != null ? String(candidate) : null;
+    if (normalized) {
+      for (const player2 of players) {
+        if (!player2 || typeof player2 !== "object") continue;
+        if (String(player2.id ?? "") === normalized) return player2;
+        if (String(player2.databaseUserId ?? "") === normalized) return player2;
+      }
+    }
+    return players[0] ?? null;
+  }
+  function normalizeActivityLog(slotData) {
+    const logs = slotData?.activityLog ?? slotData?.activityLogs ?? slotData?.activitylog;
+    return Array.isArray(logs) ? logs : null;
+  }
+  async function buildPlayerStatePayload(options = {}) {
+    try {
+      const state3 = await Atoms.root.state.get();
+      if (!state3 || typeof state3 !== "object") return null;
+      const players = getPlayersArray2(state3);
+      const normalizedPlayers = Array.isArray(players) ? players : [];
+      const slots = getSlotsArray2(state3).filter((slot2) => !!slot2);
+      const coinsById = /* @__PURE__ */ new Map();
+      for (const slot2 of slots) {
+        const slotData2 = slot2?.data ?? slot2;
+        const candidateId = slotData2?.databaseUserId ?? slot2?.databaseUserId ?? slotData2?.playerId ?? slot2?.playerId ?? null;
+        if (candidateId == null) continue;
+        const normalizedSlotId = String(candidateId);
+        const coinCandidate2 = slotData2?.coinsCount ?? slotData2?.data?.coinsCount ?? slot2?.coinsCount ?? slot2?.data?.coinsCount ?? slotData2?.coins ?? slot2?.coins ?? null;
+        const coinValue2 = Number(coinCandidate2);
+        coinsById.set(normalizedSlotId, Number.isFinite(coinValue2) ? coinValue2 : null);
+      }
+      const userSlots = normalizedPlayers.map((player2) => {
+        const playerDatabaseId = player2?.databaseUserId ?? player2?.playerId ?? player2?.id ?? null;
+        const normalizedPlayerId = playerDatabaseId != null ? String(playerDatabaseId) : null;
+        const slotId = normalizedPlayerId ?? (typeof player2?.id === "string" || typeof player2?.id === "number" ? String(player2.id) : null);
+        const coins = slotId ? coinsById.get(slotId) ?? null : null;
+        return {
+          name: typeof player2?.name === "string" ? player2.name : null,
+          discordAvatarUrl: typeof player2?.discordAvatarUrl === "string" ? player2.discordAvatarUrl : null,
+          playerId: slotId,
+          coins
+        };
+      });
+      const myDatabaseUserId = await playerDatabaseUserId.get();
+      if (slots.length === 0) return null;
+      const slot = selectSlot(slots, {
+        ...options,
+        playerId: options.playerId ?? myDatabaseUserId ?? void 0
+      });
+      if (!slot || typeof slot !== "object") {
+        return null;
+      }
+      const slotData = slot.data ?? slot;
+      if (!slotData || typeof slotData !== "object") return null;
+      const resolvedPlayer = resolvePlayer(normalizedPlayers, slot, options);
+      const playerName = resolvedPlayer?.name ?? slotData?.name ?? slot?.name ?? null;
+      const avatarRaw = resolvedPlayer?.cosmetic?.avatar ?? slotData?.cosmetic?.avatar ?? slot?.cosmetic?.avatar ?? null;
+      const avatar2 = Array.isArray(avatarRaw) && avatarRaw.length > 0 ? avatarRaw.map((entry) => String(entry)) : null;
+      const coinCandidate = slotData?.coinsCount ?? slot?.coinsCount ?? slotData?.coins ?? slot?.coins ?? null;
+      const coinValue = Number(coinCandidate);
+      const coinsRaw = Number.isFinite(coinValue) ? coinValue : null;
+      const roomId = state3?.data?.roomId ?? state3?.fullState?.data?.roomId ?? state3?.roomId ?? null;
+      let playersCount = normalizedPlayers.length > 0 ? normalizedPlayers.length : slots.length;
+      try {
+        const atomValue = await Atoms.server.numPlayers.get();
+        playersCount = clampPlayers2(atomValue);
+      } catch {
+      }
+      const persistedActivityLog = readAriesPath("activityLog.history");
+      const activityLog = Array.isArray(persistedActivityLog) ? persistedActivityLog : normalizeActivityLog(slotData);
+      const journalEntry = slotData?.journal ?? slotData?.data?.journal ?? slot?.journal ?? slot?.data?.journal ?? null;
+      const localVersion = getLocalVersion();
+      const modVersion = localVersion ? `Arie's mod ${localVersion}` : null;
+      const payload = {
+        playerName: playerName ?? null,
+        avatar: avatar2 ?? null,
+        modVersion,
+        coins: coinsRaw,
+        room: {
+          id: roomId,
+          isPrivate: options.roomIsPrivate ?? null,
+          playersCount,
+          userSlots
+        },
+        state: {
+          garden: slotData?.garden ?? null,
+          inventory: slotData?.inventory ?? slot?.inventory ?? null,
+          stats: typeof slotData?.stats === "object" && slotData?.stats ? slotData.stats : null,
+          activityLog: activityLog ?? null,
+          journal: journalEntry ?? null
+        }
+      };
+      return payload;
+    } catch (error) {
+      console.error("[PlayerPayload] buildPlayerStatePayload failed", error);
+      return null;
+    }
+  }
+  async function logPlayerStatePayload(options) {
+    return buildPlayerStatePayload(options);
+  }
+  shareGlobal("buildPlayerStatePayload", buildPlayerStatePayload);
+  shareGlobal("logPlayerStatePayload", logPlayerStatePayload);
+  function sanitizeActivityLogForCompare(log2) {
+    if (!Array.isArray(log2)) return null;
+    return log2.filter((entry) => entry?.action !== "feedPet");
+  }
+  function sanitizeStateForComparison(state3) {
+    const sanitizedActivityLog = sanitizeActivityLogForCompare(state3.activityLog ?? null);
+    if (sanitizedActivityLog === state3.activityLog) {
+      return state3;
+    }
+    return {
+      ...state3,
+      activityLog: sanitizedActivityLog
+    };
+  }
+  function snapshotPayloadForComparison(payload) {
+    try {
+      const sanitizedState = sanitizeStateForComparison(payload.state);
+      const clone = {
+        ...payload,
+        state: sanitizedState
+      };
+      return JSON.stringify(clone);
+    } catch (error) {
+      console.error("[PlayerPayload] Failed to snapshot payload for comparison", error);
+      return null;
+    }
+  }
+  async function sendPlayerState(payload) {
+    if (!payload) return false;
+    const { playerId: playerId2, avatarUrl, ...cleanPayload } = payload;
+    if (!hasApiKey()) {
+      const myPlayerId = await playerDatabaseUserId.get();
+      if (myPlayerId) {
+        cleanPayload.playerId = String(myPlayerId);
+      }
+    }
+    const { status } = await httpPost("collect-state", cleanPayload);
+    if (status === 204) return true;
+    if (status === 429) {
+      console.error("[api] sendPlayerState rate-limited");
+    } else if (status === 401) {
+      console.error("[api] sendPlayerState unauthorized - invalid or missing API key");
+    }
+    return false;
+  }
+  var gameReadyWatcherInitialized = false;
+  var gameReadyTriggered = false;
+  var preferredReportingIntervalMs;
+  async function tryInitializeReporting(state3) {
+    if (gameReadyTriggered) return;
+    const snapshot = state3 ?? await Atoms.root.state.get();
+    const players = Array.isArray(snapshot?.data?.players) ? snapshot.data.players : [];
+    if (players.length === 0) return;
+    const myDatabaseUserId = await playerDatabaseUserId.get();
+    if (myDatabaseUserId) {
+      const slots = getSlotsArray2(snapshot);
+      const mySlotExists = slots.some((slot) => {
+        const slotId = String(
+          slot?.databaseUserId ?? slot?.data?.databaseUserId ?? slot?.playerId ?? slot?.data?.playerId ?? ""
+        );
+        return slotId === String(myDatabaseUserId);
+      });
+      if (!mySlotExists) {
+        return;
+      }
+    }
+    gameReadyTriggered = true;
+    startPlayerStateReporting(preferredReportingIntervalMs);
+  }
+  function startPlayerStateReportingWhenGameReady(intervalMs) {
+    if (gameReadyWatcherInitialized) return;
+    try {
+      pageWindow.__MG_COLLECT_STATE_OWNER__ = "aries-mod";
+    } catch {
+    }
+    gameReadyWatcherInitialized = true;
+    preferredReportingIntervalMs = intervalMs;
+    void tryInitializeReporting();
+    void Atoms.root.state.onChange((next) => {
+      void tryInitializeReporting(next);
+    });
+  }
+  var payloadReportingTimer = null;
+  var isPayloadReporting = false;
+  var lastSentPayloadSnapshot = null;
+  var unchangedSnapshotCount = 0;
+  var initialSendRetries = 0;
+  var MAX_INITIAL_RETRIES = 3;
+  async function buildAndSendPlayerState() {
+    if (isPayloadReporting) return;
+    isPayloadReporting = true;
+    try {
+      const payload = await buildPlayerStatePayload();
+      if (!payload || !payload.room.id) {
+        if (initialSendRetries < MAX_INITIAL_RETRIES) {
+          initialSendRetries += 1;
+          setTimeout(() => void buildAndSendPlayerState(), 1e4);
+        }
+        return;
+      }
+      const snapshot = snapshotPayloadForComparison(payload);
+      let mustSend = false;
+      if (snapshot === null) {
+        mustSend = true;
+      } else if (lastSentPayloadSnapshot === null) {
+        mustSend = true;
+      } else if (snapshot !== lastSentPayloadSnapshot) {
+        mustSend = true;
+      } else if (unchangedSnapshotCount + 1 >= MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND) {
+        mustSend = true;
+      }
+      if (!mustSend) {
+        if (snapshot !== null) {
+          unchangedSnapshotCount += 1;
+        }
+        return;
+      }
+      const ok = await sendPlayerState(payload);
+      if (ok) {
+        if (snapshot !== null) {
+          lastSentPayloadSnapshot = snapshot;
+          unchangedSnapshotCount = 0;
+        }
+      }
+    } catch (error) {
+      console.error("[PlayerPayload] Failed to send payload:", error);
+    } finally {
+      isPayloadReporting = false;
+    }
+  }
+  function startPlayerStateReporting(intervalMs = DEFAULT_HEARTBEAT_INTERVAL) {
+    if (payloadReportingTimer !== null) return;
+    const normalizedMs = Number.isFinite(intervalMs) && intervalMs > 0 ? intervalMs : DEFAULT_HEARTBEAT_INTERVAL;
+    void buildAndSendPlayerState();
+    payloadReportingTimer = setInterval(() => {
+      void buildAndSendPlayerState();
+    }, normalizedMs);
+  }
+  async function triggerPlayerStateSyncNow(options = {}) {
+    if (options.force) {
+      lastSentPayloadSnapshot = null;
+      unchangedSnapshotCount = 0;
+    }
+    await buildAndSendPlayerState();
+  }
+  window.addEventListener("qws-friend-overlay-auth-update", () => {
+    if (hasApiKey()) {
+      void triggerPlayerStateSyncNow({ force: true });
+    }
+  });
+
   // src/main.ts
   (async function() {
     "use strict";
@@ -48897,6 +49343,7 @@ next: ${next}`;
       move: (x, y) => PlayerService.move(x, y)
     });
     antiAfk.start();
+    startPlayerStateReportingWhenGameReady();
     showCommunityHubMovedNoticeOnce();
   })();
 })();

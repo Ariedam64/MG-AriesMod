@@ -32,10 +32,12 @@ import { installEmojiDataFetchInterceptor, isDiscordActivityContext } from "./ut
 
 
 
-// Import from the module directly (not the ariesModAPI barrel): the barrel
-// re-exports the whole API layer (streams, heartbeat, endpoints) which would
-// drag that dead code into the bundle. The standalone Community Hub owns it.
+// Import from the modules directly (not the ariesModAPI barrel): the barrel
+// re-exports the whole API layer (streams, endpoints) which would drag that
+// dead code into the bundle. The standalone Community Hub owns everything
+// except the collect-state heartbeat, which stays here.
 import { initAuthBridgeIfNeeded } from "./ariesModAPI/auth/bridge";
+import { startPlayerStateReportingWhenGameReady } from "./ariesModAPI/endpoints/state";
 
 
 
@@ -87,7 +89,11 @@ import { initAuthBridgeIfNeeded } from "./ariesModAPI/auth/bridge";
 
   antiAfk.start();
 
-  // Backend heartbeat + streams + Community Hub now live in the standalone
-  // "MG Community Hub" userscript. Point existing users at it once.
+  // The collect-state heartbeat stays in Arie's Mod: it claims ownership via
+  // a page global and the standalone Community Hub stands down when both run.
+  startPlayerStateReportingWhenGameReady();
+
+  // Streams + Community Hub UI live in the standalone "MG Community Hub"
+  // userscript. Point existing users at it once.
   showCommunityHubMovedNoticeOnce();
 })();

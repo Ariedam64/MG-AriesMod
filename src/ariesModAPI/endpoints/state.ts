@@ -3,7 +3,7 @@
 
 import { Atoms, playerDatabaseUserId } from "../../store/atoms";
 import type { GardenState } from "../../store/atoms";
-import { shareGlobal } from "../../utils/page-context";
+import { shareGlobal, pageWindow } from "../../utils/page-context";
 import { readAriesPath, hasApiKey } from "../../utils/localStorage";
 import { getLocalVersion } from "../../utils/version";
 import { httpPost } from "../client/http";
@@ -461,6 +461,13 @@ async function tryInitializeReporting(state?: any): Promise<void> {
 export function startPlayerStateReportingWhenGameReady(intervalMs?: number): void {
   if (gameReadyWatcherInitialized) return;
 
+  // Claim the collect-state heartbeat. The standalone Community Hub checks
+  // this page global (at startup and on every tick) and stands down, so when
+  // both mods run only Arie's Mod reports.
+  try {
+    (pageWindow as unknown as Record<string, unknown>).__MG_COLLECT_STATE_OWNER__ = "aries-mod";
+  } catch {}
+
   gameReadyWatcherInitialized = true;
   preferredReportingIntervalMs = intervalMs;
   void tryInitializeReporting();
@@ -558,6 +565,11 @@ export async function triggerPlayerStateSyncNow(
   await buildAndSendPlayerState();
 }
 
-// NOTE: no auth-update listener here anymore. State reporting (collect-state
-// heartbeat) is owned by the standalone Community Hub userscript; reacting to
-// "qws-friend-overlay-auth-update" from this bundle would double-send.
+// Force an immediate re-sync when auth is gained (e.g. the user authenticates
+// through the Community Hub) so the next send includes the auth token. Safe:
+// Arie's Mod owns the heartbeat (see startPlayerStateReportingWhenGameReady).
+window.addEventListener("qws-friend-overlay-auth-update", () => {
+  if (hasApiKey()) {
+    void triggerPlayerStateSyncNow({ force: true });
+  }
+});
