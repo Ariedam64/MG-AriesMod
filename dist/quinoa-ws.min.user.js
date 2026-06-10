@@ -23459,7 +23459,9 @@
     "SnowyCropMutationBoost",
     "PetMutationBoost",
     "PetMutationBoostII",
-    "PetMutationBoostIII"
+    "PetMutationBoostIII",
+    // Passive chance boost; the game itself never logs it (returns nothing).
+    "DawnbinderBoost"
   ]);
   var TEAM_HK_MAP = /* @__PURE__ */ new Map();
   var TEAM_HK_UNSUBS = /* @__PURE__ */ new Map();
@@ -24583,7 +24585,8 @@
         case "CoinFinderI":
         case "CoinFinderII":
         case "CoinFinderIII":
-        case "SnowyCoinFinder": {
+        case "SnowyCoinFinder":
+        case "DawnCoinFinder": {
           const value = data["coinsFound"] ?? data["coins"] ?? 0;
           return num(value);
         }
@@ -24617,9 +24620,15 @@
         }
         case "PetXpBoost":
         case "SnowyPetXpBoost":
-        case "PetXpBoostII": {
+        case "PetXpBoostII":
+        case "PetXpBoostIII":
+        case "DawnXpBoost": {
           const xp = data["bonusXp"] ?? base["bonusXp"] ?? 0;
           return num(xp);
+        }
+        case "DawnCapture": {
+          const value = data["capsulesAdded"] ?? 0;
+          return num(value);
         }
         case "PetAgeBoost":
         case "PetAgeBoostII": {
@@ -24909,7 +24918,8 @@
           case "CoinFinderI":
           case "CoinFinderII":
           case "CoinFinderIII":
-          case "SnowyCoinFinder": {
+          case "SnowyCoinFinder":
+          case "DawnCoinFinder": {
             const coins = d["coinsFound"] ?? d["coins"] ?? base["baseMaxCoinsFindable"];
             return coins != null ? `+ ${fmtInt(coins)} coins` : "Coins found";
           }
@@ -25017,9 +25027,11 @@
           case "PetXpBoost":
           case "SnowyPetXpBoost":
           case "PetXpBoostII":
-          case "PetXpBoostIII": {
+          case "PetXpBoostIII":
+          case "DawnXpBoost": {
             const xp = d["bonusXp"] ?? base["bonusXp"];
-            return `+ ${fmtInt(xp)} XP`;
+            const affected = Array.isArray(d["petsAffected"]) ? d["petsAffected"].length : 0;
+            return affected > 1 ? `+ ${fmtInt(xp)} XP (${affected} pets)` : `+ ${fmtInt(xp)} XP`;
           }
           case "PetAgeBoost":
           case "PetAgeBoostII":
@@ -25050,6 +25062,16 @@
           }
           case "Copycat":
             return "Copied another ability";
+          case "DawnCapture": {
+            const capsules = d["capsulesAdded"];
+            const dawnlit = Number(d["dawnlitRemoved"]) || 0;
+            const dawncharged = Number(d["dawnboundRemoved"]) || 0;
+            const absorbed = [];
+            if (dawnlit > 0) absorbed.push(`${fmtInt(dawnlit)} Dawnlit`);
+            if (dawncharged > 0) absorbed.push(`${fmtInt(dawncharged)} Dawncharged`);
+            const head = capsules != null ? `+ ${fmtInt(capsules)} Dawn Capsule${Number(capsules) === 1 ? "" : "s"}` : "Dawn Capsules added";
+            return absorbed.length ? `${head} (${absorbed.join(", ")} absorbed)` : head;
+          }
           case "MoonKisser":
             return "Amber mutations empowered";
           case "DawnKisser":

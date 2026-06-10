@@ -96,6 +96,8 @@ const WEATHER_MUTATION_BOOST_IDS = new Set([
   "PetMutationBoost",
   "PetMutationBoostII",
   "PetMutationBoostIII",
+  // Passive chance boost; the game itself never logs it (returns nothing).
+  "DawnbinderBoost",
 ]);
 
 /* -------------------------------- HOTKEYS ----------------------------------- */
@@ -1335,7 +1337,8 @@ export const PetsService = {
       case "CoinFinderI":
       case "CoinFinderII":
       case "CoinFinderIII":
-      case "SnowyCoinFinder": {
+      case "SnowyCoinFinder":
+      case "DawnCoinFinder": {
         const value = data["coinsFound"] ?? data["coins"] ?? 0;
         return num(value);
       }
@@ -1389,9 +1392,16 @@ export const PetsService = {
 
       case "PetXpBoost":
       case "SnowyPetXpBoost":
-      case "PetXpBoostII": {
+      case "PetXpBoostII":
+      case "PetXpBoostIII":
+      case "DawnXpBoost": {
         const xp = data["bonusXp"] ?? base["bonusXp"] ?? 0;
         return num(xp);
+      }
+
+      case "DawnCapture": {
+        const value = data["capsulesAdded"] ?? 0;
+        return num(value);
       }
 
       case "PetAgeBoost":
@@ -1704,7 +1714,8 @@ export const PetsService = {
         case "CoinFinderI":
         case "CoinFinderII":
         case "CoinFinderIII":
-        case "SnowyCoinFinder": {
+        case "SnowyCoinFinder":
+        case "DawnCoinFinder": {
           const coins = d["coinsFound"] ?? d["coins"] ?? base["baseMaxCoinsFindable"];
           return coins != null ? `+ ${fmtInt(coins)} coins` : "Coins found";
         }
@@ -1835,9 +1846,11 @@ export const PetsService = {
         case "PetXpBoost":
         case "SnowyPetXpBoost":
         case "PetXpBoostII":
-        case "PetXpBoostIII": {
+        case "PetXpBoostIII":
+        case "DawnXpBoost": {
           const xp = d["bonusXp"] ?? base["bonusXp"];
-          return `+ ${fmtInt(xp)} XP`;
+          const affected = Array.isArray(d["petsAffected"]) ? (d["petsAffected"] as unknown[]).length : 0;
+          return affected > 1 ? `+ ${fmtInt(xp)} XP (${affected} pets)` : `+ ${fmtInt(xp)} XP`;
         }
         case "PetAgeBoost":
         case "PetAgeBoostII":
@@ -1871,6 +1884,21 @@ export const PetsService = {
 
         case "Copycat":
           return "Copied another ability";
+
+        case "DawnCapture": {
+          // data: { dawnlitRemoved, dawnboundRemoved, capsulesAdded } — the
+          // dawnbound count is displayed as Dawncharged by the game.
+          const capsules = d["capsulesAdded"];
+          const dawnlit = Number(d["dawnlitRemoved"]) || 0;
+          const dawncharged = Number(d["dawnboundRemoved"]) || 0;
+          const absorbed: string[] = [];
+          if (dawnlit > 0) absorbed.push(`${fmtInt(dawnlit)} Dawnlit`);
+          if (dawncharged > 0) absorbed.push(`${fmtInt(dawncharged)} Dawncharged`);
+          const head = capsules != null
+            ? `+ ${fmtInt(capsules)} Dawn Capsule${Number(capsules) === 1 ? "" : "s"}`
+            : "Dawn Capsules added";
+          return absorbed.length ? `${head} (${absorbed.join(", ")} absorbed)` : head;
+        }
 
         case "MoonKisser":
           return "Amber mutations empowered";
