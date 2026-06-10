@@ -66,11 +66,22 @@ function copyTextToClipboard(text: string): void {
   textarea.remove();
 }
 
+function toBase64Utf8(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let binary = "";
+  const CHUNK_SIZE = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK_SIZE));
+  }
+  return btoa(binary);
+}
+
 function downloadJSONFile(filename: string, payload: string): void {
   if (typeof GM_download === "function") {
     try {
-      const encoded = encodeURIComponent(payload);
-      const url = `data:application/json;charset=utf-8,${encoded}`;
+      // Base64 data URI: some download managers save percent-encoded URIs
+      // without decoding them, producing files full of "%7B%0A...".
+      const url = `data:application/json;base64,${toBase64Utf8(payload)}`;
       GM_download({ name: filename, url, saveAs: true });
       return;
     } catch {

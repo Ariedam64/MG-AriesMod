@@ -134,6 +134,20 @@ export function exportAllSettings(): string {
   return JSON.stringify(current, null, 2);
 }
 
+/**
+ * Files exported through GM_download data-URIs may have been saved still
+ * percent-encoded by some download managers (the whole file starts with
+ * "%7B" instead of "{"). Decode them so the import still works.
+ */
+function tryDecodePercentEncodedJson(text: string): string | null {
+  if (!/^%(?:7B|5B)/i.test(text)) return null;
+  try {
+    return decodeURIComponent(text);
+  } catch {
+    return null;
+  }
+}
+
 export function importSettings(payload: string): SettingsImportResult {
   const trimmed = payload.trim();
   if (!trimmed) {
@@ -144,10 +158,18 @@ export function importSettings(payload: string): SettingsImportResult {
   try {
     parsed = JSON.parse(trimmed);
   } catch (error) {
-    return {
-      success: false,
-      message: `Invalid JSON (${error instanceof Error ? error.message : "unknown error"}).`,
-    };
+    let rescued: unknown;
+    const decoded = tryDecodePercentEncodedJson(trimmed);
+    if (decoded != null) {
+      try { rescued = JSON.parse(decoded.trim()); } catch { /* keep original error */ }
+    }
+    if (rescued === undefined) {
+      return {
+        success: false,
+        message: `Invalid JSON (${error instanceof Error ? error.message : "unknown error"}).`,
+      };
+    }
+    parsed = rescued;
   }
 
   if (!parsed || typeof parsed !== "object") {

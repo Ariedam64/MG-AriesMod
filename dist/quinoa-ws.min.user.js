@@ -60919,6 +60919,14 @@ next: ${next}`;
     const current = ensureVersion(getAriesStorage());
     return JSON.stringify(current, null, 2);
   }
+  function tryDecodePercentEncodedJson(text) {
+    if (!/^%(?:7B|5B)/i.test(text)) return null;
+    try {
+      return decodeURIComponent(text);
+    } catch {
+      return null;
+    }
+  }
   function importSettings(payload) {
     const trimmed = payload.trim();
     if (!trimmed) {
@@ -60928,10 +60936,21 @@ next: ${next}`;
     try {
       parsed = JSON.parse(trimmed);
     } catch (error) {
-      return {
-        success: false,
-        message: `Invalid JSON (${error instanceof Error ? error.message : "unknown error"}).`
-      };
+      let rescued;
+      const decoded = tryDecodePercentEncodedJson(trimmed);
+      if (decoded != null) {
+        try {
+          rescued = JSON.parse(decoded.trim());
+        } catch {
+        }
+      }
+      if (rescued === void 0) {
+        return {
+          success: false,
+          message: `Invalid JSON (${error instanceof Error ? error.message : "unknown error"}).`
+        };
+      }
+      parsed = rescued;
     }
     if (!parsed || typeof parsed !== "object") {
       return { success: false, message: "JSON payload must be an object." };
@@ -60994,11 +61013,19 @@ next: ${next}`;
     document.execCommand("copy");
     textarea.remove();
   }
+  function toBase64Utf8(text) {
+    const bytes = new TextEncoder().encode(text);
+    let binary = "";
+    const CHUNK_SIZE = 32768;
+    for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK_SIZE));
+    }
+    return btoa(binary);
+  }
   function downloadJSONFile(filename, payload) {
     if (typeof GM_download === "function") {
       try {
-        const encoded = encodeURIComponent(payload);
-        const url = `data:application/json;charset=utf-8,${encoded}`;
+        const url = `data:application/json;base64,${toBase64Utf8(payload)}`;
         GM_download({ name: filename, url, saveAs: true });
         return;
       } catch {
