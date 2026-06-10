@@ -1082,9 +1082,9 @@
     const hook = pageWindow.__REACT_DEVTOOLS_GLOBAL_HOOK__;
     if (!hook?.renderers?.size) return null;
     for (const [rid] of hook.renderers) {
-      const roots2 = hook.getFiberRoots?.(rid);
-      if (!roots2) continue;
-      for (const root of roots2) {
+      const roots = hook.getFiberRoots?.(rid);
+      if (!roots) continue;
+      for (const root of roots) {
         const seen = /* @__PURE__ */ new Set();
         const stack = [root.current];
         while (stack.length) {
@@ -12932,14 +12932,14 @@
       if (opts.ariaLabel) b.setAttribute("aria-label", opts.ariaLabel);
       if (opts.onClick) b.addEventListener("click", opts.onClick);
       if (opts.disabled) this.setButtonEnabled(b, false);
-      b.setEnabled = (enabled) => this.setButtonEnabled(b, enabled);
+      b.setEnabled = (enabled2) => this.setButtonEnabled(b, enabled2);
       b.setActive = (active) => b.classList.toggle("active", !!active);
       return b;
     }
-    setButtonEnabled(button, enabled) {
-      button.disabled = !enabled;
-      button.classList.toggle("is-disabled", !enabled);
-      button.setAttribute("aria-disabled", (!enabled).toString());
+    setButtonEnabled(button, enabled2) {
+      button.disabled = !enabled2;
+      button.classList.toggle("is-disabled", !enabled2);
+      button.setAttribute("aria-disabled", (!enabled2).toString());
     }
     flexRow(opts = {}) {
       const row = document.createElement("div");
@@ -15500,11 +15500,11 @@
     if (typeof raw === "boolean") return raw;
     return void 0;
   }
-  function writeHoldStored(id, enabled) {
+  function writeHoldStored(id, enabled2) {
     if (typeof window === "undefined") return;
     updateAriesPath(KEYBINDS_HOLD_PATH, (current) => {
       const base = current && typeof current === "object" ? { ...current } : {};
-      base[id] = !!enabled;
+      base[id] = !!enabled2;
       return base;
     });
   }
@@ -15573,12 +15573,12 @@
   function getKeybindHoldDetection(id) {
     return ensureHoldCache(id);
   }
-  function setKeybindHoldDetection(id, enabled) {
+  function setKeybindHoldDetection(id, enabled2) {
     if (!holdDefaultMap.has(id)) return;
     const current = ensureHoldCache(id);
-    if (current === enabled) return;
-    holdCache.set(id, enabled);
-    writeHoldStored(id, enabled);
+    if (current === enabled2) return;
+    holdCache.set(id, enabled2);
+    writeHoldStored(id, enabled2);
     emitHoldChange(id);
   }
   function onKeybindHoldDetectionChange(id, cb) {
@@ -18768,8 +18768,8 @@
     state2.highlight.parent = parent;
     return { tx, ty, gidx: info.gidx, color, alpha, thickness };
   }
-  function setDebugHoverHighlight(enabled, opts = {}) {
-    if (!enabled) {
+  function setDebugHoverHighlight(enabled2, opts = {}) {
+    if (!enabled2) {
       state2.hoverDebug.cleanup?.();
       state2.hoverDebug.cleanup = null;
       state2.hoverDebug.enabled = false;
@@ -19015,7 +19015,7 @@
     }
     return wrap;
   }
-  function persist(enabled) {
+  function persist(enabled2) {
   }
   function ensureOverlay() {
     if (overlayEl && document.contains(overlayEl)) return overlayEl;
@@ -21137,16 +21137,16 @@
       console.log("[EditorService] failed to add plant", err);
     }
   }
-  function notify(enabled) {
+  function notify(enabled2) {
     listeners3.forEach((cb) => {
       try {
-        cb(enabled);
+        cb(enabled2);
       } catch {
       }
     });
   }
-  function applyState(enabled, opts = {}) {
-    const next = !!enabled;
+  function applyState(enabled2, opts = {}) {
+    const next = !!enabled2;
     const changed = next !== currentEnabled;
     if (next && overlaysVisible) showOverlay();
     else hideOverlay();
@@ -21174,8 +21174,8 @@
     isEnabled() {
       return currentEnabled;
     },
-    setEnabled(enabled) {
-      applyState(enabled, { persist: true, emit: true });
+    setEnabled(enabled2) {
+      applyState(enabled2, { persist: true, emit: true });
     },
     onChange(listener) {
       listeners3.add(listener);
@@ -24211,8 +24211,8 @@
       void _evaluateAll();
       return next;
     },
-    async setPetAutofeedEnabled(petId, enabled) {
-      return this.setOverride(petId, { enabled: !!enabled });
+    async setPetAutofeedEnabled(petId, enabled2) {
+      return this.setOverride(petId, { enabled: !!enabled2 });
     },
     getPetAutofeedEnabled(petId) {
       return this.getOverride(petId).enabled;
@@ -25117,7 +25117,30 @@
     shareGlobal("QWS_Atoms", Atoms);
   } catch {
   }
-  var _HUTCH_MAX = 25;
+  var HUTCH_BASE_CAPACITY = 25;
+  async function _getHutchInfo() {
+    let capacityLevel = 0;
+    let used = 0;
+    try {
+      const inv = await Atoms.inventory.myInventory.get();
+      const storages = Array.isArray(inv?.storages) ? inv.storages : [];
+      const hutch = storages.find((s) => s?.id === "PetHutch" || s?.decorId === "PetHutch");
+      capacityLevel = Number(hutch?.capacityLevel) || 0;
+      if (Array.isArray(hutch?.items)) used = hutch.items.length;
+    } catch {
+    }
+    if (!used) {
+      try {
+        const n = Number(await myNumPetHutchItems.get());
+        if (Number.isFinite(n) && n > 0) used = n;
+      } catch {
+      }
+    }
+    const upgrades = Array.isArray(decorCatalog2?.PetHutch?.upgrades) ? decorCatalog2.PetHutch.upgrades : [];
+    const bonus = upgrades.filter((u) => Number(u?.targetLevel) <= capacityLevel).reduce((sum, u) => sum + (Number(u?.capacityBonus) || 0), 0);
+    const capacity = HUTCH_BASE_CAPACITY + bonus;
+    return { capacity, used, free: Math.max(0, capacity - used) };
+  }
   async function _findFreeInventoryIndex() {
     try {
       const inv = await Atoms.inventory.myInventory.get();
@@ -25137,10 +25160,11 @@
       const hasStorageIndices = items.some((it) => typeof it?.storageIndex === "number");
       if (hasStorageIndices) {
         const used = new Set(items.filter((it) => typeof it?.storageIndex === "number").map((it) => it.storageIndex));
-        for (let i = 0; i < _HUTCH_MAX; i++) {
+        const { capacity } = await _getHutchInfo();
+        for (let i = 0; i < capacity; i++) {
           if (!used.has(i)) return i;
         }
-        return _HUTCH_MAX;
+        return capacity;
       }
       for (let i = 0; i < items.length; i++) {
         if (!items[i]) return i;
@@ -25234,216 +25258,214 @@
       setTimeout(() => stop2(false), timeoutMs + 50);
     });
   }
+  var MAX_TEAM_SLOTS = 3;
+  function _alignTargetsToActiveSlots(targets, activeSlots) {
+    const aligned = new Array(MAX_TEAM_SLOTS).fill("");
+    const remaining = [];
+    for (const id of targets) {
+      const idx = activeSlots.indexOf(id);
+      if (idx >= 0 && idx < MAX_TEAM_SLOTS && !aligned[idx]) aligned[idx] = id;
+      else remaining.push(id);
+    }
+    for (const id of remaining) {
+      const free = aligned.findIndex((v) => v === "");
+      if (free < 0) break;
+      aligned[free] = id;
+    }
+    return aligned;
+  }
+  async function _moveSparePetToHutch(targetSet, activeSlots, hutchItemsSet) {
+    try {
+      const invPets = await PetsService.getInventoryPets();
+      const spare = (Array.isArray(invPets) ? invPets : []).find((p) => {
+        const id = String(p?.id || "");
+        return id && !hutchItemsSet.has(id) && !activeSlots.includes(id) && !targetSet.has(id);
+      });
+      if (!spare) return false;
+      const hutIdx = await _findFreeHutchIndex();
+      await PlayerService.putItemInStorage(spare.id, "PetHutch", hutIdx);
+      void _waitForHutchState((set3) => set3.has(String(spare.id)), 3e3);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  async function _getMyUserSlotIndex() {
+    try {
+      const slots = await stateUserSlots.get();
+      const list = Array.isArray(slots) ? slots : [];
+      if (!list.length) return null;
+      let pid = null;
+      let dbId = null;
+      try {
+        pid = await playerId.get() ?? null;
+      } catch {
+      }
+      try {
+        dbId = await playerDatabaseUserId.get() ?? null;
+      } catch {
+      }
+      if (!pid && !dbId) return null;
+      for (let i = 0; i < list.length; i++) {
+        const slot = list[i];
+        if (!slot) continue;
+        const slotPid = String(slot?.playerId ?? "");
+        const slotDbId = String(slot?.databaseUserId ?? "");
+        if (pid && (slotPid === pid || slotDbId === pid) || dbId && (slotPid === dbId || slotDbId === dbId)) {
+          return i;
+        }
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+  async function _getMyDirtTilePlacement(tileOffset) {
+    try {
+      const map2 = await Atoms.root.map.get();
+      const cols = Number(map2?.cols);
+      const dirtArrays = Array.isArray(map2?.userSlotIdxAndDirtTileIdxToGlobalTileIdx) ? map2.userSlotIdxAndDirtTileIdxToGlobalTileIdx : [];
+      if (!Number.isFinite(cols) || cols <= 0 || !dirtArrays.length) return null;
+      const slotIdx = await _getMyUserSlotIndex();
+      if (slotIdx == null) return null;
+      const dirtGlobals = Array.isArray(dirtArrays[slotIdx]) ? dirtArrays[slotIdx] : [];
+      if (!dirtGlobals.length) return null;
+      const localTileIndex = Math.min(Math.max(0, tileOffset), dirtGlobals.length - 1);
+      const globalIndex = Number(dirtGlobals[localTileIndex]);
+      if (!Number.isFinite(globalIndex)) return null;
+      return {
+        position: { x: globalIndex % cols, y: Math.floor(globalIndex / cols) },
+        localTileIndex
+      };
+    } catch {
+      return null;
+    }
+  }
+  async function _placePetInMyGarden(petId, tileOffset) {
+    const tile = await _getMyDirtTilePlacement(tileOffset);
+    if (tile) {
+      await PlayerService.placePet(petId, tile.position, "Dirt", tile.localTileIndex);
+      return;
+    }
+    await PlayerService.placePet(petId, { x: 0, y: 0 }, "Boardwalk", 64);
+  }
   async function _equipPetIds(targetInvIdsRaw, opts) {
     const markId = (opts?.markTeamId ?? null) || null;
-    const targetInvIds = (Array.isArray(targetInvIdsRaw) ? targetInvIdsRaw : []).map((v) => String(v || "")).filter((v) => v.length > 0).slice(0, 3);
+    const seenIds = /* @__PURE__ */ new Set();
+    const targetInvIds = (Array.isArray(targetInvIdsRaw) ? targetInvIdsRaw : []).map((v) => String(v || "")).filter((v) => v.length > 0 && !seenIds.has(v) && !!seenIds.add(v)).slice(0, MAX_TEAM_SLOTS);
     const markResolved = markId ?? _teamIdFromSlots(targetInvIds) ?? null;
     const shouldMark = opts?.markUsed !== false && !!markResolved;
-    if (!targetInvIds.length) {
+    const finish = (res) => {
       if (shouldMark) markTeamAsUsed(markResolved);
-      return { swapped: 0, placed: 0, skipped: 0 };
-    }
-    const targetSet = new Set(targetInvIds);
-    let activeSlots = await _getActivePetSlotIds();
-    const HUTCH_MAX = 25;
-    let hutchCount = (() => {
-      try {
-        return Number(myNumPetHutchItems.get());
-      } catch {
-        return 0;
-      }
-    })();
-    try {
-      hutchCount = Number(await myNumPetHutchItems.get());
-    } catch {
-      hutchCount = 0;
-    }
-    let freeHutch = Math.max(0, HUTCH_MAX - (Number.isFinite(hutchCount) ? hutchCount : 0));
+      return res;
+    };
+    if (!targetInvIds.length) return finish({ swapped: 0, placed: 0, skipped: 0 });
+    const activeSlots = await _getActivePetSlotIds();
+    const sameTeam = targetInvIds.length === activeSlots.length && [...targetInvIds].sort().join("|") === [...activeSlots].sort().join("|");
+    if (sameTeam) return finish({ swapped: 0, placed: 0, skipped: targetInvIds.length });
+    let freeHutch = (await _getHutchInfo()).free;
     let hutchItemsSet = /* @__PURE__ */ new Set();
     try {
       const hutchItems = await myPetHutchPetItems.get();
       if (Array.isArray(hutchItems)) {
-        hutchItemsSet = new Set(hutchItems.map((it) => String(it?.id ?? "")));
+        hutchItemsSet = new Set(
+          hutchItems.map((it) => String(it?.id ?? "")).filter(Boolean)
+        );
       }
     } catch {
     }
-    const missingFromActive = targetInvIds.filter((id) => !activeSlots.includes(id));
-    const missingFromHutch = missingFromActive.filter((id) => hutchItemsSet.has(id));
-    if (missingFromHutch.length > 0) {
-      let invFull = false;
+    const targetSet = new Set(targetInvIds);
+    const aligned = _alignTargetsToActiveSlots(targetInvIds, activeSlots);
+    const notifyInventoryFull = async () => {
       try {
-        invFull = !!await isMyInventoryAtMaxLength.get();
+        await toastSimple(
+          "Inventory Full",
+          "Cannot equip team: required pets are in the Pet Hutch and your inventory is full.",
+          "error"
+        );
       } catch {
-        invFull = false;
       }
-      if (invFull && freeHutch <= 0) {
-        try {
-          await toastSimple("Inventory Full", "Cannot equip team: required pets are in the Pet Hutch and your inventory is full.");
-        } catch {
-        }
-        if (shouldMark) markTeamAsUsed(markResolved);
-        return { swapped: 0, placed: 0, skipped: targetInvIds.length };
-      }
-    }
+    };
     let swapped = 0, placed = 0, skipped = 0;
-    for (const invId of targetInvIds) {
-      const isAlreadyActive = activeSlots.includes(invId);
-      if (isAlreadyActive) {
+    let placementOffset = 0;
+    for (let slot = 0; slot < MAX_TEAM_SLOTS; slot++) {
+      const targetId = aligned[slot];
+      const currentId = String(activeSlots[slot] ?? "");
+      if (targetId && targetId === currentId) {
         skipped++;
         continue;
       }
-      const livesInHutch = hutchItemsSet.has(invId);
-      if (livesInHutch) {
+      if (!targetId && currentId) {
+        try {
+          await PlayerService.storePet(currentId);
+          activeSlots[slot] = "";
+          if (freeHutch > 0) {
+            const hutIdx = await _findFreeHutchIndex();
+            await PlayerService.putItemInStorage(currentId, "PetHutch", hutIdx);
+            freeHutch--;
+            void _waitForHutchState((set3) => set3.has(currentId), 3e3);
+          }
+        } catch {
+        }
+        continue;
+      }
+      if (!targetId) continue;
+      if (hutchItemsSet.has(targetId)) {
         let invFull = false;
         try {
           invFull = !!await isMyInventoryAtMaxLength.get();
         } catch {
-          invFull = false;
         }
         if (invFull) {
-          if (freeHutch > 0) {
-            try {
-              const invPets = await PetsService.getInventoryPets();
-              const invPet = (Array.isArray(invPets) ? invPets : []).find((p) => {
-                const id = String(p?.id || "");
-                return id && !hutchItemsSet.has(id) && !activeSlots.includes(id) && !targetSet.has(id);
-              });
-              if (invPet) {
-                const hutIdx = await _findFreeHutchIndex();
-                await PlayerService.putItemInStorage(invPet.id, "PetHutch", hutIdx);
-                freeHutch = Math.max(0, freeHutch - 1);
-                void _waitForHutchState((set3) => set3.has(String(invPet.id)), 3e3);
-              } else {
-                try {
-                  await toastSimple("Inventory Full", "Cannot equip team: no free slot to retrieve a pet from the Pet Hutch.", "error");
-                } catch {
-                }
-                if (shouldMark) markTeamAsUsed(markResolved);
-                return { swapped, placed, skipped };
-              }
-            } catch {
-              try {
-                await toastSimple("Inventory Full", "Cannot equip team: failed to free up a slot.", "error");
-              } catch {
-              }
-              if (shouldMark) markTeamAsUsed(markResolved);
-              return { swapped, placed, skipped };
-            }
+          const freed = freeHutch > 0 && await _moveSparePetToHutch(targetSet, activeSlots, hutchItemsSet);
+          if (freed) {
+            freeHutch--;
           } else {
-            try {
-              await toastSimple("Inventory Full", "Cannot equip team: required pets are in the Pet Hutch and your inventory is full.", "error");
-            } catch {
-            }
-            if (shouldMark) markTeamAsUsed(markResolved);
-            return { swapped, placed, skipped };
+            await notifyInventoryFull();
+            return finish({ swapped, placed, skipped });
           }
         }
         try {
           const invIdx = await _findFreeInventoryIndex();
-          await PlayerService.retrieveItemFromStorage(invId, "PetHutch", invIdx);
-          hutchItemsSet.delete(invId);
-          freeHutch = Math.min(25, freeHutch + 1);
+          await PlayerService.retrieveItemFromStorage(targetId, "PetHutch", invIdx);
+          hutchItemsSet.delete(targetId);
+          freeHutch++;
+          void _waitForHutchState((set3) => !set3.has(targetId), 3e3);
         } catch {
           continue;
         }
-        void _waitForHutchState((set3) => !set3.has(String(invId)), 3e3);
       }
-      const offTargetActive = activeSlots.find((id) => !targetSet.has(id));
-      if (offTargetActive) {
+      if (!currentId) {
         try {
-          await PlayerService.swapPet(offTargetActive, invId);
-          swapped++;
-          if (freeHutch > 0) {
-            try {
-              const hutIdx = await _findFreeHutchIndex();
-              await PlayerService.putItemInStorage(offTargetActive, "PetHutch", hutIdx);
-              freeHutch = Math.max(0, freeHutch - 1);
-            } catch {
-            }
-            void _waitForHutchState((set3) => set3.has(String(offTargetActive)), 3e3);
-          }
-          activeSlots = activeSlots.filter((x) => x !== offTargetActive);
-          activeSlots.push(invId);
+          await _placePetInMyGarden(targetId, placementOffset++);
+          placed++;
+          activeSlots[slot] = targetId;
         } catch {
+        }
+        continue;
+      }
+      try {
+        await PlayerService.swapPet(currentId, targetId);
+        swapped++;
+        activeSlots[slot] = targetId;
+        if (freeHutch > 0) {
           try {
-            await PlayerService.placePet(invId, { x: 0, y: 0 }, "Boardwalk", 64);
-            placed++;
-            activeSlots.push(invId);
+            const hutIdx = await _findFreeHutchIndex();
+            await PlayerService.putItemInStorage(currentId, "PetHutch", hutIdx);
+            freeHutch--;
+            void _waitForHutchState((set3) => set3.has(currentId), 3e3);
           } catch {
           }
         }
-      } else {
-        try {
-          await PlayerService.placePet(invId, { x: 0, y: 0 }, "Boardwalk", 64);
-          placed++;
-          activeSlots.push(invId);
-        } catch {
-        }
-      }
-    }
-    try {
-      try {
-        hutchCount = Number(await myNumPetHutchItems.get());
       } catch {
-      }
-      freeHutch = Math.max(0, HUTCH_MAX - (Number.isFinite(hutchCount) ? hutchCount : 0));
-      const leftovers = activeSlots.filter((id) => !targetSet.has(id));
-      for (const slotId of leftovers) {
-        if (freeHutch <= 0) break;
         try {
-          await PlayerService.storePet(slotId);
-          const hutIdx = await _findFreeHutchIndex();
-          await PlayerService.putItemInStorage(slotId, "PetHutch", hutIdx);
-          freeHutch = Math.max(0, freeHutch - 1);
-          activeSlots = activeSlots.filter((x) => x !== slotId);
-          void _waitForHutchState((set3) => set3.has(String(slotId)), 3e3);
-        } catch {
-        }
-      }
-    } catch {
-    }
-    const res = await _applyTeam(targetInvIds);
-    await new Promise((r) => setTimeout(r, 300));
-    if (shouldMark) markTeamAsUsed(markResolved);
-    return res;
-  }
-  async function _applyTeam(targetInvIds) {
-    let activeSlots = await _getActivePetSlotIds();
-    const targetSet = new Set(targetInvIds);
-    const extras = activeSlots.filter((id) => !targetSet.has(id));
-    const mustStore = Math.max(0, activeSlots.length - targetInvIds.length);
-    if (mustStore > 0) {
-      const toStore = extras.slice(0, mustStore);
-      for (const itemId of toStore) {
-        try {
-          await PlayerService.storePet(itemId);
-          activeSlots = activeSlots.filter((id) => id !== itemId);
-        } catch {
-        }
-      }
-    }
-    const alreadyActive = /* @__PURE__ */ new Set();
-    for (const invId of targetInvIds) if (activeSlots.includes(invId)) alreadyActive.add(invId);
-    let swapped = 0, placed = 0, skipped = 0;
-    if (alreadyActive.size) {
-      activeSlots = activeSlots.filter((slotId) => !alreadyActive.has(slotId));
-      skipped = alreadyActive.size;
-    }
-    const toDo = targetInvIds.filter((id) => !alreadyActive.has(id));
-    for (const invId of toDo) {
-      const slotId = activeSlots.shift();
-      try {
-        if (slotId) {
-          await PlayerService.swapPet(slotId, invId);
-          swapped++;
-        } else {
-          await PlayerService.placePet(invId, { x: 0, y: 0 }, "Boardwalk", 64);
+          await _placePetInMyGarden(targetId, placementOffset++);
           placed++;
+        } catch {
         }
-      } catch {
       }
     }
-    return { swapped, placed, skipped };
+    return finish({ swapped, placed, skipped });
   }
 
   // src/utils/sellAllPets.ts
@@ -28039,9 +28061,9 @@
     }
     if (!petId) return { enabled: false, thresholdPct: baseThreshold };
     const entry = prefs.pets[petId] ?? {};
-    const enabled = entry.enabled ?? false;
+    const enabled2 = entry.enabled ?? false;
     const thresholdPct = clampPct2(entry.thresholdPct ?? baseThreshold);
-    return { enabled, thresholdPct };
+    return { enabled: enabled2, thresholdPct };
   }
   async function triggerAlert(key2) {
     try {
@@ -28055,9 +28077,9 @@
       seenBelow.set(petId, false);
       return;
     }
-    const { enabled, thresholdPct } = prefFor(petId);
+    const { enabled: enabled2, thresholdPct } = prefFor(petId);
     const hungerPct = PetsService.getHungerPctFor(pet);
-    const below = enabled && Number.isFinite(hungerPct) && hungerPct < thresholdPct;
+    const below = enabled2 && Number.isFinite(hungerPct) && hungerPct < thresholdPct;
     const wasBelow = seenBelow.get(petId) === true;
     const loopKey = prefs.generalEnabled ? "pets:general" : `pet:${petId}`;
     const mode = audio.getPlaybackMode?.("pets") ?? "oneshot";
@@ -28184,6 +28206,8 @@
     [rarity2.Rare]: "Rare",
     [rarity2.Legendary]: "Legendary",
     [rarity2.Mythic]: "Mythical",
+    // MGData's API returns "Mythic" while rarityMap.Mythic is "Mythical".
+    Mythic: "Mythical",
     [rarity2.Divine]: "Divine",
     [rarity2.Celestial]: "Celestial"
   };
@@ -29177,11 +29201,11 @@
       if (!id) return false;
       return !!_getWeatherPref(id).notify;
     },
-    setWeatherNotify(id, enabled) {
+    setWeatherNotify(id, enabled2) {
       if (!id) return;
       _ensureWeatherPrefsLoaded();
       const pref = _getWeatherPref(id);
-      const next = !!enabled;
+      const next = !!enabled2;
       if (!!pref.notify === next) return;
       pref.notify = next;
       _weatherPrefs.set(id, pref);
@@ -29223,12 +29247,12 @@
       const popup = !!(bits & 1);
       return { popup, followed: popup };
     },
-    setPopup(id, enabled) {
-      if (enabled && _isRowCapReached(id)) {
+    setPopup(id, enabled2) {
+      if (enabled2 && _isRowCapReached(id)) {
         return;
       }
       const bits = _getPrefBits(id);
-      const next = enabled ? bits | 1 : bits & ~1;
+      const next = enabled2 ? bits | 1 : bits & ~1;
       _setPrefBits(id, next);
     },
     setPrefs(id, prefs2) {
@@ -30209,144 +30233,88 @@
     };
   }
 
-  // src/core/dom.ts
-  var ready = new Promise((res) => {
-    if (document.readyState !== "loading") res();
-    else addEventListener("DOMContentLoaded", () => res(), { once: true });
-  });
-  function addStyle(css3) {
-    const s = document.createElement("style");
-    s.textContent = css3;
-    document.head.appendChild(s);
-    return s;
-  }
-  function toPredicate(selOrFn) {
-    if (typeof selOrFn === "function") return selOrFn;
-    if (typeof selOrFn === "string") return (el2) => el2.matches?.(selOrFn) ?? false;
-    throw new Error("Selector or predicate required");
-  }
-  function onAdded(selOrFn, cb, { root = document, callForExisting = true } = {}) {
-    const pred = toPredicate(selOrFn);
-    const seen = /* @__PURE__ */ new WeakSet();
-    const consider = (el2) => {
-      if (seen.has(el2)) return;
-      if (pred(el2)) {
-        seen.add(el2);
-        cb(el2);
-      }
-    };
-    if (callForExisting && "querySelectorAll" in root) {
-      root.querySelectorAll("*").forEach(consider);
-    }
-    const obs = new MutationObserver((muts) => {
-      for (const m of muts) for (const n of Array.from(m.addedNodes)) {
-        if (n.nodeType !== 1) continue;
-        const el2 = n;
-        consider(el2);
-        el2.querySelectorAll?.("*").forEach(consider);
-      }
-    });
-    obs.observe(root, { childList: true, subtree: true });
-    return { disconnect: () => obs.disconnect() };
-  }
-
-  // src/utils/instantFeedButton.ts
+  // src/utils/instantFeedWidget.ts
   init_api();
   init_atoms();
-  var ROOT_CLASS = "css-pb842o";
-  var BAR_ATTR = "data-instant-feed-bar";
-  var BAR_INSTANCE_ATTR = "data-instant-feed-instance";
-  var BTN_ATTR = "data-instant-feed-btn";
+  init_localStorage();
   var DEFAULT_LABEL = "Instant Feed";
   var MAX_BUTTONS = 3;
   var ICON_SIZE = 18;
-  var GLOBAL_START_FLAG = "__qws_instant_feed_btn_started";
+  var WIDGET_Z_INDEX = 1999900;
+  var SCREEN_MARGIN = 8;
+  var DEFAULT_TOP = 64;
+  var GLOBAL_START_FLAG = "__qws_instant_feed_widget_started";
   var INVENTORY_CARD_ATOM = "inventoryCardIsOpenAtom";
-  var INSTANCE_ID = Math.random().toString(36).slice(2, 9);
-  var INSTANT_FEED_TEMPORARILY_DISABLED = true;
+  var ENABLED_PATH = "pets.instantFeedWidget.enabled";
+  var POS_PATH = "pets.instantFeedWidget.pos";
   var started2 = false;
-  var activePets = [];
-  var allowInject = true;
+  var enabled = true;
   var modalOpen = false;
   var inventoryCardOpen = false;
+  var activePets = [];
   var activePetsSig = "";
-  var roots = /* @__PURE__ */ new Set();
-  var sharedBar = null;
-  var pinnedRoot = null;
-  function startInstantFeedButton() {
+  var widget = null;
+  var widgetButtons = [];
+  var savedPos = null;
+  var positioned = false;
+  function isInstantFeedWidgetEnabled() {
+    return readAriesPath(ENABLED_PATH, true) !== false;
+  }
+  function setInstantFeedWidgetEnabled(value) {
+    enabled = value;
+    writeAriesPath(ENABLED_PATH, value);
+    syncVisibility();
+  }
+  function startInstantFeedWidget() {
     if (typeof document === "undefined") return;
-    if (INSTANT_FEED_TEMPORARILY_DISABLED) return;
     const win = globalThis;
     if (win[GLOBAL_START_FLAG]) return;
     win[GLOBAL_START_FLAG] = true;
     if (started2) return;
     started2 = true;
-    const syncRoots = () => {
-      if (!allowInject) return;
-      for (const root of Array.from(roots)) {
-        if (!root.isConnected) continue;
-        renderBar(root);
-      }
+    enabled = isInstantFeedWidgetEnabled();
+    savedPos = readSavedPosition();
+    const mount = () => {
+      ensureWidget();
+      syncVisibility();
     };
-    let spriteWarmupComplete = false;
-    const notifyWarmupComplete = () => {
-      if (spriteWarmupComplete) return;
-      spriteWarmupComplete = true;
-      syncRoots();
-    };
-    const recomputeAllowInject = () => {
-      const next = !(modalOpen || inventoryCardOpen);
-      if (next === allowInject) return;
-      allowInject = next;
-      if (allowInject) syncRoots();
-    };
-    const setAllowInjectFromModal = (value) => {
-      modalOpen = value != null;
-      recomputeAllowInject();
-    };
-    const setAllowInjectFromInventoryCard = (value) => {
-      inventoryCardOpen = value === true;
-      recomputeAllowInject();
-    };
-    const updateActivePets = (next) => {
-      const normalized = normalizeActivePets(next);
-      const sig = buildActivePetsSignature(normalized);
-      if (sig === activePetsSig) return;
-      activePetsSig = sig;
-      activePets = normalized;
-      syncRoots();
-    };
+    if (document.body) mount();
+    else document.addEventListener("DOMContentLoaded", mount, { once: true });
+    window.addEventListener("resize", () => {
+      if (widget && isWidgetVisible() && positioned) clampIntoViewport();
+    });
     void (async () => {
       try {
         const warmup = getSpriteWarmupState();
-        if (warmup?.completed) {
-          notifyWarmupComplete();
-        } else {
+        if (!warmup?.completed) {
           const unsub = onSpriteWarmupProgress((state3) => {
             if (state3.completed) {
               try {
                 unsub();
               } catch {
               }
-              notifyWarmupComplete();
+              updateButtons();
             }
           });
         }
       } catch {
       }
       try {
-        setAllowInjectFromModal(await Atoms.ui.activeModal.get());
+        modalOpen = await Atoms.ui.activeModal.get() != null;
+        syncVisibility();
       } catch {
       }
       try {
         await Atoms.ui.activeModal.onChange((next) => {
-          setAllowInjectFromModal(next);
+          modalOpen = next != null;
+          syncVisibility();
         });
       } catch {
       }
       try {
         await Store.subscribeImmediate(INVENTORY_CARD_ATOM, (next) => {
-          setAllowInjectFromInventoryCard(next);
+          inventoryCardOpen = next === true;
+          syncVisibility();
         });
       } catch {
       }
@@ -30355,239 +30323,349 @@
       } catch {
       }
       try {
-        await Atoms.pets.myPrimitivePetSlots.onChange((next) => {
-          updateActivePets(next);
-        });
+        await Atoms.pets.myPrimitivePetSlots.onChange((next) => updateActivePets(next));
       } catch {
       }
     })();
-    onAdded(
-      (el2) => isInstantFeedRoot(el2),
-      (el2) => {
-        if (!(el2 instanceof HTMLElement)) return;
-        roots.add(el2);
-        if (!allowInject) return;
-        renderBar(el2);
+  }
+  function isWidgetVisible() {
+    return enabled && !modalOpen && !inventoryCardOpen;
+  }
+  function syncVisibility() {
+    if (!widget) return;
+    const visible = isWidgetVisible();
+    widget.style.display = visible ? "flex" : "none";
+    if (!visible) return;
+    if (!positioned) applyInitialPosition();
+    else clampIntoViewport();
+  }
+  function readSavedPosition() {
+    const raw = readAriesPath(POS_PATH);
+    if (!raw || typeof raw !== "object") return null;
+    const left = Number(raw.left);
+    const top = Number(raw.top);
+    if (!Number.isFinite(left) || !Number.isFinite(top)) return null;
+    return { left, top };
+  }
+  function persistPosition(pos) {
+    savedPos = pos;
+    writeAriesPath(POS_PATH, { left: Math.round(pos.left), top: Math.round(pos.top) });
+  }
+  function clampCoord(value, min, max) {
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
+    if (max < min) return min;
+    return Math.min(Math.max(value, min), max);
+  }
+  function applyPosition(left, top) {
+    if (!widget) return { left, top };
+    const width = widget.offsetWidth;
+    const height = widget.offsetHeight;
+    const boundedLeft = clampCoord(left, SCREEN_MARGIN, window.innerWidth - width - SCREEN_MARGIN);
+    const boundedTop = clampCoord(top, SCREEN_MARGIN, window.innerHeight - height - SCREEN_MARGIN);
+    widget.style.left = `${Math.round(boundedLeft)}px`;
+    widget.style.top = `${Math.round(boundedTop)}px`;
+    return { left: boundedLeft, top: boundedTop };
+  }
+  function applyInitialPosition() {
+    if (!widget) return;
+    positioned = true;
+    if (savedPos) {
+      applyPosition(savedPos.left, savedPos.top);
+      return;
+    }
+    const centeredLeft = (window.innerWidth - widget.offsetWidth) / 2;
+    applyPosition(centeredLeft, DEFAULT_TOP);
+  }
+  function clampIntoViewport() {
+    if (!widget) return;
+    const rect = widget.getBoundingClientRect();
+    applyPosition(rect.left, rect.top);
+  }
+  function ensureWidget() {
+    if (widget && widget.isConnected) return widget;
+    const el2 = document.createElement("div");
+    el2.setAttribute("data-instant-feed-widget", "1");
+    Object.assign(el2.style, {
+      position: "fixed",
+      left: "-9999px",
+      top: "-9999px",
+      zIndex: String(WIDGET_Z_INDEX),
+      display: "none",
+      flexDirection: "column",
+      gap: "6px",
+      padding: "6px 8px",
+      borderRadius: "12px",
+      border: "1px solid #32404e",
+      background: "linear-gradient(180deg, #111923, #0b131c)",
+      boxShadow: "0 10px 28px rgba(0,0,0,0.45)",
+      cursor: "grab",
+      userSelect: "none",
+      touchAction: "none"
+    });
+    el2.appendChild(createHeader());
+    const buttonsRow = document.createElement("div");
+    Object.assign(buttonsRow.style, {
+      display: "flex",
+      alignItems: "center",
+      gap: "6px"
+    });
+    el2.appendChild(buttonsRow);
+    widgetButtons = [];
+    for (let i = 0; i < MAX_BUTTONS; i++) {
+      const btn = createButton2();
+      buttonsRow.appendChild(btn);
+      widgetButtons.push(btn);
+    }
+    installDragHandlers(el2);
+    document.body.appendChild(el2);
+    widget = el2;
+    positioned = false;
+    updateButtons();
+    return el2;
+  }
+  function installDragHandlers(el2) {
+    let dragState = null;
+    const onDragMove = (ev) => {
+      if (!dragState || ev.pointerId !== dragState.pointerId) return;
+      const dx = ev.clientX - dragState.startX;
+      const dy = ev.clientY - dragState.startY;
+      dragState.lastPos = applyPosition(dragState.baseLeft + dx, dragState.baseTop + dy);
+    };
+    const stopDrag = (ev) => {
+      if (!dragState) return;
+      if (ev && ev.pointerId !== dragState.pointerId) return;
+      document.removeEventListener("pointermove", onDragMove);
+      document.removeEventListener("pointerup", stopDrag);
+      document.removeEventListener("pointercancel", stopDrag);
+      try {
+        el2.releasePointerCapture(dragState.pointerId);
+      } catch {
       }
-    );
-  }
-  function isInstantFeedRoot(el2) {
-    if (!(el2 instanceof HTMLElement)) return false;
-    if (!el2.classList.contains("McFlex")) return false;
-    if (el2.classList.contains(ROOT_CLASS)) return true;
-    const hasTopNav = !!el2.querySelector(".McGrid.css-8i2u7l");
-    const hasPetActions = !!el2.querySelector(".McGrid.css-1n1dtdw");
-    return hasTopNav && hasPetActions;
-  }
-  function renderBar(root) {
-    if (!root.isConnected) return;
-    const activeRoot = pinnedRoot && pinnedRoot.isConnected ? pinnedRoot : pinnedRoot = root;
-    let bar = ensureBar(activeRoot);
-    if (!bar && activeRoot !== root) {
-      pinnedRoot = root;
-      bar = ensureBar(root);
-    }
-    if (!bar) return;
-    const buttons = ensureButtons(activeRoot, bar);
-    updateButtons(buttons);
-  }
-  function ensureBar(root) {
-    const { host, anchor, stackWithNav } = findBarHost(root);
-    if (!host) return null;
-    if (stackWithNav) {
-      host.style.display = "flex";
-      host.style.flexDirection = "column";
-      host.style.alignItems = "center";
-      host.style.gap = "6px";
-      host.style.width = "100%";
-    }
-    let bar = sharedBar;
-    if (!bar) {
-      const existingBars = Array.from(
-        document.querySelectorAll(`[${BAR_ATTR}="1"]`)
-      );
-      if (existingBars.length) {
-        const owned = existingBars.find(
-          (candidate) => candidate.getAttribute(BAR_INSTANCE_ATTR) === INSTANCE_ID
-        );
-        if (owned) {
-          bar = owned;
-          sharedBar = bar;
-          for (const candidate of existingBars) {
-            if (candidate !== owned) candidate.remove();
-          }
-        } else {
-          for (const candidate of existingBars) candidate.remove();
-        }
+      persistPosition(dragState.lastPos);
+      dragState = null;
+      el2.style.cursor = "grab";
+    };
+    el2.addEventListener("pointerdown", (ev) => {
+      if (ev.button !== 0) return;
+      const target = ev.target;
+      if (target && target.closest("button")) return;
+      if (dragState) stopDrag();
+      const rect = el2.getBoundingClientRect();
+      dragState = {
+        pointerId: ev.pointerId,
+        startX: ev.clientX,
+        startY: ev.clientY,
+        baseLeft: rect.left,
+        baseTop: rect.top,
+        lastPos: { left: rect.left, top: rect.top }
+      };
+      try {
+        el2.setPointerCapture(ev.pointerId);
+      } catch {
       }
-    }
-    if (!bar) {
-      bar = document.createElement("div");
-      bar.setAttribute(BAR_ATTR, "1");
-      bar.setAttribute(BAR_INSTANCE_ATTR, INSTANCE_ID);
-      bar.style.display = "grid";
-      bar.style.gridTemplateColumns = `repeat(${MAX_BUTTONS}, max-content)`;
-      bar.style.justifyContent = "center";
-      bar.style.alignItems = "center";
-      bar.style.gap = "6px";
-      bar.style.marginTop = stackWithNav ? "0" : "6px";
-      bar.style.width = "100%";
-      sharedBar = bar;
-      if (anchor && anchor.parentElement === host) {
-        anchor.insertAdjacentElement("afterend", bar);
-      } else {
-        host.appendChild(bar);
-      }
-    } else if (!bar.hasAttribute(BAR_INSTANCE_ATTR)) {
-      bar.setAttribute(BAR_INSTANCE_ATTR, INSTANCE_ID);
-    } else if (bar.parentElement !== host) {
-      if (anchor && anchor.parentElement === host) {
-        anchor.insertAdjacentElement("afterend", bar);
-      } else {
-        host.appendChild(bar);
-      }
-    } else if (anchor && bar.previousElementSibling !== anchor) {
-      anchor.insertAdjacentElement("afterend", bar);
-    } else if (!anchor && host.lastChild !== bar) {
-      host.appendChild(bar);
-    }
-    return bar;
+      document.addEventListener("pointermove", onDragMove);
+      document.addEventListener("pointerup", stopDrag);
+      document.addEventListener("pointercancel", stopDrag);
+      el2.style.cursor = "grabbing";
+      ev.preventDefault();
+    });
   }
-  function findBarHost(root) {
-    const navContainer = root.querySelector(".McFlex.css-1vtdcnr");
-    if (navContainer) {
-      const navGridLegacy = navContainer.querySelector(".McGrid.css-8i2u7l");
-      return { host: navContainer, anchor: navGridLegacy, stackWithNav: true };
-    }
-    const host = root;
-    const navGrid = root.querySelector(".McGrid.css-8i2u7l");
-    const gridAnchor = navGrid ? findDirectChild(host, navGrid) : null;
-    return { host, anchor: gridAnchor, stackWithNav: false };
+  function createHeader() {
+    const header = document.createElement("div");
+    Object.assign(header.style, {
+      display: "flex",
+      alignItems: "center",
+      gap: "6px"
+    });
+    const grip = document.createElement("span");
+    grip.textContent = "\u283F";
+    Object.assign(grip.style, {
+      color: "#c8d7e8",
+      opacity: "0.65",
+      fontSize: "13px",
+      lineHeight: "1",
+      pointerEvents: "none"
+    });
+    const title = document.createElement("span");
+    title.textContent = DEFAULT_LABEL;
+    Object.assign(title.style, {
+      color: "#c8d7e8",
+      fontSize: "12px",
+      fontWeight: "700",
+      lineHeight: "1",
+      flex: "1 1 auto",
+      pointerEvents: "none"
+    });
+    const gear = document.createElement("button");
+    gear.type = "button";
+    gear.textContent = "\u2699";
+    gear.title = "Open instant feed settings (Pets > Feeding)";
+    gear.setAttribute("aria-label", gear.title);
+    Object.assign(gear.style, {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "20px",
+      height: "20px",
+      padding: "0",
+      border: "none",
+      borderRadius: "6px",
+      background: "transparent",
+      color: "#c8d7e8",
+      fontSize: "13px",
+      lineHeight: "1",
+      cursor: "pointer"
+    });
+    gear.addEventListener("mouseenter", () => {
+      gear.style.background = "rgba(200, 215, 232, 0.15)";
+    });
+    gear.addEventListener("mouseleave", () => {
+      gear.style.background = "transparent";
+    });
+    gear.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      window.dispatchEvent(new CustomEvent("qws:open-panel", { detail: { id: "pets" } }));
+      window.dispatchEvent(new CustomEvent("qws:pets-open-tab", { detail: { tab: "feeding" } }));
+    });
+    header.append(grip, title, gear);
+    return header;
   }
-  function findDirectChild(root, node) {
-    let current = node;
-    while (current && current.parentElement && current.parentElement !== root) {
-      current = current.parentElement;
-    }
-    if (current && current.parentElement === root) return current;
-    return null;
-  }
-  function ensureButtons(root, bar) {
-    const existing = Array.from(
-      bar.querySelectorAll(`button[${BTN_ATTR}="1"]`)
-    );
-    for (let i = existing.length; i < MAX_BUTTONS; i++) {
-      const btn = createButton2(root, i);
-      bar.appendChild(btn);
-      existing.push(btn);
-    }
-    while (existing.length > MAX_BUTTONS) {
-      const btn = existing.pop();
-      if (btn) btn.remove();
-    }
-    return existing;
-  }
-  function createButton2(root, index) {
-    const ref = findReferenceButton(root);
-    const btn = ref ? ref.cloneNode(false) : document.createElement("button");
-    applyButtonBaseStyles(btn);
-    btn.removeAttribute("id");
-    btn.setAttribute(BTN_ATTR, "1");
+  function createButton2() {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.setAttribute("data-instant-feed-btn", "1");
+    Object.assign(btn.style, {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "6px",
+      flex: "0 0 auto",
+      whiteSpace: "nowrap",
+      padding: "6px 10px",
+      borderRadius: "8px",
+      border: "none",
+      backgroundColor: "#6D3A88",
+      color: "#ffffff",
+      fontSize: "13px",
+      fontWeight: "600",
+      cursor: "pointer",
+      pointerEvents: "auto"
+    });
+    const icon = document.createElement("span");
+    icon.setAttribute("data-instant-feed-icon", "1");
+    Object.assign(icon.style, {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: `${ICON_SIZE}px`,
+      height: `${ICON_SIZE}px`,
+      flex: "0 0 auto",
+      pointerEvents: "none"
+    });
+    const textWrap = document.createElement("span");
+    Object.assign(textWrap.style, {
+      display: "inline-flex",
+      flexDirection: "column",
+      alignItems: "flex-start",
+      lineHeight: "1.15",
+      pointerEvents: "none"
+    });
+    const name = document.createElement("span");
+    name.setAttribute("data-instant-feed-name", "1");
+    name.style.fontSize = "12px";
+    name.style.fontWeight = "600";
+    name.textContent = DEFAULT_LABEL;
+    const strength = document.createElement("span");
+    strength.setAttribute("data-instant-feed-str", "1");
+    strength.style.fontSize = "10px";
+    strength.style.opacity = "0.85";
+    strength.style.display = "none";
+    textWrap.append(name, strength);
+    btn.append(icon, textWrap);
     btn.addEventListener("click", (ev) => {
-      const target = ev.currentTarget;
-      if (!target) return;
-      const petId = target.dataset.petId || "";
+      const petId = btn.dataset.petId || "";
       if (!petId) return;
       ev.preventDefault();
       ev.stopPropagation();
-      ev.stopImmediatePropagation?.();
-      void handleInstantFeedForPet(petId, target);
+      void handleInstantFeedForPet(petId, btn);
     });
     return btn;
   }
-  function findReferenceButton(root) {
-    const btn = root.querySelector("button.chakra-button");
-    return btn ?? null;
-  }
-  function updateButtons(buttons) {
-    for (let i = 0; i < buttons.length; i++) {
-      const btn = buttons[i];
-      applyButtonBaseStyles(btn);
+  function updateButtons() {
+    for (let i = 0; i < widgetButtons.length; i++) {
+      const btn = widgetButtons[i];
+      const icon = btn.querySelector('[data-instant-feed-icon="1"]');
+      const nameEl = btn.querySelector('[data-instant-feed-name="1"]');
+      const strEl = btn.querySelector('[data-instant-feed-str="1"]');
       const pet = activePets[i] ?? null;
-      const label2 = DEFAULT_LABEL;
       const title = pet ? buildButtonTitle(pet) : DEFAULT_LABEL;
-      const parts = ensureButtonContent(btn);
-      parts.label.textContent = label2;
       btn.setAttribute("aria-label", title);
       btn.title = title;
       btn.dataset.petId = pet?.id ?? "";
       btn.disabled = !pet;
       btn.style.opacity = pet ? "" : "0.6";
+      btn.style.cursor = pet ? "pointer" : "default";
+      if (nameEl) nameEl.textContent = pet ? buildPetDisplayName(pet) : DEFAULT_LABEL;
+      if (strEl) {
+        const strength = pet ? buildStrengthLabel(pet) : null;
+        strEl.textContent = strength?.text ?? "";
+        strEl.style.color = strength?.maxed ? "#facc15" : "";
+        strEl.style.display = strength ? "" : "none";
+      }
+      if (!icon) continue;
       if (pet) {
-        parts.icon.textContent = "";
-        const candidates = [pet.petSpecies ?? "", pet.name ?? ""].filter(Boolean);
         const mutations = Array.isArray(pet.mutations) && pet.mutations.length ? pet.mutations : void 0;
-        attachSpriteIcon(parts.icon, ["pet"], candidates, ICON_SIZE, "instant-feed-btn", {
+        const iconKey = `${pet.petSpecies ?? ""}|${pet.name ?? ""}|${mutations?.join(",") ?? ""}`;
+        if (btn.dataset.iconKey === iconKey) continue;
+        btn.dataset.iconKey = iconKey;
+        icon.textContent = "";
+        const candidates = [pet.petSpecies ?? "", pet.name ?? ""].filter(Boolean);
+        attachSpriteIcon(icon, ["pet"], candidates, ICON_SIZE, "instant-feed-widget", {
           mutations,
           onNoSpriteFound: () => {
-            parts.icon.textContent = (pet.name || pet.petSpecies || "?").charAt(0).toUpperCase();
+            icon.textContent = (pet.name || pet.petSpecies || "?").charAt(0).toUpperCase();
           }
         });
       } else {
-        parts.icon.replaceChildren();
+        btn.dataset.iconKey = "";
+        icon.replaceChildren();
       }
     }
+    if (widget && positioned && isWidgetVisible()) clampIntoViewport();
   }
-  function applyButtonBaseStyles(btn) {
-    if (!btn.classList.contains("chakra-button")) {
-      btn.classList.add("chakra-button");
-    }
-    btn.type = "button";
-    btn.style.display = "inline-flex";
-    btn.style.alignItems = "center";
-    btn.style.justifyContent = "center";
-    btn.style.gap = "6px";
-    btn.style.width = "auto";
-    btn.style.flex = "0 0 auto";
-    btn.style.whiteSpace = "nowrap";
-    btn.style.backgroundColor = "#6D3A88";
-    btn.style.color = "#ffffff";
-    btn.style.pointerEvents = "auto";
+  function buildPetDisplayName(pet) {
+    const name = String(pet.name ?? "").trim();
+    if (name) return name;
+    const species = String(pet.petSpecies ?? "").trim();
+    if (species) return species.charAt(0).toUpperCase() + species.slice(1);
+    return "Pet";
+  }
+  function buildStrengthLabel(pet) {
+    const petLike = {
+      petSpecies: String(pet.petSpecies ?? ""),
+      xp: pet.xp,
+      targetScale: pet.targetScale,
+      mutations: pet.mutations
+    };
+    const maxStr = getPetMaxStrength(petLike);
+    if (maxStr <= 0) return null;
+    const str = getPetStrength(petLike);
+    const maxed = str >= maxStr;
+    return { text: maxed ? `STR ${maxStr}` : `STR ${str}/${maxStr}`, maxed };
   }
   function buildButtonTitle(pet) {
-    const name = String(pet.name ?? pet.petSpecies ?? "").trim();
-    return name ? `${DEFAULT_LABEL}: ${name}` : DEFAULT_LABEL;
+    const name = buildPetDisplayName(pet);
+    const strength = buildStrengthLabel(pet);
+    return strength ? `${DEFAULT_LABEL}: ${name} (${strength.text})` : `${DEFAULT_LABEL}: ${name}`;
   }
-  function ensureButtonContent(btn) {
-    let content = btn.querySelector('[data-instant-feed-content="1"]');
-    let icon = btn.querySelector('[data-instant-feed-icon="1"]');
-    let label2 = btn.querySelector('[data-instant-feed-label="1"]');
-    if (!content || !icon || !label2) {
-      content = document.createElement("span");
-      content.dataset.instantFeedContent = "1";
-      content.style.display = "inline-flex";
-      content.style.alignItems = "center";
-      content.style.justifyContent = "center";
-      content.style.gap = "6px";
-      content.style.pointerEvents = "none";
-      icon = document.createElement("span");
-      icon.dataset.instantFeedIcon = "1";
-      icon.style.display = "inline-flex";
-      icon.style.alignItems = "center";
-      icon.style.justifyContent = "center";
-      icon.style.width = `${ICON_SIZE}px`;
-      icon.style.height = `${ICON_SIZE}px`;
-      icon.style.flex = "0 0 auto";
-      icon.style.pointerEvents = "none";
-      icon.textContent = "";
-      label2 = document.createElement("span");
-      label2.dataset.instantFeedLabel = "1";
-      label2.style.pointerEvents = "none";
-      label2.textContent = DEFAULT_LABEL;
-      content.append(icon, label2);
-      btn.replaceChildren(content);
-    }
-    return { icon, label: label2 };
+  function updateActivePets(next) {
+    const normalized = normalizeActivePets(next);
+    const sig = buildActivePetsSignature(normalized);
+    if (sig === activePetsSig) return;
+    activePetsSig = sig;
+    activePets = normalized;
+    updateButtons();
   }
   function normalizeActivePets(value) {
     const list = Array.isArray(value) ? value : [];
@@ -30602,7 +30680,11 @@
       const petSpecies = slot?.petSpecies ?? raw?.petSpecies ?? raw?.species ?? null;
       const mutationsRaw = slot?.mutations ?? raw?.mutations ?? raw?.data?.mutations ?? raw?.slot?.data?.mutations ?? raw?.pet?.mutations ?? null;
       const mutations = Array.isArray(mutationsRaw) ? mutationsRaw.map((m) => String(m ?? "").trim()).filter(Boolean) : void 0;
-      out.push({ id, name, petSpecies, mutations });
+      const xpRaw = Number(slot?.xp ?? raw?.xp);
+      const xp = Number.isFinite(xpRaw) ? xpRaw : void 0;
+      const targetScaleRaw = Number(slot?.targetScale ?? raw?.targetScale);
+      const targetScale = Number.isFinite(targetScaleRaw) ? targetScaleRaw : void 0;
+      out.push({ id, name, petSpecies, mutations, xp, targetScale });
       if (out.length >= MAX_BUTTONS) break;
     }
     return out;
@@ -30614,7 +30696,8 @@
       const species = String(pet.petSpecies ?? "");
       const name = String(pet.name ?? "");
       const muts = Array.isArray(pet.mutations) ? pet.mutations.map((m) => String(m ?? "").trim()).filter(Boolean).sort().join(",") : "";
-      return `${id}|${species}|${name}|${muts}`;
+      const strength = buildStrengthLabel(pet)?.text ?? "";
+      return `${id}|${species}|${name}|${muts}|${strength}`;
     }).join(";");
   }
   async function findPetById2(petId) {
@@ -34642,12 +34725,12 @@
     const value = readAriesPath(STORAGE_PATH, true);
     return value === true;
   }
-  function setNotificationSoundEnabled(enabled) {
-    writeAriesPath(STORAGE_PATH, enabled);
+  function setNotificationSoundEnabled(enabled2) {
+    writeAriesPath(STORAGE_PATH, enabled2);
   }
   function playNotificationSound() {
-    const enabled = isNotificationSoundEnabled();
-    if (!enabled) {
+    const enabled2 = isNotificationSoundEnabled();
+    if (!enabled2) {
       return;
     }
     if (!audioReady || !audioElement || !audioUrlSafe) {
@@ -35115,17 +35198,17 @@
     });
     sendBtn.textContent = "Send";
     let isSending = false;
-    function setInputEnabled(enabled) {
-      msgInput.disabled = !enabled;
-      msgInput.placeholder = enabled ? "Type a message..." : "Select a conversation...";
+    function setInputEnabled(enabled2) {
+      msgInput.disabled = !enabled2;
+      msgInput.placeholder = enabled2 ? "Type a message..." : "Select a conversation...";
       style2(msgInput, {
-        opacity: enabled ? "1" : "0.4",
-        cursor: enabled ? "text" : "not-allowed"
+        opacity: enabled2 ? "1" : "0.4",
+        cursor: enabled2 ? "text" : "not-allowed"
       });
       style2(sendBtn, {
-        opacity: enabled ? "1" : "0.4",
-        cursor: enabled ? "pointer" : "not-allowed",
-        pointerEvents: enabled ? "auto" : "none"
+        opacity: enabled2 ? "1" : "0.4",
+        cursor: enabled2 ? "pointer" : "not-allowed",
+        pointerEvents: enabled2 ? "auto" : "none"
       });
     }
     async function handleSend() {
@@ -48192,8 +48275,8 @@
   var normalize3 = (s) => (s || "").replace(/\s+/g, " ").trim();
   var reGameUpdate = /game\s*update\s+ava?ilab?le/i;
   var reDailyBread = /your\s+daily\s+bread/i;
-  var log = (enabled, ...args) => {
-    if (enabled) console.log("[checkModal]", ...args);
+  var log = (enabled2, ...args) => {
+    if (enabled2) console.log("[checkModal]", ...args);
   };
   var reloadScheduled = false;
   var schedulePageReload = (doLog) => {
@@ -48309,6 +48392,47 @@
     findBreadModal
   };
   shareGlobal("CheckModal", exposed);
+
+  // src/core/dom.ts
+  var ready = new Promise((res) => {
+    if (document.readyState !== "loading") res();
+    else addEventListener("DOMContentLoaded", () => res(), { once: true });
+  });
+  function addStyle(css3) {
+    const s = document.createElement("style");
+    s.textContent = css3;
+    document.head.appendChild(s);
+    return s;
+  }
+  function toPredicate(selOrFn) {
+    if (typeof selOrFn === "function") return selOrFn;
+    if (typeof selOrFn === "string") return (el2) => el2.matches?.(selOrFn) ?? false;
+    throw new Error("Selector or predicate required");
+  }
+  function onAdded(selOrFn, cb, { root = document, callForExisting = true } = {}) {
+    const pred = toPredicate(selOrFn);
+    const seen = /* @__PURE__ */ new WeakSet();
+    const consider = (el2) => {
+      if (seen.has(el2)) return;
+      if (pred(el2)) {
+        seen.add(el2);
+        cb(el2);
+      }
+    };
+    if (callForExisting && "querySelectorAll" in root) {
+      root.querySelectorAll("*").forEach(consider);
+    }
+    const obs = new MutationObserver((muts) => {
+      for (const m of muts) for (const n of Array.from(m.addedNodes)) {
+        if (n.nodeType !== 1) continue;
+        const el2 = n;
+        consider(el2);
+        el2.querySelectorAll?.("*").forEach(consider);
+      }
+    });
+    obs.observe(root, { childList: true, subtree: true });
+    return { disconnect: () => obs.disconnect() };
+  }
 
   // src/utils/activityLogFilter.ts
   init_localStorage();
@@ -49440,6 +49564,25 @@
       opts?.onRegister?.(register);
     } catch {
     }
+    window.addEventListener("qws:open-panel", (ev) => {
+      const id = String(ev.detail?.id || "");
+      if (!id) return;
+      const entry = registry2.find((r) => r.id === id);
+      if (!entry) return;
+      const w = windows.get(id);
+      if (w) {
+        w.el.style.display = "";
+        bumpZ(w.el);
+        ensureOnScreen(w.el);
+        setLaunchState(id, true);
+        return;
+      }
+      openWindow(id, entry.title, (root) => {
+        const el2 = root.closest(".qws-win");
+        if (el2) restoreWinPos(id, el2);
+        entry.render(root);
+      });
+    });
     patchInputsKeyTrap(box);
     enableAltDragAnywhere();
     (function initVersionBadge() {
@@ -49681,7 +49824,7 @@
       startDecorPickupLockIndicator();
       startEggHatchLockIndicator();
       startInjectSellAllPets();
-      startInstantFeedButton();
+      startInstantFeedWidget();
       startSelectedInventoryQuantityLogger();
       startInventorySortingObserver();
       startModalObserver({ intervalMs: 6e4, log: true });
@@ -49898,10 +50041,10 @@
     function formatNumber(value, digits = 3) {
       return value == null || Number.isNaN(value) || !Number.isFinite(value) ? "\u2014" : value.toFixed(digits);
     }
-    function setButtonEnabled(btn, enabled) {
+    function setButtonEnabled(btn, enabled2) {
       const setter = btn.setEnabled;
-      if (typeof setter === "function") setter(enabled);
-      else btn.disabled = !enabled;
+      if (typeof setter === "function") setter(enabled2);
+      else btn.disabled = !enabled2;
     }
     const scanLabel = btnScan.querySelector(".label");
     const defaultScanText = scanLabel?.textContent ?? "Rescan sounds";
@@ -52169,7 +52312,7 @@ next: ${next}`;
     const rarity3 = String(raw || "").trim();
     const key2 = (() => {
       const k = rarity3.toLowerCase();
-      if (k === "mythical") return "Mythical";
+      if (k === "mythic" || k === "mythical") return "Mythical";
       if (k === "celestial") return "Celestial";
       if (k === "divine") return "Divine";
       if (k === "legendary") return "Legendary";
@@ -52270,7 +52413,7 @@ next: ${next}`;
       }
       return Math.min(Math.max(value, max), min);
     };
-    const applyPosition = (left2, top2) => {
+    const applyPosition2 = (left2, top2) => {
       const width2 = pop.offsetWidth;
       const height2 = pop.offsetHeight;
       const boundedLeft = clampPosition(left2, margin, window.innerWidth - width2 - margin);
@@ -52321,7 +52464,7 @@ next: ${next}`;
       if (ev.pointerId !== dragState.pointerId) return;
       const dx = ev.clientX - dragState.startX;
       const dy = ev.clientY - dragState.startY;
-      applyPosition(dragState.baseLeft + dx, dragState.baseTop + dy);
+      applyPosition2(dragState.baseLeft + dx, dragState.baseTop + dy);
     };
     const stopDrag = (ev) => {
       if (!dragState) return;
@@ -52622,7 +52765,7 @@ next: ${next}`;
     if (left + width > window.innerWidth - margin) left = window.innerWidth - width - margin;
     if (top + height > window.innerHeight - margin) top = anchorRect.top - height - 8;
     if (top < margin) top = margin;
-    applyPosition(left, top);
+    applyPosition2(left, top);
     const onDocPointer = (ev) => {
       const target = ev.target;
       if (!target) return;
@@ -54755,8 +54898,8 @@ next: ${next}`;
       this.emit();
       this.syncing = false;
     }
-    setGlobalEnabled(enabled) {
-      this.global.enabled = !!enabled;
+    setGlobalEnabled(enabled2) {
+      this.global.enabled = !!enabled2;
       this.persistGlobal();
       this.emit();
     }
@@ -54778,9 +54921,9 @@ next: ${next}`;
     getOverride(key2) {
       return this.overrides.get(key2);
     }
-    setOverrideEnabled(key2, enabled) {
+    setOverrideEnabled(key2, enabled2) {
       const entry = this.ensureOverride(key2, { silent: true });
-      entry.enabled = !!enabled;
+      entry.enabled = !!enabled2;
       this.persistOverride(key2);
       this.emit();
     }
@@ -55986,7 +56129,7 @@ next: ${next}`;
     const refreshRarityRow = () => {
       const rules = lockerRestrictionsService.getSellAllPetsRules();
       const selected = Array.isArray(rules.protectedRarities) ? rules.protectedRarities : [];
-      const enabled = rules.enabled !== false;
+      const enabled2 = rules.enabled !== false;
       const selectedSet = new Set(selected);
       raritySelectedArea.innerHTML = "";
       if (selected.length === 0) {
@@ -56049,8 +56192,8 @@ next: ${next}`;
         if (remaining.length === 0) rarityPickerOpen = false;
       }
       rarityAddBtn.textContent = rarityPickerOpen ? "\xD7" : "+";
-      rarityRow.style.opacity = enabled ? "1" : "0.6";
-      rarityRow.style.pointerEvents = enabled ? "auto" : "none";
+      rarityRow.style.opacity = enabled2 ? "1" : "0.6";
+      rarityRow.style.pointerEvents = enabled2 ? "auto" : "none";
     };
     let rarityPickerOutsideHandler = null;
     rarityAddBtn.addEventListener("click", (ev) => {
@@ -56165,25 +56308,25 @@ next: ${next}`;
     };
     const refreshSellAllPetsControls = () => {
       const rules = lockerRestrictionsService.getSellAllPetsRules();
-      const enabled = rules.enabled !== false;
+      const enabled2 = rules.enabled !== false;
       const protectGold = rules.protectGold !== false;
       const protectRainbow = rules.protectRainbow !== false;
       const protectMaxStr = rules.protectMaxStr !== false;
-      setCheck(sellEnableToggle, enabled);
+      setCheck(sellEnableToggle, enabled2);
       setCheck(sellGoldToggle, protectGold);
       setCheck(sellRainbowToggle, protectRainbow);
       setCheck(sellMaxStrToggle, protectMaxStr);
       sellMaxStrInput.value = String(clampMaxStr(rules.maxStrThreshold));
-      sellGoldToggle.disabled = !enabled;
-      sellRainbowToggle.disabled = !enabled;
-      sellMaxStrToggle.disabled = !enabled;
-      const maxStrDisabled = !enabled || !protectMaxStr;
+      sellGoldToggle.disabled = !enabled2;
+      sellRainbowToggle.disabled = !enabled2;
+      sellMaxStrToggle.disabled = !enabled2;
+      const maxStrDisabled = !enabled2 || !protectMaxStr;
       sellMaxStrInput.disabled = maxStrDisabled;
       sellMaxStrWrap.style.opacity = maxStrDisabled ? "0.6" : "1";
       sellMaxStrWrap.style.pointerEvents = maxStrDisabled ? "none" : "auto";
-      setRuleRowDisabled(sellGoldRow.row, !enabled);
-      setRuleRowDisabled(sellRainbowRow.row, !enabled);
-      setRuleRowDisabled(sellMaxStrRow.row, !enabled);
+      setRuleRowDisabled(sellGoldRow.row, !enabled2);
+      setRuleRowDisabled(sellRainbowRow.row, !enabled2);
+      setRuleRowDisabled(sellMaxStrRow.row, !enabled2);
       refreshRarityRow();
     };
     const setStatusTone = (tone) => {
@@ -56221,8 +56364,8 @@ next: ${next}`;
     slider.addEventListener("input", () => handleSliderInput(false));
     slider.addEventListener("change", () => handleSliderInput(true));
     sellEnableToggle.addEventListener("change", () => {
-      const enabled = !!sellEnableToggle.checked;
-      lockerRestrictionsService.setSellAllPetsRules({ enabled });
+      const enabled2 = !!sellEnableToggle.checked;
+      lockerRestrictionsService.setSellAllPetsRules({ enabled: enabled2 });
       refreshSellAllPetsControls();
     });
     sellGoldToggle.addEventListener("change", () => {
@@ -56710,7 +56853,7 @@ next: ${next}`;
   }
 
   // src/ui/menus/calculator.ts
-  var ROOT_CLASS2 = "mg-crop-simulation";
+  var ROOT_CLASS = "mg-crop-simulation";
   var SIZE_MIN = 50;
   var SIZE_MAX = 100;
   var SCALE_MIN = 1;
@@ -56775,7 +56918,7 @@ next: ${next}`;
     "moonbinderpod"
   ]);
   var CROP_SIMULATION_CSS = `
-.${ROOT_CLASS2} {
+.${ROOT_CLASS} {
   display: none;
   width: min(100%, 500px);
   padding: 12px 14px;
@@ -56788,36 +56931,36 @@ next: ${next}`;
   z-index: 2000;
   pointer-events: auto;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__header {
+.${ROOT_CLASS} .mg-crop-simulation__header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__title {
+.${ROOT_CLASS} .mg-crop-simulation__title {
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: #f8fafc;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__crop-name {
+.${ROOT_CLASS} .mg-crop-simulation__crop-name {
   font-size: 13px;
   font-weight: 600;
   color: #5eead4;
   text-transform: capitalize;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__sprite-section {
+.${ROOT_CLASS} .mg-crop-simulation__sprite-section {
   display: flex;
   flex-direction: column;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__sprite-box {
+.${ROOT_CLASS} .mg-crop-simulation__sprite-box {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 12px;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__sprite {
+.${ROOT_CLASS} .mg-crop-simulation__sprite {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -56829,54 +56972,54 @@ next: ${next}`;
   transform-origin: center;
   transform: scale(var(--mg-crop-simulation-scale));
 }
-.${ROOT_CLASS2} .mg-crop-simulation__sprite-layer,
-.${ROOT_CLASS2} .mg-crop-simulation__sprite-fallback {
+.${ROOT_CLASS} .mg-crop-simulation__sprite-layer,
+.${ROOT_CLASS} .mg-crop-simulation__sprite-fallback {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__sprite-layer img {
+.${ROOT_CLASS} .mg-crop-simulation__sprite-layer img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   image-rendering: pixelated;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__sprite-layer--base {
+.${ROOT_CLASS} .mg-crop-simulation__sprite-layer--base {
   z-index: 1;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__sprite-layer--overlay {
+.${ROOT_CLASS} .mg-crop-simulation__sprite-layer--overlay {
   z-index: 2;
   transform: translateY(-4px);
 }
-.${ROOT_CLASS2} .mg-crop-simulation__sprite-layer--overlay-lighting {
+.${ROOT_CLASS} .mg-crop-simulation__sprite-layer--overlay-lighting {
   transform: translateY(-30px);
 }
-.${ROOT_CLASS2} .mg-crop-simulation__sprite-fallback {
+.${ROOT_CLASS} .mg-crop-simulation__sprite-fallback {
   z-index: 0;
   font-size: 42px;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__sprite[data-mg-has-sprite="1"] .mg-crop-simulation__sprite-fallback {
+.${ROOT_CLASS} .mg-crop-simulation__sprite[data-mg-has-sprite="1"] .mg-crop-simulation__sprite-fallback {
   opacity: 0;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__slider-container {
+.${ROOT_CLASS} .mg-crop-simulation__slider-container {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__slider-row {
+.${ROOT_CLASS} .mg-crop-simulation__slider-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__slider-label {
+.${ROOT_CLASS} .mg-crop-simulation__slider-label {
   font-size: 12px;
   color: rgba(226, 232, 240, 0.82);
   flex: 0 0 auto;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__slider-value {
+.${ROOT_CLASS} .mg-crop-simulation__slider-value {
   margin-left: auto;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -56887,19 +57030,19 @@ next: ${next}`;
   flex: 0 0 4ch;
   white-space: nowrap;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__slider-weight {
+.${ROOT_CLASS} .mg-crop-simulation__slider-weight {
   font-size: 11px;
   color: rgba(148, 163, 184, 0.82);
   font-variant-numeric: tabular-nums;
   text-align: center;
   white-space: nowrap;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__slider {
+.${ROOT_CLASS} .mg-crop-simulation__slider {
   flex: 1 1 auto;
   min-width: 0;
   accent-color: #5eead4;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__price {
+.${ROOT_CLASS} .mg-crop-simulation__price {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -56909,7 +57052,7 @@ next: ${next}`;
   align-self: flex-start;
   margin-top: auto;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__price-icon {
+.${ROOT_CLASS} .mg-crop-simulation__price-icon {
   width: 20px;
   height: 20px;
   flex: 0 0 auto;
@@ -56917,19 +57060,19 @@ next: ${next}`;
   user-select: none;
   pointer-events: none;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__price-value {
+.${ROOT_CLASS} .mg-crop-simulation__price-value {
   line-height: 1;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__section-title {
+.${ROOT_CLASS} .mg-crop-simulation__section-title {
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: rgba(148, 163, 184, 0.9);
 }
-.${ROOT_CLASS2}.mg-crop-simulation--calculator {
+.${ROOT_CLASS}.mg-crop-simulation--calculator {
   align-items: center;
 }
-.${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-calculator__layout {
+.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__layout {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -56937,7 +57080,7 @@ next: ${next}`;
   width: min(440px, 100%);
   margin: 0 auto;
 }
-.${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-calculator__section {
+.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__section {
   display: grid;
   gap: 10px;
   padding: 12px;
@@ -56947,7 +57090,7 @@ next: ${next}`;
   box-shadow: none;
   justify-items: stretch;
 }
-.${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-calculator__section-heading {
+.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__section-heading {
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -56955,32 +57098,32 @@ next: ${next}`;
   font-weight: 600;
   text-align: center;
 }
-.${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-calculator__section--preview {
+.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__section--preview {
   justify-items: center;
   text-align: center;
 }
-.${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-calculator__section--preview .mg-crop-simulation__slider-row {
+.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__section--preview .mg-crop-simulation__slider-row {
   width: 100%;
 }
-.${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-calculator__mutations-weather {
+.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__mutations-weather {
   display: grid;
   gap: 8px;
 }
-.${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-calculator__mutations-heading {
+.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__mutations-heading {
   font-size: 10px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: rgba(148, 163, 184, 0.82);
   text-align: center;
 }
-.${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-simulation__price {
+.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-simulation__price {
   margin-top: 0;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__segmented {
+.${ROOT_CLASS} .mg-crop-simulation__segmented {
   display: flex;
   width: 100%;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__segmented-control {
+.${ROOT_CLASS} .mg-crop-simulation__segmented-control {
   --qmm-bg-soft: rgba(11, 15, 19, 0.8);
   --qmm-border-2: rgba(148, 163, 184, 0.28);
   --qmm-text: #e2e8f0;
@@ -56992,7 +57135,7 @@ next: ${next}`;
   min-width: 0;
   width: 100%;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__segmented-control .qmm-seg__btn {
+.${ROOT_CLASS} .mg-crop-simulation__segmented-control .qmm-seg__btn {
   font-size: 11px;
   letter-spacing: 0.02em;
   font-weight: 600;
@@ -57003,17 +57146,17 @@ next: ${next}`;
   text-align: center;
   min-width: 0;
 }
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="none"],
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="none"].active {
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="none"],
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="none"].active {
   color: rgba(148, 163, 184, 0.92);
 }
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="gold"],
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="gold"].active {
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="gold"],
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="gold"].active {
   color: #facc15;
   font-weight: 700;
 }
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="gold"] .qmm-seg__btn-label,
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="gold"].active .qmm-seg__btn-label {
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="gold"] .qmm-seg__btn-label,
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="gold"].active .qmm-seg__btn-label {
   color: transparent;
   background-image: linear-gradient(90deg, #fef08a, #facc15, #fef08a);
   background-clip: text;
@@ -57022,13 +57165,13 @@ next: ${next}`;
   background-size: 100% 100%;
   background-repeat: no-repeat;
 }
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="rainbow"],
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="rainbow"].active {
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="rainbow"],
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="rainbow"].active {
   color: #fbbf24;
   font-weight: 700;
 }
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="rainbow"] .qmm-seg__btn-label,
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-color="rainbow"].active .qmm-seg__btn-label {
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="rainbow"] .qmm-seg__btn-label,
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="rainbow"].active .qmm-seg__btn-label {
   color: transparent;
   background-image: linear-gradient(90deg, #f87171, #fbbf24, #34d399, #5eead4, #c084fc);
   background-clip: text;
@@ -57037,53 +57180,53 @@ next: ${next}`;
   background-size: 100% 100%;
   background-repeat: no-repeat;
 }
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="none"],
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="none"].active,
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="none"],
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="none"].active {
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="none"],
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="none"].active,
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="none"],
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="none"].active {
   color: rgba(148, 163, 184, 0.92);
 }
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="wet"],
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="wet"].active {
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="wet"],
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="wet"].active {
   color: #5AF6F5;
   font-weight: 700;
 }
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="chilled"],
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="chilled"].active {
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="chilled"],
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="chilled"].active {
   color: #AFE0F6;
   font-weight: 700;
 }
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="frozen"],
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="frozen"].active {
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="frozen"],
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="frozen"].active {
   color: #AABEFF;
   font-weight: 700;
 }
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="thunderstruck"],
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-weather="thunderstruck"].active {
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="thunderstruck"],
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="thunderstruck"].active {
   color: rgb(16, 141, 163);
   font-weight: 700;
 }
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="dawnlit"],
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="dawnlit"].active {
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="dawnlit"],
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="dawnlit"].active {
   color: #7864B4;
   font-weight: 700;
 }
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="dawnbound"],
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="dawnbound"].active {
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="dawnbound"],
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="dawnbound"].active {
   color: #9785CB;
   font-weight: 700;
 }
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="amberlit"],
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="amberlit"].active {
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="amberlit"],
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="amberlit"].active {
   color: #A04632;
   font-weight: 700;
 }
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="amberbound"],
-.${ROOT_CLASS2} .qmm-seg__btn[data-mg-lighting="amberbound"].active {
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="amberbound"],
+.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="amberbound"].active {
   color: #F06E50;
   font-weight: 700;
 }
-.${ROOT_CLASS2} .mg-crop-simulation__mutations-section {
+.${ROOT_CLASS} .mg-crop-simulation__mutations-section {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -57215,19 +57358,19 @@ next: ${next}`;
     ensureCropSimulationStyles();
     if (calculatorStyleEl) return;
     calculatorStyleEl = addStyle(`
-    .${ROOT_CLASS2}.mg-crop-simulation--calculator {
+    .${ROOT_CLASS}.mg-crop-simulation--calculator {
       width: 100%;
       max-width: none;
       min-width: 0;
       position: relative;
     }
-    .${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-simulation__price {
+    .${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-simulation__price {
       justify-content: center;
       margin: 0 0 12px;
       font-size: 20px;
       gap: 10px;
     }
-    .${ROOT_CLASS2}.mg-crop-simulation--calculator .mg-crop-simulation__price-value {
+    .${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-simulation__price-value {
       font-size: 20px;
     }
     .mg-crop-calculator__placeholder {
@@ -57517,7 +57660,7 @@ next: ${next}`;
       });
       right.appendChild(detailScroll);
       const simulationRoot = document.createElement("div");
-      simulationRoot.className = `${ROOT_CLASS2} mg-crop-simulation--visible mg-crop-simulation--calculator`;
+      simulationRoot.className = `${ROOT_CLASS} mg-crop-simulation--visible mg-crop-simulation--calculator`;
       const detailLayout = document.createElement("div");
       detailLayout.className = "mg-crop-calculator__layout";
       const createSection = (title, extraClass) => {
@@ -60075,6 +60218,21 @@ next: ${next}`;
     subtitle.style.opacity = "0.7";
     subtitle.style.fontSize = "12px";
     header.appendChild(subtitle);
+    const widgetRow = document.createElement("label");
+    widgetRow.style.display = "flex";
+    widgetRow.style.alignItems = "center";
+    widgetRow.style.gap = "8px";
+    widgetRow.style.marginTop = "6px";
+    widgetRow.style.cursor = "pointer";
+    const widgetSwitch = ui.switch(isInstantFeedWidgetEnabled());
+    widgetSwitch.addEventListener("change", () => {
+      setInstantFeedWidgetEnabled(widgetSwitch.checked);
+    });
+    const widgetLabel = document.createElement("span");
+    widgetLabel.textContent = "Show floating Instant Feed widget";
+    widgetLabel.style.fontSize = "13px";
+    widgetRow.append(widgetSwitch, widgetLabel);
+    header.appendChild(widgetRow);
     const body = document.createElement("div");
     body.style.display = "flex";
     body.style.flexDirection = "column";
@@ -60082,8 +60240,8 @@ next: ${next}`;
     body.style.overflow = "auto";
     body.style.minHeight = "0";
     card2.appendChild(body);
-    const petItems = Object.keys(petCatalog).map((species) => {
-      const entry = petCatalog[species];
+    const petItems = Object.keys(petCatalog2).map((species) => {
+      const entry = petCatalog2[species];
       const name = String(entry?.name || species);
       return {
         id: species,
@@ -60113,7 +60271,7 @@ next: ${next}`;
         return;
       }
       const cropEntries = list.map((crop) => {
-        const entry = plantCatalog[crop];
+        const entry = plantCatalog2[crop];
         const name = String(entry?.name || crop);
         return { crop, name };
       }).sort((a, b) => a.name.localeCompare(b.name));
@@ -60477,12 +60635,21 @@ next: ${next}`;
     })();
     repaint();
   }
+  var detachPetsOpenTabListener = null;
   function renderPetsMenu(root) {
     const ui = new Menu({ id: "pets", compact: true, windowSelector: ".qws-win" });
     ui.mount(root);
     ui.addTab("manager", "\u{1F9F0} Manager", (view) => renderManagerTab(view, ui));
     ui.addTab("feeding", "\u{1F356} Feeding", (view) => renderFeedingTab(view, ui));
     ui.addTab("logs", "\u{1F4DD} Logs", (view) => renderLogsTab(view, ui));
+    const knownTabs = /* @__PURE__ */ new Set(["manager", "feeding", "logs"]);
+    const onOpenTab = (ev) => {
+      const tab = String(ev.detail?.tab || "");
+      if (knownTabs.has(tab)) ui.switchTo(tab);
+    };
+    detachPetsOpenTabListener?.();
+    window.addEventListener("qws:pets-open-tab", onOpenTab);
+    detachPetsOpenTabListener = () => window.removeEventListener("qws:pets-open-tab", onOpenTab);
   }
 
   // src/ui/menus/misc.ts
@@ -63038,8 +63205,8 @@ next: ${next}`;
     wrap.appendChild(
       card([sectionLabel("Saved gardens"), statusEl, listWrap])
     );
-    const unsubChange = EditorService.onChange((enabled) => {
-      toggle.querySelector("input").checked = enabled;
+    const unsubChange = EditorService.onChange((enabled2) => {
+      toggle.querySelector("input").checked = enabled2;
       renderSavedList();
     });
     const unsubSaved = EditorService.onSavedGardensChange(renderSavedList);
@@ -63099,17 +63266,17 @@ next: ${next}`;
         holdText.textContent = "Hold";
         holdButton.replaceChildren(holdIndicator, holdText);
         let holdEnabled = getKeybindHoldDetection(action2.id);
-        const updateHoldButton = (enabled) => {
-          holdEnabled = enabled;
-          holdButton.setAttribute("aria-pressed", enabled ? "true" : "false");
-          holdIndicator.style.color = enabled ? "#34c759" : "#ff3b30";
+        const updateHoldButton = (enabled2) => {
+          holdEnabled = enabled2;
+          holdButton.setAttribute("aria-pressed", enabled2 ? "true" : "false");
+          holdIndicator.style.color = enabled2 ? "#34c759" : "#ff3b30";
         };
         updateHoldButton(holdEnabled);
         holdButton.addEventListener("click", () => {
           setKeybindHoldDetection(action2.id, !holdEnabled);
         });
-        detachHoldListener = onKeybindHoldDetectionChange(action2.id, (enabled) => {
-          updateHoldButton(enabled);
+        detachHoldListener = onKeybindHoldDetectionChange(action2.id, (enabled2) => {
+          updateHoldButton(enabled2);
         });
         holdContainer.appendChild(holdButton);
         if (action2.holdDetection.description) {
@@ -63158,8 +63325,8 @@ next: ${next}`;
         holdToggle.addEventListener("change", () => {
           setKeybindHoldDetection(action2.id, holdToggle.checked);
         });
-        detachHoldListener = onKeybindHoldDetectionChange(action2.id, (enabled) => {
-          holdToggle.checked = enabled;
+        detachHoldListener = onKeybindHoldDetectionChange(action2.id, (enabled2) => {
+          holdToggle.checked = enabled2;
         });
         controls.appendChild(holdContainer);
       }
@@ -63192,15 +63359,15 @@ next: ${next}`;
       });
       actionsWrap.appendChild(resetBtn);
     }
-    const setButtonEnabled = (btn, enabled) => {
+    const setButtonEnabled = (btn, enabled2) => {
       if (!btn) return;
       const setter = btn.setEnabled;
       if (setter) {
-        setter(enabled);
+        setter(enabled2);
       } else {
-        btn.disabled = !enabled;
-        btn.classList.toggle("is-disabled", !enabled);
-        btn.setAttribute("aria-disabled", (!enabled).toString());
+        btn.disabled = !enabled2;
+        btn.classList.toggle("is-disabled", !enabled2);
+        btn.setAttribute("aria-disabled", (!enabled2).toString());
       }
     };
     const updateButtons3 = (current) => {

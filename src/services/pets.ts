@@ -6,9 +6,9 @@ import {
   type CropItem,
   type CropInventoryState,
 } from "./player";
-import { petCatalog, petAbilities, plantCatalog } from "../data";
+import { petCatalog, petAbilities, plantCatalog, decorCatalog } from "../data";
 import { fakeInventoryShow, fakeInventoryDisable, closeInventoryPanel, isInventoryOpen } from "./fakeModal.ts";
-import { Atoms, myPetHutchPetItems, myNumPetHutchItems, isMyInventoryAtMaxLength } from "../store/atoms";
+import { Atoms, myPetHutchPetItems, myNumPetHutchItems, isMyInventoryAtMaxLength, stateUserSlots, playerId, playerDatabaseUserId } from "../store/atoms";
 import { toastSimple } from "../ui/toast";
 import { Hotkey, matchHotkey, stringToHotkey } from "../ui/menu.ts";
 import {
@@ -1984,7 +1984,35 @@ type FlatAbilityEntry = {
 };
 
 /* --------------------------------- Helpers: free slot finders -------------------------------- */
-const _HUTCH_MAX = 25;
+// The game hardcodes the hutch base capacity; upgrade bonuses only exist in
+// the dynamic decor catalog (decorCatalog.PetHutch.upgrades).
+const HUTCH_BASE_CAPACITY = 25;
+
+async function _getHutchInfo(): Promise<{ capacity: number; used: number; free: number }> {
+  let capacityLevel = 0;
+  let used = 0;
+  try {
+    const inv = await Atoms.inventory.myInventory.get();
+    const storages: any[] = Array.isArray((inv as any)?.storages) ? (inv as any).storages : [];
+    const hutch = storages.find((s: any) => s?.id === "PetHutch" || s?.decorId === "PetHutch");
+    capacityLevel = Number(hutch?.capacityLevel) || 0;
+    if (Array.isArray(hutch?.items)) used = hutch.items.length;
+  } catch {}
+  if (!used) {
+    try {
+      const n = Number(await myNumPetHutchItems.get());
+      if (Number.isFinite(n) && n > 0) used = n;
+    } catch {}
+  }
+  const upgrades: any[] = Array.isArray((decorCatalog as any)?.PetHutch?.upgrades)
+    ? (decorCatalog as any).PetHutch.upgrades
+    : [];
+  const bonus = upgrades
+    .filter((u: any) => Number(u?.targetLevel) <= capacityLevel)
+    .reduce((sum: number, u: any) => sum + (Number(u?.capacityBonus) || 0), 0);
+  const capacity = HUTCH_BASE_CAPACITY + bonus;
+  return { capacity, used, free: Math.max(0, capacity - used) };
+}
 
 async function _findFreeInventoryIndex(): Promise<number | undefined> {
   try {
@@ -2006,10 +2034,11 @@ async function _findFreeHutchIndex(): Promise<number | undefined> {
     const hasStorageIndices = items.some(it => typeof it?.storageIndex === "number");
     if (hasStorageIndices) {
       const used = new Set(items.filter(it => typeof it?.storageIndex === "number").map(it => it.storageIndex as number));
-      for (let i = 0; i < _HUTCH_MAX; i++) {
+      const { capacity } = await _getHutchInfo();
+      for (let i = 0; i < capacity; i++) {
         if (!used.has(i)) return i;
       }
-      return _HUTCH_MAX;
+      return capacity;
     }
     for (let i = 0; i < items.length; i++) {
       if (!items[i]) return i;
@@ -2097,208 +2126,247 @@ async function _waitForHutchState(
 /* --------------------------------- Team switching --------------------------------- */
 type EquipPetOpts = { markTeamId?: string | null; markUsed?: boolean };
 
+const MAX_TEAM_SLOTS = 3;
+
+/**
+ * Align target pet ids on the current active slots so that pets already
+ * active keep their slot. Guarantees a swap never targets a pet that is
+ * itself part of the team (which would corrupt the swap sequence).
+ */
+function _alignTargetsToActiveSlots(targets: string[], activeSlots: string[]): string[] {
+  const aligned: string[] = new Array(MAX_TEAM_SLOTS).fill("");
+  const remaining: string[] = [];
+  for (const id of targets) {
+    const idx = activeSlots.indexOf(id);
+    if (idx >= 0 && idx < MAX_TEAM_SLOTS && !aligned[idx]) aligned[idx] = id;
+    else remaining.push(id);
+  }
+  for (const id of remaining) {
+    const free = aligned.findIndex(v => v === "");
+    if (free < 0) break;
+    aligned[free] = id;
+  }
+  return aligned;
+}
+
+/** Move one spare (non-target, non-active) inventory pet into the hutch to free an inventory slot. */
+async function _moveSparePetToHutch(
+  targetSet: Set<string>,
+  activeSlots: string[],
+  hutchItemsSet: Set<string>,
+): Promise<boolean> {
+  try {
+    const invPets = await PetsService.getInventoryPets();
+    const spare = (Array.isArray(invPets) ? invPets : []).find(p => {
+      const id = String(p?.id || "");
+      return id && !hutchItemsSet.has(id) && !activeSlots.includes(id) && !targetSet.has(id);
+    });
+    if (!spare) return false;
+    const hutIdx = await _findFreeHutchIndex();
+    await PlayerService.putItemInStorage(spare.id, "PetHutch", hutIdx);
+    void _waitForHutchState(set => set.has(String(spare.id)), 3000);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function _getMyUserSlotIndex(): Promise<number | null> {
+  try {
+    const slots = await stateUserSlots.get();
+    const list: any[] = Array.isArray(slots) ? slots : [];
+    if (!list.length) return null;
+    let pid: string | null = null;
+    let dbId: string | null = null;
+    try { pid = (await playerId.get()) ?? null; } catch {}
+    try { dbId = (await playerDatabaseUserId.get()) ?? null; } catch {}
+    if (!pid && !dbId) return null;
+    for (let i = 0; i < list.length; i++) {
+      const slot = list[i];
+      if (!slot) continue;
+      const slotPid = String(slot?.playerId ?? "");
+      const slotDbId = String(slot?.databaseUserId ?? "");
+      if ((pid && (slotPid === pid || slotDbId === pid)) ||
+          (dbId && (slotPid === dbId || slotDbId === dbId))) {
+        return i;
+      }
+    }
+    return null;
+  } catch { return null; }
+}
+
+/**
+ * N-th dirt tile of my garden (position + localTileIndex), mirroring Gemini's
+ * getMyGardenDirtTile. Each placed pet must land on a distinct tile: placing
+ * several pets on the same tile makes the server ignore all but the first.
+ */
+async function _getMyDirtTilePlacement(
+  tileOffset: number,
+): Promise<{ position: { x: number; y: number }; localTileIndex: number } | null> {
+  try {
+    const map: any = await Atoms.root.map.get();
+    const cols = Number(map?.cols);
+    const dirtArrays: number[][] = Array.isArray(map?.userSlotIdxAndDirtTileIdxToGlobalTileIdx)
+      ? map.userSlotIdxAndDirtTileIdxToGlobalTileIdx
+      : [];
+    if (!Number.isFinite(cols) || cols <= 0 || !dirtArrays.length) return null;
+    const slotIdx = await _getMyUserSlotIndex();
+    if (slotIdx == null) return null;
+    const dirtGlobals: number[] = Array.isArray(dirtArrays[slotIdx]) ? dirtArrays[slotIdx] : [];
+    if (!dirtGlobals.length) return null;
+    const localTileIndex = Math.min(Math.max(0, tileOffset), dirtGlobals.length - 1);
+    const globalIndex = Number(dirtGlobals[localTileIndex]);
+    if (!Number.isFinite(globalIndex)) return null;
+    return {
+      position: { x: globalIndex % cols, y: Math.floor(globalIndex / cols) },
+      localTileIndex,
+    };
+  } catch { return null; }
+}
+
+async function _placePetInMyGarden(petId: string, tileOffset: number): Promise<void> {
+  const tile = await _getMyDirtTilePlacement(tileOffset);
+  if (tile) {
+    await PlayerService.placePet(petId, tile.position, "Dirt", tile.localTileIndex);
+    return;
+  }
+  // Fallback: legacy fixed boardwalk spot when map data is unavailable
+  await PlayerService.placePet(petId, { x: 0, y: 0 }, "Boardwalk", 64);
+}
+
 async function _equipPetIds(
   targetInvIdsRaw: string[],
   opts?: EquipPetOpts
 ): Promise<{ swapped: number; placed: number; skipped: number }> {
   const markId = (opts?.markTeamId ?? null) || null;
+  const seenIds = new Set<string>();
   const targetInvIds = (Array.isArray(targetInvIdsRaw) ? targetInvIdsRaw : [])
     .map(v => String(v || ""))
-    .filter(v => v.length > 0)
-    .slice(0, 3);
+    .filter(v => v.length > 0 && !seenIds.has(v) && !!seenIds.add(v))
+    .slice(0, MAX_TEAM_SLOTS);
   const markResolved = markId ?? _teamIdFromSlots(targetInvIds) ?? null;
   const shouldMark = opts?.markUsed !== false && !!markResolved;
-
-  if (!targetInvIds.length) {
+  const finish = (res: { swapped: number; placed: number; skipped: number }) => {
     if (shouldMark) markTeamAsUsed(markResolved);
-    return { swapped: 0, placed: 0, skipped: 0 };
-  }
+    return res;
+  };
 
-  const targetSet = new Set<string>(targetInvIds);
+  if (!targetInvIds.length) return finish({ swapped: 0, placed: 0, skipped: 0 });
 
-  // 1) Snapshot current active pets
-  let activeSlots = await _getActivePetSlotIds();
+  // 1) Snapshot current active pets (slot order)
+  const activeSlots = await _getActivePetSlotIds();
 
-  // 2) Hutch capacity snapshot
-  const HUTCH_MAX = 25;
-  let hutchCount = (() => { try { return Number(myNumPetHutchItems.get()); } catch { return 0; } })() as any;
-  try { hutchCount = Number(await myNumPetHutchItems.get()); } catch { hutchCount = 0; }
-  let freeHutch = Math.max(0, HUTCH_MAX - (Number.isFinite(hutchCount) ? (hutchCount as number) : 0));
+  // 2) Team already active (order-independent)? Nothing to do.
+  const sameTeam =
+    targetInvIds.length === activeSlots.length &&
+    [...targetInvIds].sort().join("|") === [...activeSlots].sort().join("|");
+  if (sameTeam) return finish({ swapped: 0, placed: 0, skipped: targetInvIds.length });
 
-  // 3) Ensure target pets are in inventory (retrieve from hutch if needed)
-  let hutchItemsSet: Set<string> = new Set();
+  // 3) Hutch snapshot — capacity follows the player's hutch upgrade level
+  let freeHutch = (await _getHutchInfo()).free;
+  let hutchItemsSet = new Set<string>();
   try {
     const hutchItems = await myPetHutchPetItems.get();
     if (Array.isArray(hutchItems)) {
-      hutchItemsSet = new Set(hutchItems.map((it: any) => String(it?.id ?? "")));
+      hutchItemsSet = new Set(
+        hutchItems.map((it: any) => String(it?.id ?? "")).filter(Boolean),
+      );
     }
   } catch {}
-
-  const missingFromActive = targetInvIds.filter(id => !activeSlots.includes(id));
-  const missingFromHutch = missingFromActive.filter(id => hutchItemsSet.has(id));
-
-  // If we must retrieve from Hutch but have no inventory space and no Hutch space to juggle, abort with toast
-  if (missingFromHutch.length > 0) {
-    let invFull = false;
-    try { invFull = !!(await isMyInventoryAtMaxLength.get()); } catch { invFull = false; }
-    if (invFull && freeHutch <= 0) {
-      try { await toastSimple("Inventory Full", "Cannot equip team: required pets are in the Pet Hutch and your inventory is full."); } catch {}
-      if (shouldMark) markTeamAsUsed(markResolved);
-      return { swapped: 0, placed: 0, skipped: targetInvIds.length };
-    }
-  }
-
-  // Iteratively retrieve from Hutch and equip (swap or place) with minimal clicks
-  let swapped = 0, placed = 0, skipped = 0;
-  for (const invId of targetInvIds) {
-    const isAlreadyActive = activeSlots.includes(invId);
-    if (isAlreadyActive) { skipped++; continue; }
-
-    const livesInHutch = hutchItemsSet.has(invId);
-    if (livesInHutch) {
-      // Ensure one free inventory slot
-      let invFull = false;
-      try { invFull = !!(await isMyInventoryAtMaxLength.get()); } catch { invFull = false; }
-      if (invFull) {
-        // Try to free by moving a non-target inventory pet into Hutch if space
-        if (freeHutch > 0) {
-          try {
-            const invPets = await PetsService.getInventoryPets();
-              const invPet = (Array.isArray(invPets) ? invPets : []).find(p => {
-                const id = String(p?.id || "");
-                return id && !hutchItemsSet.has(id) && !activeSlots.includes(id) && !targetSet.has(id);
-              });
-              if (invPet) {
-              const hutIdx = await _findFreeHutchIndex();
-              await PlayerService.putItemInStorage(invPet.id, "PetHutch", hutIdx);
-              freeHutch = Math.max(0, freeHutch - 1);
-              void _waitForHutchState(set => set.has(String(invPet.id)), 3000);
-              } else {
-                // No candidate to free space
-                try { await toastSimple("Inventory Full", "Cannot equip team: no free slot to retrieve a pet from the Pet Hutch.", "error"); } catch {}
-                if (shouldMark) markTeamAsUsed(markResolved);
-                return { swapped, placed, skipped };
-              }
-            } catch {
-              try { await toastSimple("Inventory Full", "Cannot equip team: failed to free up a slot.", "error"); } catch {}
-              if (shouldMark) markTeamAsUsed(markResolved);
-              return { swapped, placed, skipped };
-            }
-          } else {
-            try { await toastSimple("Inventory Full", "Cannot equip team: required pets are in the Pet Hutch and your inventory is full.", "error"); } catch {}
-            if (shouldMark) markTeamAsUsed(markResolved);
-            return { swapped, placed, skipped };
-          }
-        }
-
-      // Retrieve from Hutch (this increases available Hutch space by 1)
-      try {
-        const invIdx = await _findFreeInventoryIndex();
-        await PlayerService.retrieveItemFromStorage(invId, "PetHutch", invIdx);
-        hutchItemsSet.delete(invId);
-        freeHutch = Math.min(25, freeHutch + 1);
-      } catch { continue; }
-      void _waitForHutchState(set => !set.has(String(invId)), 3000);
-    }
-
-    // Prefer swapping out a non-target active if any, else place
-    const offTargetActive = activeSlots.find(id => !targetSet.has(id));
-    if (offTargetActive) {
-      try {
-        await PlayerService.swapPet(offTargetActive, invId);
-        swapped++;
-        // After swap, offTargetActive becomes inventory item; move it into Hutch if possible to keep flow
-        if (freeHutch > 0) {
-          try {
-            const hutIdx = await _findFreeHutchIndex();
-            await PlayerService.putItemInStorage(offTargetActive, "PetHutch", hutIdx);
-            freeHutch = Math.max(0, freeHutch - 1);
-          } catch {}
-          void _waitForHutchState(set => set.has(String(offTargetActive)), 3000);
-        }
-        // Update active set snapshot
-        activeSlots = activeSlots.filter(x => x !== offTargetActive);
-        activeSlots.push(invId);
-      } catch {
-        // fallback to place
-        try { await PlayerService.placePet(invId, { x: 0, y: 0 }, "Boardwalk", 64); placed++; activeSlots.push(invId); } catch {}
-      }
-    } else {
-      try { await PlayerService.placePet(invId, { x: 0, y: 0 }, "Boardwalk", 64); placed++; activeSlots.push(invId); } catch {}
-    }
-  }
-
-  // After equipping targets, if target has fewer pets than current actives,
-  // move remaining non-target actives into the Hutch when there is space.
-  try {
-    // refresh hutch free slots before cleanup
-    try { hutchCount = Number(await myNumPetHutchItems.get()); } catch {}
-    freeHutch = Math.max(0, HUTCH_MAX - (Number.isFinite(hutchCount) ? (hutchCount as number) : 0));
-
-    const leftovers = activeSlots.filter(id => !targetSet.has(id));
-      for (const slotId of leftovers) {
-        if (freeHutch <= 0) break;
-        try {
-          await PlayerService.storePet(slotId);
-          const hutIdx = await _findFreeHutchIndex();
-          await PlayerService.putItemInStorage(slotId, "PetHutch", hutIdx);
-          freeHutch = Math.max(0, freeHutch - 1);
-          activeSlots = activeSlots.filter(x => x !== slotId);
-          void _waitForHutchState(set => set.has(String(slotId)), 3000);
-        } catch {
-          // ignore failures; leave as is
-        }
-      }
-  } catch {}
-
-  // Final tidy pass to ensure exact targets are active (handles pets already in inventory)
-  const res = await _applyTeam(targetInvIds);
-  await new Promise(r => setTimeout(r, 300));
-  if (shouldMark) markTeamAsUsed(markResolved);
-  return res;
-}
-
-async function _applyTeam(targetInvIds: string[]): Promise<{ swapped: number; placed: number; skipped: number }> {
-  let activeSlots = await _getActivePetSlotIds();
 
   const targetSet = new Set(targetInvIds);
-  const extras = activeSlots.filter(id => !targetSet.has(id));
-  const mustStore = Math.max(0, activeSlots.length - targetInvIds.length);
+  const aligned = _alignTargetsToActiveSlots(targetInvIds, activeSlots);
 
-  if (mustStore > 0) {
-    const toStore = extras.slice(0, mustStore);
-    for (const itemId of toStore) {
+  const notifyInventoryFull = async () => {
+    try {
+      await toastSimple(
+        "Inventory Full",
+        "Cannot equip team: required pets are in the Pet Hutch and your inventory is full.",
+        "error",
+      );
+    } catch {}
+  };
+
+  let swapped = 0, placed = 0, skipped = 0;
+  let placementOffset = 0; // each placed pet gets its own dirt tile
+
+  // 4) Resolve each slot independently (same slot-by-slot logic as the Gemini pet switcher)
+  for (let slot = 0; slot < MAX_TEAM_SLOTS; slot++) {
+    const targetId = aligned[slot];
+    const currentId = String(activeSlots[slot] ?? "");
+
+    // Case 1: slot already holds the right pet
+    if (targetId && targetId === currentId) { skipped++; continue; }
+
+    // Case 2: slot must become empty -> store the active pet (hutch if space)
+    if (!targetId && currentId) {
       try {
-        await PlayerService.storePet(itemId);
-        activeSlots = activeSlots.filter(id => id !== itemId);
+        await PlayerService.storePet(currentId);
+        activeSlots[slot] = "";
+        if (freeHutch > 0) {
+          const hutIdx = await _findFreeHutchIndex();
+          await PlayerService.putItemInStorage(currentId, "PetHutch", hutIdx);
+          freeHutch--;
+          void _waitForHutchState(set => set.has(currentId), 3000);
+        }
+      } catch {}
+      continue;
+    }
+    if (!targetId) continue;
+
+    // The target must be in inventory before swapping/placing: retrieve from hutch
+    if (hutchItemsSet.has(targetId)) {
+      let invFull = false;
+      try { invFull = !!(await isMyInventoryAtMaxLength.get()); } catch {}
+      if (invFull) {
+        const freed = freeHutch > 0 && (await _moveSparePetToHutch(targetSet, activeSlots, hutchItemsSet));
+        if (freed) {
+          freeHutch--;
+        } else {
+          await notifyInventoryFull();
+          return finish({ swapped, placed, skipped });
+        }
+      }
+      try {
+        const invIdx = await _findFreeInventoryIndex();
+        await PlayerService.retrieveItemFromStorage(targetId, "PetHutch", invIdx);
+        hutchItemsSet.delete(targetId);
+        freeHutch++; // retrieving frees one hutch space
+        void _waitForHutchState(set => !set.has(targetId), 3000);
+      } catch { continue; }
+    }
+
+    // Case 3: empty active slot -> place the pet on its own dirt tile
+    if (!currentId) {
+      try {
+        await _placePetInMyGarden(targetId, placementOffset++);
+        placed++;
+        activeSlots[slot] = targetId;
+      } catch {}
+      continue;
+    }
+
+    // Case 4: swap the active pet out for the target (store it in hutch if space)
+    try {
+      await PlayerService.swapPet(currentId, targetId);
+      swapped++;
+      activeSlots[slot] = targetId;
+      if (freeHutch > 0) {
+        try {
+          const hutIdx = await _findFreeHutchIndex();
+          await PlayerService.putItemInStorage(currentId, "PetHutch", hutIdx);
+          freeHutch--;
+          void _waitForHutchState(set => set.has(currentId), 3000);
+        } catch {}
+      }
+    } catch {
+      // Swap failed: fall back to a direct placement of the target pet
+      try {
+        await _placePetInMyGarden(targetId, placementOffset++);
+        placed++;
       } catch {}
     }
   }
 
-  const alreadyActive = new Set<string>();
-  for (const invId of targetInvIds) if (activeSlots.includes(invId)) alreadyActive.add(invId);
-
-  let swapped = 0, placed = 0, skipped = 0;
-
-  if (alreadyActive.size) {
-    activeSlots = activeSlots.filter(slotId => !alreadyActive.has(slotId));
-    skipped = alreadyActive.size;
-  }
-
-  const toDo = targetInvIds.filter(id => !alreadyActive.has(id));
-
-  for (const invId of toDo) {
-    const slotId = activeSlots.shift();
-    try {
-      if (slotId) {
-        await PlayerService.swapPet(slotId, invId);
-        swapped++;
-      } else {
-        await PlayerService.placePet(invId, { x: 0, y: 0 }, "Boardwalk", 64);
-        placed++;
-      }
-    } catch {}
-  }
-
-  return { swapped, placed, skipped };
+  return finish({ swapped, placed, skipped });
 }
