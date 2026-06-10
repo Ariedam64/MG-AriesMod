@@ -6859,6 +6859,7 @@
 
   // src/data/dynamic/logic/constants.ts
   var MAIN_BUNDLE_PATTERN = /main-[^/]+\.js(\?|$)/;
+  var QUINOA_VIEW_PATTERN = /QuinoaView-[^/]+\.js(\?|$)/;
   var MAX_COLOR_POLL_ATTEMPTS = 10;
   var COLOR_POLL_INTERVAL_MS = 1e3;
   var ABILITY_COLOR_ANCHOR = "ProduceScaleBoost";
@@ -6906,6 +6907,9 @@
   }
   function findMainBundleUrl() {
     return findBundleUrl(MAIN_BUNDLE_PATTERN);
+  }
+  function findQuinoaViewUrl() {
+    return findBundleUrl(QUINOA_VIEW_PATTERN);
   }
   function findAllIndices(haystack, needle) {
     const out = [];
@@ -6974,8 +6978,12 @@
     return cache2.inFlight;
   }
   var mainBundleCache = { value: null, inFlight: null };
+  var quinoaViewCache = { value: null, inFlight: null };
   function fetchMainBundle() {
     return fetchBundleByFinder(findMainBundleUrl, mainBundleCache, "main bundle");
+  }
+  function fetchQuinoaViewBundle() {
+    return fetchBundleByFinder(findQuinoaViewUrl, quinoaViewCache, "QuinoaView bundle");
   }
 
   // src/data/dynamic/logic/abilityColors.ts
@@ -6997,7 +7005,9 @@
       if (braceAfterSwitch === -1) continue;
       const block = extractBalancedBlock(bundleText, braceAfterSwitch);
       if (!block) continue;
-      if (block.includes(ABILITY_COLOR_ANCHOR) && (block.includes('bg:"') || block.includes("bg:'"))) {
+      const hasObjectColors = block.includes('bg:"') || block.includes("bg:'");
+      const hasHexColors = /return\s*[`'"](?:#|linear-gradient)/.test(block);
+      if (block.includes(ABILITY_COLOR_ANCHOR) && (hasObjectColors || hasHexColors)) {
         return block;
       }
     }
@@ -7047,12 +7057,54 @@
     }
     return Object.keys(colors).length ? colors : null;
   }
+  function hexToRgba(hex, alpha) {
+    const match = hex.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (!match) return null;
+    let h = match[1];
+    if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  function parseAbilityColorsFromHexSwitch(switchBlock) {
+    const colors = {};
+    const pending = [];
+    const tokenRe = /case\s*([`'"])([^`'"]+)\1\s*:|default\s*:|return\s*([`'"])((?:#|linear-gradient)[^`'"]*)\3/g;
+    let match;
+    while ((match = tokenRe.exec(switchBlock)) !== null) {
+      if (match[2]) {
+        pending.push(match[2]);
+        continue;
+      }
+      if (match[0].startsWith("default")) {
+        pending.length = 0;
+        continue;
+      }
+      const value = match[4];
+      if (!value) {
+        pending.length = 0;
+        continue;
+      }
+      const bg = value.startsWith("#") ? hexToRgba(value, 0.9) ?? value : value;
+      const hover = value.startsWith("#") ? hexToRgba(value, 1) ?? value : value;
+      for (const id of pending) {
+        if (!colors[id]) colors[id] = { bg, hover };
+      }
+      pending.length = 0;
+    }
+    return Object.keys(colors).length ? colors : null;
+  }
   async function loadAbilityColorsFromBundle() {
-    const bundleText = await fetchMainBundle();
-    if (!bundleText) return null;
-    const switchBlock = findAbilityColorSwitchBlock(bundleText);
-    if (!switchBlock) return null;
-    return parseAbilityColorsFromSwitch(switchBlock);
+    for (const fetchBundle of [fetchMainBundle, fetchQuinoaViewBundle]) {
+      const bundleText = await fetchBundle();
+      if (!bundleText) continue;
+      const switchBlock = findAbilityColorSwitchBlock(bundleText);
+      if (!switchBlock) continue;
+      const parsed = parseAbilityColorsFromSwitch(switchBlock) ?? parseAbilityColorsFromHexSwitch(switchBlock);
+      if (parsed) return parsed;
+    }
+    return null;
   }
   function isAlreadyEnriched(abilities) {
     const sample = abilities[ABILITY_COLOR_ANCHOR];
