@@ -11,7 +11,7 @@ import type { PetTeam } from "../../services/pets";
 import { onActivePetsStructuralChangeNow } from "../../store/atoms";
 import { attachSpriteIcon } from "../spriteIconCache";
 import { rarityBadge } from "./notifier";
-import { petCatalog, plantCatalog } from "../../data";
+import { petCatalog, plantCatalog, petAbilities } from "../../data";
 import { getPetStrength, getPetMaxStrength } from "../../utils/petCalcul";
 import {
   isInstantFeedWidgetEnabled,
@@ -22,9 +22,19 @@ import { renderHatchTab } from "./petsHatch";
 /* ================== petits helpers UI (mêmes vibes que garden) ================== */
 
 
-  // Ability → { bg, hover } — calé sur les couleurs du jeu
-function getAbilityChipColors(id: string): { bg: string; hover: string } {
+  // Ability → { bg, hover } — couleurs servies par l'API en priorité
+export function getAbilityChipColors(id: string): { bg: string; hover: string } {
   const key = String(id || "");
+
+  // The abilities catalog is enriched at runtime with the exact chip colors
+  // parsed from the game bundle (data/dynamic/logic/abilityColors.ts). The
+  // hardcoded mapping below is only a fallback until enrichment completes.
+  const apiColor = (petAbilities as Record<string, any>)?.[key]?.color;
+  if (apiColor && typeof apiColor.bg === "string" && apiColor.bg) {
+    const hover = typeof apiColor.hover === "string" && apiColor.hover ? apiColor.hover : apiColor.bg;
+    return { bg: apiColor.bg, hover };
+  }
+
   const base = (PetsService.getAbilityNameWithoutLevel?.(key) || "")
     .replace(/[\s\-_]+/g, "")
     .toLowerCase();

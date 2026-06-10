@@ -33244,6 +33244,4415 @@
 
   // src/ui/menus/communityHub/tabs/chatImporter.ts
   init_localStorage();
+
+  // src/ui/menus/pets.ts
+  init_atoms();
+
+  // src/ui/menus/notifier.ts
+  var rulePopover = null;
+  var detachRuleDocHandler = null;
+  var detachRuleKeyBlocker = null;
+  var detachRuleWheelBlocker = null;
+  var detachRuleDragHandler = null;
+  var closeRuleEditor = () => {
+    if (rulePopover) {
+      try {
+        rulePopover.remove();
+      } catch {
+      }
+      rulePopover = null;
+    }
+    if (detachRuleDocHandler) {
+      detachRuleDocHandler();
+      detachRuleDocHandler = null;
+    }
+    if (detachRuleKeyBlocker) {
+      detachRuleKeyBlocker();
+      detachRuleKeyBlocker = null;
+    }
+    if (detachRuleWheelBlocker) {
+      detachRuleWheelBlocker();
+      detachRuleWheelBlocker = null;
+    }
+    if (detachRuleDragHandler) {
+      detachRuleDragHandler();
+      detachRuleDragHandler = null;
+    }
+  };
+  var setSwitchCapState = (wrap, capped) => {
+    if (capped) {
+      wrap.setAttribute("aria-disabled", "true");
+      wrap.style.opacity = "0.5";
+      wrap.style.pointerEvents = "none";
+      wrap.style.cursor = "not-allowed";
+      wrap.title = "Max owned \u2014 notifications disabled";
+    } else {
+      wrap.removeAttribute("aria-disabled");
+      wrap.style.opacity = "";
+      wrap.style.pointerEvents = "";
+      wrap.style.cursor = "";
+      wrap.removeAttribute("title");
+    }
+  };
+  var createSwitch = (onToggle) => {
+    const wrap = document.createElement("label");
+    wrap.style.display = "inline-flex";
+    wrap.style.alignItems = "center";
+    wrap.style.justifyContent = "center";
+    wrap.style.width = "100%";
+    wrap.style.padding = "4px 6px";
+    wrap.style.userSelect = "none";
+    wrap.setAttribute("role", "switch");
+    wrap.setAttribute("aria-checked", "false");
+    const box = document.createElement("span");
+    box.style.position = "relative";
+    box.style.width = "42px";
+    box.style.height = "24px";
+    box.style.borderRadius = "999px";
+    box.style.background = "#1f2328";
+    box.style.border = "1px solid #4446";
+    box.style.display = "inline-block";
+    box.style.boxShadow = "inset 0 0 0 1px #0005";
+    const knob = document.createElement("span");
+    knob.style.position = "absolute";
+    knob.style.top = "50%";
+    knob.style.left = "3px";
+    knob.style.transform = "translateY(-50%)";
+    knob.style.width = "18px";
+    knob.style.height = "18px";
+    knob.style.borderRadius = "50%";
+    knob.style.background = "#e7eef7";
+    knob.style.boxShadow = "0 1px 2px rgba(0,0,0,.7)";
+    knob.style.transition = "left 160ms ease, transform 160ms ease";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.style.position = "absolute";
+    input.style.opacity = "0";
+    input.style.pointerEvents = "none";
+    input.tabIndex = -1;
+    const apply = (on) => {
+      input.checked = on;
+      wrap.setAttribute("aria-checked", on ? "true" : "false");
+      knob.style.left = on ? "21px" : "3px";
+      knob.style.transform = on ? "translateY(-50%) scale(1.02)" : "translateY(-50%) scale(1)";
+      if (on) {
+        box.style.background = "linear-gradient(180deg, #2b5cff, #1e40ff)";
+        box.style.borderColor = "#7aa2ff";
+        box.style.boxShadow = "0 0 0 2px #7aa2ff55, inset 0 0 0 1px #0005";
+      } else {
+        box.style.background = "#1f2328";
+        box.style.borderColor = "#4446";
+        box.style.boxShadow = "inset 0 0 0 1px #0005";
+      }
+    };
+    input.disabled = true;
+    wrap.addEventListener("mousedown", (e) => e.preventDefault());
+    wrap.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      apply(!input.checked);
+      onToggle?.(input.checked);
+    });
+    box.appendChild(knob);
+    wrap.appendChild(input);
+    wrap.appendChild(box);
+    apply(false);
+    return wrap;
+  };
+  var setSwitchVisual = (wrap, checked) => {
+    const input = wrap.querySelector("input");
+    const box = wrap.querySelector("span");
+    const knob = box?.querySelector("span");
+    if (!input || !box || !knob) return;
+    input.checked = !!checked;
+    knob.style.left = checked ? "21px" : "3px";
+    knob.style.transform = checked ? "translateY(-50%) scale(1.02)" : "translateY(-50%) scale(1)";
+    if (checked) {
+      box.style.background = "linear-gradient(180deg, #2b5cff, #1e40ff)";
+      box.style.borderColor = "#7aa2ff";
+      box.style.boxShadow = "0 0 0 2px #7aa2ff55, inset 0 0 0 1px #0005";
+      wrap.setAttribute("aria-checked", "true");
+    } else {
+      box.style.background = "#1f2328";
+      box.style.borderColor = "#4446";
+      box.style.boxShadow = "inset 0 0 0 1px #0005";
+      wrap.setAttribute("aria-checked", "false");
+    }
+  };
+  var wrapCell = (child) => {
+    const d = document.createElement("div");
+    d.style.display = "flex";
+    d.style.alignItems = "center";
+    d.style.justifyContent = "center";
+    d.style.borderBottom = "1px solid #ffffff12";
+    d.style.padding = "4px 6px";
+    d.style.boxSizing = "border-box";
+    d.appendChild(child);
+    return d;
+  };
+  var mkHeadCell = (txt, align = "center") => {
+    const el2 = document.createElement("div");
+    el2.textContent = txt;
+    el2.style.fontWeight = "600";
+    el2.style.opacity = "0.9";
+    el2.style.padding = "4px 6px";
+    el2.style.display = "flex";
+    el2.style.alignItems = "center";
+    el2.style.justifyContent = align === "left" ? "flex-start" : "center";
+    return el2;
+  };
+  function rarityBadge(raw) {
+    const rarity3 = String(raw || "").trim();
+    const key2 = (() => {
+      const k = rarity3.toLowerCase();
+      if (k === "mythic" || k === "mythical") return "Mythical";
+      if (k === "celestial") return "Celestial";
+      if (k === "divine") return "Divine";
+      if (k === "legendary") return "Legendary";
+      if (k === "rare") return "Rare";
+      if (k === "uncommon") return "Uncommon";
+      if (k === "common") return "Common";
+      return rarity3 || "\u2014";
+    })();
+    const COLORS = {
+      Common: "#E7E7E7",
+      Uncommon: "#67BD4D",
+      Rare: "#0071C6",
+      Legendary: "#FFC734",
+      Mythical: "#9944A7",
+      Divine: "#FF7835",
+      Celestial: null
+    };
+    const darkText = /* @__PURE__ */ new Set(["Common", "Uncommon", "Legendary", "Divine"]);
+    const el2 = document.createElement("div");
+    el2.textContent = key2;
+    Object.assign(el2.style, {
+      display: "inline-flex",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: "4px 8px",
+      borderRadius: "5px",
+      fontSize: "12px",
+      fontWeight: "700",
+      margin: "2px auto",
+      color: darkText.has(key2) ? "#0b0b0b" : "#ffffff",
+      boxShadow: "0 0 0 1px #0006 inset",
+      lineHeight: "1.1",
+      whiteSpace: "nowrap"
+    });
+    if (key2 === "Celestial") {
+      if (!document.getElementById("qws-celestial-kf")) {
+        const style3 = document.createElement("style");
+        style3.id = "qws-celestial-kf";
+        style3.textContent = `
+@keyframes qwsCelestialShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}`;
+        document.head.appendChild(style3);
+      }
+      el2.style.background = `linear-gradient(130deg,
+      rgb(0,180,216) 0%,
+      rgb(124,42,232) 40%,
+      rgb(160,0,126) 60%,
+      rgb(255,215,0) 100%)`;
+      el2.style.backgroundSize = "200% 200%";
+      el2.style.animation = "qwsCelestialShift 4s linear infinite";
+    } else {
+      el2.style.background = COLORS[key2] || "#444";
+    }
+    return el2;
+  }
+  var applyRuleState = (itemCell, ruleCell, rule) => {
+    const gearBtn = ruleCell?.querySelector("button[data-role='rule']") ?? null;
+    const hint = itemCell.querySelector('[data-role="rule-hint"]');
+    const hasRule = !!(rule && (rule.sound || rule.volume != null || rule.playbackMode || rule.stopMode || rule.loopIntervalMs != null));
+    const summary = hasRule ? formatRuleSummary(rule) : "";
+    if (gearBtn) {
+      gearBtn.dataset.active = hasRule ? "1" : "0";
+      gearBtn.title = hasRule && summary ? `Custom rule \u2014 ${summary}` : "Custom rule";
+    }
+    if (hint) {
+      if (hasRule && summary) {
+        hint.textContent = summary;
+        hint.style.visibility = "visible";
+      } else {
+        hint.textContent = "";
+        hint.style.visibility = "hidden";
+      }
+    }
+  };
+  var openRuleEditor = (ui, row, anchor) => {
+    closeRuleEditor();
+    const pop = document.createElement("div");
+    pop.className = "qws-rule-popover";
+    Object.assign(pop.style, {
+      position: "fixed",
+      zIndex: "var(--qws-z-popover)",
+      minWidth: "260px",
+      maxWidth: "320px",
+      padding: "14px 16px",
+      borderRadius: "14px",
+      border: "1px solid #32404e",
+      background: "linear-gradient(180deg, #111923, #0b131c)",
+      boxShadow: "0 16px 40px rgba(0,0,0,0.45)"
+    });
+    const margin = 12;
+    const clampPosition = (value, min, max) => {
+      if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
+      if (max >= min) {
+        return Math.min(Math.max(value, min), max);
+      }
+      return Math.min(Math.max(value, max), min);
+    };
+    const applyPosition2 = (left2, top2) => {
+      const width2 = pop.offsetWidth;
+      const height2 = pop.offsetHeight;
+      const boundedLeft = clampPosition(left2, margin, window.innerWidth - width2 - margin);
+      const boundedTop = clampPosition(top2, margin, window.innerHeight - height2 - margin);
+      pop.style.left = `${Math.round(boundedLeft)}px`;
+      pop.style.top = `${Math.round(boundedTop)}px`;
+      return { left: boundedLeft, top: boundedTop };
+    };
+    const header = document.createElement("div");
+    header.style.display = "flex";
+    header.style.justifyContent = "space-between";
+    header.style.alignItems = "flex-start";
+    header.style.gap = "12px";
+    header.style.cursor = "move";
+    header.style.userSelect = "none";
+    header.style.touchAction = "none";
+    const titleWrap = document.createElement("div");
+    const title = document.createElement("div");
+    title.textContent = row.name;
+    title.style.fontWeight = "700";
+    title.style.fontSize = "14px";
+    title.style.lineHeight = "1.2";
+    const subtitle = document.createElement("div");
+    subtitle.textContent = row.type;
+    subtitle.style.opacity = "0.7";
+    subtitle.style.fontSize = "12px";
+    titleWrap.append(title, subtitle);
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.textContent = "\u2715";
+    Object.assign(closeBtn.style, {
+      background: "transparent",
+      border: "none",
+      color: "#c8d7e8",
+      fontSize: "16px",
+      lineHeight: "1",
+      cursor: "pointer"
+    });
+    closeBtn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      closeRuleEditor();
+    });
+    header.append(titleWrap, closeBtn);
+    let dragState = null;
+    const onDragMove = (ev) => {
+      if (!dragState) return;
+      if (ev.pointerId !== dragState.pointerId) return;
+      const dx = ev.clientX - dragState.startX;
+      const dy = ev.clientY - dragState.startY;
+      applyPosition2(dragState.baseLeft + dx, dragState.baseTop + dy);
+    };
+    const stopDrag = (ev) => {
+      if (!dragState) return;
+      if (ev && ev.pointerId !== dragState.pointerId) return;
+      document.removeEventListener("pointermove", onDragMove);
+      document.removeEventListener("pointerup", stopDrag);
+      document.removeEventListener("pointercancel", stopDrag);
+      try {
+        header.releasePointerCapture(dragState.pointerId);
+      } catch {
+      }
+      dragState = null;
+    };
+    const onPointerDown = (ev) => {
+      if (ev.button !== 0) return;
+      const target = ev.target;
+      if (target && closeBtn.contains(target)) return;
+      if (dragState) stopDrag();
+      const rect = pop.getBoundingClientRect();
+      dragState = {
+        pointerId: ev.pointerId,
+        startX: ev.clientX,
+        startY: ev.clientY,
+        baseLeft: rect.left,
+        baseTop: rect.top
+      };
+      try {
+        header.setPointerCapture(ev.pointerId);
+      } catch {
+      }
+      document.addEventListener("pointermove", onDragMove);
+      document.addEventListener("pointerup", stopDrag);
+      document.addEventListener("pointercancel", stopDrag);
+      ev.preventDefault();
+    };
+    header.addEventListener("pointerdown", onPointerDown);
+    detachRuleDragHandler = () => {
+      header.removeEventListener("pointerdown", onPointerDown);
+      stopDrag();
+    };
+    pop.appendChild(header);
+    const current = NotifierService.getRule(row.id);
+    const defaults = audio.getPlaybackSettings(row.context);
+    const contextDefaults = row.context === "shops" || row.context === "weather" ? NotifierService.getContextStopDefaults(row.context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: defaults.loopIntervalMs };
+    const allowPurchase = row.context === "shops";
+    const defaultSoundName = (() => {
+      const label2 = (defaults.defaultSoundName || "").trim();
+      return label2 || "Default";
+    })();
+    const formatModeLabel = (mode) => mode === "loop" ? "Loop" : "One-shot";
+    const defaultModeLabel = formatModeLabel(defaults.mode);
+    const defaultIntervalMs = Math.max(
+      150,
+      Math.floor(contextDefaults.loopIntervalMs ?? defaults.loopIntervalMs ?? 150)
+    );
+    const soundField = document.createElement("div");
+    soundField.className = "qws-rule-field";
+    const soundLabel = document.createElement("label");
+    soundLabel.textContent = "Sound";
+    const soundSelect = document.createElement("select");
+    soundSelect.className = "qmm-input";
+    soundSelect.style.width = "100%";
+    const populateSoundOptions = () => {
+      const selected = current?.sound ?? "";
+      soundSelect.innerHTML = "";
+      const optDefault = document.createElement("option");
+      optDefault.value = "";
+      optDefault.textContent = defaultSoundName;
+      soundSelect.appendChild(optDefault);
+      const names = audio.listSounds();
+      for (const name of names) {
+        if (name === defaultSoundName && selected !== name) continue;
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        soundSelect.appendChild(opt);
+      }
+      if (selected && !names.includes(selected)) {
+        const extra = document.createElement("option");
+        extra.value = selected;
+        extra.textContent = selected.length > 32 ? `${selected.slice(0, 29)}\u2026` : selected;
+        extra.dataset.extra = "1";
+        soundSelect.appendChild(extra);
+      }
+      soundSelect.value = selected;
+    };
+    populateSoundOptions();
+    soundField.append(soundLabel, soundSelect);
+    pop.appendChild(soundField);
+    const baseVolume = Math.max(0, Math.min(1, defaults.volume || 0));
+    const defaultVolumePct = Math.round(baseVolume * 100);
+    const volumeField = document.createElement("div");
+    volumeField.className = "qws-rule-field";
+    const volumeLabel = document.createElement("label");
+    volumeLabel.textContent = "Volume";
+    const volumeWrap = document.createElement("div");
+    volumeWrap.style.display = "flex";
+    volumeWrap.style.alignItems = "center";
+    volumeWrap.style.gap = "10px";
+    const volumeRange = document.createElement("input");
+    volumeRange.type = "range";
+    volumeRange.min = "0";
+    volumeRange.max = "100";
+    volumeRange.step = "1";
+    volumeRange.style.width = "100%";
+    const volumeValue = document.createElement("span");
+    volumeValue.style.minWidth = "38px";
+    volumeValue.style.textAlign = "right";
+    const applyVolumeDisplay = (value) => {
+      const clamped = Math.max(0, Math.min(100, Math.round(value)));
+      volumeRange.value = String(clamped);
+      volumeValue.textContent = `${clamped}%`;
+    };
+    const initialVolume = current?.volume != null ? current.volume : baseVolume;
+    applyVolumeDisplay(Math.round(Math.max(0, Math.min(1, initialVolume)) * 100));
+    volumeRange.addEventListener("input", () => {
+      const raw = Number(volumeRange.value);
+      const clamped = Number.isFinite(raw) ? Math.max(0, Math.min(100, Math.round(raw))) : defaultVolumePct;
+      applyVolumeDisplay(clamped);
+    });
+    const volumeHint = document.createElement("div");
+    volumeHint.textContent = `Default: ${defaultVolumePct}%`;
+    volumeHint.style.opacity = "0.7";
+    volumeHint.style.fontSize = "11px";
+    volumeHint.style.marginTop = "4px";
+    volumeWrap.append(volumeRange, volumeValue);
+    volumeField.append(volumeLabel, volumeWrap, volumeHint);
+    pop.appendChild(volumeField);
+    const modeField = document.createElement("div");
+    modeField.className = "qws-rule-field";
+    const modeLabel = document.createElement("label");
+    modeLabel.textContent = "Playback mode";
+    const modeSelect = document.createElement("select");
+    modeSelect.className = "qmm-input";
+    const modeOptions = allowPurchase ? defaults.mode === "loop" ? ["loop", "oneshot"] : ["oneshot", "loop"] : ["oneshot"];
+    modeOptions.forEach((value) => {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = formatModeLabel(value);
+      modeSelect.appendChild(opt);
+    });
+    const initialMode = allowPurchase ? current?.playbackMode ?? defaults.mode : "oneshot";
+    modeSelect.value = initialMode === "loop" && !allowPurchase ? "oneshot" : initialMode;
+    if (!allowPurchase) modeSelect.disabled = true;
+    modeField.append(modeLabel, modeSelect);
+    pop.appendChild(modeField);
+    let stopSelect = null;
+    const stopField = document.createElement("div");
+    stopField.className = "qws-rule-field";
+    if (allowPurchase) {
+      const stopLabel = document.createElement("label");
+      stopLabel.textContent = "Stop condition";
+      stopSelect = document.createElement("select");
+      stopSelect.className = "qmm-input";
+      const stopOption = document.createElement("option");
+      stopOption.value = "purchase";
+      stopOption.textContent = "Until purchase";
+      stopSelect.appendChild(stopOption);
+      const initialStopMode = current?.stopMode ?? contextDefaults.stopMode;
+      stopSelect.value = initialStopMode === "purchase" ? "purchase" : "purchase";
+      stopField.append(stopLabel, stopSelect);
+      pop.appendChild(stopField);
+    }
+    const intervalField = document.createElement("div");
+    intervalField.className = "qws-rule-field";
+    const intervalLabel = document.createElement("label");
+    intervalLabel.textContent = "Loop interval (ms)";
+    const intervalInput = document.createElement("input");
+    intervalInput.type = "number";
+    intervalInput.className = "qmm-input";
+    intervalInput.min = "150";
+    intervalInput.step = "50";
+    intervalInput.placeholder = String(defaultIntervalMs);
+    intervalInput.value = current?.loopIntervalMs != null ? String(current.loopIntervalMs) : "";
+    intervalInput.inputMode = "numeric";
+    intervalField.append(intervalLabel, intervalInput);
+    if (allowPurchase) pop.appendChild(intervalField);
+    const enforceIntegerOnly = (input) => {
+      input.addEventListener("keydown", (ev) => {
+        ev.stopPropagation();
+        ev.stopImmediatePropagation();
+        if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+        const key2 = ev.key;
+        if (/^[0-9]$/.test(key2)) return;
+        if (key2 === "Backspace" || key2 === "Delete" || key2 === "Tab" || key2 === "Enter" || key2 === "ArrowLeft" || key2 === "ArrowRight" || key2 === "ArrowUp" || key2 === "ArrowDown" || key2 === "Home" || key2 === "End") {
+          return;
+        }
+        ev.preventDefault();
+      });
+      input.addEventListener("input", () => {
+        const sanitized = input.value.replace(/\D+/g, "");
+        if (sanitized !== input.value) input.value = sanitized;
+      });
+    };
+    enforceIntegerOnly(intervalInput);
+    const resolveMode = () => {
+      const raw = modeSelect.value;
+      if (raw === "oneshot" || raw === "loop") return raw;
+      return allowPurchase ? defaults.mode : "oneshot";
+    };
+    const resolveStop = () => {
+      if (!allowPurchase) return "purchase";
+      const raw = stopSelect?.value;
+      if (raw === "purchase") return "purchase";
+      return "purchase";
+    };
+    const updateLoopVisibility = () => {
+      if (!allowPurchase) {
+        stopField.style.display = "none";
+        intervalField.style.display = "none";
+        return;
+      }
+      const mode = resolveMode();
+      const showLoop = mode === "loop";
+      stopField.style.display = showLoop ? "grid" : "none";
+      intervalField.style.display = showLoop ? "grid" : "none";
+    };
+    const forceLoopMode = () => {
+      if (!allowPurchase) return;
+      if (modeSelect.value === "loop") return;
+      modeSelect.value = "loop";
+      updateLoopVisibility();
+    };
+    modeSelect.addEventListener("change", () => {
+      updateLoopVisibility();
+    });
+    if (allowPurchase && stopSelect) {
+      stopSelect.addEventListener("change", () => {
+        forceLoopMode();
+      });
+    }
+    if (allowPurchase) intervalInput.addEventListener("input", forceLoopMode);
+    updateLoopVisibility();
+    const hint = document.createElement("div");
+    hint.textContent = "Use defaults by leaving values unchanged (matching the default volume keeps it inherited).";
+    hint.style.opacity = "0.7";
+    hint.style.fontSize = "12px";
+    pop.appendChild(hint);
+    const actions = document.createElement("div");
+    actions.className = "qws-rule-actions";
+    const clearBtn = ui.btn("Clear", { variant: "ghost", size: "sm" });
+    clearBtn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      NotifierService.clearRule(row.id);
+      closeRuleEditor();
+    });
+    if (!current) ui.setButtonEnabled(clearBtn, false);
+    const saveBtn = ui.btn("Save", { variant: "primary", size: "sm" });
+    saveBtn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const sound = soundSelect.value?.trim() || null;
+      const modeRaw = modeSelect.value || "";
+      const stopRaw = stopSelect?.value || "";
+      const intervalRaw = intervalInput.value?.trim();
+      const volRaw = Math.max(0, Math.min(100, parseInt(volumeRange.value || "", 10) || 0));
+      const volRatio = volRaw / 100;
+      let playbackMode = modeRaw === "oneshot" || modeRaw === "loop" ? modeRaw : null;
+      if (playbackMode === defaults.mode) playbackMode = null;
+      let stopMode = allowPurchase ? stopRaw === "purchase" ? "purchase" : null : null;
+      if (stopMode != null && stopMode === contextDefaults.stopMode) {
+        stopMode = null;
+      }
+      let loopIntervalMs = null;
+      if (allowPurchase && intervalRaw) {
+        const parsed = Number(intervalRaw);
+        if (Number.isFinite(parsed)) {
+          const normalized = Math.max(150, Math.min(1e4, Math.floor(parsed)));
+          if (normalized !== defaultIntervalMs) loopIntervalMs = normalized;
+        }
+      }
+      let volume = null;
+      if (Math.abs(volRatio - baseVolume) > 1e-3) {
+        volume = Math.max(0, Math.min(1, volRatio));
+      }
+      if (allowPurchase && !playbackMode && defaults.mode !== "loop" && (stopMode != null || loopIntervalMs != null)) {
+        playbackMode = "loop";
+      }
+      NotifierService.setRule(row.id, {
+        sound,
+        volume,
+        playbackMode,
+        stopMode,
+        loopIntervalMs
+      });
+      closeRuleEditor();
+    });
+    actions.append(clearBtn, saveBtn);
+    pop.appendChild(actions);
+    document.body.appendChild(pop);
+    const anchorRect = anchor.getBoundingClientRect();
+    const width = pop.offsetWidth;
+    const height = pop.offsetHeight;
+    let left = anchorRect.right - width;
+    let top = anchorRect.bottom + 8;
+    if (left < margin) left = margin;
+    if (left + width > window.innerWidth - margin) left = window.innerWidth - width - margin;
+    if (top + height > window.innerHeight - margin) top = anchorRect.top - height - 8;
+    if (top < margin) top = margin;
+    applyPosition2(left, top);
+    const onDocPointer = (ev) => {
+      const target = ev.target;
+      if (!target) return;
+      if (pop.contains(target)) return;
+      if (anchor.contains(target)) return;
+      closeRuleEditor();
+    };
+    setTimeout(() => document.addEventListener("pointerdown", onDocPointer, true));
+    detachRuleDocHandler = () => document.removeEventListener("pointerdown", onDocPointer, true);
+    const keyBlocker = (ev) => {
+      if (!rulePopover) return;
+      if (rulePopover.contains(ev.target)) return;
+      ev.stopImmediatePropagation();
+    };
+    document.addEventListener("keydown", keyBlocker, true);
+    detachRuleKeyBlocker = () => document.removeEventListener("keydown", keyBlocker, true);
+    const wheelBlocker = (ev) => {
+      const t = ev.target;
+      if (rulePopover && t && rulePopover.contains(t)) {
+        ev.stopImmediatePropagation();
+      }
+    };
+    document.addEventListener("wheel", wheelBlocker, { capture: true, passive: true });
+    detachRuleWheelBlocker = () => {
+      document.removeEventListener("wheel", wheelBlocker, { capture: true });
+    };
+    rulePopover = pop;
+  };
+  function renderSettingsTab(view, ui) {
+    view.innerHTML = "";
+    void PetAlertService.start().catch(() => {
+    });
+    const section = (title) => {
+      const card2 = ui.card(title, { tone: "muted" });
+      card2.body.style.display = "grid";
+      card2.body.style.gap = "10px";
+      return card2;
+    };
+    const row = (labelTxt, control, opts) => {
+      const { root: r, label: label2 } = ui.formRow(labelTxt, control, { alignTop: opts?.alignTop, labelWidth: "160px" });
+      label2.style.opacity = "0.9";
+      label2.style.fontWeight = "600";
+      return r;
+    };
+    const radio = (name, value, text) => {
+      const chip = ui.toggleChip(text, { type: "radio", name, value });
+      chip.root.classList.add("qmm-radio-chip");
+      return { label: chip.root, input: chip.input };
+    };
+    const makeSelect = (id) => {
+      const sel = ui.select({ id, width: "180px" });
+      return sel;
+    };
+    const playIconBtn = (title = "Play") => {
+      return ui.btn("", { icon: "\u25B6", size: "sm", tooltip: title, ariaLabel: title });
+    };
+    const smallBtn2 = (txt) => ui.btn(txt, { size: "sm" });
+    const errorBar = () => ui.errorBar();
+    const root = document.createElement("div");
+    Object.assign(root.style, {
+      display: "grid",
+      gridTemplateRows: "1fr",
+      gap: "12px",
+      height: "54vh",
+      minHeight: "0",
+      overflow: "hidden"
+    });
+    view.appendChild(root);
+    const s1 = section("Audio & Playback");
+    root.appendChild(s1.root);
+    const contextControls = {};
+    const contextOrder = [
+      { key: "shops", label: "Shops", allowPurchase: true, showStop: true },
+      { key: "weather", label: "Weather", allowPurchase: false },
+      { key: "pets", label: "Pets", allowPurchase: true, showStop: false }
+    ];
+    for (const cfg of contextOrder) {
+      const card2 = document.createElement("div");
+      Object.assign(card2.style, {
+        display: "grid",
+        gap: "12px",
+        padding: "16px",
+        borderRadius: "12px",
+        border: "1px solid #1f2429",
+        background: "#111821"
+      });
+      const heading = document.createElement("div");
+      heading.textContent = cfg.label;
+      heading.style.fontWeight = "700";
+      heading.style.fontSize = "14px";
+      heading.style.letterSpacing = "0.02em";
+      card2.appendChild(heading);
+      const defaultWrap = document.createElement("div");
+      defaultWrap.style.display = "flex";
+      defaultWrap.style.alignItems = "center";
+      defaultWrap.style.gap = "8px";
+      const select2 = makeSelect(`ap.defaultSound.${cfg.key}`);
+      select2.dataset.soundSelect = cfg.key;
+      const playBtn = playIconBtn(`Play ${cfg.label.toLowerCase()} sound`);
+      defaultWrap.append(select2, playBtn);
+      card2.appendChild(row("Default sound", defaultWrap));
+      const volumeWrap = document.createElement("div");
+      volumeWrap.style.display = "flex";
+      volumeWrap.style.alignItems = "center";
+      volumeWrap.style.gap = "10px";
+      const volumeRange = document.createElement("input");
+      volumeRange.type = "range";
+      volumeRange.min = "0";
+      volumeRange.max = "100";
+      volumeRange.step = "1";
+      volumeRange.style.width = "220px";
+      const volumeValue = document.createElement("span");
+      volumeValue.style.minWidth = "32px";
+      volumeValue.style.textAlign = "right";
+      volumeWrap.append(volumeRange, volumeValue);
+      card2.appendChild(row("Volume", volumeWrap));
+      const modeWrap = document.createElement("div");
+      modeWrap.style.display = "flex";
+      modeWrap.style.gap = "12px";
+      const modeOne = radio(`ap.mode.${cfg.key}`, "oneshot", "One-shot");
+      modeWrap.append(modeOne.label);
+      let modeLoop = null;
+      if (cfg.allowPurchase) {
+        modeLoop = radio(`ap.mode.${cfg.key}`, "loop", "Loop");
+        modeWrap.append(modeLoop.label);
+      }
+      card2.appendChild(row("Playback mode", modeWrap));
+      let stopRow;
+      let loopInput;
+      let loopWrap;
+      if (cfg.allowPurchase) {
+        const stopWrap = document.createElement("div");
+        stopWrap.style.display = "flex";
+        stopWrap.style.flexDirection = "column";
+        stopWrap.style.gap = "10px";
+        const stopInfo = document.createElement("div");
+        stopInfo.textContent = cfg.showStop === false ? "Loops keep repeating; stop manually by disabling the alert." : "Loops stop automatically when the item is purchased.";
+        stopInfo.style.opacity = "0.75";
+        stopInfo.style.fontSize = "12px";
+        stopInfo.style.lineHeight = "1.4";
+        if (cfg.key !== "pets") {
+          loopWrap = document.createElement("div");
+          loopWrap.style.display = "flex";
+          loopWrap.style.flexDirection = "column";
+          loopWrap.style.gap = "4px";
+          const loopTitle = document.createElement("div");
+          loopTitle.textContent = "Loop interval";
+          loopTitle.style.opacity = "0.8";
+          loopTitle.style.fontSize = "12px";
+          loopTitle.style.fontWeight = "600";
+          const loopBox = document.createElement("div");
+          loopBox.style.display = "inline-flex";
+          loopBox.style.alignItems = "center";
+          loopBox.style.gap = "8px";
+          loopInput = document.createElement("input");
+          loopInput.type = "number";
+          loopInput.min = "150";
+          loopInput.max = "10000";
+          loopInput.step = "50";
+          loopInput.style.width = "100px";
+          loopInput.style.textAlign = "center";
+          const loopLabel = document.createElement("span");
+          loopLabel.textContent = "ms between plays";
+          loopLabel.style.opacity = "0.85";
+          loopBox.append(loopInput, loopLabel);
+          loopWrap.append(loopTitle, loopBox);
+          stopWrap.append(stopInfo, loopWrap);
+        } else {
+          stopWrap.append(stopInfo);
+        }
+        if (cfg.showStop !== false) {
+          stopRow = row("Stop condition", stopWrap);
+        } else {
+          stopRow = row("Loop interval", stopWrap);
+        }
+        card2.appendChild(stopRow);
+      } else {
+        const info = document.createElement("div");
+        info.textContent = "Weather alerts play once per trigger.";
+        info.style.opacity = "0.75";
+        info.style.fontSize = "12px";
+        info.style.lineHeight = "1.4";
+        card2.appendChild(row("Details", info));
+      }
+      contextControls[cfg.key] = {
+        container: card2,
+        select: select2,
+        playBtn,
+        volumeRange,
+        volumeValue,
+        modeOneshot: modeOne.input,
+        modeLoop: modeLoop?.input,
+        stopRow,
+        loopInput,
+        loopWrap
+      };
+      s1.body.appendChild(card2);
+    }
+    const s1Err = errorBar();
+    s1.body.appendChild(s1Err.el);
+    const s2 = section("Sound library");
+    root.appendChild(s2.root);
+    const importRow = document.createElement("div");
+    Object.assign(importRow.style, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "12px",
+      width: "100%"
+    });
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "audio/*";
+    fileInput.multiple = true;
+    fileInput.style.display = "none";
+    const fileCard = document.createElement("div");
+    Object.assign(fileCard.style, {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "6px",
+      padding: "18px 22px",
+      width: "100%",
+      minHeight: "110px",
+      borderRadius: "14px",
+      border: "1px dashed #5d6a7d",
+      background: "linear-gradient(180deg, #0b141c, #091018)",
+      transition: "border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease",
+      cursor: "pointer",
+      textAlign: "center"
+    });
+    fileCard.tabIndex = 0;
+    fileCard.setAttribute("role", "button");
+    fileCard.setAttribute("aria-label", "Select audio files");
+    const fileCardTitle = document.createElement("div");
+    fileCardTitle.textContent = "Select audio files";
+    Object.assign(fileCardTitle.style, {
+      fontWeight: "600",
+      fontSize: "14px",
+      letterSpacing: "0.02em"
+    });
+    const fileStatus = document.createElement("div");
+    const defaultStatusText = "Click to browse or drop files";
+    fileStatus.textContent = defaultStatusText;
+    Object.assign(fileStatus.style, {
+      fontSize: "12px",
+      opacity: "0.75"
+    });
+    fileCard.append(fileCardTitle, fileStatus);
+    const setFileCardActive = (active) => {
+      if (active) {
+        fileCard.style.borderColor = "#6fc3ff";
+        fileCard.style.boxShadow = "0 0 0 3px #6fc3ff22";
+        fileCard.style.background = "linear-gradient(180deg, #102030, #0b1826)";
+      } else {
+        fileCard.style.borderColor = "#5d6a7d";
+        fileCard.style.boxShadow = "none";
+        fileCard.style.background = "linear-gradient(180deg, #0b141c, #091018)";
+      }
+    };
+    fileCard.addEventListener("mouseenter", () => setFileCardActive(true));
+    fileCard.addEventListener("mouseleave", () => setFileCardActive(document.activeElement === fileCard));
+    fileCard.addEventListener("focus", () => setFileCardActive(true));
+    fileCard.addEventListener("blur", () => setFileCardActive(false));
+    fileCard.addEventListener("dragover", (ev) => {
+      ev.preventDefault();
+      setFileCardActive(true);
+      if (ev.dataTransfer) ev.dataTransfer.dropEffect = "copy";
+    });
+    fileCard.addEventListener("dragleave", () => setFileCardActive(document.activeElement === fileCard));
+    const triggerFileSelect = () => fileInput.click();
+    fileCard.addEventListener("click", triggerFileSelect);
+    fileCard.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        triggerFileSelect();
+      }
+    });
+    const displaySelection = (files) => {
+      if (!files || !files.length) {
+        fileStatus.textContent = defaultStatusText;
+        return;
+      }
+      fileStatus.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
+    };
+    fileCard.addEventListener("drop", async (ev) => {
+      ev.preventDefault();
+      const files = ev.dataTransfer?.files || null;
+      displaySelection(files);
+      await handleFiles(files);
+      displaySelection(null);
+      setFileCardActive(document.activeElement === fileCard);
+    });
+    importRow.append(fileInput, fileCard);
+    s2.body.appendChild(importRow);
+    const tip = document.createElement("div");
+    tip.textContent = "MP3, WAV, OGG \u2014 limited to \u2264 10 s and \u2264 200 KB.";
+    tip.style.opacity = "0.75";
+    tip.style.fontSize = "12px";
+    s2.body.appendChild(tip);
+    const listWrap = document.createElement("div");
+    Object.assign(listWrap.style, {
+      display: "grid",
+      gridTemplateRows: "auto 1fr",
+      gap: "6px",
+      border: "1px solid #4445",
+      borderRadius: "10px",
+      background: "#10161c",
+      padding: "10px"
+    });
+    const listHeader = document.createElement("div");
+    Object.assign(listHeader.style, {
+      display: "grid",
+      gridTemplateColumns: "minmax(0, 1fr) auto",
+      gap: "12px",
+      fontSize: "12px",
+      letterSpacing: "0.05em",
+      textTransform: "uppercase",
+      opacity: "0.65",
+      paddingBottom: "4px",
+      borderBottom: "1px solid #ffffff14"
+    });
+    const headName = document.createElement("span");
+    headName.textContent = "Sound";
+    const headActions = document.createElement("span");
+    headActions.textContent = "Actions";
+    headActions.style.justifySelf = "end";
+    listHeader.append(headName, headActions);
+    const listBody = document.createElement("div");
+    Object.assign(listBody.style, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "6px",
+      maxHeight: "240px",
+      overflowY: "auto",
+      paddingRight: "4px",
+      minHeight: "0",
+      padding: "4px 0"
+    });
+    listWrap.append(listHeader, listBody);
+    s2.body.appendChild(listWrap);
+    const s2Err = errorBar();
+    s2.body.appendChild(s2Err.el);
+    const sanitizeLoopInput = (input, fallback) => {
+      const trimmed = (input.value || "").trim();
+      const raw = trimmed ? Number(trimmed) : NaN;
+      const normalized = Number.isFinite(raw) ? raw : fallback;
+      const clamped = Math.max(150, Math.min(1e4, Math.floor(normalized)));
+      input.value = String(clamped);
+      return clamped;
+    };
+    const updateStopVisibility = (context) => {
+      const controls = contextControls[context];
+      const loopChecked = controls.modeLoop?.checked ?? false;
+      if (controls.stopRow) controls.stopRow.style.display = loopChecked ? "" : "none";
+      if (controls.loopWrap) controls.loopWrap.style.display = loopChecked ? "flex" : "none";
+    };
+    const applyMode = (context, mode) => {
+      if (context === "weather" && mode === "loop") {
+        audio.setPlaybackMode("oneshot", context);
+        contextControls[context].modeOneshot.checked = true;
+        contextControls[context].modeLoop && (contextControls[context].modeLoop.checked = false);
+        updateStopVisibility(context);
+        return;
+      }
+      audio.setPlaybackMode(mode, context);
+      updateStopVisibility(context);
+    };
+    const applyShopsStop = () => {
+      const controls = contextControls.shops;
+      if (!controls.loopInput) return;
+      const loopMs = sanitizeLoopInput(controls.loopInput, audio.getLoopInterval("shops"));
+      audio.setLoopInterval(loopMs, "shops");
+      if (!controls.modeLoop?.checked) {
+        if (controls.modeLoop) controls.modeLoop.checked = true;
+        controls.modeOneshot.checked = false;
+        applyMode("shops", "loop");
+      }
+      audio.setStopPurchase("shops");
+      NotifierService.setContextStopDefaults("shops", { stopMode: "purchase", stopRepeats: null, loopIntervalMs: loopMs });
+      return loopMs;
+    };
+    for (const cfg of contextOrder) {
+      const controls = contextControls[cfg.key];
+      controls.select.addEventListener("change", () => {
+        audio.setDefaultSoundByName(controls.select.value, cfg.key);
+        renderLibList();
+      });
+      controls.playBtn.addEventListener("click", () => {
+        audio.trigger("preview", { sound: controls.select.value }, cfg.key).catch(() => {
+        });
+      });
+      controls.volumeRange.addEventListener("input", () => {
+        const value = Math.max(0, Math.min(100, parseInt(controls.volumeRange.value || "0", 10) || 0));
+        controls.volumeValue.textContent = `${value}%`;
+        audio.setVolume(value / 100, cfg.key);
+      });
+      controls.modeOneshot.addEventListener("change", () => {
+        if (!controls.modeOneshot.checked) return;
+        applyMode(cfg.key, "oneshot");
+        if (cfg.key === "shops") {
+          const loopMs = controls.loopInput ? sanitizeLoopInput(controls.loopInput, audio.getLoopInterval("shops")) : audio.getLoopInterval("shops");
+          audio.setLoopInterval(loopMs, "shops");
+          audio.setStopManual("shops");
+          NotifierService.setContextStopDefaults("shops", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
+        }
+      });
+      controls.modeLoop?.addEventListener("change", () => {
+        if (!controls.modeLoop?.checked) return;
+        applyMode(cfg.key, "loop");
+        if (cfg.key === "shops") applyShopsStop();
+      });
+      if (cfg.allowPurchase) {
+        controls.loopInput?.addEventListener("change", applyShopsStop);
+        controls.loopInput?.addEventListener("blur", applyShopsStop);
+      }
+    }
+    const refreshAllSoundSelects = () => {
+      const names = audio.listSounds();
+      const applyOptions = (sel, context) => {
+        const current = sel.value;
+        sel.innerHTML = "";
+        for (const n of names) {
+          const option = document.createElement("option");
+          option.value = n;
+          option.textContent = n;
+          sel.appendChild(option);
+        }
+        const preferred = audio.getDefaultSoundName(context);
+        if (names.includes(current)) sel.value = current;
+        else if (preferred && names.includes(preferred)) sel.value = preferred;
+        else if (names.length) sel.value = names[0];
+      };
+      for (const cfg of contextOrder) {
+        applyOptions(contextControls[cfg.key].select, cfg.key);
+      }
+      const all = Array.from(document.querySelectorAll("select[data-sound-select]"));
+      for (const sel of all) {
+        const ctx2 = sel.dataset.soundSelect || "shops";
+        if (contextControls[ctx2]?.select === sel) continue;
+        applyOptions(sel, ctx2);
+      }
+    };
+    const renderLibList = () => {
+      listBody.replaceChildren();
+      const names = audio.listSounds();
+      if (!names.length) {
+        const empty = document.createElement("div");
+        empty.textContent = "No sounds in the library.";
+        empty.style.opacity = "0.75";
+        empty.style.textAlign = "center";
+        empty.style.padding = "12px 6px";
+        listBody.appendChild(empty);
+        return;
+      }
+      const defaultShops = audio.getDefaultSoundName("shops");
+      const defaultWeather = audio.getDefaultSoundName("weather");
+      for (const name of names) {
+        const row2 = document.createElement("div");
+        Object.assign(row2.style, {
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) auto",
+          gap: "12px",
+          alignItems: "center",
+          padding: "8px 10px",
+          borderRadius: "8px",
+          border: "1px solid #1f2429",
+          background: "#151b22"
+        });
+        const info = document.createElement("div");
+        Object.assign(info.style, {
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          minWidth: "0"
+        });
+        const title = document.createElement("span");
+        title.textContent = name;
+        title.style.fontWeight = "600";
+        title.style.overflow = "hidden";
+        title.style.textOverflow = "ellipsis";
+        title.style.whiteSpace = "nowrap";
+        info.appendChild(title);
+        const badges = document.createElement("div");
+        badges.style.display = "flex";
+        badges.style.gap = "6px";
+        const makeBadge = (label2) => {
+          const badge = document.createElement("span");
+          badge.textContent = label2;
+          Object.assign(badge.style, {
+            fontSize: "11px",
+            padding: "2px 6px",
+            borderRadius: "999px",
+            background: "#2b5cff33",
+            border: "1px solid #2b5cff66",
+            color: "#9cbcff",
+            fontWeight: "600",
+            textTransform: "uppercase",
+            letterSpacing: "0.04em"
+          });
+          return badge;
+        };
+        const isShopsDefault = defaultShops === name;
+        const isWeatherDefault = defaultWeather === name;
+        const isPetsDefault = audio.getDefaultSoundName("pets") === name;
+        if (isShopsDefault) badges.appendChild(makeBadge("Shops"));
+        if (isWeatherDefault) badges.appendChild(makeBadge("Weather"));
+        if (isPetsDefault) badges.appendChild(makeBadge("Pets"));
+        if (badges.childElementCount) info.appendChild(badges);
+        if (isShopsDefault || isWeatherDefault || isPetsDefault) {
+          row2.style.borderColor = "#2b5cff99";
+          row2.style.boxShadow = "0 0 0 1px #2b5cff33";
+        }
+        const actions = document.createElement("div");
+        Object.assign(actions.style, {
+          display: "flex",
+          gap: "6px",
+          justifyContent: "flex-end",
+          flexWrap: "wrap"
+        });
+        const btnPlay = smallBtn2("\u25B6");
+        const btnSetShops = smallBtn2("Set shops");
+        const btnSetWeather = smallBtn2("Set weather");
+        const btnSetPets = smallBtn2("Set pets");
+        const btnDel = smallBtn2("Remove");
+        btnPlay.title = "Preview";
+        btnSetShops.title = "Set as shops default";
+        btnSetWeather.title = "Set as weather default";
+        btnSetPets.title = "Set as pets default";
+        btnDel.title = "Remove from library";
+        const isProtected = typeof audio.isProtectedSound === "function" && audio.isProtectedSound(name);
+        if (isProtected || isShopsDefault || isWeatherDefault) {
+          btnDel.disabled = true;
+          btnDel.style.opacity = "0.6";
+          if (isProtected) btnDel.title = "Built-in sound cannot be removed";
+          else btnDel.title = "Currently used as default";
+        }
+        btnPlay.onclick = () => audio.trigger("preview", { sound: name }, "shops").catch(() => {
+        });
+        btnSetShops.onclick = () => {
+          audio.setDefaultSoundByName(name, "shops");
+          refreshAllSoundSelects();
+          renderLibList();
+        };
+        btnSetWeather.onclick = () => {
+          audio.setDefaultSoundByName(name, "weather");
+          refreshAllSoundSelects();
+          renderLibList();
+        };
+        btnSetPets.onclick = () => {
+          audio.setDefaultSoundByName(name, "pets");
+          refreshAllSoundSelects();
+          renderLibList();
+        };
+        btnDel.onclick = () => {
+          audio.unregisterSound(name);
+          refreshAllSoundSelects();
+          renderLibList();
+        };
+        actions.append(btnPlay, btnSetShops, btnSetWeather, btnSetPets, btnDel);
+        row2.append(info, actions);
+        listBody.appendChild(row2);
+      }
+    };
+    const syncContext = (context) => {
+      const controls = contextControls[context];
+      const settings = audio.getPlaybackSettings(context);
+      const names = audio.listSounds();
+      if (settings.defaultSoundName && names.includes(settings.defaultSoundName)) {
+        controls.select.value = settings.defaultSoundName;
+      }
+      const volPercent = Math.round(settings.volume * 100);
+      controls.volumeRange.value = String(volPercent);
+      controls.volumeValue.textContent = `${volPercent}%`;
+      if (controls.modeLoop && settings.mode === "loop") controls.modeLoop.checked = true;
+      else controls.modeOneshot.checked = true;
+      const defaults = context === "shops" || context === "weather" ? NotifierService.getContextStopDefaults(context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: settings.loopIntervalMs };
+      const fallbackLoop = Math.max(
+        150,
+        Math.min(1e4, Math.floor(defaults.loopIntervalMs || settings.loopIntervalMs || 150))
+      );
+      const loopMs = controls.loopInput ? sanitizeLoopInput(controls.loopInput, fallbackLoop) : fallbackLoop;
+      audio.setLoopInterval(loopMs, context);
+      if (context === "shops") {
+        if (controls.modeLoop?.checked) {
+          audio.setStopPurchase("shops");
+          NotifierService.setContextStopDefaults("shops", { stopMode: "purchase", stopRepeats: null, loopIntervalMs: loopMs });
+        } else {
+          audio.setStopManual("shops");
+          NotifierService.setContextStopDefaults("shops", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
+        }
+      } else if (context === "weather") {
+        applyMode("weather", "oneshot");
+        audio.setStopManual("weather");
+        NotifierService.setContextStopDefaults("weather", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
+      } else if (context === "pets") {
+        audio.setLoopInterval(loopMs, "pets");
+        audio.setStopManual("pets");
+      }
+      updateStopVisibility(context);
+    };
+    const syncFromAudio = () => {
+      refreshAllSoundSelects();
+      syncContext("shops");
+      syncContext("weather");
+      syncContext("pets");
+      renderLibList();
+    };
+    const handleFiles = async (files) => {
+      s2Err.clear();
+      if (!files || !files.length) return;
+      const added = [];
+      for (const f of Array.from(files)) {
+        try {
+          const res = await audio.importFileAsSound(f, {
+            maxBytes: 200 * 1024,
+            maxSeconds: 10,
+            bitrates: [48e3, 32e3, 2e4, 12e3, 8e3],
+            maxInputBytes: 8 * 1024 * 1024
+          });
+          added.push(res.name);
+        } catch (e) {
+          s2Err.show(`Failed for "${f.name}": ${e?.message || e}`);
+        }
+      }
+      if (added.length) {
+        refreshAllSoundSelects();
+        renderLibList();
+        for (const cfg of contextOrder) {
+          if (!audio.getDefaultSoundName(cfg.key)) {
+            audio.setDefaultSoundByName(added[0], cfg.key);
+          }
+        }
+        refreshAllSoundSelects();
+        renderLibList();
+      }
+      fileInput.value = "";
+    };
+    fileInput.onchange = async () => {
+      const files = fileInput.files;
+      displaySelection(files);
+      await handleFiles(files);
+      displaySelection(null);
+      setFileCardActive(document.activeElement === fileCard);
+    };
+    syncFromAudio();
+    const scroller = document.createElement("div");
+    Object.assign(scroller.style, {
+      overflow: "auto",
+      minHeight: "0",
+      height: "100%",
+      display: "grid",
+      gap: "12px"
+    });
+    scroller.append(s1.root, s2.root);
+    root.appendChild(scroller);
+    view.__cleanup__ = (() => {
+      const prev = view.__cleanup__;
+      return () => {
+        try {
+          prev?.();
+        } catch {
+        }
+      };
+    })();
+  }
+  function renderShopTab(view, ui) {
+    view.innerHTML = "";
+    view.style.cssText = "";
+    if (!document.getElementById("qws-rule-style")) {
+      const style3 = document.createElement("style");
+      style3.id = "qws-rule-style";
+      style3.textContent = `
+:root {
+  /* PATCH: z-index centralis\xE9 */
+  --qws-z-popover: 99999999999999;
+}
+
+/* PATCH: bouton engrenage carr\xE9, centr\xE9, plus gros */
+.qws-rule-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  line-height: 1;
+  font-size: 18px; /* taille de l'ic\xF4ne */
+  min-width: 32px; /* \xE9vite les r\xE9tr\xE9cissements */
+  box-sizing: border-box;
+}
+.qws-rule-btn[data-active="1"] {
+  background: linear-gradient(180deg, #1b2735, #101821);
+  box-shadow: 0 0 0 1px #658dff88 inset;
+  color: #c7daff;
+}
+
+/* PATCH: popover toujours devant */
+.qws-rule-popover {
+  position: fixed !important;
+  z-index: var(--qws-z-popover) !important;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: #f1f6ff;
+}
+.qws-rule-popover .qws-rule-field {
+  display: grid;
+  gap: 6px;
+}
+.qws-rule-popover .qws-rule-field label {
+  font-weight: 600;
+  font-size: 13px;
+}
+.qws-rule-popover .qws-rule-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* PATCH: r\xE9serve un espace pour le r\xE9sum\xE9 afin d'\xE9viter tout shift */
+[data-role="rule-hint"] {
+  min-height: 1.2em;  /* ~1 ligne r\xE9serv\xE9e */
+}
+`;
+      document.head.appendChild(style3);
+    }
+    const wrap = document.createElement("div");
+    Object.assign(wrap.style, {
+      display: "grid",
+      gridTemplateRows: "auto 1fr",
+      gap: "10px",
+      height: "54vh",
+      overflow: "hidden",
+      minHeight: "0",
+      position: "relative"
+    });
+    view.appendChild(wrap);
+    const header = document.createElement("div");
+    header.style.display = "flex";
+    header.style.flexWrap = "wrap";
+    header.style.alignItems = "center";
+    header.style.gap = "10px";
+    header.style.rowGap = "8px";
+    wrap.appendChild(header);
+    const lblType = ui.label("Type");
+    const selType = document.createElement("select");
+    selType.className = "qmm-input";
+    selType.style.minWidth = "140px";
+    selType.id = "shop.filter.type";
+    [
+      ["all", "All"],
+      ["seed", "Seeds"],
+      ["egg", "Eggs"],
+      ["tool", "Tools"],
+      ["decor", "Decor"]
+    ].forEach(([v, t]) => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = t;
+      selType.appendChild(o);
+    });
+    selType.value = "all";
+    const lblRarity = ui.label("Rarity");
+    const selRarity = document.createElement("select");
+    selRarity.className = "qmm-input";
+    selRarity.style.minWidth = "160px";
+    selRarity.id = "shop.filter.rarity";
+    [
+      ["all", "All"],
+      ["common", "Common"],
+      ["uncommon", "Uncommon"],
+      ["rare", "Rare"],
+      ["legendary", "Legendary"],
+      ["mythical", "Mythical"],
+      ["divine", "Divine"],
+      ["celestial", "Celestial"]
+    ].forEach(([v, t]) => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = t;
+      selRarity.appendChild(o);
+    });
+    selRarity.value = "all";
+    const followedBadge = document.createElement("div");
+    followedBadge.id = "shop.followedCount";
+    followedBadge.textContent = "Followed: 0";
+    followedBadge.title = "Items with Overlay enabled";
+    followedBadge.style.padding = "6px 10px";
+    followedBadge.style.borderRadius = "999px";
+    followedBadge.style.border = "1px solid #4445";
+    followedBadge.style.background = "#1f2328";
+    followedBadge.style.color = "#e7eef7";
+    followedBadge.style.fontWeight = "600";
+    followedBadge.style.marginLeft = "auto";
+    followedBadge.style.width = "115px";
+    header.append(lblType, selType, lblRarity, selRarity, followedBadge);
+    const card2 = document.createElement("div");
+    card2.style.border = "1px solid #4445";
+    card2.style.borderRadius = "10px";
+    card2.style.padding = "10px";
+    card2.style.background = "#0f1318";
+    card2.style.overflow = "hidden";
+    card2.style.display = "grid";
+    card2.style.gridTemplateRows = "auto 1fr";
+    card2.style.minHeight = "0";
+    wrap.appendChild(card2);
+    const headerGrid = document.createElement("div");
+    const COLS = "minmax(200px, 1fr) 9rem 7rem 8rem";
+    headerGrid.style.display = "grid";
+    headerGrid.style.gridTemplateColumns = COLS;
+    headerGrid.style.justifyContent = "start";
+    headerGrid.style.columnGap = "0";
+    headerGrid.style.borderBottom = "1px solid #ffffff1a";
+    headerGrid.style.padding = "0 0 4px 0";
+    headerGrid.style.position = "sticky";
+    headerGrid.style.top = "0";
+    headerGrid.append(
+      mkHeadCell("Item", "left"),
+      mkHeadCell("Rarity"),
+      mkHeadCell("Notify"),
+      mkHeadCell("Custom rules")
+    );
+    card2.appendChild(headerGrid);
+    const bodyGrid = document.createElement("div");
+    bodyGrid.style.display = "grid";
+    bodyGrid.style.gridTemplateColumns = COLS;
+    bodyGrid.style.justifyContent = "start";
+    bodyGrid.style.gridAutoRows = "auto";
+    bodyGrid.style.alignContent = "start";
+    bodyGrid.style.minHeight = "0";
+    bodyGrid.style.height = "100%";
+    bodyGrid.style.overflow = "auto";
+    bodyGrid.style.overscrollBehavior = "contain";
+    bodyGrid.style.width = "100%";
+    bodyGrid.style.scrollbarGutter = "stable";
+    card2.appendChild(bodyGrid);
+    const refreshRulesUI = () => {
+      const kids = Array.from(bodyGrid.children);
+      for (let i = 0; i + 3 < kids.length; i += 4) {
+        const itemCell = kids[i];
+        const ruleCell = kids[i + 3];
+        const id = itemCell?.dataset?.id;
+        if (!id) continue;
+        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
+      }
+    };
+    const softUpdateRenderedRows = (next) => {
+      const byId = new Map(next.rows.map((r) => [r.id, r]));
+      const kids = Array.from(bodyGrid.children);
+      for (let i = 0; i + 3 < kids.length; i += 4) {
+        const itemCell = kids[i];
+        const popupCell = kids[i + 2];
+        const ruleCell = kids[i + 3];
+        const id = itemCell.dataset.id;
+        const row = byId.get(id);
+        if (!row) continue;
+        const popupSwitch = popupCell.querySelector("label");
+        if (popupSwitch) setSwitchVisual(popupSwitch, !!row.popup);
+        itemCell.dataset.follow = row.followed ? "1" : "0";
+        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
+        const capped = NotifierService.isIdCapped?.(id) ?? false;
+        if (popupSwitch) setSwitchCapState(popupSwitch, capped);
+      }
+    };
+    const syncHeaderToScrollbar = () => {
+      const sbw = bodyGrid.offsetWidth - bodyGrid.clientWidth;
+      headerGrid.style.boxSizing = "border-box";
+      headerGrid.style.paddingRight = `${sbw}px`;
+    };
+    syncHeaderToScrollbar();
+    const resizeObserver = new ResizeObserver(syncHeaderToScrollbar);
+    resizeObserver.observe(bodyGrid);
+    const onResize = () => syncHeaderToScrollbar();
+    window.addEventListener("resize", onResize);
+    const lastSeenRefs = /* @__PURE__ */ new Map();
+    let state3 = null;
+    let renderedIds = /* @__PURE__ */ new Set();
+    const getFilters = () => ({
+      type: selType.value || "all",
+      rarity: selRarity.value || "all"
+    });
+    const passesFilters = (rows) => NotifierService.filterRows(rows, getFilters());
+    const mkItemCell = (row) => {
+      const wrap2 = document.createElement("div");
+      Object.assign(wrap2.style, {
+        display: "flex",
+        alignItems: "center",
+        gap: "6px",
+        padding: "4px 6px",
+        borderBottom: "1px solid #ffffff12"
+      });
+      const ICON = 40;
+      const iconWrap = document.createElement("div");
+      Object.assign(iconWrap.style, {
+        width: `${ICON}px`,
+        height: `${ICON}px`,
+        flex: `0 0 ${ICON}px`,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "8px",
+        background: "#101820",
+        marginRight: "6px",
+        aspectRatio: "1 / 1"
+      });
+      const iconFallback = row.type === "Seed" ? "\u{1F331}" : row.type === "Egg" ? "\u{1F95A}" : row.type === "Tool" ? "\u{1F9F0}" : "\u{1F3E0}";
+      const icon = document.createElement("span");
+      icon.textContent = iconFallback;
+      icon.style.fontSize = `${ICON - 10}px`;
+      icon.setAttribute("aria-hidden", "true");
+      iconWrap.appendChild(icon);
+      const spriteCategories = row.type === "Seed" ? ["seed"] : row.type === "Egg" ? ["pet"] : row.type === "Tool" ? ["item"] : row.type === "Decor" ? ["decor"] : null;
+      if (spriteCategories) {
+        const baseId = row.id.split(":")[1] ?? row.name ?? row.id;
+        const candidatesSet = /* @__PURE__ */ new Set();
+        const addCandidate = (value) => {
+          if (!value) return;
+          const trimmed = value.trim();
+          if (!trimmed) return;
+          candidatesSet.add(trimmed);
+          candidatesSet.add(trimmed.replace(/\s+/g, ""));
+          if (row.type === "Seed" || row.type === "Egg") {
+            const stripped = trimmed.replace(/(?:seed|egg)$/i, "").trim();
+            if (stripped) {
+              candidatesSet.add(stripped);
+              candidatesSet.add(stripped.replace(/\s+/g, ""));
+            }
+          }
+        };
+        addCandidate(baseId);
+        addCandidate(row.id);
+        addCandidate(row.name);
+        const candidates = Array.from(candidatesSet).filter(Boolean);
+        if (candidates.length) {
+          attachSpriteIcon(iconWrap, spriteCategories, candidates, ICON, "alerts");
+        }
+      }
+      const col = document.createElement("div");
+      Object.assign(col.style, {
+        display: "flex",
+        flexDirection: "column",
+        gap: "2px",
+        lineHeight: "1.15",
+        minWidth: "0",
+        // autorise l'ellipsis
+        flex: "1 1 auto"
+      });
+      const title = document.createElement("div");
+      title.textContent = row.name;
+      Object.assign(title.style, {
+        fontWeight: "700",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap"
+      });
+      const sub = document.createElement("div");
+      sub.style.opacity = "0.7";
+      sub.style.fontSize = "12px";
+      sub.style.display = "flex";
+      sub.style.alignItems = "center";
+      sub.style.gap = "6px";
+      const sectionLabel3 = document.createElement("span");
+      sectionLabel3.textContent = row.type;
+      sub.appendChild(sectionLabel3);
+      if (row.weathers?.length || row.weatherOnly) {
+        const weathers = row.weathers && row.weathers.length ? row.weathers : [];
+        for (const w of weathers) {
+          const badge = document.createElement("span");
+          badge.textContent = w;
+          Object.assign(badge.style, {
+            padding: "1px 6px",
+            borderRadius: "999px",
+            fontSize: "10px",
+            fontWeight: "600",
+            background: row.weatherOnly ? "rgba(250, 204, 21, 0.18)" : "rgba(96, 165, 250, 0.18)",
+            color: row.weatherOnly ? "#facc15" : "#60a5fa",
+            border: row.weatherOnly ? "1px solid rgba(250, 204, 21, 0.35)" : "1px solid rgba(96, 165, 250, 0.35)"
+          });
+          badge.title = row.weatherOnly ? `Only available during ${w}` : `Also available during ${w}`;
+          sub.appendChild(badge);
+        }
+      }
+      const ruleHint = document.createElement("div");
+      ruleHint.dataset.role = "rule-hint";
+      ruleHint.style.display = "none";
+      ruleHint.style.opacity = "0.75";
+      ruleHint.style.fontSize = "11px";
+      ruleHint.style.whiteSpace = "nowrap";
+      ruleHint.style.overflow = "hidden";
+      ruleHint.style.textOverflow = "ellipsis";
+      ruleHint.style.minHeight = "1.2em";
+      ruleHint.style.visibility = "hidden";
+      col.append(title, sub, ruleHint);
+      wrap2.append(iconWrap, col);
+      return wrap2;
+    };
+    const addRow = (row) => {
+      const itemCell = mkItemCell(row);
+      itemCell.dataset.id = row.id;
+      itemCell.dataset.type = row.type;
+      itemCell.dataset.follow = row.followed ? "1" : "0";
+      itemCell.dataset.context = "shops";
+      const rarityCell = document.createElement("div");
+      rarityCell.style.display = "flex";
+      rarityCell.style.alignItems = "center";
+      rarityCell.style.justifyContent = "center";
+      rarityCell.style.borderBottom = "1px solid #ffffff12";
+      rarityCell.appendChild(rarityBadge(String(row.rarity ?? "\u2014")));
+      const popupSwitch = createSwitch((on) => {
+        try {
+          NotifierService.setPopup(row.id, !!on);
+        } catch {
+        }
+        const cur = NotifierService.getPref(row.id);
+        itemCell.dataset.follow = cur.followed ? "1" : "0";
+      });
+      setSwitchVisual(popupSwitch, !!row.popup);
+      popupSwitch.style.padding = "0";
+      const popupCell = wrapCell(popupSwitch);
+      const capped = NotifierService.isIdCapped?.(row.id) ?? false;
+      setSwitchCapState(popupSwitch, capped);
+      const gearBtn = ui.btn("", {
+        icon: "\u2699",
+        size: "sm",
+        tooltip: "Custom rule",
+        ariaLabel: `Custom rule for ${row.name}`
+      });
+      gearBtn.dataset.role = "rule";
+      gearBtn.classList.add("qws-rule-btn");
+      gearBtn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        openRuleEditor(ui, {
+          id: row.id,
+          name: row.name,
+          type: row.type,
+          context: "shops"
+        }, gearBtn);
+      });
+      const ruleCell = wrapCell(gearBtn);
+      ruleCell.dataset.role = "rule-cell";
+      bodyGrid.append(itemCell, rarityCell, popupCell, ruleCell);
+      applyRuleState(itemCell, ruleCell, NotifierService.getRule(row.id));
+    };
+    function clearBody() {
+      closeRuleEditor();
+      bodyGrid.innerHTML = "";
+      renderedIds = /* @__PURE__ */ new Set();
+    }
+    function renderEmpty() {
+      const empty = document.createElement("div");
+      empty.textContent = "No items.";
+      empty.style.opacity = "0.75";
+      empty.style.gridColumn = "1 / -1";
+      empty.style.padding = "8px";
+      bodyGrid.appendChild(empty);
+    }
+    function rebuildGrid() {
+      clearBody();
+      if (!state3) {
+        renderEmpty();
+        return;
+      }
+      const rows = passesFilters(state3.rows);
+      if (!rows.length) {
+        renderEmpty();
+      } else {
+        rows.forEach((r) => {
+          addRow(r);
+          renderedIds.add(r.id);
+        });
+      }
+      refreshRulesUI();
+      followedBadge.textContent = `Followed: ${state3.counts.followed}`;
+      syncHeaderToScrollbar();
+    }
+    function softUpdateBadge(next) {
+      followedBadge.textContent = `Followed: ${next.counts.followed}`;
+    }
+    function filteredIdSet(s) {
+      const set3 = /* @__PURE__ */ new Set();
+      for (const r of passesFilters(s.rows)) set3.add(r.id);
+      return set3;
+    }
+    let unsub = null;
+    let unsubRules = null;
+    (async () => {
+      try {
+        await NotifierService.start();
+      } catch {
+      }
+      unsub = await NotifierService.onChangeNow((s) => {
+        const prev = state3;
+        state3 = s;
+        if (!prev) {
+          rebuildGrid();
+          softUpdateRenderedRows(state3);
+          return;
+        }
+        const prevIds = renderedIds;
+        const nextIds = filteredIdSet(s);
+        let needRebuild = false;
+        if (prevIds.size !== nextIds.size) needRebuild = true;
+        else {
+          for (const id of nextIds) if (!prevIds.has(id)) {
+            needRebuild = true;
+            break;
+          }
+        }
+        if (needRebuild) {
+          rebuildGrid();
+        } else {
+          softUpdateBadge(s);
+          softUpdateRenderedRows(s);
+        }
+      });
+      try {
+        unsubRules = await NotifierService.onRulesChangeNow(() => refreshRulesUI());
+      } catch {
+      }
+    })();
+    const onFilterChange = () => {
+      if (state3) rebuildGrid();
+    };
+    selType.onchange = onFilterChange;
+    selRarity.onchange = onFilterChange;
+    view.__cleanup__ = (() => {
+      const prev = view.__cleanup__;
+      return () => {
+        try {
+          unsub?.();
+        } catch {
+        }
+        try {
+          unsubRules?.();
+        } catch {
+        }
+        try {
+          resizeObserver.disconnect();
+        } catch {
+        }
+        try {
+          window.removeEventListener("resize", onResize);
+        } catch {
+        }
+        try {
+          closeRuleEditor();
+        } catch {
+        }
+        try {
+          prev?.();
+        } catch {
+        }
+      };
+    })();
+  }
+  function renderPetAlertsTab(view, ui) {
+    view.innerHTML = "";
+    void PetAlertService.start().catch(() => {
+    });
+    const card2 = document.createElement("div");
+    Object.assign(card2.style, {
+      display: "grid",
+      gridTemplateColumns: "minmax(220px, 260px) minmax(0, 1fr)",
+      gap: "10px",
+      alignItems: "stretch",
+      height: "54vh",
+      overflow: "hidden",
+      border: "1px solid #4445",
+      borderRadius: "10px",
+      padding: "10px",
+      background: "#0f1318"
+    });
+    view.appendChild(card2);
+    const petList = document.createElement("div");
+    Object.assign(petList.style, {
+      display: "grid",
+      gridTemplateColumns: "1fr",
+      rowGap: "6px",
+      overflow: "auto",
+      padding: "6px",
+      border: "1px solid #4445",
+      borderRadius: "10px"
+    });
+    card2.appendChild(petList);
+    const right = document.createElement("div");
+    Object.assign(right.style, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px",
+      overflow: "auto",
+      minHeight: "0"
+    });
+    card2.appendChild(right);
+    let pets = [];
+    let unsubPets2 = null;
+    let generalEnabled = PetAlertService.isGeneralEnabled();
+    const formRow = (labelTxt, control) => {
+      const { root } = ui.formRow(labelTxt, control, { labelWidth: "180px" });
+      return root;
+    };
+    const generalCard = ui.card("General notifications", { tone: "muted", align: "stretch" });
+    generalCard.body.style.display = "grid";
+    generalCard.body.style.gap = "10px";
+    const generalRow = ui.flexRow({ justify: "start", gap: 10 });
+    const generalSw = ui.switch(PetAlertService.isGeneralEnabled());
+    const generalLbl = document.createElement("div");
+    generalLbl.textContent = "Use a shared threshold for all pets";
+    generalLbl.style.opacity = "0.9";
+    generalRow.append(generalSw, generalLbl);
+    generalCard.body.append(formRow("Enable general", generalRow));
+    const generalInput = ui.inputNumber(1, 100, 1, PetAlertService.getGeneralThresholdPct());
+    generalCard.body.append(formRow("General threshold (%)", generalInput.wrap ?? generalInput));
+    right.appendChild(generalCard.root);
+    const syncGeneralUI = () => {
+      generalEnabled = PetAlertService.isGeneralEnabled();
+      generalSw.checked = generalEnabled;
+      generalInput.value = String(PetAlertService.getGeneralThresholdPct());
+    };
+    generalSw.onchange = () => {
+      PetAlertService.setGeneralEnabled(generalSw.checked);
+      syncGeneralUI();
+    };
+    generalInput.addEventListener("change", () => {
+      const next = Math.max(1, Math.min(100, Number(generalInput.value) || PetAlertService.getGeneralThresholdPct()));
+      generalInput.value = String(PetAlertService.setGeneralThresholdPct(next));
+    });
+    syncGeneralUI();
+    const renderPetList = () => {
+      petList.innerHTML = "";
+      if (!pets.length) {
+        const empty = document.createElement("div");
+        empty.textContent = "No active pets.";
+        empty.style.opacity = "0.75";
+        petList.appendChild(empty);
+        return;
+      }
+      for (const pet of pets) {
+        const slot = pet?.slot ?? {};
+        const name = String(slot?.name || slot?.petSpecies || "Pet");
+        const hunger = PetsService.getHungerPctFor(pet);
+        const hungerText = Number.isFinite(hunger) ? `${hunger}%` : "\u2014";
+        const row = document.createElement("div");
+        row.style.display = "flex";
+        row.style.alignItems = "center";
+        row.style.justifyContent = "space-between";
+        row.style.gap = "10px";
+        row.style.width = "100%";
+        row.style.textAlign = "left";
+        row.style.padding = "6px 8px";
+        row.style.borderRadius = "8px";
+        row.style.border = "1px solid #4445";
+        row.style.background = "#121820";
+        const left = document.createElement("div");
+        left.style.display = "flex";
+        left.style.alignItems = "center";
+        left.style.gap = "8px";
+        left.style.minWidth = "0";
+        const avatar2 = document.createElement("div");
+        avatar2.style.width = "40px";
+        avatar2.style.height = "40px";
+        avatar2.style.borderRadius = "8px";
+        avatar2.style.display = "inline-flex";
+        avatar2.style.alignItems = "center";
+        avatar2.style.justifyContent = "center";
+        avatar2.style.background = "#111821";
+        avatar2.style.border = "1px solid #1f2429";
+        avatar2.style.overflow = "hidden";
+        const useEmojiFallback = () => {
+          avatar2.replaceChildren();
+          const span = document.createElement("span");
+          span.textContent = "\u{1F43E}";
+          span.style.fontSize = "28px";
+          span.setAttribute("aria-hidden", "true");
+          avatar2.appendChild(span);
+        };
+        const setIcon = (species2, mutations2) => {
+          const speciesLabel = String(species2 ?? "").trim();
+          avatar2.replaceChildren();
+          if (!speciesLabel) {
+            useEmojiFallback();
+            return;
+          }
+          const span = document.createElement("span");
+          span.textContent = speciesLabel.charAt(0).toUpperCase() || "\u0110Y?\xF3";
+          span.style.fontSize = "28px";
+          span.setAttribute("aria-hidden", "true");
+          avatar2.appendChild(span);
+          attachSpriteIcon(avatar2, ["pet"], [speciesLabel], 36, "alerts-pet", {
+            mutations: Array.isArray(mutations2) ? mutations2 : void 0
+          });
+        };
+        const species = String(slot?.petSpecies || "");
+        const mutations = slot?.mutations ?? pet?.mutations;
+        setIcon(species, Array.isArray(mutations) ? mutations : void 0);
+        const titleWrap = document.createElement("div");
+        titleWrap.style.display = "flex";
+        titleWrap.style.flexDirection = "column";
+        titleWrap.style.gap = "2px";
+        titleWrap.style.minWidth = "0";
+        const title = document.createElement("div");
+        title.textContent = name;
+        title.style.fontWeight = "600";
+        title.style.overflow = "hidden";
+        title.style.textOverflow = "ellipsis";
+        title.style.whiteSpace = "nowrap";
+        titleWrap.append(title);
+        left.append(avatar2, titleWrap);
+        const hungerValue = document.createElement("div");
+        hungerValue.textContent = hungerText;
+        hungerValue.style.fontWeight = "700";
+        hungerValue.style.color = "#FFD84D";
+        row.append(left, hungerValue);
+        petList.appendChild(row);
+      }
+    };
+    (async () => {
+      try {
+        unsubPets2 = await PetsService.onPetsChangeNow((arr) => {
+          pets = Array.isArray(arr) ? arr.slice(0, 3) : [];
+          renderPetList();
+        });
+      } catch {
+        pets = [];
+        renderPetList();
+      }
+    })();
+    view.__cleanup__ = (() => {
+      const prev = view.__cleanup__;
+      return () => {
+        try {
+          unsubPets2?.();
+        } catch {
+        }
+        try {
+          prev?.();
+        } catch {
+        }
+      };
+    })();
+  }
+  function renderWeatherTab(view, ui) {
+    view.innerHTML = "";
+    view.style.cssText = "";
+    const wrap = document.createElement("div");
+    Object.assign(wrap.style, {
+      display: "grid",
+      gridTemplateRows: "1fr",
+      height: "54vh",
+      overflow: "hidden",
+      minHeight: "0"
+    });
+    view.appendChild(wrap);
+    const card2 = document.createElement("div");
+    card2.style.border = "1px solid #4445";
+    card2.style.borderRadius = "10px";
+    card2.style.padding = "10px";
+    card2.style.background = "#0f1318";
+    card2.style.overflow = "hidden";
+    card2.style.display = "grid";
+    card2.style.gridTemplateRows = "auto 1fr";
+    card2.style.minHeight = "0";
+    wrap.appendChild(card2);
+    const headerGrid = document.createElement("div");
+    const COLS = "minmax(240px, 1fr) 9rem 7rem 8rem";
+    headerGrid.style.display = "grid";
+    headerGrid.style.gridTemplateColumns = COLS;
+    headerGrid.style.justifyContent = "start";
+    headerGrid.style.columnGap = "0";
+    headerGrid.style.borderBottom = "1px solid #ffffff1a";
+    headerGrid.style.padding = "0 0 4px 0";
+    headerGrid.style.position = "sticky";
+    headerGrid.style.top = "0";
+    headerGrid.append(
+      mkHeadCell("Weather", "left"),
+      mkHeadCell("Last seen"),
+      mkHeadCell("Notify"),
+      mkHeadCell("Custom rules")
+    );
+    card2.appendChild(headerGrid);
+    const bodyGrid = document.createElement("div");
+    bodyGrid.style.display = "grid";
+    bodyGrid.style.gridTemplateColumns = COLS;
+    bodyGrid.style.justifyContent = "start";
+    bodyGrid.style.gridAutoRows = "auto";
+    bodyGrid.style.alignContent = "start";
+    bodyGrid.style.minHeight = "0";
+    bodyGrid.style.height = "100%";
+    bodyGrid.style.overflow = "auto";
+    bodyGrid.style.overscrollBehavior = "contain";
+    bodyGrid.style.width = "100%";
+    bodyGrid.style.scrollbarGutter = "stable";
+    card2.appendChild(bodyGrid);
+    const weatherLastSeenRefs = /* @__PURE__ */ new Map();
+    const refreshRulesUI = () => {
+      const kids = Array.from(bodyGrid.children);
+      for (let i = 0; i + 3 < kids.length; i += 4) {
+        const itemCell = kids[i];
+        const ruleCell = kids[i + 3];
+        const id = itemCell?.dataset?.id;
+        if (!id) continue;
+        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
+      }
+    };
+    const syncHeaderToScrollbar = () => {
+      const sbw = bodyGrid.offsetWidth - bodyGrid.clientWidth;
+      headerGrid.style.boxSizing = "border-box";
+      headerGrid.style.paddingRight = `${sbw}px`;
+    };
+    syncHeaderToScrollbar();
+    const resizeObserver = new ResizeObserver(syncHeaderToScrollbar);
+    resizeObserver.observe(bodyGrid);
+    const onResize = () => syncHeaderToScrollbar();
+    window.addEventListener("resize", onResize);
+    const makeItemCell = (row) => {
+      const wrapCellDiv = document.createElement("div");
+      Object.assign(wrapCellDiv.style, {
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        padding: "6px",
+        borderBottom: "1px solid #ffffff12"
+      });
+      const ICON = 40;
+      const iconWrap = document.createElement("div");
+      Object.assign(iconWrap.style, {
+        width: `${ICON}px`,
+        height: `${ICON}px`,
+        flex: `0 0 ${ICON}px`,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "8px",
+        background: "#101820"
+      });
+      const weatherIcon = document.createElement("span");
+      weatherIcon.textContent = row.name.trim().charAt(0) || "\u{1F326}";
+      weatherIcon.style.fontSize = `${ICON - 8}px`;
+      weatherIcon.setAttribute("aria-hidden", "true");
+      iconWrap.appendChild(weatherIcon);
+      const weatherCategories = ["ui", "weather", "mutation"];
+      const candidateSet = /* @__PURE__ */ new Set();
+      const addCandidate = (value) => {
+        if (!value) return;
+        const trimmed = value.trim();
+        if (trimmed) {
+          candidateSet.add(trimmed);
+          candidateSet.add(trimmed.replace(/\s+/g, ""));
+        }
+      };
+      addCandidate(row.name);
+      addCandidate(row.atomValue);
+      addCandidate(row.id);
+      const bases = Array.from(candidateSet).map((value) => value.replace(/icon$/i, ""));
+      const candidates = Array.from(
+        new Set(
+          bases.map((base) => `${base}Icon`).concat(Array.from(candidateSet))
+        ).values()
+      ).filter(Boolean);
+      if (candidates.length) {
+        attachSpriteIcon(iconWrap, weatherCategories, candidates, ICON, "alerts-weather");
+      }
+      const col = document.createElement("div");
+      Object.assign(col.style, {
+        display: "flex",
+        flexDirection: "column",
+        gap: "4px",
+        lineHeight: "1.2",
+        minWidth: "0",
+        flex: "1 1 auto"
+      });
+      const headerRow = document.createElement("div");
+      Object.assign(headerRow.style, {
+        display: "flex",
+        alignItems: "center",
+        gap: "6px",
+        minWidth: "0"
+      });
+      const title = document.createElement("div");
+      title.textContent = row.name;
+      Object.assign(title.style, {
+        fontWeight: "700",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+        flex: "1 1 auto"
+      });
+      headerRow.appendChild(title);
+      if (row.isCurrent) {
+        const badge = document.createElement("span");
+        badge.textContent = "Current";
+        Object.assign(badge.style, {
+          fontSize: "11px",
+          padding: "2px 6px",
+          borderRadius: "999px",
+          background: "#2b5cff33",
+          border: "1px solid #2b5cff66",
+          color: "#9cbcff",
+          fontWeight: "600",
+          whiteSpace: "nowrap"
+        });
+        headerRow.appendChild(badge);
+      }
+      const mutationsLabel = document.createElement("div");
+      mutationsLabel.textContent = "Mutations";
+      Object.assign(mutationsLabel.style, {
+        fontSize: "11px",
+        opacity: "0.7",
+        fontWeight: "600"
+      });
+      const mutationsList = document.createElement("div");
+      Object.assign(mutationsList.style, {
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "6px",
+        alignItems: "flex-start",
+        fontSize: "12px",
+        lineHeight: "1.3",
+        opacity: row.mutations.length ? "0.85" : "0.6"
+      });
+      if (row.mutations.length) {
+        for (const mutation of row.mutations) {
+          const chip = document.createElement("span");
+          chip.textContent = formatWeatherMutation(mutation);
+          Object.assign(chip.style, {
+            display: "inline-flex",
+            alignItems: "center",
+            padding: "2px 8px",
+            borderRadius: "999px",
+            background: "#ffffff12",
+            whiteSpace: "nowrap"
+          });
+          mutationsList.appendChild(chip);
+        }
+      } else {
+        const chip = document.createElement("span");
+        chip.textContent = "No mutation effects.";
+        chip.style.whiteSpace = "nowrap";
+        mutationsList.appendChild(chip);
+      }
+      const ruleHint = document.createElement("div");
+      ruleHint.dataset.role = "rule-hint";
+      ruleHint.style.opacity = "0.75";
+      ruleHint.style.fontSize = "11px";
+      ruleHint.style.whiteSpace = "nowrap";
+      ruleHint.style.overflow = "hidden";
+      ruleHint.style.textOverflow = "ellipsis";
+      ruleHint.style.minHeight = "1.2em";
+      ruleHint.style.visibility = "hidden";
+      col.append(headerRow, mutationsLabel, mutationsList, ruleHint);
+      wrapCellDiv.append(iconWrap, col);
+      if (row.isCurrent) {
+        wrapCellDiv.style.background = "linear-gradient(180deg, #1b2735, #141d25)";
+        wrapCellDiv.style.borderRadius = "8px";
+      }
+      return wrapCellDiv;
+    };
+    const addRow = (row) => {
+      const itemCell = makeItemCell(row);
+      itemCell.dataset.id = row.id;
+      itemCell.dataset.context = "weather";
+      itemCell.dataset.current = row.isCurrent ? "1" : "0";
+      const lastSeenInfo = document.createElement("div");
+      const { label: label2, title } = formatLastSeen(row.lastSeen, row.isCurrent);
+      lastSeenInfo.textContent = label2;
+      lastSeenInfo.title = title;
+      lastSeenInfo.style.fontWeight = "600";
+      lastSeenInfo.style.opacity = label2 === "Never" ? "0.7" : "1";
+      lastSeenInfo.style.whiteSpace = "nowrap";
+      const lastSeenCell = wrapCell(lastSeenInfo);
+      weatherLastSeenRefs.set(row.id, lastSeenInfo);
+      const notifySwitch = createSwitch((on) => {
+        try {
+          NotifierService.setWeatherNotify(row.id, !!on);
+        } catch {
+        }
+      });
+      setSwitchVisual(notifySwitch, !!row.notify);
+      notifySwitch.style.padding = "0";
+      const notifyCell = wrapCell(notifySwitch);
+      const gearBtn = ui.btn("", {
+        icon: "\u2699",
+        size: "sm",
+        tooltip: "Custom rule",
+        ariaLabel: `Custom rule for ${row.name}`
+      });
+      gearBtn.dataset.role = "rule";
+      gearBtn.classList.add("qws-rule-btn");
+      gearBtn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        openRuleEditor(ui, {
+          id: row.id,
+          name: row.name,
+          type: row.type,
+          context: "weather"
+        }, gearBtn);
+      });
+      const ruleCell = wrapCell(gearBtn);
+      ruleCell.dataset.role = "rule-cell";
+      bodyGrid.append(itemCell, lastSeenCell, notifyCell, ruleCell);
+      applyRuleState(itemCell, ruleCell, NotifierService.getRule(row.id));
+    };
+    const clearGrid = () => {
+      closeRuleEditor();
+      bodyGrid.innerHTML = "";
+      weatherLastSeenRefs.clear();
+    };
+    const renderEmpty = () => {
+      const empty = document.createElement("div");
+      empty.textContent = "No weather entries.";
+      empty.style.opacity = "0.75";
+      empty.style.gridColumn = "1 / -1";
+      empty.style.padding = "8px";
+      bodyGrid.appendChild(empty);
+    };
+    let state3 = null;
+    let stateSig = "";
+    const updateDynamicWeatherStats = () => {
+      if (!state3) return;
+      for (const row of state3.rows) {
+        const target = weatherLastSeenRefs.get(row.id);
+        if (target) {
+          const { label: label2, title } = formatLastSeen(row.lastSeen, row.isCurrent);
+          target.textContent = label2;
+          target.title = title;
+          target.style.opacity = label2 === "Never" ? "0.7" : "1";
+        }
+      }
+    };
+    const rebuildGrid = () => {
+      clearGrid();
+      if (!state3 || !state3.rows.length) {
+        renderEmpty();
+      } else {
+        state3.rows.forEach(addRow);
+        refreshRulesUI();
+      }
+      syncHeaderToScrollbar();
+      updateDynamicWeatherStats();
+    };
+    let unsubWeather = null;
+    let unsubRules = null;
+    (async () => {
+      try {
+        await NotifierService.start();
+      } catch {
+      }
+      try {
+        unsubWeather = await NotifierService.onWeatherChangeNow((next) => {
+          state3 = next;
+          stateSig = weatherStateSignature(next.rows);
+          rebuildGrid();
+        });
+      } catch {
+      }
+      try {
+        unsubRules = await NotifierService.onRulesChangeNow(() => refreshRulesUI());
+      } catch {
+      }
+    })();
+    const refreshWeatherState = async () => {
+      try {
+        const next = await NotifierService.getWeatherState();
+        const nextSig = weatherStateSignature(next.rows);
+        const changed = nextSig !== stateSig;
+        state3 = next;
+        stateSig = nextSig;
+        if (changed) rebuildGrid();
+        else updateDynamicWeatherStats();
+      } catch {
+      }
+    };
+    const dynamicTimer = window.setInterval(updateDynamicWeatherStats, 3e4);
+    const weatherRefreshTimer = window.setInterval(() => {
+      void refreshWeatherState();
+    }, 6e4);
+    view.__cleanup__ = (() => {
+      const prev = view.__cleanup__;
+      return () => {
+        try {
+          unsubWeather?.();
+        } catch {
+        }
+        try {
+          unsubRules?.();
+        } catch {
+        }
+        try {
+          resizeObserver.disconnect();
+        } catch {
+        }
+        try {
+          window.removeEventListener("resize", onResize);
+        } catch {
+        }
+        try {
+          window.clearInterval(dynamicTimer);
+        } catch {
+        }
+        try {
+          window.clearInterval(weatherRefreshTimer);
+        } catch {
+        }
+        try {
+          closeRuleEditor();
+        } catch {
+        }
+        try {
+          prev?.();
+        } catch {
+        }
+      };
+    })();
+  }
+  function renderNotifierMenu(root) {
+    const ui = new Menu({ id: "alerts", compact: true, windowSelector: ".qws-win" });
+    ui.addTab("shops", "\u{1F6D2} Shops", (view) => renderShopTab(view, ui));
+    ui.addTab("weather", "\u{1F326} Weather", (view) => renderWeatherTab(view, ui));
+    ui.addTab("pets", "\u{1F43E} Pets", (view) => renderPetAlertsTab(view, ui));
+    ui.addTab("settings", "\u2699\uFE0F Settings", (view) => renderSettingsTab(view, ui));
+    ui.mount(root);
+  }
+
+  // src/ui/menus/petsHatch.ts
+  init_atoms();
+  var NF_INT = new Intl.NumberFormat("en-US");
+  var formatInt = (value) => NF_INT.format(Math.max(0, Math.floor(value || 0)));
+  var RARITY_ORDER = [
+    rarity2.Common,
+    rarity2.Uncommon,
+    rarity2.Rare,
+    rarity2.Legendary,
+    rarity2.Mythic,
+    rarity2.Divine,
+    rarity2.Celestial
+  ];
+  var RARITY_BORDER_COLORS = {
+    [rarity2.Common]: "#E7E7E7",
+    [rarity2.Uncommon]: "#67BD4D",
+    [rarity2.Rare]: "#0071C6",
+    [rarity2.Legendary]: "#FFC734",
+    [rarity2.Mythic]: "#9944A7",
+    [rarity2.Divine]: "#FF7835",
+    [rarity2.Celestial]: "#7C2AE8"
+  };
+  function createStatList(columns, rows) {
+    const container = document.createElement("div");
+    container.className = "stats-list";
+    const toTemplate = (column) => {
+      if (column.width) return column.width;
+      if (column.minWidth) return `minmax(${column.minWidth}, 1fr)`;
+      return "minmax(0, 1fr)";
+    };
+    const template = columns.map(toTemplate).join(" ");
+    const header = document.createElement("div");
+    header.className = "stats-list__row stats-list__row--header";
+    header.style.gridTemplateColumns = template;
+    for (const column of columns) {
+      const cell = document.createElement("span");
+      cell.className = "stats-list__cell";
+      const align = column.align ?? "left";
+      if (align !== "left") cell.classList.add(`stats-list__cell--align-${align}`);
+      if (column.headerClassName) cell.classList.add(column.headerClassName);
+      cell.textContent = column.label;
+      header.appendChild(cell);
+    }
+    container.appendChild(header);
+    for (const row of rows) {
+      const rowEl = document.createElement("div");
+      rowEl.className = "stats-list__row";
+      rowEl.style.gridTemplateColumns = template;
+      row.forEach((cellData, index) => {
+        const column = columns[index];
+        const cell = document.createElement("span");
+        cell.className = "stats-list__cell";
+        const align = cellData.align ?? column.align ?? "left";
+        if (align !== "left") {
+          cell.classList.add(`stats-list__cell--align-${align}`);
+          if (align === "right") cell.classList.add("qmm-num");
+        }
+        if (cellData.hint) cell.title = cellData.hint;
+        const hasContent = Boolean(cellData.content);
+        if (cellData.content) {
+          cell.appendChild(cellData.content);
+        }
+        if (cellData.text != null) {
+          if (hasContent) {
+            const textSpan = document.createElement("span");
+            textSpan.textContent = cellData.text;
+            cell.appendChild(textSpan);
+          } else {
+            cell.textContent = cellData.text;
+          }
+        } else if (!hasContent) {
+          cell.textContent = "";
+        }
+        rowEl.appendChild(cell);
+      });
+      container.appendChild(rowEl);
+    }
+    return container;
+  }
+  function isPlainRecord(value) {
+    return typeof value === "object" && value !== null;
+  }
+  function getInventoryItems(raw) {
+    if (Array.isArray(raw)) return raw;
+    if (isPlainRecord(raw) && Array.isArray(raw.items)) {
+      return raw.items;
+    }
+    return [];
+  }
+  function determinePetMutationType(mutations) {
+    if (!Array.isArray(mutations)) return "normal";
+    let hasGold = false;
+    for (const mutation of mutations) {
+      if (typeof mutation !== "string") continue;
+      const normalized = mutation.trim().toLowerCase();
+      if (normalized === "rainbow") {
+        return "rainbow";
+      }
+      if (normalized === "gold") {
+        hasGold = true;
+      }
+    }
+    return hasGold ? "gold" : "normal";
+  }
+  function isPetStatsSectionEmpty(stats) {
+    const entries = Object.values(stats.pets?.hatchedByType ?? {});
+    if (entries.length === 0) return true;
+    return entries.every((counts) => {
+      if (!counts) return true;
+      const normal = Number(counts.normal) || 0;
+      const gold = Number(counts.gold) || 0;
+      const rainbow = Number(counts.rainbow) || 0;
+      return normal <= 0 && gold <= 0 && rainbow <= 0;
+    });
+  }
+  async function initPets(stats) {
+    if (!isPetStatsSectionEmpty(stats)) return;
+    let inventory;
+    try {
+      inventory = await myInventory.get();
+    } catch (error) {
+      console.warn("[PetsHatch] Failed to read inventory data", error);
+      inventory = null;
+    }
+    let activePetsRaw;
+    try {
+      activePetsRaw = await myPetInfos.get();
+    } catch (error) {
+      console.warn("[PetsHatch] Failed to read active pet data", error);
+      activePetsRaw = null;
+    }
+    const items = getInventoryItems(inventory);
+    const activePets2 = Array.isArray(activePetsRaw) ? activePetsRaw : [];
+    if (items.length === 0 && activePets2.length === 0) return;
+    const countsBySpecies = /* @__PURE__ */ new Map();
+    for (const item of items) {
+      if (!isPlainRecord(item)) continue;
+      const itemType = typeof item.itemType === "string" ? item.itemType.toLowerCase() : "";
+      if (itemType !== "pet") continue;
+      const speciesRaw = typeof item.petSpecies === "string" ? item.petSpecies : null;
+      const species = speciesRaw?.trim();
+      if (!species) continue;
+      const key2 = species.toLowerCase();
+      const counts = countsBySpecies.get(key2) ?? { normal: 0, gold: 0, rainbow: 0 };
+      const rarityKey = determinePetMutationType(item.mutations);
+      counts[rarityKey] = (counts[rarityKey] ?? 0) + 1;
+      countsBySpecies.set(key2, counts);
+    }
+    for (const entry of activePets2) {
+      if (!isPlainRecord(entry)) continue;
+      const slot = isPlainRecord(entry.slot) ? entry.slot : null;
+      if (!slot) continue;
+      const speciesRaw = typeof slot.petSpecies === "string" ? slot.petSpecies : null;
+      const species = speciesRaw?.trim();
+      if (!species) continue;
+      const key2 = species.toLowerCase();
+      const counts = countsBySpecies.get(key2) ?? { normal: 0, gold: 0, rainbow: 0 };
+      const rarityKey = determinePetMutationType(slot.mutations);
+      counts[rarityKey] = (counts[rarityKey] ?? 0) + 1;
+      countsBySpecies.set(key2, counts);
+    }
+    let hasCounts = false;
+    for (const counts of countsBySpecies.values()) {
+      if ((counts.normal ?? 0) > 0 || (counts.gold ?? 0) > 0 || (counts.rainbow ?? 0) > 0) {
+        hasCounts = true;
+        break;
+      }
+    }
+    if (!hasCounts) return;
+    StatsService.update((draft) => {
+      if (!isPetStatsSectionEmpty(draft)) return;
+      for (const [speciesKey, counts] of countsBySpecies) {
+        if ((counts.normal ?? 0) <= 0 && (counts.gold ?? 0) <= 0 && (counts.rainbow ?? 0) <= 0) {
+          continue;
+        }
+        const entry = draft.pets.hatchedByType[speciesKey] ?? { normal: 0, gold: 0, rainbow: 0 };
+        entry.normal = (entry.normal ?? 0) + (counts.normal ?? 0);
+        entry.gold = (entry.gold ?? 0) + (counts.gold ?? 0);
+        entry.rainbow = (entry.rainbow ?? 0) + (counts.rainbow ?? 0);
+        draft.pets.hatchedByType[speciesKey] = entry;
+      }
+    });
+  }
+  function normalizePetRarity(raw) {
+    if (typeof raw !== "string") return rarity2.Common;
+    if (raw === "Mythic") return rarity2.Mythic;
+    return raw;
+  }
+  function createPetRarityGroups(stats) {
+    const map2 = /* @__PURE__ */ new Map();
+    for (const rarityKey of RARITY_ORDER) {
+      map2.set(rarityKey, []);
+    }
+    const seen = /* @__PURE__ */ new Set();
+    for (const species of Object.keys(petCatalog2)) {
+      const lower = species.toLowerCase();
+      if (seen.has(lower)) continue;
+      seen.add(lower);
+      const info = petCatalog2[species];
+      const rarityValue = normalizePetRarity(info?.rarity);
+      map2.get(rarityValue)?.push(species);
+    }
+    for (const speciesKey of Object.keys(stats.pets?.hatchedByType ?? {})) {
+      const lower = speciesKey.toLowerCase();
+      if (seen.has(lower)) continue;
+      seen.add(lower);
+      const display = speciesKey.charAt(0).toUpperCase() + speciesKey.slice(1);
+      map2.get(rarity2.Common)?.push(display);
+    }
+    for (const list of map2.values()) {
+      list.sort((a, b) => a.localeCompare(b));
+    }
+    return map2;
+  }
+  function createPetSpeciesCell(species) {
+    const wrapper = document.createElement("span");
+    wrapper.className = "stats-pet__species";
+    const iconWrap = document.createElement("span");
+    iconWrap.className = "stats-pet__icon";
+    iconWrap.textContent = species?.trim().charAt(0).toUpperCase() || "?";
+    iconWrap.setAttribute("aria-hidden", "true");
+    attachSpriteIcon(iconWrap, ["pet"], species, 28, "stats-pet");
+    const label2 = document.createElement("span");
+    label2.className = "stats-pet__label";
+    label2.textContent = species;
+    wrapper.append(iconWrap, label2);
+    return { content: wrapper };
+  }
+  function createPetTotalValueCell(total) {
+    const value = document.createElement("span");
+    value.className = "stats-pet__total-value qmm-num";
+    value.textContent = formatInt(total);
+    return { content: value, align: "center" };
+  }
+  function createPetTotalsLabelCell(label2) {
+    const value = document.createElement("span");
+    value.className = "stats-pet__total-label";
+    value.textContent = label2;
+    return { content: value };
+  }
+  function renderGroups(body, stats) {
+    body.innerHTML = "";
+    const groups2 = createPetRarityGroups(stats);
+    for (const rarityKey of RARITY_ORDER) {
+      const speciesList = groups2.get(rarityKey) ?? [];
+      if (!speciesList.length) continue;
+      const group = document.createElement("div");
+      group.className = "stats-pet-group";
+      group.style.setProperty("--stats-pet-group-border-color", RARITY_BORDER_COLORS[rarityKey]);
+      const summary = document.createElement("div");
+      summary.className = "stats-pet-group__summary";
+      const badge = rarityBadge(rarityKey);
+      badge.style.margin = "0";
+      summary.appendChild(badge);
+      group.appendChild(summary);
+      const content = document.createElement("div");
+      content.className = "stats-pet-group__content";
+      const columns = [
+        { label: "Species", width: "2.2fr" },
+        { label: "Normal", align: "center", width: "1fr" },
+        { label: "Gold", align: "center", width: "1fr", headerClassName: "stats-list__header-label--gold" },
+        {
+          label: "Rainbow",
+          align: "center",
+          width: "1fr",
+          headerClassName: "stats-list__header-label--rainbow"
+        },
+        { label: "Total", align: "center", width: "1fr" }
+      ];
+      const rows = [];
+      let totalNormal = 0;
+      let totalGold = 0;
+      let totalRainbow = 0;
+      for (const species of speciesList) {
+        const key2 = species.toLowerCase();
+        const counts = stats.pets.hatchedByType[key2] ?? { normal: 0, gold: 0, rainbow: 0 };
+        totalNormal += counts.normal;
+        totalGold += counts.gold;
+        totalRainbow += counts.rainbow;
+        const total = counts.normal + counts.gold + counts.rainbow;
+        rows.push([
+          createPetSpeciesCell(species),
+          { text: formatInt(counts.normal), align: "center" },
+          { text: formatInt(counts.gold), align: "center" },
+          { text: formatInt(counts.rainbow), align: "center" },
+          createPetTotalValueCell(total)
+        ]);
+      }
+      const totalAll = totalNormal + totalGold + totalRainbow;
+      rows.push([
+        createPetTotalsLabelCell("Total"),
+        createPetTotalValueCell(totalNormal),
+        createPetTotalValueCell(totalGold),
+        createPetTotalValueCell(totalRainbow),
+        createPetTotalValueCell(totalAll)
+      ]);
+      content.appendChild(createStatList(columns, rows));
+      group.appendChild(content);
+      body.appendChild(group);
+    }
+  }
+  function renderHatchTab(view, ui) {
+    const prevCleanup = view.__cleanup__;
+    if (typeof prevCleanup === "function") {
+      try {
+        prevCleanup();
+      } catch {
+      }
+      view.__cleanup__ = void 0;
+    }
+    view.innerHTML = "";
+    const wrap = document.createElement("div");
+    wrap.style.display = "grid";
+    wrap.style.gap = "12px";
+    wrap.style.alignContent = "start";
+    wrap.style.minHeight = "0";
+    wrap.style.maxHeight = "54vh";
+    wrap.style.overflow = "auto";
+    view.appendChild(wrap);
+    const card2 = ui.card("\u{1F43E} Hatched pets", {
+      tone: "muted",
+      align: "stretch",
+      subtitle: "Per-species hatch counts (normal / gold / rainbow)"
+    });
+    wrap.appendChild(card2.root);
+    const repaint = () => renderGroups(card2.body, StatsService.getSnapshot());
+    let rafId = null;
+    const cleanup2 = () => {
+      try {
+        unsubscribe2();
+      } catch {
+      }
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    };
+    const unsubscribe2 = StatsService.subscribe(() => {
+      if (!view.isConnected) {
+        cleanup2();
+        return;
+      }
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        repaint();
+      });
+    });
+    view.__cleanup__ = cleanup2;
+    initPets(StatsService.getSnapshot()).catch((error) => {
+      console.error("[PetsHatch] Failed to initialize pet stats", error);
+    });
+    repaint();
+  }
+
+  // src/ui/menus/pets.ts
+  function getAbilityChipColors(id) {
+    const key2 = String(id || "");
+    const apiColor = petAbilities2?.[key2]?.color;
+    if (apiColor && typeof apiColor.bg === "string" && apiColor.bg) {
+      const hover = typeof apiColor.hover === "string" && apiColor.hover ? apiColor.hover : apiColor.bg;
+      return { bg: apiColor.bg, hover };
+    }
+    const base = (PetsService.getAbilityNameWithoutLevel?.(key2) || "").replace(/[\s\-_]+/g, "").toLowerCase();
+    const is = (prefix) => key2.startsWith(prefix) || base === prefix.toLowerCase();
+    if (is("MoonKisser")) {
+      return {
+        bg: "rgba(250,166,35,0.9)",
+        hover: "rgba(250,166,35,1)"
+      };
+    }
+    if (is("DawnKisser")) {
+      return {
+        bg: "rgba(162,92,242,0.9)",
+        hover: "rgba(162,92,242,1)"
+      };
+    }
+    if (is("ProduceScaleBoost") || is("SnowyCropSizeBoost")) {
+      return { bg: "rgba(34,139,34,0.9)", hover: "rgba(34,139,34,1)" };
+    }
+    if (is("PlantGrowthBoost") || is("SnowyPlantGrowthBoost") || is("DawnPlantGrowthBoost") || is("AmberPlantGrowthBoost")) {
+      return { bg: "rgba(0,128,128,0.9)", hover: "rgba(0,128,128,1)" };
+    }
+    if (is("EggGrowthBoost") || is("SnowyEggGrowthBoost")) {
+      return { bg: "rgba(180,90,240,0.9)", hover: "rgba(180,90,240,1)" };
+    }
+    if (is("PetAgeBoost")) {
+      return { bg: "rgba(147,112,219,0.9)", hover: "rgba(147,112,219,1)" };
+    }
+    if (is("PetHatchSizeBoost")) {
+      return { bg: "rgba(128,0,128,0.9)", hover: "rgba(128,0,128,1)" };
+    }
+    if (is("PetXpBoost") || is("SnowyPetXpBoost")) {
+      return { bg: "rgba(30,144,255,0.9)", hover: "rgba(30,144,255,1)" };
+    }
+    if (is("HungerBoost") || is("SnowyHungerBoost")) {
+      return { bg: "rgba(255,20,147,0.9)", hover: "rgba(255,20,147,1)" };
+    }
+    if (is("HungerRestore") || is("SnowyHungerRestore")) {
+      return { bg: "rgba(255,105,180,0.9)", hover: "rgba(255,105,180,1)" };
+    }
+    if (is("SellBoost")) {
+      return { bg: "rgba(220,20,60,0.9)", hover: "rgba(220,20,60,1)" };
+    }
+    if (is("CoinFinder") || is("SnowyCoinFinder")) {
+      return { bg: "rgba(180,150,0,0.9)", hover: "rgba(180,150,0,1)" };
+    }
+    if (is("SeedFinder")) {
+      return {
+        bg: "rgba(168,102,38,0.9)",
+        hover: "rgba(168,102,38,1)"
+      };
+    }
+    if (is("ProduceMutationBoost") || is("SnowyCropMutationBoost") || is("DawnBoost") || is("AmberMoonBoost")) {
+      return { bg: "rgba(140,15,70,0.9)", hover: "rgba(140,15,70,1)" };
+    }
+    if (is("PetMutationBoost")) {
+      return { bg: "rgba(160,50,100,0.9)", hover: "rgba(160,50,100,1)" };
+    }
+    if (is("DoubleHarvest")) {
+      return { bg: "rgba(0,120,180,0.9)", hover: "rgba(0,120,180,1)" };
+    }
+    if (is("DoubleHatch")) {
+      return { bg: "rgba(60,90,180,0.9)", hover: "rgba(60,90,180,1)" };
+    }
+    if (is("ProduceEater")) {
+      return { bg: "rgba(255,69,0,0.9)", hover: "rgba(255,69,0,1)" };
+    }
+    if (is("ProduceRefund")) {
+      return { bg: "rgba(255,99,71,0.9)", hover: "rgba(255,99,71,1)" };
+    }
+    if (is("PetRefund")) {
+      return { bg: "rgba(0,80,120,0.9)", hover: "rgba(0,80,120,1)" };
+    }
+    if (is("Copycat")) {
+      return { bg: "rgba(255,140,0,0.9)", hover: "rgba(255,140,0,1)" };
+    }
+    if (is("GoldGranter")) {
+      return {
+        bg: "linear-gradient(135deg, rgba(225,200,55,0.9) 0%, rgba(225,180,10,0.9) 40%, rgba(215,185,45,0.9) 70%, rgba(210,185,45,0.9) 100%)",
+        hover: "linear-gradient(135deg, rgba(220,200,70,1) 0%, rgba(210,175,5,1) 40%, rgba(210,185,55,1) 70%, rgba(200,175,30,1) 100%)"
+      };
+    }
+    if (is("RainbowGranter")) {
+      return {
+        bg: "linear-gradient(45deg, rgba(200,0,0,0.9), rgba(200,120,0,0.9), rgba(160,170,30,0.9), rgba(60,170,60,0.9), rgba(50,170,170,0.9), rgba(40,150,180,0.9), rgba(20,90,180,0.9), rgba(70,30,150,0.9))",
+        hover: "linear-gradient(45deg, rgba(200,0,0,1), rgba(200,120,0,1), rgba(160,170,30,1), rgba(60,170,60,1), rgba(50,170,170,1), rgba(40,150,180,1), rgba(20,90,180,1), rgba(70,30,150,1))"
+      };
+    }
+    if (is("RainDance")) {
+      return { bg: "rgba(76,204,204,0.9)", hover: "rgba(76,204,204,1)" };
+    }
+    if (is("SnowGranter")) {
+      return { bg: "rgba(144,184,204,0.9)", hover: "rgba(144,184,204,1)" };
+    }
+    if (is("FrostGranter")) {
+      return { bg: "rgba(148,160,204,0.9)", hover: "rgba(148,160,204,1)" };
+    }
+    if (is("DawnlitGranter")) {
+      return { bg: "rgba(196,124,180,0.9)", hover: "rgba(196,124,180,1)" };
+    }
+    if (is("AmberlitGranter")) {
+      return { bg: "rgba(204,144,96,0.9)", hover: "rgba(204,144,96,1)" };
+    }
+    return {
+      bg: "rgba(100,100,100,0.9)",
+      hover: "rgba(150,150,150,1)"
+    };
+  }
+  function renderManagerTab(view, ui) {
+    view.innerHTML = "";
+    let teams = [];
+    let selectedId = null;
+    let activeTeamId = null;
+    let activePetIdSet = /* @__PURE__ */ new Set();
+    let isApplyingTeam = false;
+    let draggingIdx = null;
+    let overInsertIdx = null;
+    let draggingHeight = 0;
+    let invCacheMap = null;
+    const lastRenderedSlotIds = [null, null, null];
+    const miniSpriteCache = /* @__PURE__ */ new Map();
+    async function buildPetRenderMap() {
+      let inv = await PetsService.getInventoryPets().catch(() => null);
+      if (!inv || inv.length === 0) {
+      } else {
+        invCacheMap = /* @__PURE__ */ new Map();
+        for (const p of inv) {
+          const id = p?.id != null ? String(p.id) : "";
+          if (id) invCacheMap.set(id, p);
+        }
+      }
+      const map2 = new Map(invCacheMap ?? /* @__PURE__ */ new Map());
+      try {
+        const pets = await PetsService.getPets();
+        const list = Array.isArray(pets) ? pets : [];
+        for (const p of list) {
+          const slot = p?.slot ?? null;
+          const id = String(slot?.id || "");
+          if (!id || map2.has(id)) continue;
+          map2.set(id, {
+            id,
+            itemType: "Pet",
+            petSpecies: String(slot?.petSpecies || "").trim(),
+            name: slot?.name ?? null,
+            xp: Number.isFinite(slot?.xp) ? Number(slot.xp) : 0,
+            hunger: Number.isFinite(slot?.hunger) ? Number(slot.hunger) : 0,
+            mutations: Array.isArray(slot?.mutations) ? slot.mutations.slice() : [],
+            targetScale: Number.isFinite(slot?.targetScale) ? Number(slot.targetScale) : void 0,
+            abilities: Array.isArray(slot?.abilities) ? slot.abilities.slice() : []
+          });
+        }
+      } catch {
+      }
+      return map2;
+    }
+    const mkMiniIcon = (pet) => {
+      const size = 18;
+      const holder = document.createElement("div");
+      Object.assign(holder.style, {
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: "6px",
+        background: "#161b22",
+        border: "1px solid #ffffff10",
+        display: "grid",
+        placeItems: "center",
+        overflow: "hidden",
+        boxShadow: "0 1px 0 #000 inset",
+        fontSize: "10px",
+        color: "#e2e8f0"
+      });
+      if (!pet) {
+        holder.style.opacity = "0.35";
+        holder.textContent = "\xB7";
+        return holder;
+      }
+      const species = pet.petSpecies || "";
+      const mutKey = Array.isArray(pet.mutations) ? pet.mutations.join(",") : "";
+      const cacheKey = `${species}|${mutKey}`;
+      const applyImg = (dataUrl) => {
+        const img = document.createElement("img");
+        img.src = dataUrl;
+        img.width = size;
+        img.height = size;
+        img.alt = "";
+        img.draggable = false;
+        img.style.width = `${size}px`;
+        img.style.height = `${size}px`;
+        img.style.objectFit = "contain";
+        img.style.imageRendering = "auto";
+        holder.replaceChildren(img);
+      };
+      const cached = miniSpriteCache.get(cacheKey);
+      if (cached) {
+        applyImg(cached);
+        return holder;
+      }
+      attachSpriteIcon(holder, ["pet"], species, size, "pet-team-mini", {
+        mutations: pet.mutations,
+        onSpriteApplied: (img) => {
+          miniSpriteCache.set(cacheKey, img.src);
+        },
+        onNoSpriteFound: () => {
+          holder.textContent = (species || pet.name || "pet").charAt(0).toUpperCase();
+        }
+      });
+      return holder;
+    };
+    function applySubtleBorder(btn, hex, alpha = 0.22) {
+      const toRgba = (h, a) => {
+        const m = h.replace("#", "");
+        const r = parseInt(m.length === 3 ? m[0] + m[0] : m.slice(0, 2), 16);
+        const g = parseInt(m.length === 3 ? m[1] + m[1] : m.slice(2, 4), 16);
+        const b = parseInt(m.length === 3 ? m[2] + m[2] : m.slice(4, 6), 16);
+        return `rgba(${r},${g},${b},${a})`;
+      };
+      const border = toRgba(hex, alpha);
+      btn.style.border = `1px solid ${border}`;
+      btn.style.background = "#1f2328";
+      btn.style.boxShadow = "none";
+      btn.style.transition = "none";
+    }
+    const framed = (title, content) => {
+      const cardSection = ui.card(title, { tone: "muted", align: "center" });
+      cardSection.body.append(content);
+      cardSection.root.style.maxWidth = "720px";
+      return cardSection.root;
+    };
+    const row = (opts) => ui.flexRow({ justify: opts?.justify ?? "center" });
+    const wrap = document.createElement("div");
+    wrap.style.display = "grid";
+    wrap.style.gridTemplateColumns = "minmax(220px, 280px) minmax(0, 1fr)";
+    wrap.style.gap = "10px";
+    wrap.style.alignItems = "stretch";
+    wrap.style.height = "54vh";
+    wrap.style.overflow = "hidden";
+    view.appendChild(wrap);
+    const left = document.createElement("div");
+    left.style.display = "grid";
+    left.style.gridTemplateRows = "1fr auto";
+    left.style.gap = "8px";
+    left.style.minHeight = "0";
+    wrap.appendChild(left);
+    const teamList = document.createElement("div");
+    teamList.style.display = "flex";
+    teamList.style.flexDirection = "column";
+    teamList.style.gap = "6px";
+    teamList.style.overflow = "auto";
+    teamList.style.padding = "6px";
+    teamList.style.border = "1px solid #4445";
+    teamList.style.borderRadius = "10px";
+    teamList.style.scrollBehavior = "smooth";
+    teamList.style.minHeight = "0";
+    left.appendChild(teamList);
+    const footer = document.createElement("div");
+    footer.style.display = "flex";
+    footer.style.gap = "6px";
+    left.appendChild(footer);
+    const btnNew = ui.btn("\u2795 New", { variant: "primary", size: "sm" });
+    btnNew.id = "pets.teams.new";
+    btnNew.style.flex = "1 1 0";
+    const btnDel = ui.btn("\u{1F5D1}\uFE0F Delete", { variant: "danger", size: "sm" });
+    btnDel.id = "pets.teams.delete";
+    btnDel.style.flex = "1 1 0";
+    applySubtleBorder(btnNew, "#22c55e", 0.22);
+    applySubtleBorder(btnDel, "#ef4444", 0.22);
+    footer.append(btnNew, btnDel);
+    function getSelectedTeam() {
+      return teams.find((t) => t.id === selectedId) || null;
+    }
+    function computeInsertIndex(clientY) {
+      const children = Array.from(teamList.children);
+      if (!children.length) return 0;
+      const first = children[0].getBoundingClientRect();
+      if (clientY < first.top + first.height / 2) return 0;
+      for (let i = 0; i < children.length; i++) {
+        const rect = children[i].getBoundingClientRect();
+        const mid = rect.top + rect.height / 2;
+        if (clientY < mid) return i;
+      }
+      return children.length;
+    }
+    function abilitiesBadge(abilities) {
+      const wrap2 = document.createElement("span");
+      wrap2.style.display = "inline-flex";
+      wrap2.style.alignItems = "center";
+      wrap2.style.lineHeight = "1";
+      const SPACING_PX = 8;
+      const SIZE_PX = 12;
+      const RADIUS_PX = 3;
+      const ids = Array.isArray(abilities) ? abilities.filter(Boolean) : [];
+      if (!ids.length) {
+        const empty = document.createElement("span");
+        empty.textContent = "No ability";
+        empty.style.opacity = "0.75";
+        empty.style.fontSize = "12px";
+        wrap2.appendChild(empty);
+        return wrap2;
+      }
+      ids.forEach((id, i) => {
+        const chip = document.createElement("span");
+        const { bg, hover } = getAbilityChipColors(id);
+        chip.title = PetsService.getAbilityName(id) || id;
+        chip.setAttribute("aria-label", chip.title);
+        Object.assign(chip.style, {
+          display: "inline-block",
+          width: `${SIZE_PX}px`,
+          height: `${SIZE_PX}px`,
+          borderRadius: `${RADIUS_PX}px`,
+          marginRight: i === ids.length - 1 ? "0" : `${SPACING_PX}px`,
+          background: bg,
+          transition: "transform 80ms ease, box-shadow 120ms ease, background 120ms ease",
+          cursor: "default",
+          boxShadow: "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff1a"
+        });
+        chip.onmouseenter = () => {
+          chip.style.background = hover;
+          chip.style.transform = "scale(1.08)";
+          chip.style.boxShadow = "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff33";
+        };
+        chip.onmouseleave = () => {
+          chip.style.background = bg;
+          chip.style.transform = "none";
+          chip.style.boxShadow = "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff1a";
+        };
+        wrap2.appendChild(chip);
+      });
+      return wrap2;
+    }
+    function applyLiveTransforms() {
+      const children = Array.from(teamList.children);
+      children.forEach((el2) => el2.style.transform = "");
+      if (draggingIdx === null || overInsertIdx === null) return;
+      const from = draggingIdx;
+      const to = overInsertIdx;
+      children.forEach((el2, idx) => {
+        el2.style.transition = "transform 120ms ease";
+        if (idx === from) return;
+        if (to > from && idx > from && idx < to) {
+          el2.style.transform = `translateY(${-draggingHeight}px)`;
+        }
+        if (to < from && idx >= to && idx < from) {
+          el2.style.transform = `translateY(${draggingHeight}px)`;
+        }
+      });
+    }
+    function clearLiveTransforms() {
+      Array.from(teamList.children).forEach((el2) => {
+        el2.style.transform = "";
+        el2.style.transition = "";
+      });
+    }
+    async function refreshActiveIds() {
+      activeTeamId = null;
+      activePetIdSet = /* @__PURE__ */ new Set();
+      try {
+        const pets = await PetsService.getPets();
+        const equipIds = Array.isArray(pets) ? pets.map((p) => String(p?.slot?.id || "")).filter(Boolean) : [];
+        activePetIdSet = new Set(equipIds);
+        for (const t of teams) {
+          const tIds = (t.slots || []).filter(Boolean);
+          if (tIds.length !== equipIds.length) continue;
+          let same = true;
+          for (const id of tIds) {
+            if (!activePetIdSet.has(id)) {
+              same = false;
+              break;
+            }
+          }
+          if (same) {
+            activeTeamId = t.id;
+            break;
+          }
+        }
+      } catch {
+      }
+    }
+    function updateSelectedVisuals() {
+      const children = Array.from(teamList.children);
+      children.forEach((el2) => {
+        const id = el2.dataset.teamId || "";
+        el2.style.background = id === selectedId ? "#2a313a" : "#1f2328";
+      });
+      updateSelectedVisuals();
+    }
+    async function refreshTeamList(skipDetectActive = false) {
+      if (!skipDetectActive) {
+        await refreshActiveIds();
+      }
+      const renderMap = await buildPetRenderMap();
+      clearLiveTransforms();
+      draggingIdx = null;
+      overInsertIdx = null;
+      draggingHeight = 0;
+      teamList.innerHTML = "";
+      if (!teams.length) {
+        const empty = document.createElement("div");
+        empty.textContent = "No teams yet. Create one!";
+        empty.style.opacity = "0.75";
+        empty.style.textAlign = "center";
+        empty.style.padding = "8px";
+        teamList.appendChild(empty);
+        hydrateEditor(null);
+        return;
+      }
+      teams.forEach((t, idx) => {
+        const item = document.createElement("div");
+        const isActive = t.id === activeTeamId;
+        item.dataset.index = String(idx);
+        item.dataset.teamId = t.id;
+        item.textContent = "";
+        item.style.height = "36px";
+        item.style.lineHeight = "36px";
+        item.style.padding = "0 10px";
+        item.style.border = "1px solid #ffffff15";
+        item.style.borderRadius = "6px";
+        item.style.cursor = "pointer";
+        item.style.fontSize = "13px";
+        item.style.overflow = "hidden";
+        item.style.whiteSpace = "nowrap";
+        item.style.textOverflow = "ellipsis";
+        item.style.display = "flex";
+        item.style.flex = "0 0 auto";
+        item.style.gap = "8px";
+        item.style.alignItems = "center";
+        item.style.background = t.id === selectedId ? "#2a313a" : "#1f2328";
+        const dot = document.createElement("span");
+        dot.style.width = "10px";
+        dot.style.height = "10px";
+        dot.style.borderRadius = "50%";
+        dot.style.boxShadow = "0 0 0 1px #0006 inset";
+        dot.style.background = isActive ? "#48d170" : "#64748b";
+        dot.title = isActive ? "This team is currently active" : "Inactive team";
+        const label2 = document.createElement("span");
+        label2.textContent = t.name || "(unnamed)";
+        label2.style.overflow = "hidden";
+        label2.style.textOverflow = "ellipsis";
+        label2.style.whiteSpace = "nowrap";
+        label2.style.flex = "1 1 0";
+        const minis = document.createElement("div");
+        minis.style.display = "flex";
+        minis.style.gap = "4px";
+        minis.style.alignItems = "center";
+        minis.style.marginLeft = "auto";
+        const slots = Array.isArray(t.slots) ? t.slots.slice(0, 3) : [];
+        slots.forEach((id) => {
+          const pet = id != null ? renderMap.get(String(id)) ?? null : null;
+          minis.appendChild(mkMiniIcon(pet));
+        });
+        if (slots.length < 3) {
+          for (let i = slots.length; i < 3; i += 1) minis.appendChild(mkMiniIcon(null));
+        }
+        item.append(dot, label2, minis);
+        const grab = document.createElement("span");
+        grab.className = "qmm-grab";
+        grab.title = "Drag to reorder";
+        grab.setAttribute("aria-label", "Drag to reorder");
+        grab.innerHTML = "";
+        for (let i = 0; i < 6; i += 1) {
+          const dot2 = document.createElement("span");
+          dot2.className = "qmm-grab-dot";
+          grab.appendChild(dot2);
+        }
+        grab.draggable = true;
+        item.onmouseenter = () => item.style.borderColor = "#6aa1";
+        item.onmouseleave = () => item.style.borderColor = "#ffffff15";
+        item.onclick = (ev) => {
+          if (ev.__byDrag) return;
+          const changed = selectedId !== t.id;
+          if (changed) {
+            selectedId = t.id;
+            refreshTeamList(true);
+          }
+          void hydrateEditor(getSelectedTeam());
+        };
+        grab.addEventListener("dragstart", (ev) => {
+          draggingIdx = idx;
+          draggingHeight = item.getBoundingClientRect().height;
+          item.classList.add("qmm-dragging");
+          ev.dataTransfer?.setData("text/plain", String(idx));
+          if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "move";
+          try {
+            const ghost = item.cloneNode(true);
+            ghost.style.width = `${item.getBoundingClientRect().width}px`;
+            ghost.style.position = "absolute";
+            ghost.style.top = "-9999px";
+            document.body.appendChild(ghost);
+            ev.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
+            setTimeout(() => document.body.removeChild(ghost), 0);
+          } catch {
+          }
+        });
+        grab.addEventListener("dragend", () => {
+          item.classList.remove("qmm-dragging");
+          clearLiveTransforms();
+          draggingIdx = null;
+          overInsertIdx = null;
+        });
+        item.addEventListener("dragover", (ev) => {
+          ev.preventDefault();
+          if (ev.dataTransfer) ev.dataTransfer.dropEffect = "move";
+          if (draggingIdx === null) return;
+          const idxOver = Number(ev.currentTarget.dataset.index || -1);
+          if (idxOver < 0) return;
+          const rect = item.getBoundingClientRect();
+          const mid = rect.top + rect.height / 2;
+          const insertIdx = ev.clientY < mid ? idxOver : idxOver + 1;
+          const clamped = Math.max(0, Math.min(teams.length, insertIdx));
+          if (overInsertIdx !== clamped) {
+            overInsertIdx = clamped;
+            applyLiveTransforms();
+          }
+          const edge = 28;
+          const listRect = teamList.getBoundingClientRect();
+          if (ev.clientY < listRect.top + edge) teamList.scrollTop -= 18;
+          else if (ev.clientY > listRect.bottom - edge) teamList.scrollTop += 18;
+        });
+        item.addEventListener("drop", (ev) => {
+          ev.preventDefault();
+          ev.__byDrag = true;
+          if (draggingIdx === null) return;
+          let target = overInsertIdx ?? computeInsertIndex(ev.clientY);
+          if (target > draggingIdx) target -= 1;
+          target = Math.max(0, Math.min(teams.length - 1, target));
+          if (target !== draggingIdx) {
+            const a = teams.slice();
+            const [it] = a.splice(draggingIdx, 1);
+            a.splice(target, 0, it);
+            teams = a;
+            try {
+              PetsService.setTeamsOrder(teams.map((x) => x.id));
+            } catch {
+            }
+          }
+          clearLiveTransforms();
+          draggingIdx = null;
+          overInsertIdx = null;
+          draggingHeight = 0;
+          refreshTeamList();
+        });
+        item.appendChild(grab);
+        teamList.appendChild(item);
+      });
+    }
+    teamList.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+      if (draggingIdx === null) return;
+      const idx = computeInsertIndex(e.clientY);
+      if (overInsertIdx !== idx) {
+        overInsertIdx = idx;
+        applyLiveTransforms();
+      }
+      const edge = 28;
+      const listRect = teamList.getBoundingClientRect();
+      if (e.clientY < listRect.top + edge) teamList.scrollTop -= 18;
+      else if (e.clientY > listRect.bottom - edge) teamList.scrollTop += 18;
+    });
+    teamList.addEventListener("drop", (e) => {
+      e.preventDefault();
+      if (draggingIdx === null) return;
+      let target = overInsertIdx ?? computeInsertIndex(e.clientY);
+      if (target > draggingIdx) target -= 1;
+      target = Math.max(0, Math.min(teams.length - 1, target));
+      if (target !== draggingIdx) {
+        const a = teams.slice();
+        const [it] = a.splice(draggingIdx, 1);
+        a.splice(target, 0, it);
+        teams = a;
+        try {
+          PetsService.setTeamsOrder(teams.map((x) => x.id));
+        } catch {
+        }
+      }
+      clearLiveTransforms();
+      draggingIdx = null;
+      overInsertIdx = null;
+      draggingHeight = 0;
+      refreshTeamList();
+    });
+    btnNew.onclick = () => {
+      const created = PetsService.createTeam("New Team");
+      selectedId = created.id;
+      refreshTeamList();
+      hydrateEditor(getSelectedTeam());
+    };
+    btnDel.onclick = () => {
+      if (!selectedId) return;
+      const ok = PetsService.deleteTeam(selectedId);
+      if (!ok) return;
+    };
+    let unsubTeams = null;
+    (async () => {
+      try {
+        unsubTeams = await PetsService.onTeamsChangeNow(async (all) => {
+          teams = Array.isArray(all) ? all.slice() : [];
+          if (selectedId && !teams.some((t) => t.id === selectedId)) {
+            selectedId = teams[0]?.id ?? null;
+          }
+          if (!selectedId && teams.length) selectedId = teams[0].id;
+          refreshTeamList();
+          setTeamsForHotkeys(teams);
+          await PetsService.getInventoryPets().catch(() => []);
+          await hydrateEditor(getSelectedTeam());
+        });
+      } catch {
+      }
+    })();
+    const right = document.createElement("div");
+    right.style.display = "grid";
+    right.style.gridTemplateRows = "auto 1fr";
+    right.style.gap = "10px";
+    right.style.minHeight = "0";
+    wrap.appendChild(right);
+    const header = document.createElement("div");
+    header.style.display = "flex";
+    header.style.alignItems = "center";
+    header.style.gap = "8px";
+    const headerTitle = document.createElement("div");
+    headerTitle.textContent = "Team editor \u2014 ";
+    headerTitle.style.fontWeight = "700";
+    headerTitle.style.fontSize = "14px";
+    const btnUseTeam = document.createElement("button");
+    btnUseTeam.id = "pets.teams.useThisTeam";
+    btnUseTeam.textContent = "Use this team";
+    btnUseTeam.style.padding = "6px 10px";
+    btnUseTeam.style.borderRadius = "8px";
+    btnUseTeam.style.border = "1px solid #4445";
+    btnUseTeam.style.background = "#1f2328";
+    btnUseTeam.style.color = "#e7eef7";
+    btnUseTeam.style.cursor = "pointer";
+    btnUseTeam.onmouseenter = () => btnUseTeam.style.borderColor = "#6aa1";
+    btnUseTeam.onmouseleave = () => btnUseTeam.style.borderColor = "#4445";
+    btnUseTeam.disabled = true;
+    header.append(headerTitle, btnUseTeam);
+    right.appendChild(header);
+    const card2 = document.createElement("div");
+    card2.style.border = "1px solid #4445";
+    card2.style.borderRadius = "10px";
+    card2.style.padding = "10px";
+    card2.style.display = "flex";
+    card2.style.flexDirection = "column";
+    card2.style.gap = "12px";
+    card2.style.overflow = "auto";
+    card2.style.minHeight = "0";
+    card2.style.background = "#0f1318";
+    right.appendChild(card2);
+    const secName = (() => {
+      const r = row();
+      r.style.width = "100%";
+      const nameInput = ui.inputText("Team name", "");
+      nameInput.id = "pets.teams.editor.name";
+      nameInput.style.flex = "1";
+      nameInput.style.minWidth = "0";
+      r.append(nameInput);
+      card2.appendChild(framed("\u{1F3F7}\uFE0F Team name", r));
+      return { nameInput };
+    })();
+    const secSearch = (() => {
+      const wrapOuter = document.createElement("div");
+      wrapOuter.style.display = "flex";
+      wrapOuter.style.flexDirection = "column";
+      wrapOuter.style.gap = "10px";
+      wrapOuter.style.alignItems = "center";
+      let isProgrammaticModeSet = false;
+      let currentMode = "ability";
+      const seg = ui.segmented(
+        [
+          { value: "ability", label: "\u2728 Ability" },
+          { value: "species", label: "\u{1F9EC} Species" }
+        ],
+        "ability",
+        async (val) => {
+          if (isProgrammaticModeSet) return;
+          currentMode = val;
+          await rebuildOptionsFromInventory();
+          select2.value = "";
+          applyFilterToTeam();
+        },
+        { ariaLabel: "Search mode" }
+      );
+      const select2 = document.createElement("select");
+      select2.className = "qmm-input";
+      select2.id = "pets.teams.filter.select";
+      select2.style.minWidth = "260px";
+      const getMode = () => currentMode;
+      const setMode = (m) => {
+        currentMode = m;
+        isProgrammaticModeSet = true;
+        seg.set(m);
+        isProgrammaticModeSet = false;
+      };
+      const rebuildOptionsFromInventory = async () => {
+        const prev = select2.value;
+        const inv = await PetsService.getInventoryPets().catch(() => []);
+        select2.innerHTML = "";
+        const opt0 = document.createElement("option");
+        opt0.value = "";
+        opt0.textContent = "\u2014 No filter \u2014";
+        select2.appendChild(opt0);
+        if (getMode() === "ability") {
+          const nameSet = /* @__PURE__ */ new Set();
+          for (const p of inv) {
+            const abs = Array.isArray(p?.abilities) ? p.abilities.filter(Boolean) : [];
+            for (const id of abs) {
+              const base = PetsService.getAbilityNameWithoutLevel?.(id) || "";
+              if (base) nameSet.add(base);
+            }
+          }
+          for (const name of Array.from(nameSet).sort((a, b) => a.localeCompare(b))) {
+            const o = document.createElement("option");
+            o.value = name;
+            o.textContent = name;
+            select2.appendChild(o);
+          }
+        } else {
+          const set3 = /* @__PURE__ */ new Set();
+          for (const p of inv) {
+            const sp = String(p?.petSpecies || "").trim();
+            if (sp) set3.add(sp);
+          }
+          for (const v of Array.from(set3).sort((a, b) => a.localeCompare(b))) {
+            const o = document.createElement("option");
+            o.value = v;
+            o.textContent = v.charAt(0).toUpperCase() + v.slice(1);
+            select2.appendChild(o);
+          }
+        }
+        if (Array.from(select2.options).some((o) => o.value === prev)) select2.value = prev;
+      };
+      const applyFilterToTeam = () => {
+        const t = getSelectedTeam();
+        if (!t) return;
+        const val = (select2.value || "").trim();
+        const raw = getMode() === "ability" ? val ? `ab:${val}` : "" : val ? `sp:${val}` : "";
+        PetsService.setTeamSearch(t.id, raw);
+      };
+      select2.addEventListener("change", applyFilterToTeam);
+      wrapOuter.append(seg, select2);
+      card2.appendChild(framed("\u{1F50D} Search", wrapOuter));
+      const ensureOptionExists = (val, pretty) => {
+        const v = (val || "").trim();
+        if (!v) return;
+        const has = Array.from(select2.options).some((o) => o.value === v);
+        if (!has) {
+          const o = document.createElement("option");
+          o.value = v;
+          o.textContent = pretty ?? v;
+          select2.appendChild(o);
+        }
+      };
+      return {
+        getMode,
+        setMode,
+        select: select2,
+        rebuild: rebuildOptionsFromInventory,
+        apply: applyFilterToTeam,
+        setFromSearchString(s) {
+          const m = (s || "").match(/^(ab|sp):\s*(.*)$/i);
+          if (!m) {
+            setMode("ability");
+            select2.value = "";
+            return;
+          }
+          const mode = m[1].toLowerCase() === "ab" ? "ability" : "species";
+          const val = (m[2] || "").trim();
+          setMode(mode);
+          ensureOptionExists(val, mode === "species" ? val.charAt(0).toUpperCase() + val.slice(1) : val);
+          select2.value = val;
+        }
+      };
+    })();
+    const secSlots = (() => {
+      const grid = document.createElement("div");
+      grid.style.display = "grid";
+      grid.style.gridTemplateColumns = "1fr";
+      grid.style.rowGap = "10px";
+      grid.style.justifyItems = "center";
+      const mkRow = (idx) => {
+        const root = document.createElement("div");
+        const BTN = 28;
+        const ICON = 40;
+        root.style.display = "grid";
+        root.style.gridTemplateColumns = `${ICON}px minmax(0,1fr) ${BTN}px ${BTN}px`;
+        root.style.alignItems = "center";
+        root.style.gap = "8px";
+        root.style.width = "min(560px, 100%)";
+        root.style.border = "1px solid #4445";
+        root.style.borderRadius = "10px";
+        root.style.padding = "8px 10px";
+        root.style.background = "#0f1318";
+        const iconContainer = document.createElement("div");
+        Object.assign(iconContainer.style, {
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "2px",
+          flexShrink: "0"
+        });
+        const iconWrap = document.createElement("div");
+        Object.assign(iconWrap.style, {
+          width: `${ICON}px`,
+          height: `${ICON}px`,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center"
+        });
+        const strBadge = document.createElement("div");
+        Object.assign(strBadge.style, {
+          fontSize: "9px",
+          fontWeight: "700",
+          lineHeight: "1",
+          padding: "1px 4px",
+          borderRadius: "4px",
+          background: "rgba(0,0,0,0.75)",
+          color: "#fff",
+          whiteSpace: "nowrap",
+          display: "none",
+          pointerEvents: "none"
+        });
+        iconContainer.append(iconWrap, strBadge);
+        const useEmojiFallback = () => {
+          iconWrap.replaceChildren();
+          const span = document.createElement("span");
+          span.textContent = "\u{1F43E}";
+          span.style.fontSize = `${Math.max(ICON - 6, 12)}px`;
+          span.setAttribute("aria-hidden", "true");
+          iconWrap.appendChild(span);
+        };
+        const setIcon = (species, mutations) => {
+          const speciesLabel = String(species ?? "").trim();
+          if (!speciesLabel) {
+            iconWrap.replaceChildren();
+            iconWrap.dataset.iconKey = "";
+            useEmojiFallback();
+            return;
+          }
+          const mutKey = Array.isArray(mutations) ? mutations.join(",") : "";
+          const key2 = `${speciesLabel}|${mutKey}`;
+          if (iconWrap.dataset.iconKey === key2 && iconWrap.querySelector("img")) {
+            return;
+          }
+          iconWrap.dataset.iconKey = key2;
+          attachSpriteIcon(iconWrap, ["pet"], speciesLabel, ICON, "pet-slot", {
+            mutations,
+            onNoSpriteFound: () => {
+              iconWrap.replaceChildren();
+              useEmojiFallback();
+            }
+          });
+        };
+        const left2 = document.createElement("div");
+        left2.style.display = "flex";
+        left2.style.flexDirection = "column";
+        left2.style.gap = "6px";
+        left2.style.minWidth = "0";
+        const nameEl = document.createElement("div");
+        nameEl.style.fontWeight = "700";
+        nameEl.textContent = "None";
+        nameEl.style.overflow = "hidden";
+        nameEl.style.textOverflow = "ellipsis";
+        nameEl.style.whiteSpace = "nowrap";
+        let abilitiesEl = abilitiesBadge([]);
+        abilitiesEl.style.display = "inline-block";
+        left2.append(nameEl, abilitiesEl);
+        const btnChoose = document.createElement("button");
+        btnChoose.textContent = "+";
+        Object.assign(btnChoose.style, {
+          width: `${BTN}px`,
+          minWidth: `${BTN}px`,
+          height: `${BTN}px`,
+          padding: "0",
+          fontSize: "16px",
+          lineHeight: "1",
+          borderRadius: "10px",
+          boxShadow: "none",
+          display: "grid",
+          placeItems: "center"
+        });
+        btnChoose.title = "Choose a pet";
+        btnChoose.setAttribute("aria-label", "Choose a pet");
+        const btnClear2 = document.createElement("button");
+        btnClear2.textContent = "\u2212";
+        Object.assign(btnClear2.style, {
+          width: `${BTN}px`,
+          minWidth: `${BTN}px`,
+          height: `${BTN}px`,
+          padding: "0",
+          fontSize: "16px",
+          lineHeight: "1",
+          borderRadius: "10px",
+          boxShadow: "none",
+          display: "grid",
+          placeItems: "center"
+        });
+        btnClear2.title = "Remove this pet";
+        btnClear2.setAttribute("aria-label", "Remove this pet");
+        root.append(iconContainer, left2, btnChoose, btnClear2);
+        function update(p) {
+          if (!p) {
+            nameEl.textContent = "None";
+            setIcon(void 0);
+            strBadge.style.display = "none";
+            const fresh2 = abilitiesBadge([]);
+            fresh2.style.display = "inline-block";
+            left2.replaceChild(fresh2, left2.children[1]);
+            abilitiesEl = fresh2;
+            return;
+          }
+          const species = String(p.petSpecies || "").trim();
+          const muts = Array.isArray(p.mutations) ? p.mutations : [];
+          setIcon(species, muts);
+          const str = getPetStrength(p);
+          const maxStr = getPetMaxStrength(p);
+          if (maxStr > 0) {
+            strBadge.textContent = str >= maxStr ? `${maxStr}` : `${str}/${maxStr}`;
+            strBadge.style.color = str >= maxStr ? "#facc15" : "#fff";
+            strBadge.style.display = "block";
+          } else {
+            strBadge.style.display = "none";
+          }
+          const speciesLabel = species ? species.charAt(0).toUpperCase() + species.slice(1) : "";
+          nameEl.textContent = p.name?.trim() || speciesLabel || "Pet";
+          const abs = Array.isArray(p.abilities) ? p.abilities.filter(Boolean) : [];
+          const fresh = abilitiesBadge(abs);
+          fresh.style.display = "inline-block";
+          left2.replaceChild(fresh, left2.children[1]);
+          abilitiesEl = fresh;
+        }
+        btnChoose.onclick = async () => {
+          const t = getSelectedTeam();
+          if (!t) return;
+          btnChoose.disabled = true;
+          btnClear2.disabled = true;
+          ui.setWindowVisible(false);
+          try {
+            await PetsService.chooseSlotPet(t.id, idx);
+            await repaintSlots(getSelectedTeam());
+          } finally {
+            ui.setWindowVisible(true);
+            btnChoose.disabled = false;
+            btnClear2.disabled = false;
+          }
+        };
+        btnClear2.onclick = async () => {
+          const t = getSelectedTeam();
+          if (!t) return;
+          const next = t.slots.slice(0, 3);
+          next[idx] = null;
+          const saved = PetsService.saveTeam({ id: t.id, slots: next });
+          await repaintSlots(saved ?? getSelectedTeam());
+        };
+        return { root, nameEl, abilitiesEl, btnChoose, btnClear: btnClear2, update };
+      };
+      const r0 = mkRow(0);
+      const r1 = mkRow(1);
+      const r2 = mkRow(2);
+      grid.append(r0.root, r1.root, r2.root);
+      const extra = document.createElement("div");
+      extra.style.display = "flex";
+      extra.style.gap = "6px";
+      extra.style.justifyContent = "center";
+      const btnUseCurrent = ui.btn("Current active", { variant: "primary" });
+      btnUseCurrent.id = "pets.teams.useCurrent";
+      btnUseCurrent.style.minWidth = "140px";
+      const btnClear = ui.btn("Clear slots", { variant: "secondary" });
+      btnClear.id = "pets.teams.clearSlots";
+      btnClear.style.minWidth = "140px";
+      const DARK_BG = "#0f1318";
+      extra.append(btnUseCurrent, btnClear);
+      Object.assign(btnUseCurrent.style, {
+        width: "auto",
+        fontSize: "16px",
+        borderRadius: "10px",
+        background: DARK_BG,
+        boxShadow: "none"
+      });
+      Object.assign(btnClear.style, {
+        width: "auto",
+        fontSize: "16px",
+        borderRadius: "10px",
+        background: DARK_BG,
+        boxShadow: "none"
+      });
+      const wrapSlots = document.createElement("div");
+      wrapSlots.style.display = "flex";
+      wrapSlots.style.flexDirection = "column";
+      wrapSlots.style.gap = "8px";
+      wrapSlots.append(grid, extra);
+      card2.appendChild(framed("\u26A1 Active pets (3 slots)", wrapSlots));
+      return {
+        rows: [r0, r1, r2],
+        btnUseCurrent,
+        btnClear
+      };
+    })();
+    async function repaintSlots(sourceTeam) {
+      const t = sourceTeam ?? getSelectedTeam();
+      if (!t) return;
+      const map2 = await buildPetRenderMap();
+      [0, 1, 2].forEach((i) => {
+        const id = t.slots[i] || null;
+        if (!id) {
+          if (lastRenderedSlotIds[i] !== null) {
+            secSlots.rows[i].update(null);
+            lastRenderedSlotIds[i] = null;
+          }
+          return;
+        }
+        const pet = map2.get(id);
+        if (!pet) {
+          if (lastRenderedSlotIds[i] !== id) {
+            secSlots.rows[i].update({
+              id,
+              itemType: "Pet",
+              petSpecies: "",
+              name: null,
+              xp: 0,
+              hunger: 0,
+              mutations: [],
+              abilities: []
+            });
+            lastRenderedSlotIds[i] = id;
+          }
+          return;
+        }
+        if (lastRenderedSlotIds[i] !== id) {
+          secSlots.rows[i].update(pet);
+          lastRenderedSlotIds[i] = id;
+        }
+      });
+    }
+    async function hydrateEditor(team) {
+      const has = !!team;
+      secName.nameInput.disabled = !has;
+      secSlots.btnClear.disabled = !has;
+      secSlots.btnUseCurrent.disabled = !has;
+      btnUseTeam.disabled = !has;
+      if (has) {
+        const saved = PetsService.getTeamSearch(team.id) || "";
+        const m = saved.match(/^(ab|sp):\s*(.*)$/i);
+        const mode = m ? m[1].toLowerCase() === "ab" ? "ability" : "species" : "ability";
+        secSearch.setMode(mode);
+        await secSearch.rebuild();
+        if (m) secSearch.setFromSearchString(saved);
+      } else {
+        await secSearch.rebuild();
+      }
+      if (!has) {
+        secSlots.rows.forEach((r) => r.update(null));
+        secName.nameInput.value = "";
+        return;
+      }
+      secName.nameInput.value = String(team.name || "");
+      await repaintSlots(team);
+    }
+    const saveNameNow = () => {
+      const t = getSelectedTeam();
+      if (!t) return;
+      const nextName = secName.nameInput.value.trim();
+      if (nextName === t.name) return;
+      t.name = nextName;
+      PetsService.saveTeam({ id: t.id, name: nextName });
+      refreshTeamList(true);
+    };
+    secName.nameInput.addEventListener("input", () => saveNameNow());
+    secName.nameInput.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") {
+        ev.currentTarget.blur();
+        saveNameNow();
+      }
+    });
+    secName.nameInput.addEventListener("blur", () => saveNameNow());
+    secSlots.btnUseCurrent.onclick = async () => {
+      const t = getSelectedTeam();
+      if (!t) return;
+      try {
+        const ids = await PetsService.getActivePetIds();
+        const nextSlots = [ids[0] || null, ids[1] || null, ids[2] || null];
+        const saved = PetsService.saveTeam({ id: t.id, slots: nextSlots });
+        await repaintSlots(saved ?? getSelectedTeam());
+      } catch {
+      }
+    };
+    secSlots.btnClear.onclick = async () => {
+      const t = getSelectedTeam();
+      if (!t) return;
+      const saved = PetsService.saveTeam({ id: t.id, slots: [null, null, null] });
+      await repaintSlots(saved ?? getSelectedTeam());
+    };
+    function sameSet(a, b) {
+      if (a.length !== b.length) return false;
+      const s = new Set(a);
+      for (const x of b) if (!s.has(x)) return false;
+      return true;
+    }
+    async function waitForActiveTeam(team, timeoutMs = 2e3) {
+      const target = (team.slots || []).filter(Boolean);
+      const t0 = performance.now();
+      while (performance.now() - t0 < timeoutMs) {
+        const pets = await PetsService.getPets().catch(() => null);
+        const equip = Array.isArray(pets) ? pets.map((p) => String(p?.slot?.id || "")).filter(Boolean) : [];
+        if (sameSet(equip, target)) return true;
+        await new Promise((r) => setTimeout(r, 80));
+      }
+      return false;
+    }
+    btnUseTeam.onclick = async () => {
+      const t = getSelectedTeam();
+      if (!t) return;
+      try {
+        isApplyingTeam = true;
+        activeTeamId = t.id;
+        await refreshTeamList(true);
+        await PetsService.useTeam(t.id);
+        await waitForActiveTeam(t);
+        await hydrateEditor(getSelectedTeam());
+        await refreshTeamList();
+      } catch (e) {
+        console.warn("[Pets] Use this team failed:", e);
+        await refreshTeamList();
+      } finally {
+        isApplyingTeam = false;
+      }
+    };
+    let unsubPets2 = null;
+    (async () => {
+      try {
+        unsubPets2 = await onActivePetsStructuralChangeNow(async () => {
+          if (isApplyingTeam) return;
+          await repaintSlots(getSelectedTeam());
+          await refreshTeamList();
+        });
+      } catch {
+      }
+    })();
+    installPetTeamHotkeysOnce(async (teamId) => {
+      const t = teams.find((tt) => tt.id === teamId) || null;
+      try {
+        isApplyingTeam = true;
+        if (t) {
+          activeTeamId = t.id;
+          await refreshTeamList(true);
+        }
+        await PetsService.useTeam(teamId);
+        if (t) await waitForActiveTeam(t);
+        await hydrateEditor(getSelectedTeam());
+        await refreshTeamList();
+      } catch (e) {
+        console.warn("[Pets] hotkey useTeam failed:", e);
+        await refreshTeamList();
+      } finally {
+        isApplyingTeam = false;
+      }
+    });
+    view.__cleanup__ = (() => {
+      const prev = view.__cleanup__;
+      return () => {
+        try {
+          unsubTeams?.();
+        } catch {
+        }
+        try {
+          unsubPets2?.();
+        } catch {
+        }
+        try {
+          prev?.();
+        } catch {
+        }
+      };
+    })();
+  }
+  function renderFeedingTab(view, ui) {
+    view.innerHTML = "";
+    const wrap = document.createElement("div");
+    wrap.style.display = "grid";
+    wrap.style.gridTemplateColumns = "minmax(220px, 280px) minmax(0, 1fr)";
+    wrap.style.gap = "10px";
+    wrap.style.alignItems = "stretch";
+    wrap.style.height = "54vh";
+    wrap.style.minHeight = "0";
+    view.appendChild(wrap);
+    const left = document.createElement("div");
+    left.style.display = "flex";
+    left.style.flexDirection = "column";
+    left.style.height = "100%";
+    left.style.minHeight = "0";
+    wrap.appendChild(left);
+    const vtabs = ui.vtabs({
+      emptyText: "No pets found.",
+      fillAvailableHeight: true,
+      renderItem: (item, btn) => {
+        btn.innerHTML = "";
+        btn.style.gridTemplateColumns = "24px 1fr auto";
+        btn.style.gap = "10px";
+        const size = 22;
+        const iconWrap = document.createElement("div");
+        Object.assign(iconWrap.style, {
+          width: `${size}px`,
+          height: `${size}px`,
+          borderRadius: "6px",
+          background: "#161b22",
+          border: "1px solid #ffffff10",
+          display: "grid",
+          placeItems: "center",
+          overflow: "hidden",
+          boxShadow: "0 1px 0 #000 inset",
+          fontSize: "11px",
+          color: "#e2e8f0"
+        });
+        const label2 = String(item.title || "Pet");
+        iconWrap.textContent = label2.charAt(0).toUpperCase();
+        attachSpriteIcon(iconWrap, ["pet"], item.id, size, "pet-feeding-list", {
+          onNoSpriteFound: () => {
+            iconWrap.textContent = label2.charAt(0).toUpperCase();
+          }
+        });
+        const textWrap = document.createElement("div");
+        textWrap.style.display = "flex";
+        textWrap.style.flexDirection = "column";
+        textWrap.style.gap = "2px";
+        textWrap.style.minWidth = "0";
+        const titleEl = document.createElement("div");
+        titleEl.textContent = label2;
+        titleEl.style.whiteSpace = "nowrap";
+        titleEl.style.overflow = "hidden";
+        titleEl.style.textOverflow = "ellipsis";
+        textWrap.appendChild(titleEl);
+        const rarity3 = String(item.rarity || "").trim();
+        const badge = rarity3 ? rarityBadge(rarity3) : null;
+        if (badge) {
+          badge.style.margin = "0";
+          badge.style.alignSelf = "center";
+        }
+        btn.append(iconWrap, textWrap);
+        if (badge) btn.appendChild(badge);
+      }
+    });
+    vtabs.root.style.flex = "1 1 auto";
+    vtabs.root.style.minHeight = "0";
+    left.appendChild(vtabs.root);
+    const right = document.createElement("div");
+    right.style.display = "flex";
+    right.style.flexDirection = "column";
+    right.style.gap = "10px";
+    right.style.minHeight = "0";
+    wrap.appendChild(right);
+    const card2 = document.createElement("div");
+    card2.style.border = "1px solid #4445";
+    card2.style.borderRadius = "10px";
+    card2.style.padding = "10px";
+    card2.style.background = "#0f1318";
+    card2.style.display = "grid";
+    card2.style.gridTemplateRows = "auto 1fr";
+    card2.style.minHeight = "0";
+    right.appendChild(card2);
+    const header = document.createElement("div");
+    header.style.display = "flex";
+    header.style.flexDirection = "column";
+    header.style.gap = "4px";
+    header.style.marginBottom = "8px";
+    card2.appendChild(header);
+    const title = document.createElement("div");
+    title.textContent = "Instant feed options";
+    title.style.fontWeight = "600";
+    header.appendChild(title);
+    const subtitle = document.createElement("div");
+    subtitle.textContent = "Allow or block crops for the Instant Feed button.";
+    subtitle.style.opacity = "0.7";
+    subtitle.style.fontSize = "12px";
+    header.appendChild(subtitle);
+    const widgetRow = document.createElement("label");
+    widgetRow.style.display = "flex";
+    widgetRow.style.alignItems = "center";
+    widgetRow.style.gap = "8px";
+    widgetRow.style.marginTop = "6px";
+    widgetRow.style.cursor = "pointer";
+    const widgetSwitch = ui.switch(isInstantFeedWidgetEnabled());
+    widgetSwitch.addEventListener("change", () => {
+      setInstantFeedWidgetEnabled(widgetSwitch.checked);
+    });
+    const widgetLabel = document.createElement("span");
+    widgetLabel.textContent = "Show floating Instant Feed widget";
+    widgetLabel.style.fontSize = "13px";
+    widgetRow.append(widgetSwitch, widgetLabel);
+    header.appendChild(widgetRow);
+    const body = document.createElement("div");
+    body.style.display = "flex";
+    body.style.flexDirection = "column";
+    body.style.gap = "6px";
+    body.style.overflow = "auto";
+    body.style.minHeight = "0";
+    card2.appendChild(body);
+    const petItems = Object.keys(petCatalog2).map((species) => {
+      const entry = petCatalog2[species];
+      const name = String(entry?.name || species);
+      return {
+        id: species,
+        title: name,
+        rarity: entry?.rarity
+      };
+    });
+    vtabs.setItems(petItems);
+    if (petItems.length) vtabs.select(petItems[0].id);
+    const renderCrops = (species) => {
+      body.innerHTML = "";
+      if (!species) {
+        const empty = document.createElement("div");
+        empty.textContent = "Select a pet to configure instant feed crops.";
+        empty.style.opacity = "0.75";
+        body.appendChild(empty);
+        return;
+      }
+      const compatibles = PetsService.getCompatibleCropsForSpecies(species) ?? [];
+      const seen = /* @__PURE__ */ new Set();
+      const list = compatibles.map((c) => String(c || "")).filter((c) => c && !seen.has(c) && seen.add(c));
+      if (!list.length) {
+        const empty = document.createElement("div");
+        empty.textContent = "No compatible crops for this pet.";
+        empty.style.opacity = "0.75";
+        body.appendChild(empty);
+        return;
+      }
+      const cropEntries = list.map((crop) => {
+        const entry = plantCatalog2[crop];
+        const name = String(entry?.name || crop);
+        return { crop, name };
+      }).sort((a, b) => a.name.localeCompare(b.name));
+      cropEntries.forEach(({ crop, name }) => {
+        const row = document.createElement("div");
+        row.style.display = "grid";
+        row.style.gridTemplateColumns = "1fr auto";
+        row.style.alignItems = "center";
+        row.style.gap = "8px";
+        row.style.padding = "6px 4px";
+        row.style.borderBottom = "1px solid #ffffff12";
+        const labelWrap = document.createElement("div");
+        labelWrap.style.display = "flex";
+        labelWrap.style.flexDirection = "column";
+        labelWrap.style.gap = "2px";
+        const nameEl = document.createElement("div");
+        nameEl.textContent = name;
+        nameEl.style.fontSize = "13px";
+        labelWrap.appendChild(nameEl);
+        if (name !== crop) {
+          const idEl = document.createElement("div");
+          idEl.textContent = crop;
+          idEl.style.fontSize = "11px";
+          idEl.style.opacity = "0.6";
+          labelWrap.appendChild(idEl);
+        }
+        const sw = ui.switch(PetsService.isInstantFeedCropAllowed(species, crop));
+        sw.addEventListener("change", () => {
+          PetsService.setInstantFeedCropAllowed(species, crop, sw.checked);
+        });
+        row.append(labelWrap, sw);
+        body.appendChild(row);
+      });
+    };
+    vtabs.onSelect((id) => {
+      renderCrops(id);
+    });
+    renderCrops(petItems[0]?.id ?? null);
+  }
+  function renderLogsTab(view, ui) {
+    view.innerHTML = "";
+    const wrap = document.createElement("div");
+    wrap.style.display = "grid";
+    wrap.style.gridTemplateRows = "auto 1fr";
+    wrap.style.gap = "10px";
+    wrap.style.height = "54vh";
+    view.appendChild(wrap);
+    const header = document.createElement("div");
+    header.style.display = "flex";
+    header.style.flexWrap = "wrap";
+    header.style.alignItems = "center";
+    header.style.gap = "8px";
+    header.style.border = "1px solid #4445";
+    header.style.borderRadius = "10px";
+    header.style.padding = "8px 10px";
+    header.style.background = "#0f1318";
+    wrap.appendChild(header);
+    const selAbility = ui.select({ id: "pets.logs.filter.ability", width: "200px" });
+    const selSort = ui.select({ id: "pets.logs.sort", width: "140px" });
+    [["desc", "Newest first"], ["asc", "Oldest first"]].forEach(([v, t]) => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = t;
+      selSort.appendChild(o);
+    });
+    selSort.value = "desc";
+    const inputSearch = ui.inputText("search (pet / ability / details)", "");
+    inputSearch.id = "pets.logs.search";
+    inputSearch.style.minWidth = "220px";
+    const btnClear = ui.btn("\u{1F9F9} Clear", { size: "sm" });
+    btnClear.id = "pets.logs.clear";
+    btnClear.style.flex = "0 0 auto";
+    header.append(
+      ui.label("Ability"),
+      selAbility,
+      ui.label("Sort"),
+      selSort,
+      inputSearch,
+      btnClear
+    );
+    const card2 = document.createElement("div");
+    card2.style.border = "1px solid #4445";
+    card2.style.borderRadius = "10px";
+    card2.style.padding = "10px";
+    card2.style.background = "#0f1318";
+    card2.style.overflow = "hidden";
+    card2.style.display = "grid";
+    card2.style.gridTemplateRows = "auto 1fr";
+    card2.style.minHeight = "0";
+    wrap.appendChild(card2);
+    const headerGrid = document.createElement("div");
+    headerGrid.style.display = "grid";
+    headerGrid.style.gridTemplateColumns = "140px 220px 200px minmax(0,1fr)";
+    headerGrid.style.columnGap = "0";
+    headerGrid.style.borderBottom = "1px solid #ffffff1a";
+    headerGrid.style.padding = "0 0 6px 0";
+    function mkHeadCell2(txt, align = "center") {
+      const el2 = document.createElement("div");
+      el2.textContent = txt;
+      el2.style.fontWeight = "600";
+      el2.style.opacity = "0.9";
+      el2.style.padding = "6px 8px";
+      el2.style.textAlign = align;
+      return el2;
+    }
+    headerGrid.append(
+      mkHeadCell2("Date & Time"),
+      mkHeadCell2("Pet"),
+      mkHeadCell2("Ability"),
+      mkHeadCell2("Details", "left")
+    );
+    card2.appendChild(headerGrid);
+    const bodyGrid = document.createElement("div");
+    bodyGrid.style.display = "grid";
+    bodyGrid.style.gridTemplateColumns = "140px 220px 200px minmax(0,1fr)";
+    bodyGrid.style.gridAutoRows = "auto";
+    bodyGrid.style.alignContent = "start";
+    bodyGrid.style.overflow = "auto";
+    bodyGrid.style.width = "100%";
+    bodyGrid.style.minHeight = "0";
+    card2.appendChild(bodyGrid);
+    const sessionStart = PetsService.getAbilityLogsSessionStart?.() ?? 0;
+    let logs = [];
+    let abilityFilter = "";
+    let sortDir = "desc";
+    let q = "";
+    const petSpriteCache = /* @__PURE__ */ new Map();
+    const mkPetIcon = (log2) => {
+      const size = 22;
+      const holder = document.createElement("div");
+      Object.assign(holder.style, {
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: "8px",
+        background: "#161b22",
+        border: "1px solid #ffffff10",
+        display: "grid",
+        placeItems: "center",
+        overflow: "hidden",
+        boxShadow: "0 1px 0 #000 inset",
+        fontSize: "11px",
+        color: "#e2e8f0",
+        flex: "0 0 auto"
+      });
+      const species = String(log2.species || "").trim();
+      const mutations = Array.isArray(log2.mutations) ? log2.mutations.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
+      const mutKey = mutations.length ? mutations.map((m) => m.toLowerCase()).sort().join(",") : "";
+      const cacheKey = mutKey ? `${species}|${mutKey}` : species;
+      const applyImg = (src) => {
+        const img = document.createElement("img");
+        img.src = src;
+        img.width = size;
+        img.height = size;
+        img.alt = "";
+        img.draggable = false;
+        img.style.width = `${size}px`;
+        img.style.height = `${size}px`;
+        img.style.objectFit = "contain";
+        img.style.imageRendering = "auto";
+        holder.replaceChildren(img);
+      };
+      const cached = cacheKey ? petSpriteCache.get(cacheKey) : void 0;
+      if (cached) {
+        applyImg(cached);
+        return holder;
+      }
+      const letter = (log2.petName || species || "pet").charAt(0).toUpperCase();
+      holder.textContent = letter || "\u{1F43E}";
+      if (species) {
+        attachSpriteIcon(holder, ["pet"], species, size, "pet-log", {
+          mutations,
+          onSpriteApplied: (img) => {
+            petSpriteCache.set(cacheKey, img.src);
+          }
+        });
+      }
+      return holder;
+    };
+    function rebuildAbilityOptions() {
+      const current = selAbility.value;
+      selAbility.innerHTML = "";
+      const opts = [["", "All abilities"], ...PetsService.getSeenAbilityIds().map((a) => [a, a])];
+      for (const [v, t] of opts) {
+        const o = document.createElement("option");
+        o.value = v;
+        o.textContent = t;
+        selAbility.appendChild(o);
+      }
+      selAbility.value = opts.some(([v]) => v === current) ? current : "";
+    }
+    function formatDateMMDDYY(timestamp) {
+      const value = Number(timestamp);
+      if (!Number.isFinite(value)) return "";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const dd = String(date.getDate()).padStart(2, "0");
+      const yy = String(date.getFullYear() % 100).padStart(2, "0");
+      return `${mm}/${dd}/${yy}`;
+    }
+    function cell(txt, align = "center") {
+      const el2 = document.createElement("div");
+      el2.textContent = txt;
+      el2.style.padding = "6px 8px";
+      el2.style.display = "flex";
+      el2.style.flexDirection = "column";
+      el2.style.justifyContent = "center";
+      el2.style.alignItems = align === "left" ? "flex-start" : "center";
+      el2.style.textAlign = align;
+      el2.style.whiteSpace = align === "left" ? "pre-wrap" : "normal";
+      el2.style.wordBreak = align === "left" ? "break-word" : "normal";
+      el2.style.borderBottom = "1px solid #ffffff12";
+      return el2;
+    }
+    function row(log2) {
+      const time = cell("", "center");
+      time.style.gap = "2px";
+      const dateLine = document.createElement("div");
+      const timeLine = document.createElement("div");
+      const hasDate = typeof log2.date === "string" && log2.date.trim().length > 0;
+      if (hasDate) dateLine.textContent = log2.date ?? "";
+      timeLine.textContent = log2.time12;
+      if (hasDate) time.appendChild(dateLine);
+      time.appendChild(timeLine);
+      const petLabel = log2.petName || log2.species || "Pet";
+      const pet = cell("", "center");
+      pet.style.flexDirection = "row";
+      pet.style.alignItems = "center";
+      pet.style.gap = "8px";
+      const petIcon = mkPetIcon(log2);
+      const petText = document.createElement("span");
+      petText.textContent = petLabel;
+      petText.style.whiteSpace = "nowrap";
+      petText.style.overflow = "hidden";
+      petText.style.textOverflow = "ellipsis";
+      pet.append(petIcon, petText);
+      const abName = cell(log2.abilityName || log2.abilityId, "center");
+      const detText = typeof log2.data === "string" ? log2.data : (() => {
+        try {
+          return JSON.stringify(log2.data);
+        } catch {
+          return "";
+        }
+      })();
+      const det = cell(detText, "left");
+      if (log2.isActiveSession) {
+        [time, pet, abName, det].forEach((el2) => {
+          el2.style.background = "rgba(89, 162, 255, 0.14)";
+        });
+      }
+      bodyGrid.append(time, pet, abName, det);
+    }
+    const normAbilityKey = (s) => String(s ?? "").toLowerCase().replace(/\s+/g, "").replace(/([ivx]+)$/i, "");
+    function applyFilters() {
+      let arr = logs.slice();
+      if (abilityFilter && abilityFilter.trim()) {
+        const f = normAbilityKey(abilityFilter);
+        arr = arr.filter((l) => {
+          const idKey = normAbilityKey(l.abilityId);
+          const nameKey = normAbilityKey(PetsService.getAbilityNameWithoutLevel(l.abilityId));
+          return idKey === f || nameKey === f;
+        });
+      }
+      if (q && q.trim()) {
+        const qq = q.toLowerCase();
+        arr = arr.filter((l) => {
+          const pet = (l.petName || l.species || "").toLowerCase();
+          const abName = (l.abilityName || "").toLowerCase();
+          const abId = (l.abilityId || "").toLowerCase();
+          const det = (typeof l.data === "string" ? l.data : (() => {
+            try {
+              return JSON.stringify(l.data);
+            } catch {
+              return "";
+            }
+          })()).toLowerCase();
+          return pet.includes(qq) || abName.includes(qq) || abId.includes(qq) || det.includes(qq) || (l.petId || "").toLowerCase().includes(qq);
+        });
+      }
+      arr.sort(
+        (a, b) => sortDir === "asc" ? a.performedAt - b.performedAt : b.performedAt - a.performedAt
+      );
+      return arr;
+    }
+    function repaint() {
+      bodyGrid.innerHTML = "";
+      const arr = applyFilters();
+      if (!arr.length) {
+        const empty = document.createElement("div");
+        empty.textContent = "No logs yet.";
+        empty.style.opacity = "0.75";
+        empty.style.gridColumn = "1 / -1";
+        empty.style.padding = "8px";
+        bodyGrid.appendChild(empty);
+        return;
+      }
+      arr.forEach(row);
+      if (sortDir === "asc") bodyGrid.scrollTop = bodyGrid.scrollHeight + 32;
+      else bodyGrid.scrollTop = 0;
+    }
+    selAbility.onchange = () => {
+      abilityFilter = selAbility.value;
+      repaint();
+    };
+    selSort.onchange = () => {
+      sortDir = selSort.value || "desc";
+      repaint();
+    };
+    inputSearch.addEventListener("input", () => {
+      q = inputSearch.value.trim();
+      repaint();
+    });
+    btnClear.onclick = () => {
+      try {
+        PetsService.clearAbilityLogs();
+      } catch {
+      }
+    };
+    let stopWatcher = null;
+    let unsubLogs = null;
+    (async () => {
+      try {
+        stopWatcher = await PetsService.startAbilityLogsWatcher();
+        rebuildAbilityOptions();
+        unsubLogs = PetsService.onAbilityLogs((all) => {
+          logs = all.map((e) => ({
+            petId: e.petId,
+            petName: e.name ?? null,
+            species: e.species ?? null,
+            mutations: Array.isArray(e.mutations) ? e.mutations.slice() : void 0,
+            abilityId: e.abilityId,
+            abilityName: e.abilityName,
+            data: e.data,
+            performedAt: e.performedAt,
+            date: formatDateMMDDYY(e.performedAt),
+            time12: e.time12,
+            isActiveSession: sessionStart > 0 && e.performedAt >= sessionStart
+          }));
+          rebuildAbilityOptions();
+          repaint();
+        });
+      } catch {
+      }
+    })();
+    view.__cleanup__ = (() => {
+      const prev = view.__cleanup__;
+      return () => {
+        try {
+          unsubLogs?.();
+        } catch {
+        }
+        try {
+          stopWatcher?.();
+        } catch {
+        }
+        try {
+          prev?.();
+        } catch {
+        }
+      };
+    })();
+    repaint();
+  }
+  var detachPetsOpenTabListener = null;
+  function renderPetsMenu(root) {
+    const ui = new Menu({ id: "pets", compact: true, windowSelector: ".qws-win" });
+    ui.mount(root);
+    ui.addTab("manager", "\u{1F9F0} Manager", (view) => renderManagerTab(view, ui));
+    ui.addTab("feeding", "\u{1F356} Feeding", (view) => renderFeedingTab(view, ui));
+    ui.addTab("hatch", "\u{1F95A} Hatch", (view) => renderHatchTab(view, ui));
+    ui.addTab("logs", "\u{1F4DD} Logs", (view) => renderLogsTab(view, ui));
+    const knownTabs = /* @__PURE__ */ new Set(["manager", "feeding", "hatch", "logs"]);
+    const onOpenTab = (ev) => {
+      const tab = String(ev.detail?.tab || "");
+      if (knownTabs.has(tab)) ui.switchTo(tab);
+    };
+    detachPetsOpenTabListener?.();
+    window.addEventListener("qws:pets-open-tab", onOpenTab);
+    detachPetsOpenTabListener = () => window.removeEventListener("qws:pets-open-tab", onOpenTab);
+  }
+
+  // src/ui/menus/communityHub/tabs/chatImporter.ts
   var GEM_TOKEN_REGEX = /\{\{gem:([^|]+)\|([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?\}\}/g;
   async function getCurrentRoomId() {
     try {
@@ -33307,11 +37716,11 @@
     }
   }
   function getProduceDisplayName(species) {
-    const entry = plantCatalog[species];
+    const entry = plantCatalog2[species];
     return entry?.crop?.name ?? species;
   }
   function getProduceSize(species, targetScale) {
-    const catalog = plantCatalog;
+    const catalog = plantCatalog2;
     const entry = catalog[species];
     if (!entry?.crop) return null;
     const maxScale = Number(entry.crop.maxScale);
@@ -33721,38 +38130,6 @@
     card2.append(spriteWrap, info);
     return card2;
   }
-  function getAbilityChipColors(id) {
-    const key2 = String(id || "");
-    const base = (PetsService.getAbilityNameWithoutLevel?.(key2) || "").replace(/[\s\-_]+/g, "").toLowerCase();
-    const is = (prefix) => key2.startsWith(prefix) || base === prefix.toLowerCase();
-    if (is("MoonKisser")) return { bg: "rgba(250,166,35,0.9)", hover: "rgba(250,166,35,1)" };
-    if (is("DawnKisser")) return { bg: "rgba(162,92,242,0.9)", hover: "rgba(162,92,242,1)" };
-    if (is("ProduceScaleBoost") || is("SnowyCropSizeBoost")) return { bg: "rgba(34,139,34,0.9)", hover: "rgba(34,139,34,1)" };
-    if (is("PlantGrowthBoost") || is("SnowyPlantGrowthBoost")) return { bg: "rgba(0,128,128,0.9)", hover: "rgba(0,128,128,1)" };
-    if (is("EggGrowthBoost") || is("SnowyEggGrowthBoost")) return { bg: "rgba(180,90,240,0.9)", hover: "rgba(180,90,240,1)" };
-    if (is("PetAgeBoost")) return { bg: "rgba(147,112,219,0.9)", hover: "rgba(147,112,219,1)" };
-    if (is("PetHatchSizeBoost")) return { bg: "rgba(128,0,128,0.9)", hover: "rgba(128,0,128,1)" };
-    if (is("PetXpBoost") || is("SnowyPetXpBoost")) return { bg: "rgba(30,144,255,0.9)", hover: "rgba(30,144,255,1)" };
-    if (is("HungerBoost") || is("SnowyHungerBoost")) return { bg: "rgba(255,20,147,0.9)", hover: "rgba(255,20,147,1)" };
-    if (is("HungerRestore") || is("SnowyHungerRestore")) return { bg: "rgba(255,105,180,0.9)", hover: "rgba(255,105,180,1)" };
-    if (is("SellBoost")) return { bg: "rgba(220,20,60,0.9)", hover: "rgba(220,20,60,1)" };
-    if (is("CoinFinder") || is("SnowyCoinFinder")) return { bg: "rgba(180,150,0,0.9)", hover: "rgba(180,150,0,1)" };
-    if (is("SeedFinder")) return { bg: "rgba(168,102,38,0.9)", hover: "rgba(168,102,38,1)" };
-    if (is("ProduceMutationBoost")) return { bg: "rgba(140,15,70,0.9)", hover: "rgba(140,15,70,1)" };
-    if (is("PetMutationBoost")) return { bg: "rgba(160,50,100,0.9)", hover: "rgba(160,50,100,1)" };
-    if (is("DoubleHarvest")) return { bg: "rgba(0,120,180,0.9)", hover: "rgba(0,120,180,1)" };
-    if (is("DoubleHatch")) return { bg: "rgba(60,90,180,0.9)", hover: "rgba(60,90,180,1)" };
-    if (is("ProduceEater")) return { bg: "rgba(255,69,0,0.9)", hover: "rgba(255,69,0,1)" };
-    if (is("ProduceRefund")) return { bg: "rgba(255,99,71,0.9)", hover: "rgba(255,99,71,1)" };
-    if (is("PetRefund")) return { bg: "rgba(0,80,120,0.9)", hover: "rgba(0,80,120,1)" };
-    if (is("Copycat")) return { bg: "rgba(255,140,0,0.9)", hover: "rgba(255,140,0,1)" };
-    if (is("GoldGranter")) return { bg: "linear-gradient(135deg, rgba(225,200,55,0.9) 0%, rgba(225,180,10,0.9) 40%, rgba(215,185,45,0.9) 70%, rgba(210,185,45,0.9) 100%)", hover: "linear-gradient(135deg, rgba(220,200,70,1) 0%, rgba(210,175,5,1) 40%, rgba(210,185,55,1) 70%, rgba(200,175,30,1) 100%)" };
-    if (is("RainbowGranter")) return { bg: "linear-gradient(45deg, rgba(200,0,0,0.9), rgba(200,120,0,0.9), rgba(160,170,30,0.9), rgba(60,170,60,0.9), rgba(50,170,170,0.9), rgba(40,150,180,0.9), rgba(20,90,180,0.9), rgba(70,30,150,0.9))", hover: "linear-gradient(45deg, rgba(200,0,0,1), rgba(200,120,0,1), rgba(160,170,30,1), rgba(60,170,60,1), rgba(50,170,170,1), rgba(40,150,180,1), rgba(20,90,180,1), rgba(70,30,150,1))" };
-    if (is("RainDance")) return { bg: "rgba(102,204,216,0.9)", hover: "rgba(102,204,216,1)" };
-    if (is("SnowGranter")) return { bg: "rgba(175,215,235,0.9)", hover: "rgba(175,215,235,1)" };
-    if (is("FrostGranter")) return { bg: "rgba(100,160,220,0.9)", hover: "rgba(100,160,220,1)" };
-    return { bg: "rgba(100,100,100,0.9)", hover: "rgba(150,150,150,1)" };
-  }
   function createAbilityBadge(abilities) {
     const wrap = document.createElement("span");
     style2(wrap, { display: "inline-flex", alignItems: "center", lineHeight: "1" });
@@ -33803,7 +38180,7 @@
     return { mutations: void 0, abilities: [], xp: 0, targetScale: 1 };
   }
   function getPetStrength2(species, xp, targetScale) {
-    const catalog = petCatalog;
+    const catalog = petCatalog2;
     const entry = catalog[species];
     if (!entry) return null;
     const maxScale = Number(entry.maxScale);
@@ -45874,7 +50251,7 @@
       );
     }
   };
-  var RARITY_ORDER = [
+  var RARITY_ORDER2 = [
     rarity2.Common,
     rarity2.Uncommon,
     rarity2.Rare,
@@ -45885,7 +50262,7 @@
   ].filter(Boolean);
   var RARITY_RANK = (() => {
     const entries = /* @__PURE__ */ new Map();
-    RARITY_ORDER.forEach((label2, index) => {
+    RARITY_ORDER2.forEach((label2, index) => {
       const key2 = normalize2(label2);
       if (key2) {
         entries.set(key2, index);
@@ -45899,8 +50276,8 @@
   })();
   var getRarityRank = (value) => {
     const key2 = normalize2(value);
-    if (!key2) return RARITY_ORDER.length;
-    return RARITY_RANK.get(key2) ?? RARITY_ORDER.length;
+    if (!key2) return RARITY_ORDER2.length;
+    return RARITY_RANK.get(key2) ?? RARITY_ORDER2.length;
   };
   var SPECIES_FIELDS = [
     "species",
@@ -52176,2344 +56553,6 @@ next: ${next}`;
 
   // src/ui/menus/locker.ts
   init_atoms();
-
-  // src/ui/menus/notifier.ts
-  var rulePopover = null;
-  var detachRuleDocHandler = null;
-  var detachRuleKeyBlocker = null;
-  var detachRuleWheelBlocker = null;
-  var detachRuleDragHandler = null;
-  var closeRuleEditor = () => {
-    if (rulePopover) {
-      try {
-        rulePopover.remove();
-      } catch {
-      }
-      rulePopover = null;
-    }
-    if (detachRuleDocHandler) {
-      detachRuleDocHandler();
-      detachRuleDocHandler = null;
-    }
-    if (detachRuleKeyBlocker) {
-      detachRuleKeyBlocker();
-      detachRuleKeyBlocker = null;
-    }
-    if (detachRuleWheelBlocker) {
-      detachRuleWheelBlocker();
-      detachRuleWheelBlocker = null;
-    }
-    if (detachRuleDragHandler) {
-      detachRuleDragHandler();
-      detachRuleDragHandler = null;
-    }
-  };
-  var setSwitchCapState = (wrap, capped) => {
-    if (capped) {
-      wrap.setAttribute("aria-disabled", "true");
-      wrap.style.opacity = "0.5";
-      wrap.style.pointerEvents = "none";
-      wrap.style.cursor = "not-allowed";
-      wrap.title = "Max owned \u2014 notifications disabled";
-    } else {
-      wrap.removeAttribute("aria-disabled");
-      wrap.style.opacity = "";
-      wrap.style.pointerEvents = "";
-      wrap.style.cursor = "";
-      wrap.removeAttribute("title");
-    }
-  };
-  var createSwitch = (onToggle) => {
-    const wrap = document.createElement("label");
-    wrap.style.display = "inline-flex";
-    wrap.style.alignItems = "center";
-    wrap.style.justifyContent = "center";
-    wrap.style.width = "100%";
-    wrap.style.padding = "4px 6px";
-    wrap.style.userSelect = "none";
-    wrap.setAttribute("role", "switch");
-    wrap.setAttribute("aria-checked", "false");
-    const box = document.createElement("span");
-    box.style.position = "relative";
-    box.style.width = "42px";
-    box.style.height = "24px";
-    box.style.borderRadius = "999px";
-    box.style.background = "#1f2328";
-    box.style.border = "1px solid #4446";
-    box.style.display = "inline-block";
-    box.style.boxShadow = "inset 0 0 0 1px #0005";
-    const knob = document.createElement("span");
-    knob.style.position = "absolute";
-    knob.style.top = "50%";
-    knob.style.left = "3px";
-    knob.style.transform = "translateY(-50%)";
-    knob.style.width = "18px";
-    knob.style.height = "18px";
-    knob.style.borderRadius = "50%";
-    knob.style.background = "#e7eef7";
-    knob.style.boxShadow = "0 1px 2px rgba(0,0,0,.7)";
-    knob.style.transition = "left 160ms ease, transform 160ms ease";
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.style.position = "absolute";
-    input.style.opacity = "0";
-    input.style.pointerEvents = "none";
-    input.tabIndex = -1;
-    const apply = (on) => {
-      input.checked = on;
-      wrap.setAttribute("aria-checked", on ? "true" : "false");
-      knob.style.left = on ? "21px" : "3px";
-      knob.style.transform = on ? "translateY(-50%) scale(1.02)" : "translateY(-50%) scale(1)";
-      if (on) {
-        box.style.background = "linear-gradient(180deg, #2b5cff, #1e40ff)";
-        box.style.borderColor = "#7aa2ff";
-        box.style.boxShadow = "0 0 0 2px #7aa2ff55, inset 0 0 0 1px #0005";
-      } else {
-        box.style.background = "#1f2328";
-        box.style.borderColor = "#4446";
-        box.style.boxShadow = "inset 0 0 0 1px #0005";
-      }
-    };
-    input.disabled = true;
-    wrap.addEventListener("mousedown", (e) => e.preventDefault());
-    wrap.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      apply(!input.checked);
-      onToggle?.(input.checked);
-    });
-    box.appendChild(knob);
-    wrap.appendChild(input);
-    wrap.appendChild(box);
-    apply(false);
-    return wrap;
-  };
-  var setSwitchVisual = (wrap, checked) => {
-    const input = wrap.querySelector("input");
-    const box = wrap.querySelector("span");
-    const knob = box?.querySelector("span");
-    if (!input || !box || !knob) return;
-    input.checked = !!checked;
-    knob.style.left = checked ? "21px" : "3px";
-    knob.style.transform = checked ? "translateY(-50%) scale(1.02)" : "translateY(-50%) scale(1)";
-    if (checked) {
-      box.style.background = "linear-gradient(180deg, #2b5cff, #1e40ff)";
-      box.style.borderColor = "#7aa2ff";
-      box.style.boxShadow = "0 0 0 2px #7aa2ff55, inset 0 0 0 1px #0005";
-      wrap.setAttribute("aria-checked", "true");
-    } else {
-      box.style.background = "#1f2328";
-      box.style.borderColor = "#4446";
-      box.style.boxShadow = "inset 0 0 0 1px #0005";
-      wrap.setAttribute("aria-checked", "false");
-    }
-  };
-  var wrapCell = (child) => {
-    const d = document.createElement("div");
-    d.style.display = "flex";
-    d.style.alignItems = "center";
-    d.style.justifyContent = "center";
-    d.style.borderBottom = "1px solid #ffffff12";
-    d.style.padding = "4px 6px";
-    d.style.boxSizing = "border-box";
-    d.appendChild(child);
-    return d;
-  };
-  var mkHeadCell = (txt, align = "center") => {
-    const el2 = document.createElement("div");
-    el2.textContent = txt;
-    el2.style.fontWeight = "600";
-    el2.style.opacity = "0.9";
-    el2.style.padding = "4px 6px";
-    el2.style.display = "flex";
-    el2.style.alignItems = "center";
-    el2.style.justifyContent = align === "left" ? "flex-start" : "center";
-    return el2;
-  };
-  function rarityBadge(raw) {
-    const rarity3 = String(raw || "").trim();
-    const key2 = (() => {
-      const k = rarity3.toLowerCase();
-      if (k === "mythic" || k === "mythical") return "Mythical";
-      if (k === "celestial") return "Celestial";
-      if (k === "divine") return "Divine";
-      if (k === "legendary") return "Legendary";
-      if (k === "rare") return "Rare";
-      if (k === "uncommon") return "Uncommon";
-      if (k === "common") return "Common";
-      return rarity3 || "\u2014";
-    })();
-    const COLORS = {
-      Common: "#E7E7E7",
-      Uncommon: "#67BD4D",
-      Rare: "#0071C6",
-      Legendary: "#FFC734",
-      Mythical: "#9944A7",
-      Divine: "#FF7835",
-      Celestial: null
-    };
-    const darkText = /* @__PURE__ */ new Set(["Common", "Uncommon", "Legendary", "Divine"]);
-    const el2 = document.createElement("div");
-    el2.textContent = key2;
-    Object.assign(el2.style, {
-      display: "inline-flex",
-      justifyContent: "center",
-      alignItems: "center",
-      padding: "4px 8px",
-      borderRadius: "5px",
-      fontSize: "12px",
-      fontWeight: "700",
-      margin: "2px auto",
-      color: darkText.has(key2) ? "#0b0b0b" : "#ffffff",
-      boxShadow: "0 0 0 1px #0006 inset",
-      lineHeight: "1.1",
-      whiteSpace: "nowrap"
-    });
-    if (key2 === "Celestial") {
-      if (!document.getElementById("qws-celestial-kf")) {
-        const style3 = document.createElement("style");
-        style3.id = "qws-celestial-kf";
-        style3.textContent = `
-@keyframes qwsCelestialShift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}`;
-        document.head.appendChild(style3);
-      }
-      el2.style.background = `linear-gradient(130deg,
-      rgb(0,180,216) 0%,
-      rgb(124,42,232) 40%,
-      rgb(160,0,126) 60%,
-      rgb(255,215,0) 100%)`;
-      el2.style.backgroundSize = "200% 200%";
-      el2.style.animation = "qwsCelestialShift 4s linear infinite";
-    } else {
-      el2.style.background = COLORS[key2] || "#444";
-    }
-    return el2;
-  }
-  var applyRuleState = (itemCell, ruleCell, rule) => {
-    const gearBtn = ruleCell?.querySelector("button[data-role='rule']") ?? null;
-    const hint = itemCell.querySelector('[data-role="rule-hint"]');
-    const hasRule = !!(rule && (rule.sound || rule.volume != null || rule.playbackMode || rule.stopMode || rule.loopIntervalMs != null));
-    const summary = hasRule ? formatRuleSummary(rule) : "";
-    if (gearBtn) {
-      gearBtn.dataset.active = hasRule ? "1" : "0";
-      gearBtn.title = hasRule && summary ? `Custom rule \u2014 ${summary}` : "Custom rule";
-    }
-    if (hint) {
-      if (hasRule && summary) {
-        hint.textContent = summary;
-        hint.style.visibility = "visible";
-      } else {
-        hint.textContent = "";
-        hint.style.visibility = "hidden";
-      }
-    }
-  };
-  var openRuleEditor = (ui, row, anchor) => {
-    closeRuleEditor();
-    const pop = document.createElement("div");
-    pop.className = "qws-rule-popover";
-    Object.assign(pop.style, {
-      position: "fixed",
-      zIndex: "var(--qws-z-popover)",
-      minWidth: "260px",
-      maxWidth: "320px",
-      padding: "14px 16px",
-      borderRadius: "14px",
-      border: "1px solid #32404e",
-      background: "linear-gradient(180deg, #111923, #0b131c)",
-      boxShadow: "0 16px 40px rgba(0,0,0,0.45)"
-    });
-    const margin = 12;
-    const clampPosition = (value, min, max) => {
-      if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
-      if (max >= min) {
-        return Math.min(Math.max(value, min), max);
-      }
-      return Math.min(Math.max(value, max), min);
-    };
-    const applyPosition2 = (left2, top2) => {
-      const width2 = pop.offsetWidth;
-      const height2 = pop.offsetHeight;
-      const boundedLeft = clampPosition(left2, margin, window.innerWidth - width2 - margin);
-      const boundedTop = clampPosition(top2, margin, window.innerHeight - height2 - margin);
-      pop.style.left = `${Math.round(boundedLeft)}px`;
-      pop.style.top = `${Math.round(boundedTop)}px`;
-      return { left: boundedLeft, top: boundedTop };
-    };
-    const header = document.createElement("div");
-    header.style.display = "flex";
-    header.style.justifyContent = "space-between";
-    header.style.alignItems = "flex-start";
-    header.style.gap = "12px";
-    header.style.cursor = "move";
-    header.style.userSelect = "none";
-    header.style.touchAction = "none";
-    const titleWrap = document.createElement("div");
-    const title = document.createElement("div");
-    title.textContent = row.name;
-    title.style.fontWeight = "700";
-    title.style.fontSize = "14px";
-    title.style.lineHeight = "1.2";
-    const subtitle = document.createElement("div");
-    subtitle.textContent = row.type;
-    subtitle.style.opacity = "0.7";
-    subtitle.style.fontSize = "12px";
-    titleWrap.append(title, subtitle);
-    const closeBtn = document.createElement("button");
-    closeBtn.type = "button";
-    closeBtn.textContent = "\u2715";
-    Object.assign(closeBtn.style, {
-      background: "transparent",
-      border: "none",
-      color: "#c8d7e8",
-      fontSize: "16px",
-      lineHeight: "1",
-      cursor: "pointer"
-    });
-    closeBtn.addEventListener("click", (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      closeRuleEditor();
-    });
-    header.append(titleWrap, closeBtn);
-    let dragState = null;
-    const onDragMove = (ev) => {
-      if (!dragState) return;
-      if (ev.pointerId !== dragState.pointerId) return;
-      const dx = ev.clientX - dragState.startX;
-      const dy = ev.clientY - dragState.startY;
-      applyPosition2(dragState.baseLeft + dx, dragState.baseTop + dy);
-    };
-    const stopDrag = (ev) => {
-      if (!dragState) return;
-      if (ev && ev.pointerId !== dragState.pointerId) return;
-      document.removeEventListener("pointermove", onDragMove);
-      document.removeEventListener("pointerup", stopDrag);
-      document.removeEventListener("pointercancel", stopDrag);
-      try {
-        header.releasePointerCapture(dragState.pointerId);
-      } catch {
-      }
-      dragState = null;
-    };
-    const onPointerDown = (ev) => {
-      if (ev.button !== 0) return;
-      const target = ev.target;
-      if (target && closeBtn.contains(target)) return;
-      if (dragState) stopDrag();
-      const rect = pop.getBoundingClientRect();
-      dragState = {
-        pointerId: ev.pointerId,
-        startX: ev.clientX,
-        startY: ev.clientY,
-        baseLeft: rect.left,
-        baseTop: rect.top
-      };
-      try {
-        header.setPointerCapture(ev.pointerId);
-      } catch {
-      }
-      document.addEventListener("pointermove", onDragMove);
-      document.addEventListener("pointerup", stopDrag);
-      document.addEventListener("pointercancel", stopDrag);
-      ev.preventDefault();
-    };
-    header.addEventListener("pointerdown", onPointerDown);
-    detachRuleDragHandler = () => {
-      header.removeEventListener("pointerdown", onPointerDown);
-      stopDrag();
-    };
-    pop.appendChild(header);
-    const current = NotifierService.getRule(row.id);
-    const defaults = audio.getPlaybackSettings(row.context);
-    const contextDefaults = row.context === "shops" || row.context === "weather" ? NotifierService.getContextStopDefaults(row.context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: defaults.loopIntervalMs };
-    const allowPurchase = row.context === "shops";
-    const defaultSoundName = (() => {
-      const label2 = (defaults.defaultSoundName || "").trim();
-      return label2 || "Default";
-    })();
-    const formatModeLabel = (mode) => mode === "loop" ? "Loop" : "One-shot";
-    const defaultModeLabel = formatModeLabel(defaults.mode);
-    const defaultIntervalMs = Math.max(
-      150,
-      Math.floor(contextDefaults.loopIntervalMs ?? defaults.loopIntervalMs ?? 150)
-    );
-    const soundField = document.createElement("div");
-    soundField.className = "qws-rule-field";
-    const soundLabel = document.createElement("label");
-    soundLabel.textContent = "Sound";
-    const soundSelect = document.createElement("select");
-    soundSelect.className = "qmm-input";
-    soundSelect.style.width = "100%";
-    const populateSoundOptions = () => {
-      const selected = current?.sound ?? "";
-      soundSelect.innerHTML = "";
-      const optDefault = document.createElement("option");
-      optDefault.value = "";
-      optDefault.textContent = defaultSoundName;
-      soundSelect.appendChild(optDefault);
-      const names = audio.listSounds();
-      for (const name of names) {
-        if (name === defaultSoundName && selected !== name) continue;
-        const opt = document.createElement("option");
-        opt.value = name;
-        opt.textContent = name;
-        soundSelect.appendChild(opt);
-      }
-      if (selected && !names.includes(selected)) {
-        const extra = document.createElement("option");
-        extra.value = selected;
-        extra.textContent = selected.length > 32 ? `${selected.slice(0, 29)}\u2026` : selected;
-        extra.dataset.extra = "1";
-        soundSelect.appendChild(extra);
-      }
-      soundSelect.value = selected;
-    };
-    populateSoundOptions();
-    soundField.append(soundLabel, soundSelect);
-    pop.appendChild(soundField);
-    const baseVolume = Math.max(0, Math.min(1, defaults.volume || 0));
-    const defaultVolumePct = Math.round(baseVolume * 100);
-    const volumeField = document.createElement("div");
-    volumeField.className = "qws-rule-field";
-    const volumeLabel = document.createElement("label");
-    volumeLabel.textContent = "Volume";
-    const volumeWrap = document.createElement("div");
-    volumeWrap.style.display = "flex";
-    volumeWrap.style.alignItems = "center";
-    volumeWrap.style.gap = "10px";
-    const volumeRange = document.createElement("input");
-    volumeRange.type = "range";
-    volumeRange.min = "0";
-    volumeRange.max = "100";
-    volumeRange.step = "1";
-    volumeRange.style.width = "100%";
-    const volumeValue = document.createElement("span");
-    volumeValue.style.minWidth = "38px";
-    volumeValue.style.textAlign = "right";
-    const applyVolumeDisplay = (value) => {
-      const clamped = Math.max(0, Math.min(100, Math.round(value)));
-      volumeRange.value = String(clamped);
-      volumeValue.textContent = `${clamped}%`;
-    };
-    const initialVolume = current?.volume != null ? current.volume : baseVolume;
-    applyVolumeDisplay(Math.round(Math.max(0, Math.min(1, initialVolume)) * 100));
-    volumeRange.addEventListener("input", () => {
-      const raw = Number(volumeRange.value);
-      const clamped = Number.isFinite(raw) ? Math.max(0, Math.min(100, Math.round(raw))) : defaultVolumePct;
-      applyVolumeDisplay(clamped);
-    });
-    const volumeHint = document.createElement("div");
-    volumeHint.textContent = `Default: ${defaultVolumePct}%`;
-    volumeHint.style.opacity = "0.7";
-    volumeHint.style.fontSize = "11px";
-    volumeHint.style.marginTop = "4px";
-    volumeWrap.append(volumeRange, volumeValue);
-    volumeField.append(volumeLabel, volumeWrap, volumeHint);
-    pop.appendChild(volumeField);
-    const modeField = document.createElement("div");
-    modeField.className = "qws-rule-field";
-    const modeLabel = document.createElement("label");
-    modeLabel.textContent = "Playback mode";
-    const modeSelect = document.createElement("select");
-    modeSelect.className = "qmm-input";
-    const modeOptions = allowPurchase ? defaults.mode === "loop" ? ["loop", "oneshot"] : ["oneshot", "loop"] : ["oneshot"];
-    modeOptions.forEach((value) => {
-      const opt = document.createElement("option");
-      opt.value = value;
-      opt.textContent = formatModeLabel(value);
-      modeSelect.appendChild(opt);
-    });
-    const initialMode = allowPurchase ? current?.playbackMode ?? defaults.mode : "oneshot";
-    modeSelect.value = initialMode === "loop" && !allowPurchase ? "oneshot" : initialMode;
-    if (!allowPurchase) modeSelect.disabled = true;
-    modeField.append(modeLabel, modeSelect);
-    pop.appendChild(modeField);
-    let stopSelect = null;
-    const stopField = document.createElement("div");
-    stopField.className = "qws-rule-field";
-    if (allowPurchase) {
-      const stopLabel = document.createElement("label");
-      stopLabel.textContent = "Stop condition";
-      stopSelect = document.createElement("select");
-      stopSelect.className = "qmm-input";
-      const stopOption = document.createElement("option");
-      stopOption.value = "purchase";
-      stopOption.textContent = "Until purchase";
-      stopSelect.appendChild(stopOption);
-      const initialStopMode = current?.stopMode ?? contextDefaults.stopMode;
-      stopSelect.value = initialStopMode === "purchase" ? "purchase" : "purchase";
-      stopField.append(stopLabel, stopSelect);
-      pop.appendChild(stopField);
-    }
-    const intervalField = document.createElement("div");
-    intervalField.className = "qws-rule-field";
-    const intervalLabel = document.createElement("label");
-    intervalLabel.textContent = "Loop interval (ms)";
-    const intervalInput = document.createElement("input");
-    intervalInput.type = "number";
-    intervalInput.className = "qmm-input";
-    intervalInput.min = "150";
-    intervalInput.step = "50";
-    intervalInput.placeholder = String(defaultIntervalMs);
-    intervalInput.value = current?.loopIntervalMs != null ? String(current.loopIntervalMs) : "";
-    intervalInput.inputMode = "numeric";
-    intervalField.append(intervalLabel, intervalInput);
-    if (allowPurchase) pop.appendChild(intervalField);
-    const enforceIntegerOnly = (input) => {
-      input.addEventListener("keydown", (ev) => {
-        ev.stopPropagation();
-        ev.stopImmediatePropagation();
-        if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
-        const key2 = ev.key;
-        if (/^[0-9]$/.test(key2)) return;
-        if (key2 === "Backspace" || key2 === "Delete" || key2 === "Tab" || key2 === "Enter" || key2 === "ArrowLeft" || key2 === "ArrowRight" || key2 === "ArrowUp" || key2 === "ArrowDown" || key2 === "Home" || key2 === "End") {
-          return;
-        }
-        ev.preventDefault();
-      });
-      input.addEventListener("input", () => {
-        const sanitized = input.value.replace(/\D+/g, "");
-        if (sanitized !== input.value) input.value = sanitized;
-      });
-    };
-    enforceIntegerOnly(intervalInput);
-    const resolveMode = () => {
-      const raw = modeSelect.value;
-      if (raw === "oneshot" || raw === "loop") return raw;
-      return allowPurchase ? defaults.mode : "oneshot";
-    };
-    const resolveStop = () => {
-      if (!allowPurchase) return "purchase";
-      const raw = stopSelect?.value;
-      if (raw === "purchase") return "purchase";
-      return "purchase";
-    };
-    const updateLoopVisibility = () => {
-      if (!allowPurchase) {
-        stopField.style.display = "none";
-        intervalField.style.display = "none";
-        return;
-      }
-      const mode = resolveMode();
-      const showLoop = mode === "loop";
-      stopField.style.display = showLoop ? "grid" : "none";
-      intervalField.style.display = showLoop ? "grid" : "none";
-    };
-    const forceLoopMode = () => {
-      if (!allowPurchase) return;
-      if (modeSelect.value === "loop") return;
-      modeSelect.value = "loop";
-      updateLoopVisibility();
-    };
-    modeSelect.addEventListener("change", () => {
-      updateLoopVisibility();
-    });
-    if (allowPurchase && stopSelect) {
-      stopSelect.addEventListener("change", () => {
-        forceLoopMode();
-      });
-    }
-    if (allowPurchase) intervalInput.addEventListener("input", forceLoopMode);
-    updateLoopVisibility();
-    const hint = document.createElement("div");
-    hint.textContent = "Use defaults by leaving values unchanged (matching the default volume keeps it inherited).";
-    hint.style.opacity = "0.7";
-    hint.style.fontSize = "12px";
-    pop.appendChild(hint);
-    const actions = document.createElement("div");
-    actions.className = "qws-rule-actions";
-    const clearBtn = ui.btn("Clear", { variant: "ghost", size: "sm" });
-    clearBtn.addEventListener("click", (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      NotifierService.clearRule(row.id);
-      closeRuleEditor();
-    });
-    if (!current) ui.setButtonEnabled(clearBtn, false);
-    const saveBtn = ui.btn("Save", { variant: "primary", size: "sm" });
-    saveBtn.addEventListener("click", (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      const sound = soundSelect.value?.trim() || null;
-      const modeRaw = modeSelect.value || "";
-      const stopRaw = stopSelect?.value || "";
-      const intervalRaw = intervalInput.value?.trim();
-      const volRaw = Math.max(0, Math.min(100, parseInt(volumeRange.value || "", 10) || 0));
-      const volRatio = volRaw / 100;
-      let playbackMode = modeRaw === "oneshot" || modeRaw === "loop" ? modeRaw : null;
-      if (playbackMode === defaults.mode) playbackMode = null;
-      let stopMode = allowPurchase ? stopRaw === "purchase" ? "purchase" : null : null;
-      if (stopMode != null && stopMode === contextDefaults.stopMode) {
-        stopMode = null;
-      }
-      let loopIntervalMs = null;
-      if (allowPurchase && intervalRaw) {
-        const parsed = Number(intervalRaw);
-        if (Number.isFinite(parsed)) {
-          const normalized = Math.max(150, Math.min(1e4, Math.floor(parsed)));
-          if (normalized !== defaultIntervalMs) loopIntervalMs = normalized;
-        }
-      }
-      let volume = null;
-      if (Math.abs(volRatio - baseVolume) > 1e-3) {
-        volume = Math.max(0, Math.min(1, volRatio));
-      }
-      if (allowPurchase && !playbackMode && defaults.mode !== "loop" && (stopMode != null || loopIntervalMs != null)) {
-        playbackMode = "loop";
-      }
-      NotifierService.setRule(row.id, {
-        sound,
-        volume,
-        playbackMode,
-        stopMode,
-        loopIntervalMs
-      });
-      closeRuleEditor();
-    });
-    actions.append(clearBtn, saveBtn);
-    pop.appendChild(actions);
-    document.body.appendChild(pop);
-    const anchorRect = anchor.getBoundingClientRect();
-    const width = pop.offsetWidth;
-    const height = pop.offsetHeight;
-    let left = anchorRect.right - width;
-    let top = anchorRect.bottom + 8;
-    if (left < margin) left = margin;
-    if (left + width > window.innerWidth - margin) left = window.innerWidth - width - margin;
-    if (top + height > window.innerHeight - margin) top = anchorRect.top - height - 8;
-    if (top < margin) top = margin;
-    applyPosition2(left, top);
-    const onDocPointer = (ev) => {
-      const target = ev.target;
-      if (!target) return;
-      if (pop.contains(target)) return;
-      if (anchor.contains(target)) return;
-      closeRuleEditor();
-    };
-    setTimeout(() => document.addEventListener("pointerdown", onDocPointer, true));
-    detachRuleDocHandler = () => document.removeEventListener("pointerdown", onDocPointer, true);
-    const keyBlocker = (ev) => {
-      if (!rulePopover) return;
-      if (rulePopover.contains(ev.target)) return;
-      ev.stopImmediatePropagation();
-    };
-    document.addEventListener("keydown", keyBlocker, true);
-    detachRuleKeyBlocker = () => document.removeEventListener("keydown", keyBlocker, true);
-    const wheelBlocker = (ev) => {
-      const t = ev.target;
-      if (rulePopover && t && rulePopover.contains(t)) {
-        ev.stopImmediatePropagation();
-      }
-    };
-    document.addEventListener("wheel", wheelBlocker, { capture: true, passive: true });
-    detachRuleWheelBlocker = () => {
-      document.removeEventListener("wheel", wheelBlocker, { capture: true });
-    };
-    rulePopover = pop;
-  };
-  function renderSettingsTab(view, ui) {
-    view.innerHTML = "";
-    void PetAlertService.start().catch(() => {
-    });
-    const section = (title) => {
-      const card2 = ui.card(title, { tone: "muted" });
-      card2.body.style.display = "grid";
-      card2.body.style.gap = "10px";
-      return card2;
-    };
-    const row = (labelTxt, control, opts) => {
-      const { root: r, label: label2 } = ui.formRow(labelTxt, control, { alignTop: opts?.alignTop, labelWidth: "160px" });
-      label2.style.opacity = "0.9";
-      label2.style.fontWeight = "600";
-      return r;
-    };
-    const radio = (name, value, text) => {
-      const chip = ui.toggleChip(text, { type: "radio", name, value });
-      chip.root.classList.add("qmm-radio-chip");
-      return { label: chip.root, input: chip.input };
-    };
-    const makeSelect = (id) => {
-      const sel = ui.select({ id, width: "180px" });
-      return sel;
-    };
-    const playIconBtn = (title = "Play") => {
-      return ui.btn("", { icon: "\u25B6", size: "sm", tooltip: title, ariaLabel: title });
-    };
-    const smallBtn2 = (txt) => ui.btn(txt, { size: "sm" });
-    const errorBar = () => ui.errorBar();
-    const root = document.createElement("div");
-    Object.assign(root.style, {
-      display: "grid",
-      gridTemplateRows: "1fr",
-      gap: "12px",
-      height: "54vh",
-      minHeight: "0",
-      overflow: "hidden"
-    });
-    view.appendChild(root);
-    const s1 = section("Audio & Playback");
-    root.appendChild(s1.root);
-    const contextControls = {};
-    const contextOrder = [
-      { key: "shops", label: "Shops", allowPurchase: true, showStop: true },
-      { key: "weather", label: "Weather", allowPurchase: false },
-      { key: "pets", label: "Pets", allowPurchase: true, showStop: false }
-    ];
-    for (const cfg of contextOrder) {
-      const card2 = document.createElement("div");
-      Object.assign(card2.style, {
-        display: "grid",
-        gap: "12px",
-        padding: "16px",
-        borderRadius: "12px",
-        border: "1px solid #1f2429",
-        background: "#111821"
-      });
-      const heading = document.createElement("div");
-      heading.textContent = cfg.label;
-      heading.style.fontWeight = "700";
-      heading.style.fontSize = "14px";
-      heading.style.letterSpacing = "0.02em";
-      card2.appendChild(heading);
-      const defaultWrap = document.createElement("div");
-      defaultWrap.style.display = "flex";
-      defaultWrap.style.alignItems = "center";
-      defaultWrap.style.gap = "8px";
-      const select2 = makeSelect(`ap.defaultSound.${cfg.key}`);
-      select2.dataset.soundSelect = cfg.key;
-      const playBtn = playIconBtn(`Play ${cfg.label.toLowerCase()} sound`);
-      defaultWrap.append(select2, playBtn);
-      card2.appendChild(row("Default sound", defaultWrap));
-      const volumeWrap = document.createElement("div");
-      volumeWrap.style.display = "flex";
-      volumeWrap.style.alignItems = "center";
-      volumeWrap.style.gap = "10px";
-      const volumeRange = document.createElement("input");
-      volumeRange.type = "range";
-      volumeRange.min = "0";
-      volumeRange.max = "100";
-      volumeRange.step = "1";
-      volumeRange.style.width = "220px";
-      const volumeValue = document.createElement("span");
-      volumeValue.style.minWidth = "32px";
-      volumeValue.style.textAlign = "right";
-      volumeWrap.append(volumeRange, volumeValue);
-      card2.appendChild(row("Volume", volumeWrap));
-      const modeWrap = document.createElement("div");
-      modeWrap.style.display = "flex";
-      modeWrap.style.gap = "12px";
-      const modeOne = radio(`ap.mode.${cfg.key}`, "oneshot", "One-shot");
-      modeWrap.append(modeOne.label);
-      let modeLoop = null;
-      if (cfg.allowPurchase) {
-        modeLoop = radio(`ap.mode.${cfg.key}`, "loop", "Loop");
-        modeWrap.append(modeLoop.label);
-      }
-      card2.appendChild(row("Playback mode", modeWrap));
-      let stopRow;
-      let loopInput;
-      let loopWrap;
-      if (cfg.allowPurchase) {
-        const stopWrap = document.createElement("div");
-        stopWrap.style.display = "flex";
-        stopWrap.style.flexDirection = "column";
-        stopWrap.style.gap = "10px";
-        const stopInfo = document.createElement("div");
-        stopInfo.textContent = cfg.showStop === false ? "Loops keep repeating; stop manually by disabling the alert." : "Loops stop automatically when the item is purchased.";
-        stopInfo.style.opacity = "0.75";
-        stopInfo.style.fontSize = "12px";
-        stopInfo.style.lineHeight = "1.4";
-        if (cfg.key !== "pets") {
-          loopWrap = document.createElement("div");
-          loopWrap.style.display = "flex";
-          loopWrap.style.flexDirection = "column";
-          loopWrap.style.gap = "4px";
-          const loopTitle = document.createElement("div");
-          loopTitle.textContent = "Loop interval";
-          loopTitle.style.opacity = "0.8";
-          loopTitle.style.fontSize = "12px";
-          loopTitle.style.fontWeight = "600";
-          const loopBox = document.createElement("div");
-          loopBox.style.display = "inline-flex";
-          loopBox.style.alignItems = "center";
-          loopBox.style.gap = "8px";
-          loopInput = document.createElement("input");
-          loopInput.type = "number";
-          loopInput.min = "150";
-          loopInput.max = "10000";
-          loopInput.step = "50";
-          loopInput.style.width = "100px";
-          loopInput.style.textAlign = "center";
-          const loopLabel = document.createElement("span");
-          loopLabel.textContent = "ms between plays";
-          loopLabel.style.opacity = "0.85";
-          loopBox.append(loopInput, loopLabel);
-          loopWrap.append(loopTitle, loopBox);
-          stopWrap.append(stopInfo, loopWrap);
-        } else {
-          stopWrap.append(stopInfo);
-        }
-        if (cfg.showStop !== false) {
-          stopRow = row("Stop condition", stopWrap);
-        } else {
-          stopRow = row("Loop interval", stopWrap);
-        }
-        card2.appendChild(stopRow);
-      } else {
-        const info = document.createElement("div");
-        info.textContent = "Weather alerts play once per trigger.";
-        info.style.opacity = "0.75";
-        info.style.fontSize = "12px";
-        info.style.lineHeight = "1.4";
-        card2.appendChild(row("Details", info));
-      }
-      contextControls[cfg.key] = {
-        container: card2,
-        select: select2,
-        playBtn,
-        volumeRange,
-        volumeValue,
-        modeOneshot: modeOne.input,
-        modeLoop: modeLoop?.input,
-        stopRow,
-        loopInput,
-        loopWrap
-      };
-      s1.body.appendChild(card2);
-    }
-    const s1Err = errorBar();
-    s1.body.appendChild(s1Err.el);
-    const s2 = section("Sound library");
-    root.appendChild(s2.root);
-    const importRow = document.createElement("div");
-    Object.assign(importRow.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-      width: "100%"
-    });
-    const fileInput = document.createElement("input");
-    fileInput.type = "file";
-    fileInput.accept = "audio/*";
-    fileInput.multiple = true;
-    fileInput.style.display = "none";
-    const fileCard = document.createElement("div");
-    Object.assign(fileCard.style, {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "6px",
-      padding: "18px 22px",
-      width: "100%",
-      minHeight: "110px",
-      borderRadius: "14px",
-      border: "1px dashed #5d6a7d",
-      background: "linear-gradient(180deg, #0b141c, #091018)",
-      transition: "border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease",
-      cursor: "pointer",
-      textAlign: "center"
-    });
-    fileCard.tabIndex = 0;
-    fileCard.setAttribute("role", "button");
-    fileCard.setAttribute("aria-label", "Select audio files");
-    const fileCardTitle = document.createElement("div");
-    fileCardTitle.textContent = "Select audio files";
-    Object.assign(fileCardTitle.style, {
-      fontWeight: "600",
-      fontSize: "14px",
-      letterSpacing: "0.02em"
-    });
-    const fileStatus = document.createElement("div");
-    const defaultStatusText = "Click to browse or drop files";
-    fileStatus.textContent = defaultStatusText;
-    Object.assign(fileStatus.style, {
-      fontSize: "12px",
-      opacity: "0.75"
-    });
-    fileCard.append(fileCardTitle, fileStatus);
-    const setFileCardActive = (active) => {
-      if (active) {
-        fileCard.style.borderColor = "#6fc3ff";
-        fileCard.style.boxShadow = "0 0 0 3px #6fc3ff22";
-        fileCard.style.background = "linear-gradient(180deg, #102030, #0b1826)";
-      } else {
-        fileCard.style.borderColor = "#5d6a7d";
-        fileCard.style.boxShadow = "none";
-        fileCard.style.background = "linear-gradient(180deg, #0b141c, #091018)";
-      }
-    };
-    fileCard.addEventListener("mouseenter", () => setFileCardActive(true));
-    fileCard.addEventListener("mouseleave", () => setFileCardActive(document.activeElement === fileCard));
-    fileCard.addEventListener("focus", () => setFileCardActive(true));
-    fileCard.addEventListener("blur", () => setFileCardActive(false));
-    fileCard.addEventListener("dragover", (ev) => {
-      ev.preventDefault();
-      setFileCardActive(true);
-      if (ev.dataTransfer) ev.dataTransfer.dropEffect = "copy";
-    });
-    fileCard.addEventListener("dragleave", () => setFileCardActive(document.activeElement === fileCard));
-    const triggerFileSelect = () => fileInput.click();
-    fileCard.addEventListener("click", triggerFileSelect);
-    fileCard.addEventListener("keydown", (ev) => {
-      if (ev.key === "Enter" || ev.key === " ") {
-        ev.preventDefault();
-        triggerFileSelect();
-      }
-    });
-    const displaySelection = (files) => {
-      if (!files || !files.length) {
-        fileStatus.textContent = defaultStatusText;
-        return;
-      }
-      fileStatus.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
-    };
-    fileCard.addEventListener("drop", async (ev) => {
-      ev.preventDefault();
-      const files = ev.dataTransfer?.files || null;
-      displaySelection(files);
-      await handleFiles(files);
-      displaySelection(null);
-      setFileCardActive(document.activeElement === fileCard);
-    });
-    importRow.append(fileInput, fileCard);
-    s2.body.appendChild(importRow);
-    const tip = document.createElement("div");
-    tip.textContent = "MP3, WAV, OGG \u2014 limited to \u2264 10 s and \u2264 200 KB.";
-    tip.style.opacity = "0.75";
-    tip.style.fontSize = "12px";
-    s2.body.appendChild(tip);
-    const listWrap = document.createElement("div");
-    Object.assign(listWrap.style, {
-      display: "grid",
-      gridTemplateRows: "auto 1fr",
-      gap: "6px",
-      border: "1px solid #4445",
-      borderRadius: "10px",
-      background: "#10161c",
-      padding: "10px"
-    });
-    const listHeader = document.createElement("div");
-    Object.assign(listHeader.style, {
-      display: "grid",
-      gridTemplateColumns: "minmax(0, 1fr) auto",
-      gap: "12px",
-      fontSize: "12px",
-      letterSpacing: "0.05em",
-      textTransform: "uppercase",
-      opacity: "0.65",
-      paddingBottom: "4px",
-      borderBottom: "1px solid #ffffff14"
-    });
-    const headName = document.createElement("span");
-    headName.textContent = "Sound";
-    const headActions = document.createElement("span");
-    headActions.textContent = "Actions";
-    headActions.style.justifySelf = "end";
-    listHeader.append(headName, headActions);
-    const listBody = document.createElement("div");
-    Object.assign(listBody.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "6px",
-      maxHeight: "240px",
-      overflowY: "auto",
-      paddingRight: "4px",
-      minHeight: "0",
-      padding: "4px 0"
-    });
-    listWrap.append(listHeader, listBody);
-    s2.body.appendChild(listWrap);
-    const s2Err = errorBar();
-    s2.body.appendChild(s2Err.el);
-    const sanitizeLoopInput = (input, fallback) => {
-      const trimmed = (input.value || "").trim();
-      const raw = trimmed ? Number(trimmed) : NaN;
-      const normalized = Number.isFinite(raw) ? raw : fallback;
-      const clamped = Math.max(150, Math.min(1e4, Math.floor(normalized)));
-      input.value = String(clamped);
-      return clamped;
-    };
-    const updateStopVisibility = (context) => {
-      const controls = contextControls[context];
-      const loopChecked = controls.modeLoop?.checked ?? false;
-      if (controls.stopRow) controls.stopRow.style.display = loopChecked ? "" : "none";
-      if (controls.loopWrap) controls.loopWrap.style.display = loopChecked ? "flex" : "none";
-    };
-    const applyMode = (context, mode) => {
-      if (context === "weather" && mode === "loop") {
-        audio.setPlaybackMode("oneshot", context);
-        contextControls[context].modeOneshot.checked = true;
-        contextControls[context].modeLoop && (contextControls[context].modeLoop.checked = false);
-        updateStopVisibility(context);
-        return;
-      }
-      audio.setPlaybackMode(mode, context);
-      updateStopVisibility(context);
-    };
-    const applyShopsStop = () => {
-      const controls = contextControls.shops;
-      if (!controls.loopInput) return;
-      const loopMs = sanitizeLoopInput(controls.loopInput, audio.getLoopInterval("shops"));
-      audio.setLoopInterval(loopMs, "shops");
-      if (!controls.modeLoop?.checked) {
-        if (controls.modeLoop) controls.modeLoop.checked = true;
-        controls.modeOneshot.checked = false;
-        applyMode("shops", "loop");
-      }
-      audio.setStopPurchase("shops");
-      NotifierService.setContextStopDefaults("shops", { stopMode: "purchase", stopRepeats: null, loopIntervalMs: loopMs });
-      return loopMs;
-    };
-    for (const cfg of contextOrder) {
-      const controls = contextControls[cfg.key];
-      controls.select.addEventListener("change", () => {
-        audio.setDefaultSoundByName(controls.select.value, cfg.key);
-        renderLibList();
-      });
-      controls.playBtn.addEventListener("click", () => {
-        audio.trigger("preview", { sound: controls.select.value }, cfg.key).catch(() => {
-        });
-      });
-      controls.volumeRange.addEventListener("input", () => {
-        const value = Math.max(0, Math.min(100, parseInt(controls.volumeRange.value || "0", 10) || 0));
-        controls.volumeValue.textContent = `${value}%`;
-        audio.setVolume(value / 100, cfg.key);
-      });
-      controls.modeOneshot.addEventListener("change", () => {
-        if (!controls.modeOneshot.checked) return;
-        applyMode(cfg.key, "oneshot");
-        if (cfg.key === "shops") {
-          const loopMs = controls.loopInput ? sanitizeLoopInput(controls.loopInput, audio.getLoopInterval("shops")) : audio.getLoopInterval("shops");
-          audio.setLoopInterval(loopMs, "shops");
-          audio.setStopManual("shops");
-          NotifierService.setContextStopDefaults("shops", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
-        }
-      });
-      controls.modeLoop?.addEventListener("change", () => {
-        if (!controls.modeLoop?.checked) return;
-        applyMode(cfg.key, "loop");
-        if (cfg.key === "shops") applyShopsStop();
-      });
-      if (cfg.allowPurchase) {
-        controls.loopInput?.addEventListener("change", applyShopsStop);
-        controls.loopInput?.addEventListener("blur", applyShopsStop);
-      }
-    }
-    const refreshAllSoundSelects = () => {
-      const names = audio.listSounds();
-      const applyOptions = (sel, context) => {
-        const current = sel.value;
-        sel.innerHTML = "";
-        for (const n of names) {
-          const option = document.createElement("option");
-          option.value = n;
-          option.textContent = n;
-          sel.appendChild(option);
-        }
-        const preferred = audio.getDefaultSoundName(context);
-        if (names.includes(current)) sel.value = current;
-        else if (preferred && names.includes(preferred)) sel.value = preferred;
-        else if (names.length) sel.value = names[0];
-      };
-      for (const cfg of contextOrder) {
-        applyOptions(contextControls[cfg.key].select, cfg.key);
-      }
-      const all = Array.from(document.querySelectorAll("select[data-sound-select]"));
-      for (const sel of all) {
-        const ctx2 = sel.dataset.soundSelect || "shops";
-        if (contextControls[ctx2]?.select === sel) continue;
-        applyOptions(sel, ctx2);
-      }
-    };
-    const renderLibList = () => {
-      listBody.replaceChildren();
-      const names = audio.listSounds();
-      if (!names.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No sounds in the library.";
-        empty.style.opacity = "0.75";
-        empty.style.textAlign = "center";
-        empty.style.padding = "12px 6px";
-        listBody.appendChild(empty);
-        return;
-      }
-      const defaultShops = audio.getDefaultSoundName("shops");
-      const defaultWeather = audio.getDefaultSoundName("weather");
-      for (const name of names) {
-        const row2 = document.createElement("div");
-        Object.assign(row2.style, {
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) auto",
-          gap: "12px",
-          alignItems: "center",
-          padding: "8px 10px",
-          borderRadius: "8px",
-          border: "1px solid #1f2429",
-          background: "#151b22"
-        });
-        const info = document.createElement("div");
-        Object.assign(info.style, {
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          minWidth: "0"
-        });
-        const title = document.createElement("span");
-        title.textContent = name;
-        title.style.fontWeight = "600";
-        title.style.overflow = "hidden";
-        title.style.textOverflow = "ellipsis";
-        title.style.whiteSpace = "nowrap";
-        info.appendChild(title);
-        const badges = document.createElement("div");
-        badges.style.display = "flex";
-        badges.style.gap = "6px";
-        const makeBadge = (label2) => {
-          const badge = document.createElement("span");
-          badge.textContent = label2;
-          Object.assign(badge.style, {
-            fontSize: "11px",
-            padding: "2px 6px",
-            borderRadius: "999px",
-            background: "#2b5cff33",
-            border: "1px solid #2b5cff66",
-            color: "#9cbcff",
-            fontWeight: "600",
-            textTransform: "uppercase",
-            letterSpacing: "0.04em"
-          });
-          return badge;
-        };
-        const isShopsDefault = defaultShops === name;
-        const isWeatherDefault = defaultWeather === name;
-        const isPetsDefault = audio.getDefaultSoundName("pets") === name;
-        if (isShopsDefault) badges.appendChild(makeBadge("Shops"));
-        if (isWeatherDefault) badges.appendChild(makeBadge("Weather"));
-        if (isPetsDefault) badges.appendChild(makeBadge("Pets"));
-        if (badges.childElementCount) info.appendChild(badges);
-        if (isShopsDefault || isWeatherDefault || isPetsDefault) {
-          row2.style.borderColor = "#2b5cff99";
-          row2.style.boxShadow = "0 0 0 1px #2b5cff33";
-        }
-        const actions = document.createElement("div");
-        Object.assign(actions.style, {
-          display: "flex",
-          gap: "6px",
-          justifyContent: "flex-end",
-          flexWrap: "wrap"
-        });
-        const btnPlay = smallBtn2("\u25B6");
-        const btnSetShops = smallBtn2("Set shops");
-        const btnSetWeather = smallBtn2("Set weather");
-        const btnSetPets = smallBtn2("Set pets");
-        const btnDel = smallBtn2("Remove");
-        btnPlay.title = "Preview";
-        btnSetShops.title = "Set as shops default";
-        btnSetWeather.title = "Set as weather default";
-        btnSetPets.title = "Set as pets default";
-        btnDel.title = "Remove from library";
-        const isProtected = typeof audio.isProtectedSound === "function" && audio.isProtectedSound(name);
-        if (isProtected || isShopsDefault || isWeatherDefault) {
-          btnDel.disabled = true;
-          btnDel.style.opacity = "0.6";
-          if (isProtected) btnDel.title = "Built-in sound cannot be removed";
-          else btnDel.title = "Currently used as default";
-        }
-        btnPlay.onclick = () => audio.trigger("preview", { sound: name }, "shops").catch(() => {
-        });
-        btnSetShops.onclick = () => {
-          audio.setDefaultSoundByName(name, "shops");
-          refreshAllSoundSelects();
-          renderLibList();
-        };
-        btnSetWeather.onclick = () => {
-          audio.setDefaultSoundByName(name, "weather");
-          refreshAllSoundSelects();
-          renderLibList();
-        };
-        btnSetPets.onclick = () => {
-          audio.setDefaultSoundByName(name, "pets");
-          refreshAllSoundSelects();
-          renderLibList();
-        };
-        btnDel.onclick = () => {
-          audio.unregisterSound(name);
-          refreshAllSoundSelects();
-          renderLibList();
-        };
-        actions.append(btnPlay, btnSetShops, btnSetWeather, btnSetPets, btnDel);
-        row2.append(info, actions);
-        listBody.appendChild(row2);
-      }
-    };
-    const syncContext = (context) => {
-      const controls = contextControls[context];
-      const settings = audio.getPlaybackSettings(context);
-      const names = audio.listSounds();
-      if (settings.defaultSoundName && names.includes(settings.defaultSoundName)) {
-        controls.select.value = settings.defaultSoundName;
-      }
-      const volPercent = Math.round(settings.volume * 100);
-      controls.volumeRange.value = String(volPercent);
-      controls.volumeValue.textContent = `${volPercent}%`;
-      if (controls.modeLoop && settings.mode === "loop") controls.modeLoop.checked = true;
-      else controls.modeOneshot.checked = true;
-      const defaults = context === "shops" || context === "weather" ? NotifierService.getContextStopDefaults(context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: settings.loopIntervalMs };
-      const fallbackLoop = Math.max(
-        150,
-        Math.min(1e4, Math.floor(defaults.loopIntervalMs || settings.loopIntervalMs || 150))
-      );
-      const loopMs = controls.loopInput ? sanitizeLoopInput(controls.loopInput, fallbackLoop) : fallbackLoop;
-      audio.setLoopInterval(loopMs, context);
-      if (context === "shops") {
-        if (controls.modeLoop?.checked) {
-          audio.setStopPurchase("shops");
-          NotifierService.setContextStopDefaults("shops", { stopMode: "purchase", stopRepeats: null, loopIntervalMs: loopMs });
-        } else {
-          audio.setStopManual("shops");
-          NotifierService.setContextStopDefaults("shops", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
-        }
-      } else if (context === "weather") {
-        applyMode("weather", "oneshot");
-        audio.setStopManual("weather");
-        NotifierService.setContextStopDefaults("weather", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
-      } else if (context === "pets") {
-        audio.setLoopInterval(loopMs, "pets");
-        audio.setStopManual("pets");
-      }
-      updateStopVisibility(context);
-    };
-    const syncFromAudio = () => {
-      refreshAllSoundSelects();
-      syncContext("shops");
-      syncContext("weather");
-      syncContext("pets");
-      renderLibList();
-    };
-    const handleFiles = async (files) => {
-      s2Err.clear();
-      if (!files || !files.length) return;
-      const added = [];
-      for (const f of Array.from(files)) {
-        try {
-          const res = await audio.importFileAsSound(f, {
-            maxBytes: 200 * 1024,
-            maxSeconds: 10,
-            bitrates: [48e3, 32e3, 2e4, 12e3, 8e3],
-            maxInputBytes: 8 * 1024 * 1024
-          });
-          added.push(res.name);
-        } catch (e) {
-          s2Err.show(`Failed for "${f.name}": ${e?.message || e}`);
-        }
-      }
-      if (added.length) {
-        refreshAllSoundSelects();
-        renderLibList();
-        for (const cfg of contextOrder) {
-          if (!audio.getDefaultSoundName(cfg.key)) {
-            audio.setDefaultSoundByName(added[0], cfg.key);
-          }
-        }
-        refreshAllSoundSelects();
-        renderLibList();
-      }
-      fileInput.value = "";
-    };
-    fileInput.onchange = async () => {
-      const files = fileInput.files;
-      displaySelection(files);
-      await handleFiles(files);
-      displaySelection(null);
-      setFileCardActive(document.activeElement === fileCard);
-    };
-    syncFromAudio();
-    const scroller = document.createElement("div");
-    Object.assign(scroller.style, {
-      overflow: "auto",
-      minHeight: "0",
-      height: "100%",
-      display: "grid",
-      gap: "12px"
-    });
-    scroller.append(s1.root, s2.root);
-    root.appendChild(scroller);
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-  }
-  function renderShopTab(view, ui) {
-    view.innerHTML = "";
-    view.style.cssText = "";
-    if (!document.getElementById("qws-rule-style")) {
-      const style3 = document.createElement("style");
-      style3.id = "qws-rule-style";
-      style3.textContent = `
-:root {
-  /* PATCH: z-index centralis\xE9 */
-  --qws-z-popover: 99999999999999;
-}
-
-/* PATCH: bouton engrenage carr\xE9, centr\xE9, plus gros */
-.qws-rule-btn {
-  display: inline-grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border-radius: 8px;
-  line-height: 1;
-  font-size: 18px; /* taille de l'ic\xF4ne */
-  min-width: 32px; /* \xE9vite les r\xE9tr\xE9cissements */
-  box-sizing: border-box;
-}
-.qws-rule-btn[data-active="1"] {
-  background: linear-gradient(180deg, #1b2735, #101821);
-  box-shadow: 0 0 0 1px #658dff88 inset;
-  color: #c7daff;
-}
-
-/* PATCH: popover toujours devant */
-.qws-rule-popover {
-  position: fixed !important;
-  z-index: var(--qws-z-popover) !important;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  color: #f1f6ff;
-}
-.qws-rule-popover .qws-rule-field {
-  display: grid;
-  gap: 6px;
-}
-.qws-rule-popover .qws-rule-field label {
-  font-weight: 600;
-  font-size: 13px;
-}
-.qws-rule-popover .qws-rule-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-/* PATCH: r\xE9serve un espace pour le r\xE9sum\xE9 afin d'\xE9viter tout shift */
-[data-role="rule-hint"] {
-  min-height: 1.2em;  /* ~1 ligne r\xE9serv\xE9e */
-}
-`;
-      document.head.appendChild(style3);
-    }
-    const wrap = document.createElement("div");
-    Object.assign(wrap.style, {
-      display: "grid",
-      gridTemplateRows: "auto 1fr",
-      gap: "10px",
-      height: "54vh",
-      overflow: "hidden",
-      minHeight: "0",
-      position: "relative"
-    });
-    view.appendChild(wrap);
-    const header = document.createElement("div");
-    header.style.display = "flex";
-    header.style.flexWrap = "wrap";
-    header.style.alignItems = "center";
-    header.style.gap = "10px";
-    header.style.rowGap = "8px";
-    wrap.appendChild(header);
-    const lblType = ui.label("Type");
-    const selType = document.createElement("select");
-    selType.className = "qmm-input";
-    selType.style.minWidth = "140px";
-    selType.id = "shop.filter.type";
-    [
-      ["all", "All"],
-      ["seed", "Seeds"],
-      ["egg", "Eggs"],
-      ["tool", "Tools"],
-      ["decor", "Decor"]
-    ].forEach(([v, t]) => {
-      const o = document.createElement("option");
-      o.value = v;
-      o.textContent = t;
-      selType.appendChild(o);
-    });
-    selType.value = "all";
-    const lblRarity = ui.label("Rarity");
-    const selRarity = document.createElement("select");
-    selRarity.className = "qmm-input";
-    selRarity.style.minWidth = "160px";
-    selRarity.id = "shop.filter.rarity";
-    [
-      ["all", "All"],
-      ["common", "Common"],
-      ["uncommon", "Uncommon"],
-      ["rare", "Rare"],
-      ["legendary", "Legendary"],
-      ["mythical", "Mythical"],
-      ["divine", "Divine"],
-      ["celestial", "Celestial"]
-    ].forEach(([v, t]) => {
-      const o = document.createElement("option");
-      o.value = v;
-      o.textContent = t;
-      selRarity.appendChild(o);
-    });
-    selRarity.value = "all";
-    const followedBadge = document.createElement("div");
-    followedBadge.id = "shop.followedCount";
-    followedBadge.textContent = "Followed: 0";
-    followedBadge.title = "Items with Overlay enabled";
-    followedBadge.style.padding = "6px 10px";
-    followedBadge.style.borderRadius = "999px";
-    followedBadge.style.border = "1px solid #4445";
-    followedBadge.style.background = "#1f2328";
-    followedBadge.style.color = "#e7eef7";
-    followedBadge.style.fontWeight = "600";
-    followedBadge.style.marginLeft = "auto";
-    followedBadge.style.width = "115px";
-    header.append(lblType, selType, lblRarity, selRarity, followedBadge);
-    const card2 = document.createElement("div");
-    card2.style.border = "1px solid #4445";
-    card2.style.borderRadius = "10px";
-    card2.style.padding = "10px";
-    card2.style.background = "#0f1318";
-    card2.style.overflow = "hidden";
-    card2.style.display = "grid";
-    card2.style.gridTemplateRows = "auto 1fr";
-    card2.style.minHeight = "0";
-    wrap.appendChild(card2);
-    const headerGrid = document.createElement("div");
-    const COLS = "minmax(200px, 1fr) 9rem 7rem 8rem";
-    headerGrid.style.display = "grid";
-    headerGrid.style.gridTemplateColumns = COLS;
-    headerGrid.style.justifyContent = "start";
-    headerGrid.style.columnGap = "0";
-    headerGrid.style.borderBottom = "1px solid #ffffff1a";
-    headerGrid.style.padding = "0 0 4px 0";
-    headerGrid.style.position = "sticky";
-    headerGrid.style.top = "0";
-    headerGrid.append(
-      mkHeadCell("Item", "left"),
-      mkHeadCell("Rarity"),
-      mkHeadCell("Notify"),
-      mkHeadCell("Custom rules")
-    );
-    card2.appendChild(headerGrid);
-    const bodyGrid = document.createElement("div");
-    bodyGrid.style.display = "grid";
-    bodyGrid.style.gridTemplateColumns = COLS;
-    bodyGrid.style.justifyContent = "start";
-    bodyGrid.style.gridAutoRows = "auto";
-    bodyGrid.style.alignContent = "start";
-    bodyGrid.style.minHeight = "0";
-    bodyGrid.style.height = "100%";
-    bodyGrid.style.overflow = "auto";
-    bodyGrid.style.overscrollBehavior = "contain";
-    bodyGrid.style.width = "100%";
-    bodyGrid.style.scrollbarGutter = "stable";
-    card2.appendChild(bodyGrid);
-    const refreshRulesUI = () => {
-      const kids = Array.from(bodyGrid.children);
-      for (let i = 0; i + 3 < kids.length; i += 4) {
-        const itemCell = kids[i];
-        const ruleCell = kids[i + 3];
-        const id = itemCell?.dataset?.id;
-        if (!id) continue;
-        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
-      }
-    };
-    const softUpdateRenderedRows = (next) => {
-      const byId = new Map(next.rows.map((r) => [r.id, r]));
-      const kids = Array.from(bodyGrid.children);
-      for (let i = 0; i + 3 < kids.length; i += 4) {
-        const itemCell = kids[i];
-        const popupCell = kids[i + 2];
-        const ruleCell = kids[i + 3];
-        const id = itemCell.dataset.id;
-        const row = byId.get(id);
-        if (!row) continue;
-        const popupSwitch = popupCell.querySelector("label");
-        if (popupSwitch) setSwitchVisual(popupSwitch, !!row.popup);
-        itemCell.dataset.follow = row.followed ? "1" : "0";
-        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
-        const capped = NotifierService.isIdCapped?.(id) ?? false;
-        if (popupSwitch) setSwitchCapState(popupSwitch, capped);
-      }
-    };
-    const syncHeaderToScrollbar = () => {
-      const sbw = bodyGrid.offsetWidth - bodyGrid.clientWidth;
-      headerGrid.style.boxSizing = "border-box";
-      headerGrid.style.paddingRight = `${sbw}px`;
-    };
-    syncHeaderToScrollbar();
-    const resizeObserver = new ResizeObserver(syncHeaderToScrollbar);
-    resizeObserver.observe(bodyGrid);
-    const onResize = () => syncHeaderToScrollbar();
-    window.addEventListener("resize", onResize);
-    const lastSeenRefs = /* @__PURE__ */ new Map();
-    let state3 = null;
-    let renderedIds = /* @__PURE__ */ new Set();
-    const getFilters = () => ({
-      type: selType.value || "all",
-      rarity: selRarity.value || "all"
-    });
-    const passesFilters = (rows) => NotifierService.filterRows(rows, getFilters());
-    const mkItemCell = (row) => {
-      const wrap2 = document.createElement("div");
-      Object.assign(wrap2.style, {
-        display: "flex",
-        alignItems: "center",
-        gap: "6px",
-        padding: "4px 6px",
-        borderBottom: "1px solid #ffffff12"
-      });
-      const ICON = 40;
-      const iconWrap = document.createElement("div");
-      Object.assign(iconWrap.style, {
-        width: `${ICON}px`,
-        height: `${ICON}px`,
-        flex: `0 0 ${ICON}px`,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: "8px",
-        background: "#101820",
-        marginRight: "6px",
-        aspectRatio: "1 / 1"
-      });
-      const iconFallback = row.type === "Seed" ? "\u{1F331}" : row.type === "Egg" ? "\u{1F95A}" : row.type === "Tool" ? "\u{1F9F0}" : "\u{1F3E0}";
-      const icon = document.createElement("span");
-      icon.textContent = iconFallback;
-      icon.style.fontSize = `${ICON - 10}px`;
-      icon.setAttribute("aria-hidden", "true");
-      iconWrap.appendChild(icon);
-      const spriteCategories = row.type === "Seed" ? ["seed"] : row.type === "Egg" ? ["pet"] : row.type === "Tool" ? ["item"] : row.type === "Decor" ? ["decor"] : null;
-      if (spriteCategories) {
-        const baseId = row.id.split(":")[1] ?? row.name ?? row.id;
-        const candidatesSet = /* @__PURE__ */ new Set();
-        const addCandidate = (value) => {
-          if (!value) return;
-          const trimmed = value.trim();
-          if (!trimmed) return;
-          candidatesSet.add(trimmed);
-          candidatesSet.add(trimmed.replace(/\s+/g, ""));
-          if (row.type === "Seed" || row.type === "Egg") {
-            const stripped = trimmed.replace(/(?:seed|egg)$/i, "").trim();
-            if (stripped) {
-              candidatesSet.add(stripped);
-              candidatesSet.add(stripped.replace(/\s+/g, ""));
-            }
-          }
-        };
-        addCandidate(baseId);
-        addCandidate(row.id);
-        addCandidate(row.name);
-        const candidates = Array.from(candidatesSet).filter(Boolean);
-        if (candidates.length) {
-          attachSpriteIcon(iconWrap, spriteCategories, candidates, ICON, "alerts");
-        }
-      }
-      const col = document.createElement("div");
-      Object.assign(col.style, {
-        display: "flex",
-        flexDirection: "column",
-        gap: "2px",
-        lineHeight: "1.15",
-        minWidth: "0",
-        // autorise l'ellipsis
-        flex: "1 1 auto"
-      });
-      const title = document.createElement("div");
-      title.textContent = row.name;
-      Object.assign(title.style, {
-        fontWeight: "700",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap"
-      });
-      const sub = document.createElement("div");
-      sub.style.opacity = "0.7";
-      sub.style.fontSize = "12px";
-      sub.style.display = "flex";
-      sub.style.alignItems = "center";
-      sub.style.gap = "6px";
-      const sectionLabel3 = document.createElement("span");
-      sectionLabel3.textContent = row.type;
-      sub.appendChild(sectionLabel3);
-      if (row.weathers?.length || row.weatherOnly) {
-        const weathers = row.weathers && row.weathers.length ? row.weathers : [];
-        for (const w of weathers) {
-          const badge = document.createElement("span");
-          badge.textContent = w;
-          Object.assign(badge.style, {
-            padding: "1px 6px",
-            borderRadius: "999px",
-            fontSize: "10px",
-            fontWeight: "600",
-            background: row.weatherOnly ? "rgba(250, 204, 21, 0.18)" : "rgba(96, 165, 250, 0.18)",
-            color: row.weatherOnly ? "#facc15" : "#60a5fa",
-            border: row.weatherOnly ? "1px solid rgba(250, 204, 21, 0.35)" : "1px solid rgba(96, 165, 250, 0.35)"
-          });
-          badge.title = row.weatherOnly ? `Only available during ${w}` : `Also available during ${w}`;
-          sub.appendChild(badge);
-        }
-      }
-      const ruleHint = document.createElement("div");
-      ruleHint.dataset.role = "rule-hint";
-      ruleHint.style.display = "none";
-      ruleHint.style.opacity = "0.75";
-      ruleHint.style.fontSize = "11px";
-      ruleHint.style.whiteSpace = "nowrap";
-      ruleHint.style.overflow = "hidden";
-      ruleHint.style.textOverflow = "ellipsis";
-      ruleHint.style.minHeight = "1.2em";
-      ruleHint.style.visibility = "hidden";
-      col.append(title, sub, ruleHint);
-      wrap2.append(iconWrap, col);
-      return wrap2;
-    };
-    const addRow = (row) => {
-      const itemCell = mkItemCell(row);
-      itemCell.dataset.id = row.id;
-      itemCell.dataset.type = row.type;
-      itemCell.dataset.follow = row.followed ? "1" : "0";
-      itemCell.dataset.context = "shops";
-      const rarityCell = document.createElement("div");
-      rarityCell.style.display = "flex";
-      rarityCell.style.alignItems = "center";
-      rarityCell.style.justifyContent = "center";
-      rarityCell.style.borderBottom = "1px solid #ffffff12";
-      rarityCell.appendChild(rarityBadge(String(row.rarity ?? "\u2014")));
-      const popupSwitch = createSwitch((on) => {
-        try {
-          NotifierService.setPopup(row.id, !!on);
-        } catch {
-        }
-        const cur = NotifierService.getPref(row.id);
-        itemCell.dataset.follow = cur.followed ? "1" : "0";
-      });
-      setSwitchVisual(popupSwitch, !!row.popup);
-      popupSwitch.style.padding = "0";
-      const popupCell = wrapCell(popupSwitch);
-      const capped = NotifierService.isIdCapped?.(row.id) ?? false;
-      setSwitchCapState(popupSwitch, capped);
-      const gearBtn = ui.btn("", {
-        icon: "\u2699",
-        size: "sm",
-        tooltip: "Custom rule",
-        ariaLabel: `Custom rule for ${row.name}`
-      });
-      gearBtn.dataset.role = "rule";
-      gearBtn.classList.add("qws-rule-btn");
-      gearBtn.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        openRuleEditor(ui, {
-          id: row.id,
-          name: row.name,
-          type: row.type,
-          context: "shops"
-        }, gearBtn);
-      });
-      const ruleCell = wrapCell(gearBtn);
-      ruleCell.dataset.role = "rule-cell";
-      bodyGrid.append(itemCell, rarityCell, popupCell, ruleCell);
-      applyRuleState(itemCell, ruleCell, NotifierService.getRule(row.id));
-    };
-    function clearBody() {
-      closeRuleEditor();
-      bodyGrid.innerHTML = "";
-      renderedIds = /* @__PURE__ */ new Set();
-    }
-    function renderEmpty() {
-      const empty = document.createElement("div");
-      empty.textContent = "No items.";
-      empty.style.opacity = "0.75";
-      empty.style.gridColumn = "1 / -1";
-      empty.style.padding = "8px";
-      bodyGrid.appendChild(empty);
-    }
-    function rebuildGrid() {
-      clearBody();
-      if (!state3) {
-        renderEmpty();
-        return;
-      }
-      const rows = passesFilters(state3.rows);
-      if (!rows.length) {
-        renderEmpty();
-      } else {
-        rows.forEach((r) => {
-          addRow(r);
-          renderedIds.add(r.id);
-        });
-      }
-      refreshRulesUI();
-      followedBadge.textContent = `Followed: ${state3.counts.followed}`;
-      syncHeaderToScrollbar();
-    }
-    function softUpdateBadge(next) {
-      followedBadge.textContent = `Followed: ${next.counts.followed}`;
-    }
-    function filteredIdSet(s) {
-      const set3 = /* @__PURE__ */ new Set();
-      for (const r of passesFilters(s.rows)) set3.add(r.id);
-      return set3;
-    }
-    let unsub = null;
-    let unsubRules = null;
-    (async () => {
-      try {
-        await NotifierService.start();
-      } catch {
-      }
-      unsub = await NotifierService.onChangeNow((s) => {
-        const prev = state3;
-        state3 = s;
-        if (!prev) {
-          rebuildGrid();
-          softUpdateRenderedRows(state3);
-          return;
-        }
-        const prevIds = renderedIds;
-        const nextIds = filteredIdSet(s);
-        let needRebuild = false;
-        if (prevIds.size !== nextIds.size) needRebuild = true;
-        else {
-          for (const id of nextIds) if (!prevIds.has(id)) {
-            needRebuild = true;
-            break;
-          }
-        }
-        if (needRebuild) {
-          rebuildGrid();
-        } else {
-          softUpdateBadge(s);
-          softUpdateRenderedRows(s);
-        }
-      });
-      try {
-        unsubRules = await NotifierService.onRulesChangeNow(() => refreshRulesUI());
-      } catch {
-      }
-    })();
-    const onFilterChange = () => {
-      if (state3) rebuildGrid();
-    };
-    selType.onchange = onFilterChange;
-    selRarity.onchange = onFilterChange;
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          unsub?.();
-        } catch {
-        }
-        try {
-          unsubRules?.();
-        } catch {
-        }
-        try {
-          resizeObserver.disconnect();
-        } catch {
-        }
-        try {
-          window.removeEventListener("resize", onResize);
-        } catch {
-        }
-        try {
-          closeRuleEditor();
-        } catch {
-        }
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-  }
-  function renderPetAlertsTab(view, ui) {
-    view.innerHTML = "";
-    void PetAlertService.start().catch(() => {
-    });
-    const card2 = document.createElement("div");
-    Object.assign(card2.style, {
-      display: "grid",
-      gridTemplateColumns: "minmax(220px, 260px) minmax(0, 1fr)",
-      gap: "10px",
-      alignItems: "stretch",
-      height: "54vh",
-      overflow: "hidden",
-      border: "1px solid #4445",
-      borderRadius: "10px",
-      padding: "10px",
-      background: "#0f1318"
-    });
-    view.appendChild(card2);
-    const petList = document.createElement("div");
-    Object.assign(petList.style, {
-      display: "grid",
-      gridTemplateColumns: "1fr",
-      rowGap: "6px",
-      overflow: "auto",
-      padding: "6px",
-      border: "1px solid #4445",
-      borderRadius: "10px"
-    });
-    card2.appendChild(petList);
-    const right = document.createElement("div");
-    Object.assign(right.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-      overflow: "auto",
-      minHeight: "0"
-    });
-    card2.appendChild(right);
-    let pets = [];
-    let unsubPets2 = null;
-    let generalEnabled = PetAlertService.isGeneralEnabled();
-    const formRow = (labelTxt, control) => {
-      const { root } = ui.formRow(labelTxt, control, { labelWidth: "180px" });
-      return root;
-    };
-    const generalCard = ui.card("General notifications", { tone: "muted", align: "stretch" });
-    generalCard.body.style.display = "grid";
-    generalCard.body.style.gap = "10px";
-    const generalRow = ui.flexRow({ justify: "start", gap: 10 });
-    const generalSw = ui.switch(PetAlertService.isGeneralEnabled());
-    const generalLbl = document.createElement("div");
-    generalLbl.textContent = "Use a shared threshold for all pets";
-    generalLbl.style.opacity = "0.9";
-    generalRow.append(generalSw, generalLbl);
-    generalCard.body.append(formRow("Enable general", generalRow));
-    const generalInput = ui.inputNumber(1, 100, 1, PetAlertService.getGeneralThresholdPct());
-    generalCard.body.append(formRow("General threshold (%)", generalInput.wrap ?? generalInput));
-    right.appendChild(generalCard.root);
-    const syncGeneralUI = () => {
-      generalEnabled = PetAlertService.isGeneralEnabled();
-      generalSw.checked = generalEnabled;
-      generalInput.value = String(PetAlertService.getGeneralThresholdPct());
-    };
-    generalSw.onchange = () => {
-      PetAlertService.setGeneralEnabled(generalSw.checked);
-      syncGeneralUI();
-    };
-    generalInput.addEventListener("change", () => {
-      const next = Math.max(1, Math.min(100, Number(generalInput.value) || PetAlertService.getGeneralThresholdPct()));
-      generalInput.value = String(PetAlertService.setGeneralThresholdPct(next));
-    });
-    syncGeneralUI();
-    const renderPetList = () => {
-      petList.innerHTML = "";
-      if (!pets.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No active pets.";
-        empty.style.opacity = "0.75";
-        petList.appendChild(empty);
-        return;
-      }
-      for (const pet of pets) {
-        const slot = pet?.slot ?? {};
-        const name = String(slot?.name || slot?.petSpecies || "Pet");
-        const hunger = PetsService.getHungerPctFor(pet);
-        const hungerText = Number.isFinite(hunger) ? `${hunger}%` : "\u2014";
-        const row = document.createElement("div");
-        row.style.display = "flex";
-        row.style.alignItems = "center";
-        row.style.justifyContent = "space-between";
-        row.style.gap = "10px";
-        row.style.width = "100%";
-        row.style.textAlign = "left";
-        row.style.padding = "6px 8px";
-        row.style.borderRadius = "8px";
-        row.style.border = "1px solid #4445";
-        row.style.background = "#121820";
-        const left = document.createElement("div");
-        left.style.display = "flex";
-        left.style.alignItems = "center";
-        left.style.gap = "8px";
-        left.style.minWidth = "0";
-        const avatar2 = document.createElement("div");
-        avatar2.style.width = "40px";
-        avatar2.style.height = "40px";
-        avatar2.style.borderRadius = "8px";
-        avatar2.style.display = "inline-flex";
-        avatar2.style.alignItems = "center";
-        avatar2.style.justifyContent = "center";
-        avatar2.style.background = "#111821";
-        avatar2.style.border = "1px solid #1f2429";
-        avatar2.style.overflow = "hidden";
-        const useEmojiFallback = () => {
-          avatar2.replaceChildren();
-          const span = document.createElement("span");
-          span.textContent = "\u{1F43E}";
-          span.style.fontSize = "28px";
-          span.setAttribute("aria-hidden", "true");
-          avatar2.appendChild(span);
-        };
-        const setIcon = (species2, mutations2) => {
-          const speciesLabel = String(species2 ?? "").trim();
-          avatar2.replaceChildren();
-          if (!speciesLabel) {
-            useEmojiFallback();
-            return;
-          }
-          const span = document.createElement("span");
-          span.textContent = speciesLabel.charAt(0).toUpperCase() || "\u0110Y?\xF3";
-          span.style.fontSize = "28px";
-          span.setAttribute("aria-hidden", "true");
-          avatar2.appendChild(span);
-          attachSpriteIcon(avatar2, ["pet"], [speciesLabel], 36, "alerts-pet", {
-            mutations: Array.isArray(mutations2) ? mutations2 : void 0
-          });
-        };
-        const species = String(slot?.petSpecies || "");
-        const mutations = slot?.mutations ?? pet?.mutations;
-        setIcon(species, Array.isArray(mutations) ? mutations : void 0);
-        const titleWrap = document.createElement("div");
-        titleWrap.style.display = "flex";
-        titleWrap.style.flexDirection = "column";
-        titleWrap.style.gap = "2px";
-        titleWrap.style.minWidth = "0";
-        const title = document.createElement("div");
-        title.textContent = name;
-        title.style.fontWeight = "600";
-        title.style.overflow = "hidden";
-        title.style.textOverflow = "ellipsis";
-        title.style.whiteSpace = "nowrap";
-        titleWrap.append(title);
-        left.append(avatar2, titleWrap);
-        const hungerValue = document.createElement("div");
-        hungerValue.textContent = hungerText;
-        hungerValue.style.fontWeight = "700";
-        hungerValue.style.color = "#FFD84D";
-        row.append(left, hungerValue);
-        petList.appendChild(row);
-      }
-    };
-    (async () => {
-      try {
-        unsubPets2 = await PetsService.onPetsChangeNow((arr) => {
-          pets = Array.isArray(arr) ? arr.slice(0, 3) : [];
-          renderPetList();
-        });
-      } catch {
-        pets = [];
-        renderPetList();
-      }
-    })();
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          unsubPets2?.();
-        } catch {
-        }
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-  }
-  function renderWeatherTab(view, ui) {
-    view.innerHTML = "";
-    view.style.cssText = "";
-    const wrap = document.createElement("div");
-    Object.assign(wrap.style, {
-      display: "grid",
-      gridTemplateRows: "1fr",
-      height: "54vh",
-      overflow: "hidden",
-      minHeight: "0"
-    });
-    view.appendChild(wrap);
-    const card2 = document.createElement("div");
-    card2.style.border = "1px solid #4445";
-    card2.style.borderRadius = "10px";
-    card2.style.padding = "10px";
-    card2.style.background = "#0f1318";
-    card2.style.overflow = "hidden";
-    card2.style.display = "grid";
-    card2.style.gridTemplateRows = "auto 1fr";
-    card2.style.minHeight = "0";
-    wrap.appendChild(card2);
-    const headerGrid = document.createElement("div");
-    const COLS = "minmax(240px, 1fr) 9rem 7rem 8rem";
-    headerGrid.style.display = "grid";
-    headerGrid.style.gridTemplateColumns = COLS;
-    headerGrid.style.justifyContent = "start";
-    headerGrid.style.columnGap = "0";
-    headerGrid.style.borderBottom = "1px solid #ffffff1a";
-    headerGrid.style.padding = "0 0 4px 0";
-    headerGrid.style.position = "sticky";
-    headerGrid.style.top = "0";
-    headerGrid.append(
-      mkHeadCell("Weather", "left"),
-      mkHeadCell("Last seen"),
-      mkHeadCell("Notify"),
-      mkHeadCell("Custom rules")
-    );
-    card2.appendChild(headerGrid);
-    const bodyGrid = document.createElement("div");
-    bodyGrid.style.display = "grid";
-    bodyGrid.style.gridTemplateColumns = COLS;
-    bodyGrid.style.justifyContent = "start";
-    bodyGrid.style.gridAutoRows = "auto";
-    bodyGrid.style.alignContent = "start";
-    bodyGrid.style.minHeight = "0";
-    bodyGrid.style.height = "100%";
-    bodyGrid.style.overflow = "auto";
-    bodyGrid.style.overscrollBehavior = "contain";
-    bodyGrid.style.width = "100%";
-    bodyGrid.style.scrollbarGutter = "stable";
-    card2.appendChild(bodyGrid);
-    const weatherLastSeenRefs = /* @__PURE__ */ new Map();
-    const refreshRulesUI = () => {
-      const kids = Array.from(bodyGrid.children);
-      for (let i = 0; i + 3 < kids.length; i += 4) {
-        const itemCell = kids[i];
-        const ruleCell = kids[i + 3];
-        const id = itemCell?.dataset?.id;
-        if (!id) continue;
-        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
-      }
-    };
-    const syncHeaderToScrollbar = () => {
-      const sbw = bodyGrid.offsetWidth - bodyGrid.clientWidth;
-      headerGrid.style.boxSizing = "border-box";
-      headerGrid.style.paddingRight = `${sbw}px`;
-    };
-    syncHeaderToScrollbar();
-    const resizeObserver = new ResizeObserver(syncHeaderToScrollbar);
-    resizeObserver.observe(bodyGrid);
-    const onResize = () => syncHeaderToScrollbar();
-    window.addEventListener("resize", onResize);
-    const makeItemCell = (row) => {
-      const wrapCellDiv = document.createElement("div");
-      Object.assign(wrapCellDiv.style, {
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        padding: "6px",
-        borderBottom: "1px solid #ffffff12"
-      });
-      const ICON = 40;
-      const iconWrap = document.createElement("div");
-      Object.assign(iconWrap.style, {
-        width: `${ICON}px`,
-        height: `${ICON}px`,
-        flex: `0 0 ${ICON}px`,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: "8px",
-        background: "#101820"
-      });
-      const weatherIcon = document.createElement("span");
-      weatherIcon.textContent = row.name.trim().charAt(0) || "\u{1F326}";
-      weatherIcon.style.fontSize = `${ICON - 8}px`;
-      weatherIcon.setAttribute("aria-hidden", "true");
-      iconWrap.appendChild(weatherIcon);
-      const weatherCategories = ["ui", "weather", "mutation"];
-      const candidateSet = /* @__PURE__ */ new Set();
-      const addCandidate = (value) => {
-        if (!value) return;
-        const trimmed = value.trim();
-        if (trimmed) {
-          candidateSet.add(trimmed);
-          candidateSet.add(trimmed.replace(/\s+/g, ""));
-        }
-      };
-      addCandidate(row.name);
-      addCandidate(row.atomValue);
-      addCandidate(row.id);
-      const bases = Array.from(candidateSet).map((value) => value.replace(/icon$/i, ""));
-      const candidates = Array.from(
-        new Set(
-          bases.map((base) => `${base}Icon`).concat(Array.from(candidateSet))
-        ).values()
-      ).filter(Boolean);
-      if (candidates.length) {
-        attachSpriteIcon(iconWrap, weatherCategories, candidates, ICON, "alerts-weather");
-      }
-      const col = document.createElement("div");
-      Object.assign(col.style, {
-        display: "flex",
-        flexDirection: "column",
-        gap: "4px",
-        lineHeight: "1.2",
-        minWidth: "0",
-        flex: "1 1 auto"
-      });
-      const headerRow = document.createElement("div");
-      Object.assign(headerRow.style, {
-        display: "flex",
-        alignItems: "center",
-        gap: "6px",
-        minWidth: "0"
-      });
-      const title = document.createElement("div");
-      title.textContent = row.name;
-      Object.assign(title.style, {
-        fontWeight: "700",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-        flex: "1 1 auto"
-      });
-      headerRow.appendChild(title);
-      if (row.isCurrent) {
-        const badge = document.createElement("span");
-        badge.textContent = "Current";
-        Object.assign(badge.style, {
-          fontSize: "11px",
-          padding: "2px 6px",
-          borderRadius: "999px",
-          background: "#2b5cff33",
-          border: "1px solid #2b5cff66",
-          color: "#9cbcff",
-          fontWeight: "600",
-          whiteSpace: "nowrap"
-        });
-        headerRow.appendChild(badge);
-      }
-      const mutationsLabel = document.createElement("div");
-      mutationsLabel.textContent = "Mutations";
-      Object.assign(mutationsLabel.style, {
-        fontSize: "11px",
-        opacity: "0.7",
-        fontWeight: "600"
-      });
-      const mutationsList = document.createElement("div");
-      Object.assign(mutationsList.style, {
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "6px",
-        alignItems: "flex-start",
-        fontSize: "12px",
-        lineHeight: "1.3",
-        opacity: row.mutations.length ? "0.85" : "0.6"
-      });
-      if (row.mutations.length) {
-        for (const mutation of row.mutations) {
-          const chip = document.createElement("span");
-          chip.textContent = formatWeatherMutation(mutation);
-          Object.assign(chip.style, {
-            display: "inline-flex",
-            alignItems: "center",
-            padding: "2px 8px",
-            borderRadius: "999px",
-            background: "#ffffff12",
-            whiteSpace: "nowrap"
-          });
-          mutationsList.appendChild(chip);
-        }
-      } else {
-        const chip = document.createElement("span");
-        chip.textContent = "No mutation effects.";
-        chip.style.whiteSpace = "nowrap";
-        mutationsList.appendChild(chip);
-      }
-      const ruleHint = document.createElement("div");
-      ruleHint.dataset.role = "rule-hint";
-      ruleHint.style.opacity = "0.75";
-      ruleHint.style.fontSize = "11px";
-      ruleHint.style.whiteSpace = "nowrap";
-      ruleHint.style.overflow = "hidden";
-      ruleHint.style.textOverflow = "ellipsis";
-      ruleHint.style.minHeight = "1.2em";
-      ruleHint.style.visibility = "hidden";
-      col.append(headerRow, mutationsLabel, mutationsList, ruleHint);
-      wrapCellDiv.append(iconWrap, col);
-      if (row.isCurrent) {
-        wrapCellDiv.style.background = "linear-gradient(180deg, #1b2735, #141d25)";
-        wrapCellDiv.style.borderRadius = "8px";
-      }
-      return wrapCellDiv;
-    };
-    const addRow = (row) => {
-      const itemCell = makeItemCell(row);
-      itemCell.dataset.id = row.id;
-      itemCell.dataset.context = "weather";
-      itemCell.dataset.current = row.isCurrent ? "1" : "0";
-      const lastSeenInfo = document.createElement("div");
-      const { label: label2, title } = formatLastSeen(row.lastSeen, row.isCurrent);
-      lastSeenInfo.textContent = label2;
-      lastSeenInfo.title = title;
-      lastSeenInfo.style.fontWeight = "600";
-      lastSeenInfo.style.opacity = label2 === "Never" ? "0.7" : "1";
-      lastSeenInfo.style.whiteSpace = "nowrap";
-      const lastSeenCell = wrapCell(lastSeenInfo);
-      weatherLastSeenRefs.set(row.id, lastSeenInfo);
-      const notifySwitch = createSwitch((on) => {
-        try {
-          NotifierService.setWeatherNotify(row.id, !!on);
-        } catch {
-        }
-      });
-      setSwitchVisual(notifySwitch, !!row.notify);
-      notifySwitch.style.padding = "0";
-      const notifyCell = wrapCell(notifySwitch);
-      const gearBtn = ui.btn("", {
-        icon: "\u2699",
-        size: "sm",
-        tooltip: "Custom rule",
-        ariaLabel: `Custom rule for ${row.name}`
-      });
-      gearBtn.dataset.role = "rule";
-      gearBtn.classList.add("qws-rule-btn");
-      gearBtn.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        openRuleEditor(ui, {
-          id: row.id,
-          name: row.name,
-          type: row.type,
-          context: "weather"
-        }, gearBtn);
-      });
-      const ruleCell = wrapCell(gearBtn);
-      ruleCell.dataset.role = "rule-cell";
-      bodyGrid.append(itemCell, lastSeenCell, notifyCell, ruleCell);
-      applyRuleState(itemCell, ruleCell, NotifierService.getRule(row.id));
-    };
-    const clearGrid = () => {
-      closeRuleEditor();
-      bodyGrid.innerHTML = "";
-      weatherLastSeenRefs.clear();
-    };
-    const renderEmpty = () => {
-      const empty = document.createElement("div");
-      empty.textContent = "No weather entries.";
-      empty.style.opacity = "0.75";
-      empty.style.gridColumn = "1 / -1";
-      empty.style.padding = "8px";
-      bodyGrid.appendChild(empty);
-    };
-    let state3 = null;
-    let stateSig = "";
-    const updateDynamicWeatherStats = () => {
-      if (!state3) return;
-      for (const row of state3.rows) {
-        const target = weatherLastSeenRefs.get(row.id);
-        if (target) {
-          const { label: label2, title } = formatLastSeen(row.lastSeen, row.isCurrent);
-          target.textContent = label2;
-          target.title = title;
-          target.style.opacity = label2 === "Never" ? "0.7" : "1";
-        }
-      }
-    };
-    const rebuildGrid = () => {
-      clearGrid();
-      if (!state3 || !state3.rows.length) {
-        renderEmpty();
-      } else {
-        state3.rows.forEach(addRow);
-        refreshRulesUI();
-      }
-      syncHeaderToScrollbar();
-      updateDynamicWeatherStats();
-    };
-    let unsubWeather = null;
-    let unsubRules = null;
-    (async () => {
-      try {
-        await NotifierService.start();
-      } catch {
-      }
-      try {
-        unsubWeather = await NotifierService.onWeatherChangeNow((next) => {
-          state3 = next;
-          stateSig = weatherStateSignature(next.rows);
-          rebuildGrid();
-        });
-      } catch {
-      }
-      try {
-        unsubRules = await NotifierService.onRulesChangeNow(() => refreshRulesUI());
-      } catch {
-      }
-    })();
-    const refreshWeatherState = async () => {
-      try {
-        const next = await NotifierService.getWeatherState();
-        const nextSig = weatherStateSignature(next.rows);
-        const changed = nextSig !== stateSig;
-        state3 = next;
-        stateSig = nextSig;
-        if (changed) rebuildGrid();
-        else updateDynamicWeatherStats();
-      } catch {
-      }
-    };
-    const dynamicTimer = window.setInterval(updateDynamicWeatherStats, 3e4);
-    const weatherRefreshTimer = window.setInterval(() => {
-      void refreshWeatherState();
-    }, 6e4);
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          unsubWeather?.();
-        } catch {
-        }
-        try {
-          unsubRules?.();
-        } catch {
-        }
-        try {
-          resizeObserver.disconnect();
-        } catch {
-        }
-        try {
-          window.removeEventListener("resize", onResize);
-        } catch {
-        }
-        try {
-          window.clearInterval(dynamicTimer);
-        } catch {
-        }
-        try {
-          window.clearInterval(weatherRefreshTimer);
-        } catch {
-        }
-        try {
-          closeRuleEditor();
-        } catch {
-        }
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-  }
-  function renderNotifierMenu(root) {
-    const ui = new Menu({ id: "alerts", compact: true, windowSelector: ".qws-win" });
-    ui.addTab("shops", "\u{1F6D2} Shops", (view) => renderShopTab(view, ui));
-    ui.addTab("weather", "\u{1F326} Weather", (view) => renderWeatherTab(view, ui));
-    ui.addTab("pets", "\u{1F43E} Pets", (view) => renderPetAlertsTab(view, ui));
-    ui.addTab("settings", "\u2699\uFE0F Settings", (view) => renderSettingsTab(view, ui));
-    ui.mount(root);
-  }
-
-  // src/ui/menus/locker.ts
   var NO_WEATHER_TAG = "NoWeatherEffect";
   var SEED_EMOJIS = [
     "\u{1F955}",
@@ -58034,2072 +60073,6 @@ next: ${next}`;
       window.addEventListener("gemini:data-updated", onDataUpdated);
     });
     ui.mount(container);
-  }
-
-  // src/ui/menus/pets.ts
-  init_atoms();
-
-  // src/ui/menus/petsHatch.ts
-  init_atoms();
-  var NF_INT = new Intl.NumberFormat("en-US");
-  var formatInt = (value) => NF_INT.format(Math.max(0, Math.floor(value || 0)));
-  var RARITY_ORDER2 = [
-    rarity2.Common,
-    rarity2.Uncommon,
-    rarity2.Rare,
-    rarity2.Legendary,
-    rarity2.Mythic,
-    rarity2.Divine,
-    rarity2.Celestial
-  ];
-  var RARITY_BORDER_COLORS = {
-    [rarity2.Common]: "#E7E7E7",
-    [rarity2.Uncommon]: "#67BD4D",
-    [rarity2.Rare]: "#0071C6",
-    [rarity2.Legendary]: "#FFC734",
-    [rarity2.Mythic]: "#9944A7",
-    [rarity2.Divine]: "#FF7835",
-    [rarity2.Celestial]: "#7C2AE8"
-  };
-  function createStatList(columns, rows) {
-    const container = document.createElement("div");
-    container.className = "stats-list";
-    const toTemplate = (column) => {
-      if (column.width) return column.width;
-      if (column.minWidth) return `minmax(${column.minWidth}, 1fr)`;
-      return "minmax(0, 1fr)";
-    };
-    const template = columns.map(toTemplate).join(" ");
-    const header = document.createElement("div");
-    header.className = "stats-list__row stats-list__row--header";
-    header.style.gridTemplateColumns = template;
-    for (const column of columns) {
-      const cell = document.createElement("span");
-      cell.className = "stats-list__cell";
-      const align = column.align ?? "left";
-      if (align !== "left") cell.classList.add(`stats-list__cell--align-${align}`);
-      if (column.headerClassName) cell.classList.add(column.headerClassName);
-      cell.textContent = column.label;
-      header.appendChild(cell);
-    }
-    container.appendChild(header);
-    for (const row of rows) {
-      const rowEl = document.createElement("div");
-      rowEl.className = "stats-list__row";
-      rowEl.style.gridTemplateColumns = template;
-      row.forEach((cellData, index) => {
-        const column = columns[index];
-        const cell = document.createElement("span");
-        cell.className = "stats-list__cell";
-        const align = cellData.align ?? column.align ?? "left";
-        if (align !== "left") {
-          cell.classList.add(`stats-list__cell--align-${align}`);
-          if (align === "right") cell.classList.add("qmm-num");
-        }
-        if (cellData.hint) cell.title = cellData.hint;
-        const hasContent = Boolean(cellData.content);
-        if (cellData.content) {
-          cell.appendChild(cellData.content);
-        }
-        if (cellData.text != null) {
-          if (hasContent) {
-            const textSpan = document.createElement("span");
-            textSpan.textContent = cellData.text;
-            cell.appendChild(textSpan);
-          } else {
-            cell.textContent = cellData.text;
-          }
-        } else if (!hasContent) {
-          cell.textContent = "";
-        }
-        rowEl.appendChild(cell);
-      });
-      container.appendChild(rowEl);
-    }
-    return container;
-  }
-  function isPlainRecord(value) {
-    return typeof value === "object" && value !== null;
-  }
-  function getInventoryItems(raw) {
-    if (Array.isArray(raw)) return raw;
-    if (isPlainRecord(raw) && Array.isArray(raw.items)) {
-      return raw.items;
-    }
-    return [];
-  }
-  function determinePetMutationType(mutations) {
-    if (!Array.isArray(mutations)) return "normal";
-    let hasGold = false;
-    for (const mutation of mutations) {
-      if (typeof mutation !== "string") continue;
-      const normalized = mutation.trim().toLowerCase();
-      if (normalized === "rainbow") {
-        return "rainbow";
-      }
-      if (normalized === "gold") {
-        hasGold = true;
-      }
-    }
-    return hasGold ? "gold" : "normal";
-  }
-  function isPetStatsSectionEmpty(stats) {
-    const entries = Object.values(stats.pets?.hatchedByType ?? {});
-    if (entries.length === 0) return true;
-    return entries.every((counts) => {
-      if (!counts) return true;
-      const normal = Number(counts.normal) || 0;
-      const gold = Number(counts.gold) || 0;
-      const rainbow = Number(counts.rainbow) || 0;
-      return normal <= 0 && gold <= 0 && rainbow <= 0;
-    });
-  }
-  async function initPets(stats) {
-    if (!isPetStatsSectionEmpty(stats)) return;
-    let inventory;
-    try {
-      inventory = await myInventory.get();
-    } catch (error) {
-      console.warn("[PetsHatch] Failed to read inventory data", error);
-      inventory = null;
-    }
-    let activePetsRaw;
-    try {
-      activePetsRaw = await myPetInfos.get();
-    } catch (error) {
-      console.warn("[PetsHatch] Failed to read active pet data", error);
-      activePetsRaw = null;
-    }
-    const items = getInventoryItems(inventory);
-    const activePets2 = Array.isArray(activePetsRaw) ? activePetsRaw : [];
-    if (items.length === 0 && activePets2.length === 0) return;
-    const countsBySpecies = /* @__PURE__ */ new Map();
-    for (const item of items) {
-      if (!isPlainRecord(item)) continue;
-      const itemType = typeof item.itemType === "string" ? item.itemType.toLowerCase() : "";
-      if (itemType !== "pet") continue;
-      const speciesRaw = typeof item.petSpecies === "string" ? item.petSpecies : null;
-      const species = speciesRaw?.trim();
-      if (!species) continue;
-      const key2 = species.toLowerCase();
-      const counts = countsBySpecies.get(key2) ?? { normal: 0, gold: 0, rainbow: 0 };
-      const rarityKey = determinePetMutationType(item.mutations);
-      counts[rarityKey] = (counts[rarityKey] ?? 0) + 1;
-      countsBySpecies.set(key2, counts);
-    }
-    for (const entry of activePets2) {
-      if (!isPlainRecord(entry)) continue;
-      const slot = isPlainRecord(entry.slot) ? entry.slot : null;
-      if (!slot) continue;
-      const speciesRaw = typeof slot.petSpecies === "string" ? slot.petSpecies : null;
-      const species = speciesRaw?.trim();
-      if (!species) continue;
-      const key2 = species.toLowerCase();
-      const counts = countsBySpecies.get(key2) ?? { normal: 0, gold: 0, rainbow: 0 };
-      const rarityKey = determinePetMutationType(slot.mutations);
-      counts[rarityKey] = (counts[rarityKey] ?? 0) + 1;
-      countsBySpecies.set(key2, counts);
-    }
-    let hasCounts = false;
-    for (const counts of countsBySpecies.values()) {
-      if ((counts.normal ?? 0) > 0 || (counts.gold ?? 0) > 0 || (counts.rainbow ?? 0) > 0) {
-        hasCounts = true;
-        break;
-      }
-    }
-    if (!hasCounts) return;
-    StatsService.update((draft) => {
-      if (!isPetStatsSectionEmpty(draft)) return;
-      for (const [speciesKey, counts] of countsBySpecies) {
-        if ((counts.normal ?? 0) <= 0 && (counts.gold ?? 0) <= 0 && (counts.rainbow ?? 0) <= 0) {
-          continue;
-        }
-        const entry = draft.pets.hatchedByType[speciesKey] ?? { normal: 0, gold: 0, rainbow: 0 };
-        entry.normal = (entry.normal ?? 0) + (counts.normal ?? 0);
-        entry.gold = (entry.gold ?? 0) + (counts.gold ?? 0);
-        entry.rainbow = (entry.rainbow ?? 0) + (counts.rainbow ?? 0);
-        draft.pets.hatchedByType[speciesKey] = entry;
-      }
-    });
-  }
-  function normalizePetRarity(raw) {
-    if (typeof raw !== "string") return rarity2.Common;
-    if (raw === "Mythic") return rarity2.Mythic;
-    return raw;
-  }
-  function createPetRarityGroups(stats) {
-    const map2 = /* @__PURE__ */ new Map();
-    for (const rarityKey of RARITY_ORDER2) {
-      map2.set(rarityKey, []);
-    }
-    const seen = /* @__PURE__ */ new Set();
-    for (const species of Object.keys(petCatalog2)) {
-      const lower = species.toLowerCase();
-      if (seen.has(lower)) continue;
-      seen.add(lower);
-      const info = petCatalog2[species];
-      const rarityValue = normalizePetRarity(info?.rarity);
-      map2.get(rarityValue)?.push(species);
-    }
-    for (const speciesKey of Object.keys(stats.pets?.hatchedByType ?? {})) {
-      const lower = speciesKey.toLowerCase();
-      if (seen.has(lower)) continue;
-      seen.add(lower);
-      const display = speciesKey.charAt(0).toUpperCase() + speciesKey.slice(1);
-      map2.get(rarity2.Common)?.push(display);
-    }
-    for (const list of map2.values()) {
-      list.sort((a, b) => a.localeCompare(b));
-    }
-    return map2;
-  }
-  function createPetSpeciesCell(species) {
-    const wrapper = document.createElement("span");
-    wrapper.className = "stats-pet__species";
-    const iconWrap = document.createElement("span");
-    iconWrap.className = "stats-pet__icon";
-    iconWrap.textContent = species?.trim().charAt(0).toUpperCase() || "?";
-    iconWrap.setAttribute("aria-hidden", "true");
-    attachSpriteIcon(iconWrap, ["pet"], species, 28, "stats-pet");
-    const label2 = document.createElement("span");
-    label2.className = "stats-pet__label";
-    label2.textContent = species;
-    wrapper.append(iconWrap, label2);
-    return { content: wrapper };
-  }
-  function createPetTotalValueCell(total) {
-    const value = document.createElement("span");
-    value.className = "stats-pet__total-value qmm-num";
-    value.textContent = formatInt(total);
-    return { content: value, align: "center" };
-  }
-  function createPetTotalsLabelCell(label2) {
-    const value = document.createElement("span");
-    value.className = "stats-pet__total-label";
-    value.textContent = label2;
-    return { content: value };
-  }
-  function renderGroups(body, stats) {
-    body.innerHTML = "";
-    const groups2 = createPetRarityGroups(stats);
-    for (const rarityKey of RARITY_ORDER2) {
-      const speciesList = groups2.get(rarityKey) ?? [];
-      if (!speciesList.length) continue;
-      const group = document.createElement("div");
-      group.className = "stats-pet-group";
-      group.style.setProperty("--stats-pet-group-border-color", RARITY_BORDER_COLORS[rarityKey]);
-      const summary = document.createElement("div");
-      summary.className = "stats-pet-group__summary";
-      const badge = rarityBadge(rarityKey);
-      badge.style.margin = "0";
-      summary.appendChild(badge);
-      group.appendChild(summary);
-      const content = document.createElement("div");
-      content.className = "stats-pet-group__content";
-      const columns = [
-        { label: "Species", width: "2.2fr" },
-        { label: "Normal", align: "center", width: "1fr" },
-        { label: "Gold", align: "center", width: "1fr", headerClassName: "stats-list__header-label--gold" },
-        {
-          label: "Rainbow",
-          align: "center",
-          width: "1fr",
-          headerClassName: "stats-list__header-label--rainbow"
-        },
-        { label: "Total", align: "center", width: "1fr" }
-      ];
-      const rows = [];
-      let totalNormal = 0;
-      let totalGold = 0;
-      let totalRainbow = 0;
-      for (const species of speciesList) {
-        const key2 = species.toLowerCase();
-        const counts = stats.pets.hatchedByType[key2] ?? { normal: 0, gold: 0, rainbow: 0 };
-        totalNormal += counts.normal;
-        totalGold += counts.gold;
-        totalRainbow += counts.rainbow;
-        const total = counts.normal + counts.gold + counts.rainbow;
-        rows.push([
-          createPetSpeciesCell(species),
-          { text: formatInt(counts.normal), align: "center" },
-          { text: formatInt(counts.gold), align: "center" },
-          { text: formatInt(counts.rainbow), align: "center" },
-          createPetTotalValueCell(total)
-        ]);
-      }
-      const totalAll = totalNormal + totalGold + totalRainbow;
-      rows.push([
-        createPetTotalsLabelCell("Total"),
-        createPetTotalValueCell(totalNormal),
-        createPetTotalValueCell(totalGold),
-        createPetTotalValueCell(totalRainbow),
-        createPetTotalValueCell(totalAll)
-      ]);
-      content.appendChild(createStatList(columns, rows));
-      group.appendChild(content);
-      body.appendChild(group);
-    }
-  }
-  function renderHatchTab(view, ui) {
-    const prevCleanup = view.__cleanup__;
-    if (typeof prevCleanup === "function") {
-      try {
-        prevCleanup();
-      } catch {
-      }
-      view.__cleanup__ = void 0;
-    }
-    view.innerHTML = "";
-    const wrap = document.createElement("div");
-    wrap.style.display = "grid";
-    wrap.style.gap = "12px";
-    wrap.style.alignContent = "start";
-    wrap.style.minHeight = "0";
-    wrap.style.maxHeight = "54vh";
-    wrap.style.overflow = "auto";
-    view.appendChild(wrap);
-    const card2 = ui.card("\u{1F43E} Hatched pets", {
-      tone: "muted",
-      align: "stretch",
-      subtitle: "Per-species hatch counts (normal / gold / rainbow)"
-    });
-    wrap.appendChild(card2.root);
-    const repaint = () => renderGroups(card2.body, StatsService.getSnapshot());
-    let rafId = null;
-    const cleanup2 = () => {
-      try {
-        unsubscribe2();
-      } catch {
-      }
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-    };
-    const unsubscribe2 = StatsService.subscribe(() => {
-      if (!view.isConnected) {
-        cleanup2();
-        return;
-      }
-      if (rafId !== null) return;
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-        repaint();
-      });
-    });
-    view.__cleanup__ = cleanup2;
-    initPets(StatsService.getSnapshot()).catch((error) => {
-      console.error("[PetsHatch] Failed to initialize pet stats", error);
-    });
-    repaint();
-  }
-
-  // src/ui/menus/pets.ts
-  function getAbilityChipColors2(id) {
-    const key2 = String(id || "");
-    const base = (PetsService.getAbilityNameWithoutLevel?.(key2) || "").replace(/[\s\-_]+/g, "").toLowerCase();
-    const is = (prefix) => key2.startsWith(prefix) || base === prefix.toLowerCase();
-    if (is("MoonKisser")) {
-      return {
-        bg: "rgba(250,166,35,0.9)",
-        hover: "rgba(250,166,35,1)"
-      };
-    }
-    if (is("DawnKisser")) {
-      return {
-        bg: "rgba(162,92,242,0.9)",
-        hover: "rgba(162,92,242,1)"
-      };
-    }
-    if (is("ProduceScaleBoost") || is("SnowyCropSizeBoost")) {
-      return { bg: "rgba(34,139,34,0.9)", hover: "rgba(34,139,34,1)" };
-    }
-    if (is("PlantGrowthBoost") || is("SnowyPlantGrowthBoost") || is("DawnPlantGrowthBoost") || is("AmberPlantGrowthBoost")) {
-      return { bg: "rgba(0,128,128,0.9)", hover: "rgba(0,128,128,1)" };
-    }
-    if (is("EggGrowthBoost") || is("SnowyEggGrowthBoost")) {
-      return { bg: "rgba(180,90,240,0.9)", hover: "rgba(180,90,240,1)" };
-    }
-    if (is("PetAgeBoost")) {
-      return { bg: "rgba(147,112,219,0.9)", hover: "rgba(147,112,219,1)" };
-    }
-    if (is("PetHatchSizeBoost")) {
-      return { bg: "rgba(128,0,128,0.9)", hover: "rgba(128,0,128,1)" };
-    }
-    if (is("PetXpBoost") || is("SnowyPetXpBoost")) {
-      return { bg: "rgba(30,144,255,0.9)", hover: "rgba(30,144,255,1)" };
-    }
-    if (is("HungerBoost") || is("SnowyHungerBoost")) {
-      return { bg: "rgba(255,20,147,0.9)", hover: "rgba(255,20,147,1)" };
-    }
-    if (is("HungerRestore") || is("SnowyHungerRestore")) {
-      return { bg: "rgba(255,105,180,0.9)", hover: "rgba(255,105,180,1)" };
-    }
-    if (is("SellBoost")) {
-      return { bg: "rgba(220,20,60,0.9)", hover: "rgba(220,20,60,1)" };
-    }
-    if (is("CoinFinder") || is("SnowyCoinFinder")) {
-      return { bg: "rgba(180,150,0,0.9)", hover: "rgba(180,150,0,1)" };
-    }
-    if (is("SeedFinder")) {
-      return {
-        bg: "rgba(168,102,38,0.9)",
-        hover: "rgba(168,102,38,1)"
-      };
-    }
-    if (is("ProduceMutationBoost") || is("SnowyCropMutationBoost") || is("DawnBoost") || is("AmberMoonBoost")) {
-      return { bg: "rgba(140,15,70,0.9)", hover: "rgba(140,15,70,1)" };
-    }
-    if (is("PetMutationBoost")) {
-      return { bg: "rgba(160,50,100,0.9)", hover: "rgba(160,50,100,1)" };
-    }
-    if (is("DoubleHarvest")) {
-      return { bg: "rgba(0,120,180,0.9)", hover: "rgba(0,120,180,1)" };
-    }
-    if (is("DoubleHatch")) {
-      return { bg: "rgba(60,90,180,0.9)", hover: "rgba(60,90,180,1)" };
-    }
-    if (is("ProduceEater")) {
-      return { bg: "rgba(255,69,0,0.9)", hover: "rgba(255,69,0,1)" };
-    }
-    if (is("ProduceRefund")) {
-      return { bg: "rgba(255,99,71,0.9)", hover: "rgba(255,99,71,1)" };
-    }
-    if (is("PetRefund")) {
-      return { bg: "rgba(0,80,120,0.9)", hover: "rgba(0,80,120,1)" };
-    }
-    if (is("Copycat")) {
-      return { bg: "rgba(255,140,0,0.9)", hover: "rgba(255,140,0,1)" };
-    }
-    if (is("GoldGranter")) {
-      return {
-        bg: "linear-gradient(135deg, rgba(225,200,55,0.9) 0%, rgba(225,180,10,0.9) 40%, rgba(215,185,45,0.9) 70%, rgba(210,185,45,0.9) 100%)",
-        hover: "linear-gradient(135deg, rgba(220,200,70,1) 0%, rgba(210,175,5,1) 40%, rgba(210,185,55,1) 70%, rgba(200,175,30,1) 100%)"
-      };
-    }
-    if (is("RainbowGranter")) {
-      return {
-        bg: "linear-gradient(45deg, rgba(200,0,0,0.9), rgba(200,120,0,0.9), rgba(160,170,30,0.9), rgba(60,170,60,0.9), rgba(50,170,170,0.9), rgba(40,150,180,0.9), rgba(20,90,180,0.9), rgba(70,30,150,0.9))",
-        hover: "linear-gradient(45deg, rgba(200,0,0,1), rgba(200,120,0,1), rgba(160,170,30,1), rgba(60,170,60,1), rgba(50,170,170,1), rgba(40,150,180,1), rgba(20,90,180,1), rgba(70,30,150,1))"
-      };
-    }
-    if (is("RainDance")) {
-      return { bg: "rgba(76,204,204,0.9)", hover: "rgba(76,204,204,1)" };
-    }
-    if (is("SnowGranter")) {
-      return { bg: "rgba(144,184,204,0.9)", hover: "rgba(144,184,204,1)" };
-    }
-    if (is("FrostGranter")) {
-      return { bg: "rgba(148,160,204,0.9)", hover: "rgba(148,160,204,1)" };
-    }
-    if (is("DawnlitGranter")) {
-      return { bg: "rgba(196,124,180,0.9)", hover: "rgba(196,124,180,1)" };
-    }
-    if (is("AmberlitGranter")) {
-      return { bg: "rgba(204,144,96,0.9)", hover: "rgba(204,144,96,1)" };
-    }
-    return {
-      bg: "rgba(100,100,100,0.9)",
-      hover: "rgba(150,150,150,1)"
-    };
-  }
-  function renderManagerTab(view, ui) {
-    view.innerHTML = "";
-    let teams = [];
-    let selectedId = null;
-    let activeTeamId = null;
-    let activePetIdSet = /* @__PURE__ */ new Set();
-    let isApplyingTeam = false;
-    let draggingIdx = null;
-    let overInsertIdx = null;
-    let draggingHeight = 0;
-    let invCacheMap = null;
-    const lastRenderedSlotIds = [null, null, null];
-    const miniSpriteCache = /* @__PURE__ */ new Map();
-    async function buildPetRenderMap() {
-      let inv = await PetsService.getInventoryPets().catch(() => null);
-      if (!inv || inv.length === 0) {
-      } else {
-        invCacheMap = /* @__PURE__ */ new Map();
-        for (const p of inv) {
-          const id = p?.id != null ? String(p.id) : "";
-          if (id) invCacheMap.set(id, p);
-        }
-      }
-      const map2 = new Map(invCacheMap ?? /* @__PURE__ */ new Map());
-      try {
-        const pets = await PetsService.getPets();
-        const list = Array.isArray(pets) ? pets : [];
-        for (const p of list) {
-          const slot = p?.slot ?? null;
-          const id = String(slot?.id || "");
-          if (!id || map2.has(id)) continue;
-          map2.set(id, {
-            id,
-            itemType: "Pet",
-            petSpecies: String(slot?.petSpecies || "").trim(),
-            name: slot?.name ?? null,
-            xp: Number.isFinite(slot?.xp) ? Number(slot.xp) : 0,
-            hunger: Number.isFinite(slot?.hunger) ? Number(slot.hunger) : 0,
-            mutations: Array.isArray(slot?.mutations) ? slot.mutations.slice() : [],
-            targetScale: Number.isFinite(slot?.targetScale) ? Number(slot.targetScale) : void 0,
-            abilities: Array.isArray(slot?.abilities) ? slot.abilities.slice() : []
-          });
-        }
-      } catch {
-      }
-      return map2;
-    }
-    const mkMiniIcon = (pet) => {
-      const size = 18;
-      const holder = document.createElement("div");
-      Object.assign(holder.style, {
-        width: `${size}px`,
-        height: `${size}px`,
-        borderRadius: "6px",
-        background: "#161b22",
-        border: "1px solid #ffffff10",
-        display: "grid",
-        placeItems: "center",
-        overflow: "hidden",
-        boxShadow: "0 1px 0 #000 inset",
-        fontSize: "10px",
-        color: "#e2e8f0"
-      });
-      if (!pet) {
-        holder.style.opacity = "0.35";
-        holder.textContent = "\xB7";
-        return holder;
-      }
-      const species = pet.petSpecies || "";
-      const mutKey = Array.isArray(pet.mutations) ? pet.mutations.join(",") : "";
-      const cacheKey = `${species}|${mutKey}`;
-      const applyImg = (dataUrl) => {
-        const img = document.createElement("img");
-        img.src = dataUrl;
-        img.width = size;
-        img.height = size;
-        img.alt = "";
-        img.draggable = false;
-        img.style.width = `${size}px`;
-        img.style.height = `${size}px`;
-        img.style.objectFit = "contain";
-        img.style.imageRendering = "auto";
-        holder.replaceChildren(img);
-      };
-      const cached = miniSpriteCache.get(cacheKey);
-      if (cached) {
-        applyImg(cached);
-        return holder;
-      }
-      attachSpriteIcon(holder, ["pet"], species, size, "pet-team-mini", {
-        mutations: pet.mutations,
-        onSpriteApplied: (img) => {
-          miniSpriteCache.set(cacheKey, img.src);
-        },
-        onNoSpriteFound: () => {
-          holder.textContent = (species || pet.name || "pet").charAt(0).toUpperCase();
-        }
-      });
-      return holder;
-    };
-    function applySubtleBorder(btn, hex, alpha = 0.22) {
-      const toRgba = (h, a) => {
-        const m = h.replace("#", "");
-        const r = parseInt(m.length === 3 ? m[0] + m[0] : m.slice(0, 2), 16);
-        const g = parseInt(m.length === 3 ? m[1] + m[1] : m.slice(2, 4), 16);
-        const b = parseInt(m.length === 3 ? m[2] + m[2] : m.slice(4, 6), 16);
-        return `rgba(${r},${g},${b},${a})`;
-      };
-      const border = toRgba(hex, alpha);
-      btn.style.border = `1px solid ${border}`;
-      btn.style.background = "#1f2328";
-      btn.style.boxShadow = "none";
-      btn.style.transition = "none";
-    }
-    const framed = (title, content) => {
-      const cardSection = ui.card(title, { tone: "muted", align: "center" });
-      cardSection.body.append(content);
-      cardSection.root.style.maxWidth = "720px";
-      return cardSection.root;
-    };
-    const row = (opts) => ui.flexRow({ justify: opts?.justify ?? "center" });
-    const wrap = document.createElement("div");
-    wrap.style.display = "grid";
-    wrap.style.gridTemplateColumns = "minmax(220px, 280px) minmax(0, 1fr)";
-    wrap.style.gap = "10px";
-    wrap.style.alignItems = "stretch";
-    wrap.style.height = "54vh";
-    wrap.style.overflow = "hidden";
-    view.appendChild(wrap);
-    const left = document.createElement("div");
-    left.style.display = "grid";
-    left.style.gridTemplateRows = "1fr auto";
-    left.style.gap = "8px";
-    left.style.minHeight = "0";
-    wrap.appendChild(left);
-    const teamList = document.createElement("div");
-    teamList.style.display = "flex";
-    teamList.style.flexDirection = "column";
-    teamList.style.gap = "6px";
-    teamList.style.overflow = "auto";
-    teamList.style.padding = "6px";
-    teamList.style.border = "1px solid #4445";
-    teamList.style.borderRadius = "10px";
-    teamList.style.scrollBehavior = "smooth";
-    teamList.style.minHeight = "0";
-    left.appendChild(teamList);
-    const footer = document.createElement("div");
-    footer.style.display = "flex";
-    footer.style.gap = "6px";
-    left.appendChild(footer);
-    const btnNew = ui.btn("\u2795 New", { variant: "primary", size: "sm" });
-    btnNew.id = "pets.teams.new";
-    btnNew.style.flex = "1 1 0";
-    const btnDel = ui.btn("\u{1F5D1}\uFE0F Delete", { variant: "danger", size: "sm" });
-    btnDel.id = "pets.teams.delete";
-    btnDel.style.flex = "1 1 0";
-    applySubtleBorder(btnNew, "#22c55e", 0.22);
-    applySubtleBorder(btnDel, "#ef4444", 0.22);
-    footer.append(btnNew, btnDel);
-    function getSelectedTeam() {
-      return teams.find((t) => t.id === selectedId) || null;
-    }
-    function computeInsertIndex(clientY) {
-      const children = Array.from(teamList.children);
-      if (!children.length) return 0;
-      const first = children[0].getBoundingClientRect();
-      if (clientY < first.top + first.height / 2) return 0;
-      for (let i = 0; i < children.length; i++) {
-        const rect = children[i].getBoundingClientRect();
-        const mid = rect.top + rect.height / 2;
-        if (clientY < mid) return i;
-      }
-      return children.length;
-    }
-    function abilitiesBadge(abilities) {
-      const wrap2 = document.createElement("span");
-      wrap2.style.display = "inline-flex";
-      wrap2.style.alignItems = "center";
-      wrap2.style.lineHeight = "1";
-      const SPACING_PX = 8;
-      const SIZE_PX = 12;
-      const RADIUS_PX = 3;
-      const ids = Array.isArray(abilities) ? abilities.filter(Boolean) : [];
-      if (!ids.length) {
-        const empty = document.createElement("span");
-        empty.textContent = "No ability";
-        empty.style.opacity = "0.75";
-        empty.style.fontSize = "12px";
-        wrap2.appendChild(empty);
-        return wrap2;
-      }
-      ids.forEach((id, i) => {
-        const chip = document.createElement("span");
-        const { bg, hover } = getAbilityChipColors2(id);
-        chip.title = PetsService.getAbilityName(id) || id;
-        chip.setAttribute("aria-label", chip.title);
-        Object.assign(chip.style, {
-          display: "inline-block",
-          width: `${SIZE_PX}px`,
-          height: `${SIZE_PX}px`,
-          borderRadius: `${RADIUS_PX}px`,
-          marginRight: i === ids.length - 1 ? "0" : `${SPACING_PX}px`,
-          background: bg,
-          transition: "transform 80ms ease, box-shadow 120ms ease, background 120ms ease",
-          cursor: "default",
-          boxShadow: "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff1a"
-        });
-        chip.onmouseenter = () => {
-          chip.style.background = hover;
-          chip.style.transform = "scale(1.08)";
-          chip.style.boxShadow = "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff33";
-        };
-        chip.onmouseleave = () => {
-          chip.style.background = bg;
-          chip.style.transform = "none";
-          chip.style.boxShadow = "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff1a";
-        };
-        wrap2.appendChild(chip);
-      });
-      return wrap2;
-    }
-    function applyLiveTransforms() {
-      const children = Array.from(teamList.children);
-      children.forEach((el2) => el2.style.transform = "");
-      if (draggingIdx === null || overInsertIdx === null) return;
-      const from = draggingIdx;
-      const to = overInsertIdx;
-      children.forEach((el2, idx) => {
-        el2.style.transition = "transform 120ms ease";
-        if (idx === from) return;
-        if (to > from && idx > from && idx < to) {
-          el2.style.transform = `translateY(${-draggingHeight}px)`;
-        }
-        if (to < from && idx >= to && idx < from) {
-          el2.style.transform = `translateY(${draggingHeight}px)`;
-        }
-      });
-    }
-    function clearLiveTransforms() {
-      Array.from(teamList.children).forEach((el2) => {
-        el2.style.transform = "";
-        el2.style.transition = "";
-      });
-    }
-    async function refreshActiveIds() {
-      activeTeamId = null;
-      activePetIdSet = /* @__PURE__ */ new Set();
-      try {
-        const pets = await PetsService.getPets();
-        const equipIds = Array.isArray(pets) ? pets.map((p) => String(p?.slot?.id || "")).filter(Boolean) : [];
-        activePetIdSet = new Set(equipIds);
-        for (const t of teams) {
-          const tIds = (t.slots || []).filter(Boolean);
-          if (tIds.length !== equipIds.length) continue;
-          let same = true;
-          for (const id of tIds) {
-            if (!activePetIdSet.has(id)) {
-              same = false;
-              break;
-            }
-          }
-          if (same) {
-            activeTeamId = t.id;
-            break;
-          }
-        }
-      } catch {
-      }
-    }
-    function updateSelectedVisuals() {
-      const children = Array.from(teamList.children);
-      children.forEach((el2) => {
-        const id = el2.dataset.teamId || "";
-        el2.style.background = id === selectedId ? "#2a313a" : "#1f2328";
-      });
-      updateSelectedVisuals();
-    }
-    async function refreshTeamList(skipDetectActive = false) {
-      if (!skipDetectActive) {
-        await refreshActiveIds();
-      }
-      const renderMap = await buildPetRenderMap();
-      clearLiveTransforms();
-      draggingIdx = null;
-      overInsertIdx = null;
-      draggingHeight = 0;
-      teamList.innerHTML = "";
-      if (!teams.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No teams yet. Create one!";
-        empty.style.opacity = "0.75";
-        empty.style.textAlign = "center";
-        empty.style.padding = "8px";
-        teamList.appendChild(empty);
-        hydrateEditor(null);
-        return;
-      }
-      teams.forEach((t, idx) => {
-        const item = document.createElement("div");
-        const isActive = t.id === activeTeamId;
-        item.dataset.index = String(idx);
-        item.dataset.teamId = t.id;
-        item.textContent = "";
-        item.style.height = "36px";
-        item.style.lineHeight = "36px";
-        item.style.padding = "0 10px";
-        item.style.border = "1px solid #ffffff15";
-        item.style.borderRadius = "6px";
-        item.style.cursor = "pointer";
-        item.style.fontSize = "13px";
-        item.style.overflow = "hidden";
-        item.style.whiteSpace = "nowrap";
-        item.style.textOverflow = "ellipsis";
-        item.style.display = "flex";
-        item.style.flex = "0 0 auto";
-        item.style.gap = "8px";
-        item.style.alignItems = "center";
-        item.style.background = t.id === selectedId ? "#2a313a" : "#1f2328";
-        const dot = document.createElement("span");
-        dot.style.width = "10px";
-        dot.style.height = "10px";
-        dot.style.borderRadius = "50%";
-        dot.style.boxShadow = "0 0 0 1px #0006 inset";
-        dot.style.background = isActive ? "#48d170" : "#64748b";
-        dot.title = isActive ? "This team is currently active" : "Inactive team";
-        const label2 = document.createElement("span");
-        label2.textContent = t.name || "(unnamed)";
-        label2.style.overflow = "hidden";
-        label2.style.textOverflow = "ellipsis";
-        label2.style.whiteSpace = "nowrap";
-        label2.style.flex = "1 1 0";
-        const minis = document.createElement("div");
-        minis.style.display = "flex";
-        minis.style.gap = "4px";
-        minis.style.alignItems = "center";
-        minis.style.marginLeft = "auto";
-        const slots = Array.isArray(t.slots) ? t.slots.slice(0, 3) : [];
-        slots.forEach((id) => {
-          const pet = id != null ? renderMap.get(String(id)) ?? null : null;
-          minis.appendChild(mkMiniIcon(pet));
-        });
-        if (slots.length < 3) {
-          for (let i = slots.length; i < 3; i += 1) minis.appendChild(mkMiniIcon(null));
-        }
-        item.append(dot, label2, minis);
-        const grab = document.createElement("span");
-        grab.className = "qmm-grab";
-        grab.title = "Drag to reorder";
-        grab.setAttribute("aria-label", "Drag to reorder");
-        grab.innerHTML = "";
-        for (let i = 0; i < 6; i += 1) {
-          const dot2 = document.createElement("span");
-          dot2.className = "qmm-grab-dot";
-          grab.appendChild(dot2);
-        }
-        grab.draggable = true;
-        item.onmouseenter = () => item.style.borderColor = "#6aa1";
-        item.onmouseleave = () => item.style.borderColor = "#ffffff15";
-        item.onclick = (ev) => {
-          if (ev.__byDrag) return;
-          const changed = selectedId !== t.id;
-          if (changed) {
-            selectedId = t.id;
-            refreshTeamList(true);
-          }
-          void hydrateEditor(getSelectedTeam());
-        };
-        grab.addEventListener("dragstart", (ev) => {
-          draggingIdx = idx;
-          draggingHeight = item.getBoundingClientRect().height;
-          item.classList.add("qmm-dragging");
-          ev.dataTransfer?.setData("text/plain", String(idx));
-          if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "move";
-          try {
-            const ghost = item.cloneNode(true);
-            ghost.style.width = `${item.getBoundingClientRect().width}px`;
-            ghost.style.position = "absolute";
-            ghost.style.top = "-9999px";
-            document.body.appendChild(ghost);
-            ev.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
-            setTimeout(() => document.body.removeChild(ghost), 0);
-          } catch {
-          }
-        });
-        grab.addEventListener("dragend", () => {
-          item.classList.remove("qmm-dragging");
-          clearLiveTransforms();
-          draggingIdx = null;
-          overInsertIdx = null;
-        });
-        item.addEventListener("dragover", (ev) => {
-          ev.preventDefault();
-          if (ev.dataTransfer) ev.dataTransfer.dropEffect = "move";
-          if (draggingIdx === null) return;
-          const idxOver = Number(ev.currentTarget.dataset.index || -1);
-          if (idxOver < 0) return;
-          const rect = item.getBoundingClientRect();
-          const mid = rect.top + rect.height / 2;
-          const insertIdx = ev.clientY < mid ? idxOver : idxOver + 1;
-          const clamped = Math.max(0, Math.min(teams.length, insertIdx));
-          if (overInsertIdx !== clamped) {
-            overInsertIdx = clamped;
-            applyLiveTransforms();
-          }
-          const edge = 28;
-          const listRect = teamList.getBoundingClientRect();
-          if (ev.clientY < listRect.top + edge) teamList.scrollTop -= 18;
-          else if (ev.clientY > listRect.bottom - edge) teamList.scrollTop += 18;
-        });
-        item.addEventListener("drop", (ev) => {
-          ev.preventDefault();
-          ev.__byDrag = true;
-          if (draggingIdx === null) return;
-          let target = overInsertIdx ?? computeInsertIndex(ev.clientY);
-          if (target > draggingIdx) target -= 1;
-          target = Math.max(0, Math.min(teams.length - 1, target));
-          if (target !== draggingIdx) {
-            const a = teams.slice();
-            const [it] = a.splice(draggingIdx, 1);
-            a.splice(target, 0, it);
-            teams = a;
-            try {
-              PetsService.setTeamsOrder(teams.map((x) => x.id));
-            } catch {
-            }
-          }
-          clearLiveTransforms();
-          draggingIdx = null;
-          overInsertIdx = null;
-          draggingHeight = 0;
-          refreshTeamList();
-        });
-        item.appendChild(grab);
-        teamList.appendChild(item);
-      });
-    }
-    teamList.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-      if (draggingIdx === null) return;
-      const idx = computeInsertIndex(e.clientY);
-      if (overInsertIdx !== idx) {
-        overInsertIdx = idx;
-        applyLiveTransforms();
-      }
-      const edge = 28;
-      const listRect = teamList.getBoundingClientRect();
-      if (e.clientY < listRect.top + edge) teamList.scrollTop -= 18;
-      else if (e.clientY > listRect.bottom - edge) teamList.scrollTop += 18;
-    });
-    teamList.addEventListener("drop", (e) => {
-      e.preventDefault();
-      if (draggingIdx === null) return;
-      let target = overInsertIdx ?? computeInsertIndex(e.clientY);
-      if (target > draggingIdx) target -= 1;
-      target = Math.max(0, Math.min(teams.length - 1, target));
-      if (target !== draggingIdx) {
-        const a = teams.slice();
-        const [it] = a.splice(draggingIdx, 1);
-        a.splice(target, 0, it);
-        teams = a;
-        try {
-          PetsService.setTeamsOrder(teams.map((x) => x.id));
-        } catch {
-        }
-      }
-      clearLiveTransforms();
-      draggingIdx = null;
-      overInsertIdx = null;
-      draggingHeight = 0;
-      refreshTeamList();
-    });
-    btnNew.onclick = () => {
-      const created = PetsService.createTeam("New Team");
-      selectedId = created.id;
-      refreshTeamList();
-      hydrateEditor(getSelectedTeam());
-    };
-    btnDel.onclick = () => {
-      if (!selectedId) return;
-      const ok = PetsService.deleteTeam(selectedId);
-      if (!ok) return;
-    };
-    let unsubTeams = null;
-    (async () => {
-      try {
-        unsubTeams = await PetsService.onTeamsChangeNow(async (all) => {
-          teams = Array.isArray(all) ? all.slice() : [];
-          if (selectedId && !teams.some((t) => t.id === selectedId)) {
-            selectedId = teams[0]?.id ?? null;
-          }
-          if (!selectedId && teams.length) selectedId = teams[0].id;
-          refreshTeamList();
-          setTeamsForHotkeys(teams);
-          await PetsService.getInventoryPets().catch(() => []);
-          await hydrateEditor(getSelectedTeam());
-        });
-      } catch {
-      }
-    })();
-    const right = document.createElement("div");
-    right.style.display = "grid";
-    right.style.gridTemplateRows = "auto 1fr";
-    right.style.gap = "10px";
-    right.style.minHeight = "0";
-    wrap.appendChild(right);
-    const header = document.createElement("div");
-    header.style.display = "flex";
-    header.style.alignItems = "center";
-    header.style.gap = "8px";
-    const headerTitle = document.createElement("div");
-    headerTitle.textContent = "Team editor \u2014 ";
-    headerTitle.style.fontWeight = "700";
-    headerTitle.style.fontSize = "14px";
-    const btnUseTeam = document.createElement("button");
-    btnUseTeam.id = "pets.teams.useThisTeam";
-    btnUseTeam.textContent = "Use this team";
-    btnUseTeam.style.padding = "6px 10px";
-    btnUseTeam.style.borderRadius = "8px";
-    btnUseTeam.style.border = "1px solid #4445";
-    btnUseTeam.style.background = "#1f2328";
-    btnUseTeam.style.color = "#e7eef7";
-    btnUseTeam.style.cursor = "pointer";
-    btnUseTeam.onmouseenter = () => btnUseTeam.style.borderColor = "#6aa1";
-    btnUseTeam.onmouseleave = () => btnUseTeam.style.borderColor = "#4445";
-    btnUseTeam.disabled = true;
-    header.append(headerTitle, btnUseTeam);
-    right.appendChild(header);
-    const card2 = document.createElement("div");
-    card2.style.border = "1px solid #4445";
-    card2.style.borderRadius = "10px";
-    card2.style.padding = "10px";
-    card2.style.display = "flex";
-    card2.style.flexDirection = "column";
-    card2.style.gap = "12px";
-    card2.style.overflow = "auto";
-    card2.style.minHeight = "0";
-    card2.style.background = "#0f1318";
-    right.appendChild(card2);
-    const secName = (() => {
-      const r = row();
-      r.style.width = "100%";
-      const nameInput = ui.inputText("Team name", "");
-      nameInput.id = "pets.teams.editor.name";
-      nameInput.style.flex = "1";
-      nameInput.style.minWidth = "0";
-      r.append(nameInput);
-      card2.appendChild(framed("\u{1F3F7}\uFE0F Team name", r));
-      return { nameInput };
-    })();
-    const secSearch = (() => {
-      const wrapOuter = document.createElement("div");
-      wrapOuter.style.display = "flex";
-      wrapOuter.style.flexDirection = "column";
-      wrapOuter.style.gap = "10px";
-      wrapOuter.style.alignItems = "center";
-      let isProgrammaticModeSet = false;
-      let currentMode = "ability";
-      const seg = ui.segmented(
-        [
-          { value: "ability", label: "\u2728 Ability" },
-          { value: "species", label: "\u{1F9EC} Species" }
-        ],
-        "ability",
-        async (val) => {
-          if (isProgrammaticModeSet) return;
-          currentMode = val;
-          await rebuildOptionsFromInventory();
-          select2.value = "";
-          applyFilterToTeam();
-        },
-        { ariaLabel: "Search mode" }
-      );
-      const select2 = document.createElement("select");
-      select2.className = "qmm-input";
-      select2.id = "pets.teams.filter.select";
-      select2.style.minWidth = "260px";
-      const getMode = () => currentMode;
-      const setMode = (m) => {
-        currentMode = m;
-        isProgrammaticModeSet = true;
-        seg.set(m);
-        isProgrammaticModeSet = false;
-      };
-      const rebuildOptionsFromInventory = async () => {
-        const prev = select2.value;
-        const inv = await PetsService.getInventoryPets().catch(() => []);
-        select2.innerHTML = "";
-        const opt0 = document.createElement("option");
-        opt0.value = "";
-        opt0.textContent = "\u2014 No filter \u2014";
-        select2.appendChild(opt0);
-        if (getMode() === "ability") {
-          const nameSet = /* @__PURE__ */ new Set();
-          for (const p of inv) {
-            const abs = Array.isArray(p?.abilities) ? p.abilities.filter(Boolean) : [];
-            for (const id of abs) {
-              const base = PetsService.getAbilityNameWithoutLevel?.(id) || "";
-              if (base) nameSet.add(base);
-            }
-          }
-          for (const name of Array.from(nameSet).sort((a, b) => a.localeCompare(b))) {
-            const o = document.createElement("option");
-            o.value = name;
-            o.textContent = name;
-            select2.appendChild(o);
-          }
-        } else {
-          const set3 = /* @__PURE__ */ new Set();
-          for (const p of inv) {
-            const sp = String(p?.petSpecies || "").trim();
-            if (sp) set3.add(sp);
-          }
-          for (const v of Array.from(set3).sort((a, b) => a.localeCompare(b))) {
-            const o = document.createElement("option");
-            o.value = v;
-            o.textContent = v.charAt(0).toUpperCase() + v.slice(1);
-            select2.appendChild(o);
-          }
-        }
-        if (Array.from(select2.options).some((o) => o.value === prev)) select2.value = prev;
-      };
-      const applyFilterToTeam = () => {
-        const t = getSelectedTeam();
-        if (!t) return;
-        const val = (select2.value || "").trim();
-        const raw = getMode() === "ability" ? val ? `ab:${val}` : "" : val ? `sp:${val}` : "";
-        PetsService.setTeamSearch(t.id, raw);
-      };
-      select2.addEventListener("change", applyFilterToTeam);
-      wrapOuter.append(seg, select2);
-      card2.appendChild(framed("\u{1F50D} Search", wrapOuter));
-      const ensureOptionExists = (val, pretty) => {
-        const v = (val || "").trim();
-        if (!v) return;
-        const has = Array.from(select2.options).some((o) => o.value === v);
-        if (!has) {
-          const o = document.createElement("option");
-          o.value = v;
-          o.textContent = pretty ?? v;
-          select2.appendChild(o);
-        }
-      };
-      return {
-        getMode,
-        setMode,
-        select: select2,
-        rebuild: rebuildOptionsFromInventory,
-        apply: applyFilterToTeam,
-        setFromSearchString(s) {
-          const m = (s || "").match(/^(ab|sp):\s*(.*)$/i);
-          if (!m) {
-            setMode("ability");
-            select2.value = "";
-            return;
-          }
-          const mode = m[1].toLowerCase() === "ab" ? "ability" : "species";
-          const val = (m[2] || "").trim();
-          setMode(mode);
-          ensureOptionExists(val, mode === "species" ? val.charAt(0).toUpperCase() + val.slice(1) : val);
-          select2.value = val;
-        }
-      };
-    })();
-    const secSlots = (() => {
-      const grid = document.createElement("div");
-      grid.style.display = "grid";
-      grid.style.gridTemplateColumns = "1fr";
-      grid.style.rowGap = "10px";
-      grid.style.justifyItems = "center";
-      const mkRow = (idx) => {
-        const root = document.createElement("div");
-        const BTN = 28;
-        const ICON = 40;
-        root.style.display = "grid";
-        root.style.gridTemplateColumns = `${ICON}px minmax(0,1fr) ${BTN}px ${BTN}px`;
-        root.style.alignItems = "center";
-        root.style.gap = "8px";
-        root.style.width = "min(560px, 100%)";
-        root.style.border = "1px solid #4445";
-        root.style.borderRadius = "10px";
-        root.style.padding = "8px 10px";
-        root.style.background = "#0f1318";
-        const iconContainer = document.createElement("div");
-        Object.assign(iconContainer.style, {
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "2px",
-          flexShrink: "0"
-        });
-        const iconWrap = document.createElement("div");
-        Object.assign(iconWrap.style, {
-          width: `${ICON}px`,
-          height: `${ICON}px`,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center"
-        });
-        const strBadge = document.createElement("div");
-        Object.assign(strBadge.style, {
-          fontSize: "9px",
-          fontWeight: "700",
-          lineHeight: "1",
-          padding: "1px 4px",
-          borderRadius: "4px",
-          background: "rgba(0,0,0,0.75)",
-          color: "#fff",
-          whiteSpace: "nowrap",
-          display: "none",
-          pointerEvents: "none"
-        });
-        iconContainer.append(iconWrap, strBadge);
-        const useEmojiFallback = () => {
-          iconWrap.replaceChildren();
-          const span = document.createElement("span");
-          span.textContent = "\u{1F43E}";
-          span.style.fontSize = `${Math.max(ICON - 6, 12)}px`;
-          span.setAttribute("aria-hidden", "true");
-          iconWrap.appendChild(span);
-        };
-        const setIcon = (species, mutations) => {
-          const speciesLabel = String(species ?? "").trim();
-          if (!speciesLabel) {
-            iconWrap.replaceChildren();
-            iconWrap.dataset.iconKey = "";
-            useEmojiFallback();
-            return;
-          }
-          const mutKey = Array.isArray(mutations) ? mutations.join(",") : "";
-          const key2 = `${speciesLabel}|${mutKey}`;
-          if (iconWrap.dataset.iconKey === key2 && iconWrap.querySelector("img")) {
-            return;
-          }
-          iconWrap.dataset.iconKey = key2;
-          attachSpriteIcon(iconWrap, ["pet"], speciesLabel, ICON, "pet-slot", {
-            mutations,
-            onNoSpriteFound: () => {
-              iconWrap.replaceChildren();
-              useEmojiFallback();
-            }
-          });
-        };
-        const left2 = document.createElement("div");
-        left2.style.display = "flex";
-        left2.style.flexDirection = "column";
-        left2.style.gap = "6px";
-        left2.style.minWidth = "0";
-        const nameEl = document.createElement("div");
-        nameEl.style.fontWeight = "700";
-        nameEl.textContent = "None";
-        nameEl.style.overflow = "hidden";
-        nameEl.style.textOverflow = "ellipsis";
-        nameEl.style.whiteSpace = "nowrap";
-        let abilitiesEl = abilitiesBadge([]);
-        abilitiesEl.style.display = "inline-block";
-        left2.append(nameEl, abilitiesEl);
-        const btnChoose = document.createElement("button");
-        btnChoose.textContent = "+";
-        Object.assign(btnChoose.style, {
-          width: `${BTN}px`,
-          minWidth: `${BTN}px`,
-          height: `${BTN}px`,
-          padding: "0",
-          fontSize: "16px",
-          lineHeight: "1",
-          borderRadius: "10px",
-          boxShadow: "none",
-          display: "grid",
-          placeItems: "center"
-        });
-        btnChoose.title = "Choose a pet";
-        btnChoose.setAttribute("aria-label", "Choose a pet");
-        const btnClear2 = document.createElement("button");
-        btnClear2.textContent = "\u2212";
-        Object.assign(btnClear2.style, {
-          width: `${BTN}px`,
-          minWidth: `${BTN}px`,
-          height: `${BTN}px`,
-          padding: "0",
-          fontSize: "16px",
-          lineHeight: "1",
-          borderRadius: "10px",
-          boxShadow: "none",
-          display: "grid",
-          placeItems: "center"
-        });
-        btnClear2.title = "Remove this pet";
-        btnClear2.setAttribute("aria-label", "Remove this pet");
-        root.append(iconContainer, left2, btnChoose, btnClear2);
-        function update(p) {
-          if (!p) {
-            nameEl.textContent = "None";
-            setIcon(void 0);
-            strBadge.style.display = "none";
-            const fresh2 = abilitiesBadge([]);
-            fresh2.style.display = "inline-block";
-            left2.replaceChild(fresh2, left2.children[1]);
-            abilitiesEl = fresh2;
-            return;
-          }
-          const species = String(p.petSpecies || "").trim();
-          const muts = Array.isArray(p.mutations) ? p.mutations : [];
-          setIcon(species, muts);
-          const str = getPetStrength(p);
-          const maxStr = getPetMaxStrength(p);
-          if (maxStr > 0) {
-            strBadge.textContent = str >= maxStr ? `${maxStr}` : `${str}/${maxStr}`;
-            strBadge.style.color = str >= maxStr ? "#facc15" : "#fff";
-            strBadge.style.display = "block";
-          } else {
-            strBadge.style.display = "none";
-          }
-          const speciesLabel = species ? species.charAt(0).toUpperCase() + species.slice(1) : "";
-          nameEl.textContent = p.name?.trim() || speciesLabel || "Pet";
-          const abs = Array.isArray(p.abilities) ? p.abilities.filter(Boolean) : [];
-          const fresh = abilitiesBadge(abs);
-          fresh.style.display = "inline-block";
-          left2.replaceChild(fresh, left2.children[1]);
-          abilitiesEl = fresh;
-        }
-        btnChoose.onclick = async () => {
-          const t = getSelectedTeam();
-          if (!t) return;
-          btnChoose.disabled = true;
-          btnClear2.disabled = true;
-          ui.setWindowVisible(false);
-          try {
-            await PetsService.chooseSlotPet(t.id, idx);
-            await repaintSlots(getSelectedTeam());
-          } finally {
-            ui.setWindowVisible(true);
-            btnChoose.disabled = false;
-            btnClear2.disabled = false;
-          }
-        };
-        btnClear2.onclick = async () => {
-          const t = getSelectedTeam();
-          if (!t) return;
-          const next = t.slots.slice(0, 3);
-          next[idx] = null;
-          const saved = PetsService.saveTeam({ id: t.id, slots: next });
-          await repaintSlots(saved ?? getSelectedTeam());
-        };
-        return { root, nameEl, abilitiesEl, btnChoose, btnClear: btnClear2, update };
-      };
-      const r0 = mkRow(0);
-      const r1 = mkRow(1);
-      const r2 = mkRow(2);
-      grid.append(r0.root, r1.root, r2.root);
-      const extra = document.createElement("div");
-      extra.style.display = "flex";
-      extra.style.gap = "6px";
-      extra.style.justifyContent = "center";
-      const btnUseCurrent = ui.btn("Current active", { variant: "primary" });
-      btnUseCurrent.id = "pets.teams.useCurrent";
-      btnUseCurrent.style.minWidth = "140px";
-      const btnClear = ui.btn("Clear slots", { variant: "secondary" });
-      btnClear.id = "pets.teams.clearSlots";
-      btnClear.style.minWidth = "140px";
-      const DARK_BG = "#0f1318";
-      extra.append(btnUseCurrent, btnClear);
-      Object.assign(btnUseCurrent.style, {
-        width: "auto",
-        fontSize: "16px",
-        borderRadius: "10px",
-        background: DARK_BG,
-        boxShadow: "none"
-      });
-      Object.assign(btnClear.style, {
-        width: "auto",
-        fontSize: "16px",
-        borderRadius: "10px",
-        background: DARK_BG,
-        boxShadow: "none"
-      });
-      const wrapSlots = document.createElement("div");
-      wrapSlots.style.display = "flex";
-      wrapSlots.style.flexDirection = "column";
-      wrapSlots.style.gap = "8px";
-      wrapSlots.append(grid, extra);
-      card2.appendChild(framed("\u26A1 Active pets (3 slots)", wrapSlots));
-      return {
-        rows: [r0, r1, r2],
-        btnUseCurrent,
-        btnClear
-      };
-    })();
-    async function repaintSlots(sourceTeam) {
-      const t = sourceTeam ?? getSelectedTeam();
-      if (!t) return;
-      const map2 = await buildPetRenderMap();
-      [0, 1, 2].forEach((i) => {
-        const id = t.slots[i] || null;
-        if (!id) {
-          if (lastRenderedSlotIds[i] !== null) {
-            secSlots.rows[i].update(null);
-            lastRenderedSlotIds[i] = null;
-          }
-          return;
-        }
-        const pet = map2.get(id);
-        if (!pet) {
-          if (lastRenderedSlotIds[i] !== id) {
-            secSlots.rows[i].update({
-              id,
-              itemType: "Pet",
-              petSpecies: "",
-              name: null,
-              xp: 0,
-              hunger: 0,
-              mutations: [],
-              abilities: []
-            });
-            lastRenderedSlotIds[i] = id;
-          }
-          return;
-        }
-        if (lastRenderedSlotIds[i] !== id) {
-          secSlots.rows[i].update(pet);
-          lastRenderedSlotIds[i] = id;
-        }
-      });
-    }
-    async function hydrateEditor(team) {
-      const has = !!team;
-      secName.nameInput.disabled = !has;
-      secSlots.btnClear.disabled = !has;
-      secSlots.btnUseCurrent.disabled = !has;
-      btnUseTeam.disabled = !has;
-      if (has) {
-        const saved = PetsService.getTeamSearch(team.id) || "";
-        const m = saved.match(/^(ab|sp):\s*(.*)$/i);
-        const mode = m ? m[1].toLowerCase() === "ab" ? "ability" : "species" : "ability";
-        secSearch.setMode(mode);
-        await secSearch.rebuild();
-        if (m) secSearch.setFromSearchString(saved);
-      } else {
-        await secSearch.rebuild();
-      }
-      if (!has) {
-        secSlots.rows.forEach((r) => r.update(null));
-        secName.nameInput.value = "";
-        return;
-      }
-      secName.nameInput.value = String(team.name || "");
-      await repaintSlots(team);
-    }
-    const saveNameNow = () => {
-      const t = getSelectedTeam();
-      if (!t) return;
-      const nextName = secName.nameInput.value.trim();
-      if (nextName === t.name) return;
-      t.name = nextName;
-      PetsService.saveTeam({ id: t.id, name: nextName });
-      refreshTeamList(true);
-    };
-    secName.nameInput.addEventListener("input", () => saveNameNow());
-    secName.nameInput.addEventListener("keydown", (ev) => {
-      if (ev.key === "Enter") {
-        ev.currentTarget.blur();
-        saveNameNow();
-      }
-    });
-    secName.nameInput.addEventListener("blur", () => saveNameNow());
-    secSlots.btnUseCurrent.onclick = async () => {
-      const t = getSelectedTeam();
-      if (!t) return;
-      try {
-        const ids = await PetsService.getActivePetIds();
-        const nextSlots = [ids[0] || null, ids[1] || null, ids[2] || null];
-        const saved = PetsService.saveTeam({ id: t.id, slots: nextSlots });
-        await repaintSlots(saved ?? getSelectedTeam());
-      } catch {
-      }
-    };
-    secSlots.btnClear.onclick = async () => {
-      const t = getSelectedTeam();
-      if (!t) return;
-      const saved = PetsService.saveTeam({ id: t.id, slots: [null, null, null] });
-      await repaintSlots(saved ?? getSelectedTeam());
-    };
-    function sameSet(a, b) {
-      if (a.length !== b.length) return false;
-      const s = new Set(a);
-      for (const x of b) if (!s.has(x)) return false;
-      return true;
-    }
-    async function waitForActiveTeam(team, timeoutMs = 2e3) {
-      const target = (team.slots || []).filter(Boolean);
-      const t0 = performance.now();
-      while (performance.now() - t0 < timeoutMs) {
-        const pets = await PetsService.getPets().catch(() => null);
-        const equip = Array.isArray(pets) ? pets.map((p) => String(p?.slot?.id || "")).filter(Boolean) : [];
-        if (sameSet(equip, target)) return true;
-        await new Promise((r) => setTimeout(r, 80));
-      }
-      return false;
-    }
-    btnUseTeam.onclick = async () => {
-      const t = getSelectedTeam();
-      if (!t) return;
-      try {
-        isApplyingTeam = true;
-        activeTeamId = t.id;
-        await refreshTeamList(true);
-        await PetsService.useTeam(t.id);
-        await waitForActiveTeam(t);
-        await hydrateEditor(getSelectedTeam());
-        await refreshTeamList();
-      } catch (e) {
-        console.warn("[Pets] Use this team failed:", e);
-        await refreshTeamList();
-      } finally {
-        isApplyingTeam = false;
-      }
-    };
-    let unsubPets2 = null;
-    (async () => {
-      try {
-        unsubPets2 = await onActivePetsStructuralChangeNow(async () => {
-          if (isApplyingTeam) return;
-          await repaintSlots(getSelectedTeam());
-          await refreshTeamList();
-        });
-      } catch {
-      }
-    })();
-    installPetTeamHotkeysOnce(async (teamId) => {
-      const t = teams.find((tt) => tt.id === teamId) || null;
-      try {
-        isApplyingTeam = true;
-        if (t) {
-          activeTeamId = t.id;
-          await refreshTeamList(true);
-        }
-        await PetsService.useTeam(teamId);
-        if (t) await waitForActiveTeam(t);
-        await hydrateEditor(getSelectedTeam());
-        await refreshTeamList();
-      } catch (e) {
-        console.warn("[Pets] hotkey useTeam failed:", e);
-        await refreshTeamList();
-      } finally {
-        isApplyingTeam = false;
-      }
-    });
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          unsubTeams?.();
-        } catch {
-        }
-        try {
-          unsubPets2?.();
-        } catch {
-        }
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-  }
-  function renderFeedingTab(view, ui) {
-    view.innerHTML = "";
-    const wrap = document.createElement("div");
-    wrap.style.display = "grid";
-    wrap.style.gridTemplateColumns = "minmax(220px, 280px) minmax(0, 1fr)";
-    wrap.style.gap = "10px";
-    wrap.style.alignItems = "stretch";
-    wrap.style.height = "54vh";
-    wrap.style.minHeight = "0";
-    view.appendChild(wrap);
-    const left = document.createElement("div");
-    left.style.display = "flex";
-    left.style.flexDirection = "column";
-    left.style.height = "100%";
-    left.style.minHeight = "0";
-    wrap.appendChild(left);
-    const vtabs = ui.vtabs({
-      emptyText: "No pets found.",
-      fillAvailableHeight: true,
-      renderItem: (item, btn) => {
-        btn.innerHTML = "";
-        btn.style.gridTemplateColumns = "24px 1fr auto";
-        btn.style.gap = "10px";
-        const size = 22;
-        const iconWrap = document.createElement("div");
-        Object.assign(iconWrap.style, {
-          width: `${size}px`,
-          height: `${size}px`,
-          borderRadius: "6px",
-          background: "#161b22",
-          border: "1px solid #ffffff10",
-          display: "grid",
-          placeItems: "center",
-          overflow: "hidden",
-          boxShadow: "0 1px 0 #000 inset",
-          fontSize: "11px",
-          color: "#e2e8f0"
-        });
-        const label2 = String(item.title || "Pet");
-        iconWrap.textContent = label2.charAt(0).toUpperCase();
-        attachSpriteIcon(iconWrap, ["pet"], item.id, size, "pet-feeding-list", {
-          onNoSpriteFound: () => {
-            iconWrap.textContent = label2.charAt(0).toUpperCase();
-          }
-        });
-        const textWrap = document.createElement("div");
-        textWrap.style.display = "flex";
-        textWrap.style.flexDirection = "column";
-        textWrap.style.gap = "2px";
-        textWrap.style.minWidth = "0";
-        const titleEl = document.createElement("div");
-        titleEl.textContent = label2;
-        titleEl.style.whiteSpace = "nowrap";
-        titleEl.style.overflow = "hidden";
-        titleEl.style.textOverflow = "ellipsis";
-        textWrap.appendChild(titleEl);
-        const rarity3 = String(item.rarity || "").trim();
-        const badge = rarity3 ? rarityBadge(rarity3) : null;
-        if (badge) {
-          badge.style.margin = "0";
-          badge.style.alignSelf = "center";
-        }
-        btn.append(iconWrap, textWrap);
-        if (badge) btn.appendChild(badge);
-      }
-    });
-    vtabs.root.style.flex = "1 1 auto";
-    vtabs.root.style.minHeight = "0";
-    left.appendChild(vtabs.root);
-    const right = document.createElement("div");
-    right.style.display = "flex";
-    right.style.flexDirection = "column";
-    right.style.gap = "10px";
-    right.style.minHeight = "0";
-    wrap.appendChild(right);
-    const card2 = document.createElement("div");
-    card2.style.border = "1px solid #4445";
-    card2.style.borderRadius = "10px";
-    card2.style.padding = "10px";
-    card2.style.background = "#0f1318";
-    card2.style.display = "grid";
-    card2.style.gridTemplateRows = "auto 1fr";
-    card2.style.minHeight = "0";
-    right.appendChild(card2);
-    const header = document.createElement("div");
-    header.style.display = "flex";
-    header.style.flexDirection = "column";
-    header.style.gap = "4px";
-    header.style.marginBottom = "8px";
-    card2.appendChild(header);
-    const title = document.createElement("div");
-    title.textContent = "Instant feed options";
-    title.style.fontWeight = "600";
-    header.appendChild(title);
-    const subtitle = document.createElement("div");
-    subtitle.textContent = "Allow or block crops for the Instant Feed button.";
-    subtitle.style.opacity = "0.7";
-    subtitle.style.fontSize = "12px";
-    header.appendChild(subtitle);
-    const widgetRow = document.createElement("label");
-    widgetRow.style.display = "flex";
-    widgetRow.style.alignItems = "center";
-    widgetRow.style.gap = "8px";
-    widgetRow.style.marginTop = "6px";
-    widgetRow.style.cursor = "pointer";
-    const widgetSwitch = ui.switch(isInstantFeedWidgetEnabled());
-    widgetSwitch.addEventListener("change", () => {
-      setInstantFeedWidgetEnabled(widgetSwitch.checked);
-    });
-    const widgetLabel = document.createElement("span");
-    widgetLabel.textContent = "Show floating Instant Feed widget";
-    widgetLabel.style.fontSize = "13px";
-    widgetRow.append(widgetSwitch, widgetLabel);
-    header.appendChild(widgetRow);
-    const body = document.createElement("div");
-    body.style.display = "flex";
-    body.style.flexDirection = "column";
-    body.style.gap = "6px";
-    body.style.overflow = "auto";
-    body.style.minHeight = "0";
-    card2.appendChild(body);
-    const petItems = Object.keys(petCatalog2).map((species) => {
-      const entry = petCatalog2[species];
-      const name = String(entry?.name || species);
-      return {
-        id: species,
-        title: name,
-        rarity: entry?.rarity
-      };
-    });
-    vtabs.setItems(petItems);
-    if (petItems.length) vtabs.select(petItems[0].id);
-    const renderCrops = (species) => {
-      body.innerHTML = "";
-      if (!species) {
-        const empty = document.createElement("div");
-        empty.textContent = "Select a pet to configure instant feed crops.";
-        empty.style.opacity = "0.75";
-        body.appendChild(empty);
-        return;
-      }
-      const compatibles = PetsService.getCompatibleCropsForSpecies(species) ?? [];
-      const seen = /* @__PURE__ */ new Set();
-      const list = compatibles.map((c) => String(c || "")).filter((c) => c && !seen.has(c) && seen.add(c));
-      if (!list.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No compatible crops for this pet.";
-        empty.style.opacity = "0.75";
-        body.appendChild(empty);
-        return;
-      }
-      const cropEntries = list.map((crop) => {
-        const entry = plantCatalog2[crop];
-        const name = String(entry?.name || crop);
-        return { crop, name };
-      }).sort((a, b) => a.name.localeCompare(b.name));
-      cropEntries.forEach(({ crop, name }) => {
-        const row = document.createElement("div");
-        row.style.display = "grid";
-        row.style.gridTemplateColumns = "1fr auto";
-        row.style.alignItems = "center";
-        row.style.gap = "8px";
-        row.style.padding = "6px 4px";
-        row.style.borderBottom = "1px solid #ffffff12";
-        const labelWrap = document.createElement("div");
-        labelWrap.style.display = "flex";
-        labelWrap.style.flexDirection = "column";
-        labelWrap.style.gap = "2px";
-        const nameEl = document.createElement("div");
-        nameEl.textContent = name;
-        nameEl.style.fontSize = "13px";
-        labelWrap.appendChild(nameEl);
-        if (name !== crop) {
-          const idEl = document.createElement("div");
-          idEl.textContent = crop;
-          idEl.style.fontSize = "11px";
-          idEl.style.opacity = "0.6";
-          labelWrap.appendChild(idEl);
-        }
-        const sw = ui.switch(PetsService.isInstantFeedCropAllowed(species, crop));
-        sw.addEventListener("change", () => {
-          PetsService.setInstantFeedCropAllowed(species, crop, sw.checked);
-        });
-        row.append(labelWrap, sw);
-        body.appendChild(row);
-      });
-    };
-    vtabs.onSelect((id) => {
-      renderCrops(id);
-    });
-    renderCrops(petItems[0]?.id ?? null);
-  }
-  function renderLogsTab(view, ui) {
-    view.innerHTML = "";
-    const wrap = document.createElement("div");
-    wrap.style.display = "grid";
-    wrap.style.gridTemplateRows = "auto 1fr";
-    wrap.style.gap = "10px";
-    wrap.style.height = "54vh";
-    view.appendChild(wrap);
-    const header = document.createElement("div");
-    header.style.display = "flex";
-    header.style.flexWrap = "wrap";
-    header.style.alignItems = "center";
-    header.style.gap = "8px";
-    header.style.border = "1px solid #4445";
-    header.style.borderRadius = "10px";
-    header.style.padding = "8px 10px";
-    header.style.background = "#0f1318";
-    wrap.appendChild(header);
-    const selAbility = ui.select({ id: "pets.logs.filter.ability", width: "200px" });
-    const selSort = ui.select({ id: "pets.logs.sort", width: "140px" });
-    [["desc", "Newest first"], ["asc", "Oldest first"]].forEach(([v, t]) => {
-      const o = document.createElement("option");
-      o.value = v;
-      o.textContent = t;
-      selSort.appendChild(o);
-    });
-    selSort.value = "desc";
-    const inputSearch = ui.inputText("search (pet / ability / details)", "");
-    inputSearch.id = "pets.logs.search";
-    inputSearch.style.minWidth = "220px";
-    const btnClear = ui.btn("\u{1F9F9} Clear", { size: "sm" });
-    btnClear.id = "pets.logs.clear";
-    btnClear.style.flex = "0 0 auto";
-    header.append(
-      ui.label("Ability"),
-      selAbility,
-      ui.label("Sort"),
-      selSort,
-      inputSearch,
-      btnClear
-    );
-    const card2 = document.createElement("div");
-    card2.style.border = "1px solid #4445";
-    card2.style.borderRadius = "10px";
-    card2.style.padding = "10px";
-    card2.style.background = "#0f1318";
-    card2.style.overflow = "hidden";
-    card2.style.display = "grid";
-    card2.style.gridTemplateRows = "auto 1fr";
-    card2.style.minHeight = "0";
-    wrap.appendChild(card2);
-    const headerGrid = document.createElement("div");
-    headerGrid.style.display = "grid";
-    headerGrid.style.gridTemplateColumns = "140px 220px 200px minmax(0,1fr)";
-    headerGrid.style.columnGap = "0";
-    headerGrid.style.borderBottom = "1px solid #ffffff1a";
-    headerGrid.style.padding = "0 0 6px 0";
-    function mkHeadCell2(txt, align = "center") {
-      const el2 = document.createElement("div");
-      el2.textContent = txt;
-      el2.style.fontWeight = "600";
-      el2.style.opacity = "0.9";
-      el2.style.padding = "6px 8px";
-      el2.style.textAlign = align;
-      return el2;
-    }
-    headerGrid.append(
-      mkHeadCell2("Date & Time"),
-      mkHeadCell2("Pet"),
-      mkHeadCell2("Ability"),
-      mkHeadCell2("Details", "left")
-    );
-    card2.appendChild(headerGrid);
-    const bodyGrid = document.createElement("div");
-    bodyGrid.style.display = "grid";
-    bodyGrid.style.gridTemplateColumns = "140px 220px 200px minmax(0,1fr)";
-    bodyGrid.style.gridAutoRows = "auto";
-    bodyGrid.style.alignContent = "start";
-    bodyGrid.style.overflow = "auto";
-    bodyGrid.style.width = "100%";
-    bodyGrid.style.minHeight = "0";
-    card2.appendChild(bodyGrid);
-    const sessionStart = PetsService.getAbilityLogsSessionStart?.() ?? 0;
-    let logs = [];
-    let abilityFilter = "";
-    let sortDir = "desc";
-    let q = "";
-    const petSpriteCache = /* @__PURE__ */ new Map();
-    const mkPetIcon = (log2) => {
-      const size = 22;
-      const holder = document.createElement("div");
-      Object.assign(holder.style, {
-        width: `${size}px`,
-        height: `${size}px`,
-        borderRadius: "8px",
-        background: "#161b22",
-        border: "1px solid #ffffff10",
-        display: "grid",
-        placeItems: "center",
-        overflow: "hidden",
-        boxShadow: "0 1px 0 #000 inset",
-        fontSize: "11px",
-        color: "#e2e8f0",
-        flex: "0 0 auto"
-      });
-      const species = String(log2.species || "").trim();
-      const mutations = Array.isArray(log2.mutations) ? log2.mutations.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
-      const mutKey = mutations.length ? mutations.map((m) => m.toLowerCase()).sort().join(",") : "";
-      const cacheKey = mutKey ? `${species}|${mutKey}` : species;
-      const applyImg = (src) => {
-        const img = document.createElement("img");
-        img.src = src;
-        img.width = size;
-        img.height = size;
-        img.alt = "";
-        img.draggable = false;
-        img.style.width = `${size}px`;
-        img.style.height = `${size}px`;
-        img.style.objectFit = "contain";
-        img.style.imageRendering = "auto";
-        holder.replaceChildren(img);
-      };
-      const cached = cacheKey ? petSpriteCache.get(cacheKey) : void 0;
-      if (cached) {
-        applyImg(cached);
-        return holder;
-      }
-      const letter = (log2.petName || species || "pet").charAt(0).toUpperCase();
-      holder.textContent = letter || "\u{1F43E}";
-      if (species) {
-        attachSpriteIcon(holder, ["pet"], species, size, "pet-log", {
-          mutations,
-          onSpriteApplied: (img) => {
-            petSpriteCache.set(cacheKey, img.src);
-          }
-        });
-      }
-      return holder;
-    };
-    function rebuildAbilityOptions() {
-      const current = selAbility.value;
-      selAbility.innerHTML = "";
-      const opts = [["", "All abilities"], ...PetsService.getSeenAbilityIds().map((a) => [a, a])];
-      for (const [v, t] of opts) {
-        const o = document.createElement("option");
-        o.value = v;
-        o.textContent = t;
-        selAbility.appendChild(o);
-      }
-      selAbility.value = opts.some(([v]) => v === current) ? current : "";
-    }
-    function formatDateMMDDYY(timestamp) {
-      const value = Number(timestamp);
-      if (!Number.isFinite(value)) return "";
-      const date = new Date(value);
-      if (Number.isNaN(date.getTime())) return "";
-      const mm = String(date.getMonth() + 1).padStart(2, "0");
-      const dd = String(date.getDate()).padStart(2, "0");
-      const yy = String(date.getFullYear() % 100).padStart(2, "0");
-      return `${mm}/${dd}/${yy}`;
-    }
-    function cell(txt, align = "center") {
-      const el2 = document.createElement("div");
-      el2.textContent = txt;
-      el2.style.padding = "6px 8px";
-      el2.style.display = "flex";
-      el2.style.flexDirection = "column";
-      el2.style.justifyContent = "center";
-      el2.style.alignItems = align === "left" ? "flex-start" : "center";
-      el2.style.textAlign = align;
-      el2.style.whiteSpace = align === "left" ? "pre-wrap" : "normal";
-      el2.style.wordBreak = align === "left" ? "break-word" : "normal";
-      el2.style.borderBottom = "1px solid #ffffff12";
-      return el2;
-    }
-    function row(log2) {
-      const time = cell("", "center");
-      time.style.gap = "2px";
-      const dateLine = document.createElement("div");
-      const timeLine = document.createElement("div");
-      const hasDate = typeof log2.date === "string" && log2.date.trim().length > 0;
-      if (hasDate) dateLine.textContent = log2.date ?? "";
-      timeLine.textContent = log2.time12;
-      if (hasDate) time.appendChild(dateLine);
-      time.appendChild(timeLine);
-      const petLabel = log2.petName || log2.species || "Pet";
-      const pet = cell("", "center");
-      pet.style.flexDirection = "row";
-      pet.style.alignItems = "center";
-      pet.style.gap = "8px";
-      const petIcon = mkPetIcon(log2);
-      const petText = document.createElement("span");
-      petText.textContent = petLabel;
-      petText.style.whiteSpace = "nowrap";
-      petText.style.overflow = "hidden";
-      petText.style.textOverflow = "ellipsis";
-      pet.append(petIcon, petText);
-      const abName = cell(log2.abilityName || log2.abilityId, "center");
-      const detText = typeof log2.data === "string" ? log2.data : (() => {
-        try {
-          return JSON.stringify(log2.data);
-        } catch {
-          return "";
-        }
-      })();
-      const det = cell(detText, "left");
-      if (log2.isActiveSession) {
-        [time, pet, abName, det].forEach((el2) => {
-          el2.style.background = "rgba(89, 162, 255, 0.14)";
-        });
-      }
-      bodyGrid.append(time, pet, abName, det);
-    }
-    const normAbilityKey = (s) => String(s ?? "").toLowerCase().replace(/\s+/g, "").replace(/([ivx]+)$/i, "");
-    function applyFilters() {
-      let arr = logs.slice();
-      if (abilityFilter && abilityFilter.trim()) {
-        const f = normAbilityKey(abilityFilter);
-        arr = arr.filter((l) => {
-          const idKey = normAbilityKey(l.abilityId);
-          const nameKey = normAbilityKey(PetsService.getAbilityNameWithoutLevel(l.abilityId));
-          return idKey === f || nameKey === f;
-        });
-      }
-      if (q && q.trim()) {
-        const qq = q.toLowerCase();
-        arr = arr.filter((l) => {
-          const pet = (l.petName || l.species || "").toLowerCase();
-          const abName = (l.abilityName || "").toLowerCase();
-          const abId = (l.abilityId || "").toLowerCase();
-          const det = (typeof l.data === "string" ? l.data : (() => {
-            try {
-              return JSON.stringify(l.data);
-            } catch {
-              return "";
-            }
-          })()).toLowerCase();
-          return pet.includes(qq) || abName.includes(qq) || abId.includes(qq) || det.includes(qq) || (l.petId || "").toLowerCase().includes(qq);
-        });
-      }
-      arr.sort(
-        (a, b) => sortDir === "asc" ? a.performedAt - b.performedAt : b.performedAt - a.performedAt
-      );
-      return arr;
-    }
-    function repaint() {
-      bodyGrid.innerHTML = "";
-      const arr = applyFilters();
-      if (!arr.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No logs yet.";
-        empty.style.opacity = "0.75";
-        empty.style.gridColumn = "1 / -1";
-        empty.style.padding = "8px";
-        bodyGrid.appendChild(empty);
-        return;
-      }
-      arr.forEach(row);
-      if (sortDir === "asc") bodyGrid.scrollTop = bodyGrid.scrollHeight + 32;
-      else bodyGrid.scrollTop = 0;
-    }
-    selAbility.onchange = () => {
-      abilityFilter = selAbility.value;
-      repaint();
-    };
-    selSort.onchange = () => {
-      sortDir = selSort.value || "desc";
-      repaint();
-    };
-    inputSearch.addEventListener("input", () => {
-      q = inputSearch.value.trim();
-      repaint();
-    });
-    btnClear.onclick = () => {
-      try {
-        PetsService.clearAbilityLogs();
-      } catch {
-      }
-    };
-    let stopWatcher = null;
-    let unsubLogs = null;
-    (async () => {
-      try {
-        stopWatcher = await PetsService.startAbilityLogsWatcher();
-        rebuildAbilityOptions();
-        unsubLogs = PetsService.onAbilityLogs((all) => {
-          logs = all.map((e) => ({
-            petId: e.petId,
-            petName: e.name ?? null,
-            species: e.species ?? null,
-            mutations: Array.isArray(e.mutations) ? e.mutations.slice() : void 0,
-            abilityId: e.abilityId,
-            abilityName: e.abilityName,
-            data: e.data,
-            performedAt: e.performedAt,
-            date: formatDateMMDDYY(e.performedAt),
-            time12: e.time12,
-            isActiveSession: sessionStart > 0 && e.performedAt >= sessionStart
-          }));
-          rebuildAbilityOptions();
-          repaint();
-        });
-      } catch {
-      }
-    })();
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          unsubLogs?.();
-        } catch {
-        }
-        try {
-          stopWatcher?.();
-        } catch {
-        }
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-    repaint();
-  }
-  var detachPetsOpenTabListener = null;
-  function renderPetsMenu(root) {
-    const ui = new Menu({ id: "pets", compact: true, windowSelector: ".qws-win" });
-    ui.mount(root);
-    ui.addTab("manager", "\u{1F9F0} Manager", (view) => renderManagerTab(view, ui));
-    ui.addTab("feeding", "\u{1F356} Feeding", (view) => renderFeedingTab(view, ui));
-    ui.addTab("hatch", "\u{1F95A} Hatch", (view) => renderHatchTab(view, ui));
-    ui.addTab("logs", "\u{1F4DD} Logs", (view) => renderLogsTab(view, ui));
-    const knownTabs = /* @__PURE__ */ new Set(["manager", "feeding", "hatch", "logs"]);
-    const onOpenTab = (ev) => {
-      const tab = String(ev.detail?.tab || "");
-      if (knownTabs.has(tab)) ui.switchTo(tab);
-    };
-    detachPetsOpenTabListener?.();
-    window.addEventListener("qws:pets-open-tab", onOpenTab);
-    detachPetsOpenTabListener = () => window.removeEventListener("qws:pets-open-tab", onOpenTab);
   }
 
   // src/ui/menus/misc.ts
