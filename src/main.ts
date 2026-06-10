@@ -26,16 +26,16 @@ import { shareGlobal } from "./utils/page-context";
 
 import { warmupSpriteCache } from "./ui/spriteIconCache";
 import { showAutoRecoDisabledNoticeOnce } from "./ui/autoRecoDisabledNotice";
+import { showCommunityHubMovedNoticeOnce } from "./ui/communityHubMovedNotice";
 import { tos } from "./utils/tileObjectSystemApi";
 import { installEmojiDataFetchInterceptor, isDiscordActivityContext } from "./utils/discordCsp";
 
 
 
-import {
-  initAuthBridgeIfNeeded,
-  startPlayerStateReportingWhenGameReady,
-  initializeStreamsWhenReady,
-} from "./ariesModAPI";
+// Import from the module directly (not the ariesModAPI barrel): the barrel
+// re-exports the whole API layer (streams, heartbeat, endpoints) which would
+// drag that dead code into the bundle. The standalone Community Hub owns it.
+import { initAuthBridgeIfNeeded } from "./ariesModAPI/auth/bridge";
 
 
 
@@ -87,6 +87,7 @@ import {
 
   antiAfk.start();
 
-  startPlayerStateReportingWhenGameReady();
-  initializeStreamsWhenReady();
+  // Backend heartbeat + streams + Community Hub now live in the standalone
+  // "MG Community Hub" userscript. Point existing users at it once.
+  showCommunityHubMovedNoticeOnce();
 })();

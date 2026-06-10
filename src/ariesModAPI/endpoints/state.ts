@@ -558,11 +558,6 @@ export async function triggerPlayerStateSyncNow(
   await buildAndSendPlayerState();
 }
 
-// Écouter les événements de connexion pour forcer un re-sync avec le token
-window.addEventListener("qws-friend-overlay-auth-update", () => {
-  if (hasApiKey()) {
-    // Gained auth — force immediate re-sync so next send includes the auth token
-    void triggerPlayerStateSyncNow({ force: true });
-  }
-  // Reporting continues regardless — server accepts collect-state without auth
-});
+// NOTE: no auth-update listener here anymore. State reporting (collect-state
+// heartbeat) is owned by the standalone Community Hub userscript; reacting to
+// "qws-friend-overlay-auth-update" from this bundle would double-send.

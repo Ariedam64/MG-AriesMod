@@ -2,6 +2,11 @@
 import { ACTIVITY_LOG_MODAL_ID, fakeActivityLogShow } from "./fakeModal";
 import { Atoms, myActivityLog } from "../store/atoms";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
+import { pageWindow } from "../utils/page-context";
+
+// Shared with the standalone Community Hub: when it opens a FRIEND's activity
+// log it sets this page global so our history watcher skips one reopen.
+const SKIP_NEXT_ACTIVITY_LOG_REOPEN_GLOBAL = "__MG_SKIP_NEXT_ACTIVITY_LOG_REOPEN__";
 
 type ActivityLogEntry = {
   timestamp: number;
@@ -243,8 +248,11 @@ export async function startActivityLogHistoryWatcher(): Promise<() => void> {
   }
 
   const consumeHistoryReopenSkip = () => {
-    if (!skipNextHistoryReopen) return false;
+    const w = pageWindow as unknown as Record<string, unknown>;
+    const sharedSkip = w[SKIP_NEXT_ACTIVITY_LOG_REOPEN_GLOBAL] === true;
+    if (!skipNextHistoryReopen && !sharedSkip) return false;
     skipNextHistoryReopen = false;
+    if (sharedSkip) delete w[SKIP_NEXT_ACTIVITY_LOG_REOPEN_GLOBAL];
     return true;
   };
 

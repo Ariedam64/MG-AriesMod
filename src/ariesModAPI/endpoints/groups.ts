@@ -4,7 +4,7 @@
 import { httpGet, httpPost, httpPatch, httpDelete } from "../client/http";
 import type { GroupSummary, GroupDetails, GroupMessage, GroupRole } from "../types";
 import { optimistic } from "../optimistic";
-import { CH_EVENTS } from "../../ui/menus/communityHub/shared";
+import { CH_EVENTS } from "../events";
 import {
   getCachedGroups,
   getCachedPublicGroups,
