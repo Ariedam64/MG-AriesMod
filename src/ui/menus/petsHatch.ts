@@ -413,19 +413,24 @@ export function renderHatchTab(view: HTMLElement, ui: Menu): void {
   }
 
   view.innerHTML = "";
-  view.style.display = "grid";
-  view.style.gap = "12px";
-  view.style.alignContent = "start";
-  view.style.minHeight = "0";
-  view.style.maxHeight = "54vh";
-  view.style.overflow = "auto";
+
+  // Style an inner wrapper, never the tab view itself: an inline display on
+  // the view would override the menu's .qmm-view show/hide rule.
+  const wrap = document.createElement("div");
+  wrap.style.display = "grid";
+  wrap.style.gap = "12px";
+  wrap.style.alignContent = "start";
+  wrap.style.minHeight = "0";
+  wrap.style.maxHeight = "54vh";
+  wrap.style.overflow = "auto";
+  view.appendChild(wrap);
 
   const card = ui.card("🐾 Hatched pets", {
     tone: "muted",
     align: "stretch",
     subtitle: "Per-species hatch counts (normal / gold / rainbow)",
   });
-  view.appendChild(card.root);
+  wrap.appendChild(card.root);
 
   const repaint = () => renderGroups(card.body, StatsService.getSnapshot());
 

@@ -58328,18 +58328,20 @@ next: ${next}`;
       view.__cleanup__ = void 0;
     }
     view.innerHTML = "";
-    view.style.display = "grid";
-    view.style.gap = "12px";
-    view.style.alignContent = "start";
-    view.style.minHeight = "0";
-    view.style.maxHeight = "54vh";
-    view.style.overflow = "auto";
+    const wrap = document.createElement("div");
+    wrap.style.display = "grid";
+    wrap.style.gap = "12px";
+    wrap.style.alignContent = "start";
+    wrap.style.minHeight = "0";
+    wrap.style.maxHeight = "54vh";
+    wrap.style.overflow = "auto";
+    view.appendChild(wrap);
     const card2 = ui.card("\u{1F43E} Hatched pets", {
       tone: "muted",
       align: "stretch",
       subtitle: "Per-species hatch counts (normal / gold / rainbow)"
     });
-    view.appendChild(card2.root);
+    wrap.appendChild(card2.root);
     const repaint = () => renderGroups(card2.body, StatsService.getSnapshot());
     let rafId = null;
     const cleanup2 = () => {
