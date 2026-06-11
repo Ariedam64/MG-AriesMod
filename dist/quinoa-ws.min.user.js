@@ -19776,12 +19776,20 @@
       const wrap = function(message, ...rest) {
         let currentMessage = message;
         try {
-          const type = currentMessage?.type;
+          const envelope = currentMessage?.type === "QuinoaCommand" && currentMessage?.command && typeof currentMessage.command === "object" ? currentMessage : null;
+          const inner = envelope ? envelope.command : currentMessage;
+          const type = inner?.type;
           if (type && interceptorsByType.size > 0) {
             const context = { thisArg: this, args: rest };
-            const result = applyInterceptors(type, currentMessage, context);
+            const result = applyInterceptors(type, inner, context);
             if (result.drop) return;
-            currentMessage = result.message;
+            if (envelope) {
+              if (result.message !== inner) {
+                currentMessage = { ...envelope, command: result.message };
+              }
+            } else {
+              currentMessage = result.message;
+            }
           }
         } catch (error) {
           console.error("[MG-mod] Erreur dans le hook WS :", error);

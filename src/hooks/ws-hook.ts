@@ -390,12 +390,30 @@ function ensureMessageInterceptorInstalled() {
       let currentMessage = message;
 
       try {
-        const type = currentMessage?.type;
+        // The game now wraps commands in an envelope:
+        //   { type: "QuinoaCommand", requestId, command: { type: "HarvestCrop", ... } }
+        // Interceptors are keyed on the COMMAND type, so unwrap before
+        // dispatching (and re-wrap on replace / drop the whole envelope).
+        // Plain legacy messages keep working unchanged.
+        const envelope =
+          currentMessage?.type === "QuinoaCommand" &&
+          currentMessage?.command &&
+          typeof currentMessage.command === "object"
+            ? currentMessage
+            : null;
+        const inner = envelope ? envelope.command : currentMessage;
+        const type = inner?.type;
         if (type && interceptorsByType.size > 0) {
           const context: MessageInterceptorContext = { thisArg: this, args: rest };
-          const result = applyInterceptors(type, currentMessage, context);
+          const result = applyInterceptors(type, inner, context);
           if (result.drop) return;
-          currentMessage = result.message;
+          if (envelope) {
+            if (result.message !== inner) {
+              currentMessage = { ...envelope, command: result.message };
+            }
+          } else {
+            currentMessage = result.message;
+          }
         }
       } catch (error) {
         console.error("[MG-mod] Erreur dans le hook WS :", error);
