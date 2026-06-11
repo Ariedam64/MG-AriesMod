@@ -19682,10 +19682,36 @@
       }, delayMs);
     });
   }
+  function installQuinoaCommandSendInterceptor() {
+    const proto = NativeWS.prototype;
+    if (proto.__qwsSendPatched) return;
+    const originalSend = proto.send;
+    proto.send = function(data, ...rest) {
+      try {
+        if (typeof data === "string" && interceptorsByType.size > 0 && data.indexOf('"QuinoaCommand"') !== -1) {
+          const parsed = JSON.parse(data);
+          const command = parsed?.type === "QuinoaCommand" && parsed.command && typeof parsed.command === "object" ? parsed.command : null;
+          const type = command?.type;
+          if (type) {
+            const result = applyInterceptors(type, command, { thisArg: this, args: rest });
+            if (result.drop) return;
+            if (result.message !== command) {
+              data = JSON.stringify({ ...parsed, command: result.message });
+            }
+          }
+        }
+      } catch (error) {
+        console.error("[MG-mod] Erreur dans le hook WS send :", error);
+      }
+      return originalSend.call(this, data, ...rest);
+    };
+    proto.__qwsSendPatched = true;
+  }
   function installPageWebSocketHook() {
     if (!pageWindow || !NativeWS) return;
     startAutoReloadOnVersionExpired();
     startAutoReconnectOnSuperseded();
+    installQuinoaCommandSendInterceptor();
     function WrappedWebSocket(url, protocols) {
       const ws = protocols !== void 0 ? new NativeWS(url, protocols) : new NativeWS(url);
       sockets.push(ws);
@@ -19787,20 +19813,13 @@
       const wrap = function(message, ...rest) {
         let currentMessage = message;
         try {
-          const envelope = currentMessage?.type === "QuinoaCommand" && currentMessage?.command && typeof currentMessage.command === "object" ? currentMessage : null;
-          const inner = envelope ? envelope.command : currentMessage;
-          const type = inner?.type;
-          if (type && interceptorsByType.size > 0) {
+          const isEnvelope = currentMessage?.type === "QuinoaCommand" && currentMessage?.command && typeof currentMessage.command === "object";
+          const type = currentMessage?.type;
+          if (!isEnvelope && type && interceptorsByType.size > 0) {
             const context = { thisArg: this, args: rest };
-            const result = applyInterceptors(type, inner, context);
+            const result = applyInterceptors(type, currentMessage, context);
             if (result.drop) return;
-            if (envelope) {
-              if (result.message !== inner) {
-                currentMessage = { ...envelope, command: result.message };
-              }
-            } else {
-              currentMessage = result.message;
-            }
+            currentMessage = result.message;
           }
         } catch (error) {
           console.error("[MG-mod] Erreur dans le hook WS :", error);

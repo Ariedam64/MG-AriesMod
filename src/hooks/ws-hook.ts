@@ -235,11 +235,55 @@ function startAutoReconnectOnSuperseded() {
   });
 }
 
+/**
+ * Intercept QuinoaCommand envelopes at the WebSocket.send level.
+ *
+ * The game no longer routes commands through RoomConnection.sendMessage: they
+ * are wrapped in { type: "QuinoaCommand", requestId, command: {...} } and
+ * written straight to the socket. Patching the native prototype covers every
+ * socket instance, including reconnections. Interceptors stay keyed on the
+ * inner command type (HarvestCrop, PurchaseShopItem, ...).
+ */
+function installQuinoaCommandSendInterceptor() {
+  const proto = NativeWS.prototype as any;
+  if (proto.__qwsSendPatched) return;
+
+  const originalSend = proto.send;
+  proto.send = function (this: WebSocket, data: any, ...rest: any[]) {
+    try {
+      if (
+        typeof data === "string" &&
+        interceptorsByType.size > 0 &&
+        data.indexOf('"QuinoaCommand"') !== -1
+      ) {
+        const parsed = JSON.parse(data);
+        const command =
+          parsed?.type === "QuinoaCommand" && parsed.command && typeof parsed.command === "object"
+            ? parsed.command
+            : null;
+        const type = command?.type;
+        if (type) {
+          const result = applyInterceptors(type, command, { thisArg: this, args: rest });
+          if (result.drop) return;
+          if (result.message !== command) {
+            data = JSON.stringify({ ...parsed, command: result.message });
+          }
+        }
+      }
+    } catch (error) {
+      console.error("[MG-mod] Erreur dans le hook WS send :", error);
+    }
+    return originalSend.call(this, data, ...rest);
+  };
+  proto.__qwsSendPatched = true;
+}
+
 export function installPageWebSocketHook() {
   if (!pageWindow || !NativeWS) return;
 
   startAutoReloadOnVersionExpired();
   startAutoReconnectOnSuperseded();
+  installQuinoaCommandSendInterceptor();
 
   function WrappedWebSocket(this: any, url: string | URL, protocols?: string | string[]) {
     const ws: WebSocket =
@@ -390,30 +434,20 @@ function ensureMessageInterceptorInstalled() {
       let currentMessage = message;
 
       try {
-        // The game now wraps commands in an envelope:
-        //   { type: "QuinoaCommand", requestId, command: { type: "HarvestCrop", ... } }
-        // Interceptors are keyed on the COMMAND type, so unwrap before
-        // dispatching (and re-wrap on replace / drop the whole envelope).
-        // Plain legacy messages keep working unchanged.
-        const envelope =
+        // QuinoaCommand envelopes are intercepted at the WebSocket.send level
+        // (installQuinoaCommandSendInterceptor) — skip them here so the
+        // interceptors never run twice for the same command. Legacy flat
+        // messages are still handled at this level.
+        const isEnvelope =
           currentMessage?.type === "QuinoaCommand" &&
           currentMessage?.command &&
-          typeof currentMessage.command === "object"
-            ? currentMessage
-            : null;
-        const inner = envelope ? envelope.command : currentMessage;
-        const type = inner?.type;
-        if (type && interceptorsByType.size > 0) {
+          typeof currentMessage.command === "object";
+        const type = currentMessage?.type;
+        if (!isEnvelope && type && interceptorsByType.size > 0) {
           const context: MessageInterceptorContext = { thisArg: this, args: rest };
-          const result = applyInterceptors(type, inner, context);
+          const result = applyInterceptors(type, currentMessage, context);
           if (result.drop) return;
-          if (envelope) {
-            if (result.message !== inner) {
-              currentMessage = { ...envelope, command: result.message };
-            }
-          } else {
-            currentMessage = result.message;
-          }
+          currentMessage = result.message;
         }
       } catch (error) {
         console.error("[MG-mod] Erreur dans le hook WS :", error);
