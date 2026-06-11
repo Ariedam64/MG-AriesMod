@@ -12,6 +12,11 @@ const outDir  = path.join(__dirname, 'dist');
 const meta    = (await fs.readFile(path.join(__dirname, 'meta.userscript.js'), 'utf8')).trim() + '\n';
 await fs.mkdir(outDir, { recursive: true });
 
+// Version from the userscript header, injected into the bundle so the mod
+// always reports its real version (GM_info gives the LOADER's version when
+// the script is loaded via @require file://).
+const modVersion = meta.match(/^\/\/ @version\s+(\S+)/m)?.[1] ?? '0.0.0';
+
 const baseOptions = {
   entryPoints: [path.join(__dirname, 'src', 'main.ts')],
   bundle: true,
@@ -22,6 +27,7 @@ const baseOptions = {
   legalComments: 'none',
   write: false,                 // on récupère le bundle en mémoire
   logLevel: 'info',
+  define: { __ARIES_MOD_VERSION__: JSON.stringify(modVersion) },
 };
 
 async function buildBundle() {
