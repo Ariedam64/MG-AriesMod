@@ -7613,9 +7613,20 @@
           mutations: []
         };
       }
-      const pos = selectedOrderedPosition(order, slotCount);
-      const clampedPos = clamp(pos, 0, availableCount - 1);
-      const originalIndex = availableIndices[clampedPos] ?? null;
+      let originalIndex = null;
+      let clampedPos;
+      const bySlotId = Number.isFinite(selectedIdx) ? slots.findIndex(
+        (s) => s && typeof s === "object" && s.slotId === selectedIdx
+      ) : -1;
+      if (bySlotId >= 0) {
+        originalIndex = bySlotId;
+        const posInOrder = availableIndices.indexOf(bySlotId);
+        clampedPos = posInOrder >= 0 ? posInOrder : 0;
+      } else {
+        const pos = selectedOrderedPosition(order, slotCount);
+        clampedPos = clamp(pos, 0, availableCount - 1);
+        originalIndex = availableIndices[clampedPos] ?? null;
+      }
       const slot = typeof originalIndex === "number" ? slots[originalIndex] ?? null : null;
       const sizePercent = slot ? extractSizePercent(slot) : null;
       const mutations = slot ? sanitizeMutations2(slot.mutations) : [];
