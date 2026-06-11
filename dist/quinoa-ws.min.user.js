@@ -28544,7 +28544,7 @@
   var LOCK_EMOJI = "\u{1F512}";
   var LOCK_BORDER_STYLE = "2px solid rgb(188, 53, 215)";
   var LOCK_BORDER_RADIUS = "15px";
-  var TOOLTIP_ROOT_CLASS = "css-129757o";
+  var TOOLTIP_ROOT_CLASSES = ["css-129757o", "css-7cru8u"];
   var LOCK_ICON_CLASS = "tm-locker-tooltip-lock-icon";
   var DATASET_KEY_COLOR = "tmLockerOriginalColor";
   var DATASET_KEY_DISPLAY = "tmLockerOriginalDisplay";
@@ -28754,13 +28754,19 @@
     if (typeof document === "undefined") return;
     const all = document.querySelectorAll(`span.${LOCK_ICON_CLASS}`);
     all.forEach((icon) => {
-      if (!icon.closest(`.${TOOLTIP_ROOT_CLASS}`)) {
-        icon.remove();
-      }
+      const parent = icon.parentElement;
+      const insideTooltip = !!parent && (TOOLTIP_ROOT_CLASSES.some((cls) => parent.closest(`.${cls}`)) || !!parent.querySelector(":scope > .McGrid"));
+      if (!insideTooltip) icon.remove();
     });
   }
   function getTooltipRoot(inner) {
-    return inner.closest(`.${TOOLTIP_ROOT_CLASS}`);
+    for (const cls of TOOLTIP_ROOT_CLASSES) {
+      const direct = inner.closest(`.${cls}`);
+      if (direct) return direct;
+    }
+    const grid = inner.closest(".McGrid");
+    const parent = grid?.parentElement;
+    return parent instanceof HTMLElement ? parent : null;
   }
   function updateLockEmoji(inner, locked) {
     if (!(inner instanceof HTMLElement)) return;

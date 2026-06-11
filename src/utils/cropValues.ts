@@ -43,7 +43,10 @@ const LOCK_TEXT_SELECTOR = ":scope > .chakra-text.css-1jc0opy";
 const LOCK_EMOJI = "🔒";
 const LOCK_BORDER_STYLE = "2px solid rgb(188, 53, 215)";
 const LOCK_BORDER_RADIUS = "15px";
-const TOOLTIP_ROOT_CLASS = "css-129757o";
+// Hashed chakra class of the tooltip root — changes between game builds
+// (css-129757o, then css-7cru8u). Kept as hints; getTooltipRoot falls back to
+// the structure (parent of the .McGrid panel) when no class matches.
+const TOOLTIP_ROOT_CLASSES = ["css-129757o", "css-7cru8u"];
 const LOCK_ICON_CLASS = "tm-locker-tooltip-lock-icon";
 
 const DATASET_KEY_COLOR = "tmLockerOriginalColor";
@@ -330,14 +333,25 @@ function cleanupLegacyLockIcons(): void {
   if (typeof document === "undefined") return;
   const all = document.querySelectorAll<HTMLElement>(`span.${LOCK_ICON_CLASS}`);
   all.forEach(icon => {
-    if (!icon.closest(`.${TOOLTIP_ROOT_CLASS}`)) {
-      icon.remove();
-    }
+    const parent = icon.parentElement;
+    const insideTooltip =
+      !!parent &&
+      (TOOLTIP_ROOT_CLASSES.some((cls) => parent.closest(`.${cls}`)) ||
+        !!parent.querySelector(":scope > .McGrid"));
+    if (!insideTooltip) icon.remove();
   });
 }
 
 function getTooltipRoot(inner: HTMLElement): HTMLElement | null {
-  return inner.closest<HTMLElement>(`.${TOOLTIP_ROOT_CLASS}`);
+  for (const cls of TOOLTIP_ROOT_CLASSES) {
+    const direct = inner.closest<HTMLElement>(`.${cls}`);
+    if (direct) return direct;
+  }
+  // Structural fallback: the crop tooltip root is the parent of the .McGrid
+  // wrapping the panel (canvas + texts) — survives hashed class renames.
+  const grid = inner.closest<HTMLElement>(".McGrid");
+  const parent = grid?.parentElement;
+  return parent instanceof HTMLElement ? parent : null;
 }
 
 function updateLockEmoji(inner: Element, locked: boolean): void {
