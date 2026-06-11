@@ -610,6 +610,20 @@ function installHarvestCropInterceptor() {
       return;
     }
 
+    // Fail-closed fallback: when the tile cannot be resolved from the garden
+    // atom below, rely on the locker's own current-slot assessment (fed by
+    // myCurrentGardenObject + mySelectedSlotIdAtom — the pipeline that powers
+    // the purple outline). A harvest targets the current selection, so a
+    // negative assessment is enough to block instead of silently allowing.
+    const blockedByCurrentSlotFallback = () => {
+      try {
+        if (!lockerService.getState().enabled) return false;
+        return lockerService.getCurrentSlotSnapshot().harvestAllowed === false;
+      } catch {
+        return false;
+      }
+    };
+
     const garden = latestGardenState;
     const tileObjects = garden?.tileObjects;
     let tile: any = tileObjects ? (tileObjects[String(slot)] as any) : undefined;
@@ -626,6 +640,10 @@ function installHarvestCropInterceptor() {
     }
 
     if (!tile || typeof tile !== "object" || tile.objectType !== "plant") {
+      if (blockedByCurrentSlotFallback()) {
+        console.log("[HarvestCrop] Blocked by locker (current-slot fallback, tile not found)", { slot, slotsIndex });
+        return { kind: "drop" };
+      }
       return;
     }
 
@@ -640,6 +658,10 @@ function installHarvestCropInterceptor() {
     const cropSlot = findBySlotId(slots) ?? slots[slotsIndex as number] ?? null;
 
     if (!cropSlot || typeof cropSlot !== "object") {
+      if (blockedByCurrentSlotFallback()) {
+        console.log("[HarvestCrop] Blocked by locker (current-slot fallback, sub-slot not found)", { slot, slotsIndex });
+        return { kind: "drop" };
+      }
       return;
     }
 

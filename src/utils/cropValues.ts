@@ -155,6 +155,10 @@ export function startCropValuesObserverFromGardenAtom(options: AppendOptions = {
     if (!running) return;
     if (!lockerReady) return;
 
+    // Heal any outline applied outside a real tooltip (runs every cycle, even
+    // when the rendered value/lock state did not change).
+    cleanupStrayLockedStyles();
+
     const value = priceWatcher.get();
     const locked = lockerHarvestAllowed === false;
     if (
@@ -372,11 +376,13 @@ function getTooltipRoot(inner: HTMLElement): HTMLElement | null {
     const direct = inner.closest<HTMLElement>(`.${cls}`);
     if (direct) return direct;
   }
-  // Structural fallback (survives hashed class renames): the crop tooltip
-  // root is the parent of the .McGrid panel, but only when that parent wraps
-  // nothing else (see isTooltipRoot).
-  const grid = inner.closest<HTMLElement>(".McGrid");
-  const parent = grid?.parentElement;
+  // Structural fallback (survives hashed class renames): the crop panel grid
+  // must be the DIRECT parent of `inner` (the screen layout also nests
+  // .McGrid containers higher up — never anchor on those), and the tooltip
+  // root is that grid's parent, provided it wraps nothing else.
+  const grid = inner.parentElement;
+  if (!(grid instanceof HTMLElement) || !grid.classList.contains("McGrid")) return null;
+  const parent = grid.parentElement;
   if (!(parent instanceof HTMLElement)) return null;
   return isTooltipRoot(parent) ? parent : null;
 }

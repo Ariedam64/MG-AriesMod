@@ -19977,6 +19977,14 @@
       if (!Number.isInteger(slot) || !Number.isInteger(slotsIndex)) {
         return;
       }
+      const blockedByCurrentSlotFallback = () => {
+        try {
+          if (!lockerService.getState().enabled) return false;
+          return lockerService.getCurrentSlotSnapshot().harvestAllowed === false;
+        } catch {
+          return false;
+        }
+      };
       const garden2 = latestGardenState;
       const tileObjects = garden2?.tileObjects;
       let tile = tileObjects ? tileObjects[String(slot)] : void 0;
@@ -19990,12 +19998,20 @@
         }
       }
       if (!tile || typeof tile !== "object" || tile.objectType !== "plant") {
+        if (blockedByCurrentSlotFallback()) {
+          console.log("[HarvestCrop] Blocked by locker (current-slot fallback, tile not found)", { slot, slotsIndex });
+          return { kind: "drop" };
+        }
         return;
       }
       const slots = Array.isArray(tile.slots) ? tile.slots : [];
       const findBySlotId = (list) => list.find((s) => s && typeof s === "object" && s.slotId === slotsIndex) ?? null;
       const cropSlot = findBySlotId(slots) ?? slots[slotsIndex] ?? null;
       if (!cropSlot || typeof cropSlot !== "object") {
+        if (blockedByCurrentSlotFallback()) {
+          console.log("[HarvestCrop] Blocked by locker (current-slot fallback, sub-slot not found)", { slot, slotsIndex });
+          return { kind: "drop" };
+        }
         return;
       }
       const currentObjSlots = Array.isArray(latestCurrentGardenObject?.slots) ? latestCurrentGardenObject.slots : [];
@@ -28623,6 +28639,7 @@
     const render = () => {
       if (!running) return;
       if (!lockerReady) return;
+      cleanupStrayLockedStyles();
       const value = priceWatcher.get();
       const locked = lockerHarvestAllowed === false;
       if (value === lastRenderedValue && locked === lastRenderedLocked && !needsRepositionRender) {
@@ -28783,8 +28800,9 @@
       const direct = inner.closest(`.${cls}`);
       if (direct) return direct;
     }
-    const grid = inner.closest(".McGrid");
-    const parent = grid?.parentElement;
+    const grid = inner.parentElement;
+    if (!(grid instanceof HTMLElement) || !grid.classList.contains("McGrid")) return null;
+    const parent = grid.parentElement;
     if (!(parent instanceof HTMLElement)) return null;
     return isTooltipRoot(parent) ? parent : null;
   }
