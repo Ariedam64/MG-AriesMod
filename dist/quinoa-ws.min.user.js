@@ -28750,13 +28750,32 @@
     const markers = inner.querySelectorAll(`:scope > span.${CSS.escape(markerClass)}`);
     markers.forEach((m) => m.remove());
   }
+  function isTooltipRoot(el2) {
+    if (TOOLTIP_ROOT_CLASSES.some((cls) => el2.classList.contains(cls))) return true;
+    const children = Array.from(el2.children);
+    const grid = children.find((c) => c.classList.contains("McGrid"));
+    if (!grid) return false;
+    const extra = children.filter(
+      (c) => c !== grid && !c.classList.contains(LOCK_ICON_CLASS)
+    );
+    return extra.length === 0;
+  }
   function cleanupLegacyLockIcons() {
     if (typeof document === "undefined") return;
     const all = document.querySelectorAll(`span.${LOCK_ICON_CLASS}`);
     all.forEach((icon) => {
       const parent = icon.parentElement;
-      const insideTooltip = !!parent && (TOOLTIP_ROOT_CLASSES.some((cls) => parent.closest(`.${cls}`)) || !!parent.querySelector(":scope > .McGrid"));
-      if (!insideTooltip) icon.remove();
+      if (!parent || !isTooltipRoot(parent)) icon.remove();
+    });
+  }
+  function cleanupStrayLockedStyles() {
+    if (typeof document === "undefined") return;
+    const all = document.querySelectorAll("[data-tm-locker-original-border]");
+    all.forEach((el2) => {
+      if (!isTooltipRoot(el2)) {
+        restoreTooltipStyles(el2);
+        removeLockIcon(el2);
+      }
     });
   }
   function getTooltipRoot(inner) {
@@ -28766,12 +28785,14 @@
     }
     const grid = inner.closest(".McGrid");
     const parent = grid?.parentElement;
-    return parent instanceof HTMLElement ? parent : null;
+    if (!(parent instanceof HTMLElement)) return null;
+    return isTooltipRoot(parent) ? parent : null;
   }
   function updateLockEmoji(inner, locked) {
     if (!(inner instanceof HTMLElement)) return;
     inner.querySelectorAll(":scope > span.tm-locker-lock-emoji").forEach((node) => node.remove());
     cleanupLegacyLockIcons();
+    cleanupStrayLockedStyles();
     const textTarget = inner.querySelector(LOCK_TEXT_SELECTOR) ?? inner.querySelector(":scope > .chakra-text");
     const tooltipRoot = getTooltipRoot(inner);
     const legacyOuter = inner.closest(".css-502lyi");

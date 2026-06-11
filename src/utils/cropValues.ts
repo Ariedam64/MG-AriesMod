@@ -329,16 +329,41 @@ function removeMarker(inner: Element, markerClass: string): void {
   markers.forEach((m) => m.remove());
 }
 
+/**
+ * A tooltip root either carries one of the known hashed classes, or wraps
+ * ONLY the .McGrid crop panel (plus our own lock icon). The in-game screen
+ * also nests .McGrid containers — those hold many other children and must
+ * never receive the locked outline.
+ */
+function isTooltipRoot(el: HTMLElement): boolean {
+  if (TOOLTIP_ROOT_CLASSES.some((cls) => el.classList.contains(cls))) return true;
+  const children = Array.from(el.children);
+  const grid = children.find((c) => c.classList.contains("McGrid"));
+  if (!grid) return false;
+  const extra = children.filter(
+    (c) => c !== grid && !c.classList.contains(LOCK_ICON_CLASS),
+  );
+  return extra.length === 0;
+}
+
 function cleanupLegacyLockIcons(): void {
   if (typeof document === "undefined") return;
   const all = document.querySelectorAll<HTMLElement>(`span.${LOCK_ICON_CLASS}`);
   all.forEach(icon => {
     const parent = icon.parentElement;
-    const insideTooltip =
-      !!parent &&
-      (TOOLTIP_ROOT_CLASSES.some((cls) => parent.closest(`.${cls}`)) ||
-        !!parent.querySelector(":scope > .McGrid"));
-    if (!insideTooltip) icon.remove();
+    if (!parent || !isTooltipRoot(parent)) icon.remove();
+  });
+}
+
+/** Restore any element that received the locked styling but is not a tooltip root. */
+function cleanupStrayLockedStyles(): void {
+  if (typeof document === "undefined") return;
+  const all = document.querySelectorAll<HTMLElement>("[data-tm-locker-original-border]");
+  all.forEach((el) => {
+    if (!isTooltipRoot(el)) {
+      restoreTooltipStyles(el);
+      removeLockIcon(el);
+    }
   });
 }
 
@@ -347,11 +372,13 @@ function getTooltipRoot(inner: HTMLElement): HTMLElement | null {
     const direct = inner.closest<HTMLElement>(`.${cls}`);
     if (direct) return direct;
   }
-  // Structural fallback: the crop tooltip root is the parent of the .McGrid
-  // wrapping the panel (canvas + texts) — survives hashed class renames.
+  // Structural fallback (survives hashed class renames): the crop tooltip
+  // root is the parent of the .McGrid panel, but only when that parent wraps
+  // nothing else (see isTooltipRoot).
   const grid = inner.closest<HTMLElement>(".McGrid");
   const parent = grid?.parentElement;
-  return parent instanceof HTMLElement ? parent : null;
+  if (!(parent instanceof HTMLElement)) return null;
+  return isTooltipRoot(parent) ? parent : null;
 }
 
 function updateLockEmoji(inner: Element, locked: boolean): void {
@@ -362,6 +389,9 @@ function updateLockEmoji(inner: Element, locked: boolean): void {
 
   // Supprime les locks orphelins qui ne sont pas dans un vrai panel
   cleanupLegacyLockIcons();
+  // Et retire la bordure/le cadenas posés par erreur hors tooltip (ex: un
+  // conteneur d'écran résolu par un ancien fallback trop large)
+  cleanupStrayLockedStyles();
 
   const textTarget =
     inner.querySelector<HTMLElement>(LOCK_TEXT_SELECTOR) ??
