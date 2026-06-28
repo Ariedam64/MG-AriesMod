@@ -259,6 +259,7 @@ export const tileRefsMutations = {
   Dawnlit: "sprite/mutation/Dawnlit",
   Frozen: "sprite/mutation/Frozen",
   Puddle: "sprite/mutation/Puddle",
+  Thundercharged: "sprite/mutation/Thundercharged",
   Thunderstruck: "sprite/mutation/Thunderstruck",
   ThunderstruckGround: "sprite/mutation/ThunderstruckGround",
   Wet: "sprite/mutation/Wet",
@@ -274,7 +275,8 @@ export const tileRefsMutationLabels = {
   Dawncharged: "Dawnbound",
   Ambercharged: "Amberbound",
   Thunderstruck: "Thunderstruck",
-  ThunderstruckGround: "Thunderstruck"
+  ThunderstruckGround: "Thunderstruck",
+  Thundercharged: "Thundercharged"
 
 };
 
@@ -1777,6 +1779,7 @@ export const mutationCatalog = {
   Chilled:    { name: "Chilled",     baseChance: 0, coinMultiplier: 2,  tileRef: tileRefsMutations.Chilled },
   Frozen:     { name: "Frozen",      baseChance: 0, coinMultiplier: 6, tileRef: tileRefsMutations.Frozen },
   Thunderstruck: { name: "Thunderstruck", baseChance: 0, coinMultiplier: 5, tileRef: tileRefsMutations.Thunderstruck },
+  Thundercharged: { name: "Thundercharged", baseChance: 0, coinMultiplier: 7, tileRef: tileRefsMutations.Thundercharged },
 
   Dawnlit:    { name: "Dawnlit",     baseChance: 0, coinMultiplier: 4,  tileRef: tileRefsMutations.Dawnlit },
   Amberlit: { name: "Amberlit",    baseChance: 0, coinMultiplier: 6,  tileRef: tileRefsMutations.Amberlit },

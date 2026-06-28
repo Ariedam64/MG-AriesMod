@@ -2,6 +2,7 @@
 import { Menu } from "../menu";
 import {
   plantCatalog,
+  eggCatalog,
   tileRefsMutations,
   tileRefsMutationLabels,
 } from "../../data";
@@ -224,6 +225,7 @@ const WEATHER_RECIPE_GROUPS: Partial<Record<WeatherTag, WeatherRecipeGroup>> = {
   Chilled: "condition",
   Frozen: "condition",
   Thunderstruck: "condition",
+  Thundercharged: "condition",
   Dawnlit: "lighting",
   Amberlit: "lighting",
   Dawncharged: "lighting",
@@ -231,7 +233,7 @@ const WEATHER_RECIPE_GROUPS: Partial<Record<WeatherTag, WeatherRecipeGroup>> = {
 };
 
 const WEATHER_RECIPE_GROUP_MEMBERS: Record<WeatherRecipeGroup, WeatherTag[]> = {
-  condition: ["Wet", "Chilled", "Frozen", "Thunderstruck"],
+  condition: ["Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"],
   lighting: ["Dawnlit", "Amberlit", "Dawncharged", "Ambercharged"],
 };
 
@@ -2103,7 +2105,7 @@ function createRestrictionsTabRenderer(ui: Menu): LockerTabRenderer {
     opacity: "0.7",
     fontSize: "12px",
   });
-  emptyEggPlaceholder.textContent = "No eggs detected in shop.";
+  emptyEggPlaceholder.textContent = "No eggs available.";
 
   const updateEggToggleAppearance = (toggle: HTMLButtonElement, locked: boolean): void => {
     toggle.textContent = locked ? LOCKED_ICON : UNLOCKED_ICON;
@@ -2341,14 +2343,15 @@ function createRestrictionsTabRenderer(ui: Menu): LockerTabRenderer {
     const unsubService = lockerRestrictionsService.subscribe(syncFromService);
     disposables.push(unsubService);
 
+    eggOptions = extractEggOptionsFromCatalog();
     try {
       const initialEggShop = await Atoms.shop.eggShop.get();
-      eggOptions = extractEggOptions(initialEggShop);
-      renderEggList();
+      eggOptions = mergeEggOptions(eggOptions, extractEggOptions(initialEggShop));
     } catch {}
+    renderEggList();
     try {
       const unsubEggShop = await Atoms.shop.eggShop.onChange((next) => {
-        eggOptions = extractEggOptions(next);
+        eggOptions = mergeEggOptions(extractEggOptionsFromCatalog(), extractEggOptions(next));
         renderEggList();
       });
       if (typeof unsubEggShop === "function") disposables.push(unsubEggShop);
@@ -2411,6 +2414,29 @@ function extractEggOptions(raw: any): EggOption[] {
 
   walk(raw);
   return options;
+}
+
+function extractEggOptionsFromCatalog(): EggOption[] {
+  const options: EggOption[] = [];
+  const seen = new Set<string>();
+  for (const [id, raw] of Object.entries(eggCatalog as Record<string, any>)) {
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const name = (typeof raw?.name === "string" && raw.name) || id;
+    options.push({ id, name });
+  }
+  return options;
+}
+
+function mergeEggOptions(base: EggOption[], extra: EggOption[]): EggOption[] {
+  const seen = new Set(base.map(o => o.id));
+  const result = [...base];
+  for (const opt of extra) {
+    if (seen.has(opt.id)) continue;
+    seen.add(opt.id);
+    result.push(opt);
+  }
+  return result;
 }
 
 function createGeneralTabRenderer(ui: Menu, store: LockerMenuStore): LockerTabRenderer {

@@ -167,6 +167,7 @@ const MUTATION_ICONS: Record<string, MutationIconDef> = {
   Chilled:       { url: `${API_BASE}/assets/sprites/mutations/Chilled.png`,       anchor: { x: 0.502, y: 0.543 } },
   Frozen:        { url: `${API_BASE}/assets/sprites/mutations/Frozen.png`,        anchor: { x: 0.5, y: 0.474 } },
   Thunderstruck: { url: `${API_BASE}/assets/sprites/mutations/Thunderstruck.png`, anchor: { x: 0.495, y: 0.525 } },
+  Thundercharged: { url: `${API_BASE}/assets/sprites/mutations/Thundercharged.png`, anchor: { x: 0.495, y: 0.525 } },
   // Floating icons (anchor.y ≈ 0.8 — drawn above the plant)
   Dawnlit:       { url: `${API_BASE}/assets/sprites/mutations/Dawnlit.png`,       anchor: { x: 0.506, y: 0.809 } },
   Ambershine:    { url: `${API_BASE}/assets/sprites/mutations/Amberlit.png`,      anchor: { x: 0.5, y: 0.820 } },
@@ -192,6 +193,7 @@ const MUTATION_FILTERS: Record<string, FilterDef> = {
   Chilled: { op: "source-atop", colors: ["rgb(100,160,210)"], a: 0.45 },
   Frozen: { op: "source-atop", colors: ["rgb(100,130,220)"], a: 0.5 },
   Thunderstruck: { op: "source-atop", colors: ["rgb(16, 141, 163)"], a: 0.45 },
+  Thundercharged: { op: "source-atop", colors: ["rgb(10, 100, 190)"], a: 0.5 },
   Dawnlit: { op: "source-atop", colors: ["rgb(209,70,231)"], a: 0.5 },
   Ambershine: { op: "source-atop", colors: ["rgb(190,100,40)"], a: 0.5 },
   Dawncharged: { op: "source-atop", colors: ["rgb(140,80,200)"], a: 0.5 },
@@ -205,7 +207,7 @@ function normalizeMutations(list: string[]): string[] {
   if (names.includes("Rainbow")) return ["Rainbow"];
   const warm = ["Ambershine", "Dawnlit", "Dawncharged", "Ambercharged"];
   if (names.some(name => warm.includes(name))) {
-    return names.filter(name => !["Wet", "Chilled", "Frozen", "Thunderstruck"].includes(name));
+    return names.filter(name => !["Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"].includes(name));
   }
   return names;
 }
@@ -577,7 +579,7 @@ export function attachSpriteIcon(
 
 export function attachWeatherSpriteIcon(target: HTMLElement, tag: string, size: number): void {
   if (tag === "NoWeatherEffect") return;
-  attachSpriteIcon(target, ["mutation", "ui", "weather"], tag, size, "weather");
+  attachSpriteIcon(target, ["ui", "mutation", "weather"], [`Mutation${tag}`, tag], size, "weather");
 }
 
 /**

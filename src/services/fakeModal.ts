@@ -22,6 +22,12 @@ export type FakeModalOptions = {
 
 export async function openModal(modalId: ModalId) {
   try {
+    const current = await Atoms.ui.activeModal.get();
+    if (current && current !== modalId) {
+      await Atoms.ui.activeModal.set(null);
+      await Atoms.ui.inventoryModalIsActive.set(false);
+      await new Promise(r => requestAnimationFrame(r));
+    }
     await Atoms.ui.activeModal.set(modalId);
     await Atoms.ui.inventoryModalIsActive.set(modalId === "inventory");
   } catch (err) {

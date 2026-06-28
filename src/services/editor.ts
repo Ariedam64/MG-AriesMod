@@ -52,6 +52,8 @@ const mutationColorMap: Record<string, string> = {
 
   Thunderstruck:"rgb(16, 141, 163)",
 
+  Thundercharged:"rgb(10, 100, 190)",
+
   Dawnlit:     "rgba(120, 100, 180, 1)",
 
   Ambershine:  "rgba(160, 70, 50, 1)",      // <- important : Ambershine, pas Amberlit

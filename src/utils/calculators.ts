@@ -2,7 +2,7 @@
 import { plantCatalog, mutationCatalog } from "../data";
 
 export type ColorMutation = "Gold" | "Rainbow";
-export type WeatherMutation = "Wet" | "Chilled" | "Frozen" | "Thunderstruck";
+export type WeatherMutation = "Wet" | "Chilled" | "Frozen" | "Thunderstruck" | "Thundercharged";
 export type TimeMutation = "Dawnlit" | "Dawnbound" | "Amberlit" | "Amberbound";
 
 export type MutationName =
@@ -140,7 +140,7 @@ function isColor(m: MutationName): m is ColorMutation {
   return m === "Gold" || m === "Rainbow";
 }
 function isWeather(m: MutationName): m is WeatherMutation {
-  return m === "Wet" || m === "Chilled" || m === "Frozen" || m === "Thunderstruck";
+  return m === "Wet" || m === "Chilled" || m === "Frozen" || m === "Thunderstruck" || m === "Thundercharged";
 }
 function isTime(m: MutationName): m is TimeMutation {
   return m === "Dawnlit" || m === "Dawnbound" || m === "Amberlit" || m === "Amberbound";
@@ -159,6 +159,7 @@ function normalizeMutationName(m: MutationName): MutationName {
   if (s === "frozen") return "Frozen";
   if (s === "thunderstruck" || s === "thunder") return "Thunderstruck";
   if (s === "thunderstruckground" || s === "thunderstruck_ground") return "Thunderstruck";
+  if (s === "thundercharged" || s === "thunder charged" || s === "thunder-charged") return "Thundercharged";
   if (s === "dawnlit") return "Dawnlit";
   if (s === "dawnbound") return "Dawnbound";
   if (s === "amberlit") return "Amberlit";

@@ -19,7 +19,7 @@ const SCALE_MIN = 1;
 const SCALE_MAX = 3;
 
 const COLOR_MUTATION_LABELS = ["None", "Gold", "Rainbow"] as const;
-const WEATHER_CONDITION_LABELS = ["None", "Wet", "Chilled", "Frozen", "Thunderstruck"] as const;
+const WEATHER_CONDITION_LABELS = ["None", "Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"] as const;
 const WEATHER_LIGHTING_LABELS = ["None", "Dawnlit", "Dawnbound", "Amberlit", "Amberbound"] as const;
 const FRIEND_BONUS_LABELS = ["+0%", "+10%", "+20%", "+30%", "+40%", "+50%"] as const;
 const FRIEND_BONUS_MIN_PLAYERS = 1;
@@ -37,6 +37,7 @@ const WEATHER_CONDITION_SEGMENT_METADATA: Record<string, Record<string, string>>
   Chilled: { mgWeather: "chilled" },
   Frozen: { mgWeather: "frozen" },
   Thunderstruck: { mgWeather: "thunderstruck" },
+  Thundercharged: { mgWeather: "thundercharged" },
 };
 
 const WEATHER_LIGHTING_SEGMENT_METADATA: Record<string, Record<string, string>> = {
@@ -53,6 +54,7 @@ const MUTATION_SPRITE_OVERRIDES: Record<string, string> = {
   amberlit: "Ambershine",
   amberbound: "Ambercharged",
   thunderstruck: "Thunderstruck",
+  thundercharged: "Thundercharged",
 };
 
 type ColorLabel = (typeof COLOR_MUTATION_LABELS)[number];
@@ -779,6 +781,7 @@ const MUTATION_UI_SPRITE_NAMES: Record<string, string> = {
   Chilled: "MutationChilled",
   Frozen: "MutationFrozen",
   Thunderstruck: "MutationThunderstruck",
+  Thundercharged: "MutationThundercharged",
   Dawnlit: "MutationDawnlit",
   Amberlit: "MutationAmberlit",
   Dawnbound: "MutationDawncharged",
