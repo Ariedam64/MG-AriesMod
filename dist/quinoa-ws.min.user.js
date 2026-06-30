@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.151
+// @version      3.2.152
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -3372,7 +3372,7 @@
   var myPetHutchPetItems = makeAtom("myPetHutchPetItemsAtom");
   var isMyInventoryAtMaxLength = makeAtom("isMyInventoryAtMaxLengthAtom");
   var myNumPetHutchItems = makeAtom("myNumPetHutchItemsAtom");
-  var shops = makeAtom("shopsAtom");
+  var shops = makeView("stateAtom", { path: "child.data.shops" });
   var myShopPurchases = makeView("myDataAtom", { path: "shopPurchases" });
   var numPlayers = makeAtom("numPlayersAtom");
   var totalCropSellPrice = makeAtom("totalCropSellPriceAtom");
@@ -3405,10 +3405,10 @@
   var stateUserSlots = makeView("stateAtom", { path: "child.data.userSlots" });
   var statePlayers = makeView("stateAtom", { path: "data.players" });
   var myActivityLog = makeView("myDataAtom", { path: "activityLogs" });
-  var seedShop = makeView("shopsAtom", { path: "seed" });
-  var toolShop = makeView("shopsAtom", { path: "tool" });
-  var eggShop = makeView("shopsAtom", { path: "egg" });
-  var decorShop = makeView("shopsAtom", { path: "decor" });
+  var seedShop = makeView("stateAtom", { path: "child.data.shops.seed" });
+  var toolShop = makeView("stateAtom", { path: "child.data.shops.tool" });
+  var eggShop = makeView("stateAtom", { path: "child.data.shops.egg" });
+  var decorShop = makeView("stateAtom", { path: "child.data.shops.decor" });
   function slotSig(o) {
     if (!o) return "\u2205";
     return [
@@ -10204,7 +10204,7 @@
       const up = el("button", "qmm-step qmm-step--up", "\u25B2");
       const down = el("button", "qmm-step qmm-step--down", "\u25BC");
       up.type = down.type = "button";
-      const clamp4 = () => {
+      const clamp3 = () => {
         const n = Number(i.value);
         if (Number.isFinite(n)) {
           const lo = Number(i.min), hi = Number(i.max);
@@ -10215,7 +10215,7 @@
       const bump = (dir) => {
         if (dir < 0) i.stepDown();
         else i.stepUp();
-        clamp4();
+        clamp3();
         i.dispatchEvent(new Event("input", { bubbles: true }));
         i.dispatchEvent(new Event("change", { bubbles: true }));
       };
@@ -10258,7 +10258,7 @@
       };
       addSpin(up, 1);
       addSpin(down, -1);
-      i.addEventListener("change", clamp4);
+      i.addEventListener("change", clamp3);
       spin.append(up, down);
       wrap.append(i, spin);
       i.wrap = wrap;
@@ -28455,13 +28455,10 @@
 
   // src/utils/cropPrice.ts
   var isPlantObject2 = (o) => !!o && o.objectType === "plant";
-  var defaultOrder2 = (n) => Array.from({ length: n }, (_, i) => i);
-  var clamp2 = (n, min, max) => Math.max(min, Math.min(max, n));
   function startCropPriceWatcherViaGardenObject() {
     let cur = null;
     let players = void 0;
-    let sortedIdx = null;
-    let selectedIdx = null;
+    let selectedSlotId = null;
     let lastPrice = null;
     const listeners5 = /* @__PURE__ */ new Set();
     const notify2 = () => {
@@ -28479,36 +28476,11 @@
         recomputeAndNotify();
       });
     };
-    function getOrder() {
-      const n = Array.isArray(cur?.slots) ? cur.slots.length : 0;
-      if (!n) return [];
-      return Array.isArray(sortedIdx) && sortedIdx.length === n ? sortedIdx : defaultOrder2(n);
-    }
-    function selectedOrderedPosition() {
-      if (!isPlantObject2(cur)) return 0;
-      const slots = cur.slots ?? [];
-      const n = Array.isArray(slots) ? slots.length : 0;
-      if (!n) return 0;
-      const raw = Number.isFinite(selectedIdx) ? selectedIdx : 0;
-      const clampedRaw = clamp2(raw, 0, n - 1);
-      const ord = getOrder();
-      const pos = ord.indexOf(clampedRaw);
-      return pos >= 0 ? pos : 0;
-    }
-    function getOrderedSlots() {
-      if (!isPlantObject2(cur)) return [];
-      const slots = Array.isArray(cur.slots) ? cur.slots : [];
-      const ord = getOrder();
-      const out = [];
-      for (const i of ord) if (slots[i] != null) out.push(slots[i]);
-      return out;
-    }
     function computeSelectedSlotPrice() {
       if (!isPlantObject2(cur)) return null;
-      const ordered = getOrderedSlots();
-      if (!ordered.length) return null;
-      const pos = selectedOrderedPosition();
-      const slot = ordered[clamp2(pos, 0, ordered.length - 1)];
+      const slots = Array.isArray(cur.slots) ? cur.slots : [];
+      if (!slots.length) return null;
+      const slot = selectedSlotId != null ? slots.find((s) => s?.slotId === selectedSlotId) ?? slots[0] : slots[0];
       const val = valueFromGardenSlot(slot, DefaultPricing, players);
       return Number.isFinite(val) && val > 0 ? val : null;
     }
@@ -28535,26 +28507,18 @@
       } catch {
       }
       try {
-        const v = await myCurrentSortedGrowSlotIndices.get();
-        sortedIdx = Array.isArray(v) ? v.slice() : null;
-      } catch {
-      }
-      try {
-        selectedIdx = await myCurrentGrowSlotIndex.get();
+        selectedSlotId = await myCurrentGrowSlotIndex.get();
       } catch {
       }
       numPlayers.onChange((n) => {
         players = n;
-      });
-      myCurrentSortedGrowSlotIndices.onChange((v) => {
-        sortedIdx = Array.isArray(v) ? v.slice() : null;
       });
       myCurrentGardenObject.onChange((v) => {
         cur = v;
         scheduleRecomputeAndNotify();
       });
       myCurrentGrowSlotIndex.onChange((idx) => {
-        selectedIdx = Number.isFinite(idx) ? idx : 0;
+        selectedSlotId = Number.isFinite(idx) ? idx : null;
         scheduleRecomputeAndNotify();
       });
       recomputeAndNotify();
@@ -29614,7 +29578,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.151";
+      return "3.2.152";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -41879,7 +41843,7 @@ next: ${next}`;
     }
   `);
   }
-  function clamp3(value, min, max) {
+  function clamp2(value, min, max) {
     return Math.min(max, Math.max(min, value));
   }
   function coerceLabel(label2, allowed) {
@@ -41896,7 +41860,7 @@ next: ${next}`;
       return FRIEND_BONUS_MIN_PLAYERS;
     }
     const rounded = Math.round(players);
-    return clamp3(rounded, FRIEND_BONUS_MIN_PLAYERS, FRIEND_BONUS_MAX_PLAYERS);
+    return clamp2(rounded, FRIEND_BONUS_MIN_PLAYERS, FRIEND_BONUS_MAX_PLAYERS);
   }
   function friendPlayersToLabel(players) {
     const clamped = clampFriendPlayers(players);
@@ -41906,15 +41870,15 @@ next: ${next}`;
     const coerced = coerceLabel(label2, FRIEND_BONUS_LABELS);
     const index = FRIEND_BONUS_LABELS.indexOf(coerced);
     const players = index >= 0 ? index + 1 : FRIEND_BONUS_MIN_PLAYERS;
-    return clamp3(players, FRIEND_BONUS_MIN_PLAYERS, FRIEND_BONUS_MAX_PLAYERS);
+    return clamp2(players, FRIEND_BONUS_MIN_PLAYERS, FRIEND_BONUS_MAX_PLAYERS);
   }
   function setSpriteScale(el2, sizePercent) {
-    const clamped = clamp3(Math.round(sizePercent), SIZE_MIN, SIZE_MAX);
+    const clamped = clamp2(Math.round(sizePercent), SIZE_MIN, SIZE_MAX);
     const scale = clamped / 100;
     el2.style.setProperty("--mg-crop-simulation-scale", scale.toString());
   }
   function applySizePercent(refs, sizePercent, maxScale, baseWeight) {
-    const clamped = clamp3(Math.round(sizePercent), SIZE_MIN, SIZE_MAX);
+    const clamped = clamp2(Math.round(sizePercent), SIZE_MIN, SIZE_MAX);
     refs.sizeSlider.value = String(clamped);
     refs.sizeValue.textContent = `${clamped}%`;
     setSpriteScale(refs.sprite, clamped);
@@ -41974,7 +41938,7 @@ next: ${next}`;
   function sizePercentToScale(sizePercent, maxScale) {
     const numeric = Number(sizePercent);
     if (!Number.isFinite(numeric)) return SCALE_MIN;
-    const clampedPercent = clamp3(numeric, SIZE_MIN, SIZE_MAX);
+    const clampedPercent = clamp2(numeric, SIZE_MIN, SIZE_MAX);
     const safeMax = typeof maxScale === "number" && Number.isFinite(maxScale) && maxScale > SCALE_MIN ? maxScale : SCALE_MAX;
     if (safeMax <= SCALE_MIN) return SCALE_MIN;
     const normalized = (clampedPercent - SIZE_MIN) / (SIZE_MAX - SIZE_MIN);
@@ -42414,7 +42378,7 @@ next: ${next}`;
         if (!selectedKey) return;
         const state3 = getStateForKey(selectedKey);
         const raw = Number(slider.value);
-        const value = clamp3(Math.round(raw), SIZE_MIN, SIZE_MAX);
+        const value = clamp2(Math.round(raw), SIZE_MIN, SIZE_MAX);
         state3.sizePercent = value;
         applySizePercent(refs, value, currentMaxScale, currentBaseWeight);
         updateOutputs();

@@ -129,7 +129,7 @@ export const myPetHutchPetItems = makeAtom<any>("myPetHutchPetItemsAtom")
 export const isMyInventoryAtMaxLength = makeAtom<any>("isMyInventoryAtMaxLengthAtom")
 export const myNumPetHutchItems = makeAtom<any>("myNumPetHutchItemsAtom")
 
-export const shops = makeAtom<any>("shopsAtom");
+export const shops = makeView<any, any>("stateAtom", { path: "child.data.shops" });
 export const myShopPurchases = makeView<any, any>("myDataAtom", { path: "shopPurchases" });
 
 export const numPlayers = makeAtom<number>("numPlayersAtom");
@@ -176,11 +176,11 @@ export const stateUserSlots = makeView<any, any>("stateAtom", { path: "child.dat
 export const statePlayers = makeView<any, any[] | undefined>("stateAtom", { path: "data.players" });
 export const myActivityLog = makeView<any>("myDataAtom", { path: "activityLogs"});
 
-/* Shops view */
-export const seedShop  = makeView<any, any>("shopsAtom", { path: "seed"  });
-export const toolShop  = makeView<any, any>("shopsAtom", { path: "tool"  });
-export const eggShop   = makeView<any, any>("shopsAtom", { path: "egg"   });
-export const decorShop = makeView<any, any>("shopsAtom", { path: "decor" });
+/* Shops view (derived from stateAtom — shopsAtom removed from game) */
+export const seedShop  = makeView<any, any>("stateAtom", { path: "child.data.shops.seed"  });
+export const toolShop  = makeView<any, any>("stateAtom", { path: "child.data.shops.tool"  });
+export const eggShop   = makeView<any, any>("stateAtom", { path: "child.data.shops.egg"   });
+export const decorShop = makeView<any, any>("stateAtom", { path: "child.data.shops.decor" });
 
 /* ============================================================================
  * Signatures / Channels de diff
