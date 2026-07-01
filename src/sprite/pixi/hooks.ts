@@ -40,9 +40,19 @@ export function createPixiHooks(): PixiHandles {
   let RDR: any = null;
   let PIXI_VER: any = null;
 
-  const resolveApp = (a: any) => { if (!APP) { APP = a; appResolver(a); } };
+  // Keep tracking the *latest* app/renderer (not just the first) — the game
+  // can fully recreate its renderer after being backgrounded a while (e.g.
+  // WebGL context loss on alt-tab), firing these hooks again for the new
+  // instance. `handles.app`/`handles.renderer` below always read the
+  // current `APP`/`RDR`, so callers polling them can detect the swap.
+  // Resolving an already-settled Promise is a safe no-op, so `appReady`/
+  // `rendererReady` (used for the one-time initial wait) keep working
+  // exactly as before.
+  const resolveApp = (a: any) => { APP = a; appResolver(a); };
   const resolveRdr = (r: any, v?: any) => {
-    if (!RDR) { RDR = r; if (v) PIXI_VER = v; rdrResolver(r); }
+    RDR = r;
+    if (v) PIXI_VER = v;
+    rdrResolver(r);
     // Game may use Renderer without Application — synthesize a minimal app.
     resolveApp(APP ?? mkSyntheticApp(r));
   };

@@ -26,6 +26,7 @@ import { startCropValuesObserverFromGardenAtom } from "../utils/cropValues";
 import { startCropValueOverlayInPixi } from "../utils/cropValuePixi";
 import { startLockerIndicatorInPixi } from "../utils/lockerIndicatorPixi";
 import { startInjectSellAllPets } from "../utils/sellAllPets";
+import { startSellAllPetsPixi } from "../utils/sellAllPetsPixi";
 import { startSellCropsLockWatcher } from "../utils/sellCropsLock";
 import { startEggHatchLockIndicator } from "../utils/eggHatchLockIndicator";
 import { startDecorPickupLockIndicator } from "../utils/decorPickupLockIndicator";
@@ -1134,6 +1135,7 @@ export function initWatchers(){
       startEggHatchLockIndicator();
       startLockerIndicatorInPixi();
       startInjectSellAllPets();
+      startSellAllPetsPixi();
       startInstantFeedWidget();
       startSelectedInventoryQuantityLogger();
       startInventorySortingObserver();

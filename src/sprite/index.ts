@@ -346,6 +346,82 @@ async function resolvePixiFast(): Promise<PixiBundle> {
   return { app: waited.app, renderer: waited.renderer, version: waited.version };
 }
 
+function canvasOf(renderer: any): any {
+  return renderer?.canvas || renderer?.view?.canvas || renderer?.view || null;
+}
+
+/**
+ * The browser can fully tear down and recreate the game's WebGL
+ * renderer/canvas after the tab/window is backgrounded a while (e.g. GPU
+ * context reclaimed during an alt-tab) — `ctx.state.renderer` was only ever
+ * resolved once at boot, so every mod feature reading it would keep
+ * pointing at a dead, detached canvas forever with no way to recover short
+ * of a full page reload. Periodically check whether the canvas we're
+ * holding is still actually in the document, and if not, pick up whatever
+ * `hooks` (module-level `createPixiHooks()`) has captured most recently —
+ * `hooks.ts` keeps `APP`/`RDR` updated on every `__PIXI_APP_INIT__`/
+ * `__PIXI_RENDERER_INIT__` firing, not just the first, specifically so a
+ * renderer recreated after backgrounding can be picked up here. (The raw
+ * `__PIXI_APP__`/`window.app`-style globals this module's own
+ * `resolvePixiFast` fast-checks are not a reliable fallback on their own —
+ * this game's original resolution went through the hooks path instead.)
+ *
+ * PIXI's own Text/Sprite/Container/etc. classes aren't tied to a specific
+ * renderer instance, so `ctx.state.ctors` doesn't need re-deriving here —
+ * only the renderer/app references themselves are swapped.
+ */
+interface RendererHealthDebugState {
+  checks: number;
+  staleStreak: number;
+  swaps: Array<{ at: number; fromCanvasInDoc: boolean }>;
+}
+
+function watchRendererHealth(): void {
+  const pageWin: any = (globalThis as any).unsafeWindow || (globalThis as any);
+  const RENDERER_HEALTH_CHECK_MS = 1_000;
+  // Require the same staleness to show up on several consecutive checks
+  // (not just one) before swapping anything — a single check could catch
+  // a transient state (e.g. very early boot, right as the canvas is being
+  // attached) that looks stale for a moment but isn't actually a dead
+  // renderer.
+  const REQUIRED_STALE_STREAK = 3;
+  let staleStreak = 0;
+
+  const debugState: RendererHealthDebugState = { checks: 0, staleStreak: 0, swaps: [] };
+  const debugRoot: any = pageWin;
+  debugRoot.__MG_RENDERER_HEALTH_DEBUG__ = debugState;
+
+  pageWin.setInterval(() => {
+    try {
+      debugState.checks += 1;
+      const canvas = canvasOf(ctx.state.renderer);
+      const canvasHealthy = !!canvas && typeof document !== 'undefined' && document.contains(canvas);
+      if (canvasHealthy) {
+        staleStreak = 0;
+        debugState.staleStreak = 0;
+        return;
+      }
+      staleStreak += 1;
+      debugState.staleStreak = staleStreak;
+      if (staleStreak < REQUIRED_STALE_STREAK) return;
+
+      const freshRenderer = hooks.renderer;
+      if (!freshRenderer || freshRenderer === ctx.state.renderer) return;
+      const freshCanvas = canvasOf(freshRenderer);
+      if (!freshCanvas || typeof document === 'undefined' || !document.contains(freshCanvas)) return;
+
+      console.info('[MG SpriteCatalog] renderer canvas went stale, re-resolved a fresh one');
+      debugState.swaps.push({ at: Date.now(), fromCanvasInDoc: canvasHealthy });
+      ctx.state.renderer = freshRenderer;
+      if (hooks.app) ctx.state.app = hooks.app;
+      staleStreak = 0;
+      debugState.staleStreak = 0;
+    } catch (error) {
+      console.warn('[MG SpriteCatalog] renderer health check failed', error);
+    }
+  }, RENDERER_HEALTH_CHECK_MS);
+}
+
 async function start() {
   if (ctx.state.started) return;
   ctx.state.started = true;
@@ -461,6 +537,7 @@ async function start() {
   ctx.state.version = pixiVersion || version || version === '' ? (pixiVersion ?? version) : detectGameVersion();
   ctx.state.base = base;
   ctx.state.sig = curVariant(ctx.state).sig;
+  watchRendererHealth();
 
   // Expose the (still-mutating) state object as soon as renderer/ctors are
   // ready, instead of waiting for loadTextures() below — other mod features

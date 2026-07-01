@@ -18,7 +18,7 @@ import { readSharedGlobal, shareGlobal, pageWindow } from "./page-context";
 export interface SpriteStateLike {
   renderer: any;
   app: any;
-  ctors: { Text: any; Sprite: any; Texture: any } | null;
+  ctors: { Text: any; Sprite: any; Texture: any; Rectangle?: any; Container?: any } | null;
 }
 
 export interface GardenInfoCardGeometry {
@@ -208,6 +208,12 @@ function attachToCardSystem(system: any) {
       debugState.attached = false;
       currentCard = null;
       notifyListeners(null, null);
+      // The game can destroy and fully recreate its whole Pixi tree (e.g.
+      // WebGL context loss after the tab/window is backgrounded a while,
+      // such as switching away and back with alt-tab) — the search loop
+      // had already stopped scheduling itself once found the first time,
+      // so without this it would never look for the new one again.
+      restartSearchIfNeeded();
     }
   });
   debugState.attached = true;
@@ -261,6 +267,15 @@ function scheduleFind(now: number) {
   findRafId = raf(scheduleFind);
 }
 
+/** (Re)kicks the search loop if there are subscribers but nothing found yet. */
+function restartSearchIfNeeded() {
+  if (!listeners.size || cardSystem) return;
+  tryFindCardSystem();
+  if (!cardSystem && findRafId == null) {
+    findRafId = raf(scheduleFind);
+  }
+}
+
 /**
  * Subscribe to the game's Pixi-rendered garden info card. `listener` is
  * called with the card container + its geometry whenever a card is shown,
@@ -271,10 +286,7 @@ function scheduleFind(now: number) {
 export function watchGardenInfoCard(listener: GardenInfoCardListener): () => void {
   listeners.add(listener);
   debugState.listenerCount = listeners.size;
-  tryFindCardSystem();
-  if (!cardSystem && findRafId == null) {
-    findRafId = raf(scheduleFind);
-  }
+  restartSearchIfNeeded();
   if (currentCard) {
     try {
       listener(currentCard, computeGeometry(currentCard));

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.155
+// @version      3.2.156
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -818,17 +818,13 @@
     let RDR = null;
     let PIXI_VER = null;
     const resolveApp = (a) => {
-      if (!APP) {
-        APP = a;
-        appResolver(a);
-      }
+      APP = a;
+      appResolver(a);
     };
     const resolveRdr = (r, v) => {
-      if (!RDR) {
-        RDR = r;
-        if (v) PIXI_VER = v;
-        rdrResolver(r);
-      }
+      RDR = r;
+      if (v) PIXI_VER = v;
+      rdrResolver(r);
       resolveApp(APP ?? mkSyntheticApp(r));
     };
     const hook = (name, cb) => {
@@ -2679,6 +2675,45 @@
     debugInfo.resolvedAt = Date.now();
     return { app: waited.app, renderer: waited.renderer, version: waited.version };
   }
+  function canvasOf(renderer) {
+    return renderer?.canvas || renderer?.view?.canvas || renderer?.view || null;
+  }
+  function watchRendererHealth() {
+    const pageWin3 = globalThis.unsafeWindow || globalThis;
+    const RENDERER_HEALTH_CHECK_MS = 1e3;
+    const REQUIRED_STALE_STREAK = 3;
+    let staleStreak = 0;
+    const debugState2 = { checks: 0, staleStreak: 0, swaps: [] };
+    const debugRoot = pageWin3;
+    debugRoot.__MG_RENDERER_HEALTH_DEBUG__ = debugState2;
+    pageWin3.setInterval(() => {
+      try {
+        debugState2.checks += 1;
+        const canvas = canvasOf(ctx.state.renderer);
+        const canvasHealthy = !!canvas && typeof document !== "undefined" && document.contains(canvas);
+        if (canvasHealthy) {
+          staleStreak = 0;
+          debugState2.staleStreak = 0;
+          return;
+        }
+        staleStreak += 1;
+        debugState2.staleStreak = staleStreak;
+        if (staleStreak < REQUIRED_STALE_STREAK) return;
+        const freshRenderer = hooks.renderer;
+        if (!freshRenderer || freshRenderer === ctx.state.renderer) return;
+        const freshCanvas = canvasOf(freshRenderer);
+        if (!freshCanvas || typeof document === "undefined" || !document.contains(freshCanvas)) return;
+        console.info("[MG SpriteCatalog] renderer canvas went stale, re-resolved a fresh one");
+        debugState2.swaps.push({ at: Date.now(), fromCanvasInDoc: canvasHealthy });
+        ctx.state.renderer = freshRenderer;
+        if (hooks.app) ctx.state.app = hooks.app;
+        staleStreak = 0;
+        debugState2.staleStreak = 0;
+      } catch (error) {
+        console.warn("[MG SpriteCatalog] renderer health check failed", error);
+      }
+    }, RENDERER_HEALTH_CHECK_MS);
+  }
   async function start() {
     if (ctx.state.started) return;
     ctx.state.started = true;
@@ -2774,6 +2809,7 @@
     ctx.state.version = pixiVersion || version || version === "" ? pixiVersion ?? version : detectGameVersion();
     ctx.state.base = base;
     ctx.state.sig = curVariant(ctx.state).sig;
+    watchRendererHealth();
     {
       const root = globalThis.unsafeWindow || globalThis;
       root.__MG_SPRITE_STATE__ = ctx.state;
@@ -29308,6 +29344,7 @@
         debugState.attached = false;
         currentCard = null;
         notifyListeners2(null, null);
+        restartSearchIfNeeded();
       }
     });
     debugState.attached = true;
@@ -29343,13 +29380,17 @@
     if (!listeners5.size || cardSystem) return;
     findRafId = raf(scheduleFind);
   }
-  function watchGardenInfoCard(listener) {
-    listeners5.add(listener);
-    debugState.listenerCount = listeners5.size;
+  function restartSearchIfNeeded() {
+    if (!listeners5.size || cardSystem) return;
     tryFindCardSystem();
     if (!cardSystem && findRafId == null) {
       findRafId = raf(scheduleFind);
     }
+  }
+  function watchGardenInfoCard(listener) {
+    listeners5.add(listener);
+    debugState.listenerCount = listeners5.size;
+    restartSearchIfNeeded();
     if (currentCard) {
       try {
         listener(currentCard, computeGeometry(currentCard));
@@ -29671,6 +29712,358 @@
         unsubAtom?.();
         removeBorder();
         currentCard2 = null;
+      }
+    };
+  }
+
+  // src/utils/sellAllPetsPixi.ts
+  var ACTION_HUD_LABEL = "ActionHud";
+  var BUTTON_FACE_LABEL = "McButtonFace";
+  var ACTION_HUD_FIND_RETRY_MS = 1e3;
+  var ACTION_HUD_FIND_LOG_EVERY = 30;
+  var SELL_PET_ACTION_TYPES = /* @__PURE__ */ new Set(["sellPet", "sellRainbowPet", "sellGoldPet"]);
+  var BUTTON_GAP = 10;
+  var BUTTON_TEXT = "Sell all Pets";
+  var BUTTON_TEXT_STYLE = { fontFamily: "Arial", fontSize: 14, fontWeight: "700", fill: "#FFFFFF" };
+  var BUTTON_PADDING_X = 14;
+  var BUTTON_RADIUS = 10;
+  var BUTTON_FILL_COLOR = 26548;
+  var BUTTON_BORDER_COLOR = 4763124;
+  var BUTTON_BORDER_WIDTH = 2;
+  var HOVER_SCALE = 1.08;
+  var HOVER_SCALE_EASE = 0.25;
+  var HOVER_SCALE_SETTLE_EPSILON = 1e-3;
+  function isSellPetAction(action2) {
+    if (typeof action2 === "string") return SELL_PET_ACTION_TYPES.has(action2);
+    if (action2 && typeof action2 === "object") {
+      const type = action2.type ?? action2.action ?? action2.name ?? action2.id;
+      return typeof type === "string" && SELL_PET_ACTION_TYPES.has(type);
+    }
+    return false;
+  }
+  function actionLabel(action2) {
+    if (typeof action2 === "string") return action2;
+    if (action2 && typeof action2 === "object") {
+      const type = action2.type ?? action2.action ?? action2.name ?? action2.id;
+      return typeof type === "string" ? type : null;
+    }
+    return null;
+  }
+  function safeSize(node, prop, fallback) {
+    try {
+      const value = node?.[prop];
+      return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  function findAnyTextStyle(root, limit = 5e3) {
+    const stack = [root];
+    const seen = /* @__PURE__ */ new Set();
+    let n = 0;
+    while (stack.length && n++ < limit) {
+      const node = stack.pop();
+      if (!node || seen.has(node)) continue;
+      seen.add(node);
+      if (typeof node.text === "string" && node.style) return node.style;
+      const children = node.children;
+      if (Array.isArray(children)) for (const child of children) stack.push(child);
+    }
+    return null;
+  }
+  function startSellAllPetsPixi() {
+    let running = true;
+    let actionHud = null;
+    let buttonContainer = null;
+    let buttonBg = null;
+    let buttonText = null;
+    let currentAction = null;
+    let findAttempts2 = 0;
+    let findRafId2 = null;
+    let lastFindCheckAt2 = 0;
+    let canvasEl = null;
+    let canvasListenersAttached = false;
+    let weSetPointerCursor = false;
+    let hovering = false;
+    let currentScale = 1;
+    let scaleRafId = null;
+    const debugState2 = {
+      attached: false,
+      findAttempts: 0,
+      hasButton: false,
+      lastError: null,
+      currentAction: null
+    };
+    shareGlobal("__MG_SELL_ALL_PETS_PIXI_DEBUG__", debugState2);
+    const raf2 = pageWindow.requestAnimationFrame.bind(pageWindow);
+    const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
+    const stopScaleAnimation = () => {
+      if (scaleRafId != null) {
+        cancelRaf(scaleRafId);
+        scaleRafId = null;
+      }
+    };
+    const scaleAnimationTick = () => {
+      scaleRafId = null;
+      if (!buttonContainer || buttonContainer.destroyed) return;
+      const target = hovering ? HOVER_SCALE : 1;
+      currentScale += (target - currentScale) * HOVER_SCALE_EASE;
+      if (Math.abs(target - currentScale) < HOVER_SCALE_SETTLE_EPSILON) currentScale = target;
+      buttonContainer.scale.set(currentScale);
+      if (currentScale !== target) {
+        scaleRafId = raf2(scaleAnimationTick);
+      }
+    };
+    const ensureScaleAnimationRunning = () => {
+      if (scaleRafId == null) scaleRafId = raf2(scaleAnimationTick);
+    };
+    const forgetButtonRefs = () => {
+      stopScaleAnimation();
+      hovering = false;
+      currentScale = 1;
+      buttonContainer = null;
+      buttonBg = null;
+      buttonText = null;
+      debugState2.hasButton = false;
+    };
+    const removeButton = () => {
+      if (buttonContainer) {
+        try {
+          buttonContainer.destroy({ children: true });
+        } catch {
+        }
+      }
+      forgetButtonRefs();
+    };
+    const onClick = () => {
+      void runSellAllPetsFlow();
+    };
+    const hitTestButton = (clientX, clientY) => {
+      if (!buttonBg || buttonBg.destroyed || !canvasEl) return false;
+      try {
+        const rect = canvasEl.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+        const topLeft = buttonBg.toGlobal({ x: 0, y: 0 });
+        const bottomRight = buttonBg.toGlobal({ x: buttonBg.width || 0, y: buttonBg.height || 0 });
+        return x >= topLeft.x && x <= bottomRight.x && y >= topLeft.y && y <= bottomRight.y;
+      } catch {
+        return false;
+      }
+    };
+    const setHovering = (next) => {
+      if (hovering === next) return;
+      hovering = next;
+      ensureScaleAnimationRunning();
+    };
+    const onCanvasPointerDown = (ev) => {
+      if (hitTestButton(ev.clientX, ev.clientY)) onClick();
+    };
+    const onCanvasPointerMove = (ev) => {
+      if (!canvasEl) return;
+      const isHovering = hitTestButton(ev.clientX, ev.clientY);
+      setHovering(isHovering);
+      if (isHovering && !weSetPointerCursor) {
+        canvasEl.style.cursor = "pointer";
+        weSetPointerCursor = true;
+      } else if (!isHovering && weSetPointerCursor) {
+        canvasEl.style.cursor = "";
+        weSetPointerCursor = false;
+      }
+    };
+    const onCanvasPointerLeave = () => {
+      setHovering(false);
+      if (weSetPointerCursor && canvasEl) {
+        canvasEl.style.cursor = "";
+        weSetPointerCursor = false;
+      }
+    };
+    const ensureCanvasListeners = (state3) => {
+      if (canvasListenersAttached) return;
+      const canvas = state3.renderer?.canvas || state3.renderer?.view?.canvas || state3.renderer?.view;
+      if (!canvas) return;
+      canvasEl = canvas;
+      canvas.addEventListener("pointerdown", onCanvasPointerDown);
+      canvas.addEventListener("pointermove", onCanvasPointerMove);
+      canvas.addEventListener("pointerleave", onCanvasPointerLeave);
+      canvasListenersAttached = true;
+    };
+    const syncUnsafe = () => {
+      debugState2.currentAction = actionLabel(currentAction);
+      if (!running || !actionHud || actionHud.destroyed || !isSellPetAction(currentAction)) {
+        removeButton();
+        return;
+      }
+      const wrapper = actionHud.children?.[0];
+      if (!wrapper || wrapper.destroyed) {
+        removeButton();
+        return;
+      }
+      const state3 = getSpriteState();
+      if (!state3?.ctors?.Text) return;
+      const graphicsCtor = findGraphicsCtor(getStage(state3));
+      if (!graphicsCtor) return;
+      ensureCanvasListeners(state3);
+      const face = findByLabel(wrapper, BUTTON_FACE_LABEL) ?? wrapper;
+      const faceWidth = safeSize(face, "width", 150);
+      const faceHeight = safeSize(face, "height", 55);
+      if (!buttonContainer) {
+        const ContainerCtor = state3.ctors?.Container ?? actionHud.constructor;
+        buttonContainer = new ContainerCtor();
+        const thisContainer = buttonContainer;
+        thisContainer.once("destroyed", () => {
+          if (buttonContainer === thisContainer) forgetButtonRefs();
+        });
+        actionHud.addChildAt(buttonContainer, 0);
+      }
+      if (!buttonText) {
+        const existingTextStyle = findAnyTextStyle(wrapper);
+        const style2 = {
+          ...BUTTON_TEXT_STYLE,
+          ...existingTextStyle?.fontFamily ? { fontFamily: existingTextStyle.fontFamily } : {},
+          ...existingTextStyle?.fontSize ? { fontSize: existingTextStyle.fontSize } : {},
+          ...existingTextStyle?.fontWeight ? { fontWeight: existingTextStyle.fontWeight } : {}
+        };
+        buttonText = new state3.ctors.Text({ text: BUTTON_TEXT, style: style2 });
+        buttonContainer.addChild(buttonText);
+      }
+      if (!buttonBg) {
+        buttonBg = new graphicsCtor();
+        buttonContainer.addChildAt(buttonBg, 0);
+      }
+      if (!buttonContainer || !buttonText || !buttonBg) return;
+      const buttonTextHeight = safeSize(buttonText, "height", 20);
+      const badgeWidth = safeSize(buttonText, "width", 100) + BUTTON_PADDING_X * 2;
+      const badgeHeight = Math.max(faceHeight, buttonTextHeight + 12);
+      let localAnchor = { x: 0, y: 0 };
+      try {
+        if (typeof face?.toGlobal === "function" && typeof actionHud.toLocal === "function") {
+          const globalAnchor = face.toGlobal({ x: faceWidth, y: faceHeight / 2 });
+          localAnchor = actionHud.toLocal(globalAnchor);
+        }
+      } catch {
+      }
+      buttonBg.clear();
+      buttonBg.roundRect(0, 0, badgeWidth, badgeHeight, BUTTON_RADIUS).fill({ color: BUTTON_FILL_COLOR }).stroke({ width: BUTTON_BORDER_WIDTH, color: BUTTON_BORDER_COLOR });
+      buttonText.position.set(BUTTON_PADDING_X, (badgeHeight - buttonTextHeight) / 2);
+      buttonContainer.pivot.set(badgeWidth / 2, badgeHeight / 2);
+      buttonContainer.position.set(
+        localAnchor.x + BUTTON_GAP + badgeWidth / 2,
+        localAnchor.y
+      );
+      debugState2.hasButton = true;
+    };
+    const sync = () => {
+      try {
+        syncUnsafe();
+        debugState2.lastError = null;
+      } catch (error) {
+        debugState2.lastError = String(error?.message ?? error);
+        console.warn("[sellAllPetsPixi] sync failed, clearing button", error);
+        try {
+          removeButton();
+        } catch {
+        }
+      }
+    };
+    const onChildAdded2 = () => sync();
+    const attachToActionHud = (hud) => {
+      actionHud = hud;
+      actionHud.on("childAdded", onChildAdded2);
+      actionHud.once("destroyed", () => {
+        if (actionHud === hud) {
+          actionHud = null;
+          debugState2.attached = false;
+          removeButton();
+          restartSearchIfNeeded2();
+        }
+      });
+      debugState2.attached = true;
+      console.info(`[sellAllPetsPixi] attached to ${ACTION_HUD_LABEL} after ${findAttempts2} attempt(s)`);
+      sync();
+    };
+    const tryFindActionHud = () => {
+      if (!running || actionHud) return;
+      const state3 = getSpriteState();
+      if (!state3) return;
+      const stage = getStage(state3);
+      const found = findAcrossBranches(stage, (node) => node?.label === ACTION_HUD_LABEL);
+      if (found) {
+        attachToActionHud(found);
+        return;
+      }
+      findAttempts2 += 1;
+      debugState2.findAttempts = findAttempts2;
+      if (findAttempts2 % ACTION_HUD_FIND_LOG_EVERY === 0) {
+        console.info(`[sellAllPetsPixi] still searching for ${ACTION_HUD_LABEL} (${findAttempts2} attempts so far)`);
+      }
+    };
+    const scheduleFind2 = (now2) => {
+      findRafId2 = null;
+      if (!running || actionHud) return;
+      if (now2 - lastFindCheckAt2 >= ACTION_HUD_FIND_RETRY_MS) {
+        lastFindCheckAt2 = now2;
+        tryFindActionHud();
+      }
+      if (!running || actionHud) return;
+      findRafId2 = raf2(scheduleFind2);
+    };
+    const restartSearchIfNeeded2 = () => {
+      if (!running || actionHud) return;
+      tryFindActionHud();
+      if (!actionHud && findRafId2 == null) {
+        findRafId2 = raf2(scheduleFind2);
+      }
+    };
+    tryFindActionHud();
+    if (!actionHud) {
+      findRafId2 = raf2(scheduleFind2);
+    }
+    let unsubAction = null;
+    void (async () => {
+      try {
+        currentAction = await Atoms.player.action.get();
+        if (running) sync();
+      } catch {
+      }
+      try {
+        const unsub = await Atoms.player.action.onChange((next) => {
+          currentAction = next;
+          sync();
+        });
+        if (typeof unsub === "function") {
+          if (running) unsubAction = unsub;
+          else unsub();
+        }
+      } catch {
+      }
+    })();
+    return {
+      stop() {
+        if (!running) return;
+        running = false;
+        if (findRafId2 != null) {
+          cancelRaf(findRafId2);
+          findRafId2 = null;
+        }
+        if (actionHud) {
+          try {
+            actionHud.off("childAdded", onChildAdded2);
+          } catch {
+          }
+        }
+        unsubAction?.();
+        if (canvasListenersAttached && canvasEl) {
+          try {
+            canvasEl.removeEventListener("pointerdown", onCanvasPointerDown);
+            canvasEl.removeEventListener("pointermove", onCanvasPointerMove);
+            canvasEl.removeEventListener("pointerleave", onCanvasPointerLeave);
+            if (weSetPointerCursor) canvasEl.style.cursor = "";
+          } catch {
+          }
+        }
+        removeButton();
+        actionHud = null;
       }
     };
   }
@@ -30227,7 +30620,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.155";
+      return "3.2.156";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -34908,6 +35301,7 @@
       startEggHatchLockIndicator();
       startLockerIndicatorInPixi();
       startInjectSellAllPets();
+      startSellAllPetsPixi();
       startInstantFeedWidget();
       startSelectedInventoryQuantityLogger();
       startInventorySortingObserver();
