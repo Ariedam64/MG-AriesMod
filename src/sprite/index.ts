@@ -2,6 +2,7 @@ import { DEFAULT_CFG } from './settings';
 import { createSpriteContext } from './state';
 import { createPixiHooks, waitForPixi } from './pixi/hooks';
 import { getCtors } from './utils/pixi';
+import { sleep } from './utils/async';
 import { getJSON, getBlob, blobToImage, loadAtlasJsons, isKtx2Path, loadKtx2AsTexture } from './data/assetFetcher';
 import { buildAtlasTextures, isAtlas } from './pixi/atlasToTextures';
 import { buildItemsFromTextures } from './data/catalogIndexer';
@@ -42,8 +43,6 @@ const yieldToBrowser = (): Promise<void> => {
     }
   });
 };
-
-const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
 async function warmupSpritesFromAtlases(
   atlasJsons: Record<string, any>,
@@ -141,7 +140,7 @@ async function resolveGameVersionWithRetry(timeoutMs: number = 6000): Promise<st
     } catch (err) {
       lastError = err;
     }
-    await delay(120);
+    await sleep(120);
   }
   throw lastError ?? new Error('Version not found.');
 }
@@ -303,6 +302,12 @@ type PixiBundle = { app: any; renderer: any; version: any };
 
 async function resolvePixiFast(): Promise<PixiBundle> {
   const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
+  const debugInfo: { startedAt: number; resolvedVia: string | null; resolvedAt: number | null } = {
+    startedAt: Date.now(),
+    resolvedVia: null,
+    resolvedAt: null,
+  };
+  root.__MG_RESOLVE_PIXI_DEBUG__ = debugInfo;
   const check = (): PixiBundle | null => {
     const app = root.__PIXI_APP__ || root.PIXI_APP || root.app || null;
     const renderer =
@@ -317,17 +322,27 @@ async function resolvePixiFast(): Promise<PixiBundle> {
     return null;
   };
   const hit = check();
-  if (hit) return hit;
+  if (hit) {
+    debugInfo.resolvedVia = 'fast-check-immediate';
+    debugInfo.resolvedAt = Date.now();
+    return hit;
+  }
 
   const maxMs = 5_000;
   const start = performance.now();
   while (performance.now() - start < maxMs) {
-    await new Promise(r => setTimeout(r, 50));
+    await sleep(50);
     const retry = check();
-    if (retry) return retry;
+    if (retry) {
+      debugInfo.resolvedVia = 'fast-check-retry';
+      debugInfo.resolvedAt = Date.now();
+      return retry;
+    }
   }
 
   const waited = await waitForPixi(hooks);
+  debugInfo.resolvedVia = 'waitForPixi-fallback';
+  debugInfo.resolvedAt = Date.now();
   return { app: waited.app, renderer: waited.renderer, version: waited.version };
 }
 
@@ -350,7 +365,7 @@ async function start() {
         throw err;
       }
       console.warn('[MG SpriteCatalog] retrying game version detection...');
-      await delay(200);
+      await sleep(200);
     }
   }
   const base = `${ctx.cfg.origin.replace(/\/$/, '')}/version/${version}/assets/`;
@@ -366,15 +381,79 @@ async function start() {
   // getCtors needs at least one rendered frame (lastObjectRendered) when the game
   // uses a bare Renderer without Application.  Retry for up to 10 s.
   ctx.state.ctors = await (async () => {
+    const debugRoot: any = (globalThis as any).unsafeWindow || (globalThis as any);
+    const inspectStage = (root: any) => {
+      const stack = [root];
+      const seen = new Set<any>();
+      let totalNodes = 0;
+      let spriteLikeCount = 0;
+      let textLikeCount = 0;
+      let n = 0;
+      while (stack.length && n++ < 25000) {
+        const cur = stack.pop();
+        if (!cur || seen.has(cur)) continue;
+        seen.add(cur);
+        totalNodes++;
+        if (cur?.texture?.frame && cur?.constructor && cur?.texture?.constructor && cur?.texture?.frame?.constructor) spriteLikeCount++;
+        if ((typeof cur?.text === 'string' || typeof cur?.text === 'number') && cur?.style) textLikeCount++;
+        const children = cur.children;
+        if (Array.isArray(children)) {
+          for (let i = children.length - 1; i >= 0; i -= 1) stack.push(children[i]);
+        }
+      }
+      const topChildLabels = Array.isArray(root?.children)
+        ? root.children.map((c: any) => c?.label || c?.constructor?.name || typeof c)
+        : [];
+      return { totalNodes, spriteLikeCount, textLikeCount, topChildLabels };
+    };
+
+    const attempts: Array<{
+      at: number;
+      hasAppStage: boolean;
+      appStageChildren: number;
+      hasLastObjectRendered: boolean;
+      lastObjectRenderedChildren: number;
+      hasRendererStage: boolean;
+      rendererStageChildren: number;
+      documentHidden: boolean;
+      visibilityState: string;
+      hasFocus: boolean;
+      inspect: ReturnType<typeof inspectStage> | null;
+    }> = [];
+    debugRoot.__MG_CTORS_DEBUG__ = attempts;
+    let iteration = 0;
+    const snapshot = () => {
+      const stage = app?.stage;
+      const lor = renderer?.lastObjectRendered;
+      const rStage = renderer?.stage;
+      const walkRoot = stage || lor || rStage || null;
+      attempts.push({
+        at: Date.now(),
+        hasAppStage: !!stage,
+        appStageChildren: Array.isArray(stage?.children) ? stage.children.length : -1,
+        hasLastObjectRendered: !!lor,
+        lastObjectRenderedChildren: Array.isArray(lor?.children) ? lor.children.length : -1,
+        hasRendererStage: !!rStage,
+        rendererStageChildren: Array.isArray(rStage?.children) ? rStage.children.length : -1,
+        documentHidden: typeof document !== 'undefined' ? document.hidden : false,
+        visibilityState: typeof document !== 'undefined' ? document.visibilityState : 'unknown',
+        hasFocus: typeof document !== 'undefined' ? document.hasFocus() : false,
+        // Deep walk is relatively expensive — only do it every ~1s, not every 100ms.
+        inspect: walkRoot && iteration % 10 === 0 ? inspectStage(walkRoot) : null,
+      });
+      iteration += 1;
+    };
     const deadline = Date.now() + 10_000;
     while (Date.now() < deadline) {
+      snapshot();
       try { return getCtors(app); } catch { /* stage not ready yet */ }
       // Update synthetic app.stage from renderer so the next try finds it.
       if (app && !app.stage && renderer?.lastObjectRendered) {
         app.stage = renderer.lastObjectRendered;
       }
-      await delay(100);
+      await sleep(100);
     }
+    snapshot();
     return getCtors(app); // final attempt — throws if still failing
   })();
   ctx.state.app = app;

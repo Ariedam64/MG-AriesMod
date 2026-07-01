@@ -25,18 +25,47 @@ export function findAny(root: any, pred: (node: any) => boolean, lim = 25000) {
   return null;
 }
 
-/** Try to extract PIXI constructors from a container/stage node. */
+/**
+ * Same as findAny, but gives each top-level branch of `root` its own
+ * search budget instead of pooling one `lim` across the whole tree. A
+ * single huge branch (e.g. a tile-based world layer with tens of thousands
+ * of sprites) would otherwise exhaust the shared budget before the walk
+ * ever reaches sibling branches like a UI layer, making anything only
+ * found there (e.g. Text nodes) unreachable once the world grows large
+ * enough — a race against world size, not a real "not found" result.
+ */
+function findAnyPerBranch(root: any, pred: (node: any) => boolean, limPerBranch = 25000) {
+  if (!root) return null;
+  if (pred(root)) return root;
+  const children = (root as any).children;
+  if (!Array.isArray(children)) return null;
+  for (const child of children) {
+    const hit = findAny(child, pred, limPerBranch);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/**
+ * Try to extract PIXI constructors from a container/stage node.
+ *
+ * Sprites/tiles typically render before any UI text does, so requiring only
+ * a Sprite match here would lock in `Text: null` if this runs early (no
+ * retry happens once a stage walk "succeeds"). Returning null here instead
+ * makes the caller's retry loop keep trying until a text node exists too.
+ */
 function ctorsFromStage(stage: any): PixiCtors | null {
   if (!stage) return null;
-  const anySpr = findAny(stage, (x: any) => x?.texture?.frame && x?.constructor && x?.texture?.constructor && x?.texture?.frame?.constructor);
+  const anySpr = findAnyPerBranch(stage, (x: any) => x?.texture?.frame && x?.constructor && x?.texture?.constructor && x?.texture?.frame?.constructor);
   if (!anySpr) return null;
-  const anyTxt = findAny(stage, (x: any) => (typeof x?.text === 'string' || typeof x?.text === 'number') && x?.style);
+  const anyTxt = findAnyPerBranch(stage, (x: any) => (typeof x?.text === 'string' || typeof x?.text === 'number') && x?.style);
+  if (!anyTxt) return null;
   return {
     Container: stage.constructor,
     Sprite: anySpr.constructor,
     Texture: anySpr.texture.constructor,
     Rectangle: anySpr.texture.frame.constructor,
-    Text: anyTxt?.constructor || null,
+    Text: anyTxt.constructor,
   };
 }
 

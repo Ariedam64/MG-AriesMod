@@ -92,17 +92,20 @@ export function createPixiHooks(): PixiHandles {
     }
   };
   tryResolveExisting();
-  // Poll until both are found.
+  // Poll until both are found. Bound to the real page window's timers, not
+  // the isolated userscript sandbox's own — the sandbox realm isn't tied to
+  // the page's rendering and can throttle setInterval far more aggressively.
+  const pageWin: any = (globalThis as any).unsafeWindow || globalThis;
   let fallbackPolls = 0;
-  const fallbackInterval = setInterval(() => {
+  const fallbackInterval = pageWin.setInterval(() => {
     if (APP && RDR) {
-      clearInterval(fallbackInterval);
+      pageWin.clearInterval(fallbackInterval);
       return;
     }
     tryResolveExisting();
     fallbackPolls += 1;
     if (fallbackPolls >= 50) {
-      clearInterval(fallbackInterval);
+      pageWin.clearInterval(fallbackInterval);
     }
   }, 100);
 

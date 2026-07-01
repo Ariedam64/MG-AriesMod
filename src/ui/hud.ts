@@ -24,6 +24,7 @@ import { getSpriteWarmupState, onSpriteWarmupProgress } from "./spriteIconCache"
 import { setupBuyAll, startReorderObserver } from "../utils/shopUtility";
 import { startCropValuesObserverFromGardenAtom } from "../utils/cropValues";
 import { startCropValueOverlayInPixi } from "../utils/cropValuePixi";
+import { startLockerIndicatorInPixi } from "../utils/lockerIndicatorPixi";
 import { startInjectSellAllPets } from "../utils/sellAllPets";
 import { startSellCropsLockWatcher } from "../utils/sellCropsLock";
 import { startEggHatchLockIndicator } from "../utils/eggHatchLockIndicator";
@@ -1131,6 +1132,7 @@ export function initWatchers(){
       startSellCropsLockWatcher();
       startDecorPickupLockIndicator();
       startEggHatchLockIndicator();
+      startLockerIndicatorInPixi();
       startInjectSellAllPets();
       startInstantFeedWidget();
       startSelectedInventoryQuantityLogger();

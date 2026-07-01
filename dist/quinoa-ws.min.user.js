@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.154
+// @version      3.2.155
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -764,7 +764,8 @@
   }
 
   // src/sprite/utils/async.ts
-  var sleep = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
+  var pageWin = globalThis.unsafeWindow || globalThis;
+  var sleep = (ms) => new Promise((resolve2) => pageWin.setTimeout(resolve2, ms));
   async function waitWithTimeout(p, ms, label2) {
     const t0 = performance.now();
     while (performance.now() - t0 < ms) {
@@ -777,13 +778,13 @@
   // src/sprite/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-    const listeners5 = /* @__PURE__ */ new Set();
+    const listeners6 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
     const tick = (now2) => {
       const delta = last ? (now2 - last) / (1e3 / 60) : 1;
       last = now2;
-      for (const fn of listeners5) {
+      for (const fn of listeners6) {
         try {
           fn(delta);
         } catch {
@@ -793,14 +794,14 @@
     };
     const ticker = {
       add(fn) {
-        if (!listeners5.size) {
+        if (!listeners6.size) {
           rafId = requestAnimationFrame(tick);
         }
-        listeners5.add(fn);
+        listeners6.add(fn);
       },
       remove(fn) {
-        listeners5.delete(fn);
-        if (!listeners5.size) {
+        listeners6.delete(fn);
+        if (!listeners6.size) {
           cancelAnimationFrame(rafId);
         }
       },
@@ -868,16 +869,17 @@
       }
     };
     tryResolveExisting();
+    const pageWin3 = globalThis.unsafeWindow || globalThis;
     let fallbackPolls = 0;
-    const fallbackInterval = setInterval(() => {
+    const fallbackInterval = pageWin3.setInterval(() => {
       if (APP && RDR) {
-        clearInterval(fallbackInterval);
+        pageWin3.clearInterval(fallbackInterval);
         return;
       }
       tryResolveExisting();
       fallbackPolls += 1;
       if (fallbackPolls >= 50) {
-        clearInterval(fallbackInterval);
+        pageWin3.clearInterval(fallbackInterval);
       }
     }, 100);
     return {
@@ -917,17 +919,29 @@
     }
     return null;
   }
+  function findAnyPerBranch(root, pred, limPerBranch = 25e3) {
+    if (!root) return null;
+    if (pred(root)) return root;
+    const children = root.children;
+    if (!Array.isArray(children)) return null;
+    for (const child of children) {
+      const hit = findAny(child, pred, limPerBranch);
+      if (hit) return hit;
+    }
+    return null;
+  }
   function ctorsFromStage(stage) {
     if (!stage) return null;
-    const anySpr = findAny(stage, (x) => x?.texture?.frame && x?.constructor && x?.texture?.constructor && x?.texture?.frame?.constructor);
+    const anySpr = findAnyPerBranch(stage, (x) => x?.texture?.frame && x?.constructor && x?.texture?.constructor && x?.texture?.frame?.constructor);
     if (!anySpr) return null;
-    const anyTxt = findAny(stage, (x) => (typeof x?.text === "string" || typeof x?.text === "number") && x?.style);
+    const anyTxt = findAnyPerBranch(stage, (x) => (typeof x?.text === "string" || typeof x?.text === "number") && x?.style);
+    if (!anyTxt) return null;
     return {
       Container: stage.constructor,
       Sprite: anySpr.constructor,
       Texture: anySpr.texture.constructor,
       Rectangle: anySpr.texture.frame.constructor,
-      Text: anyTxt?.constructor || null
+      Text: anyTxt.constructor
     };
   }
   function getCtors(app) {
@@ -984,6 +998,16 @@
   }
 
   // src/sprite/data/assetFetcher.ts
+  var GM_TIMEOUT_MS = 5e3;
+  var netDebugLog = [];
+  {
+    const root = globalThis.unsafeWindow || globalThis;
+    root.__MG_NET_DEBUG__ = netDebugLog;
+  }
+  function recordNetDebug(entry) {
+    netDebugLog.push(entry);
+    if (netDebugLog.length > 200) netDebugLog.shift();
+  }
   function fetchFallback(url, type) {
     return fetch(url).then(async (res) => {
       if (!res.ok) throw new Error(`HTTP ${res.status} (${url})`);
@@ -998,20 +1022,67 @@
       throw new Error(`Network (${url}): ${err instanceof Error ? err.message : String(err)}`);
     });
   }
-  function gm(url, type = "text") {
-    if (typeof GM_xmlhttpRequest === "function") {
-      return new Promise(
-        (resolve2, reject) => GM_xmlhttpRequest({
-          method: "GET",
-          url,
-          responseType: type,
-          onload: (r) => r.status >= 200 && r.status < 300 ? resolve2(r) : reject(new Error(`HTTP ${r.status} (${url})`)),
-          onerror: () => reject(new Error(`Network (${url})`)),
-          ontimeout: () => reject(new Error(`Timeout (${url})`))
-        })
-      );
+  function gmRequest(url, type) {
+    return new Promise(
+      (resolve2, reject) => GM_xmlhttpRequest({
+        method: "GET",
+        url,
+        responseType: type,
+        timeout: GM_TIMEOUT_MS,
+        onload: (r) => r.status >= 200 && r.status < 300 ? resolve2(r) : reject(new Error(`HTTP ${r.status} (${url})`)),
+        onerror: () => reject(new Error(`Network (${url})`)),
+        ontimeout: () => reject(new Error(`Timeout (${url})`))
+      })
+    );
+  }
+  async function gm(url, type = "text") {
+    const root = globalThis.unsafeWindow || globalThis;
+    if (typeof GM_xmlhttpRequest !== "function") {
+      const entry2 = { url, path: "fetch-fallback", startedAt: Date.now(), finishedAt: null, ok: null, error: null };
+      recordNetDebug(entry2);
+      try {
+        const result = await fetchFallback(url, type);
+        entry2.finishedAt = Date.now();
+        entry2.ok = true;
+        return result;
+      } catch (error) {
+        entry2.finishedAt = Date.now();
+        entry2.ok = false;
+        entry2.error = error instanceof Error ? error.message : String(error);
+        throw error;
+      }
     }
-    return fetchFallback(url, type);
+    const entry = { url, path: "gm", startedAt: Date.now(), finishedAt: null, ok: null, error: null };
+    recordNetDebug(entry);
+    let hardTimeoutId = null;
+    const hardTimeout = new Promise((_, reject) => {
+      hardTimeoutId = root.setTimeout(() => reject(new Error(`Hard timeout (${url})`)), GM_TIMEOUT_MS + 2e3);
+    });
+    try {
+      const result = await Promise.race([gmRequest(url, type), hardTimeout]);
+      root.clearTimeout(hardTimeoutId);
+      entry.finishedAt = Date.now();
+      entry.ok = true;
+      return result;
+    } catch (error) {
+      root.clearTimeout(hardTimeoutId);
+      entry.finishedAt = Date.now();
+      entry.ok = false;
+      entry.error = error instanceof Error ? error.message : String(error);
+      const fallbackEntry = { url, path: "gm-timeout-fallback", startedAt: Date.now(), finishedAt: null, ok: null, error: null };
+      recordNetDebug(fallbackEntry);
+      try {
+        const result = await fetchFallback(url, type);
+        fallbackEntry.finishedAt = Date.now();
+        fallbackEntry.ok = true;
+        return result;
+      } catch (fallbackError) {
+        fallbackEntry.finishedAt = Date.now();
+        fallbackEntry.ok = false;
+        fallbackEntry.error = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+        throw fallbackError;
+      }
+    }
   }
   var getJSON = async (url) => JSON.parse((await gm(url, "text")).responseText);
   var getBlob = async (url) => (await gm(url, "blob")).response;
@@ -1083,7 +1154,7 @@
           return bt;
         }
       }
-      await new Promise((r) => setTimeout(r, 250));
+      await new Promise((r) => root.setTimeout(r, 250));
     }
     if (ctors?.Texture?.from) {
       for (const alias of [imgName, imgName.replace(/^.*\//, "")]) {
@@ -1755,7 +1826,7 @@
     }
     return url.toString();
   }
-  function gmRequest(method, url, body) {
+  function gmRequest2(method, url, body) {
     return new Promise((resolve2) => {
       const apiKey = getApiKey();
       const headers = {};
@@ -1822,12 +1893,12 @@
     return withDiscordPollPause(async () => {
       const url = buildUrl(path, options?.query);
       if (isDiscordActivityContext()) {
-        return gmRequest(method, url, options?.body);
+        return gmRequest2(method, url, options?.body);
       }
       try {
         return await fetchRequest(method, url, options?.body);
       } catch {
-        return gmRequest(method, url, options?.body);
+        return gmRequest2(method, url, options?.body);
       }
     });
   }
@@ -2361,7 +2432,6 @@
       }
     });
   };
-  var delay = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
   async function warmupSpritesFromAtlases(atlasJsons, blobs) {
     const FRAME_YIELD_EVERY = 6;
     const MAX_CHUNK_MS = 10;
@@ -2447,7 +2517,7 @@
       } catch (err) {
         lastError = err;
       }
-      await delay(120);
+      await sleep(120);
     }
     throw lastError ?? new Error("Version not found.");
   }
@@ -2573,6 +2643,12 @@
   }
   async function resolvePixiFast() {
     const root = globalThis.unsafeWindow || globalThis;
+    const debugInfo = {
+      startedAt: Date.now(),
+      resolvedVia: null,
+      resolvedAt: null
+    };
+    root.__MG_RESOLVE_PIXI_DEBUG__ = debugInfo;
     const check = () => {
       const app = root.__PIXI_APP__ || root.PIXI_APP || root.app || null;
       const renderer = root.__PIXI_RENDERER__ || root.PIXI_RENDERER__ || root.renderer || app?.renderer || null;
@@ -2582,15 +2658,25 @@
       return null;
     };
     const hit = check();
-    if (hit) return hit;
+    if (hit) {
+      debugInfo.resolvedVia = "fast-check-immediate";
+      debugInfo.resolvedAt = Date.now();
+      return hit;
+    }
     const maxMs = 5e3;
     const start2 = performance.now();
     while (performance.now() - start2 < maxMs) {
-      await new Promise((r) => setTimeout(r, 50));
+      await sleep(50);
       const retry = check();
-      if (retry) return retry;
+      if (retry) {
+        debugInfo.resolvedVia = "fast-check-retry";
+        debugInfo.resolvedAt = Date.now();
+        return retry;
+      }
     }
     const waited = await waitForPixi(hooks);
+    debugInfo.resolvedVia = "waitForPixi-fallback";
+    debugInfo.resolvedAt = Date.now();
     return { app: waited.app, renderer: waited.renderer, version: waited.version };
   }
   async function start() {
@@ -2610,7 +2696,7 @@
           throw err;
         }
         console.warn("[MG SpriteCatalog] retrying game version detection...");
-        await delay(200);
+        await sleep(200);
       }
     }
     const base = `${ctx.cfg.origin.replace(/\/$/, "")}/version/${version}/assets/`;
@@ -2621,8 +2707,56 @@
     await ensureDocumentReady();
     const renderer = _renderer || app?.renderer || app?.render || null;
     ctx.state.ctors = await (async () => {
+      const debugRoot = globalThis.unsafeWindow || globalThis;
+      const inspectStage = (root) => {
+        const stack = [root];
+        const seen = /* @__PURE__ */ new Set();
+        let totalNodes = 0;
+        let spriteLikeCount = 0;
+        let textLikeCount = 0;
+        let n = 0;
+        while (stack.length && n++ < 25e3) {
+          const cur = stack.pop();
+          if (!cur || seen.has(cur)) continue;
+          seen.add(cur);
+          totalNodes++;
+          if (cur?.texture?.frame && cur?.constructor && cur?.texture?.constructor && cur?.texture?.frame?.constructor) spriteLikeCount++;
+          if ((typeof cur?.text === "string" || typeof cur?.text === "number") && cur?.style) textLikeCount++;
+          const children = cur.children;
+          if (Array.isArray(children)) {
+            for (let i = children.length - 1; i >= 0; i -= 1) stack.push(children[i]);
+          }
+        }
+        const topChildLabels = Array.isArray(root?.children) ? root.children.map((c) => c?.label || c?.constructor?.name || typeof c) : [];
+        return { totalNodes, spriteLikeCount, textLikeCount, topChildLabels };
+      };
+      const attempts = [];
+      debugRoot.__MG_CTORS_DEBUG__ = attempts;
+      let iteration = 0;
+      const snapshot = () => {
+        const stage = app?.stage;
+        const lor = renderer?.lastObjectRendered;
+        const rStage = renderer?.stage;
+        const walkRoot = stage || lor || rStage || null;
+        attempts.push({
+          at: Date.now(),
+          hasAppStage: !!stage,
+          appStageChildren: Array.isArray(stage?.children) ? stage.children.length : -1,
+          hasLastObjectRendered: !!lor,
+          lastObjectRenderedChildren: Array.isArray(lor?.children) ? lor.children.length : -1,
+          hasRendererStage: !!rStage,
+          rendererStageChildren: Array.isArray(rStage?.children) ? rStage.children.length : -1,
+          documentHidden: typeof document !== "undefined" ? document.hidden : false,
+          visibilityState: typeof document !== "undefined" ? document.visibilityState : "unknown",
+          hasFocus: typeof document !== "undefined" ? document.hasFocus() : false,
+          // Deep walk is relatively expensive — only do it every ~1s, not every 100ms.
+          inspect: walkRoot && iteration % 10 === 0 ? inspectStage(walkRoot) : null
+        });
+        iteration += 1;
+      };
       const deadline = Date.now() + 1e4;
       while (Date.now() < deadline) {
+        snapshot();
         try {
           return getCtors(app);
         } catch {
@@ -2630,8 +2764,9 @@
         if (app && !app.stage && renderer?.lastObjectRendered) {
           app.stage = renderer.lastObjectRendered;
         }
-        await delay(100);
+        await sleep(100);
       }
+      snapshot();
       return getCtors(app);
     })();
     ctx.state.app = app;
@@ -2831,12 +2966,12 @@
 
   // src/utils/page-context.ts
   var sandboxWin = window;
-  var pageWin = typeof unsafeWindow !== "undefined" && unsafeWindow ? unsafeWindow : sandboxWin;
-  var pageWindow = pageWin;
-  var isIsolatedContext = pageWin !== sandboxWin;
+  var pageWin2 = typeof unsafeWindow !== "undefined" && unsafeWindow ? unsafeWindow : sandboxWin;
+  var pageWindow = pageWin2;
+  var isIsolatedContext = pageWin2 !== sandboxWin;
   function shareGlobal(name, value) {
     try {
-      pageWin[name] = value;
+      pageWin2[name] = value;
     } catch {
     }
     if (isIsolatedContext) {
@@ -2851,7 +2986,7 @@
       const sandboxValue = sandboxWin[name];
       if (sandboxValue !== void 0) return sandboxValue;
     }
-    return pageWin[name];
+    return pageWin2[name];
   }
 
   // src/core/state.ts
@@ -7546,9 +7681,9 @@
     let selectedIdx = null;
     let lastInfo = emptySlotInfo();
     let curSig = gardenObjectSignature(cur);
-    const listeners5 = /* @__PURE__ */ new Set();
+    const listeners6 = /* @__PURE__ */ new Set();
     const notify2 = () => {
-      for (const fn of listeners5) {
+      for (const fn of listeners6) {
         try {
           fn(lastInfo);
         } catch {
@@ -7786,11 +7921,11 @@
         return lastInfo;
       },
       onChange(cb) {
-        listeners5.add(cb);
-        return () => listeners5.delete(cb);
+        listeners6.add(cb);
+        return () => listeners6.delete(cb);
       },
       stop() {
-        listeners5.clear();
+        listeners6.clear();
       },
       recompute() {
         recomputeAndNotify();
@@ -20478,7 +20613,7 @@
     return "normal";
   }
   async function waitForInventoryPetAddition(previous, timeoutMs = HATCH_EGG_TIMEOUT_MS) {
-    await delay2(0);
+    await delay(0);
     const initial = await readInventoryPetSnapshots();
     if (hasNewInventoryPet(initial, previous)) {
       return initial;
@@ -20531,7 +20666,7 @@
   function hasNewInventoryPet(pets, previous) {
     return pets.some((pet) => !previous.has(pet.id));
   }
-  function delay2(ms) {
+  function delay(ms) {
     return new Promise((resolve2) => setTimeout(resolve2, ms));
   }
   function resolveSendMessage(Conn) {
@@ -28482,9 +28617,9 @@
     let players = void 0;
     let selectedSlotId = null;
     let lastPrice = null;
-    const listeners5 = /* @__PURE__ */ new Set();
+    const listeners6 = /* @__PURE__ */ new Set();
     const notify2 = () => {
-      for (const fn of listeners5) try {
+      for (const fn of listeners6) try {
         fn();
       } catch {
       }
@@ -28550,11 +28685,11 @@
         return lastPrice;
       },
       onChange(cb) {
-        listeners5.add(cb);
-        return () => listeners5.delete(cb);
+        listeners6.add(cb);
+        return () => listeners6.delete(cb);
       },
       stop() {
-        listeners5.clear();
+        listeners6.clear();
       }
     };
   }
@@ -29048,13 +29183,187 @@
     }
   }
 
-  // src/utils/cropValuePixi.ts
+  // src/utils/gardenInfoCardPixi.ts
   var CARD_SYSTEM_LABEL = "GardenInfoCardSystem";
   var CARD_ROW_LABEL = "GardenInfoCardRow";
   var OBJECT_CARD_LABEL = "GardenInfoObjectCard";
   var TITLE_ROW_LABEL = "GardenInfoObjectTitleRow";
   var ABILITIES_SECTION_LABEL = "GardenInfoPlantAbilities";
   var SECTION_GAP_ESTIMATE = 8;
+  var CARD_SYSTEM_FIND_RETRY_MS = 1e3;
+  var CARD_SYSTEM_FIND_LOG_EVERY = 30;
+  function getSpriteState() {
+    const state3 = readSharedGlobal("__MG_SPRITE_STATE__");
+    if (!state3?.renderer || !state3.ctors?.Text) return null;
+    return state3;
+  }
+  function getStage(state3) {
+    return state3.renderer.lastObjectRendered ?? state3.renderer.stage ?? state3.app?.stage ?? null;
+  }
+  function findByLabel(root, label2, limit = 25e3) {
+    if (!root) return null;
+    const stack = [root];
+    const seen = /* @__PURE__ */ new Set();
+    let n = 0;
+    while (stack.length && n++ < limit) {
+      const node = stack.pop();
+      if (!node || seen.has(node)) continue;
+      seen.add(node);
+      if (node.label === label2) return node;
+      const children = node.children;
+      if (Array.isArray(children)) for (const child of children) stack.push(child);
+    }
+    return null;
+  }
+  function findAcrossBranches(root, pred, limitPerBranch = 25e3) {
+    if (!root) return null;
+    if (pred(root)) return root;
+    const children = root.children;
+    if (!Array.isArray(children)) return null;
+    for (const child of children) {
+      const stack = [child];
+      const seen = /* @__PURE__ */ new Set();
+      let n = 0;
+      while (stack.length && n++ < limitPerBranch) {
+        const node = stack.pop();
+        if (!node || seen.has(node)) continue;
+        seen.add(node);
+        if (pred(node)) return node;
+        const kids = node.children;
+        if (Array.isArray(kids)) for (const kid of kids) stack.push(kid);
+      }
+    }
+    return null;
+  }
+  var cachedGraphicsCtor = null;
+  function findGraphicsCtor(root) {
+    if (cachedGraphicsCtor) return cachedGraphicsCtor;
+    const found = findAcrossBranches(
+      root,
+      (node) => typeof node?.roundRect === "function" && typeof node?.clear === "function"
+    )?.constructor ?? null;
+    if (found) cachedGraphicsCtor = found;
+    return found;
+  }
+  var cardSystem = null;
+  var currentCard = null;
+  var findAttempts = 0;
+  var findRafId = null;
+  var lastFindCheckAt = 0;
+  var listeners5 = /* @__PURE__ */ new Set();
+  var debugState = {
+    findAttempts: 0,
+    attached: false,
+    rafTicks: 0,
+    scriptStartedAt: Date.now(),
+    listenerCount: 0
+  };
+  shareGlobal("__MG_GARDEN_INFO_CARD_DEBUG__", debugState);
+  function computeGeometry(card2) {
+    const cardBounds = card2.getLocalBounds();
+    const width = card2.hitArea?.width ?? cardBounds.width;
+    const height = card2.hitArea?.height ?? cardBounds.height;
+    const titleRow = (card2.children ?? []).find((c) => c?.label === TITLE_ROW_LABEL);
+    const contentTop = titleRow ? titleRow.position.y + titleRow.getLocalBounds().minY : cardBounds.minY;
+    const abilitiesSection = (cardSystem?.children ?? []).find((c) => c?.label === ABILITIES_SECTION_LABEL);
+    const extraTopOffset = abilitiesSection ? abilitiesSection.getLocalBounds().height + SECTION_GAP_ESTIMATE : 0;
+    return { top: contentTop - extraTopOffset, width, height };
+  }
+  function notifyListeners2(card2, geometry) {
+    for (const listener of listeners5) {
+      try {
+        listener(card2, geometry);
+      } catch (error) {
+        console.warn("[gardenInfoCardPixi] listener failed", error);
+      }
+    }
+  }
+  function onChildAddedUnsafe(row) {
+    if (row?.label !== CARD_ROW_LABEL) return;
+    const card2 = findByLabel(row, OBJECT_CARD_LABEL);
+    if (!card2) return;
+    currentCard = card2;
+    const geometry = computeGeometry(card2);
+    card2.once("destroyed", () => {
+      if (currentCard === card2) {
+        currentCard = null;
+        notifyListeners2(null, null);
+      }
+    });
+    notifyListeners2(card2, geometry);
+  }
+  function onChildAdded(row) {
+    try {
+      onChildAddedUnsafe(row);
+    } catch (error) {
+      console.warn("[gardenInfoCardPixi] onChildAdded failed", error);
+    }
+  }
+  function attachToCardSystem(system) {
+    cardSystem = system;
+    cardSystem.on("childAdded", onChildAdded);
+    cardSystem.once("destroyed", () => {
+      if (cardSystem === system) {
+        cardSystem = null;
+        debugState.attached = false;
+        currentCard = null;
+        notifyListeners2(null, null);
+      }
+    });
+    debugState.attached = true;
+    console.info(`[gardenInfoCardPixi] attached to ${CARD_SYSTEM_LABEL} after ${findAttempts} attempt(s)`);
+    const existingRow = (system.children ?? []).find((c) => c?.label === CARD_ROW_LABEL);
+    if (existingRow) onChildAdded(existingRow);
+  }
+  function tryFindCardSystem() {
+    if (cardSystem) return;
+    const state3 = getSpriteState();
+    if (!state3) return;
+    const stage = getStage(state3);
+    const found = findAcrossBranches(stage, (node) => node?.label === CARD_SYSTEM_LABEL);
+    if (found) {
+      attachToCardSystem(found);
+      return;
+    }
+    findAttempts += 1;
+    debugState.findAttempts = findAttempts;
+    if (findAttempts % CARD_SYSTEM_FIND_LOG_EVERY === 0) {
+      console.info(`[gardenInfoCardPixi] still searching for ${CARD_SYSTEM_LABEL} (${findAttempts} attempts so far)`);
+    }
+  }
+  var raf = pageWindow.requestAnimationFrame.bind(pageWindow);
+  function scheduleFind(now2) {
+    findRafId = null;
+    debugState.rafTicks += 1;
+    if (!listeners5.size || cardSystem) return;
+    if (now2 - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
+      lastFindCheckAt = now2;
+      tryFindCardSystem();
+    }
+    if (!listeners5.size || cardSystem) return;
+    findRafId = raf(scheduleFind);
+  }
+  function watchGardenInfoCard(listener) {
+    listeners5.add(listener);
+    debugState.listenerCount = listeners5.size;
+    tryFindCardSystem();
+    if (!cardSystem && findRafId == null) {
+      findRafId = raf(scheduleFind);
+    }
+    if (currentCard) {
+      try {
+        listener(currentCard, computeGeometry(currentCard));
+      } catch (error) {
+        console.warn("[gardenInfoCardPixi] listener failed", error);
+      }
+    }
+    return () => {
+      listeners5.delete(listener);
+      debugState.listenerCount = listeners5.size;
+    };
+  }
+
+  // src/utils/cropValuePixi.ts
   var VALUE_TEXT_STYLE = { fontFamily: "Arial", fontSize: 14, fontWeight: "700", fill: "#FFD84D" };
   var VALUE_BADGE_GAP = 20;
   var VALUE_ICON_SIZE = 16;
@@ -29064,8 +29373,6 @@
   var BADGE_RADIUS = 6;
   var BADGE_COLOR = 0;
   var BADGE_ALPHA = 0.55;
-  var CARD_SYSTEM_FIND_RETRY_MS = 1e3;
-  var CARD_SYSTEM_FIND_MAX_ATTEMPTS = 60;
   var PRICE_FALLBACK2 = "\u2014";
   var nfUS2 = new Intl.NumberFormat("en-US");
   var formatCoins2 = (value) => value == null ? PRICE_FALLBACK2 : nfUS2.format(Math.max(0, Math.round(value)));
@@ -29090,60 +29397,24 @@
     }
     return coinTexturePromise;
   }
-  function getSpriteState() {
-    const state3 = readSharedGlobal("__MG_SPRITE_STATE__");
-    if (!state3?.renderer || !state3.ctors?.Text) return null;
-    return state3;
-  }
-  function getStage(state3) {
-    return state3.renderer.lastObjectRendered ?? state3.renderer.stage ?? state3.app?.stage ?? null;
-  }
-  function findByLabel(root, label2, limit = 25e3) {
-    if (!root) return null;
-    const stack = [root];
-    const seen = /* @__PURE__ */ new Set();
-    let n = 0;
-    while (stack.length && n++ < limit) {
-      const node = stack.pop();
-      if (!node || seen.has(node)) continue;
-      seen.add(node);
-      if (node.label === label2) return node;
-      const children = node.children;
-      if (Array.isArray(children)) for (const child of children) stack.push(child);
-    }
-    return null;
-  }
-  function findGraphicsCtor(root, limit = 25e3) {
-    if (!root) return null;
-    const stack = [root];
-    const seen = /* @__PURE__ */ new Set();
-    let n = 0;
-    while (stack.length && n++ < limit) {
-      const node = stack.pop();
-      if (!node || seen.has(node)) continue;
-      seen.add(node);
-      if (typeof node.roundRect === "function" && typeof node.clear === "function") {
-        return node.constructor;
-      }
-      const children = node.children;
-      if (Array.isArray(children)) for (const child of children) stack.push(child);
-    }
-    return null;
-  }
   function startCropValueOverlayInPixi() {
     let running = true;
-    let cardSystem = null;
-    let currentCard = null;
-    let cardTop = 0;
-    let cardWidth = 0;
+    let currentCard2 = null;
+    let geometry = null;
     let hitAreaBaseHeight = 0;
     let valueText = null;
     let valueIcon = null;
     let valueBadge = null;
     let graphicsCtor = null;
     let iconRetryScheduled = false;
-    let findAttempts = 0;
-    let findTimer = null;
+    const debugState2 = {
+      attached: false,
+      lastSyncAt: null,
+      lastError: null,
+      hasValueText: false,
+      hasCoinTexture: false
+    };
+    shareGlobal("__MG_CROP_VALUE_PIXI_DEBUG__", debugState2);
     const priceWatcher = startCropPriceWatcherViaGardenObject();
     const detachValueText = () => {
       if (valueBadge) {
@@ -29167,20 +29438,13 @@
         }
         valueText = null;
       }
-      if (currentCard?.hitArea) {
-        currentCard.hitArea.y = 0;
-        currentCard.hitArea.height = hitAreaBaseHeight;
+      if (currentCard2?.hitArea) {
+        currentCard2.hitArea.y = 0;
+        currentCard2.hitArea.height = hitAreaBaseHeight;
       }
     };
-    const detachCard = () => {
-      currentCard = null;
-      cardTop = 0;
-      cardWidth = 0;
-      hitAreaBaseHeight = 0;
-      detachValueText();
-    };
     const syncValueNodeUnsafe = () => {
-      if (!running || !currentCard || currentCard.destroyed) return;
+      if (!running || !currentCard2 || currentCard2.destroyed || !geometry) return;
       const state3 = getSpriteState();
       if (!state3) return;
       const value = priceWatcher.get();
@@ -29193,10 +29457,10 @@
         graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state3)));
         if (graphicsCtor) {
           valueBadge = new graphicsCtor();
-          currentCard.addChild(valueBadge);
+          currentCard2.addChild(valueBadge);
         }
         valueText = new state3.ctors.Text({ text, style: VALUE_TEXT_STYLE });
-        currentCard.addChild(valueText);
+        currentCard2.addChild(valueText);
       } else if (valueText.text !== text) {
         valueText.text = text;
       }
@@ -29205,7 +29469,7 @@
           valueIcon = new state3.ctors.Sprite(coinTexture);
           valueIcon.width = VALUE_ICON_SIZE;
           valueIcon.height = VALUE_ICON_SIZE;
-          currentCard.addChild(valueIcon);
+          currentCard2.addChild(valueIcon);
         } else if (!iconRetryScheduled) {
           iconRetryScheduled = true;
           ensureCoinTexture(state3.ctors.Texture).then(() => {
@@ -29217,9 +29481,9 @@
       const rowHeight = Math.max(valueIcon ? VALUE_ICON_SIZE : 0, valueText.height);
       const rowWidth = (valueIcon ? VALUE_ICON_SIZE + VALUE_ICON_GAP : 0) + valueText.width;
       const badgeHeight = rowHeight + BADGE_PADDING_Y * 2;
-      const badgeTop = cardTop - VALUE_BADGE_GAP - badgeHeight;
+      const badgeTop = geometry.top - VALUE_BADGE_GAP - badgeHeight;
       const rowTop = badgeTop + BADGE_PADDING_Y;
-      const startX = Math.max(0, (cardWidth - rowWidth) / 2);
+      const startX = Math.max(0, (geometry.width - rowWidth) / 2);
       if (valueIcon) {
         valueIcon.position.set(startX, rowTop + (rowHeight - VALUE_ICON_SIZE) / 2);
         valueText.position.set(startX + VALUE_ICON_SIZE + VALUE_ICON_GAP, rowTop + (rowHeight - valueText.height) / 2);
@@ -29232,15 +29496,20 @@
         valueBadge.roundRect(0, 0, badgeWidth, badgeHeight, BADGE_RADIUS).fill({ color: BADGE_COLOR, alpha: BADGE_ALPHA });
         valueBadge.position.set(startX - BADGE_PADDING_X, badgeTop);
       }
-      if (currentCard.hitArea) {
-        currentCard.hitArea.y = badgeTop;
-        currentCard.hitArea.height = hitAreaBaseHeight - badgeTop;
+      if (currentCard2.hitArea) {
+        currentCard2.hitArea.y = badgeTop;
+        currentCard2.hitArea.height = hitAreaBaseHeight - badgeTop;
       }
     };
     const syncValueNode = () => {
       try {
         syncValueNodeUnsafe();
+        debugState2.lastSyncAt = Date.now();
+        debugState2.lastError = null;
+        debugState2.hasValueText = !!valueText;
+        debugState2.hasCoinTexture = !!coinTexture;
       } catch (error) {
+        debugState2.lastError = String(error?.message ?? error);
         console.warn("[cropValuePixi] syncValueNode failed, clearing overlay", error);
         try {
           detachValueText();
@@ -29248,89 +29517,160 @@
         }
       }
     };
-    const onChildAddedUnsafe = (row) => {
-      if (!running || row?.label !== CARD_ROW_LABEL) return;
-      const card2 = findByLabel(row, OBJECT_CARD_LABEL);
-      if (!card2) return;
-      currentCard = card2;
-      const cardBounds = card2.getLocalBounds();
-      cardWidth = card2.hitArea?.width ?? cardBounds.width;
-      const titleRow = (card2.children ?? []).find((c) => c?.label === TITLE_ROW_LABEL);
-      const contentTop = titleRow ? titleRow.position.y + titleRow.getLocalBounds().minY : cardBounds.minY;
-      const abilitiesSection = (cardSystem?.children ?? []).find((c) => c?.label === ABILITIES_SECTION_LABEL);
-      const extraTopOffset = abilitiesSection ? abilitiesSection.getLocalBounds().height + SECTION_GAP_ESTIMATE : 0;
-      cardTop = contentTop - extraTopOffset;
-      hitAreaBaseHeight = card2.hitArea?.height ?? 0;
+    const offCard = watchGardenInfoCard((card2, geom) => {
+      currentCard2 = card2;
+      geometry = geom;
+      hitAreaBaseHeight = card2?.hitArea?.height ?? 0;
       detachValueText();
-      card2.once("destroyed", detachCard);
-      syncValueNode();
-    };
-    const onChildAdded = (row) => {
-      try {
-        onChildAddedUnsafe(row);
-      } catch (error) {
-        console.warn("[cropValuePixi] onChildAdded failed, clearing overlay", error);
-        try {
-          detachValueText();
-        } catch {
-        }
-      }
-    };
-    const attachToCardSystem = (system) => {
-      cardSystem = system;
-      cardSystem.on("childAdded", onChildAdded);
-      cardSystem.once("destroyed", () => {
-        if (cardSystem === system) {
-          cardSystem = null;
-          detachCard();
-        }
-      });
-      const existingRow = (system.children ?? []).find((c) => c?.label === CARD_ROW_LABEL);
-      if (existingRow) onChildAdded(existingRow);
-    };
-    const tryFindCardSystem = () => {
-      if (!running || cardSystem) return;
-      const state3 = getSpriteState();
-      if (!state3) return;
-      const stage = getStage(state3);
-      const found = findByLabel(stage, CARD_SYSTEM_LABEL);
-      if (found) {
-        attachToCardSystem(found);
-        if (findTimer != null) {
-          clearInterval(findTimer);
-          findTimer = null;
-        }
-        return;
-      }
-      findAttempts += 1;
-      if (findAttempts >= CARD_SYSTEM_FIND_MAX_ATTEMPTS && findTimer != null) {
-        clearInterval(findTimer);
-        findTimer = null;
-      }
-    };
-    tryFindCardSystem();
-    if (!cardSystem) {
-      findTimer = setInterval(tryFindCardSystem, CARD_SYSTEM_FIND_RETRY_MS);
-    }
+      debugState2.attached = !!card2;
+      if (card2) syncValueNode();
+    });
     const offPrice = priceWatcher.onChange(syncValueNode);
     return {
       stop() {
         if (!running) return;
         running = false;
-        if (findTimer != null) {
-          clearInterval(findTimer);
-          findTimer = null;
-        }
+        offCard();
         offPrice?.();
         priceWatcher.stop();
-        if (cardSystem) {
-          try {
-            cardSystem.off("childAdded", onChildAdded);
-          } catch {
-          }
+        detachValueText();
+        currentCard2 = null;
+      }
+    };
+  }
+
+  // src/utils/lockerIndicatorPixi.ts
+  var BORDER_COLOR = 12334551;
+  var BORDER_WIDTH = 3;
+  var BORDER_RADIUS = 12;
+  var BORDER_EXPAND = 2;
+  var LOCK_ICON_TEXT = "\u{1F512}";
+  var LOCK_ICON_STYLE = { fontSize: 16 };
+  var LOCK_ICON_X_NUDGE = 4;
+  var LOCK_ICON_Y_NUDGE = 4;
+  function extractEggId2(obj) {
+    if (!obj || typeof obj !== "object" || obj.objectType !== "egg") return null;
+    const eggId = obj.eggId;
+    return typeof eggId === "string" && eggId ? eggId : null;
+  }
+  function isDecorObject(obj) {
+    return !!obj && typeof obj === "object" && obj.objectType === "decor";
+  }
+  function startLockerIndicatorInPixi() {
+    let running = true;
+    let currentCard2 = null;
+    let geometry = null;
+    let border = null;
+    let lockIcon = null;
+    let graphicsCtor = null;
+    let currentGardenObject = null;
+    const debugState2 = { lastError: null, hasBorder: false, objectType: null };
+    shareGlobal("__MG_LOCKER_INDICATOR_PIXI_DEBUG__", debugState2);
+    const isLocked = () => {
+      const eggId = extractEggId2(currentGardenObject);
+      if (eggId) return lockerRestrictionsService.isEggLocked(eggId);
+      if (isDecorObject(currentGardenObject)) return lockerRestrictionsService.isDecorPickupLocked();
+      return lockerService.getCurrentSlotSnapshot().harvestAllowed === false;
+    };
+    const removeBorder = () => {
+      if (border) {
+        try {
+          border.destroy();
+        } catch {
         }
-        detachCard();
-        cardSystem = null;
+        border = null;
+      }
+      if (lockIcon) {
+        try {
+          lockIcon.destroy();
+        } catch {
+        }
+        lockIcon = null;
+      }
+      debugState2.hasBorder = false;
+    };
+    const syncUnsafe = () => {
+      debugState2.objectType = currentGardenObject?.objectType ?? null;
+      if (!running || !currentCard2 || currentCard2.destroyed || !geometry || !isLocked()) {
+        removeBorder();
+        return;
+      }
+      const state3 = getSpriteState();
+      if (!graphicsCtor) {
+        graphicsCtor = state3 ? findGraphicsCtor(getStage(state3)) : null;
+        if (!graphicsCtor) return;
+      }
+      if (!border) {
+        border = new graphicsCtor();
+        currentCard2.addChild(border);
+      }
+      const left = -BORDER_EXPAND;
+      const top = -BORDER_EXPAND;
+      const width = Math.max(0, geometry.width + BORDER_EXPAND * 2);
+      const height = Math.max(0, geometry.height + BORDER_EXPAND * 2);
+      const inset = BORDER_WIDTH / 2;
+      border.clear();
+      border.roundRect(left + inset, top + inset, Math.max(0, width - BORDER_WIDTH), Math.max(0, height - BORDER_WIDTH), BORDER_RADIUS).stroke({ width: BORDER_WIDTH, color: BORDER_COLOR, alpha: 1 });
+      debugState2.hasBorder = true;
+      if (!lockIcon && state3?.ctors?.Text) {
+        lockIcon = new state3.ctors.Text({ text: LOCK_ICON_TEXT, style: LOCK_ICON_STYLE });
+        currentCard2.addChild(lockIcon);
+      }
+      if (lockIcon) {
+        const right = left + width;
+        lockIcon.position.set(right - lockIcon.width / 2 - LOCK_ICON_X_NUDGE, top - lockIcon.height / 2 + LOCK_ICON_Y_NUDGE);
+      }
+    };
+    const sync = () => {
+      try {
+        syncUnsafe();
+        debugState2.lastError = null;
+      } catch (error) {
+        debugState2.lastError = String(error?.message ?? error);
+        console.warn("[lockerIndicatorPixi] sync failed, clearing border", error);
+        try {
+          removeBorder();
+        } catch {
+        }
+      }
+    };
+    const offCard = watchGardenInfoCard((card2, geom) => {
+      removeBorder();
+      currentCard2 = card2;
+      geometry = geom;
+      sync();
+    });
+    const offSlot = lockerService.onSlotInfoChange(() => sync());
+    const offRestrictions = lockerRestrictionsService.subscribe(() => sync());
+    let unsubAtom = null;
+    void (async () => {
+      try {
+        currentGardenObject = await Atoms.data.myCurrentGardenObject.get();
+        if (running) sync();
+      } catch {
+      }
+      try {
+        const unsub = await Atoms.data.myCurrentGardenObject.onChange((next) => {
+          currentGardenObject = next;
+          sync();
+        });
+        if (typeof unsub === "function") {
+          if (running) unsubAtom = unsub;
+          else unsub();
+        }
+      } catch {
+      }
+    })();
+    return {
+      stop() {
+        if (!running) return;
+        running = false;
+        offCard();
+        offSlot?.();
+        offRestrictions?.();
+        unsubAtom?.();
+        removeBorder();
+        currentCard2 = null;
       }
     };
   }
@@ -29507,7 +29847,7 @@
   // src/utils/eggHatchLockIndicator.ts
   var CONTAINER_SELECTOR2 = ".css-502lyi";
   var LOCK_CLASS = "tm-egg-lock";
-  var BORDER_COLOR = "rgb(188, 53, 215)";
+  var BORDER_COLOR2 = "rgb(188, 53, 215)";
   var DATA_BORDER2 = "tmEggLockBorder";
   var DATA_RADIUS2 = "tmEggLockRadius";
   var DATA_POSITION2 = "tmEggLockPosition";
@@ -29541,12 +29881,12 @@
     const subscribeAtoms = async () => {
       try {
         const initial = await Atoms.data.myCurrentGardenObject.get();
-        currentEggId = extractEggId2(initial);
+        currentEggId = extractEggId3(initial);
       } catch {
       }
       try {
         const unsub = await Atoms.data.myCurrentGardenObject.onChange((next) => {
-          currentEggId = extractEggId2(next);
+          currentEggId = extractEggId3(next);
           applyLockState();
         });
         if (typeof unsub === "function") disposables.push(unsub);
@@ -29585,7 +29925,7 @@
     storeStyle(el2, DATA_RADIUS2, "borderRadius");
     storeStyle(el2, DATA_POSITION2, "position");
     storeStyle(el2, DATA_OVERFLOW2, "overflow");
-    el2.style.border = `3px solid ${BORDER_COLOR}`;
+    el2.style.border = `3px solid ${BORDER_COLOR2}`;
     el2.style.borderRadius = "16px";
     el2.style.overflow = "visible";
     const pos = window.getComputedStyle(el2).position;
@@ -29638,7 +29978,7 @@
   function removeLockIcon3(el2) {
     el2.querySelectorAll(`span.${LOCK_CLASS}`).forEach((node) => node.remove());
   }
-  function extractEggId2(obj) {
+  function extractEggId3(obj) {
     if (!obj || typeof obj !== "object") return null;
     if (obj.objectType !== "egg") return null;
     const eggId = obj.eggId;
@@ -29648,7 +29988,7 @@
   // src/utils/decorPickupLockIndicator.ts
   var CONTAINER_SELECTOR3 = ".css-502lyi";
   var LOCK_CLASS2 = "tm-decor-lock";
-  var BORDER_COLOR2 = "rgb(188, 53, 215)";
+  var BORDER_COLOR3 = "rgb(188, 53, 215)";
   var DATA_BORDER3 = "tmDecorLockBorder";
   var DATA_RADIUS3 = "tmDecorLockRadius";
   var DATA_POSITION3 = "tmDecorLockPosition";
@@ -29728,7 +30068,7 @@
     storeStyle2(el2, DATA_RADIUS3, "borderRadius");
     storeStyle2(el2, DATA_POSITION3, "position");
     storeStyle2(el2, DATA_OVERFLOW3, "overflow");
-    el2.style.border = `3px solid ${BORDER_COLOR2}`;
+    el2.style.border = `3px solid ${BORDER_COLOR3}`;
     el2.style.borderRadius = "16px";
     el2.style.overflow = "visible";
     const pos = window.getComputedStyle(el2).position;
@@ -29887,7 +30227,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.154";
+      return "3.2.155";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -33864,10 +34204,10 @@
     function attachAutoClamp(win) {
       const anyWin = win;
       if (anyWin.__qwsClampObserver || typeof ResizeObserver === "undefined") return;
-      let raf = 0;
+      let raf2 = 0;
       const ro = new ResizeObserver(() => {
-        if (raf) cancelAnimationFrame(raf);
-        raf = requestAnimationFrame(() => ensureOnScreen(win));
+        if (raf2) cancelAnimationFrame(raf2);
+        raf2 = requestAnimationFrame(() => ensureOnScreen(win));
       });
       ro.observe(win);
       anyWin.__qwsClampObserver = ro;
@@ -34566,6 +34906,7 @@
       startSellCropsLockWatcher();
       startDecorPickupLockIndicator();
       startEggHatchLockIndicator();
+      startLockerIndicatorInPixi();
       startInjectSellAllPets();
       startInstantFeedWidget();
       startSelectedInventoryQuantityLogger();
@@ -41381,9 +41722,9 @@ next: ${next}`;
     const updateDetailScrollMemory = (key2) => {
       const current = detailScrollMemory.get(key2) ?? { detail: 0, card: 0 };
       current.detail = getClampedScrollTop(detail);
-      const currentCard = detail.querySelector('[data-locker-settings-card="1"]');
-      if (currentCard) {
-        current.card = getClampedScrollTop(currentCard);
+      const currentCard2 = detail.querySelector('[data-locker-settings-card="1"]');
+      if (currentCard2) {
+        current.card = getClampedScrollTop(currentCard2);
       }
       detailScrollMemory.set(key2, current);
     };
@@ -48908,7 +49249,7 @@ next: ${next}`;
   // src/utils/antiafk.ts
   function createAntiAfkController(deps) {
     const STOP_EVENTS = ["visibilitychange", "blur", "focus", "focusout", "pagehide", "freeze", "resume"];
-    const listeners5 = [];
+    const listeners6 = [];
     function swallowAll() {
       const add = (target, t) => {
         const h = (e) => {
@@ -48916,7 +49257,7 @@ next: ${next}`;
           e.preventDefault?.();
         };
         target.addEventListener(t, h, { capture: true });
-        listeners5.push({ t, h, target });
+        listeners6.push({ t, h, target });
       };
       STOP_EVENTS.forEach((t) => {
         add(document, t);
@@ -48924,11 +49265,11 @@ next: ${next}`;
       });
     }
     function unswallowAll() {
-      for (const { t, h, target } of listeners5) try {
+      for (const { t, h, target } of listeners6) try {
         target.removeEventListener(t, h, { capture: true });
       } catch {
       }
-      listeners5.length = 0;
+      listeners6.length = 0;
     }
     const docProto = Object.getPrototypeOf(document);
     const saved = {

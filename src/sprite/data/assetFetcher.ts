@@ -8,12 +8,43 @@ declare const GM_xmlhttpRequest:
         method: 'GET';
         url: string;
         responseType: 'text' | 'blob' | 'json';
+        timeout?: number;
         onload: (resp: { status: number; responseText: string; response: any }) => void;
         onerror: () => void;
         ontimeout: () => void;
       },
     ) => void)
   | undefined;
+
+// GM_xmlhttpRequest is the one call in this codebase that genuinely crosses
+// into the extension's isolated content-script bridge (everything else runs
+// directly in page context via @inject-into page). That bridge can be slow
+// to attach at document-start; without an explicit `timeout`, GM never calls
+// `ontimeout`, so a slow/never-attached bridge hangs the call forever with
+// no error and no console output. Both the GM-level timeout and an
+// independent page-context deadline below exist so this can never hang
+// silently, regardless of which layer is slow.
+const GM_TIMEOUT_MS = 5_000;
+
+interface NetDebugEntry {
+  url: string;
+  path: 'gm' | 'fetch-fallback' | 'gm-timeout-fallback';
+  startedAt: number;
+  finishedAt: number | null;
+  ok: boolean | null;
+  error: string | null;
+}
+
+const netDebugLog: NetDebugEntry[] = [];
+{
+  const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
+  root.__MG_NET_DEBUG__ = netDebugLog;
+}
+
+function recordNetDebug(entry: NetDebugEntry) {
+  netDebugLog.push(entry);
+  if (netDebugLog.length > 200) netDebugLog.shift();
+}
 
 function fetchFallback(url: string, type: 'text' | 'blob' | 'json') {
   return fetch(url)
@@ -32,26 +63,80 @@ function fetchFallback(url: string, type: 'text' | 'blob' | 'json') {
     });
 }
 
-export function gm(url: string, type: 'text' | 'blob' | 'json' = 'text') {
-  // Prefer the userscript API when available (respects @connect/CSP in page).
-  if (typeof GM_xmlhttpRequest === 'function') {
-    return new Promise<any>((resolve, reject) =>
-      GM_xmlhttpRequest({
-        method: 'GET',
-        url,
-        responseType: type,
-        onload: r =>
-          r.status >= 200 && r.status < 300
-            ? resolve(r)
-            : reject(new Error(`HTTP ${r.status} (${url})`)),
-        onerror: () => reject(new Error(`Network (${url})`)),
-        ontimeout: () => reject(new Error(`Timeout (${url})`)),
-      })
-    );
+function gmRequest(url: string, type: 'text' | 'blob' | 'json'): Promise<any> {
+  return new Promise<any>((resolve, reject) =>
+    GM_xmlhttpRequest!({
+      method: 'GET',
+      url,
+      responseType: type,
+      timeout: GM_TIMEOUT_MS,
+      onload: r =>
+        r.status >= 200 && r.status < 300
+          ? resolve(r)
+          : reject(new Error(`HTTP ${r.status} (${url})`)),
+      onerror: () => reject(new Error(`Network (${url})`)),
+      ontimeout: () => reject(new Error(`Timeout (${url})`)),
+    })
+  );
+}
+
+export async function gm(url: string, type: 'text' | 'blob' | 'json' = 'text') {
+  const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
+
+  if (typeof GM_xmlhttpRequest !== 'function') {
+    const entry: NetDebugEntry = { url, path: 'fetch-fallback', startedAt: Date.now(), finishedAt: null, ok: null, error: null };
+    recordNetDebug(entry);
+    try {
+      const result = await fetchFallback(url, type);
+      entry.finishedAt = Date.now();
+      entry.ok = true;
+      return result;
+    } catch (error) {
+      entry.finishedAt = Date.now();
+      entry.ok = false;
+      entry.error = error instanceof Error ? error.message : String(error);
+      throw error;
+    }
   }
 
-  // Fallback to fetch only when GM_xmlhttpRequest is unavailable.
-  return fetchFallback(url, type);
+  const entry: NetDebugEntry = { url, path: 'gm', startedAt: Date.now(), finishedAt: null, ok: null, error: null };
+  recordNetDebug(entry);
+
+  // GM's own `timeout` still depends on the bridge being alive to enforce
+  // it — if the bridge never attaches at all, add a hard ceiling on top.
+  let hardTimeoutId: any = null;
+  const hardTimeout = new Promise<never>((_, reject) => {
+    hardTimeoutId = root.setTimeout(() => reject(new Error(`Hard timeout (${url})`)), GM_TIMEOUT_MS + 2_000);
+  });
+
+  try {
+    const result = await Promise.race([gmRequest(url, type), hardTimeout]);
+    root.clearTimeout(hardTimeoutId);
+    entry.finishedAt = Date.now();
+    entry.ok = true;
+    return result;
+  } catch (error) {
+    root.clearTimeout(hardTimeoutId);
+    entry.finishedAt = Date.now();
+    entry.ok = false;
+    entry.error = error instanceof Error ? error.message : String(error);
+
+    // GM path failed or hung — fall back to a real fetch so this never ends
+    // up permanently pending and blocking the whole sprite catalog boot.
+    const fallbackEntry: NetDebugEntry = { url, path: 'gm-timeout-fallback', startedAt: Date.now(), finishedAt: null, ok: null, error: null };
+    recordNetDebug(fallbackEntry);
+    try {
+      const result = await fetchFallback(url, type);
+      fallbackEntry.finishedAt = Date.now();
+      fallbackEntry.ok = true;
+      return result;
+    } catch (fallbackError) {
+      fallbackEntry.finishedAt = Date.now();
+      fallbackEntry.ok = false;
+      fallbackEntry.error = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+      throw fallbackError;
+    }
+  }
 }
 
 export const getJSON = async <T = any>(url: string): Promise<T> =>
@@ -157,7 +242,7 @@ export async function loadKtx2AsTexture(
         return bt;
       }
     }
-    await new Promise(r => setTimeout(r, 250));
+    await new Promise(r => root.setTimeout(r, 250));
   }
 
   // Strategy 3: PIXI v7 Texture.from cache lookup (string key → TextureCache).
