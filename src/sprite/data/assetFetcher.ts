@@ -131,7 +131,7 @@ export async function loadKtx2AsTexture(
   imgName: string,
   renderer: any,
   ctors: any,
-  timeoutMs = 15_000,
+  timeoutMs = 3_000,
 ): Promise<unknown> {
   const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
 

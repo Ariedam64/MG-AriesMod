@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.152
+// @version      3.2.153
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -953,7 +953,19 @@
   var splitKey = (key2) => String(key2 || "").split("/").filter(Boolean);
   var joinPath = (base, path) => base.replace(/\/?$/, "/") + String(path || "").replace(/^\//, "");
   var dirOf = (path) => path.lastIndexOf("/") >= 0 ? path.slice(0, path.lastIndexOf("/") + 1) : "";
-  var relPath = (base, path) => typeof path === "string" ? path.startsWith("/") ? path.slice(1) : dirOf(base) + path : path;
+  function normalizeSegments(path) {
+    const out = [];
+    for (const part of path.split("/")) {
+      if (part === "" || part === ".") continue;
+      if (part === "..") {
+        out.pop();
+        continue;
+      }
+      out.push(part);
+    }
+    return out.join("/");
+  }
+  var relPath = (base, path) => typeof path === "string" ? normalizeSegments(path.startsWith("/") ? path.slice(1) : dirOf(base) + path) : path;
   function categoryOf(key2, cfg) {
     const parts = splitKey(key2);
     const start2 = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
@@ -1048,7 +1060,7 @@
     }
     return [];
   }
-  async function loadKtx2AsTexture(imgName, renderer, ctors, timeoutMs = 15e3) {
+  async function loadKtx2AsTexture(imgName, renderer, ctors, timeoutMs = 3e3) {
     const root = globalThis.unsafeWindow || globalThis;
     const PIXI = root.PIXI;
     if (PIXI?.Assets?.load) {
@@ -2523,19 +2535,23 @@
     for (const [path, data] of Object.entries(atlasJsons)) {
       if (!isAtlas(data)) continue;
       const imgPath = relPath(path, data.meta.image);
-      let baseTex;
-      if (isKtx2Path(imgPath)) {
-        const loaded = await loadKtx2AsTexture(imgPath, ctx.state.renderer, ctors);
-        baseTex = loaded;
-      } else {
-        const blob = usePrefetched?.blobs.get(imgPath) ?? await getBlob(joinPath(base, imgPath));
-        const img = await blobToImage(blob);
-        baseTex = ctors.Texture.from(img);
+      try {
+        let baseTex;
+        if (isKtx2Path(imgPath)) {
+          const loaded = await loadKtx2AsTexture(imgPath, ctx.state.renderer, ctors);
+          baseTex = loaded;
+        } else {
+          const blob = usePrefetched?.blobs.get(imgPath) ?? await getBlob(joinPath(base, imgPath));
+          const img = await blobToImage(blob);
+          baseTex = ctors.Texture.from(img);
+        }
+        buildAtlasTextures(data, baseTex, ctx.state.tex, ctx.state.atlasBases, {
+          Texture: ctors.Texture,
+          Rectangle: ctors.Rectangle
+        });
+      } catch (error) {
+        console.warn("[MG SpriteCatalog] skipping atlas (texture load failed)", { path, imgPath, error });
       }
-      buildAtlasTextures(data, baseTex, ctx.state.tex, ctx.state.atlasBases, {
-        Texture: ctors.Texture,
-        Rectangle: ctors.Rectangle
-      });
     }
     const { items, cats } = buildItemsFromTextures(ctx.state.tex, ctx.cfg);
     ctx.state.items = items;
@@ -2621,6 +2637,10 @@
     ctx.state.version = pixiVersion || version || version === "" ? pixiVersion ?? version : detectGameVersion();
     ctx.state.base = base;
     ctx.state.sig = curVariant(ctx.state).sig;
+    {
+      const root = globalThis.unsafeWindow || globalThis;
+      root.__MG_SPRITE_STATE__ = ctx.state;
+    }
     const prefetched = await (prefetchPromise ?? Promise.resolve(null));
     await loadTextures(ctx.state.base, prefetched);
     const hud = {
@@ -29026,6 +29046,293 @@
     }
   }
 
+  // src/utils/cropValuePixi.ts
+  var CARD_SYSTEM_LABEL = "GardenInfoCardSystem";
+  var CARD_ROW_LABEL = "GardenInfoCardRow";
+  var OBJECT_CARD_LABEL = "GardenInfoObjectCard";
+  var TITLE_ROW_LABEL = "GardenInfoObjectTitleRow";
+  var ABILITIES_SECTION_LABEL = "GardenInfoPlantAbilities";
+  var SECTION_GAP_ESTIMATE = 8;
+  var VALUE_TEXT_STYLE = { fontFamily: "Arial", fontSize: 14, fontWeight: "700", fill: "#FFD84D" };
+  var VALUE_BADGE_GAP = 20;
+  var VALUE_ICON_SIZE = 16;
+  var VALUE_ICON_GAP = 4;
+  var BADGE_PADDING_X = 8;
+  var BADGE_PADDING_Y = 4;
+  var BADGE_RADIUS = 6;
+  var BADGE_COLOR = 0;
+  var BADGE_ALPHA = 0.55;
+  var CARD_SYSTEM_FIND_RETRY_MS = 1e3;
+  var CARD_SYSTEM_FIND_MAX_ATTEMPTS = 60;
+  var PRICE_FALLBACK2 = "\u2014";
+  var nfUS2 = new Intl.NumberFormat("en-US");
+  var formatCoins2 = (value) => value == null ? PRICE_FALLBACK2 : nfUS2.format(Math.max(0, Math.round(value)));
+  var coinTexture = null;
+  var coinTexturePromise = null;
+  function ensureCoinTexture(TextureCtor) {
+    if (coinTexture) return Promise.resolve(coinTexture);
+    if (!coinTexturePromise) {
+      coinTexturePromise = new Promise((resolve2) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            coinTexture = TextureCtor.from(img);
+          } catch {
+            coinTexture = null;
+          }
+          resolve2(coinTexture);
+        };
+        img.onerror = () => resolve2(null);
+        img.src = coin2.img64;
+      });
+    }
+    return coinTexturePromise;
+  }
+  function getSpriteState() {
+    const state3 = readSharedGlobal("__MG_SPRITE_STATE__");
+    if (!state3?.renderer || !state3.ctors?.Text) return null;
+    return state3;
+  }
+  function getStage(state3) {
+    return state3.renderer.lastObjectRendered ?? state3.renderer.stage ?? state3.app?.stage ?? null;
+  }
+  function findByLabel(root, label2, limit = 25e3) {
+    if (!root) return null;
+    const stack = [root];
+    const seen = /* @__PURE__ */ new Set();
+    let n = 0;
+    while (stack.length && n++ < limit) {
+      const node = stack.pop();
+      if (!node || seen.has(node)) continue;
+      seen.add(node);
+      if (node.label === label2) return node;
+      const children = node.children;
+      if (Array.isArray(children)) for (const child of children) stack.push(child);
+    }
+    return null;
+  }
+  function findGraphicsCtor(root, limit = 25e3) {
+    if (!root) return null;
+    const stack = [root];
+    const seen = /* @__PURE__ */ new Set();
+    let n = 0;
+    while (stack.length && n++ < limit) {
+      const node = stack.pop();
+      if (!node || seen.has(node)) continue;
+      seen.add(node);
+      if (typeof node.roundRect === "function" && typeof node.clear === "function") {
+        return node.constructor;
+      }
+      const children = node.children;
+      if (Array.isArray(children)) for (const child of children) stack.push(child);
+    }
+    return null;
+  }
+  function startCropValueOverlayInPixi() {
+    let running = true;
+    let cardSystem = null;
+    let currentCard = null;
+    let cardTop = 0;
+    let cardWidth = 0;
+    let hitAreaBaseHeight = 0;
+    let valueText = null;
+    let valueIcon = null;
+    let valueBadge = null;
+    let graphicsCtor = null;
+    let iconRetryScheduled = false;
+    let findAttempts = 0;
+    let findTimer = null;
+    const priceWatcher = startCropPriceWatcherViaGardenObject();
+    const detachValueText = () => {
+      if (valueBadge) {
+        try {
+          valueBadge.destroy();
+        } catch {
+        }
+        valueBadge = null;
+      }
+      if (valueIcon) {
+        try {
+          valueIcon.destroy();
+        } catch {
+        }
+        valueIcon = null;
+      }
+      if (valueText) {
+        try {
+          valueText.destroy();
+        } catch {
+        }
+        valueText = null;
+      }
+      if (currentCard?.hitArea) {
+        currentCard.hitArea.y = 0;
+        currentCard.hitArea.height = hitAreaBaseHeight;
+      }
+    };
+    const detachCard = () => {
+      currentCard = null;
+      cardTop = 0;
+      cardWidth = 0;
+      hitAreaBaseHeight = 0;
+      detachValueText();
+    };
+    const syncValueNodeUnsafe = () => {
+      if (!running || !currentCard || currentCard.destroyed) return;
+      const state3 = getSpriteState();
+      if (!state3) return;
+      const value = priceWatcher.get();
+      if (value == null) {
+        detachValueText();
+        return;
+      }
+      const text = formatCoins2(value);
+      if (!valueText) {
+        graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state3)));
+        if (graphicsCtor) {
+          valueBadge = new graphicsCtor();
+          currentCard.addChild(valueBadge);
+        }
+        valueText = new state3.ctors.Text({ text, style: VALUE_TEXT_STYLE });
+        currentCard.addChild(valueText);
+      } else if (valueText.text !== text) {
+        valueText.text = text;
+      }
+      if (!valueIcon && state3.ctors.Sprite) {
+        if (coinTexture) {
+          valueIcon = new state3.ctors.Sprite(coinTexture);
+          valueIcon.width = VALUE_ICON_SIZE;
+          valueIcon.height = VALUE_ICON_SIZE;
+          currentCard.addChild(valueIcon);
+        } else if (!iconRetryScheduled) {
+          iconRetryScheduled = true;
+          ensureCoinTexture(state3.ctors.Texture).then(() => {
+            iconRetryScheduled = false;
+            if (running) syncValueNode();
+          });
+        }
+      }
+      const rowHeight = Math.max(valueIcon ? VALUE_ICON_SIZE : 0, valueText.height);
+      const rowWidth = (valueIcon ? VALUE_ICON_SIZE + VALUE_ICON_GAP : 0) + valueText.width;
+      const badgeHeight = rowHeight + BADGE_PADDING_Y * 2;
+      const badgeTop = cardTop - VALUE_BADGE_GAP - badgeHeight;
+      const rowTop = badgeTop + BADGE_PADDING_Y;
+      const startX = Math.max(0, (cardWidth - rowWidth) / 2);
+      if (valueIcon) {
+        valueIcon.position.set(startX, rowTop + (rowHeight - VALUE_ICON_SIZE) / 2);
+        valueText.position.set(startX + VALUE_ICON_SIZE + VALUE_ICON_GAP, rowTop + (rowHeight - valueText.height) / 2);
+      } else {
+        valueText.position.set(startX, rowTop + (rowHeight - valueText.height) / 2);
+      }
+      if (valueBadge) {
+        const badgeWidth = rowWidth + BADGE_PADDING_X * 2;
+        valueBadge.clear();
+        valueBadge.roundRect(0, 0, badgeWidth, badgeHeight, BADGE_RADIUS).fill({ color: BADGE_COLOR, alpha: BADGE_ALPHA });
+        valueBadge.position.set(startX - BADGE_PADDING_X, badgeTop);
+      }
+      if (currentCard.hitArea) {
+        currentCard.hitArea.y = badgeTop;
+        currentCard.hitArea.height = hitAreaBaseHeight - badgeTop;
+      }
+    };
+    const syncValueNode = () => {
+      try {
+        syncValueNodeUnsafe();
+      } catch (error) {
+        console.warn("[cropValuePixi] syncValueNode failed, clearing overlay", error);
+        try {
+          detachValueText();
+        } catch {
+        }
+      }
+    };
+    const onChildAddedUnsafe = (row) => {
+      if (!running || row?.label !== CARD_ROW_LABEL) return;
+      const card2 = findByLabel(row, OBJECT_CARD_LABEL);
+      if (!card2) return;
+      currentCard = card2;
+      const cardBounds = card2.getLocalBounds();
+      cardWidth = card2.hitArea?.width ?? cardBounds.width;
+      const titleRow = (card2.children ?? []).find((c) => c?.label === TITLE_ROW_LABEL);
+      const contentTop = titleRow ? titleRow.position.y + titleRow.getLocalBounds().minY : cardBounds.minY;
+      const abilitiesSection = (cardSystem?.children ?? []).find((c) => c?.label === ABILITIES_SECTION_LABEL);
+      const extraTopOffset = abilitiesSection ? abilitiesSection.getLocalBounds().height + SECTION_GAP_ESTIMATE : 0;
+      cardTop = contentTop - extraTopOffset;
+      hitAreaBaseHeight = card2.hitArea?.height ?? 0;
+      detachValueText();
+      card2.once("destroyed", detachCard);
+      syncValueNode();
+    };
+    const onChildAdded = (row) => {
+      try {
+        onChildAddedUnsafe(row);
+      } catch (error) {
+        console.warn("[cropValuePixi] onChildAdded failed, clearing overlay", error);
+        try {
+          detachValueText();
+        } catch {
+        }
+      }
+    };
+    const attachToCardSystem = (system) => {
+      cardSystem = system;
+      cardSystem.on("childAdded", onChildAdded);
+      cardSystem.once("destroyed", () => {
+        if (cardSystem === system) {
+          cardSystem = null;
+          detachCard();
+        }
+      });
+      const existingRow = (system.children ?? []).find((c) => c?.label === CARD_ROW_LABEL);
+      if (existingRow) onChildAdded(existingRow);
+    };
+    const tryFindCardSystem = () => {
+      if (!running || cardSystem) return;
+      const state3 = getSpriteState();
+      if (!state3) return;
+      const stage = getStage(state3);
+      const found = findByLabel(stage, CARD_SYSTEM_LABEL);
+      if (found) {
+        attachToCardSystem(found);
+        if (findTimer != null) {
+          clearInterval(findTimer);
+          findTimer = null;
+        }
+        return;
+      }
+      findAttempts += 1;
+      if (findAttempts >= CARD_SYSTEM_FIND_MAX_ATTEMPTS && findTimer != null) {
+        clearInterval(findTimer);
+        findTimer = null;
+      }
+    };
+    tryFindCardSystem();
+    if (!cardSystem) {
+      findTimer = setInterval(tryFindCardSystem, CARD_SYSTEM_FIND_RETRY_MS);
+    }
+    const offPrice = priceWatcher.onChange(syncValueNode);
+    return {
+      stop() {
+        if (!running) return;
+        running = false;
+        if (findTimer != null) {
+          clearInterval(findTimer);
+          findTimer = null;
+        }
+        offPrice?.();
+        priceWatcher.stop();
+        if (cardSystem) {
+          try {
+            cardSystem.off("childAdded", onChildAdded);
+          } catch {
+          }
+        }
+        detachCard();
+        cardSystem = null;
+      }
+    };
+  }
+
   // src/utils/sellCropsLock.ts
   var CONTAINER_SELECTOR = ".css-vmnhaw";
   var LOCK_ICON_CLASS2 = "tm-sell-crops-lock";
@@ -29578,7 +29885,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.152";
+      return "3.2.153";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -34253,6 +34560,7 @@
       setupBuyAll();
       startReorderObserver();
       startCropValuesObserverFromGardenAtom();
+      startCropValueOverlayInPixi();
       startSellCropsLockWatcher();
       startDecorPickupLockIndicator();
       startEggHatchLockIndicator();

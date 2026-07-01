@@ -248,24 +248,31 @@ async function loadTextures(base: string, prefetched?: PrefetchedAtlas | null) {
     if (!isAtlas(data)) continue;
     const imgPath = relPath(path, data.meta.image);
 
-    let baseTex: any;
-    if (isKtx2Path(imgPath)) {
-      // KTX2 compressed texture — find the game's already-loaded base texture from the renderer.
-      const loaded: any = await loadKtx2AsTexture(imgPath, ctx.state.renderer, ctors);
-      baseTex = loaded;
-    } else {
-      // Standard image (webp/png) — existing blob → Image → Texture.from path.
-      const blob =
-        usePrefetched?.blobs.get(imgPath) ??
-        (await getBlob(joinPath(base, imgPath)));
-      const img = await blobToImage(blob);
-      baseTex = ctors.Texture.from(img);
-    }
+    try {
+      let baseTex: any;
+      if (isKtx2Path(imgPath)) {
+        // KTX2 compressed texture — find the game's already-loaded base texture from the renderer.
+        const loaded: any = await loadKtx2AsTexture(imgPath, ctx.state.renderer, ctors);
+        baseTex = loaded;
+      } else {
+        // Standard image (webp/png) — existing blob → Image → Texture.from path.
+        const blob =
+          usePrefetched?.blobs.get(imgPath) ??
+          (await getBlob(joinPath(base, imgPath)));
+        const img = await blobToImage(blob);
+        baseTex = ctors.Texture.from(img);
+      }
 
-    buildAtlasTextures(data, baseTex, ctx.state.tex, ctx.state.atlasBases, {
-      Texture: ctors.Texture,
-      Rectangle: ctors.Rectangle,
-    });
+      buildAtlasTextures(data, baseTex, ctx.state.tex, ctx.state.atlasBases, {
+        Texture: ctors.Texture,
+        Rectangle: ctors.Rectangle,
+      });
+    } catch (error) {
+      // One missing/lazy-loaded atlas (e.g. weather sprites not yet resident
+      // in the renderer) must not abort the whole catalog boot — that would
+      // also prevent __MG_SPRITE_STATE__ from ever being exposed.
+      console.warn('[MG SpriteCatalog] skipping atlas (texture load failed)', { path, imgPath, error });
+    }
   }
 
   const { items, cats } = buildItemsFromTextures(ctx.state.tex, ctx.cfg);
@@ -369,6 +376,17 @@ async function start() {
   ctx.state.version = pixiVersion || version || version === '' ? (pixiVersion ?? version) : detectGameVersion();
   ctx.state.base = base;
   ctx.state.sig = curVariant(ctx.state).sig;
+
+  // Expose the (still-mutating) state object as soon as renderer/ctors are
+  // ready, instead of waiting for loadTextures() below — other mod features
+  // (e.g. the crop-value Pixi overlay) only need renderer/ctors and shouldn't
+  // be blocked by slow or failing individual atlas loads. `ctx.state` is the
+  // same object reference throughout `start()`, so later mutations (tex,
+  // items, loaded, ...) are still visible through this early exposure.
+  {
+    const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
+    root.__MG_SPRITE_STATE__ = ctx.state;
+  }
 
   const prefetched = await (prefetchPromise ?? Promise.resolve(null));
   await loadTextures(ctx.state.base, prefetched);

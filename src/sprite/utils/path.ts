@@ -8,8 +8,21 @@ export const joinPath = (base: string, path?: string) =>
 export const dirOf = (path: string) =>
   path.lastIndexOf('/') >= 0 ? path.slice(0, path.lastIndexOf('/') + 1) : '';
 
+/** Resolve `.`/`..` segments so joined paths don't keep literal `../` traversal. */
+function normalizeSegments(path: string): string {
+  const out: string[] = [];
+  for (const part of path.split('/')) {
+    if (part === '' || part === '.') continue;
+    if (part === '..') { out.pop(); continue; }
+    out.push(part);
+  }
+  return out.join('/');
+}
+
 export const relPath = (base: string, path: string) =>
-  typeof path === 'string' ? (path.startsWith('/') ? path.slice(1) : dirOf(base) + path) : path;
+  typeof path === 'string'
+    ? normalizeSegments(path.startsWith('/') ? path.slice(1) : dirOf(base) + path)
+    : path;
 
 export function categoryOf(key: string, cfg: SpriteConfig): string {
   const parts = splitKey(key);
