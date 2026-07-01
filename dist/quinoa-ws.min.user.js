@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.153
+// @version      3.2.154
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -2527,6 +2527,7 @@
       return null;
     }
   }
+  var SKIPPED_ATLAS_PATTERNS = [/(^|\/)weather\.json$/i];
   async function loadTextures(base, prefetched) {
     const usePrefetched = prefetched && prefetched.base === base ? prefetched : null;
     const atlasJsons = usePrefetched?.atlasJsons ?? await loadAtlasJsons(base, await getJSON(joinPath(base, "manifest.json")));
@@ -2534,6 +2535,7 @@
     if (!ctors?.Texture || !ctors?.Rectangle) throw new Error("PIXI constructors missing");
     for (const [path, data] of Object.entries(atlasJsons)) {
       if (!isAtlas(data)) continue;
+      if (SKIPPED_ATLAS_PATTERNS.some((re) => re.test(path))) continue;
       const imgPath = relPath(path, data.meta.image);
       try {
         let baseTex;
@@ -29885,7 +29887,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.153";
+      return "3.2.154";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
