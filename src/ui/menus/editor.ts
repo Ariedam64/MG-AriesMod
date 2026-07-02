@@ -1,6 +1,7 @@
 // src/ui/menus/editor.ts
 import { toastSimple } from "../toast";
 import { EditorService } from "../../services/editor";
+import { downloadJSONFile } from "../../utils/download";
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * Constants & style injection
@@ -176,7 +177,7 @@ function dangerBtn(label: string, onClick: () => void | Promise<void>): HTMLElem
   return btn;
 }
 
-function smallBtn(label: string, teal: boolean, onClick: () => void | Promise<void>): HTMLElement {
+function smallBtn(label: string, teal: boolean, onClick: () => void | Promise<void>): HTMLButtonElement {
   const btn = document.createElement("button");
   css(btn, {
     display: "flex",
@@ -222,29 +223,6 @@ function styledInput(placeholder: string): HTMLInputElement {
   input.addEventListener("focus", () => css(input, { borderColor: TEAL_BORDER }));
   input.addEventListener("blur",  () => css(input, { borderColor: BORDER }));
   return input;
-}
-
-function styledTextarea(placeholder: string): HTMLTextAreaElement {
-  const ta = document.createElement("textarea");
-  ta.placeholder = placeholder;
-  css(ta, {
-    width: "100%",
-    minHeight: "80px",
-    padding: "9px 12px",
-    border: `1px solid ${BORDER}`,
-    borderRadius: "10px",
-    background: "rgba(255,255,255,0.06)",
-    color: TEXT,
-    fontSize: "11px",
-    fontFamily: "monospace",
-    outline: "none",
-    resize: "vertical",
-    transition: "border-color 150ms ease",
-    boxSizing: "border-box",
-  });
-  ta.addEventListener("focus", () => css(ta, { borderColor: TEAL_BORDER }));
-  ta.addEventListener("blur",  () => css(ta, { borderColor: BORDER }));
-  return ta;
 }
 
 function createToggle(checked: boolean, onChange: (v: boolean) => void): HTMLLabelElement {
@@ -356,22 +334,88 @@ export function renderEditorMenu(container: HTMLElement) {
     card([sectionLabel("Current garden"), nameInput, actRow])
   );
 
-  /* ── Import ───────────────────────────────────────────────────────────────*/
-  const importArea = styledTextarea("Paste garden JSON here…");
+  /* ── Import (drag & drop) ─────────────────────────────────────────────────*/
+  const dropZone = document.createElement("div");
+  css(dropZone, {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "4px",
+    padding: "22px 12px",
+    border: `2px dashed ${BORDER_HI}`,
+    borderRadius: "10px",
+    background: "rgba(255,255,255,0.03)",
+    color: TEXT_DIM,
+    fontSize: "11px",
+    textAlign: "center",
+    cursor: "pointer",
+    transition: "border-color 150ms ease, background 150ms ease",
+  });
+
+  const dropTitle = document.createElement("div");
+  css(dropTitle, { fontWeight: "600", fontSize: "12px", color: TEXT });
+  dropTitle.textContent = "Drop a garden JSON file here";
+
+  const dropHint = document.createElement("div");
+  dropHint.textContent = "…or click to browse";
+
+  dropZone.append(dropTitle, dropHint);
+
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = ".json,application/json,text/plain";
+  fileInput.multiple = true;
+  css(fileInput, { display: "none" });
+
+  const setDropActive = (active: boolean) => {
+    css(dropZone, {
+      borderColor: active ? TEAL_BRD_HI : BORDER_HI,
+      background: active ? TEAL_DIM : "rgba(255,255,255,0.03)",
+    });
+  };
+
+  const importFiles = async (files: FileList | null | undefined) => {
+    const list = Array.from(files || []);
+    if (!list.length) return;
+    const fn = (window as any).qwsEditorImportGarden;
+    if (typeof fn !== "function") { setStatus("Import unavailable.", "err"); return; }
+    let importedCount = 0;
+    let lastName = "";
+    for (const file of list) {
+      try {
+        const text = await file.text();
+        const fallbackName = file.name.replace(/\.[^.]+$/, "").trim() || "Imported garden";
+        const saved = await fn(nameInput.value.trim() || fallbackName, text);
+        if (saved) { importedCount++; lastName = saved.name; }
+      } catch {
+        /* unreadable file: counts as failure */
+      }
+    }
+    if (!importedCount) { setStatus("Import failed (invalid JSON).", "err"); return; }
+    setStatus(importedCount === 1 ? `Imported "${lastName}".` : `Imported ${importedCount} gardens.`);
+  };
+
+  dropZone.onclick = () => fileInput.click();
+  fileInput.onchange = () => {
+    void importFiles(fileInput.files);
+    fileInput.value = "";
+  };
+  dropZone.addEventListener("dragover", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    setDropActive(true);
+  });
+  dropZone.addEventListener("dragleave", () => setDropActive(false));
+  dropZone.addEventListener("drop", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    setDropActive(false);
+    void importFiles(ev.dataTransfer?.files);
+  });
 
   wrap.appendChild(
-    card([
-      sectionLabel("Import"),
-      importArea,
-      primaryBtn("Import to saved gardens", async () => {
-        const fn = (window as any).qwsEditorImportGarden;
-        if (typeof fn !== "function") return;
-        const saved = await fn(nameInput.value || "Imported garden", importArea.value);
-        if (!saved) { setStatus("Import failed (invalid JSON).", "err"); return; }
-        importArea.value = "";
-        setStatus(`Imported "${saved.name}".`);
-      }),
-    ])
+    card([sectionLabel("Import"), dropZone, fileInput])
   );
 
   /* ── Saved gardens ────────────────────────────────────────────────────────*/
@@ -445,14 +489,11 @@ export function renderEditorMenu(container: HTMLElement) {
         if (typeof expFn !== "function") return;
         const json = expFn(g.id);
         if (!json) { setStatus("Export failed.", "err"); return; }
-        try {
-          await navigator.clipboard.writeText(json);
-          setStatus(`Copied "${g.name}" to clipboard.`);
-          await toastSimple("Editor", `Copied "${g.name}" to clipboard`, "success");
-        } catch {
-          setStatus(`Exported "${g.name}". Copy manually.`);
-          window.prompt("Garden JSON", json);
-        }
+        const safeName =
+          String(g.name || "garden").replace(/[\\/:*?"<>|]+/g, "").trim() || "garden";
+        downloadJSONFile(`${safeName}.json`, json);
+        setStatus(`Exported "${g.name}" as file.`);
+        await toastSimple("Editor", `Exported "${g.name}" as file`, "success");
       });
 
       const delBtn = dangerBtn("Delete", () => {

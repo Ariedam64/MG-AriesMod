@@ -6,11 +6,11 @@
 
 import { Atoms, type GardenState } from "../store/atoms";
 
-import { plantCatalog, decorCatalog, mutationCatalog } from "../data";
+import { plantCatalog, decorCatalog, mutationCatalog, weatherCatalog } from "../data";
 
 import { ensureStore, getAtomByLabel } from "../store/jotai";
 
-import { shareGlobal, pageWindow } from "../utils/page-context";
+import { shareGlobal, readSharedGlobal, pageWindow } from "../utils/page-context";
 
 import { eventMatchesKeybind } from "./keybinds";
 
@@ -35,6 +35,8 @@ const ARIES_SAVED_GARDENS_PATH = "editor.savedGardens";
 const FIXED_SLOT_START = 1760866288723;
 
 const FIXED_SLOT_END = 1760867858782;
+
+const DEFAULT_SIZE_PERCENT = 50;
 
 
 
@@ -101,6 +103,504 @@ function buildSpriteCandidates(rawId?: string | null, label?: string): string[] 
   add(label);
 
   return Array.from(set).filter(Boolean);
+
+}
+
+
+
+const MUTATION_ICON_CATEGORIES = ["ui", "mutation", "weather"];
+
+
+
+function mutationCatalogKeyFor(storedId: string): string {
+
+  return storedId === "Ambershine" ? "Amberlit" : storedId;
+
+}
+
+
+
+// Mutation sprite icon with a colored-letter fallback when no sprite exists.
+
+function createMutationIconBadge(storedId: string, size = 22): HTMLElement {
+
+  const catalogKey = mutationCatalogKeyFor(storedId);
+
+  const def = (mutationCatalog as any)[catalogKey] || (mutationCatalog as any)[storedId] || {};
+
+  const label = String(def.name || storedId || "?");
+
+  const wrap = document.createElement("span");
+
+  Object.assign(wrap.style, {
+
+    width: `${size}px`,
+
+    height: `${size}px`,
+
+    display: "inline-flex",
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    fontSize: `${Math.max(11, size - 8)}px`,
+
+    fontWeight: "900",
+
+    lineHeight: "1",
+
+  } as Partial<CSSStyleDeclaration>);
+
+
+
+  const applyFallback = () => {
+
+    if (wrap.querySelector("img")) return;
+
+    wrap.textContent = label.charAt(0).toUpperCase() || "?";
+
+    const color = mutationColorMap[storedId] ?? mutationColorMap[catalogKey];
+
+    if (!color) return;
+
+    if (color.startsWith("linear-gradient")) {
+
+      wrap.style.backgroundImage = color;
+
+      wrap.style.backgroundClip = "text";
+
+      (wrap.style as any).webkitBackgroundClip = "text";
+
+      wrap.style.color = "transparent";
+
+      (wrap.style as any).webkitTextFillColor = "transparent";
+
+    } else {
+
+      wrap.style.color = color;
+
+    }
+
+  };
+
+
+
+  const candidates = Array.from(
+
+    new Set([`Mutation${catalogKey}`, `Mutation${storedId}`, catalogKey, storedId]),
+
+  );
+
+  attachSpriteIcon(wrap, MUTATION_ICON_CATEGORIES, candidates, size, "editor", {
+
+    onNoSpriteFound: applyFallback,
+
+  });
+
+  return wrap;
+
+}
+
+
+
+// Locker-style square toggle: mutation sprite, teal highlight when active.
+
+function createMutationToggleButton(
+
+  mutKey: string,
+
+  storedId: string,
+
+  active: boolean,
+
+  onToggle: () => void,
+
+): HTMLButtonElement {
+
+  const def = (mutationCatalog as any)[mutKey] || {};
+
+  const label = String(def.name || mutKey || "?");
+
+  const btn = document.createElement("button");
+
+  btn.type = "button";
+
+  Object.assign(btn.style, {
+
+    width: "34px",
+
+    height: "34px",
+
+    padding: "0",
+
+    borderRadius: "8px",
+
+    border: active ? "1px solid rgba(94,234,212,0.55)" : "1px solid #2c3643",
+
+    background: active ? "rgba(94,234,212,0.14)" : "rgba(10,14,20,0.9)",
+
+    boxShadow: active ? "0 0 0 1px rgba(94,234,212,0.25) inset" : "none",
+
+    display: "inline-flex",
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    cursor: "pointer",
+
+    opacity: active ? "1" : "0.85",
+
+  } as Partial<CSSStyleDeclaration>);
+
+  btn.title = active ? `${label} — remove` : `${label} — add`;
+
+  btn.appendChild(createMutationIconBadge(storedId, 24));
+
+  btn.onclick = onToggle;
+
+  return btn;
+
+}
+
+
+
+const MUT_PLUS_BG_CLOSED = "rgba(10,14,20,0.9)";
+
+const MUT_PLUS_BG_OPEN = "rgba(32,42,56,0.8)";
+
+
+
+// Square "+" button that toggles the add-mutation dropdown (was round before).
+
+function createSquarePlusButton(): HTMLButtonElement {
+
+  const btn = document.createElement("button");
+
+  btn.type = "button";
+
+  btn.textContent = "+";
+
+  Object.assign(btn.style, {
+
+    width: "34px",
+
+    height: "34px",
+
+    padding: "0",
+
+    borderRadius: "8px",
+
+    border: "1px solid #2c3643",
+
+    background: MUT_PLUS_BG_CLOSED,
+
+    color: "#e7eef7",
+
+    fontWeight: "900",
+
+    fontSize: "16px",
+
+    cursor: "pointer",
+
+    display: "inline-flex",
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+  } as Partial<CSSStyleDeclaration>);
+
+  btn.title = "Add mutation";
+
+  return btn;
+
+}
+
+
+
+function createMutationDropdown(): HTMLDivElement {
+
+  const el = document.createElement("div");
+
+  Object.assign(el.style, {
+
+    display: "none",
+
+    flexWrap: "wrap",
+
+    gap: "6px",
+
+    padding: "6px",
+
+    border: "1px solid #2c3643",
+
+    borderRadius: "8px",
+
+    background: "rgba(8,12,18,0.9)",
+
+  } as Partial<CSSStyleDeclaration>);
+
+  return el;
+
+}
+
+
+
+// Requested display order: color (Gold/Rainbow), then hydro, then lunar.
+
+// Groups are derived from game data: color mutations have baseChance > 0,
+
+// weather-granted mutations inherit the weather group (game shape exposes
+
+// groupId "Hydro"/"Lunar" + mutator.mutation, hardcoded fallback exposes
+
+// type "weather"/"lunar" + mutations[].name).
+
+const MUTATION_GROUP_COLOR = 0;
+
+const MUTATION_GROUP_HYDRO = 1;
+
+const MUTATION_GROUP_LUNAR = 2;
+
+const MUTATION_GROUP_OTHER = 3;
+
+const MUTATION_STEM_MIN_PREFIX = 4;
+
+
+
+function mutationGroupRankFromWeatherType(raw: unknown): number | null {
+
+  const val = String(raw ?? "").toLowerCase();
+
+  if (val === "hydro" || val === "weather") return MUTATION_GROUP_HYDRO;
+
+  if (val === "lunar") return MUTATION_GROUP_LUNAR;
+
+  return null;
+
+}
+
+
+
+function commonPrefixLength(a: string, b: string): number {
+
+  const la = a.toLowerCase();
+
+  const lb = b.toLowerCase();
+
+  const max = Math.min(la.length, lb.length);
+
+  let i = 0;
+
+  while (i < max && la[i] === lb[i]) i++;
+
+  return i;
+
+}
+
+
+
+function computeMutationGroupRanks(keys: string[]): Record<string, number> {
+
+  const ranks: Record<string, number> = {};
+
+  const nameToKey: Record<string, string> = {};
+
+
+
+  for (const key of keys) {
+
+    const def = (mutationCatalog as any)[key] || {};
+
+    nameToKey[key.toLowerCase()] = key;
+
+    if (def.name) nameToKey[String(def.name).toLowerCase()] = key;
+
+    const alias = key === "Amberlit" ? "Ambershine" : key === "Ambershine" ? "Amberlit" : null;
+
+    if (alias) nameToKey[alias.toLowerCase()] = key;
+
+    if (Number(def.baseChance) > 0) ranks[key] = MUTATION_GROUP_COLOR;
+
+  }
+
+
+
+  for (const weatherKey of Object.keys(weatherCatalog || {})) {
+
+    const entry = (weatherCatalog as any)[weatherKey] || {};
+
+    const granted: string[] = [];
+
+    const single = entry?.mutator?.mutation;
+
+    if (single) granted.push(String(single));
+
+    if (Array.isArray(entry.mutations)) {
+
+      for (const m of entry.mutations) {
+
+        if (m?.name) granted.push(String(m.name));
+
+      }
+
+    }
+
+    if (!granted.length) continue;
+
+    // Entries granting mutations but missing a type (e.g. Thunderstorm in the
+
+    // hardcoded fallback) belong to the weather/hydro cycle.
+
+    const rank =
+
+      mutationGroupRankFromWeatherType(entry.groupId ?? entry.type) ?? MUTATION_GROUP_HYDRO;
+
+    for (const grantedName of granted) {
+
+      const key = nameToKey[grantedName.toLowerCase()];
+
+      if (key && ranks[key] == null) ranks[key] = rank;
+
+    }
+
+  }
+
+
+
+  // Derived variants (Thundercharged, Dawncharged, ...) inherit the group of
+
+  // the weather mutation sharing the longest name stem (Thunder-, Dawn-, ...).
+
+  const grouped = keys.filter((k) => ranks[k] != null && ranks[k] !== MUTATION_GROUP_COLOR);
+
+  for (const key of keys) {
+
+    if (ranks[key] != null) continue;
+
+    let bestRank: number | null = null;
+
+    let bestLen = 0;
+
+    for (const other of grouped) {
+
+      const len = commonPrefixLength(key, other);
+
+      if (len >= MUTATION_STEM_MIN_PREFIX && len > bestLen) {
+
+        bestLen = len;
+
+        bestRank = ranks[other];
+
+      }
+
+    }
+
+    if (bestRank != null) ranks[key] = bestRank;
+
+  }
+
+
+
+  // Combo mutations (e.g. Frozen = Wet + Chilled) are granted by no weather
+
+  // and share no name stem. The catalog lists mutations next to their family
+
+  // (this is also the game's own display order), so inherit the group of the
+
+  // nearest ranked weather mutation in catalog order.
+
+  for (let i = 0; i < keys.length; i++) {
+
+    const key = keys[i];
+
+    if (ranks[key] != null) continue;
+
+    let inherited: number | null = null;
+
+    for (let j = i - 1; j >= 0; j--) {
+
+      const rank = ranks[keys[j]];
+
+      if (rank === MUTATION_GROUP_HYDRO || rank === MUTATION_GROUP_LUNAR) {
+
+        inherited = rank;
+
+        break;
+
+      }
+
+    }
+
+    if (inherited == null) {
+
+      for (let j = i + 1; j < keys.length; j++) {
+
+        const rank = ranks[keys[j]];
+
+        if (rank === MUTATION_GROUP_HYDRO || rank === MUTATION_GROUP_LUNAR) {
+
+          inherited = rank;
+
+          break;
+
+        }
+
+      }
+
+    }
+
+    ranks[key] = inherited ?? MUTATION_GROUP_OTHER;
+
+  }
+
+
+
+  return ranks;
+
+}
+
+
+
+function sortMutationCatalogKeys(keys: string[]): string[] {
+
+  const ranks = computeMutationGroupRanks(keys);
+
+  return keys.slice().sort((a, b) => {
+
+    const rankDiff = (ranks[a] ?? MUTATION_GROUP_OTHER) - (ranks[b] ?? MUTATION_GROUP_OTHER);
+
+    if (rankDiff !== 0) return rankDiff;
+
+    const multA = Number((mutationCatalog as any)[a]?.coinMultiplier) || 0;
+
+    const multB = Number((mutationCatalog as any)[b]?.coinMultiplier) || 0;
+
+    if (multA !== multB) return multA - multB;
+
+    return a.localeCompare(b);
+
+  });
+
+}
+
+
+
+function sortStoredMutationIds(ids: string[]): string[] {
+
+  const order = sortMutationCatalogKeys(Object.keys(mutationCatalog || {}));
+
+  const orderIndex = (id: string) => {
+
+    const idx = order.indexOf(mutationCatalogKeyFor(id));
+
+    return idx === -1 ? order.length : idx;
+
+  };
+
+  return ids.slice().sort((a, b) => orderIndex(a) - orderIndex(b) || a.localeCompare(b));
 
 }
 
@@ -1161,7 +1661,7 @@ function renderCurrentItemOverlay() {
 
             }
 
-            const mutList = Array.from(mutSet);
+            const mutList = sortStoredMutationIds(Array.from(mutSet));
 
 
 
@@ -1183,49 +1683,29 @@ function renderCurrentItemOverlay() {
 
                 const tag = document.createElement("span");
 
-                tag.textContent =
+                Object.assign(tag.style, {
 
-                  (mutationCatalog as any)[mutId]?.name?.charAt(0)?.toUpperCase() ||
+                  display: "inline-flex",
 
-                  mutId.charAt(0)?.toUpperCase() ||
+                  alignItems: "center",
 
-                  "?";
+                  justifyContent: "center",
 
-                tag.style.fontWeight = "900";
+                  width: "28px",
 
-                tag.style.fontSize = "12px";
+                  height: "28px",
 
-                tag.style.padding = "4px 8px";
+                  borderRadius: "8px",
 
-                tag.style.borderRadius = "999px";
+                  border: "1px solid #2c3643",
 
-                tag.style.border = "1px solid #2c3643";
+                  background: "rgba(10,14,20,0.9)",
 
-                tag.style.background = "rgba(10,14,20,0.9)";
+                } as Partial<CSSStyleDeclaration>);
 
-                const color = mutationColorMap[mutId];
+                tag.title = (mutationCatalog as any)[mutId]?.name || mutId;
 
-                if (color) {
-
-                  if (color.startsWith("linear-gradient")) {
-
-                    tag.style.backgroundImage = color;
-
-                    tag.style.backgroundClip = "text";
-
-                    (tag.style as any).webkitBackgroundClip = "text";
-
-                    tag.style.color = "transparent";
-
-                    (tag.style as any).webkitTextFillColor = "transparent";
-
-                  } else {
-
-                    tag.style.color = color;
-
-                  }
-
-                }
+                tag.appendChild(createMutationIconBadge(mutId, 20));
 
                 mutRow.appendChild(tag);
 
@@ -2199,7 +2679,7 @@ function renderCurrentPlantEditor(content: HTMLElement, tileObject: any, tileKey
 
     const mutations = Array.isArray(slot?.mutations) ? slot.mutations.slice() : [];
 
-    const mutationKeys = Object.keys(mutationCatalog || {});
+    const mutationKeys = sortMutationCatalogKeys(Object.keys(mutationCatalog || {}));
 
     const applyMutationsPatch = (nextMutations: string[]) => {
 
@@ -2241,43 +2721,7 @@ function renderCurrentPlantEditor(content: HTMLElement, tileObject: any, tileKey
 
 
 
-    const styleLetter = (target: HTMLElement, mutId: string) => {
-
-      const color = mutationColorMap[mutId];
-
-      if (!color) return;
-
-      if (color.startsWith("linear-gradient")) {
-
-        target.style.backgroundImage = color;
-
-        target.style.backgroundClip = "text";
-
-        (target.style as any).webkitBackgroundClip = "text";
-
-        target.style.color = "transparent";
-
-        (target.style as any).webkitTextFillColor = "transparent";
-
-      } else {
-
-        target.style.color = color;
-
-      }
-
-    };
-
-
-
-    const getLetter = (mutId: string) => {
-
-      const def = (mutationCatalog as any)[mutId] || {};
-
-      const src = def.name || mutId || "?";
-
-      return String(src).charAt(0).toUpperCase();
-
-    };
+    const mutDropdown = createMutationDropdown();
 
 
 
@@ -2285,111 +2729,81 @@ function renderCurrentPlantEditor(content: HTMLElement, tileObject: any, tileKey
 
       mutRow.innerHTML = "";
 
-      for (const mutId of mutations) {
+      mutDropdown.innerHTML = "";
 
-        const tag = document.createElement("span");
-
-        Object.assign(tag.style, {
-
-          borderRadius: "999px",
-
-          padding: "3px 8px",
-
-          fontSize: "11px",
-
-          fontWeight: "700",
-
-          border: "1px solid #2c3643",
-
-          background: "rgba(10,14,20,0.9)",
-
-          cursor: "pointer",
-
-        } as Partial<CSSStyleDeclaration>);
+      const wasOpen = mutDropdown.style.display !== "none";
 
 
 
-        const letterSpan = document.createElement("span");
+      for (const mutId of sortStoredMutationIds(mutations)) {
 
-        letterSpan.textContent = getLetter(mutId);
+        mutRow.appendChild(
 
-        letterSpan.style.fontWeight = "900";
+          createMutationToggleButton(mutationCatalogKeyFor(mutId), mutId, true, () => {
 
-        styleLetter(letterSpan, mutId);
+            const next = mutations.filter((m: string) => m !== mutId);
 
+            applyMutationsPatch(next);
 
+          }),
 
-      tag.title = "Remove mutation";
-
-      tag.onclick = () => {
-
-        const next = mutations.filter((m: string) => m !== mutId);
-
-        applyMutationsPatch(next);
-
-      };
-
-
-
-        tag.appendChild(letterSpan);
-
-        mutRow.appendChild(tag);
+        );
 
       }
 
 
 
-      if (mutations.length < mutationKeys.length) {
+      const availableKeys = mutationKeys.filter((mutKey) => {
 
-        const toggleBtn = document.createElement("button");
+        const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
 
-        toggleBtn.type = "button";
+        return !mutations.includes(storedId);
 
-        toggleBtn.textContent = "+";
-
-        Object.assign(toggleBtn.style, {
-
-          width: "28px",
-
-          height: "28px",
-
-          borderRadius: "50%",
-
-          border: "1px solid #2c3643",
-
-          background: "rgba(10,14,20,0.9)",
-
-          color: "#e7eef7",
-
-          fontWeight: "900",
-
-          fontSize: "16px",
-
-          cursor: "pointer",
-
-          display: "inline-flex",
-
-          alignItems: "center",
-
-          justifyContent: "center",
-
-        } as Partial<CSSStyleDeclaration>);
+      });
 
 
 
-        toggleBtn.onclick = () => {
+      if (!availableKeys.length) {
 
-          const isOpen = dropdown.style.display !== "none";
+        mutDropdown.style.display = "none";
 
-          dropdown.style.display = isOpen ? "none" : "grid";
+        return;
 
-          toggleBtn.style.background = isOpen ? "rgba(10,14,20,0.9)" : "rgba(32,42,56,0.8)";
-
-        };
+      }
 
 
 
-        mutRow.appendChild(toggleBtn);
+      const plusBtn = createSquarePlusButton();
+
+      plusBtn.style.background = wasOpen ? MUT_PLUS_BG_OPEN : MUT_PLUS_BG_CLOSED;
+
+      plusBtn.onclick = () => {
+
+        const isOpen = mutDropdown.style.display !== "none";
+
+        mutDropdown.style.display = isOpen ? "none" : "flex";
+
+        plusBtn.style.background = isOpen ? MUT_PLUS_BG_CLOSED : MUT_PLUS_BG_OPEN;
+
+      };
+
+      mutRow.appendChild(plusBtn);
+
+
+
+      for (const mutKey of availableKeys) {
+
+        const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
+
+        mutDropdown.appendChild(
+
+          createMutationToggleButton(mutKey, storedId, false, () => {
+
+            applyMutationsPatch([...mutations, storedId]);
+
+          }),
+
+        );
 
       }
 
@@ -2397,113 +2811,7 @@ function renderCurrentPlantEditor(content: HTMLElement, tileObject: any, tileKey
 
 
 
-    const dropdown = document.createElement("div");
-
-    dropdown.style.display = "none";
-
-    dropdown.style.gridTemplateColumns = "repeat(auto-fill, minmax(90px, 1fr))";
-
-    dropdown.style.gap = "6px";
-
-    dropdown.style.padding = "6px";
-
-    dropdown.style.border = "1px solid #2c3643";
-
-    dropdown.style.borderRadius = "8px";
-
-    dropdown.style.background = "rgba(8,12,18,0.9)";
-
-
-
-    for (const mutKey of mutationKeys) {
-
-      const def = (mutationCatalog as any)[mutKey] || {};
-
-      const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
-
-      const isActive = Array.isArray(slot.mutations) && slot.mutations.includes(storedId);
-
-      if (isActive) continue;
-
-
-
-      const btn = document.createElement("button");
-
-      btn.type = "button";
-
-      btn.textContent = def.name || mutKey || "?";
-
-      Object.assign(btn.style, {
-
-        padding: "6px 8px",
-
-        borderRadius: "8px",
-
-        border: isActive ? "1px solid #55d38a" : "1px solid #2c3643",
-
-        background: isActive ? "rgba(85,211,138,0.22)" : "rgba(10,14,20,0.9)",
-
-        color: "#e7eef7",
-
-        fontSize: "11px",
-
-        fontWeight: "700",
-
-        cursor: "pointer",
-
-        textAlign: "left",
-
-      } as Partial<CSSStyleDeclaration>);
-
-
-
-      const color = mutationColorMap[storedId];
-
-      if (color) {
-
-        btn.style.color = color.startsWith("linear-gradient") ? "#e7eef7" : color;
-
-        if (color.startsWith("linear-gradient")) {
-
-          btn.style.backgroundImage = color;
-
-          btn.style.backgroundClip = "text";
-
-          (btn.style as any).webkitBackgroundClip = "text";
-
-          btn.style.color = "transparent";
-
-          (btn.style as any).webkitTextFillColor = "transparent";
-
-        }
-
-      }
-
-
-
-      btn.onclick = () => {
-
-        const has = Array.isArray(slot.mutations) && slot.mutations.includes(storedId);
-
-        const next = has
-
-          ? (slot.mutations || []).filter((x: string) => x !== storedId)
-
-          : [...(slot.mutations || []), storedId];
-
-        applyMutationsPatch(next);
-
-      };
-
-
-
-      dropdown.appendChild(btn);
-
-    }
-
-
-
-    mutWrap.append(mutTitle, mutRow, dropdown);
+    mutWrap.append(mutTitle, mutRow, mutDropdown);
 
     renderMutations();
 
@@ -2627,7 +2935,7 @@ function renderCurrentPlantEditor(content: HTMLElement, tileObject: any, tileKey
 
       endTime: FIXED_SLOT_END,
 
-      targetScale: computeTargetScaleFromPercent(species, 100),
+      targetScale: computeTargetScaleFromPercent(species, DEFAULT_SIZE_PERCENT),
 
       mutations: [],
 
@@ -3110,7 +3418,7 @@ function renderSideDetails() {
 
         if (current.length >= maxSlots) return;
 
-        const defaultScale = computeTargetScaleFromPercent(selId, 100);
+        const defaultScale = computeTargetScaleFromPercent(selId, DEFAULT_SIZE_PERCENT);
 
         editorPlantSlotsState = {
 
@@ -3126,7 +3434,7 @@ function renderSideDetails() {
 
               enabled: true,
 
-              sizePercent: 100,
+              sizePercent: DEFAULT_SIZE_PERCENT,
 
               customScale: defaultScale,
 
@@ -3886,375 +4194,125 @@ slotsConfig.forEach((cfg, idx) => {
 
 
 
-  const toggleMutBtn = document.createElement("button");
+  const mutRow = document.createElement("div");
 
-  toggleMutBtn.type = "button";
+  mutRow.style.display = "flex";
 
-  toggleMutBtn.textContent = "+";
+  mutRow.style.flexWrap = "wrap";
 
-  Object.assign(toggleMutBtn.style, {
+  mutRow.style.gap = "6px";
 
-    width: "28px",
-
-    height: "28px",
-
-    borderRadius: "50%",
-
-    border: "1px solid #2c3643",
-
-    background: "rgba(10,14,20,0.9)",
-
-    color: "#e7eef7",
-
-    fontWeight: "900",
-
-    fontSize: "16px",
-
-    cursor: "pointer",
-
-    display: "inline-flex",
-
-    alignItems: "center",
-
-    justifyContent: "center",
-
-  } as Partial<CSSStyleDeclaration>);
+  mutRow.style.alignItems = "center";
 
 
 
-  const activeRow = document.createElement("div");
-
-  activeRow.style.display = "flex";
-
-  activeRow.style.flexWrap = "wrap";
-
-  activeRow.style.gap = "6px";
-
-  activeRow.style.alignItems = "center";
+  const mutDropdown = createMutationDropdown();
 
 
 
-  const mutDropdown = document.createElement("div");
+  const mutationKeys = sortMutationCatalogKeys(Object.keys(mutationCatalog || {}));
 
-  mutDropdown.style.display = "none";
-
-  mutDropdown.style.gridTemplateColumns = "repeat(auto-fill, minmax(90px, 1fr))";
-
-  mutDropdown.style.gap = "6px";
-
-  mutDropdown.style.padding = "6px";
-
-  mutDropdown.style.border = "1px solid #2c3643";
-
-  mutDropdown.style.borderRadius = "8px";
-
-  mutDropdown.style.background = "rgba(8,12,18,0.9)";
+  const activeMutations = Array.isArray(cfg.mutations) ? cfg.mutations : [];
 
 
 
-  const mutationKeys = Object.keys(mutationCatalog || {});
+  const toggleMutation = (storedId: string) => {
 
+    const base = ensureEditorStateForSpecies(selId).slots;
 
+    editorPlantSlotsState = {
 
-  const renderActiveTags = () => {
+      ...editorPlantSlotsState,
 
-    activeRow.innerHTML = "";
+      species: selId,
 
-    const active = Array.isArray(cfg.mutations) ? cfg.mutations : [];
+      slots: base.map((c, i) => {
 
-    const allKeys = mutationKeys.map((k) => (k === "Amberlit" ? "Ambershine" : k));
+        if (!applyAll && i !== idx) return c;
 
-    const allSelected = allKeys.every((k) => active.includes(k));
+        const prev = Array.isArray(c.mutations) ? c.mutations : [];
 
-    // tags first, then the + button to keep order like "R +"
+        const has = prev.includes(storedId);
 
+        const next = has ? prev.filter((x) => x !== storedId) : [...prev, storedId];
 
+        return { ...c, mutations: next };
 
-    const styleLetter = (target: HTMLElement, mutId: string) => {
-
-      const color = mutationColorMap[mutId];
-
-      if (!color) return;
-
-      if (color.startsWith("linear-gradient")) {
-
-        target.style.backgroundImage = color;
-
-        target.style.backgroundClip = "text";
-
-        (target.style as any).webkitBackgroundClip = "text";
-
-        target.style.color = "transparent";
-
-        (target.style as any).webkitTextFillColor = "transparent";
-
-      } else {
-
-        target.style.color = color;
-
-      }
+      }),
 
     };
 
-
-
-    const getLetter = (mutId: string) => {
-
-      const def = (mutationCatalog as any)[mutId] || {};
-
-      const src = def.name || mutId || "?";
-
-      return String(src).charAt(0).toUpperCase();
-
-    };
-
-
-
-    for (const mutId of active) {
-
-      const tag = document.createElement("span");
-
-      Object.assign(tag.style, {
-
-        borderRadius: "999px",
-
-        padding: "3px 8px",
-
-        fontSize: "11px",
-
-        fontWeight: "700",
-
-        border: "1px solid #2c3643",
-
-        background: "rgba(10,14,20,0.9)",
-
-        cursor: "pointer",
-
-      } as Partial<CSSStyleDeclaration>);
-
-
-
-      const letterSpan = document.createElement("span");
-
-      letterSpan.textContent = getLetter(mutId);
-
-      letterSpan.style.fontWeight = "900";
-
-      styleLetter(letterSpan, mutId);
-
-
-
-      tag.title = "Remove mutation";
-
-      tag.onclick = () => {
-
-        const base = ensureEditorStateForSpecies(selId).slots;
-
-
-
-        editorPlantSlotsState = {
-
-          ...editorPlantSlotsState,
-
-          species: selId,
-
-          slots: applyAll
-
-            ? base.map((c) => {
-
-                const prev = Array.isArray(c.mutations) ? c.mutations : [];
-
-                const next = prev.filter((m) => m !== mutId);
-
-                return { ...c, mutations: next };
-
-              })
-
-            : base.map((c, i) => {
-
-                if (i !== idx) return c;
-
-                const prev = Array.isArray(c.mutations) ? c.mutations : [];
-
-                const next = prev.filter((m) => m !== mutId);
-
-                return { ...c, mutations: next };
-
-              }),
-
-        };
-
-
-
-        renderSideDetails();
-
-      };
-
-
-
-      tag.appendChild(letterSpan);
-
-      activeRow.appendChild(tag);
-
-    }
-
-    if (!allSelected) {
-
-      activeRow.appendChild(toggleMutBtn);
-
-    }
+    renderSideDetails();
 
   };
 
 
 
-  const setDropdownOpen = (open: boolean) => {
+  for (const mutId of sortStoredMutationIds(activeMutations)) {
 
-    mutDropdown.style.display = open ? "grid" : "none";
+    mutRow.appendChild(
 
-    toggleMutBtn.style.background = open
+      createMutationToggleButton(mutationCatalogKeyFor(mutId), mutId, true, () => {
 
-      ? "rgba(32,42,56,0.8)"
+        toggleMutation(mutId);
 
-      : "rgba(10,14,20,0.9)";
+      }),
 
-  };
-
-
-
-  toggleMutBtn.onclick = () => {
-
-    const isOpen = mutDropdown.style.display !== "none";
-
-    setDropdownOpen(!isOpen);
-
-  };
-
-
-
-  for (const mutKey of mutationKeys) {
-
-    const def = (mutationCatalog as any)[mutKey] || {};
-
-    const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
-
-    const isActive = Array.isArray(cfg.mutations) && cfg.mutations.includes(storedId);
-
-    if (isActive) continue;
-
-
-
-    const btn = document.createElement("button");
-
-    btn.type = "button";
-
-    btn.textContent = def.name || mutKey || "?";
-
-    Object.assign(btn.style, {
-
-      padding: "6px 8px",
-
-      borderRadius: "8px",
-
-      border: isActive ? "1px solid #55d38a" : "1px solid #2c3643",
-
-      background: isActive ? "rgba(85,211,138,0.22)" : "rgba(10,14,20,0.9)",
-
-      color: "#e7eef7",
-
-      fontSize: "11px",
-
-      fontWeight: "700",
-
-      cursor: "pointer",
-
-      textAlign: "left",
-
-    } as Partial<CSSStyleDeclaration>);
-
-
-
-    const color = mutationColorMap[storedId];
-
-    if (color) {
-
-      btn.style.color = color.startsWith("linear-gradient") ? "#e7eef7" : color;
-
-      if (color.startsWith("linear-gradient")) {
-
-        btn.style.backgroundImage = color;
-
-        btn.style.backgroundClip = "text";
-
-        (btn.style as any).webkitBackgroundClip = "text";
-
-        btn.style.color = "transparent";
-
-        (btn.style as any).webkitTextFillColor = "transparent";
-
-      }
-
-    }
-
-
-
-    btn.onclick = () => {
-
-      const base = ensureEditorStateForSpecies(selId).slots;
-
-      editorPlantSlotsState = {
-
-        ...editorPlantSlotsState,
-
-        species: selId,
-
-        slots: applyAll
-
-          ? base.map((c) => {
-
-              const prev = Array.isArray(c.mutations) ? c.mutations : [];
-
-              const has = prev.includes(storedId);
-
-              const next = has ? prev.filter((x) => x !== storedId) : [...prev, storedId];
-
-              return { ...c, mutations: next };
-
-            })
-
-          : base.map((c, i) => {
-
-              if (i !== idx) return c;
-
-              const prev = Array.isArray(c.mutations) ? c.mutations : [];
-
-              const has = prev.includes(storedId);
-
-              const next = has ? prev.filter((x) => x !== storedId) : [...prev, storedId];
-
-              return { ...c, mutations: next };
-
-            }),
-
-      };
-
-      renderSideDetails();
-
-    };
-
-
-
-    mutDropdown.appendChild(btn);
+    );
 
   }
 
 
 
-  mutWrap.append(mutTitle, activeRow, mutDropdown);
+  const availableKeys = mutationKeys.filter((mutKey) => {
 
-  renderActiveTags();
+    const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
 
-  setDropdownOpen(false);
+    return !activeMutations.includes(storedId);
+
+  });
+
+
+
+  if (availableKeys.length) {
+
+    const plusBtn = createSquarePlusButton();
+
+    plusBtn.onclick = () => {
+
+      const isOpen = mutDropdown.style.display !== "none";
+
+      mutDropdown.style.display = isOpen ? "none" : "flex";
+
+      plusBtn.style.background = isOpen ? MUT_PLUS_BG_CLOSED : MUT_PLUS_BG_OPEN;
+
+    };
+
+    mutRow.appendChild(plusBtn);
+
+
+
+    for (const mutKey of availableKeys) {
+
+      const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
+
+      mutDropdown.appendChild(
+
+        createMutationToggleButton(mutKey, storedId, false, () => {
+
+          toggleMutation(storedId);
+
+        }),
+
+      );
+
+    }
+
+  }
+
+
+
+  mutWrap.append(mutTitle, mutRow, mutDropdown);
 
 
 
@@ -4768,7 +4826,7 @@ async function addTileObjectToInventory(tileObject: any): Promise<boolean> {
 
         id: tileObject.id,
 
-        slots: Array.isArray(tileObject.slots) ? JSON.parse(JSON.stringify(tileObject.slots)) : [],
+        slots: ensureSlotIds(Array.isArray(tileObject.slots) ? JSON.parse(JSON.stringify(tileObject.slots)) : []),
 
         plantedAt: tileObject.plantedAt,
 
@@ -5144,7 +5202,7 @@ async function addPlantToInventory(species: string) {
 
       species,
 
-      slots: slotsArr,
+      slots: ensureSlotIds(slotsArr),
 
       plantedAt: 1760779438723,
 
@@ -5296,7 +5354,13 @@ function applyState(enabled: boolean, opts: { persist?: boolean; emit?: boolean 
 
     void freezeStateAtom();
 
+    // 3) Filter incoming server patches for our garden (renderer bypasses stateAtom)
+
+    void enablePatchGate();
+
   } else if (!next && currentEnabled) {
+
+    disablePatchGate();
 
     // 1) Restore TOS garden snapshot
 
@@ -5325,6 +5389,8 @@ export const EditorService = {
   init() {
 
     installEditorKeybindsOnce();
+
+    ensurePatchGateInstalled();
 
     applyState(currentEnabled, { persist: false, emit: false });
 
@@ -5418,6 +5484,71 @@ type SavedGarden = {
 
 
 
+// The game now requires a numeric `slotId` on every plant slot (schema field is
+// mandatory since the multi-harvest update); slots without it are ignored by the
+// renderer, so crops silently disappear. Keep existing ids, fill in the gaps.
+function ensureSlotIds(slots: unknown): any[] {
+
+  if (!Array.isArray(slots)) return [];
+
+  const used = new Set<number>();
+
+  for (const s of slots) {
+
+    const id = (s as any)?.slotId;
+
+    if (typeof id === "number" && Number.isFinite(id)) used.add(id);
+
+  }
+
+  let nextId = 0;
+
+  return slots.map((s) => {
+
+    const slot = s && typeof s === "object" ? { ...(s as Record<string, unknown>) } : {};
+
+    const id = (slot as any).slotId;
+
+    if (typeof id === "number" && Number.isFinite(id)) return slot;
+
+    while (used.has(nextId)) nextId++;
+
+    used.add(nextId);
+
+    (slot as any).slotId = nextId;
+
+    return slot;
+
+  });
+
+}
+
+
+
+function ensurePlantSlotIdsInTileMap(map: Record<string, any>): Record<string, any> {
+
+  const next: Record<string, any> = {};
+
+  for (const [k, v] of Object.entries(map || {})) {
+
+    if (v && typeof v === "object" && (v as any).objectType === "plant") {
+
+      next[k] = { ...v, slots: ensureSlotIds((v as any).slots) };
+
+    } else {
+
+      next[k] = v;
+
+    }
+
+  }
+
+  return next;
+
+}
+
+
+
 function sanitizeGarden(val: any): GardenState {
 
   const tileObjects = val && typeof val === "object" && typeof val.tileObjects === "object" ? val.tileObjects : {};
@@ -5432,9 +5563,9 @@ function sanitizeGarden(val: any): GardenState {
 
   return {
 
-    tileObjects: { ...tileObjects },
+    tileObjects: ensurePlantSlotIdsInTileMap({ ...tileObjects }),
 
-    boardwalkTileObjects: { ...boardwalkTileObjects },
+    boardwalkTileObjects: ensurePlantSlotIdsInTileMap({ ...boardwalkTileObjects }),
 
   };
 
@@ -6970,7 +7101,7 @@ async function placeSelectedItemInGardenAtCurrentTile() {
 
         species: selectedItem.species,
 
-        slots: Array.isArray(selectedItem.slots) ? selectedItem.slots : [],
+        slots: ensureSlotIds(selectedItem.slots),
 
         plantedAt: selectedItem.plantedAt,
 
@@ -7550,7 +7681,15 @@ async function updateGardenObjectAtCurrentTile(
 
 
 
-    const nextObj = updater(currentObj);
+    const rawNextObj = updater(currentObj);
+
+    const nextObj =
+
+      rawNextObj && rawNextObj.objectType === "plant"
+
+        ? { ...rawNextObj, slots: ensureSlotIds(rawNextObj.slots) }
+
+        : rawNextObj;
 
     const nextTargetMap = { ...currentTargetMap, [tileKey]: nextObj };
 
@@ -7866,7 +8005,7 @@ function ensureEditorSlotsForSpecies(species: string): EditorPlantSlotConfig[] {
 
   if (editorPlantSlotsState.species !== species) {
 
-    const defaultScale = computeTargetScaleFromPercent(species, 100);
+    const defaultScale = computeTargetScaleFromPercent(species, DEFAULT_SIZE_PERCENT);
 
     editorPlantSlotsState = {
 
@@ -7876,7 +8015,7 @@ function ensureEditorSlotsForSpecies(species: string): EditorPlantSlotConfig[] {
 
         enabled: true,
 
-        sizePercent: 100,
+        sizePercent: DEFAULT_SIZE_PERCENT,
 
         customScale: defaultScale,
 
@@ -7904,7 +8043,7 @@ function ensureEditorSlotsForSpecies(species: string): EditorPlantSlotConfig[] {
 
   if (!slots.length) {
 
-    const defaultScale = computeTargetScaleFromPercent(species, 100);
+    const defaultScale = computeTargetScaleFromPercent(species, DEFAULT_SIZE_PERCENT);
 
     slots = [
 
@@ -7912,7 +8051,7 @@ function ensureEditorSlotsForSpecies(species: string): EditorPlantSlotConfig[] {
 
         enabled: true,
 
-        sizePercent: 100,
+        sizePercent: DEFAULT_SIZE_PERCENT,
 
         customScale: defaultScale,
 
@@ -8187,6 +8326,278 @@ function unfreezeStateAtom() {
   }
 
   stateOriginalValue = null;
+
+}
+
+
+
+/* -------------------------------------------------------------------------- */
+
+/* Server patch gate                                                          */
+
+/* -------------------------------------------------------------------------- */
+
+
+
+// Freezing stateAtom is not enough: the renderer (TileObjectSystem, ...) also
+
+// subscribes directly to the room connection (subscribeToPatches /
+
+// subscribeToWelcome) and updates tiles without reading stateAtom. Server
+
+// patches touching our garden must therefore be filtered before they reach
+
+// those subscribers, otherwise real garden objects pop back in while editing.
+
+const PATCH_GATE_RETRY_MS = 1000;
+
+const PATCH_GATE_MAX_TRIES = 120;
+
+const FROZEN_SLOT_SUBTREES = ["garden", "inventory", "petSlots"];
+
+
+
+let patchGateActive = false;
+
+let patchGateUserSlotIdx: number | null = null;
+
+let patchGateRetryTimer: number | null = null;
+
+
+
+function isFrozenPatchPath(rawPath: unknown): boolean {
+
+  if (!patchGateActive || patchGateUserSlotIdx == null) return false;
+
+  const path = typeof rawPath === "string" ? rawPath : "";
+
+  const prefix = `/child/data/userSlots/${patchGateUserSlotIdx}/data/`;
+
+  if (!path.startsWith(prefix)) return false;
+
+  const rest = path.slice(prefix.length);
+
+  return FROZEN_SLOT_SUBTREES.some((sub) => rest === sub || rest.startsWith(`${sub}/`));
+
+}
+
+
+
+function handleWelcomeDuringFreeze() {
+
+  if (!currentEnabled) return;
+
+  console.warn(
+
+    "[EditorService] Welcome received while editor mode is on: leaving editor mode (server state is authoritative).",
+
+  );
+
+  // The server just sent a full fresh state: restoring our pre-freeze
+
+  // snapshots would overwrite it with stale data. Drop them and unfreeze.
+
+  savedGardenSnapshot = null;
+
+  stateOriginalValue = null;
+
+  applyState(false, { persist: true, emit: true });
+
+}
+
+
+
+function wrapConnectionSubscribeMethods(target: any): void {
+
+  const origPatches = target?.subscribeToPatches;
+
+  if (typeof origPatches === "function" && !(origPatches as any).__qwsPatchGate) {
+
+    const next = function (this: any, cb: any, ...rest: any[]) {
+
+      if (typeof cb !== "function") return origPatches.call(this, cb, ...rest);
+
+      const gated = (patchList: any, ...cbArgs: any[]) => {
+
+        if (patchGateActive && Array.isArray(patchList)) {
+
+          const filtered = patchList.filter((p) => !isFrozenPatchPath(p?.path));
+
+          if (!filtered.length) return;
+
+          return cb(filtered, ...cbArgs);
+
+        }
+
+        return cb(patchList, ...cbArgs);
+
+      };
+
+      return origPatches.call(this, gated, ...rest);
+
+    };
+
+    (next as any).__qwsPatchGate = true;
+
+    target.subscribeToPatches = next;
+
+  }
+
+
+
+  const origWelcome = target?.subscribeToWelcome;
+
+  if (typeof origWelcome === "function" && !(origWelcome as any).__qwsPatchGate) {
+
+    const next = function (this: any, cb: any, ...rest: any[]) {
+
+      if (typeof cb !== "function") return origWelcome.call(this, cb, ...rest);
+
+      const gated = (...cbArgs: any[]) => {
+
+        if (patchGateActive) handleWelcomeDuringFreeze();
+
+        return cb(...cbArgs);
+
+      };
+
+      return origWelcome.call(this, gated, ...rest);
+
+    };
+
+    (next as any).__qwsPatchGate = true;
+
+    target.subscribeToWelcome = next;
+
+  }
+
+}
+
+
+
+function installPatchGate(): boolean {
+
+  const raw =
+
+    (pageWindow as any)?.MagicCircle_RoomConnection ??
+
+    readSharedGlobal<any>("MagicCircle_RoomConnection");
+
+  if (!raw) return false;
+
+
+
+  let instance: any = null;
+
+  try {
+
+    instance = typeof raw.getInstance === "function" ? raw.getInstance() : null;
+
+  } catch {
+
+    instance = null;
+
+  }
+
+
+
+  for (const target of [instance, raw, raw.prototype]) {
+
+    if (!target) continue;
+
+    try {
+
+      wrapConnectionSubscribeMethods(target);
+
+    } catch {
+
+      /* ignore */
+
+    }
+
+  }
+
+
+
+  const effective = instance ?? raw;
+
+  return (
+
+    typeof effective?.subscribeToPatches === "function" &&
+
+    !!(effective.subscribeToPatches as any).__qwsPatchGate
+
+  );
+
+}
+
+
+
+function ensurePatchGateInstalled(): void {
+
+  if (patchGateRetryTimer != null) return;
+
+  if (installPatchGate()) return;
+
+
+
+  let tries = 0;
+
+  patchGateRetryTimer = window.setInterval(() => {
+
+    tries += 1;
+
+    const done = installPatchGate();
+
+    if (done || tries >= PATCH_GATE_MAX_TRIES) {
+
+      if (patchGateRetryTimer != null) {
+
+        window.clearInterval(patchGateRetryTimer);
+
+        patchGateRetryTimer = null;
+
+      }
+
+      if (!done) {
+
+        console.warn("[EditorService] patch gate not installed (room connection not found)");
+
+      }
+
+    }
+
+  }, PATCH_GATE_RETRY_MS);
+
+}
+
+
+
+async function enablePatchGate(): Promise<void> {
+
+  ensurePatchGateInstalled();
+
+  try {
+
+    patchGateUserSlotIdx = await readUserSlotIdx();
+
+  } catch {
+
+    patchGateUserSlotIdx = null;
+
+  }
+
+  patchGateActive = true;
+
+}
+
+
+
+function disablePatchGate(): void {
+
+  patchGateActive = false;
+
+  patchGateUserSlotIdx = null;
 
 }
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.160
+// @version      3.2.161
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -16184,6 +16184,7 @@
   var ARIES_SAVED_GARDENS_PATH = "editor.savedGardens";
   var FIXED_SLOT_START = 1760866288723;
   var FIXED_SLOT_END = 1760867858782;
+  var DEFAULT_SIZE_PERCENT = 50;
   var mutationColorMap = {
     Gold: "rgba(200, 170, 0, 1)",
     Rainbow: "linear-gradient(135deg, #ff0000, #ff7a00, #ffeb3b, #00c853, #40c4ff, #8e24aa)",
@@ -16215,6 +16216,213 @@
     add(rawId);
     add(label2);
     return Array.from(set2).filter(Boolean);
+  }
+  var MUTATION_ICON_CATEGORIES = ["ui", "mutation", "weather"];
+  function mutationCatalogKeyFor(storedId) {
+    return storedId === "Ambershine" ? "Amberlit" : storedId;
+  }
+  function createMutationIconBadge(storedId, size = 22) {
+    const catalogKey = mutationCatalogKeyFor(storedId);
+    const def = mutationCatalog2[catalogKey] || mutationCatalog2[storedId] || {};
+    const label2 = String(def.name || storedId || "?");
+    const wrap = document.createElement("span");
+    Object.assign(wrap.style, {
+      width: `${size}px`,
+      height: `${size}px`,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: `${Math.max(11, size - 8)}px`,
+      fontWeight: "900",
+      lineHeight: "1"
+    });
+    const applyFallback = () => {
+      if (wrap.querySelector("img")) return;
+      wrap.textContent = label2.charAt(0).toUpperCase() || "?";
+      const color = mutationColorMap[storedId] ?? mutationColorMap[catalogKey];
+      if (!color) return;
+      if (color.startsWith("linear-gradient")) {
+        wrap.style.backgroundImage = color;
+        wrap.style.backgroundClip = "text";
+        wrap.style.webkitBackgroundClip = "text";
+        wrap.style.color = "transparent";
+        wrap.style.webkitTextFillColor = "transparent";
+      } else {
+        wrap.style.color = color;
+      }
+    };
+    const candidates = Array.from(
+      /* @__PURE__ */ new Set([`Mutation${catalogKey}`, `Mutation${storedId}`, catalogKey, storedId])
+    );
+    attachSpriteIcon(wrap, MUTATION_ICON_CATEGORIES, candidates, size, "editor", {
+      onNoSpriteFound: applyFallback
+    });
+    return wrap;
+  }
+  function createMutationToggleButton(mutKey, storedId, active, onToggle) {
+    const def = mutationCatalog2[mutKey] || {};
+    const label2 = String(def.name || mutKey || "?");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    Object.assign(btn.style, {
+      width: "34px",
+      height: "34px",
+      padding: "0",
+      borderRadius: "8px",
+      border: active ? "1px solid rgba(94,234,212,0.55)" : "1px solid #2c3643",
+      background: active ? "rgba(94,234,212,0.14)" : "rgba(10,14,20,0.9)",
+      boxShadow: active ? "0 0 0 1px rgba(94,234,212,0.25) inset" : "none",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer",
+      opacity: active ? "1" : "0.85"
+    });
+    btn.title = active ? `${label2} \u2014 remove` : `${label2} \u2014 add`;
+    btn.appendChild(createMutationIconBadge(storedId, 24));
+    btn.onclick = onToggle;
+    return btn;
+  }
+  var MUT_PLUS_BG_CLOSED = "rgba(10,14,20,0.9)";
+  var MUT_PLUS_BG_OPEN = "rgba(32,42,56,0.8)";
+  function createSquarePlusButton() {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "+";
+    Object.assign(btn.style, {
+      width: "34px",
+      height: "34px",
+      padding: "0",
+      borderRadius: "8px",
+      border: "1px solid #2c3643",
+      background: MUT_PLUS_BG_CLOSED,
+      color: "#e7eef7",
+      fontWeight: "900",
+      fontSize: "16px",
+      cursor: "pointer",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center"
+    });
+    btn.title = "Add mutation";
+    return btn;
+  }
+  function createMutationDropdown() {
+    const el2 = document.createElement("div");
+    Object.assign(el2.style, {
+      display: "none",
+      flexWrap: "wrap",
+      gap: "6px",
+      padding: "6px",
+      border: "1px solid #2c3643",
+      borderRadius: "8px",
+      background: "rgba(8,12,18,0.9)"
+    });
+    return el2;
+  }
+  var MUTATION_GROUP_COLOR = 0;
+  var MUTATION_GROUP_HYDRO = 1;
+  var MUTATION_GROUP_LUNAR = 2;
+  var MUTATION_GROUP_OTHER = 3;
+  var MUTATION_STEM_MIN_PREFIX = 4;
+  function mutationGroupRankFromWeatherType(raw) {
+    const val = String(raw ?? "").toLowerCase();
+    if (val === "hydro" || val === "weather") return MUTATION_GROUP_HYDRO;
+    if (val === "lunar") return MUTATION_GROUP_LUNAR;
+    return null;
+  }
+  function commonPrefixLength(a, b) {
+    const la = a.toLowerCase();
+    const lb = b.toLowerCase();
+    const max = Math.min(la.length, lb.length);
+    let i = 0;
+    while (i < max && la[i] === lb[i]) i++;
+    return i;
+  }
+  function computeMutationGroupRanks(keys) {
+    const ranks = {};
+    const nameToKey = {};
+    for (const key2 of keys) {
+      const def = mutationCatalog2[key2] || {};
+      nameToKey[key2.toLowerCase()] = key2;
+      if (def.name) nameToKey[String(def.name).toLowerCase()] = key2;
+      const alias = key2 === "Amberlit" ? "Ambershine" : key2 === "Ambershine" ? "Amberlit" : null;
+      if (alias) nameToKey[alias.toLowerCase()] = key2;
+      if (Number(def.baseChance) > 0) ranks[key2] = MUTATION_GROUP_COLOR;
+    }
+    for (const weatherKey of Object.keys(weatherCatalog2 || {})) {
+      const entry = weatherCatalog2[weatherKey] || {};
+      const granted = [];
+      const single = entry?.mutator?.mutation;
+      if (single) granted.push(String(single));
+      if (Array.isArray(entry.mutations)) {
+        for (const m of entry.mutations) {
+          if (m?.name) granted.push(String(m.name));
+        }
+      }
+      if (!granted.length) continue;
+      const rank = mutationGroupRankFromWeatherType(entry.groupId ?? entry.type) ?? MUTATION_GROUP_HYDRO;
+      for (const grantedName of granted) {
+        const key2 = nameToKey[grantedName.toLowerCase()];
+        if (key2 && ranks[key2] == null) ranks[key2] = rank;
+      }
+    }
+    const grouped = keys.filter((k) => ranks[k] != null && ranks[k] !== MUTATION_GROUP_COLOR);
+    for (const key2 of keys) {
+      if (ranks[key2] != null) continue;
+      let bestRank = null;
+      let bestLen = 0;
+      for (const other of grouped) {
+        const len = commonPrefixLength(key2, other);
+        if (len >= MUTATION_STEM_MIN_PREFIX && len > bestLen) {
+          bestLen = len;
+          bestRank = ranks[other];
+        }
+      }
+      if (bestRank != null) ranks[key2] = bestRank;
+    }
+    for (let i = 0; i < keys.length; i++) {
+      const key2 = keys[i];
+      if (ranks[key2] != null) continue;
+      let inherited = null;
+      for (let j = i - 1; j >= 0; j--) {
+        const rank = ranks[keys[j]];
+        if (rank === MUTATION_GROUP_HYDRO || rank === MUTATION_GROUP_LUNAR) {
+          inherited = rank;
+          break;
+        }
+      }
+      if (inherited == null) {
+        for (let j = i + 1; j < keys.length; j++) {
+          const rank = ranks[keys[j]];
+          if (rank === MUTATION_GROUP_HYDRO || rank === MUTATION_GROUP_LUNAR) {
+            inherited = rank;
+            break;
+          }
+        }
+      }
+      ranks[key2] = inherited ?? MUTATION_GROUP_OTHER;
+    }
+    return ranks;
+  }
+  function sortMutationCatalogKeys(keys) {
+    const ranks = computeMutationGroupRanks(keys);
+    return keys.slice().sort((a, b) => {
+      const rankDiff = (ranks[a] ?? MUTATION_GROUP_OTHER) - (ranks[b] ?? MUTATION_GROUP_OTHER);
+      if (rankDiff !== 0) return rankDiff;
+      const multA = Number(mutationCatalog2[a]?.coinMultiplier) || 0;
+      const multB = Number(mutationCatalog2[b]?.coinMultiplier) || 0;
+      if (multA !== multB) return multA - multB;
+      return a.localeCompare(b);
+    });
+  }
+  function sortStoredMutationIds(ids) {
+    const order = sortMutationCatalogKeys(Object.keys(mutationCatalog2 || {}));
+    const orderIndex = (id) => {
+      const idx = order.indexOf(mutationCatalogKeyFor(id));
+      return idx === -1 ? order.length : idx;
+    };
+    return ids.slice().sort((a, b) => orderIndex(a) - orderIndex(b) || a.localeCompare(b));
   }
   var overlayEl = null;
   var currentEnabled = false;
@@ -16677,7 +16885,7 @@
                 const muts = Array.isArray(s?.mutations) ? s.mutations : [];
                 muts.forEach((m) => mutSet.add(m));
               }
-              const mutList = Array.from(mutSet);
+              const mutList = sortStoredMutationIds(Array.from(mutSet));
               const mutRow = document.createElement("div");
               mutRow.style.display = "flex";
               mutRow.style.flexWrap = "wrap";
@@ -16686,25 +16894,18 @@
               if (mutList.length) {
                 for (const mutId of mutList) {
                   const tag = document.createElement("span");
-                  tag.textContent = mutationCatalog2[mutId]?.name?.charAt(0)?.toUpperCase() || mutId.charAt(0)?.toUpperCase() || "?";
-                  tag.style.fontWeight = "900";
-                  tag.style.fontSize = "12px";
-                  tag.style.padding = "4px 8px";
-                  tag.style.borderRadius = "999px";
-                  tag.style.border = "1px solid #2c3643";
-                  tag.style.background = "rgba(10,14,20,0.9)";
-                  const color = mutationColorMap[mutId];
-                  if (color) {
-                    if (color.startsWith("linear-gradient")) {
-                      tag.style.backgroundImage = color;
-                      tag.style.backgroundClip = "text";
-                      tag.style.webkitBackgroundClip = "text";
-                      tag.style.color = "transparent";
-                      tag.style.webkitTextFillColor = "transparent";
-                    } else {
-                      tag.style.color = color;
-                    }
-                  }
+                  Object.assign(tag.style, {
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "8px",
+                    border: "1px solid #2c3643",
+                    background: "rgba(10,14,20,0.9)"
+                  });
+                  tag.title = mutationCatalog2[mutId]?.name || mutId;
+                  tag.appendChild(createMutationIconBadge(mutId, 20));
                   mutRow.appendChild(tag);
                 }
               } else {
@@ -17143,7 +17344,7 @@
       mutRow.style.gap = "6px";
       mutRow.style.alignItems = "center";
       const mutations = Array.isArray(slot?.mutations) ? slot.mutations.slice() : [];
-      const mutationKeys = Object.keys(mutationCatalog2 || {});
+      const mutationKeys = sortMutationCatalogKeys(Object.keys(mutationCatalog2 || {}));
       const applyMutationsPatch = (nextMutations) => {
         const copy2 = nextMutations.slice();
         mutations.length = 0;
@@ -17163,121 +17364,45 @@
           renderMutations();
         });
       };
-      const styleLetter = (target, mutId) => {
-        const color = mutationColorMap[mutId];
-        if (!color) return;
-        if (color.startsWith("linear-gradient")) {
-          target.style.backgroundImage = color;
-          target.style.backgroundClip = "text";
-          target.style.webkitBackgroundClip = "text";
-          target.style.color = "transparent";
-          target.style.webkitTextFillColor = "transparent";
-        } else {
-          target.style.color = color;
-        }
-      };
-      const getLetter = (mutId) => {
-        const def = mutationCatalog2[mutId] || {};
-        const src = def.name || mutId || "?";
-        return String(src).charAt(0).toUpperCase();
-      };
+      const mutDropdown = createMutationDropdown();
       const renderMutations = () => {
         mutRow.innerHTML = "";
-        for (const mutId of mutations) {
-          const tag = document.createElement("span");
-          Object.assign(tag.style, {
-            borderRadius: "999px",
-            padding: "3px 8px",
-            fontSize: "11px",
-            fontWeight: "700",
-            border: "1px solid #2c3643",
-            background: "rgba(10,14,20,0.9)",
-            cursor: "pointer"
-          });
-          const letterSpan = document.createElement("span");
-          letterSpan.textContent = getLetter(mutId);
-          letterSpan.style.fontWeight = "900";
-          styleLetter(letterSpan, mutId);
-          tag.title = "Remove mutation";
-          tag.onclick = () => {
-            const next = mutations.filter((m) => m !== mutId);
-            applyMutationsPatch(next);
-          };
-          tag.appendChild(letterSpan);
-          mutRow.appendChild(tag);
+        mutDropdown.innerHTML = "";
+        const wasOpen = mutDropdown.style.display !== "none";
+        for (const mutId of sortStoredMutationIds(mutations)) {
+          mutRow.appendChild(
+            createMutationToggleButton(mutationCatalogKeyFor(mutId), mutId, true, () => {
+              const next = mutations.filter((m) => m !== mutId);
+              applyMutationsPatch(next);
+            })
+          );
         }
-        if (mutations.length < mutationKeys.length) {
-          const toggleBtn2 = document.createElement("button");
-          toggleBtn2.type = "button";
-          toggleBtn2.textContent = "+";
-          Object.assign(toggleBtn2.style, {
-            width: "28px",
-            height: "28px",
-            borderRadius: "50%",
-            border: "1px solid #2c3643",
-            background: "rgba(10,14,20,0.9)",
-            color: "#e7eef7",
-            fontWeight: "900",
-            fontSize: "16px",
-            cursor: "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center"
-          });
-          toggleBtn2.onclick = () => {
-            const isOpen = dropdown.style.display !== "none";
-            dropdown.style.display = isOpen ? "none" : "grid";
-            toggleBtn2.style.background = isOpen ? "rgba(10,14,20,0.9)" : "rgba(32,42,56,0.8)";
-          };
-          mutRow.appendChild(toggleBtn2);
+        const availableKeys = mutationKeys.filter((mutKey) => {
+          const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
+          return !mutations.includes(storedId);
+        });
+        if (!availableKeys.length) {
+          mutDropdown.style.display = "none";
+          return;
+        }
+        const plusBtn = createSquarePlusButton();
+        plusBtn.style.background = wasOpen ? MUT_PLUS_BG_OPEN : MUT_PLUS_BG_CLOSED;
+        plusBtn.onclick = () => {
+          const isOpen = mutDropdown.style.display !== "none";
+          mutDropdown.style.display = isOpen ? "none" : "flex";
+          plusBtn.style.background = isOpen ? MUT_PLUS_BG_CLOSED : MUT_PLUS_BG_OPEN;
+        };
+        mutRow.appendChild(plusBtn);
+        for (const mutKey of availableKeys) {
+          const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
+          mutDropdown.appendChild(
+            createMutationToggleButton(mutKey, storedId, false, () => {
+              applyMutationsPatch([...mutations, storedId]);
+            })
+          );
         }
       };
-      const dropdown = document.createElement("div");
-      dropdown.style.display = "none";
-      dropdown.style.gridTemplateColumns = "repeat(auto-fill, minmax(90px, 1fr))";
-      dropdown.style.gap = "6px";
-      dropdown.style.padding = "6px";
-      dropdown.style.border = "1px solid #2c3643";
-      dropdown.style.borderRadius = "8px";
-      dropdown.style.background = "rgba(8,12,18,0.9)";
-      for (const mutKey of mutationKeys) {
-        const def = mutationCatalog2[mutKey] || {};
-        const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
-        const isActive = Array.isArray(slot.mutations) && slot.mutations.includes(storedId);
-        if (isActive) continue;
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.textContent = def.name || mutKey || "?";
-        Object.assign(btn.style, {
-          padding: "6px 8px",
-          borderRadius: "8px",
-          border: isActive ? "1px solid #55d38a" : "1px solid #2c3643",
-          background: isActive ? "rgba(85,211,138,0.22)" : "rgba(10,14,20,0.9)",
-          color: "#e7eef7",
-          fontSize: "11px",
-          fontWeight: "700",
-          cursor: "pointer",
-          textAlign: "left"
-        });
-        const color = mutationColorMap[storedId];
-        if (color) {
-          btn.style.color = color.startsWith("linear-gradient") ? "#e7eef7" : color;
-          if (color.startsWith("linear-gradient")) {
-            btn.style.backgroundImage = color;
-            btn.style.backgroundClip = "text";
-            btn.style.webkitBackgroundClip = "text";
-            btn.style.color = "transparent";
-            btn.style.webkitTextFillColor = "transparent";
-          }
-        }
-        btn.onclick = () => {
-          const has = Array.isArray(slot.mutations) && slot.mutations.includes(storedId);
-          const next = has ? (slot.mutations || []).filter((x) => x !== storedId) : [...slot.mutations || [], storedId];
-          applyMutationsPatch(next);
-        };
-        dropdown.appendChild(btn);
-      }
-      mutWrap.append(mutTitle, mutRow, dropdown);
+      mutWrap.append(mutTitle, mutRow, mutDropdown);
       renderMutations();
       box.append(sizeRow, modeRow, sliderRow, customRow, mutWrap);
       slotsList.appendChild(box);
@@ -17331,7 +17456,7 @@
         species,
         startTime: FIXED_SLOT_START,
         endTime: FIXED_SLOT_END,
-        targetScale: computeTargetScaleFromPercent(species, 100),
+        targetScale: computeTargetScaleFromPercent(species, DEFAULT_SIZE_PERCENT),
         mutations: []
       });
       btnAdd.onclick = () => {
@@ -17580,7 +17705,7 @@
           const state3 = ensureEditorStateForSpecies(selId);
           const current = state3.slots;
           if (current.length >= maxSlots) return;
-          const defaultScale = computeTargetScaleFromPercent(selId, 100);
+          const defaultScale = computeTargetScaleFromPercent(selId, DEFAULT_SIZE_PERCENT);
           editorPlantSlotsState = {
             ...state3,
             species: selId,
@@ -17588,7 +17713,7 @@
               ...current,
               {
                 enabled: true,
-                sizePercent: 100,
+                sizePercent: DEFAULT_SIZE_PERCENT,
                 customScale: defaultScale,
                 sizeMode: "percent",
                 mutations: []
@@ -17890,164 +18015,58 @@
         mutTitle.textContent = "Mutations";
         mutTitle.style.fontSize = "11px";
         mutTitle.style.opacity = "0.85";
-        const toggleMutBtn = document.createElement("button");
-        toggleMutBtn.type = "button";
-        toggleMutBtn.textContent = "+";
-        Object.assign(toggleMutBtn.style, {
-          width: "28px",
-          height: "28px",
-          borderRadius: "50%",
-          border: "1px solid #2c3643",
-          background: "rgba(10,14,20,0.9)",
-          color: "#e7eef7",
-          fontWeight: "900",
-          fontSize: "16px",
-          cursor: "pointer",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center"
-        });
-        const activeRow = document.createElement("div");
-        activeRow.style.display = "flex";
-        activeRow.style.flexWrap = "wrap";
-        activeRow.style.gap = "6px";
-        activeRow.style.alignItems = "center";
-        const mutDropdown = document.createElement("div");
-        mutDropdown.style.display = "none";
-        mutDropdown.style.gridTemplateColumns = "repeat(auto-fill, minmax(90px, 1fr))";
-        mutDropdown.style.gap = "6px";
-        mutDropdown.style.padding = "6px";
-        mutDropdown.style.border = "1px solid #2c3643";
-        mutDropdown.style.borderRadius = "8px";
-        mutDropdown.style.background = "rgba(8,12,18,0.9)";
-        const mutationKeys = Object.keys(mutationCatalog2 || {});
-        const renderActiveTags = () => {
-          activeRow.innerHTML = "";
-          const active = Array.isArray(cfg.mutations) ? cfg.mutations : [];
-          const allKeys = mutationKeys.map((k) => k === "Amberlit" ? "Ambershine" : k);
-          const allSelected = allKeys.every((k) => active.includes(k));
-          const styleLetter = (target, mutId) => {
-            const color = mutationColorMap[mutId];
-            if (!color) return;
-            if (color.startsWith("linear-gradient")) {
-              target.style.backgroundImage = color;
-              target.style.backgroundClip = "text";
-              target.style.webkitBackgroundClip = "text";
-              target.style.color = "transparent";
-              target.style.webkitTextFillColor = "transparent";
-            } else {
-              target.style.color = color;
-            }
+        const mutRow = document.createElement("div");
+        mutRow.style.display = "flex";
+        mutRow.style.flexWrap = "wrap";
+        mutRow.style.gap = "6px";
+        mutRow.style.alignItems = "center";
+        const mutDropdown = createMutationDropdown();
+        const mutationKeys = sortMutationCatalogKeys(Object.keys(mutationCatalog2 || {}));
+        const activeMutations = Array.isArray(cfg.mutations) ? cfg.mutations : [];
+        const toggleMutation = (storedId) => {
+          const base = ensureEditorStateForSpecies(selId).slots;
+          editorPlantSlotsState = {
+            ...editorPlantSlotsState,
+            species: selId,
+            slots: base.map((c, i) => {
+              if (!applyAll && i !== idx) return c;
+              const prev = Array.isArray(c.mutations) ? c.mutations : [];
+              const has = prev.includes(storedId);
+              const next = has ? prev.filter((x) => x !== storedId) : [...prev, storedId];
+              return { ...c, mutations: next };
+            })
           };
-          const getLetter = (mutId) => {
-            const def = mutationCatalog2[mutId] || {};
-            const src = def.name || mutId || "?";
-            return String(src).charAt(0).toUpperCase();
-          };
-          for (const mutId of active) {
-            const tag = document.createElement("span");
-            Object.assign(tag.style, {
-              borderRadius: "999px",
-              padding: "3px 8px",
-              fontSize: "11px",
-              fontWeight: "700",
-              border: "1px solid #2c3643",
-              background: "rgba(10,14,20,0.9)",
-              cursor: "pointer"
-            });
-            const letterSpan = document.createElement("span");
-            letterSpan.textContent = getLetter(mutId);
-            letterSpan.style.fontWeight = "900";
-            styleLetter(letterSpan, mutId);
-            tag.title = "Remove mutation";
-            tag.onclick = () => {
-              const base = ensureEditorStateForSpecies(selId).slots;
-              editorPlantSlotsState = {
-                ...editorPlantSlotsState,
-                species: selId,
-                slots: applyAll ? base.map((c) => {
-                  const prev = Array.isArray(c.mutations) ? c.mutations : [];
-                  const next = prev.filter((m) => m !== mutId);
-                  return { ...c, mutations: next };
-                }) : base.map((c, i) => {
-                  if (i !== idx) return c;
-                  const prev = Array.isArray(c.mutations) ? c.mutations : [];
-                  const next = prev.filter((m) => m !== mutId);
-                  return { ...c, mutations: next };
-                })
-              };
-              renderSideDetails();
-            };
-            tag.appendChild(letterSpan);
-            activeRow.appendChild(tag);
-          }
-          if (!allSelected) {
-            activeRow.appendChild(toggleMutBtn);
-          }
+          renderSideDetails();
         };
-        const setDropdownOpen = (open) => {
-          mutDropdown.style.display = open ? "grid" : "none";
-          toggleMutBtn.style.background = open ? "rgba(32,42,56,0.8)" : "rgba(10,14,20,0.9)";
-        };
-        toggleMutBtn.onclick = () => {
-          const isOpen = mutDropdown.style.display !== "none";
-          setDropdownOpen(!isOpen);
-        };
-        for (const mutKey of mutationKeys) {
-          const def = mutationCatalog2[mutKey] || {};
-          const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
-          const isActive = Array.isArray(cfg.mutations) && cfg.mutations.includes(storedId);
-          if (isActive) continue;
-          const btn2 = document.createElement("button");
-          btn2.type = "button";
-          btn2.textContent = def.name || mutKey || "?";
-          Object.assign(btn2.style, {
-            padding: "6px 8px",
-            borderRadius: "8px",
-            border: isActive ? "1px solid #55d38a" : "1px solid #2c3643",
-            background: isActive ? "rgba(85,211,138,0.22)" : "rgba(10,14,20,0.9)",
-            color: "#e7eef7",
-            fontSize: "11px",
-            fontWeight: "700",
-            cursor: "pointer",
-            textAlign: "left"
-          });
-          const color = mutationColorMap[storedId];
-          if (color) {
-            btn2.style.color = color.startsWith("linear-gradient") ? "#e7eef7" : color;
-            if (color.startsWith("linear-gradient")) {
-              btn2.style.backgroundImage = color;
-              btn2.style.backgroundClip = "text";
-              btn2.style.webkitBackgroundClip = "text";
-              btn2.style.color = "transparent";
-              btn2.style.webkitTextFillColor = "transparent";
-            }
-          }
-          btn2.onclick = () => {
-            const base = ensureEditorStateForSpecies(selId).slots;
-            editorPlantSlotsState = {
-              ...editorPlantSlotsState,
-              species: selId,
-              slots: applyAll ? base.map((c) => {
-                const prev = Array.isArray(c.mutations) ? c.mutations : [];
-                const has = prev.includes(storedId);
-                const next = has ? prev.filter((x) => x !== storedId) : [...prev, storedId];
-                return { ...c, mutations: next };
-              }) : base.map((c, i) => {
-                if (i !== idx) return c;
-                const prev = Array.isArray(c.mutations) ? c.mutations : [];
-                const has = prev.includes(storedId);
-                const next = has ? prev.filter((x) => x !== storedId) : [...prev, storedId];
-                return { ...c, mutations: next };
-              })
-            };
-            renderSideDetails();
-          };
-          mutDropdown.appendChild(btn2);
+        for (const mutId of sortStoredMutationIds(activeMutations)) {
+          mutRow.appendChild(
+            createMutationToggleButton(mutationCatalogKeyFor(mutId), mutId, true, () => {
+              toggleMutation(mutId);
+            })
+          );
         }
-        mutWrap.append(mutTitle, activeRow, mutDropdown);
-        renderActiveTags();
-        setDropdownOpen(false);
+        const availableKeys = mutationKeys.filter((mutKey) => {
+          const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
+          return !activeMutations.includes(storedId);
+        });
+        if (availableKeys.length) {
+          const plusBtn = createSquarePlusButton();
+          plusBtn.onclick = () => {
+            const isOpen = mutDropdown.style.display !== "none";
+            mutDropdown.style.display = isOpen ? "none" : "flex";
+            plusBtn.style.background = isOpen ? MUT_PLUS_BG_CLOSED : MUT_PLUS_BG_OPEN;
+          };
+          mutRow.appendChild(plusBtn);
+          for (const mutKey of availableKeys) {
+            const storedId = mutKey === "Amberlit" ? "Ambershine" : mutKey;
+            mutDropdown.appendChild(
+              createMutationToggleButton(mutKey, storedId, false, () => {
+                toggleMutation(storedId);
+              })
+            );
+          }
+        }
+        mutWrap.append(mutTitle, mutRow, mutDropdown);
         slotBox.append(sizeRow, modeRow, slider, customRow, mutWrap);
         list.appendChild(slotBox);
       });
@@ -18240,7 +18259,7 @@
           itemType: "Plant",
           species: tileObject.species,
           id: tileObject.id,
-          slots: Array.isArray(tileObject.slots) ? JSON.parse(JSON.stringify(tileObject.slots)) : [],
+          slots: ensureSlotIds(Array.isArray(tileObject.slots) ? JSON.parse(JSON.stringify(tileObject.slots)) : []),
           plantedAt: tileObject.plantedAt,
           maturedAt: tileObject.maturedAt
         };
@@ -18379,7 +18398,7 @@
         id: typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `plant-${Math.random().toString(16).slice(2)}`,
         itemType: "Plant",
         species,
-        slots: slotsArr,
+        slots: ensureSlotIds(slotsArr),
         plantedAt: 1760779438723,
         maturedAt: 1760865838723
       };
@@ -18437,7 +18456,9 @@
       void logGardenTilesForEditor();
       void snapshotAndClearGardenForEditor();
       void freezeStateAtom();
+      void enablePatchGate();
     } else if (!next && currentEnabled) {
+      disablePatchGate();
       void restoreGardenSnapshotForEditor();
       void unfreezeStateAtom();
     }
@@ -18448,6 +18469,7 @@
   var EditorService = {
     init() {
       installEditorKeybindsOnce();
+      ensurePatchGateInstalled();
       applyState(currentEnabled, { persist: false, emit: false });
     },
     isEnabled() {
@@ -18475,12 +18497,41 @@
   function makeEmptyGarden() {
     return { ...EMPTY_GARDEN };
   }
+  function ensureSlotIds(slots) {
+    if (!Array.isArray(slots)) return [];
+    const used = /* @__PURE__ */ new Set();
+    for (const s of slots) {
+      const id = s?.slotId;
+      if (typeof id === "number" && Number.isFinite(id)) used.add(id);
+    }
+    let nextId = 0;
+    return slots.map((s) => {
+      const slot = s && typeof s === "object" ? { ...s } : {};
+      const id = slot.slotId;
+      if (typeof id === "number" && Number.isFinite(id)) return slot;
+      while (used.has(nextId)) nextId++;
+      used.add(nextId);
+      slot.slotId = nextId;
+      return slot;
+    });
+  }
+  function ensurePlantSlotIdsInTileMap(map2) {
+    const next = {};
+    for (const [k, v] of Object.entries(map2 || {})) {
+      if (v && typeof v === "object" && v.objectType === "plant") {
+        next[k] = { ...v, slots: ensureSlotIds(v.slots) };
+      } else {
+        next[k] = v;
+      }
+    }
+    return next;
+  }
   function sanitizeGarden(val) {
     const tileObjects = val && typeof val === "object" && typeof val.tileObjects === "object" ? val.tileObjects : {};
     const boardwalkTileObjects = val && typeof val === "object" && typeof val.boardwalkTileObjects === "object" ? val.boardwalkTileObjects : {};
     return {
-      tileObjects: { ...tileObjects },
-      boardwalkTileObjects: { ...boardwalkTileObjects }
+      tileObjects: ensurePlantSlotIdsInTileMap({ ...tileObjects }),
+      boardwalkTileObjects: ensurePlantSlotIdsInTileMap({ ...boardwalkTileObjects })
     };
   }
   function readSavedGardens() {
@@ -19072,7 +19123,7 @@
         tileObject = {
           objectType: "plant",
           species: selectedItem.species,
-          slots: Array.isArray(selectedItem.slots) ? selectedItem.slots : [],
+          slots: ensureSlotIds(selectedItem.slots),
           plantedAt: selectedItem.plantedAt,
           maturedAt: selectedItem.maturedAt
         };
@@ -19310,7 +19361,8 @@
       const currentTargetMap = garden2[targetKey] || {};
       const currentObj = currentTargetMap[tileKey];
       if (!currentObj) return false;
-      const nextObj = updater(currentObj);
+      const rawNextObj = updater(currentObj);
+      const nextObj = rawNextObj && rawNextObj.objectType === "plant" ? { ...rawNextObj, slots: ensureSlotIds(rawNextObj.slots) } : rawNextObj;
       const nextTargetMap = { ...currentTargetMap, [tileKey]: nextObj };
       const nextGarden = {
         tileObjects: targetKey === "tileObjects" ? nextTargetMap : garden2.tileObjects,
@@ -19420,12 +19472,12 @@
   function ensureEditorSlotsForSpecies(species) {
     const maxSlots = getMaxSlotsForSpecies(species);
     if (editorPlantSlotsState.species !== species) {
-      const defaultScale = computeTargetScaleFromPercent(species, 100);
+      const defaultScale = computeTargetScaleFromPercent(species, DEFAULT_SIZE_PERCENT);
       editorPlantSlotsState = {
         species,
         slots: Array.from({ length: maxSlots }, () => ({
           enabled: true,
-          sizePercent: 100,
+          sizePercent: DEFAULT_SIZE_PERCENT,
           customScale: defaultScale,
           sizeMode: "percent",
           mutations: []
@@ -19436,11 +19488,11 @@
     }
     let slots = editorPlantSlotsState.slots.slice(0, maxSlots);
     if (!slots.length) {
-      const defaultScale = computeTargetScaleFromPercent(species, 100);
+      const defaultScale = computeTargetScaleFromPercent(species, DEFAULT_SIZE_PERCENT);
       slots = [
         {
           enabled: true,
-          sizePercent: 100,
+          sizePercent: DEFAULT_SIZE_PERCENT,
           customScale: defaultScale,
           sizeMode: "percent",
           mutations: []
@@ -19550,6 +19602,111 @@
       }
     }
     stateOriginalValue = null;
+  }
+  var PATCH_GATE_RETRY_MS = 1e3;
+  var PATCH_GATE_MAX_TRIES = 120;
+  var FROZEN_SLOT_SUBTREES = ["garden", "inventory", "petSlots"];
+  var patchGateActive = false;
+  var patchGateUserSlotIdx = null;
+  var patchGateRetryTimer = null;
+  function isFrozenPatchPath(rawPath) {
+    if (!patchGateActive || patchGateUserSlotIdx == null) return false;
+    const path = typeof rawPath === "string" ? rawPath : "";
+    const prefix = `/child/data/userSlots/${patchGateUserSlotIdx}/data/`;
+    if (!path.startsWith(prefix)) return false;
+    const rest = path.slice(prefix.length);
+    return FROZEN_SLOT_SUBTREES.some((sub) => rest === sub || rest.startsWith(`${sub}/`));
+  }
+  function handleWelcomeDuringFreeze() {
+    if (!currentEnabled) return;
+    console.warn(
+      "[EditorService] Welcome received while editor mode is on: leaving editor mode (server state is authoritative)."
+    );
+    savedGardenSnapshot = null;
+    stateOriginalValue = null;
+    applyState(false, { persist: true, emit: true });
+  }
+  function wrapConnectionSubscribeMethods(target) {
+    const origPatches = target?.subscribeToPatches;
+    if (typeof origPatches === "function" && !origPatches.__qwsPatchGate) {
+      const next = function(cb, ...rest) {
+        if (typeof cb !== "function") return origPatches.call(this, cb, ...rest);
+        const gated = (patchList, ...cbArgs) => {
+          if (patchGateActive && Array.isArray(patchList)) {
+            const filtered = patchList.filter((p) => !isFrozenPatchPath(p?.path));
+            if (!filtered.length) return;
+            return cb(filtered, ...cbArgs);
+          }
+          return cb(patchList, ...cbArgs);
+        };
+        return origPatches.call(this, gated, ...rest);
+      };
+      next.__qwsPatchGate = true;
+      target.subscribeToPatches = next;
+    }
+    const origWelcome = target?.subscribeToWelcome;
+    if (typeof origWelcome === "function" && !origWelcome.__qwsPatchGate) {
+      const next = function(cb, ...rest) {
+        if (typeof cb !== "function") return origWelcome.call(this, cb, ...rest);
+        const gated = (...cbArgs) => {
+          if (patchGateActive) handleWelcomeDuringFreeze();
+          return cb(...cbArgs);
+        };
+        return origWelcome.call(this, gated, ...rest);
+      };
+      next.__qwsPatchGate = true;
+      target.subscribeToWelcome = next;
+    }
+  }
+  function installPatchGate() {
+    const raw = pageWindow?.MagicCircle_RoomConnection ?? readSharedGlobal("MagicCircle_RoomConnection");
+    if (!raw) return false;
+    let instance = null;
+    try {
+      instance = typeof raw.getInstance === "function" ? raw.getInstance() : null;
+    } catch {
+      instance = null;
+    }
+    for (const target of [instance, raw, raw.prototype]) {
+      if (!target) continue;
+      try {
+        wrapConnectionSubscribeMethods(target);
+      } catch {
+      }
+    }
+    const effective = instance ?? raw;
+    return typeof effective?.subscribeToPatches === "function" && !!effective.subscribeToPatches.__qwsPatchGate;
+  }
+  function ensurePatchGateInstalled() {
+    if (patchGateRetryTimer != null) return;
+    if (installPatchGate()) return;
+    let tries = 0;
+    patchGateRetryTimer = window.setInterval(() => {
+      tries += 1;
+      const done = installPatchGate();
+      if (done || tries >= PATCH_GATE_MAX_TRIES) {
+        if (patchGateRetryTimer != null) {
+          window.clearInterval(patchGateRetryTimer);
+          patchGateRetryTimer = null;
+        }
+        if (!done) {
+          console.warn("[EditorService] patch gate not installed (room connection not found)");
+        }
+      }
+    }, PATCH_GATE_RETRY_MS);
+  }
+  async function enablePatchGate() {
+    ensurePatchGateInstalled();
+    try {
+      patchGateUserSlotIdx = await readUserSlotIdx();
+    } catch {
+      patchGateUserSlotIdx = null;
+    }
+    patchGateActive = true;
+  }
+  function disablePatchGate() {
+    patchGateActive = false;
+    patchGateUserSlotIdx = null;
   }
   function buildEmptyPetSlots(prev) {
     if (Array.isArray(prev)) return [];
@@ -30704,7 +30861,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.160";
+      return "3.2.161";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -46509,37 +46666,7 @@ next: ${next}`;
     }
   }
 
-  // src/ui/menus/settings.ts
-  function createActionButton(label2) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = label2;
-    button.style.borderRadius = "6px";
-    button.style.border = "1px solid rgba(255,255,255,0.2)";
-    button.style.background = "rgba(255,255,255,0.04)";
-    button.style.color = "inherit";
-    button.style.fontWeight = "600";
-    button.style.fontSize = "13px";
-    button.style.padding = "6px 12px";
-    button.style.cursor = "pointer";
-    button.addEventListener("mouseenter", () => button.style.background = "rgba(255,255,255,0.08)");
-    button.addEventListener("mouseleave", () => button.style.background = "rgba(255,255,255,0.04)");
-    return button;
-  }
-  function createStatusLine() {
-    const line = document.createElement("div");
-    line.style.fontSize = "13px";
-    line.style.minHeight = "18px";
-    line.style.opacity = "0.9";
-    return line;
-  }
-  function showStatus(line, result) {
-    line.textContent = result.message;
-    line.style.color = result.success ? "#8bf1b5" : "#ff9c9c";
-  }
-  function formatBackupDate(value) {
-    return new Date(value).toLocaleDateString();
-  }
+  // src/utils/download.ts
   function copyTextToClipboard(text) {
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(text);
@@ -46575,7 +46702,7 @@ next: ${next}`;
     const win = pageWindow || window;
     const safePayload = JSON.stringify(payload);
     const safeFilename = JSON.stringify(filename);
-    const script = `(function(){try{const data=${safePayload};const name=${safeFilename};const blob=new Blob([data],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;a.style.display="none";const parent=document.body||document.documentElement||document;parent.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}catch(e){console.error("[settings] download:",e)}})();`;
+    const script = `(function(){try{const data=${safePayload};const name=${safeFilename};const blob=new Blob([data],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;a.style.display="none";const parent=document.body||document.documentElement||document;parent.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}catch(e){console.error("[download] download:",e)}})();`;
     try {
       win.eval(script);
       return;
@@ -46601,6 +46728,38 @@ next: ${next}`;
     } catch {
       copyTextToClipboard(payload);
     }
+  }
+
+  // src/ui/menus/settings.ts
+  function createActionButton(label2) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label2;
+    button.style.borderRadius = "6px";
+    button.style.border = "1px solid rgba(255,255,255,0.2)";
+    button.style.background = "rgba(255,255,255,0.04)";
+    button.style.color = "inherit";
+    button.style.fontWeight = "600";
+    button.style.fontSize = "13px";
+    button.style.padding = "6px 12px";
+    button.style.cursor = "pointer";
+    button.addEventListener("mouseenter", () => button.style.background = "rgba(255,255,255,0.08)");
+    button.addEventListener("mouseleave", () => button.style.background = "rgba(255,255,255,0.04)");
+    return button;
+  }
+  function createStatusLine() {
+    const line = document.createElement("div");
+    line.style.fontSize = "13px";
+    line.style.minHeight = "18px";
+    line.style.opacity = "0.9";
+    return line;
+  }
+  function showStatus(line, result) {
+    line.textContent = result.message;
+    line.style.color = result.success ? "#8bf1b5" : "#ff9c9c";
+  }
+  function formatBackupDate(value) {
+    return new Date(value).toLocaleDateString();
   }
   function exportBackupData(entry) {
     const json = JSON.stringify(entry.data, null, 2);
@@ -48033,28 +48192,6 @@ next: ${next}`;
     input.addEventListener("blur", () => css(input, { borderColor: BORDER }));
     return input;
   }
-  function styledTextarea(placeholder) {
-    const ta = document.createElement("textarea");
-    ta.placeholder = placeholder;
-    css(ta, {
-      width: "100%",
-      minHeight: "80px",
-      padding: "9px 12px",
-      border: `1px solid ${BORDER}`,
-      borderRadius: "10px",
-      background: "rgba(255,255,255,0.06)",
-      color: TEXT,
-      fontSize: "11px",
-      fontFamily: "monospace",
-      outline: "none",
-      resize: "vertical",
-      transition: "border-color 150ms ease",
-      boxSizing: "border-box"
-    });
-    ta.addEventListener("focus", () => css(ta, { borderColor: TEAL_BORDER }));
-    ta.addEventListener("blur", () => css(ta, { borderColor: BORDER }));
-    return ta;
-  }
   function createToggle(checked, onChange) {
     const label2 = document.createElement("label");
     label2.className = "qws-ed-toggle";
@@ -48140,23 +48277,87 @@ next: ${next}`;
     wrap.appendChild(
       card([sectionLabel("Current garden"), nameInput, actRow])
     );
-    const importArea = styledTextarea("Paste garden JSON here\u2026");
-    wrap.appendChild(
-      card([
-        sectionLabel("Import"),
-        importArea,
-        primaryBtn("Import to saved gardens", async () => {
-          const fn = window.qwsEditorImportGarden;
-          if (typeof fn !== "function") return;
-          const saved = await fn(nameInput.value || "Imported garden", importArea.value);
-          if (!saved) {
-            setStatus("Import failed (invalid JSON).", "err");
-            return;
+    const dropZone = document.createElement("div");
+    css(dropZone, {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "4px",
+      padding: "22px 12px",
+      border: `2px dashed ${BORDER_HI}`,
+      borderRadius: "10px",
+      background: "rgba(255,255,255,0.03)",
+      color: TEXT_DIM,
+      fontSize: "11px",
+      textAlign: "center",
+      cursor: "pointer",
+      transition: "border-color 150ms ease, background 150ms ease"
+    });
+    const dropTitle = document.createElement("div");
+    css(dropTitle, { fontWeight: "600", fontSize: "12px", color: TEXT });
+    dropTitle.textContent = "Drop a garden JSON file here";
+    const dropHint = document.createElement("div");
+    dropHint.textContent = "\u2026or click to browse";
+    dropZone.append(dropTitle, dropHint);
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = ".json,application/json,text/plain";
+    fileInput.multiple = true;
+    css(fileInput, { display: "none" });
+    const setDropActive = (active) => {
+      css(dropZone, {
+        borderColor: active ? TEAL_BRD_HI : BORDER_HI,
+        background: active ? TEAL_DIM : "rgba(255,255,255,0.03)"
+      });
+    };
+    const importFiles = async (files) => {
+      const list = Array.from(files || []);
+      if (!list.length) return;
+      const fn = window.qwsEditorImportGarden;
+      if (typeof fn !== "function") {
+        setStatus("Import unavailable.", "err");
+        return;
+      }
+      let importedCount = 0;
+      let lastName = "";
+      for (const file of list) {
+        try {
+          const text = await file.text();
+          const fallbackName = file.name.replace(/\.[^.]+$/, "").trim() || "Imported garden";
+          const saved = await fn(nameInput.value.trim() || fallbackName, text);
+          if (saved) {
+            importedCount++;
+            lastName = saved.name;
           }
-          importArea.value = "";
-          setStatus(`Imported "${saved.name}".`);
-        })
-      ])
+        } catch {
+        }
+      }
+      if (!importedCount) {
+        setStatus("Import failed (invalid JSON).", "err");
+        return;
+      }
+      setStatus(importedCount === 1 ? `Imported "${lastName}".` : `Imported ${importedCount} gardens.`);
+    };
+    dropZone.onclick = () => fileInput.click();
+    fileInput.onchange = () => {
+      void importFiles(fileInput.files);
+      fileInput.value = "";
+    };
+    dropZone.addEventListener("dragover", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      setDropActive(true);
+    });
+    dropZone.addEventListener("dragleave", () => setDropActive(false));
+    dropZone.addEventListener("drop", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      setDropActive(false);
+      void importFiles(ev.dataTransfer?.files);
+    });
+    wrap.appendChild(
+      card([sectionLabel("Import"), dropZone, fileInput])
     );
     const listWrap = document.createElement("div");
     css(listWrap, { display: "flex", flexDirection: "column", gap: "6px" });
@@ -48223,14 +48424,10 @@ next: ${next}`;
             setStatus("Export failed.", "err");
             return;
           }
-          try {
-            await navigator.clipboard.writeText(json);
-            setStatus(`Copied "${g.name}" to clipboard.`);
-            await toastSimple("Editor", `Copied "${g.name}" to clipboard`, "success");
-          } catch {
-            setStatus(`Exported "${g.name}". Copy manually.`);
-            window.prompt("Garden JSON", json);
-          }
+          const safeName = String(g.name || "garden").replace(/[\\/:*?"<>|]+/g, "").trim() || "garden";
+          downloadJSONFile(`${safeName}.json`, json);
+          setStatus(`Exported "${g.name}" as file.`);
+          await toastSimple("Editor", `Exported "${g.name}" as file`, "success");
         });
         const delBtn = dangerBtn("Delete", () => {
           if (typeof delFn !== "function") return;
