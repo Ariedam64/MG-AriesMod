@@ -6,9 +6,9 @@ import {
   type CropItem,
   type CropInventoryState,
 } from "./player";
-import { petCatalog, petAbilities, plantCatalog, decorCatalog } from "../data";
+import { petCatalog, petAbilities, plantCatalog } from "../data";
 import { fakeInventoryShow, fakeInventoryDisable, closeInventoryPanel, isInventoryOpen } from "./fakeModal.ts";
-import { Atoms, myPetHutchPetItems, myNumPetHutchItems, isMyInventoryAtMaxLength, stateUserSlots, playerId, playerDatabaseUserId } from "../store/atoms";
+import { Atoms, myPetHutchPetItems, myNumPetHutchItems, myPetHutchCapacitySlots, isMyInventoryAtMaxLength, stateUserSlots, playerId, playerDatabaseUserId } from "../store/atoms";
 import { toastSimple } from "../ui/toast";
 import { Hotkey, matchHotkey, stringToHotkey } from "../ui/menu.ts";
 import {
@@ -2044,33 +2044,35 @@ type FlatAbilityEntry = {
 };
 
 /* --------------------------------- Helpers: free slot finders -------------------------------- */
-// The game hardcodes the hutch base capacity; upgrade bonuses only exist in
-// the dynamic decor catalog (decorCatalog.PetHutch.upgrades).
-const HUTCH_BASE_CAPACITY = 25;
+// The storage entry in myInventoryAtom.storages carries `capacitySlots`
+// directly; the game's myPetHutchCapacitySlotsAtom falls back to 10 when
+// the field is absent (fresh hutch, no upgrades).
+const HUTCH_DEFAULT_CAPACITY = 10;
 
 async function _getHutchInfo(): Promise<{ capacity: number; used: number; free: number }> {
-  let capacityLevel = 0;
+  let capacity = 0;
   let used = 0;
   try {
     const inv = await Atoms.inventory.myInventory.get();
     const storages: any[] = Array.isArray((inv as any)?.storages) ? (inv as any).storages : [];
     const hutch = storages.find((s: any) => s?.id === "PetHutch" || s?.decorId === "PetHutch");
-    capacityLevel = Number(hutch?.capacityLevel) || 0;
+    const slots = Number(hutch?.capacitySlots);
+    if (Number.isFinite(slots) && slots > 0) capacity = slots;
     if (Array.isArray(hutch?.items)) used = hutch.items.length;
   } catch {}
+  if (!capacity) {
+    try {
+      const n = Number(await myPetHutchCapacitySlots.get());
+      if (Number.isFinite(n) && n > 0) capacity = n;
+    } catch {}
+  }
+  if (!capacity) capacity = HUTCH_DEFAULT_CAPACITY;
   if (!used) {
     try {
       const n = Number(await myNumPetHutchItems.get());
       if (Number.isFinite(n) && n > 0) used = n;
     } catch {}
   }
-  const upgrades: any[] = Array.isArray((decorCatalog as any)?.PetHutch?.upgrades)
-    ? (decorCatalog as any).PetHutch.upgrades
-    : [];
-  const bonus = upgrades
-    .filter((u: any) => Number(u?.targetLevel) <= capacityLevel)
-    .reduce((sum: number, u: any) => sum + (Number(u?.capacityBonus) || 0), 0);
-  const capacity = HUTCH_BASE_CAPACITY + bonus;
   return { capacity, used, free: Math.max(0, capacity - used) };
 }
 

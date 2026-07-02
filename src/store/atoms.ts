@@ -128,6 +128,7 @@ export const myCropItemsToSell = makeAtom<any>("myCropItemsToSellAtom")
 export const myPetHutchPetItems = makeAtom<any>("myPetHutchPetItemsAtom")
 export const isMyInventoryAtMaxLength = makeAtom<any>("isMyInventoryAtMaxLengthAtom")
 export const myNumPetHutchItems = makeAtom<any>("myNumPetHutchItemsAtom")
+export const myPetHutchCapacitySlots = makeAtom<number>("myPetHutchCapacitySlotsAtom")
 
 export const shops = makeView<any, any>("stateAtom", { path: "child.data.shops" });
 export const myShopPurchases = makeView<any, any>("myDataAtom", { path: "shopPurchases" });

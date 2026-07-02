@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.157
+// @version      3.2.158
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -3584,6 +3584,7 @@
   var myPetHutchPetItems = makeAtom("myPetHutchPetItemsAtom");
   var isMyInventoryAtMaxLength = makeAtom("isMyInventoryAtMaxLengthAtom");
   var myNumPetHutchItems = makeAtom("myNumPetHutchItemsAtom");
+  var myPetHutchCapacitySlots = makeAtom("myPetHutchCapacitySlotsAtom");
   var shops = makeView("stateAtom", { path: "child.data.shops" });
   var myShopPurchases = makeView("myDataAtom", { path: "shopPurchases" });
   var numPlayers = makeAtom("numPlayersAtom");
@@ -22478,18 +22479,27 @@
     shareGlobal("QWS_Atoms", Atoms);
   } catch {
   }
-  var HUTCH_BASE_CAPACITY = 25;
+  var HUTCH_DEFAULT_CAPACITY = 10;
   async function _getHutchInfo() {
-    let capacityLevel = 0;
+    let capacity = 0;
     let used = 0;
     try {
       const inv = await Atoms.inventory.myInventory.get();
       const storages = Array.isArray(inv?.storages) ? inv.storages : [];
       const hutch = storages.find((s) => s?.id === "PetHutch" || s?.decorId === "PetHutch");
-      capacityLevel = Number(hutch?.capacityLevel) || 0;
+      const slots = Number(hutch?.capacitySlots);
+      if (Number.isFinite(slots) && slots > 0) capacity = slots;
       if (Array.isArray(hutch?.items)) used = hutch.items.length;
     } catch {
     }
+    if (!capacity) {
+      try {
+        const n = Number(await myPetHutchCapacitySlots.get());
+        if (Number.isFinite(n) && n > 0) capacity = n;
+      } catch {
+      }
+    }
+    if (!capacity) capacity = HUTCH_DEFAULT_CAPACITY;
     if (!used) {
       try {
         const n = Number(await myNumPetHutchItems.get());
@@ -22497,9 +22507,6 @@
       } catch {
       }
     }
-    const upgrades = Array.isArray(decorCatalog2?.PetHutch?.upgrades) ? decorCatalog2.PetHutch.upgrades : [];
-    const bonus = upgrades.filter((u) => Number(u?.targetLevel) <= capacityLevel).reduce((sum, u) => sum + (Number(u?.capacityBonus) || 0), 0);
-    const capacity = HUTCH_BASE_CAPACITY + bonus;
     return { capacity, used, free: Math.max(0, capacity - used) };
   }
   async function _findFreeInventoryIndex() {
@@ -30695,7 +30702,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.157";
+      return "3.2.158";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
