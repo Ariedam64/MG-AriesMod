@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.156
+// @version      3.2.157
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -2683,12 +2683,30 @@
     const RENDERER_HEALTH_CHECK_MS = 1e3;
     const REQUIRED_STALE_STREAK = 3;
     let staleStreak = 0;
-    const debugState2 = { checks: 0, staleStreak: 0, swaps: [] };
+    let needsCtorsRederive = false;
+    const debugState2 = {
+      checks: 0,
+      staleStreak: 0,
+      swaps: [],
+      ctorsRederiveAttempts: 0,
+      lastCtorsRederiveError: null
+    };
     const debugRoot = pageWin3;
     debugRoot.__MG_RENDERER_HEALTH_DEBUG__ = debugState2;
     pageWin3.setInterval(() => {
       try {
         debugState2.checks += 1;
+        if (needsCtorsRederive) {
+          debugState2.ctorsRederiveAttempts += 1;
+          try {
+            ctx.state.ctors = getCtors(ctx.state.app ?? ctx.state.renderer);
+            needsCtorsRederive = false;
+            debugState2.lastCtorsRederiveError = null;
+            console.info("[MG SpriteCatalog] re-derived ctors from the new renderer");
+          } catch (error) {
+            debugState2.lastCtorsRederiveError = String(error?.message ?? error);
+          }
+        }
         const canvas = canvasOf(ctx.state.renderer);
         const canvasHealthy = !!canvas && typeof document !== "undefined" && document.contains(canvas);
         if (canvasHealthy) {
@@ -2707,6 +2725,7 @@
         debugState2.swaps.push({ at: Date.now(), fromCanvasInDoc: canvasHealthy });
         ctx.state.renderer = freshRenderer;
         if (hooks.app) ctx.state.app = hooks.app;
+        needsCtorsRederive = true;
         staleStreak = 0;
         debugState2.staleStreak = 0;
       } catch (error) {
@@ -20749,6 +20768,7 @@
     "ProduceMutationBoostIII",
     "DawnBoost",
     "AmberMoonBoost",
+    "ThunderBoost",
     "SnowyCropMutationBoost",
     "PetMutationBoost",
     "PetMutationBoostII",
@@ -21879,7 +21899,8 @@
         case "CoinFinderII":
         case "CoinFinderIII":
         case "SnowyCoinFinder":
-        case "DawnCoinFinder": {
+        case "DawnCoinFinder":
+        case "ThunderCoinFinder": {
           const value = data["coinsFound"] ?? data["coins"] ?? 0;
           return num(value);
         }
@@ -21894,6 +21915,7 @@
           return num(data["sellPrice"] ?? 0);
         case "ProduceScaleBoost":
         case "ProduceScaleBoostII":
+        case "ProduceScaleBoostIII":
         case "SnowyCropSizeBoost": {
           const inc = data["scaleIncreasePercentage"] ?? data["cropScaleIncreasePercentage"] ?? base["scaleIncreasePercentage"] ?? 0;
           return num(inc);
@@ -21901,13 +21923,18 @@
         case "EggGrowthBoost":
         case "EggGrowthBoostII_NEW":
         case "EggGrowthBoostII":
-        case "SnowyEggGrowthBoost": {
+        case "SnowyEggGrowthBoost":
+        case "ThunderEggGrowthBoost": {
           const minutes = data["eggGrowthTimeReductionMinutes"] ?? data["minutesReduced"] ?? data["reductionMinutes"] ?? base["eggGrowthTimeReductionMinutes"] ?? 0;
           return num(minutes) * 60 * 1e3;
         }
         case "PlantGrowthBoost":
         case "PlantGrowthBoostII":
-        case "SnowyPlantGrowthBoost": {
+        case "PlantGrowthBoostIII":
+        case "SnowyPlantGrowthBoost":
+        case "DawnPlantGrowthBoost":
+        case "AmberPlantGrowthBoost":
+        case "ThunderPlantGrowthBoost": {
           const minutes = data["minutesReduced"] ?? data["reductionMinutes"] ?? data["plantGrowthReductionMinutes"] ?? base["plantGrowthReductionMinutes"] ?? 0;
           return num(minutes) * 60 * 1e3;
         }
@@ -21915,7 +21942,8 @@
         case "SnowyPetXpBoost":
         case "PetXpBoostII":
         case "PetXpBoostIII":
-        case "DawnXpBoost": {
+        case "DawnXpBoost":
+        case "ThunderXpBoost": {
           const xp = data["bonusXp"] ?? base["bonusXp"] ?? 0;
           return num(xp);
         }
@@ -21924,27 +21952,33 @@
           return num(value);
         }
         case "PetAgeBoost":
-        case "PetAgeBoostII": {
+        case "PetAgeBoostII":
+        case "PetAgeBoostIII": {
           const xp = data["bonusXp"] ?? base["bonusXp"] ?? 0;
           return num(xp);
         }
         case "PetHatchSizeBoost":
-        case "PetHatchSizeBoostII": {
+        case "PetHatchSizeBoostII":
+        case "PetHatchSizeBoostIII": {
           const strength = data["strengthIncrease"] ?? 0;
           return num(strength);
         }
         case "HungerRestore":
         case "HungerRestoreII":
+        case "HungerRestoreIII":
         case "SnowyHungerRestore": {
           const amount = data["hungerRestoreAmount"] ?? data["hungerRestoredPercentage"] ?? base["hungerRestorePercentage"] ?? 0;
           return num(amount);
         }
         case "HungerBoost":
         case "HungerBoostII":
+        case "HungerBoostIII":
         case "SnowyHungerBoost": {
           const pct = data["hungerDepletionRateDecreasePercentage"] ?? base["hungerDepletionRateDecreasePercentage"] ?? 0;
           return num(pct);
         }
+        case "Thundercharger":
+          return num(data["cropsCharged"] ?? 0);
         default:
           return 0;
       }
@@ -22212,7 +22246,8 @@
           case "CoinFinderII":
           case "CoinFinderIII":
           case "SnowyCoinFinder":
-          case "DawnCoinFinder": {
+          case "DawnCoinFinder":
+          case "ThunderCoinFinder": {
             const coins = d["coinsFound"] ?? d["coins"] ?? base["baseMaxCoinsFindable"];
             return coins != null ? `+ ${fmtInt(coins)} coins` : "Coins found";
           }
@@ -22277,7 +22312,8 @@
           case "SnowGranter":
           case "FrostGranter":
           case "DawnlitGranter":
-          case "AmberlitGranter": {
+          case "AmberlitGranter":
+          case "ThunderstruckGranter": {
             const cropFromSlot = cropNameFromGrowSlot(d["growSlot"]);
             const crop = label2(d["cropName"], cropFromSlot ?? "crop");
             return `${crop}`;
@@ -22294,6 +22330,7 @@
           case "ProduceMutationBoostIII":
           case "DawnBoost":
           case "AmberMoonBoost":
+          case "ThunderBoost":
           case "SnowyCropMutationBoost":
           case "PetMutationBoost":
           case "PetMutationBoostII":
@@ -22304,7 +22341,8 @@
           case "EggGrowthBoost":
           case "EggGrowthBoostII_NEW":
           case "EggGrowthBoostII":
-          case "SnowyEggGrowthBoost": {
+          case "SnowyEggGrowthBoost":
+          case "ThunderEggGrowthBoost": {
             const mins = d["minutesReduced"] ?? d["eggGrowthTimeReductionMinutes"] ?? base["eggGrowthTimeReductionMinutes"];
             return mins != null ? `- ${fmtMin1(mins)}` : "Egg growth reduced";
           }
@@ -22313,7 +22351,8 @@
           case "PlantGrowthBoostIII":
           case "DawnPlantGrowthBoost":
           case "AmberPlantGrowthBoost":
-          case "SnowyPlantGrowthBoost": {
+          case "SnowyPlantGrowthBoost":
+          case "ThunderPlantGrowthBoost": {
             const mins = d["minutesReduced"] ?? d["reductionMinutes"] ?? base["plantGrowthReductionMinutes"];
             return mins != null ? `- ${fmtMin1(mins)}` : "Plant growth reduced";
           }
@@ -22321,7 +22360,8 @@
           case "SnowyPetXpBoost":
           case "PetXpBoostII":
           case "PetXpBoostIII":
-          case "DawnXpBoost": {
+          case "DawnXpBoost":
+          case "ThunderXpBoost": {
             const xp = d["bonusXp"] ?? base["bonusXp"];
             const affected = Array.isArray(d["petsAffected"]) ? d["petsAffected"].length : 0;
             return affected > 1 ? `+ ${fmtInt(xp)} XP (${affected} pets)` : `+ ${fmtInt(xp)} XP`;
@@ -22369,6 +22409,12 @@
             return "Amber mutations empowered";
           case "DawnKisser":
             return "Dawn mutations empowered";
+          case "Thunderbloom":
+            return "Thunder mutations empowered";
+          case "Thundercharger": {
+            const charged = d["cropsCharged"];
+            return charged != null ? `${fmtInt(charged)} crop${Number(charged) === 1 ? "" : "s"} Thundercharged` : "Crops Thundercharged";
+          }
           default: {
             const meta = petAbilities2[abilityId];
             if (d && typeof d === "object" && Object.keys(d).length) return JSON.stringify(d);
@@ -29417,6 +29463,9 @@
   var PRICE_FALLBACK2 = "\u2014";
   var nfUS2 = new Intl.NumberFormat("en-US");
   var formatCoins2 = (value) => value == null ? PRICE_FALLBACK2 : nfUS2.format(Math.max(0, Math.round(value)));
+  function isPlantObject3(obj) {
+    return !!obj && typeof obj === "object" && obj.objectType === "plant";
+  }
   var coinTexture = null;
   var coinTexturePromise = null;
   function ensureCoinTexture(TextureCtor) {
@@ -29448,12 +29497,14 @@
     let valueBadge = null;
     let graphicsCtor = null;
     let iconRetryScheduled = false;
+    let currentGardenObject = null;
     const debugState2 = {
       attached: false,
       lastSyncAt: null,
       lastError: null,
       hasValueText: false,
-      hasCoinTexture: false
+      hasCoinTexture: false,
+      objectType: null
     };
     shareGlobal("__MG_CROP_VALUE_PIXI_DEBUG__", debugState2);
     const priceWatcher = startCropPriceWatcherViaGardenObject();
@@ -29485,7 +29536,11 @@
       }
     };
     const syncValueNodeUnsafe = () => {
-      if (!running || !currentCard2 || currentCard2.destroyed || !geometry) return;
+      debugState2.objectType = currentGardenObject?.objectType ?? null;
+      if (!running || !currentCard2 || currentCard2.destroyed || !geometry || !isPlantObject3(currentGardenObject)) {
+        detachValueText();
+        return;
+      }
       const state3 = getSpriteState();
       if (!state3) return;
       const value = priceWatcher.get();
@@ -29567,10 +29622,30 @@
       if (card2) syncValueNode();
     });
     const offPrice = priceWatcher.onChange(syncValueNode);
+    let unsubGardenObject = null;
+    void (async () => {
+      try {
+        currentGardenObject = await Atoms.data.myCurrentGardenObject.get();
+        if (running) syncValueNode();
+      } catch {
+      }
+      try {
+        const unsub = await Atoms.data.myCurrentGardenObject.onChange((next) => {
+          currentGardenObject = next;
+          syncValueNode();
+        });
+        if (typeof unsub === "function") {
+          if (running) unsubGardenObject = unsub;
+          else unsub();
+        }
+      } catch {
+      }
+    })();
     return {
       stop() {
         if (!running) return;
         running = false;
+        unsubGardenObject?.();
         offCard();
         offPrice?.();
         priceWatcher.stop();
@@ -30620,7 +30695,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.156";
+      return "3.2.157";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -43890,10 +43965,10 @@ next: ${next}`;
     if (is("ProduceScaleBoost") || is("SnowyCropSizeBoost")) {
       return { bg: "rgba(34,139,34,0.9)", hover: "rgba(34,139,34,1)" };
     }
-    if (is("PlantGrowthBoost") || is("SnowyPlantGrowthBoost") || is("DawnPlantGrowthBoost") || is("AmberPlantGrowthBoost")) {
+    if (is("PlantGrowthBoost") || is("SnowyPlantGrowthBoost") || is("DawnPlantGrowthBoost") || is("AmberPlantGrowthBoost") || is("ThunderPlantGrowthBoost")) {
       return { bg: "rgba(0,128,128,0.9)", hover: "rgba(0,128,128,1)" };
     }
-    if (is("EggGrowthBoost") || is("SnowyEggGrowthBoost")) {
+    if (is("EggGrowthBoost") || is("SnowyEggGrowthBoost") || is("ThunderEggGrowthBoost")) {
       return { bg: "rgba(180,90,240,0.9)", hover: "rgba(180,90,240,1)" };
     }
     if (is("PetAgeBoost")) {
@@ -43902,7 +43977,7 @@ next: ${next}`;
     if (is("PetHatchSizeBoost")) {
       return { bg: "rgba(128,0,128,0.9)", hover: "rgba(128,0,128,1)" };
     }
-    if (is("PetXpBoost") || is("SnowyPetXpBoost")) {
+    if (is("PetXpBoost") || is("SnowyPetXpBoost") || is("DawnXpBoost") || is("ThunderXpBoost")) {
       return { bg: "rgba(30,144,255,0.9)", hover: "rgba(30,144,255,1)" };
     }
     if (is("HungerBoost") || is("SnowyHungerBoost")) {
@@ -43914,7 +43989,7 @@ next: ${next}`;
     if (is("SellBoost")) {
       return { bg: "rgba(220,20,60,0.9)", hover: "rgba(220,20,60,1)" };
     }
-    if (is("CoinFinder") || is("SnowyCoinFinder")) {
+    if (is("CoinFinder") || is("SnowyCoinFinder") || is("DawnCoinFinder") || is("ThunderCoinFinder")) {
       return { bg: "rgba(180,150,0,0.9)", hover: "rgba(180,150,0,1)" };
     }
     if (is("SeedFinder")) {
@@ -43923,7 +43998,7 @@ next: ${next}`;
         hover: "rgba(168,102,38,1)"
       };
     }
-    if (is("ProduceMutationBoost") || is("SnowyCropMutationBoost") || is("DawnBoost") || is("AmberMoonBoost")) {
+    if (is("ProduceMutationBoost") || is("SnowyCropMutationBoost") || is("DawnBoost") || is("AmberMoonBoost") || is("ThunderBoost")) {
       return { bg: "rgba(140,15,70,0.9)", hover: "rgba(140,15,70,1)" };
     }
     if (is("PetMutationBoost")) {
@@ -43973,6 +44048,15 @@ next: ${next}`;
     }
     if (is("AmberlitGranter")) {
       return { bg: "rgba(204,144,96,0.9)", hover: "rgba(204,144,96,1)" };
+    }
+    if (is("ThunderstruckGranter")) {
+      return { bg: "rgba(194,184,60,0.9)", hover: "rgba(194,184,60,1)" };
+    }
+    if (is("Thundercharger")) {
+      return { bg: "rgba(31,163,130,0.9)", hover: "rgba(31,163,130,1)" };
+    }
+    if (is("Thunderbloom")) {
+      return { bg: "rgba(112,246,203,0.9)", hover: "rgba(112,246,203,1)" };
     }
     return {
       bg: "rgba(100,100,100,0.9)",

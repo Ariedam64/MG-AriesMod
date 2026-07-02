@@ -14,6 +14,7 @@
 import { startCropPriceWatcherViaGardenObject } from "./cropPrice";
 import { shareGlobal } from "./page-context";
 import { coin } from "../data";
+import { Atoms } from "../store/atoms";
 import {
   watchGardenInfoCard,
   getSpriteState,
@@ -33,6 +34,7 @@ interface CropValuePixiDebugState {
   lastError: string | null;
   hasValueText: boolean;
   hasCoinTexture: boolean;
+  objectType: string | null;
 }
 
 const VALUE_TEXT_STYLE = { fontFamily: "Arial", fontSize: 14, fontWeight: "700", fill: "#FFD84D" };
@@ -49,6 +51,15 @@ const PRICE_FALLBACK = "—";
 const nfUS = new Intl.NumberFormat("en-US");
 const formatCoins = (value: number | null) =>
   value == null ? PRICE_FALLBACK : nfUS.format(Math.max(0, Math.round(value)));
+
+// cropPrice.ts's own watcher already returns a null price for non-plant
+// objects, which already keeps the badge hidden — this is a second,
+// direct check (same pattern as lockerIndicatorPixi.ts/sellAllPetsPixi.ts)
+// so the gate is obvious here too, not just an implicit side effect of the
+// price computation elsewhere.
+function isPlantObject(obj: any): boolean {
+  return !!obj && typeof obj === "object" && obj.objectType === "plant";
+}
 
 // Coin texture is decoded once from the same base64 asset the old DOM
 // overlay used, and shared across every controller instance/card.
@@ -84,6 +95,7 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
   let valueBadge: any = null;
   let graphicsCtor: any = null;
   let iconRetryScheduled = false;
+  let currentGardenObject: any = null;
 
   const debugState: CropValuePixiDebugState = {
     attached: false,
@@ -91,6 +103,7 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
     lastError: null,
     hasValueText: false,
     hasCoinTexture: false,
+    objectType: null,
   };
   shareGlobal("__MG_CROP_VALUE_PIXI_DEBUG__", debugState);
 
@@ -121,7 +134,11 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
   // through — which is what produced a "whole card shifted" symptom in an
   // earlier version of this code. Every path here must stay exception-safe.
   const syncValueNodeUnsafe = () => {
-    if (!running || !currentCard || currentCard.destroyed || !geometry) return;
+    debugState.objectType = currentGardenObject?.objectType ?? null;
+    if (!running || !currentCard || currentCard.destroyed || !geometry || !isPlantObject(currentGardenObject)) {
+      detachValueText();
+      return;
+    }
     const state = getSpriteState();
     if (!state) return;
 
@@ -213,10 +230,29 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
 
   const offPrice = priceWatcher.onChange(syncValueNode);
 
+  let unsubGardenObject: (() => void) | null = null;
+  void (async () => {
+    try {
+      currentGardenObject = await Atoms.data.myCurrentGardenObject.get();
+      if (running) syncValueNode();
+    } catch {}
+    try {
+      const unsub = await Atoms.data.myCurrentGardenObject.onChange((next: any) => {
+        currentGardenObject = next;
+        syncValueNode();
+      });
+      if (typeof unsub === "function") {
+        if (running) unsubGardenObject = unsub;
+        else unsub();
+      }
+    } catch {}
+  })();
+
   return {
     stop() {
       if (!running) return;
       running = false;
+      unsubGardenObject?.();
       offCard();
       offPrice?.();
       priceWatcher.stop();

@@ -63,11 +63,11 @@ export function getAbilityChipColors(id: string): { bg: string; hover: string } 
     return { bg: "rgba(34,139,34,0.9)", hover: "rgba(34,139,34,1)" };
   }
 
-  if (is("PlantGrowthBoost") || is("SnowyPlantGrowthBoost") || is("DawnPlantGrowthBoost") || is("AmberPlantGrowthBoost")) {
+  if (is("PlantGrowthBoost") || is("SnowyPlantGrowthBoost") || is("DawnPlantGrowthBoost") || is("AmberPlantGrowthBoost") || is("ThunderPlantGrowthBoost")) {
     return { bg: "rgba(0,128,128,0.9)", hover: "rgba(0,128,128,1)" };
   }
 
-  if (is("EggGrowthBoost") || is("SnowyEggGrowthBoost")) {
+  if (is("EggGrowthBoost") || is("SnowyEggGrowthBoost") || is("ThunderEggGrowthBoost")) {
     // I, II_NEW, II (III en jeu) + Snowy
     return { bg: "rgba(180,90,240,0.9)", hover: "rgba(180,90,240,1)" };
   }
@@ -82,8 +82,8 @@ export function getAbilityChipColors(id: string): { bg: string; hover: string } 
     return { bg: "rgba(128,0,128,0.9)", hover: "rgba(128,0,128,1)" };
   }
 
-  if (is("PetXpBoost") || is("SnowyPetXpBoost")) {
-    // I & II (+ Snowy)
+  if (is("PetXpBoost") || is("SnowyPetXpBoost") || is("DawnXpBoost") || is("ThunderXpBoost")) {
+    // I & II (+ Snowy / Dawn / Thunder)
     return { bg: "rgba(30,144,255,0.9)", hover: "rgba(30,144,255,1)" };
   }
 
@@ -104,8 +104,8 @@ export function getAbilityChipColors(id: string): { bg: string; hover: string } 
     return { bg: "rgba(220,20,60,0.9)", hover: "rgba(220,20,60,1)" };
   }
 
-  // Coin Finder (I, II, III + Snowy)
-  if (is("CoinFinder") || is("SnowyCoinFinder")) {
+  // Coin Finder (I, II, III + Snowy / Dawn / Thunder)
+  if (is("CoinFinder") || is("SnowyCoinFinder") || is("DawnCoinFinder") || is("ThunderCoinFinder")) {
     return { bg: "rgba(180,150,0,0.9)", hover: "rgba(180,150,0,1)" };
   }
 
@@ -118,7 +118,7 @@ export function getAbilityChipColors(id: string): { bg: string; hover: string } 
   }
 
   // Mutation / mutation pets
-  if (is("ProduceMutationBoost") || is("SnowyCropMutationBoost") || is("DawnBoost") || is("AmberMoonBoost")) {
+  if (is("ProduceMutationBoost") || is("SnowyCropMutationBoost") || is("DawnBoost") || is("AmberMoonBoost") || is("ThunderBoost")) {
     return { bg: "rgba(140,15,70,0.9)", hover: "rgba(140,15,70,1)" };
   }
 
@@ -194,6 +194,18 @@ export function getAbilityChipColors(id: string): { bg: string; hover: string } 
 
   if (is("AmberlitGranter")) {
     return { bg: "rgba(204,144,96,0.9)", hover: "rgba(204,144,96,1)" };
+  }
+
+  if (is("ThunderstruckGranter")) {
+    return { bg: "rgba(194,184,60,0.9)", hover: "rgba(194,184,60,1)" };
+  }
+
+  if (is("Thundercharger")) {
+    return { bg: "rgba(31,163,130,0.9)", hover: "rgba(31,163,130,1)" };
+  }
+
+  if (is("Thunderbloom")) {
+    return { bg: "rgba(112,246,203,0.9)", hover: "rgba(112,246,203,1)" };
   }
 
   // Couleur neutre par défaut (même que le jeu)

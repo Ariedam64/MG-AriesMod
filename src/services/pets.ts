@@ -92,6 +92,7 @@ const WEATHER_MUTATION_BOOST_IDS = new Set([
   "ProduceMutationBoostIII",
   "DawnBoost",
   "AmberMoonBoost",
+  "ThunderBoost",
   "SnowyCropMutationBoost",
   "PetMutationBoost",
   "PetMutationBoostII",
@@ -1338,7 +1339,8 @@ export const PetsService = {
       case "CoinFinderII":
       case "CoinFinderIII":
       case "SnowyCoinFinder":
-      case "DawnCoinFinder": {
+      case "DawnCoinFinder":
+      case "ThunderCoinFinder": {
         const value = data["coinsFound"] ?? data["coins"] ?? 0;
         return num(value);
       }
@@ -1356,6 +1358,7 @@ export const PetsService = {
 
       case "ProduceScaleBoost":
       case "ProduceScaleBoostII":
+      case "ProduceScaleBoostIII":
       case "SnowyCropSizeBoost": {
         const inc =
           data["scaleIncreasePercentage"] ??
@@ -1368,7 +1371,8 @@ export const PetsService = {
       case "EggGrowthBoost":
       case "EggGrowthBoostII_NEW":
       case "EggGrowthBoostII":
-      case "SnowyEggGrowthBoost": {
+      case "SnowyEggGrowthBoost":
+      case "ThunderEggGrowthBoost": {
         const minutes =
           data["eggGrowthTimeReductionMinutes"] ??
           data["minutesReduced"] ??
@@ -1380,7 +1384,11 @@ export const PetsService = {
 
       case "PlantGrowthBoost":
       case "PlantGrowthBoostII":
-      case "SnowyPlantGrowthBoost": {
+      case "PlantGrowthBoostIII":
+      case "SnowyPlantGrowthBoost":
+      case "DawnPlantGrowthBoost":
+      case "AmberPlantGrowthBoost":
+      case "ThunderPlantGrowthBoost": {
         const minutes =
           data["minutesReduced"] ??
           data["reductionMinutes"] ??
@@ -1394,7 +1402,8 @@ export const PetsService = {
       case "SnowyPetXpBoost":
       case "PetXpBoostII":
       case "PetXpBoostIII":
-      case "DawnXpBoost": {
+      case "DawnXpBoost":
+      case "ThunderXpBoost": {
         const xp = data["bonusXp"] ?? base["bonusXp"] ?? 0;
         return num(xp);
       }
@@ -1405,19 +1414,22 @@ export const PetsService = {
       }
 
       case "PetAgeBoost":
-      case "PetAgeBoostII": {
+      case "PetAgeBoostII":
+      case "PetAgeBoostIII": {
         const xp = data["bonusXp"] ?? base["bonusXp"] ?? 0;
         return num(xp);
       }
 
       case "PetHatchSizeBoost":
-      case "PetHatchSizeBoostII": {
+      case "PetHatchSizeBoostII":
+      case "PetHatchSizeBoostIII": {
         const strength = data["strengthIncrease"] ?? 0;
         return num(strength);
       }
 
       case "HungerRestore":
       case "HungerRestoreII":
+      case "HungerRestoreIII":
       case "SnowyHungerRestore": {
         const amount =
           data["hungerRestoreAmount"] ??
@@ -1429,6 +1441,7 @@ export const PetsService = {
 
       case "HungerBoost":
       case "HungerBoostII":
+      case "HungerBoostIII":
       case "SnowyHungerBoost": {
         const pct =
           data["hungerDepletionRateDecreasePercentage"] ??
@@ -1436,6 +1449,9 @@ export const PetsService = {
           0;
         return num(pct);
       }
+
+      case "Thundercharger":
+        return num(data["cropsCharged"] ?? 0);
 
       default:
         return 0;
@@ -1715,7 +1731,8 @@ export const PetsService = {
         case "CoinFinderII":
         case "CoinFinderIII":
         case "SnowyCoinFinder":
-        case "DawnCoinFinder": {
+        case "DawnCoinFinder":
+        case "ThunderCoinFinder": {
           const coins = d["coinsFound"] ?? d["coins"] ?? base["baseMaxCoinsFindable"];
           return coins != null ? `+ ${fmtInt(coins)} coins` : "Coins found";
         }
@@ -1793,7 +1810,8 @@ export const PetsService = {
         case "SnowGranter":
         case "FrostGranter":
         case "DawnlitGranter":
-        case "AmberlitGranter": {
+        case "AmberlitGranter":
+        case "ThunderstruckGranter": {
           const cropFromSlot = cropNameFromGrowSlot(d["growSlot"]);
           const crop = label(d["cropName"], cropFromSlot ?? "crop");
           return `${crop}`;
@@ -1815,6 +1833,7 @@ export const PetsService = {
         case "ProduceMutationBoostIII":
         case "DawnBoost":
         case "AmberMoonBoost":
+        case "ThunderBoost":
         case "SnowyCropMutationBoost":
         case "PetMutationBoost":
         case "PetMutationBoostII":
@@ -1826,7 +1845,8 @@ export const PetsService = {
         case "EggGrowthBoost":
         case "EggGrowthBoostII_NEW":
         case "EggGrowthBoostII":
-        case "SnowyEggGrowthBoost": {
+        case "SnowyEggGrowthBoost":
+        case "ThunderEggGrowthBoost": {
           const mins =
             d["minutesReduced"] ??
             d["eggGrowthTimeReductionMinutes"] ??
@@ -1838,7 +1858,8 @@ export const PetsService = {
         case "PlantGrowthBoostIII":
         case "DawnPlantGrowthBoost":
         case "AmberPlantGrowthBoost":
-        case "SnowyPlantGrowthBoost": {
+        case "SnowyPlantGrowthBoost":
+        case "ThunderPlantGrowthBoost": {
           const mins = d["minutesReduced"] ?? d["reductionMinutes"] ?? base["plantGrowthReductionMinutes"];
           return mins != null ? `- ${fmtMin1(mins)}` : "Plant growth reduced";
         }
@@ -1847,7 +1868,8 @@ export const PetsService = {
         case "SnowyPetXpBoost":
         case "PetXpBoostII":
         case "PetXpBoostIII":
-        case "DawnXpBoost": {
+        case "DawnXpBoost":
+        case "ThunderXpBoost": {
           const xp = d["bonusXp"] ?? base["bonusXp"];
           const affected = Array.isArray(d["petsAffected"]) ? (d["petsAffected"] as unknown[]).length : 0;
           return affected > 1 ? `+ ${fmtInt(xp)} XP (${affected} pets)` : `+ ${fmtInt(xp)} XP`;
@@ -1904,6 +1926,16 @@ export const PetsService = {
           return "Amber mutations empowered";
         case "DawnKisser":
           return "Dawn mutations empowered";
+        case "Thunderbloom":
+          return "Thunder mutations empowered";
+
+        case "Thundercharger": {
+          // data: { cropsCharged } — converts Thunderstruck crops to Thundercharged.
+          const charged = d["cropsCharged"];
+          return charged != null
+            ? `${fmtInt(charged)} crop${Number(charged) === 1 ? "" : "s"} Thundercharged`
+            : "Crops Thundercharged";
+        }
 
         default: {
           const meta = (petAbilities as Record<string, any>)[abilityId];

@@ -366,14 +366,20 @@ function canvasOf(renderer: any): any {
  * `resolvePixiFast` fast-checks are not a reliable fallback on their own —
  * this game's original resolution went through the hooks path instead.)
  *
- * PIXI's own Text/Sprite/Container/etc. classes aren't tied to a specific
- * renderer instance, so `ctx.state.ctors` doesn't need re-deriving here —
- * only the renderer/app references themselves are swapped.
+ * `ctx.state.ctors` DOES need re-deriving after a swap — confirmed by a
+ * real crash: `Text` (unlike Sprite/Container/Rectangle, which are plain
+ * stateless classes) carries a renderer-specific internal font-metrics/
+ * measurement cache, so text created with a `Text` class captured from the
+ * OLD renderer throws (`Cannot read properties of undefined (reading
+ * 'advance')` — a glyph-metrics lookup against a cache tied to a renderer
+ * that no longer exists) once used against the NEW one.
  */
 interface RendererHealthDebugState {
   checks: number;
   staleStreak: number;
   swaps: Array<{ at: number; fromCanvasInDoc: boolean }>;
+  ctorsRederiveAttempts: number;
+  lastCtorsRederiveError: string | null;
 }
 
 function watchRendererHealth(): void {
@@ -386,14 +392,38 @@ function watchRendererHealth(): void {
   // renderer.
   const REQUIRED_STALE_STREAK = 3;
   let staleStreak = 0;
+  // Set right after a renderer swap; kept true (and retried every tick)
+  // until getCtors() succeeds against the new renderer's stage, which may
+  // not have any content yet the instant the swap happens.
+  let needsCtorsRederive = false;
 
-  const debugState: RendererHealthDebugState = { checks: 0, staleStreak: 0, swaps: [] };
+  const debugState: RendererHealthDebugState = {
+    checks: 0,
+    staleStreak: 0,
+    swaps: [],
+    ctorsRederiveAttempts: 0,
+    lastCtorsRederiveError: null,
+  };
   const debugRoot: any = pageWin;
   debugRoot.__MG_RENDERER_HEALTH_DEBUG__ = debugState;
 
   pageWin.setInterval(() => {
     try {
       debugState.checks += 1;
+
+      if (needsCtorsRederive) {
+        debugState.ctorsRederiveAttempts += 1;
+        try {
+          ctx.state.ctors = getCtors(ctx.state.app ?? ctx.state.renderer);
+          needsCtorsRederive = false;
+          debugState.lastCtorsRederiveError = null;
+          console.info('[MG SpriteCatalog] re-derived ctors from the new renderer');
+        } catch (error) {
+          debugState.lastCtorsRederiveError = String((error as Error)?.message ?? error);
+          // Stage likely has no content yet — retry next tick.
+        }
+      }
+
       const canvas = canvasOf(ctx.state.renderer);
       const canvasHealthy = !!canvas && typeof document !== 'undefined' && document.contains(canvas);
       if (canvasHealthy) {
@@ -414,6 +444,7 @@ function watchRendererHealth(): void {
       debugState.swaps.push({ at: Date.now(), fromCanvasInDoc: canvasHealthy });
       ctx.state.renderer = freshRenderer;
       if (hooks.app) ctx.state.app = hooks.app;
+      needsCtorsRederive = true;
       staleStreak = 0;
       debugState.staleStreak = 0;
     } catch (error) {

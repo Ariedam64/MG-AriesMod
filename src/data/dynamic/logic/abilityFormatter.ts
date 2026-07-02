@@ -7,21 +7,24 @@ export interface ActivityLogEntry {
 }
 
 export const PET_ABILITY_ACTIONS = [
-  'CoinFinderI', 'CoinFinderII', 'CoinFinderIII',
+  'CoinFinderI', 'CoinFinderII', 'CoinFinderIII', 'SnowyCoinFinder', 'DawnCoinFinder', 'ThunderCoinFinder',
   'SeedFinderI', 'SeedFinderII', 'SeedFinderIII', 'SeedFinderIV',
-  'HungerRestore', 'HungerRestoreII',
+  'HungerRestore', 'HungerRestoreII', 'HungerRestoreIII', 'SnowyHungerRestore',
   'DoubleHarvest', 'DoubleHatch',
   'ProduceEater',
-  'PetHatchSizeBoost', 'PetHatchSizeBoostII',
-  'PetAgeBoost', 'PetAgeBoostII',
+  'PetHatchSizeBoost', 'PetHatchSizeBoostII', 'PetHatchSizeBoostIII',
+  'PetAgeBoost', 'PetAgeBoostII', 'PetAgeBoostIII',
   'PetRefund', 'PetRefundII',
   'ProduceRefund',
   'SellBoostI', 'SellBoostII', 'SellBoostIII', 'SellBoostIV',
   'GoldGranter', 'RainbowGranter', 'RainDance',
-  'PetXpBoost', 'PetXpBoostII',
-  'EggGrowthBoost', 'EggGrowthBoostII_NEW', 'EggGrowthBoostII',
-  'PlantGrowthBoost', 'PlantGrowthBoostII',
-  'ProduceScaleBoost', 'ProduceScaleBoostII',
+  'SnowGranter', 'FrostGranter', 'DawnlitGranter', 'AmberlitGranter', 'ThunderstruckGranter',
+  'PetXpBoost', 'PetXpBoostII', 'PetXpBoostIII', 'SnowyPetXpBoost', 'DawnXpBoost', 'ThunderXpBoost',
+  'EggGrowthBoost', 'EggGrowthBoostII_NEW', 'EggGrowthBoostII', 'SnowyEggGrowthBoost', 'ThunderEggGrowthBoost',
+  'PlantGrowthBoost', 'PlantGrowthBoostII', 'PlantGrowthBoostIII',
+  'SnowyPlantGrowthBoost', 'DawnPlantGrowthBoost', 'AmberPlantGrowthBoost', 'ThunderPlantGrowthBoost',
+  'ProduceScaleBoost', 'ProduceScaleBoostII', 'ProduceScaleBoostIII', 'SnowyCropSizeBoost',
+  'MoonKisser', 'DawnKisser',
 ] as const;
 
 export type PetAbilityAction = (typeof PET_ABILITY_ACTIONS)[number];
@@ -56,6 +59,9 @@ export function formatAbilityLog(log: ActivityLogEntry): string {
     case 'CoinFinderI':
     case 'CoinFinderII':
     case 'CoinFinderIII':
+    case 'SnowyCoinFinder':
+    case 'DawnCoinFinder':
+    case 'ThunderCoinFinder':
       return `Found ${params.coinsFound || 0} coins`;
 
     case 'SeedFinderI':
@@ -65,7 +71,9 @@ export function formatAbilityLog(log: ActivityLogEntry): string {
       return `Found 1x ${params.speciesId || 'Unknown'} seed`;
 
     case 'HungerRestore':
-    case 'HungerRestoreII': {
+    case 'HungerRestoreII':
+    case 'HungerRestoreIII':
+    case 'SnowyHungerRestore': {
       const targetName = getPetName(params.targetPet as Record<string, unknown>);
       const amount = params.hungerRestoreAmount || 0;
       const pet = params.pet as Record<string, unknown> | undefined;
@@ -90,14 +98,16 @@ export function formatAbilityLog(log: ActivityLogEntry): string {
     }
 
     case 'PetHatchSizeBoost':
-    case 'PetHatchSizeBoostII': {
+    case 'PetHatchSizeBoostII':
+    case 'PetHatchSizeBoostIII': {
       const targetName = getPetName(params.targetPet as Record<string, unknown>);
       const increase = Number(params.strengthIncrease) || 0;
       return `Boosted ${targetName}'s size by +${increase.toFixed(0)}`;
     }
 
     case 'PetAgeBoost':
-    case 'PetAgeBoostII': {
+    case 'PetAgeBoostII':
+    case 'PetAgeBoostIII': {
       const targetName = getPetName(params.targetPet as Record<string, unknown>);
       return `Gave +${params.bonusXp || 0} XP to ${targetName}`;
     }
@@ -120,13 +130,22 @@ export function formatAbilityLog(log: ActivityLogEntry): string {
 
     case 'GoldGranter':
     case 'RainbowGranter':
-    case 'RainDance': {
+    case 'RainDance':
+    case 'SnowGranter':
+    case 'FrostGranter':
+    case 'DawnlitGranter':
+    case 'AmberlitGranter':
+    case 'ThunderstruckGranter': {
       const slot = params.growSlot as Record<string, unknown> | undefined;
       return `Made ${slot?.species || 'Unknown'} turn ${params.mutation || 'Unknown'}`;
     }
 
     case 'PetXpBoost':
-    case 'PetXpBoostII': {
+    case 'PetXpBoostII':
+    case 'PetXpBoostIII':
+    case 'SnowyPetXpBoost':
+    case 'DawnXpBoost':
+    case 'ThunderXpBoost': {
       const affected = params.petsAffected as unknown[];
       const num = Array.isArray(affected) ? affected.length : 0;
       return `Gave +${params.bonusXp || 0} XP to ${num} ${num === 1 ? 'pet' : 'pets'}`;
@@ -134,7 +153,9 @@ export function formatAbilityLog(log: ActivityLogEntry): string {
 
     case 'EggGrowthBoost':
     case 'EggGrowthBoostII_NEW':
-    case 'EggGrowthBoostII': {
+    case 'EggGrowthBoostII':
+    case 'SnowyEggGrowthBoost':
+    case 'ThunderEggGrowthBoost': {
       const eggs = params.eggsAffected as unknown[];
       const num = Array.isArray(eggs) ? eggs.length : 0;
       const time = formatTime(Number(params.secondsReduced) || 0);
@@ -142,17 +163,33 @@ export function formatAbilityLog(log: ActivityLogEntry): string {
     }
 
     case 'PlantGrowthBoost':
-    case 'PlantGrowthBoostII': {
+    case 'PlantGrowthBoostII':
+    case 'PlantGrowthBoostIII':
+    case 'SnowyPlantGrowthBoost':
+    case 'DawnPlantGrowthBoost':
+    case 'AmberPlantGrowthBoost':
+    case 'ThunderPlantGrowthBoost': {
       const num = Number(params.numPlantsAffected) || 0;
       const time = formatTime(Number(params.secondsReduced) || 0);
       return `Reduced ${num} ${num === 1 ? 'plant' : 'plants'} growth by ${time}`;
     }
 
     case 'ProduceScaleBoost':
-    case 'ProduceScaleBoostII': {
+    case 'ProduceScaleBoostII':
+    case 'ProduceScaleBoostIII':
+    case 'SnowyCropSizeBoost': {
       const pct = Number(params.scaleIncreasePercentage) || 0;
       const num = Number(params.numPlantsAffected) || 0;
       return `Boosted ${num} ${num === 1 ? 'crop' : 'crops'} size by +${pct.toFixed(0)}%`;
+    }
+
+    case 'MoonKisser':
+    case 'DawnKisser': {
+      const affected = params.growSlotsAffected as unknown[];
+      const num = Array.isArray(affected) ? affected.length : 0;
+      const source = params.sourceMutation || 'Unknown';
+      const target = params.targetMutation || 'Unknown';
+      return `Turned ${source} into ${target} on ${num} ${num === 1 ? 'crop' : 'crops'}`;
     }
 
     default:
