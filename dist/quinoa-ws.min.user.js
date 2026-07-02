@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.158
+// @version      3.2.160
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -930,7 +930,9 @@
     if (!stage) return null;
     const anySpr = findAnyPerBranch(stage, (x) => x?.texture?.frame && x?.constructor && x?.texture?.constructor && x?.texture?.frame?.constructor);
     if (!anySpr) return null;
-    const anyTxt = findAnyPerBranch(stage, (x) => (typeof x?.text === "string" || typeof x?.text === "number") && x?.style);
+    const hasTextAndStyle = (x) => (typeof x?.text === "string" || typeof x?.text === "number") && x?.style;
+    const isRiveLikeNode = (x) => !!(x?.artboard || x?.stateMachine || x?.rive);
+    const anyTxt = findAnyPerBranch(stage, (x) => hasTextAndStyle(x) && x?.renderPipeId === "text") ?? findAnyPerBranch(stage, (x) => hasTextAndStyle(x) && !isRiveLikeNode(x));
     if (!anyTxt) return null;
     return {
       Container: stage.constructor,
@@ -29847,7 +29849,7 @@
       const node = stack.pop();
       if (!node || seen.has(node)) continue;
       seen.add(node);
-      if (typeof node.text === "string" && node.style) return node.style;
+      if (typeof node.text === "string" && node.style && node.renderPipeId === "text") return node.style;
       const children = node.children;
       if (Array.isArray(children)) for (const child of children) stack.push(child);
     }
@@ -30702,7 +30704,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.158";
+      return "3.2.160";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;

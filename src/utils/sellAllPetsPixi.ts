@@ -99,7 +99,9 @@ function findAnyTextStyle(root: any, limit = 5000): any {
     const node = stack.pop();
     if (!node || seen.has(node)) continue;
     seen.add(node);
-    if (typeof node.text === "string" && node.style) return node.style;
+    // Rive display objects can also carry `.text`/`.style` — only trust
+    // genuine Pixi text nodes so we don't copy a Rive style object.
+    if (typeof node.text === "string" && node.style && node.renderPipeId === "text") return node.style;
     const children = node.children;
     if (Array.isArray(children)) for (const child of children) stack.push(child);
   }

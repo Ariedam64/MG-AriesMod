@@ -58,7 +58,17 @@ function ctorsFromStage(stage: any): PixiCtors | null {
   if (!stage) return null;
   const anySpr = findAnyPerBranch(stage, (x: any) => x?.texture?.frame && x?.constructor && x?.texture?.constructor && x?.texture?.frame?.constructor);
   if (!anySpr) return null;
-  const anyTxt = findAnyPerBranch(stage, (x: any) => (typeof x?.text === 'string' || typeof x?.text === 'number') && x?.style);
+  // The game's Rive-based display objects can also expose `.text`/`.style`,
+  // so a bare "has text and style" match can capture a RiveSprite constructor
+  // — whose positional-args constructor then throws on `{ text, style }`
+  // (e.g. `artboard.advance` of undefined). Prefer genuine Pixi v8 text nodes
+  // (renderPipeId 'text'); keep the loose match as a fallback for other Pixi
+  // versions, but never accept Rive artboard nodes.
+  const hasTextAndStyle = (x: any) => (typeof x?.text === 'string' || typeof x?.text === 'number') && x?.style;
+  const isRiveLikeNode = (x: any) => !!(x?.artboard || x?.stateMachine || x?.rive);
+  const anyTxt =
+    findAnyPerBranch(stage, (x: any) => hasTextAndStyle(x) && x?.renderPipeId === 'text')
+    ?? findAnyPerBranch(stage, (x: any) => hasTextAndStyle(x) && !isRiveLikeNode(x));
   if (!anyTxt) return null;
   return {
     Container: stage.constructor,
