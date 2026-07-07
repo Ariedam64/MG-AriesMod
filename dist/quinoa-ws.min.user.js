@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.161
+// @version      3.2.162
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -4162,6 +4162,213 @@
     } catch (err) {
       console.error("[MGData] failed to fetch data from API", err);
       captureState.fetchStarted = false;
+    }
+  }
+
+  // src/data/dynamic/logic/abilityFormatter.ts
+  var PET_ABILITY_ACTIONS = [
+    "CoinFinderI",
+    "CoinFinderII",
+    "CoinFinderIII",
+    "SnowyCoinFinder",
+    "DawnCoinFinder",
+    "ThunderCoinFinder",
+    "SeedFinderI",
+    "SeedFinderII",
+    "SeedFinderIII",
+    "SeedFinderIV",
+    "HungerRestore",
+    "HungerRestoreII",
+    "HungerRestoreIII",
+    "SnowyHungerRestore",
+    "DoubleHarvest",
+    "DoubleHatch",
+    "ProduceEater",
+    "PetHatchSizeBoost",
+    "PetHatchSizeBoostII",
+    "PetHatchSizeBoostIII",
+    "PetAgeBoost",
+    "PetAgeBoostII",
+    "PetAgeBoostIII",
+    "PetRefund",
+    "PetRefundII",
+    "ProduceRefund",
+    "SellBoostI",
+    "SellBoostII",
+    "SellBoostIII",
+    "SellBoostIV",
+    "GoldGranter",
+    "RainbowGranter",
+    "RainDance",
+    "SnowGranter",
+    "FrostGranter",
+    "DawnlitGranter",
+    "AmberlitGranter",
+    "ThunderstruckGranter",
+    "PetXpBoost",
+    "PetXpBoostII",
+    "PetXpBoostIII",
+    "SnowyPetXpBoost",
+    "DawnXpBoost",
+    "ThunderXpBoost",
+    "EggGrowthBoost",
+    "EggGrowthBoostII_NEW",
+    "EggGrowthBoostII",
+    "SnowyEggGrowthBoost",
+    "ThunderEggGrowthBoost",
+    "PlantGrowthBoost",
+    "PlantGrowthBoostII",
+    "PlantGrowthBoostIII",
+    "SnowyPlantGrowthBoost",
+    "DawnPlantGrowthBoost",
+    "AmberPlantGrowthBoost",
+    "ThunderPlantGrowthBoost",
+    "ProduceScaleBoost",
+    "ProduceScaleBoostII",
+    "ProduceScaleBoostIII",
+    "SnowyCropSizeBoost",
+    "MoonKisser",
+    "DawnKisser"
+  ];
+  function isPetAbilityAction(action2) {
+    return PET_ABILITY_ACTIONS.includes(action2);
+  }
+  function formatTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor(seconds % 3600 / 60);
+    const secs = Math.floor(seconds % 60);
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${secs}s`;
+    return `${secs}s`;
+  }
+  function getPetName(pet) {
+    return pet?.name || pet?.petSpecies || "Unknown Pet";
+  }
+  function formatAbilityLog(log2) {
+    const { action: action2, parameters } = log2;
+    const params = parameters;
+    switch (action2) {
+      case "CoinFinderI":
+      case "CoinFinderII":
+      case "CoinFinderIII":
+      case "SnowyCoinFinder":
+      case "DawnCoinFinder":
+      case "ThunderCoinFinder":
+        return `Found ${params.coinsFound || 0} coins`;
+      case "SeedFinderI":
+      case "SeedFinderII":
+      case "SeedFinderIII":
+      case "SeedFinderIV":
+        return `Found 1x ${params.speciesId || "Unknown"} seed`;
+      case "HungerRestore":
+      case "HungerRestoreII":
+      case "HungerRestoreIII":
+      case "SnowyHungerRestore": {
+        const targetName = getPetName(params.targetPet);
+        const amount = params.hungerRestoreAmount || 0;
+        const pet = params.pet;
+        const targetPet = params.targetPet;
+        const isSelf = pet?.id === targetPet?.id;
+        return `Restored ${amount} hunger to ${isSelf ? "itself" : targetName}`;
+      }
+      case "DoubleHarvest": {
+        const crop = params.harvestedCrop;
+        return `Double harvested ${crop?.species || "Unknown"}`;
+      }
+      case "DoubleHatch": {
+        const extra = params.extraPet;
+        return `Double hatched ${extra?.petSpecies || "Unknown"}`;
+      }
+      case "ProduceEater": {
+        const slot = params.growSlot;
+        return `Ate ${slot?.species || "Unknown"} for ${params.sellPrice || 0} coins`;
+      }
+      case "PetHatchSizeBoost":
+      case "PetHatchSizeBoostII":
+      case "PetHatchSizeBoostIII": {
+        const targetName = getPetName(params.targetPet);
+        const increase = Number(params.strengthIncrease) || 0;
+        return `Boosted ${targetName}'s size by +${increase.toFixed(0)}`;
+      }
+      case "PetAgeBoost":
+      case "PetAgeBoostII":
+      case "PetAgeBoostIII": {
+        const targetName = getPetName(params.targetPet);
+        return `Gave +${params.bonusXp || 0} XP to ${targetName}`;
+      }
+      case "PetRefund":
+      case "PetRefundII":
+        return `Refunded 1x ${params.eggId || "Unknown Egg"}`;
+      case "ProduceRefund": {
+        const crops = params.cropsRefunded;
+        const num = Array.isArray(crops) ? crops.length : 0;
+        return `Refunded ${num} ${num === 1 ? "crop" : "crops"}`;
+      }
+      case "SellBoostI":
+      case "SellBoostII":
+      case "SellBoostIII":
+      case "SellBoostIV":
+        return `Gave +${params.bonusCoins || 0} bonus coins`;
+      case "GoldGranter":
+      case "RainbowGranter":
+      case "RainDance":
+      case "SnowGranter":
+      case "FrostGranter":
+      case "DawnlitGranter":
+      case "AmberlitGranter":
+      case "ThunderstruckGranter": {
+        const slot = params.growSlot;
+        return `Made ${slot?.species || "Unknown"} turn ${params.mutation || "Unknown"}`;
+      }
+      case "PetXpBoost":
+      case "PetXpBoostII":
+      case "PetXpBoostIII":
+      case "SnowyPetXpBoost":
+      case "DawnXpBoost":
+      case "ThunderXpBoost": {
+        const affected = params.petsAffected;
+        const num = Array.isArray(affected) ? affected.length : 0;
+        return `Gave +${params.bonusXp || 0} XP to ${num} ${num === 1 ? "pet" : "pets"}`;
+      }
+      case "EggGrowthBoost":
+      case "EggGrowthBoostII_NEW":
+      case "EggGrowthBoostII":
+      case "SnowyEggGrowthBoost":
+      case "ThunderEggGrowthBoost": {
+        const eggs = params.eggsAffected;
+        const num = Array.isArray(eggs) ? eggs.length : 0;
+        const time = formatTime(Number(params.secondsReduced) || 0);
+        return `Reduced ${num} ${num === 1 ? "egg" : "eggs"} growth by ${time}`;
+      }
+      case "PlantGrowthBoost":
+      case "PlantGrowthBoostII":
+      case "PlantGrowthBoostIII":
+      case "SnowyPlantGrowthBoost":
+      case "DawnPlantGrowthBoost":
+      case "AmberPlantGrowthBoost":
+      case "ThunderPlantGrowthBoost": {
+        const num = Number(params.numPlantsAffected) || 0;
+        const time = formatTime(Number(params.secondsReduced) || 0);
+        return `Reduced ${num} ${num === 1 ? "plant" : "plants"} growth by ${time}`;
+      }
+      case "ProduceScaleBoost":
+      case "ProduceScaleBoostII":
+      case "ProduceScaleBoostIII":
+      case "SnowyCropSizeBoost": {
+        const pct = Number(params.scaleIncreasePercentage) || 0;
+        const num = Number(params.numPlantsAffected) || 0;
+        return `Boosted ${num} ${num === 1 ? "crop" : "crops"} size by +${pct.toFixed(0)}%`;
+      }
+      case "MoonKisser":
+      case "DawnKisser": {
+        const affected = params.growSlotsAffected;
+        const num = Array.isArray(affected) ? affected.length : 0;
+        const source = params.sourceMutation || "Unknown";
+        const target = params.targetMutation || "Unknown";
+        return `Turned ${source} into ${target} on ${num} ${num === 1 ? "crop" : "crops"}`;
+      }
+      default:
+        return `Unknown ability: ${action2}`;
     }
   }
 
@@ -21102,6 +21309,57 @@
     const raw = typeof _AB?.[key2]?.name === "string" && _AB[key2].name.trim() ? _AB[key2].name : key2;
     return String(raw);
   }
+  var PET_ABILITY_IDS = new Set(Object.keys(_AB).filter((id) => !WEATHER_MUTATION_BOOST_IDS.has(id)));
+  function _abilityLogFallbackText(abilityId, params) {
+    const fmtInt = (n) => Number.isFinite(Number(n)) ? Math.round(Number(n)).toLocaleString("en-US") : "0";
+    switch (abilityId) {
+      case "HungerBoost":
+      case "HungerBoostII":
+      case "HungerBoostIII":
+      case "SnowyHungerBoost": {
+        const base = petAbilities2[abilityId]?.baseParameters ?? {};
+        const pct = base["hungerDepletionRateDecreasePercentage"];
+        return pct != null ? `- ${Number(pct).toFixed(0)}% hunger drain` : "Hunger reduced";
+      }
+      case "Copycat":
+        return "Copied another ability";
+      case "DawnCapture": {
+        const capsules = params["capsulesAdded"];
+        const dawnlit = Number(params["dawnlitRemoved"]) || 0;
+        const dawncharged = Number(params["dawnboundRemoved"]) || 0;
+        const absorbed = [];
+        if (dawnlit > 0) absorbed.push(`${fmtInt(dawnlit)} Dawnlit`);
+        if (dawncharged > 0) absorbed.push(`${fmtInt(dawncharged)} Dawncharged`);
+        const head = capsules != null ? `+ ${fmtInt(capsules)} Dawn Capsule${Number(capsules) === 1 ? "" : "s"}` : "Dawn Capsules added";
+        return absorbed.length ? `${head} (${absorbed.join(", ")} absorbed)` : head;
+      }
+      case "Thunderbloom":
+        return "Thunder mutations empowered";
+      case "Thundercharger": {
+        const charged = params["cropsCharged"];
+        return charged != null ? `${fmtInt(charged)} crop${Number(charged) === 1 ? "" : "s"} Thundercharged` : "Crops Thundercharged";
+      }
+      default: {
+        const meta = petAbilities2[abilityId];
+        return meta?.description || meta?.name || abilityId;
+      }
+    }
+  }
+  function _buildAbilityLogText(abilityId, params) {
+    if (abilityId === "GoldGranter" || abilityId === "RainbowGranter") {
+      const growSlot = params?.growSlot;
+      const species = typeof growSlot?.species === "string" ? growSlot.species.trim() : "";
+      if (!species) return null;
+    }
+    if (isPetAbilityAction(abilityId)) {
+      try {
+        const text = formatAbilityLog({ action: abilityId, timestamp: 0, parameters: params });
+        if (text) return text;
+      } catch {
+      }
+    }
+    return _abilityLogFallbackText(abilityId, params);
+  }
   function _abilityNameWithoutLevel(id) {
     const key2 = String(id ?? "");
     const raw = typeof _AB?.[key2]?.name === "string" && _AB[key2].name.trim() ? _AB[key2].name : key2;
@@ -22041,7 +22299,9 @@
     /* ------------------------- Ability logs ------------------------- */
     _logs: [],
     _logsMax: 500,
-    _seenPerfByPet: /* @__PURE__ */ new Map(),
+    // Identity key (abilityId|petId|performedAt) of every log entry already ingested from
+    // myActivityLog, so a reconnect resync of the same historical entries can't double-log them.
+    _seenLogKeys: /* @__PURE__ */ new Set(),
     _logSubs: /* @__PURE__ */ new Set(),
     _logsCutoffMs: 0,
     _logsCutoffSkewMs: 1500,
@@ -22085,6 +22345,7 @@
         case "EggGrowthBoostII":
         case "SnowyEggGrowthBoost":
         case "ThunderEggGrowthBoost": {
+          if (data["secondsReduced"] != null) return num(data["secondsReduced"]) * 1e3;
           const minutes = data["eggGrowthTimeReductionMinutes"] ?? data["minutesReduced"] ?? data["reductionMinutes"] ?? base["eggGrowthTimeReductionMinutes"] ?? 0;
           return num(minutes) * 60 * 1e3;
         }
@@ -22095,6 +22356,7 @@
         case "DawnPlantGrowthBoost":
         case "AmberPlantGrowthBoost":
         case "ThunderPlantGrowthBoost": {
+          if (data["secondsReduced"] != null) return num(data["secondsReduced"]) * 1e3;
           const minutes = data["minutesReduced"] ?? data["reductionMinutes"] ?? data["plantGrowthReductionMinutes"] ?? base["plantGrowthReductionMinutes"] ?? 0;
           return num(minutes) * 60 * 1e3;
         }
@@ -22148,118 +22410,80 @@
         await _ensureInventoryWatchersStarted();
       } catch {
       }
-      const indexInfosByPetId = (list) => {
-        const out = {};
-        const arr = Array.isArray(list) ? list : [];
-        for (const e of arr) {
-          const id = String(e?.slot?.id ?? e?.id ?? "");
-          if (id) out[id] = e;
-        }
-        return out;
-      };
-      const normalizeSlotInfoMap = (src) => {
-        if (!src) return {};
-        if (Array.isArray(src)) {
-          const out = {};
-          for (const it of src) {
-            if (!it || typeof it !== "object") continue;
-            const id = String(it?.id ?? it?.petId ?? it?.petItemId ?? it?.itemId ?? it?.slot?.id ?? "");
-            if (!id || out[id]) continue;
-            out[id] = {
-              ...it,
-              lastAbilityTrigger: it.lastAbilityTrigger ?? it.slot?.lastAbilityTrigger ?? it.data?.lastAbilityTrigger ?? null,
-              position: it.position ?? it.slot?.position ?? null
-            };
+      const ingest = (rawLogs) => {
+        const list = Array.isArray(rawLogs) ? rawLogs : [];
+        for (const raw of list) {
+          try {
+            this._ingestActivityLogEntry(raw);
+          } catch {
           }
-          return out;
         }
-        if (typeof src === "object") return src;
-        return {};
       };
-      let myInfosMap = {};
       try {
-        myInfosMap = indexInfosByPetId(await Atoms.pets.myPetInfos.get());
+        ingest(await myActivityLog.get());
       } catch {
       }
-      let stopInfos = null;
+      let stop2 = null;
       try {
-        stopInfos = await Atoms.pets.myPetInfos.onChange((list) => {
+        const res = await myActivityLog.onChange((next) => {
           try {
-            myInfosMap = indexInfosByPetId(list);
+            ingest(next);
           } catch {
           }
         });
-      } catch {
-      }
-      const extractFlat = (src) => {
-        const out = {};
-        const obj = normalizeSlotInfoMap(src);
-        if (!obj || typeof obj !== "object") return out;
-        for (const petId of Object.keys(obj)) {
-          const entry = obj[petId] ?? {};
-          const evt = entry.lastActionEvent ?? entry.slot?.lastActionEvent ?? entry.data?.lastActionEvent ?? entry.lastAbilityTrigger ?? entry.slot?.lastAbilityTrigger ?? entry.data?.lastAbilityTrigger ?? null;
-          const lat = evt && (evt.action == null || evt.action === "ability") ? evt : null;
-          let rawH = entry.hungerPct ?? entry.hunger_percentage ?? entry.hunger ?? entry.slot?.hungerPct ?? entry.slot?.hunger_percentage ?? entry.slot?.hunger ?? entry.stats?.hungerPct ?? entry.stats?.hunger?.pct ?? entry.stats?.hunger?.percent ?? null;
-          if (rawH == null) {
-            const info = myInfosMap[petId];
-            rawH = info?.hungerPct ?? info?.hunger_percentage ?? info?.hunger ?? info?.slot?.hungerPct ?? info?.slot?.hunger ?? info?.stats?.hungerPct ?? info?.stats?.hunger?.pct ?? info?.stats?.hunger?.percent ?? null;
-          }
-          let hungerPct = Number.isFinite(Number(rawH)) ? Number(rawH) : null;
-          if (hungerPct != null && hungerPct > 0 && hungerPct <= 1) hungerPct *= 100;
-          out[petId] = {
-            petId,
-            abilityId: lat?.abilityId ?? null,
-            performedAt: Number.isFinite(lat?.performedAt) ? lat.performedAt : null,
-            data: lat?.data ?? null,
-            position: entry.position ?? entry.slot?.position ?? entry.data?.position ?? null,
-            hungerPct
-          };
-        }
-        return out;
-      };
-      try {
-        this._ingestAbilityMap(extractFlat(await Atoms.pets.myPetSlotInfos.get()));
-      } catch {
-      }
-      try {
-        this._ingestAbilityMap(extractFlat(await Atoms.pets.myPrimitivePetSlots.get()));
-      } catch {
-      }
-      let stopSlots = null;
-      try {
-        const res = await Atoms.pets.myPetSlotInfos.onChange((src) => {
-          try {
-            this._ingestAbilityMap(extractFlat(src));
-          } catch {
-          }
-        });
-        if (typeof res === "function") stopSlots = res;
-      } catch {
-      }
-      let stopPrimitives = null;
-      try {
-        stopPrimitives = await Atoms.pets.myPrimitivePetSlots.onChange((src) => {
-          try {
-            this._ingestAbilityMap(extractFlat(src));
-          } catch {
-          }
-        });
+        if (typeof res === "function") stop2 = res;
       } catch {
       }
       return () => {
         try {
-          stopSlots();
-        } catch {
-        }
-        try {
-          stopPrimitives?.();
-        } catch {
-        }
-        try {
-          stopInfos?.();
+          stop2?.();
         } catch {
         }
       };
+    },
+    _ingestActivityLogEntry(raw) {
+      if (!raw || typeof raw !== "object") return;
+      const abilityId = typeof raw.action === "string" ? raw.action : "";
+      if (!abilityId || !PET_ABILITY_IDS.has(abilityId)) return;
+      const performedAtNum = Number(raw.timestamp);
+      if (!Number.isFinite(performedAtNum) || performedAtNum <= 0) return;
+      const params = raw.parameters && typeof raw.parameters === "object" ? raw.parameters : {};
+      const petParam = params?.pet;
+      const petId = typeof petParam?.id === "string" ? petParam.id : "";
+      if (!petId) return;
+      const key2 = `${abilityId}|${petId}|${performedAtNum}`;
+      if (this._seenLogKeys.has(key2)) return;
+      this._seenLogKeys.add(key2);
+      if (this._logsCutoffMs && performedAtNum < this._logsCutoffMs - this._logsCutoffSkewMs) {
+        return;
+      }
+      const details = _buildAbilityLogText(abilityId, params);
+      if (details === null) return;
+      const cachedPet = _invPetsCache.find((p) => String(p.id) === petId) || null;
+      const species = typeof petParam?.petSpecies === "string" && petParam.petSpecies || cachedPet?.petSpecies || void 0;
+      const name = typeof petParam?.name === "string" && petParam.name || cachedPet?.name || void 0;
+      const mutationsRaw = Array.isArray(petParam?.mutations) ? petParam.mutations : cachedPet?.mutations;
+      const mutations = Array.isArray(mutationsRaw) ? mutationsRaw.map((m) => String(m ?? "").trim()).filter(Boolean) : void 0;
+      const logLine = {
+        petId,
+        species,
+        name,
+        mutations: mutations && mutations.length ? mutations : void 0,
+        abilityId,
+        abilityName: _abilityName(abilityId),
+        data: details,
+        performedAt: performedAtNum,
+        time12: new Date(performedAtNum).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+      };
+      try {
+        StatsService.incrementAbilityStat(abilityId, "triggers");
+        const abilityValue = this._extractAbilityValue(abilityId, params);
+        if (abilityValue > 0) {
+          StatsService.incrementAbilityStat(abilityId, "totalValue", abilityValue);
+        }
+      } catch {
+      }
+      this._pushLog(logLine);
     },
     getAbilityLogs(opts) {
       const ids = opts?.abilityIds && opts.abilityIds.length ? new Set(opts.abilityIds) : null;
@@ -22291,7 +22515,7 @@
     },
     clearAbilityLogs() {
       this._logs.length = 0;
-      this._seenPerfByPet.clear();
+      this._seenLogKeys.clear();
       this._logsCutoffMs = Date.now();
       this._notifyLogSubs();
       this._persistAbilityLogs();
@@ -22361,271 +22585,13 @@
         }
         restored.sort((a, b) => a.performedAt - b.performedAt);
         this._logs = restored.slice(-this._logsMax);
-        this._seenPerfByPet.clear();
+        this._seenLogKeys.clear();
         for (const entry of this._logs) {
-          const prev = this._seenPerfByPet.get(entry.petId) || 0;
-          if (entry.performedAt > prev) this._seenPerfByPet.set(entry.petId, entry.performedAt);
+          this._seenLogKeys.add(`${entry.abilityId}|${entry.petId}|${entry.performedAt}`);
         }
         const cutoff = Number(parsed.cutoff);
         if (Number.isFinite(cutoff) && cutoff > 0) this._logsCutoffMs = cutoff;
       } catch {
-      }
-    },
-    _ingestAbilityMap(map2) {
-      if (!map2 || typeof map2 !== "object") return;
-      const abilityDisplayName = (abilityId) => {
-        const def = petAbilities2[abilityId];
-        return def?.name && def.name.trim() || abilityId;
-      };
-      const fmtTime12 = (ms) => new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
-      const fmtInt = (n) => Number.isFinite(Number(n)) ? Math.round(Number(n)).toLocaleString("en-US") : "0";
-      const fmtPct0 = (n) => `${Number.isFinite(Number(n)) ? Number(n).toFixed(0) : "0"}%`;
-      const fmtMin1 = (n) => `${Number.isFinite(Number(n)) ? Number(n).toFixed(1) : "0.0"} min`;
-      const formatDetails = (abilityId, data) => {
-        const d = data ?? {};
-        const base = petAbilities2[abilityId]?.baseParameters ?? {};
-        const label2 = (value, fallback) => {
-          const s = typeof value === "string" ? value.trim() : "";
-          return s || fallback;
-        };
-        const percentOr = (value, fallback) => value != null ? value : fallback;
-        const cropNameFromGrowSlot = (src) => {
-          if (!src || typeof src !== "object") return null;
-          const species = src.species;
-          if (typeof species !== "string" || !species.trim()) return null;
-          const key2 = species.trim();
-          const variants = [key2, key2.charAt(0).toUpperCase() + key2.slice(1), key2.toLowerCase()];
-          for (const v of variants) {
-            const name = plantCatalog2?.[v]?.crop?.name;
-            if (typeof name === "string" && name.trim()) return name;
-          }
-          return null;
-        };
-        switch (abilityId) {
-          case "CoinFinderI":
-          case "CoinFinderII":
-          case "CoinFinderIII":
-          case "SnowyCoinFinder":
-          case "DawnCoinFinder":
-          case "ThunderCoinFinder": {
-            const coins = d["coinsFound"] ?? d["coins"] ?? base["baseMaxCoinsFindable"];
-            return coins != null ? `+ ${fmtInt(coins)} coins` : "Coins found";
-          }
-          case "SeedFinderI":
-          case "SeedFinderII":
-          case "SeedFinderIII":
-          case "SeedFinderIV": {
-            const seed = label2(d["seedName"], "seed");
-            return `x1 ${seed}`;
-          }
-          case "HungerRestore":
-          case "HungerRestoreII":
-          case "HungerRestoreIII":
-          case "SnowyHungerRestore": {
-            const whoRaw = d["petName"];
-            const who = label2(whoRaw === "itself" ? "itself" : whoRaw, "pet");
-            const amount = d["hungerRestoreAmount"];
-            const pct = percentOr(d["hungerRestoredPercentage"], base["hungerRestorePercentage"]);
-            if (amount != null) return `${who}: +${fmtInt(amount)} hunger`;
-            return pct != null ? `${who}: ${fmtPct0(pct)}` : `${who}: Hunger restored`;
-          }
-          case "DoubleHarvest": {
-            const crop = label2(d["cropName"], "crop");
-            return `+1 ${crop}`;
-          }
-          case "DoubleHatch": {
-            const pet = label2(d["petName"], "pet");
-            return `+1 ${pet}`;
-          }
-          case "ProduceEater": {
-            const name = label2(d["cropName"], "crop");
-            if (d["sellPrice"] != null) return `Sold ${name}: +${fmtInt(d["sellPrice"])} coins`;
-            const pct = base["cropSellPriceIncreasePercentage"];
-            return pct != null ? `Eaten: ${name} (+${fmtPct0(pct)} value)` : `Eaten: ${name}`;
-          }
-          case "ProduceRefund": {
-            const n = d["numCropsRefunded"] ?? d["numItemsRefunded"];
-            return n != null ? `+ ${fmtInt(n)} crop(s)` : "Crops refunded";
-          }
-          case "SellBoostI":
-          case "SellBoostII":
-          case "SellBoostIII":
-          case "SellBoostIV": {
-            if (d["bonusCoins"] != null) return `Sale bonus: +${fmtInt(d["bonusCoins"])} coins`;
-            const pct = base["cropSellPriceIncreasePercentage"];
-            return pct != null ? `+ ${fmtPct0(pct)}` : "Sale bonus";
-          }
-          case "GoldGranter":
-          case "RainbowGranter": {
-            const cropFromSlot = cropNameFromGrowSlot(d["growSlot"]);
-            const cropName = typeof d["cropName"] === "string" && d["cropName"].trim() ? d["cropName"].trim() : cropFromSlot;
-            if (!cropName) return null;
-            return cropName;
-          }
-          case "RainDance": {
-            const cropFromSlot = cropNameFromGrowSlot(d["growSlot"]);
-            const crop = label2(d["cropName"], cropFromSlot ?? "crop");
-            const muts = Array.isArray(d.mutations) ? d.mutations : Array.isArray(d.growSlot?.mutations) ? d.growSlot.mutations : [];
-            const hasFrozen = muts.some((m) => typeof m === "string" && m.toLowerCase() === "frozen");
-            return hasFrozen ? `${crop}: Chilled + Frozen` : `${crop}: Wet`;
-          }
-          case "SnowGranter":
-          case "FrostGranter":
-          case "DawnlitGranter":
-          case "AmberlitGranter":
-          case "ThunderstruckGranter": {
-            const cropFromSlot = cropNameFromGrowSlot(d["growSlot"]);
-            const crop = label2(d["cropName"], cropFromSlot ?? "crop");
-            return `${crop}`;
-          }
-          case "ProduceScaleBoost":
-          case "ProduceScaleBoostII":
-          case "ProduceScaleBoostIII":
-          case "SnowyCropSizeBoost": {
-            const inc = d["scaleIncreasePercentage"] ?? d["cropScaleIncreasePercentage"] ?? base["scaleIncreasePercentage"];
-            return inc != null ? `+ ${fmtPct0(inc)}` : "Crop size boosted";
-          }
-          case "ProduceMutationBoost":
-          case "ProduceMutationBoostII":
-          case "ProduceMutationBoostIII":
-          case "DawnBoost":
-          case "AmberMoonBoost":
-          case "ThunderBoost":
-          case "SnowyCropMutationBoost":
-          case "PetMutationBoost":
-          case "PetMutationBoostII":
-          case "PetMutationBoostIII": {
-            const inc = percentOr(d["mutationChanceIncreasePercentage"], base["mutationChanceIncreasePercentage"]);
-            return inc != null ? `+ ${fmtPct0(inc)} mutation chance` : "Mutation chance up";
-          }
-          case "EggGrowthBoost":
-          case "EggGrowthBoostII_NEW":
-          case "EggGrowthBoostII":
-          case "SnowyEggGrowthBoost":
-          case "ThunderEggGrowthBoost": {
-            const mins = d["minutesReduced"] ?? d["eggGrowthTimeReductionMinutes"] ?? base["eggGrowthTimeReductionMinutes"];
-            return mins != null ? `- ${fmtMin1(mins)}` : "Egg growth reduced";
-          }
-          case "PlantGrowthBoost":
-          case "PlantGrowthBoostII":
-          case "PlantGrowthBoostIII":
-          case "DawnPlantGrowthBoost":
-          case "AmberPlantGrowthBoost":
-          case "SnowyPlantGrowthBoost":
-          case "ThunderPlantGrowthBoost": {
-            const mins = d["minutesReduced"] ?? d["reductionMinutes"] ?? base["plantGrowthReductionMinutes"];
-            return mins != null ? `- ${fmtMin1(mins)}` : "Plant growth reduced";
-          }
-          case "PetXpBoost":
-          case "SnowyPetXpBoost":
-          case "PetXpBoostII":
-          case "PetXpBoostIII":
-          case "DawnXpBoost":
-          case "ThunderXpBoost": {
-            const xp = d["bonusXp"] ?? base["bonusXp"];
-            const affected = Array.isArray(d["petsAffected"]) ? d["petsAffected"].length : 0;
-            return affected > 1 ? `+ ${fmtInt(xp)} XP (${affected} pets)` : `+ ${fmtInt(xp)} XP`;
-          }
-          case "PetAgeBoost":
-          case "PetAgeBoostII":
-          case "PetAgeBoostIII": {
-            const xp = d["bonusXp"] ?? base["bonusXp"];
-            const who = label2(d["petName"], "pet");
-            return `+ ${fmtInt(xp)} XP (${who})`;
-          }
-          case "PetHatchSizeBoost":
-          case "PetHatchSizeBoostII":
-          case "PetHatchSizeBoostIII": {
-            const who = label2(d["petName"], "pet");
-            if (d["strengthIncrease"] != null) return `+${fmtInt(d["strengthIncrease"])} strength (${who})`;
-            const pct = base["maxStrengthIncreasePercentage"];
-            return pct != null ? `+ ${fmtPct0(pct)} (${who})` : `Strength increased (${who})`;
-          }
-          case "HungerBoost":
-          case "HungerBoostII":
-          case "HungerBoostIII":
-          case "SnowyHungerBoost": {
-            const pct = base["hungerDepletionRateDecreasePercentage"];
-            return pct != null ? `- ${fmtPct0(pct)} hunger drain` : "Hunger reduced";
-          }
-          case "PetRefund":
-          case "PetRefundII": {
-            const egg = d["eggName"] ?? null;
-            return egg ? `x1 ${egg}` : `Pet refunded as egg`;
-          }
-          case "Copycat":
-            return "Copied another ability";
-          case "DawnCapture": {
-            const capsules = d["capsulesAdded"];
-            const dawnlit = Number(d["dawnlitRemoved"]) || 0;
-            const dawncharged = Number(d["dawnboundRemoved"]) || 0;
-            const absorbed = [];
-            if (dawnlit > 0) absorbed.push(`${fmtInt(dawnlit)} Dawnlit`);
-            if (dawncharged > 0) absorbed.push(`${fmtInt(dawncharged)} Dawncharged`);
-            const head = capsules != null ? `+ ${fmtInt(capsules)} Dawn Capsule${Number(capsules) === 1 ? "" : "s"}` : "Dawn Capsules added";
-            return absorbed.length ? `${head} (${absorbed.join(", ")} absorbed)` : head;
-          }
-          case "MoonKisser":
-            return "Amber mutations empowered";
-          case "DawnKisser":
-            return "Dawn mutations empowered";
-          case "Thunderbloom":
-            return "Thunder mutations empowered";
-          case "Thundercharger": {
-            const charged = d["cropsCharged"];
-            return charged != null ? `${fmtInt(charged)} crop${Number(charged) === 1 ? "" : "s"} Thundercharged` : "Crops Thundercharged";
-          }
-          default: {
-            const meta = petAbilities2[abilityId];
-            if (d && typeof d === "object" && Object.keys(d).length) return JSON.stringify(d);
-            return meta?.description || "\u2014";
-          }
-        }
-      };
-      for (const petId of Object.keys(map2)) {
-        const entry = map2[petId];
-        if (!entry || typeof entry !== "object") continue;
-        const abilityId = entry.abilityId ?? null;
-        const performedAtNum = Number(entry.performedAt) || 0;
-        if (!abilityId || !performedAtNum) continue;
-        if (WEATHER_MUTATION_BOOST_IDS.has(String(abilityId))) {
-          this._seenPerfByPet.set(petId, performedAtNum);
-          continue;
-        }
-        const prev = this._seenPerfByPet.get(petId) || 0;
-        if (performedAtNum <= prev) continue;
-        if (this._logsCutoffMs && performedAtNum < this._logsCutoffMs - this._logsCutoffSkewMs) {
-          this._seenPerfByPet.set(petId, performedAtNum);
-          continue;
-        }
-        const pet = _invPetsCache.find((p) => String(p.id) === String(petId)) || null;
-        const abilityIdStr = String(abilityId);
-        const details = formatDetails(abilityIdStr, entry.data);
-        if (details === null) {
-          this._seenPerfByPet.set(petId, performedAtNum);
-          continue;
-        }
-        const logLine = {
-          petId,
-          species: pet?.petSpecies || void 0,
-          name: pet?.name ?? void 0,
-          mutations: Array.isArray(pet?.mutations) ? pet.mutations.map((m) => String(m ?? "").trim()).filter(Boolean) : void 0,
-          abilityId: abilityIdStr,
-          abilityName: abilityDisplayName(abilityId),
-          data: details,
-          performedAt: performedAtNum,
-          time12: fmtTime12(performedAtNum)
-        };
-        this._seenPerfByPet.set(petId, performedAtNum);
-        try {
-          StatsService.incrementAbilityStat(abilityIdStr, "triggers");
-          const abilityValue = this._extractAbilityValue(abilityIdStr, entry.data);
-          if (abilityValue > 0) {
-            StatsService.incrementAbilityStat(abilityIdStr, "totalValue", abilityValue);
-          }
-        } catch {
-        }
-        this._pushLog(logLine);
       }
     }
   };
@@ -30861,7 +30827,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.161";
+      return "3.2.162";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;

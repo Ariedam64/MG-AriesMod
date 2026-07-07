@@ -6,9 +6,9 @@ import {
   type CropItem,
   type CropInventoryState,
 } from "./player";
-import { petCatalog, petAbilities, plantCatalog } from "../data";
+import { petCatalog, petAbilities, formatAbilityLog, isPetAbilityAction } from "../data";
 import { fakeInventoryShow, fakeInventoryDisable, closeInventoryPanel, isInventoryOpen } from "./fakeModal.ts";
-import { Atoms, myPetHutchPetItems, myNumPetHutchItems, myPetHutchCapacitySlots, isMyInventoryAtMaxLength, stateUserSlots, playerId, playerDatabaseUserId } from "../store/atoms";
+import { Atoms, myPetHutchPetItems, myNumPetHutchItems, myPetHutchCapacitySlots, isMyInventoryAtMaxLength, stateUserSlots, playerId, playerDatabaseUserId, myActivityLog } from "../store/atoms";
 import { toastSimple } from "../ui/toast";
 import { Hotkey, matchHotkey, stringToHotkey } from "../ui/menu.ts";
 import {
@@ -335,6 +335,79 @@ function _abilityName(id: unknown): string {
     ? _AB[key]!.name
     : key;
   return String(raw);
+}
+
+// Every known pet ability id, except the weather-driven mutation boosters
+// (the game itself never logs those as discrete activity log entries).
+const PET_ABILITY_IDS = new Set(Object.keys(_AB).filter(id => !WEATHER_MUTATION_BOOST_IDS.has(id)));
+
+function _abilityLogFallbackText(abilityId: string, params: Record<string, unknown>): string {
+  const fmtInt = (n: unknown): string =>
+    Number.isFinite(Number(n)) ? Math.round(Number(n)).toLocaleString("en-US") : "0";
+
+  switch (abilityId) {
+    case "HungerBoost":
+    case "HungerBoostII":
+    case "HungerBoostIII":
+    case "SnowyHungerBoost": {
+      const base = (petAbilities as Record<string, any>)[abilityId]?.baseParameters ?? {};
+      const pct = base["hungerDepletionRateDecreasePercentage"];
+      return pct != null ? `- ${Number(pct).toFixed(0)}% hunger drain` : "Hunger reduced";
+    }
+    case "Copycat":
+      return "Copied another ability";
+    case "DawnCapture": {
+      // parameters: { dawnlitRemoved, dawnboundRemoved, capsulesAdded } — the
+      // dawnbound count is displayed as Dawncharged by the game.
+      const capsules = params["capsulesAdded"];
+      const dawnlit = Number(params["dawnlitRemoved"]) || 0;
+      const dawncharged = Number(params["dawnboundRemoved"]) || 0;
+      const absorbed: string[] = [];
+      if (dawnlit > 0) absorbed.push(`${fmtInt(dawnlit)} Dawnlit`);
+      if (dawncharged > 0) absorbed.push(`${fmtInt(dawncharged)} Dawncharged`);
+      const head = capsules != null
+        ? `+ ${fmtInt(capsules)} Dawn Capsule${Number(capsules) === 1 ? "" : "s"}`
+        : "Dawn Capsules added";
+      return absorbed.length ? `${head} (${absorbed.join(", ")} absorbed)` : head;
+    }
+    case "Thunderbloom":
+      return "Thunder mutations empowered";
+    case "Thundercharger": {
+      // parameters: { cropsCharged } — converts Thunderstruck crops to Thundercharged.
+      const charged = params["cropsCharged"];
+      return charged != null
+        ? `${fmtInt(charged)} crop${Number(charged) === 1 ? "" : "s"} Thundercharged`
+        : "Crops Thundercharged";
+    }
+    default: {
+      const meta = (petAbilities as Record<string, any>)[abilityId];
+      return meta?.description || meta?.name || abilityId;
+    }
+  }
+}
+
+/**
+ * Builds the display text for one pet-ability activity log entry. Prefers the
+ * shared `formatAbilityLog` formatter (kept in sync with the real
+ * myActivityLog wire shape); falls back to a local formatter for the handful
+ * of abilities it doesn't cover yet.
+ */
+function _buildAbilityLogText(abilityId: string, params: Record<string, unknown>): string | null {
+  // Skip phantom procs (e.g. GoldGranter/RainbowGranter with no resolved crop).
+  if (abilityId === "GoldGranter" || abilityId === "RainbowGranter") {
+    const growSlot = (params as any)?.growSlot as Record<string, unknown> | undefined;
+    const species = typeof growSlot?.species === "string" ? growSlot.species.trim() : "";
+    if (!species) return null;
+  }
+
+  if (isPetAbilityAction(abilityId)) {
+    try {
+      const text = formatAbilityLog({ action: abilityId, timestamp: 0, parameters: params });
+      if (text) return text;
+    } catch {}
+  }
+
+  return _abilityLogFallbackText(abilityId, params);
 }
 function _abilityNameWithoutLevel(id: unknown): string {
   const key = String(id ?? "");
@@ -1318,7 +1391,9 @@ export const PetsService = {
   /* ------------------------- Ability logs ------------------------- */
   _logs: [] as AbilityLogEntry[],
   _logsMax: 500,
-  _seenPerfByPet: new Map<string, number>(),
+  // Identity key (abilityId|petId|performedAt) of every log entry already ingested from
+  // myActivityLog, so a reconnect resync of the same historical entries can't double-log them.
+  _seenLogKeys: new Set<string>(),
   _logSubs: new Set<(all: AbilityLogEntry[]) => void>(),
   _logsCutoffMs: 0,
   _logsCutoffSkewMs: 1500,
@@ -1373,6 +1448,9 @@ export const PetsService = {
       case "EggGrowthBoostII":
       case "SnowyEggGrowthBoost":
       case "ThunderEggGrowthBoost": {
+        // myActivityLog reports this in seconds (`secondsReduced`); older
+        // minute-based field names are kept as a fallback for safety.
+        if (data["secondsReduced"] != null) return num(data["secondsReduced"]) * 1000;
         const minutes =
           data["eggGrowthTimeReductionMinutes"] ??
           data["minutesReduced"] ??
@@ -1389,6 +1467,7 @@ export const PetsService = {
       case "DawnPlantGrowthBoost":
       case "AmberPlantGrowthBoost":
       case "ThunderPlantGrowthBoost": {
+        if (data["secondsReduced"] != null) return num(data["secondsReduced"]) * 1000;
         const minutes =
           data["minutesReduced"] ??
           data["reductionMinutes"] ??
@@ -1461,125 +1540,86 @@ export const PetsService = {
   async startAbilityLogsWatcher(): Promise<() => void> {
     try { await _ensureInventoryWatchersStarted(); } catch {}
 
-    const indexInfosByPetId = (list: any): Record<string, any> => {
-      const out: Record<string, any> = {};
-      const arr = Array.isArray(list) ? list : [];
-      for (const e of arr) {
-        const id = String(e?.slot?.id ?? e?.id ?? "");
-        if (id) out[id] = e;
+    // Source of truth: the game's own activity log (same feed as the in-game
+    // Activity Log, capped ~500 entries). Each entry is an immutable historical
+    // fact, unlike the old myPetSlotInfos/myPrimitivePetSlots "last known trigger"
+    // snapshot — which could get re-delivered with a bumped performedAt after a
+    // forced WS reconnect and get mistaken for a brand-new proc (duplicate logs).
+    const ingest = (rawLogs: any) => {
+      const list: any[] = Array.isArray(rawLogs) ? rawLogs : [];
+      for (const raw of list) {
+        try { this._ingestActivityLogEntry(raw); } catch {}
       }
-      return out;
     };
 
-    const normalizeSlotInfoMap = (src: any): Record<string, any> => {
-      if (!src) return {};
-      if (Array.isArray(src)) {
-        const out: Record<string, any> = {};
-        for (const it of src) {
-          if (!it || typeof it !== "object") continue;
-          const id = String((it as any)?.id ?? (it as any)?.petId ?? (it as any)?.petItemId ?? (it as any)?.itemId ?? (it as any)?.slot?.id ?? "");
-          if (!id || out[id]) continue;
-          out[id] = {
-            ...(it as any),
-            lastAbilityTrigger:
-              (it as any).lastAbilityTrigger ??
-              (it as any).slot?.lastAbilityTrigger ??
-              (it as any).data?.lastAbilityTrigger ??
-              null,
-            position: (it as any).position ?? (it as any).slot?.position ?? null,
-          };
-        }
-        return out;
-      }
-      if (typeof src === "object") return src as Record<string, any>;
-      return {};
-    };
+    try { ingest(await myActivityLog.get()); } catch {}
 
-    let myInfosMap: Record<string, any> = {};
-    try { myInfosMap = indexInfosByPetId(await Atoms.pets.myPetInfos.get()); } catch {}
-
-    let stopInfos: (() => void) | null = null;
+    let stop: (() => void) | null = null;
     try {
-      stopInfos = await Atoms.pets.myPetInfos.onChange((list: any) => {
-        try { myInfosMap = indexInfosByPetId(list); } catch {}
-      });
-    } catch {}
-
-    const extractFlat = (src: any): Record<string, FlatAbilityEntry | null> => {
-      const out: Record<string, FlatAbilityEntry | null> = {};
-      const obj = normalizeSlotInfoMap(src);
-      if (!obj || typeof obj !== "object") return out;
-
-      for (const petId of Object.keys(obj)) {
-        const entry = obj[petId] ?? {};
-        const evt =
-          entry.lastActionEvent ??
-          entry.slot?.lastActionEvent ??
-          entry.data?.lastActionEvent ??
-          entry.lastAbilityTrigger ??
-          entry.slot?.lastAbilityTrigger ??
-          entry.data?.lastAbilityTrigger ??
-          null;
-        const lat = evt && (evt.action == null || evt.action === "ability") ? evt : null;
-
-        let rawH =
-          entry.hungerPct ??
-          entry.hunger_percentage ??
-          entry.hunger ??
-          entry.slot?.hungerPct ??
-          entry.slot?.hunger_percentage ??
-          entry.slot?.hunger ??
-          entry.stats?.hungerPct ??
-          entry.stats?.hunger?.pct ??
-          entry.stats?.hunger?.percent ??
-          null;
-
-        if (rawH == null) {
-          const info = myInfosMap[petId];
-          rawH =
-            info?.hungerPct ?? info?.hunger_percentage ?? info?.hunger ??
-            info?.slot?.hungerPct ?? info?.slot?.hunger ??
-            info?.stats?.hungerPct ?? info?.stats?.hunger?.pct ?? info?.stats?.hunger?.percent ?? null;
-        }
-
-        let hungerPct: number | null =
-          Number.isFinite(Number(rawH)) ? Number(rawH) : null;
-        if (hungerPct != null && hungerPct > 0 && hungerPct <= 1) hungerPct *= 100;
-
-        out[petId] = {
-          petId,
-          abilityId: lat?.abilityId ?? null,
-          performedAt: Number.isFinite(lat?.performedAt) ? lat.performedAt : null,
-          data: lat?.data ?? null,
-          position: entry.position ?? entry.slot?.position ?? entry.data?.position ?? null,
-          hungerPct,
-        };
-      }
-      return out;
-    };
-
-    try { this._ingestAbilityMap(extractFlat(await Atoms.pets.myPetSlotInfos.get())); } catch {}
-    try { this._ingestAbilityMap(extractFlat(await Atoms.pets.myPrimitivePetSlots.get())); } catch {}
-
-    let stopSlots: (() => void) | null = null;
-    try {
-      const res = await Atoms.pets.myPetSlotInfos.onChange((src) => {
-        try { this._ingestAbilityMap(extractFlat(src)); } catch {}
-      });
-      if (typeof res === "function") stopSlots = res;
-    } catch {}
-    let stopPrimitives: (() => void) | null = null;
-    try {
-      stopPrimitives = await Atoms.pets.myPrimitivePetSlots.onChange((src) => {
-        try { this._ingestAbilityMap(extractFlat(src)); } catch {}
-      });
+      const res = await myActivityLog.onChange((next: any) => { try { ingest(next); } catch {} });
+      if (typeof res === "function") stop = res;
     } catch {}
 
     return () => {
-      try { stopSlots(); } catch {}
-      try { stopPrimitives?.(); } catch {}
-      try { stopInfos?.(); } catch {}
+      try { stop?.(); } catch {}
     };
+  },
+
+  _ingestActivityLogEntry(raw: any) {
+    if (!raw || typeof raw !== "object") return;
+
+    const abilityId = typeof raw.action === "string" ? raw.action : "";
+    if (!abilityId || !PET_ABILITY_IDS.has(abilityId)) return;
+
+    const performedAtNum = Number(raw.timestamp);
+    if (!Number.isFinite(performedAtNum) || performedAtNum <= 0) return;
+
+    const params = (raw.parameters && typeof raw.parameters === "object") ? raw.parameters as Record<string, unknown> : {};
+    const petParam = (params as any)?.pet as Record<string, unknown> | undefined;
+    const petId = typeof petParam?.id === "string" ? petParam.id : "";
+    if (!petId) return;
+
+    const key = `${abilityId}|${petId}|${performedAtNum}`;
+    if (this._seenLogKeys.has(key)) return;
+    this._seenLogKeys.add(key);
+
+    if (this._logsCutoffMs && performedAtNum < (this._logsCutoffMs - this._logsCutoffSkewMs)) {
+      return;
+    }
+
+    const details = _buildAbilityLogText(abilityId, params);
+    // Skip phantom procs (e.g. GoldGranter/RainbowGranter with no resolved crop)
+    if (details === null) return;
+
+    const cachedPet = _invPetsCache.find(p => String(p.id) === petId) || null;
+    const species = (typeof petParam?.petSpecies === "string" && petParam.petSpecies) || cachedPet?.petSpecies || undefined;
+    const name = (typeof petParam?.name === "string" && petParam.name) || cachedPet?.name || undefined;
+    const mutationsRaw = Array.isArray(petParam?.mutations) ? petParam!.mutations : cachedPet?.mutations;
+    const mutations = Array.isArray(mutationsRaw)
+      ? mutationsRaw.map((m: any) => String(m ?? "").trim()).filter(Boolean)
+      : undefined;
+
+    const logLine: AbilityLogEntry = {
+      petId,
+      species,
+      name,
+      mutations: mutations && mutations.length ? mutations : undefined,
+      abilityId,
+      abilityName: _abilityName(abilityId),
+      data: details,
+      performedAt: performedAtNum,
+      time12: new Date(performedAtNum).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
+    };
+
+    try {
+      StatsService.incrementAbilityStat(abilityId, "triggers");
+      const abilityValue = this._extractAbilityValue(abilityId, params);
+      if (abilityValue > 0) {
+        StatsService.incrementAbilityStat(abilityId, "totalValue", abilityValue);
+      }
+    } catch {}
+
+    this._pushLog(logLine);
   },
 
   getAbilityLogs(opts?: { abilityIds?: string[]; since?: number; limit?: number }): AbilityLogEntry[] {
@@ -1608,7 +1648,7 @@ export const PetsService = {
   },
   clearAbilityLogs() {
     this._logs.length = 0;
-    this._seenPerfByPet.clear();
+    this._seenLogKeys.clear();
     this._logsCutoffMs = Date.now();
     this._notifyLogSubs();
     this._persistAbilityLogs();
@@ -1679,334 +1719,14 @@ export const PetsService = {
 
       restored.sort((a, b) => a.performedAt - b.performedAt);
       this._logs = restored.slice(-this._logsMax);
-      this._seenPerfByPet.clear();
+      this._seenLogKeys.clear();
       for (const entry of this._logs) {
-        const prev = this._seenPerfByPet.get(entry.petId) || 0;
-        if (entry.performedAt > prev) this._seenPerfByPet.set(entry.petId, entry.performedAt);
+        this._seenLogKeys.add(`${entry.abilityId}|${entry.petId}|${entry.performedAt}`);
       }
 
       const cutoff = Number((parsed as any).cutoff);
       if (Number.isFinite(cutoff) && cutoff > 0) this._logsCutoffMs = cutoff;
     } catch {}
-  },
-  _ingestAbilityMap(map: Record<string, FlatAbilityEntry | null | undefined>) {
-    if (!map || typeof map !== "object") return;
-
-    const abilityDisplayName = (abilityId: string): string => {
-      const def = (petAbilities as Record<string, { name?: string }>)[abilityId];
-      return (def?.name && def.name.trim()) || abilityId;
-    };
-    const fmtTime12 = (ms: number): string =>
-      new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-    const fmtInt = (n: unknown): string =>
-      Number.isFinite(Number(n)) ? Math.round(Number(n)).toLocaleString('en-US') : '0';
-    const fmtPct0 = (n: unknown): string =>
-      `${Number.isFinite(Number(n)) ? Number(n).toFixed(0) : '0'}%`;
-    const fmtMin1 = (n: unknown): string =>
-      `${Number.isFinite(Number(n)) ? Number(n).toFixed(1) : '0.0'} min`;
-
-    const formatDetails = (abilityId: string, data: any): string | null => {
-      const d = (data ?? {}) as Record<string, unknown>;
-      const base = (petAbilities as Record<string, any>)[abilityId]?.baseParameters ?? {};
-      const label = (value: unknown, fallback: string): string => {
-        const s = typeof value === "string" ? value.trim() : "";
-        return s || fallback;
-      };
-      const percentOr = (value: unknown, fallback?: unknown) => (value != null ? value : fallback);
-      const cropNameFromGrowSlot = (src: unknown): string | null => {
-        if (!src || typeof src !== "object") return null;
-        const species = (src as any).species;
-        if (typeof species !== "string" || !species.trim()) return null;
-        const key = species.trim();
-        const variants = [key, key.charAt(0).toUpperCase() + key.slice(1), key.toLowerCase()];
-        for (const v of variants) {
-          const name = (plantCatalog as any)?.[v]?.crop?.name;
-          if (typeof name === "string" && name.trim()) return name;
-        }
-        return null;
-      };
-
-      switch (abilityId as keyof typeof petAbilities) {
-        case "CoinFinderI":
-        case "CoinFinderII":
-        case "CoinFinderIII":
-        case "SnowyCoinFinder":
-        case "DawnCoinFinder":
-        case "ThunderCoinFinder": {
-          const coins = d["coinsFound"] ?? d["coins"] ?? base["baseMaxCoinsFindable"];
-          return coins != null ? `+ ${fmtInt(coins)} coins` : "Coins found";
-        }
-
-        case "SeedFinderI":
-        case "SeedFinderII":
-        case "SeedFinderIII":
-        case "SeedFinderIV": {
-          const seed = label(d["seedName"], "seed");
-          return `x1 ${seed}`;
-        }
-
-        case "HungerRestore":
-        case "HungerRestoreII":
-        case "HungerRestoreIII":
-        case "SnowyHungerRestore": {
-          const whoRaw = d["petName"];
-          const who = label(whoRaw === "itself" ? "itself" : whoRaw, "pet");
-          const amount = d["hungerRestoreAmount"];
-          const pct = percentOr(d["hungerRestoredPercentage"], base["hungerRestorePercentage"]);
-          if (amount != null) return `${who}: +${fmtInt(amount)} hunger`;
-          return pct != null ? `${who}: ${fmtPct0(pct)}` : `${who}: Hunger restored`;
-        }
-
-        case "DoubleHarvest": {
-          const crop = label(d["cropName"], "crop");
-          return `+1 ${crop}`;
-        }
-        case "DoubleHatch": {
-          const pet = label(d["petName"], "pet");
-          return `+1 ${pet}`;
-        }
-
-        case "ProduceEater": {
-          const name = label(d["cropName"], "crop");
-          if (d["sellPrice"] != null) return `Sold ${name}: +${fmtInt(d["sellPrice"])} coins`;
-          const pct = base["cropSellPriceIncreasePercentage"];
-          return pct != null ? `Eaten: ${name} (+${fmtPct0(pct)} value)` : `Eaten: ${name}`;
-        }
-
-        case "ProduceRefund": {
-          const n = d["numCropsRefunded"] ?? d["numItemsRefunded"];
-          return n != null ? `+ ${fmtInt(n)} crop(s)` : "Crops refunded";
-        }
-
-        case "SellBoostI":
-        case "SellBoostII":
-        case "SellBoostIII":
-        case "SellBoostIV": {
-          if (d["bonusCoins"] != null) return `Sale bonus: +${fmtInt(d["bonusCoins"])} coins`;
-          const pct = base["cropSellPriceIncreasePercentage"];
-          return pct != null ? `+ ${fmtPct0(pct)}` : "Sale bonus";
-        }
-
-        case "GoldGranter":
-        case "RainbowGranter": {
-          const cropFromSlot = cropNameFromGrowSlot(d["growSlot"]);
-          const cropName = typeof d["cropName"] === "string" && d["cropName"].trim()
-            ? d["cropName"].trim()
-            : cropFromSlot;
-          if (!cropName) return null;
-          return cropName;
-        }
-        case "RainDance": {
-          const cropFromSlot = cropNameFromGrowSlot(d["growSlot"]);
-          const crop = label(d["cropName"], cropFromSlot ?? "crop");
-          const muts = Array.isArray((d as any).mutations)
-            ? (d as any).mutations
-            : Array.isArray((d as any).growSlot?.mutations)
-            ? (d as any).growSlot.mutations
-            : [];
-          const hasFrozen = muts.some((m: unknown) => typeof m === "string" && m.toLowerCase() === "frozen");
-          return hasFrozen ? `${crop}: Chilled + Frozen` : `${crop}: Wet`;
-        }
-        case "SnowGranter":
-        case "FrostGranter":
-        case "DawnlitGranter":
-        case "AmberlitGranter":
-        case "ThunderstruckGranter": {
-          const cropFromSlot = cropNameFromGrowSlot(d["growSlot"]);
-          const crop = label(d["cropName"], cropFromSlot ?? "crop");
-          return `${crop}`;
-        }
-
-        case "ProduceScaleBoost":
-        case "ProduceScaleBoostII":
-        case "ProduceScaleBoostIII":
-        case "SnowyCropSizeBoost": {
-          const inc =
-            d["scaleIncreasePercentage"] ??
-            d["cropScaleIncreasePercentage"] ??
-            base["scaleIncreasePercentage"];
-          return inc != null ? `+ ${fmtPct0(inc)}` : "Crop size boosted";
-        }
-
-        case "ProduceMutationBoost":
-        case "ProduceMutationBoostII":
-        case "ProduceMutationBoostIII":
-        case "DawnBoost":
-        case "AmberMoonBoost":
-        case "ThunderBoost":
-        case "SnowyCropMutationBoost":
-        case "PetMutationBoost":
-        case "PetMutationBoostII":
-        case "PetMutationBoostIII": {
-          const inc = percentOr(d["mutationChanceIncreasePercentage"], base["mutationChanceIncreasePercentage"]);
-          return inc != null ? `+ ${fmtPct0(inc)} mutation chance` : "Mutation chance up";
-        }
-
-        case "EggGrowthBoost":
-        case "EggGrowthBoostII_NEW":
-        case "EggGrowthBoostII":
-        case "SnowyEggGrowthBoost":
-        case "ThunderEggGrowthBoost": {
-          const mins =
-            d["minutesReduced"] ??
-            d["eggGrowthTimeReductionMinutes"] ??
-            base["eggGrowthTimeReductionMinutes"];
-          return mins != null ? `- ${fmtMin1(mins)}` : "Egg growth reduced";
-        }
-        case "PlantGrowthBoost":
-        case "PlantGrowthBoostII":
-        case "PlantGrowthBoostIII":
-        case "DawnPlantGrowthBoost":
-        case "AmberPlantGrowthBoost":
-        case "SnowyPlantGrowthBoost":
-        case "ThunderPlantGrowthBoost": {
-          const mins = d["minutesReduced"] ?? d["reductionMinutes"] ?? base["plantGrowthReductionMinutes"];
-          return mins != null ? `- ${fmtMin1(mins)}` : "Plant growth reduced";
-        }
-
-        case "PetXpBoost":
-        case "SnowyPetXpBoost":
-        case "PetXpBoostII":
-        case "PetXpBoostIII":
-        case "DawnXpBoost":
-        case "ThunderXpBoost": {
-          const xp = d["bonusXp"] ?? base["bonusXp"];
-          const affected = Array.isArray(d["petsAffected"]) ? (d["petsAffected"] as unknown[]).length : 0;
-          return affected > 1 ? `+ ${fmtInt(xp)} XP (${affected} pets)` : `+ ${fmtInt(xp)} XP`;
-        }
-        case "PetAgeBoost":
-        case "PetAgeBoostII":
-        case "PetAgeBoostIII": {
-          const xp = d["bonusXp"] ?? base["bonusXp"];
-          const who = label(d["petName"], "pet");
-          return `+ ${fmtInt(xp)} XP (${who})`;
-        }
-        case "PetHatchSizeBoost":
-        case "PetHatchSizeBoostII":
-        case "PetHatchSizeBoostIII": {
-          const who = label(d["petName"], "pet");
-          if (d["strengthIncrease"] != null) return `+${fmtInt(d["strengthIncrease"])} strength (${who})`;
-          const pct = base["maxStrengthIncreasePercentage"];
-          return pct != null ? `+ ${fmtPct0(pct)} (${who})` : `Strength increased (${who})`;
-        }
-
-        case "HungerBoost":
-        case "HungerBoostII":
-        case "HungerBoostIII":
-        case "SnowyHungerBoost": {
-          const pct = base["hungerDepletionRateDecreasePercentage"];
-          return pct != null ? `- ${fmtPct0(pct)} hunger drain` : "Hunger reduced";
-        }
-
-        case "PetRefund":
-        case "PetRefundII": {
-          const egg = (d["eggName"] as string) ?? null;
-          return egg ? `x1 ${egg}` : `Pet refunded as egg`;
-        }
-
-        case "Copycat":
-          return "Copied another ability";
-
-        case "DawnCapture": {
-          // data: { dawnlitRemoved, dawnboundRemoved, capsulesAdded } — the
-          // dawnbound count is displayed as Dawncharged by the game.
-          const capsules = d["capsulesAdded"];
-          const dawnlit = Number(d["dawnlitRemoved"]) || 0;
-          const dawncharged = Number(d["dawnboundRemoved"]) || 0;
-          const absorbed: string[] = [];
-          if (dawnlit > 0) absorbed.push(`${fmtInt(dawnlit)} Dawnlit`);
-          if (dawncharged > 0) absorbed.push(`${fmtInt(dawncharged)} Dawncharged`);
-          const head = capsules != null
-            ? `+ ${fmtInt(capsules)} Dawn Capsule${Number(capsules) === 1 ? "" : "s"}`
-            : "Dawn Capsules added";
-          return absorbed.length ? `${head} (${absorbed.join(", ")} absorbed)` : head;
-        }
-
-        case "MoonKisser":
-          return "Amber mutations empowered";
-        case "DawnKisser":
-          return "Dawn mutations empowered";
-        case "Thunderbloom":
-          return "Thunder mutations empowered";
-
-        case "Thundercharger": {
-          // data: { cropsCharged } — converts Thunderstruck crops to Thundercharged.
-          const charged = d["cropsCharged"];
-          return charged != null
-            ? `${fmtInt(charged)} crop${Number(charged) === 1 ? "" : "s"} Thundercharged`
-            : "Crops Thundercharged";
-        }
-
-        default: {
-          const meta = (petAbilities as Record<string, any>)[abilityId];
-          if (d && typeof d === "object" && Object.keys(d).length) return JSON.stringify(d);
-          return meta?.description || "—";
-        }
-      }
-    };
-
-    for (const petId of Object.keys(map)) {
-      const entry = map[petId];
-      if (!entry || typeof entry !== "object") continue;
-
-      const abilityId = (entry as any).abilityId ?? null;
-      const performedAtNum = Number((entry as any).performedAt) || 0;
-      if (!abilityId || !performedAtNum) continue;
-
-      if (WEATHER_MUTATION_BOOST_IDS.has(String(abilityId))) {
-        this._seenPerfByPet.set(petId, performedAtNum);
-        continue;
-      }
-
-      const prev = this._seenPerfByPet.get(petId) || 0;
-      if (performedAtNum <= prev) continue;
-
-      if (this._logsCutoffMs &&
-          performedAtNum < (this._logsCutoffMs - this._logsCutoffSkewMs)) {
-        this._seenPerfByPet.set(petId, performedAtNum);
-        continue;
-      }
-
-      // NOTE: Some game versions no longer provide hungerPct in slot infos.
-      // We no longer gate logs on hungerPct to avoid dropping valid triggers.
-
-      const pet = _invPetsCache.find(p => String(p.id) === String(petId)) || null;
-      const abilityIdStr = String(abilityId);
-
-      const details = formatDetails(abilityIdStr, (entry as any).data);
-
-      // Skip phantom procs (e.g. GoldGranter/RainbowGranter with no resolved crop)
-      if (details === null) {
-        this._seenPerfByPet.set(petId, performedAtNum);
-        continue;
-      }
-
-      const logLine: AbilityLogEntry = {
-        petId,
-        species: pet?.petSpecies || undefined,
-        name: pet?.name ?? undefined,
-        mutations: Array.isArray(pet?.mutations)
-          ? pet.mutations.map(m => String(m ?? "").trim()).filter(Boolean)
-          : undefined,
-        abilityId: abilityIdStr,
-        abilityName: abilityDisplayName(abilityId),
-        data: details,
-        performedAt: performedAtNum,
-        time12: fmtTime12(performedAtNum),
-      };
-
-      this._seenPerfByPet.set(petId, performedAtNum);
-
-      try {
-        StatsService.incrementAbilityStat(abilityIdStr, "triggers");
-        const abilityValue = this._extractAbilityValue(abilityIdStr, (entry as any).data);
-        if (abilityValue > 0) {
-          StatsService.incrementAbilityStat(abilityIdStr, "totalValue", abilityValue);
-        }
-      } catch {}
-
-      this._pushLog(logLine);
-    }
   },
 };
 
@@ -2031,16 +1751,6 @@ export type AbilityLogEntry = {
   data?: any;
   performedAt: number;
   time12: string;
-};
-
-/* ----------------------- Flat map entry from selector ----------------------- */
-type FlatAbilityEntry = {
-  petId: string;
-  abilityId: string | null;
-  performedAt: number | null;
-  data?: any;
-  position?: { x: number; y: number } | null;
-  hungerPct?: any;
 };
 
 /* --------------------------------- Helpers: free slot finders -------------------------------- */
