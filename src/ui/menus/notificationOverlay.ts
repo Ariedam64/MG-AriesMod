@@ -9,7 +9,7 @@ import {
   seedNameFromSpecies
 } from "../../utils/catalogIndex";
 import { attachSpriteIcon } from "../spriteIconCache";
-import { startInjectGamePanelButton } from "../../utils/toolbarButton";
+import { startNotificationBellPixi, type NotificationBellPixiController } from "../../utils/notificationBellPixi";
 
 /* ========= Types min ========= */
 type SeedItem  = { itemType: "Seed";  species: string; initialStock: number };
@@ -135,7 +135,7 @@ class OverlayBarebone {
   private slot:  HTMLDivElement    = document.createElement("div");
   private badge: HTMLSpanElement   = document.createElement("span");
   private panel: HTMLDivElement    = document.createElement("div");
-  private cleanupToolbarButton: (() => void) | null = null;
+  private bellPixi: NotificationBellPixiController | null = null;
 
   private lastShops: ShopsSnapshot | null = null;
   private lastPurch: PurchasesSnapshot | null = null;
@@ -158,20 +158,14 @@ class OverlayBarebone {
     this.slot = this.createSlot();
     this.slot.id = "qws-notifier-slot";
     (globalThis as any).__qws_notifier_slot = this.slot;
-    this.ensureBellCSS();
     this.badge = this.createBadge();
     this.panel = this.createPanel();
     this.installScrollGuards(this.panel);
 
-    // Inject button into game toolbar using utility
-    // Create bell SVG icon as data URL
-    const bellSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`;
-    const bellDataUrl = `data:image/svg+xml;base64,${btoa(bellSvg)}`;
-
     // Prime audio au premier clic utilisateur + toggle panel
     let primedOnce = false;
 
-    this.cleanupToolbarButton = startInjectGamePanelButton({
+    this.bellPixi = startNotificationBellPixi({
       onClick: async () => {
         if (!primedOnce) {
           primedOnce = true;
@@ -186,8 +180,6 @@ class OverlayBarebone {
         }
         this.updateBellWiggle();
       },
-      iconUrl: bellDataUrl,
-      ariaLabel: "Notifications",
     });
 
     this.slot.append(this.badge, this.panel);
@@ -197,7 +189,7 @@ class OverlayBarebone {
     window.addEventListener("pointerdown", (e) => {
       if (this.panel.style.display !== "block") return;
       const t = e.target as Node;
-      if (!this.slot.contains(t) && !this.isClickOnToolbarButton(e.target as Node)) {
+      if (!this.slot.contains(t) && !this.isClickOnBellButton(e.clientX, e.clientY)) {
         this.panel.style.display = "none";
       }
     });
@@ -210,23 +202,16 @@ class OverlayBarebone {
     });
   }
 
-  private isClickOnToolbarButton(target: Node): boolean {
-    // Check if click is on our toolbar button
-    let el = target as HTMLElement | null;
-    while (el) {
-      if (el instanceof HTMLButtonElement && el.getAttribute("aria-label") === "Notifications") {
-        return true;
-      }
-      el = el.parentElement;
-    }
-    return false;
+  private isClickOnBellButton(clientX: number, clientY: number): boolean {
+    const rect = this.bellPixi?.getScreenRect();
+    if (!rect) return false;
+    return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
   }
 
   destroy() {
-    // Cleanup toolbar button injection
-    if (this.cleanupToolbarButton) {
-      try { this.cleanupToolbarButton(); } catch {}
-      this.cleanupToolbarButton = null;
+    if (this.bellPixi) {
+      try { this.bellPixi.stop(); } catch {}
+      this.bellPixi = null;
     }
 
     try { this.slot.remove(); } catch {}
@@ -237,39 +222,6 @@ class OverlayBarebone {
     } catch {}
     // Stop toutes les boucles audio liées à l'overlay
     try { audio.stopAllLoops(); } catch {}
-  }
-
-  private ensureBellCSS() {
-    if (document.getElementById("qws-bell-anim-css")) return;
-    const style = document.createElement("style");
-    style.id = "qws-bell-anim-css";
-    style.textContent = `
-@keyframes qwsBellShake {
-  0% { transform: rotate(0deg); }
-  10% { transform: rotate(-16deg); }
-  20% { transform: rotate(12deg); }
-  30% { transform: rotate(-10deg); }
-  40% { transform: rotate(8deg); }
-  50% { transform: rotate(-6deg); }
-  60% { transform: rotate(4deg); }
-  70% { transform: rotate(-2deg); }
-  80% { transform: rotate(1deg); }
-  100% { transform: rotate(0deg); }
-}
-
-/* Classe appliquée sur le span cloche quand il y a des items dans l'overlay */
-.qws-bell--wiggle {
-  animation: qwsBellShake 1.2s ease-in-out infinite;
-  transform-origin: 50% 0%;
-  display: inline-block;
-}
-
-/* Respecte l'accessibilité */
-@media (prefers-reduced-motion: reduce) {
-  .qws-bell--wiggle { animation: none !important; }
-}
-`;
-    (document.head ?? document.documentElement).appendChild(style);
   }
 
   /* ========= SETTERS (subs) ========= */
@@ -720,10 +672,8 @@ class OverlayBarebone {
   }
 
   private updateBadgePosition(): void {
-    // Find the toolbar button and position badge relative to it
-    const btn = document.querySelector<HTMLButtonElement>('button[aria-label="Notifications"]');
-    if (btn && this.badge) {
-      const rect = btn.getBoundingClientRect();
+    const rect = this.bellPixi?.getScreenRect();
+    if (rect && this.badge) {
       style(this.badge, {
         top: `${rect.top - 4}px`,
         right: `${window.innerWidth - rect.right - 4}px`,
@@ -732,10 +682,8 @@ class OverlayBarebone {
   }
 
   private updatePanelPosition(): void {
-    // Find the toolbar button and position panel below it
-    const btn = document.querySelector<HTMLButtonElement>('button[aria-label="Notifications"]');
-    if (btn && this.panel) {
-      const rect = btn.getBoundingClientRect();
+    const rect = this.bellPixi?.getScreenRect();
+    if (rect && this.panel) {
       style(this.panel, {
         position: "fixed",
         top: `${rect.bottom + 8}px`,
@@ -745,22 +693,9 @@ class OverlayBarebone {
   }
 
   private updateBellWiggle() {
-    // Find the toolbar button and its icon
-    const btn = document.querySelector<HTMLButtonElement>('button[aria-label="Notifications"]');
-    if (!btn) return;
-    const icon = btn.querySelector("img");
-    if (!icon) return;
-
     // Shake seulement si l'overlay a au moins 1 item ET que le panneau est fermé
     const shouldWiggle = (this.rows.length > 0) && (this.panel.style.display !== "block");
-
-    // Apply animation to the img element
-    if (shouldWiggle) {
-      icon.style.animation = "qwsBellShake 1.2s ease-in-out infinite";
-      icon.style.transformOrigin = "50% 0%";
-    } else {
-      icon.style.animation = "";
-    }
+    this.bellPixi?.setWiggle(shouldWiggle);
   }
 
   private createBadge(): HTMLSpanElement {

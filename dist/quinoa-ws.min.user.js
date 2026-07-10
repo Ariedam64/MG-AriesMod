@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.162
+// @version      3.2.163
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -26818,179 +26818,487 @@
     return cat?.[decorId]?.name ?? void 0;
   }
 
-  // src/utils/toolbarButton.ts
-  var KNOWN_ARIA = ["Chat", "Leaderboard", "Stats", "Open Activity Log"];
-  var KNOWN_TESTIDS = ["weather-status-button", "friend-bonus-button"];
-  var TOOLBAR_FALLBACK_CLASS = "css-1xlus6i";
-  var OWN_BTN_SEL = '[data-qws-btn="true"]';
-  function startInjectGamePanelButton(opts) {
-    const { onClick, iconUrl = "", ariaLabel = "" } = opts;
-    const instanceId = Math.random().toString(36).slice(2, 9);
-    let mountedBtn = null;
-    let mountedWrap = null;
-    let isMounting = false;
-    let mounted = false;
-    const esc = (v) => {
+  // src/utils/gardenInfoCardPixi.ts
+  var CARD_SYSTEM_LABEL = "GardenInfoCardSystem";
+  var CARD_ROW_LABEL = "GardenInfoCardRow";
+  var OBJECT_CARD_LABEL = "GardenInfoObjectCard";
+  var TITLE_ROW_LABEL = "GardenInfoObjectTitleRow";
+  var ABILITIES_SECTION_LABEL = "GardenInfoPlantAbilities";
+  var SECTION_GAP_ESTIMATE = 8;
+  var CARD_SYSTEM_FIND_RETRY_MS = 1e3;
+  var CARD_SYSTEM_FIND_LOG_EVERY = 30;
+  function getSpriteState() {
+    const state3 = readSharedGlobal("__MG_SPRITE_STATE__");
+    if (!state3?.renderer || !state3.ctors?.Text) return null;
+    return state3;
+  }
+  function getStage(state3) {
+    return state3.renderer.lastObjectRendered ?? state3.renderer.stage ?? state3.app?.stage ?? null;
+  }
+  function findByLabel(root, label2, limit = 25e3) {
+    if (!root) return null;
+    const stack = [root];
+    const seen = /* @__PURE__ */ new Set();
+    let n = 0;
+    while (stack.length && n++ < limit) {
+      const node = stack.pop();
+      if (!node || seen.has(node)) continue;
+      seen.add(node);
+      if (node.label === label2) return node;
+      const children = node.children;
+      if (Array.isArray(children)) for (const child of children) stack.push(child);
+    }
+    return null;
+  }
+  function findAcrossBranches(root, pred, limitPerBranch = 25e3) {
+    if (!root) return null;
+    if (pred(root)) return root;
+    const children = root.children;
+    if (!Array.isArray(children)) return null;
+    for (const child of children) {
+      const stack = [child];
+      const seen = /* @__PURE__ */ new Set();
+      let n = 0;
+      while (stack.length && n++ < limitPerBranch) {
+        const node = stack.pop();
+        if (!node || seen.has(node)) continue;
+        seen.add(node);
+        if (pred(node)) return node;
+        const kids = node.children;
+        if (Array.isArray(kids)) for (const kid of kids) stack.push(kid);
+      }
+    }
+    return null;
+  }
+  var cachedGraphicsCtor = null;
+  function findGraphicsCtor(root) {
+    if (cachedGraphicsCtor) return cachedGraphicsCtor;
+    const found = findAcrossBranches(
+      root,
+      (node) => typeof node?.roundRect === "function" && typeof node?.clear === "function"
+    )?.constructor ?? null;
+    if (found) cachedGraphicsCtor = found;
+    return found;
+  }
+  var cardSystem = null;
+  var currentCard = null;
+  var findAttempts = 0;
+  var findRafId = null;
+  var lastFindCheckAt = 0;
+  var listeners5 = /* @__PURE__ */ new Set();
+  var debugState = {
+    findAttempts: 0,
+    attached: false,
+    rafTicks: 0,
+    scriptStartedAt: Date.now(),
+    listenerCount: 0
+  };
+  shareGlobal("__MG_GARDEN_INFO_CARD_DEBUG__", debugState);
+  function computeGeometry(card2) {
+    const cardBounds = card2.getLocalBounds();
+    const width = card2.hitArea?.width ?? cardBounds.width;
+    const height = card2.hitArea?.height ?? cardBounds.height;
+    const titleRow = (card2.children ?? []).find((c) => c?.label === TITLE_ROW_LABEL);
+    const contentTop = titleRow ? titleRow.position.y + titleRow.getLocalBounds().minY : cardBounds.minY;
+    const abilitiesSection = (cardSystem?.children ?? []).find((c) => c?.label === ABILITIES_SECTION_LABEL);
+    const extraTopOffset = abilitiesSection ? abilitiesSection.getLocalBounds().height + SECTION_GAP_ESTIMATE : 0;
+    return { top: contentTop - extraTopOffset, width, height };
+  }
+  function notifyListeners2(card2, geometry) {
+    for (const listener of listeners5) {
       try {
-        return typeof CSS?.escape === "function" ? CSS.escape(v) : v.replace(/"/g, '\\"');
-      } catch {
-        return v;
+        listener(card2, geometry);
+      } catch (error) {
+        console.warn("[gardenInfoCardPixi] listener failed", error);
+      }
+    }
+  }
+  function onChildAddedUnsafe(row) {
+    if (row?.label !== CARD_ROW_LABEL) return;
+    const card2 = findByLabel(row, OBJECT_CARD_LABEL);
+    if (!card2) return;
+    currentCard = card2;
+    const geometry = computeGeometry(card2);
+    card2.once("destroyed", () => {
+      if (currentCard === card2) {
+        currentCard = null;
+        notifyListeners2(null, null);
+      }
+    });
+    notifyListeners2(card2, geometry);
+  }
+  function onChildAdded(row) {
+    try {
+      onChildAddedUnsafe(row);
+    } catch (error) {
+      console.warn("[gardenInfoCardPixi] onChildAdded failed", error);
+    }
+  }
+  function attachToCardSystem(system) {
+    cardSystem = system;
+    cardSystem.on("childAdded", onChildAdded);
+    cardSystem.once("destroyed", () => {
+      if (cardSystem === system) {
+        cardSystem = null;
+        debugState.attached = false;
+        currentCard = null;
+        notifyListeners2(null, null);
+        restartSearchIfNeeded();
+      }
+    });
+    debugState.attached = true;
+    console.info(`[gardenInfoCardPixi] attached to ${CARD_SYSTEM_LABEL} after ${findAttempts} attempt(s)`);
+    const existingRow = (system.children ?? []).find((c) => c?.label === CARD_ROW_LABEL);
+    if (existingRow) onChildAdded(existingRow);
+  }
+  function tryFindCardSystem() {
+    if (cardSystem) return;
+    const state3 = getSpriteState();
+    if (!state3) return;
+    const stage = getStage(state3);
+    const found = findAcrossBranches(stage, (node) => node?.label === CARD_SYSTEM_LABEL);
+    if (found) {
+      attachToCardSystem(found);
+      return;
+    }
+    findAttempts += 1;
+    debugState.findAttempts = findAttempts;
+    if (findAttempts % CARD_SYSTEM_FIND_LOG_EVERY === 0) {
+      console.info(`[gardenInfoCardPixi] still searching for ${CARD_SYSTEM_LABEL} (${findAttempts} attempts so far)`);
+    }
+  }
+  var raf = pageWindow.requestAnimationFrame.bind(pageWindow);
+  function scheduleFind(now2) {
+    findRafId = null;
+    debugState.rafTicks += 1;
+    if (!listeners5.size || cardSystem) return;
+    if (now2 - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
+      lastFindCheckAt = now2;
+      tryFindCardSystem();
+    }
+    if (!listeners5.size || cardSystem) return;
+    findRafId = raf(scheduleFind);
+  }
+  function restartSearchIfNeeded() {
+    if (!listeners5.size || cardSystem) return;
+    tryFindCardSystem();
+    if (!cardSystem && findRafId == null) {
+      findRafId = raf(scheduleFind);
+    }
+  }
+  function watchGardenInfoCard(listener) {
+    listeners5.add(listener);
+    debugState.listenerCount = listeners5.size;
+    restartSearchIfNeeded();
+    if (currentCard) {
+      try {
+        listener(currentCard, computeGeometry(currentCard));
+      } catch (error) {
+        console.warn("[gardenInfoCardPixi] listener failed", error);
+      }
+    }
+    return () => {
+      listeners5.delete(listener);
+      debugState.listenerCount = listeners5.size;
+    };
+  }
+
+  // src/utils/notificationBellPixi.ts
+  var RAIL_LABEL = "RightSideRail";
+  var RAIL_FIND_RETRY_MS = 1e3;
+  var RAIL_FIND_LOG_EVERY = 30;
+  var DEFAULT_ICON_GLYPH = "\u{1F514}";
+  var DEFAULT_SLOT_SIZE = 45;
+  var DEFAULT_SLOT_SPACING = 52;
+  var WIGGLE_AMPLITUDE = 0.26;
+  var WIGGLE_SPEED = 6;
+  function startNotificationBellPixi(opts) {
+    const iconGlyph = opts.iconGlyph ?? DEFAULT_ICON_GLYPH;
+    let running = true;
+    let rail = null;
+    let bellContainer = null;
+    let bellText = null;
+    let lastSize = DEFAULT_SLOT_SIZE;
+    let findAttempts2 = 0;
+    let findRafId2 = null;
+    let lastFindCheckAt2 = 0;
+    let wiggleActive = false;
+    let wiggleRafId = null;
+    let wiggleT = 0;
+    let wiggleLastFrameAt = null;
+    let canvasEl = null;
+    let canvasListenersAttached = false;
+    let weSetPointerCursor = false;
+    const debugState2 = {
+      attached: false,
+      findAttempts: 0,
+      hasButton: false,
+      lastError: null
+    };
+    shareGlobal("__MG_NOTIFICATION_BELL_PIXI_DEBUG__", debugState2);
+    const raf2 = pageWindow.requestAnimationFrame.bind(pageWindow);
+    const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
+    const forgetButtonRefs = () => {
+      bellContainer = null;
+      bellText = null;
+      debugState2.hasButton = false;
+    };
+    const removeButton = () => {
+      if (bellContainer) {
+        try {
+          bellContainer.destroy({ children: true });
+        } catch {
+        }
+      }
+      forgetButtonRefs();
+    };
+    const onClick = () => {
+      try {
+        opts.onClick();
+      } catch (error) {
+        console.error("[notificationBellPixi] onClick error:", error);
       }
     };
-    function findToolbarRoot() {
-      const ariaSelectors = KNOWN_ARIA.map((a) => `button[aria-label="${esc(a)}"]`);
-      const testidSelectors = KNOWN_TESTIDS.map((t) => `[data-testid="${esc(t)}"]`);
-      const anchorSelector = [...ariaSelectors, ...testidSelectors].join(",");
-      const countAnchors = (el2) => ariaSelectors.reduce((acc, sel) => acc + el2.querySelectorAll(sel).length, 0) + testidSelectors.reduce((acc, sel) => acc + el2.querySelectorAll(sel).length, 0);
-      const anchor = document.querySelector(anchorSelector);
-      if (anchor) {
-        let parent = anchor.parentElement;
-        while (parent && parent !== document.body) {
-          if (countAnchors(parent) >= 2) return parent;
-          parent = parent.parentElement;
+    const computeScreenRect = () => {
+      if (!bellContainer || bellContainer.destroyed) return null;
+      const state3 = getSpriteState();
+      const canvas = state3?.renderer?.canvas || state3?.renderer?.view?.canvas || state3?.renderer?.view;
+      if (!canvas) return null;
+      try {
+        const rect = canvas.getBoundingClientRect();
+        const topLeft = bellContainer.toGlobal({ x: 0, y: 0 });
+        const bottomRight = bellContainer.toGlobal({ x: lastSize, y: lastSize });
+        return {
+          left: rect.left + topLeft.x,
+          top: rect.top + topLeft.y,
+          right: rect.left + bottomRight.x,
+          bottom: rect.top + bottomRight.y,
+          width: bottomRight.x - topLeft.x,
+          height: bottomRight.y - topLeft.y
+        };
+      } catch {
+        return null;
+      }
+    };
+    const hitTestButton = (clientX, clientY) => {
+      const rect = computeScreenRect();
+      if (!rect) return false;
+      return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+    };
+    const onWindowPointerDownCapture = (ev) => {
+      if (!hitTestButton(ev.clientX, ev.clientY)) return;
+      ev.stopPropagation();
+      ev.stopImmediatePropagation();
+      ev.preventDefault();
+      onClick();
+    };
+    const onCanvasPointerMove = (ev) => {
+      if (!canvasEl) return;
+      const isHovering = hitTestButton(ev.clientX, ev.clientY);
+      if (isHovering && !weSetPointerCursor) {
+        canvasEl.style.cursor = "pointer";
+        weSetPointerCursor = true;
+      } else if (!isHovering && weSetPointerCursor) {
+        canvasEl.style.cursor = "";
+        weSetPointerCursor = false;
+      }
+    };
+    const onCanvasPointerLeave = () => {
+      if (weSetPointerCursor && canvasEl) {
+        canvasEl.style.cursor = "";
+        weSetPointerCursor = false;
+      }
+    };
+    const ensureCanvasListeners = (state3) => {
+      if (canvasListenersAttached) return;
+      const canvas = state3.renderer?.canvas || state3.renderer?.view?.canvas || state3.renderer?.view;
+      if (!canvas) return;
+      canvasEl = canvas;
+      pageWindow.addEventListener("pointerdown", onWindowPointerDownCapture, true);
+      canvas.addEventListener("pointermove", onCanvasPointerMove);
+      canvas.addEventListener("pointerleave", onCanvasPointerLeave);
+      canvasListenersAttached = true;
+    };
+    const computeSlot = () => {
+      const siblings = Array.isArray(rail?.children) ? rail.children.filter((c) => c !== bellContainer) : [];
+      let size = DEFAULT_SLOT_SIZE;
+      const railWidth = Number(rail?.width);
+      if (Number.isFinite(railWidth) && railWidth > 0) size = railWidth;
+      if (!siblings.length) return { size, nextY: 0 };
+      const ys = siblings.map((c) => Number(c?.y) || 0).sort((a, b) => a - b);
+      let spacing = DEFAULT_SLOT_SPACING;
+      if (ys.length >= 2) {
+        const diffs = [];
+        for (let i = 1; i < ys.length; i++) diffs.push(ys[i] - ys[i - 1]);
+        diffs.sort((a, b) => a - b);
+        const median = diffs[Math.floor(diffs.length / 2)];
+        if (Number.isFinite(median) && median > 0) spacing = median;
+      }
+      return { size, nextY: ys[ys.length - 1] + spacing };
+    };
+    const syncGeometry = () => {
+      const { size, nextY } = computeSlot();
+      lastSize = size;
+      bellContainer.position.set(0, nextY);
+      if (bellText) {
+        bellText.style.fontSize = Math.round(size * 0.6);
+        if (typeof bellText.anchor?.set === "function") bellText.anchor.set(0.5);
+        bellText.position.set(size / 2, size / 2);
+      }
+    };
+    const syncUnsafe = () => {
+      if (!running || !rail || rail.destroyed) {
+        removeButton();
+        return;
+      }
+      const state3 = getSpriteState();
+      if (!state3?.ctors?.Text) return;
+      if (!bellContainer) {
+        const ContainerCtor = state3.ctors.Container ?? rail.constructor;
+        bellContainer = new ContainerCtor();
+        bellContainer.label = "GeminiNotificationBell";
+        const thisContainer = bellContainer;
+        thisContainer.once("destroyed", () => {
+          if (bellContainer === thisContainer) forgetButtonRefs();
+        });
+        rail.addChild(bellContainer);
+      }
+      if (!bellText) {
+        bellText = new state3.ctors.Text({ text: iconGlyph, style: { fontSize: DEFAULT_SLOT_SIZE } });
+        bellContainer.addChild(bellText);
+      }
+      ensureCanvasListeners(state3);
+      syncGeometry();
+      debugState2.hasButton = true;
+    };
+    const sync = () => {
+      try {
+        syncUnsafe();
+        debugState2.lastError = null;
+      } catch (error) {
+        debugState2.lastError = String(error?.message ?? error);
+        console.warn("[notificationBellPixi] sync failed, clearing button", error);
+        try {
+          removeButton();
+        } catch {
         }
       }
-      return document.querySelector(`.${TOOLBAR_FALLBACK_CLASS}`) ?? null;
-    }
-    function getReference(root) {
-      const all = Array.from(
-        root.querySelectorAll(`button:not(${OWN_BTN_SEL})`)
-      );
-      if (!all.length) return { refBtn: null, refWrapper: null };
-      const filtered = all.filter(
-        (b) => b.getAttribute("aria-label") !== ariaLabel
-      );
-      const list = filtered.length ? filtered : all;
-      const idx = list.length >= 2 ? list.length - 2 : list.length - 1;
-      const refBtn = list[idx];
-      const parent = refBtn?.parentElement;
-      const refWrapper = parent?.parentElement === root && parent.tagName === "DIV" ? parent : null;
-      return { refBtn, refWrapper };
-    }
-    function cloneButton(ref) {
-      const btn = ref.cloneNode(false);
-      btn.type = "button";
-      btn.setAttribute("aria-label", ariaLabel);
-      btn.title = ariaLabel;
-      btn.dataset.qwsBtn = "true";
-      btn.style.pointerEvents = "auto";
-      btn.removeAttribute("id");
-      if (iconUrl) {
-        const img = document.createElement("img");
-        img.src = iconUrl;
-        img.alt = "QWS";
-        Object.assign(img.style, {
-          pointerEvents: "none",
-          userSelect: "none",
-          width: "60%",
-          height: "60%",
-          objectFit: "contain",
-          display: "block",
-          margin: "auto"
-        });
-        btn.appendChild(img);
-      }
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        try {
-          onClick();
-        } catch (e2) {
-          console.error("[ToolbarButton] onClick error:", ariaLabel, e2);
+    };
+    const onRailChildrenChanged = () => sync();
+    const restartSearchIfNeeded2 = () => {
+      if (!running || rail) return;
+      tryFindRail();
+      if (!rail && findRafId2 == null) findRafId2 = raf2(scheduleFind2);
+    };
+    const attachToRail = (node) => {
+      rail = node;
+      rail.on("childAdded", onRailChildrenChanged);
+      rail.on("childRemoved", onRailChildrenChanged);
+      rail.once("destroyed", () => {
+        if (rail === node) {
+          rail = null;
+          debugState2.attached = false;
+          removeButton();
+          restartSearchIfNeeded2();
         }
       });
-      return btn;
-    }
-    function mount() {
-      if (isMounting) return false;
-      isMounting = true;
-      try {
-        const root = findToolbarRoot();
-        if (!root) return false;
-        const { refBtn, refWrapper } = getReference(root);
-        if (!refBtn) return false;
-        if (!mountedWrap) {
-          mountedWrap = root.querySelector(
-            `div[data-qws-wrapper="true"][data-qws-instance="${instanceId}"]`
-          );
-          if (!mountedWrap) {
-            root.querySelectorAll(`div[data-qws-wrapper="true"][data-qws-label="${esc(ariaLabel)}"]`).forEach((el2) => el2.remove());
-            if (refWrapper) {
-              mountedWrap = refWrapper.cloneNode(false);
-              mountedWrap.dataset.qwsWrapper = "true";
-              mountedWrap.dataset.qwsInstance = instanceId;
-              mountedWrap.dataset.qwsLabel = ariaLabel;
-              mountedWrap.removeAttribute("id");
-            }
-          }
+      debugState2.attached = true;
+      console.info(`[notificationBellPixi] attached to ${RAIL_LABEL} after ${findAttempts2} attempt(s)`);
+      sync();
+    };
+    const tryFindRail = () => {
+      if (!running || rail) return;
+      const state3 = getSpriteState();
+      if (!state3) return;
+      const stage = getStage(state3);
+      const found = findAcrossBranches(stage, (node) => node?.label === RAIL_LABEL);
+      if (found) {
+        attachToRail(found);
+        return;
+      }
+      findAttempts2 += 1;
+      debugState2.findAttempts = findAttempts2;
+      if (findAttempts2 % RAIL_FIND_LOG_EVERY === 0) {
+        console.info(`[notificationBellPixi] still searching for ${RAIL_LABEL} (${findAttempts2} attempts so far)`);
+      }
+    };
+    const scheduleFind2 = (now2) => {
+      findRafId2 = null;
+      if (!running || rail) return;
+      if (now2 - lastFindCheckAt2 >= RAIL_FIND_RETRY_MS) {
+        lastFindCheckAt2 = now2;
+        tryFindRail();
+      }
+      if (!running || rail) return;
+      findRafId2 = raf2(scheduleFind2);
+    };
+    const stopWiggleAnimation = () => {
+      if (wiggleRafId != null) {
+        cancelRaf(wiggleRafId);
+        wiggleRafId = null;
+      }
+      wiggleLastFrameAt = null;
+      if (bellText && !bellText.destroyed) bellText.rotation = 0;
+    };
+    const wiggleTick = (time) => {
+      wiggleRafId = null;
+      if (!wiggleActive || !bellText || bellText.destroyed) {
+        stopWiggleAnimation();
+        return;
+      }
+      if (wiggleLastFrameAt == null) wiggleLastFrameAt = time;
+      const dt = (time - wiggleLastFrameAt) / 1e3;
+      wiggleLastFrameAt = time;
+      wiggleT += dt;
+      bellText.rotation = Math.sin(wiggleT * WIGGLE_SPEED) * WIGGLE_AMPLITUDE;
+      wiggleRafId = raf2(wiggleTick);
+    };
+    tryFindRail();
+    if (!rail) findRafId2 = raf2(scheduleFind2);
+    return {
+      stop() {
+        if (!running) return;
+        running = false;
+        if (findRafId2 != null) {
+          cancelRaf(findRafId2);
+          findRafId2 = null;
         }
-        if (!mountedBtn) {
-          mountedBtn = mountedWrap?.querySelector('button[data-qws-btn="true"]') || null;
-          if (!mountedBtn) {
-            if (!mountedWrap) {
-              root.querySelectorAll(`button[data-qws-btn="true"][aria-label="${esc(ariaLabel)}"]`).forEach((el2) => el2.remove());
-            }
-            mountedBtn = cloneButton(refBtn);
-            if (mountedWrap) {
-              mountedWrap.appendChild(mountedBtn);
-            } else {
-              root.appendChild(mountedBtn);
-            }
-          }
-        }
-        if (mountedWrap && mountedWrap.parentElement !== root) {
-          root.appendChild(mountedWrap);
-        }
-        const inDOM = document.contains(mountedBtn);
-        if (inDOM && !mounted) {
-          mounted = true;
-          console.log("[ToolbarButton] Mounted:", ariaLabel);
+        stopWiggleAnimation();
+        if (rail) {
           try {
-            opts.onMounted?.(mountedBtn);
+            rail.off("childAdded", onRailChildrenChanged);
+            rail.off("childRemoved", onRailChildrenChanged);
           } catch {
           }
         }
-        return inDOM;
-      } finally {
-        isMounting = false;
+        if (canvasListenersAttached) {
+          try {
+            pageWindow.removeEventListener("pointerdown", onWindowPointerDownCapture, true);
+            if (canvasEl) {
+              canvasEl.removeEventListener("pointermove", onCanvasPointerMove);
+              canvasEl.removeEventListener("pointerleave", onCanvasPointerLeave);
+              if (weSetPointerCursor) canvasEl.style.cursor = "";
+            }
+          } catch {
+          }
+        }
+        removeButton();
+        rail = null;
+      },
+      getScreenRect() {
+        return computeScreenRect();
+      },
+      setWiggle(active) {
+        if (wiggleActive === active) return;
+        wiggleActive = active;
+        if (active) {
+          wiggleT = 0;
+          wiggleLastFrameAt = null;
+          if (wiggleRafId == null) wiggleRafId = raf2(wiggleTick);
+        } else {
+          stopWiggleAnimation();
+        }
       }
-    }
-    const host = document.getElementById("App") || document.body;
-    let timer = null;
-    const observer2 = new MutationObserver(() => {
-      if (mounted && mountedBtn && document.contains(mountedBtn)) return;
-      if (mountedBtn && !document.contains(mountedBtn)) {
-        console.warn("[ToolbarButton] Removed from DOM, retrying:", ariaLabel);
-        mounted = false;
-        mountedBtn = null;
-        mountedWrap = null;
-      }
-      if (timer !== null) return;
-      timer = window.setTimeout(() => {
-        timer = null;
-        mount();
-      }, 100);
-    });
-    const pollingInterval = window.setInterval(() => {
-      if (mounted && mountedBtn && !document.contains(mountedBtn)) {
-        console.warn("[ToolbarButton] Detected missing button (polling), remounting:", ariaLabel);
-        mounted = false;
-        mountedBtn = null;
-        mountedWrap = null;
-        mount();
-      } else if (!mounted || !mountedBtn) {
-        mount();
-      }
-    }, 2e3);
-    mount();
-    observer2.observe(host, { childList: true, subtree: true });
-    return () => {
-      observer2.disconnect();
-      clearInterval(pollingInterval);
-      mountedWrap?.remove();
-      mountedBtn?.remove();
-      mountedBtn = null;
-      mountedWrap = null;
     };
   }
 
@@ -27072,7 +27380,7 @@
       __publicField(this, "slot", document.createElement("div"));
       __publicField(this, "badge", document.createElement("span"));
       __publicField(this, "panel", document.createElement("div"));
-      __publicField(this, "cleanupToolbarButton", null);
+      __publicField(this, "bellPixi", null);
       __publicField(this, "lastShops", null);
       __publicField(this, "lastPurch", null);
       // Suivi des IDs visibles dans l'overlay (pour loops & diff)
@@ -27089,14 +27397,11 @@
       this.slot = this.createSlot();
       this.slot.id = "qws-notifier-slot";
       globalThis.__qws_notifier_slot = this.slot;
-      this.ensureBellCSS();
       this.badge = this.createBadge();
       this.panel = this.createPanel();
       this.installScrollGuards(this.panel);
-      const bellSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`;
-      const bellDataUrl = `data:image/svg+xml;base64,${btoa(bellSvg)}`;
       let primedOnce = false;
-      this.cleanupToolbarButton = startInjectGamePanelButton({
+      this.bellPixi = startNotificationBellPixi({
         onClick: async () => {
           if (!primedOnce) {
             primedOnce = true;
@@ -27113,16 +27418,14 @@
             this.updateBadgePosition();
           }
           this.updateBellWiggle();
-        },
-        iconUrl: bellDataUrl,
-        ariaLabel: "Notifications"
+        }
       });
       this.slot.append(this.badge, this.panel);
       document.body.appendChild(this.slot);
       window.addEventListener("pointerdown", (e) => {
         if (this.panel.style.display !== "block") return;
         const t = e.target;
-        if (!this.slot.contains(t) && !this.isClickOnToolbarButton(e.target)) {
+        if (!this.slot.contains(t) && !this.isClickOnBellButton(e.clientX, e.clientY)) {
           this.panel.style.display = "none";
         }
       });
@@ -27132,23 +27435,18 @@
         return purchasedCountForId(itemId, this.lastPurch) > 0;
       });
     }
-    isClickOnToolbarButton(target) {
-      let el2 = target;
-      while (el2) {
-        if (el2 instanceof HTMLButtonElement && el2.getAttribute("aria-label") === "Notifications") {
-          return true;
-        }
-        el2 = el2.parentElement;
-      }
-      return false;
+    isClickOnBellButton(clientX, clientY) {
+      const rect = this.bellPixi?.getScreenRect();
+      if (!rect) return false;
+      return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
     }
     destroy() {
-      if (this.cleanupToolbarButton) {
+      if (this.bellPixi) {
         try {
-          this.cleanupToolbarButton();
+          this.bellPixi.stop();
         } catch {
         }
-        this.cleanupToolbarButton = null;
+        this.bellPixi = null;
       }
       try {
         this.slot.remove();
@@ -27164,38 +27462,6 @@
         audio.stopAllLoops();
       } catch {
       }
-    }
-    ensureBellCSS() {
-      if (document.getElementById("qws-bell-anim-css")) return;
-      const style2 = document.createElement("style");
-      style2.id = "qws-bell-anim-css";
-      style2.textContent = `
-@keyframes qwsBellShake {
-  0% { transform: rotate(0deg); }
-  10% { transform: rotate(-16deg); }
-  20% { transform: rotate(12deg); }
-  30% { transform: rotate(-10deg); }
-  40% { transform: rotate(8deg); }
-  50% { transform: rotate(-6deg); }
-  60% { transform: rotate(4deg); }
-  70% { transform: rotate(-2deg); }
-  80% { transform: rotate(1deg); }
-  100% { transform: rotate(0deg); }
-}
-
-/* Classe appliqu\xE9e sur le span cloche quand il y a des items dans l'overlay */
-.qws-bell--wiggle {
-  animation: qwsBellShake 1.2s ease-in-out infinite;
-  transform-origin: 50% 0%;
-  display: inline-block;
-}
-
-/* Respecte l'accessibilit\xE9 */
-@media (prefers-reduced-motion: reduce) {
-  .qws-bell--wiggle { animation: none !important; }
-}
-`;
-      (document.head ?? document.documentElement).appendChild(style2);
     }
     /* ========= SETTERS (subs) ========= */
     setShops(s) {
@@ -27583,9 +27849,8 @@
       return d;
     }
     updateBadgePosition() {
-      const btn = document.querySelector('button[aria-label="Notifications"]');
-      if (btn && this.badge) {
-        const rect = btn.getBoundingClientRect();
+      const rect = this.bellPixi?.getScreenRect();
+      if (rect && this.badge) {
         style(this.badge, {
           top: `${rect.top - 4}px`,
           right: `${window.innerWidth - rect.right - 4}px`
@@ -27593,9 +27858,8 @@
       }
     }
     updatePanelPosition() {
-      const btn = document.querySelector('button[aria-label="Notifications"]');
-      if (btn && this.panel) {
-        const rect = btn.getBoundingClientRect();
+      const rect = this.bellPixi?.getScreenRect();
+      if (rect && this.panel) {
         style(this.panel, {
           position: "fixed",
           top: `${rect.bottom + 8}px`,
@@ -27604,17 +27868,8 @@
       }
     }
     updateBellWiggle() {
-      const btn = document.querySelector('button[aria-label="Notifications"]');
-      if (!btn) return;
-      const icon = btn.querySelector("img");
-      if (!icon) return;
       const shouldWiggle = this.rows.length > 0 && this.panel.style.display !== "block";
-      if (shouldWiggle) {
-        icon.style.animation = "qwsBellShake 1.2s ease-in-out infinite";
-        icon.style.transformOrigin = "50% 0%";
-      } else {
-        icon.style.animation = "";
-      }
+      this.bellPixi?.setWiggle(shouldWiggle);
     }
     createBadge() {
       const badge = document.createElement("span");
@@ -29397,191 +29652,6 @@
     }
   }
 
-  // src/utils/gardenInfoCardPixi.ts
-  var CARD_SYSTEM_LABEL = "GardenInfoCardSystem";
-  var CARD_ROW_LABEL = "GardenInfoCardRow";
-  var OBJECT_CARD_LABEL = "GardenInfoObjectCard";
-  var TITLE_ROW_LABEL = "GardenInfoObjectTitleRow";
-  var ABILITIES_SECTION_LABEL = "GardenInfoPlantAbilities";
-  var SECTION_GAP_ESTIMATE = 8;
-  var CARD_SYSTEM_FIND_RETRY_MS = 1e3;
-  var CARD_SYSTEM_FIND_LOG_EVERY = 30;
-  function getSpriteState() {
-    const state3 = readSharedGlobal("__MG_SPRITE_STATE__");
-    if (!state3?.renderer || !state3.ctors?.Text) return null;
-    return state3;
-  }
-  function getStage(state3) {
-    return state3.renderer.lastObjectRendered ?? state3.renderer.stage ?? state3.app?.stage ?? null;
-  }
-  function findByLabel(root, label2, limit = 25e3) {
-    if (!root) return null;
-    const stack = [root];
-    const seen = /* @__PURE__ */ new Set();
-    let n = 0;
-    while (stack.length && n++ < limit) {
-      const node = stack.pop();
-      if (!node || seen.has(node)) continue;
-      seen.add(node);
-      if (node.label === label2) return node;
-      const children = node.children;
-      if (Array.isArray(children)) for (const child of children) stack.push(child);
-    }
-    return null;
-  }
-  function findAcrossBranches(root, pred, limitPerBranch = 25e3) {
-    if (!root) return null;
-    if (pred(root)) return root;
-    const children = root.children;
-    if (!Array.isArray(children)) return null;
-    for (const child of children) {
-      const stack = [child];
-      const seen = /* @__PURE__ */ new Set();
-      let n = 0;
-      while (stack.length && n++ < limitPerBranch) {
-        const node = stack.pop();
-        if (!node || seen.has(node)) continue;
-        seen.add(node);
-        if (pred(node)) return node;
-        const kids = node.children;
-        if (Array.isArray(kids)) for (const kid of kids) stack.push(kid);
-      }
-    }
-    return null;
-  }
-  var cachedGraphicsCtor = null;
-  function findGraphicsCtor(root) {
-    if (cachedGraphicsCtor) return cachedGraphicsCtor;
-    const found = findAcrossBranches(
-      root,
-      (node) => typeof node?.roundRect === "function" && typeof node?.clear === "function"
-    )?.constructor ?? null;
-    if (found) cachedGraphicsCtor = found;
-    return found;
-  }
-  var cardSystem = null;
-  var currentCard = null;
-  var findAttempts = 0;
-  var findRafId = null;
-  var lastFindCheckAt = 0;
-  var listeners5 = /* @__PURE__ */ new Set();
-  var debugState = {
-    findAttempts: 0,
-    attached: false,
-    rafTicks: 0,
-    scriptStartedAt: Date.now(),
-    listenerCount: 0
-  };
-  shareGlobal("__MG_GARDEN_INFO_CARD_DEBUG__", debugState);
-  function computeGeometry(card2) {
-    const cardBounds = card2.getLocalBounds();
-    const width = card2.hitArea?.width ?? cardBounds.width;
-    const height = card2.hitArea?.height ?? cardBounds.height;
-    const titleRow = (card2.children ?? []).find((c) => c?.label === TITLE_ROW_LABEL);
-    const contentTop = titleRow ? titleRow.position.y + titleRow.getLocalBounds().minY : cardBounds.minY;
-    const abilitiesSection = (cardSystem?.children ?? []).find((c) => c?.label === ABILITIES_SECTION_LABEL);
-    const extraTopOffset = abilitiesSection ? abilitiesSection.getLocalBounds().height + SECTION_GAP_ESTIMATE : 0;
-    return { top: contentTop - extraTopOffset, width, height };
-  }
-  function notifyListeners2(card2, geometry) {
-    for (const listener of listeners5) {
-      try {
-        listener(card2, geometry);
-      } catch (error) {
-        console.warn("[gardenInfoCardPixi] listener failed", error);
-      }
-    }
-  }
-  function onChildAddedUnsafe(row) {
-    if (row?.label !== CARD_ROW_LABEL) return;
-    const card2 = findByLabel(row, OBJECT_CARD_LABEL);
-    if (!card2) return;
-    currentCard = card2;
-    const geometry = computeGeometry(card2);
-    card2.once("destroyed", () => {
-      if (currentCard === card2) {
-        currentCard = null;
-        notifyListeners2(null, null);
-      }
-    });
-    notifyListeners2(card2, geometry);
-  }
-  function onChildAdded(row) {
-    try {
-      onChildAddedUnsafe(row);
-    } catch (error) {
-      console.warn("[gardenInfoCardPixi] onChildAdded failed", error);
-    }
-  }
-  function attachToCardSystem(system) {
-    cardSystem = system;
-    cardSystem.on("childAdded", onChildAdded);
-    cardSystem.once("destroyed", () => {
-      if (cardSystem === system) {
-        cardSystem = null;
-        debugState.attached = false;
-        currentCard = null;
-        notifyListeners2(null, null);
-        restartSearchIfNeeded();
-      }
-    });
-    debugState.attached = true;
-    console.info(`[gardenInfoCardPixi] attached to ${CARD_SYSTEM_LABEL} after ${findAttempts} attempt(s)`);
-    const existingRow = (system.children ?? []).find((c) => c?.label === CARD_ROW_LABEL);
-    if (existingRow) onChildAdded(existingRow);
-  }
-  function tryFindCardSystem() {
-    if (cardSystem) return;
-    const state3 = getSpriteState();
-    if (!state3) return;
-    const stage = getStage(state3);
-    const found = findAcrossBranches(stage, (node) => node?.label === CARD_SYSTEM_LABEL);
-    if (found) {
-      attachToCardSystem(found);
-      return;
-    }
-    findAttempts += 1;
-    debugState.findAttempts = findAttempts;
-    if (findAttempts % CARD_SYSTEM_FIND_LOG_EVERY === 0) {
-      console.info(`[gardenInfoCardPixi] still searching for ${CARD_SYSTEM_LABEL} (${findAttempts} attempts so far)`);
-    }
-  }
-  var raf = pageWindow.requestAnimationFrame.bind(pageWindow);
-  function scheduleFind(now2) {
-    findRafId = null;
-    debugState.rafTicks += 1;
-    if (!listeners5.size || cardSystem) return;
-    if (now2 - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
-      lastFindCheckAt = now2;
-      tryFindCardSystem();
-    }
-    if (!listeners5.size || cardSystem) return;
-    findRafId = raf(scheduleFind);
-  }
-  function restartSearchIfNeeded() {
-    if (!listeners5.size || cardSystem) return;
-    tryFindCardSystem();
-    if (!cardSystem && findRafId == null) {
-      findRafId = raf(scheduleFind);
-    }
-  }
-  function watchGardenInfoCard(listener) {
-    listeners5.add(listener);
-    debugState.listenerCount = listeners5.size;
-    restartSearchIfNeeded();
-    if (currentCard) {
-      try {
-        listener(currentCard, computeGeometry(currentCard));
-      } catch (error) {
-        console.warn("[gardenInfoCardPixi] listener failed", error);
-      }
-    }
-    return () => {
-      listeners5.delete(listener);
-      debugState.listenerCount = listeners5.size;
-    };
-  }
-
   // src/utils/cropValuePixi.ts
   var VALUE_TEXT_STYLE = { fontFamily: "Arial", fontSize: 14, fontWeight: "700", fill: "#FFD84D" };
   var VALUE_BADGE_GAP = 20;
@@ -30827,7 +30897,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.162";
+      return "3.2.163";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
