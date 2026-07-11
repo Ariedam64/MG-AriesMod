@@ -1,126 +1,46 @@
 import { Menu } from "../menu";
 import { createTwoColumns } from "./debug-data-shared";
-import { attachSpriteIcon } from "../spriteIconCache";
+import { setImageSafe } from "../../utils/discordCsp";
 import { MUT_G1, MUT_G2, MUT_G3, type MutationName } from "../../sprite/settings";
+import {
+  fetchSpriteCatalog,
+  composedSpriteUrl,
+  mgApiGetBinary,
+  type SpriteCatalogResponse,
+} from "../../mgApi";
 
-type SpriteListEntry = { key?: string; isAnim?: boolean; count?: number };
-
-type SpriteServiceHandle = {
-  ready?: Promise<unknown>;
-  list?: (category?: string) => SpriteListEntry[];
-  state?: { cats?: Map<string, unknown> | Record<string, unknown>; loaded?: boolean };
-  renderToDataURL?: (arg: any, type?: string, quality?: number) => Promise<string | null> | string | null;
-  renderToCanvas?: (params: { category: string; id: string; mutations?: string[] }) => HTMLCanvasElement | null;
-};
-
-const SPRITE_FAMILY_ID = "sprite";
 const ANY_CATEGORY = "all";
 const MAX_VISIBLE_SPRITES = 400;
 const SPRITE_ICON_SIZE = 96;
 
-let spriteServicePromise: Promise<SpriteServiceHandle | null> | null = null;
+type SpriteRecord = { category: string; name: string; url: string };
 
-const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+let catalogPromise: Promise<SpriteCatalogResponse | null> | null = null;
 
-function resolveGlobalSpriteService(): SpriteServiceHandle | null {
-  const root: any = (globalThis as any).unsafeWindow || globalThis;
-  return root?.__MG_SPRITE_SERVICE__ ?? null;
+async function loadCatalog(force = false): Promise<SpriteCatalogResponse | null> {
+  if (force) catalogPromise = null;
+  if (!catalogPromise) catalogPromise = fetchSpriteCatalog();
+  return catalogPromise;
 }
 
-async function waitForSpriteService(): Promise<SpriteServiceHandle | null> {
-  const timeoutMs = 8_000;
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    const svc = resolveGlobalSpriteService();
-    if (svc) {
-      try {
-        if (svc.ready && typeof svc.ready.then === "function") {
-          await svc.ready;
-        }
-      } catch {
-        /* ignore readiness errors */
-      }
-      return svc;
-    }
-    await sleep(200);
-  }
-  return null;
-}
-
-async function acquireSpriteService(force = false): Promise<SpriteServiceHandle | null> {
-  if (force) {
-    spriteServicePromise = null;
-  }
-  if (!spriteServicePromise) {
-    spriteServicePromise = waitForSpriteService();
-  }
-  const svc = await spriteServicePromise;
-  if (!svc) {
-    spriteServicePromise = null;
-    return null;
-  }
-  return svc;
-}
-
-type ParsedSpriteKey = {
-  category: string;
-  id: string;
-  full: string;
-};
-
-function parseSpriteKey(key: string): ParsedSpriteKey {
-  const safe = String(key || "");
-  const parts = safe.split("/").filter(Boolean);
-  const start = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
-  const category = parts[start] ?? "misc";
-  const id = parts.slice(start + 1).join("/") || parts[parts.length - 1] || safe;
-  const full = parts.slice(start).join("/") || safe;
-  return { category, id, full };
-}
-
-function buildSpriteCandidates(parsed: ParsedSpriteKey): string[] {
-  const variants = [parsed.id, parsed.full];
-  const compact = parsed.id.replace(/\W+/g, "");
-  if (compact && compact !== parsed.id) {
-    variants.push(compact);
-  }
-  return Array.from(new Set(variants.filter(Boolean)));
-}
-
-function extractSpriteCategories(service: SpriteServiceHandle | null): string[] {
-  if (!service) return [];
-  const cats = service.state?.cats;
-  let values: string[] = [];
-  if (cats instanceof Map) {
-    values = Array.from(cats.keys());
-  } else if (cats && typeof cats === "object") {
-    values = Object.keys(cats);
-  }
-  if (!values.length && typeof service.list === "function") {
-    try {
-      const fallback = service.list("any" as any) ?? [];
-      const collected = new Set<string>();
-      fallback.forEach(entry => {
-        const parsed = parseSpriteKey(entry?.key ?? "");
-        if (parsed.category) collected.add(parsed.category);
-      });
-      values = Array.from(collected);
-    } catch {
-      values = [];
+function flattenCatalog(catalog: SpriteCatalogResponse, category: string): SpriteRecord[] {
+  const cats = category === ANY_CATEGORY ? Object.keys(catalog.sprites) : [category];
+  const out: SpriteRecord[] = [];
+  for (const cat of cats) {
+    const entries = catalog.sprites[cat] ?? [];
+    for (const entry of entries) {
+      out.push({ category: cat, name: entry.name, url: entry.url });
     }
   }
-  return values
-    .map(value => value.trim())
-    .filter(Boolean)
-    .sort((a, b) => a.localeCompare(b));
+  return out;
 }
 
 const sanitizeFileComponent = (value: string): string =>
   value.replace(/[^a-z0-9_\-]+/gi, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "") || "sprite";
 
-const buildSpriteFilename = (parsed: ParsedSpriteKey, mutations: MutationName[]): string => {
+const buildSpriteFilename = (record: SpriteRecord, mutations: MutationName[]): string => {
   const mutSegment = mutations.length ? `-${mutations.map(m => sanitizeFileComponent(m)).join("_")}` : "";
-  return `${sanitizeFileComponent(parsed.category)}-${sanitizeFileComponent(parsed.id)}${mutSegment}.png`;
+  return `${sanitizeFileComponent(record.category)}-${sanitizeFileComponent(record.name)}${mutSegment}.png`;
 };
 
 type ColorSelection = "None" | (typeof MUT_G1)[number];
@@ -139,8 +59,6 @@ type MutationFilterState = {
 
 type MutationGroupKey = "color" | "condition" | "lighting";
 
-type SpriteCardRecord = { entry: SpriteListEntry; parsed: ParsedSpriteKey };
-
 export function renderSpritesTab(view: HTMLElement, ui: Menu) {
   view.innerHTML = "";
   view.classList.add("dd-debug-view");
@@ -149,7 +67,7 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
 
   const explorerCard = ui.card("Sprite Explorer", {
     tone: "muted",
-    subtitle: "Browse captured sprites via the runtime sprite service.",
+    subtitle: "Browse the live sprite catalog from mg-api.ariedam.fr.",
   });
   leftCol.appendChild(explorerCard.root);
 
@@ -159,22 +77,12 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
   });
   rightCol.appendChild(listCard.root);
 
-  const familySelect = ui.select({ width: "100%" });
-  const families = [{ value: SPRITE_FAMILY_ID, label: "Sprite catalog" }];
-  families.forEach(({ value, label }) => {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = label;
-    familySelect.appendChild(option);
-  });
-  familySelect.value = SPRITE_FAMILY_ID;
-
   const categorySelect = ui.select({ width: "100%" });
   categorySelect.disabled = true;
 
   const searchInput = document.createElement("input");
   searchInput.type = "search";
-  searchInput.placeholder = "Search name or key";
+  searchInput.placeholder = "Search name";
   searchInput.className = "dd-sprite-search";
 
   const reloadBtn = ui.btn("Reload sprites", {
@@ -197,7 +105,6 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
   const controlsGrid = document.createElement("div");
   controlsGrid.className = "dd-sprite-control-grid";
   controlsGrid.append(
-    createSelectControl("Asset family", familySelect),
     createSelectControl("Asset category", categorySelect),
     createSelectControl("Search", searchInput),
   );
@@ -208,21 +115,20 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
   explorerCard.body.appendChild(actionRow);
 
   const mutationFilters: MutationFilterState = { color: "None", condition: "None", lighting: "None" };
-  let mutationGroupContainers: Record<MutationGroupKey, HTMLDivElement> | null = null;
+  const mutationGroupContainers: Record<MutationGroupKey, HTMLDivElement> = {
+    color: document.createElement("div"),
+    condition: document.createElement("div"),
+    lighting: document.createElement("div"),
+  };
 
   const mutationCard = ui.card("Mutations", {
     tone: "muted",
-    subtitle: "Apply color or weather overlays to the previews.",
+    subtitle: "Apply color or weather overlays via /assets/sprites/composed.",
   });
   leftCol.appendChild(mutationCard.root);
   const mutationBody = document.createElement("div");
   mutationBody.className = "dd-sprite-mutation-card";
   mutationCard.body.appendChild(mutationBody);
-  mutationGroupContainers = {
-    color: document.createElement("div"),
-    condition: document.createElement("div"),
-    lighting: document.createElement("div"),
-  };
   mutationGroupContainers.color.className = "dd-sprite-mutation-group";
   mutationGroupContainers.condition.className = "dd-sprite-mutation-group";
   mutationGroupContainers.lighting.className = "dd-sprite-mutation-group";
@@ -235,7 +141,7 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
 
   const stats = document.createElement("p");
   stats.className = "dd-sprite-stats";
-  stats.textContent = "Waiting for sprite service…";
+  stats.textContent = "Loading sprite catalog…";
   explorerCard.body.appendChild(stats);
 
   const previewArea = document.createElement("div");
@@ -245,33 +151,13 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
   previewWrap.appendChild(previewArea);
   listCard.body.appendChild(previewWrap);
 
-  let selectedFamily = SPRITE_FAMILY_ID;
   let selectedCategory = ANY_CATEGORY;
   let searchTerm = "";
-  let spriteCategories: string[] = [];
-  let listRequestId = 0;
-  let retryTimer: number | null = null;
   let searchDebounce: number | null = null;
-  let visibleSpriteRecords: SpriteCardRecord[] = [];
+  let visibleSpriteRecords: SpriteRecord[] = [];
   let downloadInProgress = false;
 
-  const clearRetry = () => {
-    if (retryTimer !== null) {
-      clearTimeout(retryTimer);
-      retryTimer = null;
-    }
-  };
-
-  const scheduleRetry = () => {
-    if (retryTimer !== null) return;
-    retryTimer = window.setTimeout(() => {
-      retryTimer = null;
-      void updateList();
-    }, 2_000);
-  };
-
-  const applySpriteCategories = (categories: string[]) => {
-    spriteCategories = categories;
+  const applyCategories = (categories: string[]) => {
     categorySelect.innerHTML = "";
     const allOption = document.createElement("option");
     allOption.value = ANY_CATEGORY;
@@ -306,25 +192,9 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
   };
 
   function renderMutationControls(): void {
-    if (!mutationGroupContainers) return;
-    renderMutationGroup(
-      "color",
-      COLOR_SELECTIONS,
-      "Color",
-      mutationGroupContainers.color,
-    );
-    renderMutationGroup(
-      "condition",
-      CONDITION_SELECTIONS,
-      "Weather",
-      mutationGroupContainers.condition,
-    );
-    renderMutationGroup(
-      "lighting",
-      LIGHTING_SELECTIONS,
-      "Lighting",
-      mutationGroupContainers.lighting,
-    );
+    renderMutationGroup("color", COLOR_SELECTIONS, "Color", mutationGroupContainers.color);
+    renderMutationGroup("condition", CONDITION_SELECTIONS, "Weather", mutationGroupContainers.condition);
+    renderMutationGroup("lighting", LIGHTING_SELECTIONS, "Lighting", mutationGroupContainers.lighting);
   }
 
   function renderMutationGroup(
@@ -344,24 +214,24 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
       btn.type = "button";
       btn.className = "dd-sprite-mutation-btn";
       btn.textContent = option === "None" ? "None" : option;
-      if (mutationFilters[key] === option) {
-        btn.classList.add("active");
-      }
+      if (mutationFilters[key] === option) btn.classList.add("active");
       btn.setAttribute("aria-pressed", mutationFilters[key] === option ? "true" : "false");
       btn.addEventListener("click", () => {
         if (mutationFilters[key] === option) return;
         mutationFilters[key] = option as any;
         renderMutationControls();
-        if (visibleSpriteRecords.length) {
-          renderSpriteCards(visibleSpriteRecords);
-        }
+        if (visibleSpriteRecords.length) renderSpriteCards(visibleSpriteRecords);
       });
       row.appendChild(btn);
     });
     container.append(heading, row);
-  };
+  }
 
-  function renderSpriteCards(records: SpriteCardRecord[]): void {
+  function previewUrlFor(record: SpriteRecord, mutations: MutationName[]): string {
+    return mutations.length ? composedSpriteUrl(record.category, record.name, mutations) : record.url;
+  }
+
+  function renderSpriteCards(records: SpriteRecord[]): void {
     if (!records.length) {
       renderEmptyState("No sprites match the current filters.");
       return;
@@ -369,10 +239,9 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
     const activeMutations = getActiveMutations();
     previewArea.innerHTML = "";
     records.forEach(record => {
-      const { entry, parsed } = record;
       const card = document.createElement("div");
       card.className = "dd-sprite-grid__item";
-      card.title = entry?.key ?? parsed.full;
+      card.title = `${record.category}/${record.name}`;
 
       const imgWrap = document.createElement("div");
       imgWrap.className = "dd-sprite-grid__img";
@@ -380,32 +249,31 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
 
       const iconSlot = document.createElement("span");
       iconSlot.className = "dd-sprite-grid__icon";
-      iconSlot.textContent = "…";
+      const img = document.createElement("img");
+      img.alt = record.name;
+      img.decoding = "async";
+      img.loading = "lazy";
+      img.addEventListener("error", () => {
+        if (img.dataset.fallbackApplied) return;
+        img.dataset.fallbackApplied = "1";
+        setImageSafe(img, record.url);
+      });
+      iconSlot.appendChild(img);
+      setImageSafe(img, previewUrlFor(record, activeMutations));
       imgWrap.appendChild(iconSlot);
-
-      attachSpriteIcon(
-        iconSlot,
-        [parsed.category],
-        buildSpriteCandidates(parsed),
-        SPRITE_ICON_SIZE,
-        "debug-sprites",
-        { mutations: activeMutations },
-      );
 
       const nameEl = document.createElement("span");
       nameEl.className = "dd-sprite-grid__name";
-      const animSuffix =
-        entry?.isAnim && typeof entry.count === "number" ? ` (anim ${entry.count})` : entry?.isAnim ? " (anim)" : "";
-      nameEl.textContent = `${parsed.id}${animSuffix}`;
+      nameEl.textContent = record.name;
 
       const meta = document.createElement("span");
       meta.className = "dd-sprite-grid__meta";
-      meta.textContent = entry?.key ?? parsed.full;
+      meta.textContent = `${record.category}/${record.name}`;
 
       card.append(imgWrap, nameEl, meta);
       const triggerDownload = () => {
         if (downloadInProgress) return;
-        void downloadSpriteRecord(record, undefined, getActiveMutations());
+        void downloadSpriteRecord(record, getActiveMutations());
       };
       card.addEventListener("click", triggerDownload);
       card.addEventListener("keydown", event => {
@@ -419,75 +287,39 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
     });
   }
 
-  const updateList = async (forceService = false) => {
-    const token = ++listRequestId;
-    stats.textContent = "Loading sprites…";
-    const service = await acquireSpriteService(forceService);
-    if (token !== listRequestId) return;
-    if (!service) {
-      renderEmptyState("Sprite service not ready. Waiting…");
-      stats.textContent = "Sprite service not ready yet.";
-      scheduleRetry();
-      return;
-    }
-    clearRetry();
-
-    if (!spriteCategories.length || forceService) {
-      const categories = extractSpriteCategories(service);
-      applySpriteCategories(categories);
-    }
-
-    if (selectedFamily !== SPRITE_FAMILY_ID) {
-      renderEmptyState("No assets for this family.");
-      stats.textContent = "Select the sprite family to browse sprites.";
+  const updateList = async (forceReload = false) => {
+    stats.textContent = "Loading sprite catalog…";
+    const catalog = await loadCatalog(forceReload);
+    if (!catalog) {
+      renderEmptyState("Failed to load the sprite catalog from mg-api.ariedam.fr.");
+      stats.textContent = "Catalog load failed. Try Reload.";
       return;
     }
 
-    const catArg = selectedCategory === ANY_CATEGORY ? ("any" as any) : (selectedCategory as any);
-    let sprites: SpriteListEntry[] = [];
-    try {
-      sprites = typeof service.list === "function" ? service.list(catArg) ?? [] : [];
-    } catch (error) {
-      console.error("[DebugSprites] Failed to list sprites", error);
-      renderEmptyState("Failed to list sprites (see console).");
-      stats.textContent = "Listing sprites failed.";
-      return;
-    }
+    applyCategories(catalog.categories);
 
+    const records = flattenCatalog(catalog, selectedCategory);
     const normalizedSearch = searchTerm.trim().toLowerCase();
     const filtered = !normalizedSearch
-      ? sprites
-      : sprites.filter(entry => {
-          const parsed = parseSpriteKey(entry?.key ?? "");
-          const label = `${parsed.category}/${parsed.id}`.toLowerCase();
-          return label.includes(normalizedSearch) || (entry?.key ?? "").toLowerCase().includes(normalizedSearch);
-        });
+      ? records
+      : records.filter(r => r.name.toLowerCase().includes(normalizedSearch));
 
     const limited = filtered.slice(0, MAX_VISIBLE_SPRITES);
-    const records = limited.map(entry => ({ entry, parsed: parseSpriteKey(entry?.key ?? "") }));
-    visibleSpriteRecords = records;
-    if (!downloadInProgress) {
-      downloadBtn.textContent = downloadBtnLabel;
-    }
-    downloadBtn.disabled = !records.length || downloadInProgress;
-    if (!records.length) {
+    visibleSpriteRecords = limited;
+    if (!downloadInProgress) downloadBtn.textContent = downloadBtnLabel;
+    downloadBtn.disabled = !limited.length || downloadInProgress;
+    if (!limited.length) {
       renderEmptyState("No sprites match the current filters.");
     } else {
-      renderSpriteCards(records);
+      renderSpriteCards(limited);
     }
 
     const clipped = filtered.length > MAX_VISIBLE_SPRITES;
-    const categoryLabel =
-      selectedCategory === ANY_CATEGORY ? "all categories" : `category "${selectedCategory}"`;
+    const categoryLabel = selectedCategory === ANY_CATEGORY ? "all categories" : `category "${selectedCategory}"`;
     stats.textContent = clipped
       ? `Showing ${limited.length}/${filtered.length} sprites for ${categoryLabel}.`
       : `${filtered.length} sprites for ${categoryLabel}.`;
   };
-
-  familySelect.addEventListener("change", () => {
-    selectedFamily = familySelect.value || SPRITE_FAMILY_ID;
-    void updateList();
-  });
 
   categorySelect.addEventListener("change", () => {
     selectedCategory = categorySelect.value || ANY_CATEGORY;
@@ -495,9 +327,7 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
   });
 
   searchInput.addEventListener("input", () => {
-    if (searchDebounce !== null) {
-      clearTimeout(searchDebounce);
-    }
+    if (searchDebounce !== null) clearTimeout(searchDebounce);
     searchDebounce = window.setTimeout(() => {
       searchDebounce = null;
       searchTerm = searchInput.value || "";
@@ -507,69 +337,43 @@ export function renderSpritesTab(view: HTMLElement, ui: Menu) {
 
   void updateList();
 
-async function downloadSpriteRecord(
-  record: SpriteCardRecord,
-  svc?: SpriteServiceHandle | null,
-  mutations?: MutationName[],
-): Promise<boolean> {
-  const activeMutations = mutations ?? getActiveMutations();
-  const dataUrl = await renderRecordToDataUrl(record, svc, activeMutations);
-  if (!dataUrl) return false;
-  triggerDataUrlDownload(
-    dataUrl,
-    buildSpriteFilename(record.parsed, activeMutations),
-  );
-  return true;
-}
+  async function downloadSpriteRecord(record: SpriteRecord, mutations: MutationName[]): Promise<void> {
+    const bytes = await mgApiGetBinary(previewUrlFor(record, mutations));
+    if (!bytes) return;
+    triggerBlobDownload(new Blob([bytes], { type: "image/png" }), buildSpriteFilename(record, mutations));
+  }
 
-async function downloadVisibleSprites(): Promise<void> {
-  if (!visibleSpriteRecords.length || downloadInProgress) return;
-  downloadInProgress = true;
-  downloadBtn.disabled = true;
-  downloadBtn.textContent = "Preparing zip...";
-  try {
-    const service = await acquireSpriteService();
-    if (!service) return;
-    const activeMutations = getActiveMutations();
-    const files: { name: string; dataUrl: string }[] = [];
-    for (const record of visibleSpriteRecords) {
-      const dataUrl = await renderRecordToDataUrl(record, service, activeMutations);
-      if (!dataUrl) continue;
-      files.push({ name: buildSpriteFilename(record.parsed, activeMutations), dataUrl });
-      downloadBtn.textContent = `Collected ${files.length}/${visibleSpriteRecords.length}`;
+  async function downloadVisibleSprites(): Promise<void> {
+    if (!visibleSpriteRecords.length || downloadInProgress) return;
+    downloadInProgress = true;
+    downloadBtn.disabled = true;
+    downloadBtn.textContent = "Preparing zip...";
+    try {
+      const activeMutations = getActiveMutations();
+      const files: { name: string; dataUrl: string }[] = [];
+      for (const record of visibleSpriteRecords) {
+        const bytes = await mgApiGetBinary(previewUrlFor(record, activeMutations));
+        if (!bytes) continue;
+        files.push({ name: buildSpriteFilename(record, activeMutations), dataUrl: arrayBufferToDataUrl(bytes, "image/png") });
+        downloadBtn.textContent = `Collected ${files.length}/${visibleSpriteRecords.length}`;
+      }
+      if (!files.length) return;
+      downloadBtn.textContent = "Bundling zip...";
+      const zipBlob = await packFilesToZip(files);
+      triggerBlobDownload(zipBlob, `sprites-${Date.now()}.zip`);
+    } finally {
+      downloadInProgress = false;
+      downloadBtn.textContent = downloadBtnLabel;
+      downloadBtn.disabled = !visibleSpriteRecords.length;
     }
-    if (!files.length) return;
-    downloadBtn.textContent = "Bundling zip...";
-    const zipBlob = await packFilesToZip(files);
-    triggerBlobDownload(zipBlob, `sprites-${Date.now()}.zip`);
-  } finally {
-    downloadInProgress = false;
-    downloadBtn.textContent = downloadBtnLabel;
-    downloadBtn.disabled = !visibleSpriteRecords.length;
   }
 }
 
-async function renderRecordToDataUrl(
-  record: SpriteCardRecord,
-  svc?: SpriteServiceHandle | null,
-  mutations?: MutationName[],
-): Promise<string | null> {
-  const service = svc ?? (await acquireSpriteService());
-  if (!service?.renderToDataURL) return null;
-  try {
-    const dataUrl = await service.renderToDataURL(
-      {
-        category: record.parsed.category,
-        id: record.parsed.id,
-        mutations: mutations ?? getActiveMutations(),
-      },
-      "image/png",
-    );
-    return dataUrl ?? null;
-  } catch (error) {
-    console.error("[DebugSprites] download failed", { key: record.entry.key, error });
-    return null;
-  }
+function arrayBufferToDataUrl(buffer: ArrayBuffer, mime: string): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return `data:${mime};base64,${btoa(binary)}`;
 }
 
 async function packFilesToZip(files: { name: string; dataUrl: string }[]): Promise<Blob> {
@@ -577,19 +381,17 @@ async function packFilesToZip(files: { name: string; dataUrl: string }[]): Promi
   const fileEntries: { nameBytes: Uint8Array; data: Uint8Array; crc: number; offset: number }[] = [];
   let offset = 0;
   for (const file of files) {
-    const { bytes: data, crc32 } = dataUrlToBytesAndCrc(file.dataUrl);
+    const { bytes: data, crc32: crc } = dataUrlToBytesAndCrc(file.dataUrl);
     const nameBytes = new TextEncoder().encode(file.name);
-    const localHeader = buildZipLocalHeader(nameBytes, data.length, crc32);
-    fileEntries.push({ nameBytes, data, crc: crc32, offset });
+    const localHeader = buildZipLocalHeader(nameBytes, data.length, crc);
+    fileEntries.push({ nameBytes, data, crc, offset });
     chunks.push(localHeader, data);
     offset += localHeader.length + data.length;
   }
 
   const centralRecords: Uint8Array[] = [];
   fileEntries.forEach(entry => {
-    centralRecords.push(
-      buildZipCentralDirectory(entry.nameBytes, entry.data.length, entry.crc, entry.offset),
-    );
+    centralRecords.push(buildZipCentralDirectory(entry.nameBytes, entry.data.length, entry.crc, entry.offset));
   });
   const centralDirectory = concatUint8Arrays(centralRecords);
   const endRecord = buildZipEndRecord(fileEntries.length, centralDirectory.length, offset);
@@ -635,12 +437,7 @@ function buildZipLocalHeader(nameBytes: Uint8Array, size: number, crc32: number)
   return out;
 }
 
-function buildZipCentralDirectory(
-  nameBytes: Uint8Array,
-  size: number,
-  crc32: number,
-  offset: number,
-): Uint8Array {
+function buildZipCentralDirectory(nameBytes: Uint8Array, size: number, crc32: number, offset: number): Uint8Array {
   const buffer = new ArrayBuffer(46 + nameBytes.length);
   const view = new DataView(buffer);
   let pos = 0;
@@ -683,11 +480,7 @@ function buildZipCentralDirectory(
   return out;
 }
 
-function buildZipEndRecord(
-  fileCount: number,
-  centralSize: number,
-  centralOffset: number,
-): Uint8Array {
+function buildZipEndRecord(fileCount: number, centralSize: number, centralOffset: number): Uint8Array {
   const buffer = new ArrayBuffer(22);
   const view = new DataView(buffer);
   let pos = 0;
@@ -751,15 +544,6 @@ const CRC_TABLE = (() => {
   return table;
 })();
 
-function triggerDataUrlDownload(dataUrl: string, filename: string): void {
-  const a = document.createElement("a");
-  a.href = dataUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-}
-
 function triggerBlobDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -769,7 +553,6 @@ function triggerBlobDownload(blob: Blob, filename: string): void {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1_000);
-}
 }
 
 function createSelectControl(labelText: string, control: HTMLElement): HTMLLabelElement {

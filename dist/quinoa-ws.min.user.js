@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.166
+// @version      3.2.167
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -1425,6 +1425,129 @@
     } catch {
       return false;
     }
+  }
+  var _SAFE_IMG_HOSTS = ["cdn.discordapp.com", "media.discordapp.net"];
+  var _gmImgCache = /* @__PURE__ */ new Map();
+  var _gmImgPending = /* @__PURE__ */ new Map();
+  var _extMimeMap = {
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    gif: "image/gif",
+    webp: "image/webp",
+    svg: "image/svg+xml"
+  };
+  function _isImgUrlSafe(url) {
+    if (!url || url.startsWith("blob:") || url.startsWith("data:") || url.startsWith("/")) return true;
+    try {
+      const { hostname } = new URL(url);
+      return _SAFE_IMG_HOSTS.some((h) => hostname === h || hostname.endsWith("." + h));
+    } catch {
+      return true;
+    }
+  }
+  function setImageSafe(img, url) {
+    if (!url) return;
+    if (!isDiscordActivityContext()) {
+      img.src = url;
+      return;
+    }
+    if (_isImgUrlSafe(url)) {
+      img.src = url;
+      return;
+    }
+    const cached = _gmImgCache.get(url);
+    if (cached) {
+      img.src = cached;
+      return;
+    }
+    const pending = _gmImgPending.get(url);
+    if (pending) {
+      pending.push(img);
+      return;
+    }
+    _gmImgPending.set(url, [img]);
+    GM_xmlhttpRequest({
+      method: "GET",
+      url,
+      headers: {},
+      responseType: "arraybuffer",
+      onload: (res) => {
+        const imgs = _gmImgPending.get(url) ?? [];
+        _gmImgPending.delete(url);
+        if (!res.response) {
+          for (const el2 of imgs) el2.src = url;
+          return;
+        }
+        const ext = url.split(".").pop()?.toLowerCase().split("?")[0] ?? "png";
+        const mime = _extMimeMap[ext] ?? "image/png";
+        const blob = new Blob([res.response], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        _gmImgCache.set(url, blobUrl);
+        for (const el2 of imgs) el2.src = blobUrl;
+      },
+      onerror: () => {
+        const imgs = _gmImgPending.get(url) ?? [];
+        _gmImgPending.delete(url);
+        for (const el2 of imgs) el2.src = url;
+      }
+    });
+  }
+  var _gmAudioCache = /* @__PURE__ */ new Map();
+  var _gmAudioPending = /* @__PURE__ */ new Map();
+  function getAudioUrlSafe(url) {
+    return new Promise((resolve2) => {
+      if (!url) {
+        resolve2(url);
+        return;
+      }
+      if (!isDiscordActivityContext()) {
+        resolve2(url);
+        return;
+      }
+      const cached = _gmAudioCache.get(url);
+      if (cached) {
+        resolve2(cached);
+        return;
+      }
+      const pending = _gmAudioPending.get(url);
+      if (pending) {
+        pending.push(resolve2);
+        return;
+      }
+      _gmAudioPending.set(url, [resolve2]);
+      GM_xmlhttpRequest({
+        method: "GET",
+        url,
+        headers: {},
+        responseType: "arraybuffer",
+        onload: (res) => {
+          const callbacks = _gmAudioPending.get(url) ?? [];
+          _gmAudioPending.delete(url);
+          if (!res.response) {
+            for (const cb of callbacks) cb(url);
+            return;
+          }
+          const ext = url.split(".").pop()?.toLowerCase().split("?")[0] ?? "mp3";
+          const audioMimeMap = {
+            mp3: "audio/mpeg",
+            ogg: "audio/ogg",
+            wav: "audio/wav",
+            m4a: "audio/mp4"
+          };
+          const mime = audioMimeMap[ext] ?? "audio/mpeg";
+          const blob = new Blob([res.response], { type: mime });
+          const blobUrl = URL.createObjectURL(blob);
+          _gmAudioCache.set(url, blobUrl);
+          for (const cb of callbacks) cb(blobUrl);
+        },
+        onerror: () => {
+          const callbacks = _gmAudioPending.get(url) ?? [];
+          _gmAudioPending.delete(url);
+          for (const cb of callbacks) cb(url);
+        }
+      });
+    });
   }
   var EMOJI_DATA_CDN_PREFIX = "https://cdn.jsdelivr.net/npm/emoji-picker-element-data";
   var _emojiJson = null;
@@ -13530,6 +13653,12 @@
       } catch (err) {
       }
     },
+    async swapPetFromStorage(petSlotId, storagePetId, storageId) {
+      try {
+        sendToGame({ type: "SwapPetFromStorage", petSlotId, storagePetId, storageId });
+      } catch (err) {
+      }
+    },
     async placePet(itemId, position2, tileType, localTileIndex) {
       try {
         sendToGame({ type: "PlacePet", itemId, position: position2, tileType, localTileIndex });
@@ -22915,6 +23044,22 @@
         continue;
       }
       if (!targetId) continue;
+      if (currentId && hutchItemsSet.has(targetId)) {
+        try {
+          await PlayerService.swapPetFromStorage(currentId, targetId, "PetHutch");
+          swapped++;
+          activeSlots[slot] = targetId;
+          hutchItemsSet.delete(targetId);
+          hutchItemsSet.add(currentId);
+        } catch {
+          try {
+            await _placePetInMyGarden(targetId, placementOffset++);
+            placed++;
+          } catch {
+          }
+        }
+        continue;
+      }
       if (hutchItemsSet.has(targetId)) {
         let invFull = false;
         try {
@@ -30948,7 +31093,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.166";
+      return "3.2.167";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -35716,214 +35861,332 @@
     pre.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,.04)";
   }
 
+  // src/mgApi/config.ts
+  var API_BASE_URL2 = "https://mg-api.ariedam.fr";
+
+  // src/mgApi/client/http.ts
+  function buildMgApiUrl(path, query) {
+    const url = new URL(path, API_BASE_URL2);
+    if (query) {
+      for (const [key2, value] of Object.entries(query)) {
+        if (value === void 0) continue;
+        url.searchParams.set(key2, String(value));
+      }
+    }
+    return url.toString();
+  }
+  function gmGetJson(url) {
+    return new Promise((resolve2) => {
+      GM_xmlhttpRequest({
+        method: "GET",
+        url,
+        onload: (res) => {
+          if (res.status < 200 || res.status >= 300 || !res.responseText) {
+            resolve2(null);
+            return;
+          }
+          try {
+            resolve2(JSON.parse(res.responseText));
+          } catch {
+            resolve2(null);
+          }
+        },
+        onerror: () => resolve2(null)
+      });
+    });
+  }
+  async function fetchGetJson(url) {
+    const res = await fetch(url, { credentials: "omit" });
+    if (!res.ok) return null;
+    const text = await res.text();
+    if (!text) return null;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return null;
+    }
+  }
+  async function mgApiGetJson(path, query) {
+    const url = buildMgApiUrl(path, query);
+    if (isDiscordActivityContext()) {
+      return gmGetJson(url);
+    }
+    try {
+      return await fetchGetJson(url);
+    } catch {
+      return gmGetJson(url);
+    }
+  }
+  function gmGetBinary(url) {
+    return new Promise((resolve2) => {
+      GM_xmlhttpRequest({
+        method: "GET",
+        url,
+        responseType: "arraybuffer",
+        onload: (res) => {
+          if (res.status < 200 || res.status >= 300 || !res.response) {
+            resolve2(null);
+            return;
+          }
+          resolve2(res.response);
+        },
+        onerror: () => resolve2(null)
+      });
+    });
+  }
+  async function mgApiGetBinary(url) {
+    if (isDiscordActivityContext()) {
+      return gmGetBinary(url);
+    }
+    try {
+      const res = await fetch(url, { credentials: "omit" });
+      if (!res.ok) return null;
+      return await res.arrayBuffer();
+    } catch {
+      return gmGetBinary(url);
+    }
+  }
+
+  // src/mgApi/endpoints/sprites.ts
+  async function fetchSpriteCatalog() {
+    return mgApiGetJson("/assets/sprites");
+  }
+  var COMPOSE_KEY_PREFIX = {
+    seeds: "sprite/seed",
+    plants: "sprite/plant",
+    tallPlants: "sprite/plant",
+    pets: "sprite/pet",
+    items: "sprite/item",
+    decor: "sprite/decor",
+    objects: "sprite/object",
+    ui: "sprite/ui",
+    animations: "sprite/animation",
+    winter: "sprite/winter",
+    weather: "weather",
+    tiles: "tile"
+  };
+  function composedSpriteUrl(category, name, mutations) {
+    const prefix = COMPOSE_KEY_PREFIX[category] ?? `sprite/${category}`;
+    return buildMgApiUrl("/assets/sprites/composed", {
+      key: `${prefix}/${name}`,
+      mutations: mutations.length ? mutations.join(",") : void 0
+    });
+  }
+
+  // src/mgApi/endpoints/audio.ts
+  async function fetchAudioCatalog() {
+    return mgApiGetJson("/assets/audios");
+  }
+
   // src/ui/menus/debug-data-audio.ts
+  var catalogPromise = null;
+  async function loadCatalog(force = false) {
+    if (force) catalogPromise = null;
+    if (!catalogPromise) catalogPromise = fetchAudioCatalog();
+    return catalogPromise;
+  }
+  function formatTime2(seconds) {
+    if (!Number.isFinite(seconds)) return "\u2014";
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }
   function renderAudioPlayerTab(view, ui) {
     view.innerHTML = "";
     view.classList.add("dd-debug-view");
     const { leftCol, rightCol } = createTwoColumns(view);
-    let infoList = [];
-    let groupEntries = [];
-    let visibleSounds = [];
-    const overviewCard = ui.card("\u{1F3A7} Audio player", {
+    let catalog = null;
+    let visibleSfx = [];
+    const audioEl = document.createElement("audio");
+    audioEl.preload = "none";
+    view.appendChild(audioEl);
+    let stopAtHandler = null;
+    let nowPlayingLabel = "";
+    const overviewCard = ui.card("\u{1F3A7} Audio catalog", {
       tone: "muted",
-      subtitle: "Inspect detected sounds, auto groups and Howler status."
+      subtitle: "Browse themes and SFX from mg-api.ariedam.fr /assets/audios."
     });
     leftCol.appendChild(overviewCard.root);
     const summary = document.createElement("div");
     summary.className = "dd-audio-summary";
-    const summarySounds = document.createElement("div");
-    const summaryGroups = document.createElement("div");
-    const summarySources = document.createElement("div");
-    summary.append(summarySounds, summaryGroups, summarySources);
-    const volumeLine = document.createElement("div");
-    volumeLine.className = "dd-audio-volume";
-    const finalLine = document.createElement("div");
-    finalLine.className = "dd-audio-volume";
+    const summaryThemes = document.createElement("div");
+    const summarySfx = document.createElement("div");
+    summary.append(summaryThemes, summarySfx);
+    const nowPlaying = document.createElement("div");
+    nowPlaying.className = "dd-audio-volume";
     const overviewError = ui.errorBar();
     const actionsRow = ui.flexRow({ gap: 10, wrap: true, fullWidth: true });
-    const btnScan = ui.btn("Rescan sounds", {
+    const btnReload = ui.btn("Reload catalog", {
       icon: "\u{1F504}",
       variant: "primary",
       onClick: () => {
-        void refreshAll({ rescan: true });
+        void refreshAll(true);
       }
     });
-    const btnRefresh = ui.btn("Refresh snapshot", {
-      icon: "\u{1F501}",
-      onClick: () => {
-        void refreshAll();
-      }
+    const btnStop = ui.btn("Stop playback", {
+      icon: "\u23F9\uFE0F",
+      onClick: () => stopPlayback()
     });
-    const btnCopyJson = ui.btn("Copy JSON", {
-      icon: "\u{1F4CB}",
-      onClick: () => copy(audioPlayer.exportJSON())
-    });
-    actionsRow.append(btnScan, btnRefresh, btnCopyJson);
-    overviewCard.body.append(summary, volumeLine, finalLine, overviewError.el, actionsRow);
-    const groupsCard = ui.card("\u{1F39B}\uFE0F Groups", {
+    actionsRow.append(btnReload, btnStop);
+    overviewCard.body.append(summary, nowPlaying, overviewError.el, actionsRow);
+    const themesCard = ui.card("\u{1F3B5} Themes", {
       tone: "muted",
-      subtitle: "Browse auto-generated groups and play random variations."
+      subtitle: "Per-area music and ambience tracks."
     });
-    leftCol.appendChild(groupsCard.root);
-    const groupToolbar = ui.flexRow({ gap: 10, wrap: true, fullWidth: true });
-    const groupFilter = ui.inputText("filter groups (regex)", "");
-    groupFilter.classList.add("dd-grow");
-    const btnGroupClear = ui.btn("Clear", {
+    leftCol.appendChild(themesCard.root);
+    const themeList = document.createElement("div");
+    themeList.className = "dd-audio-list";
+    const themeEmpty = document.createElement("div");
+    themeEmpty.className = "dd-audio-empty";
+    themeEmpty.textContent = "No themes loaded yet.";
+    themesCard.body.append(themeList, themeEmpty);
+    const sfxCard = ui.card("\u{1F509} SFX", {
+      tone: "muted",
+      subtitle: "Sliced from the single SFX atlas file."
+    });
+    rightCol.appendChild(sfxCard.root);
+    const sfxToolbar = ui.flexRow({ gap: 10, wrap: true, fullWidth: true });
+    const sfxFilter = ui.inputText("filter sfx (regex)", "");
+    sfxFilter.classList.add("dd-grow");
+    const btnSfxClear = ui.btn("Clear", {
       icon: "\u{1F9F9}",
       onClick: () => {
-        groupFilter.value = "";
-        renderGroups2();
-        groupFilter.focus();
+        sfxFilter.value = "";
+        renderSfx();
+        sfxFilter.focus();
       }
     });
-    groupToolbar.append(groupFilter, btnGroupClear);
-    const groupInfo = document.createElement("p");
-    groupInfo.className = "dd-card-description";
-    groupInfo.style.margin = "0";
-    const groupList = document.createElement("div");
-    groupList.className = "dd-audio-list";
-    const groupEmpty = document.createElement("div");
-    groupEmpty.className = "dd-audio-empty";
-    groupEmpty.textContent = "No groups match the current filter.";
-    groupsCard.body.append(groupToolbar, groupInfo, groupList, groupEmpty);
-    const soundsCard = ui.card("\u{1F509} Sounds", {
-      tone: "muted",
-      subtitle: "Inspect detected files and trigger playback."
-    });
-    rightCol.appendChild(soundsCard.root);
-    const soundToolbar = ui.flexRow({ gap: 10, wrap: true, fullWidth: true });
-    const soundFilter = ui.inputText("filter sounds (regex)", "");
-    soundFilter.classList.add("dd-grow");
-    const btnSoundClear = ui.btn("Clear", {
-      icon: "\u{1F9F9}",
-      onClick: () => {
-        soundFilter.value = "";
-        renderSounds();
-        soundFilter.focus();
-      }
-    });
-    const btnCopyVisible = ui.btn("Copy visible URLs", {
+    const btnCopyVisible = ui.btn("Copy visible names", {
       icon: "\u{1F4CB}",
       onClick: () => {
-        if (!visibleSounds.length) return;
-        copy(visibleSounds.map((s) => s.url).join("\n"));
+        if (!visibleSfx.length) return;
+        copy(visibleSfx.map((s) => s.name).join("\n"));
       }
     });
-    soundToolbar.append(soundFilter, btnSoundClear, btnCopyVisible);
-    const soundInfo = document.createElement("p");
-    soundInfo.className = "dd-card-description";
-    soundInfo.style.margin = "0";
-    const soundList = document.createElement("div");
-    soundList.className = "dd-audio-list";
-    const soundEmpty = document.createElement("div");
-    soundEmpty.className = "dd-audio-empty";
-    soundEmpty.textContent = "No sounds match the current filter.";
-    soundsCard.body.append(soundToolbar, soundInfo, soundList, soundEmpty);
-    groupFilter.addEventListener("input", () => renderGroups2());
-    groupFilter.addEventListener("keydown", (ev) => {
+    sfxToolbar.append(sfxFilter, btnSfxClear, btnCopyVisible);
+    const sfxInfo = document.createElement("p");
+    sfxInfo.className = "dd-card-description";
+    sfxInfo.style.margin = "0";
+    const sfxList = document.createElement("div");
+    sfxList.className = "dd-audio-list";
+    const sfxEmpty = document.createElement("div");
+    sfxEmpty.className = "dd-audio-empty";
+    sfxEmpty.textContent = "No SFX match the current filter.";
+    sfxCard.body.append(sfxToolbar, sfxInfo, sfxList, sfxEmpty);
+    sfxFilter.addEventListener("input", () => renderSfx());
+    sfxFilter.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter") {
         ev.preventDefault();
-        renderGroups2();
+        renderSfx();
       }
     });
-    soundFilter.addEventListener("input", () => renderSounds());
-    soundFilter.addEventListener("keydown", (ev) => {
-      if (ev.key === "Enter") {
-        ev.preventDefault();
-        renderSounds();
-      }
-    });
-    let busy = false;
-    function labelForSound(info) {
-      return info.logicalName || info.name || fileNameFromUrl(info.url);
-    }
-    function fileNameFromUrl(url) {
-      try {
-        return new URL(url, location.href).pathname.split("/").pop() || url;
-      } catch {
-        return url;
-      }
-    }
-    function formatNumber(value, digits = 3) {
-      return value == null || Number.isNaN(value) || !Number.isFinite(value) ? "\u2014" : value.toFixed(digits);
-    }
     function setButtonEnabled(btn, enabled2) {
       const setter = btn.setEnabled;
       if (typeof setter === "function") setter(enabled2);
       else btn.disabled = !enabled2;
     }
-    const scanLabel = btnScan.querySelector(".label");
-    const defaultScanText = scanLabel?.textContent ?? "Rescan sounds";
-    function setScanButtonLoading(loading) {
-      setButtonEnabled(btnScan, !loading);
-      if (scanLabel) scanLabel.textContent = loading ? "Scanning\u2026" : defaultScanText;
+    function stopPlayback() {
+      if (stopAtHandler) {
+        audioEl.removeEventListener("timeupdate", stopAtHandler);
+        stopAtHandler = null;
+      }
+      audioEl.pause();
+      nowPlayingLabel = "";
+      nowPlaying.textContent = "Not playing.";
     }
-    function refreshData() {
-      infoList = audioPlayer.info().slice().sort((a, b) => labelForSound(a).localeCompare(labelForSound(b)));
-      groupEntries = Object.entries(audioPlayer.groups()).sort((a, b) => a[0].localeCompare(b[0]));
-    }
-    function updateOverview() {
-      const sources = /* @__PURE__ */ new Set();
-      infoList.forEach((info) => {
-        (info.sources || "").split(",").map((s) => s.trim()).filter(Boolean).forEach((src) => sources.add(src));
-      });
-      const vol = audioPlayer.getGameSfxVolume();
-      const howlerGlobal = window?.Howler;
-      let howlerMaster = null;
+    async function playClip(url, label2, start2, end) {
+      stopPlayback();
+      nowPlayingLabel = label2;
+      nowPlaying.textContent = `Loading: ${label2}\u2026`;
+      const safeUrl = await getAudioUrlSafe(url);
+      if (nowPlayingLabel !== label2) return;
+      audioEl.src = safeUrl;
+      const onLoaded = () => {
+        audioEl.removeEventListener("loadedmetadata", onLoaded);
+        if (typeof start2 === "number") audioEl.currentTime = start2;
+      };
+      audioEl.addEventListener("loadedmetadata", onLoaded);
+      if (typeof end === "number") {
+        stopAtHandler = () => {
+          if (audioEl.currentTime >= end) stopPlayback();
+        };
+        audioEl.addEventListener("timeupdate", stopAtHandler);
+      }
       try {
-        if (howlerGlobal && typeof howlerGlobal.volume === "function") {
-          const val = howlerGlobal.volume();
-          if (typeof val === "number" && Number.isFinite(val)) howlerMaster = val;
-        }
+        await audioEl.play();
+        nowPlaying.textContent = `Playing: ${label2}`;
       } catch {
+        nowPlaying.textContent = `Failed to play: ${label2}`;
       }
-      const howlerCount = Array.isArray(howlerGlobal?._howls) ? howlerGlobal._howls.length : 0;
-      summarySounds.innerHTML = `<strong>${infoList.length}</strong> sounds detected`;
-      summaryGroups.innerHTML = `<strong>${groupEntries.length}</strong> auto groups`;
-      summarySources.innerHTML = `<strong>${sources.size}</strong> unique source tags`;
-      volumeLine.textContent = `Atom raw: ${formatNumber(vol.raw)} (clamped ${formatNumber(vol.clamped)})`;
-      let suffix = "";
-      if (howlerMaster != null) {
-        suffix = ` \xB7 Howler master ${formatNumber(howlerMaster)}`;
-        if (howlerCount) suffix += ` (${howlerCount} howl${howlerCount === 1 ? "" : "s"})`;
-      } else if (howlerCount) {
-        suffix = ` \xB7 ${howlerCount} howl${howlerCount === 1 ? "" : "s"} registered`;
-      }
-      finalLine.textContent = `Final output volume: ${formatNumber(vol.vol)}${suffix}`;
     }
-    function renderGroups2() {
-      const rx = safeRegex(groupFilter.value.trim() || ".*");
-      const infoByUrl = new Map(infoList.map((info) => [info.url, info]));
-      groupList.innerHTML = "";
-      let visible = 0;
-      const matches = (value) => !!value && rx.test(value);
-      for (const [name, urls] of groupEntries) {
-        const include = matches(name) || urls.some((url) => {
-          const info = infoByUrl.get(url);
-          return matches(url) || matches(info?.logicalName) || matches(info?.name);
-        });
-        if (!include) continue;
-        visible++;
-        const sampleUrl = urls[0] || "";
-        const sampleInfo = infoByUrl.get(sampleUrl);
+    function renderThemes() {
+      themeList.innerHTML = "";
+      const themes = catalog?.themes ?? [];
+      themes.forEach((theme) => {
         const row = document.createElement("div");
         row.className = "dd-audio-row";
         const infoWrap = document.createElement("div");
         infoWrap.className = "dd-audio-row__info";
         const title = document.createElement("div");
         title.className = "dd-audio-row__title";
-        title.textContent = name;
-        const meta = document.createElement("div");
-        meta.className = "dd-audio-meta";
-        const parts = [];
-        parts.push(`${urls.length} variation${urls.length === 1 ? "" : "s"}`);
-        if (sampleInfo?.name) parts.push(`Sample: ${sampleInfo.name}`);
-        if (sampleInfo?.sources) parts.push(`Sources: ${sampleInfo.sources}`);
-        meta.textContent = parts.join(" \u2022 ");
+        title.textContent = theme.name;
         const urlEl = document.createElement("div");
         urlEl.className = "dd-audio-url";
-        urlEl.textContent = sampleUrl || "(no sample)";
-        infoWrap.append(title, meta, urlEl);
+        urlEl.textContent = [theme.music && "music", theme.ambience && "ambience"].filter(Boolean).join(" \xB7 ") || "(no tracks)";
+        infoWrap.append(title, urlEl);
+        row.appendChild(infoWrap);
+        const actions = ui.flexRow({ gap: 6, wrap: true, align: "center" });
+        actions.className = "dd-audio-actions";
+        if (theme.music) {
+          actions.appendChild(ui.btn("Play music", {
+            icon: "\u25B6\uFE0F",
+            size: "sm",
+            onClick: () => {
+              void playClip(theme.music, `${theme.name} \xB7 music`);
+            }
+          }));
+        }
+        if (theme.ambience) {
+          actions.appendChild(ui.btn("Play ambience", {
+            icon: "\u25B6\uFE0F",
+            size: "sm",
+            onClick: () => {
+              void playClip(theme.ambience, `${theme.name} \xB7 ambience`);
+            }
+          }));
+        }
+        actions.appendChild(ui.btn("Copy URLs", {
+          icon: "\u{1F4CB}",
+          size: "sm",
+          onClick: () => copy([theme.music, theme.ambience].filter(Boolean).join("\n"))
+        }));
+        row.appendChild(actions);
+        themeList.appendChild(row);
+      });
+      themeList.style.display = themes.length ? "" : "none";
+      themeEmpty.style.display = themes.length ? "none" : "block";
+      themeEmpty.textContent = catalog ? "No themes in the catalog." : "No themes loaded yet.";
+    }
+    function renderSfx() {
+      const rx = safeRegex(sfxFilter.value.trim() || ".*");
+      visibleSfx = [];
+      sfxList.innerHTML = "";
+      const items = catalog?.sfx.items ?? [];
+      const atlasUrl = catalog?.sfx.url ?? "";
+      for (const item of items) {
+        if (!rx.test(item.name)) continue;
+        visibleSfx.push(item);
+        const row = document.createElement("div");
+        row.className = "dd-audio-row";
+        const infoWrap = document.createElement("div");
+        infoWrap.className = "dd-audio-row__info";
+        const title = document.createElement("div");
+        title.className = "dd-audio-row__title";
+        title.textContent = item.name;
+        const meta = document.createElement("div");
+        meta.className = "dd-audio-meta";
+        meta.textContent = `${formatTime2(item.start)} \u2192 ${formatTime2(item.end)} (${item.duration.toFixed(2)}s)`;
+        infoWrap.append(title, meta);
         row.appendChild(infoWrap);
         const actions = ui.flexRow({ gap: 6, wrap: false, align: "center" });
         actions.className = "dd-audio-actions";
@@ -35931,128 +36194,42 @@
           icon: "\u25B6\uFE0F",
           size: "sm",
           onClick: () => {
-            audioPlayer.playGroup(name, { random: true });
+            void playClip(atlasUrl, item.name, item.start, item.end);
           }
         });
-        const copyBtn = ui.btn("Copy URLs", {
+        const copyBtn = ui.btn("Copy URL", {
           icon: "\u{1F4CB}",
           size: "sm",
-          onClick: () => copy(urls.join("\n"))
+          onClick: () => copy(atlasUrl)
         });
-        const openBtn = sampleUrl ? ui.btn("Open", {
-          icon: "\u{1F517}",
-          size: "sm",
-          onClick: () => {
-            try {
-              window.open(sampleUrl, "_blank", "noopener,noreferrer");
-            } catch {
-            }
-          }
-        }) : null;
         actions.append(playBtn, copyBtn);
-        if (openBtn) actions.append(openBtn);
         row.appendChild(actions);
-        groupList.appendChild(row);
+        sfxList.appendChild(row);
       }
-      groupInfo.textContent = groupEntries.length ? `${visible} / ${groupEntries.length} groups shown.` : "No groups have been detected yet. Run a rescan to populate the cache.";
-      groupList.style.display = visible ? "" : "none";
-      groupEmpty.textContent = groupEntries.length ? "No groups match the current filter." : "No groups detected yet. Run a rescan to populate the cache.";
-      groupEmpty.style.display = visible ? "none" : "block";
-      setButtonEnabled(btnGroupClear, groupFilter.value.trim().length > 0);
+      sfxInfo.textContent = items.length ? `${visibleSfx.length} / ${items.length} SFX shown.` : "No SFX loaded yet.";
+      sfxList.style.display = visibleSfx.length ? "" : "none";
+      sfxEmpty.style.display = visibleSfx.length ? "none" : "block";
+      setButtonEnabled(btnCopyVisible, visibleSfx.length > 0);
+      setButtonEnabled(btnSfxClear, sfxFilter.value.trim().length > 0);
     }
-    function renderSounds() {
-      const rx = safeRegex(soundFilter.value.trim() || ".*");
-      visibleSounds = [];
-      soundList.innerHTML = "";
-      const matches = (value) => !!value && rx.test(value);
-      for (const info of infoList) {
-        if (!(matches(info.logicalName) || matches(info.name) || matches(info.sources) || matches(info.url))) continue;
-        visibleSounds.push(info);
-        const row = document.createElement("div");
-        row.className = "dd-audio-row";
-        const infoWrap = document.createElement("div");
-        infoWrap.className = "dd-audio-row__info";
-        const title = document.createElement("div");
-        title.className = "dd-audio-row__title";
-        title.textContent = labelForSound(info);
-        const meta = document.createElement("div");
-        meta.className = "dd-audio-meta";
-        const parts = [];
-        if (info.name && info.name !== info.logicalName) parts.push(`File: ${info.name}`);
-        if (info.logicalName) parts.push(`Logical: ${info.logicalName}`);
-        if (info.sources) parts.push(`Sources: ${info.sources}`);
-        meta.textContent = parts.join(" \u2022 ");
-        const urlEl = document.createElement("div");
-        urlEl.className = "dd-audio-url";
-        urlEl.textContent = info.url;
-        infoWrap.append(title, meta, urlEl);
-        row.appendChild(infoWrap);
-        const actions = ui.flexRow({ gap: 6, wrap: false, align: "center" });
-        actions.className = "dd-audio-actions";
-        const playBtn = ui.btn("Play", {
-          icon: "\u25B6\uFE0F",
-          size: "sm",
-          onClick: () => {
-            audioPlayer.playUrl(info.url);
-          }
-        });
-        const copyBtn = ui.btn("Copy", {
-          icon: "\u{1F4CB}",
-          size: "sm",
-          onClick: () => copy(info.url)
-        });
-        const openBtn = ui.btn("Open", {
-          icon: "\u{1F517}",
-          size: "sm",
-          onClick: () => {
-            try {
-              window.open(info.url, "_blank", "noopener,noreferrer");
-            } catch {
-            }
-          }
-        });
-        actions.append(playBtn, copyBtn, openBtn);
-        row.appendChild(actions);
-        soundList.appendChild(row);
-      }
-      soundInfo.textContent = infoList.length ? `${visibleSounds.length} / ${infoList.length} sounds shown.` : "No sounds have been detected yet. Run a rescan to populate the cache.";
-      soundList.style.display = visibleSounds.length ? "" : "none";
-      soundEmpty.textContent = infoList.length ? "No sounds match the current filter." : "No sounds detected yet. Run a rescan to populate the cache.";
-      soundEmpty.style.display = visibleSounds.length ? "none" : "block";
-      setButtonEnabled(btnCopyVisible, visibleSounds.length > 0);
-      setButtonEnabled(btnSoundClear, soundFilter.value.trim().length > 0);
+    function updateSummary2() {
+      summaryThemes.innerHTML = `<strong>${catalog?.themes.length ?? 0}</strong> themes`;
+      summarySfx.innerHTML = `<strong>${catalog?.sfx.items.length ?? 0}</strong> SFX`;
+      if (!nowPlayingLabel) nowPlaying.textContent = "Not playing.";
     }
-    async function refreshAll(opts = {}) {
-      if (busy) return;
-      busy = true;
-      const { rescan = false } = opts;
+    async function refreshAll(forceReload = false) {
+      setButtonEnabled(btnReload, false);
       overviewError.clear();
-      if (rescan) setScanButtonLoading(true);
-      else setButtonEnabled(btnScan, false);
-      setButtonEnabled(btnRefresh, false);
-      let scanError = null;
       try {
-        if (rescan) {
-          try {
-            await audioPlayer.scan();
-          } catch (err) {
-            scanError = err;
-          }
+        catalog = await loadCatalog(forceReload);
+        if (!catalog) {
+          overviewError.show("Failed to load the audio catalog from mg-api.ariedam.fr.");
         }
-        refreshData();
-        updateOverview();
-        renderGroups2();
-        renderSounds();
-        if (scanError) {
-          const message = scanError instanceof Error ? scanError.message : String(scanError);
-          overviewError.show(`Scan failed: ${message}`);
-          console.error("[debug] audio scan failed", scanError);
-        }
+        updateSummary2();
+        renderThemes();
+        renderSfx();
       } finally {
-        if (rescan) setScanButtonLoading(false);
-        else setButtonEnabled(btnScan, true);
-        setButtonEnabled(btnRefresh, true);
-        busy = false;
+        setButtonEnabled(btnReload, true);
       }
     }
     void refreshAll();
@@ -37190,93 +37367,30 @@ next: ${next}`;
 
   // src/ui/menus/debug-data-sprites.ts
   init_settings();
-  var SPRITE_FAMILY_ID = "sprite";
   var ANY_CATEGORY = "all";
   var MAX_VISIBLE_SPRITES = 400;
   var SPRITE_ICON_SIZE = 96;
-  var spriteServicePromise = null;
-  var sleep5 = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
-  function resolveGlobalSpriteService() {
-    const root = globalThis.unsafeWindow || globalThis;
-    return root?.__MG_SPRITE_SERVICE__ ?? null;
+  var catalogPromise2 = null;
+  async function loadCatalog2(force = false) {
+    if (force) catalogPromise2 = null;
+    if (!catalogPromise2) catalogPromise2 = fetchSpriteCatalog();
+    return catalogPromise2;
   }
-  async function waitForSpriteService() {
-    const timeoutMs = 8e3;
-    const start2 = Date.now();
-    while (Date.now() - start2 < timeoutMs) {
-      const svc = resolveGlobalSpriteService();
-      if (svc) {
-        try {
-          if (svc.ready && typeof svc.ready.then === "function") {
-            await svc.ready;
-          }
-        } catch {
-        }
-        return svc;
-      }
-      await sleep5(200);
-    }
-    return null;
-  }
-  async function acquireSpriteService(force = false) {
-    if (force) {
-      spriteServicePromise = null;
-    }
-    if (!spriteServicePromise) {
-      spriteServicePromise = waitForSpriteService();
-    }
-    const svc = await spriteServicePromise;
-    if (!svc) {
-      spriteServicePromise = null;
-      return null;
-    }
-    return svc;
-  }
-  function parseSpriteKey(key2) {
-    const safe = String(key2 || "");
-    const parts = safe.split("/").filter(Boolean);
-    const start2 = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
-    const category = parts[start2] ?? "misc";
-    const id = parts.slice(start2 + 1).join("/") || parts[parts.length - 1] || safe;
-    const full = parts.slice(start2).join("/") || safe;
-    return { category, id, full };
-  }
-  function buildSpriteCandidates2(parsed) {
-    const variants = [parsed.id, parsed.full];
-    const compact = parsed.id.replace(/\W+/g, "");
-    if (compact && compact !== parsed.id) {
-      variants.push(compact);
-    }
-    return Array.from(new Set(variants.filter(Boolean)));
-  }
-  function extractSpriteCategories(service) {
-    if (!service) return [];
-    const cats = service.state?.cats;
-    let values = [];
-    if (cats instanceof Map) {
-      values = Array.from(cats.keys());
-    } else if (cats && typeof cats === "object") {
-      values = Object.keys(cats);
-    }
-    if (!values.length && typeof service.list === "function") {
-      try {
-        const fallback = service.list("any") ?? [];
-        const collected = /* @__PURE__ */ new Set();
-        fallback.forEach((entry) => {
-          const parsed = parseSpriteKey(entry?.key ?? "");
-          if (parsed.category) collected.add(parsed.category);
-        });
-        values = Array.from(collected);
-      } catch {
-        values = [];
+  function flattenCatalog(catalog, category) {
+    const cats = category === ANY_CATEGORY ? Object.keys(catalog.sprites) : [category];
+    const out = [];
+    for (const cat of cats) {
+      const entries = catalog.sprites[cat] ?? [];
+      for (const entry of entries) {
+        out.push({ category: cat, name: entry.name, url: entry.url });
       }
     }
-    return values.map((value) => value.trim()).filter(Boolean).sort((a, b) => a.localeCompare(b));
+    return out;
   }
   var sanitizeFileComponent = (value) => value.replace(/[^a-z0-9_\-]+/gi, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "") || "sprite";
-  var buildSpriteFilename = (parsed, mutations) => {
+  var buildSpriteFilename = (record, mutations) => {
     const mutSegment = mutations.length ? `-${mutations.map((m) => sanitizeFileComponent(m)).join("_")}` : "";
-    return `${sanitizeFileComponent(parsed.category)}-${sanitizeFileComponent(parsed.id)}${mutSegment}.png`;
+    return `${sanitizeFileComponent(record.category)}-${sanitizeFileComponent(record.name)}${mutSegment}.png`;
   };
   var COLOR_SELECTIONS = ["None", ...MUT_G1];
   var CONDITION_SELECTIONS = ["None", ...MUT_G2];
@@ -37287,7 +37401,7 @@ next: ${next}`;
     const { leftCol, rightCol } = createTwoColumns(view);
     const explorerCard = ui.card("Sprite Explorer", {
       tone: "muted",
-      subtitle: "Browse captured sprites via the runtime sprite service."
+      subtitle: "Browse the live sprite catalog from mg-api.ariedam.fr."
     });
     leftCol.appendChild(explorerCard.root);
     const listCard = ui.card("Sprites", {
@@ -37295,20 +37409,11 @@ next: ${next}`;
       subtitle: "Preview sprites for the selected category."
     });
     rightCol.appendChild(listCard.root);
-    const familySelect = ui.select({ width: "100%" });
-    const families = [{ value: SPRITE_FAMILY_ID, label: "Sprite catalog" }];
-    families.forEach(({ value, label: label2 }) => {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = label2;
-      familySelect.appendChild(option);
-    });
-    familySelect.value = SPRITE_FAMILY_ID;
     const categorySelect = ui.select({ width: "100%" });
     categorySelect.disabled = true;
     const searchInput = document.createElement("input");
     searchInput.type = "search";
-    searchInput.placeholder = "Search name or key";
+    searchInput.placeholder = "Search name";
     searchInput.className = "dd-sprite-search";
     const reloadBtn = ui.btn("Reload sprites", {
       size: "sm",
@@ -37329,7 +37434,6 @@ next: ${next}`;
     const controlsGrid = document.createElement("div");
     controlsGrid.className = "dd-sprite-control-grid";
     controlsGrid.append(
-      createSelectControl("Asset family", familySelect),
       createSelectControl("Asset category", categorySelect),
       createSelectControl("Search", searchInput)
     );
@@ -37339,20 +37443,19 @@ next: ${next}`;
     actionRow.append(reloadBtn, downloadBtn);
     explorerCard.body.appendChild(actionRow);
     const mutationFilters = { color: "None", condition: "None", lighting: "None" };
-    let mutationGroupContainers = null;
+    const mutationGroupContainers = {
+      color: document.createElement("div"),
+      condition: document.createElement("div"),
+      lighting: document.createElement("div")
+    };
     const mutationCard = ui.card("Mutations", {
       tone: "muted",
-      subtitle: "Apply color or weather overlays to the previews."
+      subtitle: "Apply color or weather overlays via /assets/sprites/composed."
     });
     leftCol.appendChild(mutationCard.root);
     const mutationBody = document.createElement("div");
     mutationBody.className = "dd-sprite-mutation-card";
     mutationCard.body.appendChild(mutationBody);
-    mutationGroupContainers = {
-      color: document.createElement("div"),
-      condition: document.createElement("div"),
-      lighting: document.createElement("div")
-    };
     mutationGroupContainers.color.className = "dd-sprite-mutation-group";
     mutationGroupContainers.condition.className = "dd-sprite-mutation-group";
     mutationGroupContainers.lighting.className = "dd-sprite-mutation-group";
@@ -37364,7 +37467,7 @@ next: ${next}`;
     renderMutationControls();
     const stats = document.createElement("p");
     stats.className = "dd-sprite-stats";
-    stats.textContent = "Waiting for sprite service\u2026";
+    stats.textContent = "Loading sprite catalog\u2026";
     explorerCard.body.appendChild(stats);
     const previewArea = document.createElement("div");
     previewArea.className = "dd-sprite-grid";
@@ -37372,30 +37475,12 @@ next: ${next}`;
     previewWrap.className = "dd-sprite-grid-wrap";
     previewWrap.appendChild(previewArea);
     listCard.body.appendChild(previewWrap);
-    let selectedFamily = SPRITE_FAMILY_ID;
     let selectedCategory = ANY_CATEGORY;
     let searchTerm = "";
-    let spriteCategories = [];
-    let listRequestId = 0;
-    let retryTimer = null;
     let searchDebounce = null;
     let visibleSpriteRecords = [];
     let downloadInProgress = false;
-    const clearRetry = () => {
-      if (retryTimer !== null) {
-        clearTimeout(retryTimer);
-        retryTimer = null;
-      }
-    };
-    const scheduleRetry = () => {
-      if (retryTimer !== null) return;
-      retryTimer = window.setTimeout(() => {
-        retryTimer = null;
-        void updateList();
-      }, 2e3);
-    };
-    const applySpriteCategories = (categories) => {
-      spriteCategories = categories;
+    const applyCategories = (categories) => {
       categorySelect.innerHTML = "";
       const allOption = document.createElement("option");
       allOption.value = ANY_CATEGORY;
@@ -37427,25 +37512,9 @@ next: ${next}`;
       return active;
     };
     function renderMutationControls() {
-      if (!mutationGroupContainers) return;
-      renderMutationGroup(
-        "color",
-        COLOR_SELECTIONS,
-        "Color",
-        mutationGroupContainers.color
-      );
-      renderMutationGroup(
-        "condition",
-        CONDITION_SELECTIONS,
-        "Weather",
-        mutationGroupContainers.condition
-      );
-      renderMutationGroup(
-        "lighting",
-        LIGHTING_SELECTIONS,
-        "Lighting",
-        mutationGroupContainers.lighting
-      );
+      renderMutationGroup("color", COLOR_SELECTIONS, "Color", mutationGroupContainers.color);
+      renderMutationGroup("condition", CONDITION_SELECTIONS, "Weather", mutationGroupContainers.condition);
+      renderMutationGroup("lighting", LIGHTING_SELECTIONS, "Lighting", mutationGroupContainers.lighting);
     }
     function renderMutationGroup(key2, options, label2, container) {
       container.innerHTML = "";
@@ -37459,23 +37528,21 @@ next: ${next}`;
         btn.type = "button";
         btn.className = "dd-sprite-mutation-btn";
         btn.textContent = option === "None" ? "None" : option;
-        if (mutationFilters[key2] === option) {
-          btn.classList.add("active");
-        }
+        if (mutationFilters[key2] === option) btn.classList.add("active");
         btn.setAttribute("aria-pressed", mutationFilters[key2] === option ? "true" : "false");
         btn.addEventListener("click", () => {
           if (mutationFilters[key2] === option) return;
           mutationFilters[key2] = option;
           renderMutationControls();
-          if (visibleSpriteRecords.length) {
-            renderSpriteCards(visibleSpriteRecords);
-          }
+          if (visibleSpriteRecords.length) renderSpriteCards(visibleSpriteRecords);
         });
         row.appendChild(btn);
       });
       container.append(heading, row);
     }
-    ;
+    function previewUrlFor(record, mutations) {
+      return mutations.length ? composedSpriteUrl(record.category, record.name, mutations) : record.url;
+    }
     function renderSpriteCards(records) {
       if (!records.length) {
         renderEmptyState("No sprites match the current filters.");
@@ -37484,36 +37551,36 @@ next: ${next}`;
       const activeMutations = getActiveMutations();
       previewArea.innerHTML = "";
       records.forEach((record) => {
-        const { entry, parsed } = record;
         const card2 = document.createElement("div");
         card2.className = "dd-sprite-grid__item";
-        card2.title = entry?.key ?? parsed.full;
+        card2.title = `${record.category}/${record.name}`;
         const imgWrap = document.createElement("div");
         imgWrap.className = "dd-sprite-grid__img";
         imgWrap.style.setProperty("--sprite-size", `${SPRITE_ICON_SIZE}px`);
         const iconSlot = document.createElement("span");
         iconSlot.className = "dd-sprite-grid__icon";
-        iconSlot.textContent = "\u2026";
+        const img = document.createElement("img");
+        img.alt = record.name;
+        img.decoding = "async";
+        img.loading = "lazy";
+        img.addEventListener("error", () => {
+          if (img.dataset.fallbackApplied) return;
+          img.dataset.fallbackApplied = "1";
+          setImageSafe(img, record.url);
+        });
+        iconSlot.appendChild(img);
+        setImageSafe(img, previewUrlFor(record, activeMutations));
         imgWrap.appendChild(iconSlot);
-        attachSpriteIcon(
-          iconSlot,
-          [parsed.category],
-          buildSpriteCandidates2(parsed),
-          SPRITE_ICON_SIZE,
-          "debug-sprites",
-          { mutations: activeMutations }
-        );
         const nameEl = document.createElement("span");
         nameEl.className = "dd-sprite-grid__name";
-        const animSuffix = entry?.isAnim && typeof entry.count === "number" ? ` (anim ${entry.count})` : entry?.isAnim ? " (anim)" : "";
-        nameEl.textContent = `${parsed.id}${animSuffix}`;
+        nameEl.textContent = record.name;
         const meta = document.createElement("span");
         meta.className = "dd-sprite-grid__meta";
-        meta.textContent = entry?.key ?? parsed.full;
+        meta.textContent = `${record.category}/${record.name}`;
         card2.append(imgWrap, nameEl, meta);
         const triggerDownload = () => {
           if (downloadInProgress) return;
-          void downloadSpriteRecord(record, void 0, getActiveMutations());
+          void downloadSpriteRecord(record, getActiveMutations());
         };
         card2.addEventListener("click", triggerDownload);
         card2.addEventListener("keydown", (event) => {
@@ -37526,71 +37593,37 @@ next: ${next}`;
         previewArea.appendChild(card2);
       });
     }
-    const updateList = async (forceService = false) => {
-      const token = ++listRequestId;
-      stats.textContent = "Loading sprites\u2026";
-      const service = await acquireSpriteService(forceService);
-      if (token !== listRequestId) return;
-      if (!service) {
-        renderEmptyState("Sprite service not ready. Waiting\u2026");
-        stats.textContent = "Sprite service not ready yet.";
-        scheduleRetry();
+    const updateList = async (forceReload = false) => {
+      stats.textContent = "Loading sprite catalog\u2026";
+      const catalog = await loadCatalog2(forceReload);
+      if (!catalog) {
+        renderEmptyState("Failed to load the sprite catalog from mg-api.ariedam.fr.");
+        stats.textContent = "Catalog load failed. Try Reload.";
         return;
       }
-      clearRetry();
-      if (!spriteCategories.length || forceService) {
-        const categories = extractSpriteCategories(service);
-        applySpriteCategories(categories);
-      }
-      if (selectedFamily !== SPRITE_FAMILY_ID) {
-        renderEmptyState("No assets for this family.");
-        stats.textContent = "Select the sprite family to browse sprites.";
-        return;
-      }
-      const catArg = selectedCategory === ANY_CATEGORY ? "any" : selectedCategory;
-      let sprites = [];
-      try {
-        sprites = typeof service.list === "function" ? service.list(catArg) ?? [] : [];
-      } catch (error) {
-        console.error("[DebugSprites] Failed to list sprites", error);
-        renderEmptyState("Failed to list sprites (see console).");
-        stats.textContent = "Listing sprites failed.";
-        return;
-      }
+      applyCategories(catalog.categories);
+      const records = flattenCatalog(catalog, selectedCategory);
       const normalizedSearch = searchTerm.trim().toLowerCase();
-      const filtered = !normalizedSearch ? sprites : sprites.filter((entry) => {
-        const parsed = parseSpriteKey(entry?.key ?? "");
-        const label2 = `${parsed.category}/${parsed.id}`.toLowerCase();
-        return label2.includes(normalizedSearch) || (entry?.key ?? "").toLowerCase().includes(normalizedSearch);
-      });
+      const filtered = !normalizedSearch ? records : records.filter((r) => r.name.toLowerCase().includes(normalizedSearch));
       const limited = filtered.slice(0, MAX_VISIBLE_SPRITES);
-      const records = limited.map((entry) => ({ entry, parsed: parseSpriteKey(entry?.key ?? "") }));
-      visibleSpriteRecords = records;
-      if (!downloadInProgress) {
-        downloadBtn.textContent = downloadBtnLabel;
-      }
-      downloadBtn.disabled = !records.length || downloadInProgress;
-      if (!records.length) {
+      visibleSpriteRecords = limited;
+      if (!downloadInProgress) downloadBtn.textContent = downloadBtnLabel;
+      downloadBtn.disabled = !limited.length || downloadInProgress;
+      if (!limited.length) {
         renderEmptyState("No sprites match the current filters.");
       } else {
-        renderSpriteCards(records);
+        renderSpriteCards(limited);
       }
       const clipped = filtered.length > MAX_VISIBLE_SPRITES;
       const categoryLabel = selectedCategory === ANY_CATEGORY ? "all categories" : `category "${selectedCategory}"`;
       stats.textContent = clipped ? `Showing ${limited.length}/${filtered.length} sprites for ${categoryLabel}.` : `${filtered.length} sprites for ${categoryLabel}.`;
     };
-    familySelect.addEventListener("change", () => {
-      selectedFamily = familySelect.value || SPRITE_FAMILY_ID;
-      void updateList();
-    });
     categorySelect.addEventListener("change", () => {
       selectedCategory = categorySelect.value || ANY_CATEGORY;
       void updateList();
     });
     searchInput.addEventListener("input", () => {
-      if (searchDebounce !== null) {
-        clearTimeout(searchDebounce);
-      }
+      if (searchDebounce !== null) clearTimeout(searchDebounce);
       searchDebounce = window.setTimeout(() => {
         searchDebounce = null;
         searchTerm = searchInput.value || "";
@@ -37598,15 +37631,10 @@ next: ${next}`;
       }, 150);
     });
     void updateList();
-    async function downloadSpriteRecord(record, svc, mutations) {
-      const activeMutations = mutations ?? getActiveMutations();
-      const dataUrl = await renderRecordToDataUrl(record, svc, activeMutations);
-      if (!dataUrl) return false;
-      triggerDataUrlDownload(
-        dataUrl,
-        buildSpriteFilename(record.parsed, activeMutations)
-      );
-      return true;
+    async function downloadSpriteRecord(record, mutations) {
+      const bytes = await mgApiGetBinary(previewUrlFor(record, mutations));
+      if (!bytes) return;
+      triggerBlobDownload(new Blob([bytes], { type: "image/png" }), buildSpriteFilename(record, mutations));
     }
     async function downloadVisibleSprites() {
       if (!visibleSpriteRecords.length || downloadInProgress) return;
@@ -37614,14 +37642,12 @@ next: ${next}`;
       downloadBtn.disabled = true;
       downloadBtn.textContent = "Preparing zip...";
       try {
-        const service = await acquireSpriteService();
-        if (!service) return;
         const activeMutations = getActiveMutations();
         const files = [];
         for (const record of visibleSpriteRecords) {
-          const dataUrl = await renderRecordToDataUrl(record, service, activeMutations);
-          if (!dataUrl) continue;
-          files.push({ name: buildSpriteFilename(record.parsed, activeMutations), dataUrl });
+          const bytes = await mgApiGetBinary(previewUrlFor(record, activeMutations));
+          if (!bytes) continue;
+          files.push({ name: buildSpriteFilename(record, activeMutations), dataUrl: arrayBufferToDataUrl(bytes, "image/png") });
           downloadBtn.textContent = `Collected ${files.length}/${visibleSpriteRecords.length}`;
         }
         if (!files.length) return;
@@ -37634,202 +37660,180 @@ next: ${next}`;
         downloadBtn.disabled = !visibleSpriteRecords.length;
       }
     }
-    async function renderRecordToDataUrl(record, svc, mutations) {
-      const service = svc ?? await acquireSpriteService();
-      if (!service?.renderToDataURL) return null;
-      try {
-        const dataUrl = await service.renderToDataURL(
-          {
-            category: record.parsed.category,
-            id: record.parsed.id,
-            mutations: mutations ?? getActiveMutations()
-          },
-          "image/png"
-        );
-        return dataUrl ?? null;
-      } catch (error) {
-        console.error("[DebugSprites] download failed", { key: record.entry.key, error });
-        return null;
+  }
+  function arrayBufferToDataUrl(buffer, mime) {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return `data:${mime};base64,${btoa(binary)}`;
+  }
+  async function packFilesToZip(files) {
+    const chunks = [];
+    const fileEntries = [];
+    let offset = 0;
+    for (const file of files) {
+      const { bytes: data, crc32: crc } = dataUrlToBytesAndCrc(file.dataUrl);
+      const nameBytes = new TextEncoder().encode(file.name);
+      const localHeader = buildZipLocalHeader(nameBytes, data.length, crc);
+      fileEntries.push({ nameBytes, data, crc, offset });
+      chunks.push(localHeader, data);
+      offset += localHeader.length + data.length;
+    }
+    const centralRecords = [];
+    fileEntries.forEach((entry) => {
+      centralRecords.push(buildZipCentralDirectory(entry.nameBytes, entry.data.length, entry.crc, entry.offset));
+    });
+    const centralDirectory = concatUint8Arrays(centralRecords);
+    const endRecord = buildZipEndRecord(fileEntries.length, centralDirectory.length, offset);
+    return new Blob([...chunks, centralDirectory, endRecord].map((chunk) => chunk.slice()), {
+      type: "application/zip"
+    });
+  }
+  var LOCAL_HEADER_SIGNATURE = 67324752;
+  var CENTRAL_DIR_SIGNATURE = 33639248;
+  var END_SIGNATURE = 101010256;
+  var ZIP_VERSION = 20;
+  var ZIP_FLAGS = 0;
+  var ZIP_METHOD_STORE = 0;
+  function buildZipLocalHeader(nameBytes, size, crc322) {
+    const buffer = new ArrayBuffer(30 + nameBytes.length);
+    const view = new DataView(buffer);
+    let offset = 0;
+    view.setUint32(offset, LOCAL_HEADER_SIGNATURE, true);
+    offset += 4;
+    view.setUint16(offset, ZIP_VERSION, true);
+    offset += 2;
+    view.setUint16(offset, ZIP_FLAGS, true);
+    offset += 2;
+    view.setUint16(offset, ZIP_METHOD_STORE, true);
+    offset += 2;
+    view.setUint16(offset, 0, true);
+    offset += 2;
+    view.setUint16(offset, 0, true);
+    offset += 2;
+    view.setUint32(offset, crc322 >>> 0, true);
+    offset += 4;
+    view.setUint32(offset, size, true);
+    offset += 4;
+    view.setUint32(offset, size, true);
+    offset += 4;
+    view.setUint16(offset, nameBytes.length, true);
+    offset += 2;
+    view.setUint16(offset, 0, true);
+    const out = new Uint8Array(buffer);
+    out.set(nameBytes, offset);
+    return out;
+  }
+  function buildZipCentralDirectory(nameBytes, size, crc322, offset) {
+    const buffer = new ArrayBuffer(46 + nameBytes.length);
+    const view = new DataView(buffer);
+    let pos = 0;
+    view.setUint32(pos, CENTRAL_DIR_SIGNATURE, true);
+    pos += 4;
+    view.setUint16(pos, ZIP_VERSION, true);
+    pos += 2;
+    view.setUint16(pos, ZIP_VERSION, true);
+    pos += 2;
+    view.setUint16(pos, ZIP_FLAGS, true);
+    pos += 2;
+    view.setUint16(pos, ZIP_METHOD_STORE, true);
+    pos += 2;
+    view.setUint16(pos, 0, true);
+    pos += 2;
+    view.setUint16(pos, 0, true);
+    pos += 2;
+    view.setUint32(pos, crc322 >>> 0, true);
+    pos += 4;
+    view.setUint32(pos, size, true);
+    pos += 4;
+    view.setUint32(pos, size, true);
+    pos += 4;
+    view.setUint16(pos, nameBytes.length, true);
+    pos += 2;
+    view.setUint16(pos, 0, true);
+    pos += 2;
+    view.setUint16(pos, 0, true);
+    pos += 2;
+    view.setUint16(pos, 0, true);
+    pos += 2;
+    view.setUint16(pos, 0, true);
+    pos += 2;
+    view.setUint32(pos, 0, true);
+    pos += 4;
+    view.setUint32(pos, offset, true);
+    pos += 4;
+    const out = new Uint8Array(buffer);
+    out.set(nameBytes, pos);
+    return out;
+  }
+  function buildZipEndRecord(fileCount, centralSize, centralOffset) {
+    const buffer = new ArrayBuffer(22);
+    const view = new DataView(buffer);
+    let pos = 0;
+    view.setUint32(pos, END_SIGNATURE, true);
+    pos += 4;
+    view.setUint16(pos, 0, true);
+    pos += 2;
+    view.setUint16(pos, 0, true);
+    pos += 2;
+    view.setUint16(pos, fileCount, true);
+    pos += 2;
+    view.setUint16(pos, fileCount, true);
+    pos += 2;
+    view.setUint32(pos, centralSize, true);
+    pos += 4;
+    view.setUint32(pos, centralOffset, true);
+    pos += 4;
+    view.setUint16(pos, 0, true);
+    return new Uint8Array(buffer);
+  }
+  function concatUint8Arrays(arrays) {
+    const total = arrays.reduce((sum, arr) => sum + arr.length, 0);
+    const result = new Uint8Array(total);
+    let offset = 0;
+    arrays.forEach((arr) => {
+      result.set(arr, offset);
+      offset += arr.length;
+    });
+    return result;
+  }
+  function dataUrlToBytesAndCrc(dataUrl) {
+    const base64 = dataUrl.split(",")[1] ?? "";
+    const binary = atob(base64);
+    const length = binary.length;
+    const bytes = new Uint8Array(length);
+    for (let i = 0; i < length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return { bytes, crc32: crc32(bytes) };
+  }
+  function crc32(bytes) {
+    let crc = ~0;
+    for (let i = 0; i < bytes.length; i++) {
+      crc = crc >>> 8 ^ CRC_TABLE[(crc ^ bytes[i]) & 255];
+    }
+    return ~crc >>> 0;
+  }
+  var CRC_TABLE = (() => {
+    const table = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let k = 0; k < 8; k++) {
+        c = c & 1 ? 3988292384 ^ c >>> 1 : c >>> 1;
       }
+      table[i] = c >>> 0;
     }
-    async function packFilesToZip(files) {
-      const chunks = [];
-      const fileEntries = [];
-      let offset = 0;
-      for (const file of files) {
-        const { bytes: data, crc32: crc322 } = dataUrlToBytesAndCrc(file.dataUrl);
-        const nameBytes = new TextEncoder().encode(file.name);
-        const localHeader = buildZipLocalHeader(nameBytes, data.length, crc322);
-        fileEntries.push({ nameBytes, data, crc: crc322, offset });
-        chunks.push(localHeader, data);
-        offset += localHeader.length + data.length;
-      }
-      const centralRecords = [];
-      fileEntries.forEach((entry) => {
-        centralRecords.push(
-          buildZipCentralDirectory(entry.nameBytes, entry.data.length, entry.crc, entry.offset)
-        );
-      });
-      const centralDirectory = concatUint8Arrays(centralRecords);
-      const endRecord = buildZipEndRecord(fileEntries.length, centralDirectory.length, offset);
-      return new Blob([...chunks, centralDirectory, endRecord].map((chunk) => chunk.slice()), {
-        type: "application/zip"
-      });
-    }
-    const LOCAL_HEADER_SIGNATURE = 67324752;
-    const CENTRAL_DIR_SIGNATURE = 33639248;
-    const END_SIGNATURE = 101010256;
-    const ZIP_VERSION = 20;
-    const ZIP_FLAGS = 0;
-    const ZIP_METHOD_STORE = 0;
-    function buildZipLocalHeader(nameBytes, size, crc322) {
-      const buffer = new ArrayBuffer(30 + nameBytes.length);
-      const view2 = new DataView(buffer);
-      let offset = 0;
-      view2.setUint32(offset, LOCAL_HEADER_SIGNATURE, true);
-      offset += 4;
-      view2.setUint16(offset, ZIP_VERSION, true);
-      offset += 2;
-      view2.setUint16(offset, ZIP_FLAGS, true);
-      offset += 2;
-      view2.setUint16(offset, ZIP_METHOD_STORE, true);
-      offset += 2;
-      view2.setUint16(offset, 0, true);
-      offset += 2;
-      view2.setUint16(offset, 0, true);
-      offset += 2;
-      view2.setUint32(offset, crc322 >>> 0, true);
-      offset += 4;
-      view2.setUint32(offset, size, true);
-      offset += 4;
-      view2.setUint32(offset, size, true);
-      offset += 4;
-      view2.setUint16(offset, nameBytes.length, true);
-      offset += 2;
-      view2.setUint16(offset, 0, true);
-      const out = new Uint8Array(buffer);
-      out.set(nameBytes, offset);
-      return out;
-    }
-    function buildZipCentralDirectory(nameBytes, size, crc322, offset) {
-      const buffer = new ArrayBuffer(46 + nameBytes.length);
-      const view2 = new DataView(buffer);
-      let pos = 0;
-      view2.setUint32(pos, CENTRAL_DIR_SIGNATURE, true);
-      pos += 4;
-      view2.setUint16(pos, ZIP_VERSION, true);
-      pos += 2;
-      view2.setUint16(pos, ZIP_VERSION, true);
-      pos += 2;
-      view2.setUint16(pos, ZIP_FLAGS, true);
-      pos += 2;
-      view2.setUint16(pos, ZIP_METHOD_STORE, true);
-      pos += 2;
-      view2.setUint16(pos, 0, true);
-      pos += 2;
-      view2.setUint16(pos, 0, true);
-      pos += 2;
-      view2.setUint32(pos, crc322 >>> 0, true);
-      pos += 4;
-      view2.setUint32(pos, size, true);
-      pos += 4;
-      view2.setUint32(pos, size, true);
-      pos += 4;
-      view2.setUint16(pos, nameBytes.length, true);
-      pos += 2;
-      view2.setUint16(pos, 0, true);
-      pos += 2;
-      view2.setUint16(pos, 0, true);
-      pos += 2;
-      view2.setUint16(pos, 0, true);
-      pos += 2;
-      view2.setUint16(pos, 0, true);
-      pos += 2;
-      view2.setUint32(pos, 0, true);
-      pos += 4;
-      view2.setUint32(pos, offset, true);
-      pos += 4;
-      const out = new Uint8Array(buffer);
-      out.set(nameBytes, pos);
-      return out;
-    }
-    function buildZipEndRecord(fileCount, centralSize, centralOffset) {
-      const buffer = new ArrayBuffer(22);
-      const view2 = new DataView(buffer);
-      let pos = 0;
-      view2.setUint32(pos, END_SIGNATURE, true);
-      pos += 4;
-      view2.setUint16(pos, 0, true);
-      pos += 2;
-      view2.setUint16(pos, 0, true);
-      pos += 2;
-      view2.setUint16(pos, fileCount, true);
-      pos += 2;
-      view2.setUint16(pos, fileCount, true);
-      pos += 2;
-      view2.setUint32(pos, centralSize, true);
-      pos += 4;
-      view2.setUint32(pos, centralOffset, true);
-      pos += 4;
-      view2.setUint16(pos, 0, true);
-      return new Uint8Array(buffer);
-    }
-    function concatUint8Arrays(arrays) {
-      const total = arrays.reduce((sum, arr) => sum + arr.length, 0);
-      const result = new Uint8Array(total);
-      let offset = 0;
-      arrays.forEach((arr) => {
-        result.set(arr, offset);
-        offset += arr.length;
-      });
-      return result;
-    }
-    function dataUrlToBytesAndCrc(dataUrl) {
-      const base64 = dataUrl.split(",")[1] ?? "";
-      const binary = atob(base64);
-      const length = binary.length;
-      const bytes = new Uint8Array(length);
-      for (let i = 0; i < length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      return { bytes, crc32: crc32(bytes) };
-    }
-    function crc32(bytes) {
-      let crc = ~0;
-      for (let i = 0; i < bytes.length; i++) {
-        crc = crc >>> 8 ^ CRC_TABLE[(crc ^ bytes[i]) & 255];
-      }
-      return ~crc >>> 0;
-    }
-    const CRC_TABLE = (() => {
-      const table = new Uint32Array(256);
-      for (let i = 0; i < 256; i++) {
-        let c = i;
-        for (let k = 0; k < 8; k++) {
-          c = c & 1 ? 3988292384 ^ c >>> 1 : c >>> 1;
-        }
-        table[i] = c >>> 0;
-      }
-      return table;
-    })();
-    function triggerDataUrlDownload(dataUrl, filename) {
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    }
-    function triggerBlobDownload(blob, filename) {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1e3);
-    }
+    return table;
+  })();
+  function triggerBlobDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1e3);
   }
   function createSelectControl(labelText, control) {
     const wrapper = document.createElement("label");
@@ -43067,7 +43071,7 @@ next: ${next}`;
     const filename = str.split("/").pop() || "";
     return filename.replace(/\.[a-z0-9]+(\?.*)?$/i, "") || null;
   }
-  function buildSpriteCandidates3(primary, option) {
+  function buildSpriteCandidates2(primary, option) {
     const candidates = /* @__PURE__ */ new Set();
     const addCandidate = (value) => {
       if (!value) return;
@@ -43139,7 +43143,7 @@ next: ${next}`;
       justifyContent: "center"
     });
     wrap.textContent = fallback && fallback.trim().length > 0 ? fallback : "??";
-    const candidates = buildSpriteCandidates3(option.key, option);
+    const candidates = buildSpriteCandidates2(option.key, option);
     const categories = getSpriteCategoriesForKey(option?.key, option?.seedName, option?.cropName);
     attachSpriteIcon(wrap, categories, candidates, size, logTag);
     return wrap;
@@ -43153,7 +43157,7 @@ next: ${next}`;
       syncCropSpriteLoadedState(el2, layer);
       return;
     }
-    const candidates = options.candidates && options.candidates.length ? options.candidates : buildSpriteCandidates3(speciesKey);
+    const candidates = options.candidates && options.candidates.length ? options.candidates : buildSpriteCandidates2(speciesKey);
     const mutations = Array.isArray(options.mutations) && options.mutations.length ? options.mutations : void 0;
     const categories = options.categories && options.categories.length ? options.categories : getSpriteCategoriesForKey(speciesKey);
     const updateLoadedState = () => syncCropSpriteLoadedState(el2, layer);
@@ -43712,7 +43716,7 @@ next: ${next}`;
         const option = optionByKey.get(key2);
         const fallbackEmoji = getLockerSeedEmojiForKey(key2) || (option?.seedName ? getLockerSeedEmojiForSeedName(option.seedName) : void 0) || "\u{1F331}";
         const mutations = getMutationsForState(state3);
-        const candidates = buildSpriteCandidates3(key2, option);
+        const candidates = buildSpriteCandidates2(key2, option);
         const categories = getSpriteCategoriesForKey(key2, option?.seedName, option?.cropName);
         applyCropSimulationSprite(refs.sprite, key2, {
           fallback: fallbackEmoji,
