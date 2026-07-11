@@ -17,6 +17,16 @@ import { pageWindow, shareGlobal } from "./page-context";
 const RAIL_LABEL = "RightSideRail";
 const RAIL_FIND_RETRY_MS = 1000;
 const RAIL_FIND_LOG_EVERY = 30;
+// Recovery from a renderer rebuild (e.g. WebGL context loss after the tab
+// is backgrounded a while) normally relies on the rail's `"destroyed"`
+// event to know to re-search — but that only fires if the game actually
+// calls `.destroy()` on the old tree instead of just abandoning it for GC.
+// If it doesn't, `rail` stays a stale-but-non-destroyed reference forever
+// and the bell never comes back. This periodic check catches that case by
+// verifying `rail` is still actually reachable from the *current* live
+// stage, independent of whether `.destroy()` ever fired.
+const RAIL_REACHABILITY_CHECK_MS = 2000;
+const RAIL_REACHABILITY_MAX_HOPS = 64;
 // The rail's icon slots aren't individually labeled, so there's no direct
 // way to say "the Chat slot" by name — but only the Chat slot carries this
 // unread-badge child, which makes it identifiable. Anchoring on it directly
@@ -346,6 +356,31 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
     findRafId = raf(scheduleFind);
   };
 
+  const isReachableFromLiveStage = (node: any): boolean => {
+    const state = getSpriteState();
+    if (!state) return false;
+    const stage = getStage(state);
+    if (!stage) return false;
+    let cur: any = node;
+    let hops = 0;
+    while (cur && hops++ < RAIL_REACHABILITY_MAX_HOPS) {
+      if (cur === stage) return true;
+      cur = cur.parent;
+    }
+    return false;
+  };
+
+  const checkRailReachability = () => {
+    if (!running || !rail || rail.destroyed) return;
+    if (isReachableFromLiveStage(rail)) return;
+    console.warn("[notificationBellPixi] rail orphaned from the live stage (no destroyed event fired), resetting");
+    rail = null;
+    debugState.attached = false;
+    removeButton();
+    restartSearchIfNeeded();
+  };
+  const reachabilityIntervalId = (pageWindow as any).setInterval(checkRailReachability, RAIL_REACHABILITY_CHECK_MS);
+
   const stopWiggleAnimation = () => {
     if (wiggleRafId != null) { cancelRaf(wiggleRafId); wiggleRafId = null; }
     wiggleLastFrameAt = null;
@@ -374,6 +409,7 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
       if (!running) return;
       running = false;
       if (findRafId != null) { cancelRaf(findRafId); findRafId = null; }
+      (pageWindow as any).clearInterval(reachabilityIntervalId);
       stopWiggleAnimation();
       if (rail) {
         try {

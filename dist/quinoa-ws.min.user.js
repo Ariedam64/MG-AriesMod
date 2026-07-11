@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.164
+// @version      3.2.165
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -3018,8 +3018,20 @@
       cats: ctx.state.cats.size
     });
   }
-  var __mg_ready = start();
-  __mg_ready.catch((err) => console.error("[MG SpriteCatalog] failed", err));
+  async function startWithRetry() {
+    const RETRY_DELAY_MS = 2e3;
+    for (; ; ) {
+      try {
+        await start();
+        return;
+      } catch (err) {
+        console.error("[MG SpriteCatalog] failed, retrying", err);
+        ctx.state.started = false;
+        await sleep(RETRY_DELAY_MS);
+      }
+    }
+  }
+  void startWithRetry();
 
   // src/utils/page-context.ts
   var sandboxWin = window;
@@ -27007,6 +27019,8 @@
   var RAIL_LABEL = "RightSideRail";
   var RAIL_FIND_RETRY_MS = 1e3;
   var RAIL_FIND_LOG_EVERY = 30;
+  var RAIL_REACHABILITY_CHECK_MS = 2e3;
+  var RAIL_REACHABILITY_MAX_HOPS = 64;
   var CHAT_SLOT_MARKER_LABEL = "RightSideRailChatBadge";
   var DEFAULT_ICON_GLYPH = "\u{1F514}";
   var DEFAULT_SLOT_SIZE = 45;
@@ -27245,6 +27259,29 @@
       if (!running || rail) return;
       findRafId2 = raf2(scheduleFind2);
     };
+    const isReachableFromLiveStage = (node) => {
+      const state3 = getSpriteState();
+      if (!state3) return false;
+      const stage = getStage(state3);
+      if (!stage) return false;
+      let cur = node;
+      let hops = 0;
+      while (cur && hops++ < RAIL_REACHABILITY_MAX_HOPS) {
+        if (cur === stage) return true;
+        cur = cur.parent;
+      }
+      return false;
+    };
+    const checkRailReachability = () => {
+      if (!running || !rail || rail.destroyed) return;
+      if (isReachableFromLiveStage(rail)) return;
+      console.warn("[notificationBellPixi] rail orphaned from the live stage (no destroyed event fired), resetting");
+      rail = null;
+      debugState2.attached = false;
+      removeButton();
+      restartSearchIfNeeded2();
+    };
+    const reachabilityIntervalId = pageWindow.setInterval(checkRailReachability, RAIL_REACHABILITY_CHECK_MS);
     const stopWiggleAnimation = () => {
       if (wiggleRafId != null) {
         cancelRaf(wiggleRafId);
@@ -27276,6 +27313,7 @@
           cancelRaf(findRafId2);
           findRafId2 = null;
         }
+        pageWindow.clearInterval(reachabilityIntervalId);
         stopWiggleAnimation();
         if (rail) {
           try {
@@ -30910,7 +30948,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.164";
+      return "3.2.165";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;

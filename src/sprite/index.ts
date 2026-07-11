@@ -803,6 +803,27 @@ async function start() {
   });
 }
 
-// Kick off automatically similar to userscript
-const __mg_ready = start();
-__mg_ready.catch(err => console.error('[MG SpriteCatalog] failed', err));
+// Kick off automatically similar to userscript.
+//
+// `start()` sets `ctx.state.started = true` up front to guard against
+// concurrent re-entry, but never clears it again — a transient failure
+// during the version-detection (8s deadline) or ctors-resolution (10s
+// deadline) steps used to leave `__MG_SPRITE_STATE__` permanently unset for
+// the rest of the page session, silently killing every Pixi-based mod
+// feature (crop price, locker indicator, sell-all-pets, notification bell)
+// with nothing but a single console.error. Retry indefinitely instead,
+// resetting the guard so the next attempt can actually run.
+async function startWithRetry(): Promise<void> {
+  const RETRY_DELAY_MS = 2000;
+  for (;;) {
+    try {
+      await start();
+      return;
+    } catch (err) {
+      console.error('[MG SpriteCatalog] failed, retrying', err);
+      ctx.state.started = false;
+      await sleep(RETRY_DELAY_MS);
+    }
+  }
+}
+void startWithRetry();
