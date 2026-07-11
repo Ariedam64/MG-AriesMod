@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.163
+// @version      3.2.164
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -27007,6 +27007,7 @@
   var RAIL_LABEL = "RightSideRail";
   var RAIL_FIND_RETRY_MS = 1e3;
   var RAIL_FIND_LOG_EVERY = 30;
+  var CHAT_SLOT_MARKER_LABEL = "RightSideRailChatBadge";
   var DEFAULT_ICON_GLYPH = "\u{1F514}";
   var DEFAULT_SLOT_SIZE = 45;
   var DEFAULT_SLOT_SPACING = 52;
@@ -27119,12 +27120,19 @@
       canvas.addEventListener("pointerleave", onCanvasPointerLeave);
       canvasListenersAttached = true;
     };
+    const findChatSlot = () => {
+      if (!Array.isArray(rail?.children)) return null;
+      for (const child of rail.children) {
+        if (child === bellContainer) continue;
+        if (findByLabel(child, CHAT_SLOT_MARKER_LABEL)) return child;
+      }
+      return null;
+    };
     const computeSlot = () => {
       const siblings = Array.isArray(rail?.children) ? rail.children.filter((c) => c !== bellContainer) : [];
       let size = DEFAULT_SLOT_SIZE;
       const railWidth = Number(rail?.width);
       if (Number.isFinite(railWidth) && railWidth > 0) size = railWidth;
-      if (!siblings.length) return { size, nextY: 0 };
       const ys = siblings.map((c) => Number(c?.y) || 0).sort((a, b) => a - b);
       let spacing = DEFAULT_SLOT_SPACING;
       if (ys.length >= 2) {
@@ -27134,6 +27142,11 @@
         const median = diffs[Math.floor(diffs.length / 2)];
         if (Number.isFinite(median) && median > 0) spacing = median;
       }
+      const chatSlot = findChatSlot();
+      if (chatSlot) {
+        return { size, nextY: (Number(chatSlot.y) || 0) + spacing };
+      }
+      if (!ys.length) return { size, nextY: 0 };
       return { size, nextY: ys[ys.length - 1] + spacing };
     };
     const syncGeometry = () => {
@@ -30897,7 +30910,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.163";
+      return "3.2.164";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;

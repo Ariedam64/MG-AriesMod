@@ -11,12 +11,21 @@
 // The rest of the notifier UI (badge, panel, sounds) stays plain DOM; only
 // the anchor point moves from `document.querySelector('button[...]')` to
 // this controller's `getScreenRect()`.
-import { getSpriteState, getStage, findAcrossBranches } from "./gardenInfoCardPixi";
+import { getSpriteState, getStage, findAcrossBranches, findByLabel } from "./gardenInfoCardPixi";
 import { pageWindow, shareGlobal } from "./page-context";
 
 const RAIL_LABEL = "RightSideRail";
 const RAIL_FIND_RETRY_MS = 1000;
 const RAIL_FIND_LOG_EVERY = 30;
+// The rail's icon slots aren't individually labeled, so there's no direct
+// way to say "the Chat slot" by name — but only the Chat slot carries this
+// unread-badge child, which makes it identifiable. Anchoring on it directly
+// (rather than "whatever's currently the rail's last child") matters
+// because the rail's other icons (friend bonus, weather status, ...) load
+// in asynchronously and conditionally: anchoring on "last child" made the
+// bell hop further down the rail every time a new icon streamed in after
+// it, instead of staying put right under Chat.
+const CHAT_SLOT_MARKER_LABEL = "RightSideRailChatBadge";
 
 const DEFAULT_ICON_GLYPH = "\u{1F514}"; // 🔔
 const DEFAULT_SLOT_SIZE = 45;
@@ -188,9 +197,18 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
     canvasListenersAttached = true;
   };
 
+  const findChatSlot = (): any | null => {
+    if (!Array.isArray(rail?.children)) return null;
+    for (const child of rail.children) {
+      if (child === bellContainer) continue;
+      if (findByLabel(child, CHAT_SLOT_MARKER_LABEL)) return child;
+    }
+    return null;
+  };
+
   // Reads the real spacing/size of the rail's existing icons instead of
   // hardcoding them, so this keeps working if the game changes the rail's
-  // slot size or icon count in a future build.
+  // slot size in a future build.
   const computeSlot = (): { size: number; nextY: number } => {
     const siblings: any[] = Array.isArray(rail?.children)
       ? rail.children.filter((c: any) => c !== bellContainer)
@@ -198,8 +216,6 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
     let size = DEFAULT_SLOT_SIZE;
     const railWidth = Number(rail?.width);
     if (Number.isFinite(railWidth) && railWidth > 0) size = railWidth;
-
-    if (!siblings.length) return { size, nextY: 0 };
 
     const ys = siblings.map((c: any) => Number(c?.y) || 0).sort((a, b) => a - b);
     let spacing = DEFAULT_SLOT_SPACING;
@@ -210,6 +226,16 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
       const median = diffs[Math.floor(diffs.length / 2)];
       if (Number.isFinite(median) && median > 0) spacing = median;
     }
+
+    const chatSlot = findChatSlot();
+    if (chatSlot) {
+      return { size, nextY: (Number(chatSlot.y) || 0) + spacing };
+    }
+
+    // Chat hasn't loaded into the rail yet — stack after whatever exists so
+    // far; the next resync (rail's childAdded/childRemoved) re-anchors on
+    // Chat as soon as it appears.
+    if (!ys.length) return { size, nextY: 0 };
     return { size, nextY: ys[ys.length - 1] + spacing };
   };
 
