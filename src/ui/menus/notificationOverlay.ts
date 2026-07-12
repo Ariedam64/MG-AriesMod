@@ -10,6 +10,13 @@ import {
 } from "../../utils/catalogIndex";
 import { attachSpriteIcon } from "../spriteIconCache";
 import { startNotificationBellPixi, type NotificationBellPixiController } from "../../utils/notificationBellPixi";
+import {
+  BELL_MODE_EVENT,
+  BELL_WIDGET_Z_INDEX,
+  isFloatingBellEnabled,
+  startNotificationBellFloating,
+  type NotificationBellFloatingController,
+} from "../../utils/notificationBellFloating";
 
 /* ========= Types min ========= */
 type SeedItem  = { itemType: "Seed";  species: string; initialStock: number };
@@ -140,9 +147,12 @@ class OverlayBarebone {
   private slot:  HTMLDivElement    = document.createElement("div");
   private badge: HTMLSpanElement   = document.createElement("span");
   private panel: HTMLDivElement    = document.createElement("div");
-  private bellPixi: NotificationBellPixiController | null = null;
+  private bell: NotificationBellPixiController | NotificationBellFloatingController | null = null;
   private repositionIntervalId: number | null = null;
   private onWindowResize: (() => void) | null = null;
+  private onBellModeChanged: (() => void) | null = null;
+  // Prime audio au premier clic utilisateur (une seule fois, tous modes)
+  private audioPrimedOnce = false;
 
   private lastShops: ShopsSnapshot | null = null;
   private lastPurch: PurchasesSnapshot | null = null;
@@ -169,25 +179,12 @@ class OverlayBarebone {
     this.panel = this.createPanel();
     this.installScrollGuards(this.panel);
 
-    // Prime audio au premier clic utilisateur + toggle panel
-    let primedOnce = false;
+    this.startBell();
 
-    this.bellPixi = startNotificationBellPixi({
-      onClick: async () => {
-        if (!primedOnce) {
-          primedOnce = true;
-          try { await audio.prime(); } catch {}
-        }
-        const on = this.panel.style.display !== "block";
-        this.panel.style.display = on ? "block" : "none";
-        if (on) {
-          this.updatePanelPosition();
-          this.renderPanel();
-          this.updateBadgePosition();
-        }
-        this.updateBellWiggle();
-      },
-    });
+    // Recréer la cloche dans l'autre mode quand le setting change (Alerts >
+    // Settings), sans reload.
+    this.onBellModeChanged = () => this.startBell();
+    window.addEventListener(BELL_MODE_EVENT, this.onBellModeChanged);
 
     this.slot.append(this.badge, this.panel);
     document.body.appendChild(this.slot);
@@ -217,8 +214,48 @@ class OverlayBarebone {
     });
   }
 
+  // Un seul handler de clic partagé par les deux implémentations de cloche
+  // (Pixi dans le rail du jeu, ou widget DOM flottant).
+  private handleBellClick = async (): Promise<void> => {
+    if (!this.audioPrimedOnce) {
+      this.audioPrimedOnce = true;
+      try { await audio.prime(); } catch {}
+    }
+    const on = this.panel.style.display !== "block";
+    this.panel.style.display = on ? "block" : "none";
+    if (on) {
+      this.updatePanelPosition();
+      this.renderPanel();
+      this.updateBadgePosition();
+    }
+    this.updateBellWiggle();
+  };
+
+  // (Re)crée la cloche dans le mode courant. Appelé au boot et à chaque
+  // toggle du setting "floating bell" — l'ancienne implémentation est
+  // arrêtée proprement avant d'instancier l'autre.
+  private startBell(): void {
+    if (this.bell) {
+      try { this.bell.stop(); } catch {}
+      this.bell = null;
+    }
+    const onClick = () => { void this.handleBellClick(); };
+    const floating = isFloatingBellEnabled();
+    this.bell = floating
+      ? startNotificationBellFloating({ onClick, onMoved: () => this.repositionOverlay() })
+      : startNotificationBellPixi({ onClick });
+    // `slot` is a fixed-position stacking context holding the badge and the
+    // panel. Its default z-index sits above the game canvas but *below* the
+    // floating widget, which hid the badge behind the bell button — in
+    // floating mode, lift the whole slot just above the widget so the badge
+    // bubble renders on top of it.
+    this.slot.style.zIndex = floating ? String(BELL_WIDGET_Z_INDEX + 1) : "9999";
+    this.repositionOverlay();
+    this.updateBellWiggle();
+  }
+
   private isClickOnBellButton(clientX: number, clientY: number): boolean {
-    const rect = this.bellPixi?.getScreenRect();
+    const rect = this.bell?.getScreenRect();
     if (!rect) return false;
     return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
   }
@@ -232,10 +269,14 @@ class OverlayBarebone {
       window.removeEventListener("resize", this.onWindowResize);
       this.onWindowResize = null;
     }
+    if (this.onBellModeChanged) {
+      window.removeEventListener(BELL_MODE_EVENT, this.onBellModeChanged);
+      this.onBellModeChanged = null;
+    }
 
-    if (this.bellPixi) {
-      try { this.bellPixi.stop(); } catch {}
-      this.bellPixi = null;
+    if (this.bell) {
+      try { this.bell.stop(); } catch {}
+      this.bell = null;
     }
 
     try { this.slot.remove(); } catch {}
@@ -701,7 +742,7 @@ class OverlayBarebone {
   }
 
   private updateBadgePosition(): void {
-    const rect = this.bellPixi?.getScreenRect();
+    const rect = this.bell?.getScreenRect();
     if (rect && this.badge) {
       style(this.badge, {
         top: `${rect.top - 4}px`,
@@ -711,7 +752,7 @@ class OverlayBarebone {
   }
 
   private updatePanelPosition(): void {
-    const rect = this.bellPixi?.getScreenRect();
+    const rect = this.bell?.getScreenRect();
     if (rect && this.panel) {
       style(this.panel, {
         position: "fixed",
@@ -724,7 +765,7 @@ class OverlayBarebone {
   private updateBellWiggle() {
     // Shake seulement si l'overlay a au moins 1 item ET que le panneau est fermé
     const shouldWiggle = (this.rows.length > 0) && (this.panel.style.display !== "block");
-    this.bellPixi?.setWiggle(shouldWiggle);
+    this.bell?.setWiggle(shouldWiggle);
   }
 
   private createBadge(): HTMLSpanElement {

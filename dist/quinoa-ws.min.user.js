@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.170
+// @version      3.2.171
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -27214,8 +27214,33 @@
   var DEFAULT_SLOT_SPACING = 52;
   var SLOT_OCCUPIED_TOLERANCE_RATIO = 0.5;
   var MAX_SLOT_SEARCH_STEPS = 20;
-  var WIGGLE_AMPLITUDE = 0.26;
-  var WIGGLE_SPEED = 6;
+  var BELL_RING_SEQUENCE = [
+    { offset: 0, deg: 0 },
+    { offset: 0.05, deg: 15 },
+    { offset: 0.1, deg: -13 },
+    { offset: 0.15, deg: 11 },
+    { offset: 0.2, deg: -9 },
+    { offset: 0.25, deg: 7 },
+    { offset: 0.3, deg: -5 },
+    { offset: 0.35, deg: 3 },
+    { offset: 0.4, deg: -2 },
+    { offset: 0.45, deg: 1 },
+    { offset: 0.5, deg: 0 },
+    { offset: 1, deg: 0 }
+  ];
+  var BELL_RING_DURATION_MS = 1600;
+  var DEG_TO_RAD = Math.PI / 180;
+  function bellRingAngleAt(cycleOffset) {
+    for (let i = 1; i < BELL_RING_SEQUENCE.length; i++) {
+      const next = BELL_RING_SEQUENCE[i];
+      if (cycleOffset > next.offset) continue;
+      const prev = BELL_RING_SEQUENCE[i - 1];
+      const span = next.offset - prev.offset;
+      const ratio = span > 0 ? (cycleOffset - prev.offset) / span : 0;
+      return (prev.deg + (next.deg - prev.deg) * ratio) * DEG_TO_RAD;
+    }
+    return 0;
+  }
   function startNotificationBellPixi(opts) {
     const iconGlyph = opts.iconGlyph ?? DEFAULT_ICON_GLYPH;
     let running = true;
@@ -27388,8 +27413,9 @@
       bellContainer.position.set(0, nextY);
       if (bellText) {
         bellText.style.fontSize = Math.round(size * 0.6);
-        if (typeof bellText.anchor?.set === "function") bellText.anchor.set(0.5);
-        bellText.position.set(size / 2, size / 2);
+        if (typeof bellText.anchor?.set === "function") bellText.anchor.set(0.5, 0);
+        const textHeight = Number(bellText.height) || size * 0.6;
+        bellText.position.set(size / 2, Math.max(0, (size - textHeight) / 2));
       }
     };
     const syncUnsafe = () => {
@@ -27524,10 +27550,11 @@
         return;
       }
       if (wiggleLastFrameAt == null) wiggleLastFrameAt = time;
-      const dt = (time - wiggleLastFrameAt) / 1e3;
+      const dt = time - wiggleLastFrameAt;
       wiggleLastFrameAt = time;
       wiggleT += dt;
-      bellText.rotation = Math.sin(wiggleT * WIGGLE_SPEED) * WIGGLE_AMPLITUDE;
+      const cycleOffset = wiggleT % BELL_RING_DURATION_MS / BELL_RING_DURATION_MS;
+      bellText.rotation = bellRingAngleAt(cycleOffset);
       wiggleRafId = raf2(wiggleTick);
     };
     tryFindRail();
@@ -27577,6 +27604,225 @@
         } else {
           stopWiggleAnimation();
         }
+      }
+    };
+  }
+
+  // src/utils/notificationBellFloating.ts
+  var ENABLED_PATH = "notifier.floatingBell.enabled";
+  var POS_PATH = "notifier.floatingBell.pos";
+  var BELL_MODE_EVENT = "qws:alerts-bell-mode-changed";
+  var BELL_GLYPH = "\u{1F514}";
+  var BUTTON_SIZE = 44;
+  var ICON_FONT_SIZE = 24;
+  var BELL_WIDGET_Z_INDEX = 1999900;
+  var SCREEN_MARGIN = 8;
+  var DEFAULT_RIGHT_GAP = 16;
+  var DEFAULT_TOP_RATIO = 0.35;
+  var DRAG_THRESHOLD_PX = 4;
+  var RING_KEYFRAMES = BELL_RING_SEQUENCE.map(({ offset, deg }) => ({
+    transform: `rotate(${deg}deg)`,
+    offset
+  }));
+  function isFloatingBellEnabled() {
+    return readAriesPath(ENABLED_PATH, false) === true;
+  }
+  function setFloatingBellEnabled(value) {
+    writeAriesPath(ENABLED_PATH, value);
+    try {
+      window.dispatchEvent(new CustomEvent(BELL_MODE_EVENT, { detail: { floating: value } }));
+    } catch {
+    }
+  }
+  function readSavedPosition() {
+    const raw = readAriesPath(POS_PATH);
+    if (!raw || typeof raw !== "object") return null;
+    const left = Number(raw.left);
+    const top = Number(raw.top);
+    if (!Number.isFinite(left) || !Number.isFinite(top)) return null;
+    return { left, top };
+  }
+  function persistPosition(pos) {
+    writeAriesPath(POS_PATH, { left: Math.round(pos.left), top: Math.round(pos.top) });
+  }
+  function clampCoord(value, min, max) {
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
+    if (max < min) return min;
+    return Math.min(Math.max(value, min), max);
+  }
+  function startNotificationBellFloating(opts) {
+    let running = true;
+    let wiggleAnimation = null;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.setAttribute("data-notification-bell-widget", "1");
+    button.title = "Notifications";
+    button.setAttribute("aria-label", "Notifications");
+    Object.assign(button.style, {
+      position: "fixed",
+      left: "-9999px",
+      top: "-9999px",
+      width: `${BUTTON_SIZE}px`,
+      height: `${BUTTON_SIZE}px`,
+      zIndex: String(BELL_WIDGET_Z_INDEX),
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "0",
+      borderRadius: "50%",
+      border: "1px solid #32404e",
+      background: "linear-gradient(180deg, #111923, #0b131c)",
+      boxShadow: "0 10px 28px rgba(0,0,0,0.45)",
+      cursor: "grab",
+      userSelect: "none",
+      touchAction: "none"
+    });
+    const icon = document.createElement("span");
+    icon.textContent = BELL_GLYPH;
+    Object.assign(icon.style, {
+      fontSize: `${ICON_FONT_SIZE}px`,
+      lineHeight: "1",
+      pointerEvents: "none",
+      display: "inline-block",
+      // Swing around the bell's mounting point (top center), not its middle.
+      transformOrigin: "50% 0%"
+    });
+    button.appendChild(icon);
+    const applyPosition2 = (left, top) => {
+      const boundedLeft = clampCoord(left, SCREEN_MARGIN, window.innerWidth - BUTTON_SIZE - SCREEN_MARGIN);
+      const boundedTop = clampCoord(top, SCREEN_MARGIN, window.innerHeight - BUTTON_SIZE - SCREEN_MARGIN);
+      button.style.left = `${Math.round(boundedLeft)}px`;
+      button.style.top = `${Math.round(boundedTop)}px`;
+      try {
+        opts.onMoved?.();
+      } catch {
+      }
+      return { left: boundedLeft, top: boundedTop };
+    };
+    const applyInitialPosition2 = () => {
+      const saved = readSavedPosition();
+      if (saved) {
+        applyPosition2(saved.left, saved.top);
+        return;
+      }
+      applyPosition2(
+        window.innerWidth - BUTTON_SIZE - DEFAULT_RIGHT_GAP,
+        window.innerHeight * DEFAULT_TOP_RATIO
+      );
+    };
+    const clampIntoViewport2 = () => {
+      const rect = button.getBoundingClientRect();
+      applyPosition2(rect.left, rect.top);
+    };
+    const onWindowResize = () => {
+      if (!running) return;
+      clampIntoViewport2();
+    };
+    let dragState = null;
+    const onDragMove = (ev) => {
+      if (!dragState || ev.pointerId !== dragState.pointerId) return;
+      const dx = ev.clientX - dragState.startX;
+      const dy = ev.clientY - dragState.startY;
+      if (!dragState.dragged && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+      dragState.dragged = true;
+      dragState.lastPos = applyPosition2(dragState.baseLeft + dx, dragState.baseTop + dy);
+    };
+    const stopDrag = (ev) => {
+      if (!dragState) return;
+      if (ev && ev.pointerId !== dragState.pointerId) return;
+      document.removeEventListener("pointermove", onDragMove);
+      document.removeEventListener("pointerup", stopDrag);
+      document.removeEventListener("pointercancel", stopDrag);
+      try {
+        button.releasePointerCapture(dragState.pointerId);
+      } catch {
+      }
+      const wasDrag = dragState.dragged;
+      if (wasDrag) persistPosition(dragState.lastPos);
+      dragState = null;
+      button.style.cursor = "grab";
+      if (!wasDrag && ev?.type === "pointerup") {
+        try {
+          opts.onClick();
+        } catch (error) {
+          console.error("[notificationBellFloating] onClick error:", error);
+        }
+      }
+    };
+    const onPointerDown = (ev) => {
+      if (ev.button !== 0) return;
+      if (dragState) stopDrag();
+      const rect = button.getBoundingClientRect();
+      dragState = {
+        pointerId: ev.pointerId,
+        startX: ev.clientX,
+        startY: ev.clientY,
+        baseLeft: rect.left,
+        baseTop: rect.top,
+        lastPos: { left: rect.left, top: rect.top },
+        dragged: false
+      };
+      try {
+        button.setPointerCapture(ev.pointerId);
+      } catch {
+      }
+      document.addEventListener("pointermove", onDragMove);
+      document.addEventListener("pointerup", stopDrag);
+      document.addEventListener("pointercancel", stopDrag);
+      button.style.cursor = "grabbing";
+      ev.preventDefault();
+      ev.stopPropagation();
+    };
+    button.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("resize", onWindowResize);
+    document.body.appendChild(button);
+    applyInitialPosition2();
+    const stopWiggle = () => {
+      if (wiggleAnimation) {
+        try {
+          wiggleAnimation.cancel();
+        } catch {
+        }
+        wiggleAnimation = null;
+      }
+    };
+    return {
+      stop() {
+        if (!running) return;
+        running = false;
+        stopDrag();
+        stopWiggle();
+        window.removeEventListener("resize", onWindowResize);
+        button.removeEventListener("pointerdown", onPointerDown);
+        try {
+          button.remove();
+        } catch {
+        }
+      },
+      getScreenRect() {
+        if (!running || !button.isConnected) return null;
+        const rect = button.getBoundingClientRect();
+        return {
+          left: rect.left,
+          top: rect.top,
+          right: rect.right,
+          bottom: rect.bottom,
+          width: rect.width,
+          height: rect.height
+        };
+      },
+      setWiggle(active) {
+        if (!running) return;
+        if (!active) {
+          stopWiggle();
+          return;
+        }
+        if (wiggleAnimation) return;
+        if (typeof icon.animate !== "function") return;
+        wiggleAnimation = icon.animate(RING_KEYFRAMES, {
+          duration: BELL_RING_DURATION_MS,
+          iterations: Infinity
+        });
       }
     };
   }
@@ -27660,9 +27906,12 @@
       __publicField(this, "slot", document.createElement("div"));
       __publicField(this, "badge", document.createElement("span"));
       __publicField(this, "panel", document.createElement("div"));
-      __publicField(this, "bellPixi", null);
+      __publicField(this, "bell", null);
       __publicField(this, "repositionIntervalId", null);
       __publicField(this, "onWindowResize", null);
+      __publicField(this, "onBellModeChanged", null);
+      // Prime audio au premier clic utilisateur (une seule fois, tous modes)
+      __publicField(this, "audioPrimedOnce", false);
       __publicField(this, "lastShops", null);
       __publicField(this, "lastPurch", null);
       // Suivi des IDs visibles dans l'overlay (pour loops & diff)
@@ -27676,32 +27925,34 @@
       // Items à afficher dans l'overlay (déjà filtrés)
       __publicField(this, "rows", []);
       __publicField(this, "lastPanelSig", null);
+      // Un seul handler de clic partagé par les deux implémentations de cloche
+      // (Pixi dans le rail du jeu, ou widget DOM flottant).
+      __publicField(this, "handleBellClick", async () => {
+        if (!this.audioPrimedOnce) {
+          this.audioPrimedOnce = true;
+          try {
+            await audio.prime();
+          } catch {
+          }
+        }
+        const on = this.panel.style.display !== "block";
+        this.panel.style.display = on ? "block" : "none";
+        if (on) {
+          this.updatePanelPosition();
+          this.renderPanel();
+          this.updateBadgePosition();
+        }
+        this.updateBellWiggle();
+      });
       this.slot = this.createSlot();
       this.slot.id = "qws-notifier-slot";
       globalThis.__qws_notifier_slot = this.slot;
       this.badge = this.createBadge();
       this.panel = this.createPanel();
       this.installScrollGuards(this.panel);
-      let primedOnce = false;
-      this.bellPixi = startNotificationBellPixi({
-        onClick: async () => {
-          if (!primedOnce) {
-            primedOnce = true;
-            try {
-              await audio.prime();
-            } catch {
-            }
-          }
-          const on = this.panel.style.display !== "block";
-          this.panel.style.display = on ? "block" : "none";
-          if (on) {
-            this.updatePanelPosition();
-            this.renderPanel();
-            this.updateBadgePosition();
-          }
-          this.updateBellWiggle();
-        }
-      });
+      this.startBell();
+      this.onBellModeChanged = () => this.startBell();
+      window.addEventListener(BELL_MODE_EVENT, this.onBellModeChanged);
       this.slot.append(this.badge, this.panel);
       document.body.appendChild(this.slot);
       window.addEventListener("pointerdown", (e) => {
@@ -27723,8 +27974,28 @@
         return purchasedCountForId(itemId, this.lastPurch) > 0;
       });
     }
+    // (Re)crée la cloche dans le mode courant. Appelé au boot et à chaque
+    // toggle du setting "floating bell" — l'ancienne implémentation est
+    // arrêtée proprement avant d'instancier l'autre.
+    startBell() {
+      if (this.bell) {
+        try {
+          this.bell.stop();
+        } catch {
+        }
+        this.bell = null;
+      }
+      const onClick = () => {
+        void this.handleBellClick();
+      };
+      const floating = isFloatingBellEnabled();
+      this.bell = floating ? startNotificationBellFloating({ onClick, onMoved: () => this.repositionOverlay() }) : startNotificationBellPixi({ onClick });
+      this.slot.style.zIndex = floating ? String(BELL_WIDGET_Z_INDEX + 1) : "9999";
+      this.repositionOverlay();
+      this.updateBellWiggle();
+    }
     isClickOnBellButton(clientX, clientY) {
-      const rect = this.bellPixi?.getScreenRect();
+      const rect = this.bell?.getScreenRect();
       if (!rect) return false;
       return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
     }
@@ -27737,12 +28008,16 @@
         window.removeEventListener("resize", this.onWindowResize);
         this.onWindowResize = null;
       }
-      if (this.bellPixi) {
+      if (this.onBellModeChanged) {
+        window.removeEventListener(BELL_MODE_EVENT, this.onBellModeChanged);
+        this.onBellModeChanged = null;
+      }
+      if (this.bell) {
         try {
-          this.bellPixi.stop();
+          this.bell.stop();
         } catch {
         }
-        this.bellPixi = null;
+        this.bell = null;
       }
       try {
         this.slot.remove();
@@ -28149,7 +28424,7 @@
       if (this.panel.style.display === "block") this.updatePanelPosition();
     }
     updateBadgePosition() {
-      const rect = this.bellPixi?.getScreenRect();
+      const rect = this.bell?.getScreenRect();
       if (rect && this.badge) {
         style(this.badge, {
           top: `${rect.top - 4}px`,
@@ -28158,7 +28433,7 @@
       }
     }
     updatePanelPosition() {
-      const rect = this.bellPixi?.getScreenRect();
+      const rect = this.bell?.getScreenRect();
       if (rect && this.panel) {
         style(this.panel, {
           position: "fixed",
@@ -28169,7 +28444,7 @@
     }
     updateBellWiggle() {
       const shouldWiggle = this.rows.length > 0 && this.panel.style.display !== "block";
-      this.bellPixi?.setWiggle(shouldWiggle);
+      this.bell?.setWiggle(shouldWiggle);
     }
     createBadge() {
       const badge = document.createElement("span");
@@ -28266,12 +28541,12 @@
   var MAX_BUTTONS = 3;
   var ICON_SIZE = 18;
   var WIDGET_Z_INDEX = 1999900;
-  var SCREEN_MARGIN = 8;
+  var SCREEN_MARGIN2 = 8;
   var DEFAULT_TOP = 64;
   var GLOBAL_START_FLAG = "__qws_instant_feed_widget_started";
   var INVENTORY_CARD_ATOM = "inventoryCardIsOpenAtom";
-  var ENABLED_PATH = "pets.instantFeedWidget.enabled";
-  var POS_PATH = "pets.instantFeedWidget.pos";
+  var ENABLED_PATH2 = "pets.instantFeedWidget.enabled";
+  var POS_PATH2 = "pets.instantFeedWidget.pos";
   var started2 = false;
   var enabled = true;
   var modalOpen = false;
@@ -28283,11 +28558,11 @@
   var savedPos = null;
   var positioned = false;
   function isInstantFeedWidgetEnabled() {
-    return readAriesPath(ENABLED_PATH, true) !== false;
+    return readAriesPath(ENABLED_PATH2, true) !== false;
   }
   function setInstantFeedWidgetEnabled(value) {
     enabled = value;
-    writeAriesPath(ENABLED_PATH, value);
+    writeAriesPath(ENABLED_PATH2, value);
     syncVisibility();
   }
   function startInstantFeedWidget() {
@@ -28298,7 +28573,7 @@
     if (started2) return;
     started2 = true;
     enabled = isInstantFeedWidgetEnabled();
-    savedPos = readSavedPosition();
+    savedPos = readSavedPosition2();
     const mount = () => {
       ensureWidget();
       syncVisibility();
@@ -28364,19 +28639,19 @@
     if (!positioned) applyInitialPosition();
     else clampIntoViewport();
   }
-  function readSavedPosition() {
-    const raw = readAriesPath(POS_PATH);
+  function readSavedPosition2() {
+    const raw = readAriesPath(POS_PATH2);
     if (!raw || typeof raw !== "object") return null;
     const left = Number(raw.left);
     const top = Number(raw.top);
     if (!Number.isFinite(left) || !Number.isFinite(top)) return null;
     return { left, top };
   }
-  function persistPosition(pos) {
+  function persistPosition2(pos) {
     savedPos = pos;
-    writeAriesPath(POS_PATH, { left: Math.round(pos.left), top: Math.round(pos.top) });
+    writeAriesPath(POS_PATH2, { left: Math.round(pos.left), top: Math.round(pos.top) });
   }
-  function clampCoord(value, min, max) {
+  function clampCoord2(value, min, max) {
     if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
     if (max < min) return min;
     return Math.min(Math.max(value, min), max);
@@ -28385,8 +28660,8 @@
     if (!widget) return { left, top };
     const width = widget.offsetWidth;
     const height = widget.offsetHeight;
-    const boundedLeft = clampCoord(left, SCREEN_MARGIN, window.innerWidth - width - SCREEN_MARGIN);
-    const boundedTop = clampCoord(top, SCREEN_MARGIN, window.innerHeight - height - SCREEN_MARGIN);
+    const boundedLeft = clampCoord2(left, SCREEN_MARGIN2, window.innerWidth - width - SCREEN_MARGIN2);
+    const boundedTop = clampCoord2(top, SCREEN_MARGIN2, window.innerHeight - height - SCREEN_MARGIN2);
     widget.style.left = `${Math.round(boundedLeft)}px`;
     widget.style.top = `${Math.round(boundedTop)}px`;
     return { left: boundedLeft, top: boundedTop };
@@ -28466,7 +28741,7 @@
         el2.releasePointerCapture(dragState.pointerId);
       } catch {
       }
-      persistPosition(dragState.lastPos);
+      persistPosition2(dragState.lastPos);
       dragState = null;
       el2.style.cursor = "grab";
     };
@@ -30585,7 +30860,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.170";
+      return "3.2.171";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -38000,6 +38275,32 @@ next: ${next}`;
       overflow: "hidden"
     });
     view.appendChild(root);
+    const bellSection = section("Notification bell");
+    root.appendChild(bellSection.root);
+    const bellRow = document.createElement("label");
+    Object.assign(bellRow.style, {
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      cursor: "pointer"
+    });
+    const bellSwitch = ui.switch(isFloatingBellEnabled());
+    bellSwitch.addEventListener("change", () => {
+      setFloatingBellEnabled(bellSwitch.checked);
+    });
+    const bellLabel = document.createElement("span");
+    bellLabel.textContent = "Floating bell (movable widget)";
+    bellLabel.style.fontSize = "13px";
+    bellRow.append(bellSwitch, bellLabel);
+    bellSection.body.appendChild(bellRow);
+    const bellHint = document.createElement("div");
+    bellHint.textContent = "Detaches the bell from the game's icon rail and shows it as a draggable floating button instead. Use this if the bell is missing or misplaced on your screen.";
+    Object.assign(bellHint.style, {
+      opacity: "0.7",
+      fontSize: "12px",
+      lineHeight: "1.4"
+    });
+    bellSection.body.appendChild(bellHint);
     const s1 = section("Audio & Playback");
     root.appendChild(s1.root);
     const contextControls = {};

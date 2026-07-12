@@ -46,8 +46,42 @@ const DEFAULT_SLOT_SPACING = 52;
 const SLOT_OCCUPIED_TOLERANCE_RATIO = 0.5;
 const MAX_SLOT_SEARCH_STEPS = 20;
 
-const WIGGLE_AMPLITUDE = 0.26; // radians
-const WIGGLE_SPEED = 6; // radians/sec of the oscillation argument
+// Classic "bell ring" motion, shared with the floating DOM bell
+// (notificationBellFloating.ts): a burst of fast, decaying swings around
+// the bell's mounting point over the first half of the cycle, then a rest
+// until the next ring — reads as a bell actually ringing rather than a
+// slow metronome sway. Offsets are fractions of one cycle.
+export const BELL_RING_SEQUENCE: ReadonlyArray<{ offset: number; deg: number }> = [
+  { offset: 0, deg: 0 },
+  { offset: 0.05, deg: 15 },
+  { offset: 0.1, deg: -13 },
+  { offset: 0.15, deg: 11 },
+  { offset: 0.2, deg: -9 },
+  { offset: 0.25, deg: 7 },
+  { offset: 0.3, deg: -5 },
+  { offset: 0.35, deg: 3 },
+  { offset: 0.4, deg: -2 },
+  { offset: 0.45, deg: 1 },
+  { offset: 0.5, deg: 0 },
+  { offset: 1, deg: 0 },
+];
+export const BELL_RING_DURATION_MS = 1600;
+
+const DEG_TO_RAD = Math.PI / 180;
+
+/** Ring angle (radians) at a given position in the cycle (0..1), linearly
+ * interpolated between the sequence's keyframes. */
+export function bellRingAngleAt(cycleOffset: number): number {
+  for (let i = 1; i < BELL_RING_SEQUENCE.length; i++) {
+    const next = BELL_RING_SEQUENCE[i];
+    if (cycleOffset > next.offset) continue;
+    const prev = BELL_RING_SEQUENCE[i - 1];
+    const span = next.offset - prev.offset;
+    const ratio = span > 0 ? (cycleOffset - prev.offset) / span : 0;
+    return (prev.deg + (next.deg - prev.deg) * ratio) * DEG_TO_RAD;
+  }
+  return 0;
+}
 
 export interface ScreenRect {
   left: number;
@@ -324,8 +358,11 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
     bellContainer.position.set(0, nextY);
     if (bellText) {
       bellText.style.fontSize = Math.round(size * 0.6);
-      if (typeof bellText.anchor?.set === "function") bellText.anchor.set(0.5);
-      bellText.position.set(size / 2, size / 2);
+      // Anchor at top center so the ring animation swings the bell around
+      // its mounting point, matching the floating DOM bell.
+      if (typeof bellText.anchor?.set === "function") bellText.anchor.set(0.5, 0);
+      const textHeight = Number(bellText.height) || size * 0.6;
+      bellText.position.set(size / 2, Math.max(0, (size - textHeight) / 2));
     }
   };
 
@@ -479,10 +516,11 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
       return;
     }
     if (wiggleLastFrameAt == null) wiggleLastFrameAt = time;
-    const dt = (time - wiggleLastFrameAt) / 1000;
+    const dt = time - wiggleLastFrameAt;
     wiggleLastFrameAt = time;
     wiggleT += dt;
-    bellText.rotation = Math.sin(wiggleT * WIGGLE_SPEED) * WIGGLE_AMPLITUDE;
+    const cycleOffset = (wiggleT % BELL_RING_DURATION_MS) / BELL_RING_DURATION_MS;
+    bellText.rotation = bellRingAngleAt(cycleOffset);
     wiggleRafId = raf(wiggleTick);
   };
 

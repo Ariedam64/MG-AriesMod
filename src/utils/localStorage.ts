@@ -39,7 +39,16 @@ export type AriesStorage = {
   };
   room?: { customRooms?: unknown };
   locker?: { restrictions?: unknown; state?: unknown };
-  notifier?: { prefs?: unknown; rules?: unknown; weatherPrefs?: unknown; loopDefaults?: unknown };
+  notifier?: {
+    prefs?: unknown;
+    rules?: unknown;
+    weatherPrefs?: unknown;
+    loopDefaults?: unknown;
+    floatingBell?: {
+      enabled?: boolean;
+      pos?: { left: number; top: number };
+    };
+  };
   misc?: {
     ghostMode?: unknown;
     ghostDelayMs?: unknown;

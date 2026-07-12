@@ -22,6 +22,7 @@ import { PetAlertService } from "../../services/pet-alerts";
 import { PetsService } from "../../services/pets";
 import type { PetInfo } from "../../services/player";
 import { attachSpriteIcon } from "../spriteIconCache";
+import { isFloatingBellEnabled, setFloatingBellEnabled } from "../../utils/notificationBellFloating";
 
 type RuleEditorRow = {
   id: string;
@@ -796,6 +797,43 @@ function renderSettingsTab(view: HTMLElement, ui: Menu) {
     overflow: "hidden",
   });
   view.appendChild(root);
+
+  // =========================
+  // NOTIFICATION BELL
+  // =========================
+  const bellSection = section("Notification bell");
+  root.appendChild(bellSection.root);
+
+  const bellRow = document.createElement("label");
+  Object.assign(bellRow.style, {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    cursor: "pointer",
+  });
+
+  const bellSwitch = ui.switch(isFloatingBellEnabled()) as HTMLInputElement;
+  bellSwitch.addEventListener("change", () => {
+    setFloatingBellEnabled(bellSwitch.checked);
+  });
+
+  const bellLabel = document.createElement("span");
+  bellLabel.textContent = "Floating bell (movable widget)";
+  bellLabel.style.fontSize = "13px";
+
+  bellRow.append(bellSwitch, bellLabel);
+  bellSection.body.appendChild(bellRow);
+
+  const bellHint = document.createElement("div");
+  bellHint.textContent =
+    "Detaches the bell from the game's icon rail and shows it as a draggable floating button instead. "
+    + "Use this if the bell is missing or misplaced on your screen.";
+  Object.assign(bellHint.style, {
+    opacity: "0.7",
+    fontSize: "12px",
+    lineHeight: "1.4",
+  });
+  bellSection.body.appendChild(bellHint);
 
   // =========================
   // AUDIO & PLAYBACK
