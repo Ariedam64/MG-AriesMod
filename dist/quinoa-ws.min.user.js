@@ -4379,8 +4379,8 @@
   function getPetName(pet) {
     return pet?.name || pet?.petSpecies || "Unknown Pet";
   }
-  function formatAbilityLog(log2) {
-    const { action: action2, parameters } = log2;
+  function formatAbilityLog(log) {
+    const { action: action2, parameters } = log;
     const params = parameters;
     switch (action2) {
       case "CoinFinderI":
@@ -20293,8 +20293,8 @@
     return ev.code === 4300 || ev.code === 4250 && (/superseded/i.test(reason) || /newer user session/i.test(reason));
   }
   function ensureAutoRecoOverlayStyle() {
-    const STYLE_ID7 = "mgAutoRecoOverlayStyle";
-    if (document.getElementById(STYLE_ID7)) return;
+    const STYLE_ID6 = "mgAutoRecoOverlayStyle";
+    if (document.getElementById(STYLE_ID6)) return;
     const css3 = `
     #mgAutoRecoOverlay { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #mgAutoRecoOverlay .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; border: 1px solid rgba(255,255,255,.15); }
@@ -20304,7 +20304,7 @@
     #mgAutoRecoOverlay .btn:focus { outline: 2px solid #7aa2ff; outline-offset: 2px; }
   `;
     const style2 = document.createElement("style");
-    style2.id = STYLE_ID7;
+    style2.id = STYLE_ID6;
     style2.textContent = css3;
     document.documentElement.appendChild(style2);
   }
@@ -24401,8 +24401,8 @@
     root.querySelectorAll(`.${injectedClass}`).forEach((n) => n.remove());
   }
   function ensureStyle(injectedClass, theme) {
-    const STYLE_ID7 = `${injectedClass}-style`;
-    if (document.getElementById(STYLE_ID7)) return;
+    const STYLE_ID6 = `${injectedClass}-style`;
+    if (document.getElementById(STYLE_ID6)) return;
     const css3 = `
 .${injectedClass}{
   font-synthesis: none;
@@ -24457,7 +24457,7 @@
 }
 `.trim();
     const s = document.createElement("style");
-    s.id = STYLE_ID7;
+    s.id = STYLE_ID6;
     s.textContent = css3;
     document.head.appendChild(s);
   }
@@ -26186,12 +26186,12 @@
     });
   }
   function _handleWeatherUpdate(raw, opts = {}) {
-    const normalize4 = (value) => {
+    const normalize3 = (value) => {
       if (value == null) return "";
       if (typeof value === "string") return value.trim();
       return String(value || "").trim();
     };
-    const nextValue = normalize4(raw);
+    const nextValue = normalize3(raw);
     if (!opts.force && _currentWeatherValue === nextValue) return;
     const lookupKey = nextValue.toLowerCase();
     let def = WEATHER_BY_ATOM.get(lookupKey) || WEATHER_BY_NAME.get(lookupKey);
@@ -28663,618 +28663,6 @@
     }
   }
 
-  // src/utils/shopUtility.ts
-  var SHOP_TYPES = ["plant", "egg", "tool", "decor"];
-  var BTN_CLASS = "romann-buyall-btn";
-  var STYLE_ID = "tm-buyall-css";
-  var ITEM_SELECTOR = "div.McFlex.css-1kkwxjt";
-  var LIST_SELECTOR = "div.McFlex.css-1lfov12";
-  var ROW_SELECTOR = "div.McFlex.css-b9riu6";
-  var INDEX_ATTR = "data-tm-shop-index";
-  var RESCAN_MS = 20;
-  var SHOP_ATOMS = {
-    plant: Atoms.shop.seedShop,
-    egg: Atoms.shop.eggShop,
-    tool: Atoms.shop.toolShop,
-    decor: Atoms.shop.decorShop
-  };
-  var MODAL_TO_SHOP_TYPE = {
-    seedShop: "plant",
-    eggShop: "egg",
-    toolShop: "tool",
-    decorShop: "decor"
-  };
-  var shopInventoryCache = {};
-  var shopInventoryLengths = {};
-  var shopInventoryInitStarted = false;
-  var shopInventoryUnsubs = {};
-  async function detectShopFromActiveModal() {
-    try {
-      const modalId = await Atoms.ui.activeModal.get();
-      console.log("[TM][BuyAll] activeModal =", modalId);
-      if (typeof modalId !== "string" || !modalId) return null;
-      const shop = MODAL_TO_SHOP_TYPE[modalId] ?? null;
-      console.log("[TM][BuyAll] mapped modal -> shop =", { modalId, shop });
-      return shop;
-    } catch (error) {
-      console.warn("[TM][BuyAll] failed to read active modal", error);
-      return null;
-    }
-  }
-  function extractInventoryId(shop, entry) {
-    if (!entry) return null;
-    if (shop === "plant") return entry?.species ? String(entry.species) : null;
-    if (shop === "egg") return entry?.eggId ? String(entry.eggId) : null;
-    if (shop === "tool") return entry?.toolId ? String(entry.toolId) : null;
-    if (shop === "decor") return entry?.decorId ? String(entry.decorId) : null;
-    return null;
-  }
-  function extractInventoryName(shop, entry) {
-    if (!entry) return null;
-    if (shop === "plant") return entry?.species ? String(entry.species) : null;
-    if (shop === "egg") return entry?.eggId ? String(entry.eggId) : null;
-    if (shop === "tool") return entry?.toolId ? String(entry.toolId) : null;
-    if (shop === "decor") return entry?.decorId ? String(entry.decorId) : null;
-    return null;
-  }
-  function normalizeInventory(shop, data) {
-    const rawInventory = Array.isArray(data?.inventory) ? data.inventory : [];
-    const normalized = [];
-    for (const entry of rawInventory) {
-      const id = extractInventoryId(shop, entry);
-      if (!id) continue;
-      normalized.push({ id, name: extractInventoryName(shop, entry), raw: entry });
-    }
-    return normalized;
-  }
-  function updateShopInventoryCache(shop, data) {
-    const normalized = normalizeInventory(shop, data);
-    shopInventoryCache[shop] = normalized;
-    shopInventoryLengths[shop] = normalized.length;
-  }
-  async function initShopInventoryWatchers() {
-    for (const shop of SHOP_TYPES) {
-      const atom = SHOP_ATOMS[shop];
-      console.log(await atom.get());
-      if (!atom) continue;
-      if (!shopInventoryInitStarted) return;
-      try {
-        updateShopInventoryCache(shop, await atom.get());
-      } catch (error) {
-        console.warn(`[TM] buyAll failed to fetch ${shop} inventory`, error);
-      }
-      if (!shopInventoryInitStarted) return;
-      try {
-        const unsub = await atom.onChange((next) => {
-          updateShopInventoryCache(shop, next);
-        });
-        if (!shopInventoryInitStarted) {
-          try {
-            unsub();
-          } catch (error) {
-            console.warn(`[TM] buyAll failed to cancel stale ${shop} inventory watcher`, error);
-          }
-          return;
-        }
-        shopInventoryUnsubs[shop] = () => {
-          try {
-            unsub();
-          } catch (err) {
-            console.warn(`[TM] buyAll failed to unsubscribe ${shop} inventory`, err);
-          }
-        };
-      } catch (error) {
-        console.warn(`[TM] buyAll failed to subscribe to ${shop} inventory`, error);
-      }
-    }
-  }
-  function ensureShopInventories() {
-    if (shopInventoryInitStarted) return;
-    shopInventoryInitStarted = true;
-    void initShopInventoryWatchers().catch((error) => {
-      console.warn("[TM] buyAll inventory init error", error);
-    });
-  }
-  function getInventoryEntry(shop, index) {
-    const list = shopInventoryCache[shop];
-    if (!list || index < 0 || index >= list.length) return null;
-    return list[index] ?? null;
-  }
-  var PURCHASE_FNS = {
-    plant: (id) => PlayerService.purchaseSeed(id),
-    egg: (id) => PlayerService.purchaseEgg(id),
-    tool: (id) => PlayerService.purchaseTool(id),
-    decor: (id) => PlayerService.purchaseDecor(id)
-  };
-  function incrementShopPurchaseStat(shop) {
-    switch (shop) {
-      case "plant":
-        StatsService.incrementShopStat("seedsBought");
-        break;
-      case "decor":
-        StatsService.incrementShopStat("decorBought");
-        break;
-      case "egg":
-        StatsService.incrementShopStat("eggsBought");
-        break;
-      case "tool":
-        StatsService.incrementShopStat("toolsBought");
-        break;
-      default:
-        break;
-    }
-  }
-  async function purchaseRemainingItems(shop, itemId, remaining) {
-    if (!shop || !itemId) return;
-    const purchase = PURCHASE_FNS[shop];
-    if (!purchase) return;
-    const totalToBuy = typeof remaining === "number" ? Math.max(0, Math.floor(remaining)) : 0;
-    if (totalToBuy <= 0) return;
-    for (let bought = 0; bought < totalToBuy; bought += 1) {
-      try {
-        await purchase(itemId);
-        incrementShopPurchaseStat(shop);
-      } catch (error) {
-        console.warn("[TM] buyAll purchase failed", { shop, itemId, attempt: bought + 1, error });
-        break;
-      }
-    }
-  }
-  function parseCompactNumber(s) {
-    if (!s) return void 0;
-    const txt = s.replace(/\u00A0|\u202F/g, " ").trim();
-    const re = /(\d{1,3}(?:[ \u00A0\u202F.,]\d{3})+|\d+(?:[.,]\d+)?)(\s*[kKmMbBtT])?/g;
-    let m;
-    let lastNum = null;
-    let lastSuf = null;
-    while (m = re.exec(txt)) {
-      lastNum = m[1];
-      lastSuf = (m[2] || "").trim().toUpperCase() || null;
-    }
-    if (!lastNum) return void 0;
-    if (lastSuf) {
-      const base = Number(lastNum.replace(/[ \u00A0\u202F]/g, "").replace(",", "."));
-      if (!Number.isFinite(base)) return void 0;
-      const mult = lastSuf === "K" ? 1e3 : lastSuf === "M" ? 1e6 : lastSuf === "B" ? 1e9 : lastSuf === "T" ? 1e12 : 1;
-      return Math.round(base * mult);
-    }
-    const hasThousandsSep = /[ \u00A0\u202F.,]\d{3}/.test(lastNum);
-    if (hasThousandsSep) {
-      const val = Number(lastNum.replace(/[ \u00A0\u202F.,]/g, ""));
-      return Number.isFinite(val) ? val : void 0;
-    } else {
-      const val = Number(lastNum.replace(",", "."));
-      return Number.isFinite(val) ? Math.round(val) : void 0;
-    }
-  }
-  var lastShops = null;
-  var lastPurchases = null;
-  var shopsSubStarted = false;
-  var purchasesSubStarted = false;
-  function purchasedCountForId2(id, purchases) {
-    if (!purchases) return 0;
-    const [type, raw] = String(id).split(":");
-    const section = type === "Seed" ? purchases.seed : type === "Egg" ? purchases.egg : type === "Tool" ? purchases.tool : purchases.decor;
-    if (!section || !section.purchases) return 0;
-    const n = section.purchases[raw];
-    return typeof n === "number" && n > 0 ? n : 0;
-  }
-  function toNotifierItemId(shop, itemId) {
-    if (!shop || !itemId) return null;
-    const raw = String(itemId);
-    switch (shop) {
-      case "plant":
-        return `Seed:${raw}`;
-      case "egg":
-        return `Egg:${raw}`;
-      case "tool":
-        return `Tool:${raw}`;
-      case "decor":
-        return `Decor:${raw}`;
-      default:
-        return null;
-    }
-  }
-  function ensureNotifierSnapshots() {
-    if (!shopsSubStarted) {
-      shopsSubStarted = true;
-      NotifierService.onShopsChangeNow((snap) => {
-        lastShops = snap;
-      }).catch((err) => {
-        shopsSubStarted = false;
-        console.warn("[TM] buyAll notifier shops subscription failed", err);
-      });
-    }
-    if (!purchasesSubStarted) {
-      purchasesSubStarted = true;
-      NotifierService.onPurchasesChangeNow((snap) => {
-        lastPurchases = snap;
-      }).catch((err) => {
-        purchasesSubStarted = false;
-        console.warn("[TM] buyAll notifier purchases subscription failed", err);
-      });
-    }
-  }
-  function extractInitialStock(shop, rawId) {
-    if (!shop || !rawId || !lastShops) {
-      return { initialStock: null };
-    }
-    const byShop = shop === "plant" ? lastShops.seed?.inventory ?? [] : shop === "egg" ? lastShops.egg?.inventory ?? [] : shop === "tool" ? lastShops.tool?.inventory ?? [] : lastShops.decor?.inventory ?? [];
-    const match = byShop.find((entry) => {
-      if (!entry) return false;
-      if (shop === "plant") return String(entry.species) === rawId;
-      if (shop === "egg") return String(entry.eggId) === rawId;
-      if (shop === "tool") return String(entry.toolId) === rawId;
-      return String(entry.decorId) === rawId;
-    });
-    if (!match) return { initialStock: null };
-    const initial = Number(match.initialStock);
-    const normalized = Number.isFinite(initial) ? initial : null;
-    return { initialStock: normalized };
-  }
-  function getRemainingDetails(shop, itemId) {
-    const notifierItemId = toNotifierItemId(shop, itemId);
-    if (!notifierItemId) {
-      return { notifierItemId: null, initialStock: null, purchased: null, remaining: null };
-    }
-    const rawId = notifierItemId.split(":")[1] ?? null;
-    const { initialStock } = extractInitialStock(shop, rawId);
-    if (initialStock == null) {
-      return { notifierItemId, initialStock, purchased: null, remaining: null };
-    }
-    const purchased = purchasedCountForId2(notifierItemId, lastPurchases);
-    const remaining = Math.max(0, initialStock - purchased);
-    return { notifierItemId, initialStock, purchased, remaining };
-  }
-  function isItemDisabled(itemEl) {
-    if (!itemEl) return false;
-    return !!itemEl.querySelector(".chakra-text.css-1ox18rb");
-  }
-  function getListItems(listRoot) {
-    const direct = listRoot.querySelectorAll(`:scope > ${ITEM_SELECTOR}`);
-    if (direct.length) return Array.from(direct);
-    return Array.from(listRoot.querySelectorAll(ITEM_SELECTOR));
-  }
-  function parsePriceFromButton(btn) {
-    if (!btn) return void 0;
-    const label2 = btn.querySelector(".css-1uduba2");
-    const raw = (label2?.innerText ?? btn.textContent ?? "").trim();
-    return parseCompactNumber(raw);
-  }
-  function findRowForItem(itemEl) {
-    const bySelector = itemEl.querySelector(ROW_SELECTOR);
-    if (bySelector) return bySelector;
-    const any = Array.from(itemEl.querySelectorAll("div")).find((d) => d.querySelectorAll("button.chakra-button").length >= 2);
-    return any ?? null;
-  }
-  function ensureGlobalStyles() {
-    if (document.getElementById(STYLE_ID)) return;
-    const css3 = `
-    .${BTN_CLASS}{
-      background: var(--chakra-colors-Blue-Magic, #0067B4) !important;
-      border-color: var(--chakra-colors-Blue-Dark, #264093) !important;
-      color: #fff !important;
-      border-width: 2px;
-      border-radius: 5px;
-      text-transform: uppercase;
-      height: 40px;
-      padding-inline: 24px;
-      padding-top: 12px;
-      padding-bottom: 12px;
-      width: 100%;
-    }
-    .${BTN_CLASS}:hover{
-      background: var(--chakra-colors-Blue-Light, #48ADF4) !important;
-      border-color: var(--chakra-colors-Blue-Magic, #0067B4) !important;
-    }
-    .${BTN_CLASS}:focus-visible{
-      outline: transparent solid 2px;
-      outline-offset: 2px;
-      box-shadow: var(--chakra-ring-offset-shadow, 0 0 #0000),
-                  var(--chakra-ring-shadow, 0 0 #0000),
-                  0 0 0 3px var(--chakra-ring-color, rgba(66,153,225,0.6));
-    }
-    /* \xC9tat disabled : couleurs/gris EXACTES demand\xE9es + blocage du hover */
-    .${BTN_CLASS}[disabled],
-    .${BTN_CLASS}[aria-disabled="true"]{
-      background: var(--chakra-colors-Neutral-Grey) !important;
-      border-color: var(--chakra-colors-Neutral-EarlGrey) !important;
-      color: var(--chakra-colors-Neutral-EarlGrey) !important;
-      opacity: 0.7 !important;
-      cursor: not-allowed !important;
-      box-shadow: none !important;
-      pointer-events: none; /* pour l\u2019aria-disabled \xE9ventuel */
-    }
-    .${BTN_CLASS}[disabled]:hover,
-    .${BTN_CLASS}[disabled]:focus,
-    .${BTN_CLASS}[aria-disabled="true"]:hover,
-    .${BTN_CLASS}[aria-disabled="true"]:focus{
-      background: var(--chakra-colors-Neutral-Grey) !important;
-      border-color: var(--chakra-colors-Neutral-EarlGrey) !important;
-      color: var(--chakra-colors-Neutral-EarlGrey) !important;
-      box-shadow: none !important;
-    }
-  `.trim();
-    const style2 = document.createElement("style");
-    style2.id = STYLE_ID;
-    style2.textContent = css3;
-    document.head.appendChild(style2);
-  }
-  function createButton3(templateBtn) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    if (templateBtn?.className) {
-      const classes = `${templateBtn.className} ${BTN_CLASS}`.replace(new RegExp(`\\b${BTN_CLASS}\\b`, "g"), "").trim();
-      btn.className = `${classes} ${BTN_CLASS}`.trim();
-    } else {
-      btn.className = `chakra-button ${BTN_CLASS}`;
-    }
-    const flex = document.createElement("div");
-    flex.className = "McFlex css-1fxg3mj";
-    const label2 = document.createElement("span");
-    label2.className = "css-1uduba2";
-    label2.textContent = "Buy all";
-    flex.appendChild(label2);
-    btn.appendChild(flex);
-    btn.addEventListener("click", async (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      if (btn.disabled) return;
-      const itemEl = btn.closest(ITEM_SELECTOR);
-      const listRoot = itemEl?.closest(LIST_SELECTOR) || document.body;
-      const items = getListItems(listRoot);
-      const total = items.length;
-      const attrIndex = itemEl?.getAttribute(INDEX_ATTR);
-      let idx0 = attrIndex != null && attrIndex !== "" ? Number.parseInt(attrIndex, 10) : -1;
-      if (!Number.isFinite(idx0) || idx0 < 0) {
-        idx0 = itemEl ? items.indexOf(itemEl) : -1;
-      }
-      const idx1 = idx0 >= 0 ? idx0 + 1 : -1;
-      const shop = await detectShopFromActiveModal();
-      let itemId = null;
-      let itemName = null;
-      let reason = "none";
-      let coinParsed;
-      let creditParsed;
-      if (shop && itemEl) {
-        const row = findRowForItem(itemEl);
-        if (row) {
-          const me = btn;
-          const coinBtn = me.previousElementSibling;
-          const creditBtn = me.nextElementSibling;
-          coinParsed = parsePriceFromButton(coinBtn);
-          creditParsed = parsePriceFromButton(creditBtn);
-          const inventoryEntry = idx0 >= 0 ? getInventoryEntry(shop, idx0) : null;
-          if (inventoryEntry) {
-            itemId = inventoryEntry.id;
-            itemName = inventoryEntry.name ?? inventoryEntry.id;
-            reason = "inventory";
-          } else if (idx0 >= 0 && typeof coinParsed === "number" && typeof creditParsed === "number") {
-            reason = "index";
-          }
-        }
-      }
-      const remainingDetails = getRemainingDetails(shop ?? null, itemId);
-      void purchaseRemainingItems(shop, itemId, remainingDetails.remaining);
-      window.dispatchEvent(new CustomEvent("tm:buyAll", {
-        detail: {
-          index1: idx1,
-          index0: idx0,
-          total,
-          shopType: shop,
-          itemId,
-          itemName,
-          reason,
-          coin: coinParsed,
-          credit: creditParsed,
-          element: itemEl,
-          remaining: remainingDetails.remaining,
-          notifierItemId: remainingDetails.notifierItemId
-        }
-      }));
-    });
-    return btn;
-  }
-  function insertIntoItem(itemEl) {
-    const listRoot = itemEl.closest(LIST_SELECTOR);
-    if (listRoot && !itemEl.hasAttribute(INDEX_ATTR)) {
-      const items = getListItems(listRoot);
-      const idx = items.indexOf(itemEl);
-      if (idx >= 0) {
-        itemEl.setAttribute(INDEX_ATTR, String(idx));
-      }
-    }
-    const row = itemEl.querySelector(ROW_SELECTOR) || Array.from(itemEl.querySelectorAll("div")).find((d) => d.querySelectorAll("button.chakra-button").length >= 2);
-    if (!row) return;
-    const btns = row.querySelectorAll("button.chakra-button");
-    if (btns.length < 2) return;
-    let middle = row.querySelector(`button.${BTN_CLASS}`);
-    if (!middle) {
-      middle = createButton3(btns[0]);
-      row.insertBefore(middle, btns[1]);
-    }
-    const disabled = isItemDisabled(itemEl);
-    middle.disabled = disabled;
-    middle.setAttribute("aria-disabled", disabled ? "true" : "false");
-  }
-  function scan(root = document) {
-    root.querySelectorAll(ITEM_SELECTOR).forEach(insertIntoItem);
-  }
-  var observer = null;
-  var intervalId = null;
-  function setupBuyAll() {
-    ensureGlobalStyles();
-    ensureNotifierSnapshots();
-    ensureShopInventories();
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", () => scan());
-    } else {
-      scan();
-    }
-    observer = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        for (const n of m.addedNodes) {
-          if (!(n instanceof Element)) continue;
-          if (n.matches(ITEM_SELECTOR)) insertIntoItem(n);
-          n.querySelectorAll?.(ITEM_SELECTOR).forEach(insertIntoItem);
-        }
-      }
-    });
-    const startObserver = () => observer.observe(document.body, { childList: true, subtree: true });
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", startObserver);
-    else startObserver();
-    startRescan();
-  }
-  function startRescan() {
-    if (intervalId != null) return;
-    intervalId = window.setInterval(() => scan(), RESCAN_MS);
-  }
-  function stopRescan() {
-    if (intervalId != null) {
-      window.clearInterval(intervalId);
-      intervalId = null;
-    }
-  }
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) stopRescan();
-    else if (observer) startRescan();
-  });
-  var DEFAULTS2 = {
-    containerSelector: ".McFlex.css-1lfov12",
-    itemSelector: ".McFlex.css-1kkwxjt",
-    flagSelector: ".chakra-text.css-pyjzrq"
-  };
-  function startReorderObserver(options = {}) {
-    if (!isBrowser2()) {
-      return {
-        stop() {
-        },
-        runOnce() {
-        },
-        isRunning() {
-          return false;
-        }
-      };
-    }
-    const CONTAINER_SEL = options.containerSelector ?? DEFAULTS2.containerSelector;
-    const ITEM_SEL = options.itemSelector ?? DEFAULTS2.itemSelector;
-    const FLAG_SEL = options.flagSelector ?? DEFAULTS2.flagSelector;
-    const ROOT = options.root ?? document;
-    const OBSERVE_HISTORY = options.observeHistory ?? true;
-    const PREFER_DIRECT = options.preferDirectChildren ?? false;
-    const logger = typeof options.log === "function" ? options.log : options.log ? (...args) => console.debug("[ReorderObserver]", ...args) : () => {
-    };
-    let running = true;
-    let pending = false;
-    function processAll() {
-      if (!running || pending) return;
-      pending = true;
-      requestAnimationFrame(() => {
-        try {
-          const containers = queryAll(ROOT, CONTAINER_SEL);
-          for (const c of containers) {
-            reorderContainer(c, ITEM_SEL, FLAG_SEL, PREFER_DIRECT);
-          }
-        } finally {
-          pending = false;
-        }
-      });
-    }
-    const observeTarget = ROOT.documentElement ?? ROOT;
-    const mo = new MutationObserver(processAll);
-    mo.observe(observeTarget, { childList: true, subtree: true });
-    processAll();
-    let unhookHistory = null;
-    if (OBSERVE_HISTORY) {
-      const { unhook } = hookHistory2(processAll);
-      unhookHistory = unhook;
-    }
-    const controller = {
-      stop() {
-        if (!running) return;
-        running = false;
-        mo.disconnect();
-        unhookHistory?.();
-        unhookHistory = null;
-        logger("Stopped.");
-      },
-      runOnce() {
-        processAll();
-      },
-      isRunning() {
-        return running;
-      }
-    };
-    return controller;
-  }
-  function isBrowser2() {
-    return typeof window !== "undefined" && typeof document !== "undefined";
-  }
-  function queryAll(root, selector) {
-    return Array.from(root.querySelectorAll(selector));
-  }
-  function supportsScope() {
-    try {
-      document.querySelector(":scope");
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  function childrenOrDescendants(container, itemSel) {
-    if (supportsScope()) {
-      const direct = Array.from(container.querySelectorAll(`:scope > ${itemSel}`));
-      if (direct.length > 0) return direct;
-    }
-    return Array.from(container.querySelectorAll(itemSel));
-  }
-  function reorderContainer(container, itemSel, flagSel, preferDirectChildren) {
-    const items = preferDirectChildren ? Array.from(container.children).filter((n) => n instanceof Element && n.matches(itemSel)) : childrenOrDescendants(container, itemSel);
-    if (items.length === 0) return;
-    const withFlag = [];
-    const withoutFlag = [];
-    for (const el2 of items) {
-      (el2.querySelector(flagSel) ? withFlag : withoutFlag).push(el2);
-    }
-    if (withFlag.length === 0) return;
-    let seenRest = false;
-    for (const el2 of items) {
-      const flagged = !!el2.querySelector(flagSel);
-      if (!flagged) seenRest = true;
-      else if (seenRest) {
-        const frag = document.createDocumentFragment();
-        for (const e of withFlag) frag.appendChild(e);
-        for (const e of withoutFlag) frag.appendChild(e);
-        container.appendChild(frag);
-        return;
-      }
-    }
-  }
-  function hookHistory2(onNavigate) {
-    const origPush = history.pushState?.bind(history);
-    const origReplace = history.replaceState?.bind(history);
-    function wrap(fn) {
-      if (!fn) return fn;
-      const wrapped = function(...args) {
-        const ret = fn.apply(this, args);
-        onNavigate();
-        return ret;
-      };
-      return wrapped;
-    }
-    const onPop = () => onNavigate();
-    if (origPush) history.pushState = wrap(origPush);
-    if (origReplace) history.replaceState = wrap(origReplace);
-    window.addEventListener("popstate", onPop);
-    return {
-      unhook() {
-        if (origPush) history.pushState = origPush;
-        if (origReplace) history.replaceState = origReplace;
-        window.removeEventListener("popstate", onPop);
-      }
-    };
-  }
-
   // src/utils/cropPrice.ts
   var isPlantObject2 = (o) => !!o && o.objectType === "plant";
   function startCropPriceWatcherViaGardenObject() {
@@ -29368,7 +28756,7 @@
     if (!QPM) return null;
     return inner.querySelector("span.qpm-crop-size");
   }
-  var DEFAULTS3 = {
+  var DEFAULTS2 = {
     rootSelector: ".McFlex.css-fsggty, .McFlex.css-6prrn",
     innerSelector: ".McFlex.css-1l3zq7, .McFlex.css-11dqzw",
     markerClass: "tm-crop-price"
@@ -29395,7 +28783,7 @@
   var nfUS = new Intl.NumberFormat("en-US");
   var formatCoins = (value) => value == null ? PRICE_FALLBACK : nfUS.format(Math.max(0, Math.round(value)));
   var hasDOM = typeof window !== "undefined" && typeof document !== "undefined";
-  function queryAll2(root, sel) {
+  function queryAll(root, sel) {
     return Array.from(root.querySelectorAll(sel));
   }
   function createLogger(option) {
@@ -29405,8 +28793,8 @@
     };
   }
   function forEachInner(root, selectors, callback) {
-    queryAll2(root, selectors.rootSelector).forEach((rootEl) => {
-      queryAll2(rootEl, selectors.innerSelector).forEach(callback);
+    queryAll(root, selectors.rootSelector).forEach((rootEl) => {
+      queryAll(rootEl, selectors.innerSelector).forEach(callback);
     });
   }
   function updatePanels(root, selectors, markerClass, text, locked) {
@@ -29441,10 +28829,10 @@
       }, isRunning: () => false };
     }
     const selectors = {
-      rootSelector: options.rootSelector ?? DEFAULTS3.rootSelector,
-      innerSelector: options.innerSelector ?? DEFAULTS3.innerSelector
+      rootSelector: options.rootSelector ?? DEFAULTS2.rootSelector,
+      innerSelector: options.innerSelector ?? DEFAULTS2.innerSelector
     };
-    const markerClass = options.markerClass ?? DEFAULTS3.markerClass;
+    const markerClass = options.markerClass ?? DEFAULTS2.markerClass;
     const root = options.root ?? document;
     const logger = createLogger(options.log);
     const priceWatcher = startCropPriceWatcherViaGardenObject();
@@ -31289,7 +30677,7 @@
   }
 
   // src/utils/inventorySorting.ts
-  var DEFAULTS4 = {
+  var DEFAULTS3 = {
     // Updated to new Inventory root grid container (game UI update)
     gridSelector: "div.McGrid.css-1kv58ap",
     filtersBlockSelector: ".McGrid.css-o1vp12",
@@ -33430,7 +32818,7 @@
   }
   function attachInventorySorting(userConfig = {}) {
     const cfg = {
-      ...DEFAULTS4,
+      ...DEFAULTS3,
       ...userConfig
     };
     const mapExtraByFilter = { ...MAP_EXTRA_BY_FILTER_DEFAULT, ...cfg.mapExtraByFilter || {} };
@@ -33912,17 +33300,17 @@
         }
       };
     }
-    const { waitForGrid = true, log: log2, ...config } = options;
+    const { waitForGrid = true, log, ...config } = options;
     const cfg = config;
     let controller = null;
-    let observer2 = null;
+    let observer = null;
     let readyListener = null;
-    const logger = typeof log2 === "function" ? log2 : log2 ? (...args) => console.debug("[InventorySorting]", ...args) : () => {
+    const logger = typeof log === "function" ? log : log ? (...args) => console.debug("[InventorySorting]", ...args) : () => {
     };
     const attachIfPossible = () => {
       if (controller) return controller;
       if (waitForGrid) {
-        const selector = cfg.gridSelector ?? DEFAULTS4.gridSelector;
+        const selector = cfg.gridSelector ?? DEFAULTS3.gridSelector;
         const hasGrid = !!document.querySelector(selector);
         const hasHutch = !!document.querySelector(PET_HUTCH_ROOT_SELECTOR);
         if (!hasGrid && !hasHutch) {
@@ -33934,17 +33322,17 @@
       return controller;
     };
     const ensureObserver = () => {
-      if (controller || observer2 || !waitForGrid) return;
+      if (controller || observer || !waitForGrid) return;
       const target = document.body || document.documentElement;
       if (!target) return;
-      observer2 = new MutationObserver(() => {
+      observer = new MutationObserver(() => {
         if (attachIfPossible()) {
-          observer2?.disconnect();
-          observer2 = null;
+          observer?.disconnect();
+          observer = null;
           logger("attached via mutation");
         }
       });
-      observer2.observe(target, { childList: true, subtree: true });
+      observer.observe(target, { childList: true, subtree: true });
     };
     const start2 = () => {
       if (!attachIfPossible()) {
@@ -33966,8 +33354,8 @@
           document.removeEventListener("DOMContentLoaded", readyListener);
           readyListener = null;
         }
-        observer2?.disconnect();
-        observer2 = null;
+        observer?.disconnect();
+        observer = null;
         controller?.destroy();
         controller = null;
       },
@@ -33983,132 +33371,6 @@
       }
     };
   }
-
-  // src/utils/checkModal.ts
-  var DEFAULTS5 = {
-    intervalMs: 6e4,
-    log: false
-  };
-  var normalize3 = (s) => (s || "").replace(/\s+/g, " ").trim();
-  var reGameUpdate = /game\s*update\s+ava?ilab?le/i;
-  var reDailyBread = /your\s+daily\s+bread/i;
-  var log = (enabled2, ...args) => {
-    if (enabled2) console.log("[checkModal]", ...args);
-  };
-  var reloadScheduled = false;
-  var schedulePageReload = (doLog) => {
-    if (reloadScheduled) return;
-    reloadScheduled = true;
-    log(doLog, "Game Update: \u267B\uFE0F rechargement de la page dans un instant...");
-    pageWindow.setTimeout(() => {
-      log(doLog, "Game Update: \u{1F504} rechargement maintenant.");
-      pageWindow.location.reload();
-    }, 500);
-  };
-  var isVisible2 = (el2) => {
-    if (!el2 || !(el2 instanceof HTMLElement)) return false;
-    const rect = el2.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return false;
-    const cs = getComputedStyle(el2);
-    if (cs.display === "none" || cs.visibility === "hidden" || parseFloat(cs.opacity) === 0) return false;
-    let cur = el2;
-    while (cur) {
-      const cs2 = getComputedStyle(cur);
-      if (cs2.display === "none" || cs2.visibility === "hidden") return false;
-      cur = cur.parentElement;
-    }
-    return true;
-  };
-  function findGameUpdateModal() {
-    const sections = document.querySelectorAll(
-      'section.chakra-modal__content[role="dialog"], section.chakra-modal__content[role="alertdialog"]'
-    );
-    for (const sec of sections) {
-      const header = sec.querySelector("header.chakra-modal__header");
-      const txt = normalize3(header?.textContent || sec.textContent || "");
-      if (reGameUpdate.test(txt)) return sec;
-    }
-    return null;
-  }
-  function findBreadModal() {
-    const sections = document.querySelectorAll(
-      'section.chakra-modal__content[role="dialog"], section.chakra-modal__content[role="alertdialog"]'
-    );
-    for (const sec of sections) {
-      const txt = normalize3(sec.textContent || "");
-      if (!reDailyBread.test(txt)) continue;
-      let btn = sec.querySelector("button.chakra-button.css-1o32am8");
-      if (!btn) {
-        const candidates = sec.querySelectorAll("button");
-        btn = Array.from(candidates).find((b) => /claim/i.test(normalize3(b.textContent))) ?? null;
-      }
-      if (btn) return { section: sec, button: btn };
-    }
-    return null;
-  }
-  var clickedBreadButtons = /* @__PURE__ */ new WeakSet();
-  function clickBreadIfVisible(btn, doLog) {
-    if (clickedBreadButtons.has(btn)) {
-      log(doLog, "Bread: bouton d\xE9j\xE0 cliqu\xE9 (guard).");
-      return false;
-    }
-    const ariaDisabled = btn.getAttribute("aria-disabled");
-    if (btn.disabled || ariaDisabled === "true") {
-      log(doLog, "Bread: bouton d\xE9sactiv\xE9.");
-      return false;
-    }
-    if (!isVisible2(btn)) {
-      log(doLog, "Bread: bouton non visible.");
-      return false;
-    }
-    btn.click();
-    clickedBreadButtons.add(btn);
-    log(doLog, "Bread: \u2705 click() envoy\xE9.");
-    return true;
-  }
-  function checkOnce(opts) {
-    const { log: doLog } = { ...DEFAULTS5, ...opts };
-    const gameUpdateSec = findGameUpdateModal();
-    const gameUpdateFound = !!gameUpdateSec;
-    if (gameUpdateFound) {
-      log(doLog, "Game Update: \u2705 d\xE9tect\xE9.", gameUpdateSec);
-      schedulePageReload(doLog);
-    }
-    const found = findBreadModal();
-    const breadFound = !!found;
-    let breadClicked = false;
-    if (found) {
-      log(doLog, "Daily Bread: \u2705 d\xE9tect\xE9.", found.section);
-      breadClicked = clickBreadIfVisible(found.button, doLog);
-    }
-    if (!gameUpdateFound && !breadFound) log(doLog, "Rien d\xE9tect\xE9 pour l\u2019instant.");
-    return { gameUpdateFound, breadFound, breadClicked };
-  }
-  function startModalObserver(options) {
-    const { intervalMs, log: doLog } = { ...DEFAULTS5, ...options };
-    let stopped = false;
-    const tick = () => {
-      if (stopped) return { gameUpdateFound: false, breadFound: false, breadClicked: false };
-      return checkOnce({ log: doLog });
-    };
-    tick();
-    const timer = pageWindow.setInterval(tick, intervalMs);
-    const stop2 = () => {
-      if (stopped) return;
-      stopped = true;
-      pageWindow.clearInterval(timer);
-      log(doLog, "\u23F9\uFE0F Observateur arr\xEAt\xE9.");
-    };
-    log(doLog, `\u25B6\uFE0F Observateur d\xE9marr\xE9 (intervalle: ${intervalMs} ms).`);
-    return { stop: stop2, tick };
-  }
-  var exposed = {
-    startModalObserver,
-    checkOnce,
-    findGameUpdateModal,
-    findBreadModal
-  };
-  shareGlobal("CheckModal", exposed);
 
   // src/core/dom.ts
   var ready = new Promise((res) => {
@@ -34153,7 +33415,7 @@
 
   // src/utils/activityLogFilter.ts
   var FILTER_STORAGE_KEY = "activityLog.filter";
-  var STYLE_ID2 = "mg-activity-log-filter-style";
+  var STYLE_ID = "mg-activity-log-filter-style";
   var ROOT_FLAG_ATTR = "data-mg-activity-log-filter-ready";
   var WRAPPER_CLASS = "mg-activity-log-filter";
   var BUTTON_CLASS = "mg-activity-log-filter-btn";
@@ -34487,7 +33749,7 @@
     }
   }
   function ensureStyles() {
-    if (document.getElementById(STYLE_ID2)) return;
+    if (document.getElementById(STYLE_ID)) return;
     const css3 = `
 .${WRAPPER_CLASS}{
   display:flex;
@@ -34541,7 +33803,7 @@
 }
 `;
     const s = addStyle(css3);
-    s.id = STYLE_ID2;
+    s.id = STYLE_ID;
   }
 
   // src/services/activityLogHistory.ts
@@ -35765,8 +35027,6 @@
       } catch {
       }
       startActivityLogFilter();
-      setupBuyAll();
-      startReorderObserver();
       startCropValuesObserverFromGardenAtom();
       startCropValueOverlayInPixi();
       startSellCropsLockWatcher();
@@ -35778,7 +35038,6 @@
       startInstantFeedWidget();
       startSelectedInventoryQuantityLogger();
       startInventorySortingObserver();
-      startModalObserver({ intervalMs: 6e4, log: true });
     })();
   }
 
@@ -45665,7 +44924,7 @@ next: ${next}`;
     let sortDir = "desc";
     let q = "";
     const petSpriteCache = /* @__PURE__ */ new Map();
-    const mkPetIcon = (log2) => {
+    const mkPetIcon = (log) => {
       const size = 22;
       const holder = document.createElement("div");
       Object.assign(holder.style, {
@@ -45682,8 +44941,8 @@ next: ${next}`;
         color: "#e2e8f0",
         flex: "0 0 auto"
       });
-      const species = String(log2.species || "").trim();
-      const mutations = Array.isArray(log2.mutations) ? log2.mutations.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
+      const species = String(log.species || "").trim();
+      const mutations = Array.isArray(log.mutations) ? log.mutations.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
       const mutKey = mutations.length ? mutations.map((m) => m.toLowerCase()).sort().join(",") : "";
       const cacheKey = mutKey ? `${species}|${mutKey}` : species;
       const applyImg = (src) => {
@@ -45704,7 +44963,7 @@ next: ${next}`;
         applyImg(cached);
         return holder;
       }
-      const letter = (log2.petName || species || "pet").charAt(0).toUpperCase();
+      const letter = (log.petName || species || "pet").charAt(0).toUpperCase();
       holder.textContent = letter || "\u{1F43E}";
       if (species) {
         attachSpriteIcon(holder, ["pet"], species, size, "pet-log", {
@@ -45752,38 +45011,38 @@ next: ${next}`;
       el2.style.borderBottom = "1px solid #ffffff12";
       return el2;
     }
-    function row(log2) {
+    function row(log) {
       const time = cell("", "center");
       time.style.gap = "2px";
       const dateLine = document.createElement("div");
       const timeLine = document.createElement("div");
-      const hasDate = typeof log2.date === "string" && log2.date.trim().length > 0;
-      if (hasDate) dateLine.textContent = log2.date ?? "";
-      timeLine.textContent = log2.time12;
+      const hasDate = typeof log.date === "string" && log.date.trim().length > 0;
+      if (hasDate) dateLine.textContent = log.date ?? "";
+      timeLine.textContent = log.time12;
       if (hasDate) time.appendChild(dateLine);
       time.appendChild(timeLine);
-      const petLabel = log2.petName || log2.species || "Pet";
+      const petLabel = log.petName || log.species || "Pet";
       const pet = cell("", "center");
       pet.style.flexDirection = "row";
       pet.style.alignItems = "center";
       pet.style.gap = "8px";
-      const petIcon = mkPetIcon(log2);
+      const petIcon = mkPetIcon(log);
       const petText = document.createElement("span");
       petText.textContent = petLabel;
       petText.style.whiteSpace = "nowrap";
       petText.style.overflow = "hidden";
       petText.style.textOverflow = "ellipsis";
       pet.append(petIcon, petText);
-      const abName = cell(log2.abilityName || log2.abilityId, "center");
-      const detText = typeof log2.data === "string" ? log2.data : (() => {
+      const abName = cell(log.abilityName || log.abilityId, "center");
+      const detText = typeof log.data === "string" ? log.data : (() => {
         try {
-          return JSON.stringify(log2.data);
+          return JSON.stringify(log.data);
         } catch {
           return "";
         }
       })();
       const det = cell(detText, "left");
-      if (log2.isActiveSession) {
+      if (log.isActiveSession) {
         [time, pet, abName, det].forEach((el2) => {
           el2.style.background = "rgba(89, 162, 255, 0.14)";
         });
@@ -48063,7 +47322,7 @@ next: ${next}`;
   }
 
   // src/ui/menus/editor.ts
-  var STYLE_ID3 = "qws-editor-menu-css";
+  var STYLE_ID2 = "qws-editor-menu-css";
   var TEAL = "#5eead4";
   var TEAL_DIM = "rgba(94,234,212,0.12)";
   var TEAL_MID = "rgba(94,234,212,0.22)";
@@ -48081,9 +47340,9 @@ next: ${next}`;
   var DANGER_HI = "rgba(239,68,68,0.2)";
   var DANGER_BRD_HI = "rgba(239,68,68,0.55)";
   function ensureStyles3() {
-    if (document.getElementById(STYLE_ID3)) return;
+    if (document.getElementById(STYLE_ID2)) return;
     const st = document.createElement("style");
-    st.id = STYLE_ID3;
+    st.id = STYLE_ID2;
     st.textContent = `
 .qws-ed-scroll::-webkit-scrollbar { width: 6px; }
 .qws-ed-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -49470,7 +48729,7 @@ next: ${next}`;
   }
 
   // src/ui/menus/room.ts
-  var STYLE_ID4 = "qws-room-menu-css";
+  var STYLE_ID3 = "qws-room-menu-css";
   var TEAL2 = "#5eead4";
   var TEAL_DIM2 = "rgba(94,234,212,0.12)";
   var TEAL_MID2 = "rgba(94,234,212,0.22)";
@@ -49484,9 +48743,9 @@ next: ${next}`;
   var TEXT_DIM2 = "rgba(226,232,240,0.45)";
   var GREEN = "#10b981";
   function ensureStyles4() {
-    if (document.getElementById(STYLE_ID4)) return;
+    if (document.getElementById(STYLE_ID3)) return;
     const st = document.createElement("style");
-    st.id = STYLE_ID4;
+    st.id = STYLE_ID3;
     st.textContent = `
 .qws-rm-scroll::-webkit-scrollbar { width: 6px; }
 .qws-rm-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -50320,11 +49579,11 @@ next: ${next}`;
 
   // src/ui/autoRecoDisabledNotice.ts
   var OVERLAY_ID2 = "mgAutoRecoDisabledNotice";
-  var STYLE_ID5 = "mgAutoRecoDisabledNoticeStyle";
+  var STYLE_ID4 = "mgAutoRecoDisabledNoticeStyle";
   function ensureStyle2() {
-    if (document.getElementById(STYLE_ID5)) return;
+    if (document.getElementById(STYLE_ID4)) return;
     const style2 = document.createElement("style");
-    style2.id = STYLE_ID5;
+    style2.id = STYLE_ID4;
     style2.textContent = `
     #${OVERLAY_ID2} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #${OVERLAY_ID2} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; width: 420px; border: 1px solid rgba(255,255,255,.15); }
@@ -50371,12 +49630,12 @@ next: ${next}`;
 
   // src/ui/communityHubMovedNotice.ts
   var OVERLAY_ID3 = "mgCommunityHubMovedNotice";
-  var STYLE_ID6 = "mgCommunityHubMovedNoticeStyle";
+  var STYLE_ID5 = "mgCommunityHubMovedNoticeStyle";
   var HUB_INSTALL_URL = "https://github.com/Ariedam64/MG-CommunityHub/raw/refs/heads/main/dist/mg-community-hub.user.js";
   function ensureStyle3() {
-    if (document.getElementById(STYLE_ID6)) return;
+    if (document.getElementById(STYLE_ID5)) return;
     const style2 = document.createElement("style");
-    style2.id = STYLE_ID6;
+    style2.id = STYLE_ID5;
     style2.textContent = `
     #${OVERLAY_ID3} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #${OVERLAY_ID3} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; width: 440px; border: 1px solid rgba(255,255,255,.15); }
@@ -50669,9 +49928,9 @@ next: ${next}`;
   }
   shareGlobal("buildPlayerStatePayload", buildPlayerStatePayload);
   shareGlobal("logPlayerStatePayload", logPlayerStatePayload);
-  function sanitizeActivityLogForCompare(log2) {
-    if (!Array.isArray(log2)) return null;
-    return log2.filter((entry) => entry?.action !== "feedPet");
+  function sanitizeActivityLogForCompare(log) {
+    if (!Array.isArray(log)) return null;
+    return log.filter((entry) => entry?.action !== "feedPet");
   }
   function sanitizeStateForComparison(state3) {
     const sanitizedActivityLog = sanitizeActivityLogForCompare(state3.activityLog ?? null);

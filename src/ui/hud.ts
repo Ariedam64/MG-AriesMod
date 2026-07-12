@@ -21,7 +21,6 @@ import {
 import { renderOverlay } from "./menus/notificationOverlay";
 import { startInstantFeedWidget } from "../utils/instantFeedWidget";
 import { getSpriteWarmupState, onSpriteWarmupProgress } from "./spriteIconCache";
-import { setupBuyAll, startReorderObserver } from "../utils/shopUtility";
 import { startCropValuesObserverFromGardenAtom } from "../utils/cropValues";
 import { startCropValueOverlayInPixi } from "../utils/cropValuePixi";
 import { startLockerIndicatorInPixi } from "../utils/lockerIndicatorPixi";
@@ -34,7 +33,6 @@ import { fetchRemoteVersion, getLocalVersion } from "../utils/version";
 import { isDiscordSurface } from "../utils/api";
 import { startSelectedInventoryQuantityLogger } from "../utils/inventorySelectionLogger";
 import { startInventorySortingObserver } from "../utils/inventorySorting";
-import { startModalObserver } from "../utils/checkModal";
 import { startActivityLogFilter } from "../utils/activityLogFilter";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
 import { startActivityLogHistoryWatcher } from "../services/activityLogHistory";
@@ -1126,8 +1124,6 @@ export function initWatchers(){
       try { await PetsService.startAbilityLogsWatcher(); } catch {}
       try { await startActivityLogHistoryWatcher(); } catch {}
       startActivityLogFilter();
-      setupBuyAll()
-      startReorderObserver();
       startCropValuesObserverFromGardenAtom();
       startCropValueOverlayInPixi();
       startSellCropsLockWatcher();
@@ -1139,6 +1135,5 @@ export function initWatchers(){
       startInstantFeedWidget();
       startSelectedInventoryQuantityLogger();
       startInventorySortingObserver();
-      startModalObserver({ intervalMs: 60_000, log: true });
   })();
 }

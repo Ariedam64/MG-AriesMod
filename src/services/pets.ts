@@ -2086,6 +2086,26 @@ async function _equipPetIds(
     }
     if (!targetId) continue;
 
+    // Fast path: target sits in the hutch and there's an active pet to swap it
+    // with -> one atomic SwapPetFromStorage call instead of retrieve+swap+store.
+    // Capacity-neutral (the displaced pet takes the exact hutch slot the target
+    // vacated), so no freeHutch/index bookkeeping is needed here.
+    if (currentId && hutchItemsSet.has(targetId)) {
+      try {
+        await PlayerService.swapPetFromStorage(currentId, targetId, "PetHutch");
+        swapped++;
+        activeSlots[slot] = targetId;
+        hutchItemsSet.delete(targetId);
+        hutchItemsSet.add(currentId);
+      } catch {
+        try {
+          await _placePetInMyGarden(targetId, placementOffset++);
+          placed++;
+        } catch {}
+      }
+      continue;
+    }
+
     // The target must be in inventory before swapping/placing: retrieve from hutch
     if (hutchItemsSet.has(targetId)) {
       let invFull = false;
@@ -2118,7 +2138,7 @@ async function _equipPetIds(
       continue;
     }
 
-    // Case 4: swap the active pet out for the target (store it in hutch if space)
+    // Case 4: swap the active pet out for a target already in inventory (store it in hutch if space)
     try {
       await PlayerService.swapPet(currentId, targetId);
       swapped++;

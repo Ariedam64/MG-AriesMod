@@ -393,6 +393,10 @@ export const PlayerService = {
     try { sendToGame({ type: "SwapPet", petSlotId, petInventoryId }); } catch (err) {  }
   },
 
+  async swapPetFromStorage(petSlotId: string, storagePetId: string, storageId: string) {
+    try { sendToGame({ type: "SwapPetFromStorage", petSlotId, storagePetId, storageId }); } catch (err) {  }
+  },
+
   async placePet(itemId: string, position: { x: number; y: number }, tileType: "Dirt" | "Boardwalk", localTileIndex: number) {
     try { sendToGame({ type: "PlacePet", itemId, position, tileType, localTileIndex }); } catch (err) {  }
   },
