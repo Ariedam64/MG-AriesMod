@@ -393,29 +393,85 @@ function coerceLegacyAggregate(raw: unknown): AriesStorage {
   return out;
 }
 
-function loadAriesStorage(): AriesStorage {
-  const storage = getHostStorage();
-  if (!storage) return { ...DEFAULT_ARIES_STORAGE };
+// ---------- In-memory cache + debounced flush ----------
+// readAriesPath/writeAriesPath used to re-parse (and re-stringify) the entire
+// aries_mod blob synchronously on every call. With a large blob (500-entry
+// activity log history, stats, ...) that blocked the main thread on every
+// stat increment or activity-log change — visible as in-game freezes while
+// buying/harvesting. The parsed blob is cached here and disk writes are
+// batched behind a short debounce.
+const ARIES_FLUSH_DELAY_MS = 500;
 
-  const raw = storage.getItem(ARIES_STORAGE_KEY);
-  if (raw) {
-    const parsed = parseSafe(raw);
-    if (parsed && typeof parsed === "object") {
-      return coerceLegacyAggregate(parsed);
-    }
-  }
+let cachedAriesStorage: AriesStorage | null = null;
+let ariesFlushTimer: number | null = null;
+let ariesFlushPending = false;
+let ariesLifecycleHooksInstalled = false;
 
-  return { ...DEFAULT_ARIES_STORAGE };
+function installAriesLifecycleHooksOnce(): void {
+  if (ariesLifecycleHooksInstalled || typeof window === "undefined") return;
+  ariesLifecycleHooksInstalled = true;
+  const flush = () => flushAriesStorageNow();
+  window.addEventListener("pagehide", flush);
+  window.addEventListener("beforeunload", flush);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flush();
+  });
+  // Another tab wrote the blob: drop the cache so the next read re-parses it.
+  // (This tab's own writes don't fire `storage` here.)
+  window.addEventListener("storage", (event) => {
+    if (event.key !== ARIES_STORAGE_KEY) return;
+    if (ariesFlushPending) return; // our pending write supersedes it
+    cachedAriesStorage = null;
+  });
 }
 
-function persistAriesStorage(data: AriesStorage): void {
+function flushAriesStorageNow(): void {
+  if (ariesFlushTimer !== null) {
+    clearTimeout(ariesFlushTimer);
+    ariesFlushTimer = null;
+  }
+  if (!ariesFlushPending || !cachedAriesStorage) return;
+  ariesFlushPending = false;
   const storage = getHostStorage();
   if (!storage) return;
   try {
-    storage.setItem(ARIES_STORAGE_KEY, JSON.stringify(data));
+    storage.setItem(ARIES_STORAGE_KEY, JSON.stringify(cachedAriesStorage));
   } catch {
     /* ignore persistence errors */
   }
+}
+
+function scheduleAriesFlush(): void {
+  installAriesLifecycleHooksOnce();
+  ariesFlushPending = true;
+  if (ariesFlushTimer !== null) return;
+  ariesFlushTimer = window.setTimeout(() => {
+    ariesFlushTimer = null;
+    flushAriesStorageNow();
+  }, ARIES_FLUSH_DELAY_MS);
+}
+
+function loadAriesStorage(): AriesStorage {
+  if (cachedAriesStorage) return cachedAriesStorage;
+  installAriesLifecycleHooksOnce();
+
+  const storage = getHostStorage();
+  const raw = storage?.getItem(ARIES_STORAGE_KEY);
+  if (raw) {
+    const parsed = parseSafe(raw);
+    if (parsed && typeof parsed === "object") {
+      cachedAriesStorage = coerceLegacyAggregate(parsed);
+      return cachedAriesStorage;
+    }
+  }
+
+  cachedAriesStorage = { ...DEFAULT_ARIES_STORAGE };
+  return cachedAriesStorage;
+}
+
+function persistAriesStorage(data: AriesStorage): void {
+  cachedAriesStorage = data;
+  scheduleAriesFlush();
 }
 
 function getValueAtPath(obj: any, path: string[]): any {
@@ -577,6 +633,9 @@ export function migrateLocalStorageToAries(): AriesStorage {
   if (!result.migratedAt) result.migratedAt = Date.now();
 
   persistAriesStorage(result);
+  // Flush before deleting legacy keys: with the debounced write, a crash in
+  // the next few hundred ms would otherwise lose the migrated data for good.
+  flushAriesStorageNow();
   cleanupLegacyData(storage);
   return result;
 }

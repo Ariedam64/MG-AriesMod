@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.168
+// @version      3.2.169
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -1760,25 +1760,67 @@
     }
     return out;
   }
-  function loadAriesStorage() {
-    const storage = getHostStorage();
-    if (!storage) return { ...DEFAULT_ARIES_STORAGE };
-    const raw = storage.getItem(ARIES_STORAGE_KEY);
-    if (raw) {
-      const parsed = parseSafe(raw);
-      if (parsed && typeof parsed === "object") {
-        return coerceLegacyAggregate(parsed);
-      }
-    }
-    return { ...DEFAULT_ARIES_STORAGE };
+  var ARIES_FLUSH_DELAY_MS = 500;
+  var cachedAriesStorage = null;
+  var ariesFlushTimer = null;
+  var ariesFlushPending = false;
+  var ariesLifecycleHooksInstalled = false;
+  function installAriesLifecycleHooksOnce() {
+    if (ariesLifecycleHooksInstalled || typeof window === "undefined") return;
+    ariesLifecycleHooksInstalled = true;
+    const flush = () => flushAriesStorageNow();
+    window.addEventListener("pagehide", flush);
+    window.addEventListener("beforeunload", flush);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") flush();
+    });
+    window.addEventListener("storage", (event) => {
+      if (event.key !== ARIES_STORAGE_KEY) return;
+      if (ariesFlushPending) return;
+      cachedAriesStorage = null;
+    });
   }
-  function persistAriesStorage(data) {
+  function flushAriesStorageNow() {
+    if (ariesFlushTimer !== null) {
+      clearTimeout(ariesFlushTimer);
+      ariesFlushTimer = null;
+    }
+    if (!ariesFlushPending || !cachedAriesStorage) return;
+    ariesFlushPending = false;
     const storage = getHostStorage();
     if (!storage) return;
     try {
-      storage.setItem(ARIES_STORAGE_KEY, JSON.stringify(data));
+      storage.setItem(ARIES_STORAGE_KEY, JSON.stringify(cachedAriesStorage));
     } catch {
     }
+  }
+  function scheduleAriesFlush() {
+    installAriesLifecycleHooksOnce();
+    ariesFlushPending = true;
+    if (ariesFlushTimer !== null) return;
+    ariesFlushTimer = window.setTimeout(() => {
+      ariesFlushTimer = null;
+      flushAriesStorageNow();
+    }, ARIES_FLUSH_DELAY_MS);
+  }
+  function loadAriesStorage() {
+    if (cachedAriesStorage) return cachedAriesStorage;
+    installAriesLifecycleHooksOnce();
+    const storage = getHostStorage();
+    const raw = storage?.getItem(ARIES_STORAGE_KEY);
+    if (raw) {
+      const parsed = parseSafe(raw);
+      if (parsed && typeof parsed === "object") {
+        cachedAriesStorage = coerceLegacyAggregate(parsed);
+        return cachedAriesStorage;
+      }
+    }
+    cachedAriesStorage = { ...DEFAULT_ARIES_STORAGE };
+    return cachedAriesStorage;
+  }
+  function persistAriesStorage(data) {
+    cachedAriesStorage = data;
+    scheduleAriesFlush();
   }
   function getValueAtPath(obj, path) {
     let cur = obj;
@@ -30481,7 +30523,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.168";
+      return "3.2.169";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
