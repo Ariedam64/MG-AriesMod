@@ -40,6 +40,11 @@ const CHAT_SLOT_MARKER_LABEL = "RightSideRailChatBadge";
 const DEFAULT_ICON_GLYPH = "\u{1F514}"; // 🔔
 const DEFAULT_SLOT_SIZE = 45;
 const DEFAULT_SLOT_SPACING = 52;
+// A candidate slot counts as taken when an existing icon sits within half a
+// slot of it — loose enough to absorb sub-pixel layout jitter, tight enough
+// not to skip genuinely free slots.
+const SLOT_OCCUPIED_TOLERANCE_RATIO = 0.5;
+const MAX_SLOT_SEARCH_STEPS = 20;
 
 const WIGGLE_AMPLITUDE = 0.26; // radians
 const WIGGLE_SPEED = 6; // radians/sec of the oscillation argument
@@ -71,6 +76,11 @@ interface NotificationBellPixiDebugState {
   findAttempts: number;
   hasButton: boolean;
   lastError: string | null;
+  /** Rail-local Y the bell was last placed at. */
+  slotY: number | null;
+  /** CSS px per stage unit — 1 unless the canvas is CSS-scaled (zoom/DPR). */
+  screenScaleX: number | null;
+  screenScaleY: number | null;
 }
 
 export function startNotificationBellPixi(opts: NotificationBellPixiOptions): NotificationBellPixiController {
@@ -105,6 +115,9 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
     findAttempts: 0,
     hasButton: false,
     lastError: null,
+    slotY: null,
+    screenScaleX: null,
+    screenScaleY: null,
   };
   shareGlobal("__MG_NOTIFICATION_BELL_PIXI_DEBUG__", debugState);
 
@@ -133,6 +146,14 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
   // Computes the bell's current on-screen box in page (client) coordinates.
   // Shared by the public `getScreenRect()` (used by notificationOverlay.ts
   // to place the badge/panel) and the native hit-test below.
+  //
+  // `toGlobal` yields stage/screen units, which only equal CSS pixels when
+  // the canvas is displayed at exactly `renderer.screen` size. That doesn't
+  // hold under Windows display scaling, browser zoom, or Discord's Activity
+  // iframe, where the canvas gets CSS-scaled — without the ratio below the
+  // DOM badge/panel and the click hit-test drift proportionally (the same
+  // mismatch pointerToTile in tileObjectSystemApi.ts corrects, in the other
+  // direction).
   const computeScreenRect = (): ScreenRect | null => {
     if (!bellContainer || bellContainer.destroyed) return null;
     const state = getSpriteState();
@@ -140,15 +161,22 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
     if (!canvas) return null;
     try {
       const rect = canvas.getBoundingClientRect();
+      const renderResolution = Number(state?.renderer?.resolution) || 1;
+      const stageWidth = Number(state?.renderer?.screen?.width) || (Number(canvas.width) || 0) / renderResolution;
+      const stageHeight = Number(state?.renderer?.screen?.height) || (Number(canvas.height) || 0) / renderResolution;
+      const scaleX = stageWidth > 0 ? rect.width / stageWidth : 1;
+      const scaleY = stageHeight > 0 ? rect.height / stageHeight : 1;
+      debugState.screenScaleX = scaleX;
+      debugState.screenScaleY = scaleY;
       const topLeft = bellContainer.toGlobal({ x: 0, y: 0 });
       const bottomRight = bellContainer.toGlobal({ x: lastSize, y: lastSize });
       return {
-        left: rect.left + topLeft.x,
-        top: rect.top + topLeft.y,
-        right: rect.left + bottomRight.x,
-        bottom: rect.top + bottomRight.y,
-        width: bottomRight.x - topLeft.x,
-        height: bottomRight.y - topLeft.y,
+        left: rect.left + topLeft.x * scaleX,
+        top: rect.top + topLeft.y * scaleY,
+        right: rect.left + bottomRight.x * scaleX,
+        bottom: rect.top + bottomRight.y * scaleY,
+        width: (bottomRight.x - topLeft.x) * scaleX,
+        height: (bottomRight.y - topLeft.y) * scaleY,
       };
     } catch {
       return null;
@@ -216,6 +244,22 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
     return null;
   };
 
+  // Converts the visible screen's vertical extent into the rail's local
+  // coordinate space, so a candidate slot can be checked against the actual
+  // viewport. Null when the renderer's screen size isn't readable.
+  const railLocalScreenBounds = (): { top: number; bottom: number } | null => {
+    const state = getSpriteState();
+    const screenHeight = Number(state?.renderer?.screen?.height);
+    if (!Number.isFinite(screenHeight) || screenHeight <= 0) return null;
+    try {
+      const top = rail.toLocal({ x: 0, y: 0 }).y;
+      const bottom = rail.toLocal({ x: 0, y: screenHeight }).y;
+      return { top, bottom };
+    } catch {
+      return null;
+    }
+  };
+
   // Reads the real spacing/size of the rail's existing icons instead of
   // hardcoding them, so this keeps working if the game changes the rail's
   // slot size in a future build.
@@ -237,21 +281,46 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
       if (Number.isFinite(median) && median > 0) spacing = median;
     }
 
-    const chatSlot = findChatSlot();
-    if (chatSlot) {
-      return { size, nextY: (Number(chatSlot.y) || 0) + spacing };
-    }
+    const isSlotOccupied = (y: number): boolean =>
+      ys.some((siblingY) => Math.abs(siblingY - y) < spacing * SLOT_OCCUPIED_TOLERANCE_RATIO);
 
-    // Chat hasn't loaded into the rail yet — stack after whatever exists so
+    // Chat hasn't loaded into the rail yet — anchor after whatever exists so
     // far; the next resync (rail's childAdded/childRemoved) re-anchors on
     // Chat as soon as it appears.
-    if (!ys.length) return { size, nextY: 0 };
-    return { size, nextY: ys[ys.length - 1] + spacing };
+    const chatSlot = findChatSlot();
+    const anchorY = chatSlot
+      ? (Number(chatSlot.y) || 0)
+      : (ys.length ? ys[ys.length - 1] : -spacing);
+
+    // The game parks its own conditional icons (friend bonus, weather
+    // status, ...) right below Chat too, so `chat.y + spacing` is already
+    // taken for some players — walk down to the first genuinely free slot
+    // instead of stacking the bell on top of whatever loaded there.
+    let nextY = anchorY + spacing;
+    for (let step = 0; step < MAX_SLOT_SEARCH_STEPS && isSlotOccupied(nextY); step++) {
+      nextY += spacing;
+    }
+
+    // On short screens (small laptop windows, browser zoom, Discord
+    // Activity) the first free slot below the rail can land outside the
+    // viewport, which reads as "the bell just isn't there". Fall back to
+    // the free space above the rail's topmost icon, and as a last resort
+    // clamp inside the screen even if that overlaps an existing icon.
+    const bounds = railLocalScreenBounds();
+    if (bounds && nextY + size > bounds.bottom) {
+      const aboveTopmost = (ys.length ? ys[0] : nextY) - spacing;
+      nextY = aboveTopmost >= bounds.top
+        ? aboveTopmost
+        : Math.max(bounds.top, bounds.bottom - size);
+    }
+
+    return { size, nextY };
   };
 
   const syncGeometry = () => {
     const { size, nextY } = computeSlot();
     lastSize = size;
+    debugState.slotY = nextY;
     bellContainer.position.set(0, nextY);
     if (bellText) {
       bellText.style.fontSize = Math.round(size * 0.6);
@@ -370,16 +439,32 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
     return false;
   };
 
-  const checkRailReachability = () => {
+  const periodicRailMaintenance = () => {
     if (!running || !rail || rail.destroyed) return;
-    if (isReachableFromLiveStage(rail)) return;
-    console.warn("[notificationBellPixi] rail orphaned from the live stage (no destroyed event fired), resetting");
-    rail = null;
-    debugState.attached = false;
-    removeButton();
-    restartSearchIfNeeded();
+    if (!isReachableFromLiveStage(rail)) {
+      console.warn("[notificationBellPixi] rail orphaned from the live stage (no destroyed event fired), resetting");
+      rail = null;
+      debugState.attached = false;
+      removeButton();
+      restartSearchIfNeeded();
+      return;
+    }
+    // Re-sync even when the rail looks healthy: the button can be
+    // legitimately missing here (sync bailed because the Text ctor wasn't
+    // captured yet at attach time, or a transient sync error removed it),
+    // and `childAdded`/`childRemoved` never refire on an already-complete
+    // rail — without this retry the bell would stay absent forever. It also
+    // re-runs the slot geometry, so the bell follows the rail's layout
+    // after window resizes or late-loading conditional icons.
+    sync();
   };
-  const reachabilityIntervalId = (pageWindow as any).setInterval(checkRailReachability, RAIL_REACHABILITY_CHECK_MS);
+  const maintenanceIntervalId = (pageWindow as any).setInterval(periodicRailMaintenance, RAIL_REACHABILITY_CHECK_MS);
+
+  const onWindowResize = () => {
+    if (!running || !rail || rail.destroyed) return;
+    sync();
+  };
+  (pageWindow as any).addEventListener("resize", onWindowResize);
 
   const stopWiggleAnimation = () => {
     if (wiggleRafId != null) { cancelRaf(wiggleRafId); wiggleRafId = null; }
@@ -409,7 +494,8 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
       if (!running) return;
       running = false;
       if (findRafId != null) { cancelRaf(findRafId); findRafId = null; }
-      (pageWindow as any).clearInterval(reachabilityIntervalId);
+      (pageWindow as any).clearInterval(maintenanceIntervalId);
+      (pageWindow as any).removeEventListener("resize", onWindowResize);
       stopWiggleAnimation();
       if (rail) {
         try {

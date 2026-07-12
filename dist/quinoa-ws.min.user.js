@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.169
+// @version      3.2.170
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -27212,6 +27212,8 @@
   var DEFAULT_ICON_GLYPH = "\u{1F514}";
   var DEFAULT_SLOT_SIZE = 45;
   var DEFAULT_SLOT_SPACING = 52;
+  var SLOT_OCCUPIED_TOLERANCE_RATIO = 0.5;
+  var MAX_SLOT_SEARCH_STEPS = 20;
   var WIGGLE_AMPLITUDE = 0.26;
   var WIGGLE_SPEED = 6;
   function startNotificationBellPixi(opts) {
@@ -27235,7 +27237,10 @@
       attached: false,
       findAttempts: 0,
       hasButton: false,
-      lastError: null
+      lastError: null,
+      slotY: null,
+      screenScaleX: null,
+      screenScaleY: null
     };
     shareGlobal("__MG_NOTIFICATION_BELL_PIXI_DEBUG__", debugState2);
     const raf2 = pageWindow.requestAnimationFrame.bind(pageWindow);
@@ -27268,15 +27273,22 @@
       if (!canvas) return null;
       try {
         const rect = canvas.getBoundingClientRect();
+        const renderResolution = Number(state3?.renderer?.resolution) || 1;
+        const stageWidth = Number(state3?.renderer?.screen?.width) || (Number(canvas.width) || 0) / renderResolution;
+        const stageHeight = Number(state3?.renderer?.screen?.height) || (Number(canvas.height) || 0) / renderResolution;
+        const scaleX = stageWidth > 0 ? rect.width / stageWidth : 1;
+        const scaleY = stageHeight > 0 ? rect.height / stageHeight : 1;
+        debugState2.screenScaleX = scaleX;
+        debugState2.screenScaleY = scaleY;
         const topLeft = bellContainer.toGlobal({ x: 0, y: 0 });
         const bottomRight = bellContainer.toGlobal({ x: lastSize, y: lastSize });
         return {
-          left: rect.left + topLeft.x,
-          top: rect.top + topLeft.y,
-          right: rect.left + bottomRight.x,
-          bottom: rect.top + bottomRight.y,
-          width: bottomRight.x - topLeft.x,
-          height: bottomRight.y - topLeft.y
+          left: rect.left + topLeft.x * scaleX,
+          top: rect.top + topLeft.y * scaleY,
+          right: rect.left + bottomRight.x * scaleX,
+          bottom: rect.top + bottomRight.y * scaleY,
+          width: (bottomRight.x - topLeft.x) * scaleX,
+          height: (bottomRight.y - topLeft.y) * scaleY
         };
       } catch {
         return null;
@@ -27329,6 +27341,18 @@
       }
       return null;
     };
+    const railLocalScreenBounds = () => {
+      const state3 = getSpriteState();
+      const screenHeight = Number(state3?.renderer?.screen?.height);
+      if (!Number.isFinite(screenHeight) || screenHeight <= 0) return null;
+      try {
+        const top = rail.toLocal({ x: 0, y: 0 }).y;
+        const bottom = rail.toLocal({ x: 0, y: screenHeight }).y;
+        return { top, bottom };
+      } catch {
+        return null;
+      }
+    };
     const computeSlot = () => {
       const siblings = Array.isArray(rail?.children) ? rail.children.filter((c) => c !== bellContainer) : [];
       let size = DEFAULT_SLOT_SIZE;
@@ -27343,16 +27367,24 @@
         const median = diffs[Math.floor(diffs.length / 2)];
         if (Number.isFinite(median) && median > 0) spacing = median;
       }
+      const isSlotOccupied = (y) => ys.some((siblingY) => Math.abs(siblingY - y) < spacing * SLOT_OCCUPIED_TOLERANCE_RATIO);
       const chatSlot = findChatSlot();
-      if (chatSlot) {
-        return { size, nextY: (Number(chatSlot.y) || 0) + spacing };
+      const anchorY = chatSlot ? Number(chatSlot.y) || 0 : ys.length ? ys[ys.length - 1] : -spacing;
+      let nextY = anchorY + spacing;
+      for (let step = 0; step < MAX_SLOT_SEARCH_STEPS && isSlotOccupied(nextY); step++) {
+        nextY += spacing;
       }
-      if (!ys.length) return { size, nextY: 0 };
-      return { size, nextY: ys[ys.length - 1] + spacing };
+      const bounds = railLocalScreenBounds();
+      if (bounds && nextY + size > bounds.bottom) {
+        const aboveTopmost = (ys.length ? ys[0] : nextY) - spacing;
+        nextY = aboveTopmost >= bounds.top ? aboveTopmost : Math.max(bounds.top, bounds.bottom - size);
+      }
+      return { size, nextY };
     };
     const syncGeometry = () => {
       const { size, nextY } = computeSlot();
       lastSize = size;
+      debugState2.slotY = nextY;
       bellContainer.position.set(0, nextY);
       if (bellText) {
         bellText.style.fontSize = Math.round(size * 0.6);
@@ -27459,16 +27491,24 @@
       }
       return false;
     };
-    const checkRailReachability = () => {
+    const periodicRailMaintenance = () => {
       if (!running || !rail || rail.destroyed) return;
-      if (isReachableFromLiveStage(rail)) return;
-      console.warn("[notificationBellPixi] rail orphaned from the live stage (no destroyed event fired), resetting");
-      rail = null;
-      debugState2.attached = false;
-      removeButton();
-      restartSearchIfNeeded2();
+      if (!isReachableFromLiveStage(rail)) {
+        console.warn("[notificationBellPixi] rail orphaned from the live stage (no destroyed event fired), resetting");
+        rail = null;
+        debugState2.attached = false;
+        removeButton();
+        restartSearchIfNeeded2();
+        return;
+      }
+      sync();
     };
-    const reachabilityIntervalId = pageWindow.setInterval(checkRailReachability, RAIL_REACHABILITY_CHECK_MS);
+    const maintenanceIntervalId = pageWindow.setInterval(periodicRailMaintenance, RAIL_REACHABILITY_CHECK_MS);
+    const onWindowResize = () => {
+      if (!running || !rail || rail.destroyed) return;
+      sync();
+    };
+    pageWindow.addEventListener("resize", onWindowResize);
     const stopWiggleAnimation = () => {
       if (wiggleRafId != null) {
         cancelRaf(wiggleRafId);
@@ -27500,7 +27540,8 @@
           cancelRaf(findRafId2);
           findRafId2 = null;
         }
-        pageWindow.clearInterval(reachabilityIntervalId);
+        pageWindow.clearInterval(maintenanceIntervalId);
+        pageWindow.removeEventListener("resize", onWindowResize);
         stopWiggleAnimation();
         if (rail) {
           try {
@@ -27541,6 +27582,7 @@
   }
 
   // src/ui/menus/notificationOverlay.ts
+  var OVERLAY_REPOSITION_INTERVAL_MS = 1e3;
   var style = (el2, s) => Object.assign(el2.style, s);
   var setProps = (el2, props) => {
     for (const [k, v] of Object.entries(props)) el2.style.setProperty(k, v);
@@ -27619,6 +27661,8 @@
       __publicField(this, "badge", document.createElement("span"));
       __publicField(this, "panel", document.createElement("div"));
       __publicField(this, "bellPixi", null);
+      __publicField(this, "repositionIntervalId", null);
+      __publicField(this, "onWindowResize", null);
       __publicField(this, "lastShops", null);
       __publicField(this, "lastPurch", null);
       // Suivi des IDs visibles dans l'overlay (pour loops & diff)
@@ -27667,6 +27711,12 @@
           this.panel.style.display = "none";
         }
       });
+      this.onWindowResize = () => this.repositionOverlay();
+      window.addEventListener("resize", this.onWindowResize);
+      this.repositionIntervalId = window.setInterval(
+        () => this.repositionOverlay(),
+        OVERLAY_REPOSITION_INTERVAL_MS
+      );
       audio.setPurchaseChecker((itemId) => {
         if (!itemId) return false;
         if (this.currentOverlayIds.has(itemId)) return false;
@@ -27679,6 +27729,14 @@
       return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
     }
     destroy() {
+      if (this.repositionIntervalId != null) {
+        window.clearInterval(this.repositionIntervalId);
+        this.repositionIntervalId = null;
+      }
+      if (this.onWindowResize) {
+        window.removeEventListener("resize", this.onWindowResize);
+        this.onWindowResize = null;
+      }
       if (this.bellPixi) {
         try {
           this.bellPixi.stop();
@@ -28085,6 +28143,10 @@
         "text-rendering": "optimizeLegibility"
       });
       return d;
+    }
+    repositionOverlay() {
+      this.updateBadgePosition();
+      if (this.panel.style.display === "block") this.updatePanelPosition();
     }
     updateBadgePosition() {
       const rect = this.bellPixi?.getScreenRect();
@@ -30523,7 +30585,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.169";
+      return "3.2.170";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;

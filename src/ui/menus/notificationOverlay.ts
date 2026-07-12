@@ -34,6 +34,11 @@ export type PurchasesSnapshot = {
 };
 
 /* ========= Utils ========= */
+// The Pixi bell can move after the fact (window resize, rail re-layout,
+// late-loading rail icons) — the DOM badge/panel are re-glued to it on this
+// cadence in addition to the immediate `resize` listener.
+const OVERLAY_REPOSITION_INTERVAL_MS = 1000;
+
 const style = (el: HTMLElement, s: Partial<CSSStyleDeclaration>) => Object.assign(el.style, s);
 const setProps = (el: HTMLElement, props: Record<string, string>) => {
   for (const [k, v] of Object.entries(props)) el.style.setProperty(k, v);
@@ -136,6 +141,8 @@ class OverlayBarebone {
   private badge: HTMLSpanElement   = document.createElement("span");
   private panel: HTMLDivElement    = document.createElement("div");
   private bellPixi: NotificationBellPixiController | null = null;
+  private repositionIntervalId: number | null = null;
+  private onWindowResize: (() => void) | null = null;
 
   private lastShops: ShopsSnapshot | null = null;
   private lastPurch: PurchasesSnapshot | null = null;
@@ -194,6 +201,14 @@ class OverlayBarebone {
       }
     });
 
+    // Recoller badge/panneau à la cloche quand elle bouge
+    this.onWindowResize = () => this.repositionOverlay();
+    window.addEventListener("resize", this.onWindowResize);
+    this.repositionIntervalId = window.setInterval(
+      () => this.repositionOverlay(),
+      OVERLAY_REPOSITION_INTERVAL_MS,
+    );
+
     // Brancher le "purchase checker" pour le mode "Until purchase"
     audio.setPurchaseChecker((itemId) => {
       if (!itemId) return false;
@@ -209,6 +224,15 @@ class OverlayBarebone {
   }
 
   destroy() {
+    if (this.repositionIntervalId != null) {
+      window.clearInterval(this.repositionIntervalId);
+      this.repositionIntervalId = null;
+    }
+    if (this.onWindowResize) {
+      window.removeEventListener("resize", this.onWindowResize);
+      this.onWindowResize = null;
+    }
+
     if (this.bellPixi) {
       try { this.bellPixi.stop(); } catch {}
       this.bellPixi = null;
@@ -669,6 +693,11 @@ class OverlayBarebone {
       "text-rendering": "optimizeLegibility",
     });
     return d;
+  }
+
+  private repositionOverlay(): void {
+    this.updateBadgePosition();
+    if (this.panel.style.display === "block") this.updatePanelPosition();
   }
 
   private updateBadgePosition(): void {
