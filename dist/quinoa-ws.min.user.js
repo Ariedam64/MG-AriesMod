@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.171
+// @version      3.2.172
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -30860,7 +30860,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.171";
+      return "3.2.172";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -50310,7 +50310,10 @@ next: ${next}`;
         coins: coinsRaw,
         room: {
           id: roomId,
-          isPrivate: options.roomIsPrivate ?? null,
+          // Par défaut la room est considérée privée : ce champ n'est actuellement
+          // jamais fourni par l'appelant (heartbeat), donc sans ce fallback la room
+          // était toujours envoyée avec isPrivate: null (traité comme public côté serveur).
+          isPrivate: options.roomIsPrivate ?? true,
           playersCount,
           userSlots
         },
