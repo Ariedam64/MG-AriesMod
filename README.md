@@ -1,178 +1,146 @@
-# Arie's Mod — All-in-one overlay for Magic Garden
+# Arie's Mod
 
-An in-game overlay that adds community features, alerts, pet management, crop protection, and dozens of quality-of-life improvements — all running live on top of the official game client.
+A browser overlay for **Magic Garden / Magic Circle** that adds a bunch of quality-of-life tools on top of the official game: pet team switching, crop protection, shop and weather alerts, a garden editor, and more.
 
-**Open / Close the overlay:** `ALT + X` or `Insert` (`Option + X` on Mac)
+**Open or close the overlay:** `Alt + X` or `Insert` (`Option + X` on Mac)
 
-> Download the latest script from the [Releases](https://github.com/Ariedam64/MagicGarden-modMenu/releases) page.
+> Grab the latest version from the [Releases page](https://github.com/Ariedam64/MG-AriesMod/releases).
 
 ---
 
-## Scope & Compatibility
+## Where it works
 
 | Platform | Supported |
 |---|---|
-| Official websites (magicgarden.gg, magiccircle.gg, starweaver.org) | Yes |
-| Discord Web (browser) | Yes |
-| Discord Desktop / Mobile | No |
+| magicgarden.gg, magiccircle.gg, starweaver.org | Yes |
+| Discord Activity (browser) | Yes |
+| Discord Desktop / Mobile app | No |
 
 ---
 
-## Installation
+## Installing it
 
-### 1) Get a userscript manager
+### 1. Get a userscript manager
+
+You need an extension that can run userscripts:
 
 | Browser | Extension |
 |---|---|
-| Chrome / Edge / Opera GX | [Tampermonkey](https://www.tampermonkey.net/) |
+| Chrome, Edge, Opera GX | [Tampermonkey](https://www.tampermonkey.net/) |
 | Firefox | [Violentmonkey](https://violentmonkey.github.io/) |
 
-### 2) Configure your browser (Tampermonkey only)
+### 2. Turn on Developer mode (Tampermonkey only)
 
-**Turn on Developer mode:**
+Chromium browsers block userscripts unless Developer mode is on for extensions.
 
-- **Chrome:** go to `chrome://extensions/` and toggle **Developer mode** ON (top-right)
-- **Edge:** go to `edge://extensions` and toggle **Developer mode** ON (left panel)
-- **Opera GX:** go to `opera://extensions` and toggle **Developer mode** ON (top-right)
+- **Chrome:** open `chrome://extensions/` and switch on **Developer mode** (top right)
+- **Edge:** open `edge://extensions` and switch on **Developer mode** (left panel)
+- **Opera GX:** open `opera://extensions` and switch on **Developer mode** (top right)
 
-**Enable user scripts:**
+Then open Tampermonkey's **Details** page from the extensions list and turn on **Allow user scripts**, if that option shows up. Restart your browser afterward.
 
-From the extensions page, open Tampermonkey **Details** and turn **Allow user scripts** ON (only if this toggle is visible).
+Violentmonkey doesn't need any of this, it works out of the box.
 
-Close and reopen your browser to apply the settings.
+### 3. Install the mod
 
-> Violentmonkey requires no extra configuration.
-
-### 3) Install Arie's Mod
-
-Go to the [Releases](https://github.com/Ariedam64/MagicGarden-modMenu/releases) page, download the latest `.user.js` file, and let your userscript manager install it. Refresh the game — the HUD appears in the corner once the game connects.
+Head to the [Releases page](https://github.com/Ariedam64/MG-AriesMod/releases), download the `.user.js` file from the latest release, and your userscript manager will offer to install it. Reload the game and the HUD will show up in the corner once you're connected.
 
 ---
 
-## Main Features
+## Feature map
 
-### Community Hub
+Everything below lives in the overlay's menu, opened with `Alt + X` or `Insert`.
 
-A full-screen panel accessible from a button injected directly into the game's toolbar. It connects you to the entire player community with 6 tabs:
+### 🐾 Pets
 
-- **Rooms** — Browse 150+ public rooms and join any of them with one click. Every room you join has a **+50% friend sell bonus** because of the player count. Filter by number of players and refresh anytime.
-- **Messages** — Chat with your friends and groups directly in-game. Share your current room, pet team configs, or items from your inventory through rich cards in the conversation. Includes emoji picker, read receipts, and notification sounds.
-- **Friends** — Add friends, see who's online and which room they're in. Click a friend to view their full profile: garden preview, inventory, stats, activity log, journal, and leaderboard ranks. Send a DM or join their room directly from their profile.
-- **Groups** — Create or join player groups (public or private, up to 100 members). Group owners can promote/demote members, kick, rename, and manage visibility. Each group has its own chat conversation.
-- **Leaderboard** — Rankings for **Coins** and **Eggs Hatched** with gold/silver/bronze badges for the top 3. Your own rank is always visible at the bottom. Rank change indicators show progression over time.
-- **My Profile** — Control your privacy with 7 individual toggles (room, garden, inventory, coins, activity log, journal, stats) and manage notification sounds.
+- **Manager**: build named teams of 3 pets, filter your inventory by ability or species while picking one, and snapshot your currently active pets into a team with one click. Drag teams to reorder them, assign a hotkey to each from Keybinds, and cycle through teams with Previous/Next.
+- **Feeding**: decide which crops each pet species is allowed to eat, and toggle a small floating "Instant Feed" button you can drag anywhere on screen.
+- **Hatch**: a running count of pets hatched per species, split by Normal, Gold, and Rainbow.
+- **Logs**: a searchable history of your pets' ability activations, with filters and sorting.
 
-### Alerts
+### 🔒 Locker
 
-A real-time notification system that watches the shop and weather for you.
+- **General**: a global switch plus a shared set of filters: lock or allow harvest based on size range, required mutations (Gold, Rainbow), and weather mutations (match any, match all, or match specific recipes).
+- **Overrides**: apply a different set of those same filters to individual crops, instead of the general rule.
+- **Restrictions**: four independent safety nets:
+  - A minimum friend-bonus threshold that blocks selling crops below it.
+  - A toggle that stops placed decor from being picked back up.
+  - Per-egg locks to stop specific eggs from being hatched by accident.
+  - Rules for the game's "Sell all pets" action, protecting Gold or Rainbow pets, pets near max strength, or whole rarities.
 
-- **Shop alerts** — Pick any seed, egg, tool, or decor and get notified the instant it appears in the shop. A bell icon with a badge pops up along with a sound notification.
-- **Sound modes** — Choose between *One shot* (plays once) or *Loop* (repeats until the item leaves the shop). Each alert can have its own sound and volume.
-- **Buy from the overlay** — When an alert fires, you can purchase the item directly from the notification overlay without opening the shop. There's even a **Buy All** button to grab every unit at once.
-- **Weather alerts** — Get notified when specific weather events start, with customizable sounds and last-seen timestamps.
-- **Pet food alerts** — Warns you when a pet's food drops below a threshold you set.
-- **Custom audio** — Add your own notification sounds and set defaults for shop, weather, and pet alerts.
+Locked crops get a purple outline and a lock icon right in the garden, so you can spot them at a glance.
 
-### Pet Manager
+### 🔔 Alerts
 
-Create and manage pet teams to swap your active pets instantly.
+- **Shops** and **Weather**: pick any item or weather event and get notified the moment it shows up, with a bell icon, a sound, and per-item rules (custom sound, volume, one-shot or loop, stop condition).
+- **Pets**: a hunger warning once your active pets drop below a threshold you set.
+- **Settings**: choose between the default bell icon or a movable floating widget, set default sounds per category, and import your own audio clips.
 
-- **Teams** — Create named teams with 3 pet slots each. Filter available pets by ability or species. Import your currently active pets with one click.
-- **Hotkeys** — Assign a keybind to each team from the Keybinds menu. Press a key and your pets swap instantly. You can also cycle through teams with *Previous team* / *Next team* keybinds.
-- **Drag & drop** — Reorder your teams by dragging them.
-- **Feeding config** — Choose which crops each pet species is allowed to eat with the Instant Feed button.
-- **Pet logs** — View the last 500 ability procs with filters and search.
+Clicking the bell opens a small panel listing every item you're tracking that's currently in stock, with Buy and Buy All buttons right there.
 
-### Locker
+### 🤓 Calculator
 
-Protect your valuable crops from being accidentally harvested or sold.
+Pick a crop, adjust its size, mutations, weather, and friend bonus, and see the exact coin value it would sell for, with a live preview of the sprite.
 
-- **Lock mode** — Choose between *Block* (prevent harvest if conditions match) or *Allow* (only allow harvest if conditions match).
-- **Scale filter** — Set minimum and/or maximum harvest size (as a percentage).
-- **Mutation filter** — Require Gold and/or Rainbow mutations before harvesting.
-- **Weather filter** — Require specific weather mutations with three matching modes: *Any* (at least one), *All* (every one), or *Recipes* (one from each weather group, e.g., Frozen + Dawnbound).
-- **Per-crop overrides** — Set specific rules for individual crops that bypass the general locker.
-- **Visual indicators** — Locked crops show a purple border and a lock icon directly in the game. The Sell All button is blocked when locked crops are present.
+### 🏠 Room
 
----
+A list of everyone currently in your room. Select a player to teleport to them or their garden, follow them around, peek at their inventory, journal, stats, or activity log, save their garden layout into your Editor, or check the estimated value of their inventory and garden.
 
-## In-Game Improvements
+### 📝 Editor
 
-These features are injected directly into the game's interface — no menu needed.
+A sandbox mode that unlocks every plant and decor item for free placement, handy for planning a layout. You can also save your current garden, import a garden from a file, and manage a list of saved layouts you can reload or export at any time.
 
-### Shop
+### 🧩 Misc
 
-- **Buy All button** — Appears next to every shop item. Buy all remaining stock with one click.
-- **Tracked items first** — Items you follow in the Alert menu are moved to the top of the shop list so you never miss them.
-- **Sell All Pets** — A new button to sell every non-favorited pet at once (with confirmation).
+- **Ghost mode**: walk through walls, with an adjustable movement delay.
+- **Inventory guard**: keeps one inventory slot free so you never get stuck at capacity.
+- **Auto-store**: automatically sends matching seeds and decor into the Seed Silo and Decor Shed.
+- **Seed and decor deleters**: bulk delete a selection of seeds or decor with a progress bar and pause/stop controls.
+- **Auto-reconnect** is in this menu too, but it's currently switched off at the request of the game's developers. It should come back once that's resolved.
 
-### Inventory
+### ⌨️ Keybinds
 
-- **Crop prices** — Every harvested crop in your inventory shows its estimated coin value.
-- **Sorting** — Sort your inventory by name, quantity, rarity, size, mutations, strength (pets), or value. Sort direction (asc/desc) and filters persist between sessions.
-- **Item quantity** — When you select an item, its total quantity is displayed alongside it.
-- **Lock indicators** — Locked crops display a lock icon and purple border.
+Rebind pretty much everything: opening the menu, moving around, shop shortcuts, selling crops or pets, editor actions, and one hotkey per pet team. Clear or reset any binding individually.
 
-### Pet Panel
+### 🛠️ Tools
 
-- **Instant Feed** — A button injected into the pet panel that feeds your pet the best available crop instantly.
-- **Feed from Inventory** — Opens a crop selector so you can manually choose what to feed.
-- Both buttons can be individually toggled on/off from the Pets menu.
+A curated list of community-made calculators, guides, and other tools, with tags to filter by type and a preview before you click through.
 
-### Toolbar
+### ⚙️ Settings
 
-- A custom **Community Hub** button is added to the game's toolbar.
-- Shows an unread message badge when you have new messages or friend requests.
+Export or import your whole configuration as a file, save and restore named backups, and check your mod version alongside the game's version and environment info.
 
 ---
 
-## Other Menus
+## Also happening in the background
 
-### Calculator
+A few things run automatically without a dedicated menu:
 
-Estimate the exact sell value of any crop. Pick a species, adjust size, mutations, weather, and friend bonus to see min/max coin prices with a live sprite preview.
-
-### Keybinds
-
-Remap every mod action and many game controls. Supports modifier keys, hold-to-repeat, and per-team pet hotkeys. Use the trash button to clear a binding or the reset button to restore defaults.
-
-### Stats
-
-Track your session and lifetime stats: crops planted/harvested/destroyed, watering efficiency, shop purchases, revenue from sales, pets hatched by rarity with per-species breakdowns.
-
-### Misc
-
-- **Auto-reconnect** — Automatically reconnects after a session conflict or kick, with configurable delay.
-- **Ghost mode** — Move freely through walls with adjustable speed.
-- **Inventory guard** — Keeps 1 inventory slot free to prevent overflow.
-- **Auto-store** — Automatically moves seeds and decor into the Seed Silo and Decor Shed when they already exist there.
-- **Seed / Decor deleter** — Bulk-select and delete seeds or decor items with a rate-limited queue, progress tracker, and pause/stop controls.
-
-### Settings
-
-- View mod version, game version, and environment info.
-- **Export / Import** your settings as a JSON file.
-- **Backups** — Save named backups of your settings and restore them at any time.
-
-### Tools
-
-A curated directory of community calculators, planners, guides, and spreadsheets with tag filtering and direct links.
-
-### Editor
-
-Sandbox mode that unlocks all plants and decor for placement. Useful for planning your garden layout.
+- Crops in your inventory and garden show their estimated coin value.
+- Your inventory gets a sort dropdown (name, rarity, value, size, mutations, strength) plus ascending/descending order.
+- A "Sell all Pets" button appears next to the game's own sell prompt, respecting your Locker restrictions.
 
 ---
 
-## Backend
+## Looking for the social features?
 
-The mod uses a lightweight backend API to power community features (friends, messages, groups, rooms, leaderboard). It syncs your player state every 60 seconds with smart deduplication. All community features are opt-in via the Settings menu — you can disable data sharing entirely and use only local features.
+Friends, DMs, groups, room browsing, and the leaderboard used to live inside this mod. They've since moved to their own companion userscript, **MG Community Hub**, so they can be installed and updated on their own. If you had them set up here before, your login and settings carry over automatically.
+
+Get it from [github.com/Ariedam64/MG-CommunityHub](https://github.com/Ariedam64/MG-CommunityHub). You can run it alongside Arie's Mod without any conflicts.
 
 ---
 
-## Browser Support
+## Good to know
 
-- **Chrome & Edge** — fully tested and recommended.
-- **Firefox** — works, minor layout differences possible.
-- **Discord Activity** — everything loads, but room joining redirects to the website because Discord blocks direct joins.
-- **Audio notifications** require at least one click/tap on the page to unlock the browser's audio context.
+- **Chrome and Edge** are the most tested browsers and the recommended choice.
+- **Firefox** works fine, though a few things may look slightly different.
+- **Discord Activity** loads everything, but joining a room from the Community Hub will redirect you to the website since Discord doesn't allow it directly.
+- Sound alerts need at least one click or tap on the page first, that's a browser rule for audio, not a bug.
+
+---
+
+## Support
+
+Bugs, suggestions, or just want to chat with other players? Join the [Discord server](https://discord.gg/qFpQ436HZc).
+
+If you'd like to support the project, there's a Ko-fi link in the Settings menu. Never required, always appreciated.
