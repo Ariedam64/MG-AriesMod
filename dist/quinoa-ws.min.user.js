@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.172
+// @version      3.2.173
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -1633,8 +1633,8 @@
   var ARIES_STORAGE_VERSION = 1;
   var API_KEY_STORAGE_KEY = "aries_api_key";
   var AUTH_DECLINED_STORAGE_KEY = "aries_auth_declined";
+  var SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice";
   var SEEN_AUTO_RECO_DISABLED_NOTICE_KEY = "aries_seen_autoreco_disabled_notice";
-  var SEEN_COMMUNITY_HUB_MOVED_NOTICE_KEY = "aries_seen_community_hub_moved_notice";
   var DEFAULT_ARIES_STORAGE = {
     version: ARIES_STORAGE_VERSION,
     friends: {
@@ -1907,6 +1907,29 @@
     const key2 = getApiKey();
     return key2 !== null && key2.length > 0;
   }
+  function hasSeenRoomPrivacyNotice() {
+    try {
+      if (typeof GM_getValue === "function") {
+        const raw = GM_getValue(SEEN_ROOM_PRIVACY_NOTICE_KEY, null);
+        if (raw == null) return false;
+        if (typeof raw === "boolean") return raw;
+        return String(raw).trim() === "1";
+      }
+      return getHostStorage()?.getItem(SEEN_ROOM_PRIVACY_NOTICE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+  function markRoomPrivacyNoticeSeen() {
+    try {
+      if (typeof GM_setValue === "function") {
+        GM_setValue(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
+        return;
+      }
+      getHostStorage()?.setItem(SEEN_ROOM_PRIVACY_NOTICE_KEY, "1");
+    } catch {
+    }
+  }
   function hasSeenAutoRecoDisabledNotice() {
     try {
       if (typeof GM_getValue === "function") {
@@ -1927,29 +1950,6 @@
         return;
       }
       getHostStorage()?.setItem(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
-    } catch {
-    }
-  }
-  function hasSeenCommunityHubMovedNotice() {
-    try {
-      if (typeof GM_getValue === "function") {
-        const raw = GM_getValue(SEEN_COMMUNITY_HUB_MOVED_NOTICE_KEY, null);
-        if (raw == null) return false;
-        if (typeof raw === "boolean") return raw;
-        return String(raw).trim() === "1";
-      }
-      return getHostStorage()?.getItem(SEEN_COMMUNITY_HUB_MOVED_NOTICE_KEY) === "1";
-    } catch {
-      return false;
-    }
-  }
-  function markCommunityHubMovedNoticeSeen() {
-    try {
-      if (typeof GM_setValue === "function") {
-        GM_setValue(SEEN_COMMUNITY_HUB_MOVED_NOTICE_KEY, "1");
-        return;
-      }
-      getHostStorage()?.setItem(SEEN_COMMUNITY_HUB_MOVED_NOTICE_KEY, "1");
     } catch {
     }
   }
@@ -30860,7 +30860,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.172";
+      return "3.2.173";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -50033,9 +50033,9 @@ next: ${next}`;
     button?.focus();
   }
 
-  // src/ui/communityHubMovedNotice.ts
-  var OVERLAY_ID3 = "mgCommunityHubMovedNotice";
-  var STYLE_ID5 = "mgCommunityHubMovedNoticeStyle";
+  // src/ui/roomPrivacyNotice.ts
+  var OVERLAY_ID3 = "mgRoomPrivacyNotice";
+  var STYLE_ID5 = "mgRoomPrivacyNoticeStyle";
   var HUB_INSTALL_URL = "https://github.com/Ariedam64/MG-CommunityHub/raw/refs/heads/main/dist/mg-community-hub.user.js";
   function ensureStyle3() {
     if (document.getElementById(STYLE_ID5)) return;
@@ -50053,28 +50053,30 @@ next: ${next}`;
     document.head.appendChild(style2);
   }
   function dismiss2(overlay) {
-    markCommunityHubMovedNoticeSeen();
+    markRoomPrivacyNoticeSeen();
     try {
       overlay.remove();
     } catch {
     }
   }
-  function showCommunityHubMovedNoticeOnce() {
+  function showRoomPrivacyNoticeOnce() {
     if (typeof document === "undefined" || !document.body) return;
-    if (hasSeenCommunityHubMovedNotice()) return;
+    if (hasSeenRoomPrivacyNotice()) return;
     if (document.getElementById(OVERLAY_ID3)) return;
     ensureStyle3();
     const overlay = document.createElement("div");
     overlay.id = OVERLAY_ID3;
     overlay.innerHTML = `
-    <div class="box" role="dialog" aria-label="Community Hub moved">
-      <div class="title">Community Hub is now a separate mod</div>
+    <div class="box" role="dialog" aria-label="Room privacy notice">
+      <div class="title">Your room code is shared with other players</div>
       <div class="body">
-        Friends, messages, groups and leaderboards have moved into their own
-        userscript: <b>MG Community Hub</b>. Install it to keep using these
-        features.
+        This mod shares your room's code with other mod users so they can find
+        and join it, that's what helps boost your sales. If you'd rather keep
+        your room private and invisible to others, install
+        <b>MG Community Hub</b>: it adds a privacy setting to hide your room
+        from that list.
       </div>
-      <button class="btn primary" type="button" data-action="install">Get the hub</button>
+      <button class="btn primary" type="button" data-action="install">Get the privacy tool</button>
       <button class="btn" type="button" data-action="close">Got it</button>
     </div>
   `;
@@ -50310,10 +50312,7 @@ next: ${next}`;
         coins: coinsRaw,
         room: {
           id: roomId,
-          // Par défaut la room est considérée privée : ce champ n'est actuellement
-          // jamais fourni par l'appelant (heartbeat), donc sans ce fallback la room
-          // était toujours envoyée avec isPrivate: null (traité comme public côté serveur).
-          isPrivate: options.roomIsPrivate ?? true,
+          isPrivate: options.roomIsPrivate ?? null,
           playersCount,
           userSlots
         },
@@ -50528,6 +50527,6 @@ next: ${next}`;
     });
     antiAfk.start();
     startPlayerStateReportingWhenGameReady();
-    showCommunityHubMovedNoticeOnce();
+    showRoomPrivacyNoticeOnce();
   })();
 })();

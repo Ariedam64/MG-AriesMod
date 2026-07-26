@@ -1,15 +1,15 @@
-// communityHubMovedNotice.ts
-// One-time dismissible popup shown at mod startup to inform the user that the
-// Community Hub now lives in its own userscript. Shown only once (persisted
-// via a "seen" flag).
+// roomPrivacyNotice.ts
+// One-time dismissible popup shown at mod startup to inform the user that
+// their room's code is shared with other mod users by default. Shown only
+// once (persisted via a "seen" flag).
 
 import {
-  hasSeenCommunityHubMovedNotice,
-  markCommunityHubMovedNoticeSeen,
+  hasSeenRoomPrivacyNotice,
+  markRoomPrivacyNoticeSeen,
 } from "../utils/localStorage";
 
-const OVERLAY_ID = "mgCommunityHubMovedNotice";
-const STYLE_ID = "mgCommunityHubMovedNoticeStyle";
+const OVERLAY_ID = "mgRoomPrivacyNotice";
+const STYLE_ID = "mgRoomPrivacyNoticeStyle";
 
 // Direct link to the userscript file: the userscript manager opens its
 // install dialog immediately (no need to find the link in the README).
@@ -33,7 +33,7 @@ function ensureStyle(): void {
 }
 
 function dismiss(overlay: HTMLElement): void {
-  markCommunityHubMovedNoticeSeen();
+  markRoomPrivacyNoticeSeen();
   try {
     overlay.remove();
   } catch {
@@ -42,12 +42,12 @@ function dismiss(overlay: HTMLElement): void {
 }
 
 /**
- * Shows the "Community Hub moved" notice once. No-op if already seen,
- * if already mounted, or if there is no DOM available.
+ * Shows the room privacy notice once. No-op if already seen, if already
+ * mounted, or if there is no DOM available.
  */
-export function showCommunityHubMovedNoticeOnce(): void {
+export function showRoomPrivacyNoticeOnce(): void {
   if (typeof document === "undefined" || !document.body) return;
-  if (hasSeenCommunityHubMovedNotice()) return;
+  if (hasSeenRoomPrivacyNotice()) return;
   if (document.getElementById(OVERLAY_ID)) return;
 
   ensureStyle();
@@ -55,14 +55,16 @@ export function showCommunityHubMovedNoticeOnce(): void {
   const overlay = document.createElement("div");
   overlay.id = OVERLAY_ID;
   overlay.innerHTML = `
-    <div class="box" role="dialog" aria-label="Community Hub moved">
-      <div class="title">Community Hub is now a separate mod</div>
+    <div class="box" role="dialog" aria-label="Room privacy notice">
+      <div class="title">Your room code is shared with other players</div>
       <div class="body">
-        Friends, messages, groups and leaderboards have moved into their own
-        userscript: <b>MG Community Hub</b>. Install it to keep using these
-        features.
+        This mod shares your room's code with other mod users so they can find
+        and join it, that's what helps boost your sales. If you'd rather keep
+        your room private and invisible to others, install
+        <b>MG Community Hub</b>: it adds a privacy setting to hide your room
+        from that list.
       </div>
-      <button class="btn primary" type="button" data-action="install">Get the hub</button>
+      <button class="btn primary" type="button" data-action="install">Get the privacy tool</button>
       <button class="btn" type="button" data-action="close">Got it</button>
     </div>
   `;

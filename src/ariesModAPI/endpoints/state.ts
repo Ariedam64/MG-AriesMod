@@ -321,10 +321,7 @@ export async function buildPlayerStatePayload(
       coins: coinsRaw,
       room: {
         id: roomId,
-        // Par défaut la room est considérée privée : ce champ n'est actuellement
-        // jamais fourni par l'appelant (heartbeat), donc sans ce fallback la room
-        // était toujours envoyée avec isPrivate: null (traité comme public côté serveur).
-        isPrivate: options.roomIsPrivate ?? true,
+        isPrivate: options.roomIsPrivate ?? null,
         playersCount,
         userSlots,
       },

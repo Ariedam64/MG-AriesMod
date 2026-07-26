@@ -26,7 +26,7 @@ import { shareGlobal } from "./utils/page-context";
 
 import { warmupSpriteCache } from "./ui/spriteIconCache";
 import { showAutoRecoDisabledNoticeOnce } from "./ui/autoRecoDisabledNotice";
-import { showCommunityHubMovedNoticeOnce } from "./ui/communityHubMovedNotice";
+import { showRoomPrivacyNoticeOnce } from "./ui/roomPrivacyNotice";
 import { tos } from "./utils/tileObjectSystemApi";
 import { installEmojiDataFetchInterceptor, isDiscordActivityContext } from "./utils/discordCsp";
 
@@ -93,7 +93,7 @@ import { startPlayerStateReportingWhenGameReady } from "./ariesModAPI/endpoints/
   // a page global and the standalone Community Hub stands down when both run.
   startPlayerStateReportingWhenGameReady();
 
-  // Streams + Community Hub UI live in the standalone "MG Community Hub"
-  // userscript. Point existing users at it once.
-  showCommunityHubMovedNoticeOnce();
+  // One-time notice: rooms are public by default so other mod users can find
+  // them, install MG Community Hub for a privacy toggle.
+  showRoomPrivacyNoticeOnce();
 })();
