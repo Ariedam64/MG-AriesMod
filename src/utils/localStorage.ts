@@ -16,7 +16,7 @@ export const ARIES_STORAGE_KEY = "aries_mod";
 const ARIES_STORAGE_VERSION = 1;
 const API_KEY_STORAGE_KEY = "aries_api_key";
 const AUTH_DECLINED_STORAGE_KEY = "aries_auth_declined";
-const SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice";
+const SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice_v2";
 const SEEN_AUTO_RECO_DISABLED_NOTICE_KEY = "aries_seen_autoreco_disabled_notice";
 
 export type AriesStorage = {

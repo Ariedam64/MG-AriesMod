@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.173
+// @version      3.2.174
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -1633,7 +1633,7 @@
   var ARIES_STORAGE_VERSION = 1;
   var API_KEY_STORAGE_KEY = "aries_api_key";
   var AUTH_DECLINED_STORAGE_KEY = "aries_auth_declined";
-  var SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice";
+  var SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice_v2";
   var SEEN_AUTO_RECO_DISABLED_NOTICE_KEY = "aries_seen_autoreco_disabled_notice";
   var DEFAULT_ARIES_STORAGE = {
     version: ARIES_STORAGE_VERSION,
@@ -30860,7 +30860,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.173";
+      return "3.2.174";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
