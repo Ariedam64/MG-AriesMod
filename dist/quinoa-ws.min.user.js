@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.174
+// @version      3.2.175
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -13599,6 +13599,17 @@
         await this.setPosition(x, y);
       } catch (err) {
       }
+      try {
+        sendToGame({ type: "PlayerPosition", position: { x, y } });
+      } catch (err) {
+      }
+    },
+    // Anti-AFK keepalive: resends the current position to the server without
+    // touching the local position atom. Writing a fresh {x,y} object there
+    // (even with unchanged coordinates) makes the game close any open
+    // storage-building modal (pet hutch/decor shed/seed silo/feeding trough),
+    // so the no-op ping must go over the wire only.
+    async pingPosition(x, y) {
       try {
         sendToGame({ type: "PlayerPosition", position: { x, y } });
       } catch (err) {
@@ -30860,7 +30871,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.174";
+      return "3.2.175";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -49811,7 +49822,7 @@ next: ${next}`;
       try {
         const cur = await deps.getPosition();
         if (!cur) return;
-        await deps.move(Math.round(cur.x), Math.round(cur.y));
+        await deps.pingPosition(Math.round(cur.x), Math.round(cur.y));
       } catch {
       }
     }
@@ -50523,7 +50534,7 @@ next: ${next}`;
     showAutoRecoDisabledNoticeOnce();
     const antiAfk = createAntiAfkController({
       getPosition: () => PlayerService.getPosition(),
-      move: (x, y) => PlayerService.move(x, y)
+      pingPosition: (x, y) => PlayerService.pingPosition(x, y)
     });
     antiAfk.start();
     startPlayerStateReportingWhenGameReady();

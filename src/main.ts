@@ -84,7 +84,7 @@ import { startPlayerStateReportingWhenGameReady } from "./ariesModAPI/endpoints/
 
   const antiAfk = createAntiAfkController({
     getPosition: () => PlayerService.getPosition(),
-    move: (x, y) => PlayerService.move(x, y),
+    pingPosition: (x, y) => PlayerService.pingPosition(x, y),
   });
 
   antiAfk.start();

@@ -3,7 +3,7 @@ export type XY = { x: number; y: number };
 
 export function createAntiAfkController(deps: {
   getPosition: () => Promise<XY | undefined>,
-  move: (x: number, y: number) => Promise<any>,
+  pingPosition: (x: number, y: number) => Promise<any>,
 }) {
   /* ----- Swallow common visibility/focus events ----- */
   const STOP_EVENTS = ["visibilitychange","blur","focus","focusout","pagehide","freeze","resume"];
@@ -83,7 +83,7 @@ export function createAntiAfkController(deps: {
     try {
       const cur = await deps.getPosition();
       if (!cur) return;
-      await deps.move(Math.round(cur.x), Math.round(cur.y));
+      await deps.pingPosition(Math.round(cur.x), Math.round(cur.y));
     } catch {}
   }
   function startPing() { pingTimer = window.setInterval(pingPosition, 60_000); void pingPosition(); }

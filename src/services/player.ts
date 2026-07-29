@@ -331,6 +331,15 @@ export const PlayerService = {
     try { sendToGame({ type: "PlayerPosition", position: { x, y } }); } catch (err) {  }
   },
 
+  // Anti-AFK keepalive: resends the current position to the server without
+  // touching the local position atom. Writing a fresh {x,y} object there
+  // (even with unchanged coordinates) makes the game close any open
+  // storage-building modal (pet hutch/decor shed/seed silo/feeding trough),
+  // so the no-op ping must go over the wire only.
+  async pingPosition(x: number, y: number) {
+    try { sendToGame({ type: "PlayerPosition", position: { x, y } }); } catch (err) {  }
+  },
+
   /* ------------------------------ Actions jeu ------------------------------ */
 
   async plantSeed(slot: number, species: string) {
