@@ -4,18 +4,22 @@ import { getAtomByLabel, jGet, jSet } from "../store/jotai";
 export type ToastVariant = "success" | "error" | "info" | "warn";
 export type SimpleToast = { title: any; description?: any; variant?: ToastVariant };
 
-type BoardToast = {
-  toastType: "board";
+// Matches the real "board"-style toast pushed by the game itself for shop
+// announcements (captured live from quinoaToastsAtom). title/subtitle can be
+// either a plain string or a `{ id }` i18n message reference, mirroring what
+// the game sends.
+type ShopAnnouncementToast = {
+  toastType: "shopAnnouncement";
+  presentation: string;
   title: any;
   subtitle?: any;
-  strokeColor?: string;
-  backgroundImage?: string;
   isStackable?: boolean;
-  duration?: number | null;
+  displayDurationMs?: number | null;
+  presentByServerMs?: number;
   id?: string;
 };
 
-type AnyToast = SimpleToast | BoardToast;
+type AnyToast = SimpleToast | ShopAnnouncementToast;
 
 export async function sendToast(toast: AnyToast): Promise<void> {
   const sendAtom = getAtomByLabel("sendQuinoaToastAtom");
@@ -25,13 +29,16 @@ export async function sendToast(toast: AnyToast): Promise<void> {
   if (!listAtom) throw new Error("Aucun atom de toast trouvé");
 
   const prev = await jGet<any[]>(listAtom).catch(() => []) as any[];
-  const t: any = { isClosable: true, duration: 10000, ...toast };
+  const isAnnouncement = "toastType" in toast && toast.toastType === "shopAnnouncement";
 
-  if ("toastType" in t && t.toastType === "board") {
-    t.id = t.id ?? (t.isStackable ? `quinoa-stackable-${Date.now()}-${Math.random()}` : "quinoa-game-toast");
-  } else {
-    t.id = t.id ?? "quinoa-game-toast";
-  }
+  const t: any = isAnnouncement
+    ? { isClosable: true, presentByServerMs: Date.now(), ...toast }
+    : { isClosable: true, duration: 10000, ...toast };
+
+  t.id = t.id ?? (isAnnouncement && t.isStackable
+    ? `quinoa-stackable-${Date.now()}-${Math.random()}`
+    : "quinoa-game-toast");
+
   await jSet(listAtom, [...prev, t]);
 }
 
@@ -42,10 +49,18 @@ export async function toastSimple(
 }
 
 export async function toastBoard(
-  title: any, subtitle: any, backgroundImage: string,
-  strokeColor = "Blue.Magic", duration = 5000, opts: Partial<BoardToast> = {}
+  title: any, subtitle: any, presentation: string,
+  displayDurationMs = 5000, opts: Partial<ShopAnnouncementToast> = {}
 ) {
-  await sendToast({ toastType: "board", title, subtitle, backgroundImage, strokeColor, isStackable: true, duration, ...opts });
+  await sendToast({
+    toastType: "shopAnnouncement",
+    presentation,
+    title,
+    subtitle,
+    isStackable: true,
+    displayDurationMs,
+    ...opts,
+  });
 }
 
 export async function clearToasts() {

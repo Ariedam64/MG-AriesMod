@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.175
+// @version      3.2.176
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -9416,12 +9416,9 @@
     const listAtom = getAtomByLabel("quinoaToastsAtom");
     if (!listAtom) throw new Error("Aucun atom de toast trouv\xE9");
     const prev = await jGet(listAtom).catch(() => []);
-    const t = { isClosable: true, duration: 1e4, ...toast2 };
-    if ("toastType" in t && t.toastType === "board") {
-      t.id = t.id ?? (t.isStackable ? `quinoa-stackable-${Date.now()}-${Math.random()}` : "quinoa-game-toast");
-    } else {
-      t.id = t.id ?? "quinoa-game-toast";
-    }
+    const isAnnouncement = "toastType" in toast2 && toast2.toastType === "shopAnnouncement";
+    const t = isAnnouncement ? { isClosable: true, presentByServerMs: Date.now(), ...toast2 } : { isClosable: true, duration: 1e4, ...toast2 };
+    t.id = t.id ?? (isAnnouncement && t.isStackable ? `quinoa-stackable-${Date.now()}-${Math.random()}` : "quinoa-game-toast");
     await jSet(listAtom, [...prev, t]);
   }
   async function toastSimple(title, description, variant = "info", duration = 3500) {
@@ -30871,7 +30868,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.175";
+      return "3.2.176";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
