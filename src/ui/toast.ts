@@ -35,9 +35,11 @@ export async function sendToast(toast: AnyToast): Promise<void> {
     ? { isClosable: true, presentByServerMs: Date.now(), ...toast }
     : { isClosable: true, duration: 10000, ...toast };
 
-  t.id = t.id ?? (isAnnouncement && t.isStackable
-    ? `quinoa-stackable-${Date.now()}-${Math.random()}`
-    : "quinoa-game-toast");
+  // Every toast needs a distinct id: the game's toast list keys/removes
+  // entries by id, so any two toasts sharing "quinoa-game-toast" become
+  // indistinguishable to it — closing one either closes both or fails to
+  // remove either, which is exactly the "won't dismiss" symptom this fixes.
+  t.id = t.id ?? `quinoa-game-toast-${Date.now()}-${Math.random()}`;
 
   await jSet(listAtom, [...prev, t]);
 }

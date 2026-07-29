@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.176
+// @version      3.2.177
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -9418,7 +9418,7 @@
     const prev = await jGet(listAtom).catch(() => []);
     const isAnnouncement = "toastType" in toast2 && toast2.toastType === "shopAnnouncement";
     const t = isAnnouncement ? { isClosable: true, presentByServerMs: Date.now(), ...toast2 } : { isClosable: true, duration: 1e4, ...toast2 };
-    t.id = t.id ?? (isAnnouncement && t.isStackable ? `quinoa-stackable-${Date.now()}-${Math.random()}` : "quinoa-game-toast");
+    t.id = t.id ?? `quinoa-game-toast-${Date.now()}-${Math.random()}`;
     await jSet(listAtom, [...prev, t]);
   }
   async function toastSimple(title, description, variant = "info", duration = 3500) {
@@ -30868,7 +30868,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.176";
+      return "3.2.177";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
