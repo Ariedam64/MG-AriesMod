@@ -237,6 +237,36 @@ const debugSyncState: { lastError: string | null; anchorsFound: boolean; toolbar
   toolbarBuilt: false,
 };
 
+function isDescendantOf(node: any, ancestor: any): boolean {
+  let current = node?.parent;
+  while (current) {
+    if (current === ancestor) return true;
+    current = current.parent;
+  }
+  return false;
+}
+
+// Pushing the scroll view down to make room for the toolbar would otherwise
+// let its content overflow past the modal's own bottom edge, since only its
+// position moved, not its visible clip window. If the scroll view uses a
+// Pixi `.mask` (the standard way to clip scrollable content), shrink it by
+// the same amount we pushed the container down, so the window's bottom edge
+// stays exactly where the game's native layout put it.
+function shrinkScrollViewMask(scrollViewContainer: any, deltaHeight: number): void {
+  const mask = scrollViewContainer?.mask;
+  if (!mask || !deltaHeight) return;
+  try {
+    // A mask that isn't a descendant of the container doesn't move when we
+    // reposition the container, so it has to be shifted down manually to
+    // keep tracking the (now lower) top edge of the scrollable window.
+    if (!isDescendantOf(mask, scrollViewContainer)) {
+      mask.position.y += deltaHeight;
+    }
+    mask.height = Math.max(0, mask.height - deltaHeight);
+  } catch {
+  }
+}
+
 function syncToolbar(): void {
   try {
     syncToolbarUnsafe();
@@ -276,8 +306,10 @@ function syncToolbarUnsafe(): void {
   const toolbarTopY = anchors.title.position.y + anchors.title.textHeight + TOOLBAR_GAP_ABOVE;
   const desiredOffset = Math.max(0, toolbarTopY + toolbarState.height + TOOLBAR_GAP_BELOW - lastNativeDividerY);
   if (desiredOffset !== appliedOffset) {
+    const delta = desiredOffset - appliedOffset;
     anchors.divider.position.y = lastNativeDividerY + desiredOffset;
-    anchors.scrollViewContainer.position.y += desiredOffset - appliedOffset;
+    anchors.scrollViewContainer.position.y += delta;
+    shrinkScrollViewMask(anchors.scrollViewContainer, delta);
     appliedOffset = desiredOffset;
   }
   toolbarState.container.position.set(anchors.divider.position.x, toolbarTopY);
