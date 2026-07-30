@@ -280,7 +280,7 @@ function syncToolbarUnsafe(): void {
     anchors.scrollViewContainer.position.y += desiredOffset - appliedOffset;
     appliedOffset = desiredOffset;
   }
-  toolbarState.container.position.set(anchors.title.position.x, toolbarTopY);
+  toolbarState.container.position.set(anchors.divider.position.x, toolbarTopY);
   refreshToolbarHighlight(toolbarState);
 }
 
