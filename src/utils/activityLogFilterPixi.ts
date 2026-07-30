@@ -141,7 +141,16 @@ interface ToolbarState {
   height: number;
 }
 
-function buildToolbar(graphicsCtor: any, textCtor: any, containerCtor: any): ToolbarState {
+function safeWidth(node: any, fallback: number): number {
+  try {
+    const value = node?.width;
+    return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function buildToolbar(graphicsCtor: any, textCtor: any, containerCtor: any, maxWidth: number): ToolbarState {
   const history = getActivityLogHistory();
   const counts = new Map<ActionKey, number>();
   for (const entry of history) {
@@ -153,6 +162,7 @@ function buildToolbar(graphicsCtor: any, textCtor: any, containerCtor: any): Too
   const toolbar = new containerCtor();
   const buttons: ToolbarButton[] = [];
   let x = 0;
+  let y = 0;
   const active = getActiveFilter();
 
   for (const key of keys) {
@@ -161,6 +171,14 @@ function buildToolbar(graphicsCtor: any, textCtor: any, containerCtor: any): Too
 
     const text = new textCtor({ text: label, style: BUTTON_TEXT_STYLE });
     const width = text.width + BUTTON_PADDING_X * 2;
+
+    // Wrap to a new row when this button would overflow the modal's
+    // content width — never wrap the very first button on a row, or a
+    // single button wider than maxWidth would loop forever.
+    if (x > 0 && x + width > maxWidth) {
+      x = 0;
+      y += BUTTON_HEIGHT + BUTTON_GAP;
+    }
 
     const bg = new graphicsCtor();
     bg.roundRect(0, 0, width, BUTTON_HEIGHT, BUTTON_RADIUS)
@@ -171,7 +189,7 @@ function buildToolbar(graphicsCtor: any, textCtor: any, containerCtor: any): Too
     const button = new containerCtor();
     button.addChild(bg);
     button.addChild(text);
-    button.position.set(x, 0);
+    button.position.set(x, y);
     button.eventMode = "static";
     button.cursor = "pointer";
     button.on("pointertap", () => setActiveFilter(key));
@@ -181,7 +199,7 @@ function buildToolbar(graphicsCtor: any, textCtor: any, containerCtor: any): Too
     x += width + BUTTON_GAP;
   }
 
-  return { container: toolbar, buttons, height: BUTTON_HEIGHT };
+  return { container: toolbar, buttons, height: y + BUTTON_HEIGHT };
 }
 
 function refreshToolbarHighlight(toolbarState: ToolbarState): void {
@@ -213,9 +231,26 @@ function teardownToolbar(): void {
   lastNativeDividerY = 0;
 }
 
+const debugSyncState: { lastError: string | null; anchorsFound: boolean; toolbarBuilt: boolean } = {
+  lastError: null,
+  anchorsFound: false,
+  toolbarBuilt: false,
+};
+
 function syncToolbar(): void {
+  try {
+    syncToolbarUnsafe();
+    debugSyncState.lastError = null;
+  } catch (error) {
+    debugSyncState.lastError = String((error as Error)?.message ?? error);
+    console.warn("[activityLogFilterPixi] syncToolbar failed", error);
+  }
+}
+
+function syncToolbarUnsafe(): void {
   if (!modalNode || modalNode.destroyed) { teardownToolbar(); modalNode = null; return; }
   const anchors = locateModalAnchors(modalNode);
+  debugSyncState.anchorsFound = !!anchors;
   if (!anchors) return;
 
   if (!toolbarState) {
@@ -224,9 +259,12 @@ function syncToolbar(): void {
     const stage = getStage(state);
     const graphicsCtor = findGraphicsCtor(stage);
     if (!graphicsCtor) return;
+    const maxWidth = safeWidth(anchors.divider, 0);
+    if (maxWidth <= 0) return;
     const containerCtor = anchors.modalContainer.constructor;
-    toolbarState = buildToolbar(graphicsCtor, state.ctors.Text, containerCtor);
+    toolbarState = buildToolbar(graphicsCtor, state.ctors.Text, containerCtor, maxWidth);
     anchors.modalContainer.addChild(toolbarState.container);
+    debugSyncState.toolbarBuilt = true;
   }
 
   const currentDividerY = anchors.divider.position.y;
@@ -294,3 +332,21 @@ export function startActivityLogFilterPixi(): void {
     if (findRafId == null) findRafId = raf(scheduleFind);
   })();
 }
+
+shareGlobal("__MG_ACTIVITY_LOG_TOOLBAR_DEBUG__", {
+  get modalOpen() {
+    return modalOpen;
+  },
+  get modalFound() {
+    return !!modalNode;
+  },
+  get toolbarBuilt() {
+    return debugSyncState.toolbarBuilt;
+  },
+  get anchorsFound() {
+    return debugSyncState.anchorsFound;
+  },
+  get lastError() {
+    return debugSyncState.lastError;
+  },
+});
