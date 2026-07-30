@@ -150,6 +150,15 @@ function safeWidth(node: any, fallback: number): number {
   }
 }
 
+function safeHeight(node: any, fallback: number): number {
+  try {
+    const value = node?.height;
+    return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 function buildToolbar(graphicsCtor: any, textCtor: any, containerCtor: any, maxWidth: number): ToolbarState {
   const history = getActivityLogHistory();
   const counts = new Map<ActionKey, number>();
@@ -222,11 +231,22 @@ let lastNativeDividerY = 0;
 let findRafId: number | null = null;
 let lastFindCheckAt = 0;
 
+let ownScrollMask: any = null;
+let nativeScrollHeight = 0;
+
 function teardownToolbar(): void {
   if (toolbarState) {
     try { toolbarState.container.destroy({ children: true }); } catch {}
   }
+  if (ownScrollMask) {
+    try {
+      if (ownScrollMask.parent) ownScrollMask.parent.mask = null;
+      ownScrollMask.destroy();
+    } catch {}
+  }
   toolbarState = null;
+  ownScrollMask = null;
+  nativeScrollHeight = 0;
   appliedOffset = 0;
   lastNativeDividerY = 0;
 }
@@ -237,34 +257,25 @@ const debugSyncState: { lastError: string | null; anchorsFound: boolean; toolbar
   toolbarBuilt: false,
 };
 
-function isDescendantOf(node: any, ancestor: any): boolean {
-  let current = node?.parent;
-  while (current) {
-    if (current === ancestor) return true;
-    current = current.parent;
-  }
-  return false;
-}
-
 // Pushing the scroll view down to make room for the toolbar would otherwise
 // let its content overflow past the modal's own bottom edge, since only its
-// position moved, not its visible clip window. If the scroll view uses a
-// Pixi `.mask` (the standard way to clip scrollable content), shrink it by
-// the same amount we pushed the container down, so the window's bottom edge
-// stays exactly where the game's native layout put it.
-function shrinkScrollViewMask(scrollViewContainer: any, deltaHeight: number): void {
-  const mask = scrollViewContainer?.mask;
-  if (!mask || !deltaHeight) return;
-  try {
-    // A mask that isn't a descendant of the container doesn't move when we
-    // reposition the container, so it has to be shifted down manually to
-    // keep tracking the (now lower) top edge of the scrollable window.
-    if (!isDescendantOf(mask, scrollViewContainer)) {
-      mask.position.y += deltaHeight;
-    }
-    mask.height = Math.max(0, mask.height - deltaHeight);
-  } catch {
+// position moved, not whatever clips its visible window (which may not even
+// be a plain Pixi `.mask` we can find and shrink — this custom scroll view
+// could clip via an internal scissor rect recalculated only on its own
+// `resize()`, which we have no handle on). Rather than depend on guessing
+// that internal mechanism, install our own rectangular mask as a child of
+// the scroll view container (so it moves automatically when we reposition
+// the container) sized to keep the *bottom* edge exactly where the game's
+// native layout originally put it, taking full ownership of clipping while
+// the toolbar is attached.
+function applyScrollViewClip(scrollViewContainer: any, width: number, height: number, graphicsCtor: any): void {
+  if (!ownScrollMask || ownScrollMask.destroyed || ownScrollMask.parent !== scrollViewContainer) {
+    ownScrollMask = new graphicsCtor();
+    scrollViewContainer.addChild(ownScrollMask);
   }
+  scrollViewContainer.mask = ownScrollMask;
+  ownScrollMask.clear();
+  ownScrollMask.rect(0, 0, Math.max(0, width), Math.max(0, height)).fill({ color: 0xffffff });
 }
 
 function syncToolbar(): void {
@@ -294,6 +305,7 @@ function syncToolbarUnsafe(): void {
     const containerCtor = anchors.modalContainer.constructor;
     toolbarState = buildToolbar(graphicsCtor, state.ctors.Text, containerCtor, maxWidth);
     anchors.modalContainer.addChild(toolbarState.container);
+    nativeScrollHeight = safeHeight(anchors.scrollViewContainer, 0);
     debugSyncState.toolbarBuilt = true;
   }
 
@@ -306,11 +318,18 @@ function syncToolbarUnsafe(): void {
   const toolbarTopY = anchors.title.position.y + anchors.title.textHeight + TOOLBAR_GAP_ABOVE;
   const desiredOffset = Math.max(0, toolbarTopY + toolbarState.height + TOOLBAR_GAP_BELOW - lastNativeDividerY);
   if (desiredOffset !== appliedOffset) {
-    const delta = desiredOffset - appliedOffset;
     anchors.divider.position.y = lastNativeDividerY + desiredOffset;
-    anchors.scrollViewContainer.position.y += delta;
-    shrinkScrollViewMask(anchors.scrollViewContainer, delta);
+    anchors.scrollViewContainer.position.y += desiredOffset - appliedOffset;
     appliedOffset = desiredOffset;
+    if (nativeScrollHeight > 0) {
+      const state = getSpriteState();
+      const stage = state ? getStage(state) : null;
+      const graphicsCtor = stage ? findGraphicsCtor(stage) : null;
+      if (graphicsCtor) {
+        const clipWidth = safeWidth(anchors.scrollViewContainer, safeWidth(anchors.divider, 0));
+        applyScrollViewClip(anchors.scrollViewContainer, clipWidth, nativeScrollHeight - appliedOffset, graphicsCtor);
+      }
+    }
   }
   toolbarState.container.position.set(anchors.divider.position.x, toolbarTopY);
   refreshToolbarHighlight(toolbarState);
@@ -380,5 +399,17 @@ shareGlobal("__MG_ACTIVITY_LOG_TOOLBAR_DEBUG__", {
   },
   get lastError() {
     return debugSyncState.lastError;
+  },
+  get modalNode() {
+    return modalNode;
+  },
+  get anchors() {
+    return modalNode ? locateModalAnchors(modalNode) : null;
+  },
+  get nativeScrollHeight() {
+    return nativeScrollHeight;
+  },
+  get appliedOffset() {
+    return appliedOffset;
   },
 });
