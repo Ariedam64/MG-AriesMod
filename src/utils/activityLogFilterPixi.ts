@@ -234,6 +234,7 @@ let findRafId: number | null = null;
 let lastFindCheckAt = 0;
 
 let ownScrollMask: any = null;
+let nativeScrollHeight = 0;
 
 function teardownToolbar(): void {
   if (toolbarState) {
@@ -247,6 +248,7 @@ function teardownToolbar(): void {
   }
   toolbarState = null;
   ownScrollMask = null;
+  nativeScrollHeight = 0;
   appliedOffset = 0;
   lastNativeDividerY = 0;
 }
@@ -259,18 +261,17 @@ const debugSyncState: { lastError: string | null; anchorsFound: boolean; toolbar
 
 // Pushing the scroll view down to make room for the toolbar would otherwise
 // let its content overflow past the modal's own bottom edge, since only its
-// position moved, not whatever clips its visible window (which may not even
-// be a plain Pixi `.mask` we can find and shrink — this custom scroll view
-// could clip via an internal scissor rect recalculated only on its own
-// `resize()`, which we have no handle on, and its own reported `.height`
-// turned out to reflect the full scrollable content rather than the
-// visible viewport). Rather than depend on guessing either of those, install
-// our own rectangular mask as a child of the scroll view container (so it
-// moves automatically when we reposition the container), sized every time
-// against the background sprite's own bottom edge — an explicitly
-// game-assigned `.height`/`.position`, not a bounds-derived one — so the
-// window always ends exactly at the modal artwork's bottom, regardless of
-// how far down we've had to push the scroll view's top edge.
+// position moved, not its visible window. We can't call the scroll view's
+// own resize() (we only hold its Pixi container, not the class instance that
+// implements it), so instead we install our own rectangular mask as a child
+// of the scroll view container (moves automatically when we reposition the
+// container), sized to the scroll view's own *native* height (captured once
+// before any offset was ever applied — confirmed via a live dump to be a
+// stable, correctly-proportioned value on its own) minus however much we've
+// pushed it down. This shrinks the visible window by exactly the toolbar's
+// height rather than trying to re-derive where the card's safe interior
+// ends — the hidden rows and the "load more" button remain reachable by
+// scrolling, same total content, just a shorter visible page at a time.
 function applyScrollViewClip(scrollViewContainer: any, width: number, height: number, graphicsCtor: any): void {
   if (!ownScrollMask || ownScrollMask.destroyed || ownScrollMask.parent !== scrollViewContainer) {
     ownScrollMask = new graphicsCtor();
@@ -308,6 +309,12 @@ function syncToolbarUnsafe(): void {
     const containerCtor = anchors.modalContainer.constructor;
     toolbarState = buildToolbar(graphicsCtor, state.ctors.Text, containerCtor, maxWidth);
     anchors.modalContainer.addChild(toolbarState.container);
+    // Captured now, before any offset has ever been applied, so this is the
+    // scroll view's true native height (confirmed via a live dump: a stable,
+    // sanely-sized value on its own -- e.g. 540px within a ~700px-tall card
+    // -- not the full card height, and not affected by our own later
+    // position/mask changes).
+    nativeScrollHeight = safeHeight(anchors.scrollViewContainer, 0);
     debugSyncState.toolbarBuilt = true;
   }
 
@@ -325,15 +332,13 @@ function syncToolbarUnsafe(): void {
     appliedOffset = desiredOffset;
   }
 
-  const bgBottom = safeHeight(anchors.backgroundSprite, 0) + (anchors.backgroundSprite.position?.y ?? 0);
-  if (bgBottom > 0) {
-    const clipHeight = bgBottom - anchors.scrollViewContainer.position.y;
+  if (nativeScrollHeight > 0) {
     const state = getSpriteState();
     const stage = state ? getStage(state) : null;
     const graphicsCtor = stage ? findGraphicsCtor(stage) : null;
     if (graphicsCtor) {
       const clipWidth = safeWidth(anchors.scrollViewContainer, safeWidth(anchors.divider, 0));
-      applyScrollViewClip(anchors.scrollViewContainer, clipWidth, clipHeight, graphicsCtor);
+      applyScrollViewClip(anchors.scrollViewContainer, clipWidth, nativeScrollHeight - appliedOffset, graphicsCtor);
     }
   }
 
