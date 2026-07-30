@@ -25,12 +25,13 @@ import { getSpriteState, getStage, findAcrossBranches, findGraphicsCtor } from "
 const FILTER_STORAGE_KEY = "activityLog.filter";
 const ACTIVITY_LOG_MODAL_ID = "activityLog";
 const ACTIVITY_LOG_MODAL_LABEL = "ActivityLogModal";
-const ACTIVITY_LOG_ROW_LABEL = "ActivityLogRow";
 const FIND_RETRY_MS = 1000;
 
 const BUTTON_HEIGHT = 26;
 const BUTTON_PADDING_X = 10;
 const BUTTON_GAP = 6;
+const TOOLBAR_GAP_ABOVE = 4;
+const TOOLBAR_GAP_BELOW = 6;
 const BUTTON_FILL_INACTIVE = 0x7b5a38;
 const BUTTON_FILL_ACTIVE = 0xe3a23d;
 const BUTTON_ALPHA_INACTIVE = 0.55;
@@ -101,6 +102,32 @@ const debugState = {
   computeFilteredHistory,
 };
 shareGlobal("__MG_ACTIVITY_LOG_FILTER_DEBUG__", debugState);
+
+interface ModalAnchors {
+  modalContainer: any;
+  title: any;
+  divider: any;
+  scrollViewContainer: any;
+}
+
+// Confirmed via a live console check against the running game: `this.container`
+// (found by label) always has [modalContainer, closeButton.view] as its own two
+// children (set by the base modal class), and modalContainer always has
+// [backgroundSprite, title, infoTooltip.container, divider,
+// scrollView.container] in that order (set by the ActivityLogModal subclass's
+// constructor). If a future game build changes this order, this is the one
+// place to update.
+function locateModalAnchors(modalNode: any): ModalAnchors | null {
+  const modalContainer = modalNode?.children?.[0];
+  if (!modalContainer || modalContainer.destroyed) return null;
+  const children = modalContainer.children;
+  if (!Array.isArray(children) || children.length < 5) return null;
+  const title = children[1];
+  const divider = children[3];
+  const scrollViewContainer = children[4];
+  if (!title || !divider || !scrollViewContainer) return null;
+  return { modalContainer, title, divider, scrollViewContainer };
+}
 
 interface ToolbarButton {
   container: any;
@@ -190,6 +217,8 @@ function refreshToolbarHighlight(toolbarState: ToolbarState): void {
 
 let modalNode: any = null;
 let toolbarState: ToolbarState | null = null;
+let appliedOffset = 0;
+let lastNativeDividerY = 0;
 let findRafId: number | null = null;
 let lastFindCheckAt = 0;
 
@@ -199,23 +228,13 @@ const debugSyncState: { lastError: string | null; anchorsFound: boolean; toolbar
   toolbarBuilt: false,
 };
 
-// The scroll view container's own visible-window height/scroll range is
-// owned entirely by a class instance the game keeps to itself (we only ever
-// get a plain Pixi Container back from a label search) -- confirmed via a
-// live property dump showing nothing but generic Pixi internals on it, no
-// custom viewport-height field we could adjust. So instead of resizing or
-// repositioning the scroll view at all (which previously either overflowed
-// past the card or made the tail of the list permanently unreachable, since
-// we can't tell the native scroll-clamp math the window changed), the
-// toolbar is injected as a child of the scroll view's own *content*
-// container -- found by locating a live "ActivityLogRow" and taking its
-// parent, rather than assuming a fixed structural index. Placed at the very
-// top, it overlaps the first row until the user scrolls past it, then
-// scrolls away naturally with the rest of the content -- no native geometry
-// touched, so the scroll range stays exactly what the game itself computed.
-function findRowsContent(modalNode: any): any | null {
-  const rowNode = findAcrossBranches(modalNode, (node: any) => node?.label === ACTIVITY_LOG_ROW_LABEL);
-  return rowNode?.parent ?? null;
+function teardownToolbar(): void {
+  if (toolbarState) {
+    try { toolbarState.container.destroy({ children: true }); } catch {}
+  }
+  toolbarState = null;
+  appliedOffset = 0;
+  lastNativeDividerY = 0;
 }
 
 function syncToolbar(): void {
@@ -228,40 +247,53 @@ function syncToolbar(): void {
   }
 }
 
+// Fixed position between the title and the divider (pushing both the
+// divider and the scroll view down by the toolbar's height every frame,
+// recalculated off the title's own live position — no hardcoded pixels).
+// Deliberately does NOT try to shrink or mask the scroll view's visible
+// window: the scroll view's own scroll-range math is owned by a class
+// instance we have no handle on (confirmed via a live property dump), so
+// any attempt to tell it "the window got shorter" either overflows past the
+// card or makes the tail of the list permanently unreachable by scrolling.
+// Between those two known-bad outcomes, a purely cosmetic overflow past the
+// card's bottom edge was preferred over breaking reachability or covering
+// list items with the toolbar itself.
 function syncToolbarUnsafe(): void {
-  if (!modalNode || modalNode.destroyed) { modalNode = null; toolbarState = null; return; }
+  if (!modalNode || modalNode.destroyed) { teardownToolbar(); modalNode = null; return; }
+  const anchors = locateModalAnchors(modalNode);
+  debugSyncState.anchorsFound = !!anchors;
+  if (!anchors) return;
 
-  const content = findRowsContent(modalNode);
-  debugSyncState.anchorsFound = !!content;
-  if (!content) return; // no rows yet (e.g. empty history) -- nothing to attach to
-
-  const stillAttached = !!toolbarState && !toolbarState.container.destroyed && toolbarState.container.parent === content;
-  if (!stillAttached) {
-    // The game clears and rebuilds this container's entire contents on every
-    // activityLogs/filter/resize change, wiping our toolbar along with the
-    // old rows -- rebuild fresh each time rather than re-attach the old one,
-    // so button counts stay accurate against whatever triggered the rebuild.
-    if (toolbarState && !toolbarState.container.destroyed) {
-      try { toolbarState.container.destroy({ children: true }); } catch {}
-    }
-    toolbarState = null;
-
-    const rowNode = findAcrossBranches(modalNode, (node: any) => node?.label === ACTIVITY_LOG_ROW_LABEL);
+  if (!toolbarState) {
     const state = getSpriteState();
     if (!state?.ctors?.Text) return;
     const stage = getStage(state);
     const graphicsCtor = findGraphicsCtor(stage);
     if (!graphicsCtor) return;
-    const maxWidth = safeWidth(rowNode, 0);
+    const maxWidth = safeWidth(anchors.divider, 0);
     if (maxWidth <= 0) return;
-    const containerCtor = content.constructor;
+    const containerCtor = anchors.modalContainer.constructor;
     toolbarState = buildToolbar(graphicsCtor, state.ctors.Text, containerCtor, maxWidth);
-    toolbarState.container.position.set(0, 0);
-    content.addChild(toolbarState.container);
+    anchors.modalContainer.addChild(toolbarState.container);
     debugSyncState.toolbarBuilt = true;
   }
 
-  refreshToolbarHighlight(toolbarState!);
+  const currentDividerY = anchors.divider.position.y;
+  if (Math.abs(currentDividerY - (lastNativeDividerY + appliedOffset)) > 0.5) {
+    lastNativeDividerY = currentDividerY;
+    appliedOffset = 0;
+  }
+
+  const toolbarTopY = anchors.title.position.y + anchors.title.textHeight + TOOLBAR_GAP_ABOVE;
+  const desiredOffset = Math.max(0, toolbarTopY + toolbarState.height + TOOLBAR_GAP_BELOW - lastNativeDividerY);
+  if (desiredOffset !== appliedOffset) {
+    anchors.divider.position.y = lastNativeDividerY + desiredOffset;
+    anchors.scrollViewContainer.position.y += desiredOffset - appliedOffset;
+    appliedOffset = desiredOffset;
+  }
+
+  toolbarState.container.position.set(anchors.divider.position.x, toolbarTopY);
+  refreshToolbarHighlight(toolbarState);
 }
 
 function tryFindModal(): void {
@@ -275,7 +307,7 @@ function tryFindModal(): void {
   found.once("destroyed", () => {
     if (modalNode === found) {
       modalNode = null;
-      toolbarState = null;
+      teardownToolbar();
     }
   });
 }
@@ -291,7 +323,7 @@ function scheduleFind(now: number): void {
     // Modal closed without the underlying node being destroyed — drop our
     // toolbar and go back to searching next time it opens.
     modalNode = null;
-    toolbarState = null;
+    teardownToolbar();
   }
   findRafId = raf(scheduleFind);
 }
@@ -332,7 +364,10 @@ shareGlobal("__MG_ACTIVITY_LOG_TOOLBAR_DEBUG__", {
   get modalNode() {
     return modalNode;
   },
-  get contentContainer() {
-    return modalNode ? findRowsContent(modalNode) : null;
+  get anchors() {
+    return modalNode ? locateModalAnchors(modalNode) : null;
+  },
+  get appliedOffset() {
+    return appliedOffset;
   },
 });
