@@ -24,6 +24,7 @@ import { shouldIgnoreKeydown } from "../utils/keyboard";
 import { StatsService } from "./stats";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
 import { shareGlobal } from "../utils/page-context";
+import { sendToGame } from "../core/webSocketBridge";
 
 /* ----------------------------- Types & constants ----------------------------- */
 
@@ -31,6 +32,8 @@ export type PetTeam = {
   id: string;
   name: string;
   slots: (string | null)[];
+  /** Server-generated id of the native (in-game) pet team this is linked to, once synced. */
+  serverId?: string | null;
 };
 
 export type InventoryPet = {
@@ -500,6 +503,7 @@ function loadTeams(): PetTeam[] {
       slots: Array.isArray(t?.slots)
         ? (t.slots.slice(0, 3).map((x: unknown) => (x ? String(x) : null)) as (string | null)[])
         : [null, null, null],
+      serverId: t?.serverId ? String(t.serverId) : null,
     }))
     .filter(t => t.id);
   const unique = _dedupeTeams(mapped);
@@ -526,18 +530,12 @@ function _saveTeamSearchMap(map: Record<string, string>) {
 
 /* ----------------------------- Teams state interne ----------------------------- */
 
-let _teams: PetTeam[] = loadTeams();
-let _teamSubs = new Set<(teams: PetTeam[]) => void>();
-function _notifyTeams() {
-  const snap = _teams.slice();
-  _teamSubs.forEach(fn => { try { fn(snap); } catch {} });
-}
 let _teamSearch: Record<string, string> = _loadTeamSearchMap();
 
 function _teamIdFromSlots(ids: string[]): string | null {
   const wanted = new Set(ids.map(id => String(id || "")).filter(Boolean));
   if (!wanted.size) return null;
-  for (const team of _teams) {
+  for (const team of PetsService.getTeams()) {
     const slots = (Array.isArray(team?.slots) ? team.slots : []).map(id => String(id || "")).filter(Boolean);
     if (slots.length !== wanted.size) continue;
     const set = new Set(slots);
@@ -561,6 +559,187 @@ async function _syncLastUsedFromActive(): Promise<void> {
     const tid = _teamIdFromSlots(slots);
     if (tid) lastUsedTeamId = tid;
   } catch {}
+}
+
+/* ------------------------- Native pet-team sync (game <-> mod) ------------------------- */
+// The game bundle exposes a built-in pet-team system (SavePetTeam / ApplyPetTeam /
+// DeletePetTeam / MovePetTeam / SetPetTeamEmblem, raw Quinoa room actions). We mirror
+// it here so the mod's local teams (`PetTeam.id`, used by hotkeys) stay linked to the
+// server-generated team (`PetTeam.serverId`) they correspond to, in both directions:
+//  - a change made in the mod is pushed to the server via the native commands;
+//  - a change made in-game (or by another client) flows back through `stateUserSlots`
+//    and is mirrored onto the matching local team.
+// On name-collision during first link, the server's members win (see _reconcileTeams).
+
+type ServerPetTeamMember = { petId: string; petSpecies?: string; name?: string | null };
+type ServerPetTeam = { id: string; name: string; members: ServerPetTeamMember[]; emblem?: unknown };
+
+function _serverMemberIds(team: ServerPetTeam): string[] {
+  return Array.isArray(team?.members)
+    ? team.members.map(m => String(m?.petId || "")).filter(Boolean)
+    : [];
+}
+
+function _sameMemberSet(a: (string | null)[], b: string[]): boolean {
+  const aa = a.filter((x): x is string => !!x).slice().sort();
+  const bb = b.slice().sort();
+  if (aa.length !== bb.length) return false;
+  return aa.every((v, i) => v === bb[i]);
+}
+
+function _sendSavePetTeam(teamId: string | null, name: string, petIds: string[]): void {
+  try { sendToGame({ type: "SavePetTeam", teamId, name, petIds }); } catch {}
+}
+function _sendDeletePetTeam(teamId: string): void {
+  try { sendToGame({ type: "DeletePetTeam", teamId }); } catch {}
+}
+function _sendApplyPetTeam(teamId: string): void {
+  try { sendToGame({ type: "ApplyPetTeam", teamId }); } catch {}
+}
+function _sendMovePetTeam(teamId: string, toIndex: number): void {
+  try { sendToGame({ type: "MovePetTeam", movePetTeamId: teamId, toPetTeamIndex: toIndex }); } catch {}
+}
+
+let _serverTeams: ServerPetTeam[] = [];
+let _teamSyncStarted = false;
+let _lastServerTeamsSig = "";
+let _reconcilingTeams = false;
+let _reconcileTeamsQueued = false;
+const _pendingServerCreates = new Set<string>();
+// Per local team id, the (name+members) signature we already asked the server to create.
+// The native API gives no synchronous id back, and retrying on every reconcile tick when
+// linking hasn't happened yet (e.g. a transient mismatch) would spam duplicate teams
+// forever — the doc is explicit that creation must never be auto-retried. We only allow
+// firing again if the team's actual content changed since the last attempt.
+const _lastCreateAttemptSig = new Map<string, string>();
+
+function _createAttemptSig(local: PetTeam): string {
+  const petIds = (local.slots || []).filter((x): x is string => !!x).slice().sort();
+  return `${local.name.trim().toLowerCase()}::${petIds.join(",")}`;
+}
+
+function _serverTeamsSig(list: ServerPetTeam[]): string {
+  try {
+    return list
+      .map(t => `${t.id}:${t.name}:${_serverMemberIds(t).slice().sort().join(",")}`)
+      .sort()
+      .join("|");
+  } catch { return ""; }
+}
+
+/**
+ * Creates the native team for a local team that has no server counterpart yet.
+ * No-op until it has >=1 pet (native API requires 1-3), and fires at most once per
+ * distinct (name, members) combination — see `_lastCreateAttemptSig`.
+ */
+function _maybeCreateServerTeam(local: PetTeam): void {
+  const petIds = (local.slots || []).filter((x): x is string => !!x);
+  const name = (local.name || "").trim();
+  if (!name || !petIds.length) return;
+
+  const sig = _createAttemptSig(local);
+  if (_lastCreateAttemptSig.get(local.id) === sig) return;
+  if (_pendingServerCreates.has(local.id)) return;
+
+  _lastCreateAttemptSig.set(local.id, sig);
+  _pendingServerCreates.add(local.id);
+  try { console.warn(`[Pets] Creating native pet team "${name}" (${petIds.length} pet(s)) — one-shot, will not auto-retry.`); } catch {}
+  _sendSavePetTeam(null, name, petIds);
+  Promise.resolve().finally(() => _pendingServerCreates.delete(local.id));
+}
+
+function _reconcileTeams(): void {
+  if (_reconcilingTeams) { _reconcileTeamsQueued = true; return; }
+  _reconcilingTeams = true;
+  try {
+    const teams = PetsService._teams;
+    const serverById = new Map(_serverTeams.map(t => [String(t.id), t]));
+    const serverByName = new Map(_serverTeams.map(t => [String(t.name || "").trim().toLowerCase(), t]));
+    const linkedServerIds = new Set(teams.map(t => t.serverId).filter((v): v is string => !!v));
+
+    let changed = false;
+
+    for (const local of teams) {
+      if (local.serverId) {
+        const server = serverById.get(local.serverId);
+        if (!server) continue; // deleted in-game: dropped by the removal pass below
+        const memberIds = _serverMemberIds(server);
+        if (server.name !== local.name || !_sameMemberSet(local.slots, memberIds)) {
+          local.name = server.name;
+          local.slots = [0, 1, 2].map(i => memberIds[i] ?? null);
+          changed = true;
+        }
+        continue;
+      }
+
+      const key = local.name.trim().toLowerCase();
+      const match = key ? serverByName.get(key) : undefined;
+      if (match && !linkedServerIds.has(String(match.id))) {
+        // First link on a name match: the server's members are the source of truth.
+        local.serverId = String(match.id);
+        local.name = match.name;
+        local.slots = [0, 1, 2].map(i => _serverMemberIds(match)[i] ?? null);
+        linkedServerIds.add(local.serverId);
+        changed = true;
+        continue;
+      }
+
+      _maybeCreateServerTeam(local);
+    }
+
+    const beforeCount = teams.length;
+    PetsService._teams = teams.filter(t => !t.serverId || serverById.has(t.serverId));
+    if (PetsService._teams.length !== beforeCount) changed = true;
+
+    for (const server of _serverTeams) {
+      if (linkedServerIds.has(String(server.id))) continue;
+      const memberIds = _serverMemberIds(server);
+      const imported: PetTeam = {
+        id: _uid(),
+        name: server.name,
+        slots: [0, 1, 2].map(i => memberIds[i] ?? null),
+        serverId: String(server.id),
+      };
+      PetsService._teams.push(imported);
+      linkedServerIds.add(String(server.id));
+      changed = true;
+    }
+
+    if (changed) {
+      saveTeams(PetsService._teams);
+      PetsService._notifyTeamSubs();
+    }
+  } finally {
+    _reconcilingTeams = false;
+    if (_reconcileTeamsQueued) {
+      _reconcileTeamsQueued = false;
+      _reconcileTeams();
+    }
+  }
+}
+
+async function _extractServerTeamsFromSlots(slots: any): Promise<ServerPetTeam[]> {
+  try {
+    const idx = await _getMyUserSlotIndex();
+    if (idx == null) return [];
+    const list: any[] = Array.isArray(slots) ? slots : [];
+    const teams = list[idx]?.data?.petTeams;
+    return Array.isArray(teams) ? teams : [];
+  } catch { return []; }
+}
+
+async function _startServerTeamsWatcher(): Promise<void> {
+  const applyNext = async (slots: any) => {
+    const next = await _extractServerTeamsFromSlots(slots);
+    const sig = _serverTeamsSig(next);
+    if (sig === _lastServerTeamsSig) return;
+    _lastServerTeamsSig = sig;
+    _serverTeams = next;
+    _reconcileTeams();
+  };
+
+  try { await applyNext(await stateUserSlots.get()); } catch {}
+  try { await stateUserSlots.onChange((slots: any) => { applyNext(slots); }); } catch {}
 }
 
 /* --------------------------------- Inventory cache/watchers -------------------------------- */
@@ -1101,7 +1280,7 @@ export const PetsService = {
     return unsub;
   },
   createTeam(name?: string): PetTeam {
-    const t: PetTeam = { id: _uid(), name: name?.trim() || `Team ${this._teams.length + 1}`, slots: [null,null,null] };
+    const t: PetTeam = { id: _uid(), name: name?.trim() || `Team ${this._teams.length + 1}`, slots: [null,null,null], serverId: null };
     this._teams.push(t);
     saveTeams(this._teams);
     this._notifyTeamSubs();
@@ -1110,9 +1289,10 @@ export const PetsService = {
   deleteTeam(teamId: string): boolean {
     const i = this._teams.findIndex(t => t.id === teamId);
     if (i < 0) return false;
-    this._teams.splice(i, 1);
+    const [removed] = this._teams.splice(i, 1);
     saveTeams(this._teams);
     this._notifyTeamSubs();
+    if (removed.serverId) _sendDeletePetTeam(removed.serverId);
     return true;
   },
   saveTeam(patch: { id: string; name?: string; slots?: (string|null)[] }): PetTeam | null {
@@ -1123,10 +1303,18 @@ export const PetsService = {
       id: cur.id,
       name: typeof patch.name === "string" ? patch.name : cur.name,
       slots: Array.isArray(patch.slots) ? (patch.slots.slice(0,3) as (string|null)[]) : cur.slots,
+      serverId: cur.serverId ?? null,
     };
     this._teams[i] = next;
     saveTeams(this._teams);
     this._notifyTeamSubs();
+
+    const petIds = next.slots.filter((x): x is string => !!x);
+    if (next.serverId) {
+      if (petIds.length > 0) _sendSavePetTeam(next.serverId, next.name.trim() || "Team", petIds);
+    } else {
+      _maybeCreateServerTeam(next);
+    }
     return next;
   },
   setTeamsOrder(ids: string[]) {
@@ -1140,6 +1328,13 @@ export const PetsService = {
     this._teams = next;
     saveTeams(this._teams);
     this._notifyTeamSubs();
+
+    let serverIndex = 0;
+    for (const t of next) {
+      if (!t.serverId) continue;
+      _sendMovePetTeam(t.serverId, serverIndex);
+      serverIndex++;
+    }
   },
   getTeamById(teamId: string): PetTeam | null {
     const t = this._teams.find(t => t.id === teamId) || null;
@@ -1377,7 +1572,21 @@ export const PetsService = {
     const targetInvIds = (t.slots || [])
       .filter((x): x is string => typeof x === "string" && x.length > 0)
       .slice(0, 3);
+
+    if (t.serverId) {
+      _sendApplyPetTeam(t.serverId);
+      if (opts?.markUsed !== false) markTeamAsUsed(teamId);
+      return { swapped: targetInvIds.length, placed: 0, skipped: 0 };
+    }
+
     return _equipPetIds(targetInvIds, { markTeamId: teamId, markUsed: opts?.markUsed });
+  },
+
+  /** Starts the background watcher that keeps local teams linked to their native (in-game) counterpart. Idempotent. */
+  async startPetTeamSync(): Promise<void> {
+    if (_teamSyncStarted) return;
+    _teamSyncStarted = true;
+    try { await _startServerTeamsWatcher(); } catch {}
   },
 
   async usePetIds(targetInvIds: string[]): Promise<{ swapped: number; placed: number; skipped: number }> {

@@ -334,22 +334,6 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
     return holder;
   };
 
-  function applySubtleBorder(btn: HTMLButtonElement, hex: string, alpha = 0.22) {
-    const toRgba = (h: string, a: number) => {
-      const m = h.replace("#", "");
-      const r = parseInt(m.length === 3 ? m[0] + m[0] : m.slice(0, 2), 16);
-      const g = parseInt(m.length === 3 ? m[1] + m[1] : m.slice(2, 4), 16);
-      const b = parseInt(m.length === 3 ? m[2] + m[2] : m.slice(4, 6), 16);
-      return `rgba(${r},${g},${b},${a})`;
-    };
-
-    const border = toRgba(hex, alpha);
-    btn.style.border = `1px solid ${border}`;
-    btn.style.background = "#1f2328";
-    btn.style.boxShadow = "none";
-    btn.style.transition = "none";
-  }
-
   const framed = (title: string, content: HTMLElement) => {
     const cardSection = ui.card(title, { tone: "muted", align: "center" });
     cardSection.body.append(content);
@@ -382,23 +366,20 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
   teamList.style.gap = "6px";
   teamList.style.overflow = "auto";
   teamList.style.padding = "6px";
-  teamList.style.border = "1px solid #4445";
+  teamList.style.border = "1px solid var(--qmm-border)";
   teamList.style.borderRadius = "10px";
+  teamList.style.background = "rgba(255,255,255,0.03)";
   teamList.style.scrollBehavior = "smooth";
   teamList.style.minHeight = "0";
   left.appendChild(teamList);
 
-  const footer = document.createElement("div");
-  footer.style.display = "flex";
-  footer.style.gap = "6px";
+  const footer = ui.flexRow({ gap: 6 });
   left.appendChild(footer);
 
-  const btnNew = ui.btn("➕ New", { variant: "primary", size: "sm" }); btnNew.id = "pets.teams.new";
+  const btnNew = ui.btn("➕ New", { variant: "primary", size: "sm", fullWidth: true }); btnNew.id = "pets.teams.new";
   btnNew.style.flex = "1 1 0";
-  const btnDel = ui.btn("🗑️ Delete", { variant: "danger", size: "sm" }); btnDel.id = "pets.teams.delete";
+  const btnDel = ui.btn("🗑️ Delete", { variant: "danger", size: "sm", fullWidth: true }); btnDel.id = "pets.teams.delete";
   btnDel.style.flex = "1 1 0";
-  applySubtleBorder(btnNew, "#22c55e", 0.22);
-  applySubtleBorder(btnDel, "#ef4444", 0.22);
   footer.append(btnNew, btnDel);
 
   // helpers
@@ -519,17 +500,6 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
     } catch {}
   }
 
-  // re-render list items
-  function updateSelectedVisuals() {
-    const children = Array.from(teamList.children) as HTMLElement[];
-    children.forEach((el) => {
-      const id = el.dataset.teamId || "";
-      el.style.background = id === selectedId ? "#2a313a" : "#1f2328";
-    });
-
-    updateSelectedVisuals();
-  }
-
   async function refreshTeamList(skipDetectActive = false) {
     if (!skipDetectActive) {
       await refreshActiveIds();
@@ -562,8 +532,7 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
       item.style.height = "36px";
       item.style.lineHeight = "36px";
       item.style.padding = "0 10px";
-      item.style.border = "1px solid #ffffff15";
-      item.style.borderRadius = "6px";
+      item.style.borderRadius = "8px";
       item.style.cursor = "pointer";
       item.style.fontSize = "13px";
       item.style.overflow = "hidden";
@@ -573,7 +542,14 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
       item.style.flex = "0 0 auto";
       item.style.gap = "8px";
       item.style.alignItems = "center";
-      item.style.background = t.id === selectedId ? "#2a313a" : "#1f2328";
+      item.style.transition = "background 120ms ease, border-color 120ms ease";
+      if (t.id === selectedId) {
+        item.style.border = "1px solid rgba(94,234,212,0.40)";
+        item.style.background = "rgba(94,234,212,0.14)";
+      } else {
+        item.style.border = "1px solid var(--qmm-border-2)";
+        item.style.background = "rgba(255,255,255,0.035)";
+      }
 
       const dot = document.createElement("span");
       dot.style.width = "10px";
@@ -617,8 +593,12 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
       }
       grab.draggable = true;
 
-      item.onmouseenter = () => (item.style.borderColor = "#6aa1");
-      item.onmouseleave = () => (item.style.borderColor = "#ffffff15");
+      item.onmouseenter = () => {
+        if (t.id !== selectedId) item.style.borderColor = "rgba(94,234,212,0.30)";
+      };
+      item.onmouseleave = () => {
+        if (t.id !== selectedId) item.style.borderColor = "var(--qmm-border-2)";
+      };
 
       item.onclick = (ev) => {
         if ((ev as any).__byDrag) return;
@@ -796,36 +776,27 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
   header.style.gap = "8px";
 
   const headerTitle = document.createElement("div");
-  headerTitle.textContent = "Team editor — ";
+  headerTitle.textContent = "Team editor";
   headerTitle.style.fontWeight = "700";
   headerTitle.style.fontSize = "14px";
+  headerTitle.style.flex = "1 1 0";
+  headerTitle.style.overflow = "hidden";
+  headerTitle.style.textOverflow = "ellipsis";
+  headerTitle.style.whiteSpace = "nowrap";
 
-  const btnUseTeam = document.createElement("button");
+  const btnUseTeam = ui.btn("Use this team", { variant: "primary", size: "sm" });
   btnUseTeam.id = "pets.teams.useThisTeam";
-  btnUseTeam.textContent = "Use this team";
-  btnUseTeam.style.padding = "6px 10px";
-  btnUseTeam.style.borderRadius = "8px";
-  btnUseTeam.style.border = "1px solid #4445";
-  btnUseTeam.style.background = "#1f2328";
-  btnUseTeam.style.color = "#e7eef7";
-  btnUseTeam.style.cursor = "pointer";
-  btnUseTeam.onmouseenter = () => (btnUseTeam.style.borderColor = "#6aa1");
-  btnUseTeam.onmouseleave = () => (btnUseTeam.style.borderColor = "#4445");
   btnUseTeam.disabled = true;
 
   header.append(headerTitle, btnUseTeam);
   right.appendChild(header);
 
   const card = document.createElement("div");
-  card.style.border = "1px solid #4445";
-  card.style.borderRadius = "10px";
-  card.style.padding = "10px";
   card.style.display = "flex";
   card.style.flexDirection = "column";
   card.style.gap = "12px";
   card.style.overflow = "auto";
   card.style.minHeight = "0";
-  card.style.background = "#0f1318";
   right.appendChild(card);
 
   // ---- Team name ----
@@ -839,126 +810,6 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
     r.append(nameInput);
     card.appendChild(framed("🏷️ Team name", r));
     return { nameInput: nameInput as HTMLInputElement };
-  })();
-
-  // ---- Search bar ----
-  const secSearch = (() => {
-    const wrapOuter = document.createElement("div");
-    wrapOuter.style.display = "flex";
-    wrapOuter.style.flexDirection = "column";
-    wrapOuter.style.gap = "10px";
-    wrapOuter.style.alignItems = "center";
-
-    let isProgrammaticModeSet = false;
-    let currentMode: "ability" | "species" = "ability";
-
-    const seg = ui.segmented<"ability" | "species">(
-      [
-        { value: "ability", label: "✨ Ability" },
-        { value: "species", label: "🧬 Species" },
-      ],
-      "ability",
-      async (val) => {
-        if (isProgrammaticModeSet) return;
-        currentMode = val;
-        await rebuildOptionsFromInventory();
-        select.value = "";
-        applyFilterToTeam();
-      },
-      { ariaLabel: "Search mode" }
-    );
-
-    const select = document.createElement("select");
-    select.className = "qmm-input";
-    select.id = "pets.teams.filter.select";
-    select.style.minWidth = "260px";
-
-    const getMode = (): "ability" | "species" => currentMode;
-    const setMode = (m: "ability" | "species") => {
-      currentMode = m;
-      isProgrammaticModeSet = true;
-      (seg as any).set(m);
-      isProgrammaticModeSet = false;
-    };
-
-    const rebuildOptionsFromInventory = async () => {
-      const prev = select.value;
-      const inv = await PetsService.getInventoryPets().catch(() => []) as any[];
-
-      select.innerHTML = "";
-      const opt0 = document.createElement("option");
-      opt0.value = "";
-      opt0.textContent = "— No filter —";
-      select.appendChild(opt0);
-
-      if (getMode() === "ability") {
-        const nameSet = new Set<string>();
-        for (const p of inv) {
-          const abs: string[] = Array.isArray(p?.abilities) ? p.abilities.filter(Boolean) : [];
-          for (const id of abs) {
-            const base = PetsService.getAbilityNameWithoutLevel?.(id) || "";
-            if (base) nameSet.add(base);
-          }
-        }
-        for (const name of Array.from(nameSet).sort((a, b) => a.localeCompare(b))) {
-          const o = document.createElement("option"); o.value = name; o.textContent = name; select.appendChild(o);
-        }
-      } else {
-        const set = new Set<string>();
-        for (const p of inv) {
-          const sp = String(p?.petSpecies || "").trim();
-          if (sp) set.add(sp);
-        }
-        for (const v of Array.from(set).sort((a, b) => a.localeCompare(b))) {
-          const o = document.createElement("option"); o.value = v; o.textContent = v.charAt(0).toUpperCase() + v.slice(1); select.appendChild(o);
-        }
-      }
-
-      if (Array.from(select.options).some(o => o.value === prev)) select.value = prev;
-    };
-
-    const applyFilterToTeam = () => {
-      const t = getSelectedTeam();
-      if (!t) return;
-      const val = (select.value || "").trim();
-      const raw = getMode() === "ability" ? (val ? `ab:${val}` : "") : (val ? `sp:${val}` : "");
-      PetsService.setTeamSearch(t.id, raw);
-    };
-
-    select.addEventListener("change", applyFilterToTeam);
-
-    wrapOuter.append(seg, select);
-    card.appendChild(framed("🔍 Search", wrapOuter));
-
-    const ensureOptionExists = (val: string, pretty?: string) => {
-      const v = (val || "").trim();
-      if (!v) return;
-      const has = Array.from(select.options).some(o => o.value === v);
-      if (!has) {
-        const o = document.createElement("option");
-        o.value = v;
-        o.textContent = pretty ?? v;
-        select.appendChild(o);
-      }
-    };
-
-    return {
-      getMode,
-      setMode,
-      select,
-      rebuild: rebuildOptionsFromInventory,
-      apply: applyFilterToTeam,
-      setFromSearchString(s: string) {
-        const m = (s || "").match(/^(ab|sp):\s*(.*)$/i);
-        if (!m) { setMode("ability"); select.value = ""; return; }
-        const mode = m[1].toLowerCase() === "ab" ? "ability" : "species";
-        const val = (m[2] || "").trim();
-
-        setMode(mode);
-        ensureOptionExists(val, mode === "species" ? val.charAt(0).toUpperCase() + val.slice(1) : val);
-        select.value = val;
-      }
-    };
   })();
 
   // ---- Active pets (3 slots) ----
@@ -980,7 +831,7 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
 
     const mkRow = (idx: 0 | 1 | 2): SlotRow => {
       const root = document.createElement("div");
-      const BTN = 28;
+      const BTN = 34;
       const ICON = 40;
 
       root.style.display = "grid";
@@ -988,10 +839,10 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
       root.style.alignItems = "center";
       root.style.gap = "8px";
       root.style.width = "min(560px, 100%)";
-      root.style.border = "1px solid #4445";
+      root.style.border = "1px solid var(--qmm-border-2)";
       root.style.borderRadius = "10px";
       root.style.padding = "8px 10px";
-      root.style.background = "#0f1318";
+      root.style.background = "rgba(255,255,255,0.03)";
 
       // icon container — flex colonne : sprite au-dessus, badge en dessous
       const iconContainer = document.createElement("div");
@@ -1081,39 +932,18 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
       left.append(nameEl, abilitiesEl);
 
       // buttons
-      const btnChoose = document.createElement("button");
-      btnChoose.textContent = "+";
-      Object.assign(btnChoose.style, {
-        width: `${BTN}px`,
-        minWidth: `${BTN}px`,
-        height: `${BTN}px`,
-        padding: "0",
-        fontSize: "16px",
-        lineHeight: "1",
-        borderRadius: "10px",
-        boxShadow: "none",
-        display: "grid",
-        placeItems: "center",
+      const btnChoose = ui.btn("", {
+        icon: "+",
+        variant: "secondary",
+        tooltip: "Choose a pet",
+        ariaLabel: "Choose a pet",
       });
-      btnChoose.title = "Choose a pet";
-      btnChoose.setAttribute("aria-label", "Choose a pet");
-
-      const btnClear = document.createElement("button");
-      btnClear.textContent = "−";
-      Object.assign(btnClear.style, {
-        width: `${BTN}px`,
-        minWidth: `${BTN}px`,
-        height: `${BTN}px`,
-        padding: "0",
-        fontSize: "16px",
-        lineHeight: "1",
-        borderRadius: "10px",
-        boxShadow: "none",
-        display: "grid",
-        placeItems: "center",
+      const btnClear = ui.btn("", {
+        icon: "−",
+        variant: "danger",
+        tooltip: "Remove this pet",
+        ariaLabel: "Remove this pet",
       });
-      btnClear.title = "Remove this pet";
-      btnClear.setAttribute("aria-label", "Remove this pet");
 
       root.append(iconContainer, left, btnChoose, btnClear);
 
@@ -1186,33 +1016,14 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
 
     grid.append(r0.root, r1.root, r2.root);
 
-    const extra = document.createElement("div");
-    extra.style.display = "flex";
-    extra.style.gap = "6px";
-    extra.style.justifyContent = "center";
+    const extra = ui.flexRow({ gap: 6, justify: "center" });
     const btnUseCurrent = ui.btn("Current active", { variant: "primary" });
     btnUseCurrent.id = "pets.teams.useCurrent";
     btnUseCurrent.style.minWidth = "140px";
     const btnClear = ui.btn("Clear slots", { variant: "secondary" });
     btnClear.id = "pets.teams.clearSlots";
     btnClear.style.minWidth = "140px";
-    const DARK_BG = "#0f1318";
     extra.append(btnUseCurrent, btnClear);
-
-    Object.assign(btnUseCurrent.style, {
-      width: "auto",
-      fontSize: "16px",
-      borderRadius: "10px",
-      background: DARK_BG,
-      boxShadow: "none",
-    });
-    Object.assign(btnClear.style, {
-      width: "auto",
-      fontSize: "16px",
-      borderRadius: "10px",
-      background: DARK_BG,
-      boxShadow: "none",
-    });
 
     const wrapSlots = document.createElement("div");
     wrapSlots.style.display = "flex";
@@ -1273,20 +1084,6 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
     secSlots.btnClear.disabled = !has;
     secSlots.btnUseCurrent.disabled = !has;
     btnUseTeam.disabled = !has;
-
-
-    if (has) {
-      const saved = PetsService.getTeamSearch(team!.id) || "";
-      const m = saved.match(/^(ab|sp):\s*(.*)$/i);
-      const mode: "ability" | "species" = m
-        ? (m[1].toLowerCase() === "ab" ? "ability" : "species")
-        : "ability";
-      secSearch.setMode(mode);
-      await secSearch.rebuild();
-      if (m) secSearch.setFromSearchString(saved);
-    } else {
-      await secSearch.rebuild();
-    }
 
     if (!has) {
       secSlots.rows.forEach(r => r.update(null));
@@ -1513,39 +1310,22 @@ function renderFeedingTab(view: HTMLElement, ui: Menu) {
   right.style.minHeight = "0";
   wrap.appendChild(right);
 
-  const card = document.createElement("div");
-  card.style.border = "1px solid #4445";
-  card.style.borderRadius = "10px";
-  card.style.padding = "10px";
-  card.style.background = "#0f1318";
-  card.style.display = "grid";
-  card.style.gridTemplateRows = "auto 1fr";
-  card.style.minHeight = "0";
-  right.appendChild(card);
-
-  const header = document.createElement("div");
-  header.style.display = "flex";
-  header.style.flexDirection = "column";
-  header.style.gap = "4px";
-  header.style.marginBottom = "8px";
-  card.appendChild(header);
-
-  const title = document.createElement("div");
-  title.textContent = "Instant feed options";
-  title.style.fontWeight = "600";
-  header.appendChild(title);
-
-  const subtitle = document.createElement("div");
-  subtitle.textContent = "Allow or block crops for the Instant Feed button.";
-  subtitle.style.opacity = "0.7";
-  subtitle.style.fontSize = "12px";
-  header.appendChild(subtitle);
+  const card = ui.card("🍖 Instant Feed", {
+    tone: "muted",
+    subtitle: "Allow or block crops for the Instant Feed button.",
+  });
+  card.root.style.display = "grid";
+  card.root.style.gridTemplateRows = "auto 1fr";
+  card.root.style.minHeight = "0";
+  card.root.style.height = "100%";
+  card.body.style.gridTemplateRows = "auto 1fr";
+  card.body.style.minHeight = "0";
+  right.appendChild(card.root);
 
   const widgetRow = document.createElement("label");
   widgetRow.style.display = "flex";
   widgetRow.style.alignItems = "center";
   widgetRow.style.gap = "8px";
-  widgetRow.style.marginTop = "6px";
   widgetRow.style.cursor = "pointer";
 
   const widgetSwitch = ui.switch(isInstantFeedWidgetEnabled()) as HTMLInputElement;
@@ -1558,7 +1338,7 @@ function renderFeedingTab(view: HTMLElement, ui: Menu) {
   widgetLabel.style.fontSize = "13px";
 
   widgetRow.append(widgetSwitch, widgetLabel);
-  header.appendChild(widgetRow);
+  card.body.appendChild(widgetRow);
 
   const body = document.createElement("div");
   body.style.display = "flex";
@@ -1566,7 +1346,7 @@ function renderFeedingTab(view: HTMLElement, ui: Menu) {
   body.style.gap = "6px";
   body.style.overflow = "auto";
   body.style.minHeight = "0";
-  card.appendChild(body);
+  card.body.appendChild(body);
 
     type PetItem = { id: string; title: string; rarity?: string };
     const petItems: PetItem[] = Object.keys(petCatalog as Record<string, any>)
@@ -1665,94 +1445,56 @@ function renderFeedingTab(view: HTMLElement, ui: Menu) {
 function renderLogsTab(view: HTMLElement, ui: Menu) {
   view.innerHTML = "";
 
-  // ===== Layout
-  const wrap = document.createElement("div");
-  wrap.style.display = "grid";
-  wrap.style.gridTemplateRows = "auto 1fr";
-  wrap.style.gap = "10px";
-  wrap.style.height = "54vh";
-  view.appendChild(wrap);
+  // ===== Card + toolbar
+  const card = ui.card("📝 Ability Logs", {
+    tone: "muted",
+  });
+  view.appendChild(card.root);
 
-  const header = document.createElement("div");
-  header.style.display = "flex";
-  header.style.flexWrap = "wrap";
-  header.style.alignItems = "center";
-  header.style.gap = "8px";
-  header.style.border = "1px solid #4445";
-  header.style.borderRadius = "10px";
-  header.style.padding = "8px 10px";
-  header.style.background = "#0f1318";
-  wrap.appendChild(header);
+  const toolbar = ui.flexRow({ gap: 8, wrap: true });
+  card.body.appendChild(toolbar);
 
-  const selAbility = ui.select({ id: "pets.logs.filter.ability", width: "200px" });
+  const selAbility = ui.select({ id: "pets.logs.filter.ability", width: "180px" });
 
-  const selSort = ui.select({ id: "pets.logs.sort", width: "140px" });
+  const selSort = ui.select({ id: "pets.logs.sort", width: "150px" });
   [["desc","Newest first"],["asc","Oldest first"]].forEach(([v,t])=>{
     const o = document.createElement("option"); o.value = v; o.textContent = t; selSort.appendChild(o);
   });
   selSort.value = "desc";
 
-  const inputSearch = ui.inputText("search (pet / ability / details)", "");
+  const inputSearch = ui.inputText("Search pet / ability / details", "");
   (inputSearch as any).id = "pets.logs.search";
-  (inputSearch as HTMLInputElement).style.minWidth = "220px";
+  (inputSearch as HTMLInputElement).style.flex = "1 1 220px";
+  (inputSearch as HTMLInputElement).style.minWidth = "200px";
 
-  const btnClear = ui.btn("🧹 Clear", { size: "sm" });
+  const btnClear = ui.btn("Clear", {
+    size: "sm",
+    variant: "ghost",
+    icon: "🧹",
+    tooltip: "Clear all recorded logs",
+  });
   btnClear.id = "pets.logs.clear";
-  btnClear.style.flex = "0 0 auto";
 
-  header.append(
+  toolbar.append(
     ui.label("Ability"), selAbility,
     ui.label("Sort"), selSort,
     inputSearch,
     btnClear
   );
 
-  // ===== Card + header
-  const card = document.createElement("div");
-  card.style.border = "1px solid #4445";
-  card.style.borderRadius = "10px";
-  card.style.padding = "10px";
-  card.style.background = "#0f1318";
-  card.style.overflow = "hidden";
-  card.style.display = "grid";
-  card.style.gridTemplateRows = "auto 1fr";
-  card.style.minHeight = "0";
-  wrap.appendChild(card);
-
-  const headerGrid = document.createElement("div");
-  headerGrid.style.display = "grid";
-  headerGrid.style.gridTemplateColumns = "140px 220px 200px minmax(0,1fr)";
-  headerGrid.style.columnGap = "0";
-  headerGrid.style.borderBottom = "1px solid #ffffff1a";
-  headerGrid.style.padding = "0 0 6px 0";
-
-  function mkHeadCell(txt: string, align: "center"|"left" = "center") {
-    const el = document.createElement("div");
-    el.textContent = txt;
-    el.style.fontWeight = "600";
-    el.style.opacity = "0.9";
-    el.style.padding = "6px 8px";
-    el.style.textAlign = align;
-    return el;
-  }
-  headerGrid.append(
-    mkHeadCell("Date & Time"),
-    mkHeadCell("Pet"),
-    mkHeadCell("Ability"),
-    mkHeadCell("Details","left")
+  // ===== Table
+  const { root: tableRoot, tbody } = ui.table(
+    [
+      { label: "Date & Time", align: "center", width: "128px" },
+      { label: "Pet", align: "center", width: "190px" },
+      { label: "Ability", align: "center", width: "160px" },
+      { label: "Details", align: "left" },
+    ],
+    { minimal: true, fixed: true, maxHeight: "46vh" }
   );
-  card.appendChild(headerGrid);
-
-  // ===== Body scroller (grid)
-  const bodyGrid = document.createElement("div");
-  bodyGrid.style.display = "grid";
-  bodyGrid.style.gridTemplateColumns = "140px 220px 200px minmax(0,1fr)";
-  bodyGrid.style.gridAutoRows = "auto";
-  bodyGrid.style.alignContent = "start";
-  bodyGrid.style.overflow = "auto";
-  bodyGrid.style.width = "100%";
-  bodyGrid.style.minHeight = "0";
-  card.appendChild(bodyGrid);
+  tableRoot.style.marginTop = "2px";
+  card.body.appendChild(tableRoot);
+  const tableScroller = tableRoot.querySelector<HTMLElement>(".qmm-table-scroll");
 
   // ===== State
   const sessionStart = PetsService.getAbilityLogsSessionStart?.() ?? 0;
@@ -1861,52 +1603,126 @@ function renderLogsTab(view: HTMLElement, ui: Menu) {
     return `${mm}/${dd}/${yy}`;
   }
 
-  function cell(txt: string, align: "center"|"left" = "center") {
-    const el = document.createElement("div");
-    el.textContent = txt;
-    el.style.padding = "6px 8px";
-    el.style.display = "flex";
-    el.style.flexDirection = "column";
-    el.style.justifyContent = "center";
-    el.style.alignItems = align === "left" ? "flex-start" : "center";
-    el.style.textAlign = align;
-    el.style.whiteSpace = align === "left" ? "pre-wrap" : "normal";
-    el.style.wordBreak = align === "left" ? "break-word" : "normal";
-    el.style.borderBottom = "1px solid #ffffff12";
-    return el;
+  function timeCell(log: UILog): HTMLTableCellElement {
+    const td = document.createElement("td");
+    td.style.textAlign = "center";
+    const inner = document.createElement("div");
+    Object.assign(inner.style, {
+      display: "inline-flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: "2px",
+    } as CSSStyleDeclaration);
+
+    const hasDate = typeof log.date === "string" && log.date.trim().length > 0;
+    if (hasDate) {
+      const dateLine = document.createElement("div");
+      dateLine.textContent = log.date ?? "";
+      dateLine.style.fontSize = "11px";
+      dateLine.style.opacity = "0.65";
+      inner.appendChild(dateLine);
+    }
+
+    const timeLine = document.createElement("div");
+    if (log.isActiveSession) {
+      const dot = document.createElement("span");
+      Object.assign(dot.style, {
+        display: "inline-block",
+        width: "6px",
+        height: "6px",
+        marginRight: "5px",
+        borderRadius: "50%",
+        background: "var(--qmm-accent)",
+        boxShadow: "0 0 6px var(--qmm-accent)",
+      } as CSSStyleDeclaration);
+      timeLine.appendChild(dot);
+      timeLine.style.fontWeight = "600";
+    }
+    timeLine.appendChild(document.createTextNode(log.time12));
+    inner.appendChild(timeLine);
+
+    td.appendChild(inner);
+    return td;
   }
 
-  function row(log: UILog) {
-    const time = cell("", "center");
-    time.style.gap = "2px";
-    const dateLine = document.createElement("div");
-    const timeLine = document.createElement("div");
-    const hasDate = typeof log.date === "string" && log.date.trim().length > 0;
-    if (hasDate) dateLine.textContent = log.date ?? "";
-    timeLine.textContent = log.time12;
-    if (hasDate) time.appendChild(dateLine);
-    time.appendChild(timeLine);
-    const petLabel = (log.petName || log.species || "Pet");
-    const pet  = cell("", "center");
-    pet.style.flexDirection = "row";
-    pet.style.alignItems = "center";
-    pet.style.gap = "8px";
+  function petCell(log: UILog): HTMLTableCellElement {
+    const td = document.createElement("td");
+    td.style.textAlign = "center";
+    const inner = document.createElement("div");
+    Object.assign(inner.style, {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "8px",
+      maxWidth: "100%",
+      minWidth: "0",
+    } as CSSStyleDeclaration);
     const petIcon = mkPetIcon(log);
     const petText = document.createElement("span");
-    petText.textContent = petLabel;
-    petText.style.whiteSpace = "nowrap";
-    petText.style.overflow = "hidden";
-    petText.style.textOverflow = "ellipsis";
-    pet.append(petIcon, petText);
-    const abName = cell(log.abilityName || log.abilityId, "center");
-    const detText = typeof log.data === "string" ? log.data : (() => { try { return JSON.stringify(log.data); } catch { return ""; } })();
-    const det  = cell(detText, "left");
+    petText.textContent = log.petName || log.species || "Pet";
+    Object.assign(petText.style, {
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+    } as CSSStyleDeclaration);
+    inner.append(petIcon, petText);
+    td.appendChild(inner);
+    return td;
+  }
+
+  function abilityCell(log: UILog): HTMLTableCellElement {
+    const td = document.createElement("td");
+    td.style.textAlign = "center";
+    const text = log.abilityName || log.abilityId || "—";
+    const chip = document.createElement("span");
+    chip.textContent = text;
+    chip.title = text;
+    const { bg, hover } = getAbilityChipColors(log.abilityId);
+    Object.assign(chip.style, {
+      display: "inline-block",
+      maxWidth: "100%",
+      padding: "3px 10px",
+      borderRadius: "999px",
+      fontSize: "12px",
+      fontWeight: "700",
+      lineHeight: "1.4",
+      color: "#fff",
+      textShadow: "0 1px 2px rgba(0,0,0,.45)",
+      background: bg,
+      boxShadow: "0 0 0 1px rgba(0,0,0,.35) inset",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      transition: "background 120ms ease",
+    } as CSSStyleDeclaration);
+    chip.onmouseenter = () => { chip.style.background = hover; };
+    chip.onmouseleave = () => { chip.style.background = bg; };
+    td.appendChild(chip);
+    return td;
+  }
+
+  function detailsCell(log: UILog): HTMLTableCellElement {
+    const td = document.createElement("td");
+    const text = typeof log.data === "string" ? log.data : (() => { try { return JSON.stringify(log.data); } catch { return ""; } })();
+    td.textContent = text;
+    td.title = text;
+    td.classList.add("qmm-ellipsis");
+    return td;
+  }
+
+  function row(log: UILog): HTMLTableRowElement {
+    const tr = document.createElement("tr");
+    const time = timeCell(log);
+    const pet = petCell(log);
+    const ability = abilityCell(log);
+    const details = detailsCell(log);
     if (log.isActiveSession) {
-      [time, pet, abName, det].forEach((el) => {
-        el.style.background = "rgba(89, 162, 255, 0.14)";
+      time.style.boxShadow = "inset 3px 0 0 var(--qmm-accent)";
+      [time, pet, ability, details].forEach((td) => {
+        td.style.background = "rgba(94,234,212,0.06)";
       });
     }
-    bodyGrid.append(time, pet, abName, det);
+    tr.append(time, pet, ability, details);
+    return tr;
   }
 
   // normalise pour filtre "ability X / X II"
@@ -1951,22 +1767,28 @@ function renderLogsTab(view: HTMLElement, ui: Menu) {
   }
 
   function repaint() {
-    bodyGrid.innerHTML = "";
+    tbody.innerHTML = "";
     const arr = applyFilters();
     if (!arr.length) {
-      const empty = document.createElement("div");
-      empty.textContent = "No logs yet.";
-      empty.style.opacity = "0.75";
-      empty.style.gridColumn = "1 / -1";
-      empty.style.padding = "8px";
-      bodyGrid.appendChild(empty);
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 4;
+      td.textContent = "🗒️ No logs yet.";
+      Object.assign(td.style, {
+        textAlign: "center",
+        padding: "24px 8px",
+        opacity: "0.7",
+      } as CSSStyleDeclaration);
+      tr.appendChild(td);
+      tbody.appendChild(tr);
       return;
     }
-    arr.forEach(row);
+    arr.forEach((log) => tbody.appendChild(row(log)));
 
     // autoscroll côté "fin" de liste (utile si tri asc)
-    if (sortDir === "asc") bodyGrid.scrollTop = bodyGrid.scrollHeight + 32;
-    else bodyGrid.scrollTop = 0;
+    if (!tableScroller) return;
+    if (sortDir === "asc") tableScroller.scrollTop = tableScroller.scrollHeight + 32;
+    else tableScroller.scrollTop = 0;
   }
 
   // ===== handlers UI

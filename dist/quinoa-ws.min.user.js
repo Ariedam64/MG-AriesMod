@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.177
+// @version      3.2.178
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -21622,7 +21622,8 @@
     const mapped = arr.map((t) => ({
       id: String(t?.id || ""),
       name: String(t?.name || "Team"),
-      slots: Array.isArray(t?.slots) ? t.slots.slice(0, 3).map((x) => x ? String(x) : null) : [null, null, null]
+      slots: Array.isArray(t?.slots) ? t.slots.slice(0, 3).map((x) => x ? String(x) : null) : [null, null, null],
+      serverId: t?.serverId ? String(t.serverId) : null
     })).filter((t) => t.id);
     const unique = _dedupeTeams(mapped);
     if (unique.length !== mapped.length) {
@@ -21650,12 +21651,11 @@
   function _saveTeamSearchMap(map2) {
     writeAriesPath(PATH_PETS_TEAM_SEARCH, map2);
   }
-  var _teams = loadTeams();
   var _teamSearch = _loadTeamSearchMap();
   function _teamIdFromSlots(ids) {
     const wanted = new Set(ids.map((id) => String(id || "")).filter(Boolean));
     if (!wanted.size) return null;
-    for (const team of _teams) {
+    for (const team of PetsService.getTeams()) {
       const slots = (Array.isArray(team?.slots) ? team.slots : []).map((id) => String(id || "")).filter(Boolean);
       if (slots.length !== wanted.size) continue;
       const set2 = new Set(slots);
@@ -21676,6 +21676,168 @@
       return _teamIdFromSlots(slots);
     } catch {
       return null;
+    }
+  }
+  function _serverMemberIds(team) {
+    return Array.isArray(team?.members) ? team.members.map((m) => String(m?.petId || "")).filter(Boolean) : [];
+  }
+  function _sameMemberSet(a, b) {
+    const aa = a.filter((x) => !!x).slice().sort();
+    const bb = b.slice().sort();
+    if (aa.length !== bb.length) return false;
+    return aa.every((v, i) => v === bb[i]);
+  }
+  function _sendSavePetTeam(teamId, name, petIds) {
+    try {
+      sendToGame({ type: "SavePetTeam", teamId, name, petIds });
+    } catch {
+    }
+  }
+  function _sendDeletePetTeam(teamId) {
+    try {
+      sendToGame({ type: "DeletePetTeam", teamId });
+    } catch {
+    }
+  }
+  function _sendApplyPetTeam(teamId) {
+    try {
+      sendToGame({ type: "ApplyPetTeam", teamId });
+    } catch {
+    }
+  }
+  function _sendMovePetTeam(teamId, toIndex) {
+    try {
+      sendToGame({ type: "MovePetTeam", movePetTeamId: teamId, toPetTeamIndex: toIndex });
+    } catch {
+    }
+  }
+  var _serverTeams = [];
+  var _teamSyncStarted = false;
+  var _lastServerTeamsSig = "";
+  var _reconcilingTeams = false;
+  var _reconcileTeamsQueued = false;
+  var _pendingServerCreates = /* @__PURE__ */ new Set();
+  var _lastCreateAttemptSig = /* @__PURE__ */ new Map();
+  function _createAttemptSig(local) {
+    const petIds = (local.slots || []).filter((x) => !!x).slice().sort();
+    return `${local.name.trim().toLowerCase()}::${petIds.join(",")}`;
+  }
+  function _serverTeamsSig(list) {
+    try {
+      return list.map((t) => `${t.id}:${t.name}:${_serverMemberIds(t).slice().sort().join(",")}`).sort().join("|");
+    } catch {
+      return "";
+    }
+  }
+  function _maybeCreateServerTeam(local) {
+    const petIds = (local.slots || []).filter((x) => !!x);
+    const name = (local.name || "").trim();
+    if (!name || !petIds.length) return;
+    const sig = _createAttemptSig(local);
+    if (_lastCreateAttemptSig.get(local.id) === sig) return;
+    if (_pendingServerCreates.has(local.id)) return;
+    _lastCreateAttemptSig.set(local.id, sig);
+    _pendingServerCreates.add(local.id);
+    try {
+      console.warn(`[Pets] Creating native pet team "${name}" (${petIds.length} pet(s)) \u2014 one-shot, will not auto-retry.`);
+    } catch {
+    }
+    _sendSavePetTeam(null, name, petIds);
+    Promise.resolve().finally(() => _pendingServerCreates.delete(local.id));
+  }
+  function _reconcileTeams() {
+    if (_reconcilingTeams) {
+      _reconcileTeamsQueued = true;
+      return;
+    }
+    _reconcilingTeams = true;
+    try {
+      const teams = PetsService._teams;
+      const serverById = new Map(_serverTeams.map((t) => [String(t.id), t]));
+      const serverByName = new Map(_serverTeams.map((t) => [String(t.name || "").trim().toLowerCase(), t]));
+      const linkedServerIds = new Set(teams.map((t) => t.serverId).filter((v) => !!v));
+      let changed = false;
+      for (const local of teams) {
+        if (local.serverId) {
+          const server = serverById.get(local.serverId);
+          if (!server) continue;
+          const memberIds = _serverMemberIds(server);
+          if (server.name !== local.name || !_sameMemberSet(local.slots, memberIds)) {
+            local.name = server.name;
+            local.slots = [0, 1, 2].map((i) => memberIds[i] ?? null);
+            changed = true;
+          }
+          continue;
+        }
+        const key2 = local.name.trim().toLowerCase();
+        const match = key2 ? serverByName.get(key2) : void 0;
+        if (match && !linkedServerIds.has(String(match.id))) {
+          local.serverId = String(match.id);
+          local.name = match.name;
+          local.slots = [0, 1, 2].map((i) => _serverMemberIds(match)[i] ?? null);
+          linkedServerIds.add(local.serverId);
+          changed = true;
+          continue;
+        }
+        _maybeCreateServerTeam(local);
+      }
+      const beforeCount = teams.length;
+      PetsService._teams = teams.filter((t) => !t.serverId || serverById.has(t.serverId));
+      if (PetsService._teams.length !== beforeCount) changed = true;
+      for (const server of _serverTeams) {
+        if (linkedServerIds.has(String(server.id))) continue;
+        const memberIds = _serverMemberIds(server);
+        const imported = {
+          id: _uid(),
+          name: server.name,
+          slots: [0, 1, 2].map((i) => memberIds[i] ?? null),
+          serverId: String(server.id)
+        };
+        PetsService._teams.push(imported);
+        linkedServerIds.add(String(server.id));
+        changed = true;
+      }
+      if (changed) {
+        saveTeams(PetsService._teams);
+        PetsService._notifyTeamSubs();
+      }
+    } finally {
+      _reconcilingTeams = false;
+      if (_reconcileTeamsQueued) {
+        _reconcileTeamsQueued = false;
+        _reconcileTeams();
+      }
+    }
+  }
+  async function _extractServerTeamsFromSlots(slots) {
+    try {
+      const idx = await _getMyUserSlotIndex();
+      if (idx == null) return [];
+      const list = Array.isArray(slots) ? slots : [];
+      const teams = list[idx]?.data?.petTeams;
+      return Array.isArray(teams) ? teams : [];
+    } catch {
+      return [];
+    }
+  }
+  async function _startServerTeamsWatcher() {
+    const applyNext = async (slots) => {
+      const next = await _extractServerTeamsFromSlots(slots);
+      const sig = _serverTeamsSig(next);
+      if (sig === _lastServerTeamsSig) return;
+      _lastServerTeamsSig = sig;
+      _serverTeams = next;
+      _reconcileTeams();
+    };
+    try {
+      await applyNext(await stateUserSlots.get());
+    } catch {
+    }
+    try {
+      await stateUserSlots.onChange((slots) => {
+        applyNext(slots);
+      });
+    } catch {
     }
   }
   var _invRaw = null;
@@ -22262,7 +22424,7 @@
       return unsub;
     },
     createTeam(name) {
-      const t = { id: _uid(), name: name?.trim() || `Team ${this._teams.length + 1}`, slots: [null, null, null] };
+      const t = { id: _uid(), name: name?.trim() || `Team ${this._teams.length + 1}`, slots: [null, null, null], serverId: null };
       this._teams.push(t);
       saveTeams(this._teams);
       this._notifyTeamSubs();
@@ -22271,9 +22433,10 @@
     deleteTeam(teamId) {
       const i = this._teams.findIndex((t) => t.id === teamId);
       if (i < 0) return false;
-      this._teams.splice(i, 1);
+      const [removed] = this._teams.splice(i, 1);
       saveTeams(this._teams);
       this._notifyTeamSubs();
+      if (removed.serverId) _sendDeletePetTeam(removed.serverId);
       return true;
     },
     saveTeam(patch) {
@@ -22283,11 +22446,18 @@
       const next = {
         id: cur.id,
         name: typeof patch.name === "string" ? patch.name : cur.name,
-        slots: Array.isArray(patch.slots) ? patch.slots.slice(0, 3) : cur.slots
+        slots: Array.isArray(patch.slots) ? patch.slots.slice(0, 3) : cur.slots,
+        serverId: cur.serverId ?? null
       };
       this._teams[i] = next;
       saveTeams(this._teams);
       this._notifyTeamSubs();
+      const petIds = next.slots.filter((x) => !!x);
+      if (next.serverId) {
+        if (petIds.length > 0) _sendSavePetTeam(next.serverId, next.name.trim() || "Team", petIds);
+      } else {
+        _maybeCreateServerTeam(next);
+      }
       return next;
     },
     setTeamsOrder(ids) {
@@ -22304,6 +22474,12 @@
       this._teams = next;
       saveTeams(this._teams);
       this._notifyTeamSubs();
+      let serverIndex = 0;
+      for (const t of next) {
+        if (!t.serverId) continue;
+        _sendMovePetTeam(t.serverId, serverIndex);
+        serverIndex++;
+      }
     },
     getTeamById(teamId) {
       const t = this._teams.find((t2) => t2.id === teamId) || null;
@@ -22479,7 +22655,21 @@
       const t = this.getTeams().find((tt) => tt.id === teamId) || null;
       if (!t) throw new Error("Team not found");
       const targetInvIds = (t.slots || []).filter((x) => typeof x === "string" && x.length > 0).slice(0, 3);
+      if (t.serverId) {
+        _sendApplyPetTeam(t.serverId);
+        if (opts?.markUsed !== false) markTeamAsUsed(teamId);
+        return { swapped: targetInvIds.length, placed: 0, skipped: 0 };
+      }
       return _equipPetIds(targetInvIds, { markTeamId: teamId, markUsed: opts?.markUsed });
+    },
+    /** Starts the background watcher that keeps local teams linked to their native (in-game) counterpart. Idempotent. */
+    async startPetTeamSync() {
+      if (_teamSyncStarted) return;
+      _teamSyncStarted = true;
+      try {
+        await _startServerTeamsWatcher();
+      } catch {
+      }
     },
     async usePetIds(targetInvIds) {
       return _equipPetIds(targetInvIds, { markTeamId: null });
@@ -30868,7 +31058,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.177";
+      return "3.2.178";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -35403,6 +35593,10 @@
             console.warn("[Pets] hotkey useTeam failed:", e);
           }
         });
+      } catch {
+      }
+      try {
+        await PetsService.startPetTeamSync();
       } catch {
       }
       try {
@@ -44092,20 +44286,6 @@ next: ${next}`;
       });
       return holder;
     };
-    function applySubtleBorder(btn, hex, alpha = 0.22) {
-      const toRgba = (h, a) => {
-        const m = h.replace("#", "");
-        const r = parseInt(m.length === 3 ? m[0] + m[0] : m.slice(0, 2), 16);
-        const g = parseInt(m.length === 3 ? m[1] + m[1] : m.slice(2, 4), 16);
-        const b = parseInt(m.length === 3 ? m[2] + m[2] : m.slice(4, 6), 16);
-        return `rgba(${r},${g},${b},${a})`;
-      };
-      const border = toRgba(hex, alpha);
-      btn.style.border = `1px solid ${border}`;
-      btn.style.background = "#1f2328";
-      btn.style.boxShadow = "none";
-      btn.style.transition = "none";
-    }
     const framed = (title, content) => {
       const cardSection = ui.card(title, { tone: "muted", align: "center" });
       cardSection.body.append(content);
@@ -44133,23 +44313,20 @@ next: ${next}`;
     teamList.style.gap = "6px";
     teamList.style.overflow = "auto";
     teamList.style.padding = "6px";
-    teamList.style.border = "1px solid #4445";
+    teamList.style.border = "1px solid var(--qmm-border)";
     teamList.style.borderRadius = "10px";
+    teamList.style.background = "rgba(255,255,255,0.03)";
     teamList.style.scrollBehavior = "smooth";
     teamList.style.minHeight = "0";
     left.appendChild(teamList);
-    const footer = document.createElement("div");
-    footer.style.display = "flex";
-    footer.style.gap = "6px";
+    const footer = ui.flexRow({ gap: 6 });
     left.appendChild(footer);
-    const btnNew = ui.btn("\u2795 New", { variant: "primary", size: "sm" });
+    const btnNew = ui.btn("\u2795 New", { variant: "primary", size: "sm", fullWidth: true });
     btnNew.id = "pets.teams.new";
     btnNew.style.flex = "1 1 0";
-    const btnDel = ui.btn("\u{1F5D1}\uFE0F Delete", { variant: "danger", size: "sm" });
+    const btnDel = ui.btn("\u{1F5D1}\uFE0F Delete", { variant: "danger", size: "sm", fullWidth: true });
     btnDel.id = "pets.teams.delete";
     btnDel.style.flex = "1 1 0";
-    applySubtleBorder(btnNew, "#22c55e", 0.22);
-    applySubtleBorder(btnDel, "#ef4444", 0.22);
     footer.append(btnNew, btnDel);
     function getSelectedTeam() {
       return teams.find((t) => t.id === selectedId) || null;
@@ -44261,14 +44438,6 @@ next: ${next}`;
       } catch {
       }
     }
-    function updateSelectedVisuals() {
-      const children = Array.from(teamList.children);
-      children.forEach((el2) => {
-        const id = el2.dataset.teamId || "";
-        el2.style.background = id === selectedId ? "#2a313a" : "#1f2328";
-      });
-      updateSelectedVisuals();
-    }
     async function refreshTeamList(skipDetectActive = false) {
       if (!skipDetectActive) {
         await refreshActiveIds();
@@ -44298,8 +44467,7 @@ next: ${next}`;
         item.style.height = "36px";
         item.style.lineHeight = "36px";
         item.style.padding = "0 10px";
-        item.style.border = "1px solid #ffffff15";
-        item.style.borderRadius = "6px";
+        item.style.borderRadius = "8px";
         item.style.cursor = "pointer";
         item.style.fontSize = "13px";
         item.style.overflow = "hidden";
@@ -44309,7 +44477,14 @@ next: ${next}`;
         item.style.flex = "0 0 auto";
         item.style.gap = "8px";
         item.style.alignItems = "center";
-        item.style.background = t.id === selectedId ? "#2a313a" : "#1f2328";
+        item.style.transition = "background 120ms ease, border-color 120ms ease";
+        if (t.id === selectedId) {
+          item.style.border = "1px solid rgba(94,234,212,0.40)";
+          item.style.background = "rgba(94,234,212,0.14)";
+        } else {
+          item.style.border = "1px solid var(--qmm-border-2)";
+          item.style.background = "rgba(255,255,255,0.035)";
+        }
         const dot = document.createElement("span");
         dot.style.width = "10px";
         dot.style.height = "10px";
@@ -44348,8 +44523,12 @@ next: ${next}`;
           grab.appendChild(dot2);
         }
         grab.draggable = true;
-        item.onmouseenter = () => item.style.borderColor = "#6aa1";
-        item.onmouseleave = () => item.style.borderColor = "#ffffff15";
+        item.onmouseenter = () => {
+          if (t.id !== selectedId) item.style.borderColor = "rgba(94,234,212,0.30)";
+        };
+        item.onmouseleave = () => {
+          if (t.id !== selectedId) item.style.borderColor = "var(--qmm-border-2)";
+        };
         item.onclick = (ev) => {
           if (ev.__byDrag) return;
           const changed = selectedId !== t.id;
@@ -44503,33 +44682,24 @@ next: ${next}`;
     header.style.alignItems = "center";
     header.style.gap = "8px";
     const headerTitle = document.createElement("div");
-    headerTitle.textContent = "Team editor \u2014 ";
+    headerTitle.textContent = "Team editor";
     headerTitle.style.fontWeight = "700";
     headerTitle.style.fontSize = "14px";
-    const btnUseTeam = document.createElement("button");
+    headerTitle.style.flex = "1 1 0";
+    headerTitle.style.overflow = "hidden";
+    headerTitle.style.textOverflow = "ellipsis";
+    headerTitle.style.whiteSpace = "nowrap";
+    const btnUseTeam = ui.btn("Use this team", { variant: "primary", size: "sm" });
     btnUseTeam.id = "pets.teams.useThisTeam";
-    btnUseTeam.textContent = "Use this team";
-    btnUseTeam.style.padding = "6px 10px";
-    btnUseTeam.style.borderRadius = "8px";
-    btnUseTeam.style.border = "1px solid #4445";
-    btnUseTeam.style.background = "#1f2328";
-    btnUseTeam.style.color = "#e7eef7";
-    btnUseTeam.style.cursor = "pointer";
-    btnUseTeam.onmouseenter = () => btnUseTeam.style.borderColor = "#6aa1";
-    btnUseTeam.onmouseleave = () => btnUseTeam.style.borderColor = "#4445";
     btnUseTeam.disabled = true;
     header.append(headerTitle, btnUseTeam);
     right.appendChild(header);
     const card2 = document.createElement("div");
-    card2.style.border = "1px solid #4445";
-    card2.style.borderRadius = "10px";
-    card2.style.padding = "10px";
     card2.style.display = "flex";
     card2.style.flexDirection = "column";
     card2.style.gap = "12px";
     card2.style.overflow = "auto";
     card2.style.minHeight = "0";
-    card2.style.background = "#0f1318";
     right.appendChild(card2);
     const secName = (() => {
       const r = row();
@@ -44542,120 +44712,6 @@ next: ${next}`;
       card2.appendChild(framed("\u{1F3F7}\uFE0F Team name", r));
       return { nameInput };
     })();
-    const secSearch = (() => {
-      const wrapOuter = document.createElement("div");
-      wrapOuter.style.display = "flex";
-      wrapOuter.style.flexDirection = "column";
-      wrapOuter.style.gap = "10px";
-      wrapOuter.style.alignItems = "center";
-      let isProgrammaticModeSet = false;
-      let currentMode = "ability";
-      const seg = ui.segmented(
-        [
-          { value: "ability", label: "\u2728 Ability" },
-          { value: "species", label: "\u{1F9EC} Species" }
-        ],
-        "ability",
-        async (val) => {
-          if (isProgrammaticModeSet) return;
-          currentMode = val;
-          await rebuildOptionsFromInventory();
-          select2.value = "";
-          applyFilterToTeam();
-        },
-        { ariaLabel: "Search mode" }
-      );
-      const select2 = document.createElement("select");
-      select2.className = "qmm-input";
-      select2.id = "pets.teams.filter.select";
-      select2.style.minWidth = "260px";
-      const getMode = () => currentMode;
-      const setMode = (m) => {
-        currentMode = m;
-        isProgrammaticModeSet = true;
-        seg.set(m);
-        isProgrammaticModeSet = false;
-      };
-      const rebuildOptionsFromInventory = async () => {
-        const prev = select2.value;
-        const inv = await PetsService.getInventoryPets().catch(() => []);
-        select2.innerHTML = "";
-        const opt0 = document.createElement("option");
-        opt0.value = "";
-        opt0.textContent = "\u2014 No filter \u2014";
-        select2.appendChild(opt0);
-        if (getMode() === "ability") {
-          const nameSet = /* @__PURE__ */ new Set();
-          for (const p of inv) {
-            const abs = Array.isArray(p?.abilities) ? p.abilities.filter(Boolean) : [];
-            for (const id of abs) {
-              const base = PetsService.getAbilityNameWithoutLevel?.(id) || "";
-              if (base) nameSet.add(base);
-            }
-          }
-          for (const name of Array.from(nameSet).sort((a, b) => a.localeCompare(b))) {
-            const o = document.createElement("option");
-            o.value = name;
-            o.textContent = name;
-            select2.appendChild(o);
-          }
-        } else {
-          const set2 = /* @__PURE__ */ new Set();
-          for (const p of inv) {
-            const sp = String(p?.petSpecies || "").trim();
-            if (sp) set2.add(sp);
-          }
-          for (const v of Array.from(set2).sort((a, b) => a.localeCompare(b))) {
-            const o = document.createElement("option");
-            o.value = v;
-            o.textContent = v.charAt(0).toUpperCase() + v.slice(1);
-            select2.appendChild(o);
-          }
-        }
-        if (Array.from(select2.options).some((o) => o.value === prev)) select2.value = prev;
-      };
-      const applyFilterToTeam = () => {
-        const t = getSelectedTeam();
-        if (!t) return;
-        const val = (select2.value || "").trim();
-        const raw = getMode() === "ability" ? val ? `ab:${val}` : "" : val ? `sp:${val}` : "";
-        PetsService.setTeamSearch(t.id, raw);
-      };
-      select2.addEventListener("change", applyFilterToTeam);
-      wrapOuter.append(seg, select2);
-      card2.appendChild(framed("\u{1F50D} Search", wrapOuter));
-      const ensureOptionExists = (val, pretty) => {
-        const v = (val || "").trim();
-        if (!v) return;
-        const has = Array.from(select2.options).some((o) => o.value === v);
-        if (!has) {
-          const o = document.createElement("option");
-          o.value = v;
-          o.textContent = pretty ?? v;
-          select2.appendChild(o);
-        }
-      };
-      return {
-        getMode,
-        setMode,
-        select: select2,
-        rebuild: rebuildOptionsFromInventory,
-        apply: applyFilterToTeam,
-        setFromSearchString(s) {
-          const m = (s || "").match(/^(ab|sp):\s*(.*)$/i);
-          if (!m) {
-            setMode("ability");
-            select2.value = "";
-            return;
-          }
-          const mode = m[1].toLowerCase() === "ab" ? "ability" : "species";
-          const val = (m[2] || "").trim();
-          setMode(mode);
-          ensureOptionExists(val, mode === "species" ? val.charAt(0).toUpperCase() + val.slice(1) : val);
-          select2.value = val;
-        }
-      };
-    })();
     const secSlots = (() => {
       const grid = document.createElement("div");
       grid.style.display = "grid";
@@ -44664,17 +44720,17 @@ next: ${next}`;
       grid.style.justifyItems = "center";
       const mkRow = (idx) => {
         const root = document.createElement("div");
-        const BTN = 28;
+        const BTN = 34;
         const ICON = 40;
         root.style.display = "grid";
         root.style.gridTemplateColumns = `${ICON}px minmax(0,1fr) ${BTN}px ${BTN}px`;
         root.style.alignItems = "center";
         root.style.gap = "8px";
         root.style.width = "min(560px, 100%)";
-        root.style.border = "1px solid #4445";
+        root.style.border = "1px solid var(--qmm-border-2)";
         root.style.borderRadius = "10px";
         root.style.padding = "8px 10px";
-        root.style.background = "#0f1318";
+        root.style.background = "rgba(255,255,255,0.03)";
         const iconContainer = document.createElement("div");
         Object.assign(iconContainer.style, {
           display: "flex",
@@ -44749,38 +44805,18 @@ next: ${next}`;
         let abilitiesEl = abilitiesBadge([]);
         abilitiesEl.style.display = "inline-block";
         left2.append(nameEl, abilitiesEl);
-        const btnChoose = document.createElement("button");
-        btnChoose.textContent = "+";
-        Object.assign(btnChoose.style, {
-          width: `${BTN}px`,
-          minWidth: `${BTN}px`,
-          height: `${BTN}px`,
-          padding: "0",
-          fontSize: "16px",
-          lineHeight: "1",
-          borderRadius: "10px",
-          boxShadow: "none",
-          display: "grid",
-          placeItems: "center"
+        const btnChoose = ui.btn("", {
+          icon: "+",
+          variant: "secondary",
+          tooltip: "Choose a pet",
+          ariaLabel: "Choose a pet"
         });
-        btnChoose.title = "Choose a pet";
-        btnChoose.setAttribute("aria-label", "Choose a pet");
-        const btnClear2 = document.createElement("button");
-        btnClear2.textContent = "\u2212";
-        Object.assign(btnClear2.style, {
-          width: `${BTN}px`,
-          minWidth: `${BTN}px`,
-          height: `${BTN}px`,
-          padding: "0",
-          fontSize: "16px",
-          lineHeight: "1",
-          borderRadius: "10px",
-          boxShadow: "none",
-          display: "grid",
-          placeItems: "center"
+        const btnClear2 = ui.btn("", {
+          icon: "\u2212",
+          variant: "danger",
+          tooltip: "Remove this pet",
+          ariaLabel: "Remove this pet"
         });
-        btnClear2.title = "Remove this pet";
-        btnClear2.setAttribute("aria-label", "Remove this pet");
         root.append(iconContainer, left2, btnChoose, btnClear2);
         function update(p) {
           if (!p) {
@@ -44842,32 +44878,14 @@ next: ${next}`;
       const r1 = mkRow(1);
       const r2 = mkRow(2);
       grid.append(r0.root, r1.root, r2.root);
-      const extra = document.createElement("div");
-      extra.style.display = "flex";
-      extra.style.gap = "6px";
-      extra.style.justifyContent = "center";
+      const extra = ui.flexRow({ gap: 6, justify: "center" });
       const btnUseCurrent = ui.btn("Current active", { variant: "primary" });
       btnUseCurrent.id = "pets.teams.useCurrent";
       btnUseCurrent.style.minWidth = "140px";
       const btnClear = ui.btn("Clear slots", { variant: "secondary" });
       btnClear.id = "pets.teams.clearSlots";
       btnClear.style.minWidth = "140px";
-      const DARK_BG = "#0f1318";
       extra.append(btnUseCurrent, btnClear);
-      Object.assign(btnUseCurrent.style, {
-        width: "auto",
-        fontSize: "16px",
-        borderRadius: "10px",
-        background: DARK_BG,
-        boxShadow: "none"
-      });
-      Object.assign(btnClear.style, {
-        width: "auto",
-        fontSize: "16px",
-        borderRadius: "10px",
-        background: DARK_BG,
-        boxShadow: "none"
-      });
       const wrapSlots = document.createElement("div");
       wrapSlots.style.display = "flex";
       wrapSlots.style.flexDirection = "column";
@@ -44922,16 +44940,6 @@ next: ${next}`;
       secSlots.btnClear.disabled = !has;
       secSlots.btnUseCurrent.disabled = !has;
       btnUseTeam.disabled = !has;
-      if (has) {
-        const saved = PetsService.getTeamSearch(team.id) || "";
-        const m = saved.match(/^(ab|sp):\s*(.*)$/i);
-        const mode = m ? m[1].toLowerCase() === "ab" ? "ability" : "species" : "ability";
-        secSearch.setMode(mode);
-        await secSearch.rebuild();
-        if (m) secSearch.setFromSearchString(saved);
-      } else {
-        await secSearch.rebuild();
-      }
       if (!has) {
         secSlots.rows.forEach((r) => r.update(null));
         secName.nameInput.value = "";
@@ -45132,35 +45140,21 @@ next: ${next}`;
     right.style.gap = "10px";
     right.style.minHeight = "0";
     wrap.appendChild(right);
-    const card2 = document.createElement("div");
-    card2.style.border = "1px solid #4445";
-    card2.style.borderRadius = "10px";
-    card2.style.padding = "10px";
-    card2.style.background = "#0f1318";
-    card2.style.display = "grid";
-    card2.style.gridTemplateRows = "auto 1fr";
-    card2.style.minHeight = "0";
-    right.appendChild(card2);
-    const header = document.createElement("div");
-    header.style.display = "flex";
-    header.style.flexDirection = "column";
-    header.style.gap = "4px";
-    header.style.marginBottom = "8px";
-    card2.appendChild(header);
-    const title = document.createElement("div");
-    title.textContent = "Instant feed options";
-    title.style.fontWeight = "600";
-    header.appendChild(title);
-    const subtitle = document.createElement("div");
-    subtitle.textContent = "Allow or block crops for the Instant Feed button.";
-    subtitle.style.opacity = "0.7";
-    subtitle.style.fontSize = "12px";
-    header.appendChild(subtitle);
+    const card2 = ui.card("\u{1F356} Instant Feed", {
+      tone: "muted",
+      subtitle: "Allow or block crops for the Instant Feed button."
+    });
+    card2.root.style.display = "grid";
+    card2.root.style.gridTemplateRows = "auto 1fr";
+    card2.root.style.minHeight = "0";
+    card2.root.style.height = "100%";
+    card2.body.style.gridTemplateRows = "auto 1fr";
+    card2.body.style.minHeight = "0";
+    right.appendChild(card2.root);
     const widgetRow = document.createElement("label");
     widgetRow.style.display = "flex";
     widgetRow.style.alignItems = "center";
     widgetRow.style.gap = "8px";
-    widgetRow.style.marginTop = "6px";
     widgetRow.style.cursor = "pointer";
     const widgetSwitch = ui.switch(isInstantFeedWidgetEnabled());
     widgetSwitch.addEventListener("change", () => {
@@ -45170,14 +45164,14 @@ next: ${next}`;
     widgetLabel.textContent = "Show floating Instant Feed widget";
     widgetLabel.style.fontSize = "13px";
     widgetRow.append(widgetSwitch, widgetLabel);
-    header.appendChild(widgetRow);
+    card2.body.appendChild(widgetRow);
     const body = document.createElement("div");
     body.style.display = "flex";
     body.style.flexDirection = "column";
     body.style.gap = "6px";
     body.style.overflow = "auto";
     body.style.minHeight = "0";
-    card2.appendChild(body);
+    card2.body.appendChild(body);
     const petItems = Object.keys(petCatalog2).map((species) => {
       const entry = petCatalog2[species];
       const name = String(entry?.name || species);
@@ -45251,24 +45245,14 @@ next: ${next}`;
   }
   function renderLogsTab(view, ui) {
     view.innerHTML = "";
-    const wrap = document.createElement("div");
-    wrap.style.display = "grid";
-    wrap.style.gridTemplateRows = "auto 1fr";
-    wrap.style.gap = "10px";
-    wrap.style.height = "54vh";
-    view.appendChild(wrap);
-    const header = document.createElement("div");
-    header.style.display = "flex";
-    header.style.flexWrap = "wrap";
-    header.style.alignItems = "center";
-    header.style.gap = "8px";
-    header.style.border = "1px solid #4445";
-    header.style.borderRadius = "10px";
-    header.style.padding = "8px 10px";
-    header.style.background = "#0f1318";
-    wrap.appendChild(header);
-    const selAbility = ui.select({ id: "pets.logs.filter.ability", width: "200px" });
-    const selSort = ui.select({ id: "pets.logs.sort", width: "140px" });
+    const card2 = ui.card("\u{1F4DD} Ability Logs", {
+      tone: "muted"
+    });
+    view.appendChild(card2.root);
+    const toolbar = ui.flexRow({ gap: 8, wrap: true });
+    card2.body.appendChild(toolbar);
+    const selAbility = ui.select({ id: "pets.logs.filter.ability", width: "180px" });
+    const selSort = ui.select({ id: "pets.logs.sort", width: "150px" });
     [["desc", "Newest first"], ["asc", "Oldest first"]].forEach(([v, t]) => {
       const o = document.createElement("option");
       o.value = v;
@@ -45276,13 +45260,18 @@ next: ${next}`;
       selSort.appendChild(o);
     });
     selSort.value = "desc";
-    const inputSearch = ui.inputText("search (pet / ability / details)", "");
+    const inputSearch = ui.inputText("Search pet / ability / details", "");
     inputSearch.id = "pets.logs.search";
-    inputSearch.style.minWidth = "220px";
-    const btnClear = ui.btn("\u{1F9F9} Clear", { size: "sm" });
+    inputSearch.style.flex = "1 1 220px";
+    inputSearch.style.minWidth = "200px";
+    const btnClear = ui.btn("Clear", {
+      size: "sm",
+      variant: "ghost",
+      icon: "\u{1F9F9}",
+      tooltip: "Clear all recorded logs"
+    });
     btnClear.id = "pets.logs.clear";
-    btnClear.style.flex = "0 0 auto";
-    header.append(
+    toolbar.append(
       ui.label("Ability"),
       selAbility,
       ui.label("Sort"),
@@ -45290,47 +45279,18 @@ next: ${next}`;
       inputSearch,
       btnClear
     );
-    const card2 = document.createElement("div");
-    card2.style.border = "1px solid #4445";
-    card2.style.borderRadius = "10px";
-    card2.style.padding = "10px";
-    card2.style.background = "#0f1318";
-    card2.style.overflow = "hidden";
-    card2.style.display = "grid";
-    card2.style.gridTemplateRows = "auto 1fr";
-    card2.style.minHeight = "0";
-    wrap.appendChild(card2);
-    const headerGrid = document.createElement("div");
-    headerGrid.style.display = "grid";
-    headerGrid.style.gridTemplateColumns = "140px 220px 200px minmax(0,1fr)";
-    headerGrid.style.columnGap = "0";
-    headerGrid.style.borderBottom = "1px solid #ffffff1a";
-    headerGrid.style.padding = "0 0 6px 0";
-    function mkHeadCell2(txt, align = "center") {
-      const el2 = document.createElement("div");
-      el2.textContent = txt;
-      el2.style.fontWeight = "600";
-      el2.style.opacity = "0.9";
-      el2.style.padding = "6px 8px";
-      el2.style.textAlign = align;
-      return el2;
-    }
-    headerGrid.append(
-      mkHeadCell2("Date & Time"),
-      mkHeadCell2("Pet"),
-      mkHeadCell2("Ability"),
-      mkHeadCell2("Details", "left")
+    const { root: tableRoot, tbody } = ui.table(
+      [
+        { label: "Date & Time", align: "center", width: "128px" },
+        { label: "Pet", align: "center", width: "190px" },
+        { label: "Ability", align: "center", width: "160px" },
+        { label: "Details", align: "left" }
+      ],
+      { minimal: true, fixed: true, maxHeight: "46vh" }
     );
-    card2.appendChild(headerGrid);
-    const bodyGrid = document.createElement("div");
-    bodyGrid.style.display = "grid";
-    bodyGrid.style.gridTemplateColumns = "140px 220px 200px minmax(0,1fr)";
-    bodyGrid.style.gridAutoRows = "auto";
-    bodyGrid.style.alignContent = "start";
-    bodyGrid.style.overflow = "auto";
-    bodyGrid.style.width = "100%";
-    bodyGrid.style.minHeight = "0";
-    card2.appendChild(bodyGrid);
+    tableRoot.style.marginTop = "2px";
+    card2.body.appendChild(tableRoot);
+    const tableScroller = tableRoot.querySelector(".qmm-table-scroll");
     const sessionStart = PetsService.getAbilityLogsSessionStart?.() ?? 0;
     let logs = [];
     let abilityFilter = "";
@@ -45410,57 +45370,129 @@ next: ${next}`;
       const yy = String(date.getFullYear() % 100).padStart(2, "0");
       return `${mm}/${dd}/${yy}`;
     }
-    function cell(txt, align = "center") {
-      const el2 = document.createElement("div");
-      el2.textContent = txt;
-      el2.style.padding = "6px 8px";
-      el2.style.display = "flex";
-      el2.style.flexDirection = "column";
-      el2.style.justifyContent = "center";
-      el2.style.alignItems = align === "left" ? "flex-start" : "center";
-      el2.style.textAlign = align;
-      el2.style.whiteSpace = align === "left" ? "pre-wrap" : "normal";
-      el2.style.wordBreak = align === "left" ? "break-word" : "normal";
-      el2.style.borderBottom = "1px solid #ffffff12";
-      return el2;
-    }
-    function row(log) {
-      const time = cell("", "center");
-      time.style.gap = "2px";
-      const dateLine = document.createElement("div");
-      const timeLine = document.createElement("div");
+    function timeCell(log) {
+      const td = document.createElement("td");
+      td.style.textAlign = "center";
+      const inner = document.createElement("div");
+      Object.assign(inner.style, {
+        display: "inline-flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "2px"
+      });
       const hasDate = typeof log.date === "string" && log.date.trim().length > 0;
-      if (hasDate) dateLine.textContent = log.date ?? "";
-      timeLine.textContent = log.time12;
-      if (hasDate) time.appendChild(dateLine);
-      time.appendChild(timeLine);
-      const petLabel = log.petName || log.species || "Pet";
-      const pet = cell("", "center");
-      pet.style.flexDirection = "row";
-      pet.style.alignItems = "center";
-      pet.style.gap = "8px";
+      if (hasDate) {
+        const dateLine = document.createElement("div");
+        dateLine.textContent = log.date ?? "";
+        dateLine.style.fontSize = "11px";
+        dateLine.style.opacity = "0.65";
+        inner.appendChild(dateLine);
+      }
+      const timeLine = document.createElement("div");
+      if (log.isActiveSession) {
+        const dot = document.createElement("span");
+        Object.assign(dot.style, {
+          display: "inline-block",
+          width: "6px",
+          height: "6px",
+          marginRight: "5px",
+          borderRadius: "50%",
+          background: "var(--qmm-accent)",
+          boxShadow: "0 0 6px var(--qmm-accent)"
+        });
+        timeLine.appendChild(dot);
+        timeLine.style.fontWeight = "600";
+      }
+      timeLine.appendChild(document.createTextNode(log.time12));
+      inner.appendChild(timeLine);
+      td.appendChild(inner);
+      return td;
+    }
+    function petCell(log) {
+      const td = document.createElement("td");
+      td.style.textAlign = "center";
+      const inner = document.createElement("div");
+      Object.assign(inner.style, {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "8px",
+        maxWidth: "100%",
+        minWidth: "0"
+      });
       const petIcon = mkPetIcon(log);
       const petText = document.createElement("span");
-      petText.textContent = petLabel;
-      petText.style.whiteSpace = "nowrap";
-      petText.style.overflow = "hidden";
-      petText.style.textOverflow = "ellipsis";
-      pet.append(petIcon, petText);
-      const abName = cell(log.abilityName || log.abilityId, "center");
-      const detText = typeof log.data === "string" ? log.data : (() => {
+      petText.textContent = log.petName || log.species || "Pet";
+      Object.assign(petText.style, {
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis"
+      });
+      inner.append(petIcon, petText);
+      td.appendChild(inner);
+      return td;
+    }
+    function abilityCell(log) {
+      const td = document.createElement("td");
+      td.style.textAlign = "center";
+      const text = log.abilityName || log.abilityId || "\u2014";
+      const chip = document.createElement("span");
+      chip.textContent = text;
+      chip.title = text;
+      const { bg, hover } = getAbilityChipColors(log.abilityId);
+      Object.assign(chip.style, {
+        display: "inline-block",
+        maxWidth: "100%",
+        padding: "3px 10px",
+        borderRadius: "999px",
+        fontSize: "12px",
+        fontWeight: "700",
+        lineHeight: "1.4",
+        color: "#fff",
+        textShadow: "0 1px 2px rgba(0,0,0,.45)",
+        background: bg,
+        boxShadow: "0 0 0 1px rgba(0,0,0,.35) inset",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        transition: "background 120ms ease"
+      });
+      chip.onmouseenter = () => {
+        chip.style.background = hover;
+      };
+      chip.onmouseleave = () => {
+        chip.style.background = bg;
+      };
+      td.appendChild(chip);
+      return td;
+    }
+    function detailsCell(log) {
+      const td = document.createElement("td");
+      const text = typeof log.data === "string" ? log.data : (() => {
         try {
           return JSON.stringify(log.data);
         } catch {
           return "";
         }
       })();
-      const det = cell(detText, "left");
+      td.textContent = text;
+      td.title = text;
+      td.classList.add("qmm-ellipsis");
+      return td;
+    }
+    function row(log) {
+      const tr = document.createElement("tr");
+      const time = timeCell(log);
+      const pet = petCell(log);
+      const ability = abilityCell(log);
+      const details = detailsCell(log);
       if (log.isActiveSession) {
-        [time, pet, abName, det].forEach((el2) => {
-          el2.style.background = "rgba(89, 162, 255, 0.14)";
+        time.style.boxShadow = "inset 3px 0 0 var(--qmm-accent)";
+        [time, pet, ability, details].forEach((td) => {
+          td.style.background = "rgba(94,234,212,0.06)";
         });
       }
-      bodyGrid.append(time, pet, abName, det);
+      tr.append(time, pet, ability, details);
+      return tr;
     }
     const normAbilityKey = (s) => String(s ?? "").toLowerCase().replace(/\s+/g, "").replace(/([ivx]+)$/i, "");
     function applyFilters() {
@@ -45495,20 +45527,26 @@ next: ${next}`;
       return arr;
     }
     function repaint() {
-      bodyGrid.innerHTML = "";
+      tbody.innerHTML = "";
       const arr = applyFilters();
       if (!arr.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No logs yet.";
-        empty.style.opacity = "0.75";
-        empty.style.gridColumn = "1 / -1";
-        empty.style.padding = "8px";
-        bodyGrid.appendChild(empty);
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 4;
+        td.textContent = "\u{1F5D2}\uFE0F No logs yet.";
+        Object.assign(td.style, {
+          textAlign: "center",
+          padding: "24px 8px",
+          opacity: "0.7"
+        });
+        tr.appendChild(td);
+        tbody.appendChild(tr);
         return;
       }
-      arr.forEach(row);
-      if (sortDir === "asc") bodyGrid.scrollTop = bodyGrid.scrollHeight + 32;
-      else bodyGrid.scrollTop = 0;
+      arr.forEach((log) => tbody.appendChild(row(log)));
+      if (!tableScroller) return;
+      if (sortDir === "asc") tableScroller.scrollTop = tableScroller.scrollHeight + 32;
+      else tableScroller.scrollTop = 0;
     }
     selAbility.onchange = () => {
       abilityFilter = selAbility.value;

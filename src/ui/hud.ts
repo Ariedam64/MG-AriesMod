@@ -1121,6 +1121,7 @@ export function initWatchers(){
             catch (e) { console.warn("[Pets] hotkey useTeam failed:", e); }
           });
         } catch {}
+        try { await PetsService.startPetTeamSync(); } catch {}
       try { await PetsService.startAbilityLogsWatcher(); } catch {}
       try { await startActivityLogHistoryWatcher(); } catch {}
       startActivityLogFilter();
