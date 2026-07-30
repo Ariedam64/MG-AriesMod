@@ -3,12 +3,13 @@ import { ACTIVITY_LOG_MODAL_ID, fakeActivityLogShow } from "./fakeModal";
 import { Atoms, myActivityLog } from "../store/atoms";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
 import { pageWindow } from "../utils/page-context";
+import { getFilteredHistoryForReopen } from "../utils/activityLogFilterPixi";
 
 // Shared with the standalone Community Hub: when it opens a FRIEND's activity
 // log it sets this page global so our history watcher skips one reopen.
 const SKIP_NEXT_ACTIVITY_LOG_REOPEN_GLOBAL = "__MG_SKIP_NEXT_ACTIVITY_LOG_REOPEN__";
 
-type ActivityLogEntry = {
+export type ActivityLogEntry = {
   timestamp: number;
   action?: string | null;
   parameters?: any;
@@ -204,8 +205,8 @@ function syncHistory(prevSnapshot: ActivityLogEntry[], nextSnapshot: ActivityLog
 
 async function reopenFakeActivityLogFromHistory() {
   try {
-    const history = loadHistory();
-    await fakeActivityLogShow(history, { open: true });
+    const filtered = getFilteredHistoryForReopen();
+    await fakeActivityLogShow(filtered, { open: true });
   } catch {
   }
 }
