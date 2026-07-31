@@ -50,6 +50,15 @@ type Category = {
   abilityIds: string[];
   /** False for categories whose abilities are all action-triggered (hatchEgg/sellAllCrops/sellPet/harvest) — no AFK variant is possible. */
   afkCapable: boolean;
+  /**
+   * A weather-exclusive category's id for its general (non-weather) counterpart.
+   * When set and this category doesn't fill all 3 slots on its own (e.g. only
+   * one owned pet has ThunderPlantGrowthBoost), the remaining slots are padded
+   * with the parent category's own best candidates — still the same overall
+   * goal (plant growth speed), just without the weather requirement, rather
+   * than leaving 1-2 slots empty.
+   */
+  paddingParentId?: string;
 };
 
 // Grouping of already-real ability ids into goal categories, same pattern as
@@ -72,18 +81,18 @@ const CATEGORIES: Category[] = [
   { id: "cropSize", label: "Crop Size", icon: "📏", afkCapable: true,
     abilityIds: ["ProduceScaleBoostIII", "ProduceScaleBoostII", "ProduceScaleBoost"] },
   { id: "cropSizeFrost", label: "Crop Size (Frost)", icon: "📏❄️", afkCapable: false,
-    abilityIds: ["SnowyCropSizeBoost"] },
+    abilityIds: ["SnowyCropSizeBoost"], paddingParentId: "cropSize" },
 
   { id: "plantGrowth", label: "Plant Growth Speed", icon: "🌱", afkCapable: true,
     abilityIds: ["PlantGrowthBoostIII", "PlantGrowthBoostII", "PlantGrowthBoost"] },
   { id: "plantGrowthFrost", label: "Plant Growth Speed (Frost)", icon: "🌱❄️", afkCapable: false,
-    abilityIds: ["SnowyPlantGrowthBoost"] },
+    abilityIds: ["SnowyPlantGrowthBoost"], paddingParentId: "plantGrowth" },
   { id: "plantGrowthDawn", label: "Plant Growth Speed (Dawn)", icon: "🌱🌅", afkCapable: false,
-    abilityIds: ["DawnPlantGrowthBoost"] },
+    abilityIds: ["DawnPlantGrowthBoost"], paddingParentId: "plantGrowth" },
   { id: "plantGrowthAmber", label: "Plant Growth Speed (Amber Moon)", icon: "🌱🌙", afkCapable: false,
-    abilityIds: ["AmberPlantGrowthBoost"] },
+    abilityIds: ["AmberPlantGrowthBoost"], paddingParentId: "plantGrowth" },
   { id: "plantGrowthThunder", label: "Plant Growth Speed (Thunderstorm)", icon: "🌱⚡", afkCapable: false,
-    abilityIds: ["ThunderPlantGrowthBoost"] },
+    abilityIds: ["ThunderPlantGrowthBoost"], paddingParentId: "plantGrowth" },
 
   // Ability ids/tier names here are the game's own naming, not ours: despite
   // the "II" suffix, EggGrowthBoostII is the strongest tier (11min reduction
@@ -93,9 +102,9 @@ const CATEGORIES: Category[] = [
   { id: "eggGrowth", label: "Egg Growth Speed", icon: "🥚", afkCapable: true,
     abilityIds: ["EggGrowthBoostII", "EggGrowthBoostII_NEW", "EggGrowthBoost"] },
   { id: "eggGrowthFrost", label: "Egg Growth Speed (Frost)", icon: "🥚❄️", afkCapable: false,
-    abilityIds: ["SnowyEggGrowthBoost"] },
+    abilityIds: ["SnowyEggGrowthBoost"], paddingParentId: "eggGrowth" },
   { id: "eggGrowthThunder", label: "Egg Growth Speed (Thunderstorm)", icon: "🥚⚡", afkCapable: false,
-    abilityIds: ["ThunderEggGrowthBoost"] },
+    abilityIds: ["ThunderEggGrowthBoost"], paddingParentId: "eggGrowth" },
 
   { id: "mutationWet", label: "Mutation: Wet", icon: "💧", afkCapable: true,
     abilityIds: ["RainDance"] },
@@ -104,15 +113,15 @@ const CATEGORIES: Category[] = [
   { id: "mutationChilled", label: "Mutation: Chilled", icon: "❄️", afkCapable: true,
     abilityIds: ["SnowGranter"] },
   { id: "mutationChilledFrost", label: "Mutation: Chilled (Frost)", icon: "❄️❄️", afkCapable: false,
-    abilityIds: ["SnowyCropMutationBoost"] },
+    abilityIds: ["SnowyCropMutationBoost"], paddingParentId: "mutationChilled" },
   { id: "mutationDawnlit", label: "Mutation: Dawnlit", icon: "🌅", afkCapable: true,
     abilityIds: ["DawnlitGranter", "DawnbinderBoost"] },
   { id: "mutationDawnlitDawn", label: "Mutation: Dawnlit (Dawn)", icon: "🌅🌅", afkCapable: false,
-    abilityIds: ["DawnKisser", "DawnBoost"] },
+    abilityIds: ["DawnKisser", "DawnBoost"], paddingParentId: "mutationDawnlit" },
   { id: "mutationAmbershine", label: "Mutation: Ambershine", icon: "🌙", afkCapable: true,
     abilityIds: ["AmberlitGranter"] },
   { id: "mutationAmbershineAmber", label: "Mutation: Ambershine (Amber Moon)", icon: "🌙🌙", afkCapable: false,
-    abilityIds: ["MoonKisser", "AmberMoonBoost"] },
+    abilityIds: ["MoonKisser", "AmberMoonBoost"], paddingParentId: "mutationAmbershine" },
   { id: "mutationGold", label: "Mutation: Gold", icon: "✨", afkCapable: true,
     abilityIds: ["GoldGranter"] },
   { id: "mutationRainbow", label: "Mutation: Rainbow", icon: "🌈", afkCapable: true,
@@ -120,7 +129,7 @@ const CATEGORIES: Category[] = [
   { id: "mutationThunderstruck", label: "Mutation: Thunderstruck", icon: "⚡", afkCapable: true,
     abilityIds: ["ThunderstruckGranter"] },
   { id: "mutationThunderstruckThunder", label: "Mutation: Thunderstruck (Thunderstorm)", icon: "⚡⚡", afkCapable: false,
-    abilityIds: ["Thunderbloom", "ThunderBoost"] },
+    abilityIds: ["Thunderbloom", "ThunderBoost"], paddingParentId: "mutationThunderstruck" },
   // Generic weather-mutation chance boost — unlike its Snowy/Dawn/Amber/Thunder
   // siblings above, ProduceMutationBoost has no requiredWeather in
   // baseParameters: it applies regardless of which weather is active, which
@@ -131,11 +140,11 @@ const CATEGORIES: Category[] = [
   { id: "coins", label: "Coins", icon: "🪙", afkCapable: true,
     abilityIds: ["CoinFinderIII", "CoinFinderII", "CoinFinderI"] },
   { id: "coinsFrost", label: "Coins (Frost)", icon: "🪙❄️", afkCapable: false,
-    abilityIds: ["SnowyCoinFinder"] },
+    abilityIds: ["SnowyCoinFinder"], paddingParentId: "coins" },
   { id: "coinsDawn", label: "Coins (Dawn)", icon: "🪙🌅", afkCapable: false,
-    abilityIds: ["DawnCoinFinder"] },
+    abilityIds: ["DawnCoinFinder"], paddingParentId: "coins" },
   { id: "coinsThunder", label: "Coins (Thunderstorm)", icon: "🪙⚡", afkCapable: false,
-    abilityIds: ["ThunderCoinFinder"] },
+    abilityIds: ["ThunderCoinFinder"], paddingParentId: "coins" },
   { id: "produceEater", label: "Crop Eater (auto-sell)", icon: "🍽️", afkCapable: true,
     abilityIds: ["ProduceEater"] },
   // One category per tier rather than a merged "Seeds" bucket: unlike
@@ -258,13 +267,29 @@ function rankCandidates(category: Category, pets: InventoryPet[], afkOnly: boole
     .map((pet) => {
       const abilities = petAbilityIds(pet);
       const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
-      return { pet, tierIndex: bestTierIndex(category, relevant) };
+      return { pet, tierIndex: bestTierIndex(category, relevant), strength: getPetMaxStrength(pet) };
     })
     .filter((c) => c.tierIndex !== -1);
 
+  // How many qualifying candidates share each species, across the whole
+  // pool for this category (not just those tied on strength). Used as a
+  // tie-break below: e.g. 3 Butterflies + 1 Ostrich all at max strength 96
+  // on the same ability — picking 2 Butterflies + the Ostrich over 3
+  // Butterflies gains nothing (same strength) but costs a second diet list
+  // to keep the team fed, so the species you own more of for this goal
+  // wins the tie.
+  const speciesCount = new Map<string, number>();
+  for (const c of ranked) {
+    speciesCount.set(c.pet.petSpecies, (speciesCount.get(c.pet.petSpecies) ?? 0) + 1);
+  }
+
   ranked.sort((a, b) => {
     if (a.tierIndex !== b.tierIndex) return a.tierIndex - b.tierIndex;
-    return getPetMaxStrength(b.pet) - getPetMaxStrength(a.pet);
+    if (a.strength !== b.strength) return b.strength - a.strength;
+    const aCount = speciesCount.get(a.pet.petSpecies) ?? 0;
+    const bCount = speciesCount.get(b.pet.petSpecies) ?? 0;
+    if (aCount !== bCount) return bCount - aCount;
+    return a.pet.petSpecies.localeCompare(b.pet.petSpecies);
   });
 
   return ranked.map((c) => c.pet);
@@ -310,6 +335,8 @@ function mergeTeamsWithSamePets(teams: SuggestedTeam[]): SuggestedTeam[] {
   return order.map((key) => byKey.get(key)!);
 }
 
+const CATEGORIES_BY_ID = new Map(CATEGORIES.map((c) => [c.id, c]));
+
 export function buildSuggestedTeams(pets: InventoryPet[]): TeamBuilderResult {
   const sustainPet = getBestSustainPet(pets);
   const teams: SuggestedTeam[] = [];
@@ -319,7 +346,19 @@ export function buildSuggestedTeams(pets: InventoryPet[]): TeamBuilderResult {
   for (const category of CATEGORIES) {
     const categoryRef: MergedCategory = { id: category.id, label: category.label, icon: category.icon, abilityId: category.abilityIds[0] };
 
-    const activeCandidates = rankCandidates(category, pets, false).slice(0, 3);
+    let activeCandidates = rankCandidates(category, pets, false).slice(0, 3);
+    // Weather-exclusive categories often only have one qualifying pet —
+    // top the team off with the parent (non-weather) category's own best
+    // picks rather than leaving slots empty, since they still work toward
+    // the same goal whenever the required weather isn't active.
+    if (activeCandidates.length && activeCandidates.length < 3 && category.paddingParentId) {
+      const parent = CATEGORIES_BY_ID.get(category.paddingParentId);
+      if (parent) {
+        const already = new Set(activeCandidates.map((p) => p.id));
+        const padding = rankCandidates(parent, pets, false).filter((p) => !already.has(p.id));
+        activeCandidates = [...activeCandidates, ...padding].slice(0, 3);
+      }
+    }
     activeCandidates.forEach((p) => usedIds.add(p.id));
     if (activeCandidates.length) {
       teams.push({
@@ -341,6 +380,28 @@ export function buildSuggestedTeams(pets: InventoryPet[]): TeamBuilderResult {
           petIds: [...afkCandidates.map((p) => p.id), sustainPet.id],
         });
       }
+    }
+
+    // A leftover empty slot (fewer than 3 real candidates even after
+    // weather-parent padding) can just as well be filled by the sustain
+    // pet instead of staying empty — offered as an AFK variant, since
+    // "abilityIsPassive() + a pet that keeps the team fed" is exactly what
+    // AFK means. Only when the abilities actually in play are passive
+    // (this category, or its padding parent for weather-exclusive ones):
+    // an empty slot on e.g. Double Hatch shouldn't get labeled AFK just
+    // because a feeder pet could technically sit there doing nothing.
+    const afkRelevant = category.afkCapable
+      || (category.paddingParentId != null && !!CATEGORIES_BY_ID.get(category.paddingParentId)?.afkCapable);
+    if (
+      afkRelevant && sustainPet && activeCandidates.length > 0 && activeCandidates.length < 3 &&
+      !activeCandidates.some((p) => p.id === sustainPet.id)
+    ) {
+      usedIds.add(sustainPet.id);
+      teams.push({
+        categories: [categoryRef],
+        mode: "afk",
+        petIds: [...activeCandidates.map((p) => p.id), sustainPet.id],
+      });
     }
   }
 

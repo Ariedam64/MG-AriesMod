@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.180
+// @version      3.2.181
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -31177,7 +31177,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.180";
+      return "3.2.181";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -44243,7 +44243,8 @@ next: ${next}`;
       label: "Crop Size (Frost)",
       icon: "\u{1F4CF}\u2744\uFE0F",
       afkCapable: false,
-      abilityIds: ["SnowyCropSizeBoost"]
+      abilityIds: ["SnowyCropSizeBoost"],
+      paddingParentId: "cropSize"
     },
     {
       id: "plantGrowth",
@@ -44257,28 +44258,32 @@ next: ${next}`;
       label: "Plant Growth Speed (Frost)",
       icon: "\u{1F331}\u2744\uFE0F",
       afkCapable: false,
-      abilityIds: ["SnowyPlantGrowthBoost"]
+      abilityIds: ["SnowyPlantGrowthBoost"],
+      paddingParentId: "plantGrowth"
     },
     {
       id: "plantGrowthDawn",
       label: "Plant Growth Speed (Dawn)",
       icon: "\u{1F331}\u{1F305}",
       afkCapable: false,
-      abilityIds: ["DawnPlantGrowthBoost"]
+      abilityIds: ["DawnPlantGrowthBoost"],
+      paddingParentId: "plantGrowth"
     },
     {
       id: "plantGrowthAmber",
       label: "Plant Growth Speed (Amber Moon)",
       icon: "\u{1F331}\u{1F319}",
       afkCapable: false,
-      abilityIds: ["AmberPlantGrowthBoost"]
+      abilityIds: ["AmberPlantGrowthBoost"],
+      paddingParentId: "plantGrowth"
     },
     {
       id: "plantGrowthThunder",
       label: "Plant Growth Speed (Thunderstorm)",
       icon: "\u{1F331}\u26A1",
       afkCapable: false,
-      abilityIds: ["ThunderPlantGrowthBoost"]
+      abilityIds: ["ThunderPlantGrowthBoost"],
+      paddingParentId: "plantGrowth"
     },
     // Ability ids/tier names here are the game's own naming, not ours: despite
     // the "II" suffix, EggGrowthBoostII is the strongest tier (11min reduction
@@ -44297,14 +44302,16 @@ next: ${next}`;
       label: "Egg Growth Speed (Frost)",
       icon: "\u{1F95A}\u2744\uFE0F",
       afkCapable: false,
-      abilityIds: ["SnowyEggGrowthBoost"]
+      abilityIds: ["SnowyEggGrowthBoost"],
+      paddingParentId: "eggGrowth"
     },
     {
       id: "eggGrowthThunder",
       label: "Egg Growth Speed (Thunderstorm)",
       icon: "\u{1F95A}\u26A1",
       afkCapable: false,
-      abilityIds: ["ThunderEggGrowthBoost"]
+      abilityIds: ["ThunderEggGrowthBoost"],
+      paddingParentId: "eggGrowth"
     },
     {
       id: "mutationWet",
@@ -44332,7 +44339,8 @@ next: ${next}`;
       label: "Mutation: Chilled (Frost)",
       icon: "\u2744\uFE0F\u2744\uFE0F",
       afkCapable: false,
-      abilityIds: ["SnowyCropMutationBoost"]
+      abilityIds: ["SnowyCropMutationBoost"],
+      paddingParentId: "mutationChilled"
     },
     {
       id: "mutationDawnlit",
@@ -44346,7 +44354,8 @@ next: ${next}`;
       label: "Mutation: Dawnlit (Dawn)",
       icon: "\u{1F305}\u{1F305}",
       afkCapable: false,
-      abilityIds: ["DawnKisser", "DawnBoost"]
+      abilityIds: ["DawnKisser", "DawnBoost"],
+      paddingParentId: "mutationDawnlit"
     },
     {
       id: "mutationAmbershine",
@@ -44360,7 +44369,8 @@ next: ${next}`;
       label: "Mutation: Ambershine (Amber Moon)",
       icon: "\u{1F319}\u{1F319}",
       afkCapable: false,
-      abilityIds: ["MoonKisser", "AmberMoonBoost"]
+      abilityIds: ["MoonKisser", "AmberMoonBoost"],
+      paddingParentId: "mutationAmbershine"
     },
     {
       id: "mutationGold",
@@ -44388,7 +44398,8 @@ next: ${next}`;
       label: "Mutation: Thunderstruck (Thunderstorm)",
       icon: "\u26A1\u26A1",
       afkCapable: false,
-      abilityIds: ["Thunderbloom", "ThunderBoost"]
+      abilityIds: ["Thunderbloom", "ThunderBoost"],
+      paddingParentId: "mutationThunderstruck"
     },
     // Generic weather-mutation chance boost — unlike its Snowy/Dawn/Amber/Thunder
     // siblings above, ProduceMutationBoost has no requiredWeather in
@@ -44413,21 +44424,24 @@ next: ${next}`;
       label: "Coins (Frost)",
       icon: "\u{1FA99}\u2744\uFE0F",
       afkCapable: false,
-      abilityIds: ["SnowyCoinFinder"]
+      abilityIds: ["SnowyCoinFinder"],
+      paddingParentId: "coins"
     },
     {
       id: "coinsDawn",
       label: "Coins (Dawn)",
       icon: "\u{1FA99}\u{1F305}",
       afkCapable: false,
-      abilityIds: ["DawnCoinFinder"]
+      abilityIds: ["DawnCoinFinder"],
+      paddingParentId: "coins"
     },
     {
       id: "coinsThunder",
       label: "Coins (Thunderstorm)",
       icon: "\u{1FA99}\u26A1",
       afkCapable: false,
-      abilityIds: ["ThunderCoinFinder"]
+      abilityIds: ["ThunderCoinFinder"],
+      paddingParentId: "coins"
     },
     {
       id: "produceEater",
@@ -44603,11 +44617,19 @@ next: ${next}`;
     const ranked = pets.map((pet) => {
       const abilities = petAbilityIds(pet);
       const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
-      return { pet, tierIndex: bestTierIndex(category, relevant) };
+      return { pet, tierIndex: bestTierIndex(category, relevant), strength: getPetMaxStrength(pet) };
     }).filter((c) => c.tierIndex !== -1);
+    const speciesCount = /* @__PURE__ */ new Map();
+    for (const c of ranked) {
+      speciesCount.set(c.pet.petSpecies, (speciesCount.get(c.pet.petSpecies) ?? 0) + 1);
+    }
     ranked.sort((a, b) => {
       if (a.tierIndex !== b.tierIndex) return a.tierIndex - b.tierIndex;
-      return getPetMaxStrength(b.pet) - getPetMaxStrength(a.pet);
+      if (a.strength !== b.strength) return b.strength - a.strength;
+      const aCount = speciesCount.get(a.pet.petSpecies) ?? 0;
+      const bCount = speciesCount.get(b.pet.petSpecies) ?? 0;
+      if (aCount !== bCount) return bCount - aCount;
+      return a.pet.petSpecies.localeCompare(b.pet.petSpecies);
     });
     return ranked.map((c) => c.pet);
   }
@@ -44643,6 +44665,7 @@ next: ${next}`;
     }
     return order.map((key2) => byKey.get(key2));
   }
+  var CATEGORIES_BY_ID = new Map(CATEGORIES.map((c) => [c.id, c]));
   function buildSuggestedTeams(pets) {
     const sustainPet = getBestSustainPet(pets);
     const teams = [];
@@ -44650,7 +44673,15 @@ next: ${next}`;
     if (sustainPet) usedIds.add(sustainPet.id);
     for (const category of CATEGORIES) {
       const categoryRef = { id: category.id, label: category.label, icon: category.icon, abilityId: category.abilityIds[0] };
-      const activeCandidates = rankCandidates(category, pets, false).slice(0, 3);
+      let activeCandidates = rankCandidates(category, pets, false).slice(0, 3);
+      if (activeCandidates.length && activeCandidates.length < 3 && category.paddingParentId) {
+        const parent = CATEGORIES_BY_ID.get(category.paddingParentId);
+        if (parent) {
+          const already = new Set(activeCandidates.map((p) => p.id));
+          const padding = rankCandidates(parent, pets, false).filter((p) => !already.has(p.id));
+          activeCandidates = [...activeCandidates, ...padding].slice(0, 3);
+        }
+      }
       activeCandidates.forEach((p) => usedIds.add(p.id));
       if (activeCandidates.length) {
         teams.push({
@@ -44669,6 +44700,15 @@ next: ${next}`;
             petIds: [...afkCandidates.map((p) => p.id), sustainPet.id]
           });
         }
+      }
+      const afkRelevant = category.afkCapable || category.paddingParentId != null && !!CATEGORIES_BY_ID.get(category.paddingParentId)?.afkCapable;
+      if (afkRelevant && sustainPet && activeCandidates.length > 0 && activeCandidates.length < 3 && !activeCandidates.some((p) => p.id === sustainPet.id)) {
+        usedIds.add(sustainPet.id);
+        teams.push({
+          categories: [categoryRef],
+          mode: "afk",
+          petIds: [...activeCandidates.map((p) => p.id), sustainPet.id]
+        });
       }
     }
     return {
