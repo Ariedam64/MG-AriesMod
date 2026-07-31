@@ -172,6 +172,38 @@ function weatherSuffix(label: string): string {
   return label.match(/\([^)]+\)$/)?.[0] ?? "";
 }
 
+// Terser weather names for the saved-team-name attempt, where every
+// character counts toward the game's 16-char limit.
+const SHORT_WEATHER: Record<string, string> = {
+  Frost: "Frost",
+  Dawn: "Dawn",
+  "Amber Moon": "Moon",
+  Thunderstorm: "Storm",
+};
+
+function shortWeatherSuffix(label: string): string {
+  const full = weatherSuffix(label);
+  if (!full) return "";
+  const inner = full.slice(1, -1);
+  return `(${SHORT_WEATHER[inner] ?? inner})`;
+}
+
+// A terse name (category.shortLabel, e.g. "Plant") tried before the full
+// ability name — short enough that most single categories, and even a
+// two-category merge ("Plant + Egg"), still fit the 16-char limit without
+// falling back to icons.
+function shortCategoryLabel(team: SuggestedTeam): string {
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const c of team.categories) {
+    if (seen.has(c.id)) continue;
+    seen.add(c.id);
+    const weather = shortWeatherSuffix(c.label);
+    names.push(weather ? `${c.shortLabel} ${weather}` : c.shortLabel);
+  }
+  return names.join(" + ");
+}
+
 // The real ability name (e.g. "Amberlit Granter") reads shorter and more
 // direct than the goal-category label ("Mutation: Ambershine") — dedupe in
 // case a merge ever lands on the same ability twice.
@@ -192,11 +224,16 @@ function buildSaveName(team: SuggestedTeam, isAfk: boolean): string {
   const suffix = isAfk ? " AFK" : "";
   const budget = Math.max(1, TEAM_NAME_MAX_LENGTH - charLength(suffix));
 
+  // Try shortest first (e.g. "Plant + Egg", "Amber (Moon)"), then the full
+  // ability name, before giving up on text entirely.
+  const shortLabel = shortCategoryLabel(team);
+  if (charLength(shortLabel) <= budget) return `${shortLabel}${suffix}`;
+
   const fullLabel = abilityLabel(team);
   if (charLength(fullLabel) <= budget) return `${fullLabel}${suffix}`;
 
-  // Full text doesn't fit — a truncated half-word ("Plant Growth S…") isn't
-  // any more readable than the icons, so skip straight to icons-only.
+  // Neither fits — a truncated half-word ("Plant Growth S…") isn't any
+  // more readable than the icons, so skip straight to icons-only.
   const icons = team.categories.map((c) => c.icon).join("");
   return `${truncateChars(icons, budget)}${suffix}`;
 }

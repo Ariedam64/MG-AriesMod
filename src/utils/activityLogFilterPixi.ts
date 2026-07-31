@@ -39,6 +39,13 @@ const BUTTON_ALPHA_ACTIVE = 0.95;
 const BUTTON_TEXT_STYLE = { fontFamily: "Arial", fontSize: 12, fontWeight: "700", fill: "#FFFFFF" };
 const BUTTON_RADIUS = 8;
 
+const CLOSED_LABEL_PREFIX = "Filter: ";
+const CARET_GAP = 8;
+const CARET_CLOSED = "▾";
+const CARET_OPEN = "▴";
+const CARET_TEXT_STYLE = { fontFamily: "Arial", fontSize: 12, fontWeight: "700", fill: "#FFFFFF" };
+const PANEL_GAP = 6;
+
 const raf: (cb: (t: number) => void) => number = (pageWindow as any).requestAnimationFrame.bind(pageWindow);
 
 let activeFilter: ActionKey = loadPersistedFilter();
@@ -135,9 +142,26 @@ interface ToolbarButton {
   key: ActionKey;
 }
 
-interface ToolbarState {
+interface ClosedButton {
+  container: any;
+  bg: any;
+  text: any;
+  caret: any;
+}
+
+interface ToolbarPanel {
   container: any;
   buttons: ToolbarButton[];
+  height: number;
+}
+
+interface ToolbarState {
+  container: any;
+  closedButton: ClosedButton;
+  panel: ToolbarPanel;
+  counts: Map<ActionKey, number>;
+  total: number;
+  isExpanded: boolean;
   height: number;
 }
 
@@ -150,23 +174,64 @@ function safeWidth(node: any, fallback: number): number {
   }
 }
 
-function buildToolbar(graphicsCtor: any, textCtor: any, containerCtor: any, maxWidth: number): ToolbarState {
-  const history = getActivityLogHistory();
+function computeActionCounts(history: ActivityLogEntry[]): Map<ActionKey, number> {
   const counts = new Map<ActionKey, number>();
   for (const entry of history) {
     const key = classifyEntryAction(entry.action);
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
+  return counts;
+}
+
+function countFor(key: ActionKey, counts: Map<ActionKey, number>, total: number): number {
+  return key === "all" ? total : counts.get(key) ?? 0;
+}
+
+function closedButtonLabel(counts: Map<ActionKey, number>, total: number): string {
+  const active = getActiveFilter();
+  const count = countFor(active, counts, total);
+  return `${CLOSED_LABEL_PREFIX}${getActionLabel(active)}${count ? ` (${count})` : ""}`;
+}
+
+function buildClosedButton(graphicsCtor: any, textCtor: any, containerCtor: any, counts: Map<ActionKey, number>, total: number): ClosedButton {
+  const text = new textCtor({ text: closedButtonLabel(counts, total), style: BUTTON_TEXT_STYLE });
+  const caret = new textCtor({ text: CARET_CLOSED, style: CARET_TEXT_STYLE });
+  const bg = new graphicsCtor();
+
+  const container = new containerCtor();
+  container.addChild(bg);
+  container.addChild(text);
+  container.addChild(caret);
+  container.eventMode = "static";
+  container.cursor = "pointer";
+
+  const closedButton: ClosedButton = { container, bg, text, caret };
+  layoutClosedButton(closedButton);
+  return closedButton;
+}
+
+/** Redraws the closed button's background/caret to fit its current text (called whenever the label changes). */
+function layoutClosedButton(closedButton: ClosedButton): void {
+  const width = closedButton.text.width + BUTTON_PADDING_X * 2 + CARET_GAP + closedButton.caret.width;
+  closedButton.bg.clear();
+  closedButton.bg
+    .roundRect(0, 0, width, BUTTON_HEIGHT, BUTTON_RADIUS)
+    .fill({ color: BUTTON_FILL_ACTIVE, alpha: BUTTON_ALPHA_ACTIVE });
+  closedButton.text.position.set(BUTTON_PADDING_X, (BUTTON_HEIGHT - closedButton.text.height) / 2);
+  closedButton.caret.position.set(width - BUTTON_PADDING_X - closedButton.caret.width, (BUTTON_HEIGHT - closedButton.caret.height) / 2);
+}
+
+function buildOptionsPanel(graphicsCtor: any, textCtor: any, containerCtor: any, maxWidth: number, counts: Map<ActionKey, number>, total: number): ToolbarPanel {
   const keys: ActionKey[] = ["all", ...mergeActions(Array.from(counts.keys()))];
 
-  const toolbar = new containerCtor();
+  const panel = new containerCtor();
   const buttons: ToolbarButton[] = [];
   let x = 0;
   let y = 0;
   const active = getActiveFilter();
 
   for (const key of keys) {
-    const count = key === "all" ? history.length : counts.get(key) ?? 0;
+    const count = countFor(key, counts, total);
     const label = `${getActionLabel(key)}${count ? ` (${count})` : ""}`;
 
     const text = new textCtor({ text: label, style: BUTTON_TEXT_STYLE });
@@ -192,19 +257,70 @@ function buildToolbar(graphicsCtor: any, textCtor: any, containerCtor: any, maxW
     button.position.set(x, y);
     button.eventMode = "static";
     button.cursor = "pointer";
-    button.on("pointertap", () => setActiveFilter(key));
 
-    toolbar.addChild(button);
+    panel.addChild(button);
     buttons.push({ container: button, bg, key });
     x += width + BUTTON_GAP;
   }
 
-  return { container: toolbar, buttons, height: y + BUTTON_HEIGHT };
+  return { container: panel, buttons, height: y + BUTTON_HEIGHT };
+}
+
+function collapsedHeight(): number {
+  return BUTTON_HEIGHT;
+}
+
+function expandedHeight(panel: ToolbarPanel): number {
+  return BUTTON_HEIGHT + PANEL_GAP + panel.height;
+}
+
+function setExpanded(toolbarState: ToolbarState, expanded: boolean): void {
+  if (toolbarState.isExpanded === expanded) return;
+  toolbarState.isExpanded = expanded;
+  toolbarState.panel.container.visible = expanded;
+  toolbarState.height = expanded ? expandedHeight(toolbarState.panel) : collapsedHeight();
+  toolbarState.closedButton.caret.text = expanded ? CARET_OPEN : CARET_CLOSED;
+}
+
+function buildToolbar(graphicsCtor: any, textCtor: any, containerCtor: any, maxWidth: number): ToolbarState {
+  const history = getActivityLogHistory();
+  const counts = computeActionCounts(history);
+  const total = history.length;
+
+  const container = new containerCtor();
+
+  const closedButton = buildClosedButton(graphicsCtor, textCtor, containerCtor, counts, total);
+  container.addChild(closedButton.container);
+
+  const panel = buildOptionsPanel(graphicsCtor, textCtor, containerCtor, maxWidth, counts, total);
+  panel.container.position.set(0, BUTTON_HEIGHT + PANEL_GAP);
+  panel.container.visible = false;
+  container.addChild(panel.container);
+
+  const toolbarState: ToolbarState = {
+    container,
+    closedButton,
+    panel,
+    counts,
+    total,
+    isExpanded: false,
+    height: collapsedHeight(),
+  };
+
+  closedButton.container.on("pointertap", () => setExpanded(toolbarState, !toolbarState.isExpanded));
+  for (const button of panel.buttons) {
+    button.container.on("pointertap", () => {
+      setActiveFilter(button.key);
+      setExpanded(toolbarState, false);
+    });
+  }
+
+  return toolbarState;
 }
 
 function refreshToolbarHighlight(toolbarState: ToolbarState): void {
   const active = getActiveFilter();
-  for (const button of toolbarState.buttons) {
+  for (const button of toolbarState.panel.buttons) {
     if (button.bg.destroyed) continue;
     const isActive = button.key === active;
     const bounds = button.bg.getLocalBounds();
@@ -212,6 +328,11 @@ function refreshToolbarHighlight(toolbarState: ToolbarState): void {
     button.bg
       .roundRect(0, 0, bounds.width, BUTTON_HEIGHT, BUTTON_RADIUS)
       .fill({ color: isActive ? BUTTON_FILL_ACTIVE : BUTTON_FILL_INACTIVE, alpha: isActive ? BUTTON_ALPHA_ACTIVE : BUTTON_ALPHA_INACTIVE });
+  }
+  const label = closedButtonLabel(toolbarState.counts, toolbarState.total);
+  if (toolbarState.closedButton.text.text !== label) {
+    toolbarState.closedButton.text.text = label;
+    layoutClosedButton(toolbarState.closedButton);
   }
 }
 

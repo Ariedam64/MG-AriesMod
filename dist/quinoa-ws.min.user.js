@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.184
+// @version      3.2.185
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -31177,7 +31177,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.184";
+      return "3.2.185";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -34518,6 +34518,12 @@
   var BUTTON_ALPHA_ACTIVE = 0.95;
   var BUTTON_TEXT_STYLE2 = { fontFamily: "Arial", fontSize: 12, fontWeight: "700", fill: "#FFFFFF" };
   var BUTTON_RADIUS2 = 8;
+  var CLOSED_LABEL_PREFIX = "Filter: ";
+  var CARET_GAP = 8;
+  var CARET_CLOSED = "\u25BE";
+  var CARET_OPEN = "\u25B4";
+  var CARET_TEXT_STYLE = { fontFamily: "Arial", fontSize: 12, fontWeight: "700", fill: "#FFFFFF" };
+  var PANEL_GAP = 6;
   var raf2 = pageWindow.requestAnimationFrame.bind(pageWindow);
   var activeFilter = loadPersistedFilter();
   var modalOpen2 = false;
@@ -34589,21 +34595,52 @@
       return fallback;
     }
   }
-  function buildToolbar(graphicsCtor, textCtor, containerCtor, maxWidth) {
-    const history2 = getActivityLogHistory();
+  function computeActionCounts(history2) {
     const counts = /* @__PURE__ */ new Map();
     for (const entry of history2) {
       const key2 = classifyEntryAction(entry.action);
       counts.set(key2, (counts.get(key2) ?? 0) + 1);
     }
+    return counts;
+  }
+  function countFor(key2, counts, total) {
+    return key2 === "all" ? total : counts.get(key2) ?? 0;
+  }
+  function closedButtonLabel(counts, total) {
+    const active = getActiveFilter();
+    const count = countFor(active, counts, total);
+    return `${CLOSED_LABEL_PREFIX}${getActionLabel(active)}${count ? ` (${count})` : ""}`;
+  }
+  function buildClosedButton(graphicsCtor, textCtor, containerCtor, counts, total) {
+    const text = new textCtor({ text: closedButtonLabel(counts, total), style: BUTTON_TEXT_STYLE2 });
+    const caret = new textCtor({ text: CARET_CLOSED, style: CARET_TEXT_STYLE });
+    const bg = new graphicsCtor();
+    const container = new containerCtor();
+    container.addChild(bg);
+    container.addChild(text);
+    container.addChild(caret);
+    container.eventMode = "static";
+    container.cursor = "pointer";
+    const closedButton = { container, bg, text, caret };
+    layoutClosedButton(closedButton);
+    return closedButton;
+  }
+  function layoutClosedButton(closedButton) {
+    const width = closedButton.text.width + BUTTON_PADDING_X2 * 2 + CARET_GAP + closedButton.caret.width;
+    closedButton.bg.clear();
+    closedButton.bg.roundRect(0, 0, width, BUTTON_HEIGHT, BUTTON_RADIUS2).fill({ color: BUTTON_FILL_ACTIVE, alpha: BUTTON_ALPHA_ACTIVE });
+    closedButton.text.position.set(BUTTON_PADDING_X2, (BUTTON_HEIGHT - closedButton.text.height) / 2);
+    closedButton.caret.position.set(width - BUTTON_PADDING_X2 - closedButton.caret.width, (BUTTON_HEIGHT - closedButton.caret.height) / 2);
+  }
+  function buildOptionsPanel(graphicsCtor, textCtor, containerCtor, maxWidth, counts, total) {
     const keys = ["all", ...mergeActions(Array.from(counts.keys()))];
-    const toolbar = new containerCtor();
+    const panel = new containerCtor();
     const buttons = [];
     let x = 0;
     let y = 0;
     const active = getActiveFilter();
     for (const key2 of keys) {
-      const count = key2 === "all" ? history2.length : counts.get(key2) ?? 0;
+      const count = countFor(key2, counts, total);
       const label2 = `${getActionLabel(key2)}${count ? ` (${count})` : ""}`;
       const text = new textCtor({ text: label2, style: BUTTON_TEXT_STYLE2 });
       const width = text.width + BUTTON_PADDING_X2 * 2;
@@ -34620,21 +34657,67 @@
       button.position.set(x, y);
       button.eventMode = "static";
       button.cursor = "pointer";
-      button.on("pointertap", () => setActiveFilter(key2));
-      toolbar.addChild(button);
+      panel.addChild(button);
       buttons.push({ container: button, bg, key: key2 });
       x += width + BUTTON_GAP2;
     }
-    return { container: toolbar, buttons, height: y + BUTTON_HEIGHT };
+    return { container: panel, buttons, height: y + BUTTON_HEIGHT };
+  }
+  function collapsedHeight() {
+    return BUTTON_HEIGHT;
+  }
+  function expandedHeight(panel) {
+    return BUTTON_HEIGHT + PANEL_GAP + panel.height;
+  }
+  function setExpanded(toolbarState2, expanded) {
+    if (toolbarState2.isExpanded === expanded) return;
+    toolbarState2.isExpanded = expanded;
+    toolbarState2.panel.container.visible = expanded;
+    toolbarState2.height = expanded ? expandedHeight(toolbarState2.panel) : collapsedHeight();
+    toolbarState2.closedButton.caret.text = expanded ? CARET_OPEN : CARET_CLOSED;
+  }
+  function buildToolbar(graphicsCtor, textCtor, containerCtor, maxWidth) {
+    const history2 = getActivityLogHistory();
+    const counts = computeActionCounts(history2);
+    const total = history2.length;
+    const container = new containerCtor();
+    const closedButton = buildClosedButton(graphicsCtor, textCtor, containerCtor, counts, total);
+    container.addChild(closedButton.container);
+    const panel = buildOptionsPanel(graphicsCtor, textCtor, containerCtor, maxWidth, counts, total);
+    panel.container.position.set(0, BUTTON_HEIGHT + PANEL_GAP);
+    panel.container.visible = false;
+    container.addChild(panel.container);
+    const toolbarState2 = {
+      container,
+      closedButton,
+      panel,
+      counts,
+      total,
+      isExpanded: false,
+      height: collapsedHeight()
+    };
+    closedButton.container.on("pointertap", () => setExpanded(toolbarState2, !toolbarState2.isExpanded));
+    for (const button of panel.buttons) {
+      button.container.on("pointertap", () => {
+        setActiveFilter(button.key);
+        setExpanded(toolbarState2, false);
+      });
+    }
+    return toolbarState2;
   }
   function refreshToolbarHighlight(toolbarState2) {
     const active = getActiveFilter();
-    for (const button of toolbarState2.buttons) {
+    for (const button of toolbarState2.panel.buttons) {
       if (button.bg.destroyed) continue;
       const isActive = button.key === active;
       const bounds = button.bg.getLocalBounds();
       button.bg.clear();
       button.bg.roundRect(0, 0, bounds.width, BUTTON_HEIGHT, BUTTON_RADIUS2).fill({ color: isActive ? BUTTON_FILL_ACTIVE : BUTTON_FILL_INACTIVE, alpha: isActive ? BUTTON_ALPHA_ACTIVE : BUTTON_ALPHA_INACTIVE });
+    }
+    const label2 = closedButtonLabel(toolbarState2.counts, toolbarState2.total);
+    if (toolbarState2.closedButton.text.text !== label2) {
+      toolbarState2.closedButton.text.text = label2;
+      layoutClosedButton(toolbarState2.closedButton);
     }
   }
   var modalNode = null;
@@ -44234,6 +44317,7 @@ next: ${next}`;
     {
       id: "cropSize",
       label: "Crop Size",
+      shortLabel: "Size",
       icon: "\u{1F4CF}",
       afkCapable: true,
       abilityIds: ["ProduceScaleBoostIII", "ProduceScaleBoostII", "ProduceScaleBoost"]
@@ -44241,6 +44325,7 @@ next: ${next}`;
     {
       id: "cropSizeFrost",
       label: "Crop Size (Frost)",
+      shortLabel: "Size",
       icon: "\u{1F4CF}\u2744\uFE0F",
       afkCapable: false,
       abilityIds: ["SnowyCropSizeBoost"],
@@ -44249,6 +44334,7 @@ next: ${next}`;
     {
       id: "plantGrowth",
       label: "Plant Growth Speed",
+      shortLabel: "Plant",
       icon: "\u{1F331}",
       afkCapable: true,
       abilityIds: ["PlantGrowthBoostIII", "PlantGrowthBoostII", "PlantGrowthBoost"]
@@ -44256,6 +44342,7 @@ next: ${next}`;
     {
       id: "plantGrowthFrost",
       label: "Plant Growth Speed (Frost)",
+      shortLabel: "Plant",
       icon: "\u{1F331}\u2744\uFE0F",
       afkCapable: false,
       abilityIds: ["SnowyPlantGrowthBoost"],
@@ -44264,6 +44351,7 @@ next: ${next}`;
     {
       id: "plantGrowthDawn",
       label: "Plant Growth Speed (Dawn)",
+      shortLabel: "Plant",
       icon: "\u{1F331}\u{1F305}",
       afkCapable: false,
       abilityIds: ["DawnPlantGrowthBoost"],
@@ -44272,6 +44360,7 @@ next: ${next}`;
     {
       id: "plantGrowthAmber",
       label: "Plant Growth Speed (Amber Moon)",
+      shortLabel: "Plant",
       icon: "\u{1F331}\u{1F319}",
       afkCapable: false,
       abilityIds: ["AmberPlantGrowthBoost"],
@@ -44280,6 +44369,7 @@ next: ${next}`;
     {
       id: "plantGrowthThunder",
       label: "Plant Growth Speed (Thunderstorm)",
+      shortLabel: "Plant",
       icon: "\u{1F331}\u26A1",
       afkCapable: false,
       abilityIds: ["ThunderPlantGrowthBoost"],
@@ -44293,6 +44383,7 @@ next: ${next}`;
     {
       id: "eggGrowth",
       label: "Egg Growth Speed",
+      shortLabel: "Egg",
       icon: "\u{1F95A}",
       afkCapable: true,
       abilityIds: ["EggGrowthBoostII", "EggGrowthBoostII_NEW", "EggGrowthBoost"]
@@ -44300,6 +44391,7 @@ next: ${next}`;
     {
       id: "eggGrowthFrost",
       label: "Egg Growth Speed (Frost)",
+      shortLabel: "Egg",
       icon: "\u{1F95A}\u2744\uFE0F",
       afkCapable: false,
       abilityIds: ["SnowyEggGrowthBoost"],
@@ -44308,6 +44400,7 @@ next: ${next}`;
     {
       id: "eggGrowthThunder",
       label: "Egg Growth Speed (Thunderstorm)",
+      shortLabel: "Egg",
       icon: "\u{1F95A}\u26A1",
       afkCapable: false,
       abilityIds: ["ThunderEggGrowthBoost"],
@@ -44316,6 +44409,7 @@ next: ${next}`;
     {
       id: "mutationWet",
       label: "Mutation: Wet",
+      shortLabel: "Wet",
       icon: "\u{1F4A7}",
       afkCapable: true,
       abilityIds: ["RainDance"]
@@ -44323,6 +44417,7 @@ next: ${next}`;
     {
       id: "mutationFrozen",
       label: "Mutation: Frozen",
+      shortLabel: "Frozen",
       icon: "\u{1F9CA}",
       afkCapable: true,
       abilityIds: ["FrostGranter"]
@@ -44330,6 +44425,7 @@ next: ${next}`;
     {
       id: "mutationChilled",
       label: "Mutation: Chilled",
+      shortLabel: "Chilled",
       icon: "\u2744\uFE0F",
       afkCapable: true,
       abilityIds: ["SnowGranter"]
@@ -44337,6 +44433,7 @@ next: ${next}`;
     {
       id: "mutationChilledFrost",
       label: "Mutation: Chilled (Frost)",
+      shortLabel: "Chilled",
       icon: "\u2744\uFE0F\u2744\uFE0F",
       afkCapable: false,
       abilityIds: ["SnowyCropMutationBoost"],
@@ -44345,6 +44442,7 @@ next: ${next}`;
     {
       id: "mutationDawnlit",
       label: "Mutation: Dawnlit",
+      shortLabel: "Dawnlit",
       icon: "\u{1F305}",
       afkCapable: true,
       abilityIds: ["DawnlitGranter", "DawnbinderBoost"]
@@ -44352,6 +44450,7 @@ next: ${next}`;
     {
       id: "mutationDawnlitDawn",
       label: "Mutation: Dawnlit (Dawn)",
+      shortLabel: "Dawnlit",
       icon: "\u{1F305}\u{1F305}",
       afkCapable: false,
       abilityIds: ["DawnKisser", "DawnBoost"],
@@ -44360,6 +44459,7 @@ next: ${next}`;
     {
       id: "mutationAmbershine",
       label: "Mutation: Ambershine",
+      shortLabel: "Amber",
       icon: "\u{1F319}",
       afkCapable: true,
       abilityIds: ["AmberlitGranter"]
@@ -44367,6 +44467,7 @@ next: ${next}`;
     {
       id: "mutationAmbershineAmber",
       label: "Mutation: Ambershine (Amber Moon)",
+      shortLabel: "Amber",
       icon: "\u{1F319}\u{1F319}",
       afkCapable: false,
       abilityIds: ["MoonKisser", "AmberMoonBoost"],
@@ -44375,6 +44476,7 @@ next: ${next}`;
     {
       id: "mutationGold",
       label: "Mutation: Gold",
+      shortLabel: "Gold",
       icon: "\u2728",
       afkCapable: true,
       abilityIds: ["GoldGranter"]
@@ -44382,6 +44484,7 @@ next: ${next}`;
     {
       id: "mutationRainbow",
       label: "Mutation: Rainbow",
+      shortLabel: "Rainbow",
       icon: "\u{1F308}",
       afkCapable: true,
       abilityIds: ["RainbowGranter"]
@@ -44389,6 +44492,7 @@ next: ${next}`;
     {
       id: "mutationThunderstruck",
       label: "Mutation: Thunderstruck",
+      shortLabel: "TStruck",
       icon: "\u26A1",
       afkCapable: true,
       abilityIds: ["ThunderstruckGranter"]
@@ -44396,6 +44500,7 @@ next: ${next}`;
     {
       id: "mutationThunderstruckThunder",
       label: "Mutation: Thunderstruck (Thunderstorm)",
+      shortLabel: "TStruck",
       icon: "\u26A1\u26A1",
       afkCapable: false,
       abilityIds: ["Thunderbloom", "ThunderBoost"],
@@ -44408,6 +44513,7 @@ next: ${next}`;
     {
       id: "mutationChanceGeneric",
       label: "Mutation Chance Boost (any weather)",
+      shortLabel: "MutBoost",
       icon: "\u{1F3B2}",
       afkCapable: true,
       abilityIds: ["ProduceMutationBoostIII", "ProduceMutationBoostII", "ProduceMutationBoost"]
@@ -44415,6 +44521,7 @@ next: ${next}`;
     {
       id: "coins",
       label: "Coins",
+      shortLabel: "Coins",
       icon: "\u{1FA99}",
       afkCapable: true,
       abilityIds: ["CoinFinderIII", "CoinFinderII", "CoinFinderI"]
@@ -44422,6 +44529,7 @@ next: ${next}`;
     {
       id: "coinsFrost",
       label: "Coins (Frost)",
+      shortLabel: "Coins",
       icon: "\u{1FA99}\u2744\uFE0F",
       afkCapable: false,
       abilityIds: ["SnowyCoinFinder"],
@@ -44430,6 +44538,7 @@ next: ${next}`;
     {
       id: "coinsDawn",
       label: "Coins (Dawn)",
+      shortLabel: "Coins",
       icon: "\u{1FA99}\u{1F305}",
       afkCapable: false,
       abilityIds: ["DawnCoinFinder"],
@@ -44438,6 +44547,7 @@ next: ${next}`;
     {
       id: "coinsThunder",
       label: "Coins (Thunderstorm)",
+      shortLabel: "Coins",
       icon: "\u{1FA99}\u26A1",
       afkCapable: false,
       abilityIds: ["ThunderCoinFinder"],
@@ -44446,6 +44556,7 @@ next: ${next}`;
     {
       id: "produceEater",
       label: "Crop Eater (auto-sell)",
+      shortLabel: "CropEater",
       icon: "\u{1F37D}\uFE0F",
       afkCapable: true,
       abilityIds: ["ProduceEater"]
@@ -44457,6 +44568,7 @@ next: ${next}`;
     {
       id: "seedFinderI",
       label: "Seed Finder I",
+      shortLabel: "Seed I",
       icon: "\u{1F33E}",
       afkCapable: true,
       abilityIds: ["SeedFinderI"]
@@ -44464,6 +44576,7 @@ next: ${next}`;
     {
       id: "seedFinderII",
       label: "Seed Finder II",
+      shortLabel: "Seed II",
       icon: "\u{1F33E}",
       afkCapable: true,
       abilityIds: ["SeedFinderII"]
@@ -44471,6 +44584,7 @@ next: ${next}`;
     {
       id: "seedFinderIII",
       label: "Seed Finder III",
+      shortLabel: "Seed III",
       icon: "\u{1F33E}",
       afkCapable: true,
       abilityIds: ["SeedFinderIII"]
@@ -44478,6 +44592,7 @@ next: ${next}`;
     {
       id: "seedFinderIV",
       label: "Seed Finder IV",
+      shortLabel: "Seed IV",
       icon: "\u{1F33E}",
       afkCapable: true,
       abilityIds: ["SeedFinderIV"]
@@ -44488,6 +44603,7 @@ next: ${next}`;
     {
       id: "petXp",
       label: "Pet XP",
+      shortLabel: "Pet XP",
       icon: "\u{1F4C8}",
       afkCapable: true,
       maxTeamSlots: 2,
@@ -44496,6 +44612,7 @@ next: ${next}`;
     {
       id: "petXpFrost",
       label: "Pet XP (Frost)",
+      shortLabel: "Pet XP",
       icon: "\u{1F4C8}\u2744\uFE0F",
       afkCapable: false,
       maxTeamSlots: 2,
@@ -44505,6 +44622,7 @@ next: ${next}`;
     {
       id: "petXpDawn",
       label: "Pet XP (Dawn)",
+      shortLabel: "Pet XP",
       icon: "\u{1F4C8}\u{1F305}",
       afkCapable: false,
       maxTeamSlots: 2,
@@ -44514,6 +44632,7 @@ next: ${next}`;
     {
       id: "petXpThunder",
       label: "Pet XP (Thunderstorm)",
+      shortLabel: "Pet XP",
       icon: "\u{1F4C8}\u26A1",
       afkCapable: false,
       maxTeamSlots: 2,
@@ -44536,6 +44655,7 @@ next: ${next}`;
     {
       id: "doubleHatch",
       label: "Double Hatch",
+      shortLabel: "2xHatch",
       icon: "\u{1F423}",
       afkCapable: false,
       abilityIds: ["DoubleHatch"],
@@ -44544,6 +44664,7 @@ next: ${next}`;
     {
       id: "maxStrengthBoost",
       label: "Max Strength Boost",
+      shortLabel: "MaxStr",
       icon: "\u{1F4AA}",
       afkCapable: false,
       abilityIds: ["PetHatchSizeBoostIII", "PetHatchSizeBoostII", "PetHatchSizeBoost"],
@@ -44552,6 +44673,7 @@ next: ${next}`;
     {
       id: "hatchXpBoost",
       label: "Hatch XP Boost",
+      shortLabel: "HatchXP",
       icon: "\u{1F393}",
       afkCapable: false,
       abilityIds: ["PetAgeBoostIII", "PetAgeBoostII", "PetAgeBoost"],
@@ -44560,6 +44682,7 @@ next: ${next}`;
     {
       id: "petMutationBoost",
       label: "Pet Mutation Boost",
+      shortLabel: "PetMut",
       icon: "\u{1F3B2}",
       afkCapable: false,
       abilityIds: ["PetMutationBoostIII", "PetMutationBoostII", "PetMutationBoost"],
@@ -44572,6 +44695,7 @@ next: ${next}`;
     {
       id: "doubleHarvest",
       label: "Double Harvest",
+      shortLabel: "2xHarv",
       icon: "\u{1F33E}\u2702\uFE0F",
       afkCapable: false,
       abilityIds: ["DoubleHarvest"]
@@ -44583,6 +44707,7 @@ next: ${next}`;
     {
       id: "cropRefund",
       label: "Crop Refund",
+      shortLabel: "Refund",
       icon: "\u267B\uFE0F",
       afkCapable: false,
       abilityIds: ["ProduceRefund"],
@@ -44591,6 +44716,7 @@ next: ${next}`;
     {
       id: "sellBoost",
       label: "Sell Boost",
+      shortLabel: "Sell",
       icon: "\u{1F4B0}",
       afkCapable: false,
       abilityIds: ["SellBoostIV", "SellBoostIII", "SellBoostII", "SellBoostI"],
@@ -44599,6 +44725,7 @@ next: ${next}`;
     {
       id: "petRefund",
       label: "Pet Refund",
+      shortLabel: "PetRfnd",
       icon: "\u{1F501}",
       afkCapable: false,
       abilityIds: ["PetRefundII", "PetRefund"]
@@ -44609,6 +44736,7 @@ next: ${next}`;
     {
       id: "dawnCapsules",
       label: "Dawn Capsules",
+      shortLabel: "Capsules",
       icon: "\u{1F307}",
       afkCapable: false,
       abilityIds: ["DawnCapture"]
@@ -44616,6 +44744,7 @@ next: ${next}`;
     {
       id: "thundercharge",
       label: "Thundercharge",
+      shortLabel: "Charge",
       icon: "\u{1F50C}",
       afkCapable: false,
       abilityIds: ["Thundercharger"]
@@ -44728,7 +44857,13 @@ next: ${next}`;
     const usedIds = /* @__PURE__ */ new Set();
     if (sustainPet) usedIds.add(sustainPet.id);
     for (const category of CATEGORIES) {
-      const categoryRef = { id: category.id, label: category.label, icon: category.icon, abilityId: category.abilityIds[0] };
+      const categoryRef = {
+        id: category.id,
+        label: category.label,
+        shortLabel: category.shortLabel,
+        icon: category.icon,
+        abilityId: category.abilityIds[0]
+      };
       const maxSlots = category.maxTeamSlots ?? 3;
       let activeCandidates = rankCandidates(category, pets, false).slice(0, maxSlots);
       if (activeCandidates.length && activeCandidates.length < maxSlots && category.paddingParentId) {
@@ -44932,6 +45067,29 @@ next: ${next}`;
   function weatherSuffix(label2) {
     return label2.match(/\([^)]+\)$/)?.[0] ?? "";
   }
+  var SHORT_WEATHER = {
+    Frost: "Frost",
+    Dawn: "Dawn",
+    "Amber Moon": "Moon",
+    Thunderstorm: "Storm"
+  };
+  function shortWeatherSuffix(label2) {
+    const full = weatherSuffix(label2);
+    if (!full) return "";
+    const inner = full.slice(1, -1);
+    return `(${SHORT_WEATHER[inner] ?? inner})`;
+  }
+  function shortCategoryLabel(team) {
+    const seen = /* @__PURE__ */ new Set();
+    const names = [];
+    for (const c of team.categories) {
+      if (seen.has(c.id)) continue;
+      seen.add(c.id);
+      const weather2 = shortWeatherSuffix(c.label);
+      names.push(weather2 ? `${c.shortLabel} ${weather2}` : c.shortLabel);
+    }
+    return names.join(" + ");
+  }
   function abilityLabel(team) {
     const seen = /* @__PURE__ */ new Set();
     const names = [];
@@ -44947,6 +45105,8 @@ next: ${next}`;
   function buildSaveName(team, isAfk) {
     const suffix = isAfk ? " AFK" : "";
     const budget = Math.max(1, TEAM_NAME_MAX_LENGTH - charLength(suffix));
+    const shortLabel = shortCategoryLabel(team);
+    if (charLength(shortLabel) <= budget) return `${shortLabel}${suffix}`;
     const fullLabel = abilityLabel(team);
     if (charLength(fullLabel) <= budget) return `${fullLabel}${suffix}`;
     const icons = team.categories.map((c) => c.icon).join("");
