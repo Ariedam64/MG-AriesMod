@@ -19,6 +19,56 @@ const DEFAULT_COLOR: AbilityColor = {
   hover: "rgba(150, 150, 150, 1)",
 };
 
+// Fallback color per ability id, sourced from https://mg-api.ariedam.fr/data/abilities
+// (fetched 2026-07-31). Used when the bundle's own color switch doesn't cover
+// an ability (e.g. rarer celestial abilities like DawnCapture aren't in
+// whatever switch findAbilityColorSwitchBlock locates) — without this, those
+// abilities fell straight to flat gray instead of their real color. Most
+// values are hex; GoldGranter/RainbowGranter are linear-gradient strings and
+// are used as-is (see resolveStaticColor below).
+const STATIC_ABILITY_COLORS: Record<string, string> = {
+  CoinFinderI: "#B49600", CoinFinderII: "#B49600", CoinFinderIII: "#B49600",
+  SnowyCoinFinder: "#B49600", DawnCoinFinder: "#B49600", ThunderCoinFinder: "#B49600",
+  SeedFinderI: "#A86626", SeedFinderII: "#A86626", SeedFinderIII: "#A86626", SeedFinderIV: "#A86626",
+  PlantGrowthBoost: "#008080", PlantGrowthBoostII: "#008080", PlantGrowthBoostIII: "#969696",
+  SnowyPlantGrowthBoost: "#008080", DawnPlantGrowthBoost: "#008080",
+  AmberPlantGrowthBoost: "#008080", ThunderPlantGrowthBoost: "#008080",
+  ProduceEater: "#FF4500",
+  ProduceScaleBoost: "#228B22", ProduceScaleBoostII: "#228B22", ProduceScaleBoostIII: "#969696",
+  SnowyCropSizeBoost: "#228B22",
+  ProduceMutationBoost: "#8C0F46", ProduceMutationBoostII: "#8C0F46", ProduceMutationBoostIII: "#969696",
+  SnowyCropMutationBoost: "#8C0F46", DawnBoost: "#8C0F46", AmberMoonBoost: "#8C0F46", ThunderBoost: "#8C0F46",
+  EggGrowthBoost: "#B45AF0", EggGrowthBoostII_NEW: "#B45AF0", EggGrowthBoostII: "#B45AF0",
+  SnowyEggGrowthBoost: "#B45AF0", ThunderEggGrowthBoost: "#B45AF0",
+  PetXpBoost: "#1E90FF", PetXpBoostII: "#1E90FF", PetXpBoostIII: "#969696",
+  SnowyPetXpBoost: "#1E90FF", DawnXpBoost: "#1E90FF", ThunderXpBoost: "#1E90FF",
+  HungerBoost: "#FF1493", HungerBoostII: "#FF1493", HungerBoostIII: "#969696", SnowyHungerBoost: "#FF1493",
+  HungerRestore: "#FF69B4", HungerRestoreII: "#FF69B4", HungerRestoreIII: "#969696", SnowyHungerRestore: "#FF69B4",
+  PetMutationBoost: "#A03264", PetMutationBoostII: "#A03264", PetMutationBoostIII: "#969696",
+  SellBoostI: "#DC143C", SellBoostII: "#DC143C", SellBoostIII: "#DC143C", SellBoostIV: "#DC143C",
+  ProduceRefund: "#FF6347",
+  DoubleHarvest: "#0078B4",
+  PetAgeBoost: "#9370DB", PetAgeBoostII: "#9370DB", PetAgeBoostIII: "#969696",
+  PetHatchSizeBoost: "#800080", PetHatchSizeBoostII: "#800080", PetHatchSizeBoostIII: "#969696",
+  DoubleHatch: "#3C5AB4",
+  PetRefund: "#005078", PetRefundII: "#005078",
+  RainDance: "#4CCCCC",
+  SnowGranter: "#90B8CC",
+  FrostGranter: "#94A0CC",
+  DawnlitGranter: "#C47CB4",
+  AmberlitGranter: "#CC9060",
+  GoldGranter: "linear-gradient(135deg, #DCC846 0%, #D2AF05 40%, #D2B937 70%, #C8AF1E 100%)",
+  RainbowGranter: "linear-gradient(45deg, #C80000, #C87800, #A0AA1E, #3CAA3C, #32AAAA, #2896B4, #145AB4, #461E96)",
+  DawnbinderBoost: "#B468A0",
+  Copycat: "#FF8C00",
+  DawnCapture: "#B25A9E",
+  ThunderstruckGranter: "#C2B83C",
+  Thundercharger: "#1FA382",
+  MoonKisser: "#FAA623",
+  DawnKisser: "#A25CF2",
+  Thunderbloom: "#70F6CB",
+};
+
 function findAbilityColorSwitchBlock(bundleText: string): string | null {
   const indices = findAllIndices(bundleText, ABILITY_COLOR_ANCHOR);
   if (!indices.length) return null;
@@ -175,6 +225,30 @@ function isAlreadyEnriched(abilities: Record<string, unknown>): boolean {
   return sample != null && typeof sample === "object" && "color" in sample;
 }
 
+// Hex → {bg, hover}; non-hex values (e.g. GoldGranter/RainbowGranter's
+// linear-gradient strings) are already valid CSS and are used as-is.
+function toAbilityColor(raw: string): AbilityColor {
+  if (!raw.startsWith("#")) return { bg: raw, hover: raw };
+  const bg = hexToRgba(raw, 0.9) ?? raw;
+  return { bg, hover: hexToRgba(raw, 1) ?? bg };
+}
+
+// Abilities the bundle's color switch doesn't cover (e.g. rarer celestial
+// abilities like DawnCapture live in a different code path than whatever
+// switch findAbilityColorSwitchBlock locates) used to fall straight to flat
+// gray DEFAULT_COLOR. Try the ability's own raw `color` field already
+// sitting in the captured data first, then STATIC_ABILITY_COLORS (sourced
+// from the API), before giving up and guessing gray.
+function resolveFallbackColor(abilityId: string, abilityData: unknown): AbilityColor | null {
+  const raw = (abilityData as { color?: unknown } | null)?.color;
+  if (typeof raw === "string") return toAbilityColor(raw);
+
+  const staticColor = STATIC_ABILITY_COLORS[abilityId];
+  if (staticColor) return toAbilityColor(staticColor);
+
+  return null;
+}
+
 async function enrichAbilitiesWithColors(): Promise<boolean> {
   if (!captureState.data.abilities) return false;
 
@@ -186,7 +260,7 @@ async function enrichAbilitiesWithColors(): Promise<boolean> {
 
   const enriched: Record<string, unknown> = {};
   for (const [abilityId, abilityData] of Object.entries(abilities)) {
-    const colors = map[abilityId] || DEFAULT_COLOR;
+    const colors = map[abilityId] || resolveFallbackColor(abilityId, abilityData) || DEFAULT_COLOR;
     enriched[abilityId] = {
       ...(abilityData as object),
       color: {

@@ -18,6 +18,7 @@ import {
   setInstantFeedWidgetEnabled,
 } from "../../utils/instantFeedWidget";
 import { renderHatchTab } from "./petsHatch";
+import { renderTeamBuilderTab } from "./petsTeamBuilder";
 
 /* ================== petits helpers UI (mêmes vibes que garden) ================== */
 
@@ -54,6 +55,20 @@ export function getAbilityChipColors(id: string): { bg: string; hover: string } 
     return {
       bg: "rgba(162,92,242,0.9)",
       hover: "rgba(162,92,242,1)",
+    };
+  }
+
+  if (is("DawnCapture")) {
+    return {
+      bg: "rgba(178,90,158,0.9)",
+      hover: "rgba(178,90,158,1)",
+    };
+  }
+
+  if (is("DawnbinderBoost")) {
+    return {
+      bg: "rgba(180,104,160,0.9)",
+      hover: "rgba(180,104,160,1)",
     };
   }
 
@@ -741,6 +756,36 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
     if (!ok) return;
   };
 
+  // refreshTeamList() does a full teamList.innerHTML = "" + rebuild of every
+  // pet mini-icon. It's triggered by two independent subscriptions below
+  // (team list changes, active-pets structural changes) that both fire
+  // immediately on mount — back-to-back overlapping rebuilds discard the
+  // previous pass's in-flight sprite-load promises before they resolve,
+  // which is why pet icons sometimes never appeared until some unrelated
+  // click forced one more, uncontested rebuild. Route both subscriptions
+  // through this coalescing wrapper instead of calling refreshTeamList
+  // directly, so a trigger arriving while a rebuild is already running
+  // queues one follow-up pass instead of starting a competing one.
+  let teamListRefreshInFlight: Promise<void> | null = null;
+  let teamListRefreshQueued = false;
+  function scheduleTeamListRefresh(): Promise<void> {
+    if (teamListRefreshInFlight) {
+      teamListRefreshQueued = true;
+      return teamListRefreshInFlight;
+    }
+    const run = async (): Promise<void> => {
+      await refreshTeamList();
+      while (teamListRefreshQueued) {
+        teamListRefreshQueued = false;
+        await refreshTeamList();
+      }
+    };
+    teamListRefreshInFlight = run().finally(() => {
+      teamListRefreshInFlight = null;
+    });
+    return teamListRefreshInFlight;
+  }
+
   // ----- subscribe to service (keeps UI in sync & persisted) -----
   let unsubTeams: (() => void) | null = null;
   (async () => {
@@ -752,7 +797,7 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
         }
         if (!selectedId && teams.length) selectedId = teams[0].id;
 
-        refreshTeamList();
+        void scheduleTeamListRefresh();
         setTeamsForHotkeys(teams);
 
         // prime cache inventaire (sécurisé par le mute côté service)
@@ -1184,7 +1229,7 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
       unsubPets = await onActivePetsStructuralChangeNow(async () => {
         if (isApplyingTeam) return;
         await repaintSlots(getSelectedTeam());
-        await refreshTeamList();
+        await scheduleTeamListRefresh();
       });
     } catch {}
   })();
@@ -1852,11 +1897,12 @@ export function renderPetsMenu(root: HTMLElement) {
   ui.mount(root);
 
   ui.addTab("manager", "🧰 Manager", (view) => renderManagerTab(view, ui));
+  ui.addTab("teambuilder", "🧩 Team Builder", (view) => renderTeamBuilderTab(view, ui));
   ui.addTab("feeding", "🍖 Feeding", (view) => renderFeedingTab(view, ui));
   ui.addTab("hatch", "🥚 Hatch", (view) => renderHatchTab(view, ui));
   ui.addTab("logs", "📝 Logs", (view) => renderLogsTab(view, ui));
 
-  const knownTabs = new Set(["manager", "feeding", "hatch", "logs"]);
+  const knownTabs = new Set(["manager", "feeding", "hatch", "teambuilder", "logs"]);
   const onOpenTab = (ev: Event) => {
     const tab = String((ev as CustomEvent).detail?.tab || "");
     if (knownTabs.has(tab)) ui.switchTo(tab);

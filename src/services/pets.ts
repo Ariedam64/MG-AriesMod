@@ -606,6 +606,27 @@ let _lastServerTeamsSig = "";
 let _reconcilingTeams = false;
 let _reconcileTeamsQueued = false;
 const _pendingServerCreates = new Set<string>();
+// Safety net for _pendingServerCreates: the native API gives no synchronous ack,
+// only an eventual stateUserSlots echo that _reconcileTeams picks up and links
+// (which clears the pending flag). If that echo never arrives — command silently
+// failed, connection hiccup — don't leave the team stuck forever unable to retry.
+const _pendingCreateTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+// The name actually sent in a still-pending create. Reconciliation matches
+// local↔server teams by name — if the user renames the team again before
+// the server echoes the create back, the local team's *current* name no
+// longer matches what the server actually created, so the linking lookup
+// also tries this "as sent" name to catch it instead of importing it as an
+// orphan duplicate.
+const _pendingCreateSentName = new Map<string, string>();
+const PENDING_CREATE_TIMEOUT_MS = 8000;
+
+function _clearPendingCreate(localId: string): void {
+  _pendingServerCreates.delete(localId);
+  _pendingCreateSentName.delete(localId);
+  const t = _pendingCreateTimeouts.get(localId);
+  if (t) { clearTimeout(t); _pendingCreateTimeouts.delete(localId); }
+}
+
 // Per local team id, the (name+members) signature we already asked the server to create.
 // The native API gives no synchronous id back, and retrying on every reconcile tick when
 // linking hasn't happened yet (e.g. a transient mismatch) would spam duplicate teams
@@ -633,19 +654,31 @@ function _serverTeamsSig(list: ServerPetTeam[]): string {
  * distinct (name, members) combination — see `_lastCreateAttemptSig`.
  */
 function _maybeCreateServerTeam(local: PetTeam): void {
+  // A create for this local team is already in flight — wait for it to link
+  // (or time out) rather than firing another one. Without this, editing the
+  // team again (add a pet, rename) before the server echoes back a real id
+  // used to look like "new content, never attempted" and fire a *second*
+  // SavePetTeam(null, ...), which the native API treats as "create another
+  // team" rather than "update this one" — that's what produced the orphaned
+  // 1-pet/2-pet/3-pet duplicate teams and the same team saved twice under
+  // two different names.
+  if (_pendingServerCreates.has(local.id)) return;
+
   const petIds = (local.slots || []).filter((x): x is string => !!x);
   const name = (local.name || "").trim();
   if (!name || !petIds.length) return;
 
   const sig = _createAttemptSig(local);
   if (_lastCreateAttemptSig.get(local.id) === sig) return;
-  if (_pendingServerCreates.has(local.id)) return;
 
   _lastCreateAttemptSig.set(local.id, sig);
   _pendingServerCreates.add(local.id);
+  _pendingCreateSentName.set(local.id, name);
   try { console.warn(`[Pets] Creating native pet team "${name}" (${petIds.length} pet(s)) — one-shot, will not auto-retry.`); } catch {}
   _sendSavePetTeam(null, name, petIds);
-  Promise.resolve().finally(() => _pendingServerCreates.delete(local.id));
+
+  const timeout = setTimeout(() => _clearPendingCreate(local.id), PENDING_CREATE_TIMEOUT_MS);
+  _pendingCreateTimeouts.set(local.id, timeout);
 }
 
 function _reconcileTeams(): void {
@@ -673,13 +706,32 @@ function _reconcileTeams(): void {
       }
 
       const key = local.name.trim().toLowerCase();
-      const match = key ? serverByName.get(key) : undefined;
+      const sentName = _pendingCreateSentName.get(local.id);
+      const sentKey = sentName ? sentName.trim().toLowerCase() : undefined;
+      const match =
+        (key ? serverByName.get(key) : undefined) ??
+        (sentKey ? serverByName.get(sentKey) : undefined);
       if (match && !linkedServerIds.has(String(match.id))) {
-        // First link on a name match: the server's members are the source of truth.
         local.serverId = String(match.id);
-        local.name = match.name;
-        local.slots = [0, 1, 2].map(i => _serverMemberIds(match)[i] ?? null);
         linkedServerIds.add(local.serverId);
+        _clearPendingCreate(local.id);
+
+        const matchMemberIds = _serverMemberIds(match);
+        const divergedWhilePending = match.name !== local.name || !_sameMemberSet(local.slots, matchMemberIds);
+        if (divergedWhilePending) {
+          // The user kept editing (added another pet, renamed) while this
+          // team's first create was still in flight — the server team it
+          // just linked to only reflects that earlier snapshot. Push the
+          // real current content now that a serverId finally exists, as an
+          // update (safe to repeat), instead of silently reverting local
+          // state back to the stale snapshot.
+          const petIds = local.slots.filter((x): x is string => !!x);
+          if (petIds.length) _sendSavePetTeam(local.serverId, local.name.trim() || "Team", petIds);
+        } else {
+          // First link on a name match: the server's members are the source of truth.
+          local.name = match.name;
+          local.slots = [0, 1, 2].map(i => matchMemberIds[i] ?? null);
+        }
         changed = true;
         continue;
       }

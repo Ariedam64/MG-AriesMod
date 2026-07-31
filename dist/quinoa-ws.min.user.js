@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.179
+// @version      3.2.180
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -4106,6 +4106,89 @@
     bg: "rgba(100, 100, 100, 0.9)",
     hover: "rgba(150, 150, 150, 1)"
   };
+  var STATIC_ABILITY_COLORS = {
+    CoinFinderI: "#B49600",
+    CoinFinderII: "#B49600",
+    CoinFinderIII: "#B49600",
+    SnowyCoinFinder: "#B49600",
+    DawnCoinFinder: "#B49600",
+    ThunderCoinFinder: "#B49600",
+    SeedFinderI: "#A86626",
+    SeedFinderII: "#A86626",
+    SeedFinderIII: "#A86626",
+    SeedFinderIV: "#A86626",
+    PlantGrowthBoost: "#008080",
+    PlantGrowthBoostII: "#008080",
+    PlantGrowthBoostIII: "#969696",
+    SnowyPlantGrowthBoost: "#008080",
+    DawnPlantGrowthBoost: "#008080",
+    AmberPlantGrowthBoost: "#008080",
+    ThunderPlantGrowthBoost: "#008080",
+    ProduceEater: "#FF4500",
+    ProduceScaleBoost: "#228B22",
+    ProduceScaleBoostII: "#228B22",
+    ProduceScaleBoostIII: "#969696",
+    SnowyCropSizeBoost: "#228B22",
+    ProduceMutationBoost: "#8C0F46",
+    ProduceMutationBoostII: "#8C0F46",
+    ProduceMutationBoostIII: "#969696",
+    SnowyCropMutationBoost: "#8C0F46",
+    DawnBoost: "#8C0F46",
+    AmberMoonBoost: "#8C0F46",
+    ThunderBoost: "#8C0F46",
+    EggGrowthBoost: "#B45AF0",
+    EggGrowthBoostII_NEW: "#B45AF0",
+    EggGrowthBoostII: "#B45AF0",
+    SnowyEggGrowthBoost: "#B45AF0",
+    ThunderEggGrowthBoost: "#B45AF0",
+    PetXpBoost: "#1E90FF",
+    PetXpBoostII: "#1E90FF",
+    PetXpBoostIII: "#969696",
+    SnowyPetXpBoost: "#1E90FF",
+    DawnXpBoost: "#1E90FF",
+    ThunderXpBoost: "#1E90FF",
+    HungerBoost: "#FF1493",
+    HungerBoostII: "#FF1493",
+    HungerBoostIII: "#969696",
+    SnowyHungerBoost: "#FF1493",
+    HungerRestore: "#FF69B4",
+    HungerRestoreII: "#FF69B4",
+    HungerRestoreIII: "#969696",
+    SnowyHungerRestore: "#FF69B4",
+    PetMutationBoost: "#A03264",
+    PetMutationBoostII: "#A03264",
+    PetMutationBoostIII: "#969696",
+    SellBoostI: "#DC143C",
+    SellBoostII: "#DC143C",
+    SellBoostIII: "#DC143C",
+    SellBoostIV: "#DC143C",
+    ProduceRefund: "#FF6347",
+    DoubleHarvest: "#0078B4",
+    PetAgeBoost: "#9370DB",
+    PetAgeBoostII: "#9370DB",
+    PetAgeBoostIII: "#969696",
+    PetHatchSizeBoost: "#800080",
+    PetHatchSizeBoostII: "#800080",
+    PetHatchSizeBoostIII: "#969696",
+    DoubleHatch: "#3C5AB4",
+    PetRefund: "#005078",
+    PetRefundII: "#005078",
+    RainDance: "#4CCCCC",
+    SnowGranter: "#90B8CC",
+    FrostGranter: "#94A0CC",
+    DawnlitGranter: "#C47CB4",
+    AmberlitGranter: "#CC9060",
+    GoldGranter: "linear-gradient(135deg, #DCC846 0%, #D2AF05 40%, #D2B937 70%, #C8AF1E 100%)",
+    RainbowGranter: "linear-gradient(45deg, #C80000, #C87800, #A0AA1E, #3CAA3C, #32AAAA, #2896B4, #145AB4, #461E96)",
+    DawnbinderBoost: "#B468A0",
+    Copycat: "#FF8C00",
+    DawnCapture: "#B25A9E",
+    ThunderstruckGranter: "#C2B83C",
+    Thundercharger: "#1FA382",
+    MoonKisser: "#FAA623",
+    DawnKisser: "#A25CF2",
+    Thunderbloom: "#70F6CB"
+  };
   function findAbilityColorSwitchBlock(bundleText) {
     const indices = findAllIndices(bundleText, ABILITY_COLOR_ANCHOR);
     if (!indices.length) return null;
@@ -4225,6 +4308,18 @@
     const sample = abilities[ABILITY_COLOR_ANCHOR];
     return sample != null && typeof sample === "object" && "color" in sample;
   }
+  function toAbilityColor(raw) {
+    if (!raw.startsWith("#")) return { bg: raw, hover: raw };
+    const bg = hexToRgba(raw, 0.9) ?? raw;
+    return { bg, hover: hexToRgba(raw, 1) ?? bg };
+  }
+  function resolveFallbackColor(abilityId, abilityData) {
+    const raw = abilityData?.color;
+    if (typeof raw === "string") return toAbilityColor(raw);
+    const staticColor = STATIC_ABILITY_COLORS[abilityId];
+    if (staticColor) return toAbilityColor(staticColor);
+    return null;
+  }
   async function enrichAbilitiesWithColors() {
     if (!captureState.data.abilities) return false;
     const abilities = captureState.data.abilities;
@@ -4233,7 +4328,7 @@
     if (!map2) return false;
     const enriched = {};
     for (const [abilityId, abilityData] of Object.entries(abilities)) {
-      const colors = map2[abilityId] || DEFAULT_COLOR;
+      const colors = map2[abilityId] || resolveFallbackColor(abilityId, abilityData) || DEFAULT_COLOR;
       enriched[abilityId] = {
         ...abilityData,
         color: {
@@ -21717,6 +21812,18 @@
   var _reconcilingTeams = false;
   var _reconcileTeamsQueued = false;
   var _pendingServerCreates = /* @__PURE__ */ new Set();
+  var _pendingCreateTimeouts = /* @__PURE__ */ new Map();
+  var _pendingCreateSentName = /* @__PURE__ */ new Map();
+  var PENDING_CREATE_TIMEOUT_MS = 8e3;
+  function _clearPendingCreate(localId) {
+    _pendingServerCreates.delete(localId);
+    _pendingCreateSentName.delete(localId);
+    const t = _pendingCreateTimeouts.get(localId);
+    if (t) {
+      clearTimeout(t);
+      _pendingCreateTimeouts.delete(localId);
+    }
+  }
   var _lastCreateAttemptSig = /* @__PURE__ */ new Map();
   function _createAttemptSig(local) {
     const petIds = (local.slots || []).filter((x) => !!x).slice().sort();
@@ -21730,20 +21837,22 @@
     }
   }
   function _maybeCreateServerTeam(local) {
+    if (_pendingServerCreates.has(local.id)) return;
     const petIds = (local.slots || []).filter((x) => !!x);
     const name = (local.name || "").trim();
     if (!name || !petIds.length) return;
     const sig = _createAttemptSig(local);
     if (_lastCreateAttemptSig.get(local.id) === sig) return;
-    if (_pendingServerCreates.has(local.id)) return;
     _lastCreateAttemptSig.set(local.id, sig);
     _pendingServerCreates.add(local.id);
+    _pendingCreateSentName.set(local.id, name);
     try {
       console.warn(`[Pets] Creating native pet team "${name}" (${petIds.length} pet(s)) \u2014 one-shot, will not auto-retry.`);
     } catch {
     }
     _sendSavePetTeam(null, name, petIds);
-    Promise.resolve().finally(() => _pendingServerCreates.delete(local.id));
+    const timeout = setTimeout(() => _clearPendingCreate(local.id), PENDING_CREATE_TIMEOUT_MS);
+    _pendingCreateTimeouts.set(local.id, timeout);
   }
   function _reconcileTeams() {
     if (_reconcilingTeams) {
@@ -21770,12 +21879,22 @@
           continue;
         }
         const key2 = local.name.trim().toLowerCase();
-        const match = key2 ? serverByName.get(key2) : void 0;
+        const sentName = _pendingCreateSentName.get(local.id);
+        const sentKey = sentName ? sentName.trim().toLowerCase() : void 0;
+        const match = (key2 ? serverByName.get(key2) : void 0) ?? (sentKey ? serverByName.get(sentKey) : void 0);
         if (match && !linkedServerIds.has(String(match.id))) {
           local.serverId = String(match.id);
-          local.name = match.name;
-          local.slots = [0, 1, 2].map((i) => _serverMemberIds(match)[i] ?? null);
           linkedServerIds.add(local.serverId);
+          _clearPendingCreate(local.id);
+          const matchMemberIds = _serverMemberIds(match);
+          const divergedWhilePending = match.name !== local.name || !_sameMemberSet(local.slots, matchMemberIds);
+          if (divergedWhilePending) {
+            const petIds = local.slots.filter((x) => !!x);
+            if (petIds.length) _sendSavePetTeam(local.serverId, local.name.trim() || "Team", petIds);
+          } else {
+            local.name = match.name;
+            local.slots = [0, 1, 2].map((i) => matchMemberIds[i] ?? null);
+          }
           changed = true;
           continue;
         }
@@ -31058,7 +31177,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.179";
+      return "3.2.180";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -44110,6 +44229,794 @@ next: ${next}`;
     repaint();
   }
 
+  // src/services/petTeamBuilder.ts
+  var CATEGORIES = [
+    {
+      id: "cropSize",
+      label: "Crop Size",
+      icon: "\u{1F4CF}",
+      afkCapable: true,
+      abilityIds: ["ProduceScaleBoostIII", "ProduceScaleBoostII", "ProduceScaleBoost"]
+    },
+    {
+      id: "cropSizeFrost",
+      label: "Crop Size (Frost)",
+      icon: "\u{1F4CF}\u2744\uFE0F",
+      afkCapable: false,
+      abilityIds: ["SnowyCropSizeBoost"]
+    },
+    {
+      id: "plantGrowth",
+      label: "Plant Growth Speed",
+      icon: "\u{1F331}",
+      afkCapable: true,
+      abilityIds: ["PlantGrowthBoostIII", "PlantGrowthBoostII", "PlantGrowthBoost"]
+    },
+    {
+      id: "plantGrowthFrost",
+      label: "Plant Growth Speed (Frost)",
+      icon: "\u{1F331}\u2744\uFE0F",
+      afkCapable: false,
+      abilityIds: ["SnowyPlantGrowthBoost"]
+    },
+    {
+      id: "plantGrowthDawn",
+      label: "Plant Growth Speed (Dawn)",
+      icon: "\u{1F331}\u{1F305}",
+      afkCapable: false,
+      abilityIds: ["DawnPlantGrowthBoost"]
+    },
+    {
+      id: "plantGrowthAmber",
+      label: "Plant Growth Speed (Amber Moon)",
+      icon: "\u{1F331}\u{1F319}",
+      afkCapable: false,
+      abilityIds: ["AmberPlantGrowthBoost"]
+    },
+    {
+      id: "plantGrowthThunder",
+      label: "Plant Growth Speed (Thunderstorm)",
+      icon: "\u{1F331}\u26A1",
+      afkCapable: false,
+      abilityIds: ["ThunderPlantGrowthBoost"]
+    },
+    // Ability ids/tier names here are the game's own naming, not ours: despite
+    // the "II" suffix, EggGrowthBoostII is the strongest tier (11min reduction
+    // per baseParameters.eggGrowthTimeReductionMinutes) — EggGrowthBoostII_NEW
+    // (9min) is the actual mid tier. Don't "fix" this ordering back to
+    // alphabetical/numeral without re-checking baseParameters.
+    {
+      id: "eggGrowth",
+      label: "Egg Growth Speed",
+      icon: "\u{1F95A}",
+      afkCapable: true,
+      abilityIds: ["EggGrowthBoostII", "EggGrowthBoostII_NEW", "EggGrowthBoost"]
+    },
+    {
+      id: "eggGrowthFrost",
+      label: "Egg Growth Speed (Frost)",
+      icon: "\u{1F95A}\u2744\uFE0F",
+      afkCapable: false,
+      abilityIds: ["SnowyEggGrowthBoost"]
+    },
+    {
+      id: "eggGrowthThunder",
+      label: "Egg Growth Speed (Thunderstorm)",
+      icon: "\u{1F95A}\u26A1",
+      afkCapable: false,
+      abilityIds: ["ThunderEggGrowthBoost"]
+    },
+    {
+      id: "mutationWet",
+      label: "Mutation: Wet",
+      icon: "\u{1F4A7}",
+      afkCapable: true,
+      abilityIds: ["RainDance"]
+    },
+    {
+      id: "mutationFrozen",
+      label: "Mutation: Frozen",
+      icon: "\u{1F9CA}",
+      afkCapable: true,
+      abilityIds: ["FrostGranter"]
+    },
+    {
+      id: "mutationChilled",
+      label: "Mutation: Chilled",
+      icon: "\u2744\uFE0F",
+      afkCapable: true,
+      abilityIds: ["SnowGranter"]
+    },
+    {
+      id: "mutationChilledFrost",
+      label: "Mutation: Chilled (Frost)",
+      icon: "\u2744\uFE0F\u2744\uFE0F",
+      afkCapable: false,
+      abilityIds: ["SnowyCropMutationBoost"]
+    },
+    {
+      id: "mutationDawnlit",
+      label: "Mutation: Dawnlit",
+      icon: "\u{1F305}",
+      afkCapable: true,
+      abilityIds: ["DawnlitGranter", "DawnbinderBoost"]
+    },
+    {
+      id: "mutationDawnlitDawn",
+      label: "Mutation: Dawnlit (Dawn)",
+      icon: "\u{1F305}\u{1F305}",
+      afkCapable: false,
+      abilityIds: ["DawnKisser", "DawnBoost"]
+    },
+    {
+      id: "mutationAmbershine",
+      label: "Mutation: Ambershine",
+      icon: "\u{1F319}",
+      afkCapable: true,
+      abilityIds: ["AmberlitGranter"]
+    },
+    {
+      id: "mutationAmbershineAmber",
+      label: "Mutation: Ambershine (Amber Moon)",
+      icon: "\u{1F319}\u{1F319}",
+      afkCapable: false,
+      abilityIds: ["MoonKisser", "AmberMoonBoost"]
+    },
+    {
+      id: "mutationGold",
+      label: "Mutation: Gold",
+      icon: "\u2728",
+      afkCapable: true,
+      abilityIds: ["GoldGranter"]
+    },
+    {
+      id: "mutationRainbow",
+      label: "Mutation: Rainbow",
+      icon: "\u{1F308}",
+      afkCapable: true,
+      abilityIds: ["RainbowGranter"]
+    },
+    {
+      id: "mutationThunderstruck",
+      label: "Mutation: Thunderstruck",
+      icon: "\u26A1",
+      afkCapable: true,
+      abilityIds: ["ThunderstruckGranter"]
+    },
+    {
+      id: "mutationThunderstruckThunder",
+      label: "Mutation: Thunderstruck (Thunderstorm)",
+      icon: "\u26A1\u26A1",
+      afkCapable: false,
+      abilityIds: ["Thunderbloom", "ThunderBoost"]
+    },
+    // Generic weather-mutation chance boost — unlike its Snowy/Dawn/Amber/Thunder
+    // siblings above, ProduceMutationBoost has no requiredWeather in
+    // baseParameters: it applies regardless of which weather is active, which
+    // makes it one of the more reliable AFK picks in the whole catalog.
+    {
+      id: "mutationChanceGeneric",
+      label: "Mutation Chance Boost (any weather)",
+      icon: "\u{1F3B2}",
+      afkCapable: true,
+      abilityIds: ["ProduceMutationBoostIII", "ProduceMutationBoostII", "ProduceMutationBoost"]
+    },
+    {
+      id: "coins",
+      label: "Coins",
+      icon: "\u{1FA99}",
+      afkCapable: true,
+      abilityIds: ["CoinFinderIII", "CoinFinderII", "CoinFinderI"]
+    },
+    {
+      id: "coinsFrost",
+      label: "Coins (Frost)",
+      icon: "\u{1FA99}\u2744\uFE0F",
+      afkCapable: false,
+      abilityIds: ["SnowyCoinFinder"]
+    },
+    {
+      id: "coinsDawn",
+      label: "Coins (Dawn)",
+      icon: "\u{1FA99}\u{1F305}",
+      afkCapable: false,
+      abilityIds: ["DawnCoinFinder"]
+    },
+    {
+      id: "coinsThunder",
+      label: "Coins (Thunderstorm)",
+      icon: "\u{1FA99}\u26A1",
+      afkCapable: false,
+      abilityIds: ["ThunderCoinFinder"]
+    },
+    {
+      id: "produceEater",
+      label: "Crop Eater (auto-sell)",
+      icon: "\u{1F37D}\uFE0F",
+      afkCapable: true,
+      abilityIds: ["ProduceEater"]
+    },
+    // One category per tier rather than a merged "Seeds" bucket: unlike
+    // CoinFinder/SellBoost (where a higher tier is strictly the same effect,
+    // just bigger), SeedFinder's baseParameters carry no magnitude to compare
+    // tiers by — each tier is its own goal, not a strict upgrade of the last.
+    {
+      id: "seedFinderI",
+      label: "Seed Finder I",
+      icon: "\u{1F33E}",
+      afkCapable: true,
+      abilityIds: ["SeedFinderI"]
+    },
+    {
+      id: "seedFinderII",
+      label: "Seed Finder II",
+      icon: "\u{1F33E}",
+      afkCapable: true,
+      abilityIds: ["SeedFinderII"]
+    },
+    {
+      id: "seedFinderIII",
+      label: "Seed Finder III",
+      icon: "\u{1F33E}",
+      afkCapable: true,
+      abilityIds: ["SeedFinderIII"]
+    },
+    {
+      id: "seedFinderIV",
+      label: "Seed Finder IV",
+      icon: "\u{1F33E}",
+      afkCapable: true,
+      abilityIds: ["SeedFinderIV"]
+    },
+    // Split out of a single "Hatch Prep" bucket: these 4 abilities all fire on
+    // hatchEgg but do unrelated things (duplicate the hatch, boost the new
+    // pet's max strength, give it bonus XP, or boost its gold/rainbow chance).
+    // Merged under one tier-ranked list, DoubleHatch (ranked first) silently
+    // crowded out every other ability's pets from ever being suggested.
+    {
+      id: "doubleHatch",
+      label: "Double Hatch",
+      icon: "\u{1F423}",
+      afkCapable: false,
+      abilityIds: ["DoubleHatch"]
+    },
+    {
+      id: "maxStrengthBoost",
+      label: "Max Strength Boost",
+      icon: "\u{1F4AA}",
+      afkCapable: false,
+      abilityIds: ["PetHatchSizeBoostIII", "PetHatchSizeBoostII", "PetHatchSizeBoost"]
+    },
+    {
+      id: "hatchXpBoost",
+      label: "Hatch XP Boost",
+      icon: "\u{1F393}",
+      afkCapable: false,
+      abilityIds: ["PetAgeBoostIII", "PetAgeBoostII", "PetAgeBoost"]
+    },
+    {
+      id: "petMutationBoost",
+      label: "Pet Mutation Boost",
+      icon: "\u{1F3B2}",
+      afkCapable: false,
+      abilityIds: ["PetMutationBoostIII", "PetMutationBoostII", "PetMutationBoost"]
+    },
+    // Split out of a single "Sell Session" bucket: DoubleHarvest fires on
+    // `harvest` (not selling at all), ProduceRefund and SellBoost fire on
+    // `sellAllCrops`, and PetRefund fires on `sellPet` — three different
+    // player actions, so three different categories rather than one vague one.
+    {
+      id: "doubleHarvest",
+      label: "Double Harvest",
+      icon: "\u{1F33E}\u2702\uFE0F",
+      afkCapable: false,
+      abilityIds: ["DoubleHarvest"]
+    },
+    {
+      id: "cropRefund",
+      label: "Crop Refund",
+      icon: "\u267B\uFE0F",
+      afkCapable: false,
+      abilityIds: ["ProduceRefund"]
+    },
+    {
+      id: "sellBoost",
+      label: "Sell Boost",
+      icon: "\u{1F4B0}",
+      afkCapable: false,
+      abilityIds: ["SellBoostIV", "SellBoostIII", "SellBoostII", "SellBoostI"]
+    },
+    {
+      id: "petRefund",
+      label: "Pet Refund",
+      icon: "\u{1F501}",
+      afkCapable: false,
+      abilityIds: ["PetRefundII", "PetRefund"]
+    },
+    // playerActivated (manual click + cooldown) — never AFK, distinct from the
+    // Dawnlit/Thunderstruck mutation pipelines since they convert already-
+    // mutated crops into a separate resource rather than helping crops mutate.
+    {
+      id: "dawnCapsules",
+      label: "Dawn Capsules",
+      icon: "\u{1F307}",
+      afkCapable: false,
+      abilityIds: ["DawnCapture"]
+    },
+    {
+      id: "thundercharge",
+      label: "Thundercharge",
+      icon: "\u{1F50C}",
+      afkCapable: false,
+      abilityIds: ["Thundercharger"]
+    }
+  ];
+  function abilityTrigger(id) {
+    return petAbilities2[id]?.trigger;
+  }
+  function isAfkEligibleAbility(id) {
+    return abilityTrigger(id) === "continuous";
+  }
+  function isHungerRestoreAbility(id) {
+    return id === "HungerRestore" || id === "HungerRestoreII" || id === "HungerRestoreIII" || id === "SnowyHungerRestore";
+  }
+  function isHungerBoostAbility(id) {
+    return id === "HungerBoost" || id === "HungerBoostII" || id === "HungerBoostIII" || id === "SnowyHungerBoost";
+  }
+  function petAbilityIds(pet) {
+    return Array.isArray(pet.abilities) ? pet.abilities : [];
+  }
+  function sustainScore(pet) {
+    const abilities = petAbilityIds(pet);
+    const hasRestore = abilities.some(isHungerRestoreAbility);
+    const hasBoost = abilities.some(isHungerBoostAbility);
+    if (hasRestore && hasBoost) return 2;
+    if (hasRestore || hasBoost) return 1;
+    return 0;
+  }
+  function getBestSustainPet(pets) {
+    let best = null;
+    let bestScore = 0;
+    let bestStrength = -1;
+    for (const pet of pets) {
+      const score = sustainScore(pet);
+      if (score <= 0) continue;
+      const strength = getPetMaxStrength(pet);
+      if (score > bestScore || score === bestScore && strength > bestStrength) {
+        best = pet;
+        bestScore = score;
+        bestStrength = strength;
+      }
+    }
+    return best;
+  }
+  function bestTierIndex(category, abilities) {
+    let best = -1;
+    for (const id of abilities) {
+      const idx = category.abilityIds.indexOf(id);
+      if (idx === -1) continue;
+      if (best === -1 || idx < best) best = idx;
+    }
+    return best;
+  }
+  function rankCandidates(category, pets, afkOnly) {
+    const ranked = pets.map((pet) => {
+      const abilities = petAbilityIds(pet);
+      const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
+      return { pet, tierIndex: bestTierIndex(category, relevant) };
+    }).filter((c) => c.tierIndex !== -1);
+    ranked.sort((a, b) => {
+      if (a.tierIndex !== b.tierIndex) return a.tierIndex - b.tierIndex;
+      return getPetMaxStrength(b.pet) - getPetMaxStrength(a.pet);
+    });
+    return ranked.map((c) => c.pet);
+  }
+  function qualifyingCategories(pet) {
+    const abilities = petAbilityIds(pet);
+    return CATEGORIES.filter((c) => bestTierIndex(c, abilities) !== -1);
+  }
+  function findUnusedPets(pets, usedIds, sustainPet) {
+    const unused = [];
+    const seenIds = /* @__PURE__ */ new Set();
+    for (const pet of pets) {
+      if (usedIds.has(pet.id) || seenIds.has(pet.id)) continue;
+      seenIds.add(pet.id);
+      const outrankedIn = qualifyingCategories(pet).map((c) => c.label);
+      const outrankedAsSustain = sustainScore(pet) > 0 && sustainPet?.id !== pet.id;
+      const untracked = !outrankedIn.length && !outrankedAsSustain;
+      unused.push({ pet, outrankedIn, outrankedAsSustain, untracked });
+    }
+    return unused;
+  }
+  function mergeTeamsWithSamePets(teams) {
+    const order = [];
+    const byKey = /* @__PURE__ */ new Map();
+    for (const team of teams) {
+      const key2 = `${team.mode}::${team.petIds.slice().sort().join(",")}`;
+      const existing = byKey.get(key2);
+      if (existing) {
+        existing.categories.push(...team.categories);
+      } else {
+        byKey.set(key2, { ...team, categories: [...team.categories] });
+        order.push(key2);
+      }
+    }
+    return order.map((key2) => byKey.get(key2));
+  }
+  function buildSuggestedTeams(pets) {
+    const sustainPet = getBestSustainPet(pets);
+    const teams = [];
+    const usedIds = /* @__PURE__ */ new Set();
+    if (sustainPet) usedIds.add(sustainPet.id);
+    for (const category of CATEGORIES) {
+      const categoryRef = { id: category.id, label: category.label, icon: category.icon, abilityId: category.abilityIds[0] };
+      const activeCandidates = rankCandidates(category, pets, false).slice(0, 3);
+      activeCandidates.forEach((p) => usedIds.add(p.id));
+      if (activeCandidates.length) {
+        teams.push({
+          categories: [categoryRef],
+          mode: "active",
+          petIds: activeCandidates.map((p) => p.id)
+        });
+      }
+      if (category.afkCapable && sustainPet) {
+        const afkCandidates = rankCandidates(category, pets, true).filter((p) => p.id !== sustainPet.id).slice(0, 2);
+        afkCandidates.forEach((p) => usedIds.add(p.id));
+        if (afkCandidates.length) {
+          teams.push({
+            categories: [categoryRef],
+            mode: "afk",
+            petIds: [...afkCandidates.map((p) => p.id), sustainPet.id]
+          });
+        }
+      }
+    }
+    return {
+      teams: mergeTeamsWithSamePets(teams),
+      sustainPet,
+      unusedPets: findUnusedPets(pets, usedIds, sustainPet)
+    };
+  }
+
+  // src/ui/menus/petsTeamBuilder.ts
+  var miniSpriteCache = /* @__PURE__ */ new Map();
+  function mkMiniIcon(pet, size = 24) {
+    const holder = document.createElement("div");
+    Object.assign(holder.style, {
+      width: `${size}px`,
+      height: `${size}px`,
+      borderRadius: "9px",
+      background: "linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01) 60%), #161b22",
+      border: "1px solid rgba(255,255,255,0.08)",
+      display: "grid",
+      placeItems: "center",
+      overflow: "hidden",
+      boxShadow: "0 1px 0 #000 inset, 0 1px 2px rgba(0,0,0,0.3)",
+      fontSize: "11px",
+      color: "#e2e8f0",
+      flex: "0 0 auto"
+    });
+    if (!pet) {
+      holder.style.opacity = "0.35";
+      holder.textContent = "\xB7";
+      return holder;
+    }
+    const species = pet.petSpecies || "";
+    const mutKey = Array.isArray(pet.mutations) ? pet.mutations.join(",") : "";
+    const cacheKey = `${species}|${mutKey}`;
+    const applyImg = (dataUrl) => {
+      const img = document.createElement("img");
+      img.src = dataUrl;
+      img.width = size;
+      img.height = size;
+      img.alt = "";
+      img.draggable = false;
+      img.style.width = `${size}px`;
+      img.style.height = `${size}px`;
+      img.style.objectFit = "contain";
+      holder.replaceChildren(img);
+    };
+    const cached = miniSpriteCache.get(cacheKey);
+    if (cached) {
+      applyImg(cached);
+      return holder;
+    }
+    attachSpriteIcon(holder, ["pet"], species, size, "pet-teambuilder-mini", {
+      mutations: pet.mutations,
+      onSpriteApplied: (img) => {
+        miniSpriteCache.set(cacheKey, img.src);
+      },
+      onNoSpriteFound: () => {
+        holder.textContent = (species || pet.name || "pet").charAt(0).toUpperCase();
+      }
+    });
+    return holder;
+  }
+  function abilityChipsFor(pet) {
+    const wrap = document.createElement("span");
+    wrap.style.display = "inline-flex";
+    wrap.style.alignItems = "center";
+    wrap.style.gap = "4px";
+    const ids = Array.isArray(pet.abilities) ? pet.abilities.filter(Boolean) : [];
+    for (const id of ids) {
+      const chip = document.createElement("span");
+      const { bg, hover } = getAbilityChipColors(id);
+      chip.title = PetsService.getAbilityName(id) || id;
+      Object.assign(chip.style, {
+        display: "inline-block",
+        width: "9px",
+        height: "9px",
+        borderRadius: "3px",
+        background: bg,
+        boxShadow: "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff1a",
+        cursor: "default"
+      });
+      chip.onmouseenter = () => {
+        chip.style.background = hover;
+      };
+      chip.onmouseleave = () => {
+        chip.style.background = bg;
+      };
+      wrap.appendChild(chip);
+    }
+    return wrap;
+  }
+  function renderPetChip(pet) {
+    const chip = document.createElement("div");
+    Object.assign(chip.style, {
+      display: "flex",
+      alignItems: "center",
+      gap: "6px",
+      minWidth: "0",
+      padding: "3px 4px",
+      borderRadius: "6px",
+      transition: "background 100ms ease"
+    });
+    chip.onmouseenter = () => {
+      chip.style.background = "rgba(255,255,255,0.04)";
+    };
+    chip.onmouseleave = () => {
+      chip.style.background = "transparent";
+    };
+    chip.appendChild(mkMiniIcon(pet ?? null));
+    const nameSpan = document.createElement("span");
+    nameSpan.style.fontSize = "11px";
+    nameSpan.style.fontWeight = "600";
+    nameSpan.style.overflow = "hidden";
+    nameSpan.style.textOverflow = "ellipsis";
+    nameSpan.style.whiteSpace = "nowrap";
+    nameSpan.style.flex = "1 1 auto";
+    nameSpan.style.minWidth = "0";
+    nameSpan.textContent = pet ? pet.name || pet.petSpecies || "?" : "\u2014";
+    chip.appendChild(nameSpan);
+    if (pet) {
+      const strBadge = document.createElement("span");
+      strBadge.textContent = `${getPetStrength(pet)}/${getPetMaxStrength(pet)}`;
+      strBadge.title = "Strength (current/max) \u2014 teams rank by max strength";
+      Object.assign(strBadge.style, {
+        fontSize: "10px",
+        fontVariantNumeric: "tabular-nums",
+        color: "#94a3b8",
+        background: "rgba(255,255,255,0.05)",
+        padding: "1px 6px",
+        borderRadius: "999px",
+        flex: "0 0 auto"
+      });
+      chip.appendChild(strBadge);
+      chip.appendChild(abilityChipsFor(pet));
+    }
+    return chip;
+  }
+  var TEAM_NAME_MAX_LENGTH = 16;
+  function charLength(text) {
+    return Array.from(text).length;
+  }
+  function truncateChars(text, maxLength) {
+    const chars = Array.from(text);
+    if (chars.length <= maxLength) return text;
+    if (maxLength <= 1) return chars.slice(0, Math.max(0, maxLength)).join("");
+    return `${chars.slice(0, maxLength - 1).join("")}\u2026`;
+  }
+  function buildSaveName(team, isAfk) {
+    const suffix = isAfk ? " AFK" : "";
+    const budget = Math.max(1, TEAM_NAME_MAX_LENGTH - charLength(suffix));
+    const fullLabel = team.categories.map((c) => c.label).join(" + ");
+    if (charLength(fullLabel) <= budget) return `${fullLabel}${suffix}`;
+    const icons = team.categories.map((c) => c.icon).join("");
+    return `${truncateChars(icons, budget)}${suffix}`;
+  }
+  function renderTeamCard(team, petsById, ui) {
+    const isAfk = team.mode === "afk";
+    const glow = isAfk ? "#38bdf8" : "#34d399";
+    const icons = team.categories.map((c) => c.icon).join("");
+    const labels = team.categories.map((c) => c.label).join(" + ");
+    const title = isAfk ? `${icons} ${labels} (AFK)` : `${icons} ${labels}`;
+    const card2 = ui.card(title, {
+      tone: isAfk ? "accent" : "default",
+      compactHeader: true,
+      gap: 6
+    });
+    Object.assign(card2.root.style, {
+      padding: "8px 10px 10px",
+      position: "relative",
+      overflow: "hidden",
+      transition: "transform 140ms ease, box-shadow 140ms ease"
+    });
+    card2.root.onmouseenter = () => {
+      card2.root.style.transform = "translateY(-2px)";
+      card2.root.style.boxShadow = `0 10px 24px rgba(0,0,0,0.35), 0 0 0 1px ${glow}33`;
+    };
+    card2.root.onmouseleave = () => {
+      card2.root.style.transform = "none";
+      card2.root.style.boxShadow = "";
+    };
+    const stripColors = team.categories.map((c) => getAbilityChipColors(c.abilityId).bg);
+    const strip = document.createElement("div");
+    Object.assign(strip.style, {
+      position: "absolute",
+      left: "0",
+      top: "0",
+      bottom: "0",
+      width: "4px",
+      background: stripColors.length > 1 ? `linear-gradient(180deg, ${stripColors.join(", ")})` : stripColors[0]
+    });
+    card2.root.appendChild(strip);
+    const petsCol = document.createElement("div");
+    petsCol.style.display = "grid";
+    petsCol.style.gap = "1px";
+    for (const id of team.petIds) {
+      petsCol.appendChild(renderPetChip(petsById.get(id)));
+    }
+    card2.body.appendChild(petsCol);
+    const saveBtn = ui.btn("\u{1F4BE} Save", {
+      variant: "primary",
+      size: "sm",
+      onClick: () => {
+        const name = buildSaveName(team, isAfk);
+        const created = PetsService.createTeam(name);
+        PetsService.saveTeam({ id: created.id, slots: [...team.petIds, null, null].slice(0, 3) });
+        void toastSimple("Team saved", name, "success");
+      }
+    });
+    Object.assign(saveBtn.style, {
+      marginTop: "2px",
+      width: "84px",
+      height: "24px",
+      minHeight: "24px",
+      maxHeight: "24px",
+      boxSizing: "border-box",
+      padding: "0",
+      fontSize: "11px",
+      lineHeight: "1",
+      justifySelf: "center",
+      alignSelf: "center",
+      flexShrink: "0"
+    });
+    card2.body.appendChild(saveBtn);
+    return card2.root;
+  }
+  function unusedReasonText(info) {
+    if (info.untracked) return "no tracked ability";
+    const parts = info.outrankedIn.slice();
+    if (info.outrankedAsSustain) parts.push("Sustain");
+    return `outranked in: ${parts.join(", ")}`;
+  }
+  function renderUnusedRow(info) {
+    const row = document.createElement("div");
+    row.style.display = "flex";
+    row.style.alignItems = "center";
+    row.style.gap = "6px";
+    row.style.padding = "3px 0";
+    row.style.opacity = "0.75";
+    row.appendChild(renderPetChip(info.pet));
+    const reason = document.createElement("span");
+    reason.textContent = unusedReasonText(info);
+    reason.style.fontSize = "10px";
+    reason.style.opacity = "0.7";
+    reason.style.flex = "0 0 auto";
+    reason.style.whiteSpace = "nowrap";
+    reason.style.overflow = "hidden";
+    reason.style.textOverflow = "ellipsis";
+    reason.style.maxWidth = "45%";
+    row.appendChild(reason);
+    return row;
+  }
+  function renderUnusedSection(unusedPets, ui) {
+    const card2 = ui.card(`\u{1F5D1}\uFE0F Not used in any team (${unusedPets.length})`, { tone: "muted", compactHeader: true, gap: 4 });
+    card2.root.style.gridColumn = "1 / -1";
+    card2.root.style.padding = "8px 10px";
+    const chevron = document.createElement("span");
+    chevron.textContent = "\u25B8";
+    chevron.style.display = "inline-block";
+    chevron.style.marginLeft = "8px";
+    chevron.style.opacity = "0.6";
+    chevron.style.transition = "transform 120ms ease";
+    card2.header.appendChild(chevron);
+    card2.header.style.cursor = "pointer";
+    card2.header.style.userSelect = "none";
+    const list = document.createElement("div");
+    list.style.display = "none";
+    list.style.gap = "1px";
+    for (const info of unusedPets) {
+      list.appendChild(renderUnusedRow(info));
+    }
+    card2.body.appendChild(list);
+    let expanded = false;
+    card2.header.addEventListener("click", () => {
+      expanded = !expanded;
+      list.style.display = expanded ? "grid" : "none";
+      chevron.style.transform = expanded ? "rotate(90deg)" : "none";
+    });
+    return card2.root;
+  }
+  async function loadTeams2() {
+    const pets = await PetsService.getInventoryPets();
+    const petsById = new Map(pets.map((p) => [p.id, p]));
+    const { teams, sustainPet, unusedPets } = buildSuggestedTeams(pets);
+    return { teams, sustainPet, unusedPets, petsById };
+  }
+  function renderTeamBuilderTab(view, ui) {
+    const prevCleanup = view.__cleanup__;
+    if (typeof prevCleanup === "function") {
+      try {
+        prevCleanup();
+      } catch {
+      }
+      view.__cleanup__ = void 0;
+    }
+    view.innerHTML = "";
+    const wrap = document.createElement("div");
+    wrap.style.display = "grid";
+    wrap.style.gap = "10px";
+    wrap.style.alignContent = "start";
+    wrap.style.minHeight = "0";
+    wrap.style.maxHeight = "54vh";
+    wrap.style.overflow = "auto";
+    view.appendChild(wrap);
+    const header = ui.flexRow({ justify: "end", fullWidth: true });
+    header.style.paddingBottom = "8px";
+    header.style.borderBottom = "1px solid rgba(255,255,255,0.06)";
+    const refreshBtn = ui.btn("\u{1F504} Refresh", { size: "sm" });
+    header.appendChild(refreshBtn);
+    wrap.appendChild(header);
+    const content = document.createElement("div");
+    content.style.display = "grid";
+    content.style.gridTemplateColumns = "repeat(3, minmax(0, 1fr))";
+    content.style.gap = "8px";
+    wrap.appendChild(content);
+    let destroyed = false;
+    view.__cleanup__ = () => {
+      destroyed = true;
+    };
+    async function repaint() {
+      content.innerHTML = "";
+      const loading = document.createElement("div");
+      loading.textContent = "Loading\u2026";
+      loading.style.opacity = "0.6";
+      content.appendChild(loading);
+      const { teams, unusedPets, petsById } = await loadTeams2();
+      if (destroyed || !view.isConnected) return;
+      content.innerHTML = "";
+      if (!teams.length) {
+        const empty = document.createElement("div");
+        empty.textContent = "No useful team found \u2014 hatch pets with offensive abilities.";
+        empty.style.opacity = "0.7";
+        content.appendChild(empty);
+        return;
+      }
+      for (const team of teams) {
+        content.appendChild(renderTeamCard(team, petsById, ui));
+      }
+      if (unusedPets.length) {
+        content.appendChild(renderUnusedSection(unusedPets, ui));
+      }
+    }
+    refreshBtn.addEventListener("click", () => {
+      void repaint();
+    });
+    void repaint();
+  }
+
   // src/ui/menus/pets.ts
   function getAbilityChipColors(id) {
     const key2 = String(id || "");
@@ -44130,6 +45037,18 @@ next: ${next}`;
       return {
         bg: "rgba(162,92,242,0.9)",
         hover: "rgba(162,92,242,1)"
+      };
+    }
+    if (is("DawnCapture")) {
+      return {
+        bg: "rgba(178,90,158,0.9)",
+        hover: "rgba(178,90,158,1)"
+      };
+    }
+    if (is("DawnbinderBoost")) {
+      return {
+        bg: "rgba(180,104,160,0.9)",
+        hover: "rgba(180,104,160,1)"
       };
     }
     if (is("ProduceScaleBoost") || is("SnowyCropSizeBoost")) {
@@ -44245,7 +45164,7 @@ next: ${next}`;
     let draggingHeight = 0;
     let invCacheMap = null;
     const lastRenderedSlotIds = [null, null, null];
-    const miniSpriteCache = /* @__PURE__ */ new Map();
+    const miniSpriteCache2 = /* @__PURE__ */ new Map();
     async function buildPetRenderMap() {
       let inv = await PetsService.getInventoryPets().catch(() => null);
       if (!inv || inv.length === 0) {
@@ -44280,7 +45199,7 @@ next: ${next}`;
       }
       return map2;
     }
-    const mkMiniIcon = (pet) => {
+    const mkMiniIcon2 = (pet) => {
       const size = 18;
       const holder = document.createElement("div");
       Object.assign(holder.style, {
@@ -44317,7 +45236,7 @@ next: ${next}`;
         img.style.imageRendering = "auto";
         holder.replaceChildren(img);
       };
-      const cached = miniSpriteCache.get(cacheKey);
+      const cached = miniSpriteCache2.get(cacheKey);
       if (cached) {
         applyImg(cached);
         return holder;
@@ -44325,7 +45244,7 @@ next: ${next}`;
       attachSpriteIcon(holder, ["pet"], species, size, "pet-team-mini", {
         mutations: pet.mutations,
         onSpriteApplied: (img) => {
-          miniSpriteCache.set(cacheKey, img.src);
+          miniSpriteCache2.set(cacheKey, img.src);
         },
         onNoSpriteFound: () => {
           holder.textContent = (species || pet.name || "pet").charAt(0).toUpperCase();
@@ -44553,10 +45472,10 @@ next: ${next}`;
         const slots = Array.isArray(t.slots) ? t.slots.slice(0, 3) : [];
         slots.forEach((id) => {
           const pet = id != null ? renderMap.get(String(id)) ?? null : null;
-          minis.appendChild(mkMiniIcon(pet));
+          minis.appendChild(mkMiniIcon2(pet));
         });
         if (slots.length < 3) {
-          for (let i = slots.length; i < 3; i += 1) minis.appendChild(mkMiniIcon(null));
+          for (let i = slots.length; i < 3; i += 1) minis.appendChild(mkMiniIcon2(null));
         }
         item.append(dot, label2, minis);
         const grab = document.createElement("span");
@@ -44701,6 +45620,25 @@ next: ${next}`;
       const ok = PetsService.deleteTeam(selectedId);
       if (!ok) return;
     };
+    let teamListRefreshInFlight = null;
+    let teamListRefreshQueued = false;
+    function scheduleTeamListRefresh() {
+      if (teamListRefreshInFlight) {
+        teamListRefreshQueued = true;
+        return teamListRefreshInFlight;
+      }
+      const run = async () => {
+        await refreshTeamList();
+        while (teamListRefreshQueued) {
+          teamListRefreshQueued = false;
+          await refreshTeamList();
+        }
+      };
+      teamListRefreshInFlight = run().finally(() => {
+        teamListRefreshInFlight = null;
+      });
+      return teamListRefreshInFlight;
+    }
     let unsubTeams = null;
     (async () => {
       try {
@@ -44710,7 +45648,7 @@ next: ${next}`;
             selectedId = teams[0]?.id ?? null;
           }
           if (!selectedId && teams.length) selectedId = teams[0].id;
-          refreshTeamList();
+          void scheduleTeamListRefresh();
           setTeamsForHotkeys(teams);
           await PetsService.getInventoryPets().catch(() => []);
           await hydrateEditor(getSelectedTeam());
@@ -45070,7 +46008,7 @@ next: ${next}`;
         unsubPets2 = await onActivePetsStructuralChangeNow(async () => {
           if (isApplyingTeam) return;
           await repaintSlots(getSelectedTeam());
-          await refreshTeamList();
+          await scheduleTeamListRefresh();
         });
       } catch {
       }
@@ -45663,10 +46601,11 @@ next: ${next}`;
     const ui = new Menu({ id: "pets", compact: true, windowSelector: ".qws-win" });
     ui.mount(root);
     ui.addTab("manager", "\u{1F9F0} Manager", (view) => renderManagerTab(view, ui));
+    ui.addTab("teambuilder", "\u{1F9E9} Team Builder", (view) => renderTeamBuilderTab(view, ui));
     ui.addTab("feeding", "\u{1F356} Feeding", (view) => renderFeedingTab(view, ui));
     ui.addTab("hatch", "\u{1F95A} Hatch", (view) => renderHatchTab(view, ui));
     ui.addTab("logs", "\u{1F4DD} Logs", (view) => renderLogsTab(view, ui));
-    const knownTabs = /* @__PURE__ */ new Set(["manager", "feeding", "hatch", "logs"]);
+    const knownTabs = /* @__PURE__ */ new Set(["manager", "feeding", "hatch", "teambuilder", "logs"]);
     const onOpenTab = (ev) => {
       const tab = String(ev.detail?.tab || "");
       if (knownTabs.has(tab)) ui.switchTo(tab);
