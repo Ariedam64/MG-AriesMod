@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.182
+// @version      3.2.183
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -31177,7 +31177,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.182";
+      return "3.2.183";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -44524,34 +44524,46 @@ next: ${next}`;
     // hatchEgg but do unrelated things (duplicate the hatch, boost the new
     // pet's max strength, give it bonus XP, or boost its gold/rainbow chance).
     // Merged under one tier-ranked list, DoubleHatch (ranked first) silently
-    // crowded out every other ability's pets from ever being suggested.
+    // crowded out every other ability's pets from ever being suggested — but
+    // they all still fire together on the same hatch, so each pads from the
+    // other three when it doesn't fill its own slots alone.
+    // Sibling padding order follows a value ranking (best first), not
+    // declaration order: Max Strength Boost (raises the pet's actual STR
+    // ceiling, which everything else here is ranked by) > Double Hatch
+    // (a whole extra pet) > Pet Mutation Boost (nice-to-have gold/rainbow
+    // odds) > Hatch XP Boost (just a shortcut to XP you'd get from feeding
+    // anyway — the weakest of the four).
     {
       id: "doubleHatch",
       label: "Double Hatch",
       icon: "\u{1F423}",
       afkCapable: false,
-      abilityIds: ["DoubleHatch"]
+      abilityIds: ["DoubleHatch"],
+      paddingSiblingIds: ["maxStrengthBoost", "petMutationBoost", "hatchXpBoost"]
     },
     {
       id: "maxStrengthBoost",
       label: "Max Strength Boost",
       icon: "\u{1F4AA}",
       afkCapable: false,
-      abilityIds: ["PetHatchSizeBoostIII", "PetHatchSizeBoostII", "PetHatchSizeBoost"]
+      abilityIds: ["PetHatchSizeBoostIII", "PetHatchSizeBoostII", "PetHatchSizeBoost"],
+      paddingSiblingIds: ["doubleHatch", "petMutationBoost", "hatchXpBoost"]
     },
     {
       id: "hatchXpBoost",
       label: "Hatch XP Boost",
       icon: "\u{1F393}",
       afkCapable: false,
-      abilityIds: ["PetAgeBoostIII", "PetAgeBoostII", "PetAgeBoost"]
+      abilityIds: ["PetAgeBoostIII", "PetAgeBoostII", "PetAgeBoost"],
+      paddingSiblingIds: ["maxStrengthBoost", "doubleHatch", "petMutationBoost"]
     },
     {
       id: "petMutationBoost",
       label: "Pet Mutation Boost",
       icon: "\u{1F3B2}",
       afkCapable: false,
-      abilityIds: ["PetMutationBoostIII", "PetMutationBoostII", "PetMutationBoost"]
+      abilityIds: ["PetMutationBoostIII", "PetMutationBoostII", "PetMutationBoost"],
+      paddingSiblingIds: ["maxStrengthBoost", "doubleHatch", "hatchXpBoost"]
     },
     // Split out of a single "Sell Session" bucket: DoubleHarvest fires on
     // `harvest` (not selling at all), ProduceRefund and SellBoost fire on
@@ -44564,19 +44576,25 @@ next: ${next}`;
       afkCapable: false,
       abilityIds: ["DoubleHarvest"]
     },
+    // Crop Refund ranks above Sell Boost: a flat % more coins is good, but
+    // getting an expensive crop back outright is worth more when it's a
+    // high-value one — only matters when a category needs padding from more
+    // than one sibling, but keep the declared order consistent regardless.
     {
       id: "cropRefund",
       label: "Crop Refund",
       icon: "\u267B\uFE0F",
       afkCapable: false,
-      abilityIds: ["ProduceRefund"]
+      abilityIds: ["ProduceRefund"],
+      paddingSiblingIds: ["sellBoost"]
     },
     {
       id: "sellBoost",
       label: "Sell Boost",
       icon: "\u{1F4B0}",
       afkCapable: false,
-      abilityIds: ["SellBoostIV", "SellBoostIII", "SellBoostII", "SellBoostI"]
+      abilityIds: ["SellBoostIV", "SellBoostIII", "SellBoostII", "SellBoostI"],
+      paddingSiblingIds: ["cropRefund"]
     },
     {
       id: "petRefund",
@@ -44720,6 +44738,21 @@ next: ${next}`;
           const padding = rankCandidates(parent, pets, false).filter((p) => !already.has(p.id));
           activeCandidates = [...activeCandidates, ...padding].slice(0, maxSlots);
         }
+      }
+      if (activeCandidates.length && activeCandidates.length < maxSlots && category.paddingSiblingIds?.length) {
+        const already = new Set(activeCandidates.map((p) => p.id));
+        const siblingPool = [];
+        for (const siblingId of category.paddingSiblingIds) {
+          const sibling = CATEGORIES_BY_ID.get(siblingId);
+          if (!sibling) continue;
+          for (const p of rankCandidates(sibling, pets, false)) {
+            if (!already.has(p.id)) {
+              siblingPool.push(p);
+              already.add(p.id);
+            }
+          }
+        }
+        activeCandidates = [...activeCandidates, ...siblingPool].slice(0, maxSlots);
       }
       activeCandidates.forEach((p) => usedIds.add(p.id));
       if (activeCandidates.length) {

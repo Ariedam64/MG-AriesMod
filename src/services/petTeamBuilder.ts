@@ -66,6 +66,19 @@ type Category = {
    * whatever pet you're actually trying to level up, not a 3rd booster.
    */
   maxTeamSlots?: number;
+  /**
+   * Other category ids that fire on the exact same player action (e.g.
+   * Sell Boost and Crop Refund both fire on "sell all crops"; Double Hatch,
+   * Max Strength Boost, Hatch XP Boost and Pet Mutation Boost all fire on
+   * hatching an egg). When this category doesn't fill all its slots on its
+   * own, the rest are padded with these siblings' best pets — one team
+   * gets the benefit of every ability that triggers on that single action,
+   * instead of showing several separate teams that each waste slots.
+   * Deliberately not used for "playerActivated" abilities like DawnCapture/
+   * Thundercharger — those are two distinct manual buttons, not one shared
+   * action, so stacking them doesn't make the same kind of sense.
+   */
+  paddingSiblingIds?: string[];
 };
 
 // Grouping of already-real ability ids into goal categories, same pattern as
@@ -180,25 +193,37 @@ const CATEGORIES: Category[] = [
   // hatchEgg but do unrelated things (duplicate the hatch, boost the new
   // pet's max strength, give it bonus XP, or boost its gold/rainbow chance).
   // Merged under one tier-ranked list, DoubleHatch (ranked first) silently
-  // crowded out every other ability's pets from ever being suggested.
+  // crowded out every other ability's pets from ever being suggested — but
+  // they all still fire together on the same hatch, so each pads from the
+  // other three when it doesn't fill its own slots alone.
+  // Sibling padding order follows a value ranking (best first), not
+  // declaration order: Max Strength Boost (raises the pet's actual STR
+  // ceiling, which everything else here is ranked by) > Double Hatch
+  // (a whole extra pet) > Pet Mutation Boost (nice-to-have gold/rainbow
+  // odds) > Hatch XP Boost (just a shortcut to XP you'd get from feeding
+  // anyway — the weakest of the four).
   { id: "doubleHatch", label: "Double Hatch", icon: "🐣", afkCapable: false,
-    abilityIds: ["DoubleHatch"] },
+    abilityIds: ["DoubleHatch"], paddingSiblingIds: ["maxStrengthBoost", "petMutationBoost", "hatchXpBoost"] },
   { id: "maxStrengthBoost", label: "Max Strength Boost", icon: "💪", afkCapable: false,
-    abilityIds: ["PetHatchSizeBoostIII", "PetHatchSizeBoostII", "PetHatchSizeBoost"] },
+    abilityIds: ["PetHatchSizeBoostIII", "PetHatchSizeBoostII", "PetHatchSizeBoost"], paddingSiblingIds: ["doubleHatch", "petMutationBoost", "hatchXpBoost"] },
   { id: "hatchXpBoost", label: "Hatch XP Boost", icon: "🎓", afkCapable: false,
-    abilityIds: ["PetAgeBoostIII", "PetAgeBoostII", "PetAgeBoost"] },
+    abilityIds: ["PetAgeBoostIII", "PetAgeBoostII", "PetAgeBoost"], paddingSiblingIds: ["maxStrengthBoost", "doubleHatch", "petMutationBoost"] },
   { id: "petMutationBoost", label: "Pet Mutation Boost", icon: "🎲", afkCapable: false,
-    abilityIds: ["PetMutationBoostIII", "PetMutationBoostII", "PetMutationBoost"] },
+    abilityIds: ["PetMutationBoostIII", "PetMutationBoostII", "PetMutationBoost"], paddingSiblingIds: ["maxStrengthBoost", "doubleHatch", "hatchXpBoost"] },
   // Split out of a single "Sell Session" bucket: DoubleHarvest fires on
   // `harvest` (not selling at all), ProduceRefund and SellBoost fire on
   // `sellAllCrops`, and PetRefund fires on `sellPet` — three different
   // player actions, so three different categories rather than one vague one.
   { id: "doubleHarvest", label: "Double Harvest", icon: "🌾✂️", afkCapable: false,
     abilityIds: ["DoubleHarvest"] },
+  // Crop Refund ranks above Sell Boost: a flat % more coins is good, but
+  // getting an expensive crop back outright is worth more when it's a
+  // high-value one — only matters when a category needs padding from more
+  // than one sibling, but keep the declared order consistent regardless.
   { id: "cropRefund", label: "Crop Refund", icon: "♻️", afkCapable: false,
-    abilityIds: ["ProduceRefund"] },
+    abilityIds: ["ProduceRefund"], paddingSiblingIds: ["sellBoost"] },
   { id: "sellBoost", label: "Sell Boost", icon: "💰", afkCapable: false,
-    abilityIds: ["SellBoostIV", "SellBoostIII", "SellBoostII", "SellBoostI"] },
+    abilityIds: ["SellBoostIV", "SellBoostIII", "SellBoostII", "SellBoostI"], paddingSiblingIds: ["cropRefund"] },
   { id: "petRefund", label: "Pet Refund", icon: "🔁", afkCapable: false,
     abilityIds: ["PetRefundII", "PetRefund"] },
 
@@ -378,6 +403,25 @@ export function buildSuggestedTeams(pets: InventoryPet[]): TeamBuilderResult {
         const padding = rankCandidates(parent, pets, false).filter((p) => !already.has(p.id));
         activeCandidates = [...activeCandidates, ...padding].slice(0, maxSlots);
       }
+    }
+    // Still short? Pull in pets from sibling categories that fire on the
+    // same action (sell all crops, hatch an egg, ...) — they proc from the
+    // same single click, so combining them is strictly better than an
+    // empty slot.
+    if (activeCandidates.length && activeCandidates.length < maxSlots && category.paddingSiblingIds?.length) {
+      const already = new Set(activeCandidates.map((p) => p.id));
+      const siblingPool: InventoryPet[] = [];
+      for (const siblingId of category.paddingSiblingIds) {
+        const sibling = CATEGORIES_BY_ID.get(siblingId);
+        if (!sibling) continue;
+        for (const p of rankCandidates(sibling, pets, false)) {
+          if (!already.has(p.id)) {
+            siblingPool.push(p);
+            already.add(p.id);
+          }
+        }
+      }
+      activeCandidates = [...activeCandidates, ...siblingPool].slice(0, maxSlots);
     }
     activeCandidates.forEach((p) => usedIds.add(p.id));
     if (activeCandidates.length) {
