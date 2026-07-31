@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.181
+// @version      3.2.182
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -31177,7 +31177,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.181";
+      return "3.2.182";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -44482,6 +44482,44 @@ next: ${next}`;
       afkCapable: true,
       abilityIds: ["SeedFinderIV"]
     },
+    // Pet XP boosts whichever pets are active — the point is 1-2 dedicated
+    // boosters plus a slot deliberately left empty for whatever pet you're
+    // actually trying to level, so maxTeamSlots caps at 2 instead of 3.
+    {
+      id: "petXp",
+      label: "Pet XP",
+      icon: "\u{1F4C8}",
+      afkCapable: true,
+      maxTeamSlots: 2,
+      abilityIds: ["PetXpBoostIII", "PetXpBoostII", "PetXpBoost"]
+    },
+    {
+      id: "petXpFrost",
+      label: "Pet XP (Frost)",
+      icon: "\u{1F4C8}\u2744\uFE0F",
+      afkCapable: false,
+      maxTeamSlots: 2,
+      abilityIds: ["SnowyPetXpBoost"],
+      paddingParentId: "petXp"
+    },
+    {
+      id: "petXpDawn",
+      label: "Pet XP (Dawn)",
+      icon: "\u{1F4C8}\u{1F305}",
+      afkCapable: false,
+      maxTeamSlots: 2,
+      abilityIds: ["DawnXpBoost"],
+      paddingParentId: "petXp"
+    },
+    {
+      id: "petXpThunder",
+      label: "Pet XP (Thunderstorm)",
+      icon: "\u{1F4C8}\u26A1",
+      afkCapable: false,
+      maxTeamSlots: 2,
+      abilityIds: ["ThunderXpBoost"],
+      paddingParentId: "petXp"
+    },
     // Split out of a single "Hatch Prep" bucket: these 4 abilities all fire on
     // hatchEgg but do unrelated things (duplicate the hatch, boost the new
     // pet's max strength, give it bonus XP, or boost its gold/rainbow chance).
@@ -44673,13 +44711,14 @@ next: ${next}`;
     if (sustainPet) usedIds.add(sustainPet.id);
     for (const category of CATEGORIES) {
       const categoryRef = { id: category.id, label: category.label, icon: category.icon, abilityId: category.abilityIds[0] };
-      let activeCandidates = rankCandidates(category, pets, false).slice(0, 3);
-      if (activeCandidates.length && activeCandidates.length < 3 && category.paddingParentId) {
+      const maxSlots = category.maxTeamSlots ?? 3;
+      let activeCandidates = rankCandidates(category, pets, false).slice(0, maxSlots);
+      if (activeCandidates.length && activeCandidates.length < maxSlots && category.paddingParentId) {
         const parent = CATEGORIES_BY_ID.get(category.paddingParentId);
         if (parent) {
           const already = new Set(activeCandidates.map((p) => p.id));
           const padding = rankCandidates(parent, pets, false).filter((p) => !already.has(p.id));
-          activeCandidates = [...activeCandidates, ...padding].slice(0, 3);
+          activeCandidates = [...activeCandidates, ...padding].slice(0, maxSlots);
         }
       }
       activeCandidates.forEach((p) => usedIds.add(p.id));
@@ -44691,7 +44730,7 @@ next: ${next}`;
         });
       }
       if (category.afkCapable && sustainPet) {
-        const afkCandidates = rankCandidates(category, pets, true).filter((p) => p.id !== sustainPet.id).slice(0, 2);
+        const afkCandidates = rankCandidates(category, pets, true).filter((p) => p.id !== sustainPet.id).slice(0, maxSlots - 1);
         afkCandidates.forEach((p) => usedIds.add(p.id));
         if (afkCandidates.length) {
           teams.push({
@@ -44702,7 +44741,7 @@ next: ${next}`;
         }
       }
       const afkRelevant = category.afkCapable || category.paddingParentId != null && !!CATEGORIES_BY_ID.get(category.paddingParentId)?.afkCapable;
-      if (afkRelevant && sustainPet && activeCandidates.length > 0 && activeCandidates.length < 3 && !activeCandidates.some((p) => p.id === sustainPet.id)) {
+      if (afkRelevant && sustainPet && activeCandidates.length > 0 && activeCandidates.length < maxSlots && !activeCandidates.some((p) => p.id === sustainPet.id)) {
         usedIds.add(sustainPet.id);
         teams.push({
           categories: [categoryRef],

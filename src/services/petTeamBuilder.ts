@@ -59,17 +59,21 @@ type Category = {
    * than leaving 1-2 slots empty.
    */
   paddingParentId?: string;
+  /**
+   * Real pets to fill for this category — defaults to 3. Pet XP is the one
+   * exception: its abilities boost whichever pets are active, so the point
+   * is 1-2 dedicated XP-boosters plus a genuinely empty slot left for
+   * whatever pet you're actually trying to level up, not a 3rd booster.
+   */
+  maxTeamSlots?: number;
 };
 
 // Grouping of already-real ability ids into goal categories, same pattern as
 // getAbilityChipColors() in ui/menus/pets.ts — this hardcodes a UI grouping,
 // not a game value (no probabilities/prices/durations are invented here).
-// Every one of the catalog's 81 ability ids is accounted for below, except:
-// - "Copycat" (dynamically copies whatever ability a nearby pet has — no
-//   fixed goal to rank it against)
-// - the Pet XP family (DawnXpBoost, ThunderXpBoost, PetXpBoost/II/III,
-//   SnowyPetXpBoost) — not a goal worth building a team around, dropped on
-//   request.
+// Every one of the catalog's 81 ability ids is accounted for below, except
+// "Copycat" (dynamically copies whatever ability a nearby pet has — no fixed
+// goal to rank it against).
 // Any ability whose baseParameters carry a requiredWeather is only useful
 // while that exact weather is active — not guaranteed, so it gets its own
 // category (icon/label calls out which weather) instead of being ranked
@@ -159,6 +163,18 @@ const CATEGORIES: Category[] = [
     abilityIds: ["SeedFinderIII"] },
   { id: "seedFinderIV", label: "Seed Finder IV", icon: "🌾", afkCapable: true,
     abilityIds: ["SeedFinderIV"] },
+
+  // Pet XP boosts whichever pets are active — the point is 1-2 dedicated
+  // boosters plus a slot deliberately left empty for whatever pet you're
+  // actually trying to level, so maxTeamSlots caps at 2 instead of 3.
+  { id: "petXp", label: "Pet XP", icon: "📈", afkCapable: true, maxTeamSlots: 2,
+    abilityIds: ["PetXpBoostIII", "PetXpBoostII", "PetXpBoost"] },
+  { id: "petXpFrost", label: "Pet XP (Frost)", icon: "📈❄️", afkCapable: false, maxTeamSlots: 2,
+    abilityIds: ["SnowyPetXpBoost"], paddingParentId: "petXp" },
+  { id: "petXpDawn", label: "Pet XP (Dawn)", icon: "📈🌅", afkCapable: false, maxTeamSlots: 2,
+    abilityIds: ["DawnXpBoost"], paddingParentId: "petXp" },
+  { id: "petXpThunder", label: "Pet XP (Thunderstorm)", icon: "📈⚡", afkCapable: false, maxTeamSlots: 2,
+    abilityIds: ["ThunderXpBoost"], paddingParentId: "petXp" },
 
   // Split out of a single "Hatch Prep" bucket: these 4 abilities all fire on
   // hatchEgg but do unrelated things (duplicate the hatch, boost the new
@@ -345,18 +361,22 @@ export function buildSuggestedTeams(pets: InventoryPet[]): TeamBuilderResult {
 
   for (const category of CATEGORIES) {
     const categoryRef: MergedCategory = { id: category.id, label: category.label, icon: category.icon, abilityId: category.abilityIds[0] };
+    // Everything below fills at most this many *real* pets; the rest of the
+    // 3 team slots (all of them, for Pet XP's case) stay genuinely empty —
+    // slicing to fewer than 3 already leaves them unfilled when saved.
+    const maxSlots = category.maxTeamSlots ?? 3;
 
-    let activeCandidates = rankCandidates(category, pets, false).slice(0, 3);
+    let activeCandidates = rankCandidates(category, pets, false).slice(0, maxSlots);
     // Weather-exclusive categories often only have one qualifying pet —
     // top the team off with the parent (non-weather) category's own best
     // picks rather than leaving slots empty, since they still work toward
     // the same goal whenever the required weather isn't active.
-    if (activeCandidates.length && activeCandidates.length < 3 && category.paddingParentId) {
+    if (activeCandidates.length && activeCandidates.length < maxSlots && category.paddingParentId) {
       const parent = CATEGORIES_BY_ID.get(category.paddingParentId);
       if (parent) {
         const already = new Set(activeCandidates.map((p) => p.id));
         const padding = rankCandidates(parent, pets, false).filter((p) => !already.has(p.id));
-        activeCandidates = [...activeCandidates, ...padding].slice(0, 3);
+        activeCandidates = [...activeCandidates, ...padding].slice(0, maxSlots);
       }
     }
     activeCandidates.forEach((p) => usedIds.add(p.id));
@@ -371,7 +391,7 @@ export function buildSuggestedTeams(pets: InventoryPet[]): TeamBuilderResult {
     if (category.afkCapable && sustainPet) {
       const afkCandidates = rankCandidates(category, pets, true)
         .filter((p) => p.id !== sustainPet.id)
-        .slice(0, 2);
+        .slice(0, maxSlots - 1);
       afkCandidates.forEach((p) => usedIds.add(p.id));
       if (afkCandidates.length) {
         teams.push({
@@ -382,7 +402,7 @@ export function buildSuggestedTeams(pets: InventoryPet[]): TeamBuilderResult {
       }
     }
 
-    // A leftover empty slot (fewer than 3 real candidates even after
+    // A leftover empty slot (fewer than maxSlots real candidates even after
     // weather-parent padding) can just as well be filled by the sustain
     // pet instead of staying empty — offered as an AFK variant, since
     // "abilityIsPassive() + a pet that keeps the team fed" is exactly what
@@ -393,7 +413,7 @@ export function buildSuggestedTeams(pets: InventoryPet[]): TeamBuilderResult {
     const afkRelevant = category.afkCapable
       || (category.paddingParentId != null && !!CATEGORIES_BY_ID.get(category.paddingParentId)?.afkCapable);
     if (
-      afkRelevant && sustainPet && activeCandidates.length > 0 && activeCandidates.length < 3 &&
+      afkRelevant && sustainPet && activeCandidates.length > 0 && activeCandidates.length < maxSlots &&
       !activeCandidates.some((p) => p.id === sustainPet.id)
     ) {
       usedIds.add(sustainPet.id);
