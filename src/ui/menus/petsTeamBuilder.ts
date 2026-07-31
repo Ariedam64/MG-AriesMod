@@ -163,11 +163,36 @@ function truncateChars(text: string, maxLength: number): string {
   return `${chars.slice(0, maxLength - 1).join("")}…`;
 }
 
+// Weather-exclusive categories carry the weather name as a "(...)" suffix
+// on their label (e.g. "Mutation: Ambershine (Amber Moon)") — reuse that
+// instead of re-deriving it, so a weather-required team's title still
+// calls out which weather it needs, just attached to the shorter ability
+// name instead of the full category label.
+function weatherSuffix(label: string): string {
+  return label.match(/\([^)]+\)$/)?.[0] ?? "";
+}
+
+// The real ability name (e.g. "Amberlit Granter") reads shorter and more
+// direct than the goal-category label ("Mutation: Ambershine") — dedupe in
+// case a merge ever lands on the same ability twice.
+function abilityLabel(team: SuggestedTeam): string {
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const c of team.categories) {
+    if (seen.has(c.abilityId)) continue;
+    seen.add(c.abilityId);
+    const name = PetsService.getAbilityName(c.abilityId) || c.label;
+    const weather = weatherSuffix(c.label);
+    names.push(weather ? `${name} ${weather}` : name);
+  }
+  return names.join(" + ");
+}
+
 function buildSaveName(team: SuggestedTeam, isAfk: boolean): string {
   const suffix = isAfk ? " AFK" : "";
   const budget = Math.max(1, TEAM_NAME_MAX_LENGTH - charLength(suffix));
 
-  const fullLabel = team.categories.map((c) => c.label).join(" + ");
+  const fullLabel = abilityLabel(team);
   if (charLength(fullLabel) <= budget) return `${fullLabel}${suffix}`;
 
   // Full text doesn't fit — a truncated half-word ("Plant Growth S…") isn't
@@ -183,9 +208,7 @@ function renderTeamCard(
 ): HTMLElement {
   const isAfk = team.mode === "afk";
   const glow = isAfk ? "#38bdf8" : "#34d399";
-  const icons = team.categories.map((c) => c.icon).join("");
-  const labels = team.categories.map((c) => c.label).join(" + ");
-  const title = isAfk ? `${icons} ${labels} (AFK)` : `${icons} ${labels}`;
+  const title = isAfk ? `${abilityLabel(team)} (AFK)` : abilityLabel(team);
   const card = ui.card(title, {
     tone: isAfk ? "accent" : "default",
     compactHeader: true,

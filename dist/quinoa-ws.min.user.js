@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.183
+// @version      3.2.184
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -31177,7 +31177,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.183";
+      return "3.2.184";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -44773,7 +44773,7 @@ next: ${next}`;
           });
         }
       }
-      const afkRelevant = category.afkCapable || category.paddingParentId != null && !!CATEGORIES_BY_ID.get(category.paddingParentId)?.afkCapable;
+      const afkRelevant = !category.afkCapable && category.paddingParentId != null && !!CATEGORIES_BY_ID.get(category.paddingParentId)?.afkCapable;
       if (afkRelevant && sustainPet && activeCandidates.length > 0 && activeCandidates.length < maxSlots && !activeCandidates.some((p) => p.id === sustainPet.id)) {
         usedIds.add(sustainPet.id);
         teams.push({
@@ -44929,10 +44929,25 @@ next: ${next}`;
     if (maxLength <= 1) return chars.slice(0, Math.max(0, maxLength)).join("");
     return `${chars.slice(0, maxLength - 1).join("")}\u2026`;
   }
+  function weatherSuffix(label2) {
+    return label2.match(/\([^)]+\)$/)?.[0] ?? "";
+  }
+  function abilityLabel(team) {
+    const seen = /* @__PURE__ */ new Set();
+    const names = [];
+    for (const c of team.categories) {
+      if (seen.has(c.abilityId)) continue;
+      seen.add(c.abilityId);
+      const name = PetsService.getAbilityName(c.abilityId) || c.label;
+      const weather2 = weatherSuffix(c.label);
+      names.push(weather2 ? `${name} ${weather2}` : name);
+    }
+    return names.join(" + ");
+  }
   function buildSaveName(team, isAfk) {
     const suffix = isAfk ? " AFK" : "";
     const budget = Math.max(1, TEAM_NAME_MAX_LENGTH - charLength(suffix));
-    const fullLabel = team.categories.map((c) => c.label).join(" + ");
+    const fullLabel = abilityLabel(team);
     if (charLength(fullLabel) <= budget) return `${fullLabel}${suffix}`;
     const icons = team.categories.map((c) => c.icon).join("");
     return `${truncateChars(icons, budget)}${suffix}`;
@@ -44940,9 +44955,7 @@ next: ${next}`;
   function renderTeamCard(team, petsById, ui) {
     const isAfk = team.mode === "afk";
     const glow = isAfk ? "#38bdf8" : "#34d399";
-    const icons = team.categories.map((c) => c.icon).join("");
-    const labels = team.categories.map((c) => c.label).join(" + ");
-    const title = isAfk ? `${icons} ${labels} (AFK)` : `${icons} ${labels}`;
+    const title = isAfk ? `${abilityLabel(team)} (AFK)` : abilityLabel(team);
     const card2 = ui.card(title, {
       tone: isAfk ? "accent" : "default",
       compactHeader: true,

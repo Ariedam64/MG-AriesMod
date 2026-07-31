@@ -450,12 +450,17 @@ export function buildSuggestedTeams(pets: InventoryPet[]): TeamBuilderResult {
     // weather-parent padding) can just as well be filled by the sustain
     // pet instead of staying empty — offered as an AFK variant, since
     // "abilityIsPassive() + a pet that keeps the team fed" is exactly what
-    // AFK means. Only when the abilities actually in play are passive
-    // (this category, or its padding parent for weather-exclusive ones):
-    // an empty slot on e.g. Double Hatch shouldn't get labeled AFK just
-    // because a feeder pet could technically sit there doing nothing.
-    const afkRelevant = category.afkCapable
-      || (category.paddingParentId != null && !!CATEGORIES_BY_ID.get(category.paddingParentId)?.afkCapable);
+    // AFK means. Only for categories that don't already get their own
+    // dedicated AFK team above (category.afkCapable === true already
+    // covers that — running this too produced a duplicate identical AFK
+    // team, merged into the same card twice, i.e. the same category label
+    // showing up twice in the title). Only relevant when the abilities
+    // actually in play are passive (this category, or its padding parent
+    // for weather-exclusive ones): an empty slot on e.g. Double Hatch
+    // shouldn't get labeled AFK just because a feeder pet could technically
+    // sit there doing nothing.
+    const afkRelevant = !category.afkCapable
+      && category.paddingParentId != null && !!CATEGORIES_BY_ID.get(category.paddingParentId)?.afkCapable;
     if (
       afkRelevant && sustainPet && activeCandidates.length > 0 && activeCandidates.length < maxSlots &&
       !activeCandidates.some((p) => p.id === sustainPet.id)
