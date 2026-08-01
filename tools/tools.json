@@ -1,74 +1,23 @@
 {
   "tools": [
     {
-      "id": "gemini",
-      "title": "Gemini",
-      "icon": "https://i.imgur.com/CtHVvb9.png",
-      "description": "A userscript built to run on **phones as much as on PC**, and that is really the point of it. The PC side already has well developed mods, so this one puts mobile first, which everyone else tends to ignore.\n\nIt is not a mega mod with dozens of features. It covers the essentials and tries to do them properly:\n\n- **Locker**, so you stop selling what you meant to keep\n- **Pets management**\n- **Public rooms**\n- **Avatar loadouts**\n- **Crop value**\n- **Alerts system**\n\nThree things drove the build: that it actually be usable on a phone, that it stay simple to extend, and that it survive game updates instead of breaking every other day.\n\n**On Android** you need a browser that accepts extensions, so either Firefox with Violentmonkey, or Kiwi Browser and its Chrome extensions. **On PC** it is Tampermonkey, like any other userscript. The HUD toggles with `Ctrl + Shift + U`.\n\nSeveral browsers are supported, though some environments are still rough, Discord Activities in particular. Bugs can happen, and [GitHub](https://github.com/Ariedam64/Gemini) is the place to report them.",
+      "id": "wiki",
+      "title": "Magic Garden Wiki",
+      "description": "Everything the game never bothers to explain, written down by the players who worked it out. It runs on MediaWiki and anyone can edit it, so it tends to stay closer to the current patch than any static guide.\n\nThe main sections:\n\n- [Crops](https://magicgarden.wiki/Crops) and [Shops](https://magicgarden.wiki/Shops), for what to plant and where the seeds come from\n- [Mutations](https://magicgarden.wiki/Mutations) and [Multipliers](https://magicgarden.wiki/Multipliers), which is where the money actually is: which mutations can stack together, and how they combine with size, friend bonus and sell boost pets to set the final price\n- [Pets](https://magicgarden.wiki/Pets) and [Abilities](https://magicgarden.wiki/Abilities), with what each ability actually does rather than what the tooltip says\n- [Weather Events](https://magicgarden.wiki/Weather_Events) and [Events](https://magicgarden.wiki/Events), for anything time limited\n- [Garden Tools](https://magicgarden.wiki/Tools) and the [Garden Journal](https://magicgarden.wiki/Garden_Journal), for your gear and your collection progress\n\nAround two hundred articles so far, and a few hundred screenshots to go with them. If you spot something wrong or missing you can just fix it yourself: [First Steps](https://magicgarden.wiki/First_Steps) walks you through it, and the [contributing guide](https://magicgarden.wiki/Contributing) covers the rest.",
+      "icon": "https://i.imgur.com/0LXKEzh.png",
       "tags": [
-        "mod",
-        "android"
-      ],
-      "images": [
-        "https://i.imgur.com/8cRIWuL.png",
-        "https://i.imgur.com/srwdo0A.png",
-        "https://i.imgur.com/pYOAOGv.png",
-        "https://i.imgur.com/CgLVV5r.png",
-        "https://i.imgur.com/XGEYkiT.png",
-        "https://i.imgur.com/Ms3zuQC.png"
+        "guide",
+        "utility"
       ],
       "actions": [
         {
-          "label": "Install",
-          "url": "https://github.com/Ariedam64/Gemini/releases/latest/download/gemini.user.js"
-        },
-        {
-          "label": "GitHub",
-          "url": "https://github.com/Ariedam64/Gemini"
+          "label": "Open",
+          "url": "https://magicgarden.wiki/Main_Page"
         }
       ],
       "creators": [
         {
-          "name": "Arie",
-          "avatar": "https://i.imgur.com/eRhqdPQ.png"
-        },
-        {
-          "name": "Tokyo",
-          "avatar": "https://cdn.discordapp.com/avatars/511094276613210122/c2af3c8ff2123724ba49b7e897d0ce97.png"
-        }
-      ]
-    },
-    {
-      "id": "mg-community-hub",
-      "title": "MG Community Hub",
-      "description": "A real social space inside Magic Garden, the Discord Activity included. The game gives you a room full of strangers, this gives you a way to actually keep in touch with them.\n\n- **Friends**: add people and see who is online, much like Discord\n- **Messages**: private conversations, or group chats\n- **Groups**: create or join them, public or private\n- **Public rooms**: browse the list to find people to play with\n- **Leaderboard**: see who is on top\n- **Profiles**: look at a friend's garden, inventory and stats in real time, when their privacy settings allow it\n\nThis is the standalone version of the hub that used to live inside Arie's Mod. Run it on its own or next to Arie's Mod, they do not conflict. If you were already using the hub through Arie's Mod, your Discord login and settings carry over on their own, nothing to set up again.",
-      "tags": [
-        "mod",
-        "social"
-      ],
-      "images": [
-        "https://i.imgur.com/oZyfAWA.png",
-        "https://i.imgur.com/lXIPia7.png",
-        "https://i.imgur.com/9KVFyiY.png",
-        "https://i.imgur.com/Kh5uhSe.png",
-        "https://i.imgur.com/DCFTruu.png",
-        "https://i.imgur.com/b3mE76l.png",
-        "https://i.imgur.com/tdJgyPq.png"
-      ],
-      "actions": [
-        {
-          "label": "Install",
-          "url": "https://github.com/Ariedam64/MG-CommunityHub/raw/refs/heads/main/dist/mg-community-hub.user.js"
-        },
-        {
-          "label": "GitHub",
-          "url": "https://github.com/Ariedam64/MG-CommunityHub"
-        }
-      ],
-      "creators": [
-        {
-          "name": "Arie",
-          "avatar": "https://i.imgur.com/eRhqdPQ.png"
+          "name": "Community"
         }
       ]
     },
@@ -142,99 +91,36 @@
       ]
     },
     {
-      "id": "magic-garden-api",
-      "title": "Magic Garden API",
-      "icon": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%235eead4%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%229%22%2F%3E%3Cpath%20d%3D%22M3%2012h18%22%2F%3E%3Cpath%20d%3D%22M12%203a14.5%2014.5%200%200%201%200%2018%2014.5%2014.5%200%200%201%200-18z%22%2F%3E%3C%2Fsvg%3E",
-      "description": "The unofficial API behind Arie's Mod, the Garden Explorer and a handful of other community tools. If you want to build something for Magic Garden, this is where the data comes from.\n\nIt exposes **all of the game's data**, and updates itself automatically on every game update, so it never falls behind:\n\n- **Game data**: plants, pets, items, decor, eggs, abilities, mutations, weather and enums\n- **Assets**: every sprite, cosmetic and sound, with absolute URLs ready to use\n- **Live**: current shops and weather, as a snapshot or as a stream you can subscribe to\n- **History**: every shop restock and weather change, with aggregates and timeseries\n\nA single `curl https://mg-api.ariedam.fr/data/plants` gets you every plant in the game. CORS is open, the limit is 100 requests per minute, and the [documentation](https://mg-api.ariedam.fr/docs) covers every endpoint.",
+      "id": "mg-community-hub",
+      "title": "MG Community Hub",
+      "description": "A real social space inside Magic Garden, the Discord Activity included. The game gives you a room full of strangers, this gives you a way to actually keep in touch with them.\n\n- **Friends**: add people and see who is online, much like Discord\n- **Messages**: private conversations, or group chats\n- **Groups**: create or join them, public or private\n- **Public rooms**: browse the list to find people to play with\n- **Leaderboard**: see who is on top\n- **Profiles**: look at a friend's garden, inventory and stats in real time, when their privacy settings allow it\n\nThis is the standalone version of the hub that used to live inside Arie's Mod. Run it on its own or next to Arie's Mod, they do not conflict. If you were already using the hub through Arie's Mod, your Discord login and settings carry over on their own, nothing to set up again.",
       "tags": [
-        "utility",
-        "dev"
+        "mod",
+        "social"
+      ],
+      "images": [
+        "https://i.imgur.com/oZyfAWA.png",
+        "https://i.imgur.com/lXIPia7.png",
+        "https://i.imgur.com/9KVFyiY.png",
+        "https://i.imgur.com/Kh5uhSe.png",
+        "https://i.imgur.com/DCFTruu.png",
+        "https://i.imgur.com/b3mE76l.png",
+        "https://i.imgur.com/tdJgyPq.png"
       ],
       "actions": [
         {
-          "label": "Documentation",
-          "url": "https://mg-api.ariedam.fr/docs"
+          "label": "Install",
+          "url": "https://github.com/Ariedam64/MG-CommunityHub/raw/refs/heads/main/dist/mg-community-hub.user.js"
         },
         {
           "label": "GitHub",
-          "url": "https://github.com/Ariedam64/Magic-Garden-API"
+          "url": "https://github.com/Ariedam64/MG-CommunityHub"
         }
       ],
       "creators": [
         {
           "name": "Arie",
           "avatar": "https://i.imgur.com/eRhqdPQ.png"
-        }
-      ]
-    },
-    {
-      "id": "guide-first-1b",
-      "title": "Making Your First 1B",
-      "description": "A rough step by step guide on making your first billion coins, put together by Bella. It covers the most popular crops and seeds for when you're just starting out, and why these three things matter so much:\n\n- **Crop Mutator pets**: pets that add mutations to your crops as they grow\n- **Crop Size Boost pets**: pets that push your crops toward bigger, more valuable sizes\n- **Patience**: understanding what it actually means to play the long game\n\nIt's a loose how-to rather than a strict recipe, easy to adapt to your own garden, and along the way you'll pick up the widely used tactics that most experienced players already rely on.",
-      "tags": [
-        "guide"
-      ],
-      "images": [
-        "https://i.imgur.com/cmqADL4.jpeg"
-      ],
-      "creators": [
-        {
-          "name": "Bella",
-          "avatar": "https://i.imgur.com/Myexa6x.png"
-        }
-      ]
-    },
-    {
-      "id": "wiki",
-      "title": "Magic Garden Wiki",
-      "description": "Everything the game never bothers to explain, written down by the players who worked it out. It runs on MediaWiki and anyone can edit it, so it tends to stay closer to the current patch than any static guide.\n\nThe main sections:\n\n- [Crops](https://magicgarden.wiki/Crops) and [Shops](https://magicgarden.wiki/Shops), for what to plant and where the seeds come from\n- [Mutations](https://magicgarden.wiki/Mutations) and [Multipliers](https://magicgarden.wiki/Multipliers), which is where the money actually is: which mutations can stack together, and how they combine with size, friend bonus and sell boost pets to set the final price\n- [Pets](https://magicgarden.wiki/Pets) and [Abilities](https://magicgarden.wiki/Abilities), with what each ability actually does rather than what the tooltip says\n- [Weather Events](https://magicgarden.wiki/Weather_Events) and [Events](https://magicgarden.wiki/Events), for anything time limited\n- [Garden Tools](https://magicgarden.wiki/Tools) and the [Garden Journal](https://magicgarden.wiki/Garden_Journal), for your gear and your collection progress\n\nAround two hundred articles so far, and a few hundred screenshots to go with them. If you spot something wrong or missing you can just fix it yourself: [First Steps](https://magicgarden.wiki/First_Steps) walks you through it, and the [contributing guide](https://magicgarden.wiki/Contributing) covers the rest.",
-      "icon": "https://i.imgur.com/0LXKEzh.png",
-      "tags": [
-        "guide",
-        "utility"
-      ],
-      "actions": [
-        {
-          "label": "Open",
-          "url": "https://magicgarden.wiki/Main_Page"
-        }
-      ],
-      "creators": [
-        {
-          "name": "Community"
-        }
-      ]
-    },
-    {
-      "id": "qpm",
-      "title": "QPM Mod Menu",
-      "icon": "🍖",
-      "description": "**QPM-GR** (Quinoa Pet Manager) is a companion userscript for people who like numbers. It keeps track of what your pets, crops and shops are really doing, and handles the repetitive stuff so you don't have to.\n\nWhat you get:\n\n- **Pet Hub**, with overview, comparison and abilities tabs, including live proc rates for every pet\n- **Ability and XP trackers** that log each proc as it happens and show your XP per minute and per hour for the session\n- **Shop Restock Tracker**, which predicts restocks from live data and past history, countdown timers included\n- **Auto-Favourite and Bulk Favourite**, so you can lock things by rarity, level or ability and stop selling stuff by accident\n- **Turtle Timer, Weather Hub and Journal Checker** for growth and egg timings, mutation alerts, and journal progress\n\nIt runs on the same platforms as Arie's Mod (magiccircle.gg, magicgarden.gg, starweaver.org and Discord Activities), and it shares its data read-only through an *Aries Mod bridge*, so running both side by side is fine.\n\nGrab it with Tampermonkey or Violentmonkey, open the game, and the QPM panel will be there waiting. Free and open source under the MIT licence.",
-      "tags": [
-        "mod"
-      ],
-      "images": [
-        "https://i.imgur.com/pMZlNIj.png",
-        "https://i.imgur.com/JzY6Rhb.png",
-        "https://i.imgur.com/wjVMwd7.png",
-        "https://i.imgur.com/3gADXww.png",
-        "https://i.imgur.com/Jv9sdh2.png",
-        "https://i.imgur.com/t21jGSh.png"
-      ],
-      "actions": [
-        {
-          "label": "Install",
-          "url": "https://github.com/mg-tokyo/QPM-GR/raw/refs/heads/master/dist/QPM.user.js"
-        },
-        {
-          "label": "GitHub",
-          "url": "https://github.com/mg-tokyo/QPM-GR"
-        }
-      ],
-      "creators": [
-        {
-          "name": "Tokyo",
-          "avatar": "https://cdn.discordapp.com/avatars/511094276613210122/c2af3c8ff2123724ba49b7e897d0ce97.png"
         }
       ]
     },
@@ -270,22 +156,35 @@
       ]
     },
     {
-      "id": "liam-hub",
-      "title": "Liam's Tool Hub",
-      "description": "One page gathering every tool Liam has built for Magic Garden, so there is a single link to bookmark instead of digging through Discord threads.\n\n- **Pet Feeding**: shows which food is best for your pets and how many food plants or seeds you will go through\n- **Granter Calc**: estimates pet ability chances, average wait times and egg growth boosts\n- **Magic Dust**: estimates pet dust value and expected dust from egg batches\n- **Dawn Capsule**: estimates Dawn Capsules per Dawn and compares capture cadence\n- **Farm Projection**: projects a farm's finished value and the time needed to get there, with various mutations\n- **Celestial Layout Planner**: plans celestial placements with Dawn and Amber mutation coverage\n- **Garden Layout Planner**: plans your whole farm layout, plants and decorations\n\nThe hub also links out to Garden Overview, a userscript for viewing stats on your whole garden, plus Garden Companion and a couple of smaller userscripts, through their Discord posts.",
+      "id": "qpm",
+      "title": "QPM Mod Menu",
+      "icon": "🍖",
+      "description": "**QPM-GR** (Quinoa Pet Manager) is a companion userscript for people who like numbers. It keeps track of what your pets, crops and shops are really doing, and handles the repetitive stuff so you don't have to.\n\nWhat you get:\n\n- **Pet Hub**, with overview, comparison and abilities tabs, including live proc rates for every pet\n- **Ability and XP trackers** that log each proc as it happens and show your XP per minute and per hour for the session\n- **Shop Restock Tracker**, which predicts restocks from live data and past history, countdown timers included\n- **Auto-Favourite and Bulk Favourite**, so you can lock things by rarity, level or ability and stop selling stuff by accident\n- **Turtle Timer, Weather Hub and Journal Checker** for growth and egg timings, mutation alerts, and journal progress\n\nIt runs on the same platforms as Arie's Mod (magiccircle.gg, magicgarden.gg, starweaver.org and Discord Activities), and it shares its data read-only through an *Aries Mod bridge*, so running both side by side is fine.\n\nGrab it with Tampermonkey or Violentmonkey, open the game, and the QPM panel will be there waiting. Free and open source under the MIT licence.",
       "tags": [
-        "utility"
+        "mod"
+      ],
+      "images": [
+        "https://i.imgur.com/pMZlNIj.png",
+        "https://i.imgur.com/JzY6Rhb.png",
+        "https://i.imgur.com/wjVMwd7.png",
+        "https://i.imgur.com/3gADXww.png",
+        "https://i.imgur.com/Jv9sdh2.png",
+        "https://i.imgur.com/t21jGSh.png"
       ],
       "actions": [
         {
-          "label": "Open Hub",
-          "url": "https://liam0306dis.github.io/hub/"
+          "label": "Install",
+          "url": "https://github.com/mg-tokyo/QPM-GR/raw/refs/heads/master/dist/QPM.user.js"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/mg-tokyo/QPM-GR"
         }
       ],
       "creators": [
         {
-          "name": "Liam",
-          "avatar": "https://i.imgur.com/8ha8EyR.png"
+          "name": "Tokyo",
+          "avatar": "https://cdn.discordapp.com/avatars/511094276613210122/c2af3c8ff2123724ba49b7e897d0ce97.png"
         }
       ]
     },
@@ -338,6 +237,107 @@
         {
           "name": "Daserix",
           "avatar": "https://cdn.discordapp.com/avatars/266245650662817793/09de28b070e0a107eb1bea1fe015afc3.png"
+        }
+      ]
+    },
+    {
+      "id": "liam-hub",
+      "title": "Liam's Tool Hub",
+      "description": "One page gathering every tool Liam has built for Magic Garden, so there is a single link to bookmark instead of digging through Discord threads.\n\n- **Pet Feeding**: shows which food is best for your pets and how many food plants or seeds you will go through\n- **Granter Calc**: estimates pet ability chances, average wait times and egg growth boosts\n- **Magic Dust**: estimates pet dust value and expected dust from egg batches\n- **Dawn Capsule**: estimates Dawn Capsules per Dawn and compares capture cadence\n- **Farm Projection**: projects a farm's finished value and the time needed to get there, with various mutations\n- **Celestial Layout Planner**: plans celestial placements with Dawn and Amber mutation coverage\n- **Garden Layout Planner**: plans your whole farm layout, plants and decorations\n\nThe hub also links out to Garden Overview, a userscript for viewing stats on your whole garden, plus Garden Companion and a couple of smaller userscripts, through their Discord posts.",
+      "tags": [
+        "utility"
+      ],
+      "actions": [
+        {
+          "label": "Open Hub",
+          "url": "https://liam0306dis.github.io/hub/"
+        }
+      ],
+      "creators": [
+        {
+          "name": "Liam",
+          "avatar": "https://i.imgur.com/8ha8EyR.png"
+        }
+      ]
+    },
+    {
+      "id": "magic-garden-api",
+      "title": "Magic Garden API",
+      "icon": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%235eead4%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%229%22%2F%3E%3Cpath%20d%3D%22M3%2012h18%22%2F%3E%3Cpath%20d%3D%22M12%203a14.5%2014.5%200%200%201%200%2018%2014.5%2014.5%200%200%201%200-18z%22%2F%3E%3C%2Fsvg%3E",
+      "description": "The unofficial API behind Arie's Mod, the Garden Explorer and a handful of other community tools. If you want to build something for Magic Garden, this is where the data comes from.\n\nIt exposes **all of the game's data**, and updates itself automatically on every game update, so it never falls behind:\n\n- **Game data**: plants, pets, items, decor, eggs, abilities, mutations, weather and enums\n- **Assets**: every sprite, cosmetic and sound, with absolute URLs ready to use\n- **Live**: current shops and weather, as a snapshot or as a stream you can subscribe to\n- **History**: every shop restock and weather change, with aggregates and timeseries\n\nA single `curl https://mg-api.ariedam.fr/data/plants` gets you every plant in the game. CORS is open, the limit is 100 requests per minute, and the [documentation](https://mg-api.ariedam.fr/docs) covers every endpoint.",
+      "tags": [
+        "utility",
+        "dev"
+      ],
+      "actions": [
+        {
+          "label": "Documentation",
+          "url": "https://mg-api.ariedam.fr/docs"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/Ariedam64/Magic-Garden-API"
+        }
+      ],
+      "creators": [
+        {
+          "name": "Arie",
+          "avatar": "https://i.imgur.com/eRhqdPQ.png"
+        }
+      ]
+    },
+    {
+      "id": "guide-first-1b",
+      "title": "Making Your First 1B",
+      "description": "A rough step by step guide on making your first billion coins, put together by Bella. It covers the most popular crops and seeds for when you're just starting out, and why these three things matter so much:\n\n- **Crop Mutator pets**: pets that add mutations to your crops as they grow\n- **Crop Size Boost pets**: pets that push your crops toward bigger, more valuable sizes\n- **Patience**: understanding what it actually means to play the long game\n\nIt's a loose how-to rather than a strict recipe, easy to adapt to your own garden, and along the way you'll pick up the widely used tactics that most experienced players already rely on.",
+      "tags": [
+        "guide"
+      ],
+      "images": [
+        "https://i.imgur.com/cmqADL4.jpeg"
+      ],
+      "creators": [
+        {
+          "name": "Bella",
+          "avatar": "https://i.imgur.com/Myexa6x.png"
+        }
+      ]
+    },
+    {
+      "id": "gemini",
+      "title": "Gemini",
+      "icon": "https://i.imgur.com/CtHVvb9.png",
+      "description": "A userscript built to run on **phones as much as on PC**, and that is really the point of it. The PC side already has well developed mods, so this one puts mobile first, which everyone else tends to ignore.\n\nIt is not a mega mod with dozens of features. It covers the essentials and tries to do them properly:\n\n- **Locker**, so you stop selling what you meant to keep\n- **Pets management**\n- **Public rooms**\n- **Avatar loadouts**\n- **Crop value**\n- **Alerts system**\n\nThree things drove the build: that it actually be usable on a phone, that it stay simple to extend, and that it survive game updates instead of breaking every other day.\n\n**On Android** you need a browser that accepts extensions, so either Firefox with Violentmonkey, or Kiwi Browser and its Chrome extensions. **On PC** it is Tampermonkey, like any other userscript. The HUD toggles with `Ctrl + Shift + U`.\n\nSeveral browsers are supported, though some environments are still rough, Discord Activities in particular. Bugs can happen, and [GitHub](https://github.com/Ariedam64/Gemini) is the place to report them.",
+      "tags": [
+        "mod",
+        "android"
+      ],
+      "images": [
+        "https://i.imgur.com/8cRIWuL.png",
+        "https://i.imgur.com/srwdo0A.png",
+        "https://i.imgur.com/pYOAOGv.png",
+        "https://i.imgur.com/CgLVV5r.png",
+        "https://i.imgur.com/XGEYkiT.png",
+        "https://i.imgur.com/Ms3zuQC.png"
+      ],
+      "actions": [
+        {
+          "label": "Install",
+          "url": "https://github.com/Ariedam64/Gemini/releases/latest/download/gemini.user.js"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/Ariedam64/Gemini"
+        }
+      ],
+      "creators": [
+        {
+          "name": "Arie",
+          "avatar": "https://i.imgur.com/eRhqdPQ.png"
+        },
+        {
+          "name": "Tokyo",
+          "avatar": "https://cdn.discordapp.com/avatars/511094276613210122/c2af3c8ff2123724ba49b7e897d0ce97.png"
         }
       ]
     }
