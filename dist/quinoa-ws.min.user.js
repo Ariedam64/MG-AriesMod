@@ -765,7 +765,7 @@
 
   // src/sprite/utils/async.ts
   var pageWin = globalThis.unsafeWindow || globalThis;
-  var sleep = (ms) => new Promise((resolve2) => pageWin.setTimeout(resolve2, ms));
+  var sleep = (ms) => new Promise((resolve) => pageWin.setTimeout(resolve, ms));
   async function waitWithTimeout(p, ms, label2) {
     const t0 = performance.now();
     while (performance.now() - t0 < ms) {
@@ -812,8 +812,8 @@
   function createPixiHooks() {
     let appResolver;
     let rdrResolver;
-    const appReady = new Promise((resolve2) => appResolver = resolve2);
-    const rendererReady = new Promise((resolve2) => rdrResolver = resolve2);
+    const appReady = new Promise((resolve) => appResolver = resolve);
+    const rendererReady = new Promise((resolve) => rdrResolver = resolve);
     let APP = null;
     let RDR = null;
     let PIXI_VER = null;
@@ -1022,12 +1022,12 @@
   }
   function gmRequest(url, type) {
     return new Promise(
-      (resolve2, reject) => GM_xmlhttpRequest({
+      (resolve, reject) => GM_xmlhttpRequest({
         method: "GET",
         url,
         responseType: type,
         timeout: GM_TIMEOUT_MS,
-        onload: (r) => r.status >= 200 && r.status < 300 ? resolve2(r) : reject(new Error(`HTTP ${r.status} (${url})`)),
+        onload: (r) => r.status >= 200 && r.status < 300 ? resolve(r) : reject(new Error(`HTTP ${r.status} (${url})`)),
         onerror: () => reject(new Error(`Network (${url})`)),
         ontimeout: () => reject(new Error(`Timeout (${url})`))
       })
@@ -1085,13 +1085,13 @@
   var getJSON = async (url) => JSON.parse((await gm(url, "text")).responseText);
   var getBlob = async (url) => (await gm(url, "blob")).response;
   function blobToImage(blob) {
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(blob);
       const img = new Image();
       img.decoding = "async";
       img.onload = () => {
         URL.revokeObjectURL(url);
-        resolve2(img);
+        resolve(img);
       };
       img.onerror = () => {
         URL.revokeObjectURL(url);
@@ -1379,9 +1379,9 @@
 
   // src/utils/mgCommon.ts
   var ORIGIN = "https://magicgarden.gg";
-  var sleep2 = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
+  var sleep2 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   function gmGet(url, responseType = "text") {
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve, reject) => {
       if (typeof GM_xmlhttpRequest !== "function") {
         reject(new Error("GM_xmlhttpRequest not available"));
         return;
@@ -1391,7 +1391,7 @@
         url,
         responseType,
         onload: (r) => {
-          if (r.status >= 200 && r.status < 300) resolve2(r);
+          if (r.status >= 200 && r.status < 300) resolve(r);
           else reject(new Error(`HTTP ${r.status} for ${url}`));
         },
         onerror: () => reject(new Error(`Network error for ${url}`)),
@@ -1402,13 +1402,13 @@
   var getJSON2 = async (url) => JSON.parse((await gmGet(url, "text")).responseText);
   var getBlob2 = async (url) => (await gmGet(url, "blob")).response;
   function blobToImage2(blob) {
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve, reject) => {
       const u = URL.createObjectURL(blob);
       const img = new Image();
       img.decoding = "async";
       img.onload = () => {
         URL.revokeObjectURL(u);
-        resolve2(img);
+        resolve(img);
       };
       img.onerror = () => {
         URL.revokeObjectURL(u);
@@ -1496,26 +1496,26 @@
   var _gmAudioCache = /* @__PURE__ */ new Map();
   var _gmAudioPending = /* @__PURE__ */ new Map();
   function getAudioUrlSafe(url) {
-    return new Promise((resolve2) => {
+    return new Promise((resolve) => {
       if (!url) {
-        resolve2(url);
+        resolve(url);
         return;
       }
       if (!isDiscordActivityContext()) {
-        resolve2(url);
+        resolve(url);
         return;
       }
       const cached = _gmAudioCache.get(url);
       if (cached) {
-        resolve2(cached);
+        resolve(cached);
         return;
       }
       const pending = _gmAudioPending.get(url);
       if (pending) {
-        pending.push(resolve2);
+        pending.push(resolve);
         return;
       }
-      _gmAudioPending.set(url, [resolve2]);
+      _gmAudioPending.set(url, [resolve]);
       GM_xmlhttpRequest({
         method: "GET",
         url,
@@ -1578,16 +1578,16 @@
       if (_emojiJson) {
         return Promise.resolve(_emojiMakeResponse(_emojiJson, method));
       }
-      return new Promise((resolve2) => {
+      return new Promise((resolve) => {
         _emojiPending.push((json) => {
-          resolve2(
+          resolve(
             json ? _emojiMakeResponse(json, method) : new Response(null, { status: 503 })
           );
         });
       });
     };
     void withDiscordPollPause(async () => {
-      return new Promise((resolve2) => {
+      return new Promise((resolve) => {
         GM_xmlhttpRequest({
           method: "GET",
           url: `${EMOJI_DATA_CDN_PREFIX}@^1/en/emojibase/data.json`,
@@ -1601,13 +1601,13 @@
               for (const cb of _emojiPending) cb(null);
             }
             _emojiPending = [];
-            resolve2();
+            resolve();
           },
           onerror: (err) => {
             console.error("[discordCsp] emoji fetch error:", err);
             for (const cb of _emojiPending) cb(null);
             _emojiPending = [];
-            resolve2();
+            resolve();
           }
         });
       });
@@ -1990,7 +1990,7 @@
     return url.toString();
   }
   function gmRequest2(method, url, body) {
-    return new Promise((resolve2) => {
+    return new Promise((resolve) => {
       const apiKey = getApiKey();
       const headers = {};
       if (apiKey) {
@@ -2008,16 +2008,16 @@
           if (res.status >= 200 && res.status < 300) {
             try {
               const parsed = res.responseText ? JSON.parse(res.responseText) : null;
-              resolve2({ status: res.status, data: parsed });
+              resolve({ status: res.status, data: parsed });
             } catch {
-              resolve2({ status: res.status, data: null });
+              resolve({ status: res.status, data: null });
             }
           } else {
-            resolve2({ status: res.status, data: null });
+            resolve({ status: res.status, data: null });
           }
         },
         onerror: () => {
-          resolve2({ status: 0, data: null });
+          resolve({ status: 0, data: null });
         }
       });
     });
@@ -2584,14 +2584,14 @@
     return { category, id };
   };
   var yieldToBrowser = () => {
-    return new Promise((resolve2) => {
+    return new Promise((resolve) => {
       const win = typeof window !== "undefined" ? window : null;
       if (win?.requestIdleCallback) {
-        win.requestIdleCallback(() => resolve2(), { timeout: 32 });
+        win.requestIdleCallback(() => resolve(), { timeout: 32 });
       } else if (typeof requestAnimationFrame === "function") {
-        requestAnimationFrame(() => resolve2());
+        requestAnimationFrame(() => resolve());
       } else {
-        setTimeout(resolve2, 0);
+        setTimeout(resolve, 0);
       }
     });
   };
@@ -2796,10 +2796,10 @@
   }
   function ensureDocumentReady() {
     if (document.readyState !== "loading") return Promise.resolve();
-    return new Promise((resolve2) => {
+    return new Promise((resolve) => {
       const onReady = () => {
         document.removeEventListener("DOMContentLoaded", onReady);
-        resolve2();
+        resolve();
       };
       document.addEventListener("DOMContentLoaded", onReady);
     });
@@ -4363,7 +4363,7 @@
   var DEFAULT_WAIT_TIMEOUT_MS = 5e3;
   var WAIT_POLL_INTERVAL_MS = 50;
   function sleep3(ms) {
-    return new Promise((resolve2) => setTimeout(resolve2, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
   function getData(key2) {
     return captureState.data[key2];
@@ -14857,8 +14857,8 @@
   var DEFAULT_SEED_DELETE_DELAY_MS = 35;
   async function waitSeedPause() {
     while (_seedDeletePaused) {
-      await new Promise((resolve2) => {
-        _seedDeletePauseResolver = resolve2;
+      await new Promise((resolve) => {
+        _seedDeletePauseResolver = resolve;
       });
       _seedDeletePauseResolver = null;
     }
@@ -15692,8 +15692,8 @@
   var DEFAULT_DECOR_DELETE_DELAY_MS = 35;
   async function waitDecorPause() {
     while (_decorDeletePaused) {
-      await new Promise((resolve2) => {
-        _decorDeletePauseResolver = resolve2;
+      await new Promise((resolve) => {
+        _decorDeletePauseResolver = resolve;
       });
       _decorDeletePauseResolver = null;
     }
@@ -21005,7 +21005,7 @@
     if (hasNewInventoryPet(initial, previous)) {
       return initial;
     }
-    return new Promise(async (resolve2) => {
+    return new Promise(async (resolve) => {
       let settled = false;
       let unsub = null;
       let timer = null;
@@ -21021,7 +21021,7 @@
           } catch {
           }
         }
-        resolve2(value);
+        resolve(value);
       };
       const evaluate = (source) => {
         const pets = collectInventoryPets(source);
@@ -21054,7 +21054,7 @@
     return pets.some((pet) => !previous.has(pet.id));
   }
   function delay(ms) {
-    return new Promise((resolve2) => setTimeout(resolve2, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
   function resolveSendMessage(Conn) {
     const isFn = (value) => typeof value === "function";
@@ -22872,7 +22872,7 @@
       }
     };
     if (await snapshotMatches()) return true;
-    return new Promise((resolve2) => {
+    return new Promise((resolve) => {
       const deadline = Date.now() + timeoutMs;
       let unsub = null;
       let pendingUnsub = null;
@@ -22894,7 +22894,7 @@
           pendingUnsub.then((fn) => doUnsub(fn)).catch(() => {
           });
         }
-        resolve2(ok);
+        resolve(ok);
       };
       const check = async (state3) => {
         const set2 = new Set(
@@ -24184,9 +24184,9 @@
     return confirmed;
   }
   function showSellAllPetsConfirmModal(flagged) {
-    return new Promise((resolve2) => {
+    return new Promise((resolve) => {
       if (!isBrowser()) {
-        resolve2(false);
+        resolve(false);
         return;
       }
       const existing = document.getElementById(SELL_ALL_PETS_CONFIRM_MODAL_ID);
@@ -24324,7 +24324,7 @@
         settled = true;
         overlay.remove();
         document.removeEventListener("keydown", onKeyDown, true);
-        resolve2(value);
+        resolve(value);
       };
       const onKeyDown = (ev) => {
         if (ev.key === "Escape") {
@@ -25507,11 +25507,11 @@
         let endPromise = null;
         let resolveEnd = null;
         if (awaitEnd) {
-          endPromise = new Promise((resolve2) => {
+          endPromise = new Promise((resolve) => {
             const cleanup2 = () => {
               a.removeEventListener("ended", cleanup2);
               a.removeEventListener("error", cleanup2);
-              resolve2();
+              resolve();
             };
             resolveEnd = cleanup2;
             a.addEventListener("ended", cleanup2);
@@ -25622,9 +25622,9 @@
       return `${base} (${i})`;
     }
     async blobToDataURL(blob) {
-      return await new Promise((resolve2, reject) => {
+      return await new Promise((resolve, reject) => {
         const fr = new FileReader();
-        fr.onload = () => resolve2(String(fr.result));
+        fr.onload = () => resolve(String(fr.result));
         fr.onerror = reject;
         fr.readAsDataURL(blob);
       });
@@ -25659,14 +25659,14 @@
       src.connect(gain).connect(dest);
       const chunks = [];
       const rec = new MediaRecorder(dest.stream, { mimeType: mime, bitsPerSecond });
-      const recorded = new Promise((resolve2, reject) => {
+      const recorded = new Promise((resolve, reject) => {
         rec.ondataavailable = (e) => {
           if (e.data && e.data.size) chunks.push(e.data);
         };
         rec.onerror = (e) => reject(e.error || new Error("MediaRecorder error"));
         rec.onstop = () => {
           try {
-            resolve2(new Blob(chunks, { type: mime }));
+            resolve(new Blob(chunks, { type: mime }));
           } catch (err) {
             reject(err);
           }
@@ -29632,7 +29632,7 @@
   function ensureCoinTexture(TextureCtor) {
     if (coinTexture) return Promise.resolve(coinTexture);
     if (!coinTexturePromise) {
-      coinTexturePromise = new Promise((resolve2) => {
+      coinTexturePromise = new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
           try {
@@ -29640,9 +29640,9 @@
           } catch {
             coinTexture = null;
           }
-          resolve2(coinTexture);
+          resolve(coinTexture);
         };
-        img.onerror = () => resolve2(null);
+        img.onerror = () => resolve(null);
         img.src = coin2.img64;
       });
     }
@@ -30766,7 +30766,7 @@
     return await response.text();
   }
   async function fetchTextWithGM(url, options) {
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve, reject) => {
       const xhr = typeof GM_xmlhttpRequest === "function" ? GM_xmlhttpRequest : typeof GM !== "undefined" && typeof GM.xmlHttpRequest === "function" ? GM.xmlHttpRequest : null;
       if (!xhr) return reject(new Error("GM_xmlhttpRequest not available"));
       xhr({
@@ -30774,7 +30774,7 @@
         url,
         headers: options?.headers,
         onload: (res) => {
-          if (res.status >= 200 && res.status < 300) resolve2(res.responseText);
+          if (res.status >= 200 && res.status < 300) resolve(res.responseText);
           else reject(new Error(`GM_xhr failed: ${res.status}`));
         },
         onerror: (e) => reject(e)
@@ -35245,7 +35245,7 @@
     function addLaunchItem(id, title, render) {
       const item = document.createElement("div");
       item.className = "launch-item";
-      item.innerHTML = `<div class="name">${escapeHtml2(title)}</div>`;
+      item.innerHTML = `<div class="name">${escapeHtml3(title)}</div>`;
       const openBtn = document.createElement("button");
       openBtn.className = "btn";
       openBtn.textContent = "Open";
@@ -35458,7 +35458,7 @@
         if (typeof prev === "function") prev();
       };
     })();
-    function escapeHtml2(s) {
+    function escapeHtml3(s) {
       return s.replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[m]);
     }
   }
@@ -35632,22 +35632,22 @@
     return url.toString();
   }
   function gmGetJson(url) {
-    return new Promise((resolve2) => {
+    return new Promise((resolve) => {
       GM_xmlhttpRequest({
         method: "GET",
         url,
         onload: (res) => {
           if (res.status < 200 || res.status >= 300 || !res.responseText) {
-            resolve2(null);
+            resolve(null);
             return;
           }
           try {
-            resolve2(JSON.parse(res.responseText));
+            resolve(JSON.parse(res.responseText));
           } catch {
-            resolve2(null);
+            resolve(null);
           }
         },
-        onerror: () => resolve2(null)
+        onerror: () => resolve(null)
       });
     });
   }
@@ -35674,19 +35674,19 @@
     }
   }
   function gmGetBinary(url) {
-    return new Promise((resolve2) => {
+    return new Promise((resolve) => {
       GM_xmlhttpRequest({
         method: "GET",
         url,
         responseType: "arraybuffer",
         onload: (res) => {
           if (res.status < 200 || res.status >= 300 || !res.response) {
-            resolve2(null);
+            resolve(null);
             return;
           }
-          resolve2(res.response);
+          resolve(res.response);
         },
-        onerror: () => resolve2(null)
+        onerror: () => resolve(null)
       });
     });
   }
@@ -47948,258 +47948,81 @@ next: ${next}`;
   }
 
   // src/services/tools.ts
-  var TOOL_LIST = [
-    {
-      id: "aries-mod-intro",
-      title: "Arie's Mod introduction",
-      description: "Visual guide for the mod with the main features highlighted",
-      url: "https://i.imgur.com/LZL6zPj.jpeg",
-      icon: "",
-      showInlinePreview: true,
-      tags: ["guide", "mod"],
-      creators: [
-        {
-          name: "Bella",
-          avatar: "https://cdn.discordapp.com/avatars/1400054123969380354/241dfc8a181b9e4b9dab6f1ac4f7567a.webp"
-        }
-      ]
-    },
-    {
-      id: "wiki",
-      title: "Magic Garden Wiki",
-      description: "Community-curated documentation for plants, mechanics, weather, and more.",
-      url: "https://magicgarden.wiki/Main_Page",
-      icon: "https://i.imgur.com/0LXKEzh.png",
-      tags: ["guide", "utility"],
-      creators: [
-        {
-          name: "Community"
-        }
-      ]
-    },
-    {
-      id: "qpm",
-      title: "QPM Mod Menu",
-      description: "Mod/userscript focused on game stats, adding pet analytics, inventory helpers and shop/weather tracking",
-      url: "",
-      icon: "",
-      tags: ["mod"],
-      actions: [
-        {
-          label: "Github",
-          url: "https://github.com/ryandt2305-cpu/QPM-GR/"
-        },
-        {
-          label: "Install",
-          url: "https://github.com/ryandt2305-cpu/QPM-GR/raw/refs/heads/master/dist/QPM.user.js"
-        }
-      ],
-      creators: [
-        {
-          name: "Tokyo",
-          avatar: "https://cdn.discordapp.com/avatars/511094276613210122/c2af3c8ff2123724ba49b7e897d0ce97.png"
-        }
-      ]
-    },
-    {
-      id: "calculator",
-      title: "Daserix' Magic Garden Calculators",
-      description: "Calculate crop value based on size and mutations, with garden import for total optimisation stats",
-      url: "https://daserix.github.io/magic-garden-calculator/",
-      icon: "https://i.imgur.com/xXPqRgK.png",
-      tags: ["utility"],
-      creators: [
-        {
-          name: "Daserix",
-          avatar: "https://cdn.discordapp.com/avatars/266245650662817793/09de28b070e0a107eb1bea1fe015afc3.webp"
-        }
-      ]
-    },
-    {
-      id: "mg-android-notifier",
-      title: "Magic Garden Notifier",
-      description: "Android app that sends push notifications/alarms when selected shop items restock, with configurable thresholds and background monitoring",
-      url: "",
-      icon: "https://i.imgur.com/l3NHmc5.png",
-      tags: ["utility", "android"],
-      actions: [
-        {
-          label: "Github",
-          url: "https://github.com/Daserix/magic-garden-notifier-releases"
-        },
-        {
-          label: "Install",
-          url: "https://github.com/Daserix/magic-garden-notifier-releases/releases/download/v1.1.0/mg-notifier-1.1.0.apk"
-        }
-      ],
-      creators: [
-        {
-          name: "Daserix",
-          avatar: "https://cdn.discordapp.com/avatars/266245650662817793/09de28b070e0a107eb1bea1fe015afc3.png"
-        }
-      ]
-    },
-    {
-      id: "guide-1b",
-      title: "Making Your First 1B",
-      description: "Beginner-friendly step-by-step guide to earning your first 1B coins, covering early crop choices, key pets, and long-term strategy",
-      url: "https://i.imgur.com/gs6Karj.png",
-      icon: "",
-      showInlinePreview: true,
-      tags: ["guide"],
-      creators: [
-        {
-          name: "Bella",
-          avatar: "https://cdn.discordapp.com/avatars/1400054123969380354/241dfc8a181b9e4b9dab6f1ac4f7567a.png"
-        }
-      ]
-    },
-    {
-      id: "visual-guides",
-      title: "Visual guides",
-      description: "Visual guides covering crops/multiplier stacking and pet info (eggs, hatch rates, abilities), plus beginner tips to avoid common mistakes",
-      url: "",
-      icon: "",
-      tags: ["guide"],
-      actions: [
-        {
-          label: "Crops & Multipliers",
-          url: "https://i.imgur.com/86TuVYh.jpeg",
-          showInlinePreview: true
-        },
-        {
-          label: "Pets",
-          url: "https://i.imgur.com/bx2qX8i.jpeg",
-          showInlinePreview: true
-        },
-        {
-          label: "Winter event",
-          url: "https://i.imgur.com/Ew9xBk6.jpeg",
-          showInlinePreview: true
-        }
-      ],
-      creators: [
-        {
-          name: "Foraged Rituals",
-          avatar: "https://cdn.discordapp.com/avatars/1065631808072450164/40be204333c0f3f7c5f3ce1d8636ff77.png"
-        }
-      ]
-    },
-    {
-      id: "pet-diet-visual-guides",
-      title: "Pet diet visual guides",
-      description: "Rarity-based pet diet guides focused on food restoration percentages",
-      url: "",
-      icon: "",
-      showInlinePreview: true,
-      tags: ["guide"],
-      actions: [
-        {
-          label: "Common",
-          url: "https://i.imgur.com/sOXepq1.jpeg",
-          showInlinePreview: true
-        },
-        {
-          label: "Uncommon",
-          url: "https://i.imgur.com/3weyngx.jpeg",
-          showInlinePreview: true
-        },
-        {
-          label: "Rare",
-          url: "https://i.imgur.com/n8KPA7L.jpeg",
-          showInlinePreview: true
-        },
-        {
-          label: "Winter",
-          url: "https://i.imgur.com/CBKjqiN.jpeg",
-          showInlinePreview: true
-        },
-        {
-          label: "Legendary",
-          url: "https://i.imgur.com/YD00B5U.jpeg",
-          showInlinePreview: true
-        },
-        {
-          label: "Mythical",
-          url: "https://i.imgur.com/ybcdHxC.jpeg",
-          showInlinePreview: true
-        }
-      ],
-      creators: [
-        {
-          name: "Bella",
-          avatar: "https://cdn.discordapp.com/avatars/1400054123969380354/241dfc8a181b9e4b9dab6f1ac4f7567a.webp"
-        }
-      ]
-    },
-    {
-      id: "mgtools",
-      title: "MGTools",
-      description: "Mod/userscript adding pet management, ability tracking, calculators, timers, and a customizable UI",
-      url: "",
-      actions: [
-        {
-          label: "Discord",
-          url: "https://discord.gg/qFpQ436HZc"
-        },
-        {
-          label: "Github",
-          url: "https://github.com/Myke247/MGTools/"
-        },
-        {
-          label: "Install",
-          url: "https://github.com/Umm12many/MGTools-M/raw/refs/heads/main/MGTools.user.js"
-        }
-      ],
-      icon: "https://cdn.discordapp.com/icons/1428162440297840640/23c0c05e578d5eb307febb4b562626e9.webp",
-      tags: ["mod"],
-      creators: [
-        {
-          name: "Myke",
-          avatar: "https://cdn.discordapp.com/avatars/184699074543484928/ca44cd2f0f3002b2455a9805986eeac9.webp"
-        },
-        {
-          name: "Normie",
-          avatar: "https://cdn.discordapp.com/avatars/375367702094544898/ebd1ef1279c16a4ab8e73ee9fbd70148.png"
-        }
-      ]
-    },
-    {
-      id: "mg-android",
-      title: "Magic Garden Android App",
-      description: "Basic Android companion app for Magic Garden (early build, not actively maintained)",
-      url: "https://appdistribution.firebase.dev/i/cde454c6e9eb5f30",
-      icon: "",
-      tags: ["android"],
-      creators: [
-        {
-          name: "Umm12many",
-          avatar: "https://cdn.discordapp.com/avatars/925833066310672465/ad6f0f9d27e1a4b1acebf6987b3d7c39.png"
-        }
-      ]
+  var REPO_OWNER2 = "Ariedam64";
+  var REPO_NAME2 = "MG-AriesMod";
+  var REPO_BRANCH2 = "main";
+  var TOOLS_FILE_PATH = "tools/tools.json";
+  var RAW_BASE_URL2 = `https://raw.githubusercontent.com/${REPO_OWNER2}/${REPO_NAME2}`;
+  function parseToolsPayload(raw) {
+    if (!raw || typeof raw !== "object") {
+      throw new Error("Invalid tools payload: not an object");
     }
-  ];
-  var TOOL_TAGS = Array.from(
-    new Set(
-      TOOL_LIST.flatMap((tool) => {
-        return tool.tags ?? [];
-      })
-    )
-  ).sort((a, b) => a.localeCompare(b));
-  function cloneTool(tool) {
-    return {
-      ...tool,
-      tags: tool.tags ? [...tool.tags] : void 0,
-      actions: tool.actions ? tool.actions.map((action2) => ({ ...action2 })) : void 0,
-      showInlinePreview: tool.showInlinePreview
-    };
+    const payload = raw;
+    if (!Array.isArray(payload.tools)) {
+      throw new Error("Invalid tools payload: 'tools' is not an array");
+    }
+    const tools = [];
+    for (const entry of payload.tools) {
+      if (!entry || typeof entry !== "object") {
+        console.warn("[Tools] Skipping invalid entry:", entry);
+        continue;
+      }
+      const e = entry;
+      const id = e.id;
+      const title = e.title;
+      const description = e.description;
+      if (!id || typeof id !== "string" || !id.trim()) {
+        console.warn("[Tools] Skipping entry with missing/invalid id");
+        continue;
+      }
+      if (!title || typeof title !== "string" || !title.trim()) {
+        console.warn("[Tools] Skipping entry with missing/invalid title:", id);
+        continue;
+      }
+      if (!description || typeof description !== "string" || !description.trim()) {
+        console.warn("[Tools] Skipping entry with missing/invalid description:", id);
+        continue;
+      }
+      const tags = Array.isArray(e.tags) ? e.tags.filter((t) => typeof t === "string").map((t) => t) : void 0;
+      const images = Array.isArray(e.images) ? e.images.filter((img) => typeof img === "string").map((img) => img) : void 0;
+      const icon = typeof e.icon === "string" ? e.icon : void 0;
+      const actions = Array.isArray(e.actions) ? e.actions.filter((a) => a && typeof a === "object").map((a) => {
+        const action2 = a;
+        return {
+          label: typeof action2.label === "string" ? action2.label : "Open",
+          url: typeof action2.url === "string" ? action2.url : ""
+        };
+      }).filter((a) => a.url) : void 0;
+      const creators = Array.isArray(e.creators) ? e.creators.filter((c) => c && typeof c === "object").map((c) => {
+        const creator = c;
+        return {
+          name: typeof creator.name === "string" ? creator.name : "Unknown",
+          avatar: typeof creator.avatar === "string" ? creator.avatar : void 0
+        };
+      }) : void 0;
+      tools.push({
+        id,
+        title,
+        description,
+        tags,
+        images,
+        icon,
+        actions,
+        creators
+      });
+    }
+    return tools;
   }
-  function resolve(tool) {
-    if (typeof tool === "string") {
-      const found = TOOL_LIST.find((entry) => entry.id === tool);
-      return found ? cloneTool(found) : null;
+  async function fetchTools() {
+    const url = `${RAW_BASE_URL2}/refs/heads/${REPO_BRANCH2}/${TOOLS_FILE_PATH}?t=${Date.now()}`;
+    try {
+      const text = await fetchText(url);
+      const raw = JSON.parse(text);
+      return parseToolsPayload(raw);
+    } catch (error) {
+      console.error("[Tools] Failed to fetch tools:", error);
+      throw error;
     }
-    return cloneTool(tool);
   }
   function openUrl(url) {
     if (typeof GM_openInTab === "function") {
@@ -48223,204 +48046,284 @@ next: ${next}`;
   function openLink(url) {
     return openUrl(url);
   }
-  var ToolsService = {
-    list() {
-      const list = TOOL_LIST.map(cloneTool);
-      return list;
-    },
-    tags() {
-      return TOOL_TAGS.map((tag) => tag);
-    },
-    get(id) {
-      const found = TOOL_LIST.find((tool) => tool.id === id);
-      const entry = found ? cloneTool(found) : null;
-      return entry;
-    },
-    open(tool) {
-      const entry = resolve(tool);
-      if (!entry) {
-        return false;
-      }
-      const ok = openUrl(entry.url);
-      return ok;
-    }
-  };
 
-  // src/ui/menus/tools.ts
-  function createTagPill(label2) {
-    const pill = document.createElement("span");
-    pill.textContent = label2;
-    pill.style.display = "inline-flex";
-    pill.style.alignItems = "center";
-    pill.style.justifyContent = "center";
-    pill.style.padding = "2px 8px";
-    pill.style.borderRadius = "999px";
-    pill.style.background = "#ffffff11";
-    pill.style.border = "1px solid #ffffff22";
-    pill.style.fontSize = "11px";
-    pill.style.letterSpacing = "0.02em";
-    pill.style.textTransform = "uppercase";
-    pill.style.opacity = "0.8";
-    return pill;
-  }
-  function renderToolCard(ui, tool) {
-    async function fetchImageBlob(url) {
-      if (typeof GM_xmlhttpRequest === "function") {
-        try {
-          return await new Promise((resolve2, reject) => {
-            GM_xmlhttpRequest({
-              method: "GET",
-              url,
-              responseType: "blob",
-              timeout: 15e3,
-              onload: (response) => {
-                const blob = response.response;
-                if (response.status >= 200 && response.status < 300 && blob instanceof Blob) {
-                  resolve2(blob);
-                } else {
-                  reject(new Error(`GM_xmlhttpRequest failed: ${response.status}`));
-                }
-              },
-              onerror: () => reject(new Error("GM_xmlhttpRequest error")),
-              ontimeout: () => reject(new Error("GM_xmlhttpRequest timeout")),
-              onabort: () => reject(new Error("GM_xmlhttpRequest aborted"))
-            });
+  // src/ui/menus/tools/list-view.ts
+  function renderListView(ui, tools, onSelectTool) {
+    const root = document.createElement("div");
+    root.style.display = "flex";
+    root.style.flexDirection = "column";
+    root.style.gap = "12px";
+    root.style.width = "100%";
+    const allTags = Array.from(new Set(tools.flatMap((t) => t.tags ?? [])));
+    const selectedTags = /* @__PURE__ */ new Set();
+    const filterSection = document.createElement("div");
+    filterSection.style.display = "flex";
+    filterSection.style.flexDirection = "column";
+    filterSection.style.gap = "10px";
+    filterSection.style.background = "linear-gradient(135deg, #0f1318 0%, #1a232d 100%)";
+    filterSection.style.border = "1px solid #2d8cff22";
+    filterSection.style.borderRadius = "12px";
+    filterSection.style.padding = "14px";
+    const filterTitle = document.createElement("span");
+    filterTitle.textContent = "Filter by tags";
+    filterTitle.style.fontSize = "11px";
+    filterTitle.style.letterSpacing = "0.06em";
+    filterTitle.style.textTransform = "uppercase";
+    filterTitle.style.opacity = "0.8";
+    filterTitle.style.fontWeight = "700";
+    filterTitle.style.background = "linear-gradient(135deg, #2d8cff, #00d9ff)";
+    filterTitle.style.backgroundClip = "text";
+    filterTitle.style.webkitBackgroundClip = "text";
+    filterTitle.style.webkitTextFillColor = "transparent";
+    const filterControls = document.createElement("div");
+    filterControls.style.display = "flex";
+    filterControls.style.flexWrap = "wrap";
+    filterControls.style.gap = "8px";
+    const filterBtnBaseStyle = (btn) => {
+      btn.type = "button";
+      btn.style.display = "inline-flex";
+      btn.style.alignItems = "center";
+      btn.style.justifyContent = "center";
+      btn.style.padding = "6px 12px";
+      btn.style.borderRadius = "6px";
+      btn.style.border = "1px solid";
+      btn.style.background = "#ffffff0a";
+      btn.style.borderColor = "#ffffff18";
+      btn.style.fontSize = "10px";
+      btn.style.fontWeight = "600";
+      btn.style.letterSpacing = "0.04em";
+      btn.style.textTransform = "uppercase";
+      btn.style.color = "inherit";
+      btn.style.opacity = "0.8";
+      btn.style.cursor = "pointer";
+      btn.style.transition = "all 140ms ease";
+    };
+    const setActiveState = (btn, active) => {
+      if (active) {
+        btn.style.background = "linear-gradient(135deg, #2d8cff22, #00d9ff11)";
+        btn.style.borderColor = "#2d8cff77";
+        btn.style.opacity = "1";
+        btn.style.boxShadow = "0 0 12px rgba(45, 140, 255, 0.2)";
+      } else {
+        btn.style.background = "#ffffff0a";
+        btn.style.borderColor = "#ffffff18";
+        btn.style.opacity = "0.8";
+        btn.style.boxShadow = "";
+      }
+    };
+    const tagButtons = /* @__PURE__ */ new Map();
+    let allButton;
+    const renderCardsContainer = () => {
+      cardsContainer.innerHTML = "";
+      const filtered = selectedTags.size ? tools.filter((tool) => tool.tags?.some((tag) => selectedTags.has(tag))) : tools;
+      if (filtered.length === 0) {
+        const empty = document.createElement("p");
+        empty.textContent = "No tools match the selected tags yet.";
+        empty.style.margin = "12px 0 0";
+        empty.style.fontSize = "13px";
+        empty.style.opacity = "0.75";
+        empty.style.textAlign = "center";
+        empty.style.gridColumn = "1 / -1";
+        cardsContainer.appendChild(empty);
+        return;
+      }
+      filtered.forEach((tool) => {
+        const card2 = ui.card("", { tone: "muted", align: "stretch" });
+        card2.root.style.width = "100%";
+        card2.root.style.transition = "all 200ms ease";
+        card2.root.style.borderColor = "#ffffff18";
+        card2.root.style.cursor = "pointer";
+        card2.root.onmouseenter = () => {
+          card2.root.style.borderColor = "#2d8cff44";
+          card2.root.style.boxShadow = "0 8px 32px rgba(45, 140, 255, 0.12)";
+        };
+        card2.root.onmouseleave = () => {
+          card2.root.style.borderColor = "#ffffff18";
+          card2.root.style.boxShadow = "";
+        };
+        card2.root.onclick = () => onSelectTool(tool);
+        const body = card2.body;
+        body.style.display = "grid";
+        body.style.gap = "10px";
+        const header = document.createElement("div");
+        header.style.display = "flex";
+        header.style.alignItems = "center";
+        header.style.gap = "10px";
+        if (tool.icon) {
+          const iconSpan = document.createElement("span");
+          iconSpan.textContent = tool.icon;
+          iconSpan.style.fontSize = "18px";
+          header.appendChild(iconSpan);
+        }
+        const titleText = document.createElement("span");
+        titleText.textContent = tool.title;
+        titleText.style.fontSize = "15px";
+        titleText.style.fontWeight = "700";
+        titleText.style.background = "linear-gradient(135deg, #2d8cff, #00d9ff)";
+        titleText.style.backgroundClip = "text";
+        titleText.style.webkitBackgroundClip = "text";
+        titleText.style.webkitTextFillColor = "transparent";
+        header.appendChild(titleText);
+        body.appendChild(header);
+        const descPreview = document.createElement("p");
+        descPreview.textContent = tool.description.split("\n")[0].substring(0, 120) + "...";
+        descPreview.style.margin = "0";
+        descPreview.style.fontSize = "13px";
+        descPreview.style.lineHeight = "1.5";
+        descPreview.style.opacity = "0.85";
+        descPreview.style.color = "#e8e8e8";
+        body.appendChild(descPreview);
+        if (tool.tags?.length) {
+          const tagsRow = document.createElement("div");
+          tagsRow.style.display = "flex";
+          tagsRow.style.flexWrap = "wrap";
+          tagsRow.style.gap = "6px";
+          tagsRow.style.opacity = "0.85";
+          tool.tags.forEach((tag) => {
+            const tagSpan = document.createElement("span");
+            tagSpan.textContent = tag;
+            tagSpan.style.display = "inline-flex";
+            tagSpan.style.alignItems = "center";
+            tagSpan.style.justifyContent = "center";
+            tagSpan.style.padding = "3px 10px";
+            tagSpan.style.borderRadius = "6px";
+            tagSpan.style.background = "linear-gradient(135deg, #2d8cff11, #00d9ff11)";
+            tagSpan.style.border = "1px solid #2d8cff33";
+            tagSpan.style.fontSize = "10px";
+            tagSpan.style.letterSpacing = "0.03em";
+            tagSpan.style.textTransform = "uppercase";
+            tagSpan.style.fontWeight = "500";
+            tagsRow.appendChild(tagSpan);
           });
-        } catch (error) {
-          console.warn("[Tools] GM_xmlhttpRequest failed, fallback to fetch", error);
+          body.appendChild(tagsRow);
         }
-      }
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status} while loading ${url}`);
-      }
-      return await res.blob();
-    }
-    const isIconUrl = !!tool.icon && /^https?:\/\//i.test(tool.icon);
-    const card2 = ui.card("", { tone: "muted", align: "stretch" });
-    card2.root.style.width = "100%";
-    const body = card2.body;
-    body.style.display = "grid";
-    body.style.gap = "10px";
-    body.style.justifyItems = "stretch";
-    const header = document.createElement("div");
-    header.style.display = "flex";
-    header.style.alignItems = "center";
-    header.style.gap = "10px";
-    if (isIconUrl) {
-      const img = document.createElement("img");
-      img.alt = `${tool.title} icon`;
-      img.style.width = "22px";
-      img.style.height = "22px";
-      img.style.objectFit = "contain";
-      img.style.borderRadius = "0";
-      img.style.border = "none";
-      img.style.background = "none";
-      img.style.padding = "0";
-      img.style.margin = "0";
-      img.style.boxShadow = "none";
-      img.style.display = "block";
-      img.style.flexShrink = "0";
-      img.style.mixBlendMode = "screen";
-      img.style.isolation = "isolate";
-      header.appendChild(img);
-      void (async () => {
-        try {
-          const blob = await fetchImageBlob(tool.icon);
-          const objectUrl = URL.createObjectURL(blob);
-          img.onload = () => {
-            URL.revokeObjectURL(objectUrl);
-          };
-          img.src = objectUrl;
-        } catch (error) {
-          console.warn("[Tools] Unable to load icon via GM, fallback to direct src", error);
-          img.src = tool.icon;
+        cardsContainer.appendChild(card2.root);
+      });
+    };
+    allButton = document.createElement("button");
+    allButton.textContent = "All";
+    filterBtnBaseStyle(allButton);
+    allButton.onclick = () => {
+      if (selectedTags.size === 0) return;
+      selectedTags.clear();
+      refreshButtonStates();
+      renderCardsContainer();
+    };
+    filterControls.appendChild(allButton);
+    allTags.forEach((tag) => {
+      const btn = document.createElement("button");
+      btn.textContent = tag;
+      filterBtnBaseStyle(btn);
+      btn.onclick = () => {
+        if (selectedTags.has(tag)) {
+          selectedTags.delete(tag);
+        } else {
+          selectedTags.add(tag);
         }
-      })();
-    } else if (tool.icon) {
-      const iconSpan = document.createElement("span");
-      iconSpan.textContent = tool.icon;
-      iconSpan.style.fontSize = "18px";
-      header.appendChild(iconSpan);
-    }
-    const titleText = document.createElement("span");
-    titleText.textContent = tool.title;
-    titleText.style.fontSize = "15px";
-    titleText.style.fontWeight = "700";
-    header.appendChild(titleText);
-    body.appendChild(header);
-    const description = document.createElement("p");
-    description.textContent = tool.description;
-    description.style.margin = "0";
-    description.style.fontSize = "13px";
-    description.style.lineHeight = "1.45";
-    description.style.opacity = "0.9";
-    description.style.textAlign = "left";
-    body.appendChild(description);
-    if (tool.tags?.length || tool.creators?.length) {
-      const metaRow = document.createElement("div");
-      metaRow.style.display = "flex";
-      metaRow.style.flexWrap = "wrap";
-      metaRow.style.alignItems = "center";
-      metaRow.style.justifyContent = "space-between";
-      metaRow.style.gap = "10px";
-      const tags = document.createElement("div");
-      tags.style.display = "flex";
-      tags.style.flexWrap = "wrap";
-      tags.style.gap = "6px";
-      tags.style.opacity = "0.85";
-      if (tool.tags?.length) {
-        tool.tags.forEach((tag) => tags.appendChild(createTagPill(tag)));
+        refreshButtonStates();
+        renderCardsContainer();
+      };
+      filterControls.appendChild(btn);
+      tagButtons.set(tag, btn);
+    });
+    const refreshButtonStates = () => {
+      tagButtons.forEach((btn, tag) => {
+        setActiveState(btn, selectedTags.has(tag));
+      });
+      setActiveState(allButton, selectedTags.size === 0);
+    };
+    filterSection.append(filterTitle, filterControls);
+    root.appendChild(filterSection);
+    const cardsContainer = document.createElement("div");
+    cardsContainer.style.display = "grid";
+    cardsContainer.style.gridTemplateColumns = "repeat(auto-fit, minmax(280px, 1fr))";
+    cardsContainer.style.gap = "14px";
+    renderCardsContainer();
+    refreshButtonStates();
+    root.appendChild(cardsContainer);
+    return { root };
+  }
+
+  // src/utils/markdown.ts
+  function escapeHtml2(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+  function renderInlineMarkdown(text) {
+    let html = text;
+    html = html.replace(/`([^`]+)`/g, '<code style="background:#ffffff0a;border:1px solid #ffffff18;border-radius:4px;padding:2px 6px;font-family:monospace;font-size:0.9em">$1</code>');
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text2, url) => {
+      const trimmed = url.trim();
+      if (!/^https?:\/\//i.test(trimmed)) {
+        return text2;
       }
-      metaRow.appendChild(tags);
-      if (tool.creators?.length) {
-        const creators = document.createElement("div");
-        creators.style.display = "flex";
-        creators.style.flexWrap = "wrap";
-        creators.style.gap = "6px";
-        tool.creators.forEach((creatorInfo) => {
-          const chip = document.createElement("div");
-          chip.style.display = "inline-flex";
-          chip.style.alignItems = "center";
-          chip.style.gap = "8px";
-          chip.style.padding = "4px 8px";
-          chip.style.background = "#ffffff0c";
-          chip.style.border = "1px solid #ffffff18";
-          chip.style.borderRadius = "999px";
-          if (creatorInfo.avatar) {
-            const avatar2 = document.createElement("img");
-            avatar2.src = creatorInfo.avatar;
-            avatar2.alt = creatorInfo.name;
-            avatar2.style.width = "26px";
-            avatar2.style.height = "26px";
-            avatar2.style.borderRadius = "999px";
-            avatar2.style.objectFit = "cover";
-            avatar2.style.border = "1px solid #ffffff22";
-            chip.appendChild(avatar2);
-          }
-          const name = document.createElement("span");
-          name.textContent = creatorInfo.name;
-          name.style.fontSize = "12px";
-          name.style.fontWeight = "600";
-          chip.appendChild(name);
-          creators.appendChild(chip);
+      return `<a href="${escapeHtml2(trimmed)}" target="_blank" rel="noopener noreferrer" style="color:#2d8cff;text-decoration:underline;cursor:pointer">${escapeHtml2(text2)}</a>`;
+    });
+    html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong style="font-weight:700;color:#e7eef7">$1</strong>');
+    html = html.replace(/\*([^\*]+)\*/g, '<em style="font-style:italic;opacity:0.95">$1</em>');
+    return html;
+  }
+  function renderMarkdown(source) {
+    const escaped = escapeHtml2(source);
+    const blocks = escaped.split(/\n\s*\n/);
+    const rendered = blocks.map((block) => {
+      const trimmed = block.trim();
+      if (trimmed.startsWith("- ")) {
+        const lines = trimmed.split("\n");
+        const listItems = lines.filter((line) => line.trim().startsWith("- ")).map((line) => {
+          const text = line.replace(/^-\s*/, "").trim();
+          return `<li>${renderInlineMarkdown(text)}</li>`;
         });
-        metaRow.appendChild(creators);
+        return `<ul style="margin:0;padding-left:20px;list-style:disc">${listItems.join("")}</ul>`;
       }
-      body.appendChild(metaRow);
+      return `<p style="margin:0 0 12px 0;line-height:1.5">${renderInlineMarkdown(trimmed)}</p>`;
+    });
+    return rendered.join("");
+  }
+
+  // src/ui/menus/tools/carousel.ts
+  function renderCarousel(images) {
+    const root = document.createElement("div");
+    root.style.display = "flex";
+    root.style.flexDirection = "column";
+    root.style.gap = "12px";
+    root.style.width = "100%";
+    if (!images.length) {
+      return { root };
     }
-    const actionsRow = ui.flexRow({ gap: 8, justify: "end", fullWidth: true });
-    actionsRow.style.marginTop = "4px";
-    const shouldShowInlinePreview = tool.showInlinePreview ?? false;
-    const openInlinePreview = (url, title) => {
+    const container = document.createElement("div");
+    container.style.position = "relative";
+    container.style.width = "100%";
+    container.style.background = "#ffffff05";
+    container.style.borderRadius = "8px";
+    container.style.overflow = "hidden";
+    container.style.aspectRatio = "16 / 10";
+    const imageWrapper = document.createElement("div");
+    imageWrapper.style.position = "relative";
+    imageWrapper.style.width = "100%";
+    imageWrapper.style.height = "100%";
+    imageWrapper.style.display = "flex";
+    imageWrapper.style.alignItems = "center";
+    imageWrapper.style.justifyContent = "center";
+    const img = document.createElement("img");
+    img.alt = "Tool preview";
+    img.style.maxWidth = "100%";
+    img.style.maxHeight = "100%";
+    img.style.objectFit = "contain";
+    img.style.display = "block";
+    img.style.cursor = "zoom-in";
+    let currentIndex2 = 0;
+    const cachedUrls = /* @__PURE__ */ new Map();
+    let zoomed = false;
+    let lastOrigin = "center center";
+    const openImageZoom = (imageUrl) => {
       let objectUrl;
-      let zoomed = false;
-      let lastOrigin = "center center";
       let closed = false;
       const overlay = document.createElement("div");
       overlay.style.position = "fixed";
       overlay.style.inset = "0";
-      overlay.style.background = "rgba(0,0,0,0.72)";
+      overlay.style.background = "rgba(0,0,0,0.85)";
       overlay.style.backdropFilter = "blur(4px)";
       overlay.style.zIndex = "9999";
       overlay.style.display = "grid";
@@ -48452,78 +48355,281 @@ next: ${next}`;
       close.style.display = "grid";
       close.style.placeItems = "center";
       close.style.zIndex = "2";
+      close.style.border = "none";
+      close.style.padding = "0";
       close.onclick = () => {
-        if (objectUrl) {
-          URL.revokeObjectURL(objectUrl);
-        }
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
         closed = true;
         overlay.remove();
       };
       const status = document.createElement("div");
-      status.textContent = "Loading preview...";
+      status.textContent = "Loading zoom...";
       status.style.padding = "14px 18px";
       status.style.fontSize = "13px";
       status.style.opacity = "0.85";
-      const img = document.createElement("img");
-      img.alt = title ?? tool.title;
-      img.style.display = "block";
-      img.style.maxWidth = "100%";
-      img.style.maxHeight = "90vh";
-      img.style.objectFit = "contain";
-      img.style.transition = "transform 200ms ease";
-      img.style.cursor = "zoom-in";
-      img.style.display = "none";
+      const zoomImg = document.createElement("img");
+      zoomImg.alt = "Zoomed image";
+      zoomImg.style.display = "block";
+      zoomImg.style.maxWidth = "100%";
+      zoomImg.style.maxHeight = "90vh";
+      zoomImg.style.objectFit = "contain";
+      zoomImg.style.transition = "transform 200ms ease";
+      zoomImg.style.cursor = "zoom-in";
+      zoomImg.style.display = "none";
+      let zoomedState = false;
       const toggleZoom = (event) => {
-        if (!zoomed && event) {
-          const rect = img.getBoundingClientRect();
+        if (!zoomedState && event) {
+          const rect = zoomImg.getBoundingClientRect();
           const x = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1) * 100;
           const y = Math.min(Math.max((event.clientY - rect.top) / rect.height, 0), 1) * 100;
           lastOrigin = `${x}% ${y}%`;
-          img.style.transformOrigin = lastOrigin;
+          zoomImg.style.transformOrigin = lastOrigin;
         }
-        zoomed = !zoomed;
-        img.style.transform = zoomed ? "scale(1.8)" : "scale(1)";
-        img.style.cursor = zoomed ? "zoom-out" : "zoom-in";
+        zoomedState = !zoomedState;
+        zoomImg.style.transform = zoomedState ? "scale(1.8)" : "scale(1)";
+        zoomImg.style.cursor = zoomedState ? "zoom-out" : "zoom-in";
       };
-      img.onclick = (event) => {
+      zoomImg.onclick = (event) => {
         event.stopPropagation();
         toggleZoom(event);
       };
-      box.append(close, status, img);
+      box.append(close, status, zoomImg);
       overlay.appendChild(box);
       overlay.onclick = (ev) => {
         if (ev.target === overlay) {
-          if (objectUrl) {
-            URL.revokeObjectURL(objectUrl);
-          }
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
           closed = true;
           overlay.remove();
         }
       };
       document.body.appendChild(overlay);
-      void fetchImageBlob(url).then((blob) => {
-        if (closed) return;
-        objectUrl = URL.createObjectURL(blob);
-        img.src = objectUrl;
-        status.remove();
-        img.style.display = "block";
-      }).catch((error) => {
-        if (closed) return;
-        console.warn("[Tools] Unable to load preview", error);
-        status.textContent = "Unable to load preview. Please open the link manually.";
-        status.style.color = "#ffb3b3";
-        img.style.display = "none";
+      void (async () => {
+        try {
+          const blob = await getBlob2(imageUrl);
+          if (closed) return;
+          objectUrl = URL.createObjectURL(blob);
+          zoomImg.src = objectUrl;
+          status.remove();
+          zoomImg.style.display = "block";
+        } catch (error) {
+          if (closed) return;
+          console.warn("[Carousel] Failed to load zoom image:", error);
+          status.textContent = "Unable to load image.";
+          status.style.color = "#ffb3b3";
+        }
+      })();
+    };
+    const loadImage2 = async (index) => {
+      if (index < 0 || index >= images.length) return;
+      currentIndex2 = index;
+      const imageUrl = images[index];
+      if (cachedUrls.has(imageUrl)) {
+        img.src = cachedUrls.get(imageUrl);
+        updateIndicators();
+        return;
+      }
+      try {
+        const blob = await getBlob2(imageUrl);
+        const objUrl = URL.createObjectURL(blob);
+        cachedUrls.set(imageUrl, objUrl);
+        img.src = objUrl;
+        updateIndicators();
+      } catch (error) {
+        console.warn("[Carousel] Failed to load image:", imageUrl, error);
+        img.src = "";
+      }
+    };
+    const updateIndicators = () => {
+      dotsContainer.querySelectorAll("button").forEach((dot, idx) => {
+        dot.style.opacity = idx === currentIndex2 ? "1" : "0.4";
       });
     };
-    const showActionToast = () => {
-      void toastSimple("Unable to open link", "Please open the address manually.", "error");
+    img.onclick = () => openImageZoom(images[currentIndex2]);
+    imageWrapper.appendChild(img);
+    const prevBtn = document.createElement("button");
+    prevBtn.textContent = "\u2039";
+    prevBtn.type = "button";
+    prevBtn.style.position = "absolute";
+    prevBtn.style.left = "12px";
+    prevBtn.style.top = "50%";
+    prevBtn.style.transform = "translateY(-50%)";
+    prevBtn.style.background = "#000000aa";
+    prevBtn.style.border = "1px solid #ffffff33";
+    prevBtn.style.color = "#fff";
+    prevBtn.style.width = "40px";
+    prevBtn.style.height = "40px";
+    prevBtn.style.borderRadius = "50%";
+    prevBtn.style.cursor = "pointer";
+    prevBtn.style.fontSize = "24px";
+    prevBtn.style.display = "flex";
+    prevBtn.style.alignItems = "center";
+    prevBtn.style.justifyContent = "center";
+    prevBtn.style.zIndex = "1";
+    prevBtn.style.transition = "background 150ms ease";
+    prevBtn.onmouseenter = () => {
+      prevBtn.style.background = "#000000dd";
     };
+    prevBtn.onmouseleave = () => {
+      prevBtn.style.background = "#000000aa";
+    };
+    prevBtn.onclick = () => loadImage2(currentIndex2 - 1);
+    const nextBtn = document.createElement("button");
+    nextBtn.textContent = "\u203A";
+    nextBtn.type = "button";
+    nextBtn.style.position = "absolute";
+    nextBtn.style.right = "12px";
+    nextBtn.style.top = "50%";
+    nextBtn.style.transform = "translateY(-50%)";
+    nextBtn.style.background = "#000000aa";
+    nextBtn.style.border = "1px solid #ffffff33";
+    nextBtn.style.color = "#fff";
+    nextBtn.style.width = "40px";
+    nextBtn.style.height = "40px";
+    nextBtn.style.borderRadius = "50%";
+    nextBtn.style.cursor = "pointer";
+    nextBtn.style.fontSize = "24px";
+    nextBtn.style.display = "flex";
+    nextBtn.style.alignItems = "center";
+    nextBtn.style.justifyContent = "center";
+    nextBtn.style.zIndex = "1";
+    nextBtn.style.transition = "background 150ms ease";
+    nextBtn.onmouseenter = () => {
+      nextBtn.style.background = "#000000dd";
+    };
+    nextBtn.onmouseleave = () => {
+      nextBtn.style.background = "#000000aa";
+    };
+    nextBtn.onclick = () => loadImage2(currentIndex2 + 1);
+    container.append(imageWrapper, prevBtn, nextBtn);
+    const dotsContainer = document.createElement("div");
+    dotsContainer.style.display = "flex";
+    dotsContainer.style.gap = "6px";
+    dotsContainer.style.justifyContent = "center";
+    dotsContainer.style.padding = "0";
+    images.forEach((_, idx) => {
+      const dot = document.createElement("button");
+      dot.type = "button";
+      dot.style.width = "8px";
+      dot.style.height = "8px";
+      dot.style.borderRadius = "50%";
+      dot.style.background = "#ffffff44";
+      dot.style.border = "none";
+      dot.style.cursor = "pointer";
+      dot.style.opacity = idx === 0 ? "1" : "0.4";
+      dot.style.transition = "opacity 150ms ease";
+      dot.style.padding = "0";
+      dot.onclick = () => loadImage2(idx);
+      dotsContainer.appendChild(dot);
+    });
+    root.append(container, dotsContainer);
+    void loadImage2(0);
+    return { root };
+  }
+
+  // src/ui/menus/tools/detail-view.ts
+  function renderDetailView(ui, tool, onBack) {
+    const root = document.createElement("div");
+    root.style.display = "flex";
+    root.style.flexDirection = "column";
+    root.style.gap = "16px";
+    root.style.width = "100%";
+    root.style.maxHeight = "70vh";
+    root.style.overflowY = "auto";
+    const backBtn = ui.btn("Back", {
+      icon: "\u2190",
+      variant: "ghost",
+      size: "sm"
+    });
+    backBtn.style.alignSelf = "flex-start";
+    backBtn.onclick = onBack;
+    root.appendChild(backBtn);
+    const headerCard = ui.card(tool.title, {
+      tone: "muted",
+      align: "stretch",
+      icon: tool.icon || void 0
+    });
+    headerCard.root.style.borderColor = "#2d8cff44";
+    headerCard.root.style.background = "linear-gradient(135deg, #0f1318 0%, #1a2332 100%)";
+    if (tool.creators?.length) {
+      const creatorsRow = document.createElement("div");
+      creatorsRow.style.display = "flex";
+      creatorsRow.style.flexWrap = "wrap";
+      creatorsRow.style.gap = "8px";
+      creatorsRow.style.marginTop = "8px";
+      tool.creators.forEach((creator) => {
+        const chip = document.createElement("div");
+        chip.style.display = "inline-flex";
+        chip.style.alignItems = "center";
+        chip.style.gap = "8px";
+        chip.style.padding = "4px 8px";
+        chip.style.background = "#ffffff0c";
+        chip.style.border = "1px solid #ffffff18";
+        chip.style.borderRadius = "999px";
+        if (creator.avatar) {
+          const avatar2 = document.createElement("img");
+          avatar2.src = creator.avatar;
+          avatar2.alt = creator.name;
+          avatar2.style.width = "26px";
+          avatar2.style.height = "26px";
+          avatar2.style.borderRadius = "999px";
+          avatar2.style.objectFit = "cover";
+          avatar2.style.border = "1px solid #ffffff22";
+          chip.appendChild(avatar2);
+        }
+        const name = document.createElement("span");
+        name.textContent = creator.name;
+        name.style.fontSize = "12px";
+        name.style.fontWeight = "600";
+        chip.appendChild(name);
+        creatorsRow.appendChild(chip);
+      });
+      headerCard.body.appendChild(creatorsRow);
+    }
+    root.appendChild(headerCard.root);
+    const descCard = ui.card("", { tone: "muted", align: "stretch" });
+    const descHtml = renderMarkdown(tool.description);
+    const descDiv = document.createElement("div");
+    descDiv.innerHTML = descHtml;
+    descDiv.style.fontSize = "13px";
+    descDiv.style.lineHeight = "1.6";
+    descCard.body.appendChild(descDiv);
+    root.appendChild(descCard.root);
+    if (tool.images?.length) {
+      const carouselCmp = renderCarousel(tool.images);
+      root.appendChild(carouselCmp.root);
+    }
+    if (tool.tags?.length) {
+      const tagsRow = document.createElement("div");
+      tagsRow.style.display = "flex";
+      tagsRow.style.flexWrap = "wrap";
+      tagsRow.style.gap = "6px";
+      tagsRow.style.opacity = "0.85";
+      tagsRow.style.justifyContent = "flex-start";
+      tool.tags.forEach((tag) => {
+        const tagSpan = document.createElement("span");
+        tagSpan.textContent = tag;
+        tagSpan.style.display = "inline-flex";
+        tagSpan.style.alignItems = "center";
+        tagSpan.style.justifyContent = "center";
+        tagSpan.style.padding = "3px 10px";
+        tagSpan.style.borderRadius = "6px";
+        tagSpan.style.background = "linear-gradient(135deg, #2d8cff11, #00d9ff11)";
+        tagSpan.style.border = "1px solid #2d8cff33";
+        tagSpan.style.fontSize = "10px";
+        tagSpan.style.letterSpacing = "0.03em";
+        tagSpan.style.textTransform = "uppercase";
+        tagSpan.style.fontWeight = "500";
+        tagsRow.appendChild(tagSpan);
+      });
+      root.appendChild(tagsRow);
+    }
+    const actionsRow = ui.flexRow({ gap: 8, justify: "end", fullWidth: true });
+    actionsRow.style.marginTop = "8px";
     if (tool.actions?.length) {
       actionsRow.style.display = "grid";
       actionsRow.style.width = "100%";
-      actionsRow.style.gridTemplateColumns = "repeat(auto-fit, minmax(140px, 1fr))";
+      actionsRow.style.gridTemplateColumns = "repeat(auto-fit, minmax(120px, 1fr))";
       actionsRow.style.alignItems = "stretch";
-      actionsRow.style.justifyContent = "stretch";
       tool.actions.forEach((action2) => {
         const actionBtn = ui.btn(action2.label, {
           variant: "primary",
@@ -48532,41 +48638,78 @@ next: ${next}`;
         actionBtn.style.flex = "1 1 0";
         actionBtn.style.minWidth = "0";
         actionBtn.onclick = () => {
-          if (action2.showInlinePreview) {
-            openInlinePreview(action2.url, action2.label);
-            return;
-          }
           const ok = openLink(action2.url);
           if (!ok) {
-            showActionToast();
+            console.warn("[Tools] Failed to open link:", action2.url);
           }
         };
         actionsRow.append(actionBtn);
       });
     } else {
-      const openBtn = ui.btn("Open tool", {
+      const openBtn = ui.btn("Visit", {
         variant: "primary",
-        icon: "\u{1F517}",
         fullWidth: true,
-        title: "Open the tool in a new tab"
+        title: "Open the tool"
       });
-      openBtn.style.flex = "1 1 auto";
-      openBtn.style.minWidth = "0";
       openBtn.onclick = () => {
-        if (shouldShowInlinePreview) {
-          openInlinePreview(tool.url, tool.title);
-        } else {
-          const ok = ToolsService.open(tool);
-          if (!ok) {
-            showActionToast();
-          }
+        const ok = openLink(tool.url);
+        if (!ok) {
+          console.warn("[Tools] Failed to open tool URL:", tool.url);
         }
       };
       actionsRow.append(openBtn);
     }
-    body.appendChild(actionsRow);
-    return card2.root;
+    root.appendChild(actionsRow);
+    return { root };
   }
+
+  // src/ui/menus/tools/transition.ts
+  async function swapViews(container, from, to, direction) {
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) {
+      from.style.display = "none";
+      to.style.display = "block";
+      return;
+    }
+    container.style.position = "relative";
+    container.style.overflow = "hidden";
+    from.style.position = "absolute";
+    from.style.inset = "0";
+    const fromTranslate = direction === "forward" ? -24 : 24;
+    const toTranslate = direction === "forward" ? 24 : -24;
+    const fromAnim = from.animate(
+      [
+        { transform: "translateX(0)", opacity: 1 },
+        { transform: `translateX(${fromTranslate}px)`, opacity: 0 }
+      ],
+      {
+        duration: 260,
+        easing: "cubic-bezier(.22,.7,.28,1)",
+        fill: "forwards"
+      }
+    );
+    const toAnim = to.animate(
+      [
+        { transform: `translateX(${toTranslate}px)`, opacity: 0 },
+        { transform: "translateX(0)", opacity: 1 }
+      ],
+      {
+        duration: 260,
+        easing: "cubic-bezier(.22,.7,.28,1)",
+        fill: "forwards"
+      }
+    );
+    await Promise.all([fromAnim.finished, toAnim.finished]);
+    from.style.display = "none";
+    from.style.position = "";
+    from.style.inset = "";
+    from.style.transform = "";
+    from.style.opacity = "";
+    to.style.transform = "";
+    to.style.opacity = "";
+  }
+
+  // src/ui/menus/tools.ts
   async function renderToolsMenu(container) {
     const ui = new Menu({ id: "tools", compact: true });
     ui.mount(container);
@@ -48591,135 +48734,93 @@ next: ${next}`;
     wrapper.style.maxWidth = `${WRAPPER_WIDTH}px`;
     wrapper.style.boxSizing = "border-box";
     wrapper.style.alignSelf = "center";
-    const intro = ui.card("\u{1F9F0} Community tools", {
-      tone: "muted",
-      align: "stretch"
-    });
+    const intro = ui.card("\u{1F9F0} Community Tools", { tone: "muted", align: "stretch" });
+    intro.root.style.borderColor = "#2d8cff44";
+    intro.root.style.background = "linear-gradient(135deg, #0f1318 0%, #1a2332 100%)";
     const introText = document.createElement("p");
     introText.textContent = "Discover community-made helpers to plan, calculate, and simplify your Magic Garden adventures.";
     introText.style.margin = "0";
     introText.style.fontSize = "13px";
-    introText.style.lineHeight = "1.5";
-    introText.style.opacity = "0.9";
+    introText.style.lineHeight = "1.6";
+    introText.style.opacity = "0.88";
     introText.style.textAlign = "left";
     intro.body.appendChild(introText);
     wrapper.appendChild(intro.root);
-    const allTools = ToolsService.list();
-    const filterSection = document.createElement("div");
-    filterSection.style.display = "flex";
-    filterSection.style.flexDirection = "column";
-    filterSection.style.gap = "8px";
-    filterSection.style.background = "#ffffff08";
-    filterSection.style.border = "1px solid #ffffff11";
-    filterSection.style.borderRadius = "12px";
-    filterSection.style.padding = "12px";
-    const filterTitle = document.createElement("span");
-    filterTitle.textContent = "Filter by tags";
-    filterTitle.style.fontSize = "12px";
-    filterTitle.style.letterSpacing = "0.05em";
-    filterTitle.style.textTransform = "uppercase";
-    filterTitle.style.opacity = "0.75";
-    filterTitle.style.fontWeight = "600";
-    const filterControls = document.createElement("div");
-    filterControls.style.display = "flex";
-    filterControls.style.flexWrap = "wrap";
-    filterControls.style.gap = "8px";
-    const selectedTags = /* @__PURE__ */ new Set();
-    const tagButtons = /* @__PURE__ */ new Map();
-    let allButton;
-    let cardsContainer;
-    const filterBtnBaseStyle = (btn) => {
-      btn.type = "button";
-      btn.style.display = "inline-flex";
-      btn.style.alignItems = "center";
-      btn.style.justifyContent = "center";
-      btn.style.padding = "4px 10px";
-      btn.style.borderRadius = "999px";
-      btn.style.border = "1px solid";
-      btn.style.background = "#ffffff11";
-      btn.style.borderColor = "#ffffff22";
-      btn.style.fontSize = "11px";
-      btn.style.fontWeight = "600";
-      btn.style.letterSpacing = "0.03em";
-      btn.style.textTransform = "uppercase";
-      btn.style.color = "inherit";
-      btn.style.opacity = "0.85";
-      btn.style.cursor = "pointer";
-      btn.style.transition = "background 120ms ease, border-color 120ms ease, opacity 120ms ease";
+    const viewContainer = document.createElement("div");
+    viewContainer.style.position = "relative";
+    viewContainer.style.width = "100%";
+    viewContainer.style.flex = "1";
+    wrapper.appendChild(viewContainer);
+    view.appendChild(wrapper);
+    const showLoading = () => {
+      viewContainer.innerHTML = "";
+      const loadingCard = ui.card("Loading...", { tone: "muted", align: "stretch" });
+      loadingCard.body.style.textAlign = "center";
+      const spinner = document.createElement("div");
+      spinner.textContent = "Fetching tools...";
+      spinner.style.opacity = "0.75";
+      spinner.style.fontSize = "13px";
+      loadingCard.body.appendChild(spinner);
+      viewContainer.appendChild(loadingCard.root);
     };
-    const setActiveState = (btn, active) => {
-      if (active) {
-        btn.style.background = "#2d8cff33";
-        btn.style.borderColor = "#2d8cff66";
-        btn.style.opacity = "1";
-      } else {
-        btn.style.background = "#ffffff11";
-        btn.style.borderColor = "#ffffff22";
-        btn.style.opacity = "0.85";
-      }
+    const showError = (error) => {
+      viewContainer.innerHTML = "";
+      const errorCard = ui.card("Error", { tone: "muted", align: "stretch" });
+      const errorText = document.createElement("p");
+      errorText.textContent = error.message || "Failed to load tools.";
+      errorText.style.margin = "0 0 12px 0";
+      errorText.style.opacity = "0.9";
+      errorText.style.fontSize = "13px";
+      errorCard.body.appendChild(errorText);
+      const retryBtn = ui.btn("Retry", { variant: "primary", fullWidth: true });
+      retryBtn.onclick = () => {
+        void init2();
+      };
+      errorCard.body.appendChild(retryBtn);
+      viewContainer.appendChild(errorCard.root);
     };
-    const renderList = () => {
-      cardsContainer.innerHTML = "";
-      const filtered = selectedTags.size ? allTools.filter((tool) => tool.tags?.some((tag) => selectedTags.has(tag))) : allTools;
-      if (filtered.length === 0) {
-        const empty = document.createElement("p");
-        empty.textContent = "No tools match the selected tags yet.";
-        empty.style.margin = "12px 0 0";
-        empty.style.fontSize = "13px";
-        empty.style.opacity = "0.75";
-        empty.style.textAlign = "center";
-        empty.style.gridColumn = "1 / -1";
-        cardsContainer.appendChild(empty);
+    let tools = [];
+    let listViewRoot = null;
+    let detailViewRoot = null;
+    const showListView = async () => {
+      if (listViewRoot) {
+        if (detailViewRoot && detailViewRoot.parentNode === viewContainer) {
+          await swapViews(viewContainer, detailViewRoot, listViewRoot, "back");
+        }
         return;
       }
-      filtered.forEach((tool) => {
-        cardsContainer.appendChild(renderToolCard(ui, tool));
-      });
+      const listView = renderListView(ui, tools, showDetailView);
+      listViewRoot = listView.root;
+      viewContainer.appendChild(listViewRoot);
     };
-    const refreshButtonStates = () => {
-      tagButtons.forEach((btn, tag) => {
-        setActiveState(btn, selectedTags.has(tag));
-      });
-      setActiveState(allButton, selectedTags.size === 0);
-    };
-    const handleToggle = (tag) => {
-      if (selectedTags.has(tag)) {
-        selectedTags.delete(tag);
+    const showDetailView = async (tool) => {
+      const detailView = renderDetailView(ui, tool, showListView);
+      detailViewRoot = detailView.root;
+      if (listViewRoot && listViewRoot.parentNode === viewContainer) {
+        viewContainer.appendChild(detailViewRoot);
+        await swapViews(viewContainer, listViewRoot, detailViewRoot, "forward");
       } else {
-        selectedTags.add(tag);
+        viewContainer.appendChild(detailViewRoot);
       }
-      refreshButtonStates();
-      renderList();
     };
-    allButton = document.createElement("button");
-    allButton.textContent = "All";
-    filterBtnBaseStyle(allButton);
-    allButton.onclick = () => {
-      if (selectedTags.size === 0) return;
-      selectedTags.clear();
-      refreshButtonStates();
-      renderList();
+    const init2 = async () => {
+      showLoading();
+      try {
+        tools = await fetchTools();
+        if (!tools.length) {
+          showError(new Error("No tools available."));
+          return;
+        }
+        viewContainer.innerHTML = "";
+        listViewRoot = null;
+        detailViewRoot = null;
+        await showListView();
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error("Unknown error");
+        showError(err);
+      }
     };
-    filterControls.appendChild(allButton);
-    ToolsService.tags().forEach((tag) => {
-      const btn = document.createElement("button");
-      btn.textContent = tag;
-      filterBtnBaseStyle(btn);
-      btn.onclick = () => handleToggle(tag);
-      filterControls.appendChild(btn);
-      tagButtons.set(tag, btn);
-    });
-    filterSection.appendChild(filterTitle);
-    filterSection.appendChild(filterControls);
-    wrapper.appendChild(filterSection);
-    cardsContainer = document.createElement("div");
-    cardsContainer.style.display = "grid";
-    cardsContainer.style.gridTemplateColumns = "repeat(auto-fit, minmax(320px, 1fr))";
-    cardsContainer.style.gap = "12px";
-    renderList();
-    refreshButtonStates();
-    wrapper.appendChild(cardsContainer);
-    view.appendChild(wrapper);
+    await init2();
   }
 
   // src/ui/menus/editor.ts

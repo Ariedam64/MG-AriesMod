@@ -50,7 +50,7 @@ async function fetchTextWithGM(url: string, options?: FetchOptions): Promise<str
   });
 }
 
-async function fetchText(url: string, options?: FetchOptions): Promise<string> {
+export async function fetchText(url: string, options?: FetchOptions): Promise<string> {
   const preferGM = isDiscordSurface();
   const hasGM =
     typeof GM_xmlhttpRequest === "function" ||

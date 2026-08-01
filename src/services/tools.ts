@@ -1,6 +1,7 @@
 // src/services/tools.ts
-// External community tools for Magic Garden.
+// External community tools fetched from remote JSON on GitHub
 
+import { fetchText } from "../utils/version";
 
 export type ExternalToolCreator = {
   name: string;
@@ -10,277 +11,123 @@ export type ExternalToolCreator = {
 export type ExternalToolAction = {
   label: string;
   url: string;
-  showInlinePreview?: boolean;
 };
 
 export type ExternalTool = {
   id: string;
   title: string;
   description: string;
-  url: string;
-  actions?: ExternalToolAction[];
-  showInlinePreview?: boolean;
-  icon?: string;
   tags?: string[];
+  images?: string[];
+  icon?: string;
+  actions?: ExternalToolAction[];
   creators?: ExternalToolCreator[];
 };
 
-const TOOL_LIST: ExternalTool[] = [
-  {
-    id: "aries-mod-intro",
-    title: "Arie's Mod introduction",
-    description: "Visual guide for the mod with the main features highlighted",
-    url: "https://i.imgur.com/LZL6zPj.jpeg",
-    icon: "",
-    showInlinePreview: true,
-    tags: ["guide", "mod"],
-    creators: [
-      {
-        name: "Bella",
-        avatar: "https://cdn.discordapp.com/avatars/1400054123969380354/241dfc8a181b9e4b9dab6f1ac4f7567a.webp",
-      },
-    ],
-  },
-  {
-    id: "wiki",
-    title: "Magic Garden Wiki",
-    description: "Community-curated documentation for plants, mechanics, weather, and more.",
-    url: "https://magicgarden.wiki/Main_Page",
-    icon: "https://i.imgur.com/0LXKEzh.png",
-    tags: ["guide", "utility"],
-    creators: [
-      {
-        name: "Community",
-      },
-    ],
-  },
-  {
-    id: "qpm",
-    title: "QPM Mod Menu",
-    description: "Mod/userscript focused on game stats, adding pet analytics, inventory helpers and shop/weather tracking",
-    url: "",
-    icon: "",
-    tags: ["mod"],
-    actions: [
-      {
-        label: "Github",
-        url: "https://github.com/ryandt2305-cpu/QPM-GR/",
-      },
-      {
-        label: "Install",
-        url: "https://github.com/ryandt2305-cpu/QPM-GR/raw/refs/heads/master/dist/QPM.user.js",
-      },
-    ],
-    creators: [
-      {
-        name: "Tokyo",
-        avatar: "https://cdn.discordapp.com/avatars/511094276613210122/c2af3c8ff2123724ba49b7e897d0ce97.png",
-      },
-    ],
-  },
-  {
-    id: "calculator",
-    title: "Daserix' Magic Garden Calculators",
-    description: "Calculate crop value based on size and mutations, with garden import for total optimisation stats",
-    url: "https://daserix.github.io/magic-garden-calculator/",
-    icon: "https://i.imgur.com/xXPqRgK.png",
-    tags: ["utility"],
-    creators: [
-      {
-        name: "Daserix",
-        avatar: "https://cdn.discordapp.com/avatars/266245650662817793/09de28b070e0a107eb1bea1fe015afc3.webp",
-      },
-    ],
-  },
-  {
-    id: "mg-android-notifier",
-    title: "Magic Garden Notifier",
-    description: "Android app that sends push notifications/alarms when selected shop items restock, with configurable thresholds and background monitoring",
-    url: "",
-    icon: "https://i.imgur.com/l3NHmc5.png",
-    tags: ["utility", "android"],
-    actions: [
-      {
-        label: "Github",
-        url: "https://github.com/Daserix/magic-garden-notifier-releases",
-      },
-      {
-        label: "Install",
-        url: "https://github.com/Daserix/magic-garden-notifier-releases/releases/download/v1.1.0/mg-notifier-1.1.0.apk",
-      },
-    ],
-    creators: [
-      {
-        name: "Daserix",
-        avatar: "https://cdn.discordapp.com/avatars/266245650662817793/09de28b070e0a107eb1bea1fe015afc3.png",
-      },
-    ],
-  },
-  {
-    id: "guide-1b",
-    title: "Making Your First 1B",
-    description: "Beginner-friendly step-by-step guide to earning your first 1B coins, covering early crop choices, key pets, and long-term strategy",
-    url: "https://i.imgur.com/gs6Karj.png",
-    icon: "",
-    showInlinePreview: true,
-    tags: ["guide"],
-    creators: [
-      {
-        name: "Bella",
-        avatar: "https://cdn.discordapp.com/avatars/1400054123969380354/241dfc8a181b9e4b9dab6f1ac4f7567a.png",
-      },
-    ],
-  },
-  {
-    id: "visual-guides",
-    title: "Visual guides",
-    description: "Visual guides covering crops/multiplier stacking and pet info (eggs, hatch rates, abilities), plus beginner tips to avoid common mistakes",
-    url: "",
-    icon: "",
-    tags: ["guide"],
-    actions: [
-      {
-        label: "Crops & Multipliers",
-        url: "https://i.imgur.com/86TuVYh.jpeg",
-        showInlinePreview: true,
-      },
-      {
-        label: "Pets",
-        url: "https://i.imgur.com/bx2qX8i.jpeg",
-        showInlinePreview: true,
-      },
-      {
-        label: "Winter event",
-        url: "https://i.imgur.com/Ew9xBk6.jpeg",
-        showInlinePreview: true,
-      }
-    ],
-    creators: [
-      {
-        name: "Foraged Rituals",
-        avatar: "https://cdn.discordapp.com/avatars/1065631808072450164/40be204333c0f3f7c5f3ce1d8636ff77.png",
-      },
-    ],
-  },
-  {
-    id: "pet-diet-visual-guides",
-    title: "Pet diet visual guides",
-    description: "Rarity-based pet diet guides focused on food restoration percentages",
-    url: "",
-    icon: "",
-    showInlinePreview: true,
-    tags: ["guide"],
-    actions: [
-      {
-        label: "Common",
-        url: "https://i.imgur.com/sOXepq1.jpeg",
-        showInlinePreview: true,
-      },
-      {
-        label: "Uncommon",
-        url: "https://i.imgur.com/3weyngx.jpeg",
-        showInlinePreview: true,
-      },
-      {
-        label: "Rare",
-        url: "https://i.imgur.com/n8KPA7L.jpeg",
-        showInlinePreview: true,
-      },
-      {
-        label: "Winter",
-        url: "https://i.imgur.com/CBKjqiN.jpeg",
-        showInlinePreview: true,
-      },
-      {
-        label: "Legendary",
-        url: "https://i.imgur.com/YD00B5U.jpeg",
-        showInlinePreview: true,
-      },
-      {
-        label: "Mythical",
-        url: "https://i.imgur.com/ybcdHxC.jpeg",
-        showInlinePreview: true,
-      },
-    ],
-    creators: [
-      {
-        name: "Bella",
-        avatar: "https://cdn.discordapp.com/avatars/1400054123969380354/241dfc8a181b9e4b9dab6f1ac4f7567a.webp",
-      },
-    ],
-  },
-  {
-    id: "mgtools",
-    title: "MGTools",
-    description: "Mod/userscript adding pet management, ability tracking, calculators, timers, and a customizable UI",
-    url: "",
-    actions: [
-      {
-        label: "Discord",
-        url: "https://discord.gg/qFpQ436HZc",
-      },
-      {
-        label: "Github",
-        url: "https://github.com/Myke247/MGTools/",
-      },
-      {
-        label: "Install",
-        url: "https://github.com/Umm12many/MGTools-M/raw/refs/heads/main/MGTools.user.js",
-      },
-    ],
-    icon: "https://cdn.discordapp.com/icons/1428162440297840640/23c0c05e578d5eb307febb4b562626e9.webp",
-    tags: ["mod"],
-    creators: [
-      {
-        name: "Myke",
-        avatar: "https://cdn.discordapp.com/avatars/184699074543484928/ca44cd2f0f3002b2455a9805986eeac9.webp",
-      },
-      {
-        name: "Normie",
-        avatar: "https://cdn.discordapp.com/avatars/375367702094544898/ebd1ef1279c16a4ab8e73ee9fbd70148.png",
-      },
-    ],
-  },
-  {
-    id: "mg-android",
-    title: "Magic Garden Android App",
-    description: "Basic Android companion app for Magic Garden (early build, not actively maintained)",
-    url: "https://appdistribution.firebase.dev/i/cde454c6e9eb5f30",
-    icon: "",
-    tags: ["android"],
-    creators: [
-      {
-        name: "Umm12many",
-        avatar: "https://cdn.discordapp.com/avatars/925833066310672465/ad6f0f9d27e1a4b1acebf6987b3d7c39.png",
-      },
-    ],
-  },
-];
+const REPO_OWNER = "Ariedam64";
+const REPO_NAME = "MG-AriesMod";
+const REPO_BRANCH = "main";
+const TOOLS_FILE_PATH = "tools/tools.json";
+const RAW_BASE_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}`;
 
+function parseToolsPayload(raw: unknown): ExternalTool[] {
+  if (!raw || typeof raw !== "object") {
+    throw new Error("Invalid tools payload: not an object");
+  }
 
-const TOOL_TAGS: string[] = Array.from(
-  new Set(
-    TOOL_LIST.flatMap(tool => {
-      return tool.tags ?? [];
-    }),
-  ),
-).sort((a, b) => a.localeCompare(b));
+  const payload = raw as Record<string, unknown>;
+  if (!Array.isArray(payload.tools)) {
+    throw new Error("Invalid tools payload: 'tools' is not an array");
+  }
 
-function cloneTool(tool: ExternalTool): ExternalTool {
-  return {
-    ...tool,
-    tags: tool.tags ? [...tool.tags] : undefined,
-    actions: tool.actions ? tool.actions.map(action => ({ ...action })) : undefined,
-    showInlinePreview: tool.showInlinePreview,
-  };
+  const tools: ExternalTool[] = [];
+  for (const entry of payload.tools) {
+    if (!entry || typeof entry !== "object") {
+      console.warn("[Tools] Skipping invalid entry:", entry);
+      continue;
+    }
+
+    const e = entry as Record<string, unknown>;
+    const id = e.id as string | undefined;
+    const title = e.title as string | undefined;
+    const description = e.description as string | undefined;
+
+    if (!id || typeof id !== "string" || !id.trim()) {
+      console.warn("[Tools] Skipping entry with missing/invalid id");
+      continue;
+    }
+
+    if (!title || typeof title !== "string" || !title.trim()) {
+      console.warn("[Tools] Skipping entry with missing/invalid title:", id);
+      continue;
+    }
+
+    if (!description || typeof description !== "string" || !description.trim()) {
+      console.warn("[Tools] Skipping entry with missing/invalid description:", id);
+      continue;
+    }
+
+    const tags = Array.isArray(e.tags)
+      ? (e.tags as unknown[]).filter((t) => typeof t === "string").map((t) => t as string)
+      : undefined;
+
+    const images = Array.isArray(e.images)
+      ? (e.images as unknown[]).filter((img) => typeof img === "string").map((img) => img as string)
+      : undefined;
+
+    const icon = typeof e.icon === "string" ? e.icon : undefined;
+
+    const actions = Array.isArray(e.actions)
+      ? (e.actions as unknown[])
+          .filter((a) => a && typeof a === "object")
+          .map((a) => {
+            const action = a as Record<string, unknown>;
+            return {
+              label: typeof action.label === "string" ? action.label : "Open",
+              url: typeof action.url === "string" ? action.url : "",
+            };
+          })
+          .filter((a) => a.url)
+      : undefined;
+
+    const creators = Array.isArray(e.creators)
+      ? (e.creators as unknown[])
+          .filter((c) => c && typeof c === "object")
+          .map((c) => {
+            const creator = c as Record<string, unknown>;
+            return {
+              name: typeof creator.name === "string" ? creator.name : "Unknown",
+              avatar: typeof creator.avatar === "string" ? creator.avatar : undefined,
+            };
+          })
+      : undefined;
+
+    tools.push({
+      id,
+      title,
+      description,
+      tags,
+      images,
+      icon,
+      actions,
+      creators,
+    });
+  }
+
+  return tools;
 }
 
-function resolve(tool: string | ExternalTool): ExternalTool | null {
-  if (typeof tool === "string") {
-    const found = TOOL_LIST.find(entry => entry.id === tool);
-    return found ? cloneTool(found) : null;
+export async function fetchTools(): Promise<ExternalTool[]> {
+  const url = `${RAW_BASE_URL}/refs/heads/${REPO_BRANCH}/${TOOLS_FILE_PATH}?t=${Date.now()}`;
+
+  try {
+    const text = await fetchText(url);
+    const raw = JSON.parse(text) as unknown;
+    return parseToolsPayload(raw);
+  } catch (error) {
+    console.error("[Tools] Failed to fetch tools:", error);
+    throw error;
   }
-  return cloneTool(tool);
 }
 
 declare const GM_openInTab:
@@ -292,7 +139,9 @@ function openUrl(url: string): boolean {
     GM_openInTab(url, { active: true, insert: true });
     return true;
   }
+
   if (typeof window === "undefined") return false;
+
   try {
     const a = document.createElement("a");
     a.href = url;
@@ -310,30 +159,3 @@ function openUrl(url: string): boolean {
 export function openLink(url: string): boolean {
   return openUrl(url);
 }
-
-export const ToolsService = {
-  list(): ExternalTool[] {
-    const list = TOOL_LIST.map(cloneTool);
-    return list;
-  },
-
-  tags(): string[] {
-    return TOOL_TAGS.map(tag => tag);
-  },
-
-  get(id: string): ExternalTool | null {
-    const found = TOOL_LIST.find(tool => tool.id === id);
-    const entry = found ? cloneTool(found) : null;
-    return entry;
-  },
-
-  open(tool: string | ExternalTool): boolean {
-    const entry = resolve(tool);
-    if (!entry) {
-      return false;
-    }
-    const ok = openUrl(entry.url);
-    return ok;
-  },
-};
-

@@ -1,379 +1,11 @@
-// src/ui/menus/tools.ts
+// src/ui/menus/tools.ts - Community Tools menu orchestrator
+// Fetches tools from remote JSON and renders list/detail views with animations
+
 import { Menu } from "../menu";
-import { toastSimple } from "../toast";
-import { ToolsService, openLink, type ExternalTool } from "../../services/tools";
-
-declare const GM_xmlhttpRequest:
-  | ((
-      details: {
-        method: "GET";
-        url: string;
-        responseType?: "arraybuffer" | "blob" | "json" | "text";
-        headers?: Record<string, string>;
-        timeout?: number;
-        onload?: (response: { status: number; responseText: string; response: any }) => void;
-        onerror?: () => void;
-        ontimeout?: () => void;
-        onabort?: () => void;
-      },
-    ) => void)
-  | undefined;
-
-function createTagPill(label: string): HTMLElement {
-  const pill = document.createElement("span");
-  pill.textContent = label;
-  pill.style.display = "inline-flex";
-  pill.style.alignItems = "center";
-  pill.style.justifyContent = "center";
-  pill.style.padding = "2px 8px";
-  pill.style.borderRadius = "999px";
-  pill.style.background = "#ffffff11";
-  pill.style.border = "1px solid #ffffff22";
-  pill.style.fontSize = "11px";
-  pill.style.letterSpacing = "0.02em";
-  pill.style.textTransform = "uppercase";
-  pill.style.opacity = "0.8";
-  return pill;
-}
-
-function renderToolCard(ui: Menu, tool: ExternalTool): HTMLElement {
-  async function fetchImageBlob(url: string): Promise<Blob> {
-    if (typeof GM_xmlhttpRequest === "function") {
-      try {
-        return await new Promise<Blob>((resolve, reject) => {
-          GM_xmlhttpRequest({
-            method: "GET",
-            url,
-            responseType: "blob",
-            timeout: 15000,
-            onload: response => {
-              const blob = response.response as Blob;
-              if (response.status >= 200 && response.status < 300 && blob instanceof Blob) {
-                resolve(blob);
-              } else {
-                reject(new Error(`GM_xmlhttpRequest failed: ${response.status}`));
-              }
-            },
-            onerror: () => reject(new Error("GM_xmlhttpRequest error")),
-            ontimeout: () => reject(new Error("GM_xmlhttpRequest timeout")),
-            onabort: () => reject(new Error("GM_xmlhttpRequest aborted")),
-          });
-        });
-      } catch (error) {
-        console.warn("[Tools] GM_xmlhttpRequest failed, fallback to fetch", error);
-      }
-    }
-
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status} while loading ${url}`);
-    }
-    return await res.blob();
-  }
-
-  const isIconUrl = !!tool.icon && /^https?:\/\//i.test(tool.icon);
-  const card = ui.card("", { tone: "muted", align: "stretch" });
-  card.root.style.width = "100%";
-
-  const body = card.body;
-  body.style.display = "grid";
-  body.style.gap = "10px";
-  body.style.justifyItems = "stretch";
-
-  const header = document.createElement("div");
-  header.style.display = "flex";
-  header.style.alignItems = "center";
-  header.style.gap = "10px";
-
-  if (isIconUrl) {
-    const img = document.createElement("img");
-    img.alt = `${tool.title} icon`;
-    img.style.width = "22px";
-    img.style.height = "22px";
-    img.style.objectFit = "contain";
-    img.style.borderRadius = "0";
-    img.style.border = "none";
-    img.style.background = "none";
-    img.style.padding = "0";
-    img.style.margin = "0";
-    img.style.boxShadow = "none";
-    img.style.display = "block";
-    img.style.flexShrink = "0";
-    img.style.mixBlendMode = "screen";
-    img.style.isolation = "isolate";
-    header.appendChild(img);
-
-    void (async () => {
-      try {
-        const blob = await fetchImageBlob(tool.icon!);
-        const objectUrl = URL.createObjectURL(blob);
-        img.onload = () => {
-          URL.revokeObjectURL(objectUrl);
-        };
-        img.src = objectUrl;
-      } catch (error) {
-        console.warn("[Tools] Unable to load icon via GM, fallback to direct src", error);
-        img.src = tool.icon!;
-      }
-    })();
-  } else if (tool.icon) {
-    const iconSpan = document.createElement("span");
-    iconSpan.textContent = tool.icon;
-    iconSpan.style.fontSize = "18px";
-    header.appendChild(iconSpan);
-  }
-
-  const titleText = document.createElement("span");
-  titleText.textContent = tool.title;
-  titleText.style.fontSize = "15px";
-  titleText.style.fontWeight = "700";
-  header.appendChild(titleText);
-
-  body.appendChild(header);
-
-  const description = document.createElement("p");
-  description.textContent = tool.description;
-  description.style.margin = "0";
-  description.style.fontSize = "13px";
-  description.style.lineHeight = "1.45";
-  description.style.opacity = "0.9";
-  description.style.textAlign = "left";
-  body.appendChild(description);
-
-  if (tool.tags?.length || tool.creators?.length) {
-    const metaRow = document.createElement("div");
-    metaRow.style.display = "flex";
-    metaRow.style.flexWrap = "wrap";
-    metaRow.style.alignItems = "center";
-    metaRow.style.justifyContent = "space-between";
-    metaRow.style.gap = "10px";
-
-    const tags = document.createElement("div");
-    tags.style.display = "flex";
-    tags.style.flexWrap = "wrap";
-    tags.style.gap = "6px";
-    tags.style.opacity = "0.85";
-    if (tool.tags?.length) {
-      tool.tags.forEach(tag => tags.appendChild(createTagPill(tag)));
-    }
-    metaRow.appendChild(tags);
-
-    if (tool.creators?.length) {
-      const creators = document.createElement("div");
-      creators.style.display = "flex";
-      creators.style.flexWrap = "wrap";
-      creators.style.gap = "6px";
-
-      tool.creators.forEach(creatorInfo => {
-        const chip = document.createElement("div");
-        chip.style.display = "inline-flex";
-        chip.style.alignItems = "center";
-        chip.style.gap = "8px";
-        chip.style.padding = "4px 8px";
-        chip.style.background = "#ffffff0c";
-        chip.style.border = "1px solid #ffffff18";
-        chip.style.borderRadius = "999px";
-
-        if (creatorInfo.avatar) {
-          const avatar = document.createElement("img");
-          avatar.src = creatorInfo.avatar;
-          avatar.alt = creatorInfo.name;
-          avatar.style.width = "26px";
-          avatar.style.height = "26px";
-          avatar.style.borderRadius = "999px";
-          avatar.style.objectFit = "cover";
-          avatar.style.border = "1px solid #ffffff22";
-          chip.appendChild(avatar);
-        }
-
-        const name = document.createElement("span");
-        name.textContent = creatorInfo.name;
-        name.style.fontSize = "12px";
-        name.style.fontWeight = "600";
-        chip.appendChild(name);
-
-        creators.appendChild(chip);
-      });
-
-      metaRow.appendChild(creators);
-    }
-
-    body.appendChild(metaRow);
-  }
-
-  const actionsRow = ui.flexRow({ gap: 8, justify: "end", fullWidth: true });
-  actionsRow.style.marginTop = "4px";
-
-  const shouldShowInlinePreview = tool.showInlinePreview ?? false;
-  const openInlinePreview = (url: string, title?: string) => {
-    let objectUrl: string | undefined;
-    let zoomed = false;
-    let lastOrigin = "center center";
-    let closed = false;
-
-    const overlay = document.createElement("div");
-    overlay.style.position = "fixed";
-    overlay.style.inset = "0";
-    overlay.style.background = "rgba(0,0,0,0.72)";
-    overlay.style.backdropFilter = "blur(4px)";
-    overlay.style.zIndex = "9999";
-    overlay.style.display = "grid";
-    overlay.style.placeItems = "center";
-    overlay.style.padding = "20px";
-
-    const box = document.createElement("div");
-    box.style.position = "relative";
-    box.style.maxWidth = "90vw";
-    box.style.maxHeight = "90vh";
-    box.style.background = "#0f1318";
-    box.style.border = "1px solid #ffffff22";
-    box.style.borderRadius = "12px";
-    box.style.boxShadow = "0 20px 50px rgba(0,0,0,0.45)";
-    box.style.overflow = "hidden";
-
-    const close = document.createElement("button");
-    close.textContent = "✕";
-    close.style.position = "absolute";
-    close.style.top = "8px";
-    close.style.right = "8px";
-    close.style.border = "1px solid #ffffff33";
-    close.style.borderRadius = "8px";
-    close.style.background = "#0009";
-    close.style.color = "#fff";
-    close.style.width = "32px";
-    close.style.height = "32px";
-    close.style.cursor = "pointer";
-    close.style.fontSize = "16px";
-    close.style.lineHeight = "1";
-    close.style.display = "grid";
-    close.style.placeItems = "center";
-    close.style.zIndex = "2";
-    close.onclick = () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
-      closed = true;
-      overlay.remove();
-    };
-
-    const status = document.createElement("div");
-    status.textContent = "Loading preview...";
-    status.style.padding = "14px 18px";
-    status.style.fontSize = "13px";
-    status.style.opacity = "0.85";
-
-    const img = document.createElement("img");
-    img.alt = title ?? tool.title;
-    img.style.display = "block";
-    img.style.maxWidth = "100%";
-    img.style.maxHeight = "90vh";
-    img.style.objectFit = "contain";
-    img.style.transition = "transform 200ms ease";
-    img.style.cursor = "zoom-in";
-    img.style.display = "none";
-
-    const toggleZoom = (event?: MouseEvent) => {
-      if (!zoomed && event) {
-        const rect = img.getBoundingClientRect();
-        const x = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1) * 100;
-        const y = Math.min(Math.max((event.clientY - rect.top) / rect.height, 0), 1) * 100;
-        lastOrigin = `${x}% ${y}%`;
-        img.style.transformOrigin = lastOrigin;
-      }
-      zoomed = !zoomed;
-      img.style.transform = zoomed ? "scale(1.8)" : "scale(1)";
-      img.style.cursor = zoomed ? "zoom-out" : "zoom-in";
-    };
-    img.onclick = (event) => {
-      event.stopPropagation();
-      toggleZoom(event);
-    };
-
-    box.append(close, status, img);
-    overlay.appendChild(box);
-    overlay.onclick = (ev) => {
-      if (ev.target === overlay) {
-        if (objectUrl) {
-          URL.revokeObjectURL(objectUrl);
-        }
-        closed = true;
-        overlay.remove();
-      }
-    };
-
-    document.body.appendChild(overlay);
-
-    void fetchImageBlob(url)
-      .then(blob => {
-        if (closed) return;
-        objectUrl = URL.createObjectURL(blob);
-        img.src = objectUrl;
-        status.remove();
-        img.style.display = "block";
-      })
-      .catch(error => {
-        if (closed) return;
-        console.warn("[Tools] Unable to load preview", error);
-        status.textContent = "Unable to load preview. Please open the link manually.";
-        status.style.color = "#ffb3b3";
-        img.style.display = "none";
-      });
-  };
-  const showActionToast = () => {
-    void toastSimple("Unable to open link", "Please open the address manually.", "error");
-  };
-
-  if (tool.actions?.length) {
-    actionsRow.style.display = "grid";
-    actionsRow.style.width = "100%";
-    actionsRow.style.gridTemplateColumns = "repeat(auto-fit, minmax(140px, 1fr))";
-    actionsRow.style.alignItems = "stretch";
-    actionsRow.style.justifyContent = "stretch";
-    tool.actions.forEach(action => {
-      const actionBtn = ui.btn(action.label, {
-        variant: "primary",
-        title: `Open ${action.label}`,
-      });
-      actionBtn.style.flex = "1 1 0";
-      actionBtn.style.minWidth = "0";
-      actionBtn.onclick = () => {
-        if (action.showInlinePreview) {
-          openInlinePreview(action.url, action.label);
-          return;
-        }
-        const ok = openLink(action.url);
-        if (!ok) {
-          showActionToast();
-        }
-      };
-      actionsRow.append(actionBtn);
-    });
-  } else {
-    const openBtn = ui.btn("Open tool", {
-      variant: "primary",
-      icon: "🔗",
-      fullWidth: true,
-      title: "Open the tool in a new tab",
-    });
-    openBtn.style.flex = "1 1 auto";
-    openBtn.style.minWidth = "0";
-    openBtn.onclick = () => {
-      if (shouldShowInlinePreview) {
-        openInlinePreview(tool.url, tool.title);
-      } else {
-        const ok = ToolsService.open(tool);
-        if (!ok) {
-          showActionToast();
-        }
-      }
-    };
-    actionsRow.append(openBtn);
-  }
-
-  body.appendChild(actionsRow);
-
-  return card.root;
-}
+import { fetchTools, type ExternalTool } from "../../services/tools";
+import { renderListView } from "./tools/list-view";
+import { renderDetailView } from "./tools/detail-view";
+import { swapViews } from "./tools/transition";
 
 export async function renderToolsMenu(container: HTMLElement) {
   const ui = new Menu({ id: "tools", compact: true });
@@ -384,16 +16,14 @@ export async function renderToolsMenu(container: HTMLElement) {
   view.style.display = "flex";
   view.style.flexDirection = "column";
   view.style.gap = "12px";
-  view.style.alignItems = "center"; // centre le wrapper (au lieu de stretch)
+  view.style.alignItems = "center";
   view.style.padding = "8px";
   view.style.width = "100%";
   view.style.maxHeight = "70vh";
   view.style.overflowY = "auto";
-  view.style.overflowX = "auto"; // sécurité si écran < largeur fixe
+  view.style.overflowX = "auto";
 
-  // --- largeur fixe du wrapper ---
-  const WRAPPER_WIDTH = 720; // ajuste selon ton besoin (px)
-
+  const WRAPPER_WIDTH = 720;
   const wrapper = document.createElement("div");
   wrapper.style.display = "flex";
   wrapper.style.flexDirection = "column";
@@ -402,156 +32,117 @@ export async function renderToolsMenu(container: HTMLElement) {
   wrapper.style.minWidth = `${WRAPPER_WIDTH}px`;
   wrapper.style.maxWidth = `${WRAPPER_WIDTH}px`;
   wrapper.style.boxSizing = "border-box";
-  wrapper.style.alignSelf = "center"; // s'aligne au centre dans la view
+  wrapper.style.alignSelf = "center";
 
-  const intro = ui.card("🧰 Community tools", {
-    tone: "muted",
-    align: "stretch",
-  });
+  // Intro card
+  const intro = ui.card("🧰 Community Tools", { tone: "muted", align: "stretch" });
+  intro.root.style.borderColor = "#2d8cff44";
+  intro.root.style.background = "linear-gradient(135deg, #0f1318 0%, #1a2332 100%)";
   const introText = document.createElement("p");
   introText.textContent = "Discover community-made helpers to plan, calculate, and simplify your Magic Garden adventures.";
   introText.style.margin = "0";
   introText.style.fontSize = "13px";
-  introText.style.lineHeight = "1.5";
-  introText.style.opacity = "0.9";
+  introText.style.lineHeight = "1.6";
+  introText.style.opacity = "0.88";
   introText.style.textAlign = "left";
   intro.body.appendChild(introText);
-
   wrapper.appendChild(intro.root);
 
-  const allTools = ToolsService.list();
+  // View container
+  const viewContainer = document.createElement("div");
+  viewContainer.style.position = "relative";
+  viewContainer.style.width = "100%";
+  viewContainer.style.flex = "1";
 
-  const filterSection = document.createElement("div");
-  filterSection.style.display = "flex";
-  filterSection.style.flexDirection = "column";
-  filterSection.style.gap = "8px";
-  filterSection.style.background = "#ffffff08";
-  filterSection.style.border = "1px solid #ffffff11";
-  filterSection.style.borderRadius = "12px";
-  filterSection.style.padding = "12px";
+  wrapper.appendChild(viewContainer);
+  view.appendChild(wrapper);
 
-  const filterTitle = document.createElement("span");
-  filterTitle.textContent = "Filter by tags";
-  filterTitle.style.fontSize = "12px";
-  filterTitle.style.letterSpacing = "0.05em";
-  filterTitle.style.textTransform = "uppercase";
-  filterTitle.style.opacity = "0.75";
-  filterTitle.style.fontWeight = "600";
-
-  const filterControls = document.createElement("div");
-  filterControls.style.display = "flex";
-  filterControls.style.flexWrap = "wrap";
-  filterControls.style.gap = "8px";
-
-  const selectedTags = new Set<string>();
-  const tagButtons = new Map<string, HTMLButtonElement>();
-  let allButton: HTMLButtonElement;
-  let cardsContainer: HTMLDivElement;
-
-  const filterBtnBaseStyle = (btn: HTMLButtonElement) => {
-    btn.type = "button";
-    btn.style.display = "inline-flex";
-    btn.style.alignItems = "center";
-    btn.style.justifyContent = "center";
-    btn.style.padding = "4px 10px";
-    btn.style.borderRadius = "999px";
-    btn.style.border = "1px solid";
-    btn.style.background = "#ffffff11";
-    btn.style.borderColor = "#ffffff22";
-    btn.style.fontSize = "11px";
-    btn.style.fontWeight = "600";
-    btn.style.letterSpacing = "0.03em";
-    btn.style.textTransform = "uppercase";
-    btn.style.color = "inherit";
-    btn.style.opacity = "0.85";
-    btn.style.cursor = "pointer";
-    btn.style.transition = "background 120ms ease, border-color 120ms ease, opacity 120ms ease";
+  // Loading state
+  const showLoading = () => {
+    viewContainer.innerHTML = "";
+    const loadingCard = ui.card("Loading...", { tone: "muted", align: "stretch" });
+    loadingCard.body.style.textAlign = "center";
+    const spinner = document.createElement("div");
+    spinner.textContent = "Fetching tools...";
+    spinner.style.opacity = "0.75";
+    spinner.style.fontSize = "13px";
+    loadingCard.body.appendChild(spinner);
+    viewContainer.appendChild(loadingCard.root);
   };
 
-  const setActiveState = (btn: HTMLButtonElement, active: boolean) => {
-    if (active) {
-      btn.style.background = "#2d8cff33";
-      btn.style.borderColor = "#2d8cff66";
-      btn.style.opacity = "1";
-    } else {
-      btn.style.background = "#ffffff11";
-      btn.style.borderColor = "#ffffff22";
-      btn.style.opacity = "0.85";
-    }
+  // Error state
+  const showError = (error: Error) => {
+    viewContainer.innerHTML = "";
+    const errorCard = ui.card("Error", { tone: "muted", align: "stretch" });
+    const errorText = document.createElement("p");
+    errorText.textContent = error.message || "Failed to load tools.";
+    errorText.style.margin = "0 0 12px 0";
+    errorText.style.opacity = "0.9";
+    errorText.style.fontSize = "13px";
+    errorCard.body.appendChild(errorText);
+
+    const retryBtn = ui.btn("Retry", { variant: "primary", fullWidth: true });
+    retryBtn.onclick = () => {
+      void init();
+    };
+    errorCard.body.appendChild(retryBtn);
+
+    viewContainer.appendChild(errorCard.root);
   };
 
-  const renderList = () => {
-    cardsContainer.innerHTML = "";
-    const filtered = selectedTags.size
-      ? allTools.filter(tool => tool.tags?.some(tag => selectedTags.has(tag)))
-      : allTools;
+  let tools: ExternalTool[] = [];
+  let listViewRoot: HTMLElement | null = null;
+  let detailViewRoot: HTMLElement | null = null;
 
-    if (filtered.length === 0) {
-      const empty = document.createElement("p");
-      empty.textContent = "No tools match the selected tags yet.";
-      empty.style.margin = "12px 0 0";
-      empty.style.fontSize = "13px";
-      empty.style.opacity = "0.75";
-      empty.style.textAlign = "center";
-      empty.style.gridColumn = "1 / -1";
-      cardsContainer.appendChild(empty);
+  const showListView = async () => {
+    if (listViewRoot) {
+      // List already rendered, just swap to it
+      if (detailViewRoot && detailViewRoot.parentNode === viewContainer) {
+        await swapViews(viewContainer, detailViewRoot, listViewRoot, "back");
+      }
       return;
     }
 
-    filtered.forEach(tool => {
-      cardsContainer.appendChild(renderToolCard(ui, tool));
-    });
+    // Render list for the first time
+    const listView = renderListView(ui, tools, showDetailView);
+    listViewRoot = listView.root;
+    viewContainer.appendChild(listViewRoot);
   };
 
-  const refreshButtonStates = () => {
-    tagButtons.forEach((btn, tag) => {
-      setActiveState(btn, selectedTags.has(tag));
-    });
-    setActiveState(allButton, selectedTags.size === 0);
-  };
+  const showDetailView = async (tool: ExternalTool) => {
+    const detailView = renderDetailView(ui, tool, showListView);
+    detailViewRoot = detailView.root;
 
-  const handleToggle = (tag: string) => {
-    if (selectedTags.has(tag)) {
-      selectedTags.delete(tag);
+    if (listViewRoot && listViewRoot.parentNode === viewContainer) {
+      viewContainer.appendChild(detailViewRoot);
+      await swapViews(viewContainer, listViewRoot, detailViewRoot, "forward");
     } else {
-      selectedTags.add(tag);
+      viewContainer.appendChild(detailViewRoot);
     }
-    refreshButtonStates();
-    renderList();
   };
 
-  allButton = document.createElement("button");
-  allButton.textContent = "All";
-  filterBtnBaseStyle(allButton);
-  allButton.onclick = () => {
-    if (selectedTags.size === 0) return;
-    selectedTags.clear();
-    refreshButtonStates();
-    renderList();
+  const init = async () => {
+    showLoading();
+
+    try {
+      tools = await fetchTools();
+
+      if (!tools.length) {
+        showError(new Error("No tools available."));
+        return;
+      }
+
+      viewContainer.innerHTML = "";
+      listViewRoot = null;
+      detailViewRoot = null;
+
+      await showListView();
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      showError(err);
+    }
   };
-  filterControls.appendChild(allButton);
 
-  ToolsService.tags().forEach(tag => {
-    const btn = document.createElement("button");
-    btn.textContent = tag;
-    filterBtnBaseStyle(btn);
-    btn.onclick = () => handleToggle(tag);
-    filterControls.appendChild(btn);
-    tagButtons.set(tag, btn);
-  });
-
-  filterSection.appendChild(filterTitle);
-  filterSection.appendChild(filterControls);
-  wrapper.appendChild(filterSection);
-
-  cardsContainer = document.createElement("div");
-  cardsContainer.style.display = "grid";
-  cardsContainer.style.gridTemplateColumns = "repeat(auto-fit, minmax(320px, 1fr))";
-  cardsContainer.style.gap = "12px";
-
-  renderList();
-  refreshButtonStates();
-
-  wrapper.appendChild(cardsContainer);
-  view.appendChild(wrapper);
+  // Start
+  await init();
 }

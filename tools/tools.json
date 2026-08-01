@@ -1,0 +1,132 @@
+{
+  "tools": [
+    {
+      "id": "aries-mod-intro",
+      "title": "Arie's Mod introduction",
+      "description": "Visual guide for the mod with the main features highlighted.",
+      "tags": ["guide", "mod"],
+      "images": ["https://i.imgur.com/LZL6zPj.jpeg"],
+      "creators": [
+        {
+          "name": "Bella",
+          "avatar": "https://cdn.discordapp.com/avatars/1400054123969380354/241dfc8a181b9e4b9dab6f1ac4f7567a.webp"
+        }
+      ]
+    },
+    {
+      "id": "wiki",
+      "title": "Magic Garden Wiki",
+      "description": "Community-curated documentation for plants, mechanics, weather, and more.\n\nMaintained collaboratively — see the [main page](https://magicgarden.wiki/Main_Page) for the full index.",
+      "icon": "https://i.imgur.com/0LXKEzh.png",
+      "tags": ["guide", "utility"],
+      "actions": [
+        {
+          "label": "Open",
+          "url": "https://magicgarden.wiki/Main_Page"
+        }
+      ],
+      "creators": [
+        {
+          "name": "Community"
+        }
+      ]
+    },
+    {
+      "id": "qpm",
+      "title": "QPM Mod Menu",
+      "description": "Mod/userscript focused on game stats, adding pet analytics, inventory helpers and shop/weather tracking.",
+      "tags": ["mod"],
+      "actions": [
+        {
+          "label": "GitHub",
+          "url": "https://github.com/ryandt2305-cpu/QPM-GR/"
+        },
+        {
+          "label": "Install",
+          "url": "https://github.com/ryandt2305-cpu/QPM-GR/raw/refs/heads/master/dist/QPM.user.js"
+        }
+      ],
+      "creators": [
+        {
+          "name": "Tokyo",
+          "avatar": "https://cdn.discordapp.com/avatars/511094276613210122/c2af3c8ff2123724ba49b7e897d0ce97.png"
+        }
+      ]
+    },
+    {
+      "id": "calculator",
+      "title": "Daserix' Magic Garden Calculators",
+      "description": "Calculate crop value based on size and mutations, with garden import for total optimisation stats.",
+      "tags": ["utility"],
+      "actions": [
+        {
+          "label": "Open",
+          "url": "https://daserix.github.io/magic-garden-calculator/"
+        }
+      ],
+      "icon": "https://i.imgur.com/xXPqRgK.png",
+      "creators": [
+        {
+          "name": "Daserix",
+          "avatar": "https://cdn.discordapp.com/avatars/266245650662817793/09de28b070e0a107eb1bea1fe015afc3.webp"
+        }
+      ]
+    },
+    {
+      "id": "mg-android-notifier",
+      "title": "Magic Garden Notifier",
+      "description": "Android app that sends push notifications/alarms when selected shop items restock, with configurable thresholds and background monitoring.",
+      "icon": "https://i.imgur.com/l3NHmc5.png",
+      "tags": ["utility", "android"],
+      "actions": [
+        {
+          "label": "GitHub",
+          "url": "https://github.com/Daserix/magic-garden-notifier-releases"
+        },
+        {
+          "label": "Install",
+          "url": "https://github.com/Daserix/magic-garden-notifier-releases/releases/download/v1.1.0/mg-notifier-1.1.0.apk"
+        }
+      ],
+      "creators": [
+        {
+          "name": "Daserix",
+          "avatar": "https://cdn.discordapp.com/avatars/266245650662817793/09de28b070e0a107eb1bea1fe015afc3.png"
+        }
+      ]
+    },
+    {
+      "id": "guide-1b",
+      "title": "Making Your First 1B",
+      "description": "Beginner-friendly step-by-step guide to earning your first 1B coins, covering early crop choices, key pets, and long-term strategy.",
+      "tags": ["guide"],
+      "images": ["https://i.imgur.com/gs6Karj.png"],
+      "creators": [
+        {
+          "name": "Bella",
+          "avatar": "https://cdn.discordapp.com/avatars/1400054123969380354/241dfc8a181b9e4b9dab6f1ac4f7567a.png"
+        }
+      ]
+    },
+    {
+      "id": "pet-diet-visual-guides",
+      "title": "Pet diet visual guides",
+      "description": "Rarity-based pet diet guides focused on food restoration percentages.",
+      "tags": ["guide"],
+      "images": [
+        "https://i.imgur.com/sOXepq1.jpeg",
+        "https://i.imgur.com/3weyngx.jpeg",
+        "https://i.imgur.com/n8KPA7L.jpeg",
+        "https://i.imgur.com/CBKjqiN.jpeg",
+        "https://i.imgur.com/YD00B5U.jpeg",
+        "https://i.imgur.com/ybcdHxC.jpeg"
+      ],
+      "creators": [
+        {
+          "name": "Bella",
+          "avatar": "https://cdn.discordapp.com/avatars/1400054123969380354/241dfc8a181b9e4b9dab6f1ac4f7567a.webp"
+        }
+      ]
+    }
+  ]
+}
