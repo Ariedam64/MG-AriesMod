@@ -1,6 +1,36 @@
 {
   "tools": [
     {
+      "id": "garden-explorer",
+      "title": "Garden Explorer",
+      "description": "A page that reads the game's data live and lays it out in the open. When the game gets updated, so does the site, without waiting for anyone to write it up.\n\nIt is not a wiki. You get the raw values that can be pulled out of the game code and nothing more, so no descriptions, no strategies, no lore. The [wiki](https://magicgarden.wiki/Main_Page) is still the place for all of that.\n\n- **Live and history**: current weather and shops synced with the game, plus months of shop and weather history with charts, an interactive timeline and the exact time of every drop\n- **Game data**: plants, pets, items, eggs, mutations, weather, abilities and enums. Decor also shows each upgrade level and what it costs in dust\n- **Assets**: every sprite with a mutation preview, so you can see how gold, rainbow or wet actually look once applied, every cosmetic in the game, and all the ambient music and sound effects\n- **Calculators**: crop values, dust, pet diets and dawn capsules\n- **Leaderboards**: coins, eggs hatched and pet journal progress\n- **Public rooms**: the rooms currently running Arie's Mod with their player counts, handy when you want a friend bonus before a big sell\n\nThe shop and weather history is not flawless, there are a few gaps and oddities in there, but it stays very usable. Thanks to Corni and Tokyo for the data.",
+      "tags": ["utility", "mod"],
+      "images": [
+        "https://i.imgur.com/LMRdTLy.png",
+        "https://i.imgur.com/WWvAGoH.png",
+        "https://i.imgur.com/Th7wc0c.png",
+        "https://i.imgur.com/RrtmHSO.png",
+        "https://i.imgur.com/LnPpTok.png",
+        "https://i.imgur.com/t93qKgs.png",
+        "https://i.imgur.com/6tfNG3J.png",
+        "https://i.imgur.com/XgrgYKN.png",
+        "https://i.imgur.com/WI2uL01.png",
+        "https://i.imgur.com/uusefzj.png",
+        "https://i.imgur.com/BIEuj95.png"
+      ],
+      "actions": [
+        {
+          "label": "Open Explorer",
+          "url": "https://ariesmod-api.ariedam.fr/explorer"
+        }
+      ],
+      "creators": [
+        {
+          "name": "Arie"
+        }
+      ]
+    },
+    {
       "id": "wiki",
       "title": "Magic Garden Wiki",
       "description": "Everything the game never bothers to explain, written down by the players who worked it out. It runs on MediaWiki and anyone can edit it, so it tends to stay closer to the current patch than any static guide.\n\nThe main sections:\n\n- [Crops](https://magicgarden.wiki/Crops) and [Shops](https://magicgarden.wiki/Shops), for what to plant and where the seeds come from\n- [Mutations](https://magicgarden.wiki/Mutations) and [Multipliers](https://magicgarden.wiki/Multipliers), which is where the money actually is: which mutations can stack together, and how they combine with size, friend bonus and sell boost pets to set the final price\n- [Pets](https://magicgarden.wiki/Pets) and [Abilities](https://magicgarden.wiki/Abilities), with what each ability actually does rather than what the tooltip says\n- [Weather Events](https://magicgarden.wiki/Weather_Events) and [Events](https://magicgarden.wiki/Events), for anything time limited\n- [Garden Tools](https://magicgarden.wiki/Tools) and the [Garden Journal](https://magicgarden.wiki/Garden_Journal), for your gear and your collection progress\n\nAround two hundred articles so far, and a few hundred screenshots to go with them. If you spot something wrong or missing you can just fix it yourself: [First Steps](https://magicgarden.wiki/First_Steps) walks you through it, and the [contributing guide](https://magicgarden.wiki/Contributing) covers the rest.",
