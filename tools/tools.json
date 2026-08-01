@@ -32,6 +32,37 @@
       ]
     },
     {
+      "id": "mg-afk-android",
+      "title": "MG AFK Android",
+      "description": "Stay connected to your garden from your phone without opening the game. The app holds a session open in the background, so things keep running and you keep getting alerts while your computer is off.\n\nIt is not just a viewer, you can actually play from it:\n\n- **Garden and shops**: plant, water, harvest, pot plants, cleanse mutations, hatch eggs, and buy seeds, tools, eggs or decor in single, bulk or hybrid mode\n- **Pets**: hunger bars, STR, live ability logs with a readable line for every proc, and up to 30 saved teams you can swap in one tap\n- **Alerts**: notifications or alarms set per section or per item, for shops, weather, pets and the trough\n- **Mini games**: coin flip, mines, slots, dice, crash, blackjack and egg hatcher, with their own wallet\n- **Social**: browse and join public rooms, and chat with the room you are in\n\nYou log in once with Discord and the session sticks. It keeps going with the screen locked thanks to a foreground service, reconnects on its own when the connection drops, and lets you tune the CPU wake lock so a long AFK night does not eat your battery. Several accounts can run at the same time in tabs.\n\nEvery sprite is drawn with its mutations applied, so a gold rainbow crop actually looks like one. And when you feel like properly playing, **Play in game** opens the game inside the app with Arie's Mod already injected.\n\nThe app checks GitHub for new versions every hour and installs them itself, no store needed.",
+      "tags": ["utility", "android"],
+      "images": [
+        "https://i.imgur.com/sNtFoP3.png",
+        "https://i.imgur.com/mWjCCXl.png",
+        "https://i.imgur.com/je8Ckuj.png",
+        "https://i.imgur.com/e3sB8Xq.png",
+        "https://i.imgur.com/3BZQDJE.png",
+        "https://i.imgur.com/SUNJW2h.png",
+        "https://i.imgur.com/JYwgZIm.png"
+      ],
+      "actions": [
+        {
+          "label": "Download APK",
+          "url": "https://github.com/Ariedam64/mg-afk-android/releases/latest/download/app-release.apk"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/Ariedam64/mg-afk-android"
+        }
+      ],
+      "creators": [
+        {
+          "name": "Arie",
+          "avatar": "https://i.imgur.com/eRhqdPQ.png"
+        }
+      ]
+    },
+    {
       "id": "wiki",
       "title": "Magic Garden Wiki",
       "description": "Everything the game never bothers to explain, written down by the players who worked it out. It runs on MediaWiki and anyone can edit it, so it tends to stay closer to the current patch than any static guide.\n\nThe main sections:\n\n- [Crops](https://magicgarden.wiki/Crops) and [Shops](https://magicgarden.wiki/Shops), for what to plant and where the seeds come from\n- [Mutations](https://magicgarden.wiki/Mutations) and [Multipliers](https://magicgarden.wiki/Multipliers), which is where the money actually is: which mutations can stack together, and how they combine with size, friend bonus and sell boost pets to set the final price\n- [Pets](https://magicgarden.wiki/Pets) and [Abilities](https://magicgarden.wiki/Abilities), with what each ability actually does rather than what the tooltip says\n- [Weather Events](https://magicgarden.wiki/Weather_Events) and [Events](https://magicgarden.wiki/Events), for anything time limited\n- [Garden Tools](https://magicgarden.wiki/Tools) and the [Garden Journal](https://magicgarden.wiki/Garden_Journal), for your gear and your collection progress\n\nAround two hundred articles so far, and a few hundred screenshots to go with them. If you spot something wrong or missing you can just fix it yourself: [First Steps](https://magicgarden.wiki/First_Steps) walks you through it, and the [contributing guide](https://magicgarden.wiki/Contributing) covers the rest.",
