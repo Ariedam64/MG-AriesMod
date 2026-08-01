@@ -13,7 +13,7 @@ export function renderDetailView(
   const root = document.createElement("div");
   root.style.display = "flex";
   root.style.flexDirection = "column";
-  root.style.gap = "20px";
+  root.style.gap = "24px";
   root.style.width = "100%";
   root.style.maxHeight = "70vh";
   root.style.overflowY = "auto";
@@ -89,11 +89,13 @@ export function renderDetailView(
   descDiv.style.fontSize = "13px";
   descDiv.style.lineHeight = "1.6";
   descCard.body.appendChild(descDiv);
+  descCard.root.style.marginTop = "8px";
   root.appendChild(descCard.root);
 
   // Carousel (if images exist)
   if (tool.images?.length) {
     const carouselCmp = renderCarousel(tool.images);
+    carouselCmp.root.style.marginTop = "8px";
     root.appendChild(carouselCmp.root);
   }
 
