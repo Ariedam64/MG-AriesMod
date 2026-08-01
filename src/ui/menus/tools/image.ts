@@ -16,8 +16,14 @@ export async function fetchImageBlob(url: string): Promise<Blob> {
   }
 }
 
+/** Inline images (`data:image/svg+xml,...`) need no network round trip. */
+function isDataImageUrl(value: string): boolean {
+  return /^data:image\//i.test(value.trim());
+}
+
 export function isImageUrl(icon: string): boolean {
-  return /^https?:\/\//i.test(icon.trim());
+  const value = icon.trim();
+  return /^https?:\/\//i.test(value) || isDataImageUrl(value);
 }
 
 /**
@@ -45,6 +51,13 @@ export function createIconTile(icon: string, size: "sm" | "lg" = "sm"): HTMLElem
  * keep working inside the Discord Activity CSP sandbox.
  */
 export function loadImageInto(img: HTMLImageElement, url: string): void {
+  // Data URIs carry their own bytes: fetching them would only risk the GM
+  // transport choking on a non-http scheme.
+  if (isDataImageUrl(url)) {
+    img.src = url;
+    return;
+  }
+
   void (async () => {
     try {
       const blob = await fetchImageBlob(url);

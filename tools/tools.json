@@ -3,8 +3,11 @@
     {
       "id": "garden-explorer",
       "title": "Garden Explorer",
+      "icon": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%235eead4%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%229%22%2F%3E%3Cpath%20d%3D%22M3%2012h18%22%2F%3E%3Cpath%20d%3D%22M12%203a14.5%2014.5%200%200%201%200%2018%2014.5%2014.5%200%200%201%200-18z%22%2F%3E%3C%2Fsvg%3E",
       "description": "A page that reads the game's data live and lays it out in the open. When the game gets updated, so does the site, without waiting for anyone to write it up.\n\nIt is not a wiki. You get the raw values that can be pulled out of the game code and nothing more, so no descriptions, no strategies, no lore. The [wiki](https://magicgarden.wiki/Main_Page) is still the place for all of that.\n\n- **Live and history**: current weather and shops synced with the game, plus months of shop and weather history with charts, an interactive timeline and the exact time of every drop\n- **Game data**: plants, pets, items, eggs, mutations, weather, abilities and enums. Decor also shows each upgrade level and what it costs in dust\n- **Assets**: every sprite with a mutation preview, so you can see how gold, rainbow or wet actually look once applied, every cosmetic in the game, and all the ambient music and sound effects\n- **Calculators**: crop values, dust, pet diets and dawn capsules\n- **Leaderboards**: coins, eggs hatched and pet journal progress\n- **Public rooms**: the rooms currently running Arie's Mod with their player counts, handy when you want a friend bonus before a big sell\n\nThe shop and weather history is not flawless, there are a few gaps and oddities in there, but it stays very usable. Thanks to Corni and Tokyo for the data.",
-      "tags": ["utility"],
+      "tags": [
+        "utility"
+      ],
       "images": [
         "https://i.imgur.com/LMRdTLy.png",
         "https://i.imgur.com/WWvAGoH.png",
@@ -36,7 +39,10 @@
       "title": "MG AFK Android",
       "icon": "https://i.imgur.com/S9BowRQ.png",
       "description": "Stay connected to your garden from your phone without opening the game. The app holds a session open in the background, so you can leave it running overnight and get woken up by an alarm when a seed you have been waiting for finally shows up in the shop.\n\nIt is not just a viewer, you can actually play from it:\n\n- **Garden and shops**: plant, water, harvest, pot plants, cleanse mutations, hatch eggs, and buy seeds, tools, eggs or decor in single, bulk or hybrid mode\n- **Pets**: hunger bars, STR, live ability logs with a readable line for every proc, and up to 30 saved teams you can swap in one tap\n- **Alerts**: notifications or alarms set per section or per item, for shops, weather, pets and the trough\n- **Social**: browse and join public rooms, and chat with the room you are in\n- **Play in game**: open a real game session inside the app, with the Gemini userscript already injected, so you get the mod on mobile without setting anything up\n\nYou log in once with Discord and the session sticks. It keeps going with the screen locked thanks to a foreground service, reconnects on its own when the connection drops, and lets you tune the CPU wake lock so a long AFK night does not eat your battery. Several accounts can run at the same time in tabs.\n\nThe app checks GitHub for new versions every hour and installs them itself, no store needed.",
-      "tags": ["utility", "android"],
+      "tags": [
+        "utility",
+        "android"
+      ],
       "images": [
         "https://i.imgur.com/sNtFoP3.png",
         "https://i.imgur.com/mWjCCXl.png",
@@ -68,7 +74,10 @@
       "title": "Magic Garden Wiki",
       "description": "Everything the game never bothers to explain, written down by the players who worked it out. It runs on MediaWiki and anyone can edit it, so it tends to stay closer to the current patch than any static guide.\n\nThe main sections:\n\n- [Crops](https://magicgarden.wiki/Crops) and [Shops](https://magicgarden.wiki/Shops), for what to plant and where the seeds come from\n- [Mutations](https://magicgarden.wiki/Mutations) and [Multipliers](https://magicgarden.wiki/Multipliers), which is where the money actually is: which mutations can stack together, and how they combine with size, friend bonus and sell boost pets to set the final price\n- [Pets](https://magicgarden.wiki/Pets) and [Abilities](https://magicgarden.wiki/Abilities), with what each ability actually does rather than what the tooltip says\n- [Weather Events](https://magicgarden.wiki/Weather_Events) and [Events](https://magicgarden.wiki/Events), for anything time limited\n- [Garden Tools](https://magicgarden.wiki/Tools) and the [Garden Journal](https://magicgarden.wiki/Garden_Journal), for your gear and your collection progress\n\nAround two hundred articles so far, and a few hundred screenshots to go with them. If you spot something wrong or missing you can just fix it yourself: [First Steps](https://magicgarden.wiki/First_Steps) walks you through it, and the [contributing guide](https://magicgarden.wiki/Contributing) covers the rest.",
       "icon": "https://i.imgur.com/0LXKEzh.png",
-      "tags": ["guide", "utility"],
+      "tags": [
+        "guide",
+        "utility"
+      ],
       "actions": [
         {
           "label": "Open",
@@ -85,7 +94,9 @@
       "id": "qpm",
       "title": "QPM Mod Menu",
       "description": "**QPM-GR** (Quinoa Pet Manager) is a companion userscript for people who like numbers. It keeps track of what your pets, crops and shops are really doing, and handles the repetitive stuff so you don't have to.\n\nWhat you get:\n\n- **Pet Hub**, with overview, comparison and abilities tabs, including live proc rates for every pet\n- **Ability and XP trackers** that log each proc as it happens and show your XP per minute and per hour for the session\n- **Shop Restock Tracker**, which predicts restocks from live data and past history, countdown timers included\n- **Auto-Favourite and Bulk Favourite**, so you can lock things by rarity, level or ability and stop selling stuff by accident\n- **Turtle Timer, Weather Hub and Journal Checker** for growth and egg timings, mutation alerts, and journal progress\n\nIt runs on the same platforms as Arie's Mod (magiccircle.gg, magicgarden.gg, starweaver.org and Discord Activities), and it shares its data read-only through an *Aries Mod bridge*, so running both side by side is fine.\n\nGrab it with Tampermonkey or Violentmonkey, open the game, and the QPM panel will be there waiting. Free and open source under the MIT licence.",
-      "tags": ["mod"],
+      "tags": [
+        "mod"
+      ],
       "images": [
         "https://i.imgur.com/pMZlNIj.png",
         "https://i.imgur.com/JzY6Rhb.png",
@@ -115,7 +126,9 @@
       "id": "calculator",
       "title": "Daserix' Magic Garden Calculators",
       "description": "A set of calculators for the numbers the game keeps to itself, all in one page and nothing to install.\n\nThe one you'll actually use is the [Sell Price Calculator](https://daserix.github.io/magic-garden-calculator/#/sell-price-calculator): pick a crop, set its size and its mutations, and it tells you what it will go for. A few more sit alongside it for [weight](https://daserix.github.io/magic-garden-calculator/#/weight-probability-calculator), [pet appearance](https://daserix.github.io/magic-garden-calculator/#/pet-appearance-probability-calculator) and [ability trigger](https://daserix.github.io/magic-garden-calculator/#/ability-trigger-time-calculator) odds if you ever need them.\n\nYou can also [import your garden](https://daserix.github.io/magic-garden-calculator/#/import) by pasting a short script into your browser console and dropping the json it gives you onto the site. Your garden and inventory then show up in the tool, with filters and your total worth, which is handy for seeing what you're sitting on before you decide what to harvest.",
-      "tags": ["utility"],
+      "tags": [
+        "utility"
+      ],
       "actions": [
         {
           "label": "Open",
@@ -135,7 +148,10 @@
       "title": "Magic Garden Notifier",
       "description": "An Android app that lets you know the moment the shop restocks something you've been waiting for.\n\nPick the items you care about, set your thresholds, and it keeps an eye on things in the background. When they show up you get a notification, or an alarm if you'd rather not sleep through it.",
       "icon": "https://i.imgur.com/l3NHmc5.png",
-      "tags": ["utility", "android"],
+      "tags": [
+        "utility",
+        "android"
+      ],
       "actions": [
         {
           "label": "Install",

@@ -48097,8 +48097,12 @@ next: ${next}`;
       return await res.blob();
     }
   }
+  function isDataImageUrl(value) {
+    return /^data:image\//i.test(value.trim());
+  }
   function isImageUrl(icon) {
-    return /^https?:\/\//i.test(icon.trim());
+    const value = icon.trim();
+    return /^https?:\/\//i.test(value) || isDataImageUrl(value);
   }
   function createIconTile(icon, size = "sm") {
     const tile = document.createElement("div");
@@ -48114,6 +48118,10 @@ next: ${next}`;
     return tile;
   }
   function loadImageInto(img, url) {
+    if (isDataImageUrl(url)) {
+      img.src = url;
+      return;
+    }
     void (async () => {
       try {
         const blob = await fetchImageBlob(url);
