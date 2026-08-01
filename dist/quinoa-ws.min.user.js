@@ -48657,16 +48657,13 @@ next: ${next}`;
   box-shadow: 0 2px 12px rgba(94,234,212,0.22);
 }
 
-/* \u2500\u2500 icon tile \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+/* \u2500\u2500 icon tile (no frame: the artwork stands on its own) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 .mgt-tile {
-  display: grid; place-items: center; flex-shrink: 0; overflow: hidden;
-  width: 38px; height: 38px; border-radius: 11px; font-size: 19px; line-height: 1;
-  background: rgba(94,234,212,0.07);
-  border: 1px solid rgba(94,234,212,0.16);
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 38px; height: 38px; font-size: 22px; line-height: 1;
 }
-.mgt-tile img { width: 24px; height: 24px; object-fit: contain; mix-blend-mode: screen; }
-.mgt-tile--lg { width: 54px; height: 54px; border-radius: 15px; font-size: 27px; }
-.mgt-tile--lg img { width: 34px; height: 34px; }
+.mgt-tile img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: screen; }
+.mgt-tile--lg { width: 54px; height: 54px; font-size: 32px; }
 
 /* \u2500\u2500 tags \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 .mgt-tags { display: flex; flex-wrap: wrap; gap: 5px; }
