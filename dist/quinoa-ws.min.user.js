@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.185
+// @version      3.2.186
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -12882,22 +12882,10 @@
       description: "Shortcuts for placing/removing items and toggling editor overlays.",
       actions: [
         {
-          id: "editor.place-remove",
-          label: "Place / Remove item",
-          hint: "Place selected item on empty tile, or remove the item under your feet.",
-          defaultHotkey: { code: "Space" }
-        },
-        {
           id: "editor.toggle-overlays",
           label: "Toggle editor overlays",
           hint: "Show or hide the editor panels.",
           defaultHotkey: { code: "KeyU" }
-        },
-        {
-          id: "editor.delete-inventory",
-          label: "Remove selected item from inventory",
-          hint: "Remove the currently selected inventory item.",
-          defaultHotkey: { code: "Delete" }
         }
       ]
     }
@@ -16440,7 +16428,9 @@
     }
   }
   function getCanvas() {
-    return state2.engine?.app?.view || state2.engine?.app?.renderer?.view || null;
+    const app = state2.engine?.app;
+    const renderer = app?.renderer;
+    return renderer?.canvas || renderer?.view?.canvas || renderer?.view || app?.view || app?.canvas || null;
   }
   function defaultTileSize() {
     const t = state2.tos;
@@ -16477,6 +16467,29 @@
       ev
     };
   }
+  var FARM_TILE_SIZE = 256;
+  function pointerToFarmTile(ev) {
+    assertReady();
+    const canvas = getCanvas();
+    const renderer = state2.engine?.app?.renderer;
+    const worldContainer = state2.tos?.worldContainer;
+    const map2 = state2.tos?.map;
+    if (!canvas || !renderer?.screen || !worldContainer?.toLocal || !map2) return null;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    const global = {
+      x: (ev.clientX - rect.left) * renderer.screen.width / rect.width,
+      y: (ev.clientY - rect.top) * renderer.screen.height / rect.height
+    };
+    const world = worldContainer.toLocal(global);
+    const tx = Math.floor(world.x / FARM_TILE_SIZE);
+    const ty = Math.floor(world.y / FARM_TILE_SIZE);
+    const cols = Number(map2.cols);
+    const rows = Number(map2.rows);
+    if (!Number.isFinite(cols) || tx < 0 || ty < 0 || tx >= cols) return null;
+    if (Number.isFinite(rows) && ty >= rows) return null;
+    return { tx, ty, gidx: tx + ty * cols };
+  }
   function onPointerTile(listener, opts = {}) {
     assertReady();
     const canvas = getCanvas();
@@ -16510,7 +16523,7 @@
     const info = tos.getTileObject(tx, ty, { ensureView: true });
     const tv = info.tileView;
     if (!tv) throw new Error("TileView not available");
-    const parent = tv.root || tv.container || tv;
+    const parent = tv.displayObject || tv.root || tv.container || tv;
     if (!parent?.addChild) throw new Error("TileView is not a display container");
     const PIXI = state2.engine?.app?.renderer?.PIXI ?? window.PIXI;
     const Graphics = PIXI?.Graphics;
@@ -16560,6 +16573,86 @@
     }, opts);
     state2.hoverDebug.cleanup = cleanup2;
     state2.hoverDebug.enabled = true;
+    return true;
+  }
+  var activeFlashes = /* @__PURE__ */ new Map();
+  var FLASH_DEFAULT_COLOR = 4906624;
+  var FLASH_DEFAULT_MIX = 1;
+  var FLASH_DEFAULT_DURATION_MS = 1e3;
+  function hasTint(node) {
+    return !!(node && typeof node.tint === "number");
+  }
+  function collectTintable(root, cap = 900) {
+    const out = [];
+    const stack = [root];
+    while (stack.length && out.length < cap) {
+      const node = stack.pop();
+      if (!node) continue;
+      if (hasTint(node)) out.push(node);
+      const children = node.children;
+      if (Array.isArray(children)) for (const child of children) stack.push(child);
+    }
+    return out;
+  }
+  function lerpColor(from, to, t) {
+    const r0 = from >> 16 & 255, g0 = from >> 8 & 255, b0 = from & 255;
+    const r1 = to >> 16 & 255, g1 = to >> 8 & 255, b1 = to & 255;
+    const r = Math.round(r0 + (r1 - r0) * t);
+    const g = Math.round(g0 + (g1 - g0) * t);
+    const b = Math.round(b0 + (b1 - b0) * t);
+    return r << 16 | g << 8 | b;
+  }
+  function stopFlashTile(gidx) {
+    const entry = activeFlashes.get(gidx);
+    if (!entry) return;
+    cancelAnimationFrame(entry.raf);
+    for (const node of entry.touched) {
+      const base = entry.baseline.get(node);
+      if (base == null) continue;
+      try {
+        node.tint = base;
+      } catch {
+      }
+    }
+    activeFlashes.delete(gidx);
+  }
+  function flashTileGreen(tx, ty, opts = {}) {
+    const { gidx } = getTileViewAt(Number(tx), Number(ty), true);
+    if (gidx == null) return false;
+    stopFlashTile(gidx);
+    const color = opts.color ?? FLASH_DEFAULT_COLOR;
+    const startMix = opts.startAlpha ?? FLASH_DEFAULT_MIX;
+    const durationMs = Math.max(1, opts.durationMs ?? FLASH_DEFAULT_DURATION_MS);
+    const resolveParent = () => {
+      const { tv } = getTileViewAt(Number(tx), Number(ty), false);
+      return tv?.displayObject || tv?.root || tv?.container || tv || null;
+    };
+    if (!resolveParent()) return false;
+    const entry = { raf: 0, baseline: /* @__PURE__ */ new WeakMap(), touched: /* @__PURE__ */ new Set() };
+    activeFlashes.set(gidx, entry);
+    const start2 = performance.now();
+    const tick = (now2) => {
+      const progress = Math.min(1, (now2 - start2) / durationMs);
+      const mix = startMix * (1 - progress);
+      const parent = resolveParent();
+      if (parent) {
+        for (const node of collectTintable(parent)) {
+          if (!entry.baseline.has(node)) entry.baseline.set(node, node.tint);
+          entry.touched.add(node);
+          const base = entry.baseline.get(node);
+          try {
+            node.tint = lerpColor(base, color, mix);
+          } catch {
+          }
+        }
+      }
+      if (progress >= 1) {
+        stopFlashTile(gidx);
+        return;
+      }
+      entry.raf = requestAnimationFrame(tick);
+    };
+    entry.raf = requestAnimationFrame(tick);
     return true;
   }
   var tos = {
@@ -16661,8 +16754,12 @@
       if ("maturedAt" in p) next.maturedAt = Number(p.maturedAt);
       return applyTileObject(Number(tx), Number(ty), next, opts);
     },
+    /** Retourne le canvas Pixi du jeu (ou null si pas encore capturé) */
+    getCanvas,
     /** Convertit un événement pointeur en coordonnées de tile (tx, ty) */
     pointerToTile,
+    /** Comme pointerToTile, mais correct même quand la caméra du jardin n'est pas à l'origine */
+    pointerToFarmTile,
     /** Écoute les mouvements pointeur sur le canvas et appelle le callback avec les infos de tile */
     onPointerTile,
     /** Dessine un contour autour d'une tile donnée */
@@ -16670,7 +16767,9 @@
     /** Supprime le contour actif */
     clearHighlight,
     /** Active/désactive un mode debug qui highlight la tile sous le pointeur en temps réel */
-    setDebugHoverHighlight
+    setDebugHoverHighlight,
+    /** Flash vert plein qui s'estompe sur une tile (feedback "placé"/"sélectionné" de l'éditeur) */
+    flashTileGreen
   };
 
   // src/services/editor.ts
@@ -16678,6 +16777,87 @@
   var FIXED_SLOT_START = 1760866288723;
   var FIXED_SLOT_END = 1760867858782;
   var DEFAULT_SIZE_PERCENT = 50;
+  var ITEM_PANEL_STYLE_ID = "qws-editor-item-panel-css";
+  function ensureItemPanelStyles() {
+    if (document.getElementById(ITEM_PANEL_STYLE_ID)) return;
+    const style2 = document.createElement("style");
+    style2.id = ITEM_PANEL_STYLE_ID;
+    style2.textContent = `
+.qws-item-box {
+  border: 1px solid rgba(94,234,212,0.14);
+  border-radius: 10px;
+  padding: 10px;
+  background: linear-gradient(180deg, rgba(20,26,34,0.9), rgba(12,16,22,0.9));
+  box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 6px 16px rgba(0,0,0,0.25);
+  display: grid;
+  gap: 8px;
+  transition: border-color 150ms ease;
+}
+.qws-item-box:hover { border-color: rgba(94,234,212,0.3); }
+
+.qws-item-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(226,232,240,0.55);
+}
+
+.qws-item-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 16px;
+  background: transparent;
+  cursor: pointer;
+  margin: 2px 0;
+}
+.qws-item-range:focus { outline: none; }
+.qws-item-range:disabled { cursor: default; }
+.qws-item-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #5eead4, rgba(94,234,212,0.18));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+}
+.qws-item-range::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #5eead4, rgba(94,234,212,0.18));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+}
+.qws-item-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  margin-top: -4.5px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 0 2px rgba(94,234,212,0.55);
+  transition: transform 120ms ease;
+}
+.qws-item-range:active::-webkit-slider-thumb { transform: scale(1.1); }
+.qws-item-range::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: none;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 0 2px rgba(94,234,212,0.55);
+}
+.qws-item-range:disabled::-webkit-slider-thumb,
+.qws-item-range:disabled::-moz-range-thumb { opacity: 0.5; box-shadow: none; }
+
+.qws-item-check {
+  width: 13px;
+  height: 13px;
+  accent-color: #5eead4;
+  cursor: pointer;
+  transform: scale(1.05);
+}
+`;
+    document.head.appendChild(style2);
+  }
   var mutationColorMap = {
     Gold: "rgba(200, 170, 0, 1)",
     Rainbow: "linear-gradient(135deg, #ff0000, #ff7a00, #ffeb3b, #00c853, #40c4ff, #8e24aa)",
@@ -16745,7 +16925,12 @@
       }
     };
     const candidates = Array.from(
-      /* @__PURE__ */ new Set([`Mutation${catalogKey}`, `Mutation${storedId}`, catalogKey, storedId])
+      /* @__PURE__ */ new Set([
+        `Mutation${catalogKey}`,
+        `Mutation${storedId}`,
+        catalogKey,
+        storedId
+      ])
     );
     attachSpriteIcon(wrap, MUTATION_ICON_CATEGORIES, candidates, size, "editor", {
       onNoSpriteFound: applyFallback
@@ -16860,7 +17045,9 @@
         if (key2 && ranks[key2] == null) ranks[key2] = rank;
       }
     }
-    const grouped = keys.filter((k) => ranks[k] != null && ranks[k] !== MUTATION_GROUP_COLOR);
+    const grouped = keys.filter(
+      (k) => ranks[k] != null && ranks[k] !== MUTATION_GROUP_COLOR
+    );
     for (const key2 of keys) {
       if (ranks[key2] != null) continue;
       let bestRank = null;
@@ -16918,14 +17105,15 @@
     return ids.slice().sort((a, b) => orderIndex(a) - orderIndex(b) || a.localeCompare(b));
   }
   var overlayEl = null;
+  var hudToggleBtnEl = null;
   var currentEnabled = false;
   var listeners3 = /* @__PURE__ */ new Set();
   var savedGardensListeners = /* @__PURE__ */ new Set();
   var sideOverlayEl = null;
   var sideListWrap = null;
-  var sideSelect = null;
   var sideRightWrap = null;
   var currentSideMode = "plants";
+  var sideSearchQuery = "";
   var selectedPlantId = null;
   var selectedDecorId = null;
   var currentItemOverlayEl = null;
@@ -16934,15 +17122,14 @@
   var currentItemSlotModes = {};
   var editorKeybindsInstalled = false;
   var overlaysVisible = true;
-  var EDITOR_PLACE_REMOVE_FIRST_DELAY_MS = 200;
-  var EDITOR_PLACE_REMOVE_REPEAT_MS = 100;
-  var lastEditorPlaceRemoveTs = 0;
-  var lastEditorPressStartTs = 0;
-  var lastEditorFirstFired = false;
-  var lastEditorTileKey = null;
-  var lastEditorTileType;
-  var lastEditorFirstActionTs = 0;
-  var editorActionHeld = false;
+  var currentEditorTile = null;
+  function getCurrentTileTarget() {
+    return currentEditorTile;
+  }
+  function setCurrentEditorTile(target) {
+    currentEditorTile = target;
+    renderCurrentItemOverlay();
+  }
   async function triggerEditorAnimation(animation) {
     try {
       const playerId2 = await getPlayerId();
@@ -16956,11 +17143,48 @@
     } catch {
     }
   }
-  var stateFrozenValue = null;
-  var statePatch = null;
-  var stateOriginalValue = null;
+  var plannedGarden = { tileObjects: {}, boardwalkTileObjects: {} };
+  var plannedUserSlotIdx = null;
+  var plannedReapplyTimer = null;
+  var editorDecorRotation = 0;
   var friendGardenPreviewActive = false;
   var friendGardenBackup = null;
+  function createDecorRotationRow(currentRotation, onSelect) {
+    const rotRow = document.createElement("div");
+    rotRow.style.display = "grid";
+    rotRow.style.gap = "6px";
+    rotRow.style.width = "100%";
+    const rotLabel = document.createElement("div");
+    rotLabel.textContent = "Rotation";
+    rotLabel.style.fontSize = "12px";
+    rotLabel.style.opacity = "0.8";
+    rotLabel.style.textAlign = "center";
+    const rotButtons = document.createElement("div");
+    rotButtons.style.display = "flex";
+    rotButtons.style.gap = "6px";
+    rotButtons.style.justifyContent = "center";
+    for (const angle of [0, 90, 180, 270]) {
+      const rb = document.createElement("button");
+      rb.type = "button";
+      rb.textContent = `${angle}\xB0`;
+      const active = currentRotation === angle;
+      Object.assign(rb.style, {
+        flex: "1",
+        padding: "6px 8px",
+        borderRadius: "6px",
+        border: active ? "1px solid #5eead4" : "1px solid #2b3441",
+        background: active ? "rgba(94,234,212,0.22)" : "rgba(10,14,20,0.9)",
+        color: active ? "#5eead4" : "#e7eef7",
+        fontWeight: active ? "700" : "500",
+        cursor: "pointer",
+        transition: "background 120ms ease, border-color 120ms ease, color 120ms ease"
+      });
+      rb.onclick = () => onSelect(angle);
+      rotButtons.appendChild(rb);
+    }
+    rotRow.append(rotLabel, rotButtons);
+    return rotRow;
+  }
   function createSelectionIcon(kind, label2, size = 32, rawId, spriteKey) {
     const wrap = document.createElement("span");
     Object.assign(wrap.style, {
@@ -16997,38 +17221,93 @@
   }
   function persist(enabled2) {
   }
+  function editorToolbarButtonStyle() {
+    return {
+      padding: "5px 10px",
+      borderRadius: "999px",
+      border: "1px solid #ffffff33",
+      background: "rgba(255,255,255,0.08)",
+      color: "#e7eef7",
+      font: "600 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+      cursor: "pointer"
+    };
+  }
   function ensureOverlay() {
     if (overlayEl && document.contains(overlayEl)) return overlayEl;
     const el2 = document.createElement("div");
     el2.id = "qws-editor-overlay";
-    el2.textContent = "Editor mode";
     Object.assign(el2.style, {
       position: "fixed",
       top: "7%",
       left: "50%",
       transform: "translateX(-50%)",
       zIndex: "1000001",
-      padding: "8px 12px",
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      padding: "6px 8px",
       borderRadius: "999px",
       border: "1px solid #ffffff33",
       background: "linear-gradient(180deg, rgba(17,24,31,0.95), rgba(12,18,26,0.92))",
       color: "#e7eef7",
       font: "600 13px/1.3 system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
       letterSpacing: "0.3px",
-      boxShadow: "0 10px 30px rgba(0,0,0,.35)",
-      pointerEvents: "none"
+      boxShadow: "0 10px 30px rgba(0,0,0,.35)"
     });
+    const label2 = document.createElement("span");
+    label2.textContent = "Editor mode";
+    label2.style.padding = "2px 6px";
+    const clearBtn = document.createElement("button");
+    clearBtn.type = "button";
+    clearBtn.textContent = "Clear garden";
+    Object.assign(clearBtn.style, editorToolbarButtonStyle());
+    clearBtn.onclick = () => {
+      void clearEditorGarden();
+    };
+    const hudBtn = document.createElement("button");
+    hudBtn.type = "button";
+    Object.assign(hudBtn.style, editorToolbarButtonStyle());
+    hudBtn.onclick = () => {
+      toggleEditorHud();
+    };
+    hudToggleBtnEl = hudBtn;
+    el2.append(label2, clearBtn, hudBtn);
     (document.body || document.documentElement || document).appendChild(el2);
     overlayEl = el2;
+    updateHudToggleButtonLabel();
     return el2;
+  }
+  function updateHudToggleButtonLabel() {
+    if (hudToggleBtnEl)
+      hudToggleBtnEl.textContent = overlaysVisible ? "Hide HUD" : "Show HUD";
+  }
+  function toggleEditorHud() {
+    if (!currentEnabled) return;
+    overlaysVisible = !overlaysVisible;
+    if (overlaysVisible) {
+      showSideOverlay();
+      showCurrentItemOverlay();
+    } else {
+      hideSideOverlay();
+      hideCurrentItemOverlay();
+    }
+    updateHudToggleButtonLabel();
+  }
+  async function clearEditorGarden() {
+    if (!currentEnabled) return;
+    await setCurrentGarden(makeEmptyGarden());
+    currentEditorTile = null;
+    renderCurrentItemOverlay();
   }
   function showOverlay() {
     ensureOverlay();
+    updateHudToggleButtonLabel();
   }
   function hideOverlay() {
     if (overlayEl) {
       overlayEl.remove();
       overlayEl = null;
+      hudToggleBtnEl = null;
     }
   }
   function notifySavedGardensChanged() {
@@ -17052,16 +17331,18 @@
     }
   }
   function getSideEntries() {
-    if (currentSideMode === "decor") {
-      return Object.entries(decorCatalog2 || {}).map(([decorId, val]) => ({
-        id: decorId,
-        label: String(val?.name || decorId)
-      }));
-    }
-    return Object.entries(plantCatalog2 || {}).map(([species, val]) => ({
+    const all = currentSideMode === "decor" ? Object.entries(decorCatalog2 || {}).map(([decorId, val]) => ({
+      id: decorId,
+      label: String(val?.name || decorId)
+    })) : Object.entries(plantCatalog2 || {}).map(([species, val]) => ({
       id: species,
-      label: String(val?.crop?.name || val?.seed?.name || species)
+      label: String(
+        val?.crop?.name || val?.seed?.name || species
+      )
     }));
+    const query = sideSearchQuery.trim().toLowerCase();
+    if (!query) return all;
+    return all.filter((entry) => entry.label.toLowerCase().includes(query));
   }
   function getSideEntry(id) {
     if (!id) return null;
@@ -17083,7 +17364,7 @@
       top: "12%",
       left: "12px",
       zIndex: "1000001",
-      width: "560px",
+      width: "300px",
       minHeight: "420px",
       maxHeight: "86vh",
       height: "min(720px, 86vh)",
@@ -17093,14 +17374,17 @@
       gap: "10px",
       padding: "10px",
       borderRadius: "12px",
-      border: "1px solid #ffffff22",
+      border: "1px solid rgba(94,234,212,0.18)",
       background: "linear-gradient(180deg, rgba(14,18,25,0.95), rgba(10,14,20,0.92))",
       color: "#e7eef7",
-      boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+      boxShadow: "0 10px 30px rgba(0,0,0,0.35), 0 0 0 1px rgba(94,234,212,0.05)",
       pointerEvents: "auto"
     });
     const header = document.createElement("div");
-    header.textContent = "Item picker";
+    header.textContent = "\u{1F33F} Item picker";
+    header.style.borderBottom = "1px solid rgba(94,234,212,0.12)";
+    header.style.paddingBottom = "8px";
+    header.style.color = "#5eead4";
     header.style.fontWeight = "700";
     header.style.fontSize = "13px";
     header.style.letterSpacing = "0.08em";
@@ -17109,62 +17393,105 @@
     header.style.textAlign = "center";
     const content = document.createElement("div");
     content.style.display = "grid";
-    content.style.gridTemplateColumns = "260px 1fr";
-    content.style.gap = "10px";
+    content.style.gridTemplateRows = "auto auto minmax(120px, 0.7fr) minmax(0, 1fr)";
+    content.style.gap = "8px";
     content.style.minHeight = "0";
-    const left = document.createElement("div");
-    left.style.display = "grid";
-    left.style.gridTemplateRows = "auto 1fr";
-    left.style.gap = "8px";
-    left.style.minHeight = "0";
-    const select2 = document.createElement("select");
-    select2.id = "qws-editor-side-select";
-    select2.style.width = "100%";
-    select2.style.padding = "8px";
-    select2.style.borderRadius = "10px";
-    select2.style.border = "1px solid #33404e";
-    select2.style.background = "rgba(20,25,33,0.9)";
-    select2.style.color = "#e7eef7";
-    select2.style.fontWeight = "600";
-    select2.style.cursor = "pointer";
-    const optPlants = document.createElement("option");
-    optPlants.value = "plants";
-    optPlants.textContent = "Plants";
-    const optDecor = document.createElement("option");
-    optDecor.value = "decor";
-    optDecor.textContent = "Decor";
-    select2.append(optPlants, optDecor);
-    select2.value = currentSideMode;
-    select2.onchange = () => {
-      currentSideMode = select2.value === "decor" ? "decor" : "plants";
+    const searchInput = document.createElement("input");
+    searchInput.type = "text";
+    searchInput.placeholder = "Search\u2026";
+    Object.assign(searchInput.style, {
+      width: "100%",
+      padding: "7px 10px",
+      borderRadius: "8px",
+      border: "1px solid #33404e",
+      background: "rgba(20,25,33,0.9)",
+      color: "#e7eef7",
+      fontSize: "12px",
+      boxSizing: "border-box",
+      outline: "none",
+      transition: "border-color 150ms ease"
+    });
+    searchInput.value = sideSearchQuery;
+    searchInput.addEventListener("focus", () => {
+      searchInput.style.borderColor = "rgba(94,234,212,0.55)";
+    });
+    searchInput.addEventListener("blur", () => {
+      searchInput.style.borderColor = "#33404e";
+    });
+    searchInput.oninput = () => {
+      sideSearchQuery = searchInput.value;
       renderSideList();
     };
-    sideSelect = select2;
+    const modeRow = document.createElement("div");
+    Object.assign(modeRow.style, {
+      display: "flex",
+      gap: "4px",
+      padding: "3px",
+      borderRadius: "10px",
+      background: "rgba(20,25,33,0.9)",
+      border: "1px solid #33404e"
+    });
+    const modeButtonStyle = (btn, active) => {
+      Object.assign(btn.style, {
+        flex: "1",
+        padding: "6px 8px",
+        borderRadius: "8px",
+        border: "none",
+        fontWeight: "700",
+        fontSize: "12px",
+        cursor: "pointer",
+        transition: "background 120ms ease, color 120ms ease",
+        background: active ? "rgba(94,234,212,0.22)" : "transparent",
+        color: active ? "#5eead4" : "#9aa7b5"
+      });
+    };
+    const plantsBtn = document.createElement("button");
+    plantsBtn.type = "button";
+    plantsBtn.textContent = "\u{1F331} Plants";
+    const decorBtn = document.createElement("button");
+    decorBtn.type = "button";
+    decorBtn.textContent = "\u{1F3A8} Decor";
+    const refreshModeButtons = () => {
+      modeButtonStyle(plantsBtn, currentSideMode === "plants");
+      modeButtonStyle(decorBtn, currentSideMode === "decor");
+    };
+    refreshModeButtons();
+    const switchSideMode = (mode) => {
+      if (currentSideMode === mode) return;
+      currentSideMode = mode;
+      sideSearchQuery = "";
+      searchInput.value = "";
+      refreshModeButtons();
+      renderSideList();
+      renderSideDetails();
+    };
+    plantsBtn.onclick = () => switchSideMode("plants");
+    decorBtn.onclick = () => switchSideMode("decor");
+    modeRow.append(plantsBtn, decorBtn);
     const listWrap = document.createElement("div");
     listWrap.id = "qws-editor-side-list";
     Object.assign(listWrap.style, {
-      border: "1px solid #2c3643",
+      border: "1px solid rgba(94,234,212,0.12)",
       borderRadius: "10px",
       background: "rgba(16,21,28,0.9)",
       overflow: "auto",
       padding: "6px",
-      maxHeight: "72vh"
+      minHeight: "0"
     });
     sideListWrap = listWrap;
-    left.append(select2, listWrap);
     const right = document.createElement("div");
     right.id = "qws-editor-side-details";
     right.style.display = "grid";
     right.style.gridTemplateRows = "1fr auto";
     right.style.gap = "8px";
-    right.style.border = "1px solid #2c3643";
+    right.style.border = "1px solid rgba(94,234,212,0.12)";
     right.style.borderRadius = "10px";
     right.style.background = "rgba(16,21,28,0.9)";
     right.style.padding = "10px";
     right.style.minHeight = "0";
     right.style.overflow = "hidden";
     sideRightWrap = right;
-    content.append(left, right);
+    content.append(modeRow, searchInput, listWrap, right);
     root.append(header, content);
     (document.body || document.documentElement || document).appendChild(root);
     sideOverlayEl = root;
@@ -17180,12 +17507,12 @@
       sideOverlayEl.remove();
       sideOverlayEl = null;
       sideListWrap = null;
-      sideSelect = null;
       sideRightWrap = null;
     }
   }
   function ensureCurrentItemOverlay() {
-    if (currentItemOverlayEl && document.contains(currentItemOverlayEl)) return currentItemOverlayEl;
+    if (currentItemOverlayEl && document.contains(currentItemOverlayEl))
+      return currentItemOverlayEl;
     const root = document.createElement("div");
     root.id = "qws-editor-current-item";
     Object.assign(root.style, {
@@ -17193,7 +17520,7 @@
       top: "12%",
       right: "12px",
       zIndex: "1000001",
-      width: "420px",
+      width: "300px",
       minHeight: "200px",
       maxHeight: "86vh",
       display: "grid",
@@ -17201,20 +17528,22 @@
       gap: "10px",
       padding: "10px",
       borderRadius: "12px",
-      border: "1px solid #ffffff22",
+      border: "1px solid rgba(94,234,212,0.18)",
       background: "linear-gradient(180deg, rgba(14,18,25,0.95), rgba(10,14,20,0.92))",
       color: "#e7eef7",
-      boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+      boxShadow: "0 10px 30px rgba(0,0,0,0.35), 0 0 0 1px rgba(94,234,212,0.05)",
       pointerEvents: "auto"
     });
     const header = document.createElement("div");
-    header.textContent = "Current item";
+    header.textContent = "\u2728 Current item";
     header.style.fontWeight = "700";
     header.style.fontSize = "13px";
     header.style.letterSpacing = "0.08em";
     header.style.textTransform = "uppercase";
-    header.style.opacity = "0.85";
+    header.style.color = "#5eead4";
     header.style.textAlign = "center";
+    header.style.borderBottom = "1px solid rgba(94,234,212,0.12)";
+    header.style.paddingBottom = "8px";
     const content = document.createElement("div");
     content.id = "qws-editor-current-item-content";
     content.style.display = "grid";
@@ -17254,24 +17583,19 @@
     }
     void (async () => {
       try {
-        const atom = getAtomByLabel("myCurrentGardenObjectAtom");
-        const selectedIdxAtom = getAtomByLabel("myValidatedSelectedItemIndexAtom");
+        const selectedIdxAtom = getAtomByLabel(
+          "myValidatedSelectedItemIndexAtom"
+        );
         const store = await ensureStore().catch(() => null);
-        if (!atom || !store) return;
-        const unsubA = store.sub(atom, () => {
-          renderCurrentItemOverlay();
-        });
-        const unsubB = selectedIdxAtom ? store.sub(selectedIdxAtom, () => renderCurrentItemOverlay()) : null;
+        if (!selectedIdxAtom || !store) return;
+        const unsubB = store.sub(
+          selectedIdxAtom,
+          () => renderCurrentItemOverlay()
+        );
         currentItemUnsub = () => {
           try {
-            unsubA();
+            unsubB();
           } catch {
-          }
-          if (unsubB) {
-            try {
-              unsubB();
-            } catch {
-            }
           }
         };
       } catch {
@@ -17279,29 +17603,19 @@
     })();
   }
   async function readCurrentTileContext() {
-    try {
-      const store = await ensureStore().catch(() => null);
-      if (!store) return { tileType: void 0, tileKey: null, tileObject: null };
-      const tileAtom = getAtomByLabel("myCurrentGardenTileAtom");
-      if (!tileAtom) return { tileType: void 0, tileKey: null, tileObject: null };
-      const tileVal = store.get(tileAtom);
-      if (!tileVal) return { tileType: void 0, tileKey: null, tileObject: null };
-      const tileType = tileVal.tileType;
-      const localTileIndex = tileVal.localTileIndex;
-      const userSlotIdxRaw = tileVal.userSlotIdx;
-      const userSlotIdx = typeof userSlotIdxRaw === "number" && Number.isFinite(userSlotIdxRaw) ? userSlotIdxRaw : 0;
-      if (localTileIndex == null || !Number.isFinite(localTileIndex)) {
-        return { tileType, tileKey: null, tileObject: null };
-      }
-      const cur = stateFrozenValue ?? await Atoms.root.state.get();
-      const garden2 = Array.isArray(cur?.child?.data?.userSlots) ? cur?.child?.data?.userSlots?.[userSlotIdx]?.data?.garden : cur?.child?.data?.userSlots?.[String(userSlotIdx)]?.data?.garden;
-      const safeGarden = garden2 && typeof garden2 === "object" ? garden2 : makeEmptyGarden();
-      const key2 = String(localTileIndex);
-      const targetMap = tileType === "Dirt" ? safeGarden.tileObjects || {} : safeGarden.boardwalkTileObjects || {};
-      return { tileType, tileKey: key2, tileObject: targetMap[key2] };
-    } catch {
-      return { tileType: void 0, tileKey: null, tileObject: null };
-    }
+    const target = getCurrentTileTarget();
+    if (!target) return { tileType: void 0, tileKey: null, tileObject: null };
+    const tileObject = await readTileObjectAt(target);
+    return {
+      tileType: target.tileType,
+      tileKey: String(target.localTileIndex),
+      tileObject
+    };
+  }
+  async function readTileObjectAt(target) {
+    const key2 = String(target.localTileIndex);
+    const targetMap = target.tileType === "Dirt" ? plannedGarden.tileObjects || {} : plannedGarden.boardwalkTileObjects || {};
+    return targetMap[key2] ?? null;
   }
   function getGardenObjectLabel(obj) {
     if (!obj || typeof obj !== "object") return "Unknown";
@@ -17315,68 +17629,57 @@
     }
     return String(obj.objectType || "Item");
   }
-  function getInventoryItemLabel(item) {
-    if (!item || typeof item !== "object") return "Item";
-    if (item.itemType === "Plant") {
-      const entry = plantCatalog2[item.species];
-      return entry?.crop?.name || entry?.seed?.name || item.species || "Plant";
-    }
-    if (item.itemType === "Decor") {
-      const entry = decorCatalog2[item.decorId];
-      return entry?.name || item.decorId || "Decor";
-    }
-    return String(item.itemType || "Item");
-  }
   function renderCurrentItemOverlay() {
     if (!currentItemOverlayEl) return;
-    const content = currentItemOverlayEl.querySelector("#qws-editor-current-item-content");
+    const content = currentItemOverlayEl.querySelector(
+      "#qws-editor-current-item-content"
+    );
     if (!content) return;
     void (async () => {
       content.innerHTML = "";
       const { tileType, tileKey, tileObject } = await readCurrentTileContext();
       if (!tileObject) {
         const empty = document.createElement("div");
-        empty.textContent = "Look at a plant or decor to edit it.";
+        empty.textContent = "Click on a plant or item to edit it.";
         empty.style.opacity = "0.7";
         empty.style.textAlign = "center";
         content.appendChild(empty);
         try {
-          const inv = await Atoms.inventory.myInventory.get();
-          const idx = await Atoms.inventory.myValidatedSelectedItemIndex.get();
-          const items = Array.isArray(inv?.items) ? inv.items : [];
-          const selected = typeof idx === "number" ? items[idx] : null;
-          if (selected) {
+          const selId = getSelectedId();
+          if (selId) {
+            const isDecor = currentSideMode === "decor";
+            const entry = getSideEntry(selId);
+            const label2 = getSideEntryLabel(selId, entry);
             const infoRow = document.createElement("div");
             infoRow.style.display = "flex";
             infoRow.style.flexDirection = "column";
             infoRow.style.alignItems = "center";
             infoRow.style.gap = "6px";
             const nameEl2 = document.createElement("div");
-            nameEl2.textContent = getInventoryItemLabel(selected);
+            nameEl2.textContent = label2;
             nameEl2.style.fontWeight = "700";
             nameEl2.style.fontSize = "14px";
             nameEl2.style.overflow = "hidden";
             nameEl2.style.textOverflow = "ellipsis";
             nameEl2.style.whiteSpace = "nowrap";
             nameEl2.style.textAlign = "center";
-            const _selSpecies = selected.itemType === "Plant" ? selected?.species : null;
-            const _selCatalogEntry = _selSpecies ? plantCatalog2[_selSpecies] : null;
+            const _selCatalogEntry = !isDecor ? plantCatalog2[selId] : null;
             const _selSpriteKey = _selCatalogEntry?.crop?.sprite ?? _selCatalogEntry?.plant?.sprite ?? null;
             const icon2 = createSelectionIcon(
-              selected.itemType === "Decor" ? "decor" : "plants",
-              getInventoryItemLabel(selected),
+              isDecor ? "decor" : "plants",
+              label2,
               40,
-              selected.itemType === "Decor" ? selected?.decorId : _selSpecies,
+              selId,
               _selSpriteKey
             );
             infoRow.append(icon2, nameEl2);
             content.appendChild(infoRow);
-            if (selected.itemType === "Plant") {
-              const slotsArr = Array.isArray(selected.slots) ? selected.slots : [];
+            if (!isDecor) {
+              const slotsConfig = ensureEditorStateForSpecies(selId).slots;
               const mutSet = /* @__PURE__ */ new Set();
-              for (const s of slotsArr) {
-                const muts = Array.isArray(s?.mutations) ? s.mutations : [];
-                muts.forEach((m) => mutSet.add(m));
+              for (const cfg of slotsConfig) {
+                if (!cfg.enabled) continue;
+                (cfg.mutations || []).forEach((m) => mutSet.add(m));
               }
               const mutList = sortStoredMutationIds(Array.from(mutSet));
               const mutRow = document.createElement("div");
@@ -17410,23 +17713,6 @@
               }
               content.append(mutRow);
             }
-            const placeBtn = document.createElement("button");
-            placeBtn.type = "button";
-            placeBtn.textContent = "Place";
-            Object.assign(placeBtn.style, {
-              width: "100%",
-              padding: "8px 10px",
-              borderRadius: "8px",
-              border: "1px solid #2b3441",
-              background: "linear-gradient(180deg, rgba(42,154,255,0.12), rgba(30,91,181,0.35))",
-              color: "#e7eef7",
-              fontWeight: "700",
-              cursor: "pointer"
-            });
-            placeBtn.onclick = () => {
-              void placeSelectedItemInGardenAtCurrentTile();
-            };
-            content.appendChild(placeBtn);
           }
         } catch {
         }
@@ -17460,24 +17746,16 @@
       content.appendChild(header);
       if (tileObject.objectType === "plant") {
         renderCurrentPlantEditor(content, tileObject, tileKey || "");
+      } else if (tileObject.objectType === "decor") {
+        const currentRotation = Number(tileObject.rotation) || 0;
+        const rotRow = createDecorRotationRow(currentRotation, (angle) => {
+          void updateGardenObjectAtCurrentTile((obj) => ({
+            ...obj,
+            rotation: angle
+          })).then(() => renderCurrentItemOverlay());
+        });
+        content.appendChild(rotRow);
       }
-      const addBtn = document.createElement("button");
-      addBtn.type = "button";
-      addBtn.textContent = "Copy to inventory";
-      Object.assign(addBtn.style, {
-        width: "100%",
-        padding: "8px 10px",
-        borderRadius: "8px",
-        border: "1px solid #2b3441",
-        background: "linear-gradient(180deg, rgba(42,154,255,0.12), rgba(30,91,181,0.35))",
-        color: "#e7eef7",
-        fontWeight: "700",
-        cursor: "pointer"
-      });
-      addBtn.onclick = () => {
-        void addTileObjectToInventory(tileObject);
-      };
-      content.appendChild(addBtn);
       const removeBtn = document.createElement("button");
       removeBtn.type = "button";
       removeBtn.textContent = "Remove";
@@ -17492,13 +17770,15 @@
         cursor: "pointer"
       });
       removeBtn.onclick = () => {
-        if (tileObject.objectType === "plant") void removeItemFromGardenAtCurrentTile();
+        if (tileObject.objectType === "plant")
+          void removeItemFromGardenAtCurrentTile();
         else void removeDecorFromGardenAtCurrentTile();
       };
       content.appendChild(removeBtn);
     })();
   }
   function renderCurrentPlantEditor(content, tileObject, tileKey) {
+    ensureItemPanelStyles();
     const species = tileObject?.species;
     const slots = Array.isArray(tileObject?.slots) ? tileObject.slots : [];
     const modeKey = tileKey || "default";
@@ -17516,6 +17796,7 @@
     applyAllRow.style.opacity = "0.9";
     const applyToggle = document.createElement("input");
     applyToggle.type = "checkbox";
+    applyToggle.style.accentColor = "#5eead4";
     applyToggle.checked = applyAll;
     applyToggle.onchange = () => {
       applyAll = !!applyToggle.checked;
@@ -17555,14 +17836,7 @@
     };
     slots.forEach((slot, idx) => {
       const box = document.createElement("div");
-      Object.assign(box.style, {
-        border: "1px solid #2c3643",
-        borderRadius: "8px",
-        padding: "8px",
-        background: "rgba(10,14,20,0.9)",
-        display: "grid",
-        gap: "6px"
-      });
+      box.className = "qws-item-box";
       const rawScale = Number(slot?.targetScale);
       const fallbackScale = computeTargetScaleFromPercent(species, 100);
       const initialScale = Number.isFinite(rawScale) ? rawScale : fallbackScale;
@@ -17579,7 +17853,10 @@
       const outOfBounds = initialScale < minScale || initialScale > maxScale;
       let currentMode = slotModeMap[idx] === "custom" ? "custom" : outOfBounds ? "custom" : "percent";
       if (!slotModeMap[idx] && outOfBounds) {
-        currentItemSlotModes[modeKey] = { ...currentItemSlotModes[modeKey] || {}, [idx]: "custom" };
+        currentItemSlotModes[modeKey] = {
+          ...currentItemSlotModes[modeKey] || {},
+          [idx]: "custom"
+        };
       }
       const sizeRow = document.createElement("div");
       sizeRow.style.display = "flex";
@@ -17603,7 +17880,7 @@
       slider.dataset.slotIdx = String(idx);
       slider._currentPct = currentPct;
       slider._currentMode = currentMode;
-      Object.assign(slider.style, { width: "100%", cursor: "pointer" });
+      slider.className = "qws-item-range";
       const sliderRow = document.createElement("div");
       sliderRow.dataset.sliderRowSlot = String(idx);
       sliderRow.appendChild(slider);
@@ -17631,7 +17908,6 @@
         color: "#e7eef7"
       });
       let pendingPatch = null;
-      let debounceTimer = null;
       const flushPatch = () => {
         if (!pendingPatch) return;
         const patch = pendingPatch;
@@ -17651,10 +17927,7 @@
       };
       const queuePatch = (patch) => {
         pendingPatch = { ...pendingPatch || {}, ...patch };
-        if (debounceTimer != null) window.clearTimeout(debounceTimer);
-        debounceTimer = window.setTimeout(() => {
-          flushPatch();
-        }, 150);
+        flushPatch();
       };
       const updatePercent = (nextPct) => {
         const pctVal = clampSizePercent(nextPct);
@@ -17739,6 +18012,7 @@
       modeRow.style.opacity = "0.9";
       const modeToggle = document.createElement("input");
       modeToggle.type = "checkbox";
+      modeToggle.className = "qws-item-check";
       modeToggle.dataset.scaleModeSlot = String(idx);
       modeToggle._currentMode = currentMode;
       modeToggle.checked = currentMode === "custom";
@@ -17800,11 +18074,35 @@
         inp.addEventListener("keydown", stop2);
       };
       const installCharGuard = (inp) => {
-        const allowed = /* @__PURE__ */ new Set(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "-", "."]);
+        const allowed = /* @__PURE__ */ new Set([
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "-",
+          "."
+        ]);
         inp.addEventListener("keydown", (ev) => {
           if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
           const k = ev.key;
-          if (["Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(k)) {
+          if ([
+            "Backspace",
+            "Delete",
+            "Tab",
+            "Enter",
+            "ArrowLeft",
+            "ArrowRight",
+            "ArrowUp",
+            "ArrowDown",
+            "Home",
+            "End"
+          ].includes(k)) {
             return;
           }
           if (k.length === 1 && !allowed.has(k)) {
@@ -17829,15 +18127,16 @@
       mutWrap.style.gap = "6px";
       const mutTitle = document.createElement("div");
       mutTitle.textContent = "Mutations";
-      mutTitle.style.fontSize = "11px";
-      mutTitle.style.opacity = "0.85";
+      mutTitle.className = "qws-item-label";
       const mutRow = document.createElement("div");
       mutRow.style.display = "flex";
       mutRow.style.flexWrap = "wrap";
       mutRow.style.gap = "6px";
       mutRow.style.alignItems = "center";
       const mutations = Array.isArray(slot?.mutations) ? slot.mutations.slice() : [];
-      const mutationKeys = sortMutationCatalogKeys(Object.keys(mutationCatalog2 || {}));
+      const mutationKeys = sortMutationCatalogKeys(
+        Object.keys(mutationCatalog2 || {})
+      );
       const applyMutationsPatch = (nextMutations) => {
         const copy2 = nextMutations.slice();
         mutations.length = 0;
@@ -17850,7 +18149,10 @@
               nextSlots[i] = { ...nextSlots[i] || {}, mutations: copy2.slice() };
             }
           } else {
-            nextSlots[idx] = { ...nextSlots[idx] || {}, mutations: copy2.slice() };
+            nextSlots[idx] = {
+              ...nextSlots[idx] || {},
+              mutations: copy2.slice()
+            };
           }
           return { ...obj, slots: nextSlots };
         }).then(() => {
@@ -17864,10 +18166,15 @@
         const wasOpen = mutDropdown.style.display !== "none";
         for (const mutId of sortStoredMutationIds(mutations)) {
           mutRow.appendChild(
-            createMutationToggleButton(mutationCatalogKeyFor(mutId), mutId, true, () => {
-              const next = mutations.filter((m) => m !== mutId);
-              applyMutationsPatch(next);
-            })
+            createMutationToggleButton(
+              mutationCatalogKeyFor(mutId),
+              mutId,
+              true,
+              () => {
+                const next = mutations.filter((m) => m !== mutId);
+                applyMutationsPatch(next);
+              }
+            )
           );
         }
         const availableKeys = mutationKeys.filter((mutKey) => {
@@ -18018,14 +18325,17 @@
   function renderSideList() {
     if (!sideListWrap) return;
     const applySelectionStyle = (btn, selected) => {
-      btn.style.border = "1px solid " + (selected ? "#4a6fa5" : "#2b3441");
-      btn.style.background = selected ? "rgba(74,111,165,0.18)" : "rgba(24,30,39,0.9)";
-      btn.style.fontWeight = selected ? "700" : "600";
+      btn.style.border = "1px solid " + (selected ? "#5eead4" : "#2b3441");
+      btn.style.background = selected ? "rgba(94,234,212,0.16)" : "rgba(24,30,39,0.9)";
+      btn.style.boxShadow = selected ? "0 0 0 1px rgba(94,234,212,0.25)" : "none";
+      btn.style.transform = selected ? "scale(1.06)" : "scale(1)";
     };
     const selectedId = getSelectedId();
     const entries = getSideEntries();
     const sig = `${currentSideMode}:${JSON.stringify(entries)}`;
-    const existingList = sideListWrap.querySelector('[data-editor-side-list="list"]');
+    const existingList = sideListWrap.querySelector(
+      '[data-editor-side-list="list"]'
+    );
     if (existingList && existingList.dataset.sig === sig) {
       existingList.querySelectorAll("button[data-id]").forEach((btn) => {
         applySelectionStyle(btn, btn.dataset.id === selectedId);
@@ -18037,23 +18347,33 @@
     list.dataset.editorSideList = "list";
     list.dataset.sig = sig;
     list.style.display = "grid";
+    list.style.gridTemplateColumns = "repeat(auto-fill, minmax(34px, 1fr))";
     list.style.gap = "4px";
     const makeItem = (key2, label2, selected) => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.dataset.id = key2;
+      btn.title = label2;
       Object.assign(btn.style, {
-        width: "100%",
-        display: "grid",
-        gridTemplateColumns: "auto 1fr",
+        display: "flex",
         alignItems: "center",
-        gap: "8px",
-        padding: "8px",
+        justifyContent: "center",
+        padding: "4px",
         borderRadius: "8px",
         color: "#e7eef7",
-        cursor: "pointer"
+        cursor: "pointer",
+        transition: "background 120ms ease, border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease"
       });
       applySelectionStyle(btn, selected);
+      btn.onmouseenter = () => {
+        if (btn.dataset.id !== getSelectedId()) {
+          btn.style.background = "rgba(94,234,212,0.08)";
+          btn.style.borderColor = "rgba(94,234,212,0.3)";
+        }
+      };
+      btn.onmouseleave = () => {
+        applySelectionStyle(btn, btn.dataset.id === getSelectedId());
+      };
       const _listKind = getSideSpriteKind();
       const _listCatalogEntry = _listKind !== "Decor" ? plantCatalog2[key2] : null;
       const _listSpriteKey = _listCatalogEntry?.crop?.sprite ?? _listCatalogEntry?.plant?.sprite ?? null;
@@ -18064,18 +18384,12 @@
         key2,
         _listSpriteKey
       );
-      const labelEl = document.createElement("span");
-      labelEl.textContent = label2;
-      labelEl.style.textAlign = "left";
-      labelEl.style.overflow = "hidden";
-      labelEl.style.textOverflow = "ellipsis";
-      labelEl.style.whiteSpace = "nowrap";
       btn.onclick = () => {
         setSelectedId(key2);
         renderSideList();
         renderSideDetails();
       };
-      btn.append(icon, labelEl);
+      btn.appendChild(icon);
       return btn;
     };
     for (const it of entries) {
@@ -18093,6 +18407,7 @@
   }
   function renderSideDetails() {
     if (!sideRightWrap) return;
+    ensureItemPanelStyles();
     sideRightWrap.innerHTML = "";
     const content = document.createElement("div");
     content.style.display = "grid";
@@ -18125,9 +18440,15 @@
     infoRow.style.gap = "10px";
     infoRow.dataset.editorInfoRow = "true";
     infoRow.dataset.selId = selId;
-    const existingInfo = sideRightWrap.querySelector("[data-editor-info-row]");
-    const existingIcon = existingInfo?.querySelector("[data-editor-info-icon]");
-    const existingLabel = existingInfo?.querySelector("[data-editor-info-label]");
+    const existingInfo = sideRightWrap.querySelector(
+      "[data-editor-info-row]"
+    );
+    const existingIcon = existingInfo?.querySelector(
+      "[data-editor-info-icon]"
+    );
+    const existingLabel = existingInfo?.querySelector(
+      "[data-editor-info-label]"
+    );
     const icon = existingIcon && existingInfo?.dataset.selId === selId ? existingIcon : (() => {
       const _infoKind = getSideSpriteKind();
       const _infoCatalogEntry = _infoKind !== "Decor" ? plantCatalog2[selId] : null;
@@ -18198,7 +18519,10 @@
           const state3 = ensureEditorStateForSpecies(selId);
           const current = state3.slots;
           if (current.length >= maxSlots) return;
-          const defaultScale = computeTargetScaleFromPercent(selId, DEFAULT_SIZE_PERCENT);
+          const defaultScale = computeTargetScaleFromPercent(
+            selId,
+            DEFAULT_SIZE_PERCENT
+          );
           editorPlantSlotsState = {
             ...state3,
             species: selId,
@@ -18253,6 +18577,7 @@
         applyAllRow.style.opacity = "0.9";
         const applyToggle = document.createElement("input");
         applyToggle.type = "checkbox";
+        applyToggle.style.accentColor = "#5eead4";
         applyToggle.checked = applyAll;
         applyToggle.onchange = () => {
           editorPlantSlotsState.applyAll = applyToggle.checked;
@@ -18268,15 +18593,10 @@
       list.style.gap = "6px";
       slotsConfig.forEach((cfg, idx) => {
         const slotBox = document.createElement("div");
-        Object.assign(slotBox.style, {
-          border: "1px solid #2c3643",
-          borderRadius: "8px",
-          padding: "8px",
-          background: "rgba(10,14,20,0.9)",
-          display: "grid",
-          gap: "6px"
-        });
-        const initialPct = clampSizePercent(Number.isFinite(cfg.sizePercent) ? cfg.sizePercent : 100);
+        slotBox.className = "qws-item-box";
+        const initialPct = clampSizePercent(
+          Number.isFinite(cfg.sizePercent) ? cfg.sizePercent : 100
+        );
         const baseScaleFromPct = computeTargetScaleFromPercent(selId, initialPct);
         const initialCustomScale = normalizeCustomScale(
           selId,
@@ -18289,28 +18609,31 @@
         let customText = String(currentScale);
         const sizeRow = document.createElement("div");
         sizeRow.style.display = "flex";
-        sizeRow.style.justifyContent = "space-between";
         sizeRow.style.alignItems = "center";
+        sizeRow.style.gap = "6px";
         sizeRow.style.fontSize = "11px";
         sizeRow.style.opacity = "0.85";
         const sizeName = document.createElement("span");
         sizeName.textContent = "Size";
         const sizeValue = document.createElement("span");
         sizeValue.dataset.sizeLabel = String(idx);
-        sizeRow.append(sizeName, sizeValue);
+        sizeValue.style.marginLeft = "auto";
         const modeRow = document.createElement("label");
         modeRow.style.display = "flex";
         modeRow.style.alignItems = "center";
-        modeRow.style.gap = "6px";
-        modeRow.style.fontSize = "11px";
-        modeRow.style.opacity = "0.9";
+        modeRow.style.gap = "3px";
+        modeRow.style.fontSize = "10px";
+        modeRow.style.opacity = "0.75";
+        modeRow.style.cursor = "pointer";
         const modeToggle = document.createElement("input");
         modeToggle.type = "checkbox";
+        modeToggle.className = "qws-item-check";
         modeToggle.dataset.scaleMode = String(idx);
         modeToggle.checked = currentMode === "custom";
         const modeText = document.createElement("span");
-        modeText.textContent = "Use custom scale";
+        modeText.textContent = "Custom";
         modeRow.append(modeToggle, modeText);
+        sizeRow.append(sizeName, modeRow, sizeValue);
         const slider = document.createElement("input");
         slider.type = "range";
         slider.min = "50";
@@ -18318,10 +18641,7 @@
         slider.step = "1";
         slider.value = String(currentPct);
         slider.dataset.slotIdx = String(idx);
-        Object.assign(slider.style, {
-          width: "100%",
-          cursor: "pointer"
-        });
+        slider.className = "qws-item-range";
         const customRow = document.createElement("div");
         customRow.style.display = "flex";
         customRow.style.alignItems = "center";
@@ -18374,7 +18694,20 @@
           return Number.isFinite(n) ? n : null;
         };
         const installCharGuard = (inp) => {
-          const allowed = /* @__PURE__ */ new Set(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "-", "."]);
+          const allowed = /* @__PURE__ */ new Set([
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "-",
+            "."
+          ]);
           inp.addEventListener("keydown", (ev) => {
             if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
             const k = ev.key;
@@ -18486,7 +18819,10 @@
           currentMode = modeToggle.checked ? "custom" : "percent";
           if (currentMode === "custom") {
             percentMemory = currentPct;
-            currentScale = normalizeCustomScale(selId, currentScale || computeTargetScaleFromPercent(selId, currentPct));
+            currentScale = normalizeCustomScale(
+              selId,
+              currentScale || computeTargetScaleFromPercent(selId, currentPct)
+            );
             customText = customInput.value || String(currentScale);
             applySlotPatch({ customScale: currentScale });
           } else {
@@ -18503,18 +18839,20 @@
         syncValueLabel();
         const mutWrap = document.createElement("div");
         mutWrap.style.display = "grid";
-        mutWrap.style.gap = "6px";
-        const mutTitle = document.createElement("div");
-        mutTitle.textContent = "Mutations";
-        mutTitle.style.fontSize = "11px";
-        mutTitle.style.opacity = "0.85";
+        mutWrap.style.gap = "4px";
+        const mutTitle = document.createElement("span");
+        mutTitle.textContent = "Mutations:";
+        mutTitle.className = "qws-item-label";
+        mutTitle.style.flexShrink = "0";
         const mutRow = document.createElement("div");
         mutRow.style.display = "flex";
         mutRow.style.flexWrap = "wrap";
         mutRow.style.gap = "6px";
         mutRow.style.alignItems = "center";
         const mutDropdown = createMutationDropdown();
-        const mutationKeys = sortMutationCatalogKeys(Object.keys(mutationCatalog2 || {}));
+        const mutationKeys = sortMutationCatalogKeys(
+          Object.keys(mutationCatalog2 || {})
+        );
         const activeMutations = Array.isArray(cfg.mutations) ? cfg.mutations : [];
         const toggleMutation = (storedId) => {
           const base = ensureEditorStateForSpecies(selId).slots;
@@ -18533,9 +18871,14 @@
         };
         for (const mutId of sortStoredMutationIds(activeMutations)) {
           mutRow.appendChild(
-            createMutationToggleButton(mutationCatalogKeyFor(mutId), mutId, true, () => {
-              toggleMutation(mutId);
-            })
+            createMutationToggleButton(
+              mutationCatalogKeyFor(mutId),
+              mutId,
+              true,
+              () => {
+                toggleMutation(mutId);
+              }
+            )
           );
         }
         const availableKeys = mutationKeys.filter((mutKey) => {
@@ -18559,34 +18902,22 @@
             );
           }
         }
-        mutWrap.append(mutTitle, mutRow, mutDropdown);
-        slotBox.append(sizeRow, modeRow, slider, customRow, mutWrap);
+        mutRow.prepend(mutTitle);
+        mutWrap.append(mutRow, mutDropdown);
+        slotBox.append(sizeRow, slider, customRow, mutWrap);
         list.appendChild(slotBox);
       });
       slotsPanel.appendChild(list);
       content.appendChild(slotsPanel);
     }
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = "Add to inventory";
-    Object.assign(btn.style, {
-      width: "100%",
-      padding: "8px 10px",
-      borderRadius: "8px",
-      border: "1px solid #2b3441",
-      background: "linear-gradient(180deg, rgba(42,154,255,0.12), rgba(30,91,181,0.35))",
-      color: "#e7eef7",
-      fontWeight: "700",
-      cursor: "pointer"
-    });
-    btn.onclick = () => {
-      console.log("[EditorService] addSelectedItemToInventory click", {
-        mode: currentSideMode,
-        id: selId
+    if (currentSideMode === "decor") {
+      const rotRow = createDecorRotationRow(editorDecorRotation, (angle) => {
+        editorDecorRotation = angle;
+        renderSideDetails();
       });
-      void addSelectedItemToInventory();
-    };
-    actionBar.appendChild(btn);
+      rotRow.style.marginTop = "6px";
+      content.appendChild(rotRow);
+    }
     sideRightWrap.append(content, actionBar);
   }
   function compareSlotKeys(a, b) {
@@ -18602,7 +18933,13 @@
       const arr = slots;
       for (let i = 0; i < arr.length; i++) {
         if (isMatch(arr[i])) {
-          return { isArray: true, matchSlot: arr[i], matchIndex: i, entries: null, slotsArray: arr };
+          return {
+            isArray: true,
+            matchSlot: arr[i],
+            matchIndex: i,
+            entries: null,
+            slotsArray: arr
+          };
         }
       }
       return null;
@@ -18612,7 +18949,13 @@
     for (let i = 0; i < entries.length; i++) {
       const [, s] = entries[i];
       if (isMatch(s)) {
-        return { isArray: false, matchSlot: s, matchIndex: i, entries, slotsArray: null };
+        return {
+          isArray: false,
+          matchSlot: s,
+          matchIndex: i,
+          entries,
+          slotsArray: null
+        };
       }
     }
     return null;
@@ -18647,286 +18990,48 @@
       }
     };
   }
-  async function withPatchedWrite(patch, op) {
-    if (!patch) {
-      await op();
-      return;
-    }
-    const { atom, readKey, origRead, writeKey, origWrite } = patch;
-    const savedRead = atom[readKey];
-    const savedWrite = writeKey ? atom[writeKey] : void 0;
-    try {
-      atom[readKey] = origRead;
-      if (writeKey && origWrite) atom[writeKey] = origWrite;
-      await op();
-    } finally {
-      atom[readKey] = savedRead;
-      if (writeKey) atom[writeKey] = savedWrite;
-    }
-  }
   async function setStateAtom(next) {
-    console.log("[EditorService] setStateAtom attempt", {
-      hasPatch: !!statePatch
-    });
-    await withPatchedWrite(statePatch, async () => {
-      try {
-        await Atoms.root.state.set(next);
-        console.log("[EditorService] setStateAtom success");
-      } catch (err) {
-        console.log("[EditorService] setStateAtom failed", err);
-        throw err;
-      }
-    });
+    try {
+      await Atoms.root.state.set(next);
+    } catch (err) {
+      console.log("[EditorService] setStateAtom failed", err);
+      throw err;
+    }
   }
-  async function addSelectedItemToInventory() {
+  function buildBrushTileObject() {
     const selId = getSelectedId();
-    if (!selId) return;
+    if (!selId) return null;
     if (currentSideMode === "decor") {
-      console.log("[EditorService] addSelectedItemToInventory decor", selId);
-      await addDecorToInventory(selId);
-    } else {
-      console.log("[EditorService] addSelectedItemToInventory plant", selId);
-      await addPlantToInventory(selId);
-    }
-  }
-  async function removeSelectedInventoryItem() {
-    try {
-      const pid = await getPlayerId();
-      if (!pid) return false;
-      const selectedIndex = await Atoms.inventory.myValidatedSelectedItemIndex.get();
-      const inventoryVal = await Atoms.inventory.myInventory.get();
-      const items = Array.isArray(inventoryVal?.items) ? inventoryVal.items.slice() : [];
-      if (selectedIndex == null || typeof selectedIndex !== "number" || selectedIndex < 0 || selectedIndex >= items.length) {
-        return false;
-      }
-      items.splice(selectedIndex, 1);
-      const cur = stateFrozenValue ?? await Atoms.root.state.get();
-      const slots = cur?.child?.data?.userSlots;
-      const slotMatch = findPlayerSlot(slots, pid);
-      if (!slotMatch) return false;
-      const slotData = slotMatch.matchSlot?.data || {};
-      const slotInv = slotData.inventory || {};
-      const favorited = Array.isArray(slotInv.favoritedItemIds) ? slotInv.favoritedItemIds.filter((id) => items.some((it) => it?.id === id)) : void 0;
-      const nextUserSlots = rebuildUserSlots(slotMatch, (slot) => {
-        const data = slot?.data || {};
-        return {
-          ...slot || {},
-          data: {
-            ...data,
-            inventory: {
-              ...slotInv || {},
-              items,
-              ...favorited ? { favoritedItemIds: favorited } : {}
-            }
-          }
-        };
-      });
-      const nextState = buildStateWithUserSlots(cur, nextUserSlots);
-      stateFrozenValue = nextState;
-      stateOriginalValue = nextState;
-      await setStateAtom(nextState);
-      const newIdx = Math.max(0, Math.min(items.length - 1, selectedIndex));
-      try {
-        await Atoms.inventory.myValidatedSelectedItemIndex.set(newIdx);
-      } catch {
-      }
-      return true;
-    } catch (err) {
-      console.log("[EditorService] removeSelectedInventoryItem failed", err);
-      return false;
-    }
-  }
-  async function addTileObjectToInventory(tileObject) {
-    try {
-      const pid = await getPlayerId();
-      if (!pid || !tileObject) return false;
-      const cur = stateFrozenValue ?? await Atoms.root.state.get();
-      const slots = cur?.child?.data?.userSlots;
-      const slotMatch = findPlayerSlot(slots, pid);
-      if (!slotMatch) return false;
-      const slotData = slotMatch.matchSlot?.data || {};
-      const inv = slotData.inventory;
-      const items = Array.isArray(inv?.items) ? inv.items.slice() : [];
-      if (tileObject.objectType === "plant") {
-        const plantItem = {
-          itemType: "Plant",
-          species: tileObject.species,
-          id: tileObject.id,
-          slots: ensureSlotIds(Array.isArray(tileObject.slots) ? JSON.parse(JSON.stringify(tileObject.slots)) : []),
-          plantedAt: tileObject.plantedAt,
-          maturedAt: tileObject.maturedAt
-        };
-        items.push(plantItem);
-      } else if (tileObject.objectType === "decor") {
-        items.push({
-          itemType: "Decor",
-          decorId: tileObject.decorId,
-          quantity: 1,
-          rotation: typeof tileObject.rotation === "number" ? tileObject.rotation : 0
-        });
-      } else {
-        return false;
-      }
-      const slotInv = slotData.inventory || {};
-      const nextUserSlots = rebuildUserSlots(slotMatch, (slot) => {
-        const data = slot?.data || {};
-        return {
-          ...slot || {},
-          data: {
-            ...data,
-            inventory: { ...slotInv || {}, items }
-          }
-        };
-      });
-      const nextState = buildStateWithUserSlots(cur, nextUserSlots);
-      stateFrozenValue = nextState;
-      stateOriginalValue = nextState;
-      await setStateAtom(nextState);
-      try {
-        await Atoms.inventory.myValidatedSelectedItemIndex.set(items.length - 1);
-      } catch {
-      }
-      return true;
-    } catch (err) {
-      console.log("[EditorService] addTileObjectToInventory failed", err);
-      return false;
-    }
-  }
-  async function addDecorToInventory(decorId) {
-    try {
-      console.log("[EditorService] addDecorToInventory", decorId);
-      const pid = await getPlayerId();
-      if (!pid) {
-        console.log("[EditorService] addDecorToInventory: no playerId");
-        return;
-      }
-      const cur = stateFrozenValue ?? await Atoms.root.state.get();
-      const slots = cur?.child?.data?.userSlots;
-      if (!slots || typeof slots !== "object") {
-        console.log("[EditorService] addDecorToInventory: no userSlots");
-        return;
-      }
-      const slotMatch = findPlayerSlot(slots, pid);
-      if (!slotMatch) {
-        console.log("[EditorService] addDecorToInventory: player slot not found");
-        return;
-      }
-      const slotData = slotMatch.matchSlot.data || {};
-      const inv = slotData.inventory;
-      const items = Array.isArray(inv?.items) ? inv.items.slice() : [];
-      console.log("[EditorService] decor before add", { itemsLen: items.length });
-      items.push({
-        itemType: "Decor",
-        decorId,
-        quantity: 1
-      });
-      const nextUserSlots = rebuildUserSlots(slotMatch, (slot) => {
-        const slotDataInner = slot?.data || {};
-        const slotInv = slotDataInner.inventory;
-        return {
-          ...slot || {},
-          data: {
-            ...slotDataInner,
-            inventory: { ...slotInv || {}, items }
-          }
-        };
-      });
-      const next = buildStateWithUserSlots(cur, nextUserSlots);
-      stateFrozenValue = next;
-      stateOriginalValue = next;
-      try {
-        await setStateAtom(next);
-      } catch (err) {
-        console.log("[EditorService] stateAtom set failed (decor)", err);
-      }
-      console.log("[EditorService] decor after add", { itemsLen: items.length });
-      console.log("[EditorService] decor added", { decorId });
-    } catch (err) {
-      console.log("[EditorService] failed to add decor", err);
-    }
-  }
-  async function addPlantToInventory(species) {
-    try {
-      console.log("[EditorService] addPlantToInventory", species);
-      const pid = await getPlayerId();
-      if (!pid) {
-        console.log("[EditorService] addPlantToInventory: no playerId");
-        return;
-      }
-      const cur = stateFrozenValue ?? await Atoms.root.state.get();
-      const slots = cur?.child?.data?.userSlots;
-      if (!slots || typeof slots !== "object") {
-        console.log("[EditorService] addPlantToInventory: no userSlots");
-        return;
-      }
-      const slotMatch = findPlayerSlot(slots, pid);
-      if (!slotMatch) {
-        console.log("[EditorService] addPlantToInventory: player slot not found");
-        return;
-      }
-      const slotData = slotMatch.matchSlot.data || {};
-      const inv = slotData.inventory;
-      const items = Array.isArray(inv?.items) ? inv.items.slice() : [];
-      const entry = plantCatalog2?.[species] ?? {};
-      const plantDef = entry?.plant ?? {};
-      const isMultipleHarvest = plantDef?.harvestType === "Multiple";
-      console.log("[EditorService] plant before add", { itemsLen: items.length, isMultipleHarvest });
-      const maxSlots = getMaxSlotsForSpecies(species);
-      const slotsConfig = editorPlantSlotsState.species === species ? editorPlantSlotsState.slots.slice(0, maxSlots) : ensureEditorSlotsForSpecies(species).slice(0, maxSlots);
-      const slotsArr = [];
-      for (const cfg of slotsConfig) {
-        if (!cfg.enabled) continue;
-        const targetScale = resolveSlotTargetScale(species, cfg);
-        const mutations = Array.isArray(cfg.mutations) ? cfg.mutations.slice() : [];
-        slotsArr.push({
-          species,
-          startTime: 1760866288723,
-          endTime: 1760867858782,
-          targetScale,
-          mutations
-        });
-      }
-      const slotCount = slotsArr.length;
-      const newItem = {
-        id: typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `plant-${Math.random().toString(16).slice(2)}`,
-        itemType: "Plant",
-        species,
-        slots: ensureSlotIds(slotsArr),
-        plantedAt: 1760779438723,
-        maturedAt: 1760865838723
+      return {
+        objectType: "decor",
+        decorId: selId,
+        rotation: editorDecorRotation
       };
-      if (!isMultipleHarvest) {
-        newItem.name = entry?.crop?.name ?? plantDef?.name ?? species;
-      }
-      items.push(newItem);
-      const nextUserSlots = rebuildUserSlots(slotMatch, (slot) => {
-        const slotDataInner = slot?.data || {};
-        const slotInv = slotDataInner.inventory;
-        return {
-          ...slot || {},
-          data: {
-            ...slotDataInner,
-            inventory: { ...slotInv || {}, items }
-          }
-        };
-      });
-      const next = buildStateWithUserSlots(cur, nextUserSlots);
-      stateFrozenValue = next;
-      stateOriginalValue = next;
-      try {
-        await setStateAtom(next);
-      } catch (err) {
-        console.log("[EditorService] stateAtom set failed (plant)", err);
-      }
-      console.log("[EditorService] plant after add", { itemsLen: items.length + 1 });
-      console.log("[EditorService] plant added", {
-        species,
-        isMultipleHarvest,
-        slotCount
-      });
-    } catch (err) {
-      console.log("[EditorService] failed to add plant", err);
     }
+    const species = selId;
+    const maxSlots = getMaxSlotsForSpecies(species);
+    const slotsConfig = editorPlantSlotsState.species === species ? editorPlantSlotsState.slots.slice(0, maxSlots) : ensureEditorSlotsForSpecies(species).slice(0, maxSlots);
+    const slotsArr = [];
+    for (const cfg of slotsConfig) {
+      if (!cfg.enabled) continue;
+      const targetScale = resolveSlotTargetScale(species, cfg);
+      const mutations = Array.isArray(cfg.mutations) ? cfg.mutations.slice() : [];
+      slotsArr.push({
+        species,
+        startTime: 1760866288723,
+        endTime: 1760867858782,
+        targetScale,
+        mutations
+      });
+    }
+    if (!slotsArr.length) return null;
+    return {
+      objectType: "plant",
+      species,
+      slots: ensureSlotIds(slotsArr),
+      plantedAt: 1760779438723,
+      maturedAt: 1760865838723
+    };
   }
   function notify(enabled2) {
     listeners3.forEach((cb) => {
@@ -18936,24 +19041,56 @@
       }
     });
   }
+  async function startPlannedGardenLifecycle() {
+    try {
+      const pid = await getPlayerId();
+      if (!pid) return;
+      const userSlotIdx = await readUserSlotIdx();
+      plannedGarden = await readRealGardenForPlayer(pid) || makeEmptyGarden();
+      plannedUserSlotIdx = userSlotIdx;
+      await applyGardenToTos(plannedGarden, userSlotIdx);
+    } catch (err) {
+      console.log("[EditorService] startPlannedGardenLifecycle failed", err);
+    }
+    if (plannedReapplyTimer == null) {
+      plannedReapplyTimer = window.setInterval(() => {
+        if (plannedUserSlotIdx != null)
+          void applyGardenToTos(plannedGarden, plannedUserSlotIdx);
+      }, 1e3);
+    }
+  }
+  async function stopPlannedGardenLifecycle() {
+    if (plannedReapplyTimer != null) {
+      window.clearInterval(plannedReapplyTimer);
+      plannedReapplyTimer = null;
+    }
+    try {
+      const pid = await getPlayerId();
+      if (pid && plannedUserSlotIdx != null) {
+        const realGarden = await readRealGardenForPlayer(pid) || makeEmptyGarden();
+        await applyGardenToTos(realGarden, plannedUserSlotIdx);
+      }
+    } catch (err) {
+      console.log("[EditorService] stopPlannedGardenLifecycle failed", err);
+    }
+    plannedGarden = { tileObjects: {}, boardwalkTileObjects: {} };
+    plannedUserSlotIdx = null;
+  }
   function applyState(enabled2, opts = {}) {
     const next = !!enabled2;
     const changed = next !== currentEnabled;
-    if (next && overlaysVisible) showOverlay();
+    if (next) showOverlay();
     else hideOverlay();
     if (next && overlaysVisible) showSideOverlay();
     else hideSideOverlay();
     if (next && overlaysVisible) showCurrentItemOverlay();
     else hideCurrentItemOverlay();
     if (next && !currentEnabled) {
+      currentEditorTile = null;
       void logGardenTilesForEditor();
-      void snapshotAndClearGardenForEditor();
-      void freezeStateAtom();
-      void enablePatchGate();
+      void startPlannedGardenLifecycle();
     } else if (!next && currentEnabled) {
-      disablePatchGate();
-      void restoreGardenSnapshotForEditor();
-      void unfreezeStateAtom();
+      void stopPlannedGardenLifecycle();
     }
     currentEnabled = next;
     if (opts.persist !== false) persist(next);
@@ -18962,7 +19099,6 @@
   var EditorService = {
     init() {
       installEditorKeybindsOnce();
-      ensurePatchGateInstalled();
       applyState(currentEnabled, { persist: false, emit: false });
     },
     isEnabled() {
@@ -18981,12 +19117,6 @@
     }
   };
   var EMPTY_GARDEN = { tileObjects: {}, boardwalkTileObjects: {} };
-  function isGardenEmpty(val) {
-    const tiles = val?.tileObjects;
-    const boards = val?.boardwalkTileObjects;
-    const isEmptyObj = (o) => o && typeof o === "object" && Object.keys(o).length === 0;
-    return isEmptyObj(tiles) && isEmptyObj(boards);
-  }
   function makeEmptyGarden() {
     return { ...EMPTY_GARDEN };
   }
@@ -19024,7 +19154,9 @@
     const boardwalkTileObjects = val && typeof val === "object" && typeof val.boardwalkTileObjects === "object" ? val.boardwalkTileObjects : {};
     return {
       tileObjects: ensurePlantSlotIdsInTileMap({ ...tileObjects }),
-      boardwalkTileObjects: ensurePlantSlotIdsInTileMap({ ...boardwalkTileObjects })
+      boardwalkTileObjects: ensurePlantSlotIdsInTileMap({
+        ...boardwalkTileObjects
+      })
     };
   }
   function readSavedGardens() {
@@ -19049,10 +19181,10 @@
     }
     notifySavedGardensChanged();
   }
-  async function getGardenForPlayer(playerId2) {
+  async function readRealGardenForPlayer(playerId2) {
     try {
       if (!playerId2) return null;
-      const cur = stateFrozenValue ?? await Atoms.root.state.get();
+      const cur = await Atoms.root.state.get();
       const slots = cur?.child?.data?.userSlots;
       const slotMatch = findPlayerSlot(slots, playerId2, { sortObject: true });
       if (!slotMatch || !slotMatch.matchSlot) return null;
@@ -19062,29 +19194,27 @@
       return null;
     }
   }
+  async function getGardenForPlayer(playerId2) {
+    try {
+      if (!playerId2) return null;
+      if (currentEnabled) {
+        const selfId = await getPlayerId();
+        if (selfId === playerId2) return sanitizeGarden(plannedGarden);
+      }
+      return await readRealGardenForPlayer(playerId2);
+    } catch {
+      return null;
+    }
+  }
   async function setCurrentGarden(nextGarden) {
     try {
       const pid = await getPlayerId();
       if (!pid) return false;
-      const cur = stateFrozenValue ?? await Atoms.root.state.get();
-      const slots = cur?.child?.data?.userSlots;
-      const slotMatch = findPlayerSlot(slots, pid, { sortObject: true });
-      if (!slotMatch || !slotMatch.matchSlot) return false;
-      const userSlotIdx = slotMatchToIndex(slotMatch);
-      const updatedSlot = {
-        ...slotMatch.matchSlot,
-        data: {
-          ...slotMatch.matchSlot?.data || {},
-          garden: sanitizeGarden(nextGarden)
-        }
-      };
-      const nextUserSlots = rebuildUserSlots(slotMatch, () => updatedSlot);
-      const nextState = buildStateWithUserSlots(cur, nextUserSlots);
-      stateFrozenValue = nextState;
-      stateOriginalValue = nextState;
-      await setStateAtom(nextState);
+      const userSlotIdx = plannedUserSlotIdx ?? await readUserSlotIdx();
+      plannedGarden = sanitizeGarden(nextGarden);
+      plannedUserSlotIdx = userSlotIdx;
       try {
-        await applyGardenToTos(nextGarden, userSlotIdx);
+        await applyGardenToTos(plannedGarden, userSlotIdx);
       } catch {
       }
       return true;
@@ -19190,11 +19320,16 @@
     let reuseId = null;
     if (existingIdx >= 0) {
       const canConfirm = typeof window !== "undefined" && typeof window.confirm === "function";
-      const overwrite = canConfirm ? window.confirm(`A garden named "${baseName}" already exists. Overwrite it?`) : false;
+      const overwrite = canConfirm ? window.confirm(
+        `A garden named "${baseName}" already exists. Overwrite it?`
+      ) : false;
       if (overwrite) {
         reuseId = all[existingIdx]?.id || null;
       } else {
-        finalName = makeUniqueName(baseName, all.map((g) => g.name));
+        finalName = makeUniqueName(
+          baseName,
+          all.map((g) => g.name)
+        );
       }
     }
     const saved = {
@@ -19263,41 +19398,6 @@
       return null;
     }
   }
-  function buildClearedState(state3, playerId2) {
-    const slots = state3?.child?.data?.userSlots;
-    const slotMatch = findPlayerSlot(slots, playerId2, { sortObject: true });
-    if (!slotMatch || !slotMatch.matchSlot || typeof slotMatch.matchSlot !== "object") {
-      return { next: state3, changed: false };
-    }
-    const garden2 = slotMatch.matchSlot?.data?.garden;
-    const inventory = slotMatch.matchSlot?.data?.inventory;
-    const hasInventory = inventory && typeof inventory === "object";
-    const gardenChanged = !isGardenEmpty(garden2);
-    const invChanged = hasInventory && (Array.isArray(inventory.items) ? inventory.items.length > 0 : true ? inventory?.inventory?.items?.length > 0 : false);
-    if (!gardenChanged && !invChanged) return { next: state3, changed: false };
-    const updatedSlot = {
-      ...slotMatch.matchSlot,
-      data: {
-        ...slotMatch.matchSlot?.data || {},
-        garden: makeEmptyGarden(),
-        petSlots: buildEmptyPetSlots(slotMatch.matchSlot?.data?.petSlots),
-        ...hasInventory ? { inventory: { ...inventory || {}, items: [], favoritedItemIds: [] } } : {}
-      }
-    };
-    const nextUserSlots = rebuildUserSlots(slotMatch, () => updatedSlot);
-    const nextState = buildStateWithUserSlots(state3, nextUserSlots);
-    return { next: nextState, changed: true };
-  }
-  async function buildClearedStateSnapshot(playerId2) {
-    try {
-      const cur = await Atoms.root.state.get();
-      const { next } = buildClearedState(cur, playerId2);
-      return next;
-    } catch {
-      return null;
-    }
-  }
-  var savedGardenSnapshot = null;
   async function readUserSlotIdx() {
     try {
       const store = await ensureStore().catch(() => null);
@@ -19307,6 +19407,35 @@
     } catch {
     }
     return 0;
+  }
+  async function resolveOwnTile(tx, ty) {
+    try {
+      const mapData = await Atoms.root.map.get().catch(() => null);
+      const cols = Number(mapData?.cols);
+      if (!mapData || !Number.isFinite(cols) || cols <= 0) return null;
+      if (tx < 0 || ty < 0 || tx >= cols) return null;
+      const gidx = ty * cols + tx;
+      const ownSlotIdx = await readUserSlotIdx();
+      const dirt = mapData?.globalTileIdxToDirtTile?.[gidx];
+      if (dirt && typeof dirt === "object" && Number(dirt.userSlotIdx) === ownSlotIdx) {
+        return {
+          tileType: "Dirt",
+          localTileIndex: Number(dirt.dirtTileIdx),
+          userSlotIdx: ownSlotIdx
+        };
+      }
+      const board = mapData?.globalTileIdxToBoardwalk?.[gidx];
+      if (board && typeof board === "object" && Number(board.userSlotIdx) === ownSlotIdx) {
+        return {
+          tileType: "Boardwalk",
+          localTileIndex: Number(board.boardwalkTileIdx),
+          userSlotIdx: ownSlotIdx
+        };
+      }
+      return null;
+    } catch {
+      return null;
+    }
   }
   async function collectCurrentUserGardenTiles() {
     const [mapData, userSlotIdx] = await Promise.all([
@@ -19331,7 +19460,9 @@
     const garden2 = Array.isArray(slots) ? slots?.[userSlotIdx]?.data?.garden : slots?.[String(userSlotIdx)]?.data?.garden;
     const dirtObjs = garden2?.tileObjects || {};
     const boardObjs = garden2?.boardwalkTileObjects || {};
-    const dirt = Object.entries(mapData?.globalTileIdxToDirtTile || {}).filter(([, v]) => v && typeof v === "object" && v.userSlotIdx === userSlotIdx).map(([k, v]) => {
+    const dirt = Object.entries(mapData?.globalTileIdxToDirtTile || {}).filter(
+      ([, v]) => v && typeof v === "object" && v.userSlotIdx === userSlotIdx
+    ).map(([k, v]) => {
       const gidx = Number(k);
       const pos = toPos(gidx);
       const localIdx = Number(v?.dirtTileIdx ?? -1);
@@ -19343,7 +19474,11 @@
         ...pos
       };
     });
-    const boardwalk = Object.entries(mapData?.globalTileIdxToBoardwalk || {}).filter(([, v]) => v && typeof v === "object" && v.userSlotIdx === userSlotIdx).map(([k, v]) => {
+    const boardwalk = Object.entries(
+      mapData?.globalTileIdxToBoardwalk || {}
+    ).filter(
+      ([, v]) => v && typeof v === "object" && v.userSlotIdx === userSlotIdx
+    ).map(([k, v]) => {
       const gidx = Number(k);
       const pos = toPos(gidx);
       const localIdx = Number(v?.boardwalkTileIdx ?? -1);
@@ -19355,7 +19490,9 @@
         ...pos
       };
     });
-    const tiles = [...dirt, ...boardwalk].sort((a, b) => a.globalIdx - b.globalIdx);
+    const tiles = [...dirt, ...boardwalk].sort(
+      (a, b) => a.globalIdx - b.globalIdx
+    );
     return { userSlotIdx, dirt, boardwalk, tiles };
   }
   async function resolveTileCoords(tileType, userSlotIdx, localTileIndex) {
@@ -19407,12 +19544,12 @@
     const mapData = await Atoms.root.map.get().catch(() => null);
     const cols = Number(mapData?.cols);
     if (!mapData || !Number.isFinite(cols)) return;
-    const dirtEntries = Object.entries(mapData?.globalTileIdxToDirtTile || {}).filter(
-      ([, v]) => v?.userSlotIdx === userSlotIdx
-    );
-    const boardEntries = Object.entries(mapData?.globalTileIdxToBoardwalk || {}).filter(
-      ([, v]) => v?.userSlotIdx === userSlotIdx
-    );
+    const dirtEntries = Object.entries(
+      mapData?.globalTileIdxToDirtTile || {}
+    ).filter(([, v]) => v?.userSlotIdx === userSlotIdx);
+    const boardEntries = Object.entries(
+      mapData?.globalTileIdxToBoardwalk || {}
+    ).filter(([, v]) => v?.userSlotIdx === userSlotIdx);
     const applyEntry = (entry, type) => {
       const [gidxStr, v] = entry;
       const gidx = Number(gidxStr);
@@ -19428,85 +19565,37 @@
       injectTileObjectRaw(x, y, obj);
       const typ = obj.objectType;
       if (typ === "plant") {
-        tos.setTilePlant(x, y, {
-          species: obj.species,
-          plantedAt: obj.plantedAt,
-          maturedAt: obj.maturedAt,
-          slots: obj.slots
-        }, { ensureView: true, forceUpdate: true });
+        tos.setTilePlant(
+          x,
+          y,
+          {
+            species: obj.species,
+            plantedAt: obj.plantedAt,
+            maturedAt: obj.maturedAt,
+            slots: obj.slots
+          },
+          { ensureView: true, forceUpdate: true }
+        );
       } else if (typ === "decor") {
-        tos.setTileDecor(x, y, { rotation: obj.rotation }, { ensureView: true, forceUpdate: true });
+        tos.setTileDecor(
+          x,
+          y,
+          { rotation: obj.rotation },
+          { ensureView: true, forceUpdate: true }
+        );
       } else if (typ === "egg") {
-        tos.setTileEgg(x, y, { plantedAt: obj.plantedAt, maturedAt: obj.maturedAt }, { ensureView: true, forceUpdate: true });
+        tos.setTileEgg(
+          x,
+          y,
+          { plantedAt: obj.plantedAt, maturedAt: obj.maturedAt },
+          { ensureView: true, forceUpdate: true }
+        );
       } else {
         tos.setTileEmpty(x, y, { ensureView: true, forceUpdate: true });
       }
     };
     dirtEntries.forEach((e) => applyEntry(e, "Dirt"));
     boardEntries.forEach((e) => applyEntry(e, "Boardwalk"));
-  }
-  async function snapshotAndClearGardenForEditor() {
-    if (!tos.isReady()) {
-      console.log("[EditorService] snapshot skipped: tos not ready");
-      return;
-    }
-    const info = await collectCurrentUserGardenTiles();
-    if (!info) {
-      console.log("[EditorService] snapshot skipped: map/user slot not ready");
-      return;
-    }
-    savedGardenSnapshot = info.tiles.map((t) => ({ x: t.x, y: t.y, obj: t.obj }));
-    for (const t of savedGardenSnapshot) {
-      try {
-        tos.setTileEmpty(t.x, t.y, { ensureView: true, forceUpdate: true });
-      } catch (err) {
-        console.log("[EditorService] clear tile failed", { x: t.x, y: t.y, err });
-      }
-    }
-  }
-  async function restoreGardenSnapshotForEditor() {
-    if (!tos.isReady()) {
-      console.log("[EditorService] restore skipped: tos not ready");
-      return;
-    }
-    const snapshot = savedGardenSnapshot;
-    if (!snapshot) return;
-    for (const t of snapshot) {
-      const obj = t.obj;
-      try {
-        if (!obj) {
-          tos.setTileEmpty(t.x, t.y, { ensureView: true, forceUpdate: true });
-          continue;
-        }
-        const typ = obj?.objectType;
-        if (typ === "plant") {
-          const patch = {
-            species: obj.species,
-            plantedAt: obj.plantedAt,
-            maturedAt: obj.maturedAt,
-            slots: obj.slots
-          };
-          injectTileObjectRaw(t.x, t.y, obj);
-          tos.setTilePlant(t.x, t.y, patch, { ensureView: true, forceUpdate: true });
-        } else if (typ === "decor") {
-          const patch = { rotation: obj.rotation };
-          injectTileObjectRaw(t.x, t.y, obj);
-          tos.setTileDecor(t.x, t.y, patch, { ensureView: true, forceUpdate: true });
-        } else if (typ === "egg") {
-          const patch = { plantedAt: obj.plantedAt, maturedAt: obj.maturedAt };
-          injectTileObjectRaw(t.x, t.y, obj);
-          tos.setTileEgg(t.x, t.y, patch, { ensureView: true, forceUpdate: true });
-        } else {
-          tos.setTileEmpty(t.x, t.y, { ensureView: true, forceUpdate: true });
-        }
-      } catch (err) {
-        const ok = obj ? injectTileObjectRaw(t.x, t.y, obj) : false;
-        if (!ok) {
-          console.log("[EditorService] restore tile failed", { x: t.x, y: t.y, err });
-        }
-      }
-    }
-    savedGardenSnapshot = null;
   }
   async function logGardenTilesForEditor() {
     try {
@@ -19528,30 +19617,25 @@
   }
   async function logSelectedInventoryItemWithTile() {
     try {
-      const store = await ensureStore().catch(() => null);
-      let tileType;
-      let localTileIndex;
-      if (store) {
-        const tileAtom = getAtomByLabel("myCurrentGardenTileAtom");
-        if (!tileAtom) {
-          console.log("[EditorService] logSelectedInventoryItemWithTile: no myCurrentGardenTileAtom");
-        } else {
-          const tileVal = store.get(tileAtom);
-          tileType = tileVal?.tileType;
-          localTileIndex = tileVal?.localTileIndex;
-        }
-      } else {
-        console.log("[EditorService] logSelectedInventoryItemWithTile: no jotai store");
-      }
+      const target = getCurrentTileTarget();
+      if (!target)
+        console.log(
+          "[EditorService] logSelectedInventoryItemWithTile: no currentEditorTile"
+        );
+      const tileType = target?.tileType;
+      const localTileIndex = target?.localTileIndex;
       const selectedIndex = await Atoms.inventory.myValidatedSelectedItemIndex.get();
       const inventoryVal = await Atoms.inventory.myInventory.get();
       const rotation = await Atoms.inventory.mySelectedItemRotation.get();
       const items = Array.isArray(inventoryVal?.items) ? inventoryVal.items : [];
       if (selectedIndex == null || typeof selectedIndex !== "number" || selectedIndex < 0 || selectedIndex >= items.length) {
-        console.log("[EditorService] logSelectedInventoryItemWithTile: invalid selected index", {
-          selectedIndex,
-          itemsLen: items.length
-        });
+        console.log(
+          "[EditorService] logSelectedInventoryItemWithTile: invalid selected index",
+          {
+            selectedIndex,
+            itemsLen: items.length
+          }
+        );
         return;
       }
       const selectedItem = items[selectedIndex];
@@ -19568,247 +19652,148 @@
   }
   async function placeSelectedItemInGardenAtCurrentTile() {
     try {
-      const store = await ensureStore().catch(() => null);
-      if (!store) {
-        console.log("[EditorService] placeSelectedItemInGardenAtCurrentTile: no jotai store");
+      const target = getCurrentTileTarget();
+      if (!target) {
+        console.log(
+          "[EditorService] placeSelectedItemInGardenAtCurrentTile: no currentEditorTile"
+        );
         return;
       }
-      const tileAtom = getAtomByLabel("myCurrentGardenTileAtom");
-      if (!tileAtom) {
-        console.log("[EditorService] placeSelectedItemInGardenAtCurrentTile: no myCurrentGardenTileAtom");
-        return;
-      }
-      const tileVal = store.get(tileAtom);
-      if (!tileVal) {
-        console.log("[EditorService] placeSelectedItemInGardenAtCurrentTile: tileVal is null");
-        return;
-      }
-      const tileType = tileVal.tileType;
-      const localTileIndex = tileVal.localTileIndex;
-      const userSlotIdxRaw = tileVal.userSlotIdx;
-      const userSlotIdx = typeof userSlotIdxRaw === "number" && Number.isFinite(userSlotIdxRaw) ? userSlotIdxRaw : 0;
-      if (localTileIndex == null || !Number.isFinite(localTileIndex)) {
-        console.log("[EditorService] placeSelectedItemInGardenAtCurrentTile: invalid localTileIndex", {
-          localTileIndex
-        });
-        return;
-      }
-      const selectedIndex = await Atoms.inventory.myValidatedSelectedItemIndex.get();
-      const inventoryVal = await Atoms.inventory.myInventory.get();
-      const rotation = await Atoms.inventory.mySelectedItemRotation.get();
-      const items = Array.isArray(inventoryVal?.items) ? inventoryVal.items : [];
-      if (selectedIndex == null || typeof selectedIndex !== "number" || selectedIndex < 0 || selectedIndex >= items.length) {
-        console.log("[EditorService] placeSelectedItemInGardenAtCurrentTile: invalid selected index", {
-          selectedIndex,
-          itemsLen: items.length
-        });
-        return;
-      }
-      const selectedItem = items[selectedIndex];
-      if (selectedItem?.itemType !== "Plant" && selectedItem?.itemType !== "Decor") {
-        console.log("[EditorService] placeSelectedItemInGardenAtCurrentTile: unsupported itemType", {
-          itemType: selectedItem?.itemType
-        });
-        return;
-      }
-      let tileObject;
-      if (selectedItem.itemType === "Plant") {
-        tileObject = {
-          objectType: "plant",
-          species: selectedItem.species,
-          slots: ensureSlotIds(selectedItem.slots),
-          plantedAt: selectedItem.plantedAt,
-          maturedAt: selectedItem.maturedAt
-        };
-      } else if (selectedItem.itemType === "Decor") {
-        tileObject = {
-          objectType: "decor",
-          decorId: selectedItem.decorId,
-          // rotation depuis lâatom, fallback sur ce quâaurait dÃ©jÃ  lâitem (au cas oÃ¹)
-          rotation: typeof rotation === "number" ? rotation : selectedItem.rotation ?? 0
-        };
-      }
+      const { tileType, localTileIndex, userSlotIdx } = target;
+      const tileObject = buildBrushTileObject();
       if (!tileObject) {
-        console.log("[EditorService] placeSelectedItemInGardenAtCurrentTile: failed to build tileObject");
+        console.log(
+          "[EditorService] placeSelectedItemInGardenAtCurrentTile: no brush selected"
+        );
         return;
       }
-      const coords = await resolveTileCoords(tileType, userSlotIdx, localTileIndex);
+      const coords = await resolveTileCoords(
+        tileType,
+        userSlotIdx,
+        localTileIndex
+      );
       if (!coords) {
-        console.log("[EditorService] placeSelectedItemInGardenAtCurrentTile: cannot resolve coords", {
-          tileType,
-          localTileIndex,
-          userSlotIdx
-        });
+        console.log(
+          "[EditorService] placeSelectedItemInGardenAtCurrentTile: cannot resolve coords",
+          {
+            tileType,
+            localTileIndex,
+            userSlotIdx
+          }
+        );
         return;
       }
       if (!tos.isReady()) {
-        console.log("[EditorService] placeSelectedItemInGardenAtCurrentTile: tos not ready");
+        console.log(
+          "[EditorService] placeSelectedItemInGardenAtCurrentTile: tos not ready"
+        );
         return;
       }
       injectTileObjectRaw(coords.x, coords.y, tileObject);
       if (tileObject.objectType === "plant") {
-        tos.setTilePlant(coords.x, coords.y, {
-          species: tileObject.species,
-          plantedAt: tileObject.plantedAt,
-          maturedAt: tileObject.maturedAt,
-          slots: tileObject.slots
-        }, { ensureView: true, forceUpdate: true });
+        tos.setTilePlant(
+          coords.x,
+          coords.y,
+          {
+            species: tileObject.species,
+            plantedAt: tileObject.plantedAt,
+            maturedAt: tileObject.maturedAt,
+            slots: tileObject.slots
+          },
+          { ensureView: true, forceUpdate: true }
+        );
       } else if (tileObject.objectType === "decor") {
-        tos.setTileDecor(coords.x, coords.y, { rotation: tileObject.rotation }, { ensureView: true, forceUpdate: true });
+        tos.setTileDecor(
+          coords.x,
+          coords.y,
+          { rotation: tileObject.rotation },
+          { ensureView: true, forceUpdate: true }
+        );
       }
-      const cur = stateFrozenValue ?? await Atoms.root.state.get();
-      const userSlots = cur?.child?.data?.userSlots;
-      if (userSlots && typeof userSlots === "object") {
-        const isArray = Array.isArray(userSlots);
-        const matchSlot = isArray ? userSlots[userSlotIdx] : userSlots[String(userSlotIdx)];
-        if (matchSlot) {
-          const slotData = matchSlot.data || {};
-          const prevGarden = slotData.garden && typeof slotData.garden === "object" ? slotData.garden : makeEmptyGarden();
-          const garden2 = {
-            tileObjects: { ...prevGarden.tileObjects || {} },
-            boardwalkTileObjects: { ...prevGarden.boardwalkTileObjects || {} }
-          };
-          const targetKey = tileType === "Dirt" ? "tileObjects" : "boardwalkTileObjects";
-          const tileKey = String(localTileIndex);
-          const nextTargetMap = { ...garden2[targetKey], [tileKey]: tileObject };
-          const nextGarden = {
-            tileObjects: targetKey === "tileObjects" ? nextTargetMap : garden2.tileObjects,
-            boardwalkTileObjects: targetKey === "boardwalkTileObjects" ? nextTargetMap : garden2.boardwalkTileObjects
-          };
-          const updatedSlot = {
-            ...matchSlot,
-            data: {
-              ...slotData,
-              garden: nextGarden
-            }
-          };
-          const nextUserSlots = isArray ? (() => {
-            const nextSlots = userSlots.slice();
-            nextSlots[userSlotIdx] = updatedSlot;
-            return nextSlots;
-          })() : {
-            ...userSlots,
-            [String(userSlotIdx)]: updatedSlot
-          };
-          const nextState = buildStateWithUserSlots(cur, nextUserSlots);
-          stateFrozenValue = nextState;
-          stateOriginalValue = nextState;
-          try {
-            await setStateAtom(nextState);
-          } catch {
-          }
+      const tileKey = String(localTileIndex);
+      const targetKey = tileType === "Dirt" ? "tileObjects" : "boardwalkTileObjects";
+      plannedGarden = {
+        ...plannedGarden,
+        [targetKey]: {
+          ...plannedGarden[targetKey],
+          [tileKey]: tileObject
         }
-      }
-      console.log("[EditorService] placed item in garden (tos)", {
+      };
+      console.log("[EditorService] placed item in garden (local plan)", {
         tileType,
         localTileIndex,
-        userSlotIdx,
-        selectedIndex,
-        itemType: selectedItem.itemType,
-        species: selectedItem.species,
-        decorId: selectedItem.decorId,
-        rotation,
+        itemType: tileObject.objectType,
+        species: tileObject.species,
+        decorId: tileObject.decorId,
         coords
       });
+      renderCurrentItemOverlay();
+      void triggerEditorAnimation("dropObject");
+      tos.flashTileGreen(coords.x, coords.y, { startAlpha: 1, durationMs: 400 });
     } catch (err) {
-      console.log("[EditorService] placeSelectedItemInGardenAtCurrentTile failed", err);
+      console.log(
+        "[EditorService] placeSelectedItemInGardenAtCurrentTile failed",
+        err
+      );
     }
   }
   async function removeGardenObjectAtCurrentTile() {
     try {
-      const store = await ensureStore().catch(() => null);
-      if (!store) {
-        console.log("[EditorService] removeItemFromGardenAtCurrentTile: no jotai store");
+      const target = getCurrentTileTarget();
+      if (!target) {
+        console.log(
+          "[EditorService] removeItemFromGardenAtCurrentTile: no currentEditorTile"
+        );
         return false;
       }
-      const tileAtom = getAtomByLabel("myCurrentGardenTileAtom");
-      if (!tileAtom) {
-        console.log("[EditorService] removeItemFromGardenAtCurrentTile: no myCurrentGardenTileAtom");
-        return false;
-      }
-      const tileVal = store.get(tileAtom);
-      if (!tileVal) {
-        console.log("[EditorService] removeItemFromGardenAtCurrentTile: tileVal is null");
-        return false;
-      }
-      const tileType = tileVal.tileType;
-      const localTileIndex = tileVal.localTileIndex;
-      const userSlotIdxRaw = tileVal.userSlotIdx;
-      const userSlotIdx = typeof userSlotIdxRaw === "number" && Number.isFinite(userSlotIdxRaw) ? userSlotIdxRaw : 0;
-      if (localTileIndex == null || !Number.isFinite(localTileIndex)) {
-        console.log("[EditorService] removeItemFromGardenAtCurrentTile: invalid localTileIndex", {
-          localTileIndex
-        });
-        return false;
-      }
-      const coords = await resolveTileCoords(tileType, userSlotIdx, localTileIndex);
+      const { tileType, localTileIndex, userSlotIdx } = target;
+      const coords = await resolveTileCoords(
+        tileType,
+        userSlotIdx,
+        localTileIndex
+      );
       if (!coords) {
-        console.log("[EditorService] removeItemFromGardenAtCurrentTile: cannot resolve coords", {
-          tileType,
-          localTileIndex,
-          userSlotIdx
-        });
+        console.log(
+          "[EditorService] removeItemFromGardenAtCurrentTile: cannot resolve coords",
+          {
+            tileType,
+            localTileIndex,
+            userSlotIdx
+          }
+        );
         return false;
       }
       if (!tos.isReady()) {
-        console.log("[EditorService] removeItemFromGardenAtCurrentTile: tos not ready");
+        console.log(
+          "[EditorService] removeItemFromGardenAtCurrentTile: tos not ready"
+        );
         return false;
       }
-      tos.setTileEmpty(coords.x, coords.y, { ensureView: true, forceUpdate: true });
-      const cur = stateFrozenValue ?? await Atoms.root.state.get();
-      const userSlots = cur?.child?.data?.userSlots;
-      if (userSlots && typeof userSlots === "object") {
-        const isArray = Array.isArray(userSlots);
-        const matchSlot = isArray ? userSlots[userSlotIdx] : userSlots[String(userSlotIdx)];
-        if (matchSlot) {
-          const slotData = matchSlot.data || {};
-          const prevGarden = slotData.garden && typeof slotData.garden === "object" ? slotData.garden : makeEmptyGarden();
-          const garden2 = {
-            tileObjects: { ...prevGarden.tileObjects || {} },
-            boardwalkTileObjects: { ...prevGarden.boardwalkTileObjects || {} }
-          };
-          const targetKey = tileType === "Dirt" ? "tileObjects" : "boardwalkTileObjects";
-          const tileKey = String(localTileIndex);
-          const currentTargetMap = garden2[targetKey] || {};
-          const nextTargetMap = { ...currentTargetMap };
-          delete nextTargetMap[tileKey];
-          const nextGarden = {
-            tileObjects: targetKey === "tileObjects" ? nextTargetMap : garden2.tileObjects,
-            boardwalkTileObjects: targetKey === "boardwalkTileObjects" ? nextTargetMap : garden2.boardwalkTileObjects
-          };
-          const updatedSlot = {
-            ...matchSlot,
-            data: {
-              ...slotData,
-              garden: nextGarden
-            }
-          };
-          const nextUserSlots = isArray ? (() => {
-            const nextSlots = userSlots.slice();
-            nextSlots[userSlotIdx] = updatedSlot;
-            return nextSlots;
-          })() : {
-            ...userSlots,
-            [String(userSlotIdx)]: updatedSlot
-          };
-          const nextState = buildStateWithUserSlots(cur, nextUserSlots);
-          stateFrozenValue = nextState;
-          stateOriginalValue = nextState;
-          try {
-            await setStateAtom(nextState);
-          } catch {
-          }
-        }
-      }
-      console.log("[EditorService] removed item from garden (tos + state)", {
+      tos.setTileEmpty(coords.x, coords.y, {
+        ensureView: true,
+        forceUpdate: true
+      });
+      const tileKey = String(localTileIndex);
+      const targetKey = tileType === "Dirt" ? "tileObjects" : "boardwalkTileObjects";
+      const nextTargetMap = { ...plannedGarden[targetKey] };
+      delete nextTargetMap[tileKey];
+      plannedGarden = {
+        ...plannedGarden,
+        [targetKey]: nextTargetMap
+      };
+      console.log("[EditorService] removed item from garden (local plan)", {
         tileType,
         localTileIndex,
-        userSlotIdx,
         coords
       });
+      renderCurrentItemOverlay();
+      void triggerEditorAnimation("dig");
       return true;
     } catch (err) {
-      console.log("[EditorService] removeItemFromGardenAtCurrentTile failed", err);
+      console.log(
+        "[EditorService] removeItemFromGardenAtCurrentTile failed",
+        err
+      );
       return false;
     }
   }
@@ -19820,84 +19805,56 @@
   }
   async function updateGardenObjectAtCurrentTile(updater) {
     try {
-      const store = await ensureStore().catch(() => null);
-      if (!store) return false;
-      const tileAtom = getAtomByLabel("myCurrentGardenTileAtom");
-      if (!tileAtom) return false;
-      const tileVal = store.get(tileAtom);
-      if (!tileVal) return false;
-      const tileType = tileVal.tileType;
-      const localTileIndex = tileVal.localTileIndex;
-      const userSlotIdxRaw = tileVal.userSlotIdx;
-      const userSlotIdx = typeof userSlotIdxRaw === "number" && Number.isFinite(userSlotIdxRaw) ? userSlotIdxRaw : 0;
-      if (localTileIndex == null || !Number.isFinite(localTileIndex)) return false;
-      const cur = stateFrozenValue ?? await Atoms.root.state.get();
-      const userSlots = cur?.child?.data?.userSlots;
-      if (!userSlots || typeof userSlots !== "object") return false;
-      const isArray = Array.isArray(userSlots);
-      let matchSlot;
-      if (isArray) {
-        matchSlot = userSlots[userSlotIdx];
-      } else {
-        const key2 = String(userSlotIdx);
-        matchSlot = userSlots[key2];
-      }
-      if (!matchSlot) return false;
-      const slotData = matchSlot.data || {};
-      const prevGarden = slotData.garden && typeof slotData.garden === "object" ? slotData.garden : makeEmptyGarden();
-      const garden2 = {
-        tileObjects: { ...prevGarden.tileObjects || {} },
-        boardwalkTileObjects: { ...prevGarden.boardwalkTileObjects || {} }
-      };
-      const targetKey = tileType === "Dirt" ? "tileObjects" : "boardwalkTileObjects";
+      const target = getCurrentTileTarget();
+      if (!target) return false;
+      const { tileType, localTileIndex, userSlotIdx } = target;
       const tileKey = String(localTileIndex);
-      const currentTargetMap = garden2[targetKey] || {};
-      const currentObj = currentTargetMap[tileKey];
+      const targetKey = tileType === "Dirt" ? "tileObjects" : "boardwalkTileObjects";
+      const currentObj = plannedGarden[targetKey]?.[tileKey];
       if (!currentObj) return false;
       const rawNextObj = updater(currentObj);
       const nextObj = rawNextObj && rawNextObj.objectType === "plant" ? { ...rawNextObj, slots: ensureSlotIds(rawNextObj.slots) } : rawNextObj;
-      const nextTargetMap = { ...currentTargetMap, [tileKey]: nextObj };
-      const nextGarden = {
-        tileObjects: targetKey === "tileObjects" ? nextTargetMap : garden2.tileObjects,
-        boardwalkTileObjects: targetKey === "boardwalkTileObjects" ? nextTargetMap : garden2.boardwalkTileObjects
+      plannedGarden = {
+        ...plannedGarden,
+        [targetKey]: { ...plannedGarden[targetKey], [tileKey]: nextObj }
       };
-      const updatedSlot = {
-        ...matchSlot,
-        data: {
-          ...slotData,
-          garden: nextGarden
-        }
-      };
-      const nextUserSlots = isArray ? (() => {
-        const nextSlots = userSlots.slice();
-        nextSlots[userSlotIdx] = updatedSlot;
-        return nextSlots;
-      })() : {
-        ...userSlots,
-        [String(userSlotIdx)]: updatedSlot
-      };
-      const nextState = buildStateWithUserSlots(cur, nextUserSlots);
-      stateFrozenValue = nextState;
-      stateOriginalValue = nextState;
-      await setStateAtom(nextState);
       try {
-        const coords = await resolveTileCoords(tileType, userSlotIdx, localTileIndex);
+        const coords = await resolveTileCoords(
+          tileType,
+          userSlotIdx,
+          localTileIndex
+        );
         if (coords && tos.isReady()) {
           injectTileObjectRaw(coords.x, coords.y, nextObj);
           if (nextObj.objectType === "plant") {
-            tos.setTilePlant(coords.x, coords.y, {
-              species: nextObj.species,
-              plantedAt: nextObj.plantedAt,
-              maturedAt: nextObj.maturedAt,
-              slots: nextObj.slots
-            }, { ensureView: true, forceUpdate: true });
+            tos.setTilePlant(
+              coords.x,
+              coords.y,
+              {
+                species: nextObj.species,
+                plantedAt: nextObj.plantedAt,
+                maturedAt: nextObj.maturedAt,
+                slots: nextObj.slots
+              },
+              { ensureView: true, forceUpdate: true }
+            );
           } else if (nextObj.objectType === "decor") {
-            tos.setTileDecor(coords.x, coords.y, { rotation: nextObj.rotation }, { ensureView: true, forceUpdate: true });
+            tos.setTileDecor(
+              coords.x,
+              coords.y,
+              { rotation: nextObj.rotation },
+              { ensureView: true, forceUpdate: true }
+            );
           } else if (nextObj.objectType === "egg") {
-            tos.setTileEgg(coords.x, coords.y, {
-              plantedAt: nextObj.plantedAt,
-              maturedAt: nextObj.maturedAt
-            }, { ensureView: true, forceUpdate: true });
+            tos.setTileEgg(
+              coords.x,
+              coords.y,
+              {
+                plantedAt: nextObj.plantedAt,
+                maturedAt: nextObj.maturedAt
+              },
+              { ensureView: true, forceUpdate: true }
+            );
           }
         }
       } catch {
@@ -19965,7 +19922,10 @@
   function ensureEditorSlotsForSpecies(species) {
     const maxSlots = getMaxSlotsForSpecies(species);
     if (editorPlantSlotsState.species !== species) {
-      const defaultScale = computeTargetScaleFromPercent(species, DEFAULT_SIZE_PERCENT);
+      const defaultScale = computeTargetScaleFromPercent(
+        species,
+        DEFAULT_SIZE_PERCENT
+      );
       editorPlantSlotsState = {
         species,
         slots: Array.from({ length: maxSlots }, () => ({
@@ -19981,7 +19941,10 @@
     }
     let slots = editorPlantSlotsState.slots.slice(0, maxSlots);
     if (!slots.length) {
-      const defaultScale = computeTargetScaleFromPercent(species, DEFAULT_SIZE_PERCENT);
+      const defaultScale = computeTargetScaleFromPercent(
+        species,
+        DEFAULT_SIZE_PERCENT
+      );
       slots = [
         {
           enabled: true,
@@ -20009,7 +19972,11 @@
         mutations: Array.isArray(slot.mutations) ? slot.mutations : []
       };
     });
-    editorPlantSlotsState = { ...editorPlantSlotsState, slots, applyAll: !!editorPlantSlotsState.applyAll };
+    editorPlantSlotsState = {
+      ...editorPlantSlotsState,
+      slots,
+      applyAll: !!editorPlantSlotsState.applyAll
+    };
     return slots;
   }
   function ensureEditorStateForSpecies(species) {
@@ -20018,193 +19985,6 @@
       editorPlantSlotsState.applyAll = false;
     }
     return editorPlantSlotsState;
-  }
-  function findReadKey(atom) {
-    if (atom && typeof atom.read === "function") return "read";
-    for (const k of Object.keys(atom || {})) {
-      const v = atom[k];
-      if (typeof v === "function" && k !== "write" && k !== "onMount" && k !== "toString") {
-        const ar = v.length;
-        if (ar === 1 || ar === 2) return k;
-      }
-    }
-    throw new Error("stateAtom read() not found");
-  }
-  function findWriteKey(atom) {
-    if (atom && typeof atom.write === "function") return "write";
-    for (const k of Object.keys(atom || {})) {
-      const v = atom[k];
-      if (typeof v === "function" && k !== "read" && k !== "onMount" && k !== "toString") {
-        const ar = v.length;
-        if (ar >= 2) return k;
-      }
-    }
-    return null;
-  }
-  async function freezeStateAtom() {
-    await ensureStore().catch(() => {
-    });
-    const pid = await getPlayerId();
-    if (!pid) return;
-    const atom = getAtomByLabel("stateAtom");
-    if (!atom) return;
-    try {
-      stateOriginalValue = await Atoms.root.state.get();
-    } catch {
-      stateOriginalValue = null;
-    }
-    const frozen = await buildClearedStateSnapshot(pid);
-    if (!frozen) return;
-    try {
-      await Atoms.root.state.set(frozen);
-    } catch {
-    }
-    stateFrozenValue = frozen;
-    if (statePatch && statePatch.atom === atom) return;
-    let readKey;
-    try {
-      readKey = findReadKey(atom);
-    } catch {
-      return;
-    }
-    const origRead = atom[readKey];
-    const writeKey = findWriteKey(atom) || void 0;
-    const origWrite = writeKey ? atom[writeKey] : void 0;
-    atom[readKey] = () => stateFrozenValue;
-    if (writeKey) {
-      atom[writeKey] = () => stateFrozenValue;
-    }
-    statePatch = { atom, readKey, origRead, writeKey, origWrite };
-  }
-  function unfreezeStateAtom() {
-    if (statePatch) {
-      try {
-        statePatch.atom[statePatch.readKey] = statePatch.origRead;
-        if (statePatch.writeKey && statePatch.origWrite) {
-          statePatch.atom[statePatch.writeKey] = statePatch.origWrite;
-        }
-      } catch {
-      }
-    }
-    statePatch = null;
-    stateFrozenValue = null;
-    if (stateOriginalValue != null) {
-      try {
-        void Atoms.root.state.set(stateOriginalValue);
-      } catch {
-      }
-    }
-    stateOriginalValue = null;
-  }
-  var PATCH_GATE_RETRY_MS = 1e3;
-  var PATCH_GATE_MAX_TRIES = 120;
-  var FROZEN_SLOT_SUBTREES = ["garden", "inventory", "petSlots"];
-  var patchGateActive = false;
-  var patchGateUserSlotIdx = null;
-  var patchGateRetryTimer = null;
-  function isFrozenPatchPath(rawPath) {
-    if (!patchGateActive || patchGateUserSlotIdx == null) return false;
-    const path = typeof rawPath === "string" ? rawPath : "";
-    const prefix = `/child/data/userSlots/${patchGateUserSlotIdx}/data/`;
-    if (!path.startsWith(prefix)) return false;
-    const rest = path.slice(prefix.length);
-    return FROZEN_SLOT_SUBTREES.some((sub) => rest === sub || rest.startsWith(`${sub}/`));
-  }
-  function handleWelcomeDuringFreeze() {
-    if (!currentEnabled) return;
-    console.warn(
-      "[EditorService] Welcome received while editor mode is on: leaving editor mode (server state is authoritative)."
-    );
-    savedGardenSnapshot = null;
-    stateOriginalValue = null;
-    applyState(false, { persist: true, emit: true });
-  }
-  function wrapConnectionSubscribeMethods(target) {
-    const origPatches = target?.subscribeToPatches;
-    if (typeof origPatches === "function" && !origPatches.__qwsPatchGate) {
-      const next = function(cb, ...rest) {
-        if (typeof cb !== "function") return origPatches.call(this, cb, ...rest);
-        const gated = (patchList, ...cbArgs) => {
-          if (patchGateActive && Array.isArray(patchList)) {
-            const filtered = patchList.filter((p) => !isFrozenPatchPath(p?.path));
-            if (!filtered.length) return;
-            return cb(filtered, ...cbArgs);
-          }
-          return cb(patchList, ...cbArgs);
-        };
-        return origPatches.call(this, gated, ...rest);
-      };
-      next.__qwsPatchGate = true;
-      target.subscribeToPatches = next;
-    }
-    const origWelcome = target?.subscribeToWelcome;
-    if (typeof origWelcome === "function" && !origWelcome.__qwsPatchGate) {
-      const next = function(cb, ...rest) {
-        if (typeof cb !== "function") return origWelcome.call(this, cb, ...rest);
-        const gated = (...cbArgs) => {
-          if (patchGateActive) handleWelcomeDuringFreeze();
-          return cb(...cbArgs);
-        };
-        return origWelcome.call(this, gated, ...rest);
-      };
-      next.__qwsPatchGate = true;
-      target.subscribeToWelcome = next;
-    }
-  }
-  function installPatchGate() {
-    const raw = pageWindow?.MagicCircle_RoomConnection ?? readSharedGlobal("MagicCircle_RoomConnection");
-    if (!raw) return false;
-    let instance = null;
-    try {
-      instance = typeof raw.getInstance === "function" ? raw.getInstance() : null;
-    } catch {
-      instance = null;
-    }
-    for (const target of [instance, raw, raw.prototype]) {
-      if (!target) continue;
-      try {
-        wrapConnectionSubscribeMethods(target);
-      } catch {
-      }
-    }
-    const effective = instance ?? raw;
-    return typeof effective?.subscribeToPatches === "function" && !!effective.subscribeToPatches.__qwsPatchGate;
-  }
-  function ensurePatchGateInstalled() {
-    if (patchGateRetryTimer != null) return;
-    if (installPatchGate()) return;
-    let tries = 0;
-    patchGateRetryTimer = window.setInterval(() => {
-      tries += 1;
-      const done = installPatchGate();
-      if (done || tries >= PATCH_GATE_MAX_TRIES) {
-        if (patchGateRetryTimer != null) {
-          window.clearInterval(patchGateRetryTimer);
-          patchGateRetryTimer = null;
-        }
-        if (!done) {
-          console.warn("[EditorService] patch gate not installed (room connection not found)");
-        }
-      }
-    }, PATCH_GATE_RETRY_MS);
-  }
-  async function enablePatchGate() {
-    ensurePatchGateInstalled();
-    try {
-      patchGateUserSlotIdx = await readUserSlotIdx();
-    } catch {
-      patchGateUserSlotIdx = null;
-    }
-    patchGateActive = true;
-  }
-  function disablePatchGate() {
-    patchGateActive = false;
-    patchGateUserSlotIdx = null;
-  }
-  function buildEmptyPetSlots(prev) {
-    if (Array.isArray(prev)) return [];
-    if (prev && typeof prev === "object") return {};
-    return [];
   }
   shareGlobal("qwsLogSelectedInventoryItemWithTile", () => {
     void logSelectedInventoryItemWithTile();
@@ -20231,9 +20011,12 @@
   shareGlobal("qwsEditorLoadGarden", async (id) => {
     return await loadSavedGarden(id);
   });
-  shareGlobal("qwsEditorSaveGardenForPlayer", async (playerId2, name) => {
-    return await saveCurrentGarden(name || "Untitled", playerId2);
-  });
+  shareGlobal(
+    "qwsEditorSaveGardenForPlayer",
+    async (playerId2, name) => {
+      return await saveCurrentGarden(name || "Untitled", playerId2);
+    }
+  );
   shareGlobal("qwsEditorDeleteGarden", (id) => {
     return deleteSavedGarden(id);
   });
@@ -20243,9 +20026,12 @@
   shareGlobal("qwsEditorImportGarden", async (name, raw) => {
     return await importGarden(name, raw);
   });
-  shareGlobal("qwsEditorPreviewFriendGarden", async (garden2) => {
-    return await applyFriendGardenPreview(garden2);
-  });
+  shareGlobal(
+    "qwsEditorPreviewFriendGarden",
+    async (garden2) => {
+      return await applyFriendGardenPreview(garden2);
+    }
+  );
   shareGlobal("qwsEditorClearFriendGardenPreview", async () => {
     return await clearFriendGardenPreview();
   });
@@ -20259,119 +20045,12 @@
         if (eventMatchesKeybind("editor.toggle-overlays", ev)) {
           ev.preventDefault();
           ev.stopPropagation();
-          if (!currentEnabled) return;
-          overlaysVisible = !overlaysVisible;
-          if (overlaysVisible) {
-            showOverlay();
-            showSideOverlay();
-            showCurrentItemOverlay();
-          } else {
-            hideOverlay();
-            hideSideOverlay();
-            hideCurrentItemOverlay();
-          }
+          toggleEditorHud();
           return;
-        }
-        if (!currentEnabled) return;
-        if (eventMatchesKeybind("editor.place-remove", ev)) {
-          ev.preventDefault();
-          ev.stopPropagation();
-          const alreadyHeld = editorActionHeld;
-          editorActionHeld = true;
-          void handleEditorPlaceRemove(ev, alreadyHeld);
-          return;
-        }
-        if (eventMatchesKeybind("editor.delete-inventory", ev)) {
-          ev.preventDefault();
-          ev.stopPropagation();
-          void removeSelectedInventoryItem();
         }
       },
       true
     );
-    window.addEventListener(
-      "keyup",
-      (ev) => {
-        const isSyntheticRF = ev?.__inGameHotkeysRapidSynthetic__ === true;
-        if (isSyntheticRF) return;
-        if (!currentEnabled) return;
-        if (eventMatchesKeybind("editor.place-remove", ev)) {
-          editorActionHeld = false;
-          lastEditorPressStartTs = 0;
-          lastEditorPlaceRemoveTs = 0;
-          lastEditorFirstFired = false;
-          lastEditorTileKey = null;
-          lastEditorTileType = void 0;
-          lastEditorFirstActionTs = 0;
-        }
-      },
-      true
-    );
-  }
-  async function hasSelectedInventoryItem() {
-    try {
-      const inv = await Atoms.inventory.myInventory.get();
-      const idx = await Atoms.inventory.myValidatedSelectedItemIndex.get();
-      const items = Array.isArray(inv?.items) ? inv.items : [];
-      return typeof idx === "number" && !!items[idx];
-    } catch {
-      return false;
-    }
-  }
-  async function handleEditorPlaceRemove(ev, isHeld = false) {
-    const now2 = typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
-    if (!isHeld || lastEditorPressStartTs === 0) {
-      lastEditorPressStartTs = now2;
-      lastEditorPlaceRemoveTs = 0;
-      lastEditorFirstFired = false;
-      lastEditorTileKey = null;
-      lastEditorTileType = void 0;
-      lastEditorFirstActionTs = 0;
-    }
-    const { tileObject, tileKey, tileType } = await readCurrentTileContext();
-    const hasSelection = await hasSelectedInventoryItem();
-    const wantsRemove = !!tileObject;
-    const wantsPlace = !tileObject && hasSelection;
-    if (!wantsRemove && !wantsPlace) return;
-    const tileKeyStr = `${tileType ?? "?"}|${tileKey ?? "none"}`;
-    const sameTile = tileKeyStr === `${lastEditorTileType ?? "?"}|${lastEditorTileKey ?? "none"}`;
-    if (!sameTile) {
-      lastEditorTileKey = tileKey ?? null;
-      lastEditorTileType = tileType;
-      lastEditorFirstFired = false;
-      lastEditorPlaceRemoveTs = 0;
-      lastEditorPressStartTs = now2;
-      lastEditorFirstActionTs = 0;
-    }
-    const elapsedSincePress = now2 - lastEditorPressStartTs;
-    if (!lastEditorFirstFired) {
-      lastEditorFirstFired = true;
-      lastEditorPlaceRemoveTs = now2;
-      lastEditorFirstActionTs = now2;
-    } else {
-      const sinceFirstAction = lastEditorFirstActionTs > 0 ? now2 - lastEditorFirstActionTs : elapsedSincePress;
-      const gateMs = sinceFirstAction < EDITOR_PLACE_REMOVE_FIRST_DELAY_MS ? EDITOR_PLACE_REMOVE_FIRST_DELAY_MS : EDITOR_PLACE_REMOVE_REPEAT_MS;
-      if (now2 - lastEditorPlaceRemoveTs < gateMs) {
-        return;
-      }
-      lastEditorPlaceRemoveTs = now2;
-    }
-    if (wantsRemove) {
-      if (tileObject?.objectType === "plant") {
-        await removeItemFromGardenAtCurrentTile();
-        void triggerEditorAnimation("dig");
-        return;
-      }
-      if (tileObject?.objectType === "decor") {
-        await removeDecorFromGardenAtCurrentTile();
-        void triggerEditorAnimation("dig");
-        return;
-      }
-    }
-    if (wantsPlace) {
-      await placeSelectedItemInGardenAtCurrentTile();
-      void triggerEditorAnimation("dropObject");
-    }
   }
 
   // src/hooks/ws-hook.ts
@@ -31177,7 +30856,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.185";
+      return "3.2.186";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -49291,6 +48970,7 @@ next: ${next}`;
       padding: "14px",
       overflowY: "auto",
       height: "100%",
+      width: "380px",
       boxSizing: "border-box",
       background: "linear-gradient(160deg, rgba(15,20,30,0.95) 0%, rgba(10,14,20,0.95) 60%, rgba(8,12,18,0.96) 100%)"
     });
@@ -49323,7 +49003,7 @@ next: ${next}`;
     toggleRow.append(toggleLabel, toggle);
     const desc = document.createElement("div");
     css(desc, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.5" });
-    desc.textContent = "Sandbox garden editor with every plant and decor unlocked. Place/Remove uses your action key \xB7 Toggle overlays with U \xB7 Edit keybinds in Keybinds \u203A Editor.";
+    desc.textContent = "Sandbox garden editor with every plant and decor unlocked. Left click to place or select, right click to remove, drag to paint \xB7 Toggle overlays with U \xB7 Edit keybinds in Keybinds \u203A Editor.";
     wrap.appendChild(card([toggleRow, desc]));
     const nameInput = styledInput("Garden name\u2026");
     const actRow = document.createElement("div");
@@ -51160,6 +50840,90 @@ next: ${next}`;
     };
   }
 
+  // src/services/editorPointerControls.ts
+  var installed = false;
+  var dragMode = null;
+  var lastTileKey = null;
+  function tileKeyOf(target) {
+    return `${target.tileType}|${target.localTileIndex}`;
+  }
+  function hitTestOwnTile(ev) {
+    if (!tos.isReady()) return null;
+    const canvas = tos.getCanvas();
+    if (!canvas || ev.target !== canvas) return null;
+    const info = tos.pointerToFarmTile(ev);
+    if (!info) return null;
+    return { tx: info.tx, ty: info.ty };
+  }
+  async function handlePrimary(target, tx, ty) {
+    const occupied = await readTileObjectAt(target);
+    setCurrentEditorTile(target);
+    if (occupied) {
+      tos.flashTileGreen(tx, ty, { startAlpha: 0.55, durationMs: 400 });
+      return;
+    }
+    await placeSelectedItemInGardenAtCurrentTile();
+  }
+  async function handleRemove(target) {
+    const occupied = await readTileObjectAt(target);
+    if (!occupied) return;
+    setCurrentEditorTile(target);
+    await removeGardenObjectAtCurrentTile();
+  }
+  async function handlePointerDown(ev) {
+    if (!EditorService.isEnabled() || ev.button !== 0 && ev.button !== 2) return;
+    const hit = hitTestOwnTile(ev);
+    if (!hit) return;
+    const target = await resolveOwnTile(hit.tx, hit.ty);
+    if (!target) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    lastTileKey = tileKeyOf(target);
+    if (ev.button === 2) {
+      dragMode = "remove";
+      await handleRemove(target);
+    } else {
+      dragMode = "place";
+      await handlePrimary(target, hit.tx, hit.ty);
+    }
+  }
+  async function handlePointerMove(ev) {
+    if (!dragMode || !EditorService.isEnabled()) return;
+    const hit = hitTestOwnTile(ev);
+    if (!hit) return;
+    const target = await resolveOwnTile(hit.tx, hit.ty);
+    if (!target) return;
+    const key2 = tileKeyOf(target);
+    if (key2 === lastTileKey) return;
+    lastTileKey = key2;
+    if (dragMode === "remove") await handleRemove(target);
+    else await handlePrimary(target, hit.tx, hit.ty);
+  }
+  function handlePointerUp() {
+    dragMode = null;
+    lastTileKey = null;
+  }
+  function handleContextMenu(ev) {
+    if (!EditorService.isEnabled() || !tos.isReady()) return;
+    const canvas = tos.getCanvas();
+    if (!canvas || ev.target !== canvas) return;
+    if (!tos.pointerToFarmTile(ev)) return;
+    ev.preventDefault();
+  }
+  function installEditorPointerControls() {
+    if (installed || typeof window === "undefined") return;
+    installed = true;
+    window.addEventListener("pointerdown", (ev) => {
+      void handlePointerDown(ev);
+    }, true);
+    window.addEventListener("pointermove", (ev) => {
+      void handlePointerMove(ev);
+    }, true);
+    window.addEventListener("pointerup", handlePointerUp, true);
+    window.addEventListener("pointercancel", handlePointerUp, true);
+    window.addEventListener("contextmenu", handleContextMenu, true);
+  }
+
   // src/utils/mgVersion.ts
   var VERSION_PATH = "/platform/v1/version";
   var VERSION_CACHE_TTL = 60 * 1e3;
@@ -51821,6 +51585,7 @@ next: ${next}`;
     }
     tos.init();
     EditorService.init();
+    installEditorPointerControls();
     mountHUD({
       onRegister(register) {
         register("pets", "\u{1F43E} Pets", renderPetsMenu);

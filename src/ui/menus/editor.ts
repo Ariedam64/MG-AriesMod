@@ -263,6 +263,7 @@ export function renderEditorMenu(container: HTMLElement) {
     padding: "14px",
     overflowY: "auto",
     height: "100%",
+    width: "380px",
     boxSizing: "border-box",
     background: "linear-gradient(160deg, rgba(15,20,30,0.95) 0%, rgba(10,14,20,0.95) 60%, rgba(8,12,18,0.96) 100%)",
   });
@@ -304,7 +305,7 @@ export function renderEditorMenu(container: HTMLElement) {
 
   const desc = document.createElement("div");
   css(desc, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.5" });
-  desc.textContent = "Sandbox garden editor with every plant and decor unlocked. Place/Remove uses your action key · Toggle overlays with U · Edit keybinds in Keybinds › Editor.";
+  desc.textContent = "Sandbox garden editor with every plant and decor unlocked. Left click to place or select, right click to remove, drag to paint · Toggle overlays with U · Edit keybinds in Keybinds › Editor.";
 
   wrap.appendChild(card([toggleRow, desc]));
 

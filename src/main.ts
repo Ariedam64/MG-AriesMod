@@ -18,6 +18,7 @@ import { renderRoomMenu } from "./ui/menus/room";
 import { PlayerService } from "./services/player";
 import { createAntiAfkController } from "./utils/antiafk";
 import { EditorService } from "./services/editor";
+import { installEditorPointerControls } from "./services/editorPointerControls";
 
 import { initGameVersion } from "./utils/gameVersion";
 import { MGVersion } from "./utils/mgVersion";
@@ -60,6 +61,7 @@ import { startPlayerStateReportingWhenGameReady } from "./ariesModAPI/endpoints/
     tos.init()
 
   EditorService.init();
+  installEditorPointerControls();
 
   mountHUD({
     onRegister(register) {

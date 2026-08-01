@@ -40,6 +40,12 @@ export type TileOpts = {
   forceUpdate?: boolean;  // default true
 };
 
+export type FlashTileOpts = {
+  color?: number;
+  startAlpha?: number;
+  durationMs?: number;
+};
+
 type AnyFn = (...args: any[]) => any;
 
 type HookStatus = {
@@ -244,9 +250,12 @@ type HighlightOpts = {
 };
 
 function getCanvas(): HTMLCanvasElement | null {
-  return (state.engine as any)?.app?.view
-    || (state.engine as any)?.app?.renderer?.view
-    || null;
+  const app = (state.engine as any)?.app;
+  const renderer = app?.renderer;
+  // Pixi v8 exposes the canvas at renderer.canvas; .view is the v7 name (sometimes
+  // a wrapper with its own .canvas). Check canvas first, same order proven to work
+  // in notificationBellPixi.ts / sellAllPetsPixi.ts against this same game build.
+  return renderer?.canvas || renderer?.view?.canvas || renderer?.view || app?.view || app?.canvas || null;
 }
 
 function defaultTileSize(): number {
@@ -295,6 +304,40 @@ function pointerToTile(ev: PointerEvent, opts: PointerToTileOpts = {}): PointerT
   };
 }
 
+const FARM_TILE_SIZE = 256;
+
+/**
+ * Like pointerToTile, but accounts for the garden camera's pan by projecting through the
+ * tile system's worldContainer instead of assuming canvas pixels == world pixels. pointerToTile
+ * only works when the camera sits at world origin; this is the version that works everywhere.
+ */
+function pointerToFarmTile(ev: PointerEvent): { tx: number; ty: number; gidx: number } | null {
+  assertReady();
+  const canvas = getCanvas();
+  const renderer = (state.engine as any)?.app?.renderer;
+  const worldContainer = (state.tos as any)?.worldContainer;
+  const map = (state.tos as any)?.map;
+  if (!canvas || !renderer?.screen || !worldContainer?.toLocal || !map) return null;
+
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return null;
+
+  const global = {
+    x: (ev.clientX - rect.left) * renderer.screen.width / rect.width,
+    y: (ev.clientY - rect.top) * renderer.screen.height / rect.height,
+  };
+  const world = worldContainer.toLocal(global);
+  const tx = Math.floor(world.x / FARM_TILE_SIZE);
+  const ty = Math.floor(world.y / FARM_TILE_SIZE);
+
+  const cols = Number(map.cols);
+  const rows = Number(map.rows);
+  if (!Number.isFinite(cols) || tx < 0 || ty < 0 || tx >= cols) return null;
+  if (Number.isFinite(rows) && ty >= rows) return null;
+
+  return { tx, ty, gidx: tx + ty * cols };
+}
+
 function onPointerTile(listener: PointerTileListener, opts: PointerToTileOpts = {}): () => void {
   assertReady();
   const canvas = getCanvas();
@@ -331,7 +374,7 @@ function highlightTile(tx: number, ty: number, color = 0x00ff00, opts: Highlight
   const tv = info.tileView as any;
   if (!tv) throw new Error("TileView not available");
 
-  const parent = tv.root || tv.container || tv;
+  const parent = tv.displayObject || tv.root || tv.container || tv;
   if (!parent?.addChild) throw new Error("TileView is not a display container");
 
   const PIXI = (state.engine as any)?.app?.renderer?.PIXI ?? (window as any).PIXI;
@@ -384,6 +427,114 @@ function setDebugHoverHighlight(enabled: boolean, opts: HighlightOpts & PointerT
 
   state.hoverDebug.cleanup = cleanup;
   state.hoverDebug.enabled = true;
+  return true;
+}
+
+type FlashEntry = {
+  raf: number;
+  baseline: WeakMap<any, number>;
+  touched: Set<any>;
+};
+
+const activeFlashes = new Map<number, FlashEntry>();
+
+const FLASH_DEFAULT_COLOR = 0x4ade80;
+const FLASH_DEFAULT_MIX = 1;
+const FLASH_DEFAULT_DURATION_MS = 1000;
+
+function hasTint(node: any): boolean {
+  return !!(node && typeof node.tint === "number");
+}
+
+/** Depth-first walk collecting every tintable node (Sprite/Graphics/Mesh) under `root`. */
+function collectTintable(root: any, cap = 900): any[] {
+  const out: any[] = [];
+  const stack = [root];
+  while (stack.length && out.length < cap) {
+    const node = stack.pop();
+    if (!node) continue;
+    if (hasTint(node)) out.push(node);
+    const children = node.children;
+    if (Array.isArray(children)) for (const child of children) stack.push(child);
+  }
+  return out;
+}
+
+function lerpColor(from: number, to: number, t: number): number {
+  const r0 = (from >> 16) & 255, g0 = (from >> 8) & 255, b0 = from & 255;
+  const r1 = (to >> 16) & 255, g1 = (to >> 8) & 255, b1 = to & 255;
+  const r = Math.round(r0 + (r1 - r0) * t);
+  const g = Math.round(g0 + (g1 - g0) * t);
+  const b = Math.round(b0 + (b1 - b0) * t);
+  return (r << 16) | (g << 8) | b;
+}
+
+function stopFlashTile(gidx: number): void {
+  const entry = activeFlashes.get(gidx);
+  if (!entry) return;
+  cancelAnimationFrame(entry.raf);
+  for (const node of entry.touched) {
+    const base = entry.baseline.get(node);
+    if (base == null) continue;
+    try { node.tint = base; } catch {}
+  }
+  activeFlashes.delete(gidx);
+}
+
+/**
+ * Briefly tints every sprite on a tile (the crop/decor itself, not a shape drawn over it) green,
+ * then eases back to each sprite's own original tint over `durationMs` - used by the editor as a
+ * "just placed" / "selected" cue. Tinting (rather than an overlay) follows the sprite's actual
+ * silhouette for free, and preserves any pre-existing tint (e.g. a Gold mutation) since it eases
+ * back to what each sprite already had, not to white. Re-resolves the tile's sprites on every
+ * frame - capturing a fresh baseline for any newly-appeared node - so a mid-fade tileView rebuild
+ * (the editor repaints the whole planned garden every 1s) doesn't desync or leave a stuck tint.
+ */
+function flashTileGreen(tx: number, ty: number, opts: FlashTileOpts = {}): boolean {
+  const { gidx } = getTileViewAt(Number(tx), Number(ty), true);
+  if (gidx == null) return false;
+
+  stopFlashTile(gidx);
+
+  const color = opts.color ?? FLASH_DEFAULT_COLOR;
+  const startMix = opts.startAlpha ?? FLASH_DEFAULT_MIX;
+  const durationMs = Math.max(1, opts.durationMs ?? FLASH_DEFAULT_DURATION_MS);
+
+  const resolveParent = () => {
+    const { tv } = getTileViewAt(Number(tx), Number(ty), false);
+    return tv?.displayObject || tv?.root || tv?.container || tv || null;
+  };
+
+  if (!resolveParent()) return false;
+
+  const entry: FlashEntry = { raf: 0, baseline: new WeakMap(), touched: new Set() };
+  activeFlashes.set(gidx, entry);
+
+  const start = performance.now();
+
+  const tick = (now: number) => {
+    const progress = Math.min(1, (now - start) / durationMs);
+    const mix = startMix * (1 - progress);
+
+    const parent = resolveParent();
+    if (parent) {
+      for (const node of collectTintable(parent)) {
+        if (!entry.baseline.has(node)) entry.baseline.set(node, node.tint);
+        entry.touched.add(node);
+        const base = entry.baseline.get(node)!;
+        try { node.tint = lerpColor(base, color, mix); } catch {}
+      }
+    }
+
+    if (progress >= 1) {
+      stopFlashTile(gidx);
+      return;
+    }
+
+    entry.raf = requestAnimationFrame(tick);
+  };
+
+  entry.raf = requestAnimationFrame(tick);
   return true;
 }
 
@@ -512,8 +663,14 @@ export const tos = {
     return applyTileObject(Number(tx), Number(ty), next, opts);
   },
 
+  /** Retourne le canvas Pixi du jeu (ou null si pas encore capturé) */
+  getCanvas,
+
   /** Convertit un événement pointeur en coordonnées de tile (tx, ty) */
   pointerToTile,
+
+  /** Comme pointerToTile, mais correct même quand la caméra du jardin n'est pas à l'origine */
+  pointerToFarmTile,
 
   /** Écoute les mouvements pointeur sur le canvas et appelle le callback avec les infos de tile */
   onPointerTile,
@@ -526,4 +683,7 @@ export const tos = {
 
   /** Active/désactive un mode debug qui highlight la tile sous le pointeur en temps réel */
   setDebugHoverHighlight,
+
+  /** Flash vert plein qui s'estompe sur une tile (feedback "placé"/"sélectionné" de l'éditeur) */
+  flashTileGreen,
 };
