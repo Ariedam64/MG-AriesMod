@@ -112,7 +112,7 @@
       "icon": "https://i.imgur.com/S9BowRQ.png",
       "description": "Stay connected to your garden from your phone without opening the game. The app holds a session open in the background, so you can leave it running overnight and get woken up by an alarm when a seed you have been waiting for finally shows up in the shop.\n\nIt is not just a viewer, you can actually play from it:\n\n- **Garden and shops**: plant, water, harvest, pot plants, cleanse mutations, hatch eggs, and buy seeds, tools, eggs or decor in single, bulk or hybrid mode\n- **Pets**: hunger bars, STR, live ability logs with a readable line for every proc, and up to 30 saved teams you can swap in one tap\n- **Alerts**: notifications or alarms set per section or per item, for shops, weather, pets and the trough\n- **Social**: browse and join public rooms, and chat with the room you are in\n- **Play in game**: open a real game session inside the app, with the Gemini userscript already injected, so you get the mod on mobile without setting anything up\n\nYou log in once with Discord and the session sticks. It keeps going with the screen locked thanks to a foreground service, reconnects on its own when the connection drops, and lets you tune the CPU wake lock so a long AFK night does not eat your battery. Several accounts can run at the same time in tabs.\n\nThe app checks GitHub for new versions every hour and installs them itself, no store needed.",
       "tags": [
-        "utility",
+        "apk",
         "android"
       ],
       "images": [
@@ -279,7 +279,7 @@
       "description": "Tired of being asleep when a Celestial Seed comes into shop? Busy doing something else the last time a Starweaver was up? That is exactly the problem this app solves.\n\nIt watches the shops in the background and tells you the moment something you care about comes into stock, either with a push notification or with a proper alarm if you would rather not sleep through it. You can also set a threshold per item, so it only goes off when there are enough of them in stock to be worth getting up for, and tapping the notification takes you straight to the game.\n\n- Notifications or alarms for any shop item, set separately for each shop\n- Weather event alerts on top of the shop ones\n- Your own ringtone for the alarm, picked inside the app\n- Items and weather pulled live from Arie's API, so anything new appears as soon as it lands in the game\n\nThe app checks for its own updates when it starts, and the [releases page](https://github.com/Daserix/magic-garden-notifier-releases) always has the newest build.",
       "icon": "https://i.imgur.com/l3NHmc5.png",
       "tags": [
-        "utility",
+        "apk",
         "android"
       ],
       "images": [
