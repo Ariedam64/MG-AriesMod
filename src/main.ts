@@ -28,6 +28,7 @@ import { shareGlobal } from "./utils/page-context";
 import { warmupSpriteCache } from "./ui/spriteIconCache";
 import { showAutoRecoDisabledNoticeOnce } from "./ui/autoRecoDisabledNotice";
 import { showRoomPrivacyNoticeOnce } from "./ui/roomPrivacyNotice";
+import { showChangelogNoticeOnce } from "./ui/changelogNotice";
 import { tos } from "./utils/tileObjectSystemApi";
 import { installEmojiDataFetchInterceptor, isDiscordActivityContext } from "./utils/discordCsp";
 
@@ -98,4 +99,8 @@ import { startPlayerStateReportingWhenGameReady } from "./ariesModAPI/endpoints/
   // One-time notice: rooms are public by default so other mod users can find
   // them, install MG Community Hub for a privacy toggle.
   showRoomPrivacyNoticeOnce();
+
+  // One-time notice: release notes for the version just installed, resets
+  // automatically on the next version bump.
+  void showChangelogNoticeOnce();
 })();

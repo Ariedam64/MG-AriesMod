@@ -18,6 +18,7 @@ const API_KEY_STORAGE_KEY = "aries_api_key";
 const AUTH_DECLINED_STORAGE_KEY = "aries_auth_declined";
 const SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice_v2";
 const SEEN_AUTO_RECO_DISABLED_NOTICE_KEY = "aries_seen_autoreco_disabled_notice";
+const SEEN_CHANGELOG_VERSION_KEY = "aries_seen_changelog_version";
 
 export type AriesStorage = {
   version: number;
@@ -825,6 +826,32 @@ export function markAutoRecoDisabledNoticeSeen(): void {
       return;
     }
     getHostStorage()?.setItem(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+// ---------- Changelog: last version whose notes were shown ----------
+
+export function getSeenChangelogVersion(): string | null {
+  try {
+    if (typeof GM_getValue === "function") {
+      const raw = GM_getValue(SEEN_CHANGELOG_VERSION_KEY, null);
+      return typeof raw === "string" && raw ? raw : null;
+    }
+    return getHostStorage()?.getItem(SEEN_CHANGELOG_VERSION_KEY) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function markChangelogVersionSeen(version: string): void {
+  try {
+    if (typeof GM_setValue === "function") {
+      GM_setValue(SEEN_CHANGELOG_VERSION_KEY, version);
+      return;
+    }
+    getHostStorage()?.setItem(SEEN_CHANGELOG_VERSION_KEY, version);
   } catch {
     /* ignore */
   }

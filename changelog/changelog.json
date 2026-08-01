@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "version": "3.2.187",
+      "date": "2026-08-01",
+      "title": "Tools rework, editor rework, Pet Team Builder",
+      "notes": "- **Community Tools**: the whole menu got reworked, list and detail views included, and the tools listed inside were reviewed and updated\n- **Editor**: reworked as well, placing decor now follows your mouse directly instead of snapping to a grid\n- **Pets**: new Team Builder tab"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.186
+// @version      3.2.187
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -1635,6 +1635,7 @@
   var AUTH_DECLINED_STORAGE_KEY = "aries_auth_declined";
   var SEEN_ROOM_PRIVACY_NOTICE_KEY = "aries_seen_room_privacy_notice_v2";
   var SEEN_AUTO_RECO_DISABLED_NOTICE_KEY = "aries_seen_autoreco_disabled_notice";
+  var SEEN_CHANGELOG_VERSION_KEY = "aries_seen_changelog_version";
   var DEFAULT_ARIES_STORAGE = {
     version: ARIES_STORAGE_VERSION,
     friends: {
@@ -1950,6 +1951,27 @@
         return;
       }
       getHostStorage()?.setItem(SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, "1");
+    } catch {
+    }
+  }
+  function getSeenChangelogVersion() {
+    try {
+      if (typeof GM_getValue === "function") {
+        const raw = GM_getValue(SEEN_CHANGELOG_VERSION_KEY, null);
+        return typeof raw === "string" && raw ? raw : null;
+      }
+      return getHostStorage()?.getItem(SEEN_CHANGELOG_VERSION_KEY) ?? null;
+    } catch {
+      return null;
+    }
+  }
+  function markChangelogVersionSeen(version) {
+    try {
+      if (typeof GM_setValue === "function") {
+        GM_setValue(SEEN_CHANGELOG_VERSION_KEY, version);
+        return;
+      }
+      getHostStorage()?.setItem(SEEN_CHANGELOG_VERSION_KEY, version);
     } catch {
     }
   }
@@ -20117,8 +20139,8 @@
     return ev.code === 4300 || ev.code === 4250 && (/superseded/i.test(reason) || /newer user session/i.test(reason));
   }
   function ensureAutoRecoOverlayStyle() {
-    const STYLE_ID6 = "mgAutoRecoOverlayStyle";
-    if (document.getElementById(STYLE_ID6)) return;
+    const STYLE_ID7 = "mgAutoRecoOverlayStyle";
+    if (document.getElementById(STYLE_ID7)) return;
     const css3 = `
     #mgAutoRecoOverlay { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #mgAutoRecoOverlay .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; border: 1px solid rgba(255,255,255,.15); }
@@ -20128,7 +20150,7 @@
     #mgAutoRecoOverlay .btn:focus { outline: 2px solid #7aa2ff; outline-offset: 2px; }
   `;
     const style2 = document.createElement("style");
-    style2.id = STYLE_ID6;
+    style2.id = STYLE_ID7;
     style2.textContent = css3;
     document.documentElement.appendChild(style2);
   }
@@ -24439,8 +24461,8 @@
     root.querySelectorAll(`.${injectedClass}`).forEach((n) => n.remove());
   }
   function ensureStyle(injectedClass, theme) {
-    const STYLE_ID6 = `${injectedClass}-style`;
-    if (document.getElementById(STYLE_ID6)) return;
+    const STYLE_ID7 = `${injectedClass}-style`;
+    if (document.getElementById(STYLE_ID7)) return;
     const css3 = `
 .${injectedClass}{
   font-synthesis: none;
@@ -24495,7 +24517,7 @@
 }
 `.trim();
     const s = document.createElement("style");
-    s.id = STYLE_ID6;
+    s.id = STYLE_ID7;
     s.textContent = css3;
     document.head.appendChild(s);
   }
@@ -30856,7 +30878,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.186";
+      return "3.2.187";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -48320,14 +48342,14 @@ next: ${next}`;
       box.style.borderRadius = "14px";
       box.style.boxShadow = "0 24px 60px rgba(0,0,0,0.55)";
       box.style.overflow = "hidden";
-      const dismiss3 = () => {
+      const dismiss4 = () => {
         if (closed) return;
         closed = true;
         document.removeEventListener("keydown", onKeyDown);
         overlay.remove();
       };
       const onKeyDown = (event) => {
-        if (event.key === "Escape") dismiss3();
+        if (event.key === "Escape") dismiss4();
       };
       document.addEventListener("keydown", onKeyDown);
       const close = document.createElement("button");
@@ -48342,7 +48364,7 @@ next: ${next}`;
       close.style.fontSize = "14px";
       close.style.padding = "0";
       close.style.zIndex = "2";
-      close.onclick = dismiss3;
+      close.onclick = dismiss4;
       const status = document.createElement("p");
       status.className = "mgt-state__text";
       status.textContent = "Loading image...";
@@ -48371,7 +48393,7 @@ next: ${next}`;
       box.append(close, status, zoomImg);
       overlay.appendChild(box);
       overlay.onclick = (event) => {
-        if (event.target === overlay) dismiss3();
+        if (event.target === overlay) dismiss4();
       };
       document.body.appendChild(overlay);
       void (async () => {
@@ -51438,6 +51460,172 @@ next: ${next}`;
     document.body.appendChild(overlay);
   }
 
+  // src/services/changelog.ts
+  var REPO_OWNER3 = "Ariedam64";
+  var REPO_NAME3 = "MG-AriesMod";
+  var REPO_BRANCH3 = "main";
+  var CHANGELOG_FILE_PATH = "changelog/changelog.json";
+  var RAW_BASE_URL3 = `https://raw.githubusercontent.com/${REPO_OWNER3}/${REPO_NAME3}`;
+  function parseChangelogPayload(raw) {
+    if (!raw || typeof raw !== "object") {
+      throw new Error("Invalid changelog payload: not an object");
+    }
+    const payload = raw;
+    if (!Array.isArray(payload.entries)) {
+      throw new Error("Invalid changelog payload: 'entries' is not an array");
+    }
+    const entries = [];
+    for (const entry of payload.entries) {
+      if (!entry || typeof entry !== "object") {
+        console.warn("[Changelog] Skipping invalid entry:", entry);
+        continue;
+      }
+      const e = entry;
+      const version = e.version;
+      const notes = e.notes;
+      if (!version || typeof version !== "string" || !version.trim()) {
+        console.warn("[Changelog] Skipping entry with missing/invalid version");
+        continue;
+      }
+      if (!notes || typeof notes !== "string" || !notes.trim()) {
+        console.warn("[Changelog] Skipping entry with missing/invalid notes:", version);
+        continue;
+      }
+      entries.push({
+        version,
+        notes,
+        date: typeof e.date === "string" ? e.date : void 0,
+        title: typeof e.title === "string" ? e.title : void 0
+      });
+    }
+    return entries;
+  }
+  async function fetchChangelog() {
+    const url = `${RAW_BASE_URL3}/refs/heads/${REPO_BRANCH3}/${CHANGELOG_FILE_PATH}?t=${Date.now()}`;
+    const text = await fetchText(url);
+    const raw = JSON.parse(text);
+    return parseChangelogPayload(raw);
+  }
+  async function fetchChangelogEntryForVersion(version) {
+    const entries = await fetchChangelog();
+    return entries.find((entry) => entry.version === version) ?? null;
+  }
+
+  // src/ui/changelogNotice.ts
+  var OVERLAY_ID4 = "mgChangelogNotice";
+  var STYLE_ID6 = "mgChangelogNoticeStyle";
+  var OVERLAY_Z_INDEX2 = "2147483647";
+  var ACCENT2 = "#5eead4";
+  var ACCENT_22 = "#2dd4bf";
+  var TEXT4 = "#e7eef7";
+  var TEXT_DIM4 = "rgba(231,238,247,0.68)";
+  function ensureStyle4() {
+    if (document.getElementById(STYLE_ID6)) return;
+    const style2 = document.createElement("style");
+    style2.id = STYLE_ID6;
+    style2.textContent = `
+#${OVERLAY_ID4} {
+  position: fixed; inset: 0; z-index: ${OVERLAY_Z_INDEX2};
+  display: grid; place-items: center; padding: 20px;
+  background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+#${OVERLAY_ID4} .mgcl-box {
+  width: 440px; max-width: 92vw; max-height: 85vh; overflow-y: auto;
+  padding: 22px 24px; border-radius: 16px;
+  border: 1px solid rgba(94,234,212,0.20);
+  background:
+    radial-gradient(130% 150% at 0% 0%, rgba(94,234,212,0.10), transparent 55%),
+    linear-gradient(160deg, rgba(18,24,34,0.97), rgba(10,14,20,0.98));
+  box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+  color: ${TEXT4};
+}
+#${OVERLAY_ID4} .mgcl-eyebrow {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: ${ACCENT2}; margin: 0 0 6px;
+}
+#${OVERLAY_ID4} .mgcl-title { font-size: 18px; font-weight: 750; margin: 0 0 4px; }
+#${OVERLAY_ID4} .mgcl-version { font-size: 11.5px; color: ${TEXT_DIM4}; margin: 0 0 16px; }
+#${OVERLAY_ID4} .mgcl-body { font-size: 12.5px; line-height: 1.65; color: rgba(231,238,247,0.85); }
+#${OVERLAY_ID4} .mgcl-body > :first-child { margin-top: 0; }
+#${OVERLAY_ID4} .mgcl-body > :last-child { margin-bottom: 0; }
+#${OVERLAY_ID4} .mgcl-body p { margin: 0 0 10px; }
+#${OVERLAY_ID4} .mgcl-body ul { margin: 0 0 10px; padding-left: 18px; list-style: disc; }
+#${OVERLAY_ID4} .mgcl-body li { margin: 3px 0; }
+#${OVERLAY_ID4} .mgcl-body strong { color: ${TEXT4}; font-weight: 700; }
+#${OVERLAY_ID4} .mgcl-body code {
+  padding: 1px 5px; border-radius: 5px; font-size: 0.9em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: ${ACCENT2}; background: rgba(94,234,212,0.08); border: 1px solid rgba(94,234,212,0.16);
+}
+#${OVERLAY_ID4} .mgcl-body a {
+  color: ${ACCENT2}; text-decoration: none; border-bottom: 1px solid rgba(94,234,212,0.35);
+}
+#${OVERLAY_ID4} .mgcl-body a:hover { color: ${ACCENT_22}; border-bottom-color: ${ACCENT_22}; }
+#${OVERLAY_ID4} .mgcl-close {
+  margin-top: 18px; width: 100%; padding: 10px 16px; border-radius: 10px; cursor: pointer;
+  border: none; color: #06181c; font-size: 13px; font-weight: 700;
+  background: linear-gradient(135deg, ${ACCENT2}, ${ACCENT_22});
+  box-shadow: 0 4px 16px rgba(94,234,212,0.20);
+}
+#${OVERLAY_ID4} .mgcl-close:hover { filter: brightness(1.08); }
+#${OVERLAY_ID4} .mgcl-close:focus-visible { outline: 2px solid ${ACCENT2}; outline-offset: 2px; }
+  `;
+    document.head.appendChild(style2);
+  }
+  function dismiss3(overlay, version) {
+    markChangelogVersionSeen(version);
+    overlay.remove();
+  }
+  function buildOverlay(entry) {
+    const overlay = document.createElement("div");
+    overlay.id = OVERLAY_ID4;
+    const box = document.createElement("div");
+    box.className = "mgcl-box";
+    box.setAttribute("role", "dialog");
+    box.setAttribute("aria-label", "What's new");
+    const eyebrow = document.createElement("p");
+    eyebrow.className = "mgcl-eyebrow";
+    eyebrow.textContent = "What's new";
+    const title = document.createElement("h2");
+    title.className = "mgcl-title";
+    title.textContent = entry.title?.trim() || "This update brings:";
+    const versionLine = document.createElement("p");
+    versionLine.className = "mgcl-version";
+    versionLine.textContent = entry.date ? `v${entry.version} \xB7 ${entry.date}` : `v${entry.version}`;
+    const body = document.createElement("div");
+    body.className = "mgcl-body";
+    body.innerHTML = renderMarkdown(entry.notes);
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "mgcl-close";
+    close.textContent = "Got it";
+    close.onclick = () => dismiss3(overlay, entry.version);
+    box.append(eyebrow, title, versionLine, body, close);
+    overlay.appendChild(box);
+    overlay.onclick = (event) => {
+      if (event.target === overlay) dismiss3(overlay, entry.version);
+    };
+    return overlay;
+  }
+  async function showChangelogNoticeOnce() {
+    if (typeof document === "undefined" || !document.body) return;
+    const version = getLocalVersion();
+    if (!version) return;
+    if (getSeenChangelogVersion() === version) return;
+    if (document.getElementById(OVERLAY_ID4)) return;
+    let entry;
+    try {
+      entry = await fetchChangelogEntryForVersion(version);
+    } catch (error) {
+      console.warn("[Changelog] Failed to load changelog:", error);
+      return;
+    }
+    if (!entry) return;
+    ensureStyle4();
+    document.body.appendChild(buildOverlay(entry));
+  }
+
   // src/ariesModAPI/auth/bridge.ts
   function normalizeAuthPayload(data) {
     if (!data || data.type !== "aries_discord_auth" || !data.apiKey) return null;
@@ -51872,5 +52060,6 @@ next: ${next}`;
     antiAfk.start();
     startPlayerStateReportingWhenGameReady();
     showRoomPrivacyNoticeOnce();
+    void showChangelogNoticeOnce();
   })();
 })();
