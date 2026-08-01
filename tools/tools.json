@@ -1,6 +1,47 @@
 {
   "tools": [
     {
+      "id": "gemini",
+      "title": "Gemini",
+      "icon": "♊",
+      "description": "The mod this very menu lives in. A browser overlay for Magic Garden that adds the quality of life the game leaves out, opened with `Alt + X` or `Insert`.\n\n- **Pets**: named teams of 3 you can swap with a hotkey, feeding rules per species, hatch counters and a searchable ability log\n- **Locker**: rules on size, mutations and weather that stop you selling the wrong crop, plus locks on decor, eggs and the sell all pets action. Locked crops get an outline in the garden so you can see them at a glance\n- **Alerts**: pick any shop item or weather event and get a bell, a sound, and a panel with Buy and Buy All the moment it lands\n- **Calculator**: the exact coin value of a crop from its size, mutations, weather and friend bonus, with a live sprite preview\n- **Room**: everyone around you, with teleport, follow, and a look at their inventory, journal or garden value\n- **Editor**: a sandbox with every plant and decor unlocked for planning layouts, and gardens you can save or import\n- **Misc**: ghost mode, inventory guard, auto-store into the silo and shed, and bulk seed or decor deletion\n\nJust about everything is rebindable, and your whole configuration can be exported, backed up and restored.\n\nWorks on magicgarden.gg, magiccircle.gg, starweaver.org and the Discord Activity in a browser. You need Tampermonkey or Violentmonkey to install it. The social side, friends, DMs and leaderboard, now lives in [MG Community Hub](https://github.com/Ariedam64/MG-CommunityHub), which runs alongside without conflicts.",
+      "tags": [
+        "mod"
+      ],
+      "images": [
+        "https://i.imgur.com/8cRIWuL.png",
+        "https://i.imgur.com/srwdo0A.png",
+        "https://i.imgur.com/pYOAOGv.png",
+        "https://i.imgur.com/CgLVV5r.png",
+        "https://i.imgur.com/XGEYkiT.png",
+        "https://i.imgur.com/Ms3zuQC.png"
+      ],
+      "actions": [
+        {
+          "label": "Install",
+          "url": "https://github.com/Ariedam64/Gemini/releases/latest/download/gemini.user.js"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/Ariedam64/Gemini"
+        },
+        {
+          "label": "Discord",
+          "url": "https://discord.gg/qFpQ436HZc"
+        }
+      ],
+      "creators": [
+        {
+          "name": "Arie",
+          "avatar": "https://i.imgur.com/eRhqdPQ.png"
+        },
+        {
+          "name": "Tokyo",
+          "avatar": "https://cdn.discordapp.com/avatars/511094276613210122/c2af3c8ff2123724ba49b7e897d0ce97.png"
+        }
+      ]
+    },
+    {
       "id": "garden-explorer",
       "title": "Garden Explorer",
       "icon": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%235eead4%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%229%22%2F%3E%3Cpath%20d%3D%22M3%2012h18%22%2F%3E%3Cpath%20d%3D%22M12%203a14.5%2014.5%200%200%201%200%2018%2014.5%2014.5%200%200%201%200-18z%22%2F%3E%3C%2Fsvg%3E",
