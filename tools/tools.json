@@ -3,7 +3,7 @@
     {
       "id": "gemini",
       "title": "Gemini",
-      "icon": "♊",
+      "icon": "https://i.imgur.com/CtHVvb9.png",
       "description": "A userscript built to run on **phones as much as on PC**, and that is really the point of it. The PC side already has well developed mods, so this one puts mobile first, which everyone else tends to ignore.\n\nIt is not a mega mod with dozens of features. It covers the essentials and tries to do them properly:\n\n- **Locker**, so you stop selling what you meant to keep\n- **Pets management**\n- **Public rooms**\n- **Avatar loadouts**\n- **Crop value**\n- **Alerts system**\n\nThree things drove the build: that it actually be usable on a phone, that it stay simple to extend, and that it survive game updates instead of breaking every other day.\n\n**On Android** you need a browser that accepts extensions, so either Firefox with Violentmonkey, or Kiwi Browser and its Chrome extensions. **On PC** it is Tampermonkey, like any other userscript. The HUD toggles with `Ctrl + Shift + U`.\n\nSeveral browsers are supported, though some environments are still rough, Discord Activities in particular. Bugs can happen, and [GitHub](https://github.com/Ariedam64/Gemini) is the place to report them.",
       "tags": [
         "mod",
