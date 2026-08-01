@@ -1,18 +1,5 @@
 // Carousel component for displaying tool images
-import { getBlob } from "../../../utils/mgCommon";
-
-async function fetchImageBlob(url: string): Promise<Blob> {
-  try {
-    return await getBlob(url);
-  } catch (gmError) {
-    console.warn("[Carousel] GM_xmlhttpRequest failed, trying fetch:", gmError);
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status} while loading ${url}`);
-    }
-    return await res.blob();
-  }
-}
+import { fetchImageBlob } from "./image";
 
 export function renderCarousel(images: string[]): { root: HTMLElement } {
   const root = document.createElement("div");

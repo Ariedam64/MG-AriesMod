@@ -48047,6 +48047,69 @@ next: ${next}`;
     return openUrl(url);
   }
 
+  // src/ui/menus/tools/image.ts
+  var ICON_SIZE_PX = 22;
+  var EMOJI_FONT_SIZE_PX = 18;
+  async function fetchImageBlob(url) {
+    try {
+      return await getBlob2(url);
+    } catch (gmError) {
+      console.warn("[Tools] GM_xmlhttpRequest failed, trying fetch:", gmError);
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status} while loading ${url}`);
+      }
+      return await res.blob();
+    }
+  }
+  function isImageUrl(icon) {
+    return /^https?:\/\//i.test(icon.trim());
+  }
+  function createToolIcon(icon) {
+    if (!isImageUrl(icon)) {
+      const span = document.createElement("span");
+      span.textContent = icon;
+      span.style.fontSize = `${EMOJI_FONT_SIZE_PX}px`;
+      span.style.lineHeight = "1";
+      span.style.flexShrink = "0";
+      return span;
+    }
+    const img = document.createElement("img");
+    img.alt = "";
+    img.style.width = `${ICON_SIZE_PX}px`;
+    img.style.height = `${ICON_SIZE_PX}px`;
+    img.style.objectFit = "contain";
+    img.style.display = "block";
+    img.style.flexShrink = "0";
+    img.style.mixBlendMode = "screen";
+    img.style.isolation = "isolate";
+    void (async () => {
+      try {
+        const blob = await fetchImageBlob(icon);
+        const objectUrl = URL.createObjectURL(blob);
+        img.onload = () => URL.revokeObjectURL(objectUrl);
+        img.src = objectUrl;
+      } catch (error) {
+        console.warn("[Tools] Unable to load icon:", icon, error);
+        img.remove();
+      }
+    })();
+    return img;
+  }
+  function loadImageInto(img, url) {
+    void (async () => {
+      try {
+        const blob = await fetchImageBlob(url);
+        const objectUrl = URL.createObjectURL(blob);
+        img.onload = () => URL.revokeObjectURL(objectUrl);
+        img.src = objectUrl;
+      } catch (error) {
+        console.warn("[Tools] Unable to load image:", url, error);
+        img.style.display = "none";
+      }
+    })();
+  }
+
   // src/ui/menus/tools/list-view.ts
   function renderListView(ui, tools, onSelectTool) {
     const root = document.createElement("div");
@@ -48150,10 +48213,7 @@ next: ${next}`;
         header.style.alignItems = "center";
         header.style.gap = "10px";
         if (tool.icon) {
-          const iconSpan = document.createElement("span");
-          iconSpan.textContent = tool.icon;
-          iconSpan.style.fontSize = "18px";
-          header.appendChild(iconSpan);
+          header.appendChild(createToolIcon(tool.icon));
         }
         const titleText = document.createElement("span");
         titleText.textContent = tool.title;
@@ -48283,18 +48343,6 @@ next: ${next}`;
   }
 
   // src/ui/menus/tools/carousel.ts
-  async function fetchImageBlob(url) {
-    try {
-      return await getBlob2(url);
-    } catch (gmError) {
-      console.warn("[Carousel] GM_xmlhttpRequest failed, trying fetch:", gmError);
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status} while loading ${url}`);
-      }
-      return await res.blob();
-    }
-  }
   function renderCarousel(images) {
     const root = document.createElement("div");
     root.style.display = "flex";
@@ -48558,7 +48606,7 @@ next: ${next}`;
     const headerCard = ui.card(tool.title, {
       tone: "muted",
       align: "stretch",
-      icon: tool.icon || void 0
+      icon: tool.icon ? createToolIcon(tool.icon) : void 0
     });
     headerCard.root.style.borderColor = "#2d8cff44";
     headerCard.root.style.background = "linear-gradient(135deg, #0f1318 0%, #1a2332 100%)";
@@ -48579,8 +48627,8 @@ next: ${next}`;
         chip.style.borderRadius = "999px";
         if (creator.avatar) {
           const avatar2 = document.createElement("img");
-          avatar2.src = creator.avatar;
           avatar2.alt = creator.name;
+          loadImageInto(avatar2, creator.avatar);
           avatar2.style.width = "26px";
           avatar2.style.height = "26px";
           avatar2.style.borderRadius = "999px";

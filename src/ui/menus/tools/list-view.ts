@@ -1,6 +1,7 @@
 // List view: filter bar + clickable tool cards
 import { Menu } from "../../menu";
 import type { ExternalTool } from "../../../services/tools";
+import { createToolIcon } from "./image";
 
 export function renderListView(
   ui: Menu,
@@ -125,10 +126,7 @@ export function renderListView(
       header.style.gap = "10px";
 
       if (tool.icon) {
-        const iconSpan = document.createElement("span");
-        iconSpan.textContent = tool.icon;
-        iconSpan.style.fontSize = "18px";
-        header.appendChild(iconSpan);
+        header.appendChild(createToolIcon(tool.icon));
       }
 
       const titleText = document.createElement("span");

@@ -4,6 +4,7 @@ import type { ExternalTool } from "../../../services/tools";
 import { openLink } from "../../../services/tools";
 import { renderMarkdown } from "../../../utils/markdown";
 import { renderCarousel } from "./carousel";
+import { createToolIcon, loadImageInto } from "./image";
 
 export function renderDetailView(
   ui: Menu,
@@ -32,7 +33,7 @@ export function renderDetailView(
   const headerCard = ui.card(tool.title, {
     tone: "muted",
     align: "stretch",
-    icon: tool.icon || undefined,
+    icon: tool.icon ? createToolIcon(tool.icon) : undefined,
   });
   headerCard.root.style.borderColor = "#2d8cff44";
   headerCard.root.style.background = "linear-gradient(135deg, #0f1318 0%, #1a2332 100%)";
@@ -57,8 +58,8 @@ export function renderDetailView(
 
       if (creator.avatar) {
         const avatar = document.createElement("img");
-        avatar.src = creator.avatar;
         avatar.alt = creator.name;
+        loadImageInto(avatar, creator.avatar);
         avatar.style.width = "26px";
         avatar.style.height = "26px";
         avatar.style.borderRadius = "999px";
