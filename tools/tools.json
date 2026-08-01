@@ -253,6 +253,26 @@
       ]
     },
     {
+      "id": "liam-hub",
+      "title": "Liam's Tool Hub",
+      "description": "One page gathering every tool Liam has built for Magic Garden, so there is a single link to bookmark instead of digging through Discord threads.\n\n- **Pet Feeding**: shows which food is best for your pets and how many food plants or seeds you will go through\n- **Granter Calc**: estimates pet ability chances, average wait times and egg growth boosts\n- **Magic Dust**: estimates pet dust value and expected dust from egg batches\n- **Dawn Capsule**: estimates Dawn Capsules per Dawn and compares capture cadence\n- **Farm Projection**: projects a farm's finished value and the time needed to get there, with various mutations\n- **Celestial Layout Planner**: plans celestial placements with Dawn and Amber mutation coverage\n- **Garden Layout Planner**: plans your whole farm layout, plants and decorations\n\nThe hub also links out to Garden Overview, a userscript for viewing stats on your whole garden, plus Garden Companion and a couple of smaller userscripts, through their Discord posts.",
+      "tags": [
+        "utility"
+      ],
+      "actions": [
+        {
+          "label": "Open Hub",
+          "url": "https://liam0306dis.github.io/hub/"
+        }
+      ],
+      "creators": [
+        {
+          "name": "Liam",
+          "avatar": "https://i.imgur.com/8ha8EyR.png"
+        }
+      ]
+    },
+    {
       "id": "calculator",
       "title": "Daserix' Magic Garden Calculators",
       "description": "A set of calculators for the numbers the game keeps to itself, all in one page and nothing to install.\n\nThe one you'll actually use is the [Sell Price Calculator](https://daserix.github.io/magic-garden-calculator/#/sell-price-calculator): pick a crop, set its size and its mutations, and it tells you what it will go for. A few more sit alongside it for [weight](https://daserix.github.io/magic-garden-calculator/#/weight-probability-calculator), [pet appearance](https://daserix.github.io/magic-garden-calculator/#/pet-appearance-probability-calculator) and [ability trigger](https://daserix.github.io/magic-garden-calculator/#/ability-trigger-time-calculator) odds if you ever need them.\n\nYou can also [import your garden](https://daserix.github.io/magic-garden-calculator/#/import) by pasting a short script into your browser console and dropping the json it gives you onto the site. Your garden and inventory then show up in the tool, with filters and your total worth, which is handy for seeing what you're sitting on before you decide what to harvest.",
