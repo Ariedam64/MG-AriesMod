@@ -5,9 +5,47 @@ import { Menu } from "../menu";
 import { fetchTools, type ExternalTool } from "../../services/tools";
 import { renderListView } from "./tools/list-view";
 import { renderDetailView } from "./tools/detail-view";
+import { ensureToolsStyles } from "./tools/styles";
 import { swapViews } from "./tools/transition";
 
+const WRAPPER_WIDTH_PX = 720;
+
+function createIntro(): { root: HTMLElement; setCount: (count: number) => void } {
+  const root = document.createElement("div");
+  root.className = "mgt-intro";
+
+  const head = document.createElement("div");
+  head.className = "mgt-intro__head";
+
+  const title = document.createElement("span");
+  title.className = "mgt-intro__title";
+  title.textContent = "🧰 Community Tools";
+
+  const count = document.createElement("span");
+  count.className = "mgt-intro__count";
+  count.style.visibility = "hidden";
+
+  head.append(title, count);
+
+  const text = document.createElement("p");
+  text.className = "mgt-intro__text";
+  text.textContent =
+    "Discover community-made helpers to plan, calculate, and simplify your Magic Garden adventures.";
+
+  root.append(head, text);
+
+  return {
+    root,
+    setCount(value: number) {
+      count.textContent = `${value} ${value === 1 ? "tool" : "tools"}`;
+      count.style.visibility = "visible";
+    },
+  };
+}
+
 export async function renderToolsMenu(container: HTMLElement) {
+  ensureToolsStyles();
+
   const ui = new Menu({ id: "tools", compact: true });
   ui.mount(container);
 
@@ -15,79 +53,64 @@ export async function renderToolsMenu(container: HTMLElement) {
   view.innerHTML = "";
   view.style.display = "flex";
   view.style.flexDirection = "column";
-  view.style.gap = "12px";
   view.style.alignItems = "center";
   view.style.padding = "8px";
   view.style.width = "100%";
   view.style.maxHeight = "70vh";
   view.style.overflowY = "auto";
-  view.style.overflowX = "auto";
 
-  const WRAPPER_WIDTH = 720;
   const wrapper = document.createElement("div");
-  wrapper.style.display = "flex";
-  wrapper.style.flexDirection = "column";
-  wrapper.style.gap = "12px";
-  wrapper.style.width = `${WRAPPER_WIDTH}px`;
-  wrapper.style.minWidth = `${WRAPPER_WIDTH}px`;
-  wrapper.style.maxWidth = `${WRAPPER_WIDTH}px`;
+  wrapper.className = "mgt-wrap";
+  wrapper.style.width = `${WRAPPER_WIDTH_PX}px`;
+  wrapper.style.minWidth = `${WRAPPER_WIDTH_PX}px`;
+  wrapper.style.maxWidth = "100%";
   wrapper.style.boxSizing = "border-box";
-  wrapper.style.alignSelf = "center";
 
-  // Intro card
-  const intro = ui.card("🧰 Community Tools", { tone: "muted", align: "stretch" });
-  intro.root.style.borderColor = "#2d8cff44";
-  intro.root.style.background = "linear-gradient(135deg, #0f1318 0%, #1a2332 100%)";
-  const introText = document.createElement("p");
-  introText.textContent = "Discover community-made helpers to plan, calculate, and simplify your Magic Garden adventures.";
-  introText.style.margin = "0";
-  introText.style.fontSize = "13px";
-  introText.style.lineHeight = "1.6";
-  introText.style.opacity = "0.88";
-  introText.style.textAlign = "left";
-  intro.body.appendChild(introText);
+  const intro = createIntro();
   wrapper.appendChild(intro.root);
 
-  // View container
   const viewContainer = document.createElement("div");
-  viewContainer.style.position = "relative";
-  viewContainer.style.width = "100%";
-  viewContainer.style.flex = "1";
-
+  viewContainer.className = "mgt-views";
   wrapper.appendChild(viewContainer);
   view.appendChild(wrapper);
 
-  // Loading state
   const showLoading = () => {
     viewContainer.innerHTML = "";
-    const loadingCard = ui.card("Loading...", { tone: "muted", align: "stretch" });
-    loadingCard.body.style.textAlign = "center";
+    const state = document.createElement("div");
+    state.className = "mgt-state";
+
     const spinner = document.createElement("div");
-    spinner.textContent = "Fetching tools...";
-    spinner.style.opacity = "0.75";
-    spinner.style.fontSize = "13px";
-    loadingCard.body.appendChild(spinner);
-    viewContainer.appendChild(loadingCard.root);
+    spinner.className = "mgt-spinner";
+
+    const text = document.createElement("p");
+    text.className = "mgt-state__text";
+    text.textContent = "Fetching the latest tools...";
+
+    state.append(spinner, text);
+    viewContainer.appendChild(state);
   };
 
-  // Error state
-  const showError = (error: Error) => {
+  const showError = (message: string) => {
     viewContainer.innerHTML = "";
-    const errorCard = ui.card("Error", { tone: "muted", align: "stretch" });
-    const errorText = document.createElement("p");
-    errorText.textContent = error.message || "Failed to load tools.";
-    errorText.style.margin = "0 0 12px 0";
-    errorText.style.opacity = "0.9";
-    errorText.style.fontSize = "13px";
-    errorCard.body.appendChild(errorText);
+    const state = document.createElement("div");
+    state.className = "mgt-state";
 
-    const retryBtn = ui.btn("Retry", { variant: "primary", fullWidth: true });
-    retryBtn.onclick = () => {
-      void init();
-    };
-    errorCard.body.appendChild(retryBtn);
+    const title = document.createElement("span");
+    title.className = "mgt-state__title";
+    title.textContent = "Couldn't load the tools";
 
-    viewContainer.appendChild(errorCard.root);
+    const text = document.createElement("p");
+    text.className = "mgt-state__text";
+    text.textContent = message;
+
+    const retry = document.createElement("button");
+    retry.type = "button";
+    retry.className = "mgt-action is-primary";
+    retry.textContent = "Retry";
+    retry.onclick = () => void init();
+
+    state.append(title, text, retry);
+    viewContainer.appendChild(state);
   };
 
   let tools: ExternalTool[] = [];
@@ -96,28 +119,23 @@ export async function renderToolsMenu(container: HTMLElement) {
 
   const showListView = async () => {
     if (listViewRoot) {
-      // List already rendered, just swap to it
+      // The list stays mounted, so returning to it only needs the animation.
       if (detailViewRoot && detailViewRoot.parentNode === viewContainer) {
         await swapViews(viewContainer, detailViewRoot, listViewRoot, "back");
       }
       return;
     }
 
-    // Render list for the first time
-    const listView = renderListView(ui, tools, showDetailView);
-    listViewRoot = listView.root;
+    listViewRoot = renderListView(tools, showDetailView).root;
     viewContainer.appendChild(listViewRoot);
   };
 
   const showDetailView = async (tool: ExternalTool) => {
-    const detailView = renderDetailView(ui, tool, showListView);
-    detailViewRoot = detailView.root;
+    detailViewRoot = renderDetailView(tool, showListView).root;
+    viewContainer.appendChild(detailViewRoot);
 
     if (listViewRoot && listViewRoot.parentNode === viewContainer) {
-      viewContainer.appendChild(detailViewRoot);
       await swapViews(viewContainer, listViewRoot, detailViewRoot, "forward");
-    } else {
-      viewContainer.appendChild(detailViewRoot);
     }
   };
 
@@ -128,9 +146,11 @@ export async function renderToolsMenu(container: HTMLElement) {
       tools = await fetchTools();
 
       if (!tools.length) {
-        showError(new Error("No tools available."));
+        showError("No tools are available right now.");
         return;
       }
+
+      intro.setCount(tools.length);
 
       viewContainer.innerHTML = "";
       listViewRoot = null;
@@ -138,11 +158,9 @@ export async function renderToolsMenu(container: HTMLElement) {
 
       await showListView();
     } catch (error) {
-      const err = error instanceof Error ? error : new Error("Unknown error");
-      showError(err);
+      showError(error instanceof Error ? error.message : "Unknown error.");
     }
   };
 
-  // Start
   await init();
 }

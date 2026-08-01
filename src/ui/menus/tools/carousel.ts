@@ -1,4 +1,5 @@
-// Carousel component for displaying tool images
+// Carousel component for displaying tool images.
+// Styling lives in styles.ts (`.mgt-carousel`, `.mgt-nav`, `.mgt-dot`).
 import { fetchImageBlob } from "./image";
 
 /** Same top-layer value used by the other full-screen overlays (sellAllPets, roomPrivacyNotice). */
@@ -12,10 +13,7 @@ type Slide = { root: HTMLElement; img: HTMLImageElement };
 
 export function renderCarousel(images: string[]): { root: HTMLElement } {
   const root = document.createElement("div");
-  root.style.display = "flex";
-  root.style.flexDirection = "column";
-  root.style.gap = "12px";
-  root.style.width = "100%";
+  root.className = "mgt-carousel";
 
   if (!images.length) {
     return { root };
@@ -23,50 +21,23 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
 
   const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const container = document.createElement("div");
-  container.style.position = "relative";
-  container.style.width = "100%";
-  container.style.background = "#ffffff05";
-  container.style.borderRadius = "8px";
-  container.style.overflow = "hidden";
-  container.style.aspectRatio = "16 / 10";
-
-  const imageWrapper = document.createElement("div");
-  imageWrapper.style.position = "relative";
-  imageWrapper.style.width = "100%";
-  imageWrapper.style.height = "100%";
-  imageWrapper.style.overflow = "hidden";
+  const stage = document.createElement("div");
+  stage.className = "mgt-carousel__stage";
 
   let currentIndex = 0;
   let transitioning = false;
   const cachedUrls = new Map<string, string>();
 
-  const createSlide = (): Slide => {
-    const slideRoot = document.createElement("div");
-    slideRoot.style.position = "absolute";
-    slideRoot.style.inset = "0";
-    slideRoot.style.display = "flex";
-    slideRoot.style.alignItems = "center";
-    slideRoot.style.justifyContent = "center";
+  /** Fetches (once) and caches a blob URL for a remote image. */
+  const resolveImageUrl = async (imageUrl: string): Promise<string> => {
+    const cached = cachedUrls.get(imageUrl);
+    if (cached) return cached;
 
-    const img = document.createElement("img");
-    img.alt = "Tool preview";
-    img.style.maxWidth = "100%";
-    img.style.maxHeight = "100%";
-    img.style.objectFit = "contain";
-    img.style.display = "block";
-    img.style.cursor = "zoom-in";
-    img.onclick = () => openImageZoom(images[currentIndex]);
-
-    slideRoot.appendChild(img);
-    return { root: slideRoot, img };
+    const blob = await fetchImageBlob(imageUrl);
+    const objectUrl = URL.createObjectURL(blob);
+    cachedUrls.set(imageUrl, objectUrl);
+    return objectUrl;
   };
-
-  // Two layers: the visible one and the one being swapped in.
-  let activeSlide = createSlide();
-  let pendingSlide = createSlide();
-  pendingSlide.root.style.opacity = "0";
-  imageWrapper.append(activeSlide.root, pendingSlide.root);
 
   const openImageZoom = (imageUrl: string) => {
     let closed = false;
@@ -85,10 +56,10 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
     box.style.position = "relative";
     box.style.maxWidth = "90vw";
     box.style.maxHeight = "90vh";
-    box.style.background = "#0f1318";
-    box.style.border = "1px solid #ffffff22";
-    box.style.borderRadius = "12px";
-    box.style.boxShadow = "0 20px 50px rgba(0,0,0,0.45)";
+    box.style.background = "#0a0e14";
+    box.style.border = "1px solid rgba(94,234,212,0.20)";
+    box.style.borderRadius = "14px";
+    box.style.boxShadow = "0 24px 60px rgba(0,0,0,0.55)";
     box.style.overflow = "hidden";
 
     const dismiss = () => {
@@ -104,31 +75,23 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
     document.addEventListener("keydown", onKeyDown);
 
     const close = document.createElement("button");
-    close.textContent = "✕";
     close.type = "button";
+    close.className = "mgt-nav";
+    close.textContent = "✕";
+    close.title = "Close";
     close.style.position = "absolute";
-    close.style.top = "8px";
-    close.style.right = "8px";
-    close.style.borderRadius = "8px";
-    close.style.background = "#0009";
-    close.style.color = "#fff";
-    close.style.width = "32px";
-    close.style.height = "32px";
-    close.style.cursor = "pointer";
-    close.style.fontSize = "16px";
-    close.style.lineHeight = "1";
-    close.style.display = "grid";
-    close.style.placeItems = "center";
-    close.style.zIndex = "2";
-    close.style.border = "none";
+    close.style.top = "10px";
+    close.style.right = "10px";
+    close.style.transform = "none";
+    close.style.fontSize = "14px";
     close.style.padding = "0";
+    close.style.zIndex = "2";
     close.onclick = dismiss;
 
-    const status = document.createElement("div");
-    status.textContent = "Loading zoom...";
-    status.style.padding = "14px 18px";
-    status.style.fontSize = "13px";
-    status.style.opacity = "0.85";
+    const status = document.createElement("p");
+    status.className = "mgt-state__text";
+    status.textContent = "Loading image...";
+    status.style.padding = "18px 22px";
 
     const zoomImg = document.createElement("img");
     zoomImg.alt = "Zoomed image";
@@ -140,7 +103,8 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
     zoomImg.style.display = "none";
 
     let zoomedState = false;
-    const toggleZoom = (event: MouseEvent) => {
+    zoomImg.onclick = (event) => {
+      event.stopPropagation();
       if (!zoomedState) {
         const rect = zoomImg.getBoundingClientRect();
         const x = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1) * 100;
@@ -150,11 +114,6 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
       zoomedState = !zoomedState;
       zoomImg.style.transform = zoomedState ? `scale(${ZOOM_SCALE})` : "scale(1)";
       zoomImg.style.cursor = zoomedState ? "zoom-out" : "zoom-in";
-    };
-
-    zoomImg.onclick = (event) => {
-      event.stopPropagation();
-      toggleZoom(event);
     };
 
     box.append(close, status, zoomImg);
@@ -182,29 +141,36 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
     })();
   };
 
-  /** Fetches (once) and caches a blob URL for a remote image. */
-  const resolveImageUrl = async (imageUrl: string): Promise<string> => {
-    const cached = cachedUrls.get(imageUrl);
-    if (cached) return cached;
+  const createSlide = (): Slide => {
+    const slideRoot = document.createElement("div");
+    slideRoot.className = "mgt-carousel__slide";
 
-    const blob = await fetchImageBlob(imageUrl);
-    const objectUrl = URL.createObjectURL(blob);
-    cachedUrls.set(imageUrl, objectUrl);
-    return objectUrl;
+    const img = document.createElement("img");
+    img.alt = "Tool preview";
+    img.onclick = () => openImageZoom(images[currentIndex]);
+
+    slideRoot.appendChild(img);
+    return { root: slideRoot, img };
   };
 
-  /** Waits for the <img> to actually have pixels, so the swap never animates a blank frame. */
-  const awaitDecode = (img: HTMLImageElement): Promise<void> =>
-    img.decode().catch(() => undefined);
+  // Two layers: the visible one and the one being swapped in.
+  let activeSlide = createSlide();
+  let pendingSlide = createSlide();
+  pendingSlide.root.style.opacity = "0";
+  stage.append(activeSlide.root, pendingSlide.root);
+
+  const dots = document.createElement("div");
+  dots.className = "mgt-dots";
 
   const updateIndicators = () => {
-    dotsContainer.querySelectorAll("button").forEach((dot, idx) => {
-      dot.style.opacity = idx === currentIndex ? "1" : "0.4";
+    dots.querySelectorAll("button").forEach((dot, index) => {
+      dot.classList.toggle("is-active", index === currentIndex);
     });
   };
 
   /** Wraps around both ends so navigation is infinite. */
-  const normalizeIndex = (index: number) => ((index % images.length) + images.length) % images.length;
+  const normalizeIndex = (index: number) =>
+    ((index % images.length) + images.length) % images.length;
 
   const goTo = async (rawIndex: number, direction: "next" | "prev") => {
     if (transitioning || images.length === 0) return;
@@ -214,12 +180,11 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
 
     transitioning = true;
     try {
-      const blobUrl = await resolveImageUrl(images[index]);
-      pendingSlide.img.src = blobUrl;
-      await awaitDecode(pendingSlide.img);
+      pendingSlide.img.src = await resolveImageUrl(images[index]);
+      // Waits for actual pixels, so the swap never animates a blank frame.
+      await pendingSlide.img.decode().catch(() => undefined);
 
       const offset = direction === "next" ? SWAP_OFFSET_PX : -SWAP_OFFSET_PX;
-
       const running: Animation[] = [];
 
       if (!prefersReduced) {
@@ -266,77 +231,35 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
     }
   };
 
-  const makeNavButton = (label: string, side: "left" | "right") => {
-    const btn = document.createElement("button");
-    btn.textContent = label;
-    btn.type = "button";
-    btn.style.position = "absolute";
-    btn.style[side] = "12px";
-    btn.style.top = "50%";
-    btn.style.transform = "translateY(-50%)";
-    btn.style.background = "#000000aa";
-    btn.style.border = "1px solid #ffffff33";
-    btn.style.color = "#fff";
-    btn.style.width = "40px";
-    btn.style.height = "40px";
-    btn.style.borderRadius = "50%";
-    btn.style.cursor = "pointer";
-    btn.style.fontSize = "24px";
-    btn.style.display = "flex";
-    btn.style.alignItems = "center";
-    btn.style.justifyContent = "center";
-    btn.style.zIndex = "1";
-    btn.style.transition = "background 150ms ease";
-    btn.onmouseenter = () => {
-      btn.style.background = "#000000dd";
-    };
-    btn.onmouseleave = () => {
-      btn.style.background = "#000000aa";
-    };
-    return btn;
-  };
-
-  const prevBtn = makeNavButton("‹", "left");
-  prevBtn.onclick = () => void goTo(currentIndex - 1, "prev");
-
-  const nextBtn = makeNavButton("›", "right");
-  nextBtn.onclick = () => void goTo(currentIndex + 1, "next");
-
-  container.append(imageWrapper, prevBtn, nextBtn);
-
-  // A single image needs no navigation affordances.
-  if (images.length < 2) {
-    prevBtn.style.display = "none";
-    nextBtn.style.display = "none";
-  }
-
-  // Indicators
-  const dotsContainer = document.createElement("div");
-  dotsContainer.style.display = "flex";
-  dotsContainer.style.gap = "6px";
-  dotsContainer.style.justifyContent = "center";
-  dotsContainer.style.padding = "0";
-
-  images.forEach((_, idx) => {
-    const dot = document.createElement("button");
-    dot.type = "button";
-    dot.style.width = "8px";
-    dot.style.height = "8px";
-    dot.style.borderRadius = "50%";
-    dot.style.background = "#ffffff44";
-    dot.style.border = "none";
-    dot.style.cursor = "pointer";
-    dot.style.opacity = idx === 0 ? "1" : "0.4";
-    dot.style.transition = "opacity 150ms ease";
-    dot.style.padding = "0";
-    dot.onclick = () => void goTo(idx, idx > currentIndex ? "next" : "prev");
-    dotsContainer.appendChild(dot);
-  });
-
   if (images.length > 1) {
-    root.append(container, dotsContainer);
+    const prevBtn = document.createElement("button");
+    prevBtn.type = "button";
+    prevBtn.className = "mgt-nav mgt-nav--prev";
+    prevBtn.textContent = "‹";
+    prevBtn.title = "Previous image";
+    prevBtn.onclick = () => void goTo(currentIndex - 1, "prev");
+
+    const nextBtn = document.createElement("button");
+    nextBtn.type = "button";
+    nextBtn.className = "mgt-nav mgt-nav--next";
+    nextBtn.textContent = "›";
+    nextBtn.title = "Next image";
+    nextBtn.onclick = () => void goTo(currentIndex + 1, "next");
+
+    stage.append(prevBtn, nextBtn);
+
+    images.forEach((_, index) => {
+      const dot = document.createElement("button");
+      dot.type = "button";
+      dot.className = index === 0 ? "mgt-dot is-active" : "mgt-dot";
+      dot.title = `Image ${index + 1}`;
+      dot.onclick = () => void goTo(index, index > currentIndex ? "next" : "prev");
+      dots.appendChild(dot);
+    });
+
+    root.append(stage, dots);
   } else {
-    root.append(container);
+    root.appendChild(stage);
   }
 
   // Initial image: no animation, straight into the active slide.

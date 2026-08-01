@@ -1,5 +1,8 @@
 // Simple markdown-to-HTML renderer for tool descriptions
 // Supports: paragraphs, **bold**, *italic*, `code`, [text](url), and - bullet lists
+//
+// The output carries no styling of its own — callers wrap it in a container
+// that styles the tags (see `.mgt-md` in ui/menus/tools/styles.ts).
 
 function escapeHtml(text: string): string {
   const div = document.createElement('div');
@@ -11,22 +14,22 @@ function renderInlineMarkdown(text: string): string {
   let html = text;
 
   // Code blocks (backticks) - do first to avoid processing inside code
-  html = html.replace(/`([^`]+)`/g, '<code style="background:#ffffff0a;border:1px solid #ffffff18;border-radius:4px;padding:2px 6px;font-family:monospace;font-size:0.9em">$1</code>');
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
 
   // Links [text](url) - sanitize URL to http/https only
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label: string, url: string) => {
     const trimmed = url.trim();
     if (!/^https?:\/\//i.test(trimmed)) {
-      return text; // Skip non-http(s) links
+      return label; // Skip non-http(s) links
     }
-    return `<a href="${escapeHtml(trimmed)}" target="_blank" rel="noopener noreferrer" style="color:#2d8cff;text-decoration:underline;cursor:pointer">${escapeHtml(text)}</a>`;
+    return `<a href="${escapeHtml(trimmed)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
   });
 
   // Bold **text**
-  html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong style="font-weight:700;color:#e7eef7">$1</strong>');
+  html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
 
   // Italic *text* (must be after bold to avoid conflicts)
-  html = html.replace(/\*([^\*]+)\*/g, '<em style="font-style:italic;opacity:0.95">$1</em>');
+  html = html.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
 
   return html;
 }
@@ -41,19 +44,28 @@ export function renderMarkdown(source: string): string {
 
     // Bullet list
     if (trimmed.startsWith('- ')) {
-      const lines = trimmed.split('\n');
-      const listItems = lines
+      const listItems = trimmed
+        .split('\n')
         .filter((line) => line.trim().startsWith('- '))
-        .map((line) => {
-          const text = line.replace(/^-\s*/, '').trim();
-          return `<li>${renderInlineMarkdown(text)}</li>`;
-        });
-      return `<ul style="margin:0;padding-left:20px;list-style:disc">${listItems.join('')}</ul>`;
+        .map((line) => `<li>${renderInlineMarkdown(line.replace(/^-\s*/, '').trim())}</li>`);
+      return `<ul>${listItems.join('')}</ul>`;
     }
 
     // Normal paragraph
-    return `<p style="margin:0 0 12px 0;line-height:1.5">${renderInlineMarkdown(trimmed)}</p>`;
+    return `<p>${renderInlineMarkdown(trimmed)}</p>`;
   });
 
   return rendered.join('');
+}
+
+/** Plain-text preview of a markdown source, for list card summaries. */
+export function markdownToPlainText(source: string): string {
+  return source
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\*\*([^\*]+)\*\*/g, '$1')
+    .replace(/\*([^\*]+)\*/g, '$1')
+    .replace(/^\s*-\s+/gm, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }

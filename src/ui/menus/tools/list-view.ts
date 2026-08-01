@@ -1,216 +1,155 @@
-// List view: filter bar + clickable tool cards
-import { Menu } from "../../menu";
+// List view: tag filter bar + clickable tool cards.
+// Styling lives in styles.ts (`.mgt-list`, `.mgt-grid`, `.mgt-card`, ...).
 import type { ExternalTool } from "../../../services/tools";
-import { createToolIcon } from "./image";
+import { markdownToPlainText } from "../../../utils/markdown";
+import { createIconTile } from "./image";
 import { createTagRow } from "./tag";
 
+const ALL_FILTER_LABEL = "All";
+
+function createCard(tool: ExternalTool, onSelect: () => void): HTMLElement {
+  // A <div role="button"> rather than a real <button>: the card holds block
+  // content (paragraph, tag row), which a <button> is not allowed to contain.
+  const card = document.createElement("div");
+  card.className = "mgt-card";
+  card.setAttribute("role", "button");
+  card.tabIndex = 0;
+  card.title = tool.title;
+  card.onclick = onSelect;
+  card.onkeydown = (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onSelect();
+  };
+
+  const head = document.createElement("div");
+  head.className = "mgt-card__head";
+
+  if (tool.icon) {
+    head.appendChild(createIconTile(tool.icon));
+  }
+
+  const title = document.createElement("span");
+  title.className = "mgt-card__title";
+  title.textContent = tool.title;
+  head.appendChild(title);
+
+  const arrow = document.createElement("span");
+  arrow.className = "mgt-card__arrow";
+  arrow.textContent = "→";
+  arrow.setAttribute("aria-hidden", "true");
+  head.appendChild(arrow);
+
+  card.appendChild(head);
+
+  // CSS clamps this to two lines, so the full text can be handed over as-is.
+  const desc = document.createElement("p");
+  desc.className = "mgt-card__desc";
+  desc.textContent = markdownToPlainText(tool.description);
+  card.appendChild(desc);
+
+  if (tool.tags?.length) {
+    const foot = createTagRow(tool.tags);
+    foot.classList.add("mgt-card__foot");
+    card.appendChild(foot);
+  }
+
+  return card;
+}
+
 export function renderListView(
-  ui: Menu,
   tools: ExternalTool[],
   onSelectTool: (tool: ExternalTool) => void
 ): { root: HTMLElement } {
   const root = document.createElement("div");
-  root.style.display = "flex";
-  root.style.flexDirection = "column";
-  root.style.gap = "16px";
-  root.style.width = "100%";
+  root.className = "mgt-list";
 
-  // Filter section
-  const allTags = Array.from(new Set(tools.flatMap((t) => t.tags ?? [])));
+  const allTags = Array.from(new Set(tools.flatMap((tool) => tool.tags ?? [])));
   const selectedTags = new Set<string>();
 
-  const filterSection = document.createElement("div");
-  filterSection.style.display = "flex";
-  filterSection.style.flexDirection = "column";
-  filterSection.style.gap = "10px";
-  filterSection.style.background = "linear-gradient(135deg, #0f1318 0%, #1a232d 100%)";
-  filterSection.style.border = "1px solid #2d8cff22";
-  filterSection.style.borderRadius = "12px";
-  filterSection.style.padding = "14px";
+  const grid = document.createElement("div");
+  grid.className = "mgt-grid";
 
-  const filterTitle = document.createElement("span");
-  filterTitle.textContent = "Filter by tags";
-  filterTitle.style.fontSize = "11px";
-  filterTitle.style.letterSpacing = "0.06em";
-  filterTitle.style.textTransform = "uppercase";
-  filterTitle.style.opacity = "0.8";
-  filterTitle.style.fontWeight = "700";
-  filterTitle.style.background = "linear-gradient(135deg, #2d8cff, #00d9ff)";
-  filterTitle.style.backgroundClip = "text";
-  filterTitle.style.webkitBackgroundClip = "text";
-  filterTitle.style.webkitTextFillColor = "transparent";
+  const renderCards = () => {
+    grid.innerHTML = "";
 
-  const filterControls = document.createElement("div");
-  filterControls.style.display = "flex";
-  filterControls.style.flexWrap = "wrap";
-  filterControls.style.gap = "8px";
-
-  const filterBtnBaseStyle = (btn: HTMLButtonElement) => {
-    btn.type = "button";
-    btn.style.display = "inline-flex";
-    btn.style.alignItems = "center";
-    btn.style.justifyContent = "center";
-    btn.style.padding = "6px 12px";
-    btn.style.borderRadius = "6px";
-    btn.style.border = "1px solid";
-    btn.style.background = "#ffffff0a";
-    btn.style.borderColor = "#ffffff18";
-    btn.style.fontSize = "10px";
-    btn.style.fontWeight = "600";
-    btn.style.letterSpacing = "0.04em";
-    btn.style.textTransform = "uppercase";
-    btn.style.color = "inherit";
-    btn.style.opacity = "0.8";
-    btn.style.cursor = "pointer";
-    btn.style.transition = "all 140ms ease";
-  };
-
-  const setActiveState = (btn: HTMLButtonElement, active: boolean) => {
-    if (active) {
-      btn.style.background = "linear-gradient(135deg, #2d8cff22, #00d9ff11)";
-      btn.style.borderColor = "#2d8cff77";
-      btn.style.opacity = "1";
-      btn.style.boxShadow = "0 0 12px rgba(45, 140, 255, 0.2)";
-    } else {
-      btn.style.background = "#ffffff0a";
-      btn.style.borderColor = "#ffffff18";
-      btn.style.opacity = "0.8";
-      btn.style.boxShadow = "";
-    }
-  };
-
-  const tagButtons = new Map<string, HTMLButtonElement>();
-  let allButton: HTMLButtonElement;
-
-  const renderCardsContainer = () => {
-    cardsContainer.innerHTML = "";
     const filtered = selectedTags.size
       ? tools.filter((tool) => tool.tags?.some((tag) => selectedTags.has(tag)))
       : tools;
 
-    if (filtered.length === 0) {
-      const empty = document.createElement("p");
-      empty.textContent = "No tools match the selected tags yet.";
-      empty.style.margin = "12px 0 0";
-      empty.style.fontSize = "13px";
-      empty.style.opacity = "0.75";
-      empty.style.textAlign = "center";
+    if (!filtered.length) {
+      const empty = document.createElement("div");
+      empty.className = "mgt-state";
       empty.style.gridColumn = "1 / -1";
-      cardsContainer.appendChild(empty);
+      const text = document.createElement("p");
+      text.className = "mgt-state__text";
+      text.textContent = "No tools match the selected tags.";
+      empty.appendChild(text);
+      grid.appendChild(empty);
       return;
     }
 
     filtered.forEach((tool) => {
-      const card = ui.card("", { tone: "muted", align: "stretch" });
-      card.root.style.width = "100%";
-      card.root.style.transition = "all 200ms ease";
-      card.root.style.borderColor = "#ffffff18";
-      card.root.style.cursor = "pointer";
-      card.root.onmouseenter = () => {
-        card.root.style.borderColor = "#2d8cff44";
-        card.root.style.boxShadow = "0 8px 32px rgba(45, 140, 255, 0.12)";
-      };
-      card.root.onmouseleave = () => {
-        card.root.style.borderColor = "#ffffff18";
-        card.root.style.boxShadow = "";
-      };
-      card.root.onclick = () => onSelectTool(tool);
-
-      const body = card.body;
-      body.style.display = "grid";
-      body.style.gap = "10px";
-
-      // Header with icon and title
-      const header = document.createElement("div");
-      header.style.display = "flex";
-      header.style.alignItems = "center";
-      header.style.gap = "10px";
-
-      if (tool.icon) {
-        header.appendChild(createToolIcon(tool.icon));
-      }
-
-      const titleText = document.createElement("span");
-      titleText.textContent = tool.title;
-      titleText.style.fontSize = "15px";
-      titleText.style.fontWeight = "700";
-      titleText.style.background = "linear-gradient(135deg, #2d8cff, #00d9ff)";
-      titleText.style.backgroundClip = "text";
-      titleText.style.webkitBackgroundClip = "text";
-      titleText.style.webkitTextFillColor = "transparent";
-      header.appendChild(titleText);
-
-      body.appendChild(header);
-
-      // Description preview (plain text, stripped of markdown)
-      const descPreview = document.createElement("p");
-      descPreview.textContent = tool.description.split("\n")[0].substring(0, 120) + "...";
-      descPreview.style.margin = "0";
-      descPreview.style.fontSize = "13px";
-      descPreview.style.lineHeight = "1.5";
-      descPreview.style.opacity = "0.85";
-      descPreview.style.color = "#e8e8e8";
-      body.appendChild(descPreview);
-
-      // Tags
-      if (tool.tags?.length) {
-        body.appendChild(createTagRow(tool.tags));
-      }
-
-      cardsContainer.appendChild(card.root);
+      grid.appendChild(createCard(tool, () => onSelectTool(tool)));
     });
   };
 
-  // All button
-  allButton = document.createElement("button");
-  allButton.textContent = "All";
-  filterBtnBaseStyle(allButton);
-  allButton.onclick = () => {
-    if (selectedTags.size === 0) return;
-    selectedTags.clear();
-    refreshButtonStates();
-    renderCardsContainer();
-  };
-  filterControls.appendChild(allButton);
+  // Filter bar — only worth showing when there is something to filter on.
+  if (allTags.length) {
+    const filters = document.createElement("div");
+    filters.className = "mgt-filters";
 
-  // Tag buttons
-  allTags.forEach((tag) => {
-    const btn = document.createElement("button");
-    btn.textContent = tag;
-    filterBtnBaseStyle(btn);
-    btn.onclick = () => {
-      if (selectedTags.has(tag)) {
-        selectedTags.delete(tag);
-      } else {
-        selectedTags.add(tag);
-      }
-      refreshButtonStates();
-      renderCardsContainer();
+    const label = document.createElement("span");
+    label.className = "mgt-label";
+    label.textContent = "Filter";
+    filters.appendChild(label);
+
+    const tagButtons = new Map<string, HTMLButtonElement>();
+
+    const allButton = document.createElement("button");
+    allButton.type = "button";
+    allButton.className = "mgt-chip";
+    allButton.textContent = ALL_FILTER_LABEL;
+
+    const refreshStates = () => {
+      allButton.classList.toggle("is-active", selectedTags.size === 0);
+      tagButtons.forEach((button, tag) => {
+        button.classList.toggle("is-active", selectedTags.has(tag));
+      });
     };
-    filterControls.appendChild(btn);
-    tagButtons.set(tag, btn);
-  });
 
-  const refreshButtonStates = () => {
-    tagButtons.forEach((btn, tag) => {
-      setActiveState(btn, selectedTags.has(tag));
+    allButton.onclick = () => {
+      if (selectedTags.size === 0) return;
+      selectedTags.clear();
+      refreshStates();
+      renderCards();
+    };
+    filters.appendChild(allButton);
+
+    allTags.forEach((tag) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "mgt-chip";
+      button.textContent = tag;
+      button.onclick = () => {
+        if (selectedTags.has(tag)) {
+          selectedTags.delete(tag);
+        } else {
+          selectedTags.add(tag);
+        }
+        refreshStates();
+        renderCards();
+      };
+      filters.appendChild(button);
+      tagButtons.set(tag, button);
     });
-    setActiveState(allButton, selectedTags.size === 0);
-  };
 
-  filterSection.append(filterTitle, filterControls);
-  root.appendChild(filterSection);
+    refreshStates();
+    root.appendChild(filters);
+  }
 
-  // Cards container
-  const cardsContainer = document.createElement("div");
-  cardsContainer.style.display = "grid";
-  cardsContainer.style.gridTemplateColumns = "repeat(auto-fit, minmax(280px, 1fr))";
-  cardsContainer.style.gap = "16px";
-
-  renderCardsContainer();
-  refreshButtonStates();
-
-  root.appendChild(cardsContainer);
+  renderCards();
+  root.appendChild(grid);
 
   return { root };
 }

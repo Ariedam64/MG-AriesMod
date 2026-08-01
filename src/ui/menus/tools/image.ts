@@ -1,9 +1,7 @@
-// Shared image helpers for the Tools menu: blob loading (GM first, fetch fallback)
-// and icon elements that accept either an emoji or a remote image URL.
+// Shared image helpers for the Tools menu: blob loading (GM first, fetch
+// fallback) and the icon tile, which accepts either an emoji or a remote URL.
+// Styling lives in styles.ts (`.mgt-tile`).
 import { getBlob } from "../../../utils/mgCommon";
-
-const ICON_SIZE_PX = 22;
-const EMOJI_FONT_SIZE_PX = 18;
 
 export async function fetchImageBlob(url: string): Promise<Blob> {
   try {
@@ -23,47 +21,28 @@ export function isImageUrl(icon: string): boolean {
 }
 
 /**
- * Builds an icon element for a tool: an <img> when the icon is a remote URL,
- * a plain text span when it is an emoji/character.
+ * Rounded tile holding a tool icon: an <img> when the icon is a remote URL,
+ * the raw character when it is an emoji.
  */
-export function createToolIcon(icon: string): HTMLElement {
+export function createIconTile(icon: string, size: "sm" | "lg" = "sm"): HTMLElement {
+  const tile = document.createElement("div");
+  tile.className = size === "lg" ? "mgt-tile mgt-tile--lg" : "mgt-tile";
+
   if (!isImageUrl(icon)) {
-    const span = document.createElement("span");
-    span.textContent = icon;
-    span.style.fontSize = `${EMOJI_FONT_SIZE_PX}px`;
-    span.style.lineHeight = "1";
-    span.style.flexShrink = "0";
-    return span;
+    tile.textContent = icon;
+    return tile;
   }
 
   const img = document.createElement("img");
   img.alt = "";
-  img.style.width = `${ICON_SIZE_PX}px`;
-  img.style.height = `${ICON_SIZE_PX}px`;
-  img.style.objectFit = "contain";
-  img.style.display = "block";
-  img.style.flexShrink = "0";
-  img.style.mixBlendMode = "screen";
-  img.style.isolation = "isolate";
-
-  void (async () => {
-    try {
-      const blob = await fetchImageBlob(icon);
-      const objectUrl = URL.createObjectURL(blob);
-      img.onload = () => URL.revokeObjectURL(objectUrl);
-      img.src = objectUrl;
-    } catch (error) {
-      console.warn("[Tools] Unable to load icon:", icon, error);
-      img.remove();
-    }
-  })();
-
-  return img;
+  loadImageInto(img, icon);
+  tile.appendChild(img);
+  return tile;
 }
 
 /**
- * Loads an avatar URL into an <img> using the same GM-first strategy, so
- * creator avatars keep working inside the Discord Activity CSP sandbox.
+ * Loads a remote image into an <img> using the GM-first strategy, so images
+ * keep working inside the Discord Activity CSP sandbox.
  */
 export function loadImageInto(img: HTMLImageElement, url: string): void {
   void (async () => {
