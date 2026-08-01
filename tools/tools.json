@@ -1,19 +1,6 @@
 {
   "tools": [
     {
-      "id": "aries-mod-intro",
-      "title": "Arie's Mod introduction",
-      "description": "New here? This one picture walks you through the interface and points out what each part of the mod actually does.\n\nWorth a look before you go digging through the settings.",
-      "tags": ["guide", "mod"],
-      "images": ["https://i.imgur.com/LZL6zPj.jpeg"],
-      "creators": [
-        {
-          "name": "Bella",
-          "avatar": "https://cdn.discordapp.com/avatars/1400054123969380354/241dfc8a181b9e4b9dab6f1ac4f7567a.webp"
-        }
-      ]
-    },
-    {
       "id": "wiki",
       "title": "Magic Garden Wiki",
       "description": "The community wiki, where players write down everything the game never bothers to explain: plants, pets, weather, mutations, all of it.\n\nAnyone can contribute, and the [main page](https://magicgarden.wiki/Main_Page) links out to every section.",
