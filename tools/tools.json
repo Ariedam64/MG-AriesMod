@@ -146,16 +146,21 @@
     {
       "id": "mg-android-notifier",
       "title": "Magic Garden Notifier",
-      "description": "An Android app that lets you know the moment the shop restocks something you've been waiting for.\n\nPick the items you care about, set your thresholds, and it keeps an eye on things in the background. When they show up you get a notification, or an alarm if you'd rather not sleep through it.",
+      "description": "Tired of being asleep when a Celestial Seed comes into shop? Busy doing something else the last time a Starweaver was up? That is exactly the problem this app solves.\n\nIt watches the shops in the background and tells you the moment something you care about comes into stock, either with a push notification or with a proper alarm if you would rather not sleep through it. You can also set a threshold per item, so it only goes off when there are enough of them in stock to be worth getting up for, and tapping the notification takes you straight to the game.\n\n- Notifications or alarms for any shop item, set separately for each shop\n- Weather event alerts on top of the shop ones\n- Your own ringtone for the alarm, picked inside the app\n- Items and weather pulled live from Arie's API, so anything new appears as soon as it lands in the game\n\nThe app checks for its own updates when it starts, and the [releases page](https://github.com/Daserix/magic-garden-notifier-releases) always has the newest build.",
       "icon": "https://i.imgur.com/l3NHmc5.png",
       "tags": [
         "utility",
         "android"
       ],
+      "images": [
+        "https://i.imgur.com/MhVDEjq.png",
+        "https://i.imgur.com/lN1mZ3b.png",
+        "https://i.imgur.com/VUM7UWg.png"
+      ],
       "actions": [
         {
-          "label": "Install",
-          "url": "https://github.com/Daserix/magic-garden-notifier-releases/releases/download/v1.1.3/mg-notifier-1.1.3.apk"
+          "label": "Download APK",
+          "url": "https://github.com/Daserix/magic-garden-notifier-releases/releases/latest"
         },
         {
           "label": "GitHub",
