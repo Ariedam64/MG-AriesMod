@@ -39,6 +39,40 @@
       ]
     },
     {
+      "id": "mg-community-hub",
+      "title": "MG Community Hub",
+      "description": "A real social space inside Magic Garden, the Discord Activity included. The game gives you a room full of strangers, this gives you a way to actually keep in touch with them.\n\n- **Friends**: add people and see who is online, much like Discord\n- **Messages**: private conversations, or group chats\n- **Groups**: create or join them, public or private\n- **Public rooms**: browse the list to find people to play with\n- **Leaderboard**: see who is on top\n- **Profiles**: look at a friend's garden, inventory and stats in real time, when their privacy settings allow it\n\nThis is the standalone version of the hub that used to live inside Arie's Mod. Run it on its own or next to Arie's Mod, they do not conflict. If you were already using the hub through Arie's Mod, your Discord login and settings carry over on their own, nothing to set up again.",
+      "tags": [
+        "mod",
+        "social"
+      ],
+      "images": [
+        "https://i.imgur.com/oZyfAWA.png",
+        "https://i.imgur.com/lXIPia7.png",
+        "https://i.imgur.com/9KVFyiY.png",
+        "https://i.imgur.com/Kh5uhSe.png",
+        "https://i.imgur.com/DCFTruu.png",
+        "https://i.imgur.com/b3mE76l.png",
+        "https://i.imgur.com/tdJgyPq.png"
+      ],
+      "actions": [
+        {
+          "label": "Install",
+          "url": "https://github.com/Ariedam64/MG-CommunityHub/raw/refs/heads/main/dist/mg-community-hub.user.js"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/Ariedam64/MG-CommunityHub"
+        }
+      ],
+      "creators": [
+        {
+          "name": "Arie",
+          "avatar": "https://i.imgur.com/eRhqdPQ.png"
+        }
+      ]
+    },
+    {
       "id": "garden-explorer",
       "title": "Garden Explorer",
       "icon": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%235eead4%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%229%22%2F%3E%3Cpath%20d%3D%22M3%2012h18%22%2F%3E%3Cpath%20d%3D%22M12%203a14.5%2014.5%200%200%201%200%2018%2014.5%2014.5%200%200%201%200-18z%22%2F%3E%3C%2Fsvg%3E",
