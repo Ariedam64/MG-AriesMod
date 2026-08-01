@@ -3,7 +3,7 @@
     {
       "id": "aries-mod-intro",
       "title": "Arie's Mod introduction",
-      "description": "Visual guide for the mod with the main features highlighted.",
+      "description": "New here? This one picture walks you through the interface and points out what each part of the mod actually does.\n\nWorth a look before you go digging through the settings.",
       "tags": ["guide", "mod"],
       "images": ["https://i.imgur.com/LZL6zPj.jpeg"],
       "creators": [
@@ -16,7 +16,7 @@
     {
       "id": "wiki",
       "title": "Magic Garden Wiki",
-      "description": "Community-curated documentation for plants, mechanics, weather, and more.\n\nMaintained collaboratively — see the [main page](https://magicgarden.wiki/Main_Page) for the full index.",
+      "description": "The community wiki, where players write down everything the game never bothers to explain: plants, pets, weather, mutations, all of it.\n\nAnyone can contribute, and the [main page](https://magicgarden.wiki/Main_Page) links out to every section.",
       "icon": "https://i.imgur.com/0LXKEzh.png",
       "tags": ["guide", "utility"],
       "actions": [
@@ -34,7 +34,7 @@
     {
       "id": "qpm",
       "title": "QPM Mod Menu",
-      "description": "**QPM-GR** (Quinoa Pet Manager) is a companion userscript built around analytics: it tracks what your pets, crops and shops are actually doing, and automates the tedious parts.\n\n- **Pet Hub** — overview, comparison and abilities tabs, with real-time proc rates per pet\n- **Ability & XP trackers** — every proc logged as it happens, plus session XP/min and XP/hour\n- **Shop Restock Tracker** — live tracking and statistical prediction, with countdown timers and dashboard cards\n- **Auto-Favourite & Bulk Favourite** — rule-based locking by rarity, level or ability, so nothing gets sold by mistake\n- **Turtle Timer, Weather Hub & Journal Checker** — growth and egg timings, mutation alerts, and journal completion progress\n\nIt runs on the same platforms as Arie's Mod (magiccircle.gg, magicgarden.gg, starweaver.org and Discord Activities) and exposes its data read-only through an *Aries Mod bridge*, so both can run side by side.\n\nInstall it with Tampermonkey or Violentmonkey, then open Magic Garden — the QPM panel appears in-game. Open source under the MIT licence.",
+      "description": "**QPM-GR** (Quinoa Pet Manager) is a companion userscript for people who like numbers. It keeps track of what your pets, crops and shops are really doing, and handles the repetitive stuff so you don't have to.\n\nWhat you get:\n\n- **Pet Hub**, with overview, comparison and abilities tabs, including live proc rates for every pet\n- **Ability and XP trackers** that log each proc as it happens and show your XP per minute and per hour for the session\n- **Shop Restock Tracker**, which predicts restocks from live data and past history, countdown timers included\n- **Auto-Favourite and Bulk Favourite**, so you can lock things by rarity, level or ability and stop selling stuff by accident\n- **Turtle Timer, Weather Hub and Journal Checker** for growth and egg timings, mutation alerts, and journal progress\n\nIt runs on the same platforms as Arie's Mod (magiccircle.gg, magicgarden.gg, starweaver.org and Discord Activities), and it shares its data read-only through an *Aries Mod bridge*, so running both side by side is fine.\n\nGrab it with Tampermonkey or Violentmonkey, open the game, and the QPM panel will be there waiting. Free and open source under the MIT licence.",
       "tags": ["mod"],
       "actions": [
         {
@@ -56,7 +56,7 @@
     {
       "id": "calculator",
       "title": "Daserix' Magic Garden Calculators",
-      "description": "Calculate crop value based on size and mutations, with garden import for total optimisation stats.",
+      "description": "Find out what a crop is actually worth before you sell it, based on its size and the mutations it picked up.\n\nYou can also import your whole garden to see your totals in one go, which makes it a lot easier to spot where optimising is worth the effort.",
       "tags": ["utility"],
       "actions": [
         {
@@ -75,7 +75,7 @@
     {
       "id": "mg-android-notifier",
       "title": "Magic Garden Notifier",
-      "description": "Android app that sends push notifications/alarms when selected shop items restock, with configurable thresholds and background monitoring.",
+      "description": "An Android app that lets you know the moment the shop restocks something you've been waiting for.\n\nPick the items you care about, set your thresholds, and it keeps an eye on things in the background. When they show up you get a notification, or an alarm if you'd rather not sleep through it.",
       "icon": "https://i.imgur.com/l3NHmc5.png",
       "tags": ["utility", "android"],
       "actions": [
@@ -98,7 +98,7 @@
     {
       "id": "guide-1b",
       "title": "Making Your First 1B",
-      "description": "Beginner-friendly step-by-step guide to earning your first 1B coins, covering early crop choices, key pets, and long-term strategy.",
+      "description": "A step by step guide to your first billion coins, written for players who are still finding their feet.\n\nIt covers which crops are worth planting early on, the pets that make the biggest difference, and how to play the long game instead of chasing quick sales.",
       "tags": ["guide"],
       "images": ["https://i.imgur.com/gs6Karj.png"],
       "creators": [
@@ -111,7 +111,7 @@
     {
       "id": "pet-diet-visual-guides",
       "title": "Pet diet visual guides",
-      "description": "Rarity-based pet diet guides focused on food restoration percentages.",
+      "description": "One chart per rarity, showing how much food each item restores for your pets.\n\nHandy when you want to stop feeding your best produce to pets that would have been just as happy with something cheaper.",
       "tags": ["guide"],
       "images": [
         "https://i.imgur.com/sOXepq1.jpeg",
