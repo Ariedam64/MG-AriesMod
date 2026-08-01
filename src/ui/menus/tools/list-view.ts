@@ -2,6 +2,7 @@
 import { Menu } from "../../menu";
 import type { ExternalTool } from "../../../services/tools";
 import { createToolIcon } from "./image";
+import { createTagRow } from "./tag";
 
 export function renderListView(
   ui: Menu,
@@ -153,30 +154,7 @@ export function renderListView(
 
       // Tags
       if (tool.tags?.length) {
-        const tagsRow = document.createElement("div");
-        tagsRow.style.display = "flex";
-        tagsRow.style.flexWrap = "wrap";
-        tagsRow.style.gap = "6px";
-        tagsRow.style.opacity = "0.85";
-
-        tool.tags.forEach((tag) => {
-          const tagSpan = document.createElement("span");
-          tagSpan.textContent = tag;
-          tagSpan.style.display = "inline-flex";
-          tagSpan.style.alignItems = "center";
-          tagSpan.style.justifyContent = "center";
-          tagSpan.style.padding = "3px 10px";
-          tagSpan.style.borderRadius = "6px";
-          tagSpan.style.background = "linear-gradient(135deg, #2d8cff11, #00d9ff11)";
-          tagSpan.style.border = "1px solid #2d8cff33";
-          tagSpan.style.fontSize = "10px";
-          tagSpan.style.letterSpacing = "0.03em";
-          tagSpan.style.textTransform = "uppercase";
-          tagSpan.style.fontWeight = "500";
-          tagsRow.appendChild(tagSpan);
-        });
-
-        body.appendChild(tagsRow);
+        body.appendChild(createTagRow(tool.tags));
       }
 
       cardsContainer.appendChild(card.root);
