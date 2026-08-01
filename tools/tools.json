@@ -34,16 +34,16 @@
     {
       "id": "qpm",
       "title": "QPM Mod Menu",
-      "description": "Mod/userscript focused on game stats, adding pet analytics, inventory helpers and shop/weather tracking.",
+      "description": "**QPM-GR** (Quinoa Pet Manager) is a companion userscript built around analytics: it tracks what your pets, crops and shops are actually doing, and automates the tedious parts.\n\n- **Pet Hub** — overview, comparison and abilities tabs, with real-time proc rates per pet\n- **Ability & XP trackers** — every proc logged as it happens, plus session XP/min and XP/hour\n- **Shop Restock Tracker** — live tracking and statistical prediction, with countdown timers and dashboard cards\n- **Auto-Favourite & Bulk Favourite** — rule-based locking by rarity, level or ability, so nothing gets sold by mistake\n- **Turtle Timer, Weather Hub & Journal Checker** — growth and egg timings, mutation alerts, and journal completion progress\n\nIt runs on the same platforms as Arie's Mod (magiccircle.gg, magicgarden.gg, starweaver.org and Discord Activities) and exposes its data read-only through an *Aries Mod bridge*, so both can run side by side.\n\nInstall it with Tampermonkey or Violentmonkey, then open Magic Garden — the QPM panel appears in-game. Open source under the MIT licence.",
       "tags": ["mod"],
       "actions": [
         {
-          "label": "GitHub",
-          "url": "https://github.com/ryandt2305-cpu/QPM-GR/"
+          "label": "Install",
+          "url": "https://github.com/mg-tokyo/QPM-GR/raw/refs/heads/master/dist/QPM.user.js"
         },
         {
-          "label": "Install",
-          "url": "https://github.com/ryandt2305-cpu/QPM-GR/raw/refs/heads/master/dist/QPM.user.js"
+          "label": "GitHub",
+          "url": "https://github.com/mg-tokyo/QPM-GR"
         }
       ],
       "creators": [
