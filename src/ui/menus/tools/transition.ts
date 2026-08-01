@@ -62,6 +62,7 @@ export async function swapViews(
   from.style.transform = "";
   from.style.opacity = "";
 
+  to.style.display = "";
   to.style.transform = "";
   to.style.opacity = "";
 }

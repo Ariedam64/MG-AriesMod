@@ -48705,6 +48705,7 @@ next: ${next}`;
     from.style.inset = "";
     from.style.transform = "";
     from.style.opacity = "";
+    to.style.display = "";
     to.style.transform = "";
     to.style.opacity = "";
   }
