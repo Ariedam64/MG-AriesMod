@@ -1,6 +1,15 @@
 // Carousel component for displaying tool images
 import { fetchImageBlob } from "./image";
 
+/** Same top-layer value used by the other full-screen overlays (sellAllPets, roomPrivacyNotice). */
+const OVERLAY_Z_INDEX = "2147483647";
+const SWAP_DURATION_MS = 320;
+const SWAP_EASING = "cubic-bezier(.22,.7,.28,1)";
+const SWAP_OFFSET_PX = 40;
+const ZOOM_SCALE = 1.8;
+
+type Slide = { root: HTMLElement; img: HTMLImageElement };
+
 export function renderCarousel(images: string[]): { root: HTMLElement } {
   const root = document.createElement("div");
   root.style.display = "flex";
@@ -11,6 +20,8 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
   if (!images.length) {
     return { root };
   }
+
+  const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const container = document.createElement("div");
   container.style.position = "relative";
@@ -24,26 +35,40 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
   imageWrapper.style.position = "relative";
   imageWrapper.style.width = "100%";
   imageWrapper.style.height = "100%";
-  imageWrapper.style.display = "flex";
-  imageWrapper.style.alignItems = "center";
-  imageWrapper.style.justifyContent = "center";
-
-  const img = document.createElement("img");
-  img.alt = "Tool preview";
-  img.style.maxWidth = "100%";
-  img.style.maxHeight = "100%";
-  img.style.objectFit = "contain";
-  img.style.display = "block";
-  img.style.cursor = "zoom-in";
+  imageWrapper.style.overflow = "hidden";
 
   let currentIndex = 0;
+  let transitioning = false;
   const cachedUrls = new Map<string, string>();
 
-  let zoomed = false;
-  let lastOrigin = "center center";
+  const createSlide = (): Slide => {
+    const slideRoot = document.createElement("div");
+    slideRoot.style.position = "absolute";
+    slideRoot.style.inset = "0";
+    slideRoot.style.display = "flex";
+    slideRoot.style.alignItems = "center";
+    slideRoot.style.justifyContent = "center";
+
+    const img = document.createElement("img");
+    img.alt = "Tool preview";
+    img.style.maxWidth = "100%";
+    img.style.maxHeight = "100%";
+    img.style.objectFit = "contain";
+    img.style.display = "block";
+    img.style.cursor = "zoom-in";
+    img.onclick = () => openImageZoom(images[currentIndex]);
+
+    slideRoot.appendChild(img);
+    return { root: slideRoot, img };
+  };
+
+  // Two layers: the visible one and the one being swapped in.
+  let activeSlide = createSlide();
+  let pendingSlide = createSlide();
+  pendingSlide.root.style.opacity = "0";
+  imageWrapper.append(activeSlide.root, pendingSlide.root);
 
   const openImageZoom = (imageUrl: string) => {
-    let objectUrl: string | undefined;
     let closed = false;
 
     const overlay = document.createElement("div");
@@ -51,7 +76,7 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
     overlay.style.inset = "0";
     overlay.style.background = "rgba(0,0,0,0.85)";
     overlay.style.backdropFilter = "blur(4px)";
-    overlay.style.zIndex = "9999";
+    overlay.style.zIndex = OVERLAY_Z_INDEX;
     overlay.style.display = "grid";
     overlay.style.placeItems = "center";
     overlay.style.padding = "20px";
@@ -66,12 +91,24 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
     box.style.boxShadow = "0 20px 50px rgba(0,0,0,0.45)";
     box.style.overflow = "hidden";
 
+    const dismiss = () => {
+      if (closed) return;
+      closed = true;
+      document.removeEventListener("keydown", onKeyDown);
+      overlay.remove();
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") dismiss();
+    };
+    document.addEventListener("keydown", onKeyDown);
+
     const close = document.createElement("button");
     close.textContent = "✕";
+    close.type = "button";
     close.style.position = "absolute";
     close.style.top = "8px";
     close.style.right = "8px";
-    close.style.border = "1px solid #ffffff33";
     close.style.borderRadius = "8px";
     close.style.background = "#0009";
     close.style.color = "#fff";
@@ -85,12 +122,7 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
     close.style.zIndex = "2";
     close.style.border = "none";
     close.style.padding = "0";
-
-    close.onclick = () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-      closed = true;
-      overlay.remove();
-    };
+    close.onclick = dismiss;
 
     const status = document.createElement("div");
     status.textContent = "Loading zoom...";
@@ -100,7 +132,6 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
 
     const zoomImg = document.createElement("img");
     zoomImg.alt = "Zoomed image";
-    zoomImg.style.display = "block";
     zoomImg.style.maxWidth = "100%";
     zoomImg.style.maxHeight = "90vh";
     zoomImg.style.objectFit = "contain";
@@ -109,16 +140,15 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
     zoomImg.style.display = "none";
 
     let zoomedState = false;
-    const toggleZoom = (event?: MouseEvent) => {
-      if (!zoomedState && event) {
+    const toggleZoom = (event: MouseEvent) => {
+      if (!zoomedState) {
         const rect = zoomImg.getBoundingClientRect();
         const x = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1) * 100;
         const y = Math.min(Math.max((event.clientY - rect.top) / rect.height, 0), 1) * 100;
-        lastOrigin = `${x}% ${y}%`;
-        zoomImg.style.transformOrigin = lastOrigin;
+        zoomImg.style.transformOrigin = `${x}% ${y}%`;
       }
       zoomedState = !zoomedState;
-      zoomImg.style.transform = zoomedState ? "scale(1.8)" : "scale(1)";
+      zoomImg.style.transform = zoomedState ? `scale(${ZOOM_SCALE})` : "scale(1)";
       zoomImg.style.cursor = zoomedState ? "zoom-out" : "zoom-in";
     };
 
@@ -129,22 +159,18 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
 
     box.append(close, status, zoomImg);
     overlay.appendChild(box);
-    overlay.onclick = (ev) => {
-      if (ev.target === overlay) {
-        if (objectUrl) URL.revokeObjectURL(objectUrl);
-        closed = true;
-        overlay.remove();
-      }
+    overlay.onclick = (event) => {
+      if (event.target === overlay) dismiss();
     };
 
     document.body.appendChild(overlay);
 
     void (async () => {
       try {
-        const blob = await fetchImageBlob(imageUrl);
+        // Reuses the carousel's cached blob URL, which the carousel owns — never revoked here.
+        const blobUrl = await resolveImageUrl(imageUrl);
         if (closed) return;
-        objectUrl = URL.createObjectURL(blob);
-        zoomImg.src = objectUrl;
+        zoomImg.src = blobUrl;
         status.remove();
         zoomImg.style.display = "block";
       } catch (error) {
@@ -156,31 +182,20 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
     })();
   };
 
-  const loadImage = async (index: number) => {
-    if (index < 0 || index >= images.length) return;
+  /** Fetches (once) and caches a blob URL for a remote image. */
+  const resolveImageUrl = async (imageUrl: string): Promise<string> => {
+    const cached = cachedUrls.get(imageUrl);
+    if (cached) return cached;
 
-    currentIndex = index;
-    const imageUrl = images[index];
-
-    // Check cache first
-    if (cachedUrls.has(imageUrl)) {
-      img.src = cachedUrls.get(imageUrl)!;
-      updateIndicators();
-      return;
-    }
-
-    // Lazy load
-    try {
-      const blob = await fetchImageBlob(imageUrl);
-      const objUrl = URL.createObjectURL(blob);
-      cachedUrls.set(imageUrl, objUrl);
-      img.src = objUrl;
-      updateIndicators();
-    } catch (error) {
-      console.warn("[Carousel] Failed to load image:", imageUrl, error);
-      img.src = ""; // Fallback to broken image
-    }
+    const blob = await fetchImageBlob(imageUrl);
+    const objectUrl = URL.createObjectURL(blob);
+    cachedUrls.set(imageUrl, objectUrl);
+    return objectUrl;
   };
+
+  /** Waits for the <img> to actually have pixels, so the swap never animates a blank frame. */
+  const awaitDecode = (img: HTMLImageElement): Promise<void> =>
+    img.decode().catch(() => undefined);
 
   const updateIndicators = () => {
     dotsContainer.querySelectorAll("button").forEach((dot, idx) => {
@@ -188,66 +203,112 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
     });
   };
 
-  img.onclick = () => openImageZoom(images[currentIndex]);
-  imageWrapper.appendChild(img);
+  /** Wraps around both ends so navigation is infinite. */
+  const normalizeIndex = (index: number) => ((index % images.length) + images.length) % images.length;
 
-  const prevBtn = document.createElement("button");
-  prevBtn.textContent = "‹";
-  prevBtn.type = "button";
-  prevBtn.style.position = "absolute";
-  prevBtn.style.left = "12px";
-  prevBtn.style.top = "50%";
-  prevBtn.style.transform = "translateY(-50%)";
-  prevBtn.style.background = "#000000aa";
-  prevBtn.style.border = "1px solid #ffffff33";
-  prevBtn.style.color = "#fff";
-  prevBtn.style.width = "40px";
-  prevBtn.style.height = "40px";
-  prevBtn.style.borderRadius = "50%";
-  prevBtn.style.cursor = "pointer";
-  prevBtn.style.fontSize = "24px";
-  prevBtn.style.display = "flex";
-  prevBtn.style.alignItems = "center";
-  prevBtn.style.justifyContent = "center";
-  prevBtn.style.zIndex = "1";
-  prevBtn.style.transition = "background 150ms ease";
-  prevBtn.onmouseenter = () => {
-    prevBtn.style.background = "#000000dd";
-  };
-  prevBtn.onmouseleave = () => {
-    prevBtn.style.background = "#000000aa";
-  };
-  prevBtn.onclick = () => loadImage(currentIndex - 1);
+  const goTo = async (rawIndex: number, direction: "next" | "prev") => {
+    if (transitioning || images.length === 0) return;
 
-  const nextBtn = document.createElement("button");
-  nextBtn.textContent = "›";
-  nextBtn.type = "button";
-  nextBtn.style.position = "absolute";
-  nextBtn.style.right = "12px";
-  nextBtn.style.top = "50%";
-  nextBtn.style.transform = "translateY(-50%)";
-  nextBtn.style.background = "#000000aa";
-  nextBtn.style.border = "1px solid #ffffff33";
-  nextBtn.style.color = "#fff";
-  nextBtn.style.width = "40px";
-  nextBtn.style.height = "40px";
-  nextBtn.style.borderRadius = "50%";
-  nextBtn.style.cursor = "pointer";
-  nextBtn.style.fontSize = "24px";
-  nextBtn.style.display = "flex";
-  nextBtn.style.alignItems = "center";
-  nextBtn.style.justifyContent = "center";
-  nextBtn.style.zIndex = "1";
-  nextBtn.style.transition = "background 150ms ease";
-  nextBtn.onmouseenter = () => {
-    nextBtn.style.background = "#000000dd";
+    const index = normalizeIndex(rawIndex);
+    if (index === currentIndex) return;
+
+    transitioning = true;
+    try {
+      const blobUrl = await resolveImageUrl(images[index]);
+      pendingSlide.img.src = blobUrl;
+      await awaitDecode(pendingSlide.img);
+
+      const offset = direction === "next" ? SWAP_OFFSET_PX : -SWAP_OFFSET_PX;
+
+      const running: Animation[] = [];
+
+      if (!prefersReduced) {
+        const outgoing = activeSlide.root.animate(
+          [
+            { transform: "translateX(0)", opacity: 1 },
+            { transform: `translateX(${-offset}px)`, opacity: 0 },
+          ],
+          { duration: SWAP_DURATION_MS, easing: SWAP_EASING, fill: "forwards" }
+        );
+
+        const incoming = pendingSlide.root.animate(
+          [
+            { transform: `translateX(${offset}px)`, opacity: 0 },
+            { transform: "translateX(0)", opacity: 1 },
+          ],
+          { duration: SWAP_DURATION_MS, easing: SWAP_EASING, fill: "forwards" }
+        );
+
+        running.push(outgoing, incoming);
+        await Promise.all([outgoing.finished, incoming.finished]);
+      }
+
+      // The incoming slide becomes the active one; recycle the old one for the next swap.
+      activeSlide.root.style.transform = "";
+      activeSlide.root.style.opacity = "0";
+      pendingSlide.root.style.transform = "";
+      pendingSlide.root.style.opacity = "1";
+
+      // Inline styles now hold the end state, so releasing the fill:forwards
+      // animations can't flash the pre-animation frame.
+      running.forEach((animation) => animation.cancel());
+
+      const previousActive = activeSlide;
+      activeSlide = pendingSlide;
+      pendingSlide = previousActive;
+
+      currentIndex = index;
+      updateIndicators();
+    } catch (error) {
+      console.warn("[Carousel] Failed to load image:", images[index], error);
+    } finally {
+      transitioning = false;
+    }
   };
-  nextBtn.onmouseleave = () => {
-    nextBtn.style.background = "#000000aa";
+
+  const makeNavButton = (label: string, side: "left" | "right") => {
+    const btn = document.createElement("button");
+    btn.textContent = label;
+    btn.type = "button";
+    btn.style.position = "absolute";
+    btn.style[side] = "12px";
+    btn.style.top = "50%";
+    btn.style.transform = "translateY(-50%)";
+    btn.style.background = "#000000aa";
+    btn.style.border = "1px solid #ffffff33";
+    btn.style.color = "#fff";
+    btn.style.width = "40px";
+    btn.style.height = "40px";
+    btn.style.borderRadius = "50%";
+    btn.style.cursor = "pointer";
+    btn.style.fontSize = "24px";
+    btn.style.display = "flex";
+    btn.style.alignItems = "center";
+    btn.style.justifyContent = "center";
+    btn.style.zIndex = "1";
+    btn.style.transition = "background 150ms ease";
+    btn.onmouseenter = () => {
+      btn.style.background = "#000000dd";
+    };
+    btn.onmouseleave = () => {
+      btn.style.background = "#000000aa";
+    };
+    return btn;
   };
-  nextBtn.onclick = () => loadImage(currentIndex + 1);
+
+  const prevBtn = makeNavButton("‹", "left");
+  prevBtn.onclick = () => void goTo(currentIndex - 1, "prev");
+
+  const nextBtn = makeNavButton("›", "right");
+  nextBtn.onclick = () => void goTo(currentIndex + 1, "next");
 
   container.append(imageWrapper, prevBtn, nextBtn);
+
+  // A single image needs no navigation affordances.
+  if (images.length < 2) {
+    prevBtn.style.display = "none";
+    nextBtn.style.display = "none";
+  }
 
   // Indicators
   const dotsContainer = document.createElement("div");
@@ -268,14 +329,24 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
     dot.style.opacity = idx === 0 ? "1" : "0.4";
     dot.style.transition = "opacity 150ms ease";
     dot.style.padding = "0";
-    dot.onclick = () => loadImage(idx);
+    dot.onclick = () => void goTo(idx, idx > currentIndex ? "next" : "prev");
     dotsContainer.appendChild(dot);
   });
 
-  root.append(container, dotsContainer);
+  if (images.length > 1) {
+    root.append(container, dotsContainer);
+  } else {
+    root.append(container);
+  }
 
-  // Load first image
-  void loadImage(0);
+  // Initial image: no animation, straight into the active slide.
+  void (async () => {
+    try {
+      activeSlide.img.src = await resolveImageUrl(images[0]);
+    } catch (error) {
+      console.warn("[Carousel] Failed to load image:", images[0], error);
+    }
+  })();
 
   return { root };
 }

@@ -48343,6 +48343,11 @@ next: ${next}`;
   }
 
   // src/ui/menus/tools/carousel.ts
+  var OVERLAY_Z_INDEX = "2147483647";
+  var SWAP_DURATION_MS = 320;
+  var SWAP_EASING = "cubic-bezier(.22,.7,.28,1)";
+  var SWAP_OFFSET_PX = 40;
+  var ZOOM_SCALE = 1.8;
   function renderCarousel(images) {
     const root = document.createElement("div");
     root.style.display = "flex";
@@ -48352,6 +48357,7 @@ next: ${next}`;
     if (!images.length) {
       return { root };
     }
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const container = document.createElement("div");
     container.style.position = "relative";
     container.style.width = "100%";
@@ -48363,29 +48369,40 @@ next: ${next}`;
     imageWrapper.style.position = "relative";
     imageWrapper.style.width = "100%";
     imageWrapper.style.height = "100%";
-    imageWrapper.style.display = "flex";
-    imageWrapper.style.alignItems = "center";
-    imageWrapper.style.justifyContent = "center";
-    const img = document.createElement("img");
-    img.alt = "Tool preview";
-    img.style.maxWidth = "100%";
-    img.style.maxHeight = "100%";
-    img.style.objectFit = "contain";
-    img.style.display = "block";
-    img.style.cursor = "zoom-in";
+    imageWrapper.style.overflow = "hidden";
     let currentIndex2 = 0;
+    let transitioning = false;
     const cachedUrls = /* @__PURE__ */ new Map();
-    let zoomed = false;
-    let lastOrigin = "center center";
+    const createSlide = () => {
+      const slideRoot = document.createElement("div");
+      slideRoot.style.position = "absolute";
+      slideRoot.style.inset = "0";
+      slideRoot.style.display = "flex";
+      slideRoot.style.alignItems = "center";
+      slideRoot.style.justifyContent = "center";
+      const img = document.createElement("img");
+      img.alt = "Tool preview";
+      img.style.maxWidth = "100%";
+      img.style.maxHeight = "100%";
+      img.style.objectFit = "contain";
+      img.style.display = "block";
+      img.style.cursor = "zoom-in";
+      img.onclick = () => openImageZoom(images[currentIndex2]);
+      slideRoot.appendChild(img);
+      return { root: slideRoot, img };
+    };
+    let activeSlide = createSlide();
+    let pendingSlide = createSlide();
+    pendingSlide.root.style.opacity = "0";
+    imageWrapper.append(activeSlide.root, pendingSlide.root);
     const openImageZoom = (imageUrl) => {
-      let objectUrl;
       let closed = false;
       const overlay = document.createElement("div");
       overlay.style.position = "fixed";
       overlay.style.inset = "0";
       overlay.style.background = "rgba(0,0,0,0.85)";
       overlay.style.backdropFilter = "blur(4px)";
-      overlay.style.zIndex = "9999";
+      overlay.style.zIndex = OVERLAY_Z_INDEX;
       overlay.style.display = "grid";
       overlay.style.placeItems = "center";
       overlay.style.padding = "20px";
@@ -48398,12 +48415,22 @@ next: ${next}`;
       box.style.borderRadius = "12px";
       box.style.boxShadow = "0 20px 50px rgba(0,0,0,0.45)";
       box.style.overflow = "hidden";
+      const dismiss3 = () => {
+        if (closed) return;
+        closed = true;
+        document.removeEventListener("keydown", onKeyDown);
+        overlay.remove();
+      };
+      const onKeyDown = (event) => {
+        if (event.key === "Escape") dismiss3();
+      };
+      document.addEventListener("keydown", onKeyDown);
       const close = document.createElement("button");
       close.textContent = "\u2715";
+      close.type = "button";
       close.style.position = "absolute";
       close.style.top = "8px";
       close.style.right = "8px";
-      close.style.border = "1px solid #ffffff33";
       close.style.borderRadius = "8px";
       close.style.background = "#0009";
       close.style.color = "#fff";
@@ -48417,11 +48444,7 @@ next: ${next}`;
       close.style.zIndex = "2";
       close.style.border = "none";
       close.style.padding = "0";
-      close.onclick = () => {
-        if (objectUrl) URL.revokeObjectURL(objectUrl);
-        closed = true;
-        overlay.remove();
-      };
+      close.onclick = dismiss3;
       const status = document.createElement("div");
       status.textContent = "Loading zoom...";
       status.style.padding = "14px 18px";
@@ -48429,7 +48452,6 @@ next: ${next}`;
       status.style.opacity = "0.85";
       const zoomImg = document.createElement("img");
       zoomImg.alt = "Zoomed image";
-      zoomImg.style.display = "block";
       zoomImg.style.maxWidth = "100%";
       zoomImg.style.maxHeight = "90vh";
       zoomImg.style.objectFit = "contain";
@@ -48438,15 +48460,14 @@ next: ${next}`;
       zoomImg.style.display = "none";
       let zoomedState = false;
       const toggleZoom = (event) => {
-        if (!zoomedState && event) {
+        if (!zoomedState) {
           const rect = zoomImg.getBoundingClientRect();
           const x = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1) * 100;
           const y = Math.min(Math.max((event.clientY - rect.top) / rect.height, 0), 1) * 100;
-          lastOrigin = `${x}% ${y}%`;
-          zoomImg.style.transformOrigin = lastOrigin;
+          zoomImg.style.transformOrigin = `${x}% ${y}%`;
         }
         zoomedState = !zoomedState;
-        zoomImg.style.transform = zoomedState ? "scale(1.8)" : "scale(1)";
+        zoomImg.style.transform = zoomedState ? `scale(${ZOOM_SCALE})` : "scale(1)";
         zoomImg.style.cursor = zoomedState ? "zoom-out" : "zoom-in";
       };
       zoomImg.onclick = (event) => {
@@ -48455,20 +48476,15 @@ next: ${next}`;
       };
       box.append(close, status, zoomImg);
       overlay.appendChild(box);
-      overlay.onclick = (ev) => {
-        if (ev.target === overlay) {
-          if (objectUrl) URL.revokeObjectURL(objectUrl);
-          closed = true;
-          overlay.remove();
-        }
+      overlay.onclick = (event) => {
+        if (event.target === overlay) dismiss3();
       };
       document.body.appendChild(overlay);
       void (async () => {
         try {
-          const blob = await fetchImageBlob(imageUrl);
+          const blobUrl = await resolveImageUrl(imageUrl);
           if (closed) return;
-          objectUrl = URL.createObjectURL(blob);
-          zoomImg.src = objectUrl;
+          zoomImg.src = blobUrl;
           status.remove();
           zoomImg.style.display = "block";
         } catch (error) {
@@ -48479,88 +48495,104 @@ next: ${next}`;
         }
       })();
     };
-    const loadImage2 = async (index) => {
-      if (index < 0 || index >= images.length) return;
-      currentIndex2 = index;
-      const imageUrl = images[index];
-      if (cachedUrls.has(imageUrl)) {
-        img.src = cachedUrls.get(imageUrl);
-        updateIndicators();
-        return;
-      }
-      try {
-        const blob = await fetchImageBlob(imageUrl);
-        const objUrl = URL.createObjectURL(blob);
-        cachedUrls.set(imageUrl, objUrl);
-        img.src = objUrl;
-        updateIndicators();
-      } catch (error) {
-        console.warn("[Carousel] Failed to load image:", imageUrl, error);
-        img.src = "";
-      }
+    const resolveImageUrl = async (imageUrl) => {
+      const cached = cachedUrls.get(imageUrl);
+      if (cached) return cached;
+      const blob = await fetchImageBlob(imageUrl);
+      const objectUrl = URL.createObjectURL(blob);
+      cachedUrls.set(imageUrl, objectUrl);
+      return objectUrl;
     };
+    const awaitDecode = (img) => img.decode().catch(() => void 0);
     const updateIndicators = () => {
       dotsContainer.querySelectorAll("button").forEach((dot, idx) => {
         dot.style.opacity = idx === currentIndex2 ? "1" : "0.4";
       });
     };
-    img.onclick = () => openImageZoom(images[currentIndex2]);
-    imageWrapper.appendChild(img);
-    const prevBtn = document.createElement("button");
-    prevBtn.textContent = "\u2039";
-    prevBtn.type = "button";
-    prevBtn.style.position = "absolute";
-    prevBtn.style.left = "12px";
-    prevBtn.style.top = "50%";
-    prevBtn.style.transform = "translateY(-50%)";
-    prevBtn.style.background = "#000000aa";
-    prevBtn.style.border = "1px solid #ffffff33";
-    prevBtn.style.color = "#fff";
-    prevBtn.style.width = "40px";
-    prevBtn.style.height = "40px";
-    prevBtn.style.borderRadius = "50%";
-    prevBtn.style.cursor = "pointer";
-    prevBtn.style.fontSize = "24px";
-    prevBtn.style.display = "flex";
-    prevBtn.style.alignItems = "center";
-    prevBtn.style.justifyContent = "center";
-    prevBtn.style.zIndex = "1";
-    prevBtn.style.transition = "background 150ms ease";
-    prevBtn.onmouseenter = () => {
-      prevBtn.style.background = "#000000dd";
+    const normalizeIndex = (index) => (index % images.length + images.length) % images.length;
+    const goTo = async (rawIndex, direction) => {
+      if (transitioning || images.length === 0) return;
+      const index = normalizeIndex(rawIndex);
+      if (index === currentIndex2) return;
+      transitioning = true;
+      try {
+        const blobUrl = await resolveImageUrl(images[index]);
+        pendingSlide.img.src = blobUrl;
+        await awaitDecode(pendingSlide.img);
+        const offset = direction === "next" ? SWAP_OFFSET_PX : -SWAP_OFFSET_PX;
+        const running = [];
+        if (!prefersReduced) {
+          const outgoing = activeSlide.root.animate(
+            [
+              { transform: "translateX(0)", opacity: 1 },
+              { transform: `translateX(${-offset}px)`, opacity: 0 }
+            ],
+            { duration: SWAP_DURATION_MS, easing: SWAP_EASING, fill: "forwards" }
+          );
+          const incoming = pendingSlide.root.animate(
+            [
+              { transform: `translateX(${offset}px)`, opacity: 0 },
+              { transform: "translateX(0)", opacity: 1 }
+            ],
+            { duration: SWAP_DURATION_MS, easing: SWAP_EASING, fill: "forwards" }
+          );
+          running.push(outgoing, incoming);
+          await Promise.all([outgoing.finished, incoming.finished]);
+        }
+        activeSlide.root.style.transform = "";
+        activeSlide.root.style.opacity = "0";
+        pendingSlide.root.style.transform = "";
+        pendingSlide.root.style.opacity = "1";
+        running.forEach((animation) => animation.cancel());
+        const previousActive = activeSlide;
+        activeSlide = pendingSlide;
+        pendingSlide = previousActive;
+        currentIndex2 = index;
+        updateIndicators();
+      } catch (error) {
+        console.warn("[Carousel] Failed to load image:", images[index], error);
+      } finally {
+        transitioning = false;
+      }
     };
-    prevBtn.onmouseleave = () => {
-      prevBtn.style.background = "#000000aa";
+    const makeNavButton = (label2, side) => {
+      const btn = document.createElement("button");
+      btn.textContent = label2;
+      btn.type = "button";
+      btn.style.position = "absolute";
+      btn.style[side] = "12px";
+      btn.style.top = "50%";
+      btn.style.transform = "translateY(-50%)";
+      btn.style.background = "#000000aa";
+      btn.style.border = "1px solid #ffffff33";
+      btn.style.color = "#fff";
+      btn.style.width = "40px";
+      btn.style.height = "40px";
+      btn.style.borderRadius = "50%";
+      btn.style.cursor = "pointer";
+      btn.style.fontSize = "24px";
+      btn.style.display = "flex";
+      btn.style.alignItems = "center";
+      btn.style.justifyContent = "center";
+      btn.style.zIndex = "1";
+      btn.style.transition = "background 150ms ease";
+      btn.onmouseenter = () => {
+        btn.style.background = "#000000dd";
+      };
+      btn.onmouseleave = () => {
+        btn.style.background = "#000000aa";
+      };
+      return btn;
     };
-    prevBtn.onclick = () => loadImage2(currentIndex2 - 1);
-    const nextBtn = document.createElement("button");
-    nextBtn.textContent = "\u203A";
-    nextBtn.type = "button";
-    nextBtn.style.position = "absolute";
-    nextBtn.style.right = "12px";
-    nextBtn.style.top = "50%";
-    nextBtn.style.transform = "translateY(-50%)";
-    nextBtn.style.background = "#000000aa";
-    nextBtn.style.border = "1px solid #ffffff33";
-    nextBtn.style.color = "#fff";
-    nextBtn.style.width = "40px";
-    nextBtn.style.height = "40px";
-    nextBtn.style.borderRadius = "50%";
-    nextBtn.style.cursor = "pointer";
-    nextBtn.style.fontSize = "24px";
-    nextBtn.style.display = "flex";
-    nextBtn.style.alignItems = "center";
-    nextBtn.style.justifyContent = "center";
-    nextBtn.style.zIndex = "1";
-    nextBtn.style.transition = "background 150ms ease";
-    nextBtn.onmouseenter = () => {
-      nextBtn.style.background = "#000000dd";
-    };
-    nextBtn.onmouseleave = () => {
-      nextBtn.style.background = "#000000aa";
-    };
-    nextBtn.onclick = () => loadImage2(currentIndex2 + 1);
+    const prevBtn = makeNavButton("\u2039", "left");
+    prevBtn.onclick = () => void goTo(currentIndex2 - 1, "prev");
+    const nextBtn = makeNavButton("\u203A", "right");
+    nextBtn.onclick = () => void goTo(currentIndex2 + 1, "next");
     container.append(imageWrapper, prevBtn, nextBtn);
+    if (images.length < 2) {
+      prevBtn.style.display = "none";
+      nextBtn.style.display = "none";
+    }
     const dotsContainer = document.createElement("div");
     dotsContainer.style.display = "flex";
     dotsContainer.style.gap = "6px";
@@ -48578,11 +48610,21 @@ next: ${next}`;
       dot.style.opacity = idx === 0 ? "1" : "0.4";
       dot.style.transition = "opacity 150ms ease";
       dot.style.padding = "0";
-      dot.onclick = () => loadImage2(idx);
+      dot.onclick = () => void goTo(idx, idx > currentIndex2 ? "next" : "prev");
       dotsContainer.appendChild(dot);
     });
-    root.append(container, dotsContainer);
-    void loadImage2(0);
+    if (images.length > 1) {
+      root.append(container, dotsContainer);
+    } else {
+      root.append(container);
+    }
+    void (async () => {
+      try {
+        activeSlide.img.src = await resolveImageUrl(images[0]);
+      } catch (error) {
+        console.warn("[Carousel] Failed to load image:", images[0], error);
+      }
+    })();
     return { root };
   }
 
