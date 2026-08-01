@@ -97,6 +97,29 @@
           "avatar": "https://cdn.discordapp.com/avatars/266245650662817793/09de28b070e0a107eb1bea1fe015afc3.webp"
         }
       ]
+    },
+    {
+      "id": "mg-android-notifier",
+      "title": "Magic Garden Notifier",
+      "description": "An Android app that lets you know the moment the shop restocks something you've been waiting for.\n\nPick the items you care about, set your thresholds, and it keeps an eye on things in the background. When they show up you get a notification, or an alarm if you'd rather not sleep through it.",
+      "icon": "https://i.imgur.com/l3NHmc5.png",
+      "tags": ["utility", "android"],
+      "actions": [
+        {
+          "label": "Install",
+          "url": "https://github.com/Daserix/magic-garden-notifier-releases/releases/download/v1.1.3/mg-notifier-1.1.3.apk"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/Daserix/magic-garden-notifier-releases"
+        }
+      ],
+      "creators": [
+        {
+          "name": "Daserix",
+          "avatar": "https://cdn.discordapp.com/avatars/266245650662817793/09de28b070e0a107eb1bea1fe015afc3.png"
+        }
+      ]
     }
   ]
 }
