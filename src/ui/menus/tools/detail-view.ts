@@ -13,7 +13,7 @@ export function renderDetailView(
   const root = document.createElement("div");
   root.style.display = "flex";
   root.style.flexDirection = "column";
-  root.style.gap = "16px";
+  root.style.gap = "20px";
   root.style.width = "100%";
   root.style.maxHeight = "70vh";
   root.style.overflowY = "auto";

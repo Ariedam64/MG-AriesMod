@@ -10,7 +10,7 @@ export function renderListView(
   const root = document.createElement("div");
   root.style.display = "flex";
   root.style.flexDirection = "column";
-  root.style.gap = "12px";
+  root.style.gap = "16px";
   root.style.width = "100%";
 
   // Filter section
@@ -229,7 +229,7 @@ export function renderListView(
   const cardsContainer = document.createElement("div");
   cardsContainer.style.display = "grid";
   cardsContainer.style.gridTemplateColumns = "repeat(auto-fit, minmax(280px, 1fr))";
-  cardsContainer.style.gap = "14px";
+  cardsContainer.style.gap = "16px";
 
   renderCardsContainer();
   refreshButtonStates();
