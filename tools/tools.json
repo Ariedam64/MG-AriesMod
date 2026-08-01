@@ -168,6 +168,22 @@
       ]
     },
     {
+      "id": "guide-first-1b",
+      "title": "Making Your First 1B",
+      "description": "A rough step by step guide on making your first billion coins, put together by Bella. It covers the most popular crops and seeds for when you're just starting out, and why these three things matter so much:\n\n- **Crop Mutator pets**: pets that add mutations to your crops as they grow\n- **Crop Size Boost pets**: pets that push your crops toward bigger, more valuable sizes\n- **Patience**: understanding what it actually means to play the long game\n\nIt's a loose how-to rather than a strict recipe, easy to adapt to your own garden, and along the way you'll pick up the widely used tactics that most experienced players already rely on.",
+      "tags": [
+        "guide"
+      ],
+      "images": [
+        "https://i.imgur.com/cmqADL4.jpeg"
+      ],
+      "creators": [
+        {
+          "name": "Bella"
+        }
+      ]
+    },
+    {
       "id": "wiki",
       "title": "Magic Garden Wiki",
       "description": "Everything the game never bothers to explain, written down by the players who worked it out. It runs on MediaWiki and anyone can edit it, so it tends to stay closer to the current patch than any static guide.\n\nThe main sections:\n\n- [Crops](https://magicgarden.wiki/Crops) and [Shops](https://magicgarden.wiki/Shops), for what to plant and where the seeds come from\n- [Mutations](https://magicgarden.wiki/Mutations) and [Multipliers](https://magicgarden.wiki/Multipliers), which is where the money actually is: which mutations can stack together, and how they combine with size, friend bonus and sell boost pets to set the final price\n- [Pets](https://magicgarden.wiki/Pets) and [Abilities](https://magicgarden.wiki/Abilities), with what each ability actually does rather than what the tooltip says\n- [Weather Events](https://magicgarden.wiki/Weather_Events) and [Events](https://magicgarden.wiki/Events), for anything time limited\n- [Garden Tools](https://magicgarden.wiki/Tools) and the [Garden Journal](https://magicgarden.wiki/Garden_Journal), for your gear and your collection progress\n\nAround two hundred articles so far, and a few hundred screenshots to go with them. If you spot something wrong or missing you can just fix it yourself: [First Steps](https://magicgarden.wiki/First_Steps) walks you through it, and the [contributing guide](https://magicgarden.wiki/Contributing) covers the rest.",
