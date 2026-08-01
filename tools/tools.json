@@ -4,7 +4,7 @@
       "id": "garden-explorer",
       "title": "Garden Explorer",
       "description": "A page that reads the game's data live and lays it out in the open. When the game gets updated, so does the site, without waiting for anyone to write it up.\n\nIt is not a wiki. You get the raw values that can be pulled out of the game code and nothing more, so no descriptions, no strategies, no lore. The [wiki](https://magicgarden.wiki/Main_Page) is still the place for all of that.\n\n- **Live and history**: current weather and shops synced with the game, plus months of shop and weather history with charts, an interactive timeline and the exact time of every drop\n- **Game data**: plants, pets, items, eggs, mutations, weather, abilities and enums. Decor also shows each upgrade level and what it costs in dust\n- **Assets**: every sprite with a mutation preview, so you can see how gold, rainbow or wet actually look once applied, every cosmetic in the game, and all the ambient music and sound effects\n- **Calculators**: crop values, dust, pet diets and dawn capsules\n- **Leaderboards**: coins, eggs hatched and pet journal progress\n- **Public rooms**: the rooms currently running Arie's Mod with their player counts, handy when you want a friend bonus before a big sell\n\nThe shop and weather history is not flawless, there are a few gaps and oddities in there, but it stays very usable. Thanks to Corni and Tokyo for the data.",
-      "tags": ["utility", "mod"],
+      "tags": ["utility"],
       "images": [
         "https://i.imgur.com/LMRdTLy.png",
         "https://i.imgur.com/WWvAGoH.png",
@@ -95,62 +95,6 @@
         {
           "name": "Daserix",
           "avatar": "https://cdn.discordapp.com/avatars/266245650662817793/09de28b070e0a107eb1bea1fe015afc3.webp"
-        }
-      ]
-    },
-    {
-      "id": "mg-android-notifier",
-      "title": "Magic Garden Notifier",
-      "description": "An Android app that lets you know the moment the shop restocks something you've been waiting for.\n\nPick the items you care about, set your thresholds, and it keeps an eye on things in the background. When they show up you get a notification, or an alarm if you'd rather not sleep through it.",
-      "icon": "https://i.imgur.com/l3NHmc5.png",
-      "tags": ["utility", "android"],
-      "actions": [
-        {
-          "label": "GitHub",
-          "url": "https://github.com/Daserix/magic-garden-notifier-releases"
-        },
-        {
-          "label": "Install",
-          "url": "https://github.com/Daserix/magic-garden-notifier-releases/releases/download/v1.1.0/mg-notifier-1.1.0.apk"
-        }
-      ],
-      "creators": [
-        {
-          "name": "Daserix",
-          "avatar": "https://cdn.discordapp.com/avatars/266245650662817793/09de28b070e0a107eb1bea1fe015afc3.png"
-        }
-      ]
-    },
-    {
-      "id": "guide-1b",
-      "title": "Making Your First 1B",
-      "description": "A step by step guide to your first billion coins, written for players who are still finding their feet.\n\nIt covers which crops are worth planting early on, the pets that make the biggest difference, and how to play the long game instead of chasing quick sales.",
-      "tags": ["guide"],
-      "images": ["https://i.imgur.com/gs6Karj.png"],
-      "creators": [
-        {
-          "name": "Bella",
-          "avatar": "https://cdn.discordapp.com/avatars/1400054123969380354/241dfc8a181b9e4b9dab6f1ac4f7567a.png"
-        }
-      ]
-    },
-    {
-      "id": "pet-diet-visual-guides",
-      "title": "Pet diet visual guides",
-      "description": "One chart per rarity, showing how much food each item restores for your pets.\n\nHandy when you want to stop feeding your best produce to pets that would have been just as happy with something cheaper.",
-      "tags": ["guide"],
-      "images": [
-        "https://i.imgur.com/sOXepq1.jpeg",
-        "https://i.imgur.com/3weyngx.jpeg",
-        "https://i.imgur.com/n8KPA7L.jpeg",
-        "https://i.imgur.com/CBKjqiN.jpeg",
-        "https://i.imgur.com/YD00B5U.jpeg",
-        "https://i.imgur.com/ybcdHxC.jpeg"
-      ],
-      "creators": [
-        {
-          "name": "Bella",
-          "avatar": "https://cdn.discordapp.com/avatars/1400054123969380354/241dfc8a181b9e4b9dab6f1ac4f7567a.webp"
         }
       ]
     }
