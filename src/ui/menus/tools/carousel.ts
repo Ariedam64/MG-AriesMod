@@ -1,6 +1,19 @@
 // Carousel component for displaying tool images
 import { getBlob } from "../../../utils/mgCommon";
 
+async function fetchImageBlob(url: string): Promise<Blob> {
+  try {
+    return await getBlob(url);
+  } catch (gmError) {
+    console.warn("[Carousel] GM_xmlhttpRequest failed, trying fetch:", gmError);
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} while loading ${url}`);
+    }
+    return await res.blob();
+  }
+}
+
 export function renderCarousel(images: string[]): { root: HTMLElement } {
   const root = document.createElement("div");
   root.style.display = "flex";
@@ -141,7 +154,7 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
 
     void (async () => {
       try {
-        const blob = await getBlob(imageUrl);
+        const blob = await fetchImageBlob(imageUrl);
         if (closed) return;
         objectUrl = URL.createObjectURL(blob);
         zoomImg.src = objectUrl;
@@ -171,7 +184,7 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
 
     // Lazy load
     try {
-      const blob = await getBlob(imageUrl);
+      const blob = await fetchImageBlob(imageUrl);
       const objUrl = URL.createObjectURL(blob);
       cachedUrls.set(imageUrl, objUrl);
       img.src = objUrl;

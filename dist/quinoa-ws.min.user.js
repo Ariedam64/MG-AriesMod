@@ -48283,6 +48283,18 @@ next: ${next}`;
   }
 
   // src/ui/menus/tools/carousel.ts
+  async function fetchImageBlob(url) {
+    try {
+      return await getBlob2(url);
+    } catch (gmError) {
+      console.warn("[Carousel] GM_xmlhttpRequest failed, trying fetch:", gmError);
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status} while loading ${url}`);
+      }
+      return await res.blob();
+    }
+  }
   function renderCarousel(images) {
     const root = document.createElement("div");
     root.style.display = "flex";
@@ -48405,7 +48417,7 @@ next: ${next}`;
       document.body.appendChild(overlay);
       void (async () => {
         try {
-          const blob = await getBlob2(imageUrl);
+          const blob = await fetchImageBlob(imageUrl);
           if (closed) return;
           objectUrl = URL.createObjectURL(blob);
           zoomImg.src = objectUrl;
@@ -48429,7 +48441,7 @@ next: ${next}`;
         return;
       }
       try {
-        const blob = await getBlob2(imageUrl);
+        const blob = await fetchImageBlob(imageUrl);
         const objUrl = URL.createObjectURL(blob);
         cachedUrls.set(imageUrl, objUrl);
         img.src = objUrl;
