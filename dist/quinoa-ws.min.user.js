@@ -48675,6 +48675,7 @@ next: ${next}`;
     }
     container.style.position = "relative";
     container.style.overflow = "hidden";
+    to.style.display = "flex";
     from.style.position = "absolute";
     from.style.inset = "0";
     const fromTranslate = direction === "forward" ? -24 : 24;

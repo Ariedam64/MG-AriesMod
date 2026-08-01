@@ -20,6 +20,9 @@ export async function swapViews(
   container.style.position = "relative";
   container.style.overflow = "hidden";
 
+  // Restore incoming view display (both views use flex)
+  to.style.display = "flex";
+
   // Position the outgoing panel absolutely so the incoming one can be laid out below
   from.style.position = "absolute";
   from.style.inset = "0";
