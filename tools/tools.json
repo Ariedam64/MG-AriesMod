@@ -194,6 +194,13 @@
       "tags": [
         "mod"
       ],
+      "images": [
+        "https://i.imgur.com/SjdYngw.png",
+        "https://i.imgur.com/09t4VJl.png",
+        "https://i.imgur.com/kVswT8h.png",
+        "https://i.imgur.com/uV8zZDX.png",
+        "https://i.imgur.com/jNup5GV.png"
+      ],
       "actions": [
         {
           "label": "Install",
