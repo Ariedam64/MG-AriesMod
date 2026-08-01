@@ -188,6 +188,30 @@
       ]
     },
     {
+      "id": "garden-companion",
+      "title": "Garden Companion",
+      "description": "A userscript that surfaces the information the game keeps to itself and adds the shortcuts it lacks, without ever playing for you. Everything it does takes a deliberate click or keypress.\n\n- **Garden overview**: growth, value, mutation progress and granter estimates, with completion alarms\n- **Pet teams**: create, edit and delete them, synced with the game's own team system\n- **Pet abilities**: a searchable proc history you can filter ability by ability\n- **Ignore alerts**: silence the game's popups and sounds for the abilities you do not care about\n- **Journal**: every plant and pet on one screen, with the variants you have already logged\n- **Calculators**: dust, granter and food estimates worked out from your own pets, eggs and garden\n- **Shop alarms**: per item alerts grouped by shop, with an explicit Buy all button\n\nAlongside those: a pet food dock next to the game's own pet panel, a Turtle-Timer for growth estimates, a layout planner, a room browser, a lunar countdown, and keybinds you can configure throughout.\n\nWorks on magicgarden.gg, magiccircle.gg, starweaver.org and the Discord Activity. Install it with Tampermonkey or Violentmonkey and it keeps itself up to date from there.",
+      "tags": [
+        "mod"
+      ],
+      "actions": [
+        {
+          "label": "Install",
+          "url": "https://raw.githubusercontent.com/Liam0306dis/garden-companion/main/dist/garden-companion.user.js"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/Liam0306dis/garden-companion"
+        }
+      ],
+      "creators": [
+        {
+          "name": "Liam",
+          "avatar": "https://i.imgur.com/8ha8EyR.png"
+        }
+      ]
+    },
+    {
       "id": "calculator",
       "title": "Daserix' Magic Garden Calculators",
       "description": "A set of calculators for the numbers the game keeps to itself, all in one page and nothing to install.\n\nThe one you'll actually use is the [Sell Price Calculator](https://daserix.github.io/magic-garden-calculator/#/sell-price-calculator): pick a crop, set its size and its mutations, and it tells you what it will go for. A few more sit alongside it for [weight](https://daserix.github.io/magic-garden-calculator/#/weight-probability-calculator), [pet appearance](https://daserix.github.io/magic-garden-calculator/#/pet-appearance-probability-calculator) and [ability trigger](https://daserix.github.io/magic-garden-calculator/#/ability-trigger-time-calculator) odds if you ever need them.\n\nYou can also [import your garden](https://daserix.github.io/magic-garden-calculator/#/import) by pasting a short script into your browser console and dropping the json it gives you onto the site. Your garden and inventory then show up in the tool, with filters and your total worth, which is handy for seeing what you're sitting on before you decide what to harvest.",
