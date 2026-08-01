@@ -21,8 +21,20 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
 
   const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  // The whole stage opens the zoom, not just the <img>: the image is letterboxed
+  // inside it, and clicking the empty margins should work too.
   const stage = document.createElement("div");
   stage.className = "mgt-carousel__stage";
+  stage.setAttribute("role", "button");
+  stage.tabIndex = 0;
+  stage.title = "Click to enlarge";
+  stage.setAttribute("aria-label", "Enlarge image");
+  stage.onclick = () => openImageZoom(images[currentIndex]);
+  stage.onkeydown = (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    openImageZoom(images[currentIndex]);
+  };
 
   let currentIndex = 0;
   let transitioning = false;
@@ -145,9 +157,9 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
     const slideRoot = document.createElement("div");
     slideRoot.className = "mgt-carousel__slide";
 
+    // Decorative: the stage carries the accessible name and the click target.
     const img = document.createElement("img");
-    img.alt = "Tool preview";
-    img.onclick = () => openImageZoom(images[currentIndex]);
+    img.alt = "";
 
     slideRoot.appendChild(img);
     return { root: slideRoot, img };
@@ -237,14 +249,21 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
     prevBtn.className = "mgt-nav mgt-nav--prev";
     prevBtn.textContent = "‹";
     prevBtn.title = "Previous image";
-    prevBtn.onclick = () => void goTo(currentIndex - 1, "prev");
+    // Without this the click bubbles to the stage and opens the zoom too.
+    prevBtn.onclick = (event) => {
+      event.stopPropagation();
+      void goTo(currentIndex - 1, "prev");
+    };
 
     const nextBtn = document.createElement("button");
     nextBtn.type = "button";
     nextBtn.className = "mgt-nav mgt-nav--next";
     nextBtn.textContent = "›";
     nextBtn.title = "Next image";
-    nextBtn.onclick = () => void goTo(currentIndex + 1, "next");
+    nextBtn.onclick = (event) => {
+      event.stopPropagation();
+      void goTo(currentIndex + 1, "next");
+    };
 
     stage.append(prevBtn, nextBtn);
 

@@ -230,11 +230,16 @@ export function ensureToolsStyles(): void {
 .mgt-carousel__stage {
   position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden;
   border-radius: 14px; border: 1px solid ${BORDER}; background: rgba(0,0,0,0.28);
+  cursor: zoom-in;
 }
+.mgt-carousel__stage:focus-visible { outline: 2px solid ${ACCENT}; outline-offset: 2px; }
+/* The slides stack on top of each other, so they must never take the clicks
+   meant for the stage. Only the nav buttons opt back in. */
 .mgt-carousel__slide {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
 }
-.mgt-carousel__slide img { max-width: 100%; max-height: 100%; object-fit: contain; cursor: zoom-in; }
+.mgt-carousel__slide img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .mgt-nav {
   position: absolute; top: 50%; transform: translateY(-50%);
   display: grid; place-items: center; width: 36px; height: 36px;
