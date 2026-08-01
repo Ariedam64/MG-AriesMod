@@ -25,7 +25,11 @@ function createCreatorChip(creator: ExternalToolCreator): HTMLElement {
   return chip;
 }
 
-/** Icon + title + tags on one line, creators below a divider. */
+/**
+ * One card holding the whole identity of the tool: icon, title and tags on the
+ * left, creators on the right, then the description under a divider. Keeping
+ * them together avoids stacking two near-identical panels.
+ */
 function createHero(tool: ExternalTool): HTMLElement {
   const hero = document.createElement("div");
   hero.className = "mgt-hero";
@@ -50,13 +54,8 @@ function createHero(tool: ExternalTool): HTMLElement {
   }
 
   top.appendChild(titles);
-  hero.appendChild(top);
 
   if (tool.creators?.length) {
-    const divider = document.createElement("div");
-    divider.className = "mgt-divider";
-    hero.appendChild(divider);
-
     const meta = document.createElement("div");
     meta.className = "mgt-meta";
 
@@ -66,8 +65,19 @@ function createHero(tool: ExternalTool): HTMLElement {
     meta.appendChild(label);
 
     tool.creators.forEach((creator) => meta.appendChild(createCreatorChip(creator)));
-    hero.appendChild(meta);
+    top.appendChild(meta);
   }
+
+  hero.appendChild(top);
+
+  const divider = document.createElement("div");
+  divider.className = "mgt-divider";
+  hero.appendChild(divider);
+
+  const description = document.createElement("div");
+  description.className = "mgt-md";
+  description.innerHTML = renderMarkdown(tool.description);
+  hero.appendChild(description);
 
   return hero;
 }
@@ -116,11 +126,6 @@ export function renderDetailView(
   root.appendChild(back);
 
   root.appendChild(createHero(tool));
-
-  const description = document.createElement("div");
-  description.className = "mgt-panel mgt-md";
-  description.innerHTML = renderMarkdown(tool.description);
-  root.appendChild(description);
 
   if (tool.images?.length) {
     root.appendChild(renderCarousel(tool.images).root);

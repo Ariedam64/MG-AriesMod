@@ -157,12 +157,14 @@ export function ensureToolsStyles(): void {
     radial-gradient(130% 150% at 0% 0%, rgba(94,234,212,0.10), transparent 55%),
     linear-gradient(160deg, rgba(18,24,34,0.95), rgba(12,17,26,0.96));
 }
-.mgt-hero__top { display: flex; align-items: center; gap: 14px; }
-.mgt-hero__titles { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.mgt-hero__top { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
+/* Grows to fill the row so the creators get pushed to the far right. */
+.mgt-hero__titles { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1 1 240px; }
 .mgt-hero__title { margin: 0; font-size: 19px; font-weight: 750; line-height: 1.2; color: ${TEXT}; }
 .mgt-divider { height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.10), transparent); }
 
 .mgt-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
+.mgt-hero__top .mgt-meta { margin-left: auto; }
 .mgt-creator {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 3px 11px 3px 3px; border-radius: 999px;
@@ -173,11 +175,6 @@ export function ensureToolsStyles(): void {
 .mgt-creator img {
   width: 22px; height: 22px; border-radius: 999px; object-fit: cover;
   border: 1px solid rgba(255,255,255,0.14); flex-shrink: 0;
-}
-
-.mgt-panel {
-  padding: 16px; border-radius: 14px;
-  border: 1px solid ${BORDER}; background: rgba(255,255,255,0.02);
 }
 
 /* ── markdown body ───────────────────────────────────────────────────── */
