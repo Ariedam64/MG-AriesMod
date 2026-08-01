@@ -48673,6 +48673,7 @@ next: ${next}`;
     }
     container.style.position = "relative";
     container.style.overflow = "hidden";
+    to.style.display = "";
     from.style.position = "absolute";
     from.style.inset = "0";
     const fromTranslate = direction === "forward" ? -24 : 24;
@@ -48705,7 +48706,6 @@ next: ${next}`;
     from.style.inset = "";
     from.style.transform = "";
     from.style.opacity = "";
-    to.style.display = "";
     to.style.transform = "";
     to.style.opacity = "";
   }
