@@ -10,39 +10,6 @@ import { swapViews } from "./tools/transition";
 
 const WRAPPER_WIDTH_PX = 720;
 
-function createIntro(): { root: HTMLElement; setCount: (count: number) => void } {
-  const root = document.createElement("div");
-  root.className = "mgt-intro";
-
-  const head = document.createElement("div");
-  head.className = "mgt-intro__head";
-
-  const title = document.createElement("span");
-  title.className = "mgt-intro__title";
-  title.textContent = "🧰 Community Tools";
-
-  const count = document.createElement("span");
-  count.className = "mgt-intro__count";
-  count.style.visibility = "hidden";
-
-  head.append(title, count);
-
-  const text = document.createElement("p");
-  text.className = "mgt-intro__text";
-  text.textContent =
-    "Discover community-made helpers to plan, calculate, and simplify your Magic Garden adventures.";
-
-  root.append(head, text);
-
-  return {
-    root,
-    setCount(value: number) {
-      count.textContent = `${value} ${value === 1 ? "tool" : "tools"}`;
-      count.style.visibility = "visible";
-    },
-  };
-}
-
 export async function renderToolsMenu(container: HTMLElement) {
   ensureToolsStyles();
 
@@ -65,9 +32,6 @@ export async function renderToolsMenu(container: HTMLElement) {
   wrapper.style.minWidth = `${WRAPPER_WIDTH_PX}px`;
   wrapper.style.maxWidth = "100%";
   wrapper.style.boxSizing = "border-box";
-
-  const intro = createIntro();
-  wrapper.appendChild(intro.root);
 
   const viewContainer = document.createElement("div");
   viewContainer.className = "mgt-views";
@@ -149,8 +113,6 @@ export async function renderToolsMenu(container: HTMLElement) {
         showError("No tools are available right now.");
         return;
       }
-
-      intro.setCount(tools.length);
 
       viewContainer.innerHTML = "";
       listViewRoot = null;

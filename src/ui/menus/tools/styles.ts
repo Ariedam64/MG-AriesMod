@@ -35,27 +35,6 @@ export function ensureToolsStyles(): void {
 .mgt-wrap { display: flex; flex-direction: column; gap: 14px; width: 100%; }
 .mgt-views { position: relative; width: 100%; }
 
-/* ── intro banner ────────────────────────────────────────────────────── */
-.mgt-intro {
-  display: flex; flex-direction: column; gap: 7px;
-  padding: 16px 18px; border-radius: 14px;
-  border: 1px solid rgba(94,234,212,0.20);
-  background:
-    radial-gradient(120% 140% at 0% 0%, rgba(94,234,212,0.10), transparent 55%),
-    linear-gradient(160deg, rgba(18,24,34,0.95), rgba(12,17,26,0.96));
-}
-.mgt-intro__head { display: flex; align-items: center; gap: 9px; }
-.mgt-intro__title { font-size: 15px; font-weight: 700; color: ${TEXT}; letter-spacing: 0.01em; }
-.mgt-intro__count {
-  margin-left: auto; flex-shrink: 0;
-  padding: 3px 10px; border-radius: 999px;
-  font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
-  color: ${ACCENT};
-  background: rgba(94,234,212,0.08);
-  border: 1px solid rgba(94,234,212,0.18);
-}
-.mgt-intro__text { margin: 0; font-size: 12.5px; line-height: 1.55; color: ${TEXT_DIM}; }
-
 /* ── filter bar ──────────────────────────────────────────────────────── */
 .mgt-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
 .mgt-label {

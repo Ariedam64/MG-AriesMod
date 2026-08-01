@@ -48619,27 +48619,6 @@ next: ${next}`;
 .mgt-wrap { display: flex; flex-direction: column; gap: 14px; width: 100%; }
 .mgt-views { position: relative; width: 100%; }
 
-/* \u2500\u2500 intro banner \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
-.mgt-intro {
-  display: flex; flex-direction: column; gap: 7px;
-  padding: 16px 18px; border-radius: 14px;
-  border: 1px solid rgba(94,234,212,0.20);
-  background:
-    radial-gradient(120% 140% at 0% 0%, rgba(94,234,212,0.10), transparent 55%),
-    linear-gradient(160deg, rgba(18,24,34,0.95), rgba(12,17,26,0.96));
-}
-.mgt-intro__head { display: flex; align-items: center; gap: 9px; }
-.mgt-intro__title { font-size: 15px; font-weight: 700; color: ${TEXT}; letter-spacing: 0.01em; }
-.mgt-intro__count {
-  margin-left: auto; flex-shrink: 0;
-  padding: 3px 10px; border-radius: 999px;
-  font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
-  color: ${ACCENT};
-  background: rgba(94,234,212,0.08);
-  border: 1px solid rgba(94,234,212,0.18);
-}
-.mgt-intro__text { margin: 0; font-size: 12.5px; line-height: 1.55; color: ${TEXT_DIM}; }
-
 /* \u2500\u2500 filter bar \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 .mgt-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
 .mgt-label {
@@ -48913,30 +48892,6 @@ next: ${next}`;
 
   // src/ui/menus/tools.ts
   var WRAPPER_WIDTH_PX = 720;
-  function createIntro() {
-    const root = document.createElement("div");
-    root.className = "mgt-intro";
-    const head = document.createElement("div");
-    head.className = "mgt-intro__head";
-    const title = document.createElement("span");
-    title.className = "mgt-intro__title";
-    title.textContent = "\u{1F9F0} Community Tools";
-    const count = document.createElement("span");
-    count.className = "mgt-intro__count";
-    count.style.visibility = "hidden";
-    head.append(title, count);
-    const text = document.createElement("p");
-    text.className = "mgt-intro__text";
-    text.textContent = "Discover community-made helpers to plan, calculate, and simplify your Magic Garden adventures.";
-    root.append(head, text);
-    return {
-      root,
-      setCount(value) {
-        count.textContent = `${value} ${value === 1 ? "tool" : "tools"}`;
-        count.style.visibility = "visible";
-      }
-    };
-  }
   async function renderToolsMenu(container) {
     ensureToolsStyles();
     const ui = new Menu({ id: "tools", compact: true });
@@ -48956,8 +48911,6 @@ next: ${next}`;
     wrapper.style.minWidth = `${WRAPPER_WIDTH_PX}px`;
     wrapper.style.maxWidth = "100%";
     wrapper.style.boxSizing = "border-box";
-    const intro = createIntro();
-    wrapper.appendChild(intro.root);
     const viewContainer = document.createElement("div");
     viewContainer.className = "mgt-views";
     wrapper.appendChild(viewContainer);
@@ -49020,7 +48973,6 @@ next: ${next}`;
           showError("No tools are available right now.");
           return;
         }
-        intro.setCount(tools.length);
         viewContainer.innerHTML = "";
         listViewRoot = null;
         detailViewRoot = null;
