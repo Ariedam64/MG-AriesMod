@@ -20,9 +20,6 @@ export async function swapViews(
   container.style.position = "relative";
   container.style.overflow = "hidden";
 
-  // Make sure incoming view is visible before animation starts
-  to.style.display = "";
-
   // Position the outgoing panel absolutely so the incoming one can be laid out below
   from.style.position = "absolute";
   from.style.inset = "0";
