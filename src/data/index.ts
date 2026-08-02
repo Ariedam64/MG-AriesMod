@@ -72,6 +72,12 @@ export const rarity = hardcoded.rarity;
 export const harvestType = hardcoded.harvestType;
 export const coin = hardcoded.coin;
 
+// Hunger depletion minutes per species. Static-only on purpose — the game
+// bundle and MGData both lack it, and it must NOT be folded into petCatalog:
+// makeCatalogProxy resolves per species, so a hardcoded field would be
+// shadowed by MGData's entry. See hardcoded-data.clean.js for details.
+export const petHungerDepletionMinutes = hardcoded.petHungerDepletionMinutes as Record<string, number | undefined>;
+
 // Tile refs (sprite references, no dynamic equivalent)
 export const tileRefsMap = hardcoded.tileRefsMap;
 export const tileRefsPlants = hardcoded.tileRefsPlants;

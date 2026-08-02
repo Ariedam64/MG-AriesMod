@@ -10,6 +10,7 @@ import { getAbilityChipColors } from "./pets";
 import { attachSpriteIcon } from "../spriteIconCache";
 import { toastSimple } from "../toast";
 import { getPetStrength, getPetMaxStrength } from "../../utils/petCalcul";
+import { renderTeamStats } from "./petsTeamStats";
 
 const miniSpriteCache = new Map<string, string>();
 
@@ -288,6 +289,15 @@ function renderTeamCard(
     petsCol.appendChild(renderPetChip(petsById.get(id)));
   }
   card.body.appendChild(petsCol);
+
+  // What the team is actually worth at these pets' strengths, restricted to
+  // the goal this team was built for — a Crop Size team reports Crop Size,
+  // not every unrelated ability its pets happen to carry. Collapsed by
+  // default: the grid holds many cards and the one-liner is the scan surface.
+  const teamPets = team.petIds
+    .map((id) => petsById.get(id))
+    .filter((pet): pet is InventoryPet => Boolean(pet));
+  card.body.appendChild(renderTeamStats(teamPets, { focusAbilityIds: team.focusAbilityIds }));
 
   const saveBtn = ui.btn("💾 Save", {
     variant: "primary",

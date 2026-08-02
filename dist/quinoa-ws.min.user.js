@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.187
+// @version      3.2.188
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -7973,6 +7973,34 @@
       ]
     }
   };
+  var petHungerDepletionMinutes = {
+    Bat: 30,
+    Bee: 15,
+    Bunny: 45,
+    Butterfly: 30,
+    Capybara: 60,
+    Chicken: 60,
+    Cow: 75,
+    Dragonfly: 15,
+    FireHorse: 90,
+    Goat: 60,
+    Horse: 75,
+    Ostrich: 45,
+    Peacock: 60,
+    Pig: 60,
+    Platypus: 60,
+    Pony: 60,
+    Sheep: 60,
+    Snail: 60,
+    SnowFox: 45,
+    Squirrel: 30,
+    Stoat: 60,
+    ThunderWolf: 60,
+    Turkey: 60,
+    Turtle: 90,
+    WhiteCaribou: 75,
+    Worm: 30
+  };
   var coin = {
     img64: "data:image/png;base64,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"
   };
@@ -8023,6 +8051,7 @@
   var weatherCatalog2 = makeCatalogProxy("weather", weatherCatalog);
   var rarity2 = rarity;
   var coin2 = coin;
+  var petHungerDepletionMinutes2 = petHungerDepletionMinutes;
   var tileRefsMutations2 = tileRefsMutations;
   var tileRefsMutationLabels2 = tileRefsMutationLabels;
 
@@ -30878,7 +30907,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.187";
+      return "3.2.188";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -44013,6 +44042,299 @@ next: ${next}`;
     repaint();
   }
 
+  // src/services/petAbilityStats.ts
+  var MAX_PROBABILITY_PERCENT = 100;
+  var MIN_COOLDOWN_RATIO = 0.01;
+  var STRENGTH_SCALE = 100;
+  var SCALED_PARAMETER_KEYS = /* @__PURE__ */ new Set([
+    "scaleIncreasePercentage",
+    "cropSellPriceIncreasePercentage",
+    "mutationChanceIncreasePercentage",
+    "hungerRestorePercentage",
+    "hungerRefundPercentage",
+    // Older name for hungerRefundPercentage, still carried by the hardcoded
+    // fallback catalog. Absent from the live bundle's `tge` switch only because
+    // the game renamed it — same parameter, so it scales the same way.
+    "hungerDepletionRateDecreasePercentage",
+    "plantGrowthReductionMinutes",
+    "eggGrowthTimeReductionMinutes",
+    "baseMaxCoinsFindable",
+    "bonusXp",
+    "maxStrengthIncreasePercentage",
+    "plantAbilityChanceBoostPercentage"
+  ]);
+  var COOLDOWN_PARAMETER_KEY = "cooldownSeconds";
+  function getDefinition(abilityId) {
+    const entry = petAbilities2[abilityId];
+    return entry ?? null;
+  }
+  function toFiniteNumber(value) {
+    return typeof value === "number" && Number.isFinite(value) ? value : null;
+  }
+  function getStrengthRatio(pet) {
+    return getPetStrength(pet) / STRENGTH_SCALE;
+  }
+  function getMaxStrengthRatio(pet) {
+    return getPetMaxStrength(pet) / STRENGTH_SCALE;
+  }
+  function getAbilityDisplayName(abilityId) {
+    return getDefinition(abilityId)?.name ?? abilityId;
+  }
+  function getAbilityRawParameters(abilityId) {
+    return getDefinition(abilityId)?.baseParameters ?? {};
+  }
+  function getRequiredWeather(abilityId) {
+    const raw = getDefinition(abilityId)?.baseParameters?.requiredWeather;
+    return typeof raw === "string" && raw ? raw : null;
+  }
+  function computeAbilityStatsAtRatio(abilityId, ratio) {
+    const definition = getDefinition(abilityId);
+    if (!definition) return null;
+    const safeRatio = Number.isFinite(ratio) && ratio > 0 ? ratio : 0;
+    const baseProbability = toFiniteNumber(definition.baseProbability);
+    const baseParameters = definition.baseParameters ?? {};
+    const scaledParameters = {};
+    let effectiveCooldownSeconds = null;
+    for (const [key2, rawValue] of Object.entries(baseParameters)) {
+      const value = toFiniteNumber(rawValue);
+      if (value === null) continue;
+      if (key2 === COOLDOWN_PARAMETER_KEY) {
+        effectiveCooldownSeconds = value / Math.max(safeRatio, MIN_COOLDOWN_RATIO);
+        continue;
+      }
+      scaledParameters[key2] = SCALED_PARAMETER_KEYS.has(key2) ? value * safeRatio : value;
+    }
+    return {
+      abilityId,
+      name: definition.name ?? abilityId,
+      trigger: definition.trigger ?? null,
+      effectiveProbability: baseProbability === null ? null : Math.min(MAX_PROBABILITY_PERCENT, baseProbability * safeRatio),
+      baseProbability,
+      scaledParameters,
+      effectiveCooldownSeconds,
+      requiredWeather: getRequiredWeather(abilityId)
+    };
+  }
+
+  // src/services/petTeamStats.ts
+  var PERCENT = 100;
+  var DRAIN_REDUCTION_KEYS = ["hungerRefundPercentage", "hungerDepletionRateDecreasePercentage"];
+  var RESTORE_AMOUNT_KEY = "hungerRestorePercentage";
+  var SECONDS_PER_MINUTE = 60;
+  var TIER_SUFFIX = /(?:_NEW)?(?:IV|I{1,3})$/;
+  function stripTierSuffix(text) {
+    return text.replace(/\s*(?:_NEW)?(?:IV|I{1,3})$/, "").trim() || text;
+  }
+  function getMaxHunger(species) {
+    const entry = petCatalog2[species];
+    const raw = entry?.coinsToFullyReplenishHunger;
+    return typeof raw === "number" && Number.isFinite(raw) && raw > 0 ? raw : null;
+  }
+  function getDepletionMinutes(species) {
+    const raw = petHungerDepletionMinutes2[species];
+    return typeof raw === "number" && Number.isFinite(raw) && raw > 0 ? raw : null;
+  }
+  function isKnownSpecies(species) {
+    return Boolean(petCatalog2[species]);
+  }
+  function petLabel(pet) {
+    return pet.name || pet.petSpecies || "Pet";
+  }
+  function effectGroupKey(stats, rawParameters) {
+    const granted = rawParameters.grantedMutations;
+    if (Array.isArray(granted) && granted.length) {
+      return `mutation:${granted.slice().sort().join(",")}`;
+    }
+    const numericKeys = Object.keys(stats.scaledParameters).sort();
+    if (numericKeys.length) {
+      return `param:${numericKeys.join("+")}@${stats.trigger ?? "?"}`;
+    }
+    return `id:${stats.abilityId.replace(TIER_SUFFIX, "")}`;
+  }
+  function effectGroupKeyForAbility(abilityId) {
+    const stats = computeAbilityStatsAtRatio(abilityId, 1);
+    if (!stats) return null;
+    return effectGroupKey(stats, getAbilityRawParameters(abilityId));
+  }
+  function combineProbabilities(probabilities) {
+    if (!probabilities.length) return null;
+    let missAll = 1;
+    for (const probability of probabilities) {
+      missAll *= 1 - probability / PERCENT;
+    }
+    return (1 - missAll) * PERCENT;
+  }
+  function addInto(target, source) {
+    for (const [key2, value] of Object.entries(source)) {
+      target[key2] = (target[key2] ?? 0) + value;
+    }
+  }
+  function restoreActivationsPerMinute(probabilityPercent) {
+    const perMinute = probabilityPercent / 100;
+    if (perMinute <= 0) return 0;
+    if (perMinute >= 1) return SECONDS_PER_MINUTE;
+    const perSecond = 1 - Math.pow(1 - perMinute, 1 / SECONDS_PER_MINUTE);
+    return perSecond * SECONDS_PER_MINUTE;
+  }
+  function computeTeamAutonomy(pets) {
+    const speciesMissingDepletion = [];
+    for (const pet of pets) {
+      if (getDepletionMinutes(pet.petSpecies) === null || getMaxHunger(pet.petSpecies) === null) {
+        if (!speciesMissingDepletion.includes(pet.petSpecies)) {
+          speciesMissingDepletion.push(pet.petSpecies);
+        }
+      }
+    }
+    let drainReductionPercent = 0;
+    const restoreSources = [];
+    const weatherGatedHungerAbilities = [];
+    for (const pet of pets) {
+      const ratio = getStrengthRatio(pet);
+      for (const abilityId of Array.isArray(pet.abilities) ? pet.abilities : []) {
+        const stats = computeAbilityStatsAtRatio(abilityId, ratio);
+        if (!stats) continue;
+        if (stats.requiredWeather) {
+          if (!weatherGatedHungerAbilities.includes(stats.name)) {
+            const touchesHunger = RESTORE_AMOUNT_KEY in stats.scaledParameters || DRAIN_REDUCTION_KEYS.some((key2) => key2 in stats.scaledParameters);
+            if (touchesHunger) weatherGatedHungerAbilities.push(stats.name);
+          }
+          continue;
+        }
+        for (const key2 of DRAIN_REDUCTION_KEYS) {
+          const value = stats.scaledParameters[key2];
+          if (typeof value === "number") drainReductionPercent += value;
+        }
+        const amountPercent = stats.scaledParameters[RESTORE_AMOUNT_KEY];
+        if (typeof amountPercent === "number" && stats.effectiveProbability !== null) {
+          restoreSources.push({
+            amountPercent,
+            activationsPerMinute: restoreActivationsPerMinute(stats.effectiveProbability)
+          });
+        }
+      }
+    }
+    const restoreActivationsTotal = restoreSources.reduce((sum, s) => sum + s.activationsPerMinute, 0);
+    const remainingDrain = Math.max(0, 1 - drainReductionPercent / 100);
+    const base = {
+      limitingPetName: null,
+      speciesMissingDepletion,
+      drainReductionPercent,
+      restoreActivationsPerMinute: restoreActivationsTotal,
+      weatherGatedHungerAbilities
+    };
+    if (speciesMissingDepletion.length) {
+      return { ...base, status: "unknown", minutesFromFull: null };
+    }
+    if (remainingDrain <= 0) {
+      return { ...base, status: "sustained", minutesFromFull: null };
+    }
+    let worstMinutes = null;
+    let limitingPetName = null;
+    for (const pet of pets) {
+      const maxHunger = getMaxHunger(pet.petSpecies);
+      const depletionMinutes = getDepletionMinutes(pet.petSpecies);
+      const drainPerMinute = maxHunger / depletionMinutes * remainingDrain;
+      let restorePerMinute = 0;
+      for (const source of restoreSources) {
+        const hitsPerMinute = source.activationsPerMinute / pets.length;
+        const cap = Math.floor(maxHunger * source.amountPercent / 100);
+        const averageRoll = cap > 0 ? (cap + 1) / 2 : 0;
+        restorePerMinute += hitsPerMinute * averageRoll;
+      }
+      const net = restorePerMinute - drainPerMinute;
+      if (net >= 0) continue;
+      const minutes = maxHunger / -net;
+      if (worstMinutes === null || minutes < worstMinutes) {
+        worstMinutes = minutes;
+        limitingPetName = petLabel(pet);
+      }
+    }
+    return worstMinutes === null ? { ...base, status: "sustained", minutesFromFull: null } : { ...base, status: "runs-out", minutesFromFull: worstMinutes, limitingPetName };
+  }
+  function computeTeamStats(pets) {
+    const realPets = pets.filter(Boolean);
+    const groupsByKey = /* @__PURE__ */ new Map();
+    const groupOrder = [];
+    const weatherCounts = /* @__PURE__ */ new Map();
+    const unknownSpecies = [];
+    let totalAbilityCount = 0;
+    let strengthCurrent = 0;
+    let strengthMax = 0;
+    for (const pet of realPets) {
+      if (!isKnownSpecies(pet.petSpecies) && !unknownSpecies.includes(pet.petSpecies)) {
+        unknownSpecies.push(pet.petSpecies);
+      }
+      strengthCurrent += getPetStrength(pet);
+      strengthMax += getPetMaxStrength(pet);
+      const ratio = getStrengthRatio(pet);
+      const maxRatio = getMaxStrengthRatio(pet);
+      const abilityIds = Array.isArray(pet.abilities) ? pet.abilities.filter(Boolean) : [];
+      for (const abilityId of abilityIds) {
+        const stats = computeAbilityStatsAtRatio(abilityId, ratio);
+        if (!stats) continue;
+        const statsAtMax = computeAbilityStatsAtRatio(abilityId, maxRatio);
+        totalAbilityCount += 1;
+        if (stats.requiredWeather) {
+          weatherCounts.set(stats.requiredWeather, (weatherCounts.get(stats.requiredWeather) ?? 0) + 1);
+        }
+        const key2 = effectGroupKey(stats, getAbilityRawParameters(abilityId));
+        let group = groupsByKey.get(key2);
+        if (!group) {
+          group = {
+            key: key2,
+            label: stripTierSuffix(getAbilityDisplayName(abilityId)),
+            trigger: stats.trigger,
+            contributors: [],
+            combinedProbability: null,
+            combinedProbabilityAtMax: null,
+            summedParameters: {},
+            summedParametersAtMax: {},
+            requiredWeathers: []
+          };
+          groupsByKey.set(key2, group);
+          groupOrder.push(key2);
+        }
+        group.contributors.push({
+          petId: pet.id,
+          petName: petLabel(pet),
+          abilityId,
+          abilityName: stats.name,
+          probability: stats.effectiveProbability,
+          probabilityAtMax: statsAtMax?.effectiveProbability ?? null,
+          scaledParameters: stats.scaledParameters,
+          requiredWeather: stats.requiredWeather
+        });
+        addInto(group.summedParameters, stats.scaledParameters);
+        if (statsAtMax) addInto(group.summedParametersAtMax, statsAtMax.scaledParameters);
+        if (stats.requiredWeather && !group.requiredWeathers.includes(stats.requiredWeather)) {
+          group.requiredWeathers.push(stats.requiredWeather);
+        }
+      }
+    }
+    const groups = groupOrder.map((key2) => {
+      const group = groupsByKey.get(key2);
+      const probabilities = group.contributors.map((c) => c.probability).filter((p) => p !== null);
+      const probabilitiesAtMax = group.contributors.map((c) => c.probabilityAtMax).filter((p) => p !== null);
+      group.combinedProbability = combineProbabilities(probabilities);
+      group.combinedProbabilityAtMax = combineProbabilities(probabilitiesAtMax);
+      return group;
+    });
+    const potential = strengthMax > 0 ? strengthCurrent / strengthMax : 0;
+    const headroom = strengthCurrent > 0 ? strengthMax / strengthCurrent - 1 : 0;
+    const weatherExposure = Array.from(weatherCounts.entries()).map(([weather2, abilityCount]) => ({ weather: weather2, abilityCount })).sort((a, b) => b.abilityCount - a.abilityCount);
+    return {
+      groups,
+      strengthCurrent,
+      strengthMax,
+      potential,
+      headroom,
+      weatherExposure,
+      totalAbilityCount,
+      autonomy: computeTeamAutonomy(realPets),
+      unknownSpecies
+    };
+  }
+
   // src/services/petTeamBuilder.ts
   var CATEGORIES = [
     {
@@ -44474,21 +44796,152 @@ next: ${next}`;
     if (hasRestore || hasBoost) return 1;
     return 0;
   }
+  function pickSustainPet(pets, category, afkOnly) {
+    const NOT_USEFUL = Number.POSITIVE_INFINITY;
+    const wantedMutations = category ? categoryGrantedMutations(category) : /* @__PURE__ */ new Set();
+    const ranked = pets.map((pet) => {
+      const abilities = petAbilityIds(pet);
+      const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
+      const tierIndex = category ? bestTierIndex(category, relevant) : -1;
+      const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
+      return {
+        pet,
+        score: sustainScore(pet),
+        hardAvoidCount,
+        // Lower is better; pets that do nothing for the goal sort last.
+        goalRank: tierIndex === -1 ? NOT_USEFUL : tierIndex,
+        effectiveStrength: getPetMaxStrength(pet) - GRANTER_STRENGTH_PENALTY * softAvoidCount
+      };
+    }).filter((candidate) => candidate.score > 0);
+    if (!ranked.length) return null;
+    ranked.sort((a, b) => {
+      if (a.score !== b.score) return b.score - a.score;
+      if (a.hardAvoidCount !== b.hardAvoidCount) return a.hardAvoidCount - b.hardAvoidCount;
+      if (a.goalRank !== b.goalRank) return a.goalRank - b.goalRank;
+      if (a.effectiveStrength !== b.effectiveStrength) return b.effectiveStrength - a.effectiveStrength;
+      return a.pet.petSpecies.localeCompare(b.pet.petSpecies);
+    });
+    return ranked[0].pet;
+  }
   function getBestSustainPet(pets) {
-    let best = null;
-    let bestScore = 0;
-    let bestStrength = -1;
-    for (const pet of pets) {
-      const score = sustainScore(pet);
-      if (score <= 0) continue;
-      const strength = getPetMaxStrength(pet);
-      if (score > bestScore || score === bestScore && strength > bestStrength) {
-        best = pet;
-        bestScore = score;
-        bestStrength = strength;
-      }
+    return pickSustainPet(pets, null, false);
+  }
+  var HARD_AVOID_MUTATIONS = /* @__PURE__ */ new Set(["Gold"]);
+  var SOFT_AVOID_MUTATIONS = /* @__PURE__ */ new Set(["Rainbow"]);
+  var GRANTER_STRENGTH_PENALTY = 10;
+  function abilityGrantedMutations(abilityId) {
+    const raw = getAbilityRawParameters(abilityId).grantedMutations;
+    return Array.isArray(raw) ? raw.filter((m) => typeof m === "string") : [];
+  }
+  function petGrantedMutations(pet) {
+    const mutations = /* @__PURE__ */ new Set();
+    for (const abilityId of petAbilityIds(pet)) {
+      for (const mutation of abilityGrantedMutations(abilityId)) mutations.add(mutation);
     }
-    return best;
+    return Array.from(mutations);
+  }
+  function categoryGrantedMutations(category) {
+    const mutations = /* @__PURE__ */ new Set();
+    for (const abilityId of category.abilityIds) {
+      for (const mutation of abilityGrantedMutations(abilityId)) mutations.add(mutation);
+    }
+    return mutations;
+  }
+  function granterPenaltyFor(pet, wanted) {
+    let hardAvoidCount = 0;
+    let softAvoidCount = 0;
+    for (const mutation of petGrantedMutations(pet)) {
+      if (wanted.has(mutation)) continue;
+      if (HARD_AVOID_MUTATIONS.has(mutation)) hardAvoidCount += 1;
+      else if (SOFT_AVOID_MUTATIONS.has(mutation)) softAvoidCount += 1;
+    }
+    return { hardAvoidCount, softAvoidCount };
+  }
+  function countUnwantedGranters(teamPets, wanted) {
+    let hardAvoidCount = 0;
+    let softAvoidCount = 0;
+    for (const pet of teamPets) {
+      const penalty = granterPenaltyFor(pet, wanted);
+      hardAvoidCount += penalty.hardAvoidCount;
+      softAvoidCount += penalty.softAvoidCount;
+    }
+    return { hardAvoidCount, softAvoidCount };
+  }
+  var AFK_POOL_LIMIT = 6;
+  var AFK_FEEDER_LIMIT = 4;
+  function combinations(items, size) {
+    if (size <= 0 || size > items.length) return [];
+    const out = [];
+    const current = [];
+    const walk = (start2) => {
+      if (current.length === size) {
+        out.push([...current]);
+        return;
+      }
+      for (let i = start2; i < items.length; i += 1) {
+        current.push(items[i]);
+        walk(i + 1);
+        current.pop();
+      }
+    };
+    walk(0);
+    return out;
+  }
+  function categoryCombinedProbability(category, teamPets) {
+    let missAll = 1;
+    for (const pet of teamPets) {
+      const abilities = petAbilityIds(pet).filter(isAfkEligibleAbility);
+      const tierIndex = bestTierIndex(category, abilities);
+      if (tierIndex === -1) continue;
+      const stats = computeAbilityStatsAtRatio(category.abilityIds[tierIndex], getStrengthRatio(pet));
+      if (!stats || stats.effectiveProbability === null) continue;
+      missAll *= 1 - stats.effectiveProbability / 100;
+    }
+    return 1 - missAll;
+  }
+  function pickAfkTeam(category, pets, maxSlots) {
+    const qualifying = rankCandidates(category, pets, true).slice(0, AFK_POOL_LIMIT);
+    if (!qualifying.length) return null;
+    const feeders = pets.filter((pet) => sustainScore(pet) > 0).sort((a, b) => sustainScore(b) - sustainScore(a) || getPetMaxStrength(b) - getPetMaxStrength(a)).slice(0, AFK_FEEDER_LIMIT);
+    const poolById = /* @__PURE__ */ new Map();
+    for (const pet of [...qualifying, ...feeders]) poolById.set(pet.id, pet);
+    const pool = Array.from(poolById.values());
+    const qualifyingIds = new Set(qualifying.map((pet) => pet.id));
+    const wantedMutations = categoryGrantedMutations(category);
+    let best = null;
+    for (const combo of combinations(pool, Math.min(maxSlots, pool.length))) {
+      if (!combo.some((pet) => qualifyingIds.has(pet.id))) continue;
+      if (!combo.some((pet) => sustainScore(pet) > 0)) continue;
+      const { hardAvoidCount, softAvoidCount } = countUnwantedGranters(combo, wantedMutations);
+      const strength = combo.reduce((sum, pet) => sum + getPetMaxStrength(pet), 0);
+      const sustained = computeTeamAutonomy(combo).status === "sustained";
+      const candidate = {
+        pets: combo,
+        sustained,
+        // Only meaningful while the team still runs dry: dodging a granter must
+        // not cost you a real feeder. Once the team sustains itself, extra
+        // hunger capability buys nothing and the later tiers decide.
+        sustainCapability: sustained ? 0 : combo.reduce((sum, pet) => sum + sustainScore(pet), 0),
+        hardAvoidCount,
+        probability: categoryCombinedProbability(category, combo),
+        // Soft-avoided granters cost GRANTER_STRENGTH_PENALTY each, so such a
+        // pet only wins when it is more than that much stronger.
+        effectiveStrength: strength - GRANTER_STRENGTH_PENALTY * softAvoidCount
+      };
+      if (!best || isBetterAfkTeam(candidate, best)) best = candidate;
+    }
+    return best?.pets ?? null;
+  }
+  function isBetterAfkTeam(candidate, best) {
+    if (candidate.sustained !== best.sustained) return candidate.sustained;
+    if (candidate.sustainCapability !== best.sustainCapability) {
+      return candidate.sustainCapability > best.sustainCapability;
+    }
+    if (candidate.hardAvoidCount !== best.hardAvoidCount) {
+      return candidate.hardAvoidCount < best.hardAvoidCount;
+    }
+    if (candidate.probability !== best.probability) return candidate.probability > best.probability;
+    return candidate.effectiveStrength > best.effectiveStrength;
   }
   function bestTierIndex(category, abilities) {
     let best = -1;
@@ -44500,10 +44953,19 @@ next: ${next}`;
     return best;
   }
   function rankCandidates(category, pets, afkOnly) {
+    const wantedMutations = categoryGrantedMutations(category);
     const ranked = pets.map((pet) => {
       const abilities = petAbilityIds(pet);
       const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
-      return { pet, tierIndex: bestTierIndex(category, relevant), strength: getPetMaxStrength(pet) };
+      const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
+      return {
+        pet,
+        tierIndex: bestTierIndex(category, relevant),
+        hardAvoidCount,
+        // Same handicap as the AFK ranking: a soft-avoided granter only wins
+        // when it is more than GRANTER_STRENGTH_PENALTY stronger.
+        effectiveStrength: getPetMaxStrength(pet) - GRANTER_STRENGTH_PENALTY * softAvoidCount
+      };
     }).filter((c) => c.tierIndex !== -1);
     const speciesCount = /* @__PURE__ */ new Map();
     for (const c of ranked) {
@@ -44511,7 +44973,8 @@ next: ${next}`;
     }
     ranked.sort((a, b) => {
       if (a.tierIndex !== b.tierIndex) return a.tierIndex - b.tierIndex;
-      if (a.strength !== b.strength) return b.strength - a.strength;
+      if (a.hardAvoidCount !== b.hardAvoidCount) return a.hardAvoidCount - b.hardAvoidCount;
+      if (a.effectiveStrength !== b.effectiveStrength) return b.effectiveStrength - a.effectiveStrength;
       const aCount = speciesCount.get(a.pet.petSpecies) ?? 0;
       const bCount = speciesCount.get(b.pet.petSpecies) ?? 0;
       if (aCount !== bCount) return bCount - aCount;
@@ -44544,14 +45007,22 @@ next: ${next}`;
       const existing = byKey.get(key2);
       if (existing) {
         existing.categories.push(...team.categories);
+        existing.focusAbilityIds = dedupe([...existing.focusAbilityIds, ...team.focusAbilityIds]);
       } else {
-        byKey.set(key2, { ...team, categories: [...team.categories] });
+        byKey.set(key2, {
+          ...team,
+          categories: [...team.categories],
+          focusAbilityIds: [...team.focusAbilityIds]
+        });
         order.push(key2);
       }
     }
     return order.map((key2) => byKey.get(key2));
   }
   var CATEGORIES_BY_ID = new Map(CATEGORIES.map((c) => [c.id, c]));
+  function dedupe(ids) {
+    return Array.from(new Set(ids));
+  }
   function buildSuggestedTeams(pets) {
     const sustainPet = getBestSustainPet(pets);
     const teams = [];
@@ -44566,18 +45037,22 @@ next: ${next}`;
         abilityId: category.abilityIds[0]
       };
       const maxSlots = category.maxTeamSlots ?? 3;
+      const focusAbilityIds = [category.abilityIds[0]];
       let activeCandidates = rankCandidates(category, pets, false).slice(0, maxSlots);
       if (activeCandidates.length && activeCandidates.length < maxSlots && category.paddingParentId) {
         const parent = CATEGORIES_BY_ID.get(category.paddingParentId);
         if (parent) {
           const already = new Set(activeCandidates.map((p) => p.id));
           const padding = rankCandidates(parent, pets, false).filter((p) => !already.has(p.id));
+          const before = activeCandidates.length;
           activeCandidates = [...activeCandidates, ...padding].slice(0, maxSlots);
+          if (activeCandidates.length > before) focusAbilityIds.push(parent.abilityIds[0]);
         }
       }
       if (activeCandidates.length && activeCandidates.length < maxSlots && category.paddingSiblingIds?.length) {
         const already = new Set(activeCandidates.map((p) => p.id));
         const siblingPool = [];
+        const siblingByPetId = /* @__PURE__ */ new Map();
         for (const siblingId of category.paddingSiblingIds) {
           const sibling = CATEGORIES_BY_ID.get(siblingId);
           if (!sibling) continue;
@@ -44585,37 +45060,49 @@ next: ${next}`;
             if (!already.has(p.id)) {
               siblingPool.push(p);
               already.add(p.id);
+              siblingByPetId.set(p.id, sibling);
             }
           }
         }
         activeCandidates = [...activeCandidates, ...siblingPool].slice(0, maxSlots);
+        for (const pet of activeCandidates) {
+          const sibling = siblingByPetId.get(pet.id);
+          if (sibling) focusAbilityIds.push(sibling.abilityIds[0]);
+        }
       }
       activeCandidates.forEach((p) => usedIds.add(p.id));
       if (activeCandidates.length) {
         teams.push({
           categories: [categoryRef],
           mode: "active",
-          petIds: activeCandidates.map((p) => p.id)
+          petIds: activeCandidates.map((p) => p.id),
+          focusAbilityIds: dedupe(focusAbilityIds)
         });
       }
-      if (category.afkCapable && sustainPet) {
-        const afkCandidates = rankCandidates(category, pets, true).filter((p) => p.id !== sustainPet.id).slice(0, maxSlots - 1);
-        afkCandidates.forEach((p) => usedIds.add(p.id));
-        if (afkCandidates.length) {
+      if (category.afkCapable) {
+        const afkTeam = pickAfkTeam(category, pets, maxSlots);
+        if (afkTeam?.length) {
+          afkTeam.forEach((p) => usedIds.add(p.id));
           teams.push({
             categories: [categoryRef],
             mode: "afk",
-            petIds: [...afkCandidates.map((p) => p.id), sustainPet.id]
+            // Only the category's own ability. A feeder in this team may well
+            // carry it too — that is often why it was picked — and the stats
+            // layer counts whatever abilities the pets actually have.
+            petIds: afkTeam.map((p) => p.id),
+            focusAbilityIds: [category.abilityIds[0]]
           });
         }
       }
       const afkRelevant = !category.afkCapable && category.paddingParentId != null && !!CATEGORIES_BY_ID.get(category.paddingParentId)?.afkCapable;
-      if (afkRelevant && sustainPet && activeCandidates.length > 0 && activeCandidates.length < maxSlots && !activeCandidates.some((p) => p.id === sustainPet.id)) {
-        usedIds.add(sustainPet.id);
+      const fillerSustainPet = pickSustainPet(pets, category, false);
+      if (afkRelevant && fillerSustainPet && activeCandidates.length > 0 && activeCandidates.length < maxSlots && !activeCandidates.some((p) => p.id === fillerSustainPet.id)) {
+        usedIds.add(fillerSustainPet.id);
         teams.push({
           categories: [categoryRef],
           mode: "afk",
-          petIds: [...activeCandidates.map((p) => p.id), sustainPet.id]
+          petIds: [...activeCandidates.map((p) => p.id), fillerSustainPet.id],
+          focusAbilityIds: dedupe(focusAbilityIds)
         });
       }
     }
@@ -44624,6 +45111,385 @@ next: ${next}`;
       sustainPet,
       unusedPets: findUnusedPets(pets, usedIds, sustainPet)
     };
+  }
+
+  // src/ui/menus/petsTeamStats.ts
+  var PARAMETER_LABELS = {
+    scaleIncreasePercentage: { label: "Crop size", unit: "%" },
+    cropSellPriceIncreasePercentage: { label: "Sell price", unit: "%" },
+    mutationChanceIncreasePercentage: { label: "Mutation chance", unit: "%" },
+    hungerRestorePercentage: { label: "Hunger restore", unit: "%" },
+    hungerRefundPercentage: { label: "Hunger refund", unit: "%" },
+    hungerDepletionRateDecreasePercentage: { label: "Hunger drain", unit: "%" },
+    plantGrowthReductionMinutes: { label: "Plant growth", unit: "min" },
+    eggGrowthTimeReductionMinutes: { label: "Egg growth", unit: "min" },
+    baseMaxCoinsFindable: { label: "Coins (max)", unit: "" },
+    bonusXp: { label: "Bonus XP", unit: "" },
+    maxStrengthIncreasePercentage: { label: "Max STR", unit: "%" },
+    plantAbilityChanceBoostPercentage: { label: "Plant ability", unit: "%" }
+  };
+  var MUTED = "#94a3b8";
+  var ACCENT = "#34d399";
+  var DIM = "#64748b";
+  var CONTINUOUS_ROLLS_PER_HOUR = 60;
+  var TRIGGER_UNITS = {
+    continuous: "/min",
+    harvest: "/harvest",
+    sellAllCrops: "/sale",
+    sellPet: "/pet sold",
+    hatchEgg: "/hatch",
+    playerActivated: "/use",
+    weather: "/weather"
+  };
+  function triggerUnit(trigger) {
+    return trigger && TRIGGER_UNITS[trigger] || "/roll";
+  }
+  function fillRatioColor(ratio) {
+    if (ratio >= 0.99) return "#34d399";
+    if (ratio >= 0.9) return "#a3e635";
+    if (ratio >= 0.75) return "#fbbf24";
+    return "#f87171";
+  }
+  function mkBar(current, atMax) {
+    const ratio = atMax > 0 ? Math.max(0, Math.min(1, current / atMax)) : 0;
+    const track = document.createElement("div");
+    Object.assign(track.style, {
+      height: "3px",
+      borderRadius: "999px",
+      background: "rgba(255,255,255,0.07)",
+      overflow: "hidden",
+      margin: "3px 0 1px"
+    });
+    const fill = document.createElement("div");
+    Object.assign(fill.style, {
+      height: "100%",
+      width: `${Math.max(1.5, ratio * 100)}%`,
+      borderRadius: "999px",
+      background: fillRatioColor(ratio),
+      opacity: "0.85"
+    });
+    track.appendChild(fill);
+    return track;
+  }
+  function formatPercent(value) {
+    if (value >= 10) return `${value.toFixed(1)}%`;
+    if (value >= 1) return `${value.toFixed(2)}%`;
+    return `${value.toFixed(3)}%`;
+  }
+  function formatAmount(value, unit) {
+    const decimals = Math.abs(value) >= 10 ? 0 : 1;
+    const text = value.toLocaleString("en-US", {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    });
+    return unit ? `${text}${unit === "%" ? "%" : ` ${unit}`}` : text;
+  }
+  function formatDuration(minutes) {
+    const total = Math.max(0, Math.round(minutes));
+    const hours = Math.floor(total / 60);
+    const mins = total % 60;
+    if (hours > 0) return `${hours}h${String(mins).padStart(2, "0")}`;
+    return `${mins}m`;
+  }
+  function primaryParameterKey(group) {
+    for (const contributor of group.contributors) {
+      for (const key2 of Object.keys(contributor.scaledParameters)) {
+        if (PARAMETER_LABELS[key2]) return key2;
+      }
+    }
+    return null;
+  }
+  function groupTitle(group) {
+    const key2 = primaryParameterKey(group);
+    return key2 ? PARAMETER_LABELS[key2].label : group.label;
+  }
+  function perProcMagnitude(group) {
+    const key2 = primaryParameterKey(group);
+    if (!key2) return null;
+    const meta = PARAMETER_LABELS[key2];
+    const values = group.contributors.map((contributor) => contributor.scaledParameters[key2]).filter((value) => typeof value === "number" && value !== 0);
+    if (!values.length) return null;
+    const low = formatAmount(Math.min(...values), meta.unit);
+    const high = formatAmount(Math.max(...values), meta.unit);
+    return low === high ? high : `${low} \u2013 ${high}`;
+  }
+  function mkNav(nav) {
+    const wrap = document.createElement("div");
+    Object.assign(wrap.style, {
+      display: "flex",
+      alignItems: "center",
+      gap: "2px",
+      flex: "0 0 auto"
+    });
+    const mkArrow = (glyph, delta, label2) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = glyph;
+      button.title = label2;
+      Object.assign(button.style, {
+        border: "none",
+        background: "transparent",
+        color: MUTED,
+        font: "inherit",
+        fontSize: "11px",
+        lineHeight: "1",
+        padding: "0 3px",
+        cursor: "pointer",
+        borderRadius: "3px"
+      });
+      button.onmouseenter = () => {
+        button.style.color = "#e2e8f0";
+      };
+      button.onmouseleave = () => {
+        button.style.color = MUTED;
+      };
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        event.preventDefault();
+        nav.onStep(delta);
+      });
+      return button;
+    };
+    const counter = document.createElement("span");
+    counter.textContent = `${nav.index + 1}/${nav.total}`;
+    counter.style.fontSize = "9px";
+    counter.style.color = DIM;
+    counter.style.fontVariantNumeric = "tabular-nums";
+    wrap.append(mkArrow("\u2039", -1, "Previous effect"), counter, mkArrow("\u203A", 1, "Next effect"));
+    return wrap;
+  }
+  function renderGroup(group, nav) {
+    const block = document.createElement("div");
+    Object.assign(block.style, {
+      padding: "5px 7px",
+      borderRadius: "7px",
+      background: "rgba(255,255,255,0.025)",
+      border: "1px solid rgba(255,255,255,0.05)",
+      marginBottom: "4px"
+    });
+    const nameRow = document.createElement("div");
+    Object.assign(nameRow.style, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "6px",
+      minHeight: "13px"
+    });
+    const name = document.createElement("div");
+    const weatherSuffix2 = group.requiredWeathers.length ? ` \xB7 ${group.requiredWeathers.join("/")}` : "";
+    name.textContent = `${groupTitle(group)}${weatherSuffix2}`;
+    Object.assign(name.style, {
+      fontSize: "9px",
+      fontWeight: "600",
+      letterSpacing: "0.05em",
+      textTransform: "uppercase",
+      color: DIM,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    });
+    if (weatherSuffix2) name.title = "Only fires while this weather is active.";
+    nameRow.appendChild(name);
+    if (nav) nameRow.appendChild(mkNav(nav));
+    block.appendChild(nameRow);
+    const value = document.createElement("div");
+    Object.assign(value.style, {
+      display: "flex",
+      alignItems: "baseline",
+      gap: "3px",
+      fontVariantNumeric: "tabular-nums"
+    });
+    if (group.combinedProbability === null) {
+      const always = document.createElement("span");
+      always.textContent = "always on";
+      always.style.fontSize = "12px";
+      always.style.color = MUTED;
+      always.title = "This ability has no proc chance \u2014 it applies continuously.";
+      value.appendChild(always);
+      block.appendChild(value);
+    } else {
+      const atMax = group.combinedProbabilityAtMax ?? group.combinedProbability;
+      const ratio = atMax > 0 ? Math.min(1, group.combinedProbability / atMax) : 1;
+      const isMaxed = ratio >= 0.995;
+      const big = document.createElement("span");
+      big.textContent = formatPercent(group.combinedProbability);
+      big.style.fontSize = "15px";
+      big.style.fontWeight = "700";
+      big.style.color = fillRatioColor(ratio);
+      big.style.lineHeight = "1.1";
+      const unit = document.createElement("span");
+      unit.textContent = triggerUnit(group.trigger);
+      unit.style.fontSize = "9px";
+      unit.style.color = DIM;
+      value.append(big, unit);
+      if (!isMaxed) {
+        const ceiling = document.createElement("span");
+        ceiling.textContent = `max ${formatPercent(atMax)}`;
+        ceiling.style.fontSize = "9px";
+        ceiling.style.color = DIM;
+        ceiling.style.marginLeft = "auto";
+        value.appendChild(ceiling);
+      }
+      const perHour = group.trigger === "continuous" ? `
+About ${(group.combinedProbability / 100 * CONTINUOUS_ROLLS_PER_HOUR).toFixed(1)} procs per hour.` : "";
+      value.title = `Chance at least one of ${group.contributors.length} pet(s) procs.
+Not a sum \u2014 it is 1 minus the product of every pet missing.${perHour}
+
+` + (isMaxed ? "Every pet is at max strength \u2014 this is the most this team can do." : `At ${(ratio * 100).toFixed(0)}% of what these same pets would do at max strength (${formatPercent(atMax)}).`);
+      block.appendChild(value);
+      block.appendChild(mkBar(group.combinedProbability, atMax));
+    }
+    const magnitude = perProcMagnitude(group);
+    if (magnitude) {
+      const row = document.createElement("div");
+      Object.assign(row.style, {
+        display: "flex",
+        alignItems: "baseline",
+        justifyContent: "space-between",
+        gap: "8px",
+        fontSize: "10px",
+        marginTop: "1px"
+      });
+      row.title = group.contributors.length > 1 ? "What a single proc gives. Each pet applies its own value, so this is\na range across the team \u2014 the values never add up." : "What a single proc gives.";
+      const label2 = document.createElement("span");
+      label2.textContent = "per proc";
+      label2.style.color = MUTED;
+      const amount = document.createElement("span");
+      amount.textContent = magnitude;
+      amount.style.fontWeight = "600";
+      amount.style.flex = "0 0 auto";
+      amount.style.fontVariantNumeric = "tabular-nums";
+      row.append(label2, amount);
+      block.appendChild(row);
+    }
+    return block;
+  }
+  function focusGroups(groups, focusAbilityIds) {
+    const wanted = /* @__PURE__ */ new Set();
+    for (const abilityId of focusAbilityIds) {
+      const key2 = effectGroupKeyForAbility(abilityId);
+      if (key2) wanted.add(key2);
+    }
+    if (!wanted.size) return groups;
+    const focused = groups.filter((group) => wanted.has(group.key));
+    return focused.length ? focused : groups;
+  }
+  function renderGroupCarousel(groups) {
+    const host = document.createElement("div");
+    if (!groups.length) return host;
+    if (groups.length === 1) {
+      host.appendChild(renderGroup(groups[0]));
+      return host;
+    }
+    let index = 0;
+    const paint = () => {
+      host.replaceChildren(
+        renderGroup(groups[index], {
+          index,
+          total: groups.length,
+          onStep: (delta) => {
+            index = (index + delta + groups.length) % groups.length;
+            paint();
+          }
+        })
+      );
+    };
+    paint();
+    return host;
+  }
+  function renderDetails(stats, groups, showAllGroups) {
+    const details = document.createElement("div");
+    details.style.paddingTop = "4px";
+    if (stats.unknownSpecies.length) {
+      const warn = document.createElement("div");
+      warn.textContent = `\u26A0 unknown species: ${stats.unknownSpecies.join(", ")}`;
+      warn.style.fontSize = "10px";
+      warn.style.color = "#fbbf24";
+      details.appendChild(warn);
+    }
+    if (showAllGroups) {
+      for (const group of groups) details.appendChild(renderGroup(group));
+    } else {
+      details.appendChild(renderGroupCarousel(groups));
+    }
+    details.appendChild(renderFeedRow(stats));
+    return details;
+  }
+  function renderFeedRow(stats) {
+    const autonomy = stats.autonomy;
+    let text;
+    let color;
+    let title;
+    const boostLine = autonomy.drainReductionPercent > 0 ? `
+Hunger Boost removes ${autonomy.drainReductionPercent.toFixed(0)}% of the drain.` : "";
+    const restoreLine = autonomy.restoreActivationsPerMinute > 0 ? `
+Hunger Restore fires ~${autonomy.restoreActivationsPerMinute.toFixed(2)}\xD7/min on average.` : "";
+    const weatherLine = autonomy.weatherGatedHungerAbilities.length ? `
+Not counted (needs a specific weather): ${autonomy.weatherGatedHungerAbilities.join(", ")}.` : "";
+    if (autonomy.status === "sustained") {
+      text = "indefinitely";
+      color = ACCENT;
+      title = `Expected hunger restore covers the drain for every pet, so the team
+feeds itself.${boostLine}${restoreLine}${weatherLine}
+
+This is an average \u2014 a bad run of Restore luck can still empty a pet.`;
+    } else if (autonomy.status === "runs-out" && autonomy.minutesFromFull !== null) {
+      text = `~${formatDuration(autonomy.minutesFromFull)}`;
+      color = autonomy.minutesFromFull < 60 ? "#fbbf24" : ACCENT;
+      title = `Starting from full, ${autonomy.limitingPetName ?? "the first pet"} empties first.
+Rates the team itself \u2014 current hunger is not taken into account.${boostLine}${restoreLine}${weatherLine}
+
+Restore figures are averages; unlucky streaks do worse.`;
+    } else {
+      text = "unknown";
+      color = MUTED;
+      title = `No known hunger data for: ${autonomy.speciesMissingDepletion.join(", ")}.`;
+    }
+    const row = document.createElement("div");
+    Object.assign(row.style, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "8px",
+      padding: "4px 7px",
+      borderRadius: "7px",
+      background: "rgba(255,255,255,0.02)",
+      border: "1px solid rgba(255,255,255,0.05)",
+      fontSize: "10px"
+    });
+    row.title = title;
+    const label2 = document.createElement("span");
+    label2.textContent = "\u{1F356} Lasts without feeding (from full)";
+    label2.style.color = MUTED;
+    label2.style.overflow = "hidden";
+    label2.style.textOverflow = "ellipsis";
+    label2.style.whiteSpace = "nowrap";
+    const valueSpan = document.createElement("span");
+    valueSpan.textContent = text;
+    valueSpan.style.color = color;
+    valueSpan.style.fontWeight = "600";
+    valueSpan.style.flex = "0 0 auto";
+    valueSpan.style.fontVariantNumeric = "tabular-nums";
+    row.append(label2, valueSpan);
+    return row;
+  }
+  function renderTeamStats(pets, options = {}) {
+    const wrap = document.createElement("div");
+    wrap.style.display = "grid";
+    wrap.style.gap = "2px";
+    const realPets = pets.filter(Boolean);
+    if (!realPets.length) {
+      const empty = document.createElement("div");
+      empty.textContent = "No pets in this team.";
+      empty.style.fontSize = "10px";
+      empty.style.color = MUTED;
+      wrap.appendChild(empty);
+      return wrap;
+    }
+    const stats = computeTeamStats(realPets);
+    const groups = options.focusAbilityIds?.length ? focusGroups(stats.groups, options.focusAbilityIds) : stats.groups;
+    wrap.appendChild(renderDetails(stats, groups, options.showAllGroups === true));
+    return wrap;
   }
 
   // src/ui/menus/petsTeamBuilder.ts
@@ -44854,6 +45720,8 @@ next: ${next}`;
       petsCol.appendChild(renderPetChip(petsById.get(id)));
     }
     card2.body.appendChild(petsCol);
+    const teamPets = team.petIds.map((id) => petsById.get(id)).filter((pet) => Boolean(pet));
+    card2.body.appendChild(renderTeamStats(teamPets, { focusAbilityIds: team.focusAbilityIds }));
     const saveBtn = ui.btn("\u{1F4BE} Save", {
       variant: "primary",
       size: "sm",
@@ -45869,6 +46737,29 @@ next: ${next}`;
         btnClear
       };
     })();
+    const teamStatsHost = document.createElement("div");
+    teamStatsHost.style.width = "100%";
+    card2.appendChild(framed("\u{1F4CA} Team stats", teamStatsHost));
+    function showTeamStatsMessage(message) {
+      const empty = document.createElement("div");
+      empty.textContent = message;
+      empty.style.opacity = "0.7";
+      empty.style.fontSize = "11px";
+      teamStatsHost.replaceChildren(empty);
+    }
+    async function refreshTeamStats(team) {
+      if (!team) {
+        showTeamStatsMessage("No team selected.");
+        return;
+      }
+      const map2 = await buildPetRenderMap();
+      const pets = (team.slots || []).map((id) => id ? map2.get(String(id)) : void 0).filter((pet) => Boolean(pet));
+      if (!pets.length) {
+        showTeamStatsMessage("No pets in this team.");
+        return;
+      }
+      teamStatsHost.replaceChildren(renderTeamStats(pets, { showAllGroups: true }));
+    }
     async function repaintSlots(sourceTeam) {
       const t = sourceTeam ?? getSelectedTeam();
       if (!t) return;
@@ -45904,6 +46795,7 @@ next: ${next}`;
           lastRenderedSlotIds[i] = id;
         }
       });
+      void refreshTeamStats(t);
     }
     async function hydrateEditor(team) {
       const has = !!team;
@@ -45914,6 +46806,7 @@ next: ${next}`;
       if (!has) {
         secSlots.rows.forEach((r) => r.update(null));
         secName.nameInput.value = "";
+        void refreshTeamStats(null);
         return;
       }
       secName.nameInput.value = String(team.name || "");
@@ -48613,7 +49506,7 @@ next: ${next}`;
 
   // src/ui/menus/tools/styles.ts
   var STYLE_ID = "gemini-tools-styles";
-  var ACCENT = "#5eead4";
+  var ACCENT2 = "#5eead4";
   var ACCENT_2 = "#2dd4bf";
   var TEXT = "#e7eef7";
   var TEXT_DIM = "rgba(231,238,247,0.62)";
@@ -48633,7 +49526,7 @@ next: ${next}`;
 }
 .mgt-card:focus-visible, .mgt-chip:focus-visible, .mgt-back:focus-visible,
 .mgt-action:focus-visible, .mgt-nav:focus-visible, .mgt-dot:focus-visible {
-  outline: 2px solid ${ACCENT};
+  outline: 2px solid ${ACCENT2};
   outline-offset: 2px;
 }
 
@@ -48661,7 +49554,7 @@ next: ${next}`;
 }
 .mgt-chip.is-active {
   color: #06181c;
-  background: linear-gradient(135deg, ${ACCENT}, ${ACCENT_2});
+  background: linear-gradient(135deg, ${ACCENT2}, ${ACCENT_2});
   border-color: transparent;
   box-shadow: 0 2px 12px rgba(94,234,212,0.22);
 }
@@ -48706,7 +49599,7 @@ next: ${next}`;
   overflow: hidden; text-overflow: ellipsis;
 }
 .mgt-card__arrow {
-  margin-left: auto; flex-shrink: 0; font-size: 15px; color: ${ACCENT};
+  margin-left: auto; flex-shrink: 0; font-size: 15px; color: ${ACCENT2};
   opacity: 0; transform: translateX(-5px);
   transition: opacity 170ms ease, transform 170ms ease;
 }
@@ -48774,12 +49667,12 @@ next: ${next}`;
 .mgt-md code {
   padding: 1px 5px; border-radius: 5px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em;
-  color: ${ACCENT};
+  color: ${ACCENT2};
   background: rgba(94,234,212,0.08);
   border: 1px solid rgba(94,234,212,0.16);
 }
 .mgt-md a {
-  color: ${ACCENT}; text-decoration: none;
+  color: ${ACCENT2}; text-decoration: none;
   border-bottom: 1px solid rgba(94,234,212,0.35);
   transition: color 140ms ease, border-color 140ms ease;
 }
@@ -48795,11 +49688,11 @@ next: ${next}`;
   transition: color 150ms ease, background 150ms ease, border-color 150ms ease, filter 150ms ease;
 }
 .mgt-action:hover {
-  color: ${ACCENT}; border-color: rgba(94,234,212,0.32); background: rgba(94,234,212,0.08);
+  color: ${ACCENT2}; border-color: rgba(94,234,212,0.32); background: rgba(94,234,212,0.08);
 }
 .mgt-action.is-primary {
   color: #06181c; border-color: transparent;
-  background: linear-gradient(135deg, ${ACCENT}, ${ACCENT_2});
+  background: linear-gradient(135deg, ${ACCENT2}, ${ACCENT_2});
   box-shadow: 0 4px 16px rgba(94,234,212,0.20);
 }
 .mgt-action.is-primary:hover { color: #06181c; filter: brightness(1.08); }
@@ -48811,7 +49704,7 @@ next: ${next}`;
   border-radius: 14px; border: 1px solid ${BORDER}; background: rgba(0,0,0,0.28);
   cursor: zoom-in;
 }
-.mgt-carousel__stage:focus-visible { outline: 2px solid ${ACCENT}; outline-offset: 2px; }
+.mgt-carousel__stage:focus-visible { outline: 2px solid ${ACCENT2}; outline-offset: 2px; }
 /* The slides stack on top of each other, so they must never take the clicks
    meant for the stage. Only the nav buttons opt back in. */
 .mgt-carousel__slide {
@@ -48829,7 +49722,7 @@ next: ${next}`;
   backdrop-filter: blur(6px);
   transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
 }
-.mgt-nav:hover { background: rgba(6,10,16,0.92); border-color: rgba(94,234,212,0.40); color: ${ACCENT}; }
+.mgt-nav:hover { background: rgba(6,10,16,0.92); border-color: rgba(94,234,212,0.40); color: ${ACCENT2}; }
 .mgt-nav--prev { left: 10px; }
 .mgt-nav--next { right: 10px; }
 .mgt-dots { display: flex; justify-content: center; gap: 6px; }
@@ -48839,7 +49732,7 @@ next: ${next}`;
   transition: background 160ms ease, width 160ms ease;
 }
 .mgt-dot:hover { background: rgba(255,255,255,0.5); }
-.mgt-dot.is-active { width: 18px; border-radius: 999px; background: ${ACCENT}; }
+.mgt-dot.is-active { width: 18px; border-radius: 999px; background: ${ACCENT2}; }
 
 /* \u2500\u2500 loading / error / empty states \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 .mgt-state {
@@ -48851,7 +49744,7 @@ next: ${next}`;
 .mgt-state__title { font-size: 13.5px; font-weight: 700; color: ${TEXT}; }
 .mgt-spinner {
   width: 22px; height: 22px; border-radius: 50%;
-  border: 2px solid rgba(94,234,212,0.16); border-top-color: ${ACCENT};
+  border: 2px solid rgba(94,234,212,0.16); border-top-color: ${ACCENT2};
   animation: mgt-spin 700ms linear infinite;
 }
 @keyframes mgt-spin { to { transform: rotate(360deg); } }
@@ -51515,7 +52408,7 @@ next: ${next}`;
   var OVERLAY_ID4 = "mgChangelogNotice";
   var STYLE_ID6 = "mgChangelogNoticeStyle";
   var OVERLAY_Z_INDEX2 = "2147483647";
-  var ACCENT2 = "#5eead4";
+  var ACCENT3 = "#5eead4";
   var ACCENT_22 = "#2dd4bf";
   var TEXT4 = "#e7eef7";
   var TEXT_DIM4 = "rgba(231,238,247,0.68)";
@@ -51542,7 +52435,7 @@ next: ${next}`;
 }
 #${OVERLAY_ID4} .mgcl-eyebrow {
   font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-  color: ${ACCENT2}; margin: 0 0 6px;
+  color: ${ACCENT3}; margin: 0 0 6px;
 }
 #${OVERLAY_ID4} .mgcl-title { font-size: 18px; font-weight: 750; margin: 0 0 4px; }
 #${OVERLAY_ID4} .mgcl-version { font-size: 11.5px; color: ${TEXT_DIM4}; margin: 0 0 16px; }
@@ -51556,20 +52449,20 @@ next: ${next}`;
 #${OVERLAY_ID4} .mgcl-body code {
   padding: 1px 5px; border-radius: 5px; font-size: 0.9em;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: ${ACCENT2}; background: rgba(94,234,212,0.08); border: 1px solid rgba(94,234,212,0.16);
+  color: ${ACCENT3}; background: rgba(94,234,212,0.08); border: 1px solid rgba(94,234,212,0.16);
 }
 #${OVERLAY_ID4} .mgcl-body a {
-  color: ${ACCENT2}; text-decoration: none; border-bottom: 1px solid rgba(94,234,212,0.35);
+  color: ${ACCENT3}; text-decoration: none; border-bottom: 1px solid rgba(94,234,212,0.35);
 }
 #${OVERLAY_ID4} .mgcl-body a:hover { color: ${ACCENT_22}; border-bottom-color: ${ACCENT_22}; }
 #${OVERLAY_ID4} .mgcl-close {
   margin-top: 18px; width: 100%; padding: 10px 16px; border-radius: 10px; cursor: pointer;
   border: none; color: #06181c; font-size: 13px; font-weight: 700;
-  background: linear-gradient(135deg, ${ACCENT2}, ${ACCENT_22});
+  background: linear-gradient(135deg, ${ACCENT3}, ${ACCENT_22});
   box-shadow: 0 4px 16px rgba(94,234,212,0.20);
 }
 #${OVERLAY_ID4} .mgcl-close:hover { filter: brightness(1.08); }
-#${OVERLAY_ID4} .mgcl-close:focus-visible { outline: 2px solid ${ACCENT2}; outline-offset: 2px; }
+#${OVERLAY_ID4} .mgcl-close:focus-visible { outline: 2px solid ${ACCENT3}; outline-offset: 2px; }
   `;
     document.head.appendChild(style2);
   }

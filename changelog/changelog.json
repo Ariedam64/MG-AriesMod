@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "version": "3.2.188",
+      "date": "2026-08-02",
+      "title": "Team Builder improvements",
+      "notes": "- **Pets**: the Team Builder now shows extra stats for each suggested team\n- **Pets**: it also got smarter at putting teams together"
+    },
+    {
       "version": "3.2.187",
       "date": "2026-08-01",
       "title": "Tools rework, editor rework, Pet Team Builder",

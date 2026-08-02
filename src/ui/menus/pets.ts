@@ -19,6 +19,7 @@ import {
 } from "../../utils/instantFeedWidget";
 import { renderHatchTab } from "./petsHatch";
 import { renderTeamBuilderTab } from "./petsTeamBuilder";
+import { renderTeamStats } from "./petsTeamStats";
 
 /* ================== petits helpers UI (mêmes vibes que garden) ================== */
 
@@ -519,6 +520,7 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
     if (!skipDetectActive) {
       await refreshActiveIds();
     }
+
     const renderMap = await buildPetRenderMap();
     clearLiveTransforms();
     draggingIdx = null;
@@ -1085,6 +1087,41 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
     };
   })();
 
+  // ===================== Selected team stats =====================
+  // Follows the team selected on the left and edited in the slots above, so
+  // the numbers track what you are actually looking at — including while you
+  // swap pets in and out, before the team is ever equipped.
+  const teamStatsHost = document.createElement("div");
+  teamStatsHost.style.width = "100%";
+  card.appendChild(framed("📊 Team stats", teamStatsHost));
+
+  function showTeamStatsMessage(message: string) {
+    const empty = document.createElement("div");
+    empty.textContent = message;
+    empty.style.opacity = "0.7";
+    empty.style.fontSize = "11px";
+    teamStatsHost.replaceChildren(empty);
+  }
+
+  async function refreshTeamStats(team: PetTeam | null) {
+    if (!team) {
+      showTeamStatsMessage("No team selected.");
+      return;
+    }
+
+    const map = await buildPetRenderMap();
+    const pets = (team.slots || [])
+      .map((id) => (id ? map.get(String(id)) : undefined))
+      .filter((pet): pet is InventoryPet => Boolean(pet));
+
+    if (!pets.length) {
+      showTeamStatsMessage("No pets in this team.");
+      return;
+    }
+
+    teamStatsHost.replaceChildren(renderTeamStats(pets, { showAllGroups: true }));
+  }
+
   // ===================== Wiring RIGHT side =====================
   async function repaintSlots(sourceTeam?: PetTeam | null) {
     const t = sourceTeam ?? getSelectedTeam();
@@ -1121,6 +1158,10 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
         lastRenderedSlotIds[i] = id;
       }
     });
+
+    // Every slot edit and every selection change lands here, so this is the
+    // one place the stats panel needs to follow.
+    void refreshTeamStats(t);
   }
 
   async function hydrateEditor(team: PetTeam | null) {
@@ -1133,6 +1174,8 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
     if (!has) {
       secSlots.rows.forEach(r => r.update(null));
       secName.nameInput.value = "";
+      // repaintSlots bails out when there is no team, so clear the panel here.
+      void refreshTeamStats(null);
       return;
     }
 

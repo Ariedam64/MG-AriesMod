@@ -8,7 +8,7 @@ Status: approved (design)
 The Team Builder ranks pets by max strength but never shows what that
 strength is *worth*. A card says "Turtle 92/96" without telling you that the
 Turtle's Plant Growth Boost II therefore procs at 24.8% instead of its 27%
-base, or that the whole team clears 57.6% per roll.
+base, or that the whole team clears 57.6% per minute.
 
 This feature adds a computed stats layer to every suggested team: effective
 proc chance, summed magnitudes, strength potential, weather exposure, and AFK
@@ -21,9 +21,22 @@ equipped team.
   historical contribution. The activity-log history exists and could support
   it, but it is deliberately out of scope — everything here is derived from
   formulas and live state.
-- **No procs/hour in any form.** The server tick interval for `continuous`
-  abilities is not present in the client bundle, so a per-hour rate cannot be
-  computed honestly. All proc figures are expressed **per roll**.
+- **No measured rates.** Nothing is derived from observed history.
+
+## Roll cadence (corrected 2026-08-02)
+
+An earlier draft of this spec claimed the roll cadence was unknowable from
+the client and that every figure had to be expressed "per roll". That was
+wrong. The game's own item tooltip labels `continuous` abilities **"chance
+per minute"** — visible in the bundle as the `trigger === "continuous"`
+branch selecting message id `xVEzUu`. Continuous abilities roll **once per
+minute**, so their effective probability is a per-minute chance and an
+expected hourly count is simply `p × 60`.
+
+This applies to `continuous` only. Every other trigger (`harvest`,
+`sellAllCrops`, `sellPet`, `hatchEgg`, `playerActivated`) rolls once per
+matching player action, at a frequency set by the player — those are labelled
+per action, never per minute.
 - **No team-composition suggestions.** Redundancy detection and marginal-swap
   advice ("replace X with Y → +8%") are not part of this.
 
@@ -77,12 +90,15 @@ The table must be keyed on `petSpecies`. Four entries differ:
 `FireHorse`, `Thunder Wolf` → `ThunderWolf`. Keying on display names would
 drop 4 of 26 pets into fallback silently.
 
-Coverage is 26/26 pets today. The fallback path is retained anyway: when the
-game adds a 27th pet it will appear via MGData with no depletion time, and
-must show the relative sustain score rather than a wrong duration.
+Coverage is 26/26 pets today, and the values match the community reference
+calculator's `HUNGER_MINUTES` table exactly — an independent corroboration.
+The fallback path is retained anyway: when the game adds a 27th pet it will
+appear via MGData with no depletion time, and must report `unknown` rather
+than a wrong duration.
 
-Max hunger is read dynamically from `coinsToFullyReplenishHunger`; current
-hunger from `InventoryPet.hunger`. Only the depletion time is hardcoded.
+Max hunger is read dynamically from `coinsToFullyReplenishHunger`. Live
+hunger is not read at all — see the autonomy section. Only the depletion time
+is hardcoded.
 
 ## Architecture
 
@@ -136,26 +152,128 @@ type AbilityStats = {
 
 Baseline only, fully computed:
 
+Computed as if every pet started **full**. Live hunger is deliberately not
+read: this stat rates the team's composition so it stays comparable between
+suggested teams, rather than reporting how recently each pet was fed.
+
+An earlier version reported the raw depletion time and ignored both hunger
+abilities. That understated a feeder team by more than an order of magnitude
+— a Turtle trio with one Hunger Boost II + Hunger Restore II lasts ~30h, not
+the 90 minutes it reported. The model below matches the community reference
+calculator at <https://liam0306dis.github.io/hunger/> exactly on that case.
+
+**Hunger Boost** cuts the drain rate and stacks across the team:
+
 ```
-drainPerMinute(pet) = coinsToFullyReplenishHunger(species) / depletionMinutes(species)
-timeToStarve(pet)   = pet.hunger / drainPerMinute(pet)
-teamAutonomy        = min over the team's pets
+drainReduction% = Σ over pets, over boost abilities: refund × str/100
+remainingDrain  = max(0, 1 - drainReduction% / 100)
+drainPerMinute  = maxHunger / depletionMinutes × remainingDrain
 ```
 
-Presented as "holds ~3h20 unattended, excluding restore procs". It is a floor,
-not a prediction — restore abilities extend it by an amount that cannot be
-computed without the tick interval, and the wording must not imply otherwise.
+The parameter is `hungerRefundPercentage` in the live bundle and
+`hungerDepletionRateDecreasePercentage` in the hardcoded fallback — the same
+value under two names, so both are recognised.
 
-When any pet in the team has no depletion entry, the team falls back to the
-relative sustain score, with no duration shown:
+**Hunger Restore** refills a random active pet. Its chance is stated per
+minute but checked every second, so it can fire more than once a minute:
 
 ```
-sustainScore = Σ (hungerRestorePercentage × ratio) + Σ (hungerRefundPercentage × ratio)
+perSecond      = 1 - (1 - chance×str/100 ÷ 100)^(1/60)
+activations/min = perSecond × 60
+hitsPerPet      = activations/min ÷ teamSize      // "a random active pet"
+cap             = floor(targetMaxHunger × amount×str/100 ÷ 100)
+averageRoll     = (cap + 1) / 2                   // uniform 1..cap
+restorePerMinute = Σ hitsPerPet × averageRoll
 ```
 
-Displayed raw (a percentage-point total), not rescaled to 0–100 — there is no
-principled maximum to divide by, and an invented one would read as a
-meaningful ceiling. Two teams are compared by their raw totals.
+Then per pet, `net = restorePerMinute - drainPerMinute`, and:
+
+- every pet at `net ≥ 0`, or `remainingDrain == 0` → **sustained**, the team
+  feeds itself and no duration is shown;
+- otherwise → **runs out** in `min over pets of maxHunger / -net`.
+
+Weather-gated hunger abilities (Snow Hunger Boost, Snowy Hunger Restore) are
+**excluded**: they only work during that weather, which is never guaranteed.
+The UI names the ones it left out so the figure is not misread.
+
+Presented as "Lasts without feeding (from full): ~3h20" or "indefinitely".
+Restore figures are expectations, so an unlucky streak does worse — the
+tooltip says so.
+
+When any pet in the team has no depletion entry or no max hunger, the whole
+figure reports **unknown** rather than a partial answer: the pet that empties
+first could easily be the one that cannot be measured.
+
+## AFK team composition
+
+The Team Builder's AFK variant originally filled `maxSlots - 1` goal slots and
+reserved exactly one for a feeder. That fixed split is wrong whenever the goal
+pets carry hunger abilities themselves: two Rainbow Turtles that each have
+Hunger Restore and Hunger Boost sustain each other indefinitely, but the split
+took only one of them and handed the last slot to a separate feeder, landing
+on a finite ~2h31.
+
+The AFK team is therefore chosen as a whole. Candidate compositions are drawn
+from the top qualifying pets plus the top feeders, and ranked
+lexicographically:
+
+1. **self-sustaining** (`computeTeamAutonomy(...).status === "sustained"`) —
+   a team that never needs feeding beats one that does, whatever the strength
+   gap, because that is the entire point of an AFK team;
+2. **feeding capability**, but only while the team still runs dry — dodging a
+   granter (below) must never cost a real feeder; once sustained, extra hunger
+   capability buys nothing and this tier goes silent;
+3. **no Gold granter** (see below);
+4. combined proc chance for the goal;
+5. total max strength, minus the granter handicap below.
+
+### Unwanted mutation granters
+
+A pet carrying a mutation granter keeps rewriting the garden. Granters are
+detected from the catalog (`grantedMutations` in `baseParameters`), so nothing
+is hardcoded and a future granter is covered automatically. A granter the team
+is actually built for is exempt — a Rainbow team wants its Rainbow pets.
+
+This applies to **every pet in every team**, not only to feeders and not only
+to AFK teams: an active Plant Growth team of Turtles rewrites the garden just
+as happily if one of them carries Gold Granter. Concretely the rule lives in
+three places — `rankCandidates` (active teams, AFK pools and padding),
+`pickSustainPet` (the leftover-slot feeder) and `pickAfkTeam`'s team-level
+score.
+
+Ability tier still outranks it: dropping a whole tier to dodge a granter costs
+more than the granter does. And a granter pet is still fielded when there is
+no alternative — an empty slot is worse.
+
+Only **Gold** and **Rainbow** are steered around:
+
+- **Gold is avoided outright** whenever an equally capable granter-free pet
+  exists. A golden crop can no longer turn Rainbow, so an unwanted Gold
+  Granter actively destroys value rather than merely being noisy.
+- **Rainbow costs a 10-strength handicap.** Expressed as a penalty rather
+  than a veto, this reproduces the intended rule exactly: the Rainbow pet wins
+  only when `strength - 10 > strength of the best clean pet`, i.e. when it is
+  more than 10 stronger.
+
+Every other granter (Wet, Chilled, Frozen, Dawnlit, Ambershine, Thunderstruck)
+is **ignored**. An earlier version penalised all of them, which reshuffled
+unrelated teams for no benefit: Ambershine Granter pets were pushed out of a
+Dawn team by a much weaker pet, which stopped that team from merging with its
+neighbour and split one card into two confusing ones.
+
+Mutation *converters* (`MoonKisser`, `DawnKisser`) carry no `grantedMutations`
+and are therefore not covered. They transform existing mutations rather than
+granting new ones; revisit if that turns out to matter in practice.
+
+Every composition must contain at least one pet that serves the goal and at
+least one hunger source; otherwise "AFK" would be meaningless. Pool sizes are
+capped (6 goal pets, 4 feeders) so the search stays trivial across all
+categories — the pools are pre-ranked, so anything past the top few could
+never win.
+
+This is why `computeTeamAutonomy` is exported from `petTeamStats.ts`: the
+builder needs the real hunger model to make this choice. The dependency runs
+builder → stats only, so there is no cycle.
 
 ## UI
 
@@ -209,8 +327,8 @@ cleaned up with the card.
 - Team with an empty slot (Pet XP caps at 2) → aggregation runs over the real
   pets only; potential and autonomy are not diluted by the empty slot.
 - `effectiveProbability` clamped at 100 exactly as the game does.
-- Pet with 0 current hunger → autonomy 0, surfaced as "starving" rather than
-  a misleading "0h00".
+- Pet at 0 current hunger → no effect on the figure at all; autonomy assumes
+  every pet starts full by design.
 
 ## Testing
 
@@ -224,5 +342,9 @@ Unit tests on the two services, no DOM required:
   proc headroom differs from magnitude headroom.
 - Depletion keying: `WhiteCaribou` resolves; `"Caribou"` does not — guards the
   display-name trap.
-- Fallback: an unknown species yields a sustain score and no duration.
+- Fallback: an unknown species reports `unknown`, never a partial duration.
+- Hunger: Boost stacks team-wide and stretches the lifetime; Restore averages
+  slightly more activations than its per-minute chance; weather-gated hunger
+  abilities are excluded; a feeder team reproduces the reference calculator's
+  1831 min on the reported case.
 - Clamping: a high-probability ability at max STR caps at 100%.

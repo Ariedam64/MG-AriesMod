@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "node esbuild.config.mjs",
+    "check:stats": "esbuild scripts/checkTeamStats.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkTeamStats.cjs --log-level=error && node -e \"globalThis.window=globalThis;globalThis.document={};require('./node_modules/.cache/checkTeamStats.cjs')\"",
     "watch": "node esbuild.config.mjs --watch",
     "serve": "npx http-server dist -p 5174 --cors"
   },
