@@ -85,6 +85,7 @@ const PATH_PETS_INSTANT_FEED = "pets.instantFeed";
 const PATH_PETS_UI = "pets.ui";
 const PATH_PETS_TEAMS = "pets.teams";
 const PATH_PETS_TEAM_SEARCH = "pets.teamSearch";
+const PATH_PETS_TEAM_SYNC = "pets.teamSync";
 const PATH_PETS_HOTKEYS = "pets.hotkeys";
 const PATH_PETS_ABILITY_LOGS = "pets.abilityLogs";
 
@@ -587,16 +588,26 @@ function _sameMemberSet(a: (string | null)[], b: string[]): boolean {
   return aa.every((v, i) => v === bb[i]);
 }
 
+// User-facing opt-out (default ON). When off, the mod's teams become purely local:
+// nothing is pushed to the native system and nothing is pulled back from it. Existing
+// links (`PetTeam.serverId`) are kept frozen, so turning the sync back on resumes where
+// it left off — with the server winning on any divergence, as it always does.
+let _teamSyncEnabled = readAriesPath<boolean>(PATH_PETS_TEAM_SYNC, true) !== false;
+
 function _sendSavePetTeam(teamId: string | null, name: string, petIds: string[]): void {
+  if (!_teamSyncEnabled) return;
   try { sendToGame({ type: "SavePetTeam", teamId, name, petIds }); } catch {}
 }
 function _sendDeletePetTeam(teamId: string): void {
+  if (!_teamSyncEnabled) return;
   try { sendToGame({ type: "DeletePetTeam", teamId }); } catch {}
 }
 function _sendApplyPetTeam(teamId: string): void {
+  if (!_teamSyncEnabled) return;
   try { sendToGame({ type: "ApplyPetTeam", teamId }); } catch {}
 }
 function _sendMovePetTeam(teamId: string, toIndex: number): void {
+  if (!_teamSyncEnabled) return;
   try { sendToGame({ type: "MovePetTeam", movePetTeamId: teamId, toPetTeamIndex: toIndex }); } catch {}
 }
 
@@ -654,6 +665,11 @@ function _serverTeamsSig(list: ServerPetTeam[]): string {
  * distinct (name, members) combination — see `_lastCreateAttemptSig`.
  */
 function _maybeCreateServerTeam(local: PetTeam): void {
+  // Bail out before touching `_lastCreateAttemptSig` / `_pendingServerCreates`: with the
+  // sync off nothing is ever sent, and recording an attempt here would make the team look
+  // "already tried" once the user turns the sync back on.
+  if (!_teamSyncEnabled) return;
+
   // A create for this local team is already in flight — wait for it to link
   // (or time out) rather than firing another one. Without this, editing the
   // team again (add a pet, rename) before the server echoes back a real id
@@ -682,6 +698,7 @@ function _maybeCreateServerTeam(local: PetTeam): void {
 }
 
 function _reconcileTeams(): void {
+  if (!_teamSyncEnabled) return;
   if (_reconcilingTeams) { _reconcileTeamsQueued = true; return; }
   _reconcilingTeams = true;
   try {
@@ -792,6 +809,24 @@ async function _startServerTeamsWatcher(): Promise<void> {
 
   try { await applyNext(await stateUserSlots.get()); } catch {}
   try { await stateUserSlots.onChange((slots: any) => { applyNext(slots); }); } catch {}
+}
+
+function _setTeamSyncEnabled(value: boolean): void {
+  const next = !!value;
+  if (next === _teamSyncEnabled) return;
+  _teamSyncEnabled = next;
+  writeAriesPath(PATH_PETS_TEAM_SYNC, next);
+
+  if (!next) {
+    // Nothing will ever ack these now — drop the timers rather than leave them pending.
+    for (const localId of Array.from(_pendingServerCreates)) _clearPendingCreate(localId);
+    return;
+  }
+
+  // Teams edited while the sync was off never got a create attempt; clear the memo so
+  // they aren't mistaken for "already attempted, don't retry".
+  _lastCreateAttemptSig.clear();
+  _reconcileTeams();
 }
 
 /* --------------------------------- Inventory cache/watchers -------------------------------- */
@@ -1625,7 +1660,7 @@ export const PetsService = {
       .filter((x): x is string => typeof x === "string" && x.length > 0)
       .slice(0, 3);
 
-    if (t.serverId) {
+    if (_teamSyncEnabled && t.serverId) {
       _sendApplyPetTeam(t.serverId);
       if (opts?.markUsed !== false) markTeamAsUsed(teamId);
       return { swapped: targetInvIds.length, placed: 0, skipped: 0 };
@@ -1633,6 +1668,11 @@ export const PetsService = {
 
     return _equipPetIds(targetInvIds, { markTeamId: teamId, markUsed: opts?.markUsed });
   },
+
+  /** Whether mod teams mirror the native (in-game) pet teams. Defaults to true. */
+  isTeamSyncEnabled(): boolean { return _teamSyncEnabled; },
+  /** Turns the native pet-team mirroring on/off. Existing links are kept when turning it off. */
+  setTeamSyncEnabled(value: boolean): void { _setTeamSyncEnabled(value); },
 
   /** Starts the background watcher that keeps local teams linked to their native (in-game) counterpart. Idempotent. */
   async startPetTeamSync(): Promise<void> {

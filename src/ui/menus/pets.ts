@@ -371,10 +371,30 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
   /* ================= LEFT: liste des teams ================= */
   const left = document.createElement("div");
   left.style.display = "grid";
-  left.style.gridTemplateRows = "1fr auto";
+  left.style.gridTemplateRows = "auto 1fr auto";
   left.style.gap = "8px";
   left.style.minHeight = "0";
   wrap.appendChild(left);
+
+  const syncRow = document.createElement("label");
+  syncRow.style.display = "flex";
+  syncRow.style.alignItems = "center";
+  syncRow.style.gap = "8px";
+  syncRow.style.padding = "2px 7px"; // aligns with the team list content (1px border + 6px padding)
+  syncRow.style.cursor = "pointer";
+  left.appendChild(syncRow);
+
+  const syncSwitch = ui.switch(PetsService.isTeamSyncEnabled()) as HTMLInputElement;
+  syncSwitch.style.flexShrink = "0";
+  syncSwitch.addEventListener("change", () => {
+    PetsService.setTeamSyncEnabled(syncSwitch.checked);
+  });
+
+  const syncLabel = document.createElement("span");
+  syncLabel.textContent = "Sync teams with the game";
+  syncLabel.style.fontSize = "13px";
+
+  syncRow.append(syncSwitch, syncLabel);
 
   const teamList = document.createElement("div");
   teamList.style.display = "flex";

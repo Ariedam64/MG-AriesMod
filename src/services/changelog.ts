@@ -9,6 +9,8 @@ export type ChangelogEntry = {
   date?: string;
   title?: string;
   notes: string;
+  /** Optional screenshots shown under the notes. Several images become a carousel. */
+  images?: string[];
 };
 
 const REPO_OWNER = "Ariedam64";
@@ -48,11 +50,20 @@ function parseChangelogPayload(raw: unknown): ChangelogEntry[] {
       continue;
     }
 
+    // Same shape as services/tools.ts: unusable values are dropped rather than
+    // failing the whole entry, so a typo in one URL can't hide the release notes.
+    const images = Array.isArray(e.images)
+      ? (e.images as unknown[]).filter(
+          (img): img is string => typeof img === "string" && img.trim().length > 0
+        )
+      : [];
+
     entries.push({
       version,
       notes,
       date: typeof e.date === "string" ? e.date : undefined,
       title: typeof e.title === "string" ? e.title : undefined,
+      images,
     });
   }
 

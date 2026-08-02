@@ -9,6 +9,11 @@ import { getLocalVersion } from "../utils/version";
 import { getSeenChangelogVersion, markChangelogVersionSeen } from "../utils/localStorage";
 import { fetchChangelogEntryForVersion, type ChangelogEntry } from "../services/changelog";
 import { renderMarkdown } from "../utils/markdown";
+// Reused as-is from the Tools menu: same `.mgt-*` stylesheet (id-guarded, global,
+// injected into document.head) and the same GM-first image loading, which is what
+// keeps remote screenshots working inside the Discord Activity CSP sandbox.
+import { renderCarousel } from "./menus/tools/carousel";
+import { ensureToolsStyles } from "./menus/tools/styles";
 
 const OVERLAY_ID = "mgChangelogNotice";
 const STYLE_ID = "mgChangelogNoticeStyle";
@@ -64,6 +69,7 @@ function ensureStyle(): void {
   color: ${ACCENT}; text-decoration: none; border-bottom: 1px solid rgba(94,234,212,0.35);
 }
 #${OVERLAY_ID} .mgcl-body a:hover { color: ${ACCENT_2}; border-bottom-color: ${ACCENT_2}; }
+#${OVERLAY_ID} .mgcl-media { margin-top: 14px; }
 #${OVERLAY_ID} .mgcl-close {
   margin-top: 18px; width: 100%; padding: 10px 16px; border-radius: 10px; cursor: pointer;
   border: none; color: #06181c; font-size: 13px; font-weight: 700;
@@ -112,7 +118,17 @@ function buildOverlay(entry: ChangelogEntry): HTMLElement {
   close.textContent = "Got it";
   close.onclick = () => dismiss(overlay, entry.version);
 
-  box.append(eyebrow, title, versionLine, body, close);
+  box.append(eyebrow, title, versionLine, body);
+
+  const images = entry.images ?? [];
+  if (images.length) {
+    ensureToolsStyles();
+    const carousel = renderCarousel(images);
+    carousel.root.classList.add("mgcl-media");
+    box.appendChild(carousel.root);
+  }
+
+  box.appendChild(close);
   overlay.appendChild(box);
   overlay.onclick = (event) => {
     if (event.target === overlay) dismiss(overlay, entry.version);

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.188
+// @version      3.2.189
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -21143,6 +21143,7 @@
   var PATH_PETS_UI = "pets.ui";
   var PATH_PETS_TEAMS = "pets.teams";
   var PATH_PETS_TEAM_SEARCH = "pets.teamSearch";
+  var PATH_PETS_TEAM_SYNC = "pets.teamSync";
   var PATH_PETS_HOTKEYS = "pets.hotkeys";
   var PATH_PETS_ABILITY_LOGS = "pets.abilityLogs";
   var WEATHER_MUTATION_BOOST_IDS = /* @__PURE__ */ new Set([
@@ -21512,25 +21513,30 @@
     if (aa.length !== bb.length) return false;
     return aa.every((v, i) => v === bb[i]);
   }
+  var _teamSyncEnabled = readAriesPath(PATH_PETS_TEAM_SYNC, true) !== false;
   function _sendSavePetTeam(teamId, name, petIds) {
+    if (!_teamSyncEnabled) return;
     try {
       sendToGame({ type: "SavePetTeam", teamId, name, petIds });
     } catch {
     }
   }
   function _sendDeletePetTeam(teamId) {
+    if (!_teamSyncEnabled) return;
     try {
       sendToGame({ type: "DeletePetTeam", teamId });
     } catch {
     }
   }
   function _sendApplyPetTeam(teamId) {
+    if (!_teamSyncEnabled) return;
     try {
       sendToGame({ type: "ApplyPetTeam", teamId });
     } catch {
     }
   }
   function _sendMovePetTeam(teamId, toIndex) {
+    if (!_teamSyncEnabled) return;
     try {
       sendToGame({ type: "MovePetTeam", movePetTeamId: teamId, toPetTeamIndex: toIndex });
     } catch {
@@ -21567,6 +21573,7 @@
     }
   }
   function _maybeCreateServerTeam(local) {
+    if (!_teamSyncEnabled) return;
     if (_pendingServerCreates.has(local.id)) return;
     const petIds = (local.slots || []).filter((x) => !!x);
     const name = (local.name || "").trim();
@@ -21585,6 +21592,7 @@
     _pendingCreateTimeouts.set(local.id, timeout);
   }
   function _reconcileTeams() {
+    if (!_teamSyncEnabled) return;
     if (_reconcilingTeams) {
       _reconcileTeamsQueued = true;
       return;
@@ -21688,6 +21696,18 @@
       });
     } catch {
     }
+  }
+  function _setTeamSyncEnabled(value) {
+    const next = !!value;
+    if (next === _teamSyncEnabled) return;
+    _teamSyncEnabled = next;
+    writeAriesPath(PATH_PETS_TEAM_SYNC, next);
+    if (!next) {
+      for (const localId of Array.from(_pendingServerCreates)) _clearPendingCreate(localId);
+      return;
+    }
+    _lastCreateAttemptSig.clear();
+    _reconcileTeams();
   }
   var _invRaw = null;
   var _activeRaw = [];
@@ -22504,12 +22524,20 @@
       const t = this.getTeams().find((tt) => tt.id === teamId) || null;
       if (!t) throw new Error("Team not found");
       const targetInvIds = (t.slots || []).filter((x) => typeof x === "string" && x.length > 0).slice(0, 3);
-      if (t.serverId) {
+      if (_teamSyncEnabled && t.serverId) {
         _sendApplyPetTeam(t.serverId);
         if (opts?.markUsed !== false) markTeamAsUsed(teamId);
         return { swapped: targetInvIds.length, placed: 0, skipped: 0 };
       }
       return _equipPetIds(targetInvIds, { markTeamId: teamId, markUsed: opts?.markUsed });
+    },
+    /** Whether mod teams mirror the native (in-game) pet teams. Defaults to true. */
+    isTeamSyncEnabled() {
+      return _teamSyncEnabled;
+    },
+    /** Turns the native pet-team mirroring on/off. Existing links are kept when turning it off. */
+    setTeamSyncEnabled(value) {
+      _setTeamSyncEnabled(value);
     },
     /** Starts the background watcher that keeps local teams linked to their native (in-game) counterpart. Idempotent. */
     async startPetTeamSync() {
@@ -30907,7 +30935,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.188";
+      return "3.2.189";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -46123,10 +46151,26 @@ Restore figures are averages; unlucky streaks do worse.`;
     view.appendChild(wrap);
     const left = document.createElement("div");
     left.style.display = "grid";
-    left.style.gridTemplateRows = "1fr auto";
+    left.style.gridTemplateRows = "auto 1fr auto";
     left.style.gap = "8px";
     left.style.minHeight = "0";
     wrap.appendChild(left);
+    const syncRow = document.createElement("label");
+    syncRow.style.display = "flex";
+    syncRow.style.alignItems = "center";
+    syncRow.style.gap = "8px";
+    syncRow.style.padding = "2px 7px";
+    syncRow.style.cursor = "pointer";
+    left.appendChild(syncRow);
+    const syncSwitch = ui.switch(PetsService.isTeamSyncEnabled());
+    syncSwitch.style.flexShrink = "0";
+    syncSwitch.addEventListener("change", () => {
+      PetsService.setTeamSyncEnabled(syncSwitch.checked);
+    });
+    const syncLabel = document.createElement("span");
+    syncLabel.textContent = "Sync teams with the game";
+    syncLabel.style.fontSize = "13px";
+    syncRow.append(syncSwitch, syncLabel);
     const teamList = document.createElement("div");
     teamList.style.display = "flex";
     teamList.style.flexDirection = "column";
@@ -52384,11 +52428,15 @@ Restore figures are averages; unlucky streaks do worse.`;
         console.warn("[Changelog] Skipping entry with missing/invalid notes:", version);
         continue;
       }
+      const images = Array.isArray(e.images) ? e.images.filter(
+        (img) => typeof img === "string" && img.trim().length > 0
+      ) : [];
       entries.push({
         version,
         notes,
         date: typeof e.date === "string" ? e.date : void 0,
-        title: typeof e.title === "string" ? e.title : void 0
+        title: typeof e.title === "string" ? e.title : void 0,
+        images
       });
     }
     return entries;
@@ -52455,6 +52503,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   color: ${ACCENT3}; text-decoration: none; border-bottom: 1px solid rgba(94,234,212,0.35);
 }
 #${OVERLAY_ID4} .mgcl-body a:hover { color: ${ACCENT_22}; border-bottom-color: ${ACCENT_22}; }
+#${OVERLAY_ID4} .mgcl-media { margin-top: 14px; }
 #${OVERLAY_ID4} .mgcl-close {
   margin-top: 18px; width: 100%; padding: 10px 16px; border-radius: 10px; cursor: pointer;
   border: none; color: #06181c; font-size: 13px; font-weight: 700;
@@ -52494,7 +52543,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     close.className = "mgcl-close";
     close.textContent = "Got it";
     close.onclick = () => dismiss3(overlay, entry.version);
-    box.append(eyebrow, title, versionLine, body, close);
+    box.append(eyebrow, title, versionLine, body);
+    const images = entry.images ?? [];
+    if (images.length) {
+      ensureToolsStyles();
+      const carousel = renderCarousel(images);
+      carousel.root.classList.add("mgcl-media");
+      box.appendChild(carousel.root);
+    }
+    box.appendChild(close);
     overlay.appendChild(box);
     overlay.onclick = (event) => {
       if (event.target === overlay) dismiss3(overlay, entry.version);
