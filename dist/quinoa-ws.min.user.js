@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.189
+// @version      3.2.190
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -17200,6 +17200,7 @@
   var editorDecorRotation = 0;
   var friendGardenPreviewActive = false;
   var friendGardenBackup = null;
+  var DECOR_ROTATION_ANGLES = [0, 90, 180, 270, -360];
   function createDecorRotationRow(currentRotation, onSelect) {
     const rotRow = document.createElement("div");
     rotRow.style.display = "grid";
@@ -17214,14 +17215,14 @@
     rotButtons.style.display = "flex";
     rotButtons.style.gap = "6px";
     rotButtons.style.justifyContent = "center";
-    for (const angle of [0, 90, 180, 270]) {
+    for (const angle of DECOR_ROTATION_ANGLES) {
       const rb = document.createElement("button");
       rb.type = "button";
       rb.textContent = `${angle}\xB0`;
       const active = currentRotation === angle;
       Object.assign(rb.style, {
         flex: "1",
-        padding: "6px 8px",
+        padding: "6px 6px",
         borderRadius: "6px",
         border: active ? "1px solid #5eead4" : "1px solid #2b3441",
         background: active ? "rgba(94,234,212,0.22)" : "rgba(10,14,20,0.9)",
@@ -30935,7 +30936,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.189";
+      return "3.2.190";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
