@@ -1,6 +1,13 @@
 {
   "entries": [
     {
+      "version": "3.2.189",
+      "date": "2026-08-02",
+      "title": "Pet team sync is now optional",
+      "notes": "- **Pets**: a new toggle in the Manager tab lets you unsync the mod's pet teams from the in-game ones. It stays on by default, so nothing changes unless you turn it off",
+      "images": ["https://i.imgur.com/W1WibXd.png"]
+    },
+    {
       "version": "3.2.188",
       "date": "2026-08-02",
       "title": "Team Builder improvements",
