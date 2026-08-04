@@ -1,6 +1,7 @@
 // src/services/keybinds.ts
 import { inGameHotkeys } from "../core/ingameHotkeys";
 import { hotkeyToPretty, hotkeyToString, matchHotkey, stringToHotkey, type Hotkey } from "../ui/menu";
+import { isKeybindCaptureActive } from "../utils/keyboard";
 import { readAriesPath, updateAriesPath } from "../utils/localStorage";
 
 export type { Hotkey } from "../ui/menu";
@@ -657,6 +658,7 @@ export function mountGlobalKeybinds(opts: {
 
   function handle(ev: KeyboardEvent, phase: KeyPhase) {
     if (opts.isRebinding?.() === true) return;
+    if (isKeybindCaptureActive()) return;
     if (!canUse()) return;
     if (isTyping(ev.target)) return;
 

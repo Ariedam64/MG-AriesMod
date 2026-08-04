@@ -511,9 +511,15 @@ function loadTeams(): PetTeam[] {
   if (unique.length !== mapped.length) {
     try { saveTeams(unique); } catch {}
   }
+  for (const t of unique) {
+    if (t.serverId) _localTeamIdByServerId.set(t.serverId, t.id);
+  }
   return unique;
 }
 function saveTeams(arr: PetTeam[]) {
+  for (const t of Array.isArray(arr) ? arr : []) {
+    if (t?.serverId && t?.id) _localTeamIdByServerId.set(String(t.serverId), String(t.id));
+  }
   writeAriesPath(PATH_PETS_TEAMS, arr);
 }
 function _uid() {
@@ -610,6 +616,11 @@ function _sendMovePetTeam(teamId: string, toIndex: number): void {
   if (!_teamSyncEnabled) return;
   try { sendToGame({ type: "MovePetTeam", movePetTeamId: teamId, toPetTeamIndex: toIndex }); } catch {}
 }
+
+// Dernier id local connu pour un serverId donné. Les keybinds des équipes sont
+// stockés sous `pets.team.<id local>` : si une équipe disparaît puis revient du
+// serveur, elle doit retrouver son id local, sinon le raccourci est perdu.
+const _localTeamIdByServerId = new Map<string, string>();
 
 let _serverTeams: ServerPetTeam[] = [];
 let _teamSyncStarted = false;
@@ -757,14 +768,22 @@ function _reconcileTeams(): void {
     }
 
     const beforeCount = teams.length;
+    const dropped = teams.filter(t => !!t.serverId && !serverById.has(t.serverId));
+    for (const t of dropped) _localTeamIdByServerId.set(String(t.serverId), t.id);
     PetsService._teams = teams.filter(t => !t.serverId || serverById.has(t.serverId));
     if (PetsService._teams.length !== beforeCount) changed = true;
 
+    const usedLocalIds = new Set(PetsService._teams.map(t => t.id));
     for (const server of _serverTeams) {
       if (linkedServerIds.has(String(server.id))) continue;
       const memberIds = _serverMemberIds(server);
+      // Ce serverId a peut-être déjà eu une équipe locale (drop transitoire) :
+      // on réutilise son id pour ne pas casser les keybinds `pets.team.<id>`.
+      const knownLocalId = _localTeamIdByServerId.get(String(server.id));
+      const importedId = knownLocalId && !usedLocalIds.has(knownLocalId) ? knownLocalId : _uid();
+      usedLocalIds.add(importedId);
       const imported: PetTeam = {
-        id: _uid(),
+        id: importedId,
         name: server.name,
         slots: [0, 1, 2].map(i => memberIds[i] ?? null),
         serverId: String(server.id),
@@ -787,19 +806,31 @@ function _reconcileTeams(): void {
   }
 }
 
-async function _extractServerTeamsFromSlots(slots: any): Promise<ServerPetTeam[]> {
+/**
+ * Server-side teams for my user slot, or `null` when the slot simply can't be read
+ * right now (player id not resolved yet, slots not streamed in, reconnect in
+ * progress, no `petTeams` field). That distinction matters: `[]` means "the server
+ * really has no team" and makes _reconcileTeams drop every linked local team, while
+ * `null` means "unknown" and must leave local teams alone. Treating the two as the
+ * same is what used to wipe the local teams on a transient payload, re-import them
+ * with brand new ids, and silently orphan every `pets.team.<id>` keybind.
+ */
+async function _extractServerTeamsFromSlots(slots: any): Promise<ServerPetTeam[] | null> {
   try {
     const idx = await _getMyUserSlotIndex();
-    if (idx == null) return [];
+    if (idx == null) return null;
     const list: any[] = Array.isArray(slots) ? slots : [];
-    const teams = list[idx]?.data?.petTeams;
-    return Array.isArray(teams) ? teams : [];
-  } catch { return []; }
+    const mySlot = list[idx];
+    if (!mySlot || typeof mySlot !== "object") return null;
+    const teams = mySlot?.data?.petTeams;
+    return Array.isArray(teams) ? teams : null;
+  } catch { return null; }
 }
 
 async function _startServerTeamsWatcher(): Promise<void> {
   const applyNext = async (slots: any) => {
     const next = await _extractServerTeamsFromSlots(slots);
+    if (next === null) return; // état serveur illisible : on ne touche à rien
     const sig = _serverTeamsSig(next);
     if (sig === _lastServerTeamsSig) return;
     _lastServerTeamsSig = sig;

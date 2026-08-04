@@ -3,6 +3,7 @@
 // + Helpers réutilisables : split2 (layout 2 colonnes) et VTabs (tabs verticaux)
 
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
+import { beginKeybindCapture, endKeybindCapture } from "../utils/keyboard";
 
 type TabRender = (root: HTMLElement, api: Menu) => void;
 type Handler = (...args: any[]) => void;
@@ -122,6 +123,11 @@ export type HotkeyButtonElement = HTMLButtonElement & {
 };
 
 const MOD_ONLY = new Set(["Shift","Control","Alt","Meta"]);
+
+/** Un seul bouton de raccourci peut écouter le clavier à la fois. */
+let activeHotkeyRecorder: (() => void) | null = null;
+/** Filet de sécurité : une écoute oubliée s'arrête d'elle-même. */
+const HOTKEY_RECORDING_TIMEOUT_MS = 8000;
 
 type TabDef = {
   title: string;
@@ -1214,6 +1220,7 @@ inputNumber(min = 0, max = 9999, step = 1, value = 0) {
   const clearable = opts?.clearable ?? true;
   let hk: Hotkey | null = initial ?? null;
   let recording = false;
+  let recordingTimeout: number | null = null;
 
   if (opts?.storageKey) {
     try {
@@ -1251,13 +1258,38 @@ inputNumber(min = 0, max = 9999, step = 1, value = 0) {
     applyHotkey(value);
   };
 
-  const stopRecording = (commit: boolean) => {
+  // Un seul bouton peut écouter à la fois, et l'écoute doit TOUJOURS s'arrêter
+  // (clic ailleurs, perte de focus, menu fermé, timeout). Sans ça le listener
+  // window/capture restait armé indéfiniment : la prochaine touche pressée
+  // (typiquement Alt+X pour ouvrir le menu) était capturée et réassignée à
+  // l'action de ce bouton, en écrasant le raccourci existant.
+  const stopRecording = () => {
+    if (!recording) return;
     recording = false;
-    if (!commit) {
-      render();
-      return;
+    if (activeHotkeyRecorder === stopRecording) activeHotkeyRecorder = null;
+    window.removeEventListener("keydown", handleKeyDown, true);
+    document.removeEventListener("pointerdown", handlePointerDown, true);
+    window.removeEventListener("blur", handleWindowBlur);
+    if (recordingTimeout !== null) {
+      clearTimeout(recordingTimeout);
+      recordingTimeout = null;
     }
-    // commit déjà fait dans handleKeyDown si valide
+    endKeybindCapture();
+    render();
+  };
+
+  const startRecording = () => {
+    if (recording) return;
+    activeHotkeyRecorder?.();
+    recording = true;
+    activeHotkeyRecorder = stopRecording;
+    beginKeybindCapture();
+    window.addEventListener("keydown", handleKeyDown, true);
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    // Sans capture : seul le blur de la fenêtre remonte ici, pas celui des éléments
+    // (btn.focus() ci-dessous en déclencherait un et annulerait aussitôt l'écoute).
+    window.addEventListener("blur", handleWindowBlur);
+    recordingTimeout = window.setTimeout(stopRecording, HOTKEY_RECORDING_TIMEOUT_MS);
     render();
   };
 
@@ -1272,19 +1304,34 @@ inputNumber(min = 0, max = 9999, step = 1, value = 0) {
     onChange?.(hk, opts?.storageKey ? hotkeyToString(hk) : undefined);
   };
 
-  const handleKeyDown = (e: KeyboardEvent) => {
+  const handlePointerDown = (e: Event) => {
+    if (e.target instanceof Node && btn.contains(e.target)) return;
+    stopRecording();
+  };
+
+  const handleWindowBlur = (e: Event) => {
+    if (e.target !== window) return;
+    stopRecording();
+  };
+
+  function handleKeyDown(e: KeyboardEvent): void {
     if (!recording) return;
-    e.preventDefault(); e.stopPropagation();
+    // Le bouton a été retiré du DOM (menu fermé/re-rendu) pendant l'écoute :
+    // on abandonne au lieu d'assigner la touche à une action invisible.
+    if (!btn.isConnected) {
+      stopRecording();
+      return;
+    }
+    e.preventDefault();
+    e.stopImmediatePropagation();
     if (e.key === "Escape") { // annuler
-      stopRecording(false);
-      window.removeEventListener("keydown", handleKeyDown, true);
+      stopRecording();
       return;
     }
     if ((e.key === "Backspace" || e.key === "Delete") && clearable) { // effacer
       applyHotkey(null, true);
       save();
-      stopRecording(true);
-      window.removeEventListener("keydown", handleKeyDown, true);
+      stopRecording();
       return;
     }
     const next = eventToHotkey(e, opts?.allowModifierOnly ?? false);
@@ -1294,19 +1341,18 @@ inputNumber(min = 0, max = 9999, step = 1, value = 0) {
     }
     applyHotkey(next, true);
     save();
-    stopRecording(true);
-    window.removeEventListener("keydown", handleKeyDown, true);
-  };
+    stopRecording();
+  }
 
   btn.addEventListener("click", (e) => {
     e.preventDefault();
-    if (!recording) {
-      recording = true;
-      render();
-      window.addEventListener("keydown", handleKeyDown, true);
-      // petit trick: focus visuel seulement en mode recording (déjà géré par .is-recording)
-      btn.focus();
+    if (recording) {
+      stopRecording();
+      return;
     }
+    startRecording();
+    // petit trick: focus visuel seulement en mode recording (déjà géré par .is-recording)
+    btn.focus();
   });
 
   if (clearable) {

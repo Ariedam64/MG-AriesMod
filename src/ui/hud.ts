@@ -18,6 +18,7 @@ import {
   type Hotkey,
   type KeybindId,
 } from "../services/keybinds";
+import { isKeybindCaptureActive } from "../utils/keyboard";
 import { renderOverlay } from "./menus/notificationOverlay";
 import { startInstantFeedWidget } from "../utils/instantFeedWidget";
 import { getSpriteWarmupState, onSpriteWarmupProgress } from "./spriteIconCache";
@@ -496,6 +497,9 @@ export function mountHUD(opts?: HUDOptions) {
       if (editing) return;
 
       if (e.repeat) return;
+
+      // Pendant l'enregistrement d'un raccourci, la touche appartient à l'UI de rebind.
+      if (isKeybindCaptureActive()) return;
 
       if (matchesHotkey(e, toggleHotkey)) {
         if (insertDown && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {

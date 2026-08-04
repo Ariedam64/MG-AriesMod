@@ -12,6 +12,8 @@ import {
   weatherCatalog,
 } from "../data";
 
+import { createDecorRotationControl } from "./editor/decorRotation";
+
 import { ensureStore, getAtomByLabel } from "../store/jotai";
 
 import {
@@ -686,54 +688,6 @@ let friendGardenPreviewActive = false;
 type FriendGardenBackup = { garden: GardenState; userSlotIdx: number };
 
 let friendGardenBackup: FriendGardenBackup | null = null;
-
-/** Rotations the game accepts for a decor, offered as presets (no free angle). */
-const DECOR_ROTATION_ANGLES = [0, 90, 180, 270, -360];
-
-/** A "Rotation" label + preset button row, used both by the decor picker and by the current-item editor. */
-function createDecorRotationRow(
-  currentRotation: number,
-  onSelect: (angle: number) => void,
-): HTMLDivElement {
-  const rotRow = document.createElement("div");
-  rotRow.style.display = "grid";
-  rotRow.style.gap = "6px";
-  rotRow.style.width = "100%";
-
-  const rotLabel = document.createElement("div");
-  rotLabel.textContent = "Rotation";
-  rotLabel.style.fontSize = "12px";
-  rotLabel.style.opacity = "0.8";
-  rotLabel.style.textAlign = "center";
-
-  const rotButtons = document.createElement("div");
-  rotButtons.style.display = "flex";
-  rotButtons.style.gap = "6px";
-  rotButtons.style.justifyContent = "center";
-
-  for (const angle of DECOR_ROTATION_ANGLES) {
-    const rb = document.createElement("button");
-    rb.type = "button";
-    rb.textContent = `${angle}°`;
-    const active = currentRotation === angle;
-    Object.assign(rb.style, {
-      flex: "1",
-      padding: "6px 6px",
-      borderRadius: "6px",
-      border: active ? "1px solid #5eead4" : "1px solid #2b3441",
-      background: active ? "rgba(94,234,212,0.22)" : "rgba(10,14,20,0.9)",
-      color: active ? "#5eead4" : "#e7eef7",
-      fontWeight: active ? "700" : "500",
-      cursor: "pointer",
-      transition: "background 120ms ease, border-color 120ms ease, color 120ms ease",
-    } as Partial<CSSStyleDeclaration>);
-    rb.onclick = () => onSelect(angle);
-    rotButtons.appendChild(rb);
-  }
-
-  rotRow.append(rotLabel, rotButtons);
-  return rotRow;
-}
 
 function createSelectionIcon(
   kind: "decor" | "plants",
@@ -1667,12 +1621,15 @@ function renderCurrentItemOverlay() {
       renderCurrentPlantEditor(content, tileObject, tileKey || "");
     } else if (tileObject.objectType === "decor") {
       const currentRotation = Number(tileObject.rotation) || 0;
-      const rotRow = createDecorRotationRow(currentRotation, (angle) => {
-        void updateGardenObjectAtCurrentTile((obj) => ({
-          ...obj,
-          rotation: angle,
-        })).then(() => renderCurrentItemOverlay());
-      });
+      // No renderCurrentItemOverlay() on select: the control owns its preview,
+      // and rebuilding the overlay mid-drag would recreate the slider.
+      const rotRow = createDecorRotationControl(
+        String(tileObject.decorId || ""),
+        currentRotation,
+        (angle) => {
+          void updateGardenObjectAtCurrentTile((obj) => ({ ...obj, rotation: angle }));
+        },
+      );
       content.appendChild(rotRow);
     }
 
@@ -3674,10 +3631,14 @@ function renderSideDetails() {
   // --- fin slots UI ---
 
   // Decor has no slots UI above, so its only picker-side control is rotation.
-  if (currentSideMode === "decor") {
-    const rotRow = createDecorRotationRow(editorDecorRotation, (angle) => {
+  if (currentSideMode === "decor" && selectedDecorId) {
+    // Pinned for the callbacks below: `selectedDecorId` is module-level and
+    // mutable, so the narrowing above does not survive into the closures.
+    const decorId = selectedDecorId;
+    // The control repaints its own preview, so no renderSideDetails() here:
+    // rebuilding the panel would recreate the slider and lose the drag.
+    const rotRow = createDecorRotationControl(decorId, editorDecorRotation, (angle) => {
       editorDecorRotation = angle;
-      renderSideDetails();
     });
     rotRow.style.marginTop = "6px";
     content.appendChild(rotRow);

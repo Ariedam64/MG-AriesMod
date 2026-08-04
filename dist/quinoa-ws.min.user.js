@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.190
+// @version      3.2.191
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -10438,7 +10438,27 @@
   } catch {
   }
 
+  // src/utils/keyboard.ts
+  var keybindCaptureCount = 0;
+  function isKeybindCaptureActive() {
+    return keybindCaptureCount > 0;
+  }
+  function beginKeybindCapture() {
+    keybindCaptureCount++;
+  }
+  function endKeybindCapture() {
+    keybindCaptureCount = Math.max(0, keybindCaptureCount - 1);
+  }
+  function shouldIgnoreKeydown(e) {
+    if (isKeybindCaptureActive()) return true;
+    const el2 = e.target;
+    if (!el2) return false;
+    return el2.isContentEditable || el2.tagName === "INPUT" || el2.tagName === "TEXTAREA" || el2.tagName === "SELECT";
+  }
+
   // src/ui/menu.ts
+  var activeHotkeyRecorder = null;
+  var HOTKEY_RECORDING_TIMEOUT_MS = 8e3;
   var Menu = class {
     constructor(opts = {}) {
       this.opts = opts;
@@ -11339,6 +11359,7 @@
       const clearable = opts?.clearable ?? true;
       let hk = initial ?? null;
       let recording = false;
+      let recordingTimeout = null;
       if (opts?.storageKey) {
         try {
           hk = stringToHotkey(localStorage.getItem(opts.storageKey) || "") ?? initial ?? null;
@@ -11371,12 +11392,30 @@
       btn.refreshHotkey = (value) => {
         applyHotkey(value);
       };
-      const stopRecording = (commit) => {
+      const stopRecording = () => {
+        if (!recording) return;
         recording = false;
-        if (!commit) {
-          render();
-          return;
+        if (activeHotkeyRecorder === stopRecording) activeHotkeyRecorder = null;
+        window.removeEventListener("keydown", handleKeyDown, true);
+        document.removeEventListener("pointerdown", handlePointerDown2, true);
+        window.removeEventListener("blur", handleWindowBlur);
+        if (recordingTimeout !== null) {
+          clearTimeout(recordingTimeout);
+          recordingTimeout = null;
         }
+        endKeybindCapture();
+        render();
+      };
+      const startRecording = () => {
+        if (recording) return;
+        activeHotkeyRecorder?.();
+        recording = true;
+        activeHotkeyRecorder = stopRecording;
+        beginKeybindCapture();
+        window.addEventListener("keydown", handleKeyDown, true);
+        document.addEventListener("pointerdown", handlePointerDown2, true);
+        window.addEventListener("blur", handleWindowBlur);
+        recordingTimeout = window.setTimeout(stopRecording, HOTKEY_RECORDING_TIMEOUT_MS);
         render();
       };
       const save = () => {
@@ -11390,20 +11429,30 @@
         }
         onChange?.(hk, opts?.storageKey ? hotkeyToString(hk) : void 0);
       };
-      const handleKeyDown = (e) => {
+      const handlePointerDown2 = (e) => {
+        if (e.target instanceof Node && btn.contains(e.target)) return;
+        stopRecording();
+      };
+      const handleWindowBlur = (e) => {
+        if (e.target !== window) return;
+        stopRecording();
+      };
+      function handleKeyDown(e) {
         if (!recording) return;
+        if (!btn.isConnected) {
+          stopRecording();
+          return;
+        }
         e.preventDefault();
-        e.stopPropagation();
+        e.stopImmediatePropagation();
         if (e.key === "Escape") {
-          stopRecording(false);
-          window.removeEventListener("keydown", handleKeyDown, true);
+          stopRecording();
           return;
         }
         if ((e.key === "Backspace" || e.key === "Delete") && clearable) {
           applyHotkey(null, true);
           save();
-          stopRecording(true);
-          window.removeEventListener("keydown", handleKeyDown, true);
+          stopRecording();
           return;
         }
         const next = eventToHotkey(e, opts?.allowModifierOnly ?? false);
@@ -11412,17 +11461,16 @@
         }
         applyHotkey(next, true);
         save();
-        stopRecording(true);
-        window.removeEventListener("keydown", handleKeyDown, true);
-      };
+        stopRecording();
+      }
       btn.addEventListener("click", (e) => {
         e.preventDefault();
-        if (!recording) {
-          recording = true;
-          render();
-          window.addEventListener("keydown", handleKeyDown, true);
-          btn.focus();
+        if (recording) {
+          stopRecording();
+          return;
         }
+        startRecording();
+        btn.focus();
       });
       if (clearable) {
         btn.addEventListener("contextmenu", (e) => {
@@ -13434,13 +13482,6 @@
       for (const id of actionMap.keys()) emitChange(id);
       for (const id of holdDefaultMap.keys()) emitHoldChange(id);
     });
-  }
-
-  // src/utils/keyboard.ts
-  function shouldIgnoreKeydown(e) {
-    const el2 = e.target;
-    if (!el2) return false;
-    return el2.isContentEditable || el2.tagName === "INPUT" || el2.tagName === "TEXTAREA" || el2.tagName === "SELECT";
   }
 
   // src/services/shops.ts
@@ -15942,6 +15983,224 @@
     }
   };
 
+  // src/services/editor/decorRotation.ts
+  var ANGLE_NONE = 0;
+  var ANGLE_MIRRORED_NONE = -360;
+  var FULL_TURN_DEGREES = 360;
+  var PREVIEW_SIZE_PX = 64;
+  var CONTENT_MAX_WIDTH_PX = 168;
+  var TRACK_INSET_PX = 14;
+  var SPRITE_LOG_TAG = "editor-decor-rotation";
+  var THUMB_SIZE_PX = 14;
+  var SLIDER_CLASS = "qws-decor-rot-slider";
+  var STYLE_ID = "gemini-decor-rotation-styles";
+  function ensureSliderStyle() {
+    if (document.getElementById(STYLE_ID)) return;
+    const style2 = document.createElement("style");
+    style2.id = STYLE_ID;
+    style2.textContent = `
+.${SLIDER_CLASS} {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: ${THUMB_SIZE_PX}px;
+  background: transparent; cursor: pointer; margin: 0;
+}
+.${SLIDER_CLASS}::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 999px; background: #2b3441;
+}
+.${SLIDER_CLASS}::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: ${THUMB_SIZE_PX}px; height: ${THUMB_SIZE_PX}px;
+  margin-top: ${(4 - THUMB_SIZE_PX) / 2}px;
+  border-radius: 50%; background: #5eead4; border: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.45);
+}
+.${SLIDER_CLASS}::-moz-range-track {
+  height: 4px; border-radius: 999px; background: #2b3441;
+}
+.${SLIDER_CLASS}::-moz-range-thumb {
+  width: ${THUMB_SIZE_PX}px; height: ${THUMB_SIZE_PX}px;
+  border-radius: 50%; background: #5eead4; border: none;
+}
+.${SLIDER_CLASS}:focus-visible { outline: 2px solid #5eead4; outline-offset: 2px; }
+  `;
+    document.head.appendChild(style2);
+  }
+  function getEntry(decorId) {
+    if (!decorId) return null;
+    const entry = decorCatalog2?.[decorId];
+    return entry && typeof entry === "object" ? entry : null;
+  }
+  function isStorageDecor(decorId) {
+    const entry = getEntry(decorId);
+    return typeof entry?.baseCapacitySlots === "number";
+  }
+  function spriteIdFromRef(ref) {
+    const parts = String(ref || "").split("/");
+    return parts[parts.length - 1]?.trim() || "";
+  }
+  function positiveAngles(entry) {
+    return Object.keys(entry?.rotationVariants ?? {}).map(Number).filter((angle) => Number.isFinite(angle) && angle > 0).sort((a, b) => a - b);
+  }
+  function getDecorRotationStates(decorId) {
+    const entry = getEntry(decorId);
+    if (!entry || isStorageDecor(decorId)) return [ANGLE_NONE];
+    const angles = positiveAngles(entry);
+    if (angles.length) return [ANGLE_NONE, ...angles];
+    return [ANGLE_NONE, ANGLE_MIRRORED_NONE];
+  }
+  function resolveDecorSpriteState(decorId, rotation) {
+    const entry = getEntry(decorId);
+    const angle = Math.abs(Number(rotation) || 0) % FULL_TURN_DEGREES;
+    const variant = angle ? entry?.rotationVariants?.[String(angle)] : void 0;
+    const variantId = variant?.sprite ? spriteIdFromRef(variant.sprite) : "";
+    const mirrored = Boolean(variant?.flipH) !== (Number(rotation) || 0) < 0;
+    return {
+      spriteIds: variantId ? [variantId, decorId] : [decorId],
+      mirrored
+    };
+  }
+  function formatRotationLabel(rotation) {
+    const value = Number(rotation) || 0;
+    const angle = Math.abs(value) % FULL_TURN_DEGREES;
+    return value < 0 ? `${angle}\xB0 mirrored` : `${angle}\xB0`;
+  }
+  function createLabel(text) {
+    const label2 = document.createElement("div");
+    label2.textContent = text;
+    label2.style.fontSize = "12px";
+    label2.style.opacity = "0.8";
+    label2.style.textAlign = "center";
+    return label2;
+  }
+  function createPreviewBox() {
+    const box = document.createElement("div");
+    Object.assign(box.style, {
+      width: "100%",
+      maxWidth: `${CONTENT_MAX_WIDTH_PX}px`,
+      justifySelf: "center",
+      boxSizing: "border-box",
+      height: `${PREVIEW_SIZE_PX + 14}px`,
+      display: "grid",
+      placeItems: "center",
+      borderRadius: "8px",
+      border: "1px solid #2b3441",
+      background: "rgba(10,14,20,0.9)",
+      overflow: "hidden"
+    });
+    return box;
+  }
+  function createTrackWrap() {
+    const wrap = document.createElement("div");
+    wrap.style.width = "100%";
+    wrap.style.maxWidth = `${CONTENT_MAX_WIDTH_PX - TRACK_INSET_PX * 2}px`;
+    wrap.style.justifySelf = "center";
+    wrap.style.display = "grid";
+    wrap.style.gap = "2px";
+    return wrap;
+  }
+  function createSlider(stopCount, value) {
+    ensureSliderStyle();
+    const slider = document.createElement("input");
+    slider.type = "range";
+    slider.className = SLIDER_CLASS;
+    slider.min = "0";
+    slider.max = String(stopCount - 1);
+    slider.step = "1";
+    slider.value = String(value);
+    return slider;
+  }
+  function createTicks(labels) {
+    const root = document.createElement("div");
+    root.style.position = "relative";
+    root.style.width = "100%";
+    root.style.height = "20px";
+    const lastIndex = Math.max(1, labels.length - 1);
+    const cells = labels.map((text, index) => {
+      const fraction = index / lastIndex;
+      const cell = document.createElement("div");
+      cell.style.position = "absolute";
+      cell.style.top = "0";
+      cell.style.left = `calc(${THUMB_SIZE_PX / 2}px + (100% - ${THUMB_SIZE_PX}px) * ${fraction})`;
+      cell.style.transform = "translateX(-50%)";
+      cell.style.display = "grid";
+      cell.style.justifyItems = "center";
+      cell.style.gap = "2px";
+      const mark = document.createElement("div");
+      mark.style.width = "1px";
+      mark.style.height = "5px";
+      mark.style.background = "#2b3441";
+      const caption = document.createElement("div");
+      caption.textContent = text;
+      caption.style.fontSize = "10px";
+      caption.style.whiteSpace = "nowrap";
+      caption.style.color = "#8b97a8";
+      cell.append(mark, caption);
+      root.appendChild(cell);
+      return { mark, caption };
+    });
+    const setActive = (index) => {
+      cells.forEach(({ mark, caption }, i) => {
+        const active = i === index;
+        mark.style.background = active ? "#5eead4" : "#2b3441";
+        caption.style.color = active ? "#5eead4" : "#8b97a8";
+        caption.style.fontWeight = active ? "700" : "400";
+      });
+    };
+    return { root, setActive };
+  }
+  function createDecorRotationControl(decorId, currentRotation, onSelect) {
+    const root = document.createElement("div");
+    root.style.display = "grid";
+    root.style.gap = "6px";
+    root.style.width = "100%";
+    root.style.maxWidth = "100%";
+    root.style.boxSizing = "border-box";
+    root.style.overflow = "hidden";
+    const preview = createPreviewBox();
+    const holder = document.createElement("div");
+    holder.style.width = `${PREVIEW_SIZE_PX}px`;
+    holder.style.height = `${PREVIEW_SIZE_PX}px`;
+    holder.style.display = "grid";
+    holder.style.placeItems = "center";
+    preview.appendChild(holder);
+    const renderSprite = (spriteIds2, mirrored2) => {
+      holder.innerHTML = "";
+      holder.style.transform = mirrored2 ? "scaleX(-1)" : "none";
+      attachSpriteIcon(holder, ["decor"], spriteIds2, PREVIEW_SIZE_PX, SPRITE_LOG_TAG, {
+        onNoSpriteFound: () => {
+          holder.textContent = (decorId || "D").charAt(0).toUpperCase();
+        }
+      });
+    };
+    const states = getDecorRotationStates(decorId);
+    let index = Math.max(0, states.indexOf(Number(currentRotation) || 0));
+    root.append(createLabel("Rotation"), preview);
+    if (states.length > 1) {
+      const slider = createSlider(states.length, index);
+      const ticks = createTicks(states.map(formatRotationLabel));
+      const apply = () => {
+        const rotation2 = states[index] ?? ANGLE_NONE;
+        const { spriteIds: spriteIds2, mirrored: mirrored2 } = resolveDecorSpriteState(decorId, rotation2);
+        renderSprite(spriteIds2, mirrored2);
+        ticks.setActive(index);
+      };
+      slider.oninput = () => {
+        index = Number(slider.value) || 0;
+        apply();
+        onSelect(states[index] ?? ANGLE_NONE);
+      };
+      const track = createTrackWrap();
+      track.append(slider, ticks.root);
+      root.appendChild(track);
+      apply();
+      return root;
+    }
+    const rotation = states[0] ?? ANGLE_NONE;
+    const { spriteIds, mirrored } = resolveDecorSpriteState(decorId, rotation);
+    renderSprite(spriteIds, mirrored);
+    return root;
+  }
+
   // src/core/audioPlayer.ts
   var AudioPlayer = class {
     constructor(opts = {}) {
@@ -17200,43 +17459,6 @@
   var editorDecorRotation = 0;
   var friendGardenPreviewActive = false;
   var friendGardenBackup = null;
-  var DECOR_ROTATION_ANGLES = [0, 90, 180, 270, -360];
-  function createDecorRotationRow(currentRotation, onSelect) {
-    const rotRow = document.createElement("div");
-    rotRow.style.display = "grid";
-    rotRow.style.gap = "6px";
-    rotRow.style.width = "100%";
-    const rotLabel = document.createElement("div");
-    rotLabel.textContent = "Rotation";
-    rotLabel.style.fontSize = "12px";
-    rotLabel.style.opacity = "0.8";
-    rotLabel.style.textAlign = "center";
-    const rotButtons = document.createElement("div");
-    rotButtons.style.display = "flex";
-    rotButtons.style.gap = "6px";
-    rotButtons.style.justifyContent = "center";
-    for (const angle of DECOR_ROTATION_ANGLES) {
-      const rb = document.createElement("button");
-      rb.type = "button";
-      rb.textContent = `${angle}\xB0`;
-      const active = currentRotation === angle;
-      Object.assign(rb.style, {
-        flex: "1",
-        padding: "6px 6px",
-        borderRadius: "6px",
-        border: active ? "1px solid #5eead4" : "1px solid #2b3441",
-        background: active ? "rgba(94,234,212,0.22)" : "rgba(10,14,20,0.9)",
-        color: active ? "#5eead4" : "#e7eef7",
-        fontWeight: active ? "700" : "500",
-        cursor: "pointer",
-        transition: "background 120ms ease, border-color 120ms ease, color 120ms ease"
-      });
-      rb.onclick = () => onSelect(angle);
-      rotButtons.appendChild(rb);
-    }
-    rotRow.append(rotLabel, rotButtons);
-    return rotRow;
-  }
   function createSelectionIcon(kind, label2, size = 32, rawId, spriteKey) {
     const wrap = document.createElement("span");
     Object.assign(wrap.style, {
@@ -17800,12 +18022,13 @@
         renderCurrentPlantEditor(content, tileObject, tileKey || "");
       } else if (tileObject.objectType === "decor") {
         const currentRotation = Number(tileObject.rotation) || 0;
-        const rotRow = createDecorRotationRow(currentRotation, (angle) => {
-          void updateGardenObjectAtCurrentTile((obj) => ({
-            ...obj,
-            rotation: angle
-          })).then(() => renderCurrentItemOverlay());
-        });
+        const rotRow = createDecorRotationControl(
+          String(tileObject.decorId || ""),
+          currentRotation,
+          (angle) => {
+            void updateGardenObjectAtCurrentTile((obj) => ({ ...obj, rotation: angle }));
+          }
+        );
         content.appendChild(rotRow);
       }
       const removeBtn = document.createElement("button");
@@ -18962,10 +19185,10 @@
       slotsPanel.appendChild(list);
       content.appendChild(slotsPanel);
     }
-    if (currentSideMode === "decor") {
-      const rotRow = createDecorRotationRow(editorDecorRotation, (angle) => {
+    if (currentSideMode === "decor" && selectedDecorId) {
+      const decorId = selectedDecorId;
+      const rotRow = createDecorRotationControl(decorId, editorDecorRotation, (angle) => {
         editorDecorRotation = angle;
-        renderSideDetails();
       });
       rotRow.style.marginTop = "6px";
       content.appendChild(rotRow);
@@ -20169,8 +20392,8 @@
     return ev.code === 4300 || ev.code === 4250 && (/superseded/i.test(reason) || /newer user session/i.test(reason));
   }
   function ensureAutoRecoOverlayStyle() {
-    const STYLE_ID7 = "mgAutoRecoOverlayStyle";
-    if (document.getElementById(STYLE_ID7)) return;
+    const STYLE_ID8 = "mgAutoRecoOverlayStyle";
+    if (document.getElementById(STYLE_ID8)) return;
     const css3 = `
     #mgAutoRecoOverlay { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #mgAutoRecoOverlay .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; border: 1px solid rgba(255,255,255,.15); }
@@ -20180,7 +20403,7 @@
     #mgAutoRecoOverlay .btn:focus { outline: 2px solid #7aa2ff; outline-offset: 2px; }
   `;
     const style2 = document.createElement("style");
-    style2.id = STYLE_ID7;
+    style2.id = STYLE_ID8;
     style2.textContent = css3;
     document.documentElement.appendChild(style2);
   }
@@ -21459,9 +21682,15 @@
       } catch {
       }
     }
+    for (const t of unique) {
+      if (t.serverId) _localTeamIdByServerId.set(t.serverId, t.id);
+    }
     return unique;
   }
   function saveTeams(arr) {
+    for (const t of Array.isArray(arr) ? arr : []) {
+      if (t?.serverId && t?.id) _localTeamIdByServerId.set(String(t.serverId), String(t.id));
+    }
     writeAriesPath(PATH_PETS_TEAMS, arr);
   }
   function _uid() {
@@ -21543,6 +21772,7 @@
     } catch {
     }
   }
+  var _localTeamIdByServerId = /* @__PURE__ */ new Map();
   var _serverTeams = [];
   var _teamSyncStarted = false;
   var _lastServerTeamsSig = "";
@@ -21640,13 +21870,19 @@
         _maybeCreateServerTeam(local);
       }
       const beforeCount = teams.length;
+      const dropped = teams.filter((t) => !!t.serverId && !serverById.has(t.serverId));
+      for (const t of dropped) _localTeamIdByServerId.set(String(t.serverId), t.id);
       PetsService._teams = teams.filter((t) => !t.serverId || serverById.has(t.serverId));
       if (PetsService._teams.length !== beforeCount) changed = true;
+      const usedLocalIds = new Set(PetsService._teams.map((t) => t.id));
       for (const server of _serverTeams) {
         if (linkedServerIds.has(String(server.id))) continue;
         const memberIds = _serverMemberIds(server);
+        const knownLocalId = _localTeamIdByServerId.get(String(server.id));
+        const importedId = knownLocalId && !usedLocalIds.has(knownLocalId) ? knownLocalId : _uid();
+        usedLocalIds.add(importedId);
         const imported = {
-          id: _uid(),
+          id: importedId,
           name: server.name,
           slots: [0, 1, 2].map((i) => memberIds[i] ?? null),
           serverId: String(server.id)
@@ -21670,17 +21906,20 @@
   async function _extractServerTeamsFromSlots(slots) {
     try {
       const idx = await _getMyUserSlotIndex();
-      if (idx == null) return [];
+      if (idx == null) return null;
       const list = Array.isArray(slots) ? slots : [];
-      const teams = list[idx]?.data?.petTeams;
-      return Array.isArray(teams) ? teams : [];
+      const mySlot = list[idx];
+      if (!mySlot || typeof mySlot !== "object") return null;
+      const teams = mySlot?.data?.petTeams;
+      return Array.isArray(teams) ? teams : null;
     } catch {
-      return [];
+      return null;
     }
   }
   async function _startServerTeamsWatcher() {
     const applyNext = async (slots) => {
       const next = await _extractServerTeamsFromSlots(slots);
+      if (next === null) return;
       const sig = _serverTeamsSig(next);
       if (sig === _lastServerTeamsSig) return;
       _lastServerTeamsSig = sig;
@@ -24519,8 +24758,8 @@
     root.querySelectorAll(`.${injectedClass}`).forEach((n) => n.remove());
   }
   function ensureStyle(injectedClass, theme) {
-    const STYLE_ID7 = `${injectedClass}-style`;
-    if (document.getElementById(STYLE_ID7)) return;
+    const STYLE_ID8 = `${injectedClass}-style`;
+    if (document.getElementById(STYLE_ID8)) return;
     const css3 = `
 .${injectedClass}{
   font-synthesis: none;
@@ -24575,7 +24814,7 @@
 }
 `.trim();
     const s = document.createElement("style");
-    s.id = STYLE_ID7;
+    s.id = STYLE_ID8;
     s.textContent = css3;
     document.head.appendChild(s);
   }
@@ -30936,7 +31175,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.190";
+      return "3.2.191";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -35045,6 +35284,7 @@
         const editing = !!t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName));
         if (editing) return;
         if (e.repeat) return;
+        if (isKeybindCaptureActive()) return;
         if (matchesHotkey(e, toggleHotkey)) {
           if (insertDown && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
             insertUsedAsModifier = true;
@@ -49550,7 +49790,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
 
   // src/ui/menus/tools/styles.ts
-  var STYLE_ID = "gemini-tools-styles";
+  var STYLE_ID2 = "gemini-tools-styles";
   var ACCENT2 = "#5eead4";
   var ACCENT_2 = "#2dd4bf";
   var TEXT = "#e7eef7";
@@ -49558,9 +49798,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   var BORDER = "rgba(255,255,255,0.10)";
   var SURFACE = "rgba(255,255,255,0.03)";
   function ensureToolsStyles() {
-    if (document.getElementById(STYLE_ID)) return;
+    if (document.getElementById(STYLE_ID2)) return;
     const style2 = document.createElement("style");
-    style2.id = STYLE_ID;
+    style2.id = STYLE_ID2;
     style2.textContent = `
 /* \u2500\u2500 reset for the interactive elements \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 .mgt-chip, .mgt-back, .mgt-action, .mgt-nav, .mgt-dot {
@@ -49945,7 +50185,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
 
   // src/ui/menus/editor.ts
-  var STYLE_ID2 = "qws-editor-menu-css";
+  var STYLE_ID3 = "qws-editor-menu-css";
   var TEAL = "#5eead4";
   var TEAL_DIM = "rgba(94,234,212,0.12)";
   var TEAL_MID = "rgba(94,234,212,0.22)";
@@ -49963,9 +50203,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   var DANGER_HI = "rgba(239,68,68,0.2)";
   var DANGER_BRD_HI = "rgba(239,68,68,0.55)";
   function ensureStyles2() {
-    if (document.getElementById(STYLE_ID2)) return;
+    if (document.getElementById(STYLE_ID3)) return;
     const st = document.createElement("style");
-    st.id = STYLE_ID2;
+    st.id = STYLE_ID3;
     st.textContent = `
 .qws-ed-scroll::-webkit-scrollbar { width: 6px; }
 .qws-ed-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -51353,7 +51593,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
 
   // src/ui/menus/room.ts
-  var STYLE_ID3 = "qws-room-menu-css";
+  var STYLE_ID4 = "qws-room-menu-css";
   var TEAL2 = "#5eead4";
   var TEAL_DIM2 = "rgba(94,234,212,0.12)";
   var TEAL_MID2 = "rgba(94,234,212,0.22)";
@@ -51367,9 +51607,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   var TEXT_DIM3 = "rgba(226,232,240,0.45)";
   var GREEN = "#10b981";
   function ensureStyles3() {
-    if (document.getElementById(STYLE_ID3)) return;
+    if (document.getElementById(STYLE_ID4)) return;
     const st = document.createElement("style");
-    st.id = STYLE_ID3;
+    st.id = STYLE_ID4;
     st.textContent = `
 .qws-rm-scroll::-webkit-scrollbar { width: 6px; }
 .qws-rm-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -52287,11 +52527,11 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/ui/autoRecoDisabledNotice.ts
   var OVERLAY_ID2 = "mgAutoRecoDisabledNotice";
-  var STYLE_ID4 = "mgAutoRecoDisabledNoticeStyle";
+  var STYLE_ID5 = "mgAutoRecoDisabledNoticeStyle";
   function ensureStyle2() {
-    if (document.getElementById(STYLE_ID4)) return;
+    if (document.getElementById(STYLE_ID5)) return;
     const style2 = document.createElement("style");
-    style2.id = STYLE_ID4;
+    style2.id = STYLE_ID5;
     style2.textContent = `
     #${OVERLAY_ID2} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #${OVERLAY_ID2} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; width: 420px; border: 1px solid rgba(255,255,255,.15); }
@@ -52338,12 +52578,12 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/ui/roomPrivacyNotice.ts
   var OVERLAY_ID3 = "mgRoomPrivacyNotice";
-  var STYLE_ID5 = "mgRoomPrivacyNoticeStyle";
+  var STYLE_ID6 = "mgRoomPrivacyNoticeStyle";
   var HUB_INSTALL_URL = "https://github.com/Ariedam64/MG-CommunityHub/raw/refs/heads/main/dist/mg-community-hub.user.js";
   function ensureStyle3() {
-    if (document.getElementById(STYLE_ID5)) return;
+    if (document.getElementById(STYLE_ID6)) return;
     const style2 = document.createElement("style");
-    style2.id = STYLE_ID5;
+    style2.id = STYLE_ID6;
     style2.textContent = `
     #${OVERLAY_ID3} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #${OVERLAY_ID3} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; width: 440px; border: 1px solid rgba(255,255,255,.15); }
@@ -52455,16 +52695,16 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/ui/changelogNotice.ts
   var OVERLAY_ID4 = "mgChangelogNotice";
-  var STYLE_ID6 = "mgChangelogNoticeStyle";
+  var STYLE_ID7 = "mgChangelogNoticeStyle";
   var OVERLAY_Z_INDEX2 = "2147483647";
   var ACCENT3 = "#5eead4";
   var ACCENT_22 = "#2dd4bf";
   var TEXT4 = "#e7eef7";
   var TEXT_DIM4 = "rgba(231,238,247,0.68)";
   function ensureStyle4() {
-    if (document.getElementById(STYLE_ID6)) return;
+    if (document.getElementById(STYLE_ID7)) return;
     const style2 = document.createElement("style");
-    style2.id = STYLE_ID6;
+    style2.id = STYLE_ID7;
     style2.textContent = `
 #${OVERLAY_ID4} {
   position: fixed; inset: 0; z-index: ${OVERLAY_Z_INDEX2};

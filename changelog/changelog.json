@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "version": "3.2.191",
+      "date": "2026-08-04",
+      "title": "Editor rotation and keybind fixes",
+      "notes": "- **Editor**: decor rotation is now a slider with a live preview, and each decor only offers the angles it actually supports\n- **Keybinds**: attempted fix for the shortcuts that reassigned themselves on their own, and for the pet team shortcuts that kept disappearing"
+    },
+    {
       "version": "3.2.189",
       "date": "2026-08-02",
       "title": "Pet team sync is now optional",
