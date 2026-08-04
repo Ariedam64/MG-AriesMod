@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "version": "3.2.192",
+      "date": "2026-08-04",
+      "title": "Pet sprites are back",
+      "notes": "- **Pets**: fixed the pet icons that showed up empty across the Manager, Team Builder, feeding lists, logs and alerts\n- **Sprites**: pet and egg icons now come straight from the API data, so they no longer depend on name matching to be found"
+    },
+    {
       "version": "3.2.191",
       "date": "2026-08-04",
       "title": "Editor rotation and keybind fixes",

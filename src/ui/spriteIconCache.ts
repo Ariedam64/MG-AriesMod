@@ -3,8 +3,9 @@
 // Mutation color filters are applied client-side via Canvas 2D.
 // Uses GM_xmlhttpRequest (via mgCommon helpers) to bypass CORS restrictions.
 
-import { getJSON, getBlob, blobToImage } from "../utils/mgCommon";
+import { getJSON, getBlob } from "../utils/mgCommon";
 import { withDiscordPollPause } from "../ariesModAPI/client/events";
+import { MGData } from "../data/dynamic";
 
 const API_BASE = "https://mg-api.ariedam.fr";
 
@@ -15,6 +16,7 @@ type SpriteIndexEntry = {
   name: string;        // e.g. "Bamboo"
   internalCat: string; // e.g. "plant" (extracted from id)
   apiCat: string;      // e.g. "plants" (for URL construction)
+  url: string;         // ready-to-fetch PNG URL
 };
 
 const indexEntries: SpriteIndexEntry[] = [];
@@ -79,7 +81,13 @@ function fetchIndex(): Promise<void> {
         const start = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
         const internalCat = parts[start] || "";
         const apiCat = INTERNAL_TO_API[internalCat] || internalCat;
-        const entry: SpriteIndexEntry = { id: item.id, name: item.name, internalCat, apiCat };
+        const entry: SpriteIndexEntry = {
+          id: item.id,
+          name: item.name,
+          internalCat,
+          apiCat,
+          url: `${API_BASE}/assets/sprites/${apiCat}/${item.name}.png`,
+        };
         indexEntries.push(entry);
         const norm = normalize(item.name);
         const arr = nameIndex.get(norm) || [];
@@ -101,21 +109,85 @@ function fetchIndex(): Promise<void> {
 // where DOM elements get replaced before async sprite loading completes.
 fetchIndex();
 
-function spriteUrl(entry: SpriteIndexEntry): string {
-  return `${API_BASE}/assets/sprites/${entry.apiCat}/${entry.name}.png`;
-}
-
-function findSprite(categories: string[], candidateId: string): SpriteIndexEntry | null {
-  const norm = normalize(candidateId);
-  const entries = nameIndex.get(norm);
-  if (!entries?.length) {
-    return findSpriteFuzzy(categories, norm);
-  }
-
+function expandCategories(categories: string[]): Set<string> {
   const internalCats = new Set<string>();
   for (const cat of categories) {
     const expanded = SEARCH_CATS[cat] || [cat];
     for (const catName of expanded) internalCats.add(catName);
+  }
+  return internalCats;
+}
+
+// ─── Catalog Sprites (authoritative, from /data) ───────────────────────────────
+// MGData already serves every catalog entry with a ready-to-use, versioned `sprite`
+// URL. Preferring it over the name-matched sprite index means pets/eggs never depend
+// on a second endpoint nor on fuzzy name matching to get their icon.
+
+const CATALOG_SPRITE_SOURCES: Array<{ dataKey: "pets" | "eggs"; internalCat: string }> = [
+  { dataKey: "pets", internalCat: "pet" },
+  { dataKey: "eggs", internalCat: "pet" }, // eggs live in the pet spritesheet
+];
+
+const catalogIndex = new Map<string, SpriteIndexEntry[]>();
+let catalogSourcesIndexed = -1;
+
+function addCatalogAlias(alias: string, entry: SpriteIndexEntry): void {
+  const key = normalize(alias);
+  if (!key) return;
+  const entries = catalogIndex.get(key) || [];
+  if (entries.some(known => known.internalCat === entry.internalCat)) return;
+  entries.push(entry);
+  catalogIndex.set(key, entries);
+}
+
+/** (Re)build the catalog lookup as MGData catalogs land. Cheap no-op once stable. */
+function buildCatalogIndex(): void {
+  const loaded = CATALOG_SPRITE_SOURCES.filter(source => MGData.get(source.dataKey)).length;
+  if (loaded === catalogSourcesIndexed) return;
+  catalogSourcesIndexed = loaded;
+  catalogIndex.clear();
+
+  for (const source of CATALOG_SPRITE_SOURCES) {
+    const catalog = MGData.get(source.dataKey) as Record<string, unknown> | null;
+    if (!catalog) continue;
+    for (const [id, raw] of Object.entries(catalog)) {
+      const data = raw as { sprite?: unknown; name?: unknown } | null;
+      const url = typeof data?.sprite === "string" ? data.sprite : "";
+      if (!url) continue;
+      const entry: SpriteIndexEntry = {
+        id: `sprite/${source.internalCat}/${id}`,
+        name: id,
+        internalCat: source.internalCat,
+        apiCat: INTERNAL_TO_API[source.internalCat] || source.internalCat,
+        url,
+      };
+      addCatalogAlias(id, entry);
+      if (typeof data?.name === "string") addCatalogAlias(data.name, entry);
+    }
+  }
+}
+
+function findCatalogSprite(internalCats: Set<string>, normTarget: string): SpriteIndexEntry | null {
+  if (!normTarget) return null;
+  buildCatalogIndex();
+  const entries = catalogIndex.get(normTarget);
+  if (!entries?.length) return null;
+  for (const entry of entries) {
+    if (internalCats.has(entry.internalCat)) return entry;
+  }
+  return null;
+}
+
+function findSprite(categories: string[], candidateId: string): SpriteIndexEntry | null {
+  const norm = normalize(candidateId);
+  const internalCats = expandCategories(categories);
+
+  const fromCatalog = findCatalogSprite(internalCats, norm);
+  if (fromCatalog) return fromCatalog;
+
+  const entries = nameIndex.get(norm);
+  if (!entries?.length) {
+    return findSpriteFuzzy(categories, norm);
   }
 
   for (const entry of entries) {
@@ -129,11 +201,7 @@ function findSprite(categories: string[], candidateId: string): SpriteIndexEntry
 function findSpriteFuzzy(categories: string[], normTarget: string): SpriteIndexEntry | null {
   if (!normTarget) return null;
 
-  const internalCats = new Set<string>();
-  for (const cat of categories) {
-    const expanded = SEARCH_CATS[cat] || [cat];
-    for (const catName of expanded) internalCats.add(catName);
-  }
+  const internalCats = expandCategories(categories);
 
   for (const [norm, entries] of nameIndex) {
     if (norm.includes(normTarget) || normTarget.includes(norm)) {
@@ -199,6 +267,15 @@ const MUTATION_FILTERS: Record<string, FilterDef> = {
   Dawncharged: { op: "source-atop", colors: ["rgb(140,80,200)"], a: 0.5 },
   Ambercharged: { op: "source-atop", colors: ["rgb(170,60,25)"], a: 0.5 },
 };
+
+/** Keep only mutation names this module can actually render (color filter or icon). */
+function knownMutations(list?: unknown[]): string[] {
+  if (!Array.isArray(list)) return [];
+  const names = list
+    .map(value => (typeof value === "string" ? value.trim() : ""))
+    .filter(name => !!name && (!!MUTATION_FILTERS[name] || !!MUTATION_ICONS[name]));
+  return [...new Set(names)];
+}
 
 function normalizeMutations(list: string[]): string[] {
   const names = [...new Set(list.filter(mutName => MUTATION_FILTERS[mutName]))];
@@ -362,11 +439,22 @@ async function applyMutationFilters(img: HTMLImageElement, mutations: string[]):
 
 const imageCache = new Map<string, Promise<HTMLImageElement>>();
 
-/** Load an image via GM blob fetch → blobToImage (same pattern as mgCommon) */
+/**
+ * Load an image via GM blob fetch, backed by the long-lived object URL cache.
+ * Note: we deliberately do NOT use mgCommon's blobToImage here — it revokes the
+ * object URL on load, so the resolved image's `src` is already dead and copying it
+ * into a fresh <img> yields a broken icon.
+ */
 function loadImage(url: string): Promise<HTMLImageElement> {
   let promise = imageCache.get(url);
   if (promise) return promise;
-  promise = withDiscordPollPause(() => getBlob(url)).then(blob => blobToImage(blob));
+  promise = getSpriteObjectUrl(url).then(objectUrl => new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Image decode failed"));
+    img.src = objectUrl;
+  }));
   imageCache.set(url, promise);
   return promise;
 }
@@ -491,8 +579,11 @@ export function attachSpriteIcon(
     : [String(id ?? "").trim()].filter(Boolean);
   if (!candidateIds.length) return;
 
-  const mutKey = mutationKeyStr(options?.mutations);
-  const hasMutations = !!(options?.mutations?.length);
+  // Unknown mutation names (new game mutation, non-string payload) carry no visual
+  // change, so they must not push the sprite through the canvas pipeline.
+  const mutations = knownMutations(options?.mutations);
+  const mutKey = mutationKeyStr(mutations);
+  const hasMutations = mutations.length > 0;
 
   fetchIndex().then(() => {
     let selectedEntry: SpriteIndexEntry | null = null;
@@ -513,7 +604,7 @@ export function attachSpriteIcon(
     }
 
     const entry = selectedEntry;
-    const url = spriteUrl(entry);
+    const url = entry.url;
     const spriteKey = `${entry.internalCat}:${entry.name}${mutKey}`;
 
     const existing = target.querySelector<HTMLImageElement>("img[data-sprite-key]");
@@ -554,7 +645,7 @@ export function attachSpriteIcon(
     if (!promise) {
       promise = loadImage(url)
         .then(async imgEl => {
-          const dataUrl = await applyMutationFilters(imgEl, options?.mutations ?? []);
+          const dataUrl = await applyMutationFilters(imgEl, mutations);
           spriteDataUrlResolved.set(ck, dataUrl);
           return dataUrl;
         })
@@ -595,7 +686,7 @@ export async function getSpriteObjectUrlByName(
   const entry = findSprite(categories, name);
   if (!entry) return null;
   try {
-    return await getSpriteObjectUrl(spriteUrl(entry));
+    return await getSpriteObjectUrl(entry.url);
   } catch {
     return null;
   }

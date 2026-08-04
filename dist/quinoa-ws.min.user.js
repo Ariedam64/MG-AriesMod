@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.191
+// @version      3.2.192
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -1401,22 +1401,6 @@
   }
   var getJSON2 = async (url) => JSON.parse((await gmGet(url, "text")).responseText);
   var getBlob2 = async (url) => (await gmGet(url, "blob")).response;
-  function blobToImage2(blob) {
-    return new Promise((resolve, reject) => {
-      const u = URL.createObjectURL(blob);
-      const img = new Image();
-      img.decoding = "async";
-      img.onload = () => {
-        URL.revokeObjectURL(u);
-        resolve(img);
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(u);
-        reject(new Error("Image decode failed"));
-      };
-      img.src = u;
-    });
-  }
 
   // src/utils/discordCsp.ts
   function isDiscordActivityContext() {
@@ -2125,8 +2109,757 @@
     }
   }
 
-  // src/ui/spriteIconCache.ts
+  // src/utils/page-context.ts
+  var sandboxWin = window;
+  var pageWin2 = typeof unsafeWindow !== "undefined" && unsafeWindow ? unsafeWindow : sandboxWin;
+  var pageWindow = pageWin2;
+  var isIsolatedContext = pageWin2 !== sandboxWin;
+  function shareGlobal(name, value) {
+    try {
+      pageWin2[name] = value;
+    } catch {
+    }
+    if (isIsolatedContext) {
+      try {
+        sandboxWin[name] = value;
+      } catch {
+      }
+    }
+  }
+  function readSharedGlobal(name) {
+    if (isIsolatedContext) {
+      const sandboxValue = sandboxWin[name];
+      if (sandboxValue !== void 0) return sandboxValue;
+    }
+    return pageWin2[name];
+  }
+
+  // src/data/dynamic/state.ts
+  function createInitialState2() {
+    return {
+      data: {
+        items: null,
+        decor: null,
+        mutations: null,
+        eggs: null,
+        pets: null,
+        abilities: null,
+        plants: null,
+        weather: null
+      },
+      fetchStarted: false,
+      fetchComplete: false,
+      colorPollingTimer: null,
+      colorPollAttempts: 0
+    };
+  }
+  var STATE_GLOBAL_KEY = "__MG_DATA_STATE__";
+  var captureState = pageWindow[STATE_GLOBAL_KEY] || createInitialState2();
+  if (!pageWindow[STATE_GLOBAL_KEY]) {
+    pageWindow[STATE_GLOBAL_KEY] = captureState;
+  }
+
+  // src/data/dynamic/logic/constants.ts
+  var MAIN_BUNDLE_PATTERN = /main-[^/]+\.js(\?|$)/;
+  var QUINOA_VIEW_PATTERN = /QuinoaView-[^/]+\.js(\?|$)/;
+  var MAX_COLOR_POLL_ATTEMPTS = 10;
+  var COLOR_POLL_INTERVAL_MS = 1e3;
+  var ABILITY_COLOR_ANCHOR = "ProduceScaleBoost";
+
+  // src/data/dynamic/logic/bundleParser.ts
+  var pageContext = pageWindow;
+  function findBundleUrl(pattern) {
+    const docs = [
+      pageContext.document,
+      typeof document !== "undefined" ? document : null
+    ].filter(Boolean);
+    for (const doc of docs) {
+      try {
+        const scripts = doc.querySelectorAll("script[src]");
+        for (const script of scripts) {
+          const src = script.src || "";
+          if (pattern.test(src)) return src;
+        }
+      } catch {
+      }
+      try {
+        const links = doc.querySelectorAll('link[rel="modulepreload"]');
+        for (const link of links) {
+          const href = link.href || "";
+          if (pattern.test(href)) return href;
+        }
+      } catch {
+      }
+    }
+    const perfs = [
+      pageContext.performance,
+      typeof performance !== "undefined" ? performance : null
+    ].filter(Boolean);
+    for (const perf of perfs) {
+      try {
+        for (const entry of perf.getEntriesByType?.("resource") || []) {
+          const name = entry?.name ? String(entry.name) : "";
+          if (pattern.test(name)) return name;
+        }
+      } catch {
+      }
+    }
+    return null;
+  }
+  function findMainBundleUrl() {
+    return findBundleUrl(MAIN_BUNDLE_PATTERN);
+  }
+  function findQuinoaViewUrl() {
+    return findBundleUrl(QUINOA_VIEW_PATTERN);
+  }
+  function findAllIndices(haystack, needle) {
+    const out = [];
+    let idx = haystack.indexOf(needle);
+    while (idx !== -1) {
+      out.push(idx);
+      idx = haystack.indexOf(needle, idx + needle.length);
+    }
+    return out;
+  }
+  function extractBalancedBlock(text, openBraceIndex) {
+    let depth = 0;
+    let quote = "";
+    let escaped = false;
+    for (let i = openBraceIndex; i < text.length; i++) {
+      const ch = text[i];
+      if (quote) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (ch === "\\") {
+          escaped = true;
+          continue;
+        }
+        if (ch === quote) quote = "";
+        continue;
+      }
+      if (ch === '"' || ch === "'" || ch === "`") {
+        quote = ch;
+        continue;
+      }
+      if (ch === "{") depth++;
+      else if (ch === "}" && --depth === 0) return text.slice(openBraceIndex, i + 1);
+    }
+    return null;
+  }
+  async function fetchBundleByFinder(findUrl, cache2, label2) {
+    if (cache2.value) return cache2.value;
+    if (cache2.inFlight) return cache2.inFlight;
+    cache2.inFlight = (async () => {
+      const MAX_RETRIES = 30;
+      const RETRY_INTERVAL = 500;
+      let url = null;
+      for (let i = 0; i < MAX_RETRIES; i++) {
+        url = findUrl();
+        if (url) break;
+        await new Promise((r) => setTimeout(r, RETRY_INTERVAL));
+      }
+      if (!url) {
+        console.warn(`[MGData] Could not find ${label2} URL after retries`);
+        return null;
+      }
+      try {
+        const res = await fetch(url, { credentials: "include" });
+        if (!res.ok) return null;
+        const text = await res.text();
+        cache2.value = text;
+        return text;
+      } catch {
+        return null;
+      } finally {
+        cache2.inFlight = null;
+      }
+    })();
+    return cache2.inFlight;
+  }
+  var mainBundleCache = { value: null, inFlight: null };
+  var quinoaViewCache = { value: null, inFlight: null };
+  function fetchMainBundle() {
+    return fetchBundleByFinder(findMainBundleUrl, mainBundleCache, "main bundle");
+  }
+  function fetchQuinoaViewBundle() {
+    return fetchBundleByFinder(findQuinoaViewUrl, quinoaViewCache, "QuinoaView bundle");
+  }
+
+  // src/data/dynamic/logic/abilityColors.ts
+  var DEFAULT_COLOR = {
+    bg: "rgba(100, 100, 100, 0.9)",
+    hover: "rgba(150, 150, 150, 1)"
+  };
+  var STATIC_ABILITY_COLORS = {
+    CoinFinderI: "#B49600",
+    CoinFinderII: "#B49600",
+    CoinFinderIII: "#B49600",
+    SnowyCoinFinder: "#B49600",
+    DawnCoinFinder: "#B49600",
+    ThunderCoinFinder: "#B49600",
+    SeedFinderI: "#A86626",
+    SeedFinderII: "#A86626",
+    SeedFinderIII: "#A86626",
+    SeedFinderIV: "#A86626",
+    PlantGrowthBoost: "#008080",
+    PlantGrowthBoostII: "#008080",
+    PlantGrowthBoostIII: "#969696",
+    SnowyPlantGrowthBoost: "#008080",
+    DawnPlantGrowthBoost: "#008080",
+    AmberPlantGrowthBoost: "#008080",
+    ThunderPlantGrowthBoost: "#008080",
+    ProduceEater: "#FF4500",
+    ProduceScaleBoost: "#228B22",
+    ProduceScaleBoostII: "#228B22",
+    ProduceScaleBoostIII: "#969696",
+    SnowyCropSizeBoost: "#228B22",
+    ProduceMutationBoost: "#8C0F46",
+    ProduceMutationBoostII: "#8C0F46",
+    ProduceMutationBoostIII: "#969696",
+    SnowyCropMutationBoost: "#8C0F46",
+    DawnBoost: "#8C0F46",
+    AmberMoonBoost: "#8C0F46",
+    ThunderBoost: "#8C0F46",
+    EggGrowthBoost: "#B45AF0",
+    EggGrowthBoostII_NEW: "#B45AF0",
+    EggGrowthBoostII: "#B45AF0",
+    SnowyEggGrowthBoost: "#B45AF0",
+    ThunderEggGrowthBoost: "#B45AF0",
+    PetXpBoost: "#1E90FF",
+    PetXpBoostII: "#1E90FF",
+    PetXpBoostIII: "#969696",
+    SnowyPetXpBoost: "#1E90FF",
+    DawnXpBoost: "#1E90FF",
+    ThunderXpBoost: "#1E90FF",
+    HungerBoost: "#FF1493",
+    HungerBoostII: "#FF1493",
+    HungerBoostIII: "#969696",
+    SnowyHungerBoost: "#FF1493",
+    HungerRestore: "#FF69B4",
+    HungerRestoreII: "#FF69B4",
+    HungerRestoreIII: "#969696",
+    SnowyHungerRestore: "#FF69B4",
+    PetMutationBoost: "#A03264",
+    PetMutationBoostII: "#A03264",
+    PetMutationBoostIII: "#969696",
+    SellBoostI: "#DC143C",
+    SellBoostII: "#DC143C",
+    SellBoostIII: "#DC143C",
+    SellBoostIV: "#DC143C",
+    ProduceRefund: "#FF6347",
+    DoubleHarvest: "#0078B4",
+    PetAgeBoost: "#9370DB",
+    PetAgeBoostII: "#9370DB",
+    PetAgeBoostIII: "#969696",
+    PetHatchSizeBoost: "#800080",
+    PetHatchSizeBoostII: "#800080",
+    PetHatchSizeBoostIII: "#969696",
+    DoubleHatch: "#3C5AB4",
+    PetRefund: "#005078",
+    PetRefundII: "#005078",
+    RainDance: "#4CCCCC",
+    SnowGranter: "#90B8CC",
+    FrostGranter: "#94A0CC",
+    DawnlitGranter: "#C47CB4",
+    AmberlitGranter: "#CC9060",
+    GoldGranter: "linear-gradient(135deg, #DCC846 0%, #D2AF05 40%, #D2B937 70%, #C8AF1E 100%)",
+    RainbowGranter: "linear-gradient(45deg, #C80000, #C87800, #A0AA1E, #3CAA3C, #32AAAA, #2896B4, #145AB4, #461E96)",
+    DawnbinderBoost: "#B468A0",
+    Copycat: "#FF8C00",
+    DawnCapture: "#B25A9E",
+    ThunderstruckGranter: "#C2B83C",
+    Thundercharger: "#1FA382",
+    MoonKisser: "#FAA623",
+    DawnKisser: "#A25CF2",
+    Thunderbloom: "#70F6CB"
+  };
+  function findAbilityColorSwitchBlock(bundleText) {
+    const indices = findAllIndices(bundleText, ABILITY_COLOR_ANCHOR);
+    if (!indices.length) return null;
+    for (const pos of indices) {
+      const winStart = Math.max(0, pos - 4e3);
+      const winEnd = Math.min(bundleText.length, pos + 4e3);
+      const windowText = bundleText.slice(winStart, winEnd);
+      const relSwitch = windowText.lastIndexOf("switch(");
+      if (relSwitch === -1) continue;
+      const absSwitch = winStart + relSwitch;
+      const braceAfterSwitch = bundleText.indexOf("{", absSwitch);
+      if (braceAfterSwitch === -1) continue;
+      const block = extractBalancedBlock(bundleText, braceAfterSwitch);
+      if (!block) continue;
+      const hasObjectColors = block.includes('bg:"') || block.includes("bg:'");
+      const hasHexColors = /return\s*[`'"](?:#|linear-gradient)/.test(block);
+      if (block.includes(ABILITY_COLOR_ANCHOR) && (hasObjectColors || hasHexColors)) {
+        return block;
+      }
+    }
+    return null;
+  }
+  function parseAbilityColorsFromSwitch(switchBlock) {
+    const colors = {};
+    const pending = [];
+    const tokenRe = /case\s*(['"])([^'"]+)\1\s*:|default\s*:|return\s*\{/g;
+    const findProp = (segment, prop) => {
+      const propRe = new RegExp(`${prop}\\s*:\\s*(['"])([\\s\\S]*?)\\1`);
+      const propMatch = segment.match(propRe);
+      return propMatch ? propMatch[2] : null;
+    };
+    let match;
+    while ((match = tokenRe.exec(switchBlock)) !== null) {
+      if (match[2]) {
+        pending.push(match[2]);
+        continue;
+      }
+      const token = match[0];
+      if (token.startsWith("default")) {
+        pending.length = 0;
+        continue;
+      }
+      if (!token.startsWith("return")) continue;
+      const braceIndex = switchBlock.indexOf("{", match.index);
+      if (braceIndex === -1) {
+        pending.length = 0;
+        continue;
+      }
+      const literal = extractBalancedBlock(switchBlock, braceIndex);
+      if (!literal) {
+        pending.length = 0;
+        continue;
+      }
+      const bg = findProp(literal, "bg");
+      if (!bg) {
+        pending.length = 0;
+        continue;
+      }
+      const hover = findProp(literal, "hover") || bg;
+      for (const id of pending) {
+        if (!colors[id]) colors[id] = { bg, hover };
+      }
+      pending.length = 0;
+    }
+    return Object.keys(colors).length ? colors : null;
+  }
+  function hexToRgba(hex, alpha) {
+    const match = hex.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (!match) return null;
+    let h = match[1];
+    if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  function parseAbilityColorsFromHexSwitch(switchBlock) {
+    const colors = {};
+    const pending = [];
+    const tokenRe = /case\s*([`'"])([^`'"]+)\1\s*:|default\s*:|return\s*([`'"])((?:#|linear-gradient)[^`'"]*)\3/g;
+    let match;
+    while ((match = tokenRe.exec(switchBlock)) !== null) {
+      if (match[2]) {
+        pending.push(match[2]);
+        continue;
+      }
+      if (match[0].startsWith("default")) {
+        pending.length = 0;
+        continue;
+      }
+      const value = match[4];
+      if (!value) {
+        pending.length = 0;
+        continue;
+      }
+      const bg = value.startsWith("#") ? hexToRgba(value, 0.9) ?? value : value;
+      const hover = value.startsWith("#") ? hexToRgba(value, 1) ?? value : value;
+      for (const id of pending) {
+        if (!colors[id]) colors[id] = { bg, hover };
+      }
+      pending.length = 0;
+    }
+    return Object.keys(colors).length ? colors : null;
+  }
+  async function loadAbilityColorsFromBundle() {
+    for (const fetchBundle of [fetchMainBundle, fetchQuinoaViewBundle]) {
+      const bundleText = await fetchBundle();
+      if (!bundleText) continue;
+      const switchBlock = findAbilityColorSwitchBlock(bundleText);
+      if (!switchBlock) continue;
+      const parsed = parseAbilityColorsFromSwitch(switchBlock) ?? parseAbilityColorsFromHexSwitch(switchBlock);
+      if (parsed) return parsed;
+    }
+    return null;
+  }
+  function isAlreadyEnriched(abilities) {
+    const sample = abilities[ABILITY_COLOR_ANCHOR];
+    return sample != null && typeof sample === "object" && "color" in sample;
+  }
+  function toAbilityColor(raw) {
+    if (!raw.startsWith("#")) return { bg: raw, hover: raw };
+    const bg = hexToRgba(raw, 0.9) ?? raw;
+    return { bg, hover: hexToRgba(raw, 1) ?? bg };
+  }
+  function resolveFallbackColor(abilityId, abilityData) {
+    const raw = abilityData?.color;
+    if (typeof raw === "string") return toAbilityColor(raw);
+    const staticColor = STATIC_ABILITY_COLORS[abilityId];
+    if (staticColor) return toAbilityColor(staticColor);
+    return null;
+  }
+  async function enrichAbilitiesWithColors() {
+    if (!captureState.data.abilities) return false;
+    const abilities = captureState.data.abilities;
+    if (isAlreadyEnriched(abilities)) return true;
+    const map2 = await loadAbilityColorsFromBundle();
+    if (!map2) return false;
+    const enriched = {};
+    for (const [abilityId, abilityData] of Object.entries(abilities)) {
+      const colors = map2[abilityId] || resolveFallbackColor(abilityId, abilityData) || DEFAULT_COLOR;
+      enriched[abilityId] = {
+        ...abilityData,
+        color: {
+          bg: colors.bg,
+          hover: colors.hover
+        }
+      };
+    }
+    captureState.data.abilities = enriched;
+    return true;
+  }
+  function startColorPolling() {
+    if (captureState.colorPollingTimer) return;
+    captureState.colorPollAttempts = 0;
+    const timer = setInterval(async () => {
+      const success = await enrichAbilitiesWithColors();
+      if (success || ++captureState.colorPollAttempts > MAX_COLOR_POLL_ATTEMPTS) {
+        clearInterval(timer);
+        captureState.colorPollingTimer = null;
+      }
+    }, COLOR_POLL_INTERVAL_MS);
+    captureState.colorPollingTimer = timer;
+  }
+  function stopColorPolling() {
+    if (captureState.colorPollingTimer) {
+      clearInterval(captureState.colorPollingTimer);
+      captureState.colorPollingTimer = null;
+    }
+  }
+
+  // src/data/dynamic/logic/accessors.ts
+  var DEFAULT_WAIT_TIMEOUT_MS = 5e3;
+  var WAIT_POLL_INTERVAL_MS = 50;
+  function sleep3(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+  function getData(key2) {
+    return captureState.data[key2];
+  }
+  function getAllData() {
+    return { ...captureState.data };
+  }
+  function hasData(key2) {
+    return captureState.data[key2] != null;
+  }
+  async function waitForData(key2, timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, intervalMs = WAIT_POLL_INTERVAL_MS) {
+    const start2 = Date.now();
+    while (Date.now() - start2 < timeoutMs) {
+      const value = captureState.data[key2];
+      if (value != null) return value;
+      await sleep3(intervalMs);
+    }
+    throw new Error(`MGData.waitFor: timeout waiting for "${key2}"`);
+  }
+  async function waitForAnyData(timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, intervalMs = WAIT_POLL_INTERVAL_MS) {
+    const start2 = Date.now();
+    while (Date.now() - start2 < timeoutMs) {
+      if (Object.values(captureState.data).some((v) => v != null)) {
+        return { ...captureState.data };
+      }
+      await sleep3(intervalMs);
+    }
+    throw new Error("MGData.waitForAnyData: timeout");
+  }
+
+  // src/data/dynamic/logic/capture.ts
   var API_BASE = "https://mg-api.ariedam.fr";
+  function setCapturedData(key2, value) {
+    if (captureState.data[key2] != null) return;
+    captureState.data[key2] = value;
+    try {
+      window.dispatchEvent(new CustomEvent("gemini:data-updated", { detail: { key: key2 } }));
+    } catch {
+    }
+  }
+  function isAllDataCaptured() {
+    return Object.values(captureState.data).every((v) => v != null);
+  }
+  async function fetchAllData() {
+    if (captureState.fetchStarted) return;
+    captureState.fetchStarted = true;
+    try {
+      const data = await withDiscordPollPause(() => getJSON2(`${API_BASE}/data`));
+      if (data.plants) setCapturedData("plants", data.plants);
+      if (data.pets) setCapturedData("pets", data.pets);
+      if (data.items) setCapturedData("items", data.items);
+      if (data.decor) setCapturedData("decor", data.decor);
+      if (data.eggs) setCapturedData("eggs", data.eggs);
+      if (data.mutations) setCapturedData("mutations", data.mutations);
+      if (data.abilities) setCapturedData("abilities", data.abilities);
+      if (data.weathers) setCapturedData("weather", data.weathers);
+      captureState.fetchComplete = true;
+      console.log("[MGData] all data loaded from API", {
+        plants: Object.keys(data.plants || {}).length,
+        pets: Object.keys(data.pets || {}).length,
+        items: Object.keys(data.items || {}).length,
+        decor: Object.keys(data.decor || {}).length,
+        eggs: Object.keys(data.eggs || {}).length,
+        mutations: Object.keys(data.mutations || {}).length,
+        abilities: Object.keys(data.abilities || {}).length,
+        weathers: Object.keys(data.weathers || {}).length
+      });
+    } catch (err) {
+      console.error("[MGData] failed to fetch data from API", err);
+      captureState.fetchStarted = false;
+    }
+  }
+
+  // src/data/dynamic/logic/abilityFormatter.ts
+  var PET_ABILITY_ACTIONS = [
+    "CoinFinderI",
+    "CoinFinderII",
+    "CoinFinderIII",
+    "SnowyCoinFinder",
+    "DawnCoinFinder",
+    "ThunderCoinFinder",
+    "SeedFinderI",
+    "SeedFinderII",
+    "SeedFinderIII",
+    "SeedFinderIV",
+    "HungerRestore",
+    "HungerRestoreII",
+    "HungerRestoreIII",
+    "SnowyHungerRestore",
+    "DoubleHarvest",
+    "DoubleHatch",
+    "ProduceEater",
+    "PetHatchSizeBoost",
+    "PetHatchSizeBoostII",
+    "PetHatchSizeBoostIII",
+    "PetAgeBoost",
+    "PetAgeBoostII",
+    "PetAgeBoostIII",
+    "PetRefund",
+    "PetRefundII",
+    "ProduceRefund",
+    "SellBoostI",
+    "SellBoostII",
+    "SellBoostIII",
+    "SellBoostIV",
+    "GoldGranter",
+    "RainbowGranter",
+    "RainDance",
+    "SnowGranter",
+    "FrostGranter",
+    "DawnlitGranter",
+    "AmberlitGranter",
+    "ThunderstruckGranter",
+    "PetXpBoost",
+    "PetXpBoostII",
+    "PetXpBoostIII",
+    "SnowyPetXpBoost",
+    "DawnXpBoost",
+    "ThunderXpBoost",
+    "EggGrowthBoost",
+    "EggGrowthBoostII_NEW",
+    "EggGrowthBoostII",
+    "SnowyEggGrowthBoost",
+    "ThunderEggGrowthBoost",
+    "PlantGrowthBoost",
+    "PlantGrowthBoostII",
+    "PlantGrowthBoostIII",
+    "SnowyPlantGrowthBoost",
+    "DawnPlantGrowthBoost",
+    "AmberPlantGrowthBoost",
+    "ThunderPlantGrowthBoost",
+    "ProduceScaleBoost",
+    "ProduceScaleBoostII",
+    "ProduceScaleBoostIII",
+    "SnowyCropSizeBoost",
+    "MoonKisser",
+    "DawnKisser"
+  ];
+  function isPetAbilityAction(action2) {
+    return PET_ABILITY_ACTIONS.includes(action2);
+  }
+  function formatTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor(seconds % 3600 / 60);
+    const secs = Math.floor(seconds % 60);
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${secs}s`;
+    return `${secs}s`;
+  }
+  function getPetName(pet) {
+    return pet?.name || pet?.petSpecies || "Unknown Pet";
+  }
+  function formatAbilityLog(log) {
+    const { action: action2, parameters } = log;
+    const params = parameters;
+    switch (action2) {
+      case "CoinFinderI":
+      case "CoinFinderII":
+      case "CoinFinderIII":
+      case "SnowyCoinFinder":
+      case "DawnCoinFinder":
+      case "ThunderCoinFinder":
+        return `Found ${params.coinsFound || 0} coins`;
+      case "SeedFinderI":
+      case "SeedFinderII":
+      case "SeedFinderIII":
+      case "SeedFinderIV":
+        return `Found 1x ${params.speciesId || "Unknown"} seed`;
+      case "HungerRestore":
+      case "HungerRestoreII":
+      case "HungerRestoreIII":
+      case "SnowyHungerRestore": {
+        const targetName = getPetName(params.targetPet);
+        const amount = params.hungerRestoreAmount || 0;
+        const pet = params.pet;
+        const targetPet = params.targetPet;
+        const isSelf = pet?.id === targetPet?.id;
+        return `Restored ${amount} hunger to ${isSelf ? "itself" : targetName}`;
+      }
+      case "DoubleHarvest": {
+        const crop = params.harvestedCrop;
+        return `Double harvested ${crop?.species || "Unknown"}`;
+      }
+      case "DoubleHatch": {
+        const extra = params.extraPet;
+        return `Double hatched ${extra?.petSpecies || "Unknown"}`;
+      }
+      case "ProduceEater": {
+        const slot = params.growSlot;
+        return `Ate ${slot?.species || "Unknown"} for ${params.sellPrice || 0} coins`;
+      }
+      case "PetHatchSizeBoost":
+      case "PetHatchSizeBoostII":
+      case "PetHatchSizeBoostIII": {
+        const targetName = getPetName(params.targetPet);
+        const increase = Number(params.strengthIncrease) || 0;
+        return `Boosted ${targetName}'s size by +${increase.toFixed(0)}`;
+      }
+      case "PetAgeBoost":
+      case "PetAgeBoostII":
+      case "PetAgeBoostIII": {
+        const targetName = getPetName(params.targetPet);
+        return `Gave +${params.bonusXp || 0} XP to ${targetName}`;
+      }
+      case "PetRefund":
+      case "PetRefundII":
+        return `Refunded 1x ${params.eggId || "Unknown Egg"}`;
+      case "ProduceRefund": {
+        const crops = params.cropsRefunded;
+        const num = Array.isArray(crops) ? crops.length : 0;
+        return `Refunded ${num} ${num === 1 ? "crop" : "crops"}`;
+      }
+      case "SellBoostI":
+      case "SellBoostII":
+      case "SellBoostIII":
+      case "SellBoostIV":
+        return `Gave +${params.bonusCoins || 0} bonus coins`;
+      case "GoldGranter":
+      case "RainbowGranter":
+      case "RainDance":
+      case "SnowGranter":
+      case "FrostGranter":
+      case "DawnlitGranter":
+      case "AmberlitGranter":
+      case "ThunderstruckGranter": {
+        const slot = params.growSlot;
+        return `Made ${slot?.species || "Unknown"} turn ${params.mutation || "Unknown"}`;
+      }
+      case "PetXpBoost":
+      case "PetXpBoostII":
+      case "PetXpBoostIII":
+      case "SnowyPetXpBoost":
+      case "DawnXpBoost":
+      case "ThunderXpBoost": {
+        const affected = params.petsAffected;
+        const num = Array.isArray(affected) ? affected.length : 0;
+        return `Gave +${params.bonusXp || 0} XP to ${num} ${num === 1 ? "pet" : "pets"}`;
+      }
+      case "EggGrowthBoost":
+      case "EggGrowthBoostII_NEW":
+      case "EggGrowthBoostII":
+      case "SnowyEggGrowthBoost":
+      case "ThunderEggGrowthBoost": {
+        const eggs = params.eggsAffected;
+        const num = Array.isArray(eggs) ? eggs.length : 0;
+        const time = formatTime(Number(params.secondsReduced) || 0);
+        return `Reduced ${num} ${num === 1 ? "egg" : "eggs"} growth by ${time}`;
+      }
+      case "PlantGrowthBoost":
+      case "PlantGrowthBoostII":
+      case "PlantGrowthBoostIII":
+      case "SnowyPlantGrowthBoost":
+      case "DawnPlantGrowthBoost":
+      case "AmberPlantGrowthBoost":
+      case "ThunderPlantGrowthBoost": {
+        const num = Number(params.numPlantsAffected) || 0;
+        const time = formatTime(Number(params.secondsReduced) || 0);
+        return `Reduced ${num} ${num === 1 ? "plant" : "plants"} growth by ${time}`;
+      }
+      case "ProduceScaleBoost":
+      case "ProduceScaleBoostII":
+      case "ProduceScaleBoostIII":
+      case "SnowyCropSizeBoost": {
+        const pct = Number(params.scaleIncreasePercentage) || 0;
+        const num = Number(params.numPlantsAffected) || 0;
+        return `Boosted ${num} ${num === 1 ? "crop" : "crops"} size by +${pct.toFixed(0)}%`;
+      }
+      case "MoonKisser":
+      case "DawnKisser": {
+        const affected = params.growSlotsAffected;
+        const num = Array.isArray(affected) ? affected.length : 0;
+        const source = params.sourceMutation || "Unknown";
+        const target = params.targetMutation || "Unknown";
+        return `Turned ${source} into ${target} on ${num} ${num === 1 ? "crop" : "crops"}`;
+      }
+      default:
+        return `Unknown ability: ${action2}`;
+    }
+  }
+
+  // src/data/dynamic/index.ts
+  var MGData = {
+    /** Initialize module: fetch all data from API, start ability color polling */
+    init() {
+      fetchAllData();
+      startColorPolling();
+    },
+    /** Check if all data has been loaded */
+    isReady: isAllDataCaptured,
+    /** Get data for a specific key */
+    get: getData,
+    /** Get all data */
+    getAll: getAllData,
+    /** Check if data exists for a specific key */
+    has: hasData,
+    /** Wait for specific data to be available */
+    waitFor: waitForData,
+    /** Wait for any data to be available */
+    waitForAny: waitForAnyData,
+    /** No-op (sprites now come from the API with URLs included) */
+    resolveSprites() {
+    },
+    /** Cleanup */
+    cleanup() {
+      stopColorPolling();
+    }
+  };
+
+  // src/ui/spriteIconCache.ts
+  var API_BASE2 = "https://mg-api.ariedam.fr";
   var indexEntries = [];
   var nameIndex = /* @__PURE__ */ new Map();
   var indexReady = null;
@@ -2171,7 +2904,7 @@
     if (indexReady) return indexReady;
     indexReady = withDiscordPollPause(
       () => getJSON2(
-        `${API_BASE}/assets/sprite-data?flat=1`
+        `${API_BASE2}/assets/sprite-data?flat=1`
       )
     ).then((data) => {
       const items = data.items || [];
@@ -2180,7 +2913,13 @@
         const start2 = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
         const internalCat = parts[start2] || "";
         const apiCat = INTERNAL_TO_API[internalCat] || internalCat;
-        const entry = { id: item.id, name: item.name, internalCat, apiCat };
+        const entry = {
+          id: item.id,
+          name: item.name,
+          internalCat,
+          apiCat,
+          url: `${API_BASE2}/assets/sprites/${apiCat}/${item.name}.png`
+        };
         indexEntries.push(entry);
         const norm3 = normalize(item.name);
         const arr = nameIndex.get(norm3) || [];
@@ -2195,19 +2934,71 @@
     return indexReady;
   }
   fetchIndex();
-  function spriteUrl(entry) {
-    return `${API_BASE}/assets/sprites/${entry.apiCat}/${entry.name}.png`;
-  }
-  function findSprite(categories, candidateId) {
-    const norm3 = normalize(candidateId);
-    const entries = nameIndex.get(norm3);
-    if (!entries?.length) {
-      return findSpriteFuzzy(categories, norm3);
-    }
+  function expandCategories(categories) {
     const internalCats = /* @__PURE__ */ new Set();
     for (const cat of categories) {
       const expanded = SEARCH_CATS[cat] || [cat];
       for (const catName of expanded) internalCats.add(catName);
+    }
+    return internalCats;
+  }
+  var CATALOG_SPRITE_SOURCES = [
+    { dataKey: "pets", internalCat: "pet" },
+    { dataKey: "eggs", internalCat: "pet" }
+    // eggs live in the pet spritesheet
+  ];
+  var catalogIndex = /* @__PURE__ */ new Map();
+  var catalogSourcesIndexed = -1;
+  function addCatalogAlias(alias, entry) {
+    const key2 = normalize(alias);
+    if (!key2) return;
+    const entries = catalogIndex.get(key2) || [];
+    if (entries.some((known) => known.internalCat === entry.internalCat)) return;
+    entries.push(entry);
+    catalogIndex.set(key2, entries);
+  }
+  function buildCatalogIndex() {
+    const loaded = CATALOG_SPRITE_SOURCES.filter((source) => MGData.get(source.dataKey)).length;
+    if (loaded === catalogSourcesIndexed) return;
+    catalogSourcesIndexed = loaded;
+    catalogIndex.clear();
+    for (const source of CATALOG_SPRITE_SOURCES) {
+      const catalog = MGData.get(source.dataKey);
+      if (!catalog) continue;
+      for (const [id, raw] of Object.entries(catalog)) {
+        const data = raw;
+        const url = typeof data?.sprite === "string" ? data.sprite : "";
+        if (!url) continue;
+        const entry = {
+          id: `sprite/${source.internalCat}/${id}`,
+          name: id,
+          internalCat: source.internalCat,
+          apiCat: INTERNAL_TO_API[source.internalCat] || source.internalCat,
+          url
+        };
+        addCatalogAlias(id, entry);
+        if (typeof data?.name === "string") addCatalogAlias(data.name, entry);
+      }
+    }
+  }
+  function findCatalogSprite(internalCats, normTarget) {
+    if (!normTarget) return null;
+    buildCatalogIndex();
+    const entries = catalogIndex.get(normTarget);
+    if (!entries?.length) return null;
+    for (const entry of entries) {
+      if (internalCats.has(entry.internalCat)) return entry;
+    }
+    return null;
+  }
+  function findSprite(categories, candidateId) {
+    const norm3 = normalize(candidateId);
+    const internalCats = expandCategories(categories);
+    const fromCatalog = findCatalogSprite(internalCats, norm3);
+    if (fromCatalog) return fromCatalog;
+    const entries = nameIndex.get(norm3);
+    if (!entries?.length) {
+      return findSpriteFuzzy(categories, norm3);
     }
     for (const entry of entries) {
       if (internalCats.has(entry.internalCat)) return entry;
@@ -2216,11 +3007,7 @@
   }
   function findSpriteFuzzy(categories, normTarget) {
     if (!normTarget) return null;
-    const internalCats = /* @__PURE__ */ new Set();
-    for (const cat of categories) {
-      const expanded = SEARCH_CATS[cat] || [cat];
-      for (const catName of expanded) internalCats.add(catName);
-    }
+    const internalCats = expandCategories(categories);
     for (const [norm3, entries] of nameIndex) {
       if (norm3.includes(normTarget) || normTarget.includes(norm3)) {
         for (const entry of entries) {
@@ -2237,16 +3024,16 @@
   }
   var MUTATION_ICONS = {
     // Ground-level icons (anchor.y ≈ 0.5 — drawn at plant base)
-    Wet: { url: `${API_BASE}/assets/sprites/mutations/Wet.png`, anchor: { x: 0.5, y: 0.487 } },
-    Chilled: { url: `${API_BASE}/assets/sprites/mutations/Chilled.png`, anchor: { x: 0.502, y: 0.543 } },
-    Frozen: { url: `${API_BASE}/assets/sprites/mutations/Frozen.png`, anchor: { x: 0.5, y: 0.474 } },
-    Thunderstruck: { url: `${API_BASE}/assets/sprites/mutations/Thunderstruck.png`, anchor: { x: 0.495, y: 0.525 } },
-    Thundercharged: { url: `${API_BASE}/assets/sprites/mutations/Thundercharged.png`, anchor: { x: 0.495, y: 0.525 } },
+    Wet: { url: `${API_BASE2}/assets/sprites/mutations/Wet.png`, anchor: { x: 0.5, y: 0.487 } },
+    Chilled: { url: `${API_BASE2}/assets/sprites/mutations/Chilled.png`, anchor: { x: 0.502, y: 0.543 } },
+    Frozen: { url: `${API_BASE2}/assets/sprites/mutations/Frozen.png`, anchor: { x: 0.5, y: 0.474 } },
+    Thunderstruck: { url: `${API_BASE2}/assets/sprites/mutations/Thunderstruck.png`, anchor: { x: 0.495, y: 0.525 } },
+    Thundercharged: { url: `${API_BASE2}/assets/sprites/mutations/Thundercharged.png`, anchor: { x: 0.495, y: 0.525 } },
     // Floating icons (anchor.y ≈ 0.8 — drawn above the plant)
-    Dawnlit: { url: `${API_BASE}/assets/sprites/mutations/Dawnlit.png`, anchor: { x: 0.506, y: 0.809 } },
-    Ambershine: { url: `${API_BASE}/assets/sprites/mutations/Amberlit.png`, anchor: { x: 0.5, y: 0.82 } },
-    Dawncharged: { url: `${API_BASE}/assets/sprites/mutations/Dawncharged.png`, anchor: { x: 0.519, y: 0.796 } },
-    Ambercharged: { url: `${API_BASE}/assets/sprites/mutations/Ambercharged.png`, anchor: { x: 0.501, y: 0.795 } }
+    Dawnlit: { url: `${API_BASE2}/assets/sprites/mutations/Dawnlit.png`, anchor: { x: 0.506, y: 0.809 } },
+    Ambershine: { url: `${API_BASE2}/assets/sprites/mutations/Amberlit.png`, anchor: { x: 0.5, y: 0.82 } },
+    Dawncharged: { url: `${API_BASE2}/assets/sprites/mutations/Dawncharged.png`, anchor: { x: 0.519, y: 0.796 } },
+    Ambercharged: { url: `${API_BASE2}/assets/sprites/mutations/Ambercharged.png`, anchor: { x: 0.501, y: 0.795 } }
   };
   var MUTATION_FILTERS = {
     Gold: { op: "source-atop", colors: ["rgb(235,200,0)"], a: 0.7 },
@@ -2261,6 +3048,11 @@
     Dawncharged: { op: "source-atop", colors: ["rgb(140,80,200)"], a: 0.5 },
     Ambercharged: { op: "source-atop", colors: ["rgb(170,60,25)"], a: 0.5 }
   };
+  function knownMutations(list) {
+    if (!Array.isArray(list)) return [];
+    const names = list.map((value) => typeof value === "string" ? value.trim() : "").filter((name) => !!name && (!!MUTATION_FILTERS[name] || !!MUTATION_ICONS[name]));
+    return [...new Set(names)];
+  }
   function normalizeMutations(list) {
     const names = [...new Set(list.filter((mutName) => MUTATION_FILTERS[mutName]))];
     if (!names.length) return [];
@@ -2401,7 +3193,13 @@
   function loadImage(url) {
     let promise = imageCache.get(url);
     if (promise) return promise;
-    promise = withDiscordPollPause(() => getBlob2(url)).then((blob) => blobToImage2(blob));
+    promise = getSpriteObjectUrl(url).then((objectUrl) => new Promise((resolve, reject) => {
+      const img = new Image();
+      img.decoding = "async";
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Image decode failed"));
+      img.src = objectUrl;
+    }));
     imageCache.set(url, promise);
     return promise;
   }
@@ -2479,8 +3277,9 @@
   function attachSpriteIcon(target, categories, id, size, _logTag, options) {
     const candidateIds = Array.isArray(id) ? id.map((value) => String(value ?? "").trim()).filter(Boolean) : [String(id ?? "").trim()].filter(Boolean);
     if (!candidateIds.length) return;
-    const mutKey = mutationKeyStr(options?.mutations);
-    const hasMutations = !!options?.mutations?.length;
+    const mutations = knownMutations(options?.mutations);
+    const mutKey = mutationKeyStr(mutations);
+    const hasMutations = mutations.length > 0;
     fetchIndex().then(() => {
       let selectedEntry = null;
       let selectedCandidate = "";
@@ -2497,7 +3296,7 @@
         return;
       }
       const entry = selectedEntry;
-      const url = spriteUrl(entry);
+      const url = entry.url;
       const spriteKey = `${entry.internalCat}:${entry.name}${mutKey}`;
       const existing = target.querySelector("img[data-sprite-key]");
       if (existing && existing.dataset.spriteKey === spriteKey) return;
@@ -2534,7 +3333,7 @@
       let promise = spriteDataUrlCache.get(ck);
       if (!promise) {
         promise = loadImage(url).then(async (imgEl) => {
-          const dataUrl = await applyMutationFilters(imgEl, options?.mutations ?? []);
+          const dataUrl = await applyMutationFilters(imgEl, mutations);
           spriteDataUrlResolved.set(ck, dataUrl);
           return dataUrl;
         }).catch(() => null);
@@ -2563,7 +3362,7 @@
     const entry = findSprite(categories, name);
     if (!entry) return null;
     try {
-      return await getSpriteObjectUrl(spriteUrl(entry));
+      return await getSpriteObjectUrl(entry.url);
     } catch {
       return null;
     }
@@ -3219,31 +4018,6 @@
     }
   }
   void startWithRetry();
-
-  // src/utils/page-context.ts
-  var sandboxWin = window;
-  var pageWin2 = typeof unsafeWindow !== "undefined" && unsafeWindow ? unsafeWindow : sandboxWin;
-  var pageWindow = pageWin2;
-  var isIsolatedContext = pageWin2 !== sandboxWin;
-  function shareGlobal(name, value) {
-    try {
-      pageWin2[name] = value;
-    } catch {
-    }
-    if (isIsolatedContext) {
-      try {
-        sandboxWin[name] = value;
-      } catch {
-      }
-    }
-  }
-  function readSharedGlobal(name) {
-    if (isIsolatedContext) {
-      const sandboxValue = sandboxWin[name];
-      if (sandboxValue !== void 0) return sandboxValue;
-    }
-    return pageWin2[name];
-  }
 
   // src/core/state.ts
   var NativeWS = pageWindow.WebSocket;
@@ -3969,730 +4743,6 @@
     const arr = await favoriteIds.get();
     return new Set(Array.isArray(arr) ? arr : []);
   }
-
-  // src/data/dynamic/state.ts
-  function createInitialState2() {
-    return {
-      data: {
-        items: null,
-        decor: null,
-        mutations: null,
-        eggs: null,
-        pets: null,
-        abilities: null,
-        plants: null,
-        weather: null
-      },
-      fetchStarted: false,
-      fetchComplete: false,
-      colorPollingTimer: null,
-      colorPollAttempts: 0
-    };
-  }
-  var STATE_GLOBAL_KEY = "__MG_DATA_STATE__";
-  var captureState = pageWindow[STATE_GLOBAL_KEY] || createInitialState2();
-  if (!pageWindow[STATE_GLOBAL_KEY]) {
-    pageWindow[STATE_GLOBAL_KEY] = captureState;
-  }
-
-  // src/data/dynamic/logic/constants.ts
-  var MAIN_BUNDLE_PATTERN = /main-[^/]+\.js(\?|$)/;
-  var QUINOA_VIEW_PATTERN = /QuinoaView-[^/]+\.js(\?|$)/;
-  var MAX_COLOR_POLL_ATTEMPTS = 10;
-  var COLOR_POLL_INTERVAL_MS = 1e3;
-  var ABILITY_COLOR_ANCHOR = "ProduceScaleBoost";
-
-  // src/data/dynamic/logic/bundleParser.ts
-  var pageContext = pageWindow;
-  function findBundleUrl(pattern) {
-    const docs = [
-      pageContext.document,
-      typeof document !== "undefined" ? document : null
-    ].filter(Boolean);
-    for (const doc of docs) {
-      try {
-        const scripts = doc.querySelectorAll("script[src]");
-        for (const script of scripts) {
-          const src = script.src || "";
-          if (pattern.test(src)) return src;
-        }
-      } catch {
-      }
-      try {
-        const links = doc.querySelectorAll('link[rel="modulepreload"]');
-        for (const link of links) {
-          const href = link.href || "";
-          if (pattern.test(href)) return href;
-        }
-      } catch {
-      }
-    }
-    const perfs = [
-      pageContext.performance,
-      typeof performance !== "undefined" ? performance : null
-    ].filter(Boolean);
-    for (const perf of perfs) {
-      try {
-        for (const entry of perf.getEntriesByType?.("resource") || []) {
-          const name = entry?.name ? String(entry.name) : "";
-          if (pattern.test(name)) return name;
-        }
-      } catch {
-      }
-    }
-    return null;
-  }
-  function findMainBundleUrl() {
-    return findBundleUrl(MAIN_BUNDLE_PATTERN);
-  }
-  function findQuinoaViewUrl() {
-    return findBundleUrl(QUINOA_VIEW_PATTERN);
-  }
-  function findAllIndices(haystack, needle) {
-    const out = [];
-    let idx = haystack.indexOf(needle);
-    while (idx !== -1) {
-      out.push(idx);
-      idx = haystack.indexOf(needle, idx + needle.length);
-    }
-    return out;
-  }
-  function extractBalancedBlock(text, openBraceIndex) {
-    let depth = 0;
-    let quote = "";
-    let escaped = false;
-    for (let i = openBraceIndex; i < text.length; i++) {
-      const ch = text[i];
-      if (quote) {
-        if (escaped) {
-          escaped = false;
-          continue;
-        }
-        if (ch === "\\") {
-          escaped = true;
-          continue;
-        }
-        if (ch === quote) quote = "";
-        continue;
-      }
-      if (ch === '"' || ch === "'" || ch === "`") {
-        quote = ch;
-        continue;
-      }
-      if (ch === "{") depth++;
-      else if (ch === "}" && --depth === 0) return text.slice(openBraceIndex, i + 1);
-    }
-    return null;
-  }
-  async function fetchBundleByFinder(findUrl, cache2, label2) {
-    if (cache2.value) return cache2.value;
-    if (cache2.inFlight) return cache2.inFlight;
-    cache2.inFlight = (async () => {
-      const MAX_RETRIES = 30;
-      const RETRY_INTERVAL = 500;
-      let url = null;
-      for (let i = 0; i < MAX_RETRIES; i++) {
-        url = findUrl();
-        if (url) break;
-        await new Promise((r) => setTimeout(r, RETRY_INTERVAL));
-      }
-      if (!url) {
-        console.warn(`[MGData] Could not find ${label2} URL after retries`);
-        return null;
-      }
-      try {
-        const res = await fetch(url, { credentials: "include" });
-        if (!res.ok) return null;
-        const text = await res.text();
-        cache2.value = text;
-        return text;
-      } catch {
-        return null;
-      } finally {
-        cache2.inFlight = null;
-      }
-    })();
-    return cache2.inFlight;
-  }
-  var mainBundleCache = { value: null, inFlight: null };
-  var quinoaViewCache = { value: null, inFlight: null };
-  function fetchMainBundle() {
-    return fetchBundleByFinder(findMainBundleUrl, mainBundleCache, "main bundle");
-  }
-  function fetchQuinoaViewBundle() {
-    return fetchBundleByFinder(findQuinoaViewUrl, quinoaViewCache, "QuinoaView bundle");
-  }
-
-  // src/data/dynamic/logic/abilityColors.ts
-  var DEFAULT_COLOR = {
-    bg: "rgba(100, 100, 100, 0.9)",
-    hover: "rgba(150, 150, 150, 1)"
-  };
-  var STATIC_ABILITY_COLORS = {
-    CoinFinderI: "#B49600",
-    CoinFinderII: "#B49600",
-    CoinFinderIII: "#B49600",
-    SnowyCoinFinder: "#B49600",
-    DawnCoinFinder: "#B49600",
-    ThunderCoinFinder: "#B49600",
-    SeedFinderI: "#A86626",
-    SeedFinderII: "#A86626",
-    SeedFinderIII: "#A86626",
-    SeedFinderIV: "#A86626",
-    PlantGrowthBoost: "#008080",
-    PlantGrowthBoostII: "#008080",
-    PlantGrowthBoostIII: "#969696",
-    SnowyPlantGrowthBoost: "#008080",
-    DawnPlantGrowthBoost: "#008080",
-    AmberPlantGrowthBoost: "#008080",
-    ThunderPlantGrowthBoost: "#008080",
-    ProduceEater: "#FF4500",
-    ProduceScaleBoost: "#228B22",
-    ProduceScaleBoostII: "#228B22",
-    ProduceScaleBoostIII: "#969696",
-    SnowyCropSizeBoost: "#228B22",
-    ProduceMutationBoost: "#8C0F46",
-    ProduceMutationBoostII: "#8C0F46",
-    ProduceMutationBoostIII: "#969696",
-    SnowyCropMutationBoost: "#8C0F46",
-    DawnBoost: "#8C0F46",
-    AmberMoonBoost: "#8C0F46",
-    ThunderBoost: "#8C0F46",
-    EggGrowthBoost: "#B45AF0",
-    EggGrowthBoostII_NEW: "#B45AF0",
-    EggGrowthBoostII: "#B45AF0",
-    SnowyEggGrowthBoost: "#B45AF0",
-    ThunderEggGrowthBoost: "#B45AF0",
-    PetXpBoost: "#1E90FF",
-    PetXpBoostII: "#1E90FF",
-    PetXpBoostIII: "#969696",
-    SnowyPetXpBoost: "#1E90FF",
-    DawnXpBoost: "#1E90FF",
-    ThunderXpBoost: "#1E90FF",
-    HungerBoost: "#FF1493",
-    HungerBoostII: "#FF1493",
-    HungerBoostIII: "#969696",
-    SnowyHungerBoost: "#FF1493",
-    HungerRestore: "#FF69B4",
-    HungerRestoreII: "#FF69B4",
-    HungerRestoreIII: "#969696",
-    SnowyHungerRestore: "#FF69B4",
-    PetMutationBoost: "#A03264",
-    PetMutationBoostII: "#A03264",
-    PetMutationBoostIII: "#969696",
-    SellBoostI: "#DC143C",
-    SellBoostII: "#DC143C",
-    SellBoostIII: "#DC143C",
-    SellBoostIV: "#DC143C",
-    ProduceRefund: "#FF6347",
-    DoubleHarvest: "#0078B4",
-    PetAgeBoost: "#9370DB",
-    PetAgeBoostII: "#9370DB",
-    PetAgeBoostIII: "#969696",
-    PetHatchSizeBoost: "#800080",
-    PetHatchSizeBoostII: "#800080",
-    PetHatchSizeBoostIII: "#969696",
-    DoubleHatch: "#3C5AB4",
-    PetRefund: "#005078",
-    PetRefundII: "#005078",
-    RainDance: "#4CCCCC",
-    SnowGranter: "#90B8CC",
-    FrostGranter: "#94A0CC",
-    DawnlitGranter: "#C47CB4",
-    AmberlitGranter: "#CC9060",
-    GoldGranter: "linear-gradient(135deg, #DCC846 0%, #D2AF05 40%, #D2B937 70%, #C8AF1E 100%)",
-    RainbowGranter: "linear-gradient(45deg, #C80000, #C87800, #A0AA1E, #3CAA3C, #32AAAA, #2896B4, #145AB4, #461E96)",
-    DawnbinderBoost: "#B468A0",
-    Copycat: "#FF8C00",
-    DawnCapture: "#B25A9E",
-    ThunderstruckGranter: "#C2B83C",
-    Thundercharger: "#1FA382",
-    MoonKisser: "#FAA623",
-    DawnKisser: "#A25CF2",
-    Thunderbloom: "#70F6CB"
-  };
-  function findAbilityColorSwitchBlock(bundleText) {
-    const indices = findAllIndices(bundleText, ABILITY_COLOR_ANCHOR);
-    if (!indices.length) return null;
-    for (const pos of indices) {
-      const winStart = Math.max(0, pos - 4e3);
-      const winEnd = Math.min(bundleText.length, pos + 4e3);
-      const windowText = bundleText.slice(winStart, winEnd);
-      const relSwitch = windowText.lastIndexOf("switch(");
-      if (relSwitch === -1) continue;
-      const absSwitch = winStart + relSwitch;
-      const braceAfterSwitch = bundleText.indexOf("{", absSwitch);
-      if (braceAfterSwitch === -1) continue;
-      const block = extractBalancedBlock(bundleText, braceAfterSwitch);
-      if (!block) continue;
-      const hasObjectColors = block.includes('bg:"') || block.includes("bg:'");
-      const hasHexColors = /return\s*[`'"](?:#|linear-gradient)/.test(block);
-      if (block.includes(ABILITY_COLOR_ANCHOR) && (hasObjectColors || hasHexColors)) {
-        return block;
-      }
-    }
-    return null;
-  }
-  function parseAbilityColorsFromSwitch(switchBlock) {
-    const colors = {};
-    const pending = [];
-    const tokenRe = /case\s*(['"])([^'"]+)\1\s*:|default\s*:|return\s*\{/g;
-    const findProp = (segment, prop) => {
-      const propRe = new RegExp(`${prop}\\s*:\\s*(['"])([\\s\\S]*?)\\1`);
-      const propMatch = segment.match(propRe);
-      return propMatch ? propMatch[2] : null;
-    };
-    let match;
-    while ((match = tokenRe.exec(switchBlock)) !== null) {
-      if (match[2]) {
-        pending.push(match[2]);
-        continue;
-      }
-      const token = match[0];
-      if (token.startsWith("default")) {
-        pending.length = 0;
-        continue;
-      }
-      if (!token.startsWith("return")) continue;
-      const braceIndex = switchBlock.indexOf("{", match.index);
-      if (braceIndex === -1) {
-        pending.length = 0;
-        continue;
-      }
-      const literal = extractBalancedBlock(switchBlock, braceIndex);
-      if (!literal) {
-        pending.length = 0;
-        continue;
-      }
-      const bg = findProp(literal, "bg");
-      if (!bg) {
-        pending.length = 0;
-        continue;
-      }
-      const hover = findProp(literal, "hover") || bg;
-      for (const id of pending) {
-        if (!colors[id]) colors[id] = { bg, hover };
-      }
-      pending.length = 0;
-    }
-    return Object.keys(colors).length ? colors : null;
-  }
-  function hexToRgba(hex, alpha) {
-    const match = hex.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-    if (!match) return null;
-    let h = match[1];
-    if (h.length === 3) h = h.split("").map((c) => c + c).join("");
-    const r = parseInt(h.slice(0, 2), 16);
-    const g = parseInt(h.slice(2, 4), 16);
-    const b = parseInt(h.slice(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-  function parseAbilityColorsFromHexSwitch(switchBlock) {
-    const colors = {};
-    const pending = [];
-    const tokenRe = /case\s*([`'"])([^`'"]+)\1\s*:|default\s*:|return\s*([`'"])((?:#|linear-gradient)[^`'"]*)\3/g;
-    let match;
-    while ((match = tokenRe.exec(switchBlock)) !== null) {
-      if (match[2]) {
-        pending.push(match[2]);
-        continue;
-      }
-      if (match[0].startsWith("default")) {
-        pending.length = 0;
-        continue;
-      }
-      const value = match[4];
-      if (!value) {
-        pending.length = 0;
-        continue;
-      }
-      const bg = value.startsWith("#") ? hexToRgba(value, 0.9) ?? value : value;
-      const hover = value.startsWith("#") ? hexToRgba(value, 1) ?? value : value;
-      for (const id of pending) {
-        if (!colors[id]) colors[id] = { bg, hover };
-      }
-      pending.length = 0;
-    }
-    return Object.keys(colors).length ? colors : null;
-  }
-  async function loadAbilityColorsFromBundle() {
-    for (const fetchBundle of [fetchMainBundle, fetchQuinoaViewBundle]) {
-      const bundleText = await fetchBundle();
-      if (!bundleText) continue;
-      const switchBlock = findAbilityColorSwitchBlock(bundleText);
-      if (!switchBlock) continue;
-      const parsed = parseAbilityColorsFromSwitch(switchBlock) ?? parseAbilityColorsFromHexSwitch(switchBlock);
-      if (parsed) return parsed;
-    }
-    return null;
-  }
-  function isAlreadyEnriched(abilities) {
-    const sample = abilities[ABILITY_COLOR_ANCHOR];
-    return sample != null && typeof sample === "object" && "color" in sample;
-  }
-  function toAbilityColor(raw) {
-    if (!raw.startsWith("#")) return { bg: raw, hover: raw };
-    const bg = hexToRgba(raw, 0.9) ?? raw;
-    return { bg, hover: hexToRgba(raw, 1) ?? bg };
-  }
-  function resolveFallbackColor(abilityId, abilityData) {
-    const raw = abilityData?.color;
-    if (typeof raw === "string") return toAbilityColor(raw);
-    const staticColor = STATIC_ABILITY_COLORS[abilityId];
-    if (staticColor) return toAbilityColor(staticColor);
-    return null;
-  }
-  async function enrichAbilitiesWithColors() {
-    if (!captureState.data.abilities) return false;
-    const abilities = captureState.data.abilities;
-    if (isAlreadyEnriched(abilities)) return true;
-    const map2 = await loadAbilityColorsFromBundle();
-    if (!map2) return false;
-    const enriched = {};
-    for (const [abilityId, abilityData] of Object.entries(abilities)) {
-      const colors = map2[abilityId] || resolveFallbackColor(abilityId, abilityData) || DEFAULT_COLOR;
-      enriched[abilityId] = {
-        ...abilityData,
-        color: {
-          bg: colors.bg,
-          hover: colors.hover
-        }
-      };
-    }
-    captureState.data.abilities = enriched;
-    return true;
-  }
-  function startColorPolling() {
-    if (captureState.colorPollingTimer) return;
-    captureState.colorPollAttempts = 0;
-    const timer = setInterval(async () => {
-      const success = await enrichAbilitiesWithColors();
-      if (success || ++captureState.colorPollAttempts > MAX_COLOR_POLL_ATTEMPTS) {
-        clearInterval(timer);
-        captureState.colorPollingTimer = null;
-      }
-    }, COLOR_POLL_INTERVAL_MS);
-    captureState.colorPollingTimer = timer;
-  }
-  function stopColorPolling() {
-    if (captureState.colorPollingTimer) {
-      clearInterval(captureState.colorPollingTimer);
-      captureState.colorPollingTimer = null;
-    }
-  }
-
-  // src/data/dynamic/logic/accessors.ts
-  var DEFAULT_WAIT_TIMEOUT_MS = 5e3;
-  var WAIT_POLL_INTERVAL_MS = 50;
-  function sleep3(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-  function getData(key2) {
-    return captureState.data[key2];
-  }
-  function getAllData() {
-    return { ...captureState.data };
-  }
-  function hasData(key2) {
-    return captureState.data[key2] != null;
-  }
-  async function waitForData(key2, timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, intervalMs = WAIT_POLL_INTERVAL_MS) {
-    const start2 = Date.now();
-    while (Date.now() - start2 < timeoutMs) {
-      const value = captureState.data[key2];
-      if (value != null) return value;
-      await sleep3(intervalMs);
-    }
-    throw new Error(`MGData.waitFor: timeout waiting for "${key2}"`);
-  }
-  async function waitForAnyData(timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, intervalMs = WAIT_POLL_INTERVAL_MS) {
-    const start2 = Date.now();
-    while (Date.now() - start2 < timeoutMs) {
-      if (Object.values(captureState.data).some((v) => v != null)) {
-        return { ...captureState.data };
-      }
-      await sleep3(intervalMs);
-    }
-    throw new Error("MGData.waitForAnyData: timeout");
-  }
-
-  // src/data/dynamic/logic/capture.ts
-  var API_BASE2 = "https://mg-api.ariedam.fr";
-  function setCapturedData(key2, value) {
-    if (captureState.data[key2] != null) return;
-    captureState.data[key2] = value;
-    try {
-      window.dispatchEvent(new CustomEvent("gemini:data-updated", { detail: { key: key2 } }));
-    } catch {
-    }
-  }
-  function isAllDataCaptured() {
-    return Object.values(captureState.data).every((v) => v != null);
-  }
-  async function fetchAllData() {
-    if (captureState.fetchStarted) return;
-    captureState.fetchStarted = true;
-    try {
-      const data = await withDiscordPollPause(() => getJSON2(`${API_BASE2}/data`));
-      if (data.plants) setCapturedData("plants", data.plants);
-      if (data.pets) setCapturedData("pets", data.pets);
-      if (data.items) setCapturedData("items", data.items);
-      if (data.decor) setCapturedData("decor", data.decor);
-      if (data.eggs) setCapturedData("eggs", data.eggs);
-      if (data.mutations) setCapturedData("mutations", data.mutations);
-      if (data.abilities) setCapturedData("abilities", data.abilities);
-      if (data.weathers) setCapturedData("weather", data.weathers);
-      captureState.fetchComplete = true;
-      console.log("[MGData] all data loaded from API", {
-        plants: Object.keys(data.plants || {}).length,
-        pets: Object.keys(data.pets || {}).length,
-        items: Object.keys(data.items || {}).length,
-        decor: Object.keys(data.decor || {}).length,
-        eggs: Object.keys(data.eggs || {}).length,
-        mutations: Object.keys(data.mutations || {}).length,
-        abilities: Object.keys(data.abilities || {}).length,
-        weathers: Object.keys(data.weathers || {}).length
-      });
-    } catch (err) {
-      console.error("[MGData] failed to fetch data from API", err);
-      captureState.fetchStarted = false;
-    }
-  }
-
-  // src/data/dynamic/logic/abilityFormatter.ts
-  var PET_ABILITY_ACTIONS = [
-    "CoinFinderI",
-    "CoinFinderII",
-    "CoinFinderIII",
-    "SnowyCoinFinder",
-    "DawnCoinFinder",
-    "ThunderCoinFinder",
-    "SeedFinderI",
-    "SeedFinderII",
-    "SeedFinderIII",
-    "SeedFinderIV",
-    "HungerRestore",
-    "HungerRestoreII",
-    "HungerRestoreIII",
-    "SnowyHungerRestore",
-    "DoubleHarvest",
-    "DoubleHatch",
-    "ProduceEater",
-    "PetHatchSizeBoost",
-    "PetHatchSizeBoostII",
-    "PetHatchSizeBoostIII",
-    "PetAgeBoost",
-    "PetAgeBoostII",
-    "PetAgeBoostIII",
-    "PetRefund",
-    "PetRefundII",
-    "ProduceRefund",
-    "SellBoostI",
-    "SellBoostII",
-    "SellBoostIII",
-    "SellBoostIV",
-    "GoldGranter",
-    "RainbowGranter",
-    "RainDance",
-    "SnowGranter",
-    "FrostGranter",
-    "DawnlitGranter",
-    "AmberlitGranter",
-    "ThunderstruckGranter",
-    "PetXpBoost",
-    "PetXpBoostII",
-    "PetXpBoostIII",
-    "SnowyPetXpBoost",
-    "DawnXpBoost",
-    "ThunderXpBoost",
-    "EggGrowthBoost",
-    "EggGrowthBoostII_NEW",
-    "EggGrowthBoostII",
-    "SnowyEggGrowthBoost",
-    "ThunderEggGrowthBoost",
-    "PlantGrowthBoost",
-    "PlantGrowthBoostII",
-    "PlantGrowthBoostIII",
-    "SnowyPlantGrowthBoost",
-    "DawnPlantGrowthBoost",
-    "AmberPlantGrowthBoost",
-    "ThunderPlantGrowthBoost",
-    "ProduceScaleBoost",
-    "ProduceScaleBoostII",
-    "ProduceScaleBoostIII",
-    "SnowyCropSizeBoost",
-    "MoonKisser",
-    "DawnKisser"
-  ];
-  function isPetAbilityAction(action2) {
-    return PET_ABILITY_ACTIONS.includes(action2);
-  }
-  function formatTime(seconds) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor(seconds % 3600 / 60);
-    const secs = Math.floor(seconds % 60);
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    if (minutes > 0) return `${minutes}m ${secs}s`;
-    return `${secs}s`;
-  }
-  function getPetName(pet) {
-    return pet?.name || pet?.petSpecies || "Unknown Pet";
-  }
-  function formatAbilityLog(log) {
-    const { action: action2, parameters } = log;
-    const params = parameters;
-    switch (action2) {
-      case "CoinFinderI":
-      case "CoinFinderII":
-      case "CoinFinderIII":
-      case "SnowyCoinFinder":
-      case "DawnCoinFinder":
-      case "ThunderCoinFinder":
-        return `Found ${params.coinsFound || 0} coins`;
-      case "SeedFinderI":
-      case "SeedFinderII":
-      case "SeedFinderIII":
-      case "SeedFinderIV":
-        return `Found 1x ${params.speciesId || "Unknown"} seed`;
-      case "HungerRestore":
-      case "HungerRestoreII":
-      case "HungerRestoreIII":
-      case "SnowyHungerRestore": {
-        const targetName = getPetName(params.targetPet);
-        const amount = params.hungerRestoreAmount || 0;
-        const pet = params.pet;
-        const targetPet = params.targetPet;
-        const isSelf = pet?.id === targetPet?.id;
-        return `Restored ${amount} hunger to ${isSelf ? "itself" : targetName}`;
-      }
-      case "DoubleHarvest": {
-        const crop = params.harvestedCrop;
-        return `Double harvested ${crop?.species || "Unknown"}`;
-      }
-      case "DoubleHatch": {
-        const extra = params.extraPet;
-        return `Double hatched ${extra?.petSpecies || "Unknown"}`;
-      }
-      case "ProduceEater": {
-        const slot = params.growSlot;
-        return `Ate ${slot?.species || "Unknown"} for ${params.sellPrice || 0} coins`;
-      }
-      case "PetHatchSizeBoost":
-      case "PetHatchSizeBoostII":
-      case "PetHatchSizeBoostIII": {
-        const targetName = getPetName(params.targetPet);
-        const increase = Number(params.strengthIncrease) || 0;
-        return `Boosted ${targetName}'s size by +${increase.toFixed(0)}`;
-      }
-      case "PetAgeBoost":
-      case "PetAgeBoostII":
-      case "PetAgeBoostIII": {
-        const targetName = getPetName(params.targetPet);
-        return `Gave +${params.bonusXp || 0} XP to ${targetName}`;
-      }
-      case "PetRefund":
-      case "PetRefundII":
-        return `Refunded 1x ${params.eggId || "Unknown Egg"}`;
-      case "ProduceRefund": {
-        const crops = params.cropsRefunded;
-        const num = Array.isArray(crops) ? crops.length : 0;
-        return `Refunded ${num} ${num === 1 ? "crop" : "crops"}`;
-      }
-      case "SellBoostI":
-      case "SellBoostII":
-      case "SellBoostIII":
-      case "SellBoostIV":
-        return `Gave +${params.bonusCoins || 0} bonus coins`;
-      case "GoldGranter":
-      case "RainbowGranter":
-      case "RainDance":
-      case "SnowGranter":
-      case "FrostGranter":
-      case "DawnlitGranter":
-      case "AmberlitGranter":
-      case "ThunderstruckGranter": {
-        const slot = params.growSlot;
-        return `Made ${slot?.species || "Unknown"} turn ${params.mutation || "Unknown"}`;
-      }
-      case "PetXpBoost":
-      case "PetXpBoostII":
-      case "PetXpBoostIII":
-      case "SnowyPetXpBoost":
-      case "DawnXpBoost":
-      case "ThunderXpBoost": {
-        const affected = params.petsAffected;
-        const num = Array.isArray(affected) ? affected.length : 0;
-        return `Gave +${params.bonusXp || 0} XP to ${num} ${num === 1 ? "pet" : "pets"}`;
-      }
-      case "EggGrowthBoost":
-      case "EggGrowthBoostII_NEW":
-      case "EggGrowthBoostII":
-      case "SnowyEggGrowthBoost":
-      case "ThunderEggGrowthBoost": {
-        const eggs = params.eggsAffected;
-        const num = Array.isArray(eggs) ? eggs.length : 0;
-        const time = formatTime(Number(params.secondsReduced) || 0);
-        return `Reduced ${num} ${num === 1 ? "egg" : "eggs"} growth by ${time}`;
-      }
-      case "PlantGrowthBoost":
-      case "PlantGrowthBoostII":
-      case "PlantGrowthBoostIII":
-      case "SnowyPlantGrowthBoost":
-      case "DawnPlantGrowthBoost":
-      case "AmberPlantGrowthBoost":
-      case "ThunderPlantGrowthBoost": {
-        const num = Number(params.numPlantsAffected) || 0;
-        const time = formatTime(Number(params.secondsReduced) || 0);
-        return `Reduced ${num} ${num === 1 ? "plant" : "plants"} growth by ${time}`;
-      }
-      case "ProduceScaleBoost":
-      case "ProduceScaleBoostII":
-      case "ProduceScaleBoostIII":
-      case "SnowyCropSizeBoost": {
-        const pct = Number(params.scaleIncreasePercentage) || 0;
-        const num = Number(params.numPlantsAffected) || 0;
-        return `Boosted ${num} ${num === 1 ? "crop" : "crops"} size by +${pct.toFixed(0)}%`;
-      }
-      case "MoonKisser":
-      case "DawnKisser": {
-        const affected = params.growSlotsAffected;
-        const num = Array.isArray(affected) ? affected.length : 0;
-        const source = params.sourceMutation || "Unknown";
-        const target = params.targetMutation || "Unknown";
-        return `Turned ${source} into ${target} on ${num} ${num === 1 ? "crop" : "crops"}`;
-      }
-      default:
-        return `Unknown ability: ${action2}`;
-    }
-  }
-
-  // src/data/dynamic/index.ts
-  var MGData = {
-    /** Initialize module: fetch all data from API, start ability color polling */
-    init() {
-      fetchAllData();
-      startColorPolling();
-    },
-    /** Check if all data has been loaded */
-    isReady: isAllDataCaptured,
-    /** Get data for a specific key */
-    get: getData,
-    /** Get all data */
-    getAll: getAllData,
-    /** Check if data exists for a specific key */
-    has: hasData,
-    /** Wait for specific data to be available */
-    waitFor: waitForData,
-    /** Wait for any data to be available */
-    waitForAny: waitForAnyData,
-    /** No-op (sprites now come from the API with URLs included) */
-    resolveSprites() {
-    },
-    /** Cleanup */
-    cleanup() {
-      stopColorPolling();
-    }
-  };
 
   // src/data/hardcoded-data.clean.js
   var rarity = {
@@ -31175,7 +31225,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.191";
+      return "3.2.192";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
