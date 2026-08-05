@@ -14,6 +14,8 @@ import { renderToolsMenu } from "./ui/menus/tools";
 import { renderEditorMenu } from "./ui/menus/editor";
 import { renderKeybindsMenu } from "./ui/menus/keybinds";
 import { renderRoomMenu } from "./ui/menus/room";
+import { renderSkinsMenu } from "./ui/menus/skins";
+import { initSkins } from "./skins/index";
 
 import { PlayerService } from "./services/player";
 import { createAntiAfkController } from "./utils/antiafk";
@@ -64,6 +66,11 @@ import { startPlayerStateReportingWhenGameReady } from "./ariesModAPI/endpoints/
   EditorService.init();
   installEditorPointerControls();
 
+  // Kick off at boot, not on first menu open: stored skins must already be on
+  // screen when the player arrives. Resolves on its own once the sprite
+  // catalog has the atlases ready.
+  void initSkins();
+
   mountHUD({
     onRegister(register) {
       register('pets', '🐾 Pets', renderPetsMenu);
@@ -72,6 +79,7 @@ import { startPlayerStateReportingWhenGameReady } from "./ariesModAPI/endpoints/
       register('calculator', '🤓 Calculator', renderCalculatorMenu);
       register('room', '🏠 Room', renderRoomMenu);
       register('editor', '📝 Editor', renderEditorMenu);
+      register('skins', '🎨 Skins', renderSkinsMenu);
       register('misc', '🧩 Misc', renderMiscMenu);
       register('keybinds', '⌨️ Keybinds', renderKeybindsMenu);
       register('tools', '🛠️ Tools', renderToolsMenu);

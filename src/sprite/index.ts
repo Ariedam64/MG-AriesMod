@@ -102,6 +102,53 @@ async function warmupSpritesFromAtlases(
 
 let prefetchPromise: Promise<PrefetchedAtlas | null> | null = null;
 
+/**
+ * The atlas JSONs (+ whatever image blobs the prefetch collected), kept alive
+ * after boot instead of being dropped once `loadTextures` has built its
+ * textures.
+ *
+ * The skin system reads the frame rectangles out of these JSONs to know the
+ * exact size each replacement image must be fitted to. Re-downloading and
+ * re-parsing them on every skin change would be pure waste.
+ */
+let atlasBundle: PrefetchedAtlas | null = null;
+let atlasBundleResolve: ((bundle: PrefetchedAtlas | null) => void) | null = null;
+const atlasBundleReady = new Promise<PrefetchedAtlas | null>(resolve => {
+  atlasBundleResolve = resolve;
+});
+
+export type AtlasBundle = PrefetchedAtlas;
+
+/** Resolves once the atlas JSONs + original blobs are available (null if the load failed). */
+export function whenAtlasBundleReady(): Promise<PrefetchedAtlas | null> {
+  return atlasBundleReady;
+}
+
+/** Synchronous access to the atlas bundle; null until `whenAtlasBundleReady` resolves. */
+export function getAtlasBundle(): PrefetchedAtlas | null {
+  return atlasBundle;
+}
+
+/** The live sprite catalog state (renderer, ctors, texture map, atlas base textures). */
+export function getSpriteState() {
+  return ctx.state;
+}
+
+/**
+ * The real Pixi Application, as captured by `__PIXI_APP_INIT__`.
+ *
+ * Deliberately not `ctx.state.app`: Pixi v8 builds the renderer before calling
+ * `__PIXI_APP_INIT__`, so `__PIXI_RENDERER_INIT__` fires first and
+ * `mkSyntheticApp` resolves the `appReady` promise with a stand-in
+ * `{ renderer, stage, ticker }`. That stand-in is what `waitForPixi` returns
+ * and what `ctx.state.app` holds, and it carries none of the game's own
+ * Application extensions (`renderTextureCache`, …). `hooks.app` keeps tracking
+ * the latest value and does end up holding the genuine Application.
+ */
+export function getPixiApp(): any {
+  return hooks.app ?? ctx.state.app;
+}
+
 function detectGameVersion() {
   // Prefer the global helper initialized in utils/gameVersion
   try {
@@ -245,6 +292,15 @@ async function loadTextures(base: string, prefetched?: PrefetchedAtlas | null) {
   const usePrefetched = prefetched && prefetched.base === base ? prefetched : null;
   const atlasJsons =
     usePrefetched?.atlasJsons ?? (await loadAtlasJsons(base, await getJSON<any>(joinPath(base, 'manifest.json'))));
+
+  // Publish the bundle even when the prefetch failed and we re-loaded the
+  // JSONs here — the skin system must not depend on which path won the race.
+  // Blobs stay whatever the prefetch managed to collect; the compositor
+  // re-fetches any it needs and finds missing.
+  atlasBundle = usePrefetched ?? { base, atlasJsons, blobs: new Map<string, Blob>() };
+  atlasBundleResolve?.(atlasBundle);
+  atlasBundleResolve = null;
+
   const ctors = ctx.state.ctors;
   if (!ctors?.Texture || !ctors?.Rectangle) throw new Error('PIXI constructors missing');
 

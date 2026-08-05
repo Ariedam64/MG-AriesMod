@@ -1,6 +1,13 @@
 {
   "entries": [
     {
+      "version": "3.2.193",
+      "date": "2026-08-05",
+      "title": "Skin changer",
+      "notes": "- **Skins**: a new menu to replace any game sprite with your own image — browse the grid, pick an object, drop in a PNG\n- **Skins**: works on plants, decor and items, mutated ones included; each slot shows its ideal image size\n- **Skins**: imports are stored locally and reapplied automatically on every load\n- **Skins**: ground tiles and pets are out of scope (baked into the map / rendered with Rive)",
+      "images": ["https://i.imgur.com/lHEjy46.png", "https://i.imgur.com/7foJtGk.png"]
+    },
+    {
       "version": "3.2.192",
       "date": "2026-08-04",
       "title": "Pet sprites are back",

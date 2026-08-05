@@ -63,6 +63,9 @@ export type AriesStorage = {
   inventory?: { sortKey?: unknown; sortDirection?: unknown; showValues?: unknown };
   keybinds?: { bindings?: Record<string, string>; hold?: Record<string, boolean> };
   editor?: { savedGardens?: unknown; enabled?: unknown };
+  // Only the on/off switch lives here — the skin images themselves are far
+  // too large for this shared blob and go to IndexedDB (see src/skins/store.ts).
+  skins?: { enabled?: boolean };
   activityLog?: { history?: unknown; filter?: unknown };
   audio?: { settings?: unknown; library?: unknown; sfxVolumeAtom?: unknown };
   friends?: {
