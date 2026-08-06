@@ -15,6 +15,18 @@ if (!atom) return fallback;
 try { return await jGet<T>(atom); } catch { return fallback; }
 }
 
+/**
+ * Indique si un atom existe sous ce label dans le runtime du jeu.
+ *
+ * `select`/`set`/`subscribe` ne font rien du tout quand le label est introuvable,
+ * sans lever d’erreur — un renommage côté jeu casse donc une fonctionnalité en
+ * silence. Ce test permet de choisir entre plusieurs noms possibles.
+ */
+export async function hasAtom(label: string): Promise<boolean> {
+  await ensureStore();
+  return !!getAtomByLabel(label);
+}
+
 /** S’abonne à un atom par label. Callback appelé sur changements. */
 export async function subscribe<T>(label: string, cb: (value: T) => void): Promise<Unsubscribe> {
 await ensureStore();
@@ -39,4 +51,4 @@ export async function set(label: string, value: any) {
   if (!atom) return;
   await jSet(atom, value);
 }
-export const Store = { ensure: ensureStore, select, subscribe, subscribeImmediate, set };
+export const Store = { ensure: ensureStore, select, subscribe, subscribeImmediate, set, hasAtom };

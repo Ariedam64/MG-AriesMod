@@ -46,9 +46,14 @@ const INTERNAL_TO_API: Record<string, string> = {
   "mutation-overlay": "mutations",
   ui: "ui",
   weather: "weather",
-  objects: "objects",
-  tiles: "tiles",
-  animations: "animations",
+  // Keys here are the *internal* category, which comes from the frame key and
+  // is always singular (`sprite/object/…`). These three were written plural on
+  // both sides, so they never matched and their sprites fell through to the
+  // singular URL — which the API serves only in plural, hence a 404 for every
+  // object/tile/animation icon in the mod.
+  object: "objects",
+  tile: "tiles",
+  animation: "animations",
   winter: "winter",
 };
 

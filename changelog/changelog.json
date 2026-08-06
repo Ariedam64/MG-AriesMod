@@ -1,6 +1,13 @@
 {
   "entries": [
     {
+      "version": "3.2.194",
+      "date": "2026-08-06",
+      "title": "Keybinds redesign and fixes",
+      "notes": "**Keybinds**\n\n- Full menu redesign, with the actual game sprites in place of the emojis\n- New shortcut to open the Weather Station\n- Fixed every shortcut that opens a game panel, shops, decor shed, seed silo, feeding trough, pet hutch and journal stopped working after a game update and open again\n\n**Misc**\n\n- Fixed auto-store, seeds and decor are picked up as soon as they land in your inventory instead of only when you toggle the option off and on",
+      "images": ["https://i.imgur.com/Nj2pL8P.png"]
+    },
+    {
       "version": "3.2.193",
       "date": "2026-08-05",
       "title": "Skin changer",

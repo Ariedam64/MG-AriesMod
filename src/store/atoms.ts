@@ -1,5 +1,5 @@
 // src/store/atoms.ts
-import { makeAtom, makeView, HubEq } from "./hub";
+import { makeAtom, makeAliasedAtom, makeView, HubEq } from "./hub";
 
 /* ============================================================================
  * Types
@@ -153,7 +153,13 @@ export const mySelectedItemRotation = makeAtom<any>("mySelectedItemRotationAtom"
 
 export const weather = makeAtom<string | null>("weatherAtom")
 
-export const activeModal = makeAtom<string | null>("activeModalAtom");
+// Renommé `activeModalAtom` -> `activeModalStateAtom` côté jeu ; même forme
+// (`string | null`). L’ancien nom reste en repli le temps que les bundles en
+// cache disparaissent.
+export const activeModal = makeAliasedAtom<string | null>([
+  "activeModalStateAtom",
+  "activeModalAtom",
+]);
 export const inventoryModalIsActive = makeAtom<boolean>("inventoryModalIsActiveAtom");
 export const avatarTriggerAnimationAtom = makeAtom<AvatarTriggerAnimation | null>("avatarTriggerAnimationAtom")
 

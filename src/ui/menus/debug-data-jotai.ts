@@ -140,7 +140,7 @@ export function renderJotaiTab(view: HTMLElement, ui: Menu) {
     rightCol.appendChild(card.root);
 
     const controls = ui.flexRow({ gap: 10, wrap: true, fullWidth: true });
-    const q = ui.inputText("atom label (ex: activeModalAtom)", "");
+    const q = ui.inputText("atom label (ex: activeModalStateAtom)", "");
     q.classList.add("dd-grow");
     const ta = document.createElement("textarea");
     ta.className = "qmm-input dd-textarea";

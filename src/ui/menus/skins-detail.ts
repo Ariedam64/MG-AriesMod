@@ -2,7 +2,7 @@
 
 import { importSkin, removeSkin } from '../../skins/index';
 import { mountThumb } from './skins-thumb';
-import { BORDER, CARD_BG, TEXT, TEXT_DIM, WARN, button, chip, css, sectionLabel } from './skins-ui';
+import { BORDER, CARD_BG, TEXT, TEXT_DIM, WARN, button, chip, css, sectionLabel } from './panel-ui';
 import type { SkinApplyResult, SkinEntry, SkinTarget, SkinnableObject } from '../../skins/types';
 
 const SLOT_THUMB_PX = 46;
@@ -213,7 +213,7 @@ export function buildDetail(options: DetailOptions): HTMLElement {
   host.appendChild(title);
 
   const list = document.createElement('div');
-  list.className = 'qws-sk-scroll';
+  list.className = 'qws-pnl-scroll';
   css(list, { display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', minHeight: '0' });
   object.slots.forEach((target, index) => {
     list.appendChild(

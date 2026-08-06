@@ -22,9 +22,7 @@ import {
   pageWindow,
 } from "../utils/page-context";
 
-import { eventMatchesKeybind } from "./keybinds";
 
-import { shouldIgnoreKeydown } from "../utils/keyboard";
 
 import { audioPlayer } from "../core/audioPlayer";
 
@@ -627,7 +625,6 @@ let currentItemApplyAll = false;
 
 const currentItemSlotModes: Record<string, Record<number, SlotScaleMode>> = {};
 
-let editorKeybindsInstalled = false;
 
 let overlaysVisible = true;
 
@@ -3920,8 +3917,6 @@ function applyState(
 
 export const EditorService = {
   init() {
-    installEditorKeybindsOnce();
-
     applyState(currentEnabled, { persist: false, emit: false });
   },
 
@@ -5473,28 +5468,3 @@ shareGlobal("qwsEditorClearFriendGardenPreview", async () => {
   return await clearFriendGardenPreview();
 });
 
-function installEditorKeybindsOnce() {
-  if (editorKeybindsInstalled || typeof window === "undefined") return;
-
-  editorKeybindsInstalled = true;
-
-  window.addEventListener(
-    "keydown",
-
-    (ev) => {
-      if (shouldIgnoreKeydown(ev)) return;
-
-      if (eventMatchesKeybind("editor.toggle-overlays", ev)) {
-        ev.preventDefault();
-
-        ev.stopPropagation();
-
-        toggleEditorHud();
-
-        return;
-      }
-    },
-
-    true,
-  );
-}

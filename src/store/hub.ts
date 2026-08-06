@@ -270,3 +270,41 @@ export const HubEq = eq;
 export function makeAtom<T = any>(label: string) {
   return makeView<T, T>(label);
 }
+
+/**
+ * Atom désigné par plusieurs noms possibles, le premier trouvé gagne.
+ *
+ * Le jeu renomme parfois un atom d’une version à l’autre. Comme un label
+ * introuvable ne provoque aucune erreur — `set` et `subscribe` deviennent
+ * simplement des no-ops — la fonctionnalité concernée s’arrête sans le moindre
+ * signe. Lister l’ancien nom en repli garde le mod fonctionnel pendant la
+ * transition (bundle en cache, rollback du jeu).
+ *
+ * Le nom retenu est mémorisé dès qu’il est résolu ; tant qu’aucun ne l’est, on
+ * retente à chaque appel plutôt que de figer un mauvais choix au boot, avant
+ * que les atoms du jeu ne soient enregistrés.
+ */
+export function makeAliasedAtom<T = any>(labels: string[]): View<T> {
+  let resolved: View<T> | null = null;
+
+  async function pick(): Promise<View<T>> {
+    if (resolved) return resolved;
+    for (const label of labels) {
+      if (await Store.hasAtom(label)) {
+        resolved = makeView<T, T>(label);
+        return resolved;
+      }
+    }
+    return makeView<T, T>(labels[0]);
+  }
+
+  return {
+    label: labels[0],
+    get: async () => (await pick()).get(),
+    set: async next => (await pick()).set(next),
+    update: async fn => (await pick()).update(fn),
+    onChange: async (cb, isEqual) => (await pick()).onChange(cb, isEqual),
+    onChangeNow: async (cb, isEqual) => (await pick()).onChangeNow(cb, isEqual),
+    asSignature: opts => makeView<T, T>(resolved?.label ?? labels[0]).asSignature(opts),
+  };
+}

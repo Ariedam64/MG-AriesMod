@@ -61,7 +61,12 @@ export type AriesStorage = {
   hud?: { pos?: unknown; collapsed?: unknown; hidden?: unknown; windows?: Record<string, unknown> };
   menu?: { activeTabs?: Record<string, string> };
   inventory?: { sortKey?: unknown; sortDirection?: unknown; showValues?: unknown };
-  keybinds?: { bindings?: Record<string, string>; hold?: Record<string, boolean> };
+  keybinds?: {
+    bindings?: Record<string, string>;
+    hold?: Record<string, boolean>;
+    /** Section id -> collapsed, for the Keybinds menu. */
+    collapsed?: Record<string, boolean>;
+  };
   editor?: { savedGardens?: unknown; enabled?: unknown };
   // Only the on/off switch lives here — the skin images themselves are far
   // too large for this shared blob and go to IndexedDB (see src/skins/store.ts).

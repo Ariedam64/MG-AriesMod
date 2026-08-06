@@ -22,11 +22,11 @@ export type KeybindId =
   | "game.decor-shed"
   | "game.seed-silo"
   | "game.feeding-trough"
+  | "game.weather-station"
   | "game.move-up"
   | "game.move-down"
   | "game.move-left"
   | "game.move-right"
-  | "editor.toggle-overlays"
   | `pets.team.${string}`
   | "pets.team.next"
   | "pets.team.prev";
@@ -45,6 +45,8 @@ export interface KeybindAction {
   id: KeybindId;
   sectionId: string;
   label: string;
+  /** Atlas frame key rendered in place of a leading emoji, e.g. `sprite/ui/SeedIcon`. */
+  icon?: string;
   hint?: string;
   defaultHotkey: Hotkey | null;
   allowModifierOnly?: boolean;
@@ -76,6 +78,8 @@ export interface KeybindHoldDetectionConfig {
 interface KeybindActionConfig {
   id: KeybindId;
   label: string;
+  /** Atlas frame key rendered in place of a leading emoji, e.g. `sprite/ui/SeedIcon`. */
+  icon?: string;
   hint?: string;
   defaultHotkey: Hotkey | null;
   allowModifierOnly?: boolean;
@@ -100,13 +104,15 @@ const SECTION_CONFIG: KeybindSectionConfig[] = [
     actions: [
       {
         id: "gui.toggle",
-        label: "👁️ Toggle menu visibility",
+        label: "Toggle menu visibility",
+        icon: "sprite/ui/CameraOff",
         hint: "Opens or closes the Arie's Mod overlay.",
         defaultHotkey: { alt: true, code: "KeyX" },
       },
       {
         id: "gui.drag",
-        label: "✋ Drag HUD",
+        label: "Drag HUD",
+        icon: "sprite/ui/Touchpad",
         hint: "Hold to drag menus interfaces around the screen.",
         defaultHotkey: { alt: true, code: "AltLeft" },
         allowModifierOnly: true,
@@ -121,22 +127,26 @@ const SECTION_CONFIG: KeybindSectionConfig[] = [
     actions: [
       {
         id: "shops.seeds",
-        label: "🌰 Seeds shop",
+        label: "Seeds shop",
+        icon: "sprite/ui/SeedIcon",
         defaultHotkey: { alt: true, code: "KeyS" },
       },
       {
         id: "shops.eggs",
-        label: "🥚 Eggs shop",
+        label: "Eggs shop",
+        icon: "sprite/ui/EggIcon",
         defaultHotkey: { alt: true, code: "KeyE" },
       },
       {
         id: "shops.decors",
-        label: "🪑 Decors shop",
+        label: "Decors shop",
+        icon: "sprite/ui/DecorIcon",
         defaultHotkey: { alt: true, code: "KeyD" },
       },
       {
         id: "shops.tools",
-        label: "🧺 Tools shop",
+        label: "Tools shop",
+        icon: "sprite/ui/ToolIcon",
         defaultHotkey: { alt: true, code: "KeyT" },
       },
     ],
@@ -149,66 +159,84 @@ const SECTION_CONFIG: KeybindSectionConfig[] = [
     actions: [
       {
         id: "game.action",
-        label: "⚡ Action",
+        label: "Action",
+        icon: "sprite/ui/PickupPin",
         defaultHotkey: { code: "Space" },
         holdDetection: {
-          label: "Hold to repeat",
+          label: "Rapid fire",
           defaultEnabled: false,
         },
       },
       {
         id: "game.inventory",
-        label: "🎒 Inventory",
+        label: "Inventory",
+        icon: "sprite/ui/InventoryBag",
         defaultHotkey: { code: "KeyE" },
       },
       {
         id: "game.pet-hutch",
-        label: "🏠 Pet hutch",
+        label: "Pet hutch",
+        icon: "sprite/decor/PetHutch_1",
         defaultHotkey: null,
         allowClear: true,
       },
       {
         id: "game.decor-shed",
-        label: "🧴 Decor shed",
+        label: "Decor shed",
+        icon: "sprite/decor/DecorShed",
         defaultHotkey: null,
         allowClear: true,
       },
       {
         id: "game.seed-silo",
-        label: "🌾 Seed Silo",
+        label: "Seed silo",
+        icon: "sprite/decor/SeedSilo",
         defaultHotkey: null,
         allowClear: true,
       },
       {
         id: "game.feeding-trough",
-        label: "🍖 Feeding trough",
+        label: "Feeding trough",
+        icon: "sprite/decor/FeedingTrough",
+        defaultHotkey: null,
+        allowClear: true,
+      },
+      {
+        id: "game.weather-station",
+        label: "Weather station",
+        icon: "sprite/object/WeatherStation",
         defaultHotkey: null,
         allowClear: true,
       },
       {
         id: "game.journal",
-        label: "📔 Journal",
+        label: "Journal",
+        icon: "sprite/ui/JournalStamp",
         defaultHotkey: null,
         allowClear: true,
       },
       {
         id: "game.move-up",
-        label: "⬆ Move up",
+        label: "Move up",
+        icon: "https://i.imgur.com/EkbKUgi.png",
         defaultHotkey: { code: "KeyW" },
       },
       {
         id: "game.move-down",
-        label: "⬇ Move down",
+        label: "Move down",
+        icon: "https://i.imgur.com/tdJ7IGP.png",
         defaultHotkey: { code: "KeyS" },
       },
       {
         id: "game.move-left",
-        label: "⬅ Move left",
+        label: "Move left",
+        icon: "https://i.imgur.com/86VbR70.png",
         defaultHotkey: { code: "KeyA" },
       },
       {
         id: "game.move-right",
-        label: "➡ Move right",
+        label: "Move right",
+        icon: "https://i.imgur.com/Ljzz6td.png",
         defaultHotkey: { code: "KeyD" },
       },
     ],
@@ -221,29 +249,17 @@ const SECTION_CONFIG: KeybindSectionConfig[] = [
     actions: [
       {
         id: "sell.sell-all",
-        label: "🌾 All crops",
+        label: "All crops",
+        icon: "sprite/ui/IconSell",
         hint: "Trigger the sell-all flow for harvested crops.",
         defaultHotkey: null,
       },
       {
         id: "sell.sell-all-pets",
-        label: "🐾 All pets",
+        label: "All pets",
+        icon: "sprite/ui/IconShop",
         hint: "Sell every non-favorited pet in your inventory.",
         defaultHotkey: null,
-      },
-    ],
-  },
-  {
-    id: "editor",
-    title: "Editor",
-    icon: "📝",
-    description: "Shortcuts for placing/removing items and toggling editor overlays.",
-    actions: [
-      {
-        id: "editor.toggle-overlays",
-        label: "Toggle editor overlays",
-        hint: "Show or hide the editor panels.",
-        defaultHotkey: { code: "KeyU" },
       },
     ],
   },
@@ -268,6 +284,7 @@ const keybindSections: KeybindSection[] = SECTION_CONFIG.map((section) => {
     id: action.id,
     sectionId: section.id,
     label: action.label,
+    icon: action.icon,
     hint: action.hint,
     allowModifierOnly: action.allowModifierOnly,
     allowClear: action.allowClear,
@@ -367,7 +384,7 @@ export function updatePetKeybinds(teams: PetTeamKeybindInfo[]): void {
     {
       id: PET_TEAM_PREV_ID,
       sectionId: PET_SECTION_ID,
-      label: "◀️ Previous team",
+      label: "Previous team",
       defaultHotkey: null,
     },
     null
@@ -377,7 +394,7 @@ export function updatePetKeybinds(teams: PetTeamKeybindInfo[]): void {
     {
       id: PET_TEAM_NEXT_ID,
       sectionId: PET_SECTION_ID,
-      label: "▶️ Next team",
+      label: "Next team",
       defaultHotkey: null,
     },
     null

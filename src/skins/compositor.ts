@@ -5,12 +5,8 @@
 // (GPU-compressed), so its pixels cannot be decoded in the browser — the skin
 // system replaces a frame's texture outright instead of patching the atlas.
 
-import { getSpriteState } from '../sprite/index';
+import { renderFrameToCanvas } from '../sprite/api/frameCanvas';
 import type { SkinTarget } from './types';
-
-/** Rendered originals kept around; the menu grid asks for the same ones repeatedly. */
-const previewCache = new Map<string, HTMLCanvasElement>();
-const PREVIEW_CACHE_MAX = 600;
 
 /**
  * Scales `source` to fit entirely inside `boxW`×`boxH`, preserving aspect
@@ -58,51 +54,11 @@ export async function buildSkinCanvas(
   }
 }
 
-/**
- * Renders the game's original art for a frame.
- *
- * Goes through the renderer's extract rather than reading the atlas: that is
- * the only way to get pixels back out of a compressed texture, and the sprite
- * catalog already holds a Texture per frame built on the game's own KTX2
- * source. Results are cached — extraction is a GPU round-trip and the menu grid
- * re-requests the same frames on every re-render.
- */
-export function renderOriginalFrame(frameKey: string): HTMLCanvasElement | null {
-  const cached = previewCache.get(frameKey);
-  if (cached) return cached;
-
-  const state = getSpriteState();
-  const texture = state.tex.get(frameKey);
-  const ctors = state.ctors;
-  if (!texture || !ctors?.Sprite || !state.renderer?.extract) return null;
-
-  let sprite: any = null;
-  try {
-    sprite = new ctors.Sprite(texture);
-    const canvas = state.renderer.extract.canvas(sprite, { resolution: 1 });
-    if (canvas) {
-      if (previewCache.size >= PREVIEW_CACHE_MAX) {
-        previewCache.delete(previewCache.keys().next().value as string);
-      }
-      previewCache.set(frameKey, canvas);
-    }
-    return canvas ?? null;
-  } catch {
-    return null;
-  } finally {
-    try {
-      sprite?.destroy?.({ children: true, texture: false, baseTexture: false });
-    } catch {
-      /* ignore */
-    }
-  }
-}
-
 /** Renders what a frame looks like: the user's skin if any, else the original. */
 export async function renderFramePreview(
   target: SkinTarget,
   blob: Blob | null,
 ): Promise<HTMLCanvasElement | null> {
   if (blob) return buildSkinCanvas(target, blob);
-  return renderOriginalFrame(target.frameKey);
+  return renderFrameToCanvas(target.frameKey);
 }

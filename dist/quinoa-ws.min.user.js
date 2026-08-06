@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.193
+// @version      3.2.194
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -2882,9 +2882,14 @@
     "mutation-overlay": "mutations",
     ui: "ui",
     weather: "weather",
-    objects: "objects",
-    tiles: "tiles",
-    animations: "animations",
+    // Keys here are the *internal* category, which comes from the frame key and
+    // is always singular (`sprite/object/…`). These three were written plural on
+    // both sides, so they never matched and their sprites fell through to the
+    // singular URL — which the API serves only in plural, hence a 404 for every
+    // object/tile/animation icon in the mod.
+    object: "objects",
+    tile: "tiles",
+    animation: "animations",
     winter: "winter"
   };
   var SEARCH_CATS = {
@@ -4338,6 +4343,10 @@
       return fallback;
     }
   }
+  async function hasAtom(label2) {
+    await ensureStore2();
+    return !!getAtomByLabel(label2);
+  }
   async function subscribe(label2, cb) {
     await ensureStore2();
     const atom = getAtomByLabel(label2);
@@ -4362,7 +4371,7 @@
     if (!atom) return;
     await jSet(atom, value);
   }
-  var Store = { ensure: ensureStore2, select, subscribe, subscribeImmediate, set };
+  var Store = { ensure: ensureStore2, select, subscribe, subscribeImmediate, set, hasAtom };
 
   // src/store/hub.ts
   function toPathArray(path) {
@@ -4552,6 +4561,28 @@
   function makeAtom(label2) {
     return makeView(label2);
   }
+  function makeAliasedAtom(labels) {
+    let resolved = null;
+    async function pick() {
+      if (resolved) return resolved;
+      for (const label2 of labels) {
+        if (await Store.hasAtom(label2)) {
+          resolved = makeView(label2);
+          return resolved;
+        }
+      }
+      return makeView(labels[0]);
+    }
+    return {
+      label: labels[0],
+      get: async () => (await pick()).get(),
+      set: async (next) => (await pick()).set(next),
+      update: async (fn) => (await pick()).update(fn),
+      onChange: async (cb, isEqual) => (await pick()).onChange(cb, isEqual),
+      onChangeNow: async (cb, isEqual) => (await pick()).onChangeNow(cb, isEqual),
+      asSignature: (opts) => makeView(resolved?.label ?? labels[0]).asSignature(opts)
+    };
+  }
 
   // src/store/atoms.ts
   var position = makeAtom("positionAtom");
@@ -4597,7 +4628,10 @@
   var myOwnCurrentDirtTileIndex = makeAtom("myOwnCurrentDirtTileIndexAtom");
   var mySelectedItemRotation = makeAtom("mySelectedItemRotationAtom");
   var weather = makeAtom("weatherAtom");
-  var activeModal = makeAtom("activeModalAtom");
+  var activeModal = makeAliasedAtom([
+    "activeModalStateAtom",
+    "activeModalAtom"
+  ]);
   var inventoryModalIsActive = makeAtom("inventoryModalIsActiveAtom");
   var avatarTriggerAnimationAtom = makeAtom("avatarTriggerAnimationAtom");
   var friendBonusMultiplier = makeAtom("friendBonusMultiplierAtom");
@@ -12911,13 +12945,15 @@
       actions: [
         {
           id: "gui.toggle",
-          label: "\u{1F441}\uFE0F Toggle menu visibility",
+          label: "Toggle menu visibility",
+          icon: "sprite/ui/CameraOff",
           hint: "Opens or closes the Arie's Mod overlay.",
           defaultHotkey: { alt: true, code: "KeyX" }
         },
         {
           id: "gui.drag",
-          label: "\u270B Drag HUD",
+          label: "Drag HUD",
+          icon: "sprite/ui/Touchpad",
           hint: "Hold to drag menus interfaces around the screen.",
           defaultHotkey: { alt: true, code: "AltLeft" },
           allowModifierOnly: true
@@ -12932,22 +12968,26 @@
       actions: [
         {
           id: "shops.seeds",
-          label: "\u{1F330} Seeds shop",
+          label: "Seeds shop",
+          icon: "sprite/ui/SeedIcon",
           defaultHotkey: { alt: true, code: "KeyS" }
         },
         {
           id: "shops.eggs",
-          label: "\u{1F95A} Eggs shop",
+          label: "Eggs shop",
+          icon: "sprite/ui/EggIcon",
           defaultHotkey: { alt: true, code: "KeyE" }
         },
         {
           id: "shops.decors",
-          label: "\u{1FA91} Decors shop",
+          label: "Decors shop",
+          icon: "sprite/ui/DecorIcon",
           defaultHotkey: { alt: true, code: "KeyD" }
         },
         {
           id: "shops.tools",
-          label: "\u{1F9FA} Tools shop",
+          label: "Tools shop",
+          icon: "sprite/ui/ToolIcon",
           defaultHotkey: { alt: true, code: "KeyT" }
         }
       ]
@@ -12960,66 +13000,84 @@
       actions: [
         {
           id: "game.action",
-          label: "\u26A1 Action",
+          label: "Action",
+          icon: "sprite/ui/PickupPin",
           defaultHotkey: { code: "Space" },
           holdDetection: {
-            label: "Hold to repeat",
+            label: "Rapid fire",
             defaultEnabled: false
           }
         },
         {
           id: "game.inventory",
-          label: "\u{1F392} Inventory",
+          label: "Inventory",
+          icon: "sprite/ui/InventoryBag",
           defaultHotkey: { code: "KeyE" }
         },
         {
           id: "game.pet-hutch",
-          label: "\u{1F3E0} Pet hutch",
+          label: "Pet hutch",
+          icon: "sprite/decor/PetHutch_1",
           defaultHotkey: null,
           allowClear: true
         },
         {
           id: "game.decor-shed",
-          label: "\u{1F9F4} Decor shed",
+          label: "Decor shed",
+          icon: "sprite/decor/DecorShed",
           defaultHotkey: null,
           allowClear: true
         },
         {
           id: "game.seed-silo",
-          label: "\u{1F33E} Seed Silo",
+          label: "Seed silo",
+          icon: "sprite/decor/SeedSilo",
           defaultHotkey: null,
           allowClear: true
         },
         {
           id: "game.feeding-trough",
-          label: "\u{1F356} Feeding trough",
+          label: "Feeding trough",
+          icon: "sprite/decor/FeedingTrough",
+          defaultHotkey: null,
+          allowClear: true
+        },
+        {
+          id: "game.weather-station",
+          label: "Weather station",
+          icon: "sprite/object/WeatherStation",
           defaultHotkey: null,
           allowClear: true
         },
         {
           id: "game.journal",
-          label: "\u{1F4D4} Journal",
+          label: "Journal",
+          icon: "sprite/ui/JournalStamp",
           defaultHotkey: null,
           allowClear: true
         },
         {
           id: "game.move-up",
-          label: "\u2B06 Move up",
+          label: "Move up",
+          icon: "https://i.imgur.com/EkbKUgi.png",
           defaultHotkey: { code: "KeyW" }
         },
         {
           id: "game.move-down",
-          label: "\u2B07 Move down",
+          label: "Move down",
+          icon: "https://i.imgur.com/tdJ7IGP.png",
           defaultHotkey: { code: "KeyS" }
         },
         {
           id: "game.move-left",
-          label: "\u2B05 Move left",
+          label: "Move left",
+          icon: "https://i.imgur.com/86VbR70.png",
           defaultHotkey: { code: "KeyA" }
         },
         {
           id: "game.move-right",
-          label: "\u27A1 Move right",
+          label: "Move right",
+          icon: "https://i.imgur.com/Ljzz6td.png",
           defaultHotkey: { code: "KeyD" }
         }
       ]
@@ -13032,29 +13090,17 @@
       actions: [
         {
           id: "sell.sell-all",
-          label: "\u{1F33E} All crops",
+          label: "All crops",
+          icon: "sprite/ui/IconSell",
           hint: "Trigger the sell-all flow for harvested crops.",
           defaultHotkey: null
         },
         {
           id: "sell.sell-all-pets",
-          label: "\u{1F43E} All pets",
+          label: "All pets",
+          icon: "sprite/ui/IconShop",
           hint: "Sell every non-favorited pet in your inventory.",
           defaultHotkey: null
-        }
-      ]
-    },
-    {
-      id: "editor",
-      title: "Editor",
-      icon: "\u{1F4DD}",
-      description: "Shortcuts for placing/removing items and toggling editor overlays.",
-      actions: [
-        {
-          id: "editor.toggle-overlays",
-          label: "Toggle editor overlays",
-          hint: "Show or hide the editor panels.",
-          defaultHotkey: { code: "KeyU" }
         }
       ]
     }
@@ -13076,6 +13122,7 @@
         id: action2.id,
         sectionId: section.id,
         label: action2.label,
+        icon: action2.icon,
         hint: action2.hint,
         allowModifierOnly: action2.allowModifierOnly,
         allowClear: action2.allowClear,
@@ -13155,7 +13202,7 @@
       {
         id: PET_TEAM_PREV_ID,
         sectionId: PET_SECTION_ID,
-        label: "\u25C0\uFE0F Previous team",
+        label: "Previous team",
         defaultHotkey: null
       },
       null
@@ -13164,7 +13211,7 @@
       {
         id: PET_TEAM_NEXT_ID,
         sectionId: PET_SECTION_ID,
-        label: "\u25B6\uFE0F Next team",
+        label: "Next team",
         defaultHotkey: null
       },
       null
@@ -14589,6 +14636,20 @@
   };
   var AUTO_STORE_DEBOUNCE_MS = 800;
   var AUTO_STORE_RECENT_REMOVE_MS = 2e3;
+  var AUTO_STORE_ATOM_POLL_MS = 400;
+  var AUTO_STORE_ATOM_TIMEOUT_MS = 10 * 6e4;
+  async function waitForAutoStoreAtoms(storage, inventory, keepGoing) {
+    const startedAt = Date.now();
+    while (keepGoing() && Date.now() - startedAt < AUTO_STORE_ATOM_TIMEOUT_MS) {
+      try {
+        const ready2 = await Store.hasAtom(storage.label) && await Store.hasAtom(inventory.label);
+        if (ready2 && Array.isArray(await inventory.get())) return true;
+      } catch {
+      }
+      await new Promise((resolve) => setTimeout(resolve, AUTO_STORE_ATOM_POLL_MS));
+    }
+    return false;
+  }
   var diffSet = (prev, next) => {
     const added = [];
     const removed = [];
@@ -14617,6 +14678,7 @@
   var seedPendingKeys = /* @__PURE__ */ new Set();
   var seedPendingTimer = null;
   var seedSiloRemovedAt = /* @__PURE__ */ new Map();
+  var seedStartGeneration = 0;
   var decorShedItems = /* @__PURE__ */ new Set();
   var decorInventoryQty = /* @__PURE__ */ new Map();
   var decorShedQueue = /* @__PURE__ */ new Set();
@@ -14626,6 +14688,7 @@
   var decorPendingKeys = /* @__PURE__ */ new Set();
   var decorPendingTimer = null;
   var decorShedRemovedAt = /* @__PURE__ */ new Map();
+  var decorStartGeneration = 0;
   function queueSeedSiloStore(keys) {
     for (const key2 of keys) if (key2) seedSiloQueue.add(key2);
     if (keys.length) {
@@ -14686,6 +14749,14 @@
   async function startSeedSiloAutoStore() {
     if (seedInvUnsub || seedSiloUnsub) return;
     if (typeof window === "undefined") return;
+    const generation = ++seedStartGeneration;
+    const isCurrent = () => autoSeedSiloEnabled && seedStartGeneration === generation;
+    const ready2 = await waitForAutoStoreAtoms(mySeedSiloItems, Atoms.inventory.mySeedInventory, isCurrent);
+    if (!ready2 || !isCurrent()) {
+      logAutoStore("seed auto-store aborted", { ready: ready2, enabled: autoSeedSiloEnabled });
+      return;
+    }
+    if (seedInvUnsub || seedSiloUnsub) return;
     try {
       seedSiloItems = buildKeySet(await mySeedSiloItems.get(), seedKeyFromItem);
     } catch {
@@ -14730,8 +14801,14 @@
     } catch {
       seedInvUnsub = null;
     }
+    const initialKeys = Array.from(seedInventoryQty.keys()).filter((key2) => seedSiloItems.has(key2));
+    if (initialKeys.length) {
+      logAutoStore("seed auto-store initial queue", { keys: initialKeys });
+      queueSeedSiloStore(initialKeys);
+    }
   }
   function stopSeedSiloAutoStore() {
+    seedStartGeneration++;
     try {
       seedInvUnsub?.();
     } catch {
@@ -14814,6 +14891,14 @@
   async function startDecorShedAutoStore() {
     if (decorInvUnsub || decorShedUnsub) return;
     if (typeof window === "undefined") return;
+    const generation = ++decorStartGeneration;
+    const isCurrent = () => autoDecorShedEnabled && decorStartGeneration === generation;
+    const ready2 = await waitForAutoStoreAtoms(myDecorShedItems, Atoms.inventory.myDecorInventory, isCurrent);
+    if (!ready2 || !isCurrent()) {
+      logAutoStore("decor auto-store aborted", { ready: ready2, enabled: autoDecorShedEnabled });
+      return;
+    }
+    if (decorInvUnsub || decorShedUnsub) return;
     try {
       decorShedItems = buildKeySet(await myDecorShedItems.get(), decorKeyFromItem);
     } catch {
@@ -14858,8 +14943,14 @@
     } catch {
       decorInvUnsub = null;
     }
+    const initialKeys = Array.from(decorInventoryQty.keys()).filter((key2) => decorShedItems.has(key2));
+    if (initialKeys.length) {
+      logAutoStore("decor auto-store initial queue", { keys: initialKeys });
+      queueDecorShedStore(initialKeys);
+    }
   }
   function stopDecorShedAutoStore() {
+    decorStartGeneration++;
     try {
       decorInvUnsub?.();
     } catch {
@@ -14891,14 +14982,7 @@
     }
     logAutoStore("seed auto-store toggle", { enabled: next });
     if (next) {
-      void (async () => {
-        await startSeedSiloAutoStore();
-        const keys = Array.from(seedInventoryQty.keys()).filter((k) => seedSiloItems.has(k));
-        if (keys.length) {
-          logAutoStore("seed auto-store initial queue", { keys });
-          queueSeedSiloStore(keys);
-        }
-      })();
+      void startSeedSiloAutoStore();
     } else {
       stopSeedSiloAutoStore();
     }
@@ -14912,14 +14996,7 @@
     }
     logAutoStore("decor auto-store toggle", { enabled: next });
     if (next) {
-      void (async () => {
-        await startDecorShedAutoStore();
-        const keys = Array.from(decorInventoryQty.keys()).filter((k) => decorShedItems.has(k));
-        if (keys.length) {
-          logAutoStore("decor auto-store initial queue", { keys });
-          queueDecorShedStore(keys);
-        }
-      })();
+      void startDecorShedAutoStore();
     } else {
       stopDecorShedAutoStore();
     }
@@ -17500,7 +17577,6 @@
   var currentItemUnsub = null;
   var currentItemApplyAll = false;
   var currentItemSlotModes = {};
-  var editorKeybindsInstalled = false;
   var overlaysVisible = true;
   var currentEditorTile = null;
   function getCurrentTileTarget() {
@@ -19443,7 +19519,6 @@
   }
   var EditorService = {
     init() {
-      installEditorKeybindsOnce();
       applyState(currentEnabled, { persist: false, emit: false });
     },
     isEnabled() {
@@ -20380,23 +20455,6 @@
   shareGlobal("qwsEditorClearFriendGardenPreview", async () => {
     return await clearFriendGardenPreview();
   });
-  function installEditorKeybindsOnce() {
-    if (editorKeybindsInstalled || typeof window === "undefined") return;
-    editorKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (ev) => {
-        if (shouldIgnoreKeydown(ev)) return;
-        if (eventMatchesKeybind("editor.toggle-overlays", ev)) {
-          ev.preventDefault();
-          ev.stopPropagation();
-          toggleEditorHud();
-          return;
-        }
-      },
-      true
-    );
-  }
 
   // src/hooks/ws-hook.ts
   var wsCloseListeners = [];
@@ -25081,6 +25139,37 @@
         event.preventDefault();
         event.stopPropagation();
         void toggleFeedingTroughModal();
+      },
+      true
+    );
+  }
+
+  // src/services/weatherStationKeybind.ts
+  var ACTION_ID6 = "game.weather-station";
+  var WEATHER_STATION_MODAL_ID = "weatherStation";
+  var weatherStationKeybindsInstalled = false;
+  async function toggleWeatherStationModal() {
+    try {
+      const current = await Atoms.ui.activeModal.get();
+      if (current === WEATHER_STATION_MODAL_ID) {
+        await closeModal(WEATHER_STATION_MODAL_ID);
+        return;
+      }
+      await openModal(WEATHER_STATION_MODAL_ID);
+    } catch {
+    }
+  }
+  function installWeatherStationKeybindsOnce() {
+    if (weatherStationKeybindsInstalled || typeof window === "undefined") return;
+    weatherStationKeybindsInstalled = true;
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (shouldIgnoreKeydown(event)) return;
+        if (!eventMatchesKeybind(ACTION_ID6, event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        void toggleWeatherStationModal();
       },
       true
     );
@@ -31245,7 +31334,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.193";
+      return "3.2.194";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -35861,6 +35950,7 @@
     installSeedSiloKeybindsOnce();
     installDecorShedKeybindsOnce();
     installFeedingTroughKeybindsOnce();
+    installWeatherStationKeybindsOnce();
     const bootToolbar = async () => {
       try {
         await renderOverlay();
@@ -36508,7 +36598,7 @@
       });
       rightCol.appendChild(card3.root);
       const controls = ui.flexRow({ gap: 10, wrap: true, fullWidth: true });
-      const q = ui.inputText("atom label (ex: activeModalAtom)", "");
+      const q = ui.inputText("atom label (ex: activeModalStateAtom)", "");
       q.classList.add("dd-grow");
       const ta = document.createElement("textarea");
       ta.className = "qmm-input dd-textarea";
@@ -50535,7 +50625,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     toggleRow.append(toggleLabel, toggle2);
     const desc = document.createElement("div");
     css(desc, { fontSize: "11px", color: TEXT_DIM2, lineHeight: "1.5" });
-    desc.textContent = "Sandbox garden editor with every plant and decor unlocked. Left click to place or select, right click to remove, drag to paint \xB7 Toggle overlays with U \xB7 Edit keybinds in Keybinds \u203A Editor.";
+    desc.textContent = "Sandbox garden with every plant and decor unlocked. Left click to place, right click to remove, drag to paint.";
     wrap.appendChild(card([toggleRow, desc]));
     const nameInput = styledInput("Garden name\u2026");
     const actRow = document.createElement("div");
@@ -50746,14 +50836,287 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
 
+  // src/ui/menus/panel-ui.ts
+  var STYLE_ID4 = "qws-panel-ui-css";
+  var TEAL2 = "#5eead4";
+  var TEAL_DIM2 = "rgba(94,234,212,0.12)";
+  var TEAL_BORDER2 = "rgba(94,234,212,0.3)";
+  var BORDER3 = "rgba(255,255,255,0.08)";
+  var CARD_BG2 = "rgba(255,255,255,0.03)";
+  var TEXT3 = "#e7eef7";
+  var TEXT_DIM3 = "rgba(226,232,240,0.45)";
+  var DANGER2 = "#ef4444";
+  var WARN = "#fbbf24";
+  var css2 = (el2, style2) => Object.assign(el2.style, style2);
+  function ensurePanelStyles() {
+    if (document.getElementById(STYLE_ID4)) return;
+    const st = document.createElement("style");
+    st.id = STYLE_ID4;
+    st.textContent = `
+.qws-pnl-scroll::-webkit-scrollbar { width: 6px; }
+.qws-pnl-scroll::-webkit-scrollbar-track { background: transparent; }
+.qws-pnl-scroll::-webkit-scrollbar-thumb { background: rgba(94,234,212,0.2); border-radius: 3px; }
+.qws-pnl-scroll::-webkit-scrollbar-thumb:hover { background: rgba(94,234,212,0.35); }
+.qws-pnl-scroll { scrollbar-width: thin; scrollbar-color: rgba(94,234,212,0.2) transparent; }
+
+.qws-pnl-cell {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  aspect-ratio: 1; border-radius: 10px; cursor: pointer;
+  background: ${CARD_BG2}; border: 1px solid ${BORDER3};
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+.qws-pnl-cell:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.16); transform: translateY(-1px); }
+.qws-pnl-cell.is-active { border-color: ${TEAL_BORDER2}; background: ${TEAL_DIM2}; }
+.qws-pnl-cell.is-skinned::after {
+  content: ''; position: absolute; top: 5px; right: 5px;
+  width: 6px; height: 6px; border-radius: 50%; background: ${TEAL2};
+}
+
+.qws-pnl-toggle { position:relative; display:inline-block; width:36px; height:20px; cursor:pointer; flex-shrink:0; }
+.qws-pnl-toggle input { opacity:0; width:0; height:0; position:absolute; }
+.qws-pnl-track {
+  position:absolute; inset:0; border-radius:10px;
+  background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.12);
+  transition:background 150ms ease, border-color 150ms ease;
+}
+.qws-pnl-toggle input:checked ~ .qws-pnl-track { background:rgba(94,234,212,0.25); border-color:rgba(94,234,212,0.5); }
+.qws-pnl-thumb {
+  position:absolute; top:3px; left:3px; width:12px; height:12px; border-radius:50%;
+  background:rgba(226,232,240,0.5); transition:transform 150ms ease, background 150ms ease;
+}
+.qws-pnl-toggle input:checked ~ .qws-pnl-track .qws-pnl-thumb { transform:translateX(16px); background:${TEAL2}; }
+
+.qws-pnl-input {
+  padding: 8px 10px; border-radius: 9px; border: 1px solid ${BORDER3};
+  background: rgba(0,0,0,0.22); color: ${TEXT3}; font-size: 12px; outline: none;
+  transition: border-color 120ms ease;
+}
+.qws-pnl-input:focus { border-color: ${TEAL_BORDER2}; }
+.qws-pnl-input option { background: #10151c; color: ${TEXT3}; }
+
+/* Restyles the Menu's own hotkey capture button, which stays in use for its
+   key-recording behaviour. Scoped to panels so other menus keep their look. */
+.qws-pnl-root .qmm-hotkey {
+  min-width: 104px; padding: 7px 12px; border-radius: 9px;
+  border: 1px solid ${BORDER3}; background: rgba(0,0,0,0.22);
+  color: ${TEXT3}; font-size: 11px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: all 120ms ease;
+}
+.qws-pnl-root .qmm-hotkey:hover { border-color: rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); }
+.qws-pnl-root .qmm-hotkey.is-assigned { color: ${TEAL2}; border-color: ${TEAL_BORDER2}; background: ${TEAL_DIM2}; }
+.qws-pnl-root .qmm-hotkey.is-empty { color: ${TEXT_DIM3}; font-weight: 500; }
+.qws-pnl-root .qmm-hotkey.is-recording {
+  color: ${WARN}; border-color: rgba(251,191,36,0.55); background: rgba(251,191,36,0.12);
+}
+.qws-pnl-root .qmm-check, .qws-pnl-root .qmm-switch { accent-color: ${TEAL2}; }
+`;
+    document.head.appendChild(st);
+  }
+  function sectionLabel2(text) {
+    const el2 = document.createElement("div");
+    css2(el2, {
+      fontSize: "10px",
+      fontWeight: "700",
+      letterSpacing: "0.08em",
+      color: TEXT_DIM3,
+      textTransform: "uppercase"
+    });
+    el2.textContent = text;
+    return el2;
+  }
+  function card2() {
+    const el2 = document.createElement("div");
+    css2(el2, {
+      padding: "12px",
+      background: CARD_BG2,
+      borderRadius: "12px",
+      border: `1px solid ${BORDER3}`,
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px",
+      minHeight: "0"
+    });
+    return el2;
+  }
+  var TONES = {
+    accent: {
+      fg: TEAL2,
+      bg: TEAL_DIM2,
+      border: TEAL_BORDER2,
+      hoverBg: "rgba(94,234,212,0.22)",
+      hoverBorder: "rgba(94,234,212,0.55)"
+    },
+    neutral: {
+      fg: TEXT3,
+      bg: CARD_BG2,
+      border: BORDER3,
+      hoverBg: "rgba(255,255,255,0.06)",
+      hoverBorder: "rgba(255,255,255,0.16)"
+    },
+    danger: {
+      fg: DANGER2,
+      bg: "rgba(239,68,68,0.12)",
+      border: "rgba(239,68,68,0.3)",
+      hoverBg: "rgba(239,68,68,0.2)",
+      hoverBorder: "rgba(239,68,68,0.55)"
+    }
+  };
+  function button(label2, tone, onClick) {
+    const btn = document.createElement("button");
+    const palette = TONES[tone];
+    css2(btn, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "6px",
+      padding: "7px 12px",
+      border: `1px solid ${palette.border}`,
+      borderRadius: "9px",
+      background: palette.bg,
+      color: palette.fg,
+      fontSize: "11px",
+      fontWeight: "600",
+      cursor: "pointer",
+      transition: "all 120ms ease",
+      whiteSpace: "nowrap"
+    });
+    btn.textContent = label2;
+    btn.onmouseenter = () => css2(btn, { background: palette.hoverBg, borderColor: palette.hoverBorder });
+    btn.onmouseleave = () => css2(btn, { background: palette.bg, borderColor: palette.border });
+    btn.onclick = async () => {
+      css2(btn, { opacity: "0.6", pointerEvents: "none" });
+      try {
+        await onClick();
+      } finally {
+        css2(btn, { opacity: "1", pointerEvents: "auto" });
+      }
+    };
+    return btn;
+  }
+  function toggle(checked, onChange) {
+    const wrap = document.createElement("label");
+    wrap.className = "qws-pnl-toggle";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = checked;
+    const track = document.createElement("span");
+    track.className = "qws-pnl-track";
+    const thumb = document.createElement("span");
+    thumb.className = "qws-pnl-thumb";
+    track.appendChild(thumb);
+    wrap.append(input, track);
+    input.addEventListener("change", () => onChange(input.checked));
+    wrap.setChecked = (value) => {
+      input.checked = value;
+    };
+    return wrap;
+  }
+  function chip(text, tone) {
+    const el2 = document.createElement("span");
+    const color = tone === "ok" ? TEAL2 : WARN;
+    css2(el2, {
+      alignSelf: "flex-start",
+      fontSize: "10px",
+      fontWeight: "600",
+      padding: "2px 7px",
+      borderRadius: "999px",
+      color,
+      background: tone === "ok" ? TEAL_DIM2 : "rgba(251,191,36,0.12)"
+    });
+    el2.textContent = text;
+    return el2;
+  }
+
   // src/ui/menus/keybinds.ts
+  var ICON_BOX_PX = 26;
+  function spriteLookup(frameKey) {
+    const parts = frameKey.split("/").filter(Boolean);
+    const name = parts[parts.length - 1] ?? frameKey;
+    const category = parts.length >= 2 ? parts[parts.length - 2] : "";
+    const categories = [category, `${category}s`, "ui", "decor", "objects"].filter(
+      (value, index, all) => value && all.indexOf(value) === index
+    );
+    return { categories, name };
+  }
+  function isSectionCollapsed(sectionId) {
+    return getAriesStorage().keybinds?.collapsed?.[sectionId] === true;
+  }
+  function setSectionCollapsed(sectionId, collapsed) {
+    updateAriesStorage((current) => {
+      const keybinds = current.keybinds ?? (current.keybinds = {});
+      const map2 = keybinds.collapsed ?? (keybinds.collapsed = {});
+      if (collapsed) map2[sectionId] = true;
+      else delete map2[sectionId];
+    });
+  }
+  function createHoldControl(action2) {
+    const holdDetection = action2.holdDetection;
+    const wrap = document.createElement("div");
+    css2(wrap, { display: "flex", alignItems: "center", gap: "7px", flex: "0 0 auto" });
+    const label2 = document.createElement("span");
+    css2(label2, { fontSize: "11px", color: TEXT_DIM3, whiteSpace: "nowrap" });
+    label2.textContent = holdDetection.label;
+    if (holdDetection.description) label2.title = holdDetection.description;
+    const control = toggle(
+      getKeybindHoldDetection(action2.id),
+      (on) => setKeybindHoldDetection(action2.id, on)
+    );
+    control.title = holdDetection.description || holdDetection.label;
+    const detach = onKeybindHoldDetectionChange(action2.id, (enabled2) => {
+      control.setChecked?.(enabled2);
+    });
+    wrap.append(label2, control);
+    return { root: wrap, detach };
+  }
   function createKeybindRow(ui, action2) {
+    const row = document.createElement("div");
+    css2(row, {
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      padding: "8px 10px",
+      borderRadius: "10px",
+      background: CARD_BG2,
+      border: `1px solid ${BORDER3}`,
+      flexShrink: "0"
+    });
+    if (action2.icon) {
+      const iconBox = document.createElement("div");
+      css2(iconBox, {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: `${ICON_BOX_PX}px`,
+        height: `${ICON_BOX_PX}px`,
+        flex: "0 0 auto"
+      });
+      if (/^https?:\/\//i.test(action2.icon)) {
+        const img = document.createElement("img");
+        css2(img, { maxWidth: "100%", maxHeight: "100%", imageRendering: "pixelated" });
+        img.alt = "";
+        setImageSafe(img, action2.icon);
+        iconBox.appendChild(img);
+      } else {
+        const { categories, name: name2 } = spriteLookup(action2.icon);
+        attachSpriteIcon(iconBox, categories, name2, ICON_BOX_PX, "keybinds");
+      }
+      row.appendChild(iconBox);
+    }
+    const labelCol = document.createElement("div");
+    css2(labelCol, { display: "flex", flexDirection: "column", gap: "2px", flex: "1 1 auto", minWidth: "0" });
+    const name = document.createElement("div");
+    css2(name, { fontSize: "12px", color: TEXT3, overflow: "hidden", textOverflow: "ellipsis" });
+    name.textContent = action2.label;
+    labelCol.appendChild(name);
+    if (action2.hint) {
+      const hint = document.createElement("div");
+      css2(hint, { fontSize: "10px", color: TEXT_DIM3, lineHeight: "1.4" });
+      hint.textContent = action2.hint;
+      labelCol.appendChild(hint);
+    }
     const controls = document.createElement("div");
-    controls.style.display = "flex";
-    controls.style.alignItems = "center";
-    controls.style.flexWrap = "nowrap";
-    controls.style.gap = "8px";
-    const button2 = ui.hotkeyButton(
+    css2(controls, { display: "flex", alignItems: "center", gap: "8px", flex: "0 0 auto" });
+    const hotkeyButton = ui.hotkeyButton(
       getKeybind(action2.id),
       (hk) => setKeybind(action2.id, hk),
       {
@@ -50763,221 +51126,133 @@ Restore figures are averages; unlucky streaks do worse.`;
         allowModifierOnly: action2.allowModifierOnly
       }
     );
-    button2.style.flexShrink = "0";
-    controls.appendChild(button2);
-    let detachHoldListener = null;
+    css2(hotkeyButton, { flexShrink: "0" });
+    let detachHold = null;
     if (action2.holdDetection) {
-      if (action2.id === "game.action") {
-        const holdContainer = document.createElement("div");
-        holdContainer.style.display = "flex";
-        holdContainer.style.flexDirection = "column";
-        holdContainer.style.alignItems = "center";
-        holdContainer.style.gap = "4px";
-        holdContainer.style.flex = "0 1 160px";
-        holdContainer.style.alignSelf = "center";
-        const holdButton = ui.btn("Hold", { size: "sm", variant: "secondary" });
-        holdButton.style.display = "inline-flex";
-        holdButton.style.alignItems = "center";
-        holdButton.style.gap = "6px";
-        holdButton.setAttribute("aria-label", action2.holdDetection.label);
-        holdButton.title = action2.holdDetection.label;
-        const holdIndicator = document.createElement("span");
-        holdIndicator.textContent = "\u25CF";
-        holdIndicator.style.fontSize = "10px";
-        holdIndicator.style.lineHeight = "1";
-        holdIndicator.setAttribute("aria-hidden", "true");
-        const holdText = document.createElement("span");
-        holdText.textContent = "Hold";
-        holdButton.replaceChildren(holdIndicator, holdText);
-        let holdEnabled = getKeybindHoldDetection(action2.id);
-        const updateHoldButton = (enabled2) => {
-          holdEnabled = enabled2;
-          holdButton.setAttribute("aria-pressed", enabled2 ? "true" : "false");
-          holdIndicator.style.color = enabled2 ? "#34c759" : "#ff3b30";
-        };
-        updateHoldButton(holdEnabled);
-        holdButton.addEventListener("click", () => {
-          setKeybindHoldDetection(action2.id, !holdEnabled);
-        });
-        detachHoldListener = onKeybindHoldDetectionChange(action2.id, (enabled2) => {
-          updateHoldButton(enabled2);
-        });
-        holdContainer.appendChild(holdButton);
-        if (action2.holdDetection.description) {
-          const holdDesc = document.createElement("div");
-          holdDesc.textContent = action2.holdDetection.description;
-          holdDesc.style.fontSize = "11px";
-          holdDesc.style.opacity = "0.65";
-          holdDesc.style.maxWidth = "100%";
-          holdDesc.style.textAlign = "center";
-          holdContainer.appendChild(holdDesc);
-        }
-        controls.appendChild(holdContainer);
-      } else {
-        const holdContainer = document.createElement("div");
-        holdContainer.style.display = "flex";
-        holdContainer.style.flexDirection = "column";
-        holdContainer.style.alignItems = "flex-start";
-        holdContainer.style.gap = "2px";
-        holdContainer.style.padding = "2px 4px";
-        holdContainer.style.borderRadius = "8px";
-        holdContainer.style.background = "rgba(255, 255, 255, 0.04)";
-        holdContainer.style.flex = "0 1 180px";
-        holdContainer.style.maxWidth = "180px";
-        const holdLabel = document.createElement("label");
-        holdLabel.style.display = "inline-flex";
-        holdLabel.style.alignItems = "center";
-        holdLabel.style.gap = "6px";
-        holdLabel.style.fontSize = "12px";
-        holdLabel.style.cursor = "pointer";
-        const holdToggle = ui.switch(getKeybindHoldDetection(action2.id));
-        holdToggle.style.margin = "0";
-        holdToggle.setAttribute("aria-label", action2.holdDetection.label);
-        const holdText = document.createElement("span");
-        holdText.textContent = action2.holdDetection.label;
-        holdText.style.opacity = "0.85";
-        holdLabel.append(holdToggle, holdText);
-        holdContainer.appendChild(holdLabel);
-        if (action2.holdDetection.description) {
-          const holdDesc = document.createElement("div");
-          holdDesc.textContent = action2.holdDetection.description;
-          holdDesc.style.fontSize = "11px";
-          holdDesc.style.opacity = "0.65";
-          holdDesc.style.maxWidth = "100%";
-          holdContainer.appendChild(holdDesc);
-        }
-        holdToggle.addEventListener("change", () => {
-          setKeybindHoldDetection(action2.id, holdToggle.checked);
-        });
-        detachHoldListener = onKeybindHoldDetectionChange(action2.id, (enabled2) => {
-          holdToggle.checked = enabled2;
-        });
-        controls.appendChild(holdContainer);
-      }
+      const hold = createHoldControl(action2);
+      detachHold = hold.detach;
+      controls.appendChild(hold.root);
     }
-    const actionsWrap = document.createElement("div");
-    actionsWrap.style.display = "flex";
-    actionsWrap.style.alignItems = "center";
-    actionsWrap.style.gap = "4px";
-    actionsWrap.style.marginLeft = "auto";
-    const clearBtn = action2.sectionId === "game" && !action2.allowClear ? null : ui.btn("", {
-      icon: "\u{1F5D1}\uFE0F",
-      variant: "danger",
-      size: "sm",
-      tooltip: "Remove this shortcut",
-      ariaLabel: "Remove keybind"
+    controls.appendChild(hotkeyButton);
+    const clearBtn = action2.sectionId === "game" && !action2.allowClear ? null : button("\u2715", "danger", () => {
+      setKeybind(action2.id, null);
+      const refreshed = getKeybind(action2.id);
+      hotkeyButton.refreshHotkey(refreshed);
+      updateButtons2(refreshed);
     });
     if (clearBtn) {
-      actionsWrap.appendChild(clearBtn);
+      clearBtn.title = "Remove this shortcut";
+      controls.appendChild(clearBtn);
     }
     const defaultHotkey = getDefaultKeybind(action2.id);
     const defaultString = hotkeyToString(defaultHotkey);
-    let resetBtn = null;
-    if (defaultHotkey) {
-      resetBtn = ui.btn("", {
-        icon: "\u{1F504}",
-        variant: "primary",
-        size: "sm",
-        tooltip: "Restore default shortcut",
-        ariaLabel: "Reset keybind to default"
-      });
-      actionsWrap.appendChild(resetBtn);
-    }
-    const setButtonEnabled = (btn, enabled2) => {
-      if (!btn) return;
-      const setter = btn.setEnabled;
-      if (setter) {
-        setter(enabled2);
-      } else {
-        btn.disabled = !enabled2;
-        btn.classList.toggle("is-disabled", !enabled2);
-        btn.setAttribute("aria-disabled", (!enabled2).toString());
-      }
-    };
-    const updateButtons2 = (current) => {
-      const hasHotkey = hotkeyToString(current).length > 0;
-      if (clearBtn) {
-        setButtonEnabled(clearBtn, hasHotkey);
-      }
-      if (resetBtn) {
-        const isDefault = hotkeyToString(current) === defaultString;
-        setButtonEnabled(resetBtn, !isDefault);
-      }
-    };
-    if (clearBtn) {
-      clearBtn.addEventListener("click", () => {
-        setKeybind(action2.id, null);
-        const refreshed = getKeybind(action2.id);
-        button2.refreshHotkey(refreshed);
-        updateButtons2(refreshed);
-      });
-    }
+    const resetBtn = defaultHotkey ? button("\u27F2", "neutral", () => {
+      resetKeybind(action2.id);
+      const refreshed = getKeybind(action2.id);
+      hotkeyButton.refreshHotkey(refreshed);
+      updateButtons2(refreshed);
+    }) : null;
     if (resetBtn) {
-      resetBtn.addEventListener("click", () => {
-        resetKeybind(action2.id);
-        const refreshed = getKeybind(action2.id);
-        button2.refreshHotkey(refreshed);
-        updateButtons2(refreshed);
-      });
+      resetBtn.title = "Restore default shortcut";
+      controls.appendChild(resetBtn);
     }
-    controls.appendChild(actionsWrap);
+    function setEnabled(btn, enabled2) {
+      if (!btn) return;
+      btn.disabled = !enabled2;
+      css2(btn, { opacity: enabled2 ? "1" : "0.35", pointerEvents: enabled2 ? "auto" : "none" });
+    }
+    function updateButtons2(current) {
+      setEnabled(clearBtn, hotkeyToString(current).length > 0);
+      setEnabled(resetBtn, hotkeyToString(current) !== defaultString);
+    }
     updateButtons2(getKeybind(action2.id));
     const stop2 = onKeybindChange(action2.id, (hk) => {
-      button2.refreshHotkey(hk);
+      hotkeyButton.refreshHotkey(hk);
       updateButtons2(hk);
     });
     ui.on("unmounted", stop2);
-    if (detachHoldListener) ui.on("unmounted", detachHoldListener);
-    const row = ui.formRow(action2.label, controls, { labelWidth: "180px" });
-    row.label.style.fontSize = "13px";
-    row.label.style.opacity = "0.92";
-    if (action2.hint) {
-      const hintEl = document.createElement("div");
-      hintEl.textContent = action2.hint;
-      hintEl.style.fontSize = "11px";
-      hintEl.style.opacity = "0.7";
-      hintEl.style.marginTop = "2px";
-      hintEl.style.gridColumn = "2 / 3";
-      row.root.appendChild(hintEl);
-    }
-    return row.root;
+    if (detachHold) ui.on("unmounted", detachHold);
+    row.append(labelCol, controls);
+    return row;
   }
   async function renderKeybindsMenu(container) {
+    ensurePanelStyles();
     const ui = new Menu({ id: "keybinds", compact: true });
     ui.mount(container);
-    const view = ui.root.querySelector(".qmm-views");
-    view.innerHTML = "";
-    view.style.display = "flex";
-    view.style.flexDirection = "column";
-    view.style.gap = "12px";
-    view.style.padding = "8px";
-    view.style.maxHeight = "60vh";
-    view.style.overflowY = "auto";
-    const wrapper = document.createElement("div");
-    wrapper.style.display = "grid";
-    wrapper.style.gap = "12px";
-    wrapper.style.width = "100%";
-    wrapper.style.maxWidth = "720px";
-    wrapper.style.margin = "0 auto";
+    const root = ui.root.querySelector(".qmm-views") ?? ui.root;
+    root.innerHTML = "";
+    root.classList.add("qws-pnl-root");
+    css2(root, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "12px",
+      width: "620px",
+      maxWidth: "100%",
+      // A definite height, not 100%: the HUD window is itself a scroller and has
+      // no fixed height, so `height:100%` would collapse onto the content and
+      // hand the scrollbar back to the whole window.
+      height: "min(70vh, 600px)",
+      overflowY: "auto",
+      boxSizing: "border-box"
+    });
     for (const section of getKeybindSections()) {
-      const card3 = ui.card(`${section.icon} ${section.title}`, { tone: "muted", align: "stretch" });
-      card3.root.dataset.section = section.id;
-      card3.body.style.display = "flex";
-      card3.body.style.flexDirection = "column";
-      card3.body.style.gap = "10px";
-      const desc = document.createElement("p");
-      desc.textContent = section.description;
-      desc.style.margin = "0";
-      desc.style.fontSize = "12px";
-      desc.style.opacity = "0.78";
-      card3.body.appendChild(desc);
-      for (const action2 of section.actions) {
-        const row = createKeybindRow(ui, action2);
-        card3.body.appendChild(row);
+      const sectionCard = card2();
+      sectionCard.dataset.section = section.id;
+      css2(sectionCard, { flexShrink: "0", minHeight: "auto" });
+      const head = document.createElement("button");
+      head.type = "button";
+      css2(head, {
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        padding: "0",
+        border: "none",
+        background: "none",
+        cursor: "pointer",
+        textAlign: "left",
+        font: "inherit",
+        color: "inherit"
+      });
+      const chevron = document.createElement("span");
+      css2(chevron, {
+        color: TEXT_DIM3,
+        fontSize: "10px",
+        transition: "transform 140ms ease",
+        flex: "0 0 auto",
+        marginLeft: "auto"
+      });
+      chevron.textContent = "\u25B6";
+      const titles = document.createElement("div");
+      css2(titles, { display: "flex", flexDirection: "column", gap: "3px", minWidth: "0", flex: "1 1 auto" });
+      titles.appendChild(sectionLabel2(`${section.icon} ${section.title}`));
+      if (section.description) {
+        const desc = document.createElement("div");
+        css2(desc, { fontSize: "11px", color: TEXT_DIM3, lineHeight: "1.45" });
+        desc.textContent = section.description;
+        titles.appendChild(desc);
       }
-      wrapper.appendChild(card3.root);
+      head.append(titles, chevron);
+      sectionCard.appendChild(head);
+      const body = document.createElement("div");
+      css2(body, { display: "flex", flexDirection: "column", gap: "8px" });
+      for (const action2 of section.actions) {
+        body.appendChild(createKeybindRow(ui, action2));
+      }
+      sectionCard.appendChild(body);
+      let collapsed = isSectionCollapsed(section.id);
+      const applyCollapsed = () => {
+        body.style.display = collapsed ? "none" : "flex";
+        chevron.style.transform = collapsed ? "rotate(0deg)" : "rotate(90deg)";
+        head.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      };
+      applyCollapsed();
+      head.addEventListener("click", () => {
+        collapsed = !collapsed;
+        applyCollapsed();
+        setSectionCollapsed(section.id, collapsed);
+      });
+      root.appendChild(sectionCard);
     }
-    view.appendChild(wrapper);
   }
 
   // src/services/players.ts
@@ -51663,41 +51938,41 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
 
   // src/ui/menus/room.ts
-  var STYLE_ID4 = "qws-room-menu-css";
-  var TEAL2 = "#5eead4";
-  var TEAL_DIM2 = "rgba(94,234,212,0.12)";
+  var STYLE_ID5 = "qws-room-menu-css";
+  var TEAL3 = "#5eead4";
+  var TEAL_DIM3 = "rgba(94,234,212,0.12)";
   var TEAL_MID2 = "rgba(94,234,212,0.22)";
-  var TEAL_BORDER2 = "rgba(94,234,212,0.3)";
+  var TEAL_BORDER3 = "rgba(94,234,212,0.3)";
   var TEAL_BORDER_HI = "rgba(94,234,212,0.55)";
-  var BORDER3 = "rgba(255,255,255,0.08)";
+  var BORDER4 = "rgba(255,255,255,0.08)";
   var BORDER_HI2 = "rgba(255,255,255,0.16)";
-  var CARD_BG2 = "rgba(255,255,255,0.03)";
+  var CARD_BG3 = "rgba(255,255,255,0.03)";
   var CARD_BG_HI2 = "rgba(255,255,255,0.06)";
-  var TEXT3 = "#e7eef7";
-  var TEXT_DIM3 = "rgba(226,232,240,0.45)";
+  var TEXT4 = "#e7eef7";
+  var TEXT_DIM4 = "rgba(226,232,240,0.45)";
   var GREEN = "#10b981";
   function ensureStyles3() {
-    if (document.getElementById(STYLE_ID4)) return;
+    if (document.getElementById(STYLE_ID5)) return;
     const st = document.createElement("style");
-    st.id = STYLE_ID4;
+    st.id = STYLE_ID5;
     st.textContent = `
 .qws-rm-scroll::-webkit-scrollbar { width: 6px; }
 .qws-rm-scroll::-webkit-scrollbar-track { background: transparent; }
-.qws-rm-scroll::-webkit-scrollbar-thumb { background: ${TEAL_DIM2}; border-radius: 3px; }
+.qws-rm-scroll::-webkit-scrollbar-thumb { background: ${TEAL_DIM3}; border-radius: 3px; }
 .qws-rm-scroll::-webkit-scrollbar-thumb:hover { background: rgba(94,234,212,0.35); }
-.qws-rm-scroll { scrollbar-width: thin; scrollbar-color: ${TEAL_DIM2} transparent; }
+.qws-rm-scroll { scrollbar-width: thin; scrollbar-color: ${TEAL_DIM3} transparent; }
 @keyframes qws-rm-spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
 `;
     document.head.appendChild(st);
   }
-  var css2 = (el2, s) => Object.assign(el2.style, s);
-  function sectionLabel2(text) {
+  var css3 = (el2, s) => Object.assign(el2.style, s);
+  function sectionLabel3(text) {
     const el2 = document.createElement("div");
-    css2(el2, {
+    css3(el2, {
       fontSize: "10px",
       fontWeight: "700",
       letterSpacing: "0.08em",
-      color: TEXT_DIM3,
+      color: TEXT_DIM4,
       textTransform: "uppercase",
       paddingBottom: "6px"
     });
@@ -51706,7 +51981,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function avatar(player2, size) {
     const el2 = document.createElement("div");
-    css2(el2, {
+    css3(el2, {
       width: `${size}px`,
       height: `${size}px`,
       borderRadius: "50%",
@@ -51716,18 +51991,18 @@ Restore figures are averages; unlucky streaks do worse.`;
       justifyContent: "center",
       fontSize: `${Math.floor(size * 0.38)}px`,
       fontWeight: "700",
-      color: TEAL2,
+      color: TEAL3,
       overflow: "hidden"
     });
     if (player2.discordAvatarUrl) {
-      css2(el2, {
+      css3(el2, {
         backgroundImage: `url(${player2.discordAvatarUrl})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
-        border: `2px solid ${TEAL_BORDER2}`
+        border: `2px solid ${TEAL_BORDER3}`
       });
     } else {
-      css2(el2, {
+      css3(el2, {
         background: "linear-gradient(135deg, rgba(94,234,212,0.22), rgba(59,130,246,0.22))",
         border: `2px solid rgba(94,234,212,0.2)`
       });
@@ -51737,15 +52012,15 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function statusPill(online) {
     const wrap = document.createElement("div");
-    css2(wrap, {
+    css3(wrap, {
       display: "flex",
       alignItems: "center",
       gap: "4px",
       fontSize: "11px",
-      color: online ? GREEN : TEXT_DIM3
+      color: online ? GREEN : TEXT_DIM4
     });
     const dot = document.createElement("span");
-    css2(dot, {
+    css3(dot, {
       width: "6px",
       height: "6px",
       borderRadius: "50%",
@@ -51757,16 +52032,16 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function primaryBtn2(label2, iconSvg, onClick) {
     const btn = document.createElement("button");
-    css2(btn, {
+    css3(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       gap: "7px",
       padding: "10px 14px",
-      border: `1px solid ${TEAL_BORDER2}`,
+      border: `1px solid ${TEAL_BORDER3}`,
       borderRadius: "10px",
-      background: TEAL_DIM2,
-      color: TEAL2,
+      background: TEAL_DIM3,
+      color: TEAL3,
       fontSize: "12px",
       fontWeight: "600",
       cursor: "pointer",
@@ -51776,16 +52051,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const icon = document.createElement("span");
     icon.innerHTML = iconSvg;
-    css2(icon, { display: "flex", alignItems: "center", flexShrink: "0" });
+    css3(icon, { display: "flex", alignItems: "center", flexShrink: "0" });
     btn.append(icon, document.createTextNode(label2));
-    btn.onmouseenter = () => css2(btn, { background: TEAL_MID2, borderColor: TEAL_BORDER_HI });
-    btn.onmouseleave = () => css2(btn, { background: TEAL_DIM2, borderColor: TEAL_BORDER2 });
+    btn.onmouseenter = () => css3(btn, { background: TEAL_MID2, borderColor: TEAL_BORDER_HI });
+    btn.onmouseleave = () => css3(btn, { background: TEAL_DIM3, borderColor: TEAL_BORDER3 });
     btn.onclick = async () => {
-      css2(btn, { opacity: "0.6", pointerEvents: "none" });
+      css3(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css2(btn, { opacity: "1", pointerEvents: "auto" });
+        css3(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
@@ -51794,13 +52069,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     let isActive = active;
     const btn = document.createElement("button");
     const applyState2 = () => {
-      css2(btn, {
-        border: `1px solid ${isActive ? TEAL_BORDER_HI : BORDER3}`,
-        background: isActive ? TEAL_MID2 : CARD_BG2,
-        color: isActive ? TEAL2 : TEXT3
+      css3(btn, {
+        border: `1px solid ${isActive ? TEAL_BORDER_HI : BORDER4}`,
+        background: isActive ? TEAL_MID2 : CARD_BG3,
+        color: isActive ? TEAL3 : TEXT4
       });
     };
-    css2(btn, {
+    css3(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -51816,22 +52091,22 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const icon = document.createElement("span");
     icon.innerHTML = iconSvg;
-    css2(icon, { display: "flex", alignItems: "center", flexShrink: "0" });
+    css3(icon, { display: "flex", alignItems: "center", flexShrink: "0" });
     btn.append(icon, document.createTextNode(label2));
     applyState2();
     btn.onmouseenter = () => {
-      if (!isActive) css2(btn, { background: CARD_BG_HI2, borderColor: TEAL_BORDER2 });
+      if (!isActive) css3(btn, { background: CARD_BG_HI2, borderColor: TEAL_BORDER3 });
     };
     btn.onmouseleave = applyState2;
     btn.onclick = async () => {
-      css2(btn, { opacity: "0.6", pointerEvents: "none" });
+      css3(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         const next = !isActive;
         await onToggle(next);
         isActive = next;
         applyState2();
       } finally {
-        css2(btn, { opacity: "1", pointerEvents: "auto" });
+        css3(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     btn.__setActive = (v) => {
@@ -51842,15 +52117,15 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function secondaryBtn2(label2, iconSvg, onClick) {
     const btn = document.createElement("button");
-    css2(btn, {
+    css3(btn, {
       display: "flex",
       alignItems: "center",
       gap: "7px",
       padding: "9px 12px",
-      border: `1px solid ${BORDER3}`,
+      border: `1px solid ${BORDER4}`,
       borderRadius: "10px",
-      background: CARD_BG2,
-      color: TEXT3,
+      background: CARD_BG3,
+      color: TEXT4,
       fontSize: "12px",
       fontWeight: "500",
       cursor: "pointer",
@@ -51860,16 +52135,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const icon = document.createElement("span");
     icon.innerHTML = iconSvg;
-    css2(icon, { display: "flex", alignItems: "center", flexShrink: "0", opacity: "0.7" });
+    css3(icon, { display: "flex", alignItems: "center", flexShrink: "0", opacity: "0.7" });
     btn.append(icon, document.createTextNode(label2));
-    btn.onmouseenter = () => css2(btn, { background: CARD_BG_HI2, borderColor: BORDER_HI2 });
-    btn.onmouseleave = () => css2(btn, { background: CARD_BG2, borderColor: BORDER3 });
+    btn.onmouseenter = () => css3(btn, { background: CARD_BG_HI2, borderColor: BORDER_HI2 });
+    btn.onmouseleave = () => css3(btn, { background: CARD_BG3, borderColor: BORDER4 });
     btn.onclick = async () => {
-      css2(btn, { opacity: "0.6", pointerEvents: "none" });
+      css3(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css2(btn, { opacity: "1", pointerEvents: "auto" });
+        css3(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
@@ -51888,9 +52163,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   };
   async function renderRoomMenu(root) {
     ensureStyles3();
-    css2(root, { padding: "0", overflow: "hidden" });
+    css3(root, { padding: "0", overflow: "hidden" });
     const wrap = document.createElement("div");
-    css2(wrap, {
+    css3(wrap, {
       display: "flex",
       flexDirection: "row",
       minHeight: "400px",
@@ -51899,7 +52174,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const leftPane = document.createElement("div");
     leftPane.className = "qws-rm-scroll";
-    css2(leftPane, {
+    css3(leftPane, {
       width: "200px",
       flexShrink: "0",
       display: "flex",
@@ -51907,11 +52182,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       gap: "5px",
       overflowY: "auto",
       padding: "14px 8px 14px 12px",
-      borderRight: `1px solid ${BORDER3}`
+      borderRight: `1px solid ${BORDER4}`
     });
     const rightPane = document.createElement("div");
     rightPane.className = "qws-rm-scroll";
-    css2(rightPane, {
+    css3(rightPane, {
       flex: "1",
       overflowY: "auto",
       padding: "14px 14px 14px 16px",
@@ -51935,44 +52210,44 @@ Restore figures are averages; unlucky streaks do worse.`;
       const player2 = playerId2 ? players.find((p) => p.id === playerId2) ?? null : null;
       if (!player2) {
         const hint = document.createElement("div");
-        css2(hint, {
+        css3(hint, {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           height: "100%",
           gap: "10px",
-          color: TEXT_DIM3,
+          color: TEXT_DIM4,
           fontSize: "12px",
           paddingTop: "60px"
         });
         const iconWrap = document.createElement("div");
         iconWrap.innerHTML = ICONS.user.replace("13", "28").replace("13", "28");
-        css2(iconWrap, { opacity: "0.35" });
+        css3(iconWrap, { opacity: "0.35" });
         hint.append(iconWrap, document.createTextNode("Select a player"));
         rightPane.appendChild(hint);
         return;
       }
       const content = document.createElement("div");
-      css2(content, { display: "flex", flexDirection: "column", gap: "18px" });
+      css3(content, { display: "flex", flexDirection: "column", gap: "18px" });
       const profileCard = document.createElement("div");
-      css2(profileCard, {
+      css3(profileCard, {
         display: "flex",
         alignItems: "center",
         gap: "12px",
         padding: "14px",
-        background: CARD_BG2,
+        background: CARD_BG3,
         borderRadius: "12px",
-        border: `1px solid ${BORDER3}`
+        border: `1px solid ${BORDER4}`
       });
       const av = avatar(player2, 46);
       const infoBlock = document.createElement("div");
-      css2(infoBlock, { display: "flex", flexDirection: "column", gap: "4px", minWidth: "0", flex: "1" });
+      css3(infoBlock, { display: "flex", flexDirection: "column", gap: "4px", minWidth: "0", flex: "1" });
       const nameEl = document.createElement("div");
-      css2(nameEl, {
+      css3(nameEl, {
         fontSize: "15px",
         fontWeight: "700",
-        color: TEXT3,
+        color: TEXT4,
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap"
@@ -51982,9 +52257,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       profileCard.append(av, infoBlock);
       content.appendChild(profileCard);
       const teleSection = document.createElement("div");
-      teleSection.appendChild(sectionLabel2("Teleport"));
+      teleSection.appendChild(sectionLabel3("Teleport"));
       const teleRow = document.createElement("div");
-      css2(teleRow, { display: "flex", gap: "8px" });
+      css3(teleRow, { display: "flex", gap: "8px" });
       teleRow.append(
         primaryBtn2("To player", ICONS.teleport, () => PlayersService.teleportToPlayer(player2.id)),
         primaryBtn2("To garden", ICONS.garden, () => PlayersService.teleportToGarden(player2.id))
@@ -51992,9 +52267,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       teleSection.appendChild(teleRow);
       content.appendChild(teleSection);
       const followSection = document.createElement("div");
-      followSection.appendChild(sectionLabel2("Follow"));
+      followSection.appendChild(sectionLabel3("Follow"));
       const followRow = document.createElement("div");
-      css2(followRow, { display: "flex", gap: "8px" });
+      css3(followRow, { display: "flex", gap: "8px" });
       const followPlayerBtn = toggleBtn(
         "Follow player",
         ICONS.follow,
@@ -52013,9 +52288,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       followSection.appendChild(followRow);
       content.appendChild(followSection);
       const inspectSection = document.createElement("div");
-      inspectSection.appendChild(sectionLabel2("Inspect"));
+      inspectSection.appendChild(sectionLabel3("Inspect"));
       const inspectGrid = document.createElement("div");
-      css2(inspectGrid, { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" });
+      css3(inspectGrid, { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" });
       inspectGrid.append(
         secondaryBtn2("Inventory", ICONS.inventory, async () => {
           hideWin();
@@ -52057,7 +52332,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       inspectSection.appendChild(inspectGrid);
       content.appendChild(inspectSection);
       const editorSection = document.createElement("div");
-      editorSection.appendChild(sectionLabel2("Editor"));
+      editorSection.appendChild(sectionLabel3("Editor"));
       editorSection.appendChild(
         secondaryBtn2("Save player garden", ICONS.save, async () => {
           const fn = window.qwsEditorSaveGardenForPlayer ?? pageWindow?.qwsEditorSaveGardenForPlayer;
@@ -52072,26 +52347,26 @@ Restore figures are averages; unlucky streaks do worse.`;
       );
       content.appendChild(editorSection);
       const valSection = document.createElement("div");
-      valSection.appendChild(sectionLabel2("Crop values"));
+      valSection.appendChild(sectionLabel3("Crop values"));
       const valRow = document.createElement("div");
-      css2(valRow, { display: "flex", gap: "8px" });
+      css3(valRow, { display: "flex", gap: "8px" });
       const makeValCard = (label2) => {
         const card3 = document.createElement("div");
-        css2(card3, {
+        css3(card3, {
           flex: "1",
           padding: "11px 14px",
-          background: CARD_BG2,
+          background: CARD_BG3,
           borderRadius: "10px",
-          border: `1px solid ${BORDER3}`,
+          border: `1px solid ${BORDER4}`,
           display: "flex",
           flexDirection: "column",
           gap: "4px"
         });
         const lbl = document.createElement("div");
-        css2(lbl, { fontSize: "10px", color: TEXT_DIM3, fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" });
+        css3(lbl, { fontSize: "10px", color: TEXT_DIM4, fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" });
         lbl.textContent = label2;
         const val = document.createElement("div");
-        css2(val, { fontSize: "15px", fontWeight: "700", color: "#FFD84D" });
+        css3(val, { fontSize: "15px", fontWeight: "700", color: "#FFD84D" });
         val.textContent = "\u2026";
         card3.append(lbl, val);
         return { card: card3, val };
@@ -52118,20 +52393,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     function createPlayerCard(player2) {
       const isSelected = selectedId === player2.id;
       const card3 = document.createElement("div");
-      css2(card3, {
+      css3(card3, {
         display: "flex",
         alignItems: "center",
         gap: "10px",
         padding: "9px 10px",
         borderRadius: "10px",
-        border: isSelected ? `1px solid ${TEAL_BORDER2}` : `1px solid ${BORDER3}`,
-        background: isSelected ? TEAL_DIM2 : "rgba(255,255,255,0.02)",
+        border: isSelected ? `1px solid ${TEAL_BORDER3}` : `1px solid ${BORDER4}`,
+        background: isSelected ? TEAL_DIM3 : "rgba(255,255,255,0.02)",
         cursor: "pointer",
         transition: "all 120ms ease"
       });
       if (!isSelected) {
-        card3.onmouseenter = () => css2(card3, { background: CARD_BG_HI2, borderColor: "rgba(94,234,212,0.18)" });
-        card3.onmouseleave = () => css2(card3, { background: "rgba(255,255,255,0.02)", borderColor: BORDER3 });
+        card3.onmouseenter = () => css3(card3, { background: CARD_BG_HI2, borderColor: "rgba(94,234,212,0.18)" });
+        card3.onmouseleave = () => css3(card3, { background: "rgba(255,255,255,0.02)", borderColor: BORDER4 });
       }
       card3.onclick = () => {
         selectedId = player2.id;
@@ -52140,28 +52415,28 @@ Restore figures are averages; unlucky streaks do worse.`;
       };
       const av = avatar(player2, 32);
       const info = document.createElement("div");
-      css2(info, { flex: "1", minWidth: "0" });
+      css3(info, { flex: "1", minWidth: "0" });
       const nameEl = document.createElement("div");
-      css2(nameEl, {
+      css3(nameEl, {
         fontSize: "12px",
         fontWeight: "600",
-        color: TEXT3,
+        color: TEXT4,
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap"
       });
       nameEl.textContent = player2.name || player2.id;
       const st = document.createElement("div");
-      css2(st, {
+      css3(st, {
         display: "flex",
         alignItems: "center",
         gap: "4px",
         marginTop: "2px",
         fontSize: "10px",
-        color: player2.isConnected ? GREEN : TEXT_DIM3
+        color: player2.isConnected ? GREEN : TEXT_DIM4
       });
       const dot = document.createElement("span");
-      css2(dot, { width: "5px", height: "5px", borderRadius: "50%", background: player2.isConnected ? GREEN : "rgba(226,232,240,0.3)", flexShrink: "0" });
+      css3(dot, { width: "5px", height: "5px", borderRadius: "50%", background: player2.isConnected ? GREEN : "rgba(226,232,240,0.3)", flexShrink: "0" });
       st.append(dot, document.createTextNode(player2.isConnected ? "Online" : "Offline"));
       info.append(nameEl, st);
       card3.append(av, info);
@@ -52170,20 +52445,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     function renderPlayerList() {
       leftPane.innerHTML = "";
       const header = document.createElement("div");
-      css2(header, {
+      css3(header, {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         marginBottom: "6px"
       });
       const countEl = document.createElement("div");
-      css2(countEl, { fontSize: "10px", fontWeight: "700", letterSpacing: "0.07em", color: TEXT_DIM3, textTransform: "uppercase" });
+      css3(countEl, { fontSize: "10px", fontWeight: "700", letterSpacing: "0.07em", color: TEXT_DIM4, textTransform: "uppercase" });
       countEl.textContent = `${players.length} player${players.length !== 1 ? "s" : ""}`;
       header.appendChild(countEl);
       leftPane.appendChild(header);
       if (players.length === 0) {
         const empty = document.createElement("div");
-        css2(empty, { paddingTop: "16px", textAlign: "center", color: TEXT_DIM3, fontSize: "12px" });
+        css3(empty, { paddingTop: "16px", textAlign: "center", color: TEXT_DIM4, fontSize: "12px" });
         empty.textContent = "No players in room";
         leftPane.appendChild(empty);
         return;
@@ -52471,9 +52746,37 @@ Restore figures are averages; unlucky streaks do worse.`;
     applied.clear();
   }
 
+  // src/sprite/api/frameCanvas.ts
+  var canvasCache = /* @__PURE__ */ new Map();
+  var CACHE_MAX = 600;
+  function renderFrameToCanvas(frameKey) {
+    const cached = canvasCache.get(frameKey);
+    if (cached) return cached;
+    const state3 = getSpriteState();
+    const texture = state3.tex.get(frameKey);
+    const ctors = state3.ctors;
+    if (!texture || !ctors?.Sprite || !state3.renderer?.extract) return null;
+    let sprite = null;
+    try {
+      sprite = new ctors.Sprite(texture);
+      const canvas = state3.renderer.extract.canvas(sprite, { resolution: 1 });
+      if (!canvas) return null;
+      if (canvasCache.size >= CACHE_MAX) {
+        canvasCache.delete(canvasCache.keys().next().value);
+      }
+      canvasCache.set(frameKey, canvas);
+      return canvas;
+    } catch {
+      return null;
+    } finally {
+      try {
+        sprite?.destroy?.({ children: true, texture: false, baseTexture: false });
+      } catch {
+      }
+    }
+  }
+
   // src/skins/compositor.ts
-  var previewCache = /* @__PURE__ */ new Map();
-  var PREVIEW_CACHE_MAX = 600;
   function drawContained(ctx2, source, boxW, boxH) {
     const scale = Math.min(boxW / source.width, boxH / source.height);
     const drawW = Math.max(1, Math.round(source.width * scale));
@@ -52497,36 +52800,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       bitmap.close?.();
     }
   }
-  function renderOriginalFrame(frameKey) {
-    const cached = previewCache.get(frameKey);
-    if (cached) return cached;
-    const state3 = getSpriteState();
-    const texture = state3.tex.get(frameKey);
-    const ctors = state3.ctors;
-    if (!texture || !ctors?.Sprite || !state3.renderer?.extract) return null;
-    let sprite = null;
-    try {
-      sprite = new ctors.Sprite(texture);
-      const canvas = state3.renderer.extract.canvas(sprite, { resolution: 1 });
-      if (canvas) {
-        if (previewCache.size >= PREVIEW_CACHE_MAX) {
-          previewCache.delete(previewCache.keys().next().value);
-        }
-        previewCache.set(frameKey, canvas);
-      }
-      return canvas ?? null;
-    } catch {
-      return null;
-    } finally {
-      try {
-        sprite?.destroy?.({ children: true, texture: false, baseTexture: false });
-      } catch {
-      }
-    }
-  }
   async function renderFramePreview(target, blob) {
     if (blob) return buildSkinCanvas(target, blob);
-    return renderOriginalFrame(target.frameKey);
+    return renderFrameToCanvas(target.frameKey);
   }
 
   // src/skins/gameCaches.ts
@@ -53032,181 +53308,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     io.observe(host);
   }
 
-  // src/ui/menus/skins-ui.ts
-  var STYLE_ID5 = "qws-skins-menu-css";
-  var TEAL3 = "#5eead4";
-  var TEAL_DIM3 = "rgba(94,234,212,0.12)";
-  var TEAL_BORDER3 = "rgba(94,234,212,0.3)";
-  var BORDER4 = "rgba(255,255,255,0.08)";
-  var CARD_BG3 = "rgba(255,255,255,0.03)";
-  var TEXT4 = "#e7eef7";
-  var TEXT_DIM4 = "rgba(226,232,240,0.45)";
-  var DANGER2 = "#ef4444";
-  var WARN = "#fbbf24";
-  var css3 = (el2, style2) => Object.assign(el2.style, style2);
-  function ensureSkinStyles() {
-    if (document.getElementById(STYLE_ID5)) return;
-    const st = document.createElement("style");
-    st.id = STYLE_ID5;
-    st.textContent = `
-.qws-sk-scroll::-webkit-scrollbar { width: 6px; }
-.qws-sk-scroll::-webkit-scrollbar-track { background: transparent; }
-.qws-sk-scroll::-webkit-scrollbar-thumb { background: rgba(94,234,212,0.2); border-radius: 3px; }
-.qws-sk-scroll::-webkit-scrollbar-thumb:hover { background: rgba(94,234,212,0.35); }
-.qws-sk-scroll { scrollbar-width: thin; scrollbar-color: rgba(94,234,212,0.2) transparent; }
-
-.qws-sk-cell {
-  position: relative; display: flex; align-items: center; justify-content: center;
-  aspect-ratio: 1; border-radius: 10px; cursor: pointer;
-  background: ${CARD_BG3}; border: 1px solid ${BORDER4};
-  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
-}
-.qws-sk-cell:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.16); transform: translateY(-1px); }
-.qws-sk-cell.is-active { border-color: ${TEAL_BORDER3}; background: ${TEAL_DIM3}; }
-.qws-sk-cell.is-skinned::after {
-  content: ''; position: absolute; top: 5px; right: 5px;
-  width: 6px; height: 6px; border-radius: 50%; background: ${TEAL3};
-}
-
-.qws-sk-toggle { position:relative; display:inline-block; width:36px; height:20px; cursor:pointer; flex-shrink:0; }
-.qws-sk-toggle input { opacity:0; width:0; height:0; position:absolute; }
-.qws-sk-track {
-  position:absolute; inset:0; border-radius:10px;
-  background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.12);
-  transition:background 150ms ease, border-color 150ms ease;
-}
-.qws-sk-toggle input:checked ~ .qws-sk-track { background:rgba(94,234,212,0.25); border-color:rgba(94,234,212,0.5); }
-.qws-sk-thumb {
-  position:absolute; top:3px; left:3px; width:12px; height:12px; border-radius:50%;
-  background:rgba(226,232,240,0.5); transition:transform 150ms ease, background 150ms ease;
-}
-.qws-sk-toggle input:checked ~ .qws-sk-track .qws-sk-thumb { transform:translateX(16px); background:${TEAL3}; }
-
-.qws-sk-input {
-  padding: 8px 10px; border-radius: 9px; border: 1px solid ${BORDER4};
-  background: rgba(0,0,0,0.22); color: ${TEXT4}; font-size: 12px; outline: none;
-  transition: border-color 120ms ease;
-}
-.qws-sk-input:focus { border-color: ${TEAL_BORDER3}; }
-.qws-sk-input option { background: #10151c; color: ${TEXT4}; }
-`;
-    document.head.appendChild(st);
-  }
-  function sectionLabel3(text) {
-    const el2 = document.createElement("div");
-    css3(el2, {
-      fontSize: "10px",
-      fontWeight: "700",
-      letterSpacing: "0.08em",
-      color: TEXT_DIM4,
-      textTransform: "uppercase"
-    });
-    el2.textContent = text;
-    return el2;
-  }
-  function card2() {
-    const el2 = document.createElement("div");
-    css3(el2, {
-      padding: "12px",
-      background: CARD_BG3,
-      borderRadius: "12px",
-      border: `1px solid ${BORDER4}`,
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-      minHeight: "0"
-    });
-    return el2;
-  }
-  var TONES = {
-    accent: {
-      fg: TEAL3,
-      bg: TEAL_DIM3,
-      border: TEAL_BORDER3,
-      hoverBg: "rgba(94,234,212,0.22)",
-      hoverBorder: "rgba(94,234,212,0.55)"
-    },
-    neutral: {
-      fg: TEXT4,
-      bg: CARD_BG3,
-      border: BORDER4,
-      hoverBg: "rgba(255,255,255,0.06)",
-      hoverBorder: "rgba(255,255,255,0.16)"
-    },
-    danger: {
-      fg: DANGER2,
-      bg: "rgba(239,68,68,0.12)",
-      border: "rgba(239,68,68,0.3)",
-      hoverBg: "rgba(239,68,68,0.2)",
-      hoverBorder: "rgba(239,68,68,0.55)"
-    }
-  };
-  function button(label2, tone, onClick) {
-    const btn = document.createElement("button");
-    const palette = TONES[tone];
-    css3(btn, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "6px",
-      padding: "7px 12px",
-      border: `1px solid ${palette.border}`,
-      borderRadius: "9px",
-      background: palette.bg,
-      color: palette.fg,
-      fontSize: "11px",
-      fontWeight: "600",
-      cursor: "pointer",
-      transition: "all 120ms ease",
-      whiteSpace: "nowrap"
-    });
-    btn.textContent = label2;
-    btn.onmouseenter = () => css3(btn, { background: palette.hoverBg, borderColor: palette.hoverBorder });
-    btn.onmouseleave = () => css3(btn, { background: palette.bg, borderColor: palette.border });
-    btn.onclick = async () => {
-      css3(btn, { opacity: "0.6", pointerEvents: "none" });
-      try {
-        await onClick();
-      } finally {
-        css3(btn, { opacity: "1", pointerEvents: "auto" });
-      }
-    };
-    return btn;
-  }
-  function toggle(checked, onChange) {
-    const wrap = document.createElement("label");
-    wrap.className = "qws-sk-toggle";
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.checked = checked;
-    const track = document.createElement("span");
-    track.className = "qws-sk-track";
-    const thumb = document.createElement("span");
-    thumb.className = "qws-sk-thumb";
-    track.appendChild(thumb);
-    wrap.append(input, track);
-    input.addEventListener("change", () => onChange(input.checked));
-    wrap.setChecked = (value) => {
-      input.checked = value;
-    };
-    return wrap;
-  }
-  function chip(text, tone) {
-    const el2 = document.createElement("span");
-    const color = tone === "ok" ? TEAL3 : WARN;
-    css3(el2, {
-      alignSelf: "flex-start",
-      fontSize: "10px",
-      fontWeight: "600",
-      padding: "2px 7px",
-      borderRadius: "999px",
-      color,
-      background: tone === "ok" ? TEAL_DIM3 : "rgba(251,191,36,0.12)"
-    });
-    el2.textContent = text;
-    return el2;
-  }
-
   // src/ui/menus/skins-detail.ts
   var SLOT_THUMB_PX = 46;
   function pickImageFile() {
@@ -53225,7 +53326,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function thumbBox(empty = false) {
     const el2 = document.createElement("div");
-    css3(el2, {
+    css2(el2, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -53234,11 +53335,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "0 0 auto",
       borderRadius: "9px",
       background: "rgba(0,0,0,0.22)",
-      border: `1px solid ${BORDER4}`
+      border: `1px solid ${BORDER3}`
     });
     if (empty) {
       const plus = document.createElement("span");
-      css3(plus, { color: TEXT_DIM4, fontSize: "18px" });
+      css2(plus, { color: TEXT_DIM3, fontSize: "18px" });
       plus.textContent = "+";
       el2.appendChild(plus);
     }
@@ -53247,28 +53348,28 @@ Restore figures are averages; unlucky streaks do worse.`;
   function buildSlot(target, index, deps) {
     const { entry, result, onError, onChanged } = deps;
     const row = document.createElement("div");
-    css3(row, {
+    css2(row, {
       display: "flex",
       flexDirection: "column",
       gap: "8px",
       padding: "8px",
       borderRadius: "10px",
-      background: CARD_BG3,
-      border: `1px solid ${BORDER4}`
+      background: CARD_BG2,
+      border: `1px solid ${BORDER3}`
     });
     const before = thumbBox();
     mountThumb(before, target, null, SLOT_THUMB_PX);
     const arrow = document.createElement("span");
-    css3(arrow, { color: TEXT_DIM4, fontSize: "12px" });
+    css2(arrow, { color: TEXT_DIM3, fontSize: "12px" });
     arrow.textContent = "\u2192";
     const after = thumbBox(!entry);
     if (entry) mountThumb(after, target, entry.blob, SLOT_THUMB_PX);
     const head = document.createElement("div");
-    css3(head, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+    css2(head, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
     const name = document.createElement("div");
-    css3(name, {
+    css2(name, {
       fontSize: "11px",
-      color: TEXT4,
+      color: TEXT3,
       flex: "1 1 auto",
       minWidth: "0",
       overflow: "hidden",
@@ -53281,20 +53382,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (entry) {
       const applied2 = result?.applied !== false;
       const pill = chip(applied2 ? "Active" : "Waiting", applied2 ? "ok" : "warn");
-      css3(pill, { alignSelf: "center", flex: "0 0 auto" });
+      css2(pill, { alignSelf: "center", flex: "0 0 auto" });
       if (result?.error) pill.title = result.error;
       head.appendChild(pill);
     }
     const body = document.createElement("div");
-    css3(body, { display: "flex", alignItems: "center", gap: "8px" });
+    css2(body, { display: "flex", alignItems: "center", gap: "8px" });
     const dims = document.createElement("div");
-    css3(dims, { fontSize: "10px", color: TEXT_DIM4, whiteSpace: "nowrap" });
+    css2(dims, { fontSize: "10px", color: TEXT_DIM3, whiteSpace: "nowrap" });
     dims.textContent = `${target.logicalSize.w}\xD7${target.logicalSize.h}`;
     dims.title = "Ideal image size for this slot";
     const spacer = document.createElement("div");
-    css3(spacer, { flex: "1 1 auto" });
+    css2(spacer, { flex: "1 1 auto" });
     const actions = document.createElement("div");
-    css3(actions, { display: "flex", gap: "5px", flex: "0 0 auto" });
+    css2(actions, { display: "flex", gap: "5px", flex: "0 0 auto" });
     if (!target.skinnable) {
       actions.appendChild(chip(target.blockedReason || "Unavailable", "warn"));
     } else {
@@ -53330,18 +53431,18 @@ Restore figures are averages; unlucky streaks do worse.`;
   function buildDetail(options) {
     const { object, entries, results, onError, onChanged } = options;
     const host = document.createElement("div");
-    css3(host, { display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" });
+    css2(host, { display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" });
     if (!object) {
       const empty = document.createElement("div");
-      css3(empty, { fontSize: "12px", color: TEXT_DIM4, textAlign: "center", padding: "28px 0" });
+      css2(empty, { fontSize: "12px", color: TEXT_DIM3, textAlign: "center", padding: "28px 0" });
       empty.textContent = "Pick a sprite";
       host.appendChild(empty);
       return host;
     }
-    host.appendChild(sectionLabel3(object.category));
+    host.appendChild(sectionLabel2(object.category));
     if (object.category === "tile") {
       const notice = document.createElement("div");
-      css3(notice, {
+      css2(notice, {
         fontSize: "11px",
         color: WARN,
         lineHeight: "1.45",
@@ -53354,10 +53455,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       host.appendChild(notice);
     }
     const title = document.createElement("div");
-    css3(title, {
+    css2(title, {
       fontSize: "14px",
       fontWeight: "600",
-      color: TEXT4,
+      color: TEXT3,
       overflow: "hidden",
       textOverflow: "ellipsis",
       whiteSpace: "nowrap"
@@ -53366,8 +53467,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     title.title = object.key;
     host.appendChild(title);
     const list = document.createElement("div");
-    list.className = "qws-sk-scroll";
-    css3(list, { display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto", minHeight: "0" });
+    list.className = "qws-pnl-scroll";
+    css2(list, { display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto", minHeight: "0" });
     object.slots.forEach((target, index) => {
       list.appendChild(
         buildSlot(target, index, {
@@ -53396,12 +53497,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
   }
   function renderSkinsMenu(container) {
-    ensureSkinStyles();
+    ensurePanelStyles();
     void initSkins();
-    css3(container, { padding: "0", overflow: "hidden" });
+    css2(container, { padding: "0", overflow: "hidden" });
     container.innerHTML = "";
     const root = document.createElement("div");
-    css3(root, {
+    css2(root, {
       display: "grid",
       gridTemplateColumns: "minmax(0,1fr) 300px",
       gap: "12px",
@@ -53420,16 +53521,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     container.appendChild(root);
     const browser = card2();
     const detail = card2();
-    css3(browser, { overflow: "hidden" });
-    css3(detail, { overflow: "hidden" });
+    css2(browser, { overflow: "hidden" });
+    css2(detail, { overflow: "hidden" });
     root.append(browser, detail);
     const header = document.createElement("div");
-    css3(header, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" });
+    css2(header, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" });
     const enableWrap = document.createElement("div");
-    css3(enableWrap, { display: "flex", alignItems: "center", gap: "8px" });
+    css2(enableWrap, { display: "flex", alignItems: "center", gap: "8px" });
     const enableToggle = toggle(areSkinsEnabled(), (on) => void setSkinsEnabled(on));
     enableToggle.title = "Enable skins";
-    enableWrap.append(sectionLabel3("Sprites"), enableToggle);
+    enableWrap.append(sectionLabel2("Sprites"), enableToggle);
     let confirmTimer = null;
     const clearBtn = button("Clear all", "danger", async () => {
       if (clearBtn.dataset.armed !== "yes") {
@@ -53451,20 +53552,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     header.append(enableWrap, clearBtn);
     browser.appendChild(header);
     const filters = document.createElement("div");
-    css3(filters, { display: "flex", gap: "8px" });
+    css2(filters, { display: "flex", gap: "8px" });
     const categorySelect = document.createElement("select");
-    categorySelect.className = "qws-sk-input";
-    css3(categorySelect, { flex: "0 0 auto", maxWidth: "150px" });
+    categorySelect.className = "qws-pnl-input";
+    css2(categorySelect, { flex: "0 0 auto", maxWidth: "150px" });
     const search2 = document.createElement("input");
-    search2.className = "qws-sk-input";
+    search2.className = "qws-pnl-input";
     search2.type = "search";
     search2.placeholder = "Search";
-    css3(search2, { flex: "1 1 auto", minWidth: "0" });
+    css2(search2, { flex: "1 1 auto", minWidth: "0" });
     filters.append(categorySelect, search2);
     browser.appendChild(filters);
     const grid = document.createElement("div");
-    grid.className = "qws-sk-scroll";
-    css3(grid, {
+    grid.className = "qws-pnl-scroll";
+    css2(grid, {
       display: "grid",
       gap: "8px",
       gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))",
@@ -53476,13 +53577,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     browser.appendChild(grid);
     const status = document.createElement("div");
-    css3(status, { fontSize: "11px", color: TEXT_DIM4, minHeight: "15px" });
+    css2(status, { fontSize: "11px", color: TEXT_DIM3, minHeight: "15px" });
     browser.appendChild(status);
     const errorEl = document.createElement("div");
-    css3(errorEl, { fontSize: "11px", color: DANGER2, display: "none" });
+    css2(errorEl, { fontSize: "11px", color: DANGER2, display: "none" });
     detail.appendChild(errorEl);
     const detailHost = document.createElement("div");
-    css3(detailHost, { display: "flex", flexDirection: "column", minHeight: "0", flex: "1 1 auto" });
+    css2(detailHost, { display: "flex", flexDirection: "column", minHeight: "0", flex: "1 1 auto" });
     detail.appendChild(detailHost);
     const showError = (message) => {
       errorEl.textContent = message;
@@ -53527,7 +53628,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const matches = filterObjects(snapshot2.objects);
       for (const object of matches.slice(0, MAX_VISIBLE)) {
         const cell = document.createElement("div");
-        cell.className = "qws-sk-cell";
+        cell.className = "qws-pnl-cell";
         cell.title = object.label;
         if (object.key === menuState.selectedKey) cell.classList.add("is-active");
         if (object.slots.some((slot) => snapshot2.entries.has(slot.frameKey))) {
@@ -53543,7 +53644,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       if (!matches.length) {
         const empty = document.createElement("div");
-        css3(empty, { gridColumn: "1 / -1", fontSize: "12px", color: TEXT_DIM4, padding: "24px 0", textAlign: "center" });
+        css2(empty, { gridColumn: "1 / -1", fontSize: "12px", color: TEXT_DIM3, padding: "24px 0", textAlign: "center" });
         empty.textContent = snapshot2.ready ? "No match" : "Loading\u2026";
         grid.appendChild(empty);
       }
@@ -53558,7 +53659,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (snapshot2.error) parts.push(`\u26A0 ${snapshot2.error}`);
       if (hasSkins && snapshot2.rebaked === null) parts.push("\u26A0 Mutated plants keep their original look");
       status.textContent = parts.join(" \xB7 ");
-      status.style.color = parts.some((p) => p.startsWith("\u26A0")) ? WARN : TEXT_DIM4;
+      status.style.color = parts.some((p) => p.startsWith("\u26A0")) ? WARN : TEXT_DIM3;
     };
     const renderAll = () => {
       renderCategories(getSkinsSnapshot().objects);

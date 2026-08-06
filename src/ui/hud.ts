@@ -9,6 +9,7 @@ import { installJournalKeybindsOnce } from "../services/journalKeybind";
 import { installDecorShedKeybindsOnce } from "../services/decorShedKeybind";
 import { installSeedSiloKeybindsOnce } from "../services/seedSiloKeybind";
 import { installFeedingTroughKeybindsOnce } from "../services/feedingTroughKeybind";
+import { installWeatherStationKeybindsOnce } from "../services/weatherStationKeybind";
 import { PetAlertService } from "../services/pet-alerts";
 import {
   getKeybind,
@@ -1101,6 +1102,7 @@ export function initWatchers(){
     installSeedSiloKeybindsOnce();
     installDecorShedKeybindsOnce();
     installFeedingTroughKeybindsOnce();
+    installWeatherStationKeybindsOnce();
 
     const bootToolbar = async () => {
       try { await renderOverlay(); } catch (e) { console.error("[HUD] renderOverlay failed:", e); }

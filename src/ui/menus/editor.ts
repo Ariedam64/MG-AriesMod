@@ -305,7 +305,7 @@ export function renderEditorMenu(container: HTMLElement) {
 
   const desc = document.createElement("div");
   css(desc, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.5" });
-  desc.textContent = "Sandbox garden editor with every plant and decor unlocked. Left click to place or select, right click to remove, drag to paint · Toggle overlays with U · Edit keybinds in Keybinds › Editor.";
+  desc.textContent = "Sandbox garden with every plant and decor unlocked. Left click to place, right click to remove, drag to paint.";
 
   wrap.appendChild(card([toggleRow, desc]));
 

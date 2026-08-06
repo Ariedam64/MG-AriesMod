@@ -9,10 +9,10 @@ import {
   button,
   card,
   css,
-  ensureSkinStyles,
+  ensurePanelStyles,
   sectionLabel,
   toggle,
-} from './skins-ui';
+} from './panel-ui';
 import {
   areSkinsEnabled,
   getSkinsSnapshot,
@@ -45,7 +45,7 @@ function filterObjects(objects: SkinnableObject[]): SkinnableObject[] {
 }
 
 export function renderSkinsMenu(container: HTMLElement): void {
-  ensureSkinStyles();
+  ensurePanelStyles();
   void initSkins();
 
   css(container, { padding: '0', overflow: 'hidden' });
@@ -115,10 +115,10 @@ export function renderSkinsMenu(container: HTMLElement): void {
   const filters = document.createElement('div');
   css(filters, { display: 'flex', gap: '8px' });
   const categorySelect = document.createElement('select');
-  categorySelect.className = 'qws-sk-input';
+  categorySelect.className = 'qws-pnl-input';
   css(categorySelect, { flex: '0 0 auto', maxWidth: '150px' });
   const search = document.createElement('input');
-  search.className = 'qws-sk-input';
+  search.className = 'qws-pnl-input';
   search.type = 'search';
   search.placeholder = 'Search';
   css(search, { flex: '1 1 auto', minWidth: '0' });
@@ -126,7 +126,7 @@ export function renderSkinsMenu(container: HTMLElement): void {
   browser.appendChild(filters);
 
   const grid = document.createElement('div');
-  grid.className = 'qws-sk-scroll';
+  grid.className = 'qws-pnl-scroll';
   css(grid, {
     display: 'grid',
     gap: '8px',
@@ -198,7 +198,7 @@ export function renderSkinsMenu(container: HTMLElement): void {
     const matches = filterObjects(snapshot.objects);
     for (const object of matches.slice(0, MAX_VISIBLE)) {
       const cell = document.createElement('div');
-      cell.className = 'qws-sk-cell';
+      cell.className = 'qws-pnl-cell';
       cell.title = object.label;
       if (object.key === menuState.selectedKey) cell.classList.add('is-active');
       if (object.slots.some(slot => snapshot.entries.has(slot.frameKey))) {
