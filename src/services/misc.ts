@@ -2,6 +2,7 @@
 import { PlayerService } from "./player";
 import { decorCatalog, plantCatalog } from "../data";
 import { Atoms, myDecorShedItems, mySeedSiloItems } from "../store/atoms";
+import { Store } from "../store/api";
 import { fakeInventoryShow, isInventoryPanelOpen, waitInventoryPanelClosed, fakeInventoryHide } from "./fakeModal";
 import { toastSimple } from "../ui/toast";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
@@ -313,6 +314,35 @@ const logAutoStore = (...args: any[]) => {
 };
 const AUTO_STORE_DEBOUNCE_MS = 800;
 const AUTO_STORE_RECENT_REMOVE_MS = 2000;
+const AUTO_STORE_ATOM_POLL_MS = 400;
+const AUTO_STORE_ATOM_TIMEOUT_MS = 10 * 60_000;
+
+type AutoStoreSource = { label: string; get: () => Promise<unknown> };
+
+/**
+ * Attend que les atoms du jeu soient réellement disponibles.
+ *
+ * `Store.subscribe` sur un label introuvable renvoie un unsubscribe vide sans
+ * jamais s'abonner : démarrer trop tôt (le module est importé au boot du
+ * userscript, avant l'enregistrement des atoms du jeu) laisse la feature
+ * définitivement muette. On attend donc que les deux atoms existent ET que
+ * l'inventaire soit chargé (tableau) avant de poser quoi que ce soit.
+ */
+async function waitForAutoStoreAtoms(
+  storage: AutoStoreSource,
+  inventory: AutoStoreSource,
+  keepGoing: () => boolean,
+): Promise<boolean> {
+  const startedAt = Date.now();
+  while (keepGoing() && Date.now() - startedAt < AUTO_STORE_ATOM_TIMEOUT_MS) {
+    try {
+      const ready = (await Store.hasAtom(storage.label)) && (await Store.hasAtom(inventory.label));
+      if (ready && Array.isArray(await inventory.get())) return true;
+    } catch {}
+    await new Promise<void>((resolve) => setTimeout(resolve, AUTO_STORE_ATOM_POLL_MS));
+  }
+  return false;
+}
 const diffSet = (prev: Set<string>, next: Set<string>) => {
   const added: string[] = [];
   const removed: string[] = [];
@@ -344,6 +374,7 @@ let seedSiloUnsub: (() => void) | null = null;
 let seedPendingKeys = new Set<string>();
 let seedPendingTimer: number | null = null;
 let seedSiloRemovedAt = new Map<string, number>();
+let seedStartGeneration = 0;
 
 let decorShedItems = new Set<string>();
 let decorInventoryQty = new Map<string, number>();
@@ -354,6 +385,7 @@ let decorShedUnsub: (() => void) | null = null;
 let decorPendingKeys = new Set<string>();
 let decorPendingTimer: number | null = null;
 let decorShedRemovedAt = new Map<string, number>();
+let decorStartGeneration = 0;
 
 function queueSeedSiloStore(keys: string[]) {
   for (const key of keys) if (key) seedSiloQueue.add(key);
@@ -419,6 +451,16 @@ async function startSeedSiloAutoStore() {
   if (seedInvUnsub || seedSiloUnsub) return;
   if (typeof window === "undefined") return;
 
+  const generation = ++seedStartGeneration;
+  const isCurrent = () => autoSeedSiloEnabled && seedStartGeneration === generation;
+
+  const ready = await waitForAutoStoreAtoms(mySeedSiloItems, Atoms.inventory.mySeedInventory, isCurrent);
+  if (!ready || !isCurrent()) {
+    logAutoStore("seed auto-store aborted", { ready, enabled: autoSeedSiloEnabled });
+    return;
+  }
+  if (seedInvUnsub || seedSiloUnsub) return;
+
   try { seedSiloItems = buildKeySet(await mySeedSiloItems.get(), seedKeyFromItem); } catch {}
   try { seedInventoryQty = buildQtyMap(await Atoms.inventory.mySeedInventory.get(), seedKeyFromItem); } catch {}
   logAutoStore("seed auto-store start", { siloSize: seedSiloItems.size, inventoryKeys: seedInventoryQty.size });
@@ -459,9 +501,18 @@ async function startSeedSiloAutoStore() {
   } catch {
     seedInvUnsub = null;
   }
+
+  // Rattrape ce qui est déjà dans l'inventaire au moment du démarrage :
+  // ces stacks n'augmenteront plus, donc l'abonnement ne les verra jamais.
+  const initialKeys = Array.from(seedInventoryQty.keys()).filter((key) => seedSiloItems.has(key));
+  if (initialKeys.length) {
+    logAutoStore("seed auto-store initial queue", { keys: initialKeys });
+    queueSeedSiloStore(initialKeys);
+  }
 }
 
 function stopSeedSiloAutoStore() {
+  seedStartGeneration++; // annule un démarrage encore en attente des atoms
   try { seedInvUnsub?.(); } catch {}
   try { seedSiloUnsub?.(); } catch {}
   seedInvUnsub = null;
@@ -543,6 +594,16 @@ async function startDecorShedAutoStore() {
   if (decorInvUnsub || decorShedUnsub) return;
   if (typeof window === "undefined") return;
 
+  const generation = ++decorStartGeneration;
+  const isCurrent = () => autoDecorShedEnabled && decorStartGeneration === generation;
+
+  const ready = await waitForAutoStoreAtoms(myDecorShedItems, Atoms.inventory.myDecorInventory, isCurrent);
+  if (!ready || !isCurrent()) {
+    logAutoStore("decor auto-store aborted", { ready, enabled: autoDecorShedEnabled });
+    return;
+  }
+  if (decorInvUnsub || decorShedUnsub) return;
+
   try { decorShedItems = buildKeySet(await myDecorShedItems.get(), decorKeyFromItem); } catch {}
   try { decorInventoryQty = buildQtyMap(await Atoms.inventory.myDecorInventory.get(), decorKeyFromItem); } catch {}
   logAutoStore("decor auto-store start", { shedSize: decorShedItems.size, inventoryKeys: decorInventoryQty.size });
@@ -583,9 +644,18 @@ async function startDecorShedAutoStore() {
   } catch {
     decorInvUnsub = null;
   }
+
+  // Rattrape ce qui est déjà dans l'inventaire au moment du démarrage :
+  // ces stacks n'augmenteront plus, donc l'abonnement ne les verra jamais.
+  const initialKeys = Array.from(decorInventoryQty.keys()).filter((key) => decorShedItems.has(key));
+  if (initialKeys.length) {
+    logAutoStore("decor auto-store initial queue", { keys: initialKeys });
+    queueDecorShedStore(initialKeys);
+  }
 }
 
 function stopDecorShedAutoStore() {
+  decorStartGeneration++; // annule un démarrage encore en attente des atoms
   try { decorInvUnsub?.(); } catch {}
   try { decorShedUnsub?.(); } catch {}
   decorInvUnsub = null;
@@ -609,14 +679,7 @@ export function setAutoStoreSeedSiloEnabled(on: boolean) {
   try { writeAriesPath(PATH_AUTO_STORE_SEED_SILO_ENABLED, next); } catch {}
   logAutoStore("seed auto-store toggle", { enabled: next });
   if (next) {
-    void (async () => {
-      await startSeedSiloAutoStore();
-      const keys = Array.from(seedInventoryQty.keys()).filter((k) => seedSiloItems.has(k));
-      if (keys.length) {
-        logAutoStore("seed auto-store initial queue", { keys });
-        queueSeedSiloStore(keys);
-      }
-    })();
+    void startSeedSiloAutoStore();
   } else {
     stopSeedSiloAutoStore();
   }
@@ -628,14 +691,7 @@ export function setAutoStoreDecorShedEnabled(on: boolean) {
   try { writeAriesPath(PATH_AUTO_STORE_DECOR_SHED_ENABLED, next); } catch {}
   logAutoStore("decor auto-store toggle", { enabled: next });
   if (next) {
-    void (async () => {
-      await startDecorShedAutoStore();
-      const keys = Array.from(decorInventoryQty.keys()).filter((k) => decorShedItems.has(k));
-      if (keys.length) {
-        logAutoStore("decor auto-store initial queue", { keys });
-        queueDecorShedStore(keys);
-      }
-    })();
+    void startDecorShedAutoStore();
   } else {
     stopDecorShedAutoStore();
   }
