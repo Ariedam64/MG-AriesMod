@@ -38,6 +38,9 @@ const SCREEN_MARGIN = 8;
 // own icon rail sits, without assuming anything about it.
 const DEFAULT_RIGHT_GAP = 16;
 const DEFAULT_TOP_RATIO = 0.35;
+// Instants (ms après le montage) où la position voulue est ré-appliquée, le
+// temps que la fenêtre atteigne sa taille définitive.
+const SETTLE_REAPPLY_DELAYS_MS = [0, 250, 1000];
 // Pointer travel below this stays a click; beyond it the gesture is a drag
 // and releasing does not open the panel.
 const DRAG_THRESHOLD_PX = 4;
@@ -146,26 +149,35 @@ export function startNotificationBellFloating(
     return { left: boundedLeft, top: boundedTop };
   };
 
-  const applyInitialPosition = () => {
-    const saved = readSavedPosition();
-    if (saved) {
-      applyPosition(saved.left, saved.top);
-      return;
-    }
-    applyPosition(
-      window.innerWidth - BUTTON_SIZE - DEFAULT_RIGHT_GAP,
-      window.innerHeight * DEFAULT_TOP_RATIO,
-    );
+  const defaultPosition = (): WidgetPosition => ({
+    left: window.innerWidth - BUTTON_SIZE - DEFAULT_RIGHT_GAP,
+    top: window.innerHeight * DEFAULT_TOP_RATIO,
+  });
+
+  // Position voulue par l'utilisateur, gardée NON clampée : le clamp ne sert
+  // qu'à l'affichage. Sinon un viewport provisoire (iframe Discord pas encore
+  // redimensionnée, canvas du jeu en cours de mise en place) écrase la position
+  // restaurée par sa version rétrécie, et plus rien ne la retrouve ensuite.
+  let desiredPosition: WidgetPosition | null = null;
+  // Tant que l'utilisateur n'a rien déplacé, le défaut est recalculé à chaque
+  // changement de viewport — il dépend lui aussi de la taille de la fenêtre.
+  let usingDefaultPosition = true;
+
+  const applyDesiredPosition = () => {
+    const target = usingDefaultPosition || !desiredPosition ? defaultPosition() : desiredPosition;
+    applyPosition(target.left, target.top);
   };
 
-  const clampIntoViewport = () => {
-    const rect = button.getBoundingClientRect();
-    applyPosition(rect.left, rect.top);
+  const applyInitialPosition = () => {
+    const saved = readSavedPosition();
+    desiredPosition = saved;
+    usingDefaultPosition = !saved;
+    applyDesiredPosition();
   };
 
   const onWindowResize = () => {
     if (!running) return;
-    clampIntoViewport();
+    applyDesiredPosition();
   };
 
   // Drag to move; a press that never travels past the threshold is a click.
@@ -186,6 +198,8 @@ export function startNotificationBellFloating(
     if (!dragState.dragged && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
     dragState.dragged = true;
     dragState.lastPos = applyPosition(dragState.baseLeft + dx, dragState.baseTop + dy);
+    desiredPosition = dragState.lastPos;
+    usingDefaultPosition = false;
   };
 
   const stopDrag = (ev?: PointerEvent) => {
@@ -233,6 +247,19 @@ export function startNotificationBellFloating(
   document.body.appendChild(button);
   applyInitialPosition();
 
+  // Le widget est monté très tôt, avant que la fenêtre ait sa taille finale, et
+  // un viewport qui grandit ne déclenche pas toujours `resize` (iframe Discord).
+  // On ré-applique donc la position voulue quelques fois pendant que la mise en
+  // page se stabilise.
+  const settleTimers = SETTLE_REAPPLY_DELAYS_MS.map((delay) =>
+    window.setTimeout(() => { if (running) applyDesiredPosition(); }, delay),
+  );
+  const clearSettleTimers = () => {
+    for (const id of settleTimers) {
+      try { window.clearTimeout(id); } catch {}
+    }
+  };
+
   const stopWiggle = () => {
     if (wiggleAnimation) {
       try { wiggleAnimation.cancel(); } catch {}
@@ -246,6 +273,7 @@ export function startNotificationBellFloating(
       running = false;
       stopDrag();
       stopWiggle();
+      clearSettleTimers();
       window.removeEventListener("resize", onWindowResize);
       button.removeEventListener("pointerdown", onPointerDown);
       try { button.remove(); } catch {}

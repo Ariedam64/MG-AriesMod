@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.194
+// @version      3.2.195
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -26867,6 +26867,7 @@
   var _state = null;
   var _unsubShops = null;
   var _unsubPurchases = null;
+  var _watchGeneration = 0;
   var _subs = /* @__PURE__ */ new Set();
   var _toolInv = /* @__PURE__ */ new Map();
   var _decorInv = /* @__PURE__ */ new Map();
@@ -27121,6 +27122,59 @@
       }
     });
   }
+  var ATOM_WAIT_POLL_MS = 400;
+  var ATOM_WAIT_TIMEOUT_MS = 10 * 6e4;
+  var STATE_ATOM_LABEL = "stateAtom";
+  var MY_DATA_ATOM_LABEL = "myDataAtom";
+  async function _waitForAtom(label2, keepGoing) {
+    const startedAt = Date.now();
+    while (keepGoing() && Date.now() - startedAt < ATOM_WAIT_TIMEOUT_MS) {
+      try {
+        if (await Store.hasAtom(label2)) return true;
+      } catch {
+      }
+      await new Promise((resolve) => setTimeout(resolve, ATOM_WAIT_POLL_MS));
+    }
+    return false;
+  }
+  async function _watchShops(generation) {
+    const isCurrent = () => _watchGeneration === generation;
+    if (!await _waitForAtom(STATE_ATOM_LABEL, isCurrent) || !isCurrent()) return;
+    if (_unsubShops) return;
+    try {
+      _unsubShops = await Atoms.shop.shops.onChange((next) => {
+        try {
+          _notifyShops(next);
+        } catch {
+        }
+      });
+    } catch {
+    }
+    if (!isCurrent()) return;
+    try {
+      _notifyShops(await Atoms.shop.shops.get());
+    } catch {
+    }
+  }
+  async function _watchPurchases(generation) {
+    const isCurrent = () => _watchGeneration === generation;
+    if (!await _waitForAtom(MY_DATA_ATOM_LABEL, isCurrent) || !isCurrent()) return;
+    if (_unsubPurchases) return;
+    try {
+      _unsubPurchases = await Atoms.shop.myShopPurchases.onChange((next) => {
+        try {
+          _notifyPurchases(next);
+        } catch {
+        }
+      });
+    } catch {
+    }
+    if (!isCurrent()) return;
+    try {
+      _notifyPurchases(await Atoms.shop.myShopPurchases.get());
+    } catch {
+    }
+  }
   var _started = false;
   async function _ensureStarted() {
     if (_started) {
@@ -27137,34 +27191,9 @@
       window.addEventListener("gemini:data-updated", _onDataUpdated);
     } catch {
     }
-    try {
-      const cur = await Atoms.shop.shops.get();
-      _notifyShops(cur);
-    } catch (err) {
-    }
-    try {
-      _unsubShops = await Atoms.shop.shops.onChange((next) => {
-        try {
-          _notifyShops(next);
-        } catch {
-        }
-      });
-    } catch (err) {
-    }
-    try {
-      const curP = await Atoms.shop.myShopPurchases.get();
-      _notifyPurchases(curP);
-    } catch (err) {
-    }
-    try {
-      _unsubPurchases = await Atoms.shop.myShopPurchases.onChange((next) => {
-        try {
-          _notifyPurchases(next);
-        } catch {
-        }
-      });
-    } catch (err) {
-    }
+    const generation = ++_watchGeneration;
+    void _watchShops(generation);
+    void _watchPurchases(generation);
     try {
       const invAtom = _resolveToolInvAtom();
       if (invAtom) {
@@ -27225,6 +27254,7 @@
     }
   }
   function _stop() {
+    _watchGeneration++;
     try {
       window.removeEventListener("gemini:data-updated", _onDataUpdated);
     } catch {
@@ -28093,6 +28123,7 @@
   var SCREEN_MARGIN = 8;
   var DEFAULT_RIGHT_GAP = 16;
   var DEFAULT_TOP_RATIO = 0.35;
+  var SETTLE_REAPPLY_DELAYS_MS = [0, 250, 1e3];
   var DRAG_THRESHOLD_PX = 4;
   var RING_KEYFRAMES = BELL_RING_SEQUENCE.map(({ offset, deg }) => ({
     transform: `rotate(${deg}deg)`,
@@ -28173,24 +28204,25 @@
       }
       return { left: boundedLeft, top: boundedTop };
     };
+    const defaultPosition = () => ({
+      left: window.innerWidth - BUTTON_SIZE - DEFAULT_RIGHT_GAP,
+      top: window.innerHeight * DEFAULT_TOP_RATIO
+    });
+    let desiredPosition = null;
+    let usingDefaultPosition = true;
+    const applyDesiredPosition = () => {
+      const target = usingDefaultPosition || !desiredPosition ? defaultPosition() : desiredPosition;
+      applyPosition2(target.left, target.top);
+    };
     const applyInitialPosition2 = () => {
       const saved = readSavedPosition();
-      if (saved) {
-        applyPosition2(saved.left, saved.top);
-        return;
-      }
-      applyPosition2(
-        window.innerWidth - BUTTON_SIZE - DEFAULT_RIGHT_GAP,
-        window.innerHeight * DEFAULT_TOP_RATIO
-      );
-    };
-    const clampIntoViewport2 = () => {
-      const rect = button2.getBoundingClientRect();
-      applyPosition2(rect.left, rect.top);
+      desiredPosition = saved;
+      usingDefaultPosition = !saved;
+      applyDesiredPosition();
     };
     const onWindowResize = () => {
       if (!running) return;
-      clampIntoViewport2();
+      applyDesiredPosition();
     };
     let dragState = null;
     const onDragMove = (ev) => {
@@ -28200,6 +28232,8 @@
       if (!dragState.dragged && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
       dragState.dragged = true;
       dragState.lastPos = applyPosition2(dragState.baseLeft + dx, dragState.baseTop + dy);
+      desiredPosition = dragState.lastPos;
+      usingDefaultPosition = false;
     };
     const stopDrag = (ev) => {
       if (!dragState) return;
@@ -28251,6 +28285,19 @@
     window.addEventListener("resize", onWindowResize);
     document.body.appendChild(button2);
     applyInitialPosition2();
+    const settleTimers = SETTLE_REAPPLY_DELAYS_MS.map(
+      (delay2) => window.setTimeout(() => {
+        if (running) applyDesiredPosition();
+      }, delay2)
+    );
+    const clearSettleTimers = () => {
+      for (const id of settleTimers) {
+        try {
+          window.clearTimeout(id);
+        } catch {
+        }
+      }
+    };
     const stopWiggle = () => {
       if (wiggleAnimation) {
         try {
@@ -28266,6 +28313,7 @@
         running = false;
         stopDrag();
         stopWiggle();
+        clearSettleTimers();
         window.removeEventListener("resize", onWindowResize);
         button2.removeEventListener("pointerdown", onPointerDown);
         try {
@@ -31334,7 +31382,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.194";
+      return "3.2.195";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;

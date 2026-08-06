@@ -7,6 +7,7 @@
 
 
 import { Atoms } from "../store/atoms";
+import { Store } from "../store/api";
 import {
   plantCatalog,
   eggCatalog,
@@ -864,6 +865,8 @@ let _lastSig = ""; // structural signature to avoid noisy notifies
 let _state: NotifierState | null = null;
 let _unsubShops: null | (() => void) = null;
 let _unsubPurchases: null | (() => void) = null;
+/** Annule les attentes d'atoms encore en vol quand `_stop()` passe par là. */
+let _watchGeneration = 0;
 const _subs = new Set<(s: NotifierState) => void>();
 
 let _toolInv = new Map<string, number>();
@@ -1181,6 +1184,64 @@ function _notify() {
   });
 }
 
+// ---------- attente des atoms du jeu ----------
+const ATOM_WAIT_POLL_MS = 400;
+const ATOM_WAIT_TIMEOUT_MS = 10 * 60_000;
+const STATE_ATOM_LABEL = "stateAtom";
+const MY_DATA_ATOM_LABEL = "myDataAtom";
+
+/**
+ * Attend qu'un atom du jeu soit réellement enregistré.
+ *
+ * `ensureStore()` n'attend que la capture du store, pas la création des atoms :
+ * `Store.subscribe` sur un label encore inconnu renvoie un unsubscribe vide sans
+ * jamais s'abonner ni lever d'erreur. `myDataAtom` n'apparaît qu'une fois les
+ * données joueur reçues, alors que le HUD monte l'overlay dès `document.head` —
+ * s'abonner tout de suite laissait les achats définitivement muets pour la
+ * session, et `purchasesUpdates` bloqué sous le seuil qui arme les alertes.
+ */
+async function _waitForAtom(label: string, keepGoing: () => boolean): Promise<boolean> {
+  const startedAt = Date.now();
+  while (keepGoing() && Date.now() - startedAt < ATOM_WAIT_TIMEOUT_MS) {
+    try { if (await Store.hasAtom(label)) return true; } catch {}
+    await new Promise<void>((resolve) => setTimeout(resolve, ATOM_WAIT_POLL_MS));
+  }
+  return false;
+}
+
+/**
+ * S'abonne puis re-lit la valeur courante.
+ *
+ * L'ordre compte : s'abonner d'abord garantit qu'aucun changement survenu
+ * pendant l'attente n'est perdu, et la relecture qui suit remplace le snapshot
+ * vide poussé au boot par les vraies données.
+ */
+async function _watchShops(generation: number) {
+  const isCurrent = () => _watchGeneration === generation;
+  if (!(await _waitForAtom(STATE_ATOM_LABEL, isCurrent)) || !isCurrent()) return;
+  if (_unsubShops) return;
+  try {
+    _unsubShops = await Atoms.shop.shops.onChange((next) => {
+      try { _notifyShops(next); } catch {}
+    });
+  } catch {}
+  if (!isCurrent()) return;
+  try { _notifyShops(await Atoms.shop.shops.get()); } catch {}
+}
+
+async function _watchPurchases(generation: number) {
+  const isCurrent = () => _watchGeneration === generation;
+  if (!(await _waitForAtom(MY_DATA_ATOM_LABEL, isCurrent)) || !isCurrent()) return;
+  if (_unsubPurchases) return;
+  try {
+    _unsubPurchases = await Atoms.shop.myShopPurchases.onChange((next: any) => {
+      try { _notifyPurchases(next); } catch {}
+    });
+  } catch {}
+  if (!isCurrent()) return;
+  try { _notifyPurchases(await Atoms.shop.myShopPurchases.get()); } catch {}
+}
+
 // ---------- start/stop ----------
 let _started = false;
 async function _ensureStarted() {
@@ -1197,32 +1258,12 @@ async function _ensureStarted() {
     window.addEventListener("gemini:data-updated", _onDataUpdated);
   } catch {}
 
-  // prime + subscribe shops (only for live snapshot forwarding to overlay)
-  try {
-    const cur = await Atoms.shop.shops.get();
-    _notifyShops(cur);
-  } catch (err) {
-  }
-
-  try {
-    _unsubShops = await Atoms.shop.shops.onChange((next) => {
-      try { _notifyShops(next); } catch {}
-    });
-  } catch (err) {
-  }
-
-  // prime + subscribe purchases
-  try {
-    const curP = await Atoms.shop.myShopPurchases.get();
-    _notifyPurchases(curP);
-  } catch (err) {
-  }
-  try {
-    _unsubPurchases = await Atoms.shop.myShopPurchases.onChange((next: any) => {
-      try { _notifyPurchases(next); } catch {}
-    });
-  } catch (err) {
-  }
+  // Shops + achats : on n'attend pas les atoms ici (le HUD monte l'overlay très
+  // tôt), on lance la surveillance en tâche de fond. Elle s'abonne et re-notifie
+  // dès que le jeu a enregistré ses atoms.
+  const generation = ++_watchGeneration;
+  void _watchShops(generation);
+  void _watchPurchases(generation);
 
   // tool inventory (caps)
   try {
@@ -1274,6 +1315,7 @@ async function _ensureStarted() {
 }
 
 function _stop() {
+  _watchGeneration++; // annule une surveillance encore en attente des atoms
   try { window.removeEventListener("gemini:data-updated", _onDataUpdated); } catch {}
   try { _unsubShops?.(); } catch {}
   _unsubShops = null;
