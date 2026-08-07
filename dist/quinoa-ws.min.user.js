@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.195
+// @version      3.2.196
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -4327,6 +4327,46 @@
   }
 
   // src/store/api.ts
+  var ATOM_POLL_MS = 250;
+  var ATOM_WAIT_TIMEOUT_MS = 10 * 6e4;
+  var pendingWaiters = /* @__PURE__ */ new Set();
+  var pollTimer = null;
+  function stopPoller() {
+    if (pollTimer === null) return;
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+  function pollPendingWaiters() {
+    const now2 = Date.now();
+    for (const waiter of Array.from(pendingWaiters)) {
+      const atom = getAtomByLabel(waiter.label);
+      if (atom) {
+        pendingWaiters.delete(waiter);
+        waiter.resolve(atom);
+        continue;
+      }
+      if (now2 >= waiter.expiresAt) {
+        pendingWaiters.delete(waiter);
+        waiter.resolve(null);
+      }
+    }
+    if (!pendingWaiters.size) stopPoller();
+  }
+  function ensurePoller() {
+    if (pollTimer !== null) return;
+    pollTimer = setInterval(pollPendingWaiters, ATOM_POLL_MS);
+  }
+  function waitForAtom(label2) {
+    return new Promise((resolve) => {
+      const waiter = {
+        label: label2,
+        expiresAt: Date.now() + ATOM_WAIT_TIMEOUT_MS,
+        resolve
+      };
+      pendingWaiters.add(waiter);
+      ensurePoller();
+    });
+  }
   async function ensureStore2() {
     try {
       await ensureStore();
@@ -4349,21 +4389,94 @@
   }
   async function subscribe(label2, cb) {
     await ensureStore2();
-    const atom = getAtomByLabel(label2);
-    if (!atom) return () => {
+    let cancelled = false;
+    let attachedUnsub = null;
+    const attach = async (atom2) => {
+      const unsub = await jSub(atom2, async () => {
+        try {
+          cb(await jGet(atom2));
+        } catch {
+        }
+      });
+      if (cancelled) {
+        try {
+          unsub();
+        } catch {
+        }
+        return;
+      }
+      attachedUnsub = unsub;
     };
-    const unsub = await jSub(atom, async () => {
+    const atom = getAtomByLabel(label2);
+    if (atom) {
+      await attach(atom);
+    } else {
+      void (async () => {
+        const found = await waitForAtom(label2);
+        if (!found || cancelled) return;
+        try {
+          await attach(found);
+        } catch {
+        }
+      })();
+    }
+    return () => {
+      cancelled = true;
+      const unsub = attachedUnsub;
+      attachedUnsub = null;
       try {
-        cb(await jGet(atom));
+        unsub?.();
       } catch {
       }
-    });
-    return unsub;
+    };
   }
   async function subscribeImmediate(label2, cb) {
-    const first = await select(label2);
-    if (first !== void 0) cb(first);
-    return subscribe(label2, cb);
+    await ensureStore2();
+    let cancelled = false;
+    let attachedUnsub = null;
+    const attach = async (atom2) => {
+      const unsub = await jSub(atom2, async () => {
+        try {
+          cb(await jGet(atom2));
+        } catch {
+        }
+      });
+      if (cancelled) {
+        try {
+          unsub();
+        } catch {
+        }
+        return;
+      }
+      attachedUnsub = unsub;
+      try {
+        const current = await jGet(atom2);
+        if (!cancelled && current !== void 0) cb(current);
+      } catch {
+      }
+    };
+    const atom = getAtomByLabel(label2);
+    if (atom) {
+      await attach(atom);
+    } else {
+      void (async () => {
+        const found = await waitForAtom(label2);
+        if (!found || cancelled) return;
+        try {
+          await attach(found);
+        } catch {
+        }
+      })();
+    }
+    return () => {
+      cancelled = true;
+      const unsub = attachedUnsub;
+      attachedUnsub = null;
+      try {
+        unsub?.();
+      } catch {
+      }
+    };
   }
   async function set(label2, value) {
     await ensureStore2();
@@ -27123,12 +27236,12 @@
     });
   }
   var ATOM_WAIT_POLL_MS = 400;
-  var ATOM_WAIT_TIMEOUT_MS = 10 * 6e4;
+  var ATOM_WAIT_TIMEOUT_MS2 = 10 * 6e4;
   var STATE_ATOM_LABEL = "stateAtom";
   var MY_DATA_ATOM_LABEL = "myDataAtom";
   async function _waitForAtom(label2, keepGoing) {
     const startedAt = Date.now();
-    while (keepGoing() && Date.now() - startedAt < ATOM_WAIT_TIMEOUT_MS) {
+    while (keepGoing() && Date.now() - startedAt < ATOM_WAIT_TIMEOUT_MS2) {
       try {
         if (await Store.hasAtom(label2)) return true;
       } catch {
@@ -31382,7 +31495,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.195";
+      return "3.2.196";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
