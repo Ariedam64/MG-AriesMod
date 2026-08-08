@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.196
+// @version      3.2.197
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -31495,7 +31495,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.196";
+      return "3.2.197";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -44381,16 +44381,17 @@ next: ${next}`;
     }
     return hasGold ? "gold" : "normal";
   }
+  function sumHatchedCounts(counts) {
+    if (!isPlainRecord(counts)) return 0;
+    const normal = Number(counts.normal) || 0;
+    const gold = Number(counts.gold) || 0;
+    const rainbow = Number(counts.rainbow) || 0;
+    return Math.max(0, normal) + Math.max(0, gold) + Math.max(0, rainbow);
+  }
   function isPetStatsSectionEmpty(stats) {
     const entries = Object.values(stats.pets?.hatchedByType ?? {});
     if (entries.length === 0) return true;
-    return entries.every((counts) => {
-      if (!counts) return true;
-      const normal = Number(counts.normal) || 0;
-      const gold = Number(counts.gold) || 0;
-      const rainbow = Number(counts.rainbow) || 0;
-      return normal <= 0 && gold <= 0 && rainbow <= 0;
-    });
+    return entries.every((counts) => sumHatchedCounts(counts) <= 0);
   }
   async function initPets(stats) {
     if (!isPetStatsSectionEmpty(stats)) return;
@@ -44479,9 +44480,11 @@ next: ${next}`;
       const rarityValue = normalizePetRarity(info?.rarity);
       map2.get(rarityValue)?.push(species);
     }
-    for (const speciesKey of Object.keys(stats.pets?.hatchedByType ?? {})) {
+    const hatchedByType = stats.pets?.hatchedByType ?? {};
+    for (const speciesKey of Object.keys(hatchedByType)) {
       const lower = speciesKey.toLowerCase();
       if (seen.has(lower)) continue;
+      if (sumHatchedCounts(hatchedByType[speciesKey]) <= 0) continue;
       seen.add(lower);
       const display = speciesKey.charAt(0).toUpperCase() + speciesKey.slice(1);
       map2.get(rarity2.Common)?.push(display);

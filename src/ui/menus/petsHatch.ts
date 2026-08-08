@@ -156,16 +156,18 @@ function determinePetMutationType(mutations: unknown): keyof HatchedCountsShape 
   return hasGold ? "gold" : "normal";
 }
 
+function sumHatchedCounts(counts: unknown): number {
+  if (!isPlainRecord(counts)) return 0;
+  const normal = Number(counts.normal) || 0;
+  const gold = Number(counts.gold) || 0;
+  const rainbow = Number(counts.rainbow) || 0;
+  return Math.max(0, normal) + Math.max(0, gold) + Math.max(0, rainbow);
+}
+
 function isPetStatsSectionEmpty(stats: StatsSnapshot): boolean {
   const entries = Object.values(stats.pets?.hatchedByType ?? {});
   if (entries.length === 0) return true;
-  return entries.every((counts) => {
-    if (!counts) return true;
-    const normal = Number((counts as { normal?: unknown }).normal) || 0;
-    const gold = Number((counts as { gold?: unknown }).gold) || 0;
-    const rainbow = Number((counts as { rainbow?: unknown }).rainbow) || 0;
-    return normal <= 0 && gold <= 0 && rainbow <= 0;
-  });
+  return entries.every((counts) => sumHatchedCounts(counts) <= 0);
 }
 
 /** Seed the hatch counters from owned pets the first time the tab is used. */
@@ -282,10 +284,17 @@ function createPetRarityGroups(stats: StatsSnapshot): Map<PetRarity, string[]> {
     map.get(rarityValue)?.push(species);
   }
 
-  // Include pets the player has stats for but that aren't in the catalog yet.
-  for (const speciesKey of Object.keys(stats.pets?.hatchedByType ?? {})) {
+  // Include pets the player has actually hatched but that aren't in the catalog
+  // (species the data API dropped, or ones it hasn't shipped yet).
+  // Zero-count entries are skipped on purpose: createDefaultStats seeds a 0 for
+  // every catalog species and normalizeStats never prunes keys, so a species the
+  // API served once stays in storage forever and would otherwise be displayed
+  // long after it left the game.
+  const hatchedByType = stats.pets?.hatchedByType ?? {};
+  for (const speciesKey of Object.keys(hatchedByType)) {
     const lower = speciesKey.toLowerCase();
     if (seen.has(lower)) continue;
+    if (sumHatchedCounts(hatchedByType[speciesKey]) <= 0) continue;
     seen.add(lower);
     const display = speciesKey.charAt(0).toUpperCase() + speciesKey.slice(1);
     map.get(rarity.Common as PetRarity)?.push(display);
