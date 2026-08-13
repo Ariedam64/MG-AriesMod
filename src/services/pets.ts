@@ -8,7 +8,8 @@ import {
 } from "./player";
 import { petCatalog, petAbilities, formatAbilityLog, isPetAbilityAction } from "../data";
 import { fakeInventoryShow, fakeInventoryDisable, closeInventoryPanel, isInventoryOpen } from "./fakeModal.ts";
-import { Atoms, myPetHutchPetItems, myNumPetHutchItems, myPetHutchCapacitySlots, isMyInventoryAtMaxLength, stateUserSlots, playerId, playerDatabaseUserId, myActivityLog } from "../store/atoms";
+import { Atoms, myPetHutchPetItems, myNumPetHutchItems, myPetHutchCapacitySlots, isMyInventoryAtMaxLength, stateUserSlots, playerId, player as playerAtom, myActivityLog } from "../store/atoms";
+import { readAccountId, findSlotIndex } from "../utils/playerIdentity";
 import { toastSimple } from "../ui/toast";
 import { Hotkey, matchHotkey, stringToHotkey } from "../ui/menu.ts";
 import {
@@ -2280,22 +2281,12 @@ async function _getMyUserSlotIndex(): Promise<number | null> {
     const slots = await stateUserSlots.get();
     const list: any[] = Array.isArray(slots) ? slots : [];
     if (!list.length) return null;
-    let pid: string | null = null;
-    let dbId: string | null = null;
-    try { pid = (await playerId.get()) ?? null; } catch {}
-    try { dbId = (await playerDatabaseUserId.get()) ?? null; } catch {}
-    if (!pid && !dbId) return null;
-    for (let i = 0; i < list.length; i++) {
-      const slot = list[i];
-      if (!slot) continue;
-      const slotPid = String(slot?.playerId ?? "");
-      const slotDbId = String(slot?.databaseUserId ?? "");
-      if ((pid && (slotPid === pid || slotDbId === pid)) ||
-          (dbId && (slotPid === dbId || slotDbId === dbId))) {
-        return i;
-      }
-    }
-    return null;
+    let roomId: string | null = null;
+    let accountId: string | null = null;
+    try { roomId = (await playerId.get()) ?? null; } catch {}
+    try { accountId = readAccountId(await playerAtom.get()); } catch {}
+    if (!roomId && !accountId) return null;
+    return findSlotIndex(list, { accountId, roomId });
   } catch { return null; }
 }
 

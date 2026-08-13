@@ -10,6 +10,7 @@ import {
 } from "../utils/api";
 import { fetchRemoteRooms, type RemoteRoomsPayload } from "../utils/publicRooms";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
+import { readAccountId } from "../utils/playerIdentity";
 
 const MAX_PLAYERS = 6;
 
@@ -331,10 +332,9 @@ function normalizeRoomPlayers(
     if (!entry || typeof entry !== "object") continue;
 
     const id = typeof entry.id === "string" && entry.id.trim().length ? entry.id.trim() : undefined;
-    const databaseUserId =
-      typeof entry.databaseUserId === "string" && entry.databaseUserId.trim().length
-        ? entry.databaseUserId.trim()
-        : undefined;
+    // Le jeu a renommé ce champ en `discordUserId`. Le lire sous les deux noms,
+    // sinon `isHost` perd un de ses deux critères et l'hôte n'est plus marqué.
+    const databaseUserId = readAccountId(entry) ?? undefined;
     const rawName = typeof entry.name === "string" ? entry.name.trim() : "";
     const name = rawName || "Unknown player";
     const isConnected = typeof entry.isConnected === "boolean" ? entry.isConnected : false;

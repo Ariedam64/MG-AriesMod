@@ -1,11 +1,18 @@
 // ariesModAPI/endpoints/state.ts
 // Endpoint collect-state + logique de payload (déplacé depuis utils/payload.ts)
 
-import { Atoms, playerDatabaseUserId } from "../../store/atoms";
+import { Atoms, player as playerAtom } from "../../store/atoms";
 import type { GardenState } from "../../store/atoms";
 import { shareGlobal, pageWindow } from "../../utils/page-context";
 import { readAriesPath, hasApiKey } from "../../utils/localStorage";
 import { getLocalVersion } from "../../utils/version";
+import {
+  readAccountId,
+  readSlotId,
+  resolveMyAccountId,
+  selectSlotForAccount,
+  findPlayerByAccountId,
+} from "../../utils/playerIdentity";
 import { httpPost } from "../client/http";
 import { MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND, DEFAULT_HEARTBEAT_INTERVAL } from "../config";
 
@@ -114,73 +121,39 @@ function getSlotsArray(state: any): any[] {
   return [];
 }
 
-function selectSlot(
-  slots: any[],
-  options: BuildPlayerStatePayloadOptions,
-): any | null {
-  if (!Array.isArray(slots) || slots.length === 0) return null;
-
-  const { slotIndex, playerId } = options;
-
-  if (typeof slotIndex === "number" && Number.isInteger(slotIndex)) {
-    const candidate = slots[slotIndex];
-    if (candidate && typeof candidate === "object") return candidate;
+/**
+ * Notre id de compte, résolu depuis le player atom avec la liste des joueurs en
+ * repli. Renvoie null tant que l'identité n'est pas connue : tout ce qui
+ * remonte au serveur doit s'arrêter là plutôt que de deviner.
+ */
+async function getMyAccountId(state?: any): Promise<string | null> {
+  try {
+    const me = await playerAtom.get();
+    const snapshot = state ?? (await Atoms.root.state.get());
+    return resolveMyAccountId(me, getPlayersArray(snapshot));
+  } catch {
+    return null;
   }
+}
 
-  const normalizedId = playerId != null ? String(playerId) : null;
-  if (normalizedId) {
-    for (const slot of slots) {
-      if (!slot || typeof slot !== "object") continue;
-      if (
-        String(
-          slot.databaseUserId ??
-            slot.playerId ??
-            slot.data?.databaseUserId ??
-            slot.data?.playerId ??
-            "",
-        ) === normalizedId
-      ) {
-        return slot;
+/** Le joueur d'un slot : d'abord par compte, puis par id de room du slot. */
+function resolvePlayer(players: any[], slot: any, accountId: string | null): any | null {
+  const byAccount = findPlayerByAccountId(players, accountId ?? readSlotId(slot));
+  if (byAccount) return byAccount;
+
+  const slotRoomId = slot?.playerId ?? slot?.data?.playerId ?? null;
+  if (slotRoomId != null) {
+    const normalized = String(slotRoomId);
+    for (const player of players) {
+      if (player && typeof player === "object" && String(player.id ?? "") === normalized) {
+        return player;
       }
     }
   }
 
-  // Ne pas prendre de fallback si un playerId spécifique était demandé
-  if (normalizedId) {
-    return null;
-  }
-
-  for (const slot of slots) {
-    if (!slot || typeof slot !== "object") continue;
-    if (slot.playerId || slot.databaseUserId || slot.data) return slot;
-  }
-
+  // Pas de repli sur players[0] : cela mettait le nom d'un autre joueur sur
+  // notre propre ligne de leaderboard.
   return null;
-}
-
-function resolvePlayer(
-  players: any[],
-  slot: any,
-  options: BuildPlayerStatePayloadOptions,
-): any | null {
-  const candidate =
-    options.playerId ??
-    slot?.playerId ??
-    slot?.databaseUserId ??
-    slot?.data?.playerId ??
-    slot?.data?.databaseUserId ??
-    null;
-  const normalized = candidate != null ? String(candidate) : null;
-
-  if (normalized) {
-    for (const player of players) {
-      if (!player || typeof player !== "object") continue;
-      if (String(player.id ?? "") === normalized) return player;
-      if (String(player.databaseUserId ?? "") === normalized) return player;
-    }
-  }
-
-  return players[0] ?? null;
 }
 
 function normalizeActivityLog(slotData: any): any[] | null {
@@ -210,14 +183,8 @@ export async function buildPlayerStatePayload(
     const coinsById = new Map<string, number | null>();
     for (const slot of slots) {
       const slotData = slot?.data ?? slot;
-      const candidateId =
-        slotData?.databaseUserId ??
-        slot?.databaseUserId ??
-        slotData?.playerId ??
-        slot?.playerId ??
-        null;
-      if (candidateId == null) continue;
-      const normalizedSlotId = String(candidateId);
+      const normalizedSlotId = readSlotId(slot);
+      if (normalizedSlotId == null) continue;
       const coinCandidate =
         slotData?.coinsCount ??
         slotData?.data?.coinsCount ??
@@ -231,15 +198,9 @@ export async function buildPlayerStatePayload(
     }
 
     const userSlots = normalizedPlayers.map((player) => {
-      const playerDatabaseId =
-        player?.databaseUserId ?? player?.playerId ?? player?.id ?? null;
-      const normalizedPlayerId =
-        playerDatabaseId != null ? String(playerDatabaseId) : null;
-      const slotId =
-        normalizedPlayerId ??
-        (typeof player?.id === "string" || typeof player?.id === "number"
-          ? String(player.id)
-          : null);
+      // Uniquement l'id de compte : `player.id` est un id de room éphémère, et
+      // le remonter comme playerId crée un compte fantôme à chaque join.
+      const slotId = readAccountId(player);
       const coins = slotId ? coinsById.get(slotId) ?? null : null;
       return {
         name: typeof player?.name === "string" ? player.name : null,
@@ -250,13 +211,13 @@ export async function buildPlayerStatePayload(
       };
     });
 
-    const myDatabaseUserId = await playerDatabaseUserId.get();
     if (slots.length === 0) return null;
 
-    const slot = selectSlot(slots, {
-      ...options,
-      playerId: options.playerId ?? myDatabaseUserId ?? undefined,
-    });
+    const myAccountId = options.playerId ?? (await getMyAccountId(state));
+    const slot = selectSlotForAccount(slots, {
+      slotIndex: options.slotIndex,
+      accountId: myAccountId,
+    }) as any;
 
     if (!slot || typeof slot !== "object") {
       return null;
@@ -265,7 +226,7 @@ export async function buildPlayerStatePayload(
     const slotData = slot.data ?? slot;
     if (!slotData || typeof slotData !== "object") return null;
 
-    const resolvedPlayer = resolvePlayer(normalizedPlayers, slot, options);
+    const resolvedPlayer = resolvePlayer(normalizedPlayers, slot, myAccountId ?? null);
 
     const playerName = resolvedPlayer?.name ?? slotData?.name ?? slot?.name ?? null;
 
@@ -405,10 +366,14 @@ export async function sendPlayerState(
 
   // When not authenticated, include playerId in body so the server can identify the player
   if (!hasApiKey()) {
-    const myPlayerId = await playerDatabaseUserId.get();
-    if (myPlayerId) {
-      (cleanPayload as any).playerId = String(myPlayerId);
+    const myAccountId = await getMyAccountId();
+    if (!myAccountId) {
+      // Sans identité, le serveur ne peut rattacher ce payload à personne. Ne
+      // rien envoyer plutôt que de le laisser atterrir sur un autre compte.
+      console.error("[api] sendPlayerState skipped - player identity unknown");
+      return false;
     }
+    (cleanPayload as any).playerId = myAccountId;
   }
 
   const { status } = await httpPost<null>("collect-state", cleanPayload);
@@ -434,25 +399,15 @@ async function tryInitializeReporting(state?: any): Promise<void> {
   const players = Array.isArray(snapshot?.data?.players) ? snapshot.data.players : [];
   if (players.length === 0) return;
 
-  // Vérifier que notre slot est présent avant de démarrer
-  const myDatabaseUserId = await playerDatabaseUserId.get();
-  if (myDatabaseUserId) {
-    const slots = getSlotsArray(snapshot);
-    const mySlotExists = slots.some((slot) => {
-      const slotId = String(
-        slot?.databaseUserId ??
-          slot?.data?.databaseUserId ??
-          slot?.playerId ??
-          slot?.data?.playerId ??
-          "",
-      );
-      return slotId === String(myDatabaseUserId);
-    });
+  // Vérifier que notre slot est présent avant de démarrer. Le garde-fou était
+  // conditionné à l'identité, donc une identité nulle le désactivait au lieu de
+  // bloquer : maintenant une identité inconnue empêche simplement le démarrage.
+  const myAccountId = await getMyAccountId(snapshot);
+  if (!myAccountId) return;
 
-    if (!mySlotExists) {
-      return;
-    }
-  }
+  const slots = getSlotsArray(snapshot);
+  const mySlotExists = slots.some((slot) => readSlotId(slot) === myAccountId);
+  if (!mySlotExists) return;
 
   gameReadyTriggered = true;
   startPlayerStateReporting(preferredReportingIntervalMs);

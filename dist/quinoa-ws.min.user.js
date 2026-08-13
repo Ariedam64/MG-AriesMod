@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.197
+// @version      3.2.198
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -4752,7 +4752,6 @@
   var gardenTileObjects = makeView("myDataAtom", { path: "garden.tileObjects" });
   var favoriteIds = makeView("myInventoryAtom", { path: "favoritedItemIds" });
   var playerId = makeView("playerAtom", { path: "id" });
-  var playerDatabaseUserId = makeView("playerAtom", { path: "databaseUserId" });
   var myOwnCurrentGardenObjectType = makeView("myOwnCurrentGardenObjectAtom", { path: "objectType" });
   var stateChild = makeView("stateAtom", { path: "child" });
   var stateChildData = makeView("stateAtom", { path: "child.data" });
@@ -21602,6 +21601,78 @@
     }
   }
 
+  // src/utils/playerIdentity.ts
+  var ACCOUNT_ID_KEYS = ["discordUserId", "databaseUserId"];
+  var SLOT_ID_KEYS = [...ACCOUNT_ID_KEYS, "userId", "playerId"];
+  var ROOM_ID_KEYS = ["id"];
+  function asRecord(value) {
+    return value && typeof value === "object" ? value : null;
+  }
+  function readFirstKey(source, keys) {
+    const record = asRecord(source);
+    if (!record) return null;
+    for (const key2 of keys) {
+      const value = record[key2];
+      if (typeof value === "string" && value.length > 0) return value;
+      if (typeof value === "number" && Number.isFinite(value)) return String(value);
+    }
+    return null;
+  }
+  function readNested(source, keys) {
+    const direct = readFirstKey(source, keys);
+    if (direct) return direct;
+    return readFirstKey(asRecord(source)?.data, keys);
+  }
+  function readAccountId(source) {
+    return readNested(source, ACCOUNT_ID_KEYS);
+  }
+  function readSlotId(slot) {
+    return readNested(slot, SLOT_ID_KEYS);
+  }
+  function resolveMyAccountId(player2, players = []) {
+    const direct = readAccountId(player2);
+    if (direct) return direct;
+    const myRoomId = readFirstKey(player2, ROOM_ID_KEYS);
+    if (!myRoomId) return null;
+    for (const entry of players) {
+      if (readFirstKey(entry, ROOM_ID_KEYS) === myRoomId) return readAccountId(entry);
+    }
+    return null;
+  }
+  function selectSlotForAccount(slots, selection = {}) {
+    if (!Array.isArray(slots) || slots.length === 0) return null;
+    const { slotIndex, accountId } = selection;
+    if (typeof slotIndex === "number" && Number.isInteger(slotIndex)) {
+      const candidate = asRecord(slots[slotIndex]);
+      if (candidate) return candidate;
+    }
+    const normalized = accountId != null && accountId !== "" ? String(accountId) : null;
+    if (!normalized) return null;
+    for (const slot of slots) {
+      if (readSlotId(slot) === normalized) return slot;
+    }
+    return null;
+  }
+  function findPlayerByAccountId(players, accountId) {
+    if (!accountId) return null;
+    for (const player2 of players) {
+      if (readAccountId(player2) === accountId) return player2;
+    }
+    return null;
+  }
+  function findSlotIndex(slots, identifiers) {
+    if (!Array.isArray(slots) || slots.length === 0) return null;
+    const wanted = [identifiers.accountId, identifiers.roomId].filter(
+      (value) => typeof value === "string" && value.length > 0
+    );
+    if (wanted.length === 0) return null;
+    for (let index = 0; index < slots.length; index++) {
+      const slotId = readSlotId(slots[index]);
+      if (slotId != null && wanted.includes(slotId)) return index;
+    }
+    return null;
+  }
+
   // src/services/pets.ts
   var PATH_PETS_OVERRIDES = "pets.overrides";
   var PATH_PETS_INSTANT_FEED = "pets.instantFeed";
@@ -23527,27 +23598,18 @@
       const slots = await stateUserSlots.get();
       const list = Array.isArray(slots) ? slots : [];
       if (!list.length) return null;
-      let pid = null;
-      let dbId = null;
+      let roomId = null;
+      let accountId = null;
       try {
-        pid = await playerId.get() ?? null;
+        roomId = await playerId.get() ?? null;
       } catch {
       }
       try {
-        dbId = await playerDatabaseUserId.get() ?? null;
+        accountId = readAccountId(await player.get());
       } catch {
       }
-      if (!pid && !dbId) return null;
-      for (let i = 0; i < list.length; i++) {
-        const slot = list[i];
-        if (!slot) continue;
-        const slotPid = String(slot?.playerId ?? "");
-        const slotDbId = String(slot?.databaseUserId ?? "");
-        if (pid && (slotPid === pid || slotDbId === pid) || dbId && (slotPid === dbId || slotDbId === dbId)) {
-          return i;
-        }
-      }
-      return null;
+      if (!roomId && !accountId) return null;
+      return findSlotIndex(list, { accountId, roomId });
     } catch {
       return null;
     }
@@ -31495,7 +31557,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.197";
+      return "3.2.198";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -54631,44 +54693,28 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return [];
   }
-  function selectSlot(slots, options) {
-    if (!Array.isArray(slots) || slots.length === 0) return null;
-    const { slotIndex, playerId: playerId2 } = options;
-    if (typeof slotIndex === "number" && Number.isInteger(slotIndex)) {
-      const candidate = slots[slotIndex];
-      if (candidate && typeof candidate === "object") return candidate;
+  async function getMyAccountId(state3) {
+    try {
+      const me = await player.get();
+      const snapshot2 = state3 ?? await Atoms.root.state.get();
+      return resolveMyAccountId(me, getPlayersArray2(snapshot2));
+    } catch {
+      return null;
     }
-    const normalizedId = playerId2 != null ? String(playerId2) : null;
-    if (normalizedId) {
-      for (const slot of slots) {
-        if (!slot || typeof slot !== "object") continue;
-        if (String(
-          slot.databaseUserId ?? slot.playerId ?? slot.data?.databaseUserId ?? slot.data?.playerId ?? ""
-        ) === normalizedId) {
-          return slot;
+  }
+  function resolvePlayer(players, slot, accountId) {
+    const byAccount = findPlayerByAccountId(players, accountId ?? readSlotId(slot));
+    if (byAccount) return byAccount;
+    const slotRoomId = slot?.playerId ?? slot?.data?.playerId ?? null;
+    if (slotRoomId != null) {
+      const normalized = String(slotRoomId);
+      for (const player2 of players) {
+        if (player2 && typeof player2 === "object" && String(player2.id ?? "") === normalized) {
+          return player2;
         }
       }
     }
-    if (normalizedId) {
-      return null;
-    }
-    for (const slot of slots) {
-      if (!slot || typeof slot !== "object") continue;
-      if (slot.playerId || slot.databaseUserId || slot.data) return slot;
-    }
     return null;
-  }
-  function resolvePlayer(players, slot, options) {
-    const candidate = options.playerId ?? slot?.playerId ?? slot?.databaseUserId ?? slot?.data?.playerId ?? slot?.data?.databaseUserId ?? null;
-    const normalized = candidate != null ? String(candidate) : null;
-    if (normalized) {
-      for (const player2 of players) {
-        if (!player2 || typeof player2 !== "object") continue;
-        if (String(player2.id ?? "") === normalized) return player2;
-        if (String(player2.databaseUserId ?? "") === normalized) return player2;
-      }
-    }
-    return players[0] ?? null;
   }
   function normalizeActivityLog(slotData) {
     const logs = slotData?.activityLog ?? slotData?.activityLogs ?? slotData?.activitylog;
@@ -54684,17 +54730,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       const coinsById = /* @__PURE__ */ new Map();
       for (const slot2 of slots) {
         const slotData2 = slot2?.data ?? slot2;
-        const candidateId = slotData2?.databaseUserId ?? slot2?.databaseUserId ?? slotData2?.playerId ?? slot2?.playerId ?? null;
-        if (candidateId == null) continue;
-        const normalizedSlotId = String(candidateId);
+        const normalizedSlotId = readSlotId(slot2);
+        if (normalizedSlotId == null) continue;
         const coinCandidate2 = slotData2?.coinsCount ?? slotData2?.data?.coinsCount ?? slot2?.coinsCount ?? slot2?.data?.coinsCount ?? slotData2?.coins ?? slot2?.coins ?? null;
         const coinValue2 = Number(coinCandidate2);
         coinsById.set(normalizedSlotId, Number.isFinite(coinValue2) ? coinValue2 : null);
       }
       const userSlots = normalizedPlayers.map((player2) => {
-        const playerDatabaseId = player2?.databaseUserId ?? player2?.playerId ?? player2?.id ?? null;
-        const normalizedPlayerId = playerDatabaseId != null ? String(playerDatabaseId) : null;
-        const slotId = normalizedPlayerId ?? (typeof player2?.id === "string" || typeof player2?.id === "number" ? String(player2.id) : null);
+        const slotId = readAccountId(player2);
         const coins = slotId ? coinsById.get(slotId) ?? null : null;
         return {
           name: typeof player2?.name === "string" ? player2.name : null,
@@ -54703,18 +54746,18 @@ Restore figures are averages; unlucky streaks do worse.`;
           coins
         };
       });
-      const myDatabaseUserId = await playerDatabaseUserId.get();
       if (slots.length === 0) return null;
-      const slot = selectSlot(slots, {
-        ...options,
-        playerId: options.playerId ?? myDatabaseUserId ?? void 0
+      const myAccountId = options.playerId ?? await getMyAccountId(state3);
+      const slot = selectSlotForAccount(slots, {
+        slotIndex: options.slotIndex,
+        accountId: myAccountId
       });
       if (!slot || typeof slot !== "object") {
         return null;
       }
       const slotData = slot.data ?? slot;
       if (!slotData || typeof slotData !== "object") return null;
-      const resolvedPlayer = resolvePlayer(normalizedPlayers, slot, options);
+      const resolvedPlayer = resolvePlayer(normalizedPlayers, slot, myAccountId ?? null);
       const playerName = resolvedPlayer?.name ?? slotData?.name ?? slot?.name ?? null;
       const avatarRaw = resolvedPlayer?.cosmetic?.avatar ?? slotData?.cosmetic?.avatar ?? slot?.cosmetic?.avatar ?? null;
       const avatar2 = Array.isArray(avatarRaw) && avatarRaw.length > 0 ? avatarRaw.map((entry) => String(entry)) : null;
@@ -54794,10 +54837,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!payload) return false;
     const { playerId: playerId2, avatarUrl, ...cleanPayload } = payload;
     if (!hasApiKey()) {
-      const myPlayerId = await playerDatabaseUserId.get();
-      if (myPlayerId) {
-        cleanPayload.playerId = String(myPlayerId);
+      const myAccountId = await getMyAccountId();
+      if (!myAccountId) {
+        console.error("[api] sendPlayerState skipped - player identity unknown");
+        return false;
       }
+      cleanPayload.playerId = myAccountId;
     }
     const { status } = await httpPost("collect-state", cleanPayload);
     if (status === 204) return true;
@@ -54816,19 +54861,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     const snapshot2 = state3 ?? await Atoms.root.state.get();
     const players = Array.isArray(snapshot2?.data?.players) ? snapshot2.data.players : [];
     if (players.length === 0) return;
-    const myDatabaseUserId = await playerDatabaseUserId.get();
-    if (myDatabaseUserId) {
-      const slots = getSlotsArray2(snapshot2);
-      const mySlotExists = slots.some((slot) => {
-        const slotId = String(
-          slot?.databaseUserId ?? slot?.data?.databaseUserId ?? slot?.playerId ?? slot?.data?.playerId ?? ""
-        );
-        return slotId === String(myDatabaseUserId);
-      });
-      if (!mySlotExists) {
-        return;
-      }
-    }
+    const myAccountId = await getMyAccountId(snapshot2);
+    if (!myAccountId) return;
+    const slots = getSlotsArray2(snapshot2);
+    const mySlotExists = slots.some((slot) => readSlotId(slot) === myAccountId);
+    if (!mySlotExists) return;
     gameReadyTriggered = true;
     startPlayerStateReporting(preferredReportingIntervalMs);
   }
