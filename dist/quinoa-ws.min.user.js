@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.198
+// @version      3.2.199
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -19461,7 +19461,7 @@
   }
   function findPlayerSlot(slots, playerId2, opts = {}) {
     if (!slots || typeof slots !== "object") return null;
-    const isMatch = (slot) => slot && String(slot.playerId || slot.id || "") === String(playerId2);
+    const isMatch = (slot) => slot && String(slot.userId || slot.playerId || slot.id || "") === String(playerId2);
     if (Array.isArray(slots)) {
       const arr = slots;
       for (let i = 0; i < arr.length; i++) {
@@ -31557,7 +31557,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.198";
+      return "3.2.199";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -51573,15 +51573,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     const boardwalkTileObjects = bto && typeof bto === "object" ? bto : {};
     return { tileObjects, boardwalkTileObjects };
   }
+  function getSlotOwnerId(slot) {
+    const raw = slot?.userId ?? slot?.playerId ?? slot?.id;
+    return raw != null ? String(raw) : "";
+  }
   function getSlotByPlayerId(st, playerId2) {
-    for (const s of getSlotsArray(st)) if (String(s?.playerId ?? "") === String(playerId2)) return s;
+    for (const s of getSlotsArray(st)) if (getSlotOwnerId(s) === String(playerId2)) return s;
     return null;
   }
   function enrichPlayersWithSlots(players, st) {
     const byPid = /* @__PURE__ */ new Map();
     for (const slot of getSlotsArray(st)) {
       if (!slot || typeof slot !== "object") continue;
-      const pid = slot.playerId != null ? String(slot.playerId) : "";
+      const pid = getSlotOwnerId(slot);
       if (!pid) continue;
       const pos = extractPosFromSlot(slot);
       const inv = extractInventoryFromSlot(slot);
@@ -51599,7 +51603,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const out = [];
     const seen = /* @__PURE__ */ new Set();
     for (const s of slots) {
-      const pid = s?.playerId != null ? String(s.playerId) : "";
+      const pid = getSlotOwnerId(s);
       if (!pid || seen.has(pid)) continue;
       const p = mapById.get(pid);
       if (p) {
@@ -52177,6 +52181,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   var TEXT4 = "#e7eef7";
   var TEXT_DIM4 = "rgba(226,232,240,0.45)";
   var GREEN = "#10b981";
+  var PLAYER_POSITION_AVAILABLE = false;
+  var PLAYER_POSITION_UNAVAILABLE_HINT = "Temporarily unavailable: the game no longer exposes player positions.";
   function ensureStyles3() {
     if (document.getElementById(STYLE_ID5)) return;
     const st = document.createElement("style");
@@ -52341,6 +52347,23 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     return btn;
   }
+  function markUnavailable(btn, hint) {
+    btn.title = hint;
+    css3(btn, {
+      opacity: "0.45",
+      cursor: "not-allowed",
+      filter: "grayscale(1)",
+      border: `1px solid ${BORDER4}`,
+      background: CARD_BG3,
+      color: TEXT_DIM4
+    });
+    btn.onmouseenter = null;
+    btn.onmouseleave = null;
+    btn.onclick = () => {
+      void toastSimple("Unavailable", hint, "info");
+    };
+    return btn;
+  }
   function secondaryBtn2(label2, iconSvg, onClick) {
     const btn = document.createElement("button");
     css3(btn, {
@@ -52486,8 +52509,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       teleSection.appendChild(sectionLabel3("Teleport"));
       const teleRow = document.createElement("div");
       css3(teleRow, { display: "flex", gap: "8px" });
+      const toPlayerBtn = primaryBtn2(
+        "To player",
+        ICONS.teleport,
+        () => PlayersService.teleportToPlayer(player2.id)
+      );
+      if (!PLAYER_POSITION_AVAILABLE) markUnavailable(toPlayerBtn, PLAYER_POSITION_UNAVAILABLE_HINT);
       teleRow.append(
-        primaryBtn2("To player", ICONS.teleport, () => PlayersService.teleportToPlayer(player2.id)),
+        toPlayerBtn,
+        // "To garden" ne dépend pas de la position live : il passe par mapAtom.spawnTiles.
         primaryBtn2("To garden", ICONS.garden, () => PlayersService.teleportToGarden(player2.id))
       );
       teleSection.appendChild(teleRow);
@@ -52499,7 +52529,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const followPlayerBtn = toggleBtn(
         "Follow player",
         ICONS.follow,
-        PlayersService.isFollowing(player2.id),
+        PLAYER_POSITION_AVAILABLE && PlayersService.isFollowing(player2.id),
         async (next) => {
           if (next) {
             await PlayersService.startFollowing(player2.id);
@@ -52510,6 +52540,9 @@ Restore figures are averages; unlucky streaks do worse.`;
           }
         }
       );
+      if (!PLAYER_POSITION_AVAILABLE) {
+        markUnavailable(followPlayerBtn, PLAYER_POSITION_UNAVAILABLE_HINT);
+      }
       followRow.append(followPlayerBtn);
       followSection.appendChild(followRow);
       content.appendChild(followSection);

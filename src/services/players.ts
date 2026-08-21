@@ -164,8 +164,18 @@ function extractGardenFromSlot(slot: any): Garden | null {
   return { tileObjects, boardwalkTileObjects };
 }
 
+/**
+ * Identifiant du propriétaire d'un `userSlot`.
+ * Le jeu a renommé `playerId` en `userId` : lire les deux, sinon la jointure
+ * joueur↔slot casse (inventaire/jardin/journal/stats vides pour tout le monde).
+ */
+function getSlotOwnerId(slot: any): string {
+  const raw = slot?.userId ?? slot?.playerId ?? slot?.id;
+  return raw != null ? String(raw) : "";
+}
+
 function getSlotByPlayerId(st: any, playerId: string) {
-  for (const s of getSlotsArray(st)) if (String(s?.playerId ?? "") === String(playerId)) return s;
+  for (const s of getSlotsArray(st)) if (getSlotOwnerId(s) === String(playerId)) return s;
   return null;
 }
 
@@ -173,7 +183,7 @@ function enrichPlayersWithSlots(players: Player[], st: any): Player[] {
   const byPid = new Map<string, { x?: number; y?: number; inventory?: Inventory | null }>();
   for (const slot of getSlotsArray(st)) {
     if (!slot || typeof slot !== "object") continue;
-    const pid = slot.playerId != null ? String(slot.playerId) : "";
+    const pid = getSlotOwnerId(slot);
     if (!pid) continue;
     const pos = extractPosFromSlot(slot);
     const inv = extractInventoryFromSlot(slot);
@@ -194,7 +204,7 @@ function orderPlayersBySlots(players: Player[], st: any): Player[] {
   const out: Player[] = [];
   const seen = new Set<string>();
   for (const s of slots) {
-    const pid = s?.playerId != null ? String(s.playerId) : "";
+    const pid = getSlotOwnerId(s);
     if (!pid || seen.has(pid)) continue;
     const p = mapById.get(pid);
     if (p) { out.push(p); seen.add(pid); }

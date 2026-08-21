@@ -3682,7 +3682,7 @@ function findPlayerSlot(
   if (!slots || typeof slots !== "object") return null;
 
   const isMatch = (slot: any) =>
-    slot && String(slot.playerId || slot.id || "") === String(playerId);
+    slot && String(slot.userId || slot.playerId || slot.id || "") === String(playerId);
 
   if (Array.isArray(slots)) {
     const arr = slots as any[];

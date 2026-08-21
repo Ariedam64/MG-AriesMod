@@ -34,6 +34,16 @@ const TEXT = "#e7eef7";
 const TEXT_DIM = "rgba(226,232,240,0.45)";
 const GREEN = "#10b981";
 
+/**
+ * Le jeu ne publie plus la position des joueurs dans `stateAtom`
+ * (`userSlots[].data.position` a disparu, seuls les pets ont encore un `motion`).
+ * Tant qu'on n'a pas retrouvé la nouvelle source, tout ce qui dépend de la
+ * position d'un autre joueur est désactivé. Repasser à `true` pour réactiver.
+ */
+const PLAYER_POSITION_AVAILABLE = false;
+const PLAYER_POSITION_UNAVAILABLE_HINT =
+  "Temporarily unavailable: the game no longer exposes player positions.";
+
 function ensureStyles(): void {
   if (document.getElementById(STYLE_ID)) return;
   const st = document.createElement("style");
@@ -207,6 +217,27 @@ function toggleBtn(label: string, iconSvg: string, active: boolean, onToggle: (n
   };
 
   (btn as any).__setActive = (v: boolean) => { isActive = v; applyState(); };
+  return btn;
+}
+
+/**
+ * Grise un bouton et remplace son action par un toast explicatif.
+ * On garde le bouton cliquable (plutôt que `disabled`) pour que l'utilisateur
+ * comprenne pourquoi l'action ne marche pas au lieu de croire à un bug.
+ */
+function markUnavailable(btn: HTMLElement, hint: string): HTMLElement {
+  btn.title = hint;
+  css(btn, {
+    opacity: "0.45",
+    cursor: "not-allowed",
+    filter: "grayscale(1)",
+    border: `1px solid ${BORDER}`,
+    background: CARD_BG,
+    color: TEXT_DIM,
+  });
+  btn.onmouseenter = null;
+  btn.onmouseleave = null;
+  btn.onclick = () => { void toastSimple("Unavailable", hint, "info"); };
   return btn;
 }
 
@@ -384,9 +415,15 @@ export async function renderRoomMenu(root: HTMLElement) {
     teleSection.appendChild(sectionLabel("Teleport"));
     const teleRow = document.createElement("div");
     css(teleRow, { display: "flex", gap: "8px" });
+    const toPlayerBtn = primaryBtn("To player", ICONS.teleport, () =>
+      PlayersService.teleportToPlayer(player.id),
+    );
+    if (!PLAYER_POSITION_AVAILABLE) markUnavailable(toPlayerBtn, PLAYER_POSITION_UNAVAILABLE_HINT);
+
     teleRow.append(
-      primaryBtn("To player", ICONS.teleport, () => PlayersService.teleportToPlayer(player.id)),
-      primaryBtn("To garden", ICONS.garden,   () => PlayersService.teleportToGarden(player.id)),
+      toPlayerBtn,
+      // "To garden" ne dépend pas de la position live : il passe par mapAtom.spawnTiles.
+      primaryBtn("To garden", ICONS.garden, () => PlayersService.teleportToGarden(player.id)),
     );
     teleSection.appendChild(teleRow);
     content.appendChild(teleSection);
@@ -400,7 +437,7 @@ export async function renderRoomMenu(root: HTMLElement) {
     const followPlayerBtn = toggleBtn(
       "Follow player",
       ICONS.follow,
-      PlayersService.isFollowing(player.id),
+      PLAYER_POSITION_AVAILABLE && PlayersService.isFollowing(player.id),
       async (next) => {
         if (next) {
           await PlayersService.startFollowing(player.id);
@@ -411,6 +448,10 @@ export async function renderRoomMenu(root: HTMLElement) {
         }
       },
     );
+
+    if (!PLAYER_POSITION_AVAILABLE) {
+      markUnavailable(followPlayerBtn, PLAYER_POSITION_UNAVAILABLE_HINT);
+    }
 
     followRow.append(followPlayerBtn);
     followSection.appendChild(followRow);
