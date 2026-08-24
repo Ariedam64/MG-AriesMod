@@ -1,6 +1,6 @@
 # Arie's Mod
 
-A browser overlay for **Magic Garden / Magic Circle** that adds a bunch of quality-of-life tools on top of the official game: pet team switching, crop protection, shop and weather alerts, a garden editor, and more.
+A browser overlay for **Magic Garden / Magic Circle** that adds a bunch of quality-of-life tools on top of the official game: pet team switching, crop protection, shop and weather alerts, a garden editor, custom sprite skins, and more.
 
 **Open or close the overlay:** `Alt + X` or `Insert` (`Option + X` on Mac)
 
@@ -45,6 +45,8 @@ Violentmonkey doesn't need any of this, it works out of the box.
 
 Head to the [Releases page](https://github.com/Ariedam64/MG-AriesMod/releases), download the `.user.js` file from the latest release, and your userscript manager will offer to install it. Reload the game and the HUD will show up in the corner once you're connected.
 
+After an update, a short release note pops up on your first load so you can see what changed.
+
 ---
 
 ## Feature map
@@ -53,7 +55,8 @@ Everything below lives in the overlay's menu, opened with `Alt + X` or `Insert`.
 
 ### 🐾 Pets
 
-- **Manager**: build named teams of 3 pets, filter your inventory by ability or species while picking one, and snapshot your currently active pets into a team with one click. Drag teams to reorder them, assign a hotkey to each from Keybinds, and cycle through teams with Previous/Next.
+- **Manager**: build named teams of 3 pets, filter your inventory by ability or species while picking one, and snapshot your currently active pets into a team with one click. Drag teams to reorder them, assign a hotkey to each from Keybinds, and cycle through teams with Previous/Next. Teams stay in sync with the in-game ones by default, and a toggle lets you unsync them if you'd rather keep the two lists separate.
+- **Team Builder**: scans the pets you actually own and proposes ready-made teams per goal (plant growth, egg hatching, a specific mutation, and so on), each with an Active and an AFK variant. Every suggestion shows its stats so you can compare, and saving one drops it straight into your Manager list.
 - **Feeding**: decide which crops each pet species is allowed to eat, and toggle a small floating "Instant Feed" button you can drag anywhere on screen.
 - **Hatch**: a running count of pets hatched per species, split by Normal, Gold, and Rainbow.
 - **Logs**: a searchable history of your pets' ability activations, with filters and sorting.
@@ -88,23 +91,47 @@ A list of everyone currently in your room. Select a player to teleport to them o
 
 ### 📝 Editor
 
-A sandbox mode that unlocks every plant and decor item for free placement, handy for planning a layout. You can also save your current garden, import a garden from a file, and manage a list of saved layouts you can reload or export at any time.
+A sandbox mode that unlocks every plant and decor item for free placement, handy for planning a layout.
+
+- Left click to place, right click to remove, drag to paint. Decor follows your mouse directly instead of snapping to a grid.
+- Plants can be placed with the size, custom scale, and mutations of your choice, so a mock garden can look exactly like the real thing.
+- Decor rotation is a slider with a live preview, and each piece only offers the angles it actually supports.
+- Save your current garden, import one from a file, and manage a list of saved layouts you can reload or export at any time.
+
+### 🎨 Skins
+
+Replace any game sprite with your own image.
+
+- Browse the sprite grid, filter by category or search by name, then pick an object and drop in a PNG.
+- Works on plants (each growth stage has its own slot), decor, and items, mutated versions included.
+- Every slot shows its ideal image size, match it for a pixel-perfect result.
+- Skins are stored locally on your machine and reapplied automatically on every load. A master switch turns them all off, and Reset clears the lot.
+
+Ground tiles are the one exception, they're baked into the map and can't be skinned.
 
 ### 🧩 Misc
 
 - **Ghost mode**: walk through walls, with an adjustable movement delay.
 - **Inventory guard**: keeps one inventory slot free so you never get stuck at capacity.
-- **Auto-store**: automatically sends matching seeds and decor into the Seed Silo and Decor Shed.
+- **Auto-store**: automatically sends matching seeds and decor into the Seed Silo and Decor Shed, as soon as they land in your inventory.
 - **Seed and decor deleters**: bulk delete a selection of seeds or decor with a progress bar and pause/stop controls.
 - **Auto-reconnect** is in this menu too, but it's currently switched off at the request of the game's developers. It should come back once that's resolved.
 
 ### ⌨️ Keybinds
 
-Rebind pretty much everything: opening the menu, moving around, shop shortcuts, selling crops or pets, editor actions, and one hotkey per pet team. Clear or reset any binding individually.
+Rebind pretty much everything, grouped into sections you can collapse, with the game's own sprites next to each action:
+
+- **GUI**: open the menu, drag the HUD.
+- **Shops**: seeds, eggs, decor, tools.
+- **Game**: the action button (with a rapid-fire hold), movement, and every panel, inventory, pet hutch, decor shed, seed silo, feeding trough, weather station, journal.
+- **Sell**: all crops, all pets.
+- **Pets**: previous and next team, plus one hotkey per saved team.
+
+Clear or reset any binding individually.
 
 ### 🛠️ Tools
 
-A curated list of community-made calculators, guides, and other tools, with tags to filter by type and a preview before you click through.
+A curated list of community-made calculators, guides, apps, and other tools, with tags to filter by type, screenshots, and a preview before you click through.
 
 ### ⚙️ Settings
 
@@ -119,6 +146,7 @@ A few things run automatically without a dedicated menu:
 - Crops in your inventory and garden show their estimated coin value.
 - Your inventory gets a sort dropdown (name, rarity, value, size, mutations, strength) plus ascending/descending order.
 - A "Sell all Pets" button appears next to the game's own sell prompt, respecting your Locker restrictions.
+- The activity log keeps a much longer history than the game does, and gains a filter by action type.
 
 ---
 
@@ -126,7 +154,7 @@ A few things run automatically without a dedicated menu:
 
 Friends, DMs, groups, room browsing, and the leaderboard used to live inside this mod. They've since moved to their own companion userscript, **MG Community Hub**, so they can be installed and updated on their own. If you had them set up here before, your login and settings carry over automatically.
 
-Get it from [github.com/Ariedam64/MG-CommunityHub](https://github.com/Ariedam64/MG-CommunityHub). You can run it alongside Arie's Mod without any conflicts.
+Get it from [github.com/Ariedam64/MG-CommunityHub](https://github.com/Ariedam64/MG-CommunityHub). You can run it alongside Arie's Mod without any conflicts. It's also where the room privacy toggle lives, if you'd rather your room stayed out of the public list.
 
 ---
 
