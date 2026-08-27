@@ -6,71 +6,29 @@
 import { getJSON, getBlob } from "../utils/mgCommon";
 import { withDiscordPollPause } from "../ariesModAPI/client/events";
 import { MGData } from "../data/dynamic";
+import {
+  findSprite,
+  normalizeSpriteName as normalize,
+  setCatalogReader,
+  setSpriteIndex,
+  spriteIndexSize,
+  type SpriteCatalogKey,
+  type SpriteEntry,
+} from "./spriteResolver";
 
 const API_BASE = "https://mg-api.ariedam.fr";
 
 // ─── Sprite Index ──────────────────────────────────────────────────────────────
+// Name lookup itself lives in ./spriteResolver; this module owns the fetching,
+// the blob/object-URL caches and the DOM side.
 
-type SpriteIndexEntry = {
-  id: string;          // e.g. "sprite/plant/Bamboo"
-  name: string;        // e.g. "Bamboo"
-  internalCat: string; // e.g. "plant" (extracted from id)
-  apiCat: string;      // e.g. "plants" (for URL construction)
-  url: string;         // ready-to-fetch PNG URL
-};
-
-const indexEntries: SpriteIndexEntry[] = [];
-const nameIndex = new Map<string, SpriteIndexEntry[]>();
 let indexReady: Promise<void> | null = null;
 
-const normalize = (value: string): string => {
-  let str = String(value || "").trim();
-  // If it looks like a URL or path, extract just the filename
-  if (str.includes("/")) {
-    str = str.split("/").pop() || str;
-  }
-  // Strip file extensions and query params (e.g. "Carrot.png?v=163" → "Carrot")
-  str = str.replace(/\.[a-z0-9]+(\?.*)?$/i, "");
-  return str.toLowerCase().replace(/[^a-z0-9]/g, "");
-};
-
-/** Map from internal sprite-id category → API URL path segment */
-const INTERNAL_TO_API: Record<string, string> = {
-  plant: "plants",
-  tallplant: "tallPlants",
-  seed: "seeds",
-  pet: "pets",
-  item: "items",
-  decor: "decor",
-  mutation: "mutations",
-  "mutation-overlay": "mutations",
-  ui: "ui",
-  weather: "weather",
-  // Keys here are the *internal* category, which comes from the frame key and
-  // is always singular (`sprite/object/…`). These three were written plural on
-  // both sides, so they never matched and their sprites fell through to the
-  // singular URL — which the API serves only in plural, hence a 404 for every
-  // object/tile/animation icon in the mod.
-  object: "objects",
-  tile: "tiles",
-  animation: "animations",
-  winter: "winter",
-};
-
-/** Map from the categories used in attachSpriteIcon calls → internal cats to search */
-const SEARCH_CATS: Record<string, string[]> = {
-  plant: ["plant", "tallplant"],
-  tallplant: ["tallplant", "plant"],
-  crop: ["plant", "tallplant"],
-  seed: ["seed"],
-  pet: ["pet"],
-  item: ["item"],
-  decor: ["decor"],
-  mutation: ["mutation", "mutation-overlay"],
-  "mutation-overlay": ["mutation-overlay", "mutation"],
-  ui: ["ui"],
-  weather: ["ui", "weather", "mutation"],
-};
+// The catalogs are the authoritative source: each entry already carries a
+// ready-to-use, versioned `sprite` URL, so icons never depend on the sprite
+// index nor on fuzzy name matching. The index is only a fallback for the few
+// sprites no catalog exposes (raw ui/tile frames).
+setCatalogReader((key: SpriteCatalogKey) => MGData.get(key) as Record<string, unknown> | null);
 
 function fetchIndex(): Promise<void> {
   if (indexReady) return indexReady;
@@ -80,26 +38,8 @@ function fetchIndex(): Promise<void> {
     ),
   )
     .then((data) => {
-      const items = data.items || [];
-      for (const item of items) {
-        const parts = item.id.split("/").filter(Boolean);
-        const start = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
-        const internalCat = parts[start] || "";
-        const apiCat = INTERNAL_TO_API[internalCat] || internalCat;
-        const entry: SpriteIndexEntry = {
-          id: item.id,
-          name: item.name,
-          internalCat,
-          apiCat,
-          url: `${API_BASE}/assets/sprites/${apiCat}/${item.name}.png`,
-        };
-        indexEntries.push(entry);
-        const norm = normalize(item.name);
-        const arr = nameIndex.get(norm) || [];
-        arr.push(entry);
-        nameIndex.set(norm, arr);
-      }
-      console.log("[SpriteIconCache] sprite index loaded", { count: indexEntries.length });
+      setSpriteIndex(data.items || [], API_BASE);
+      console.log("[SpriteIconCache] sprite index loaded", { count: spriteIndexSize() });
     })
     .catch(err => {
       console.error("[SpriteIconCache] failed to fetch sprite index", err);
@@ -113,117 +53,6 @@ function fetchIndex(): Promise<void> {
 // This ensures it's ready before any menu opens, avoiding race conditions
 // where DOM elements get replaced before async sprite loading completes.
 fetchIndex();
-
-function expandCategories(categories: string[]): Set<string> {
-  const internalCats = new Set<string>();
-  for (const cat of categories) {
-    const expanded = SEARCH_CATS[cat] || [cat];
-    for (const catName of expanded) internalCats.add(catName);
-  }
-  return internalCats;
-}
-
-// ─── Catalog Sprites (authoritative, from /data) ───────────────────────────────
-// MGData already serves every catalog entry with a ready-to-use, versioned `sprite`
-// URL. Preferring it over the name-matched sprite index means pets/eggs never depend
-// on a second endpoint nor on fuzzy name matching to get their icon.
-
-const CATALOG_SPRITE_SOURCES: Array<{ dataKey: "pets" | "eggs"; internalCat: string }> = [
-  { dataKey: "pets", internalCat: "pet" },
-  { dataKey: "eggs", internalCat: "pet" }, // eggs live in the pet spritesheet
-];
-
-const catalogIndex = new Map<string, SpriteIndexEntry[]>();
-let catalogSourcesIndexed = -1;
-
-function addCatalogAlias(alias: string, entry: SpriteIndexEntry): void {
-  const key = normalize(alias);
-  if (!key) return;
-  const entries = catalogIndex.get(key) || [];
-  if (entries.some(known => known.internalCat === entry.internalCat)) return;
-  entries.push(entry);
-  catalogIndex.set(key, entries);
-}
-
-/** (Re)build the catalog lookup as MGData catalogs land. Cheap no-op once stable. */
-function buildCatalogIndex(): void {
-  const loaded = CATALOG_SPRITE_SOURCES.filter(source => MGData.get(source.dataKey)).length;
-  if (loaded === catalogSourcesIndexed) return;
-  catalogSourcesIndexed = loaded;
-  catalogIndex.clear();
-
-  for (const source of CATALOG_SPRITE_SOURCES) {
-    const catalog = MGData.get(source.dataKey) as Record<string, unknown> | null;
-    if (!catalog) continue;
-    for (const [id, raw] of Object.entries(catalog)) {
-      const data = raw as { sprite?: unknown; name?: unknown } | null;
-      const url = typeof data?.sprite === "string" ? data.sprite : "";
-      if (!url) continue;
-      const entry: SpriteIndexEntry = {
-        id: `sprite/${source.internalCat}/${id}`,
-        name: id,
-        internalCat: source.internalCat,
-        apiCat: INTERNAL_TO_API[source.internalCat] || source.internalCat,
-        url,
-      };
-      addCatalogAlias(id, entry);
-      if (typeof data?.name === "string") addCatalogAlias(data.name, entry);
-    }
-  }
-}
-
-function findCatalogSprite(internalCats: Set<string>, normTarget: string): SpriteIndexEntry | null {
-  if (!normTarget) return null;
-  buildCatalogIndex();
-  const entries = catalogIndex.get(normTarget);
-  if (!entries?.length) return null;
-  for (const entry of entries) {
-    if (internalCats.has(entry.internalCat)) return entry;
-  }
-  return null;
-}
-
-function findSprite(categories: string[], candidateId: string): SpriteIndexEntry | null {
-  const norm = normalize(candidateId);
-  const internalCats = expandCategories(categories);
-
-  const fromCatalog = findCatalogSprite(internalCats, norm);
-  if (fromCatalog) return fromCatalog;
-
-  const entries = nameIndex.get(norm);
-  if (!entries?.length) {
-    return findSpriteFuzzy(categories, norm);
-  }
-
-  for (const entry of entries) {
-    if (internalCats.has(entry.internalCat)) return entry;
-  }
-
-  // No category match — try fuzzy search instead of returning wrong category
-  return findSpriteFuzzy(categories, norm);
-}
-
-function findSpriteFuzzy(categories: string[], normTarget: string): SpriteIndexEntry | null {
-  if (!normTarget) return null;
-
-  const internalCats = expandCategories(categories);
-
-  for (const [norm, entries] of nameIndex) {
-    if (norm.includes(normTarget) || normTarget.includes(norm)) {
-      for (const entry of entries) {
-        if (internalCats.has(entry.internalCat)) return entry;
-      }
-    }
-  }
-
-  for (const [norm, entries] of nameIndex) {
-    if (norm.includes(normTarget) || normTarget.includes(norm)) {
-      return entries[0];
-    }
-  }
-
-  return null;
-}
 
 // ─── Mutation Icon Sprites ──────────────────────────────────────────────────────
 // Mutations that have an icon sprite overlay (from the API /data/mutations)
@@ -527,7 +356,7 @@ export function primeWarmupKeys(_keys: string[]): void {
 
 export function warmupSpriteCache(): void {
   fetchIndex().then(() => {
-    const total = indexEntries.length;
+    const total = spriteIndexSize();
     notifyWarmup({ total, done: total, completed: true });
   });
 }
@@ -591,7 +420,7 @@ export function attachSpriteIcon(
   const hasMutations = mutations.length > 0;
 
   fetchIndex().then(() => {
-    let selectedEntry: SpriteIndexEntry | null = null;
+    let selectedEntry: SpriteEntry | null = null;
     let selectedCandidate = "";
 
     for (const candidate of candidateIds) {

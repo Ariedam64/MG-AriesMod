@@ -390,8 +390,10 @@ export const PlayerService = {
     try { sendToGame({ type: "HatchEgg", slot }); } catch (err) {  }
   },
 
+  // The message is named `GrowEgg` on the wire — `PlantEgg` no longer exists
+  // anywhere in the client, so it could only ever have been rejected.
   async plantEgg(slot: number, eggId: string) {
-    try { sendToGame({ type: "PlantEgg", slot, eggId }); } catch (err) {  }
+    try { sendToGame({ type: "GrowEgg", slot, eggId }); } catch (err) {  }
   },
 
   async placeDecor(tileType: "Dirt" | "Boardwalk", localTileIndex: number, decorId: string, rotation: 0) {
@@ -471,6 +473,10 @@ export const PlayerService = {
       return;
     }
 
+    // `PetPositions` exists nowhere in the current client, so the server has
+    // no handler for it — this send is a no-op and pet-follow only moves pets
+    // client-side. Kept flat (never wrapped in a command envelope, which would
+    // be rejected as malformed) until the feature is reworked.
     try { sendToGame({ type: "PetPositions", petPositions: sanitized }); } catch (err) { }
   },
 
@@ -504,8 +510,11 @@ export const PlayerService = {
 
   /* -------------------------------- Favorites ------------------------------ */
 
+  // The game renamed the action to `ToggleLockItem` (the padlock in the
+  // inventory); the state field it toggles is still `favoritedItemIds`, which
+  // is what `Atoms.inventory.favoriteIds` reads.
   async toggleFavoriteItem(itemId: string) {
-    try { sendToGame({ type: "ToggleFavoriteItem", itemId }); } catch (err) {  }
+    try { sendToGame({ type: "ToggleLockItem", itemId }); } catch (err) {  }
   },
 
   async getFavoriteIds(): Promise<string[]> {

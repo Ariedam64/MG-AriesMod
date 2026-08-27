@@ -119,9 +119,22 @@ export const myDecorInventory = makeAtom<DecorInventoryState>("myDecorInventoryA
 export const mySeedSiloItems = makeAtom<SeedInventoryState>("mySeedSiloItemsAtom");
 export const myDecorShedItems = makeAtom<DecorInventoryState>("myDecorShedItemsAtom");
 export const myFeedingTroughItems = makeAtom<CropInventoryState>("myFeedingTroughItemsAtom");
+// `myPetInfosAtom` no longer exists in the game (v1029). Nothing reads it
+// directly: `normalizePetsState` prefers it but falls back to the pet slots
+// below, which carry every field it needs, so pets keep resolving. Left in
+// place — and deliberately not repointed at `petInfosAtom`, which is every pet
+// in the room rather than ours.
 export const myPetInfos = makeAtom<PetState>("myPetInfosAtom");
 export const myPetSlotInfos = makeAtom<any>("myPetSlotInfosAtom");
-export const myPrimitivePetSlots = makeAtom<any[]>("myPrimitivePetSlotsAtom");
+// Renommé `myPrimitivePetSlotsAtom` -> `myPredictedPetSlotsAtom` côté jeu, avec
+// l'arrivée du système de prédiction/rollback : même tableau de slots, servi
+// depuis `prediction/quinoaPredictionAtoms.ts` et enrichi des commandes encore
+// en vol. L'ancien nom reste en repli le temps que les bundles en cache
+// disparaissent.
+export const myPrimitivePetSlots = makeAliasedAtom<any[]>([
+  "myPredictedPetSlotsAtom",
+  "myPrimitivePetSlotsAtom",
+]);
 export const myPetIdOnSameTile = makeAtom<string | null>("myPetIdOnSameTileAtom");
 export const totalPetSellPrice = makeAtom<number>("totalPetSellPriceAtom")
 export const myCropItemsToSell = makeAtom<any>("myCropItemsToSellAtom")
@@ -171,10 +184,12 @@ export const friendBonusMultiplier = makeAtom<any>("friendBonusMultiplierAtom")
 export const garden = makeView<any, GardenState | null>("myDataAtom", { path: "garden" });
 export const gardenTileObjects = makeView<any, Record<string, any>>("myDataAtom", { path: "garden.tileObjects" });
 export const favoriteIds = makeView<any, string[]>("myInventoryAtom", { path: "favoritedItemIds" });
+// `playerAtom.id` porte aujourd'hui l'id de compte (il portait un id de room
+// `p_…` avant le renommage). Cette vue reste brute et sans garantie : une vue
+// mono-chemin renvoie null en silence au prochain renommage, et ne sait pas
+// distinguer les deux espaces de noms. Pour identifier le joueur, passer par
+// resolveMyAccountId() dans ../utils/playerIdentity.
 export const playerId = makeView<any, string | null>("playerAtom", { path: "id" });
-// Pas de vue sur l'identité de compte ici : le champ a déjà été renommé une
-// fois et une vue mono-chemin renvoie null en silence quand cela arrive.
-// Passer par resolveMyAccountId() dans ../utils/playerIdentity.
 export const myOwnCurrentGardenObjectType = makeView<any, string | null>("myOwnCurrentGardenObjectAtom", { path: "objectType" });
 
 /* stateAtom sub-views (optionnel) */

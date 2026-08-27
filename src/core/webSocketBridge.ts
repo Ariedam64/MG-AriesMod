@@ -1,5 +1,6 @@
 // src/core/bridge.ts
 import { NativeWS, quinoaWS, setQWS, sockets, Workers } from "./state";
+import { buildQuinoaMessage } from "./quinoaCommands";
 
 export function postAllToWorkers(msg: any) {
   if ((Workers as any).forEach) (Workers as any).forEach((w: Worker) => { try { w.postMessage(msg); } catch {} });
@@ -20,7 +21,10 @@ export function getPageWS(): WebSocket {
 }
 
 export function sendToGame(payloadObj: Record<string, any>) {
-  const msg: any = { scopePath: ["Room", "Quinoa"], ...payloadObj };
+  // Gameplay actions travel inside the QuinoaCommand envelope (requestId +
+  // commandSequence); Ping/PlayerPosition and the types the game still writes
+  // flat keep the legacy shape. See src/core/quinoaCommands.ts.
+  const msg: any = buildQuinoaMessage(payloadObj);
 
   // tente via page
   try {

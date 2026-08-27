@@ -601,9 +601,22 @@ function _sameMemberSet(a: (string | null)[], b: string[]): boolean {
 // it left off — with the server winning on any divergence, as it always does.
 let _teamSyncEnabled = readAriesPath<boolean>(PATH_PETS_TEAM_SYNC, true) !== false;
 
+// The game never sends a null teamId: on a create it mints the id client-side
+// and flags the message with `isCreate`. Sending `teamId: null` was our own
+// invention and only ever left the server to guess.
 function _sendSavePetTeam(teamId: string | null, name: string, petIds: string[]): void {
   if (!_teamSyncEnabled) return;
-  try { sendToGame({ type: "SavePetTeam", teamId, name, petIds }); } catch {}
+  const isCreate = teamId === null;
+  const id = teamId ?? _newTeamId();
+  try { sendToGame({ type: "SavePetTeam", teamId: id, isCreate, name, petIds }); } catch {}
+}
+
+function _newTeamId(): string {
+  try {
+    const uuid = (globalThis.crypto as Crypto | undefined)?.randomUUID?.();
+    if (uuid) return uuid;
+  } catch {}
+  return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
 }
 function _sendDeletePetTeam(teamId: string): void {
   if (!_teamSyncEnabled) return;

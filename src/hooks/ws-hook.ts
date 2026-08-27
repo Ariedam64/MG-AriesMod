@@ -2,6 +2,14 @@
 import { NativeWS, sockets, setQWS } from "../core/state";
 import { pageWindow, readSharedGlobal, shareGlobal } from "../utils/page-context";
 import { parseWSData } from "../core/parse";
+import {
+  consumeOwnRequestId,
+  hasInjectedCommands,
+  observeGameCommandSequence,
+  resetCommandSequence,
+  seedCommandSequence,
+  takeCommandSequenceForGame,
+} from "../core/quinoaCommands";
 import { Atoms } from "../store/atoms";
 import { lockerService } from "../services/locker";
 import { plantCatalog } from "../data";
@@ -239,10 +247,13 @@ function startAutoReconnectOnSuperseded() {
  * Intercept QuinoaCommand envelopes at the WebSocket.send level.
  *
  * The game no longer routes commands through RoomConnection.sendMessage: they
- * are wrapped in { type: "QuinoaCommand", requestId, command: {...} } and
- * written straight to the socket. Patching the native prototype covers every
- * socket instance, including reconnections. Interceptors stay keyed on the
- * inner command type (HarvestCrop, PurchaseShopItem, ...).
+ * are wrapped in { type: "QuinoaCommand", requestId, commandSequence, command }
+ * and written straight to the socket. Patching the native prototype covers
+ * every socket instance, including reconnections. Interceptors stay keyed on
+ * the inner command type (HarvestCrop, PurchaseShopItem, ...).
+ *
+ * This is also where the command sequence stays gapless: the game and the mod
+ * both number into the same socket, and only the mod can see both streams.
  */
 function installQuinoaCommandSendInterceptor() {
   const proto = NativeWS.prototype as any;
@@ -251,23 +262,32 @@ function installQuinoaCommandSendInterceptor() {
   const originalSend = proto.send;
   proto.send = function (this: WebSocket, data: any, ...rest: any[]) {
     try {
-      if (
-        typeof data === "string" &&
-        interceptorsByType.size > 0 &&
-        data.indexOf('"QuinoaCommand"') !== -1
-      ) {
+      if (typeof data === "string" && data.indexOf('"QuinoaCommand"') !== -1) {
         const parsed = JSON.parse(data);
         const command =
           parsed?.type === "QuinoaCommand" && parsed.command && typeof parsed.command === "object"
             ? parsed.command
             : null;
-        const type = command?.type;
-        if (type) {
-          const result = applyInterceptors(type, command, { thisArg: this, args: rest });
-          if (result.drop) return;
-          if (result.message !== command) {
-            data = JSON.stringify({ ...parsed, command: result.message });
+
+        if (command) {
+          // Envelopes the mod built are already numbered, and the interceptors
+          // exist to filter what the *game* sends (locker, stats, inventory
+          // reserve). Running them on our own commands would make the mod
+          // block and count itself, which it never did while it sent flat.
+          const isOwnCommand = consumeOwnRequestId(parsed.requestId);
+          let envelope = parsed;
+
+          const type = command.type;
+          if (!isOwnCommand && type && interceptorsByType.size > 0) {
+            const result = applyInterceptors(type, command, { thisArg: this, args: rest });
+            if (result.drop) return;
+            if (result.message !== command) {
+              envelope = { ...envelope, command: result.message };
+            }
           }
+
+          if (!isOwnCommand) envelope = renumberGameCommand(envelope);
+          if (envelope !== parsed) data = JSON.stringify(envelope);
         }
       }
     } catch (error) {
@@ -276,6 +296,25 @@ function installQuinoaCommandSendInterceptor() {
     return originalSend.call(this, data, ...rest);
   };
   proto.__qwsSendPatched = true;
+}
+
+/**
+ * Keeps one gapless `commandSequence` stream on a socket both the game and the
+ * mod write to.
+ *
+ * The game's counter is module-local to its bundle, so it cannot know about the
+ * commands we inject: as soon as the mod sends one, the game's next number is
+ * already taken. Rewriting the game's outgoing commands from our own counter is
+ * what closes that gap. While the mod has sent nothing, we stay a passive
+ * observer and the bytes on the wire are exactly what vanilla would send.
+ */
+function renumberGameCommand(envelope: any): any {
+  if (!hasInjectedCommands()) {
+    observeGameCommandSequence(envelope?.commandSequence);
+    return envelope;
+  }
+
+  return { ...envelope, commandSequence: takeCommandSequenceForGame() };
 }
 
 export function installPageWebSocketHook() {
@@ -301,6 +340,10 @@ export function installPageWebSocketHook() {
     ws.addEventListener("message", async (ev: MessageEvent) => {
       const j = await parseWSData(ev.data);
       if (!j) return;
+      // Welcome carries the last sequence the server executed; the next command
+      // must be that plus one. Re-seeding on every Welcome is also what makes
+      // reconnects work without any special handling.
+      if (j.type === "Welcome") seedCommandSequence(j.executedCommandSequence);
       if (
         !hasSharedQuinoaWS() &&
         (j.type === "Welcome" || j.type === "Config" || j.fullState || j.config)
@@ -310,6 +353,9 @@ export function installPageWebSocketHook() {
     });
 
     ws.addEventListener("close", (ev: CloseEvent) => {
+      // The numbering is per connection: drop it so a socket that closes before
+      // the next Welcome can never leak a stale sequence into the new session.
+      resetCommandSequence();
       notifyWebSocketClose(ev, ws);
     });
     return ws;

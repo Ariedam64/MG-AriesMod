@@ -332,8 +332,9 @@ function normalizeRoomPlayers(
     if (!entry || typeof entry !== "object") continue;
 
     const id = typeof entry.id === "string" && entry.id.trim().length ? entry.id.trim() : undefined;
-    // Le jeu a renommé ce champ en `discordUserId`. Le lire sous les deux noms,
-    // sinon `isHost` perd un de ses deux critères et l'hôte n'est plus marqué.
+    // Toujours via readAccountId : le champ qui porte le compte a changé deux
+    // fois (`databaseUserId`, puis `discordUserId`, puis `id`). Sans lui,
+    // `isHost` perd un de ses deux critères et l'hôte n'est plus marqué.
     const databaseUserId = readAccountId(entry) ?? undefined;
     const rawName = typeof entry.name === "string" ? entry.name.trim() : "";
     const name = rawName || "Unknown player";

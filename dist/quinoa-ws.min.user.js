@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.199
+// @version      3.2.200
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -2858,19 +2858,7 @@
     }
   };
 
-  // src/ui/spriteIconCache.ts
-  var API_BASE2 = "https://mg-api.ariedam.fr";
-  var indexEntries = [];
-  var nameIndex = /* @__PURE__ */ new Map();
-  var indexReady = null;
-  var normalize = (value) => {
-    let str = String(value || "").trim();
-    if (str.includes("/")) {
-      str = str.split("/").pop() || str;
-    }
-    str = str.replace(/\.[a-z0-9]+(\?.*)?$/i, "");
-    return str.toLowerCase().replace(/[^a-z0-9]/g, "");
-  };
+  // src/ui/spriteResolver.ts
   var INTERNAL_TO_API = {
     plant: "plants",
     tallplant: "tallPlants",
@@ -2892,6 +2880,21 @@
     animation: "animations",
     winter: "winter"
   };
+  var API_TO_INTERNAL = {
+    plants: "plant",
+    tallplants: "tallplant",
+    seeds: "seed",
+    pets: "pet",
+    items: "item",
+    decor: "decor",
+    mutations: "mutation",
+    ui: "ui",
+    weather: "weather",
+    objects: "object",
+    tiles: "tile",
+    animations: "animation",
+    winter: "winter"
+  };
   var SEARCH_CATS = {
     plant: ["plant", "tallplant"],
     tallplant: ["tallplant", "plant"],
@@ -2900,45 +2903,22 @@
     pet: ["pet"],
     item: ["item"],
     decor: ["decor"],
-    mutation: ["mutation", "mutation-overlay"],
+    // A few mutation icons live in the `ui` sheet (MutationGold, MutationRainbow)
+    // while the rest sit in `mutations`, so both have to be searched — same
+    // reason `weather` already spans three.
+    mutation: ["mutation", "mutation-overlay", "ui"],
     "mutation-overlay": ["mutation-overlay", "mutation"],
     ui: ["ui"],
     weather: ["ui", "weather", "mutation"]
   };
-  function fetchIndex() {
-    if (indexReady) return indexReady;
-    indexReady = withDiscordPollPause(
-      () => getJSON2(
-        `${API_BASE2}/assets/sprite-data?flat=1`
-      )
-    ).then((data) => {
-      const items = data.items || [];
-      for (const item of items) {
-        const parts = item.id.split("/").filter(Boolean);
-        const start2 = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
-        const internalCat = parts[start2] || "";
-        const apiCat = INTERNAL_TO_API[internalCat] || internalCat;
-        const entry = {
-          id: item.id,
-          name: item.name,
-          internalCat,
-          apiCat,
-          url: `${API_BASE2}/assets/sprites/${apiCat}/${item.name}.png`
-        };
-        indexEntries.push(entry);
-        const norm3 = normalize(item.name);
-        const arr = nameIndex.get(norm3) || [];
-        arr.push(entry);
-        nameIndex.set(norm3, arr);
-      }
-      console.log("[SpriteIconCache] sprite index loaded", { count: indexEntries.length });
-    }).catch((err) => {
-      console.error("[SpriteIconCache] failed to fetch sprite index", err);
-      indexReady = null;
-    });
-    return indexReady;
+  function normalizeSpriteName(value) {
+    let str = String(value || "").trim();
+    if (str.includes("/")) {
+      str = str.split("/").pop() || str;
+    }
+    str = str.replace(/\.[a-z0-9]+(\?.*)?$/i, "");
+    return str.toLowerCase().replace(/[^a-z0-9]/g, "");
   }
-  fetchIndex();
   function expandCategories(categories) {
     const internalCats = /* @__PURE__ */ new Set();
     for (const cat of categories) {
@@ -2947,42 +2927,101 @@
     }
     return internalCats;
   }
-  var CATALOG_SPRITE_SOURCES = [
-    { dataKey: "pets", internalCat: "pet" },
-    { dataKey: "eggs", internalCat: "pet" }
-    // eggs live in the pet spritesheet
+  var indexEntries = [];
+  var nameIndex = /* @__PURE__ */ new Map();
+  function setSpriteIndex(items, apiBase) {
+    indexEntries.length = 0;
+    nameIndex.clear();
+    for (const item of items) {
+      const parts = item.id.split("/").filter(Boolean);
+      const start2 = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
+      const internalCat = parts[start2] || "";
+      const apiCat = INTERNAL_TO_API[internalCat] || internalCat;
+      const entry = {
+        id: item.id,
+        name: item.name,
+        internalCat,
+        apiCat,
+        url: `${apiBase}/assets/sprites/${apiCat}/${item.name}.png`
+      };
+      indexEntries.push(entry);
+      const norm3 = normalizeSpriteName(item.name);
+      const arr = nameIndex.get(norm3) || [];
+      arr.push(entry);
+      nameIndex.set(norm3, arr);
+    }
+  }
+  function spriteIndexSize() {
+    return indexEntries.length;
+  }
+  var CATALOG_SOURCES = [
+    // `crop` before `plant`: both land in the `plants` sheet, and the bare species
+    // name must resolve to the harvested crop (Carrot), not the seedling
+    // (BabyCarrot) — which is what the index used to return.
+    { key: "plants", paths: ["seed", "crop", "plant"] },
+    { key: "pets", paths: [null] },
+    { key: "eggs", paths: [null] },
+    { key: "items", paths: [null] },
+    { key: "decor", paths: [null] },
+    { key: "mutations", paths: [null] },
+    { key: "weather", paths: [null] }
   ];
   var catalogIndex = /* @__PURE__ */ new Map();
   var catalogSourcesIndexed = -1;
+  var catalogReader = null;
+  function setCatalogReader(reader) {
+    catalogReader = reader;
+    catalogSourcesIndexed = -1;
+  }
   function addCatalogAlias(alias, entry) {
-    const key2 = normalize(alias);
+    const key2 = normalizeSpriteName(alias);
     if (!key2) return;
     const entries = catalogIndex.get(key2) || [];
     if (entries.some((known) => known.internalCat === entry.internalCat)) return;
     entries.push(entry);
     catalogIndex.set(key2, entries);
   }
+  function readSpriteUrl(url) {
+    const match = /\/assets\/sprites\/([^/]+)\/([^/?#]+)\.[a-z0-9]+(?:[?#]|$)/i.exec(url);
+    if (!match) return null;
+    return { apiCat: match[1], name: match[2] };
+  }
+  function catalogEntryFor(url) {
+    const parsed = readSpriteUrl(url);
+    if (!parsed) return null;
+    const internalCat = API_TO_INTERNAL[parsed.apiCat.toLowerCase()] || parsed.apiCat.toLowerCase();
+    return {
+      id: `sprite/${internalCat}/${parsed.name}`,
+      name: parsed.name,
+      internalCat,
+      apiCat: parsed.apiCat,
+      url
+    };
+  }
   function buildCatalogIndex() {
-    const loaded = CATALOG_SPRITE_SOURCES.filter((source) => MGData.get(source.dataKey)).length;
+    const read = catalogReader;
+    if (!read) return;
+    const loaded = CATALOG_SOURCES.filter((source) => read(source.key)).length;
     if (loaded === catalogSourcesIndexed) return;
     catalogSourcesIndexed = loaded;
     catalogIndex.clear();
-    for (const source of CATALOG_SPRITE_SOURCES) {
-      const catalog = MGData.get(source.dataKey);
+    for (const source of CATALOG_SOURCES) {
+      const catalog = read(source.key);
       if (!catalog) continue;
       for (const [id, raw] of Object.entries(catalog)) {
-        const data = raw;
-        const url = typeof data?.sprite === "string" ? data.sprite : "";
-        if (!url) continue;
-        const entry = {
-          id: `sprite/${source.internalCat}/${id}`,
-          name: id,
-          internalCat: source.internalCat,
-          apiCat: INTERNAL_TO_API[source.internalCat] || source.internalCat,
-          url
-        };
-        addCatalogAlias(id, entry);
-        if (typeof data?.name === "string") addCatalogAlias(data.name, entry);
+        const record = raw;
+        if (!record || typeof record !== "object") continue;
+        for (const path of source.paths) {
+          const holder = path === null ? record : record[path];
+          if (!holder || typeof holder !== "object") continue;
+          const url = typeof holder.sprite === "string" ? holder.sprite : "";
+          if (!url) continue;
+          const entry = catalogEntryFor(url);
+          if (!entry) continue;
+          addCatalogAlias(entry.name, entry);
+          addCatalogAlias(id, entry);
+          if (typeof holder.name === "string") addCatalogAlias(holder.name, entry);
+        }
       }
     }
   }
@@ -2997,7 +3036,7 @@
     return null;
   }
   function findSprite(categories, candidateId) {
-    const norm3 = normalize(candidateId);
+    const norm3 = normalizeSpriteName(candidateId);
     const internalCats = expandCategories(categories);
     const fromCatalog = findCatalogSprite(internalCats, norm3);
     if (fromCatalog) return fromCatalog;
@@ -3027,6 +3066,27 @@
     }
     return null;
   }
+
+  // src/ui/spriteIconCache.ts
+  var API_BASE2 = "https://mg-api.ariedam.fr";
+  var indexReady = null;
+  setCatalogReader((key2) => MGData.get(key2));
+  function fetchIndex() {
+    if (indexReady) return indexReady;
+    indexReady = withDiscordPollPause(
+      () => getJSON2(
+        `${API_BASE2}/assets/sprite-data?flat=1`
+      )
+    ).then((data) => {
+      setSpriteIndex(data.items || [], API_BASE2);
+      console.log("[SpriteIconCache] sprite index loaded", { count: spriteIndexSize() });
+    }).catch((err) => {
+      console.error("[SpriteIconCache] failed to fetch sprite index", err);
+      indexReady = null;
+    });
+    return indexReady;
+  }
+  fetchIndex();
   var MUTATION_ICONS = {
     // Ground-level icons (anchor.y ≈ 0.5 — drawn at plant base)
     Wet: { url: `${API_BASE2}/assets/sprites/mutations/Wet.png`, anchor: { x: 0.5, y: 0.487 } },
@@ -3219,12 +3279,12 @@
   var spriteDataUrlCache = /* @__PURE__ */ new Map();
   var spriteDataUrlResolved = /* @__PURE__ */ new Map();
   function cacheKeyFor(category, spriteId, mutationKey) {
-    return `${category}:${normalize(spriteId)}${mutationKey ?? ""}`;
+    return `${category}:${normalizeSpriteName(spriteId)}${mutationKey ?? ""}`;
   }
   function mutationKeyStr(mutations) {
     const list = [...new Set((mutations ?? []).map((val) => String(val ?? "").trim()).filter(Boolean))];
     if (!list.length) return "";
-    return "|m=" + list.map(normalize).filter(Boolean).sort().join(",");
+    return "|m=" + list.map(normalizeSpriteName).filter(Boolean).sort().join(",");
   }
   var warmupState = { total: 0, done: 0, completed: false };
   var warmupListeners = /* @__PURE__ */ new Set();
@@ -3256,7 +3316,7 @@
   }
   function warmupSpriteCache() {
     fetchIndex().then(() => {
-      const total = indexEntries.length;
+      const total = spriteIndexSize();
       notifyWarmup({ total, done: total, completed: true });
     });
   }
@@ -4088,6 +4148,136 @@
     return null;
   }
 
+  // src/core/quinoaCommands.ts
+  var QUINOA_SCOPE = ["Room", "Quinoa"];
+  var COMMAND_ENVELOPE_TYPE = "QuinoaCommand";
+  var COMMAND_TYPES = /* @__PURE__ */ new Set([
+    // Garden / crops
+    "PlantSeed",
+    "PlantGardenPlant",
+    "WaterPlant",
+    "HarvestCrop",
+    "PotPlant",
+    "Preserve",
+    "DisplayCrop",
+    "PickupDisplayedCrop",
+    "RemoveGardenObject",
+    "MutationPotion",
+    "CropCleanser",
+    "SellAllCrops",
+    // Decor
+    "PlaceDecor",
+    "PickupDecor",
+    // Eggs / pets
+    "GrowEgg",
+    "HatchEgg",
+    "PlacePet",
+    "PickupPet",
+    "FeedPet",
+    "SellPet",
+    "NamePet",
+    "SwapPet",
+    "SwapPetFromStorage",
+    "MovePetSlot",
+    "RidePet",
+    "DismountPet",
+    "DawnCapture",
+    "Thundercharge",
+    "ReplenishPotion",
+    "XPPotion",
+    "EquipPetCosmetic",
+    // Pet teams
+    "SavePetTeam",
+    "ApplyPetTeam",
+    "DeletePetTeam",
+    "MovePetTeam",
+    "SetPetTeamEmblem",
+    // Inventory / storage
+    "MoveInventoryItem",
+    "ToggleLockItem",
+    "PutItemInStorage",
+    "RetrieveItemFromStorage",
+    "MoveStorageItem",
+    "SwapItemWithStorage",
+    "LogItems",
+    // Shop / misc
+    "PurchaseShopItem",
+    "Wish"
+  ]);
+  function isQuinoaCommandType(type) {
+    return typeof type === "string" && COMMAND_TYPES.has(type);
+  }
+  function isQuinoaScope(scopePath) {
+    return Array.isArray(scopePath) && scopePath.length === QUINOA_SCOPE.length && scopePath.every((part, index) => part === QUINOA_SCOPE[index]);
+  }
+  var FIRST_COMMAND_SEQUENCE = 1;
+  var MAX_TRACKED_REQUEST_IDS = 64;
+  var nextCommandSequence = FIRST_COMMAND_SEQUENCE;
+  var modCommandsSent = 0;
+  var ownRequestIds = /* @__PURE__ */ new Set();
+  function seedCommandSequence(executedCommandSequence) {
+    const executed = Number(executedCommandSequence);
+    if (!Number.isFinite(executed) || executed < 0) return;
+    nextCommandSequence = executed + 1;
+    modCommandsSent = 0;
+    ownRequestIds.clear();
+  }
+  function resetCommandSequence() {
+    nextCommandSequence = FIRST_COMMAND_SEQUENCE;
+    modCommandsSent = 0;
+    ownRequestIds.clear();
+  }
+  function hasInjectedCommands() {
+    return modCommandsSent > 0;
+  }
+  function takeCommandSequenceForMod() {
+    modCommandsSent += 1;
+    return nextCommandSequence++;
+  }
+  function takeCommandSequenceForGame() {
+    return nextCommandSequence++;
+  }
+  function observeGameCommandSequence(commandSequence) {
+    const value = Number(commandSequence);
+    if (!Number.isFinite(value)) return;
+    if (value >= nextCommandSequence) nextCommandSequence = value + 1;
+  }
+  function rememberOwnRequestId(requestId) {
+    if (ownRequestIds.size >= MAX_TRACKED_REQUEST_IDS) {
+      const oldest = ownRequestIds.values().next();
+      if (!oldest.done) ownRequestIds.delete(oldest.value);
+    }
+    ownRequestIds.add(requestId);
+  }
+  function consumeOwnRequestId(requestId) {
+    if (typeof requestId !== "string") return false;
+    return ownRequestIds.delete(requestId);
+  }
+  function randomRequestId() {
+    try {
+      const uuid = globalThis.crypto?.randomUUID?.();
+      if (uuid) return uuid;
+    } catch {
+    }
+    return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`;
+  }
+  function buildQuinoaMessage(payload) {
+    const { scopePath: rawScopePath, ...command } = payload;
+    const scopePath = rawScopePath ?? QUINOA_SCOPE;
+    if (!isQuinoaScope(scopePath) || !isQuinoaCommandType(command.type)) {
+      return { scopePath, ...command };
+    }
+    const requestId = randomRequestId();
+    rememberOwnRequestId(requestId);
+    return {
+      scopePath,
+      type: COMMAND_ENVELOPE_TYPE,
+      requestId,
+      commandSequence: takeCommandSequenceForMod(),
+      command
+    };
+  }
+
   // src/store/bridge.ts
   var STORE_BRIDGE_GLOBAL = "__MG_STORE_BRIDGE__";
   function getBridge() {
@@ -4716,7 +4906,10 @@
   var myFeedingTroughItems = makeAtom("myFeedingTroughItemsAtom");
   var myPetInfos = makeAtom("myPetInfosAtom");
   var myPetSlotInfos = makeAtom("myPetSlotInfosAtom");
-  var myPrimitivePetSlots = makeAtom("myPrimitivePetSlotsAtom");
+  var myPrimitivePetSlots = makeAliasedAtom([
+    "myPredictedPetSlotsAtom",
+    "myPrimitivePetSlotsAtom"
+  ]);
   var myPetIdOnSameTile = makeAtom("myPetIdOnSameTileAtom");
   var totalPetSellPrice = makeAtom("totalPetSellPriceAtom");
   var myCropItemsToSell = makeAtom("myCropItemsToSellAtom");
@@ -9853,7 +10046,7 @@
     throw new Error("No page WebSocket open");
   }
   function sendToGame(payloadObj) {
-    const msg = { scopePath: ["Room", "Quinoa"], ...payloadObj };
+    const msg = buildQuinoaMessage(payloadObj);
     try {
       const ws = getPageWS();
       ws.send(JSON.stringify(msg));
@@ -14089,9 +14282,11 @@
       } catch (err) {
       }
     },
+    // The message is named `GrowEgg` on the wire — `PlantEgg` no longer exists
+    // anywhere in the client, so it could only ever have been rejected.
     async plantEgg(slot, eggId) {
       try {
-        sendToGame({ type: "PlantEgg", slot, eggId });
+        sendToGame({ type: "GrowEgg", slot, eggId });
       } catch (err) {
       }
     },
@@ -14216,9 +14411,12 @@
       Atoms.player.avatarTriggerAnimationAtom.set({ playerId: playerId2, animation });
     },
     /* -------------------------------- Favorites ------------------------------ */
+    // The game renamed the action to `ToggleLockItem` (the padlock in the
+    // inventory); the state field it toggles is still `favoritedItemIds`, which
+    // is what `Atoms.inventory.favoriteIds` reads.
     async toggleFavoriteItem(itemId) {
       try {
-        sendToGame({ type: "ToggleFavoriteItem", itemId });
+        sendToGame({ type: "ToggleLockItem", itemId });
       } catch (err) {
       }
     },
@@ -20761,16 +20959,22 @@
     const originalSend = proto.send;
     proto.send = function(data, ...rest) {
       try {
-        if (typeof data === "string" && interceptorsByType.size > 0 && data.indexOf('"QuinoaCommand"') !== -1) {
+        if (typeof data === "string" && data.indexOf('"QuinoaCommand"') !== -1) {
           const parsed = JSON.parse(data);
           const command = parsed?.type === "QuinoaCommand" && parsed.command && typeof parsed.command === "object" ? parsed.command : null;
-          const type = command?.type;
-          if (type) {
-            const result = applyInterceptors(type, command, { thisArg: this, args: rest });
-            if (result.drop) return;
-            if (result.message !== command) {
-              data = JSON.stringify({ ...parsed, command: result.message });
+          if (command) {
+            const isOwnCommand = consumeOwnRequestId(parsed.requestId);
+            let envelope = parsed;
+            const type = command.type;
+            if (!isOwnCommand && type && interceptorsByType.size > 0) {
+              const result = applyInterceptors(type, command, { thisArg: this, args: rest });
+              if (result.drop) return;
+              if (result.message !== command) {
+                envelope = { ...envelope, command: result.message };
+              }
             }
+            if (!isOwnCommand) envelope = renumberGameCommand(envelope);
+            if (envelope !== parsed) data = JSON.stringify(envelope);
           }
         }
       } catch (error) {
@@ -20779,6 +20983,13 @@
       return originalSend.call(this, data, ...rest);
     };
     proto.__qwsSendPatched = true;
+  }
+  function renumberGameCommand(envelope) {
+    if (!hasInjectedCommands()) {
+      observeGameCommandSequence(envelope?.commandSequence);
+      return envelope;
+    }
+    return { ...envelope, commandSequence: takeCommandSequenceForGame() };
   }
   function installPageWebSocketHook() {
     if (!pageWindow || !NativeWS) return;
@@ -20796,11 +21007,13 @@
       ws.addEventListener("message", async (ev) => {
         const j = await parseWSData(ev.data);
         if (!j) return;
+        if (j.type === "Welcome") seedCommandSequence(j.executedCommandSequence);
         if (!hasSharedQuinoaWS() && (j.type === "Welcome" || j.type === "Config" || j.fullState || j.config)) {
           setQWS(ws, "message:" + (j.type || "state"));
         }
       });
       ws.addEventListener("close", (ev) => {
+        resetCommandSequence();
         notifyWebSocketClose(ev, ws);
       });
       return ws;
@@ -21602,32 +21815,39 @@
   }
 
   // src/utils/playerIdentity.ts
-  var ACCOUNT_ID_KEYS = ["discordUserId", "databaseUserId"];
-  var SLOT_ID_KEYS = [...ACCOUNT_ID_KEYS, "userId", "playerId"];
+  var ACCOUNT_ID_KEYS = ["userId", "id", "discordUserId", "databaseUserId"];
+  var SLOT_ID_KEYS = [...ACCOUNT_ID_KEYS, "playerId"];
   var ROOM_ID_KEYS = ["id"];
+  var ROOM_ID_PREFIX = "p_";
   function asRecord(value) {
     return value && typeof value === "object" ? value : null;
   }
-  function readFirstKey(source, keys) {
+  function looksLikeRoomId(value) {
+    return value.startsWith(ROOM_ID_PREFIX);
+  }
+  function readFirstKey(source, keys, skipRoomIds = false) {
     const record = asRecord(source);
     if (!record) return null;
     for (const key2 of keys) {
       const value = record[key2];
-      if (typeof value === "string" && value.length > 0) return value;
+      if (typeof value === "string" && value.length > 0) {
+        if (skipRoomIds && looksLikeRoomId(value)) continue;
+        return value;
+      }
       if (typeof value === "number" && Number.isFinite(value)) return String(value);
     }
     return null;
   }
-  function readNested(source, keys) {
-    const direct = readFirstKey(source, keys);
+  function readNested(source, keys, skipRoomIds = false) {
+    const direct = readFirstKey(source, keys, skipRoomIds);
     if (direct) return direct;
-    return readFirstKey(asRecord(source)?.data, keys);
+    return readFirstKey(asRecord(source)?.data, keys, skipRoomIds);
   }
   function readAccountId(source) {
-    return readNested(source, ACCOUNT_ID_KEYS);
+    return readNested(source, ACCOUNT_ID_KEYS, true);
   }
   function readSlotId(slot) {
-    return readNested(slot, SLOT_ID_KEYS);
+    return readNested(slot, SLOT_ID_KEYS, true);
   }
   function resolveMyAccountId(player2, players = []) {
     const direct = readAccountId(player2);
@@ -21660,6 +21880,9 @@
     }
     return null;
   }
+  function readSlotIdOrRoomId(slot) {
+    return readNested(slot, SLOT_ID_KEYS);
+  }
   function findSlotIndex(slots, identifiers) {
     if (!Array.isArray(slots) || slots.length === 0) return null;
     const wanted = [identifiers.accountId, identifiers.roomId].filter(
@@ -21667,7 +21890,7 @@
     );
     if (wanted.length === 0) return null;
     for (let index = 0; index < slots.length; index++) {
-      const slotId = readSlotId(slots[index]);
+      const slotId = readSlotIdOrRoomId(slots[index]);
       if (slotId != null && wanted.includes(slotId)) return index;
     }
     return null;
@@ -22058,10 +22281,20 @@
   var _teamSyncEnabled = readAriesPath(PATH_PETS_TEAM_SYNC, true) !== false;
   function _sendSavePetTeam(teamId, name, petIds) {
     if (!_teamSyncEnabled) return;
+    const isCreate = teamId === null;
+    const id = teamId ?? _newTeamId();
     try {
-      sendToGame({ type: "SavePetTeam", teamId, name, petIds });
+      sendToGame({ type: "SavePetTeam", teamId: id, isCreate, name, petIds });
     } catch {
     }
+  }
+  function _newTeamId() {
+    try {
+      const uuid = globalThis.crypto?.randomUUID?.();
+      if (uuid) return uuid;
+    } catch {
+    }
+    return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
   }
   function _sendDeletePetTeam(teamId) {
     if (!_teamSyncEnabled) return;
@@ -26877,12 +27110,12 @@
     });
   }
   function _handleWeatherUpdate(raw, opts = {}) {
-    const normalize3 = (value) => {
+    const normalize2 = (value) => {
       if (value == null) return "";
       if (typeof value === "string") return value.trim();
       return String(value || "").trim();
     };
-    const nextValue = normalize3(raw);
+    const nextValue = normalize2(raw);
     if (!opts.force && _currentWeatherValue === nextValue) return;
     const lookupKey = nextValue.toLowerCase();
     let def = WEATHER_BY_ATOM.get(lookupKey) || WEATHER_BY_NAME.get(lookupKey);
@@ -31557,7 +31790,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.199";
+      return "3.2.200";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -31963,11 +32196,11 @@
     return r.width > 0 && r.height > 0;
   }
   var labelIsChecked = (el2) => el2.matches("[data-checked]") || !!el2.querySelector("[data-checked]");
-  var normalize2 = (s) => (s ?? "").trim().toLowerCase();
+  var normalize = (s) => (s ?? "").trim().toLowerCase();
   var createFilterContextKey = (filters, search2) => {
-    const normalizedFilters = filters.map((value) => normalize2(value)).filter((value) => value && value !== "all");
+    const normalizedFilters = filters.map((value) => normalize(value)).filter((value) => value && value !== "all");
     normalizedFilters.sort();
-    const normalizedSearch = normalize2(search2);
+    const normalizedSearch = normalize(search2);
     return `${normalizedFilters.join("|")}::${normalizedSearch}`;
   };
   var areSetsEqual = (a, b) => {
@@ -31988,7 +32221,7 @@
   var setCachedItemTypesForKey = (contextKey, types) => {
     const normalizedTypes = /* @__PURE__ */ new Set();
     types.forEach((type) => {
-      const normalizedType = normalize2(type);
+      const normalizedType = normalize(type);
       if (normalizedType) {
         normalizedTypes.add(normalizedType);
       }
@@ -32009,7 +32242,7 @@
     const input = getInventorySearchInput(grid);
     return typeof input?.value === "string" ? input.value : "";
   };
-  var getNormalizedInventorySearchQuery = (grid) => normalize2(getInventorySearchQuery(grid));
+  var getNormalizedInventorySearchQuery = (grid) => normalize(getInventorySearchQuery(grid));
   var logFilteredInventorySearchResults = async (grid, filters, searchQuery) => {
     if (!grid) return;
     try {
@@ -32046,19 +32279,19 @@
   var RARITY_RANK = (() => {
     const entries = /* @__PURE__ */ new Map();
     RARITY_ORDER.forEach((label2, index) => {
-      const key2 = normalize2(label2);
+      const key2 = normalize(label2);
       if (key2) {
         entries.set(key2, index);
       }
     });
-    const mythicIndex = entries.get(normalize2(rarity2.Mythic));
+    const mythicIndex = entries.get(normalize(rarity2.Mythic));
     if (typeof mythicIndex === "number") {
-      entries.set(normalize2("Mythic"), mythicIndex);
+      entries.set(normalize("Mythic"), mythicIndex);
     }
     return entries;
   })();
   var getRarityRank = (value) => {
-    const key2 = normalize2(value);
+    const key2 = normalize(value);
     if (!key2) return RARITY_ORDER.length;
     return RARITY_RANK.get(key2) ?? RARITY_ORDER.length;
   };
@@ -32196,7 +32429,7 @@
     const mapping = /* @__PURE__ */ new Map();
     for (const [filterKey, itemTypes] of Object.entries(FILTER_LABEL_TO_ITEM_TYPES)) {
       for (const itemType of itemTypes) {
-        const normalizedType = normalize2(itemType);
+        const normalizedType = normalize(itemType);
         if (!normalizedType) continue;
         const set2 = mapping.get(normalizedType) ?? /* @__PURE__ */ new Set();
         set2.add(filterKey);
@@ -32227,7 +32460,7 @@
     return [];
   };
   var getExtrasForItemType = (itemType, mapExtraByFilter) => {
-    const normalizedType = normalize2(itemType);
+    const normalizedType = normalize(itemType);
     if (!normalizedType) return [];
     const extras = /* @__PURE__ */ new Set();
     const direct = mapExtraByFilter[normalizedType];
@@ -32244,7 +32477,7 @@
     return Array.from(extras);
   };
   function filterLabelToItemTypes(filter) {
-    const key2 = normalize2(filter);
+    const key2 = normalize(filter);
     if (!key2 || key2 === "all") return [];
     const mapped = FILTER_LABEL_TO_ITEM_TYPES[key2];
     if (mapped) return mapped;
@@ -32259,10 +32492,10 @@
     const matchesValue = (value) => {
       if (value == null) return false;
       if (typeof value === "string") {
-        return normalize2(value).includes(normalizedQuery);
+        return normalize(value).includes(normalizedQuery);
       }
       if (typeof value === "number" || typeof value === "boolean") {
-        return normalize2(String(value)).includes(normalizedQuery);
+        return normalize(String(value)).includes(normalizedQuery);
       }
       if (Array.isArray(value)) {
         for (const entry of value) {
@@ -32329,7 +32562,7 @@
     }
   }
   function filterInventoryItems(items, filters, searchQuery) {
-    const normalizedFilters = filters.map((f) => normalize2(f)).filter(Boolean);
+    const normalizedFilters = filters.map((f) => normalize(f)).filter(Boolean);
     const itemTypes = /* @__PURE__ */ new Set();
     let recognized = false;
     for (const filter of normalizedFilters) {
@@ -32346,7 +32579,7 @@
       const type = typeof item?.itemType === "string" ? item.itemType.trim() : "";
       return type ? itemTypes.has(type) : false;
     });
-    const normalizedSearch = normalize2(searchQuery);
+    const normalizedSearch = normalize(searchQuery);
     const filteredItems = normalizedSearch ? filteredByType.filter((item) => inventoryItemMatchesSearchQuery(item, normalizedSearch)) : filteredByType;
     attachItemValues(filteredItems);
     const detectedItemTypes = /* @__PURE__ */ new Set();
@@ -32991,13 +33224,13 @@
     }
     return null;
   };
-  var getPetCardName = (card3) => normalize2(card3.querySelector(PET_NAME_SELECTOR)?.textContent ?? "");
+  var getPetCardName = (card3) => normalize(card3.querySelector(PET_NAME_SELECTOR)?.textContent ?? "");
   var getPetNameCandidates = (item) => {
     const candidates = /* @__PURE__ */ new Set();
     const name = readNestedStringField(item, "name");
-    if (name) candidates.add(normalize2(name));
+    if (name) candidates.add(normalize(name));
     const species = readNestedStringField(item, "petSpecies") ?? readNestedStringField(item, "species");
-    if (species) candidates.add(normalize2(species));
+    if (species) candidates.add(normalize(species));
     return Array.from(candidates);
   };
   var isPetItem = (item) => {
@@ -33461,7 +33694,7 @@
   }
   function computeSortOptions(activeFilters, labelByValue = LABEL_BY_VALUE_DEFAULT, mapExtraByFilter = MAP_EXTRA_BY_FILTER_DEFAULT, searchQuery = "") {
     const normalizedFilters = activeFilters.map((value) => (value ?? "").trim().toLowerCase()).filter(Boolean);
-    const normalizedSearch = normalize2(searchQuery);
+    const normalizedSearch = normalize(searchQuery);
     const intersectSets = (sets) => {
       if (!sets.length) return null;
       let intersection = new Set(sets[0]);
