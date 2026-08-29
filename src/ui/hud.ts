@@ -849,6 +849,35 @@ export function mountHUD(opts?: HUDOptions) {
     (launch as HTMLDivElement).appendChild(item);
   }
 
+  function insertModMenuToggleButton() {
+    const button = document.createElement("button");
+    button.innerText = "🔮"
+    button.onclick = toggleHUDHidden;
+    
+    const header = document.getElementById("SystemHeader")
+    if (!header) {
+      console.warn("[hud]: Could not find SystemHeader. Skipping mod menu button.");
+      return;
+    }
+    const buttonGrid = header.querySelector("div.McFlex")
+    if (!buttonGrid) {
+      console.warn("[hud]: Could not find button grid. Skipping mod menu button.");
+      return;
+    };
+    buttonGrid.appendChild(button);
+    // Match the class name of the previous button
+    button.className = button.previousElementSibling?.className || "";
+  }
+  // Wait for the SystemHeader element to be created before inserting button
+  const systemHeaderObserver = new MutationObserver((_, observer) => {
+    const element = document.getElementById("SystemHeader")
+    if (element) {
+      observer.disconnect();
+      insertModMenuToggleButton();
+    }
+  });
+  systemHeaderObserver.observe(document.body, { childList: true, subtree: true });
+
   // Permet au code appelant d’enregistrer ses fenêtres (la liste est affichée en permanence)
   try { opts?.onRegister?.(register); } catch {}
 
