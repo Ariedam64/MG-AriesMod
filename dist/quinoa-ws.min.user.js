@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.200
+// @version      3.2.201
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -17911,10 +17911,24 @@
   }
   var plannedGarden = { tileObjects: {}, boardwalkTileObjects: {} };
   var plannedUserSlotIdx = null;
-  var plannedReapplyTimer = null;
+  function setPlannedGarden(next) {
+    plannedGarden = next;
+    if (overlayOwner === "editor") void setOverlayMyDataGarden(plannedGarden);
+  }
   var editorDecorRotation = 0;
+  var overlayOwner = null;
+  var overlayHolds = /* @__PURE__ */ new Map();
   var friendGardenPreviewActive = false;
-  var friendGardenBackup = null;
+  var friendPreviewUserSlotIdx = null;
+  var friendPreviewPlayerId = null;
+  var friendPreviewGarden = {
+    tileObjects: {},
+    boardwalkTileObjects: {}
+  };
+  var OVERLAY_MYDATA_PATCH = {
+    label: Atoms.data.myData.label,
+    merge: (real, fake) => ({ ...real || {}, ...fake || {} })
+  };
   function createSelectionIcon(kind, label2, size = 32, rawId, spriteKey) {
     const wrap = document.createElement("span");
     Object.assign(wrap.style, {
@@ -19698,37 +19712,6 @@
     const n = Number(k);
     return Number.isFinite(n) ? n : 0;
   }
-  function rebuildUserSlots(meta, buildSlot2) {
-    if (meta.isArray) {
-      const nextSlots = (meta.slotsArray || []).slice();
-      nextSlots[meta.matchIndex] = buildSlot2(meta.matchSlot);
-      return nextSlots;
-    }
-    const nextEntries = (meta.entries || []).map(
-      ([k, s], idx) => idx === meta.matchIndex ? [k, buildSlot2(s)] : [k, s]
-    );
-    return Object.fromEntries(nextEntries);
-  }
-  function buildStateWithUserSlots(cur, userSlots) {
-    return {
-      ...cur || {},
-      child: {
-        ...cur?.child || {},
-        data: {
-          ...cur?.child?.data || {},
-          userSlots
-        }
-      }
-    };
-  }
-  async function setStateAtom(next) {
-    try {
-      await Atoms.root.state.set(next);
-    } catch (err) {
-      console.log("[EditorService] setStateAtom failed", err);
-      throw err;
-    }
-  }
   function buildBrushTileObject() {
     const selId = getSelectedId();
     if (!selId) return null;
@@ -19779,27 +19762,24 @@
       const userSlotIdx = await readUserSlotIdx();
       plannedGarden = await readRealGardenForPlayer(pid) || makeEmptyGarden();
       plannedUserSlotIdx = userSlotIdx;
-      await applyGardenToTos(plannedGarden, userSlotIdx);
+      await installGardenOverlay(
+        "editor",
+        userSlotIdx,
+        makeGardenTileResolver(() => plannedGarden)
+      );
+      await setOverlayMyDataGarden(plannedGarden);
     } catch (err) {
       console.log("[EditorService] startPlannedGardenLifecycle failed", err);
     }
-    if (plannedReapplyTimer == null) {
-      plannedReapplyTimer = window.setInterval(() => {
-        if (plannedUserSlotIdx != null)
-          void applyGardenToTos(plannedGarden, plannedUserSlotIdx);
-      }, 1e3);
-    }
   }
   async function stopPlannedGardenLifecycle() {
-    if (plannedReapplyTimer != null) {
-      window.clearInterval(plannedReapplyTimer);
-      plannedReapplyTimer = null;
-    }
+    releaseGardenOverlay();
+    await clearOverlayMyDataGarden();
     try {
       const pid = await getPlayerId();
       if (pid && plannedUserSlotIdx != null) {
         const realGarden = await readRealGardenForPlayer(pid) || makeEmptyGarden();
-        await applyGardenToTos(realGarden, plannedUserSlotIdx);
+        await repaintGarden(realGarden, plannedUserSlotIdx);
       }
     } catch (err) {
       console.log("[EditorService] stopPlannedGardenLifecycle failed", err);
@@ -19941,16 +19921,164 @@
       const pid = await getPlayerId();
       if (!pid) return false;
       const userSlotIdx = plannedUserSlotIdx ?? await readUserSlotIdx();
-      plannedGarden = sanitizeGarden(nextGarden);
+      setPlannedGarden(sanitizeGarden(nextGarden));
       plannedUserSlotIdx = userSlotIdx;
       try {
-        await applyGardenToTos(plannedGarden, userSlotIdx);
+        if (overlayOwner === "editor") repaintOverlay();
+        else await applyGardenToTos(plannedGarden, userSlotIdx);
       } catch {
       }
       return true;
     } catch (err) {
       console.log("[EditorService] setCurrentGarden failed", err);
       return false;
+    }
+  }
+  function cloneOverlayTileObject(obj) {
+    if (!obj) return null;
+    try {
+      return JSON.parse(JSON.stringify(obj));
+    } catch {
+      return obj;
+    }
+  }
+  function makeGardenTileResolver(getGarden) {
+    return (localIdx, kind) => {
+      const garden2 = getGarden();
+      const source = kind === "dirt" ? garden2?.tileObjects : garden2?.boardwalkTileObjects;
+      return (source || {})[String(localIdx)] ?? null;
+    };
+  }
+  async function collectOverlayTileTargets(userSlotIdx) {
+    const mapData = await Atoms.root.map.get().catch(() => null);
+    const cols = Number(mapData?.cols);
+    if (!mapData || !Number.isFinite(cols) || cols <= 0) return [];
+    const out = [];
+    const collect = (record, localIdxKey, kind) => {
+      for (const [gidxStr, meta] of Object.entries(record || {})) {
+        if (meta?.userSlotIdx !== userSlotIdx) continue;
+        const gidx = Number(gidxStr);
+        if (!Number.isFinite(gidx)) continue;
+        out.push({
+          gidx,
+          tx: gidx % cols,
+          ty: Math.floor(gidx / cols),
+          localIdx: Number(meta?.[localIdxKey] ?? -1),
+          kind
+        });
+      }
+    };
+    collect(mapData.globalTileIdxToDirtTile, "dirtTileIdx", "dirt");
+    collect(mapData.globalTileIdxToBoardwalk, "boardwalkTileIdx", "boardwalk");
+    return out;
+  }
+  function overlayTileViewAt(target) {
+    try {
+      return tos.getTileObject(target.tx, target.ty, { ensureView: true })?.tileView ?? null;
+    } catch {
+      return null;
+    }
+  }
+  function overlayRenderContext() {
+    try {
+      return tos.getStatus().engine?.reusableContext ?? null;
+    } catch {
+      return null;
+    }
+  }
+  function pushToOverlayTileView(tileView, obj, ctx2) {
+    try {
+      tileView.onDataChanged(cloneOverlayTileObject(obj));
+    } catch {
+      return;
+    }
+    if (ctx2 && typeof tileView.update === "function") {
+      try {
+        tileView.update(ctx2);
+      } catch {
+      }
+    }
+  }
+  function installOverlayTileHold(tileView, resolve) {
+    if (!tileView || typeof tileView.onDataChanged !== "function") return null;
+    const hadOwnProperty = Object.prototype.hasOwnProperty.call(
+      tileView,
+      "onDataChanged"
+    );
+    const original = tileView.onDataChanged;
+    tileView.onDataChanged = function() {
+      return original.call(this, cloneOverlayTileObject(resolve()));
+    };
+    return { tileView, hadOwnProperty, original, resolve };
+  }
+  function releaseOverlayTileHold(hold) {
+    try {
+      if (hold.hadOwnProperty) {
+        hold.tileView.onDataChanged = hold.original;
+      } else {
+        delete hold.tileView.onDataChanged;
+      }
+    } catch {
+      try {
+        hold.tileView.onDataChanged = hold.original;
+      } catch {
+      }
+    }
+  }
+  async function installGardenOverlay(owner, userSlotIdx, resolve) {
+    releaseGardenOverlay();
+    if (!tos.isReady()) return false;
+    const targets = await collectOverlayTileTargets(userSlotIdx);
+    if (!targets.length) return false;
+    const ctx2 = overlayRenderContext();
+    for (const target of targets) {
+      const tileView = overlayTileViewAt(target);
+      if (!tileView) continue;
+      const tileResolve = () => resolve(target.localIdx, target.kind);
+      const hold = installOverlayTileHold(tileView, tileResolve);
+      if (hold) overlayHolds.set(target.gidx, hold);
+      pushToOverlayTileView(tileView, tileResolve(), ctx2);
+    }
+    if (overlayHolds.size === 0) return false;
+    overlayOwner = owner;
+    return true;
+  }
+  function releaseGardenOverlay() {
+    for (const hold of overlayHolds.values()) releaseOverlayTileHold(hold);
+    overlayHolds.clear();
+    overlayOwner = null;
+  }
+  function repaintOverlay() {
+    const ctx2 = overlayRenderContext();
+    for (const hold of overlayHolds.values()) {
+      pushToOverlayTileView(hold.tileView, hold.resolve(), ctx2);
+    }
+  }
+  async function repaintGarden(garden2, userSlotIdx) {
+    const targets = await collectOverlayTileTargets(userSlotIdx);
+    const resolve = makeGardenTileResolver(() => garden2);
+    const ctx2 = overlayRenderContext();
+    for (const target of targets) {
+      const tileView = overlayTileViewAt(target);
+      if (!tileView) continue;
+      pushToOverlayTileView(
+        tileView,
+        resolve(target.localIdx, target.kind),
+        ctx2
+      );
+    }
+  }
+  async function setOverlayMyDataGarden(garden2) {
+    try {
+      await fakeShow(OVERLAY_MYDATA_PATCH, { garden: sanitizeGarden(garden2) });
+    } catch (error) {
+      console.warn("[EditorService] tile info patch unavailable", error);
+    }
+  }
+  async function clearOverlayMyDataGarden() {
+    try {
+      await fakeHide(OVERLAY_MYDATA_PATCH.label);
+    } catch {
     }
   }
   async function applyFriendGardenPreview(garden2) {
@@ -19960,30 +20088,27 @@
       if (!pid) return false;
       const cur = await Atoms.root.state.get().catch(() => null);
       if (!cur) return false;
-      const slots = cur?.child?.data?.userSlots;
-      const slotMatch = findPlayerSlot(slots, pid, { sortObject: true });
+      const slotMatch = findPlayerSlot(cur?.child?.data?.userSlots, pid, {
+        sortObject: true
+      });
       if (!slotMatch || !slotMatch.matchSlot) return false;
       const userSlotIdx = slotMatchToIndex(slotMatch);
-      const prevGarden = slotMatch.matchSlot?.data?.garden ? sanitizeGarden(slotMatch.matchSlot.data.garden) : makeEmptyGarden();
-      friendGardenBackup = { garden: prevGarden, userSlotIdx };
-      const updatedSlot = {
-        ...slotMatch.matchSlot,
-        data: {
-          ...slotMatch.matchSlot?.data || {},
-          garden: sanitizeGarden(garden2)
-        }
-      };
-      const nextUserSlots = rebuildUserSlots(slotMatch, () => updatedSlot);
-      const nextState = buildStateWithUserSlots(cur, nextUserSlots);
-      await setStateAtom(nextState);
-      try {
-        await applyGardenToTos(garden2, userSlotIdx);
-      } catch {
-      }
+      friendPreviewGarden = sanitizeGarden(garden2);
+      const installed2 = await installGardenOverlay(
+        "friend",
+        userSlotIdx,
+        makeGardenTileResolver(() => friendPreviewGarden)
+      );
+      if (!installed2) return false;
+      await setOverlayMyDataGarden(friendPreviewGarden);
+      friendPreviewUserSlotIdx = userSlotIdx;
+      friendPreviewPlayerId = pid;
       friendGardenPreviewActive = true;
       return true;
     } catch (error) {
       console.error("[EditorService] applyFriendGardenPreview failed", error);
+      releaseGardenOverlay();
+      await clearOverlayMyDataGarden();
       friendGardenPreviewActive = false;
       return false;
     }
@@ -19991,33 +20116,22 @@
   async function clearFriendGardenPreview() {
     if (!friendGardenPreviewActive) return false;
     friendGardenPreviewActive = false;
+    const userSlotIdx = friendPreviewUserSlotIdx;
+    const playerId2 = friendPreviewPlayerId;
+    friendPreviewUserSlotIdx = null;
+    friendPreviewPlayerId = null;
+    releaseGardenOverlay();
+    await clearOverlayMyDataGarden();
     try {
-      const backup = friendGardenBackup;
-      friendGardenBackup = null;
-      if (backup) {
-        const pid = await getPlayerId();
-        if (pid) {
-          const cur = await Atoms.root.state.get().catch(() => null);
-          const slots = cur?.child?.data?.userSlots;
-          const slotMatch = findPlayerSlot(slots, pid, { sortObject: true });
-          if (slotMatch && slotMatch.matchSlot) {
-            const updatedSlot = {
-              ...slotMatch.matchSlot,
-              data: {
-                ...slotMatch.matchSlot?.data || {},
-                garden: sanitizeGarden(backup.garden)
-              }
-            };
-            const nextUserSlots = rebuildUserSlots(slotMatch, () => updatedSlot);
-            const nextState = buildStateWithUserSlots(cur, nextUserSlots);
-            await setStateAtom(nextState);
-            try {
-              await applyGardenToTos(backup.garden, backup.userSlotIdx);
-            } catch {
-            }
-          }
-        }
-      }
+      if (userSlotIdx == null || !playerId2) return true;
+      const cur = await Atoms.root.state.get().catch(() => null);
+      const slotMatch = findPlayerSlot(cur?.child?.data?.userSlots, playerId2, {
+        sortObject: true
+      });
+      await repaintGarden(
+        sanitizeGarden(slotMatch?.matchSlot?.data?.garden),
+        userSlotIdx
+      );
       return true;
     } catch (error) {
       console.error("[EditorService] clearFriendGardenPreview failed", error);
@@ -20419,6 +20533,15 @@
         );
         return;
       }
+      const tileKey = String(localTileIndex);
+      const targetKey = tileType === "Dirt" ? "tileObjects" : "boardwalkTileObjects";
+      setPlannedGarden({
+        ...plannedGarden,
+        [targetKey]: {
+          ...plannedGarden[targetKey],
+          [tileKey]: tileObject
+        }
+      });
       injectTileObjectRaw(coords.x, coords.y, tileObject);
       if (tileObject.objectType === "plant") {
         tos.setTilePlant(
@@ -20440,15 +20563,6 @@
           { ensureView: true, forceUpdate: true }
         );
       }
-      const tileKey = String(localTileIndex);
-      const targetKey = tileType === "Dirt" ? "tileObjects" : "boardwalkTileObjects";
-      plannedGarden = {
-        ...plannedGarden,
-        [targetKey]: {
-          ...plannedGarden[targetKey],
-          [tileKey]: tileObject
-        }
-      };
       console.log("[EditorService] placed item in garden (local plan)", {
         tileType,
         localTileIndex,
@@ -20499,18 +20613,18 @@
         );
         return false;
       }
-      tos.setTileEmpty(coords.x, coords.y, {
-        ensureView: true,
-        forceUpdate: true
-      });
       const tileKey = String(localTileIndex);
       const targetKey = tileType === "Dirt" ? "tileObjects" : "boardwalkTileObjects";
       const nextTargetMap = { ...plannedGarden[targetKey] };
       delete nextTargetMap[tileKey];
-      plannedGarden = {
+      setPlannedGarden({
         ...plannedGarden,
         [targetKey]: nextTargetMap
-      };
+      });
+      tos.setTileEmpty(coords.x, coords.y, {
+        ensureView: true,
+        forceUpdate: true
+      });
       console.log("[EditorService] removed item from garden (local plan)", {
         tileType,
         localTileIndex,
@@ -20544,10 +20658,10 @@
       if (!currentObj) return false;
       const rawNextObj = updater(currentObj);
       const nextObj = rawNextObj && rawNextObj.objectType === "plant" ? { ...rawNextObj, slots: ensureSlotIds(rawNextObj.slots) } : rawNextObj;
-      plannedGarden = {
+      setPlannedGarden({
         ...plannedGarden,
         [targetKey]: { ...plannedGarden[targetKey], [tileKey]: nextObj }
-      };
+      });
       try {
         const coords = await resolveTileCoords(
           tileType,
@@ -31790,7 +31904,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.200";
+      return "3.2.201";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;

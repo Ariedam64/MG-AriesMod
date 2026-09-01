@@ -30,6 +30,8 @@ import { readAriesPath, writeAriesPath } from "../utils/localStorage";
 
 import { tos } from "../utils/tileObjectSystemApi";
 
+import { fakeShow, fakeHide, type FakeConfig } from "./fakeAtoms";
+
 import { attachSpriteIcon } from "../ui/spriteIconCache";
 
 type Listener = (enabled: boolean) => void;
@@ -671,20 +673,101 @@ async function triggerEditorAnimation(
   }
 }
 
-// Editor mode never touches the real garden/inventory/pets state anymore: it paints a local
-// `plannedGarden` onto the Pixi tile views (via applyGardenToTos, re-applied on an interval so
-// it keeps winning over any real server redraw), and repaints the real garden back on exit.
+// Editor mode never touches the real garden/inventory/pets state: it holds the Pixi tile views
+// on a local `plannedGarden` (see l'overlay plus bas) and repaints the real garden back on exit.
 let plannedGarden: GardenState = { tileObjects: {}, boardwalkTileObjects: {} };
 let plannedUserSlotIdx: number | null = null;
-let plannedReapplyTimer: number | null = null;
+
+/**
+ * Met à jour le plan local. Passer par ici plutôt que d'assigner `plannedGarden`
+ * directement : le panneau d'infos lit `myDataAtom`, dont le contenu injecté
+ * doit suivre chaque pose, suppression ou rotation.
+ */
+function setPlannedGarden(next: GardenState): void {
+  plannedGarden = next;
+
+  if (overlayOwner === "editor") void setOverlayMyDataGarden(plannedGarden);
+}
 /** Decor placement rotation, chosen in the picker instead of via a real inventory item. */
 let editorDecorRotation = 0;
 
+/* -------------------------------------------------------------------------- */
+/* Aperçu du jardin d'un ami                                                  */
+/* -------------------------------------------------------------------------- */
+//
+// En lecture seule : on détourne ce que le jeu lit et peint, on n'écrit jamais
+// dans le state.
+//
+// L'implémentation précédente écrivait le jardin de l'ami dans notre userSlot.
+// Mesuré en jeu, le serveur repousse l'état complet toutes les ~730 ms et le jeu
+// repeint depuis cet état : l'aperçu ne tenait qu'une seconde. Le réécrire à
+// chaque push ne faisait que transformer le problème en clignotement, les deux
+// camps se disputant la même donnée.
+//
+// On tient donc les deux couches que le jeu consulte réellement :
+//   - la peinture, en détournant `tileView.onDataChanged` sur nos tuiles ;
+//   - le panneau d'infos de la tuile courante, via un patch de lecture sur
+//     `myDataAtom` (dont `myOwnCurrentGardenObjectAtom` dérive).
+//
+// Ne pas écrire dans le state évite au passage que le jardin de l'ami se
+// retrouve uploadé sous notre compte, et rend la restauration triviale : le
+// state porte toujours la vérité serveur, à jour.
+
+/** Qui tient l'overlay. Un seul à la fois : deux détournements empilés sur la
+ *  même tuile ne se restaureraient pas proprement. */
+type OverlayOwner = "friend" | "editor";
+
+/** Une tuile dont on a détourné `onDataChanged`, avec de quoi la restaurer. */
+type OverlayTileHold = {
+  tileView: any;
+  hadOwnProperty: boolean;
+  original: (obj: any) => void;
+  resolve: () => any;
+};
+
+type OverlayTileTarget = {
+  gidx: number;
+  tx: number;
+  ty: number;
+  localIdx: number;
+  kind: "dirt" | "boardwalk";
+};
+
+type OverlayTileResolver = (
+  localIdx: number,
+  kind: "dirt" | "boardwalk",
+) => any;
+
+let overlayOwner: OverlayOwner | null = null;
+
+const overlayHolds = new Map<number, OverlayTileHold>();
+
 let friendGardenPreviewActive = false;
 
-type FriendGardenBackup = { garden: GardenState; userSlotIdx: number };
+let friendPreviewUserSlotIdx: number | null = null;
 
-let friendGardenBackup: FriendGardenBackup | null = null;
+let friendPreviewPlayerId: string | null = null;
+
+let friendPreviewGarden: GardenState = {
+  tileObjects: {},
+  boardwalkTileObjects: {},
+};
+
+/**
+ * Le panneau d'infos de la tuile courante lit `myOwnCurrentGardenObjectAtom`,
+ * lui-même dérivé de `myDataAtom.garden`. Patcher la lecture de myData suffit
+ * donc à ce qu'il décrive le jardin de l'ami.
+ *
+ * Pas de gate : myData se recalcule à chaque push serveur, ce qui réinjecte
+ * notre valeur tout seul. L'entrée du registre de fakeAtoms est partagée avec
+ * les modales (même label), mais le payload `{ garden }` traverse
+ * indifféremment les deux fonctions de merge.
+ */
+const OVERLAY_MYDATA_PATCH: FakeConfig<any> = {
+  label: Atoms.data.myData.label,
+
+  merge: (real: any, fake: any) => ({ ...(real || {}), ...(fake || {}) }),
+};
 
 function createSelectionIcon(
   kind: "decor" | "plants",
@@ -3838,9 +3921,13 @@ function notify(enabled: boolean) {
 }
 
 /**
- * Seeds the local plan from the real garden and starts repainting it onto Pixi on an interval,
- * so it keeps winning over any real server-driven tile redraw while editing. Never touches
- * Atoms.root.state, inventory, or pets - editor mode is purely a local visual overlay.
+ * Seeds the local plan from the real garden, then holds the tiles so the plan keeps showing.
+ * Never touches Atoms.root.state, inventory, or pets - editor mode is purely a local overlay.
+ *
+ * L'ancienne version repeignait le plan toutes les secondes en pariant sur le
+ * fait de gagner contre les redraws serveur. Entre deux ticks le jeu reprenait
+ * la main : un proc d'ability effaçait le plan le temps d'un tick. L'overlay
+ * détourne la peinture au lieu de la refaire, donc il n'y a plus de fenêtre.
  */
 async function startPlannedGardenLifecycle() {
   try {
@@ -3849,30 +3936,29 @@ async function startPlannedGardenLifecycle() {
     const userSlotIdx = await readUserSlotIdx();
     plannedGarden = (await readRealGardenForPlayer(pid)) || makeEmptyGarden();
     plannedUserSlotIdx = userSlotIdx;
-    await applyGardenToTos(plannedGarden, userSlotIdx);
+    await installGardenOverlay(
+      "editor",
+      userSlotIdx,
+      makeGardenTileResolver(() => plannedGarden),
+    );
+    // Le panneau d'infos de la tuile courante décrit alors ce qu'on a posé,
+    // et non le vrai jardin.
+    await setOverlayMyDataGarden(plannedGarden);
   } catch (err) {
     console.log("[EditorService] startPlannedGardenLifecycle failed", err);
   }
-  if (plannedReapplyTimer == null) {
-    plannedReapplyTimer = window.setInterval(() => {
-      if (plannedUserSlotIdx != null)
-        void applyGardenToTos(plannedGarden, plannedUserSlotIdx);
-    }, 1000);
-  }
 }
 
-/** Stops the reapply loop and repaints the real garden back over the local plan. */
+/** Releases the overlay and repaints the real garden back over the local plan. */
 async function stopPlannedGardenLifecycle() {
-  if (plannedReapplyTimer != null) {
-    window.clearInterval(plannedReapplyTimer);
-    plannedReapplyTimer = null;
-  }
+  releaseGardenOverlay();
+  await clearOverlayMyDataGarden();
   try {
     const pid = await getPlayerId();
     if (pid && plannedUserSlotIdx != null) {
       const realGarden =
         (await readRealGardenForPlayer(pid)) || makeEmptyGarden();
-      await applyGardenToTos(realGarden, plannedUserSlotIdx);
+      await repaintGarden(realGarden, plannedUserSlotIdx);
     }
   } catch (err) {
     console.log("[EditorService] stopPlannedGardenLifecycle failed", err);
@@ -4182,12 +4268,15 @@ async function setCurrentGarden(nextGarden: GardenState): Promise<boolean> {
 
     const userSlotIdx = plannedUserSlotIdx ?? (await readUserSlotIdx());
 
-    plannedGarden = sanitizeGarden(nextGarden);
+    setPlannedGarden(sanitizeGarden(nextGarden));
 
     plannedUserSlotIdx = userSlotIdx;
 
     try {
-      await applyGardenToTos(plannedGarden, userSlotIdx);
+      // Sous overlay, les tuiles sont déjà tenues : il suffit de les redemander
+      // au resolver, qui lit le plan qu'on vient de remplacer.
+      if (overlayOwner === "editor") repaintOverlay();
+      else await applyGardenToTos(plannedGarden, userSlotIdx);
     } catch {
       /* ignore */
     }
@@ -4198,6 +4287,240 @@ async function setCurrentGarden(nextGarden: GardenState): Promise<boolean> {
 
     return false;
   }
+}
+
+function cloneOverlayTileObject(obj: any): any {
+  if (!obj) return null;
+
+  try {
+    return JSON.parse(JSON.stringify(obj));
+  } catch {
+    return obj;
+  }
+}
+
+/** Resolver lisant un jardin vivant : l'éditeur peut modifier son plan sans
+ *  qu'on ait à réinstaller quoi que ce soit. */
+function makeGardenTileResolver(
+  getGarden: () => GardenState,
+): OverlayTileResolver {
+  return (localIdx, kind) => {
+    const garden = getGarden();
+
+    const source =
+      kind === "dirt" ? garden?.tileObjects : garden?.boardwalkTileObjects;
+
+    return (source || {})[String(localIdx)] ?? null;
+  };
+}
+
+/** Les tuiles de la parcelle `userSlotIdx`, avec de quoi les adresser. */
+async function collectOverlayTileTargets(
+  userSlotIdx: number,
+): Promise<OverlayTileTarget[]> {
+  const mapData = (await Atoms.root.map.get().catch(() => null)) as any;
+
+  const cols = Number(mapData?.cols);
+
+  if (!mapData || !Number.isFinite(cols) || cols <= 0) return [];
+
+  const out: OverlayTileTarget[] = [];
+
+  const collect = (
+    record: any,
+    localIdxKey: string,
+    kind: "dirt" | "boardwalk",
+  ) => {
+    for (const [gidxStr, meta] of Object.entries(record || {})) {
+      if ((meta as any)?.userSlotIdx !== userSlotIdx) continue;
+
+      const gidx = Number(gidxStr);
+
+      if (!Number.isFinite(gidx)) continue;
+
+      out.push({
+        gidx,
+        tx: gidx % cols,
+        ty: Math.floor(gidx / cols),
+        localIdx: Number((meta as any)?.[localIdxKey] ?? -1),
+        kind,
+      });
+    }
+  };
+
+  collect(mapData.globalTileIdxToDirtTile, "dirtTileIdx", "dirt");
+
+  collect(mapData.globalTileIdxToBoardwalk, "boardwalkTileIdx", "boardwalk");
+
+  return out;
+}
+
+function overlayTileViewAt(target: OverlayTileTarget): any | null {
+  try {
+    return (
+      (tos.getTileObject(target.tx, target.ty, { ensureView: true }) as any)
+        ?.tileView ?? null
+    );
+  } catch {
+    return null;
+  }
+}
+
+function overlayRenderContext(): any {
+  try {
+    return (tos.getStatus().engine as any)?.reusableContext ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function pushToOverlayTileView(tileView: any, obj: any, ctx: any): void {
+  try {
+    tileView.onDataChanged(cloneOverlayTileObject(obj));
+  } catch {
+    return;
+  }
+
+  if (ctx && typeof tileView.update === "function") {
+    try {
+      tileView.update(ctx);
+    } catch {}
+  }
+}
+
+/**
+ * Détourne `onDataChanged` : quoi que le jeu envoie sur cette tuile, elle
+ * réaffiche ce que `resolve` dit. Le resolver est consulté à chaque appel, ce
+ * qui rend le détournement compatible avec un plan qui évolue.
+ */
+function installOverlayTileHold(
+  tileView: any,
+  resolve: () => any,
+): OverlayTileHold | null {
+  if (!tileView || typeof tileView.onDataChanged !== "function") return null;
+
+  const hadOwnProperty = Object.prototype.hasOwnProperty.call(
+    tileView,
+    "onDataChanged",
+  );
+
+  const original = tileView.onDataChanged as (obj: any) => void;
+
+  tileView.onDataChanged = function (this: any) {
+    return original.call(this, cloneOverlayTileObject(resolve()));
+  };
+
+  return { tileView, hadOwnProperty, original, resolve };
+}
+
+function releaseOverlayTileHold(hold: OverlayTileHold): void {
+  try {
+    if (hold.hadOwnProperty) {
+      hold.tileView.onDataChanged = hold.original;
+    } else {
+      delete hold.tileView.onDataChanged;
+    }
+  } catch {
+    try {
+      hold.tileView.onDataChanged = hold.original;
+    } catch {}
+  }
+}
+
+/**
+ * Installe l'overlay sur la parcelle. Un overlay déjà en place est relâché
+ * d'abord : deux détournements empilés sur la même tuile ne se restaureraient
+ * pas proprement.
+ */
+async function installGardenOverlay(
+  owner: OverlayOwner,
+  userSlotIdx: number,
+  resolve: OverlayTileResolver,
+): Promise<boolean> {
+  releaseGardenOverlay();
+
+  if (!tos.isReady()) return false;
+
+  const targets = await collectOverlayTileTargets(userSlotIdx);
+
+  if (!targets.length) return false;
+
+  const ctx = overlayRenderContext();
+
+  for (const target of targets) {
+    const tileView = overlayTileViewAt(target);
+
+    if (!tileView) continue;
+
+    const tileResolve = () => resolve(target.localIdx, target.kind);
+
+    const hold = installOverlayTileHold(tileView, tileResolve);
+
+    if (hold) overlayHolds.set(target.gidx, hold);
+
+    pushToOverlayTileView(tileView, tileResolve(), ctx);
+  }
+
+  if (overlayHolds.size === 0) return false;
+
+  overlayOwner = owner;
+
+  return true;
+}
+
+function releaseGardenOverlay(): void {
+  for (const hold of overlayHolds.values()) releaseOverlayTileHold(hold);
+
+  overlayHolds.clear();
+
+  overlayOwner = null;
+}
+
+/** Repeint toutes les tuiles tenues depuis leur resolver. */
+function repaintOverlay(): void {
+  const ctx = overlayRenderContext();
+
+  for (const hold of overlayHolds.values()) {
+    pushToOverlayTileView(hold.tileView, hold.resolve(), ctx);
+  }
+}
+
+/** Repeint la parcelle depuis un jardin donné, hors détournement. */
+async function repaintGarden(
+  garden: GardenState,
+  userSlotIdx: number,
+): Promise<void> {
+  const targets = await collectOverlayTileTargets(userSlotIdx);
+
+  const resolve = makeGardenTileResolver(() => garden);
+
+  const ctx = overlayRenderContext();
+
+  for (const target of targets) {
+    const tileView = overlayTileViewAt(target);
+
+    if (!tileView) continue;
+
+    pushToOverlayTileView(
+      tileView,
+      resolve(target.localIdx, target.kind),
+      ctx,
+    );
+  }
+}
+
+async function setOverlayMyDataGarden(garden: GardenState): Promise<void> {
+  try {
+    await fakeShow(OVERLAY_MYDATA_PATCH, { garden: sanitizeGarden(garden) });
+  } catch (error) {
+    console.warn("[EditorService] tile info patch unavailable", error);
+  }
+}
+
+async function clearOverlayMyDataGarden(): Promise<void> {
+  try {
+    await fakeHide(OVERLAY_MYDATA_PATCH.label);
+  } catch {}
 }
 
 async function applyFriendGardenPreview(
@@ -4214,45 +4537,41 @@ async function applyFriendGardenPreview(
 
     if (!cur) return false;
 
-    const slots = cur?.child?.data?.userSlots;
-
-    const slotMatch = findPlayerSlot(slots, pid, { sortObject: true });
+    const slotMatch = findPlayerSlot(cur?.child?.data?.userSlots, pid, {
+      sortObject: true,
+    });
 
     if (!slotMatch || !slotMatch.matchSlot) return false;
 
     const userSlotIdx = slotMatchToIndex(slotMatch);
 
-    const prevGarden = slotMatch.matchSlot?.data?.garden
-      ? sanitizeGarden(slotMatch.matchSlot.data.garden)
-      : makeEmptyGarden();
+    friendPreviewGarden = sanitizeGarden(garden);
 
-    friendGardenBackup = { garden: prevGarden, userSlotIdx };
+    const installed = await installGardenOverlay(
+      "friend",
+      userSlotIdx,
+      makeGardenTileResolver(() => friendPreviewGarden),
+    );
 
-    const updatedSlot = {
-      ...(slotMatch.matchSlot as any),
+    if (!installed) return false;
 
-      data: {
-        ...(slotMatch.matchSlot?.data || {}),
+    // La peinture est posée ; on aligne aussi la donnée lue par le panneau
+    // d'infos de la tuile courante.
+    await setOverlayMyDataGarden(friendPreviewGarden);
 
-        garden: sanitizeGarden(garden),
-      },
-    };
+    friendPreviewUserSlotIdx = userSlotIdx;
 
-    const nextUserSlots = rebuildUserSlots(slotMatch, () => updatedSlot);
-
-    const nextState = buildStateWithUserSlots(cur, nextUserSlots);
-
-    await setStateAtom(nextState);
-
-    try {
-      await applyGardenToTos(garden, userSlotIdx);
-    } catch {}
+    friendPreviewPlayerId = pid;
 
     friendGardenPreviewActive = true;
 
     return true;
   } catch (error) {
     console.error("[EditorService] applyFriendGardenPreview failed", error);
+
+    releaseGardenOverlay();
+
+    await clearOverlayMyDataGarden();
 
     friendGardenPreviewActive = false;
 
@@ -4265,44 +4584,33 @@ async function clearFriendGardenPreview(): Promise<boolean> {
 
   friendGardenPreviewActive = false;
 
+  const userSlotIdx = friendPreviewUserSlotIdx;
+
+  const playerId = friendPreviewPlayerId;
+
+  friendPreviewUserSlotIdx = null;
+
+  friendPreviewPlayerId = null;
+
+  releaseGardenOverlay();
+
+  await clearOverlayMyDataGarden();
+
   try {
-    const backup = friendGardenBackup;
+    // Le state n'a jamais été modifié : il porte la vérité serveur, y compris
+    // ce qui a poussé pendant l'aperçu. On repeint simplement depuis lui.
+    if (userSlotIdx == null || !playerId) return true;
 
-    friendGardenBackup = null;
+    const cur = (await Atoms.root.state.get().catch(() => null)) as any;
 
-    if (backup) {
-      const pid = await getPlayerId();
+    const slotMatch = findPlayerSlot(cur?.child?.data?.userSlots, playerId, {
+      sortObject: true,
+    });
 
-      if (pid) {
-        const cur = (await Atoms.root.state.get().catch(() => null)) as any;
-
-        const slots = cur?.child?.data?.userSlots;
-
-        const slotMatch = findPlayerSlot(slots, pid, { sortObject: true });
-
-        if (slotMatch && slotMatch.matchSlot) {
-          const updatedSlot = {
-            ...(slotMatch.matchSlot as any),
-
-            data: {
-              ...(slotMatch.matchSlot?.data || {}),
-
-              garden: sanitizeGarden(backup.garden),
-            },
-          };
-
-          const nextUserSlots = rebuildUserSlots(slotMatch, () => updatedSlot);
-
-          const nextState = buildStateWithUserSlots(cur, nextUserSlots);
-
-          await setStateAtom(nextState);
-
-          try {
-            await applyGardenToTos(backup.garden, backup.userSlotIdx);
-          } catch {}
-        }
-      }
-    }
+    await repaintGarden(
+      sanitizeGarden(slotMatch?.matchSlot?.data?.garden),
+      userSlotIdx,
+    );
 
     return true;
   } catch (error) {
@@ -4967,6 +5275,19 @@ export async function placeSelectedItemInGardenAtCurrentTile() {
       return;
     }
 
+    // Le plan d'abord, la peinture ensuite : l'overlay resert ce que le plan
+    // contient, donc peindre avant la mise à jour réafficherait l'ancien objet.
+    const tileKey = String(localTileIndex);
+    const targetKey =
+      tileType === "Dirt" ? "tileObjects" : "boardwalkTileObjects";
+    setPlannedGarden({
+      ...plannedGarden,
+      [targetKey]: {
+        ...(plannedGarden as any)[targetKey],
+        [tileKey]: tileObject,
+      },
+    } as GardenState);
+
     injectTileObjectRaw(coords.x, coords.y, tileObject);
 
     if (tileObject.objectType === "plant") {
@@ -4989,17 +5310,6 @@ export async function placeSelectedItemInGardenAtCurrentTile() {
         { ensureView: true, forceUpdate: true },
       );
     }
-
-    const tileKey = String(localTileIndex);
-    const targetKey =
-      tileType === "Dirt" ? "tileObjects" : "boardwalkTileObjects";
-    plannedGarden = {
-      ...plannedGarden,
-      [targetKey]: {
-        ...(plannedGarden as any)[targetKey],
-        [tileKey]: tileObject,
-      },
-    } as GardenState;
 
     console.log("[EditorService] placed item in garden (local plan)", {
       tileType,
@@ -5056,20 +5366,22 @@ export async function removeGardenObjectAtCurrentTile(): Promise<boolean> {
       return false;
     }
 
-    tos.setTileEmpty(coords.x, coords.y, {
-      ensureView: true,
-      forceUpdate: true,
-    });
-
+    // Le plan d'abord, la peinture ensuite : sinon l'overlay reposerait
+    // l'objet qu'on vient d'enlever.
     const tileKey = String(localTileIndex);
     const targetKey =
       tileType === "Dirt" ? "tileObjects" : "boardwalkTileObjects";
     const nextTargetMap = { ...(plannedGarden as any)[targetKey] };
     delete nextTargetMap[tileKey];
-    plannedGarden = {
+    setPlannedGarden({
       ...plannedGarden,
       [targetKey]: nextTargetMap,
-    } as GardenState;
+    } as GardenState);
+
+    tos.setTileEmpty(coords.x, coords.y, {
+      ensureView: true,
+      forceUpdate: true,
+    });
 
     console.log("[EditorService] removed item from garden (local plan)", {
       tileType,
@@ -5116,10 +5428,10 @@ async function updateGardenObjectAtCurrentTile(
         ? { ...rawNextObj, slots: ensureSlotIds(rawNextObj.slots) }
         : rawNextObj;
 
-    plannedGarden = {
+    setPlannedGarden({
       ...plannedGarden,
       [targetKey]: { ...(plannedGarden as any)[targetKey], [tileKey]: nextObj },
-    } as GardenState;
+    } as GardenState);
 
     try {
       const coords = await resolveTileCoords(
