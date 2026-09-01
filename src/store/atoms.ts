@@ -118,6 +118,7 @@ export const myEggInventory = makeAtom<ToolInventoryState>("myEggInventoryAtom")
 export const myDecorInventory = makeAtom<DecorInventoryState>("myDecorInventoryAtom");
 export const mySeedSiloItems = makeAtom<SeedInventoryState>("mySeedSiloItemsAtom");
 export const myDecorShedItems = makeAtom<DecorInventoryState>("myDecorShedItemsAtom");
+export const myToolShackItems = makeAtom<ToolInventoryState>("myToolShackItemsAtom");
 export const myFeedingTroughItems = makeAtom<CropInventoryState>("myFeedingTroughItemsAtom");
 // `myPetInfosAtom` no longer exists in the game (v1029). Nothing reads it
 // directly: `normalizePetsState` prefers it but falls back to the pet slots
@@ -385,6 +386,7 @@ export const Atoms = {
     myDecorInventory,
     mySeedSiloItems,
     myDecorShedItems,
+    myToolShackItems,
     myFeedingTroughItems,
     favoriteIds,
     mySelectedItemId,

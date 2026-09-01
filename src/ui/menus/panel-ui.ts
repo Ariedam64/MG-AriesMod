@@ -6,7 +6,13 @@
 // borrowing its class names would leave other panels unstyled for anyone who
 // never opens it.
 
+import { attachSpriteIcon } from '../spriteIconCache';
+import { setImageSafe } from '../../utils/discordCsp';
+
 const STYLE_ID = 'qws-panel-ui-css';
+
+/** Icon size for a setting row, matching the Keybinds rows. */
+const ROW_ICON_PX = 26;
 
 export const TEAL = '#5eead4';
 export const TEAL_DIM = 'rgba(94,234,212,0.12)';
@@ -82,6 +88,29 @@ export function ensurePanelStyles(): void {
   color: ${WARN}; border-color: rgba(251,191,36,0.55); background: rgba(251,191,36,0.12);
 }
 .qws-pnl-root .qmm-check, .qws-pnl-root .qmm-switch { accent-color: ${TEAL}; }
+
+.qws-pnl-range {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 4px; border-radius: 999px; outline: none; cursor: pointer;
+  background: rgba(255,255,255,0.1); border: none; padding: 0; margin: 0;
+}
+.qws-pnl-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: ${TEAL}; border: none; cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.qws-pnl-range::-webkit-slider-thumb:hover { transform: scale(1.15); box-shadow: 0 0 0 4px ${TEAL_DIM}; }
+.qws-pnl-range::-moz-range-thumb {
+  width: 13px; height: 13px; border-radius: 50%;
+  background: ${TEAL}; border: none; cursor: pointer;
+}
+.qws-pnl-range::-moz-range-track { height: 4px; border-radius: 999px; background: rgba(255,255,255,0.1); }
+.qws-pnl-range:disabled { opacity: 0.4; cursor: not-allowed; }
+.qws-pnl-range:disabled::-webkit-slider-thumb { background: ${TEXT_DIM}; cursor: not-allowed; }
+.qws-pnl-range:disabled::-moz-range-thumb { background: ${TEXT_DIM}; cursor: not-allowed; }
+
+.qws-pnl-head:hover .qws-pnl-chevron { color: ${TEAL}; }
 `;
   document.head.appendChild(st);
 }
@@ -158,14 +187,24 @@ export function button(
   btn.onmouseenter = () => css(btn, { background: palette.hoverBg, borderColor: palette.hoverBorder });
   btn.onmouseleave = () => css(btn, { background: palette.bg, borderColor: palette.border });
   btn.onclick = async () => {
+    if (btn.disabled) return;
     css(btn, { opacity: '0.6', pointerEvents: 'none' });
     try {
       await onClick();
     } finally {
-      css(btn, { opacity: '1', pointerEvents: 'auto' });
+      // Restore to whatever the button's state is *now*: the handler may well
+      // have disabled it (a completed run, an emptied selection), and blindly
+      // restoring full opacity would leave it looking clickable.
+      setButtonEnabled(btn, !btn.disabled);
     }
   };
   return btn;
+}
+
+/** Enables/disables a panel button, keeping the dimmed look in sync. */
+export function setButtonEnabled(btn: HTMLButtonElement, enabled: boolean): void {
+  btn.disabled = !enabled;
+  css(btn, { opacity: enabled ? '1' : '0.35', pointerEvents: enabled ? 'auto' : 'none' });
 }
 
 export function toggle(checked: boolean, onChange: (on: boolean) => void): HTMLElement {
@@ -202,4 +241,227 @@ export function chip(text: string, tone: 'ok' | 'warn'): HTMLElement {
   });
   el.textContent = text;
   return el;
+}
+
+/** Read-only value badge, e.g. a slider's current value or a selection summary. */
+export function pill(text: string): HTMLElement {
+  const el = document.createElement('span');
+  css(el, {
+    fontSize: '11px',
+    fontWeight: '600',
+    padding: '4px 9px',
+    borderRadius: '999px',
+    border: `1px solid ${BORDER}`,
+    background: 'rgba(0,0,0,0.22)',
+    color: TEXT,
+    whiteSpace: 'nowrap',
+  });
+  el.textContent = text;
+  return el;
+}
+
+export function range(min: number, max: number, step: number, value: number): HTMLInputElement {
+  const el = document.createElement('input');
+  el.className = 'qws-pnl-range';
+  el.type = 'range';
+  el.min = String(min);
+  el.max = String(max);
+  el.step = String(step);
+  el.value = String(value);
+  return el;
+}
+
+export function numberField(min: number, max: number, step: number, value: number): HTMLInputElement {
+  const el = document.createElement('input');
+  el.className = 'qws-pnl-input';
+  el.type = 'number';
+  el.min = String(min);
+  el.max = String(max);
+  el.step = String(step);
+  el.value = String(value);
+  css(el, { width: '78px', textAlign: 'right' });
+  return el;
+}
+
+/**
+ * Splits an atlas frame key into the category/name pair the sprite API uses.
+ *
+ * The API pluralises some categories (`sprite/object/…` is served under
+ * `objects/`), and a few sprites exist under more than one, so candidates are
+ * returned rather than a single guess — `attachSpriteIcon` takes the first that
+ * resolves.
+ */
+export function spriteLookup(frameKey: string): { categories: string[]; name: string } {
+  const parts = frameKey.split('/').filter(Boolean);
+  const name = parts[parts.length - 1] ?? frameKey;
+  const category = parts.length >= 2 ? parts[parts.length - 2] : '';
+  const categories = [category, `${category}s`, 'ui', 'decor', 'objects'].filter(
+    (value, index, all) => value && all.indexOf(value) === index,
+  );
+  return { categories, name };
+}
+
+/**
+ * Square icon holder for an atlas frame key (`sprite/decor/SeedSilo`) or a
+ * hosted image URL. Remote URLs go through `setImageSafe`, which routes them via
+ * GM inside the Discord Activity where the CSP blocks direct loads.
+ */
+export function iconBox(source: string, sizePx: number, logTag: string): HTMLElement {
+  const box = document.createElement('div');
+  css(box, {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: `${sizePx}px`,
+    height: `${sizePx}px`,
+    flex: '0 0 auto',
+  });
+  if (/^https?:\/\//i.test(source)) {
+    const img = document.createElement('img');
+    css(img, { maxWidth: '100%', maxHeight: '100%', imageRendering: 'pixelated' });
+    img.alt = '';
+    setImageSafe(img, source);
+    box.appendChild(img);
+  } else {
+    const { categories, name } = spriteLookup(source);
+    attachSpriteIcon(box, categories, name, sizePx, logTag);
+  }
+  return box;
+}
+
+export interface SettingRowOptions {
+  /** Atlas frame key or image URL shown at the start of the row. */
+  icon?: string;
+  /** Log tag forwarded to the sprite loader. */
+  iconTag?: string;
+}
+
+/** One labelled setting: title (+ optional hint) on the left, controls on the right. */
+export function settingRow(
+  title: string,
+  hint: string | null,
+  control: HTMLElement,
+  opts: SettingRowOptions = {},
+): { row: HTMLElement; controls: HTMLElement } {
+  const row = document.createElement('div');
+  css(row, {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '8px 10px',
+    borderRadius: '10px',
+    background: CARD_BG,
+    border: `1px solid ${BORDER}`,
+    flexShrink: '0',
+  });
+
+  if (opts.icon) row.appendChild(iconBox(opts.icon, ROW_ICON_PX, opts.iconTag ?? 'panel'));
+
+  const labelCol = document.createElement('div');
+  css(labelCol, { display: 'flex', flexDirection: 'column', gap: '2px', flex: '1 1 auto', minWidth: '0' });
+
+  const name = document.createElement('div');
+  css(name, { fontSize: '12px', color: TEXT });
+  name.textContent = title;
+  labelCol.appendChild(name);
+
+  if (hint) {
+    const desc = document.createElement('div');
+    css(desc, { fontSize: '10px', color: TEXT_DIM, lineHeight: '1.4' });
+    desc.textContent = hint;
+    labelCol.appendChild(desc);
+  }
+
+  const controls = document.createElement('div');
+  css(controls, {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: '8px',
+    flex: '0 0 auto',
+    flexWrap: 'wrap',
+  });
+  controls.appendChild(control);
+
+  row.append(labelCol, controls);
+  return { row, controls };
+}
+
+export interface CollapsibleCardOptions {
+  icon?: string;
+  title: string;
+  description?: string;
+  collapsed: boolean;
+  onToggle: (collapsed: boolean) => void;
+}
+
+/**
+ * Section card whose header doubles as the collapse control.
+ *
+ * `flexShrink:0` / `minHeight:auto` opt out of the shared card()'s shrinking:
+ * inside a scrolling list, shrinking makes every card collapse under its own
+ * content and the rows overlap.
+ */
+export function collapsibleCard(opts: CollapsibleCardOptions): { root: HTMLElement; body: HTMLElement } {
+  const root = card();
+  css(root, { flexShrink: '0', minHeight: 'auto' });
+
+  const head = document.createElement('button');
+  head.type = 'button';
+  head.className = 'qws-pnl-head';
+  css(head, {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '0',
+    border: 'none',
+    background: 'none',
+    cursor: 'pointer',
+    textAlign: 'left',
+    font: 'inherit',
+    color: 'inherit',
+  });
+
+  const titles = document.createElement('div');
+  css(titles, { display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '0', flex: '1 1 auto' });
+  titles.appendChild(sectionLabel(opts.icon ? `${opts.icon} ${opts.title}` : opts.title));
+  if (opts.description) {
+    const desc = document.createElement('div');
+    css(desc, { fontSize: '11px', color: TEXT_DIM, lineHeight: '1.45' });
+    desc.textContent = opts.description;
+    titles.appendChild(desc);
+  }
+
+  const chevron = document.createElement('span');
+  chevron.className = 'qws-pnl-chevron';
+  css(chevron, {
+    color: TEXT_DIM,
+    fontSize: '10px',
+    transition: 'transform 140ms ease, color 120ms ease',
+    flex: '0 0 auto',
+    marginLeft: 'auto',
+  });
+  chevron.textContent = '▶';
+
+  head.append(titles, chevron);
+
+  const body = document.createElement('div');
+  css(body, { display: 'flex', flexDirection: 'column', gap: '8px' });
+
+  let collapsed = opts.collapsed;
+  const apply = () => {
+    body.style.display = collapsed ? 'none' : 'flex';
+    chevron.style.transform = collapsed ? 'rotate(0deg)' : 'rotate(90deg)';
+    head.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  };
+  apply();
+
+  head.addEventListener('click', () => {
+    collapsed = !collapsed;
+    apply();
+    opts.onToggle(collapsed);
+  });
+
+  root.append(head, body);
+  return { root, body };
 }

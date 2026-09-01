@@ -20,6 +20,7 @@ export type KeybindId =
   | "game.journal"
   | "game.pet-hutch"
   | "game.decor-shed"
+  | "game.tool-shack"
   | "game.seed-silo"
   | "game.feeding-trough"
   | "game.weather-station"
@@ -184,6 +185,13 @@ const SECTION_CONFIG: KeybindSectionConfig[] = [
         id: "game.decor-shed",
         label: "Decor shed",
         icon: "sprite/decor/DecorShed",
+        defaultHotkey: null,
+        allowClear: true,
+      },
+      {
+        id: "game.tool-shack",
+        label: "Tool shack",
+        icon: "sprite/decor/ToolShack",
         defaultHotkey: null,
         allowClear: true,
       },

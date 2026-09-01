@@ -4,29 +4,9 @@
 // `ui.on('unmounted')` owns listener cleanup. Only the presentation is ours.
 
 import { Menu, hotkeyToString, type HotkeyButtonElement } from "../menu";
-import { attachSpriteIcon } from "../spriteIconCache";
-import { setImageSafe } from "../../utils/discordCsp";
 import { getAriesStorage, updateAriesStorage } from "../../utils/localStorage";
 
 const ICON_BOX_PX = 26;
-
-/**
- * Splits an atlas frame key into the category/name pair the sprite API uses.
- *
- * The API pluralises some categories (`sprite/object/…` is served under
- * `objects/`), and a few sprites exist under more than one, so candidates are
- * returned rather than a single guess — `attachSpriteIcon` takes the first that
- * resolves.
- */
-function spriteLookup(frameKey: string): { categories: string[]; name: string } {
-  const parts = frameKey.split("/").filter(Boolean);
-  const name = parts[parts.length - 1] ?? frameKey;
-  const category = parts.length >= 2 ? parts[parts.length - 2] : "";
-  const categories = [category, `${category}s`, "ui", "decor", "objects"].filter(
-    (value, index, all) => value && all.indexOf(value) === index,
-  );
-  return { categories, name };
-}
 
 /** Collapsed sections persist so the menu reopens the way it was left. */
 function isSectionCollapsed(sectionId: string): boolean {
@@ -50,7 +30,9 @@ import {
   card,
   css,
   ensurePanelStyles,
+  iconBox,
   sectionLabel,
+  setButtonEnabled,
   toggle,
 } from "./panel-ui";
 import {
@@ -106,29 +88,7 @@ function createKeybindRow(ui: Menu, action: KeybindAction): HTMLElement {
   // Real game art where the action has one, so a shortcut is recognisable at a
   // glance rather than by an approximate emoji.
   if (action.icon) {
-    const iconBox = document.createElement("div");
-    css(iconBox, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: `${ICON_BOX_PX}px`,
-      height: `${ICON_BOX_PX}px`,
-      flex: "0 0 auto",
-    });
-    if (/^https?:\/\//i.test(action.icon)) {
-      // Hosted image rather than an atlas frame. setImageSafe routes it through
-      // GM when running inside the Discord Activity, where the CSP blocks
-      // direct remote loads.
-      const img = document.createElement("img");
-      css(img, { maxWidth: "100%", maxHeight: "100%", imageRendering: "pixelated" });
-      img.alt = "";
-      setImageSafe(img, action.icon);
-      iconBox.appendChild(img);
-    } else {
-      const { categories, name } = spriteLookup(action.icon);
-      attachSpriteIcon(iconBox, categories, name, ICON_BOX_PX, "keybinds");
-    }
-    row.appendChild(iconBox);
+    row.appendChild(iconBox(action.icon, ICON_BOX_PX, "keybinds"));
   }
 
   // Label column, with the optional hint underneath it.
@@ -203,9 +163,7 @@ function createKeybindRow(ui: Menu, action: KeybindAction): HTMLElement {
   }
 
   function setEnabled(btn: HTMLButtonElement | null, enabled: boolean): void {
-    if (!btn) return;
-    btn.disabled = !enabled;
-    css(btn, { opacity: enabled ? "1" : "0.35", pointerEvents: enabled ? "auto" : "none" });
+    if (btn) setButtonEnabled(btn, enabled);
   }
 
   function updateButtons(current: ReturnType<typeof getKeybind>): void {

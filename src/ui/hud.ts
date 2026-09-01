@@ -7,6 +7,7 @@ import { installSellKeybindsOnce } from "../services/sell";
 import { installPetHutchKeybindsOnce } from "../services/petHutchKeybind";
 import { installJournalKeybindsOnce } from "../services/journalKeybind";
 import { installDecorShedKeybindsOnce } from "../services/decorShedKeybind";
+import { installToolShackKeybindsOnce } from "../services/toolShackKeybind";
 import { installSeedSiloKeybindsOnce } from "../services/seedSiloKeybind";
 import { installFeedingTroughKeybindsOnce } from "../services/feedingTroughKeybind";
 import { installWeatherStationKeybindsOnce } from "../services/weatherStationKeybind";
@@ -1101,6 +1102,7 @@ export function initWatchers(){
     installJournalKeybindsOnce();
     installSeedSiloKeybindsOnce();
     installDecorShedKeybindsOnce();
+    installToolShackKeybindsOnce();
     installFeedingTroughKeybindsOnce();
     installWeatherStationKeybindsOnce();
 

@@ -57,6 +57,9 @@ export type AriesStorage = {
     keepInventorySlotFree?: unknown;
     autoStoreSeedSiloEnabled?: unknown;
     autoStoreDecorShedEnabled?: unknown;
+    autoStoreToolShackEnabled?: unknown;
+    /** Section id -> collapsed, for the Misc menu. */
+    collapsed?: Record<string, boolean>;
   };
   hud?: { pos?: unknown; collapsed?: unknown; hidden?: unknown; windows?: Record<string, unknown> };
   menu?: { activeTabs?: Record<string, string> };

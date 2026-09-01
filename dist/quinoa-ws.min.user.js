@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.201
+// @version      3.2.202
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -2702,8 +2702,8 @@
   function getPetName(pet) {
     return pet?.name || pet?.petSpecies || "Unknown Pet";
   }
-  function formatAbilityLog(log) {
-    const { action: action2, parameters } = log;
+  function formatAbilityLog(log2) {
+    const { action: action2, parameters } = log2;
     const params = parameters;
     switch (action2) {
       case "CoinFinderI":
@@ -4903,6 +4903,7 @@
   var myDecorInventory = makeAtom("myDecorInventoryAtom");
   var mySeedSiloItems = makeAtom("mySeedSiloItemsAtom");
   var myDecorShedItems = makeAtom("myDecorShedItemsAtom");
+  var myToolShackItems = makeAtom("myToolShackItemsAtom");
   var myFeedingTroughItems = makeAtom("myFeedingTroughItemsAtom");
   var myPetInfos = makeAtom("myPetInfosAtom");
   var myPetSlotInfos = makeAtom("myPetSlotInfosAtom");
@@ -5044,6 +5045,7 @@
       myDecorInventory,
       mySeedSiloItems,
       myDecorShedItems,
+      myToolShackItems,
       myFeedingTroughItems,
       favoriteIds,
       mySelectedItemId,
@@ -13334,6 +13336,13 @@
           allowClear: true
         },
         {
+          id: "game.tool-shack",
+          label: "Tool shack",
+          icon: "sprite/decor/ToolShack",
+          defaultHotkey: null,
+          allowClear: true
+        },
+        {
           id: "game.seed-silo",
           label: "Seed silo",
           icon: "sprite/decor/SeedSilo",
@@ -13421,11 +13430,11 @@
   var holdDefaultMap = /* @__PURE__ */ new Map();
   var holdCache = /* @__PURE__ */ new Map();
   var holdListeners = /* @__PURE__ */ new Map();
-  var keybindSections = SECTION_CONFIG.map((section) => {
-    const actions = section.actions.map((action2) => {
+  var keybindSections = SECTION_CONFIG.map((section2) => {
+    const actions = section2.actions.map((action2) => {
       const normalized = {
         id: action2.id,
-        sectionId: section.id,
+        sectionId: section2.id,
         label: action2.label,
         icon: action2.icon,
         hint: action2.hint,
@@ -13446,10 +13455,10 @@
       return normalized;
     });
     return {
-      id: section.id,
-      title: section.title,
-      description: section.description,
-      icon: section.icon,
+      id: section2.id,
+      title: section2.title,
+      description: section2.description,
+      icon: section2.icon,
       actions
     };
   });
@@ -13883,9 +13892,9 @@
     return prettyHotkey(getKeybind(id));
   }
   function getKeybindSections() {
-    return keybindSections.map((section) => ({
-      ...section,
-      actions: section.actions.map((action2) => ({
+    return keybindSections.map((section2) => ({
+      ...section2,
+      actions: section2.actions.map((action2) => ({
         ...action2,
         defaultHotkey: cloneHotkey(action2.defaultHotkey),
         holdDetection: action2.holdDetection ? {
@@ -14668,6 +14677,275 @@
     }
   };
 
+  // src/services/autoStore.ts
+  var LOG_PREFIX = "[Misc][AutoStore]";
+  var log = (...args) => {
+    try {
+      console.log(LOG_PREFIX, ...args);
+    } catch {
+    }
+  };
+  var DEBOUNCE_MS = 800;
+  var RECENT_REMOVE_MS = 2e3;
+  var ATOM_POLL_MS2 = 400;
+  var ATOM_TIMEOUT_MS = 10 * 6e4;
+  var normalizeKey2 = (value) => typeof value === "string" ? value.trim() : "";
+  var normalizeQty = (value) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+  };
+  var buildQtyMap = (raw, getKey) => {
+    const map2 = /* @__PURE__ */ new Map();
+    const list = Array.isArray(raw) ? raw : [];
+    for (const item of list) {
+      const key2 = getKey(item);
+      if (!key2) continue;
+      const qty = normalizeQty(item?.quantity);
+      if (qty <= 0) continue;
+      map2.set(key2, (map2.get(key2) ?? 0) + qty);
+    }
+    return map2;
+  };
+  var buildKeySet = (raw, getKey) => {
+    const set2 = /* @__PURE__ */ new Set();
+    const list = Array.isArray(raw) ? raw : [];
+    for (const item of list) {
+      const key2 = getKey(item);
+      if (!key2) continue;
+      const qty = normalizeQty(item?.quantity);
+      if (qty <= 0) continue;
+      set2.add(key2);
+    }
+    return set2;
+  };
+  var diffIncreases = (prev, next) => {
+    const out = [];
+    for (const [key2, qty] of next) {
+      const before = prev.get(key2) ?? 0;
+      if (qty > before) out.push(key2);
+    }
+    return out;
+  };
+  var diffSet = (prev, next) => {
+    const added = [];
+    const removed = [];
+    for (const key2 of next) if (!prev.has(key2)) added.push(key2);
+    for (const key2 of prev) if (!next.has(key2)) removed.push(key2);
+    return { added, removed };
+  };
+  var pruneRecentMap = (map2, now2, maxAgeMs = RECENT_REMOVE_MS * 4) => {
+    for (const [key2, ts] of map2) {
+      if (now2 - ts > maxAgeMs) map2.delete(key2);
+    }
+  };
+  var summarizeQtyDelta = (prev, next, keys) => keys.map((key2) => ({
+    key: key2,
+    before: prev.get(key2) ?? 0,
+    after: next.get(key2) ?? 0
+  }));
+  var readEnabledFlag = (path, def) => {
+    try {
+      const stored = readAriesPath(path);
+      if (typeof stored === "boolean") return stored;
+      if (stored === "1" || stored === 1) return true;
+      if (stored === "0" || stored === 0) return false;
+      return !!stored;
+    } catch {
+      return def;
+    }
+  };
+  async function waitForAtoms(storage, inventory, keepGoing) {
+    const startedAt = Date.now();
+    while (keepGoing() && Date.now() - startedAt < ATOM_TIMEOUT_MS) {
+      try {
+        const ready2 = await Store.hasAtom(storage.label) && await Store.hasAtom(inventory.label);
+        if (ready2 && Array.isArray(await inventory.get())) return true;
+      } catch {
+      }
+      await new Promise((resolve) => setTimeout(resolve, ATOM_POLL_MS2));
+    }
+    return false;
+  }
+  function createAutoStore(config) {
+    const { logName, storagePath, storageId, storageAtom, inventoryAtom, keyFromItem } = config;
+    let enabled2 = readEnabledFlag(storagePath, false);
+    let storedKeys = /* @__PURE__ */ new Set();
+    let inventoryQty = /* @__PURE__ */ new Map();
+    let queue = /* @__PURE__ */ new Set();
+    let busy = false;
+    let inventoryUnsub = null;
+    let storageUnsub = null;
+    let pendingKeys = /* @__PURE__ */ new Set();
+    let pendingTimer = null;
+    let removedAtByKey = /* @__PURE__ */ new Map();
+    let startGeneration = 0;
+    function queueStore(keys) {
+      for (const key2 of keys) if (key2) queue.add(key2);
+      if (keys.length) {
+        log(`${logName} queue add`, { keys, queueSize: queue.size });
+      }
+      void flushQueue();
+    }
+    function queueStoreDebounced(keys) {
+      for (const key2 of keys) if (key2) pendingKeys.add(key2);
+      if (!pendingKeys.size) return;
+      if (pendingTimer != null) return;
+      pendingTimer = window.setTimeout(() => {
+        pendingTimer = null;
+        const now2 = Date.now();
+        const pending2 = Array.from(pendingKeys);
+        pendingKeys.clear();
+        pruneRecentMap(removedAtByKey, now2);
+        const filtered = [];
+        const skipped = [];
+        for (const key2 of pending2) {
+          const removedAt = removedAtByKey.get(key2) ?? 0;
+          if (removedAt && now2 - removedAt <= RECENT_REMOVE_MS) {
+            skipped.push(key2);
+          } else {
+            filtered.push(key2);
+          }
+        }
+        log(`${logName} pending flush`, { pending: pending2, filtered, skipped });
+        if (filtered.length) queueStore(filtered);
+      }, DEBOUNCE_MS);
+    }
+    async function flushQueue() {
+      if (busy || !enabled2) return;
+      busy = true;
+      try {
+        while (queue.size && enabled2) {
+          const batch = Array.from(queue);
+          queue.clear();
+          log(`${logName} flush start`, { batchSize: batch.length, batch });
+          for (const key2 of batch) {
+            if (!enabled2) return;
+            if (!storedKeys.has(key2)) {
+              log(`${logName} skip (not in storage)`, { key: key2, storageSize: storedKeys.size });
+              continue;
+            }
+            try {
+              await PlayerService.putItemInStorage(key2, storageId);
+              log(`${logName} stored`, { key: key2 });
+            } catch (err) {
+              log(`${logName} store failed`, { key: key2, err });
+            }
+          }
+        }
+      } finally {
+        busy = false;
+      }
+    }
+    async function start2() {
+      if (inventoryUnsub || storageUnsub) return;
+      if (typeof window === "undefined") return;
+      const generation = ++startGeneration;
+      const isCurrent = () => enabled2 && startGeneration === generation;
+      const ready2 = await waitForAtoms(storageAtom, inventoryAtom, isCurrent);
+      if (!ready2 || !isCurrent()) {
+        log(`${logName} auto-store aborted`, { ready: ready2, enabled: enabled2 });
+        return;
+      }
+      if (inventoryUnsub || storageUnsub) return;
+      try {
+        storedKeys = buildKeySet(await storageAtom.get(), keyFromItem);
+      } catch {
+      }
+      try {
+        inventoryQty = buildQtyMap(await inventoryAtom.get(), keyFromItem);
+      } catch {
+      }
+      log(`${logName} auto-store start`, { storageSize: storedKeys.size, inventoryKeys: inventoryQty.size });
+      try {
+        storageUnsub = await storageAtom.onChange((next) => {
+          const prev = storedKeys;
+          const nextSet = buildKeySet(next, keyFromItem);
+          storedKeys = nextSet;
+          const diff = diffSet(prev, nextSet);
+          if (diff.added.length || diff.removed.length) {
+            if (diff.removed.length) {
+              const now2 = Date.now();
+              for (const key2 of diff.removed) removedAtByKey.set(key2, now2);
+            }
+            log(`${logName} storage items updated`, { size: nextSet.size, added: diff.added, removed: diff.removed });
+          }
+        });
+      } catch {
+        storageUnsub = null;
+      }
+      try {
+        inventoryUnsub = await inventoryAtom.onChange((next) => {
+          if (!enabled2) return;
+          const prevMap = inventoryQty;
+          const nextMap = buildQtyMap(next, keyFromItem);
+          const increased = diffIncreases(prevMap, nextMap);
+          inventoryQty = nextMap;
+          if (increased.length) {
+            log(`${logName} inventory increased`, {
+              changes: summarizeQtyDelta(prevMap, nextMap, increased),
+              storageSize: storedKeys.size
+            });
+            queueStoreDebounced(increased);
+          }
+        });
+      } catch {
+        inventoryUnsub = null;
+      }
+      const initialKeys = Array.from(inventoryQty.keys()).filter((key2) => storedKeys.has(key2));
+      if (initialKeys.length) {
+        log(`${logName} auto-store initial queue`, { keys: initialKeys });
+        queueStore(initialKeys);
+      }
+    }
+    function stop2() {
+      startGeneration++;
+      try {
+        inventoryUnsub?.();
+      } catch {
+      }
+      try {
+        storageUnsub?.();
+      } catch {
+      }
+      inventoryUnsub = null;
+      storageUnsub = null;
+      queue.clear();
+      busy = false;
+      storedKeys.clear();
+      inventoryQty.clear();
+      pendingKeys.clear();
+      if (pendingTimer != null) {
+        clearTimeout(pendingTimer);
+        pendingTimer = null;
+      }
+      removedAtByKey.clear();
+      log(`${logName} auto-store stopped`);
+    }
+    return {
+      isEnabled: (def = false) => readEnabledFlag(storagePath, def),
+      setEnabled(on) {
+        const next = !!on;
+        enabled2 = next;
+        try {
+          writeAriesPath(storagePath, next);
+        } catch {
+        }
+        log(`${logName} auto-store toggle`, { enabled: next });
+        if (next) {
+          void start2();
+        } else {
+          stop2();
+        }
+      },
+      bootIfEnabled() {
+        if (enabled2) void start2();
+      }
+    };
+  }
+  var storageKeyFromSpecies = (item) => normalizeKey2(item?.species);
+  var storageKeyFromDecorId = (item) => normalizeKey2(item?.decorId);
+  var storageKeyFromToolId = (item) => normalizeKey2(item?.toolId);
+
   // src/services/misc.ts
   var PATH_GHOST_MODE = "misc.ghostMode";
   var PATH_GHOST_DELAY = "misc.ghostDelayMs";
@@ -14681,6 +14959,7 @@
   var PATH_KEEP_INVENTORY_SLOT_FREE = "misc.keepInventorySlotFree";
   var PATH_AUTO_STORE_SEED_SILO_ENABLED = "misc.autoStoreSeedSiloEnabled";
   var PATH_AUTO_STORE_DECOR_SHED_ENABLED = "misc.autoStoreDecorShedEnabled";
+  var PATH_AUTO_STORE_TOOL_SHACK_ENABLED = "misc.autoStoreToolShackEnabled";
   var readGhostEnabled = (def = false) => {
     try {
       const stored = readAriesPath(PATH_GHOST_MODE);
@@ -14781,6 +15060,17 @@
   var readAutoStoreDecorShedEnabled = (def = false) => {
     try {
       const stored = readAriesPath(PATH_AUTO_STORE_DECOR_SHED_ENABLED);
+      if (typeof stored === "boolean") return stored;
+      if (stored === "1" || stored === 1) return true;
+      if (stored === "0" || stored === 0) return false;
+      return !!stored;
+    } catch {
+      return def;
+    }
+  };
+  var readAutoStoreToolShackEnabled = (def = false) => {
+    try {
+      const stored = readAriesPath(PATH_AUTO_STORE_TOOL_SHACK_ENABLED);
       if (typeof stored === "boolean") return stored;
       if (stored === "1" || stored === 1) return true;
       if (stored === "0" || stored === 0) return false;
@@ -14898,425 +15188,42 @@
       }
     };
   }
-  var normalizeStorageKey = (value) => typeof value === "string" ? value.trim() : "";
-  var normalizeStorageQty = (value) => {
-    const n = Number(value);
-    return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
-  };
-  var buildQtyMap = (raw, getKey) => {
-    const map2 = /* @__PURE__ */ new Map();
-    const list = Array.isArray(raw) ? raw : [];
-    for (const item of list) {
-      const key2 = getKey(item);
-      if (!key2) continue;
-      const qty = normalizeStorageQty(item?.quantity);
-      if (qty <= 0) continue;
-      map2.set(key2, (map2.get(key2) ?? 0) + qty);
-    }
-    return map2;
-  };
-  var buildKeySet = (raw, getKey) => {
-    const set2 = /* @__PURE__ */ new Set();
-    const list = Array.isArray(raw) ? raw : [];
-    for (const item of list) {
-      const key2 = getKey(item);
-      if (!key2) continue;
-      const qty = normalizeStorageQty(item?.quantity);
-      if (qty <= 0) continue;
-      set2.add(key2);
-    }
-    return set2;
-  };
-  var diffIncreases = (prev, next) => {
-    const out = [];
-    for (const [key2, qty] of next) {
-      const before = prev.get(key2) ?? 0;
-      if (qty > before) out.push(key2);
-    }
-    return out;
-  };
-  var seedKeyFromItem = (item) => normalizeStorageKey(item?.species);
-  var decorKeyFromItem = (item) => normalizeStorageKey(item?.decorId);
-  var AUTO_STORE_LOG_PREFIX = "[Misc][AutoStore]";
-  var logAutoStore = (...args) => {
-    try {
-      console.log(AUTO_STORE_LOG_PREFIX, ...args);
-    } catch {
-    }
-  };
-  var AUTO_STORE_DEBOUNCE_MS = 800;
-  var AUTO_STORE_RECENT_REMOVE_MS = 2e3;
-  var AUTO_STORE_ATOM_POLL_MS = 400;
-  var AUTO_STORE_ATOM_TIMEOUT_MS = 10 * 6e4;
-  async function waitForAutoStoreAtoms(storage, inventory, keepGoing) {
-    const startedAt = Date.now();
-    while (keepGoing() && Date.now() - startedAt < AUTO_STORE_ATOM_TIMEOUT_MS) {
-      try {
-        const ready2 = await Store.hasAtom(storage.label) && await Store.hasAtom(inventory.label);
-        if (ready2 && Array.isArray(await inventory.get())) return true;
-      } catch {
-      }
-      await new Promise((resolve) => setTimeout(resolve, AUTO_STORE_ATOM_POLL_MS));
-    }
-    return false;
-  }
-  var diffSet = (prev, next) => {
-    const added = [];
-    const removed = [];
-    for (const key2 of next) if (!prev.has(key2)) added.push(key2);
-    for (const key2 of prev) if (!next.has(key2)) removed.push(key2);
-    return { added, removed };
-  };
-  var pruneRecentMap = (map2, now2, maxAgeMs = AUTO_STORE_RECENT_REMOVE_MS * 4) => {
-    for (const [key2, ts] of map2) {
-      if (now2 - ts > maxAgeMs) map2.delete(key2);
-    }
-  };
-  var summarizeQtyDelta = (prev, next, keys) => keys.map((key2) => ({
-    key: key2,
-    before: prev.get(key2) ?? 0,
-    after: next.get(key2) ?? 0
-  }));
-  var autoSeedSiloEnabled = readAutoStoreSeedSiloEnabled(false);
-  var autoDecorShedEnabled = readAutoStoreDecorShedEnabled(false);
-  var seedSiloItems = /* @__PURE__ */ new Set();
-  var seedInventoryQty = /* @__PURE__ */ new Map();
-  var seedSiloQueue = /* @__PURE__ */ new Set();
-  var seedSiloBusy = false;
-  var seedInvUnsub = null;
-  var seedSiloUnsub = null;
-  var seedPendingKeys = /* @__PURE__ */ new Set();
-  var seedPendingTimer = null;
-  var seedSiloRemovedAt = /* @__PURE__ */ new Map();
-  var seedStartGeneration = 0;
-  var decorShedItems = /* @__PURE__ */ new Set();
-  var decorInventoryQty = /* @__PURE__ */ new Map();
-  var decorShedQueue = /* @__PURE__ */ new Set();
-  var decorShedBusy = false;
-  var decorInvUnsub = null;
-  var decorShedUnsub = null;
-  var decorPendingKeys = /* @__PURE__ */ new Set();
-  var decorPendingTimer = null;
-  var decorShedRemovedAt = /* @__PURE__ */ new Map();
-  var decorStartGeneration = 0;
-  function queueSeedSiloStore(keys) {
-    for (const key2 of keys) if (key2) seedSiloQueue.add(key2);
-    if (keys.length) {
-      logAutoStore("seed queue add", { keys, queueSize: seedSiloQueue.size });
-    }
-    void flushSeedSiloQueue();
-  }
-  function queueSeedSiloStoreDebounced(keys) {
-    for (const key2 of keys) if (key2) seedPendingKeys.add(key2);
-    if (!seedPendingKeys.size) return;
-    if (seedPendingTimer != null) return;
-    seedPendingTimer = window.setTimeout(() => {
-      seedPendingTimer = null;
-      const now2 = Date.now();
-      const pending2 = Array.from(seedPendingKeys);
-      seedPendingKeys.clear();
-      pruneRecentMap(seedSiloRemovedAt, now2);
-      const filtered = [];
-      const skipped = [];
-      for (const key2 of pending2) {
-        const removedAt = seedSiloRemovedAt.get(key2) ?? 0;
-        if (removedAt && now2 - removedAt <= AUTO_STORE_RECENT_REMOVE_MS) {
-          skipped.push(key2);
-        } else {
-          filtered.push(key2);
-        }
-      }
-      logAutoStore("seed pending flush", { pending: pending2, filtered, skipped });
-      if (filtered.length) queueSeedSiloStore(filtered);
-    }, AUTO_STORE_DEBOUNCE_MS);
-  }
-  async function flushSeedSiloQueue() {
-    if (seedSiloBusy || !autoSeedSiloEnabled) return;
-    seedSiloBusy = true;
-    try {
-      while (seedSiloQueue.size && autoSeedSiloEnabled) {
-        const batch = Array.from(seedSiloQueue);
-        seedSiloQueue.clear();
-        logAutoStore("seed flush start", { batchSize: batch.length, batch });
-        for (const species of batch) {
-          if (!autoSeedSiloEnabled) return;
-          if (!seedSiloItems.has(species)) {
-            logAutoStore("seed skip (not in silo)", { species, siloSize: seedSiloItems.size });
-            continue;
-          }
-          try {
-            await PlayerService.putItemInStorage(species, "SeedSilo");
-            logAutoStore("seed stored", { species });
-          } catch (err) {
-            logAutoStore("seed store failed", { species, err });
-          }
-        }
-      }
-    } finally {
-      seedSiloBusy = false;
-    }
-  }
-  async function startSeedSiloAutoStore() {
-    if (seedInvUnsub || seedSiloUnsub) return;
-    if (typeof window === "undefined") return;
-    const generation = ++seedStartGeneration;
-    const isCurrent = () => autoSeedSiloEnabled && seedStartGeneration === generation;
-    const ready2 = await waitForAutoStoreAtoms(mySeedSiloItems, Atoms.inventory.mySeedInventory, isCurrent);
-    if (!ready2 || !isCurrent()) {
-      logAutoStore("seed auto-store aborted", { ready: ready2, enabled: autoSeedSiloEnabled });
-      return;
-    }
-    if (seedInvUnsub || seedSiloUnsub) return;
-    try {
-      seedSiloItems = buildKeySet(await mySeedSiloItems.get(), seedKeyFromItem);
-    } catch {
-    }
-    try {
-      seedInventoryQty = buildQtyMap(await Atoms.inventory.mySeedInventory.get(), seedKeyFromItem);
-    } catch {
-    }
-    logAutoStore("seed auto-store start", { siloSize: seedSiloItems.size, inventoryKeys: seedInventoryQty.size });
-    try {
-      seedSiloUnsub = await mySeedSiloItems.onChange((next) => {
-        const prev = seedSiloItems;
-        const nextSet = buildKeySet(next, seedKeyFromItem);
-        seedSiloItems = nextSet;
-        const diff = diffSet(prev, nextSet);
-        if (diff.added.length || diff.removed.length) {
-          if (diff.removed.length) {
-            const now2 = Date.now();
-            for (const key2 of diff.removed) seedSiloRemovedAt.set(key2, now2);
-          }
-          logAutoStore("seed silo items updated", { size: nextSet.size, added: diff.added, removed: diff.removed });
-        }
-      });
-    } catch {
-      seedSiloUnsub = null;
-    }
-    try {
-      seedInvUnsub = await Atoms.inventory.mySeedInventory.onChange((next) => {
-        if (!autoSeedSiloEnabled) return;
-        const prevMap = seedInventoryQty;
-        const nextMap = buildQtyMap(next, seedKeyFromItem);
-        const increased = diffIncreases(prevMap, nextMap);
-        seedInventoryQty = nextMap;
-        if (increased.length) {
-          logAutoStore("seed inventory increased", {
-            changes: summarizeQtyDelta(prevMap, nextMap, increased),
-            siloSize: seedSiloItems.size
-          });
-          queueSeedSiloStoreDebounced(increased);
-        }
-      });
-    } catch {
-      seedInvUnsub = null;
-    }
-    const initialKeys = Array.from(seedInventoryQty.keys()).filter((key2) => seedSiloItems.has(key2));
-    if (initialKeys.length) {
-      logAutoStore("seed auto-store initial queue", { keys: initialKeys });
-      queueSeedSiloStore(initialKeys);
-    }
-  }
-  function stopSeedSiloAutoStore() {
-    seedStartGeneration++;
-    try {
-      seedInvUnsub?.();
-    } catch {
-    }
-    try {
-      seedSiloUnsub?.();
-    } catch {
-    }
-    seedInvUnsub = null;
-    seedSiloUnsub = null;
-    seedSiloQueue.clear();
-    seedSiloBusy = false;
-    seedSiloItems.clear();
-    seedInventoryQty.clear();
-    seedPendingKeys.clear();
-    if (seedPendingTimer != null) {
-      clearTimeout(seedPendingTimer);
-      seedPendingTimer = null;
-    }
-    seedSiloRemovedAt.clear();
-    logAutoStore("seed auto-store stopped");
-  }
-  function queueDecorShedStore(keys) {
-    for (const key2 of keys) if (key2) decorShedQueue.add(key2);
-    if (keys.length) {
-      logAutoStore("decor queue add", { keys, queueSize: decorShedQueue.size });
-    }
-    void flushDecorShedQueue();
-  }
-  function queueDecorShedStoreDebounced(keys) {
-    for (const key2 of keys) if (key2) decorPendingKeys.add(key2);
-    if (!decorPendingKeys.size) return;
-    if (decorPendingTimer != null) return;
-    decorPendingTimer = window.setTimeout(() => {
-      decorPendingTimer = null;
-      const now2 = Date.now();
-      const pending2 = Array.from(decorPendingKeys);
-      decorPendingKeys.clear();
-      pruneRecentMap(decorShedRemovedAt, now2);
-      const filtered = [];
-      const skipped = [];
-      for (const key2 of pending2) {
-        const removedAt = decorShedRemovedAt.get(key2) ?? 0;
-        if (removedAt && now2 - removedAt <= AUTO_STORE_RECENT_REMOVE_MS) {
-          skipped.push(key2);
-        } else {
-          filtered.push(key2);
-        }
-      }
-      logAutoStore("decor pending flush", { pending: pending2, filtered, skipped });
-      if (filtered.length) queueDecorShedStore(filtered);
-    }, AUTO_STORE_DEBOUNCE_MS);
-  }
-  async function flushDecorShedQueue() {
-    if (decorShedBusy || !autoDecorShedEnabled) return;
-    decorShedBusy = true;
-    try {
-      while (decorShedQueue.size && autoDecorShedEnabled) {
-        const batch = Array.from(decorShedQueue);
-        decorShedQueue.clear();
-        logAutoStore("decor flush start", { batchSize: batch.length, batch });
-        for (const decorId of batch) {
-          if (!autoDecorShedEnabled) return;
-          if (!decorShedItems.has(decorId)) {
-            logAutoStore("decor skip (not in shed)", { decorId, shedSize: decorShedItems.size });
-            continue;
-          }
-          try {
-            await PlayerService.putItemInStorage(decorId, "DecorShed");
-            logAutoStore("decor stored", { decorId });
-          } catch (err) {
-            logAutoStore("decor store failed", { decorId, err });
-          }
-        }
-      }
-    } finally {
-      decorShedBusy = false;
-    }
-  }
-  async function startDecorShedAutoStore() {
-    if (decorInvUnsub || decorShedUnsub) return;
-    if (typeof window === "undefined") return;
-    const generation = ++decorStartGeneration;
-    const isCurrent = () => autoDecorShedEnabled && decorStartGeneration === generation;
-    const ready2 = await waitForAutoStoreAtoms(myDecorShedItems, Atoms.inventory.myDecorInventory, isCurrent);
-    if (!ready2 || !isCurrent()) {
-      logAutoStore("decor auto-store aborted", { ready: ready2, enabled: autoDecorShedEnabled });
-      return;
-    }
-    if (decorInvUnsub || decorShedUnsub) return;
-    try {
-      decorShedItems = buildKeySet(await myDecorShedItems.get(), decorKeyFromItem);
-    } catch {
-    }
-    try {
-      decorInventoryQty = buildQtyMap(await Atoms.inventory.myDecorInventory.get(), decorKeyFromItem);
-    } catch {
-    }
-    logAutoStore("decor auto-store start", { shedSize: decorShedItems.size, inventoryKeys: decorInventoryQty.size });
-    try {
-      decorShedUnsub = await myDecorShedItems.onChange((next) => {
-        const prev = decorShedItems;
-        const nextSet = buildKeySet(next, decorKeyFromItem);
-        decorShedItems = nextSet;
-        const diff = diffSet(prev, nextSet);
-        if (diff.added.length || diff.removed.length) {
-          if (diff.removed.length) {
-            const now2 = Date.now();
-            for (const key2 of diff.removed) decorShedRemovedAt.set(key2, now2);
-          }
-          logAutoStore("decor shed items updated", { size: nextSet.size, added: diff.added, removed: diff.removed });
-        }
-      });
-    } catch {
-      decorShedUnsub = null;
-    }
-    try {
-      decorInvUnsub = await Atoms.inventory.myDecorInventory.onChange((next) => {
-        if (!autoDecorShedEnabled) return;
-        const prevMap = decorInventoryQty;
-        const nextMap = buildQtyMap(next, decorKeyFromItem);
-        const increased = diffIncreases(prevMap, nextMap);
-        decorInventoryQty = nextMap;
-        if (increased.length) {
-          logAutoStore("decor inventory increased", {
-            changes: summarizeQtyDelta(prevMap, nextMap, increased),
-            shedSize: decorShedItems.size
-          });
-          queueDecorShedStoreDebounced(increased);
-        }
-      });
-    } catch {
-      decorInvUnsub = null;
-    }
-    const initialKeys = Array.from(decorInventoryQty.keys()).filter((key2) => decorShedItems.has(key2));
-    if (initialKeys.length) {
-      logAutoStore("decor auto-store initial queue", { keys: initialKeys });
-      queueDecorShedStore(initialKeys);
-    }
-  }
-  function stopDecorShedAutoStore() {
-    decorStartGeneration++;
-    try {
-      decorInvUnsub?.();
-    } catch {
-    }
-    try {
-      decorShedUnsub?.();
-    } catch {
-    }
-    decorInvUnsub = null;
-    decorShedUnsub = null;
-    decorShedQueue.clear();
-    decorShedBusy = false;
-    decorShedItems.clear();
-    decorInventoryQty.clear();
-    decorPendingKeys.clear();
-    if (decorPendingTimer != null) {
-      clearTimeout(decorPendingTimer);
-      decorPendingTimer = null;
-    }
-    decorShedRemovedAt.clear();
-    logAutoStore("decor auto-store stopped");
-  }
+  var seedSiloAutoStore = createAutoStore({
+    logName: "seed",
+    storagePath: PATH_AUTO_STORE_SEED_SILO_ENABLED,
+    storageId: "SeedSilo",
+    storageAtom: mySeedSiloItems,
+    inventoryAtom: Atoms.inventory.mySeedInventory,
+    keyFromItem: storageKeyFromSpecies
+  });
+  var decorShedAutoStore = createAutoStore({
+    logName: "decor",
+    storagePath: PATH_AUTO_STORE_DECOR_SHED_ENABLED,
+    storageId: "DecorShed",
+    storageAtom: myDecorShedItems,
+    inventoryAtom: Atoms.inventory.myDecorInventory,
+    keyFromItem: storageKeyFromDecorId
+  });
+  var toolShackAutoStore = createAutoStore({
+    logName: "tool",
+    storagePath: PATH_AUTO_STORE_TOOL_SHACK_ENABLED,
+    storageId: "ToolShack",
+    storageAtom: myToolShackItems,
+    inventoryAtom: Atoms.inventory.myToolInventory,
+    keyFromItem: storageKeyFromToolId
+  });
   function setAutoStoreSeedSiloEnabled(on) {
-    const next = !!on;
-    autoSeedSiloEnabled = next;
-    try {
-      writeAriesPath(PATH_AUTO_STORE_SEED_SILO_ENABLED, next);
-    } catch {
-    }
-    logAutoStore("seed auto-store toggle", { enabled: next });
-    if (next) {
-      void startSeedSiloAutoStore();
-    } else {
-      stopSeedSiloAutoStore();
-    }
+    seedSiloAutoStore.setEnabled(on);
   }
   function setAutoStoreDecorShedEnabled(on) {
-    const next = !!on;
-    autoDecorShedEnabled = next;
-    try {
-      writeAriesPath(PATH_AUTO_STORE_DECOR_SHED_ENABLED, next);
-    } catch {
-    }
-    logAutoStore("decor auto-store toggle", { enabled: next });
-    if (next) {
-      void startDecorShedAutoStore();
-    } else {
-      stopDecorShedAutoStore();
-    }
+    decorShedAutoStore.setEnabled(on);
   }
-  if (autoSeedSiloEnabled) {
-    void startSeedSiloAutoStore();
+  function setAutoStoreToolShackEnabled(on) {
+    toolShackAutoStore.setEnabled(on);
   }
-  if (autoDecorShedEnabled) {
-    void startDecorShedAutoStore();
-  }
+  seedSiloAutoStore.bootIfEnabled();
+  decorShedAutoStore.bootIfEnabled();
+  toolShackAutoStore.bootIfEnabled();
   var selectedMap = /* @__PURE__ */ new Map();
   var seedStockByName = /* @__PURE__ */ new Map();
   var seedSourceCache = [];
@@ -16406,6 +16313,8 @@
     setAutoStoreSeedSiloEnabled,
     readAutoStoreDecorShedEnabled,
     setAutoStoreDecorShedEnabled,
+    readAutoStoreToolShackEnabled,
+    setAutoStoreToolShackEnabled,
     // seeds
     getMySeedInventory,
     openSeedInventoryPreview,
@@ -25604,8 +25513,39 @@
     );
   }
 
+  // src/services/toolShackKeybind.ts
+  var ACTION_ID4 = "game.tool-shack";
+  var TOOL_SHACK_MODAL_ID = "toolShack";
+  var toolShackKeybindsInstalled = false;
+  async function toggleToolShackModal() {
+    try {
+      const current = await Atoms.ui.activeModal.get();
+      if (current === TOOL_SHACK_MODAL_ID) {
+        await closeModal(TOOL_SHACK_MODAL_ID);
+        return;
+      }
+      await openModal(TOOL_SHACK_MODAL_ID);
+    } catch {
+    }
+  }
+  function installToolShackKeybindsOnce() {
+    if (toolShackKeybindsInstalled || typeof window === "undefined") return;
+    toolShackKeybindsInstalled = true;
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (shouldIgnoreKeydown(event)) return;
+        if (!eventMatchesKeybind(ACTION_ID4, event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        void toggleToolShackModal();
+      },
+      true
+    );
+  }
+
   // src/services/seedSiloKeybind.ts
-  var ACTION_ID4 = "game.seed-silo";
+  var ACTION_ID5 = "game.seed-silo";
   var SEED_SILO_MODAL_ID = "seedSilo";
   var seedSiloKeybindsInstalled = false;
   async function toggleSeedSiloModal() {
@@ -25626,7 +25566,7 @@
       "keydown",
       (event) => {
         if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind(ACTION_ID4, event)) return;
+        if (!eventMatchesKeybind(ACTION_ID5, event)) return;
         event.preventDefault();
         event.stopPropagation();
         void toggleSeedSiloModal();
@@ -25636,7 +25576,7 @@
   }
 
   // src/services/feedingTroughKeybind.ts
-  var ACTION_ID5 = "game.feeding-trough";
+  var ACTION_ID6 = "game.feeding-trough";
   var FEEDING_TROUGH_MODAL_ID = "feedingTrough";
   var feedingTroughKeybindsInstalled = false;
   async function toggleFeedingTroughModal() {
@@ -25657,7 +25597,7 @@
       "keydown",
       (event) => {
         if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind(ACTION_ID5, event)) return;
+        if (!eventMatchesKeybind(ACTION_ID6, event)) return;
         event.preventDefault();
         event.stopPropagation();
         void toggleFeedingTroughModal();
@@ -25667,7 +25607,7 @@
   }
 
   // src/services/weatherStationKeybind.ts
-  var ACTION_ID6 = "game.weather-station";
+  var ACTION_ID7 = "game.weather-station";
   var WEATHER_STATION_MODAL_ID = "weatherStation";
   var weatherStationKeybindsInstalled = false;
   async function toggleWeatherStationModal() {
@@ -25688,7 +25628,7 @@
       "keydown",
       (event) => {
         if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind(ACTION_ID6, event)) return;
+        if (!eventMatchesKeybind(ACTION_ID7, event)) return;
         event.preventDefault();
         event.stopPropagation();
         void toggleWeatherStationModal();
@@ -27581,12 +27521,12 @@
         if (!entry || typeof entry !== "object") continue;
         const { base, weathers } = _splitEligibleShops(entry.eligibleShops);
         if (!base && weathers.length === 0) continue;
-        const section = base ?? naturalSection;
-        const id = `${section}:${key2}`;
+        const section2 = base ?? naturalSection;
+        const id = `${section2}:${key2}`;
         const name = typeof entry.name === "string" && entry.name.trim() ? String(entry.name) : key2;
         const rawRarity = typeof entry.rarity === "string" ? entry.rarity : void 0;
         const rarity3 = rawRarity ? DISPLAY_RARITY[rawRarity] ?? rawRarity : void 0;
-        addRow(id, section, name, rarity3, weathers, !base);
+        addRow(id, section2, name, rarity3, weathers, !base);
       }
     }
     return out;
@@ -31904,7 +31844,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.201";
+      return "3.2.202";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -34723,12 +34663,12 @@
         }
       };
     }
-    const { waitForGrid = true, log, ...config } = options;
+    const { waitForGrid = true, log: log2, ...config } = options;
     const cfg = config;
     let controller = null;
     let observer2 = null;
     let readyListener = null;
-    const logger = typeof log === "function" ? log : log ? (...args) => console.debug("[InventorySorting]", ...args) : () => {
+    const logger = typeof log2 === "function" ? log2 : log2 ? (...args) => console.debug("[InventorySorting]", ...args) : () => {
     };
     const attachIfPossible = () => {
       if (controller) return controller;
@@ -36519,6 +36459,7 @@
     installJournalKeybindsOnce();
     installSeedSiloKeybindsOnce();
     installDecorShedKeybindsOnce();
+    installToolShackKeybindsOnce();
     installFeedingTroughKeybindsOnce();
     installWeatherStationKeybindsOnce();
     const bootToolbar = async () => {
@@ -36886,7 +36827,7 @@
         renderSfx();
       }
     });
-    function setButtonEnabled(btn, enabled2) {
+    function setButtonEnabled2(btn, enabled2) {
       const setter = btn.setEnabled;
       if (typeof setter === "function") setter(enabled2);
       else btn.disabled = !enabled2;
@@ -37015,8 +36956,8 @@
       sfxInfo.textContent = items.length ? `${visibleSfx.length} / ${items.length} SFX shown.` : "No SFX loaded yet.";
       sfxList.style.display = visibleSfx.length ? "" : "none";
       sfxEmpty.style.display = visibleSfx.length ? "none" : "block";
-      setButtonEnabled(btnCopyVisible, visibleSfx.length > 0);
-      setButtonEnabled(btnSfxClear, sfxFilter.value.trim().length > 0);
+      setButtonEnabled2(btnCopyVisible, visibleSfx.length > 0);
+      setButtonEnabled2(btnSfxClear, sfxFilter.value.trim().length > 0);
     }
     function updateSummary2() {
       summaryThemes.innerHTML = `<strong>${catalog?.themes.length ?? 0}</strong> themes`;
@@ -37024,7 +36965,7 @@
       if (!nowPlayingLabel) nowPlaying.textContent = "Not playing.";
     }
     async function refreshAll(forceReload = false) {
-      setButtonEnabled(btnReload, false);
+      setButtonEnabled2(btnReload, false);
       overviewError.clear();
       try {
         catalog = await loadCatalog(forceReload);
@@ -37035,7 +36976,7 @@
         renderThemes();
         renderSfx();
       } finally {
-        setButtonEnabled(btnReload, true);
+        setButtonEnabled2(btnReload, true);
       }
     }
     void refreshAll();
@@ -39407,7 +39348,7 @@ next: ${next}`;
     view.innerHTML = "";
     void PetAlertService.start().catch(() => {
     });
-    const section = (title) => {
+    const section2 = (title) => {
       const card3 = ui.card(title, { tone: "muted" });
       card3.body.style.display = "grid";
       card3.body.style.gap = "10px";
@@ -39443,7 +39384,7 @@ next: ${next}`;
       overflow: "hidden"
     });
     view.appendChild(root);
-    const bellSection = section("Notification bell");
+    const bellSection = section2("Notification bell");
     root.appendChild(bellSection.root);
     const bellRow = document.createElement("label");
     Object.assign(bellRow.style, {
@@ -39469,7 +39410,7 @@ next: ${next}`;
       lineHeight: "1.4"
     });
     bellSection.body.appendChild(bellHint);
-    const s1 = section("Audio & Playback");
+    const s1 = section2("Audio & Playback");
     root.appendChild(s1.root);
     const contextControls = {};
     const contextOrder = [
@@ -39601,7 +39542,7 @@ next: ${next}`;
     }
     const s1Err = errorBar();
     s1.body.appendChild(s1Err.el);
-    const s2 = section("Sound library");
+    const s2 = section2("Sound library");
     root.appendChild(s2.root);
     const importRow = document.createElement("div");
     Object.assign(importRow.style, {
@@ -41779,23 +41720,23 @@ next: ${next}`;
       recipesTitleElement.textContent = `${prefix} when any recipe row matches (OR between rows)`;
     };
     const makeSection = (titleText, content) => {
-      const section = document.createElement("div");
-      section.style.display = "grid";
-      section.style.justifyItems = "center";
-      section.style.gap = "8px";
-      section.style.textAlign = "center";
-      section.style.border = "1px solid rgba(255,255,255,0.10)";
-      section.style.borderRadius = "10px";
-      section.style.padding = "10px";
-      section.style.background = "rgba(255,255,255,0.04)";
-      section.style.boxShadow = "none";
-      section.style.width = "min(720px, 100%)";
+      const section2 = document.createElement("div");
+      section2.style.display = "grid";
+      section2.style.justifyItems = "center";
+      section2.style.gap = "8px";
+      section2.style.textAlign = "center";
+      section2.style.border = "1px solid rgba(255,255,255,0.10)";
+      section2.style.borderRadius = "10px";
+      section2.style.padding = "10px";
+      section2.style.background = "rgba(255,255,255,0.04)";
+      section2.style.boxShadow = "none";
+      section2.style.width = "min(720px, 100%)";
       const heading = document.createElement("div");
       heading.textContent = titleText;
       heading.style.fontWeight = "600";
       heading.style.opacity = "0.95";
-      section.append(heading, content);
-      return section;
+      section2.append(heading, content);
+      return section2;
     };
     const centerRow = () => {
       const row = document.createElement("div");
@@ -44337,18 +44278,18 @@ next: ${next}`;
       const detailLayout = document.createElement("div");
       detailLayout.className = "mg-crop-calculator__layout";
       const createSection = (title, extraClass) => {
-        const section = document.createElement("div");
-        section.className = "mg-crop-calculator__section";
+        const section2 = document.createElement("div");
+        section2.className = "mg-crop-calculator__section";
         if (extraClass) {
-          section.classList.add(extraClass);
+          section2.classList.add(extraClass);
         }
         if (title) {
           const heading = document.createElement("div");
           heading.className = "mg-crop-calculator__section-heading";
           heading.textContent = title;
-          section.appendChild(heading);
+          section2.appendChild(heading);
         }
-        return section;
+        return section2;
       };
       const previewSection = createSection(null, "mg-crop-calculator__section--preview");
       const priceRow = document.createElement("div");
@@ -48179,7 +48120,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     let sortDir = "desc";
     let q = "";
     const petSpriteCache = /* @__PURE__ */ new Map();
-    const mkPetIcon = (log) => {
+    const mkPetIcon = (log2) => {
       const size = 22;
       const holder = document.createElement("div");
       Object.assign(holder.style, {
@@ -48196,8 +48137,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         color: "#e2e8f0",
         flex: "0 0 auto"
       });
-      const species = String(log.species || "").trim();
-      const mutations = Array.isArray(log.mutations) ? log.mutations.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
+      const species = String(log2.species || "").trim();
+      const mutations = Array.isArray(log2.mutations) ? log2.mutations.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
       const mutKey = mutations.length ? mutations.map((m) => m.toLowerCase()).sort().join(",") : "";
       const cacheKey = mutKey ? `${species}|${mutKey}` : species;
       const applyImg = (src) => {
@@ -48218,7 +48159,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         applyImg(cached);
         return holder;
       }
-      const letter = (log.petName || species || "pet").charAt(0).toUpperCase();
+      const letter = (log2.petName || species || "pet").charAt(0).toUpperCase();
       holder.textContent = letter || "\u{1F43E}";
       if (species) {
         attachSpriteIcon(holder, ["pet"], species, size, "pet-log", {
@@ -48252,7 +48193,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const yy = String(date.getFullYear() % 100).padStart(2, "0");
       return `${mm}/${dd}/${yy}`;
     }
-    function timeCell(log) {
+    function timeCell(log2) {
       const td = document.createElement("td");
       td.style.textAlign = "center";
       const inner = document.createElement("div");
@@ -48262,16 +48203,16 @@ Restore figures are averages; unlucky streaks do worse.`;
         alignItems: "center",
         gap: "2px"
       });
-      const hasDate = typeof log.date === "string" && log.date.trim().length > 0;
+      const hasDate = typeof log2.date === "string" && log2.date.trim().length > 0;
       if (hasDate) {
         const dateLine = document.createElement("div");
-        dateLine.textContent = log.date ?? "";
+        dateLine.textContent = log2.date ?? "";
         dateLine.style.fontSize = "11px";
         dateLine.style.opacity = "0.65";
         inner.appendChild(dateLine);
       }
       const timeLine = document.createElement("div");
-      if (log.isActiveSession) {
+      if (log2.isActiveSession) {
         const dot = document.createElement("span");
         Object.assign(dot.style, {
           display: "inline-block",
@@ -48285,12 +48226,12 @@ Restore figures are averages; unlucky streaks do worse.`;
         timeLine.appendChild(dot);
         timeLine.style.fontWeight = "600";
       }
-      timeLine.appendChild(document.createTextNode(log.time12));
+      timeLine.appendChild(document.createTextNode(log2.time12));
       inner.appendChild(timeLine);
       td.appendChild(inner);
       return td;
     }
-    function petCell(log) {
+    function petCell(log2) {
       const td = document.createElement("td");
       td.style.textAlign = "center";
       const inner = document.createElement("div");
@@ -48301,9 +48242,9 @@ Restore figures are averages; unlucky streaks do worse.`;
         maxWidth: "100%",
         minWidth: "0"
       });
-      const petIcon = mkPetIcon(log);
+      const petIcon = mkPetIcon(log2);
       const petText = document.createElement("span");
-      petText.textContent = log.petName || log.species || "Pet";
+      petText.textContent = log2.petName || log2.species || "Pet";
       Object.assign(petText.style, {
         whiteSpace: "nowrap",
         overflow: "hidden",
@@ -48313,14 +48254,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       td.appendChild(inner);
       return td;
     }
-    function abilityCell(log) {
+    function abilityCell(log2) {
       const td = document.createElement("td");
       td.style.textAlign = "center";
-      const text = log.abilityName || log.abilityId || "\u2014";
+      const text = log2.abilityName || log2.abilityId || "\u2014";
       const chip2 = document.createElement("span");
       chip2.textContent = text;
       chip2.title = text;
-      const { bg, hover } = getAbilityChipColors(log.abilityId);
+      const { bg, hover } = getAbilityChipColors(log2.abilityId);
       Object.assign(chip2.style, {
         display: "inline-block",
         maxWidth: "100%",
@@ -48347,11 +48288,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       td.appendChild(chip2);
       return td;
     }
-    function detailsCell(log) {
+    function detailsCell(log2) {
       const td = document.createElement("td");
-      const text = typeof log.data === "string" ? log.data : (() => {
+      const text = typeof log2.data === "string" ? log2.data : (() => {
         try {
-          return JSON.stringify(log.data);
+          return JSON.stringify(log2.data);
         } catch {
           return "";
         }
@@ -48361,13 +48302,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       td.classList.add("qmm-ellipsis");
       return td;
     }
-    function row(log) {
+    function row(log2) {
       const tr = document.createElement("tr");
-      const time = timeCell(log);
-      const pet = petCell(log);
-      const ability = abilityCell(log);
-      const details = detailsCell(log);
-      if (log.isActiveSession) {
+      const time = timeCell(log2);
+      const pet = petCell(log2);
+      const ability = abilityCell(log2);
+      const details = detailsCell(log2);
+      if (log2.isActiveSession) {
         time.style.boxShadow = "inset 3px 0 0 var(--qmm-accent)";
         [time, pet, ability, details].forEach((td) => {
           td.style.background = "rgba(94,234,212,0.06)";
@@ -48425,7 +48366,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         tbody.appendChild(tr);
         return;
       }
-      arr.forEach((log) => tbody.appendChild(row(log)));
+      arr.forEach((log2) => tbody.appendChild(row(log2)));
       if (!tableScroller) return;
       if (sortDir === "asc") tableScroller.scrollTop = tableScroller.scrollHeight + 32;
       else tableScroller.scrollTop = 0;
@@ -48512,18 +48453,390 @@ Restore figures are averages; unlucky streaks do worse.`;
     detachPetsOpenTabListener = () => window.removeEventListener("qws:pets-open-tab", onOpenTab);
   }
 
-  // src/ui/menus/misc.ts
-  var formatShortDuration = (seconds) => {
-    if (seconds <= 0) return "Instant";
-    const sec = Math.max(0, Math.round(seconds));
-    if (sec < 60) return `${sec} s`;
-    const m = Math.floor(sec / 60);
-    const r = sec % 60;
-    if (r === 0) return `${m} min`;
-    return `${m} min ${r} s`;
+  // src/ui/menus/panel-ui.ts
+  var STYLE_ID2 = "qws-panel-ui-css";
+  var ROW_ICON_PX = 26;
+  var TEAL = "#5eead4";
+  var TEAL_DIM = "rgba(94,234,212,0.12)";
+  var TEAL_BORDER = "rgba(94,234,212,0.3)";
+  var BORDER = "rgba(255,255,255,0.08)";
+  var CARD_BG = "rgba(255,255,255,0.03)";
+  var TEXT = "#e7eef7";
+  var TEXT_DIM = "rgba(226,232,240,0.45)";
+  var DANGER = "#ef4444";
+  var WARN = "#fbbf24";
+  var css = (el2, style2) => Object.assign(el2.style, style2);
+  function ensurePanelStyles() {
+    if (document.getElementById(STYLE_ID2)) return;
+    const st = document.createElement("style");
+    st.id = STYLE_ID2;
+    st.textContent = `
+.qws-pnl-scroll::-webkit-scrollbar { width: 6px; }
+.qws-pnl-scroll::-webkit-scrollbar-track { background: transparent; }
+.qws-pnl-scroll::-webkit-scrollbar-thumb { background: rgba(94,234,212,0.2); border-radius: 3px; }
+.qws-pnl-scroll::-webkit-scrollbar-thumb:hover { background: rgba(94,234,212,0.35); }
+.qws-pnl-scroll { scrollbar-width: thin; scrollbar-color: rgba(94,234,212,0.2) transparent; }
+
+.qws-pnl-cell {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  aspect-ratio: 1; border-radius: 10px; cursor: pointer;
+  background: ${CARD_BG}; border: 1px solid ${BORDER};
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+.qws-pnl-cell:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.16); transform: translateY(-1px); }
+.qws-pnl-cell.is-active { border-color: ${TEAL_BORDER}; background: ${TEAL_DIM}; }
+.qws-pnl-cell.is-skinned::after {
+  content: ''; position: absolute; top: 5px; right: 5px;
+  width: 6px; height: 6px; border-radius: 50%; background: ${TEAL};
+}
+
+.qws-pnl-toggle { position:relative; display:inline-block; width:36px; height:20px; cursor:pointer; flex-shrink:0; }
+.qws-pnl-toggle input { opacity:0; width:0; height:0; position:absolute; }
+.qws-pnl-track {
+  position:absolute; inset:0; border-radius:10px;
+  background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.12);
+  transition:background 150ms ease, border-color 150ms ease;
+}
+.qws-pnl-toggle input:checked ~ .qws-pnl-track { background:rgba(94,234,212,0.25); border-color:rgba(94,234,212,0.5); }
+.qws-pnl-thumb {
+  position:absolute; top:3px; left:3px; width:12px; height:12px; border-radius:50%;
+  background:rgba(226,232,240,0.5); transition:transform 150ms ease, background 150ms ease;
+}
+.qws-pnl-toggle input:checked ~ .qws-pnl-track .qws-pnl-thumb { transform:translateX(16px); background:${TEAL}; }
+
+.qws-pnl-input {
+  padding: 8px 10px; border-radius: 9px; border: 1px solid ${BORDER};
+  background: rgba(0,0,0,0.22); color: ${TEXT}; font-size: 12px; outline: none;
+  transition: border-color 120ms ease;
+}
+.qws-pnl-input:focus { border-color: ${TEAL_BORDER}; }
+.qws-pnl-input option { background: #10151c; color: ${TEXT}; }
+
+/* Restyles the Menu's own hotkey capture button, which stays in use for its
+   key-recording behaviour. Scoped to panels so other menus keep their look. */
+.qws-pnl-root .qmm-hotkey {
+  min-width: 104px; padding: 7px 12px; border-radius: 9px;
+  border: 1px solid ${BORDER}; background: rgba(0,0,0,0.22);
+  color: ${TEXT}; font-size: 11px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: all 120ms ease;
+}
+.qws-pnl-root .qmm-hotkey:hover { border-color: rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); }
+.qws-pnl-root .qmm-hotkey.is-assigned { color: ${TEAL}; border-color: ${TEAL_BORDER}; background: ${TEAL_DIM}; }
+.qws-pnl-root .qmm-hotkey.is-empty { color: ${TEXT_DIM}; font-weight: 500; }
+.qws-pnl-root .qmm-hotkey.is-recording {
+  color: ${WARN}; border-color: rgba(251,191,36,0.55); background: rgba(251,191,36,0.12);
+}
+.qws-pnl-root .qmm-check, .qws-pnl-root .qmm-switch { accent-color: ${TEAL}; }
+
+.qws-pnl-range {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 4px; border-radius: 999px; outline: none; cursor: pointer;
+  background: rgba(255,255,255,0.1); border: none; padding: 0; margin: 0;
+}
+.qws-pnl-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: ${TEAL}; border: none; cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.qws-pnl-range::-webkit-slider-thumb:hover { transform: scale(1.15); box-shadow: 0 0 0 4px ${TEAL_DIM}; }
+.qws-pnl-range::-moz-range-thumb {
+  width: 13px; height: 13px; border-radius: 50%;
+  background: ${TEAL}; border: none; cursor: pointer;
+}
+.qws-pnl-range::-moz-range-track { height: 4px; border-radius: 999px; background: rgba(255,255,255,0.1); }
+.qws-pnl-range:disabled { opacity: 0.4; cursor: not-allowed; }
+.qws-pnl-range:disabled::-webkit-slider-thumb { background: ${TEXT_DIM}; cursor: not-allowed; }
+.qws-pnl-range:disabled::-moz-range-thumb { background: ${TEXT_DIM}; cursor: not-allowed; }
+
+.qws-pnl-head:hover .qws-pnl-chevron { color: ${TEAL}; }
+`;
+    document.head.appendChild(st);
+  }
+  function sectionLabel(text) {
+    const el2 = document.createElement("div");
+    css(el2, {
+      fontSize: "10px",
+      fontWeight: "700",
+      letterSpacing: "0.08em",
+      color: TEXT_DIM,
+      textTransform: "uppercase"
+    });
+    el2.textContent = text;
+    return el2;
+  }
+  function card() {
+    const el2 = document.createElement("div");
+    css(el2, {
+      padding: "12px",
+      background: CARD_BG,
+      borderRadius: "12px",
+      border: `1px solid ${BORDER}`,
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px",
+      minHeight: "0"
+    });
+    return el2;
+  }
+  var TONES = {
+    accent: {
+      fg: TEAL,
+      bg: TEAL_DIM,
+      border: TEAL_BORDER,
+      hoverBg: "rgba(94,234,212,0.22)",
+      hoverBorder: "rgba(94,234,212,0.55)"
+    },
+    neutral: {
+      fg: TEXT,
+      bg: CARD_BG,
+      border: BORDER,
+      hoverBg: "rgba(255,255,255,0.06)",
+      hoverBorder: "rgba(255,255,255,0.16)"
+    },
+    danger: {
+      fg: DANGER,
+      bg: "rgba(239,68,68,0.12)",
+      border: "rgba(239,68,68,0.3)",
+      hoverBg: "rgba(239,68,68,0.2)",
+      hoverBorder: "rgba(239,68,68,0.55)"
+    }
   };
+  function button(label2, tone, onClick) {
+    const btn = document.createElement("button");
+    const palette = TONES[tone];
+    css(btn, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "6px",
+      padding: "7px 12px",
+      border: `1px solid ${palette.border}`,
+      borderRadius: "9px",
+      background: palette.bg,
+      color: palette.fg,
+      fontSize: "11px",
+      fontWeight: "600",
+      cursor: "pointer",
+      transition: "all 120ms ease",
+      whiteSpace: "nowrap"
+    });
+    btn.textContent = label2;
+    btn.onmouseenter = () => css(btn, { background: palette.hoverBg, borderColor: palette.hoverBorder });
+    btn.onmouseleave = () => css(btn, { background: palette.bg, borderColor: palette.border });
+    btn.onclick = async () => {
+      if (btn.disabled) return;
+      css(btn, { opacity: "0.6", pointerEvents: "none" });
+      try {
+        await onClick();
+      } finally {
+        setButtonEnabled(btn, !btn.disabled);
+      }
+    };
+    return btn;
+  }
+  function setButtonEnabled(btn, enabled2) {
+    btn.disabled = !enabled2;
+    css(btn, { opacity: enabled2 ? "1" : "0.35", pointerEvents: enabled2 ? "auto" : "none" });
+  }
+  function toggle(checked, onChange) {
+    const wrap = document.createElement("label");
+    wrap.className = "qws-pnl-toggle";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = checked;
+    const track = document.createElement("span");
+    track.className = "qws-pnl-track";
+    const thumb = document.createElement("span");
+    thumb.className = "qws-pnl-thumb";
+    track.appendChild(thumb);
+    wrap.append(input, track);
+    input.addEventListener("change", () => onChange(input.checked));
+    wrap.setChecked = (value) => {
+      input.checked = value;
+    };
+    return wrap;
+  }
+  function chip(text, tone) {
+    const el2 = document.createElement("span");
+    const color = tone === "ok" ? TEAL : WARN;
+    css(el2, {
+      alignSelf: "flex-start",
+      fontSize: "10px",
+      fontWeight: "600",
+      padding: "2px 7px",
+      borderRadius: "999px",
+      color,
+      background: tone === "ok" ? TEAL_DIM : "rgba(251,191,36,0.12)"
+    });
+    el2.textContent = text;
+    return el2;
+  }
+  function pill(text) {
+    const el2 = document.createElement("span");
+    css(el2, {
+      fontSize: "11px",
+      fontWeight: "600",
+      padding: "4px 9px",
+      borderRadius: "999px",
+      border: `1px solid ${BORDER}`,
+      background: "rgba(0,0,0,0.22)",
+      color: TEXT,
+      whiteSpace: "nowrap"
+    });
+    el2.textContent = text;
+    return el2;
+  }
+  function range(min, max, step, value) {
+    const el2 = document.createElement("input");
+    el2.className = "qws-pnl-range";
+    el2.type = "range";
+    el2.min = String(min);
+    el2.max = String(max);
+    el2.step = String(step);
+    el2.value = String(value);
+    return el2;
+  }
+  function numberField(min, max, step, value) {
+    const el2 = document.createElement("input");
+    el2.className = "qws-pnl-input";
+    el2.type = "number";
+    el2.min = String(min);
+    el2.max = String(max);
+    el2.step = String(step);
+    el2.value = String(value);
+    css(el2, { width: "78px", textAlign: "right" });
+    return el2;
+  }
+  function spriteLookup(frameKey) {
+    const parts = frameKey.split("/").filter(Boolean);
+    const name = parts[parts.length - 1] ?? frameKey;
+    const category = parts.length >= 2 ? parts[parts.length - 2] : "";
+    const categories = [category, `${category}s`, "ui", "decor", "objects"].filter(
+      (value, index, all) => value && all.indexOf(value) === index
+    );
+    return { categories, name };
+  }
+  function iconBox(source, sizePx, logTag) {
+    const box = document.createElement("div");
+    css(box, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: `${sizePx}px`,
+      height: `${sizePx}px`,
+      flex: "0 0 auto"
+    });
+    if (/^https?:\/\//i.test(source)) {
+      const img = document.createElement("img");
+      css(img, { maxWidth: "100%", maxHeight: "100%", imageRendering: "pixelated" });
+      img.alt = "";
+      setImageSafe(img, source);
+      box.appendChild(img);
+    } else {
+      const { categories, name } = spriteLookup(source);
+      attachSpriteIcon(box, categories, name, sizePx, logTag);
+    }
+    return box;
+  }
+  function settingRow(title, hint, control, opts = {}) {
+    const row = document.createElement("div");
+    css(row, {
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      padding: "8px 10px",
+      borderRadius: "10px",
+      background: CARD_BG,
+      border: `1px solid ${BORDER}`,
+      flexShrink: "0"
+    });
+    if (opts.icon) row.appendChild(iconBox(opts.icon, ROW_ICON_PX, opts.iconTag ?? "panel"));
+    const labelCol = document.createElement("div");
+    css(labelCol, { display: "flex", flexDirection: "column", gap: "2px", flex: "1 1 auto", minWidth: "0" });
+    const name = document.createElement("div");
+    css(name, { fontSize: "12px", color: TEXT });
+    name.textContent = title;
+    labelCol.appendChild(name);
+    if (hint) {
+      const desc = document.createElement("div");
+      css(desc, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.4" });
+      desc.textContent = hint;
+      labelCol.appendChild(desc);
+    }
+    const controls = document.createElement("div");
+    css(controls, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      gap: "8px",
+      flex: "0 0 auto",
+      flexWrap: "wrap"
+    });
+    controls.appendChild(control);
+    row.append(labelCol, controls);
+    return { row, controls };
+  }
+  function collapsibleCard(opts) {
+    const root = card();
+    css(root, { flexShrink: "0", minHeight: "auto" });
+    const head = document.createElement("button");
+    head.type = "button";
+    head.className = "qws-pnl-head";
+    css(head, {
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      padding: "0",
+      border: "none",
+      background: "none",
+      cursor: "pointer",
+      textAlign: "left",
+      font: "inherit",
+      color: "inherit"
+    });
+    const titles = document.createElement("div");
+    css(titles, { display: "flex", flexDirection: "column", gap: "3px", minWidth: "0", flex: "1 1 auto" });
+    titles.appendChild(sectionLabel(opts.icon ? `${opts.icon} ${opts.title}` : opts.title));
+    if (opts.description) {
+      const desc = document.createElement("div");
+      css(desc, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
+      desc.textContent = opts.description;
+      titles.appendChild(desc);
+    }
+    const chevron = document.createElement("span");
+    chevron.className = "qws-pnl-chevron";
+    css(chevron, {
+      color: TEXT_DIM,
+      fontSize: "10px",
+      transition: "transform 140ms ease, color 120ms ease",
+      flex: "0 0 auto",
+      marginLeft: "auto"
+    });
+    chevron.textContent = "\u25B6";
+    head.append(titles, chevron);
+    const body = document.createElement("div");
+    css(body, { display: "flex", flexDirection: "column", gap: "8px" });
+    let collapsed = opts.collapsed;
+    const apply = () => {
+      body.style.display = collapsed ? "none" : "flex";
+      chevron.style.transform = collapsed ? "rotate(0deg)" : "rotate(90deg)";
+      head.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    };
+    apply();
+    head.addEventListener("click", () => {
+      collapsed = !collapsed;
+      apply();
+      opts.onToggle(collapsed);
+    });
+    root.append(head, body);
+    return { root, body };
+  }
+
+  // src/ui/menus/misc/deleter-section.ts
   var NF_US2 = new Intl.NumberFormat("en-US");
   var formatNum2 = (n) => NF_US2.format(Math.max(0, Math.floor(n || 0)));
+  var EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS = 10;
   var formatDurationShort = (ms) => {
     if (ms < 1e3) return `${ms} ms`;
     const seconds = ms / 1e3;
@@ -48531,7 +48844,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     return `${Math.round(seconds)} s`;
   };
   var formatFinishTime = (timestamp) => new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  var EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS = 10;
   var buildEstimateSentence = (count, delayMs, finishTimestamp) => {
     if (count <= 0 || delayMs <= 0) return "";
     const durationMs = count * (delayMs + EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS);
@@ -48539,665 +48851,446 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!finishTimestamp) return ` \xB7 Estimated time ${durationText}`;
     return ` \xB7 Estimated time ${durationText} (${formatFinishTime(finishTimestamp)})`;
   };
-  async function renderMiscMenu(container) {
-    const ui = new Menu({ id: "misc", compact: true });
-    ui.mount(container);
-    const view = ui.root.querySelector(".qmm-views");
-    view.innerHTML = "";
-    view.style.display = "grid";
-    view.style.minHeight = "0";
-    view.style.justifyItems = "center";
-    view.style.padding = "8px 0";
-    const applyStyles3 = (el2, styles) => {
-      Object.assign(el2.style, styles);
-      return el2;
-    };
-    const createPill = (text) => {
-      const pill = applyStyles3(document.createElement("div"), {
-        padding: "3px 8px",
-        borderRadius: "999px",
-        border: "1px solid #2b3340",
-        background: "#141b22",
-        fontSize: "12px",
-        fontWeight: "600",
-        color: "#dbe7ff",
-        whiteSpace: "nowrap"
-      });
-      pill.textContent = text;
-      return pill;
-    };
-    const createSettingRow = (title, description, control) => {
-      const row = applyStyles3(document.createElement("div"), {
-        display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr) auto",
-        alignItems: "center",
-        gap: "12px",
-        padding: "10px 12px",
-        border: "1px solid #2b3340",
-        borderRadius: "10px",
-        background: "#0f1318"
-      });
-      const text = applyStyles3(document.createElement("div"), {
-        display: "grid",
-        gap: "2px"
-      });
-      const titleEl = document.createElement("div");
-      titleEl.textContent = title;
-      titleEl.style.fontWeight = "600";
-      titleEl.style.fontSize = "13px";
-      text.appendChild(titleEl);
-      if (description) {
-        const desc = document.createElement("div");
-        desc.textContent = description;
-        desc.style.fontSize = "12px";
-        desc.style.opacity = "0.72";
-        text.appendChild(desc);
+  function createDeleterSection(config) {
+    const section2 = collapsibleCard({
+      icon: config.headerIcon,
+      title: config.title,
+      description: config.description,
+      collapsed: config.collapsed,
+      onToggle: config.onToggleCollapsed
+    });
+    const summary = pill(`0 ${config.groupNoun} \xB7 0 ${config.unitNoun}`);
+    const summaryRow = settingRow(
+      "Selected",
+      `Review the current selection before deleting.`,
+      summary,
+      { icon: config.rowIcon, iconTag: "misc" }
+    );
+    const actions = document.createElement("div");
+    css(actions, { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" });
+    const btnSelect = button(config.selectLabel, "accent", () => runSelect());
+    const btnDelete = button("Delete", "danger", () => runDelete());
+    const btnClear = button("Clear", "neutral", () => {
+      try {
+        config.clearSelection();
+      } catch {
       }
-      const controls = applyStyles3(document.createElement("div"), {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "flex-end",
-        gap: "8px",
-        flexWrap: "wrap"
-      });
-      controls.appendChild(control);
-      row.append(text, controls);
-      return { row, controls };
+      updateSummary2();
+    });
+    actions.append(btnSelect, btnDelete, btnClear);
+    const actionsRow = settingRow("Actions", "Pick, clear, or delete the selection.", actions);
+    const status = pill("Idle");
+    const controls = document.createElement("div");
+    css(controls, { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" });
+    const btnPause = button("Pause", "neutral", () => {
+      config.pause();
+      updateControls();
+    });
+    const btnPlay = button("Play", "neutral", () => {
+      config.resume();
+      updateControls();
+    });
+    const btnStop = button("Stop", "danger", () => {
+      config.cancel();
+      updateControls();
+    });
+    controls.append(btnPause, btnPlay, btnStop, status);
+    const statusRow = settingRow("Status", "Pause or stop the current delete flow.", controls);
+    const progress = { target: "-", done: 0, total: 0 };
+    const describeStatus = () => {
+      if (!config.isRunning()) return "Idle";
+      const base = `${progress.target || "-"} (${progress.done}/${progress.total})`;
+      return config.isPaused() ? `Paused \xB7 ${base}` : base;
     };
-    const styleCard = (card3) => {
-      card3.root.style.width = "100%";
-      card3.root.style.maxWidth = "100%";
-      card3.root.style.minWidth = "0";
-      card3.body.style.display = "grid";
-      card3.body.style.gap = "10px";
+    function updateControls() {
+      const running = config.isRunning();
+      const paused = config.isPaused();
+      setButtonEnabled(btnPause, running && !paused);
+      setButtonEnabled(btnPlay, running && paused);
+      setButtonEnabled(btnStop, running);
+      status.textContent = describeStatus();
+    }
+    let estimatedFinish = null;
+    let summaryTimer = null;
+    const clearSummaryTimer = () => {
+      if (summaryTimer !== null) {
+        clearTimeout(summaryTimer);
+        summaryTimer = null;
+      }
     };
-    const header = applyStyles3(document.createElement("div"), {
-      width: "100%",
-      maxWidth: "1040px",
-      display: "grid",
-      gap: "4px",
-      padding: "10px 14px",
-      borderRadius: "12px",
-      border: "1px solid #2b3340",
-      background: "linear-gradient(135deg, #1c222b 0%, #121820 100%)",
-      boxShadow: "0 8px 24px rgba(0,0,0,0.35)"
+    const readSelection = () => {
+      const selection = config.getSelection() || [];
+      let totalQty = 0;
+      for (const item of selection) totalQty += Math.max(0, Math.floor(item?.qty || 0));
+      return { groupCount: selection.length, totalQty };
+    };
+    function updateSummary2() {
+      const { groupCount, totalQty } = readSelection();
+      const estimateMs = totalQty * (config.estimateDelayMs + EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS);
+      const running = config.isRunning();
+      const finishTimestamp = running ? estimatedFinish : estimateMs > 0 ? Date.now() + estimateMs : null;
+      const estimateText = buildEstimateSentence(totalQty, config.estimateDelayMs, finishTimestamp);
+      summary.textContent = `${groupCount} ${config.groupNoun} \xB7 ${formatNum2(totalQty)} ${config.unitNoun}${estimateText}`;
+      const hasSelection = groupCount > 0 && totalQty > 0;
+      setButtonEnabled(btnDelete, hasSelection);
+      setButtonEnabled(btnClear, hasSelection);
+      clearSummaryTimer();
+      if (!running && totalQty > 0) {
+        summaryTimer = window.setTimeout(() => updateSummary2(), 1e3);
+      }
+    }
+    async function runSelect() {
+      await config.openSelector();
+      updateSummary2();
+    }
+    async function runDelete() {
+      const { totalQty } = readSelection();
+      const estimateMs = totalQty * (config.estimateDelayMs + EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS);
+      estimatedFinish = estimateMs > 0 ? Date.now() + estimateMs : null;
+      clearSummaryTimer();
+      const pending2 = config.runDelete(config.runDelayMs);
+      updateSummary2();
+      if (pending2) await pending2;
+      estimatedFinish = null;
+      updateSummary2();
+    }
+    const onProgress = (event) => {
+      const detail = event.detail;
+      progress.target = config.progressTarget(detail);
+      progress.done = detail?.done ?? 0;
+      progress.total = detail?.total ?? 0;
+      updateControls();
+    };
+    const onComplete = () => {
+      progress.target = "-";
+      progress.done = 0;
+      progress.total = 0;
+      updateControls();
+    };
+    const onPauseState = () => updateControls();
+    const listeners6 = [
+      [`${config.eventPrefix}:progress`, onProgress],
+      [`${config.eventPrefix}:done`, onComplete],
+      [`${config.eventPrefix}:error`, onComplete],
+      [`${config.eventPrefix}:paused`, onPauseState],
+      [`${config.eventPrefix}:resumed`, onPauseState]
+    ];
+    for (const [type, handler] of listeners6) window.addEventListener(type, handler);
+    updateControls();
+    updateSummary2();
+    section2.body.append(summaryRow.row, actionsRow.row, statusRow.row);
+    return {
+      root: section2.root,
+      cleanup: () => {
+        clearSummaryTimer();
+        for (const [type, handler] of listeners6) window.removeEventListener(type, handler);
+      }
+    };
+  }
+
+  // src/ui/menus/misc.ts
+  var PANEL_WIDTH_PX = 620;
+  var AUTO_RECO_MAX_SECONDS = 300;
+  var AUTO_RECO_STEP_SECONDS = 30;
+  var MOVE_DELAY_MIN_MS = 10;
+  var MOVE_DELAY_MAX_MS = 1e3;
+  var MOVE_DELAY_DEFAULT_MS = 50;
+  var formatShortDuration = (seconds) => {
+    if (seconds <= 0) return "Instant";
+    const total = Math.max(0, Math.round(seconds));
+    if (total < 60) return `${total} s`;
+    const minutes = Math.floor(total / 60);
+    const rest = total % 60;
+    return rest === 0 ? `${minutes} min` : `${minutes} min ${rest} s`;
+  };
+  function isSectionCollapsed(sectionId) {
+    return getAriesStorage().misc?.collapsed?.[sectionId] === true;
+  }
+  function setSectionCollapsed(sectionId, collapsed) {
+    updateAriesStorage((current) => {
+      const misc = current.misc ?? (current.misc = {});
+      const map2 = misc.collapsed ?? (misc.collapsed = {});
+      if (collapsed) map2[sectionId] = true;
+      else delete map2[sectionId];
     });
-    const headerTitle = document.createElement("div");
-    headerTitle.textContent = "Misc controls";
-    headerTitle.style.fontSize = "16px";
-    headerTitle.style.fontWeight = "700";
-    const headerSubtitle = document.createElement("div");
-    headerSubtitle.textContent = "Utility toggles and bulk tools.";
-    headerSubtitle.style.fontSize = "12.5px";
-    headerSubtitle.style.opacity = "0.75";
-    header.append(headerTitle, headerSubtitle);
-    const page = applyStyles3(document.createElement("div"), {
-      width: "100%",
-      maxWidth: "1040px",
-      display: "grid",
-      gap: "12px",
-      alignItems: "start"
+  }
+  function section(id, icon, title, description) {
+    return collapsibleCard({
+      icon,
+      title,
+      description,
+      collapsed: isSectionCollapsed(id),
+      onToggle: (collapsed) => setSectionCollapsed(id, collapsed)
     });
-    const grid = applyStyles3(document.createElement("div"), {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-      gap: "12px",
-      width: "100%",
-      alignItems: "start"
+  }
+  function panelHeader() {
+    const head = document.createElement("div");
+    css(head, { display: "flex", flexDirection: "column", gap: "4px", flexShrink: "0", padding: "2px 2px 0" });
+    const title = document.createElement("div");
+    css(title, { fontSize: "15px", fontWeight: "700", color: TEXT });
+    title.textContent = "\u2699\uFE0F Misc controls";
+    const subtitle = document.createElement("div");
+    css(subtitle, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
+    subtitle.textContent = "Utility toggles and bulk tools.";
+    head.append(title, subtitle);
+    return head;
+  }
+  function buildAutoRecoSection() {
+    const card3 = section(
+      "autoReco",
+      "\u{1F50C}",
+      "Auto reconnect",
+      "Reconnect automatically when the session is kicked."
+    );
+    const featureDisabled = MiscService.AUTO_RECO_TEMPORARILY_DISABLED;
+    const initialSeconds = Math.round(MiscService.getAutoRecoDelayMs() / 1e3);
+    const hint = document.createElement("div");
+    css(hint, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.45", padding: "0 2px" });
+    const slider = range(0, AUTO_RECO_MAX_SECONDS, AUTO_RECO_STEP_SECONDS, initialSeconds);
+    css(slider, { width: "150px" });
+    const sliderValue = pill(formatShortDuration(initialSeconds));
+    css(sliderValue, { minWidth: "64px", textAlign: "center" });
+    const enabledToggle = toggle(featureDisabled ? false : MiscService.readAutoRecoEnabled(false), (on) => {
+      MiscService.writeAutoRecoEnabled(on);
+      syncEnabled(on);
     });
-    const secAutoReco = (() => {
-      const card3 = ui.card("Auto reconnect", {
-        tone: "muted",
-        align: "stretch",
-        subtitle: "Reconnect automatically when the session is kicked."
-      });
-      styleCard(card3);
-      const featureDisabled = MiscService.AUTO_RECO_TEMPORARILY_DISABLED;
-      const toggle2 = ui.switch(
-        featureDisabled ? false : MiscService.readAutoRecoEnabled(false)
+    function syncEnabled(on) {
+      slider.disabled = featureDisabled || !on;
+      hint.textContent = on ? "Automatically log back in if this account is disconnected because it was opened in another session." : "Auto reconnect on session conflict is turned off.";
+    }
+    if (featureDisabled) {
+      const input = enabledToggle.querySelector("input");
+      if (input) input.disabled = true;
+      css(enabledToggle, { opacity: "0.4", pointerEvents: "none" });
+      slider.disabled = true;
+      hint.textContent = "Auto reconnect has been temporarily disabled at the request of the game developers. It will most likely come back later.";
+    } else {
+      syncEnabled(MiscService.readAutoRecoEnabled(false));
+    }
+    const clampSeconds = (value) => Math.max(0, Math.min(AUTO_RECO_MAX_SECONDS, Math.round(value / AUTO_RECO_STEP_SECONDS) * AUTO_RECO_STEP_SECONDS));
+    const applySeconds = (raw, persist2) => {
+      const seconds = clampSeconds(raw);
+      slider.value = String(seconds);
+      sliderValue.textContent = formatShortDuration(seconds);
+      if (persist2) MiscService.setAutoRecoDelayMs(seconds * 1e3);
+    };
+    slider.addEventListener("input", () => applySeconds(Number(slider.value), false));
+    slider.addEventListener("change", () => applySeconds(Number(slider.value), true));
+    const delayControl = document.createElement("div");
+    css(delayControl, { display: "flex", alignItems: "center", gap: "10px" });
+    delayControl.append(slider, sliderValue);
+    card3.body.append(
+      settingRow("Enabled", "Attempts to log back in after a session conflict.", enabledToggle).row,
+      settingRow("Delay", "Wait time before reconnecting.", delayControl).row,
+      hint
+    );
+    return card3.root;
+  }
+  function buildPlayerSection() {
+    const card3 = section(
+      "player",
+      "\u{1F47B}",
+      "Player controls",
+      "Movement helpers for walking and testing."
+    );
+    const ghost = MiscService.createGhostController();
+    const ghostToggle = toggle(MiscService.readGhostEnabled(false), (on) => {
+      MiscService.writeGhostEnabled(on);
+      if (on) ghost.start();
+      else ghost.stop();
+    });
+    if (MiscService.readGhostEnabled(false)) ghost.start();
+    const delayInput = numberField(
+      MOVE_DELAY_MIN_MS,
+      MOVE_DELAY_MAX_MS,
+      5,
+      MiscService.getGhostDelayMs()
+    );
+    delayInput.addEventListener("change", () => {
+      const value = Math.max(
+        MOVE_DELAY_MIN_MS,
+        Math.min(MOVE_DELAY_MAX_MS, Math.floor(Number(delayInput.value) || MOVE_DELAY_DEFAULT_MS))
       );
-      if (featureDisabled) toggle2.disabled = true;
-      const toggleRow = createSettingRow(
-        "Enabled",
-        "Attempts to log back in after a session conflict.",
-        toggle2
-      );
-      const initialSeconds = Math.round(MiscService.getAutoRecoDelayMs() / 1e3);
-      const slider = ui.slider(0, 300, 30, initialSeconds);
-      slider.style.width = "100%";
-      const sliderValue = createPill(formatShortDuration(initialSeconds));
-      sliderValue.style.minWidth = "72px";
-      sliderValue.style.textAlign = "center";
-      const sliderControl = applyStyles3(document.createElement("div"), {
-        display: "grid",
-        gridTemplateColumns: "1fr auto",
-        gap: "8px",
-        alignItems: "center",
-        minWidth: "220px"
-      });
-      sliderControl.append(slider, sliderValue);
-      const sliderRow = createSettingRow(
-        "Delay",
-        "Wait time before reconnecting.",
-        sliderControl
-      );
-      const hint = document.createElement("div");
-      hint.style.opacity = "0.8";
-      hint.style.fontSize = "12px";
-      hint.style.lineHeight = "1.35";
-      const clampSeconds = (value) => Math.max(0, Math.min(300, Math.round(value / 30) * 30));
-      const syncToggle = () => {
-        if (featureDisabled) {
-          toggle2.checked = false;
-          slider.disabled = true;
-          hint.textContent = "Auto reconnect has been temporarily disabled at the request of the game developers. It will most likely come back later.";
-          return;
-        }
-        const on = !!toggle2.checked;
-        slider.disabled = !on;
-        MiscService.writeAutoRecoEnabled(on);
-        hint.textContent = on ? "Automatically log back in if this account is disconnected because it was opened in another session." : "Auto reconnect on session conflict is turned off.";
-      };
-      const updateSlider = (raw, persist2) => {
-        const seconds = clampSeconds(raw);
-        slider.value = String(seconds);
-        sliderValue.textContent = formatShortDuration(seconds);
-        if (persist2) MiscService.setAutoRecoDelayMs(seconds * 1e3);
-        syncToggle();
-      };
-      toggle2.addEventListener("change", syncToggle);
-      slider.addEventListener("input", () => updateSlider(Number(slider.value), false));
-      slider.addEventListener("change", () => updateSlider(Number(slider.value), true));
-      syncToggle();
-      card3.body.append(toggleRow.row, sliderRow.row, hint);
-      return card3.root;
-    })();
-    const secPlayer = (() => {
-      const card3 = ui.card("Player controls", {
-        tone: "muted",
-        align: "stretch",
-        subtitle: "Movement helpers for walking and testing."
-      });
-      styleCard(card3);
-      const ghostSwitch = ui.switch(MiscService.readGhostEnabled(false));
-      ghostSwitch.id = "player.ghostMode";
-      const delayInput = ui.inputNumber(10, 1e3, 5, 50);
-      delayInput.id = "player.moveDelay";
-      const delayWrap = delayInput.wrap ?? delayInput;
-      delayWrap.style && (delayWrap.style.margin = "0");
-      delayInput.style && (delayInput.style.width = "84px");
-      const ghostRow = createSettingRow(
-        "Ghost mode",
-        "Ignores collisions while you move.",
-        ghostSwitch
-      );
-      const delayRow = createSettingRow(
-        "Move delay (ms)",
-        "Lower values feel faster.",
-        delayWrap
-      );
-      const ghost = MiscService.createGhostController();
-      delayInput.value = String(MiscService.getGhostDelayMs());
-      delayInput.addEventListener("change", () => {
-        const v = Math.max(10, Math.min(1e3, Math.floor(Number(delayInput.value) || 50)));
-        delayInput.value = String(v);
-        ghost.setSpeed?.(v);
-        MiscService.setGhostDelayMs(v);
-      });
-      if (ghostSwitch.checked) ghost.start();
-      ghostSwitch.onchange = () => {
-        const on = !!ghostSwitch.checked;
-        MiscService.writeGhostEnabled(on);
-        on ? ghost.start() : ghost.stop();
-      };
-      card3.root.__cleanup__ = () => {
+      delayInput.value = String(value);
+      ghost.setSpeed?.(value);
+      MiscService.setGhostDelayMs(value);
+    });
+    card3.body.append(
+      settingRow("Ghost mode", "Ignores collisions while you move.", ghostToggle).row,
+      settingRow("Move delay (ms)", "Lower values feel faster.", delayInput).row
+    );
+    return {
+      root: card3.root,
+      cleanup: () => {
         try {
           ghost.stop();
         } catch {
         }
-      };
-      card3.body.append(ghostRow.row, delayRow.row);
-      return card3.root;
-    })();
-    const secInventoryReserve = (() => {
-      const card3 = ui.card("Inventory guard", {
-        tone: "muted",
-        align: "stretch",
-        subtitle: "Keep a slot open for swaps and bulk actions."
-      });
-      styleCard(card3);
-      const toggle2 = ui.switch(MiscService.readInventorySlotReserveEnabled(false));
-      const row = createSettingRow(
+      }
+    };
+  }
+  function buildInventoryGuardSection() {
+    const card3 = section(
+      "inventoryGuard",
+      "\u{1F392}",
+      "Inventory guard",
+      "Keep a slot open for swaps and bulk actions."
+    );
+    const guardToggle = toggle(
+      MiscService.readInventorySlotReserveEnabled(false),
+      (on) => MiscService.writeInventorySlotReserveEnabled(on)
+    );
+    card3.body.append(
+      settingRow(
         "Keep 1 slot free",
         "Blocks actions that would add a new inventory entry at 99/100.",
-        toggle2
-      );
-      toggle2.addEventListener("change", () => {
-        MiscService.writeInventorySlotReserveEnabled(!!toggle2.checked);
-      });
-      card3.body.append(row.row);
-      return card3.root;
-    })();
-    const secStorage = (() => {
-      const card3 = ui.card("Storage auto-store", {
-        tone: "muted",
-        align: "stretch",
-        subtitle: "Move items into storage when a matching stack already exists."
-      });
-      styleCard(card3);
-      const seedToggle = ui.switch(MiscService.readAutoStoreSeedSiloEnabled(false));
-      const seedRow = createSettingRow(
-        "Seed Silo",
-        "Auto-store seeds when the species already exists in the silo.",
-        seedToggle
-      );
-      const decorToggle = ui.switch(MiscService.readAutoStoreDecorShedEnabled(false));
-      const decorRow = createSettingRow(
-        "Decor Shed",
-        "Auto-store decor when the item already exists in the shed.",
-        decorToggle
-      );
-      seedToggle.addEventListener("change", () => {
-        MiscService.setAutoStoreSeedSiloEnabled(!!seedToggle.checked);
-      });
-      decorToggle.addEventListener("change", () => {
-        MiscService.setAutoStoreDecorShedEnabled(!!decorToggle.checked);
-      });
-      card3.body.append(seedRow.row, decorRow.row);
-      return card3.root;
-    })();
-    const secSeed = (() => {
-      const grid2 = applyStyles3(document.createElement("div"), {
-        display: "grid",
-        gap: "10px"
-      });
-      const selValue = createPill("0 species - 0 seeds");
-      selValue.id = "misc.seedDeleter.summary";
-      const summaryRow = createSettingRow(
-        "Selected",
-        "Review the current seed selection before deleting.",
-        selValue
-      );
-      grid2.append(summaryRow.row);
-      const actions = ui.flexRow({ gap: 6 });
-      actions.style.flexWrap = "wrap";
-      const btnSelect = ui.btn("Select seeds", { variant: "primary", size: "sm" });
-      const btnDelete = ui.btn("Delete", { variant: "danger", size: "sm", disabled: true });
-      const btnClear = ui.btn("Clear", { size: "sm", disabled: true });
-      actions.append(btnSelect, btnDelete, btnClear);
-      const actionsRow = createSettingRow(
-        "Actions",
-        "Pick, clear, or delete the selected seeds.",
-        actions
-      );
-      grid2.append(actionsRow.row);
-      const statusLine = createPill("Idle");
-      statusLine.style.fontWeight = "600";
-      const controlRow = ui.flexRow({ gap: 6 });
-      controlRow.style.flexWrap = "wrap";
-      const btnPause = ui.btn("Pause", { size: "sm" });
-      const btnPlay = ui.btn("Play", { size: "sm" });
-      const btnStop = ui.btn("Stop", { size: "sm", variant: "ghost" });
-      btnPause.onclick = () => {
-        MiscService.pauseSeedDeletion();
-        updateSeedControlState();
-      };
-      btnPlay.onclick = () => {
-        MiscService.resumeSeedDeletion();
-        updateSeedControlState();
-      };
-      btnStop.onclick = () => {
-        MiscService.cancelSeedDeletion();
-        updateSeedControlState();
-      };
-      controlRow.append(btnPause, btnPlay, btnStop);
-      const statusControls = applyStyles3(document.createElement("div"), {
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        flexWrap: "wrap",
-        justifyContent: "flex-end"
-      });
-      statusControls.append(controlRow, statusLine);
-      const statusRow = createSettingRow(
-        "Status",
-        "Pause or stop the current delete flow.",
-        statusControls
-      );
-      grid2.append(statusRow.row);
-      const seedStatus = { species: "-", done: 0, total: 0, remaining: 0 };
-      const describeSeedStatus = () => {
-        const running = MiscService.isSeedDeletionRunning();
-        const paused = MiscService.isSeedDeletionPaused();
-        const target = seedStatus.species || "-";
-        const base = `${target} (${seedStatus.done}/${seedStatus.total})`;
-        if (!running) return "Idle";
-        return paused ? `Paused - ${base}` : base;
-      };
-      const updateSeedStatusUI = () => {
-        statusLine.textContent = describeSeedStatus();
-      };
-      const updateSeedControlState = () => {
-        const running = MiscService.isSeedDeletionRunning();
-        const paused = MiscService.isSeedDeletionPaused();
-        btnPause.disabled = !running || paused;
-        btnPlay.disabled = !running || !paused;
-        btnStop.disabled = !running;
-        updateSeedStatusUI();
-      };
-      let seedEstimatedFinish = null;
-      let seedSummaryTimer = null;
-      const clearSeedSummaryTimer = () => {
-        if (seedSummaryTimer !== null) {
-          clearTimeout(seedSummaryTimer);
-          seedSummaryTimer = null;
-        }
-      };
-      const scheduleSeedSummaryRefresh = () => {
-        clearSeedSummaryTimer();
-        seedSummaryTimer = window.setTimeout(() => updateSummaryUI(), 1e3);
-      };
-      const onSeedProgress = (event) => {
-        const detail = event.detail;
-        seedStatus.species = detail.species;
-        seedStatus.done = detail.done;
-        seedStatus.total = detail.total;
-        seedStatus.remaining = detail.remainingForSpecies;
-        updateSeedStatusUI();
-        updateSeedControlState();
-      };
-      const onSeedComplete = () => {
-        seedStatus.species = "-";
-        seedStatus.done = 0;
-        seedStatus.total = 0;
-        seedStatus.remaining = 0;
-        updateSeedStatusUI();
-        updateSeedControlState();
-      };
-      const onSeedPaused = () => updateSeedControlState();
-      const onSeedResumed = () => updateSeedControlState();
-      window.addEventListener("qws:seeddeleter:progress", onSeedProgress);
-      window.addEventListener("qws:seeddeleter:done", onSeedComplete);
-      window.addEventListener("qws:seeddeleter:error", onSeedComplete);
-      window.addEventListener("qws:seeddeleter:paused", onSeedPaused);
-      window.addEventListener("qws:seeddeleter:resumed", onSeedResumed);
-      const cleanupSeedListeners = () => {
-        window.removeEventListener("qws:seeddeleter:progress", onSeedProgress);
-        window.removeEventListener("qws:seeddeleter:done", onSeedComplete);
-        window.removeEventListener("qws:seeddeleter:error", onSeedComplete);
-        window.removeEventListener("qws:seeddeleter:paused", onSeedPaused);
-        window.removeEventListener("qws:seeddeleter:resumed", onSeedResumed);
-      };
-      updateSeedStatusUI();
-      updateSeedControlState();
-      function readSelection() {
-        const sel = MiscService.getCurrentSeedSelection?.() || [];
-        const speciesCount = sel.length;
-        let totalQty = 0;
-        for (const it of sel) totalQty += Math.max(0, Math.floor(it?.qty || 0));
-        return { sel, speciesCount, totalQty };
+        guardToggle,
+        { icon: "sprite/ui/InventoryBag", iconTag: "misc" }
+      ).row
+    );
+    return card3.root;
+  }
+  function buildStorageSection() {
+    const card3 = section(
+      "storage",
+      "\u{1F4E6}",
+      "Storage auto-store",
+      "Move items into storage when a matching stack already exists."
+    );
+    const rows = [
+      {
+        title: "Seed Silo",
+        hint: "Auto-store seeds when the species already exists in the silo.",
+        icon: "sprite/decor/SeedSilo",
+        read: () => MiscService.readAutoStoreSeedSiloEnabled(false),
+        write: (on) => MiscService.setAutoStoreSeedSiloEnabled(on)
+      },
+      {
+        title: "Decor Shed",
+        hint: "Auto-store decor when the item already exists in the shed.",
+        icon: "sprite/decor/DecorShed",
+        read: () => MiscService.readAutoStoreDecorShedEnabled(false),
+        write: (on) => MiscService.setAutoStoreDecorShedEnabled(on)
+      },
+      {
+        title: "Tool Shack",
+        hint: "Auto-store tools when the item already exists in the shack.",
+        icon: "sprite/decor/ToolShack",
+        read: () => MiscService.readAutoStoreToolShackEnabled(false),
+        write: (on) => MiscService.setAutoStoreToolShackEnabled(on)
       }
-      function updateSummaryUI() {
-        const { speciesCount, totalQty } = readSelection();
-        const seedDelayMs = DEFAULT_SEED_DELETE_DELAY_MS;
-        const estimateMs = totalQty * (seedDelayMs + EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS);
-        const isRunning = MiscService.isSeedDeletionRunning();
-        const finishTimestamp = isRunning ? seedEstimatedFinish : estimateMs > 0 ? Date.now() + estimateMs : null;
-        const estimateText = buildEstimateSentence(totalQty, seedDelayMs, finishTimestamp);
-        selValue.textContent = `${speciesCount} species - ${formatNum2(totalQty)} seeds${estimateText}`;
-        const has = speciesCount > 0 && totalQty > 0;
-        ui.setButtonEnabled(btnDelete, has);
-        ui.setButtonEnabled(btnClear, has);
-        if (!isRunning && totalQty > 0) {
-          scheduleSeedSummaryRefresh();
-        } else {
-          clearSeedSummaryTimer();
-        }
+    ];
+    for (const entry of rows) {
+      const control = toggle(entry.read(), (on) => entry.write(on));
+      card3.body.appendChild(
+        settingRow(entry.title, entry.hint, control, { icon: entry.icon, iconTag: "misc" }).row
+      );
+    }
+    return card3.root;
+  }
+  async function renderMiscMenu(container) {
+    ensurePanelStyles();
+    const ui = new Menu({ id: "misc", compact: true });
+    ui.mount(container);
+    const root = ui.root.querySelector(".qmm-views") ?? ui.root;
+    root.innerHTML = "";
+    root.classList.add("qws-pnl-root", "qws-pnl-scroll");
+    css(root, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "12px",
+      width: `${PANEL_WIDTH_PX}px`,
+      maxWidth: "100%",
+      // A definite height, not 100%: the HUD window is itself a scroller and has
+      // no fixed height, so `height:100%` would collapse onto the content and
+      // hand the scrollbar back to the whole window.
+      height: "min(70vh, 600px)",
+      overflowY: "auto",
+      boxSizing: "border-box"
+    });
+    const resetSelectedItemIndex = async () => {
+      try {
+        await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.set(null);
+      } catch {
       }
-      btnSelect.onclick = async () => {
-        try {
-          await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.set(null);
-        } catch {
-        }
+    };
+    const player2 = buildPlayerSection();
+    const seedDeleter = createDeleterSection({
+      headerIcon: "\u{1F331}",
+      title: "Seed deleter",
+      description: "Bulk delete seeds from inventory.",
+      rowIcon: "sprite/ui/SeedIcon",
+      groupNoun: "species",
+      unitNoun: "seeds",
+      selectLabel: "Select seeds",
+      eventPrefix: "qws:seeddeleter",
+      estimateDelayMs: DEFAULT_SEED_DELETE_DELAY_MS,
+      runDelayMs: DEFAULT_SEED_DELETE_DELAY_MS,
+      collapsed: isSectionCollapsed("seedDeleter"),
+      onToggleCollapsed: (collapsed) => setSectionCollapsed("seedDeleter", collapsed),
+      progressTarget: (detail) => String(detail?.species ?? "-"),
+      getSelection: () => MiscService.getCurrentSeedSelection?.() || [],
+      clearSelection: () => MiscService.clearSeedSelection?.(),
+      openSelector: async () => {
+        await resetSelectedItemIndex();
         await MiscService.openSeedSelectorFlow(ui.setWindowVisible.bind(ui));
-        updateSummaryUI();
-      };
-      btnClear.onclick = () => {
-        try {
-          MiscService.clearSeedSelection?.();
-        } catch {
-        }
-        updateSummaryUI();
-      };
-      btnDelete.onclick = async () => {
-        const { totalQty } = readSelection();
-        const seedDelayMs = DEFAULT_SEED_DELETE_DELAY_MS;
-        const estimateMs = totalQty * (seedDelayMs + EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS);
-        seedEstimatedFinish = estimateMs > 0 ? Date.now() + estimateMs : null;
-        clearSeedSummaryTimer();
-        const deletionPromise = MiscService.deleteSelectedSeeds({ delayMs: seedDelayMs });
-        updateSummaryUI();
-        await deletionPromise;
-        seedEstimatedFinish = null;
-        updateSummaryUI();
-      };
-      const card3 = ui.card("Seed deleter", {
-        tone: "muted",
-        align: "stretch",
-        subtitle: "Bulk delete seeds from inventory."
-      });
-      styleCard(card3);
-      card3.body.append(grid2);
-      card3.root.__cleanup__ = () => {
-        clearSeedSummaryTimer();
-        cleanupSeedListeners();
-      };
-      return card3.root;
-    })();
-    const secDecor = (() => {
-      const grid2 = applyStyles3(document.createElement("div"), {
-        display: "grid",
-        gap: "10px"
-      });
-      const selValue = createPill("0 decor - 0 items");
-      selValue.id = "misc.decorDeleter.summary";
-      const summaryRow = createSettingRow(
-        "Selected",
-        "Review the current decor selection before deleting.",
-        selValue
-      );
-      grid2.append(summaryRow.row);
-      const actions = ui.flexRow({ gap: 6 });
-      actions.style.flexWrap = "wrap";
-      const btnSelect = ui.btn("Select decor", { variant: "primary", size: "sm" });
-      const btnDelete = ui.btn("Delete", { variant: "danger", size: "sm", disabled: true });
-      const btnClear = ui.btn("Clear", { size: "sm", disabled: true });
-      actions.append(btnSelect, btnDelete, btnClear);
-      const actionsRow = createSettingRow(
-        "Actions",
-        "Pick, clear, or delete the selected decor.",
-        actions
-      );
-      grid2.append(actionsRow.row);
-      const statusLine = createPill("Idle");
-      statusLine.style.fontWeight = "600";
-      const controlRow = ui.flexRow({ gap: 6 });
-      controlRow.style.flexWrap = "wrap";
-      const btnPause = ui.btn("Pause", { size: "sm" });
-      const btnPlay = ui.btn("Play", { size: "sm" });
-      const btnStop = ui.btn("Stop", { size: "sm", variant: "ghost" });
-      btnPause.onclick = () => {
-        MiscService.pauseDecorDeletion();
-        updateDecorControlState();
-      };
-      btnPlay.onclick = () => {
-        MiscService.resumeDecorDeletion();
-        updateDecorControlState();
-      };
-      btnStop.onclick = () => {
-        MiscService.cancelDecorDeletion();
-        updateDecorControlState();
-      };
-      controlRow.append(btnPause, btnPlay, btnStop);
-      const statusControls = applyStyles3(document.createElement("div"), {
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        flexWrap: "wrap",
-        justifyContent: "flex-end"
-      });
-      statusControls.append(controlRow, statusLine);
-      const statusRow = createSettingRow(
-        "Status",
-        "Pause or stop the current delete flow.",
-        statusControls
-      );
-      grid2.append(statusRow.row);
-      const decorStatus = { name: "-", done: 0, total: 0, remaining: 0 };
-      const describeDecorStatus = () => {
-        const running = MiscService.isDecorDeletionRunning();
-        const paused = MiscService.isDecorDeletionPaused();
-        const target = decorStatus.name || "-";
-        const base = `${target} (${decorStatus.done}/${decorStatus.total})`;
-        if (!running) return "Idle";
-        return paused ? `Paused - ${base}` : base;
-      };
-      const updateDecorStatusUI = () => {
-        statusLine.textContent = describeDecorStatus();
-      };
-      const updateDecorControlState = () => {
-        const running = MiscService.isDecorDeletionRunning();
-        const paused = MiscService.isDecorDeletionPaused();
-        btnPause.disabled = !running || paused;
-        btnPlay.disabled = !running || !paused;
-        btnStop.disabled = !running;
-        updateDecorStatusUI();
-      };
-      const onDecorProgress = (event) => {
-        const detail = event.detail;
-        decorStatus.name = detail.decorId;
-        decorStatus.done = detail.done;
-        decorStatus.total = detail.total;
-        decorStatus.remaining = detail.remainingForDecor;
-        updateDecorStatusUI();
-        updateDecorControlState();
-      };
-      const onDecorComplete = () => {
-        decorStatus.name = "-";
-        decorStatus.done = 0;
-        decorStatus.total = 0;
-        decorStatus.remaining = 0;
-        updateDecorStatusUI();
-        updateDecorControlState();
-      };
-      const onDecorPaused = () => updateDecorControlState();
-      const onDecorResumed = () => updateDecorControlState();
-      window.addEventListener("qws:decordeleter:progress", onDecorProgress);
-      window.addEventListener("qws:decordeleter:done", onDecorComplete);
-      window.addEventListener("qws:decordeleter:error", onDecorComplete);
-      window.addEventListener("qws:decordeleter:paused", onDecorPaused);
-      window.addEventListener("qws:decordeleter:resumed", onDecorResumed);
-      const cleanupDecorListeners = () => {
-        window.removeEventListener("qws:decordeleter:progress", onDecorProgress);
-        window.removeEventListener("qws:decordeleter:done", onDecorComplete);
-        window.removeEventListener("qws:decordeleter:error", onDecorComplete);
-        window.removeEventListener("qws:decordeleter:paused", onDecorPaused);
-        window.removeEventListener("qws:decordeleter:resumed", onDecorResumed);
-      };
-      updateDecorStatusUI();
-      updateDecorControlState();
-      let decorEstimatedFinish = null;
-      let decorSummaryTimer = null;
-      const clearDecorSummaryTimer = () => {
-        if (decorSummaryTimer !== null) {
-          clearTimeout(decorSummaryTimer);
-          decorSummaryTimer = null;
-        }
-      };
-      const scheduleDecorSummaryRefresh = () => {
-        clearDecorSummaryTimer();
-        decorSummaryTimer = window.setTimeout(() => updateSummaryUI(), 1e3);
-      };
-      function readSelection() {
-        const sel = MiscService.getCurrentDecorSelection?.() || [];
-        const decorCount = sel.length;
-        let totalQty = 0;
-        for (const it of sel) totalQty += Math.max(0, Math.floor(it?.qty || 0));
-        return { sel, decorCount, totalQty };
-      }
-      function updateSummaryUI() {
-        const { decorCount, totalQty } = readSelection();
-        const decorDelayMs = DEFAULT_DECOR_DELETE_DELAY_MS * 2;
-        const estimateMs = totalQty * (decorDelayMs + EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS);
-        const isRunning = MiscService.isDecorDeletionRunning();
-        const finishTimestamp = isRunning ? decorEstimatedFinish : estimateMs > 0 ? Date.now() + estimateMs : null;
-        const estimateText = buildEstimateSentence(totalQty, decorDelayMs, finishTimestamp);
-        selValue.textContent = `${decorCount} decor - ${formatNum2(totalQty)} items${estimateText}`;
-        const has = decorCount > 0 && totalQty > 0;
-        ui.setButtonEnabled(btnDelete, has);
-        ui.setButtonEnabled(btnClear, has);
-        if (!isRunning && totalQty > 0) {
-          scheduleDecorSummaryRefresh();
-        } else {
-          clearDecorSummaryTimer();
-        }
-      }
-      btnSelect.onclick = async () => {
-        try {
-          await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.set(null);
-        } catch {
-        }
+      },
+      runDelete: (delayMs) => MiscService.deleteSelectedSeeds({ delayMs }),
+      isRunning: () => MiscService.isSeedDeletionRunning(),
+      isPaused: () => MiscService.isSeedDeletionPaused(),
+      pause: () => MiscService.pauseSeedDeletion(),
+      resume: () => MiscService.resumeSeedDeletion(),
+      cancel: () => MiscService.cancelSeedDeletion()
+    });
+    const decorDeleter = createDeleterSection({
+      headerIcon: "\u{1FAB4}",
+      title: "Decor deleter",
+      description: "Bulk delete decor from inventory.",
+      rowIcon: "sprite/ui/DecorIcon",
+      groupNoun: "decor",
+      unitNoun: "items",
+      selectLabel: "Select decor",
+      eventPrefix: "qws:decordeleter",
+      // Decor deletes cost roughly two round-trips each, so the estimate doubles
+      // the delay the service is actually given.
+      estimateDelayMs: DEFAULT_DECOR_DELETE_DELAY_MS * 2,
+      runDelayMs: DEFAULT_DECOR_DELETE_DELAY_MS,
+      collapsed: isSectionCollapsed("decorDeleter"),
+      onToggleCollapsed: (collapsed) => setSectionCollapsed("decorDeleter", collapsed),
+      progressTarget: (detail) => String(detail?.decorId ?? "-"),
+      getSelection: () => MiscService.getCurrentDecorSelection?.() || [],
+      clearSelection: () => MiscService.clearDecorSelection?.(),
+      openSelector: async () => {
+        await resetSelectedItemIndex();
         await MiscService.openDecorSelectorFlow(ui.setWindowVisible.bind(ui));
-        updateSummaryUI();
-      };
-      btnDelete.onclick = async () => {
-        const { totalQty } = readSelection();
-        const decorDelayMs = DEFAULT_DECOR_DELETE_DELAY_MS * 2;
-        const estimateMs = totalQty * (decorDelayMs + EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS);
-        decorEstimatedFinish = estimateMs > 0 ? Date.now() + estimateMs : null;
-        clearDecorSummaryTimer();
-        const deletionPromise = MiscService.deleteSelectedDecor?.({ delayMs: DEFAULT_DECOR_DELETE_DELAY_MS });
-        updateSummaryUI();
-        if (deletionPromise) await deletionPromise;
-        decorEstimatedFinish = null;
-        updateSummaryUI();
-      };
-      btnClear.onclick = () => {
-        try {
-          MiscService.clearDecorSelection?.();
-        } catch {
-        }
-        updateSummaryUI();
-      };
-      const card3 = ui.card("Decor deleter", {
-        tone: "muted",
-        align: "stretch",
-        subtitle: "Bulk delete decor from inventory."
-      });
-      styleCard(card3);
-      card3.body.append(grid2);
-      card3.root.__cleanup__ = () => {
-        clearDecorSummaryTimer();
-        cleanupDecorListeners();
-      };
-      return card3.root;
-    })();
-    secSeed.style.gridColumn = "1 / -1";
-    secDecor.style.gridColumn = "1 / -1";
-    grid.append(secAutoReco, secPlayer, secInventoryReserve, secStorage, secSeed, secDecor);
-    page.append(header, grid);
-    view.appendChild(page);
-    view.__cleanup__ = () => {
+      },
+      runDelete: (delayMs) => MiscService.deleteSelectedDecor?.({ delayMs }),
+      isRunning: () => MiscService.isDecorDeletionRunning(),
+      isPaused: () => MiscService.isDecorDeletionPaused(),
+      pause: () => MiscService.pauseDecorDeletion(),
+      resume: () => MiscService.resumeDecorDeletion(),
+      cancel: () => MiscService.cancelDecorDeletion()
+    });
+    root.append(
+      panelHeader(),
+      buildAutoRecoSection(),
+      player2.root,
+      buildInventoryGuardSection(),
+      buildStorageSection(),
+      seedDeleter.root,
+      decorDeleter.root
+    );
+    root.__cleanup__ = () => {
       try {
-        secPlayer.__cleanup__?.();
+        player2.cleanup();
       } catch {
       }
       try {
-        secSeed.__cleanup__?.();
+        seedDeleter.cleanup();
       } catch {
       }
       try {
-        secDecor.__cleanup__?.();
+        decorDeleter.cleanup();
       } catch {
       }
     };
@@ -50523,17 +50616,17 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
 
   // src/ui/menus/tools/styles.ts
-  var STYLE_ID2 = "gemini-tools-styles";
+  var STYLE_ID3 = "gemini-tools-styles";
   var ACCENT2 = "#5eead4";
   var ACCENT_2 = "#2dd4bf";
-  var TEXT = "#e7eef7";
-  var TEXT_DIM = "rgba(231,238,247,0.62)";
-  var BORDER = "rgba(255,255,255,0.10)";
+  var TEXT2 = "#e7eef7";
+  var TEXT_DIM2 = "rgba(231,238,247,0.62)";
+  var BORDER2 = "rgba(255,255,255,0.10)";
   var SURFACE = "rgba(255,255,255,0.03)";
   function ensureToolsStyles() {
-    if (document.getElementById(STYLE_ID2)) return;
+    if (document.getElementById(STYLE_ID3)) return;
     const style2 = document.createElement("style");
-    style2.id = STYLE_ID2;
+    style2.id = STYLE_ID3;
     style2.textContent = `
 /* \u2500\u2500 reset for the interactive elements \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 .mgt-chip, .mgt-back, .mgt-action, .mgt-nav, .mgt-dot {
@@ -50556,17 +50649,17 @@ Restore figures are averages; unlucky streaks do worse.`;
 .mgt-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
 .mgt-label {
   font-size: 9.5px; font-weight: 700; letter-spacing: 0.09em;
-  text-transform: uppercase; color: ${TEXT_DIM};
+  text-transform: uppercase; color: ${TEXT_DIM2};
 }
 .mgt-filters .mgt-label { margin-right: 3px; }
 .mgt-chip {
   padding: 5px 11px; border-radius: 999px; cursor: pointer;
-  border: 1px solid ${BORDER}; background: ${SURFACE}; color: ${TEXT_DIM};
+  border: 1px solid ${BORDER2}; background: ${SURFACE}; color: ${TEXT_DIM2};
   font-size: 11px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap;
   transition: color 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
 }
 .mgt-chip:hover {
-  color: ${TEXT};
+  color: ${TEXT2};
   border-color: rgba(94,234,212,0.30);
   background: rgba(94,234,212,0.07);
 }
@@ -50602,7 +50695,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 .mgt-card {
   display: flex; flex-direction: column; gap: 10px; text-align: left;
   padding: 14px; border-radius: 14px; cursor: pointer;
-  border: 1px solid ${BORDER};
+  border: 1px solid ${BORDER2};
   background: linear-gradient(160deg, rgba(18,24,34,0.70), rgba(12,17,26,0.86));
   transition: transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease;
 }
@@ -50613,7 +50706,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 }
 .mgt-card__head { display: flex; align-items: center; gap: 11px; }
 .mgt-card__title {
-  font-size: 13.5px; font-weight: 700; color: ${TEXT}; line-height: 1.25;
+  font-size: 13.5px; font-weight: 700; color: ${TEXT2}; line-height: 1.25;
   overflow: hidden; text-overflow: ellipsis;
 }
 .mgt-card__arrow {
@@ -50625,7 +50718,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   opacity: 1; transform: translateX(0);
 }
 .mgt-card__desc {
-  margin: 0; font-size: 12px; line-height: 1.55; color: ${TEXT_DIM};
+  margin: 0; font-size: 12px; line-height: 1.55; color: ${TEXT_DIM2};
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .mgt-card__foot { margin-top: auto; }
@@ -50635,12 +50728,12 @@ Restore figures are averages; unlucky streaks do worse.`;
 .mgt-back {
   align-self: flex-start; display: inline-flex; align-items: center; gap: 7px;
   padding: 6px 13px 6px 10px; border-radius: 999px; cursor: pointer;
-  border: 1px solid ${BORDER}; background: ${SURFACE}; color: ${TEXT_DIM};
+  border: 1px solid ${BORDER2}; background: ${SURFACE}; color: ${TEXT_DIM2};
   font-size: 11.5px; font-weight: 600;
   transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
 }
 .mgt-back:hover {
-  color: ${TEXT}; border-color: rgba(94,234,212,0.30); background: rgba(94,234,212,0.07);
+  color: ${TEXT2}; border-color: rgba(94,234,212,0.30); background: rgba(94,234,212,0.07);
 }
 .mgt-back__arrow { font-size: 13px; transition: transform 150ms ease; }
 .mgt-back:hover .mgt-back__arrow { transform: translateX(-2px); }
@@ -50656,7 +50749,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 .mgt-hero__top { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
 /* Grows to fill the row so the creators get pushed to the far right. */
 .mgt-hero__titles { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1 1 240px; }
-.mgt-hero__title { margin: 0; font-size: 19px; font-weight: 750; line-height: 1.2; color: ${TEXT}; }
+.mgt-hero__title { margin: 0; font-size: 19px; font-weight: 750; line-height: 1.2; color: ${TEXT2}; }
 .mgt-divider { height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.10), transparent); }
 
 .mgt-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
@@ -50664,8 +50757,8 @@ Restore figures are averages; unlucky streaks do worse.`;
 .mgt-creator {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 3px 11px 3px 3px; border-radius: 999px;
-  background: rgba(255,255,255,0.04); border: 1px solid ${BORDER};
-  font-size: 11.5px; font-weight: 600; color: ${TEXT};
+  background: rgba(255,255,255,0.04); border: 1px solid ${BORDER2};
+  font-size: 11.5px; font-weight: 600; color: ${TEXT2};
 }
 .mgt-creator--plain { padding: 5px 11px; }
 .mgt-creator img {
@@ -50680,7 +50773,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 .mgt-md p { margin: 0 0 10px; }
 .mgt-md ul { margin: 0 0 10px; padding-left: 18px; list-style: disc; }
 .mgt-md li { margin: 3px 0; }
-.mgt-md strong { color: ${TEXT}; font-weight: 700; }
+.mgt-md strong { color: ${TEXT2}; font-weight: 700; }
 .mgt-md em { font-style: italic; }
 .mgt-md code {
   padding: 1px 5px; border-radius: 5px;
@@ -50701,7 +50794,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 .mgt-action {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   padding: 9px 14px; border-radius: 10px; cursor: pointer;
-  border: 1px solid ${BORDER}; background: rgba(255,255,255,0.04); color: ${TEXT};
+  border: 1px solid ${BORDER2}; background: rgba(255,255,255,0.04); color: ${TEXT2};
   font-size: 12px; font-weight: 650; letter-spacing: 0.01em;
   transition: color 150ms ease, background 150ms ease, border-color 150ms ease, filter 150ms ease;
 }
@@ -50719,7 +50812,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 .mgt-carousel { display: flex; flex-direction: column; gap: 10px; width: 100%; }
 .mgt-carousel__stage {
   position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden;
-  border-radius: 14px; border: 1px solid ${BORDER}; background: rgba(0,0,0,0.28);
+  border-radius: 14px; border: 1px solid ${BORDER2}; background: rgba(0,0,0,0.28);
   cursor: zoom-in;
 }
 .mgt-carousel__stage:focus-visible { outline: 2px solid ${ACCENT2}; outline-offset: 2px; }
@@ -50735,7 +50828,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   display: grid; place-items: center; width: 36px; height: 36px;
   border-radius: 50%; cursor: pointer; z-index: 1;
   border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(6,10,16,0.72); color: ${TEXT};
+  background: rgba(6,10,16,0.72); color: ${TEXT2};
   font-size: 20px; line-height: 1; padding: 0 0 2px;
   backdrop-filter: blur(6px);
   transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
@@ -50756,10 +50849,10 @@ Restore figures are averages; unlucky streaks do worse.`;
 .mgt-state {
   display: flex; flex-direction: column; align-items: center; gap: 11px;
   padding: 30px 20px; border-radius: 14px; text-align: center;
-  border: 1px dashed ${BORDER}; background: rgba(255,255,255,0.02);
+  border: 1px dashed ${BORDER2}; background: rgba(255,255,255,0.02);
 }
-.mgt-state__text { margin: 0; font-size: 12.5px; line-height: 1.55; color: ${TEXT_DIM}; }
-.mgt-state__title { font-size: 13.5px; font-weight: 700; color: ${TEXT}; }
+.mgt-state__text { margin: 0; font-size: 12.5px; line-height: 1.55; color: ${TEXT_DIM2}; }
+.mgt-state__title { font-size: 13.5px; font-weight: 700; color: ${TEXT2}; }
 .mgt-spinner {
   width: 22px; height: 22px; border-radius: 50%;
   border: 2px solid rgba(94,234,212,0.16); border-top-color: ${ACCENT2};
@@ -50918,27 +51011,27 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
 
   // src/ui/menus/editor.ts
-  var STYLE_ID3 = "qws-editor-menu-css";
-  var TEAL = "#5eead4";
-  var TEAL_DIM = "rgba(94,234,212,0.12)";
+  var STYLE_ID4 = "qws-editor-menu-css";
+  var TEAL2 = "#5eead4";
+  var TEAL_DIM2 = "rgba(94,234,212,0.12)";
   var TEAL_MID = "rgba(94,234,212,0.22)";
-  var TEAL_BORDER = "rgba(94,234,212,0.3)";
+  var TEAL_BORDER2 = "rgba(94,234,212,0.3)";
   var TEAL_BRD_HI = "rgba(94,234,212,0.55)";
-  var BORDER2 = "rgba(255,255,255,0.08)";
+  var BORDER3 = "rgba(255,255,255,0.08)";
   var BORDER_HI = "rgba(255,255,255,0.16)";
-  var CARD_BG = "rgba(255,255,255,0.03)";
+  var CARD_BG2 = "rgba(255,255,255,0.03)";
   var CARD_BG_HI = "rgba(255,255,255,0.06)";
-  var TEXT2 = "#e7eef7";
-  var TEXT_DIM2 = "rgba(226,232,240,0.45)";
-  var DANGER = "#ef4444";
+  var TEXT3 = "#e7eef7";
+  var TEXT_DIM3 = "rgba(226,232,240,0.45)";
+  var DANGER2 = "#ef4444";
   var DANGER_DIM = "rgba(239,68,68,0.12)";
   var DANGER_BRD = "rgba(239,68,68,0.3)";
   var DANGER_HI = "rgba(239,68,68,0.2)";
   var DANGER_BRD_HI = "rgba(239,68,68,0.55)";
   function ensureStyles2() {
-    if (document.getElementById(STYLE_ID3)) return;
+    if (document.getElementById(STYLE_ID4)) return;
     const st = document.createElement("style");
-    st.id = STYLE_ID3;
+    st.id = STYLE_ID4;
     st.textContent = `
 .qws-ed-scroll::-webkit-scrollbar { width: 6px; }
 .qws-ed-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -50964,32 +51057,32 @@ Restore figures are averages; unlucky streaks do worse.`;
   transition:transform 150ms ease, background 150ms ease;
 }
 .qws-ed-toggle input:checked ~ .qws-ed-track .qws-ed-thumb {
-  transform:translateX(16px); background:${TEAL};
+  transform:translateX(16px); background:${TEAL2};
 }
 `;
     document.head.appendChild(st);
   }
-  var css = (el2, s) => Object.assign(el2.style, s);
-  function sectionLabel(text) {
+  var css2 = (el2, s) => Object.assign(el2.style, s);
+  function sectionLabel2(text) {
     const el2 = document.createElement("div");
-    css(el2, {
+    css2(el2, {
       fontSize: "10px",
       fontWeight: "700",
       letterSpacing: "0.08em",
-      color: TEXT_DIM2,
+      color: TEXT_DIM3,
       textTransform: "uppercase",
       paddingBottom: "7px"
     });
     el2.textContent = text;
     return el2;
   }
-  function card(children) {
+  function card2(children) {
     const el2 = document.createElement("div");
-    css(el2, {
+    css2(el2, {
       padding: "14px",
-      background: CARD_BG,
+      background: CARD_BG2,
       borderRadius: "12px",
-      border: `1px solid ${BORDER2}`,
+      border: `1px solid ${BORDER3}`,
       display: "flex",
       flexDirection: "column",
       gap: "10px"
@@ -50999,16 +51092,16 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function primaryBtn(label2, onClick) {
     const btn = document.createElement("button");
-    css(btn, {
+    css2(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       gap: "6px",
       padding: "10px 14px",
-      border: `1px solid ${TEAL_BORDER}`,
+      border: `1px solid ${TEAL_BORDER2}`,
       borderRadius: "10px",
-      background: TEAL_DIM,
-      color: TEAL,
+      background: TEAL_DIM2,
+      color: TEAL2,
       fontSize: "12px",
       fontWeight: "600",
       cursor: "pointer",
@@ -51016,29 +51109,29 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "1"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css(btn, { background: TEAL_MID, borderColor: TEAL_BRD_HI });
-    btn.onmouseleave = () => css(btn, { background: TEAL_DIM, borderColor: TEAL_BORDER });
+    btn.onmouseenter = () => css2(btn, { background: TEAL_MID, borderColor: TEAL_BRD_HI });
+    btn.onmouseleave = () => css2(btn, { background: TEAL_DIM2, borderColor: TEAL_BORDER2 });
     btn.onclick = async () => {
-      css(btn, { opacity: "0.6", pointerEvents: "none" });
+      css2(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css(btn, { opacity: "1", pointerEvents: "auto" });
+        css2(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
   }
   function secondaryBtn(label2, onClick) {
     const btn = document.createElement("button");
-    css(btn, {
+    css2(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       padding: "10px 14px",
-      border: `1px solid ${BORDER2}`,
+      border: `1px solid ${BORDER3}`,
       borderRadius: "10px",
-      background: CARD_BG,
-      color: TEXT2,
+      background: CARD_BG2,
+      color: TEXT3,
       fontSize: "12px",
       fontWeight: "500",
       cursor: "pointer",
@@ -51046,21 +51139,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "1"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css(btn, { background: CARD_BG_HI, borderColor: BORDER_HI });
-    btn.onmouseleave = () => css(btn, { background: CARD_BG, borderColor: BORDER2 });
+    btn.onmouseenter = () => css2(btn, { background: CARD_BG_HI, borderColor: BORDER_HI });
+    btn.onmouseleave = () => css2(btn, { background: CARD_BG2, borderColor: BORDER3 });
     btn.onclick = async () => {
-      css(btn, { opacity: "0.6", pointerEvents: "none" });
+      css2(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css(btn, { opacity: "1", pointerEvents: "auto" });
+        css2(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
   }
   function dangerBtn(label2, onClick) {
     const btn = document.createElement("button");
-    css(btn, {
+    css2(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -51068,7 +51161,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       border: `1px solid ${DANGER_BRD}`,
       borderRadius: "8px",
       background: DANGER_DIM,
-      color: DANGER,
+      color: DANGER2,
       fontSize: "11px",
       fontWeight: "600",
       cursor: "pointer",
@@ -51076,29 +51169,29 @@ Restore figures are averages; unlucky streaks do worse.`;
       flexShrink: "0"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css(btn, { background: DANGER_HI, borderColor: DANGER_BRD_HI });
-    btn.onmouseleave = () => css(btn, { background: DANGER_DIM, borderColor: DANGER_BRD });
+    btn.onmouseenter = () => css2(btn, { background: DANGER_HI, borderColor: DANGER_BRD_HI });
+    btn.onmouseleave = () => css2(btn, { background: DANGER_DIM, borderColor: DANGER_BRD });
     btn.onclick = async () => {
-      css(btn, { opacity: "0.6", pointerEvents: "none" });
+      css2(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css(btn, { opacity: "1", pointerEvents: "auto" });
+        css2(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
   }
   function smallBtn(label2, teal, onClick) {
     const btn = document.createElement("button");
-    css(btn, {
+    css2(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       padding: "7px 11px",
-      border: `1px solid ${teal ? TEAL_BORDER : BORDER2}`,
+      border: `1px solid ${teal ? TEAL_BORDER2 : BORDER3}`,
       borderRadius: "8px",
-      background: teal ? TEAL_DIM : CARD_BG,
-      color: teal ? TEAL : TEXT2,
+      background: teal ? TEAL_DIM2 : CARD_BG2,
+      color: teal ? TEAL2 : TEXT3,
       fontSize: "11px",
       fontWeight: "600",
       cursor: "pointer",
@@ -51106,14 +51199,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       flexShrink: "0"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css(btn, { background: teal ? TEAL_MID : CARD_BG_HI, borderColor: teal ? TEAL_BRD_HI : BORDER_HI });
-    btn.onmouseleave = () => css(btn, { background: teal ? TEAL_DIM : CARD_BG, borderColor: teal ? TEAL_BORDER : BORDER2 });
+    btn.onmouseenter = () => css2(btn, { background: teal ? TEAL_MID : CARD_BG_HI, borderColor: teal ? TEAL_BRD_HI : BORDER_HI });
+    btn.onmouseleave = () => css2(btn, { background: teal ? TEAL_DIM2 : CARD_BG2, borderColor: teal ? TEAL_BORDER2 : BORDER3 });
     btn.onclick = async () => {
-      css(btn, { opacity: "0.6", pointerEvents: "none" });
+      css2(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css(btn, { opacity: "1", pointerEvents: "auto" });
+        css2(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
@@ -51122,20 +51215,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     const input = document.createElement("input");
     input.type = "text";
     input.placeholder = placeholder;
-    css(input, {
+    css2(input, {
       width: "100%",
       padding: "9px 12px",
-      border: `1px solid ${BORDER2}`,
+      border: `1px solid ${BORDER3}`,
       borderRadius: "10px",
       background: "rgba(255,255,255,0.06)",
-      color: TEXT2,
+      color: TEXT3,
       fontSize: "12px",
       outline: "none",
       transition: "border-color 150ms ease",
       boxSizing: "border-box"
     });
-    input.addEventListener("focus", () => css(input, { borderColor: TEAL_BORDER }));
-    input.addEventListener("blur", () => css(input, { borderColor: BORDER2 }));
+    input.addEventListener("focus", () => css2(input, { borderColor: TEAL_BORDER2 }));
+    input.addEventListener("blur", () => css2(input, { borderColor: BORDER3 }));
     return input;
   }
   function createToggle(checked, onChange) {
@@ -51155,10 +51248,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function renderEditorMenu(container) {
     ensureStyles2();
-    css(container, { padding: "0", overflow: "hidden" });
+    css2(container, { padding: "0", overflow: "hidden" });
     const wrap = document.createElement("div");
     wrap.className = "qws-ed-scroll";
-    css(wrap, {
+    css2(wrap, {
       display: "flex",
       flexDirection: "column",
       gap: "12px",
@@ -51171,38 +51264,38 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     container.appendChild(wrap);
     const statusEl = document.createElement("div");
-    css(statusEl, {
+    css2(statusEl, {
       fontSize: "11px",
-      color: TEXT_DIM2,
+      color: TEXT_DIM3,
       minHeight: "16px",
       paddingLeft: "2px",
       transition: "opacity 200ms ease"
     });
     function setStatus(msg, tone = "ok") {
       statusEl.textContent = msg;
-      statusEl.style.color = tone === "err" ? DANGER : tone === "warn" ? "#fbbf24" : TEAL;
+      statusEl.style.color = tone === "err" ? DANGER2 : tone === "warn" ? "#fbbf24" : TEAL2;
       clearTimeout(statusEl.__t);
       statusEl.__t = setTimeout(() => {
         statusEl.textContent = "";
-        statusEl.style.color = TEXT_DIM2;
+        statusEl.style.color = TEXT_DIM3;
       }, 4e3);
     }
     const toggleRow = document.createElement("div");
-    css(toggleRow, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" });
+    css2(toggleRow, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" });
     const toggleLabel = document.createElement("div");
-    css(toggleLabel, { fontSize: "13px", fontWeight: "600", color: TEXT2 });
+    css2(toggleLabel, { fontSize: "13px", fontWeight: "600", color: TEXT3 });
     toggleLabel.textContent = "Editor mode";
     const toggle2 = createToggle(EditorService.isEnabled(), (on) => {
       EditorService.setEnabled(on);
     });
     toggleRow.append(toggleLabel, toggle2);
     const desc = document.createElement("div");
-    css(desc, { fontSize: "11px", color: TEXT_DIM2, lineHeight: "1.5" });
+    css2(desc, { fontSize: "11px", color: TEXT_DIM3, lineHeight: "1.5" });
     desc.textContent = "Sandbox garden with every plant and decor unlocked. Left click to place, right click to remove, drag to paint.";
-    wrap.appendChild(card([toggleRow, desc]));
+    wrap.appendChild(card2([toggleRow, desc]));
     const nameInput = styledInput("Garden name\u2026");
     const actRow = document.createElement("div");
-    css(actRow, { display: "flex", gap: "8px" });
+    css2(actRow, { display: "flex", gap: "8px" });
     actRow.append(
       primaryBtn("Save current garden", async () => {
         const fn = window.qwsEditorSaveGarden;
@@ -51222,10 +51315,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       })
     );
     wrap.appendChild(
-      card([sectionLabel("Current garden"), nameInput, actRow])
+      card2([sectionLabel2("Current garden"), nameInput, actRow])
     );
     const dropZone = document.createElement("div");
-    css(dropZone, {
+    css2(dropZone, {
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
@@ -51235,14 +51328,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       border: `2px dashed ${BORDER_HI}`,
       borderRadius: "10px",
       background: "rgba(255,255,255,0.03)",
-      color: TEXT_DIM2,
+      color: TEXT_DIM3,
       fontSize: "11px",
       textAlign: "center",
       cursor: "pointer",
       transition: "border-color 150ms ease, background 150ms ease"
     });
     const dropTitle = document.createElement("div");
-    css(dropTitle, { fontWeight: "600", fontSize: "12px", color: TEXT2 });
+    css2(dropTitle, { fontWeight: "600", fontSize: "12px", color: TEXT3 });
     dropTitle.textContent = "Drop a garden JSON file here";
     const dropHint = document.createElement("div");
     dropHint.textContent = "\u2026or click to browse";
@@ -51251,11 +51344,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     fileInput.type = "file";
     fileInput.accept = ".json,application/json,text/plain";
     fileInput.multiple = true;
-    css(fileInput, { display: "none" });
+    css2(fileInput, { display: "none" });
     const setDropActive = (active) => {
-      css(dropZone, {
+      css2(dropZone, {
         borderColor: active ? TEAL_BRD_HI : BORDER_HI,
-        background: active ? TEAL_DIM : "rgba(255,255,255,0.03)"
+        background: active ? TEAL_DIM2 : "rgba(255,255,255,0.03)"
       });
     };
     const importFiles = async (files) => {
@@ -51304,10 +51397,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       void importFiles(ev.dataTransfer?.files);
     });
     wrap.appendChild(
-      card([sectionLabel("Import"), dropZone, fileInput])
+      card2([sectionLabel2("Import"), dropZone, fileInput])
     );
     const listWrap = document.createElement("div");
-    css(listWrap, { display: "flex", flexDirection: "column", gap: "6px" });
+    css2(listWrap, { display: "flex", flexDirection: "column", gap: "6px" });
     const renderSavedList = () => {
       const listFn = window.qwsEditorListSavedGardens;
       const loadFn = window.qwsEditorLoadGarden;
@@ -51317,7 +51410,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const items = typeof listFn === "function" ? listFn() : [];
       if (!items.length) {
         const empty = document.createElement("div");
-        css(empty, { fontSize: "12px", color: TEXT_DIM2, padding: "4px 0" });
+        css2(empty, { fontSize: "12px", color: TEXT_DIM3, padding: "4px 0" });
         empty.textContent = "No saved gardens yet.";
         listWrap.appendChild(empty);
         return;
@@ -51325,24 +51418,24 @@ Restore figures are averages; unlucky streaks do worse.`;
       const editorOn = EditorService.isEnabled();
       for (const g of items) {
         const row = document.createElement("div");
-        css(row, {
+        css2(row, {
           display: "flex",
           alignItems: "center",
           gap: "8px",
           padding: "10px 12px",
-          background: CARD_BG,
+          background: CARD_BG2,
           borderRadius: "10px",
-          border: `1px solid ${BORDER2}`,
+          border: `1px solid ${BORDER3}`,
           transition: "border-color 120ms ease"
         });
-        row.onmouseenter = () => css(row, { borderColor: BORDER_HI });
-        row.onmouseleave = () => css(row, { borderColor: BORDER2 });
+        row.onmouseenter = () => css2(row, { borderColor: BORDER_HI });
+        row.onmouseleave = () => css2(row, { borderColor: BORDER3 });
         const nameEl = document.createElement("div");
-        css(nameEl, {
+        css2(nameEl, {
           flex: "1",
           fontSize: "12px",
           fontWeight: "600",
-          color: TEXT2,
+          color: TEXT3,
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
@@ -51361,7 +51454,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         });
         loadBtn.disabled = !editorOn;
         if (!editorOn) {
-          css(loadBtn, { opacity: "0.4", cursor: "not-allowed" });
+          css2(loadBtn, { opacity: "0.4", cursor: "not-allowed" });
           loadBtn.title = "Enable editor mode to load";
         }
         const expBtn = smallBtn("Export", false, async () => {
@@ -51390,7 +51483,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     renderSavedList();
     wrap.appendChild(
-      card([sectionLabel("Saved gardens"), statusEl, listWrap])
+      card2([sectionLabel2("Saved gardens"), statusEl, listWrap])
     );
     const unsubChange = EditorService.onChange((enabled2) => {
       toggle2.querySelector("input").checked = enabled2;
@@ -51409,212 +51502,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
 
-  // src/ui/menus/panel-ui.ts
-  var STYLE_ID4 = "qws-panel-ui-css";
-  var TEAL2 = "#5eead4";
-  var TEAL_DIM2 = "rgba(94,234,212,0.12)";
-  var TEAL_BORDER2 = "rgba(94,234,212,0.3)";
-  var BORDER3 = "rgba(255,255,255,0.08)";
-  var CARD_BG2 = "rgba(255,255,255,0.03)";
-  var TEXT3 = "#e7eef7";
-  var TEXT_DIM3 = "rgba(226,232,240,0.45)";
-  var DANGER2 = "#ef4444";
-  var WARN = "#fbbf24";
-  var css2 = (el2, style2) => Object.assign(el2.style, style2);
-  function ensurePanelStyles() {
-    if (document.getElementById(STYLE_ID4)) return;
-    const st = document.createElement("style");
-    st.id = STYLE_ID4;
-    st.textContent = `
-.qws-pnl-scroll::-webkit-scrollbar { width: 6px; }
-.qws-pnl-scroll::-webkit-scrollbar-track { background: transparent; }
-.qws-pnl-scroll::-webkit-scrollbar-thumb { background: rgba(94,234,212,0.2); border-radius: 3px; }
-.qws-pnl-scroll::-webkit-scrollbar-thumb:hover { background: rgba(94,234,212,0.35); }
-.qws-pnl-scroll { scrollbar-width: thin; scrollbar-color: rgba(94,234,212,0.2) transparent; }
-
-.qws-pnl-cell {
-  position: relative; display: flex; align-items: center; justify-content: center;
-  aspect-ratio: 1; border-radius: 10px; cursor: pointer;
-  background: ${CARD_BG2}; border: 1px solid ${BORDER3};
-  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
-}
-.qws-pnl-cell:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.16); transform: translateY(-1px); }
-.qws-pnl-cell.is-active { border-color: ${TEAL_BORDER2}; background: ${TEAL_DIM2}; }
-.qws-pnl-cell.is-skinned::after {
-  content: ''; position: absolute; top: 5px; right: 5px;
-  width: 6px; height: 6px; border-radius: 50%; background: ${TEAL2};
-}
-
-.qws-pnl-toggle { position:relative; display:inline-block; width:36px; height:20px; cursor:pointer; flex-shrink:0; }
-.qws-pnl-toggle input { opacity:0; width:0; height:0; position:absolute; }
-.qws-pnl-track {
-  position:absolute; inset:0; border-radius:10px;
-  background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.12);
-  transition:background 150ms ease, border-color 150ms ease;
-}
-.qws-pnl-toggle input:checked ~ .qws-pnl-track { background:rgba(94,234,212,0.25); border-color:rgba(94,234,212,0.5); }
-.qws-pnl-thumb {
-  position:absolute; top:3px; left:3px; width:12px; height:12px; border-radius:50%;
-  background:rgba(226,232,240,0.5); transition:transform 150ms ease, background 150ms ease;
-}
-.qws-pnl-toggle input:checked ~ .qws-pnl-track .qws-pnl-thumb { transform:translateX(16px); background:${TEAL2}; }
-
-.qws-pnl-input {
-  padding: 8px 10px; border-radius: 9px; border: 1px solid ${BORDER3};
-  background: rgba(0,0,0,0.22); color: ${TEXT3}; font-size: 12px; outline: none;
-  transition: border-color 120ms ease;
-}
-.qws-pnl-input:focus { border-color: ${TEAL_BORDER2}; }
-.qws-pnl-input option { background: #10151c; color: ${TEXT3}; }
-
-/* Restyles the Menu's own hotkey capture button, which stays in use for its
-   key-recording behaviour. Scoped to panels so other menus keep their look. */
-.qws-pnl-root .qmm-hotkey {
-  min-width: 104px; padding: 7px 12px; border-radius: 9px;
-  border: 1px solid ${BORDER3}; background: rgba(0,0,0,0.22);
-  color: ${TEXT3}; font-size: 11px; font-weight: 600; font-family: inherit;
-  cursor: pointer; transition: all 120ms ease;
-}
-.qws-pnl-root .qmm-hotkey:hover { border-color: rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); }
-.qws-pnl-root .qmm-hotkey.is-assigned { color: ${TEAL2}; border-color: ${TEAL_BORDER2}; background: ${TEAL_DIM2}; }
-.qws-pnl-root .qmm-hotkey.is-empty { color: ${TEXT_DIM3}; font-weight: 500; }
-.qws-pnl-root .qmm-hotkey.is-recording {
-  color: ${WARN}; border-color: rgba(251,191,36,0.55); background: rgba(251,191,36,0.12);
-}
-.qws-pnl-root .qmm-check, .qws-pnl-root .qmm-switch { accent-color: ${TEAL2}; }
-`;
-    document.head.appendChild(st);
-  }
-  function sectionLabel2(text) {
-    const el2 = document.createElement("div");
-    css2(el2, {
-      fontSize: "10px",
-      fontWeight: "700",
-      letterSpacing: "0.08em",
-      color: TEXT_DIM3,
-      textTransform: "uppercase"
-    });
-    el2.textContent = text;
-    return el2;
-  }
-  function card2() {
-    const el2 = document.createElement("div");
-    css2(el2, {
-      padding: "12px",
-      background: CARD_BG2,
-      borderRadius: "12px",
-      border: `1px solid ${BORDER3}`,
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-      minHeight: "0"
-    });
-    return el2;
-  }
-  var TONES = {
-    accent: {
-      fg: TEAL2,
-      bg: TEAL_DIM2,
-      border: TEAL_BORDER2,
-      hoverBg: "rgba(94,234,212,0.22)",
-      hoverBorder: "rgba(94,234,212,0.55)"
-    },
-    neutral: {
-      fg: TEXT3,
-      bg: CARD_BG2,
-      border: BORDER3,
-      hoverBg: "rgba(255,255,255,0.06)",
-      hoverBorder: "rgba(255,255,255,0.16)"
-    },
-    danger: {
-      fg: DANGER2,
-      bg: "rgba(239,68,68,0.12)",
-      border: "rgba(239,68,68,0.3)",
-      hoverBg: "rgba(239,68,68,0.2)",
-      hoverBorder: "rgba(239,68,68,0.55)"
-    }
-  };
-  function button(label2, tone, onClick) {
-    const btn = document.createElement("button");
-    const palette = TONES[tone];
-    css2(btn, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "6px",
-      padding: "7px 12px",
-      border: `1px solid ${palette.border}`,
-      borderRadius: "9px",
-      background: palette.bg,
-      color: palette.fg,
-      fontSize: "11px",
-      fontWeight: "600",
-      cursor: "pointer",
-      transition: "all 120ms ease",
-      whiteSpace: "nowrap"
-    });
-    btn.textContent = label2;
-    btn.onmouseenter = () => css2(btn, { background: palette.hoverBg, borderColor: palette.hoverBorder });
-    btn.onmouseleave = () => css2(btn, { background: palette.bg, borderColor: palette.border });
-    btn.onclick = async () => {
-      css2(btn, { opacity: "0.6", pointerEvents: "none" });
-      try {
-        await onClick();
-      } finally {
-        css2(btn, { opacity: "1", pointerEvents: "auto" });
-      }
-    };
-    return btn;
-  }
-  function toggle(checked, onChange) {
-    const wrap = document.createElement("label");
-    wrap.className = "qws-pnl-toggle";
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.checked = checked;
-    const track = document.createElement("span");
-    track.className = "qws-pnl-track";
-    const thumb = document.createElement("span");
-    thumb.className = "qws-pnl-thumb";
-    track.appendChild(thumb);
-    wrap.append(input, track);
-    input.addEventListener("change", () => onChange(input.checked));
-    wrap.setChecked = (value) => {
-      input.checked = value;
-    };
-    return wrap;
-  }
-  function chip(text, tone) {
-    const el2 = document.createElement("span");
-    const color = tone === "ok" ? TEAL2 : WARN;
-    css2(el2, {
-      alignSelf: "flex-start",
-      fontSize: "10px",
-      fontWeight: "600",
-      padding: "2px 7px",
-      borderRadius: "999px",
-      color,
-      background: tone === "ok" ? TEAL_DIM2 : "rgba(251,191,36,0.12)"
-    });
-    el2.textContent = text;
-    return el2;
-  }
-
   // src/ui/menus/keybinds.ts
   var ICON_BOX_PX = 26;
-  function spriteLookup(frameKey) {
-    const parts = frameKey.split("/").filter(Boolean);
-    const name = parts[parts.length - 1] ?? frameKey;
-    const category = parts.length >= 2 ? parts[parts.length - 2] : "";
-    const categories = [category, `${category}s`, "ui", "decor", "objects"].filter(
-      (value, index, all) => value && all.indexOf(value) === index
-    );
-    return { categories, name };
-  }
-  function isSectionCollapsed(sectionId) {
+  function isSectionCollapsed2(sectionId) {
     return getAriesStorage().keybinds?.collapsed?.[sectionId] === true;
   }
-  function setSectionCollapsed(sectionId, collapsed) {
+  function setSectionCollapsed2(sectionId, collapsed) {
     updateAriesStorage((current) => {
       const keybinds = current.keybinds ?? (current.keybinds = {});
       const map2 = keybinds.collapsed ?? (keybinds.collapsed = {});
@@ -51625,9 +51518,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   function createHoldControl(action2) {
     const holdDetection = action2.holdDetection;
     const wrap = document.createElement("div");
-    css2(wrap, { display: "flex", alignItems: "center", gap: "7px", flex: "0 0 auto" });
+    css(wrap, { display: "flex", alignItems: "center", gap: "7px", flex: "0 0 auto" });
     const label2 = document.createElement("span");
-    css2(label2, { fontSize: "11px", color: TEXT_DIM3, whiteSpace: "nowrap" });
+    css(label2, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap" });
     label2.textContent = holdDetection.label;
     if (holdDetection.description) label2.title = holdDetection.description;
     const control = toggle(
@@ -51643,52 +51536,33 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function createKeybindRow(ui, action2) {
     const row = document.createElement("div");
-    css2(row, {
+    css(row, {
       display: "flex",
       alignItems: "center",
       gap: "10px",
       padding: "8px 10px",
       borderRadius: "10px",
-      background: CARD_BG2,
-      border: `1px solid ${BORDER3}`,
+      background: CARD_BG,
+      border: `1px solid ${BORDER}`,
       flexShrink: "0"
     });
     if (action2.icon) {
-      const iconBox = document.createElement("div");
-      css2(iconBox, {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: `${ICON_BOX_PX}px`,
-        height: `${ICON_BOX_PX}px`,
-        flex: "0 0 auto"
-      });
-      if (/^https?:\/\//i.test(action2.icon)) {
-        const img = document.createElement("img");
-        css2(img, { maxWidth: "100%", maxHeight: "100%", imageRendering: "pixelated" });
-        img.alt = "";
-        setImageSafe(img, action2.icon);
-        iconBox.appendChild(img);
-      } else {
-        const { categories, name: name2 } = spriteLookup(action2.icon);
-        attachSpriteIcon(iconBox, categories, name2, ICON_BOX_PX, "keybinds");
-      }
-      row.appendChild(iconBox);
+      row.appendChild(iconBox(action2.icon, ICON_BOX_PX, "keybinds"));
     }
     const labelCol = document.createElement("div");
-    css2(labelCol, { display: "flex", flexDirection: "column", gap: "2px", flex: "1 1 auto", minWidth: "0" });
+    css(labelCol, { display: "flex", flexDirection: "column", gap: "2px", flex: "1 1 auto", minWidth: "0" });
     const name = document.createElement("div");
-    css2(name, { fontSize: "12px", color: TEXT3, overflow: "hidden", textOverflow: "ellipsis" });
+    css(name, { fontSize: "12px", color: TEXT, overflow: "hidden", textOverflow: "ellipsis" });
     name.textContent = action2.label;
     labelCol.appendChild(name);
     if (action2.hint) {
       const hint = document.createElement("div");
-      css2(hint, { fontSize: "10px", color: TEXT_DIM3, lineHeight: "1.4" });
+      css(hint, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.4" });
       hint.textContent = action2.hint;
       labelCol.appendChild(hint);
     }
     const controls = document.createElement("div");
-    css2(controls, { display: "flex", alignItems: "center", gap: "8px", flex: "0 0 auto" });
+    css(controls, { display: "flex", alignItems: "center", gap: "8px", flex: "0 0 auto" });
     const hotkeyButton = ui.hotkeyButton(
       getKeybind(action2.id),
       (hk) => setKeybind(action2.id, hk),
@@ -51699,7 +51573,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         allowModifierOnly: action2.allowModifierOnly
       }
     );
-    css2(hotkeyButton, { flexShrink: "0" });
+    css(hotkeyButton, { flexShrink: "0" });
     let detachHold = null;
     if (action2.holdDetection) {
       const hold = createHoldControl(action2);
@@ -51730,9 +51604,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       controls.appendChild(resetBtn);
     }
     function setEnabled(btn, enabled2) {
-      if (!btn) return;
-      btn.disabled = !enabled2;
-      css2(btn, { opacity: enabled2 ? "1" : "0.35", pointerEvents: enabled2 ? "auto" : "none" });
+      if (btn) setButtonEnabled(btn, enabled2);
     }
     function updateButtons2(current) {
       setEnabled(clearBtn, hotkeyToString(current).length > 0);
@@ -51755,7 +51627,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const root = ui.root.querySelector(".qmm-views") ?? ui.root;
     root.innerHTML = "";
     root.classList.add("qws-pnl-root");
-    css2(root, {
+    css(root, {
       display: "flex",
       flexDirection: "column",
       gap: "12px",
@@ -51768,13 +51640,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       overflowY: "auto",
       boxSizing: "border-box"
     });
-    for (const section of getKeybindSections()) {
-      const sectionCard = card2();
-      sectionCard.dataset.section = section.id;
-      css2(sectionCard, { flexShrink: "0", minHeight: "auto" });
+    for (const section2 of getKeybindSections()) {
+      const sectionCard = card();
+      sectionCard.dataset.section = section2.id;
+      css(sectionCard, { flexShrink: "0", minHeight: "auto" });
       const head = document.createElement("button");
       head.type = "button";
-      css2(head, {
+      css(head, {
         display: "flex",
         alignItems: "center",
         gap: "8px",
@@ -51787,8 +51659,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         color: "inherit"
       });
       const chevron = document.createElement("span");
-      css2(chevron, {
-        color: TEXT_DIM3,
+      css(chevron, {
+        color: TEXT_DIM,
         fontSize: "10px",
         transition: "transform 140ms ease",
         flex: "0 0 auto",
@@ -51796,23 +51668,23 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       chevron.textContent = "\u25B6";
       const titles = document.createElement("div");
-      css2(titles, { display: "flex", flexDirection: "column", gap: "3px", minWidth: "0", flex: "1 1 auto" });
-      titles.appendChild(sectionLabel2(`${section.icon} ${section.title}`));
-      if (section.description) {
+      css(titles, { display: "flex", flexDirection: "column", gap: "3px", minWidth: "0", flex: "1 1 auto" });
+      titles.appendChild(sectionLabel(`${section2.icon} ${section2.title}`));
+      if (section2.description) {
         const desc = document.createElement("div");
-        css2(desc, { fontSize: "11px", color: TEXT_DIM3, lineHeight: "1.45" });
-        desc.textContent = section.description;
+        css(desc, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
+        desc.textContent = section2.description;
         titles.appendChild(desc);
       }
       head.append(titles, chevron);
       sectionCard.appendChild(head);
       const body = document.createElement("div");
-      css2(body, { display: "flex", flexDirection: "column", gap: "8px" });
-      for (const action2 of section.actions) {
+      css(body, { display: "flex", flexDirection: "column", gap: "8px" });
+      for (const action2 of section2.actions) {
         body.appendChild(createKeybindRow(ui, action2));
       }
       sectionCard.appendChild(body);
-      let collapsed = isSectionCollapsed(section.id);
+      let collapsed = isSectionCollapsed2(section2.id);
       const applyCollapsed = () => {
         body.style.display = collapsed ? "none" : "flex";
         chevron.style.transform = collapsed ? "rotate(0deg)" : "rotate(90deg)";
@@ -51822,7 +51694,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       head.addEventListener("click", () => {
         collapsed = !collapsed;
         applyCollapsed();
-        setSectionCollapsed(section.id, collapsed);
+        setSectionCollapsed2(section2.id, collapsed);
       });
       root.appendChild(sectionCard);
     }
@@ -53932,7 +53804,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function thumbBox(empty = false) {
     const el2 = document.createElement("div");
-    css2(el2, {
+    css(el2, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -53941,11 +53813,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "0 0 auto",
       borderRadius: "9px",
       background: "rgba(0,0,0,0.22)",
-      border: `1px solid ${BORDER3}`
+      border: `1px solid ${BORDER}`
     });
     if (empty) {
       const plus = document.createElement("span");
-      css2(plus, { color: TEXT_DIM3, fontSize: "18px" });
+      css(plus, { color: TEXT_DIM, fontSize: "18px" });
       plus.textContent = "+";
       el2.appendChild(plus);
     }
@@ -53954,28 +53826,28 @@ Restore figures are averages; unlucky streaks do worse.`;
   function buildSlot(target, index, deps) {
     const { entry, result, onError, onChanged } = deps;
     const row = document.createElement("div");
-    css2(row, {
+    css(row, {
       display: "flex",
       flexDirection: "column",
       gap: "8px",
       padding: "8px",
       borderRadius: "10px",
-      background: CARD_BG2,
-      border: `1px solid ${BORDER3}`
+      background: CARD_BG,
+      border: `1px solid ${BORDER}`
     });
     const before = thumbBox();
     mountThumb(before, target, null, SLOT_THUMB_PX);
     const arrow = document.createElement("span");
-    css2(arrow, { color: TEXT_DIM3, fontSize: "12px" });
+    css(arrow, { color: TEXT_DIM, fontSize: "12px" });
     arrow.textContent = "\u2192";
     const after = thumbBox(!entry);
     if (entry) mountThumb(after, target, entry.blob, SLOT_THUMB_PX);
     const head = document.createElement("div");
-    css2(head, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+    css(head, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
     const name = document.createElement("div");
-    css2(name, {
+    css(name, {
       fontSize: "11px",
-      color: TEXT3,
+      color: TEXT,
       flex: "1 1 auto",
       minWidth: "0",
       overflow: "hidden",
@@ -53987,21 +53859,21 @@ Restore figures are averages; unlucky streaks do worse.`;
     head.appendChild(name);
     if (entry) {
       const applied2 = result?.applied !== false;
-      const pill = chip(applied2 ? "Active" : "Waiting", applied2 ? "ok" : "warn");
-      css2(pill, { alignSelf: "center", flex: "0 0 auto" });
-      if (result?.error) pill.title = result.error;
-      head.appendChild(pill);
+      const pill2 = chip(applied2 ? "Active" : "Waiting", applied2 ? "ok" : "warn");
+      css(pill2, { alignSelf: "center", flex: "0 0 auto" });
+      if (result?.error) pill2.title = result.error;
+      head.appendChild(pill2);
     }
     const body = document.createElement("div");
-    css2(body, { display: "flex", alignItems: "center", gap: "8px" });
+    css(body, { display: "flex", alignItems: "center", gap: "8px" });
     const dims = document.createElement("div");
-    css2(dims, { fontSize: "10px", color: TEXT_DIM3, whiteSpace: "nowrap" });
+    css(dims, { fontSize: "10px", color: TEXT_DIM, whiteSpace: "nowrap" });
     dims.textContent = `${target.logicalSize.w}\xD7${target.logicalSize.h}`;
     dims.title = "Ideal image size for this slot";
     const spacer = document.createElement("div");
-    css2(spacer, { flex: "1 1 auto" });
+    css(spacer, { flex: "1 1 auto" });
     const actions = document.createElement("div");
-    css2(actions, { display: "flex", gap: "5px", flex: "0 0 auto" });
+    css(actions, { display: "flex", gap: "5px", flex: "0 0 auto" });
     if (!target.skinnable) {
       actions.appendChild(chip(target.blockedReason || "Unavailable", "warn"));
     } else {
@@ -54037,18 +53909,18 @@ Restore figures are averages; unlucky streaks do worse.`;
   function buildDetail(options) {
     const { object, entries, results, onError, onChanged } = options;
     const host = document.createElement("div");
-    css2(host, { display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" });
+    css(host, { display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" });
     if (!object) {
       const empty = document.createElement("div");
-      css2(empty, { fontSize: "12px", color: TEXT_DIM3, textAlign: "center", padding: "28px 0" });
+      css(empty, { fontSize: "12px", color: TEXT_DIM, textAlign: "center", padding: "28px 0" });
       empty.textContent = "Pick a sprite";
       host.appendChild(empty);
       return host;
     }
-    host.appendChild(sectionLabel2(object.category));
+    host.appendChild(sectionLabel(object.category));
     if (object.category === "tile") {
       const notice = document.createElement("div");
-      css2(notice, {
+      css(notice, {
         fontSize: "11px",
         color: WARN,
         lineHeight: "1.45",
@@ -54061,10 +53933,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       host.appendChild(notice);
     }
     const title = document.createElement("div");
-    css2(title, {
+    css(title, {
       fontSize: "14px",
       fontWeight: "600",
-      color: TEXT3,
+      color: TEXT,
       overflow: "hidden",
       textOverflow: "ellipsis",
       whiteSpace: "nowrap"
@@ -54074,7 +53946,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     host.appendChild(title);
     const list = document.createElement("div");
     list.className = "qws-pnl-scroll";
-    css2(list, { display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto", minHeight: "0" });
+    css(list, { display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto", minHeight: "0" });
     object.slots.forEach((target, index) => {
       list.appendChild(
         buildSlot(target, index, {
@@ -54105,10 +53977,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function renderSkinsMenu(container) {
     ensurePanelStyles();
     void initSkins();
-    css2(container, { padding: "0", overflow: "hidden" });
+    css(container, { padding: "0", overflow: "hidden" });
     container.innerHTML = "";
     const root = document.createElement("div");
-    css2(root, {
+    css(root, {
       display: "grid",
       gridTemplateColumns: "minmax(0,1fr) 300px",
       gap: "12px",
@@ -54125,18 +53997,18 @@ Restore figures are averages; unlucky streaks do worse.`;
       background: "linear-gradient(160deg, rgba(15,20,30,0.95) 0%, rgba(10,14,20,0.95) 60%, rgba(8,12,18,0.96) 100%)"
     });
     container.appendChild(root);
-    const browser = card2();
-    const detail = card2();
-    css2(browser, { overflow: "hidden" });
-    css2(detail, { overflow: "hidden" });
+    const browser = card();
+    const detail = card();
+    css(browser, { overflow: "hidden" });
+    css(detail, { overflow: "hidden" });
     root.append(browser, detail);
     const header = document.createElement("div");
-    css2(header, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" });
+    css(header, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" });
     const enableWrap = document.createElement("div");
-    css2(enableWrap, { display: "flex", alignItems: "center", gap: "8px" });
+    css(enableWrap, { display: "flex", alignItems: "center", gap: "8px" });
     const enableToggle = toggle(areSkinsEnabled(), (on) => void setSkinsEnabled(on));
     enableToggle.title = "Enable skins";
-    enableWrap.append(sectionLabel2("Sprites"), enableToggle);
+    enableWrap.append(sectionLabel("Sprites"), enableToggle);
     let confirmTimer = null;
     const clearBtn = button("Clear all", "danger", async () => {
       if (clearBtn.dataset.armed !== "yes") {
@@ -54158,20 +54030,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     header.append(enableWrap, clearBtn);
     browser.appendChild(header);
     const filters = document.createElement("div");
-    css2(filters, { display: "flex", gap: "8px" });
+    css(filters, { display: "flex", gap: "8px" });
     const categorySelect = document.createElement("select");
     categorySelect.className = "qws-pnl-input";
-    css2(categorySelect, { flex: "0 0 auto", maxWidth: "150px" });
+    css(categorySelect, { flex: "0 0 auto", maxWidth: "150px" });
     const search2 = document.createElement("input");
     search2.className = "qws-pnl-input";
     search2.type = "search";
     search2.placeholder = "Search";
-    css2(search2, { flex: "1 1 auto", minWidth: "0" });
+    css(search2, { flex: "1 1 auto", minWidth: "0" });
     filters.append(categorySelect, search2);
     browser.appendChild(filters);
     const grid = document.createElement("div");
     grid.className = "qws-pnl-scroll";
-    css2(grid, {
+    css(grid, {
       display: "grid",
       gap: "8px",
       gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))",
@@ -54183,13 +54055,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     browser.appendChild(grid);
     const status = document.createElement("div");
-    css2(status, { fontSize: "11px", color: TEXT_DIM3, minHeight: "15px" });
+    css(status, { fontSize: "11px", color: TEXT_DIM, minHeight: "15px" });
     browser.appendChild(status);
     const errorEl = document.createElement("div");
-    css2(errorEl, { fontSize: "11px", color: DANGER2, display: "none" });
+    css(errorEl, { fontSize: "11px", color: DANGER, display: "none" });
     detail.appendChild(errorEl);
     const detailHost = document.createElement("div");
-    css2(detailHost, { display: "flex", flexDirection: "column", minHeight: "0", flex: "1 1 auto" });
+    css(detailHost, { display: "flex", flexDirection: "column", minHeight: "0", flex: "1 1 auto" });
     detail.appendChild(detailHost);
     const showError = (message) => {
       errorEl.textContent = message;
@@ -54250,7 +54122,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       if (!matches.length) {
         const empty = document.createElement("div");
-        css2(empty, { gridColumn: "1 / -1", fontSize: "12px", color: TEXT_DIM3, padding: "24px 0", textAlign: "center" });
+        css(empty, { gridColumn: "1 / -1", fontSize: "12px", color: TEXT_DIM, padding: "24px 0", textAlign: "center" });
         empty.textContent = snapshot2.ready ? "No match" : "Loading\u2026";
         grid.appendChild(empty);
       }
@@ -54265,7 +54137,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (snapshot2.error) parts.push(`\u26A0 ${snapshot2.error}`);
       if (hasSkins && snapshot2.rebaked === null) parts.push("\u26A0 Mutated plants keep their original look");
       status.textContent = parts.join(" \xB7 ");
-      status.style.color = parts.some((p) => p.startsWith("\u26A0")) ? WARN : TEXT_DIM3;
+      status.style.color = parts.some((p) => p.startsWith("\u26A0")) ? WARN : TEXT_DIM;
     };
     const renderAll = () => {
       renderCategories(getSkinsSnapshot().objects);
@@ -55186,9 +55058,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   shareGlobal("buildPlayerStatePayload", buildPlayerStatePayload);
   shareGlobal("logPlayerStatePayload", logPlayerStatePayload);
-  function sanitizeActivityLogForCompare(log) {
-    if (!Array.isArray(log)) return null;
-    return log.filter((entry) => entry?.action !== "feedPet");
+  function sanitizeActivityLogForCompare(log2) {
+    if (!Array.isArray(log2)) return null;
+    return log2.filter((entry) => entry?.action !== "feedPet");
   }
   function sanitizeStateForComparison(state3) {
     const sanitizedActivityLog = sanitizeActivityLogForCompare(state3.activityLog ?? null);
