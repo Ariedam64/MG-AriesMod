@@ -14,6 +14,7 @@ function createInitialState(): CaptureState {
       abilities: null,
       plants: null,
       weather: null,
+      enums: null,
     },
     fetchStarted: false,
     fetchComplete: false,

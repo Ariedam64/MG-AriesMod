@@ -1,458 +1,272 @@
 // src/ui/menus/petsHatch.ts
-// "Hatch" tab of the Pets menu: per-species hatch counts (normal/gold/rainbow).
-// Formerly the Pets section of the Stats menu; the rest of that menu was
-// removed once the game started shipping its own stats screens.
+// "Hatch" tab of the Pets menu: one collapsible card per egg, ordered by the
+// game's own rarity order, holding that egg's Bad Luck Protection progress and
+// the pets it hatches. Species no egg produces fall into a final card.
+//
+// Hatches are detected from the activity log (see services/hatchTracker), not
+// from the websocket: the log names the egg and the pet outright, and tells a
+// Double Hatch bonus pet apart from a real pull.
 
 import { Menu } from "../menu";
-import { rarityBadge } from "./notifier";
-import { petCatalog, rarity } from "../../data";
-import { StatsService } from "../../services/stats";
-import type { StatsSnapshot } from "../../services/stats";
+import { petCatalog } from "../../data";
+import { HatchTracker } from "../../services/hatchTracker";
+import { listEggPity } from "../../services/hatchPity";
+import { StatsService, type StatsSnapshot } from "../../services/stats";
 import { myInventory, myPetInfos } from "../../store/atoms";
-import { attachSpriteIcon } from "../spriteIconCache";
+import { createEggCard } from "./pets/hatch-egg-card";
+import { countsFor, sortSpeciesByRarity, speciesCountsGrid, totalOf } from "./pets/hatch-counts";
+import {
+  BORDER,
+  CARD_BG,
+  TEAL,
+  TEXT,
+  TEXT_DIM,
+  button,
+  css,
+  ensurePanelStyles,
+} from "./panel-ui";
+import { collapsibleCard } from "./panel-layout";
+import { getAriesStorage, updateAriesStorage } from "../../utils/localStorage";
 
-const NF_INT = new Intl.NumberFormat("en-US");
-const formatInt = (value: number) => NF_INT.format(Math.max(0, Math.floor(value || 0)));
+type HatchedCounts = StatsSnapshot["pets"]["hatchedByType"][string];
 
-const RARITY_ORDER = [
-  rarity.Common,
-  rarity.Uncommon,
-  rarity.Rare,
-  rarity.Legendary,
-  rarity.Mythic,
-  rarity.Divine,
-  rarity.Celestial,
-];
+const OTHER_SECTION_ID = "__other__";
 
-type PetRarity = (typeof RARITY_ORDER)[number];
+/* ------------------------------ collapse state ----------------------------- */
 
-const RARITY_BORDER_COLORS: Record<PetRarity, string> = {
-  [rarity.Common]: "#E7E7E7",
-  [rarity.Uncommon]: "#67BD4D",
-  [rarity.Rare]: "#0071C6",
-  [rarity.Legendary]: "#FFC734",
-  [rarity.Mythic]: "#9944A7",
-  [rarity.Divine]: "#FF7835",
-  [rarity.Celestial]: "#7C2AE8",
-};
-
-/* ----------------------------- Stat list table ----------------------------- */
-
-type StatListColumn = {
-  label: string;
-  align?: "left" | "right" | "center";
-  width?: string;
-  minWidth?: string;
-  headerClassName?: string;
-};
-type StatListCell = {
-  text?: string;
-  hint?: string;
-  align?: "left" | "right" | "center";
-  content?: Node;
-};
-
-function createStatList(columns: StatListColumn[], rows: StatListCell[][]) {
-  const container = document.createElement("div");
-  container.className = "stats-list";
-
-  const toTemplate = (column: StatListColumn) => {
-    if (column.width) return column.width;
-    if (column.minWidth) return `minmax(${column.minWidth}, 1fr)`;
-    return "minmax(0, 1fr)";
-  };
-
-  const template = columns.map(toTemplate).join(" ");
-
-  const header = document.createElement("div");
-  header.className = "stats-list__row stats-list__row--header";
-  header.style.gridTemplateColumns = template;
-
-  for (const column of columns) {
-    const cell = document.createElement("span");
-    cell.className = "stats-list__cell";
-    const align = column.align ?? "left";
-    if (align !== "left") cell.classList.add(`stats-list__cell--align-${align}`);
-    if (column.headerClassName) cell.classList.add(column.headerClassName);
-    cell.textContent = column.label;
-    header.appendChild(cell);
-  }
-
-  container.appendChild(header);
-
-  for (const row of rows) {
-    const rowEl = document.createElement("div");
-    rowEl.className = "stats-list__row";
-    rowEl.style.gridTemplateColumns = template;
-
-    row.forEach((cellData, index) => {
-      const column = columns[index];
-      const cell = document.createElement("span");
-      cell.className = "stats-list__cell";
-      const align = cellData.align ?? column.align ?? "left";
-      if (align !== "left") {
-        cell.classList.add(`stats-list__cell--align-${align}`);
-        if (align === "right") cell.classList.add("qmm-num");
-      }
-      if (cellData.hint) cell.title = cellData.hint;
-
-      const hasContent = Boolean(cellData.content);
-      if (cellData.content) {
-        cell.appendChild(cellData.content);
-      }
-
-      if (cellData.text != null) {
-        if (hasContent) {
-          const textSpan = document.createElement("span");
-          textSpan.textContent = cellData.text;
-          cell.appendChild(textSpan);
-        } else {
-          cell.textContent = cellData.text;
-        }
-      } else if (!hasContent) {
-        cell.textContent = "";
-      }
-
-      rowEl.appendChild(cell);
-    });
-
-    container.appendChild(rowEl);
-  }
-
-  return container;
+// Cards start closed — eleven eggs expanded at once buries the tab — so what
+// persists is the opposite: which ones the player has opened.
+function isCollapsed(sectionId: string): boolean {
+  return getAriesStorage().hatch?.expanded?.[sectionId] !== true;
 }
 
-/* ----------------------- Seed counts from current state ---------------------- */
+function setCollapsed(sectionId: string, collapsed: boolean): void {
+  updateAriesStorage(current => {
+    const hatch = (current.hatch ??= {});
+    const map = (hatch.expanded ??= {});
+    if (collapsed) delete map[sectionId];
+    else map[sectionId] = true;
+  });
+}
 
-type HatchedCountsShape = StatsSnapshot["pets"]["hatchedByType"][string];
+/* --------------------------- seeding from inventory ------------------------ */
 
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function getInventoryItems(raw: unknown): unknown[] {
+function inventoryItems(raw: unknown): unknown[] {
   if (Array.isArray(raw)) return raw;
-  if (isPlainRecord(raw) && Array.isArray(raw.items)) {
-    return raw.items;
-  }
+  if (isRecord(raw) && Array.isArray(raw.items)) return raw.items;
   return [];
 }
 
-function determinePetMutationType(mutations: unknown): keyof HatchedCountsShape {
+function mutationTypeOf(mutations: unknown): keyof HatchedCounts {
   if (!Array.isArray(mutations)) return "normal";
-
   let hasGold = false;
   for (const mutation of mutations) {
     if (typeof mutation !== "string") continue;
     const normalized = mutation.trim().toLowerCase();
-    if (normalized === "rainbow") {
-      return "rainbow";
-    }
-    if (normalized === "gold") {
-      hasGold = true;
-    }
+    if (normalized === "rainbow") return "rainbow";
+    if (normalized === "gold") hasGold = true;
   }
-
   return hasGold ? "gold" : "normal";
 }
 
-function sumHatchedCounts(counts: unknown): number {
-  if (!isPlainRecord(counts)) return 0;
-  const normal = Number(counts.normal) || 0;
-  const gold = Number(counts.gold) || 0;
-  const rainbow = Number(counts.rainbow) || 0;
-  return Math.max(0, normal) + Math.max(0, gold) + Math.max(0, rainbow);
-}
-
-function isPetStatsSectionEmpty(stats: StatsSnapshot): boolean {
+function isTableEmpty(stats: StatsSnapshot): boolean {
   const entries = Object.values(stats.pets?.hatchedByType ?? {});
-  if (entries.length === 0) return true;
-  return entries.every((counts) => sumHatchedCounts(counts) <= 0);
+  return entries.length === 0 || entries.every(counts => totalOf(counts) <= 0);
 }
 
-/** Seed the hatch counters from owned pets the first time the tab is used. */
-async function initPets(stats: StatsSnapshot): Promise<void> {
-  if (!isPetStatsSectionEmpty(stats)) return;
+function addSpecies(map: Map<string, HatchedCounts>, species: unknown, mutations: unknown): void {
+  const name = typeof species === "string" ? species.trim() : "";
+  if (!name) return;
+  const key = name.toLowerCase();
+  const counts = map.get(key) ?? { normal: 0, gold: 0, rainbow: 0 };
+  const bucket = mutationTypeOf(mutations);
+  counts[bucket] = (counts[bucket] ?? 0) + 1;
+  map.set(key, counts);
+}
 
-  let inventory: unknown;
-  try {
-    inventory = await myInventory.get();
-  } catch (error) {
+/** Seeds the hatch counts from owned pets the first time the tab is used. */
+async function seedFromOwnedPets(stats: StatsSnapshot): Promise<void> {
+  if (!isTableEmpty(stats)) return;
+
+  let inventory: unknown = null;
+  let activePets: unknown = null;
+  try { inventory = await myInventory.get(); } catch (error) {
     console.warn("[PetsHatch] Failed to read inventory data", error);
-    inventory = null;
   }
-
-  let activePetsRaw: unknown;
-  try {
-    activePetsRaw = await myPetInfos.get();
-  } catch (error) {
+  try { activePets = await myPetInfos.get(); } catch (error) {
     console.warn("[PetsHatch] Failed to read active pet data", error);
-    activePetsRaw = null;
   }
 
-  const items = getInventoryItems(inventory);
-  const activePets = Array.isArray(activePetsRaw) ? activePetsRaw : [];
+  const counts = new Map<string, HatchedCounts>();
 
-  if (items.length === 0 && activePets.length === 0) return;
-
-  const countsBySpecies = new Map<string, HatchedCountsShape>();
-
-  for (const item of items) {
-    if (!isPlainRecord(item)) continue;
+  for (const item of inventoryItems(inventory)) {
+    if (!isRecord(item)) continue;
     const itemType = typeof item.itemType === "string" ? item.itemType.toLowerCase() : "";
     if (itemType !== "pet") continue;
-
-    const speciesRaw = typeof item.petSpecies === "string" ? item.petSpecies : null;
-    const species = speciesRaw?.trim();
-    if (!species) continue;
-
-    const key = species.toLowerCase();
-    const counts = countsBySpecies.get(key) ?? ({ normal: 0, gold: 0, rainbow: 0 } as HatchedCountsShape);
-    const rarityKey = determinePetMutationType(item.mutations);
-    counts[rarityKey] = (counts[rarityKey] ?? 0) + 1;
-    countsBySpecies.set(key, counts);
+    addSpecies(counts, item.petSpecies, item.mutations);
   }
 
-  for (const entry of activePets) {
-    if (!isPlainRecord(entry)) continue;
-    const slot = isPlainRecord(entry.slot) ? entry.slot : null;
-    if (!slot) continue;
-
-    const speciesRaw = typeof slot.petSpecies === "string" ? slot.petSpecies : null;
-    const species = speciesRaw?.trim();
-    if (!species) continue;
-
-    const key = species.toLowerCase();
-    const counts = countsBySpecies.get(key) ?? ({ normal: 0, gold: 0, rainbow: 0 } as HatchedCountsShape);
-    const rarityKey = determinePetMutationType((slot as { mutations?: unknown }).mutations);
-    counts[rarityKey] = (counts[rarityKey] ?? 0) + 1;
-    countsBySpecies.set(key, counts);
+  for (const entry of Array.isArray(activePets) ? activePets : []) {
+    if (!isRecord(entry) || !isRecord(entry.slot)) continue;
+    addSpecies(counts, entry.slot.petSpecies, (entry.slot as Record<string, unknown>).mutations);
   }
 
-  let hasCounts = false;
-  for (const counts of countsBySpecies.values()) {
-    if ((counts.normal ?? 0) > 0 || (counts.gold ?? 0) > 0 || (counts.rainbow ?? 0) > 0) {
-      hasCounts = true;
-      break;
-    }
-  }
+  if (!counts.size) return;
 
-  if (!hasCounts) return;
-
-  StatsService.update((draft) => {
-    if (!isPetStatsSectionEmpty(draft)) return;
-    for (const [speciesKey, counts] of countsBySpecies) {
-      if ((counts.normal ?? 0) <= 0 && (counts.gold ?? 0) <= 0 && (counts.rainbow ?? 0) <= 0) {
-        continue;
-      }
-
-      const entry =
-        draft.pets.hatchedByType[speciesKey] ?? ({ normal: 0, gold: 0, rainbow: 0 } as HatchedCountsShape);
-      entry.normal = (entry.normal ?? 0) + (counts.normal ?? 0);
-      entry.gold = (entry.gold ?? 0) + (counts.gold ?? 0);
-      entry.rainbow = (entry.rainbow ?? 0) + (counts.rainbow ?? 0);
-      draft.pets.hatchedByType[speciesKey] = entry;
+  StatsService.update(draft => {
+    if (!isTableEmpty(draft)) return;
+    for (const [species, seeded] of counts) {
+      const entry = draft.pets.hatchedByType[species] ?? { normal: 0, gold: 0, rainbow: 0 };
+      entry.normal += seeded.normal ?? 0;
+      entry.gold += seeded.gold ?? 0;
+      entry.rainbow += seeded.rainbow ?? 0;
+      draft.pets.hatchedByType[species] = entry;
     }
   });
 }
 
-/* ------------------------------ Rarity groups ------------------------------ */
+/* ------------------------------- other pets -------------------------------- */
 
-// MGData's API returns "Mythic" while the hardcoded `rarity` constant uses "Mythical".
-function normalizePetRarity(raw: unknown): PetRarity {
-  if (typeof raw !== "string") return rarity.Common as PetRarity;
-  if (raw === "Mythic") return rarity.Mythic as PetRarity;
-  return raw as PetRarity;
-}
-
-function createPetRarityGroups(stats: StatsSnapshot): Map<PetRarity, string[]> {
-  const map = new Map<PetRarity, string[]>();
-  for (const rarityKey of RARITY_ORDER) {
-    map.set(rarityKey, []);
-  }
-
-  // Track species we've already added (by lowercased key) so a pet present in
-  // both the catalog and the stats payload isn't displayed twice.
+/**
+ * Species no egg hatches, so nothing the player owns goes unlisted: capsule
+ * pets, event grants, and anything the catalogs gained before the egg data did.
+ */
+function otherSpecies(stats: StatsSnapshot, fromEggs: Set<string>): string[] {
   const seen = new Set<string>();
+  const out: string[] = [];
 
-  for (const species of Object.keys(petCatalog)) {
+  const consider = (species: string) => {
     const lower = species.toLowerCase();
-    if (seen.has(lower)) continue;
+    if (seen.has(lower) || fromEggs.has(lower)) return;
     seen.add(lower);
-    const info = petCatalog[species as keyof typeof petCatalog] as { rarity?: unknown } | undefined;
-    const rarityValue = normalizePetRarity(info?.rarity);
-    map.get(rarityValue)?.push(species);
+    out.push(species);
+  };
+
+  for (const species of Object.keys(petCatalog)) consider(species);
+
+  // Species the catalog no longer serves but the player has hatched. Zero-count
+  // entries are skipped: the stats snapshot seeds a 0 for every catalog species
+  // and never prunes, so a species the API served once would linger forever.
+  for (const key of Object.keys(stats.pets?.hatchedByType ?? {})) {
+    if (totalOf(countsFor(stats, key)) <= 0) continue;
+    consider(key.charAt(0).toUpperCase() + key.slice(1));
   }
 
-  // Include pets the player has actually hatched but that aren't in the catalog
-  // (species the data API dropped, or ones it hasn't shipped yet).
-  // Zero-count entries are skipped on purpose: createDefaultStats seeds a 0 for
-  // every catalog species and normalizeStats never prunes keys, so a species the
-  // API served once stays in storage forever and would otherwise be displayed
-  // long after it left the game.
-  const hatchedByType = stats.pets?.hatchedByType ?? {};
-  for (const speciesKey of Object.keys(hatchedByType)) {
-    const lower = speciesKey.toLowerCase();
-    if (seen.has(lower)) continue;
-    if (sumHatchedCounts(hatchedByType[speciesKey]) <= 0) continue;
-    seen.add(lower);
-    const display = speciesKey.charAt(0).toUpperCase() + speciesKey.slice(1);
-    map.get(rarity.Common as PetRarity)?.push(display);
-  }
-
-  for (const list of map.values()) {
-    list.sort((a, b) => a.localeCompare(b));
-  }
-  return map;
+  return sortSpeciesByRarity(out);
 }
 
-/* --------------------------------- Cells ---------------------------------- */
+/* ----------------------------------- tab ----------------------------------- */
 
-function createPetSpeciesCell(species: string): StatListCell {
-  const wrapper = document.createElement("span");
-  wrapper.className = "stats-pet__species";
-
-  const iconWrap = document.createElement("span");
-  iconWrap.className = "stats-pet__icon";
-  iconWrap.textContent = species?.trim().charAt(0).toUpperCase() || "?";
-  iconWrap.setAttribute("aria-hidden", "true");
-  attachSpriteIcon(iconWrap, ["pet"], species, 28, "stats-pet");
-
-  const label = document.createElement("span");
-  label.className = "stats-pet__label";
-  label.textContent = species;
-
-  wrapper.append(iconWrap, label);
-
-  return { content: wrapper };
-}
-
-function createPetTotalValueCell(total: number): StatListCell {
-  const value = document.createElement("span");
-  value.className = "stats-pet__total-value qmm-num";
-  value.textContent = formatInt(total);
-  return { content: value, align: "center" };
-}
-
-function createPetTotalsLabelCell(label: string): StatListCell {
-  const value = document.createElement("span");
-  value.className = "stats-pet__total-label";
-  value.textContent = label;
-  return { content: value };
-}
-
-/* ---------------------------------- Tab ----------------------------------- */
-
-function renderGroups(body: HTMLElement, stats: StatsSnapshot): void {
-  body.innerHTML = "";
-  const groups = createPetRarityGroups(stats);
-
-  for (const rarityKey of RARITY_ORDER) {
-    const speciesList = groups.get(rarityKey) ?? [];
-    if (!speciesList.length) continue;
-
-    const group = document.createElement("div");
-    group.className = "stats-pet-group";
-    group.style.setProperty("--stats-pet-group-border-color", RARITY_BORDER_COLORS[rarityKey]);
-
-    const summary = document.createElement("div");
-    summary.className = "stats-pet-group__summary";
-    const badge = rarityBadge(rarityKey);
-    badge.style.margin = "0";
-    summary.appendChild(badge);
-    group.appendChild(summary);
-
-    const content = document.createElement("div");
-    content.className = "stats-pet-group__content";
-
-    const columns: StatListColumn[] = [
-      { label: "Species", width: "2.2fr" },
-      { label: "Normal", align: "center", width: "1fr" },
-      { label: "Gold", align: "center", width: "1fr", headerClassName: "stats-list__header-label--gold" },
-      {
-        label: "Rainbow",
-        align: "center",
-        width: "1fr",
-        headerClassName: "stats-list__header-label--rainbow",
-      },
-      { label: "Total", align: "center", width: "1fr" },
-    ];
-
-    const rows: StatListCell[][] = [];
-    let totalNormal = 0;
-    let totalGold = 0;
-    let totalRainbow = 0;
-
-    for (const species of speciesList) {
-      const key = species.toLowerCase();
-      const counts = stats.pets.hatchedByType[key] ?? { normal: 0, gold: 0, rainbow: 0 };
-      totalNormal += counts.normal;
-      totalGold += counts.gold;
-      totalRainbow += counts.rainbow;
-      const total = counts.normal + counts.gold + counts.rainbow;
-      rows.push([
-        createPetSpeciesCell(species),
-        { text: formatInt(counts.normal), align: "center" },
-        { text: formatInt(counts.gold), align: "center" },
-        { text: formatInt(counts.rainbow), align: "center" },
-        createPetTotalValueCell(total),
-      ]);
-    }
-
-    const totalAll = totalNormal + totalGold + totalRainbow;
-    rows.push([
-      createPetTotalsLabelCell("Total"),
-      createPetTotalValueCell(totalNormal),
-      createPetTotalValueCell(totalGold),
-      createPetTotalValueCell(totalRainbow),
-      createPetTotalValueCell(totalAll),
-    ]);
-
-    content.appendChild(createStatList(columns, rows));
-    group.appendChild(content);
-    body.appendChild(group);
-  }
-}
-
-export function renderHatchTab(view: HTMLElement, ui: Menu): void {
+export function renderHatchTab(view: HTMLElement, _ui: Menu): void {
   const prevCleanup = (view as any).__cleanup__;
   if (typeof prevCleanup === "function") {
     try { prevCleanup(); } catch {}
     (view as any).__cleanup__ = undefined;
   }
 
+  ensurePanelStyles();
   view.innerHTML = "";
 
   // Style an inner wrapper, never the tab view itself: an inline display on
   // the view would override the menu's .qmm-view show/hide rule.
   const wrap = document.createElement("div");
-  wrap.style.display = "grid";
-  wrap.style.gap = "12px";
-  wrap.style.alignContent = "start";
-  wrap.style.minHeight = "0";
-  wrap.style.maxHeight = "54vh";
-  wrap.style.overflow = "auto";
+  wrap.classList.add("qws-pnl-root", "qws-pnl-scroll");
+  css(wrap, {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    // Wide enough for the counts grid to breathe, but capped against the
+    // viewport so the HUD window never runs off a small screen.
+    width: "min(680px, 86vw)",
+    maxWidth: "100%",
+    minHeight: "0",
+    maxHeight: "68vh",
+    overflowY: "auto",
+    boxSizing: "border-box",
+  });
   view.appendChild(wrap);
 
-  const card = ui.card("🐾 Hatched pets", {
-    tone: "muted",
-    align: "stretch",
-    subtitle: "Per-species hatch counts (normal / gold / rainbow)",
+  /* ----- Header ----- */
+  const header = document.createElement("div");
+  css(header, { display: "flex", alignItems: "center", gap: "8px", flexShrink: "0", padding: "0 2px" });
+
+  const title = document.createElement("div");
+  css(title, { fontSize: "14.5px", fontWeight: "700", color: TEXT, flex: "1 1 auto" });
+  title.textContent = "🥚 Hatches & bad luck protection";
+  title.title =
+    "Counted from the hatches Arie's Mod has watched — the game never sends the real counters. Use Calibrate to set your actual head start.";
+  header.appendChild(title);
+
+  let showOffsets = false;
+  const calibrateBtn = button("Calibrate", "neutral", () => {
+    showOffsets = !showOffsets;
+    repaint();
   });
-  wrap.appendChild(card.root);
+  calibrateBtn.title = "Show a head start field on every counter.";
+  header.appendChild(calibrateBtn);
+  wrap.appendChild(header);
 
-  const repaint = () => renderGroups(card.body, StatsService.getSnapshot());
+  const body = document.createElement("div");
+  css(body, { display: "flex", flexDirection: "column", gap: "8px" });
+  wrap.appendChild(body);
 
-  let rafId: number | null = null;
-  const cleanup = () => {
-    try { unsubscribe(); } catch {}
-    if (rafId !== null) {
-      cancelAnimationFrame(rafId);
-      rafId = null;
+  /* ----- Painting ----- */
+  function repaint(): void {
+    css(calibrateBtn, {
+      color: showOffsets ? TEAL : TEXT,
+      borderColor: showOffsets ? "rgba(94,234,212,0.3)" : BORDER,
+      background: showOffsets ? "rgba(94,234,212,0.12)" : CARD_BG,
+    });
+
+    const stats = StatsService.getSnapshot();
+    body.innerHTML = "";
+
+    const eggs = listEggPity();
+    const fromEggs = new Set<string>();
+    for (const egg of eggs) {
+      for (const entry of egg.fauna) fromEggs.add(entry.species.toLowerCase());
     }
-  };
 
-  const unsubscribe = StatsService.subscribe(() => {
+    for (const egg of eggs) {
+      body.appendChild(
+        createEggCard({
+          egg,
+          stats,
+          showOffsets,
+          collapsed: isCollapsed(egg.eggId),
+          onToggle: collapsed => setCollapsed(egg.eggId, collapsed),
+        }),
+      );
+    }
+
+    const others = otherSpecies(stats, fromEggs);
+    if (others.length) {
+      const card = collapsibleCard({
+        icon: "🐾",
+        title: "Other pets",
+        description: "Species no egg hatches.",
+        collapsed: isCollapsed(OTHER_SECTION_ID),
+        onToggle: collapsed => setCollapsed(OTHER_SECTION_ID, collapsed),
+      });
+      card.body.appendChild(speciesCountsGrid(others.map(species => ({ species })), stats));
+      body.appendChild(card.root);
+    }
+
+    if (!body.childElementCount) {
+      const empty = document.createElement("div");
+      css(empty, { fontSize: "12.5px", color: TEXT_DIM, padding: "6px 2px" });
+      empty.textContent = "No egg data available yet.";
+      body.appendChild(empty);
+    }
+  }
+
+  /* ----- Live updates ----- */
+  let rafId: number | null = null;
+  const schedule = () => {
     if (!view.isConnected) {
       cleanup();
       return;
@@ -462,12 +276,24 @@ export function renderHatchTab(view: HTMLElement, ui: Menu): void {
       rafId = null;
       repaint();
     });
-  });
+  };
+
+  const stopStats = StatsService.subscribe(schedule);
+  const stopTracker = HatchTracker.subscribe(schedule);
+
+  function cleanup(): void {
+    try { stopStats(); } catch {}
+    try { stopTracker(); } catch {}
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+  }
 
   (view as any).__cleanup__ = cleanup;
 
-  initPets(StatsService.getSnapshot()).catch((error) => {
-    console.error("[PetsHatch] Failed to initialize pet stats", error);
+  seedFromOwnedPets(StatsService.getSnapshot()).catch(error => {
+    console.error("[PetsHatch] Failed to seed pet stats", error);
   });
 
   repaint();

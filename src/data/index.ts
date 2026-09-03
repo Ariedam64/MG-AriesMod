@@ -72,6 +72,45 @@ export const rarity = hardcoded.rarity;
 export const harvestType = hardcoded.harvestType;
 export const coin = hardcoded.coin;
 
+/**
+ * Rarities from least to most rare, as the game orders them.
+ *
+ * Comes from MGData's `enums`, so a new tier added to the game slots in on its
+ * own; the hardcoded constants order it until that data lands.
+ */
+export function rarityOrder(): string[] {
+  const list = MGData.get("enums")?.rarity;
+  if (Array.isArray(list)) {
+    const values = list.filter((value): value is string => typeof value === "string" && !!value);
+    if (values.length) return values;
+  }
+  return Object.values(hardcoded.rarity);
+}
+
+/**
+ * The game's frame name for a rarity differs from its value in exactly one
+ * place: `Mythical` is drawn by `RarityMythic`.
+ */
+const RARITY_SPRITE_NAMES: Record<string, string> = { Mythical: "Mythic" };
+
+/** Atlas frame key for a rarity's badge, or null when it isn't a known one. */
+export function raritySprite(value: unknown): string | null {
+  if (typeof value !== "string" || !value) return null;
+  // The game bundle says "Mythic" where the catalogs say "Mythical".
+  const normalized = value === "Mythic" ? hardcoded.rarity.Mythic : value;
+  if (!rarityOrder().includes(normalized)) return null;
+  return `sprite/ui/Rarity${RARITY_SPRITE_NAMES[normalized] ?? normalized}`;
+}
+
+/** Position of a rarity in `rarityOrder`, with unknown values sorted last. */
+export function rarityRank(value: unknown): number {
+  if (typeof value !== "string") return Number.MAX_SAFE_INTEGER;
+  // The game bundle says "Mythic" where the catalogs say "Mythical".
+  const normalized = value === "Mythic" ? hardcoded.rarity.Mythic : value;
+  const index = rarityOrder().indexOf(normalized);
+  return index < 0 ? Number.MAX_SAFE_INTEGER : index;
+}
+
 // Hunger depletion minutes per species. Static-only on purpose — the game
 // bundle and MGData both lack it, and it must NOT be folded into petCatalog:
 // makeCatalogProxy resolves per species, so a hardcoded field would be

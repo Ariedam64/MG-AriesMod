@@ -910,24 +910,9 @@ function installHarvestCropInterceptor() {
       })();
       return { kind: "drop" };
     }
-
-    void (async () => {
-      const previousPets = await readInventoryPetSnapshots();
-      const previousMap = buildPetMap(previousPets);
-
-      const nextPets = await waitForInventoryPetAddition(previousMap);
-      if (!nextPets) return;
-
-      const newPets = extractNewPets(nextPets, previousMap);
-      if (!newPets.length) return;
-
-      for (const pet of newPets) {
-        const rarity = inferPetRarity(pet.mutations);
-        if (pet.species) {
-          StatsService.incrementPetHatched(pet.species, rarity);
-        }
-      }
-    })();
+    // Counting the hatch is no longer this interceptor's job: the activity log
+    // names the egg and the pet outright, so `hatchTracker` reads it there
+    // instead of racing the inventory for a pet that may not be the only one.
   });
 
   registerMessageInterceptor("SellAllCrops", (message) => {
@@ -1125,34 +1110,6 @@ function clampPercent(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-type InventoryPetSnapshot = {
-  id: string;
-  species: string;
-  mutations: string[];
-};
-
-const HATCH_EGG_TIMEOUT_MS = 5000;
-
-async function readInventoryPetSnapshots(): Promise<InventoryPetSnapshot[]> {
-  try {
-    const inventory = await Atoms.inventory.myInventory.get();
-    return collectInventoryPets(inventory);
-  } catch (error) {
-    console.error("[HatchEgg] Unable to read inventory", error);
-    return [];
-  }
-}
-
-function collectInventoryPets(rawInventory: any): InventoryPetSnapshot[] {
-  const items = extractInventoryItems(rawInventory);
-  const pets: InventoryPetSnapshot[] = [];
-  for (const entry of items) {
-    const pet = toInventoryPet(entry);
-    if (pet) pets.push(pet);
-  }
-  return pets;
-}
-
 function extractInventoryItems(rawInventory: any): any[] {
   if (!rawInventory) return [];
   if (Array.isArray(rawInventory)) return rawInventory;
@@ -1160,43 +1117,6 @@ function extractInventoryItems(rawInventory: any): any[] {
   if (Array.isArray(rawInventory.inventory)) return rawInventory.inventory;
   if (Array.isArray(rawInventory.inventory?.items)) return rawInventory.inventory.items;
   return [];
-}
-
-function toInventoryPet(entry: any): InventoryPetSnapshot | null {
-  if (!entry || typeof entry !== "object") return null;
-  const source = (entry as any).item && typeof (entry as any).item === "object"
-    ? (entry as any).item
-    : entry;
-  if (!source || typeof source !== "object") return null;
-  const type = (source.itemType ?? source.data?.itemType ?? "") as string;
-  if (String(type).toLowerCase() !== "pet") return null;
-
-  const id = source.id ?? source.data?.id;
-  const species = source.petSpecies ?? source.data?.petSpecies;
-  if (!id || !species) return null;
-
-  const mutations = sanitizeMutations(source.mutations ?? source.data?.mutations);
-
-  return {
-    id: String(id),
-    species: String(species),
-    mutations,
-  };
-}
-
-function buildPetMap(pets: InventoryPetSnapshot[]): Map<string, InventoryPetSnapshot> {
-  const map = new Map<string, InventoryPetSnapshot>();
-  for (const pet of pets) {
-    map.set(pet.id, pet);
-  }
-  return map;
-}
-
-function extractNewPets(
-  pets: InventoryPetSnapshot[],
-  previous: Map<string, InventoryPetSnapshot>
-): InventoryPetSnapshot[] {
-  return pets.filter(pet => !previous.has(pet.id));
 }
 
 function extractEggId(obj: any): string | null {
@@ -1230,86 +1150,6 @@ async function dedupeEggLockToast(latestEggId: string | null) {
     id: "quinoa-game-toast",
   });
   await jSet(toastsAtom, filtered);
-}
-
-function inferPetRarity(mutations: string[]): "normal" | "gold" | "rainbow" {
-  if (!Array.isArray(mutations) || mutations.length === 0) {
-    return "normal";
-  }
-
-  const seen = new Set(mutations.map(m => String(m).toLowerCase()));
-  if (seen.has("rainbow")) return "rainbow";
-  if (seen.has("gold") || seen.has("golden")) return "gold";
-  return "normal";
-}
-
-async function waitForInventoryPetAddition(
-  previous: Map<string, InventoryPetSnapshot>,
-  timeoutMs = HATCH_EGG_TIMEOUT_MS
-): Promise<InventoryPetSnapshot[] | null> {
-  await delay(0);
-
-  const initial = await readInventoryPetSnapshots();
-  if (hasNewInventoryPet(initial, previous)) {
-    return initial;
-  }
-
-  return new Promise(async (resolve) => {
-    let settled = false;
-    let unsub: (() => void) | null = null;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-
-    const finalize = (value: InventoryPetSnapshot[] | null) => {
-      if (settled) return;
-      settled = true;
-      if (timer !== null) {
-        clearTimeout(timer);
-      }
-      if (unsub) {
-        try { unsub(); } catch {}
-      }
-      resolve(value);
-    };
-
-    const evaluate = (source: any) => {
-      const pets = collectInventoryPets(source);
-      if (hasNewInventoryPet(pets, previous)) {
-        finalize(pets);
-      }
-    };
-
-    try {
-      unsub = await Atoms.inventory.myInventory.onChange((next) => {
-        evaluate(next);
-      });
-    } catch (error) {
-      console.error("[HatchEgg] Unable to observe inventory", error);
-      finalize(null);
-      return;
-    }
-
-    timer = setTimeout(() => {
-      void (async () => {
-        const latest = await readInventoryPetSnapshots();
-        if (hasNewInventoryPet(latest, previous)) {
-          finalize(latest);
-        } else {
-          finalize(null);
-        }
-      })();
-    }, timeoutMs);
-  });
-}
-
-function hasNewInventoryPet(
-  pets: InventoryPetSnapshot[],
-  previous: Map<string, InventoryPetSnapshot>
-): boolean {
-  return pets.some(pet => !previous.has(pet.id));
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function resolveSendMessage(Conn: ConnectionCtor): ResolvedSendMessage {

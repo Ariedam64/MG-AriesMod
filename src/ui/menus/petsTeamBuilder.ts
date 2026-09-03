@@ -6,7 +6,7 @@
 import { Menu } from "../menu";
 import { PetsService, type InventoryPet } from "../../services/pets";
 import { buildSuggestedTeams, type SuggestedTeam, type UnusedPetInfo } from "../../services/petTeamBuilder";
-import { getAbilityChipColors } from "./pets";
+import { getAbilityChipColors } from "./pets-ability-colors";
 import { attachSpriteIcon } from "../spriteIconCache";
 import { toastSimple } from "../toast";
 import { getPetStrength, getPetMaxStrength } from "../../utils/petCalcul";

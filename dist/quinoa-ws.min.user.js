@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.202
+// @version      3.2.203
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -778,13 +778,13 @@
   // src/sprite/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-    const listeners6 = /* @__PURE__ */ new Set();
+    const listeners7 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
     const tick = (now2) => {
       const delta = last ? (now2 - last) / (1e3 / 60) : 1;
       last = now2;
-      for (const fn of listeners6) {
+      for (const fn of listeners7) {
         try {
           fn(delta);
         } catch {
@@ -794,14 +794,14 @@
     };
     const ticker = {
       add(fn) {
-        if (!listeners6.size) {
+        if (!listeners7.size) {
           rafId = requestAnimationFrame(tick);
         }
-        listeners6.add(fn);
+        listeners7.add(fn);
       },
       remove(fn) {
-        listeners6.delete(fn);
-        if (!listeners6.size) {
+        listeners7.delete(fn);
+        if (!listeners7.size) {
           cancelAnimationFrame(rafId);
         }
       },
@@ -1165,17 +1165,30 @@
     }
     throw new Error(`KTX2 base texture not found in renderer for "${imgName}"`);
   }
+  function srcPath(entry) {
+    if (typeof entry === "string") return entry;
+    return typeof entry?.src === "string" && entry.src ? entry.src : null;
+  }
+  function srcResolution(entry) {
+    if (typeof entry === "string") return 1;
+    const value = Number(entry?.resolution);
+    return Number.isFinite(value) && value > 0 ? value : 1;
+  }
+  function isAtlasJsonPath(path) {
+    return path.endsWith(".json") && path !== "manifest.json" && !path.startsWith("audio/");
+  }
   function extractAtlasJsons(manifest) {
     const jsons = /* @__PURE__ */ new Set();
     for (const bundle of manifest.bundles || []) {
       for (const asset of bundle.assets || []) {
-        for (const src of asset.src || []) {
-          if (typeof src !== "string") continue;
-          if (!src.endsWith(".json")) continue;
-          if (src === "manifest.json") continue;
-          if (src.startsWith("audio/")) continue;
-          jsons.add(src);
+        let best = null;
+        for (const entry of asset.src || []) {
+          const path = srcPath(entry);
+          if (!path || !isAtlasJsonPath(path)) continue;
+          const resolution = srcResolution(entry);
+          if (!best || resolution > best.resolution) best = { path, resolution };
         }
+        if (best) jsons.add(best.path);
       }
     }
     return jsons;
@@ -2145,7 +2158,8 @@
         pets: null,
         abilities: null,
         plants: null,
-        weather: null
+        weather: null,
+        enums: null
       },
       fetchStarted: false,
       fetchComplete: false,
@@ -2606,6 +2620,7 @@
       if (data.mutations) setCapturedData("mutations", data.mutations);
       if (data.abilities) setCapturedData("abilities", data.abilities);
       if (data.weathers) setCapturedData("weather", data.weathers);
+      if (data.enums) setCapturedData("enums", data.enums);
       captureState.fetchComplete = true;
       console.log("[MGData] all data loaded from API", {
         plants: Object.keys(data.plants || {}).length,
@@ -3663,7 +3678,7 @@
       return null;
     }
   }
-  var SKIPPED_ATLAS_PATTERNS = [/(^|\/)weather\.json$/i];
+  var SKIPPED_ATLAS_PATTERNS = [/(^|\/)weather(-\d+x)?\.json$/i];
   async function loadTextures(base, prefetched) {
     const usePrefetched = prefetched && prefetched.base === base ? prefetched : null;
     const atlasJsons = usePrefetched?.atlasJsons ?? await loadAtlasJsons(base, await getJSON(joinPath(base, "manifest.json")));
@@ -8462,6 +8477,27 @@
   var weatherCatalog2 = makeCatalogProxy("weather", weatherCatalog);
   var rarity2 = rarity;
   var coin2 = coin;
+  function rarityOrder() {
+    const list = MGData.get("enums")?.rarity;
+    if (Array.isArray(list)) {
+      const values = list.filter((value) => typeof value === "string" && !!value);
+      if (values.length) return values;
+    }
+    return Object.values(rarity);
+  }
+  var RARITY_SPRITE_NAMES = { Mythical: "Mythic" };
+  function raritySprite(value) {
+    if (typeof value !== "string" || !value) return null;
+    const normalized = value === "Mythic" ? rarity.Mythic : value;
+    if (!rarityOrder().includes(normalized)) return null;
+    return `sprite/ui/Rarity${RARITY_SPRITE_NAMES[normalized] ?? normalized}`;
+  }
+  function rarityRank(value) {
+    if (typeof value !== "string") return Number.MAX_SAFE_INTEGER;
+    const normalized = value === "Mythic" ? rarity.Mythic : value;
+    const index = rarityOrder().indexOf(normalized);
+    return index < 0 ? Number.MAX_SAFE_INTEGER : index;
+  }
   var petHungerDepletionMinutes2 = petHungerDepletionMinutes;
   var tileRefsMutations2 = tileRefsMutations;
   var tileRefsMutationLabels2 = tileRefsMutationLabels;
@@ -8680,9 +8716,9 @@
     let selectedIdx = null;
     let lastInfo = emptySlotInfo();
     let curSig = gardenObjectSignature(cur);
-    const listeners6 = /* @__PURE__ */ new Set();
+    const listeners7 = /* @__PURE__ */ new Set();
     const notify2 = () => {
-      for (const fn of listeners6) {
+      for (const fn of listeners7) {
         try {
           fn(lastInfo);
         } catch {
@@ -8920,11 +8956,11 @@
         return lastInfo;
       },
       onChange(cb) {
-        listeners6.add(cb);
-        return () => listeners6.delete(cb);
+        listeners7.add(cb);
+        return () => listeners7.delete(cb);
       },
       stop() {
-        listeners6.clear();
+        listeners7.clear();
       },
       recompute() {
         recomputeAndNotify();
@@ -11961,7 +11997,7 @@
     }
     ensureStyles() {
       if (document.getElementById("__qmm_css__")) return;
-      const css4 = `
+      const css5 = `
     /* ================= Modern UI for qmm ================= */
 .qmm{
   --qmm-bg:        #0a0e14;
@@ -12249,176 +12285,6 @@
 .qmm-chip-toggle input:checked + .qmm-chip-toggle__face{
   background:linear-gradient(180deg, rgba(94,234,212,.22), rgba(94,234,212,.08));
   box-shadow:0 0 0 1px rgba(94,234,212,0.35) inset, 0 6px 18px rgba(94,234,212,.15);
-}
-
-.qmm .stats-metric-grid{
-  display:grid;
-  gap:10px;
-  grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));
-}
-.qmm .stats-metric{
-  border-radius:12px;
-  padding:12px 14px;
-  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
-  border:1px solid rgba(255,255,255,.08);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  transition:border-color .18s ease, background .18s ease, transform .14s ease;
-}
-.qmm .stats-metric:hover{
-  border-color:rgba(94,234,212,0.30);
-  background:linear-gradient(180deg, rgba(94,234,212,.14), rgba(94,234,212,.06));
-  transform:translateY(-1px);
-}
-.qmm .stats-metric__label{
-  font-size:12px;
-  letter-spacing:.02em;
-  text-transform:uppercase;
-  color:var(--qmm-text-dim);
-}
-.qmm .stats-metric__value{
-  font-size:20px;
-  font-weight:700;
-  color:#fff;
-}
-
-.qmm .stats-list{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-.qmm .stats-list__row{
-  display:grid;
-  align-items:center;
-  gap:10px;
-  padding:10px 12px;
-  border-radius:10px;
-  background:rgba(255,255,255,.035);
-  border:1px solid rgba(255,255,255,.08);
-  transition:border-color .18s ease, background .18s ease;
-}
-.qmm .stats-list__row:not(.stats-list__row--header):hover{
-  background:rgba(94,234,212,0.09);
-  border-color:rgba(94,234,212,0.28);
-}
-.qmm .stats-list__row--header{
-  background:transparent;
-  border:none;
-  padding:0 6px 2px 6px;
-  font-size:11px;
-  letter-spacing:.05em;
-  text-transform:uppercase;
-  color:var(--qmm-text-dim);
-}
-.qmm .stats-list__row--header .stats-list__cell{
-  font-weight:600;
-}
-.qmm .stats-list__header-label--gold,
-.qmm .stats-list__header-label--rainbow{
-  display:inline-block;
-}
-.qmm .stats-list__header-label--gold{
-  color:#f7d774;
-  background:linear-gradient(135deg,#fff5c0 0%,#f3c76a 55%,#f5b84f 100%);
-  background-clip:text;
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
-  text-shadow:0 1px 4px rgba(0,0,0,.35);
-}
-.qmm .stats-list__header-label--rainbow{
-  color:#ffd6ff;
-  background:linear-gradient(90deg,#ff6b6b 0%,#ffd86f 25%,#6bff8f 50%,#6bc7ff 75%,#b86bff 100%);
-  background-clip:text;
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
-  text-shadow:0 1px 4px rgba(0,0,0,.35);
-}
-.qmm .stats-list__cell{
-  min-width:0;
-  font-size:13px;
-}
-.qmm .stats-pet__species{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  min-width:0;
-}
-.qmm .stats-pet__label{
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.qmm .stats-pet__total-label{
-  font-weight:700;
-}
-.qmm .stats-pet__total-value{
-  font-weight:700;
-}
-.qmm .stats-weather__name{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  min-width:0;
-}
-.qmm .stats-weather__icon{
-  width:32px;
-  height:32px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  border-radius:6px;
-  background:rgba(255,255,255,.08);
-  overflow:hidden;
-  flex-shrink:0;
-}
-.qmm .stats-weather__icon img{
-  width:100%;
-  height:100%;
-  object-fit:contain;
-  image-rendering:pixelated;
-}
-.qmm .stats-weather__label{
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.qmm .stats-list__cell--align-right{ text-align:right; }
-.qmm .stats-list__cell--align-center{ text-align:center; }
-
-.qmm .stats-pet-group{
-  border:1px solid var(--stats-pet-group-border-color, rgba(255,255,255,.09));
-  border-radius:12px;
-  padding:10px 12px;
-  background:rgba(255,255,255,.05);
-  transition:border-color .18s ease, background .18s ease;
-  display:flex;
-  flex-direction:column;
-  align-items:stretch;
-  width:100%;
-}
-.qmm .stats-pet-group + .stats-pet-group{
-  margin-top:8px;
-}
-.qmm .stats-pet-group__summary{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  font-weight:650;
-  font-size:13px;
-  color:var(--qmm-text);
-  margin:0;
-  user-select:none;
-  justify-content:center;
-  text-align:center;
-}
-.qmm .stats-pet-group__content{
-  margin-top:8px;
-  display:flex;
-  flex-direction:column;
-  align-items:stretch;
-  gap:8px;
 }
 
 .qmm-error{
@@ -12883,7 +12749,7 @@
     `;
       const st = document.createElement("style");
       st.id = "__qmm_css__";
-      st.textContent = css4;
+      st.textContent = css5;
       (document.documentElement || document.body).appendChild(st);
     }
   };
@@ -20855,7 +20721,7 @@
   function ensureAutoRecoOverlayStyle() {
     const STYLE_ID9 = "mgAutoRecoOverlayStyle";
     if (document.getElementById(STYLE_ID9)) return;
-    const css4 = `
+    const css5 = `
     #mgAutoRecoOverlay { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #mgAutoRecoOverlay .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; border: 1px solid rgba(255,255,255,.15); }
     #mgAutoRecoOverlay .title { font-size: 24px; font-weight: 900; letter-spacing: .02em; margin: 0 0 8px 0; }
@@ -20865,7 +20731,7 @@
   `;
     const style2 = document.createElement("style");
     style2.id = STYLE_ID9;
-    style2.textContent = css4;
+    style2.textContent = css5;
     document.documentElement.appendChild(style2);
   }
   function createAutoRecoOverlay(initialMs, onReconnectNow) {
@@ -21475,20 +21341,6 @@
         })();
         return { kind: "drop" };
       }
-      void (async () => {
-        const previousPets = await readInventoryPetSnapshots();
-        const previousMap = buildPetMap(previousPets);
-        const nextPets = await waitForInventoryPetAddition(previousMap);
-        if (!nextPets) return;
-        const newPets = extractNewPets(nextPets, previousMap);
-        if (!newPets.length) return;
-        for (const pet of newPets) {
-          const rarity3 = inferPetRarity(pet.mutations);
-          if (pet.species) {
-            StatsService.incrementPetHatched(pet.species, rarity3);
-          }
-        }
-      })();
     });
     registerMessageInterceptor("SellAllCrops", (message) => {
       const restrictionState = lockerRestrictionsService.getState();
@@ -21663,25 +21515,6 @@
   function clampPercent3(value, min, max) {
     return Math.max(min, Math.min(max, value));
   }
-  var HATCH_EGG_TIMEOUT_MS = 5e3;
-  async function readInventoryPetSnapshots() {
-    try {
-      const inventory = await Atoms.inventory.myInventory.get();
-      return collectInventoryPets(inventory);
-    } catch (error) {
-      console.error("[HatchEgg] Unable to read inventory", error);
-      return [];
-    }
-  }
-  function collectInventoryPets(rawInventory) {
-    const items = extractInventoryItems(rawInventory);
-    const pets = [];
-    for (const entry of items) {
-      const pet = toInventoryPet(entry);
-      if (pet) pets.push(pet);
-    }
-    return pets;
-  }
   function extractInventoryItems(rawInventory) {
     if (!rawInventory) return [];
     if (Array.isArray(rawInventory)) return rawInventory;
@@ -21689,32 +21522,6 @@
     if (Array.isArray(rawInventory.inventory)) return rawInventory.inventory;
     if (Array.isArray(rawInventory.inventory?.items)) return rawInventory.inventory.items;
     return [];
-  }
-  function toInventoryPet(entry) {
-    if (!entry || typeof entry !== "object") return null;
-    const source = entry.item && typeof entry.item === "object" ? entry.item : entry;
-    if (!source || typeof source !== "object") return null;
-    const type = source.itemType ?? source.data?.itemType ?? "";
-    if (String(type).toLowerCase() !== "pet") return null;
-    const id = source.id ?? source.data?.id;
-    const species = source.petSpecies ?? source.data?.petSpecies;
-    if (!id || !species) return null;
-    const mutations = sanitizeMutations(source.mutations ?? source.data?.mutations);
-    return {
-      id: String(id),
-      species: String(species),
-      mutations
-    };
-  }
-  function buildPetMap(pets) {
-    const map2 = /* @__PURE__ */ new Map();
-    for (const pet of pets) {
-      map2.set(pet.id, pet);
-    }
-    return map2;
-  }
-  function extractNewPets(pets, previous) {
-    return pets.filter((pet) => !previous.has(pet.id));
   }
   function extractEggId(obj) {
     if (!obj || typeof obj !== "object") return null;
@@ -21740,72 +21547,6 @@
       id: "quinoa-game-toast"
     });
     await jSet(toastsAtom, filtered);
-  }
-  function inferPetRarity(mutations) {
-    if (!Array.isArray(mutations) || mutations.length === 0) {
-      return "normal";
-    }
-    const seen = new Set(mutations.map((m) => String(m).toLowerCase()));
-    if (seen.has("rainbow")) return "rainbow";
-    if (seen.has("gold") || seen.has("golden")) return "gold";
-    return "normal";
-  }
-  async function waitForInventoryPetAddition(previous, timeoutMs = HATCH_EGG_TIMEOUT_MS) {
-    await delay(0);
-    const initial = await readInventoryPetSnapshots();
-    if (hasNewInventoryPet(initial, previous)) {
-      return initial;
-    }
-    return new Promise(async (resolve) => {
-      let settled = false;
-      let unsub = null;
-      let timer = null;
-      const finalize = (value) => {
-        if (settled) return;
-        settled = true;
-        if (timer !== null) {
-          clearTimeout(timer);
-        }
-        if (unsub) {
-          try {
-            unsub();
-          } catch {
-          }
-        }
-        resolve(value);
-      };
-      const evaluate = (source) => {
-        const pets = collectInventoryPets(source);
-        if (hasNewInventoryPet(pets, previous)) {
-          finalize(pets);
-        }
-      };
-      try {
-        unsub = await Atoms.inventory.myInventory.onChange((next) => {
-          evaluate(next);
-        });
-      } catch (error) {
-        console.error("[HatchEgg] Unable to observe inventory", error);
-        finalize(null);
-        return;
-      }
-      timer = setTimeout(() => {
-        void (async () => {
-          const latest = await readInventoryPetSnapshots();
-          if (hasNewInventoryPet(latest, previous)) {
-            finalize(latest);
-          } else {
-            finalize(null);
-          }
-        })();
-      }, timeoutMs);
-    });
-  }
-  function hasNewInventoryPet(pets, previous) {
-    return pets.some((pet) => !previous.has(pet.id));
-  }
-  function delay(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
   }
   function resolveSendMessage(Conn) {
     const isFn = (value) => typeof value === "function";
@@ -23476,7 +23217,7 @@
         await _ensureInventoryWatchersStarted();
       } catch {
       }
-      const ingest = (rawLogs) => {
+      const ingest2 = (rawLogs) => {
         const list = Array.isArray(rawLogs) ? rawLogs : [];
         for (const raw of list) {
           try {
@@ -23486,14 +23227,14 @@
         }
       };
       try {
-        ingest(await myActivityLog.get());
+        ingest2(await myActivityLog.get());
       } catch {
       }
       let stop2 = null;
       try {
         const res = await myActivityLog.onChange((next) => {
           try {
-            ingest(next);
+            ingest2(next);
           } catch {
           }
         });
@@ -25319,7 +25060,7 @@
   function ensureStyle(injectedClass, theme) {
     const STYLE_ID9 = `${injectedClass}-style`;
     if (document.getElementById(STYLE_ID9)) return;
-    const css4 = `
+    const css5 = `
 .${injectedClass}{
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
@@ -25374,7 +25115,7 @@
 `.trim();
     const s = document.createElement("style");
     s.id = STYLE_ID9;
-    s.textContent = css4;
+    s.textContent = css5;
     document.head.appendChild(s);
   }
   function hookHistory(onNavigate) {
@@ -28748,9 +28489,9 @@
     document.body.appendChild(button2);
     applyInitialPosition2();
     const settleTimers = SETTLE_REAPPLY_DELAYS_MS.map(
-      (delay2) => window.setTimeout(() => {
+      (delay) => window.setTimeout(() => {
         if (running) applyDesiredPosition();
-      }, delay2)
+      }, delay)
     );
     const clearSettleTimers = () => {
       for (const id of settleTimers) {
@@ -30033,9 +29774,9 @@
     let players = void 0;
     let selectedSlotId = null;
     let lastPrice = null;
-    const listeners6 = /* @__PURE__ */ new Set();
+    const listeners7 = /* @__PURE__ */ new Set();
     const notify2 = () => {
-      for (const fn of listeners6) try {
+      for (const fn of listeners7) try {
         fn();
       } catch {
       }
@@ -30101,11 +29842,11 @@
         return lastPrice;
       },
       onChange(cb) {
-        listeners6.add(cb);
-        return () => listeners6.delete(cb);
+        listeners7.add(cb);
+        return () => listeners7.delete(cb);
       },
       stop() {
-        listeners6.clear();
+        listeners7.clear();
       }
     };
   }
@@ -31844,7 +31585,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.202";
+      return "3.2.203";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -33362,13 +33103,13 @@
         Atoms.inventory.myInventory.get().catch(() => null)
       ]);
       const hutchItems = Array.isArray(hutchItemsRaw) ? hutchItemsRaw : [];
-      const inventoryItems = Array.isArray(inventoryRaw?.items) ? inventoryRaw.items : Array.isArray(inventoryRaw) ? inventoryRaw : [];
+      const inventoryItems2 = Array.isArray(inventoryRaw?.items) ? inventoryRaw.items : Array.isArray(inventoryRaw) ? inventoryRaw : [];
       console.log("[InventorySorting] Hutch data", {
         hutchItems: hutchItems.length,
-        inventoryItems: inventoryItems.length
+        inventoryItems: inventoryItems2.length
       });
       applyPetItemsToContainer(hutchContainer, hutchItems);
-      applyPetItemsToContainer(inventoryContainer, inventoryItems);
+      applyPetItemsToContainer(inventoryContainer, inventoryItems2);
       return true;
     } catch (error) {
       console.warn("[InventorySorting] Impossible de mettre a jour les pets du hutch", error);
@@ -33800,7 +33541,7 @@
   }
   function injectDarkSelectStyles(id = "inv-sort-dark-styles") {
     if (document.getElementById(id)) return;
-    const css4 = `
+    const css5 = `
     .tm-sort-select {
       color: #e7eef7 !important;
       background-color: rgba(17,17,17,0.98) !important;
@@ -33825,7 +33566,7 @@
   `;
     const style2 = document.createElement("style");
     style2.id = id;
-    style2.textContent = css4;
+    style2.textContent = css5;
     document.head.appendChild(style2);
   }
   function createSortingBar(useCustomSelectStyles) {
@@ -35100,7 +34841,7 @@
   async function startActivityLogHistoryWatcher() {
     const stops = [];
     let lastSnapshot = [];
-    const ingest = async (logs, prev) => {
+    const ingest2 = async (logs, prev) => {
       try {
         const prevSnapshot = typeof prev !== "undefined" ? normalizeList(prev) : lastSnapshot;
         const nextSnapshot = normalizeList(logs);
@@ -35111,12 +34852,12 @@
     };
     try {
       const initial = normalizeList(await myActivityLog.get());
-      await ingest(initial);
+      await ingest2(initial);
     } catch {
     }
     try {
       const unsub = await myActivityLog.onChange((next, prev) => {
-        void ingest(next, prev);
+        void ingest2(next, prev);
       });
       stops.push(() => {
         try {
@@ -35526,6 +35267,356 @@
     }
   });
 
+  // src/services/hatchPity.ts
+  var PITY_MULTIPLIER = 2;
+  var MAX_PROTECTED_CHANCE = 0.05;
+  var GOLD_MUTATION = "Gold";
+  var RAINBOW_MUTATION = "Rainbow";
+  function isRecord2(value) {
+    return typeof value === "object" && value !== null;
+  }
+  function toPositiveNumber2(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+  function thresholdForChance(chance) {
+    if (!Number.isFinite(chance) || chance <= 0) return 0;
+    return Math.round(PITY_MULTIPLIER / chance);
+  }
+  function mutationEntry(mutationId) {
+    const entry = mutationCatalog2[mutationId];
+    return isRecord2(entry) ? entry : null;
+  }
+  function mutationIcon(mutationId) {
+    const sprite = mutationEntry(mutationId)?.sprite;
+    return typeof sprite === "string" && sprite ? sprite : `sprite/ui/Mutation${mutationId}`;
+  }
+  function mutationTargets() {
+    const targets = [];
+    for (const [key2, mutationId] of [
+      ["gold", GOLD_MUTATION],
+      ["rainbow", RAINBOW_MUTATION]
+    ]) {
+      const chance = toPositiveNumber2(mutationEntry(mutationId)?.baseChance) ?? 0;
+      if (chance <= 0) continue;
+      targets.push({
+        key: key2,
+        label: `${mutationId} pet`,
+        icon: mutationIcon(mutationId),
+        chance,
+        threshold: thresholdForChance(chance),
+        kind: "mutation"
+      });
+    }
+    return targets;
+  }
+  function speciesChances(weights) {
+    const out = /* @__PURE__ */ new Map();
+    let total = 0;
+    for (const value of Object.values(weights)) {
+      total += toPositiveNumber2(value) ?? 0;
+    }
+    if (total <= 0) return out;
+    for (const [species, value] of Object.entries(weights)) {
+      const weight = toPositiveNumber2(value);
+      if (weight === null) continue;
+      out.set(species, weight / total);
+    }
+    return out;
+  }
+  function speciesTargets(entry) {
+    const weights = isRecord2(entry.faunaSpawnWeights) ? entry.faunaSpawnWeights : {};
+    const chances = speciesChances(weights);
+    const declared = isRecord2(entry.speciesPityThresholdPulls) ? entry.speciesPityThresholdPulls : null;
+    const targets = [];
+    const species = declared ? Object.keys(declared) : Array.from(chances.keys());
+    for (const id of species) {
+      const chance = chances.get(id) ?? 0;
+      const declaredThreshold = declared ? toPositiveNumber2(declared[id]) : null;
+      if (declaredThreshold === null && (chance <= 0 || chance > MAX_PROTECTED_CHANCE)) continue;
+      const threshold = declaredThreshold ?? thresholdForChance(chance);
+      if (threshold <= 0) continue;
+      targets.push({
+        key: id,
+        label: id,
+        icon: `sprite/pet/${id}`,
+        chance,
+        threshold,
+        kind: "species"
+      });
+    }
+    targets.sort((a, b) => b.threshold - a.threshold || a.label.localeCompare(b.label));
+    return targets;
+  }
+  function buildEggPity(eggId, entry) {
+    const targets = [...speciesTargets(entry), ...mutationTargets()];
+    if (!targets.length) return null;
+    const weights = isRecord2(entry.faunaSpawnWeights) ? entry.faunaSpawnWeights : {};
+    const fauna = Array.from(speciesChances(weights)).map(([species, share]) => ({ species, share })).sort((a, b) => b.share - a.share || a.species.localeCompare(b.species));
+    return {
+      eggId,
+      name: typeof entry.name === "string" && entry.name.trim() ? entry.name : eggId,
+      rarity: typeof entry.rarity === "string" ? entry.rarity : "",
+      fauna,
+      targets
+    };
+  }
+  function listEggPity() {
+    const out = [];
+    for (const eggId of Object.keys(eggCatalog2)) {
+      const entry = eggCatalog2[eggId];
+      if (!isRecord2(entry)) continue;
+      const pity = buildEggPity(eggId, entry);
+      if (pity) out.push(pity);
+    }
+    out.sort((a, b) => {
+      const diff = rarityRank(a.rarity) - rarityRank(b.rarity);
+      return diff !== 0 ? diff : a.name.localeCompare(b.name);
+    });
+    return out;
+  }
+  function getEggPity(eggId) {
+    const entry = eggCatalog2[eggId];
+    return isRecord2(entry) ? buildEggPity(eggId, entry) : null;
+  }
+  function protectedSpecies(eggId) {
+    const pity = getEggPity(eggId);
+    if (!pity) return [];
+    return pity.targets.filter((target) => target.kind === "species").map((target) => target.key);
+  }
+
+  // src/services/hatchTracker.ts
+  var STATE_PATH = "hatch.tracker";
+  var HATCH_ACTION = "hatchEgg";
+  var DOUBLE_HATCH_ACTIONS = /* @__PURE__ */ new Set(["doublehatch", "doublehatchii"]);
+  var SEEN_LIMIT = 4e3;
+  var listeners6 = /* @__PURE__ */ new Set();
+  var cachedState = null;
+  function emptyCounters() {
+    return { species: {}, gold: 0, rainbow: 0, pulls: 0 };
+  }
+  function isRecord3(value) {
+    return typeof value === "object" && value !== null;
+  }
+  function toCount(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  }
+  function normalizeCounters(raw) {
+    const out = emptyCounters();
+    if (!isRecord3(raw)) return out;
+    if (isRecord3(raw.species)) {
+      for (const [species, value] of Object.entries(raw.species)) {
+        const count = toCount(value);
+        if (count > 0) out.species[species] = count;
+      }
+    }
+    out.gold = toCount(raw.gold);
+    out.rainbow = toCount(raw.rainbow);
+    out.pulls = toCount(raw.pulls);
+    return out;
+  }
+  function normalizeCounterMap(raw) {
+    const out = {};
+    if (!isRecord3(raw)) return out;
+    for (const [eggId, value] of Object.entries(raw)) {
+      out[eggId] = normalizeCounters(value);
+    }
+    return out;
+  }
+  function loadState() {
+    if (cachedState) return cachedState;
+    let raw = null;
+    try {
+      raw = readAriesPath(STATE_PATH);
+    } catch {
+    }
+    const seenPetIds = [];
+    if (isRecord3(raw) && Array.isArray(raw.seenPetIds)) {
+      for (const id of raw.seenPetIds) {
+        if (typeof id === "string" && id) seenPetIds.push(id);
+      }
+    }
+    cachedState = {
+      seenPetIds,
+      counters: normalizeCounterMap(isRecord3(raw) ? raw.counters : null),
+      offsets: normalizeCounterMap(isRecord3(raw) ? raw.offsets : null),
+      lastHatchAt: isRecord3(raw) ? toCount(raw.lastHatchAt) : 0,
+      bootstrapped: isRecord3(raw) ? raw.bootstrapped === true : false
+    };
+    return cachedState;
+  }
+  function saveState(state3) {
+    if (state3.seenPetIds.length > SEEN_LIMIT) {
+      state3.seenPetIds.splice(0, state3.seenPetIds.length - SEEN_LIMIT);
+    }
+    cachedState = state3;
+    try {
+      writeAriesPath(STATE_PATH, state3);
+    } catch {
+    }
+    for (const listener of listeners6) {
+      try {
+        listener(state3);
+      } catch {
+      }
+    }
+  }
+  function readPet(raw, eggIdFallback, timestamp, isPull) {
+    if (!isRecord3(raw)) return null;
+    const petId = typeof raw.id === "string" ? raw.id.trim() : "";
+    const species = typeof raw.petSpecies === "string" ? raw.petSpecies.trim() : "";
+    if (!petId || !species) return null;
+    let hasGold = false;
+    let hasRainbow = false;
+    if (Array.isArray(raw.mutations)) {
+      for (const mutation of raw.mutations) {
+        if (typeof mutation !== "string") continue;
+        const normalized = mutation.trim().toLowerCase();
+        if (normalized === GOLD_MUTATION.toLowerCase()) hasGold = true;
+        if (normalized === RAINBOW_MUTATION.toLowerCase()) hasRainbow = true;
+      }
+    }
+    const sourceEggId = typeof raw.sourceEggId === "string" && raw.sourceEggId.trim() ? raw.sourceEggId : null;
+    return {
+      petId,
+      species,
+      eggId: eggIdFallback ?? sourceEggId,
+      hasGold,
+      hasRainbow,
+      timestamp,
+      isPull
+    };
+  }
+  function extractHatchEvents(entries) {
+    const events = [];
+    for (const entry of entries) {
+      const action2 = typeof entry?.action === "string" ? entry.action.trim() : "";
+      if (!action2) continue;
+      const timestamp = Number(entry.timestamp) || 0;
+      const parameters = entry.parameters;
+      if (!isRecord3(parameters)) continue;
+      if (action2 === HATCH_ACTION) {
+        const eggId = typeof parameters.eggId === "string" && parameters.eggId.trim() ? parameters.eggId : null;
+        const event = readPet(parameters.pet, eggId, timestamp, true);
+        if (event) events.push(event);
+        continue;
+      }
+      if (DOUBLE_HATCH_ACTIONS.has(action2.toLowerCase())) {
+        const event = readPet(parameters.extraPet, null, timestamp, false);
+        if (event) events.push(event);
+      }
+    }
+    events.sort((a, b) => a.timestamp - b.timestamp);
+    return events;
+  }
+  function rarityOf(event) {
+    if (event.hasRainbow) return "rainbow";
+    if (event.hasGold) return "gold";
+    return "normal";
+  }
+  function applyPull(counters, event, rareSpecies) {
+    counters.pulls += 1;
+    for (const species of rareSpecies) {
+      if (event.species === species) counters.species[species] = 0;
+      else counters.species[species] = (counters.species[species] ?? 0) + 1;
+    }
+    counters.gold = event.hasGold ? 0 : counters.gold + 1;
+    counters.rainbow = event.hasRainbow ? 0 : counters.rainbow + 1;
+  }
+  function ingest(entries, countStats) {
+    var _a, _b;
+    const events = extractHatchEvents(entries);
+    if (!events.length) return false;
+    const state3 = loadState();
+    const seen = new Set(state3.seenPetIds);
+    let changed = false;
+    for (const event of events) {
+      if (seen.has(event.petId)) continue;
+      seen.add(event.petId);
+      state3.seenPetIds.push(event.petId);
+      changed = true;
+      if (countStats) {
+        try {
+          StatsService.incrementPetHatched(event.species, rarityOf(event));
+        } catch {
+        }
+      }
+      if (event.timestamp > state3.lastHatchAt) state3.lastHatchAt = event.timestamp;
+      if (!event.isPull || !event.eggId) continue;
+      const counters = (_a = state3.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
+      applyPull(counters, event, protectedSpecies(event.eggId));
+    }
+    if (changed) saveState(state3);
+    return changed;
+  }
+  var HatchTracker = {
+    getState() {
+      return loadState();
+    },
+    /** Observed misses for one egg, before the manual offset. */
+    getCounters(eggId) {
+      return loadState().counters[eggId] ?? emptyCounters();
+    },
+    getOffsets(eggId) {
+      return loadState().offsets[eggId] ?? emptyCounters();
+    },
+    setOffset(eggId, key2, value) {
+      var _a;
+      const state3 = loadState();
+      const offsets = (_a = state3.offsets)[eggId] ?? (_a[eggId] = emptyCounters());
+      const next = toCount(value);
+      if (key2 === "gold") offsets.gold = next;
+      else if (key2 === "rainbow") offsets.rainbow = next;
+      else if (next > 0) offsets.species[key2] = next;
+      else delete offsets.species[key2];
+      saveState(state3);
+    },
+    // Deliberately no reset: a counter that can be cleared is worse than useless,
+    // since the server's own never resets except on the outcome itself. Only
+    // `setOffset` moves a counter by hand.
+    subscribe(listener) {
+      listeners6.add(listener);
+      return () => {
+        listeners6.delete(listener);
+      };
+    }
+  };
+  async function startHatchTracker() {
+    const firstRun = !loadState().bootstrapped;
+    const consume = (logs, countStats) => {
+      if (!Array.isArray(logs)) return;
+      try {
+        ingest(logs, countStats);
+      } catch {
+      }
+    };
+    try {
+      ingest(getActivityLogHistory(), false);
+    } catch {
+    }
+    try {
+      consume(await myActivityLog.get(), !firstRun);
+    } catch {
+    }
+    if (firstRun) {
+      const state3 = loadState();
+      state3.bootstrapped = true;
+      saveState(state3);
+    }
+    let unsubscribe2 = null;
+    try {
+      unsubscribe2 = await myActivityLog.onChange((next) => consume(next, true));
+    } catch {
+    }
+    return () => {
+      try {
+        unsubscribe2?.();
+      } catch {
+      }
+    };
+  }
+
   // src/ui/hud.ts
   function mountHUD(opts) {
     const HUD_POS_PATH = "hud.pos";
@@ -35538,7 +35629,7 @@
       document.addEventListener("DOMContentLoaded", () => mountHUD(opts), { once: true });
       return;
     }
-    const css4 = `
+    const css5 = `
   :root{
     --qws-bg:        #0f1318;
     --qws-panel:     #111823cc;
@@ -35639,7 +35730,7 @@
   .qws-win .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:6px 0 }
   `;
     const st = document.createElement("style");
-    st.textContent = css4;
+    st.textContent = css5;
     (document.documentElement || document.body).appendChild(st);
     const box = document.createElement("div");
     box.className = "qws2";
@@ -36512,6 +36603,10 @@
       }
       try {
         await startActivityLogHistoryWatcher();
+      } catch {
+      }
+      try {
+        await startHatchTracker();
       } catch {
       }
       startActivityLogFilterPixi();
@@ -43456,9 +43551,9 @@ next: ${next}`;
     if (document.readyState !== "loading") res();
     else addEventListener("DOMContentLoaded", () => res(), { once: true });
   });
-  function addStyle(css4) {
+  function addStyle(css5) {
     const s = document.createElement("style");
-    s.textContent = css4;
+    s.textContent = css5;
     document.head.appendChild(s);
     return s;
   }
@@ -44628,310 +44723,831 @@ next: ${next}`;
     ui.mount(container);
   }
 
-  // src/ui/menus/petsHatch.ts
+  // src/ui/menus/panel-icons.ts
+  var css = (el2, style2) => Object.assign(el2.style, style2);
+  function spriteLookup(frameKey) {
+    const parts = frameKey.split("/").filter(Boolean);
+    const name = parts[parts.length - 1] ?? frameKey;
+    const category = parts.length >= 2 ? parts[parts.length - 2] : "";
+    const categories = [category, `${category}s`, "ui", "decor", "objects"].filter(
+      (value, index, all) => value && all.indexOf(value) === index
+    );
+    return { categories, name };
+  }
+  function iconBox(source, sizePx, logTag) {
+    const box = document.createElement("div");
+    css(box, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: `${sizePx}px`,
+      height: `${sizePx}px`,
+      flex: "0 0 auto"
+    });
+    if (/^https?:\/\//i.test(source)) {
+      const img = document.createElement("img");
+      css(img, { maxWidth: "100%", maxHeight: "100%", imageRendering: "auto" });
+      img.alt = "";
+      setImageSafe(img, source);
+      box.appendChild(img);
+    } else {
+      const { categories, name } = spriteLookup(source);
+      attachSpriteIcon(box, categories, name, sizePx, logTag);
+    }
+    return box;
+  }
+
+  // src/ui/menus/panel-ui.ts
+  var STYLE_ID2 = "qws-panel-ui-css";
+  var ROW_ICON_PX = 26;
+  var TEAL = "#5eead4";
+  var TEAL_DIM = "rgba(94,234,212,0.12)";
+  var TEAL_BORDER = "rgba(94,234,212,0.3)";
+  var BORDER = "rgba(255,255,255,0.08)";
+  var CARD_BG = "rgba(255,255,255,0.03)";
+  var TEXT = "#e7eef7";
+  var TEXT_DIM = "rgba(226,232,240,0.45)";
+  var DANGER = "#ef4444";
+  var WARN = "#fbbf24";
+  var css2 = (el2, style2) => Object.assign(el2.style, style2);
+  function ensurePanelStyles() {
+    if (document.getElementById(STYLE_ID2)) return;
+    const st = document.createElement("style");
+    st.id = STYLE_ID2;
+    st.textContent = `
+.qws-pnl-scroll::-webkit-scrollbar { width: 6px; }
+.qws-pnl-scroll::-webkit-scrollbar-track { background: transparent; }
+.qws-pnl-scroll::-webkit-scrollbar-thumb { background: rgba(94,234,212,0.2); border-radius: 3px; }
+.qws-pnl-scroll::-webkit-scrollbar-thumb:hover { background: rgba(94,234,212,0.35); }
+.qws-pnl-scroll { scrollbar-width: thin; scrollbar-color: rgba(94,234,212,0.2) transparent; }
+
+.qws-pnl-cell {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  aspect-ratio: 1; border-radius: 10px; cursor: pointer;
+  background: ${CARD_BG}; border: 1px solid ${BORDER};
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+.qws-pnl-cell:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.16); transform: translateY(-1px); }
+.qws-pnl-cell.is-active { border-color: ${TEAL_BORDER}; background: ${TEAL_DIM}; }
+.qws-pnl-cell.is-skinned::after {
+  content: ''; position: absolute; top: 5px; right: 5px;
+  width: 6px; height: 6px; border-radius: 50%; background: ${TEAL};
+}
+
+.qws-pnl-toggle { position:relative; display:inline-block; width:36px; height:20px; cursor:pointer; flex-shrink:0; }
+.qws-pnl-toggle input { opacity:0; width:0; height:0; position:absolute; }
+.qws-pnl-track {
+  position:absolute; inset:0; border-radius:10px;
+  background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.12);
+  transition:background 150ms ease, border-color 150ms ease;
+}
+.qws-pnl-toggle input:checked ~ .qws-pnl-track { background:rgba(94,234,212,0.25); border-color:rgba(94,234,212,0.5); }
+.qws-pnl-thumb {
+  position:absolute; top:3px; left:3px; width:12px; height:12px; border-radius:50%;
+  background:rgba(226,232,240,0.5); transition:transform 150ms ease, background 150ms ease;
+}
+.qws-pnl-toggle input:checked ~ .qws-pnl-track .qws-pnl-thumb { transform:translateX(16px); background:${TEAL}; }
+
+.qws-pnl-input {
+  padding: 8px 10px; border-radius: 9px; border: 1px solid ${BORDER};
+  background: rgba(0,0,0,0.22); color: ${TEXT}; font-size: 12px; outline: none;
+  transition: border-color 120ms ease;
+}
+.qws-pnl-input:focus { border-color: ${TEAL_BORDER}; }
+.qws-pnl-input option { background: #10151c; color: ${TEXT}; }
+
+/* Restyles the Menu's own hotkey capture button, which stays in use for its
+   key-recording behaviour. Scoped to panels so other menus keep their look. */
+.qws-pnl-root .qmm-hotkey {
+  min-width: 104px; padding: 7px 12px; border-radius: 9px;
+  border: 1px solid ${BORDER}; background: rgba(0,0,0,0.22);
+  color: ${TEXT}; font-size: 11px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: all 120ms ease;
+}
+.qws-pnl-root .qmm-hotkey:hover { border-color: rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); }
+.qws-pnl-root .qmm-hotkey.is-assigned { color: ${TEAL}; border-color: ${TEAL_BORDER}; background: ${TEAL_DIM}; }
+.qws-pnl-root .qmm-hotkey.is-empty { color: ${TEXT_DIM}; font-weight: 500; }
+.qws-pnl-root .qmm-hotkey.is-recording {
+  color: ${WARN}; border-color: rgba(251,191,36,0.55); background: rgba(251,191,36,0.12);
+}
+.qws-pnl-root .qmm-check, .qws-pnl-root .qmm-switch { accent-color: ${TEAL}; }
+
+.qws-pnl-range {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 4px; border-radius: 999px; outline: none; cursor: pointer;
+  background: rgba(255,255,255,0.1); border: none; padding: 0; margin: 0;
+}
+.qws-pnl-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: ${TEAL}; border: none; cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.qws-pnl-range::-webkit-slider-thumb:hover { transform: scale(1.15); box-shadow: 0 0 0 4px ${TEAL_DIM}; }
+.qws-pnl-range::-moz-range-thumb {
+  width: 13px; height: 13px; border-radius: 50%;
+  background: ${TEAL}; border: none; cursor: pointer;
+}
+.qws-pnl-range::-moz-range-track { height: 4px; border-radius: 999px; background: rgba(255,255,255,0.1); }
+.qws-pnl-range:disabled { opacity: 0.4; cursor: not-allowed; }
+.qws-pnl-range:disabled::-webkit-slider-thumb { background: ${TEXT_DIM}; cursor: not-allowed; }
+.qws-pnl-range:disabled::-moz-range-thumb { background: ${TEXT_DIM}; cursor: not-allowed; }
+
+.qws-pnl-head:hover .qws-pnl-chevron { color: ${TEAL}; }
+`;
+    document.head.appendChild(st);
+  }
+  var GOLD = "#FFC734";
+  var RAINBOW = "#c084fc";
+  function sectionLabel(text) {
+    const el2 = document.createElement("div");
+    css2(el2, {
+      fontSize: "10px",
+      fontWeight: "700",
+      letterSpacing: "0.08em",
+      color: TEXT_DIM,
+      textTransform: "uppercase"
+    });
+    el2.textContent = text;
+    return el2;
+  }
+  function card() {
+    const el2 = document.createElement("div");
+    css2(el2, {
+      padding: "10px",
+      background: CARD_BG,
+      borderRadius: "12px",
+      border: `1px solid ${BORDER}`,
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px",
+      minHeight: "0"
+    });
+    return el2;
+  }
+  var TONES = {
+    accent: {
+      fg: TEAL,
+      bg: TEAL_DIM,
+      border: TEAL_BORDER,
+      hoverBg: "rgba(94,234,212,0.22)",
+      hoverBorder: "rgba(94,234,212,0.55)"
+    },
+    neutral: {
+      fg: TEXT,
+      bg: CARD_BG,
+      border: BORDER,
+      hoverBg: "rgba(255,255,255,0.06)",
+      hoverBorder: "rgba(255,255,255,0.16)"
+    },
+    danger: {
+      fg: DANGER,
+      bg: "rgba(239,68,68,0.12)",
+      border: "rgba(239,68,68,0.3)",
+      hoverBg: "rgba(239,68,68,0.2)",
+      hoverBorder: "rgba(239,68,68,0.55)"
+    }
+  };
+  function button(label2, tone, onClick) {
+    const btn = document.createElement("button");
+    const palette = TONES[tone];
+    css2(btn, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "6px",
+      padding: "7px 12px",
+      border: `1px solid ${palette.border}`,
+      borderRadius: "9px",
+      background: palette.bg,
+      color: palette.fg,
+      fontSize: "11px",
+      fontWeight: "600",
+      cursor: "pointer",
+      transition: "all 120ms ease",
+      whiteSpace: "nowrap"
+    });
+    btn.textContent = label2;
+    btn.onmouseenter = () => css2(btn, { background: palette.hoverBg, borderColor: palette.hoverBorder });
+    btn.onmouseleave = () => css2(btn, { background: palette.bg, borderColor: palette.border });
+    btn.onclick = async () => {
+      if (btn.disabled) return;
+      css2(btn, { opacity: "0.6", pointerEvents: "none" });
+      try {
+        await onClick();
+      } finally {
+        setButtonEnabled(btn, !btn.disabled);
+      }
+    };
+    return btn;
+  }
+  function setButtonEnabled(btn, enabled2) {
+    btn.disabled = !enabled2;
+    css2(btn, { opacity: enabled2 ? "1" : "0.35", pointerEvents: enabled2 ? "auto" : "none" });
+  }
+  function toggle(checked, onChange) {
+    const wrap = document.createElement("label");
+    wrap.className = "qws-pnl-toggle";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = checked;
+    const track = document.createElement("span");
+    track.className = "qws-pnl-track";
+    const thumb = document.createElement("span");
+    thumb.className = "qws-pnl-thumb";
+    track.appendChild(thumb);
+    wrap.append(input, track);
+    input.addEventListener("change", () => onChange(input.checked));
+    wrap.setChecked = (value) => {
+      input.checked = value;
+    };
+    return wrap;
+  }
+  function chip(text, tone) {
+    const el2 = document.createElement("span");
+    const color = tone === "ok" ? TEAL : WARN;
+    css2(el2, {
+      alignSelf: "flex-start",
+      fontSize: "10px",
+      fontWeight: "600",
+      padding: "2px 7px",
+      borderRadius: "999px",
+      color,
+      background: tone === "ok" ? TEAL_DIM : "rgba(251,191,36,0.12)"
+    });
+    el2.textContent = text;
+    return el2;
+  }
+  function pill(text) {
+    const el2 = document.createElement("span");
+    css2(el2, {
+      fontSize: "11px",
+      fontWeight: "600",
+      padding: "4px 9px",
+      borderRadius: "999px",
+      border: `1px solid ${BORDER}`,
+      background: "rgba(0,0,0,0.22)",
+      color: TEXT,
+      whiteSpace: "nowrap"
+    });
+    el2.textContent = text;
+    return el2;
+  }
+  function meter() {
+    const root = document.createElement("div");
+    css2(root, {
+      position: "relative",
+      height: "5px",
+      borderRadius: "999px",
+      background: "rgba(255,255,255,0.08)",
+      overflow: "hidden",
+      flex: "1 1 auto",
+      minWidth: "60px"
+    });
+    const fill = document.createElement("div");
+    css2(fill, {
+      position: "absolute",
+      inset: "0 auto 0 0",
+      width: "0%",
+      borderRadius: "999px",
+      background: TEAL,
+      transition: "width 200ms ease, background 200ms ease"
+    });
+    root.appendChild(fill);
+    return {
+      root,
+      set(ratio, tone = "accent") {
+        const clamped = Number.isFinite(ratio) ? Math.max(0, Math.min(1, ratio)) : 0;
+        fill.style.width = `${clamped * 100}%`;
+        fill.style.background = tone === "warn" ? WARN : TEAL;
+      }
+    };
+  }
+  function range(min, max, step, value) {
+    const el2 = document.createElement("input");
+    el2.className = "qws-pnl-range";
+    el2.type = "range";
+    el2.min = String(min);
+    el2.max = String(max);
+    el2.step = String(step);
+    el2.value = String(value);
+    return el2;
+  }
+  function textField(placeholder, value = "") {
+    const el2 = document.createElement("input");
+    el2.className = "qws-pnl-input";
+    el2.type = "text";
+    el2.placeholder = placeholder;
+    el2.value = value;
+    css2(el2, { padding: "6px 9px", fontSize: "11.5px" });
+    return el2;
+  }
+  function selectField(options) {
+    const el2 = document.createElement("select");
+    el2.className = "qws-pnl-input";
+    css2(el2, { padding: "6px 9px", fontSize: "11.5px", cursor: "pointer" });
+    for (const [value, label2] of options) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label2;
+      el2.appendChild(option);
+    }
+    return el2;
+  }
+  function numberField(min, max, step, value) {
+    const el2 = document.createElement("input");
+    el2.className = "qws-pnl-input";
+    el2.type = "number";
+    el2.min = String(min);
+    el2.max = String(max);
+    el2.step = String(step);
+    el2.value = String(value);
+    css2(el2, { width: "78px", textAlign: "right" });
+    return el2;
+  }
+
+  // src/ui/menus/pets/hatch-counts.ts
   var NF_INT = new Intl.NumberFormat("en-US");
   var formatInt = (value) => NF_INT.format(Math.max(0, Math.floor(value || 0)));
-  var RARITY_ORDER2 = [
-    rarity2.Common,
-    rarity2.Uncommon,
-    rarity2.Rare,
-    rarity2.Legendary,
-    rarity2.Mythic,
-    rarity2.Divine,
-    rarity2.Celestial
-  ];
-  var RARITY_BORDER_COLORS = {
-    [rarity2.Common]: "#E7E7E7",
-    [rarity2.Uncommon]: "#67BD4D",
-    [rarity2.Rare]: "#0071C6",
-    [rarity2.Legendary]: "#FFC734",
-    [rarity2.Mythic]: "#9944A7",
-    [rarity2.Divine]: "#FF7835",
-    [rarity2.Celestial]: "#7C2AE8"
-  };
-  function createStatList(columns, rows) {
-    const container = document.createElement("div");
-    container.className = "stats-list";
-    const toTemplate = (column) => {
-      if (column.width) return column.width;
-      if (column.minWidth) return `minmax(${column.minWidth}, 1fr)`;
-      return "minmax(0, 1fr)";
-    };
-    const template = columns.map(toTemplate).join(" ");
-    const header = document.createElement("div");
-    header.className = "stats-list__row stats-list__row--header";
-    header.style.gridTemplateColumns = template;
-    for (const column of columns) {
-      const cell = document.createElement("span");
-      cell.className = "stats-list__cell";
-      const align = column.align ?? "left";
-      if (align !== "left") cell.classList.add(`stats-list__cell--align-${align}`);
-      if (column.headerClassName) cell.classList.add(column.headerClassName);
-      cell.textContent = column.label;
-      header.appendChild(cell);
-    }
-    container.appendChild(header);
-    for (const row of rows) {
-      const rowEl = document.createElement("div");
-      rowEl.className = "stats-list__row";
-      rowEl.style.gridTemplateColumns = template;
-      row.forEach((cellData, index) => {
-        const column = columns[index];
-        const cell = document.createElement("span");
-        cell.className = "stats-list__cell";
-        const align = cellData.align ?? column.align ?? "left";
-        if (align !== "left") {
-          cell.classList.add(`stats-list__cell--align-${align}`);
-          if (align === "right") cell.classList.add("qmm-num");
-        }
-        if (cellData.hint) cell.title = cellData.hint;
-        const hasContent = Boolean(cellData.content);
-        if (cellData.content) {
-          cell.appendChild(cellData.content);
-        }
-        if (cellData.text != null) {
-          if (hasContent) {
-            const textSpan = document.createElement("span");
-            textSpan.textContent = cellData.text;
-            cell.appendChild(textSpan);
-          } else {
-            cell.textContent = cellData.text;
-          }
-        } else if (!hasContent) {
-          cell.textContent = "";
-        }
-        rowEl.appendChild(cell);
-      });
-      container.appendChild(rowEl);
-    }
-    return container;
+  var SPECIES_ICON_PX = 24;
+  var HEADER_ICON_PX = 18;
+  var GRID_TEMPLATE = "minmax(0, 2.2fr) repeat(4, minmax(54px, 1fr))";
+  function countsFor(stats, species) {
+    return stats.pets.hatchedByType[species.toLowerCase()] ?? { normal: 0, gold: 0, rainbow: 0 };
   }
-  function isPlainRecord(value) {
+  function totalOf(counts) {
+    return (counts.normal ?? 0) + (counts.gold ?? 0) + (counts.rainbow ?? 0);
+  }
+  function sortSpeciesByRarity(species) {
+    return species.slice().sort((a, b) => {
+      const infoA = petCatalog2[a];
+      const infoB = petCatalog2[b];
+      const diff = rarityRank(infoA?.rarity) - rarityRank(infoB?.rarity);
+      return diff !== 0 ? diff : a.localeCompare(b);
+    });
+  }
+  function gridRow() {
+    const row = document.createElement("div");
+    css2(row, {
+      display: "grid",
+      gridTemplateColumns: GRID_TEMPLATE,
+      alignItems: "center",
+      gap: "6px"
+    });
+    return row;
+  }
+  function headerCell(label2, align = "center") {
+    const cell = document.createElement("span");
+    css2(cell, {
+      fontSize: "10.5px",
+      fontWeight: "700",
+      letterSpacing: "0.06em",
+      textTransform: "uppercase",
+      textAlign: align,
+      color: TEXT_DIM
+    });
+    cell.textContent = label2;
+    return cell;
+  }
+  function mutationHeaderCell(mutationId) {
+    const cell = document.createElement("span");
+    css2(cell, { display: "flex", justifyContent: "center" });
+    cell.title = mutationId;
+    cell.appendChild(iconBox(mutationIcon(mutationId), HEADER_ICON_PX, "hatch"));
+    return cell;
+  }
+  function numberCell(value, color, strong = false) {
+    const cell = document.createElement("span");
+    css2(cell, {
+      fontSize: "12.5px",
+      fontVariantNumeric: "tabular-nums",
+      fontWeight: strong ? "700" : "500",
+      color: value > 0 ? color : TEXT_DIM,
+      textAlign: "center"
+    });
+    cell.textContent = formatInt(value);
+    return cell;
+  }
+  function speciesCell(row) {
+    const cell = document.createElement("span");
+    css2(cell, { display: "flex", alignItems: "center", gap: "7px", minWidth: "0" });
+    cell.appendChild(iconBox(`sprite/pet/${row.species}`, SPECIES_ICON_PX, "hatch"));
+    const label2 = document.createElement("span");
+    css2(label2, {
+      fontSize: "12.5px",
+      color: TEXT,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    });
+    label2.textContent = row.species;
+    cell.appendChild(label2);
+    if (row.share !== void 0) {
+      const share = document.createElement("span");
+      css2(share, { fontSize: "10px", color: TEXT_DIM, whiteSpace: "nowrap", flex: "0 0 auto" });
+      const percent = row.share * 100;
+      share.textContent = `${percent >= 1 ? Math.round(percent) : percent.toFixed(1)}%`;
+      cell.appendChild(share);
+    }
+    return cell;
+  }
+  function speciesCountsGrid(rows, stats) {
+    const wrap = document.createElement("div");
+    css2(wrap, { display: "flex", flexDirection: "column", gap: "3px" });
+    const header = gridRow();
+    header.append(
+      headerCell("Mutation counters", "left"),
+      headerCell("Normal"),
+      mutationHeaderCell(GOLD_MUTATION),
+      mutationHeaderCell(RAINBOW_MUTATION),
+      headerCell("Total")
+    );
+    wrap.appendChild(header);
+    let totalNormal = 0;
+    let totalGold = 0;
+    let totalRainbow = 0;
+    for (const row of rows) {
+      const counts = countsFor(stats, row.species);
+      totalNormal += counts.normal ?? 0;
+      totalGold += counts.gold ?? 0;
+      totalRainbow += counts.rainbow ?? 0;
+      const line = gridRow();
+      line.append(
+        speciesCell(row),
+        numberCell(counts.normal, TEXT),
+        numberCell(counts.gold, GOLD),
+        numberCell(counts.rainbow, RAINBOW),
+        numberCell(totalOf(counts), TEAL, true)
+      );
+      wrap.appendChild(line);
+    }
+    if (rows.length > 1) {
+      const separator = document.createElement("div");
+      css2(separator, { height: "1px", background: BORDER, margin: "2px 0" });
+      wrap.appendChild(separator);
+      const label2 = document.createElement("span");
+      css2(label2, { fontSize: "11px", fontWeight: "700", color: TEXT_DIM, textTransform: "uppercase" });
+      label2.textContent = "Total";
+      const totals = gridRow();
+      totals.append(
+        label2,
+        numberCell(totalNormal, TEXT, true),
+        numberCell(totalGold, GOLD, true),
+        numberCell(totalRainbow, RAINBOW, true),
+        numberCell(totalNormal + totalGold + totalRainbow, TEAL, true)
+      );
+      wrap.appendChild(totals);
+    }
+    return wrap;
+  }
+
+  // src/ui/menus/panel-layout.ts
+  function settingRow(title, hint, control, opts = {}) {
+    const row = document.createElement("div");
+    css2(row, {
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      padding: "8px 10px",
+      borderRadius: "10px",
+      background: CARD_BG,
+      border: `1px solid ${BORDER}`,
+      flexShrink: "0"
+    });
+    if (opts.icon) row.appendChild(iconBox(opts.icon, ROW_ICON_PX, opts.iconTag ?? "panel"));
+    const labelCol = document.createElement("div");
+    css2(labelCol, { display: "flex", flexDirection: "column", gap: "2px", flex: "1 1 auto", minWidth: "0" });
+    const name = document.createElement("div");
+    css2(name, { fontSize: "12px", color: TEXT });
+    name.textContent = title;
+    labelCol.appendChild(name);
+    if (hint) {
+      const desc = document.createElement("div");
+      css2(desc, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.4" });
+      desc.textContent = hint;
+      labelCol.appendChild(desc);
+    }
+    const controls = document.createElement("div");
+    css2(controls, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      gap: "8px",
+      flex: "0 0 auto",
+      flexWrap: "wrap"
+    });
+    controls.appendChild(control);
+    row.append(labelCol, controls);
+    return { row, controls };
+  }
+  function collapsibleCard(opts) {
+    const root = card();
+    css2(root, { flexShrink: "0", minHeight: "auto" });
+    const head = document.createElement("button");
+    head.type = "button";
+    head.className = "qws-pnl-head";
+    css2(head, {
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      padding: "0",
+      border: "none",
+      background: "none",
+      cursor: "pointer",
+      textAlign: "left",
+      font: "inherit",
+      color: "inherit"
+    });
+    const titles = document.createElement("div");
+    css2(titles, { display: "flex", flexDirection: "column", gap: "3px", minWidth: "0", flex: "1 1 auto" });
+    if (opts.header) {
+      titles.appendChild(opts.header);
+    } else {
+      const title = opts.title ?? "";
+      titles.appendChild(sectionLabel(opts.icon ? `${opts.icon} ${title}` : title));
+      if (opts.description) {
+        const desc = document.createElement("div");
+        css2(desc, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
+        desc.textContent = opts.description;
+        titles.appendChild(desc);
+      }
+    }
+    const chevron = document.createElement("span");
+    chevron.className = "qws-pnl-chevron";
+    css2(chevron, {
+      color: TEXT_DIM,
+      fontSize: "10px",
+      transition: "transform 140ms ease, color 120ms ease",
+      flex: "0 0 auto",
+      marginLeft: "auto"
+    });
+    chevron.textContent = "\u25B6";
+    head.append(titles, chevron);
+    const body = document.createElement("div");
+    css2(body, { display: "flex", flexDirection: "column", gap: "8px" });
+    let collapsed = opts.collapsed;
+    const apply = () => {
+      body.style.display = collapsed ? "none" : "flex";
+      chevron.style.transform = collapsed ? "rotate(0deg)" : "rotate(90deg)";
+      head.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    };
+    apply();
+    head.addEventListener("click", () => {
+      collapsed = !collapsed;
+      apply();
+      opts.onToggle(collapsed);
+    });
+    root.append(head, body);
+    return { root, body };
+  }
+
+  // src/ui/menus/pets/hatch-egg-card.ts
+  var NF_INT2 = new Intl.NumberFormat("en-US");
+  var formatInt2 = (value) => NF_INT2.format(Math.max(0, Math.floor(value || 0)));
+  var EGG_ICON_PX = 30;
+  var TARGET_ICON_PX = 22;
+  var RARITY_ICON_PX = 20;
+  var ROW_TEMPLATE = "minmax(96px, 1fr) minmax(70px, 1.5fr) auto auto";
+  var NEAR_GUARANTEE_PULLS = 10;
+  function formatChance(chance) {
+    if (!Number.isFinite(chance) || chance <= 0) return "";
+    const percent = chance * 100;
+    return `${percent >= 1 ? percent.toFixed(percent % 1 === 0 ? 0 : 1) : percent.toFixed(2)}%`;
+  }
+  function counterValue(counters, key2) {
+    if (key2 === "gold") return counters.gold;
+    if (key2 === "rainbow") return counters.rainbow;
+    return counters.species[key2] ?? 0;
+  }
+  function targetRow(egg, target, showOffsets) {
+    const observed = counterValue(HatchTracker.getCounters(egg.eggId), target.key);
+    const offset = counterValue(HatchTracker.getOffsets(egg.eggId), target.key);
+    const misses = observed + offset;
+    const ceiling = Math.max(1, target.threshold - 1);
+    const remaining = Math.max(0, ceiling - misses);
+    const due = remaining === 0;
+    const near = !due && remaining <= NEAR_GUARANTEE_PULLS;
+    const row = document.createElement("div");
+    css2(row, {
+      display: "grid",
+      gridTemplateColumns: ROW_TEMPLATE,
+      alignItems: "center",
+      gap: "10px",
+      padding: "3px 0"
+    });
+    const label2 = document.createElement("div");
+    css2(label2, { display: "flex", alignItems: "center", gap: "6px", minWidth: "0" });
+    label2.title = target.label;
+    const icon = iconBox(target.icon, TARGET_ICON_PX, "hatch");
+    label2.appendChild(icon);
+    if (target.kind === "species") {
+      const name = document.createElement("span");
+      css2(name, {
+        fontSize: "12.5px",
+        color: TEXT,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap"
+      });
+      name.textContent = target.label;
+      label2.appendChild(name);
+    }
+    const chance = formatChance(target.chance);
+    if (chance) {
+      const rate = document.createElement("span");
+      css2(rate, { fontSize: "10.5px", color: TEXT_DIM, whiteSpace: "nowrap" });
+      rate.textContent = chance;
+      label2.appendChild(rate);
+    }
+    const bar = meter();
+    bar.set(misses / ceiling, due || near ? "warn" : "accent");
+    const value = document.createElement("span");
+    css2(value, {
+      fontSize: "11.5px",
+      fontVariantNumeric: "tabular-nums",
+      color: due || near ? WARN : TEXT_DIM,
+      whiteSpace: "nowrap",
+      textAlign: "right"
+    });
+    value.textContent = due ? "Guaranteed" : `${formatInt2(misses)} / ${formatInt2(ceiling)}`;
+    value.title = due ? `Due: the next pull is forced (threshold ${formatInt2(target.threshold)}).` : `${formatInt2(remaining)} more misses before the guarantee (threshold ${formatInt2(target.threshold)}).`;
+    row.append(label2, bar.root, value);
+    if (showOffsets) {
+      const input = numberField(0, ceiling, 1, offset);
+      css2(input, { width: "70px", padding: "5px 7px", fontSize: "11px" });
+      input.title = "Head start: your real counter when the mod started watching.";
+      input.addEventListener("change", () => {
+        HatchTracker.setOffset(egg.eggId, target.key, Number(input.value));
+      });
+      row.appendChild(input);
+    } else {
+      row.appendChild(document.createElement("span"));
+    }
+    return row;
+  }
+  function eggHeader(egg, pulls) {
+    const head = document.createElement("div");
+    css2(head, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+    head.appendChild(iconBox(`sprite/pet/${egg.eggId}`, EGG_ICON_PX, "hatch"));
+    const name = document.createElement("span");
+    css2(name, {
+      fontSize: "13.5px",
+      fontWeight: "600",
+      color: TEXT,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    });
+    name.textContent = egg.name;
+    head.appendChild(name);
+    const rarityFrame = raritySprite(egg.rarity);
+    if (rarityFrame) {
+      const badge = iconBox(rarityFrame, RARITY_ICON_PX, "hatch");
+      badge.title = egg.rarity;
+      head.appendChild(badge);
+    }
+    const seen = document.createElement("span");
+    css2(seen, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap", marginLeft: "auto" });
+    seen.textContent = pulls === 1 ? "1 hatch seen" : `${formatInt2(pulls)} hatches seen`;
+    head.appendChild(seen);
+    return head;
+  }
+  function createEggCard(options) {
+    const { egg, stats, showOffsets } = options;
+    const counters = HatchTracker.getCounters(egg.eggId);
+    const card3 = collapsibleCard({
+      header: eggHeader(egg, counters.pulls),
+      collapsed: options.collapsed,
+      onToggle: options.onToggle
+    });
+    const panel = document.createElement("div");
+    css2(panel, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "2px",
+      padding: "7px 9px",
+      borderRadius: "8px",
+      background: CARD_BG,
+      border: `1px solid ${BORDER}`
+    });
+    panel.appendChild(sectionLabel("Bad luck protection"));
+    for (const target of egg.targets) {
+      panel.appendChild(targetRow(egg, target, showOffsets));
+    }
+    if (egg.fauna.length) {
+      const separator = document.createElement("div");
+      css2(separator, { height: "1px", background: BORDER, margin: "5px 0 4px" });
+      panel.appendChild(separator);
+      panel.appendChild(
+        speciesCountsGrid(
+          egg.fauna.map((entry) => ({ species: entry.species, share: entry.share })),
+          stats
+        )
+      );
+    }
+    card3.body.appendChild(panel);
+    return card3.root;
+  }
+
+  // src/ui/menus/petsHatch.ts
+  var OTHER_SECTION_ID = "__other__";
+  function isCollapsed(sectionId) {
+    return getAriesStorage().hatch?.expanded?.[sectionId] !== true;
+  }
+  function setCollapsed(sectionId, collapsed) {
+    updateAriesStorage((current) => {
+      const hatch = current.hatch ?? (current.hatch = {});
+      const map2 = hatch.expanded ?? (hatch.expanded = {});
+      if (collapsed) delete map2[sectionId];
+      else map2[sectionId] = true;
+    });
+  }
+  function isRecord4(value) {
     return typeof value === "object" && value !== null;
   }
-  function getInventoryItems(raw) {
+  function inventoryItems(raw) {
     if (Array.isArray(raw)) return raw;
-    if (isPlainRecord(raw) && Array.isArray(raw.items)) {
-      return raw.items;
-    }
+    if (isRecord4(raw) && Array.isArray(raw.items)) return raw.items;
     return [];
   }
-  function determinePetMutationType(mutations) {
+  function mutationTypeOf(mutations) {
     if (!Array.isArray(mutations)) return "normal";
     let hasGold = false;
     for (const mutation of mutations) {
       if (typeof mutation !== "string") continue;
       const normalized = mutation.trim().toLowerCase();
-      if (normalized === "rainbow") {
-        return "rainbow";
-      }
-      if (normalized === "gold") {
-        hasGold = true;
-      }
+      if (normalized === "rainbow") return "rainbow";
+      if (normalized === "gold") hasGold = true;
     }
     return hasGold ? "gold" : "normal";
   }
-  function sumHatchedCounts(counts) {
-    if (!isPlainRecord(counts)) return 0;
-    const normal = Number(counts.normal) || 0;
-    const gold = Number(counts.gold) || 0;
-    const rainbow = Number(counts.rainbow) || 0;
-    return Math.max(0, normal) + Math.max(0, gold) + Math.max(0, rainbow);
-  }
-  function isPetStatsSectionEmpty(stats) {
+  function isTableEmpty(stats) {
     const entries = Object.values(stats.pets?.hatchedByType ?? {});
-    if (entries.length === 0) return true;
-    return entries.every((counts) => sumHatchedCounts(counts) <= 0);
+    return entries.length === 0 || entries.every((counts) => totalOf(counts) <= 0);
   }
-  async function initPets(stats) {
-    if (!isPetStatsSectionEmpty(stats)) return;
-    let inventory;
+  function addSpecies(map2, species, mutations) {
+    const name = typeof species === "string" ? species.trim() : "";
+    if (!name) return;
+    const key2 = name.toLowerCase();
+    const counts = map2.get(key2) ?? { normal: 0, gold: 0, rainbow: 0 };
+    const bucket = mutationTypeOf(mutations);
+    counts[bucket] = (counts[bucket] ?? 0) + 1;
+    map2.set(key2, counts);
+  }
+  async function seedFromOwnedPets(stats) {
+    if (!isTableEmpty(stats)) return;
+    let inventory = null;
+    let activePets2 = null;
     try {
       inventory = await myInventory.get();
     } catch (error) {
       console.warn("[PetsHatch] Failed to read inventory data", error);
-      inventory = null;
     }
-    let activePetsRaw;
     try {
-      activePetsRaw = await myPetInfos.get();
+      activePets2 = await myPetInfos.get();
     } catch (error) {
       console.warn("[PetsHatch] Failed to read active pet data", error);
-      activePetsRaw = null;
     }
-    const items = getInventoryItems(inventory);
-    const activePets2 = Array.isArray(activePetsRaw) ? activePetsRaw : [];
-    if (items.length === 0 && activePets2.length === 0) return;
-    const countsBySpecies = /* @__PURE__ */ new Map();
-    for (const item of items) {
-      if (!isPlainRecord(item)) continue;
+    const counts = /* @__PURE__ */ new Map();
+    for (const item of inventoryItems(inventory)) {
+      if (!isRecord4(item)) continue;
       const itemType = typeof item.itemType === "string" ? item.itemType.toLowerCase() : "";
       if (itemType !== "pet") continue;
-      const speciesRaw = typeof item.petSpecies === "string" ? item.petSpecies : null;
-      const species = speciesRaw?.trim();
-      if (!species) continue;
-      const key2 = species.toLowerCase();
-      const counts = countsBySpecies.get(key2) ?? { normal: 0, gold: 0, rainbow: 0 };
-      const rarityKey = determinePetMutationType(item.mutations);
-      counts[rarityKey] = (counts[rarityKey] ?? 0) + 1;
-      countsBySpecies.set(key2, counts);
+      addSpecies(counts, item.petSpecies, item.mutations);
     }
-    for (const entry of activePets2) {
-      if (!isPlainRecord(entry)) continue;
-      const slot = isPlainRecord(entry.slot) ? entry.slot : null;
-      if (!slot) continue;
-      const speciesRaw = typeof slot.petSpecies === "string" ? slot.petSpecies : null;
-      const species = speciesRaw?.trim();
-      if (!species) continue;
-      const key2 = species.toLowerCase();
-      const counts = countsBySpecies.get(key2) ?? { normal: 0, gold: 0, rainbow: 0 };
-      const rarityKey = determinePetMutationType(slot.mutations);
-      counts[rarityKey] = (counts[rarityKey] ?? 0) + 1;
-      countsBySpecies.set(key2, counts);
+    for (const entry of Array.isArray(activePets2) ? activePets2 : []) {
+      if (!isRecord4(entry) || !isRecord4(entry.slot)) continue;
+      addSpecies(counts, entry.slot.petSpecies, entry.slot.mutations);
     }
-    let hasCounts = false;
-    for (const counts of countsBySpecies.values()) {
-      if ((counts.normal ?? 0) > 0 || (counts.gold ?? 0) > 0 || (counts.rainbow ?? 0) > 0) {
-        hasCounts = true;
-        break;
-      }
-    }
-    if (!hasCounts) return;
+    if (!counts.size) return;
     StatsService.update((draft) => {
-      if (!isPetStatsSectionEmpty(draft)) return;
-      for (const [speciesKey, counts] of countsBySpecies) {
-        if ((counts.normal ?? 0) <= 0 && (counts.gold ?? 0) <= 0 && (counts.rainbow ?? 0) <= 0) {
-          continue;
-        }
-        const entry = draft.pets.hatchedByType[speciesKey] ?? { normal: 0, gold: 0, rainbow: 0 };
-        entry.normal = (entry.normal ?? 0) + (counts.normal ?? 0);
-        entry.gold = (entry.gold ?? 0) + (counts.gold ?? 0);
-        entry.rainbow = (entry.rainbow ?? 0) + (counts.rainbow ?? 0);
-        draft.pets.hatchedByType[speciesKey] = entry;
+      if (!isTableEmpty(draft)) return;
+      for (const [species, seeded] of counts) {
+        const entry = draft.pets.hatchedByType[species] ?? { normal: 0, gold: 0, rainbow: 0 };
+        entry.normal += seeded.normal ?? 0;
+        entry.gold += seeded.gold ?? 0;
+        entry.rainbow += seeded.rainbow ?? 0;
+        draft.pets.hatchedByType[species] = entry;
       }
     });
   }
-  function normalizePetRarity(raw) {
-    if (typeof raw !== "string") return rarity2.Common;
-    if (raw === "Mythic") return rarity2.Mythic;
-    return raw;
-  }
-  function createPetRarityGroups(stats) {
-    const map2 = /* @__PURE__ */ new Map();
-    for (const rarityKey of RARITY_ORDER2) {
-      map2.set(rarityKey, []);
-    }
+  function otherSpecies(stats, fromEggs) {
     const seen = /* @__PURE__ */ new Set();
-    for (const species of Object.keys(petCatalog2)) {
+    const out = [];
+    const consider = (species) => {
       const lower = species.toLowerCase();
-      if (seen.has(lower)) continue;
+      if (seen.has(lower) || fromEggs.has(lower)) return;
       seen.add(lower);
-      const info = petCatalog2[species];
-      const rarityValue = normalizePetRarity(info?.rarity);
-      map2.get(rarityValue)?.push(species);
+      out.push(species);
+    };
+    for (const species of Object.keys(petCatalog2)) consider(species);
+    for (const key2 of Object.keys(stats.pets?.hatchedByType ?? {})) {
+      if (totalOf(countsFor(stats, key2)) <= 0) continue;
+      consider(key2.charAt(0).toUpperCase() + key2.slice(1));
     }
-    const hatchedByType = stats.pets?.hatchedByType ?? {};
-    for (const speciesKey of Object.keys(hatchedByType)) {
-      const lower = speciesKey.toLowerCase();
-      if (seen.has(lower)) continue;
-      if (sumHatchedCounts(hatchedByType[speciesKey]) <= 0) continue;
-      seen.add(lower);
-      const display = speciesKey.charAt(0).toUpperCase() + speciesKey.slice(1);
-      map2.get(rarity2.Common)?.push(display);
-    }
-    for (const list of map2.values()) {
-      list.sort((a, b) => a.localeCompare(b));
-    }
-    return map2;
+    return sortSpeciesByRarity(out);
   }
-  function createPetSpeciesCell(species) {
-    const wrapper = document.createElement("span");
-    wrapper.className = "stats-pet__species";
-    const iconWrap = document.createElement("span");
-    iconWrap.className = "stats-pet__icon";
-    iconWrap.textContent = species?.trim().charAt(0).toUpperCase() || "?";
-    iconWrap.setAttribute("aria-hidden", "true");
-    attachSpriteIcon(iconWrap, ["pet"], species, 28, "stats-pet");
-    const label2 = document.createElement("span");
-    label2.className = "stats-pet__label";
-    label2.textContent = species;
-    wrapper.append(iconWrap, label2);
-    return { content: wrapper };
-  }
-  function createPetTotalValueCell(total) {
-    const value = document.createElement("span");
-    value.className = "stats-pet__total-value qmm-num";
-    value.textContent = formatInt(total);
-    return { content: value, align: "center" };
-  }
-  function createPetTotalsLabelCell(label2) {
-    const value = document.createElement("span");
-    value.className = "stats-pet__total-label";
-    value.textContent = label2;
-    return { content: value };
-  }
-  function renderGroups(body, stats) {
-    body.innerHTML = "";
-    const groups = createPetRarityGroups(stats);
-    for (const rarityKey of RARITY_ORDER2) {
-      const speciesList = groups.get(rarityKey) ?? [];
-      if (!speciesList.length) continue;
-      const group = document.createElement("div");
-      group.className = "stats-pet-group";
-      group.style.setProperty("--stats-pet-group-border-color", RARITY_BORDER_COLORS[rarityKey]);
-      const summary = document.createElement("div");
-      summary.className = "stats-pet-group__summary";
-      const badge = rarityBadge(rarityKey);
-      badge.style.margin = "0";
-      summary.appendChild(badge);
-      group.appendChild(summary);
-      const content = document.createElement("div");
-      content.className = "stats-pet-group__content";
-      const columns = [
-        { label: "Species", width: "2.2fr" },
-        { label: "Normal", align: "center", width: "1fr" },
-        { label: "Gold", align: "center", width: "1fr", headerClassName: "stats-list__header-label--gold" },
-        {
-          label: "Rainbow",
-          align: "center",
-          width: "1fr",
-          headerClassName: "stats-list__header-label--rainbow"
-        },
-        { label: "Total", align: "center", width: "1fr" }
-      ];
-      const rows = [];
-      let totalNormal = 0;
-      let totalGold = 0;
-      let totalRainbow = 0;
-      for (const species of speciesList) {
-        const key2 = species.toLowerCase();
-        const counts = stats.pets.hatchedByType[key2] ?? { normal: 0, gold: 0, rainbow: 0 };
-        totalNormal += counts.normal;
-        totalGold += counts.gold;
-        totalRainbow += counts.rainbow;
-        const total = counts.normal + counts.gold + counts.rainbow;
-        rows.push([
-          createPetSpeciesCell(species),
-          { text: formatInt(counts.normal), align: "center" },
-          { text: formatInt(counts.gold), align: "center" },
-          { text: formatInt(counts.rainbow), align: "center" },
-          createPetTotalValueCell(total)
-        ]);
-      }
-      const totalAll = totalNormal + totalGold + totalRainbow;
-      rows.push([
-        createPetTotalsLabelCell("Total"),
-        createPetTotalValueCell(totalNormal),
-        createPetTotalValueCell(totalGold),
-        createPetTotalValueCell(totalRainbow),
-        createPetTotalValueCell(totalAll)
-      ]);
-      content.appendChild(createStatList(columns, rows));
-      group.appendChild(content);
-      body.appendChild(group);
-    }
-  }
-  function renderHatchTab(view, ui) {
+  function renderHatchTab(view, _ui) {
     const prevCleanup = view.__cleanup__;
     if (typeof prevCleanup === "function") {
       try {
@@ -44940,34 +45556,87 @@ next: ${next}`;
       }
       view.__cleanup__ = void 0;
     }
+    ensurePanelStyles();
     view.innerHTML = "";
     const wrap = document.createElement("div");
-    wrap.style.display = "grid";
-    wrap.style.gap = "12px";
-    wrap.style.alignContent = "start";
-    wrap.style.minHeight = "0";
-    wrap.style.maxHeight = "54vh";
-    wrap.style.overflow = "auto";
-    view.appendChild(wrap);
-    const card3 = ui.card("\u{1F43E} Hatched pets", {
-      tone: "muted",
-      align: "stretch",
-      subtitle: "Per-species hatch counts (normal / gold / rainbow)"
+    wrap.classList.add("qws-pnl-root", "qws-pnl-scroll");
+    css2(wrap, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+      // Wide enough for the counts grid to breathe, but capped against the
+      // viewport so the HUD window never runs off a small screen.
+      width: "min(680px, 86vw)",
+      maxWidth: "100%",
+      minHeight: "0",
+      maxHeight: "68vh",
+      overflowY: "auto",
+      boxSizing: "border-box"
     });
-    wrap.appendChild(card3.root);
-    const repaint = () => renderGroups(card3.body, StatsService.getSnapshot());
+    view.appendChild(wrap);
+    const header = document.createElement("div");
+    css2(header, { display: "flex", alignItems: "center", gap: "8px", flexShrink: "0", padding: "0 2px" });
+    const title = document.createElement("div");
+    css2(title, { fontSize: "14.5px", fontWeight: "700", color: TEXT, flex: "1 1 auto" });
+    title.textContent = "\u{1F95A} Hatches & bad luck protection";
+    title.title = "Counted from the hatches Arie's Mod has watched \u2014 the game never sends the real counters. Use Calibrate to set your actual head start.";
+    header.appendChild(title);
+    let showOffsets = false;
+    const calibrateBtn = button("Calibrate", "neutral", () => {
+      showOffsets = !showOffsets;
+      repaint();
+    });
+    calibrateBtn.title = "Show a head start field on every counter.";
+    header.appendChild(calibrateBtn);
+    wrap.appendChild(header);
+    const body = document.createElement("div");
+    css2(body, { display: "flex", flexDirection: "column", gap: "8px" });
+    wrap.appendChild(body);
+    function repaint() {
+      css2(calibrateBtn, {
+        color: showOffsets ? TEAL : TEXT,
+        borderColor: showOffsets ? "rgba(94,234,212,0.3)" : BORDER,
+        background: showOffsets ? "rgba(94,234,212,0.12)" : CARD_BG
+      });
+      const stats = StatsService.getSnapshot();
+      body.innerHTML = "";
+      const eggs = listEggPity();
+      const fromEggs = /* @__PURE__ */ new Set();
+      for (const egg of eggs) {
+        for (const entry of egg.fauna) fromEggs.add(entry.species.toLowerCase());
+      }
+      for (const egg of eggs) {
+        body.appendChild(
+          createEggCard({
+            egg,
+            stats,
+            showOffsets,
+            collapsed: isCollapsed(egg.eggId),
+            onToggle: (collapsed) => setCollapsed(egg.eggId, collapsed)
+          })
+        );
+      }
+      const others = otherSpecies(stats, fromEggs);
+      if (others.length) {
+        const card3 = collapsibleCard({
+          icon: "\u{1F43E}",
+          title: "Other pets",
+          description: "Species no egg hatches.",
+          collapsed: isCollapsed(OTHER_SECTION_ID),
+          onToggle: (collapsed) => setCollapsed(OTHER_SECTION_ID, collapsed)
+        });
+        card3.body.appendChild(speciesCountsGrid(others.map((species) => ({ species })), stats));
+        body.appendChild(card3.root);
+      }
+      if (!body.childElementCount) {
+        const empty = document.createElement("div");
+        css2(empty, { fontSize: "12.5px", color: TEXT_DIM, padding: "6px 2px" });
+        empty.textContent = "No egg data available yet.";
+        body.appendChild(empty);
+      }
+    }
     let rafId = null;
-    const cleanup2 = () => {
-      try {
-        unsubscribe2();
-      } catch {
-      }
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-    };
-    const unsubscribe2 = StatsService.subscribe(() => {
+    const schedule = () => {
       if (!view.isConnected) {
         cleanup2();
         return;
@@ -44977,10 +45646,26 @@ next: ${next}`;
         rafId = null;
         repaint();
       });
-    });
+    };
+    const stopStats = StatsService.subscribe(schedule);
+    const stopTracker = HatchTracker.subscribe(schedule);
+    function cleanup2() {
+      try {
+        stopStats();
+      } catch {
+      }
+      try {
+        stopTracker();
+      } catch {
+      }
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    }
     view.__cleanup__ = cleanup2;
-    initPets(StatsService.getSnapshot()).catch((error) => {
-      console.error("[PetsHatch] Failed to initialize pet stats", error);
+    seedFromOwnedPets(StatsService.getSnapshot()).catch((error) => {
+      console.error("[PetsHatch] Failed to seed pet stats", error);
     });
     repaint();
   }
@@ -46056,6 +46741,142 @@ next: ${next}`;
     };
   }
 
+  // src/ui/menus/pets-ability-colors.ts
+  function getAbilityChipColors(id) {
+    const key2 = String(id || "");
+    const apiColor = petAbilities2?.[key2]?.color;
+    if (apiColor && typeof apiColor.bg === "string" && apiColor.bg) {
+      const hover = typeof apiColor.hover === "string" && apiColor.hover ? apiColor.hover : apiColor.bg;
+      return { bg: apiColor.bg, hover };
+    }
+    const base = (PetsService.getAbilityNameWithoutLevel?.(key2) || "").replace(/[\s\-_]+/g, "").toLowerCase();
+    const is = (prefix) => key2.startsWith(prefix) || base === prefix.toLowerCase();
+    if (is("MoonKisser")) {
+      return {
+        bg: "rgba(250,166,35,0.9)",
+        hover: "rgba(250,166,35,1)"
+      };
+    }
+    if (is("DawnKisser")) {
+      return {
+        bg: "rgba(162,92,242,0.9)",
+        hover: "rgba(162,92,242,1)"
+      };
+    }
+    if (is("DawnCapture")) {
+      return {
+        bg: "rgba(178,90,158,0.9)",
+        hover: "rgba(178,90,158,1)"
+      };
+    }
+    if (is("DawnbinderBoost")) {
+      return {
+        bg: "rgba(180,104,160,0.9)",
+        hover: "rgba(180,104,160,1)"
+      };
+    }
+    if (is("ProduceScaleBoost") || is("SnowyCropSizeBoost")) {
+      return { bg: "rgba(34,139,34,0.9)", hover: "rgba(34,139,34,1)" };
+    }
+    if (is("PlantGrowthBoost") || is("SnowyPlantGrowthBoost") || is("DawnPlantGrowthBoost") || is("AmberPlantGrowthBoost") || is("ThunderPlantGrowthBoost")) {
+      return { bg: "rgba(0,128,128,0.9)", hover: "rgba(0,128,128,1)" };
+    }
+    if (is("EggGrowthBoost") || is("SnowyEggGrowthBoost") || is("ThunderEggGrowthBoost")) {
+      return { bg: "rgba(180,90,240,0.9)", hover: "rgba(180,90,240,1)" };
+    }
+    if (is("PetAgeBoost")) {
+      return { bg: "rgba(147,112,219,0.9)", hover: "rgba(147,112,219,1)" };
+    }
+    if (is("PetHatchSizeBoost")) {
+      return { bg: "rgba(128,0,128,0.9)", hover: "rgba(128,0,128,1)" };
+    }
+    if (is("PetXpBoost") || is("SnowyPetXpBoost") || is("DawnXpBoost") || is("ThunderXpBoost")) {
+      return { bg: "rgba(30,144,255,0.9)", hover: "rgba(30,144,255,1)" };
+    }
+    if (is("HungerBoost") || is("SnowyHungerBoost")) {
+      return { bg: "rgba(255,20,147,0.9)", hover: "rgba(255,20,147,1)" };
+    }
+    if (is("HungerRestore") || is("SnowyHungerRestore")) {
+      return { bg: "rgba(255,105,180,0.9)", hover: "rgba(255,105,180,1)" };
+    }
+    if (is("SellBoost")) {
+      return { bg: "rgba(220,20,60,0.9)", hover: "rgba(220,20,60,1)" };
+    }
+    if (is("CoinFinder") || is("SnowyCoinFinder") || is("DawnCoinFinder") || is("ThunderCoinFinder")) {
+      return { bg: "rgba(180,150,0,0.9)", hover: "rgba(180,150,0,1)" };
+    }
+    if (is("SeedFinder")) {
+      return {
+        bg: "rgba(168,102,38,0.9)",
+        hover: "rgba(168,102,38,1)"
+      };
+    }
+    if (is("ProduceMutationBoost") || is("SnowyCropMutationBoost") || is("DawnBoost") || is("AmberMoonBoost") || is("ThunderBoost")) {
+      return { bg: "rgba(140,15,70,0.9)", hover: "rgba(140,15,70,1)" };
+    }
+    if (is("PetMutationBoost")) {
+      return { bg: "rgba(160,50,100,0.9)", hover: "rgba(160,50,100,1)" };
+    }
+    if (is("DoubleHarvest")) {
+      return { bg: "rgba(0,120,180,0.9)", hover: "rgba(0,120,180,1)" };
+    }
+    if (is("DoubleHatch")) {
+      return { bg: "rgba(60,90,180,0.9)", hover: "rgba(60,90,180,1)" };
+    }
+    if (is("ProduceEater")) {
+      return { bg: "rgba(255,69,0,0.9)", hover: "rgba(255,69,0,1)" };
+    }
+    if (is("ProduceRefund")) {
+      return { bg: "rgba(255,99,71,0.9)", hover: "rgba(255,99,71,1)" };
+    }
+    if (is("PetRefund")) {
+      return { bg: "rgba(0,80,120,0.9)", hover: "rgba(0,80,120,1)" };
+    }
+    if (is("Copycat")) {
+      return { bg: "rgba(255,140,0,0.9)", hover: "rgba(255,140,0,1)" };
+    }
+    if (is("GoldGranter")) {
+      return {
+        bg: "linear-gradient(135deg, rgba(225,200,55,0.9) 0%, rgba(225,180,10,0.9) 40%, rgba(215,185,45,0.9) 70%, rgba(210,185,45,0.9) 100%)",
+        hover: "linear-gradient(135deg, rgba(220,200,70,1) 0%, rgba(210,175,5,1) 40%, rgba(210,185,55,1) 70%, rgba(200,175,30,1) 100%)"
+      };
+    }
+    if (is("RainbowGranter")) {
+      return {
+        bg: "linear-gradient(45deg, rgba(200,0,0,0.9), rgba(200,120,0,0.9), rgba(160,170,30,0.9), rgba(60,170,60,0.9), rgba(50,170,170,0.9), rgba(40,150,180,0.9), rgba(20,90,180,0.9), rgba(70,30,150,0.9))",
+        hover: "linear-gradient(45deg, rgba(200,0,0,1), rgba(200,120,0,1), rgba(160,170,30,1), rgba(60,170,60,1), rgba(50,170,170,1), rgba(40,150,180,1), rgba(20,90,180,1), rgba(70,30,150,1))"
+      };
+    }
+    if (is("RainDance")) {
+      return { bg: "rgba(76,204,204,0.9)", hover: "rgba(76,204,204,1)" };
+    }
+    if (is("SnowGranter")) {
+      return { bg: "rgba(144,184,204,0.9)", hover: "rgba(144,184,204,1)" };
+    }
+    if (is("FrostGranter")) {
+      return { bg: "rgba(148,160,204,0.9)", hover: "rgba(148,160,204,1)" };
+    }
+    if (is("DawnlitGranter")) {
+      return { bg: "rgba(196,124,180,0.9)", hover: "rgba(196,124,180,1)" };
+    }
+    if (is("AmberlitGranter")) {
+      return { bg: "rgba(204,144,96,0.9)", hover: "rgba(204,144,96,1)" };
+    }
+    if (is("ThunderstruckGranter")) {
+      return { bg: "rgba(194,184,60,0.9)", hover: "rgba(194,184,60,1)" };
+    }
+    if (is("Thundercharger")) {
+      return { bg: "rgba(31,163,130,0.9)", hover: "rgba(31,163,130,1)" };
+    }
+    if (is("Thunderbloom")) {
+      return { bg: "rgba(112,246,203,0.9)", hover: "rgba(112,246,203,1)" };
+    }
+    return {
+      bg: "rgba(100,100,100,0.9)",
+      hover: "rgba(150,150,150,1)"
+    };
+  }
+
   // src/ui/menus/petsTeamStats.ts
   var PARAMETER_LABELS = {
     scaleIncreasePercentage: { label: "Crop size", unit: "%" },
@@ -46814,141 +47635,365 @@ Restore figures are averages; unlucky streaks do worse.`;
     void repaint();
   }
 
-  // src/ui/menus/pets.ts
-  function getAbilityChipColors(id) {
-    const key2 = String(id || "");
-    const apiColor = petAbilities2?.[key2]?.color;
-    if (apiColor && typeof apiColor.bg === "string" && apiColor.bg) {
-      const hover = typeof apiColor.hover === "string" && apiColor.hover ? apiColor.hover : apiColor.bg;
-      return { bg: apiColor.bg, hover };
+  // src/ui/menus/pets/logs-tab.ts
+  var PANEL_WIDTH = "min(760px, 88vw)";
+  var LIST_MAX_HEIGHT = "min(56vh, 520px)";
+  var PET_ICON_PX = 24;
+  var ROW_TEMPLATE2 = "104px minmax(120px, 1.2fr) minmax(110px, 0.9fr) minmax(0, 2fr)";
+  function formatDateMMDDYY(timestamp) {
+    const value = Number(timestamp);
+    if (!Number.isFinite(value)) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    const yy = String(date.getFullYear() % 100).padStart(2, "0");
+    return `${mm}/${dd}/${yy}`;
+  }
+  function detailsOf(log2) {
+    if (typeof log2.data === "string") return log2.data;
+    try {
+      return JSON.stringify(log2.data) ?? "";
+    } catch {
+      return "";
     }
-    const base = (PetsService.getAbilityNameWithoutLevel?.(key2) || "").replace(/[\s\-_]+/g, "").toLowerCase();
-    const is = (prefix) => key2.startsWith(prefix) || base === prefix.toLowerCase();
-    if (is("MoonKisser")) {
-      return {
-        bg: "rgba(250,166,35,0.9)",
-        hover: "rgba(250,166,35,1)"
+  }
+  var normalizeAbilityKey = (value) => String(value ?? "").toLowerCase().replace(/\s+/g, "").replace(/([ivx]+)$/i, "");
+  function renderLogsTab(view) {
+    const prevCleanup = view.__cleanup__;
+    if (typeof prevCleanup === "function") {
+      try {
+        prevCleanup();
+      } catch {
+      }
+      view.__cleanup__ = void 0;
+    }
+    ensurePanelStyles();
+    view.innerHTML = "";
+    const wrap = document.createElement("div");
+    wrap.classList.add("qws-pnl-root");
+    css2(wrap, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px",
+      width: PANEL_WIDTH,
+      maxWidth: "100%",
+      minHeight: "0",
+      boxSizing: "border-box"
+    });
+    view.appendChild(wrap);
+    const panel = card();
+    css2(panel, { minHeight: "0" });
+    wrap.appendChild(panel);
+    const head = document.createElement("div");
+    css2(head, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
+    const title = document.createElement("div");
+    css2(title, { fontSize: "14.5px", fontWeight: "700", color: TEXT, flex: "1 1 auto" });
+    title.textContent = "\u{1F4DD} Ability logs";
+    head.appendChild(title);
+    const count = document.createElement("span");
+    css2(count, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap" });
+    head.appendChild(count);
+    panel.appendChild(head);
+    const toolbar = document.createElement("div");
+    css2(toolbar, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
+    const selAbility = selectField([["", "All abilities"]]);
+    css2(selAbility, { minWidth: "170px" });
+    const selSort = selectField([["desc", "Newest first"], ["asc", "Oldest first"]]);
+    selSort.value = "desc";
+    const inputSearch = textField("Search pet / ability / details");
+    css2(inputSearch, { flex: "1 1 200px", minWidth: "160px" });
+    const btnClear = button("\u{1F9F9} Clear", "danger", () => {
+      try {
+        PetsService.clearAbilityLogs();
+      } catch {
+      }
+    });
+    btnClear.title = "Clear all recorded logs";
+    toolbar.append(selAbility, selSort, inputSearch, btnClear);
+    panel.appendChild(toolbar);
+    const columns = document.createElement("div");
+    css2(columns, {
+      display: "grid",
+      gridTemplateColumns: ROW_TEMPLATE2,
+      gap: "10px",
+      padding: "0 8px"
+    });
+    for (const label2 of ["When", "Pet", "Ability", "Details"]) {
+      columns.appendChild(sectionLabel(label2));
+    }
+    panel.appendChild(columns);
+    const list = document.createElement("div");
+    list.classList.add("qws-pnl-scroll");
+    css2(list, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "3px",
+      maxHeight: LIST_MAX_HEIGHT,
+      overflowY: "auto",
+      minHeight: "0"
+    });
+    panel.appendChild(list);
+    const sessionStart = PetsService.getAbilityLogsSessionStart?.() ?? 0;
+    const petSpriteCache = /* @__PURE__ */ new Map();
+    let logs = [];
+    let abilityFilter = "";
+    let sortDir = "desc";
+    let search2 = "";
+    function petIcon(log2) {
+      const holder = document.createElement("div");
+      css2(holder, {
+        width: `${PET_ICON_PX}px`,
+        height: `${PET_ICON_PX}px`,
+        borderRadius: "7px",
+        background: "rgba(0,0,0,0.22)",
+        border: `1px solid ${BORDER}`,
+        display: "grid",
+        placeItems: "center",
+        overflow: "hidden",
+        fontSize: "11px",
+        color: TEXT,
+        flex: "0 0 auto"
+      });
+      const species = String(log2.species || "").trim();
+      const mutations = Array.isArray(log2.mutations) ? log2.mutations.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
+      const mutationKey = mutations.length ? mutations.map((m) => m.toLowerCase()).sort().join(",") : "";
+      const cacheKey = mutationKey ? `${species}|${mutationKey}` : species;
+      const applyImg = (src) => {
+        const img = document.createElement("img");
+        img.src = src;
+        img.alt = "";
+        img.draggable = false;
+        css2(img, {
+          width: `${PET_ICON_PX}px`,
+          height: `${PET_ICON_PX}px`,
+          objectFit: "contain",
+          imageRendering: "auto"
+        });
+        holder.replaceChildren(img);
       };
+      const cached = cacheKey ? petSpriteCache.get(cacheKey) : void 0;
+      if (cached) {
+        applyImg(cached);
+        return holder;
+      }
+      holder.textContent = (log2.petName || species || "pet").charAt(0).toUpperCase() || "\u{1F43E}";
+      if (species) {
+        attachSpriteIcon(holder, ["pet"], species, PET_ICON_PX, "pet-log", {
+          mutations,
+          onSpriteApplied: (img) => {
+            petSpriteCache.set(cacheKey, img.src);
+          }
+        });
+      }
+      return holder;
     }
-    if (is("DawnKisser")) {
-      return {
-        bg: "rgba(162,92,242,0.9)",
-        hover: "rgba(162,92,242,1)"
+    function whenCell(log2) {
+      const cell = document.createElement("div");
+      css2(cell, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
+      if (log2.date) {
+        const date = document.createElement("span");
+        css2(date, { fontSize: "10px", color: TEXT_DIM, fontVariantNumeric: "tabular-nums" });
+        date.textContent = log2.date;
+        cell.appendChild(date);
+      }
+      const time = document.createElement("span");
+      css2(time, {
+        fontSize: "11.5px",
+        color: log2.isActiveSession ? TEAL : TEXT,
+        fontWeight: log2.isActiveSession ? "600" : "500",
+        fontVariantNumeric: "tabular-nums",
+        whiteSpace: "nowrap"
+      });
+      time.textContent = log2.time12;
+      cell.appendChild(time);
+      return cell;
+    }
+    function petCell(log2) {
+      const cell = document.createElement("div");
+      css2(cell, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+      const name = document.createElement("span");
+      css2(name, {
+        fontSize: "12px",
+        color: TEXT,
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis"
+      });
+      name.textContent = log2.petName || log2.species || "Pet";
+      name.title = name.textContent;
+      cell.append(petIcon(log2), name);
+      return cell;
+    }
+    function abilityCell(log2) {
+      const cell = document.createElement("div");
+      css2(cell, { display: "flex", minWidth: "0" });
+      const text = log2.abilityName || log2.abilityId || "\u2014";
+      const chip2 = document.createElement("span");
+      chip2.textContent = text;
+      chip2.title = text;
+      const { bg, hover } = getAbilityChipColors(log2.abilityId);
+      css2(chip2, {
+        display: "inline-block",
+        maxWidth: "100%",
+        padding: "3px 9px",
+        borderRadius: "999px",
+        fontSize: "11px",
+        fontWeight: "700",
+        lineHeight: "1.5",
+        color: "#fff",
+        textShadow: "0 1px 2px rgba(0,0,0,.45)",
+        background: bg,
+        boxShadow: "0 0 0 1px rgba(0,0,0,.35) inset",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        transition: "background 120ms ease"
+      });
+      chip2.onmouseenter = () => {
+        chip2.style.background = hover;
       };
-    }
-    if (is("DawnCapture")) {
-      return {
-        bg: "rgba(178,90,158,0.9)",
-        hover: "rgba(178,90,158,1)"
+      chip2.onmouseleave = () => {
+        chip2.style.background = bg;
       };
+      cell.appendChild(chip2);
+      return cell;
     }
-    if (is("DawnbinderBoost")) {
-      return {
-        bg: "rgba(180,104,160,0.9)",
-        hover: "rgba(180,104,160,1)"
-      };
+    function detailsCell(log2) {
+      const cell = document.createElement("div");
+      const text = detailsOf(log2);
+      css2(cell, {
+        fontSize: "11.5px",
+        color: TEXT_DIM,
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        minWidth: "0"
+      });
+      cell.textContent = text;
+      cell.title = text;
+      return cell;
     }
-    if (is("ProduceScaleBoost") || is("SnowyCropSizeBoost")) {
-      return { bg: "rgba(34,139,34,0.9)", hover: "rgba(34,139,34,1)" };
+    function logRow(log2) {
+      const row = document.createElement("div");
+      css2(row, {
+        display: "grid",
+        gridTemplateColumns: ROW_TEMPLATE2,
+        alignItems: "center",
+        gap: "10px",
+        padding: "5px 8px",
+        borderRadius: "8px",
+        background: log2.isActiveSession ? "rgba(94,234,212,0.06)" : CARD_BG,
+        border: `1px solid ${BORDER}`,
+        // A tick from this session reads at a glance without a legend.
+        borderLeft: log2.isActiveSession ? `2px solid ${TEAL}` : `1px solid ${BORDER}`
+      });
+      row.append(whenCell(log2), petCell(log2), abilityCell(log2), detailsCell(log2));
+      return row;
     }
-    if (is("PlantGrowthBoost") || is("SnowyPlantGrowthBoost") || is("DawnPlantGrowthBoost") || is("AmberPlantGrowthBoost") || is("ThunderPlantGrowthBoost")) {
-      return { bg: "rgba(0,128,128,0.9)", hover: "rgba(0,128,128,1)" };
+    function applyFilters() {
+      let result = logs.slice();
+      if (abilityFilter.trim()) {
+        const wanted = normalizeAbilityKey(abilityFilter);
+        result = result.filter((log2) => {
+          const byId = normalizeAbilityKey(log2.abilityId);
+          const byName = normalizeAbilityKey(PetsService.getAbilityNameWithoutLevel(log2.abilityId));
+          return byId === wanted || byName === wanted;
+        });
+      }
+      if (search2.trim()) {
+        const needle = search2.toLowerCase();
+        result = result.filter((log2) => (log2.petName || log2.species || "").toLowerCase().includes(needle) || (log2.abilityName || "").toLowerCase().includes(needle) || (log2.abilityId || "").toLowerCase().includes(needle) || detailsOf(log2).toLowerCase().includes(needle) || (log2.petId || "").toLowerCase().includes(needle));
+      }
+      result.sort((a, b) => sortDir === "asc" ? a.performedAt - b.performedAt : b.performedAt - a.performedAt);
+      return result;
     }
-    if (is("EggGrowthBoost") || is("SnowyEggGrowthBoost") || is("ThunderEggGrowthBoost")) {
-      return { bg: "rgba(180,90,240,0.9)", hover: "rgba(180,90,240,1)" };
+    function rebuildAbilityOptions() {
+      const current = selAbility.value;
+      const options = [
+        ["", "All abilities"],
+        ...PetsService.getSeenAbilityIds().map((id) => [id, id])
+      ];
+      selAbility.innerHTML = "";
+      for (const [value, label2] of options) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label2;
+        selAbility.appendChild(option);
+      }
+      selAbility.value = options.some(([value]) => value === current) ? current : "";
     }
-    if (is("PetAgeBoost")) {
-      return { bg: "rgba(147,112,219,0.9)", hover: "rgba(147,112,219,1)" };
+    function repaint() {
+      const visible = applyFilters();
+      count.textContent = visible.length === logs.length ? `${logs.length} entries` : `${visible.length} of ${logs.length} entries`;
+      list.innerHTML = "";
+      if (!visible.length) {
+        const empty = document.createElement("div");
+        css2(empty, {
+          fontSize: "12px",
+          color: TEXT_DIM,
+          textAlign: "center",
+          padding: "24px 8px"
+        });
+        empty.textContent = logs.length ? "No log matches these filters." : "\u{1F5D2}\uFE0F No logs yet.";
+        list.appendChild(empty);
+        return;
+      }
+      for (const log2 of visible) list.appendChild(logRow(log2));
+      list.scrollTop = sortDir === "asc" ? list.scrollHeight : 0;
     }
-    if (is("PetHatchSizeBoost")) {
-      return { bg: "rgba(128,0,128,0.9)", hover: "rgba(128,0,128,1)" };
-    }
-    if (is("PetXpBoost") || is("SnowyPetXpBoost") || is("DawnXpBoost") || is("ThunderXpBoost")) {
-      return { bg: "rgba(30,144,255,0.9)", hover: "rgba(30,144,255,1)" };
-    }
-    if (is("HungerBoost") || is("SnowyHungerBoost")) {
-      return { bg: "rgba(255,20,147,0.9)", hover: "rgba(255,20,147,1)" };
-    }
-    if (is("HungerRestore") || is("SnowyHungerRestore")) {
-      return { bg: "rgba(255,105,180,0.9)", hover: "rgba(255,105,180,1)" };
-    }
-    if (is("SellBoost")) {
-      return { bg: "rgba(220,20,60,0.9)", hover: "rgba(220,20,60,1)" };
-    }
-    if (is("CoinFinder") || is("SnowyCoinFinder") || is("DawnCoinFinder") || is("ThunderCoinFinder")) {
-      return { bg: "rgba(180,150,0,0.9)", hover: "rgba(180,150,0,1)" };
-    }
-    if (is("SeedFinder")) {
-      return {
-        bg: "rgba(168,102,38,0.9)",
-        hover: "rgba(168,102,38,1)"
-      };
-    }
-    if (is("ProduceMutationBoost") || is("SnowyCropMutationBoost") || is("DawnBoost") || is("AmberMoonBoost") || is("ThunderBoost")) {
-      return { bg: "rgba(140,15,70,0.9)", hover: "rgba(140,15,70,1)" };
-    }
-    if (is("PetMutationBoost")) {
-      return { bg: "rgba(160,50,100,0.9)", hover: "rgba(160,50,100,1)" };
-    }
-    if (is("DoubleHarvest")) {
-      return { bg: "rgba(0,120,180,0.9)", hover: "rgba(0,120,180,1)" };
-    }
-    if (is("DoubleHatch")) {
-      return { bg: "rgba(60,90,180,0.9)", hover: "rgba(60,90,180,1)" };
-    }
-    if (is("ProduceEater")) {
-      return { bg: "rgba(255,69,0,0.9)", hover: "rgba(255,69,0,1)" };
-    }
-    if (is("ProduceRefund")) {
-      return { bg: "rgba(255,99,71,0.9)", hover: "rgba(255,99,71,1)" };
-    }
-    if (is("PetRefund")) {
-      return { bg: "rgba(0,80,120,0.9)", hover: "rgba(0,80,120,1)" };
-    }
-    if (is("Copycat")) {
-      return { bg: "rgba(255,140,0,0.9)", hover: "rgba(255,140,0,1)" };
-    }
-    if (is("GoldGranter")) {
-      return {
-        bg: "linear-gradient(135deg, rgba(225,200,55,0.9) 0%, rgba(225,180,10,0.9) 40%, rgba(215,185,45,0.9) 70%, rgba(210,185,45,0.9) 100%)",
-        hover: "linear-gradient(135deg, rgba(220,200,70,1) 0%, rgba(210,175,5,1) 40%, rgba(210,185,55,1) 70%, rgba(200,175,30,1) 100%)"
-      };
-    }
-    if (is("RainbowGranter")) {
-      return {
-        bg: "linear-gradient(45deg, rgba(200,0,0,0.9), rgba(200,120,0,0.9), rgba(160,170,30,0.9), rgba(60,170,60,0.9), rgba(50,170,170,0.9), rgba(40,150,180,0.9), rgba(20,90,180,0.9), rgba(70,30,150,0.9))",
-        hover: "linear-gradient(45deg, rgba(200,0,0,1), rgba(200,120,0,1), rgba(160,170,30,1), rgba(60,170,60,1), rgba(50,170,170,1), rgba(40,150,180,1), rgba(20,90,180,1), rgba(70,30,150,1))"
-      };
-    }
-    if (is("RainDance")) {
-      return { bg: "rgba(76,204,204,0.9)", hover: "rgba(76,204,204,1)" };
-    }
-    if (is("SnowGranter")) {
-      return { bg: "rgba(144,184,204,0.9)", hover: "rgba(144,184,204,1)" };
-    }
-    if (is("FrostGranter")) {
-      return { bg: "rgba(148,160,204,0.9)", hover: "rgba(148,160,204,1)" };
-    }
-    if (is("DawnlitGranter")) {
-      return { bg: "rgba(196,124,180,0.9)", hover: "rgba(196,124,180,1)" };
-    }
-    if (is("AmberlitGranter")) {
-      return { bg: "rgba(204,144,96,0.9)", hover: "rgba(204,144,96,1)" };
-    }
-    if (is("ThunderstruckGranter")) {
-      return { bg: "rgba(194,184,60,0.9)", hover: "rgba(194,184,60,1)" };
-    }
-    if (is("Thundercharger")) {
-      return { bg: "rgba(31,163,130,0.9)", hover: "rgba(31,163,130,1)" };
-    }
-    if (is("Thunderbloom")) {
-      return { bg: "rgba(112,246,203,0.9)", hover: "rgba(112,246,203,1)" };
-    }
-    return {
-      bg: "rgba(100,100,100,0.9)",
-      hover: "rgba(150,150,150,1)"
+    selAbility.onchange = () => {
+      abilityFilter = selAbility.value;
+      repaint();
+    };
+    selSort.onchange = () => {
+      sortDir = selSort.value || "desc";
+      repaint();
+    };
+    inputSearch.addEventListener("input", () => {
+      search2 = inputSearch.value.trim();
+      repaint();
+    });
+    let stopWatcher = null;
+    let unsubLogs = null;
+    void (async () => {
+      try {
+        stopWatcher = await PetsService.startAbilityLogsWatcher();
+        rebuildAbilityOptions();
+        unsubLogs = PetsService.onAbilityLogs((all) => {
+          logs = all.map((entry) => ({
+            petId: entry.petId,
+            petName: entry.name ?? null,
+            species: entry.species ?? null,
+            mutations: Array.isArray(entry.mutations) ? entry.mutations.slice() : void 0,
+            abilityId: entry.abilityId,
+            abilityName: entry.abilityName,
+            data: entry.data,
+            performedAt: entry.performedAt,
+            date: formatDateMMDDYY(entry.performedAt),
+            time12: entry.time12,
+            isActiveSession: sessionStart > 0 && entry.performedAt >= sessionStart
+          }));
+          rebuildAbilityOptions();
+          repaint();
+        });
+      } catch {
+      }
+    })();
+    repaint();
+    view.__cleanup__ = () => {
+      try {
+        unsubLogs?.();
+      } catch {
+      }
+      try {
+        stopWatcher?.();
+      } catch {
+      }
     };
   }
+
+  // src/ui/menus/pets.ts
   function renderManagerTab(view, ui) {
     view.innerHTML = "";
     let teams = [];
@@ -48066,374 +49111,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     renderCrops(petItems[0]?.id ?? null);
   }
-  function renderLogsTab(view, ui) {
-    view.innerHTML = "";
-    const card3 = ui.card("\u{1F4DD} Ability Logs", {
-      tone: "muted"
-    });
-    view.appendChild(card3.root);
-    const toolbar = ui.flexRow({ gap: 8, wrap: true });
-    card3.body.appendChild(toolbar);
-    const selAbility = ui.select({ id: "pets.logs.filter.ability", width: "180px" });
-    const selSort = ui.select({ id: "pets.logs.sort", width: "150px" });
-    [["desc", "Newest first"], ["asc", "Oldest first"]].forEach(([v, t]) => {
-      const o = document.createElement("option");
-      o.value = v;
-      o.textContent = t;
-      selSort.appendChild(o);
-    });
-    selSort.value = "desc";
-    const inputSearch = ui.inputText("Search pet / ability / details", "");
-    inputSearch.id = "pets.logs.search";
-    inputSearch.style.flex = "1 1 220px";
-    inputSearch.style.minWidth = "200px";
-    const btnClear = ui.btn("Clear", {
-      size: "sm",
-      variant: "ghost",
-      icon: "\u{1F9F9}",
-      tooltip: "Clear all recorded logs"
-    });
-    btnClear.id = "pets.logs.clear";
-    toolbar.append(
-      ui.label("Ability"),
-      selAbility,
-      ui.label("Sort"),
-      selSort,
-      inputSearch,
-      btnClear
-    );
-    const { root: tableRoot, tbody } = ui.table(
-      [
-        { label: "Date & Time", align: "center", width: "128px" },
-        { label: "Pet", align: "center", width: "190px" },
-        { label: "Ability", align: "center", width: "160px" },
-        { label: "Details", align: "left" }
-      ],
-      { minimal: true, fixed: true, maxHeight: "46vh" }
-    );
-    tableRoot.style.marginTop = "2px";
-    card3.body.appendChild(tableRoot);
-    const tableScroller = tableRoot.querySelector(".qmm-table-scroll");
-    const sessionStart = PetsService.getAbilityLogsSessionStart?.() ?? 0;
-    let logs = [];
-    let abilityFilter = "";
-    let sortDir = "desc";
-    let q = "";
-    const petSpriteCache = /* @__PURE__ */ new Map();
-    const mkPetIcon = (log2) => {
-      const size = 22;
-      const holder = document.createElement("div");
-      Object.assign(holder.style, {
-        width: `${size}px`,
-        height: `${size}px`,
-        borderRadius: "8px",
-        background: "#161b22",
-        border: "1px solid #ffffff10",
-        display: "grid",
-        placeItems: "center",
-        overflow: "hidden",
-        boxShadow: "0 1px 0 #000 inset",
-        fontSize: "11px",
-        color: "#e2e8f0",
-        flex: "0 0 auto"
-      });
-      const species = String(log2.species || "").trim();
-      const mutations = Array.isArray(log2.mutations) ? log2.mutations.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
-      const mutKey = mutations.length ? mutations.map((m) => m.toLowerCase()).sort().join(",") : "";
-      const cacheKey = mutKey ? `${species}|${mutKey}` : species;
-      const applyImg = (src) => {
-        const img = document.createElement("img");
-        img.src = src;
-        img.width = size;
-        img.height = size;
-        img.alt = "";
-        img.draggable = false;
-        img.style.width = `${size}px`;
-        img.style.height = `${size}px`;
-        img.style.objectFit = "contain";
-        img.style.imageRendering = "auto";
-        holder.replaceChildren(img);
-      };
-      const cached = cacheKey ? petSpriteCache.get(cacheKey) : void 0;
-      if (cached) {
-        applyImg(cached);
-        return holder;
-      }
-      const letter = (log2.petName || species || "pet").charAt(0).toUpperCase();
-      holder.textContent = letter || "\u{1F43E}";
-      if (species) {
-        attachSpriteIcon(holder, ["pet"], species, size, "pet-log", {
-          mutations,
-          onSpriteApplied: (img) => {
-            petSpriteCache.set(cacheKey, img.src);
-          }
-        });
-      }
-      return holder;
-    };
-    function rebuildAbilityOptions() {
-      const current = selAbility.value;
-      selAbility.innerHTML = "";
-      const opts = [["", "All abilities"], ...PetsService.getSeenAbilityIds().map((a) => [a, a])];
-      for (const [v, t] of opts) {
-        const o = document.createElement("option");
-        o.value = v;
-        o.textContent = t;
-        selAbility.appendChild(o);
-      }
-      selAbility.value = opts.some(([v]) => v === current) ? current : "";
-    }
-    function formatDateMMDDYY(timestamp) {
-      const value = Number(timestamp);
-      if (!Number.isFinite(value)) return "";
-      const date = new Date(value);
-      if (Number.isNaN(date.getTime())) return "";
-      const mm = String(date.getMonth() + 1).padStart(2, "0");
-      const dd = String(date.getDate()).padStart(2, "0");
-      const yy = String(date.getFullYear() % 100).padStart(2, "0");
-      return `${mm}/${dd}/${yy}`;
-    }
-    function timeCell(log2) {
-      const td = document.createElement("td");
-      td.style.textAlign = "center";
-      const inner = document.createElement("div");
-      Object.assign(inner.style, {
-        display: "inline-flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: "2px"
-      });
-      const hasDate = typeof log2.date === "string" && log2.date.trim().length > 0;
-      if (hasDate) {
-        const dateLine = document.createElement("div");
-        dateLine.textContent = log2.date ?? "";
-        dateLine.style.fontSize = "11px";
-        dateLine.style.opacity = "0.65";
-        inner.appendChild(dateLine);
-      }
-      const timeLine = document.createElement("div");
-      if (log2.isActiveSession) {
-        const dot = document.createElement("span");
-        Object.assign(dot.style, {
-          display: "inline-block",
-          width: "6px",
-          height: "6px",
-          marginRight: "5px",
-          borderRadius: "50%",
-          background: "var(--qmm-accent)",
-          boxShadow: "0 0 6px var(--qmm-accent)"
-        });
-        timeLine.appendChild(dot);
-        timeLine.style.fontWeight = "600";
-      }
-      timeLine.appendChild(document.createTextNode(log2.time12));
-      inner.appendChild(timeLine);
-      td.appendChild(inner);
-      return td;
-    }
-    function petCell(log2) {
-      const td = document.createElement("td");
-      td.style.textAlign = "center";
-      const inner = document.createElement("div");
-      Object.assign(inner.style, {
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "8px",
-        maxWidth: "100%",
-        minWidth: "0"
-      });
-      const petIcon = mkPetIcon(log2);
-      const petText = document.createElement("span");
-      petText.textContent = log2.petName || log2.species || "Pet";
-      Object.assign(petText.style, {
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis"
-      });
-      inner.append(petIcon, petText);
-      td.appendChild(inner);
-      return td;
-    }
-    function abilityCell(log2) {
-      const td = document.createElement("td");
-      td.style.textAlign = "center";
-      const text = log2.abilityName || log2.abilityId || "\u2014";
-      const chip2 = document.createElement("span");
-      chip2.textContent = text;
-      chip2.title = text;
-      const { bg, hover } = getAbilityChipColors(log2.abilityId);
-      Object.assign(chip2.style, {
-        display: "inline-block",
-        maxWidth: "100%",
-        padding: "3px 10px",
-        borderRadius: "999px",
-        fontSize: "12px",
-        fontWeight: "700",
-        lineHeight: "1.4",
-        color: "#fff",
-        textShadow: "0 1px 2px rgba(0,0,0,.45)",
-        background: bg,
-        boxShadow: "0 0 0 1px rgba(0,0,0,.35) inset",
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        transition: "background 120ms ease"
-      });
-      chip2.onmouseenter = () => {
-        chip2.style.background = hover;
-      };
-      chip2.onmouseleave = () => {
-        chip2.style.background = bg;
-      };
-      td.appendChild(chip2);
-      return td;
-    }
-    function detailsCell(log2) {
-      const td = document.createElement("td");
-      const text = typeof log2.data === "string" ? log2.data : (() => {
-        try {
-          return JSON.stringify(log2.data);
-        } catch {
-          return "";
-        }
-      })();
-      td.textContent = text;
-      td.title = text;
-      td.classList.add("qmm-ellipsis");
-      return td;
-    }
-    function row(log2) {
-      const tr = document.createElement("tr");
-      const time = timeCell(log2);
-      const pet = petCell(log2);
-      const ability = abilityCell(log2);
-      const details = detailsCell(log2);
-      if (log2.isActiveSession) {
-        time.style.boxShadow = "inset 3px 0 0 var(--qmm-accent)";
-        [time, pet, ability, details].forEach((td) => {
-          td.style.background = "rgba(94,234,212,0.06)";
-        });
-      }
-      tr.append(time, pet, ability, details);
-      return tr;
-    }
-    const normAbilityKey = (s) => String(s ?? "").toLowerCase().replace(/\s+/g, "").replace(/([ivx]+)$/i, "");
-    function applyFilters() {
-      let arr = logs.slice();
-      if (abilityFilter && abilityFilter.trim()) {
-        const f = normAbilityKey(abilityFilter);
-        arr = arr.filter((l) => {
-          const idKey = normAbilityKey(l.abilityId);
-          const nameKey = normAbilityKey(PetsService.getAbilityNameWithoutLevel(l.abilityId));
-          return idKey === f || nameKey === f;
-        });
-      }
-      if (q && q.trim()) {
-        const qq = q.toLowerCase();
-        arr = arr.filter((l) => {
-          const pet = (l.petName || l.species || "").toLowerCase();
-          const abName = (l.abilityName || "").toLowerCase();
-          const abId = (l.abilityId || "").toLowerCase();
-          const det = (typeof l.data === "string" ? l.data : (() => {
-            try {
-              return JSON.stringify(l.data);
-            } catch {
-              return "";
-            }
-          })()).toLowerCase();
-          return pet.includes(qq) || abName.includes(qq) || abId.includes(qq) || det.includes(qq) || (l.petId || "").toLowerCase().includes(qq);
-        });
-      }
-      arr.sort(
-        (a, b) => sortDir === "asc" ? a.performedAt - b.performedAt : b.performedAt - a.performedAt
-      );
-      return arr;
-    }
-    function repaint() {
-      tbody.innerHTML = "";
-      const arr = applyFilters();
-      if (!arr.length) {
-        const tr = document.createElement("tr");
-        const td = document.createElement("td");
-        td.colSpan = 4;
-        td.textContent = "\u{1F5D2}\uFE0F No logs yet.";
-        Object.assign(td.style, {
-          textAlign: "center",
-          padding: "24px 8px",
-          opacity: "0.7"
-        });
-        tr.appendChild(td);
-        tbody.appendChild(tr);
-        return;
-      }
-      arr.forEach((log2) => tbody.appendChild(row(log2)));
-      if (!tableScroller) return;
-      if (sortDir === "asc") tableScroller.scrollTop = tableScroller.scrollHeight + 32;
-      else tableScroller.scrollTop = 0;
-    }
-    selAbility.onchange = () => {
-      abilityFilter = selAbility.value;
-      repaint();
-    };
-    selSort.onchange = () => {
-      sortDir = selSort.value || "desc";
-      repaint();
-    };
-    inputSearch.addEventListener("input", () => {
-      q = inputSearch.value.trim();
-      repaint();
-    });
-    btnClear.onclick = () => {
-      try {
-        PetsService.clearAbilityLogs();
-      } catch {
-      }
-    };
-    let stopWatcher = null;
-    let unsubLogs = null;
-    (async () => {
-      try {
-        stopWatcher = await PetsService.startAbilityLogsWatcher();
-        rebuildAbilityOptions();
-        unsubLogs = PetsService.onAbilityLogs((all) => {
-          logs = all.map((e) => ({
-            petId: e.petId,
-            petName: e.name ?? null,
-            species: e.species ?? null,
-            mutations: Array.isArray(e.mutations) ? e.mutations.slice() : void 0,
-            abilityId: e.abilityId,
-            abilityName: e.abilityName,
-            data: e.data,
-            performedAt: e.performedAt,
-            date: formatDateMMDDYY(e.performedAt),
-            time12: e.time12,
-            isActiveSession: sessionStart > 0 && e.performedAt >= sessionStart
-          }));
-          rebuildAbilityOptions();
-          repaint();
-        });
-      } catch {
-      }
-    })();
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          unsubLogs?.();
-        } catch {
-        }
-        try {
-          stopWatcher?.();
-        } catch {
-        }
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-    repaint();
-  }
   var detachPetsOpenTabListener = null;
   function renderPetsMenu(root) {
     const ui = new Menu({ id: "pets", compact: true, windowSelector: ".qws-win" });
@@ -48442,7 +49119,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     ui.addTab("teambuilder", "\u{1F9E9} Team Builder", (view) => renderTeamBuilderTab(view, ui));
     ui.addTab("feeding", "\u{1F356} Feeding", (view) => renderFeedingTab(view, ui));
     ui.addTab("hatch", "\u{1F95A} Hatch", (view) => renderHatchTab(view, ui));
-    ui.addTab("logs", "\u{1F4DD} Logs", (view) => renderLogsTab(view, ui));
+    ui.addTab("logs", "\u{1F4DD} Logs", (view) => renderLogsTab(view));
     const knownTabs = /* @__PURE__ */ new Set(["manager", "feeding", "hatch", "teambuilder", "logs"]);
     const onOpenTab = (ev) => {
       const tab = String(ev.detail?.tab || "");
@@ -48451,386 +49128,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     detachPetsOpenTabListener?.();
     window.addEventListener("qws:pets-open-tab", onOpenTab);
     detachPetsOpenTabListener = () => window.removeEventListener("qws:pets-open-tab", onOpenTab);
-  }
-
-  // src/ui/menus/panel-ui.ts
-  var STYLE_ID2 = "qws-panel-ui-css";
-  var ROW_ICON_PX = 26;
-  var TEAL = "#5eead4";
-  var TEAL_DIM = "rgba(94,234,212,0.12)";
-  var TEAL_BORDER = "rgba(94,234,212,0.3)";
-  var BORDER = "rgba(255,255,255,0.08)";
-  var CARD_BG = "rgba(255,255,255,0.03)";
-  var TEXT = "#e7eef7";
-  var TEXT_DIM = "rgba(226,232,240,0.45)";
-  var DANGER = "#ef4444";
-  var WARN = "#fbbf24";
-  var css = (el2, style2) => Object.assign(el2.style, style2);
-  function ensurePanelStyles() {
-    if (document.getElementById(STYLE_ID2)) return;
-    const st = document.createElement("style");
-    st.id = STYLE_ID2;
-    st.textContent = `
-.qws-pnl-scroll::-webkit-scrollbar { width: 6px; }
-.qws-pnl-scroll::-webkit-scrollbar-track { background: transparent; }
-.qws-pnl-scroll::-webkit-scrollbar-thumb { background: rgba(94,234,212,0.2); border-radius: 3px; }
-.qws-pnl-scroll::-webkit-scrollbar-thumb:hover { background: rgba(94,234,212,0.35); }
-.qws-pnl-scroll { scrollbar-width: thin; scrollbar-color: rgba(94,234,212,0.2) transparent; }
-
-.qws-pnl-cell {
-  position: relative; display: flex; align-items: center; justify-content: center;
-  aspect-ratio: 1; border-radius: 10px; cursor: pointer;
-  background: ${CARD_BG}; border: 1px solid ${BORDER};
-  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
-}
-.qws-pnl-cell:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.16); transform: translateY(-1px); }
-.qws-pnl-cell.is-active { border-color: ${TEAL_BORDER}; background: ${TEAL_DIM}; }
-.qws-pnl-cell.is-skinned::after {
-  content: ''; position: absolute; top: 5px; right: 5px;
-  width: 6px; height: 6px; border-radius: 50%; background: ${TEAL};
-}
-
-.qws-pnl-toggle { position:relative; display:inline-block; width:36px; height:20px; cursor:pointer; flex-shrink:0; }
-.qws-pnl-toggle input { opacity:0; width:0; height:0; position:absolute; }
-.qws-pnl-track {
-  position:absolute; inset:0; border-radius:10px;
-  background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.12);
-  transition:background 150ms ease, border-color 150ms ease;
-}
-.qws-pnl-toggle input:checked ~ .qws-pnl-track { background:rgba(94,234,212,0.25); border-color:rgba(94,234,212,0.5); }
-.qws-pnl-thumb {
-  position:absolute; top:3px; left:3px; width:12px; height:12px; border-radius:50%;
-  background:rgba(226,232,240,0.5); transition:transform 150ms ease, background 150ms ease;
-}
-.qws-pnl-toggle input:checked ~ .qws-pnl-track .qws-pnl-thumb { transform:translateX(16px); background:${TEAL}; }
-
-.qws-pnl-input {
-  padding: 8px 10px; border-radius: 9px; border: 1px solid ${BORDER};
-  background: rgba(0,0,0,0.22); color: ${TEXT}; font-size: 12px; outline: none;
-  transition: border-color 120ms ease;
-}
-.qws-pnl-input:focus { border-color: ${TEAL_BORDER}; }
-.qws-pnl-input option { background: #10151c; color: ${TEXT}; }
-
-/* Restyles the Menu's own hotkey capture button, which stays in use for its
-   key-recording behaviour. Scoped to panels so other menus keep their look. */
-.qws-pnl-root .qmm-hotkey {
-  min-width: 104px; padding: 7px 12px; border-radius: 9px;
-  border: 1px solid ${BORDER}; background: rgba(0,0,0,0.22);
-  color: ${TEXT}; font-size: 11px; font-weight: 600; font-family: inherit;
-  cursor: pointer; transition: all 120ms ease;
-}
-.qws-pnl-root .qmm-hotkey:hover { border-color: rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); }
-.qws-pnl-root .qmm-hotkey.is-assigned { color: ${TEAL}; border-color: ${TEAL_BORDER}; background: ${TEAL_DIM}; }
-.qws-pnl-root .qmm-hotkey.is-empty { color: ${TEXT_DIM}; font-weight: 500; }
-.qws-pnl-root .qmm-hotkey.is-recording {
-  color: ${WARN}; border-color: rgba(251,191,36,0.55); background: rgba(251,191,36,0.12);
-}
-.qws-pnl-root .qmm-check, .qws-pnl-root .qmm-switch { accent-color: ${TEAL}; }
-
-.qws-pnl-range {
-  -webkit-appearance: none; appearance: none;
-  width: 100%; height: 4px; border-radius: 999px; outline: none; cursor: pointer;
-  background: rgba(255,255,255,0.1); border: none; padding: 0; margin: 0;
-}
-.qws-pnl-range::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none;
-  width: 13px; height: 13px; border-radius: 50%;
-  background: ${TEAL}; border: none; cursor: pointer;
-  transition: transform 120ms ease, box-shadow 120ms ease;
-}
-.qws-pnl-range::-webkit-slider-thumb:hover { transform: scale(1.15); box-shadow: 0 0 0 4px ${TEAL_DIM}; }
-.qws-pnl-range::-moz-range-thumb {
-  width: 13px; height: 13px; border-radius: 50%;
-  background: ${TEAL}; border: none; cursor: pointer;
-}
-.qws-pnl-range::-moz-range-track { height: 4px; border-radius: 999px; background: rgba(255,255,255,0.1); }
-.qws-pnl-range:disabled { opacity: 0.4; cursor: not-allowed; }
-.qws-pnl-range:disabled::-webkit-slider-thumb { background: ${TEXT_DIM}; cursor: not-allowed; }
-.qws-pnl-range:disabled::-moz-range-thumb { background: ${TEXT_DIM}; cursor: not-allowed; }
-
-.qws-pnl-head:hover .qws-pnl-chevron { color: ${TEAL}; }
-`;
-    document.head.appendChild(st);
-  }
-  function sectionLabel(text) {
-    const el2 = document.createElement("div");
-    css(el2, {
-      fontSize: "10px",
-      fontWeight: "700",
-      letterSpacing: "0.08em",
-      color: TEXT_DIM,
-      textTransform: "uppercase"
-    });
-    el2.textContent = text;
-    return el2;
-  }
-  function card() {
-    const el2 = document.createElement("div");
-    css(el2, {
-      padding: "12px",
-      background: CARD_BG,
-      borderRadius: "12px",
-      border: `1px solid ${BORDER}`,
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-      minHeight: "0"
-    });
-    return el2;
-  }
-  var TONES = {
-    accent: {
-      fg: TEAL,
-      bg: TEAL_DIM,
-      border: TEAL_BORDER,
-      hoverBg: "rgba(94,234,212,0.22)",
-      hoverBorder: "rgba(94,234,212,0.55)"
-    },
-    neutral: {
-      fg: TEXT,
-      bg: CARD_BG,
-      border: BORDER,
-      hoverBg: "rgba(255,255,255,0.06)",
-      hoverBorder: "rgba(255,255,255,0.16)"
-    },
-    danger: {
-      fg: DANGER,
-      bg: "rgba(239,68,68,0.12)",
-      border: "rgba(239,68,68,0.3)",
-      hoverBg: "rgba(239,68,68,0.2)",
-      hoverBorder: "rgba(239,68,68,0.55)"
-    }
-  };
-  function button(label2, tone, onClick) {
-    const btn = document.createElement("button");
-    const palette = TONES[tone];
-    css(btn, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "6px",
-      padding: "7px 12px",
-      border: `1px solid ${palette.border}`,
-      borderRadius: "9px",
-      background: palette.bg,
-      color: palette.fg,
-      fontSize: "11px",
-      fontWeight: "600",
-      cursor: "pointer",
-      transition: "all 120ms ease",
-      whiteSpace: "nowrap"
-    });
-    btn.textContent = label2;
-    btn.onmouseenter = () => css(btn, { background: palette.hoverBg, borderColor: palette.hoverBorder });
-    btn.onmouseleave = () => css(btn, { background: palette.bg, borderColor: palette.border });
-    btn.onclick = async () => {
-      if (btn.disabled) return;
-      css(btn, { opacity: "0.6", pointerEvents: "none" });
-      try {
-        await onClick();
-      } finally {
-        setButtonEnabled(btn, !btn.disabled);
-      }
-    };
-    return btn;
-  }
-  function setButtonEnabled(btn, enabled2) {
-    btn.disabled = !enabled2;
-    css(btn, { opacity: enabled2 ? "1" : "0.35", pointerEvents: enabled2 ? "auto" : "none" });
-  }
-  function toggle(checked, onChange) {
-    const wrap = document.createElement("label");
-    wrap.className = "qws-pnl-toggle";
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.checked = checked;
-    const track = document.createElement("span");
-    track.className = "qws-pnl-track";
-    const thumb = document.createElement("span");
-    thumb.className = "qws-pnl-thumb";
-    track.appendChild(thumb);
-    wrap.append(input, track);
-    input.addEventListener("change", () => onChange(input.checked));
-    wrap.setChecked = (value) => {
-      input.checked = value;
-    };
-    return wrap;
-  }
-  function chip(text, tone) {
-    const el2 = document.createElement("span");
-    const color = tone === "ok" ? TEAL : WARN;
-    css(el2, {
-      alignSelf: "flex-start",
-      fontSize: "10px",
-      fontWeight: "600",
-      padding: "2px 7px",
-      borderRadius: "999px",
-      color,
-      background: tone === "ok" ? TEAL_DIM : "rgba(251,191,36,0.12)"
-    });
-    el2.textContent = text;
-    return el2;
-  }
-  function pill(text) {
-    const el2 = document.createElement("span");
-    css(el2, {
-      fontSize: "11px",
-      fontWeight: "600",
-      padding: "4px 9px",
-      borderRadius: "999px",
-      border: `1px solid ${BORDER}`,
-      background: "rgba(0,0,0,0.22)",
-      color: TEXT,
-      whiteSpace: "nowrap"
-    });
-    el2.textContent = text;
-    return el2;
-  }
-  function range(min, max, step, value) {
-    const el2 = document.createElement("input");
-    el2.className = "qws-pnl-range";
-    el2.type = "range";
-    el2.min = String(min);
-    el2.max = String(max);
-    el2.step = String(step);
-    el2.value = String(value);
-    return el2;
-  }
-  function numberField(min, max, step, value) {
-    const el2 = document.createElement("input");
-    el2.className = "qws-pnl-input";
-    el2.type = "number";
-    el2.min = String(min);
-    el2.max = String(max);
-    el2.step = String(step);
-    el2.value = String(value);
-    css(el2, { width: "78px", textAlign: "right" });
-    return el2;
-  }
-  function spriteLookup(frameKey) {
-    const parts = frameKey.split("/").filter(Boolean);
-    const name = parts[parts.length - 1] ?? frameKey;
-    const category = parts.length >= 2 ? parts[parts.length - 2] : "";
-    const categories = [category, `${category}s`, "ui", "decor", "objects"].filter(
-      (value, index, all) => value && all.indexOf(value) === index
-    );
-    return { categories, name };
-  }
-  function iconBox(source, sizePx, logTag) {
-    const box = document.createElement("div");
-    css(box, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: `${sizePx}px`,
-      height: `${sizePx}px`,
-      flex: "0 0 auto"
-    });
-    if (/^https?:\/\//i.test(source)) {
-      const img = document.createElement("img");
-      css(img, { maxWidth: "100%", maxHeight: "100%", imageRendering: "pixelated" });
-      img.alt = "";
-      setImageSafe(img, source);
-      box.appendChild(img);
-    } else {
-      const { categories, name } = spriteLookup(source);
-      attachSpriteIcon(box, categories, name, sizePx, logTag);
-    }
-    return box;
-  }
-  function settingRow(title, hint, control, opts = {}) {
-    const row = document.createElement("div");
-    css(row, {
-      display: "flex",
-      alignItems: "center",
-      gap: "10px",
-      padding: "8px 10px",
-      borderRadius: "10px",
-      background: CARD_BG,
-      border: `1px solid ${BORDER}`,
-      flexShrink: "0"
-    });
-    if (opts.icon) row.appendChild(iconBox(opts.icon, ROW_ICON_PX, opts.iconTag ?? "panel"));
-    const labelCol = document.createElement("div");
-    css(labelCol, { display: "flex", flexDirection: "column", gap: "2px", flex: "1 1 auto", minWidth: "0" });
-    const name = document.createElement("div");
-    css(name, { fontSize: "12px", color: TEXT });
-    name.textContent = title;
-    labelCol.appendChild(name);
-    if (hint) {
-      const desc = document.createElement("div");
-      css(desc, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.4" });
-      desc.textContent = hint;
-      labelCol.appendChild(desc);
-    }
-    const controls = document.createElement("div");
-    css(controls, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "flex-end",
-      gap: "8px",
-      flex: "0 0 auto",
-      flexWrap: "wrap"
-    });
-    controls.appendChild(control);
-    row.append(labelCol, controls);
-    return { row, controls };
-  }
-  function collapsibleCard(opts) {
-    const root = card();
-    css(root, { flexShrink: "0", minHeight: "auto" });
-    const head = document.createElement("button");
-    head.type = "button";
-    head.className = "qws-pnl-head";
-    css(head, {
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      padding: "0",
-      border: "none",
-      background: "none",
-      cursor: "pointer",
-      textAlign: "left",
-      font: "inherit",
-      color: "inherit"
-    });
-    const titles = document.createElement("div");
-    css(titles, { display: "flex", flexDirection: "column", gap: "3px", minWidth: "0", flex: "1 1 auto" });
-    titles.appendChild(sectionLabel(opts.icon ? `${opts.icon} ${opts.title}` : opts.title));
-    if (opts.description) {
-      const desc = document.createElement("div");
-      css(desc, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
-      desc.textContent = opts.description;
-      titles.appendChild(desc);
-    }
-    const chevron = document.createElement("span");
-    chevron.className = "qws-pnl-chevron";
-    css(chevron, {
-      color: TEXT_DIM,
-      fontSize: "10px",
-      transition: "transform 140ms ease, color 120ms ease",
-      flex: "0 0 auto",
-      marginLeft: "auto"
-    });
-    chevron.textContent = "\u25B6";
-    head.append(titles, chevron);
-    const body = document.createElement("div");
-    css(body, { display: "flex", flexDirection: "column", gap: "8px" });
-    let collapsed = opts.collapsed;
-    const apply = () => {
-      body.style.display = collapsed ? "none" : "flex";
-      chevron.style.transform = collapsed ? "rotate(0deg)" : "rotate(90deg)";
-      head.setAttribute("aria-expanded", collapsed ? "false" : "true");
-    };
-    apply();
-    head.addEventListener("click", () => {
-      collapsed = !collapsed;
-      apply();
-      opts.onToggle(collapsed);
-    });
-    root.append(head, body);
-    return { root, body };
   }
 
   // src/ui/menus/misc/deleter-section.ts
@@ -48867,7 +49164,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       { icon: config.rowIcon, iconTag: "misc" }
     );
     const actions = document.createElement("div");
-    css(actions, { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" });
+    css2(actions, { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" });
     const btnSelect = button(config.selectLabel, "accent", () => runSelect());
     const btnDelete = button("Delete", "danger", () => runDelete());
     const btnClear = button("Clear", "neutral", () => {
@@ -48881,7 +49178,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const actionsRow = settingRow("Actions", "Pick, clear, or delete the selection.", actions);
     const status = pill("Idle");
     const controls = document.createElement("div");
-    css(controls, { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" });
+    css2(controls, { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" });
     const btnPause = button("Pause", "neutral", () => {
       config.pause();
       updateControls();
@@ -48968,14 +49265,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       updateControls();
     };
     const onPauseState = () => updateControls();
-    const listeners6 = [
+    const listeners7 = [
       [`${config.eventPrefix}:progress`, onProgress],
       [`${config.eventPrefix}:done`, onComplete],
       [`${config.eventPrefix}:error`, onComplete],
       [`${config.eventPrefix}:paused`, onPauseState],
       [`${config.eventPrefix}:resumed`, onPauseState]
     ];
-    for (const [type, handler] of listeners6) window.addEventListener(type, handler);
+    for (const [type, handler] of listeners7) window.addEventListener(type, handler);
     updateControls();
     updateSummary2();
     section2.body.append(summaryRow.row, actionsRow.row, statusRow.row);
@@ -48983,7 +49280,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       root: section2.root,
       cleanup: () => {
         clearSummaryTimer();
-        for (const [type, handler] of listeners6) window.removeEventListener(type, handler);
+        for (const [type, handler] of listeners7) window.removeEventListener(type, handler);
       }
     };
   }
@@ -49025,12 +49322,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function panelHeader() {
     const head = document.createElement("div");
-    css(head, { display: "flex", flexDirection: "column", gap: "4px", flexShrink: "0", padding: "2px 2px 0" });
+    css2(head, { display: "flex", flexDirection: "column", gap: "4px", flexShrink: "0", padding: "2px 2px 0" });
     const title = document.createElement("div");
-    css(title, { fontSize: "15px", fontWeight: "700", color: TEXT });
+    css2(title, { fontSize: "15px", fontWeight: "700", color: TEXT });
     title.textContent = "\u2699\uFE0F Misc controls";
     const subtitle = document.createElement("div");
-    css(subtitle, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
+    css2(subtitle, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
     subtitle.textContent = "Utility toggles and bulk tools.";
     head.append(title, subtitle);
     return head;
@@ -49045,11 +49342,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     const featureDisabled = MiscService.AUTO_RECO_TEMPORARILY_DISABLED;
     const initialSeconds = Math.round(MiscService.getAutoRecoDelayMs() / 1e3);
     const hint = document.createElement("div");
-    css(hint, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.45", padding: "0 2px" });
+    css2(hint, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.45", padding: "0 2px" });
     const slider = range(0, AUTO_RECO_MAX_SECONDS, AUTO_RECO_STEP_SECONDS, initialSeconds);
-    css(slider, { width: "150px" });
+    css2(slider, { width: "150px" });
     const sliderValue = pill(formatShortDuration(initialSeconds));
-    css(sliderValue, { minWidth: "64px", textAlign: "center" });
+    css2(sliderValue, { minWidth: "64px", textAlign: "center" });
     const enabledToggle = toggle(featureDisabled ? false : MiscService.readAutoRecoEnabled(false), (on) => {
       MiscService.writeAutoRecoEnabled(on);
       syncEnabled(on);
@@ -49061,7 +49358,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (featureDisabled) {
       const input = enabledToggle.querySelector("input");
       if (input) input.disabled = true;
-      css(enabledToggle, { opacity: "0.4", pointerEvents: "none" });
+      css2(enabledToggle, { opacity: "0.4", pointerEvents: "none" });
       slider.disabled = true;
       hint.textContent = "Auto reconnect has been temporarily disabled at the request of the game developers. It will most likely come back later.";
     } else {
@@ -49077,7 +49374,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     slider.addEventListener("input", () => applySeconds(Number(slider.value), false));
     slider.addEventListener("change", () => applySeconds(Number(slider.value), true));
     const delayControl = document.createElement("div");
-    css(delayControl, { display: "flex", alignItems: "center", gap: "10px" });
+    css2(delayControl, { display: "flex", alignItems: "center", gap: "10px" });
     delayControl.append(slider, sliderValue);
     card3.body.append(
       settingRow("Enabled", "Attempts to log back in after a session conflict.", enabledToggle).row,
@@ -49195,7 +49492,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const root = ui.root.querySelector(".qmm-views") ?? ui.root;
     root.innerHTML = "";
     root.classList.add("qws-pnl-root", "qws-pnl-scroll");
-    css(root, {
+    css2(root, {
       display: "flex",
       flexDirection: "column",
       gap: "12px",
@@ -51062,10 +51359,10 @@ Restore figures are averages; unlucky streaks do worse.`;
 `;
     document.head.appendChild(st);
   }
-  var css2 = (el2, s) => Object.assign(el2.style, s);
+  var css3 = (el2, s) => Object.assign(el2.style, s);
   function sectionLabel2(text) {
     const el2 = document.createElement("div");
-    css2(el2, {
+    css3(el2, {
       fontSize: "10px",
       fontWeight: "700",
       letterSpacing: "0.08em",
@@ -51078,7 +51375,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function card2(children) {
     const el2 = document.createElement("div");
-    css2(el2, {
+    css3(el2, {
       padding: "14px",
       background: CARD_BG2,
       borderRadius: "12px",
@@ -51092,7 +51389,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function primaryBtn(label2, onClick) {
     const btn = document.createElement("button");
-    css2(btn, {
+    css3(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -51109,21 +51406,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "1"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css2(btn, { background: TEAL_MID, borderColor: TEAL_BRD_HI });
-    btn.onmouseleave = () => css2(btn, { background: TEAL_DIM2, borderColor: TEAL_BORDER2 });
+    btn.onmouseenter = () => css3(btn, { background: TEAL_MID, borderColor: TEAL_BRD_HI });
+    btn.onmouseleave = () => css3(btn, { background: TEAL_DIM2, borderColor: TEAL_BORDER2 });
     btn.onclick = async () => {
-      css2(btn, { opacity: "0.6", pointerEvents: "none" });
+      css3(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css2(btn, { opacity: "1", pointerEvents: "auto" });
+        css3(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
   }
   function secondaryBtn(label2, onClick) {
     const btn = document.createElement("button");
-    css2(btn, {
+    css3(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -51139,21 +51436,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "1"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css2(btn, { background: CARD_BG_HI, borderColor: BORDER_HI });
-    btn.onmouseleave = () => css2(btn, { background: CARD_BG2, borderColor: BORDER3 });
+    btn.onmouseenter = () => css3(btn, { background: CARD_BG_HI, borderColor: BORDER_HI });
+    btn.onmouseleave = () => css3(btn, { background: CARD_BG2, borderColor: BORDER3 });
     btn.onclick = async () => {
-      css2(btn, { opacity: "0.6", pointerEvents: "none" });
+      css3(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css2(btn, { opacity: "1", pointerEvents: "auto" });
+        css3(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
   }
   function dangerBtn(label2, onClick) {
     const btn = document.createElement("button");
-    css2(btn, {
+    css3(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -51169,21 +51466,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       flexShrink: "0"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css2(btn, { background: DANGER_HI, borderColor: DANGER_BRD_HI });
-    btn.onmouseleave = () => css2(btn, { background: DANGER_DIM, borderColor: DANGER_BRD });
+    btn.onmouseenter = () => css3(btn, { background: DANGER_HI, borderColor: DANGER_BRD_HI });
+    btn.onmouseleave = () => css3(btn, { background: DANGER_DIM, borderColor: DANGER_BRD });
     btn.onclick = async () => {
-      css2(btn, { opacity: "0.6", pointerEvents: "none" });
+      css3(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css2(btn, { opacity: "1", pointerEvents: "auto" });
+        css3(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
   }
   function smallBtn(label2, teal, onClick) {
     const btn = document.createElement("button");
-    css2(btn, {
+    css3(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -51199,14 +51496,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       flexShrink: "0"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css2(btn, { background: teal ? TEAL_MID : CARD_BG_HI, borderColor: teal ? TEAL_BRD_HI : BORDER_HI });
-    btn.onmouseleave = () => css2(btn, { background: teal ? TEAL_DIM2 : CARD_BG2, borderColor: teal ? TEAL_BORDER2 : BORDER3 });
+    btn.onmouseenter = () => css3(btn, { background: teal ? TEAL_MID : CARD_BG_HI, borderColor: teal ? TEAL_BRD_HI : BORDER_HI });
+    btn.onmouseleave = () => css3(btn, { background: teal ? TEAL_DIM2 : CARD_BG2, borderColor: teal ? TEAL_BORDER2 : BORDER3 });
     btn.onclick = async () => {
-      css2(btn, { opacity: "0.6", pointerEvents: "none" });
+      css3(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css2(btn, { opacity: "1", pointerEvents: "auto" });
+        css3(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
@@ -51215,7 +51512,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const input = document.createElement("input");
     input.type = "text";
     input.placeholder = placeholder;
-    css2(input, {
+    css3(input, {
       width: "100%",
       padding: "9px 12px",
       border: `1px solid ${BORDER3}`,
@@ -51227,8 +51524,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       transition: "border-color 150ms ease",
       boxSizing: "border-box"
     });
-    input.addEventListener("focus", () => css2(input, { borderColor: TEAL_BORDER2 }));
-    input.addEventListener("blur", () => css2(input, { borderColor: BORDER3 }));
+    input.addEventListener("focus", () => css3(input, { borderColor: TEAL_BORDER2 }));
+    input.addEventListener("blur", () => css3(input, { borderColor: BORDER3 }));
     return input;
   }
   function createToggle(checked, onChange) {
@@ -51248,10 +51545,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function renderEditorMenu(container) {
     ensureStyles2();
-    css2(container, { padding: "0", overflow: "hidden" });
+    css3(container, { padding: "0", overflow: "hidden" });
     const wrap = document.createElement("div");
     wrap.className = "qws-ed-scroll";
-    css2(wrap, {
+    css3(wrap, {
       display: "flex",
       flexDirection: "column",
       gap: "12px",
@@ -51264,7 +51561,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     container.appendChild(wrap);
     const statusEl = document.createElement("div");
-    css2(statusEl, {
+    css3(statusEl, {
       fontSize: "11px",
       color: TEXT_DIM3,
       minHeight: "16px",
@@ -51281,21 +51578,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       }, 4e3);
     }
     const toggleRow = document.createElement("div");
-    css2(toggleRow, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" });
+    css3(toggleRow, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" });
     const toggleLabel = document.createElement("div");
-    css2(toggleLabel, { fontSize: "13px", fontWeight: "600", color: TEXT3 });
+    css3(toggleLabel, { fontSize: "13px", fontWeight: "600", color: TEXT3 });
     toggleLabel.textContent = "Editor mode";
     const toggle2 = createToggle(EditorService.isEnabled(), (on) => {
       EditorService.setEnabled(on);
     });
     toggleRow.append(toggleLabel, toggle2);
     const desc = document.createElement("div");
-    css2(desc, { fontSize: "11px", color: TEXT_DIM3, lineHeight: "1.5" });
+    css3(desc, { fontSize: "11px", color: TEXT_DIM3, lineHeight: "1.5" });
     desc.textContent = "Sandbox garden with every plant and decor unlocked. Left click to place, right click to remove, drag to paint.";
     wrap.appendChild(card2([toggleRow, desc]));
     const nameInput = styledInput("Garden name\u2026");
     const actRow = document.createElement("div");
-    css2(actRow, { display: "flex", gap: "8px" });
+    css3(actRow, { display: "flex", gap: "8px" });
     actRow.append(
       primaryBtn("Save current garden", async () => {
         const fn = window.qwsEditorSaveGarden;
@@ -51318,7 +51615,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       card2([sectionLabel2("Current garden"), nameInput, actRow])
     );
     const dropZone = document.createElement("div");
-    css2(dropZone, {
+    css3(dropZone, {
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
@@ -51335,7 +51632,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       transition: "border-color 150ms ease, background 150ms ease"
     });
     const dropTitle = document.createElement("div");
-    css2(dropTitle, { fontWeight: "600", fontSize: "12px", color: TEXT3 });
+    css3(dropTitle, { fontWeight: "600", fontSize: "12px", color: TEXT3 });
     dropTitle.textContent = "Drop a garden JSON file here";
     const dropHint = document.createElement("div");
     dropHint.textContent = "\u2026or click to browse";
@@ -51344,9 +51641,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     fileInput.type = "file";
     fileInput.accept = ".json,application/json,text/plain";
     fileInput.multiple = true;
-    css2(fileInput, { display: "none" });
+    css3(fileInput, { display: "none" });
     const setDropActive = (active) => {
-      css2(dropZone, {
+      css3(dropZone, {
         borderColor: active ? TEAL_BRD_HI : BORDER_HI,
         background: active ? TEAL_DIM2 : "rgba(255,255,255,0.03)"
       });
@@ -51400,7 +51697,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       card2([sectionLabel2("Import"), dropZone, fileInput])
     );
     const listWrap = document.createElement("div");
-    css2(listWrap, { display: "flex", flexDirection: "column", gap: "6px" });
+    css3(listWrap, { display: "flex", flexDirection: "column", gap: "6px" });
     const renderSavedList = () => {
       const listFn = window.qwsEditorListSavedGardens;
       const loadFn = window.qwsEditorLoadGarden;
@@ -51410,7 +51707,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const items = typeof listFn === "function" ? listFn() : [];
       if (!items.length) {
         const empty = document.createElement("div");
-        css2(empty, { fontSize: "12px", color: TEXT_DIM3, padding: "4px 0" });
+        css3(empty, { fontSize: "12px", color: TEXT_DIM3, padding: "4px 0" });
         empty.textContent = "No saved gardens yet.";
         listWrap.appendChild(empty);
         return;
@@ -51418,7 +51715,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const editorOn = EditorService.isEnabled();
       for (const g of items) {
         const row = document.createElement("div");
-        css2(row, {
+        css3(row, {
           display: "flex",
           alignItems: "center",
           gap: "8px",
@@ -51428,10 +51725,10 @@ Restore figures are averages; unlucky streaks do worse.`;
           border: `1px solid ${BORDER3}`,
           transition: "border-color 120ms ease"
         });
-        row.onmouseenter = () => css2(row, { borderColor: BORDER_HI });
-        row.onmouseleave = () => css2(row, { borderColor: BORDER3 });
+        row.onmouseenter = () => css3(row, { borderColor: BORDER_HI });
+        row.onmouseleave = () => css3(row, { borderColor: BORDER3 });
         const nameEl = document.createElement("div");
-        css2(nameEl, {
+        css3(nameEl, {
           flex: "1",
           fontSize: "12px",
           fontWeight: "600",
@@ -51454,7 +51751,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         });
         loadBtn.disabled = !editorOn;
         if (!editorOn) {
-          css2(loadBtn, { opacity: "0.4", cursor: "not-allowed" });
+          css3(loadBtn, { opacity: "0.4", cursor: "not-allowed" });
           loadBtn.title = "Enable editor mode to load";
         }
         const expBtn = smallBtn("Export", false, async () => {
@@ -51518,9 +51815,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   function createHoldControl(action2) {
     const holdDetection = action2.holdDetection;
     const wrap = document.createElement("div");
-    css(wrap, { display: "flex", alignItems: "center", gap: "7px", flex: "0 0 auto" });
+    css2(wrap, { display: "flex", alignItems: "center", gap: "7px", flex: "0 0 auto" });
     const label2 = document.createElement("span");
-    css(label2, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap" });
+    css2(label2, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap" });
     label2.textContent = holdDetection.label;
     if (holdDetection.description) label2.title = holdDetection.description;
     const control = toggle(
@@ -51536,7 +51833,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function createKeybindRow(ui, action2) {
     const row = document.createElement("div");
-    css(row, {
+    css2(row, {
       display: "flex",
       alignItems: "center",
       gap: "10px",
@@ -51550,19 +51847,19 @@ Restore figures are averages; unlucky streaks do worse.`;
       row.appendChild(iconBox(action2.icon, ICON_BOX_PX, "keybinds"));
     }
     const labelCol = document.createElement("div");
-    css(labelCol, { display: "flex", flexDirection: "column", gap: "2px", flex: "1 1 auto", minWidth: "0" });
+    css2(labelCol, { display: "flex", flexDirection: "column", gap: "2px", flex: "1 1 auto", minWidth: "0" });
     const name = document.createElement("div");
-    css(name, { fontSize: "12px", color: TEXT, overflow: "hidden", textOverflow: "ellipsis" });
+    css2(name, { fontSize: "12px", color: TEXT, overflow: "hidden", textOverflow: "ellipsis" });
     name.textContent = action2.label;
     labelCol.appendChild(name);
     if (action2.hint) {
       const hint = document.createElement("div");
-      css(hint, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.4" });
+      css2(hint, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.4" });
       hint.textContent = action2.hint;
       labelCol.appendChild(hint);
     }
     const controls = document.createElement("div");
-    css(controls, { display: "flex", alignItems: "center", gap: "8px", flex: "0 0 auto" });
+    css2(controls, { display: "flex", alignItems: "center", gap: "8px", flex: "0 0 auto" });
     const hotkeyButton = ui.hotkeyButton(
       getKeybind(action2.id),
       (hk) => setKeybind(action2.id, hk),
@@ -51573,7 +51870,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         allowModifierOnly: action2.allowModifierOnly
       }
     );
-    css(hotkeyButton, { flexShrink: "0" });
+    css2(hotkeyButton, { flexShrink: "0" });
     let detachHold = null;
     if (action2.holdDetection) {
       const hold = createHoldControl(action2);
@@ -51627,7 +51924,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const root = ui.root.querySelector(".qmm-views") ?? ui.root;
     root.innerHTML = "";
     root.classList.add("qws-pnl-root");
-    css(root, {
+    css2(root, {
       display: "flex",
       flexDirection: "column",
       gap: "12px",
@@ -51643,10 +51940,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     for (const section2 of getKeybindSections()) {
       const sectionCard = card();
       sectionCard.dataset.section = section2.id;
-      css(sectionCard, { flexShrink: "0", minHeight: "auto" });
+      css2(sectionCard, { flexShrink: "0", minHeight: "auto" });
       const head = document.createElement("button");
       head.type = "button";
-      css(head, {
+      css2(head, {
         display: "flex",
         alignItems: "center",
         gap: "8px",
@@ -51659,7 +51956,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         color: "inherit"
       });
       const chevron = document.createElement("span");
-      css(chevron, {
+      css2(chevron, {
         color: TEXT_DIM,
         fontSize: "10px",
         transition: "transform 140ms ease",
@@ -51668,18 +51965,18 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       chevron.textContent = "\u25B6";
       const titles = document.createElement("div");
-      css(titles, { display: "flex", flexDirection: "column", gap: "3px", minWidth: "0", flex: "1 1 auto" });
+      css2(titles, { display: "flex", flexDirection: "column", gap: "3px", minWidth: "0", flex: "1 1 auto" });
       titles.appendChild(sectionLabel(`${section2.icon} ${section2.title}`));
       if (section2.description) {
         const desc = document.createElement("div");
-        css(desc, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
+        css2(desc, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
         desc.textContent = section2.description;
         titles.appendChild(desc);
       }
       head.append(titles, chevron);
       sectionCard.appendChild(head);
       const body = document.createElement("div");
-      css(body, { display: "flex", flexDirection: "column", gap: "8px" });
+      css2(body, { display: "flex", flexDirection: "column", gap: "8px" });
       for (const action2 of section2.actions) {
         body.appendChild(createKeybindRow(ui, action2));
       }
@@ -52416,10 +52713,10 @@ Restore figures are averages; unlucky streaks do worse.`;
 `;
     document.head.appendChild(st);
   }
-  var css3 = (el2, s) => Object.assign(el2.style, s);
+  var css4 = (el2, s) => Object.assign(el2.style, s);
   function sectionLabel3(text) {
     const el2 = document.createElement("div");
-    css3(el2, {
+    css4(el2, {
       fontSize: "10px",
       fontWeight: "700",
       letterSpacing: "0.08em",
@@ -52432,7 +52729,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function avatar(player2, size) {
     const el2 = document.createElement("div");
-    css3(el2, {
+    css4(el2, {
       width: `${size}px`,
       height: `${size}px`,
       borderRadius: "50%",
@@ -52446,14 +52743,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       overflow: "hidden"
     });
     if (player2.discordAvatarUrl) {
-      css3(el2, {
+      css4(el2, {
         backgroundImage: `url(${player2.discordAvatarUrl})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         border: `2px solid ${TEAL_BORDER3}`
       });
     } else {
-      css3(el2, {
+      css4(el2, {
         background: "linear-gradient(135deg, rgba(94,234,212,0.22), rgba(59,130,246,0.22))",
         border: `2px solid rgba(94,234,212,0.2)`
       });
@@ -52463,7 +52760,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function statusPill(online) {
     const wrap = document.createElement("div");
-    css3(wrap, {
+    css4(wrap, {
       display: "flex",
       alignItems: "center",
       gap: "4px",
@@ -52471,7 +52768,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       color: online ? GREEN : TEXT_DIM4
     });
     const dot = document.createElement("span");
-    css3(dot, {
+    css4(dot, {
       width: "6px",
       height: "6px",
       borderRadius: "50%",
@@ -52483,7 +52780,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function primaryBtn2(label2, iconSvg, onClick) {
     const btn = document.createElement("button");
-    css3(btn, {
+    css4(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -52502,16 +52799,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const icon = document.createElement("span");
     icon.innerHTML = iconSvg;
-    css3(icon, { display: "flex", alignItems: "center", flexShrink: "0" });
+    css4(icon, { display: "flex", alignItems: "center", flexShrink: "0" });
     btn.append(icon, document.createTextNode(label2));
-    btn.onmouseenter = () => css3(btn, { background: TEAL_MID2, borderColor: TEAL_BORDER_HI });
-    btn.onmouseleave = () => css3(btn, { background: TEAL_DIM3, borderColor: TEAL_BORDER3 });
+    btn.onmouseenter = () => css4(btn, { background: TEAL_MID2, borderColor: TEAL_BORDER_HI });
+    btn.onmouseleave = () => css4(btn, { background: TEAL_DIM3, borderColor: TEAL_BORDER3 });
     btn.onclick = async () => {
-      css3(btn, { opacity: "0.6", pointerEvents: "none" });
+      css4(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css3(btn, { opacity: "1", pointerEvents: "auto" });
+        css4(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
@@ -52520,13 +52817,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     let isActive = active;
     const btn = document.createElement("button");
     const applyState2 = () => {
-      css3(btn, {
+      css4(btn, {
         border: `1px solid ${isActive ? TEAL_BORDER_HI : BORDER4}`,
         background: isActive ? TEAL_MID2 : CARD_BG3,
         color: isActive ? TEAL3 : TEXT4
       });
     };
-    css3(btn, {
+    css4(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -52542,22 +52839,22 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const icon = document.createElement("span");
     icon.innerHTML = iconSvg;
-    css3(icon, { display: "flex", alignItems: "center", flexShrink: "0" });
+    css4(icon, { display: "flex", alignItems: "center", flexShrink: "0" });
     btn.append(icon, document.createTextNode(label2));
     applyState2();
     btn.onmouseenter = () => {
-      if (!isActive) css3(btn, { background: CARD_BG_HI2, borderColor: TEAL_BORDER3 });
+      if (!isActive) css4(btn, { background: CARD_BG_HI2, borderColor: TEAL_BORDER3 });
     };
     btn.onmouseleave = applyState2;
     btn.onclick = async () => {
-      css3(btn, { opacity: "0.6", pointerEvents: "none" });
+      css4(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         const next = !isActive;
         await onToggle(next);
         isActive = next;
         applyState2();
       } finally {
-        css3(btn, { opacity: "1", pointerEvents: "auto" });
+        css4(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     btn.__setActive = (v) => {
@@ -52568,7 +52865,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function markUnavailable(btn, hint) {
     btn.title = hint;
-    css3(btn, {
+    css4(btn, {
       opacity: "0.45",
       cursor: "not-allowed",
       filter: "grayscale(1)",
@@ -52585,7 +52882,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function secondaryBtn2(label2, iconSvg, onClick) {
     const btn = document.createElement("button");
-    css3(btn, {
+    css4(btn, {
       display: "flex",
       alignItems: "center",
       gap: "7px",
@@ -52603,16 +52900,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const icon = document.createElement("span");
     icon.innerHTML = iconSvg;
-    css3(icon, { display: "flex", alignItems: "center", flexShrink: "0", opacity: "0.7" });
+    css4(icon, { display: "flex", alignItems: "center", flexShrink: "0", opacity: "0.7" });
     btn.append(icon, document.createTextNode(label2));
-    btn.onmouseenter = () => css3(btn, { background: CARD_BG_HI2, borderColor: BORDER_HI2 });
-    btn.onmouseleave = () => css3(btn, { background: CARD_BG3, borderColor: BORDER4 });
+    btn.onmouseenter = () => css4(btn, { background: CARD_BG_HI2, borderColor: BORDER_HI2 });
+    btn.onmouseleave = () => css4(btn, { background: CARD_BG3, borderColor: BORDER4 });
     btn.onclick = async () => {
-      css3(btn, { opacity: "0.6", pointerEvents: "none" });
+      css4(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css3(btn, { opacity: "1", pointerEvents: "auto" });
+        css4(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
@@ -52631,9 +52928,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   };
   async function renderRoomMenu(root) {
     ensureStyles3();
-    css3(root, { padding: "0", overflow: "hidden" });
+    css4(root, { padding: "0", overflow: "hidden" });
     const wrap = document.createElement("div");
-    css3(wrap, {
+    css4(wrap, {
       display: "flex",
       flexDirection: "row",
       minHeight: "400px",
@@ -52642,7 +52939,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const leftPane = document.createElement("div");
     leftPane.className = "qws-rm-scroll";
-    css3(leftPane, {
+    css4(leftPane, {
       width: "200px",
       flexShrink: "0",
       display: "flex",
@@ -52654,7 +52951,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const rightPane = document.createElement("div");
     rightPane.className = "qws-rm-scroll";
-    css3(rightPane, {
+    css4(rightPane, {
       flex: "1",
       overflowY: "auto",
       padding: "14px 14px 14px 16px",
@@ -52678,7 +52975,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const player2 = playerId2 ? players.find((p) => p.id === playerId2) ?? null : null;
       if (!player2) {
         const hint = document.createElement("div");
-        css3(hint, {
+        css4(hint, {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -52691,15 +52988,15 @@ Restore figures are averages; unlucky streaks do worse.`;
         });
         const iconWrap = document.createElement("div");
         iconWrap.innerHTML = ICONS.user.replace("13", "28").replace("13", "28");
-        css3(iconWrap, { opacity: "0.35" });
+        css4(iconWrap, { opacity: "0.35" });
         hint.append(iconWrap, document.createTextNode("Select a player"));
         rightPane.appendChild(hint);
         return;
       }
       const content = document.createElement("div");
-      css3(content, { display: "flex", flexDirection: "column", gap: "18px" });
+      css4(content, { display: "flex", flexDirection: "column", gap: "18px" });
       const profileCard = document.createElement("div");
-      css3(profileCard, {
+      css4(profileCard, {
         display: "flex",
         alignItems: "center",
         gap: "12px",
@@ -52710,9 +53007,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       const av = avatar(player2, 46);
       const infoBlock = document.createElement("div");
-      css3(infoBlock, { display: "flex", flexDirection: "column", gap: "4px", minWidth: "0", flex: "1" });
+      css4(infoBlock, { display: "flex", flexDirection: "column", gap: "4px", minWidth: "0", flex: "1" });
       const nameEl = document.createElement("div");
-      css3(nameEl, {
+      css4(nameEl, {
         fontSize: "15px",
         fontWeight: "700",
         color: TEXT4,
@@ -52727,7 +53024,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const teleSection = document.createElement("div");
       teleSection.appendChild(sectionLabel3("Teleport"));
       const teleRow = document.createElement("div");
-      css3(teleRow, { display: "flex", gap: "8px" });
+      css4(teleRow, { display: "flex", gap: "8px" });
       const toPlayerBtn = primaryBtn2(
         "To player",
         ICONS.teleport,
@@ -52744,7 +53041,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const followSection = document.createElement("div");
       followSection.appendChild(sectionLabel3("Follow"));
       const followRow = document.createElement("div");
-      css3(followRow, { display: "flex", gap: "8px" });
+      css4(followRow, { display: "flex", gap: "8px" });
       const followPlayerBtn = toggleBtn(
         "Follow player",
         ICONS.follow,
@@ -52768,7 +53065,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const inspectSection = document.createElement("div");
       inspectSection.appendChild(sectionLabel3("Inspect"));
       const inspectGrid = document.createElement("div");
-      css3(inspectGrid, { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" });
+      css4(inspectGrid, { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" });
       inspectGrid.append(
         secondaryBtn2("Inventory", ICONS.inventory, async () => {
           hideWin();
@@ -52827,10 +53124,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       const valSection = document.createElement("div");
       valSection.appendChild(sectionLabel3("Crop values"));
       const valRow = document.createElement("div");
-      css3(valRow, { display: "flex", gap: "8px" });
+      css4(valRow, { display: "flex", gap: "8px" });
       const makeValCard = (label2) => {
         const card3 = document.createElement("div");
-        css3(card3, {
+        css4(card3, {
           flex: "1",
           padding: "11px 14px",
           background: CARD_BG3,
@@ -52841,10 +53138,10 @@ Restore figures are averages; unlucky streaks do worse.`;
           gap: "4px"
         });
         const lbl = document.createElement("div");
-        css3(lbl, { fontSize: "10px", color: TEXT_DIM4, fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" });
+        css4(lbl, { fontSize: "10px", color: TEXT_DIM4, fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" });
         lbl.textContent = label2;
         const val = document.createElement("div");
-        css3(val, { fontSize: "15px", fontWeight: "700", color: "#FFD84D" });
+        css4(val, { fontSize: "15px", fontWeight: "700", color: "#FFD84D" });
         val.textContent = "\u2026";
         card3.append(lbl, val);
         return { card: card3, val };
@@ -52871,7 +53168,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     function createPlayerCard(player2) {
       const isSelected = selectedId === player2.id;
       const card3 = document.createElement("div");
-      css3(card3, {
+      css4(card3, {
         display: "flex",
         alignItems: "center",
         gap: "10px",
@@ -52883,8 +53180,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         transition: "all 120ms ease"
       });
       if (!isSelected) {
-        card3.onmouseenter = () => css3(card3, { background: CARD_BG_HI2, borderColor: "rgba(94,234,212,0.18)" });
-        card3.onmouseleave = () => css3(card3, { background: "rgba(255,255,255,0.02)", borderColor: BORDER4 });
+        card3.onmouseenter = () => css4(card3, { background: CARD_BG_HI2, borderColor: "rgba(94,234,212,0.18)" });
+        card3.onmouseleave = () => css4(card3, { background: "rgba(255,255,255,0.02)", borderColor: BORDER4 });
       }
       card3.onclick = () => {
         selectedId = player2.id;
@@ -52893,9 +53190,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       };
       const av = avatar(player2, 32);
       const info = document.createElement("div");
-      css3(info, { flex: "1", minWidth: "0" });
+      css4(info, { flex: "1", minWidth: "0" });
       const nameEl = document.createElement("div");
-      css3(nameEl, {
+      css4(nameEl, {
         fontSize: "12px",
         fontWeight: "600",
         color: TEXT4,
@@ -52905,7 +53202,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       nameEl.textContent = player2.name || player2.id;
       const st = document.createElement("div");
-      css3(st, {
+      css4(st, {
         display: "flex",
         alignItems: "center",
         gap: "4px",
@@ -52914,7 +53211,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         color: player2.isConnected ? GREEN : TEXT_DIM4
       });
       const dot = document.createElement("span");
-      css3(dot, { width: "5px", height: "5px", borderRadius: "50%", background: player2.isConnected ? GREEN : "rgba(226,232,240,0.3)", flexShrink: "0" });
+      css4(dot, { width: "5px", height: "5px", borderRadius: "50%", background: player2.isConnected ? GREEN : "rgba(226,232,240,0.3)", flexShrink: "0" });
       st.append(dot, document.createTextNode(player2.isConnected ? "Online" : "Offline"));
       info.append(nameEl, st);
       card3.append(av, info);
@@ -52923,20 +53220,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     function renderPlayerList() {
       leftPane.innerHTML = "";
       const header = document.createElement("div");
-      css3(header, {
+      css4(header, {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         marginBottom: "6px"
       });
       const countEl = document.createElement("div");
-      css3(countEl, { fontSize: "10px", fontWeight: "700", letterSpacing: "0.07em", color: TEXT_DIM4, textTransform: "uppercase" });
+      css4(countEl, { fontSize: "10px", fontWeight: "700", letterSpacing: "0.07em", color: TEXT_DIM4, textTransform: "uppercase" });
       countEl.textContent = `${players.length} player${players.length !== 1 ? "s" : ""}`;
       header.appendChild(countEl);
       leftPane.appendChild(header);
       if (players.length === 0) {
         const empty = document.createElement("div");
-        css3(empty, { paddingTop: "16px", textAlign: "center", color: TEXT_DIM4, fontSize: "12px" });
+        css4(empty, { paddingTop: "16px", textAlign: "center", color: TEXT_DIM4, fontSize: "12px" });
         empty.textContent = "No players in room";
         leftPane.appendChild(empty);
         return;
@@ -53804,7 +54101,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function thumbBox(empty = false) {
     const el2 = document.createElement("div");
-    css(el2, {
+    css2(el2, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -53817,7 +54114,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     if (empty) {
       const plus = document.createElement("span");
-      css(plus, { color: TEXT_DIM, fontSize: "18px" });
+      css2(plus, { color: TEXT_DIM, fontSize: "18px" });
       plus.textContent = "+";
       el2.appendChild(plus);
     }
@@ -53826,7 +54123,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function buildSlot(target, index, deps) {
     const { entry, result, onError, onChanged } = deps;
     const row = document.createElement("div");
-    css(row, {
+    css2(row, {
       display: "flex",
       flexDirection: "column",
       gap: "8px",
@@ -53838,14 +54135,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     const before = thumbBox();
     mountThumb(before, target, null, SLOT_THUMB_PX);
     const arrow = document.createElement("span");
-    css(arrow, { color: TEXT_DIM, fontSize: "12px" });
+    css2(arrow, { color: TEXT_DIM, fontSize: "12px" });
     arrow.textContent = "\u2192";
     const after = thumbBox(!entry);
     if (entry) mountThumb(after, target, entry.blob, SLOT_THUMB_PX);
     const head = document.createElement("div");
-    css(head, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+    css2(head, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
     const name = document.createElement("div");
-    css(name, {
+    css2(name, {
       fontSize: "11px",
       color: TEXT,
       flex: "1 1 auto",
@@ -53860,20 +54157,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (entry) {
       const applied2 = result?.applied !== false;
       const pill2 = chip(applied2 ? "Active" : "Waiting", applied2 ? "ok" : "warn");
-      css(pill2, { alignSelf: "center", flex: "0 0 auto" });
+      css2(pill2, { alignSelf: "center", flex: "0 0 auto" });
       if (result?.error) pill2.title = result.error;
       head.appendChild(pill2);
     }
     const body = document.createElement("div");
-    css(body, { display: "flex", alignItems: "center", gap: "8px" });
+    css2(body, { display: "flex", alignItems: "center", gap: "8px" });
     const dims = document.createElement("div");
-    css(dims, { fontSize: "10px", color: TEXT_DIM, whiteSpace: "nowrap" });
+    css2(dims, { fontSize: "10px", color: TEXT_DIM, whiteSpace: "nowrap" });
     dims.textContent = `${target.logicalSize.w}\xD7${target.logicalSize.h}`;
     dims.title = "Ideal image size for this slot";
     const spacer = document.createElement("div");
-    css(spacer, { flex: "1 1 auto" });
+    css2(spacer, { flex: "1 1 auto" });
     const actions = document.createElement("div");
-    css(actions, { display: "flex", gap: "5px", flex: "0 0 auto" });
+    css2(actions, { display: "flex", gap: "5px", flex: "0 0 auto" });
     if (!target.skinnable) {
       actions.appendChild(chip(target.blockedReason || "Unavailable", "warn"));
     } else {
@@ -53909,10 +54206,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function buildDetail(options) {
     const { object, entries, results, onError, onChanged } = options;
     const host = document.createElement("div");
-    css(host, { display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" });
+    css2(host, { display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" });
     if (!object) {
       const empty = document.createElement("div");
-      css(empty, { fontSize: "12px", color: TEXT_DIM, textAlign: "center", padding: "28px 0" });
+      css2(empty, { fontSize: "12px", color: TEXT_DIM, textAlign: "center", padding: "28px 0" });
       empty.textContent = "Pick a sprite";
       host.appendChild(empty);
       return host;
@@ -53920,7 +54217,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     host.appendChild(sectionLabel(object.category));
     if (object.category === "tile") {
       const notice = document.createElement("div");
-      css(notice, {
+      css2(notice, {
         fontSize: "11px",
         color: WARN,
         lineHeight: "1.45",
@@ -53933,7 +54230,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       host.appendChild(notice);
     }
     const title = document.createElement("div");
-    css(title, {
+    css2(title, {
       fontSize: "14px",
       fontWeight: "600",
       color: TEXT,
@@ -53946,7 +54243,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     host.appendChild(title);
     const list = document.createElement("div");
     list.className = "qws-pnl-scroll";
-    css(list, { display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto", minHeight: "0" });
+    css2(list, { display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto", minHeight: "0" });
     object.slots.forEach((target, index) => {
       list.appendChild(
         buildSlot(target, index, {
@@ -53977,10 +54274,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function renderSkinsMenu(container) {
     ensurePanelStyles();
     void initSkins();
-    css(container, { padding: "0", overflow: "hidden" });
+    css2(container, { padding: "0", overflow: "hidden" });
     container.innerHTML = "";
     const root = document.createElement("div");
-    css(root, {
+    css2(root, {
       display: "grid",
       gridTemplateColumns: "minmax(0,1fr) 300px",
       gap: "12px",
@@ -53999,13 +54296,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     container.appendChild(root);
     const browser = card();
     const detail = card();
-    css(browser, { overflow: "hidden" });
-    css(detail, { overflow: "hidden" });
+    css2(browser, { overflow: "hidden" });
+    css2(detail, { overflow: "hidden" });
     root.append(browser, detail);
     const header = document.createElement("div");
-    css(header, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" });
+    css2(header, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" });
     const enableWrap = document.createElement("div");
-    css(enableWrap, { display: "flex", alignItems: "center", gap: "8px" });
+    css2(enableWrap, { display: "flex", alignItems: "center", gap: "8px" });
     const enableToggle = toggle(areSkinsEnabled(), (on) => void setSkinsEnabled(on));
     enableToggle.title = "Enable skins";
     enableWrap.append(sectionLabel("Sprites"), enableToggle);
@@ -54030,20 +54327,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     header.append(enableWrap, clearBtn);
     browser.appendChild(header);
     const filters = document.createElement("div");
-    css(filters, { display: "flex", gap: "8px" });
+    css2(filters, { display: "flex", gap: "8px" });
     const categorySelect = document.createElement("select");
     categorySelect.className = "qws-pnl-input";
-    css(categorySelect, { flex: "0 0 auto", maxWidth: "150px" });
+    css2(categorySelect, { flex: "0 0 auto", maxWidth: "150px" });
     const search2 = document.createElement("input");
     search2.className = "qws-pnl-input";
     search2.type = "search";
     search2.placeholder = "Search";
-    css(search2, { flex: "1 1 auto", minWidth: "0" });
+    css2(search2, { flex: "1 1 auto", minWidth: "0" });
     filters.append(categorySelect, search2);
     browser.appendChild(filters);
     const grid = document.createElement("div");
     grid.className = "qws-pnl-scroll";
-    css(grid, {
+    css2(grid, {
       display: "grid",
       gap: "8px",
       gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))",
@@ -54055,13 +54352,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     browser.appendChild(grid);
     const status = document.createElement("div");
-    css(status, { fontSize: "11px", color: TEXT_DIM, minHeight: "15px" });
+    css2(status, { fontSize: "11px", color: TEXT_DIM, minHeight: "15px" });
     browser.appendChild(status);
     const errorEl = document.createElement("div");
-    css(errorEl, { fontSize: "11px", color: DANGER, display: "none" });
+    css2(errorEl, { fontSize: "11px", color: DANGER, display: "none" });
     detail.appendChild(errorEl);
     const detailHost = document.createElement("div");
-    css(detailHost, { display: "flex", flexDirection: "column", minHeight: "0", flex: "1 1 auto" });
+    css2(detailHost, { display: "flex", flexDirection: "column", minHeight: "0", flex: "1 1 auto" });
     detail.appendChild(detailHost);
     const showError = (message) => {
       errorEl.textContent = message;
@@ -54122,7 +54419,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       if (!matches.length) {
         const empty = document.createElement("div");
-        css(empty, { gridColumn: "1 / -1", fontSize: "12px", color: TEXT_DIM, padding: "24px 0", textAlign: "center" });
+        css2(empty, { gridColumn: "1 / -1", fontSize: "12px", color: TEXT_DIM, padding: "24px 0", textAlign: "center" });
         empty.textContent = snapshot2.ready ? "No match" : "Loading\u2026";
         grid.appendChild(empty);
       }
@@ -54167,7 +54464,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/utils/antiafk.ts
   function createAntiAfkController(deps) {
     const STOP_EVENTS = ["visibilitychange", "blur", "focus", "focusout", "pagehide", "freeze", "resume"];
-    const listeners6 = [];
+    const listeners7 = [];
     function swallowAll() {
       const add = (target, t) => {
         const h = (e) => {
@@ -54175,7 +54472,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           e.preventDefault?.();
         };
         target.addEventListener(t, h, { capture: true });
-        listeners6.push({ t, h, target });
+        listeners7.push({ t, h, target });
       };
       STOP_EVENTS.forEach((t) => {
         add(document, t);
@@ -54183,11 +54480,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
     }
     function unswallowAll() {
-      for (const { t, h, target } of listeners6) try {
+      for (const { t, h, target } of listeners7) try {
         target.removeEventListener(t, h, { capture: true });
       } catch {
       }
-      listeners6.length = 0;
+      listeners7.length = 0;
     }
     const docProto = Object.getPrototypeOf(document);
     const saved = {

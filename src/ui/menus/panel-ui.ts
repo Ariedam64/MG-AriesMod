@@ -6,13 +6,12 @@
 // borrowing its class names would leave other panels unstyled for anyone who
 // never opens it.
 
-import { attachSpriteIcon } from '../spriteIconCache';
-import { setImageSafe } from '../../utils/discordCsp';
+export { iconBox, spriteLookup } from './panel-icons';
 
 const STYLE_ID = 'qws-panel-ui-css';
 
 /** Icon size for a setting row, matching the Keybinds rows. */
-const ROW_ICON_PX = 26;
+export const ROW_ICON_PX = 26;
 
 export const TEAL = '#5eead4';
 export const TEAL_DIM = 'rgba(94,234,212,0.12)';
@@ -115,6 +114,35 @@ export function ensurePanelStyles(): void {
   document.head.appendChild(st);
 }
 
+export const GOLD = '#FFC734';
+export const RAINBOW = '#c084fc';
+
+/**
+ * Paints an element's text with the rainbow gradient.
+ *
+ * The gradient is painted across the element's box and then clipped to the
+ * glyphs, so a box wider than its text shows only the gradient's first colours.
+ * `width: fit-content` shrinks the box onto the text, which is what makes the
+ * full spectrum land on the letters; grid and flex parents need the element to
+ * stop stretching, hence `justifySelf`/`alignSelf`.
+ *
+ * The transparent fill is what lets the background show through, so the element
+ * must carry no `color` of its own afterwards.
+ */
+export function rainbowText(el: HTMLElement): void {
+  css(el, {
+    display: 'inline-block',
+    width: 'fit-content',
+    justifySelf: 'center',
+    alignSelf: 'center',
+    background: 'linear-gradient(90deg, #ff4d4d, #ff9f1c, #ffe14d, #3ddc84, #4dabf7, #a06bff)',
+    backgroundClip: 'text',
+    color: 'transparent',
+  });
+  el.style.setProperty('-webkit-background-clip', 'text');
+  el.style.setProperty('-webkit-text-fill-color', 'transparent');
+}
+
 export function sectionLabel(text: string): HTMLElement {
   const el = document.createElement('div');
   css(el, {
@@ -131,7 +159,7 @@ export function sectionLabel(text: string): HTMLElement {
 export function card(): HTMLElement {
   const el = document.createElement('div');
   css(el, {
-    padding: '12px',
+    padding: '10px',
     background: CARD_BG,
     borderRadius: '12px',
     border: `1px solid ${BORDER}`,
@@ -260,6 +288,46 @@ export function pill(text: string): HTMLElement {
   return el;
 }
 
+export interface Meter {
+  root: HTMLElement;
+  /** `ratio` is clamped to 0..1; `tone` colours the fill. */
+  set(ratio: number, tone?: 'accent' | 'warn'): void;
+}
+
+/** Thin horizontal progress bar. */
+export function meter(): Meter {
+  const root = document.createElement('div');
+  css(root, {
+    position: 'relative',
+    height: '5px',
+    borderRadius: '999px',
+    background: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+    flex: '1 1 auto',
+    minWidth: '60px',
+  });
+
+  const fill = document.createElement('div');
+  css(fill, {
+    position: 'absolute',
+    inset: '0 auto 0 0',
+    width: '0%',
+    borderRadius: '999px',
+    background: TEAL,
+    transition: 'width 200ms ease, background 200ms ease',
+  });
+  root.appendChild(fill);
+
+  return {
+    root,
+    set(ratio, tone = 'accent') {
+      const clamped = Number.isFinite(ratio) ? Math.max(0, Math.min(1, ratio)) : 0;
+      fill.style.width = `${clamped * 100}%`;
+      fill.style.background = tone === 'warn' ? WARN : TEAL;
+    },
+  };
+}
+
 export function range(min: number, max: number, step: number, value: number): HTMLInputElement {
   const el = document.createElement('input');
   el.className = 'qws-pnl-range';
@@ -268,6 +336,29 @@ export function range(min: number, max: number, step: number, value: number): HT
   el.max = String(max);
   el.step = String(step);
   el.value = String(value);
+  return el;
+}
+
+export function textField(placeholder: string, value = ''): HTMLInputElement {
+  const el = document.createElement('input');
+  el.className = 'qws-pnl-input';
+  el.type = 'text';
+  el.placeholder = placeholder;
+  el.value = value;
+  css(el, { padding: '6px 9px', fontSize: '11.5px' });
+  return el;
+}
+
+export function selectField(options: Array<[value: string, label: string]>): HTMLSelectElement {
+  const el = document.createElement('select');
+  el.className = 'qws-pnl-input';
+  css(el, { padding: '6px 9px', fontSize: '11.5px', cursor: 'pointer' });
+  for (const [value, label] of options) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    el.appendChild(option);
+  }
   return el;
 }
 
@@ -281,187 +372,4 @@ export function numberField(min: number, max: number, step: number, value: numbe
   el.value = String(value);
   css(el, { width: '78px', textAlign: 'right' });
   return el;
-}
-
-/**
- * Splits an atlas frame key into the category/name pair the sprite API uses.
- *
- * The API pluralises some categories (`sprite/object/…` is served under
- * `objects/`), and a few sprites exist under more than one, so candidates are
- * returned rather than a single guess — `attachSpriteIcon` takes the first that
- * resolves.
- */
-export function spriteLookup(frameKey: string): { categories: string[]; name: string } {
-  const parts = frameKey.split('/').filter(Boolean);
-  const name = parts[parts.length - 1] ?? frameKey;
-  const category = parts.length >= 2 ? parts[parts.length - 2] : '';
-  const categories = [category, `${category}s`, 'ui', 'decor', 'objects'].filter(
-    (value, index, all) => value && all.indexOf(value) === index,
-  );
-  return { categories, name };
-}
-
-/**
- * Square icon holder for an atlas frame key (`sprite/decor/SeedSilo`) or a
- * hosted image URL. Remote URLs go through `setImageSafe`, which routes them via
- * GM inside the Discord Activity where the CSP blocks direct loads.
- */
-export function iconBox(source: string, sizePx: number, logTag: string): HTMLElement {
-  const box = document.createElement('div');
-  css(box, {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: `${sizePx}px`,
-    height: `${sizePx}px`,
-    flex: '0 0 auto',
-  });
-  if (/^https?:\/\//i.test(source)) {
-    const img = document.createElement('img');
-    css(img, { maxWidth: '100%', maxHeight: '100%', imageRendering: 'pixelated' });
-    img.alt = '';
-    setImageSafe(img, source);
-    box.appendChild(img);
-  } else {
-    const { categories, name } = spriteLookup(source);
-    attachSpriteIcon(box, categories, name, sizePx, logTag);
-  }
-  return box;
-}
-
-export interface SettingRowOptions {
-  /** Atlas frame key or image URL shown at the start of the row. */
-  icon?: string;
-  /** Log tag forwarded to the sprite loader. */
-  iconTag?: string;
-}
-
-/** One labelled setting: title (+ optional hint) on the left, controls on the right. */
-export function settingRow(
-  title: string,
-  hint: string | null,
-  control: HTMLElement,
-  opts: SettingRowOptions = {},
-): { row: HTMLElement; controls: HTMLElement } {
-  const row = document.createElement('div');
-  css(row, {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    padding: '8px 10px',
-    borderRadius: '10px',
-    background: CARD_BG,
-    border: `1px solid ${BORDER}`,
-    flexShrink: '0',
-  });
-
-  if (opts.icon) row.appendChild(iconBox(opts.icon, ROW_ICON_PX, opts.iconTag ?? 'panel'));
-
-  const labelCol = document.createElement('div');
-  css(labelCol, { display: 'flex', flexDirection: 'column', gap: '2px', flex: '1 1 auto', minWidth: '0' });
-
-  const name = document.createElement('div');
-  css(name, { fontSize: '12px', color: TEXT });
-  name.textContent = title;
-  labelCol.appendChild(name);
-
-  if (hint) {
-    const desc = document.createElement('div');
-    css(desc, { fontSize: '10px', color: TEXT_DIM, lineHeight: '1.4' });
-    desc.textContent = hint;
-    labelCol.appendChild(desc);
-  }
-
-  const controls = document.createElement('div');
-  css(controls, {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: '8px',
-    flex: '0 0 auto',
-    flexWrap: 'wrap',
-  });
-  controls.appendChild(control);
-
-  row.append(labelCol, controls);
-  return { row, controls };
-}
-
-export interface CollapsibleCardOptions {
-  icon?: string;
-  title: string;
-  description?: string;
-  collapsed: boolean;
-  onToggle: (collapsed: boolean) => void;
-}
-
-/**
- * Section card whose header doubles as the collapse control.
- *
- * `flexShrink:0` / `minHeight:auto` opt out of the shared card()'s shrinking:
- * inside a scrolling list, shrinking makes every card collapse under its own
- * content and the rows overlap.
- */
-export function collapsibleCard(opts: CollapsibleCardOptions): { root: HTMLElement; body: HTMLElement } {
-  const root = card();
-  css(root, { flexShrink: '0', minHeight: 'auto' });
-
-  const head = document.createElement('button');
-  head.type = 'button';
-  head.className = 'qws-pnl-head';
-  css(head, {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '0',
-    border: 'none',
-    background: 'none',
-    cursor: 'pointer',
-    textAlign: 'left',
-    font: 'inherit',
-    color: 'inherit',
-  });
-
-  const titles = document.createElement('div');
-  css(titles, { display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '0', flex: '1 1 auto' });
-  titles.appendChild(sectionLabel(opts.icon ? `${opts.icon} ${opts.title}` : opts.title));
-  if (opts.description) {
-    const desc = document.createElement('div');
-    css(desc, { fontSize: '11px', color: TEXT_DIM, lineHeight: '1.45' });
-    desc.textContent = opts.description;
-    titles.appendChild(desc);
-  }
-
-  const chevron = document.createElement('span');
-  chevron.className = 'qws-pnl-chevron';
-  css(chevron, {
-    color: TEXT_DIM,
-    fontSize: '10px',
-    transition: 'transform 140ms ease, color 120ms ease',
-    flex: '0 0 auto',
-    marginLeft: 'auto',
-  });
-  chevron.textContent = '▶';
-
-  head.append(titles, chevron);
-
-  const body = document.createElement('div');
-  css(body, { display: 'flex', flexDirection: 'column', gap: '8px' });
-
-  let collapsed = opts.collapsed;
-  const apply = () => {
-    body.style.display = collapsed ? 'none' : 'flex';
-    chevron.style.transform = collapsed ? 'rotate(0deg)' : 'rotate(90deg)';
-    head.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-  };
-  apply();
-
-  head.addEventListener('click', () => {
-    collapsed = !collapsed;
-    apply();
-    opts.onToggle(collapsed);
-  });
-
-  root.append(head, body);
-  return { root, body };
 }

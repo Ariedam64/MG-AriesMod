@@ -3,7 +3,8 @@
 // The seed and decor bulk deleters differ only in labels, service calls and
 // event names, so they share one section builder.
 
-import { button, collapsibleCard, css, pill, setButtonEnabled, settingRow } from "../panel-ui";
+import { button, css, pill, setButtonEnabled } from "../panel-ui";
+import { collapsibleCard, settingRow } from "../panel-layout";
 
 const NF_US = new Intl.NumberFormat("en-US");
 const formatNum = (n: number) => NF_US.format(Math.max(0, Math.floor(n || 0)));

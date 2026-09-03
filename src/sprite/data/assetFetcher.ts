@@ -1,6 +1,6 @@
 // Networking helpers (ported from userscript GM_xmlhttpRequest flow)
 import { joinPath, relPath } from '../utils/path';
-import type { ManifestBundle } from '../types';
+import type { ManifestBundle, ManifestSrc } from '../types';
 
 declare const GM_xmlhttpRequest:
   | ((
@@ -258,17 +258,43 @@ export async function loadKtx2AsTexture(
   throw new Error(`KTX2 base texture not found in renderer for "${imgName}"`);
 }
 
+/** Path of a manifest `src` entry, whichever of the two forms it uses. */
+function srcPath(entry: ManifestSrc): string | null {
+  if (typeof entry === 'string') return entry;
+  return typeof entry?.src === 'string' && entry.src ? entry.src : null;
+}
+
+function srcResolution(entry: ManifestSrc): number {
+  if (typeof entry === 'string') return 1;
+  const value = Number(entry?.resolution);
+  return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
+function isAtlasJsonPath(path: string): boolean {
+  return path.endsWith('.json') && path !== 'manifest.json' && !path.startsWith('audio/');
+}
+
+/**
+ * Atlas JSON paths listed by the manifest, one per asset.
+ *
+ * An asset's `src` list holds the same atlas packed at several resolutions —
+ * 1x and 2x carry identical frame keys, only the rectangles differ — so exactly
+ * one is taken. The highest resolution wins: its rectangles are true pixels
+ * (`meta.scale: 1`), which is what a replacement image should be fitted to.
+ * Taking both would index every frame twice with conflicting rectangles.
+ */
 export function extractAtlasJsons(manifest: ManifestBundle) {
   const jsons = new Set<string>();
   for (const bundle of manifest.bundles || []) {
     for (const asset of bundle.assets || []) {
-      for (const src of asset.src || []) {
-        if (typeof src !== 'string') continue;
-        if (!src.endsWith('.json')) continue;
-        if (src === 'manifest.json') continue;
-        if (src.startsWith('audio/')) continue;
-        jsons.add(src);
+      let best: { path: string; resolution: number } | null = null;
+      for (const entry of asset.src || []) {
+        const path = srcPath(entry);
+        if (!path || !isAtlasJsonPath(path)) continue;
+        const resolution = srcResolution(entry);
+        if (!best || resolution > best.resolution) best = { path, resolution };
       }
+      if (best) jsons.add(best.path);
     }
   }
   return jsons;

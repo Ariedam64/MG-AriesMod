@@ -75,6 +75,12 @@ export type AriesStorage = {
   // too large for this shared blob and go to IndexedDB (see src/skins/store.ts).
   skins?: { enabled?: boolean };
   activityLog?: { history?: unknown; filter?: unknown };
+  hatch?: {
+    /** Seen pets, Bad Luck Protection counters and head starts. */
+    tracker?: unknown;
+    /** Egg id -> expanded, for the Hatch tab. Cards default to collapsed. */
+    expanded?: Record<string, boolean>;
+  };
   audio?: { settings?: unknown; library?: unknown; sfxVolumeAtom?: unknown };
   friends?: {
     settings?: FriendSettings;

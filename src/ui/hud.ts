@@ -39,6 +39,7 @@ import { startInventorySortingObserver } from "../utils/inventorySorting";
 import { startActivityLogFilterPixi } from "../utils/activityLogFilterPixi";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
 import { startActivityLogHistoryWatcher } from "../services/activityLogHistory";
+import { startHatchTracker } from "../services/hatchTracker";
 
 // ========================
 // Types d’intégration
@@ -1132,6 +1133,7 @@ export function initWatchers(){
         try { await PetsService.startPetTeamSync(); } catch {}
       try { await PetsService.startAbilityLogsWatcher(); } catch {}
       try { await startActivityLogHistoryWatcher(); } catch {}
+      try { await startHatchTracker(); } catch {}
       startActivityLogFilterPixi();
       startCropValuesObserverFromGardenAtom();
       startCropValueOverlayInPixi();

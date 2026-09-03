@@ -1,7 +1,7 @@
 // src/data/dynamic/logic/capture.ts
 // Fetches all game data from the mg-api.ariedam.fr API.
 
-import type { CapturedDataKey } from "../types";
+import type { DataKey } from "../types";
 import { captureState } from "../state";
 import { getJSON } from "../../../utils/mgCommon";
 import { withDiscordPollPause } from "../../../ariesModAPI/client/events";
@@ -17,9 +17,10 @@ interface ApiData {
   mutations: Record<string, unknown>;
   abilities: Record<string, unknown>;
   weathers: Record<string, unknown>;
+  enums: Record<string, unknown>;
 }
 
-function setCapturedData(key: CapturedDataKey | "weather", value: Record<string, unknown>): void {
+function setCapturedData(key: DataKey, value: Record<string, unknown>): void {
   if (captureState.data[key] != null) return;
   captureState.data[key] = value;
 
@@ -49,6 +50,7 @@ export async function fetchAllData(): Promise<void> {
     if (data.mutations) setCapturedData("mutations", data.mutations);
     if (data.abilities) setCapturedData("abilities", data.abilities);
     if (data.weathers) setCapturedData("weather", data.weathers);
+    if (data.enums) setCapturedData("enums", data.enums);
 
     captureState.fetchComplete = true;
     console.log("[MGData] all data loaded from API", {

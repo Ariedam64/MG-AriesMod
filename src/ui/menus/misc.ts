@@ -14,15 +14,14 @@ import { createDeleterSection } from "./misc/deleter-section";
 import {
   TEXT,
   TEXT_DIM,
-  collapsibleCard,
   css,
   ensurePanelStyles,
   numberField,
   pill,
   range,
-  settingRow,
   toggle,
 } from "./panel-ui";
+import { collapsibleCard, settingRow } from "./panel-layout";
 
 const PANEL_WIDTH_PX = 620;
 

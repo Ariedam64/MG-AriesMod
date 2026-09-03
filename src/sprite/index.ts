@@ -286,7 +286,10 @@ async function prefetchAtlas(base: string): Promise<PrefetchedAtlas | null> {
 // Atlases the mod has no use for (e.g. weather effects). The game may not
 // have these resident in the renderer at boot time, so instead of polling
 // and failing on every load, skip them outright — no attempt, no warning.
-const SKIPPED_ATLAS_PATTERNS = [/(^|\/)weather\.json$/i];
+// The resolution suffix is optional: the game renamed `weather.json` to
+// `weather-1x.json` / `weather-2x.json` when it started packing every atlas at
+// two resolutions.
+const SKIPPED_ATLAS_PATTERNS = [/(^|\/)weather(-\d+x)?\.json$/i];
 
 async function loadTextures(base: string, prefetched?: PrefetchedAtlas | null) {
   const usePrefetched = prefetched && prefetched.base === base ? prefetched : null;
