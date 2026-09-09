@@ -9,6 +9,7 @@ import type { Unsubscribe } from "../store/api";
 import { getPetInfo } from "./petCalcul";
 import { estimateProduceValue, valueFromInventoryProduce } from "./calculators";
 import type { InventoryProduce } from "./calculators";
+import { readCropSize } from "./cropSize";
 
 export type InventoryValueLogKey = "seeds" | "tools" | "eggs" | "decors";
 
@@ -29,7 +30,8 @@ export interface PetInventoryValueSummary {
 
 export interface PlantSlotInventoryValueEntry {
   species: string | null;
-  targetScale: number | null;
+  /** Whole-number Crop Size in [50, 100]. */
+  size: number | null;
   mutations: string[];
   value: number | null;
 }
@@ -52,7 +54,8 @@ export interface PlantInventoryValueSummary {
 export interface CropInventoryValueEntry {
   id: string | null;
   species: string | null;
-  scale: number | null;
+  /** Whole-number Crop Size in [50, 100]. */
+  size: number | null;
   mutations: string[];
   value: number | null;
 }
@@ -245,16 +248,14 @@ export function computeInventoryItemValue(
 
       for (const slot of slots) {
         const slotSpecies = typeof slot?.species === "string" ? slot.species : null;
-        const rawTarget = slot?.targetScale;
-        const target = Number.isFinite(rawTarget) ? (rawTarget as number) : Number(rawTarget);
-        const targetScale = Number.isFinite(target) ? target : null;
+        const size = readCropSize(slot);
         const mutations = Array.isArray(slot?.mutations)
           ? slot.mutations.filter((m: unknown): m is string => typeof m === "string")
           : [];
 
-        if (!slotSpecies || targetScale == null) continue;
+        if (!slotSpecies || size == null) continue;
 
-        const value = estimateProduceValue(slotSpecies, targetScale, mutations, {
+        const value = estimateProduceValue(slotSpecies, size, mutations, {
           friendPlayers: playersInRoom,
         });
 
@@ -335,25 +336,21 @@ function computePlantValues(
 
     const slotEntries: PlantSlotInventoryValueEntry[] = slots.map((slot: any) => {
       const slotSpecies = typeof slot?.species === "string" ? slot.species : null;
-      const targetScaleRaw = slot?.targetScale;
-      const targetScale = Number.isFinite(targetScaleRaw)
-        ? (targetScaleRaw as number)
-        : Number(targetScaleRaw);
-      const scaleValue = Number.isFinite(targetScale) ? targetScale : null;
+      const size = readCropSize(slot);
       const mutations = Array.isArray(slot?.mutations)
         ? slot.mutations.filter((m: unknown): m is string => typeof m === "string")
         : [];
 
       const value =
-        slotSpecies && scaleValue != null
-          ? estimateProduceValue(slotSpecies, scaleValue, mutations, {
+        slotSpecies && size != null
+          ? estimateProduceValue(slotSpecies, size, mutations, {
               friendPlayers: playersInRoom,
             })
           : 0;
 
       return {
         species: slotSpecies,
-        targetScale: scaleValue,
+        size,
         mutations,
         value,
       };
@@ -399,9 +396,7 @@ function computeCropValues(
   const entries: CropInventoryValueEntry[] = crops.map((crop: any) => {
     const id = typeof crop?.id === "string" ? crop.id : null;
     const species = typeof crop?.species === "string" ? crop.species : null;
-    const rawScale = crop?.scale;
-    const scale = Number.isFinite(rawScale) ? (rawScale as number) : Number(rawScale);
-    const scaleValue = Number.isFinite(scale) ? scale : null;
+    const size = readCropSize(crop);
     const mutations = Array.isArray(crop?.mutations)
       ? crop.mutations.filter((m: unknown): m is string => typeof m === "string")
       : [];
@@ -411,7 +406,7 @@ function computeCropValues(
     return {
       id,
       species,
-      scale: scaleValue,
+      size,
       mutations,
       value,
     };

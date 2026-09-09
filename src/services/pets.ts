@@ -1781,9 +1781,12 @@ export const PetsService = {
       case "ProduceScaleBoostII":
       case "ProduceScaleBoostIII":
       case "SnowyCropSizeBoost": {
+        // Whole Size points added to the crop, not a percentage of its scale.
         const inc =
+          data["sizeIncrease"] ??
           data["scaleIncreasePercentage"] ??
           data["cropScaleIncreasePercentage"] ??
+          base["sizeIncrease"] ??
           base["scaleIncreasePercentage"] ??
           0;
         return num(inc);

@@ -178,9 +178,10 @@ export function formatAbilityLog(log: ActivityLogEntry): string {
     case 'ProduceScaleBoostII':
     case 'ProduceScaleBoostIII':
     case 'SnowyCropSizeBoost': {
-      const pct = Number(params.scaleIncreasePercentage) || 0;
+      // Crop Size is a whole number in [50, 100]: the boost adds points, not a percentage.
+      const points = Number(params.sizeIncrease ?? params.scaleIncreasePercentage) || 0;
       const num = Number(params.numPlantsAffected) || 0;
-      return `Boosted ${num} ${num === 1 ? 'crop' : 'crops'} size by +${pct.toFixed(0)}%`;
+      return `Boosted ${num} ${num === 1 ? 'crop' : 'crops'} size by +${points.toFixed(0)}`;
     }
 
     case 'MoonKisser':

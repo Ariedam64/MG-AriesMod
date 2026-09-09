@@ -11,7 +11,7 @@ import {
   type CurrentGardenObject,
   type PlantSlotTiming,
 } from "../store/atoms";
-import { plantCatalog } from "../data";
+import { CROP_SIZE_MAX, readCropSize } from "../utils/cropSize";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
 
 /** Référence des mutations visuelles reconnues par le locker. */
@@ -61,35 +61,6 @@ const normalizeMutationsList = (raw: unknown): string[] => {
   }
   return out;
 };
-
-const normalizeSpeciesKey = (value: string): string =>
-  value
-    .toLowerCase()
-    .replace(/['’`]/g, "")
-    .replace(/\s+/g, "")
-    .replace(/-/g, "")
-    .replace(/(seed|plant|baby|fruit|crop)$/i, "");
-
-const MAX_SCALE_BY_SPECIES = (() => {
-  const map = new Map<string, number>();
-  const register = (key: unknown, value: number) => {
-    if (typeof key !== "string") return;
-    const normalized = normalizeSpeciesKey(key.trim());
-    if (!normalized || map.has(normalized)) return;
-    map.set(normalized, value);
-  };
-
-  for (const [species, entry] of Object.entries(plantCatalog as Record<string, any>)) {
-    const maxScale = Number(entry?.crop?.maxScale);
-    if (!Number.isFinite(maxScale) || maxScale <= 0) continue;
-    register(species, maxScale);
-    register(entry?.seed?.name, maxScale);
-    register(entry?.plant?.name, maxScale);
-    register(entry?.crop?.name, maxScale);
-  }
-
-  return map;
-})();
 
 type VisualTag = "Gold" | "Rainbow";
 type WeatherTag = string;
@@ -221,9 +192,9 @@ const slotSignature = (slot: PlantSlotTiming | null | undefined): string => {
   const species = slot.species ?? "";
   const start = Number.isFinite(slot.startTime as number) ? (slot.startTime as number) : 0;
   const end = Number.isFinite(slot.endTime as number) ? (slot.endTime as number) : 0;
-  const target = Number.isFinite(slot.targetScale as number) ? (slot.targetScale as number) : 0;
+  const size = readCropSize(slot) ?? 0;
   const muts = Array.isArray(slot.mutations) ? slot.mutations.join(",") : "";
-  return `${species}|${start}|${end}|${target}|${muts}`;
+  return `${species}|${start}|${end}|${size}|${muts}`;
 };
 
 const gardenObjectSignature = (obj: CurrentGardenObject): string => {
@@ -268,67 +239,26 @@ const extractSeedKey = (obj: CGO | null | undefined): string | null => {
 const clampPercent = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, value));
 
-const lookupMaxScale = (species: unknown): number | null => {
-  if (typeof species !== "string") return null;
-  const normalized = normalizeSpeciesKey(species.trim());
-  if (!normalized) return null;
-  const found = MAX_SCALE_BY_SPECIES.get(normalized);
-  if (typeof found === "number" && Number.isFinite(found) && found > 0) {
-    return found;
-  }
-  return null;
-};
-
-const getMaxScaleForSlot = (slot: any): number | null => {
-  if (!slot || typeof slot !== "object") return null;
-  const candidates = new Set<string>();
-  const fromSeedKey = extractSeedKey(slot as any);
-  if (fromSeedKey) candidates.add(fromSeedKey);
-  const fields = [
-    "species",
-    "seedSpecies",
-    "plantSpecies",
-    "cropSpecies",
-    "baseSpecies",
-    "seedKey",
-  ];
-  for (const field of fields) {
-    const value = (slot as Record<string, unknown>)[field];
-    if (typeof value === "string" && value) {
-      candidates.add(value);
-    }
-  }
-  for (const cand of candidates) {
-    const max = lookupMaxScale(cand);
-    if (typeof max === "number" && Number.isFinite(max) && max > 0) {
-      return max;
-    }
-  }
-  return null;
-};
-
+/** Crop Size of a grow slot, in [50, 100]. Falls back to a full-size slot. */
 const extractSizePercent = (slot: any): number => {
-  if (!slot || typeof slot !== "object") return 100;
-  const direct = Number(slot.sizePercent ?? slot.sizePct ?? slot.size ?? slot.percent ?? slot.progressPercent);
-  if (Number.isFinite(direct)) {
-    return clampPercent(Math.round(direct), 0, 100);
+  if (!slot || typeof slot !== "object") return CROP_SIZE_MAX;
+
+  // Percent-shaped aliases some callers hand us in place of a raw slot.
+  const alias = Number(slot.sizePercent ?? slot.sizePct ?? slot.percent ?? slot.progressPercent);
+  if (Number.isFinite(alias)) {
+    return clampPercent(Math.round(alias), 0, CROP_SIZE_MAX);
   }
-  const scale = Number(slot.targetScale ?? slot.scale);
-  if (Number.isFinite(scale)) {
-    const maxScale = getMaxScaleForSlot(slot);
-    if (typeof maxScale === "number" && Number.isFinite(maxScale) && maxScale > 1) {
-      const clamped = Math.max(1, Math.min(maxScale, scale));
-      const pct = 50 + ((clamped - 1) / (maxScale - 1)) * 50;
-      return clampPercent(Math.round(pct), 50, 100);
-    }
-    if (scale > 1 && scale <= 2) {
-      const pct = 50 + ((scale - 1) / 1) * 50;
-      return clampPercent(Math.round(pct), 50, 100);
-    }
-    const pct = Math.round(scale * 100);
-    return clampPercent(pct, 0, 100);
+
+  const size = readCropSize(slot);
+  if (size != null) return size;
+
+  // Pre-rework payloads name the species on the plant, not on the slot.
+  const seedKey = extractSeedKey(slot);
+  if (seedKey) {
+    const fromSeedKey = readCropSize({ ...(slot as Record<string, unknown>), species: seedKey });
+    if (fromSeedKey != null) return fromSeedKey;
   }
-  return 100;
+  return CROP_SIZE_MAX;
 };
 
 export interface LockerSlotWatcher {

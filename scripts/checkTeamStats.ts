@@ -79,14 +79,14 @@ check("...yet fills its own bar completely",
 
 console.log("\n--- magnitudes are per proc, only the chance stacks ---");
 // Three Crop Size Boost I pets at full strength. Each proc applies ONE pet's
-// +6%, so every contributor must still report 6 — not a shared 18.
+// +4 Size, so every contributor must still report 4 — not a shared 12.
 const cropTrio = computeTeamStats([
   mkPet("c1", "Turtle", 2.5, 1e9, ["ProduceScaleBoost"]),
   mkPet("c2", "Turtle", 2.5, 1e9, ["ProduceScaleBoost"]),
   mkPet("c3", "Turtle", 2.5, 1e9, ["ProduceScaleBoost"]),
 ]).groups[0];
 check("each contributor keeps its own magnitude",
-  cropTrio.contributors.map((c) => c.scaledParameters.scaleIncreasePercentage).join(","), "6,6,6");
+  cropTrio.contributors.map((c) => c.scaledParameters.sizeIncrease).join(","), "4,4,4");
 check("the chance does stack across the three",
   (cropTrio.combinedProbability ?? 0) > (cropTrio.contributors[0].probability ?? 0), true);
 // Different tiers must stay distinguishable per pet, so the UI can show a range.
@@ -95,11 +95,16 @@ const mixedTiers = computeTeamStats([
   mkPet("t2", "Turtle", 2.5, 1e9, ["ProduceScaleBoostIII"]),
 ]).groups[0];
 check("mixed tiers keep distinct per-proc values",
-  mixedTiers.contributors.map((c) => c.scaledParameters.scaleIncreasePercentage).sort().join("-"), "14-6");
-// Strength scales each pet's own value, independently of the others.
-check("a weaker pet reports a smaller per-proc value",
+  mixedTiers.contributors.map((c) => c.scaledParameters.sizeIncrease).sort().join("-"), "4-9");
+// Crop Size is a whole number the game adds flat: strength changes how often
+// the ability procs, never how many Size points it grants.
+check("a weaker pet grants the same Size points",
   computeTeamStats([mkPet("w", "Turtle", 2.5, 0, ["ProduceScaleBoost"])])
-    .groups[0].contributors[0].scaledParameters.scaleIncreasePercentage?.toFixed(1), "4.2");
+    .groups[0].contributors[0].scaledParameters.sizeIncrease, 4);
+// Percentage parameters do still scale on strength.
+check("a weaker pet reports a smaller percentage magnitude",
+  computeTeamStats([mkPet("w2", "Turtle", 2.5, 0, ["ProduceEater"])])
+    .groups[0].contributors[0].scaledParameters.cropSellPriceIncreasePercentage?.toFixed(1), "105.0");
 
 console.log("\n--- effect grouping is derived from the catalog ---");
 check("Gold vs Rainbow granter stay separate", computeTeamStats([

@@ -18,6 +18,7 @@ import {
   getInventoryValueSnapshot,
   onInventoryValueChange,
 } from "./inventoryValue";
+import { readCropSize } from "./cropSize";
 import { readAriesPath, writeAriesPath } from "./localStorage";
 
 export type SortKey =
@@ -507,59 +508,8 @@ const normalizeSpeciesKey = (value: string): string =>
     .replace(/-/g, "")
     .replace(/(seed|plant|baby|fruit|crop)$/i, "");
 
-const MAX_SCALE_BY_SPECIES = (() => {
-  const map = new Map<string, number>();
-  const register = (key: unknown, value: number) => {
-    if (typeof key !== "string") return;
-    const normalized = normalizeSpeciesKey(key.trim());
-    if (!normalized || map.has(normalized)) return;
-    map.set(normalized, value);
-  };
-
-  for (const [species, entry] of Object.entries(plantCatalog as Record<string, any>)) {
-    const maxScale = Number(entry?.crop?.maxScale);
-    if (!Number.isFinite(maxScale) || maxScale <= 0) continue;
-    register(species, maxScale);
-    register(entry?.seed?.name, maxScale);
-    register(entry?.plant?.name, maxScale);
-    register(entry?.crop?.name, maxScale);
-  }
-
-  return map;
-})();
-
-const lookupMaxScale = (species: unknown): number | null => {
-  if (typeof species !== "string") return null;
-  const normalized = normalizeSpeciesKey(species.trim());
-  if (!normalized) return null;
-  const value = MAX_SCALE_BY_SPECIES.get(normalized);
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
-};
-
 const clampNumber = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, value));
-
-const scaleToPercent = (scale: number, maxScale: number | null): number => {
-  if (!Number.isFinite(scale)) return 50;
-
-  const MIN_PERCENT = 50;
-  const MAX_PERCENT = 100;
-  const MIN_SCALE = 1;
-  const safeScale = Math.max(MIN_SCALE, scale);
-
-  if (typeof maxScale === "number" && Number.isFinite(maxScale) && maxScale > MIN_SCALE) {
-    const limited = Math.min(maxScale, safeScale);
-    const ratio = (limited - MIN_SCALE) / (maxScale - MIN_SCALE);
-    const pct = MIN_PERCENT + ratio * (MAX_PERCENT - MIN_PERCENT);
-    return clampNumber(Math.round(pct), MIN_PERCENT, MAX_PERCENT);
-  }
-
-  const FALLBACK_MAX_SCALE = 2;
-  const limited = Math.min(FALLBACK_MAX_SCALE, safeScale);
-  const ratio = (limited - MIN_SCALE) / (FALLBACK_MAX_SCALE - MIN_SCALE);
-  const pct = MIN_PERCENT + ratio * (MAX_PERCENT - MIN_PERCENT);
-  return clampNumber(Math.round(pct), MIN_PERCENT, MAX_PERCENT);
-};
 
 const collectSpeciesCandidates = (source: any, out: Set<string>): void => {
   if (!source || typeof source !== "object") return;
@@ -572,34 +522,30 @@ const collectSpeciesCandidates = (source: any, out: Set<string>): void => {
   }
 };
 
-const computeSizePercentFromScale = (speciesCandidates: Iterable<string>, scale: number): number | null => {
-  if (!Number.isFinite(scale)) return null;
-
-  let maxScale: number | null = null;
-  for (const candidate of speciesCandidates) {
-    maxScale = lookupMaxScale(candidate);
-    if (maxScale != null) break;
-  }
-
-  return scaleToPercent(scale, maxScale);
-};
-
+/**
+ * Crop Size carried by a produce item, in [50, 100]. Species candidates only
+ * matter for the pre-rework fallback, where the Size had to be recovered from
+ * a fractional scale and the catalog's max multiplier.
+ */
 const getInventoryItemSizePercent = (item: any): number | null => {
   if (!item || typeof item !== "object") return null;
+
+  const rawType = typeof item.itemType === "string" ? item.itemType : "";
+  const type = rawType.trim();
+  if (type !== "Crop" && type !== "Produce") return null;
+
+  const direct = readCropSize(item);
+  if (direct != null) return direct;
 
   const candidates = new Set<string>();
   collectSpeciesCandidates(item, candidates);
   collectSpeciesCandidates((item as any).item, candidates);
   collectSpeciesCandidates((item as any).data, candidates);
 
-  const rawType = typeof item.itemType === "string" ? item.itemType : "";
-  const type = rawType.trim();
-
-  if (type === "Crop" || type === "Produce") {
-    const scale = Number((item as Record<string, unknown>).scale);
-    return computeSizePercentFromScale(candidates, scale);
+  for (const candidate of candidates) {
+    const size = readCropSize({ ...(item as Record<string, unknown>), species: candidate });
+    if (size != null) return size;
   }
-
   return null;
 };
 

@@ -2,6 +2,12 @@
 import { addStyle } from "../../core/dom";
 import { coin, plantCatalog, petAbilities, petCatalog } from "../../data";
 import { DefaultPricing, estimateProduceValue } from "../../utils/calculators";
+import {
+  CROP_SIZE_MAX,
+  CROP_SIZE_MIN,
+  cropSizeMultiplier,
+  getMaxSizeMultiplier,
+} from "../../utils/cropSize";
 import { getPetMaxStrength, getPetStrength } from "../../utils/petCalcul";
 import {
   getLockerSeedEmojiForKey,
@@ -13,10 +19,8 @@ import { Menu } from "../menu";
 import { attachSpriteIcon, getSpriteObjectUrlByName } from "../spriteIconCache";
 
 const ROOT_CLASS = "mg-crop-simulation";
-const SIZE_MIN = 50;
-const SIZE_MAX = 100;
-const SCALE_MIN = 1;
-const SCALE_MAX = 3;
+const SIZE_MIN = CROP_SIZE_MIN;
+const SIZE_MAX = CROP_SIZE_MAX;
 
 const COLOR_MUTATION_LABELS = ["None", "Gold", "Rainbow"] as const;
 const WEATHER_CONDITION_LABELS = ["None", "Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"] as const;
@@ -685,21 +689,22 @@ function setSpriteScale(el: HTMLSpanElement, sizePercent: number): void {
 function applySizePercent(
   refs: CalculatorRefs,
   sizePercent: number,
-  maxScale: number | null,
+  speciesKey: string | null,
   baseWeight: number | null,
 ): void {
   const clamped = clamp(Math.round(sizePercent), SIZE_MIN, SIZE_MAX);
   refs.sizeSlider.value = String(clamped);
-  refs.sizeValue.textContent = `${clamped}%`;
+  refs.sizeValue.textContent = String(clamped);
   setSpriteScale(refs.sprite, clamped);
-  if (typeof maxScale === "number" && Number.isFinite(maxScale) && maxScale > SCALE_MIN) {
-    refs.sizeSlider.dataset.maxScale = String(maxScale);
+
+  const maxMultiplier = speciesKey ? getMaxSizeMultiplier(speciesKey) : null;
+  if (maxMultiplier != null && maxMultiplier > 1) {
+    refs.sizeSlider.dataset.maxSizeMultiplier = String(maxMultiplier);
   } else {
-    delete refs.sizeSlider.dataset.maxScale;
+    delete refs.sizeSlider.dataset.maxSizeMultiplier;
   }
 
-  const [minWeight, maxWeight] = computeWeightRange(baseWeight, clamped, maxScale);
-  refs.sizeWeight.textContent = formatWeightRange(minWeight, maxWeight);
+  refs.sizeWeight.textContent = formatWeight(computeWeight(baseWeight, speciesKey, clamped));
 }
 
 function formatCoinValue(value: number | null): string {
@@ -708,69 +713,25 @@ function formatCoinValue(value: number | null): string {
   return priceFormatter.format(safe);
 }
 
-function formatCoinRange(min: number | null, max: number | null): string {
-  const minValue = typeof min === "number" && Number.isFinite(min) ? Math.max(0, min) : null;
-  const maxValue = typeof max === "number" && Number.isFinite(max) ? Math.max(0, max) : null;
-  if (minValue == null && maxValue == null) return "—";
-  if (minValue == null) return formatCoinValue(maxValue);
-  if (maxValue == null) return formatCoinValue(minValue);
-  if (Math.round(minValue) === Math.round(maxValue)) {
-    return formatCoinValue(minValue);
-  }
-  return `${formatCoinValue(minValue)} – ${formatCoinValue(maxValue)}`;
-}
-
-function computeWeightRange(
+/** `baseWeight * sizeMultiplier`, the game's own weight formula. */
+function computeWeight(
   baseWeight: number | null,
-  sizePercent: number,
-  maxScale: number | null,
-): [number | null, number | null] {
+  speciesKey: string | null,
+  size: number,
+): number | null {
   const numericWeight = typeof baseWeight === "number" ? baseWeight : Number(baseWeight);
-  if (!Number.isFinite(numericWeight) || numericWeight == null || numericWeight <= 0) {
-    return [null, null];
-  }
-  const scale = sizePercentToScale(sizePercent, maxScale);
-  if (!Number.isFinite(scale) || scale <= 0) {
-    return [null, null];
-  }
-  const minWeight = numericWeight * scale;
-  const safeMax =
-    typeof maxScale === "number" && Number.isFinite(maxScale) && maxScale > SCALE_MIN
-      ? maxScale
-      : SCALE_MIN;
-  const variation = 1 + Math.max(0, (safeMax - scale) * 0.02);
-  const maxWeight = minWeight * variation;
-  return [minWeight, maxWeight];
+  if (!Number.isFinite(numericWeight) || numericWeight <= 0) return null;
+  if (!speciesKey) return numericWeight;
+  return numericWeight * cropSizeMultiplier(speciesKey, size);
 }
 
-function formatWeight(value: number | null): string | null {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
-  const formatted = weightFormatter.format(value);
-  return formatted.replace(/(\.\d*?[1-9])0+$/u, "$1").replace(/\.0+$/u, "");
-}
-
-function formatWeightRange(min: number | null, max: number | null): string {
-  const minFormatted = formatWeight(min);
-  const maxFormatted = formatWeight(max);
-  if (!minFormatted && !maxFormatted) return "—";
-  if (!maxFormatted || minFormatted === maxFormatted) {
-    return `${minFormatted ?? maxFormatted} kg`;
-  }
-  return `${minFormatted ?? "—"} – ${maxFormatted} kg`;
-}
-
-function sizePercentToScale(sizePercent: number, maxScale: number | null): number {
-  const numeric = Number(sizePercent);
-  if (!Number.isFinite(numeric)) return SCALE_MIN;
-  const clampedPercent = clamp(numeric, SIZE_MIN, SIZE_MAX);
-  const safeMax =
-    typeof maxScale === "number" && Number.isFinite(maxScale) && maxScale > SCALE_MIN
-      ? maxScale
-      : SCALE_MAX;
-  if (safeMax <= SCALE_MIN) return SCALE_MIN;
-  const normalized = (clampedPercent - SIZE_MIN) / (SIZE_MAX - SIZE_MIN);
-  const scale = SCALE_MIN + normalized * (safeMax - SCALE_MIN);
-  return Number.isFinite(scale) ? scale : SCALE_MIN;
+function formatWeight(value: number | null): string {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return "—";
+  const formatted = weightFormatter
+    .format(value)
+    .replace(/(\.\d*?[1-9])0+$/u, "$1")
+    .replace(/\.0+$/u, "");
+  return `${formatted} kg`;
 }
 
 /** Map from mutation label → UI sprite name in the sprite index */
@@ -869,28 +830,13 @@ function normalizeMutationLabelForSprite(label: string): string {
 function computePrice(
   speciesKey: string,
   state: CalculatorState,
-  percent: number,
-  maxScale: number | null,
+  size: number,
 ): number | null {
-  const scale = sizePercentToScale(percent, maxScale);
-  if (!Number.isFinite(scale) || scale <= 0) return null;
   const mutations = getMutationsForState(state);
   const friendPlayers = clampFriendPlayers(state.friendPlayers);
   const pricingOptions = { ...DefaultPricing, friendPlayers };
-  const value = estimateProduceValue(speciesKey, scale, mutations, pricingOptions);
+  const value = estimateProduceValue(speciesKey, size, mutations, pricingOptions);
   return Number.isFinite(value) && value > 0 ? value : null;
-}
-
-function getMaxScaleForSpecies(key: string): number | null {
-  const entry = (plantCatalog as Record<string, any>)[key];
-  const candidates = [entry?.crop?.maxScale, entry?.plant?.maxScale, entry?.seed?.maxScale];
-  for (const candidate of candidates) {
-    const numeric = typeof candidate === "number" ? candidate : Number(candidate);
-    if (Number.isFinite(numeric) && numeric > 0) {
-      return numeric;
-    }
-  }
-  return null;
 }
 
 function getBaseWeightForSpecies(key: string): number | null {
@@ -1120,7 +1066,6 @@ export async function renderCalculatorMenu(container: HTMLElement) {
     };
 
     let selectedKey: string | null = null;
-    let currentMaxScale: number | null = null;
     let currentBaseWeight: number | null = null;
     const listButtons = new Map<
       string,
@@ -1235,10 +1180,7 @@ export async function renderCalculatorMenu(container: HTMLElement) {
         return;
       }
       const state = getStateForKey(key);
-      const min = computePrice(key, state, state.sizePercent, currentMaxScale);
-      const maxPercent = Math.min(SIZE_MAX, state.sizePercent + 1);
-      const max = computePrice(key, state, maxPercent, currentMaxScale);
-      refs.priceValue.textContent = formatCoinRange(min, max);
+      refs.priceValue.textContent = formatCoinValue(computePrice(key, state, state.sizePercent));
     }
 
     function updateSprite(): void {
@@ -1279,12 +1221,11 @@ export async function renderCalculatorMenu(container: HTMLElement) {
         return;
       }
 
-      currentMaxScale = getMaxScaleForSpecies(key);
       currentBaseWeight = getBaseWeightForSpecies(key);
       const state = getStateForKey(key);
 
       refs.sizeSlider.disabled = false;
-      applySizePercent(refs, state.sizePercent, currentMaxScale, currentBaseWeight);
+      applySizePercent(refs, state.sizePercent, key, currentBaseWeight);
 
       renderColorSegment(state, true);
       renderWeatherConditions(state, true);
@@ -1300,7 +1241,7 @@ export async function renderCalculatorMenu(container: HTMLElement) {
       const raw = Number(slider.value);
       const value = clamp(Math.round(raw), SIZE_MIN, SIZE_MAX);
       state.sizePercent = value;
-      applySizePercent(refs, value, currentMaxScale, currentBaseWeight);
+      applySizePercent(refs, value, selectedKey, currentBaseWeight);
       updateOutputs();
     });
 
@@ -1317,19 +1258,16 @@ export async function renderCalculatorMenu(container: HTMLElement) {
         empty.textContent = "No crops available.";
         list.appendChild(empty);
         selectedKey = null;
-        currentMaxScale = null;
         renderDetail();
         return;
       }
 
       if (selectedKey && !options.some(opt => opt.key === selectedKey)) {
         selectedKey = options[0]!.key;
-        currentMaxScale = getMaxScaleForSpecies(selectedKey);
       }
 
       if (!selectedKey) {
         selectedKey = options[0]!.key;
-        currentMaxScale = getMaxScaleForSpecies(selectedKey);
       }
 
       const fragment = document.createDocumentFragment();
@@ -1370,7 +1308,6 @@ export async function renderCalculatorMenu(container: HTMLElement) {
         button.onclick = () => {
           if (selectedKey === opt.key) return;
           selectedKey = opt.key;
-          currentMaxScale = getMaxScaleForSpecies(opt.key);
           refreshListStyles();
           renderDetail();
           updateOutputs();

@@ -370,7 +370,7 @@ export const plantCatalog = {
       baseSellPrice: 20,
       baseWeight: 0.1,
       baseTileScale: 0.6,
-      maxScale: 3,
+      maxSizeMultiplier: 3,
     },
   },
 
@@ -401,7 +401,7 @@ export const plantCatalog = {
             baseSellPrice: 42,
             baseWeight: 1,
             baseTileScale: .8,
-            maxScale: 3
+            maxSizeMultiplier: 3
         }
     },
 
@@ -434,7 +434,7 @@ export const plantCatalog = {
       baseSellPrice: 14,
       baseWeight: 0.05,
       baseTileScale: 0.25,
-      maxScale: 2,
+      maxSizeMultiplier: 2,
     },
   },
 
@@ -458,7 +458,7 @@ export const plantCatalog = {
       baseSellPrice: 310,
       baseWeight: 1.5,
       baseTileScale: 0.7,
-      maxScale: 2.5,
+      maxSizeMultiplier: 2.5,
     },
   },
 
@@ -482,7 +482,7 @@ export const plantCatalog = {
             baseSellPrice: 350,
             baseWeight: .3,
             baseTileScale: .2,
-            maxScale: 3
+            maxSizeMultiplier: 3
         }
     },
 
@@ -506,7 +506,7 @@ export const plantCatalog = {
       baseSellPrice: 300,
       baseWeight: 0.01,
       baseTileScale: 1,
-      maxScale: 4,
+      maxSizeMultiplier: 4,
     },
   },
 
@@ -542,7 +542,7 @@ export const plantCatalog = {
       baseSellPrice: 30,
       baseWeight: 0.03,
       baseTileScale: 0.3,
-      maxScale: 3,
+      maxSizeMultiplier: 3,
     },
   },
 
@@ -569,7 +569,7 @@ export const plantCatalog = {
       baseSellPrice: 530,
       baseWeight: 0.02,
       baseTileScale: 0.8,
-      maxScale: 3,
+      maxSizeMultiplier: 3,
     },
   },
 
@@ -602,7 +602,7 @@ export const plantCatalog = {
       baseSellPrice: 23,
       baseWeight: 0.01,
       baseTileScale: 0.25,
-      maxScale: 2,
+      maxSizeMultiplier: 2,
     },
   },
 
@@ -640,7 +640,7 @@ export const plantCatalog = {
       baseSellPrice: 73,
       baseWeight: 0.18,
       baseTileScale: 0.5,
-      maxScale: 2,
+      maxSizeMultiplier: 2,
     },
   },
 
@@ -664,7 +664,7 @@ export const plantCatalog = {
       baseSellPrice: 767,
       baseWeight: 0.01,
       baseTileScale: 0.5,
-      maxScale: 3,
+      maxSizeMultiplier: 3,
     },
   },
 
@@ -694,7 +694,7 @@ export const plantCatalog = {
       baseSellPrice: 27,
       baseWeight: 0.3,
       baseTileScale: 0.33,
-      maxScale: 2,
+      maxSizeMultiplier: 2,
     },
   },
 
@@ -718,7 +718,7 @@ export const plantCatalog = {
       baseSellPrice: 1090,
       baseWeight: 0.01,
       baseTileScale: 0.5,
-      maxScale: 3,
+      maxSizeMultiplier: 3,
     },
   },
 
@@ -745,7 +745,7 @@ export const plantCatalog = {
       baseSellPrice: 36,
       baseWeight: 1.2,
       baseTileScale: 0.7,
-      maxScale: 2,
+      maxSizeMultiplier: 2,
     },
   },
 
@@ -769,7 +769,7 @@ export const plantCatalog = {
       baseSellPrice: 2708,
       baseWeight: 4.5,
       baseTileScale: 0.8,
-      maxScale: 3,
+      maxSizeMultiplier: 3,
     },
   },
 
@@ -793,7 +793,7 @@ export const plantCatalog = {
       baseSellPrice: 3700,
       baseWeight: 6,
       baseTileScale: 0.8,
-      maxScale: 3,
+      maxSizeMultiplier: 3,
     },
   },
 
@@ -817,7 +817,7 @@ export const plantCatalog = {
       baseSellPrice: 4600,
       baseWeight: 0.8,
       baseTileScale: 0.8,
-      maxScale: 2.75,
+      maxSizeMultiplier: 2.75,
     },
   },
 
@@ -874,7 +874,7 @@ export const plantCatalog = {
             baseSellPrice: 250,
             baseWeight: .17,
             baseTileScale: .5,
-            maxScale: 2
+            maxSizeMultiplier: 2
         }
     },
 
@@ -898,7 +898,7 @@ export const plantCatalog = {
             baseSellPrice: 1e4,
             baseWeight: .02,
             baseTileScale: .5,
-            maxScale: 3
+            maxSizeMultiplier: 3
         }
     },
 
@@ -935,7 +935,7 @@ export const plantCatalog = {
       baseSellPrice: 302,
       baseWeight: 5,
       baseTileScale: 0.25,
-      maxScale: 3,
+      maxSizeMultiplier: 3,
     },
   },
 
@@ -959,7 +959,7 @@ export const plantCatalog = {
             baseSellPrice: 15e3,
             baseWeight: 1e3,
             baseTileScale: 1.5,
-            maxScale: 3.5
+            maxSizeMultiplier: 3.5
         }
     },
 
@@ -1000,7 +1000,7 @@ export const plantCatalog = {
       baseSellPrice: 1750,
       baseWeight: 0.12,
       baseTileScale: 0.5,
-      maxScale: 1.7,
+      maxSizeMultiplier: 1.7,
     },
   },
 
@@ -1026,7 +1026,7 @@ export const plantCatalog = {
       baseSellPrice: 20123,
       baseWeight: 0.02,
       baseTileScale: 0.5,
-      maxScale: 2.75,
+      maxSizeMultiplier: 2.75,
     },
   },
 
@@ -1065,7 +1065,7 @@ export const plantCatalog = {
       baseSellPrice: 4875,
       baseWeight: 0.3,
       baseTileScale: 0.4,
-      maxScale: 2.5,
+      maxSizeMultiplier: 2.5,
     },
   },
 
@@ -1096,7 +1096,7 @@ export const plantCatalog = {
       baseSellPrice: 3500,
       baseWeight: 0.3,
       baseTileScale: 0.4,
-      maxScale: 2.5,
+      maxSizeMultiplier: 2.5,
     },
   },
 
@@ -1131,7 +1131,7 @@ export const plantCatalog = {
       baseSellPrice: 9e3,
       baseWeight: .18,
       baseTileScale: .5,
-      maxScale: 3,
+      maxSizeMultiplier: 3,
     },
   },
 
@@ -1161,7 +1161,7 @@ export const plantCatalog = {
       baseSellPrice: 6000,
       baseWeight: 0.4,
       baseTileScale: 0.4,
-      maxScale: 2.5,
+      maxSizeMultiplier: 2.5,
     },
   },
 
@@ -1185,7 +1185,7 @@ export const plantCatalog = {
       baseSellPrice: 160000,
       baseWeight: 25,
       baseTileScale: 0.65,
-      maxScale: 3.5,
+      maxSizeMultiplier: 3.5,
     },
   },
 
@@ -1212,7 +1212,7 @@ export const plantCatalog = {
       baseSellPrice: 261000,
       baseWeight: 1500,
       baseTileScale: 2.5,
-      maxScale: 1.8,
+      maxSizeMultiplier: 1.8,
     },
   },
 
@@ -1239,7 +1239,7 @@ export const plantCatalog = {
       baseSellPrice: 500000,
       baseWeight: 1,
       baseTileScale: 2.5,
-      maxScale: 2,
+      maxSizeMultiplier: 2,
     },
   },
   Poinsettia: {
@@ -1281,7 +1281,7 @@ export const plantCatalog = {
             baseSellPrice: 3e4,
             baseWeight: .02,
             baseTileScale: .3,
-            maxScale: 2
+            maxSizeMultiplier: 2
         }
     },
 
@@ -1305,7 +1305,7 @@ export const plantCatalog = {
             baseSellPrice: 6e5,
             baseWeight: 2,
             baseTileScale: .65,
-            maxScale: 3.5
+            maxSizeMultiplier: 3.5
         }
     },
 
@@ -1341,7 +1341,7 @@ export const plantCatalog = {
       baseSellPrice: 18000,
       baseWeight: 0.01,
       baseTileScale: 0.3,
-      maxScale: 2.75,
+      maxSizeMultiplier: 2.75,
     },
   },
 
@@ -1382,7 +1382,7 @@ export const plantCatalog = {
       baseSellPrice: 15000,
       baseWeight: 0.02,
       baseTileScale: 0.25,
-      maxScale: 2,
+      maxSizeMultiplier: 2,
     },
   },
 
@@ -1411,7 +1411,7 @@ export const plantCatalog = {
       baseSellPrice: 12500,
       baseWeight: 3,
       baseTileScale: 0.5,
-      maxScale: 2,
+      maxSizeMultiplier: 2,
     },
   },
 
@@ -1448,7 +1448,7 @@ export const plantCatalog = {
       baseSellPrice: 7220,
       baseWeight: 0.5,
       baseTileScale: 0.3,
-      maxScale: 2,
+      maxSizeMultiplier: 2,
     },
   },
 
@@ -1486,7 +1486,7 @@ export const plantCatalog = {
       baseSellPrice: 10000,
       baseWeight: 0.5,
       baseTileScale: 0.25,
-      maxScale: 3,
+      maxSizeMultiplier: 3,
     },
   },
 
@@ -1516,7 +1516,7 @@ export const plantCatalog = {
       baseSellPrice: 24500,
       baseWeight: 9.5,
       baseTileScale: 0.35,
-      maxScale: 2,
+      maxSizeMultiplier: 2,
     },
   },
 
@@ -1551,7 +1551,7 @@ export const plantCatalog = {
       baseSellPrice: 24500,
       baseWeight: 8.4,
       baseTileScale: 0.4,
-      maxScale: 2,
+      maxSizeMultiplier: 2,
     },
   },
 
@@ -1587,7 +1587,7 @@ export const plantCatalog = {
       baseSellPrice: 70000,
       baseWeight: 0.5,
       baseTileScale: 0.4,
-      maxScale: 2.5,
+      maxSizeMultiplier: 2.5,
     },
   },
 
@@ -1623,7 +1623,7 @@ export const plantCatalog = {
       baseSellPrice: 50000,
       baseWeight: 9,
       baseTileScale: 0.2,
-      maxScale: 2,
+      maxSizeMultiplier: 2,
     },
   },
 
@@ -1652,7 +1652,7 @@ export const plantCatalog = {
       baseSellPrice: 750000,
       baseWeight: 10,
       baseTileScale: 0.5,
-      maxScale: 2.5,
+      maxSizeMultiplier: 2.5,
     },
   },
 
@@ -1684,7 +1684,7 @@ export const plantCatalog = {
       baseSellPrice: 10000000,
       baseWeight: 10,
       baseTileScale: 0.6,
-      maxScale: 2,
+      maxSizeMultiplier: 2,
     },
   },
 
@@ -1722,7 +1722,7 @@ export const plantCatalog = {
       baseSellPrice: 11000000,
       baseWeight: 6,
       baseTileScale: 0.4,
-      maxScale: 2.5,
+      maxSizeMultiplier: 2.5,
       transformOrigin: "top",
     },
   },
@@ -1764,7 +1764,7 @@ export const plantCatalog = {
       baseSellPrice: 11000000,
       baseWeight: 2,
       baseTileScale: 0.4,
-      maxScale: 2,
+      maxSizeMultiplier: 2,
       transformOrigin: "bottom",
     },
   },
@@ -2109,30 +2109,30 @@ export const petCatalog = {
 export const petAbilities = {
   ProduceScaleBoost: {
     name: "Crop Size Boost I",
-    description: "Increases the scale of garden crops",
+    description: "Increases the size of garden crops",
     trigger: "continuous",
     baseProbability: 0.3,
-    baseParameters: { scaleIncreasePercentage: 6 }
+    baseParameters: { sizeIncrease: 4 }
   },
   ProduceScaleBoostII: {
     name: "Crop Size Boost II",
-    description: "Increases the scale of garden crops",
+    description: "Increases the size of garden crops",
     trigger: "continuous",
     baseProbability: 0.4,
-    baseParameters: { scaleIncreasePercentage: 10 }
+    baseParameters: { sizeIncrease: 7 }
   },
   ProduceScaleBoostIII: {
     name: "Crop Size Boost III",
     trigger: "continuous",
     baseProbability: .5,
-    baseParameters: { scaleIncreasePercentage: 14 }
+    baseParameters: { sizeIncrease: 9 }
   },
   SnowyCropSizeBoost: {
-    name: "Snowy Crop Size Boost",
+    name: "Snow Crop Size Boost",
     trigger: "continuous",
     baseProbability: 0.8,
     baseParameters: {
-      scaleIncreasePercentage: 12,
+      sizeIncrease: 8,
       requiredWeather: "Frost"
     }
   },

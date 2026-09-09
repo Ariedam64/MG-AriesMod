@@ -23,6 +23,9 @@ export type PlantSlotTiming = {
   species: string;
   startTime: number;
   endTime: number;
+  /** Whole-number Crop Size in [50, 100]. */
+  size?: number;
+  /** Pre-rework fractional scale, still read when `size` is absent. */
   targetScale?: number;
   mutations?: string[];
 };
@@ -79,6 +82,9 @@ export type CropItem = {
   id: string;
   species?: string;
   itemType?: string;
+  /** Whole-number Crop Size in [50, 100]. */
+  size?: number;
+  /** Pre-rework fractional scale, still read when `size` is absent. */
   scale?: number;
   mutations?: string[];
 };

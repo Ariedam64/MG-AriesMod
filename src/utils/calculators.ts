@@ -1,5 +1,6 @@
 // src/utils/calculators.ts
 import { plantCatalog, mutationCatalog } from "../data";
+import { cropSizeMultiplier, readCropSize } from "./cropSize";
 
 export type ColorMutation = "Gold" | "Rainbow";
 export type WeatherMutation = "Wet" | "Chilled" | "Frozen" | "Thunderstruck" | "Thundercharged";
@@ -15,7 +16,10 @@ export type InventoryProduce = {
   id: string;
   species: string;
   itemType: "Produce";
-  scale: number;
+  /** Whole-number Crop Size in [50, 100]. */
+  size: number;
+  /** Pre-rework fractional scale, still accepted when `size` is absent. */
+  scale?: number;
   mutations?: MutationName[];
 };
 
@@ -23,7 +27,10 @@ export type GardenPlantSlot = {
   species: string;
   startTime: number;
   endTime: number;
-  targetScale: number;
+  /** Whole-number Crop Size in [50, 100]. */
+  size: number;
+  /** Pre-rework fractional scale, still accepted when `size` is absent. */
+  targetScale?: number;
   mutations?: MutationName[];
 };
 
@@ -39,7 +46,8 @@ export type RoundingMode = "round" | "floor" | "ceil" | "none";
 
 export type PricingOptions = {
   getBasePrice?: (species: string) => number | undefined | null;
-  scaleTransform?: (species: string, scale: number) => number;
+  /** Overrides the Size → coin multiplier the catalog would give. */
+  sizeMultiplier?: (species: string, size: number) => number;
   rounding?: RoundingMode;
   friendPlayers?: number;
 };
@@ -267,22 +275,22 @@ export function mutationsMultiplier(mutations?: MutationName[] | null): number {
 
 export function estimateProduceValue(
   species: string,
-  scale: number,
+  size: number,
   mutations?: MutationName[] | null,
   opts?: PricingOptions
 ): number {
   const getBase = opts?.getBasePrice ?? defaultGetBasePrice;
-  const sXform = opts?.scaleTransform ?? ((_: string, s: number) => s);
+  const toMultiplier = opts?.sizeMultiplier ?? cropSizeMultiplier;
   const round = opts?.rounding ?? "round";
   const base = getBase(species);
   if (!(Number.isFinite(base as number) && (base as number) > 0)) return 0;
-  const sc = Number(scale);
-  if (!Number.isFinite(sc) || sc <= 0) return 0;
-  const effScale = sXform(species, sc);
-  if (!Number.isFinite(effScale) || effScale <= 0) return 0;
+  const numericSize = Number(size);
+  if (!Number.isFinite(numericSize)) return 0;
+  const sizeMult = toMultiplier(species, numericSize);
+  if (!Number.isFinite(sizeMult) || sizeMult <= 0) return 0;
   const mutMult = mutationsMultiplier(mutations);
   const friendsMult = friendBonusMultiplier(opts?.friendPlayers);
-  const pre = (base as number) * effScale * mutMult * friendsMult;
+  const pre = (base as number) * sizeMult * mutMult * friendsMult;
   const out = Math.max(0, applyRounding(pre, round));
   return out;
 }
@@ -294,7 +302,9 @@ export function valueFromInventoryProduce(
 ): number {
   if (!item || item.itemType !== "Produce") return 0;
   const merged: PricingOptions | undefined = playersInRoom == null ? opts : { ...opts, friendPlayers: playersInRoom };
-  return estimateProduceValue(item.species, item.scale, item.mutations, merged);
+  const size = readCropSize(item);
+  if (size == null) return 0;
+  return estimateProduceValue(item.species, size, item.mutations, merged);
 }
 
 export function valueFromGardenSlot(
@@ -304,7 +314,9 @@ export function valueFromGardenSlot(
 ): number {
   if (!slot) return 0;
   const merged: PricingOptions | undefined = playersInRoom == null ? opts : { ...opts, friendPlayers: playersInRoom };
-  return estimateProduceValue(slot.species, slot.targetScale, slot.mutations, merged);
+  const size = readCropSize(slot);
+  if (size == null) return 0;
+  return estimateProduceValue(slot.species, size, slot.mutations, merged);
 }
 
 export function valueFromGardenPlant(
@@ -359,19 +371,20 @@ export const DefaultPricing: PricingOptions = Object.freeze({
 
 export function debugProbe(
   species: string,
-  scale: number,
+  size: number,
   muts?: MutationName[],
   playersInRoom?: number
 ) {
   const base = defaultGetBasePrice(species) ?? 0;
-  const effScale = scale;
+  const sizeMult = cropSizeMultiplier(species, size);
   const mutMult = mutationsMultiplier(muts);
   const friendsMult = friendBonusMultiplier(playersInRoom);
-  const rawCoins = base * effScale * mutMult * friendsMult;
+  const rawCoins = base * sizeMult * mutMult * friendsMult;
   return {
     species,
     basePrice: base,
-    effScale,
+    size,
+    sizeMult,
     mutationMult: mutMult,
     friendsMult,
     rawCoins,

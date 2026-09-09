@@ -33,6 +33,10 @@ const STRENGTH_SCALE = 100;
  * wrong figures.
  */
 const SCALED_PARAMETER_KEYS = new Set([
+  // `sizeIncrease` (Crop Size Boost) is deliberately absent: the game adds those
+  // Size points flat, and strength only changes how often the ability procs.
+  // Its pre-rework name `scaleIncreasePercentage` did scale, and the hardcoded
+  // fallback catalog can still carry it, so that one stays listed.
   "scaleIncreasePercentage",
   "cropSellPriceIncreasePercentage",
   "mutationChanceIncreasePercentage",

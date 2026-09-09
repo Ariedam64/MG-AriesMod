@@ -4,6 +4,7 @@
 import { sendToGame } from "../core/webSocketBridge";
 import { Atoms, onFavoriteIds, onFavoriteIdsNow, getFavoriteIdSet } from "../store/atoms";
 import { ShopsService } from "./shops";
+import { readCropSize } from "../utils/cropSize";
 
 export type XY = { x: number; y: number };
 
@@ -239,6 +240,9 @@ export type CropItem = {
   id: string;
   species?: string;
   itemType?: string;
+  /** Whole-number Crop Size in [50, 100]. */
+  size?: number;
+  /** Pre-rework fractional scale, still read when `size` is absent. */
   scale?: number;
   mutations?: string[];
 };
@@ -259,8 +263,8 @@ export type InventoryDiff = {
 
 function cropSig(it: CropItem): string {
   const muts = Array.isArray(it.mutations) ? it.mutations.slice().sort().join(",") : "";
-  const scale = Number.isFinite(it.scale) ? Math.round((it.scale as number) * 1000) : 0;
-  return `${it.species ?? ""}|${it.itemType ?? ""}|${scale}|${muts}`;
+  const size = readCropSize(it) ?? 0;
+  return `${it.species ?? ""}|${it.itemType ?? ""}|${size}|${muts}`;
 }
 
 type InvSnapshot = Map<string, string>;

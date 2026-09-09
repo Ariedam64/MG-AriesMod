@@ -18,6 +18,8 @@ import type { InventoryPet } from "../../services/pets";
  * not game data — the values themselves always come from the catalog.
  */
 const PARAMETER_LABELS: Record<string, { label: string; unit: string }> = {
+  // Crop Size is a whole number in [50, 100]; the boost adds points, not a percentage.
+  sizeIncrease: { label: "Crop size", unit: "" },
   scaleIncreasePercentage: { label: "Crop size", unit: "%" },
   cropSellPriceIncreasePercentage: { label: "Sell price", unit: "%" },
   mutationChanceIncreasePercentage: { label: "Mutation chance", unit: "%" },

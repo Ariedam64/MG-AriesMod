@@ -12,7 +12,8 @@
 export type PlantSlotPatch = {
   startTime?: number;
   endTime?: number;
-  targetScale?: number;
+  /** Whole-number Crop Size in [50, 100]. */
+  size?: number;
   mutations?: string[]; // remplacement total uniquement
 };
 
@@ -214,7 +215,7 @@ function patchPlantSlot(slot: any, slotPatch: PlantSlotPatch) {
 
   if ("startTime" in p) slot.startTime = Number(p.startTime);
   if ("endTime" in p) slot.endTime = Number(p.endTime);
-  if ("targetScale" in p) slot.targetScale = Number(p.targetScale);
+  if ("size" in p) slot.size = Number(p.size);
 
   // remplacement total uniquement
   if ("mutations" in p) {

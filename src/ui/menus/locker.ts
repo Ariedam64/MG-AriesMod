@@ -985,10 +985,10 @@ function createLockerSettingsCard(
   const scaleMinSlider = scaleSlider.min;
   const scaleMaxSlider = scaleSlider.max;
 
-  const scaleMinValue = ui.label("50%");
-  const scaleMaxValue = ui.label("100%");
-  const scaleMinimumValue = ui.label("50%");
-  const scaleMaximumValue = ui.label("100%");
+  const scaleMinValue = ui.label("50");
+  const scaleMaxValue = ui.label("100");
+  const scaleMinimumValue = ui.label("50");
+  const scaleMaximumValue = ui.label("100");
   [scaleMinValue, scaleMaxValue, scaleMinimumValue, scaleMaximumValue].forEach(label => {
     label.style.margin = "0";
     label.style.fontWeight = "600";
@@ -1062,8 +1062,8 @@ function createLockerSettingsCard(
       }
     }
     scaleSlider.setValues(minValue, maxValue);
-    scaleMinValue.textContent = `${minValue}%`;
-    scaleMaxValue.textContent = `${maxValue}%`;
+    scaleMinValue.textContent = `${minValue}`;
+    scaleMaxValue.textContent = `${maxValue}`;
     if (commit) {
       state.minScalePct = minValue;
       state.maxScalePct = maxValue;
@@ -1076,7 +1076,7 @@ function createLockerSettingsCard(
     if (!Number.isFinite(minValue)) minValue = state.minScalePct;
     minValue = Math.max(50, Math.min(100, minValue));
     minSlider.value = String(minValue);
-    scaleMinimumValue.textContent = `${minValue}%`;
+    scaleMinimumValue.textContent = `${minValue}`;
     if (commit) {
       state.minScalePct = minValue;
       if (notify) opts.onChange?.();
@@ -1088,7 +1088,7 @@ function createLockerSettingsCard(
     if (!Number.isFinite(maxValue)) maxValue = state.maxScalePct;
     maxValue = Math.max(50, Math.min(100, maxValue));
     maxSlider.value = String(maxValue);
-    scaleMaximumValue.textContent = `${maxValue}%`;
+    scaleMaximumValue.textContent = `${maxValue}`;
     if (commit) {
       state.maxScalePct = maxValue;
       if (notify) opts.onChange?.();

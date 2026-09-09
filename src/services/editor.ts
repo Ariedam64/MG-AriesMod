@@ -26,6 +26,8 @@ import {
 
 import { audioPlayer } from "../core/audioPlayer";
 
+import { CROP_SIZE_MAX, CROP_SIZE_MIN, readCropSize } from "../utils/cropSize";
+
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
 
 import { tos } from "../utils/tileObjectSystemApi";
@@ -1833,7 +1835,7 @@ function renderCurrentPlantEditor(
       .forEach((lab) => {
         const curPct = (lab as any)._currentPct;
 
-        if (curPct != null) lab.textContent = `${curPct}%`;
+        if (curPct != null) lab.textContent = `${curPct}`;
       });
 
     slotsList
@@ -1865,11 +1867,11 @@ function renderCurrentPlantEditor(
     const box = document.createElement("div");
     box.className = "qws-item-box";
 
-    const rawScale = Number(slot?.targetScale);
+    const rawScale = readCropSize(slot);
 
     const fallbackScale = computeTargetScaleFromPercent(species, 100);
 
-    const initialScale = Number.isFinite(rawScale) ? rawScale : fallbackScale;
+    const initialScale = rawScale ?? fallbackScale;
 
     const { minScale, maxScale } = getScaleBoundsForSpecies(species);
 
@@ -1923,7 +1925,7 @@ function renderCurrentPlantEditor(
 
     const sizeValue = document.createElement("span");
 
-    sizeValue.textContent = `${currentPct}%`;
+    sizeValue.textContent = `${currentPct}`;
 
     sizeValue.dataset.sizeLabel = String(idx);
 
@@ -1971,13 +1973,13 @@ function renderCurrentPlantEditor(
 
     const customLabel = document.createElement("span");
 
-    customLabel.textContent = "Custom scale";
+    customLabel.textContent = "Custom size";
 
     const customInput = document.createElement("input");
 
     customInput.type = "text";
 
-    customInput.inputMode = "decimal";
+    customInput.inputMode = "numeric";
 
     customInput.autocomplete = "off";
 
@@ -2042,17 +2044,17 @@ function renderCurrentPlantEditor(
 
       (sizeValue as any)._currentPct = pctVal;
 
-      sizeValue.textContent = `${pctVal}%`;
+      sizeValue.textContent = `${pctVal}`;
 
       slider.value = String(pctVal);
 
       currentScale = computeTargetScaleFromPercent(species, pctVal);
 
-      if (currentMode !== "custom") customInput.value = currentScale.toFixed(4);
+      if (currentMode !== "custom") customInput.value = String(currentScale);
 
       (customInput as any)._currentScale = currentScale;
 
-      queuePatch({ targetScale: currentScale });
+      queuePatch({ size: currentScale });
 
       if (applyAll) {
         slotsList
@@ -2076,7 +2078,7 @@ function renderCurrentPlantEditor(
           .forEach((s) => {
             if (s === customInput) return;
 
-            s.value = currentScale.toFixed(4);
+            s.value = String(currentScale);
 
             (s as any)._currentScale = currentScale;
           });
@@ -2084,7 +2086,7 @@ function renderCurrentPlantEditor(
         slotsList
           .querySelectorAll<HTMLElement>("[data-size-label]")
           .forEach((lab) => {
-            lab.textContent = `${pctVal}%`;
+            lab.textContent = `${pctVal}`;
 
             (lab as any)._currentPct = pctVal;
           });
@@ -2112,9 +2114,9 @@ function renderCurrentPlantEditor(
 
       slider.value = String(pctVal);
 
-      sizeValue.textContent = `${pctVal}%`;
+      sizeValue.textContent = `${pctVal}`;
 
-      queuePatch({ targetScale: n });
+      queuePatch({ size: n });
 
       if (applyAll) {
         slotsList
@@ -2146,7 +2148,7 @@ function renderCurrentPlantEditor(
         slotsList
           .querySelectorAll<HTMLElement>("[data-size-label]")
           .forEach((lab) => {
-            lab.textContent = `${pctVal}%`;
+            lab.textContent = `${pctVal}`;
 
             (lab as any)._currentPct = pctVal;
           });
@@ -2197,13 +2199,13 @@ function renderCurrentPlantEditor(
 
     const modeText = document.createElement("span");
 
-    modeText.textContent = "Use custom scale";
+    modeText.textContent = "Use custom size";
 
     const syncValueLabel = () => {
       sizeValue.textContent =
         currentMode === "custom"
-          ? `${currentScale.toFixed(2)}x`
-          : `${currentPct}%`;
+          ? `${currentScale}`
+          : `${currentPct}`;
 
       (sizeValue as any)._currentPct = currentPct;
     };
@@ -2232,7 +2234,7 @@ function renderCurrentPlantEditor(
       };
 
       if (currentMode === "custom") {
-        queuePatch({ targetScale: currentScale });
+        queuePatch({ size: currentScale });
       } else {
         const clamped = clampCustomScale(species, currentScale);
 
@@ -2250,7 +2252,7 @@ function renderCurrentPlantEditor(
 
         slider.value = String(pctVal);
 
-        queuePatch({ targetScale: clamped });
+        queuePatch({ size: clamped });
       }
 
       syncControlState();
@@ -2583,7 +2585,7 @@ function renderCurrentPlantEditor(
 
       endTime: FIXED_SLOT_END,
 
-      targetScale: computeTargetScaleFromPercent(species, DEFAULT_SIZE_PERCENT),
+      size: computeTargetScaleFromPercent(species, DEFAULT_SIZE_PERCENT),
 
       mutations: [],
     });
@@ -2702,7 +2704,7 @@ function renderCurrentPlantEditor(
         const pctVal = (lab as any)._currentPct ?? refPct;
 
         lab.textContent =
-          mode === "custom" ? `${refScale.toFixed(2)}x` : `${pctVal}%`;
+          mode === "custom" ? `${refScale}` : `${pctVal}`;
       });
 
     const map = currentItemSlotModes[modeKey] || {};
@@ -3170,7 +3172,7 @@ function renderSideDetails() {
 
       let customText = String(currentScale);
 
-      // Size label, the "use custom scale" toggle, and the current value all share one
+      // Size label, the "use custom size" toggle, and the current value all share one
       // compact row instead of three, to save vertical space in this already-tight panel.
       const sizeRow = document.createElement("div");
 
@@ -3258,13 +3260,13 @@ function renderSideDetails() {
 
       const customLabel = document.createElement("span");
 
-      customLabel.textContent = "Custom scale";
+      customLabel.textContent = "Custom size";
 
       const customInput = document.createElement("input");
 
       customInput.type = "text";
 
-      customInput.inputMode = "decimal";
+      customInput.inputMode = "numeric";
 
       customInput.autocomplete = "off";
 
@@ -3318,9 +3320,9 @@ function renderSideDetails() {
 
       installGameKeyBlocker(customInput);
 
-      const formatScaleLabel = (val: number) => `${val.toFixed(2)}x`;
+      const formatScaleLabel = (val: number) => String(clampSizePercent(val));
 
-      const formatScaleInput = (val: number) => val.toFixed(2);
+      const formatScaleInput = (val: number) => String(clampSizePercent(val));
 
       const parseInputNumber = (el: HTMLInputElement): number | null => {
         const raw = el.value;
@@ -3392,7 +3394,7 @@ function renderSideDetails() {
         sizeValue.textContent =
           currentMode === "custom"
             ? formatScaleLabel(currentScale)
-            : `${currentPct}%`;
+            : `${currentPct}`;
       };
 
       const syncControlState = () => {
@@ -3462,7 +3464,7 @@ function renderSideDetails() {
             lab.textContent =
               currentMode === "custom"
                 ? formatScaleLabel(currentScale)
-                : `${currentPct}%`;
+                : `${currentPct}`;
           });
 
         sideRightWrap
@@ -3889,13 +3891,13 @@ function buildBrushTileObject(): any | null {
   const slotsArr: any[] = [];
   for (const cfg of slotsConfig) {
     if (!cfg.enabled) continue;
-    const targetScale = resolveSlotTargetScale(species, cfg);
+    const size = resolveSlotTargetScale(species, cfg);
     const mutations = Array.isArray(cfg.mutations) ? cfg.mutations.slice() : [];
     slotsArr.push({
       species,
       startTime: 1760866288723,
       endTime: 1760867858782,
-      targetScale,
+      size,
       mutations,
     });
   }
@@ -5483,74 +5485,43 @@ async function updateGardenObjectAtCurrentTile(
 
 type SlotScaleMode = "percent" | "custom";
 
+// A grow slot carries a whole-number Crop Size in [50, 100]; both the slider
+// and the "custom" text field edit that same number, so every helper below is
+// a clamp rather than a conversion.
+
 function clampSizePercent(sizePercent: number): number {
   const pctRaw = Number.isFinite(sizePercent as number)
     ? (sizePercent as number)
-    : 100;
+    : CROP_SIZE_MAX;
 
-  return Math.max(50, Math.min(100, Math.round(pctRaw)));
+  return Math.max(CROP_SIZE_MIN, Math.min(CROP_SIZE_MAX, Math.round(pctRaw)));
 }
 
-function getScaleBoundsForSpecies(species: string | null | undefined): {
+function getScaleBoundsForSpecies(_species: string | null | undefined): {
   minScale: number;
   maxScale: number;
 } {
-  if (!species) return { minScale: 1, maxScale: 1 };
-
-  const entry = (plantCatalog as any)[species];
-
-  const maxScaleRaw = Number(entry?.crop?.maxScale);
-
-  const maxScale =
-    Number.isFinite(maxScaleRaw) && maxScaleRaw > 1 ? maxScaleRaw : 1;
-
-  return { minScale: 1, maxScale };
+  return { minScale: CROP_SIZE_MIN, maxScale: CROP_SIZE_MAX };
 }
 
-function clampCustomScale(species: string, scale: number): number {
-  const { minScale, maxScale } = getScaleBoundsForSpecies(species);
-
-  if (!Number.isFinite(scale)) return minScale;
-
-  const upper = Math.max(minScale, maxScale);
-
-  return Math.max(minScale, Math.min(upper, scale));
+function clampCustomScale(_species: string, size: number): number {
+  return clampSizePercent(size);
 }
 
-function normalizeCustomScale(species: string, scale: number): number {
-  if (!Number.isFinite(scale)) return 1;
-
-  return scale;
+function normalizeCustomScale(_species: string, size: number): number {
+  return clampSizePercent(size);
 }
 
 export function computeTargetScaleFromPercent(
-  species: string | null | undefined,
+  _species: string | null | undefined,
 
   sizePercent: number,
 ): number {
-  const pct = clampSizePercent(sizePercent);
-
-  if (!species) return 1;
-
-  const { minScale, maxScale } = getScaleBoundsForSpecies(species);
-
-  if (!maxScale || maxScale <= minScale) return minScale;
-
-  const t = (pct - 50) / 50;
-
-  return minScale + t * (maxScale - minScale);
+  return clampSizePercent(sizePercent);
 }
 
-function computePercentFromScale(species: string, targetScale: number): number {
-  const { minScale, maxScale } = getScaleBoundsForSpecies(species);
-
-  if (!maxScale || maxScale <= minScale) return 100;
-
-  const clamped = clampCustomScale(species, targetScale);
-
-  const pct = 50 + ((clamped - minScale) / (maxScale - minScale)) * 50;
-
-  return clampSizePercent(pct);
+function computePercentFromScale(_species: string, size: number): number {
+  return clampSizePercent(size);
 }
 
 function resolveSlotTargetScale(

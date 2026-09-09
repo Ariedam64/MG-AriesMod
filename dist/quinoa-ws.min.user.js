@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.203
+// @version      3.2.204
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -2828,9 +2828,9 @@
       case "ProduceScaleBoostII":
       case "ProduceScaleBoostIII":
       case "SnowyCropSizeBoost": {
-        const pct = Number(params.scaleIncreasePercentage) || 0;
+        const points = Number(params.sizeIncrease ?? params.scaleIncreasePercentage) || 0;
         const num = Number(params.numPlantsAffected) || 0;
-        return `Boosted ${num} ${num === 1 ? "crop" : "crops"} size by +${pct.toFixed(0)}%`;
+        return `Boosted ${num} ${num === 1 ? "crop" : "crops"} size by +${points.toFixed(0)}`;
       }
       case "MoonKisser":
       case "DawnKisser": {
@@ -5437,7 +5437,7 @@
         baseSellPrice: 20,
         baseWeight: 0.1,
         baseTileScale: 0.6,
-        maxScale: 3
+        maxSizeMultiplier: 3
       }
     },
     Cabbage: {
@@ -5467,7 +5467,7 @@
         baseSellPrice: 42,
         baseWeight: 1,
         baseTileScale: 0.8,
-        maxScale: 3
+        maxSizeMultiplier: 3
       }
     },
     Strawberry: {
@@ -5499,7 +5499,7 @@
         baseSellPrice: 14,
         baseWeight: 0.05,
         baseTileScale: 0.25,
-        maxScale: 2
+        maxSizeMultiplier: 2
       }
     },
     Aloe: {
@@ -5522,7 +5522,7 @@
         baseSellPrice: 310,
         baseWeight: 1.5,
         baseTileScale: 0.7,
-        maxScale: 2.5
+        maxSizeMultiplier: 2.5
       }
     },
     Beet: {
@@ -5545,7 +5545,7 @@
         baseSellPrice: 350,
         baseWeight: 0.3,
         baseTileScale: 0.2,
-        maxScale: 3
+        maxSizeMultiplier: 3
       }
     },
     Rose: {
@@ -5568,7 +5568,7 @@
         baseSellPrice: 300,
         baseWeight: 0.01,
         baseTileScale: 1,
-        maxScale: 4
+        maxSizeMultiplier: 4
       }
     },
     FavaBean: {
@@ -5603,7 +5603,7 @@
         baseSellPrice: 30,
         baseWeight: 0.03,
         baseTileScale: 0.3,
-        maxScale: 3
+        maxSizeMultiplier: 3
       }
     },
     Delphinium: {
@@ -5629,7 +5629,7 @@
         baseSellPrice: 530,
         baseWeight: 0.02,
         baseTileScale: 0.8,
-        maxScale: 3
+        maxSizeMultiplier: 3
       }
     },
     Blueberry: {
@@ -5661,7 +5661,7 @@
         baseSellPrice: 23,
         baseWeight: 0.01,
         baseTileScale: 0.25,
-        maxScale: 2
+        maxSizeMultiplier: 2
       }
     },
     Apple: {
@@ -5698,7 +5698,7 @@
         baseSellPrice: 73,
         baseWeight: 0.18,
         baseTileScale: 0.5,
-        maxScale: 2
+        maxSizeMultiplier: 2
       }
     },
     OrangeTulip: {
@@ -5721,7 +5721,7 @@
         baseSellPrice: 767,
         baseWeight: 0.01,
         baseTileScale: 0.5,
-        maxScale: 3
+        maxSizeMultiplier: 3
       }
     },
     Tomato: {
@@ -5750,7 +5750,7 @@
         baseSellPrice: 27,
         baseWeight: 0.3,
         baseTileScale: 0.33,
-        maxScale: 2
+        maxSizeMultiplier: 2
       }
     },
     Daffodil: {
@@ -5773,7 +5773,7 @@
         baseSellPrice: 1090,
         baseWeight: 0.01,
         baseTileScale: 0.5,
-        maxScale: 3
+        maxSizeMultiplier: 3
       }
     },
     Corn: {
@@ -5799,7 +5799,7 @@
         baseSellPrice: 36,
         baseWeight: 1.2,
         baseTileScale: 0.7,
-        maxScale: 2
+        maxSizeMultiplier: 2
       }
     },
     Watermelon: {
@@ -5822,7 +5822,7 @@
         baseSellPrice: 2708,
         baseWeight: 4.5,
         baseTileScale: 0.8,
-        maxScale: 3
+        maxSizeMultiplier: 3
       }
     },
     Pumpkin: {
@@ -5845,7 +5845,7 @@
         baseSellPrice: 3700,
         baseWeight: 6,
         baseTileScale: 0.8,
-        maxScale: 3
+        maxSizeMultiplier: 3
       }
     },
     Echeveria: {
@@ -5868,7 +5868,7 @@
         baseSellPrice: 4600,
         baseWeight: 0.8,
         baseTileScale: 0.8,
-        maxScale: 2.75
+        maxSizeMultiplier: 2.75
       }
     },
     Pear: {
@@ -5924,7 +5924,7 @@
         baseSellPrice: 250,
         baseWeight: 0.17,
         baseTileScale: 0.5,
-        maxScale: 2
+        maxSizeMultiplier: 2
       }
     },
     Gentian: {
@@ -5947,7 +5947,7 @@
         baseSellPrice: 1e4,
         baseWeight: 0.02,
         baseTileScale: 0.5,
-        maxScale: 3
+        maxSizeMultiplier: 3
       }
     },
     Coconut: {
@@ -5983,7 +5983,7 @@
         baseSellPrice: 302,
         baseWeight: 5,
         baseTileScale: 0.25,
-        maxScale: 3
+        maxSizeMultiplier: 3
       }
     },
     PineTree: {
@@ -6006,7 +6006,7 @@
         baseSellPrice: 15e3,
         baseWeight: 1e3,
         baseTileScale: 1.5,
-        maxScale: 3.5
+        maxSizeMultiplier: 3.5
       }
     },
     Banana: {
@@ -6046,7 +6046,7 @@
         baseSellPrice: 1750,
         baseWeight: 0.12,
         baseTileScale: 0.5,
-        maxScale: 1.7
+        maxSizeMultiplier: 1.7
       }
     },
     Lily: {
@@ -6070,7 +6070,7 @@
         baseSellPrice: 20123,
         baseWeight: 0.02,
         baseTileScale: 0.5,
-        maxScale: 2.75
+        maxSizeMultiplier: 2.75
       }
     },
     Camellia: {
@@ -6108,7 +6108,7 @@
         baseSellPrice: 4875,
         baseWeight: 0.3,
         baseTileScale: 0.4,
-        maxScale: 2.5
+        maxSizeMultiplier: 2.5
       }
     },
     Squash: {
@@ -6138,7 +6138,7 @@
         baseSellPrice: 3500,
         baseWeight: 0.3,
         baseTileScale: 0.4,
-        maxScale: 2.5
+        maxSizeMultiplier: 2.5
       }
     },
     Peach: {
@@ -6172,7 +6172,7 @@
         baseSellPrice: 9e3,
         baseWeight: 0.18,
         baseTileScale: 0.5,
-        maxScale: 3
+        maxSizeMultiplier: 3
       }
     },
     BurrosTail: {
@@ -6201,7 +6201,7 @@
         baseSellPrice: 6e3,
         baseWeight: 0.4,
         baseTileScale: 0.4,
-        maxScale: 2.5
+        maxSizeMultiplier: 2.5
       }
     },
     Mushroom: {
@@ -6224,7 +6224,7 @@
         baseSellPrice: 16e4,
         baseWeight: 25,
         baseTileScale: 0.65,
-        maxScale: 3.5
+        maxSizeMultiplier: 3.5
       }
     },
     Cactus: {
@@ -6250,7 +6250,7 @@
         baseSellPrice: 261e3,
         baseWeight: 1500,
         baseTileScale: 2.5,
-        maxScale: 1.8
+        maxSizeMultiplier: 1.8
       }
     },
     Bamboo: {
@@ -6276,7 +6276,7 @@
         baseSellPrice: 5e5,
         baseWeight: 1,
         baseTileScale: 2.5,
-        maxScale: 2
+        maxSizeMultiplier: 2
       }
     },
     Poinsettia: {
@@ -6318,7 +6318,7 @@
         baseSellPrice: 3e4,
         baseWeight: 0.02,
         baseTileScale: 0.3,
-        maxScale: 2
+        maxSizeMultiplier: 2
       }
     },
     VioletCort: {
@@ -6341,7 +6341,7 @@
         baseSellPrice: 6e5,
         baseWeight: 2,
         baseTileScale: 0.65,
-        maxScale: 3.5
+        maxSizeMultiplier: 3.5
       }
     },
     Chrysanthemum: {
@@ -6376,7 +6376,7 @@
         baseSellPrice: 18e3,
         baseWeight: 0.01,
         baseTileScale: 0.3,
-        maxScale: 2.75
+        maxSizeMultiplier: 2.75
       }
     },
     Date: {
@@ -6416,7 +6416,7 @@
         baseSellPrice: 15e3,
         baseWeight: 0.02,
         baseTileScale: 0.25,
-        maxScale: 2
+        maxSizeMultiplier: 2
       }
     },
     Grape: {
@@ -6444,7 +6444,7 @@
         baseSellPrice: 12500,
         baseWeight: 3,
         baseTileScale: 0.5,
-        maxScale: 2
+        maxSizeMultiplier: 2
       }
     },
     Pepper: {
@@ -6480,7 +6480,7 @@
         baseSellPrice: 7220,
         baseWeight: 0.5,
         baseTileScale: 0.3,
-        maxScale: 2
+        maxSizeMultiplier: 2
       }
     },
     Lemon: {
@@ -6517,7 +6517,7 @@
         baseSellPrice: 1e4,
         baseWeight: 0.5,
         baseTileScale: 0.25,
-        maxScale: 3
+        maxSizeMultiplier: 3
       }
     },
     PassionFruit: {
@@ -6546,7 +6546,7 @@
         baseSellPrice: 24500,
         baseWeight: 9.5,
         baseTileScale: 0.35,
-        maxScale: 2
+        maxSizeMultiplier: 2
       }
     },
     DragonFruit: {
@@ -6580,7 +6580,7 @@
         baseSellPrice: 24500,
         baseWeight: 8.4,
         baseTileScale: 0.4,
-        maxScale: 2
+        maxSizeMultiplier: 2
       }
     },
     Cacao: {
@@ -6615,7 +6615,7 @@
         baseSellPrice: 7e4,
         baseWeight: 0.5,
         baseTileScale: 0.4,
-        maxScale: 2.5
+        maxSizeMultiplier: 2.5
       }
     },
     Lychee: {
@@ -6650,7 +6650,7 @@
         baseSellPrice: 5e4,
         baseWeight: 9,
         baseTileScale: 0.2,
-        maxScale: 2
+        maxSizeMultiplier: 2
       }
     },
     Sunflower: {
@@ -6678,7 +6678,7 @@
         baseSellPrice: 75e4,
         baseWeight: 10,
         baseTileScale: 0.5,
-        maxScale: 2.5
+        maxSizeMultiplier: 2.5
       }
     },
     Starweaver: {
@@ -6709,7 +6709,7 @@
         baseSellPrice: 1e7,
         baseWeight: 10,
         baseTileScale: 0.6,
-        maxScale: 2
+        maxSizeMultiplier: 2
       }
     },
     DawnCelestial: {
@@ -6746,7 +6746,7 @@
         baseSellPrice: 11e6,
         baseWeight: 6,
         baseTileScale: 0.4,
-        maxScale: 2.5,
+        maxSizeMultiplier: 2.5,
         transformOrigin: "top"
       }
     },
@@ -6787,7 +6787,7 @@
         baseSellPrice: 11e6,
         baseWeight: 2,
         baseTileScale: 0.4,
-        maxScale: 2,
+        maxSizeMultiplier: 2,
         transformOrigin: "bottom"
       }
     }
@@ -7211,30 +7211,30 @@
   var petAbilities = {
     ProduceScaleBoost: {
       name: "Crop Size Boost I",
-      description: "Increases the scale of garden crops",
+      description: "Increases the size of garden crops",
       trigger: "continuous",
       baseProbability: 0.3,
-      baseParameters: { scaleIncreasePercentage: 6 }
+      baseParameters: { sizeIncrease: 4 }
     },
     ProduceScaleBoostII: {
       name: "Crop Size Boost II",
-      description: "Increases the scale of garden crops",
+      description: "Increases the size of garden crops",
       trigger: "continuous",
       baseProbability: 0.4,
-      baseParameters: { scaleIncreasePercentage: 10 }
+      baseParameters: { sizeIncrease: 7 }
     },
     ProduceScaleBoostIII: {
       name: "Crop Size Boost III",
       trigger: "continuous",
       baseProbability: 0.5,
-      baseParameters: { scaleIncreasePercentage: 14 }
+      baseParameters: { sizeIncrease: 9 }
     },
     SnowyCropSizeBoost: {
-      name: "Snowy Crop Size Boost",
+      name: "Snow Crop Size Boost",
       trigger: "continuous",
       baseProbability: 0.8,
       baseParameters: {
-        scaleIncreasePercentage: 12,
+        sizeIncrease: 8,
         requiredWeather: "Frost"
       }
     },
@@ -8502,6 +8502,70 @@
   var tileRefsMutations2 = tileRefsMutations;
   var tileRefsMutationLabels2 = tileRefsMutationLabels;
 
+  // src/utils/cropSize.ts
+  var CROP_SIZE_MIN = 50;
+  var CROP_SIZE_MAX = 100;
+  var SIZE_SPAN = CROP_SIZE_MAX - CROP_SIZE_MIN;
+  var LEGACY_SCALE_MIN = 1;
+  var LEGACY_FALLBACK_MAX_SCALE = 2;
+  function toFinite(value) {
+    const numeric = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+  function normalizeKey2(value) {
+    return String(value ?? "").trim().toLowerCase();
+  }
+  function clampCropSize(value) {
+    const numeric = toFinite(value);
+    if (numeric == null) return CROP_SIZE_MIN;
+    return Math.min(CROP_SIZE_MAX, Math.max(CROP_SIZE_MIN, Math.round(numeric)));
+  }
+  function findPlantCatalogEntry(species) {
+    const wanted = normalizeKey2(species);
+    if (!wanted) return null;
+    const catalog = plantCatalog2;
+    const direct = typeof species === "string" ? catalog[species] : void 0;
+    if (direct) return direct;
+    for (const key2 of Object.keys(catalog)) {
+      const entry = catalog[key2];
+      if (!entry) continue;
+      if (normalizeKey2(key2) === wanted) return entry;
+      if (normalizeKey2(entry.crop?.name) === wanted) return entry;
+      if (normalizeKey2(entry.plant?.name) === wanted) return entry;
+      if (normalizeKey2(entry.seed?.name) === wanted) return entry;
+    }
+    return null;
+  }
+  function getMaxSizeMultiplier(species) {
+    const crop = findPlantCatalogEntry(species)?.crop;
+    if (!crop) return null;
+    const value = toFinite(crop.maxSizeMultiplier) ?? toFinite(crop.maxScale);
+    return value != null && value > 0 ? value : null;
+  }
+  function cropSizeMultiplier(species, size) {
+    const maxMultiplier = getMaxSizeMultiplier(species);
+    if (maxMultiplier == null || maxMultiplier <= 1) return 1;
+    const ratio = (clampCropSize(size) - CROP_SIZE_MIN) / SIZE_SPAN;
+    return 1 + (maxMultiplier - 1) * ratio;
+  }
+  function legacyScaleToCropSize(scale, maxScale) {
+    const numeric = toFinite(scale);
+    if (numeric == null) return null;
+    const upper = maxScale != null && maxScale > LEGACY_SCALE_MIN ? maxScale : LEGACY_FALLBACK_MAX_SCALE;
+    const clamped = Math.min(upper, Math.max(LEGACY_SCALE_MIN, numeric));
+    const ratio = (clamped - LEGACY_SCALE_MIN) / (upper - LEGACY_SCALE_MIN);
+    return clampCropSize(CROP_SIZE_MIN + ratio * SIZE_SPAN);
+  }
+  function readCropSize(source) {
+    if (!source || typeof source !== "object") return null;
+    const record = source;
+    const direct = toFinite(record.size);
+    if (direct != null) return clampCropSize(direct);
+    const legacy = toFinite(record.targetScale) ?? toFinite(record.scale);
+    if (legacy == null) return null;
+    return legacyScaleToCropSize(legacy, getMaxSizeMultiplier(record.species));
+  }
+
   // src/services/locker.ts
   var VISUAL_MUTATIONS = /* @__PURE__ */ new Set(["Gold", "Rainbow"]);
   var LOCKER_NO_WEATHER_TAG = "NoWeatherEffect";
@@ -8556,25 +8620,6 @@
     }
     return out;
   };
-  var normalizeSpeciesKey = (value) => value.toLowerCase().replace(/['’`]/g, "").replace(/\s+/g, "").replace(/-/g, "").replace(/(seed|plant|baby|fruit|crop)$/i, "");
-  var MAX_SCALE_BY_SPECIES = (() => {
-    const map2 = /* @__PURE__ */ new Map();
-    const register = (key2, value) => {
-      if (typeof key2 !== "string") return;
-      const normalized = normalizeSpeciesKey(key2.trim());
-      if (!normalized || map2.has(normalized)) return;
-      map2.set(normalized, value);
-    };
-    for (const [species, entry] of Object.entries(plantCatalog2)) {
-      const maxScale = Number(entry?.crop?.maxScale);
-      if (!Number.isFinite(maxScale) || maxScale <= 0) continue;
-      register(species, maxScale);
-      register(entry?.seed?.name, maxScale);
-      register(entry?.plant?.name, maxScale);
-      register(entry?.crop?.name, maxScale);
-    }
-    return map2;
-  })();
   var emptySlotInfo = () => ({
     isPlant: false,
     originalIndex: null,
@@ -8603,9 +8648,9 @@
     const species = slot.species ?? "";
     const start2 = Number.isFinite(slot.startTime) ? slot.startTime : 0;
     const end = Number.isFinite(slot.endTime) ? slot.endTime : 0;
-    const target = Number.isFinite(slot.targetScale) ? slot.targetScale : 0;
+    const size = readCropSize(slot) ?? 0;
     const muts = Array.isArray(slot.mutations) ? slot.mutations.join(",") : "";
-    return `${species}|${start2}|${end}|${target}|${muts}`;
+    return `${species}|${start2}|${end}|${size}|${muts}`;
   };
   var gardenObjectSignature = (obj) => {
     if (!obj) return "\u2205";
@@ -8638,65 +8683,20 @@
     return null;
   };
   var clampPercent = (value, min, max) => Math.max(min, Math.min(max, value));
-  var lookupMaxScale = (species) => {
-    if (typeof species !== "string") return null;
-    const normalized = normalizeSpeciesKey(species.trim());
-    if (!normalized) return null;
-    const found = MAX_SCALE_BY_SPECIES.get(normalized);
-    if (typeof found === "number" && Number.isFinite(found) && found > 0) {
-      return found;
-    }
-    return null;
-  };
-  var getMaxScaleForSlot = (slot) => {
-    if (!slot || typeof slot !== "object") return null;
-    const candidates = /* @__PURE__ */ new Set();
-    const fromSeedKey = extractSeedKey(slot);
-    if (fromSeedKey) candidates.add(fromSeedKey);
-    const fields = [
-      "species",
-      "seedSpecies",
-      "plantSpecies",
-      "cropSpecies",
-      "baseSpecies",
-      "seedKey"
-    ];
-    for (const field of fields) {
-      const value = slot[field];
-      if (typeof value === "string" && value) {
-        candidates.add(value);
-      }
-    }
-    for (const cand of candidates) {
-      const max = lookupMaxScale(cand);
-      if (typeof max === "number" && Number.isFinite(max) && max > 0) {
-        return max;
-      }
-    }
-    return null;
-  };
   var extractSizePercent = (slot) => {
-    if (!slot || typeof slot !== "object") return 100;
-    const direct = Number(slot.sizePercent ?? slot.sizePct ?? slot.size ?? slot.percent ?? slot.progressPercent);
-    if (Number.isFinite(direct)) {
-      return clampPercent(Math.round(direct), 0, 100);
+    if (!slot || typeof slot !== "object") return CROP_SIZE_MAX;
+    const alias = Number(slot.sizePercent ?? slot.sizePct ?? slot.percent ?? slot.progressPercent);
+    if (Number.isFinite(alias)) {
+      return clampPercent(Math.round(alias), 0, CROP_SIZE_MAX);
     }
-    const scale = Number(slot.targetScale ?? slot.scale);
-    if (Number.isFinite(scale)) {
-      const maxScale = getMaxScaleForSlot(slot);
-      if (typeof maxScale === "number" && Number.isFinite(maxScale) && maxScale > 1) {
-        const clamped = Math.max(1, Math.min(maxScale, scale));
-        const pct2 = 50 + (clamped - 1) / (maxScale - 1) * 50;
-        return clampPercent(Math.round(pct2), 50, 100);
-      }
-      if (scale > 1 && scale <= 2) {
-        const pct2 = 50 + (scale - 1) / 1 * 50;
-        return clampPercent(Math.round(pct2), 50, 100);
-      }
-      const pct = Math.round(scale * 100);
-      return clampPercent(pct, 0, 100);
+    const size = readCropSize(slot);
+    if (size != null) return size;
+    const seedKey = extractSeedKey(slot);
+    if (seedKey) {
+      const fromSeedKey = readCropSize({ ...slot, species: seedKey });
+      if (fromSeedKey != null) return fromSeedKey;
     }
-    return 100;
+    return CROP_SIZE_MAX;
   };
   function startLockerSlotWatcherViaGardenObject() {
     if (typeof window === "undefined") {
@@ -14004,8 +14004,8 @@
   }
   function cropSig(it) {
     const muts = Array.isArray(it.mutations) ? it.mutations.slice().sort().join(",") : "";
-    const scale = Number.isFinite(it.scale) ? Math.round(it.scale * 1e3) : 0;
-    return `${it.species ?? ""}|${it.itemType ?? ""}|${scale}|${muts}`;
+    const size = readCropSize(it) ?? 0;
+    return `${it.species ?? ""}|${it.itemType ?? ""}|${size}|${muts}`;
   }
   function snapshotInventory(inv) {
     const snap = /* @__PURE__ */ new Map();
@@ -14555,7 +14555,7 @@
   var RECENT_REMOVE_MS = 2e3;
   var ATOM_POLL_MS2 = 400;
   var ATOM_TIMEOUT_MS = 10 * 6e4;
-  var normalizeKey2 = (value) => typeof value === "string" ? value.trim() : "";
+  var normalizeKey3 = (value) => typeof value === "string" ? value.trim() : "";
   var normalizeQty = (value) => {
     const n = Number(value);
     return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
@@ -14808,9 +14808,9 @@
       }
     };
   }
-  var storageKeyFromSpecies = (item) => normalizeKey2(item?.species);
-  var storageKeyFromDecorId = (item) => normalizeKey2(item?.decorId);
-  var storageKeyFromToolId = (item) => normalizeKey2(item?.toolId);
+  var storageKeyFromSpecies = (item) => normalizeKey3(item?.species);
+  var storageKeyFromDecorId = (item) => normalizeKey3(item?.decorId);
+  var storageKeyFromToolId = (item) => normalizeKey3(item?.toolId);
 
   // src/services/misc.ts
   var PATH_GHOST_MODE = "misc.ghostMode";
@@ -16962,7 +16962,7 @@
     const p = slotPatch || {};
     if ("startTime" in p) slot.startTime = Number(p.startTime);
     if ("endTime" in p) slot.endTime = Number(p.endTime);
-    if ("targetScale" in p) slot.targetScale = Number(p.targetScale);
+    if ("size" in p) slot.size = Number(p.size);
     if ("mutations" in p) {
       if (!Array.isArray(p.mutations)) throw new Error("mutations must be an array of strings");
       if (!p.mutations.every((x) => typeof x === "string")) throw new Error("mutations must contain only strings");
@@ -18339,7 +18339,7 @@
       });
       slotsList.querySelectorAll("[data-size-label]").forEach((lab) => {
         const curPct = lab._currentPct;
-        if (curPct != null) lab.textContent = `${curPct}%`;
+        if (curPct != null) lab.textContent = `${curPct}`;
       });
       slotsList.querySelectorAll("input[data-scale-mode-slot]").forEach((chk) => {
         const mode = chk._currentMode || "percent";
@@ -18357,9 +18357,9 @@
     slots.forEach((slot, idx) => {
       const box = document.createElement("div");
       box.className = "qws-item-box";
-      const rawScale = Number(slot?.targetScale);
+      const rawScale = readCropSize(slot);
       const fallbackScale = computeTargetScaleFromPercent(species, 100);
-      const initialScale = Number.isFinite(rawScale) ? rawScale : fallbackScale;
+      const initialScale = rawScale ?? fallbackScale;
       const { minScale, maxScale } = getScaleBoundsForSpecies(species);
       const computePercentLoose = (scale) => {
         const { minScale: minScale2, maxScale: maxScale2 } = getScaleBoundsForSpecies(species);
@@ -18387,7 +18387,7 @@
       const sizeName = document.createElement("span");
       sizeName.textContent = "Size";
       const sizeValue = document.createElement("span");
-      sizeValue.textContent = `${currentPct}%`;
+      sizeValue.textContent = `${currentPct}`;
       sizeValue.dataset.sizeLabel = String(idx);
       sizeValue._currentPct = currentPct;
       sizeRow.append(sizeName, sizeValue);
@@ -18411,10 +18411,10 @@
       customRow.style.fontSize = "11px";
       customRow.style.opacity = "0.9";
       const customLabel = document.createElement("span");
-      customLabel.textContent = "Custom scale";
+      customLabel.textContent = "Custom size";
       const customInput = document.createElement("input");
       customInput.type = "text";
-      customInput.inputMode = "decimal";
+      customInput.inputMode = "numeric";
       customInput.autocomplete = "off";
       customInput.value = String(currentScale);
       customInput.dataset.scaleInputSlot = String(idx);
@@ -18454,12 +18454,12 @@
         currentPct = pctVal;
         slider._currentPct = pctVal;
         sizeValue._currentPct = pctVal;
-        sizeValue.textContent = `${pctVal}%`;
+        sizeValue.textContent = `${pctVal}`;
         slider.value = String(pctVal);
         currentScale = computeTargetScaleFromPercent(species, pctVal);
-        if (currentMode !== "custom") customInput.value = currentScale.toFixed(4);
+        if (currentMode !== "custom") customInput.value = String(currentScale);
         customInput._currentScale = currentScale;
-        queuePatch({ targetScale: currentScale });
+        queuePatch({ size: currentScale });
         if (applyAll) {
           slotsList.querySelectorAll("input[data-slot-idx]").forEach((s) => {
             if (s === slider) return;
@@ -18471,11 +18471,11 @@
           });
           slotsList.querySelectorAll("input[data-scale-input-slot]").forEach((s) => {
             if (s === customInput) return;
-            s.value = currentScale.toFixed(4);
+            s.value = String(currentScale);
             s._currentScale = currentScale;
           });
           slotsList.querySelectorAll("[data-size-label]").forEach((lab) => {
-            lab.textContent = `${pctVal}%`;
+            lab.textContent = `${pctVal}`;
             lab._currentPct = pctVal;
           });
           applyModeToAll("percent", currentScale, currentPct);
@@ -18491,8 +18491,8 @@
         const pctVal = computePercentFromScale(species, n);
         currentPct = pctVal;
         slider.value = String(pctVal);
-        sizeValue.textContent = `${pctVal}%`;
-        queuePatch({ targetScale: n });
+        sizeValue.textContent = `${pctVal}`;
+        queuePatch({ size: n });
         if (applyAll) {
           slotsList.querySelectorAll("input[data-slot-idx]").forEach((s) => {
             if (s === slider) return;
@@ -18508,7 +18508,7 @@
             s._currentScale = n;
           });
           slotsList.querySelectorAll("[data-size-label]").forEach((lab) => {
-            lab.textContent = `${pctVal}%`;
+            lab.textContent = `${pctVal}`;
             lab._currentPct = pctVal;
           });
           applyModeToAll("custom", n, currentPct);
@@ -18537,9 +18537,9 @@
       modeToggle._currentMode = currentMode;
       modeToggle.checked = currentMode === "custom";
       const modeText = document.createElement("span");
-      modeText.textContent = "Use custom scale";
+      modeText.textContent = "Use custom size";
       const syncValueLabel = () => {
-        sizeValue.textContent = currentMode === "custom" ? `${currentScale.toFixed(2)}x` : `${currentPct}%`;
+        sizeValue.textContent = currentMode === "custom" ? `${currentScale}` : `${currentPct}`;
         sizeValue._currentPct = currentPct;
       };
       const syncControlState = () => {
@@ -18557,7 +18557,7 @@
           [idx]: currentMode
         };
         if (currentMode === "custom") {
-          queuePatch({ targetScale: currentScale });
+          queuePatch({ size: currentScale });
         } else {
           const clamped = clampCustomScale(species, currentScale);
           currentScale = clamped;
@@ -18567,7 +18567,7 @@
           currentPct = pctVal;
           slider._currentPct = pctVal;
           slider.value = String(pctVal);
-          queuePatch({ targetScale: clamped });
+          queuePatch({ size: clamped });
         }
         syncControlState();
         syncValueLabel();
@@ -18776,7 +18776,7 @@
         species,
         startTime: FIXED_SLOT_START,
         endTime: FIXED_SLOT_END,
-        targetScale: computeTargetScaleFromPercent(species, DEFAULT_SIZE_PERCENT),
+        size: computeTargetScaleFromPercent(species, DEFAULT_SIZE_PERCENT),
         mutations: []
       });
       btnAdd.onclick = () => {
@@ -18835,7 +18835,7 @@
       });
       slotsList.querySelectorAll("[data-size-label]").forEach((lab) => {
         const pctVal = lab._currentPct ?? refPct;
-        lab.textContent = mode === "custom" ? `${refScale.toFixed(2)}x` : `${pctVal}%`;
+        lab.textContent = mode === "custom" ? `${refScale}` : `${pctVal}`;
       });
       const map2 = currentItemSlotModes[modeKey] || {};
       for (let i = 0; i < slots.length; i++) map2[i] = mode;
@@ -19170,10 +19170,10 @@
         customRow.style.opacity = "0.9";
         customRow.dataset.customRow = String(idx);
         const customLabel = document.createElement("span");
-        customLabel.textContent = "Custom scale";
+        customLabel.textContent = "Custom size";
         const customInput = document.createElement("input");
         customInput.type = "text";
-        customInput.inputMode = "decimal";
+        customInput.inputMode = "numeric";
         customInput.autocomplete = "off";
         customInput.value = customText;
         customInput.dataset.scaleInput = String(idx);
@@ -19204,8 +19204,8 @@
           inp.addEventListener("keydown", stop2);
         };
         installGameKeyBlocker(customInput);
-        const formatScaleLabel = (val) => `${val.toFixed(2)}x`;
-        const formatScaleInput = (val) => val.toFixed(2);
+        const formatScaleLabel = (val) => String(clampSizePercent(val));
+        const formatScaleInput = (val) => String(clampSizePercent(val));
         const parseInputNumber = (el2) => {
           const raw = el2.value;
           if (raw === "" || raw == null) return null;
@@ -19248,7 +19248,7 @@
         };
         installCharGuard(customInput);
         const syncValueLabel = () => {
-          sizeValue.textContent = currentMode === "custom" ? formatScaleLabel(currentScale) : `${currentPct}%`;
+          sizeValue.textContent = currentMode === "custom" ? formatScaleLabel(currentScale) : `${currentPct}`;
         };
         const syncControlState = () => {
           const showPercentMode = currentMode !== "custom";
@@ -19281,7 +19281,7 @@
             chk.checked = currentMode === "custom";
           });
           sideRightWrap.querySelectorAll("[data-size-label]").forEach((lab) => {
-            lab.textContent = currentMode === "custom" ? formatScaleLabel(currentScale) : `${currentPct}%`;
+            lab.textContent = currentMode === "custom" ? formatScaleLabel(currentScale) : `${currentPct}`;
           });
           sideRightWrap.querySelectorAll("[data-scale-row]").forEach((row) => {
             row.remove();
@@ -19503,13 +19503,13 @@
     const slotsArr = [];
     for (const cfg of slotsConfig) {
       if (!cfg.enabled) continue;
-      const targetScale = resolveSlotTargetScale(species, cfg);
+      const size = resolveSlotTargetScale(species, cfg);
       const mutations = Array.isArray(cfg.mutations) ? cfg.mutations.slice() : [];
       slotsArr.push({
         species,
         startTime: 1760866288723,
         endTime: 1760867858782,
-        targetScale,
+        size,
         mutations
       });
     }
@@ -20484,40 +20484,23 @@
     }
   }
   function clampSizePercent(sizePercent) {
-    const pctRaw = Number.isFinite(sizePercent) ? sizePercent : 100;
-    return Math.max(50, Math.min(100, Math.round(pctRaw)));
+    const pctRaw = Number.isFinite(sizePercent) ? sizePercent : CROP_SIZE_MAX;
+    return Math.max(CROP_SIZE_MIN, Math.min(CROP_SIZE_MAX, Math.round(pctRaw)));
   }
-  function getScaleBoundsForSpecies(species) {
-    if (!species) return { minScale: 1, maxScale: 1 };
-    const entry = plantCatalog2[species];
-    const maxScaleRaw = Number(entry?.crop?.maxScale);
-    const maxScale = Number.isFinite(maxScaleRaw) && maxScaleRaw > 1 ? maxScaleRaw : 1;
-    return { minScale: 1, maxScale };
+  function getScaleBoundsForSpecies(_species) {
+    return { minScale: CROP_SIZE_MIN, maxScale: CROP_SIZE_MAX };
   }
-  function clampCustomScale(species, scale) {
-    const { minScale, maxScale } = getScaleBoundsForSpecies(species);
-    if (!Number.isFinite(scale)) return minScale;
-    const upper = Math.max(minScale, maxScale);
-    return Math.max(minScale, Math.min(upper, scale));
+  function clampCustomScale(_species, size) {
+    return clampSizePercent(size);
   }
-  function normalizeCustomScale(species, scale) {
-    if (!Number.isFinite(scale)) return 1;
-    return scale;
+  function normalizeCustomScale(_species, size) {
+    return clampSizePercent(size);
   }
-  function computeTargetScaleFromPercent(species, sizePercent) {
-    const pct = clampSizePercent(sizePercent);
-    if (!species) return 1;
-    const { minScale, maxScale } = getScaleBoundsForSpecies(species);
-    if (!maxScale || maxScale <= minScale) return minScale;
-    const t = (pct - 50) / 50;
-    return minScale + t * (maxScale - minScale);
+  function computeTargetScaleFromPercent(_species, sizePercent) {
+    return clampSizePercent(sizePercent);
   }
-  function computePercentFromScale(species, targetScale) {
-    const { minScale, maxScale } = getScaleBoundsForSpecies(species);
-    if (!maxScale || maxScale <= minScale) return 100;
-    const clamped = clampCustomScale(species, targetScale);
-    const pct = 50 + (clamped - minScale) / (maxScale - minScale) * 50;
-    return clampSizePercent(pct);
+  function computePercentFromScale(_species, size) {
+    return clampSizePercent(size);
   }
   function resolveSlotTargetScale(species, cfg) {
     if (cfg.sizeMode === "custom") {
@@ -21417,86 +21400,22 @@
     }
     return null;
   }
-  var normalizeSpeciesKey2 = (value) => value.toLowerCase().replace(/['’`]/g, "").replace(/\s+/g, "").replace(/-/g, "").replace(/(seed|plant|baby|fruit|crop)$/i, "");
-  var MAX_SCALE_BY_SPECIES2 = (() => {
-    const map2 = /* @__PURE__ */ new Map();
-    const register = (key2, value) => {
-      if (typeof key2 !== "string") return;
-      const normalized = normalizeSpeciesKey2(key2.trim());
-      if (!normalized || map2.has(normalized)) return;
-      map2.set(normalized, value);
-    };
-    for (const [species, entry] of Object.entries(plantCatalog2)) {
-      const maxScale = Number(entry?.crop?.maxScale);
-      if (!Number.isFinite(maxScale) || maxScale <= 0) continue;
-      register(species, maxScale);
-      register(entry?.seed?.name, maxScale);
-      register(entry?.plant?.name, maxScale);
-      register(entry?.crop?.name, maxScale);
-    }
-    return map2;
-  })();
-  function lookupMaxScale2(species) {
-    if (typeof species !== "string") return null;
-    const normalized = normalizeSpeciesKey2(species.trim());
-    if (!normalized) return null;
-    const found = MAX_SCALE_BY_SPECIES2.get(normalized);
-    if (typeof found === "number" && Number.isFinite(found) && found > 0) {
-      return found;
-    }
-    return null;
-  }
-  function getMaxScaleForSlot2(slot) {
-    if (!slot || typeof slot !== "object") return null;
-    const candidates = /* @__PURE__ */ new Set();
-    const fromSeedKey = extractSeedKey2(slot);
-    if (fromSeedKey) candidates.add(fromSeedKey);
-    const fields = [
-      "species",
-      "seedSpecies",
-      "plantSpecies",
-      "cropSpecies",
-      "baseSpecies",
-      "seedKey"
-    ];
-    for (const field of fields) {
-      const value = slot[field];
-      if (typeof value === "string" && value) {
-        candidates.add(value);
-      }
-    }
-    for (const cand of candidates) {
-      const max = lookupMaxScale2(cand);
-      if (typeof max === "number" && Number.isFinite(max) && max > 0) {
-        return max;
-      }
-    }
-    return null;
-  }
   function extractSizePercent2(slot) {
-    if (!slot || typeof slot !== "object") return 100;
-    const direct = Number(
-      slot.sizePercent ?? slot.sizePct ?? slot.size ?? slot.percent ?? slot.progressPercent
+    if (!slot || typeof slot !== "object") return CROP_SIZE_MAX;
+    const alias = Number(
+      slot.sizePercent ?? slot.sizePct ?? slot.percent ?? slot.progressPercent
     );
-    if (Number.isFinite(direct)) {
-      return clampPercent3(Math.round(direct), 0, 100);
+    if (Number.isFinite(alias)) {
+      return clampPercent3(Math.round(alias), 0, CROP_SIZE_MAX);
     }
-    const scale = Number(slot.targetScale ?? slot.scale);
-    if (Number.isFinite(scale)) {
-      const maxScale = getMaxScaleForSlot2(slot);
-      if (typeof maxScale === "number" && Number.isFinite(maxScale) && maxScale > 1) {
-        const clamped = Math.max(1, Math.min(maxScale, scale));
-        const pct2 = 50 + (clamped - 1) / (maxScale - 1) * 50;
-        return clampPercent3(Math.round(pct2), 50, 100);
-      }
-      if (scale > 1 && scale <= 2) {
-        const pct2 = 50 + (scale - 1) / 1 * 50;
-        return clampPercent3(Math.round(pct2), 50, 100);
-      }
-      const pct = Math.round(scale * 100);
-      return clampPercent3(pct, 0, 100);
+    const size = readCropSize(slot);
+    if (size != null) return size;
+    const seedKey = extractSeedKey2(slot);
+    if (seedKey) {
+      const fromSeedKey = readCropSize({ ...slot, species: seedKey });
+      if (fromSeedKey != null) return fromSeedKey;
     }
-    return 100;
+    return CROP_SIZE_MAX;
   }
   function sanitizeMutations(raw) {
     if (!Array.isArray(raw)) return [];
@@ -23144,7 +23063,7 @@
         case "ProduceScaleBoostII":
         case "ProduceScaleBoostIII":
         case "SnowyCropSizeBoost": {
-          const inc = data["scaleIncreasePercentage"] ?? data["cropScaleIncreasePercentage"] ?? base["scaleIncreasePercentage"] ?? 0;
+          const inc = data["sizeIncrease"] ?? data["scaleIncreasePercentage"] ?? data["cropScaleIncreasePercentage"] ?? base["sizeIncrease"] ?? base["scaleIncreasePercentage"] ?? 0;
           return num(inc);
         }
         case "EggGrowthBoost":
@@ -24067,31 +23986,35 @@
     const wt = computeWeatherTimeMultiplier(weather2, time);
     return color * wt;
   }
-  function estimateProduceValue(species, scale, mutations, opts) {
+  function estimateProduceValue(species, size, mutations, opts) {
     const getBase = opts?.getBasePrice ?? defaultGetBasePrice;
-    const sXform = opts?.scaleTransform ?? ((_, s) => s);
+    const toMultiplier = opts?.sizeMultiplier ?? cropSizeMultiplier;
     const round = opts?.rounding ?? "round";
     const base = getBase(species);
     if (!(Number.isFinite(base) && base > 0)) return 0;
-    const sc = Number(scale);
-    if (!Number.isFinite(sc) || sc <= 0) return 0;
-    const effScale = sXform(species, sc);
-    if (!Number.isFinite(effScale) || effScale <= 0) return 0;
+    const numericSize = Number(size);
+    if (!Number.isFinite(numericSize)) return 0;
+    const sizeMult = toMultiplier(species, numericSize);
+    if (!Number.isFinite(sizeMult) || sizeMult <= 0) return 0;
     const mutMult = mutationsMultiplier(mutations);
     const friendsMult = friendBonusMultiplier2(opts?.friendPlayers);
-    const pre = base * effScale * mutMult * friendsMult;
+    const pre = base * sizeMult * mutMult * friendsMult;
     const out = Math.max(0, applyRounding(pre, round));
     return out;
   }
   function valueFromInventoryProduce(item, opts, playersInRoom) {
     if (!item || item.itemType !== "Produce") return 0;
     const merged = playersInRoom == null ? opts : { ...opts, friendPlayers: playersInRoom };
-    return estimateProduceValue(item.species, item.scale, item.mutations, merged);
+    const size = readCropSize(item);
+    if (size == null) return 0;
+    return estimateProduceValue(item.species, size, item.mutations, merged);
   }
   function valueFromGardenSlot(slot, opts, playersInRoom) {
     if (!slot) return 0;
     const merged = playersInRoom == null ? opts : { ...opts, friendPlayers: playersInRoom };
-    return estimateProduceValue(slot.species, slot.targetScale, slot.mutations, merged);
+    const size = readCropSize(slot);
+    if (size == null) return 0;
+    return estimateProduceValue(slot.species, size, slot.mutations, merged);
   }
   function valueFromGardenPlant(plant, opts, playersInRoom) {
     if (!plant || plant.objectType !== "plant" || !Array.isArray(plant.slots)) return 0;
@@ -24253,12 +24176,10 @@
         let total = 0;
         for (const slot of slots) {
           const slotSpecies = typeof slot?.species === "string" ? slot.species : null;
-          const rawTarget = slot?.targetScale;
-          const target = Number.isFinite(rawTarget) ? rawTarget : Number(rawTarget);
-          const targetScale = Number.isFinite(target) ? target : null;
+          const size = readCropSize(slot);
           const mutations = Array.isArray(slot?.mutations) ? slot.mutations.filter((m) => typeof m === "string") : [];
-          if (!slotSpecies || targetScale == null) continue;
-          const value = estimateProduceValue(slotSpecies, targetScale, mutations, {
+          if (!slotSpecies || size == null) continue;
+          const value = estimateProduceValue(slotSpecies, size, mutations, {
             friendPlayers: playersInRoom
           });
           if (typeof value === "number" && Number.isFinite(value)) {
@@ -24323,16 +24244,14 @@
       const slots = Array.isArray(plant?.slots) ? plant.slots : [];
       const slotEntries = slots.map((slot) => {
         const slotSpecies = typeof slot?.species === "string" ? slot.species : null;
-        const targetScaleRaw = slot?.targetScale;
-        const targetScale = Number.isFinite(targetScaleRaw) ? targetScaleRaw : Number(targetScaleRaw);
-        const scaleValue = Number.isFinite(targetScale) ? targetScale : null;
+        const size = readCropSize(slot);
         const mutations = Array.isArray(slot?.mutations) ? slot.mutations.filter((m) => typeof m === "string") : [];
-        const value2 = slotSpecies && scaleValue != null ? estimateProduceValue(slotSpecies, scaleValue, mutations, {
+        const value2 = slotSpecies && size != null ? estimateProduceValue(slotSpecies, size, mutations, {
           friendPlayers: playersInRoom
         }) : 0;
         return {
           species: slotSpecies,
-          targetScale: scaleValue,
+          size,
           mutations,
           value: value2
         };
@@ -24368,15 +24287,13 @@
     const entries = crops.map((crop) => {
       const id = typeof crop?.id === "string" ? crop.id : null;
       const species = typeof crop?.species === "string" ? crop.species : null;
-      const rawScale = crop?.scale;
-      const scale = Number.isFinite(rawScale) ? rawScale : Number(rawScale);
-      const scaleValue = Number.isFinite(scale) ? scale : null;
+      const size = readCropSize(crop);
       const mutations = Array.isArray(crop?.mutations) ? crop.mutations.filter((m) => typeof m === "string") : [];
       const value = valueFromInventoryProduce(crop, void 0, playersInRoom);
       return {
         id,
         species,
-        scale: scaleValue,
+        size,
         mutations,
         value
       };
@@ -31585,7 +31502,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.203";
+      return "3.2.204";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -32098,51 +32015,8 @@
     "baseSpecies",
     "seedKey"
   ];
-  var normalizeSpeciesKey3 = (value) => value.toLowerCase().replace(/['’`]/g, "").replace(/\s+/g, "").replace(/-/g, "").replace(/(seed|plant|baby|fruit|crop)$/i, "");
-  var MAX_SCALE_BY_SPECIES3 = (() => {
-    const map2 = /* @__PURE__ */ new Map();
-    const register = (key2, value) => {
-      if (typeof key2 !== "string") return;
-      const normalized = normalizeSpeciesKey3(key2.trim());
-      if (!normalized || map2.has(normalized)) return;
-      map2.set(normalized, value);
-    };
-    for (const [species, entry] of Object.entries(plantCatalog2)) {
-      const maxScale = Number(entry?.crop?.maxScale);
-      if (!Number.isFinite(maxScale) || maxScale <= 0) continue;
-      register(species, maxScale);
-      register(entry?.seed?.name, maxScale);
-      register(entry?.plant?.name, maxScale);
-      register(entry?.crop?.name, maxScale);
-    }
-    return map2;
-  })();
-  var lookupMaxScale3 = (species) => {
-    if (typeof species !== "string") return null;
-    const normalized = normalizeSpeciesKey3(species.trim());
-    if (!normalized) return null;
-    const value = MAX_SCALE_BY_SPECIES3.get(normalized);
-    return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
-  };
+  var normalizeSpeciesKey = (value) => value.toLowerCase().replace(/['’`]/g, "").replace(/\s+/g, "").replace(/-/g, "").replace(/(seed|plant|baby|fruit|crop)$/i, "");
   var clampNumber2 = (value, min, max) => Math.max(min, Math.min(max, value));
-  var scaleToPercent = (scale, maxScale) => {
-    if (!Number.isFinite(scale)) return 50;
-    const MIN_PERCENT = 50;
-    const MAX_PERCENT = 100;
-    const MIN_SCALE = 1;
-    const safeScale = Math.max(MIN_SCALE, scale);
-    if (typeof maxScale === "number" && Number.isFinite(maxScale) && maxScale > MIN_SCALE) {
-      const limited2 = Math.min(maxScale, safeScale);
-      const ratio2 = (limited2 - MIN_SCALE) / (maxScale - MIN_SCALE);
-      const pct2 = MIN_PERCENT + ratio2 * (MAX_PERCENT - MIN_PERCENT);
-      return clampNumber2(Math.round(pct2), MIN_PERCENT, MAX_PERCENT);
-    }
-    const FALLBACK_MAX_SCALE = 2;
-    const limited = Math.min(FALLBACK_MAX_SCALE, safeScale);
-    const ratio = (limited - MIN_SCALE) / (FALLBACK_MAX_SCALE - MIN_SCALE);
-    const pct = MIN_PERCENT + ratio * (MAX_PERCENT - MIN_PERCENT);
-    return clampNumber2(Math.round(pct), MIN_PERCENT, MAX_PERCENT);
-  };
   var collectSpeciesCandidates = (source, out) => {
     if (!source || typeof source !== "object") return;
     for (const field of SPECIES_FIELDS) {
@@ -32153,26 +32027,20 @@
       }
     }
   };
-  var computeSizePercentFromScale = (speciesCandidates, scale) => {
-    if (!Number.isFinite(scale)) return null;
-    let maxScale = null;
-    for (const candidate of speciesCandidates) {
-      maxScale = lookupMaxScale3(candidate);
-      if (maxScale != null) break;
-    }
-    return scaleToPercent(scale, maxScale);
-  };
   var getInventoryItemSizePercent = (item) => {
     if (!item || typeof item !== "object") return null;
+    const rawType = typeof item.itemType === "string" ? item.itemType : "";
+    const type = rawType.trim();
+    if (type !== "Crop" && type !== "Produce") return null;
+    const direct = readCropSize(item);
+    if (direct != null) return direct;
     const candidates = /* @__PURE__ */ new Set();
     collectSpeciesCandidates(item, candidates);
     collectSpeciesCandidates(item.item, candidates);
     collectSpeciesCandidates(item.data, candidates);
-    const rawType = typeof item.itemType === "string" ? item.itemType : "";
-    const type = rawType.trim();
-    if (type === "Crop" || type === "Produce") {
-      const scale = Number(item.scale);
-      return computeSizePercentFromScale(candidates, scale);
+    for (const candidate of candidates) {
+      const size = readCropSize({ ...item, species: candidate });
+      if (size != null) return size;
     }
     return null;
   };
@@ -33124,7 +32992,7 @@
     const map2 = /* @__PURE__ */ new Map();
     const register = (key2, maxScale, hoursToMature) => {
       if (typeof key2 !== "string") return;
-      const normalized = normalizeSpeciesKey3(key2);
+      const normalized = normalizeSpeciesKey(key2);
       if (!normalized || map2.has(normalized)) return;
       map2.set(normalized, { maxScale, hoursToMature });
     };
@@ -33140,7 +33008,7 @@
   })();
   var lookupPetStats = (species) => {
     if (typeof species !== "string") return null;
-    const normalized = normalizeSpeciesKey3(species);
+    const normalized = normalizeSpeciesKey(species);
     if (!normalized) return null;
     return PET_STATS_BY_SPECIES.get(normalized) ?? null;
   };
@@ -41944,10 +41812,10 @@ next: ${next}`;
     });
     const scaleMinSlider = scaleSlider.min;
     const scaleMaxSlider = scaleSlider.max;
-    const scaleMinValue = ui.label("50%");
-    const scaleMaxValue = ui.label("100%");
-    const scaleMinimumValue = ui.label("50%");
-    const scaleMaximumValue = ui.label("100%");
+    const scaleMinValue = ui.label("50");
+    const scaleMaxValue = ui.label("100");
+    const scaleMinimumValue = ui.label("50");
+    const scaleMaximumValue = ui.label("100");
     [scaleMinValue, scaleMaxValue, scaleMinimumValue, scaleMaximumValue].forEach((label2) => {
       label2.style.margin = "0";
       label2.style.fontWeight = "600";
@@ -42013,8 +41881,8 @@ next: ${next}`;
         }
       }
       scaleSlider.setValues(minValue, maxValue);
-      scaleMinValue.textContent = `${minValue}%`;
-      scaleMaxValue.textContent = `${maxValue}%`;
+      scaleMinValue.textContent = `${minValue}`;
+      scaleMaxValue.textContent = `${maxValue}`;
       if (commit) {
         state3.minScalePct = minValue;
         state3.maxScalePct = maxValue;
@@ -42026,7 +41894,7 @@ next: ${next}`;
       if (!Number.isFinite(minValue)) minValue = state3.minScalePct;
       minValue = Math.max(50, Math.min(100, minValue));
       minSlider.value = String(minValue);
-      scaleMinimumValue.textContent = `${minValue}%`;
+      scaleMinimumValue.textContent = `${minValue}`;
       if (commit) {
         state3.minScalePct = minValue;
         if (notify2) opts.onChange?.();
@@ -42037,7 +41905,7 @@ next: ${next}`;
       if (!Number.isFinite(maxValue)) maxValue = state3.maxScalePct;
       maxValue = Math.max(50, Math.min(100, maxValue));
       maxSlider.value = String(maxValue);
-      scaleMaximumValue.textContent = `${maxValue}%`;
+      scaleMaximumValue.textContent = `${maxValue}`;
       if (commit) {
         state3.maxScalePct = maxValue;
         if (notify2) opts.onChange?.();
@@ -43560,10 +43428,8 @@ next: ${next}`;
 
   // src/ui/menus/calculator.ts
   var ROOT_CLASS = "mg-crop-simulation";
-  var SIZE_MIN = 50;
-  var SIZE_MAX = 100;
-  var SCALE_MIN = 1;
-  var SCALE_MAX = 3;
+  var SIZE_MIN = CROP_SIZE_MIN;
+  var SIZE_MAX = CROP_SIZE_MAX;
   var COLOR_MUTATION_LABELS = ["None", "Gold", "Rainbow"];
   var WEATHER_CONDITION_LABELS = ["None", "Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"];
   var WEATHER_LIGHTING_LABELS = ["None", "Dawnlit", "Dawnbound", "Amberlit", "Amberbound"];
@@ -44134,73 +44000,34 @@ next: ${next}`;
     const scale = clamped / 100;
     el2.style.setProperty("--mg-crop-simulation-scale", scale.toString());
   }
-  function applySizePercent(refs, sizePercent, maxScale, baseWeight) {
+  function applySizePercent(refs, sizePercent, speciesKey, baseWeight) {
     const clamped = clamp2(Math.round(sizePercent), SIZE_MIN, SIZE_MAX);
     refs.sizeSlider.value = String(clamped);
-    refs.sizeValue.textContent = `${clamped}%`;
+    refs.sizeValue.textContent = String(clamped);
     setSpriteScale(refs.sprite, clamped);
-    if (typeof maxScale === "number" && Number.isFinite(maxScale) && maxScale > SCALE_MIN) {
-      refs.sizeSlider.dataset.maxScale = String(maxScale);
+    const maxMultiplier = speciesKey ? getMaxSizeMultiplier(speciesKey) : null;
+    if (maxMultiplier != null && maxMultiplier > 1) {
+      refs.sizeSlider.dataset.maxSizeMultiplier = String(maxMultiplier);
     } else {
-      delete refs.sizeSlider.dataset.maxScale;
+      delete refs.sizeSlider.dataset.maxSizeMultiplier;
     }
-    const [minWeight, maxWeight] = computeWeightRange(baseWeight, clamped, maxScale);
-    refs.sizeWeight.textContent = formatWeightRange(minWeight, maxWeight);
+    refs.sizeWeight.textContent = formatWeight(computeWeight(baseWeight, speciesKey, clamped));
   }
   function formatCoinValue(value) {
     if (typeof value !== "number" || !Number.isFinite(value)) return "\u2014";
     const safe = Math.max(0, Math.round(value));
     return priceFormatter.format(safe);
   }
-  function formatCoinRange(min, max) {
-    const minValue = typeof min === "number" && Number.isFinite(min) ? Math.max(0, min) : null;
-    const maxValue = typeof max === "number" && Number.isFinite(max) ? Math.max(0, max) : null;
-    if (minValue == null && maxValue == null) return "\u2014";
-    if (minValue == null) return formatCoinValue(maxValue);
-    if (maxValue == null) return formatCoinValue(minValue);
-    if (Math.round(minValue) === Math.round(maxValue)) {
-      return formatCoinValue(minValue);
-    }
-    return `${formatCoinValue(minValue)} \u2013 ${formatCoinValue(maxValue)}`;
-  }
-  function computeWeightRange(baseWeight, sizePercent, maxScale) {
+  function computeWeight(baseWeight, speciesKey, size) {
     const numericWeight = typeof baseWeight === "number" ? baseWeight : Number(baseWeight);
-    if (!Number.isFinite(numericWeight) || numericWeight == null || numericWeight <= 0) {
-      return [null, null];
-    }
-    const scale = sizePercentToScale(sizePercent, maxScale);
-    if (!Number.isFinite(scale) || scale <= 0) {
-      return [null, null];
-    }
-    const minWeight = numericWeight * scale;
-    const safeMax = typeof maxScale === "number" && Number.isFinite(maxScale) && maxScale > SCALE_MIN ? maxScale : SCALE_MIN;
-    const variation = 1 + Math.max(0, (safeMax - scale) * 0.02);
-    const maxWeight = minWeight * variation;
-    return [minWeight, maxWeight];
+    if (!Number.isFinite(numericWeight) || numericWeight <= 0) return null;
+    if (!speciesKey) return numericWeight;
+    return numericWeight * cropSizeMultiplier(speciesKey, size);
   }
   function formatWeight(value) {
-    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
-    const formatted = weightFormatter.format(value);
-    return formatted.replace(/(\.\d*?[1-9])0+$/u, "$1").replace(/\.0+$/u, "");
-  }
-  function formatWeightRange(min, max) {
-    const minFormatted = formatWeight(min);
-    const maxFormatted = formatWeight(max);
-    if (!minFormatted && !maxFormatted) return "\u2014";
-    if (!maxFormatted || minFormatted === maxFormatted) {
-      return `${minFormatted ?? maxFormatted} kg`;
-    }
-    return `${minFormatted ?? "\u2014"} \u2013 ${maxFormatted} kg`;
-  }
-  function sizePercentToScale(sizePercent, maxScale) {
-    const numeric = Number(sizePercent);
-    if (!Number.isFinite(numeric)) return SCALE_MIN;
-    const clampedPercent = clamp2(numeric, SIZE_MIN, SIZE_MAX);
-    const safeMax = typeof maxScale === "number" && Number.isFinite(maxScale) && maxScale > SCALE_MIN ? maxScale : SCALE_MAX;
-    if (safeMax <= SCALE_MIN) return SCALE_MIN;
-    const normalized = (clampedPercent - SIZE_MIN) / (SIZE_MAX - SIZE_MIN);
-    const scale = SCALE_MIN + normalized * (safeMax - SCALE_MIN);
-    return Number.isFinite(scale) ? scale : SCALE_MIN;
+    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return "\u2014";
+    const formatted = weightFormatter.format(value).replace(/(\.\d*?[1-9])0+$/u, "$1").replace(/\.0+$/u, "");
+    return `${formatted} kg`;
   }
   var MUTATION_UI_SPRITE_NAMES = {
     Gold: "MutationGold",
@@ -44277,25 +44104,12 @@ next: ${next}`;
     const overridden = MUTATION_SPRITE_OVERRIDES[normalized.toLowerCase()];
     return overridden ?? normalized;
   }
-  function computePrice(speciesKey, state3, percent, maxScale) {
-    const scale = sizePercentToScale(percent, maxScale);
-    if (!Number.isFinite(scale) || scale <= 0) return null;
+  function computePrice(speciesKey, state3, size) {
     const mutations = getMutationsForState(state3);
     const friendPlayers = clampFriendPlayers(state3.friendPlayers);
     const pricingOptions = { ...DefaultPricing, friendPlayers };
-    const value = estimateProduceValue(speciesKey, scale, mutations, pricingOptions);
+    const value = estimateProduceValue(speciesKey, size, mutations, pricingOptions);
     return Number.isFinite(value) && value > 0 ? value : null;
-  }
-  function getMaxScaleForSpecies(key2) {
-    const entry = plantCatalog2[key2];
-    const candidates = [entry?.crop?.maxScale, entry?.plant?.maxScale, entry?.seed?.maxScale];
-    for (const candidate of candidates) {
-      const numeric = typeof candidate === "number" ? candidate : Number(candidate);
-      if (Number.isFinite(numeric) && numeric > 0) {
-        return numeric;
-      }
-    }
-    return null;
   }
   function getBaseWeightForSpecies(key2) {
     const entry = plantCatalog2[key2];
@@ -44483,7 +44297,6 @@ next: ${next}`;
         return state3;
       };
       let selectedKey = null;
-      let currentMaxScale = null;
       let currentBaseWeight = null;
       const listButtons = /* @__PURE__ */ new Map();
       const refreshListStyles = () => {
@@ -44581,10 +44394,7 @@ next: ${next}`;
           return;
         }
         const state3 = getStateForKey(key2);
-        const min = computePrice(key2, state3, state3.sizePercent, currentMaxScale);
-        const maxPercent = Math.min(SIZE_MAX, state3.sizePercent + 1);
-        const max = computePrice(key2, state3, maxPercent, currentMaxScale);
-        refs.priceValue.textContent = formatCoinRange(min, max);
+        refs.priceValue.textContent = formatCoinValue(computePrice(key2, state3, state3.sizePercent));
       }
       function updateSprite() {
         const key2 = selectedKey;
@@ -44619,11 +44429,10 @@ next: ${next}`;
           refs.priceValue.textContent = "\u2014";
           return;
         }
-        currentMaxScale = getMaxScaleForSpecies(key2);
         currentBaseWeight = getBaseWeightForSpecies(key2);
         const state3 = getStateForKey(key2);
         refs.sizeSlider.disabled = false;
-        applySizePercent(refs, state3.sizePercent, currentMaxScale, currentBaseWeight);
+        applySizePercent(refs, state3.sizePercent, key2, currentBaseWeight);
         renderColorSegment(state3, true);
         renderWeatherConditions(state3, true);
         renderWeatherLighting(state3, true);
@@ -44637,7 +44446,7 @@ next: ${next}`;
         const raw = Number(slider.value);
         const value = clamp2(Math.round(raw), SIZE_MIN, SIZE_MAX);
         state3.sizePercent = value;
-        applySizePercent(refs, value, currentMaxScale, currentBaseWeight);
+        applySizePercent(refs, value, selectedKey, currentBaseWeight);
         updateOutputs();
       });
       function renderList() {
@@ -44653,17 +44462,14 @@ next: ${next}`;
           empty.textContent = "No crops available.";
           list.appendChild(empty);
           selectedKey = null;
-          currentMaxScale = null;
           renderDetail();
           return;
         }
         if (selectedKey && !options.some((opt) => opt.key === selectedKey)) {
           selectedKey = options[0].key;
-          currentMaxScale = getMaxScaleForSpecies(selectedKey);
         }
         if (!selectedKey) {
           selectedKey = options[0].key;
-          currentMaxScale = getMaxScaleForSpecies(selectedKey);
         }
         const fragment = document.createDocumentFragment();
         options.forEach((opt) => {
@@ -44700,7 +44506,6 @@ next: ${next}`;
           button2.onclick = () => {
             if (selectedKey === opt.key) return;
             selectedKey = opt.key;
-            currentMaxScale = getMaxScaleForSpecies(opt.key);
             refreshListStyles();
             renderDetail();
             updateOutputs();
@@ -45675,6 +45480,10 @@ next: ${next}`;
   var MIN_COOLDOWN_RATIO = 0.01;
   var STRENGTH_SCALE = 100;
   var SCALED_PARAMETER_KEYS = /* @__PURE__ */ new Set([
+    // `sizeIncrease` (Crop Size Boost) is deliberately absent: the game adds those
+    // Size points flat, and strength only changes how often the ability procs.
+    // Its pre-rework name `scaleIncreasePercentage` did scale, and the hardcoded
+    // fallback catalog can still carry it, so that one stays listed.
     "scaleIncreasePercentage",
     "cropSellPriceIncreasePercentage",
     "mutationChanceIncreasePercentage",
@@ -46879,6 +46688,8 @@ next: ${next}`;
 
   // src/ui/menus/petsTeamStats.ts
   var PARAMETER_LABELS = {
+    // Crop Size is a whole number in [50, 100]; the boost adds points, not a percentage.
+    sizeIncrease: { label: "Crop size", unit: "" },
     scaleIncreasePercentage: { label: "Crop size", unit: "%" },
     cropSellPriceIncreasePercentage: { label: "Sell price", unit: "%" },
     mutationChanceIncreasePercentage: { label: "Mutation chance", unit: "%" },
