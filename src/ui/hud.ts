@@ -3,6 +3,7 @@ import { NativeWS, sockets, workerFound } from "../core/state";
 import { ensureStore, isStoreCaptured, getCapturedInfo } from "../store/jotai";
 import { PetsService, installPetTeamHotkeysOnce, setTeamsForHotkeys } from "../services/pets";
 import { ShopsService, installShopKeybindsOnce } from "../services/shops";
+import { installCompanionKeybindsOnce } from "../services/companionKeybind";
 import { installSellKeybindsOnce } from "../services/sell";
 import { installPetHutchKeybindsOnce } from "../services/petHutchKeybind";
 import { installJournalKeybindsOnce } from "../services/journalKeybind";
@@ -1106,6 +1107,7 @@ export function initWatchers(){
     installToolShackKeybindsOnce();
     installFeedingTroughKeybindsOnce();
     installWeatherStationKeybindsOnce();
+    installCompanionKeybindsOnce();
 
     const bootToolbar = async () => {
       try { await renderOverlay(); } catch (e) { console.error("[HUD] renderOverlay failed:", e); }

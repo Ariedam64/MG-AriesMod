@@ -15,6 +15,7 @@ export type KeybindId =
   | "shops.tools"
   | "sell.sell-all"
   | "sell.sell-all-pets"
+  | "companion.chat"
   | "game.action"
   | "game.inventory"
   | "game.journal"
@@ -268,6 +269,22 @@ const SECTION_CONFIG: KeybindSectionConfig[] = [
         icon: "sprite/ui/IconShop",
         hint: "Sell every non-favorited pet in your inventory.",
         defaultHotkey: null,
+      },
+    ],
+  },
+  {
+    id: "companion",
+    title: "Companion",
+    icon: "🤖",
+    description: "Reach your companion without going through the launcher.",
+    actions: [
+      {
+        id: "companion.chat",
+        label: "Open the chat",
+        // Sans icône : l'atlas `ui` n'a pas de pictogramme de conversation, et
+        // en inventer une clé afficherait une case vide (`icon` est optionnel).
+        hint: "Opens the Companion window straight on its Chat tab.",
+        defaultHotkey: { alt: true, code: "KeyC" },
       },
     ],
   },

@@ -75,6 +75,8 @@ export type AriesStorage = {
   // too large for this shared blob and go to IndexedDB (see src/skins/store.ts).
   skins?: { enabled?: boolean };
   activityLog?: { history?: unknown; filter?: unknown };
+  /** Réglages du companion. Sa forme vit dans services/companion/settingsShape.ts. */
+  companion?: Record<string, unknown>;
   hatch?: {
     /** Seen pets, Bad Luck Protection counters and head starts. */
     tracker?: unknown;
@@ -373,6 +375,14 @@ function coerceLegacyAggregate(raw: unknown): AriesStorage {
 
   if ("activityLog" in data && typeof (data as any).activityLog === "object") {
     out.activityLog = mergeSection(out.activityLog, data.activityLog as Record<string, unknown>);
+  }
+
+  // Cette fonction est une liste blanche : une section absente d'ici est écrite
+  // sur le disque puis jetée en silence à la relecture. Les réglages tenaient
+  // alors toute la session grâce au cache mémoire et disparaissaient au premier
+  // rafraîchissement. Toute nouvelle section doit passer par ici.
+  if ("companion" in data && typeof (data as any).companion === "object") {
+    out.companion = mergeSection(out.companion, data.companion as Record<string, unknown>);
   }
   if ("activityLogHistory" in data) out.activityLog = mergeSection(out.activityLog, { history: (data as any).activityLogHistory });
   if ("activityLogFilter" in data) out.activityLog = mergeSection(out.activityLog, { filter: (data as any).activityLogFilter });

@@ -199,7 +199,14 @@ export function consumeOwnRequestId(requestId: unknown): boolean {
   return ownRequestIds.delete(requestId);
 }
 
-function randomRequestId(): string {
+/**
+ * A fresh client-side id.
+ *
+ * Used for request ids, and also for the ids the client is expected to mint
+ * itself: `HarvestCrop.cropItemId` is the produce's id, forged here so the game
+ * can predict the pickup locally before the server confirms it.
+ */
+export function randomClientId(): string {
   try {
     const uuid = (globalThis.crypto as Crypto | undefined)?.randomUUID?.();
     if (uuid) return uuid;
@@ -209,6 +216,8 @@ function randomRequestId(): string {
     .toString(16)
     .slice(2)}`;
 }
+
+const randomRequestId = randomClientId;
 
 /* ============================== Message building =========================== */
 

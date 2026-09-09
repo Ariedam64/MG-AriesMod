@@ -15,12 +15,15 @@ import { renderEditorMenu } from "./ui/menus/editor";
 import { renderKeybindsMenu } from "./ui/menus/keybinds";
 import { renderRoomMenu } from "./ui/menus/room";
 import { renderSkinsMenu } from "./ui/menus/skins";
+import { renderCompanionMenu } from "./ui/menus/companion/companion";
 import { initSkins } from "./skins/index";
 
 import { PlayerService } from "./services/player";
 import { createAntiAfkController } from "./utils/antiafk";
 import { EditorService } from "./services/editor";
 import { installEditorPointerControls } from "./services/editorPointerControls";
+import { CompanionService } from "./services/companion";
+import { startFeedWatch } from "./services/companion/chat/feedWatch";
 
 import { initGameVersion } from "./utils/gameVersion";
 import { MGVersion } from "./utils/mgVersion";
@@ -84,11 +87,20 @@ import { startPlayerStateReportingWhenGameReady } from "./ariesModAPI/endpoints/
       register('keybinds', '⌨️ Keybinds', renderKeybindsMenu);
       register('tools', '🛠️ Tools', renderToolsMenu);
       register('settings', '⚙️ Settings', renderSettingsMenu);
+      register('companion', '🤖 Companion', renderCompanionMenu);
       register('debug-data', '🐞 Debug', renderDebugDataMenu);
     }
   });
 
   initWatchers()
+
+  // Le companion reprend s'il était actif à la session précédente, et sa veille
+  // sur les pets affamés démarre avec lui. Elle ne fait que poser des questions :
+  // rien ne s'exécute sans confirmation (cf. services/companion/chat/proposals.ts).
+  CompanionService.autoStart();
+  startFeedWatch();
+  // Exposé pour le diagnostic : window.Companion.start() / .listNpcs() / .say()
+  shareGlobal("Companion", CompanionService);
 
   // One-time notice: auto-reconnect temporarily disabled at devs' request.
   showAutoRecoDisabledNoticeOnce();

@@ -2,6 +2,7 @@
 // Service central des actions liées au joueur (position, téléportation, listeners)
 
 import { sendToGame } from "../core/webSocketBridge";
+import { randomClientId } from "../core/quinoaCommands";
 import { Atoms, onFavoriteIds, onFavoriteIdsNow, getFavoriteIdSet } from "../store/atoms";
 import { ShopsService } from "./shops";
 import { readCropSize } from "../utils/cropSize";
@@ -382,8 +383,11 @@ export const PlayerService = {
     try { sendToGame({ type: "DropObject" }); } catch (err) { }
   },
 
-  async harvestCrop(slot: number, slotsIndex: number) {
-    try { sendToGame({ type: "HarvestCrop", slot, slotsIndex }); } catch (err) {  }
+  // `cropItemId` est l'id de la produce à naître, que le client forge lui-même
+  // (bundle 1125 : `cropItemId: crypto.randomUUID()`). Il alimente la prédiction
+  // locale du jeu ; sans lui le serveur ignore la récolte en silence.
+  async harvestCrop(slot: number, slotsIndex: number = 0, cropItemId: string = randomClientId()) {
+    try { sendToGame({ scopePath: ["Room", "Quinoa"], type: "HarvestCrop", slot, slotsIndex, cropItemId }); } catch (err) {  }
   },
 
   async feedPet(petItemId: string, cropItemId: string) {

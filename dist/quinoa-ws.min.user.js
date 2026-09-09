@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.204
+// @version      3.2.205
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -137,20 +137,20 @@
     }
     ctx2.restore();
   }
-  function tallOverlayFromSheet(mutName, state3) {
+  function tallOverlayFromSheet(mutName, state4) {
     const target = String(mutName || "").toLowerCase();
-    for (const k of state3.tex.keys()) {
+    for (const k of state4.tex.keys()) {
       const m = /sprite\/mutation-overlay\/([A-Za-z0-9]+)TallPlant/i.exec(String(k));
       if (!m || !m[1]) continue;
       const prefix = m[1].toLowerCase();
       if (prefix === target) {
-        const t = state3.tex.get(k);
+        const t = state4.tex.get(k);
         if (t) return { tex: t, key: k };
       }
     }
     return null;
   }
-  function findOverlayTexture(itKey, mutName, state3, preferTall) {
+  function findOverlayTexture(itKey, mutName, state4, preferTall) {
     if (!mutName) return null;
     const base = baseNameOf(itKey);
     const aliases = mutationAliases(mutName);
@@ -163,27 +163,27 @@
         `sprite/mutation/${name}`
       ];
       for (const k of tries) {
-        const t = state3.tex.get(k);
+        const t = state4.tex.get(k);
         if (t) return { tex: t, key: k };
       }
       if (preferTall) {
-        const hit = state3.tex.get(`sprite/mutation-overlay/${name}TallPlant`) && {
-          tex: state3.tex.get(`sprite/mutation-overlay/${name}TallPlant`),
+        const hit = state4.tex.get(`sprite/mutation-overlay/${name}TallPlant`) && {
+          tex: state4.tex.get(`sprite/mutation-overlay/${name}TallPlant`),
           key: `sprite/mutation-overlay/${name}TallPlant`
-        } || state3.tex.get(`sprite/mutation-overlay/${name}`) && {
-          tex: state3.tex.get(`sprite/mutation-overlay/${name}`),
+        } || state4.tex.get(`sprite/mutation-overlay/${name}`) && {
+          tex: state4.tex.get(`sprite/mutation-overlay/${name}`),
           key: `sprite/mutation-overlay/${name}`
-        } || tallOverlayFromSheet(mutName, state3);
+        } || tallOverlayFromSheet(mutName, state4);
         if (hit) return hit;
       }
     }
     return null;
   }
-  function findIconTexture(itKey, mutName, isTall, state3) {
+  function findIconTexture(itKey, mutName, isTall, state4) {
     if (!mutName) return null;
     const meta = MUT_META[mutName];
     if (isTall && meta?.tallIconOverride) {
-      const t = state3.tex.get(meta.tallIconOverride);
+      const t = state4.tex.get(meta.tallIconOverride);
       if (t) return t;
     }
     const base = baseNameOf(itKey);
@@ -198,11 +198,11 @@
         `sprite/mutation/${name}/${base}`
       ];
       for (const k of tries) {
-        const t = state3.tex.get(k);
+        const t = state4.tex.get(k);
         if (t) return t;
       }
       if (isTall) {
-        const t = state3.tex.get(`sprite/mutation-overlay/${name}TallPlantIcon`) || state3.tex.get(`sprite/mutation-overlay/${name}TallPlant`);
+        const t = state4.tex.get(`sprite/mutation-overlay/${name}TallPlantIcon`) || state4.tex.get(`sprite/mutation-overlay/${name}TallPlant`);
         if (t) return t;
       }
     }
@@ -242,14 +242,14 @@
       }
     };
   }
-  function textureToCanvas(tex, state3, cfg) {
-    const hit = state3.srcCan.get(tex);
+  function textureToCanvas(tex, state4, cfg) {
+    const hit = state4.srcCan.get(tex);
     if (hit) return hit;
     let c = null;
-    const RDR = state3.renderer;
+    const RDR = state4.renderer;
     try {
       if (RDR?.extract?.canvas && (RDR?.resolution ?? 1) === 1) {
-        const s = new state3.ctors.Sprite(tex);
+        const s = new state4.ctors.Sprite(tex);
         c = RDR.extract.canvas(s);
         s.destroy?.({ children: true, texture: false, baseTexture: false });
       }
@@ -282,18 +282,18 @@
         ctx2.drawImage(src, fr.x, fr.y, fr.width, fr.height, offX, offY, fr.width, fr.height);
       }
     }
-    state3.srcCan.set(tex, c);
-    if (state3.srcCan.size > cfg.srcCanvasMax) {
-      const k = state3.srcCan.keys().next().value;
-      if (k !== void 0) state3.srcCan.delete(k);
+    state4.srcCan.set(tex, c);
+    if (state4.srcCan.size > cfg.srcCanvasMax) {
+      const k = state4.srcCan.keys().next().value;
+      if (k !== void 0) state4.srcCan.delete(k);
     }
     return c;
   }
-  function buildColorLayerSprites(tex, dims, pipeline, state3, cfg, disposables, TextureCtor) {
+  function buildColorLayerSprites(tex, dims, pipeline, state4, cfg, disposables, TextureCtor) {
     const { w, h, aX, aY, basePos } = dims;
     const layers = [];
     for (const step of pipeline) {
-      const clone = new state3.ctors.Sprite(tex);
+      const clone = new state4.ctors.Sprite(tex);
       clone.anchor?.set?.(aX, aY);
       clone.position.set(basePos.x, basePos.y);
       clone.zIndex = 1;
@@ -304,7 +304,7 @@
       lctx.imageSmoothingEnabled = false;
       lctx.save();
       lctx.translate(w * aX, h * aY);
-      lctx.drawImage(textureToCanvas(tex, state3, cfg), -w * aX, -h * aY);
+      lctx.drawImage(textureToCanvas(tex, state4, cfg), -w * aX, -h * aY);
       lctx.restore();
       applyFilterOnto(lctx, layerCanvas, step.name, step.isTall);
       const filteredTex = TextureCtor.from(layerCanvas);
@@ -314,14 +314,14 @@
     }
     return layers;
   }
-  function buildTallOverlaySprites(itKey, dims, overlayPipeline, state3, cfg, baseCanvas, TextureCtor, disposables) {
+  function buildTallOverlaySprites(itKey, dims, overlayPipeline, state4, cfg, baseCanvas, TextureCtor, disposables) {
     const { w, aX, basePos } = dims;
     if (!baseCanvas) return [];
     const overlays = [];
     for (const step of overlayPipeline) {
-      const hit = step.overlayTall && state3.tex.get(step.overlayTall) && { tex: state3.tex.get(step.overlayTall), key: step.overlayTall } || findOverlayTexture(itKey, step.name, state3, true);
+      const hit = step.overlayTall && state4.tex.get(step.overlayTall) && { tex: state4.tex.get(step.overlayTall), key: step.overlayTall } || findOverlayTexture(itKey, step.name, state4, true);
       if (!hit?.tex) continue;
-      const oCan = textureToCanvas(hit.tex, state3, cfg);
+      const oCan = textureToCanvas(hit.tex, state4, cfg);
       if (!oCan) continue;
       const ow = oCan.width;
       const overlayAnchor = { x: 0, y: 0 };
@@ -342,7 +342,7 @@
       mctx.drawImage(baseCanvas, -overlayPos.x, -overlayPos.y);
       const maskedTex = TextureCtor.from(maskedCanvas);
       disposables.push(maskedTex);
-      const ov = new state3.ctors.Sprite(maskedTex);
+      const ov = new state4.ctors.Sprite(maskedTex);
       ov.anchor?.set?.(overlayAnchor.x, overlayAnchor.y);
       ov.position.set(overlayPos.x, overlayPos.y);
       ov.scale.set(1);
@@ -352,14 +352,14 @@
     }
     return overlays;
   }
-  function buildIconSprites(itKey, dims, iconPipeline, state3, iconLayout) {
+  function buildIconSprites(itKey, dims, iconPipeline, state4, iconLayout) {
     const { basePos } = dims;
     const icons = [];
     for (const step of iconPipeline) {
       if (step.name === "Gold" || step.name === "Rainbow") continue;
-      const itex = findIconTexture(itKey, step.name, step.isTall, state3);
+      const itex = findIconTexture(itKey, step.name, step.isTall, state4);
       if (!itex) continue;
-      const icon = new state3.ctors.Sprite(itex);
+      const icon = new state4.ctors.Sprite(itex);
       const iconAnchorX = itex?.defaultAnchor?.x ?? 0.5;
       const iconAnchorY = itex?.defaultAnchor?.y ?? 0.5;
       icon.anchor?.set?.(iconAnchorX, iconAnchorY);
@@ -372,31 +372,31 @@
     }
     return icons;
   }
-  function lruEvict(state3, cfg) {
+  function lruEvict(state4, cfg) {
     if (!cfg.cacheOn) return;
-    while (state3.lru.size > cfg.cacheMaxEntries || state3.cost > cfg.cacheMaxCost) {
-      const k = state3.lru.keys().next().value;
+    while (state4.lru.size > cfg.cacheMaxEntries || state4.cost > cfg.cacheMaxCost) {
+      const k = state4.lru.keys().next().value;
       if (k === void 0) break;
-      const e = state3.lru.get(k);
-      state3.lru.delete(k);
-      state3.cost = Math.max(0, state3.cost - entryCost(e));
+      const e = state4.lru.get(k);
+      state4.lru.delete(k);
+      state4.cost = Math.max(0, state4.cost - entryCost(e));
     }
   }
-  function clearVariantCache(state3) {
-    state3.lru.clear();
-    state3.cost = 0;
-    state3.srcCan.clear();
+  function clearVariantCache(state4) {
+    state4.lru.clear();
+    state4.cost = 0;
+    state4.srcCan.clear();
   }
-  function renderMutatedTexture(tex, itKey, V, state3, cfg) {
+  function renderMutatedTexture(tex, itKey, V, state4, cfg) {
     try {
-      if (!tex || !state3.renderer || !state3.ctors?.Container || !state3.ctors?.Sprite || !state3.ctors?.Texture) return null;
-      const { Container, Sprite, Texture } = state3.ctors;
+      if (!tex || !state4.renderer || !state4.ctors?.Container || !state4.ctors?.Sprite || !state4.ctors?.Texture) return null;
+      const { Container, Sprite, Texture } = state4.ctors;
       const w = tex?.orig?.width ?? tex?.frame?.width ?? tex?.width ?? 1;
       const h = tex?.orig?.height ?? tex?.frame?.height ?? tex?.height ?? 1;
       const aX = tex?.defaultAnchor?.x ?? 0.5;
       const aY = tex?.defaultAnchor?.y ?? 0.5;
       const basePos = { x: w * aX, y: h * aY };
-      const baseCanvas = textureToCanvas(tex, state3, cfg);
+      const baseCanvas = textureToCanvas(tex, state4, cfg);
       const root = new Container();
       root.sortableChildren = true;
       try {
@@ -423,14 +423,14 @@
       const baseName = baseNameOf(itKey);
       const iconLayout = computeIconLayout(tex, baseName, isTall);
       const dims = { w, h, aX, aY, basePos };
-      buildColorLayerSprites(tex, dims, pipeline, state3, cfg, disposables, Texture).forEach((layer) => root.addChild(layer));
+      buildColorLayerSprites(tex, dims, pipeline, state4, cfg, disposables, Texture).forEach((layer) => root.addChild(layer));
       if (isTall) {
-        buildTallOverlaySprites(itKey, dims, overlayPipeline, state3, cfg, baseCanvas, Texture, disposables).forEach((ov) => root.addChild(ov));
+        buildTallOverlaySprites(itKey, dims, overlayPipeline, state4, cfg, baseCanvas, Texture, disposables).forEach((ov) => root.addChild(ov));
       }
-      buildIconSprites(itKey, dims, iconPipeline, state3, iconLayout).forEach((icon) => root.addChild(icon));
-      const RDR = state3.renderer;
+      buildIconSprites(itKey, dims, iconPipeline, state4, iconLayout).forEach((icon) => root.addChild(icon));
+      const RDR = state4.renderer;
       let rt = null;
-      const RectCtor = state3.ctors?.Rectangle;
+      const RectCtor = state4.ctors?.Rectangle;
       const crop = RectCtor ? new RectCtor(0, 0, w, h) : null;
       if (typeof RDR?.generateTexture === "function")
         rt = RDR.generateTexture(root, { resolution: 1, region: crop ?? void 0 });
@@ -452,36 +452,36 @@
       return null;
     }
   }
-  function processVariantJobs(state3, cfg) {
-    if (!cfg.jobOn || !state3.open || !state3.jobs.length) return false;
+  function processVariantJobs(state4, cfg) {
+    if (!cfg.jobOn || !state4.open || !state4.jobs.length) return false;
     const now2 = performance.now();
-    const burst = now2 - state3.changedAt <= cfg.jobBurstWindowMs;
+    const burst = now2 - state4.changedAt <= cfg.jobBurstWindowMs;
     const budget = burst ? cfg.jobBurstMs : cfg.jobBudgetMs;
     const t0 = performance.now();
     let done = 0;
     let needsLayout = false;
-    while (state3.jobs.length) {
+    while (state4.jobs.length) {
       if (performance.now() - t0 >= budget) break;
       if (done >= cfg.jobCapPerTick) break;
-      const job = state3.jobs[0];
-      if (job.sig !== state3.sig) {
-        state3.jobs.shift();
-        state3.jobMap.delete(job.k);
+      const job = state4.jobs[0];
+      if (job.sig !== state4.sig) {
+        state4.jobs.shift();
+        state4.jobMap.delete(job.k);
         continue;
       }
       const tex = job.src[job.i];
       if (!tex) {
-        state3.jobs.shift();
-        state3.jobMap.delete(job.k);
+        state4.jobs.shift();
+        state4.jobMap.delete(job.k);
         continue;
       }
-      const ft = renderMutatedTexture(tex, job.itKey, job.V, state3, cfg);
+      const ft = renderMutatedTexture(tex, job.itKey, job.V, state4, cfg);
       if (ft) job.out.push(ft);
       job.i++;
       done++;
       if (job.i >= job.src.length) {
-        state3.jobs.shift();
-        state3.jobMap.delete(job.k);
+        state4.jobs.shift();
+        state4.jobMap.delete(job.k);
         let entry = null;
         if (job.isAnim) {
           if (job.out.length >= 2) entry = { isAnim: true, frames: job.out };
@@ -491,9 +491,9 @@
           if (job.out[0]) entry = { isAnim: false, tex: job.out[0] };
         }
         if (entry) {
-          state3.lru.set(job.k, entry);
-          state3.cost += entryCost(entry);
-          lruEvict(state3, cfg);
+          state4.lru.set(job.k, entry);
+          state4.cost += entryCost(entry);
+          lruEvict(state4, cfg);
           needsLayout = true;
         }
       }
@@ -573,13 +573,13 @@
       };
       hasMutationFilter = (value) => Boolean(value && FILTERS[value]);
       isTallKey = (k) => /tallplant/i.test(k);
-      computeVariantSignature = (state3) => {
-        if (!state3.mutOn) {
-          const f = hasMutationFilter(state3.f) ? state3.f : null;
+      computeVariantSignature = (state4) => {
+        if (!state4.mutOn) {
+          const f = hasMutationFilter(state4.f) ? state4.f : null;
           const baseMuts = f ? [f] : [];
           return { mode: "F", muts: baseMuts, overlayMuts: baseMuts, selectedMuts: baseMuts, sig: `F:${f ?? ""}` };
         }
-        const raw = state3.mutations.filter((value) => hasMutationFilter(value));
+        const raw = state4.mutations.filter((value) => hasMutationFilter(value));
         const selected = sortMutations(raw);
         const muts = normalizeMutListColor(raw);
         const overlayMuts = normalizeMutListOverlay(raw);
@@ -649,9 +649,9 @@
     getSpriteWithMutations: () => getSpriteWithMutations,
     listItemsByCategory: () => listItemsByCategory
   });
-  function findItem(state3, category, id) {
+  function findItem(state4, category, id) {
     const normId = normalizeKey(id);
-    for (const it of state3.items) {
+    for (const it of state4.items) {
       const keyCat = keyCategoryOf(it.key);
       if (!matchesCategory(keyCat, category)) continue;
       const base = normalizeKey(baseNameOf2(it.key));
@@ -659,22 +659,22 @@
     }
     return null;
   }
-  function listItemsByCategory(state3, category = "any") {
-    return state3.items.filter((it) => matchesCategory(keyCategoryOf(it.key), category));
+  function listItemsByCategory(state4, category = "any") {
+    return state4.items.filter((it) => matchesCategory(keyCategoryOf(it.key), category));
   }
   function buildVariant(mutations) {
     return buildVariantFromMutations(mutations);
   }
-  function getSpriteWithMutations(params, state3, cfg) {
-    const it = findItem(state3, params.category, params.id);
+  function getSpriteWithMutations(params, state4, cfg) {
+    const it = findItem(state4, params.category, params.id);
     if (!it) return null;
     const tex = it.isAnim ? it.frames?.[0] : it.first;
     if (!tex) return null;
     const V = buildVariantFromMutations(params.mutations);
-    return renderMutatedTexture(tex, it.key, V, state3, cfg);
+    return renderMutatedTexture(tex, it.key, V, state4, cfg);
   }
-  function getBaseSprite(params, state3) {
-    const it = findItem(state3, params.category, params.id);
+  function getBaseSprite(params, state4) {
+    const it = findItem(state4, params.category, params.id);
     if (!it) return null;
     return it.isAnim ? it.frames?.[0] ?? null : it.first;
   }
@@ -778,30 +778,30 @@
   // src/sprite/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-    const listeners7 = /* @__PURE__ */ new Set();
+    const listeners8 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
-    const tick = (now2) => {
+    const tick3 = (now2) => {
       const delta = last ? (now2 - last) / (1e3 / 60) : 1;
       last = now2;
-      for (const fn of listeners7) {
+      for (const fn of listeners8) {
         try {
           fn(delta);
         } catch {
         }
       }
-      rafId = requestAnimationFrame(tick);
+      rafId = requestAnimationFrame(tick3);
     };
     const ticker = {
       add(fn) {
-        if (!listeners7.size) {
-          rafId = requestAnimationFrame(tick);
+        if (!listeners8.size) {
+          rafId = requestAnimationFrame(tick3);
         }
-        listeners7.add(fn);
+        listeners8.add(fn);
       },
       remove(fn) {
-        listeners7.delete(fn);
-        if (!listeners7.size) {
+        listeners8.delete(fn);
+        if (!listeners8.size) {
           cancelAnimationFrame(rafId);
         }
       },
@@ -1340,48 +1340,48 @@
 
   // src/sprite/api/expose.ts
   init_variantBuilder();
-  function exposeApi(state3, hud) {
+  function exposeApi(state4, hud) {
     const root = globalThis.unsafeWindow || globalThis;
     const api = {
       open() {
         hud.root?.style && (hud.root.style.display = "block");
-        state3.open = true;
+        state4.open = true;
       },
       close() {
         hud.root?.style && (hud.root.style.display = "none");
-        state3.open = false;
+        state4.open = false;
       },
       toggle() {
-        state3.open ? api.close() : api.open();
+        state4.open ? api.close() : api.open();
       },
       setCategory(cat) {
-        state3.cat = cat || "__all__";
+        state4.cat = cat || "__all__";
       },
       setFilterText(text) {
-        state3.q = String(text || "").trim();
+        state4.q = String(text || "").trim();
       },
       setSpriteFilter(name) {
-        state3.f = name;
-        state3.mutOn = false;
+        state4.f = name;
+        state4.mutOn = false;
       },
       setMutation(on, ...muts) {
-        state3.mutOn = !!on;
-        state3.f = "";
-        state3.mutations = state3.mutOn ? muts.filter(Boolean).map((name) => name) : [];
+        state4.mutOn = !!on;
+        state4.f = "";
+        state4.mutations = state4.mutOn ? muts.filter(Boolean).map((name) => name) : [];
       },
       filters() {
         return [];
       },
       categories() {
-        return [...state3.cats.keys()].sort((a, b) => a.localeCompare(b));
+        return [...state4.cats.keys()].sort((a, b) => a.localeCompare(b));
       },
       cacheStats() {
-        return { entries: state3.lru.size, cost: state3.cost };
+        return { entries: state4.lru.size, cost: state4.cost };
       },
       clearCache() {
-        clearVariantCache(state3);
+        clearVariantCache(state4);
       },
-      curVariant: () => curVariant(state3)
+      curVariant: () => curVariant(state4)
     };
     root.MGSpriteCatalog = api;
     return api;
@@ -1458,9 +1458,9 @@
       img.src = cached;
       return;
     }
-    const pending2 = _gmImgPending.get(url);
-    if (pending2) {
-      pending2.push(img);
+    const pending3 = _gmImgPending.get(url);
+    if (pending3) {
+      pending3.push(img);
       return;
     }
     _gmImgPending.set(url, [img]);
@@ -1507,9 +1507,9 @@
         resolve(cached);
         return;
       }
-      const pending2 = _gmAudioPending.get(url);
-      if (pending2) {
-        pending2.push(resolve);
+      const pending3 = _gmAudioPending.get(url);
+      if (pending3) {
+        pending3.push(resolve);
         return;
       }
       _gmAudioPending.set(url, [resolve]);
@@ -1721,6 +1721,9 @@
     if ("activityLog" in data && typeof data.activityLog === "object") {
       out.activityLog = mergeSection(out.activityLog, data.activityLog);
     }
+    if ("companion" in data && typeof data.companion === "object") {
+      out.companion = mergeSection(out.companion, data.companion);
+    }
     if ("activityLogHistory" in data) out.activityLog = mergeSection(out.activityLog, { history: data.activityLogHistory });
     if ("activityLogFilter" in data) out.activityLog = mergeSection(out.activityLog, { filter: data.activityLogFilter });
     if ("hud" in data && typeof data.hud === "object") {
@@ -1867,16 +1870,16 @@
     return value;
   }
   function writeAriesPath(path, value) {
-    return updateAriesStorage((state3) => {
-      setValueAtPath(state3, path.split(".").filter(Boolean), value);
+    return updateAriesStorage((state4) => {
+      setValueAtPath(state4, path.split(".").filter(Boolean), value);
     });
   }
   function updateAriesPath(path, updater) {
-    return updateAriesStorage((state3) => {
+    return updateAriesStorage((state4) => {
       const parts = path.split(".").filter(Boolean);
-      const currentValue = getValueAtPath(state3, parts);
+      const currentValue = getValueAtPath(state4, parts);
       const next = updater(currentValue);
-      setValueAtPath(state3, parts, next);
+      setValueAtPath(state4, parts, next);
     });
   }
   function setApiKey(apiKey) {
@@ -2413,7 +2416,7 @@
   }
   function parseAbilityColorsFromSwitch(switchBlock) {
     const colors = {};
-    const pending2 = [];
+    const pending3 = [];
     const tokenRe = /case\s*(['"])([^'"]+)\1\s*:|default\s*:|return\s*\{/g;
     const findProp = (segment, prop) => {
       const propRe = new RegExp(`${prop}\\s*:\\s*(['"])([\\s\\S]*?)\\1`);
@@ -2423,35 +2426,35 @@
     let match;
     while ((match = tokenRe.exec(switchBlock)) !== null) {
       if (match[2]) {
-        pending2.push(match[2]);
+        pending3.push(match[2]);
         continue;
       }
       const token = match[0];
       if (token.startsWith("default")) {
-        pending2.length = 0;
+        pending3.length = 0;
         continue;
       }
       if (!token.startsWith("return")) continue;
       const braceIndex = switchBlock.indexOf("{", match.index);
       if (braceIndex === -1) {
-        pending2.length = 0;
+        pending3.length = 0;
         continue;
       }
       const literal = extractBalancedBlock(switchBlock, braceIndex);
       if (!literal) {
-        pending2.length = 0;
+        pending3.length = 0;
         continue;
       }
       const bg = findProp(literal, "bg");
       if (!bg) {
-        pending2.length = 0;
+        pending3.length = 0;
         continue;
       }
       const hover = findProp(literal, "hover") || bg;
-      for (const id of pending2) {
+      for (const id of pending3) {
         if (!colors[id]) colors[id] = { bg, hover };
       }
-      pending2.length = 0;
+      pending3.length = 0;
     }
     return Object.keys(colors).length ? colors : null;
   }
@@ -2467,29 +2470,29 @@
   }
   function parseAbilityColorsFromHexSwitch(switchBlock) {
     const colors = {};
-    const pending2 = [];
+    const pending3 = [];
     const tokenRe = /case\s*([`'"])([^`'"]+)\1\s*:|default\s*:|return\s*([`'"])((?:#|linear-gradient)[^`'"]*)\3/g;
     let match;
     while ((match = tokenRe.exec(switchBlock)) !== null) {
       if (match[2]) {
-        pending2.push(match[2]);
+        pending3.push(match[2]);
         continue;
       }
       if (match[0].startsWith("default")) {
-        pending2.length = 0;
+        pending3.length = 0;
         continue;
       }
       const value = match[4];
       if (!value) {
-        pending2.length = 0;
+        pending3.length = 0;
         continue;
       }
       const bg = value.startsWith("#") ? hexToRgba(value, 0.9) ?? value : value;
       const hover = value.startsWith("#") ? hexToRgba(value, 1) ?? value : value;
-      for (const id of pending2) {
+      for (const id of pending3) {
         if (!colors[id]) colors[id] = { bg, hover };
       }
-      pending2.length = 0;
+      pending3.length = 0;
     }
     return Object.keys(colors).length ? colors : null;
   }
@@ -2543,14 +2546,14 @@
   function startColorPolling() {
     if (captureState.colorPollingTimer) return;
     captureState.colorPollAttempts = 0;
-    const timer = setInterval(async () => {
+    const timer2 = setInterval(async () => {
       const success = await enrichAbilitiesWithColors();
       if (success || ++captureState.colorPollAttempts > MAX_COLOR_POLL_ATTEMPTS) {
-        clearInterval(timer);
+        clearInterval(timer2);
         captureState.colorPollingTimer = null;
       }
     }, COLOR_POLL_INTERVAL_MS);
-    captureState.colorPollingTimer = timer;
+    captureState.colorPollingTimer = timer2;
   }
   function stopColorPolling() {
     if (captureState.colorPollingTimer) {
@@ -3303,8 +3306,8 @@
   }
   var warmupState = { total: 0, done: 0, completed: false };
   var warmupListeners = /* @__PURE__ */ new Set();
-  function notifyWarmup(state3) {
-    warmupState = state3;
+  function notifyWarmup(state4) {
+    warmupState = state4;
     warmupListeners.forEach((listener) => {
       try {
         listener(warmupState);
@@ -4268,7 +4271,7 @@
     if (typeof requestId !== "string") return false;
     return ownRequestIds.delete(requestId);
   }
-  function randomRequestId() {
+  function randomClientId() {
     try {
       const uuid = globalThis.crypto?.randomUUID?.();
       if (uuid) return uuid;
@@ -4276,6 +4279,7 @@
     }
     return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`;
   }
+  var randomRequestId = randomClientId;
   function buildQuinoaMessage(payload) {
     const { scopePath: rawScopePath, ...command } = payload;
     const scopePath = rawScopePath ?? QUINOA_SCOPE;
@@ -8716,9 +8720,9 @@
     let selectedIdx = null;
     let lastInfo = emptySlotInfo();
     let curSig = gardenObjectSignature(cur);
-    const listeners7 = /* @__PURE__ */ new Set();
-    const notify2 = () => {
-      for (const fn of listeners7) {
+    const listeners8 = /* @__PURE__ */ new Set();
+    const notify3 = () => {
+      for (const fn of listeners8) {
         try {
           fn(lastInfo);
         } catch {
@@ -8857,7 +8861,7 @@
       const next = computeSlotInfo();
       if (!infosEqual(next, lastInfo)) {
         lastInfo = next;
-        notify2();
+        notify3();
       }
     }
     (async () => {
@@ -8956,11 +8960,11 @@
         return lastInfo;
       },
       onChange(cb) {
-        listeners7.add(cb);
-        return () => listeners7.delete(cb);
+        listeners8.add(cb);
+        return () => listeners8.delete(cb);
       },
       stop() {
-        listeners7.clear();
+        listeners8.clear();
       },
       recompute() {
         recomputeAndNotify();
@@ -9038,21 +9042,21 @@
     return base;
   }
   function sanitizeState(raw) {
-    const state3 = defaultState();
-    if (!raw || typeof raw !== "object") return state3;
-    state3.enabled = raw.enabled === true;
-    state3.settings = sanitizeSettings(raw.settings);
-    state3.overrides = {};
+    const state4 = defaultState();
+    if (!raw || typeof raw !== "object") return state4;
+    state4.enabled = raw.enabled === true;
+    state4.settings = sanitizeSettings(raw.settings);
+    state4.overrides = {};
     if (raw.overrides && typeof raw.overrides === "object") {
       for (const [key2, value] of Object.entries(raw.overrides)) {
         if (!key2) continue;
-        state3.overrides[key2] = {
+        state4.overrides[key2] = {
           enabled: value?.enabled === true,
           settings: sanitizeSettings(value?.settings)
         };
       }
     }
-    return state3;
+    return state4;
   }
   function cloneSettings(settings) {
     return {
@@ -9070,14 +9074,14 @@
       weatherRecipes: settings.weatherRecipes.map((recipe) => recipe.slice())
     };
   }
-  function cloneState(state3) {
+  function cloneState(state4) {
     const overrides = {};
-    for (const [key2, value] of Object.entries(state3.overrides)) {
+    for (const [key2, value] of Object.entries(state4.overrides)) {
       overrides[key2] = { enabled: value.enabled, settings: cloneSettings(value.settings) };
     }
     return {
-      enabled: state3.enabled,
-      settings: cloneSettings(state3.settings),
+      enabled: state4.enabled,
+      settings: cloneSettings(state4.settings),
       overrides
     };
   }
@@ -10132,7 +10136,7 @@
     if (!atoms.length) {
       throw new Error(`${config.label} introuvable`);
     }
-    const state3 = existing ?? {
+    const state4 = existing ?? {
       config,
       enabled: false,
       payload: null,
@@ -10157,13 +10161,13 @@
           }
         }
         const real = orig(get2);
-        if (!state3.enabled || state3.payload == null) return real;
-        return config.merge ? config.merge(real, state3.payload) : state3.payload;
+        if (!state4.enabled || state4.payload == null) return real;
+        return config.merge ? config.merge(real, state4.payload) : state4.payload;
       };
-      state3.patched.set(a, { readKey, orig });
+      state4.patched.set(a, { readKey, orig });
     }
     if (gateAtom && config.gate?.autoDisableOnClose) {
-      state3.unsubGate = await jSub(gateAtom, async () => {
+      state4.unsubGate = await jSub(gateAtom, async () => {
         let v;
         try {
           v = await jGet(gateAtom);
@@ -10171,12 +10175,12 @@
           v = null;
         }
         const isOpen = config.gate?.isOpen ? config.gate.isOpen(v) : !!v;
-        if (!isOpen && state3.enabled) state3.enabled = false;
+        if (!isOpen && state4.enabled) state4.enabled = false;
       });
     }
-    state3.installed = true;
-    _fakeRegistry.set(key2, state3);
-    return state3;
+    state4.installed = true;
+    _fakeRegistry.set(key2, state4);
+    return state4;
   }
   async function _primePatched(st) {
     const store = await ensureStore();
@@ -10207,6 +10211,12 @@
       }, options.autoRestoreMs);
     }
   }
+  async function fakeUpdate(label2, nextPayload) {
+    const st = _getState(label2);
+    if (!st?.installed) throw new Error(`Fake ${label2} non install\xE9`);
+    st.payload = nextPayload;
+    await _forceRepaintViaGate(st.config.gate);
+  }
   async function fakeHide(label2) {
     const st = _getState(label2);
     if (!st) return;
@@ -10217,6 +10227,31 @@
       st.autoTimer = null;
     }
     await _forceRepaintViaGate(st.config.gate);
+  }
+  async function fakeDispose(label2) {
+    const st = _getState(label2);
+    if (!st) return;
+    for (const [a, meta] of st.patched) {
+      try {
+        a[meta.readKey] = meta.orig;
+      } catch (err) {
+      }
+    }
+    st.patched.clear();
+    st.enabled = false;
+    st.payload = null;
+    if (st.unsubGate) {
+      try {
+        st.unsubGate();
+      } catch (err) {
+      }
+      st.unsubGate = void 0;
+    }
+    if (st.autoTimer) {
+      clearTimeout(st.autoTimer);
+      st.autoTimer = void 0;
+    }
+    _fakeRegistry.delete(label2);
   }
 
   // src/services/fakeModal.ts
@@ -10788,7 +10823,7 @@
     }
     startLoop(doc, s) {
       this.stopLoop(doc, s);
-      const tick = () => {
+      const tick3 = () => {
         if (!s.pressed) return;
         this.dispatchKey(doc, s.lastTarget || doc, "keydown", s.emit, true);
         if (s.mode === "tap") {
@@ -10798,8 +10833,8 @@
           }, s.keyupDelayMs);
         }
       };
-      tick();
-      s.tickTimer = this.win.setInterval(tick, s.rateMs);
+      tick3();
+      s.tickTimer = this.win.setInterval(tick3, s.rateMs);
     }
     stopLoop(doc, s) {
       if (s.tickTimer) {
@@ -11207,7 +11242,7 @@
       if (opts.onClick) b.addEventListener("click", opts.onClick);
       if (opts.disabled) this.setButtonEnabled(b, false);
       b.setEnabled = (enabled2) => this.setButtonEnabled(b, enabled2);
-      b.setActive = (active) => b.classList.toggle("active", !!active);
+      b.setActive = (active2) => b.classList.toggle("active", !!active2);
       return b;
     }
     setButtonEnabled(button2, enabled2) {
@@ -11625,26 +11660,26 @@
         }
         value = v;
         for (const b of btns) {
-          const active = b.dataset.value === v;
-          b.setAttribute("aria-checked", active ? "true" : "false");
-          b.tabIndex = active ? 0 : -1;
-          b.classList.toggle("active", active);
-          if (active && focus) b.focus();
+          const active2 = b.dataset.value === v;
+          b.setAttribute("aria-checked", active2 ? "true" : "false");
+          b.tabIndex = active2 ? 0 : -1;
+          b.classList.toggle("active", active2);
+          if (active2 && focus) b.focus();
         }
         moveIndicator(true);
         onChange?.(value);
       };
       const moveIndicator = (animate = false) => {
-        const active = btns.find((b) => b.dataset.value === value);
-        if (!active) return;
-        const i = btns.indexOf(active);
+        const active2 = btns.find((b) => b.dataset.value === value);
+        if (!active2) return;
+        const i = btns.indexOf(active2);
         const n = btns.length;
         const cs = getComputedStyle(root);
         const gap = parseFloat(cs.gap || cs.columnGap || "0") || 0;
         const bL = parseFloat(cs.borderLeftWidth || "0") || 0;
         const bR = parseFloat(cs.borderRightWidth || "0") || 0;
         const rRoot = root.getBoundingClientRect();
-        const rBtn = active.getBoundingClientRect();
+        const rBtn = active2.getBoundingClientRect();
         let left = rBtn.left - rRoot.left - bL;
         let width = rBtn.width;
         const padW = rRoot.width - bL - bR;
@@ -12898,9 +12933,9 @@
             const tag = el("span", "qmm-tag", escapeHtml(String(it.badge)));
             btn.appendChild(tag);
           } else {
-            const spacer = document.createElement("div");
-            spacer.style.width = "0";
-            btn.appendChild(spacer);
+            const spacer2 = document.createElement("div");
+            spacer2.style.width = "0";
+            btn.appendChild(spacer2);
           }
         }
         btn.classList.toggle("active", it.id === this.selectedId);
@@ -13283,6 +13318,22 @@
           defaultHotkey: null
         }
       ]
+    },
+    {
+      id: "companion",
+      title: "Companion",
+      icon: "\u{1F916}",
+      description: "Reach your companion without going through the launcher.",
+      actions: [
+        {
+          id: "companion.chat",
+          label: "Open the chat",
+          // Sans icône : l'atlas `ui` n'a pas de pictogramme de conversation, et
+          // en inventer une clé afficherait une case vide (`icon` est optionnel).
+          hint: "Opens the Companion window straight on its Chat tab.",
+          defaultHotkey: { alt: true, code: "KeyC" }
+        }
+      ]
     }
   ];
   var KEYBINDS_BINDINGS_PATH = "keybinds.bindings";
@@ -13341,8 +13392,8 @@
   };
   keybindSections.push(petSection);
   var petActionIds = /* @__PURE__ */ new Set();
-  function getPetTeamActionId(teamId) {
-    return `${PET_TEAM_ACTION_PREFIX}${teamId}`;
+  function getPetTeamActionId(teamId2) {
+    return `${PET_TEAM_ACTION_PREFIX}${teamId2}`;
   }
   function disposePetAction(id) {
     actionMap.delete(id);
@@ -13437,9 +13488,9 @@
   var gameActionBlockers = /* @__PURE__ */ new Set();
   var gameActionBlockedCombos = /* @__PURE__ */ new Set();
   function getCombosForGameAction() {
-    const state3 = gameActiveStates.get(GAME_ACTION_ID);
-    if (!state3) return [];
-    const combo = state3.combo;
+    const state4 = gameActiveStates.get(GAME_ACTION_ID);
+    if (!state4) return [];
+    const combo = state4.combo;
     return typeof combo === "string" && combo.length ? [combo] : [];
   }
   function applyGameActionBlockers() {
@@ -13924,9 +13975,9 @@
     const y = Number.isFinite(p?.position?.y) ? Math.round(p.position.y) : 0;
     return `${species}|${name}|xp:${xp}|hg:${hunger}|sc:${scale}|m:${muts}|a:${ab}|pos:${x},${y}`;
   }
-  function snapshotPets(state3) {
+  function snapshotPets(state4) {
     const snap = /* @__PURE__ */ new Map();
-    const arr = Array.isArray(state3) ? state3 : [];
+    const arr = Array.isArray(state4) ? state4 : [];
     for (const it of arr) {
       const id = String(it?.slot?.id ?? "");
       if (!id) continue;
@@ -13994,10 +14045,10 @@
     }
     return infos;
   }
-  function petsStateSig(state3) {
-    if (!Array.isArray(state3)) return "null";
-    if (!state3.length) return "empty";
-    return state3.map((p) => {
+  function petsStateSig(state4) {
+    if (!Array.isArray(state4)) return "null";
+    if (!state4.length) return "empty";
+    return state4.map((p) => {
       const id = String(p?.slot?.id ?? "");
       return `${id}:${petSig(p)}`;
     }).join("|");
@@ -14139,9 +14190,12 @@
       } catch (err) {
       }
     },
-    async harvestCrop(slot, slotsIndex) {
+    // `cropItemId` est l'id de la produce à naître, que le client forge lui-même
+    // (bundle 1125 : `cropItemId: crypto.randomUUID()`). Il alimente la prédiction
+    // locale du jeu ; sans lui le serveur ignore la récolte en silence.
+    async harvestCrop(slot, slotsIndex = 0, cropItemId = randomClientId()) {
       try {
-        sendToGame({ type: "HarvestCrop", slot, slotsIndex });
+        sendToGame({ scopePath: ["Room", "Quinoa"], type: "HarvestCrop", slot, slotsIndex, cropItemId });
       } catch (err) {
       }
     },
@@ -14442,11 +14496,11 @@
     },
     onPetsDiff(cb) {
       let prevSnap = snapshotPets(null);
-      return this.onPetsChange((state3) => {
-        const nextSnap = snapshotPets(state3);
+      return this.onPetsChange((state4) => {
+        const nextSnap = snapshotPets(state4);
         const d = diffPetsSnapshot(prevSnap, nextSnap);
         if (d.added.length || d.updated.length || d.removed.length) {
-          cb(state3, d);
+          cb(state4, d);
           prevSnap = nextSnap;
         }
       });
@@ -14458,11 +14512,11 @@
       const first = diffPetsSnapshot(prevSnap, nextSnap);
       cb(cur, first);
       prevSnap = nextSnap;
-      return this.onPetsChange((state3) => {
-        nextSnap = snapshotPets(state3);
+      return this.onPetsChange((state4) => {
+        nextSnap = snapshotPets(state4);
         const d = diffPetsSnapshot(prevSnap, nextSnap);
         if (d.added.length || d.updated.length || d.removed.length) {
-          cb(state3, d);
+          cb(state4, d);
           prevSnap = nextSnap;
         }
       });
@@ -14659,12 +14713,12 @@
       pendingTimer = window.setTimeout(() => {
         pendingTimer = null;
         const now2 = Date.now();
-        const pending2 = Array.from(pendingKeys);
+        const pending3 = Array.from(pendingKeys);
         pendingKeys.clear();
         pruneRecentMap(removedAtByKey, now2);
         const filtered = [];
         const skipped = [];
-        for (const key2 of pending2) {
+        for (const key2 of pending3) {
           const removedAt = removedAtByKey.get(key2) ?? 0;
           if (removedAt && now2 - removedAt <= RECENT_REMOVE_MS) {
             skipped.push(key2);
@@ -14672,7 +14726,7 @@
             filtered.push(key2);
           }
         }
-        log(`${logName} pending flush`, { pending: pending2, filtered, skipped });
+        log(`${logName} pending flush`, { pending: pending3, filtered, skipped });
         if (filtered.length) queueStore(filtered);
       }, DEBOUNCE_MS);
     }
@@ -15134,10 +15188,10 @@
     try {
       const cat = plantCatalog2;
       for (const species of Object.keys(cat || {})) {
-        const seedName = cat?.[species]?.seed?.name && String(cat?.[species]?.seed?.name) || `${species} Seed`;
-        const arr = map2.get(seedName) ?? [];
+        const seedName2 = cat?.[species]?.seed?.name && String(cat?.[species]?.seed?.name) || `${species} Seed`;
+        const arr = map2.get(seedName2) ?? [];
         arr.push(species);
-        map2.set(seedName, arr);
+        map2.set(seedName2, arr);
       }
     } catch {
     }
@@ -15996,9 +16050,9 @@
     }
   }
   async function findFirstEmptySlot() {
-    const state3 = await PlayerService.getGardenState();
-    const dirt = state3?.tileObjects || {};
-    const boardwalk = state3?.boardwalkTileObjects || {};
+    const state4 = await PlayerService.getGardenState();
+    const dirt = state4?.tileObjects || {};
+    const boardwalk = state4?.boardwalkTileObjects || {};
     for (let i = 0; i < 200; i++) {
       const key2 = String(i);
       const has = Object.prototype.hasOwnProperty.call(dirt, key2) && dirt[key2] != null;
@@ -16372,10 +16426,10 @@
     });
     const setActive = (index) => {
       cells.forEach(({ mark, caption }, i) => {
-        const active = i === index;
-        mark.style.background = active ? "#5eead4" : "#2b3441";
-        caption.style.color = active ? "#5eead4" : "#8b97a8";
-        caption.style.fontWeight = active ? "700" : "400";
+        const active2 = i === index;
+        mark.style.background = active2 ? "#5eead4" : "#2b3441";
+        caption.style.color = active2 ? "#5eead4" : "#8b97a8";
+        caption.style.fontWeight = active2 ? "700" : "400";
       });
     };
     return { root, setActive };
@@ -17173,7 +17227,7 @@
     const entry = { raf: 0, baseline: /* @__PURE__ */ new WeakMap(), touched: /* @__PURE__ */ new Set() };
     activeFlashes.set(gidx, entry);
     const start2 = performance.now();
-    const tick = (now2) => {
+    const tick3 = (now2) => {
       const progress = Math.min(1, (now2 - start2) / durationMs);
       const mix = startMix * (1 - progress);
       const parent = resolveParent();
@@ -17192,9 +17246,9 @@
         stopFlashTile(gidx);
         return;
       }
-      entry.raf = requestAnimationFrame(tick);
+      entry.raf = requestAnimationFrame(tick3);
     };
-    entry.raf = requestAnimationFrame(tick);
+    entry.raf = requestAnimationFrame(tick3);
     return true;
   }
   var tos = {
@@ -17479,7 +17533,7 @@
     });
     return wrap;
   }
-  function createMutationToggleButton(mutKey, storedId, active, onToggle) {
+  function createMutationToggleButton(mutKey, storedId, active2, onToggle) {
     const def = mutationCatalog2[mutKey] || {};
     const label2 = String(def.name || mutKey || "?");
     const btn = document.createElement("button");
@@ -17489,16 +17543,16 @@
       height: "34px",
       padding: "0",
       borderRadius: "8px",
-      border: active ? "1px solid rgba(94,234,212,0.55)" : "1px solid #2c3643",
-      background: active ? "rgba(94,234,212,0.14)" : "rgba(10,14,20,0.9)",
-      boxShadow: active ? "0 0 0 1px rgba(94,234,212,0.25) inset" : "none",
+      border: active2 ? "1px solid rgba(94,234,212,0.55)" : "1px solid #2c3643",
+      background: active2 ? "rgba(94,234,212,0.14)" : "rgba(10,14,20,0.9)",
+      boxShadow: active2 ? "0 0 0 1px rgba(94,234,212,0.25) inset" : "none",
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
       cursor: "pointer",
-      opacity: active ? "1" : "0.85"
+      opacity: active2 ? "1" : "0.85"
     });
-    btn.title = active ? `${label2} \u2014 remove` : `${label2} \u2014 add`;
+    btn.title = active2 ? `${label2} \u2014 remove` : `${label2} \u2014 add`;
     btn.appendChild(createMutationIconBadge(storedId, 24));
     btn.onclick = onToggle;
     return btn;
@@ -17723,8 +17777,8 @@
         wrap.textContent = fallback;
       }
     };
-    const spriteBaseName = spriteKey?.split("/").pop() ?? null;
-    const candidates = spriteBaseName ? [spriteBaseName, ...buildSpriteCandidates(rawId, label2)] : buildSpriteCandidates(rawId, label2);
+    const spriteBaseName2 = spriteKey?.split("/").pop() ?? null;
+    const candidates = spriteBaseName2 ? [spriteBaseName2, ...buildSpriteCandidates(rawId, label2)] : buildSpriteCandidates(rawId, label2);
     let categories = kind === "decor" ? ["decor"] : ["plant"];
     if (kind !== "decor" && /bamboo|cactus/i.test(String(rawId ?? label2 ?? ""))) {
       categories = ["tallplant", "tallPlant", "plant"];
@@ -17950,7 +18004,7 @@
       background: "rgba(20,25,33,0.9)",
       border: "1px solid #33404e"
     });
-    const modeButtonStyle = (btn, active) => {
+    const modeButtonStyle = (btn, active2) => {
       Object.assign(btn.style, {
         flex: "1",
         padding: "6px 8px",
@@ -17960,8 +18014,8 @@
         fontSize: "12px",
         cursor: "pointer",
         transition: "background 120ms ease, color 120ms ease",
-        background: active ? "rgba(94,234,212,0.22)" : "transparent",
-        color: active ? "#5eead4" : "#9aa7b5"
+        background: active2 ? "rgba(94,234,212,0.22)" : "transparent",
+        color: active2 ? "#5eead4" : "#9aa7b5"
       });
     };
     const plantsBtn = document.createElement("button");
@@ -18936,11 +18990,11 @@
     content.style.overflow = "auto";
     content.style.alignContent = "flex-start";
     content.style.justifyItems = "center";
-    const actionBar = document.createElement("div");
-    actionBar.style.display = "grid";
-    actionBar.style.gap = "6px";
-    actionBar.style.justifyItems = "start";
-    actionBar.style.marginTop = "4px";
+    const actionBar2 = document.createElement("div");
+    actionBar2.style.display = "grid";
+    actionBar2.style.gap = "6px";
+    actionBar2.style.justifyItems = "start";
+    actionBar2.style.marginTop = "4px";
     const selId = getSelectedId();
     if (!selId) {
       const empty = document.createElement("div");
@@ -18948,7 +19002,7 @@
       empty.style.textAlign = "center";
       empty.textContent = "Select an item on the left.";
       content.appendChild(empty);
-      sideRightWrap.append(content, actionBar);
+      sideRightWrap.append(content, actionBar2);
       return;
     }
     const entry = getSideEntry(selId);
@@ -19036,15 +19090,15 @@
           fontWeight: "600"
         });
         btnAdd.onclick = () => {
-          const state3 = ensureEditorStateForSpecies(selId);
-          const current = state3.slots;
+          const state4 = ensureEditorStateForSpecies(selId);
+          const current = state4.slots;
           if (current.length >= maxSlots) return;
           const defaultScale = computeTargetScaleFromPercent(
             selId,
             DEFAULT_SIZE_PERCENT
           );
           editorPlantSlotsState = {
-            ...state3,
+            ...state4,
             species: selId,
             slots: [
               ...current,
@@ -19074,11 +19128,11 @@
           fontWeight: "600"
         });
         btnRemove.onclick = () => {
-          const state3 = ensureEditorStateForSpecies(selId);
-          const current = state3.slots;
+          const state4 = ensureEditorStateForSpecies(selId);
+          const current = state4.slots;
           if (current.length <= 1) return;
           editorPlantSlotsState = {
-            ...state3,
+            ...state4,
             species: selId,
             slots: current.slice(0, current.length - 1)
           };
@@ -19438,7 +19492,7 @@
       rotRow.style.marginTop = "6px";
       content.appendChild(rotRow);
     }
-    sideRightWrap.append(content, actionBar);
+    sideRightWrap.append(content, actionBar2);
   }
   function compareSlotKeys(a, b) {
     const ai = Number(a);
@@ -19869,12 +19923,12 @@
       if (!slotMatch || !slotMatch.matchSlot) return false;
       const userSlotIdx = slotMatchToIndex(slotMatch);
       friendPreviewGarden = sanitizeGarden(garden2);
-      const installed2 = await installGardenOverlay(
+      const installed3 = await installGardenOverlay(
         "friend",
         userSlotIdx,
         makeGardenTileResolver(() => friendPreviewGarden)
       );
-      if (!installed2) return false;
+      if (!installed3) return false;
       await setOverlayMyDataGarden(friendPreviewGarden);
       friendPreviewUserSlotIdx = userSlotIdx;
       friendPreviewPlayerId = pid;
@@ -21611,10 +21665,10 @@
   var orderedTeamIds = [];
   var lastUsedTeamId = null;
   var _lastTeamHotkeyAt = 0;
-  function syncTeamHotkey(teamId) {
-    const hk = getKeybind(getPetTeamActionId(teamId));
-    if (hk) TEAM_HK_MAP.set(teamId, hk);
-    else TEAM_HK_MAP.delete(teamId);
+  function syncTeamHotkey(teamId2) {
+    const hk = getKeybind(getPetTeamActionId(teamId2));
+    if (hk) TEAM_HK_MAP.set(teamId2, hk);
+    else TEAM_HK_MAP.delete(teamId2);
   }
   function syncNextTeamHotkey() {
     hkNextTeam = getKeybind(PET_TEAM_NEXT_ID);
@@ -21622,11 +21676,11 @@
   function syncPrevTeamHotkey() {
     hkPrevTeam = getKeybind(PET_TEAM_PREV_ID);
   }
-  function ensureLegacyTeamHotkeyMigration(teamId) {
+  function ensureLegacyTeamHotkeyMigration(teamId2) {
     const hotkeys = readAriesPath(PATH_PETS_HOTKEYS) ?? {};
-    const legacy = hotkeys[teamId];
+    const legacy = hotkeys[teamId2];
     if (!legacy) return;
-    const actionId = getPetTeamActionId(teamId);
+    const actionId = getPetTeamActionId(teamId2);
     const existing = getKeybind(actionId);
     if (!existing) {
       const hk = stringToHotkey(legacy);
@@ -21635,7 +21689,7 @@
       }
     }
     const clone = { ...hotkeys };
-    delete clone[teamId];
+    delete clone[teamId2];
     writeAriesPath(PATH_PETS_HOTKEYS, clone);
   }
   function normalizeTeamList(teams) {
@@ -21659,8 +21713,8 @@
       lastUsedTeamId = orderedTeamIds[0] ?? null;
     }
   }
-  function markTeamAsUsed(teamId) {
-    lastUsedTeamId = teamId ? String(teamId) : null;
+  function markTeamAsUsed(teamId2) {
+    lastUsedTeamId = teamId2 ? String(teamId2) : null;
   }
   function setTeamsForHotkeys(rawTeams) {
     for (const unsub of TEAM_HK_UNSUBS.values()) {
@@ -21689,8 +21743,8 @@
     orderedTeamIds = teams.map((t) => t.id);
     ensureLastUsedTeamIsValid();
     const keep = new Set(orderedTeamIds);
-    for (const teamId of Array.from(TEAM_HK_MAP.keys())) {
-      if (!keep.has(teamId)) TEAM_HK_MAP.delete(teamId);
+    for (const teamId2 of Array.from(TEAM_HK_MAP.keys())) {
+      if (!keep.has(teamId2)) TEAM_HK_MAP.delete(teamId2);
     }
     teams.forEach((team) => {
       ensureLegacyTeamHotkeyMigration(team.id);
@@ -21719,10 +21773,10 @@
           lastUsedTeamId = teamsList[0] ?? null;
         }
         ensureLastUsedTeamIsValid();
-        const useTeam = (teamId) => {
-          if (!teamId) return;
-          markTeamAsUsed(teamId);
-          onUseTeam(teamId);
+        const useTeam = (teamId2) => {
+          if (!teamId2) return;
+          markTeamAsUsed(teamId2);
+          onUseTeam(teamId2);
           _lastTeamHotkeyAt = Date.now();
         };
         if (hkPrevTeam && matchHotkey(e, hkPrevTeam)) {
@@ -21749,11 +21803,11 @@
             return;
           }
         }
-        for (const [teamId, hk] of TEAM_HK_MAP) {
+        for (const [teamId2, hk] of TEAM_HK_MAP) {
           if (matchHotkey(e, hk)) {
             e.preventDefault();
             e.stopPropagation();
-            useTeam(teamId);
+            useTeam(teamId2);
             break;
           }
         }
@@ -21962,10 +22016,10 @@
     return aa.every((v, i) => v === bb[i]);
   }
   var _teamSyncEnabled = readAriesPath(PATH_PETS_TEAM_SYNC, true) !== false;
-  function _sendSavePetTeam(teamId, name, petIds) {
+  function _sendSavePetTeam(teamId2, name, petIds) {
     if (!_teamSyncEnabled) return;
-    const isCreate = teamId === null;
-    const id = teamId ?? _newTeamId();
+    const isCreate = teamId2 === null;
+    const id = teamId2 ?? _newTeamId();
     try {
       sendToGame({ type: "SavePetTeam", teamId: id, isCreate, name, petIds });
     } catch {
@@ -21979,24 +22033,24 @@
     }
     return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
   }
-  function _sendDeletePetTeam(teamId) {
+  function _sendDeletePetTeam(teamId2) {
     if (!_teamSyncEnabled) return;
     try {
-      sendToGame({ type: "DeletePetTeam", teamId });
+      sendToGame({ type: "DeletePetTeam", teamId: teamId2 });
     } catch {
     }
   }
-  function _sendApplyPetTeam(teamId) {
+  function _sendApplyPetTeam(teamId2) {
     if (!_teamSyncEnabled) return;
     try {
-      sendToGame({ type: "ApplyPetTeam", teamId });
+      sendToGame({ type: "ApplyPetTeam", teamId: teamId2 });
     } catch {
     }
   }
-  function _sendMovePetTeam(teamId, toIndex) {
+  function _sendMovePetTeam(teamId2, toIndex) {
     if (!_teamSyncEnabled) return;
     try {
-      sendToGame({ type: "MovePetTeam", movePetTeamId: teamId, toPetTeamIndex: toIndex });
+      sendToGame({ type: "MovePetTeam", movePetTeamId: teamId2, toPetTeamIndex: toIndex });
     } catch {
     }
   }
@@ -22366,22 +22420,22 @@
     if (!_invPetsCache.length) {
       try {
         const inv = await Atoms.inventory.myInventory.get();
-        let active = null;
+        let active2 = null;
         try {
-          active = await Atoms.pets.myPrimitivePetSlots.get();
+          active2 = await Atoms.pets.myPrimitivePetSlots.get();
         } catch {
         }
-        if (!Array.isArray(active)) {
+        if (!Array.isArray(active2)) {
           try {
-            active = await Atoms.pets.myPetInfos.get();
+            active2 = await Atoms.pets.myPetInfos.get();
           } catch {
           }
         }
         const hutch = await myPetHutchPetItems.get();
         _invSig = _buildInvSigFromInventory(inv);
-        _activeSig = _buildActiveSig(active);
+        _activeSig = _buildActiveSig(active2);
         _invRaw = inv;
-        _activeRaw = Array.isArray(active) ? active : [];
+        _activeRaw = Array.isArray(active2) ? active2 : [];
         _hutchRaw = Array.isArray(hutch) ? hutch : [];
         _rebuildInvPets();
       } catch {
@@ -22767,8 +22821,8 @@
       this._notifyTeamSubs();
       return t;
     },
-    deleteTeam(teamId) {
-      const i = this._teams.findIndex((t) => t.id === teamId);
+    deleteTeam(teamId2) {
+      const i = this._teams.findIndex((t) => t.id === teamId2);
       if (i < 0) return false;
       const [removed] = this._teams.splice(i, 1);
       saveTeams(this._teams);
@@ -22818,15 +22872,15 @@
         serverIndex++;
       }
     },
-    getTeamById(teamId) {
-      const t = this._teams.find((t2) => t2.id === teamId) || null;
+    getTeamById(teamId2) {
+      const t = this._teams.find((t2) => t2.id === teamId2) || null;
       return t ? { ...t, slots: t.slots.slice(0, 3) } : null;
     },
-    getTeamSearch(teamId) {
-      return _teamSearch[teamId] || "";
+    getTeamSearch(teamId2) {
+      return _teamSearch[teamId2] || "";
     },
-    setTeamSearch(teamId, q) {
-      _teamSearch[teamId] = (q || "").trim();
+    setTeamSearch(teamId2, q) {
+      _teamSearch[teamId2] = (q || "").trim();
       _saveTeamSearchMap(_teamSearch);
     },
     /* ------------------------- Inventory filters + pickers ------------------------- */
@@ -22834,9 +22888,9 @@
       await _ensureInventoryWatchersStarted();
       return _invPetsCache.slice();
     },
-    async buildFilteredInventoryForTeam(teamId, opts) {
+    async buildFilteredInventoryForTeam(teamId2, opts) {
       await _ensureInventoryWatchersStarted();
-      const { mode, value } = _parseTeamSearch(this.getTeamSearch(teamId) || "");
+      const { mode, value } = _parseTeamSearch(this.getTeamSearch(teamId2) || "");
       let list = await this.getInventoryPets();
       if (mode === "ability" && value) {
         const idSet = await _abilityNameToPresentIds(value);
@@ -22887,17 +22941,17 @@
       }
       return { items, favoritedItemIds };
     },
-    async chooseSlotPet(teamId, slotIndex, searchOverride) {
+    async chooseSlotPet(teamId2, slotIndex, searchOverride) {
       const idx = Math.max(0, Math.min(2, Math.floor(slotIndex || 0)));
-      const team = this.getTeamById(teamId);
+      const team = this.getTeamById(teamId2);
       if (!team) return null;
       const exclude = /* @__PURE__ */ new Set();
       team.slots.forEach((id, i) => {
         if (i !== idx && id) exclude.add(String(id));
       });
-      const payload = searchOverride && searchOverride.trim().length ? await this.buildFilteredInventoryByQuery(searchOverride, { excludeIds: exclude }) : await this.buildFilteredInventoryForTeam(teamId, { excludeIds: exclude });
+      const payload = searchOverride && searchOverride.trim().length ? await this.buildFilteredInventoryByQuery(searchOverride, { excludeIds: exclude }) : await this.buildFilteredInventoryForTeam(teamId2, { excludeIds: exclude });
       const items = Array.isArray(payload?.items) ? payload.items : [];
-      const teamSearch = this.getTeamSearch(teamId) || "";
+      const teamSearch = this.getTeamSearch(teamId2) || "";
       const applyFilters = async (list) => {
         let out = Array.isArray(list) ? list : [];
         if (searchOverride && searchOverride.trim().length) {
@@ -22988,16 +23042,16 @@
       return _inventoryItemToPet(items[selIndex]);
     },
     /* ------------------------- Team switching ------------------------- */
-    async useTeam(teamId, opts) {
-      const t = this.getTeams().find((tt) => tt.id === teamId) || null;
+    async useTeam(teamId2, opts) {
+      const t = this.getTeams().find((tt) => tt.id === teamId2) || null;
       if (!t) throw new Error("Team not found");
       const targetInvIds = (t.slots || []).filter((x) => typeof x === "string" && x.length > 0).slice(0, 3);
       if (_teamSyncEnabled && t.serverId) {
         _sendApplyPetTeam(t.serverId);
-        if (opts?.markUsed !== false) markTeamAsUsed(teamId);
+        if (opts?.markUsed !== false) markTeamAsUsed(teamId2);
         return { swapped: targetInvIds.length, placed: 0, skipped: 0 };
       }
-      return _equipPetIds(targetInvIds, { markTeamId: teamId, markUsed: opts?.markUsed });
+      return _equipPetIds(targetInvIds, { markTeamId: teamId2, markUsed: opts?.markUsed });
     },
     /** Whether mod teams mirror the native (in-game) pet teams. Defaults to true. */
     isTeamSyncEnabled() {
@@ -23443,9 +23497,9 @@
         }
         resolve(ok);
       };
-      const check = async (state3) => {
+      const check = async (state4) => {
         const set2 = new Set(
-          (Array.isArray(state3) ? state3 : []).map((p) => String(p?.id || "")).filter(Boolean)
+          (Array.isArray(state4) ? state4 : []).map((p) => String(p?.id || "")).filter(Boolean)
         );
         if (predicate(set2)) {
           stop2(true);
@@ -23454,8 +23508,8 @@
         }
       };
       try {
-        const res = myPetHutchPetItems.onChange((state3) => {
-          void check(state3);
+        const res = myPetHutchPetItems.onChange((state4) => {
+          void check(state4);
         });
         if (typeof res === "function") {
           unsub = res;
@@ -23692,6 +23746,31 @@
       }
     }
     return finish({ swapped, placed, skipped });
+  }
+
+  // src/services/companionKeybind.ts
+  var COMPANION_PANEL_ID = "companion";
+  var CHAT_TAB_ID = "chat";
+  var COMPANION_TAB_EVENT = "qws:companion-tab";
+  var installed = false;
+  function openCompanionChat() {
+    window.dispatchEvent(new CustomEvent("qws:open-panel", { detail: { id: COMPANION_PANEL_ID } }));
+    window.dispatchEvent(new CustomEvent(COMPANION_TAB_EVENT, { detail: { tab: CHAT_TAB_ID } }));
+  }
+  function installCompanionKeybindsOnce() {
+    if (installed || typeof window === "undefined") return;
+    installed = true;
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (shouldIgnoreKeydown(event)) return;
+        if (!eventMatchesKeybind("companion.chat", event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        openCompanionChat();
+      },
+      true
+    );
   }
 
   // src/utils/petCalcul.ts
@@ -24447,16 +24526,16 @@
     };
     const HANDLE = options.onClick ?? createDefaultClickHandler(logger);
     ensureStyle(INJ_CLASS, THEME);
-    let running = true;
-    let pending2 = false;
+    let running2 = true;
+    let pending3 = false;
     const processAll = () => {
-      if (!running || pending2) return;
-      pending2 = true;
+      if (!running2 || pending3) return;
+      pending3 = true;
       requestAnimationFrame(() => {
         try {
           document.querySelectorAll(ROOT_SEL).forEach((root) => processRoot(root));
         } finally {
-          pending2 = false;
+          pending3 = false;
         }
       });
     };
@@ -24484,8 +24563,8 @@
     }
     return {
       stop() {
-        if (!running) return;
-        running = false;
+        if (!running2) return;
+        running2 = false;
         mo.disconnect();
         unhookHistory?.();
         logger("stopped");
@@ -24494,7 +24573,7 @@
         processAll();
       },
       isRunning() {
-        return running;
+        return running2;
       }
     };
   }
@@ -24557,8 +24636,8 @@
     return pets;
   }
   async function sellPetsFromInventory(pets, logger) {
-    const toSell = pets.filter((pet) => typeof pet?.id === "string" && pet.id.trim().length > 0);
-    if (toSell.length === 0) {
+    const toSell2 = pets.filter((pet) => typeof pet?.id === "string" && pet.id.trim().length > 0);
+    if (toSell2.length === 0) {
       try {
         logger("no-sellable-pets", { requested: pets.length });
       } catch {
@@ -24569,7 +24648,7 @@
       }
       return;
     }
-    if (!await confirmHighValuePetSale(toSell, logger)) {
+    if (!await confirmHighValuePetSale(toSell2, logger)) {
       try {
         logger("sell-pets:cancelled");
       } catch {
@@ -24582,27 +24661,27 @@
     }
     const failures = [];
     let sold = 0;
-    const totalValue = computeTotalPetSellValueFromInventory(toSell);
+    const totalValue = computeTotalPetSellValueFromInventory(toSell2);
     try {
-      logger("sell-pets:total-value", { attempted: toSell.length, totalValue });
+      logger("sell-pets:total-value", { attempted: toSell2.length, totalValue });
     } catch {
     }
     if (SELL_ALL_PETS_DRY_RUN) {
       try {
-        logger("sell-pets:dry-run", { attempted: toSell.length, totalValue });
+        logger("sell-pets:dry-run", { attempted: toSell2.length, totalValue });
       } catch {
       }
       try {
-        toastSimple("Sell all Pets", `Dry run: ${toSell.length} pets detected (no sale).`, "info");
+        toastSimple("Sell all Pets", `Dry run: ${toSell2.length} pets detected (no sale).`, "info");
       } catch {
       }
       try {
-        globalThis.__sellAllPetsResult = { attempted: toSell.length, sold: 0, failures: [] };
+        globalThis.__sellAllPetsResult = { attempted: toSell2.length, sold: 0, failures: [] };
       } catch {
       }
       return;
     }
-    for (const pet of toSell) {
+    for (const pet of toSell2) {
       try {
         logger("sell-pet:start", { id: pet.id, pet });
       } catch {
@@ -24638,12 +24717,12 @@
       toastSimple("Sell all Pets", `${sold} pets have been sold for ${totalValue} coins!`, "success");
     }
     try {
-      globalThis.__sellAllPetsResult = { attempted: toSell.length, sold, failures };
+      globalThis.__sellAllPetsResult = { attempted: toSell2.length, sold, failures };
     } catch {
     }
     audioPlayer.playSellNotification();
     try {
-      logger("sell-pets:complete", { attempted: toSell.length, sold, failures });
+      logger("sell-pets:complete", { attempted: toSell2.length, sold, failures });
     } catch {
     }
   }
@@ -25934,7 +26013,7 @@
       this.stopLoop(key2);
       const stopOverride = normalizeStop(overrides.stop ?? null);
       const loopIntervalOverride = overrides.loopIntervalMs != null && Number.isFinite(overrides.loopIntervalMs) ? Math.max(150, Math.round(overrides.loopIntervalMs)) : null;
-      const state3 = {
+      const state4 = {
         key: key2,
         timer: null,
         plays: 0,
@@ -25949,8 +26028,8 @@
         volumeOverride,
         volume: effectiveVolume
       };
-      this.loops.set(key2, state3);
-      this.scheduleNext(state3, 0);
+      this.loops.set(key2, state4);
+      this.scheduleNext(state4, 0);
     }
     forEachLoop(context, fn) {
       for (const st of this.loops.values()) {
@@ -26125,39 +26204,39 @@
       }
       return true;
     }
-    scheduleNext(state3, delayMs) {
+    scheduleNext(state4, delayMs) {
       const run = async () => {
-        if (state3.stopped) return;
-        const stopConf = state3.stopOverride ?? state3.baseStop;
+        if (state4.stopped) return;
+        const stopConf = state4.stopOverride ?? state4.baseStop;
         if (stopConf.mode === "purchase" && this.purchaseChecker) {
           try {
-            if (this.purchaseChecker(state3.key)) {
-              this.stopLoop(state3.key);
+            if (this.purchaseChecker(state4.key)) {
+              this.stopLoop(state4.key);
               return;
             }
           } catch {
           }
         }
-        const du = this.resolveToDataUrl(state3.soundOverride, state3.context);
+        const du = this.resolveToDataUrl(state4.soundOverride, state4.context);
         const played = await this.playOnce(
           du,
-          state3.volume,
-          state3.context,
+          state4.volume,
+          state4.context,
           { awaitEnd: true }
         );
-        if (played) state3.plays++;
+        if (played) state4.plays++;
         if (stopConf.mode === "repeat") {
           const max = Math.max(1, stopConf.repeats | 0);
-          if (state3.plays >= max) {
-            this.stopLoop(state3.key);
+          if (state4.plays >= max) {
+            this.stopLoop(state4.key);
             return;
           }
         }
-        const intervalBase = state3.loopIntervalOverride ?? state3.baseLoopInterval;
+        const intervalBase = state4.loopIntervalOverride ?? state4.baseLoopInterval;
         const gap = Math.max(150, intervalBase | 0);
-        state3.timer = setTimeout(() => this.scheduleNext(state3, 0), gap);
+        state4.timer = setTimeout(() => this.scheduleNext(state4, 0), gap);
       };
-      if (delayMs > 0) state3.timer = setTimeout(run, delayMs);
+      if (delayMs > 0) state4.timer = setTimeout(run, delayMs);
       else run().catch(() => {
       });
     }
@@ -26780,14 +26859,14 @@
     _ensureWeatherPrefsLoaded();
     const rows = WEATHER_DEFS.map((def) => {
       const pref = _getWeatherPref(def.id);
-      const notify2 = !!pref.notify;
+      const notify3 = !!pref.notify;
       const lastSeen = typeof pref.lastSeen === "number" && Number.isFinite(pref.lastSeen) ? pref.lastSeen : null;
       return {
         id: def.id,
         name: def.name,
         type: def.type,
         atomValue: def.atomValue,
-        notify: notify2,
+        notify: notify3,
         lastSeen,
         isCurrent: def.id === _currentWeatherId,
         description: def.description,
@@ -27651,12 +27730,12 @@
   var CARD_SYSTEM_FIND_RETRY_MS = 1e3;
   var CARD_SYSTEM_FIND_LOG_EVERY = 30;
   function getSpriteState2() {
-    const state3 = readSharedGlobal("__MG_SPRITE_STATE__");
-    if (!state3?.renderer || !state3.ctors?.Text) return null;
-    return state3;
+    const state4 = readSharedGlobal("__MG_SPRITE_STATE__");
+    if (!state4?.renderer || !state4.ctors?.Text) return null;
+    return state4;
   }
-  function getStage(state3) {
-    return state3.renderer.lastObjectRendered ?? state3.renderer.stage ?? state3.app?.stage ?? null;
+  function getStage(state4) {
+    return state4.renderer.lastObjectRendered ?? state4.renderer.stage ?? state4.app?.stage ?? null;
   }
   function findByLabel(root, label2, limit = 25e3) {
     if (!root) return null;
@@ -27776,9 +27855,9 @@
   }
   function tryFindCardSystem() {
     if (cardSystem) return;
-    const state3 = getSpriteState2();
-    if (!state3) return;
-    const stage = getStage(state3);
+    const state4 = getSpriteState2();
+    if (!state4) return;
+    const stage = getStage(state4);
     const found = findAcrossBranches(stage, (node) => node?.label === CARD_SYSTEM_LABEL);
     if (found) {
       attachToCardSystem(found);
@@ -27867,7 +27946,7 @@
   }
   function startNotificationBellPixi(opts) {
     const iconGlyph = opts.iconGlyph ?? DEFAULT_ICON_GLYPH;
-    let running = true;
+    let running2 = true;
     let rail = null;
     let bellContainer = null;
     let bellText = null;
@@ -27917,14 +27996,14 @@
     };
     const computeScreenRect = () => {
       if (!bellContainer || bellContainer.destroyed) return null;
-      const state3 = getSpriteState2();
-      const canvas = state3?.renderer?.canvas || state3?.renderer?.view?.canvas || state3?.renderer?.view;
+      const state4 = getSpriteState2();
+      const canvas = state4?.renderer?.canvas || state4?.renderer?.view?.canvas || state4?.renderer?.view;
       if (!canvas) return null;
       try {
         const rect = canvas.getBoundingClientRect();
-        const renderResolution = Number(state3?.renderer?.resolution) || 1;
-        const stageWidth = Number(state3?.renderer?.screen?.width) || (Number(canvas.width) || 0) / renderResolution;
-        const stageHeight = Number(state3?.renderer?.screen?.height) || (Number(canvas.height) || 0) / renderResolution;
+        const renderResolution = Number(state4?.renderer?.resolution) || 1;
+        const stageWidth = Number(state4?.renderer?.screen?.width) || (Number(canvas.width) || 0) / renderResolution;
+        const stageHeight = Number(state4?.renderer?.screen?.height) || (Number(canvas.height) || 0) / renderResolution;
         const scaleX = stageWidth > 0 ? rect.width / stageWidth : 1;
         const scaleY = stageHeight > 0 ? rect.height / stageHeight : 1;
         debugState4.screenScaleX = scaleX;
@@ -27972,9 +28051,9 @@
         weSetPointerCursor = false;
       }
     };
-    const ensureCanvasListeners = (state3) => {
+    const ensureCanvasListeners = (state4) => {
       if (canvasListenersAttached) return;
-      const canvas = state3.renderer?.canvas || state3.renderer?.view?.canvas || state3.renderer?.view;
+      const canvas = state4.renderer?.canvas || state4.renderer?.view?.canvas || state4.renderer?.view;
       if (!canvas) return;
       canvasEl = canvas;
       pageWindow.addEventListener("pointerdown", onWindowPointerDownCapture, true);
@@ -27991,8 +28070,8 @@
       return null;
     };
     const railLocalScreenBounds = () => {
-      const state3 = getSpriteState2();
-      const screenHeight = Number(state3?.renderer?.screen?.height);
+      const state4 = getSpriteState2();
+      const screenHeight = Number(state4?.renderer?.screen?.height);
       if (!Number.isFinite(screenHeight) || screenHeight <= 0) return null;
       try {
         const top = rail.toLocal({ x: 0, y: 0 }).y;
@@ -28013,8 +28092,8 @@
         const diffs = [];
         for (let i = 1; i < ys.length; i++) diffs.push(ys[i] - ys[i - 1]);
         diffs.sort((a, b) => a - b);
-        const median = diffs[Math.floor(diffs.length / 2)];
-        if (Number.isFinite(median) && median > 0) spacing = median;
+        const median2 = diffs[Math.floor(diffs.length / 2)];
+        if (Number.isFinite(median2) && median2 > 0) spacing = median2;
       }
       const isSlotOccupied = (y) => ys.some((siblingY) => Math.abs(siblingY - y) < spacing * SLOT_OCCUPIED_TOLERANCE_RATIO);
       const chatSlot = findChatSlot();
@@ -28043,14 +28122,14 @@
       }
     };
     const syncUnsafe = () => {
-      if (!running || !rail || rail.destroyed) {
+      if (!running2 || !rail || rail.destroyed) {
         removeButton();
         return;
       }
-      const state3 = getSpriteState2();
-      if (!state3?.ctors?.Text) return;
+      const state4 = getSpriteState2();
+      if (!state4?.ctors?.Text) return;
       if (!bellContainer) {
-        const ContainerCtor = state3.ctors.Container ?? rail.constructor;
+        const ContainerCtor = state4.ctors.Container ?? rail.constructor;
         bellContainer = new ContainerCtor();
         bellContainer.label = "GeminiNotificationBell";
         const thisContainer = bellContainer;
@@ -28060,10 +28139,10 @@
         rail.addChild(bellContainer);
       }
       if (!bellText) {
-        bellText = new state3.ctors.Text({ text: iconGlyph, style: { fontSize: DEFAULT_SLOT_SIZE } });
+        bellText = new state4.ctors.Text({ text: iconGlyph, style: { fontSize: DEFAULT_SLOT_SIZE } });
         bellContainer.addChild(bellText);
       }
-      ensureCanvasListeners(state3);
+      ensureCanvasListeners(state4);
       syncGeometry();
       debugState4.hasButton = true;
     };
@@ -28082,7 +28161,7 @@
     };
     const onRailChildrenChanged = () => sync();
     const restartSearchIfNeeded2 = () => {
-      if (!running || rail) return;
+      if (!running2 || rail) return;
       tryFindRail();
       if (!rail && findRafId3 == null) findRafId3 = raf3(scheduleFind3);
     };
@@ -28103,10 +28182,10 @@
       sync();
     };
     const tryFindRail = () => {
-      if (!running || rail) return;
-      const state3 = getSpriteState2();
-      if (!state3) return;
-      const stage = getStage(state3);
+      if (!running2 || rail) return;
+      const state4 = getSpriteState2();
+      if (!state4) return;
+      const stage = getStage(state4);
       const found = findAcrossBranches(stage, (node) => node?.label === RAIL_LABEL);
       if (found) {
         attachToRail(found);
@@ -28120,18 +28199,18 @@
     };
     const scheduleFind3 = (now2) => {
       findRafId3 = null;
-      if (!running || rail) return;
+      if (!running2 || rail) return;
       if (now2 - lastFindCheckAt3 >= RAIL_FIND_RETRY_MS) {
         lastFindCheckAt3 = now2;
         tryFindRail();
       }
-      if (!running || rail) return;
+      if (!running2 || rail) return;
       findRafId3 = raf3(scheduleFind3);
     };
     const isReachableFromLiveStage = (node) => {
-      const state3 = getSpriteState2();
-      if (!state3) return false;
-      const stage = getStage(state3);
+      const state4 = getSpriteState2();
+      if (!state4) return false;
+      const stage = getStage(state4);
       if (!stage) return false;
       let cur = node;
       let hops = 0;
@@ -28142,7 +28221,7 @@
       return false;
     };
     const periodicRailMaintenance = () => {
-      if (!running || !rail || rail.destroyed) return;
+      if (!running2 || !rail || rail.destroyed) return;
       if (!isReachableFromLiveStage(rail)) {
         console.warn("[notificationBellPixi] rail orphaned from the live stage (no destroyed event fired), resetting");
         rail = null;
@@ -28155,7 +28234,7 @@
     };
     const maintenanceIntervalId = pageWindow.setInterval(periodicRailMaintenance, RAIL_REACHABILITY_CHECK_MS);
     const onWindowResize = () => {
-      if (!running || !rail || rail.destroyed) return;
+      if (!running2 || !rail || rail.destroyed) return;
       sync();
     };
     pageWindow.addEventListener("resize", onWindowResize);
@@ -28185,8 +28264,8 @@
     if (!rail) findRafId3 = raf3(scheduleFind3);
     return {
       stop() {
-        if (!running) return;
-        running = false;
+        if (!running2) return;
+        running2 = false;
         if (findRafId3 != null) {
           cancelRaf(findRafId3);
           findRafId3 = null;
@@ -28218,10 +28297,10 @@
       getScreenRect() {
         return computeScreenRect();
       },
-      setWiggle(active) {
-        if (wiggleActive === active) return;
-        wiggleActive = active;
-        if (active) {
+      setWiggle(active2) {
+        if (wiggleActive === active2) return;
+        wiggleActive = active2;
+        if (active2) {
           wiggleT = 0;
           wiggleLastFrameAt = null;
           if (wiggleRafId == null) wiggleRafId = raf3(wiggleTick);
@@ -28276,7 +28355,7 @@
     return Math.min(Math.max(value, min), max);
   }
   function startNotificationBellFloating(opts) {
-    let running = true;
+    let running2 = true;
     let wiggleAnimation = null;
     const button2 = document.createElement("button");
     button2.type = "button";
@@ -28341,7 +28420,7 @@
       applyDesiredPosition();
     };
     const onWindowResize = () => {
-      if (!running) return;
+      if (!running2) return;
       applyDesiredPosition();
     };
     let dragState = null;
@@ -28407,7 +28486,7 @@
     applyInitialPosition2();
     const settleTimers = SETTLE_REAPPLY_DELAYS_MS.map(
       (delay) => window.setTimeout(() => {
-        if (running) applyDesiredPosition();
+        if (running2) applyDesiredPosition();
       }, delay)
     );
     const clearSettleTimers = () => {
@@ -28429,8 +28508,8 @@
     };
     return {
       stop() {
-        if (!running) return;
-        running = false;
+        if (!running2) return;
+        running2 = false;
         stopDrag();
         stopWiggle();
         clearSettleTimers();
@@ -28442,7 +28521,7 @@
         }
       },
       getScreenRect() {
-        if (!running || !button2.isConnected) return null;
+        if (!running2 || !button2.isConnected) return null;
         const rect = button2.getBoundingClientRect();
         return {
           left: rect.left,
@@ -28453,9 +28532,9 @@
           height: rect.height
         };
       },
-      setWiggle(active) {
-        if (!running) return;
-        if (!active) {
+      setWiggle(active2) {
+        if (!running2) return;
+        if (!active2) {
           stopWiggle();
           return;
         }
@@ -29229,8 +29308,8 @@
       try {
         const warmup = getSpriteWarmupState();
         if (!warmup?.completed) {
-          const unsub = onSpriteWarmupProgress((state3) => {
-            if (state3.completed) {
+          const unsub = onSpriteWarmupProgress((state4) => {
+            if (state4.completed) {
               try {
                 unsub();
               } catch {
@@ -29691,9 +29770,9 @@
     let players = void 0;
     let selectedSlotId = null;
     let lastPrice = null;
-    const listeners7 = /* @__PURE__ */ new Set();
-    const notify2 = () => {
-      for (const fn of listeners7) try {
+    const listeners8 = /* @__PURE__ */ new Set();
+    const notify3 = () => {
+      for (const fn of listeners8) try {
         fn();
       } catch {
       }
@@ -29725,7 +29804,7 @@
       const next = slotVal ?? computeWholePlantPrice() ?? null;
       if (next !== lastPrice) {
         lastPrice = next;
-        notify2();
+        notify3();
       }
     }
     (async () => {
@@ -29759,11 +29838,11 @@
         return lastPrice;
       },
       onChange(cb) {
-        listeners7.add(cb);
-        return () => listeners7.delete(cb);
+        listeners8.add(cb);
+        return () => listeners8.delete(cb);
       },
       stop() {
-        listeners7.clear();
+        listeners8.clear();
       }
     };
   }
@@ -29858,7 +29937,7 @@
     const logger = createLogger(options.log);
     const priceWatcher = startCropPriceWatcherViaGardenObject();
     const shouldWaitForLocker = lockerService.getState().enabled;
-    let running = true;
+    let running2 = true;
     let lockerHarvestAllowed = getLockerHarvestAllowed();
     let lockerReady = !shouldWaitForLocker;
     let lastRenderedValue = void 0;
@@ -29866,7 +29945,7 @@
     let needsRepositionRender = false;
     let qpmObserver = null;
     const render = () => {
-      if (!running) return;
+      if (!running2) return;
       if (!lockerReady) return;
       cleanupStrayLockedStyles();
       const value = priceWatcher.get();
@@ -29953,8 +30032,8 @@
     const off = priceWatcher.onChange(render);
     return {
       stop() {
-        if (!running) return;
-        running = false;
+        if (!running2) return;
+        running2 = false;
         clearLockerReadyTimeout();
         stopQpmObserver();
         off?.();
@@ -29971,7 +30050,7 @@
         render();
       },
       isRunning() {
-        return running;
+        return running2;
       }
     };
   }
@@ -30295,7 +30374,7 @@
     return coinTexturePromise;
   }
   function startCropValueOverlayInPixi() {
-    let running = true;
+    let running2 = true;
     let currentCard2 = null;
     let geometry = null;
     let hitAreaBaseHeight = 0;
@@ -30344,12 +30423,12 @@
     };
     const syncValueNodeUnsafe = () => {
       debugState4.objectType = currentGardenObject?.objectType ?? null;
-      if (!running || !currentCard2 || currentCard2.destroyed || !geometry || !isPlantObject3(currentGardenObject)) {
+      if (!running2 || !currentCard2 || currentCard2.destroyed || !geometry || !isPlantObject3(currentGardenObject)) {
         detachValueText();
         return;
       }
-      const state3 = getSpriteState2();
-      if (!state3) return;
+      const state4 = getSpriteState2();
+      if (!state4) return;
       const value = priceWatcher.get();
       if (value == null) {
         detachValueText();
@@ -30357,27 +30436,27 @@
       }
       const text = formatCoins2(value);
       if (!valueText) {
-        graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state3)));
+        graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state4)));
         if (graphicsCtor) {
           valueBadge = new graphicsCtor();
           currentCard2.addChild(valueBadge);
         }
-        valueText = new state3.ctors.Text({ text, style: VALUE_TEXT_STYLE });
+        valueText = new state4.ctors.Text({ text, style: VALUE_TEXT_STYLE });
         currentCard2.addChild(valueText);
       } else if (valueText.text !== text) {
         valueText.text = text;
       }
-      if (!valueIcon && state3.ctors.Sprite) {
+      if (!valueIcon && state4.ctors.Sprite) {
         if (coinTexture) {
-          valueIcon = new state3.ctors.Sprite(coinTexture);
+          valueIcon = new state4.ctors.Sprite(coinTexture);
           valueIcon.width = VALUE_ICON_SIZE;
           valueIcon.height = VALUE_ICON_SIZE;
           currentCard2.addChild(valueIcon);
         } else if (!iconRetryScheduled) {
           iconRetryScheduled = true;
-          ensureCoinTexture(state3.ctors.Texture).then(() => {
+          ensureCoinTexture(state4.ctors.Texture).then(() => {
             iconRetryScheduled = false;
-            if (running) syncValueNode();
+            if (running2) syncValueNode();
           });
         }
       }
@@ -30433,7 +30512,7 @@
     void (async () => {
       try {
         currentGardenObject = await Atoms.data.myCurrentGardenObject.get();
-        if (running) syncValueNode();
+        if (running2) syncValueNode();
       } catch {
       }
       try {
@@ -30442,7 +30521,7 @@
           syncValueNode();
         });
         if (typeof unsub === "function") {
-          if (running) unsubGardenObject = unsub;
+          if (running2) unsubGardenObject = unsub;
           else unsub();
         }
       } catch {
@@ -30450,8 +30529,8 @@
     })();
     return {
       stop() {
-        if (!running) return;
-        running = false;
+        if (!running2) return;
+        running2 = false;
         unsubGardenObject?.();
         offCard();
         offPrice?.();
@@ -30480,7 +30559,7 @@
     return !!obj && typeof obj === "object" && obj.objectType === "decor";
   }
   function startLockerIndicatorInPixi() {
-    let running = true;
+    let running2 = true;
     let currentCard2 = null;
     let geometry = null;
     let border = null;
@@ -30514,13 +30593,13 @@
     };
     const syncUnsafe = () => {
       debugState4.objectType = currentGardenObject?.objectType ?? null;
-      if (!running || !currentCard2 || currentCard2.destroyed || !geometry || !isLocked()) {
+      if (!running2 || !currentCard2 || currentCard2.destroyed || !geometry || !isLocked()) {
         removeBorder();
         return;
       }
-      const state3 = getSpriteState2();
+      const state4 = getSpriteState2();
       if (!graphicsCtor) {
-        graphicsCtor = state3 ? findGraphicsCtor(getStage(state3)) : null;
+        graphicsCtor = state4 ? findGraphicsCtor(getStage(state4)) : null;
         if (!graphicsCtor) return;
       }
       if (!border) {
@@ -30535,8 +30614,8 @@
       border.clear();
       border.roundRect(left + inset, top + inset, Math.max(0, width - BORDER_WIDTH), Math.max(0, height - BORDER_WIDTH), BORDER_RADIUS).stroke({ width: BORDER_WIDTH, color: BORDER_COLOR, alpha: 1 });
       debugState4.hasBorder = true;
-      if (!lockIcon && state3?.ctors?.Text) {
-        lockIcon = new state3.ctors.Text({ text: LOCK_ICON_TEXT, style: LOCK_ICON_STYLE });
+      if (!lockIcon && state4?.ctors?.Text) {
+        lockIcon = new state4.ctors.Text({ text: LOCK_ICON_TEXT, style: LOCK_ICON_STYLE });
         currentCard2.addChild(lockIcon);
       }
       if (lockIcon) {
@@ -30569,7 +30648,7 @@
     void (async () => {
       try {
         currentGardenObject = await Atoms.data.myCurrentGardenObject.get();
-        if (running) sync();
+        if (running2) sync();
       } catch {
       }
       try {
@@ -30578,7 +30657,7 @@
           sync();
         });
         if (typeof unsub === "function") {
-          if (running) unsubAtom = unsub;
+          if (running2) unsubAtom = unsub;
           else unsub();
         }
       } catch {
@@ -30586,8 +30665,8 @@
     })();
     return {
       stop() {
-        if (!running) return;
-        running = false;
+        if (!running2) return;
+        running2 = false;
         offCard();
         offSlot?.();
         offRestrictions?.();
@@ -30654,7 +30733,7 @@
     return null;
   }
   function startSellAllPetsPixi() {
-    let running = true;
+    let running2 = true;
     let actionHud = null;
     let buttonContainer = null;
     let buttonBg = null;
@@ -30760,9 +30839,9 @@
         weSetPointerCursor = false;
       }
     };
-    const ensureCanvasListeners = (state3) => {
+    const ensureCanvasListeners = (state4) => {
       if (canvasListenersAttached) return;
-      const canvas = state3.renderer?.canvas || state3.renderer?.view?.canvas || state3.renderer?.view;
+      const canvas = state4.renderer?.canvas || state4.renderer?.view?.canvas || state4.renderer?.view;
       if (!canvas) return;
       canvasEl = canvas;
       canvas.addEventListener("pointerdown", onCanvasPointerDown);
@@ -30772,7 +30851,7 @@
     };
     const syncUnsafe = () => {
       debugState4.currentAction = actionLabel(currentAction);
-      if (!running || !actionHud || actionHud.destroyed || !isSellPetAction(currentAction)) {
+      if (!running2 || !actionHud || actionHud.destroyed || !isSellPetAction(currentAction)) {
         removeButton();
         return;
       }
@@ -30781,16 +30860,16 @@
         removeButton();
         return;
       }
-      const state3 = getSpriteState2();
-      if (!state3?.ctors?.Text) return;
-      const graphicsCtor = findGraphicsCtor(getStage(state3));
+      const state4 = getSpriteState2();
+      if (!state4?.ctors?.Text) return;
+      const graphicsCtor = findGraphicsCtor(getStage(state4));
       if (!graphicsCtor) return;
-      ensureCanvasListeners(state3);
+      ensureCanvasListeners(state4);
       const face = findByLabel(wrapper, BUTTON_FACE_LABEL) ?? wrapper;
       const faceWidth = safeSize(face, "width", 150);
       const faceHeight = safeSize(face, "height", 55);
       if (!buttonContainer) {
-        const ContainerCtor = state3.ctors?.Container ?? actionHud.constructor;
+        const ContainerCtor = state4.ctors?.Container ?? actionHud.constructor;
         buttonContainer = new ContainerCtor();
         const thisContainer = buttonContainer;
         thisContainer.once("destroyed", () => {
@@ -30806,7 +30885,7 @@
           ...existingTextStyle?.fontSize ? { fontSize: existingTextStyle.fontSize } : {},
           ...existingTextStyle?.fontWeight ? { fontWeight: existingTextStyle.fontWeight } : {}
         };
-        buttonText = new state3.ctors.Text({ text: BUTTON_TEXT, style: style2 });
+        buttonText = new state4.ctors.Text({ text: BUTTON_TEXT, style: style2 });
         buttonContainer.addChild(buttonText);
       }
       if (!buttonBg) {
@@ -30865,10 +30944,10 @@
       sync();
     };
     const tryFindActionHud = () => {
-      if (!running || actionHud) return;
-      const state3 = getSpriteState2();
-      if (!state3) return;
-      const stage = getStage(state3);
+      if (!running2 || actionHud) return;
+      const state4 = getSpriteState2();
+      if (!state4) return;
+      const stage = getStage(state4);
       const found = findAcrossBranches(stage, (node) => node?.label === ACTION_HUD_LABEL);
       if (found) {
         attachToActionHud(found);
@@ -30882,16 +30961,16 @@
     };
     const scheduleFind3 = (now2) => {
       findRafId3 = null;
-      if (!running || actionHud) return;
+      if (!running2 || actionHud) return;
       if (now2 - lastFindCheckAt3 >= ACTION_HUD_FIND_RETRY_MS) {
         lastFindCheckAt3 = now2;
         tryFindActionHud();
       }
-      if (!running || actionHud) return;
+      if (!running2 || actionHud) return;
       findRafId3 = raf3(scheduleFind3);
     };
     const restartSearchIfNeeded2 = () => {
-      if (!running || actionHud) return;
+      if (!running2 || actionHud) return;
       tryFindActionHud();
       if (!actionHud && findRafId3 == null) {
         findRafId3 = raf3(scheduleFind3);
@@ -30905,7 +30984,7 @@
     void (async () => {
       try {
         currentAction = await Atoms.player.action.get();
-        if (running) sync();
+        if (running2) sync();
       } catch {
       }
       try {
@@ -30914,7 +30993,7 @@
           sync();
         });
         if (typeof unsub === "function") {
-          if (running) unsubAction = unsub;
+          if (running2) unsubAction = unsub;
           else unsub();
         }
       } catch {
@@ -30922,8 +31001,8 @@
     })();
     return {
       stop() {
-        if (!running) return;
-        running = false;
+        if (!running2) return;
+        running2 = false;
         if (findRafId3 != null) {
           cancelRaf(findRafId3);
           findRafId3 = null;
@@ -30967,7 +31046,7 @@
     }
     let bonusFromMultiplier = null;
     let bonusFromPlayers = friendBonusPercentFromPlayers(1);
-    let running = true;
+    let running2 = true;
     const disposables = [];
     const resolveCurrentBonus = () => bonusFromMultiplier ?? bonusFromPlayers ?? 0;
     const applyLockState = (locked) => {
@@ -30977,7 +31056,7 @@
       containers.forEach((wrap) => setContainerLocked(wrap, locked));
     };
     const recompute = () => {
-      if (!running) return;
+      if (!running2) return;
       const requiredPct = lockerRestrictionsService.getRequiredPercent();
       const current = resolveCurrentBonus();
       const locked = requiredPct > 0 && !(Number.isFinite(current) && current + 1e-4 >= requiredPct);
@@ -31022,7 +31101,7 @@
     recompute();
     return {
       stop() {
-        running = false;
+        running2 = false;
         disposables.splice(0).forEach((fn) => {
           try {
             fn();
@@ -31132,12 +31211,12 @@
       return { stop() {
       } };
     }
-    let running = true;
+    let running2 = true;
     let currentEggId = null;
     const disposables = [];
     const isEggLocked = () => lockerRestrictionsService.isEggLocked(currentEggId);
     const applyLockState = () => {
-      if (!running) return;
+      if (!running2) return;
       const locked = isEggLocked();
       const containers = Array.from(document.querySelectorAll(CONTAINER_SELECTOR2));
       containers.forEach((el2) => {
@@ -31175,7 +31254,7 @@
     applyLockState();
     return {
       stop() {
-        running = false;
+        running2 = false;
         disposables.splice(0).forEach((fn) => {
           try {
             fn();
@@ -31287,11 +31366,11 @@
       return { stop() {
       } };
     }
-    let running = true;
+    let running2 = true;
     const disposables = [];
     const isLocked = () => lockerRestrictionsService.isDecorPickupLocked();
     const applyLockState = () => {
-      if (!running) return;
+      if (!running2) return;
       const locked = isLocked();
       const containers = Array.from(document.querySelectorAll(CONTAINER_SELECTOR3));
       containers.forEach((el2) => {
@@ -31316,7 +31395,7 @@
     applyLockState();
     return {
       stop() {
-        running = false;
+        running2 = false;
         disposables.splice(0).forEach((fn) => {
           try {
             fn();
@@ -31502,7 +31581,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.204";
+      return "3.2.205";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -32971,13 +33050,13 @@
         Atoms.inventory.myInventory.get().catch(() => null)
       ]);
       const hutchItems = Array.isArray(hutchItemsRaw) ? hutchItemsRaw : [];
-      const inventoryItems2 = Array.isArray(inventoryRaw?.items) ? inventoryRaw.items : Array.isArray(inventoryRaw) ? inventoryRaw : [];
+      const inventoryItems3 = Array.isArray(inventoryRaw?.items) ? inventoryRaw.items : Array.isArray(inventoryRaw) ? inventoryRaw : [];
       console.log("[InventorySorting] Hutch data", {
         hutchItems: hutchItems.length,
-        inventoryItems: inventoryItems2.length
+        inventoryItems: inventoryItems3.length
       });
       applyPetItemsToContainer(hutchContainer, hutchItems);
-      applyPetItemsToContainer(inventoryContainer, inventoryItems2);
+      applyPetItemsToContainer(inventoryContainer, inventoryItems3);
       return true;
     } catch (error) {
       console.warn("[InventorySorting] Impossible de mettre a jour les pets du hutch", error);
@@ -33200,25 +33279,25 @@
     const stateByGrid = /* @__PURE__ */ new WeakMap();
     const ensureState = async (grid, filters, entries, searchQuery) => {
       const filtersKey = JSON.stringify({ filters });
-      const state3 = stateByGrid.get(grid);
+      const state4 = stateByGrid.get(grid);
       const hasAllBaseIndexes = entries.every((e) => readBaseIndex(e) != null);
-      const searchChanged = state3 ? state3.searchQuery !== searchQuery : false;
-      const entryCountChanged = state3 ? state3.entryCount !== entries.length : false;
-      const filtersChanged = state3 ? state3.filtersKey !== filtersKey : false;
-      const baseLengthChanged = state3 ? state3.baseItems.length !== entries.length : false;
-      const needsRebuild = !state3 || filtersChanged || entryCountChanged || baseLengthChanged || !hasAllBaseIndexes || searchChanged;
-      if (state3 && !needsRebuild) {
-        state3.entryByBaseIndex.clear();
+      const searchChanged = state4 ? state4.searchQuery !== searchQuery : false;
+      const entryCountChanged = state4 ? state4.entryCount !== entries.length : false;
+      const filtersChanged = state4 ? state4.filtersKey !== filtersKey : false;
+      const baseLengthChanged = state4 ? state4.baseItems.length !== entries.length : false;
+      const needsRebuild = !state4 || filtersChanged || entryCountChanged || baseLengthChanged || !hasAllBaseIndexes || searchChanged;
+      if (state4 && !needsRebuild) {
+        state4.entryByBaseIndex.clear();
         for (const entry of entries) {
           const baseIndex = readBaseIndex(entry);
           if (baseIndex != null) {
-            state3.entryByBaseIndex.set(baseIndex, entry);
+            state4.entryByBaseIndex.set(baseIndex, entry);
           }
         }
-        state3.filtersKey = filtersKey;
-        state3.searchQuery = searchQuery;
-        state3.entryCount = entries.length;
-        return state3;
+        state4.filtersKey = filtersKey;
+        state4.searchQuery = searchQuery;
+        state4.entryCount = entries.length;
+        return state4;
       }
       try {
         const inventory = await Atoms.inventory.myInventory.get();
@@ -33241,7 +33320,7 @@
           entryCount: entries.length,
           baseItems: filteredItems.slice(),
           entryByBaseIndex: /* @__PURE__ */ new Map(),
-          lastSortKey: state3?.lastSortKey ?? null
+          lastSortKey: state4?.lastSortKey ?? null
         };
         entries.forEach((entry, index) => {
           newState.entryByBaseIndex.set(index, entry);
@@ -33253,37 +33332,37 @@
         return null;
       }
     };
-    const rebaseStateToDomOrder = (state3, entries) => {
-      if (entries.length !== state3.baseItems.length) return false;
+    const rebaseStateToDomOrder = (state4, entries) => {
+      if (entries.length !== state4.baseItems.length) return false;
       const reordered = [];
       const used = /* @__PURE__ */ new Set();
       for (const entry of entries) {
         const baseIndex = readBaseIndex(entry);
-        if (baseIndex == null || baseIndex < 0 || baseIndex >= state3.baseItems.length) {
+        if (baseIndex == null || baseIndex < 0 || baseIndex >= state4.baseItems.length) {
           return false;
         }
         if (used.has(baseIndex)) {
           return false;
         }
         used.add(baseIndex);
-        reordered.push(state3.baseItems[baseIndex]);
+        reordered.push(state4.baseItems[baseIndex]);
       }
-      if (reordered.length !== state3.baseItems.length) return false;
+      if (reordered.length !== state4.baseItems.length) return false;
       let changed = false;
       for (let i = 0; i < reordered.length; i++) {
-        if (reordered[i] !== state3.baseItems[i]) {
+        if (reordered[i] !== state4.baseItems[i]) {
           changed = true;
           break;
         }
       }
       if (!changed) return false;
-      state3.baseItems = reordered;
+      state4.baseItems = reordered;
       assignBaseIndexesToEntries(entries);
-      state3.entryByBaseIndex.clear();
+      state4.entryByBaseIndex.clear();
       entries.forEach((entry, index) => {
-        state3.entryByBaseIndex.set(index, entry);
+        state4.entryByBaseIndex.set(index, entry);
       });
-      state3.entryCount = entries.length;
+      state4.entryCount = entries.length;
       return true;
     };
     return async (grid, sortKey, direction) => {
@@ -33298,24 +33377,24 @@
         cfg.checkboxLabelSelector
       );
       const searchQuery = getNormalizedInventorySearchQuery(grid);
-      const state3 = await ensureState(grid, filters, entries, searchQuery);
-      if (!state3) return;
-      const previousSortKey = state3.lastSortKey;
+      const state4 = await ensureState(grid, filters, entries, searchQuery);
+      if (!state4) return;
+      const previousSortKey = state4.lastSortKey;
       if ((!sortKey || sortKey === "none") && previousSortKey === "none") {
-        rebaseStateToDomOrder(state3, entries);
+        rebaseStateToDomOrder(state4, entries);
       }
       const baseIndexByItem = /* @__PURE__ */ new Map();
-      state3.baseItems.forEach((item, index) => {
+      state4.baseItems.forEach((item, index) => {
         baseIndexByItem.set(item, index);
       });
       const effectiveDirection = direction && DIRECTION_ORDER.includes(direction) ? direction : DEFAULT_DIRECTION_BY_SORT_KEY[sortKey] ?? "asc";
-      const desiredItems = !sortKey || sortKey === "none" ? state3.baseItems.slice() : sortInventoryItems(state3.baseItems, sortKey, effectiveDirection);
+      const desiredItems = !sortKey || sortKey === "none" ? state4.baseItems.slice() : sortInventoryItems(state4.baseItems, sortKey, effectiveDirection);
       const desiredEntries = [];
       const usedEntries = /* @__PURE__ */ new Set();
       for (const item of desiredItems) {
         const baseIndex = baseIndexByItem.get(item);
         if (baseIndex == null) continue;
-        const entry = state3.entryByBaseIndex.get(baseIndex);
+        const entry = state4.entryByBaseIndex.get(baseIndex);
         if (!entry || usedEntries.has(entry)) continue;
         const value = getInventoryItemValue(item);
         updateInventoryCardValue(entry.card, value);
@@ -33340,14 +33419,14 @@
         });
         container.appendChild(fragment);
       }
-      state3.entryByBaseIndex.clear();
+      state4.entryByBaseIndex.clear();
       desiredEntries.forEach((entry) => {
         const baseIndex = readBaseIndex(entry);
         if (baseIndex != null) {
-          state3.entryByBaseIndex.set(baseIndex, entry);
+          state4.entryByBaseIndex.set(baseIndex, entry);
         }
       });
-      state3.lastSortKey = sortKey;
+      state4.lastSortKey = sortKey;
     };
   }
   function getActiveFiltersFromGrid(grid, checkboxSelector, checkboxLabelSelector) {
@@ -34883,9 +34962,9 @@
     return key2 === "all" ? total : counts.get(key2) ?? 0;
   }
   function closedButtonLabel(counts, total) {
-    const active = getActiveFilter();
-    const count = countFor(active, counts, total);
-    return `${CLOSED_LABEL_PREFIX}${getActionLabel(active)}${count ? ` (${count})` : ""}`;
+    const active2 = getActiveFilter();
+    const count = countFor(active2, counts, total);
+    return `${CLOSED_LABEL_PREFIX}${getActionLabel(active2)}${count ? ` (${count})` : ""}`;
   }
   function buildClosedButton(graphicsCtor, textCtor, containerCtor, counts, total) {
     const text = new textCtor({ text: closedButtonLabel(counts, total), style: BUTTON_TEXT_STYLE2 });
@@ -34914,7 +34993,7 @@
     const buttons = [];
     let x = 0;
     let y = 0;
-    const active = getActiveFilter();
+    const active2 = getActiveFilter();
     for (const key2 of keys) {
       const count = countFor(key2, counts, total);
       const label2 = `${getActionLabel(key2)}${count ? ` (${count})` : ""}`;
@@ -34925,7 +35004,7 @@
         y += BUTTON_HEIGHT + BUTTON_GAP2;
       }
       const bg = new graphicsCtor();
-      bg.roundRect(0, 0, width, BUTTON_HEIGHT, BUTTON_RADIUS2).fill({ color: key2 === active ? BUTTON_FILL_ACTIVE : BUTTON_FILL_INACTIVE, alpha: key2 === active ? BUTTON_ALPHA_ACTIVE : BUTTON_ALPHA_INACTIVE });
+      bg.roundRect(0, 0, width, BUTTON_HEIGHT, BUTTON_RADIUS2).fill({ color: key2 === active2 ? BUTTON_FILL_ACTIVE : BUTTON_FILL_INACTIVE, alpha: key2 === active2 ? BUTTON_ALPHA_ACTIVE : BUTTON_ALPHA_INACTIVE });
       text.position.set(BUTTON_PADDING_X2, (BUTTON_HEIGHT - text.height) / 2);
       const button2 = new containerCtor();
       button2.addChild(bg);
@@ -34982,10 +35061,10 @@
     return toolbarState2;
   }
   function refreshToolbarHighlight(toolbarState2) {
-    const active = getActiveFilter();
+    const active2 = getActiveFilter();
     for (const button2 of toolbarState2.panel.buttons) {
       if (button2.bg.destroyed) continue;
-      const isActive = button2.key === active;
+      const isActive = button2.key === active2;
       const bounds = button2.bg.getLocalBounds();
       button2.bg.clear();
       button2.bg.roundRect(0, 0, bounds.width, BUTTON_HEIGHT, BUTTON_RADIUS2).fill({ color: isActive ? BUTTON_FILL_ACTIVE : BUTTON_FILL_INACTIVE, alpha: isActive ? BUTTON_ALPHA_ACTIVE : BUTTON_ALPHA_INACTIVE });
@@ -35037,15 +35116,15 @@
     debugSyncState.anchorsFound = !!anchors;
     if (!anchors) return;
     if (!toolbarState) {
-      const state3 = getSpriteState2();
-      if (!state3?.ctors?.Text) return;
-      const stage = getStage(state3);
+      const state4 = getSpriteState2();
+      if (!state4?.ctors?.Text) return;
+      const stage = getStage(state4);
       const graphicsCtor = findGraphicsCtor(stage);
       if (!graphicsCtor) return;
       const maxWidth = safeWidth(anchors.divider, 0);
       if (maxWidth <= 0) return;
       const containerCtor = anchors.modalContainer.constructor;
-      toolbarState = buildToolbar(graphicsCtor, state3.ctors.Text, containerCtor, maxWidth);
+      toolbarState = buildToolbar(graphicsCtor, state4.ctors.Text, containerCtor, maxWidth);
       anchors.modalContainer.addChild(toolbarState.container);
       debugSyncState.toolbarBuilt = true;
     }
@@ -35066,9 +35145,9 @@
   }
   function tryFindModal() {
     if (!modalOpen2 || modalNode) return;
-    const state3 = getSpriteState2();
-    if (!state3) return;
-    const stage = getStage(state3);
+    const state4 = getSpriteState2();
+    if (!state4) return;
+    const stage = getStage(state4);
     const found = findAcrossBranches(stage, (node) => node?.label === ACTIVITY_LOG_MODAL_LABEL);
     if (!found) return;
     modalNode = found;
@@ -35314,18 +35393,18 @@
     };
     return cachedState;
   }
-  function saveState(state3) {
-    if (state3.seenPetIds.length > SEEN_LIMIT) {
-      state3.seenPetIds.splice(0, state3.seenPetIds.length - SEEN_LIMIT);
+  function saveState(state4) {
+    if (state4.seenPetIds.length > SEEN_LIMIT) {
+      state4.seenPetIds.splice(0, state4.seenPetIds.length - SEEN_LIMIT);
     }
-    cachedState = state3;
+    cachedState = state4;
     try {
-      writeAriesPath(STATE_PATH, state3);
+      writeAriesPath(STATE_PATH, state4);
     } catch {
     }
     for (const listener of listeners6) {
       try {
-        listener(state3);
+        listener(state4);
       } catch {
       }
     }
@@ -35396,13 +35475,13 @@
     var _a, _b;
     const events = extractHatchEvents(entries);
     if (!events.length) return false;
-    const state3 = loadState();
-    const seen = new Set(state3.seenPetIds);
+    const state4 = loadState();
+    const seen = new Set(state4.seenPetIds);
     let changed = false;
     for (const event of events) {
       if (seen.has(event.petId)) continue;
       seen.add(event.petId);
-      state3.seenPetIds.push(event.petId);
+      state4.seenPetIds.push(event.petId);
       changed = true;
       if (countStats) {
         try {
@@ -35410,12 +35489,12 @@
         } catch {
         }
       }
-      if (event.timestamp > state3.lastHatchAt) state3.lastHatchAt = event.timestamp;
+      if (event.timestamp > state4.lastHatchAt) state4.lastHatchAt = event.timestamp;
       if (!event.isPull || !event.eggId) continue;
-      const counters = (_a = state3.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
+      const counters = (_a = state4.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
       applyPull(counters, event, protectedSpecies(event.eggId));
     }
-    if (changed) saveState(state3);
+    if (changed) saveState(state4);
     return changed;
   }
   var HatchTracker = {
@@ -35431,14 +35510,14 @@
     },
     setOffset(eggId, key2, value) {
       var _a;
-      const state3 = loadState();
-      const offsets = (_a = state3.offsets)[eggId] ?? (_a[eggId] = emptyCounters());
+      const state4 = loadState();
+      const offsets = (_a = state4.offsets)[eggId] ?? (_a[eggId] = emptyCounters());
       const next = toCount(value);
       if (key2 === "gold") offsets.gold = next;
       else if (key2 === "rainbow") offsets.rainbow = next;
       else if (next > 0) offsets.species[key2] = next;
       else delete offsets.species[key2];
-      saveState(state3);
+      saveState(state4);
     },
     // Deliberately no reset: a counter that can be cleared is worse than useless,
     // since the server's own never resets except on the outcome itself. Only
@@ -35468,9 +35547,9 @@
     } catch {
     }
     if (firstRun) {
-      const state3 = loadState();
-      state3.bootstrapped = true;
-      saveState(state3);
+      const state4 = loadState();
+      state4.bootstrapped = true;
+      saveState(state4);
     }
     let unsubscribe2 = null;
     try {
@@ -36156,9 +36235,9 @@
       };
       const handler = (ev) => {
         const target = ev.target;
-        const active = document.activeElement;
+        const active2 = document.activeElement;
         const inScope = (node) => !!(node && (scope.contains(node) || node.closest?.(".qws-win") || node.closest?.(".qws2")));
-        if (!(inScope(target) && isEditable(target) || inScope(active) && isEditable(active))) return;
+        if (!(inScope(target) && isEditable(target) || inScope(active2) && isEditable(active2))) return;
         ev.stopPropagation();
         ev.stopImmediatePropagation?.();
       };
@@ -36357,8 +36436,8 @@
         sMini.style.display = "";
       }
     };
-    const offWarmup = onSpriteWarmupProgress((state3) => {
-      warmupState2 = state3;
+    const offWarmup = onSpriteWarmupProgress((state4) => {
+      warmupState2 = state4;
       updateStatus();
     });
     setInterval(updateStatus, 800);
@@ -36421,6 +36500,7 @@
     installToolShackKeybindsOnce();
     installFeedingTroughKeybindsOnce();
     installWeatherStationKeybindsOnce();
+    installCompanionKeybindsOnce();
     const bootToolbar = async () => {
       try {
         await renderOverlay();
@@ -36452,9 +36532,9 @@
       } catch {
       }
       try {
-        installPetTeamHotkeysOnce(async (teamId) => {
+        installPetTeamHotkeysOnce(async (teamId2) => {
           try {
-            await PetsService.useTeam(teamId);
+            await PetsService.useTeam(teamId2);
           } catch (e) {
             console.warn("[Pets] hotkey useTeam failed:", e);
           }
@@ -36675,6 +36755,9 @@
     weather: "weather",
     tiles: "tile"
   };
+  function isComposableCategory(category) {
+    return category in COMPOSE_KEY_PREFIX;
+  }
   function composedSpriteUrl(category, name, mutations) {
     const prefix = COMPOSE_KEY_PREFIX[category] ?? `sprite/${category}`;
     return buildMgApiUrl("/assets/sprites/composed", {
@@ -38215,11 +38298,11 @@ next: ${next}`;
       previewArea.appendChild(empty);
     };
     const getActiveMutations = () => {
-      const active = [];
-      if (mutationFilters.color !== "None") active.push(mutationFilters.color);
-      if (mutationFilters.condition !== "None") active.push(mutationFilters.condition);
-      if (mutationFilters.lighting !== "None") active.push(mutationFilters.lighting);
-      return active;
+      const active2 = [];
+      if (mutationFilters.color !== "None") active2.push(mutationFilters.color);
+      if (mutationFilters.condition !== "None") active2.push(mutationFilters.condition);
+      if (mutationFilters.lighting !== "None") active2.push(mutationFilters.lighting);
+      return active2;
     };
     function renderMutationControls() {
       renderMutationGroup("color", COLOR_SELECTIONS, "Color", mutationGroupContainers.color);
@@ -39554,8 +39637,8 @@ next: ${next}`;
       opacity: "0.75"
     });
     fileCard.append(fileCardTitle, fileStatus);
-    const setFileCardActive = (active) => {
-      if (active) {
+    const setFileCardActive = (active2) => {
+      if (active2) {
         fileCard.style.borderColor = "#6fc3ff";
         fileCard.style.boxShadow = "0 0 0 3px #6fc3ff22";
         fileCard.style.background = "linear-gradient(180deg, #102030, #0b1826)";
@@ -39835,11 +39918,11 @@ next: ${next}`;
         btnSetWeather.title = "Set as weather default";
         btnSetPets.title = "Set as pets default";
         btnDel.title = "Remove from library";
-        const isProtected = typeof audio.isProtectedSound === "function" && audio.isProtectedSound(name);
-        if (isProtected || isShopsDefault || isWeatherDefault) {
+        const isProtected2 = typeof audio.isProtectedSound === "function" && audio.isProtectedSound(name);
+        if (isProtected2 || isShopsDefault || isWeatherDefault) {
           btnDel.disabled = true;
           btnDel.style.opacity = "0.6";
-          if (isProtected) btnDel.title = "Built-in sound cannot be removed";
+          if (isProtected2) btnDel.title = "Built-in sound cannot be removed";
           else btnDel.title = "Currently used as default";
         }
         btnPlay.onclick = () => audio.trigger("preview", { sound: name }, "shops").catch(() => {
@@ -40181,7 +40264,7 @@ next: ${next}`;
     const onResize = () => syncHeaderToScrollbar();
     window.addEventListener("resize", onResize);
     const lastSeenRefs = /* @__PURE__ */ new Map();
-    let state3 = null;
+    let state4 = null;
     let renderedIds = /* @__PURE__ */ new Set();
     const getFilters = () => ({
       type: selType.value || "all",
@@ -40365,11 +40448,11 @@ next: ${next}`;
     }
     function rebuildGrid() {
       clearBody();
-      if (!state3) {
+      if (!state4) {
         renderEmpty();
         return;
       }
-      const rows = passesFilters(state3.rows);
+      const rows = passesFilters(state4.rows);
       if (!rows.length) {
         renderEmpty();
       } else {
@@ -40379,7 +40462,7 @@ next: ${next}`;
         });
       }
       refreshRulesUI();
-      followedBadge.textContent = `Followed: ${state3.counts.followed}`;
+      followedBadge.textContent = `Followed: ${state4.counts.followed}`;
       syncHeaderToScrollbar();
     }
     function softUpdateBadge(next) {
@@ -40398,11 +40481,11 @@ next: ${next}`;
       } catch {
       }
       unsub = await NotifierService.onChangeNow((s) => {
-        const prev = state3;
-        state3 = s;
+        const prev = state4;
+        state4 = s;
         if (!prev) {
           rebuildGrid();
-          softUpdateRenderedRows(state3);
+          softUpdateRenderedRows(state4);
           return;
         }
         const prevIds = renderedIds;
@@ -40428,7 +40511,7 @@ next: ${next}`;
       }
     })();
     const onFilterChange = () => {
-      if (state3) rebuildGrid();
+      if (state4) rebuildGrid();
     };
     selType.onchange = onFilterChange;
     selRarity.onchange = onFilterChange;
@@ -40564,27 +40647,27 @@ next: ${next}`;
         left.style.alignItems = "center";
         left.style.gap = "8px";
         left.style.minWidth = "0";
-        const avatar2 = document.createElement("div");
-        avatar2.style.width = "40px";
-        avatar2.style.height = "40px";
-        avatar2.style.borderRadius = "8px";
-        avatar2.style.display = "inline-flex";
-        avatar2.style.alignItems = "center";
-        avatar2.style.justifyContent = "center";
-        avatar2.style.background = "#111821";
-        avatar2.style.border = "1px solid #1f2429";
-        avatar2.style.overflow = "hidden";
+        const avatar3 = document.createElement("div");
+        avatar3.style.width = "40px";
+        avatar3.style.height = "40px";
+        avatar3.style.borderRadius = "8px";
+        avatar3.style.display = "inline-flex";
+        avatar3.style.alignItems = "center";
+        avatar3.style.justifyContent = "center";
+        avatar3.style.background = "#111821";
+        avatar3.style.border = "1px solid #1f2429";
+        avatar3.style.overflow = "hidden";
         const useEmojiFallback = () => {
-          avatar2.replaceChildren();
+          avatar3.replaceChildren();
           const span = document.createElement("span");
           span.textContent = "\u{1F43E}";
           span.style.fontSize = "28px";
           span.setAttribute("aria-hidden", "true");
-          avatar2.appendChild(span);
+          avatar3.appendChild(span);
         };
         const setIcon = (species2, mutations2) => {
           const speciesLabel = String(species2 ?? "").trim();
-          avatar2.replaceChildren();
+          avatar3.replaceChildren();
           if (!speciesLabel) {
             useEmojiFallback();
             return;
@@ -40593,8 +40676,8 @@ next: ${next}`;
           span.textContent = speciesLabel.charAt(0).toUpperCase() || "\u0110Y?\xF3";
           span.style.fontSize = "28px";
           span.setAttribute("aria-hidden", "true");
-          avatar2.appendChild(span);
-          attachSpriteIcon(avatar2, ["pet"], [speciesLabel], 36, "alerts-pet", {
+          avatar3.appendChild(span);
+          attachSpriteIcon(avatar3, ["pet"], [speciesLabel], 36, "alerts-pet", {
             mutations: Array.isArray(mutations2) ? mutations2 : void 0
           });
         };
@@ -40613,7 +40696,7 @@ next: ${next}`;
         title.style.textOverflow = "ellipsis";
         title.style.whiteSpace = "nowrap";
         titleWrap.append(title);
-        left.append(avatar2, titleWrap);
+        left.append(avatar3, titleWrap);
         const hungerValue = document.createElement("div");
         hungerValue.textContent = hungerText;
         hungerValue.style.fontWeight = "700";
@@ -40922,11 +41005,11 @@ next: ${next}`;
       empty.style.padding = "8px";
       bodyGrid.appendChild(empty);
     };
-    let state3 = null;
+    let state4 = null;
     let stateSig = "";
     const updateDynamicWeatherStats = () => {
-      if (!state3) return;
-      for (const row of state3.rows) {
+      if (!state4) return;
+      for (const row of state4.rows) {
         const target = weatherLastSeenRefs.get(row.id);
         if (target) {
           const { label: label2, title } = formatLastSeen(row.lastSeen, row.isCurrent);
@@ -40938,10 +41021,10 @@ next: ${next}`;
     };
     const rebuildGrid = () => {
       clearGrid();
-      if (!state3 || !state3.rows.length) {
+      if (!state4 || !state4.rows.length) {
         renderEmpty();
       } else {
-        state3.rows.forEach(addRow);
+        state4.rows.forEach(addRow);
         refreshRulesUI();
       }
       syncHeaderToScrollbar();
@@ -40956,7 +41039,7 @@ next: ${next}`;
       }
       try {
         unsubWeather = await NotifierService.onWeatherChangeNow((next) => {
-          state3 = next;
+          state4 = next;
           stateSig = weatherStateSignature(next.rows);
           rebuildGrid();
         });
@@ -40972,7 +41055,7 @@ next: ${next}`;
         const next = await NotifierService.getWeatherState();
         const nextSig = weatherStateSignature(next.rows);
         const changed = nextSig !== stateSig;
-        state3 = next;
+        state4 = next;
         stateSig = nextSig;
         if (changed) rebuildGrid();
         else updateDynamicWeatherStats();
@@ -41217,8 +41300,8 @@ next: ${next}`;
       justifyContent: "center"
     });
     wrap.appendChild(createEmojiIcon(fallback, size));
-    const spriteBaseName = options.spriteKey?.split("/").pop();
-    const candidates = spriteBaseName ? [spriteBaseName, seedKey] : seedKey;
+    const spriteBaseName2 = options.spriteKey?.split("/").pop();
+    const candidates = spriteBaseName2 ? [spriteBaseName2, seedKey] : seedKey;
     attachSpriteIcon(wrap, ["plant", "tallplant", "crop"], candidates, size, "plant");
     return wrap;
   }
@@ -41358,12 +41441,12 @@ next: ${next}`;
       target.weatherRecipes.push(set2);
     });
   }
-  function serializeSettingsState(state3) {
-    normalizeWeatherSelection(state3.weatherSelected);
-    state3.weatherRecipes.forEach((set2) => normalizeRecipeSelection(set2));
-    const mode = state3.scaleLockMode === "MINIMUM" ? "MINIMUM" : state3.scaleLockMode === "MAXIMUM" ? "MAXIMUM" : state3.scaleLockMode === "NONE" ? "NONE" : "RANGE";
-    let minScale = Math.max(50, Math.min(100, Math.round(state3.minScalePct || 50)));
-    let maxScale = Math.max(50, Math.min(100, Math.round(state3.maxScalePct || 100)));
+  function serializeSettingsState(state4) {
+    normalizeWeatherSelection(state4.weatherSelected);
+    state4.weatherRecipes.forEach((set2) => normalizeRecipeSelection(set2));
+    const mode = state4.scaleLockMode === "MINIMUM" ? "MINIMUM" : state4.scaleLockMode === "MAXIMUM" ? "MAXIMUM" : state4.scaleLockMode === "NONE" ? "NONE" : "RANGE";
+    let minScale = Math.max(50, Math.min(100, Math.round(state4.minScalePct || 50)));
+    let maxScale = Math.max(50, Math.min(100, Math.round(state4.maxScalePct || 100)));
     if (mode === "RANGE") {
       maxScale = Math.max(51, Math.min(100, maxScale));
       if (maxScale <= minScale) {
@@ -41383,14 +41466,14 @@ next: ${next}`;
       minScalePct: minScale,
       maxScalePct: maxScale,
       scaleLockMode: mode,
-      lockMode: state3.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
-      minInventory: Math.max(0, Math.min(999, Math.round(state3.minInventory || 91))),
-      avoidNormal: !!state3.avoidNormal,
-      includeNormal: !state3.avoidNormal,
-      visualMutations: Array.from(state3.visualMutations),
-      weatherMode: state3.weatherMode,
-      weatherSelected: Array.from(state3.weatherSelected),
-      weatherRecipes: state3.weatherRecipes.map((set2) => Array.from(set2))
+      lockMode: state4.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
+      minInventory: Math.max(0, Math.min(999, Math.round(state4.minInventory || 91))),
+      avoidNormal: !!state4.avoidNormal,
+      includeNormal: !state4.avoidNormal,
+      visualMutations: Array.from(state4.visualMutations),
+      weatherMode: state4.weatherMode,
+      weatherSelected: Array.from(state4.weatherSelected),
+      weatherRecipes: state4.weatherRecipes.map((set2) => Array.from(set2))
     };
   }
   var LockerMenuStore = class {
@@ -41402,12 +41485,12 @@ next: ${next}`;
       this.global = { enabled: false, settings: createDefaultSettings(), hasPersistedSettings: true };
       this.syncFromService(initial);
     }
-    applyPersisted(state3) {
-      this.global.enabled = !!state3.enabled;
-      hydrateSettingsFromPersisted(this.global.settings, state3.settings);
+    applyPersisted(state4) {
+      this.global.enabled = !!state4.enabled;
+      hydrateSettingsFromPersisted(this.global.settings, state4.settings);
       this.global.hasPersistedSettings = true;
       const seen = /* @__PURE__ */ new Set();
-      Object.entries(state3.overrides ?? {}).forEach(([key2, value]) => {
+      Object.entries(state4.overrides ?? {}).forEach(([key2, value]) => {
         const entry = this.ensureOverride(key2, { silent: true });
         entry.enabled = !!value?.enabled;
         hydrateSettingsFromPersisted(entry.settings, value?.settings);
@@ -41432,9 +41515,9 @@ next: ${next}`;
         }
       }
     }
-    syncFromService(state3) {
+    syncFromService(state4) {
       this.syncing = true;
-      this.applyPersisted(state3);
+      this.applyPersisted(state4);
       this.emit();
       this.syncing = false;
     }
@@ -41663,7 +41746,7 @@ next: ${next}`;
       button2.style.background = "rgba(255,255,255,0.04)";
     };
   }
-  function createLockerSettingsCard(ui, state3, opts = {}) {
+  function createLockerSettingsCard(ui, state4, opts = {}) {
     const card3 = document.createElement("div");
     card3.dataset.lockerSettingsCard = "1";
     card3.style.border = "1px solid rgba(255,255,255,0.10)";
@@ -41679,7 +41762,7 @@ next: ${next}`;
     let recipesTitleElement = null;
     const updateRecipeTitleText = () => {
       if (!recipesTitleElement) return;
-      const prefix = state3.lockMode === "ALLOW" ? "Allow" : "Lock";
+      const prefix = state4.lockMode === "ALLOW" ? "Allow" : "Lock";
       recipesTitleElement.textContent = `${prefix} when any recipe row matches (OR between rows)`;
     };
     const makeSection = (titleText, content) => {
@@ -41726,10 +41809,10 @@ next: ${next}`;
         { value: "lock", label: "Lock" },
         { value: "allow", label: "Allow" }
       ],
-      fromLockMode(state3.lockMode),
+      fromLockMode(state4.lockMode),
       (value) => {
         if (isProgrammaticLockMode) return;
-        state3.lockMode = toLockMode(value);
+        state4.lockMode = toLockMode(value);
         updateLockModeUI();
         opts.onChange?.();
       },
@@ -41737,7 +41820,7 @@ next: ${next}`;
     );
     lockModeRow.append(lockModeSegmented, lockModeHint);
     const updateLockModeUI = () => {
-      const value = fromLockMode(state3.lockMode);
+      const value = fromLockMode(state4.lockMode);
       const current = lockModeSegmented.get?.();
       if (current !== value) {
         isProgrammaticLockMode = true;
@@ -41759,9 +41842,9 @@ next: ${next}`;
     scaleModeRow.style.flexWrap = "wrap";
     scaleModeRow.style.justifyContent = "center";
     scaleModeRow.style.gap = "12px";
-    const minSlider = ui.slider(50, 100, 1, state3.minScalePct);
+    const minSlider = ui.slider(50, 100, 1, state4.minScalePct);
     applyStyles(minSlider, { width: "min(420px, 100%)" });
-    const maxSlider = ui.slider(50, 100, 1, state3.maxScalePct);
+    const maxSlider = ui.slider(50, 100, 1, state4.maxScalePct);
     applyStyles(maxSlider, { width: "min(420px, 100%)" });
     const toMode = (value) => {
       switch (value) {
@@ -41788,7 +41871,7 @@ next: ${next}`;
       }
     };
     let isProgrammaticScaleMode = false;
-    const initialScaleMode = fromMode(state3.scaleLockMode);
+    const initialScaleMode = fromMode(state4.scaleLockMode);
     const scaleModeSegmented = ui.segmented(
       [
         { value: "none", label: "None" },
@@ -41804,7 +41887,7 @@ next: ${next}`;
       { ariaLabel: "Scale lock mode" }
     );
     scaleModeRow.append(scaleModeSegmented);
-    const scaleSlider = ui.rangeDual(50, 100, 1, state3.minScalePct, state3.maxScalePct);
+    const scaleSlider = ui.rangeDual(50, 100, 1, state4.minScalePct, state4.maxScalePct);
     applyStyles(scaleSlider.root, {
       width: "min(420px, 100%)",
       marginLeft: "auto",
@@ -41865,11 +41948,11 @@ next: ${next}`;
     });
     rangeControls.append(scaleSlider.root, scaleValues);
     scaleRow.append(scaleModeRow, minControls, maxControls, rangeControls);
-    const applyScaleRange = (commit, notify2 = commit) => {
+    const applyScaleRange = (commit, notify3 = commit) => {
       let minValue = parseInt(scaleMinSlider.value, 10);
       let maxValue = parseInt(scaleMaxSlider.value, 10);
-      if (!Number.isFinite(minValue)) minValue = state3.minScalePct;
-      if (!Number.isFinite(maxValue)) maxValue = state3.maxScalePct;
+      if (!Number.isFinite(minValue)) minValue = state4.minScalePct;
+      if (!Number.isFinite(maxValue)) maxValue = state4.maxScalePct;
       minValue = Math.max(50, Math.min(99, minValue));
       maxValue = Math.max(51, Math.min(100, maxValue));
       if (maxValue <= minValue) {
@@ -41884,41 +41967,41 @@ next: ${next}`;
       scaleMinValue.textContent = `${minValue}`;
       scaleMaxValue.textContent = `${maxValue}`;
       if (commit) {
-        state3.minScalePct = minValue;
-        state3.maxScalePct = maxValue;
-        if (notify2) opts.onChange?.();
+        state4.minScalePct = minValue;
+        state4.maxScalePct = maxValue;
+        if (notify3) opts.onChange?.();
       }
     };
-    const applyScaleMinimum = (commit, notify2 = commit) => {
+    const applyScaleMinimum = (commit, notify3 = commit) => {
       let minValue = parseInt(minSlider.value, 10);
-      if (!Number.isFinite(minValue)) minValue = state3.minScalePct;
+      if (!Number.isFinite(minValue)) minValue = state4.minScalePct;
       minValue = Math.max(50, Math.min(100, minValue));
       minSlider.value = String(minValue);
       scaleMinimumValue.textContent = `${minValue}`;
       if (commit) {
-        state3.minScalePct = minValue;
-        if (notify2) opts.onChange?.();
+        state4.minScalePct = minValue;
+        if (notify3) opts.onChange?.();
       }
     };
-    const applyScaleMaximum = (commit, notify2 = commit) => {
+    const applyScaleMaximum = (commit, notify3 = commit) => {
       let maxValue = parseInt(maxSlider.value, 10);
-      if (!Number.isFinite(maxValue)) maxValue = state3.maxScalePct;
+      if (!Number.isFinite(maxValue)) maxValue = state4.maxScalePct;
       maxValue = Math.max(50, Math.min(100, maxValue));
       maxSlider.value = String(maxValue);
       scaleMaximumValue.textContent = `${maxValue}`;
       if (commit) {
-        state3.maxScalePct = maxValue;
-        if (notify2) opts.onChange?.();
+        state4.maxScalePct = maxValue;
+        if (notify3) opts.onChange?.();
       }
     };
     const updateScaleModeUI = () => {
-      const isRange = state3.scaleLockMode === "RANGE";
-      const isMin = state3.scaleLockMode === "MINIMUM";
-      const isMax = state3.scaleLockMode === "MAXIMUM";
+      const isRange = state4.scaleLockMode === "RANGE";
+      const isMin = state4.scaleLockMode === "MINIMUM";
+      const isMax = state4.scaleLockMode === "MAXIMUM";
       rangeControls.style.display = isRange ? "" : "none";
       minControls.style.display = isMin ? "" : "none";
       maxControls.style.display = isMax ? "" : "none";
-      const segValue = fromMode(state3.scaleLockMode);
+      const segValue = fromMode(state4.scaleLockMode);
       if (scaleModeSegmented.get?.() !== segValue) {
         isProgrammaticScaleMode = true;
         try {
@@ -41928,21 +42011,21 @@ next: ${next}`;
         }
       }
     };
-    const applyScaleMode = (mode, notify2) => {
-      const prevMode = state3.scaleLockMode;
-      state3.scaleLockMode = mode;
+    const applyScaleMode = (mode, notify3) => {
+      const prevMode = state4.scaleLockMode;
+      state4.scaleLockMode = mode;
       if (mode === "RANGE") {
-        scaleSlider.setValues(state3.minScalePct, state3.maxScalePct);
+        scaleSlider.setValues(state4.minScalePct, state4.maxScalePct);
         applyScaleRange(prevMode !== mode, false);
       } else if (mode === "MINIMUM") {
-        minSlider.value = String(state3.minScalePct);
+        minSlider.value = String(state4.minScalePct);
         applyScaleMinimum(prevMode !== mode, false);
       } else if (mode === "MAXIMUM") {
-        maxSlider.value = String(state3.maxScalePct);
+        maxSlider.value = String(state4.maxScalePct);
         applyScaleMaximum(prevMode !== mode, false);
       }
       updateScaleModeUI();
-      if (notify2 && prevMode !== mode) {
+      if (notify3 && prevMode !== mode) {
         opts.onChange?.();
       }
     };
@@ -41957,7 +42040,7 @@ next: ${next}`;
     applyScaleRange(false);
     applyScaleMinimum(false);
     applyScaleMaximum(false);
-    applyScaleMode(state3.scaleLockMode, false);
+    applyScaleMode(state4.scaleLockMode, false);
     const colorsRow = centerRow();
     colorsRow.style.flexWrap = "wrap";
     colorsRow.style.gap = "8px";
@@ -42014,33 +42097,33 @@ next: ${next}`;
       "Rainbow",
       "linear-gradient(90deg, #ff6b6b, #f7d35c, #3fd3ff, #9b6bff, #ff6b6b)"
     );
-    const updateColorButtonVisual = (button2, active) => {
-      button2.dataset.active = active ? "1" : "0";
-      button2.style.borderColor = active ? "rgba(94,234,212,0.40)" : "rgba(255,255,255,0.10)";
-      button2.style.boxShadow = active ? "0 0 0 1px rgba(94,234,212,0.25) inset, 0 2px 6px rgba(0, 0, 0, 0.45)" : "none";
-      button2.style.background = active ? "rgba(94,234,212,0.12)" : "rgba(255,255,255,0.04)";
+    const updateColorButtonVisual = (button2, active2) => {
+      button2.dataset.active = active2 ? "1" : "0";
+      button2.style.borderColor = active2 ? "rgba(94,234,212,0.40)" : "rgba(255,255,255,0.10)";
+      button2.style.boxShadow = active2 ? "0 0 0 1px rgba(94,234,212,0.25) inset, 0 2px 6px rgba(0, 0, 0, 0.45)" : "none";
+      button2.style.background = active2 ? "rgba(94,234,212,0.12)" : "rgba(255,255,255,0.04)";
       button2.style.opacity = button2.disabled ? "0.55" : "";
       button2.style.cursor = button2.disabled ? "default" : "pointer";
     };
     const updateColorButtons = () => {
-      updateColorButtonVisual(btnNormal, state3.avoidNormal);
-      updateColorButtonVisual(btnGold, state3.visualMutations.has("Gold"));
-      updateColorButtonVisual(btnRainbow, state3.visualMutations.has("Rainbow"));
+      updateColorButtonVisual(btnNormal, state4.avoidNormal);
+      updateColorButtonVisual(btnGold, state4.visualMutations.has("Gold"));
+      updateColorButtonVisual(btnRainbow, state4.visualMutations.has("Rainbow"));
     };
     btnNormal.addEventListener("click", () => {
-      state3.avoidNormal = !state3.avoidNormal;
+      state4.avoidNormal = !state4.avoidNormal;
       updateColorButtons();
       opts.onChange?.();
     });
     btnGold.addEventListener("click", () => {
-      if (state3.visualMutations.has("Gold")) state3.visualMutations.delete("Gold");
-      else state3.visualMutations.add("Gold");
+      if (state4.visualMutations.has("Gold")) state4.visualMutations.delete("Gold");
+      else state4.visualMutations.add("Gold");
       updateColorButtons();
       opts.onChange?.();
     });
     btnRainbow.addEventListener("click", () => {
-      if (state3.visualMutations.has("Rainbow")) state3.visualMutations.delete("Rainbow");
-      else state3.visualMutations.add("Rainbow");
+      if (state4.visualMutations.has("Rainbow")) state4.visualMutations.delete("Rainbow");
+      else state4.visualMutations.add("Rainbow");
       updateColorButtons();
       opts.onChange?.();
     });
@@ -42062,26 +42145,26 @@ next: ${next}`;
       }
       opts.onChange?.();
     };
-    const updateMainWeatherSelection = applyWeatherSelection(state3.weatherSelected);
+    const updateMainWeatherSelection = applyWeatherSelection(state4.weatherSelected);
     const weatherToggles = WEATHER_MUTATIONS.map((info) => {
-      const toggle2 = createWeatherMutationToggle({
+      const toggle3 = createWeatherMutationToggle({
         key: info.key,
         label: info.label,
         kind: "main",
         iconFactory: info.iconFactory
       });
-      toggle2.input.addEventListener(
+      toggle3.input.addEventListener(
         "change",
-        () => updateMainWeatherSelection(info.key, toggle2.input.checked)
+        () => updateMainWeatherSelection(info.key, toggle3.input.checked)
       );
-      weatherGrid.appendChild(toggle2.wrap);
-      return toggle2;
+      weatherGrid.appendChild(toggle3.wrap);
+      return toggle3;
     });
     const updateWeatherMutationsDisabled = () => {
-      const disabled = card3.dataset.disabled === "1" || state3.weatherMode === "RECIPES";
+      const disabled = card3.dataset.disabled === "1" || state4.weatherMode === "RECIPES";
       weatherGrid.style.opacity = disabled ? "0.55" : "";
       weatherGrid.style.pointerEvents = disabled ? "none" : "";
-      weatherToggles.forEach((toggle2) => toggle2.setDisabled(disabled));
+      weatherToggles.forEach((toggle3) => toggle3.setDisabled(disabled));
     };
     const weatherModeName = `locker-weather-mode-${++weatherModeNameSeq}`;
     const weatherModeRow = centerRow();
@@ -42096,7 +42179,7 @@ next: ${next}`;
       wrap.append(input, span);
       input.addEventListener("change", () => {
         if (!input.checked) return;
-        state3.weatherMode = value;
+        state4.weatherMode = value;
         recipesWrap.style.display = value === "RECIPES" ? "" : "none";
         updateWeatherMutationsDisabled();
         opts.onChange?.();
@@ -42158,10 +42241,10 @@ next: ${next}`;
       if (editingRecipeIndex === null) return;
       const draft = new Set(editingRecipeDraft);
       normalizeRecipeSelection(draft);
-      if (editingRecipeIndex === state3.weatherRecipes.length) {
-        state3.weatherRecipes.push(draft);
-      } else if (editingRecipeIndex >= 0 && editingRecipeIndex < state3.weatherRecipes.length) {
-        state3.weatherRecipes[editingRecipeIndex] = draft;
+      if (editingRecipeIndex === state4.weatherRecipes.length) {
+        state4.weatherRecipes.push(draft);
+      } else if (editingRecipeIndex >= 0 && editingRecipeIndex < state4.weatherRecipes.length) {
+        state4.weatherRecipes[editingRecipeIndex] = draft;
       }
       editingRecipeIndex = null;
       editingRecipeDraft = /* @__PURE__ */ new Set();
@@ -42170,8 +42253,8 @@ next: ${next}`;
     };
     const deleteRecipeAt = (index) => {
       if (index < 0) return;
-      if (index < state3.weatherRecipes.length) {
-        state3.weatherRecipes.splice(index, 1);
+      if (index < state4.weatherRecipes.length) {
+        state4.weatherRecipes.splice(index, 1);
       }
       if (editingRecipeIndex !== null) {
         if (index === editingRecipeIndex) {
@@ -42269,7 +42352,7 @@ next: ${next}`;
       });
       const toggles = /* @__PURE__ */ new Map();
       WEATHER_MUTATIONS.forEach((info) => {
-        const toggle2 = createWeatherMutationToggle({
+        const toggle3 = createWeatherMutationToggle({
           key: info.key,
           label: info.label,
           iconSize: 40,
@@ -42277,40 +42360,40 @@ next: ${next}`;
           kind: "recipe",
           iconFactory: info.iconFactory
         });
-        toggles.set(info.key, toggle2);
-        toggle2.setChecked(selection.has(toggle2.key));
-        toggle2.input.addEventListener("change", () => {
-          const checked = toggle2.input.checked;
-          const group = WEATHER_RECIPE_GROUPS[toggle2.key];
+        toggles.set(info.key, toggle3);
+        toggle3.setChecked(selection.has(toggle3.key));
+        toggle3.input.addEventListener("change", () => {
+          const checked = toggle3.input.checked;
+          const group = WEATHER_RECIPE_GROUPS[toggle3.key];
           if (checked && group) {
             WEATHER_RECIPE_GROUP_MEMBERS[group].forEach((other) => {
-              if (other === toggle2.key) return;
+              if (other === toggle3.key) return;
               if (!selection.has(other)) return;
               selection.delete(other);
               toggles.get(other)?.setChecked(false);
             });
           }
           if (checked) {
-            selection.add(toggle2.key);
+            selection.add(toggle3.key);
           } else {
-            selection.delete(toggle2.key);
+            selection.delete(toggle3.key);
           }
           onSelectionChange();
         });
-        toggleGrid.appendChild(toggle2.wrap);
+        toggleGrid.appendChild(toggle3.wrap);
       });
       return toggleGrid;
     }
     function repaintRecipes() {
       recipesList.innerHTML = "";
-      const hasDraftNew = editingRecipeIndex !== null && editingRecipeIndex === state3.weatherRecipes.length;
-      const totalRows = state3.weatherRecipes.length + (hasDraftNew ? 1 : 0);
+      const hasDraftNew = editingRecipeIndex !== null && editingRecipeIndex === state4.weatherRecipes.length;
+      const totalRows = state4.weatherRecipes.length + (hasDraftNew ? 1 : 0);
       if (totalRows === 0) {
         recipesList.appendChild(emptyRecipes);
         applyDisabled();
         return;
       }
-      state3.weatherRecipes.forEach((set2, index) => {
+      state4.weatherRecipes.forEach((set2, index) => {
         normalizeRecipeSelection(set2);
         const isEditing = editingRecipeIndex === index;
         const selection = isEditing ? editingRecipeDraft : set2;
@@ -42354,7 +42437,7 @@ next: ${next}`;
           styleBtnFullWidth(btnValidate, "\u2714\uFE0F");
           btnValidate.onclick = commitEditingRecipe;
           actions.append(btnCancel, btnValidate);
-          if (editingRecipeIndex !== null && editingRecipeIndex < state3.weatherRecipes.length) {
+          if (editingRecipeIndex !== null && editingRecipeIndex < state4.weatherRecipes.length) {
             const btnDelete = document.createElement("button");
             styleBtnFullWidth(btnDelete, "\u{1F5D1}\uFE0F");
             btnDelete.title = "Delete";
@@ -42423,7 +42506,7 @@ next: ${next}`;
       applyDisabled();
     }
     btnAddRecipe.onclick = () => {
-      startEditingRecipe(state3.weatherRecipes.length);
+      startEditingRecipe(state4.weatherRecipes.length);
     };
     recipesWrap.append(recipesHeader, recipesList);
     card3.append(
@@ -42436,19 +42519,19 @@ next: ${next}`;
     );
     const refresh = () => {
       updateLockModeUI();
-      scaleSlider.setValues(state3.minScalePct, state3.maxScalePct);
-      minSlider.value = String(state3.minScalePct);
-      maxSlider.value = String(state3.maxScalePct);
+      scaleSlider.setValues(state4.minScalePct, state4.maxScalePct);
+      minSlider.value = String(state4.minScalePct);
+      maxSlider.value = String(state4.maxScalePct);
       applyScaleRange(false);
       applyScaleMinimum(false);
       applyScaleMaximum(false);
-      applyScaleMode(state3.scaleLockMode, false);
+      applyScaleMode(state4.scaleLockMode, false);
       updateColorButtons();
-      weatherToggles.forEach((toggle2) => toggle2.setChecked(state3.weatherSelected.has(toggle2.key)));
-      radioAny.input.checked = state3.weatherMode === "ANY";
-      radioAll.input.checked = state3.weatherMode === "ALL";
-      radioRecipes.input.checked = state3.weatherMode === "RECIPES";
-      recipesWrap.style.display = state3.weatherMode === "RECIPES" ? "" : "none";
+      weatherToggles.forEach((toggle3) => toggle3.setChecked(state4.weatherSelected.has(toggle3.key)));
+      radioAny.input.checked = state4.weatherMode === "ANY";
+      radioAll.input.checked = state4.weatherMode === "ALL";
+      radioRecipes.input.checked = state4.weatherMode === "RECIPES";
+      recipesWrap.style.display = state4.weatherMode === "RECIPES" ? "" : "none";
       updateWeatherMutationsDisabled();
       repaintRecipes();
     };
@@ -42460,7 +42543,7 @@ next: ${next}`;
     return { root: card3, refresh, setDisabled };
   }
   function createRestrictionsTabRenderer(ui) {
-    let state3 = lockerRestrictionsService.getState();
+    let state4 = lockerRestrictionsService.getState();
     let bonusFromMultiplier = null;
     let bonusFromPlayers = friendBonusPercentFromPlayers(1);
     let eggOptions = [];
@@ -42496,7 +42579,7 @@ next: ${next}`;
       textShadow: "0 1px 1px rgba(0, 0, 0, 0.5)"
     });
     sliderHeader.append(sliderTitle, sliderValue);
-    const initialRequiredPct = friendBonusPercentFromPlayers(state3.minRequiredPlayers) ?? 0;
+    const initialRequiredPct = friendBonusPercentFromPlayers(state4.minRequiredPlayers) ?? 0;
     const slider = ui.slider(0, FRIEND_BONUS_MAX, FRIEND_BONUS_STEP, initialRequiredPct);
     slider.style.width = "100%";
     sliderWrap.append(sliderHeader, slider);
@@ -42537,10 +42620,10 @@ next: ${next}`;
     decorSubtitle.style.fontSize = "12.5px";
     decorSubtitle.style.opacity = "0.85";
     decorText.append(decorSubtitle);
-    const decorToggle = ui.switch(state3.decorPickupLocked);
+    const decorToggle = ui.switch(state4.decorPickupLocked);
     decorToggle.addEventListener("change", () => {
       const locked = !!decorToggle.checked;
-      state3.decorPickupLocked = locked;
+      state4.decorPickupLocked = locked;
       lockerRestrictionsService.setDecorPickupLocked(locked);
     });
     decorRow.append(decorText, decorToggle);
@@ -42767,10 +42850,10 @@ next: ${next}`;
       fontSize: "12px"
     });
     emptyEggPlaceholder.textContent = "No eggs available.";
-    const updateEggToggleAppearance = (toggle2, locked) => {
-      toggle2.textContent = locked ? LOCKED_ICON : UNLOCKED_ICON;
-      toggle2.style.background = locked ? "rgba(239,68,68,0.15)" : "rgba(16,185,129,0.15)";
-      toggle2.style.color = locked ? "#fca5a5" : "#9ef7c3";
+    const updateEggToggleAppearance = (toggle3, locked) => {
+      toggle3.textContent = locked ? LOCKED_ICON : UNLOCKED_ICON;
+      toggle3.style.background = locked ? "rgba(239,68,68,0.15)" : "rgba(16,185,129,0.15)";
+      toggle3.style.color = locked ? "#fca5a5" : "#9ef7c3";
     };
     let renderEggList;
     const createEggRow = (opt) => {
@@ -42784,16 +42867,16 @@ next: ${next}`;
         borderRadius: "10px",
         background: "rgba(255,255,255,0.02)"
       });
-      const toggle2 = document.createElement("button");
-      toggle2.type = "button";
-      toggle2.style.border = "1px solid rgba(255,255,255,0.10)";
-      toggle2.style.borderRadius = "10px";
-      toggle2.style.padding = "6px 10px";
-      toggle2.style.fontSize = "14px";
-      toggle2.style.fontWeight = "700";
-      toggle2.addEventListener("click", () => {
-        const next = !Boolean(state3.eggLocks?.[opt.id]);
-        state3.eggLocks = { ...state3.eggLocks || {}, [opt.id]: next };
+      const toggle3 = document.createElement("button");
+      toggle3.type = "button";
+      toggle3.style.border = "1px solid rgba(255,255,255,0.10)";
+      toggle3.style.borderRadius = "10px";
+      toggle3.style.padding = "6px 10px";
+      toggle3.style.fontSize = "14px";
+      toggle3.style.fontWeight = "700";
+      toggle3.addEventListener("click", () => {
+        const next = !Boolean(state4.eggLocks?.[opt.id]);
+        state4.eggLocks = { ...state4.eggLocks || {}, [opt.id]: next };
         lockerRestrictionsService.setEggLock(opt.id, next);
         renderEggList();
       });
@@ -42801,8 +42884,8 @@ next: ${next}`;
       name.style.fontWeight = "600";
       name.style.color = "#e7eef7";
       const icon = createEggIcon(opt.id, opt.name, 32);
-      row.append(toggle2, icon, name);
-      return { row, toggle: toggle2, name };
+      row.append(toggle3, icon, name);
+      return { row, toggle: toggle3, name };
     };
     renderEggList = () => {
       eggList.innerHTML = "";
@@ -42821,7 +42904,7 @@ next: ${next}`;
           eggRowCache.set(id, entry);
         }
         entry.name.textContent = opt.name || id;
-        const locked = !!state3.eggLocks?.[id];
+        const locked = !!state4.eggLocks?.[id];
         updateEggToggleAppearance(entry.toggle, locked);
         fragment.appendChild(entry.row);
       });
@@ -42876,9 +42959,9 @@ next: ${next}`;
       statusBadge.style.color = palette.color;
     };
     const updateStatus = () => {
-      const requiredPct = clampPercent4(friendBonusPercentFromPlayers(state3.minRequiredPlayers) ?? 0);
+      const requiredPct = clampPercent4(friendBonusPercentFromPlayers(state4.minRequiredPlayers) ?? 0);
       const currentPct = resolveCurrentBonus();
-      const requiredPlayers = state3.minRequiredPlayers;
+      const requiredPlayers = state4.minRequiredPlayers;
       const currentPlayers = currentPct != null ? percentToRequiredFriendCount(currentPct) : null;
       const allowed = requiredPct <= 0 || currentPct != null && currentPct + 1e-4 >= requiredPct;
       if (requiredPct <= 0) {
@@ -42895,10 +42978,10 @@ next: ${next}`;
       const raw = Number(slider.value);
       const pct = clampPercent4(Number.isFinite(raw) ? raw : 0);
       updateSliderValue(pct);
-      state3.minRequiredPlayers = percentToRequiredFriendCount(pct);
+      state4.minRequiredPlayers = percentToRequiredFriendCount(pct);
       updateStatus();
       if (commit) {
-        lockerRestrictionsService.setMinRequiredPlayers(state3.minRequiredPlayers);
+        lockerRestrictionsService.setMinRequiredPlayers(state4.minRequiredPlayers);
       }
     };
     slider.addEventListener("input", () => handleSliderInput(false));
@@ -42924,9 +43007,9 @@ next: ${next}`;
       lockerRestrictionsService.setSellAllPetsRules({ maxStrThreshold: next });
     });
     const syncFromService = (next) => {
-      state3 = { ...next };
-      setCheck(decorToggle, state3.decorPickupLocked);
-      updateSliderValue(friendBonusPercentFromPlayers(state3.minRequiredPlayers) ?? 0);
+      state4 = { ...next };
+      setCheck(decorToggle, state4.decorPickupLocked);
+      updateSliderValue(friendBonusPercentFromPlayers(state4.minRequiredPlayers) ?? 0);
       updateStatus();
       renderEggList();
       refreshSellAllPetsControls();
@@ -43092,8 +43175,8 @@ next: ${next}`;
     });
     const toggleLabel = ui.label("Enabled");
     toggleLabel.style.margin = "0";
-    const toggle2 = ui.switch(store.global.enabled);
-    toggleWrap.append(toggleLabel, toggle2);
+    const toggle3 = ui.switch(store.global.enabled);
+    toggleWrap.append(toggleLabel, toggle3);
     header.append(textWrap, toggleWrap);
     const form = createLockerSettingsCard(ui, store.global.settings, {
       onChange: () => store.notifyGlobalSettingsChanged()
@@ -43101,12 +43184,12 @@ next: ${next}`;
     layout.append(header, form.root);
     viewRoot.append(layout);
     const update = () => {
-      setCheck(toggle2, store.global.enabled);
+      setCheck(toggle3, store.global.enabled);
       form.setDisabled(!store.global.enabled);
       form.refresh();
     };
-    toggle2.addEventListener("change", () => {
-      store.setGlobalEnabled(!!toggle2.checked);
+    toggle3.addEventListener("change", () => {
+      store.setGlobalEnabled(!!toggle3.checked);
     });
     const unsubscribe2 = store.subscribe(() => {
       update();
@@ -43307,8 +43390,8 @@ next: ${next}`;
       toggleWrap.style.flexWrap = "nowrap";
       const toggleLabel = ui.label("Override");
       toggleLabel.style.margin = "0";
-      const toggle2 = ui.switch(override.enabled);
-      toggleWrap.append(toggleLabel, toggle2);
+      const toggle3 = ui.switch(override.enabled);
+      toggleWrap.append(toggleLabel, toggle3);
       header.append(titleWrap, toggleWrap);
       const status = document.createElement("div");
       status.style.fontSize = "12px";
@@ -43330,10 +43413,10 @@ next: ${next}`;
         form.refresh();
         updateStatus();
       };
-      toggle2.addEventListener("change", () => {
+      toggle3.addEventListener("change", () => {
         if (!selectedKey) return;
         const wasEnabled = override.enabled;
-        const nextEnabled = !!toggle2.checked;
+        const nextEnabled = !!toggle3.checked;
         if (nextEnabled && !wasEnabled && !override.hasPersistedSettings) {
           copySettings(override.settings, store.global.settings);
         }
@@ -44045,14 +44128,14 @@ next: ${next}`;
   function createSegmentedControl(labels, selectedLabel, interactive, onSelect, ariaLabel) {
     const coerced = coerceLabel(selectedLabel, labels);
     const items = labels.map((label2) => ({ value: label2, label: label2, disabled: !interactive }));
-    const segmented = segmentedUi.segmented(
+    const segmented2 = segmentedUi.segmented(
       items,
       coerced,
       interactive && onSelect ? (value) => onSelect(value) : void 0,
       { ariaLabel, fullWidth: true }
     );
-    segmented.classList.add("mg-crop-simulation__segmented-control");
-    const buttons = segmented.querySelectorAll(".qmm-seg__btn");
+    segmented2.classList.add("mg-crop-simulation__segmented-control");
+    const buttons = segmented2.querySelectorAll(".qmm-seg__btn");
     buttons.forEach((button2) => {
       const label2 = button2.dataset.value || button2.textContent?.trim() || "";
       const spriteName = MUTATION_UI_SPRITE_NAMES[label2];
@@ -44076,10 +44159,10 @@ next: ${next}`;
         labelSpan.appendChild(img);
       });
     });
-    return segmented;
+    return segmented2;
   }
-  function applySegmentedButtonMetadata(segmented, metadata) {
-    const buttons = segmented.querySelectorAll(".qmm-seg__btn");
+  function applySegmentedButtonMetadata(segmented2, metadata) {
+    const buttons = segmented2.querySelectorAll(".qmm-seg__btn");
     buttons.forEach((button2) => {
       const label2 = button2.textContent?.trim();
       if (!label2) return;
@@ -44091,11 +44174,11 @@ next: ${next}`;
       });
     });
   }
-  function getMutationsForState(state3) {
+  function getMutationsForState(state4) {
     const mutations = [];
-    if (state3.color !== "None") mutations.push(state3.color);
-    if (state3.weatherCondition !== "None") mutations.push(state3.weatherCondition);
-    if (state3.weatherLighting !== "None") mutations.push(state3.weatherLighting);
+    if (state4.color !== "None") mutations.push(state4.color);
+    if (state4.weatherCondition !== "None") mutations.push(state4.weatherCondition);
+    if (state4.weatherLighting !== "None") mutations.push(state4.weatherLighting);
     return mutations.map((label2) => normalizeMutationLabelForSprite(label2));
   }
   function normalizeMutationLabelForSprite(label2) {
@@ -44104,9 +44187,9 @@ next: ${next}`;
     const overridden = MUTATION_SPRITE_OVERRIDES[normalized.toLowerCase()];
     return overridden ?? normalized;
   }
-  function computePrice(speciesKey, state3, size) {
-    const mutations = getMutationsForState(state3);
-    const friendPlayers = clampFriendPlayers(state3.friendPlayers);
+  function computePrice(speciesKey, state4, size) {
+    const mutations = getMutationsForState(state4);
+    const friendPlayers = clampFriendPlayers(state4.friendPlayers);
     const pricingOptions = { ...DefaultPricing, friendPlayers };
     const value = estimateProduceValue(speciesKey, size, mutations, pricingOptions);
     return Number.isFinite(value) && value > 0 ? value : null;
@@ -44292,9 +44375,9 @@ next: ${next}`;
       const getStateForKey = (key2) => {
         const existing = states.get(key2);
         if (existing) return existing;
-        const state3 = { ...DEFAULT_STATE2 };
-        states.set(key2, state3);
-        return state3;
+        const state4 = { ...DEFAULT_STATE2 };
+        states.set(key2, state4);
+        return state4;
       };
       let selectedKey = null;
       let currentBaseWeight = null;
@@ -44307,11 +44390,11 @@ next: ${next}`;
           dot.style.background = isSelected ? "rgba(94,234,212,0.85)" : "rgba(255,255,255,0.20)";
         });
       };
-      function renderColorSegment(state3, interactive) {
-        const active = state3?.color ?? COLOR_MUTATION_LABELS[0];
-        const segmented = createSegmentedControl(
+      function renderColorSegment(state4, interactive) {
+        const active2 = state4?.color ?? COLOR_MUTATION_LABELS[0];
+        const segmented2 = createSegmentedControl(
           COLOR_MUTATION_LABELS,
-          active,
+          active2,
           interactive,
           interactive ? (label2) => {
             if (!selectedKey) return;
@@ -44325,15 +44408,15 @@ next: ${next}`;
           } : void 0,
           "Mutations"
         );
-        applySegmentedButtonMetadata(segmented, COLOR_SEGMENT_METADATA);
+        applySegmentedButtonMetadata(segmented2, COLOR_SEGMENT_METADATA);
         refs.colorMutations.innerHTML = "";
-        refs.colorMutations.appendChild(segmented);
+        refs.colorMutations.appendChild(segmented2);
       }
-      function renderWeatherConditions(state3, interactive) {
-        const active = state3?.weatherCondition ?? WEATHER_CONDITION_LABELS[0];
-        const segmented = createSegmentedControl(
+      function renderWeatherConditions(state4, interactive) {
+        const active2 = state4?.weatherCondition ?? WEATHER_CONDITION_LABELS[0];
+        const segmented2 = createSegmentedControl(
           WEATHER_CONDITION_LABELS,
-          active,
+          active2,
           interactive,
           interactive ? (label2) => {
             if (!selectedKey) return;
@@ -44345,15 +44428,15 @@ next: ${next}`;
           } : void 0,
           "Weather condition"
         );
-        applySegmentedButtonMetadata(segmented, WEATHER_CONDITION_SEGMENT_METADATA);
+        applySegmentedButtonMetadata(segmented2, WEATHER_CONDITION_SEGMENT_METADATA);
         refs.weatherConditions.innerHTML = "";
-        refs.weatherConditions.appendChild(segmented);
+        refs.weatherConditions.appendChild(segmented2);
       }
-      function renderWeatherLighting(state3, interactive) {
-        const active = state3?.weatherLighting ?? WEATHER_LIGHTING_LABELS[0];
-        const segmented = createSegmentedControl(
+      function renderWeatherLighting(state4, interactive) {
+        const active2 = state4?.weatherLighting ?? WEATHER_LIGHTING_LABELS[0];
+        const segmented2 = createSegmentedControl(
           WEATHER_LIGHTING_LABELS,
-          active,
+          active2,
           interactive,
           interactive ? (label2) => {
             if (!selectedKey) return;
@@ -44365,15 +44448,15 @@ next: ${next}`;
           } : void 0,
           "Weather lighting"
         );
-        applySegmentedButtonMetadata(segmented, WEATHER_LIGHTING_SEGMENT_METADATA);
+        applySegmentedButtonMetadata(segmented2, WEATHER_LIGHTING_SEGMENT_METADATA);
         refs.weatherLighting.innerHTML = "";
-        refs.weatherLighting.appendChild(segmented);
+        refs.weatherLighting.appendChild(segmented2);
       }
-      function renderFriendBonus(state3, interactive) {
-        const active = friendPlayersToLabel(state3?.friendPlayers ?? FRIEND_BONUS_MIN_PLAYERS);
-        const segmented = createSegmentedControl(
+      function renderFriendBonus(state4, interactive) {
+        const active2 = friendPlayersToLabel(state4?.friendPlayers ?? FRIEND_BONUS_MIN_PLAYERS);
+        const segmented2 = createSegmentedControl(
           FRIEND_BONUS_LABELS,
-          active,
+          active2,
           interactive,
           interactive ? (label2) => {
             if (!selectedKey) return;
@@ -44385,7 +44468,7 @@ next: ${next}`;
           "Friend bonus"
         );
         refs.friendBonus.innerHTML = "";
-        refs.friendBonus.appendChild(segmented);
+        refs.friendBonus.appendChild(segmented2);
       }
       function updateOutputs() {
         const key2 = selectedKey;
@@ -44393,8 +44476,8 @@ next: ${next}`;
           refs.priceValue.textContent = "\u2014";
           return;
         }
-        const state3 = getStateForKey(key2);
-        refs.priceValue.textContent = formatCoinValue(computePrice(key2, state3, state3.sizePercent));
+        const state4 = getStateForKey(key2);
+        refs.priceValue.textContent = formatCoinValue(computePrice(key2, state4, state4.sizePercent));
       }
       function updateSprite() {
         const key2 = selectedKey;
@@ -44402,10 +44485,10 @@ next: ${next}`;
           resetCropSimulationSprite(refs.sprite);
           return;
         }
-        const state3 = getStateForKey(key2);
+        const state4 = getStateForKey(key2);
         const option = optionByKey.get(key2);
         const fallbackEmoji = getLockerSeedEmojiForKey(key2) || (option?.seedName ? getLockerSeedEmojiForSeedName(option.seedName) : void 0) || "\u{1F331}";
-        const mutations = getMutationsForState(state3);
+        const mutations = getMutationsForState(state4);
         const candidates = buildSpriteCandidates2(key2, option);
         const categories = getSpriteCategoriesForKey(key2, option?.seedName, option?.cropName);
         applyCropSimulationSprite(refs.sprite, key2, {
@@ -44430,22 +44513,22 @@ next: ${next}`;
           return;
         }
         currentBaseWeight = getBaseWeightForSpecies(key2);
-        const state3 = getStateForKey(key2);
+        const state4 = getStateForKey(key2);
         refs.sizeSlider.disabled = false;
-        applySizePercent(refs, state3.sizePercent, key2, currentBaseWeight);
-        renderColorSegment(state3, true);
-        renderWeatherConditions(state3, true);
-        renderWeatherLighting(state3, true);
-        renderFriendBonus(state3, true);
+        applySizePercent(refs, state4.sizePercent, key2, currentBaseWeight);
+        renderColorSegment(state4, true);
+        renderWeatherConditions(state4, true);
+        renderWeatherLighting(state4, true);
+        renderFriendBonus(state4, true);
         updateSprite();
         updateOutputs();
       }
       slider.addEventListener("input", () => {
         if (!selectedKey) return;
-        const state3 = getStateForKey(selectedKey);
+        const state4 = getStateForKey(selectedKey);
         const raw = Number(slider.value);
         const value = clamp2(Math.round(raw), SIZE_MIN, SIZE_MAX);
-        state3.sizePercent = value;
+        state4.sizePercent = value;
         applySizePercent(refs, value, selectedKey, currentBaseWeight);
         updateOutputs();
       });
@@ -46825,12 +46908,12 @@ next: ${next}`;
       });
       return button2;
     };
-    const counter = document.createElement("span");
-    counter.textContent = `${nav.index + 1}/${nav.total}`;
-    counter.style.fontSize = "9px";
-    counter.style.color = DIM;
-    counter.style.fontVariantNumeric = "tabular-nums";
-    wrap.append(mkArrow("\u2039", -1, "Previous effect"), counter, mkArrow("\u203A", 1, "Next effect"));
+    const counter2 = document.createElement("span");
+    counter2.textContent = `${nav.index + 1}/${nav.total}`;
+    counter2.style.fontSize = "9px";
+    counter2.style.color = DIM;
+    counter2.style.fontVariantNumeric = "tabular-nums";
+    wrap.append(mkArrow("\u2039", -1, "Previous effect"), counter2, mkArrow("\u203A", 1, "Next effect"));
     return wrap;
   }
   function renderGroup(group, nav) {
@@ -46999,20 +47082,20 @@ Not a sum \u2014 it is 1 minus the product of every pet missing.${perHour}
 Hunger Boost removes ${autonomy.drainReductionPercent.toFixed(0)}% of the drain.` : "";
     const restoreLine = autonomy.restoreActivationsPerMinute > 0 ? `
 Hunger Restore fires ~${autonomy.restoreActivationsPerMinute.toFixed(2)}\xD7/min on average.` : "";
-    const weatherLine = autonomy.weatherGatedHungerAbilities.length ? `
+    const weatherLine2 = autonomy.weatherGatedHungerAbilities.length ? `
 Not counted (needs a specific weather): ${autonomy.weatherGatedHungerAbilities.join(", ")}.` : "";
     if (autonomy.status === "sustained") {
       text = "indefinitely";
       color = ACCENT;
       title = `Expected hunger restore covers the drain for every pet, so the team
-feeds itself.${boostLine}${restoreLine}${weatherLine}
+feeds itself.${boostLine}${restoreLine}${weatherLine2}
 
 This is an average \u2014 a bad run of Restore luck can still empty a pet.`;
     } else if (autonomy.status === "runs-out" && autonomy.minutesFromFull !== null) {
       text = `~${formatDuration(autonomy.minutesFromFull)}`;
       color = autonomy.minutesFromFull < 60 ? "#fbbf24" : ACCENT;
       title = `Starting from full, ${autonomy.limitingPetName ?? "the first pet"} empties first.
-Rates the team itself \u2014 current hunger is not taken into account.${boostLine}${restoreLine}${weatherLine}
+Rates the team itself \u2014 current hunger is not taken into account.${boostLine}${restoreLine}${weatherLine2}
 
 Restore figures are averages; unlucky streaks do worse.`;
     } else {
@@ -48707,15 +48790,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       } catch {
       }
     })();
-    installPetTeamHotkeysOnce(async (teamId) => {
-      const t = teams.find((tt) => tt.id === teamId) || null;
+    installPetTeamHotkeysOnce(async (teamId2) => {
+      const t = teams.find((tt) => tt.id === teamId2) || null;
       try {
         isApplyingTeam = true;
         if (t) {
           activeTeamId = t.id;
           await refreshTeamList(true);
         }
-        await PetsService.useTeam(teamId);
+        await PetsService.useTeam(teamId2);
         if (t) await waitForActiveTeam(t);
         await hydrateEditor(getSelectedTeam());
         await refreshTeamList();
@@ -49011,11 +49094,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       return config.isPaused() ? `Paused \xB7 ${base}` : base;
     };
     function updateControls() {
-      const running = config.isRunning();
+      const running2 = config.isRunning();
       const paused = config.isPaused();
-      setButtonEnabled(btnPause, running && !paused);
-      setButtonEnabled(btnPlay, running && paused);
-      setButtonEnabled(btnStop, running);
+      setButtonEnabled(btnPause, running2 && !paused);
+      setButtonEnabled(btnPlay, running2 && paused);
+      setButtonEnabled(btnStop, running2);
       status.textContent = describeStatus();
     }
     let estimatedFinish = null;
@@ -49035,15 +49118,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     function updateSummary2() {
       const { groupCount, totalQty } = readSelection();
       const estimateMs = totalQty * (config.estimateDelayMs + EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS);
-      const running = config.isRunning();
-      const finishTimestamp = running ? estimatedFinish : estimateMs > 0 ? Date.now() + estimateMs : null;
+      const running2 = config.isRunning();
+      const finishTimestamp = running2 ? estimatedFinish : estimateMs > 0 ? Date.now() + estimateMs : null;
       const estimateText = buildEstimateSentence(totalQty, config.estimateDelayMs, finishTimestamp);
       summary.textContent = `${groupCount} ${config.groupNoun} \xB7 ${formatNum2(totalQty)} ${config.unitNoun}${estimateText}`;
       const hasSelection = groupCount > 0 && totalQty > 0;
       setButtonEnabled(btnDelete, hasSelection);
       setButtonEnabled(btnClear, hasSelection);
       clearSummaryTimer();
-      if (!running && totalQty > 0) {
+      if (!running2 && totalQty > 0) {
         summaryTimer = window.setTimeout(() => updateSummary2(), 1e3);
       }
     }
@@ -49056,9 +49139,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       const estimateMs = totalQty * (config.estimateDelayMs + EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS);
       estimatedFinish = estimateMs > 0 ? Date.now() + estimateMs : null;
       clearSummaryTimer();
-      const pending2 = config.runDelete(config.runDelayMs);
+      const pending3 = config.runDelete(config.runDelayMs);
       updateSummary2();
-      if (pending2) await pending2;
+      if (pending3) await pending3;
       estimatedFinish = null;
       updateSummary2();
     }
@@ -49076,14 +49159,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       updateControls();
     };
     const onPauseState = () => updateControls();
-    const listeners7 = [
+    const listeners8 = [
       [`${config.eventPrefix}:progress`, onProgress],
       [`${config.eventPrefix}:done`, onComplete],
       [`${config.eventPrefix}:error`, onComplete],
       [`${config.eventPrefix}:paused`, onPauseState],
       [`${config.eventPrefix}:resumed`, onPauseState]
     ];
-    for (const [type, handler] of listeners7) window.addEventListener(type, handler);
+    for (const [type, handler] of listeners8) window.addEventListener(type, handler);
     updateControls();
     updateSummary2();
     section2.body.append(summaryRow.row, actionsRow.row, statusRow.row);
@@ -49091,7 +49174,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       root: section2.root,
       cleanup: () => {
         clearSummaryTimer();
-        for (const [type, handler] of listeners7) window.removeEventListener(type, handler);
+        for (const [type, handler] of listeners8) window.removeEventListener(type, handler);
       }
     };
   }
@@ -49786,8 +49869,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       opacity: "0.75"
     });
     fileCard.append(fileCardTitle, fileStatus);
-    const setFileCardActive = (active) => {
-      if (active) {
+    const setFileCardActive = (active2) => {
+      if (active2) {
         fileCard.style.borderColor = "#6fc3ff";
         fileCard.style.boxShadow = "0 0 0 3px #6fc3ff22";
         fileCard.style.background = "linear-gradient(180deg, #102030, #0b1826)";
@@ -50552,7 +50635,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         pendingSlide.img.src = await resolveImageUrl(images[index]);
         await pendingSlide.img.decode().catch(() => void 0);
         const offset = direction === "next" ? SWAP_OFFSET_PX : -SWAP_OFFSET_PX;
-        const running = [];
+        const running2 = [];
         if (!prefersReduced) {
           const outgoing = activeSlide.root.animate(
             [
@@ -50568,14 +50651,14 @@ Restore figures are averages; unlucky streaks do worse.`;
             ],
             { duration: SWAP_DURATION_MS, easing: SWAP_EASING, fill: "forwards" }
           );
-          running.push(outgoing, incoming);
+          running2.push(outgoing, incoming);
           await Promise.all([outgoing.finished, incoming.finished]);
         }
         activeSlide.root.style.transform = "";
         activeSlide.root.style.opacity = "0";
         pendingSlide.root.style.transform = "";
         pendingSlide.root.style.opacity = "1";
-        running.forEach((animation) => animation.cancel());
+        running2.forEach((animation) => animation.cancel());
         const previousActive = activeSlide;
         activeSlide = pendingSlide;
         pendingSlide = previousActive;
@@ -50634,10 +50717,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     const chip2 = document.createElement("div");
     chip2.className = creator.avatar ? "mgt-creator" : "mgt-creator mgt-creator--plain";
     if (creator.avatar) {
-      const avatar2 = document.createElement("img");
-      avatar2.alt = creator.name;
-      loadImageInto(avatar2, creator.avatar);
-      chip2.appendChild(avatar2);
+      const avatar3 = document.createElement("img");
+      avatar3.alt = creator.name;
+      loadImageInto(avatar3, creator.avatar);
+      chip2.appendChild(avatar3);
     }
     const name = document.createElement("span");
     name.textContent = creator.name;
@@ -51051,20 +51134,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     view.appendChild(wrapper);
     const showLoading = () => {
       viewContainer.innerHTML = "";
-      const state3 = document.createElement("div");
-      state3.className = "mgt-state";
+      const state4 = document.createElement("div");
+      state4.className = "mgt-state";
       const spinner = document.createElement("div");
       spinner.className = "mgt-spinner";
       const text = document.createElement("p");
       text.className = "mgt-state__text";
       text.textContent = "Fetching the latest tools...";
-      state3.append(spinner, text);
-      viewContainer.appendChild(state3);
+      state4.append(spinner, text);
+      viewContainer.appendChild(state4);
     };
     const showError = (message) => {
       viewContainer.innerHTML = "";
-      const state3 = document.createElement("div");
-      state3.className = "mgt-state";
+      const state4 = document.createElement("div");
+      state4.className = "mgt-state";
       const title = document.createElement("span");
       title.className = "mgt-state__title";
       title.textContent = "Couldn't load the tools";
@@ -51076,8 +51159,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       retry.className = "mgt-action is-primary";
       retry.textContent = "Retry";
       retry.onclick = () => void init2();
-      state3.append(title, text, retry);
-      viewContainer.appendChild(state3);
+      state4.append(title, text, retry);
+      viewContainer.appendChild(state4);
     };
     let tools = [];
     let listViewRoot = null;
@@ -51393,10 +51476,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     const toggleLabel = document.createElement("div");
     css3(toggleLabel, { fontSize: "13px", fontWeight: "600", color: TEXT3 });
     toggleLabel.textContent = "Editor mode";
-    const toggle2 = createToggle(EditorService.isEnabled(), (on) => {
+    const toggle3 = createToggle(EditorService.isEnabled(), (on) => {
       EditorService.setEnabled(on);
     });
-    toggleRow.append(toggleLabel, toggle2);
+    toggleRow.append(toggleLabel, toggle3);
     const desc = document.createElement("div");
     css3(desc, { fontSize: "11px", color: TEXT_DIM3, lineHeight: "1.5" });
     desc.textContent = "Sandbox garden with every plant and decor unlocked. Left click to place, right click to remove, drag to paint.";
@@ -51453,10 +51536,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     fileInput.accept = ".json,application/json,text/plain";
     fileInput.multiple = true;
     css3(fileInput, { display: "none" });
-    const setDropActive = (active) => {
+    const setDropActive = (active2) => {
       css3(dropZone, {
-        borderColor: active ? TEAL_BRD_HI : BORDER_HI,
-        background: active ? TEAL_DIM2 : "rgba(255,255,255,0.03)"
+        borderColor: active2 ? TEAL_BRD_HI : BORDER_HI,
+        background: active2 ? TEAL_DIM2 : "rgba(255,255,255,0.03)"
       });
     };
     const importFiles = async (files) => {
@@ -51594,7 +51677,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       card2([sectionLabel2("Saved gardens"), statusEl, listWrap])
     );
     const unsubChange = EditorService.onChange((enabled2) => {
-      toggle2.querySelector("input").checked = enabled2;
+      toggle3.querySelector("input").checked = enabled2;
       renderSavedList();
     });
     const unsubSaved = EditorService.onSavedGardensChange(renderSavedList);
@@ -51809,11 +51892,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
 
   // src/services/players.ts
-  function findPlayersDeep(state3) {
-    if (!state3 || typeof state3 !== "object") return [];
+  function findPlayersDeep(state4) {
+    if (!state4 || typeof state4 !== "object") return [];
     const out = [];
     const seen = /* @__PURE__ */ new Set();
-    const stack = [state3];
+    const stack = [state4];
     while (stack.length) {
       const cur = stack.pop();
       if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
@@ -52624,8 +52707,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     return btn;
   }
-  function toggleBtn(label2, iconSvg, active, onToggle) {
-    let isActive = active;
+  function toggleBtn(label2, iconSvg, active2, onToggle) {
+    let isActive = active2;
     const btn = document.createElement("button");
     const applyState2 = () => {
       css4(btn, {
@@ -53092,13 +53175,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   var frameRectOf = (texture) => texture?.frame ?? texture?._frame ?? null;
   var sourceOf = (texture) => texture?.source ?? texture?._source ?? texture?.baseTexture ?? null;
   function collectGameMatches() {
-    const state3 = getSpriteState();
-    const roots = [state3.app?.stage, state3.renderer?.lastObjectRendered, state3.renderer?.stage];
+    const state4 = getSpriteState();
+    const roots = [state4.app?.stage, state4.renderer?.lastObjectRendered, state4.renderer?.stage];
     const byLabel = /* @__PURE__ */ new Map();
     const byRect = /* @__PURE__ */ new Map();
     const seenNodes = /* @__PURE__ */ new Set();
     let visited = 0;
-    const catalogTextures = new Set(state3.tex.values());
+    const catalogTextures = new Set(state4.tex.values());
     const add = (bucket, key2, texture, node) => {
       let match = bucket.get(key2);
       if (!match) {
@@ -53231,14 +53314,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   function applySkinTexture(target, canvas, getIndex = collectGameMatches) {
     const frameKey = target.frameKey;
     revertSkin(frameKey);
-    const state3 = getSpriteState();
-    const Texture = state3.ctors?.Texture;
+    const state4 = getSpriteState();
+    const Texture = state4.ctors?.Texture;
     if (!Texture?.from) return false;
     const stage = getIndex();
     const labelMatch = stage.byLabel.get(frameKey);
     const { x, y, w, h } = target.occupiedRect;
     const rectMatch = stage.byRect.get(rectKey(x, y, w, h));
-    const atlasSource = sourceOf(state3.tex.get(frameKey));
+    const atlasSource = sourceOf(state4.tex.get(frameKey));
     const textures = [];
     const nodes = [];
     const cached = lookupCachedTexture(frameKey);
@@ -53338,14 +53421,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   function renderFrameToCanvas(frameKey) {
     const cached = canvasCache.get(frameKey);
     if (cached) return cached;
-    const state3 = getSpriteState();
-    const texture = state3.tex.get(frameKey);
-    const ctors = state3.ctors;
-    if (!texture || !ctors?.Sprite || !state3.renderer?.extract) return null;
+    const state4 = getSpriteState();
+    const texture = state4.tex.get(frameKey);
+    const ctors = state4.ctors;
+    if (!texture || !ctors?.Sprite || !state4.renderer?.extract) return null;
     let sprite = null;
     try {
       sprite = new ctors.Sprite(texture);
-      const canvas = state3.renderer.extract.canvas(sprite, { resolution: 1 });
+      const canvas = state4.renderer.extract.canvas(sprite, { resolution: 1 });
       if (!canvas) return null;
       if (canvasCache.size >= CACHE_MAX) {
         canvasCache.delete(canvasCache.keys().next().value);
@@ -53394,14 +53477,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/skins/gameCaches.ts
   var hasRebake = (value) => !!value && typeof value.rebakeAll === "function";
   function holders() {
-    const state3 = getSpriteState();
+    const state4 = getSpriteState();
     const root = globalThis.unsafeWindow || globalThis;
     return [
       getPixiApp(),
-      state3.app,
-      state3.app?.app,
-      state3.renderer,
-      state3.renderer?.app,
+      state4.app,
+      state4.app?.app,
+      state4.renderer,
+      state4.renderer?.app,
       root.__PIXI_APP__,
       root.app
     ].filter(Boolean);
@@ -53452,9 +53535,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   var sourceOf2 = (texture) => texture?.source ?? texture?._source ?? texture?.baseTexture ?? null;
   var rectKey2 = (x, y, w, h) => `${x}|${y}|${w}|${h}`;
   function inspectFrame(frameKey, occupiedRect) {
-    const state3 = getSpriteState();
+    const state4 = getSpriteState();
     const stage = collectGameMatches();
-    const catalogTexture = state3.tex.get(frameKey);
+    const catalogTexture = state4.tex.get(frameKey);
     const atlasSource = sourceOf2(catalogTexture);
     const describe = (match) => (match?.nodes ?? []).map((node) => ({
       ctor: node?.constructor?.name,
@@ -53489,7 +53572,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function findOnStage(substring = "") {
-    const state3 = getSpriteState();
+    const state4 = getSpriteState();
     const stage = collectGameMatches();
     const needle = substring.toLowerCase();
     const labels = [...stage.byLabel.keys()].filter((label2) => label2.toLowerCase().includes(needle)).sort();
@@ -53514,7 +53597,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       unlabelledRects: unlabelled.slice(0, 40),
       unlabelledRectCount: unlabelled.length,
       catalogRect: (() => {
-        const rect = frameRectOf2(state3.tex.get(substring));
+        const rect = frameRectOf2(state4.tex.get(substring));
         return rect ? rectKey2(rect.x, rect.y, rect.width, rect.height) : null;
       })()
     };
@@ -53752,13 +53835,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function retryPending() {
     if (!snapshot.enabled || retriesLeft <= 0) return;
-    const pending2 = [...snapshot.results.values()].filter((result) => !result.applied);
-    if (!pending2.length) return;
+    const pending3 = [...snapshot.results.values()].filter((result) => !result.applied);
+    if (!pending3.length) return;
     retriesLeft -= 1;
     const targets = await loadTargets();
     const index = sharedStageIndex();
     let changed = false;
-    for (const result of pending2) {
+    for (const result of pending3) {
       const canvas = skinCanvases.get(result.frameKey);
       const target = targets.get(result.frameKey);
       if (!canvas || !target) continue;
@@ -53978,8 +54061,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     css2(dims, { fontSize: "10px", color: TEXT_DIM, whiteSpace: "nowrap" });
     dims.textContent = `${target.logicalSize.w}\xD7${target.logicalSize.h}`;
     dims.title = "Ideal image size for this slot";
-    const spacer = document.createElement("div");
-    css2(spacer, { flex: "1 1 auto" });
+    const spacer2 = document.createElement("div");
+    css2(spacer2, { flex: "1 1 auto" });
     const actions = document.createElement("div");
     css2(actions, { display: "flex", gap: "5px", flex: "0 0 auto" });
     if (!target.skinnable) {
@@ -54010,7 +54093,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         actions.appendChild(remove);
       }
     }
-    body.append(before, arrow, after, dims, spacer, actions);
+    body.append(before, arrow, after, dims, spacer2, actions);
     row.append(head, body);
     return row;
   }
@@ -54272,10 +54355,5173 @@ Restore figures are averages; unlucky streaks do worse.`;
     renderAll();
   }
 
+  // src/services/companion/pathfinding.ts
+  var MAX_EXPLORED_NODES = 12e3;
+  var STEPS = [
+    { x: 0, y: -1 },
+    { x: 0, y: 1 },
+    { x: -1, y: 0 },
+    { x: 1, y: 0 }
+  ];
+  var keyOf = (x, y) => `${x},${y}`;
+  function findFirstStep(from, isGoal, isWalkable, maxExploredNodes = MAX_EXPLORED_NODES) {
+    if (isGoal(from.x, from.y)) return null;
+    const firstStepTo = /* @__PURE__ */ new Map();
+    const seen = /* @__PURE__ */ new Set([keyOf(from.x, from.y)]);
+    let frontier = [from];
+    let explored = 0;
+    while (frontier.length > 0 && explored < maxExploredNodes) {
+      const nextFrontier = [];
+      for (const tile of frontier) {
+        const stepToTile = firstStepTo.get(keyOf(tile.x, tile.y)) ?? null;
+        for (const step of STEPS) {
+          const x = tile.x + step.x;
+          const y = tile.y + step.y;
+          const key2 = keyOf(x, y);
+          if (seen.has(key2)) continue;
+          seen.add(key2);
+          explored++;
+          if (!isWalkable(x, y)) continue;
+          const firstStep = stepToTile ?? { x, y };
+          if (isGoal(x, y)) return firstStep;
+          firstStepTo.set(key2, firstStep);
+          nextFrontier.push({ x, y });
+        }
+      }
+      frontier = nextFrontier;
+    }
+    return null;
+  }
+
+  // src/services/companion/movement.ts
+  var STEP_INTERVAL_MS = 150;
+  var DEFAULT_MOVEMENT_CONFIG = {
+    followDistance: 2,
+    // 15 s d'immobilité avant de flâner, 30 s d'arrêt entre deux balades.
+    idleTicksBeforeWander: Math.round(15e3 / STEP_INTERVAL_MS),
+    wanderRadius: 3,
+    wanderPauseTicks: Math.round(3e4 / STEP_INTERVAL_MS)
+  };
+  var TASK_MOVEMENT_CONFIG = {
+    ...DEFAULT_MOVEMENT_CONFIG,
+    followDistance: 0
+  };
+  var SPAWN_SEARCH_RADIUS = 8;
+  function initialMovementState() {
+    return {
+      activity: "pursue",
+      tile: null,
+      lastAnchorTile: null,
+      idleTicks: 0,
+      wanderCooldown: 0,
+      wanderTarget: null
+    };
+  }
+  function manhattan(a, b) {
+    return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+  }
+  function sameTile(a, b) {
+    if (!a || !b) return a === b;
+    return a.x === b.x && a.y === b.y;
+  }
+  function hasGameCaughtUp(ourTile, observedTile) {
+    if (!ourTile || !observedTile) return true;
+    return observedTile.x === ourTile.x && observedTile.y === ourTile.y;
+  }
+  function findNearbyWalkable(center, isWalkable, excludeCenter, maxRadius = SPAWN_SEARCH_RADIUS) {
+    if (!excludeCenter && isWalkable(center.x, center.y)) return { ...center };
+    for (let radius = 1; radius <= maxRadius; radius++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dy = -radius; dy <= radius; dy++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+          const x = center.x + dx;
+          const y = center.y + dy;
+          if (isWalkable(x, y)) return { x, y };
+        }
+      }
+    }
+    return null;
+  }
+  function pickWanderTarget(center, radius, isWalkable, random) {
+    const candidates = [];
+    for (let dx = -radius; dx <= radius; dx++) {
+      for (let dy = -radius; dy <= radius; dy++) {
+        if (dx === 0 && dy === 0) continue;
+        const x = center.x + dx;
+        const y = center.y + dy;
+        if (isWalkable(x, y)) candidates.push({ x, y });
+      }
+    }
+    if (candidates.length === 0) return null;
+    const index = Math.min(candidates.length - 1, Math.floor(random() * candidates.length));
+    return candidates[index];
+  }
+  var wanderRadiusOf = (anchor, config) => anchor.wanderRadius ?? config.wanderRadius;
+  function stepMovement(input) {
+    const { anchor, isWalkable, random, config } = input;
+    const state4 = { ...input.state };
+    const excludeCenter = anchor.tracksPlayer;
+    const blocked = anchor.tracksPlayer ? anchor.tile : null;
+    const zone = anchor.zone;
+    const zoneWalkable = (x, y) => isWalkable(x, y) && (!zone || zone(x, y));
+    const insideZone = !zone || !state4.tile || zone(state4.tile.x, state4.tile.y);
+    const stepWalkable = insideZone ? zoneWalkable : isWalkable;
+    const anchorMoved = !sameTile(state4.lastAnchorTile, anchor.tile);
+    state4.lastAnchorTile = { ...anchor.tile };
+    if (anchorMoved) {
+      state4.idleTicks = 0;
+      if (state4.activity === "wander") {
+        state4.activity = "pursue";
+        state4.wanderTarget = null;
+        state4.wanderCooldown = 0;
+      }
+    } else {
+      state4.idleTicks++;
+    }
+    if (!state4.tile) {
+      const spawn = findNearbyWalkable(anchor.tile, zoneWalkable, excludeCenter) ?? findNearbyWalkable(anchor.tile, isWalkable, excludeCenter);
+      state4.tile = spawn;
+      return { state: state4, tile: spawn, teleported: spawn !== null };
+    }
+    const arrived = manhattan(state4.tile, anchor.tile) <= config.followDistance;
+    if (state4.activity === "pursue" && arrived && anchor.onArrival === "wander") {
+      const mayWander = !anchor.tracksPlayer || state4.idleTicks >= config.idleTicksBeforeWander;
+      if (mayWander) {
+        state4.activity = "wander";
+        state4.wanderTarget = null;
+        state4.wanderCooldown = 0;
+      }
+    }
+    const passable = (x, y) => stepWalkable(x, y) && !(blocked !== null && x === blocked.x && y === blocked.y);
+    let isGoal = null;
+    if (state4.activity === "pursue") {
+      if (!arrived) {
+        isGoal = (x, y) => manhattan({ x, y }, anchor.tile) <= config.followDistance;
+      }
+    } else {
+      const target = resolveWanderTarget(state4, anchor, config, zoneWalkable, random);
+      if (target) isGoal = (x, y) => x === target.x && y === target.y;
+    }
+    if (!isGoal) return { state: state4, tile: state4.tile, teleported: false };
+    const next = findFirstStep(state4.tile, isGoal, passable);
+    if (!next) {
+      if (state4.activity === "wander") state4.wanderTarget = null;
+      return { state: state4, tile: state4.tile, teleported: false };
+    }
+    state4.tile = next;
+    return { state: state4, tile: next, teleported: false };
+  }
+  function resolveWanderTarget(state4, anchor, config, isWalkable, random) {
+    if (state4.wanderCooldown > 0) {
+      state4.wanderCooldown--;
+      return null;
+    }
+    if (state4.wanderTarget && sameTile(state4.wanderTarget, state4.tile)) {
+      state4.wanderTarget = null;
+      state4.wanderCooldown = config.wanderPauseTicks;
+      return null;
+    }
+    if (!state4.wanderTarget) {
+      state4.wanderTarget = pickWanderTarget(
+        anchor.tile,
+        wanderRadiusOf(anchor, config),
+        isWalkable,
+        random
+      );
+      if (!state4.wanderTarget) {
+        state4.wanderCooldown = config.wanderPauseTicks;
+        return null;
+      }
+    }
+    return state4.wanderTarget;
+  }
+
+  // src/services/companion/buildings.ts
+  function matchBuildingName(names, required, alternatives) {
+    const wanted = required.map((word) => word.toLowerCase());
+    const either = alternatives.map((word) => word.toLowerCase());
+    for (const name of names) {
+      const key2 = name.toLowerCase().replace(/[^a-z]/g, "");
+      if (!wanted.every((word) => key2.includes(word))) continue;
+      if (either.length > 0 && !either.some((word) => key2.includes(word))) continue;
+      return name;
+    }
+    return null;
+  }
+
+  // src/services/companion/map.ts
+  var mapAtom = makeAtom("mapAtom");
+  function toSet(source) {
+    if (!source) return /* @__PURE__ */ new Set();
+    if (source instanceof Set) return source;
+    try {
+      return new Set(source);
+    } catch {
+      return /* @__PURE__ */ new Set();
+    }
+  }
+  function buildCompanionMap(raw) {
+    if (!raw || !Number.isFinite(raw.cols) || !Number.isFinite(raw.rows)) return null;
+    const cols = Number(raw.cols);
+    const rows = Number(raw.rows);
+    if (cols <= 0 || rows <= 0) return null;
+    const blocked = toSet(raw.collisionTiles);
+    for (const region of raw.conditionalCollisionRegions ?? []) {
+      for (const tile of toSet(region?.tiles)) blocked.add(tile);
+    }
+    const npcSpawns = raw.npcSpawns ?? {};
+    const locations = raw.locations ?? {};
+    const dirtBySlot = raw.userSlotIdxAndDirtTileIdxToGlobalTileIdx ?? [];
+    const boardwalkBySlot = raw.userSlotIdxAndBoardwalkTileIdxToGlobalTileIdx ?? [];
+    return {
+      cols,
+      rows,
+      toIndex: (x, y) => y * cols + x,
+      toXY: (index) => ({ x: index % cols, y: Math.floor(index / cols) }),
+      isWalkable(x, y) {
+        if (!Number.isInteger(x) || !Number.isInteger(y)) return false;
+        if (x < 0 || y < 0 || x >= cols || y >= rows) return false;
+        return !blocked.has(y * cols + x);
+      },
+      npcSpawnLayers: Object.keys(npcSpawns),
+      npcSpawnTile(spawnLayer) {
+        const tile = npcSpawns[spawnLayer];
+        return Number.isFinite(tile) ? Number(tile) : null;
+      },
+      buildingNames: Object.keys(locations),
+      buildingActivationTiles(name) {
+        const tiles = locations[name]?.activationTilesIdxs;
+        return Array.isArray(tiles) ? tiles.filter((t) => Number.isInteger(t)) : [];
+      },
+      findBuilding(required, alternatives) {
+        return matchBuildingName(Object.keys(locations), required, alternatives);
+      },
+      gardenTilesForSlot(userSlotIdx) {
+        if (!Number.isInteger(userSlotIdx) || userSlotIdx < 0) return [];
+        const dirt = dirtBySlot[userSlotIdx];
+        const boardwalk = boardwalkBySlot[userSlotIdx];
+        const tiles = /* @__PURE__ */ new Set();
+        for (const tile of Array.isArray(dirt) ? dirt : []) tiles.add(tile);
+        for (const tile of Array.isArray(boardwalk) ? boardwalk : []) tiles.add(tile);
+        return [...tiles];
+      },
+      gardenTileToGlobal(userSlotIdx, dirtTileIdx) {
+        if (!Number.isInteger(userSlotIdx) || userSlotIdx < 0) return null;
+        if (!Number.isInteger(dirtTileIdx) || dirtTileIdx < 0) return null;
+        const dirt = dirtBySlot[userSlotIdx];
+        if (!Array.isArray(dirt)) return null;
+        const global = dirt[dirtTileIdx];
+        return Number.isInteger(global) ? Number(global) : null;
+      },
+      dirtTileCount(userSlotIdx) {
+        if (!Number.isInteger(userSlotIdx) || userSlotIdx < 0) return 0;
+        const dirt = dirtBySlot[userSlotIdx];
+        return Array.isArray(dirt) ? dirt.length : 0;
+      }
+    };
+  }
+  async function readCompanionMap() {
+    try {
+      return buildCompanionMap(await mapAtom.get());
+    } catch {
+      return null;
+    }
+  }
+  async function onMapChange(cb) {
+    try {
+      return await mapAtom.onChange((raw) => cb(buildCompanionMap(raw)));
+    } catch {
+      return () => {
+      };
+    }
+  }
+
+  // src/services/companion/dialogue.ts
+  var DEFAULT_CONTEXTUAL_COOLDOWN_MS = 12e4;
+  var DEFAULT_CUSTOM_LINES = [
+    "Right behind you, boss.",
+    "Nice patch you've got here.",
+    "Want me to keep an eye on anything?",
+    "I like it here."
+  ];
+  function initialDialogueState() {
+    return { lastCustomIndex: -1, mutedUntil: {} };
+  }
+  function pickDialogueLine(input) {
+    const { contextual, customLines, nowMs: nowMs2, random, cooldownMs } = input;
+    const state4 = {
+      lastCustomIndex: input.state.lastCustomIndex,
+      mutedUntil: { ...input.state.mutedUntil }
+    };
+    for (const candidate of contextual) {
+      if (!candidate?.message) continue;
+      const mutedUntil = state4.mutedUntil[candidate.key] ?? 0;
+      if (nowMs2 < mutedUntil) continue;
+      state4.mutedUntil[candidate.key] = nowMs2 + cooldownMs;
+      return { message: candidate.message, state: state4 };
+    }
+    const lines = customLines.filter((line) => typeof line === "string" && line.trim().length > 0);
+    if (lines.length === 0) return { message: null, state: state4 };
+    if (lines.length === 1) {
+      state4.lastCustomIndex = 0;
+      return { message: lines[0], state: state4 };
+    }
+    let index = Math.min(lines.length - 1, Math.floor(random() * lines.length));
+    if (index === state4.lastCustomIndex) index = (index + 1) % lines.length;
+    state4.lastCustomIndex = index;
+    return { message: lines[index], state: state4 };
+  }
+
+  // src/services/companion/chat/harvest.ts
+  function mutationsOf(row) {
+    return row.mutations;
+  }
+  function rowKey(row) {
+    return `${row.tileIndex}:${row.slotId}`;
+  }
+  function selectionSignature(rows) {
+    return rows.map(rowKey).sort().join("|");
+  }
+  function speciesPresent(rows) {
+    return [...new Set(rows.map((row) => row.species))].sort((a, b) => a.localeCompare(b));
+  }
+  function mutationsPresent(rows) {
+    const all = /* @__PURE__ */ new Set();
+    for (const row of rows) for (const mutation of mutationsOf(row)) all.add(mutation);
+    return [...all].sort((a, b) => a.localeCompare(b));
+  }
+  function tally(rows, of) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const row of rows) {
+      for (const value of of(row)) {
+        if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }
+  var DEFAULT_FILTERS = {
+    species: null,
+    minSizePct: 50,
+    mutations: [],
+    mutationMode: "any"
+  };
+  function matchesMutations(row, wanted, mode) {
+    if (wanted.length === 0) return true;
+    const present = new Set(mutationsOf(row));
+    switch (mode) {
+      case "all":
+        return wanted.every((mutation) => present.has(mutation));
+      case "none":
+        return wanted.every((mutation) => !present.has(mutation));
+      default:
+        return wanted.some((mutation) => present.has(mutation));
+    }
+  }
+  function filterRows(rows, filters) {
+    const species = filters.species && filters.species.length > 0 ? new Set(filters.species) : null;
+    return rows.filter((row) => {
+      if (!row.ready) return false;
+      if (species && !species.has(row.species)) return false;
+      if (row.sizePct < filters.minSizePct) return false;
+      return matchesMutations(row, filters.mutations, filters.mutationMode);
+    });
+  }
+  function describeFilters(filters) {
+    const species = filters.species ?? [];
+    const subject = species.length > 0 ? `my ${listWords(species)}` : "everything";
+    const qualifiers = [];
+    if (filters.mutations.length > 0) {
+      const list = listWords(filters.mutations);
+      if (filters.mutationMode === "none") qualifiers.push(`without ${list}`);
+      else if (filters.mutationMode === "all") qualifiers.push(`with both ${list}`);
+      else qualifiers.push(`with ${list}`);
+    }
+    if (filters.minSizePct > DEFAULT_FILTERS.minSizePct) {
+      qualifiers.push(`at least ${filters.minSizePct}% size`);
+    }
+    if (qualifiers.length === 0) {
+      return species.length > 0 ? `Harvest ${subject}, please` : "Harvest everything that's ready";
+    }
+    return `Harvest ${subject}, ${qualifiers.join(", ")}`;
+  }
+  function groupVariants(rows) {
+    const groups = /* @__PURE__ */ new Map();
+    for (const row of rows) {
+      const mutations = [...mutationsOf(row)].sort();
+      const key2 = `${row.species}|${mutations.join(",")}`;
+      const known = groups.get(key2);
+      if (known) known.count++;
+      else groups.set(key2, { species: row.species, mutations, count: 1 });
+    }
+    return [...groups.values()].sort(
+      (a, b) => b.count - a.count || a.species.localeCompare(b.species) || a.mutations.length - b.mutations.length || a.mutations.join(",").localeCompare(b.mutations.join(","))
+    );
+  }
+  function listWords(words) {
+    if (words.length <= 1) return words[0] ?? "";
+    return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
+  }
+  function describeSelection(rows) {
+    if (rows.length === 0) return "nothing";
+    const bySpecies2 = /* @__PURE__ */ new Map();
+    for (const row of rows) bySpecies2.set(row.species, (bySpecies2.get(row.species) ?? 0) + 1);
+    const parts = [...bySpecies2.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([species, count]) => `${count} ${species}`);
+    const head = parts.slice(0, 3);
+    const rest = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
+    const total = `${rows.length} crop${rows.length === 1 ? "" : "s"}`;
+    if (parts.length === 1) return `${parts[0]} ready`;
+    return `${total} ready: ${listWords(head)}${rest}`;
+  }
+
+  // src/services/companion/chat/hatch.ts
+  var DEFAULT_KEEP_RULES = {
+    species: [],
+    mutations: [],
+    abilities: [],
+    minMaxStr: null
+  };
+  function hasAnyRule(rules) {
+    return rules.species.length > 0 || rules.mutations.length > 0 || rules.abilities.length > 0 || rules.minMaxStr !== null;
+  }
+  function hasAny(present, wanted) {
+    if (wanted.length === 0) return false;
+    const set2 = new Set(present.map((value) => value.toLowerCase()));
+    return wanted.some((value) => set2.has(value.toLowerCase()));
+  }
+  function matchesKeep(pet, rules) {
+    if (rules.species.includes(pet.species)) return true;
+    if (hasAny(pet.mutations, rules.mutations)) return true;
+    if (rules.abilities.some((ability) => pet.abilities.includes(ability))) return true;
+    if (rules.minMaxStr !== null && pet.maxStrength !== null && pet.maxStrength >= rules.minMaxStr) return true;
+    return false;
+  }
+  function isProtected(pet, rules) {
+    return pet.favorited || pet.onTeam || matchesKeep(pet, rules);
+  }
+  function toFavourite(pets, rules) {
+    return pets.filter((pet) => !pet.favorited && matchesKeep(pet, rules));
+  }
+  function toSell(pets, rules) {
+    if (!hasAnyRule(rules)) return [];
+    return pets.filter((pet) => !isProtected(pet, rules));
+  }
+  function petSignature(pets) {
+    return pets.map((pet) => pet.petId).sort().join("|");
+  }
+  function slotSignature2(slots) {
+    return [...slots].sort((a, b) => a - b).join("|");
+  }
+  function bySpecies(pets) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const pet of pets) counts.set(pet.species, (counts.get(pet.species) ?? 0) + 1);
+    return [...counts.entries()].map(([species, count]) => ({ species, count })).sort((a, b) => b.count - a.count || a.species.localeCompare(b.species));
+  }
+  function describeKeep(rules, abilityNames = /* @__PURE__ */ new Map()) {
+    if (!hasAnyRule(rules)) return "Nothing set yet";
+    const parts = [];
+    if (rules.species.length) parts.push(listWords(rules.species));
+    if (rules.mutations.length) parts.push(listWords(rules.mutations));
+    if (rules.abilities.length) {
+      parts.push(listWords(rules.abilities.map((id) => abilityNames.get(id) ?? id)));
+    }
+    if (rules.minMaxStr !== null) parts.push(`max STR ${rules.minMaxStr} and up`);
+    return parts.join(", ");
+  }
+  function describeHatchRequest(count) {
+    return count === 1 ? "Hatch that egg for me" : `Hatch my ${count} eggs`;
+  }
+  function summarizeHatch(slots) {
+    return `${slots.length} egg${slots.length === 1 ? "" : "s"} ready to hatch`;
+  }
+  function summarizeSell(pets) {
+    if (pets.length === 0) return "nothing";
+    const parts = bySpecies(pets).map((entry) => `${entry.count} ${entry.species}`);
+    const head = parts.slice(0, 3);
+    const rest = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
+    if (parts.length === 1) return parts[0];
+    return `${pets.length} pets: ${listWords(head)}${rest}`;
+  }
+
+  // src/services/companion/settingsShape.ts
+  var COMPANION_MODES = ["follow", "garden"];
+  var MAX_LINE_LENGTH = 160;
+  var MAX_LINES = 50;
+  var SETTINGS_GROUPS = ["feed", "harvest", "hatch"];
+  var DEFAULT_COMPANION_SETTINGS = {
+    enabled: false,
+    mode: "follow",
+    npcId: null,
+    lines: [...DEFAULT_CUSTOM_LINES],
+    contextualEnabled: true,
+    feedAlerts: true,
+    feedThresholdPct: 10,
+    feedFromGarden: true,
+    harvestTeamId: null,
+    hatchTeamId: null,
+    hatchSellTeamId: null,
+    hatchKeepRules: { ...DEFAULT_KEEP_RULES },
+    reviewedSettings: []
+  };
+  function sanitizeLines(raw) {
+    if (!Array.isArray(raw)) return [...DEFAULT_CUSTOM_LINES];
+    return raw.filter((line) => typeof line === "string").map((line) => line.trim().slice(0, MAX_LINE_LENGTH)).filter((line) => line.length > 0).slice(0, MAX_LINES);
+  }
+  function sanitizeKeepRules(raw) {
+    if (!raw || typeof raw !== "object") return { ...DEFAULT_KEEP_RULES };
+    const source = raw;
+    const names = (value) => Array.isArray(value) ? value.filter((entry) => typeof entry === "string" && entry !== "") : [];
+    const strength = Number(source.minMaxStr);
+    return {
+      species: names(source.species),
+      mutations: names(source.mutations),
+      abilities: names(source.abilities),
+      minMaxStr: Number.isFinite(strength) && strength > 0 ? Math.round(strength) : null
+    };
+  }
+  function teamId(raw) {
+    return typeof raw === "string" && raw ? raw : null;
+  }
+  function clampThreshold(raw) {
+    const value = Math.round(Number(raw));
+    if (!Number.isFinite(value)) return DEFAULT_COMPANION_SETTINGS.feedThresholdPct;
+    return Math.max(1, Math.min(90, value));
+  }
+  function coerceSettings(raw) {
+    if (!raw || typeof raw !== "object") return { ...DEFAULT_COMPANION_SETTINGS };
+    return {
+      enabled: raw.enabled === true,
+      // Les réglages de déplacement persistés par les versions précédentes sont
+      // simplement ignorés : ils sont devenus des constantes.
+      mode: COMPANION_MODES.includes(raw.mode) ? raw.mode : DEFAULT_COMPANION_SETTINGS.mode,
+      npcId: typeof raw.npcId === "string" && raw.npcId ? raw.npcId : null,
+      lines: raw.lines === void 0 ? [...DEFAULT_CUSTOM_LINES] : sanitizeLines(raw.lines),
+      contextualEnabled: raw.contextualEnabled !== false,
+      feedAlerts: raw.feedAlerts !== false,
+      feedThresholdPct: clampThreshold(raw.feedThresholdPct),
+      feedFromGarden: raw.feedFromGarden !== false,
+      harvestTeamId: teamId(raw.harvestTeamId),
+      hatchTeamId: teamId(raw.hatchTeamId),
+      hatchSellTeamId: teamId(raw.hatchSellTeamId),
+      hatchKeepRules: sanitizeKeepRules(raw.hatchKeepRules),
+      reviewedSettings: SETTINGS_GROUPS.filter(
+        (group) => Array.isArray(raw.reviewedSettings) && raw.reviewedSettings.includes(group)
+      )
+    };
+  }
+
+  // src/services/companion/anchors.ts
+  var myUserSlotIdx = makeAtom("myUserSlotIdxAtom");
+  async function resolveAnchor(request2) {
+    const { mode, map: map2, player: player2 } = request2;
+    if (mode === "garden") {
+      const resolved = await resolveGardenAnchor(map2);
+      if (resolved) return resolved;
+    }
+    return followAnchor(map2, player2);
+  }
+  function followAnchor(map2, player2) {
+    return {
+      anchor: { tile: player2, onArrival: "wander", tracksPlayer: true },
+      isWalkable: map2.isWalkable,
+      effectiveMode: "follow"
+    };
+  }
+  async function resolveGardenAnchor(map2) {
+    const slot = await readMySlotIdx();
+    if (slot === null) return null;
+    const tiles = map2.gardenTilesForSlot(slot);
+    if (tiles.length === 0) return null;
+    const allowed = new Set(tiles);
+    const zone = (x, y) => allowed.has(map2.toIndex(x, y));
+    const positions = tiles.map((tile) => map2.toXY(tile));
+    const center = nearestTo(centroid(positions), positions);
+    const radius = positions.reduce(
+      (max, tile) => Math.max(max, Math.abs(tile.x - center.x), Math.abs(tile.y - center.y)),
+      1
+    );
+    return {
+      anchor: { tile: center, onArrival: "wander", tracksPlayer: false, zone, wanderRadius: radius },
+      isWalkable: map2.isWalkable,
+      effectiveMode: "garden"
+    };
+  }
+  async function readMySlotIdx() {
+    try {
+      const slot = Number(await myUserSlotIdx.get());
+      return Number.isInteger(slot) && slot >= 0 ? slot : null;
+    } catch {
+      return null;
+    }
+  }
+  function centroid(tiles) {
+    let sumX = 0;
+    let sumY = 0;
+    for (const tile of tiles) {
+      sumX += tile.x;
+      sumY += tile.y;
+    }
+    return { x: Math.round(sumX / tiles.length), y: Math.round(sumY / tiles.length) };
+  }
+  function nearestTo(target, tiles) {
+    let best = tiles[0];
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (const tile of tiles) {
+      const distance = Math.abs(tile.x - target.x) + Math.abs(tile.y - target.y);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = tile;
+      }
+    }
+    return { ...best };
+  }
+
+  // src/services/companion/tick.ts
+  var COMPANION_TICK_LABEL = "ariesCompanionTickAtom";
+  var CACHE_KEY = `aries/companion/${COMPANION_TICK_LABEL}`;
+  var tickAtom = null;
+  var counter = 0;
+  function createTickAtom() {
+    const atom = {};
+    atom.init = 0;
+    atom.read = (get2) => get2(atom);
+    atom.write = (get2, set2, update) => set2(atom, typeof update === "function" ? update(get2(atom)) : update);
+    atom.debugLabel = COMPANION_TICK_LABEL;
+    atom.toString = () => COMPANION_TICK_LABEL;
+    return atom;
+  }
+  function ensureTickAtom() {
+    if (tickAtom) return tickAtom;
+    const cache2 = pageWindow.jotaiAtomCache;
+    if (!cache2 || typeof cache2.get !== "function") return null;
+    tickAtom = cache2.get(CACHE_KEY, createTickAtom());
+    return tickAtom;
+  }
+  function isTickAvailable() {
+    return ensureTickAtom() !== null;
+  }
+  async function bumpTick() {
+    const atom = ensureTickAtom();
+    if (!atom) return;
+    counter++;
+    try {
+      await jSet(atom, counter);
+    } catch {
+    }
+  }
+
+  // src/services/companion/injection.ts
+  var NPC_ID_PREFIX = "NPC_";
+  var QUINOA_DATA_LABEL = "quinoaDataAtom";
+  var quinoaData = makeAtom(QUINOA_DATA_LABEL);
+  var COMPANION_PATCH = {
+    label: QUINOA_DATA_LABEL,
+    // Dépendance artificielle : sans elle, le recalcul ne suit que l'état de room
+    // (~420 ms mesuré), trop lent pour les 130 ms d'interpolation d'un pas.
+    extraDeps: [COMPANION_TICK_LABEL],
+    merge: (real, fake) => {
+      const base = real && typeof real === "object" ? real : {};
+      const realNpcs = base.npcs && typeof base.npcs === "object" ? base.npcs : {};
+      const fakeNpcs = fake?.npcs && typeof fake.npcs === "object" ? fake.npcs : {};
+      return { ...base, npcs: { ...realNpcs, ...fakeNpcs } };
+    }
+  };
+  var active = false;
+  var currentPayload = { npcs: {} };
+  async function listNpcIdentities() {
+    const map2 = await readCompanionMap();
+    const presentIds = new Set(await readPresentNpcIds());
+    const byId = /* @__PURE__ */ new Map();
+    for (const name of map2?.npcSpawnLayers ?? []) {
+      const playerId2 = NPC_ID_PREFIX + name;
+      byId.set(playerId2, {
+        playerId: playerId2,
+        name,
+        spawnLayer: name,
+        present: presentIds.has(playerId2),
+        spawnTile: map2?.npcSpawnTile(name) ?? null
+      });
+    }
+    for (const playerId2 of presentIds) {
+      if (byId.has(playerId2)) continue;
+      const name = playerId2.startsWith(NPC_ID_PREFIX) ? playerId2.slice(NPC_ID_PREFIX.length) : playerId2;
+      byId.set(playerId2, { playerId: playerId2, name, spawnLayer: name, present: true, spawnTile: null });
+    }
+    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }
+  async function readPresentNpcIds() {
+    try {
+      const data = await quinoaData.get();
+      const npcs = data?.npcs;
+      if (!npcs || typeof npcs !== "object") return [];
+      return Object.keys(npcs).filter((id) => !(id in currentPayload.npcs));
+    } catch {
+      return [];
+    }
+  }
+  async function installInjection() {
+    if (active) return;
+    ensureTickAtom();
+    await fakeShow(COMPANION_PATCH, currentPayload);
+    active = true;
+  }
+  async function setCompanionTile(playerId2, tileIndex) {
+    if (!Number.isInteger(tileIndex) || tileIndex < 0) return;
+    currentPayload = { npcs: { [playerId2]: tileIndex } };
+    if (!active) {
+      ensureTickAtom();
+      await fakeShow(COMPANION_PATCH, currentPayload);
+      active = true;
+      return;
+    }
+    await fakeUpdate(QUINOA_DATA_LABEL, currentPayload);
+    await bumpTick();
+  }
+  async function hideCompanion() {
+    if (!active) return;
+    currentPayload = { npcs: {} };
+    active = false;
+    await fakeHide(QUINOA_DATA_LABEL);
+  }
+  async function disposeInjection() {
+    currentPayload = { npcs: {} };
+    active = false;
+    await fakeDispose(QUINOA_DATA_LABEL);
+  }
+
+  // src/services/companion/state.ts
+  var STORAGE_PATH = "companion";
+  function loadCompanionSettings() {
+    return coerceSettings(readAriesPath(STORAGE_PATH, void 0));
+  }
+  function saveCompanionSettings(settings) {
+    writeAriesPath(STORAGE_PATH, settings);
+  }
+  function patchCompanionSettings(patch) {
+    saveCompanionSettings({ ...loadCompanionSettings(), ...patch });
+    return loadCompanionSettings();
+  }
+  function isUnreviewed(group) {
+    return !loadCompanionSettings().reviewedSettings.includes(group);
+  }
+  function markReviewed(group) {
+    const current = loadCompanionSettings().reviewedSettings;
+    if (current.includes(group)) return;
+    patchCompanionSettings({ reviewedSettings: [...current, group] });
+  }
+
+  // src/services/companion/diagnostics.ts
+  var DEFAULT_SAMPLE_MS = 6e3;
+  var npcQuinoaUsers = makeAtom(
+    "npcQuinoaUsersAtom"
+  );
+  function median(values) {
+    if (values.length === 0) return null;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0 ? Math.round((sorted[mid - 1] + sorted[mid]) / 2) : sorted[mid];
+  }
+  async function diagnoseCompanion(npcId, sampleMs = DEFAULT_SAMPLE_MS) {
+    const seen = [];
+    const record = (entries) => {
+      const entry = Array.isArray(entries) ? entries.find((e) => e?.playerId === npcId) : null;
+      const pos = entry?.position;
+      if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return;
+      const last = seen[seen.length - 1];
+      if (last && last.x === pos.x && last.y === pos.y) return;
+      seen.push({ atMs: performance.now(), x: pos.x, y: pos.y });
+    };
+    let unsub = null;
+    try {
+      unsub = await npcQuinoaUsers.onChangeNow((next) => record(next));
+    } catch {
+      return {
+        observations: 0,
+        medianIntervalMs: null,
+        maxDelta: 0,
+        snapCount: 0,
+        snapRatio: 0,
+        verdict: "Impossible de s'abonner \xE0 npcQuinoaUsersAtom."
+      };
+    }
+    await new Promise((resolve) => setTimeout(resolve, sampleMs));
+    try {
+      unsub?.();
+    } catch {
+    }
+    const intervals = [];
+    let maxDelta = 0;
+    let snapCount = 0;
+    for (let i = 1; i < seen.length; i++) {
+      const prev = seen[i - 1];
+      const curr = seen[i];
+      intervals.push(curr.atMs - prev.atMs);
+      const delta = Math.abs(curr.x - prev.x) + Math.abs(curr.y - prev.y);
+      if (delta > maxDelta) maxDelta = delta;
+      if (delta > 1) snapCount++;
+    }
+    const transitions = Math.max(0, seen.length - 1);
+    const snapRatio = transitions === 0 ? 0 : snapCount / transitions;
+    return {
+      observations: seen.length,
+      medianIntervalMs: median(intervals),
+      maxDelta,
+      snapCount,
+      snapRatio: Number(snapRatio.toFixed(2)),
+      verdict: buildVerdict(seen.length, snapCount, maxDelta)
+    };
+  }
+  function buildVerdict(observations, snapCount, maxDelta) {
+    if (observations < 2) {
+      return "Aucune position observ\xE9e : le companion ne bouge pas, ou l'atom n'est pas relu. V\xE9rifie qu'il marche pendant la mesure.";
+    }
+    if (snapCount === 0) {
+      return "Le jeu ne voit que des pas d'une tuile. La cadence n'est pas en cause : le snap vient d'ailleurs (forceSnap).";
+    }
+    return `Le jeu observe des sauts jusqu'\xE0 ${maxDelta} tuiles : la cadence de recalcul est plus lente que notre pas. C'est la cause du snap.`;
+  }
+
+  // src/services/companion/dialogueContext.ts
+  function matureSubSlotCount(obj, now2) {
+    const slots = obj?.slots;
+    if (!Array.isArray(slots)) return 0;
+    let count = 0;
+    for (const slot of slots) {
+      const end = slot?.endTime;
+      if (typeof end === "number" && end > 0 && end <= now2) count++;
+    }
+    return count;
+  }
+  var HUNGRY_PET_THRESHOLD_PCT = 25;
+  var plural = (count, singular, pluralForm) => count === 1 ? singular : pluralForm;
+  async function collectContextualLines() {
+    const providers = [
+      readyHarvestLine,
+      hungryPetLine,
+      cropsToSellLine,
+      weatherLine
+    ];
+    const lines = [];
+    for (const provider of providers) {
+      try {
+        const line = await provider();
+        if (line) lines.push(line);
+      } catch {
+      }
+    }
+    return lines;
+  }
+  async function readyHarvestLine() {
+    const tileObjects = await Atoms.data.gardenTileObjects.get();
+    if (!tileObjects || typeof tileObjects !== "object") return null;
+    const now2 = Date.now();
+    let ready2 = 0;
+    for (const obj of Object.values(tileObjects)) {
+      ready2 += matureSubSlotCount(obj, now2);
+    }
+    if (ready2 === 0) return null;
+    return {
+      key: "harvest",
+      message: `${ready2} ${plural(ready2, "crop is", "crops are")} ready to harvest, by the way.`
+    };
+  }
+  async function hungryPetLine() {
+    const pets = await PetsService.getPets();
+    if (!Array.isArray(pets) || pets.length === 0) return null;
+    const hungry = pets.filter((pet) => {
+      const pct = PetsService.getHungerPctFor(pet);
+      return Number.isFinite(pct) && pct < HUNGRY_PET_THRESHOLD_PCT;
+    });
+    if (hungry.length === 0) return null;
+    return {
+      key: "pets",
+      message: `${hungry.length} ${plural(hungry.length, "pet is", "pets are")} getting hungry.`
+    };
+  }
+  async function cropsToSellLine() {
+    const total = Number(await Atoms.shop.totalCropSellPrice.get());
+    if (!Number.isFinite(total) || total <= 0) return null;
+    return {
+      key: "sell",
+      message: `You're carrying ${Math.round(total).toLocaleString("en-US")} coins worth of crops.`
+    };
+  }
+  async function weatherLine() {
+    const weather2 = await Atoms.data.weather.get();
+    if (!weather2 || typeof weather2 !== "string") return null;
+    return { key: "weather", message: `We're getting ${weather2} right now.` };
+  }
+
+  // src/services/companion/speech.ts
+  var CHAT_BUBBLES_LABEL = "npcChatBubblesAtom";
+  var AUTHORED_BY_MOD = "ariesAuthored";
+  var wrapped = null;
+  var resolver = null;
+  var targetNpcId = null;
+  function rewritePayload(payload) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
+    if (!targetNpcId || !resolver) return payload;
+    const entries = payload;
+    const entry = entries[targetNpcId];
+    if (!entry || typeof entry !== "object") return payload;
+    if (entry[AUTHORED_BY_MOD] === true) return payload;
+    const original = typeof entry.message === "string" ? entry.message : "";
+    let replacement = null;
+    try {
+      replacement = resolver(targetNpcId, original);
+    } catch {
+      return payload;
+    }
+    if (!replacement || replacement === original) return payload;
+    return { ...entries, [targetNpcId]: { ...entry, message: replacement } };
+  }
+  function installSpeechRewriter(npcId, resolve) {
+    targetNpcId = npcId;
+    resolver = resolve;
+    if (wrapped) return true;
+    const atom = getAtomByLabel(CHAT_BUBBLES_LABEL);
+    if (!atom || typeof atom.write !== "function") return false;
+    const original = atom.write;
+    atom.write = function(get2, set2, update, ...rest) {
+      const next = typeof update === "function" ? update : rewritePayload(update);
+      return original.call(this, get2, set2, next, ...rest);
+    };
+    wrapped = { atom, original };
+    return true;
+  }
+  function uninstallSpeechRewriter() {
+    targetNpcId = null;
+    resolver = null;
+    if (!wrapped) return;
+    try {
+      wrapped.atom.write = wrapped.original;
+    } catch {
+    }
+    wrapped = null;
+  }
+
+  // src/services/companion/index.ts
+  var CHAT_BUBBLE_MIN_INTERVAL_MS = 1200;
+  var RENDER_WAIT_TIMEOUT_MS = 1500;
+  var CONTEXTUAL_REFRESH_MS = 1e4;
+  var npcChatBubbles = makeAtom("npcChatBubblesAtom");
+  var npcQuinoaUsers2 = makeAtom("npcQuinoaUsersAtom");
+  var runtime = null;
+  var starting = null;
+  function roundTile(pos) {
+    const x = Number(pos?.x);
+    const y = Number(pos?.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return { x: Math.round(x), y: Math.round(y) };
+  }
+  async function resolveNpcId(preferred) {
+    const roster = await listNpcIdentities();
+    if (roster.length === 0) return preferred;
+    if (preferred && roster.some((n) => n.playerId === preferred)) return preferred;
+    return (roster.find((n) => !n.present) ?? roster[0]).playerId;
+  }
+  async function tick() {
+    const rt = runtime;
+    if (!rt || !rt.map || !rt.player) return;
+    if (!hasGameCaughtUp(rt.movement.tile, rt.observedTile)) {
+      const now2 = Date.now();
+      if (rt.waitingSinceMs === null) rt.waitingSinceMs = now2;
+      if (now2 - rt.waitingSinceMs < RENDER_WAIT_TIMEOUT_MS) return;
+    }
+    rt.waitingSinceMs = null;
+    let anchor;
+    let isWalkable;
+    if (rt.task) {
+      anchor = { tile: rt.task, onArrival: "hold", tracksPlayer: false };
+      isWalkable = rt.map.isWalkable;
+    } else {
+      const resolved = await resolveAnchor({
+        mode: rt.attention ? "follow" : rt.settings.mode,
+        map: rt.map,
+        player: rt.player
+      });
+      if (resolved.effectiveMode !== rt.effectiveMode) {
+        rt.effectiveMode = resolved.effectiveMode;
+        rt.movement.wanderTarget = null;
+      }
+      anchor = resolved.anchor;
+      isWalkable = resolved.isWalkable;
+    }
+    const decision = stepMovement({
+      anchor,
+      state: rt.movement,
+      isWalkable,
+      random: Math.random,
+      config: rt.task ? TASK_MOVEMENT_CONFIG : DEFAULT_MOVEMENT_CONFIG
+    });
+    rt.movement = decision.state;
+    if (!decision.tile) return;
+    await setCompanionTile(rt.npcId, rt.map.toIndex(decision.tile.x, decision.tile.y));
+  }
+  function resolveSpeech() {
+    const rt = runtime;
+    if (!rt) return null;
+    const picked = pickDialogueLine({
+      contextual: rt.settings.contextualEnabled ? rt.contextualCache : [],
+      customLines: rt.settings.lines,
+      state: rt.dialogue,
+      nowMs: Date.now(),
+      random: Math.random,
+      cooldownMs: DEFAULT_CONTEXTUAL_COOLDOWN_MS
+    });
+    rt.dialogue = picked.state;
+    return picked.message;
+  }
+  async function refreshContextual() {
+    const rt = runtime;
+    if (!rt) return;
+    rt.contextualCache = rt.settings.contextualEnabled ? await collectContextualLines() : [];
+  }
+  function clearContextualTimer(rt) {
+    if (rt.contextualTimer !== null) {
+      clearInterval(rt.contextualTimer);
+      rt.contextualTimer = null;
+    }
+  }
+  function clearTimer(rt) {
+    if (rt.timer !== null) {
+      clearInterval(rt.timer);
+      rt.timer = null;
+    }
+  }
+  function startTimer(rt) {
+    clearTimer(rt);
+    rt.timer = window.setInterval(() => {
+      void tick().catch(() => {
+      });
+    }, STEP_INTERVAL_MS);
+  }
+  async function startInternal() {
+    if (runtime) return true;
+    const settings = loadCompanionSettings();
+    const npcId = await resolveNpcId(settings.npcId);
+    if (!npcId) return false;
+    const map2 = await readCompanionMap();
+    const player2 = roundTile(await Atoms.player.position.get().catch(() => null));
+    const rt = {
+      settings,
+      npcId,
+      map: map2,
+      movement: initialMovementState(),
+      player: player2,
+      timer: null,
+      unsubs: [],
+      lastBubbleAt: 0,
+      observedTile: null,
+      waitingSinceMs: null,
+      effectiveMode: settings.mode,
+      dialogue: initialDialogueState(),
+      contextualCache: [],
+      contextualTimer: null,
+      task: null,
+      attention: false
+    };
+    runtime = rt;
+    await installInjection();
+    installSpeechRewriter(npcId, resolveSpeech);
+    void refreshContextual().catch(() => {
+    });
+    rt.contextualTimer = window.setInterval(() => {
+      void refreshContextual().catch(() => {
+      });
+    }, CONTEXTUAL_REFRESH_MS);
+    try {
+      rt.unsubs.push(
+        await Atoms.player.position.onChangeNow((next) => {
+          const tile = roundTile(next);
+          if (tile) rt.player = tile;
+        })
+      );
+    } catch {
+    }
+    try {
+      rt.unsubs.push(
+        await npcQuinoaUsers2.onChangeNow((entries) => {
+          const entry = Array.isArray(entries) ? entries.find((e) => e?.playerId === rt.npcId) : null;
+          const tile = roundTile(entry?.position ?? null);
+          if (tile) rt.observedTile = tile;
+        })
+      );
+    } catch {
+    }
+    try {
+      rt.unsubs.push(
+        await onMapChange((next) => {
+          rt.map = next;
+          rt.movement = initialMovementState();
+          rt.observedTile = null;
+          rt.waitingSinceMs = null;
+        })
+      );
+    } catch {
+    }
+    startTimer(rt);
+    return true;
+  }
+  var WALK_TIMEOUT_MS = 5e3;
+  var ARRIVAL_POLL_MS = 100;
+  var NEARBY_DISTANCE = 3;
+  var CompanionService = {
+    isRunning() {
+      return runtime !== null;
+    },
+    /**
+     * Position de la tuile de terre d'un crop, dans la parcelle du joueur.
+     *
+     * `dirtTileIdx` est le `slot` du protocole de récolte. Rend `null` quand la
+     * map n'est pas encore lue ou que l'index ne correspond à aucune tuile.
+     */
+    gardenTileXY(userSlotIdx, dirtTileIdx) {
+      const map2 = runtime?.map;
+      if (!map2) return null;
+      const global = map2.gardenTileToGlobal(userSlotIdx, dirtTileIdx);
+      return global === null ? null : map2.toXY(global);
+    },
+    /**
+     * Envoie le companion sur une tuile et attend qu'il y soit.
+     *
+     * Rend `false` s'il n'y arrive pas dans le temps imparti — l'appelant décide
+     * alors s'il poursuit sans lui. La tâche reste posée : c'est `releaseTask`
+     * qui rend le companion à son mode, une fois toute la série terminée, sinon
+     * il repartirait vers le joueur entre deux crops.
+     *
+     * Une tuile occupée par une plante peut être infranchissable : on vise alors
+     * la case marchable la plus proche, ce qui suffit à « être devant ».
+     */
+    async walkTo(target) {
+      const rt = runtime;
+      if (!rt || !rt.map) return false;
+      const reachable = rt.map.isWalkable(target.x, target.y) ? target : findNearbyWalkable(target, rt.map.isWalkable, true, 2);
+      if (!reachable) return false;
+      rt.task = reachable;
+      rt.movement = { ...rt.movement, activity: "pursue", wanderTarget: null, wanderCooldown: 0 };
+      const deadline = Date.now() + WALK_TIMEOUT_MS;
+      while (Date.now() < deadline) {
+        const here = runtime?.movement.tile;
+        if (!runtime || runtime.task !== reachable) return false;
+        if (here && manhattan(here, reachable) === 0) return true;
+        await new Promise((resolve) => setTimeout(resolve, ARRIVAL_POLL_MS));
+      }
+      return false;
+    },
+    /**
+     * Fait venir le companion auprès du joueur, pour lui parler en face.
+     *
+     * Une bulle apparaît au-dessus du PNJ : lancée depuis l'autre bout de la
+     * carte, elle s'afficherait hors écran et personne ne la verrait. Il faut
+     * donc être là avant d'ouvrir la bouche.
+     *
+     * On vise une case *voisine* : la tuile du joueur est occupée, et se planter
+     * dessus n'aurait aucun sens. Déjà à portée de vue, on ne bouge pas.
+     *
+     * Comme `walkTo`, la tâche reste posée jusqu'à `releaseTask`.
+     */
+    async comeToPlayer() {
+      const rt = runtime;
+      if (!rt || !rt.map || !rt.player) return false;
+      const here = rt.movement.tile;
+      if (here && manhattan(here, rt.player) <= NEARBY_DISTANCE) return true;
+      const spot = findNearbyWalkable(rt.player, rt.map.isWalkable, true, 3);
+      return spot ? CompanionService.walkTo(spot) : false;
+    },
+    /** Rend le companion à son mode après une série de déplacements. */
+    releaseTask() {
+      if (runtime) runtime.task = null;
+    },
+    /** Le fait rester auprès du joueur, quel que soit son mode. */
+    holdAttention() {
+      if (runtime) runtime.attention = true;
+    },
+    /** Le rend à son mode : suivi ou jardin, selon ce qui était réglé. */
+    releaseAttention() {
+      if (runtime) runtime.attention = false;
+    },
+    /** Vrai tant qu'il attend une réponse auprès du joueur. */
+    isHoldingAttention() {
+      return runtime?.attention === true;
+    },
+    getNpcId() {
+      return runtime?.npcId ?? null;
+    },
+    getSettings() {
+      return runtime?.settings ?? loadCompanionSettings();
+    },
+    listNpcs() {
+      return listNpcIdentities();
+    },
+    /** Mode réellement appliqué : diffère du réglage quand un repli a joué. */
+    getEffectiveMode() {
+      return runtime?.effectiveMode ?? null;
+    },
+    /** Redémarre le companion au boot s'il était actif à la session précédente. */
+    autoStart() {
+      try {
+        if (!loadCompanionSettings().enabled) return;
+        void CompanionService.start().catch(() => {
+        });
+      } catch {
+      }
+    },
+    /** Démarre le companion. Idempotent, y compris sur appels concurrents. */
+    async start() {
+      if (runtime) return true;
+      if (!starting) {
+        starting = startInternal().finally(() => {
+          starting = null;
+        });
+      }
+      return starting;
+    },
+    /** Arrête tout et restaure l'atom du jeu. Sûr à appeler plusieurs fois. */
+    async stop() {
+      const rt = runtime;
+      runtime = null;
+      uninstallSpeechRewriter();
+      if (!rt) {
+        await disposeInjection();
+        return;
+      }
+      clearTimer(rt);
+      clearContextualTimer(rt);
+      for (const unsub of rt.unsubs) {
+        try {
+          unsub();
+        } catch {
+        }
+      }
+      rt.unsubs.length = 0;
+      await hideCompanion();
+      await disposeInjection();
+    },
+    /** Applique une modification de config, en redémarrant si nécessaire. */
+    async applySettings(patch) {
+      const next = patchCompanionSettings(patch);
+      const rt = runtime;
+      if (!rt) {
+        if (next.enabled) await CompanionService.start();
+        return next;
+      }
+      if (!next.enabled) {
+        await CompanionService.stop();
+        return next;
+      }
+      const npcChanged = patch.npcId !== void 0 && patch.npcId !== rt.npcId;
+      if (npcChanged) {
+        await CompanionService.stop();
+        await CompanionService.start();
+        return next;
+      }
+      rt.settings = next;
+      startTimer(rt);
+      void refreshContextual().catch(() => {
+      });
+      return next;
+    },
+    /** Remplace la liste de répliques perso. Utilisable depuis la console. */
+    async setLines(lines) {
+      return CompanionService.applySettings({ lines: sanitizeLines(lines) });
+    },
+    /**
+     * Mesure ce que le jeu observe réellement comme positions, pour distinguer un
+     * snap dû à la cadence de recalcul d'un snap dû à autre chose.
+     * À lancer pendant que le companion marche.
+     */
+    async diagnose(sampleMs) {
+      const npcId = runtime?.npcId;
+      if (!npcId) return { error: "Companion inactif : lance d'abord window.Companion.start()." };
+      return { tickAvailable: isTickAvailable(), ...await diagnoseCompanion(npcId, sampleMs) };
+    },
+    /**
+     * Fait parler le companion. Point d'entrée du dialogue (phase 3) : le jeu lit
+     * les bulles NPC dans un atom local, aucun envoi réseau n'est impliqué.
+     *
+     * L'anti-rafale protège des séries de messages de progression. `force` est
+     * pour la réplique qu'on tient absolument à faire entendre : sans lui, une
+     * annonce venant juste après le message qui l'a déclenchée se faisait jeter,
+     * et le companion restait muet au moment précis où il avait à parler.
+     */
+    async say(message, opts = {}) {
+      const rt = runtime;
+      if (!rt || !message.trim()) return;
+      const now2 = Date.now();
+      if (!opts.force && now2 - rt.lastBubbleAt < CHAT_BUBBLE_MIN_INTERVAL_MS) return;
+      rt.lastBubbleAt = now2;
+      try {
+        await npcChatBubbles.set({
+          // Marqué comme écrit par le mod : sans ça, l'interception réécrirait
+          // notre propre message avec une réplique tirée au hasard.
+          [rt.npcId]: { seq: 0, playerId: rt.npcId, message, timestamp: now2, [AUTHORED_BY_MOD]: true }
+        });
+      } catch {
+      }
+    }
+  };
+
+  // src/ui/menus/companion/behavior-tab.ts
+  var STATUS_REFRESH_MS = 1e3;
+  var MODE_LABELS = [
+    ["follow", "Follow me"],
+    ["garden", "Stay in my garden"]
+  ];
+  function renderBehaviorTab(view) {
+    view.innerHTML = "";
+    const settings = CompanionService.getSettings();
+    let disposed = false;
+    const card3 = collapsibleCard({
+      icon: "\u{1F9ED}",
+      title: "Behavior",
+      description: "Is he out, and where he stays.",
+      collapsed: false,
+      onToggle: () => {
+      }
+    });
+    const enableToggle = toggle(settings.enabled, (on) => {
+      void CompanionService.applySettings({ enabled: on }).then(refresh).catch(() => {
+      });
+    });
+    const modeSelect = selectField(MODE_LABELS.map(([value, label2]) => [value, label2]));
+    modeSelect.value = settings.mode;
+    modeSelect.addEventListener("change", () => {
+      void CompanionService.applySettings({ mode: modeSelect.value }).then(refresh).catch(() => {
+      });
+    });
+    const npcSelect = selectField([["", "Loading\u2026"]]);
+    npcSelect.disabled = true;
+    npcSelect.addEventListener("change", () => {
+      void CompanionService.applySettings({ npcId: npcSelect.value || null }).then(refresh).catch(() => {
+      });
+    });
+    void CompanionService.listNpcs().then((roster) => {
+      if (disposed) return;
+      npcSelect.innerHTML = "";
+      if (roster.length === 0) {
+        npcSelect.append(new Option("No NPC detected", ""));
+        return;
+      }
+      npcSelect.append(new Option("Automatic (an absent NPC)", ""));
+      for (const npc of roster) {
+        npcSelect.append(new Option(npc.present ? `${npc.name} (in game)` : npc.name, npc.playerId));
+      }
+      npcSelect.value = CompanionService.getNpcId() ?? settings.npcId ?? "";
+      npcSelect.disabled = false;
+    }).catch(() => {
+      if (disposed) return;
+      npcSelect.innerHTML = "";
+      npcSelect.append(new Option("Unavailable", ""));
+    });
+    const status = document.createElement("div");
+    css2(status, { fontSize: "12px", color: TEXT_DIM, padding: "2px 2px 0" });
+    function refresh() {
+      if (disposed) return;
+      if (!CompanionService.isRunning()) {
+        status.textContent = "Inactive.";
+        return;
+      }
+      const npcId = CompanionService.getNpcId();
+      const name = npcId ? npcId.replace(/^NPC_/, "") : "?";
+      const wanted = CompanionService.getSettings().mode;
+      const actual = CompanionService.getEffectiveMode();
+      const fallback = actual && actual !== wanted ? " (no garden found, following you)" : "";
+      status.textContent = `Active as ${name}${fallback}. Only you can see it.`;
+    }
+    card3.body.append(
+      settingRow("Enable", "Brings him out next to you.", enableToggle).row,
+      settingRow("Mode", "Follows you, or stays on your plot.", modeSelect).row,
+      settingRow("Borrowed NPC", 'Whose look it takes. "In game" means already spawned.', npcSelect).row,
+      status
+    );
+    refresh();
+    const timer2 = window.setInterval(refresh, STATUS_REFRESH_MS);
+    view.append(card3.root);
+    view.__cleanup__ = () => {
+      disposed = true;
+      clearInterval(timer2);
+    };
+  }
+
+  // src/services/companion/chat/log.ts
+  var MAX_MESSAGES = 200;
+  function emptyLog() {
+    return { messages: [], nextSeq: 1 };
+  }
+  function append(log2, message) {
+    const entry = {
+      id: `m${log2.nextSeq}`,
+      atMs: message.atMs,
+      from: message.from,
+      kind: message.kind,
+      text: message.text,
+      ...message.proposalId ? { proposalId: message.proposalId } : {}
+    };
+    const messages = [...log2.messages, entry];
+    return {
+      messages: messages.length > MAX_MESSAGES ? messages.slice(messages.length - MAX_MESSAGES) : messages,
+      nextSeq: log2.nextSeq + 1
+    };
+  }
+  function appendAlertOnce(log2, message, withinMs) {
+    const cutoff = message.atMs - withinMs;
+    const duplicate = log2.messages.some(
+      (entry) => entry.kind === "alert" && entry.text === message.text && entry.atMs >= cutoff
+    );
+    return duplicate ? log2 : append(log2, message);
+  }
+  function clearProposal(log2, proposalId) {
+    let changed = false;
+    const messages = log2.messages.map((entry) => {
+      if (entry.proposalId !== proposalId) return entry;
+      changed = true;
+      const { proposalId: _dropped, ...rest } = entry;
+      return rest;
+    });
+    return changed ? { ...log2, messages } : log2;
+  }
+
+  // src/services/companion/chat/batch.ts
+  var ACTION_DELAY_MS = 500;
+  var SETTLE_MS = 700;
+  var PROGRESS_EVERY = 10;
+  var sleep5 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  // src/services/companion/chat/teamSwap.ts
+  var AFTER_TEAM_SWAP_MS = 300;
+  var NOT_SWAPPED = {
+    async restore() {
+    },
+    wearing: false
+  };
+  function teamName(teamId2) {
+    if (!teamId2) return null;
+    try {
+      return PetsService.getTeamById(teamId2)?.name ?? null;
+    } catch {
+      return null;
+    }
+  }
+  async function wearTeam(teamId2, reporter2) {
+    if (!teamId2) return NOT_SWAPPED;
+    const name = teamName(teamId2);
+    if (!name) {
+      reporter2.say("system", "That team is gone, keeping the one you have on.");
+      return NOT_SWAPPED;
+    }
+    let previous = null;
+    try {
+      const ids = await PetsService.getActivePetIds();
+      previous = ids.length ? ids : null;
+    } catch {
+      previous = null;
+    }
+    try {
+      await PetsService.useTeam(teamId2, { markUsed: false });
+      await sleep5(AFTER_TEAM_SWAP_MS);
+    } catch {
+      reporter2.say("system", "The team switch failed, working as I am.");
+      return NOT_SWAPPED;
+    }
+    reporter2.say("system", `Wearing ${name} for this.`);
+    return {
+      wearing: true,
+      async restore() {
+        if (!previous || previous.length === 0) return;
+        try {
+          await PetsService.usePetIds(previous);
+          await sleep5(AFTER_TEAM_SWAP_MS);
+          reporter2.say("system", "Your team is back the way it was.");
+        } catch {
+          reporter2.say("system", "Could not put your team back, sorry.");
+        }
+      }
+    };
+  }
+
+  // src/services/companion/chat/walk.ts
+  var GIVE_UP_AFTER = 2;
+  var IDLE = {
+    async toGardenTile() {
+    },
+    async toPosition() {
+    },
+    async toBuilding() {
+      return false;
+    },
+    release() {
+    },
+    walking: false
+  };
+  async function createWalker(onGiveUp) {
+    if (!CompanionService.isRunning()) return IDLE;
+    const slotIdx = await readMySlotIdx();
+    if (slotIdx === null) return IDLE;
+    let walking = true;
+    let failures = 0;
+    const record = (arrived) => {
+      failures = arrived ? 0 : failures + 1;
+      if (walking && failures >= GIVE_UP_AFTER) {
+        walking = false;
+        CompanionService.releaseTask();
+        onGiveUp("Cannot get around there, so I work from here.");
+      }
+    };
+    const goTo = async (tile) => {
+      if (!walking) return;
+      if (!tile) {
+        record(false);
+        return;
+      }
+      record(await CompanionService.walkTo(tile));
+    };
+    return {
+      async toGardenTile(dirtTileIdx) {
+        if (!walking) return;
+        await goTo(CompanionService.gardenTileXY(slotIdx, dirtTileIdx));
+      },
+      async toPosition(position2) {
+        if (!walking) return;
+        const x = Number(position2?.x);
+        const y = Number(position2?.y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+          record(false);
+          return;
+        }
+        await goTo({ x: Math.round(x), y: Math.round(y) });
+      },
+      async toBuilding(name) {
+        if (!walking) return false;
+        const map2 = await readCompanionMap();
+        if (!map2) return false;
+        const tiles = map2.buildingActivationTiles(name);
+        const spot = tiles.map((tile) => map2.toXY(tile)).find((xy) => map2.isWalkable(xy.x, xy.y));
+        if (!spot) return false;
+        await goTo(spot);
+        return walking;
+      },
+      release() {
+        if (walking) CompanionService.releaseTask();
+        walking = false;
+      },
+      get walking() {
+        return walking;
+      }
+    };
+  }
+
+  // src/services/workflowScan.ts
+  var COLOR_MUTATIONS = new Set(
+    Object.keys(mutationCatalog2).filter((k) => {
+      const entry = mutationCatalog2[k];
+      return !entry.tileRef;
+    })
+  );
+  var WEATHER_MUTATIONS2 = /* @__PURE__ */ new Set(["Wet", "Chilled", "Frozen", "Thunderstruck"]);
+  var TIME_MUTATIONS = /* @__PURE__ */ new Set(["Dawnlit", "Amberlit", "Dawncharged", "Ambercharged"]);
+  var ALL_KNOWN_MUTATIONS = /* @__PURE__ */ new Set([
+    ...COLOR_MUTATIONS,
+    ...WEATHER_MUTATIONS2,
+    ...TIME_MUTATIONS
+  ]);
+  var _maxScaleCache = /* @__PURE__ */ new Map();
+  function getMaxScale(species) {
+    if (_maxScaleCache.has(species)) return _maxScaleCache.get(species);
+    const entry = plantCatalog2[species];
+    const crop = entry?.crop;
+    const maxScale = typeof crop?.maxScale === "number" ? crop.maxScale : 1;
+    _maxScaleCache.set(species, maxScale);
+    return maxScale;
+  }
+  function scaleToSizePct(targetScale, maxScale) {
+    if (maxScale <= 1) return 100;
+    const clamped = Math.max(1, Math.min(maxScale, Number(targetScale) || 1));
+    const pct = 50 + (clamped - 1) / (maxScale - 1) * 50;
+    return Math.max(50, Math.min(100, Math.round(pct)));
+  }
+  function scanGarden(tileObjects, selectedSpecies) {
+    const plants = [];
+    const allCrops = [];
+    const now2 = Date.now();
+    if (!tileObjects || !selectedSpecies.size) {
+      return emptyResult();
+    }
+    for (const [tileIdx, tileRaw] of Object.entries(tileObjects)) {
+      const tile = tileRaw;
+      if (!tile || tile.objectType !== "plant") continue;
+      const species = tile.species;
+      if (!species || !selectedSpecies.has(species)) continue;
+      const slots = tile.slots;
+      if (!Array.isArray(slots) || !slots.length) continue;
+      const maxScale = getMaxScale(species);
+      const crops = [];
+      for (let si = 0; si < slots.length; si++) {
+        const slot = slots[si];
+        const rawSlotId = slot.slotId;
+        const slotId = Number.isFinite(rawSlotId) ? Number(rawSlotId) : si;
+        const startTime = Number(slot.startTime) || 0;
+        const endTime = Number(slot.endTime) || 0;
+        const targetScale = Number(slot.targetScale) || 1;
+        const mutations = Array.isArray(slot.mutations) ? slot.mutations : [];
+        let growthPct = 0;
+        const duration = endTime - startTime;
+        if (duration > 0) {
+          const elapsed = now2 - startTime;
+          growthPct = Math.max(0, Math.min(100, elapsed / duration * 100));
+        } else {
+          growthPct = 100;
+        }
+        const sizePct = scaleToSizePct(targetScale, maxScale);
+        const colorMuts = [];
+        const weatherMuts = [];
+        const timeMuts = [];
+        for (const m of mutations) {
+          if (COLOR_MUTATIONS.has(m)) colorMuts.push(m);
+          else if (WEATHER_MUTATIONS2.has(m)) weatherMuts.push(m);
+          else if (TIME_MUTATIONS.has(m)) timeMuts.push(m);
+        }
+        const crop = {
+          slotIndex: slotId,
+          species: slot.species ?? species,
+          startTime,
+          endTime,
+          targetScale,
+          mutations,
+          growthPct,
+          sizePct,
+          colorMutations: colorMuts,
+          weatherMutations: weatherMuts,
+          timeMutations: timeMuts
+        };
+        crops.push(crop);
+        allCrops.push(crop);
+      }
+      plants.push({
+        tileIndex: Number(tileIdx),
+        species,
+        crops
+      });
+    }
+    if (!allCrops.length) return emptyResult();
+    const total = allCrops.length;
+    const avgGrowthPct = allCrops.reduce((s, c) => s + c.growthPct, 0) / total;
+    const avgSizePct = allCrops.reduce((s, c) => s + c.sizePct, 0) / total;
+    const cropsWithColor = allCrops.filter((c) => c.colorMutations.length > 0).length;
+    const colorMutationPct = cropsWithColor / total * 100;
+    const weatherMutationPcts = {};
+    for (const wm of WEATHER_MUTATIONS2) {
+      const count = allCrops.filter((c) => c.weatherMutations.includes(wm)).length;
+      weatherMutationPcts[wm] = count / total * 100;
+    }
+    const timeMutationPcts = {};
+    for (const tm of TIME_MUTATIONS) {
+      const count = allCrops.filter((c) => c.timeMutations.includes(tm)).length;
+      timeMutationPcts[tm] = count / total * 100;
+    }
+    const cropsAtMaxSize = allCrops.filter((c) => c.sizePct >= 100).length;
+    const sizeCompletePct = cropsAtMaxSize / total * 100;
+    const harvestTargets = [];
+    for (const plant of plants) {
+      for (const crop of plant.crops) {
+        if (crop.growthPct >= 100) {
+          harvestTargets.push({ tileIndex: plant.tileIndex, slotIndex: crop.slotIndex });
+        }
+      }
+    }
+    return {
+      totalCrops: total,
+      plants,
+      avgGrowthPct: Math.round(avgGrowthPct * 100) / 100,
+      avgSizePct: Math.round(avgSizePct * 100) / 100,
+      colorMutationPct: Math.round(colorMutationPct * 100) / 100,
+      weatherMutationPcts,
+      timeMutationPcts,
+      sizeCompletePct: Math.round(sizeCompletePct * 100) / 100,
+      matureCropCount: harvestTargets.length,
+      harvestTargets
+    };
+  }
+  function emptyResult() {
+    return {
+      totalCrops: 0,
+      plants: [],
+      avgGrowthPct: 0,
+      avgSizePct: 50,
+      colorMutationPct: 0,
+      weatherMutationPcts: {},
+      timeMutationPcts: {},
+      sizeCompletePct: 0,
+      matureCropCount: 0,
+      harvestTargets: []
+    };
+  }
+
+  // src/services/companion/chat/gardenRead.ts
+  function speciesInGarden(tileObjects) {
+    const species = /* @__PURE__ */ new Set();
+    for (const raw of Object.values(tileObjects)) {
+      const tile = raw;
+      if (!tile || tile.objectType !== "plant") continue;
+      const name = tile.species;
+      if (typeof name === "string" && name) species.add(name);
+    }
+    return species;
+  }
+  async function readHarvestRows() {
+    let tileObjects = null;
+    try {
+      tileObjects = await Atoms.data.gardenTileObjects.get();
+    } catch {
+      return [];
+    }
+    if (!tileObjects || typeof tileObjects !== "object") return [];
+    const species = speciesInGarden(tileObjects);
+    if (species.size === 0) return [];
+    const scan = scanGarden(tileObjects, species);
+    const now2 = Date.now();
+    const rows = [];
+    for (const plant of scan.plants) {
+      for (const crop of plant.crops) {
+        rows.push({
+          tileIndex: plant.tileIndex,
+          // `slotIndex` porte le slotId résolu par scanGarden, pas un index de tableau.
+          slotId: crop.slotIndex,
+          species: crop.species,
+          sizePct: crop.sizePct,
+          growthPct: Math.round(crop.growthPct),
+          mutations: Array.isArray(crop.mutations) ? crop.mutations : [],
+          ready: crop.endTime > 0 && crop.endTime <= now2
+        });
+      }
+    }
+    return rows;
+  }
+  async function readHarvestable() {
+    const rows = await readHarvestRows();
+    const ripe = rows.filter((row) => row.ready);
+    const allowed = ripe.filter((row) => {
+      try {
+        return lockerService.allowsHarvest({
+          seedKey: row.species,
+          sizePercent: row.sizePct,
+          mutations: mutationsOf(row)
+        });
+      } catch {
+        return false;
+      }
+    });
+    return { rows: allowed, lockedOut: ripe.length - allowed.length };
+  }
+
+  // src/services/companion/chat/harvestRun.ts
+  async function report(attempted, cancelled, reporter2) {
+    if (attempted.length === 0) {
+      reporter2.say("report", "Stopped before I picked anything.");
+      return;
+    }
+    await sleep5(SETTLE_MS);
+    let fresh = null;
+    try {
+      fresh = (await readHarvestRows()).filter((row) => row.ready);
+    } catch {
+      fresh = null;
+    }
+    const stopped = cancelled ? " before you stopped me" : "";
+    if (!fresh) {
+      reporter2.say(
+        "report",
+        `Sent all ${attempted.length}${stopped}, but I could not check they landed.`
+      );
+      return;
+    }
+    const targeted = new Set(attempted.map(rowKey));
+    const stillRipe = fresh.filter((row) => targeted.has(rowKey(row))).length;
+    const picked = attempted.length - stillRipe;
+    if (picked > 0) StatsService.incrementGardenStat("totalHarvested", picked);
+    if (stillRipe === 0) {
+      reporter2.say("report", cancelled ? `Stopped there. Got ${picked}.` : `All done, ${picked} picked.`);
+      return;
+    }
+    if (picked === 0) {
+      reporter2.say(
+        "report",
+        "None went through. Still ripe, so your bag is probably full."
+      );
+      return;
+    }
+    reporter2.say("report", `Got ${picked} of ${attempted.length}${stopped}. ${stillRipe} still ripe.`);
+  }
+  async function executeHarvestBatch(rows, reporter2) {
+    reporter2.say("reply", `On it. Picking ${rows.length} now.`);
+    const team = await wearTeam(loadCompanionSettings().harvestTeamId, reporter2);
+    const walker = await createWalker((message) => reporter2.say("system", message));
+    const attempted = [];
+    for (const row of rows) {
+      if (reporter2.stopped()) break;
+      await walker.toGardenTile(row.tileIndex);
+      attempted.push(row);
+      await PlayerService.harvestCrop(row.tileIndex, row.slotId);
+      const done = attempted.length;
+      reporter2.progress(done, rows.length);
+      if (done % PROGRESS_EVERY === 0 && done < rows.length) {
+        reporter2.say("system", `${done} of ${rows.length} so far...`);
+      }
+      await sleep5(ACTION_DELAY_MS);
+    }
+    walker.release();
+    await team.restore();
+    await report(attempted, reporter2.stopped(), reporter2);
+  }
+
+  // src/services/companion/chat/feedScope.ts
+  function feedSignature(candidates) {
+    return candidates.map((candidate) => candidate.petId).sort().join("|");
+  }
+  function disambiguate(candidates) {
+    const byName = /* @__PURE__ */ new Map();
+    for (const candidate of candidates) {
+      const group = byName.get(candidate.petName);
+      if (group) group.push(candidate);
+      else byName.set(candidate.petName, [candidate]);
+    }
+    for (const group of byName.values()) {
+      if (group.length < 2) continue;
+      const ordered = [...group].sort((a, b) => a.petId.localeCompare(b.petId));
+      ordered.forEach((candidate, index) => {
+        candidate.petName = `${candidate.petName} #${index + 1}`;
+      });
+    }
+    return candidates;
+  }
+  function isSettled(picks, stillFeedable) {
+    return !picks.some((pick) => stillFeedable.has(pick.petId));
+  }
+  function describeFeed(candidates) {
+    if (candidates.length === 0) return "nothing";
+    if (candidates.length === 1) {
+      const only = candidates[0];
+      const where = only.source.kind === "garden" ? ", which I would pick first" : "";
+      return `${only.petName} is down to ${only.hungerPct}% and I have ${only.source.species}${where}`;
+    }
+    const names = candidates.map((candidate) => candidate.petName);
+    const head = names.slice(0, 3).join(", ");
+    const rest = names.length > 3 ? ` and ${names.length - 3} more` : "";
+    return `${candidates.length} pets are hungry: ${head}${rest}`;
+  }
+
+  // src/services/companion/chat/petFeed.ts
+  function petIdOf(pet) {
+    return String(pet?.slot?.id ?? "");
+  }
+  function petNameOf(pet) {
+    const given = pet?.slot?.name;
+    const species = String(pet?.slot?.petSpecies ?? "");
+    return typeof given === "string" && given.trim() || species || "That pet";
+  }
+  function allowedCropsFor(petId, species) {
+    const compatibles = PetsService.getCompatibleCropsForSpecies(species);
+    let rules = {};
+    try {
+      rules = PetsService.getOverride(petId).crops ?? {};
+    } catch {
+      rules = {};
+    }
+    return new Set(compatibles.filter((crop) => rules[crop] ? rules[crop].allowed : true));
+  }
+  async function reviewFeeding(search2) {
+    const settings = loadCompanionSettings();
+    const thresholdPct = search2?.thresholdPct ?? settings.feedThresholdPct;
+    const allowGarden = search2?.allowGarden ?? settings.feedFromGarden;
+    const empty = { candidates: [], hungry: 0, waitingOnGardenRule: 0 };
+    let pets = [];
+    try {
+      pets = await PetsService.getPets() ?? [];
+    } catch {
+      return empty;
+    }
+    const hungry = pets.filter((pet) => petIdOf(pet) && PetsService.getHungerPctFor(pet) <= thresholdPct);
+    if (hungry.length === 0) return empty;
+    let inventory = [];
+    let favourites = /* @__PURE__ */ new Set();
+    try {
+      const [invRaw, favRaw] = await Promise.all([
+        PlayerService.getCropInventoryState(),
+        PlayerService.getFavoriteIds().catch(() => [])
+      ]);
+      inventory = Array.isArray(invRaw) ? invRaw : [];
+      favourites = new Set(Array.isArray(favRaw) ? favRaw : []);
+    } catch {
+      inventory = [];
+    }
+    let garden2 = null;
+    const gardenRows = async () => {
+      if (garden2 === null) garden2 = await readHarvestable().then((scope) => scope.rows).catch(() => []);
+      return garden2;
+    };
+    const claimed = /* @__PURE__ */ new Set();
+    const candidates = [];
+    let waitingOnGardenRule = 0;
+    for (const pet of hungry) {
+      const petId = petIdOf(pet);
+      const species = String(pet?.slot?.petSpecies ?? "");
+      const allowed = allowedCropsFor(petId, species);
+      if (allowed.size === 0) continue;
+      const fromInventory = inventory.find(
+        (item) => item?.id && !favourites.has(String(item.id)) && !claimed.has(`inv:${item.id}`) && typeof item.species === "string" && allowed.has(item.species)
+      );
+      let source = null;
+      if (fromInventory?.id) {
+        claimed.add(`inv:${fromInventory.id}`);
+        source = { kind: "inventory", itemId: String(fromInventory.id), species: String(fromInventory.species) };
+      } else {
+        const rows = await gardenRows();
+        const fromGarden = rows.find((row) => allowed.has(row.species) && !claimed.has(`garden:${rowKey(row)}`));
+        if (fromGarden && allowGarden) {
+          claimed.add(`garden:${rowKey(fromGarden)}`);
+          source = { kind: "garden", row: fromGarden, species: fromGarden.species };
+        } else if (fromGarden) {
+          waitingOnGardenRule++;
+        }
+      }
+      if (!source) continue;
+      candidates.push({
+        petId,
+        petName: petNameOf(pet),
+        petSpecies: species,
+        hungerPct: PetsService.getHungerPctFor(pet),
+        source
+      });
+    }
+    return {
+      // Le plus affamé d'abord : c'est celui pour qui la question presse.
+      candidates: disambiguate(candidates.sort((a, b) => a.hungerPct - b.hungerPct)),
+      hungry: hungry.length,
+      waitingOnGardenRule
+    };
+  }
+  async function findFeedable(search2) {
+    return (await reviewFeeding(search2)).candidates;
+  }
+
+  // src/services/companion/chat/feedRun.ts
+  var AFTER_HARVEST_MS = 700;
+  var AFTER_FEED_MS = 400;
+  var sleep6 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  async function petPosition(petId) {
+    try {
+      const pets = await PetsService.getPets() ?? [];
+      const found = pets.find((pet) => String(pet?.slot?.id ?? "") === petId);
+      return found?.position ?? null;
+    } catch {
+      return null;
+    }
+  }
+  async function runFeed(candidate, walker) {
+    let cropItemId;
+    if (candidate.source.kind === "inventory") {
+      cropItemId = candidate.source.itemId;
+    } else {
+      await walker.toGardenTile(candidate.source.row.tileIndex);
+      cropItemId = randomClientId();
+      try {
+        await PlayerService.harvestCrop(candidate.source.row.tileIndex, candidate.source.row.slotId, cropItemId);
+      } catch {
+        return { ok: false, reason: "could not pick it" };
+      }
+      StatsService.incrementGardenStat("totalHarvested", 1);
+      await sleep6(AFTER_HARVEST_MS);
+    }
+    await walker.toPosition(await petPosition(candidate.petId));
+    try {
+      await PlayerService.feedPet(candidate.petId, cropItemId);
+    } catch {
+      return { ok: false, reason: "the feed did not go through" };
+    }
+    await sleep6(AFTER_FEED_MS);
+    return { ok: true };
+  }
+  async function executeFeedBatch(picks, reporter2) {
+    reporter2.say("reply", picks.length === 1 ? "On it." : `On it. Feeding ${picks.length} of them.`);
+    const walker = await createWalker((message) => reporter2.say("system", message));
+    const fed = [];
+    const failures = [];
+    for (const pick of picks) {
+      if (reporter2.stopped()) break;
+      const outcome = await runFeed(pick, walker);
+      if (outcome.ok) {
+        fed.push(pick.petName);
+        reporter2.say("system", `${pick.petName} has been fed.`);
+      } else {
+        failures.push(`${pick.petName} (${outcome.reason})`);
+      }
+      reporter2.progress(fed.length + failures.length, picks.length);
+    }
+    walker.release();
+    const cancelled = reporter2.stopped();
+    if (fed.length === 0) {
+      reporter2.say("report", `That did not work: ${failures.join(", ") || "nothing went through"}.`);
+      return;
+    }
+    const tail = failures.length > 0 ? ` I could not manage ${failures.join(", ")}.` : "";
+    const who = fed.length === 1 ? fed[0] : `${fed.slice(0, -1).join(", ")} and ${fed[fed.length - 1]}`;
+    reporter2.say("report", `${cancelled ? "Stopped there. " : ""}Fed ${who}.${tail}`);
+  }
+
+  // src/services/companion/chat/plant.ts
+  var GARDEN_COLS = 20;
+  var GARDEN_ROWS = 10;
+  var GARDEN_TILE_COUNT = GARDEN_COLS * GARDEN_ROWS;
+  var EMPTY_SCOPE = { tiles: [], occupied: /* @__PURE__ */ new Set(), items: [] };
+  function itemKey(item) {
+    return `${item.kind}:${item.id}`;
+  }
+  function assignmentKey(assignment) {
+    return `${assignment.tileIndex}:${assignment.kind}:${assignment.id}`;
+  }
+  function plantSignature(plan) {
+    return plan.map(assignmentKey).sort().join("|");
+  }
+  function countByItem(plan) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const assignment of plan) {
+      const key2 = itemKey(assignment);
+      const known = counts.get(key2);
+      if (known) known.count++;
+      else counts.set(key2, { kind: assignment.kind, id: assignment.id, name: assignment.name, count: 1 });
+    }
+    return [...counts.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }
+  function stockLeft(plan, items) {
+    const left = new Map(items.map((item) => [itemKey(item), item.stock]));
+    for (const assignment of plan) {
+      const key2 = itemKey(assignment);
+      left.set(key2, (left.get(key2) ?? 0) - 1);
+    }
+    return left;
+  }
+  function viablePlan(plan, scope) {
+    const owned = new Set(scope.tiles);
+    const left = new Map(scope.items.map((item) => [itemKey(item), item.stock]));
+    const kept = [];
+    for (const assignment of plan) {
+      if (!owned.has(assignment.tileIndex)) continue;
+      if (scope.occupied.has(assignment.tileIndex)) continue;
+      const key2 = itemKey(assignment);
+      const remaining = left.get(key2) ?? 0;
+      if (remaining <= 0) continue;
+      left.set(key2, remaining - 1);
+      kept.push(assignment);
+    }
+    return kept;
+  }
+  function listPlantItems(plan) {
+    const parts = countByItem(plan).map((entry) => `${entry.count} ${entry.name}`);
+    if (parts.length === 0) return "nothing";
+    const head = parts.slice(0, 3);
+    const rest = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
+    return `${listWords(head)}${rest}`;
+  }
+  function describePlan(plan) {
+    if (plan.length === 0) return "Plant nothing";
+    return `Plant ${listPlantItems(plan)} for me`;
+  }
+  function summarizePlan(plan) {
+    if (plan.length === 0) return "nothing";
+    const tiles = `${plan.length} tile${plan.length === 1 ? "" : "s"}`;
+    const parts = countByItem(plan);
+    if (parts.length === 1) return `${parts[0].count} ${parts[0].name} to plant`;
+    return `${listPlantItems(plan)} to plant, over ${tiles}`;
+  }
+
+  // src/services/companion/chat/plantRead.ts
+  async function readOwnedTiles() {
+    let count = 0;
+    try {
+      const [map2, slotIdx] = await Promise.all([readCompanionMap(), readMySlotIdx()]);
+      if (map2 && slotIdx !== null) count = map2.dirtTileCount(slotIdx);
+    } catch {
+      count = 0;
+    }
+    const total = count > 0 ? count : GARDEN_TILE_COUNT;
+    return Array.from({ length: total }, (_, index) => index);
+  }
+  async function readOccupied() {
+    const occupied = /* @__PURE__ */ new Set();
+    let tileObjects = null;
+    try {
+      tileObjects = await Atoms.data.gardenTileObjects.get();
+    } catch {
+      return occupied;
+    }
+    if (!tileObjects || typeof tileObjects !== "object") return occupied;
+    for (const [key2, value] of Object.entries(tileObjects)) {
+      if (!value) continue;
+      const index = Number(key2);
+      if (Number.isInteger(index)) occupied.add(index);
+    }
+    return occupied;
+  }
+  function seedName(species) {
+    const entry = plantCatalog2[species];
+    const name = entry?.seed?.name;
+    return typeof name === "string" && name ? name : species;
+  }
+  function eggName(eggId) {
+    const entry = eggCatalog2[eggId];
+    const name = entry?.name;
+    return typeof name === "string" && name ? name : eggId;
+  }
+  function accumulate(rows, kind, idOf, nameOf) {
+    const totals = /* @__PURE__ */ new Map();
+    for (const raw of Array.isArray(rows) ? rows : []) {
+      if (!raw || typeof raw !== "object") continue;
+      const row = raw;
+      const id = idOf(row).trim();
+      if (!id) continue;
+      const quantity = Math.floor(Number(row.quantity ?? 0));
+      if (!Number.isFinite(quantity) || quantity <= 0) continue;
+      totals.set(id, (totals.get(id) ?? 0) + quantity);
+    }
+    return [...totals.entries()].map(([id, stock]) => ({ kind, id, name: nameOf(id), stock })).sort((a, b) => a.name.localeCompare(b.name));
+  }
+  async function readItems() {
+    const [seeds, eggs] = await Promise.all([
+      Atoms.inventory.mySeedInventory.get().catch(() => null),
+      Atoms.inventory.myEggInventory.get().catch(() => null)
+    ]);
+    return [
+      ...accumulate(seeds, "seed", (row) => String(row.species ?? ""), seedName),
+      ...accumulate(eggs, "egg", (row) => String(row.eggId ?? row.id ?? row.species ?? ""), eggName)
+    ];
+  }
+  async function readPlantScope() {
+    const [tiles, occupied, items] = await Promise.all([readOwnedTiles(), readOccupied(), readItems()]);
+    return { tiles, occupied, items };
+  }
+
+  // src/services/companion/chat/plantRun.ts
+  async function send(assignment) {
+    if (assignment.kind === "egg") {
+      await PlayerService.plantEgg(assignment.tileIndex, assignment.id);
+      return;
+    }
+    await PlayerService.plantSeed(assignment.tileIndex, assignment.id);
+  }
+  async function countPlanted(attempted) {
+    try {
+      const { occupied } = await readPlantScope();
+      return attempted.filter((assignment) => occupied.has(assignment.tileIndex)).length;
+    } catch {
+      return null;
+    }
+  }
+  async function report2(attempted, cancelled, reporter2) {
+    if (attempted.length === 0) {
+      reporter2.say("report", "Stopped before I planted anything.");
+      return;
+    }
+    await sleep5(SETTLE_MS);
+    const planted = await countPlanted(attempted);
+    const stopped = cancelled ? " before you stopped me" : "";
+    if (planted === null) {
+      reporter2.say(
+        "report",
+        `Planted all ${attempted.length}${stopped}, but I could not check.`
+      );
+      return;
+    }
+    if (planted > 0) StatsService.incrementGardenStat("totalPlanted", planted);
+    if (planted === attempted.length) {
+      reporter2.say("report", cancelled ? `Stopped there. ${planted} are in the ground.` : `All done, ${planted} planted.`);
+      return;
+    }
+    if (planted === 0) {
+      reporter2.say(
+        "report",
+        "None took. The tiles are still bare, so the seeds probably ran out."
+      );
+      return;
+    }
+    reporter2.say("report", `Planted ${planted} of ${attempted.length}${stopped}. The rest would not go in.`);
+  }
+  async function executePlantBatch(plan, reporter2) {
+    const what = countByItem(plan);
+    reporter2.say(
+      "reply",
+      what.length === 1 ? `On it. Planting ${plan.length} ${what[0].name} now.` : `On it. Planting ${listPlantItems(plan)} now.`
+    );
+    const walker = await createWalker((message) => reporter2.say("system", message));
+    const attempted = [];
+    for (const assignment of plan) {
+      if (reporter2.stopped()) break;
+      await walker.toGardenTile(assignment.tileIndex);
+      attempted.push(assignment);
+      await send(assignment);
+      const done = attempted.length;
+      reporter2.progress(done, plan.length);
+      if (done % PROGRESS_EVERY === 0 && done < plan.length) {
+        reporter2.say("system", `${done} of ${plan.length} in the ground so far...`);
+      }
+      await sleep5(ACTION_DELAY_MS);
+    }
+    walker.release();
+    await report2(attempted, reporter2.stopped(), reporter2);
+  }
+
+  // src/services/companion/chat/hatchRead.ts
+  var INVENTORY_CAPACITY = 98;
+  var EMPTY_HATCH_SCOPE = {
+    readySlots: [],
+    totalEggs: 0,
+    possibleSpecies: [],
+    possibleAbilities: [],
+    presentMutations: [],
+    pets: [],
+    inventoryCount: 0,
+    capacity: INVENTORY_CAPACITY
+  };
+  function normalizeTs(value) {
+    const raw = typeof value === "number" ? value : Number(value);
+    if (!Number.isFinite(raw) || raw <= 0) return null;
+    return raw < 1e11 ? raw * 1e3 : raw;
+  }
+  function isEggReady(tile, now2) {
+    const readyAt = normalizeTs(tile.maturedAt) ?? normalizeTs(tile.endTime) ?? normalizeTs(tile.readyAt) ?? normalizeTs(tile.hatchTime) ?? null;
+    return readyAt === null || readyAt <= now2;
+  }
+  function asStringArray(value) {
+    return Array.isArray(value) ? value.filter((entry) => typeof entry === "string") : [];
+  }
+  function inventoryItems2(raw) {
+    const source = raw;
+    const list = Array.isArray(raw) ? raw : Array.isArray(source?.items) ? source.items : [];
+    return list.filter((entry) => !!entry && typeof entry === "object");
+  }
+  async function scanEggs() {
+    const scan = { readySlots: [], totalEggs: 0, eggIds: /* @__PURE__ */ new Set() };
+    let tileObjects = null;
+    try {
+      tileObjects = await Atoms.data.gardenTileObjects.get();
+    } catch {
+      return scan;
+    }
+    if (!tileObjects || typeof tileObjects !== "object") return scan;
+    const now2 = Date.now();
+    for (const [key2, raw] of Object.entries(tileObjects)) {
+      if (!raw || typeof raw !== "object") continue;
+      const tile = raw;
+      const objectType = String(tile.objectType ?? tile.type ?? "").toLowerCase();
+      if (objectType !== "egg") continue;
+      const slot = Number(key2);
+      if (!Number.isInteger(slot)) continue;
+      scan.totalEggs++;
+      const eggId = String(tile.eggId ?? tile.id ?? tile.species ?? "");
+      if (eggId) scan.eggIds.add(eggId);
+      if (isEggReady(tile, now2)) scan.readySlots.push(slot);
+    }
+    scan.readySlots.sort((a, b) => a - b);
+    return scan;
+  }
+  function whatCouldHatch(eggIds) {
+    const species = /* @__PURE__ */ new Set();
+    for (const eggId of eggIds) {
+      const egg = eggCatalog2[eggId];
+      for (const name of Object.keys(egg?.faunaSpawnWeights ?? {})) species.add(name);
+    }
+    const abilityIds = /* @__PURE__ */ new Set();
+    for (const name of species) {
+      const pet = petCatalog2[name];
+      for (const id of Object.keys(pet?.innateAbilityWeights ?? {})) abilityIds.add(id);
+    }
+    const abilities = [...abilityIds].map((id) => ({
+      id,
+      name: petAbilities2[id]?.name
+    })).map((entry) => ({ id: entry.id, name: typeof entry.name === "string" && entry.name ? entry.name : entry.id })).sort((a, b) => a.name.localeCompare(b.name));
+    return { species: [...species].sort((a, b) => a.localeCompare(b)), abilities };
+  }
+  async function readPets() {
+    const [inventory, favoriteIds2, activeIds] = await Promise.all([
+      Atoms.inventory.myInventory.get().catch(() => null),
+      Atoms.inventory.favoriteIds.get().catch(() => null),
+      PetsService.getActivePetIds().catch(() => [])
+    ]);
+    const items = inventoryItems2(inventory);
+    const favorites = new Set(asStringArray(favoriteIds2));
+    const onTeam = new Set(activeIds);
+    const pets = [];
+    for (const item of items) {
+      if (item.itemType !== "Pet" || typeof item.id !== "string") continue;
+      const species = String(item.petSpecies ?? "");
+      const info = getPetInfo(item);
+      const maxStrength = typeof info?.maxStrength === "number" && info.maxStrength > 0 ? info.maxStrength : null;
+      pets.push({
+        petId: item.id,
+        name: typeof item.nickname === "string" && item.nickname ? item.nickname : species || item.id,
+        species,
+        mutations: asStringArray(item.mutations),
+        abilities: asStringArray(item.abilities),
+        maxStrength,
+        favorited: favorites.has(item.id),
+        onTeam: onTeam.has(item.id)
+      });
+    }
+    return { pets, inventoryCount: items.length };
+  }
+  async function readInventoryCount() {
+    try {
+      return inventoryItems2(await Atoms.inventory.myInventory.get()).length;
+    } catch {
+      return 0;
+    }
+  }
+  async function readHatchScope() {
+    const [eggs, bag] = await Promise.all([scanEggs(), readPets()]);
+    const { species, abilities } = whatCouldHatch(eggs.eggIds);
+    const mutations = /* @__PURE__ */ new Set();
+    for (const pet of bag.pets) for (const mutation of pet.mutations) mutations.add(mutation);
+    return {
+      readySlots: eggs.readySlots,
+      totalEggs: eggs.totalEggs,
+      possibleSpecies: species,
+      possibleAbilities: abilities,
+      presentMutations: [...mutations].sort((a, b) => a.localeCompare(b)),
+      pets: bag.pets,
+      inventoryCount: bag.inventoryCount,
+      capacity: INVENTORY_CAPACITY
+    };
+  }
+
+  // src/services/companion/chat/hatchRun.ts
+  var RECOUNT_EVERY = 5;
+  var NEAR_CAPACITY = 5;
+  var SELL_BUILDING_WORDS = ["pet"];
+  var SELL_BUILDING_ALTERNATIVES = ["sell", "shop", "store", "market"];
+  async function countHatched(slots) {
+    try {
+      const still = new Set((await readHatchScope()).readySlots);
+      return slots.filter((slot) => !still.has(slot)).length;
+    } catch {
+      return null;
+    }
+  }
+  async function reportHatch(attempted, stop2, reporter2) {
+    if (attempted.length === 0) {
+      reporter2.say(
+        "report",
+        stop2 === "full" ? "Your bag was already full, so I opened none." : "Stopped before I opened any."
+      );
+      return;
+    }
+    await sleep5(SETTLE_MS);
+    const hatched = await countHatched(attempted);
+    if (hatched === null) {
+      reporter2.say("report", `Opened all ${attempted.length}, but I could not check.`);
+      return;
+    }
+    if (hatched === 0) {
+      reporter2.say("report", "None opened. They are all still there.");
+      return;
+    }
+    const tail = stop2 === "full" ? " Your bag is full now." : stop2 === "cancelled" ? " Stopped there." : "";
+    if (hatched === attempted.length) {
+      reporter2.say("report", `${hatched} hatched.${tail}`);
+      return;
+    }
+    reporter2.say("report", `${hatched} of ${attempted.length} hatched.${tail}`);
+  }
+  async function executeHatchBatch(slots, reporter2) {
+    reporter2.say("reply", `On it. Opening ${slots.length} now.`);
+    const team = await wearTeam(loadCompanionSettings().hatchTeamId, reporter2);
+    const walker = await createWalker((message) => reporter2.say("system", message));
+    const attempted = [];
+    let count = await readInventoryCount();
+    let stop2 = "done";
+    for (const slot of slots) {
+      if (reporter2.stopped()) {
+        stop2 = "cancelled";
+        break;
+      }
+      if (attempted.length % RECOUNT_EVERY === 0 || count >= INVENTORY_CAPACITY - NEAR_CAPACITY) {
+        count = await readInventoryCount();
+      }
+      if (count >= INVENTORY_CAPACITY) {
+        stop2 = "full";
+        break;
+      }
+      await walker.toGardenTile(slot);
+      await PlayerService.hatchEgg(slot);
+      attempted.push(slot);
+      count++;
+      reporter2.progress(attempted.length, slots.length);
+      if (attempted.length % PROGRESS_EVERY === 0 && attempted.length < slots.length) {
+        reporter2.say("system", `${attempted.length} of ${slots.length} open so far...`);
+      }
+      await sleep5(ACTION_DELAY_MS);
+    }
+    walker.release();
+    await team.restore();
+    await reportHatch(attempted, stop2, reporter2);
+    return stop2;
+  }
+  async function goToSellShop(walker, reporter2) {
+    if (!walker.walking) return;
+    const map2 = await readCompanionMap();
+    if (!map2) return;
+    const shop = map2.findBuilding(SELL_BUILDING_WORDS, SELL_BUILDING_ALTERNATIVES);
+    if (!shop) {
+      console.warn("[companion] no pet shop found on the map, selling from here. Buildings:", map2.buildingNames);
+      return;
+    }
+    reporter2.say("system", "Heading to the pet shop.");
+    const arrived = await walker.toBuilding(shop);
+    if (!arrived) reporter2.say("system", "Could not get there, selling from here.");
+  }
+  async function executeSellBatch(plan, reporter2) {
+    reporter2.say("reply", `On it. ${summarizeSell(plan.sell)} going.`);
+    for (const pet of plan.favourite) {
+      if (reporter2.stopped()) break;
+      try {
+        await PlayerService.ensureFavoriteItem(pet.petId, true);
+      } catch {
+        reporter2.say("system", `Could not favourite ${pet.name}, leaving it alone.`);
+      }
+    }
+    if (plan.favourite.length > 0) {
+      reporter2.say("system", `${plan.favourite.length} kept and favourited.`);
+    }
+    const walker = await createWalker((message) => reporter2.say("system", message));
+    await goToSellShop(walker, reporter2);
+    const team = await wearTeam(plan.teamId, reporter2);
+    let nowOnTeam = /* @__PURE__ */ new Set();
+    try {
+      nowOnTeam = new Set(await PetsService.getActivePetIds());
+    } catch {
+      nowOnTeam = /* @__PURE__ */ new Set();
+    }
+    const attempted = [];
+    const skipped = [];
+    for (const pet of plan.sell) {
+      if (reporter2.stopped()) break;
+      if (nowOnTeam.has(pet.petId)) {
+        skipped.push(pet);
+        continue;
+      }
+      try {
+        await PlayerService.sellPet(pet.petId);
+        attempted.push(pet);
+      } catch {
+        skipped.push(pet);
+      }
+      reporter2.progress(attempted.length + skipped.length, plan.sell.length);
+      await sleep5(ACTION_DELAY_MS);
+    }
+    await team.restore();
+    walker.release();
+    await reportSell(attempted, skipped, reporter2);
+  }
+  async function reportSell(attempted, skipped, reporter2) {
+    if (attempted.length === 0) {
+      reporter2.say("report", skipped.length > 0 ? "None of them went through." : "Nothing sold.");
+      return;
+    }
+    await sleep5(SETTLE_MS);
+    let sold = null;
+    try {
+      const left = new Set((await readHatchScope()).pets.map((pet) => pet.petId));
+      sold = attempted.filter((pet) => !left.has(pet.petId)).length;
+    } catch {
+      sold = null;
+    }
+    const tail = skipped.length > 0 ? ` I left ${skipped.length} alone.` : "";
+    if (sold === null) {
+      reporter2.say("report", `Sent all ${attempted.length}, but I could not check.${tail}`);
+      return;
+    }
+    if (sold === 0) {
+      reporter2.say("report", `None of them sold. They are all still in your bag.${tail}`);
+      return;
+    }
+    reporter2.say("report", `${sold} sold.${tail}`);
+  }
+
+  // src/services/companion/chat/hatchFlow.ts
+  function hatchProvider() {
+    return async () => (await readHatchScope()).readySlots;
+  }
+  function sellProvider(rules) {
+    return async () => {
+      const scope = await readHatchScope();
+      return {
+        favourite: toFavourite(scope.pets, rules),
+        sell: toSell(scope.pets, rules),
+        teamId: loadCompanionSettings().hatchSellTeamId
+      };
+    };
+  }
+  function afterHatch(stop2, scope, rules, sellable) {
+    const waiting = scope.readySlots.length;
+    const eggs = waiting > 0 ? ` ${waiting} egg${waiting === 1 ? "" : "s"} still waiting.` : "";
+    if (stop2 === "full") {
+      if (sellable.length > 0) return `Your bag is full.${eggs}`;
+      return hasAnyRule(rules) ? `Your bag is full, nothing in it is up for sale.${eggs}` : `Your bag is full.${eggs} Nothing set to keep, so I am not selling.`;
+    }
+    return sellable.length > 0 ? "All open. Now the ones you did not want." : null;
+  }
+
+  // src/services/companion/chat/proposals.ts
+  var PROPOSAL_TTL_MS = 3e4;
+  function isExpired(proposal, nowMs2, ttlMs = PROPOSAL_TTL_MS) {
+    return nowMs2 - proposal.createdAtMs >= ttlMs;
+  }
+  function verdict(proposal, currentSignature2, nowMs2, ttlMs = PROPOSAL_TTL_MS) {
+    if (!proposal) return { ok: false, reason: "unknown" };
+    if (isExpired(proposal, nowMs2, ttlMs)) return { ok: false, reason: "expired" };
+    if (!currentSignature2 || proposal.size === 0) return { ok: false, reason: "empty" };
+    if (currentSignature2 !== proposal.signature) return { ok: false, reason: "changed" };
+    return { ok: true };
+  }
+  function explain(reason) {
+    switch (reason) {
+      case "expired":
+        return "That went stale while I waited. Let me have another look.";
+      case "changed":
+        return "Things moved while I was waiting. Here is what I see now.";
+      case "empty":
+        return "There is nothing left to do there.";
+      default:
+        return "I lost track of that one, sorry. Ask me again.";
+    }
+  }
+
+  // src/services/companion/chat/index.ts
+  var ALERT_DEDUPE_MS = 6e4;
+  var state3 = {
+    log: emptyLog(),
+    proposal: null,
+    captured: null,
+    run: null,
+    cancelRequested: false
+  };
+  var listeners7 = /* @__PURE__ */ new Set();
+  var nextProposalSeq = 1;
+  function notify2() {
+    for (const listener of [...listeners7]) {
+      try {
+        listener();
+      } catch {
+      }
+    }
+  }
+  function post(from, kind, text, proposalId) {
+    state3 = { ...state3, log: append(state3.log, { from, kind, text, atMs: Date.now(), proposalId }) };
+    if (from === "companion") speak(text);
+    notify2();
+  }
+  function speak(text) {
+    const line = text.length > MAX_LINE_LENGTH ? `${text.slice(0, MAX_LINE_LENGTH - 1).trimEnd()}\u2026` : text;
+    void CompanionService.say(line).catch(() => {
+    });
+  }
+  function dropStaleProposal() {
+    const proposal = state3.proposal;
+    if (!proposal || !isExpired(proposal, Date.now())) return;
+    state3 = { ...state3, proposal: null, captured: null, log: clearProposal(state3.log, proposal.id) };
+    notify2();
+  }
+  async function proposeHarvestScope(provider) {
+    let scope;
+    try {
+      scope = await provider();
+    } catch {
+      post("companion", "system", "Could not see your garden just now.");
+      return;
+    }
+    const rows = scope.rows;
+    if (rows.length === 0) {
+      post(
+        "companion",
+        "reply",
+        scope.lockedOut > 0 ? `Your Locker is holding all ${scope.lockedOut}. Nothing I can pick.` : "Nothing is ripe right now."
+      );
+      return;
+    }
+    const team = loadCompanionSettings().harvestTeamId;
+    const proposal = openProposal(
+      "harvest",
+      describeSelection(rows),
+      rows.length,
+      withTeam(selectionSignature(rows), team)
+    );
+    state3 = { ...state3, proposal, captured: { kind: "harvest", provider, rows } };
+    const held = scope.lockedOut > 0 ? ` I am leaving ${scope.lockedOut} locked one${scope.lockedOut === 1 ? "" : "s"} alone.` : "";
+    post(
+      "companion",
+      "reply",
+      `I can see ${proposal.summary}.${held}${teamPromise(team)} Want me to pick them?`,
+      proposal.id
+    );
+  }
+  async function proposeFeedScope(provider) {
+    let picks;
+    try {
+      picks = await provider();
+    } catch {
+      post("companion", "system", "Could not check on your pets just now.");
+      return;
+    }
+    if (picks.length === 0) {
+      post("companion", "reply", "Your pets are fine, or I have nothing they eat.");
+      return;
+    }
+    const proposal = openProposal("feed", describeFeed(picks), picks.length, feedSignature(picks));
+    state3 = { ...state3, proposal, captured: { kind: "feed", provider, picks } };
+    post("companion", "reply", `${proposal.summary}. Should I feed ${picks.length === 1 ? "them" : "all of them"}?`, proposal.id);
+  }
+  async function proposePlantPlan(provider) {
+    let plan;
+    try {
+      plan = await provider();
+    } catch {
+      post("companion", "system", "Could not see your garden just now.");
+      return;
+    }
+    if (plan.length === 0) {
+      post("companion", "reply", "Nothing left of that plan. Tiles filled up, or seeds ran out.");
+      return;
+    }
+    const proposal = openProposal("plant", summarizePlan(plan), plan.length, plantSignature(plan));
+    state3 = { ...state3, proposal, captured: { kind: "plant", provider, plan } };
+    post("companion", "reply", `That is ${proposal.summary}. Want me to get started?`, proposal.id);
+  }
+  async function proposeHatchSlots(provider, rules) {
+    let slots;
+    try {
+      slots = await provider();
+    } catch {
+      post("companion", "system", "Could not see your eggs just now.");
+      return;
+    }
+    if (slots.length === 0) {
+      post("companion", "reply", "Nothing is ready to hatch right now.");
+      return;
+    }
+    const team = loadCompanionSettings().hatchTeamId;
+    const proposal = openProposal("hatch", summarizeHatch(slots), slots.length, withTeam(slotSignature2(slots), team));
+    state3 = { ...state3, proposal, captured: { kind: "hatch", provider, rules, slots } };
+    post("companion", "reply", `${proposal.summary}.${teamPromise(team)} Want me to open them?`, proposal.id);
+  }
+  async function proposeSellPlan(provider, rules) {
+    let plan;
+    try {
+      plan = await provider();
+    } catch {
+      post("companion", "system", "Could not go through your bag just now.");
+      return;
+    }
+    if (plan.sell.length === 0) {
+      post("companion", "reply", "Nothing in your bag is up for sale.");
+      return;
+    }
+    const signature = withTeam(`${petSignature(plan.sell)}/${petSignature(plan.favourite)}`, plan.teamId);
+    const proposal = openProposal("sell", summarizeSell(plan.sell), plan.sell.length, signature);
+    state3 = { ...state3, proposal, captured: { kind: "sell", provider, rules, plan } };
+    const keeping = plan.favourite.length > 0 ? ` I would favourite the ${plan.favourite.length} you keep first.` : "";
+    post(
+      "companion",
+      "reply",
+      `That would be ${proposal.summary}.${keeping}${teamPromise(plan.teamId)} Should I?`,
+      proposal.id
+    );
+  }
+  function reporter() {
+    return {
+      say: (kind, text) => post("companion", kind, text),
+      stopped: () => state3.cancelRequested,
+      progress: (done, total) => {
+        state3 = { ...state3, run: { done, total } };
+        notify2();
+      }
+    };
+  }
+  async function runBatch(run) {
+    try {
+      await run(reporter());
+    } finally {
+      state3 = { ...state3, run: null, cancelRequested: false };
+      notify2();
+    }
+  }
+  async function afterHatchBatch(rules, stop2) {
+    if (stop2 === "cancelled") return;
+    const scope = await readHatchScope().catch(() => null);
+    if (!scope) return;
+    const sellable = toSell(scope.pets, rules);
+    const note = afterHatch(stop2, scope, rules, sellable);
+    if (note) post("companion", "system", note);
+    if (sellable.length === 0) return;
+    await proposeSellPlan(sellProvider(rules), rules);
+  }
+  async function afterSellBatch(rules) {
+    const provider = hatchProvider();
+    const slots = await provider().catch(() => []);
+    if (slots.length === 0) return;
+    post("companion", "system", "There is room again.");
+    await proposeHatchSlots(provider, rules);
+  }
+  function teamPromise(teamId2) {
+    const name = teamName(teamId2);
+    return name ? ` I would wear ${name}, then give yours back.` : "";
+  }
+  function withTeam(signature, teamId2) {
+    return `${signature}#team:${teamId2 ?? ""}`;
+  }
+  function openProposal(commandId, summary, size, signature) {
+    return { id: `p${nextProposalSeq++}`, commandId, summary, size, signature, createdAtMs: Date.now() };
+  }
+  async function currentSignature(captured) {
+    try {
+      const settings = loadCompanionSettings();
+      if (captured.kind === "harvest") {
+        return withTeam(selectionSignature((await captured.provider()).rows), settings.harvestTeamId);
+      }
+      if (captured.kind === "plant") return plantSignature(await captured.provider());
+      if (captured.kind === "hatch") return withTeam(slotSignature2(await captured.provider()), settings.hatchTeamId);
+      if (captured.kind === "sell") {
+        const plan = await captured.provider();
+        return withTeam(`${petSignature(plan.sell)}/${petSignature(plan.favourite)}`, plan.teamId);
+      }
+      return feedSignature(await captured.provider());
+    } catch {
+      return null;
+    }
+  }
+  async function reproposeSame(captured) {
+    if (captured.kind === "harvest") await proposeHarvestScope(captured.provider);
+    else if (captured.kind === "plant") await proposePlantPlan(captured.provider);
+    else if (captured.kind === "hatch") await proposeHatchSlots(captured.provider, captured.rules);
+    else if (captured.kind === "sell") await proposeSellPlan(captured.provider, captured.rules);
+    else await proposeFeedScope(captured.provider);
+  }
+  var ACCEPTANCE = {
+    harvest: "Yes, go ahead",
+    feed: "Yes, feed them",
+    plant: "Yes, plant them",
+    hatch: "Yes, open them",
+    // Une vente ne se rattrape pas : la réponse le nomme.
+    sell: "Yes, sell them"
+  };
+  function capturedSize(captured) {
+    if (captured.kind === "harvest") return captured.rows.length;
+    if (captured.kind === "plant") return captured.plan.length;
+    if (captured.kind === "hatch") return captured.slots.length;
+    if (captured.kind === "sell") return captured.plan.sell.length;
+    return captured.picks.length;
+  }
+  var CompanionChat = {
+    getLog() {
+      return state3.log;
+    },
+    /** Retire une question à laquelle il est trop tard pour répondre. */
+    dropStaleProposal() {
+      dropStaleProposal();
+    },
+    /**
+     * Retire la question de nourrissage quand elle n'a plus d'objet.
+     *
+     * Le joueur a nourri les animaux lui-même, ou changé d'équipe : la question
+     * ne veut plus rien dire. La laisser en attente ferait patienter le companion
+     * auprès du joueur pour une réponse sans conséquence.
+     *
+     * On ne se retire que si PLUS AUCUN des animaux proposés n'est concerné :
+     * tant qu'il en reste un, la question garde du sens, et c'est la
+     * vérification de périmètre à la confirmation qui protège du reste.
+     */
+    withdrawFeedIfSettled(stillFeedable) {
+      const proposal = state3.proposal;
+      const captured = state3.captured;
+      if (!proposal || captured?.kind !== "feed") return false;
+      if (!isSettled(captured.picks, stillFeedable)) return false;
+      state3 = { ...state3, proposal: null, captured: null, log: clearProposal(state3.log, proposal.id) };
+      post("companion", "system", "Never mind, your pets are sorted.");
+      return true;
+    },
+    getProposal() {
+      return state3.proposal;
+    },
+    getRun() {
+      return state3.run;
+    },
+    isRunning() {
+      return state3.run !== null;
+    },
+    subscribe(listener) {
+      listeners7.add(listener);
+      return () => listeners7.delete(listener);
+    },
+    /** Alerte poussée par une source ; ignorée si identique et récente. */
+    alert(text) {
+      state3 = {
+        ...state3,
+        log: appendAlertOnce(state3.log, { from: "companion", kind: "alert", text, atMs: Date.now() }, ALERT_DEDUPE_MS)
+      };
+      notify2();
+    },
+    /**
+     * Demande émise par le joueur. N'exécute rien : pose la question.
+     *
+     * `request.provider` sera rappelé à la confirmation pour vérifier que le
+     * périmètre n'a pas changé entre-temps.
+     */
+    async proposeHarvest(request2) {
+      post("you", "command", request2.label);
+      if (state3.run) {
+        post("companion", "system", "Hold on, still on the last batch.");
+        return;
+      }
+      if (request2.kind === "harvest") await proposeHarvestScope(request2.provider);
+      else if (request2.kind === "plant") await proposePlantPlan(request2.provider);
+      else if (request2.kind === "hatch") await proposeHatchSlots(request2.provider, request2.rules);
+      else await proposeFeedScope(request2.provider);
+    },
+    /**
+     * Proposition venue du companion lui-même, sans demande du joueur.
+     *
+     * Poser une question n'est pas agir : rien ne part tant que la confirmation
+     * n'a pas été donnée. On s'abstient si une question attend déjà une réponse
+     * ou si un lot tourne — se couper la parole ferait perdre la précédente.
+     */
+    async offerFeed(provider) {
+      dropStaleProposal();
+      if (state3.run || state3.proposal) return false;
+      await proposeFeedScope(provider);
+      return state3.proposal !== null;
+    },
+    /** Confirme et exécute. C'est le seul chemin qui déclenche une action. */
+    async confirm(proposalId) {
+      const proposal = state3.proposal;
+      const captured = state3.captured;
+      if (!proposal || proposal.id !== proposalId || !captured) {
+        post("companion", "system", explain("unknown"));
+        return;
+      }
+      post("you", "command", ACCEPTANCE[captured.kind]);
+      const signature = await currentSignature(captured);
+      if (signature === null) {
+        post("companion", "system", "Could not check again, so I am not touching anything.");
+        return;
+      }
+      const decision = verdict(proposal, signature, Date.now());
+      if (!decision.ok) {
+        state3 = { ...state3, proposal: null, captured: null, log: clearProposal(state3.log, proposalId) };
+        post("companion", "system", explain(decision.reason));
+        if (decision.reason === "changed" || decision.reason === "expired") await reproposeSame(captured);
+        return;
+      }
+      state3 = {
+        ...state3,
+        proposal: null,
+        captured: null,
+        run: { done: 0, total: capturedSize(captured) },
+        cancelRequested: false,
+        log: clearProposal(state3.log, proposalId)
+      };
+      if (captured.kind === "harvest") {
+        await runBatch((r) => executeHarvestBatch(captured.rows, r));
+      } else if (captured.kind === "plant") {
+        await runBatch((r) => executePlantBatch(captured.plan, r));
+      } else if (captured.kind === "hatch") {
+        let stop2 = "done";
+        await runBatch(async (r) => {
+          stop2 = await executeHatchBatch(captured.slots, r);
+        });
+        await afterHatchBatch(captured.rules, stop2);
+      } else if (captured.kind === "sell") {
+        await runBatch((r) => executeSellBatch(captured.plan, r));
+        await afterSellBatch(captured.rules);
+      } else {
+        await runBatch((r) => executeFeedBatch(captured.picks, r));
+      }
+    },
+    /** Écarte la proposition en cours sans rien exécuter. */
+    decline(proposalId) {
+      if (state3.proposal?.id !== proposalId) return;
+      state3 = { ...state3, proposal: null, captured: null, log: clearProposal(state3.log, proposalId) };
+      post("you", "command", "Not now");
+      post("companion", "system", "Alright, leaving them be.");
+    },
+    /** Interrompt un lot en cours. */
+    cancelRun() {
+      if (!state3.run) return;
+      state3 = { ...state3, cancelRequested: true };
+      notify2();
+    }
+  };
+
+  // src/services/companion/avatar.ts
+  var npcAvatarData = makeAtom("npcAvatarDataAtom");
+  var LAYER_ORDER = ["Default", "Bottom", "Mid", "Top", "Expression"];
+  function layerRank(filename) {
+    const prefix = filename.split("_")[0];
+    return LAYER_ORDER.indexOf(prefix);
+  }
+  function cosmeticsIn(value, depth = 0) {
+    if (depth > 3 || !value) return [];
+    if (Array.isArray(value)) {
+      return value.filter((entry) => typeof entry === "string" && entry.endsWith(".png"));
+    }
+    if (typeof value !== "object") return [];
+    for (const nested of Object.values(value)) {
+      const found = cosmeticsIn(nested, depth + 1);
+      if (found.length > 0) return found;
+    }
+    return [];
+  }
+  async function readNpcOutfit(npcId) {
+    if (!npcId) return [];
+    let all = null;
+    try {
+      all = await npcAvatarData.get();
+    } catch {
+      return [];
+    }
+    if (!all || typeof all !== "object") return [];
+    return cosmeticsIn(all[npcId]).filter((filename) => layerRank(filename) >= 0).sort((a, b) => layerRank(a) - layerRank(b));
+  }
+  function cosmeticUrl(filename) {
+    if (!gameVersion || !filename) return null;
+    const origin = typeof location !== "undefined" ? location.origin.replace(/\/$/, "") : "";
+    if (!origin) return null;
+    return `${origin}/version/${gameVersion}/assets/cosmetic/${filename}`;
+  }
+
+  // src/ui/menus/companion/npc-avatar.ts
+  var CANVAS_PX = 128;
+  var PORTRAIT_PX = 64;
+  var HEAD_PADDING = 0.22;
+  var FALLBACK_CROP = { x: 0.28, y: 0.04, size: 0.44 };
+  var pending2 = /* @__PURE__ */ new Map();
+  function loadImage2(url) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.addEventListener("load", () => resolve(img));
+      img.addEventListener("error", () => resolve(null));
+      setImageSafe(img, url);
+    });
+  }
+  function opaqueBounds(canvas) {
+    const ctx2 = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx2) return null;
+    let pixels;
+    try {
+      pixels = ctx2.getImageData(0, 0, canvas.width, canvas.height).data;
+    } catch {
+      return null;
+    }
+    let minX = canvas.width;
+    let minY = canvas.height;
+    let maxX = -1;
+    let maxY = -1;
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        if (pixels[(y * canvas.width + x) * 4 + 3] < 16) continue;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+    if (maxX < 0) return null;
+    return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+  }
+  function headCrop(canvas) {
+    const bounds = opaqueBounds(canvas);
+    if (!bounds) {
+      return {
+        x: canvas.width * FALLBACK_CROP.x,
+        y: canvas.height * FALLBACK_CROP.y,
+        width: canvas.width * FALLBACK_CROP.size,
+        height: canvas.height * FALLBACK_CROP.size
+      };
+    }
+    const side = Math.min(bounds.width * (1 + HEAD_PADDING * 2), bounds.height, canvas.height);
+    const centreX = bounds.x + bounds.width / 2;
+    const top = Math.max(0, bounds.y - side * (HEAD_PADDING / 2));
+    return {
+      x: Math.max(0, Math.min(centreX - side / 2, canvas.width - side)),
+      y: Math.min(top, Math.max(0, canvas.height - side)),
+      width: side,
+      height: side
+    };
+  }
+  async function compose(npcId) {
+    const outfit = await readNpcOutfit(npcId).catch(() => []);
+    if (outfit.length === 0) return null;
+    const urls = outfit.map(cosmeticUrl).filter((url) => url !== null);
+    if (urls.length === 0) return null;
+    const layers = await Promise.all(urls.map(loadImage2));
+    const drawable = layers.filter((img) => img !== null);
+    if (drawable.length === 0) return null;
+    const full = document.createElement("canvas");
+    full.width = CANVAS_PX;
+    full.height = CANVAS_PX;
+    const ctx2 = full.getContext("2d", { willReadFrequently: true });
+    if (!ctx2) return null;
+    for (const layer of drawable) ctx2.drawImage(layer, 0, 0, CANVAS_PX, CANVAS_PX);
+    const crop = headCrop(full);
+    const portrait = document.createElement("canvas");
+    portrait.width = PORTRAIT_PX;
+    portrait.height = PORTRAIT_PX;
+    const out = portrait.getContext("2d");
+    if (!out) return null;
+    out.imageSmoothingEnabled = false;
+    out.drawImage(full, crop.x, crop.y, crop.width, crop.height, 0, 0, PORTRAIT_PX, PORTRAIT_PX);
+    return portrait;
+  }
+  function npcPortrait(npcId) {
+    let known = pending2.get(npcId);
+    if (!known) {
+      known = compose(npcId).catch(() => null);
+      pending2.set(npcId, known);
+    }
+    return known;
+  }
+  function fillWithPortrait(box, npcId) {
+    if (!npcId) return;
+    void npcPortrait(npcId).then((source) => {
+      if (!source || !box.isConnected) return;
+      const view = document.createElement("canvas");
+      view.width = source.width;
+      view.height = source.height;
+      view.getContext("2d")?.drawImage(source, 0, 0);
+      view.style.width = "100%";
+      view.style.height = "100%";
+      view.style.imageRendering = "pixelated";
+      box.replaceChildren(view);
+    });
+  }
+
+  // src/ui/menus/companion/chat-view.ts
+  var GROUP_WINDOW_MS = 2 * 60 * 1e3;
+  var AVATAR_PX = 26;
+  var OUTGOING_BG = "rgba(94,234,212,0.14)";
+  var OUTGOING_BORDER = "rgba(94,234,212,0.22)";
+  var OUTGOING_TEXT = "#d1fae5";
+  var INCOMING_BG = "rgba(255,255,255,0.06)";
+  var ALERT_BG = "rgba(251,191,36,0.10)";
+  var ALERT_BORDER = "rgba(251,191,36,0.28)";
+  function isCentered(message) {
+    return message.kind === "system";
+  }
+  function isSameGroup(previous, current) {
+    if (isCentered(previous) || isCentered(current)) return false;
+    if (previous.from !== current.from) return false;
+    return current.atMs - previous.atMs < GROUP_WINDOW_MS;
+  }
+  function formatMessageTime(atMs) {
+    try {
+      return new Date(atMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    } catch {
+      return "";
+    }
+  }
+  function formatDayLabel(atMs, nowMs2) {
+    const startOfDay = (ms) => {
+      const date = new Date(ms);
+      date.setHours(0, 0, 0, 0);
+      return date.getTime();
+    };
+    const days = Math.round((startOfDay(nowMs2) - startOfDay(atMs)) / 864e5);
+    if (days <= 0) return "Today";
+    if (days === 1) return "Yesterday";
+    try {
+      return new Date(atMs).toLocaleDateString([], { day: "numeric", month: "short" });
+    } catch {
+      return "";
+    }
+  }
+  function dateSeparator(label2) {
+    const wrap = document.createElement("div");
+    css2(wrap, { display: "flex", alignItems: "center", gap: "10px", margin: "10px 0 6px" });
+    const line = () => {
+      const el2 = document.createElement("div");
+      css2(el2, { flex: "1", height: "1px", background: BORDER });
+      return el2;
+    };
+    const text = document.createElement("div");
+    css2(text, {
+      fontSize: "10px",
+      fontWeight: "600",
+      color: TEXT_DIM,
+      whiteSpace: "nowrap",
+      textTransform: "uppercase",
+      letterSpacing: "0.5px"
+    });
+    text.textContent = label2;
+    wrap.append(line(), text, line());
+    return wrap;
+  }
+  function systemLine(text) {
+    const line = document.createElement("div");
+    css2(line, {
+      alignSelf: "center",
+      fontSize: "11px",
+      color: TEXT_DIM,
+      textAlign: "center",
+      padding: "2px 8px",
+      maxWidth: "90%"
+    });
+    line.textContent = text;
+    return line;
+  }
+  function avatar2(identity, sizePx = AVATAR_PX) {
+    const el2 = document.createElement("div");
+    css2(el2, {
+      width: `${sizePx}px`,
+      height: `${sizePx}px`,
+      flexShrink: "0",
+      borderRadius: "50%",
+      overflow: "hidden",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: `${Math.round(sizePx * 0.45)}px`,
+      fontWeight: "600",
+      color: TEAL,
+      background: "linear-gradient(135deg, rgba(94,234,212,0.25), rgba(59,130,246,0.25))"
+    });
+    const name = (identity?.name ?? "").trim();
+    if (name) el2.textContent = name.charAt(0).toUpperCase();
+    fillWithPortrait(el2, identity?.npcId ?? null);
+    return el2;
+  }
+  function spacer() {
+    const el2 = document.createElement("div");
+    css2(el2, { width: `${AVATAR_PX}px`, flexShrink: "0" });
+    return el2;
+  }
+  function messageRow(message, flags, identity = null) {
+    if (isCentered(message)) return systemLine(message.text);
+    const outgoing = message.from === "you";
+    const alerting = message.kind === "alert";
+    const row = document.createElement("div");
+    css2(row, {
+      display: "flex",
+      gap: "8px",
+      alignItems: "flex-end",
+      justifyContent: outgoing ? "flex-end" : "flex-start",
+      ...flags.isFirstInGroup ? {} : { marginTop: "-4px" }
+    });
+    if (!outgoing) row.append(flags.isLastInGroup ? avatar2(identity) : spacer());
+    const column = document.createElement("div");
+    css2(column, {
+      maxWidth: "78%",
+      display: "flex",
+      flexDirection: "column",
+      gap: flags.isLastInGroup ? "3px" : "0",
+      alignItems: outgoing ? "flex-end" : "flex-start"
+    });
+    const bubble = document.createElement("div");
+    css2(bubble, {
+      padding: "7px 11px",
+      borderRadius: outgoing ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
+      fontSize: "12.5px",
+      lineHeight: "1.5",
+      wordBreak: "break-word",
+      whiteSpace: "pre-wrap",
+      background: outgoing ? OUTGOING_BG : alerting ? ALERT_BG : INCOMING_BG,
+      border: `1px solid ${outgoing ? OUTGOING_BORDER : alerting ? ALERT_BORDER : BORDER}`,
+      color: outgoing ? OUTGOING_TEXT : TEXT
+    });
+    bubble.textContent = message.text;
+    column.append(bubble);
+    if (flags.isLastInGroup) {
+      const stamp = document.createElement("div");
+      css2(stamp, { fontSize: "10px", color: TEXT_DIM });
+      stamp.textContent = formatMessageTime(message.atMs);
+      column.append(stamp);
+    }
+    row.append(column);
+    return row;
+  }
+  function chatHeader(name) {
+    const root = document.createElement("div");
+    css2(root, {
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      padding: "8px 10px",
+      borderBottom: `1px solid ${BORDER}`
+    });
+    const portraitSlot = document.createElement("div");
+    css2(portraitSlot, { display: "flex", flexShrink: "0" });
+    portraitSlot.append(avatar2(null, 32));
+    const info = document.createElement("div");
+    css2(info, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
+    const title = document.createElement("div");
+    css2(title, { fontSize: "13px", fontWeight: "600", color: TEXT });
+    title.textContent = name;
+    const status = document.createElement("div");
+    css2(status, { fontSize: "11px", color: TEXT_DIM });
+    info.append(title, status);
+    root.append(portraitSlot, info);
+    let shownIdentity = null;
+    return {
+      root,
+      setStatus(text, busy) {
+        status.textContent = text;
+        css2(status, { color: busy ? TEAL : TEXT_DIM });
+      },
+      setIdentity(identity) {
+        if (identity.npcId === shownIdentity) return;
+        shownIdentity = identity.npcId;
+        portraitSlot.replaceChildren(avatar2(identity, 32));
+        title.textContent = identity.name || name;
+      }
+    };
+  }
+  function threadBody() {
+    const body = document.createElement("div");
+    body.className = "qws-pnl-scroll";
+    css2(body, {
+      height: "300px",
+      overflowY: "auto",
+      padding: "10px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "5px"
+    });
+    return body;
+  }
+  function emptyThread(text) {
+    const wrap = document.createElement("div");
+    css2(wrap, {
+      margin: "auto",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: "8px",
+      color: TEXT_DIM,
+      textAlign: "center"
+    });
+    const label2 = document.createElement("div");
+    css2(label2, { fontSize: "12px", maxWidth: "220px", lineHeight: "1.5" });
+    label2.textContent = text;
+    wrap.append(label2);
+    return wrap;
+  }
+  function actionBar() {
+    const bar = document.createElement("div");
+    css2(bar, {
+      display: "flex",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: "6px",
+      padding: "8px 10px",
+      borderTop: `1px solid ${BORDER}`
+    });
+    return bar;
+  }
+  function barHint(text, tone = "dim") {
+    const hint = document.createElement("div");
+    css2(hint, { fontSize: "11px", color: tone === "warn" ? WARN : TEXT_DIM, marginLeft: "auto" });
+    hint.textContent = text;
+    return hint;
+  }
+
+  // src/ui/menus/companion/harvest-chips.ts
+  var SPRITE_LOG_TAG2 = "companion-harvest";
+  var ICON_PX = 26;
+  function iconHolder(sizePx) {
+    const box = document.createElement("div");
+    css2(box, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: `${sizePx}px`,
+      height: `${sizePx}px`,
+      flex: "0 0 auto"
+    });
+    return box;
+  }
+  function catalogCropKey(species) {
+    const entry = plantCatalog2[species];
+    const key2 = entry?.crop?.sprite ?? entry?.plant?.sprite;
+    return typeof key2 === "string" && key2 ? key2 : null;
+  }
+  function spellings(...names) {
+    const out = /* @__PURE__ */ new Set();
+    for (const name of names) {
+      const trimmed = (name ?? "").trim();
+      if (!trimmed) continue;
+      out.add(trimmed);
+      out.add(trimmed.replace(/\W+/g, ""));
+    }
+    return [...out];
+  }
+  function spriteBaseName(species) {
+    const last = catalogCropKey(species)?.split("/").pop() ?? null;
+    if (!last) return species;
+    const withoutQuery = last.split(/[?#]/)[0];
+    return withoutQuery.replace(/\.[a-z0-9]+$/i, "") || species;
+  }
+  function attachAtlasCrop(box, species, sizePx) {
+    const candidates = spellings(spriteBaseName(species), species);
+    const bases = candidates.map((value) => value.replace(/icon$/i, "")).filter(Boolean);
+    const all = [.../* @__PURE__ */ new Set([...candidates, ...bases.map((base) => `${base}Icon`)])];
+    if (all.length) attachSpriteIcon(box, ["crop", "tallplant", "plant"], all, sizePx, SPRITE_LOG_TAG2);
+  }
+  function speciesIcon(species, sizePx = ICON_PX) {
+    const box = iconHolder(sizePx);
+    attachAtlasCrop(box, species, sizePx);
+    return box;
+  }
+  function composedUrl(species, mutations) {
+    const key2 = catalogCropKey(species);
+    const parts = key2 ? key2.split(/[?#]/)[0].split("/").filter(Boolean) : [];
+    const segment = parts.length >= 2 ? parts[parts.length - 2] : "";
+    const apiCategory = INTERNAL_TO_API[segment] ?? (isComposableCategory(segment) ? segment : "plants");
+    return composedSpriteUrl(apiCategory, spriteBaseName(species), mutations);
+  }
+  function variantIcon(species, mutations, sizePx = ICON_PX) {
+    if (mutations.length === 0) return speciesIcon(species, sizePx);
+    const box = iconHolder(sizePx);
+    const url = composedUrl(species, mutations);
+    const img = document.createElement("img");
+    img.alt = "";
+    css2(img, { maxWidth: "100%", maxHeight: "100%", imageRendering: "auto" });
+    img.addEventListener("error", () => {
+      console.warn("[companion] composed sprite failed, falling back to the plain crop:", url);
+      box.replaceChildren();
+      attachAtlasCrop(box, species, sizePx);
+    });
+    setImageSafe(img, url);
+    box.append(img);
+    return box;
+  }
+  function mutationIconEl(mutation, sizePx = ICON_PX) {
+    const box = iconHolder(sizePx);
+    const candidates = spellings(mutation).flatMap((name) => [`Mutation${name}`, name]);
+    attachSpriteIcon(box, ["ui", "mutation"], candidates, sizePx, SPRITE_LOG_TAG2);
+    return box;
+  }
+  function spriteTile(options) {
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.title = options.title;
+    css2(tile, {
+      display: "inline-flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: "1px",
+      padding: "5px 6px 3px",
+      borderRadius: "10px",
+      cursor: "pointer",
+      lineHeight: "1",
+      transition: "background 120ms ease, border-color 120ms ease",
+      background: options.selected ? TEAL_DIM : CARD_BG,
+      border: `1px solid ${options.selected ? TEAL_BORDER : BORDER}`
+    });
+    const count = document.createElement("span");
+    css2(count, { fontSize: "10px", color: options.selected ? TEAL : TEXT_DIM });
+    count.textContent = String(options.count);
+    tile.append(options.icon, count);
+    tile.addEventListener("click", options.onClick);
+    tile.addEventListener("mouseenter", () => {
+      if (!options.selected) css2(tile, { background: "rgba(255,255,255,0.06)" });
+    });
+    tile.addEventListener("mouseleave", () => {
+      if (!options.selected) css2(tile, { background: CARD_BG });
+    });
+    return tile;
+  }
+  function allTile(label2, selected, onClick) {
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.textContent = label2;
+    css2(tile, {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      minWidth: "40px",
+      padding: "0 10px",
+      alignSelf: "stretch",
+      borderRadius: "10px",
+      cursor: "pointer",
+      fontSize: "11px",
+      lineHeight: "1",
+      background: selected ? TEAL_DIM : CARD_BG,
+      border: `1px solid ${selected ? TEAL_BORDER : BORDER}`,
+      color: selected ? TEAL : TEXT
+    });
+    tile.addEventListener("click", onClick);
+    return tile;
+  }
+  function tileRow() {
+    const row = document.createElement("div");
+    css2(row, { display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: "5px" });
+    return row;
+  }
+  function segmented(options, selected, onSelect) {
+    const wrap = document.createElement("div");
+    css2(wrap, {
+      display: "inline-flex",
+      padding: "2px",
+      gap: "2px",
+      borderRadius: "9px",
+      background: "rgba(0,0,0,0.22)",
+      border: `1px solid ${BORDER}`
+    });
+    for (const option of options) {
+      const active2 = option.value === selected;
+      const button2 = document.createElement("button");
+      button2.type = "button";
+      if (option.title) button2.title = option.title;
+      button2.textContent = option.label;
+      css2(button2, {
+        padding: "4px 10px",
+        borderRadius: "7px",
+        border: "none",
+        cursor: "pointer",
+        fontSize: "11px",
+        lineHeight: "1",
+        background: active2 ? TEAL_DIM : "transparent",
+        color: active2 ? TEAL : TEXT_DIM
+      });
+      button2.addEventListener("click", () => onSelect(option.value));
+      wrap.append(button2);
+    }
+    return wrap;
+  }
+
+  // src/ui/menus/companion/harvest-fields.ts
+  function filterCard(icon, title) {
+    const summary = document.createElement("div");
+    css2(summary, {
+      marginLeft: "auto",
+      fontSize: "11px",
+      color: TEXT_DIM,
+      textAlign: "right",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+      maxWidth: "60%"
+    });
+    const header = document.createElement("div");
+    css2(header, { display: "flex", alignItems: "center", gap: "8px", width: "100%" });
+    header.append(sectionLabel(icon ? `${icon} ${title}` : title), summary);
+    const { root, body } = collapsibleCard({ header, collapsed: true, onToggle: () => {
+    } });
+    css2(root, { padding: "9px 11px", gap: "9px", flex: "0 0 auto" });
+    return {
+      root,
+      body,
+      setSummary(text, active2) {
+        summary.textContent = text;
+        css2(summary, { color: active2 ? TEAL : TEXT_DIM });
+      }
+    };
+  }
+  function fieldRow(label2, control) {
+    const row = document.createElement("div");
+    css2(row, { display: "flex", alignItems: "center", gap: "10px", justifyContent: "space-between" });
+    const text = document.createElement("div");
+    css2(text, { fontSize: "11.5px", color: TEXT });
+    text.textContent = label2;
+    row.append(text, control);
+    return row;
+  }
+  function toggleIn(current, value) {
+    const next = new Set(current ?? []);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    return next.size === 0 ? null : [...next];
+  }
+  function selectionRow(options) {
+    const row = tileRow();
+    row.append(allTile(options.allLabel, options.selected === null, options.onClear));
+    for (const value of options.values) {
+      row.append(
+        spriteTile({
+          icon: options.iconFor(value),
+          title: value,
+          count: options.counts.get(value) ?? 0,
+          selected: options.selected?.includes(value) ?? false,
+          onClick: () => options.onPick(value)
+        })
+      );
+    }
+    return row;
+  }
+  function nameList(values, fallback) {
+    if (values.length === 0) return fallback;
+    if (values.length > 3) return `${values.length} kinds`;
+    if (values.length === 1) return values[0];
+    return `${values.slice(0, -1).join(", ")} and ${values[values.length - 1]}`;
+  }
+  function summarizeSpecies(filters) {
+    return nameList(filters.species ?? [], "All");
+  }
+  function summarizeMutations(filters) {
+    if (filters.mutations.length === 0) return "Any";
+    const list = nameList(filters.mutations, "Any");
+    if (filters.mutationMode === "none") return `Without ${list}`;
+    if (filters.mutationMode === "all") return `All of ${list}`;
+    return list;
+  }
+  function summarizeSize(filters) {
+    return filters.minSizePct > 50 ? `${filters.minSizePct}% and up` : "Any size";
+  }
+  function resultStrip() {
+    const root = document.createElement("div");
+    css2(root, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+      padding: "11px 12px",
+      borderRadius: "12px",
+      background: "rgba(94,234,212,0.07)",
+      border: `1px solid ${BORDER}`,
+      flex: "0 0 auto"
+    });
+    const count = document.createElement("div");
+    css2(count, { fontSize: "13px", fontWeight: "600", color: TEAL });
+    const sprites = document.createElement("div");
+    css2(sprites, { display: "flex", alignItems: "flex-end", gap: "10px", flexWrap: "wrap" });
+    root.append(count, sprites);
+    return {
+      root,
+      update(total, entries, hidden) {
+        count.textContent = total === 0 ? "Nothing to pick" : `${total} crop${total === 1 ? "" : "s"}`;
+        sprites.innerHTML = "";
+        sprites.style.display = entries.length === 0 ? "none" : "flex";
+        for (const entry of entries) {
+          const pair = document.createElement("div");
+          pair.title = entry.label;
+          css2(pair, { display: "flex", alignItems: "center", gap: "3px" });
+          const tally2 = document.createElement("span");
+          css2(tally2, { fontSize: "11px", color: TEXT_DIM });
+          tally2.textContent = String(entry.count);
+          pair.append(entry.icon, tally2);
+          sprites.append(pair);
+        }
+        if (hidden > 0) {
+          const more = document.createElement("span");
+          css2(more, { fontSize: "11px", color: TEXT_DIM, alignSelf: "center" });
+          more.textContent = `+${hidden} more`;
+          sprites.append(more);
+        }
+      }
+    };
+  }
+  function lockedNote() {
+    const root = document.createElement("div");
+    css2(root, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+    return {
+      root,
+      update(lockedOut) {
+        if (lockedOut === 0) {
+          root.textContent = "Your Locker decides what I leave alone.";
+          css2(root, { color: TEXT_DIM });
+          return;
+        }
+        root.textContent = `Leaving ${lockedOut} locked crop${lockedOut === 1 ? "" : "s"} alone.`;
+        css2(root, { color: WARN });
+      }
+    };
+  }
+
+  // src/ui/menus/companion/modal.ts
+  function menuCard(options) {
+    const disabled = options.disabled === true;
+    const card3 = document.createElement("button");
+    card3.type = "button";
+    card3.disabled = disabled;
+    css2(card3, {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "flex-start",
+      gap: "3px",
+      padding: "11px 12px",
+      borderRadius: "12px",
+      border: `1px solid ${BORDER}`,
+      background: CARD_BG,
+      cursor: disabled ? "default" : "pointer",
+      textAlign: "left",
+      font: "inherit",
+      opacity: disabled ? "0.55" : "1",
+      transition: "background 120ms ease, border-color 120ms ease"
+    });
+    const name = document.createElement("div");
+    css2(name, { fontSize: "13px", fontWeight: "600", color: disabled ? TEXT_DIM : TEXT });
+    name.textContent = options.name;
+    const detail = document.createElement("div");
+    css2(detail, { fontSize: "11.5px", lineHeight: "1.45", color: disabled ? TEAL : TEXT_DIM });
+    detail.textContent = options.detail;
+    card3.append(name, detail);
+    if (!disabled) {
+      card3.addEventListener("mouseenter", () => css2(card3, { background: "rgba(255,255,255,0.06)" }));
+      card3.addEventListener("mouseleave", () => css2(card3, { background: CARD_BG }));
+      card3.addEventListener("click", options.onClick);
+    }
+    return card3;
+  }
+  function openModal2(options) {
+    let closed = false;
+    const scrim = document.createElement("div");
+    const hostZ = Number.parseInt(getComputedStyle(options.host).zIndex, 10);
+    css2(scrim, {
+      position: "fixed",
+      inset: "0",
+      zIndex: String((Number.isFinite(hostZ) ? hostZ : 2000001) + 1),
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "16px",
+      background: "rgba(0,0,0,0.55)",
+      backdropFilter: "blur(4px)"
+    });
+    const panel = document.createElement("div");
+    css2(panel, {
+      display: "flex",
+      flexDirection: "column",
+      width: `min(${options.widthPx ?? 420}px, 100%)`,
+      maxHeight: "min(520px, 88vh)",
+      borderRadius: "16px",
+      border: `1px solid ${BORDER}`,
+      background: "#101620",
+      boxShadow: "0 24px 64px rgba(0,0,0,0.55)",
+      overflow: "hidden"
+    });
+    panel.addEventListener("click", (event) => event.stopPropagation());
+    const header = document.createElement("div");
+    css2(header, {
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      padding: "12px 14px",
+      borderBottom: `1px solid ${BORDER}`,
+      flex: "0 0 auto"
+    });
+    const title = document.createElement("div");
+    css2(title, { fontSize: "14px", fontWeight: "600", color: TEXT, flex: "1", minWidth: "0" });
+    title.textContent = options.title;
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.textContent = "\u2715";
+    closeButton.title = "Close";
+    css2(closeButton, {
+      width: "28px",
+      height: "28px",
+      flex: "0 0 auto",
+      borderRadius: "8px",
+      border: `1px solid ${BORDER}`,
+      background: "rgba(255,255,255,0.03)",
+      color: TEXT_DIM,
+      cursor: "pointer",
+      fontSize: "12px",
+      lineHeight: "1"
+    });
+    closeButton.addEventListener("click", () => close());
+    header.append(title, closeButton);
+    const body = document.createElement("div");
+    body.className = "qws-pnl-scroll";
+    css2(body, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px",
+      padding: "12px 14px",
+      overflowY: "auto",
+      // Sans cette paire, un enfant de colonne flex refuse de descendre sous sa
+      // hauteur de contenu : le corps déborderait au lieu de défiler.
+      flex: "1 1 auto",
+      minHeight: "0"
+    });
+    const footer = document.createElement("div");
+    css2(footer, {
+      display: "none",
+      alignItems: "center",
+      gap: "10px",
+      padding: "12px 14px",
+      borderTop: `1px solid ${BORDER}`,
+      flex: "0 0 auto"
+    });
+    const showFooterWhenFilled = new MutationObserver(() => {
+      footer.style.display = footer.childElementCount > 0 ? "flex" : "none";
+    });
+    showFooterWhenFilled.observe(footer, { childList: true });
+    panel.append(header, body, footer);
+    scrim.append(panel);
+    function onKeyDown(event) {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        close();
+      }
+    }
+    function close() {
+      if (closed) return;
+      closed = true;
+      clearInterval(hostWatch);
+      showFooterWhenFilled.disconnect();
+      document.removeEventListener("keydown", onKeyDown, true);
+      scrim.remove();
+      options.onClose?.();
+    }
+    const hostWatch = window.setInterval(() => {
+      if (!options.host.isConnected) close();
+    }, 1e3);
+    scrim.addEventListener("click", () => close());
+    document.addEventListener("keydown", onKeyDown, true);
+    (document.documentElement || document.body).appendChild(scrim);
+    return {
+      body,
+      footer,
+      close,
+      isOpen: () => !closed
+    };
+  }
+
+  // src/ui/menus/companion/settings-notice.ts
+  function settingsNotice(group, what, onOpen) {
+    const root = document.createElement("div");
+    if (!isUnreviewed(group)) {
+      root.style.display = "none";
+      return { root };
+    }
+    css2(root, {
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      padding: "10px 12px",
+      borderRadius: "12px",
+      background: "rgba(251,191,36,0.08)",
+      border: `1px solid ${BORDER}`,
+      flex: "0 0 auto"
+    });
+    const text = document.createElement("div");
+    css2(text, { fontSize: "11.5px", lineHeight: "1.5", color: TEXT, flex: "1", minWidth: "0" });
+    text.textContent = what;
+    const open = document.createElement("button");
+    open.type = "button";
+    open.textContent = "Set up";
+    css2(open, {
+      flex: "0 0 auto",
+      padding: "6px 11px",
+      borderRadius: "9px",
+      border: `1px solid ${WARN}`,
+      background: "transparent",
+      color: WARN,
+      cursor: "pointer",
+      fontSize: "11.5px",
+      lineHeight: "1"
+    });
+    open.addEventListener("click", onOpen);
+    root.append(text, open);
+    return { root };
+  }
+
+  // src/ui/menus/companion/team-select.ts
+  var NO_TEAM = "";
+  function teamSelect(current, onPick) {
+    const el2 = document.createElement("select");
+    el2.className = "qws-pnl-select";
+    css2(el2, { fontSize: "12px", color: TEXT, minWidth: "150px" });
+    const none = document.createElement("option");
+    none.value = NO_TEAM;
+    none.textContent = "Leave my team alone";
+    el2.append(none);
+    let teams = [];
+    try {
+      teams = PetsService.getTeams().map((team) => ({ id: team.id, name: team.name }));
+    } catch {
+      teams = [];
+    }
+    for (const team of teams) {
+      const option = document.createElement("option");
+      option.value = team.id;
+      option.textContent = team.name;
+      el2.append(option);
+    }
+    el2.value = current && teams.some((team) => team.id === current) ? current : NO_TEAM;
+    el2.addEventListener("change", () => onPick(el2.value === NO_TEAM ? null : el2.value));
+    return { el: el2, empty: teams.length === 0 };
+  }
+  var NO_TEAMS_HINT = "No pet teams yet. Build one in the Pets tab.";
+
+  // src/services/companion/chat/feedWatch.ts
+  var POLL_MS = 3e4;
+  var SETTLE_MS2 = 1500;
+  var REASK_COOLDOWN_MS = 10 * 60 * 1e3;
+  var timer = null;
+  var settleTimer = null;
+  var unsubscribers = [];
+  var running = false;
+  var lastOfferedSignature = "";
+  var lastOfferedAtMs = 0;
+  var announcedProposalId = null;
+  function spokenAlert(picks) {
+    if (picks.length === 1) {
+      const only = picks[0];
+      return only.hungerPct <= 5 ? `${only.petName} is starving. Want me to feed it?` : `${only.petName} is getting hungry. Want me to feed it?`;
+    }
+    return "Your pets are going hungry. Want me to feed them?";
+  }
+  async function announceInPerson(picks) {
+    if (!CompanionService.isRunning()) return;
+    try {
+      await CompanionService.comeToPlayer();
+      await CompanionService.say(spokenAlert(picks), { force: true });
+    } catch {
+    } finally {
+      CompanionService.releaseTask();
+      CompanionService.holdAttention();
+    }
+  }
+  async function announceIfNeeded(picks) {
+    if (picks.length === 0) return;
+    const proposal = CompanionChat.getProposal();
+    if (proposal?.commandId !== "feed" || proposal.id === announcedProposalId) return;
+    if (!CompanionService.isRunning()) return;
+    announcedProposalId = proposal.id;
+    await announceInPerson(picks);
+  }
+  function releaseIfIdle() {
+    if (!CompanionChat.getProposal() && CompanionService.isHoldingAttention()) {
+      CompanionService.releaseAttention();
+    }
+  }
+  async function tick2() {
+    CompanionChat.dropStaleProposal();
+    const pending3 = CompanionChat.getProposal();
+    const alertsOn = loadCompanionSettings().feedAlerts;
+    if (pending3?.commandId !== "feed" && !alertsOn) {
+      releaseIfIdle();
+      return;
+    }
+    const picks = await findFeedable().catch(() => []);
+    if (pending3?.commandId === "feed") {
+      const withdrawn = CompanionChat.withdrawFeedIfSettled(new Set(picks.map((pick) => pick.petId)));
+      if (withdrawn) lastOfferedSignature = "";
+      else await announceIfNeeded(picks);
+    }
+    releaseIfIdle();
+    if (!alertsOn) return;
+    if (picks.length === 0) {
+      lastOfferedSignature = "";
+      return;
+    }
+    const signature = feedSignature(picks);
+    const now2 = Date.now();
+    if (signature === lastOfferedSignature && now2 - lastOfferedAtMs < REASK_COOLDOWN_MS) return;
+    const offered = await CompanionChat.offerFeed(() => findFeedable());
+    if (!offered) return;
+    lastOfferedSignature = signature;
+    lastOfferedAtMs = now2;
+    await announceIfNeeded(picks);
+  }
+  var runTick = () => void tick2().catch(() => {
+  });
+  function scheduleCheck() {
+    if (!running || settleTimer !== null) return;
+    settleTimer = window.setTimeout(() => {
+      settleTimer = null;
+      runTick();
+    }, SETTLE_MS2);
+  }
+  function checkFeedNow() {
+    lastOfferedSignature = "";
+    runTick();
+  }
+  function startFeedWatch() {
+    if (running) return;
+    running = true;
+    timer = window.setInterval(runTick, POLL_MS);
+    try {
+      unsubscribers.push(PetsService.onPetsChange(() => scheduleCheck()));
+    } catch {
+    }
+    unsubscribers.push(
+      CompanionChat.subscribe(() => {
+        if (!CompanionChat.getProposal() && CompanionService.isHoldingAttention()) {
+          CompanionService.releaseAttention();
+        }
+      })
+    );
+    runTick();
+  }
+
+  // src/ui/menus/companion/feed-settings-modal.ts
+  var MIN_PCT = 1;
+  var MAX_PCT = 90;
+  function openFeedSettingsModal(host) {
+    markReviewed("feed");
+    const modal = openModal2({ host, title: "Pet feed", widthPx: 440 });
+    const settings = loadCompanionSettings();
+    const alerts = toggle(settings.feedAlerts, (on) => {
+      void CompanionService.applySettings({ feedAlerts: on }).then(checkFeedNow);
+    });
+    const threshold = numberField(MIN_PCT, MAX_PCT, 1, settings.feedThresholdPct);
+    threshold.addEventListener("change", () => {
+      const value = Math.max(MIN_PCT, Math.min(MAX_PCT, Math.round(Number(threshold.value) || MIN_PCT)));
+      threshold.value = String(value);
+      void CompanionService.applySettings({ feedThresholdPct: value }).then(checkFeedNow);
+    });
+    const fromGarden = toggle(settings.feedFromGarden, (on) => {
+      void CompanionService.applySettings({ feedFromGarden: on }).then(checkFeedNow);
+    });
+    const note = document.createElement("div");
+    css2(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+    note.textContent = "He only speaks up when he has something to give. He always asks first.";
+    modal.body.append(
+      settingRow("Tell me when a pet is starving", "He offers, and waits for your answer.", alerts).row,
+      settingRow("Warn below", `Fullness that worries him (${MIN_PCT} to ${MAX_PCT}).`, threshold).row,
+      settingRow(
+        "May pick from the garden",
+        "Lets him pick a ripe crop when the bag is empty. Your Locker still applies.",
+        fromGarden
+      ).row,
+      note
+    );
+    modal.footer.append(
+      button("Back", "neutral", () => {
+        modal.close();
+        openSettingsModal(host);
+      })
+    );
+  }
+
+  // src/ui/menus/companion/hatch-settings-modal.ts
+  function openHatchSettingsModal(host) {
+    markReviewed("hatch");
+    const modal = openModal2({ host, title: "Hatching", widthPx: 460 });
+    const settings = loadCompanionSettings();
+    const hatchTeam = teamSelect(settings.hatchTeamId, (teamId2) => {
+      void CompanionService.applySettings({ hatchTeamId: teamId2 });
+    });
+    const sellTeam = teamSelect(settings.hatchSellTeamId, (teamId2) => {
+      void CompanionService.applySettings({ hatchSellTeamId: teamId2 });
+    });
+    const note = document.createElement("div");
+    css2(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+    note.textContent = hatchTeam.empty ? NO_TEAMS_HINT : "The game will not sell a pet on your active team, so a smaller team frees the rest. He asks first, and puts yours back after.";
+    modal.body.append(
+      settingRow("Team to wear while hatching", "For abilities that change what hatches.", hatchTeam.el).row,
+      settingRow("Team to wear while selling", "Only during the sale. Yours comes straight back after.", sellTeam.el).row,
+      note
+    );
+    modal.footer.append(
+      button("Back", "neutral", () => {
+        modal.close();
+        openSettingsModal(host);
+      })
+    );
+  }
+
+  // src/ui/menus/companion/settings-modal.ts
+  function teamLine(teamId2, verb) {
+    const name = teamName(teamId2);
+    return name ? `Wears ${name} to ${verb}.` : `Keeps your team on while ${verb}.`;
+  }
+  function openSettingsModal(host) {
+    const modal = openModal2({ host, title: "Settings", widthPx: 440 });
+    const settings = loadCompanionSettings();
+    const unseen = (group) => settings.reviewedSettings.includes(group) ? "" : " Not set up yet.";
+    const feedDetail = settings.feedAlerts ? `Warns below ${settings.feedThresholdPct}%${settings.feedFromGarden ? ", may pick from the garden" : ", from the bag only"}.` : "Off. He stays quiet about hungry pets.";
+    const keeping = hasAnyRule(settings.hatchKeepRules) ? `Keeps ${describeKeep(settings.hatchKeepRules)}.` : "Nothing set to keep yet.";
+    modal.body.append(
+      menuCard({
+        name: "Pet feed",
+        detail: `${feedDetail}${unseen("feed")}`,
+        onClick: () => {
+          modal.close();
+          openFeedSettingsModal(host);
+        }
+      }),
+      menuCard({
+        name: "Harvest",
+        detail: `${teamLine(settings.harvestTeamId, "harvest")}${unseen("harvest")}`,
+        onClick: () => {
+          modal.close();
+          openHarvestSettingsModal(host);
+        }
+      }),
+      menuCard({
+        name: "Hatching",
+        detail: `${keeping} ${teamLine(settings.hatchSellTeamId, "sell")}${unseen("hatch")}`,
+        onClick: () => {
+          modal.close();
+          openHatchSettingsModal(host);
+        }
+      })
+    );
+  }
+
+  // src/ui/menus/companion/harvest-settings-modal.ts
+  function openHarvestSettingsModal(host) {
+    markReviewed("harvest");
+    const modal = openModal2({ host, title: "Harvest", widthPx: 460 });
+    const settings = loadCompanionSettings();
+    const team = teamSelect(settings.harvestTeamId, (teamId2) => {
+      void CompanionService.applySettings({ harvestTeamId: teamId2 });
+    });
+    const note = document.createElement("div");
+    css2(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+    note.textContent = team.empty ? NO_TEAMS_HINT : "He names the team before he picks, and puts yours back after. What he may pick still comes from your Locker.";
+    modal.body.append(
+      settingRow(
+        "Team to wear while harvesting",
+        "For abilities that pay off on harvest.",
+        team.el
+      ).row,
+      note
+    );
+    modal.footer.append(
+      button("Back", "neutral", () => {
+        modal.close();
+        openSettingsModal(host);
+      })
+    );
+  }
+
+  // src/ui/menus/companion/harvest-modal.ts
+  var REFRESH_MS = 4e3;
+  var PREVIEW_ICON_PX = 30;
+  var TILE_ICON_PX = 26;
+  var MAX_PREVIEW_VARIANTS = 10;
+  function openHarvestModal(host, onAsk) {
+    let scope = { rows: [], lockedOut: 0 };
+    let filters = { ...DEFAULT_FILTERS };
+    const iconCache = /* @__PURE__ */ new Map();
+    const cachedIcon = (key2, make) => {
+      let known = iconCache.get(key2);
+      if (!known) {
+        known = make();
+        iconCache.set(key2, known);
+      }
+      return known;
+    };
+    const modal = openModal2({
+      host,
+      title: "What should I harvest?",
+      widthPx: 460,
+      onClose: () => clearInterval(timer2)
+    });
+    const speciesCard = filterCard("", "Species");
+    const mutationCard = filterCard("", "Mutations");
+    const sizeCard = filterCard("", "Size");
+    const preview = resultStrip();
+    const note = lockedNote();
+    function scopedTo(without) {
+      const scope2 = without === "species" ? { ...filters, species: null } : { ...filters, mutations: [] };
+      return filterRows(scope.rows, scope2);
+    }
+    function renderSpecies() {
+      const available = scopedTo("species");
+      speciesCard.body.innerHTML = "";
+      speciesCard.body.append(
+        selectionRow({
+          values: speciesPresent(available),
+          counts: tally(available, (row) => [row.species]),
+          selected: filters.species,
+          iconFor: (name) => cachedIcon(`species:${name}`, () => speciesIcon(name, TILE_ICON_PX)),
+          onPick: (name) => {
+            filters = { ...filters, species: toggleIn(filters.species, name) };
+            render();
+          },
+          onClear: () => {
+            filters = { ...filters, species: null };
+            render();
+          },
+          allLabel: "All"
+        })
+      );
+      speciesCard.setSummary(summarizeSpecies(filters), filters.species !== null);
+    }
+    function renderMutations() {
+      const available = scopedTo("mutations");
+      const mutations = mutationsPresent(available);
+      const kept = filters.mutations.filter((name) => mutations.includes(name));
+      if (kept.length !== filters.mutations.length) filters = { ...filters, mutations: kept };
+      mutationCard.root.style.display = mutations.length === 0 ? "none" : "flex";
+      if (mutations.length === 0) return;
+      mutationCard.body.innerHTML = "";
+      mutationCard.body.append(
+        fieldRow(
+          "Match",
+          segmented(
+            [
+              { value: "any", label: "Any", title: "Has at least one" },
+              { value: "all", label: "All", title: "Has every one" },
+              { value: "none", label: "None", title: "Has none of them" }
+            ],
+            filters.mutationMode,
+            (value) => {
+              filters = { ...filters, mutationMode: value };
+              render();
+            }
+          )
+        ),
+        selectionRow({
+          values: mutations,
+          counts: tally(available, mutationsOf),
+          selected: filters.mutations.length === 0 ? null : filters.mutations,
+          iconFor: (name) => cachedIcon(`mutation:${name}`, () => mutationIconEl(name, TILE_ICON_PX)),
+          onPick: (name) => {
+            filters = { ...filters, mutations: toggleIn(filters.mutations, name) ?? [] };
+            render();
+          },
+          onClear: () => {
+            filters = { ...filters, mutations: [] };
+            render();
+          },
+          allLabel: "Any"
+        })
+      );
+      mutationCard.setSummary(summarizeMutations(filters), filters.mutations.length > 0);
+    }
+    const sizeValue = document.createElement("span");
+    css2(sizeValue, { fontSize: "11.5px", color: TEXT, minWidth: "38px", textAlign: "right" });
+    const sizeSlider = document.createElement("input");
+    sizeSlider.type = "range";
+    sizeSlider.className = "qws-pnl-range";
+    sizeSlider.min = "50";
+    sizeSlider.max = "100";
+    sizeSlider.step = "5";
+    css2(sizeSlider, { flex: "1" });
+    sizeSlider.addEventListener("input", () => {
+      filters = { ...filters, minSizePct: Number(sizeSlider.value) };
+      render();
+    });
+    {
+      const control = document.createElement("div");
+      css2(control, { display: "flex", alignItems: "center", gap: "10px", flex: "1", minWidth: "0" });
+      control.append(sizeSlider, sizeValue);
+      const row = fieldRow("Minimum size", control);
+      css2(row, { gap: "14px" });
+      sizeCard.body.append(row);
+    }
+    const resetButton = button("Reset", "neutral", () => {
+      filters = { ...DEFAULT_FILTERS };
+      render();
+    });
+    const askButton = button("Ask to pick these", "accent", () => {
+      onAsk({
+        kind: "harvest",
+        label: describeFilters(filters),
+        // Le fournisseur est rappelé à la confirmation : c'est ce qui permet de
+        // détecter que le jardin a changé entre-temps. Il refait le même chemin,
+        // protection du Locker comprise, puis applique les critères.
+        provider: async () => {
+          const fresh = await readHarvestable();
+          return { rows: filterRows(fresh.rows, filters), lockedOut: fresh.lockedOut };
+        }
+      });
+      modal.close();
+    });
+    css2(askButton, { marginLeft: "auto" });
+    const notice = settingsNotice(
+      "harvest",
+      "Harvest is not set up. I will pick with the team you have on.",
+      () => {
+        modal.close();
+        openHarvestSettingsModal(host);
+      }
+    );
+    modal.body.append(notice.root, speciesCard.root, mutationCard.root, sizeCard.root, preview.root, note.root);
+    modal.footer.append(resetButton, askButton);
+    function render() {
+      if (!modal.isOpen()) return;
+      renderSpecies();
+      renderMutations();
+      sizeSlider.value = String(filters.minSizePct);
+      sizeValue.textContent = `${filters.minSizePct}%`;
+      sizeCard.setSummary(summarizeSize(filters), filters.minSizePct > DEFAULT_FILTERS.minSizePct);
+      const selected = filterRows(scope.rows, filters);
+      const variants = groupVariants(selected);
+      const shown = variants.slice(0, MAX_PREVIEW_VARIANTS);
+      preview.update(
+        selected.length,
+        shown.map((variant) => {
+          const key2 = `${variant.species}|${variant.mutations.join(",")}`;
+          return {
+            icon: cachedIcon(`variant:${key2}`, () => variantIcon(variant.species, variant.mutations, PREVIEW_ICON_PX)),
+            label: variant.mutations.length ? `${variant.species}: ${variant.mutations.join(", ")}` : variant.species,
+            count: variant.count
+          };
+        }),
+        variants.length - shown.length
+      );
+      note.update(scope.lockedOut);
+      askButton.disabled = selected.length === 0;
+    }
+    async function refresh() {
+      if (!modal.isOpen()) return;
+      scope = await readHarvestable().catch(() => ({ rows: [], lockedOut: 0 }));
+      if (!modal.isOpen()) return;
+      render();
+    }
+    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS);
+    render();
+    void refresh();
+    return { close: modal.close };
+  }
+
+  // src/ui/menus/companion/feed-modal.ts
+  var REFRESH_MS2 = 5e3;
+  var CROP_ICON_PX = 26;
+  function openFeedModal(host, onAsk) {
+    let picks = [];
+    const modal = openModal2({
+      host,
+      title: "Who needs feeding?",
+      widthPx: 420,
+      onClose: () => clearInterval(timer2)
+    });
+    const list = document.createElement("div");
+    css2(list, { display: "flex", flexDirection: "column", gap: "7px" });
+    const empty = document.createElement("div");
+    css2(empty, { fontSize: "12px", color: TEXT_DIM, padding: "10px 2px", lineHeight: "1.5" });
+    empty.textContent = "Nobody is hungry, or I have nothing they eat.";
+    const notice = settingsNotice(
+      "feed",
+      "Pet feed is not set up. I warn below 10% and may pick from the garden.",
+      () => {
+        modal.close();
+        openFeedSettingsModal(host);
+      }
+    );
+    modal.body.append(notice.root, list, empty);
+    const askButton = button("Ask to feed them", "accent", () => {
+      onAsk({
+        kind: "feed",
+        label: picks.length === 1 ? `Feed ${picks[0].petName}` : "Feed my hungry pets",
+        // Rappelé à la confirmation : c'est ce qui détecte qu'un pet a été nourri
+        // entre-temps, ou que le crop prévu a disparu.
+        provider: () => findFeedable()
+      });
+      modal.close();
+    });
+    css2(askButton, { marginLeft: "auto" });
+    modal.footer.append(askButton);
+    function row(candidate) {
+      const line = document.createElement("div");
+      css2(line, {
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        padding: "9px 11px",
+        borderRadius: "12px",
+        border: `1px solid ${BORDER}`,
+        background: CARD_BG
+      });
+      const text = document.createElement("div");
+      css2(text, { display: "flex", flexDirection: "column", gap: "2px", flex: "1", minWidth: "0" });
+      const name = document.createElement("div");
+      css2(name, { fontSize: "12.5px", color: TEXT });
+      name.textContent = candidate.petName;
+      const meta = document.createElement("div");
+      css2(meta, { fontSize: "11px", color: candidate.hungerPct <= 5 ? WARN : TEXT_DIM });
+      meta.textContent = candidate.source.kind === "garden" ? `${candidate.hungerPct}% left, I would pick a ${candidate.source.species}` : `${candidate.hungerPct}% left, I have a ${candidate.source.species} in the bag`;
+      text.append(name, meta);
+      const icon = speciesIcon(candidate.source.species, CROP_ICON_PX);
+      icon.title = candidate.source.species;
+      line.append(text, icon);
+      return line;
+    }
+    function render() {
+      if (!modal.isOpen()) return;
+      list.innerHTML = "";
+      for (const candidate of picks) list.append(row(candidate));
+      empty.style.display = picks.length === 0 ? "" : "none";
+      askButton.disabled = picks.length === 0;
+    }
+    async function refresh() {
+      if (!modal.isOpen()) return;
+      picks = await findFeedable().catch(() => []);
+      if (!modal.isOpen()) return;
+      render();
+    }
+    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS2);
+    render();
+    void refresh();
+  }
+
+  // src/ui/menus/companion/plant-chips.ts
+  var SPRITE_LOG_TAG3 = "companion-plant";
+  var ICON_PX2 = 24;
+  function iconHolder2(sizePx) {
+    const box = document.createElement("div");
+    css2(box, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: `${sizePx}px`,
+      height: `${sizePx}px`,
+      flex: "0 0 auto"
+    });
+    return box;
+  }
+  function spellings2(...names) {
+    const out = /* @__PURE__ */ new Set();
+    for (const name of names) {
+      const trimmed = (name ?? "").trim();
+      if (!trimmed) continue;
+      for (const form of [trimmed, trimmed.split(/[./]/).pop() ?? trimmed]) {
+        if (!form) continue;
+        out.add(form);
+        out.add(form.replace(/\s+/g, ""));
+      }
+    }
+    return [...out];
+  }
+  function seedCandidates(species, name) {
+    const entry = plantCatalog2[species];
+    const catalogName = typeof entry?.seed?.name === "string" ? entry.seed.name : null;
+    return spellings2(species, catalogName, name);
+  }
+  function eggCandidates(eggId, name) {
+    const entry = eggCatalog2[eggId];
+    const tileRef = typeof entry?.tileRef === "string" ? entry.tileRef : null;
+    const catalogName = typeof entry?.name === "string" ? entry.name : null;
+    return spellings2(eggId, tileRef, catalogName, name);
+  }
+  function plantItemIcon(item, sizePx = ICON_PX2) {
+    const box = iconHolder2(sizePx);
+    const isEgg = item.kind === "egg";
+    const candidates = isEgg ? eggCandidates(item.id, item.name) : seedCandidates(item.id, item.name);
+    if (candidates.length) {
+      attachSpriteIcon(box, isEgg ? ["pet"] : ["seed"], candidates, sizePx, SPRITE_LOG_TAG3);
+    }
+    return box;
+  }
+  function plantItemTitle(item) {
+    return item.kind === "egg" ? `${item.name} (egg)` : item.name;
+  }
+  function plantTile(item, onClick) {
+    const el2 = document.createElement("button");
+    el2.type = "button";
+    el2.title = plantItemTitle(item);
+    css2(el2, {
+      display: "inline-flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: "1px",
+      padding: "5px 6px 3px",
+      borderRadius: "10px",
+      cursor: "pointer",
+      lineHeight: "1",
+      transition: "background 120ms ease, border-color 120ms ease, opacity 120ms ease"
+    });
+    const count = document.createElement("span");
+    css2(count, { fontSize: "10px" });
+    el2.append(plantItemIcon(item), count);
+    el2.addEventListener("click", onClick);
+    return {
+      el: el2,
+      update(left, selected) {
+        const empty = left <= 0;
+        count.textContent = String(Math.max(0, left));
+        css2(el2, {
+          background: selected ? TEAL_DIM : CARD_BG,
+          border: `1px solid ${selected ? TEAL_BORDER : BORDER}`,
+          opacity: empty && !selected ? "0.45" : "1"
+        });
+        css2(count, { color: selected ? TEAL : empty ? WARN : TEXT_DIM });
+      }
+    };
+  }
+
+  // src/ui/menus/companion/plant-grid.ts
+  var MAX_GRID_HEIGHT_PX = 300;
+  var CELL_ICON_PX = 20;
+  var HALF_GAP_PX = 12;
+  function plantGrid(options) {
+    const root = document.createElement("div");
+    css2(root, {
+      display: "grid",
+      gridTemplateColumns: `repeat(${GARDEN_COLS / 2}, 1fr) ${HALF_GAP_PX}px repeat(${GARDEN_COLS / 2}, 1fr)`,
+      gridTemplateRows: `repeat(${GARDEN_ROWS}, 1fr)`,
+      gap: "2px",
+      height: `min(38vh, ${MAX_GRID_HEIGHT_PX}px)`,
+      aspectRatio: `${GARDEN_COLS} / ${GARDEN_ROWS}`,
+      width: "auto",
+      margin: "0 auto",
+      padding: "6px",
+      borderRadius: "12px",
+      border: `1px solid ${BORDER}`,
+      background: "rgba(0,0,0,0.28)",
+      boxSizing: "border-box",
+      flex: "0 0 auto"
+    });
+    root.addEventListener("contextmenu", (event) => event.preventDefault());
+    const cells = /* @__PURE__ */ new Map();
+    let painting = false;
+    let mode = "assign";
+    const stopPainting = () => {
+      painting = false;
+    };
+    window.addEventListener("mouseup", stopPainting);
+    function buildCell(tileIndex) {
+      const cell = document.createElement("div");
+      cell.dataset.tile = String(tileIndex);
+      css2(cell, {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "4px",
+        userSelect: "none",
+        border: "1px solid transparent",
+        transition: "background 90ms ease"
+      });
+      cell.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        painting = true;
+        mode = event.button === 2 ? "erase" : "assign";
+        options.onPaint(tileIndex, mode);
+      });
+      cell.addEventListener("mouseenter", () => {
+        if (painting) options.onPaint(tileIndex, mode);
+      });
+      return cell;
+    }
+    for (let row = 0; row < GARDEN_ROWS; row++) {
+      for (let col = 0; col < GARDEN_COLS; col++) {
+        if (col === GARDEN_COLS / 2) {
+          const spacer2 = document.createElement("div");
+          css2(spacer2, { pointerEvents: "none" });
+          root.append(spacer2);
+        }
+        const tileIndex = row * GARDEN_COLS + col;
+        const el2 = buildCell(tileIndex);
+        cells.set(tileIndex, { el: el2, shown: null });
+        root.append(el2);
+      }
+    }
+    function stateKey(tileIndex, owned, occupied) {
+      if (!owned.has(tileIndex)) return "absent";
+      if (occupied.has(tileIndex)) return "occupied";
+      const assignment = options.assignmentAt(tileIndex);
+      return assignment ? `set:${assignment.kind}:${assignment.id}` : "free";
+    }
+    function paintCell(cell, tileIndex, key2) {
+      cell.shown = key2;
+      cell.el.replaceChildren();
+      if (key2 === "absent") {
+        css2(cell.el, { background: "transparent", borderColor: "transparent", cursor: "default" });
+        cell.el.title = "";
+        return;
+      }
+      if (key2 === "occupied") {
+        css2(cell.el, {
+          background: "rgba(239,68,68,0.22)",
+          borderColor: DANGER,
+          cursor: "not-allowed"
+        });
+        cell.el.title = "Something is already growing here";
+        return;
+      }
+      if (key2 === "free") {
+        css2(cell.el, { background: "rgba(255,255,255,0.05)", borderColor: BORDER, cursor: "pointer" });
+        cell.el.title = "";
+        return;
+      }
+      const assignment = options.assignmentAt(tileIndex);
+      css2(cell.el, { background: TEAL_DIM, borderColor: TEAL_BORDER, cursor: "pointer" });
+      cell.el.title = assignment?.name ?? "";
+      if (assignment) {
+        const icon = options.iconFor(assignment, CELL_ICON_PX);
+        css2(icon, { pointerEvents: "none" });
+        cell.el.append(icon);
+      }
+    }
+    return {
+      root,
+      update() {
+        const owned = options.owned();
+        const occupied = options.occupied();
+        for (let tileIndex = 0; tileIndex < GARDEN_TILE_COUNT; tileIndex++) {
+          const cell = cells.get(tileIndex);
+          if (!cell) continue;
+          const key2 = stateKey(tileIndex, owned, occupied);
+          if (key2 !== cell.shown) paintCell(cell, tileIndex, key2);
+        }
+      },
+      destroy() {
+        window.removeEventListener("mouseup", stopPainting);
+      }
+    };
+  }
+
+  // src/ui/menus/companion/plant-modal.ts
+  var REFRESH_MS3 = 4e3;
+  var STRIP_ICON_PX = 24;
+  function openPlantModal(host, onAsk) {
+    let scope = EMPTY_SCOPE;
+    let plan = /* @__PURE__ */ new Map();
+    let held = null;
+    let owned = /* @__PURE__ */ new Set();
+    let tiles = /* @__PURE__ */ new Map();
+    let paletteSignature = "";
+    const stripIcons = /* @__PURE__ */ new Map();
+    const modal = openModal2({
+      host,
+      title: "What should I plant?",
+      widthPx: 700,
+      onClose: () => {
+        clearInterval(timer2);
+        grid.destroy();
+      }
+    });
+    function paletteGroup(title) {
+      const root = document.createElement("div");
+      css2(root, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
+      const row = document.createElement("div");
+      css2(row, { display: "flex", flexWrap: "wrap", gap: "5px" });
+      root.append(sectionLabel(title), row);
+      return { root, row };
+    }
+    const seedGroup = paletteGroup("Seeds");
+    const eggGroup = paletteGroup("Eggs");
+    const paletteEmpty = document.createElement("div");
+    css2(paletteEmpty, { fontSize: "12px", color: TEXT_DIM, lineHeight: "1.5" });
+    paletteEmpty.textContent = "Nothing to plant. No seeds, no eggs.";
+    const hint = document.createElement("div");
+    css2(hint, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.5" });
+    hint.textContent = "Pick one and draw. Right click erases, red is taken.";
+    const grid = plantGrid({
+      owned: () => owned,
+      occupied: () => scope.occupied,
+      assignmentAt: (tileIndex) => plan.get(tileIndex) ?? null,
+      iconFor: (assignment, sizePx) => plantItemIcon(assignment, sizePx),
+      onPaint: (tileIndex, mode) => paint(tileIndex, mode)
+    });
+    const strip = document.createElement("div");
+    css2(strip, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+      padding: "11px 12px",
+      borderRadius: "12px",
+      background: "rgba(94,234,212,0.07)",
+      border: `1px solid ${BORDER}`,
+      flex: "0 0 auto"
+    });
+    const stripCount = document.createElement("div");
+    css2(stripCount, { fontSize: "13px", fontWeight: "600", color: TEAL });
+    const stripIconRow = document.createElement("div");
+    css2(stripIconRow, { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" });
+    strip.append(stripCount, stripIconRow);
+    const clearButton = button("Clear", "neutral", () => {
+      plan = /* @__PURE__ */ new Map();
+      render();
+    });
+    const askButton = button("Ask to plant these", "accent", () => {
+      const drawn = [...plan.values()];
+      onAsk({
+        kind: "plant",
+        label: describePlan(drawn),
+        // Rappelé à la confirmation : c'est ce qui détecte qu'une case s'est
+        // remplie ou qu'une graine est partie ailleurs entre-temps. Le plan
+        // dessiné ne bouge pas ; c'est le jardin qu'on relit.
+        provider: async () => viablePlan(drawn, await readPlantScope())
+      });
+      modal.close();
+    });
+    css2(askButton, { marginLeft: "auto" });
+    modal.body.append(seedGroup.root, eggGroup.root, paletteEmpty, hint, grid.root, strip);
+    modal.footer.append(clearButton, askButton);
+    function remainingFor(item) {
+      return stockLeft([...plan.values()], scope.items).get(itemKey(item)) ?? 0;
+    }
+    function paint(tileIndex, mode) {
+      if (mode === "erase") {
+        if (plan.delete(tileIndex)) render();
+        return;
+      }
+      if (!held) return;
+      if (!owned.has(tileIndex) || scope.occupied.has(tileIndex)) return;
+      const current = plan.get(tileIndex);
+      if (current && itemKey(current) === itemKey(held)) return;
+      if (current) plan.delete(tileIndex);
+      if (remainingFor(held) <= 0) {
+        if (current) plan.set(tileIndex, current);
+        return;
+      }
+      plan.set(tileIndex, { tileIndex, kind: held.kind, id: held.id, name: held.name });
+      render();
+    }
+    function syncPalette() {
+      const signature = scope.items.map(itemKey).join("|");
+      if (signature === paletteSignature) return;
+      paletteSignature = signature;
+      tiles = /* @__PURE__ */ new Map();
+      seedGroup.row.replaceChildren();
+      eggGroup.row.replaceChildren();
+      for (const item of scope.items) {
+        const tile = plantTile(item, () => {
+          held = item;
+          render();
+        });
+        tiles.set(itemKey(item), tile);
+        (item.kind === "egg" ? eggGroup : seedGroup).row.append(tile.el);
+      }
+      if (held && !tiles.has(itemKey(held))) held = null;
+      if (!held) held = scope.items[0] ?? null;
+    }
+    function renderStrip() {
+      const drawn = [...plan.values()];
+      stripCount.textContent = drawn.length === 0 ? "Nothing to plant yet" : `${drawn.length} tile${drawn.length === 1 ? "" : "s"}`;
+      stripIconRow.replaceChildren();
+      stripIconRow.style.display = drawn.length === 0 ? "none" : "flex";
+      const counts = /* @__PURE__ */ new Map();
+      for (const assignment of drawn) {
+        const key2 = itemKey(assignment);
+        const known = counts.get(key2);
+        if (known) known.count++;
+        else counts.set(key2, { item: assignment, count: 1 });
+      }
+      for (const [key2, entry] of [...counts.entries()].sort((a, b) => b[1].count - a[1].count)) {
+        let icon = stripIcons.get(key2);
+        if (!icon) {
+          icon = plantItemIcon(entry.item, STRIP_ICON_PX);
+          stripIcons.set(key2, icon);
+        }
+        const pair = document.createElement("div");
+        pair.title = entry.item.name;
+        css2(pair, { display: "flex", alignItems: "center", gap: "3px" });
+        const tally2 = document.createElement("span");
+        css2(tally2, { fontSize: "11px", color: TEXT_DIM });
+        tally2.textContent = String(entry.count);
+        pair.append(icon, tally2);
+        stripIconRow.append(pair);
+      }
+    }
+    function render() {
+      if (!modal.isOpen()) return;
+      syncPalette();
+      const left = stockLeft([...plan.values()], scope.items);
+      for (const item of scope.items) {
+        const key2 = itemKey(item);
+        tiles.get(key2)?.update(left.get(key2) ?? 0, held !== null && itemKey(held) === key2);
+      }
+      const hasItems = scope.items.length > 0;
+      for (const group of [seedGroup, eggGroup]) {
+        group.root.style.display = group.row.childElementCount > 0 ? "flex" : "none";
+      }
+      paletteEmpty.style.display = hasItems ? "none" : "";
+      hint.style.display = hasItems ? "" : "none";
+      grid.root.style.display = hasItems ? "grid" : "none";
+      grid.update();
+      renderStrip();
+      askButton.disabled = plan.size === 0;
+    }
+    async function refresh() {
+      if (!modal.isOpen()) return;
+      scope = await readPlantScope().catch(() => EMPTY_SCOPE);
+      if (!modal.isOpen()) return;
+      owned = new Set(scope.tiles);
+      plan = new Map(viablePlan([...plan.values()], scope).map((entry) => [entry.tileIndex, entry]));
+      render();
+    }
+    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS3);
+    render();
+    void refresh();
+  }
+
+  // src/ui/menus/companion/hatch-chips.ts
+  var SPRITE_LOG_TAG4 = "companion-hatch";
+  var ICON_PX3 = 26;
+  function iconHolder3(sizePx) {
+    const box = document.createElement("div");
+    css2(box, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: `${sizePx}px`,
+      height: `${sizePx}px`,
+      flex: "0 0 auto"
+    });
+    return box;
+  }
+  function petSpeciesIcon(species, sizePx = ICON_PX3) {
+    const box = iconHolder3(sizePx);
+    const candidates = [species, species.replace(/\s+/g, "")].filter(Boolean);
+    attachSpriteIcon(box, ["pet"], candidates, sizePx, SPRITE_LOG_TAG4, {
+      onNoSpriteFound: () => {
+        css2(box, { fontSize: "12px", fontWeight: "700", color: TEXT_DIM });
+        box.textContent = species.charAt(0).toUpperCase();
+      }
+    });
+    return box;
+  }
+  function abilityIcon(abilityId, sizePx = ICON_PX3) {
+    const box = iconHolder3(sizePx);
+    const square = document.createElement("span");
+    const { bg } = getAbilityChipColors(abilityId);
+    css2(square, {
+      display: "inline-block",
+      width: "13px",
+      height: "13px",
+      borderRadius: "4px",
+      background: bg,
+      boxShadow: "0 0 0 1px rgba(0,0,0,0.4) inset, 0 0 0 1px rgba(255,255,255,0.1)"
+    });
+    box.append(square);
+    return box;
+  }
+
+  // src/ui/menus/companion/hatch-modal.ts
+  var REFRESH_MS4 = 4e3;
+  var TILE_ICON_PX2 = 26;
+  var MIN_STR = 1;
+  var MAX_STR = 100;
+  var DEFAULT_STR = 95;
+  function openHatchModal(host, onAsk) {
+    let scope = EMPTY_HATCH_SCOPE;
+    let rules = { ...loadCompanionSettings().hatchKeepRules };
+    const iconCache = /* @__PURE__ */ new Map();
+    const cachedIcon = (key2, make) => {
+      let known = iconCache.get(key2);
+      if (!known) {
+        known = make();
+        iconCache.set(key2, known);
+      }
+      return known;
+    };
+    const modal = openModal2({
+      host,
+      title: "Hatching",
+      widthPx: 470,
+      onClose: () => clearInterval(timer2)
+    });
+    const speciesCard = filterCard("", "Keep species");
+    const mutationCard = filterCard("", "Keep mutations");
+    const abilityCard = filterCard("", "Keep abilities");
+    const strengthCard = filterCard("", "Keep by strength");
+    function commit(next) {
+      rules = next;
+      patchCompanionSettings({ hatchKeepRules: next });
+      render();
+    }
+    function toggled(list, value) {
+      return list.includes(value) ? list.filter((entry) => entry !== value) : [...list, value];
+    }
+    function chipRow(values, selected, counts, labelFor, iconFor, onPick) {
+      const row = tileRow();
+      for (const value of values) {
+        const owned = counts.get(value) ?? 0;
+        row.append(
+          spriteTile({
+            icon: iconFor(value),
+            // Le chiffre seul n'apprend rien : l'infobulle dit ce qu'il compte.
+            title: `${labelFor(value)}: ${owned === 0 ? "none" : owned} in your bag`,
+            count: owned,
+            selected: selected.includes(value),
+            onClick: () => onPick(value)
+          })
+        );
+      }
+      return row;
+    }
+    function offered(available, picked) {
+      const all = /* @__PURE__ */ new Set([...available, ...picked]);
+      return [...all].sort((a, b) => a.localeCompare(b));
+    }
+    function tallyPets(of) {
+      const counts = /* @__PURE__ */ new Map();
+      for (const pet of scope.pets) {
+        for (const value of of(pet)) counts.set(value, (counts.get(value) ?? 0) + 1);
+      }
+      return counts;
+    }
+    function renderSpecies() {
+      const values = offered(scope.possibleSpecies, rules.species);
+      speciesCard.root.style.display = values.length > 0 ? "flex" : "none";
+      if (values.length === 0) return;
+      const counts = tallyPets((pet) => [pet.species]);
+      speciesCard.body.replaceChildren(
+        chipRow(
+          values,
+          rules.species,
+          counts,
+          (name) => name,
+          (name) => cachedIcon(`species:${name}`, () => petSpeciesIcon(name, TILE_ICON_PX2)),
+          (name) => commit({ ...rules, species: toggled(rules.species, name) })
+        )
+      );
+      speciesCard.setSummary(summarize(rules.species.length), rules.species.length > 0);
+    }
+    function renderMutations() {
+      const values = offered(scope.presentMutations, rules.mutations);
+      mutationCard.root.style.display = values.length > 0 ? "flex" : "none";
+      if (values.length === 0) return;
+      const counts = tallyPets((pet) => pet.mutations);
+      mutationCard.body.replaceChildren(
+        chipRow(
+          values,
+          rules.mutations,
+          counts,
+          (name) => name,
+          (name) => cachedIcon(`mutation:${name}`, () => mutationIconEl(name, TILE_ICON_PX2)),
+          (name) => commit({ ...rules, mutations: toggled(rules.mutations, name) })
+        )
+      );
+      mutationCard.setSummary(summarize(rules.mutations.length), rules.mutations.length > 0);
+    }
+    function renderAbilities() {
+      const values = offered(scope.possibleAbilities.map((entry) => entry.id), rules.abilities);
+      abilityCard.root.style.display = values.length > 0 ? "flex" : "none";
+      if (values.length === 0) return;
+      const names = new Map(scope.possibleAbilities.map((entry) => [entry.id, entry.name]));
+      const counts = tallyPets((pet) => pet.abilities);
+      abilityCard.body.replaceChildren(
+        chipRow(
+          values,
+          rules.abilities,
+          counts,
+          (id) => names.get(id) ?? id,
+          (id) => cachedIcon(`ability:${id}`, () => abilityIcon(id, TILE_ICON_PX2)),
+          (id) => commit({ ...rules, abilities: toggled(rules.abilities, id) })
+        )
+      );
+      abilityCard.setSummary(summarize(rules.abilities.length), rules.abilities.length > 0);
+    }
+    const strengthField = numberField(MIN_STR, MAX_STR, 1, DEFAULT_STR);
+    strengthField.addEventListener("change", () => {
+      const value = Math.max(MIN_STR, Math.min(MAX_STR, Math.round(Number(strengthField.value) || DEFAULT_STR)));
+      strengthField.value = String(value);
+      commit({ ...rules, minMaxStr: value });
+    });
+    const strengthToggle = toggle(rules.minMaxStr !== null, (on) => {
+      commit({ ...rules, minMaxStr: on ? Number(strengthField.value) || DEFAULT_STR : null });
+    });
+    {
+      const control = document.createElement("div");
+      css2(control, { display: "flex", alignItems: "center", gap: "10px" });
+      control.append(strengthField, strengthToggle);
+      strengthCard.body.append(fieldRow("Keep max STR from", control));
+    }
+    function summarize(count) {
+      return count === 0 ? "None" : `${count} picked`;
+    }
+    const strip = document.createElement("div");
+    css2(strip, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "5px",
+      padding: "11px 12px",
+      borderRadius: "12px",
+      background: "rgba(94,234,212,0.07)",
+      border: `1px solid ${BORDER}`,
+      flex: "0 0 auto"
+    });
+    const ready2 = document.createElement("div");
+    css2(ready2, { fontSize: "13px", fontWeight: "600", color: TEAL });
+    const bag = document.createElement("div");
+    css2(bag, { fontSize: "11.5px", lineHeight: "1.5", color: TEXT });
+    const note = document.createElement("div");
+    css2(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+    strip.append(ready2, bag, note);
+    const resetButton = button("Reset", "neutral", () => commit({ ...DEFAULT_KEEP_RULES }));
+    const askButton = button("Ask to hatch", "accent", () => {
+      onAsk({
+        kind: "hatch",
+        label: describeHatchRequest(scope.readySlots.length),
+        // Rappelé à la confirmation : c'est ce qui détecte qu'un œuf a éclos ou
+        // mûri entre-temps.
+        provider: hatchProvider(),
+        rules
+      });
+      modal.close();
+    });
+    css2(askButton, { marginLeft: "auto" });
+    const legend = document.createElement("div");
+    css2(legend, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+    legend.textContent = "Numbers are how many you already have.";
+    const notice = settingsNotice(
+      "hatch",
+      "Hatching is not set up. I will use the team you have on.",
+      () => {
+        modal.close();
+        openHatchSettingsModal(host);
+      }
+    );
+    modal.body.append(
+      notice.root,
+      speciesCard.root,
+      mutationCard.root,
+      abilityCard.root,
+      strengthCard.root,
+      legend,
+      strip
+    );
+    modal.footer.append(resetButton, askButton);
+    function render() {
+      if (!modal.isOpen()) return;
+      renderSpecies();
+      renderMutations();
+      renderAbilities();
+      strengthField.disabled = rules.minMaxStr === null;
+      if (rules.minMaxStr !== null) strengthField.value = String(rules.minMaxStr);
+      css2(strengthField, { opacity: rules.minMaxStr === null ? "0.45" : "1" });
+      strengthCard.setSummary(
+        rules.minMaxStr === null ? "Off" : `${rules.minMaxStr} and up`,
+        rules.minMaxStr !== null
+      );
+      const waiting = scope.totalEggs - scope.readySlots.length;
+      ready2.textContent = scope.readySlots.length === 0 ? "No egg is ready" : `${scope.readySlots.length} egg${scope.readySlots.length === 1 ? "" : "s"} ready`;
+      const sellable = toSell(scope.pets, rules);
+      const kept = scope.pets.length - sellable.length;
+      bag.textContent = `${scope.inventoryCount}/${scope.capacity} slots. Of ${scope.pets.length} pets, I keep ${kept} and sell ${sellable.length}.`;
+      if (!hasAnyRule(rules)) {
+        note.textContent = "Nothing set to keep, so I will not offer to sell. Favourites and your active team are always safe.";
+        css2(note, { color: WARN });
+      } else {
+        note.textContent = `Favourites and your active team are never sold.${waiting > 0 ? ` ${waiting} still growing.` : ""}`;
+        css2(note, { color: TEXT_DIM });
+      }
+      askButton.disabled = scope.readySlots.length === 0;
+    }
+    async function refresh() {
+      if (!modal.isOpen()) return;
+      scope = await readHatchScope().catch(() => EMPTY_HATCH_SCOPE);
+      if (!modal.isOpen()) return;
+      render();
+    }
+    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS4);
+    render();
+    void refresh();
+  }
+
+  // src/ui/menus/companion/actions-modal.ts
+  function openActionsModal(host, onAsk) {
+    const modal = openModal2({ host, title: "What can you do?", widthPx: 420 });
+    const list = document.createElement("div");
+    css2(list, { display: "flex", flexDirection: "column", gap: "8px" });
+    modal.body.append(list);
+    function renderRows(rows) {
+      if (!modal.isOpen()) return;
+      list.innerHTML = "";
+      for (const action2 of rows) {
+        list.append(
+          menuCard({
+            name: action2.name,
+            detail: action2.unavailable ?? action2.description,
+            disabled: action2.unavailable !== null,
+            onClick: () => {
+              modal.close();
+              action2.run();
+            }
+          })
+        );
+      }
+    }
+    async function refresh() {
+      if (!modal.isOpen()) return;
+      const [harvestable, feedable, plantable, hatchable] = await Promise.all([
+        readHarvestable().catch(() => ({ rows: [], lockedOut: 0 })),
+        reviewFeeding().catch(() => ({ candidates: [], hungry: 0, waitingOnGardenRule: 0 })),
+        readPlantScope().catch(() => EMPTY_SCOPE),
+        readHatchScope().catch(() => EMPTY_HATCH_SCOPE)
+      ]);
+      if (!modal.isOpen()) return;
+      const freeTiles = plantable.tiles.filter((tile) => !plantable.occupied.has(tile)).length;
+      renderRows([
+        {
+          name: "Harvest",
+          description: "Pick what your Locker lets me touch.",
+          unavailable: harvestable.rows.length > 0 ? null : harvestable.lockedOut > 0 ? "Everything ripe is locked right now." : "Nothing is ripe yet.",
+          run: () => openHarvestModal(host, onAsk)
+        },
+        {
+          name: "Feed a pet",
+          description: "Feed a pet something it likes.",
+          // « Rien à faire » recouvrait trois situations : on dit laquelle.
+          unavailable: feedable.candidates.length > 0 ? null : feedable.waitingOnGardenRule > 0 ? `${feedable.waitingOnGardenRule} could eat from the garden, but that is off in Settings.` : feedable.hungry > 0 ? `${feedable.hungry} hungry, but I have nothing they eat.` : "No pet is hungry enough.",
+          run: () => openFeedModal(host, onAsk)
+        },
+        {
+          name: "Plant",
+          description: "Draw where your seeds and eggs go.",
+          // Deux blocages bien distincts : rien à semer, ou nulle part où semer.
+          unavailable: plantable.items.length === 0 ? "You have no seeds and no eggs." : freeTiles === 0 ? "Your plot is full." : null,
+          run: () => openPlantModal(host, onAsk)
+        },
+        {
+          name: "Hatch",
+          description: "Open ripe eggs and sort what hatches.",
+          // Un sac déjà plein n'est pas « rien à faire » : c'est une éclosion qui
+          // ne donnerait rien, et ça se dit autrement.
+          unavailable: hatchable.readySlots.length === 0 ? hatchable.totalEggs > 0 ? `${hatchable.totalEggs} still growing.` : "No eggs in the ground." : hatchable.inventoryCount >= hatchable.capacity ? "Your bag is full." : null,
+          run: () => openHatchModal(host, onAsk)
+        }
+      ]);
+    }
+    renderRows([
+      { name: "Harvest", description: "Pick what your Locker lets me touch.", unavailable: "Checking...", run: () => {
+      } },
+      { name: "Feed a pet", description: "Feed a pet something it likes.", unavailable: "Checking...", run: () => {
+      } },
+      { name: "Plant", description: "Draw where your seeds and eggs go.", unavailable: "Checking...", run: () => {
+      } },
+      { name: "Hatch", description: "Open ripe eggs and sort what hatches.", unavailable: "Checking...", run: () => {
+      } }
+    ]);
+    void refresh();
+  }
+
+  // src/ui/menus/companion/chat-tab.ts
+  var EMPTY_HINT = "Pick something below. I always ask first.";
+  var IDENTITY_REFRESH_MS = 2e3;
+  function borrowed() {
+    const npcId = CompanionService.getNpcId();
+    return { npcId, name: npcId ? npcId.replace(/^NPC_/, "") : null };
+  }
+  function renderChatTab(view) {
+    view.innerHTML = "";
+    const root = document.createElement("div");
+    css2(root, { display: "flex", flexDirection: "column", gap: "8px" });
+    view.append(root);
+    const header = chatHeader("Companion");
+    const thread = threadBody();
+    const bar = actionBar();
+    const host = view.closest(".qws-win") ?? view;
+    function renderThread() {
+      thread.innerHTML = "";
+      const identity = borrowed();
+      const { messages } = CompanionChat.getLog();
+      const proposal = CompanionChat.getProposal();
+      if (messages.length === 0) {
+        thread.append(emptyThread(EMPTY_HINT));
+        return;
+      }
+      const now2 = Date.now();
+      let lastDayLabel = "";
+      for (let i = 0; i < messages.length; i++) {
+        const message = messages[i];
+        const dayLabel = formatDayLabel(message.atMs, now2);
+        const startsDay = dayLabel !== "" && dayLabel !== lastDayLabel;
+        if (startsDay) {
+          thread.append(dateSeparator(dayLabel));
+          lastDayLabel = dayLabel;
+        }
+        const previous = i > 0 ? messages[i - 1] : null;
+        const next = i < messages.length - 1 ? messages[i + 1] : null;
+        thread.append(
+          messageRow(
+            message,
+            {
+              isFirstInGroup: !previous || startsDay || !isSameGroup(previous, message),
+              isLastInGroup: !next || !isSameGroup(message, next)
+            },
+            identity
+          )
+        );
+        if (message.proposalId && proposal && proposal.id === message.proposalId) {
+          thread.append(confirmRow(message.proposalId));
+        }
+      }
+      thread.scrollTop = thread.scrollHeight;
+    }
+    function confirmRow(proposalId) {
+      const row = document.createElement("div");
+      css2(row, { display: "flex", gap: "6px", alignSelf: "flex-start", marginLeft: "34px", marginTop: "2px" });
+      row.append(
+        button("Yes, go ahead", "accent", () => void CompanionChat.confirm(proposalId).catch(() => {
+        })),
+        button("Not now", "neutral", () => CompanionChat.decline(proposalId))
+      );
+      return row;
+    }
+    const actionsButton = button("Actions", "neutral", () => {
+      openActionsModal(host, (request2) => {
+        void CompanionChat.proposeHarvest(request2).catch(() => {
+        });
+      });
+    });
+    const settingsButton = button("Settings", "neutral", () => openSettingsModal(host));
+    function renderBar() {
+      bar.innerHTML = "";
+      const run = CompanionChat.getRun();
+      if (run) {
+        bar.append(
+          button(`Stop (${run.done}/${run.total})`, "danger", () => CompanionChat.cancelRun()),
+          barHint("Working on it", "warn")
+        );
+        return;
+      }
+      bar.append(actionsButton, settingsButton);
+    }
+    function renderStatus() {
+      header.setIdentity(borrowed());
+      const run = CompanionChat.getRun();
+      if (run) {
+        header.setStatus(`On it, ${run.done} of ${run.total}`, true);
+        return;
+      }
+      if (CompanionChat.getProposal()) {
+        header.setStatus("Waiting on you", true);
+        return;
+      }
+      header.setStatus(
+        CompanionService.isRunning() ? "Ready when you are" : "Not out yet, but I can still help",
+        false
+      );
+    }
+    function renderAll() {
+      renderThread();
+      renderBar();
+      renderStatus();
+    }
+    root.append(header.root, thread, bar);
+    renderAll();
+    let unsubscribe2 = () => {
+    };
+    unsubscribe2 = CompanionChat.subscribe(() => {
+      if (!root.isConnected) {
+        unsubscribe2();
+        return;
+      }
+      renderAll();
+    });
+    const identityTimer = window.setInterval(() => {
+      if (!root.isConnected) {
+        clearInterval(identityTimer);
+        return;
+      }
+      renderStatus();
+    }, IDENTITY_REFRESH_MS);
+    view.__cleanup__ = () => {
+      clearInterval(identityTimer);
+      unsubscribe2();
+    };
+  }
+
+  // src/ui/menus/companion/companion.ts
+  var MIN_WIDTH_PX = 460;
+  function renderCompanionMenu(root) {
+    ensurePanelStyles();
+    const ui = new Menu({ id: "companion", compact: true, windowSelector: ".qws-win" });
+    ui.mount(root);
+    css2(root, { minWidth: `${MIN_WIDTH_PX}px` });
+    const TABS = ["behavior", "chat"];
+    ui.addTab("behavior", "Behavior", (view) => renderBehaviorTab(view));
+    ui.addTab("chat", "Chat", (view) => renderChatTab(view));
+    const onTabRequest = (event) => {
+      if (!root.isConnected) {
+        window.removeEventListener(COMPANION_TAB_EVENT, onTabRequest);
+        return;
+      }
+      const tab = String(event.detail?.tab ?? "");
+      if (TABS.includes(tab)) ui.switchTo(tab);
+    };
+    window.addEventListener(COMPANION_TAB_EVENT, onTabRequest);
+  }
+
   // src/utils/antiafk.ts
   function createAntiAfkController(deps) {
     const STOP_EVENTS = ["visibilitychange", "blur", "focus", "focusout", "pagehide", "freeze", "resume"];
-    const listeners7 = [];
+    const listeners8 = [];
     function swallowAll() {
       const add = (target, t) => {
         const h = (e) => {
@@ -54283,7 +59529,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           e.preventDefault?.();
         };
         target.addEventListener(t, h, { capture: true });
-        listeners7.push({ t, h, target });
+        listeners8.push({ t, h, target });
       };
       STOP_EVENTS.forEach((t) => {
         add(document, t);
@@ -54291,11 +59537,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
     }
     function unswallowAll() {
-      for (const { t, h, target } of listeners7) try {
+      for (const { t, h, target } of listeners8) try {
         target.removeEventListener(t, h, { capture: true });
       } catch {
       }
-      listeners7.length = 0;
+      listeners8.length = 0;
     }
     const docProto = Object.getPrototypeOf(document);
     const saved = {
@@ -54431,7 +59677,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
 
   // src/services/editorPointerControls.ts
-  var installed = false;
+  var installed2 = false;
   var dragMode = null;
   var lastTileKey = null;
   function tileKeyOf(target) {
@@ -54501,8 +59747,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     ev.preventDefault();
   }
   function installEditorPointerControls() {
-    if (installed || typeof window === "undefined") return;
-    installed = true;
+    if (installed2 || typeof window === "undefined") return;
+    installed2 = true;
     window.addEventListener("pointerdown", (ev) => {
       void handlePointerDown(ev);
     }, true);
@@ -55004,11 +60250,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!Number.isFinite(value)) return 1;
     return Math.max(1, Math.min(6, value));
   }
-  function findPlayersDeep2(state3) {
-    if (!state3 || typeof state3 !== "object") return [];
+  function findPlayersDeep2(state4) {
+    if (!state4 || typeof state4 !== "object") return [];
     const out = [];
     const seen = /* @__PURE__ */ new Set();
-    const stack = [state3];
+    const stack = [state4];
     while (stack.length) {
       const cur = stack.pop();
       if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
@@ -55034,12 +60280,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return [...byId.values()];
   }
-  function getPlayersArray2(state3) {
-    const direct = state3?.fullState?.data?.players ?? state3?.data?.players ?? state3?.players;
-    return Array.isArray(direct) ? direct : findPlayersDeep2(state3);
+  function getPlayersArray2(state4) {
+    const direct = state4?.fullState?.data?.players ?? state4?.data?.players ?? state4?.players;
+    return Array.isArray(direct) ? direct : findPlayersDeep2(state4);
   }
-  function getSlotsArray2(state3) {
-    const raw = state3?.child?.data?.userSlots ?? state3?.fullState?.child?.data?.userSlots ?? state3?.data?.userSlots;
+  function getSlotsArray2(state4) {
+    const raw = state4?.child?.data?.userSlots ?? state4?.fullState?.child?.data?.userSlots ?? state4?.data?.userSlots;
     if (Array.isArray(raw)) return raw;
     if (raw && typeof raw === "object") {
       const entries = Object.entries(raw);
@@ -55053,10 +60299,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return [];
   }
-  async function getMyAccountId(state3) {
+  async function getMyAccountId(state4) {
     try {
       const me = await player.get();
-      const snapshot2 = state3 ?? await Atoms.root.state.get();
+      const snapshot2 = state4 ?? await Atoms.root.state.get();
       return resolveMyAccountId(me, getPlayersArray2(snapshot2));
     } catch {
       return null;
@@ -55082,11 +60328,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function buildPlayerStatePayload(options = {}) {
     try {
-      const state3 = await Atoms.root.state.get();
-      if (!state3 || typeof state3 !== "object") return null;
-      const players = getPlayersArray2(state3);
+      const state4 = await Atoms.root.state.get();
+      if (!state4 || typeof state4 !== "object") return null;
+      const players = getPlayersArray2(state4);
       const normalizedPlayers = Array.isArray(players) ? players : [];
-      const slots = getSlotsArray2(state3).filter((slot2) => !!slot2);
+      const slots = getSlotsArray2(state4).filter((slot2) => !!slot2);
       const coinsById = /* @__PURE__ */ new Map();
       for (const slot2 of slots) {
         const slotData2 = slot2?.data ?? slot2;
@@ -55107,7 +60353,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         };
       });
       if (slots.length === 0) return null;
-      const myAccountId = options.playerId ?? await getMyAccountId(state3);
+      const myAccountId = options.playerId ?? await getMyAccountId(state4);
       const slot = selectSlotForAccount(slots, {
         slotIndex: options.slotIndex,
         accountId: myAccountId
@@ -55120,11 +60366,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       const resolvedPlayer = resolvePlayer(normalizedPlayers, slot, myAccountId ?? null);
       const playerName = resolvedPlayer?.name ?? slotData?.name ?? slot?.name ?? null;
       const avatarRaw = resolvedPlayer?.cosmetic?.avatar ?? slotData?.cosmetic?.avatar ?? slot?.cosmetic?.avatar ?? null;
-      const avatar2 = Array.isArray(avatarRaw) && avatarRaw.length > 0 ? avatarRaw.map((entry) => String(entry)) : null;
+      const avatar3 = Array.isArray(avatarRaw) && avatarRaw.length > 0 ? avatarRaw.map((entry) => String(entry)) : null;
       const coinCandidate = slotData?.coinsCount ?? slot?.coinsCount ?? slotData?.coins ?? slot?.coins ?? null;
       const coinValue = Number(coinCandidate);
       const coinsRaw = Number.isFinite(coinValue) ? coinValue : null;
-      const roomId = state3?.data?.roomId ?? state3?.fullState?.data?.roomId ?? state3?.roomId ?? null;
+      const roomId = state4?.data?.roomId ?? state4?.fullState?.data?.roomId ?? state4?.roomId ?? null;
       let playersCount = normalizedPlayers.length > 0 ? normalizedPlayers.length : slots.length;
       try {
         const atomValue = await Atoms.server.numPlayers.get();
@@ -55138,7 +60384,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const modVersion = localVersion ? `Arie's mod ${localVersion}` : null;
       const payload = {
         playerName: playerName ?? null,
-        avatar: avatar2 ?? null,
+        avatar: avatar3 ?? null,
         modVersion,
         coins: coinsRaw,
         room: {
@@ -55170,13 +60416,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!Array.isArray(log2)) return null;
     return log2.filter((entry) => entry?.action !== "feedPet");
   }
-  function sanitizeStateForComparison(state3) {
-    const sanitizedActivityLog = sanitizeActivityLogForCompare(state3.activityLog ?? null);
-    if (sanitizedActivityLog === state3.activityLog) {
-      return state3;
+  function sanitizeStateForComparison(state4) {
+    const sanitizedActivityLog = sanitizeActivityLogForCompare(state4.activityLog ?? null);
+    if (sanitizedActivityLog === state4.activityLog) {
+      return state4;
     }
     return {
-      ...state3,
+      ...state4,
       activityLog: sanitizedActivityLog
     };
   }
@@ -55216,9 +60462,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   var gameReadyWatcherInitialized = false;
   var gameReadyTriggered = false;
   var preferredReportingIntervalMs;
-  async function tryInitializeReporting(state3) {
+  async function tryInitializeReporting(state4) {
     if (gameReadyTriggered) return;
-    const snapshot2 = state3 ?? await Atoms.root.state.get();
+    const snapshot2 = state4 ?? await Atoms.root.state.get();
     const players = Array.isArray(snapshot2?.data?.players) ? snapshot2.data.players : [];
     if (players.length === 0) return;
     const myAccountId = await getMyAccountId(snapshot2);
@@ -55344,10 +60590,14 @@ Restore figures are averages; unlucky streaks do worse.`;
         register("keybinds", "\u2328\uFE0F Keybinds", renderKeybindsMenu);
         register("tools", "\u{1F6E0}\uFE0F Tools", renderToolsMenu);
         register("settings", "\u2699\uFE0F Settings", renderSettingsMenu);
+        register("companion", "\u{1F916} Companion", renderCompanionMenu);
         register("debug-data", "\u{1F41E} Debug", renderDebugDataMenu);
       }
     });
     initWatchers();
+    CompanionService.autoStart();
+    startFeedWatch();
+    shareGlobal("Companion", CompanionService);
     showAutoRecoDisabledNoticeOnce();
     const antiAfk = createAntiAfkController({
       getPosition: () => PlayerService.getPosition(),
