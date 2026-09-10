@@ -92,10 +92,15 @@ export function renderBehaviorTab(view: HTMLElement): void {
     status.textContent = `Active as ${name}${fallback}. Only you can see it.`;
   }
 
+  const askToggle = toggle(settings.askOnScreen, (on) => {
+    void CompanionService.applySettings({ askOnScreen: on });
+  });
+
   card.body.append(
     settingRow("Enable", "Brings him out next to you.", enableToggle).row,
     settingRow("Mode", "Follows you, or stays on your plot.", modeSelect).row,
     settingRow("Borrowed NPC", 'Whose look it takes. "In game" means already spawned.', npcSelect).row,
+    settingRow("Ask on screen", "Shows his questions at the top, portrait and all.", askToggle).row,
     status
   );
 

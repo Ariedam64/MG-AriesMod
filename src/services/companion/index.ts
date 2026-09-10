@@ -9,6 +9,7 @@
 import { Atoms } from "../../store/atoms";
 import { makeAtom } from "../../store/hub";
 import {
+  ATTENTION_MOVEMENT_CONFIG,
   DEFAULT_MOVEMENT_CONFIG,
   STEP_INTERVAL_MS,
   TASK_MOVEMENT_CONFIG,
@@ -193,7 +194,11 @@ async function tick(): Promise<void> {
     state: rt.movement,
     isWalkable,
     random: Math.random,
-    config: rt.task ? TASK_MOVEMENT_CONFIG : DEFAULT_MOVEMENT_CONFIG,
+    config: rt.task
+      ? TASK_MOVEMENT_CONFIG
+      : rt.attention
+        ? ATTENTION_MOVEMENT_CONFIG
+        : DEFAULT_MOVEMENT_CONFIG,
   });
   rt.movement = decision.state;
 

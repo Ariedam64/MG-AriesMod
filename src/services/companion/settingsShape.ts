@@ -57,6 +57,13 @@ export type CompanionSettings = {
    * hors d'atteinte. L'équipe portée avant est toujours remise après.
    */
   /** Équipe à porter le temps d'une récolte. `null` = ne pas y toucher. */
+  /**
+   * Montre ses questions en haut de l'écran, avec son portrait.
+   *
+   * Le fil du menu les porte de toute façon : ceci n'ajoute aucune action, ce
+   * n'est qu'un second endroit où lire la même question et y répondre.
+   */
+  askOnScreen: boolean;
   harvestTeamId: string | null;
   /** Équipe à porter le temps d'une couvée. `null` = ne pas y toucher. */
   hatchTeamId: string | null;
@@ -89,6 +96,7 @@ export const DEFAULT_COMPANION_SETTINGS: CompanionSettings = {
   feedAlerts: true,
   feedThresholdPct: 10,
   feedFromGarden: true,
+  askOnScreen: true,
   harvestTeamId: null,
   hatchTeamId: null,
   hatchSellTeamId: null,
@@ -166,6 +174,7 @@ export function coerceSettings(raw: Partial<CompanionSettings> | undefined | nul
     feedAlerts: raw.feedAlerts !== false,
     feedThresholdPct: clampThreshold(raw.feedThresholdPct),
     feedFromGarden: raw.feedFromGarden !== false,
+    askOnScreen: raw.askOnScreen !== false,
     harvestTeamId: teamId(raw.harvestTeamId),
     hatchTeamId: teamId(raw.hatchTeamId),
     hatchSellTeamId: teamId(raw.hatchSellTeamId),

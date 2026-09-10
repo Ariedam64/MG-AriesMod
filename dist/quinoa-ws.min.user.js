@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.206
+// @version      3.2.207
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -2546,14 +2546,14 @@
   function startColorPolling() {
     if (captureState.colorPollingTimer) return;
     captureState.colorPollAttempts = 0;
-    const timer2 = setInterval(async () => {
+    const timer3 = setInterval(async () => {
       const success = await enrichAbilitiesWithColors();
       if (success || ++captureState.colorPollAttempts > MAX_COLOR_POLL_ATTEMPTS) {
-        clearInterval(timer2);
+        clearInterval(timer3);
         captureState.colorPollingTimer = null;
       }
     }, COLOR_POLL_INTERVAL_MS);
-    captureState.colorPollingTimer = timer2;
+    captureState.colorPollingTimer = timer3;
   }
   function stopColorPolling() {
     if (captureState.colorPollingTimer) {
@@ -20756,8 +20756,8 @@
     return ev.code === 4300 || ev.code === 4250 && (/superseded/i.test(reason) || /newer user session/i.test(reason));
   }
   function ensureAutoRecoOverlayStyle() {
-    const STYLE_ID9 = "mgAutoRecoOverlayStyle";
-    if (document.getElementById(STYLE_ID9)) return;
+    const STYLE_ID10 = "mgAutoRecoOverlayStyle";
+    if (document.getElementById(STYLE_ID10)) return;
     const css5 = `
     #mgAutoRecoOverlay { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #mgAutoRecoOverlay .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; border: 1px solid rgba(255,255,255,.15); }
@@ -20767,7 +20767,7 @@
     #mgAutoRecoOverlay .btn:focus { outline: 2px solid #7aa2ff; outline-offset: 2px; }
   `;
     const style2 = document.createElement("style");
-    style2.id = STYLE_ID9;
+    style2.id = STYLE_ID10;
     style2.textContent = css5;
     document.documentElement.appendChild(style2);
   }
@@ -25054,8 +25054,8 @@
     root.querySelectorAll(`.${injectedClass}`).forEach((n) => n.remove());
   }
   function ensureStyle(injectedClass, theme) {
-    const STYLE_ID9 = `${injectedClass}-style`;
-    if (document.getElementById(STYLE_ID9)) return;
+    const STYLE_ID10 = `${injectedClass}-style`;
+    if (document.getElementById(STYLE_ID10)) return;
     const css5 = `
 .${injectedClass}{
   font-synthesis: none;
@@ -25110,7 +25110,7 @@
 }
 `.trim();
     const s = document.createElement("style");
-    s.id = STYLE_ID9;
+    s.id = STYLE_ID10;
     s.textContent = css5;
     document.head.appendChild(s);
   }
@@ -27796,20 +27796,20 @@
     listenerCount: 0
   };
   shareGlobal("__MG_GARDEN_INFO_CARD_DEBUG__", debugState);
-  function computeGeometry(card3) {
-    const cardBounds = card3.getLocalBounds();
-    const width = card3.hitArea?.width ?? cardBounds.width;
-    const height = card3.hitArea?.height ?? cardBounds.height;
-    const titleRow = (card3.children ?? []).find((c) => c?.label === TITLE_ROW_LABEL);
+  function computeGeometry(card4) {
+    const cardBounds = card4.getLocalBounds();
+    const width = card4.hitArea?.width ?? cardBounds.width;
+    const height = card4.hitArea?.height ?? cardBounds.height;
+    const titleRow = (card4.children ?? []).find((c) => c?.label === TITLE_ROW_LABEL);
     const contentTop = titleRow ? titleRow.position.y + titleRow.getLocalBounds().minY : cardBounds.minY;
     const abilitiesSection = (cardSystem?.children ?? []).find((c) => c?.label === ABILITIES_SECTION_LABEL);
     const extraTopOffset = abilitiesSection ? abilitiesSection.getLocalBounds().height + SECTION_GAP_ESTIMATE : 0;
     return { top: contentTop - extraTopOffset, width, height };
   }
-  function notifyListeners2(card3, geometry) {
+  function notifyListeners2(card4, geometry) {
     for (const listener of listeners5) {
       try {
-        listener(card3, geometry);
+        listener(card4, geometry);
       } catch (error) {
         console.warn("[gardenInfoCardPixi] listener failed", error);
       }
@@ -27817,17 +27817,17 @@
   }
   function onChildAddedUnsafe(row) {
     if (row?.label !== CARD_ROW_LABEL) return;
-    const card3 = findByLabel(row, OBJECT_CARD_LABEL);
-    if (!card3) return;
-    currentCard = card3;
-    const geometry = computeGeometry(card3);
-    card3.once("destroyed", () => {
-      if (currentCard === card3) {
+    const card4 = findByLabel(row, OBJECT_CARD_LABEL);
+    if (!card4) return;
+    currentCard = card4;
+    const geometry = computeGeometry(card4);
+    card4.once("destroyed", () => {
+      if (currentCard === card4) {
         currentCard = null;
         notifyListeners2(null, null);
       }
     });
-    notifyListeners2(card3, geometry);
+    notifyListeners2(card4, geometry);
   }
   function onChildAdded(row) {
     try {
@@ -28146,7 +28146,7 @@
       syncGeometry();
       debugState4.hasButton = true;
     };
-    const sync = () => {
+    const sync2 = () => {
       try {
         syncUnsafe();
         debugState4.lastError = null;
@@ -28159,7 +28159,7 @@
         }
       }
     };
-    const onRailChildrenChanged = () => sync();
+    const onRailChildrenChanged = () => sync2();
     const restartSearchIfNeeded2 = () => {
       if (!running2 || rail) return;
       tryFindRail();
@@ -28179,7 +28179,7 @@
       });
       debugState4.attached = true;
       console.info(`[notificationBellPixi] attached to ${RAIL_LABEL} after ${findAttempts2} attempt(s)`);
-      sync();
+      sync2();
     };
     const tryFindRail = () => {
       if (!running2 || rail) return;
@@ -28230,12 +28230,12 @@
         restartSearchIfNeeded2();
         return;
       }
-      sync();
+      sync2();
     };
     const maintenanceIntervalId = pageWindow.setInterval(periodicRailMaintenance, RAIL_REACHABILITY_CHECK_MS);
     const onWindowResize = () => {
       if (!running2 || !rail || rail.destroyed) return;
-      sync();
+      sync2();
     };
     pageWindow.addEventListener("resize", onWindowResize);
     const stopWiggleAnimation = () => {
@@ -30499,13 +30499,13 @@
         }
       }
     };
-    const offCard = watchGardenInfoCard((card3, geom) => {
-      currentCard2 = card3;
+    const offCard = watchGardenInfoCard((card4, geom) => {
+      currentCard2 = card4;
       geometry = geom;
-      hitAreaBaseHeight = card3?.hitArea?.height ?? 0;
+      hitAreaBaseHeight = card4?.hitArea?.height ?? 0;
       detachValueText();
-      debugState4.attached = !!card3;
-      if (card3) syncValueNode();
+      debugState4.attached = !!card4;
+      if (card4) syncValueNode();
     });
     const offPrice = priceWatcher.onChange(syncValueNode);
     let unsubGardenObject = null;
@@ -30623,7 +30623,7 @@
         lockIcon.position.set(right - lockIcon.width / 2 - LOCK_ICON_X_NUDGE, top - lockIcon.height / 2 + LOCK_ICON_Y_NUDGE);
       }
     };
-    const sync = () => {
+    const sync2 = () => {
       try {
         syncUnsafe();
         debugState4.lastError = null;
@@ -30636,25 +30636,25 @@
         }
       }
     };
-    const offCard = watchGardenInfoCard((card3, geom) => {
+    const offCard = watchGardenInfoCard((card4, geom) => {
       removeBorder();
-      currentCard2 = card3;
+      currentCard2 = card4;
       geometry = geom;
-      sync();
+      sync2();
     });
-    const offSlot = lockerService.onSlotInfoChange(() => sync());
-    const offRestrictions = lockerRestrictionsService.subscribe(() => sync());
+    const offSlot = lockerService.onSlotInfoChange(() => sync2());
+    const offRestrictions = lockerRestrictionsService.subscribe(() => sync2());
     let unsubAtom = null;
     void (async () => {
       try {
         currentGardenObject = await Atoms.data.myCurrentGardenObject.get();
-        if (running2) sync();
+        if (running2) sync2();
       } catch {
       }
       try {
         const unsub = await Atoms.data.myCurrentGardenObject.onChange((next) => {
           currentGardenObject = next;
-          sync();
+          sync2();
         });
         if (typeof unsub === "function") {
           if (running2) unsubAtom = unsub;
@@ -30914,7 +30914,7 @@
       );
       debugState4.hasButton = true;
     };
-    const sync = () => {
+    const sync2 = () => {
       try {
         syncUnsafe();
         debugState4.lastError = null;
@@ -30927,7 +30927,7 @@
         }
       }
     };
-    const onChildAdded2 = () => sync();
+    const onChildAdded2 = () => sync2();
     const attachToActionHud = (hud) => {
       actionHud = hud;
       actionHud.on("childAdded", onChildAdded2);
@@ -30941,7 +30941,7 @@
       });
       debugState4.attached = true;
       console.info(`[sellAllPetsPixi] attached to ${ACTION_HUD_LABEL} after ${findAttempts2} attempt(s)`);
-      sync();
+      sync2();
     };
     const tryFindActionHud = () => {
       if (!running2 || actionHud) return;
@@ -30984,13 +30984,13 @@
     void (async () => {
       try {
         currentAction = await Atoms.player.action.get();
-        if (running2) sync();
+        if (running2) sync2();
       } catch {
       }
       try {
         const unsub = await Atoms.player.action.onChange((next) => {
           currentAction = next;
-          sync();
+          sync2();
         });
         if (typeof unsub === "function") {
           if (running2) unsubAction = unsub;
@@ -31581,7 +31581,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.206";
+      return "3.2.207";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -32368,8 +32368,8 @@
     }
     return null;
   };
-  var alignInventoryStrengthText = (card3) => {
-    const strengthWrap = card3.querySelector(INVENTORY_STRENGTH_WRAPPER_SELECTOR);
+  var alignInventoryStrengthText = (card4) => {
+    const strengthWrap = card4.querySelector(INVENTORY_STRENGTH_WRAPPER_SELECTOR);
     if (!strengthWrap) return;
     const baseTransformKey = "tmStrengthBaseTransform";
     const existingBase = strengthWrap.dataset[baseTransformKey];
@@ -32388,7 +32388,7 @@
       }
       return;
     }
-    const container = findAncestorWithDescendant(strengthWrap, INVENTORY_FAVORITE_BUTTON_SELECTOR) ?? findAncestorWithDescendant(card3, INVENTORY_FAVORITE_BUTTON_SELECTOR);
+    const container = findAncestorWithDescendant(strengthWrap, INVENTORY_FAVORITE_BUTTON_SELECTOR) ?? findAncestorWithDescendant(card4, INVENTORY_FAVORITE_BUTTON_SELECTOR);
     if (!container) return;
     const favoriteButton = container.querySelector(INVENTORY_FAVORITE_BUTTON_SELECTOR);
     if (!favoriteButton) return;
@@ -32424,10 +32424,10 @@
     const children = Array.from(container.children);
     for (const child of children) {
       if (!(child instanceof HTMLElement)) continue;
-      const card3 = getInventoryCardElement(child);
-      if (card3) {
-        alignInventoryStrengthText(card3);
-        entries.push({ wrapper: child, card: card3 });
+      const card4 = getInventoryCardElement(child);
+      if (card4) {
+        alignInventoryStrengthText(card4);
+        entries.push({ wrapper: child, card: card4 });
       }
     }
     return entries;
@@ -32559,8 +32559,8 @@
     }
     return { label: label2, current, max };
   };
-  function updateInventoryCardStrengthText(card3, item) {
-    const strengthWrap = card3.querySelector(INVENTORY_STRENGTH_WRAPPER_SELECTOR);
+  function updateInventoryCardStrengthText(card4, item) {
+    const strengthWrap = card4.querySelector(INVENTORY_STRENGTH_WRAPPER_SELECTOR);
     if (!strengthWrap) return;
     const textEl = strengthWrap.querySelector(INVENTORY_STRENGTH_TEXT_SELECTOR);
     if (!textEl) return;
@@ -32709,12 +32709,12 @@
       setValueSummaryText(summary, FILTERED_VALUE_UNKNOWN);
     }
   }
-  function updateInventoryCardValue(card3, rawValue) {
-    const container = card3.querySelector(INVENTORY_VALUE_CONTAINER_SELECTOR);
-    const existing = card3.dataset[INVENTORY_VALUE_DATASET_KEY];
+  function updateInventoryCardValue(card4, rawValue) {
+    const container = card4.querySelector(INVENTORY_VALUE_CONTAINER_SELECTOR);
+    const existing = card4.dataset[INVENTORY_VALUE_DATASET_KEY];
     if (!container) {
       if (existing != null) {
-        delete card3.dataset[INVENTORY_VALUE_DATASET_KEY];
+        delete card4.dataset[INVENTORY_VALUE_DATASET_KEY];
       }
       return;
     }
@@ -32724,7 +32724,7 @@
         currentEl.parentElement.removeChild(currentEl);
       }
       if (existing != null) {
-        delete card3.dataset[INVENTORY_VALUE_DATASET_KEY];
+        delete card4.dataset[INVENTORY_VALUE_DATASET_KEY];
       }
       return;
     }
@@ -32733,7 +32733,7 @@
         currentEl.parentElement.removeChild(currentEl);
       }
       if (existing != null) {
-        delete card3.dataset[INVENTORY_VALUE_DATASET_KEY];
+        delete card4.dataset[INVENTORY_VALUE_DATASET_KEY];
       }
       return;
     }
@@ -32772,7 +32772,7 @@
     }
     textEl.textContent = compactValue;
     target.title = fullValue;
-    card3.dataset[INVENTORY_VALUE_DATASET_KEY] = String(rawValue);
+    card4.dataset[INVENTORY_VALUE_DATASET_KEY] = String(rawValue);
     if (target.parentElement !== container || target !== container.lastElementChild) {
       container.appendChild(target);
     }
@@ -32966,7 +32966,7 @@
     }
     return null;
   };
-  var getPetCardName = (card3) => normalize(card3.querySelector(PET_NAME_SELECTOR)?.textContent ?? "");
+  var getPetCardName = (card4) => normalize(card4.querySelector(PET_NAME_SELECTOR)?.textContent ?? "");
   var getPetNameCandidates = (item) => {
     const candidates = /* @__PURE__ */ new Set();
     const name = readNestedStringField(item, "name");
@@ -35551,14 +35551,14 @@
       state4.bootstrapped = true;
       saveState(state4);
     }
-    let unsubscribe2 = null;
+    let unsubscribe3 = null;
     try {
-      unsubscribe2 = await myActivityLog.onChange((next) => consume(next, true));
+      unsubscribe3 = await myActivityLog.onChange((next) => consume(next, true));
     } catch {
     }
     return () => {
       try {
-        unsubscribe2?.();
+        unsubscribe3?.();
       } catch {
       }
     };
@@ -37034,11 +37034,11 @@
     view.classList.add("dd-debug-view");
     const { leftCol, rightCol } = createTwoColumns(view);
     {
-      const card3 = ui.card("\u{1F5C4}\uFE0F Capture store", {
+      const card4 = ui.card("\u{1F5C4}\uFE0F Capture store", {
         tone: "muted",
         subtitle: "Initialize the Jotai store so atoms can be inspected."
       });
-      leftCol.appendChild(card3.root);
+      leftCol.appendChild(card4.root);
       const status = document.createElement("span");
       status.className = "dd-status-chip";
       const refreshStatus = () => {
@@ -37061,14 +37061,14 @@
         }
       });
       actions.append(btnCap, status);
-      card3.body.appendChild(actions);
+      card4.body.appendChild(actions);
     }
     {
-      const card3 = ui.card("\u{1F50D} Explore atoms", {
+      const card4 = ui.card("\u{1F50D} Explore atoms", {
         tone: "muted",
         subtitle: "Filter labels using a regular expression."
       });
-      leftCol.appendChild(card3.root);
+      leftCol.appendChild(card4.root);
       const queryRow = ui.flexRow({ gap: 10, wrap: true, fullWidth: true });
       const q = ui.inputText("regex label (ex: position|health)", "");
       q.classList.add("dd-grow");
@@ -37086,14 +37086,14 @@
         const labels = atoms.map((a) => String(a?.debugLabel || a?.label || "<?>"));
         pre.textContent = labels.join("\n");
       }
-      card3.body.append(queryRow, pre);
+      card4.body.append(queryRow, pre);
     }
     {
-      const card3 = ui.card("\u{1F9ED} Inspect an atom", {
+      const card4 = ui.card("\u{1F9ED} Inspect an atom", {
         tone: "muted",
         subtitle: "Get the current value or subscribe to updates."
       });
-      rightCol.appendChild(card3.root);
+      rightCol.appendChild(card4.root);
       const controls = ui.flexRow({ gap: 10, wrap: true, fullWidth: true });
       const q = ui.inputText("atom label (ex: positionAtom)", "");
       q.classList.add("dd-grow");
@@ -37146,14 +37146,14 @@
       const note = document.createElement("p");
       note.className = "dd-inline-note";
       note.textContent = "Tip: subscriptions keep the value updated after each mutation.";
-      card3.body.append(controls, note, pre);
+      card4.body.append(controls, note, pre);
     }
     {
-      const card3 = ui.card("\u270F\uFE0F Update an atom", {
+      const card4 = ui.card("\u270F\uFE0F Update an atom", {
         tone: "muted",
         subtitle: "Publish a new value (JSON)."
       });
-      rightCol.appendChild(card3.root);
+      rightCol.appendChild(card4.root);
       const controls = ui.flexRow({ gap: 10, wrap: true, fullWidth: true });
       const q = ui.inputText("atom label (ex: activeModalStateAtom)", "");
       q.classList.add("dd-grow");
@@ -37207,7 +37207,7 @@
       });
       const btnCopy = ui.btn("Copy JSON", { icon: "\u{1F4CB}", onClick: () => copy(ta.value) });
       controls.append(q, btnSet, btnCopy);
-      card3.body.append(controls, ta);
+      card4.body.append(controls, ta);
     }
     function setText(el2, v) {
       el2.textContent = typeof v === "string" ? v : JSON.stringify(v, null, 2);
@@ -38344,9 +38344,9 @@ next: ${next}`;
       const activeMutations = getActiveMutations();
       previewArea.innerHTML = "";
       records.forEach((record2) => {
-        const card3 = document.createElement("div");
-        card3.className = "dd-sprite-grid__item";
-        card3.title = `${record2.category}/${record2.name}`;
+        const card4 = document.createElement("div");
+        card4.className = "dd-sprite-grid__item";
+        card4.title = `${record2.category}/${record2.name}`;
         const imgWrap = document.createElement("div");
         imgWrap.className = "dd-sprite-grid__img";
         imgWrap.style.setProperty("--sprite-size", `${SPRITE_ICON_SIZE}px`);
@@ -38370,20 +38370,20 @@ next: ${next}`;
         const meta = document.createElement("span");
         meta.className = "dd-sprite-grid__meta";
         meta.textContent = `${record2.category}/${record2.name}`;
-        card3.append(imgWrap, nameEl, meta);
+        card4.append(imgWrap, nameEl, meta);
         const triggerDownload = () => {
           if (downloadInProgress) return;
           void downloadSpriteRecord(record2, getActiveMutations());
         };
-        card3.addEventListener("click", triggerDownload);
-        card3.addEventListener("keydown", (event) => {
+        card4.addEventListener("click", triggerDownload);
+        card4.addEventListener("keydown", (event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
             triggerDownload();
           }
         });
-        card3.tabIndex = 0;
-        previewArea.appendChild(card3);
+        card4.tabIndex = 0;
+        previewArea.appendChild(card4);
       });
     }
     const updateList = async (forceReload = false) => {
@@ -39395,10 +39395,10 @@ next: ${next}`;
     void PetAlertService.start().catch(() => {
     });
     const section2 = (title) => {
-      const card3 = ui.card(title, { tone: "muted" });
-      card3.body.style.display = "grid";
-      card3.body.style.gap = "10px";
-      return card3;
+      const card4 = ui.card(title, { tone: "muted" });
+      card4.body.style.display = "grid";
+      card4.body.style.gap = "10px";
+      return card4;
     };
     const row = (labelTxt, control, opts) => {
       const { root: r, label: label2 } = ui.formRow(labelTxt, control, { alignTop: opts?.alignTop, labelWidth: "160px" });
@@ -39465,8 +39465,8 @@ next: ${next}`;
       { key: "pets", label: "Pets", allowPurchase: true, showStop: false }
     ];
     for (const cfg of contextOrder) {
-      const card3 = document.createElement("div");
-      Object.assign(card3.style, {
+      const card4 = document.createElement("div");
+      Object.assign(card4.style, {
         display: "grid",
         gap: "12px",
         padding: "16px",
@@ -39479,7 +39479,7 @@ next: ${next}`;
       heading.style.fontWeight = "700";
       heading.style.fontSize = "14px";
       heading.style.letterSpacing = "0.02em";
-      card3.appendChild(heading);
+      card4.appendChild(heading);
       const defaultWrap = document.createElement("div");
       defaultWrap.style.display = "flex";
       defaultWrap.style.alignItems = "center";
@@ -39488,7 +39488,7 @@ next: ${next}`;
       select2.dataset.soundSelect = cfg.key;
       const playBtn = playIconBtn(`Play ${cfg.label.toLowerCase()} sound`);
       defaultWrap.append(select2, playBtn);
-      card3.appendChild(row("Default sound", defaultWrap));
+      card4.appendChild(row("Default sound", defaultWrap));
       const volumeWrap = document.createElement("div");
       volumeWrap.style.display = "flex";
       volumeWrap.style.alignItems = "center";
@@ -39503,7 +39503,7 @@ next: ${next}`;
       volumeValue.style.minWidth = "32px";
       volumeValue.style.textAlign = "right";
       volumeWrap.append(volumeRange, volumeValue);
-      card3.appendChild(row("Volume", volumeWrap));
+      card4.appendChild(row("Volume", volumeWrap));
       const modeWrap = document.createElement("div");
       modeWrap.style.display = "flex";
       modeWrap.style.gap = "12px";
@@ -39514,7 +39514,7 @@ next: ${next}`;
         modeLoop = radio(`ap.mode.${cfg.key}`, "loop", "Loop");
         modeWrap.append(modeLoop.label);
       }
-      card3.appendChild(row("Playback mode", modeWrap));
+      card4.appendChild(row("Playback mode", modeWrap));
       let stopRow;
       let loopInput;
       let loopWrap;
@@ -39563,17 +39563,17 @@ next: ${next}`;
         } else {
           stopRow = row("Loop interval", stopWrap);
         }
-        card3.appendChild(stopRow);
+        card4.appendChild(stopRow);
       } else {
         const info = document.createElement("div");
         info.textContent = "Weather alerts play once per trigger.";
         info.style.opacity = "0.75";
         info.style.fontSize = "12px";
         info.style.lineHeight = "1.4";
-        card3.appendChild(row("Details", info));
+        card4.appendChild(row("Details", info));
       }
       contextControls[cfg.key] = {
-        container: card3,
+        container: card4,
         select: select2,
         playBtn,
         volumeRange,
@@ -39584,7 +39584,7 @@ next: ${next}`;
         loopInput,
         loopWrap
       };
-      s1.body.appendChild(card3);
+      s1.body.appendChild(card4);
     }
     const s1Err = errorBar();
     s1.body.appendChild(s1Err.el);
@@ -40185,16 +40185,16 @@ next: ${next}`;
     followedBadge.style.marginLeft = "auto";
     followedBadge.style.width = "115px";
     header.append(lblType, selType, lblRarity, selRarity, followedBadge);
-    const card3 = document.createElement("div");
-    card3.style.border = "1px solid #4445";
-    card3.style.borderRadius = "10px";
-    card3.style.padding = "10px";
-    card3.style.background = "#0f1318";
-    card3.style.overflow = "hidden";
-    card3.style.display = "grid";
-    card3.style.gridTemplateRows = "auto 1fr";
-    card3.style.minHeight = "0";
-    wrap.appendChild(card3);
+    const card4 = document.createElement("div");
+    card4.style.border = "1px solid #4445";
+    card4.style.borderRadius = "10px";
+    card4.style.padding = "10px";
+    card4.style.background = "#0f1318";
+    card4.style.overflow = "hidden";
+    card4.style.display = "grid";
+    card4.style.gridTemplateRows = "auto 1fr";
+    card4.style.minHeight = "0";
+    wrap.appendChild(card4);
     const headerGrid = document.createElement("div");
     const COLS = "minmax(200px, 1fr) 9rem 7rem 8rem";
     headerGrid.style.display = "grid";
@@ -40211,7 +40211,7 @@ next: ${next}`;
       mkHeadCell("Notify"),
       mkHeadCell("Custom rules")
     );
-    card3.appendChild(headerGrid);
+    card4.appendChild(headerGrid);
     const bodyGrid = document.createElement("div");
     bodyGrid.style.display = "grid";
     bodyGrid.style.gridTemplateColumns = COLS;
@@ -40224,7 +40224,7 @@ next: ${next}`;
     bodyGrid.style.overscrollBehavior = "contain";
     bodyGrid.style.width = "100%";
     bodyGrid.style.scrollbarGutter = "stable";
-    card3.appendChild(bodyGrid);
+    card4.appendChild(bodyGrid);
     const refreshRulesUI = () => {
       const kids = Array.from(bodyGrid.children);
       for (let i = 0; i + 3 < kids.length; i += 4) {
@@ -40549,8 +40549,8 @@ next: ${next}`;
     view.innerHTML = "";
     void PetAlertService.start().catch(() => {
     });
-    const card3 = document.createElement("div");
-    Object.assign(card3.style, {
+    const card4 = document.createElement("div");
+    Object.assign(card4.style, {
       display: "grid",
       gridTemplateColumns: "minmax(220px, 260px) minmax(0, 1fr)",
       gap: "10px",
@@ -40562,7 +40562,7 @@ next: ${next}`;
       padding: "10px",
       background: "#0f1318"
     });
-    view.appendChild(card3);
+    view.appendChild(card4);
     const petList = document.createElement("div");
     Object.assign(petList.style, {
       display: "grid",
@@ -40573,7 +40573,7 @@ next: ${next}`;
       border: "1px solid #4445",
       borderRadius: "10px"
     });
-    card3.appendChild(petList);
+    card4.appendChild(petList);
     const right = document.createElement("div");
     Object.assign(right.style, {
       display: "flex",
@@ -40582,7 +40582,7 @@ next: ${next}`;
       overflow: "auto",
       minHeight: "0"
     });
-    card3.appendChild(right);
+    card4.appendChild(right);
     let pets = [];
     let unsubPets2 = null;
     let generalEnabled = PetAlertService.isGeneralEnabled();
@@ -40742,16 +40742,16 @@ next: ${next}`;
       minHeight: "0"
     });
     view.appendChild(wrap);
-    const card3 = document.createElement("div");
-    card3.style.border = "1px solid #4445";
-    card3.style.borderRadius = "10px";
-    card3.style.padding = "10px";
-    card3.style.background = "#0f1318";
-    card3.style.overflow = "hidden";
-    card3.style.display = "grid";
-    card3.style.gridTemplateRows = "auto 1fr";
-    card3.style.minHeight = "0";
-    wrap.appendChild(card3);
+    const card4 = document.createElement("div");
+    card4.style.border = "1px solid #4445";
+    card4.style.borderRadius = "10px";
+    card4.style.padding = "10px";
+    card4.style.background = "#0f1318";
+    card4.style.overflow = "hidden";
+    card4.style.display = "grid";
+    card4.style.gridTemplateRows = "auto 1fr";
+    card4.style.minHeight = "0";
+    wrap.appendChild(card4);
     const headerGrid = document.createElement("div");
     const COLS = "minmax(240px, 1fr) 9rem 7rem 8rem";
     headerGrid.style.display = "grid";
@@ -40768,7 +40768,7 @@ next: ${next}`;
       mkHeadCell("Notify"),
       mkHeadCell("Custom rules")
     );
-    card3.appendChild(headerGrid);
+    card4.appendChild(headerGrid);
     const bodyGrid = document.createElement("div");
     bodyGrid.style.display = "grid";
     bodyGrid.style.gridTemplateColumns = COLS;
@@ -40781,7 +40781,7 @@ next: ${next}`;
     bodyGrid.style.overscrollBehavior = "contain";
     bodyGrid.style.width = "100%";
     bodyGrid.style.scrollbarGutter = "stable";
-    card3.appendChild(bodyGrid);
+    card4.appendChild(bodyGrid);
     const weatherLastSeenRefs = /* @__PURE__ */ new Map();
     const refreshRulesUI = () => {
       const kids = Array.from(bodyGrid.children);
@@ -41747,18 +41747,18 @@ next: ${next}`;
     };
   }
   function createLockerSettingsCard(ui, state4, opts = {}) {
-    const card3 = document.createElement("div");
-    card3.dataset.lockerSettingsCard = "1";
-    card3.style.border = "1px solid rgba(255,255,255,0.10)";
-    card3.style.borderRadius = "10px";
-    card3.style.padding = "12px";
-    card3.style.display = "flex";
-    card3.style.flexDirection = "column";
-    card3.style.gap = "12px";
-    card3.style.alignItems = "center";
-    card3.style.overflow = "auto";
-    card3.style.minHeight = "0";
-    card3.style.width = "min(760px, 100%)";
+    const card4 = document.createElement("div");
+    card4.dataset.lockerSettingsCard = "1";
+    card4.style.border = "1px solid rgba(255,255,255,0.10)";
+    card4.style.borderRadius = "10px";
+    card4.style.padding = "12px";
+    card4.style.display = "flex";
+    card4.style.flexDirection = "column";
+    card4.style.gap = "12px";
+    card4.style.alignItems = "center";
+    card4.style.overflow = "auto";
+    card4.style.minHeight = "0";
+    card4.style.width = "min(760px, 100%)";
     let recipesTitleElement = null;
     const updateRecipeTitleText = () => {
       if (!recipesTitleElement) return;
@@ -42161,7 +42161,7 @@ next: ${next}`;
       return toggle3;
     });
     const updateWeatherMutationsDisabled = () => {
-      const disabled = card3.dataset.disabled === "1" || state4.weatherMode === "RECIPES";
+      const disabled = card4.dataset.disabled === "1" || state4.weatherMode === "RECIPES";
       weatherGrid.style.opacity = disabled ? "0.55" : "";
       weatherGrid.style.pointerEvents = disabled ? "none" : "";
       weatherToggles.forEach((toggle3) => toggle3.setDisabled(disabled));
@@ -42221,7 +42221,7 @@ next: ${next}`;
     emptyRecipes.style.textAlign = "center";
     const updateAddRecipeDisabled = () => {
       const editing = editingRecipeIndex !== null;
-      const cardDisabled = card3.dataset.disabled === "1";
+      const cardDisabled = card4.dataset.disabled === "1";
       btnAddRecipe.disabled = editing || cardDisabled;
       btnAddRecipe.style.opacity = editing ? "0.7" : "";
       btnAddRecipe.style.pointerEvents = editing ? "none" : "";
@@ -42328,8 +42328,8 @@ next: ${next}`;
       container.appendChild(badges);
     };
     const applyDisabled = () => {
-      const cardDisabled = card3.dataset.disabled === "1";
-      const inputs = card3.querySelectorAll("input,button,select,textarea");
+      const cardDisabled = card4.dataset.disabled === "1";
+      const inputs = card4.querySelectorAll("input,button,select,textarea");
       inputs.forEach((el2) => {
         if (el2.dataset.weatherToggle === "main") {
           return;
@@ -42339,7 +42339,7 @@ next: ${next}`;
       });
       updateWeatherMutationsDisabled();
       updateColorButtons();
-      card3.style.opacity = cardDisabled ? "0.55" : "";
+      card4.style.opacity = cardDisabled ? "0.55" : "";
       updateAddRecipeDisabled();
     };
     function buildRecipeToggleGrid(selection, onSelectionChange) {
@@ -42509,7 +42509,7 @@ next: ${next}`;
       startEditingRecipe(state4.weatherRecipes.length);
     };
     recipesWrap.append(recipesHeader, recipesList);
-    card3.append(
+    card4.append(
       makeSection("Harvest mode", lockModeRow),
       makeSection("Filter by size", scaleRow),
       makeSection("Filter by color", colorsRow),
@@ -42536,11 +42536,11 @@ next: ${next}`;
       repaintRecipes();
     };
     const setDisabled = (value) => {
-      card3.dataset.disabled = value ? "1" : "0";
+      card4.dataset.disabled = value ? "1" : "0";
       applyDisabled();
     };
     refresh();
-    return { root: card3, refresh, setDisabled };
+    return { root: card4, refresh, setDisabled };
   }
   function createRestrictionsTabRenderer(ui) {
     let state4 = lockerRestrictionsService.getState();
@@ -42558,13 +42558,13 @@ next: ${next}`;
       width: "100%",
       maxWidth: "1100px"
     });
-    const card3 = ui.card("Friend bonus locker", {
+    const card4 = ui.card("Friend bonus locker", {
       align: "stretch"
     });
-    card3.root.style.width = "100%";
-    card3.header.style.display = "flex";
-    card3.header.style.alignItems = "center";
-    card3.header.style.justifyContent = "space-between";
+    card4.root.style.width = "100%";
+    card4.header.style.display = "flex";
+    card4.header.style.alignItems = "center";
+    card4.header.style.justifyContent = "space-between";
     const sliderWrap = applyStyles(document.createElement("div"), {
       display: "grid",
       gap: "6px"
@@ -42594,14 +42594,14 @@ next: ${next}`;
       letterSpacing: "0.25px"
     });
     statusBadge.style.marginLeft = "auto";
-    card3.header.appendChild(statusBadge);
+    card4.header.appendChild(statusBadge);
     const statusText = applyStyles(document.createElement("div"), {
       fontSize: "12.5px",
       lineHeight: "1.5",
       opacity: "0.92"
     });
-    card3.body.append(sliderWrap, statusText);
-    layout.append(card3.root);
+    card4.body.append(sliderWrap, statusText);
+    layout.append(card4.root);
     const decorCard = ui.card("Decor pick locker", { align: "stretch" });
     decorCard.root.style.width = "100%";
     const decorRow = applyStyles(document.createElement("div"), {
@@ -43191,7 +43191,7 @@ next: ${next}`;
     toggle3.addEventListener("change", () => {
       store.setGlobalEnabled(!!toggle3.checked);
     });
-    const unsubscribe2 = store.subscribe(() => {
+    const unsubscribe3 = store.subscribe(() => {
       update();
     });
     update();
@@ -43204,7 +43204,7 @@ next: ${next}`;
     };
     return {
       render,
-      destroy: () => unsubscribe2()
+      destroy: () => unsubscribe3()
     };
   }
   function createOverridesTabRenderer(ui, store) {
@@ -43448,7 +43448,7 @@ next: ${next}`;
       refreshListStyles();
       renderDetail();
     };
-    const unsubscribe2 = store.subscribe(refresh);
+    const unsubscribe3 = store.subscribe(refresh);
     const onDataUpdated = (e) => {
       const key2 = e.detail?.key;
       if (key2 === "plants") renderList();
@@ -43462,7 +43462,7 @@ next: ${next}`;
     return {
       render,
       destroy: () => {
-        unsubscribe2();
+        unsubscribe3();
         window.removeEventListener("gemini:data-updated", onDataUpdated);
       }
     };
@@ -45303,7 +45303,7 @@ next: ${next}`;
   function createEggCard(options) {
     const { egg, stats, showOffsets } = options;
     const counters = HatchTracker.getCounters(egg.eggId);
-    const card3 = collapsibleCard({
+    const card4 = collapsibleCard({
       header: eggHeader(egg, counters.pulls),
       collapsed: options.collapsed,
       onToggle: options.onToggle
@@ -45333,8 +45333,8 @@ next: ${next}`;
         )
       );
     }
-    card3.body.appendChild(panel);
-    return card3.root;
+    card4.body.appendChild(panel);
+    return card4.root;
   }
 
   // src/ui/menus/petsHatch.ts
@@ -45506,15 +45506,15 @@ next: ${next}`;
       }
       const others = otherSpecies(stats, fromEggs);
       if (others.length) {
-        const card3 = collapsibleCard({
+        const card4 = collapsibleCard({
           icon: "\u{1F43E}",
           title: "Other pets",
           description: "Species no egg hatches.",
           collapsed: isCollapsed(OTHER_SECTION_ID),
           onToggle: (collapsed) => setCollapsed(OTHER_SECTION_ID, collapsed)
         });
-        card3.body.appendChild(speciesCountsGrid(others.map((species) => ({ species })), stats));
-        body.appendChild(card3.root);
+        card4.body.appendChild(speciesCountsGrid(others.map((species) => ({ species })), stats));
+        body.appendChild(card4.root);
       }
       if (!body.childElementCount) {
         const empty = document.createElement("div");
@@ -47341,24 +47341,24 @@ Restore figures are averages; unlucky streaks do worse.`;
     const isAfk = team.mode === "afk";
     const glow = isAfk ? "#38bdf8" : "#34d399";
     const title = isAfk ? `${abilityLabel(team)} (AFK)` : abilityLabel(team);
-    const card3 = ui.card(title, {
+    const card4 = ui.card(title, {
       tone: isAfk ? "accent" : "default",
       compactHeader: true,
       gap: 6
     });
-    Object.assign(card3.root.style, {
+    Object.assign(card4.root.style, {
       padding: "8px 10px 10px",
       position: "relative",
       overflow: "hidden",
       transition: "transform 140ms ease, box-shadow 140ms ease"
     });
-    card3.root.onmouseenter = () => {
-      card3.root.style.transform = "translateY(-2px)";
-      card3.root.style.boxShadow = `0 10px 24px rgba(0,0,0,0.35), 0 0 0 1px ${glow}33`;
+    card4.root.onmouseenter = () => {
+      card4.root.style.transform = "translateY(-2px)";
+      card4.root.style.boxShadow = `0 10px 24px rgba(0,0,0,0.35), 0 0 0 1px ${glow}33`;
     };
-    card3.root.onmouseleave = () => {
-      card3.root.style.transform = "none";
-      card3.root.style.boxShadow = "";
+    card4.root.onmouseleave = () => {
+      card4.root.style.transform = "none";
+      card4.root.style.boxShadow = "";
     };
     const stripColors = team.categories.map((c) => getAbilityChipColors(c.abilityId).bg);
     const strip = document.createElement("div");
@@ -47370,16 +47370,16 @@ Restore figures are averages; unlucky streaks do worse.`;
       width: "4px",
       background: stripColors.length > 1 ? `linear-gradient(180deg, ${stripColors.join(", ")})` : stripColors[0]
     });
-    card3.root.appendChild(strip);
+    card4.root.appendChild(strip);
     const petsCol = document.createElement("div");
     petsCol.style.display = "grid";
     petsCol.style.gap = "1px";
     for (const id of team.petIds) {
       petsCol.appendChild(renderPetChip(petsById.get(id)));
     }
-    card3.body.appendChild(petsCol);
+    card4.body.appendChild(petsCol);
     const teamPets = team.petIds.map((id) => petsById.get(id)).filter((pet) => Boolean(pet));
-    card3.body.appendChild(renderTeamStats(teamPets, { focusAbilityIds: team.focusAbilityIds }));
+    card4.body.appendChild(renderTeamStats(teamPets, { focusAbilityIds: team.focusAbilityIds }));
     const saveBtn = ui.btn("\u{1F4BE} Save", {
       variant: "primary",
       size: "sm",
@@ -47404,8 +47404,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       alignSelf: "center",
       flexShrink: "0"
     });
-    card3.body.appendChild(saveBtn);
-    return card3.root;
+    card4.body.appendChild(saveBtn);
+    return card4.root;
   }
   function unusedReasonText(info) {
     if (info.untracked) return "no tracked ability";
@@ -47434,32 +47434,32 @@ Restore figures are averages; unlucky streaks do worse.`;
     return row;
   }
   function renderUnusedSection(unusedPets, ui) {
-    const card3 = ui.card(`\u{1F5D1}\uFE0F Not used in any team (${unusedPets.length})`, { tone: "muted", compactHeader: true, gap: 4 });
-    card3.root.style.gridColumn = "1 / -1";
-    card3.root.style.padding = "8px 10px";
+    const card4 = ui.card(`\u{1F5D1}\uFE0F Not used in any team (${unusedPets.length})`, { tone: "muted", compactHeader: true, gap: 4 });
+    card4.root.style.gridColumn = "1 / -1";
+    card4.root.style.padding = "8px 10px";
     const chevron = document.createElement("span");
     chevron.textContent = "\u25B8";
     chevron.style.display = "inline-block";
     chevron.style.marginLeft = "8px";
     chevron.style.opacity = "0.6";
     chevron.style.transition = "transform 120ms ease";
-    card3.header.appendChild(chevron);
-    card3.header.style.cursor = "pointer";
-    card3.header.style.userSelect = "none";
+    card4.header.appendChild(chevron);
+    card4.header.style.cursor = "pointer";
+    card4.header.style.userSelect = "none";
     const list = document.createElement("div");
     list.style.display = "none";
     list.style.gap = "1px";
     for (const info of unusedPets) {
       list.appendChild(renderUnusedRow(info));
     }
-    card3.body.appendChild(list);
+    card4.body.appendChild(list);
     let expanded = false;
-    card3.header.addEventListener("click", () => {
+    card4.header.addEventListener("click", () => {
       expanded = !expanded;
       list.style.display = expanded ? "grid" : "none";
       chevron.style.transform = expanded ? "rotate(90deg)" : "none";
     });
-    return card3.root;
+    return card4.root;
   }
   async function loadTeams2() {
     const pets = await PetsService.getInventoryPets();
@@ -48431,13 +48431,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     btnUseTeam.disabled = true;
     header.append(headerTitle, btnUseTeam);
     right.appendChild(header);
-    const card3 = document.createElement("div");
-    card3.style.display = "flex";
-    card3.style.flexDirection = "column";
-    card3.style.gap = "12px";
-    card3.style.overflow = "auto";
-    card3.style.minHeight = "0";
-    right.appendChild(card3);
+    const card4 = document.createElement("div");
+    card4.style.display = "flex";
+    card4.style.flexDirection = "column";
+    card4.style.gap = "12px";
+    card4.style.overflow = "auto";
+    card4.style.minHeight = "0";
+    right.appendChild(card4);
     const secName = (() => {
       const r = row();
       r.style.width = "100%";
@@ -48446,7 +48446,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       nameInput.style.flex = "1";
       nameInput.style.minWidth = "0";
       r.append(nameInput);
-      card3.appendChild(framed("\u{1F3F7}\uFE0F Team name", r));
+      card4.appendChild(framed("\u{1F3F7}\uFE0F Team name", r));
       return { nameInput };
     })();
     const secSlots = (() => {
@@ -48628,7 +48628,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       wrapSlots.style.flexDirection = "column";
       wrapSlots.style.gap = "8px";
       wrapSlots.append(grid, extra);
-      card3.appendChild(framed("\u26A1 Active pets (3 slots)", wrapSlots));
+      card4.appendChild(framed("\u26A1 Active pets (3 slots)", wrapSlots));
       return {
         rows: [r0, r1, r2],
         btnUseCurrent,
@@ -48637,7 +48637,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     })();
     const teamStatsHost = document.createElement("div");
     teamStatsHost.style.width = "100%";
-    card3.appendChild(framed("\u{1F4CA} Team stats", teamStatsHost));
+    card4.appendChild(framed("\u{1F4CA} Team stats", teamStatsHost));
     function showTeamStatsMessage(message) {
       const empty = document.createElement("div");
       empty.textContent = message;
@@ -48902,17 +48902,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     right.style.gap = "10px";
     right.style.minHeight = "0";
     wrap.appendChild(right);
-    const card3 = ui.card("\u{1F356} Instant Feed", {
+    const card4 = ui.card("\u{1F356} Instant Feed", {
       tone: "muted",
       subtitle: "Allow or block crops for the Instant Feed button."
     });
-    card3.root.style.display = "grid";
-    card3.root.style.gridTemplateRows = "auto 1fr";
-    card3.root.style.minHeight = "0";
-    card3.root.style.height = "100%";
-    card3.body.style.gridTemplateRows = "auto 1fr";
-    card3.body.style.minHeight = "0";
-    right.appendChild(card3.root);
+    card4.root.style.display = "grid";
+    card4.root.style.gridTemplateRows = "auto 1fr";
+    card4.root.style.minHeight = "0";
+    card4.root.style.height = "100%";
+    card4.body.style.gridTemplateRows = "auto 1fr";
+    card4.body.style.minHeight = "0";
+    right.appendChild(card4.root);
     const widgetRow = document.createElement("label");
     widgetRow.style.display = "flex";
     widgetRow.style.alignItems = "center";
@@ -48926,14 +48926,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     widgetLabel.textContent = "Show floating Instant Feed widget";
     widgetLabel.style.fontSize = "13px";
     widgetRow.append(widgetSwitch, widgetLabel);
-    card3.body.appendChild(widgetRow);
+    card4.body.appendChild(widgetRow);
     const body = document.createElement("div");
     body.style.display = "flex";
     body.style.flexDirection = "column";
     body.style.gap = "6px";
     body.style.overflow = "auto";
     body.style.minHeight = "0";
-    card3.body.appendChild(body);
+    card4.body.appendChild(body);
     const petItems = Object.keys(petCatalog2).map((species) => {
       const entry = petCatalog2[species];
       const name = String(entry?.name || species);
@@ -49227,7 +49227,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return head;
   }
   function buildAutoRecoSection() {
-    const card3 = section(
+    const card4 = section(
       "autoReco",
       "\u{1F50C}",
       "Auto reconnect",
@@ -49270,15 +49270,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     const delayControl = document.createElement("div");
     css2(delayControl, { display: "flex", alignItems: "center", gap: "10px" });
     delayControl.append(slider, sliderValue);
-    card3.body.append(
+    card4.body.append(
       settingRow("Enabled", "Attempts to log back in after a session conflict.", enabledToggle).row,
       settingRow("Delay", "Wait time before reconnecting.", delayControl).row,
       hint
     );
-    return card3.root;
+    return card4.root;
   }
   function buildPlayerSection() {
-    const card3 = section(
+    const card4 = section(
       "player",
       "\u{1F47B}",
       "Player controls",
@@ -49306,12 +49306,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       ghost.setSpeed?.(value);
       MiscService.setGhostDelayMs(value);
     });
-    card3.body.append(
+    card4.body.append(
       settingRow("Ghost mode", "Ignores collisions while you move.", ghostToggle).row,
       settingRow("Move delay (ms)", "Lower values feel faster.", delayInput).row
     );
     return {
-      root: card3.root,
+      root: card4.root,
       cleanup: () => {
         try {
           ghost.stop();
@@ -49321,7 +49321,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function buildInventoryGuardSection() {
-    const card3 = section(
+    const card4 = section(
       "inventoryGuard",
       "\u{1F392}",
       "Inventory guard",
@@ -49331,7 +49331,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       MiscService.readInventorySlotReserveEnabled(false),
       (on) => MiscService.writeInventorySlotReserveEnabled(on)
     );
-    card3.body.append(
+    card4.body.append(
       settingRow(
         "Keep 1 slot free",
         "Blocks actions that would add a new inventory entry at 99/100.",
@@ -49339,10 +49339,10 @@ Restore figures are averages; unlucky streaks do worse.`;
         { icon: "sprite/ui/InventoryBag", iconTag: "misc" }
       ).row
     );
-    return card3.root;
+    return card4.root;
   }
   function buildStorageSection() {
-    const card3 = section(
+    const card4 = section(
       "storage",
       "\u{1F4E6}",
       "Storage auto-store",
@@ -49373,11 +49373,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     ];
     for (const entry of rows) {
       const control = toggle(entry.read(), (on) => entry.write(on));
-      card3.body.appendChild(
+      card4.body.appendChild(
         settingRow(entry.title, entry.hint, control, { icon: entry.icon, iconTag: "misc" }).row
       );
     }
-    return card3.root;
+    return card4.root;
   }
   async function renderMiscMenu(container) {
     ensurePanelStyles();
@@ -49807,15 +49807,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     const ioCard = ui.card("Import / Export", {
       description: "Import or export the mod settings directly through JSON files."
     });
-    const card3 = ui.card("Backup", {
+    const card4 = ui.card("Backup", {
       description: "Save our settings directly inside the mod storage for easy restores."
     });
     ioCard.body.style.display = "flex";
     ioCard.body.style.flexDirection = "column";
     ioCard.body.style.gap = "10px";
-    card3.body.style.display = "flex";
-    card3.body.style.flexDirection = "column";
-    card3.body.style.gap = "10px";
+    card4.body.style.display = "flex";
+    card4.body.style.flexDirection = "column";
+    card4.body.style.gap = "10px";
     const ioStatus = createStatusLine();
     const exportButton = createActionButton("Export Settings");
     exportButton.style.width = "100%";
@@ -49968,8 +49968,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     });
     controlRow.append(nameInput, saveButton);
-    card3.body.append(controlRow, controlStatus, backupListHolder);
-    layout.appendChild(card3.root);
+    card4.body.append(controlRow, controlStatus, backupListHolder);
+    layout.appendChild(card4.root);
     view.appendChild(layout);
     refreshBackupList(controlStatus, backupListHolder);
   }
@@ -50369,13 +50369,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/ui/menus/tools/list-view.ts
   var ALL_FILTER_LABEL = "All";
   function createCard(tool, onSelect) {
-    const card3 = document.createElement("div");
-    card3.className = "mgt-card";
-    card3.setAttribute("role", "button");
-    card3.tabIndex = 0;
-    card3.title = tool.title;
-    card3.onclick = onSelect;
-    card3.onkeydown = (event) => {
+    const card4 = document.createElement("div");
+    card4.className = "mgt-card";
+    card4.setAttribute("role", "button");
+    card4.tabIndex = 0;
+    card4.title = tool.title;
+    card4.onclick = onSelect;
+    card4.onkeydown = (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
       onSelect();
@@ -50394,17 +50394,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     arrow.textContent = "\u2192";
     arrow.setAttribute("aria-hidden", "true");
     head.appendChild(arrow);
-    card3.appendChild(head);
+    card4.appendChild(head);
     const desc = document.createElement("p");
     desc.className = "mgt-card__desc";
     desc.textContent = markdownToPlainText(tool.description);
-    card3.appendChild(desc);
+    card4.appendChild(desc);
     if (tool.tags?.length) {
       const foot = createTagRow(tool.tags);
       foot.classList.add("mgt-card__foot");
-      card3.appendChild(foot);
+      card4.appendChild(foot);
     }
-    return card3;
+    return card4;
   }
   function renderListView(tools, onSelectTool) {
     const root = document.createElement("div");
@@ -53020,8 +53020,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       const valRow = document.createElement("div");
       css4(valRow, { display: "flex", gap: "8px" });
       const makeValCard = (label2) => {
-        const card3 = document.createElement("div");
-        css4(card3, {
+        const card4 = document.createElement("div");
+        css4(card4, {
           flex: "1",
           padding: "11px 14px",
           background: CARD_BG3,
@@ -53037,8 +53037,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         const val = document.createElement("div");
         css4(val, { fontSize: "15px", fontWeight: "700", color: "#FFD84D" });
         val.textContent = "\u2026";
-        card3.append(lbl, val);
-        return { card: card3, val };
+        card4.append(lbl, val);
+        return { card: card4, val };
       };
       const { card: invCard, val: invVal } = makeValCard("Inventory");
       const { card: gardenCard, val: gardenVal } = makeValCard("Garden");
@@ -53061,8 +53061,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     function createPlayerCard(player2) {
       const isSelected = selectedId === player2.id;
-      const card3 = document.createElement("div");
-      css4(card3, {
+      const card4 = document.createElement("div");
+      css4(card4, {
         display: "flex",
         alignItems: "center",
         gap: "10px",
@@ -53074,10 +53074,10 @@ Restore figures are averages; unlucky streaks do worse.`;
         transition: "all 120ms ease"
       });
       if (!isSelected) {
-        card3.onmouseenter = () => css4(card3, { background: CARD_BG_HI2, borderColor: "rgba(94,234,212,0.18)" });
-        card3.onmouseleave = () => css4(card3, { background: "rgba(255,255,255,0.02)", borderColor: BORDER4 });
+        card4.onmouseenter = () => css4(card4, { background: CARD_BG_HI2, borderColor: "rgba(94,234,212,0.18)" });
+        card4.onmouseleave = () => css4(card4, { background: "rgba(255,255,255,0.02)", borderColor: BORDER4 });
       }
-      card3.onclick = () => {
+      card4.onclick = () => {
         selectedId = player2.id;
         renderPlayerList();
         renderRightPanel(player2.id);
@@ -53108,8 +53108,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       css4(dot, { width: "5px", height: "5px", borderRadius: "50%", background: player2.isConnected ? GREEN : "rgba(226,232,240,0.3)", flexShrink: "0" });
       st.append(dot, document.createTextNode(player2.isConnected ? "Online" : "Offline"));
       info.append(nameEl, st);
-      card3.append(av, info);
-      return card3;
+      card4.append(av, info);
+      return card4;
     }
     function renderPlayerList() {
       leftPane.innerHTML = "";
@@ -54345,9 +54345,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       renderGrid();
     });
     search2.value = menuState.query;
-    const unsubscribe2 = onSkinsChanged(() => {
+    const unsubscribe3 = onSkinsChanged(() => {
       if (!container.isConnected) {
-        unsubscribe2();
+        unsubscribe3();
         return;
       }
       renderAll();
@@ -54405,6 +54405,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   var TASK_MOVEMENT_CONFIG = {
     ...DEFAULT_MOVEMENT_CONFIG,
     followDistance: 0
+  };
+  var ATTENTION_MOVEMENT_CONFIG = {
+    ...DEFAULT_MOVEMENT_CONFIG,
+    followDistance: 1
   };
   var SPAWN_SEARCH_RADIUS = 8;
   function initialMovementState() {
@@ -54877,6 +54881,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     feedAlerts: true,
     feedThresholdPct: 10,
     feedFromGarden: true,
+    askOnScreen: true,
     harvestTeamId: null,
     hatchTeamId: null,
     hatchSellTeamId: null,
@@ -54920,6 +54925,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       feedAlerts: raw.feedAlerts !== false,
       feedThresholdPct: clampThreshold(raw.feedThresholdPct),
       feedFromGarden: raw.feedFromGarden !== false,
+      askOnScreen: raw.askOnScreen !== false,
       harvestTeamId: teamId(raw.harvestTeamId),
       hatchTeamId: teamId(raw.hatchTeamId),
       hatchSellTeamId: teamId(raw.hatchSellTeamId),
@@ -55421,7 +55427,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       state: rt.movement,
       isWalkable,
       random: Math.random,
-      config: rt.task ? TASK_MOVEMENT_CONFIG : DEFAULT_MOVEMENT_CONFIG
+      config: rt.task ? TASK_MOVEMENT_CONFIG : rt.attention ? ATTENTION_MOVEMENT_CONFIG : DEFAULT_MOVEMENT_CONFIG
     });
     rt.movement = decision.state;
     if (!decision.tile) return;
@@ -55799,7 +55805,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     view.innerHTML = "";
     const settings = CompanionService.getSettings();
     let disposed = false;
-    const card3 = collapsibleCard({
+    const card4 = collapsibleCard({
       icon: "\u{1F9ED}",
       title: "Behavior",
       description: "Is he out, and where he stays.",
@@ -55856,19 +55862,45 @@ Restore figures are averages; unlucky streaks do worse.`;
       const fallback = actual && actual !== wanted ? " (no garden found, following you)" : "";
       status.textContent = `Active as ${name}${fallback}. Only you can see it.`;
     }
-    card3.body.append(
+    const askToggle = toggle(settings.askOnScreen, (on) => {
+      void CompanionService.applySettings({ askOnScreen: on });
+    });
+    card4.body.append(
       settingRow("Enable", "Brings him out next to you.", enableToggle).row,
       settingRow("Mode", "Follows you, or stays on your plot.", modeSelect).row,
       settingRow("Borrowed NPC", 'Whose look it takes. "In game" means already spawned.', npcSelect).row,
+      settingRow("Ask on screen", "Shows his questions at the top, portrait and all.", askToggle).row,
       status
     );
     refresh();
-    const timer2 = window.setInterval(refresh, STATUS_REFRESH_MS);
-    view.append(card3.root);
+    const timer3 = window.setInterval(refresh, STATUS_REFRESH_MS);
+    view.append(card4.root);
     view.__cleanup__ = () => {
       disposed = true;
-      clearInterval(timer2);
+      clearInterval(timer3);
     };
+  }
+
+  // src/services/companion/chat/attend.ts
+  var attending = null;
+  async function walkOver() {
+    try {
+      await CompanionService.comeToPlayer();
+    } catch {
+    }
+    CompanionService.releaseTask();
+    CompanionService.holdAttention();
+  }
+  function attendToQuestion(proposalId) {
+    if (attending?.proposalId === proposalId) return attending.arrival.then(() => true);
+    if (!CompanionService.isRunning()) return Promise.resolve(false);
+    const arrival = walkOver();
+    attending = { proposalId, arrival };
+    return arrival.then(() => true);
+  }
+  function stopAttending() {
+    attending = null;
+    if (CompanionService.isHoldingAttention()) CompanionService.releaseAttention();
   }
 
   // src/services/companion/chat/bubbleTags.ts
@@ -57296,6 +57328,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (from === "companion") {
       speak(extra.bubble ?? { message: text }, insist);
       if (proposalId !== void 0) {
+        void attendToQuestion(proposalId).catch(() => {
+        });
         void CompanionService.emoteWhenStill(EmoteType.Questioning).catch(() => {
         });
       }
@@ -58445,10 +58479,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/ui/menus/companion/modal.ts
   function menuCard(options) {
     const disabled = options.disabled === true;
-    const card3 = document.createElement("button");
-    card3.type = "button";
-    card3.disabled = disabled;
-    css2(card3, {
+    const card4 = document.createElement("button");
+    card4.type = "button";
+    card4.disabled = disabled;
+    css2(card4, {
       display: "flex",
       flexDirection: "column",
       alignItems: "flex-start",
@@ -58469,13 +58503,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     const detail = document.createElement("div");
     css2(detail, { fontSize: "11.5px", lineHeight: "1.45", color: disabled ? TEAL : TEXT_DIM });
     detail.textContent = options.detail;
-    card3.append(name, detail);
+    card4.append(name, detail);
     if (!disabled) {
-      card3.addEventListener("mouseenter", () => css2(card3, { background: "rgba(255,255,255,0.06)" }));
-      card3.addEventListener("mouseleave", () => css2(card3, { background: CARD_BG }));
-      card3.addEventListener("click", options.onClick);
+      card4.addEventListener("mouseenter", () => css2(card4, { background: "rgba(255,255,255,0.06)" }));
+      card4.addEventListener("mouseleave", () => css2(card4, { background: CARD_BG }));
+      card4.addEventListener("click", options.onClick);
     }
-    return card3;
+    return card4;
   }
   function openModal2(options) {
     let closed = false;
@@ -58670,30 +58704,23 @@ Restore figures are averages; unlucky streaks do worse.`;
   var lastOfferedSignature = "";
   var lastOfferedAtMs = 0;
   var announcedProposalId = null;
-  async function announceInPerson(picks) {
-    if (!CompanionService.isRunning()) return;
+  async function speakInPerson(picks) {
     try {
-      await CompanionService.comeToPlayer();
       const line = forGame(feedBubble(picks));
       await CompanionService.say(line.message, { force: true, tags: line.tags });
     } catch {
-    } finally {
-      CompanionService.releaseTask();
-      CompanionService.holdAttention();
     }
   }
   async function announceIfNeeded(picks) {
     if (picks.length === 0) return;
     const proposal = CompanionChat.getProposal();
     if (proposal?.commandId !== "feed" || proposal.id === announcedProposalId) return;
-    if (!CompanionService.isRunning()) return;
+    if (!await attendToQuestion(proposal.id)) return;
     announcedProposalId = proposal.id;
-    await announceInPerson(picks);
+    await speakInPerson(picks);
   }
   function releaseIfIdle() {
-    if (!CompanionChat.getProposal() && CompanionService.isHoldingAttention()) {
-      CompanionService.releaseAttention();
-    }
+    if (!CompanionChat.getProposal()) stopAttending();
   }
   async function tick2() {
     CompanionChat.dropStaleProposal();
@@ -58745,13 +58772,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       unsubscribers.push(PetsService.onPetsChange(() => scheduleCheck()));
     } catch {
     }
-    unsubscribers.push(
-      CompanionChat.subscribe(() => {
-        if (!CompanionChat.getProposal() && CompanionService.isHoldingAttention()) {
-          CompanionService.releaseAttention();
-        }
-      })
-    );
+    unsubscribers.push(CompanionChat.subscribe(releaseIfIdle));
     runTick();
   }
 
@@ -58909,7 +58930,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       host,
       title: "What should I harvest?",
       widthPx: 460,
-      onClose: () => clearInterval(timer2)
+      onClose: () => clearInterval(timer3)
     });
     const speciesCard = filterCard("", "Species");
     const mutationCard = filterCard("", "Mutations");
@@ -59065,7 +59086,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (!modal.isOpen()) return;
       render();
     }
-    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS);
+    const timer3 = window.setInterval(() => void refresh(), REFRESH_MS);
     render();
     void refresh();
     return { close: modal.close };
@@ -59080,7 +59101,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       host,
       title: "Who needs feeding?",
       widthPx: 420,
-      onClose: () => clearInterval(timer2)
+      onClose: () => clearInterval(timer3)
     });
     const list = document.createElement("div");
     css2(list, { display: "flex", flexDirection: "column", gap: "7px" });
@@ -59146,7 +59167,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (!modal.isOpen()) return;
       render();
     }
-    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS2);
+    const timer3 = window.setInterval(() => void refresh(), REFRESH_MS2);
     render();
     void refresh();
   }
@@ -59373,7 +59394,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       title: "What should I plant?",
       widthPx: 700,
       onClose: () => {
-        clearInterval(timer2);
+        clearInterval(timer3);
         grid.destroy();
       }
     });
@@ -59528,7 +59549,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       plan = new Map(viablePlan([...plan.values()], scope).map((entry) => [entry.tileIndex, entry]));
       render();
     }
-    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS3);
+    const timer3 = window.setInterval(() => void refresh(), REFRESH_MS3);
     render();
     void refresh();
   }
@@ -59599,7 +59620,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       host,
       title: "Hatching",
       widthPx: 470,
-      onClose: () => clearInterval(timer2)
+      onClose: () => clearInterval(timer3)
     });
     const speciesCard = filterCard("", "Keep species");
     const mutationCard = filterCard("", "Keep mutations");
@@ -59775,7 +59796,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (!modal.isOpen()) return;
       render();
     }
-    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS4);
+    const timer3 = window.setInterval(() => void refresh(), REFRESH_MS4);
     render();
     void refresh();
   }
@@ -59962,11 +59983,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     root.append(header.root, thread, bar);
     renderAll();
-    let unsubscribe2 = () => {
+    let unsubscribe3 = () => {
     };
-    unsubscribe2 = CompanionChat.subscribe(() => {
+    unsubscribe3 = CompanionChat.subscribe(() => {
       if (!root.isConnected) {
-        unsubscribe2();
+        unsubscribe3();
         return;
       }
       renderAll();
@@ -59980,7 +60001,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }, IDENTITY_REFRESH_MS);
     view.__cleanup__ = () => {
       clearInterval(identityTimer);
-      unsubscribe2();
+      unsubscribe3();
     };
   }
 
@@ -60247,6 +60268,170 @@ Restore figures are averages; unlucky streaks do worse.`;
     window.addEventListener("contextmenu", handleContextMenu, true);
   }
 
+  // src/ui/companionAsk.ts
+  var CARD_ID = "mgCompanionAsk";
+  var STYLE_ID6 = "mgCompanionAskStyle";
+  var Z_INDEX = "2000050";
+  var ICON_PX4 = 17;
+  var TICK_MS = 100;
+  var ACCENT3 = "#5eead4";
+  var TEXT5 = "#e7eef7";
+  var TEXT_DIM5 = "rgba(231,238,247,0.68)";
+  function ensureStyle2() {
+    if (document.getElementById(STYLE_ID6)) return;
+    const style2 = document.createElement("style");
+    style2.id = STYLE_ID6;
+    style2.textContent = `
+#${CARD_ID} {
+  position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+  z-index: ${Z_INDEX};
+  width: 430px; max-width: calc(100vw - 24px);
+  border-radius: 14px; overflow: hidden;
+  border: 1px solid rgba(94,234,212,0.22);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(94,234,212,0.10), transparent 55%),
+    rgba(15,20,26,0.94);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 12px 38px rgba(0,0,0,0.48);
+  font: 12.5px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: ${TEXT5};
+  animation: mgAskIn 160ms ease-out;
+}
+@keyframes mgAskIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+#${CARD_ID} .mgask-body { display: flex; gap: 11px; padding: 13px 14px 11px; }
+#${CARD_ID} .mgask-face {
+  width: 46px; height: 46px; flex: 0 0 auto;
+  border-radius: 11px; overflow: hidden;
+  border: 1px solid rgba(94,234,212,0.22);
+  background: rgba(255,255,255,0.05);
+  display: grid; place-items: center;
+  font-size: 22px; line-height: 1;
+}
+#${CARD_ID} .mgask-right { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
+#${CARD_ID} .mgask-who { font-size: 11px; font-weight: 700; color: ${ACCENT3}; letter-spacing: 0.02em; }
+#${CARD_ID} .mgask-text { display: block; overflow-wrap: anywhere; }
+#${CARD_ID} .mgask-text img, #${CARD_ID} .mgask-text canvas { vertical-align: -3px; }
+#${CARD_ID} .mgask-buttons { display: flex; gap: 8px; }
+#${CARD_ID} button {
+  flex: 0 0 auto; padding: 6px 13px; border-radius: 9px; cursor: pointer;
+  font: 600 12px/1 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+#${CARD_ID} button.mgask-yes {
+  border: 1px solid rgba(94,234,212,0.45); background: rgba(94,234,212,0.16); color: ${ACCENT3};
+}
+#${CARD_ID} button.mgask-yes:hover { background: rgba(94,234,212,0.26); }
+#${CARD_ID} button.mgask-no {
+  border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.05); color: ${TEXT_DIM5};
+}
+#${CARD_ID} button.mgask-no:hover { background: rgba(255,255,255,0.10); }
+#${CARD_ID} .mgask-clock { height: 3px; background: rgba(255,255,255,0.07); }
+#${CARD_ID} .mgask-clock > i {
+  display: block; height: 100%; width: 100%;
+  background: linear-gradient(90deg, ${ACCENT3}, rgba(94,234,212,0.45));
+}
+`;
+    document.head.appendChild(style2);
+  }
+  var card3 = null;
+  var clockBar = null;
+  var timer2 = null;
+  var shownId = null;
+  var unsubscribe2 = null;
+  function hide() {
+    if (timer2 !== null) {
+      window.clearInterval(timer2);
+      timer2 = null;
+    }
+    card3?.remove();
+    card3 = null;
+    clockBar = null;
+    shownId = null;
+  }
+  function questionOf(proposal) {
+    const message = CompanionChat.getLog().messages.find((entry) => entry.proposalId === proposal.id);
+    if (!message) return [document.createTextNode(proposal.summary)];
+    return message.positioned ? renderTagged(message.text, message.icons, ICON_PX4) : [document.createTextNode(message.text)];
+  }
+  function build(proposal) {
+    ensureStyle2();
+    const root = document.createElement("div");
+    root.id = CARD_ID;
+    const face = document.createElement("div");
+    face.className = "mgask-face";
+    face.textContent = "\u{1F916}";
+    fillWithPortrait(face, CompanionService.getNpcId());
+    const who = document.createElement("div");
+    who.className = "mgask-who";
+    who.textContent = "Companion";
+    const text = document.createElement("div");
+    text.className = "mgask-text";
+    text.append(...questionOf(proposal));
+    const yes = document.createElement("button");
+    yes.className = "mgask-yes";
+    yes.textContent = "Yes, go ahead";
+    yes.addEventListener("click", () => {
+      hide();
+      void CompanionChat.confirm(proposal.id).catch(() => {
+      });
+    });
+    const no = document.createElement("button");
+    no.className = "mgask-no";
+    no.textContent = "Not now";
+    no.addEventListener("click", () => {
+      hide();
+      CompanionChat.decline(proposal.id);
+    });
+    const buttons = document.createElement("div");
+    buttons.className = "mgask-buttons";
+    buttons.append(yes, no);
+    const right = document.createElement("div");
+    right.className = "mgask-right";
+    right.append(who, text, buttons);
+    const body = document.createElement("div");
+    body.className = "mgask-body";
+    body.append(face, right);
+    const clock = document.createElement("div");
+    clock.className = "mgask-clock";
+    const fill = document.createElement("i");
+    clock.append(fill);
+    root.append(body, clock);
+    document.body.appendChild(root);
+    card3 = root;
+    clockBar = fill;
+    shownId = proposal.id;
+    timer2 = window.setInterval(() => {
+      const left = PROPOSAL_TTL_MS - (Date.now() - proposal.createdAtMs);
+      if (left <= 0) {
+        hide();
+        return;
+      }
+      if (clockBar) clockBar.style.width = `${left / PROPOSAL_TTL_MS * 100}%`;
+    }, TICK_MS);
+  }
+  function sync() {
+    const proposal = CompanionChat.getProposal();
+    if (!proposal) {
+      hide();
+      return;
+    }
+    if (!loadCompanionSettings().askOnScreen) {
+      hide();
+      return;
+    }
+    if (proposal.id === shownId) return;
+    hide();
+    build(proposal);
+  }
+  function mountCompanionAsk() {
+    if (unsubscribe2) return;
+    unsubscribe2 = CompanionChat.subscribe(sync);
+    sync();
+  }
+
   // src/utils/mgVersion.ts
   var VERSION_PATH = "/platform/v1/version";
   var VERSION_CACHE_TTL = 60 * 1e3;
@@ -60388,11 +60573,11 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/ui/autoRecoDisabledNotice.ts
   var OVERLAY_ID2 = "mgAutoRecoDisabledNotice";
-  var STYLE_ID6 = "mgAutoRecoDisabledNoticeStyle";
-  function ensureStyle2() {
-    if (document.getElementById(STYLE_ID6)) return;
+  var STYLE_ID7 = "mgAutoRecoDisabledNoticeStyle";
+  function ensureStyle3() {
+    if (document.getElementById(STYLE_ID7)) return;
     const style2 = document.createElement("style");
-    style2.id = STYLE_ID6;
+    style2.id = STYLE_ID7;
     style2.textContent = `
     #${OVERLAY_ID2} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #${OVERLAY_ID2} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; width: 420px; border: 1px solid rgba(255,255,255,.15); }
@@ -60414,7 +60599,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (typeof document === "undefined" || !document.body) return;
     if (hasSeenAutoRecoDisabledNotice()) return;
     if (document.getElementById(OVERLAY_ID2)) return;
-    ensureStyle2();
+    ensureStyle3();
     const overlay = document.createElement("div");
     overlay.id = OVERLAY_ID2;
     overlay.innerHTML = `
@@ -60439,12 +60624,12 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/ui/roomPrivacyNotice.ts
   var OVERLAY_ID3 = "mgRoomPrivacyNotice";
-  var STYLE_ID7 = "mgRoomPrivacyNoticeStyle";
+  var STYLE_ID8 = "mgRoomPrivacyNoticeStyle";
   var HUB_INSTALL_URL = "https://github.com/Ariedam64/MG-CommunityHub/raw/refs/heads/main/dist/mg-community-hub.user.js";
-  function ensureStyle3() {
-    if (document.getElementById(STYLE_ID7)) return;
+  function ensureStyle4() {
+    if (document.getElementById(STYLE_ID8)) return;
     const style2 = document.createElement("style");
-    style2.id = STYLE_ID7;
+    style2.id = STYLE_ID8;
     style2.textContent = `
     #${OVERLAY_ID3} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #${OVERLAY_ID3} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; width: 440px; border: 1px solid rgba(255,255,255,.15); }
@@ -60467,7 +60652,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (typeof document === "undefined" || !document.body) return;
     if (hasSeenRoomPrivacyNotice()) return;
     if (document.getElementById(OVERLAY_ID3)) return;
-    ensureStyle3();
+    ensureStyle4();
     const overlay = document.createElement("div");
     overlay.id = OVERLAY_ID3;
     overlay.innerHTML = `
@@ -60556,16 +60741,16 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/ui/changelogNotice.ts
   var OVERLAY_ID4 = "mgChangelogNotice";
-  var STYLE_ID8 = "mgChangelogNoticeStyle";
+  var STYLE_ID9 = "mgChangelogNoticeStyle";
   var OVERLAY_Z_INDEX2 = "2147483647";
-  var ACCENT3 = "#5eead4";
+  var ACCENT4 = "#5eead4";
   var ACCENT_22 = "#2dd4bf";
-  var TEXT5 = "#e7eef7";
-  var TEXT_DIM5 = "rgba(231,238,247,0.68)";
-  function ensureStyle4() {
-    if (document.getElementById(STYLE_ID8)) return;
+  var TEXT6 = "#e7eef7";
+  var TEXT_DIM6 = "rgba(231,238,247,0.68)";
+  function ensureStyle5() {
+    if (document.getElementById(STYLE_ID9)) return;
     const style2 = document.createElement("style");
-    style2.id = STYLE_ID8;
+    style2.id = STYLE_ID9;
     style2.textContent = `
 #${OVERLAY_ID4} {
   position: fixed; inset: 0; z-index: ${OVERLAY_Z_INDEX2};
@@ -60581,39 +60766,39 @@ Restore figures are averages; unlucky streaks do worse.`;
     radial-gradient(130% 150% at 0% 0%, rgba(94,234,212,0.10), transparent 55%),
     linear-gradient(160deg, rgba(18,24,34,0.97), rgba(10,14,20,0.98));
   box-shadow: 0 24px 60px rgba(0,0,0,0.55);
-  color: ${TEXT5};
+  color: ${TEXT6};
 }
 #${OVERLAY_ID4} .mgcl-eyebrow {
   font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-  color: ${ACCENT3}; margin: 0 0 6px;
+  color: ${ACCENT4}; margin: 0 0 6px;
 }
 #${OVERLAY_ID4} .mgcl-title { font-size: 18px; font-weight: 750; margin: 0 0 4px; }
-#${OVERLAY_ID4} .mgcl-version { font-size: 11.5px; color: ${TEXT_DIM5}; margin: 0 0 16px; }
+#${OVERLAY_ID4} .mgcl-version { font-size: 11.5px; color: ${TEXT_DIM6}; margin: 0 0 16px; }
 #${OVERLAY_ID4} .mgcl-body { font-size: 12.5px; line-height: 1.65; color: rgba(231,238,247,0.85); }
 #${OVERLAY_ID4} .mgcl-body > :first-child { margin-top: 0; }
 #${OVERLAY_ID4} .mgcl-body > :last-child { margin-bottom: 0; }
 #${OVERLAY_ID4} .mgcl-body p { margin: 0 0 10px; }
 #${OVERLAY_ID4} .mgcl-body ul { margin: 0 0 10px; padding-left: 18px; list-style: disc; }
 #${OVERLAY_ID4} .mgcl-body li { margin: 3px 0; }
-#${OVERLAY_ID4} .mgcl-body strong { color: ${TEXT5}; font-weight: 700; }
+#${OVERLAY_ID4} .mgcl-body strong { color: ${TEXT6}; font-weight: 700; }
 #${OVERLAY_ID4} .mgcl-body code {
   padding: 1px 5px; border-radius: 5px; font-size: 0.9em;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: ${ACCENT3}; background: rgba(94,234,212,0.08); border: 1px solid rgba(94,234,212,0.16);
+  color: ${ACCENT4}; background: rgba(94,234,212,0.08); border: 1px solid rgba(94,234,212,0.16);
 }
 #${OVERLAY_ID4} .mgcl-body a {
-  color: ${ACCENT3}; text-decoration: none; border-bottom: 1px solid rgba(94,234,212,0.35);
+  color: ${ACCENT4}; text-decoration: none; border-bottom: 1px solid rgba(94,234,212,0.35);
 }
 #${OVERLAY_ID4} .mgcl-body a:hover { color: ${ACCENT_22}; border-bottom-color: ${ACCENT_22}; }
 #${OVERLAY_ID4} .mgcl-media { margin-top: 14px; }
 #${OVERLAY_ID4} .mgcl-close {
   margin-top: 18px; width: 100%; padding: 10px 16px; border-radius: 10px; cursor: pointer;
   border: none; color: #06181c; font-size: 13px; font-weight: 700;
-  background: linear-gradient(135deg, ${ACCENT3}, ${ACCENT_22});
+  background: linear-gradient(135deg, ${ACCENT4}, ${ACCENT_22});
   box-shadow: 0 4px 16px rgba(94,234,212,0.20);
 }
 #${OVERLAY_ID4} .mgcl-close:hover { filter: brightness(1.08); }
-#${OVERLAY_ID4} .mgcl-close:focus-visible { outline: 2px solid ${ACCENT3}; outline-offset: 2px; }
+#${OVERLAY_ID4} .mgcl-close:focus-visible { outline: 2px solid ${ACCENT4}; outline-offset: 2px; }
   `;
     document.head.appendChild(style2);
   }
@@ -60674,7 +60859,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     if (!entry) return;
-    ensureStyle4();
+    ensureStyle5();
     document.body.appendChild(buildOverlay(entry));
   }
 
@@ -61084,6 +61269,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     initWatchers();
     CompanionService.autoStart();
     startFeedWatch();
+    mountCompanionAsk();
     shareGlobal("Companion", CompanionService);
     showAutoRecoDisabledNoticeOnce();
     const antiAfk = createAntiAfkController({

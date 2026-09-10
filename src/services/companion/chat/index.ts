@@ -9,6 +9,7 @@
 // proposé. Pas de file d'attente, pas de « toujours autoriser », pas de refaire.
 
 import { CompanionService } from "..";
+import { attendToQuestion } from "./attend";
 import { EmoteType } from "../emoteTypes";
 import { MAX_LINE_LENGTH } from "../state";
 import { type BatchReporter } from "./batch";
@@ -160,10 +161,11 @@ function post(
   const insist = extra.force ?? proposalId !== undefined;
   if (from === "companion") {
     speak(extra.bubble ?? { message: text }, insist);
-    // Une question s'accompagne d'un air interrogateur — mais seulement une
-    // fois qu'il s'est posé. Poser la question et partir en courant vers le
-    // joueur, la pose jouée en chemin, ne se verrait pas.
     if (proposalId !== undefined) {
+      // Il vient la poser en face : une bulle lancée depuis l'autre bout du
+      // jardin s'afficherait hors écran, et personne ne la lirait.
+      void attendToQuestion(proposalId).catch(() => {});
+      // L'air interrogateur attend qu'il se soit posé — voir `emoteWhenStill`.
       void CompanionService.emoteWhenStill(EmoteType.Questioning).catch(() => {});
     }
   }

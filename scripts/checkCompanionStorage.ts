@@ -69,6 +69,9 @@ console.log("\n--- reglages du companion, repares a la lecture ---");
 
   check("les valeurs presentes sont gardees", settings.mode, "garden");
   check("une equipe absente vaut « ne pas y toucher »", settings.harvestTeamId, null);
+  // Un reglage ajoute apres coup doit s'activer tout seul chez qui met a jour,
+  // sinon la fonctionnalite n'existe que pour les nouveaux venus.
+  check("une carte de question absente du blob est active", settings.askOnScreen, true);
   check("aucun groupe n'a ete consulte", settings.reviewedSettings.length, 0);
   // Sans critere, aucune vente ne sera proposee : c'est le defaut sur lequel il
   // faut retomber, jamais un critere invente.
@@ -88,6 +91,9 @@ console.log("\n--- reglages du companion, repares a la lecture ---");
   check("un groupe consulte est note une seule fois", loadCompanionSettings().reviewedSettings.join(","), "harvest");
   check("il ne l'est plus a signaler", isUnreviewed("harvest"), false);
   check("les autres le restent", isUnreviewed("hatch"), true);
+
+  patchCompanionSettings({ askOnScreen: false });
+  check("mais elle se coupe et se retient", loadCompanionSettings().askOnScreen, false);
 
   // Une valeur inconnue venue d'une version future ne doit pas entrer.
   patchCompanionSettings({ reviewedSettings: ["harvest", "nope"] as never });

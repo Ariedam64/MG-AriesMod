@@ -24,6 +24,7 @@ import { EditorService } from "./services/editor";
 import { installEditorPointerControls } from "./services/editorPointerControls";
 import { CompanionService } from "./services/companion";
 import { startFeedWatch } from "./services/companion/chat/feedWatch";
+import { mountCompanionAsk } from "./ui/companionAsk";
 
 import { initGameVersion } from "./utils/gameVersion";
 import { MGVersion } from "./utils/mgVersion";
@@ -99,6 +100,9 @@ import { startPlayerStateReportingWhenGameReady } from "./ariesModAPI/endpoints/
   // rien ne s'exécute sans confirmation (cf. services/companion/chat/proposals.ts).
   CompanionService.autoStart();
   startFeedWatch();
+  // Ses questions s'affichent en haut de l'écran, menu fermé compris. Aucune
+  // action de plus : les mêmes confirm/decline que le fil du chat.
+  mountCompanionAsk();
   // Exposé pour le diagnostic : window.Companion.start() / .listNpcs() / .say()
   shareGlobal("Companion", CompanionService);
 

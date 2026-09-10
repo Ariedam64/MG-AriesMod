@@ -101,6 +101,20 @@ export const TASK_MOVEMENT_CONFIG: MovementConfig = {
   followDistance: 0,
 };
 
+/**
+ * Réglages tant qu'il attend une réponse.
+ *
+ * Il vient de poser une question : deux cases d'écart, la distance de suivi
+ * ordinaire, le laissent à portée de vue mais pas à portée de conversation, et
+ * un joueur qui se déplace le voit traîner derrière. Une seule case le colle
+ * sans le faire monter sur le joueur, ce qu'un `0` provoquerait ici — la tuile
+ * du joueur n'est pas libre.
+ */
+export const ATTENTION_MOVEMENT_CONFIG: MovementConfig = {
+  ...DEFAULT_MOVEMENT_CONFIG,
+  followDistance: 1,
+};
+
 export type MovementState = {
   activity: MovementActivity;
   /** Position courante du companion. `null` tant qu'il n'est pas apparu. */

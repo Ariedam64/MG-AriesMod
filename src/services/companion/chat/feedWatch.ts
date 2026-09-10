@@ -13,6 +13,7 @@ import { PetsService } from "../../pets";
 import { loadCompanionSettings } from "../state";
 import { CompanionChat } from ".";
 import { feedBubble, findFeedable, feedSignature, type FeedCandidate } from "./petFeed";
+import { attendToQuestion, stopAttending } from "./attend";
 import { forGame } from "./bubbleTags";
 
 /**
@@ -56,16 +57,16 @@ let lastOfferedAtMs = 0;
 let announcedProposalId: string | null = null;
 
 /**
- * Va le dire au joueur, de vive voix, et reste là.
+ * Va le dire au joueur, de vive voix.
  *
  * Le fil du chat reçoit la question dans tous les cas ; ceci n'est que la
- * version visible en jeu, pour qui ne regarde pas le menu. Sans companion
- * incarné, il n'y a personne pour parler et on s'en tient au fil.
+ * version visible en jeu, pour qui ne regarde pas le menu.
+ *
+ * Le trajet ne se fait plus ici : `attendToQuestion` s'en charge pour TOUTES
+ * les questions, et deux trajets concurrents se voleraient la tâche.
  */
-async function announceInPerson(picks: FeedCandidate[]): Promise<void> {
-  if (!CompanionService.isRunning()) return;
+async function speakInPerson(picks: FeedCandidate[]): Promise<void> {
   try {
-    await CompanionService.comeToPlayer();
     // Forcée : le message du fil vient d'être repris en bulle, et l'anti-rafale
     // aurait avalé celle-ci. C'est pourtant elle qui compte, puisqu'elle est
     // écrite pour être lue au-dessus de sa tête.
@@ -73,12 +74,6 @@ async function announceInPerson(picks: FeedCandidate[]): Promise<void> {
     await CompanionService.say(line.message, { force: true, tags: line.tags });
   } catch {
     // Une annonce ratée ne doit pas emporter la proposition, qui est l'essentiel.
-  } finally {
-    // La tâche l'immobilisait sur une case ; l'attention, elle, le fait suivre
-    // le joueur jusqu'à la réponse. Repartir au jardin en ayant posé une
-    // question donnerait l'impression qu'il s'en désintéresse.
-    CompanionService.releaseTask();
-    CompanionService.holdAttention();
   }
 }
 
@@ -99,17 +94,19 @@ async function announceIfNeeded(picks: FeedCandidate[]): Promise<void> {
 
   const proposal = CompanionChat.getProposal();
   if (proposal?.commandId !== "feed" || proposal.id === announcedProposalId) return;
-  if (!CompanionService.isRunning()) return;
+
+  // Rend `false` tant qu'il n'est pas incarné : rien n'est retenu, et le tour
+  // suivant retentera. Sinon la promesse ne se résout qu'une fois sur place,
+  // donc la bulle tombe quand il est à l'écran.
+  if (!(await attendToQuestion(proposal.id))) return;
 
   announcedProposalId = proposal.id;
-  await announceInPerson(picks);
+  await speakInPerson(picks);
 }
 
 /** Plus rien en attente : il retourne à son mode. */
 function releaseIfIdle(): void {
-  if (!CompanionChat.getProposal() && CompanionService.isHoldingAttention()) {
-    CompanionService.releaseAttention();
-  }
+  if (!CompanionChat.getProposal()) stopAttending();
 }
 
 async function tick(): Promise<void> {
@@ -202,13 +199,9 @@ export function startFeedWatch(): void {
   }
 
   // Répondre à une question doit le libérer sans attendre le prochain tour.
-  unsubscribers.push(
-    CompanionChat.subscribe(() => {
-      if (!CompanionChat.getProposal() && CompanionService.isHoldingAttention()) {
-        CompanionService.releaseAttention();
-      }
-    })
-  );
+  // Vrai pour toutes les questions, pas seulement celles de la faim : c'est le
+  // seul abonnement au chat qui tourne en permanence.
+  unsubscribers.push(CompanionChat.subscribe(releaseIfIdle));
 
   runTick();
 }
