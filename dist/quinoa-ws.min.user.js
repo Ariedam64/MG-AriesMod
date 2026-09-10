@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.208
+// @version      3.2.209
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -31581,7 +31581,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.208";
+      return "3.2.209";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -55795,92 +55795,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   };
 
-  // src/ui/menus/companion/behavior-tab.ts
-  var STATUS_REFRESH_MS = 1e3;
-  var MODE_LABELS = [
-    ["follow", "Follow me"],
-    ["garden", "Stay in my garden"]
-  ];
-  function renderBehaviorTab(view) {
-    view.innerHTML = "";
-    const settings = CompanionService.getSettings();
-    let disposed = false;
-    const card4 = collapsibleCard({
-      icon: "\u{1F9ED}",
-      title: "Behavior",
-      description: "Is he out, and where he stays.",
-      collapsed: false,
-      onToggle: () => {
-      }
-    });
-    const enableToggle = toggle(settings.enabled, (on) => {
-      void CompanionService.applySettings({ enabled: on }).then(refresh).catch(() => {
-      });
-    });
-    const modeSelect = selectField(MODE_LABELS.map(([value, label2]) => [value, label2]));
-    modeSelect.value = settings.mode;
-    modeSelect.addEventListener("change", () => {
-      void CompanionService.applySettings({ mode: modeSelect.value }).then(refresh).catch(() => {
-      });
-    });
-    const npcSelect = selectField([["", "Loading\u2026"]]);
-    npcSelect.disabled = true;
-    npcSelect.addEventListener("change", () => {
-      void CompanionService.applySettings({ npcId: npcSelect.value || null }).then(refresh).catch(() => {
-      });
-    });
-    void CompanionService.listNpcs().then((roster) => {
-      if (disposed) return;
-      npcSelect.innerHTML = "";
-      if (roster.length === 0) {
-        npcSelect.append(new Option("No NPC detected", ""));
-        return;
-      }
-      npcSelect.append(new Option("Automatic (an absent NPC)", ""));
-      for (const npc of roster) {
-        npcSelect.append(new Option(npc.present ? `${npc.name} (in game)` : npc.name, npc.playerId));
-      }
-      npcSelect.value = CompanionService.getNpcId() ?? settings.npcId ?? "";
-      npcSelect.disabled = false;
-    }).catch(() => {
-      if (disposed) return;
-      npcSelect.innerHTML = "";
-      npcSelect.append(new Option("Unavailable", ""));
-    });
-    const status = document.createElement("div");
-    css2(status, { fontSize: "12px", color: TEXT_DIM, padding: "2px 2px 0" });
-    function refresh() {
-      if (disposed) return;
-      if (!CompanionService.isRunning()) {
-        status.textContent = "Inactive.";
-        return;
-      }
-      const npcId = CompanionService.getNpcId();
-      const name = npcId ? npcId.replace(/^NPC_/, "") : "?";
-      const wanted = CompanionService.getSettings().mode;
-      const actual = CompanionService.getEffectiveMode();
-      const fallback = actual && actual !== wanted ? " (no garden found, following you)" : "";
-      status.textContent = `Active as ${name}${fallback}. Only you can see it.`;
-    }
-    const askToggle = toggle(settings.askOnScreen, (on) => {
-      void CompanionService.applySettings({ askOnScreen: on });
-    });
-    card4.body.append(
-      settingRow("Enable", "Brings him out next to you.", enableToggle).row,
-      settingRow("Mode", "Follows you, or stays on your plot.", modeSelect).row,
-      settingRow("Borrowed NPC", 'Whose look it takes. "In game" means already spawned.', npcSelect).row,
-      settingRow("Ask on screen", "Shows his questions at the top, portrait and all.", askToggle).row,
-      status
-    );
-    refresh();
-    const timer3 = window.setInterval(refresh, STATUS_REFRESH_MS);
-    view.append(card4.root);
-    view.__cleanup__ = () => {
-      disposed = true;
-      clearInterval(timer3);
-    };
-  }
-
   // src/services/companion/chat/attend.ts
   var attending = null;
   async function walkOver() {
@@ -56045,7 +55959,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
 
   // src/services/companion/chat/batch.ts
-  var ACTION_DELAY_MS = 350;
+  var ACTION_DELAY_MS = 400;
   function pacer(minGapMs = ACTION_DELAY_MS) {
     let lastAt = 0;
     return {
@@ -57041,8 +56955,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   var RECOUNT_EVERY = 5;
   var NEAR_CAPACITY = 5;
   var CHEER_TIMING = {
-    Rainbow: { holdMs: 4e3, pauseMs: 3e3 },
-    Gold: { holdMs: 2e3, pauseMs: 1500 }
+    Rainbow: { holdMs: 5e3, pauseMs: 4500 },
+    Gold: { holdMs: 2500, pauseMs: 2250 }
   };
   var CHEER_LINES = {
     Rainbow: { cheer: "I have never seen one of those.", resume: "Right. Where was I." },
@@ -57560,6 +57474,20 @@ Restore figures are averages; unlucky streaks do worse.`;
       dropStaleProposal();
     },
     /**
+     * Retire la question en attente, sans un mot.
+     *
+     * Pour le cas où le companion cesse d'exister : il n'a plus à s'excuser de
+     * reprendre une question, il n'est plus là pour la poser. `withdrawFeedIfSettled`
+     * commente parce que la situation a changé sous les yeux du joueur ; ici c'est
+     * le joueur lui-même qui vient de le couper.
+     */
+    withdrawProposal() {
+      const proposal = state3.proposal;
+      if (!proposal) return;
+      state3 = { ...state3, proposal: null, captured: null, log: clearProposal(state3.log, proposal.id) };
+      notify2();
+    },
+    /**
      * Retire la question de nourrissage quand elle n'a plus d'objet.
      *
      * Le joueur a nourri les animaux lui-même, ou changé d'équipe : la question
@@ -57690,6 +57618,186 @@ Restore figures are averages; unlucky streaks do worse.`;
       notify2();
     }
   };
+
+  // src/services/companion/chat/feedWatch.ts
+  var POLL_MS = 3e4;
+  var SETTLE_MS2 = 1500;
+  var REASK_COOLDOWN_MS = 10 * 60 * 1e3;
+  var timer = null;
+  var settleTimer = null;
+  var unsubscribers = [];
+  var running = false;
+  var lastOfferedSignature = "";
+  var lastOfferedAtMs = 0;
+  var announcedProposalId = null;
+  async function speakInPerson(picks) {
+    try {
+      const line = forGame(feedBubble(picks));
+      await CompanionService.say(line.message, { force: true, tags: line.tags });
+    } catch {
+    }
+  }
+  async function announceIfNeeded(picks) {
+    if (picks.length === 0) return;
+    const proposal = CompanionChat.getProposal();
+    if (proposal?.commandId !== "feed" || proposal.id === announcedProposalId) return;
+    if (!await attendToQuestion(proposal.id)) return;
+    announcedProposalId = proposal.id;
+    await speakInPerson(picks);
+  }
+  function releaseIfIdle() {
+    if (!CompanionChat.getProposal()) stopAttending();
+  }
+  async function tick2() {
+    const settings = loadCompanionSettings();
+    if (!settings.enabled) {
+      CompanionChat.withdrawProposal();
+      stopAttending();
+      lastOfferedSignature = "";
+      announcedProposalId = null;
+      return;
+    }
+    CompanionChat.dropStaleProposal();
+    const pending3 = CompanionChat.getProposal();
+    const alertsOn = settings.feedAlerts;
+    if (pending3?.commandId !== "feed" && !alertsOn) {
+      releaseIfIdle();
+      return;
+    }
+    const picks = await findFeedable().catch(() => []);
+    if (pending3?.commandId === "feed") {
+      const withdrawn = CompanionChat.withdrawFeedIfSettled(new Set(picks.map((pick) => pick.petId)));
+      if (withdrawn) lastOfferedSignature = "";
+      else await announceIfNeeded(picks);
+    }
+    releaseIfIdle();
+    if (!alertsOn) return;
+    if (picks.length === 0) {
+      lastOfferedSignature = "";
+      return;
+    }
+    const signature = feedSignature(picks);
+    const now2 = Date.now();
+    if (signature === lastOfferedSignature && now2 - lastOfferedAtMs < REASK_COOLDOWN_MS) return;
+    const offered = await CompanionChat.offerFeed(() => findFeedable());
+    if (!offered) return;
+    lastOfferedSignature = signature;
+    lastOfferedAtMs = now2;
+    await announceIfNeeded(picks);
+  }
+  var runTick = () => void tick2().catch(() => {
+  });
+  function scheduleCheck() {
+    if (!running || settleTimer !== null) return;
+    settleTimer = window.setTimeout(() => {
+      settleTimer = null;
+      runTick();
+    }, SETTLE_MS2);
+  }
+  function checkFeedNow() {
+    lastOfferedSignature = "";
+    runTick();
+  }
+  function startFeedWatch() {
+    if (running) return;
+    running = true;
+    timer = window.setInterval(runTick, POLL_MS);
+    try {
+      unsubscribers.push(PetsService.onPetsChange(() => scheduleCheck()));
+    } catch {
+    }
+    unsubscribers.push(CompanionChat.subscribe(releaseIfIdle));
+    runTick();
+  }
+
+  // src/ui/menus/companion/behavior-tab.ts
+  var STATUS_REFRESH_MS = 1e3;
+  var MODE_LABELS = [
+    ["follow", "Follow me"],
+    ["garden", "Stay in my garden"]
+  ];
+  function renderBehaviorTab(view) {
+    view.innerHTML = "";
+    const settings = CompanionService.getSettings();
+    let disposed = false;
+    const card4 = collapsibleCard({
+      icon: "\u{1F9ED}",
+      title: "Behavior",
+      description: "Is he out, and where he stays.",
+      collapsed: false,
+      onToggle: () => {
+      }
+    });
+    const enableToggle = toggle(settings.enabled, (on) => {
+      void CompanionService.applySettings({ enabled: on }).then(() => {
+        checkFeedNow();
+        refresh();
+      }).catch(() => {
+      });
+    });
+    const modeSelect = selectField(MODE_LABELS.map(([value, label2]) => [value, label2]));
+    modeSelect.value = settings.mode;
+    modeSelect.addEventListener("change", () => {
+      void CompanionService.applySettings({ mode: modeSelect.value }).then(refresh).catch(() => {
+      });
+    });
+    const npcSelect = selectField([["", "Loading\u2026"]]);
+    npcSelect.disabled = true;
+    npcSelect.addEventListener("change", () => {
+      void CompanionService.applySettings({ npcId: npcSelect.value || null }).then(refresh).catch(() => {
+      });
+    });
+    void CompanionService.listNpcs().then((roster) => {
+      if (disposed) return;
+      npcSelect.innerHTML = "";
+      if (roster.length === 0) {
+        npcSelect.append(new Option("No NPC detected", ""));
+        return;
+      }
+      npcSelect.append(new Option("Automatic (an absent NPC)", ""));
+      for (const npc of roster) {
+        npcSelect.append(new Option(npc.present ? `${npc.name} (in game)` : npc.name, npc.playerId));
+      }
+      npcSelect.value = CompanionService.getNpcId() ?? settings.npcId ?? "";
+      npcSelect.disabled = false;
+    }).catch(() => {
+      if (disposed) return;
+      npcSelect.innerHTML = "";
+      npcSelect.append(new Option("Unavailable", ""));
+    });
+    const status = document.createElement("div");
+    css2(status, { fontSize: "12px", color: TEXT_DIM, padding: "2px 2px 0" });
+    function refresh() {
+      if (disposed) return;
+      if (!CompanionService.isRunning()) {
+        status.textContent = "Inactive.";
+        return;
+      }
+      const npcId = CompanionService.getNpcId();
+      const name = npcId ? npcId.replace(/^NPC_/, "") : "?";
+      const wanted = CompanionService.getSettings().mode;
+      const actual = CompanionService.getEffectiveMode();
+      const fallback = actual && actual !== wanted ? " (no garden found, following you)" : "";
+      status.textContent = `Active as ${name}${fallback}. Only you can see it.`;
+    }
+    const askToggle = toggle(settings.askOnScreen, (on) => {
+      void CompanionService.applySettings({ askOnScreen: on });
+    });
+    card4.body.append(
+      settingRow("Enable", "Brings him out next to you.", enableToggle).row,
+      settingRow("Mode", "Follows you, or stays on your plot.", modeSelect).row,
+      settingRow("Borrowed NPC", 'Whose look it takes. "In game" means already spawned.', npcSelect).row,
+      settingRow("Ask on screen", "Shows his questions at the top, portrait and all.", askToggle).row,
+      status
+    );
+    refresh();
+    const timer3 = window.setInterval(refresh, STATUS_REFRESH_MS);
+    view.append(card4.root);
+    view.__cleanup__ = () => {
+      disposed = true;
+      clearInterval(timer3);
+    };
+  }
 
   // src/services/companion/avatar.ts
   var npcAvatarData = makeAtom("npcAvatarDataAtom");
@@ -58692,89 +58800,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { el: el2, empty: teams.length === 0 };
   }
   var NO_TEAMS_HINT = "No pet teams yet. Build one in the Pets tab.";
-
-  // src/services/companion/chat/feedWatch.ts
-  var POLL_MS = 3e4;
-  var SETTLE_MS2 = 1500;
-  var REASK_COOLDOWN_MS = 10 * 60 * 1e3;
-  var timer = null;
-  var settleTimer = null;
-  var unsubscribers = [];
-  var running = false;
-  var lastOfferedSignature = "";
-  var lastOfferedAtMs = 0;
-  var announcedProposalId = null;
-  async function speakInPerson(picks) {
-    try {
-      const line = forGame(feedBubble(picks));
-      await CompanionService.say(line.message, { force: true, tags: line.tags });
-    } catch {
-    }
-  }
-  async function announceIfNeeded(picks) {
-    if (picks.length === 0) return;
-    const proposal = CompanionChat.getProposal();
-    if (proposal?.commandId !== "feed" || proposal.id === announcedProposalId) return;
-    if (!await attendToQuestion(proposal.id)) return;
-    announcedProposalId = proposal.id;
-    await speakInPerson(picks);
-  }
-  function releaseIfIdle() {
-    if (!CompanionChat.getProposal()) stopAttending();
-  }
-  async function tick2() {
-    CompanionChat.dropStaleProposal();
-    const pending3 = CompanionChat.getProposal();
-    const alertsOn = loadCompanionSettings().feedAlerts;
-    if (pending3?.commandId !== "feed" && !alertsOn) {
-      releaseIfIdle();
-      return;
-    }
-    const picks = await findFeedable().catch(() => []);
-    if (pending3?.commandId === "feed") {
-      const withdrawn = CompanionChat.withdrawFeedIfSettled(new Set(picks.map((pick) => pick.petId)));
-      if (withdrawn) lastOfferedSignature = "";
-      else await announceIfNeeded(picks);
-    }
-    releaseIfIdle();
-    if (!alertsOn) return;
-    if (picks.length === 0) {
-      lastOfferedSignature = "";
-      return;
-    }
-    const signature = feedSignature(picks);
-    const now2 = Date.now();
-    if (signature === lastOfferedSignature && now2 - lastOfferedAtMs < REASK_COOLDOWN_MS) return;
-    const offered = await CompanionChat.offerFeed(() => findFeedable());
-    if (!offered) return;
-    lastOfferedSignature = signature;
-    lastOfferedAtMs = now2;
-    await announceIfNeeded(picks);
-  }
-  var runTick = () => void tick2().catch(() => {
-  });
-  function scheduleCheck() {
-    if (!running || settleTimer !== null) return;
-    settleTimer = window.setTimeout(() => {
-      settleTimer = null;
-      runTick();
-    }, SETTLE_MS2);
-  }
-  function checkFeedNow() {
-    lastOfferedSignature = "";
-    runTick();
-  }
-  function startFeedWatch() {
-    if (running) return;
-    running = true;
-    timer = window.setInterval(runTick, POLL_MS);
-    try {
-      unsubscribers.push(PetsService.onPetsChange(() => scheduleCheck()));
-    } catch {
-    }
-    unsubscribers.push(CompanionChat.subscribe(releaseIfIdle));
-    runTick();
-  }
 
   // src/ui/menus/companion/feed-settings-modal.ts
   var MIN_PCT = 1;
@@ -60418,7 +60443,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       hide();
       return;
     }
-    if (!loadCompanionSettings().askOnScreen) {
+    const settings = loadCompanionSettings();
+    if (!settings.enabled || !settings.askOnScreen) {
       hide();
       return;
     }

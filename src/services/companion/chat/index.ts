@@ -558,6 +558,21 @@ export const CompanionChat = {
   },
 
   /**
+   * Retire la question en attente, sans un mot.
+   *
+   * Pour le cas où le companion cesse d'exister : il n'a plus à s'excuser de
+   * reprendre une question, il n'est plus là pour la poser. `withdrawFeedIfSettled`
+   * commente parce que la situation a changé sous les yeux du joueur ; ici c'est
+   * le joueur lui-même qui vient de le couper.
+   */
+  withdrawProposal(): void {
+    const proposal = state.proposal;
+    if (!proposal) return;
+    state = { ...state, proposal: null, captured: null, log: clearProposal(state.log, proposal.id) };
+    notify();
+  },
+
+  /**
    * Retire la question de nourrissage quand elle n'a plus d'objet.
    *
    * Le joueur a nourri les animaux lui-même, ou changé d'équipe : la question

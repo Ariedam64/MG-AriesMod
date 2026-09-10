@@ -31,7 +31,7 @@ export type BatchReporter = {
  * le companion n'a rien à gagner à courir, et cette marge absorbe une latence
  * inhabituelle sans jamais perdre une commande.
  */
-export const ACTION_DELAY_MS = 350;
+export const ACTION_DELAY_MS = 400;
 
 /**
  * Cadence d'un lot : garantit l'écart, sans le payer deux fois.

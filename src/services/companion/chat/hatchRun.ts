@@ -33,15 +33,19 @@ const NEAR_CAPACITY = 5;
  * `holdMs` est la durée de l'emote, qui vaut 1,5 s partout ailleurs. `pauseMs`
  * est le temps pendant lequel il ne fait plus rien avant l'œuf suivant, là où
  * la cadence normale se compte en centaines de millisecondes. Les deux
- * comptent : tenir la pose sans
- * suspendre la couvée donnerait un companion qui adore et ouvre en même temps.
+ * comptent : tenir la pose sans suspendre la couvée donnerait un companion qui
+ * adore et ouvre l'œuf suivant en même temps.
+ *
+ * La pose déborde légèrement l'arrêt, et c'est voulu : il repart en marchant
+ * alors qu'il se réjouit encore, plutôt que de retomber au repos pile à
+ * l'instant où il bouge.
  *
  * Le Gold vaut la moitié du Rainbow : il marque le coup sans arrêter la
  * couvée aussi longtemps, et la hiérarchie entre les deux reste lisible.
  */
 const CHEER_TIMING: Record<string, { holdMs: number; pauseMs: number }> = {
-  Rainbow: { holdMs: 4000, pauseMs: 3000 },
-  Gold: { holdMs: 2000, pauseMs: 1500 },
+  Rainbow: { holdMs: 5000, pauseMs: 4500 },
+  Gold: { holdMs: 2500, pauseMs: 2250 },
 };
 
 /**

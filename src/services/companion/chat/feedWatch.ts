@@ -110,12 +110,28 @@ function releaseIfIdle(): void {
 }
 
 async function tick(): Promise<void> {
+  const settings = loadCompanionSettings();
+
+  // Companion coupé : personne pour signaler quoi que ce soit. La veille
+  // tournait jusqu'ici sur le seul réglage d'alertes, donc un companion
+  // désactivé posait quand même ses questions — dans le fil comme à l'écran.
+  //
+  // Une question encore en attente tombe avec lui : y répondre ferait
+  // travailler quelqu'un qui n'est pas là.
+  if (!settings.enabled) {
+    CompanionChat.withdrawProposal();
+    stopAttending();
+    lastOfferedSignature = "";
+    announcedProposalId = null;
+    return;
+  }
+
   // Une question périmée bloquerait la veille indéfiniment : on la retire même
   // quand les alertes sont coupées.
   CompanionChat.dropStaleProposal();
 
   const pending = CompanionChat.getProposal();
-  const alertsOn = loadCompanionSettings().feedAlerts;
+  const alertsOn = settings.feedAlerts;
   // On ne lit l'état du jeu que s'il y a une raison : une question en attente
   // dont il faut vérifier qu'elle a encore un objet, ou des alertes actives.
   if (pending?.commandId !== "feed" && !alertsOn) {

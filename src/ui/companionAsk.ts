@@ -210,8 +210,11 @@ function sync(): void {
     hide();
     return;
   }
-  // Coupée dans les réglages : le fil garde la question, l'écran non.
-  if (!loadCompanionSettings().askOnScreen) {
+  // Companion coupé, ou carte coupée dans les réglages. Le premier cas n'est
+  // pas qu'une précaution : une question restée en attente au moment où on le
+  // désactive s'afficherait sinon jusqu'à ce que la veille la retire.
+  const settings = loadCompanionSettings();
+  if (!settings.enabled || !settings.askOnScreen) {
     hide();
     return;
   }

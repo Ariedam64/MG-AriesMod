@@ -7,6 +7,7 @@
 // à casser la marche sans comprendre pourquoi.
 
 import { CompanionService } from "../../../services/companion";
+import { checkFeedNow } from "../../../services/companion/chat/feedWatch";
 import type { CompanionMode } from "../../../services/companion/anchors";
 import { TEXT_DIM, css, selectField, toggle } from "../panel-ui";
 import { collapsibleCard, settingRow } from "../panel-layout";
@@ -32,7 +33,14 @@ export function renderBehaviorTab(view: HTMLElement): void {
   });
 
   const enableToggle = toggle(settings.enabled, (on) => {
-    void CompanionService.applySettings({ enabled: on }).then(refresh).catch(() => {});
+    void CompanionService.applySettings({ enabled: on })
+      .then(() => {
+        // Le couper doit retirer sa question tout de suite, pas au prochain
+        // battement de la veille, qui peut être à trente secondes.
+        checkFeedNow();
+        refresh();
+      })
+      .catch(() => {});
   });
 
   const modeSelect = selectField(MODE_LABELS.map(([value, label]) => [value, label]));
