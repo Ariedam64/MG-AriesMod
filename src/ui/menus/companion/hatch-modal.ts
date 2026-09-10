@@ -19,13 +19,12 @@ import {
   DEFAULT_KEEP_RULES,
   describeHatchRequest,
   hasAnyRule,
-  toSell,
   type KeepRules,
 } from "../../../services/companion/chat/hatch";
 import { EMPTY_HATCH_SCOPE, readHatchScope, type HatchScope } from "../../../services/companion/chat/hatchRead";
 import { loadCompanionSettings, patchCompanionSettings } from "../../../services/companion/state";
-import { BORDER, TEAL, TEXT, TEXT_DIM, WARN, button, css, numberField, toggle } from "../panel-ui";
-import { mutationIconEl, spriteTile, tileRow } from "./harvest-chips";
+import { BORDER, TEAL, TEXT_DIM, WARN, button, css, numberField, toggle } from "../panel-ui";
+import { labelledTile, mutationIconEl, spriteTile, tileRow } from "./harvest-chips";
 import { fieldRow, filterCard } from "./harvest-fields";
 import { abilityIcon, petSpeciesIcon } from "./hatch-chips";
 import { openModal } from "./modal";
@@ -35,6 +34,10 @@ import { openHatchSettingsModal } from "./hatch-settings-modal";
 /** Les œufs mûrissent pendant qu'on règle les critères. */
 const REFRESH_MS = 4000;
 const TILE_ICON_PX = 26;
+/** La pastille d'une capacité tient dans sa vignette nommée, plus serrée. */
+const ABILITY_ICON_PX = 16;
+/** Au-delà, la liste des capacités défile plutôt que de pousser le reste dehors. */
+const ABILITY_LIST_MAX_PX = 190;
 const MIN_STR = 1;
 const MAX_STR = 100;
 const DEFAULT_STR = 95;
@@ -87,30 +90,44 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: HarvestReques
 
   /* ------------------------------- Contenus -------------------------------- */
 
-  /** Rangée de vignettes sans entrée « tout » : ici, rien coché veut dire rien gardé. */
+  /**
+   * Rangée de vignettes sans entrée « tout » : ici, rien coché veut dire rien gardé.
+   *
+   * Aucun effectif sous les sprites. Ces critères décrivent ce qu'on voudra
+   * garder, pas ce qu'on possède : afficher « 0 » sous une capacité qu'on
+   * cherche justement à obtenir n'apprend rien et se lit comme une indisponibilité.
+   */
   function chipRow(
     values: string[],
     selected: string[],
-    counts: Map<string, number>,
     labelFor: (value: string) => string,
     iconFor: (value: string) => HTMLElement,
-    onPick: (value: string) => void
+    onPick: (value: string) => void,
+    named = false
   ): HTMLElement {
     const row = tileRow();
     for (const value of values) {
-      const owned = counts.get(value) ?? 0;
+      const shared = { icon: iconFor(value), selected: selected.includes(value), onClick: () => onPick(value) };
       row.append(
-        spriteTile({
-          icon: iconFor(value),
-          // Le chiffre seul n'apprend rien : l'infobulle dit ce qu'il compte.
-          title: `${labelFor(value)}: ${owned === 0 ? "none" : owned} in your bag`,
-          count: owned,
-          selected: selected.includes(value),
-          onClick: () => onPick(value),
-        })
+        named
+          ? labelledTile({ ...shared, label: labelFor(value) })
+          : spriteTile({ ...shared, title: labelFor(value) })
       );
     }
     return row;
+  }
+
+  /**
+   * Enferme une longue liste dans une hauteur tenable.
+   *
+   * Les capacités se comptent par dizaines : déroulées d'un bloc, elles
+   * repoussent le bandeau et le bouton hors de la fenêtre.
+   */
+  function scrollable(row: HTMLElement): HTMLElement {
+    const box = document.createElement("div");
+    css(box, { maxHeight: `${ABILITY_LIST_MAX_PX}px`, overflowY: "auto", overscrollBehavior: "contain" });
+    box.append(row);
+    return box;
   }
 
   /**
@@ -126,26 +143,17 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: HarvestReques
     return [...all].sort((a, b) => a.localeCompare(b));
   }
 
-  /** Combien d'animaux du sac portent chaque valeur : de quoi juger un critère. */
-  function tallyPets(of: (pet: HatchScope["pets"][number]) => string[]): Map<string, number> {
-    const counts = new Map<string, number>();
-    for (const pet of scope.pets) {
-      for (const value of of(pet)) counts.set(value, (counts.get(value) ?? 0) + 1);
-    }
-    return counts;
-  }
-
   function renderSpecies(): void {
     const values = offered(scope.possibleSpecies, rules.species);
+    // « flex » et non « », sinon la carte retombe en bloc et son en-tête, qui
+    // est un bouton, cesse de prendre toute la largeur.
     speciesCard.root.style.display = values.length > 0 ? "flex" : "none";
     if (values.length === 0) return;
 
-    const counts = tallyPets((pet) => [pet.species]);
     speciesCard.body.replaceChildren(
       chipRow(
         values,
         rules.species,
-        counts,
         (name) => name,
         (name) => cachedIcon(`species:${name}`, () => petSpeciesIcon(name, TILE_ICON_PX)),
         (name) => commit({ ...rules, species: toggled(rules.species, name) })
@@ -155,20 +163,14 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: HarvestReques
   }
 
   function renderMutations(): void {
-    // Le jeu n'expose pas de catalogue de mutations d'animaux : on ne propose
-    // que celles qu'on a sous les yeux. Sans aucune, la carte disparaît —
-    // « flex » et non « », sinon la carte retombe en bloc et son en-tête, qui
-    // est un bouton, cesse de prendre toute la largeur.
     const values = offered(scope.presentMutations, rules.mutations);
     mutationCard.root.style.display = values.length > 0 ? "flex" : "none";
     if (values.length === 0) return;
 
-    const counts = tallyPets((pet) => pet.mutations);
     mutationCard.body.replaceChildren(
       chipRow(
         values,
         rules.mutations,
-        counts,
         (name) => name,
         (name) => cachedIcon(`mutation:${name}`, () => mutationIconEl(name, TILE_ICON_PX)),
         (name) => commit({ ...rules, mutations: toggled(rules.mutations, name) })
@@ -183,15 +185,17 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: HarvestReques
     if (values.length === 0) return;
 
     const names = new Map(scope.possibleAbilities.map((entry) => [entry.id, entry.name]));
-    const counts = tallyPets((pet) => pet.abilities);
+    // Nommées : un carré de couleur ne se reconnaît pas, et il y en a des dizaines.
     abilityCard.body.replaceChildren(
-      chipRow(
-        values,
-        rules.abilities,
-        counts,
-        (id) => names.get(id) ?? id,
-        (id) => cachedIcon(`ability:${id}`, () => abilityIcon(id, TILE_ICON_PX)),
-        (id) => commit({ ...rules, abilities: toggled(rules.abilities, id) })
+      scrollable(
+        chipRow(
+          values,
+          rules.abilities,
+          (id) => names.get(id) ?? id,
+          (id) => cachedIcon(`ability:${id}`, () => abilityIcon(id, ABILITY_ICON_PX)),
+          (id) => commit({ ...rules, abilities: toggled(rules.abilities, id) }),
+          true
+        )
       )
     );
     abilityCard.setSummary(summarize(rules.abilities.length), rules.abilities.length > 0);
@@ -236,13 +240,10 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: HarvestReques
   const ready = document.createElement("div");
   css(ready, { fontSize: "13px", fontWeight: "600", color: TEAL });
 
-  const bag = document.createElement("div");
-  css(bag, { fontSize: "11.5px", lineHeight: "1.5", color: TEXT });
-
   const note = document.createElement("div");
   css(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
 
-  strip.append(ready, bag, note);
+  strip.append(ready, note);
 
   /* --------------------------------- Pied ---------------------------------- */
 
@@ -261,10 +262,6 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: HarvestReques
   });
   css(askButton, { marginLeft: "auto" });
 
-  const legend = document.createElement("div");
-  css(legend, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
-  legend.textContent = "Numbers are how many you already have.";
-
   const notice = settingsNotice(
     "hatch",
     "Hatching is not set up. I will use the team you have on.",
@@ -280,7 +277,6 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: HarvestReques
     mutationCard.root,
     abilityCard.root,
     strengthCard.root,
-    legend,
     strip
   );
   modal.footer.append(resetButton, askButton);
@@ -307,10 +303,6 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: HarvestReques
       scope.readySlots.length === 0
         ? "No egg is ready"
         : `${scope.readySlots.length} egg${scope.readySlots.length === 1 ? "" : "s"} ready`;
-
-    const sellable = toSell(scope.pets, rules);
-    const kept = scope.pets.length - sellable.length;
-    bag.textContent = `${scope.inventoryCount}/${scope.capacity} slots. Of ${scope.pets.length} pets, I keep ${kept} and sell ${sellable.length}.`;
 
     if (!hasAnyRule(rules)) {
       note.textContent =

@@ -49,9 +49,23 @@ import {
 } from "./dialogue";
 import { collectContextualLines } from "./dialogueContext";
 import { AUTHORED_BY_MOD, installSpeechRewriter, uninstallSpeechRewriter } from "./speech";
+import { playEmote, stopEmote } from "./emote";
+import type { EmoteType } from "./emoteTypes";
+import type { BubbleTag } from "./chat/bubbleTags";
 
 /** Durée d'affichage d'une bulle côté jeu, pour ne pas la réécrire trop vite. */
-const CHAT_BUBBLE_MIN_INTERVAL_MS = 1200;
+/**
+ * Écart minimum entre deux bulles.
+ *
+ * Le jeu, lui, n'en impose aucun : ses propres PNJ changent de réplique aussi
+ * vite qu'on leur parle. Ce garde-fou est donc entièrement à nous, et il était
+ * réglé bien trop haut — à 1200 ms il avalait les annonces d'un lot dont les
+ * actions partent toutes les 500 ms.
+ *
+ * Il ne reste ici que pour absorber deux écritures au même instant. Tout ce qui
+ * mérite d'être lu passe désormais, sans avoir à demander la priorité.
+ */
+const CHAT_BUBBLE_MIN_INTERVAL_MS = 250;
 
 /**
  * Au-delà de ce délai d'attente du rendu, on avance quand même.
@@ -315,9 +329,31 @@ async function startInternal(): Promise<boolean> {
  * l'aller échoue, d'où l'abandon rapide côté appelant.
  */
 const WALK_TIMEOUT_MS = 5000;
-const ARRIVAL_POLL_MS = 100;
+/**
+ * Cadence à laquelle on vérifie l'arrivée.
+ *
+ * Sous les 150 ms d'un pas : c'est du temps mort pur, entre l'instant où le
+ * companion pose le pied sur sa case et celui où l'action part. À 100 ms on en
+ * perdait jusqu'à 100 par crop, pour rien.
+ */
+const ARRIVAL_POLL_MS = 50;
 /** À cette distance du joueur, la bulle est déjà à l'écran : inutile de marcher. */
 const NEARBY_DISTANCE = 3;
+
+/** Cadence à laquelle on vérifie qu'il s'est posé, avant d'emoter. */
+const STILL_POLL_MS = 150;
+
+/**
+ * Au-delà, on renonce à l'emote d'arrivée.
+ *
+ * Large exprès : un trajet d'un bout à l'autre du jardin prend quelques
+ * secondes, et rater l'emote parce qu'on comptait trop court serait dommage.
+ * Ce n'est qu'une soupape contre un companion qui ne s'arrête jamais.
+ */
+const STILL_TIMEOUT_MS = 10_000;
+
+/** Jeton de l'attente en cours : une question plus récente annule la précédente. */
+let stillToken = 0;
 
 export const CompanionService = {
   isRunning(): boolean {
@@ -420,6 +456,66 @@ export const CompanionService = {
     return runtime?.npcId ?? null;
   },
 
+  /**
+   * Fait jouer une emote au PNJ, le temps que le jeu s'accorde lui-même.
+   *
+   * Sans effet quand le companion n'est pas incarné : il n'y a alors aucune vue
+   * à animer. C'est du décor local — rien ne part sur le réseau, et l'appelant
+   * n'a donc pas à demander de confirmation pour ça.
+   *
+   * `holdMs` prolonge la pose au-delà de la durée par défaut, pour un moment
+   * qui mérite qu'on s'y arrête.
+   */
+  async emote(emote: EmoteType, holdMs?: number): Promise<void> {
+    const rt = runtime;
+    if (!rt) return;
+    await playEmote(rt.npcId, emote, holdMs);
+  },
+
+  /**
+   * Emote une fois qu'il est arrivé et qu'il ne bouge plus.
+   *
+   * Une pose jouée en pleine marche passe inaperçue : elle se déroule pendant
+   * qu'il glisse d'une case à l'autre, et le joueur ne voit qu'un avatar qui
+   * traverse. On attend donc qu'il soit posé.
+   *
+   * Deux conditions, et il faut les deux. Plus aucune tâche en cours, ce qui
+   * couvre le trajet qu'on vient de lui donner — une question posée juste avant
+   * qu'il parte rejoindre le joueur attend ainsi son arrivée. Et la même tuile
+   * sur deux relevés consécutifs, parce que l'avatar interpole entre deux cases
+   * et qu'il glisse encore un instant après avoir atteint la dernière.
+   *
+   * Le premier relevé ne peut donc jamais déclencher : c'est voulu, ce délai de
+   * grâce laisse le temps à un ordre de déplacement imminent d'être enregistré.
+   *
+   * Abandonne en silence s'il ne se pose jamais. Un joueur qui marche sans
+   * s'arrêter entraîne le companion avec lui, et la question reste de toute
+   * façon lisible dans la bulle comme dans le fil.
+   */
+  async emoteWhenStill(emote: EmoteType, timeoutMs = STILL_TIMEOUT_MS): Promise<void> {
+    const rt = runtime;
+    if (!rt) return;
+
+    const token = ++stillToken;
+    const deadline = Date.now() + timeoutMs;
+    let previous: XY | null = null;
+
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, STILL_POLL_MS));
+      // Une attente plus récente a pris la main, ou le companion s'est arrêté
+      // entre-temps : dans les deux cas celle-ci n'a plus lieu d'être.
+      if (token !== stillToken || runtime !== rt) return;
+
+      const here = rt.movement.tile;
+      const still = rt.task === null && here !== null && previous !== null && manhattan(here, previous) === 0;
+      previous = here;
+      if (still) {
+        await playEmote(rt.npcId, emote);
+        return;
+      }
+    }
+  },
+
   getSettings(): CompanionSettings {
     return runtime?.settings ?? loadCompanionSettings();
   },
@@ -457,6 +553,9 @@ export const CompanionService = {
     const rt = runtime;
     runtime = null;
     uninstallSpeechRewriter();
+    // Avant tout le reste : une pose en cours survivrait au retrait du
+    // companion et figerait le PNJ qu'on lui empruntait.
+    await stopEmote();
     if (!rt) {
       await disposeInjection();
       return;
@@ -528,17 +627,25 @@ export const CompanionService = {
    * annonce venant juste après le message qui l'a déclenchée se faisait jeter,
    * et le companion restait muet au moment précis où il avait à parler.
    */
-  async say(message: string, opts: { force?: boolean } = {}): Promise<void> {
+  async say(
+    message: string,
+    opts: { force?: boolean; tags?: Record<number, BubbleTag> } = {}
+  ): Promise<void> {
     const rt = runtime;
     if (!rt || !message.trim()) return;
     const now = Date.now();
     if (!opts.force && now - rt.lastBubbleAt < CHAT_BUBBLE_MIN_INTERVAL_MS) return;
     rt.lastBubbleAt = now;
+
+    // Le jeu bascule sur son rendu balisé dès que `tags` est présent, et un
+    // objet vide y suffit : on ne le joint que s'il porte vraiment une icône.
+    const tagged = opts.tags && Object.keys(opts.tags).length > 0 ? { tags: opts.tags } : {};
+
     try {
       await npcChatBubbles.set({
         // Marqué comme écrit par le mod : sans ça, l'interception réécrirait
         // notre propre message avec une réplique tirée au hasard.
-        [rt.npcId]: { seq: 0, playerId: rt.npcId, message, timestamp: now, [AUTHORED_BY_MOD]: true },
+        [rt.npcId]: { seq: 0, playerId: rt.npcId, message, timestamp: now, ...tagged, [AUTHORED_BY_MOD]: true },
       });
     } catch {}
   },

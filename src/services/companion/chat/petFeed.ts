@@ -18,6 +18,8 @@ import { PlayerService, type CropItem } from "../../player";
 import { readHarvestable } from "./gardenRead";
 import { rowKey, type HarvestRow } from "./harvest";
 import { disambiguate, type FeedCandidate, type FeedSource } from "./feedScope";
+import { compose, spaced, type BubbleLine } from "./bubbleTags";
+import { petSpeciesIcon, petThing } from "./bubbleIcons";
 
 export { describeFeed, feedSignature } from "./feedScope";
 export type { FeedCandidate, FeedSource } from "./feedScope";
@@ -163,6 +165,7 @@ export async function reviewFeeding(search?: Partial<FeedSearch>): Promise<FeedR
       petId,
       petName: petNameOf(pet),
       petSpecies: species,
+      pet: pet?.slot,
       hungerPct: PetsService.getHungerPctFor(pet),
       source,
     });
@@ -178,4 +181,53 @@ export async function reviewFeeding(search?: Partial<FeedSearch>): Promise<FeedR
 
 export async function findFeedable(search?: Partial<FeedSearch>): Promise<FeedCandidate[]> {
   return (await reviewFeeding(search)).candidates;
+}
+
+/** L'icône d'un animal : son rendu composé, ou son sprite d'espèce à défaut. */
+function iconOf(pick: FeedCandidate) {
+  return petThing(pick.pet, "") ?? petSpeciesIcon(pick.petSpecies);
+}
+
+/**
+ * La question telle qu'elle tient dans une bulle : courte, sans énumération.
+ *
+ * Une bulle fait le quart de la largeur du fil. La liste nominative y passe à
+ * la ligne trois fois et devient pénible à lire, alors qu'elle se parcourt très
+ * bien dans le menu.
+ *
+ * C'est la seule divergence qu'on s'autorise entre les deux, et elle tient à
+ * une contrainte du support, pas à une préférence de formulation.
+ */
+export function feedBubble(picks: FeedCandidate[]): BubbleLine {
+  const only = picks.length === 1 ? picks[0] : null;
+  if (only) return compose(iconOf(only), ` ${only.petName} is at ${only.hungerPct}%. Feed it?`);
+
+  // Une icône par espèce, deux au plus : elles disent qui sans allonger.
+  const seen = new Set<string>();
+  const icons = picks
+    .filter((pick) => !seen.has(pick.petSpecies) && seen.add(pick.petSpecies))
+    .slice(0, 2)
+    .map(iconOf);
+
+  return compose(...spaced(icons.filter((icon) => icon !== null)), ` ${picks.length} pets are hungry. Feed them all?`);
+}
+
+/**
+ * La question dans le fil : chaque animal nommé, avec son sprite et sa faim.
+ *
+ * Chaque nom porte son icône plutôt qu'un sprite groupé en tête : c'est la
+ * différence entre « une image puis deux noms » et une liste qui se lit.
+ */
+export function feedQuestion(picks: FeedCandidate[]): BubbleLine {
+  const listed = picks.flatMap((pick, index) => [
+    index === 0 ? "" : ", ",
+    iconOf(pick),
+    ` ${pick.petName} (${pick.hungerPct}%)`,
+  ]);
+
+  return compose(
+    picks.length === 1 ? "" : `${picks.length} pets are hungry: `,
+    ...listed,
+    picks.length === 1 ? ". Should I feed it?" : ". Should I feed all of them?"
+  );
 }

@@ -154,7 +154,14 @@ export type TileOptions = {
   icon: HTMLElement;
   /** Nom complet, donné en infobulle puisqu'il n'est pas écrit. */
   title: string;
-  count: number;
+  /**
+   * Effectif sous le sprite. Omis, la tuile n'affiche que l'icône.
+   *
+   * La récolte en a besoin : le chiffre dit combien de crops partiraient. Un
+   * filtre de conservation, lui, décrit ce qu'on veut à l'avenir, et compter ce
+   * qu'on possède déjà n'y répond à aucune question.
+   */
+  count?: number;
   selected: boolean;
   onClick: () => void;
 };
@@ -184,11 +191,63 @@ export function spriteTile(options: TileOptions): HTMLButtonElement {
     border: `1px solid ${options.selected ? TEAL_BORDER : BORDER}`,
   });
 
-  const count = document.createElement("span");
-  css(count, { fontSize: "10px", color: options.selected ? TEAL : TEXT_DIM });
-  count.textContent = String(options.count);
+  tile.append(options.icon);
+  if (options.count !== undefined) {
+    const count = document.createElement("span");
+    css(count, { fontSize: "10px", color: options.selected ? TEAL : TEXT_DIM });
+    count.textContent = String(options.count);
+    tile.append(count);
+  }
+  tile.addEventListener("click", options.onClick);
+  tile.addEventListener("mouseenter", () => {
+    if (!options.selected) css(tile, { background: "rgba(255,255,255,0.06)" });
+  });
+  tile.addEventListener("mouseleave", () => {
+    if (!options.selected) css(tile, { background: CARD_BG });
+  });
 
-  tile.append(options.icon, count);
+  return tile;
+}
+
+/**
+ * Vignette dont le nom est écrit, à côté de l'icône plutôt qu'en infobulle.
+ *
+ * Pour les listes qu'on ne reconnaît pas à l'œil. Une espèce se retrouve à son
+ * sprite, mais une capacité n'a qu'un carré de couleur : sur une longue liste,
+ * la retrouver reviendrait à survoler les carrés un par un.
+ */
+export function labelledTile(options: {
+  icon: HTMLElement;
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}): HTMLButtonElement {
+  const tile = document.createElement("button");
+  tile.type = "button";
+  tile.title = options.label;
+  css(tile, {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "4px 9px 4px 5px",
+    borderRadius: "10px",
+    cursor: "pointer",
+    lineHeight: "1",
+    transition: "background 120ms ease, border-color 120ms ease",
+    background: options.selected ? TEAL_DIM : CARD_BG,
+    border: `1px solid ${options.selected ? TEAL_BORDER : BORDER}`,
+  });
+
+  const name = document.createElement("span");
+  css(name, {
+    fontSize: "11.5px",
+    fontWeight: options.selected ? "600" : "500",
+    color: options.selected ? TEAL : TEXT,
+    whiteSpace: "nowrap",
+  });
+  name.textContent = options.label;
+
+  tile.append(options.icon, name);
   tile.addEventListener("click", options.onClick);
   tile.addEventListener("mouseenter", () => {
     if (!options.selected) css(tile, { background: "rgba(255,255,255,0.06)" });

@@ -12,7 +12,8 @@ import { CompanionService } from "..";
 import { PetsService } from "../../pets";
 import { loadCompanionSettings } from "../state";
 import { CompanionChat } from ".";
-import { findFeedable, feedSignature, type FeedCandidate } from "./petFeed";
+import { feedBubble, findFeedable, feedSignature, type FeedCandidate } from "./petFeed";
+import { forGame } from "./bubbleTags";
 
 /**
  * Filet de sécurité, pas la source principale.
@@ -54,17 +55,6 @@ let lastOfferedAtMs = 0;
  */
 let announcedProposalId: string | null = null;
 
-/** Une bulle doit tenir en un souffle : c'est une réplique, pas un rapport. */
-function spokenAlert(picks: FeedCandidate[]): string {
-  if (picks.length === 1) {
-    const only = picks[0];
-    return only.hungerPct <= 5
-      ? `${only.petName} is starving. Want me to feed it?`
-      : `${only.petName} is getting hungry. Want me to feed it?`;
-  }
-  return "Your pets are going hungry. Want me to feed them?";
-}
-
 /**
  * Va le dire au joueur, de vive voix, et reste là.
  *
@@ -79,7 +69,8 @@ async function announceInPerson(picks: FeedCandidate[]): Promise<void> {
     // Forcée : le message du fil vient d'être repris en bulle, et l'anti-rafale
     // aurait avalé celle-ci. C'est pourtant elle qui compte, puisqu'elle est
     // écrite pour être lue au-dessus de sa tête.
-    await CompanionService.say(spokenAlert(picks), { force: true });
+    const line = forGame(feedBubble(picks));
+    await CompanionService.say(line.message, { force: true, tags: line.tags });
   } catch {
     // Une annonce ratée ne doit pas emporter la proposition, qui est l'essentiel.
   } finally {

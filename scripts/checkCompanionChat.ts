@@ -10,6 +10,7 @@ import {
   selectionSignature,
   type HarvestRow,
 } from "../src/services/companion/chat/harvest";
+import { compose, forGame } from "../src/services/companion/chat/bubbleTags";
 import {
   describeFeed,
   disambiguate,
@@ -31,6 +32,7 @@ import {
 import {
   DEFAULT_KEEP_RULES,
   describeKeep,
+  hatchCheer,
   isProtected,
   matchesKeep,
   petSignature,
@@ -42,6 +44,7 @@ import {
   type KeepRules,
   type PetRow,
 } from "../src/services/companion/chat/hatch";
+import { EmoteType } from "../src/services/companion/emoteTypes";
 import {
   MAX_MESSAGES,
   append,
@@ -260,6 +263,80 @@ console.log("\n--- plan de plantation ---");
   check("aucun cadratin", describePlan(mixed).includes("—"), false);
 }
 
+console.log("\n--- icones de bulle ---");
+{
+  // Le jeu bascule sur son rendu balise des que `tags` existe, meme vide : une
+  // phrase sans icone ne doit pas emporter de champ `tags` du tout.
+  const plain = compose("nothing to show");
+  check("sans icone, aucun champ tags", plain.tags, undefined);
+  check("le texte passe tel quel", plain.message, "nothing to show");
+
+  const icon = { gameThing: { name: "", sprite: "sprite/plant/Carrot" } };
+  const one = compose("I found ", icon, " for you");
+  check("la balise est auto-fermante et numerotee", one.message, "I found <0/> for you");
+  check("et la voila dans les tags", one.tags?.[0], icon);
+
+  const two = compose(icon, " and ", { mutation: "Frozen" });
+  check("les numeros se suivent", two.message, "<0/> and <1/>");
+  check("chacun a son entree", Object.keys(two.tags ?? {}).join(","), "0,1");
+
+  // Un fabricant rend `null` quand le catalogue ne connait pas l'objet : une
+  // cle d'atlas inventee dessinerait un carre vide, pire qu'une phrase nue.
+  const missing = compose("plain ", null, "text");
+  check("un fragment nul disparait sans trou", missing.message, "plain text");
+  check("et ne cree pas de tags", missing.tags, undefined);
+  check("la numerotation ignore les nuls", compose(null, icon).message, "<0/>");
+
+  // Les phrases sont ecrites en supposant l'icone presente : quand elle manque,
+  // il reste « 12  ready » ou « 12 . Pick ». On repare au composeur plutot qu'a
+  // chaque appel, sinon le prochain point d'appel reintroduira le defaut.
+  check("les espaces doublees se resorbent", compose("12 ", null, " ready").message, "12 ready");
+  check("l'espace avant un point disparait", compose("12 ", null, ". Pick them?").message, "12. Pick them?");
+  check("et avant une virgule aussi", compose("a ", null, ", b").message, "a, b");
+  check("les bords sont rognes", compose(" ", "hello", " ").message, "hello");
+
+  // Une liste ou chaque nom porte son sprite : c'est la difference entre « une
+  // icone puis trois noms » et une liste qu'on lit.
+  const listed = compose(icon, " Bee, ", icon, " Worm");
+  check("chaque nom garde son icone", listed.message, "<0/> Bee, <1/> Worm");
+  check("et chaque icone son entree", Object.keys(listed.tags ?? {}).join(","), "0,1");
+
+  // Un objet de catalogue ne parle pas au jeu : ni `tileRef`, qui nomme un
+  // sprite des atlas du mod, ni `sprite`, qui est une URL de l'API du mod. Le
+  // fil sait les dessiner, `Sprite.from` non.
+  const modOnly = { gameThing: { name: "", sprite: "sprite/plant/Carrot" }, modOnly: true } as const;
+  const mixed = compose("2 ", modOnly, " and ", { mutation: "Frozen" }, ". Pick them?");
+  check("le fil garde tout", Object.keys(mixed.tags ?? {}).join(","), "0,1");
+
+  // Retirer le tag sans sa balise laissait « 2 . Pick them? » : le jeu saute
+  // bien la balise orpheline, mais le texte se refermait mal.
+  const spoken = forGame(mixed);
+  check("la balise part avec son tag", spoken.message, "2 and <1/>. Pick them?");
+  check("et le tag survivant garde son numero", Object.keys(spoken.tags ?? {}).join(","), "1");
+
+  // Plus rien d'affichable : pas de champ `tags`, sinon le jeu basculerait sur
+  // son rendu balise pour une phrase qui n'a plus de balise.
+  const bare = forGame(compose("2 ", modOnly, " ready"));
+  check("tout retirer nettoie la phrase", bare.message, "2 ready");
+  check("et ne laisse aucun tag", bare.tags, undefined);
+  check("une ligne sans tags passe telle quelle", forGame({ message: "plain" }).message, "plain");
+  check("une phrase saine ne bouge pas", compose("12 ", icon, " with ", icon).message, "12 <0/> with <1/>");
+}
+{
+  // La bulle d'une recolte montre UNE variante pour tout un lot : celle qu'on
+  // verra le plus dans le panier. C'est `groupVariants` qui la designe, en tete
+  // de son classement, mutations comprises.
+  const rows = [
+    row({ tileIndex: 1, species: "Carrot" }),
+    row({ tileIndex: 2, species: "Aloe", mutations: ["Frozen"] }),
+    row({ tileIndex: 3, species: "Aloe", mutations: ["Frozen"] }),
+  ];
+  const top = groupVariants(rows)[0];
+  check("la variante dominante mene le classement", `${top.species}:${top.count}`, "Aloe:2");
+  check("et elle porte ses mutations", top.mutations.join(","), "Frozen");
+  check("un lot vide n'en a aucune", groupVariants([]).length, 0);
+}
+
 console.log("\n--- couvee : ce qu'on garde, ce qui part ---");
 {
   const pet = (over: Partial<PetRow> = {}): PetRow => ({
@@ -333,6 +410,51 @@ console.log("\n--- couvee : ce qu'on garde, ce qui part ---");
     "Seed Finder I"
   );
   check("aucun cadratin", describeKeep(rules({ species: ["Bee"], minMaxStr: 95 })).includes("—"), false);
+
+  // La celebration suit les criteres, pas l'eclosion : applaudir un animal
+  // qu'on proposera de vendre juste apres n'aurait aucun sens.
+  const keepBee = rules({ species: ["Bee"] });
+  check("ce qui ne correspond pas ne se fete pas", hatchCheer([pet({ species: "Worm" })], keepBee), null);
+  check("sans critere, rien ne se fete", hatchCheer([pet({ species: "Bee" })], DEFAULT_KEEP_RULES), null);
+  check("une portee vide non plus", hatchCheer([], keepBee), null);
+
+  const plain = hatchCheer([pet({ species: "Bee" })], keepBee);
+  check("ce qu'on garde vaut des applaudissements", plain?.emote, EmoteType.Clapping);
+  check("mais aucune vedette", plain?.star, null);
+  check("et rien a nommer", plain?.mutation, null);
+
+  const rainbow = hatchCheer([pet({ petId: "r", species: "Bee", mutations: ["Rainbow"] })], keepBee);
+  check("un gros tirage vaut mieux que ca", rainbow?.emote, EmoteType.Love);
+  check("il passe en vedette", rainbow?.star?.petId, "r");
+  check("et la phrase le nomme", rainbow?.mutation, "Rainbow");
+
+  // Les sources ecrivent les mutations tantot en majuscules tantot non, mais le
+  // nom rendu est celui de notre liste : c'est lui qui part dans la phrase.
+  const gold = hatchCheer([pet({ species: "Bee", mutations: ["gold"] })], keepBee);
+  check("quelle que soit la casse", gold?.emote, EmoteType.Love);
+  check("le nom rendu est canonique", gold?.mutation, "Gold");
+
+  // Un Gold qui ne correspond a rien reste un Gold qu'on vendra : la regle du
+  // joueur passe avant la rarete.
+  check(
+    "un gros tirage hors criteres reste muet",
+    hatchCheer([pet({ species: "Worm", mutations: ["Gold"] })], keepBee),
+    null
+  );
+  // Plusieurs peuvent sortir entre deux lectures du sac, et le beau n'est pas
+  // toujours le premier.
+  const litter = hatchCheer(
+    [pet({ petId: "a", species: "Bee" }), pet({ petId: "b", species: "Bee", mutations: ["Gold"] })],
+    keepBee
+  );
+  check("le meilleur de la portee passe devant", litter?.star?.petId, "b");
+  // Une portee qui sort les deux fete la plus rare, pas la premiere trouvee.
+  const both = hatchCheer(
+    [pet({ petId: "g", species: "Bee", mutations: ["Gold"] }), pet({ petId: "r", species: "Bee", mutations: ["Rainbow"] })],
+    keepBee
+  );
+  check("le rainbow passe avant l'or", both?.mutation, "Rainbow");
+  check("et c'est lui la vedette", both?.star?.petId, "r");
 }
 
 console.log("\n--- propositions ---");

@@ -9,8 +9,11 @@
 // proposé. Pas de file d'attente, pas de « toujours autoriser », pas de refaire.
 
 import { CompanionService } from "..";
+import { EmoteType } from "../emoteTypes";
 import { MAX_LINE_LENGTH } from "../state";
 import { type BatchReporter } from "./batch";
+import { compose, forGame, spaced, type BubbleLine } from "./bubbleTags";
+import { eggIcon, petRowIcons, seedIcon, variantIcons } from "./bubbleIcons";
 import {
   append,
   appendAlertOnce,
@@ -21,12 +24,12 @@ import {
   type ChatLog,
 } from "./log";
 import { type HarvestScope } from "./gardenRead";
-import { describeSelection, selectionSignature, type HarvestRow } from "./harvest";
+import { describeSelection, groupVariants, selectionSignature, type HarvestRow } from "./harvest";
 import { executeHarvestBatch } from "./harvestRun";
-import { describeFeed, feedSignature, type FeedCandidate } from "./petFeed";
+import { describeFeed, feedBubble, feedQuestion, feedSignature, type FeedCandidate } from "./petFeed";
 import { isSettled } from "./feedScope";
 import { executeFeedBatch } from "./feedRun";
-import { plantSignature, summarizePlan, type PlantAssignment } from "./plant";
+import { countByItem, plantSignature, summarizePlan, type PlantAssignment } from "./plant";
 import { executePlantBatch } from "./plantRun";
 import { petSignature, slotSignature, summarizeHatch, summarizeSell, toSell, type KeepRules } from "./hatch";
 import { readHatchScope } from "./hatchRead";
@@ -102,9 +105,68 @@ function notify(): void {
   }
 }
 
-function post(from: ChatAuthor, kind: ChatKind, text: string, proposalId?: string): void {
-  state = { ...state, log: append(state.log, { from, kind, text, atMs: Date.now(), proposalId }) };
-  if (from === "companion") speak(text);
+/**
+ * Écrit dans le fil, et fait parler le companion.
+ *
+ * `spoken` sert quand la bulle mérite mieux que le texte du fil : elle peut y
+ * glisser des icônes du jeu, que le fil ne saurait pas rendre — il afficherait
+ * le balisage `<0/>` en toutes lettres. C'est aussi l'occasion d'être plus
+ * bref : une bulle tient sur une ligne, un fil non.
+ */
+type Illustrated = {
+  /** La phrase illustrée, la même des deux côtés sauf mention contraire. */
+  bubble?: BubbleLine;
+  /**
+   * Une version pour le fil seulement, quand il a de quoi en dire plus.
+   *
+   * Le fil a de la place : il peut nommer chaque animal d'une liste et lui
+   * coller son sprite, là où la bulle tiendrait mal. Hors de ces cas, les deux
+   * disent exactement la même chose — une seule formulation à maintenir.
+   */
+  thread?: BubbleLine;
+  /**
+   * Passe outre l'anti-rafale de la bulle.
+   *
+   * Pour les annonces qu'on tient à faire entendre chacune : un animal qui
+   * sort d'un œuf, par exemple, quand les éclosions s'enchaînent plus vite que
+   * l'intervalle minimum entre deux bulles.
+   */
+  force?: boolean;
+};
+
+function post(
+  from: ChatAuthor,
+  kind: ChatKind,
+  text: string,
+  proposalId?: string,
+  extra: Illustrated = {}
+): void {
+  const shown = extra.thread ?? extra.bubble;
+  state = {
+    ...state,
+    log: append(state.log, {
+      from,
+      kind,
+      text: shown?.message ?? text,
+      atMs: Date.now(),
+      proposalId,
+      icons: shown?.tags ? Object.values(shown.tags) : undefined,
+      // Le fil ne sait afficher une icône à sa place que s'il a le balisage.
+      positioned: shown !== undefined,
+    }),
+  };
+  // Une bulle porteuse de question passe toujours : elle attend une réponse, et
+  // se faire avaler par la note qui la précède la rendrait invisible.
+  const insist = extra.force ?? proposalId !== undefined;
+  if (from === "companion") {
+    speak(extra.bubble ?? { message: text }, insist);
+    // Une question s'accompagne d'un air interrogateur — mais seulement une
+    // fois qu'il s'est posé. Poser la question et partir en courant vers le
+    // joueur, la pose jouée en chemin, ne se verrait pas.
+    if (proposalId !== undefined) {
+      void CompanionService.emoteWhenStill(EmoteType.Questioning).catch(() => {});
+    }
+  }
   notify();
 }
 
@@ -116,9 +178,18 @@ function post(from: ChatAuthor, kind: ChatKind, text: string, proposalId?: strin
  * `say` ignore de lui-même ce qui arrive trop vite après la précédente — une
  * rafale de progression ne clignote pas au-dessus de sa tête.
  */
-function speak(text: string): void {
-  const line = text.length > MAX_LINE_LENGTH ? `${text.slice(0, MAX_LINE_LENGTH - 1).trimEnd()}…` : text;
-  void CompanionService.say(line).catch(() => {});
+function speak(line: BubbleLine, force = false): void {
+  // On ne tronque que le texte nu : couper une phrase balisée en plein `<0/>`
+  // laisserait le jeu chercher une balise qui n'existe plus. Les lignes
+  // balisées sont écrites courtes à la main, elles n'en ont pas besoin.
+  // Ce que le jeu peut dessiner d'abord : retirer une balise raccourcit la
+  // phrase, et c'est cette longueur-là qu'il faut mesurer.
+  const spoken = forGame(line);
+  const message =
+    !spoken.tags && spoken.message.length > MAX_LINE_LENGTH
+      ? `${spoken.message.slice(0, MAX_LINE_LENGTH - 1).trimEnd()}…`
+      : spoken.message;
+  void CompanionService.say(message, { tags: spoken.tags, force }).catch(() => {});
 }
 
 /**
@@ -133,6 +204,23 @@ function dropStaleProposal(): void {
   if (!proposal || !isExpired(proposal, Date.now())) return;
   state = { ...state, proposal: null, captured: null, log: clearProposal(state.log, proposal.id) };
   notify();
+}
+
+/**
+ * La bulle d'une proposition de récolte : la variante dominante, puis le compte.
+ *
+ * Une seule variante montrée pour tout un lot : c'est celle qu'on verra le plus
+ * dans le panier, et une bulle qui les listerait toutes ne tiendrait pas sur sa
+ * ligne. Les pastilles de mutation portent leur propre nom, donc la phrase ne
+ * les nomme pas.
+ */
+function harvestBubble(rows: HarvestRow[], sentence: string): BubbleLine {
+  const top = groupVariants(rows)[0];
+  if (!top) return compose(sentence);
+
+  // La variante dominante ouvre la phrase, puis la phrase entière suit. L'icône
+  // montre, le texte nomme : l'un ne remplace pas l'autre.
+  return compose(...spaced(variantIcons(top.species, top.mutations)), " ", sentence);
 }
 
 /**
@@ -176,12 +264,8 @@ async function proposeHarvestScope(provider: ScopeProvider): Promise<void> {
   state = { ...state, proposal, captured: { kind: "harvest", provider, rows } };
   const held =
     scope.lockedOut > 0 ? ` I am leaving ${scope.lockedOut} locked one${scope.lockedOut === 1 ? "" : "s"} alone.` : "";
-  post(
-    "companion",
-    "reply",
-    `I can see ${proposal.summary}.${held}${teamPromise(team)} Want me to pick them?`,
-    proposal.id
-  );
+  const sentence = `I can see ${proposal.summary}.${held}${teamPromise(team)} Want me to pick them?`;
+  post("companion", "reply", sentence, proposal.id, { bubble: harvestBubble(rows, sentence) });
 }
 
 async function proposeFeedScope(provider: FeedProvider): Promise<void> {
@@ -200,7 +284,13 @@ async function proposeFeedScope(provider: FeedProvider): Promise<void> {
 
   const proposal = openProposal("feed", describeFeed(picks), picks.length, feedSignature(picks));
   state = { ...state, proposal, captured: { kind: "feed", provider, picks } };
-  post("companion", "reply", `${proposal.summary}. Should I feed ${picks.length === 1 ? "them" : "all of them"}?`, proposal.id);
+
+  // Le fil nomme chaque animal ; la bulle, trop étroite pour une liste, compte.
+  const listed = feedQuestion(picks);
+  post("companion", "reply", listed.message, proposal.id, {
+    bubble: feedBubble(picks),
+    thread: listed,
+  });
 }
 
 /**
@@ -227,7 +317,14 @@ async function proposePlantPlan(provider: PlantProvider): Promise<void> {
 
   const proposal = openProposal("plant", summarizePlan(plan), plan.length, plantSignature(plan));
   state = { ...state, proposal, captured: { kind: "plant", provider, plan } };
-  post("companion", "reply", `That is ${proposal.summary}. Want me to get started?`, proposal.id);
+
+  // La sorte la plus posée du plan porte l'icône. Un œuf n'a pas de graine au
+  // catalogue, donc `seedIcon` rend `null` et la bulle reste en toutes lettres.
+  const most = countByItem(plan)[0];
+  const sentence = `That is ${proposal.summary}. Want me to get started?`;
+  post("companion", "reply", sentence, proposal.id, {
+    bubble: compose(most?.kind === "seed" ? seedIcon(most.id) : null, " ", sentence),
+  });
 }
 
 /**
@@ -254,7 +351,16 @@ async function proposeHatchSlots(provider: HatchProvider, rules: KeepRules): Pro
   const team = loadCompanionSettings().hatchTeamId;
   const proposal = openProposal("hatch", summarizeHatch(slots), slots.length, withTeam(slotSignature(slots), team));
   state = { ...state, proposal, captured: { kind: "hatch", provider, rules, slots } };
-  post("companion", "reply", `${proposal.summary}.${teamPromise(team)} Want me to open them?`, proposal.id);
+
+  // La sorte d'œuf n'est connue qu'en relisant le jardin, et une couvée mêlée
+  // n'a pas d'icône unique : on ne la met que s'il n'y en a qu'une sorte.
+  const kinds = await readHatchScope()
+    .then((scope) => scope.eggIds)
+    .catch(() => [] as string[]);
+  const sentence = `${proposal.summary}.${teamPromise(team)} Want me to open them?`;
+  post("companion", "reply", sentence, proposal.id, {
+    bubble: compose(kinds.length === 1 ? eggIcon(kinds[0]) : null, " ", sentence),
+  });
 }
 
 /**
@@ -286,12 +392,12 @@ async function proposeSellPlan(provider: SellProvider, rules: KeepRules): Promis
     plan.favourite.length > 0
       ? ` I would favourite the ${plan.favourite.length} you keep first.`
       : "";
-  post(
-    "companion",
-    "reply",
-    `That would be ${proposal.summary}.${keeping}${teamPromise(plan.teamId)} Should I?`,
-    proposal.id
-  );
+  // Les deux espèces les plus vendues portent l'icône. Un rendu composé par
+  // animal n'aurait aucun sens ici : c'est un décompte, pas une présentation.
+  const sentence = `That would be ${proposal.summary}.${keeping}${teamPromise(plan.teamId)} Should I?`;
+  post("companion", "reply", sentence, proposal.id, {
+    bubble: compose(...spaced(petRowIcons(plan.sell)), " ", sentence),
+  });
 }
 
 /**
@@ -303,7 +409,7 @@ async function proposeSellPlan(provider: SellProvider, rules: KeepRules): Promis
  */
 function reporter(): BatchReporter {
   return {
-    say: (kind, text) => post("companion", kind, text),
+    say: (kind, text, spoken, force) => post("companion", kind, text, undefined, { bubble: spoken, force }),
     stopped: () => state.cancelRequested,
     progress: (done, total) => {
       state = { ...state, run: { done, total } };
@@ -320,13 +426,19 @@ function reporter(): BatchReporter {
  * avec le lot toujours en cours. Sans ce réveil, elle resterait sur « Working
  * on it » jusqu'à ce qu'autre chose la réveille — et si rien ne suit, jamais.
  */
-async function runBatch(run: (reporter: BatchReporter) => Promise<void>): Promise<void> {
+async function runBatch(run: (reporter: BatchReporter) => Promise<void>): Promise<boolean> {
+  let stopped = false;
   try {
     await run(reporter());
   } finally {
+    // Relevé AVANT la remise à plat : c'est la seule fenêtre où l'appelant peut
+    // encore savoir que le joueur a dit stop, et ça décide s'il a le droit
+    // d'enchaîner sur une question suivante.
+    stopped = state.cancelRequested;
     state = { ...state, run: null, cancelRequested: false };
     notify();
   }
+  return stopped;
 }
 
 /**
@@ -574,8 +686,10 @@ export const CompanionChat = {
       });
       await afterHatchBatch(captured.rules, stop);
     } else if (captured.kind === "sell") {
-      await runBatch((r) => executeSellBatch(captured.plan, r));
-      await afterSellBatch(captured.rules);
+      const stopped = await runBatch((r) => executeSellBatch(captured.plan, r));
+      // Arrêter une vente puis se faire aussitôt relancer sur la couvée, c'est
+      // pénible. La couvée sait déjà s'abstenir dans ce cas, la vente non.
+      if (!stopped) await afterSellBatch(captured.rules);
     } else {
       await runBatch((r) => executeFeedBatch(captured.picks, r));
     }

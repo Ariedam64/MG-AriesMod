@@ -18,6 +18,27 @@ import type { XY } from "../movement";
 import type { FeedCandidate } from "./petFeed";
 import { createWalker, type Walker } from "./walk";
 import type { BatchReporter } from "./batch";
+import { compose, spaced } from "./bubbleTags";
+import { petSpeciesIcon, petThing } from "./bubbleIcons";
+import type { BubbleTag } from "./bubbleTags";
+
+/**
+ * Une icône par animal, sans doublon d'espèce, deux au plus.
+ *
+ * Le rendu d'animal du jeu d'abord : c'est le seul qui sache dessiner un pet en
+ * bulle. La clé d'atlas ne sert que de repli, pour le fil.
+ */
+function petIcons(picks: FeedCandidate[]): BubbleTag[] {
+  const seen = new Set<string>();
+  const icons: BubbleTag[] = [];
+  for (const pick of picks) {
+    if (seen.has(pick.petSpecies) || icons.length >= 2) continue;
+    seen.add(pick.petSpecies);
+    const icon = petThing(pick.pet, "") ?? petSpeciesIcon(pick.petSpecies);
+    if (icon) icons.push(icon);
+  }
+  return icons;
+}
 
 /** Temps laissé au serveur pour créer la produce avant de la donner. */
 const AFTER_HARVEST_MS = 700;
@@ -82,19 +103,24 @@ export async function runFeed(candidate: FeedCandidate, walker: Walker): Promise
  * les trajets prennent du temps, et un silence prolongé ressemble à une panne.
  */
 export async function executeFeedBatch(picks: FeedCandidate[], reporter: BatchReporter): Promise<void> {
-  reporter.say("reply", picks.length === 1 ? "On it." : `On it. Feeding ${picks.length} of them.`);
+  const who = petIcons(picks);
+  const opening = picks.length === 1 ? "On it." : `On it. Feeding ${picks.length} of them.`;
+  reporter.say("reply", opening, compose(...spaced(who), " ", opening));
 
   const walker = await createWalker((message) => reporter.say("system", message));
 
-  const fed: string[] = [];
+  // Les candidats eux-mêmes, pas leurs noms : le bilan a besoin de leur espèce
+  // pour poser les bonnes icônes.
+  const fed: FeedCandidate[] = [];
   const failures: string[] = [];
 
   for (const pick of picks) {
     if (reporter.stopped()) break;
     const outcome = await runFeed(pick, walker);
     if (outcome.ok) {
-      fed.push(pick.petName);
-      reporter.say("system", `${pick.petName} has been fed.`);
+      fed.push(pick);
+      const fedLine = `${pick.petName} has been fed.`;
+      reporter.say("system", fedLine, compose(petThing(pick.pet, "") ?? petSpeciesIcon(pick.petSpecies), " ", fedLine));
     } else {
       failures.push(`${pick.petName} (${outcome.reason})`);
     }
@@ -109,6 +135,11 @@ export async function executeFeedBatch(picks: FeedCandidate[], reporter: BatchRe
     return;
   }
   const tail = failures.length > 0 ? ` I could not manage ${failures.join(", ")}.` : "";
-  const who = fed.length === 1 ? fed[0] : `${fed.slice(0, -1).join(", ")} and ${fed[fed.length - 1]}`;
-  reporter.say("report", `${cancelled ? "Stopped there. " : ""}Fed ${who}.${tail}`);
+  const fedNames = fed.map((pick) => pick.petName);
+  const names =
+    fedNames.length === 1 ? fedNames[0] : `${fedNames.slice(0, -1).join(", ")} and ${fedNames[fedNames.length - 1]}`;
+  // La bulle compte plutôt qu'elle n'énumère : trois noms tiennent dans le fil,
+  // pas au-dessus de sa tête.
+  const done = `${cancelled ? "Stopped there. " : ""}Fed ${names}.${tail}`;
+  reporter.say("report", done, compose(...spaced(petIcons(fed)), " ", done));
 }

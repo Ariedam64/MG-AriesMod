@@ -19,6 +19,14 @@ export type FeedCandidate = {
   petSpecies: string;
   hungerPct: number;
   source: FeedSource;
+  /**
+   * L'animal tel que le jeu le connaît, gardé pour le rendu seul.
+   *
+   * Une bulle ne sait pas dessiner un animal depuis une clé d'atlas : les
+   * animaux passent par le rendu dédié du jeu, qui veut l'objet. Opaque à
+   * dessein, tout ce qui compte est déjà extrait au-dessus.
+   */
+  pet?: unknown;
 };
 
 /**

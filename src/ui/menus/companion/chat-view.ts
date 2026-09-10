@@ -11,17 +11,38 @@
 import { BORDER, TEAL, TEXT, TEXT_DIM, WARN, css } from "../panel-ui";
 import { fillWithPortrait } from "./npc-avatar";
 import type { ChatMessage } from "../../../services/companion/chat/log";
+import type { BubbleTag } from "../../../services/companion/chat/bubbleTags";
+import { renderTagged, tagIcons } from "./chat-icons";
 
 /** Deux messages du même auteur dans cette fenêtre sont collés visuellement. */
 export const GROUP_WINDOW_MS = 2 * 60 * 1000;
 
 const AVATAR_PX = 26;
+/** Assez grand pour se lire, assez petit pour ne pas bousculer la ligne. */
+const BUBBLE_ICON_PX = 18;
+const SYSTEM_ICON_PX = 15;
 const OUTGOING_BG = "rgba(94,234,212,0.14)";
 const OUTGOING_BORDER = "rgba(94,234,212,0.22)";
 const OUTGOING_TEXT = "#d1fae5";
 const INCOMING_BG = "rgba(255,255,255,0.06)";
 const ALERT_BG = "rgba(251,191,36,0.10)";
 const ALERT_BORDER = "rgba(251,191,36,0.28)";
+
+/**
+ * Le contenu d'un message : ses vignettes et son texte.
+ *
+ * Deux dispositions, selon ce qu'on sait. Quand le texte porte le balisage, on
+ * le découpe et chaque icône va à sa place, contre ce qu'elle désigne. Sinon
+ * les vignettes viennent d'une bulle écrite pour une autre phrase : on les
+ * groupe devant, faute de savoir où elles allaient.
+ */
+function contentOf(text: string, icons: BubbleTag[] | undefined, positioned: boolean | undefined, sizePx: number): Node[] {
+  if (positioned) return renderTagged(text, icons, sizePx);
+
+  const label = document.createElement("span");
+  label.textContent = text;
+  return [...tagIcons(icons, sizePx), label];
+}
 
 /** Un message centré n'appartient à aucune colonne : il ne se groupe pas. */
 export function isCentered(message: ChatMessage): boolean {
@@ -85,7 +106,7 @@ export function dateSeparator(label: string): HTMLElement {
 }
 
 /** Ligne d'événement centrée : progression, refus, annulation. */
-export function systemLine(text: string): HTMLElement {
+export function systemLine(text: string, icons?: BubbleTag[], positioned = false): HTMLElement {
   const line = document.createElement("div");
   css(line, {
     alignSelf: "center",
@@ -95,7 +116,10 @@ export function systemLine(text: string): HTMLElement {
     padding: "2px 8px",
     maxWidth: "90%",
   });
-  line.textContent = text;
+
+  // Ces lignes portent les nouvelles au fil de l'eau : « ce pet a été nourri »,
+  // « un Bee est sorti ». C'est là que la vignette apprend le plus.
+  line.append(...contentOf(text, icons, positioned, SYSTEM_ICON_PX));
   return line;
 }
 
@@ -151,7 +175,7 @@ export type BubbleFlags = {
  * les unes par rapport aux autres.
  */
 export function messageRow(message: ChatMessage, flags: BubbleFlags, identity: NpcIdentityView | null = null): HTMLElement {
-  if (isCentered(message)) return systemLine(message.text);
+  if (isCentered(message)) return systemLine(message.text, message.icons, message.positioned);
 
   const outgoing = message.from === "you";
   const alerting = message.kind === "alert";
@@ -188,7 +212,7 @@ export function messageRow(message: ChatMessage, flags: BubbleFlags, identity: N
     border: `1px solid ${outgoing ? OUTGOING_BORDER : alerting ? ALERT_BORDER : BORDER}`,
     color: outgoing ? OUTGOING_TEXT : TEXT,
   });
-  bubble.textContent = message.text;
+  bubble.append(...contentOf(message.text, message.icons, message.positioned, BUBBLE_ICON_PX));
   column.append(bubble);
 
   if (flags.isLastInGroup) {

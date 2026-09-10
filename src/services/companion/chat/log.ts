@@ -4,6 +4,8 @@
 // Module PUR : rend toujours un nouveau journal, ne mute jamais l'entrée. Ça
 // permet à l'UI de comparer les références pour savoir si elle doit redessiner.
 
+import type { BubbleTag } from "./bubbleTags";
+
 export type ChatAuthor = "companion" | "you";
 
 /**
@@ -20,6 +22,23 @@ export type ChatMessage = {
   text: string;
   /** Proposition attachée, en attente de confirmation. */
   proposalId?: string;
+  /**
+   * Vignettes du message, dans le fil.
+   *
+   * Ce sont les mêmes descriptions que celles des bulles en jeu : une seule
+   * source pour les deux rendus, sinon l'un dirait un jour autre chose que
+   * l'autre. Le fil les dessine avec l'atlas du mod, la bulle avec le
+   * balisage du jeu — deux mécaniques, une intention.
+   */
+  icons?: BubbleTag[];
+  /**
+   * `text` porte le balisage `<0/>`, et chaque icône va à sa place.
+   *
+   * Faux quand les vignettes viennent d'une bulle : elles se regroupent alors
+   * devant le texte, faute de savoir où elles allaient dans une phrase qui
+   * n'est pas la leur.
+   */
+  positioned?: boolean;
 };
 
 /** Au-delà, les plus anciens messages sont oubliés. */
@@ -41,6 +60,15 @@ export type NewMessage = {
   text: string;
   atMs: number;
   proposalId?: string;
+  icons?: BubbleTag[];
+  /**
+   * `text` porte le balisage `<0/>`, et chaque icône va à sa place.
+   *
+   * Faux quand les vignettes viennent d'une bulle : elles se regroupent alors
+   * devant le texte, faute de savoir où elles allaient dans une phrase qui
+   * n'est pas la leur.
+   */
+  positioned?: boolean;
 };
 
 export function append(log: ChatLog, message: NewMessage): ChatLog {
@@ -51,6 +79,8 @@ export function append(log: ChatLog, message: NewMessage): ChatLog {
     kind: message.kind,
     text: message.text,
     ...(message.proposalId ? { proposalId: message.proposalId } : {}),
+    ...(message.icons && message.icons.length > 0 ? { icons: message.icons } : {}),
+    ...(message.positioned ? { positioned: true } : {}),
   };
   const messages = [...log.messages, entry];
   return {

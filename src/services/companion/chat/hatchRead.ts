@@ -1,14 +1,13 @@
 // src/services/companion/chat/hatchRead.ts
 // Lit la couvée : les œufs prêts, les animaux déjà là, et la place qui reste.
 //
-// Rien n'est écrit en dur. Les espèces qu'un œuf peut donner viennent de son
-// `faunaSpawnWeights`, leurs capacités de `innateAbilityWeights`, et les
-// mutations proposées en filtre sont celles que portent réellement les animaux
-// du sac — le jeu n'expose pas de catalogue de mutations d'animaux, et en
-// inventer un reviendrait à en oublier au premier ajout.
+// Rien n'est écrit en dur. Les espèces que les œufs POSÉS peuvent donner
+// viennent de leur `faunaSpawnWeights`, leurs capacités de
+// `innateAbilityWeights`, et les mutations se déduisent du catalogue (cf.
+// `rolledMutations`) parce qu'elles ne dépendent pas de la sorte d'œuf.
 
 import { Atoms } from "../../../store/atoms";
-import { eggCatalog, petAbilities, petCatalog } from "../../../data";
+import { eggCatalog, mutationCatalog, petAbilities, petCatalog } from "../../../data";
 import { getPetInfo } from "../../../utils/petCalcul";
 import { PetsService } from "../../pets";
 import type { PetRow } from "./hatch";
@@ -28,10 +27,12 @@ export type HatchScope = {
   readySlots: number[];
   /** Œufs en terre, mûrs ou non : de quoi dire ce qui attend encore. */
   totalEggs: number;
+  /** Sortes d'œufs en terre : de quoi mettre la bonne icône sur une bulle. */
+  eggIds: string[];
   /** Espèces que les œufs en terre peuvent donner. Alimente les filtres. */
   possibleSpecies: string[];
   possibleAbilities: AbilityChoice[];
-  /** Mutations observées sur les animaux du sac. */
+  /** Mutations qu'un animal peut porter : celles qui se tirent, plus celles vues dans le sac. */
   presentMutations: string[];
   pets: PetRow[];
   inventoryCount: number;
@@ -41,6 +42,7 @@ export type HatchScope = {
 export const EMPTY_HATCH_SCOPE: HatchScope = {
   readySlots: [],
   totalEggs: 0,
+  eggIds: [],
   possibleSpecies: [],
   possibleAbilities: [],
   presentMutations: [],
@@ -112,7 +114,18 @@ async function scanEggs(): Promise<EggScan> {
   return scan;
 }
 
-/** Ce que les œufs en terre peuvent donner : espèces, puis capacités innées. */
+/**
+ * Ce que les œufs en terre peuvent donner : espèces, puis capacités innées.
+ *
+ * Les œufs posés dans le jardin, et eux seuls. Le filtre décide de ce qu'on
+ * garde de CETTE couvée : y faire figurer les vingt-neuf espèces du catalogue
+ * noierait les cinq que ces œufs-là peuvent réellement sortir, et les capacités
+ * suivent puisqu'elles se déduisent des espèces.
+ *
+ * Les mutations, elles, ne dépendent pas de la sorte d'œuf : n'importe quel
+ * animal peut naître Gold ou Rainbow, d'où leur présence permanente (cf.
+ * `rolledMutations`).
+ */
 function whatCouldHatch(eggIds: Set<string>): { species: string[]; abilities: AbilityChoice[] } {
   const species = new Set<string>();
   for (const eggId of eggIds) {
@@ -166,10 +179,26 @@ async function readPets(): Promise<{ pets: PetRow[]; inventoryCount: number }> {
       maxStrength,
       favorited: favorites.has(item.id),
       onTeam: onTeam.has(item.id),
+      item,
     });
   }
 
   return { pets, inventoryCount: items.length };
+}
+
+/**
+ * Les animaux du sac, sans relire le jardin.
+ *
+ * `readHatchScope` scanne aussi les tuiles, les favoris et l'équipe active :
+ * beaucoup trop pour la seule question « qui vient d'apparaître ? », posée
+ * après chaque œuf.
+ */
+export async function readPetRows(): Promise<PetRow[]> {
+  try {
+    return (await readPets()).pets;
+  } catch {
+    return [];
+  }
 }
 
 /** Combien d'objets occupent le sac, sans relire tout le reste. */
@@ -181,16 +210,44 @@ export async function readInventoryCount(): Promise<number> {
   }
 }
 
+/**
+ * Les mutations qu'un animal peut tirer en naissant.
+ *
+ * Le catalogue ne les étiquette pas « animal » ou « plante », mais il les
+ * sépare quand même : `baseChance` est la probabilité d'être tiré à la
+ * naissance, et seules Gold et Rainbow en ont une. Tout le reste — Wet,
+ * Frozen, Dawnlit… — vaut zéro parce que ce sont des effets que
+ * l'environnement pose sur une plante, jamais sur un animal.
+ *
+ * Se déduire du catalogue plutôt que de lister deux noms garde le filtre juste
+ * le jour où le jeu en ajoute une troisième, et la source dynamique porte bien
+ * ce champ.
+ */
+export function rolledMutations(): string[] {
+  try {
+    return Object.entries(mutationCatalog as Record<string, { baseChance?: unknown }>)
+      .filter(([, def]) => Number(def?.baseChance) > 0)
+      .map(([name]) => name);
+  } catch {
+    // Sans catalogue lisible, le filtre retombe sur ce qu'on observe dans le
+    // sac : moins pratique, mais jamais faux.
+    return [];
+  }
+}
+
 export async function readHatchScope(): Promise<HatchScope> {
   const [eggs, bag] = await Promise.all([scanEggs(), readPets()]);
   const { species, abilities } = whatCouldHatch(eggs.eggIds);
 
-  const mutations = new Set<string>();
+  // Les tirables d'abord : sans elles, on ne pourrait cocher « garder les
+  // Rainbow » qu'après en avoir déjà eu un, c'est-à-dire trop tard.
+  const mutations = new Set<string>(rolledMutations());
   for (const pet of bag.pets) for (const mutation of pet.mutations) mutations.add(mutation);
 
   return {
     readySlots: eggs.readySlots,
     totalEggs: eggs.totalEggs,
+    eggIds: [...eggs.eggIds].sort((a, b) => a.localeCompare(b)),
     possibleSpecies: species,
     possibleAbilities: abilities,
     presentMutations: [...mutations].sort((a, b) => a.localeCompare(b)),

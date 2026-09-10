@@ -12,10 +12,18 @@
 
 import { PlayerService } from "../../player";
 import { StatsService } from "../../stats";
-import { ACTION_DELAY_MS, PROGRESS_EVERY, SETTLE_MS, sleep, type BatchReporter } from "./batch";
+import { PROGRESS_EVERY, SETTLE_MS, pacer, sleep, type BatchReporter } from "./batch";
 import { createWalker } from "./walk";
 import { readPlantScope } from "./plantRead";
 import { countByItem, listPlantItems, type PlantAssignment } from "./plant";
+import { compose } from "./bubbleTags";
+import { seedIcon } from "./bubbleIcons";
+
+/** La graine dominante d'un plan. Un oeuf n'en a pas, et rend donc `null`. */
+function topSeed(plan: PlantAssignment[]) {
+  const most = countByItem(plan)[0];
+  return most?.kind === "seed" ? seedIcon(most.id) : null;
+}
 
 /** Pose une graine ou un œuf. Une commande par sorte, un seul appelant. */
 async function send(assignment: PlantAssignment): Promise<void> {
@@ -63,7 +71,8 @@ async function report(attempted: PlantAssignment[], cancelled: boolean, reporter
   if (planted > 0) StatsService.incrementGardenStat("totalPlanted", planted);
 
   if (planted === attempted.length) {
-    reporter.say("report", cancelled ? `Stopped there. ${planted} are in the ground.` : `All done, ${planted} planted.`);
+    const done = cancelled ? `Stopped there. ${planted} are in the ground.` : `All done, ${planted} planted.`;
+    reporter.say("report", done, compose(topSeed(attempted), " ", done));
     return;
   }
   if (planted === 0) {
@@ -85,29 +94,31 @@ async function report(attempted: PlantAssignment[], cancelled: boolean, reporter
  */
 export async function executePlantBatch(plan: PlantAssignment[], reporter: BatchReporter): Promise<void> {
   const what = countByItem(plan);
-  reporter.say(
-    "reply",
+  const opening =
     what.length === 1
       ? `On it. Planting ${plan.length} ${what[0].name} now.`
-      : `On it. Planting ${listPlantItems(plan)} now.`
-  );
+      : `On it. Planting ${listPlantItems(plan)} now.`;
+  reporter.say("reply", opening, compose(topSeed(plan), " ", opening));
 
   const walker = await createWalker((message) => reporter.say("system", message));
 
   const attempted: PlantAssignment[] = [];
+  const pace = pacer();
   for (const assignment of plan) {
     if (reporter.stopped()) break;
 
+    // Le trajet compte comme de l'attente : voir `pacer`.
     await walker.toGardenTile(assignment.tileIndex);
+    await pace.wait();
     attempted.push(assignment);
     await send(assignment);
+    pace.mark();
 
     const done = attempted.length;
     reporter.progress(done, plan.length);
     if (done % PROGRESS_EVERY === 0 && done < plan.length) {
       reporter.say("system", `${done} of ${plan.length} in the ground so far...`);
     }
-    await sleep(ACTION_DELAY_MS);
   }
 
   // Rendu à son mode : sans cela il resterait planté sur la dernière case.

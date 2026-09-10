@@ -9,11 +9,19 @@
 import { PlayerService } from "../../player";
 import { StatsService } from "../../stats";
 import { loadCompanionSettings } from "../state";
-import { ACTION_DELAY_MS, PROGRESS_EVERY, SETTLE_MS, sleep, type BatchReporter } from "./batch";
+import { PROGRESS_EVERY, SETTLE_MS, pacer, sleep, type BatchReporter } from "./batch";
 import { wearTeam } from "./teamSwap";
 import { createWalker } from "./walk";
 import { readHarvestRows } from "./gardenRead";
-import { rowKey, type HarvestRow } from "./harvest";
+import { groupVariants, rowKey, type HarvestRow } from "./harvest";
+import { compose } from "./bubbleTags";
+import { cropIcon } from "./bubbleIcons";
+
+/** Le crop dominant d'un lot, pour l'icone d'une bulle. */
+function topCrop(rows: HarvestRow[]) {
+  const top = groupVariants(rows)[0];
+  return top ? cropIcon(top.species) : null;
+}
 
 /**
  * Rend compte d'un lot en relisant le jardin.
@@ -63,7 +71,8 @@ async function report(attempted: HarvestRow[], cancelled: boolean, reporter: Bat
   if (picked > 0) StatsService.incrementGardenStat("totalHarvested", picked);
 
   if (stillRipe === 0) {
-    reporter.say("report", cancelled ? `Stopped there. Got ${picked}.` : `All done, ${picked} picked.`);
+    const done = cancelled ? `Stopped there. Got ${picked}.` : `All done, ${picked} picked.`;
+    reporter.say("report", done, compose(topCrop(attempted), " ", done));
     return;
   }
   if (picked === 0) {
@@ -78,7 +87,8 @@ async function report(attempted: HarvestRow[], cancelled: boolean, reporter: Bat
 
 /** Récolte le lot confirmé, crop par crop. */
 export async function executeHarvestBatch(rows: HarvestRow[], reporter: BatchReporter): Promise<void> {
-  reporter.say("reply", `On it. Picking ${rows.length} now.`);
+  const opening = `On it. Picking ${rows.length} now.`;
+  reporter.say("reply", opening, compose(topCrop(rows), " ", opening));
 
   // L'équipe d'abord : certaines capacités agissent à la récolte, et les
   // enfiler après coup ne servirait plus à rien.
@@ -86,19 +96,23 @@ export async function executeHarvestBatch(rows: HarvestRow[], reporter: BatchRep
   const walker = await createWalker((message) => reporter.say("system", message));
 
   const attempted: HarvestRow[] = [];
+  const pace = pacer();
   for (const row of rows) {
     if (reporter.stopped()) break;
 
+    // Le trajet compte comme de l'attente : il espace les envois tout autant
+    // qu'un sommeil, et l'ajouter à l'écart le paierait deux fois.
     await walker.toGardenTile(row.tileIndex);
+    await pace.wait();
     attempted.push(row);
     await PlayerService.harvestCrop(row.tileIndex, row.slotId);
+    pace.mark();
 
     const done = attempted.length;
     reporter.progress(done, rows.length);
     if (done % PROGRESS_EVERY === 0 && done < rows.length) {
       reporter.say("system", `${done} of ${rows.length} so far...`);
     }
-    await sleep(ACTION_DELAY_MS);
   }
 
   // Rendu à son mode : sans cela il resterait planté sur le dernier crop.

@@ -5,7 +5,7 @@
 // reste que le stockage, et les deux commodités qui en découlent.
 
 import { readAriesPath, writeAriesPath } from "../../utils/localStorage";
-import { DEFAULT_COMPANION_SETTINGS, coerceSettings, type CompanionSettings, type SettingsGroup } from "./settingsShape";
+import { coerceSettings, type CompanionSettings, type SettingsGroup } from "./settingsShape";
 
 // Ré-exportés pour que les appelants n'aient qu'une porte d'entrée.
 export * from "./settingsShape";

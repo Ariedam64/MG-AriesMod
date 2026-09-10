@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.205
+// @version      3.2.206
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -3027,18 +3027,18 @@
       const catalog = read(source.key);
       if (!catalog) continue;
       for (const [id, raw] of Object.entries(catalog)) {
-        const record = raw;
-        if (!record || typeof record !== "object") continue;
+        const record2 = raw;
+        if (!record2 || typeof record2 !== "object") continue;
         for (const path of source.paths) {
-          const holder = path === null ? record : record[path];
-          if (!holder || typeof holder !== "object") continue;
-          const url = typeof holder.sprite === "string" ? holder.sprite : "";
+          const holder2 = path === null ? record2 : record2[path];
+          if (!holder2 || typeof holder2 !== "object") continue;
+          const url = typeof holder2.sprite === "string" ? holder2.sprite : "";
           if (!url) continue;
           const entry = catalogEntryFor(url);
           if (!entry) continue;
           addCatalogAlias(entry.name, entry);
           addCatalogAlias(id, entry);
-          if (typeof holder.name === "string") addCatalogAlias(holder.name, entry);
+          if (typeof holder2.name === "string") addCatalogAlias(holder2.name, entry);
         }
       }
     }
@@ -8562,12 +8562,12 @@
   }
   function readCropSize(source) {
     if (!source || typeof source !== "object") return null;
-    const record = source;
-    const direct = toFinite(record.size);
+    const record2 = source;
+    const direct = toFinite(record2.size);
     if (direct != null) return clampCropSize(direct);
-    const legacy = toFinite(record.targetScale) ?? toFinite(record.scale);
+    const legacy = toFinite(record2.targetScale) ?? toFinite(record2.scale);
     if (legacy == null) return null;
-    return legacyScaleToCropSize(legacy, getMaxSizeMultiplier(record.species));
+    return legacyScaleToCropSize(legacy, getMaxSizeMultiplier(record2.species));
   }
 
   // src/services/locker.ts
@@ -16443,18 +16443,18 @@
     root.style.boxSizing = "border-box";
     root.style.overflow = "hidden";
     const preview = createPreviewBox();
-    const holder = document.createElement("div");
-    holder.style.width = `${PREVIEW_SIZE_PX}px`;
-    holder.style.height = `${PREVIEW_SIZE_PX}px`;
-    holder.style.display = "grid";
-    holder.style.placeItems = "center";
-    preview.appendChild(holder);
+    const holder2 = document.createElement("div");
+    holder2.style.width = `${PREVIEW_SIZE_PX}px`;
+    holder2.style.height = `${PREVIEW_SIZE_PX}px`;
+    holder2.style.display = "grid";
+    holder2.style.placeItems = "center";
+    preview.appendChild(holder2);
     const renderSprite = (spriteIds2, mirrored2) => {
-      holder.innerHTML = "";
-      holder.style.transform = mirrored2 ? "scaleX(-1)" : "none";
-      attachSpriteIcon(holder, ["decor"], spriteIds2, PREVIEW_SIZE_PX, SPRITE_LOG_TAG, {
+      holder2.innerHTML = "";
+      holder2.style.transform = mirrored2 ? "scaleX(-1)" : "none";
+      attachSpriteIcon(holder2, ["decor"], spriteIds2, PREVIEW_SIZE_PX, SPRITE_LOG_TAG, {
         onNoSpriteFound: () => {
-          holder.textContent = (decorId || "D").charAt(0).toUpperCase();
+          holder2.textContent = (decorId || "D").charAt(0).toUpperCase();
         }
       });
     };
@@ -19783,8 +19783,8 @@
     const cols = Number(mapData?.cols);
     if (!mapData || !Number.isFinite(cols) || cols <= 0) return [];
     const out = [];
-    const collect = (record, localIdxKey, kind) => {
-      for (const [gidxStr, meta] of Object.entries(record || {})) {
+    const collect = (record2, localIdxKey, kind) => {
+      for (const [gidxStr, meta] of Object.entries(record2 || {})) {
         if (meta?.userSlotIdx !== userSlotIdx) continue;
         const gidx = Number(gidxStr);
         if (!Number.isFinite(gidx)) continue;
@@ -20883,7 +20883,7 @@
     const proto = NativeWS.prototype;
     if (proto.__qwsSendPatched) return;
     const originalSend = proto.send;
-    proto.send = function(data, ...rest) {
+    proto.send = function(data, ...rest2) {
       try {
         if (typeof data === "string" && data.indexOf('"QuinoaCommand"') !== -1) {
           const parsed = JSON.parse(data);
@@ -20893,7 +20893,7 @@
             let envelope = parsed;
             const type = command.type;
             if (!isOwnCommand && type && interceptorsByType.size > 0) {
-              const result = applyInterceptors(type, command, { thisArg: this, args: rest });
+              const result = applyInterceptors(type, command, { thisArg: this, args: rest2 });
               if (result.drop) return;
               if (result.message !== command) {
                 envelope = { ...envelope, command: result.message };
@@ -20906,7 +20906,7 @@
       } catch (error) {
         console.error("[MG-mod] Erreur dans le hook WS send :", error);
       }
-      return originalSend.call(this, data, ...rest);
+      return originalSend.call(this, data, ...rest2);
     };
     proto.__qwsSendPatched = true;
   }
@@ -21022,13 +21022,13 @@
       if (!Conn) return false;
       const original = resolveSendMessage(Conn);
       if (!original) return false;
-      const wrap = function(message, ...rest) {
+      const wrap = function(message, ...rest2) {
         let currentMessage = message;
         try {
           const isEnvelope = currentMessage?.type === "QuinoaCommand" && currentMessage?.command && typeof currentMessage.command === "object";
           const type = currentMessage?.type;
           if (!isEnvelope && type && interceptorsByType.size > 0) {
-            const context = { thisArg: this, args: rest };
+            const context = { thisArg: this, args: rest2 };
             const result = applyInterceptors(type, currentMessage, context);
             if (result.drop) return;
             currentMessage = result.message;
@@ -21036,7 +21036,7 @@
         } catch (error) {
           console.error("[MG-mod] Erreur dans le hook WS :", error);
         }
-        return original.fn.call(this, currentMessage, ...rest);
+        return original.fn.call(this, currentMessage, ...rest2);
       };
       if (original.kind === "static") {
         Conn.sendMessage = wrap;
@@ -21563,10 +21563,10 @@
     return value.startsWith(ROOM_ID_PREFIX);
   }
   function readFirstKey(source, keys, skipRoomIds = false) {
-    const record = asRecord(source);
-    if (!record) return null;
+    const record2 = asRecord(source);
+    if (!record2) return null;
     for (const key2 of keys) {
-      const value = record[key2];
+      const value = record2[key2];
       if (typeof value === "string" && value.length > 0) {
         if (skipRoomIds && looksLikeRoomId(value)) continue;
         return value;
@@ -22861,7 +22861,7 @@
           byId.delete(id);
         }
       }
-      for (const rest of byId.values()) next.push(rest);
+      for (const rest2 of byId.values()) next.push(rest2);
       this._teams = next;
       saveTeams(this._teams);
       this._notifyTeamSubs();
@@ -31581,7 +31581,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.205";
+      return "3.2.206";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -34591,9 +34591,9 @@
   function getActionLabel(action2) {
     const preset = ACTION_LABELS[action2];
     if (preset) return preset;
-    const spaced = String(action2 || "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
-    if (!spaced) return String(action2 || "");
-    return spaced.split(" ").map((word) => word ? word.charAt(0).toUpperCase() + word.slice(1) : word).join(" ");
+    const spaced2 = String(action2 || "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!spaced2) return String(action2 || "");
+    return spaced2.split(" ").map((word) => word ? word.charAt(0).toUpperCase() + word.slice(1) : word).join(" ");
   }
   function mergeActions(actions) {
     const seen = /* @__PURE__ */ new Set();
@@ -38181,9 +38181,9 @@ next: ${next}`;
     return out;
   }
   var sanitizeFileComponent = (value) => value.replace(/[^a-z0-9_\-]+/gi, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "") || "sprite";
-  var buildSpriteFilename = (record, mutations) => {
+  var buildSpriteFilename = (record2, mutations) => {
     const mutSegment = mutations.length ? `-${mutations.map((m) => sanitizeFileComponent(m)).join("_")}` : "";
-    return `${sanitizeFileComponent(record.category)}-${sanitizeFileComponent(record.name)}${mutSegment}.png`;
+    return `${sanitizeFileComponent(record2.category)}-${sanitizeFileComponent(record2.name)}${mutSegment}.png`;
   };
   var COLOR_SELECTIONS = ["None", ...MUT_G1];
   var CONDITION_SELECTIONS = ["None", ...MUT_G2];
@@ -38333,8 +38333,8 @@ next: ${next}`;
       });
       container.append(heading, row);
     }
-    function previewUrlFor(record, mutations) {
-      return mutations.length ? composedSpriteUrl(record.category, record.name, mutations) : record.url;
+    function previewUrlFor(record2, mutations) {
+      return mutations.length ? composedSpriteUrl(record2.category, record2.name, mutations) : record2.url;
     }
     function renderSpriteCards(records) {
       if (!records.length) {
@@ -38343,37 +38343,37 @@ next: ${next}`;
       }
       const activeMutations = getActiveMutations();
       previewArea.innerHTML = "";
-      records.forEach((record) => {
+      records.forEach((record2) => {
         const card3 = document.createElement("div");
         card3.className = "dd-sprite-grid__item";
-        card3.title = `${record.category}/${record.name}`;
+        card3.title = `${record2.category}/${record2.name}`;
         const imgWrap = document.createElement("div");
         imgWrap.className = "dd-sprite-grid__img";
         imgWrap.style.setProperty("--sprite-size", `${SPRITE_ICON_SIZE}px`);
         const iconSlot = document.createElement("span");
         iconSlot.className = "dd-sprite-grid__icon";
         const img = document.createElement("img");
-        img.alt = record.name;
+        img.alt = record2.name;
         img.decoding = "async";
         img.loading = "lazy";
         img.addEventListener("error", () => {
           if (img.dataset.fallbackApplied) return;
           img.dataset.fallbackApplied = "1";
-          setImageSafe(img, record.url);
+          setImageSafe(img, record2.url);
         });
         iconSlot.appendChild(img);
-        setImageSafe(img, previewUrlFor(record, activeMutations));
+        setImageSafe(img, previewUrlFor(record2, activeMutations));
         imgWrap.appendChild(iconSlot);
         const nameEl = document.createElement("span");
         nameEl.className = "dd-sprite-grid__name";
-        nameEl.textContent = record.name;
+        nameEl.textContent = record2.name;
         const meta = document.createElement("span");
         meta.className = "dd-sprite-grid__meta";
-        meta.textContent = `${record.category}/${record.name}`;
+        meta.textContent = `${record2.category}/${record2.name}`;
         card3.append(imgWrap, nameEl, meta);
         const triggerDownload = () => {
           if (downloadInProgress) return;
-          void downloadSpriteRecord(record, getActiveMutations());
+          void downloadSpriteRecord(record2, getActiveMutations());
         };
         card3.addEventListener("click", triggerDownload);
         card3.addEventListener("keydown", (event) => {
@@ -38424,10 +38424,10 @@ next: ${next}`;
       }, 150);
     });
     void updateList();
-    async function downloadSpriteRecord(record, mutations) {
-      const bytes = await mgApiGetBinary(previewUrlFor(record, mutations));
+    async function downloadSpriteRecord(record2, mutations) {
+      const bytes = await mgApiGetBinary(previewUrlFor(record2, mutations));
       if (!bytes) return;
-      triggerBlobDownload(new Blob([bytes], { type: "image/png" }), buildSpriteFilename(record, mutations));
+      triggerBlobDownload(new Blob([bytes], { type: "image/png" }), buildSpriteFilename(record2, mutations));
     }
     async function downloadVisibleSprites() {
       if (!visibleSpriteRecords.length || downloadInProgress) return;
@@ -38437,10 +38437,10 @@ next: ${next}`;
       try {
         const activeMutations = getActiveMutations();
         const files = [];
-        for (const record of visibleSpriteRecords) {
-          const bytes = await mgApiGetBinary(previewUrlFor(record, activeMutations));
+        for (const record2 of visibleSpriteRecords) {
+          const bytes = await mgApiGetBinary(previewUrlFor(record2, activeMutations));
           if (!bytes) continue;
-          files.push({ name: buildSpriteFilename(record, activeMutations), dataUrl: arrayBufferToDataUrl(bytes, "image/png") });
+          files.push({ name: buildSpriteFilename(record2, activeMutations), dataUrl: arrayBufferToDataUrl(bytes, "image/png") });
           downloadBtn.textContent = `Collected ${files.length}/${visibleSpriteRecords.length}`;
         }
         if (!files.length) return;
@@ -41187,9 +41187,9 @@ next: ${next}`;
     return getLockerCache().bySeedName.get(name) ?? "\u2022";
   };
   function formatMutationLabel(key2) {
-    const spaced = key2.replace(/_/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/\s+/g, " ").trim();
-    if (!spaced) return key2;
-    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+    const spaced2 = key2.replace(/_/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/\s+/g, " ").trim();
+    if (!spaced2) return key2;
+    return spaced2.charAt(0).toUpperCase() + spaced2.slice(1);
   }
   var WEATHER_MUTATION_LABELS = tileRefsMutationLabels2 ?? {};
   var WEATHER_MUTATIONS = Object.entries(
@@ -47153,8 +47153,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/ui/menus/petsTeamBuilder.ts
   var miniSpriteCache = /* @__PURE__ */ new Map();
   function mkMiniIcon(pet, size = 24) {
-    const holder = document.createElement("div");
-    Object.assign(holder.style, {
+    const holder2 = document.createElement("div");
+    Object.assign(holder2.style, {
       width: `${size}px`,
       height: `${size}px`,
       borderRadius: "9px",
@@ -47169,9 +47169,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "0 0 auto"
     });
     if (!pet) {
-      holder.style.opacity = "0.35";
-      holder.textContent = "\xB7";
-      return holder;
+      holder2.style.opacity = "0.35";
+      holder2.textContent = "\xB7";
+      return holder2;
     }
     const species = pet.petSpecies || "";
     const mutKey = Array.isArray(pet.mutations) ? pet.mutations.join(",") : "";
@@ -47186,23 +47186,23 @@ Restore figures are averages; unlucky streaks do worse.`;
       img.style.width = `${size}px`;
       img.style.height = `${size}px`;
       img.style.objectFit = "contain";
-      holder.replaceChildren(img);
+      holder2.replaceChildren(img);
     };
     const cached = miniSpriteCache.get(cacheKey);
     if (cached) {
       applyImg(cached);
-      return holder;
+      return holder2;
     }
-    attachSpriteIcon(holder, ["pet"], species, size, "pet-teambuilder-mini", {
+    attachSpriteIcon(holder2, ["pet"], species, size, "pet-teambuilder-mini", {
       mutations: pet.mutations,
       onSpriteApplied: (img) => {
         miniSpriteCache.set(cacheKey, img.src);
       },
       onNoSpriteFound: () => {
-        holder.textContent = (species || pet.name || "pet").charAt(0).toUpperCase();
+        holder2.textContent = (species || pet.name || "pet").charAt(0).toUpperCase();
       }
     });
-    return holder;
+    return holder2;
   }
   function abilityChipsFor(pet) {
     const wrap = document.createElement("span");
@@ -47635,8 +47635,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     let sortDir = "desc";
     let search2 = "";
     function petIcon(log2) {
-      const holder = document.createElement("div");
-      css2(holder, {
+      const holder2 = document.createElement("div");
+      css2(holder2, {
         width: `${PET_ICON_PX}px`,
         height: `${PET_ICON_PX}px`,
         borderRadius: "7px",
@@ -47664,23 +47664,23 @@ Restore figures are averages; unlucky streaks do worse.`;
           objectFit: "contain",
           imageRendering: "auto"
         });
-        holder.replaceChildren(img);
+        holder2.replaceChildren(img);
       };
       const cached = cacheKey ? petSpriteCache.get(cacheKey) : void 0;
       if (cached) {
         applyImg(cached);
-        return holder;
+        return holder2;
       }
-      holder.textContent = (log2.petName || species || "pet").charAt(0).toUpperCase() || "\u{1F43E}";
+      holder2.textContent = (log2.petName || species || "pet").charAt(0).toUpperCase() || "\u{1F43E}";
       if (species) {
-        attachSpriteIcon(holder, ["pet"], species, PET_ICON_PX, "pet-log", {
+        attachSpriteIcon(holder2, ["pet"], species, PET_ICON_PX, "pet-log", {
           mutations,
           onSpriteApplied: (img) => {
             petSpriteCache.set(cacheKey, img.src);
           }
         });
       }
-      return holder;
+      return holder2;
     }
     function whenCell(log2) {
       const cell = document.createElement("div");
@@ -47937,8 +47937,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const mkMiniIcon2 = (pet) => {
       const size = 18;
-      const holder = document.createElement("div");
-      Object.assign(holder.style, {
+      const holder2 = document.createElement("div");
+      Object.assign(holder2.style, {
         width: `${size}px`,
         height: `${size}px`,
         borderRadius: "6px",
@@ -47952,9 +47952,9 @@ Restore figures are averages; unlucky streaks do worse.`;
         color: "#e2e8f0"
       });
       if (!pet) {
-        holder.style.opacity = "0.35";
-        holder.textContent = "\xB7";
-        return holder;
+        holder2.style.opacity = "0.35";
+        holder2.textContent = "\xB7";
+        return holder2;
       }
       const species = pet.petSpecies || "";
       const mutKey = Array.isArray(pet.mutations) ? pet.mutations.join(",") : "";
@@ -47970,23 +47970,23 @@ Restore figures are averages; unlucky streaks do worse.`;
         img.style.height = `${size}px`;
         img.style.objectFit = "contain";
         img.style.imageRendering = "auto";
-        holder.replaceChildren(img);
+        holder2.replaceChildren(img);
       };
       const cached = miniSpriteCache2.get(cacheKey);
       if (cached) {
         applyImg(cached);
-        return holder;
+        return holder2;
       }
-      attachSpriteIcon(holder, ["pet"], species, size, "pet-team-mini", {
+      attachSpriteIcon(holder2, ["pet"], species, size, "pet-team-mini", {
         mutations: pet.mutations,
         onSpriteApplied: (img) => {
           miniSpriteCache2.set(cacheKey, img.src);
         },
         onNoSpriteFound: () => {
-          holder.textContent = (species || pet.name || "pet").charAt(0).toUpperCase();
+          holder2.textContent = (species || pet.name || "pet").charAt(0).toUpperCase();
         }
       });
-      return holder;
+      return holder2;
     };
     const framed = (title, content) => {
       const cardSection = ui.card(title, { tone: "muted", align: "center" });
@@ -49191,8 +49191,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     const total = Math.max(0, Math.round(seconds));
     if (total < 60) return `${total} s`;
     const minutes = Math.floor(total / 60);
-    const rest = total % 60;
-    return rest === 0 ? `${minutes} min` : `${minutes} min ${rest} s`;
+    const rest2 = total % 60;
+    return rest2 === 0 ? `${minutes} min` : `${minutes} min ${rest2} s`;
   };
   function isSectionCollapsed(sectionId) {
     return getAriesStorage().misc?.collapsed?.[sectionId] === true;
@@ -53228,10 +53228,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const root = globalThis.unsafeWindow || globalThis;
     const pixi = root.PIXI;
-    for (const holder of [pixi?.Assets, pixi?.Cache]) {
-      if (typeof holder?.get !== "function") continue;
+    for (const holder2 of [pixi?.Assets, pixi?.Cache]) {
+      if (typeof holder2?.get !== "function") continue;
       try {
-        const hit = holder.get(frameKey);
+        const hit = holder2.get(frameKey);
         if (hit && frameRectOf(hit)) return hit;
       } catch {
       }
@@ -53343,12 +53343,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     const viaLabel = consider(labelMatch, false);
     const viaRect = consider(rectMatch, true);
     const failures = [];
-    const record = (retargeted, nodesPoked2) => {
+    const record2 = (retargeted, nodesPoked2) => {
       debugState3.lastApply[frameKey] = { viaLabel, viaRect, retargeted, nodesPoked: nodesPoked2, failures };
     };
     if (!textures.length) {
       failures.push("no texture found");
-      record(0, 0);
+      record2(0, 0);
       return false;
     }
     let skinSource;
@@ -53356,12 +53356,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       skinSource = sourceOf(Texture.from(canvas));
     } catch (error) {
       failures.push(`Texture.from: ${String(error)}`);
-      record(0, 0);
+      record2(0, 0);
       return false;
     }
     if (!skinSource) {
       failures.push("skin source missing");
-      record(0, 0);
+      record2(0, 0);
       return false;
     }
     const originals = [];
@@ -53378,7 +53378,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     for (const node of nodes) {
       if (pokeNode(node, Texture)) nodesPoked += 1;
     }
-    record(originals.length, nodesPoked);
+    record2(originals.length, nodesPoked);
     if (!originals.length) return false;
     applied.set(frameKey, { originals, nodes });
     return true;
@@ -53509,8 +53509,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return null;
   }
   function findRenderTextureCache() {
-    for (const holder of holders()) {
-      if (hasRebake(holder?.renderTextureCache)) return holder.renderTextureCache;
+    for (const holder2 of holders()) {
+      if (hasRebake(holder2?.renderTextureCache)) return holder2.renderTextureCache;
     }
     return search("renderTextureCache", hasRebake);
   }
@@ -54767,11 +54767,22 @@ Restore figures are averages; unlucky streaks do worse.`;
     for (const row of rows) bySpecies2.set(row.species, (bySpecies2.get(row.species) ?? 0) + 1);
     const parts = [...bySpecies2.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([species, count]) => `${count} ${species}`);
     const head = parts.slice(0, 3);
-    const rest = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
+    const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
     const total = `${rows.length} crop${rows.length === 1 ? "" : "s"}`;
     if (parts.length === 1) return `${parts[0]} ready`;
-    return `${total} ready: ${listWords(head)}${rest}`;
+    return `${total} ready: ${listWords(head)}${rest2}`;
   }
+
+  // src/services/companion/emoteTypes.ts
+  var EmoteType = {
+    Idle: -1,
+    Clapping: 0,
+    Laughing: 1,
+    Angered: 2,
+    Crying: 3,
+    Questioning: 4,
+    Love: 5
+  };
 
   // src/services/companion/chat/hatch.ts
   var DEFAULT_KEEP_RULES = {
@@ -54794,6 +54805,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (rules.abilities.some((ability) => pet.abilities.includes(ability))) return true;
     if (rules.minMaxStr !== null && pet.maxStrength !== null && pet.maxStrength >= rules.minMaxStr) return true;
     return false;
+  }
+  var CHEERED_MUTATIONS = ["Rainbow", "Gold"];
+  function hatchCheer(pets, rules) {
+    const kept = pets.filter((pet) => matchesKeep(pet, rules));
+    if (kept.length === 0) return null;
+    for (const mutation of CHEERED_MUTATIONS) {
+      const star = kept.find((pet) => hasAny(pet.mutations, [mutation]));
+      if (star) return { emote: EmoteType.Love, star, mutation };
+    }
+    return { emote: EmoteType.Clapping, star: null, mutation: null };
   }
   function isProtected(pet, rules) {
     return pet.favorited || pet.onTeam || matchesKeep(pet, rules);
@@ -54837,9 +54858,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (pets.length === 0) return "nothing";
     const parts = bySpecies(pets).map((entry) => `${entry.count} ${entry.species}`);
     const head = parts.slice(0, 3);
-    const rest = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
+    const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
     if (parts.length === 1) return parts[0];
-    return `${pets.length} pets: ${listWords(head)}${rest}`;
+    return `${pets.length} pets: ${listWords(head)}${rest2}`;
   }
 
   // src/services/companion/settingsShape.ts
@@ -55122,7 +55143,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function diagnoseCompanion(npcId, sampleMs = DEFAULT_SAMPLE_MS) {
     const seen = [];
-    const record = (entries) => {
+    const record2 = (entries) => {
       const entry = Array.isArray(entries) ? entries.find((e) => e?.playerId === npcId) : null;
       const pos = entry?.position;
       if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return;
@@ -55132,7 +55153,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     let unsub = null;
     try {
-      unsub = await npcQuinoaUsers.onChangeNow((next) => record(next));
+      unsub = await npcQuinoaUsers.onChangeNow((next) => record2(next));
     } catch {
       return {
         observations: 0,
@@ -55281,9 +55302,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     const atom = getAtomByLabel(CHAT_BUBBLES_LABEL);
     if (!atom || typeof atom.write !== "function") return false;
     const original = atom.write;
-    atom.write = function(get2, set2, update, ...rest) {
+    atom.write = function(get2, set2, update, ...rest2) {
       const next = typeof update === "function" ? update : rewritePayload(update);
-      return original.call(this, get2, set2, next, ...rest);
+      return original.call(this, get2, set2, next, ...rest2);
     };
     wrapped = { atom, original };
     return true;
@@ -55299,8 +55320,57 @@ Restore figures are averages; unlucky streaks do worse.`;
     wrapped = null;
   }
 
+  // src/services/companion/emote.ts
+  var EMOTES_LABEL = "playerEmoteTypesAtom";
+  var playerEmotes = makeAtom(EMOTES_LABEL);
+  var EMOTE_DURATION_MS = 1500;
+  var releaseTimer = null;
+  var posing = null;
+  function record(previous) {
+    return previous && typeof previous === "object" ? previous : {};
+  }
+  async function rest(playerId2) {
+    try {
+      await playerEmotes.update((previous) => {
+        const current = record(previous);
+        if (!(playerId2 in current)) return current;
+        const next = { ...current };
+        delete next[playerId2];
+        return next;
+      });
+    } catch {
+    }
+  }
+  function cancelPending() {
+    if (releaseTimer === null) return;
+    window.clearTimeout(releaseTimer);
+    releaseTimer = null;
+  }
+  async function playEmote(playerId2, emote, durationMs = EMOTE_DURATION_MS) {
+    if (!playerId2 || emote === EmoteType.Idle) return;
+    cancelPending();
+    posing = playerId2;
+    try {
+      await playerEmotes.update((previous) => ({ ...record(previous), [playerId2]: emote }));
+    } catch {
+      posing = null;
+      return;
+    }
+    releaseTimer = window.setTimeout(() => {
+      releaseTimer = null;
+      posing = null;
+      void rest(playerId2);
+    }, durationMs);
+  }
+  async function stopEmote() {
+    cancelPending();
+    const playerId2 = posing;
+    posing = null;
+    if (playerId2) await rest(playerId2);
+  }
+
   // src/services/companion/index.ts
-  var CHAT_BUBBLE_MIN_INTERVAL_MS = 1200;
+  var CHAT_BUBBLE_MIN_INTERVAL_MS = 250;
   var RENDER_WAIT_TIMEOUT_MS = 1500;
   var CONTEXTUAL_REFRESH_MS = 1e4;
   var npcChatBubbles = makeAtom("npcChatBubblesAtom");
@@ -55463,8 +55533,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     return true;
   }
   var WALK_TIMEOUT_MS = 5e3;
-  var ARRIVAL_POLL_MS = 100;
+  var ARRIVAL_POLL_MS = 50;
   var NEARBY_DISTANCE = 3;
+  var STILL_POLL_MS = 150;
+  var STILL_TIMEOUT_MS = 1e4;
+  var stillToken = 0;
   var CompanionService = {
     isRunning() {
       return runtime !== null;
@@ -55547,6 +55620,59 @@ Restore figures are averages; unlucky streaks do worse.`;
     getNpcId() {
       return runtime?.npcId ?? null;
     },
+    /**
+     * Fait jouer une emote au PNJ, le temps que le jeu s'accorde lui-même.
+     *
+     * Sans effet quand le companion n'est pas incarné : il n'y a alors aucune vue
+     * à animer. C'est du décor local — rien ne part sur le réseau, et l'appelant
+     * n'a donc pas à demander de confirmation pour ça.
+     *
+     * `holdMs` prolonge la pose au-delà de la durée par défaut, pour un moment
+     * qui mérite qu'on s'y arrête.
+     */
+    async emote(emote, holdMs) {
+      const rt = runtime;
+      if (!rt) return;
+      await playEmote(rt.npcId, emote, holdMs);
+    },
+    /**
+     * Emote une fois qu'il est arrivé et qu'il ne bouge plus.
+     *
+     * Une pose jouée en pleine marche passe inaperçue : elle se déroule pendant
+     * qu'il glisse d'une case à l'autre, et le joueur ne voit qu'un avatar qui
+     * traverse. On attend donc qu'il soit posé.
+     *
+     * Deux conditions, et il faut les deux. Plus aucune tâche en cours, ce qui
+     * couvre le trajet qu'on vient de lui donner — une question posée juste avant
+     * qu'il parte rejoindre le joueur attend ainsi son arrivée. Et la même tuile
+     * sur deux relevés consécutifs, parce que l'avatar interpole entre deux cases
+     * et qu'il glisse encore un instant après avoir atteint la dernière.
+     *
+     * Le premier relevé ne peut donc jamais déclencher : c'est voulu, ce délai de
+     * grâce laisse le temps à un ordre de déplacement imminent d'être enregistré.
+     *
+     * Abandonne en silence s'il ne se pose jamais. Un joueur qui marche sans
+     * s'arrêter entraîne le companion avec lui, et la question reste de toute
+     * façon lisible dans la bulle comme dans le fil.
+     */
+    async emoteWhenStill(emote, timeoutMs = STILL_TIMEOUT_MS) {
+      const rt = runtime;
+      if (!rt) return;
+      const token = ++stillToken;
+      const deadline = Date.now() + timeoutMs;
+      let previous = null;
+      while (Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, STILL_POLL_MS));
+        if (token !== stillToken || runtime !== rt) return;
+        const here = rt.movement.tile;
+        const still = rt.task === null && here !== null && previous !== null && manhattan(here, previous) === 0;
+        previous = here;
+        if (still) {
+          await playEmote(rt.npcId, emote);
+          return;
+        }
+      }
+    },
     getSettings() {
       return runtime?.settings ?? loadCompanionSettings();
     },
@@ -55581,6 +55707,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const rt = runtime;
       runtime = null;
       uninstallSpeechRewriter();
+      await stopEmote();
       if (!rt) {
         await disposeInjection();
         return;
@@ -55650,11 +55777,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       const now2 = Date.now();
       if (!opts.force && now2 - rt.lastBubbleAt < CHAT_BUBBLE_MIN_INTERVAL_MS) return;
       rt.lastBubbleAt = now2;
+      const tagged = opts.tags && Object.keys(opts.tags).length > 0 ? { tags: opts.tags } : {};
       try {
         await npcChatBubbles.set({
           // Marqué comme écrit par le mod : sans ça, l'interception réécrirait
           // notre propre message avec une réplique tirée au hasard.
-          [rt.npcId]: { seq: 0, playerId: rt.npcId, message, timestamp: now2, [AUTHORED_BY_MOD]: true }
+          [rt.npcId]: { seq: 0, playerId: rt.npcId, message, timestamp: now2, ...tagged, [AUTHORED_BY_MOD]: true }
         });
       } catch {
       }
@@ -55743,6 +55871,107 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
 
+  // src/services/companion/chat/bubbleTags.ts
+  function compose(...fragments) {
+    const tags = {};
+    let message = "";
+    let next = 0;
+    for (const fragment of fragments) {
+      if (fragment === null || fragment === void 0) continue;
+      if (typeof fragment === "string") {
+        message += fragment;
+        continue;
+      }
+      tags[next] = fragment;
+      message += `<${next}/>`;
+      next += 1;
+    }
+    const tidy = tidySpacing(message);
+    return next === 0 ? { message: tidy } : { message: tidy, tags };
+  }
+  function tidySpacing(message) {
+    return message.replace(/[ \t]{2,}/g, " ").replace(/\s+([.,!?])/g, "$1").trim();
+  }
+  function spaced(tags) {
+    return tags.flatMap((tag, index) => index === 0 ? [tag] : [" ", tag]);
+  }
+  function mutationChip(mutation, backgroundColor) {
+    return { mutation, ...backgroundColor === void 0 ? {} : { backgroundColor } };
+  }
+  function forGame(line) {
+    if (!line.tags) return line;
+    const kept = {};
+    const dropped = /* @__PURE__ */ new Set();
+    for (const [index, tag] of Object.entries(line.tags)) {
+      if ("gameThing" in tag && tag.modOnly === true) dropped.add(Number(index));
+      else kept[Number(index)] = tag;
+    }
+    if (dropped.size === 0) return line;
+    const message = tidySpacing(
+      line.message.replace(/<(\d+)\/>/g, (marker, index) => dropped.has(Number(index)) ? "" : marker)
+    );
+    return Object.keys(kept).length > 0 ? { message, tags: kept } : { message };
+  }
+
+  // src/services/companion/chat/bubbleIcons.ts
+  var BUBBLE_ICON_PX = 28;
+  var PET_ICON_PX2 = 20;
+  function spriteKeyOf(entry) {
+    if (typeof entry?.tileRef === "string" && entry.tileRef) return entry.tileRef;
+    const url = entry?.sprite;
+    if (typeof url !== "string" || !url) return null;
+    if (url.startsWith("sprite/")) return url;
+    const parts = url.split(/[?#]/)[0].split("/").filter(Boolean);
+    if (parts.length < 2) return null;
+    const name = parts[parts.length - 1].replace(/\.[a-z0-9]+$/i, "");
+    const category = API_TO_INTERNAL[parts[parts.length - 2].toLowerCase()];
+    return name && category ? `sprite/${category}/${name}` : null;
+  }
+  function thing(entry, label2, iconSizePx = BUBBLE_ICON_PX) {
+    const sprite = spriteKeyOf(entry);
+    if (!sprite) return null;
+    return { gameThing: { name: label2, sprite }, iconSizePx };
+  }
+  function plantEntry(species) {
+    return plantCatalog2[species];
+  }
+  function cropIcon(species) {
+    const entry = plantEntry(species);
+    return thing(entry?.crop ?? entry?.plant, "");
+  }
+  function seedIcon(species) {
+    return thing(plantEntry(species)?.seed, "");
+  }
+  function eggIcon(eggId) {
+    return thing(eggCatalog2[eggId], "");
+  }
+  function variantIcons(species, mutations) {
+    const crop = cropIcon(species);
+    return [...crop ? [crop] : [], ...mutationChips(mutations)];
+  }
+  function petSpeciesIcon(species) {
+    return thing(petCatalog2[species], "", PET_ICON_PX2);
+  }
+  function petThing(item, name) {
+    if (!item || typeof item !== "object") return null;
+    return { petThing: { name, pet: item }, iconSizePx: PET_ICON_PX2 };
+  }
+  function petRowIcons(pets, limit = 2) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const pet of pets) counts.set(pet.species, (counts.get(pet.species) ?? 0) + 1);
+    const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, limit).map(([species]) => species);
+    const icons = [];
+    for (const species of ranked) {
+      const one = pets.find((pet) => pet.species === species);
+      const icon = petThing(one?.item, "") ?? petSpeciesIcon(species);
+      if (icon) icons.push(icon);
+    }
+    return icons;
+  }
+  function mutationChips(mutations, backgroundColor) {
+    return mutations.map((mutation) => ({ ...mutationChip(mutation, backgroundColor), iconSizePx: BUBBLE_ICON_PX }));
+  }
+
   // src/services/companion/chat/log.ts
   var MAX_MESSAGES = 200;
   function emptyLog() {
@@ -55755,7 +55984,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       from: message.from,
       kind: message.kind,
       text: message.text,
-      ...message.proposalId ? { proposalId: message.proposalId } : {}
+      ...message.proposalId ? { proposalId: message.proposalId } : {},
+      ...message.icons && message.icons.length > 0 ? { icons: message.icons } : {},
+      ...message.positioned ? { positioned: true } : {}
     };
     const messages = [...log2.messages, entry];
     return {
@@ -55775,14 +56006,28 @@ Restore figures are averages; unlucky streaks do worse.`;
     const messages = log2.messages.map((entry) => {
       if (entry.proposalId !== proposalId) return entry;
       changed = true;
-      const { proposalId: _dropped, ...rest } = entry;
-      return rest;
+      const { proposalId: _dropped, ...rest2 } = entry;
+      return rest2;
     });
     return changed ? { ...log2, messages } : log2;
   }
 
   // src/services/companion/chat/batch.ts
-  var ACTION_DELAY_MS = 500;
+  var ACTION_DELAY_MS = 350;
+  function pacer(minGapMs = ACTION_DELAY_MS) {
+    let lastAt = 0;
+    return {
+      /** À appeler juste après un envoi. */
+      mark() {
+        lastAt = Date.now();
+      },
+      /** Attend ce qui manque pour respecter l'écart. À appeler juste avant un envoi. */
+      async wait() {
+        const missing = minGapMs - (Date.now() - lastAt);
+        if (missing > 0) await sleep5(missing);
+      }
+    };
+  }
   var SETTLE_MS = 700;
   var PROGRESS_EVERY = 10;
   var sleep5 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -55859,7 +56104,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (slotIdx === null) return IDLE;
     let walking = true;
     let failures = 0;
-    const record = (arrived) => {
+    const record2 = (arrived) => {
       failures = arrived ? 0 : failures + 1;
       if (walking && failures >= GIVE_UP_AFTER) {
         walking = false;
@@ -55870,10 +56115,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     const goTo = async (tile) => {
       if (!walking) return;
       if (!tile) {
-        record(false);
+        record2(false);
         return;
       }
-      record(await CompanionService.walkTo(tile));
+      record2(await CompanionService.walkTo(tile));
     };
     return {
       async toGardenTile(dirtTileIdx) {
@@ -55885,7 +56130,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         const x = Number(position2?.x);
         const y = Number(position2?.y);
         if (!Number.isFinite(x) || !Number.isFinite(y)) {
-          record(false);
+          record2(false);
           return;
         }
         await goTo({ x: Math.round(x), y: Math.round(y) });
@@ -56114,6 +56359,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
 
   // src/services/companion/chat/harvestRun.ts
+  function topCrop(rows) {
+    const top = groupVariants(rows)[0];
+    return top ? cropIcon(top.species) : null;
+  }
   async function report(attempted, cancelled, reporter2) {
     if (attempted.length === 0) {
       reporter2.say("report", "Stopped before I picked anything.");
@@ -56139,7 +56388,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     const picked = attempted.length - stillRipe;
     if (picked > 0) StatsService.incrementGardenStat("totalHarvested", picked);
     if (stillRipe === 0) {
-      reporter2.say("report", cancelled ? `Stopped there. Got ${picked}.` : `All done, ${picked} picked.`);
+      const done = cancelled ? `Stopped there. Got ${picked}.` : `All done, ${picked} picked.`;
+      reporter2.say("report", done, compose(topCrop(attempted), " ", done));
       return;
     }
     if (picked === 0) {
@@ -56152,21 +56402,24 @@ Restore figures are averages; unlucky streaks do worse.`;
     reporter2.say("report", `Got ${picked} of ${attempted.length}${stopped}. ${stillRipe} still ripe.`);
   }
   async function executeHarvestBatch(rows, reporter2) {
-    reporter2.say("reply", `On it. Picking ${rows.length} now.`);
+    const opening = `On it. Picking ${rows.length} now.`;
+    reporter2.say("reply", opening, compose(topCrop(rows), " ", opening));
     const team = await wearTeam(loadCompanionSettings().harvestTeamId, reporter2);
     const walker = await createWalker((message) => reporter2.say("system", message));
     const attempted = [];
+    const pace = pacer();
     for (const row of rows) {
       if (reporter2.stopped()) break;
       await walker.toGardenTile(row.tileIndex);
+      await pace.wait();
       attempted.push(row);
       await PlayerService.harvestCrop(row.tileIndex, row.slotId);
+      pace.mark();
       const done = attempted.length;
       reporter2.progress(done, rows.length);
       if (done % PROGRESS_EVERY === 0 && done < rows.length) {
         reporter2.say("system", `${done} of ${rows.length} so far...`);
       }
-      await sleep5(ACTION_DELAY_MS);
     }
     walker.release();
     await team.restore();
@@ -56205,8 +56458,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const names = candidates.map((candidate) => candidate.petName);
     const head = names.slice(0, 3).join(", ");
-    const rest = names.length > 3 ? ` and ${names.length - 3} more` : "";
-    return `${candidates.length} pets are hungry: ${head}${rest}`;
+    const rest2 = names.length > 3 ? ` and ${names.length - 3} more` : "";
+    return `${candidates.length} pets are hungry: ${head}${rest2}`;
   }
 
   // src/services/companion/chat/petFeed.ts
@@ -56288,6 +56541,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         petId,
         petName: petNameOf(pet),
         petSpecies: species,
+        pet: pet?.slot,
         hungerPct: PetsService.getHungerPctFor(pet),
         source
       });
@@ -56302,8 +56556,41 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function findFeedable(search2) {
     return (await reviewFeeding(search2)).candidates;
   }
+  function iconOf2(pick) {
+    return petThing(pick.pet, "") ?? petSpeciesIcon(pick.petSpecies);
+  }
+  function feedBubble(picks) {
+    const only = picks.length === 1 ? picks[0] : null;
+    if (only) return compose(iconOf2(only), ` ${only.petName} is at ${only.hungerPct}%. Feed it?`);
+    const seen = /* @__PURE__ */ new Set();
+    const icons = picks.filter((pick) => !seen.has(pick.petSpecies) && seen.add(pick.petSpecies)).slice(0, 2).map(iconOf2);
+    return compose(...spaced(icons.filter((icon) => icon !== null)), ` ${picks.length} pets are hungry. Feed them all?`);
+  }
+  function feedQuestion(picks) {
+    const listed = picks.flatMap((pick, index) => [
+      index === 0 ? "" : ", ",
+      iconOf2(pick),
+      ` ${pick.petName} (${pick.hungerPct}%)`
+    ]);
+    return compose(
+      picks.length === 1 ? "" : `${picks.length} pets are hungry: `,
+      ...listed,
+      picks.length === 1 ? ". Should I feed it?" : ". Should I feed all of them?"
+    );
+  }
 
   // src/services/companion/chat/feedRun.ts
+  function petIcons(picks) {
+    const seen = /* @__PURE__ */ new Set();
+    const icons = [];
+    for (const pick of picks) {
+      if (seen.has(pick.petSpecies) || icons.length >= 2) continue;
+      seen.add(pick.petSpecies);
+      const icon = petThing(pick.pet, "") ?? petSpeciesIcon(pick.petSpecies);
+      if (icon) icons.push(icon);
+    }
+    return icons;
+  }
   var AFTER_HARVEST_MS = 700;
   var AFTER_FEED_MS = 400;
   var sleep6 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -56341,7 +56628,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { ok: true };
   }
   async function executeFeedBatch(picks, reporter2) {
-    reporter2.say("reply", picks.length === 1 ? "On it." : `On it. Feeding ${picks.length} of them.`);
+    const who = petIcons(picks);
+    const opening = picks.length === 1 ? "On it." : `On it. Feeding ${picks.length} of them.`;
+    reporter2.say("reply", opening, compose(...spaced(who), " ", opening));
     const walker = await createWalker((message) => reporter2.say("system", message));
     const fed = [];
     const failures = [];
@@ -56349,8 +56638,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (reporter2.stopped()) break;
       const outcome = await runFeed(pick, walker);
       if (outcome.ok) {
-        fed.push(pick.petName);
-        reporter2.say("system", `${pick.petName} has been fed.`);
+        fed.push(pick);
+        const fedLine = `${pick.petName} has been fed.`;
+        reporter2.say("system", fedLine, compose(petThing(pick.pet, "") ?? petSpeciesIcon(pick.petSpecies), " ", fedLine));
       } else {
         failures.push(`${pick.petName} (${outcome.reason})`);
       }
@@ -56363,8 +56653,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     const tail = failures.length > 0 ? ` I could not manage ${failures.join(", ")}.` : "";
-    const who = fed.length === 1 ? fed[0] : `${fed.slice(0, -1).join(", ")} and ${fed[fed.length - 1]}`;
-    reporter2.say("report", `${cancelled ? "Stopped there. " : ""}Fed ${who}.${tail}`);
+    const fedNames = fed.map((pick) => pick.petName);
+    const names = fedNames.length === 1 ? fedNames[0] : `${fedNames.slice(0, -1).join(", ")} and ${fedNames[fedNames.length - 1]}`;
+    const done = `${cancelled ? "Stopped there. " : ""}Fed ${names}.${tail}`;
+    reporter2.say("report", done, compose(...spaced(petIcons(fed)), " ", done));
   }
 
   // src/services/companion/chat/plant.ts
@@ -56418,8 +56710,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     const parts = countByItem(plan).map((entry) => `${entry.count} ${entry.name}`);
     if (parts.length === 0) return "nothing";
     const head = parts.slice(0, 3);
-    const rest = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
-    return `${listWords(head)}${rest}`;
+    const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
+    return `${listWords(head)}${rest2}`;
   }
   function describePlan(plan) {
     if (plan.length === 0) return "Plant nothing";
@@ -56500,6 +56792,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
 
   // src/services/companion/chat/plantRun.ts
+  function topSeed(plan) {
+    const most = countByItem(plan)[0];
+    return most?.kind === "seed" ? seedIcon(most.id) : null;
+  }
   async function send(assignment) {
     if (assignment.kind === "egg") {
       await PlayerService.plantEgg(assignment.tileIndex, assignment.id);
@@ -56532,7 +56828,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     if (planted > 0) StatsService.incrementGardenStat("totalPlanted", planted);
     if (planted === attempted.length) {
-      reporter2.say("report", cancelled ? `Stopped there. ${planted} are in the ground.` : `All done, ${planted} planted.`);
+      const done = cancelled ? `Stopped there. ${planted} are in the ground.` : `All done, ${planted} planted.`;
+      reporter2.say("report", done, compose(topSeed(attempted), " ", done));
       return;
     }
     if (planted === 0) {
@@ -56546,23 +56843,23 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function executePlantBatch(plan, reporter2) {
     const what = countByItem(plan);
-    reporter2.say(
-      "reply",
-      what.length === 1 ? `On it. Planting ${plan.length} ${what[0].name} now.` : `On it. Planting ${listPlantItems(plan)} now.`
-    );
+    const opening = what.length === 1 ? `On it. Planting ${plan.length} ${what[0].name} now.` : `On it. Planting ${listPlantItems(plan)} now.`;
+    reporter2.say("reply", opening, compose(topSeed(plan), " ", opening));
     const walker = await createWalker((message) => reporter2.say("system", message));
     const attempted = [];
+    const pace = pacer();
     for (const assignment of plan) {
       if (reporter2.stopped()) break;
       await walker.toGardenTile(assignment.tileIndex);
+      await pace.wait();
       attempted.push(assignment);
       await send(assignment);
+      pace.mark();
       const done = attempted.length;
       reporter2.progress(done, plan.length);
       if (done % PROGRESS_EVERY === 0 && done < plan.length) {
         reporter2.say("system", `${done} of ${plan.length} in the ground so far...`);
       }
-      await sleep5(ACTION_DELAY_MS);
     }
     walker.release();
     await report2(attempted, reporter2.stopped(), reporter2);
@@ -56573,6 +56870,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var EMPTY_HATCH_SCOPE = {
     readySlots: [],
     totalEggs: 0,
+    eggIds: [],
     possibleSpecies: [],
     possibleAbilities: [],
     presentMutations: [],
@@ -56662,10 +56960,18 @@ Restore figures are averages; unlucky streaks do worse.`;
         abilities: asStringArray(item.abilities),
         maxStrength,
         favorited: favorites.has(item.id),
-        onTeam: onTeam.has(item.id)
+        onTeam: onTeam.has(item.id),
+        item
       });
     }
     return { pets, inventoryCount: items.length };
+  }
+  async function readPetRows() {
+    try {
+      return (await readPets()).pets;
+    } catch {
+      return [];
+    }
   }
   async function readInventoryCount() {
     try {
@@ -56674,14 +56980,22 @@ Restore figures are averages; unlucky streaks do worse.`;
       return 0;
     }
   }
+  function rolledMutations() {
+    try {
+      return Object.entries(mutationCatalog2).filter(([, def]) => Number(def?.baseChance) > 0).map(([name]) => name);
+    } catch {
+      return [];
+    }
+  }
   async function readHatchScope() {
     const [eggs, bag] = await Promise.all([scanEggs(), readPets()]);
     const { species, abilities } = whatCouldHatch(eggs.eggIds);
-    const mutations = /* @__PURE__ */ new Set();
+    const mutations = new Set(rolledMutations());
     for (const pet of bag.pets) for (const mutation of pet.mutations) mutations.add(mutation);
     return {
       readySlots: eggs.readySlots,
       totalEggs: eggs.totalEggs,
+      eggIds: [...eggs.eggIds].sort((a, b) => a.localeCompare(b)),
       possibleSpecies: species,
       possibleAbilities: abilities,
       presentMutations: [...mutations].sort((a, b) => a.localeCompare(b)),
@@ -56694,6 +57008,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/services/companion/chat/hatchRun.ts
   var RECOUNT_EVERY = 5;
   var NEAR_CAPACITY = 5;
+  var CHEER_TIMING = {
+    Rainbow: { holdMs: 4e3, pauseMs: 3e3 },
+    Gold: { holdMs: 2e3, pauseMs: 1500 }
+  };
+  var CHEER_LINES = {
+    Rainbow: { cheer: "I have never seen one of those.", resume: "Right. Where was I." },
+    Gold: { cheer: "That one is a beauty.", resume: "Okay, back to it." }
+  };
   var SELL_BUILDING_WORDS = ["pet"];
   var SELL_BUILDING_ALTERNATIVES = ["sell", "shop", "store", "market"];
   async function countHatched(slots) {
@@ -56729,13 +57051,41 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     reporter2.say("report", `${hatched} of ${attempted.length} hatched.${tail}`);
   }
+  async function announceHatchling(known, rules, reporter2) {
+    const pets = await readPetRows();
+    if (pets.length === 0) return;
+    const born = pets.filter((pet) => !known.has(pet.petId));
+    for (const pet of born) known.add(pet.petId);
+    if (born.length === 0) return;
+    const cheer = hatchCheer(born, rules);
+    const mutation = cheer?.mutation ?? null;
+    const timing = mutation ? CHEER_TIMING[mutation] : void 0;
+    const lines = mutation ? CHEER_LINES[mutation] : void 0;
+    const star = cheer?.star ?? born[0];
+    const others = born.length - 1;
+    const tail = others > 0 ? ` And ${others} more.` : "";
+    const strength = star.maxStrength === null ? "" : `, ${star.maxStrength} STR`;
+    const line = lines ? `A ${mutation} ${star.species}${strength}! ${lines.cheer}${tail}` : `A ${star.species}${strength}.${tail}`;
+    const shown = mutation ? star.mutations.filter((name) => name.toLowerCase() !== mutation.toLowerCase()) : star.mutations;
+    if (cheer) void CompanionService.emote(cheer.emote, timing?.holdMs).catch(() => {
+    });
+    reporter2.say("system", line, compose(petThing(star.item, ""), " ", line, ...spaced(mutationChips(shown))), true);
+    if (!timing || !lines) return;
+    await sleep5(timing.pauseMs);
+    if (!reporter2.stopped()) reporter2.say("system", lines.resume);
+  }
   async function executeHatchBatch(slots, reporter2) {
-    reporter2.say("reply", `On it. Opening ${slots.length} now.`);
-    const team = await wearTeam(loadCompanionSettings().hatchTeamId, reporter2);
+    const kinds = (await readHatchScope().catch(() => null))?.eggIds ?? [];
+    const opening = `On it. Opening ${slots.length} now.`;
+    reporter2.say("reply", opening, compose(kinds.length === 1 ? eggIcon(kinds[0]) : null, " ", opening));
+    const settings = loadCompanionSettings();
+    const team = await wearTeam(settings.hatchTeamId, reporter2);
     const walker = await createWalker((message) => reporter2.say("system", message));
     const attempted = [];
     let count = await readInventoryCount();
     let stop2 = "done";
+    const known = new Set((await readPetRows()).map((pet) => pet.petId));
+    const pace = pacer();
     for (const slot of slots) {
       if (reporter2.stopped()) {
         stop2 = "cancelled";
@@ -56749,14 +57099,16 @@ Restore figures are averages; unlucky streaks do worse.`;
         break;
       }
       await walker.toGardenTile(slot);
+      await pace.wait();
       await PlayerService.hatchEgg(slot);
+      pace.mark();
       attempted.push(slot);
       count++;
       reporter2.progress(attempted.length, slots.length);
+      await announceHatchling(known, settings.hatchKeepRules, reporter2);
       if (attempted.length % PROGRESS_EVERY === 0 && attempted.length < slots.length) {
         reporter2.say("system", `${attempted.length} of ${slots.length} open so far...`);
       }
-      await sleep5(ACTION_DELAY_MS);
     }
     walker.release();
     await team.restore();
@@ -56777,7 +57129,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!arrived) reporter2.say("system", "Could not get there, selling from here.");
   }
   async function executeSellBatch(plan, reporter2) {
-    reporter2.say("reply", `On it. ${summarizeSell(plan.sell)} going.`);
+    const opening = `On it. ${summarizeSell(plan.sell)} going.`;
+    reporter2.say("reply", opening, compose(...spaced(petRowIcons(plan.sell)), " ", opening));
     for (const pet of plan.favourite) {
       if (reporter2.stopped()) break;
       try {
@@ -56787,7 +57140,17 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     }
     if (plan.favourite.length > 0) {
-      reporter2.say("system", `${plan.favourite.length} kept and favourited.`);
+      const best = plan.favourite[0];
+      const strength = best.maxStrength === null ? "" : ` ${best.maxStrength} STR,`;
+      const others = plan.favourite.length - 1;
+      reporter2.say(
+        "system",
+        `${plan.favourite.length} kept and favourited.`,
+        compose(
+          petThing(best.item, ""),
+          `${strength} keeping that one${others > 0 ? ` and ${others} more` : ""}.`
+        )
+      );
     }
     const walker = await createWalker((message) => reporter2.say("system", message));
     await goToSellShop(walker, reporter2);
@@ -56800,20 +57163,22 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const attempted = [];
     const skipped = [];
+    const sellPace = pacer();
     for (const pet of plan.sell) {
       if (reporter2.stopped()) break;
       if (nowOnTeam.has(pet.petId)) {
         skipped.push(pet);
         continue;
       }
+      await sellPace.wait();
       try {
         await PlayerService.sellPet(pet.petId);
         attempted.push(pet);
       } catch {
         skipped.push(pet);
       }
+      sellPace.mark();
       reporter2.progress(attempted.length + skipped.length, plan.sell.length);
-      await sleep5(ACTION_DELAY_MS);
     }
     await team.restore();
     walker.release();
@@ -56912,14 +57277,35 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     }
   }
-  function post(from, kind, text, proposalId) {
-    state3 = { ...state3, log: append(state3.log, { from, kind, text, atMs: Date.now(), proposalId }) };
-    if (from === "companion") speak(text);
+  function post(from, kind, text, proposalId, extra = {}) {
+    const shown = extra.thread ?? extra.bubble;
+    state3 = {
+      ...state3,
+      log: append(state3.log, {
+        from,
+        kind,
+        text: shown?.message ?? text,
+        atMs: Date.now(),
+        proposalId,
+        icons: shown?.tags ? Object.values(shown.tags) : void 0,
+        // Le fil ne sait afficher une icône à sa place que s'il a le balisage.
+        positioned: shown !== void 0
+      })
+    };
+    const insist = extra.force ?? proposalId !== void 0;
+    if (from === "companion") {
+      speak(extra.bubble ?? { message: text }, insist);
+      if (proposalId !== void 0) {
+        void CompanionService.emoteWhenStill(EmoteType.Questioning).catch(() => {
+        });
+      }
+    }
     notify2();
   }
-  function speak(text) {
-    const line = text.length > MAX_LINE_LENGTH ? `${text.slice(0, MAX_LINE_LENGTH - 1).trimEnd()}\u2026` : text;
-    void CompanionService.say(line).catch(() => {
+  function speak(line, force = false) {
+    const spoken = forGame(line);
+    const message = !spoken.tags && spoken.message.length > MAX_LINE_LENGTH ? `${spoken.message.slice(0, MAX_LINE_LENGTH - 1).trimEnd()}\u2026` : spoken.message;
+    void CompanionService.say(message, { tags: spoken.tags, force }).catch(() => {
     });
   }
   function dropStaleProposal() {
@@ -56927,6 +57313,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!proposal || !isExpired(proposal, Date.now())) return;
     state3 = { ...state3, proposal: null, captured: null, log: clearProposal(state3.log, proposal.id) };
     notify2();
+  }
+  function harvestBubble(rows, sentence) {
+    const top = groupVariants(rows)[0];
+    if (!top) return compose(sentence);
+    return compose(...spaced(variantIcons(top.species, top.mutations)), " ", sentence);
   }
   async function proposeHarvestScope(provider) {
     let scope;
@@ -56954,12 +57345,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     );
     state3 = { ...state3, proposal, captured: { kind: "harvest", provider, rows } };
     const held = scope.lockedOut > 0 ? ` I am leaving ${scope.lockedOut} locked one${scope.lockedOut === 1 ? "" : "s"} alone.` : "";
-    post(
-      "companion",
-      "reply",
-      `I can see ${proposal.summary}.${held}${teamPromise(team)} Want me to pick them?`,
-      proposal.id
-    );
+    const sentence = `I can see ${proposal.summary}.${held}${teamPromise(team)} Want me to pick them?`;
+    post("companion", "reply", sentence, proposal.id, { bubble: harvestBubble(rows, sentence) });
   }
   async function proposeFeedScope(provider) {
     let picks;
@@ -56975,7 +57362,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const proposal = openProposal("feed", describeFeed(picks), picks.length, feedSignature(picks));
     state3 = { ...state3, proposal, captured: { kind: "feed", provider, picks } };
-    post("companion", "reply", `${proposal.summary}. Should I feed ${picks.length === 1 ? "them" : "all of them"}?`, proposal.id);
+    const listed = feedQuestion(picks);
+    post("companion", "reply", listed.message, proposal.id, {
+      bubble: feedBubble(picks),
+      thread: listed
+    });
   }
   async function proposePlantPlan(provider) {
     let plan;
@@ -56991,7 +57382,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const proposal = openProposal("plant", summarizePlan(plan), plan.length, plantSignature(plan));
     state3 = { ...state3, proposal, captured: { kind: "plant", provider, plan } };
-    post("companion", "reply", `That is ${proposal.summary}. Want me to get started?`, proposal.id);
+    const most = countByItem(plan)[0];
+    const sentence = `That is ${proposal.summary}. Want me to get started?`;
+    post("companion", "reply", sentence, proposal.id, {
+      bubble: compose(most?.kind === "seed" ? seedIcon(most.id) : null, " ", sentence)
+    });
   }
   async function proposeHatchSlots(provider, rules) {
     let slots;
@@ -57008,7 +57403,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     const team = loadCompanionSettings().hatchTeamId;
     const proposal = openProposal("hatch", summarizeHatch(slots), slots.length, withTeam(slotSignature2(slots), team));
     state3 = { ...state3, proposal, captured: { kind: "hatch", provider, rules, slots } };
-    post("companion", "reply", `${proposal.summary}.${teamPromise(team)} Want me to open them?`, proposal.id);
+    const kinds = await readHatchScope().then((scope) => scope.eggIds).catch(() => []);
+    const sentence = `${proposal.summary}.${teamPromise(team)} Want me to open them?`;
+    post("companion", "reply", sentence, proposal.id, {
+      bubble: compose(kinds.length === 1 ? eggIcon(kinds[0]) : null, " ", sentence)
+    });
   }
   async function proposeSellPlan(provider, rules) {
     let plan;
@@ -57026,16 +57425,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     const proposal = openProposal("sell", summarizeSell(plan.sell), plan.sell.length, signature);
     state3 = { ...state3, proposal, captured: { kind: "sell", provider, rules, plan } };
     const keeping = plan.favourite.length > 0 ? ` I would favourite the ${plan.favourite.length} you keep first.` : "";
-    post(
-      "companion",
-      "reply",
-      `That would be ${proposal.summary}.${keeping}${teamPromise(plan.teamId)} Should I?`,
-      proposal.id
-    );
+    const sentence = `That would be ${proposal.summary}.${keeping}${teamPromise(plan.teamId)} Should I?`;
+    post("companion", "reply", sentence, proposal.id, {
+      bubble: compose(...spaced(petRowIcons(plan.sell)), " ", sentence)
+    });
   }
   function reporter() {
     return {
-      say: (kind, text) => post("companion", kind, text),
+      say: (kind, text, spoken, force) => post("companion", kind, text, void 0, { bubble: spoken, force }),
       stopped: () => state3.cancelRequested,
       progress: (done, total) => {
         state3 = { ...state3, run: { done, total } };
@@ -57044,12 +57441,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   async function runBatch(run) {
+    let stopped = false;
     try {
       await run(reporter());
     } finally {
+      stopped = state3.cancelRequested;
       state3 = { ...state3, run: null, cancelRequested: false };
       notify2();
     }
+    return stopped;
   }
   async function afterHatchBatch(rules, stop2) {
     if (stop2 === "cancelled") return;
@@ -57236,8 +57636,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         });
         await afterHatchBatch(captured.rules, stop2);
       } else if (captured.kind === "sell") {
-        await runBatch((r) => executeSellBatch(captured.plan, r));
-        await afterSellBatch(captured.rules);
+        const stopped = await runBatch((r) => executeSellBatch(captured.plan, r));
+        if (!stopped) await afterSellBatch(captured.rules);
       } else {
         await runBatch((r) => executeFeedBatch(captured.picks, r));
       }
@@ -57354,7 +57754,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       height: side
     };
   }
-  async function compose(npcId) {
+  async function compose2(npcId) {
     const outfit = await readNpcOutfit(npcId).catch(() => []);
     if (outfit.length === 0) return null;
     const urls = outfit.map(cosmeticUrl).filter((url) => url !== null);
@@ -57381,7 +57781,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function npcPortrait(npcId) {
     let known = pending2.get(npcId);
     if (!known) {
-      known = compose(npcId).catch(() => null);
+      known = compose2(npcId).catch(() => null);
       pending2.set(npcId, known);
     }
     return known;
@@ -57401,15 +57801,89 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
   }
 
+  // src/ui/menus/companion/chat-icons.ts
+  var SPRITE_LOG_TAG2 = "companion-thread";
+  function splitSpriteKey(key2) {
+    const parts = key2.split(/[?#]/)[0].split("/").filter(Boolean);
+    if (parts.length < 2) return null;
+    const name = parts[parts.length - 1].replace(/\.[a-z0-9]+$/i, "");
+    return name ? { category: parts[parts.length - 2], name } : null;
+  }
+  function holder(sizePx) {
+    const box = document.createElement("span");
+    css2(box, {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: `${sizePx}px`,
+      height: `${sizePx}px`,
+      verticalAlign: "-4px",
+      marginRight: "4px",
+      flexShrink: "0"
+    });
+    return box;
+  }
+  function petSpeciesOf(pet) {
+    const species = pet?.petSpecies;
+    return typeof species === "string" && species ? species : null;
+  }
+  function tagIcon(tag, sizePx) {
+    if ("mutation" in tag) {
+      const box2 = holder(sizePx);
+      attachSpriteIcon(box2, ["ui", "mutation"], [`Mutation${tag.mutation}`, tag.mutation], sizePx, SPRITE_LOG_TAG2);
+      return box2;
+    }
+    if ("petThing" in tag) {
+      const species = petSpeciesOf(tag.petThing.pet);
+      if (!species) return null;
+      const box2 = holder(sizePx);
+      attachSpriteIcon(box2, ["pet"], [species, species.replace(/\s+/g, "")], sizePx, SPRITE_LOG_TAG2);
+      return box2;
+    }
+    const split = splitSpriteKey(tag.gameThing.sprite);
+    if (!split) return null;
+    const box = holder(sizePx);
+    attachSpriteIcon(box, [split.category], [split.name], sizePx, SPRITE_LOG_TAG2);
+    return box;
+  }
+  function tagIcons(tags, sizePx) {
+    if (!tags || tags.length === 0) return [];
+    return tags.map((tag) => tagIcon(tag, sizePx)).filter((icon) => icon !== null);
+  }
+  var TAG_MARKER = /<(\d+)\/>/g;
+  function renderTagged(text, tags, sizePx) {
+    if (!tags || tags.length === 0) return [document.createTextNode(text)];
+    const out = [];
+    let cursor = 0;
+    for (const match of text.matchAll(TAG_MARKER)) {
+      const at = match.index ?? 0;
+      if (at > cursor) out.push(document.createTextNode(text.slice(cursor, at)));
+      cursor = at + match[0].length;
+      const tag = tags[Number(match[1])];
+      const icon = tag ? tagIcon(tag, sizePx) : null;
+      if (icon) out.push(icon);
+    }
+    if (cursor < text.length) out.push(document.createTextNode(text.slice(cursor)));
+    return out;
+  }
+
   // src/ui/menus/companion/chat-view.ts
   var GROUP_WINDOW_MS = 2 * 60 * 1e3;
   var AVATAR_PX = 26;
+  var BUBBLE_ICON_PX2 = 18;
+  var SYSTEM_ICON_PX = 15;
   var OUTGOING_BG = "rgba(94,234,212,0.14)";
   var OUTGOING_BORDER = "rgba(94,234,212,0.22)";
   var OUTGOING_TEXT = "#d1fae5";
   var INCOMING_BG = "rgba(255,255,255,0.06)";
   var ALERT_BG = "rgba(251,191,36,0.10)";
   var ALERT_BORDER = "rgba(251,191,36,0.28)";
+  function contentOf(text, icons, positioned2, sizePx) {
+    if (positioned2) return renderTagged(text, icons, sizePx);
+    const label2 = document.createElement("span");
+    label2.textContent = text;
+    return [...tagIcons(icons, sizePx), label2];
+  }
   function isCentered(message) {
     return message.kind === "system";
   }
@@ -57461,7 +57935,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     wrap.append(line(), text, line());
     return wrap;
   }
-  function systemLine(text) {
+  function systemLine(text, icons, positioned2 = false) {
     const line = document.createElement("div");
     css2(line, {
       alignSelf: "center",
@@ -57471,7 +57945,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       padding: "2px 8px",
       maxWidth: "90%"
     });
-    line.textContent = text;
+    line.append(...contentOf(text, icons, positioned2, SYSTEM_ICON_PX));
     return line;
   }
   function avatar2(identity, sizePx = AVATAR_PX) {
@@ -57501,7 +57975,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return el2;
   }
   function messageRow(message, flags, identity = null) {
-    if (isCentered(message)) return systemLine(message.text);
+    if (isCentered(message)) return systemLine(message.text, message.icons, message.positioned);
     const outgoing = message.from === "you";
     const alerting = message.kind === "alert";
     const row = document.createElement("div");
@@ -57533,7 +58007,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       border: `1px solid ${outgoing ? OUTGOING_BORDER : alerting ? ALERT_BORDER : BORDER}`,
       color: outgoing ? OUTGOING_TEXT : TEXT
     });
-    bubble.textContent = message.text;
+    bubble.append(...contentOf(message.text, message.icons, message.positioned, BUBBLE_ICON_PX2));
     column.append(bubble);
     if (flags.isLastInGroup) {
       const stamp = document.createElement("div");
@@ -57630,7 +58104,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
 
   // src/ui/menus/companion/harvest-chips.ts
-  var SPRITE_LOG_TAG2 = "companion-harvest";
+  var SPRITE_LOG_TAG3 = "companion-harvest";
   var ICON_PX = 26;
   function iconHolder(sizePx) {
     const box = document.createElement("div");
@@ -57669,7 +58143,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const candidates = spellings(spriteBaseName(species), species);
     const bases = candidates.map((value) => value.replace(/icon$/i, "")).filter(Boolean);
     const all = [.../* @__PURE__ */ new Set([...candidates, ...bases.map((base) => `${base}Icon`)])];
-    if (all.length) attachSpriteIcon(box, ["crop", "tallplant", "plant"], all, sizePx, SPRITE_LOG_TAG2);
+    if (all.length) attachSpriteIcon(box, ["crop", "tallplant", "plant"], all, sizePx, SPRITE_LOG_TAG3);
   }
   function speciesIcon(species, sizePx = ICON_PX) {
     const box = iconHolder(sizePx);
@@ -57702,7 +58176,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function mutationIconEl(mutation, sizePx = ICON_PX) {
     const box = iconHolder(sizePx);
     const candidates = spellings(mutation).flatMap((name) => [`Mutation${name}`, name]);
-    attachSpriteIcon(box, ["ui", "mutation"], candidates, sizePx, SPRITE_LOG_TAG2);
+    attachSpriteIcon(box, ["ui", "mutation"], candidates, sizePx, SPRITE_LOG_TAG3);
     return box;
   }
   function spriteTile(options) {
@@ -57722,10 +58196,47 @@ Restore figures are averages; unlucky streaks do worse.`;
       background: options.selected ? TEAL_DIM : CARD_BG,
       border: `1px solid ${options.selected ? TEAL_BORDER : BORDER}`
     });
-    const count = document.createElement("span");
-    css2(count, { fontSize: "10px", color: options.selected ? TEAL : TEXT_DIM });
-    count.textContent = String(options.count);
-    tile.append(options.icon, count);
+    tile.append(options.icon);
+    if (options.count !== void 0) {
+      const count = document.createElement("span");
+      css2(count, { fontSize: "10px", color: options.selected ? TEAL : TEXT_DIM });
+      count.textContent = String(options.count);
+      tile.append(count);
+    }
+    tile.addEventListener("click", options.onClick);
+    tile.addEventListener("mouseenter", () => {
+      if (!options.selected) css2(tile, { background: "rgba(255,255,255,0.06)" });
+    });
+    tile.addEventListener("mouseleave", () => {
+      if (!options.selected) css2(tile, { background: CARD_BG });
+    });
+    return tile;
+  }
+  function labelledTile(options) {
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.title = options.label;
+    css2(tile, {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "6px",
+      padding: "4px 9px 4px 5px",
+      borderRadius: "10px",
+      cursor: "pointer",
+      lineHeight: "1",
+      transition: "background 120ms ease, border-color 120ms ease",
+      background: options.selected ? TEAL_DIM : CARD_BG,
+      border: `1px solid ${options.selected ? TEAL_BORDER : BORDER}`
+    });
+    const name = document.createElement("span");
+    css2(name, {
+      fontSize: "11.5px",
+      fontWeight: options.selected ? "600" : "500",
+      color: options.selected ? TEAL : TEXT,
+      whiteSpace: "nowrap"
+    });
+    name.textContent = options.label;
+    tile.append(options.icon, name);
     tile.addEventListener("click", options.onClick);
     tile.addEventListener("mouseenter", () => {
       if (!options.selected) css2(tile, { background: "rgba(255,255,255,0.06)" });
@@ -58159,18 +58670,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   var lastOfferedSignature = "";
   var lastOfferedAtMs = 0;
   var announcedProposalId = null;
-  function spokenAlert(picks) {
-    if (picks.length === 1) {
-      const only = picks[0];
-      return only.hungerPct <= 5 ? `${only.petName} is starving. Want me to feed it?` : `${only.petName} is getting hungry. Want me to feed it?`;
-    }
-    return "Your pets are going hungry. Want me to feed them?";
-  }
   async function announceInPerson(picks) {
     if (!CompanionService.isRunning()) return;
     try {
       await CompanionService.comeToPlayer();
-      await CompanionService.say(spokenAlert(picks), { force: true });
+      const line = forGame(feedBubble(picks));
+      await CompanionService.say(line.message, { force: true, tags: line.tags });
     } catch {
     } finally {
       CompanionService.releaseTask();
@@ -58647,7 +59152,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
 
   // src/ui/menus/companion/plant-chips.ts
-  var SPRITE_LOG_TAG3 = "companion-plant";
+  var SPRITE_LOG_TAG4 = "companion-plant";
   var ICON_PX2 = 24;
   function iconHolder2(sizePx) {
     const box = document.createElement("div");
@@ -58690,7 +59195,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const isEgg = item.kind === "egg";
     const candidates = isEgg ? eggCandidates(item.id, item.name) : seedCandidates(item.id, item.name);
     if (candidates.length) {
-      attachSpriteIcon(box, isEgg ? ["pet"] : ["seed"], candidates, sizePx, SPRITE_LOG_TAG3);
+      attachSpriteIcon(box, isEgg ? ["pet"] : ["seed"], candidates, sizePx, SPRITE_LOG_TAG4);
     }
     return box;
   }
@@ -59029,7 +59534,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
 
   // src/ui/menus/companion/hatch-chips.ts
-  var SPRITE_LOG_TAG4 = "companion-hatch";
+  var SPRITE_LOG_TAG5 = "companion-hatch";
   var ICON_PX3 = 26;
   function iconHolder3(sizePx) {
     const box = document.createElement("div");
@@ -59043,10 +59548,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     return box;
   }
-  function petSpeciesIcon(species, sizePx = ICON_PX3) {
+  function petSpeciesIcon2(species, sizePx = ICON_PX3) {
     const box = iconHolder3(sizePx);
     const candidates = [species, species.replace(/\s+/g, "")].filter(Boolean);
-    attachSpriteIcon(box, ["pet"], candidates, sizePx, SPRITE_LOG_TAG4, {
+    attachSpriteIcon(box, ["pet"], candidates, sizePx, SPRITE_LOG_TAG5, {
       onNoSpriteFound: () => {
         css2(box, { fontSize: "12px", fontWeight: "700", color: TEXT_DIM });
         box.textContent = species.charAt(0).toUpperCase();
@@ -59073,6 +59578,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/ui/menus/companion/hatch-modal.ts
   var REFRESH_MS4 = 4e3;
   var TILE_ICON_PX2 = 26;
+  var ABILITY_ICON_PX = 16;
+  var ABILITY_LIST_MAX_PX = 190;
   var MIN_STR = 1;
   var MAX_STR = 100;
   var DEFAULT_STR = 95;
@@ -59106,46 +59613,36 @@ Restore figures are averages; unlucky streaks do worse.`;
     function toggled(list, value) {
       return list.includes(value) ? list.filter((entry) => entry !== value) : [...list, value];
     }
-    function chipRow(values, selected, counts, labelFor, iconFor, onPick) {
+    function chipRow(values, selected, labelFor, iconFor, onPick, named = false) {
       const row = tileRow();
       for (const value of values) {
-        const owned = counts.get(value) ?? 0;
+        const shared = { icon: iconFor(value), selected: selected.includes(value), onClick: () => onPick(value) };
         row.append(
-          spriteTile({
-            icon: iconFor(value),
-            // Le chiffre seul n'apprend rien : l'infobulle dit ce qu'il compte.
-            title: `${labelFor(value)}: ${owned === 0 ? "none" : owned} in your bag`,
-            count: owned,
-            selected: selected.includes(value),
-            onClick: () => onPick(value)
-          })
+          named ? labelledTile({ ...shared, label: labelFor(value) }) : spriteTile({ ...shared, title: labelFor(value) })
         );
       }
       return row;
+    }
+    function scrollable(row) {
+      const box = document.createElement("div");
+      css2(box, { maxHeight: `${ABILITY_LIST_MAX_PX}px`, overflowY: "auto", overscrollBehavior: "contain" });
+      box.append(row);
+      return box;
     }
     function offered(available, picked) {
       const all = /* @__PURE__ */ new Set([...available, ...picked]);
       return [...all].sort((a, b) => a.localeCompare(b));
     }
-    function tallyPets(of) {
-      const counts = /* @__PURE__ */ new Map();
-      for (const pet of scope.pets) {
-        for (const value of of(pet)) counts.set(value, (counts.get(value) ?? 0) + 1);
-      }
-      return counts;
-    }
     function renderSpecies() {
       const values = offered(scope.possibleSpecies, rules.species);
       speciesCard.root.style.display = values.length > 0 ? "flex" : "none";
       if (values.length === 0) return;
-      const counts = tallyPets((pet) => [pet.species]);
       speciesCard.body.replaceChildren(
         chipRow(
           values,
           rules.species,
-          counts,
           (name) => name,
-          (name) => cachedIcon(`species:${name}`, () => petSpeciesIcon(name, TILE_ICON_PX2)),
+          (name) => cachedIcon(`species:${name}`, () => petSpeciesIcon2(name, TILE_ICON_PX2)),
           (name) => commit({ ...rules, species: toggled(rules.species, name) })
         )
       );
@@ -59155,12 +59652,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       const values = offered(scope.presentMutations, rules.mutations);
       mutationCard.root.style.display = values.length > 0 ? "flex" : "none";
       if (values.length === 0) return;
-      const counts = tallyPets((pet) => pet.mutations);
       mutationCard.body.replaceChildren(
         chipRow(
           values,
           rules.mutations,
-          counts,
           (name) => name,
           (name) => cachedIcon(`mutation:${name}`, () => mutationIconEl(name, TILE_ICON_PX2)),
           (name) => commit({ ...rules, mutations: toggled(rules.mutations, name) })
@@ -59173,15 +59668,16 @@ Restore figures are averages; unlucky streaks do worse.`;
       abilityCard.root.style.display = values.length > 0 ? "flex" : "none";
       if (values.length === 0) return;
       const names = new Map(scope.possibleAbilities.map((entry) => [entry.id, entry.name]));
-      const counts = tallyPets((pet) => pet.abilities);
       abilityCard.body.replaceChildren(
-        chipRow(
-          values,
-          rules.abilities,
-          counts,
-          (id) => names.get(id) ?? id,
-          (id) => cachedIcon(`ability:${id}`, () => abilityIcon(id, TILE_ICON_PX2)),
-          (id) => commit({ ...rules, abilities: toggled(rules.abilities, id) })
+        scrollable(
+          chipRow(
+            values,
+            rules.abilities,
+            (id) => names.get(id) ?? id,
+            (id) => cachedIcon(`ability:${id}`, () => abilityIcon(id, ABILITY_ICON_PX)),
+            (id) => commit({ ...rules, abilities: toggled(rules.abilities, id) }),
+            true
+          )
         )
       );
       abilityCard.setSummary(summarize(rules.abilities.length), rules.abilities.length > 0);
@@ -59217,11 +59713,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const ready2 = document.createElement("div");
     css2(ready2, { fontSize: "13px", fontWeight: "600", color: TEAL });
-    const bag = document.createElement("div");
-    css2(bag, { fontSize: "11.5px", lineHeight: "1.5", color: TEXT });
     const note = document.createElement("div");
     css2(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
-    strip.append(ready2, bag, note);
+    strip.append(ready2, note);
     const resetButton = button("Reset", "neutral", () => commit({ ...DEFAULT_KEEP_RULES }));
     const askButton = button("Ask to hatch", "accent", () => {
       onAsk({
@@ -59235,9 +59729,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       modal.close();
     });
     css2(askButton, { marginLeft: "auto" });
-    const legend = document.createElement("div");
-    css2(legend, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
-    legend.textContent = "Numbers are how many you already have.";
     const notice = settingsNotice(
       "hatch",
       "Hatching is not set up. I will use the team you have on.",
@@ -59252,7 +59743,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       mutationCard.root,
       abilityCard.root,
       strengthCard.root,
-      legend,
       strip
     );
     modal.footer.append(resetButton, askButton);
@@ -59270,9 +59760,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       );
       const waiting = scope.totalEggs - scope.readySlots.length;
       ready2.textContent = scope.readySlots.length === 0 ? "No egg is ready" : `${scope.readySlots.length} egg${scope.readySlots.length === 1 ? "" : "s"} ready`;
-      const sellable = toSell(scope.pets, rules);
-      const kept = scope.pets.length - sellable.length;
-      bag.textContent = `${scope.inventoryCount}/${scope.capacity} slots. Of ${scope.pets.length} pets, I keep ${kept} and sell ${sellable.length}.`;
       if (!hasAnyRule(rules)) {
         note.textContent = "Nothing set to keep, so I will not offer to sell. Favourites and your active team are always safe.";
         css2(note, { color: WARN });

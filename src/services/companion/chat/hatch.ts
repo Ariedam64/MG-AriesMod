@@ -12,6 +12,7 @@
 // garder : sans critère renseigné, rien ne part.
 
 import { listWords } from "./harvest";
+import { EmoteType } from "../emoteTypes";
 
 /** Ce que le joueur veut conserver. Tout le reste est vendable. */
 export type KeepRules = {
@@ -58,6 +59,14 @@ export type PetRow = {
   favorited: boolean;
   /** Présent dans l'équipe active. */
   onTeam: boolean;
+  /**
+   * L'objet d'inventaire tel quel, gardé pour le rendu seul.
+   *
+   * Une bulle peut afficher un animal composé, mutations comprises, mais le tag
+   * du jeu veut l'objet et pas son nom. Opaque à dessein : rien ici ne doit lire
+   * dedans, tout ce qui compte est déjà extrait dans les champs au-dessus.
+   */
+  item?: unknown;
 };
 
 /** Comparaison de mutations insensible à la casse : les sources divergent. */
@@ -74,6 +83,56 @@ export function matchesKeep(pet: PetRow, rules: KeepRules): boolean {
   if (rules.abilities.some((ability) => pet.abilities.includes(ability))) return true;
   if (rules.minMaxStr !== null && pet.maxStrength !== null && pet.maxStrength >= rules.minMaxStr) return true;
   return false;
+}
+
+/**
+ * Les mutations qu'on fête plus fort que les autres, de la plus rare à la moins.
+ *
+ * Ce n'est pas un catalogue recopié du jeu mais une préférence de notre côté :
+ * ces deux-là sont les tirages qui font lever les yeux. Un nom que le jeu
+ * n'emploierait plus ne casse rien — la comparaison ne trouve personne, et le
+ * companion applaudit au lieu d'adorer.
+ *
+ * L'ordre décide : une portée qui sort les deux fête le Rainbow.
+ */
+const CHEERED_MUTATIONS = ["Rainbow", "Gold"];
+
+export type HatchCheer = {
+  emote: EmoteType;
+  /**
+   * L'animal à mettre en vedette. `null` quand rien ne sort du lot.
+   *
+   * Plusieurs peuvent apparaître entre deux lectures du sac, et le beau n'est
+   * pas toujours le premier : sans ça, on ferait tout un cinéma en montrant le
+   * sprite du Worm sorti juste avant.
+   */
+  star: PetRow | null;
+  /** La mutation qui vaut la fête, au nom canonique. `null` = simple correspondance. */
+  mutation: string | null;
+};
+
+/**
+ * Ce que le companion joue en voyant sortir ces animaux. `null` = rien.
+ *
+ * Un animal qui ne coche aucun critère ne mérite pas de célébration : c'est
+ * exactement celui qu'on proposera de vendre ensuite, et l'applaudir avant de
+ * le jeter serait absurde. Sans critère renseigné, plus rien ne correspond,
+ * donc plus rien ne se fête — c'est cohérent avec `hasAnyRule`, qui refuse
+ * déjà de trier dans cet état.
+ *
+ * Le nom rendu est celui de notre liste, pas celui que porte l'animal : les
+ * sources écrivent les mutations tantôt en majuscules tantôt non, et c'est ce
+ * nom-là qui part dans la phrase.
+ */
+export function hatchCheer(pets: PetRow[], rules: KeepRules): HatchCheer | null {
+  const kept = pets.filter((pet) => matchesKeep(pet, rules));
+  if (kept.length === 0) return null;
+
+  for (const mutation of CHEERED_MUTATIONS) {
+    const star = kept.find((pet) => hasAny(pet.mutations, [mutation]));
+    if (star) return { emote: EmoteType.Love, star, mutation };
+  }
+  return { emote: EmoteType.Clapping, star: null, mutation: null };
 }
 
 /** Tout ce qui met un animal à l'abri, critères du joueur compris. */

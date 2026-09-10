@@ -57,7 +57,7 @@ export const INTERNAL_TO_API: Record<string, string> = {
 };
 
 /** URL path segment → internal category. Inverse of INTERNAL_TO_API. */
-const API_TO_INTERNAL: Record<string, string> = {
+export const API_TO_INTERNAL: Record<string, string> = {
   plants: "plant",
   tallplants: "tallplant",
   seeds: "seed",
