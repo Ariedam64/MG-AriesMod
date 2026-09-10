@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "version": "3.2.208",
+      "date": "2026-09-10",
+      "title": "Companion",
+      "notes": "**Companion** (experimental)\n\n- A borrowed NPC who harvests, plants, hatches and feeds your pets, asking you before every batch\n- He walks over to ask, shows what he found with real sprites, and celebrates a Gold or Rainbow pull\n- Alt+C opens his chat\n\nBarely tested, so expect bugs. Tell me when you hit one."
+    },
+    {
       "version": "3.2.194",
       "date": "2026-08-06",
       "title": "Keybinds redesign and fixes",
