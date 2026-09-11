@@ -74,6 +74,7 @@ const row = (over: Partial<HarvestRow> = {}): HarvestRow => ({
   growthPct: 100,
   mutations: [],
   ready: true,
+  preserved: false,
   ...over,
 });
 
@@ -130,6 +131,30 @@ console.log("\n--- filtres de recolte ---");
   check("mutation absente", filterRows(rows, { ...DEFAULT_FILTERS, mutations: ["Gold"], mutationMode: "none" }).length, 2);
   check("mutations cumulees", filterRows(rows, { ...DEFAULT_FILTERS, mutations: ["Gold", "Frozen"], mutationMode: "all" }).length, 0);
   check("mutations presentes, triees", mutationsPresent(rows).join(","), "Frozen,Gold");
+
+  // Preserver se paie au crop : le defaut ferme, contrairement a tous les
+  // autres criteres. En laisser un de cote ne coute qu'un second passage,
+  // en recolter un par erreur coute ce qu'on vient de payer.
+  const withPreserved = [...rows, row({ tileIndex: 9, slotId: 0, species: "Carrot", preserved: true })];
+  check("un crop preserve est ecarte par defaut", filterRows(withPreserved, DEFAULT_FILTERS).length, 3);
+  check(
+    "et repris quand on l'autorise",
+    filterRows(withPreserved, { ...DEFAULT_FILTERS, includePreserved: true }).length,
+    4
+  );
+  // L'option ouvre, elle ne contourne pas : les autres criteres tiennent.
+  check(
+    "mais il reste soumis aux autres criteres",
+    filterRows(withPreserved, { ...DEFAULT_FILTERS, includePreserved: true, species: ["Aloe"] }).length,
+    1
+  );
+  // Un preserve encore en croissance ne se recolte pas plus qu'un autre.
+  const growing = [row({ tileIndex: 8, slotId: 0, ready: false, preserved: true })];
+  check(
+    "la maturite passe avant l'option",
+    filterRows(growing, { ...DEFAULT_FILTERS, includePreserved: true }).length,
+    0
+  );
 }
 {
   // La bulle cote joueur decrit la demande, pas le resultat.
@@ -139,6 +164,18 @@ console.log("\n--- filtres de recolte ---");
     "taille et mutation",
     describeFilters({ ...DEFAULT_FILTERS, minSizePct: 90, mutations: ["Gold"] }),
     "Harvest everything, with Gold, at least 90% size"
+  );
+  // Seul l'ecart au defaut se dit : rappeler la regle ordinaire a chaque
+  // demande alourdirait la phrase sans rien apprendre.
+  check(
+    "le defaut ne dit rien des preserves",
+    describeFilters(DEFAULT_FILTERS).includes("preserved"),
+    false
+  );
+  check(
+    "les inclure se dit",
+    describeFilters({ ...DEFAULT_FILTERS, includePreserved: true }),
+    "Harvest everything, preserved ones included"
   );
   check("aucun cadratin", describeFilters({ ...DEFAULT_FILTERS, species: ["Carrot"] }).includes("—"), false);
 }

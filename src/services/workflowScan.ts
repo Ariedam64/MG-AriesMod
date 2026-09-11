@@ -23,6 +23,13 @@ export interface CropSnapshot {
   weatherMutations: string[];
   /** Time mutations present on this crop. */
   timeMutations: string[];
+  /**
+   * Preserved by the player: paid for, and frozen as it is.
+   *
+   * The game shows these a dedicated badge and charges coins per crop, so
+   * harvesting one throws away what was just paid for it.
+   */
+  preserved: boolean;
 }
 
 export interface PlantSnapshot {
@@ -179,6 +186,7 @@ export function scanGarden(
         colorMutations: colorMuts,
         weatherMutations: weatherMuts,
         timeMutations: timeMuts,
+        preserved: slot.preserved === true,
       };
 
       crops.push(crop);

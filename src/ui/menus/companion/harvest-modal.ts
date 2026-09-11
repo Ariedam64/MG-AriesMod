@@ -28,7 +28,7 @@ import {
   type HarvestRow,
   type MutationMode,
 } from "../../../services/companion/chat/harvest";
-import { TEXT, button, css, toggle } from "../panel-ui";
+import { TEXT, button, css } from "../panel-ui";
 import { mutationIconEl, segmented, speciesIcon, variantIcon } from "./harvest-chips";
 import {
   fieldRow,
@@ -193,6 +193,52 @@ export function openHarvestModal(host: HTMLElement, onAsk: (request: HarvestRequ
     sizeCard.body.append(row);
   }
 
+  /* ------------------------------ Périmètre ------------------------------- */
+
+  /**
+   * Les crops préservés : le premier tri, et celui dont dépendent les autres.
+   *
+   * En tête et hors carte, parce qu'il ne se range pas au même niveau que les
+   * autres. Espèces, mutations et tailles décrivent ce qu'on cherche DANS un
+   * ensemble ; celui-ci décide de quel ensemble on parle. Leurs listes et leurs
+   * effectifs se recalculent dessus — `scopedTo` part de `filters`, donc écarter
+   * les préservés retire aussi leurs espèces et leurs mutations des choix.
+   *
+   * Seul critère dont le défaut ferme au lieu d'ouvrir. Préserver se paie au
+   * crop, donc en récolter un par erreur coûte quelque chose, alors qu'en
+   * laisser un de côté ne coûte qu'un second passage.
+   */
+  const preservedRow = document.createElement("div");
+  css(preservedRow, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
+
+  const preservedLabel = document.createElement("div");
+  css(preservedLabel, { fontSize: "11.5px", fontWeight: "600", color: TEXT });
+  preservedRow.append(preservedLabel);
+
+  const preservedControl = document.createElement("div");
+  preservedRow.append(preservedControl);
+
+  function renderPreserved(): void {
+    const ripe = scope.rows.filter((row) => row.ready && row.preserved).length;
+    // Le compte se lit dans l'intitulé : sans lui, un écart entre ce qui est
+    // mûr et ce qu'il propose n'aurait aucune explication à l'écran.
+    preservedLabel.textContent = ripe === 0 ? "Preserved crops" : `Preserved crops (${ripe} ripe)`;
+
+    preservedControl.replaceChildren(
+      segmented<"skip" | "include">(
+        [
+          { value: "skip", label: "Leave them", title: "They stay in the ground" },
+          { value: "include", label: "Pick them too", title: "Treated like any other crop" },
+        ],
+        filters.includePreserved ? "include" : "skip",
+        (value) => {
+          filters = { ...filters, includePreserved: value === "include" };
+          render();
+        }
+      )
+    );
+  }
+
   /* --------------------------------- Pied --------------------------------- */
 
   const resetButton = button("Reset", "neutral", () => {
@@ -225,7 +271,15 @@ export function openHarvestModal(host: HTMLElement, onAsk: (request: HarvestRequ
     }
   );
 
-  modal.body.append(notice.root, speciesCard.root, mutationCard.root, sizeCard.root, preview.root, note.root);
+  modal.body.append(
+    notice.root,
+    preservedRow,
+    speciesCard.root,
+    mutationCard.root,
+    sizeCard.root,
+    preview.root,
+    note.root
+  );
   modal.footer.append(resetButton, askButton);
 
   /* --------------------------------- Rendu -------------------------------- */
@@ -233,6 +287,8 @@ export function openHarvestModal(host: HTMLElement, onAsk: (request: HarvestRequ
   function render(): void {
     if (!modal.isOpen()) return;
 
+    // Le périmètre d'abord : c'est lui qui décide du contenu des autres.
+    renderPreserved();
     renderSpecies();
     renderMutations();
 

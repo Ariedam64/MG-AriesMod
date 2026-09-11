@@ -65,6 +65,7 @@ export async function readHarvestRows(): Promise<HarvestRow[]> {
         growthPct: Math.round(crop.growthPct),
         mutations: Array.isArray(crop.mutations) ? crop.mutations : [],
         ready: crop.endTime > 0 && crop.endTime <= now,
+        preserved: crop.preserved === true,
       });
     }
   }

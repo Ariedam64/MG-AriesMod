@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.209
+// @version      3.2.210
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -31581,7 +31581,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.209";
+      return "3.2.210";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -42147,24 +42147,24 @@ next: ${next}`;
     };
     const updateMainWeatherSelection = applyWeatherSelection(state4.weatherSelected);
     const weatherToggles = WEATHER_MUTATIONS.map((info) => {
-      const toggle3 = createWeatherMutationToggle({
+      const toggle2 = createWeatherMutationToggle({
         key: info.key,
         label: info.label,
         kind: "main",
         iconFactory: info.iconFactory
       });
-      toggle3.input.addEventListener(
+      toggle2.input.addEventListener(
         "change",
-        () => updateMainWeatherSelection(info.key, toggle3.input.checked)
+        () => updateMainWeatherSelection(info.key, toggle2.input.checked)
       );
-      weatherGrid.appendChild(toggle3.wrap);
-      return toggle3;
+      weatherGrid.appendChild(toggle2.wrap);
+      return toggle2;
     });
     const updateWeatherMutationsDisabled = () => {
       const disabled = card4.dataset.disabled === "1" || state4.weatherMode === "RECIPES";
       weatherGrid.style.opacity = disabled ? "0.55" : "";
       weatherGrid.style.pointerEvents = disabled ? "none" : "";
-      weatherToggles.forEach((toggle3) => toggle3.setDisabled(disabled));
+      weatherToggles.forEach((toggle2) => toggle2.setDisabled(disabled));
     };
     const weatherModeName = `locker-weather-mode-${++weatherModeNameSeq}`;
     const weatherModeRow = centerRow();
@@ -42352,7 +42352,7 @@ next: ${next}`;
       });
       const toggles = /* @__PURE__ */ new Map();
       WEATHER_MUTATIONS.forEach((info) => {
-        const toggle3 = createWeatherMutationToggle({
+        const toggle2 = createWeatherMutationToggle({
           key: info.key,
           label: info.label,
           iconSize: 40,
@@ -42360,27 +42360,27 @@ next: ${next}`;
           kind: "recipe",
           iconFactory: info.iconFactory
         });
-        toggles.set(info.key, toggle3);
-        toggle3.setChecked(selection.has(toggle3.key));
-        toggle3.input.addEventListener("change", () => {
-          const checked = toggle3.input.checked;
-          const group = WEATHER_RECIPE_GROUPS[toggle3.key];
+        toggles.set(info.key, toggle2);
+        toggle2.setChecked(selection.has(toggle2.key));
+        toggle2.input.addEventListener("change", () => {
+          const checked = toggle2.input.checked;
+          const group = WEATHER_RECIPE_GROUPS[toggle2.key];
           if (checked && group) {
             WEATHER_RECIPE_GROUP_MEMBERS[group].forEach((other) => {
-              if (other === toggle3.key) return;
+              if (other === toggle2.key) return;
               if (!selection.has(other)) return;
               selection.delete(other);
               toggles.get(other)?.setChecked(false);
             });
           }
           if (checked) {
-            selection.add(toggle3.key);
+            selection.add(toggle2.key);
           } else {
-            selection.delete(toggle3.key);
+            selection.delete(toggle2.key);
           }
           onSelectionChange();
         });
-        toggleGrid.appendChild(toggle3.wrap);
+        toggleGrid.appendChild(toggle2.wrap);
       });
       return toggleGrid;
     }
@@ -42527,7 +42527,7 @@ next: ${next}`;
       applyScaleMaximum(false);
       applyScaleMode(state4.scaleLockMode, false);
       updateColorButtons();
-      weatherToggles.forEach((toggle3) => toggle3.setChecked(state4.weatherSelected.has(toggle3.key)));
+      weatherToggles.forEach((toggle2) => toggle2.setChecked(state4.weatherSelected.has(toggle2.key)));
       radioAny.input.checked = state4.weatherMode === "ANY";
       radioAll.input.checked = state4.weatherMode === "ALL";
       radioRecipes.input.checked = state4.weatherMode === "RECIPES";
@@ -42850,10 +42850,10 @@ next: ${next}`;
       fontSize: "12px"
     });
     emptyEggPlaceholder.textContent = "No eggs available.";
-    const updateEggToggleAppearance = (toggle3, locked) => {
-      toggle3.textContent = locked ? LOCKED_ICON : UNLOCKED_ICON;
-      toggle3.style.background = locked ? "rgba(239,68,68,0.15)" : "rgba(16,185,129,0.15)";
-      toggle3.style.color = locked ? "#fca5a5" : "#9ef7c3";
+    const updateEggToggleAppearance = (toggle2, locked) => {
+      toggle2.textContent = locked ? LOCKED_ICON : UNLOCKED_ICON;
+      toggle2.style.background = locked ? "rgba(239,68,68,0.15)" : "rgba(16,185,129,0.15)";
+      toggle2.style.color = locked ? "#fca5a5" : "#9ef7c3";
     };
     let renderEggList;
     const createEggRow = (opt) => {
@@ -42867,14 +42867,14 @@ next: ${next}`;
         borderRadius: "10px",
         background: "rgba(255,255,255,0.02)"
       });
-      const toggle3 = document.createElement("button");
-      toggle3.type = "button";
-      toggle3.style.border = "1px solid rgba(255,255,255,0.10)";
-      toggle3.style.borderRadius = "10px";
-      toggle3.style.padding = "6px 10px";
-      toggle3.style.fontSize = "14px";
-      toggle3.style.fontWeight = "700";
-      toggle3.addEventListener("click", () => {
+      const toggle2 = document.createElement("button");
+      toggle2.type = "button";
+      toggle2.style.border = "1px solid rgba(255,255,255,0.10)";
+      toggle2.style.borderRadius = "10px";
+      toggle2.style.padding = "6px 10px";
+      toggle2.style.fontSize = "14px";
+      toggle2.style.fontWeight = "700";
+      toggle2.addEventListener("click", () => {
         const next = !Boolean(state4.eggLocks?.[opt.id]);
         state4.eggLocks = { ...state4.eggLocks || {}, [opt.id]: next };
         lockerRestrictionsService.setEggLock(opt.id, next);
@@ -42884,8 +42884,8 @@ next: ${next}`;
       name.style.fontWeight = "600";
       name.style.color = "#e7eef7";
       const icon = createEggIcon(opt.id, opt.name, 32);
-      row.append(toggle3, icon, name);
-      return { row, toggle: toggle3, name };
+      row.append(toggle2, icon, name);
+      return { row, toggle: toggle2, name };
     };
     renderEggList = () => {
       eggList.innerHTML = "";
@@ -43175,8 +43175,8 @@ next: ${next}`;
     });
     const toggleLabel = ui.label("Enabled");
     toggleLabel.style.margin = "0";
-    const toggle3 = ui.switch(store.global.enabled);
-    toggleWrap.append(toggleLabel, toggle3);
+    const toggle2 = ui.switch(store.global.enabled);
+    toggleWrap.append(toggleLabel, toggle2);
     header.append(textWrap, toggleWrap);
     const form = createLockerSettingsCard(ui, store.global.settings, {
       onChange: () => store.notifyGlobalSettingsChanged()
@@ -43184,12 +43184,12 @@ next: ${next}`;
     layout.append(header, form.root);
     viewRoot.append(layout);
     const update = () => {
-      setCheck(toggle3, store.global.enabled);
+      setCheck(toggle2, store.global.enabled);
       form.setDisabled(!store.global.enabled);
       form.refresh();
     };
-    toggle3.addEventListener("change", () => {
-      store.setGlobalEnabled(!!toggle3.checked);
+    toggle2.addEventListener("change", () => {
+      store.setGlobalEnabled(!!toggle2.checked);
     });
     const unsubscribe3 = store.subscribe(() => {
       update();
@@ -43390,8 +43390,8 @@ next: ${next}`;
       toggleWrap.style.flexWrap = "nowrap";
       const toggleLabel = ui.label("Override");
       toggleLabel.style.margin = "0";
-      const toggle3 = ui.switch(override.enabled);
-      toggleWrap.append(toggleLabel, toggle3);
+      const toggle2 = ui.switch(override.enabled);
+      toggleWrap.append(toggleLabel, toggle2);
       header.append(titleWrap, toggleWrap);
       const status = document.createElement("div");
       status.style.fontSize = "12px";
@@ -43413,10 +43413,10 @@ next: ${next}`;
         form.refresh();
         updateStatus();
       };
-      toggle3.addEventListener("change", () => {
+      toggle2.addEventListener("change", () => {
         if (!selectedKey) return;
         const wasEnabled = override.enabled;
-        const nextEnabled = !!toggle3.checked;
+        const nextEnabled = !!toggle2.checked;
         if (nextEnabled && !wasEnabled && !override.hasPersistedSettings) {
           copySettings(override.settings, store.global.settings);
         }
@@ -51476,10 +51476,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     const toggleLabel = document.createElement("div");
     css3(toggleLabel, { fontSize: "13px", fontWeight: "600", color: TEXT3 });
     toggleLabel.textContent = "Editor mode";
-    const toggle3 = createToggle(EditorService.isEnabled(), (on) => {
+    const toggle2 = createToggle(EditorService.isEnabled(), (on) => {
       EditorService.setEnabled(on);
     });
-    toggleRow.append(toggleLabel, toggle3);
+    toggleRow.append(toggleLabel, toggle2);
     const desc = document.createElement("div");
     css3(desc, { fontSize: "11px", color: TEXT_DIM3, lineHeight: "1.5" });
     desc.textContent = "Sandbox garden with every plant and decor unlocked. Left click to place, right click to remove, drag to paint.";
@@ -51677,7 +51677,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       card2([sectionLabel2("Saved gardens"), statusEl, listWrap])
     );
     const unsubChange = EditorService.onChange((enabled2) => {
-      toggle3.querySelector("input").checked = enabled2;
+      toggle2.querySelector("input").checked = enabled2;
       renderSavedList();
     });
     const unsubSaved = EditorService.onSavedGardensChange(renderSavedList);
@@ -54707,7 +54707,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     species: null,
     minSizePct: 50,
     mutations: [],
-    mutationMode: "any"
+    mutationMode: "any",
+    includePreserved: false
   };
   function matchesMutations(row, wanted, mode) {
     if (wanted.length === 0) return true;
@@ -54725,6 +54726,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const species = filters.species && filters.species.length > 0 ? new Set(filters.species) : null;
     return rows.filter((row) => {
       if (!row.ready) return false;
+      if (row.preserved && !filters.includePreserved) return false;
       if (species && !species.has(row.species)) return false;
       if (row.sizePct < filters.minSizePct) return false;
       return matchesMutations(row, filters.mutations, filters.mutationMode);
@@ -54743,6 +54745,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (filters.minSizePct > DEFAULT_FILTERS.minSizePct) {
       qualifiers.push(`at least ${filters.minSizePct}% size`);
     }
+    if (filters.includePreserved) qualifiers.push("preserved ones included");
     if (qualifiers.length === 0) {
       return species.length > 0 ? `Harvest ${subject}, please` : "Harvest everything that's ready";
     }
@@ -56182,7 +56185,8 @@ Restore figures are averages; unlucky streaks do worse.`;
           sizePct,
           colorMutations: colorMuts,
           weatherMutations: weatherMuts,
-          timeMutations: timeMuts
+          timeMutations: timeMuts,
+          preserved: slot.preserved === true
         };
         crops.push(crop);
         allCrops.push(crop);
@@ -56281,7 +56285,8 @@ Restore figures are averages; unlucky streaks do worse.`;
           sizePct: crop.sizePct,
           growthPct: Math.round(crop.growthPct),
           mutations: Array.isArray(crop.mutations) ? crop.mutations : [],
-          ready: crop.endTime > 0 && crop.endTime <= now2
+          ready: crop.endTime > 0 && crop.endTime <= now2,
+          preserved: crop.preserved === true
         });
       }
     }
@@ -59051,6 +59056,30 @@ Restore figures are averages; unlucky streaks do worse.`;
       css2(row, { gap: "14px" });
       sizeCard.body.append(row);
     }
+    const preservedRow = document.createElement("div");
+    css2(preservedRow, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
+    const preservedLabel = document.createElement("div");
+    css2(preservedLabel, { fontSize: "11.5px", fontWeight: "600", color: TEXT });
+    preservedRow.append(preservedLabel);
+    const preservedControl = document.createElement("div");
+    preservedRow.append(preservedControl);
+    function renderPreserved() {
+      const ripe = scope.rows.filter((row) => row.ready && row.preserved).length;
+      preservedLabel.textContent = ripe === 0 ? "Preserved crops" : `Preserved crops (${ripe} ripe)`;
+      preservedControl.replaceChildren(
+        segmented(
+          [
+            { value: "skip", label: "Leave them", title: "They stay in the ground" },
+            { value: "include", label: "Pick them too", title: "Treated like any other crop" }
+          ],
+          filters.includePreserved ? "include" : "skip",
+          (value) => {
+            filters = { ...filters, includePreserved: value === "include" };
+            render();
+          }
+        )
+      );
+    }
     const resetButton = button("Reset", "neutral", () => {
       filters = { ...DEFAULT_FILTERS };
       render();
@@ -59078,10 +59107,19 @@ Restore figures are averages; unlucky streaks do worse.`;
         openHarvestSettingsModal(host);
       }
     );
-    modal.body.append(notice.root, speciesCard.root, mutationCard.root, sizeCard.root, preview.root, note.root);
+    modal.body.append(
+      notice.root,
+      preservedRow,
+      speciesCard.root,
+      mutationCard.root,
+      sizeCard.root,
+      preview.root,
+      note.root
+    );
     modal.footer.append(resetButton, askButton);
     function render() {
       if (!modal.isOpen()) return;
+      renderPreserved();
       renderSpecies();
       renderMutations();
       sizeSlider.value = String(filters.minSizePct);

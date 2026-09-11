@@ -33,6 +33,14 @@ export type HarvestRow = {
   mutations: string[];
   /** Récoltable maintenant. */
   ready: boolean;
+  /**
+   * Préservé par le joueur, et payé pour l'être.
+   *
+   * Le jeu facture la préservation au crop et lui pose un badge : c'est un
+   * geste délibéré, pas un état de croissance. Le récolter jette ce qu'on vient
+   * d'acheter, d'où le fait qu'il soit écarté par défaut.
+   */
+  preserved: boolean;
 };
 
 /** Toutes les mutations d'une ligne, catégories confondues. */
@@ -95,6 +103,15 @@ export type HarvestFilters = {
   /** Mutations recherchées, toutes catégories confondues. */
   mutations: string[];
   mutationMode: MutationMode;
+  /**
+   * Autorise la récolte des crops préservés.
+   *
+   * Faux par défaut, contrairement à tous les autres critères qui partent
+   * ouverts : préserver coûte des pièces et se fait crop par crop, donc en
+   * récolter un par mégarde a un prix. Les écarter en silence ne serait pas
+   * mieux — c'est pour ça que la popup le dit et que le compte s'affiche.
+   */
+  includePreserved: boolean;
 };
 
 export const DEFAULT_FILTERS: HarvestFilters = {
@@ -102,6 +119,7 @@ export const DEFAULT_FILTERS: HarvestFilters = {
   minSizePct: 50,
   mutations: [],
   mutationMode: "any",
+  includePreserved: false,
 };
 
 function matchesMutations(row: HarvestRow, wanted: string[], mode: MutationMode): boolean {
@@ -128,6 +146,7 @@ export function filterRows(rows: HarvestRow[], filters: HarvestFilters): Harvest
   const species = filters.species && filters.species.length > 0 ? new Set(filters.species) : null;
   return rows.filter((row) => {
     if (!row.ready) return false;
+    if (row.preserved && !filters.includePreserved) return false;
     if (species && !species.has(row.species)) return false;
     if (row.sizePct < filters.minSizePct) return false;
     return matchesMutations(row, filters.mutations, filters.mutationMode);
@@ -156,6 +175,9 @@ export function describeFilters(filters: HarvestFilters): string {
   if (filters.minSizePct > DEFAULT_FILTERS.minSizePct) {
     qualifiers.push(`at least ${filters.minSizePct}% size`);
   }
+  // Seul le cas qui s'écarte du défaut se dit : préciser « sans les préservés »
+  // à chaque demande alourdirait la phrase pour rappeler la règle ordinaire.
+  if (filters.includePreserved) qualifiers.push("preserved ones included");
 
   if (qualifiers.length === 0) {
     return species.length > 0 ? `Harvest ${subject}, please` : "Harvest everything that's ready";
