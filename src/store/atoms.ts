@@ -164,7 +164,13 @@ export const myPossiblyNoLongerValidSelectedItemIndex = makeAtom<number | null>(
 
 export const myCurrentGardenObject = makeAtom<CurrentGardenObject>("myCurrentGardenObjectAtom");
 
-/** Cycle order of the current plant's slotIds (v1125 renamed `…IndicesAtom`). */
+/**
+ * Cycle order of the current plant's slotIds.
+ *
+ * v1169 folded this into the unlabelled tile-source state, so neither name
+ * resolves on a current client and this stays empty — callers must not depend
+ * on it for correctness, only as an ordering hint when it happens to arrive.
+ */
 export const myCurrentSortedGrowSlotIndices = makeAliasedAtom<number[] | null>([
   "myCurrentSortedGrowSlotIdsAtom",
   "myCurrentSortedGrowSlotIndicesAtom",
@@ -173,13 +179,17 @@ export const myCurrentSortedGrowSlotIndices = makeAliasedAtom<number[] | null>([
 /**
  * slotId of the selected fruit — NOT its position in `slots[]`.
  *
- * `myCurrentGrowSlotIdAtom` is the id the game already resolved and is what
- * the info card shows. `mySelectedSlotIdAtom` behind it is only the raw
- * cursor: it starts at 0 and keeps pointing at ids harvesting removed, so it
- * needs `resolveGrowSlot` to land on a slot. Kept as the fallback for builds
- * before v1125, which had no resolved atom.
+ * v1169 moved crop selection into `data/tile/cropSelection.ts` and publishes
+ * the already-resolved id as `selectedCropSlotIdAtom`; it defaults to the
+ * first of the plant's sortedSlotIds and, when the stored pick was harvested
+ * away, slides to the next id upwards (else the lowest).
+ *
+ * The older names behind it are the raw cursor, which starts at 0 and keeps
+ * pointing at ids harvesting removed — those need `resolveGrowSlot` to land
+ * on a slot, which is why the resolution stays in place downstream.
  */
 export const myCurrentGrowSlotIndex = makeAliasedAtom<number | null>([
+  "selectedCropSlotIdAtom",
   "myCurrentGrowSlotIdAtom",
   "mySelectedSlotIdAtom",
 ]);

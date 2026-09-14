@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.211
+// @version      3.2.212
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -4952,6 +4952,7 @@
     "myCurrentSortedGrowSlotIndicesAtom"
   ]);
   var myCurrentGrowSlotIndex = makeAliasedAtom([
+    "selectedCropSlotIdAtom",
     "myCurrentGrowSlotIdAtom",
     "mySelectedSlotIdAtom"
   ]);
@@ -31602,7 +31603,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.211";
+      return "3.2.212";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
