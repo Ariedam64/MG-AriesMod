@@ -10,6 +10,7 @@ import {
   valueFromGardenPlant,
   DefaultPricing,
 } from "../utils/calculators";
+import { resolveGrowSlot } from "./growSlot";
 
 type CGO = CurrentGardenObject & { objectType?: string; slots?: any[] };
 const isPlantObject = (o: CGO | null | undefined): o is CGO & { objectType: "plant" } =>
@@ -42,9 +43,8 @@ export function startCropPriceWatcherViaGardenObject(): CropPriceWatcher {
     if (!isPlantObject(cur)) return null;
     const slots = Array.isArray((cur as CGO).slots) ? (cur as CGO).slots! : [];
     if (!slots.length) return null;
-    const slot = selectedSlotId != null
-      ? (slots.find((s: any) => s?.slotId === selectedSlotId) ?? slots[0])
-      : slots[0];
+    const slot = resolveGrowSlot(slots, selectedSlotId);
+    if (!slot) return null;
     const val = valueFromGardenSlot(slot, DefaultPricing, players);
     return Number.isFinite(val) && val > 0 ? val : null;
   }

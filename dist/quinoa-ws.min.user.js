@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.210
+// @version      3.2.211
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -4947,8 +4947,14 @@
   var mySelectedItemId = makeAtom("mySelectedItemIdAtom");
   var myPossiblyNoLongerValidSelectedItemIndex = makeAtom("myPossiblyNoLongerValidSelectedItemIndexAtom");
   var myCurrentGardenObject = makeAtom("myCurrentGardenObjectAtom");
-  var myCurrentSortedGrowSlotIndices = makeAtom("myCurrentSortedGrowSlotIndicesAtom");
-  var myCurrentGrowSlotIndex = makeAtom("mySelectedSlotIdAtom");
+  var myCurrentSortedGrowSlotIndices = makeAliasedAtom([
+    "myCurrentSortedGrowSlotIdsAtom",
+    "myCurrentSortedGrowSlotIndicesAtom"
+  ]);
+  var myCurrentGrowSlotIndex = makeAliasedAtom([
+    "myCurrentGrowSlotIdAtom",
+    "mySelectedSlotIdAtom"
+  ]);
   var myOwnCurrentGardenObject = makeAtom("myOwnCurrentGardenObjectAtom");
   var isCurrentGrowSlotMature = makeAtom("isCurrentGrowSlotMatureAtom");
   var myOwnCurrentDirtTileIndex = makeAtom("myOwnCurrentDirtTileIndexAtom");
@@ -8818,12 +8824,12 @@
       }
       let originalIndex = null;
       let clampedPos;
-      const bySlotId = Number.isFinite(selectedIdx) ? slots.findIndex(
+      const bySlotId2 = Number.isFinite(selectedIdx) ? slots.findIndex(
         (s) => s && typeof s === "object" && s.slotId === selectedIdx
       ) : -1;
-      if (bySlotId >= 0) {
-        originalIndex = bySlotId;
-        const posInOrder = availableIndices.indexOf(bySlotId);
+      if (bySlotId2 >= 0) {
+        originalIndex = bySlotId2;
+        const posInOrder = availableIndices.indexOf(bySlotId2);
         clampedPos = posInOrder >= 0 ? posInOrder : 0;
       } else {
         const pos = selectedOrderedPosition(order, slotCount);
@@ -29763,6 +29769,20 @@
     }
   }
 
+  // src/utils/growSlot.ts
+  var slotIdOf = (slot) => Number.isFinite(slot?.slotId) ? slot.slotId : 0;
+  var bySlotId = (a, b) => slotIdOf(a) - slotIdOf(b);
+  function resolveGrowSlot(slots, selectedSlotId) {
+    if (!Array.isArray(slots) || slots.length === 0) return null;
+    if (selectedSlotId != null && Number.isFinite(selectedSlotId)) {
+      const exact = slots.find((slot) => slot && slot.slotId === selectedSlotId);
+      if (exact) return exact;
+      const sorted = [...slots].sort(bySlotId);
+      return sorted.find((slot) => slotIdOf(slot) >= selectedSlotId) ?? sorted[0] ?? null;
+    }
+    return [...slots].sort(bySlotId)[0] ?? null;
+  }
+
   // src/utils/cropPrice.ts
   var isPlantObject2 = (o) => !!o && o.objectType === "plant";
   function startCropPriceWatcherViaGardenObject() {
@@ -29790,7 +29810,8 @@
       if (!isPlantObject2(cur)) return null;
       const slots = Array.isArray(cur.slots) ? cur.slots : [];
       if (!slots.length) return null;
-      const slot = selectedSlotId != null ? slots.find((s) => s?.slotId === selectedSlotId) ?? slots[0] : slots[0];
+      const slot = resolveGrowSlot(slots, selectedSlotId);
+      if (!slot) return null;
       const val = valueFromGardenSlot(slot, DefaultPricing, players);
       return Number.isFinite(val) && val > 0 ? val : null;
     }
@@ -31581,7 +31602,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.210";
+      return "3.2.211";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;

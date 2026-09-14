@@ -163,8 +163,26 @@ export const mySelectedItemId = makeAtom<any>("mySelectedItemIdAtom");
 export const myPossiblyNoLongerValidSelectedItemIndex = makeAtom<number | null>("myPossiblyNoLongerValidSelectedItemIndexAtom");
 
 export const myCurrentGardenObject = makeAtom<CurrentGardenObject>("myCurrentGardenObjectAtom");
-export const myCurrentSortedGrowSlotIndices = makeAtom<number[] | null>("myCurrentSortedGrowSlotIndicesAtom");
-export const myCurrentGrowSlotIndex = makeAtom<number | null>("mySelectedSlotIdAtom");
+
+/** Cycle order of the current plant's slotIds (v1125 renamed `…IndicesAtom`). */
+export const myCurrentSortedGrowSlotIndices = makeAliasedAtom<number[] | null>([
+  "myCurrentSortedGrowSlotIdsAtom",
+  "myCurrentSortedGrowSlotIndicesAtom",
+]);
+
+/**
+ * slotId of the selected fruit — NOT its position in `slots[]`.
+ *
+ * `myCurrentGrowSlotIdAtom` is the id the game already resolved and is what
+ * the info card shows. `mySelectedSlotIdAtom` behind it is only the raw
+ * cursor: it starts at 0 and keeps pointing at ids harvesting removed, so it
+ * needs `resolveGrowSlot` to land on a slot. Kept as the fallback for builds
+ * before v1125, which had no resolved atom.
+ */
+export const myCurrentGrowSlotIndex = makeAliasedAtom<number | null>([
+  "myCurrentGrowSlotIdAtom",
+  "mySelectedSlotIdAtom",
+]);
 
 export const myOwnCurrentGardenObject = makeAtom<any>("myOwnCurrentGardenObjectAtom")
 export const isCurrentGrowSlotMature = makeAtom<any>("isCurrentGrowSlotMatureAtom")
