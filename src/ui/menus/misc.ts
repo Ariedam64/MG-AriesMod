@@ -3,14 +3,19 @@
 // Same visual language as the Editor / Keybinds / Skins panels: one scrolling
 // column of collapsible section cards built from `panel-ui`.
 //
-// The Menu instance stays for `setWindowVisible`, which the seed/decor selector
-// flows need to hide the HUD while the player picks items in-game.
+// The deleters pick what to destroy through `deleter-picker`, a popup of our
+// own listing the inventory *and* the matching storage. The flow it replaced
+// faked the game's inventory panel and read clicks back off a selection atom,
+// which the game has since removed.
 
 import { Menu } from "../menu";
 import { MiscService, DEFAULT_SEED_DELETE_DELAY_MS, DEFAULT_DECOR_DELETE_DELAY_MS } from "../../services/misc";
-import { Atoms } from "../../store/atoms";
 import { getAriesStorage, updateAriesStorage } from "../../utils/localStorage";
 import { createDeleterSection } from "./misc/deleter-section";
+import { openDeleterPicker } from "./misc/deleter-picker";
+import { decorDeleter, seedDeleter } from "../../services/deleters";
+import { getDecorEntries, getSeedEntries, type DeleterEntry } from "../../services/deleterSources";
+import type { DeleterController } from "../../services/deleterRun";
 import {
   TEXT,
   TEXT_DIM,
@@ -293,51 +298,104 @@ export async function renderMiscMenu(container: HTMLElement) {
     boxSizing: "border-box",
   });
 
-  /** Clearing the stale selected-item index keeps the in-game picker in sync. */
-  const resetSelectedItemIndex = async () => {
-    try {
-      await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.set(null);
-    } catch {}
-  };
-
   const player = buildPlayerSection();
 
-  const seedDeleter = createDeleterSection({
-    headerIcon: "🌱",
+  /** HUD window the popup anchors to, so it stacks above this menu. */
+  const modalHost = (): HTMLElement =>
+    (ui.root.closest(".qws-win") as HTMLElement | null) ?? ui.root;
+
+  /**
+   * Opens the picker and resolves once it is gone, confirmed or cancelled,
+   * so the section refreshes its summary either way.
+   */
+  const pickFor = (
+    controller: DeleterController,
+    opts: {
+      title: string;
+      unitNoun: string;
+      storageNoun: string;
+      spriteCategories: string[];
+      fallbackIcon: string;
+      loadEntries: () => Promise<DeleterEntry[]>;
+    },
+  ): Promise<void> =>
+    new Promise<void>((resolve) => {
+      let loaded: DeleterEntry[] = [];
+      openDeleterPicker({
+        host: modalHost(),
+        title: opts.title,
+        unitNoun: opts.unitNoun,
+        storageNoun: opts.storageNoun,
+        spriteCategories: opts.spriteCategories,
+        fallbackIcon: opts.fallbackIcon,
+        initial: new Map(controller.getSelection().map((entry) => [entry.id, entry.qty])),
+        loadEntries: async () => {
+          loaded = await opts.loadEntries();
+          return loaded;
+        },
+        onConfirm: (picked) => {
+          controller.setSelection(
+            Array.from(picked, ([id, qty]) => {
+              const entry = loaded.find((candidate) => candidate.id === id);
+              return {
+                id,
+                qty,
+                label: entry?.label ?? id,
+                fromStorage: Math.max(0, qty - (entry?.invQty ?? 0)),
+              };
+            }),
+          );
+        },
+        onClose: () => resolve(),
+      });
+    });
+
+  const seedDeleterSection = createDeleterSection({
+    headerSprite: "sprite/ui/SeedIcon",
     title: "Seed deleter",
-    description: "Bulk delete seeds from inventory.",
-    rowIcon: "sprite/ui/SeedIcon",
+    description: "Bulk delete seeds from your inventory and Seed Silo.",
+    spriteCategories: ["seed"],
+    fallbackIcon: "🌱",
     groupNoun: "species",
     unitNoun: "seeds",
-    selectLabel: "Select seeds",
+    selectLabel: "Choose seeds",
+    clearLabel: "Clear selected seeds",
+    storageLabel: "Seed Silo",
     eventPrefix: "qws:seeddeleter",
     estimateDelayMs: DEFAULT_SEED_DELETE_DELAY_MS,
     runDelayMs: DEFAULT_SEED_DELETE_DELAY_MS,
     collapsed: isSectionCollapsed("seedDeleter"),
     onToggleCollapsed: collapsed => setSectionCollapsed("seedDeleter", collapsed),
-    progressTarget: detail => String(detail?.species ?? "-"),
-    getSelection: () => MiscService.getCurrentSeedSelection?.() || [],
-    clearSelection: () => MiscService.clearSeedSelection?.(),
-    openSelector: async () => {
-      await resetSelectedItemIndex();
-      await MiscService.openSeedSelectorFlow(ui.setWindowVisible.bind(ui));
-    },
-    runDelete: delayMs => MiscService.deleteSelectedSeeds({ delayMs }),
-    isRunning: () => MiscService.isSeedDeletionRunning(),
-    isPaused: () => MiscService.isSeedDeletionPaused(),
-    pause: () => MiscService.pauseSeedDeletion(),
-    resume: () => MiscService.resumeSeedDeletion(),
-    cancel: () => MiscService.cancelSeedDeletion(),
+    progressTarget: detail => String(detail?.label ?? detail?.species ?? "-"),
+    getSelection: () => seedDeleter.getSelection(),
+    clearSelection: () => seedDeleter.clearSelection(),
+    openSelector: () => pickFor(seedDeleter, {
+      title: "Select seeds",
+      unitNoun: "seeds",
+      storageNoun: "silo",
+      spriteCategories: ["seed"],
+      fallbackIcon: "🌱",
+      loadEntries: getSeedEntries,
+    }),
+    runDelete: delayMs => seedDeleter.run(delayMs),
+    isRunning: () => seedDeleter.isRunning(),
+    isPaused: () => seedDeleter.isPaused(),
+    pause: () => seedDeleter.pause(),
+    resume: () => seedDeleter.resume(),
+    cancel: () => seedDeleter.cancel(),
   });
 
-  const decorDeleter = createDeleterSection({
-    headerIcon: "🪴",
+  const decorDeleterSection = createDeleterSection({
+    headerSprite: "sprite/ui/DecorIcon",
     title: "Decor deleter",
-    description: "Bulk delete decor from inventory.",
-    rowIcon: "sprite/ui/DecorIcon",
+    description: "Bulk delete decor from your inventory and Decor Shed.",
+    spriteCategories: ["decor"],
+    fallbackIcon: "🪴",
     groupNoun: "decor",
     unitNoun: "items",
-    selectLabel: "Select decor",
+    selectLabel: "Choose decor",
+    clearLabel: "Clear selected decor",
+    storageLabel: "Decor Shed",
     eventPrefix: "qws:decordeleter",
     // Decor deletes cost roughly two round-trips each, so the estimate doubles
     // the delay the service is actually given.
@@ -345,19 +403,23 @@ export async function renderMiscMenu(container: HTMLElement) {
     runDelayMs: DEFAULT_DECOR_DELETE_DELAY_MS,
     collapsed: isSectionCollapsed("decorDeleter"),
     onToggleCollapsed: collapsed => setSectionCollapsed("decorDeleter", collapsed),
-    progressTarget: detail => String(detail?.decorId ?? "-"),
-    getSelection: () => MiscService.getCurrentDecorSelection?.() || [],
-    clearSelection: () => MiscService.clearDecorSelection?.(),
-    openSelector: async () => {
-      await resetSelectedItemIndex();
-      await MiscService.openDecorSelectorFlow(ui.setWindowVisible.bind(ui));
-    },
-    runDelete: delayMs => MiscService.deleteSelectedDecor?.({ delayMs }),
-    isRunning: () => MiscService.isDecorDeletionRunning(),
-    isPaused: () => MiscService.isDecorDeletionPaused(),
-    pause: () => MiscService.pauseDecorDeletion(),
-    resume: () => MiscService.resumeDecorDeletion(),
-    cancel: () => MiscService.cancelDecorDeletion(),
+    progressTarget: detail => String(detail?.label ?? detail?.decorId ?? "-"),
+    getSelection: () => decorDeleter.getSelection(),
+    clearSelection: () => decorDeleter.clearSelection(),
+    openSelector: () => pickFor(decorDeleter, {
+      title: "Select decor",
+      unitNoun: "decor",
+      storageNoun: "shed",
+      spriteCategories: ["decor"],
+      fallbackIcon: "🪴",
+      loadEntries: getDecorEntries,
+    }),
+    runDelete: delayMs => decorDeleter.run(delayMs),
+    isRunning: () => decorDeleter.isRunning(),
+    isPaused: () => decorDeleter.isPaused(),
+    pause: () => decorDeleter.pause(),
+    resume: () => decorDeleter.resume(),
+    cancel: () => decorDeleter.cancel(),
   });
 
   root.append(
@@ -366,13 +428,13 @@ export async function renderMiscMenu(container: HTMLElement) {
     player.root,
     buildInventoryGuardSection(),
     buildStorageSection(),
-    seedDeleter.root,
-    decorDeleter.root,
+    seedDeleterSection.root,
+    decorDeleterSection.root,
   );
 
   (root as any).__cleanup__ = () => {
     try { player.cleanup(); } catch {}
-    try { seedDeleter.cleanup(); } catch {}
-    try { decorDeleter.cleanup(); } catch {}
+    try { seedDeleterSection.cleanup(); } catch {}
+    try { decorDeleterSection.cleanup(); } catch {}
   };
 }

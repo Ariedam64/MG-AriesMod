@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.212
+// @version      3.2.213
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -10011,17 +10011,17 @@
   var lockerRestrictionsService = new LockerRestrictionsService();
 
   // src/ui/toast.ts
-  async function sendToast(toast2) {
+  async function sendToast(toast3) {
     const sendAtom = getAtomByLabel("sendQuinoaToastAtom");
     if (sendAtom) {
-      await jSet(sendAtom, toast2);
+      await jSet(sendAtom, toast3);
       return;
     }
     const listAtom = getAtomByLabel("quinoaToastsAtom");
     if (!listAtom) throw new Error("Aucun atom de toast trouv\xE9");
     const prev = await jGet(listAtom).catch(() => []);
-    const isAnnouncement = "toastType" in toast2 && toast2.toastType === "shopAnnouncement";
-    const t = isAnnouncement ? { isClosable: true, presentByServerMs: Date.now(), ...toast2 } : { isClosable: true, duration: 1e4, ...toast2 };
+    const isAnnouncement = "toastType" in toast3 && toast3.toastType === "shopAnnouncement";
+    const t = isAnnouncement ? { isClosable: true, presentByServerMs: Date.now(), ...toast3 } : { isClosable: true, duration: 1e4, ...toast3 };
     t.id = t.id ?? `quinoa-game-toast-${Date.now()}-${Math.random()}`;
     await jSet(listAtom, [...prev, t]);
   }
@@ -14250,9 +14250,19 @@
       } catch (err) {
       }
     },
-    async retrieveItemFromStorage(itemId, storageId, toInventoryIndex) {
+    /**
+     * `quantity` pulls back part of a stack; omitting it takes the whole entry
+     * (the game's own drag-and-drop leaves it out for unique items).
+     */
+    async retrieveItemFromStorage(itemId, storageId, toInventoryIndex, quantity) {
       try {
-        sendToGame({ type: "RetrieveItemFromStorage", itemId, storageId, ...toInventoryIndex !== void 0 && { toInventoryIndex } });
+        sendToGame({
+          type: "RetrieveItemFromStorage",
+          itemId,
+          storageId,
+          ...toInventoryIndex !== void 0 && { toInventoryIndex },
+          ...quantity !== void 0 && { quantity: Math.max(1, Math.floor(quantity)) }
+        });
       } catch (err) {
       }
     },
@@ -31603,7 +31613,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.212";
+      return "3.2.213";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -49050,56 +49060,107 @@ Restore figures are averages; unlucky streaks do worse.`;
   var NF_US2 = new Intl.NumberFormat("en-US");
   var formatNum2 = (n) => NF_US2.format(Math.max(0, Math.floor(n || 0)));
   var EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS = 10;
+  var MAX_VISIBLE_CHIPS = 4;
+  var CHIP_SPRITE_PX = 22;
   var formatDurationShort = (ms) => {
     if (ms < 1e3) return `${ms} ms`;
     const seconds = ms / 1e3;
     if (seconds < 10) return `${seconds.toFixed(1)} s`;
-    return `${Math.round(seconds)} s`;
+    if (seconds < 90) return `${Math.round(seconds)} s`;
+    const minutes = Math.floor(seconds / 60);
+    const rest2 = Math.round(seconds % 60);
+    return rest2 === 0 ? `${minutes} min` : `${minutes} min ${rest2} s`;
   };
-  var formatFinishTime = (timestamp) => new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  var buildEstimateSentence = (count, delayMs, finishTimestamp) => {
-    if (count <= 0 || delayMs <= 0) return "";
-    const durationMs = count * (delayMs + EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS);
-    const durationText = formatDurationShort(durationMs);
-    if (!finishTimestamp) return ` \xB7 Estimated time ${durationText}`;
-    return ` \xB7 Estimated time ${durationText} (${formatFinishTime(finishTimestamp)})`;
-  };
+  var formatFinishTime = (timestamp) => new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  function statTile() {
+    const root = document.createElement("div");
+    css2(root, {
+      flex: "1 1 0",
+      minWidth: "0",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: "2px",
+      padding: "8px 4px",
+      borderRadius: "10px",
+      background: CARD_BG,
+      border: `1px solid ${BORDER}`
+    });
+    const value = document.createElement("div");
+    css2(value, { fontSize: "19px", fontWeight: "700", color: TEXT, lineHeight: "1.1" });
+    const caption = document.createElement("div");
+    css2(caption, {
+      fontSize: "9.5px",
+      color: TEXT_DIM,
+      textTransform: "uppercase",
+      letterSpacing: "0.06em",
+      whiteSpace: "nowrap"
+    });
+    root.append(value, caption);
+    return {
+      root,
+      set: (nextValue, nextCaption, tone) => {
+        value.textContent = nextValue;
+        caption.textContent = nextCaption;
+        css2(value, { color: tone ?? TEXT });
+      }
+    };
+  }
   function createDeleterSection(config) {
+    const header = document.createElement("div");
+    css2(header, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+    const headerText = document.createElement("div");
+    css2(headerText, { display: "flex", flexDirection: "column", gap: "3px", minWidth: "0" });
+    headerText.append(sectionLabel(config.title));
+    const headerDesc = document.createElement("div");
+    css2(headerDesc, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
+    headerDesc.textContent = config.description;
+    headerText.append(headerDesc);
+    header.append(iconBox(config.headerSprite, 22, "misc"), headerText);
     const section2 = collapsibleCard({
-      icon: config.headerIcon,
-      title: config.title,
-      description: config.description,
+      header,
       collapsed: config.collapsed,
       onToggle: config.onToggleCollapsed
     });
-    const summary = pill(`0 ${config.groupNoun} \xB7 0 ${config.unitNoun}`);
-    const summaryRow = settingRow(
-      "Selected",
-      `Review the current selection before deleting.`,
-      summary,
-      { icon: config.rowIcon, iconTag: "misc" }
-    );
+    const stats = document.createElement("div");
+    css2(stats, { display: "flex", gap: "6px", marginBottom: "8px" });
+    const statGroups = statTile();
+    const statUnits = statTile();
+    const statStorage = statTile();
+    stats.append(statGroups.root, statUnits.root, statStorage.root);
+    const chips = document.createElement("div");
+    css2(chips, { display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "8px" });
+    const estimate = document.createElement("div");
+    css2(estimate, { fontSize: "11px", color: TEXT_DIM, marginBottom: "10px", minHeight: "14px" });
+    const progressWrap = document.createElement("div");
+    css2(progressWrap, { display: "none", flexDirection: "column", gap: "6px", marginBottom: "10px" });
+    const bar = meter();
+    const progressLine = document.createElement("div");
+    css2(progressLine, { display: "flex", alignItems: "center", gap: "8px", fontSize: "11.5px", color: TEXT });
+    const progressTargetEl = document.createElement("div");
+    css2(progressTargetEl, { flex: "1", minWidth: "0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" });
+    const progressCount = document.createElement("div");
+    css2(progressCount, { color: TEXT_DIM, flex: "0 0 auto" });
+    progressLine.append(progressTargetEl, progressCount);
+    progressWrap.append(bar.root, progressLine);
     const actions = document.createElement("div");
-    css2(actions, { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" });
+    css2(actions, { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" });
     const btnSelect = button(config.selectLabel, "accent", () => runSelect());
-    const btnDelete = button("Delete", "danger", () => runDelete());
-    const btnClear = button("Clear", "neutral", () => {
+    const btnClear = button(config.clearLabel, "neutral", () => {
       try {
         config.clearSelection();
       } catch {
       }
       updateSummary2();
     });
-    actions.append(btnSelect, btnDelete, btnClear);
-    const actionsRow = settingRow("Actions", "Pick, clear, or delete the selection.", actions);
-    const status = pill("Idle");
-    const controls = document.createElement("div");
-    css2(controls, { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" });
+    const spacer2 = document.createElement("div");
+    css2(spacer2, { flex: "1 1 auto" });
+    const btnDelete = button("Start deleting", "danger", () => runDelete());
     const btnPause = button("Pause", "neutral", () => {
       config.pause();
       updateControls();
     });
-    const btnPlay = button("Play", "neutral", () => {
+    const btnPlay = button("Resume", "neutral", () => {
       config.resume();
       updateControls();
     });
@@ -49107,21 +49168,67 @@ Restore figures are averages; unlucky streaks do worse.`;
       config.cancel();
       updateControls();
     });
-    controls.append(btnPause, btnPlay, btnStop, status);
-    const statusRow = settingRow("Status", "Pause or stop the current delete flow.", controls);
+    actions.append(btnSelect, btnClear, spacer2, btnDelete, btnPause, btnPlay, btnStop);
+    section2.body.append(stats, chips, estimate, progressWrap, actions);
     const progress = { target: "-", done: 0, total: 0 };
-    const describeStatus = () => {
-      if (!config.isRunning()) return "Idle";
-      const base = `${progress.target || "-"} (${progress.done}/${progress.total})`;
-      return config.isPaused() ? `Paused \xB7 ${base}` : base;
-    };
-    function updateControls() {
-      const running2 = config.isRunning();
-      const paused = config.isPaused();
-      setButtonEnabled(btnPause, running2 && !paused);
-      setButtonEnabled(btnPlay, running2 && paused);
-      setButtonEnabled(btnStop, running2);
-      status.textContent = describeStatus();
+    function buildChip(item) {
+      const chip2 = document.createElement("div");
+      css2(chip2, {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "5px",
+        padding: "3px 8px 3px 4px",
+        borderRadius: "999px",
+        border: `1px solid ${BORDER}`,
+        background: CARD_BG,
+        fontSize: "11px",
+        color: TEXT,
+        maxWidth: "100%"
+      });
+      const icon = document.createElement("span");
+      css2(icon, {
+        width: `${CHIP_SPRITE_PX}px`,
+        height: `${CHIP_SPRITE_PX}px`,
+        flex: "0 0 auto",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "13px"
+      });
+      icon.textContent = config.fallbackIcon;
+      if (item.id) attachSpriteIcon(icon, config.spriteCategories, [item.id], CHIP_SPRITE_PX, "deleter-chip");
+      const name = document.createElement("span");
+      css2(name, { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "130px" });
+      name.textContent = item.label ?? item.id ?? "?";
+      const qty = document.createElement("span");
+      css2(qty, { color: TEAL, fontWeight: "600", flex: "0 0 auto" });
+      qty.textContent = formatNum2(item.qty ?? 0);
+      chip2.append(icon, name, qty);
+      return chip2;
+    }
+    function overflowChip(count) {
+      const chip2 = document.createElement("div");
+      css2(chip2, {
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "3px 10px",
+        borderRadius: "999px",
+        border: `1px dashed ${BORDER}`,
+        fontSize: "11px",
+        color: TEXT_DIM
+      });
+      chip2.textContent = `+${count} more`;
+      return chip2;
+    }
+    function readSelection() {
+      const selection = config.getSelection() || [];
+      let totalQty = 0;
+      let fromStorage = 0;
+      for (const item of selection) {
+        totalQty += Math.max(0, Math.floor(item?.qty || 0));
+        fromStorage += Math.max(0, Math.floor(item?.fromStorage || 0));
+      }
+      return { selection, groupCount: selection.length, totalQty, fromStorage };
     }
     let estimatedFinish = null;
     let summaryTimer = null;
@@ -49131,30 +49238,60 @@ Restore figures are averages; unlucky streaks do worse.`;
         summaryTimer = null;
       }
     };
-    const readSelection = () => {
-      const selection = config.getSelection() || [];
-      let totalQty = 0;
-      for (const item of selection) totalQty += Math.max(0, Math.floor(item?.qty || 0));
-      return { groupCount: selection.length, totalQty };
-    };
     function updateSummary2() {
-      const { groupCount, totalQty } = readSelection();
-      const estimateMs = totalQty * (config.estimateDelayMs + EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS);
+      const { selection, groupCount, totalQty, fromStorage } = readSelection();
+      statGroups.set(formatNum2(groupCount), config.groupNoun);
+      statUnits.set(formatNum2(totalQty), config.unitNoun);
+      statStorage.set(formatNum2(fromStorage), "from storage", fromStorage > 0 ? WARN : TEXT);
+      chips.innerHTML = "";
+      if (groupCount === 0) {
+        const empty = document.createElement("div");
+        css2(empty, { fontSize: "11px", color: TEXT_DIM });
+        empty.textContent = `Nothing picked yet. Choose from your inventory and your ${config.storageLabel}.`;
+        chips.append(empty);
+      } else {
+        const sorted = [...selection].sort((a, b) => (b.qty ?? 0) - (a.qty ?? 0));
+        for (const item of sorted.slice(0, MAX_VISIBLE_CHIPS)) chips.append(buildChip(item));
+        if (sorted.length > MAX_VISIBLE_CHIPS) chips.append(overflowChip(sorted.length - MAX_VISIBLE_CHIPS));
+      }
       const running2 = config.isRunning();
+      const estimateMs = totalQty * (config.estimateDelayMs + EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS);
       const finishTimestamp = running2 ? estimatedFinish : estimateMs > 0 ? Date.now() + estimateMs : null;
-      const estimateText = buildEstimateSentence(totalQty, config.estimateDelayMs, finishTimestamp);
-      summary.textContent = `${groupCount} ${config.groupNoun} \xB7 ${formatNum2(totalQty)} ${config.unitNoun}${estimateText}`;
+      estimate.textContent = totalQty <= 0 ? "" : finishTimestamp ? `About ${formatDurationShort(estimateMs)} \xB7 done around ${formatFinishTime(finishTimestamp)}` : `About ${formatDurationShort(estimateMs)}`;
       const hasSelection = groupCount > 0 && totalQty > 0;
-      setButtonEnabled(btnDelete, hasSelection);
-      setButtonEnabled(btnClear, hasSelection);
+      setButtonEnabled(btnDelete, hasSelection && !running2);
+      setButtonEnabled(btnClear, hasSelection && !running2);
+      setButtonEnabled(btnSelect, !running2);
       clearSummaryTimer();
       if (!running2 && totalQty > 0) {
         summaryTimer = window.setTimeout(() => updateSummary2(), 1e3);
       }
     }
+    function updateControls() {
+      const running2 = config.isRunning();
+      const paused = config.isPaused();
+      css2(progressWrap, { display: running2 ? "flex" : "none" });
+      css2(stats, { display: running2 ? "none" : "flex" });
+      css2(chips, { display: running2 ? "none" : "flex" });
+      btnPause.hidden = !running2 || paused;
+      btnPlay.hidden = !running2 || !paused;
+      btnStop.hidden = !running2;
+      btnDelete.hidden = running2;
+      if (running2) {
+        const ratio = progress.total > 0 ? progress.done / progress.total : 0;
+        bar.set(ratio, paused ? "warn" : "accent");
+        progressTargetEl.textContent = paused ? `Paused \xB7 ${progress.target || "-"}` : progress.target || "-";
+        progressCount.textContent = `${formatNum2(progress.done)} / ${formatNum2(progress.total)}`;
+        estimate.textContent = "";
+      }
+      setButtonEnabled(btnPause, running2 && !paused);
+      setButtonEnabled(btnPlay, running2 && paused);
+      setButtonEnabled(btnStop, running2);
+    }
     async function runSelect() {
       await config.openSelector();
       updateSummary2();
+      updateControls();
     }
     async function runDelete() {
       const { totalQty } = readSelection();
@@ -49162,9 +49299,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       estimatedFinish = estimateMs > 0 ? Date.now() + estimateMs : null;
       clearSummaryTimer();
       const pending3 = config.runDelete(config.runDelayMs);
+      updateControls();
       updateSummary2();
       if (pending3) await pending3;
       estimatedFinish = null;
+      updateControls();
       updateSummary2();
     }
     const onProgress = (event) => {
@@ -49179,6 +49318,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       progress.done = 0;
       progress.total = 0;
       updateControls();
+      updateSummary2();
     };
     const onPauseState = () => updateControls();
     const listeners8 = [
@@ -49189,9 +49329,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       [`${config.eventPrefix}:resumed`, onPauseState]
     ];
     for (const [type, handler] of listeners8) window.addEventListener(type, handler);
-    updateControls();
     updateSummary2();
-    section2.body.append(summaryRow.row, actionsRow.row, statusRow.row);
+    updateControls();
     return {
       root: section2.root,
       cleanup: () => {
@@ -49200,6 +49339,636 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
   }
+
+  // src/ui/menus/companion/modal.ts
+  function menuCard(options) {
+    const disabled = options.disabled === true;
+    const card4 = document.createElement("button");
+    card4.type = "button";
+    card4.disabled = disabled;
+    css2(card4, {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "flex-start",
+      gap: "3px",
+      padding: "11px 12px",
+      borderRadius: "12px",
+      border: `1px solid ${BORDER}`,
+      background: CARD_BG,
+      cursor: disabled ? "default" : "pointer",
+      textAlign: "left",
+      font: "inherit",
+      opacity: disabled ? "0.55" : "1",
+      transition: "background 120ms ease, border-color 120ms ease"
+    });
+    const name = document.createElement("div");
+    css2(name, { fontSize: "13px", fontWeight: "600", color: disabled ? TEXT_DIM : TEXT });
+    name.textContent = options.name;
+    const detail = document.createElement("div");
+    css2(detail, { fontSize: "11.5px", lineHeight: "1.45", color: disabled ? TEAL : TEXT_DIM });
+    detail.textContent = options.detail;
+    card4.append(name, detail);
+    if (!disabled) {
+      card4.addEventListener("mouseenter", () => css2(card4, { background: "rgba(255,255,255,0.06)" }));
+      card4.addEventListener("mouseleave", () => css2(card4, { background: CARD_BG }));
+      card4.addEventListener("click", options.onClick);
+    }
+    return card4;
+  }
+  function openModal2(options) {
+    let closed = false;
+    const scrim = document.createElement("div");
+    const hostZ = Number.parseInt(getComputedStyle(options.host).zIndex, 10);
+    css2(scrim, {
+      position: "fixed",
+      inset: "0",
+      zIndex: String((Number.isFinite(hostZ) ? hostZ : 2000001) + 1),
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "16px",
+      background: "rgba(0,0,0,0.55)",
+      backdropFilter: "blur(4px)"
+    });
+    const panel = document.createElement("div");
+    css2(panel, {
+      display: "flex",
+      flexDirection: "column",
+      width: `min(${options.widthPx ?? 420}px, 100%)`,
+      maxHeight: "min(520px, 88vh)",
+      borderRadius: "16px",
+      border: `1px solid ${BORDER}`,
+      background: "#101620",
+      boxShadow: "0 24px 64px rgba(0,0,0,0.55)",
+      overflow: "hidden"
+    });
+    panel.addEventListener("click", (event) => event.stopPropagation());
+    const header = document.createElement("div");
+    css2(header, {
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      padding: "12px 14px",
+      borderBottom: `1px solid ${BORDER}`,
+      flex: "0 0 auto"
+    });
+    const title = document.createElement("div");
+    css2(title, { fontSize: "14px", fontWeight: "600", color: TEXT, flex: "1", minWidth: "0" });
+    title.textContent = options.title;
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.textContent = "\u2715";
+    closeButton.title = "Close";
+    css2(closeButton, {
+      width: "28px",
+      height: "28px",
+      flex: "0 0 auto",
+      borderRadius: "8px",
+      border: `1px solid ${BORDER}`,
+      background: "rgba(255,255,255,0.03)",
+      color: TEXT_DIM,
+      cursor: "pointer",
+      fontSize: "12px",
+      lineHeight: "1"
+    });
+    closeButton.addEventListener("click", () => close());
+    header.append(title, closeButton);
+    const body = document.createElement("div");
+    body.className = "qws-pnl-scroll";
+    css2(body, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px",
+      padding: "12px 14px",
+      overflowY: "auto",
+      // Sans cette paire, un enfant de colonne flex refuse de descendre sous sa
+      // hauteur de contenu : le corps déborderait au lieu de défiler.
+      flex: "1 1 auto",
+      minHeight: "0"
+    });
+    const footer = document.createElement("div");
+    css2(footer, {
+      display: "none",
+      alignItems: "center",
+      gap: "10px",
+      padding: "12px 14px",
+      borderTop: `1px solid ${BORDER}`,
+      flex: "0 0 auto"
+    });
+    const showFooterWhenFilled = new MutationObserver(() => {
+      footer.style.display = footer.childElementCount > 0 ? "flex" : "none";
+    });
+    showFooterWhenFilled.observe(footer, { childList: true });
+    panel.append(header, body, footer);
+    scrim.append(panel);
+    function onKeyDown(event) {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        close();
+      }
+    }
+    function close() {
+      if (closed) return;
+      closed = true;
+      clearInterval(hostWatch);
+      showFooterWhenFilled.disconnect();
+      document.removeEventListener("keydown", onKeyDown, true);
+      scrim.remove();
+      options.onClose?.();
+    }
+    const hostWatch = window.setInterval(() => {
+      if (!options.host.isConnected) close();
+    }, 1e3);
+    scrim.addEventListener("click", () => close());
+    document.addEventListener("keydown", onKeyDown, true);
+    (document.documentElement || document.body).appendChild(scrim);
+    return {
+      body,
+      footer,
+      close,
+      isOpen: () => !closed
+    };
+  }
+
+  // src/ui/menus/misc/deleter-picker.ts
+  var ROW_SPRITE_PX = 36;
+  var NF_US3 = new Intl.NumberFormat("en-US");
+  var formatNum3 = (n) => NF_US3.format(Math.max(0, Math.floor(n || 0)));
+  function openDeleterPicker(options) {
+    const modal = openModal2({
+      host: options.host,
+      title: options.title,
+      widthPx: 460,
+      onClose: options.onClose
+    });
+    const picked = new Map(options.initial);
+    let entries = [];
+    let filter = "";
+    const controls = document.createElement("div");
+    css2(controls, { display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", marginBottom: "10px" });
+    const search2 = textField(`Search ${options.unitNoun}\u2026`);
+    css2(search2, { flex: "1 1 160px", minWidth: "120px" });
+    search2.addEventListener("input", () => {
+      filter = search2.value.trim().toLowerCase();
+      renderRows();
+    });
+    const setAll = (fn) => {
+      for (const entry of visibleEntries()) {
+        const qty = fn(entry);
+        if (qty > 0) picked.set(entry.id, qty);
+        else picked.delete(entry.id);
+      }
+      renderRows();
+    };
+    controls.append(
+      search2,
+      button("All", "neutral", () => setAll((e) => e.total)),
+      button("None", "neutral", () => setAll(() => 0))
+    );
+    const list = document.createElement("div");
+    css2(list, { display: "flex", flexDirection: "column", gap: "4px" });
+    modal.body.append(controls, list);
+    const summary = document.createElement("div");
+    css2(summary, { flex: "1", minWidth: "0", fontSize: "12px", color: TEXT_DIM });
+    const btnCancel = button("Cancel", "neutral", () => modal.close());
+    const btnConfirm = button("Confirm selection", "accent", () => {
+      const out = /* @__PURE__ */ new Map();
+      for (const [id, qty] of picked) if (qty > 0) out.set(id, qty);
+      options.onConfirm(out);
+      modal.close();
+    });
+    css2(modal.footer, { display: "flex", alignItems: "center", gap: "8px" });
+    modal.footer.append(summary, btnCancel, btnConfirm);
+    function buildIcon(id) {
+      const box = document.createElement("span");
+      css2(box, {
+        width: `${ROW_SPRITE_PX}px`,
+        height: `${ROW_SPRITE_PX}px`,
+        flex: "0 0 auto",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "22px",
+        lineHeight: "1"
+      });
+      box.textContent = options.fallbackIcon;
+      attachSpriteIcon(box, options.spriteCategories, [id], ROW_SPRITE_PX, "deleter-picker");
+      return box;
+    }
+    function visibleEntries() {
+      if (!filter) return entries;
+      return entries.filter(
+        (entry) => entry.label.toLowerCase().includes(filter) || entry.id.toLowerCase().includes(filter)
+      );
+    }
+    function updateSummary2() {
+      let groups = 0;
+      let units = 0;
+      let fromStorage = 0;
+      for (const entry of entries) {
+        const qty = picked.get(entry.id) ?? 0;
+        if (qty <= 0) continue;
+        groups += 1;
+        units += qty;
+        fromStorage += Math.max(0, qty - entry.invQty);
+      }
+      const storagePart = fromStorage > 0 ? ` \xB7 ${formatNum3(fromStorage)} from the ${options.storageNoun}` : "";
+      summary.textContent = groups === 0 ? "Nothing selected." : `${groups} selected \xB7 ${formatNum3(units)} ${options.unitNoun}${storagePart}`;
+      btnConfirm.disabled = groups === 0;
+      css2(btnConfirm, { opacity: groups === 0 ? "0.45" : "1", cursor: groups === 0 ? "default" : "pointer" });
+    }
+    function buildRow(entry) {
+      const qty = picked.get(entry.id) ?? 0;
+      const selected = qty > 0;
+      const row = document.createElement("div");
+      css2(row, {
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        padding: "6px 8px",
+        borderRadius: "10px",
+        border: `1px solid ${selected ? TEAL_BORDER : BORDER}`,
+        background: selected ? TEAL_DIM : CARD_BG,
+        cursor: "pointer"
+      });
+      row.addEventListener("click", () => {
+        if ((picked.get(entry.id) ?? 0) > 0) picked.delete(entry.id);
+        else picked.set(entry.id, entry.total);
+        renderRows();
+      });
+      const label2 = document.createElement("div");
+      css2(label2, { flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "1px" });
+      const name = document.createElement("div");
+      css2(name, { fontSize: "12.5px", color: TEXT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" });
+      name.textContent = entry.label;
+      const detail = document.createElement("div");
+      css2(detail, { fontSize: "10.5px", color: TEXT_DIM });
+      detail.textContent = entry.storeQty > 0 ? `${formatNum3(entry.total)} \xB7 ${formatNum3(entry.invQty)} held, ${formatNum3(entry.storeQty)} in ${options.storageNoun}` : `${formatNum3(entry.total)} held`;
+      label2.append(name, detail);
+      const amount = document.createElement("input");
+      amount.type = "number";
+      amount.min = "0";
+      amount.max = String(entry.total);
+      amount.step = "1";
+      amount.value = String(qty);
+      css2(amount, {
+        width: "66px",
+        flex: "0 0 auto",
+        padding: "4px 6px",
+        borderRadius: "8px",
+        border: `1px solid ${BORDER}`,
+        background: "rgba(10,14,20,0.9)",
+        color: TEXT,
+        fontSize: "12px",
+        textAlign: "right"
+      });
+      amount.addEventListener("click", (event) => event.stopPropagation());
+      amount.addEventListener("change", (event) => {
+        event.stopPropagation();
+        const next = Math.max(0, Math.min(entry.total, Math.floor(Number(amount.value) || 0)));
+        if (next > 0) picked.set(entry.id, next);
+        else picked.delete(entry.id);
+        renderRows();
+      });
+      row.append(buildIcon(entry.id), label2, amount);
+      return row;
+    }
+    function renderRows() {
+      if (!modal.isOpen()) return;
+      list.innerHTML = "";
+      const rows = visibleEntries();
+      if (rows.length === 0) {
+        const empty = document.createElement("div");
+        css2(empty, { padding: "14px", textAlign: "center", fontSize: "12px", color: TEXT_DIM });
+        empty.textContent = entries.length === 0 ? `You have no ${options.unitNoun} to delete, in your inventory or your ${options.storageNoun}.` : "No match.";
+        list.append(empty);
+      } else {
+        for (const entry of rows) list.append(buildRow(entry));
+      }
+      updateSummary2();
+    }
+    const loading = document.createElement("div");
+    css2(loading, { padding: "14px", textAlign: "center", fontSize: "12px", color: TEXT_DIM });
+    loading.textContent = "Reading inventory\u2026";
+    list.append(loading);
+    updateSummary2();
+    void options.loadEntries().then((loaded) => {
+      if (!modal.isOpen()) return;
+      entries = loaded;
+      for (const [id, qty] of [...picked]) {
+        const entry = entries.find((e) => e.id === id);
+        if (!entry) picked.delete(id);
+        else picked.set(id, Math.min(qty, entry.total));
+      }
+      renderRows();
+    }).catch(() => {
+      if (!modal.isOpen()) return;
+      entries = [];
+      renderRows();
+      css2(summary, { color: DANGER });
+      summary.textContent = "Could not read the inventory.";
+    });
+  }
+
+  // src/services/deleterSources.ts
+  var SEED_STORAGE_ID = "SeedSilo";
+  var DECOR_STORAGE_ID = "DecorShed";
+  var INVENTORY_ENTRY_LIMIT = 100;
+  var INVENTORY_ENTRY_LIMIT_GUARDED = 99;
+  var toQty = (value) => {
+    const numeric = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0;
+  };
+  var toId = (value) => typeof value === "string" ? value.trim() : "";
+  function tallyById(items, idKey) {
+    const out = /* @__PURE__ */ new Map();
+    if (!Array.isArray(items)) return out;
+    for (const raw of items) {
+      if (!raw || typeof raw !== "object") continue;
+      const item = raw;
+      const id = toId(item[idKey]);
+      const qty = toQty(item.quantity);
+      if (!id || qty <= 0) continue;
+      out.set(id, (out.get(id) ?? 0) + qty);
+    }
+    return out;
+  }
+  function mergeEntries(inventory, storage, label2) {
+    const ids = /* @__PURE__ */ new Set([...inventory.keys(), ...storage.keys()]);
+    const entries = [];
+    for (const id of ids) {
+      const invQty = inventory.get(id) ?? 0;
+      const storeQty = storage.get(id) ?? 0;
+      const total = invQty + storeQty;
+      if (total <= 0) continue;
+      entries.push({ id, label: label2(id), invQty, storeQty, total });
+    }
+    entries.sort((a, b) => a.label.localeCompare(b.label));
+    return entries;
+  }
+  function entryLimit(guardEnabled2) {
+    return guardEnabled2 ? INVENTORY_ENTRY_LIMIT_GUARDED : INVENTORY_ENTRY_LIMIT;
+  }
+  function hasRoomForWithdrawal(plan, inventoryEntryCount, guardEnabled2) {
+    if (plan.fromStorage <= 0) return true;
+    if (!plan.needsNewInventoryEntry) return true;
+    return inventoryEntryCount < entryLimit(guardEnabled2);
+  }
+  function planWithdrawal(entry, wantQty) {
+    const want = Math.max(0, Math.min(Math.floor(wantQty || 0), entry.total));
+    const fromInventory = Math.min(want, entry.invQty);
+    const fromStorage = want - fromInventory;
+    return {
+      fromInventory,
+      fromStorage,
+      needsNewInventoryEntry: fromStorage > 0 && entry.invQty <= 0
+    };
+  }
+  var seedLabel = (species) => {
+    try {
+      const name = plantCatalog2?.[species]?.seed?.name;
+      if (typeof name === "string" && name) return name;
+    } catch {
+    }
+    return `${species} Seed`;
+  };
+  var decorLabel = (decorId) => {
+    try {
+      const name = decorCatalog2?.[decorId]?.name;
+      if (typeof name === "string" && name) return name;
+    } catch {
+    }
+    return decorId || "Decor";
+  };
+  async function readAtom(read) {
+    try {
+      return await read();
+    } catch {
+      return null;
+    }
+  }
+  async function getSeedEntries() {
+    const inventory = await readAtom(() => Atoms.inventory.mySeedInventory.get());
+    const storage = await readAtom(() => Atoms.inventory.mySeedSiloItems.get());
+    return mergeEntries(
+      tallyById(inventory, "species"),
+      tallyById(storage, "species"),
+      seedLabel
+    );
+  }
+  async function getDecorEntries() {
+    const inventory = await readAtom(() => Atoms.inventory.myDecorInventory.get());
+    const storage = await readAtom(() => Atoms.inventory.myDecorShedItems.get());
+    return mergeEntries(
+      tallyById(inventory, "decorId"),
+      tallyById(storage, "decorId"),
+      decorLabel
+    );
+  }
+  async function getInventoryEntryCount() {
+    const inventory = await readAtom(() => Atoms.inventory.myInventory.get());
+    const items = inventory?.items;
+    return Array.isArray(items) ? items.length : 0;
+  }
+
+  // src/services/deleterRun.ts
+  var WITHDRAW_SETTLE_MS = 180;
+  var sleep5 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  var formatNum4 = (n) => new Intl.NumberFormat("en-US").format(Math.max(0, Math.floor(n || 0)));
+  function createDeleterController(kind) {
+    const selection = /* @__PURE__ */ new Map();
+    let running2 = false;
+    let paused = false;
+    let cancelled = false;
+    let resumeWaiter = null;
+    const emit = (suffix, detail) => {
+      try {
+        window.dispatchEvent(new CustomEvent(`${kind.eventPrefix}:${suffix}`, { detail }));
+      } catch {
+      }
+    };
+    async function gate() {
+      while (paused && !cancelled) {
+        await new Promise((resolve) => {
+          resumeWaiter = resolve;
+        });
+        resumeWaiter = null;
+      }
+      if (cancelled) throw new Error("cancelled");
+    }
+    async function ensureRoom(plan) {
+      if (plan.fromStorage <= 0) return true;
+      const count = await getInventoryEntryCount();
+      return hasRoomForWithdrawal(plan, count, kind.isGuardEnabled());
+    }
+    async function run(delayMs) {
+      if (running2) {
+        kind.toast(kind.toastTitle, "Deletion already in progress.", "info");
+        return;
+      }
+      if (selection.size === 0) {
+        kind.toast(kind.toastTitle, `No ${kind.unitNoun} selected.`, "info");
+        return;
+      }
+      const entries = await kind.loadEntries();
+      const byId = new Map(entries.map((entry) => [entry.id, entry]));
+      const tasks = [];
+      for (const picked of selection.values()) {
+        const entry = byId.get(picked.id);
+        if (!entry) continue;
+        const qty = Math.min(Math.max(0, Math.floor(picked.qty)), entry.total);
+        if (qty > 0) tasks.push({ entry, qty });
+      }
+      const total = tasks.reduce((sum, task) => sum + task.qty, 0);
+      if (total <= 0) {
+        kind.toast(kind.toastTitle, "Nothing left to delete.", "info");
+        return;
+      }
+      const firstWithdrawal = tasks.map((task) => planWithdrawal(task.entry, task.qty)).find((plan) => plan.fromStorage > 0);
+      if (firstWithdrawal && !await ensureRoom(firstWithdrawal)) {
+        kind.toast(
+          kind.toastTitle,
+          "Your inventory is full. Free one slot and try again.",
+          "error"
+        );
+        return;
+      }
+      running2 = true;
+      paused = false;
+      cancelled = false;
+      let done = 0;
+      try {
+        kind.toast(
+          kind.toastTitle,
+          `Deleting ${formatNum4(total)} ${kind.unitNoun} across ${tasks.length} categories...`,
+          "info"
+        );
+        for (const task of tasks) {
+          await gate();
+          const plan = planWithdrawal(task.entry, task.qty);
+          if (plan.fromStorage > 0) {
+            if (!await ensureRoom(plan)) {
+              kind.toast(
+                kind.toastTitle,
+                `Stopped at ${task.entry.label}, your inventory filled up.`,
+                "error"
+              );
+              break;
+            }
+            await kind.withdraw(task.entry.id, kind.storageId, plan.fromStorage);
+            await sleep5(WITHDRAW_SETTLE_MS);
+          }
+          for (let i = 0; i < task.qty; i++) {
+            await gate();
+            await kind.deleteOne(task.entry.id, delayMs);
+            done += 1;
+            emit("progress", {
+              done,
+              total,
+              [kind.targetKey]: task.entry.id,
+              label: task.entry.label,
+              remainingForCategory: task.qty - i - 1
+            });
+            if (delayMs > 0 && i < task.qty - 1) await sleep5(delayMs);
+          }
+        }
+        selection.clear();
+        emit("done", { total: done, categories: tasks.length });
+        kind.toast(
+          kind.toastTitle,
+          done > 0 ? `Deleted ${formatNum4(done)} ${kind.unitNoun} (${tasks.length} categories).` : `No ${kind.unitNoun} were deleted.`,
+          done > 0 ? "success" : "info"
+        );
+      } catch (error) {
+        const message = error?.message === "cancelled" ? `Cancelled after ${formatNum4(done)} ${kind.unitNoun}.` : error?.message || "Deletion failed.";
+        emit("error", { message });
+        kind.toast(kind.toastTitle, message, "error");
+      } finally {
+        running2 = false;
+        paused = false;
+        cancelled = false;
+        resumeWaiter = null;
+      }
+    }
+    return {
+      getSelection: () => Array.from(selection.values()),
+      setSelection(entries) {
+        selection.clear();
+        for (const entry of entries) {
+          if (entry && entry.id && entry.qty > 0) selection.set(entry.id, { ...entry });
+        }
+      },
+      clearSelection: () => selection.clear(),
+      run,
+      isRunning: () => running2,
+      isPaused: () => paused,
+      pause() {
+        if (!running2 || paused) return;
+        paused = true;
+        emit("paused");
+      },
+      resume() {
+        if (!running2 || !paused) return;
+        paused = false;
+        resumeWaiter?.();
+        emit("resumed");
+      },
+      cancel() {
+        if (!running2) return;
+        cancelled = true;
+        paused = false;
+        resumeWaiter?.();
+      }
+    };
+  }
+
+  // src/services/deleters.ts
+  var sleep6 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  var toast2 = (title, message, kind) => {
+    void toastSimple(title, message, kind);
+  };
+  var guardEnabled = () => {
+    try {
+      return readInventorySlotReserveEnabled(false);
+    } catch {
+      return false;
+    }
+  };
+  var withdraw = async (id, storageId, qty) => {
+    await PlayerService.retrieveItemFromStorage(id, storageId, void 0, qty);
+  };
+  var seedDeleter = createDeleterController({
+    eventPrefix: "qws:seeddeleter",
+    toastTitle: "Seed deleter",
+    unitNoun: "seeds",
+    storageId: SEED_STORAGE_ID,
+    targetKey: "species",
+    loadEntries: getSeedEntries,
+    isGuardEnabled: guardEnabled,
+    toast: toast2,
+    async deleteOne(species) {
+      await PlayerService.wish(species);
+    },
+    withdraw
+  });
+  var decorDeleter = createDeleterController({
+    eventPrefix: "qws:decordeleter",
+    toastTitle: "Decor deleter",
+    unitNoun: "decor",
+    storageId: DECOR_STORAGE_ID,
+    targetKey: "decorId",
+    loadEntries: getDecorEntries,
+    isGuardEnabled: guardEnabled,
+    toast: toast2,
+    async deleteOne(decorId, delayMs) {
+      const slot = await findFirstEmptySlot();
+      if (!slot) throw new Error("No empty garden tile to delete decor on.");
+      await PlayerService.placeDecor(slot.tileType, slot.index, decorId, 0);
+      if (delayMs > 0) await sleep6(delayMs);
+      await PlayerService.removeGardenObject(slot.index, slot.tileType);
+    },
+    withdraw
+  });
 
   // src/ui/menus/misc.ts
   var PANEL_WIDTH_PX = 620;
@@ -49421,48 +50190,83 @@ Restore figures are averages; unlucky streaks do worse.`;
       overflowY: "auto",
       boxSizing: "border-box"
     });
-    const resetSelectedItemIndex = async () => {
-      try {
-        await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.set(null);
-      } catch {
-      }
-    };
     const player2 = buildPlayerSection();
-    const seedDeleter = createDeleterSection({
-      headerIcon: "\u{1F331}",
+    const modalHost = () => ui.root.closest(".qws-win") ?? ui.root;
+    const pickFor = (controller, opts) => new Promise((resolve) => {
+      let loaded = [];
+      openDeleterPicker({
+        host: modalHost(),
+        title: opts.title,
+        unitNoun: opts.unitNoun,
+        storageNoun: opts.storageNoun,
+        spriteCategories: opts.spriteCategories,
+        fallbackIcon: opts.fallbackIcon,
+        initial: new Map(controller.getSelection().map((entry) => [entry.id, entry.qty])),
+        loadEntries: async () => {
+          loaded = await opts.loadEntries();
+          return loaded;
+        },
+        onConfirm: (picked) => {
+          controller.setSelection(
+            Array.from(picked, ([id, qty]) => {
+              const entry = loaded.find((candidate) => candidate.id === id);
+              return {
+                id,
+                qty,
+                label: entry?.label ?? id,
+                fromStorage: Math.max(0, qty - (entry?.invQty ?? 0))
+              };
+            })
+          );
+        },
+        onClose: () => resolve()
+      });
+    });
+    const seedDeleterSection = createDeleterSection({
+      headerSprite: "sprite/ui/SeedIcon",
       title: "Seed deleter",
-      description: "Bulk delete seeds from inventory.",
-      rowIcon: "sprite/ui/SeedIcon",
+      description: "Bulk delete seeds from your inventory and Seed Silo.",
+      spriteCategories: ["seed"],
+      fallbackIcon: "\u{1F331}",
       groupNoun: "species",
       unitNoun: "seeds",
-      selectLabel: "Select seeds",
+      selectLabel: "Choose seeds",
+      clearLabel: "Clear selected seeds",
+      storageLabel: "Seed Silo",
       eventPrefix: "qws:seeddeleter",
       estimateDelayMs: DEFAULT_SEED_DELETE_DELAY_MS,
       runDelayMs: DEFAULT_SEED_DELETE_DELAY_MS,
       collapsed: isSectionCollapsed("seedDeleter"),
       onToggleCollapsed: (collapsed) => setSectionCollapsed("seedDeleter", collapsed),
-      progressTarget: (detail) => String(detail?.species ?? "-"),
-      getSelection: () => MiscService.getCurrentSeedSelection?.() || [],
-      clearSelection: () => MiscService.clearSeedSelection?.(),
-      openSelector: async () => {
-        await resetSelectedItemIndex();
-        await MiscService.openSeedSelectorFlow(ui.setWindowVisible.bind(ui));
-      },
-      runDelete: (delayMs) => MiscService.deleteSelectedSeeds({ delayMs }),
-      isRunning: () => MiscService.isSeedDeletionRunning(),
-      isPaused: () => MiscService.isSeedDeletionPaused(),
-      pause: () => MiscService.pauseSeedDeletion(),
-      resume: () => MiscService.resumeSeedDeletion(),
-      cancel: () => MiscService.cancelSeedDeletion()
+      progressTarget: (detail) => String(detail?.label ?? detail?.species ?? "-"),
+      getSelection: () => seedDeleter.getSelection(),
+      clearSelection: () => seedDeleter.clearSelection(),
+      openSelector: () => pickFor(seedDeleter, {
+        title: "Select seeds",
+        unitNoun: "seeds",
+        storageNoun: "silo",
+        spriteCategories: ["seed"],
+        fallbackIcon: "\u{1F331}",
+        loadEntries: getSeedEntries
+      }),
+      runDelete: (delayMs) => seedDeleter.run(delayMs),
+      isRunning: () => seedDeleter.isRunning(),
+      isPaused: () => seedDeleter.isPaused(),
+      pause: () => seedDeleter.pause(),
+      resume: () => seedDeleter.resume(),
+      cancel: () => seedDeleter.cancel()
     });
-    const decorDeleter = createDeleterSection({
-      headerIcon: "\u{1FAB4}",
+    const decorDeleterSection = createDeleterSection({
+      headerSprite: "sprite/ui/DecorIcon",
       title: "Decor deleter",
-      description: "Bulk delete decor from inventory.",
-      rowIcon: "sprite/ui/DecorIcon",
+      description: "Bulk delete decor from your inventory and Decor Shed.",
+      spriteCategories: ["decor"],
+      fallbackIcon: "\u{1FAB4}",
       groupNoun: "decor",
       unitNoun: "items",
-      selectLabel: "Select decor",
+      selectLabel: "Choose decor",
+      clearLabel: "Clear selected decor",
+      storageLabel: "Decor Shed",
       eventPrefix: "qws:decordeleter",
       // Decor deletes cost roughly two round-trips each, so the estimate doubles
       // the delay the service is actually given.
@@ -49470,19 +50274,23 @@ Restore figures are averages; unlucky streaks do worse.`;
       runDelayMs: DEFAULT_DECOR_DELETE_DELAY_MS,
       collapsed: isSectionCollapsed("decorDeleter"),
       onToggleCollapsed: (collapsed) => setSectionCollapsed("decorDeleter", collapsed),
-      progressTarget: (detail) => String(detail?.decorId ?? "-"),
-      getSelection: () => MiscService.getCurrentDecorSelection?.() || [],
-      clearSelection: () => MiscService.clearDecorSelection?.(),
-      openSelector: async () => {
-        await resetSelectedItemIndex();
-        await MiscService.openDecorSelectorFlow(ui.setWindowVisible.bind(ui));
-      },
-      runDelete: (delayMs) => MiscService.deleteSelectedDecor?.({ delayMs }),
-      isRunning: () => MiscService.isDecorDeletionRunning(),
-      isPaused: () => MiscService.isDecorDeletionPaused(),
-      pause: () => MiscService.pauseDecorDeletion(),
-      resume: () => MiscService.resumeDecorDeletion(),
-      cancel: () => MiscService.cancelDecorDeletion()
+      progressTarget: (detail) => String(detail?.label ?? detail?.decorId ?? "-"),
+      getSelection: () => decorDeleter.getSelection(),
+      clearSelection: () => decorDeleter.clearSelection(),
+      openSelector: () => pickFor(decorDeleter, {
+        title: "Select decor",
+        unitNoun: "decor",
+        storageNoun: "shed",
+        spriteCategories: ["decor"],
+        fallbackIcon: "\u{1FAB4}",
+        loadEntries: getDecorEntries
+      }),
+      runDelete: (delayMs) => decorDeleter.run(delayMs),
+      isRunning: () => decorDeleter.isRunning(),
+      isPaused: () => decorDeleter.isPaused(),
+      pause: () => decorDeleter.pause(),
+      resume: () => decorDeleter.resume(),
+      cancel: () => decorDeleter.cancel()
     });
     root.append(
       panelHeader(),
@@ -49490,8 +50298,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       player2.root,
       buildInventoryGuardSection(),
       buildStorageSection(),
-      seedDeleter.root,
-      decorDeleter.root
+      seedDeleterSection.root,
+      decorDeleterSection.root
     );
     root.__cleanup__ = () => {
       try {
@@ -49499,11 +50307,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       } catch {
       }
       try {
-        seedDeleter.cleanup();
+        seedDeleterSection.cleanup();
       } catch {
       }
       try {
-        decorDeleter.cleanup();
+        decorDeleterSection.cleanup();
       } catch {
       }
     };
@@ -55995,13 +56803,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       /** Attend ce qui manque pour respecter l'écart. À appeler juste avant un envoi. */
       async wait() {
         const missing = minGapMs - (Date.now() - lastAt);
-        if (missing > 0) await sleep5(missing);
+        if (missing > 0) await sleep7(missing);
       }
     };
   }
   var SETTLE_MS = 700;
   var PROGRESS_EVERY = 10;
-  var sleep5 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  var sleep7 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   // src/services/companion/chat/teamSwap.ts
   var AFTER_TEAM_SWAP_MS = 300;
@@ -56034,7 +56842,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     try {
       await PetsService.useTeam(teamId2, { markUsed: false });
-      await sleep5(AFTER_TEAM_SWAP_MS);
+      await sleep7(AFTER_TEAM_SWAP_MS);
     } catch {
       reporter2.say("system", "The team switch failed, working as I am.");
       return NOT_SWAPPED;
@@ -56046,7 +56854,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         if (!previous || previous.length === 0) return;
         try {
           await PetsService.usePetIds(previous);
-          await sleep5(AFTER_TEAM_SWAP_MS);
+          await sleep7(AFTER_TEAM_SWAP_MS);
           reporter2.say("system", "Your team is back the way it was.");
         } catch {
           reporter2.say("system", "Could not put your team back, sorry.");
@@ -56341,7 +57149,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       reporter2.say("report", "Stopped before I picked anything.");
       return;
     }
-    await sleep5(SETTLE_MS);
+    await sleep7(SETTLE_MS);
     let fresh = null;
     try {
       fresh = (await readHarvestRows()).filter((row) => row.ready);
@@ -56566,7 +57374,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var AFTER_HARVEST_MS = 700;
   var AFTER_FEED_MS = 400;
-  var sleep6 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  var sleep8 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   async function petPosition(petId) {
     try {
       const pets = await PetsService.getPets() ?? [];
@@ -56589,7 +57397,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         return { ok: false, reason: "could not pick it" };
       }
       StatsService.incrementGardenStat("totalHarvested", 1);
-      await sleep6(AFTER_HARVEST_MS);
+      await sleep8(AFTER_HARVEST_MS);
     }
     await walker.toPosition(await petPosition(candidate.petId));
     try {
@@ -56597,7 +57405,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
       return { ok: false, reason: "the feed did not go through" };
     }
-    await sleep6(AFTER_FEED_MS);
+    await sleep8(AFTER_FEED_MS);
     return { ok: true };
   }
   async function executeFeedBatch(picks, reporter2) {
@@ -56789,7 +57597,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       reporter2.say("report", "Stopped before I planted anything.");
       return;
     }
-    await sleep5(SETTLE_MS);
+    await sleep7(SETTLE_MS);
     const planted = await countPlanted(attempted);
     const stopped = cancelled ? " before you stopped me" : "";
     if (planted === null) {
@@ -57007,7 +57815,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       );
       return;
     }
-    await sleep5(SETTLE_MS);
+    await sleep7(SETTLE_MS);
     const hatched = await countHatched(attempted);
     if (hatched === null) {
       reporter2.say("report", `Opened all ${attempted.length}, but I could not check.`);
@@ -57044,7 +57852,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     reporter2.say("system", line, compose(petThing(star.item, ""), " ", line, ...spaced(mutationChips(shown))), true);
     if (!timing || !lines) return;
-    await sleep5(timing.pauseMs);
+    await sleep7(timing.pauseMs);
     if (!reporter2.stopped()) reporter2.say("system", lines.resume);
   }
   async function executeHatchBatch(slots, reporter2) {
@@ -57162,7 +57970,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       reporter2.say("report", skipped.length > 0 ? "None of them went through." : "Nothing sold.");
       return;
     }
-    await sleep5(SETTLE_MS);
+    await sleep7(SETTLE_MS);
     let sold = null;
     try {
       const left = new Set((await readHatchScope()).pets.map((pet) => pet.petId));
@@ -58608,156 +59416,6 @@ Restore figures are averages; unlucky streaks do worse.`;
         root.textContent = `Leaving ${lockedOut} locked crop${lockedOut === 1 ? "" : "s"} alone.`;
         css2(root, { color: WARN });
       }
-    };
-  }
-
-  // src/ui/menus/companion/modal.ts
-  function menuCard(options) {
-    const disabled = options.disabled === true;
-    const card4 = document.createElement("button");
-    card4.type = "button";
-    card4.disabled = disabled;
-    css2(card4, {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "flex-start",
-      gap: "3px",
-      padding: "11px 12px",
-      borderRadius: "12px",
-      border: `1px solid ${BORDER}`,
-      background: CARD_BG,
-      cursor: disabled ? "default" : "pointer",
-      textAlign: "left",
-      font: "inherit",
-      opacity: disabled ? "0.55" : "1",
-      transition: "background 120ms ease, border-color 120ms ease"
-    });
-    const name = document.createElement("div");
-    css2(name, { fontSize: "13px", fontWeight: "600", color: disabled ? TEXT_DIM : TEXT });
-    name.textContent = options.name;
-    const detail = document.createElement("div");
-    css2(detail, { fontSize: "11.5px", lineHeight: "1.45", color: disabled ? TEAL : TEXT_DIM });
-    detail.textContent = options.detail;
-    card4.append(name, detail);
-    if (!disabled) {
-      card4.addEventListener("mouseenter", () => css2(card4, { background: "rgba(255,255,255,0.06)" }));
-      card4.addEventListener("mouseleave", () => css2(card4, { background: CARD_BG }));
-      card4.addEventListener("click", options.onClick);
-    }
-    return card4;
-  }
-  function openModal2(options) {
-    let closed = false;
-    const scrim = document.createElement("div");
-    const hostZ = Number.parseInt(getComputedStyle(options.host).zIndex, 10);
-    css2(scrim, {
-      position: "fixed",
-      inset: "0",
-      zIndex: String((Number.isFinite(hostZ) ? hostZ : 2000001) + 1),
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "16px",
-      background: "rgba(0,0,0,0.55)",
-      backdropFilter: "blur(4px)"
-    });
-    const panel = document.createElement("div");
-    css2(panel, {
-      display: "flex",
-      flexDirection: "column",
-      width: `min(${options.widthPx ?? 420}px, 100%)`,
-      maxHeight: "min(520px, 88vh)",
-      borderRadius: "16px",
-      border: `1px solid ${BORDER}`,
-      background: "#101620",
-      boxShadow: "0 24px 64px rgba(0,0,0,0.55)",
-      overflow: "hidden"
-    });
-    panel.addEventListener("click", (event) => event.stopPropagation());
-    const header = document.createElement("div");
-    css2(header, {
-      display: "flex",
-      alignItems: "center",
-      gap: "10px",
-      padding: "12px 14px",
-      borderBottom: `1px solid ${BORDER}`,
-      flex: "0 0 auto"
-    });
-    const title = document.createElement("div");
-    css2(title, { fontSize: "14px", fontWeight: "600", color: TEXT, flex: "1", minWidth: "0" });
-    title.textContent = options.title;
-    const closeButton = document.createElement("button");
-    closeButton.type = "button";
-    closeButton.textContent = "\u2715";
-    closeButton.title = "Close";
-    css2(closeButton, {
-      width: "28px",
-      height: "28px",
-      flex: "0 0 auto",
-      borderRadius: "8px",
-      border: `1px solid ${BORDER}`,
-      background: "rgba(255,255,255,0.03)",
-      color: TEXT_DIM,
-      cursor: "pointer",
-      fontSize: "12px",
-      lineHeight: "1"
-    });
-    closeButton.addEventListener("click", () => close());
-    header.append(title, closeButton);
-    const body = document.createElement("div");
-    body.className = "qws-pnl-scroll";
-    css2(body, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-      padding: "12px 14px",
-      overflowY: "auto",
-      // Sans cette paire, un enfant de colonne flex refuse de descendre sous sa
-      // hauteur de contenu : le corps déborderait au lieu de défiler.
-      flex: "1 1 auto",
-      minHeight: "0"
-    });
-    const footer = document.createElement("div");
-    css2(footer, {
-      display: "none",
-      alignItems: "center",
-      gap: "10px",
-      padding: "12px 14px",
-      borderTop: `1px solid ${BORDER}`,
-      flex: "0 0 auto"
-    });
-    const showFooterWhenFilled = new MutationObserver(() => {
-      footer.style.display = footer.childElementCount > 0 ? "flex" : "none";
-    });
-    showFooterWhenFilled.observe(footer, { childList: true });
-    panel.append(header, body, footer);
-    scrim.append(panel);
-    function onKeyDown(event) {
-      if (event.key === "Escape") {
-        event.stopPropagation();
-        close();
-      }
-    }
-    function close() {
-      if (closed) return;
-      closed = true;
-      clearInterval(hostWatch);
-      showFooterWhenFilled.disconnect();
-      document.removeEventListener("keydown", onKeyDown, true);
-      scrim.remove();
-      options.onClose?.();
-    }
-    const hostWatch = window.setInterval(() => {
-      if (!options.host.isConnected) close();
-    }, 1e3);
-    scrim.addEventListener("click", () => close());
-    document.addEventListener("keydown", onKeyDown, true);
-    (document.documentElement || document.body).appendChild(scrim);
-    return {
-      body,
-      footer,
-      close,
-      isOpen: () => !closed
     };
   }
 

@@ -420,8 +420,20 @@ export const PlayerService = {
     try { sendToGame({ type: "PlacePet", itemId, position, tileType, localTileIndex }); } catch (err) {  }
   },
 
-  async retrieveItemFromStorage(itemId: string, storageId: string, toInventoryIndex?: number){
-    try { sendToGame({ type: "RetrieveItemFromStorage", itemId, storageId, ...(toInventoryIndex !== undefined && { toInventoryIndex }) }) } catch (err) { }
+  /**
+   * `quantity` pulls back part of a stack; omitting it takes the whole entry
+   * (the game's own drag-and-drop leaves it out for unique items).
+   */
+  async retrieveItemFromStorage(itemId: string, storageId: string, toInventoryIndex?: number, quantity?: number){
+    try {
+      sendToGame({
+        type: "RetrieveItemFromStorage",
+        itemId,
+        storageId,
+        ...(toInventoryIndex !== undefined && { toInventoryIndex }),
+        ...(quantity !== undefined && { quantity: Math.max(1, Math.floor(quantity)) }),
+      })
+    } catch (err) { }
   },
 
   async putItemInStorage(itemId: string, storageId: string, toStorageIndex?: number){

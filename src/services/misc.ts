@@ -1387,7 +1387,7 @@ async function endSelectedDecorNameListener() {
   try { await fn?.(); } catch {}
 }
 
-async function findFirstEmptySlot(): Promise<{ tileType: "Dirt" | "Boardwalk"; index: number } | null> {
+export async function findFirstEmptySlot(): Promise<{ tileType: "Dirt" | "Boardwalk"; index: number } | null> {
   const state = await PlayerService.getGardenState();
   const dirt = state?.tileObjects || {};
   const boardwalk = state?.boardwalkTileObjects || {};
