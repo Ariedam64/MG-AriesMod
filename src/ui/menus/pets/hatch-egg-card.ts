@@ -109,17 +109,25 @@ function targetRow(egg: EggPity, target: PityTarget, showOffsets: boolean): HTML
     whiteSpace: "nowrap",
     textAlign: "right",
   });
-  value.textContent = due ? "Guaranteed" : `${formatInt(misses)} / ${formatInt(ceiling)}`;
+  // Without a head start the count is only what this install watched, so it is
+  // a floor rather than the real counter. Saying so beats quietly showing a
+  // number the game would disagree with.
+  const isFloor = offset <= 0;
+  value.textContent = due
+    ? "Guaranteed"
+    : `${isFloor ? "≥ " : ""}${formatInt(misses)} / ${formatInt(ceiling)}`;
   value.title = due
     ? `Due: the next pull is forced (threshold ${formatInt(target.threshold)}).`
-    : `${formatInt(remaining)} more misses before the guarantee (threshold ${formatInt(target.threshold)}).`;
+    : isFloor
+      ? `At least ${formatInt(remaining)} more misses before the guarantee (threshold ${formatInt(target.threshold)}). The game keeps its own counter private, so this only counts hatches seen since tracking began. Set your real counter to correct it.`
+      : `${formatInt(remaining)} more misses before the guarantee (threshold ${formatInt(target.threshold)}).`;
 
   row.append(label, bar.root, value);
 
   if (showOffsets) {
     const input = numberField(0, ceiling, 1, offset);
     css(input, { width: "70px", padding: "5px 7px", fontSize: "11px" });
-    input.title = "Head start: your real counter when the mod started watching.";
+    input.title = "Your real in-game counter for this outcome. The mod adds what it has seen since.";
     input.addEventListener("change", () => {
       HatchTracker.setOffset(egg.eggId, target.key, Number(input.value));
     });
@@ -130,6 +138,28 @@ function targetRow(egg: EggPity, target: PityTarget, showOffsets: boolean): HTML
   }
 
   return row;
+}
+
+/**
+ * Says where the numbers come from.
+ *
+ * The game keeps its own counters server side and strips them from what the
+ * client receives, so the mod can only count hatches it watched. Anything
+ * hatched before this install is invisible to it, which is why the counts read
+ * low on an old account and why the head start exists.
+ */
+function trackingNote(): HTMLElement {
+  const note = document.createElement("div");
+  css(note, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.45", padding: "1px 0 4px" });
+
+  const startedAt = HatchTracker.getTrackingStartedAt();
+  const since = startedAt > 0
+    ? `since ${new Date(startedAt).toLocaleDateString()}`
+    : "since this install started watching";
+  note.textContent =
+    `The game keeps its real counters private, so these only count hatches seen ${since}. ` +
+    `Hatched before that? Type your in-game counter to correct it.`;
+  return note;
 }
 
 /** Single line, so a collapsed card costs one row rather than two. */
@@ -198,6 +228,7 @@ export function createEggCard(options: EggCardOptions): HTMLElement {
   // Species and mutation guarantees are separate rolls, but both are Bad Luck
   // Protection, so one heading covers the lot.
   panel.appendChild(sectionLabel("Bad luck protection"));
+  panel.appendChild(trackingNote());
   for (const target of egg.targets) {
     panel.appendChild(targetRow(egg, target, showOffsets));
   }

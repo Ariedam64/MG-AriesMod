@@ -51,6 +51,12 @@ export interface HatchTrackerState {
   offsets: Record<string, EggCounters>;
   /** Timestamp of the newest hatch ingested, for display only. */
   lastHatchAt: number;
+  /**
+   * When this install first started watching. Everything hatched before it is
+   * invisible to the counters, so the panel says so rather than passing a
+   * partial count off as the real one.
+   */
+  trackingStartedAt: number;
   /** Set once the first log snapshot has been absorbed as history. */
   bootstrapped: boolean;
 }
@@ -129,6 +135,7 @@ function loadState(): HatchTrackerState {
     counters: normalizeCounterMap(isRecord(raw) ? raw.counters : null),
     offsets: normalizeCounterMap(isRecord(raw) ? raw.offsets : null),
     lastHatchAt: isRecord(raw) ? toCount(raw.lastHatchAt) : 0,
+    trackingStartedAt: isRecord(raw) ? toCount(raw.trackingStartedAt) : 0,
     bootstrapped: isRecord(raw) ? raw.bootstrapped === true : false,
   };
   return cachedState;
@@ -284,6 +291,11 @@ export const HatchTracker = {
     return loadState().offsets[eggId] ?? emptyCounters();
   },
 
+  /** When this install started watching, or 0 before it ever has. */
+  getTrackingStartedAt(): number {
+    return loadState().trackingStartedAt;
+  },
+
   setOffset(eggId: string, key: string, value: number): void {
     const state = loadState();
     const offsets = (state.offsets[eggId] ??= emptyCounters());
@@ -333,7 +345,16 @@ export async function startHatchTracker(): Promise<() => void> {
   if (firstRun) {
     const state = loadState();
     state.bootstrapped = true;
+    state.trackingStartedAt = Date.now();
     saveState(state);
+  }
+
+  // Installs that bootstrapped before this field existed still get a date, so
+  // the panel never claims to have been counting since 1970.
+  const current = loadState();
+  if (current.bootstrapped && current.trackingStartedAt <= 0) {
+    current.trackingStartedAt = current.lastHatchAt > 0 ? current.lastHatchAt : Date.now();
+    saveState(current);
   }
 
   let unsubscribe: (() => void) | null = null;

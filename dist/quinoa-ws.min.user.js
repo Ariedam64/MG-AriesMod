@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.213
+// @version      3.2.214
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -31613,7 +31613,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.213";
+      return "3.2.214";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -35421,6 +35421,7 @@
       counters: normalizeCounterMap(isRecord3(raw) ? raw.counters : null),
       offsets: normalizeCounterMap(isRecord3(raw) ? raw.offsets : null),
       lastHatchAt: isRecord3(raw) ? toCount(raw.lastHatchAt) : 0,
+      trackingStartedAt: isRecord3(raw) ? toCount(raw.trackingStartedAt) : 0,
       bootstrapped: isRecord3(raw) ? raw.bootstrapped === true : false
     };
     return cachedState;
@@ -35540,6 +35541,10 @@
     getOffsets(eggId) {
       return loadState().offsets[eggId] ?? emptyCounters();
     },
+    /** When this install started watching, or 0 before it ever has. */
+    getTrackingStartedAt() {
+      return loadState().trackingStartedAt;
+    },
     setOffset(eggId, key2, value) {
       var _a;
       const state4 = loadState();
@@ -35581,7 +35586,13 @@
     if (firstRun) {
       const state4 = loadState();
       state4.bootstrapped = true;
+      state4.trackingStartedAt = Date.now();
       saveState(state4);
+    }
+    const current = loadState();
+    if (current.bootstrapped && current.trackingStartedAt <= 0) {
+      current.trackingStartedAt = current.lastHatchAt > 0 ? current.lastHatchAt : Date.now();
+      saveState(current);
     }
     let unsubscribe3 = null;
     try {
@@ -45289,13 +45300,14 @@ next: ${next}`;
       whiteSpace: "nowrap",
       textAlign: "right"
     });
-    value.textContent = due ? "Guaranteed" : `${formatInt2(misses)} / ${formatInt2(ceiling)}`;
-    value.title = due ? `Due: the next pull is forced (threshold ${formatInt2(target.threshold)}).` : `${formatInt2(remaining)} more misses before the guarantee (threshold ${formatInt2(target.threshold)}).`;
+    const isFloor = offset <= 0;
+    value.textContent = due ? "Guaranteed" : `${isFloor ? "\u2265 " : ""}${formatInt2(misses)} / ${formatInt2(ceiling)}`;
+    value.title = due ? `Due: the next pull is forced (threshold ${formatInt2(target.threshold)}).` : isFloor ? `At least ${formatInt2(remaining)} more misses before the guarantee (threshold ${formatInt2(target.threshold)}). The game keeps its own counter private, so this only counts hatches seen since tracking began. Set your real counter to correct it.` : `${formatInt2(remaining)} more misses before the guarantee (threshold ${formatInt2(target.threshold)}).`;
     row.append(label2, bar.root, value);
     if (showOffsets) {
       const input = numberField(0, ceiling, 1, offset);
       css2(input, { width: "70px", padding: "5px 7px", fontSize: "11px" });
-      input.title = "Head start: your real counter when the mod started watching.";
+      input.title = "Your real in-game counter for this outcome. The mod adds what it has seen since.";
       input.addEventListener("change", () => {
         HatchTracker.setOffset(egg.eggId, target.key, Number(input.value));
       });
@@ -45304,6 +45316,14 @@ next: ${next}`;
       row.appendChild(document.createElement("span"));
     }
     return row;
+  }
+  function trackingNote() {
+    const note = document.createElement("div");
+    css2(note, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.45", padding: "1px 0 4px" });
+    const startedAt = HatchTracker.getTrackingStartedAt();
+    const since = startedAt > 0 ? `since ${new Date(startedAt).toLocaleDateString()}` : "since this install started watching";
+    note.textContent = `The game keeps its real counters private, so these only count hatches seen ${since}. Hatched before that? Type your in-game counter to correct it.`;
+    return note;
   }
   function eggHeader(egg, pulls) {
     const head = document.createElement("div");
@@ -45351,6 +45371,7 @@ next: ${next}`;
       border: `1px solid ${BORDER}`
     });
     panel.appendChild(sectionLabel("Bad luck protection"));
+    panel.appendChild(trackingNote());
     for (const target of egg.targets) {
       panel.appendChild(targetRow(egg, target, showOffsets));
     }
