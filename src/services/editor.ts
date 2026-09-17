@@ -4370,7 +4370,7 @@ function overlayTileViewAt(target: OverlayTileTarget): any | null {
 
 function overlayRenderContext(): any {
   try {
-    return (tos.getStatus().engine as any)?.reusableContext ?? null;
+    return tos.getRenderContext();
   } catch {
     return null;
   }
@@ -5046,9 +5046,7 @@ function injectTileObjectRaw(tx: number, ty: number, obj: any): boolean {
 
     tv.onDataChanged(cloned);
 
-    const status = tos.getStatus();
-
-    const ctx = (status.engine as any)?.reusableContext;
+    const ctx = tos.getRenderContext();
 
     if (ctx && typeof tv.update === "function") {
       try {

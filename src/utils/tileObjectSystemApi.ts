@@ -8,6 +8,27 @@
 //   // ailleurs
 //   import { tos } from "./quinoaTileApi";
 //   tos.setTileEmpty(15, 15);
+//
+// Capture
+// -------
+// The game used to expose a single engine object carrying `app`, `systems`,
+// `start()` and `destroy()`, and the mod grabbed it by patching
+// `Function.prototype.bind` and watching for that shape. Build 1206 broke that
+// apart into a tree of scopes: the world scope owns `app` and `systems` but has
+// no `start`/`destroy`, and nothing calls `.bind()` on it, so the old predicate
+// could never match again and every editor action threw.
+//
+// What survived is the system itself. `Scope.addSystem` still does
+// `systems.set(system.name, { system, enabled })`, and the tile system is still
+// called `tileObject`, so the capture now watches `Map.prototype.set` for that
+// one key. The patch is installed at boot, fires when the world builds, and
+// takes itself back off straight away.
+//
+// The Pixi app and renderer no longer come from the engine either: they are read
+// from the sprite catalog's shared state, which resolves them through Pixi's own
+// `__PIXI_APP_INIT__` hook.
+
+import { pageWindow, readSharedGlobal, shareGlobal } from "./page-context";
 
 export type PlantSlotPatch = {
   startTime?: number;
@@ -73,10 +94,16 @@ type ApplyResult = {
 };
 
 const state = {
+  /**
+   * The old monolithic engine. Current builds have none, so this stays null
+   * unless another mod published one; everything below treats it as optional.
+   */
   engine: null as any,
   tos: null as any,
-  origBind: Function.prototype.bind as AnyFn,
-  bindPatched: false,
+  /** Set while `Map.prototype.set` carries our capture wrapper. */
+  mapSetPatched: false,
+  origMapSet: null as AnyFn | null,
+  ourMapSet: null as AnyFn | null,
   highlight: {
     gfx: null as any,
     tile: null as { tx: number; ty: number } | null,
@@ -88,65 +115,181 @@ const state = {
   },
 };
 
-function looksLikeEngine(o: any): boolean {
+/** The name the game gives the tile system, and the key it registers it under. */
+const TILE_OBJECT_SYSTEM_NAME = "tileObject";
+/** How deep to follow a scope tree when searching an engine handed to us. */
+const SCOPE_SEARCH_DEPTH = 6;
+
+function looksLikeTileObjectSystem(o: any): boolean {
   return !!(o && typeof o === "object"
-    && typeof o.start === "function"
-    && typeof o.destroy === "function"
-    && o.app && o.app.stage && o.app.renderer
-    && o.systems && typeof o.systems.values === "function");
+    && o.name === TILE_OBJECT_SYSTEM_NAME
+    && o.tileViews && typeof o.tileViews.get === "function"
+    && typeof o.getOrCreateTileView === "function");
 }
 
-function findTileObjectSystem(engine: any): any | null {
+/**
+ * A registry entry is `{ system, enabled }` since the scope rework; older builds
+ * stored the system itself. Accept both so this survives the next reshuffle.
+ */
+function tileObjectSystemFrom(value: any): any | null {
+  if (looksLikeTileObjectSystem(value)) return value;
+  if (looksLikeTileObjectSystem(value?.system)) return value.system;
+  return null;
+}
+
+/**
+ * A world rebuild (travelling to another village) disposes the tile system and
+ * builds a new one. The old object still answers every call, it just paints
+ * nothing, so the container it draws into is what says whether it is still real.
+ */
+function isLiveTileObjectSystem(o: any): boolean {
+  if (!looksLikeTileObjectSystem(o)) return false;
   try {
-    for (const e of engine.systems.values()) {
-      const s = e?.system;
-      if (s?.name === "tileObject") return s;
+    return o.worldContainer?.destroyed !== true;
+  } catch {
+    return true;
+  }
+}
+
+function isScopeLike(o: any): boolean {
+  return !!(o && typeof o === "object"
+    && ((o.systems && typeof o.systems.values === "function")
+      || typeof o.addScope === "function"
+      || typeof o.addSystem === "function"));
+}
+
+/**
+ * Searches a scope (or the legacy engine) and the scopes below it.
+ *
+ * Only ever steps into children that are themselves scopes, so handing this a
+ * Pixi container by mistake costs one property read rather than a walk of the
+ * whole display tree.
+ */
+function findTileObjectSystem(scope: any, depth = 0): any | null {
+  if (!scope || typeof scope !== "object" || depth > SCOPE_SEARCH_DEPTH) return null;
+
+  try {
+    const systems = scope.systems;
+    if (systems && typeof systems.values === "function") {
+      for (const entry of systems.values()) {
+        const found = tileObjectSystemFrom(entry);
+        if (found) return found;
+      }
     }
   } catch {}
+
+  try {
+    const children = scope.children;
+    if (children && typeof children[Symbol.iterator] === "function") {
+      for (const child of children) {
+        if (!isScopeLike(child)) continue;
+        const found = findTileObjectSystem(child, depth + 1);
+        if (found) return found;
+      }
+    }
+  } catch {}
+
+  // The world scope hangs off the renderer scope, and the player scope points
+  // back at the world scope through `renderer`.
+  for (const key of ["rendererScope", "renderer", "worldScope", "world"]) {
+    try {
+      const next = scope[key];
+      if (!isScopeLike(next)) continue;
+      const found = findTileObjectSystem(next, depth + 1);
+      if (found) return found;
+    } catch {}
+  }
+
   return null;
 }
 
 function tryCaptureFromKnownGlobals(): void {
-  const w = window as any;
-  if (!state.engine && w.__QUINOA_ENGINE__) state.engine = w.__QUINOA_ENGINE__;
-  if (!state.tos && w.__TILE_OBJECT_SYSTEM__) state.tos = w.__TILE_OBJECT_SYSTEM__;
-  if (state.engine && !state.tos) state.tos = findTileObjectSystem(state.engine);
+  if (!state.engine) {
+    const shared = readSharedGlobal<any>("__QUINOA_ENGINE__");
+    if (shared) state.engine = shared;
+  }
+  if (!state.tos) {
+    // Another mod may have published one from a world that has since gone away.
+    const shared = readSharedGlobal<any>("__TILE_OBJECT_SYSTEM__");
+    if (isLiveTileObjectSystem(shared)) state.tos = shared;
+  }
+  if (!state.tos && state.engine) state.tos = findTileObjectSystem(state.engine);
   publishCapturedGlobals();
 }
 
-// Share the captured engine/TOS with other mods (Arie's Mod / Community Hub):
-// only one bind-patch capture needs to win, the others read these globals.
+// Share the captured TOS with other mods (Arie's Mod / Community Hub): only one
+// capture needs to win, the others read these globals. Always overwrites, so a
+// world rebuild replaces a dead system rather than leaving readers on it.
 function publishCapturedGlobals(): void {
-  try {
-    const w = window as any;
-    if (state.engine && !w.__QUINOA_ENGINE__) w.__QUINOA_ENGINE__ = state.engine;
-    if (state.tos && !w.__TILE_OBJECT_SYSTEM__) w.__TILE_OBJECT_SYSTEM__ = state.tos;
-  } catch {}
+  if (state.engine) shareGlobal("__QUINOA_ENGINE__", state.engine);
+  if (state.tos) shareGlobal("__TILE_OBJECT_SYSTEM__", state.tos);
 }
 
+function mapPrototype(): any {
+  const MapCtor: any = (pageWindow as any)?.Map ?? Map;
+  return MapCtor?.prototype ?? null;
+}
+
+/**
+ * Watches `Map.prototype.set` for the one key that identifies the tile system.
+ *
+ * `Scope.addSystem` registers every system as `systems.set(system.name, …)`, so
+ * this fires exactly once per world build, on a string compare that costs
+ * nothing. It comes straight back off once it has what it needs.
+ */
 function armCapture(): void {
-  if (state.engine && state.tos) return;
-  if (state.bindPatched) return;
+  if (state.tos || state.mapSetPatched) return;
 
-  state.bindPatched = true;
+  const proto = mapPrototype();
+  const original = proto?.set;
+  if (typeof original !== "function") return;
 
-  Function.prototype.bind = function (this: any, thisArg: any, ...args: any[]) {
-    const bound = state.origBind.call(this, thisArg, ...args);
-
-    try {
-      if (!state.engine && looksLikeEngine(thisArg)) {
-        state.engine = thisArg;
-        state.tos = findTileObjectSystem(thisArg);
-        publishCapturedGlobals();
-
-        // Restore bind ASAP (one-shot)
-        Function.prototype.bind = state.origBind;
-        state.bindPatched = false;
-      }
-    } catch {}
-
-    return bound;
+  const wrapper = function (this: any, key: any, value: any) {
+    const result = original.call(this, key, value);
+    if (key === TILE_OBJECT_SYSTEM_NAME) {
+      try {
+        const system = tileObjectSystemFrom(value);
+        if (system) {
+          state.tos = system;
+          publishCapturedGlobals();
+          disarmCapture();
+        }
+      } catch {}
+    }
+    return result;
   };
+
+  state.origMapSet = original;
+  state.ourMapSet = wrapper;
+  state.mapSetPatched = true;
+  proto.set = wrapper;
+}
+
+function disarmCapture(): void {
+  if (!state.mapSetPatched) return;
+  state.mapSetPatched = false;
+
+  const proto = mapPrototype();
+  try {
+    // Someone else may have wrapped us in the meantime; leave their patch alone
+    // rather than unhooking it along with ours.
+    if (proto && state.origMapSet && proto.set === state.ourMapSet) {
+      proto.set = state.origMapSet;
+    }
+  } catch {}
+
+  state.origMapSet = null;
+  state.ourMapSet = null;
+}
+
+function ensureCapture(): void {
+  if (state.tos && isLiveTileObjectSystem(state.tos)) return;
+  if (state.tos) {
+    state.tos = null;
+    try { shareGlobal("__TILE_OBJECT_SYSTEM__", null); } catch {}
+  }
+  tryCaptureFromKnownGlobals();
+  if (!state.tos) armCapture();
 }
 
 function deepClone<T>(v: T): T {
@@ -179,8 +322,25 @@ function getTileViewAt(tx: number, ty: number, ensureView: boolean) {
 }
 
 function assertReady(): void {
-  if (!state.engine || !state.tos) {
-    throw new Error("Quinoa engine/TOS not captured. Call tos.init() early (main entry) and ensure it runs before engine initializes.");
+  ensureCapture();
+  if (!state.tos) {
+    throw new Error("Quinoa tile system not captured. Call tos.init() early (main entry) so it is watching before the world builds.");
+  }
+}
+
+/**
+ * The frame context the tile system passes to `TileView.update`.
+ *
+ * Old builds parked a reusable one on the engine; current builds do not hand it
+ * out at all, so this is usually null. That costs nothing: `onDataChanged`
+ * marks the view dirty and the system's own update pass repaints it on the next
+ * frame, which is where the repaint came from anyway.
+ */
+function getRenderContext(): any | null {
+  try {
+    return state.engine?.reusableContext ?? null;
+  } catch {
+    return null;
   }
 }
 
@@ -198,8 +358,9 @@ function applyTileObject(tx: number, ty: number, nextObj: any, opts: TileOpts = 
 
   tv.onDataChanged(nextObj);
 
-  if (forceUpdate && state.engine?.reusableContext) {
-    try { tv.update(state.engine.reusableContext); } catch {}
+  const ctx = forceUpdate ? getRenderContext() : null;
+  if (ctx && typeof tv.update === "function") {
+    try { tv.update(ctx); } catch {}
   }
 
   return { tx, ty, gidx, ok: true, before, after: tv.tileObject };
@@ -250,9 +411,41 @@ type HighlightOpts = {
   tileSize?: number;
 };
 
+/**
+ * The Pixi app, wherever it lives.
+ *
+ * The engine used to own it. Now it is read from the sprite catalog's shared
+ * state, which resolves it through Pixi's own `__PIXI_APP_INIT__` hook, with the
+ * raw Pixi globals as a last resort.
+ */
+function getPixiApp(): any {
+  try {
+    const w = pageWindow as any;
+    return state.engine?.app
+      ?? readSharedGlobal<any>("__MG_SPRITE_STATE__")?.app
+      ?? w?.__PIXI_APP__
+      ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function getRenderer(): any {
+  try {
+    const w = pageWindow as any;
+    return state.engine?.app?.renderer
+      ?? readSharedGlobal<any>("__MG_SPRITE_STATE__")?.renderer
+      ?? w?.__PIXI_RENDERER__
+      ?? getPixiApp()?.renderer
+      ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function getCanvas(): HTMLCanvasElement | null {
-  const app = (state.engine as any)?.app;
-  const renderer = app?.renderer;
+  const app = getPixiApp();
+  const renderer = getRenderer();
   // Pixi v8 exposes the canvas at renderer.canvas; .view is the v7 name (sometimes
   // a wrapper with its own .canvas). Check canvas first, same order proven to work
   // in notificationBellPixi.ts / sellAllPetsPixi.ts against this same game build.
@@ -315,7 +508,7 @@ const FARM_TILE_SIZE = 256;
 function pointerToFarmTile(ev: PointerEvent): { tx: number; ty: number; gidx: number } | null {
   assertReady();
   const canvas = getCanvas();
-  const renderer = (state.engine as any)?.app?.renderer;
+  const renderer = getRenderer();
   const worldContainer = (state.tos as any)?.worldContainer;
   const map = (state.tos as any)?.map;
   if (!canvas || !renderer?.screen || !worldContainer?.toLocal || !map) return null;
@@ -378,8 +571,10 @@ function highlightTile(tx: number, ty: number, color = 0x00ff00, opts: Highlight
   const parent = tv.displayObject || tv.root || tv.container || tv;
   if (!parent?.addChild) throw new Error("TileView is not a display container");
 
-  const PIXI = (state.engine as any)?.app?.renderer?.PIXI ?? (window as any).PIXI;
-  const Graphics = PIXI?.Graphics;
+  const Graphics =
+    readSharedGlobal<any>("__MG_SPRITE_STATE__")?.ctors?.Graphics
+    ?? (pageWindow as any)?.PIXI?.Graphics
+    ?? getRenderer()?.PIXI?.Graphics;
   if (!Graphics) throw new Error("PIXI.Graphics not available");
 
   const gfx = state.highlight.gfx ?? new Graphics();
@@ -542,20 +737,24 @@ function flashTileGreen(tx: number, ty: number, opts: FlashTileOpts = {}): boole
 export const tos = {
   /** À appeler une fois dans le main, le plus tôt possible */
   init(): HookStatus {
-    tryCaptureFromKnownGlobals();
-    armCapture();
-    tryCaptureFromKnownGlobals();
-    return { ok: !!(state.engine && state.tos), engine: state.engine, tos: state.tos };
+    ensureCapture();
+    return { ok: !!state.tos, engine: state.engine, tos: state.tos };
   },
 
   isReady(): boolean {
-    if (!state.engine || !state.tos) tryCaptureFromKnownGlobals();
-    return !!(state.engine && state.tos);
+    ensureCapture();
+    return !!state.tos;
   },
 
   getStatus(): HookStatus {
-    return { ok: !!(state.engine && state.tos), engine: state.engine, tos: state.tos };
+    return { ok: !!state.tos, engine: state.engine, tos: state.tos };
   },
+
+  /**
+   * Frame context for a manual `TileView.update`, or null when the game does not
+   * hand one out. Callers must treat null as "no forced repaint needed".
+   */
+  getRenderContext,
 
   /** Get tile object by global index (same index used in WS HarvestCrop slot field). */
   getTileObjectByIndex(gidx: number): { tileObject: any } | null {

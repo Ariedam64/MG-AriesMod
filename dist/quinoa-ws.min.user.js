@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.214
+// @version      3.2.215
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -16914,10 +16914,16 @@
 
   // src/utils/tileObjectSystemApi.ts
   var state2 = {
+    /**
+     * The old monolithic engine. Current builds have none, so this stays null
+     * unless another mod published one; everything below treats it as optional.
+     */
     engine: null,
     tos: null,
-    origBind: Function.prototype.bind,
-    bindPatched: false,
+    /** Set while `Map.prototype.set` carries our capture wrapper. */
+    mapSetPatched: false,
+    origMapSet: null,
+    ourMapSet: null,
     highlight: {
       gfx: null,
       tile: null,
@@ -16928,52 +16934,130 @@
       cleanup: null
     }
   };
-  function looksLikeEngine(o) {
-    return !!(o && typeof o === "object" && typeof o.start === "function" && typeof o.destroy === "function" && o.app && o.app.stage && o.app.renderer && o.systems && typeof o.systems.values === "function");
+  var TILE_OBJECT_SYSTEM_NAME = "tileObject";
+  var SCOPE_SEARCH_DEPTH = 6;
+  function looksLikeTileObjectSystem(o) {
+    return !!(o && typeof o === "object" && o.name === TILE_OBJECT_SYSTEM_NAME && o.tileViews && typeof o.tileViews.get === "function" && typeof o.getOrCreateTileView === "function");
   }
-  function findTileObjectSystem(engine) {
+  function tileObjectSystemFrom(value) {
+    if (looksLikeTileObjectSystem(value)) return value;
+    if (looksLikeTileObjectSystem(value?.system)) return value.system;
+    return null;
+  }
+  function isLiveTileObjectSystem(o) {
+    if (!looksLikeTileObjectSystem(o)) return false;
     try {
-      for (const e of engine.systems.values()) {
-        const s = e?.system;
-        if (s?.name === "tileObject") return s;
+      return o.worldContainer?.destroyed !== true;
+    } catch {
+      return true;
+    }
+  }
+  function isScopeLike(o) {
+    return !!(o && typeof o === "object" && (o.systems && typeof o.systems.values === "function" || typeof o.addScope === "function" || typeof o.addSystem === "function"));
+  }
+  function findTileObjectSystem(scope, depth = 0) {
+    if (!scope || typeof scope !== "object" || depth > SCOPE_SEARCH_DEPTH) return null;
+    try {
+      const systems = scope.systems;
+      if (systems && typeof systems.values === "function") {
+        for (const entry of systems.values()) {
+          const found = tileObjectSystemFrom(entry);
+          if (found) return found;
+        }
       }
     } catch {
+    }
+    try {
+      const children = scope.children;
+      if (children && typeof children[Symbol.iterator] === "function") {
+        for (const child of children) {
+          if (!isScopeLike(child)) continue;
+          const found = findTileObjectSystem(child, depth + 1);
+          if (found) return found;
+        }
+      }
+    } catch {
+    }
+    for (const key2 of ["rendererScope", "renderer", "worldScope", "world"]) {
+      try {
+        const next = scope[key2];
+        if (!isScopeLike(next)) continue;
+        const found = findTileObjectSystem(next, depth + 1);
+        if (found) return found;
+      } catch {
+      }
     }
     return null;
   }
   function tryCaptureFromKnownGlobals() {
-    const w = window;
-    if (!state2.engine && w.__QUINOA_ENGINE__) state2.engine = w.__QUINOA_ENGINE__;
-    if (!state2.tos && w.__TILE_OBJECT_SYSTEM__) state2.tos = w.__TILE_OBJECT_SYSTEM__;
-    if (state2.engine && !state2.tos) state2.tos = findTileObjectSystem(state2.engine);
+    if (!state2.engine) {
+      const shared = readSharedGlobal("__QUINOA_ENGINE__");
+      if (shared) state2.engine = shared;
+    }
+    if (!state2.tos) {
+      const shared = readSharedGlobal("__TILE_OBJECT_SYSTEM__");
+      if (isLiveTileObjectSystem(shared)) state2.tos = shared;
+    }
+    if (!state2.tos && state2.engine) state2.tos = findTileObjectSystem(state2.engine);
     publishCapturedGlobals();
   }
   function publishCapturedGlobals() {
-    try {
-      const w = window;
-      if (state2.engine && !w.__QUINOA_ENGINE__) w.__QUINOA_ENGINE__ = state2.engine;
-      if (state2.tos && !w.__TILE_OBJECT_SYSTEM__) w.__TILE_OBJECT_SYSTEM__ = state2.tos;
-    } catch {
-    }
+    if (state2.engine) shareGlobal("__QUINOA_ENGINE__", state2.engine);
+    if (state2.tos) shareGlobal("__TILE_OBJECT_SYSTEM__", state2.tos);
+  }
+  function mapPrototype() {
+    const MapCtor = pageWindow?.Map ?? Map;
+    return MapCtor?.prototype ?? null;
   }
   function armCapture() {
-    if (state2.engine && state2.tos) return;
-    if (state2.bindPatched) return;
-    state2.bindPatched = true;
-    Function.prototype.bind = function(thisArg, ...args) {
-      const bound = state2.origBind.call(this, thisArg, ...args);
-      try {
-        if (!state2.engine && looksLikeEngine(thisArg)) {
-          state2.engine = thisArg;
-          state2.tos = findTileObjectSystem(thisArg);
-          publishCapturedGlobals();
-          Function.prototype.bind = state2.origBind;
-          state2.bindPatched = false;
+    if (state2.tos || state2.mapSetPatched) return;
+    const proto = mapPrototype();
+    const original = proto?.set;
+    if (typeof original !== "function") return;
+    const wrapper = function(key2, value) {
+      const result = original.call(this, key2, value);
+      if (key2 === TILE_OBJECT_SYSTEM_NAME) {
+        try {
+          const system = tileObjectSystemFrom(value);
+          if (system) {
+            state2.tos = system;
+            publishCapturedGlobals();
+            disarmCapture();
+          }
+        } catch {
         }
+      }
+      return result;
+    };
+    state2.origMapSet = original;
+    state2.ourMapSet = wrapper;
+    state2.mapSetPatched = true;
+    proto.set = wrapper;
+  }
+  function disarmCapture() {
+    if (!state2.mapSetPatched) return;
+    state2.mapSetPatched = false;
+    const proto = mapPrototype();
+    try {
+      if (proto && state2.origMapSet && proto.set === state2.ourMapSet) {
+        proto.set = state2.origMapSet;
+      }
+    } catch {
+    }
+    state2.origMapSet = null;
+    state2.ourMapSet = null;
+  }
+  function ensureCapture() {
+    if (state2.tos && isLiveTileObjectSystem(state2.tos)) return;
+    if (state2.tos) {
+      state2.tos = null;
+      try {
+        shareGlobal("__TILE_OBJECT_SYSTEM__", null);
       } catch {
       }
-      return bound;
-    };
+    }
+    tryCaptureFromKnownGlobals();
+    if (!state2.tos) armCapture();
   }
   function deepClone(v) {
     try {
@@ -17004,8 +17088,16 @@
     return { gidx, tv };
   }
   function assertReady() {
-    if (!state2.engine || !state2.tos) {
-      throw new Error("Quinoa engine/TOS not captured. Call tos.init() early (main entry) and ensure it runs before engine initializes.");
+    ensureCapture();
+    if (!state2.tos) {
+      throw new Error("Quinoa tile system not captured. Call tos.init() early (main entry) so it is watching before the world builds.");
+    }
+  }
+  function getRenderContext() {
+    try {
+      return state2.engine?.reusableContext ?? null;
+    } catch {
+      return null;
     }
   }
   function applyTileObject(tx, ty, nextObj, opts = {}) {
@@ -17017,9 +17109,10 @@
     if (!tv) throw new Error("TileView not available");
     const before = tv.tileObject;
     tv.onDataChanged(nextObj);
-    if (forceUpdate && state2.engine?.reusableContext) {
+    const ctx2 = forceUpdate ? getRenderContext() : null;
+    if (ctx2 && typeof tv.update === "function") {
       try {
-        tv.update(state2.engine.reusableContext);
+        tv.update(ctx2);
       } catch {
       }
     }
@@ -17040,9 +17133,25 @@
       slot.mutations = p.mutations.slice();
     }
   }
+  function getPixiApp2() {
+    try {
+      const w = pageWindow;
+      return state2.engine?.app ?? readSharedGlobal("__MG_SPRITE_STATE__")?.app ?? w?.__PIXI_APP__ ?? null;
+    } catch {
+      return null;
+    }
+  }
+  function getRenderer() {
+    try {
+      const w = pageWindow;
+      return state2.engine?.app?.renderer ?? readSharedGlobal("__MG_SPRITE_STATE__")?.renderer ?? w?.__PIXI_RENDERER__ ?? getPixiApp2()?.renderer ?? null;
+    } catch {
+      return null;
+    }
+  }
   function getCanvas() {
-    const app = state2.engine?.app;
-    const renderer = app?.renderer;
+    const app = getPixiApp2();
+    const renderer = getRenderer();
     return renderer?.canvas || renderer?.view?.canvas || renderer?.view || app?.view || app?.canvas || null;
   }
   function defaultTileSize() {
@@ -17084,7 +17193,7 @@
   function pointerToFarmTile(ev) {
     assertReady();
     const canvas = getCanvas();
-    const renderer = state2.engine?.app?.renderer;
+    const renderer = getRenderer();
     const worldContainer = state2.tos?.worldContainer;
     const map2 = state2.tos?.map;
     if (!canvas || !renderer?.screen || !worldContainer?.toLocal || !map2) return null;
@@ -17138,8 +17247,7 @@
     if (!tv) throw new Error("TileView not available");
     const parent = tv.displayObject || tv.root || tv.container || tv;
     if (!parent?.addChild) throw new Error("TileView is not a display container");
-    const PIXI = state2.engine?.app?.renderer?.PIXI ?? window.PIXI;
-    const Graphics = PIXI?.Graphics;
+    const Graphics = readSharedGlobal("__MG_SPRITE_STATE__")?.ctors?.Graphics ?? pageWindow?.PIXI?.Graphics ?? getRenderer()?.PIXI?.Graphics;
     if (!Graphics) throw new Error("PIXI.Graphics not available");
     const gfx = state2.highlight.gfx ?? new Graphics();
     const alpha = opts.alpha ?? 0.8;
@@ -17271,18 +17379,21 @@
   var tos = {
     /** À appeler une fois dans le main, le plus tôt possible */
     init() {
-      tryCaptureFromKnownGlobals();
-      armCapture();
-      tryCaptureFromKnownGlobals();
-      return { ok: !!(state2.engine && state2.tos), engine: state2.engine, tos: state2.tos };
+      ensureCapture();
+      return { ok: !!state2.tos, engine: state2.engine, tos: state2.tos };
     },
     isReady() {
-      if (!state2.engine || !state2.tos) tryCaptureFromKnownGlobals();
-      return !!(state2.engine && state2.tos);
+      ensureCapture();
+      return !!state2.tos;
     },
     getStatus() {
-      return { ok: !!(state2.engine && state2.tos), engine: state2.engine, tos: state2.tos };
+      return { ok: !!state2.tos, engine: state2.engine, tos: state2.tos };
     },
+    /**
+     * Frame context for a manual `TileView.update`, or null when the game does not
+     * hand one out. Callers must treat null as "no forced repaint needed".
+     */
+    getRenderContext,
     /** Get tile object by global index (same index used in WS HarvestCrop slot field). */
     getTileObjectByIndex(gidx) {
       if (!state2.tos) return null;
@@ -19827,7 +19938,7 @@
   }
   function overlayRenderContext() {
     try {
-      return tos.getStatus().engine?.reusableContext ?? null;
+      return tos.getRenderContext();
     } catch {
       return null;
     }
@@ -20216,8 +20327,7 @@
         }
       })();
       tv.onDataChanged(cloned);
-      const status = tos.getStatus();
-      const ctx2 = status.engine?.reusableContext;
+      const ctx2 = tos.getRenderContext();
       if (ctx2 && typeof tv.update === "function") {
         try {
           tv.update(ctx2);
@@ -31613,7 +31723,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.214";
+      return "3.2.215";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
