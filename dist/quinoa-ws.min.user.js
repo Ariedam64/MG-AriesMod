@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.215
+// @version      3.2.216
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -31723,7 +31723,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.215";
+      return "3.2.216";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -57079,20 +57079,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     ...WEATHER_MUTATIONS2,
     ...TIME_MUTATIONS
   ]);
-  var _maxScaleCache = /* @__PURE__ */ new Map();
-  function getMaxScale(species) {
-    if (_maxScaleCache.has(species)) return _maxScaleCache.get(species);
-    const entry = plantCatalog2[species];
-    const crop = entry?.crop;
-    const maxScale = typeof crop?.maxScale === "number" ? crop.maxScale : 1;
-    _maxScaleCache.set(species, maxScale);
-    return maxScale;
-  }
-  function scaleToSizePct(targetScale, maxScale) {
-    if (maxScale <= 1) return 100;
-    const clamped = Math.max(1, Math.min(maxScale, Number(targetScale) || 1));
-    const pct = 50 + (clamped - 1) / (maxScale - 1) * 50;
-    return Math.max(50, Math.min(100, Math.round(pct)));
+  function slotCropSize(slot, species) {
+    const size = readCropSize({ ...slot, species: slot.species ?? species });
+    if (size != null) return size;
+    return CROP_SIZE_MIN;
   }
   function scanGarden(tileObjects, selectedSpecies) {
     const plants = [];
@@ -57108,7 +57098,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (!species || !selectedSpecies.has(species)) continue;
       const slots = tile.slots;
       if (!Array.isArray(slots) || !slots.length) continue;
-      const maxScale = getMaxScale(species);
       const crops = [];
       for (let si = 0; si < slots.length; si++) {
         const slot = slots[si];
@@ -57116,7 +57105,6 @@ Restore figures are averages; unlucky streaks do worse.`;
         const slotId = Number.isFinite(rawSlotId) ? Number(rawSlotId) : si;
         const startTime = Number(slot.startTime) || 0;
         const endTime = Number(slot.endTime) || 0;
-        const targetScale = Number(slot.targetScale) || 1;
         const mutations = Array.isArray(slot.mutations) ? slot.mutations : [];
         let growthPct = 0;
         const duration = endTime - startTime;
@@ -57126,7 +57114,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         } else {
           growthPct = 100;
         }
-        const sizePct = scaleToSizePct(targetScale, maxScale);
+        const size = slotCropSize(slot, species);
         const colorMuts = [];
         const weatherMuts = [];
         const timeMuts = [];
@@ -57140,10 +57128,10 @@ Restore figures are averages; unlucky streaks do worse.`;
           species: slot.species ?? species,
           startTime,
           endTime,
-          targetScale,
+          size,
           mutations,
           growthPct,
-          sizePct,
+          sizePct: size,
           colorMutations: colorMuts,
           weatherMutations: weatherMuts,
           timeMutations: timeMuts,
@@ -57174,7 +57162,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const count = allCrops.filter((c) => c.timeMutations.includes(tm)).length;
       timeMutationPcts[tm] = count / total * 100;
     }
-    const cropsAtMaxSize = allCrops.filter((c) => c.sizePct >= 100).length;
+    const cropsAtMaxSize = allCrops.filter((c) => c.sizePct >= CROP_SIZE_MAX).length;
     const sizeCompletePct = cropsAtMaxSize / total * 100;
     const harvestTargets = [];
     for (const plant of plants) {

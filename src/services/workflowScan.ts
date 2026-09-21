@@ -3,6 +3,7 @@
 
 import { Atoms } from "../store/atoms";
 import { plantCatalog, mutationCatalog } from "../data";
+import { CROP_SIZE_MAX, CROP_SIZE_MIN, readCropSize } from "../utils/cropSize";
 
 /* ─── Types ─── */
 
@@ -11,11 +12,12 @@ export interface CropSnapshot {
   species: string;
   startTime: number;
   endTime: number;
-  targetScale: number;
+  /** Crop Size as the game stores it: a whole number in [50, 100]. */
+  size: number;
   mutations: string[];
   /** Growth maturity 0–100 (clamped). */
   growthPct: number;
-  /** Size percent 50–100 based on targetScale vs maxScale. */
+  /** Same figure as `size`, under the name the size filters read. */
   sizePct: number;
   /** Color mutations present on this crop (Gold, Rainbow). */
   colorMutations: string[];
@@ -89,25 +91,30 @@ const ALL_KNOWN_MUTATIONS = new Set([
   ...TIME_MUTATIONS,
 ]);
 
-/* ─── MaxScale lookup ─── */
+/* ─── Crop Size ─── */
 
-const _maxScaleCache = new Map<string, number>();
-
-function getMaxScale(species: string): number {
-  if (_maxScaleCache.has(species)) return _maxScaleCache.get(species)!;
-  const entry = (plantCatalog as Record<string, Record<string, unknown>>)[species];
-  const crop = entry?.crop as Record<string, unknown> | undefined;
-  const maxScale = typeof crop?.maxScale === "number" ? crop.maxScale : 1;
-  _maxScaleCache.set(species, maxScale);
-  return maxScale;
-}
-
-/** Convert targetScale to a 50–100% size value. */
-function scaleToSizePct(targetScale: number, maxScale: number): number {
-  if (maxScale <= 1) return 100;
-  const clamped = Math.max(1, Math.min(maxScale, Number(targetScale) || 1));
-  const pct = 50 + ((clamped - 1) / (maxScale - 1)) * 50;
-  return Math.max(50, Math.min(100, Math.round(pct)));
+/**
+ * A grow slot's Crop Size.
+ *
+ * This used to derive the figure itself, from the slot's fractional
+ * `targetScale` against the catalog's `maxScale`. The game renamed both in the
+ * Crop Size rework: slots carry a whole-number `size` and the catalog carries
+ * `maxSizeMultiplier`. Reading the old names left `maxScale` at 1, which the
+ * old formula treated as "this species has no size range" and answered 100 for
+ * every crop — so the companion's size filter and the Locker's size range both
+ * saw a garden full of perfect crops and let everything through.
+ *
+ * `readCropSize` is the one place that knows both shapes, so the conversion
+ * lives there rather than being written a second time here. The species is
+ * passed along because the legacy branch needs it to find the multiplier.
+ */
+function slotCropSize(slot: Record<string, unknown>, species: string): number {
+  const size = readCropSize({ ...slot, species: slot.species ?? species });
+  if (size != null) return size;
+  // No size on the slot at all: treat it as the smallest rather than the
+  // biggest, so an unreadable crop is skipped by a size filter instead of
+  // being harvested by one.
+  return CROP_SIZE_MIN;
 }
 
 /* ─── Core scan ─── */
@@ -134,7 +141,6 @@ export function scanGarden(
     const slots = tile.slots as Array<Record<string, unknown>> | undefined;
     if (!Array.isArray(slots) || !slots.length) continue;
 
-    const maxScale = getMaxScale(species);
     const crops: CropSnapshot[] = [];
 
     for (let si = 0; si < slots.length; si++) {
@@ -148,7 +154,6 @@ export function scanGarden(
 
       const startTime = Number(slot.startTime) || 0;
       const endTime = Number(slot.endTime) || 0;
-      const targetScale = Number(slot.targetScale) || 1;
       const mutations = Array.isArray(slot.mutations) ? (slot.mutations as string[]) : [];
 
       // Growth maturity
@@ -162,7 +167,7 @@ export function scanGarden(
       }
 
       // Size
-      const sizePct = scaleToSizePct(targetScale, maxScale);
+      const size = slotCropSize(slot, species);
 
       // Classify mutations
       const colorMuts: string[] = [];
@@ -179,10 +184,10 @@ export function scanGarden(
         species: (slot.species as string) ?? species,
         startTime,
         endTime,
-        targetScale,
+        size,
         mutations,
         growthPct,
-        sizePct,
+        sizePct: size,
         colorMutations: colorMuts,
         weatherMutations: weatherMuts,
         timeMutations: timeMuts,
@@ -229,7 +234,7 @@ export function scanGarden(
   }
 
   // Size completion (crops at max size)
-  const cropsAtMaxSize = allCrops.filter((c) => c.sizePct >= 100).length;
+  const cropsAtMaxSize = allCrops.filter((c) => c.sizePct >= CROP_SIZE_MAX).length;
   const sizeCompletePct = (cropsAtMaxSize / total) * 100;
 
   // Mature crops (ready to harvest)
