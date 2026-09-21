@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.216
+// @version      3.2.217
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -2659,6 +2659,7 @@
     "SnowyHungerRestore",
     "DoubleHarvest",
     "DoubleHatch",
+    "DoubleHatchII",
     "ProduceEater",
     "PetHatchSizeBoost",
     "PetHatchSizeBoostII",
@@ -2751,7 +2752,9 @@
         const crop = params.harvestedCrop;
         return `Double harvested ${crop?.species || "Unknown"}`;
       }
-      case "DoubleHatch": {
+      // Double Hatch I sits on Turkey, II on Rooster. Both log the same way.
+      case "DoubleHatch":
+      case "DoubleHatchII": {
         const extra = params.extraPet;
         return `Double hatched ${extra?.petSpecies || "Unknown"}`;
       }
@@ -8982,7 +8985,12 @@
     return {
       minScalePct: 50,
       maxScalePct: 100,
-      scaleLockMode: "RANGE",
+      // "None", not "Range". A 50–100 range is an *active* size criterion that
+      // every crop matches, so in LOCK mode it locks the whole species while the
+      // sliders sit at their extremes and look like no filter at all. Starting
+      // with no size criterion means turning a species on locks nothing until the
+      // player actually asks for something.
+      scaleLockMode: "NONE",
       lockMode: "LOCK",
       minInventory: 91,
       avoidNormal: false,
@@ -21949,7 +21957,17 @@
     const raw = typeof _AB?.[key2]?.name === "string" && _AB[key2].name.trim() ? _AB[key2].name : key2;
     return String(raw);
   }
-  var PET_ABILITY_IDS = new Set(Object.keys(_AB).filter((id) => !WEATHER_MUTATION_BOOST_IDS.has(id)));
+  var _abilityIdsCache = null;
+  function petAbilityIds() {
+    const keys = Object.keys(_AB);
+    if (!_abilityIdsCache || _abilityIdsCache.count !== keys.length) {
+      _abilityIdsCache = {
+        count: keys.length,
+        ids: new Set(keys.filter((id) => !WEATHER_MUTATION_BOOST_IDS.has(id)))
+      };
+    }
+    return _abilityIdsCache.ids;
+  }
   function _abilityLogFallbackText(abilityId, params) {
     const fmtInt = (n) => Number.isFinite(Number(n)) ? Math.round(Number(n)).toLocaleString("en-US") : "0";
     switch (abilityId) {
@@ -23351,7 +23369,7 @@
     _ingestActivityLogEntry(raw) {
       if (!raw || typeof raw !== "object") return;
       const abilityId = typeof raw.action === "string" ? raw.action : "";
-      if (!abilityId || !PET_ABILITY_IDS.has(abilityId)) return;
+      if (!abilityId || !petAbilityIds().has(abilityId)) return;
       const performedAtNum = Number(raw.timestamp);
       if (!Number.isFinite(performedAtNum) || performedAtNum <= 0) return;
       const params = raw.parameters && typeof raw.parameters === "object" ? raw.parameters : {};
@@ -31723,7 +31741,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.216";
+      return "3.2.217";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -41517,7 +41535,10 @@ next: ${next}`;
     return {
       minScalePct: 50,
       maxScalePct: 100,
-      scaleLockMode: "RANGE",
+      // Matches the service default, and for the same reason: a full 50–100 range
+      // is a filter that matches every crop, so defaulting to it would lock a
+      // species outright the moment it is switched on.
+      scaleLockMode: "NONE",
       lockMode: "LOCK",
       minInventory: 91,
       avoidNormal: false,
@@ -41971,7 +41992,33 @@ next: ${next}`;
       },
       { ariaLabel: "Harvest mode" }
     );
-    lockModeRow.append(lockModeSegmented, lockModeHint);
+    const lockWarning = document.createElement("div");
+    applyStyles(lockWarning, {
+      fontSize: "12px",
+      textAlign: "center",
+      color: "#fbbf24",
+      fontWeight: "600",
+      display: "none"
+    });
+    const locksEverySize = () => {
+      if ((state4.lockMode ?? "LOCK") !== "LOCK") return false;
+      switch (state4.scaleLockMode) {
+        case "RANGE":
+          return state4.minScalePct <= 50 && state4.maxScalePct >= 100;
+        case "MINIMUM":
+          return state4.minScalePct <= 50;
+        case "MAXIMUM":
+          return state4.maxScalePct >= 100;
+        default:
+          return false;
+      }
+    };
+    const updateLockWarning = () => {
+      const blocked = locksEverySize();
+      lockWarning.style.display = blocked ? "" : "none";
+      lockWarning.textContent = blocked ? "This size filter covers every size, so nothing can be harvested. Pick None to stop filtering by size." : "";
+    };
+    lockModeRow.append(lockModeSegmented, lockModeHint, lockWarning);
     const updateLockModeUI = () => {
       const value = fromLockMode(state4.lockMode);
       const current = lockModeSegmented.get?.();
@@ -41984,6 +42031,7 @@ next: ${next}`;
         }
       }
       lockModeHint.textContent = value === "allow" ? "Harvest only when every active filter category matches" : "Harvest is locked whenever any active filter matches";
+      updateLockWarning();
       updateRecipeTitleText();
     };
     const scaleRow = centerRow();
@@ -42122,6 +42170,7 @@ next: ${next}`;
       if (commit) {
         state4.minScalePct = minValue;
         state4.maxScalePct = maxValue;
+        updateLockWarning();
         if (notify3) opts.onChange?.();
       }
     };
@@ -42133,6 +42182,7 @@ next: ${next}`;
       scaleMinimumValue.textContent = `${minValue}`;
       if (commit) {
         state4.minScalePct = minValue;
+        updateLockWarning();
         if (notify3) opts.onChange?.();
       }
     };
@@ -42144,6 +42194,7 @@ next: ${next}`;
       scaleMaximumValue.textContent = `${maxValue}`;
       if (commit) {
         state4.maxScalePct = maxValue;
+        updateLockWarning();
         if (notify3) opts.onChange?.();
       }
     };
@@ -42163,6 +42214,7 @@ next: ${next}`;
           isProgrammaticScaleMode = false;
         }
       }
+      updateLockWarning();
     };
     const applyScaleMode = (mode, notify3) => {
       const prevMode = state4.scaleLockMode;
@@ -46468,11 +46520,11 @@ next: ${next}`;
   function isHungerBoostAbility(id) {
     return id === "HungerBoost" || id === "HungerBoostII" || id === "HungerBoostIII" || id === "SnowyHungerBoost";
   }
-  function petAbilityIds(pet) {
+  function petAbilityIds2(pet) {
     return Array.isArray(pet.abilities) ? pet.abilities : [];
   }
   function sustainScore(pet) {
-    const abilities = petAbilityIds(pet);
+    const abilities = petAbilityIds2(pet);
     const hasRestore = abilities.some(isHungerRestoreAbility);
     const hasBoost = abilities.some(isHungerBoostAbility);
     if (hasRestore && hasBoost) return 2;
@@ -46483,7 +46535,7 @@ next: ${next}`;
     const NOT_USEFUL = Number.POSITIVE_INFINITY;
     const wantedMutations = category ? categoryGrantedMutations(category) : /* @__PURE__ */ new Set();
     const ranked = pets.map((pet) => {
-      const abilities = petAbilityIds(pet);
+      const abilities = petAbilityIds2(pet);
       const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
       const tierIndex = category ? bestTierIndex(category, relevant) : -1;
       const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
@@ -46518,7 +46570,7 @@ next: ${next}`;
   }
   function petGrantedMutations(pet) {
     const mutations = /* @__PURE__ */ new Set();
-    for (const abilityId of petAbilityIds(pet)) {
+    for (const abilityId of petAbilityIds2(pet)) {
       for (const mutation of abilityGrantedMutations(abilityId)) mutations.add(mutation);
     }
     return Array.from(mutations);
@@ -46573,7 +46625,7 @@ next: ${next}`;
   function categoryCombinedProbability(category, teamPets) {
     let missAll = 1;
     for (const pet of teamPets) {
-      const abilities = petAbilityIds(pet).filter(isAfkEligibleAbility);
+      const abilities = petAbilityIds2(pet).filter(isAfkEligibleAbility);
       const tierIndex = bestTierIndex(category, abilities);
       if (tierIndex === -1) continue;
       const stats = computeAbilityStatsAtRatio(category.abilityIds[tierIndex], getStrengthRatio(pet));
@@ -46638,7 +46690,7 @@ next: ${next}`;
   function rankCandidates(category, pets, afkOnly) {
     const wantedMutations = categoryGrantedMutations(category);
     const ranked = pets.map((pet) => {
-      const abilities = petAbilityIds(pet);
+      const abilities = petAbilityIds2(pet);
       const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
       const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
       return {
@@ -46666,7 +46718,7 @@ next: ${next}`;
     return ranked.map((c) => c.pet);
   }
   function qualifyingCategories(pet) {
-    const abilities = petAbilityIds(pet);
+    const abilities = petAbilityIds2(pet);
     return CATEGORIES.filter((c) => bestTierIndex(c, abilities) !== -1);
   }
   function findUnusedPets(pets, usedIds, sustainPet) {

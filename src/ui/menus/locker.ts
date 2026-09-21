@@ -371,7 +371,10 @@ function createDefaultSettings(): LockerSettingsState {
   return {
     minScalePct: 50,
     maxScalePct: 100,
-    scaleLockMode: "RANGE",
+    // Matches the service default, and for the same reason: a full 50–100 range
+    // is a filter that matches every crop, so defaulting to it would lock a
+    // species outright the moment it is switched on.
+    scaleLockMode: "NONE",
     lockMode: "LOCK",
     minInventory: 91,
     avoidNormal: false,
@@ -903,7 +906,38 @@ function createLockerSettingsCard(
     },
     { ariaLabel: "Harvest mode" }
   );
-  lockModeRow.append(lockModeSegmented, lockModeHint);
+  // Says so when the size filter covers every size there is. In LOCK mode that
+  // means nothing can ever be harvested, and the sliders sitting at 50 and 100
+  // look exactly like no filter at all, so without this the crop simply becomes
+  // unharvestable with nothing on screen to explain it.
+  const lockWarning = document.createElement("div");
+  applyStyles(lockWarning, {
+    fontSize: "12px",
+    textAlign: "center",
+    color: "#fbbf24",
+    fontWeight: "600",
+    display: "none",
+  });
+
+  const locksEverySize = (): boolean => {
+    if ((state.lockMode ?? "LOCK") !== "LOCK") return false;
+    switch (state.scaleLockMode) {
+      case "RANGE": return state.minScalePct <= 50 && state.maxScalePct >= 100;
+      case "MINIMUM": return state.minScalePct <= 50;
+      case "MAXIMUM": return state.maxScalePct >= 100;
+      default: return false;
+    }
+  };
+
+  const updateLockWarning = () => {
+    const blocked = locksEverySize();
+    lockWarning.style.display = blocked ? "" : "none";
+    lockWarning.textContent = blocked
+      ? "This size filter covers every size, so nothing can be harvested. Pick None to stop filtering by size."
+      : "";
+  };
+
+  lockModeRow.append(lockModeSegmented, lockModeHint, lockWarning);
 
   const updateLockModeUI = () => {
     const value = fromLockMode(state.lockMode);
@@ -920,6 +954,7 @@ function createLockerSettingsCard(
       value === "allow"
         ? "Harvest only when every active filter category matches"
         : "Harvest is locked whenever any active filter matches";
+    updateLockWarning();
     updateRecipeTitleText();
   };
 
@@ -1067,6 +1102,7 @@ function createLockerSettingsCard(
     if (commit) {
       state.minScalePct = minValue;
       state.maxScalePct = maxValue;
+      updateLockWarning();
       if (notify) opts.onChange?.();
     }
   };
@@ -1079,6 +1115,7 @@ function createLockerSettingsCard(
     scaleMinimumValue.textContent = `${minValue}`;
     if (commit) {
       state.minScalePct = minValue;
+      updateLockWarning();
       if (notify) opts.onChange?.();
     }
   };
@@ -1091,6 +1128,7 @@ function createLockerSettingsCard(
     scaleMaximumValue.textContent = `${maxValue}`;
     if (commit) {
       state.maxScalePct = maxValue;
+      updateLockWarning();
       if (notify) opts.onChange?.();
     }
   };
@@ -1111,6 +1149,7 @@ function createLockerSettingsCard(
         isProgrammaticScaleMode = false;
       }
     }
+    updateLockWarning();
   };
 
   const applyScaleMode = (mode: LockerScaleLockMode, notify: boolean) => {

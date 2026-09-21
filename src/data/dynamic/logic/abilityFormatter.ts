@@ -10,7 +10,7 @@ export const PET_ABILITY_ACTIONS = [
   'CoinFinderI', 'CoinFinderII', 'CoinFinderIII', 'SnowyCoinFinder', 'DawnCoinFinder', 'ThunderCoinFinder',
   'SeedFinderI', 'SeedFinderII', 'SeedFinderIII', 'SeedFinderIV',
   'HungerRestore', 'HungerRestoreII', 'HungerRestoreIII', 'SnowyHungerRestore',
-  'DoubleHarvest', 'DoubleHatch',
+  'DoubleHarvest', 'DoubleHatch', 'DoubleHatchII',
   'ProduceEater',
   'PetHatchSizeBoost', 'PetHatchSizeBoostII', 'PetHatchSizeBoostIII',
   'PetAgeBoost', 'PetAgeBoostII', 'PetAgeBoostIII',
@@ -87,7 +87,9 @@ export function formatAbilityLog(log: ActivityLogEntry): string {
       return `Double harvested ${crop?.species || 'Unknown'}`;
     }
 
-    case 'DoubleHatch': {
+    // Double Hatch I sits on Turkey, II on Rooster. Both log the same way.
+    case 'DoubleHatch':
+    case 'DoubleHatchII': {
       const extra = params.extraPet as Record<string, unknown> | undefined;
       return `Double hatched ${extra?.petSpecies || 'Unknown'}`;
     }

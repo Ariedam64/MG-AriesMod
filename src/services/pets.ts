@@ -342,9 +342,38 @@ function _abilityName(id: unknown): string {
   return String(raw);
 }
 
-// Every known pet ability id, except the weather-driven mutation boosters
-// (the game itself never logs those as discrete activity log entries).
-const PET_ABILITY_IDS = new Set(Object.keys(_AB).filter(id => !WEATHER_MUTATION_BOOST_IDS.has(id)));
+/**
+ * Every pet ability id the catalog knows, minus the weather-driven mutation
+ * boosters (the game never logs those as discrete activity log entries).
+ *
+ * Read on demand, never frozen at import. `petAbilities` serves the live
+ * catalog first and the bundled copy only as a fallback, and at import time —
+ * document-start — the live one has not been fetched yet. Capturing the ids
+ * then pinned this set to the bundled copy for the whole session, so every
+ * ability shipped since that copy was taken (Double Hatch II, the Thunder,
+ * Dawn and Amber lines: 19 of them) was dropped on arrival and never reached
+ * the logs at all.
+ *
+ * The set is rebuilt only when the catalog gains or loses entries, so the
+ * common case is a length comparison.
+ */
+let _abilityIdsCache: { count: number; ids: Set<string> } | null = null;
+
+function petAbilityIds(): Set<string> {
+  const keys = Object.keys(_AB);
+  if (!_abilityIdsCache || _abilityIdsCache.count !== keys.length) {
+    _abilityIdsCache = {
+      count: keys.length,
+      ids: new Set(keys.filter(id => !WEATHER_MUTATION_BOOST_IDS.has(id))),
+    };
+  }
+  return _abilityIdsCache.ids;
+}
+
+/** Exposed for the check script: the ids the log ingestion currently accepts. */
+export function getLoggablePetAbilityIds(): Set<string> {
+  return new Set(petAbilityIds());
+}
 
 function _abilityLogFallbackText(abilityId: string, params: Record<string, unknown>): string {
   const fmtInt = (n: unknown): string =>
@@ -1918,7 +1947,7 @@ export const PetsService = {
     if (!raw || typeof raw !== "object") return;
 
     const abilityId = typeof raw.action === "string" ? raw.action : "";
-    if (!abilityId || !PET_ABILITY_IDS.has(abilityId)) return;
+    if (!abilityId || !petAbilityIds().has(abilityId)) return;
 
     const performedAtNum = Number(raw.timestamp);
     if (!Number.isFinite(performedAtNum) || performedAtNum <= 0) return;

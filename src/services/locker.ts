@@ -581,7 +581,12 @@ function defaultSettings(): LockerSettingsPersisted {
   return {
     minScalePct: 50,
     maxScalePct: 100,
-    scaleLockMode: "RANGE",
+    // "None", not "Range". A 50–100 range is an *active* size criterion that
+    // every crop matches, so in LOCK mode it locks the whole species while the
+    // sliders sit at their extremes and look like no filter at all. Starting
+    // with no size criterion means turning a species on locks nothing until the
+    // player actually asks for something.
+    scaleLockMode: "NONE",
     lockMode: "LOCK",
     minInventory: 91,
     avoidNormal: false,
