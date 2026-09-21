@@ -3,5 +3,18 @@
     "allow": [
       "Read(//c/Users/Romann/.claude/projects/c--Users-Romann-Desktop-Codage-magicGarden---Copie/memory/**)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/dist-fresh.mjs\""
+          }
+        ]
+      }
+    ]
   }
 }
