@@ -19,6 +19,7 @@ import {
 import { audio, type PlaybackMode, type TriggerOverrides } from "../utils/audio";
 import { StatsService } from "./stats";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
+import { purchasesForCurrentRestock, type ShopKind } from "../utils/shopPurchases";
 
 export type SectionType = "Seed" | "Egg" | "Tool" | "Decor";
 
@@ -952,51 +953,33 @@ function _computeSig(ids: string[]): string {
 
 const _purchasesSubs = new Set<(p: PurchasesSnapshot) => void>();
 
-function _coercePurchases(raw: any): PurchasesSnapshot {
-  const seedP: Record<string, number> = {};
-  const eggP:  Record<string, number> = {};
-  const toolP: Record<string, number> = {};
-  const decorP: Record<string, number> = {};
+const _itemKind = (itemId: string): ShopKind | null => {
+  if (itemId in (plantCatalog as any)) return "seed";
+  if (itemId in (eggCatalog   as any)) return "egg";
+  if (itemId in (toolCatalog  as any)) return "tool";
+  if (itemId in (decorCatalog as any)) return "decor";
+  return null;
+};
 
-  const kindOf = (itemId: string): "seed" | "egg" | "tool" | "decor" | null => {
-    if (itemId in (plantCatalog as any)) return "seed";
-    if (itemId in (eggCatalog   as any)) return "egg";
-    if (itemId in (toolCatalog  as any)) return "tool";
-    if (itemId in (decorCatalog as any)) return "decor";
-    return null;
-  };
-  const targetFor = (k: "seed" | "egg" | "tool" | "decor") =>
-    k === "seed" ? seedP : k === "egg" ? eggP : k === "tool" ? toolP : decorP;
-  const directKind: Record<string, "seed" | "egg" | "tool" | "decor"> = {
-    seed: "seed", egg: "egg", tool: "tool", decor: "decor",
-  };
-
-  if (raw && typeof raw === "object") {
-    for (const shopKey of Object.keys(raw)) {
-      const sec = (raw as any)[shopKey];
-      if (!sec || typeof sec !== "object") continue;
-      const purch = (sec as any).purchases;
-      if (!purch || typeof purch !== "object") continue;
-      for (const [itemId, count] of Object.entries(purch)) {
-        const n = Number(count) || 0;
-        const kind = directKind[shopKey] ?? kindOf(itemId);
-        if (!kind) continue;
-        const target = targetFor(kind);
-        target[itemId] = (target[itemId] ?? 0) + n;
-      }
-    }
-  }
-
+function _coercePurchases(raw: any, shops: any): PurchasesSnapshot {
+  const p = purchasesForCurrentRestock(shops, raw, _itemKind);
+  const startedAt = (k: ShopKind) => Number(raw?.[k]?.startedAtMs ?? raw?.[k]?.createdAt) || 0;
   return {
-    seed:  { createdAt: Number(raw?.seed?.createdAt)  || 0, purchases: seedP  },
-    egg:   { createdAt: Number(raw?.egg?.createdAt)   || 0, purchases: eggP   },
-    tool:  { createdAt: Number(raw?.tool?.createdAt)  || 0, purchases: toolP  },
-    decor: { createdAt: Number(raw?.decor?.createdAt) || 0, purchases: decorP },
+    seed:  { createdAt: startedAt("seed"),  purchases: p.seed  },
+    egg:   { createdAt: startedAt("egg"),   purchases: p.egg   },
+    tool:  { createdAt: startedAt("tool"),  purchases: p.tool  },
+    decor: { createdAt: startedAt("decor"), purchases: p.decor },
   };
 }
 
-function _notifyPurchases(raw: any) {
-  const snap = _coercePurchases(raw);
+// Since v1284 the purchase counts only mean something against the live shops'
+// restockId, so both raw values are kept and a restock alone re-derives them.
+let _rawShops: any = null;
+let _rawPurchases: any = null;
+
+function _notifyPurchases(raw: any = _rawPurchases) {
+  _rawPurchases = raw;
+  const snap = _coercePurchases(raw, _rawShops);
   _purchasesSubs.forEach((fn) => {
     try {
       fn(snap);
@@ -1037,12 +1020,16 @@ function _coerceSnap(raw: any): ShopsSnapshot {
 }
 
 function _notifyShops(raw: any) {
+  _rawShops = raw;
   const snap = _coerceSnap(raw);
   _shopsSubs.forEach((fn) => {
     try {
       fn(snap);
     } catch {}
   });
+  // After the shops, never before: purchases re-derived against a restock the
+  // overlay has not seen yet would make the old stock look unbought.
+  if (_rawPurchases != null) _notifyPurchases();
 }
 
 const BASE_SHOPS_SET = new Set(["Seed", "Egg", "Tool", "Decor"]);
@@ -1391,7 +1378,13 @@ export const NotifierService = {
 
   async onPurchasesChangeNow(cb: (p: PurchasesSnapshot) => void): Promise<() => void> {
     await _ensureStarted();
-    try { cb(_coercePurchases(await (Atoms.shop as any).myShopPurchases.get())); } catch {}
+    try {
+      const [raw, shops] = await Promise.all([
+        (Atoms.shop as any).myShopPurchases.get(),
+        Atoms.shop.shops.get(),
+      ]);
+      cb(_coercePurchases(raw, shops));
+    } catch {}
     return this.onPurchasesChange(cb);
   },
 

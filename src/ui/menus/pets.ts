@@ -8,6 +8,7 @@ import { PetsService,
   setTeamsForHotkeys } from "../../services/pets";
 import type { PetInfo } from "../../services/player";
 import type { PetTeam } from "../../services/pets";
+import { petTeamName } from "../../services/petTeamReconcile";
 import { onActivePetsStructuralChangeNow } from "../../store/atoms";
 import { attachSpriteIcon } from "../spriteIconCache";
 import { rarityBadge } from "./notifier";
@@ -1003,7 +1004,9 @@ function renderManagerTab(view: HTMLElement, ui: Menu) {
   const saveNameNow = () => {
     const t = getSelectedTeam();
     if (!t) return;
-    const nextName = secName.nameInput.value.trim();
+    // The game keeps 16 characters of a team name; show the name it will keep.
+    const nextName = petTeamName(secName.nameInput.value);
+    if (secName.nameInput.value.trim().length > nextName.length) secName.nameInput.value = nextName;
     if (nextName === t.name) return;
     t.name = nextName;
     PetsService.saveTeam({ id: t.id, name: nextName });

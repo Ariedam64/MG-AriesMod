@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.217
+// @version      3.2.218
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -21768,6 +21768,109 @@
     return null;
   }
 
+  // src/services/petTeamReconcile.ts
+  function serverMemberIds(team) {
+    return Array.isArray(team?.members) ? team.members.map((m) => String(m?.petId || "")).filter(Boolean) : [];
+  }
+  function sameMemberSet(a, b) {
+    const aa = a.filter((x) => !!x).slice().sort();
+    const bb = b.slice().sort();
+    if (aa.length !== bb.length) return false;
+    return aa.every((v, i) => v === bb[i]);
+  }
+  var PET_TEAM_NAME_MAX_CLUSTERS = 16;
+  function petTeamName(name) {
+    const trimmed = String(name ?? "").trim();
+    let parts;
+    try {
+      const seg = new Intl.Segmenter(void 0, { granularity: "grapheme" });
+      parts = Array.from(seg.segment(trimmed), (s) => s.segment);
+    } catch {
+      parts = Array.from(trimmed);
+    }
+    return parts.length <= PET_TEAM_NAME_MAX_CLUSTERS ? trimmed : parts.slice(0, PET_TEAM_NAME_MAX_CLUSTERS).join("");
+  }
+  function nameKey(name) {
+    return name ? petTeamName(name).toLowerCase() : "";
+  }
+  function reconcilePetTeams(teams, serverTeams, env) {
+    const serverById = new Map(serverTeams.map((t) => [String(t.id), t]));
+    const linkedServerIds = new Set(teams.map((t) => t.serverId).filter((v) => !!v));
+    const freeByName = (key2) => key2 ? serverTeams.filter((t) => !linkedServerIds.has(String(t.id)) && nameKey(t.name) === key2) : [];
+    const result = {
+      teams,
+      changed: false,
+      linkedLocalIds: [],
+      pushUpdates: [],
+      needsCreate: [],
+      dropped: []
+    };
+    const folded = /* @__PURE__ */ new Set();
+    for (const local of teams) {
+      if (folded.has(local)) continue;
+      if (local.serverId) {
+        const server = serverById.get(local.serverId);
+        if (!server) continue;
+        const memberIds = serverMemberIds(server);
+        if (server.name !== local.name || !sameMemberSet(local.slots, memberIds)) {
+          local.name = server.name;
+          local.slots = [0, 1, 2].map((i) => memberIds[i] ?? null);
+          result.changed = true;
+        }
+        continue;
+      }
+      const candidates = [...freeByName(nameKey(local.name)), ...freeByName(nameKey(env.sentName(local.id)))];
+      const match = candidates.find((t) => sameMemberSet(local.slots, serverMemberIds(t))) ?? candidates[0];
+      if (match) {
+        local.serverId = String(match.id);
+        linkedServerIds.add(local.serverId);
+        result.linkedLocalIds.push(local.id);
+        const matchMemberIds = serverMemberIds(match);
+        const divergedWhilePending = match.name !== petTeamName(local.name) || !sameMemberSet(local.slots, matchMemberIds);
+        if (divergedWhilePending) {
+          const petIds = local.slots.filter((x) => !!x);
+          if (petIds.length) result.pushUpdates.push({ serverId: local.serverId, name: local.name.trim() || "Team", petIds });
+        } else {
+          local.name = match.name;
+          local.slots = [0, 1, 2].map((i) => matchMemberIds[i] ?? null);
+        }
+        result.changed = true;
+        continue;
+      }
+      const twin = teams.find((t) => t !== local && !folded.has(t) && !!t.serverId && serverById.has(t.serverId) && nameKey(t.name) === nameKey(local.name) && sameMemberSet(t.slots, local.slots.filter((x) => !!x)));
+      if (twin) {
+        local.serverId = twin.serverId;
+        local.name = twin.name;
+        local.slots = twin.slots.slice();
+        folded.add(twin);
+        result.changed = true;
+        continue;
+      }
+      result.needsCreate.push(local);
+    }
+    result.dropped = teams.filter((t) => !folded.has(t) && !!t.serverId && !serverById.has(t.serverId));
+    const kept = teams.filter((t) => !folded.has(t) && (!t.serverId || serverById.has(t.serverId)));
+    if (kept.length !== teams.length) result.changed = true;
+    const usedLocalIds = new Set(kept.map((t) => t.id));
+    for (const server of serverTeams) {
+      if (linkedServerIds.has(String(server.id))) continue;
+      const memberIds = serverMemberIds(server);
+      const knownLocalId = env.knownLocalId(String(server.id));
+      const importedId = knownLocalId && !usedLocalIds.has(knownLocalId) ? knownLocalId : env.newId();
+      usedLocalIds.add(importedId);
+      kept.push({
+        id: importedId,
+        name: server.name,
+        slots: [0, 1, 2].map((i) => memberIds[i] ?? null),
+        serverId: String(server.id)
+      });
+      linkedServerIds.add(String(server.id));
+      result.changed = true;
+    }
+    result.teams = kept;
+    return result;
+  }
+
   // src/services/pets.ts
   var PATH_PETS_OVERRIDES = "pets.overrides";
   var PATH_PETS_INSTANT_FEED = "pets.instantFeed";
@@ -22151,22 +22254,13 @@
       return null;
     }
   }
-  function _serverMemberIds(team) {
-    return Array.isArray(team?.members) ? team.members.map((m) => String(m?.petId || "")).filter(Boolean) : [];
-  }
-  function _sameMemberSet(a, b) {
-    const aa = a.filter((x) => !!x).slice().sort();
-    const bb = b.slice().sort();
-    if (aa.length !== bb.length) return false;
-    return aa.every((v, i) => v === bb[i]);
-  }
   var _teamSyncEnabled = readAriesPath(PATH_PETS_TEAM_SYNC, true) !== false;
   function _sendSavePetTeam(teamId2, name, petIds) {
     if (!_teamSyncEnabled) return;
     const isCreate = teamId2 === null;
     const id = teamId2 ?? _newTeamId();
     try {
-      sendToGame({ type: "SavePetTeam", teamId: id, isCreate, name, petIds });
+      sendToGame({ type: "SavePetTeam", teamId: id, isCreate, name: petTeamName(name), petIds });
     } catch {
     }
   }
@@ -22225,7 +22319,7 @@
   }
   function _serverTeamsSig(list) {
     try {
-      return list.map((t) => `${t.id}:${t.name}:${_serverMemberIds(t).slice().sort().join(",")}`).sort().join("|");
+      return list.map((t) => `${t.id}:${t.name}:${serverMemberIds(t).slice().sort().join(",")}`).sort().join("|");
     } catch {
       return "";
     }
@@ -22257,68 +22351,17 @@
     }
     _reconcilingTeams = true;
     try {
-      const teams = PetsService._teams;
-      const serverById = new Map(_serverTeams.map((t) => [String(t.id), t]));
-      const serverByName = new Map(_serverTeams.map((t) => [String(t.name || "").trim().toLowerCase(), t]));
-      const linkedServerIds = new Set(teams.map((t) => t.serverId).filter((v) => !!v));
-      let changed = false;
-      for (const local of teams) {
-        if (local.serverId) {
-          const server = serverById.get(local.serverId);
-          if (!server) continue;
-          const memberIds = _serverMemberIds(server);
-          if (server.name !== local.name || !_sameMemberSet(local.slots, memberIds)) {
-            local.name = server.name;
-            local.slots = [0, 1, 2].map((i) => memberIds[i] ?? null);
-            changed = true;
-          }
-          continue;
-        }
-        const key2 = local.name.trim().toLowerCase();
-        const sentName = _pendingCreateSentName.get(local.id);
-        const sentKey = sentName ? sentName.trim().toLowerCase() : void 0;
-        const match = (key2 ? serverByName.get(key2) : void 0) ?? (sentKey ? serverByName.get(sentKey) : void 0);
-        if (match && !linkedServerIds.has(String(match.id))) {
-          local.serverId = String(match.id);
-          linkedServerIds.add(local.serverId);
-          _clearPendingCreate(local.id);
-          const matchMemberIds = _serverMemberIds(match);
-          const divergedWhilePending = match.name !== local.name || !_sameMemberSet(local.slots, matchMemberIds);
-          if (divergedWhilePending) {
-            const petIds = local.slots.filter((x) => !!x);
-            if (petIds.length) _sendSavePetTeam(local.serverId, local.name.trim() || "Team", petIds);
-          } else {
-            local.name = match.name;
-            local.slots = [0, 1, 2].map((i) => matchMemberIds[i] ?? null);
-          }
-          changed = true;
-          continue;
-        }
-        _maybeCreateServerTeam(local);
-      }
-      const beforeCount = teams.length;
-      const dropped = teams.filter((t) => !!t.serverId && !serverById.has(t.serverId));
-      for (const t of dropped) _localTeamIdByServerId.set(String(t.serverId), t.id);
-      PetsService._teams = teams.filter((t) => !t.serverId || serverById.has(t.serverId));
-      if (PetsService._teams.length !== beforeCount) changed = true;
-      const usedLocalIds = new Set(PetsService._teams.map((t) => t.id));
-      for (const server of _serverTeams) {
-        if (linkedServerIds.has(String(server.id))) continue;
-        const memberIds = _serverMemberIds(server);
-        const knownLocalId = _localTeamIdByServerId.get(String(server.id));
-        const importedId = knownLocalId && !usedLocalIds.has(knownLocalId) ? knownLocalId : _uid();
-        usedLocalIds.add(importedId);
-        const imported = {
-          id: importedId,
-          name: server.name,
-          slots: [0, 1, 2].map((i) => memberIds[i] ?? null),
-          serverId: String(server.id)
-        };
-        PetsService._teams.push(imported);
-        linkedServerIds.add(String(server.id));
-        changed = true;
-      }
-      if (changed) {
+      const r = reconcilePetTeams(PetsService._teams, _serverTeams, {
+        sentName: (localId) => _pendingCreateSentName.get(localId),
+        knownLocalId: (serverId) => _localTeamIdByServerId.get(serverId),
+        newId: _uid
+      });
+      for (const localId of r.linkedLocalIds) _clearPendingCreate(localId);
+      for (const u of r.pushUpdates) _sendSavePetTeam(u.serverId, u.name, u.petIds);
+      for (const local of r.needsCreate) _maybeCreateServerTeam(local);
+      for (const t of r.dropped) _localTeamIdByServerId.set(String(t.serverId), t.id);
+      PetsService._teams = r.teams;
+      if (r.changed) {
         saveTeams(PetsService._teams);
         PetsService._notifyTeamSubs();
       }
@@ -22960,7 +23003,7 @@
       return unsub;
     },
     createTeam(name) {
-      const t = { id: _uid(), name: name?.trim() || `Team ${this._teams.length + 1}`, slots: [null, null, null], serverId: null };
+      const t = { id: _uid(), name: petTeamName(name ?? "") || `Team ${this._teams.length + 1}`, slots: [null, null, null], serverId: null };
       this._teams.push(t);
       saveTeams(this._teams);
       this._notifyTeamSubs();
@@ -22981,7 +23024,7 @@
       const cur = this._teams[i];
       const next = {
         id: cur.id,
-        name: typeof patch.name === "string" ? patch.name : cur.name,
+        name: typeof patch.name === "string" ? petTeamName(patch.name) : cur.name,
         slots: Array.isArray(patch.slots) ? patch.slots.slice(0, 3) : cur.slots,
         serverId: cur.serverId ?? null
       };
@@ -26685,6 +26728,32 @@
     }
   };
 
+  // src/utils/shopPurchases.ts
+  var DIRECT_KIND = { seed: "seed", egg: "egg", tool: "tool", decor: "decor" };
+  function isCurrentRestock(entry, shop) {
+    if (!("restockId" in entry)) return true;
+    const current = shop?.restockId;
+    return current != null && entry.restockId === current;
+  }
+  function purchasesForCurrentRestock(shops2, shopPurchases, kindOf) {
+    const out = { seed: {}, egg: {}, tool: {}, decor: {} };
+    if (!shopPurchases || typeof shopPurchases !== "object") return out;
+    for (const shopKey of Object.keys(shopPurchases)) {
+      const entry = shopPurchases[shopKey];
+      if (!entry || typeof entry !== "object") continue;
+      if (!isCurrentRestock(entry, shops2?.[shopKey])) continue;
+      const purch = entry.purchases;
+      if (!purch || typeof purch !== "object") continue;
+      for (const [itemId, count] of Object.entries(purch)) {
+        const n = Number(count) || 0;
+        const kind = DIRECT_KIND[shopKey] ?? kindOf(itemId);
+        if (!kind) continue;
+        out[kind][itemId] = (out[kind][itemId] ?? 0) + n;
+      }
+    }
+    return out;
+  }
+
   // src/services/notifier.ts
   var PATH_NOTIFIER_PREFS = "notifier.prefs";
   var PATH_NOTIFIER_RULES = "notifier.rules";
@@ -27273,49 +27342,28 @@
     return ids.slice().sort().join("|");
   }
   var _purchasesSubs = /* @__PURE__ */ new Set();
-  function _coercePurchases(raw) {
-    const seedP = {};
-    const eggP = {};
-    const toolP = {};
-    const decorP = {};
-    const kindOf = (itemId) => {
-      if (itemId in plantCatalog2) return "seed";
-      if (itemId in eggCatalog2) return "egg";
-      if (itemId in toolCatalog2) return "tool";
-      if (itemId in decorCatalog2) return "decor";
-      return null;
-    };
-    const targetFor = (k) => k === "seed" ? seedP : k === "egg" ? eggP : k === "tool" ? toolP : decorP;
-    const directKind = {
-      seed: "seed",
-      egg: "egg",
-      tool: "tool",
-      decor: "decor"
-    };
-    if (raw && typeof raw === "object") {
-      for (const shopKey of Object.keys(raw)) {
-        const sec = raw[shopKey];
-        if (!sec || typeof sec !== "object") continue;
-        const purch = sec.purchases;
-        if (!purch || typeof purch !== "object") continue;
-        for (const [itemId, count] of Object.entries(purch)) {
-          const n = Number(count) || 0;
-          const kind = directKind[shopKey] ?? kindOf(itemId);
-          if (!kind) continue;
-          const target = targetFor(kind);
-          target[itemId] = (target[itemId] ?? 0) + n;
-        }
-      }
-    }
+  var _itemKind = (itemId) => {
+    if (itemId in plantCatalog2) return "seed";
+    if (itemId in eggCatalog2) return "egg";
+    if (itemId in toolCatalog2) return "tool";
+    if (itemId in decorCatalog2) return "decor";
+    return null;
+  };
+  function _coercePurchases(raw, shops2) {
+    const p = purchasesForCurrentRestock(shops2, raw, _itemKind);
+    const startedAt = (k) => Number(raw?.[k]?.startedAtMs ?? raw?.[k]?.createdAt) || 0;
     return {
-      seed: { createdAt: Number(raw?.seed?.createdAt) || 0, purchases: seedP },
-      egg: { createdAt: Number(raw?.egg?.createdAt) || 0, purchases: eggP },
-      tool: { createdAt: Number(raw?.tool?.createdAt) || 0, purchases: toolP },
-      decor: { createdAt: Number(raw?.decor?.createdAt) || 0, purchases: decorP }
+      seed: { createdAt: startedAt("seed"), purchases: p.seed },
+      egg: { createdAt: startedAt("egg"), purchases: p.egg },
+      tool: { createdAt: startedAt("tool"), purchases: p.tool },
+      decor: { createdAt: startedAt("decor"), purchases: p.decor }
     };
   }
-  function _notifyPurchases(raw) {
-    const snap = _coercePurchases(raw);
+  var _rawShops = null;
+  var _rawPurchases = null;
+  function _notifyPurchases(raw = _rawPurchases) {
+    _rawPurchases = raw;
+    const snap = _coercePurchases(raw, _rawShops);
     _purchasesSubs.forEach((fn) => {
       try {
         fn(snap);
@@ -27352,6 +27400,7 @@
     };
   }
   function _notifyShops(raw) {
+    _rawShops = raw;
     const snap = _coerceSnap(raw);
     _shopsSubs.forEach((fn) => {
       try {
@@ -27359,6 +27408,7 @@
       } catch {
       }
     });
+    if (_rawPurchases != null) _notifyPurchases();
   }
   var BASE_SHOPS_SET = /* @__PURE__ */ new Set(["Seed", "Egg", "Tool", "Decor"]);
   function _splitEligibleShops(shops2) {
@@ -27695,7 +27745,11 @@
     async onPurchasesChangeNow(cb) {
       await _ensureStarted();
       try {
-        cb(_coercePurchases(await Atoms.shop.myShopPurchases.get()));
+        const [raw, shops2] = await Promise.all([
+          Atoms.shop.myShopPurchases.get(),
+          Atoms.shop.shops.get()
+        ]);
+        cb(_coercePurchases(raw, shops2));
       } catch {
       }
       return this.onPurchasesChange(cb);
@@ -31741,7 +31795,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.217";
+      return "3.2.218";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -48928,7 +48982,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     const saveNameNow = () => {
       const t = getSelectedTeam();
       if (!t) return;
-      const nextName = secName.nameInput.value.trim();
+      const nextName = petTeamName(secName.nameInput.value);
+      if (secName.nameInput.value.trim().length > nextName.length) secName.nameInput.value = nextName;
       if (nextName === t.name) return;
       t.name = nextName;
       PetsService.saveTeam({ id: t.id, name: nextName });

@@ -26,16 +26,11 @@ import { StatsService } from "./stats";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
 import { shareGlobal } from "../utils/page-context";
 import { sendToGame } from "../core/webSocketBridge";
+import { petTeamName, reconcilePetTeams, serverMemberIds, type PetTeam, type ServerPetTeam } from "./petTeamReconcile";
 
 /* ----------------------------- Types & constants ----------------------------- */
 
-export type PetTeam = {
-  id: string;
-  name: string;
-  slots: (string | null)[];
-  /** Server-generated id of the native (in-game) pet team this is linked to, once synced. */
-  serverId?: string | null;
-};
+export type { PetTeam };
 
 export type InventoryPet = {
   id: string;
@@ -608,21 +603,6 @@ async function _syncLastUsedFromActive(): Promise<void> {
 //    and is mirrored onto the matching local team.
 // On name-collision during first link, the server's members win (see _reconcileTeams).
 
-type ServerPetTeamMember = { petId: string; petSpecies?: string; name?: string | null };
-type ServerPetTeam = { id: string; name: string; members: ServerPetTeamMember[]; emblem?: unknown };
-
-function _serverMemberIds(team: ServerPetTeam): string[] {
-  return Array.isArray(team?.members)
-    ? team.members.map(m => String(m?.petId || "")).filter(Boolean)
-    : [];
-}
-
-function _sameMemberSet(a: (string | null)[], b: string[]): boolean {
-  const aa = a.filter((x): x is string => !!x).slice().sort();
-  const bb = b.slice().sort();
-  if (aa.length !== bb.length) return false;
-  return aa.every((v, i) => v === bb[i]);
-}
 
 // User-facing opt-out (default ON). When off, the mod's teams become purely local:
 // nothing is pushed to the native system and nothing is pulled back from it. Existing
@@ -637,7 +617,7 @@ function _sendSavePetTeam(teamId: string | null, name: string, petIds: string[])
   if (!_teamSyncEnabled) return;
   const isCreate = teamId === null;
   const id = teamId ?? _newTeamId();
-  try { sendToGame({ type: "SavePetTeam", teamId: id, isCreate, name, petIds }); } catch {}
+  try { sendToGame({ type: "SavePetTeam", teamId: id, isCreate, name: petTeamName(name), petIds }); } catch {}
 }
 
 function _newTeamId(): string {
@@ -707,7 +687,7 @@ function _createAttemptSig(local: PetTeam): string {
 function _serverTeamsSig(list: ServerPetTeam[]): string {
   try {
     return list
-      .map(t => `${t.id}:${t.name}:${_serverMemberIds(t).slice().sort().join(",")}`)
+      .map(t => `${t.id}:${t.name}:${serverMemberIds(t).slice().sort().join(",")}`)
       .sort()
       .join("|");
   } catch { return ""; }
@@ -756,87 +736,18 @@ function _reconcileTeams(): void {
   if (_reconcilingTeams) { _reconcileTeamsQueued = true; return; }
   _reconcilingTeams = true;
   try {
-    const teams = PetsService._teams;
-    const serverById = new Map(_serverTeams.map(t => [String(t.id), t]));
-    const serverByName = new Map(_serverTeams.map(t => [String(t.name || "").trim().toLowerCase(), t]));
-    const linkedServerIds = new Set(teams.map(t => t.serverId).filter((v): v is string => !!v));
+    const r = reconcilePetTeams(PetsService._teams, _serverTeams, {
+      sentName: (localId) => _pendingCreateSentName.get(localId),
+      knownLocalId: (serverId) => _localTeamIdByServerId.get(serverId),
+      newId: _uid,
+    });
+    for (const localId of r.linkedLocalIds) _clearPendingCreate(localId);
+    for (const u of r.pushUpdates) _sendSavePetTeam(u.serverId, u.name, u.petIds);
+    for (const local of r.needsCreate) _maybeCreateServerTeam(local);
+    for (const t of r.dropped) _localTeamIdByServerId.set(String(t.serverId), t.id);
+    PetsService._teams = r.teams;
 
-    let changed = false;
-
-    for (const local of teams) {
-      if (local.serverId) {
-        const server = serverById.get(local.serverId);
-        if (!server) continue; // deleted in-game: dropped by the removal pass below
-        const memberIds = _serverMemberIds(server);
-        if (server.name !== local.name || !_sameMemberSet(local.slots, memberIds)) {
-          local.name = server.name;
-          local.slots = [0, 1, 2].map(i => memberIds[i] ?? null);
-          changed = true;
-        }
-        continue;
-      }
-
-      const key = local.name.trim().toLowerCase();
-      const sentName = _pendingCreateSentName.get(local.id);
-      const sentKey = sentName ? sentName.trim().toLowerCase() : undefined;
-      const match =
-        (key ? serverByName.get(key) : undefined) ??
-        (sentKey ? serverByName.get(sentKey) : undefined);
-      if (match && !linkedServerIds.has(String(match.id))) {
-        local.serverId = String(match.id);
-        linkedServerIds.add(local.serverId);
-        _clearPendingCreate(local.id);
-
-        const matchMemberIds = _serverMemberIds(match);
-        const divergedWhilePending = match.name !== local.name || !_sameMemberSet(local.slots, matchMemberIds);
-        if (divergedWhilePending) {
-          // The user kept editing (added another pet, renamed) while this
-          // team's first create was still in flight — the server team it
-          // just linked to only reflects that earlier snapshot. Push the
-          // real current content now that a serverId finally exists, as an
-          // update (safe to repeat), instead of silently reverting local
-          // state back to the stale snapshot.
-          const petIds = local.slots.filter((x): x is string => !!x);
-          if (petIds.length) _sendSavePetTeam(local.serverId, local.name.trim() || "Team", petIds);
-        } else {
-          // First link on a name match: the server's members are the source of truth.
-          local.name = match.name;
-          local.slots = [0, 1, 2].map(i => matchMemberIds[i] ?? null);
-        }
-        changed = true;
-        continue;
-      }
-
-      _maybeCreateServerTeam(local);
-    }
-
-    const beforeCount = teams.length;
-    const dropped = teams.filter(t => !!t.serverId && !serverById.has(t.serverId));
-    for (const t of dropped) _localTeamIdByServerId.set(String(t.serverId), t.id);
-    PetsService._teams = teams.filter(t => !t.serverId || serverById.has(t.serverId));
-    if (PetsService._teams.length !== beforeCount) changed = true;
-
-    const usedLocalIds = new Set(PetsService._teams.map(t => t.id));
-    for (const server of _serverTeams) {
-      if (linkedServerIds.has(String(server.id))) continue;
-      const memberIds = _serverMemberIds(server);
-      // Ce serverId a peut-être déjà eu une équipe locale (drop transitoire) :
-      // on réutilise son id pour ne pas casser les keybinds `pets.team.<id>`.
-      const knownLocalId = _localTeamIdByServerId.get(String(server.id));
-      const importedId = knownLocalId && !usedLocalIds.has(knownLocalId) ? knownLocalId : _uid();
-      usedLocalIds.add(importedId);
-      const imported: PetTeam = {
-        id: importedId,
-        name: server.name,
-        slots: [0, 1, 2].map(i => memberIds[i] ?? null),
-        serverId: String(server.id),
-      };
-      PetsService._teams.push(imported);
-      linkedServerIds.add(String(server.id));
-      changed = true;
-    }
-
-    if (changed) {
+    if (r.changed) {
       saveTeams(PetsService._teams);
       PetsService._notifyTeamSubs();
     }
@@ -1441,7 +1352,7 @@ export const PetsService = {
     return unsub;
   },
   createTeam(name?: string): PetTeam {
-    const t: PetTeam = { id: _uid(), name: name?.trim() || `Team ${this._teams.length + 1}`, slots: [null,null,null], serverId: null };
+    const t: PetTeam = { id: _uid(), name: petTeamName(name ?? "") || `Team ${this._teams.length + 1}`, slots: [null,null,null], serverId: null };
     this._teams.push(t);
     saveTeams(this._teams);
     this._notifyTeamSubs();
@@ -1462,7 +1373,7 @@ export const PetsService = {
     const cur = this._teams[i];
     const next: PetTeam = {
       id: cur.id,
-      name: typeof patch.name === "string" ? patch.name : cur.name,
+      name: typeof patch.name === "string" ? petTeamName(patch.name) : cur.name,
       slots: Array.isArray(patch.slots) ? (patch.slots.slice(0,3) as (string|null)[]) : cur.slots,
       serverId: cur.serverId ?? null,
     };
