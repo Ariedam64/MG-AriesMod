@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "version": "3.2.219",
+      "date": "2026-09-26",
+      "title": "Shop fix",
+      "notes": "**Shops**\n\n- Buying from the shop notifications works again, Buy and Buy all. The game's new shop update broke every purchase made by the mod\n- Shop stats now count everything bought with the game's new Buy All, not just one item"
+    },
+    {
       "version": "3.2.208",
       "date": "2026-09-10",
       "title": "Companion",
