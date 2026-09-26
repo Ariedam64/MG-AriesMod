@@ -7,6 +7,8 @@ import { shouldIgnoreKeydown } from "../utils/keyboard";
 import { StatsService} from "./stats";
 import { sendToGame } from "../core/webSocketBridge";
 import { Atoms } from "../store/atoms";
+import { pageWindow } from "../utils/page-context";
+import { buildShopPurchaseCommand, readShopViewMode } from "../utils/shopPurchaseMessage";
 
 
 export type Kind = "seeds" | "tools" | "eggs" | "decor";
@@ -119,6 +121,11 @@ function _findShopForItem(snap: any, kind: Kind, it: AnyItem): string | null {
 export const ShopsService = {
   /** Achat unitaire : envoie le bon message au jeu. */
   async buyOne(kind: Kind, it: AnyItem): Promise<void> {
+    return ShopsService.buy(kind, it, 1);
+  },
+
+  /** Achete `quantity` exemplaires en une seule commande, comme le Buy All du jeu. */
+  async buy(kind: Kind, it: AnyItem, quantity: number): Promise<void> {
     const built = _buildPurchasePayload(kind, it);
     if (!built) return;
 
@@ -130,8 +137,11 @@ export const ShopsService = {
     if (!shop) shop = _fallbackShopFor(kind);
 
     try {
-      sendToGame({ type: "PurchaseShopItem", shop, item: built.item });
-      StatsService.incrementShopStat(built.stat);
+      let storage: Storage | null = null;
+      try { storage = pageWindow.localStorage; } catch { }
+      const command = buildShopPurchaseCommand(shop, built.item, readShopViewMode(shop, storage), quantity);
+      sendToGame(command);
+      StatsService.incrementShopStat(built.stat, Number(command.quantity ?? 1));
     } catch { }
   },
 };

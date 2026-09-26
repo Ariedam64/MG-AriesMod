@@ -579,6 +579,10 @@ class OverlayBarebone {
     const prevLabel = btn.textContent;
     btn.textContent = "Buying...";
     try {
+      // One purchase per unit on purpose. The server takes a `quantity` since
+      // v1292, but the game only sends it when the player can pay for the whole
+      // stack and has room for it, and the mod knows neither. Unit purchases
+      // still buy what the player can afford, as they always did.
       for (let i = 0; i < available; i++) {
         await Promise.resolve(ShopsService.buyOne(resolved.kind, resolved.item));
       }

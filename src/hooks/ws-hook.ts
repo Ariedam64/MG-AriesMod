@@ -862,7 +862,11 @@ function installHarvestCropInterceptor() {
       console.log(`[PurchaseShopItem:${shop}] Blocked by inventory reserve`, { id });
       return { kind: "drop" };
     }
-    if (stat) StatsService.incrementShopStat(stat);
+    if (stat) {
+      // The game's own Buy All sends the whole stack as one command (v1292).
+      const quantity = Math.max(1, Math.floor(Number(message?.quantity) || 1));
+      StatsService.incrementShopStat(stat, quantity);
+    }
   });
 
   registerMessageInterceptor("PickupObject", () => {

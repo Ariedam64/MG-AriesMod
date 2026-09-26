@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.218
+// @version      3.2.219
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -13847,6 +13847,43 @@
     });
   }
 
+  // src/utils/shopPurchaseMessage.ts
+  var VIEW_MODE_KEY = /^shop:.*:(.+):viewMode$/;
+  function parseViewMode(raw) {
+    if (raw == null) return null;
+    let value = raw;
+    try {
+      value = JSON.parse(raw);
+    } catch {
+    }
+    return value === "list" || value === "grid" ? value : null;
+  }
+  function readShopViewMode(shop, storage) {
+    if (!storage) return "list";
+    try {
+      for (let i = 0; i < storage.length; i++) {
+        const key2 = storage.key(i);
+        if (!key2) continue;
+        const match = VIEW_MODE_KEY.exec(key2);
+        if (!match || match[1] !== shop) continue;
+        const mode = parseViewMode(storage.getItem(key2));
+        if (mode) return mode;
+      }
+    } catch {
+    }
+    return "list";
+  }
+  function buildShopPurchaseCommand(shop, item, viewMode, quantity = 1) {
+    const q = Math.max(1, Math.floor(Number(quantity) || 1));
+    return {
+      type: "PurchaseShopItem",
+      shop,
+      viewMode,
+      item,
+      ...q === 1 ? {} : { quantity: q }
+    };
+  }
+
   // src/services/shops.ts
   var SHOP_KEYBINDS = [
     { id: "shops.seeds", modal: "seedShop" },
@@ -13924,6 +13961,10 @@
   var ShopsService = {
     /** Achat unitaire : envoie le bon message au jeu. */
     async buyOne(kind, it) {
+      return ShopsService.buy(kind, it, 1);
+    },
+    /** Achete `quantity` exemplaires en une seule commande, comme le Buy All du jeu. */
+    async buy(kind, it, quantity) {
       const built = _buildPurchasePayload(kind, it);
       if (!built) return;
       let shop = null;
@@ -13934,8 +13975,14 @@
       }
       if (!shop) shop = _fallbackShopFor(kind);
       try {
-        sendToGame({ type: "PurchaseShopItem", shop, item: built.item });
-        StatsService.incrementShopStat(built.stat);
+        let storage = null;
+        try {
+          storage = pageWindow.localStorage;
+        } catch {
+        }
+        const command = buildShopPurchaseCommand(shop, built.item, readShopViewMode(shop, storage), quantity);
+        sendToGame(command);
+        StatsService.incrementShopStat(built.stat, Number(command.quantity ?? 1));
       } catch {
       }
     }
@@ -21470,7 +21517,10 @@
         console.log(`[PurchaseShopItem:${shop}] Blocked by inventory reserve`, { id });
         return { kind: "drop" };
       }
-      if (stat) StatsService.incrementShopStat(stat);
+      if (stat) {
+        const quantity = Math.max(1, Math.floor(Number(message?.quantity) || 1));
+        StatsService.incrementShopStat(stat, quantity);
+      }
     });
     registerMessageInterceptor("PickupObject", () => {
       if (shouldBlockNewInventoryEntry()) {
@@ -31795,7 +31845,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.218";
+      return "3.2.219";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;

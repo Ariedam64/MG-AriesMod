@@ -21,6 +21,7 @@
     "check:storage": "esbuild scripts/checkCompanionStorage.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkCompanionStorage.cjs --log-level=error && node node_modules/.cache/checkCompanionStorage.cjs",
     "check:teamsync": "esbuild scripts/checkPetTeamSync.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkPetTeamSync.cjs --log-level=error && node node_modules/.cache/checkPetTeamSync.cjs",
     "check:shoppurchases": "esbuild scripts/checkShopPurchases.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkShopPurchases.cjs --log-level=error && node node_modules/.cache/checkShopPurchases.cjs",
+    "check:shopmessage": "esbuild scripts/checkShopPurchaseMessage.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkShopPurchaseMessage.cjs --log-level=error && node node_modules/.cache/checkShopPurchaseMessage.cjs",
     "watch": "node esbuild.config.mjs --watch",
     "serve": "npx http-server dist -p 5174 --cors"
   },
