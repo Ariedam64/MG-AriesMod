@@ -77,6 +77,12 @@ export type AriesStorage = {
   activityLog?: { history?: unknown; filter?: unknown };
   /** Réglages du companion. Sa forme vit dans services/companion/settingsShape.ts. */
   companion?: Record<string, unknown>;
+  /**
+   * Session de jeu vue par le companion : début, dernier signe de vie, heures
+   * déjà annoncées. À part des réglages, que `saveCompanionSettings` réécrit
+   * en entier sous `companion` et qui l'effaceraient à chaque sauvegarde.
+   */
+  companionSession?: Record<string, unknown>;
   hatch?: {
     /** Seen pets, Bad Luck Protection counters and head starts. */
     tracker?: unknown;
@@ -383,6 +389,9 @@ function coerceLegacyAggregate(raw: unknown): AriesStorage {
   // rafraîchissement. Toute nouvelle section doit passer par ici.
   if ("companion" in data && typeof (data as any).companion === "object") {
     out.companion = mergeSection(out.companion, data.companion as Record<string, unknown>);
+  }
+  if ("companionSession" in data && typeof (data as any).companionSession === "object") {
+    out.companionSession = mergeSection(out.companionSession, data.companionSession as Record<string, unknown>);
   }
   if ("activityLogHistory" in data) out.activityLog = mergeSection(out.activityLog, { history: (data as any).activityLogHistory });
   if ("activityLogFilter" in data) out.activityLog = mergeSection(out.activityLog, { filter: (data as any).activityLogFilter });

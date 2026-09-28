@@ -6,7 +6,7 @@
 // disque est justement ce qu'on veut pouvoir vérifier hors navigateur : c'est
 // elle qui décide de ce que voit un joueur dont la config date d'avant.
 
-import { DEFAULT_CUSTOM_LINES } from "./dialogue";
+import { DEFAULT_CUSTOM_LINES, LEGACY_DEFAULT_LINES } from "./dialogueLines";
 import { DEFAULT_KEEP_RULES, type KeepRules } from "./chat/hatch";
 
 export type CompanionMode = "follow" | "garden";
@@ -38,6 +38,11 @@ export type CompanionSettings = {
   lines: string[];
   /** Autorise les répliques tirées de l'état du jeu (récolte, pets, météo). */
   contextualEnabled: boolean;
+  /**
+   * Il commente de lui-même ce qui se passe : météo, ventes, paliers de stats,
+   * temps passé en jeu. Ne pose jamais de question et n'agit jamais.
+   */
+  reactions: boolean;
   /** Le companion signale un pet affamé et propose de le nourrir. */
   feedAlerts: boolean;
   /** Satiété en dessous de laquelle il s'en inquiète, en pourcent. */
@@ -93,6 +98,7 @@ export const DEFAULT_COMPANION_SETTINGS: CompanionSettings = {
   npcId: null,
   lines: [...DEFAULT_CUSTOM_LINES],
   contextualEnabled: true,
+  reactions: true,
   feedAlerts: true,
   feedThresholdPct: 10,
   feedFromGarden: true,
@@ -114,6 +120,23 @@ export function sanitizeLines(raw: unknown): string[] {
     .slice(0, MAX_LINES);
   // Une liste vide est un choix légitime : le companion garde alors les
   // répliques d'origine du jeu quand rien de contextuel ne se présente.
+}
+
+/**
+ * Les répliques lues sur disque.
+ *
+ * Exactement les quatre anciennes répliques par défaut : le joueur ne les a
+ * jamais choisies (aucune UI ne les édite), elles ont juste été sauvées avec
+ * le reste. On lui donne la liste actuelle, sinon elle ne lui parviendrait
+ * jamais. Toute autre liste, vide comprise, est gardée telle quelle.
+ */
+function storedLines(raw: unknown): string[] {
+  if (raw === undefined) return [...DEFAULT_CUSTOM_LINES];
+  const lines = sanitizeLines(raw);
+  const isLegacy =
+    lines.length === LEGACY_DEFAULT_LINES.length &&
+    lines.every((line, i) => line === LEGACY_DEFAULT_LINES[i]);
+  return isLegacy ? [...DEFAULT_CUSTOM_LINES] : lines;
 }
 
 /**
@@ -169,8 +192,9 @@ export function coerceSettings(raw: Partial<CompanionSettings> | undefined | nul
       ? (raw.mode as CompanionMode)
       : DEFAULT_COMPANION_SETTINGS.mode,
     npcId: typeof raw.npcId === "string" && raw.npcId ? raw.npcId : null,
-    lines: raw.lines === undefined ? [...DEFAULT_CUSTOM_LINES] : sanitizeLines(raw.lines),
+    lines: storedLines(raw.lines),
     contextualEnabled: raw.contextualEnabled !== false,
+    reactions: raw.reactions !== false,
     feedAlerts: raw.feedAlerts !== false,
     feedThresholdPct: clampThreshold(raw.feedThresholdPct),
     feedFromGarden: raw.feedFromGarden !== false,

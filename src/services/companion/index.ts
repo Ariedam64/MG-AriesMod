@@ -49,6 +49,8 @@ import {
   type DialogueState,
 } from "./dialogue";
 import { collectContextualLines } from "./dialogueContext";
+import { POKE_WINDOW_MS, lineEmote, pokeLine } from "./dialogueLines";
+import { timeLines } from "./reactions";
 import { AUTHORED_BY_MOD, installSpeechRewriter, uninstallSpeechRewriter } from "./speech";
 import { playEmote, stopEmote } from "./emote";
 import type { EmoteType } from "./emoteTypes";
@@ -122,6 +124,8 @@ type Runtime = {
    * mais cède à une tâche : un ordre précis reste plus fort qu'une attente.
    */
   attention: boolean;
+  /** Instants des derniers Talk, pour remarquer qu'on clique sur lui en boucle. */
+  talkTimes: number[];
 };
 
 let runtime: Runtime | null = null;
@@ -214,16 +218,44 @@ async function tick(): Promise<void> {
 function resolveSpeech(): string | null {
   const rt = runtime;
   if (!rt) return null;
+
+  const now = Date.now();
+  rt.talkTimes = [...rt.talkTimes.filter((t) => now - t <= POKE_WINDOW_MS), now];
+  const poke = pokeLine(rt.talkTimes, now, Math.random);
+  if (poke) {
+    playEmoteSoon(rt, poke.emote);
+    return poke.message;
+  }
+
+  // Les répliques d'heure et de calendrier ne s'ajoutent qu'à une liste non
+  // vide : une liste vidée exprès veut dire « laisse parler le jeu ».
+  const customLines = rt.settings.lines.length > 0 ? [...rt.settings.lines, ...timeLines(new Date(now))] : [];
   const picked = pickDialogueLine({
     contextual: rt.settings.contextualEnabled ? rt.contextualCache : [],
-    customLines: rt.settings.lines,
+    customLines,
     state: rt.dialogue,
     nowMs: Date.now(),
     random: Math.random,
     cooldownMs: DEFAULT_CONTEXTUAL_COOLDOWN_MS,
   });
   rt.dialogue = picked.state;
+
+  const emote = picked.emote ?? (picked.custom && picked.message ? lineEmote(picked.message) : null);
+  if (emote !== null) playEmoteSoon(rt, emote as EmoteType);
   return picked.message;
+}
+
+/**
+ * Joue une pose juste après la réplique.
+ *
+ * Hors de l'écriture en cours : on est appelé depuis le `write` de l'atom des
+ * bulles, et écrire un autre atom en plein milieu n'est pas sûr.
+ */
+function playEmoteSoon(rt: Runtime, emote: EmoteType): void {
+  const npcId = rt.npcId;
+  setTimeout(() => {
+    if (runtime === rt) void playEmote(npcId, emote).catch(() => {});
+  }, 0);
 }
 
 async function refreshContextual(): Promise<void> {
@@ -280,6 +312,7 @@ async function startInternal(): Promise<boolean> {
     contextualTimer: null,
     task: null,
     attention: false,
+    talkTimes: [],
   };
   runtime = rt;
 
@@ -455,6 +488,19 @@ export const CompanionService = {
   /** Vrai tant qu'il attend une réponse auprès du joueur. */
   isHoldingAttention(): boolean {
     return runtime?.attention === true;
+  },
+
+  /** Occupé : en route pour une tâche, ou en attente d'une réponse. */
+  isBusy(): boolean {
+    return runtime !== null && (runtime.task !== null || runtime.attention);
+  },
+
+  /** Distance en tuiles jusqu'au joueur, `null` tant qu'on ne sait pas où ils sont. */
+  distanceToPlayer(): number | null {
+    const rt = runtime;
+    const here = rt?.movement.tile;
+    if (!rt || !here || !rt.player) return null;
+    return manhattan(here, rt.player);
   },
 
   getNpcId(): string | null {

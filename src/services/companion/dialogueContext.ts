@@ -4,39 +4,29 @@
 //
 // Séparé de `dialogue.ts` (qui reste pur et testable hors navigateur) pour la
 // même raison que `movement.ts` l'est : la logique de choix se teste, la lecture
-// de l'état se branche.
+// de l'état se branche. Le compte et la tournure des phrases vivent dans
+// `dialogueLines.ts`, pur lui aussi.
 //
 // Aucune donnée de jeu n'est écrite en dur : tout passe par les atomes et les
 // services existants (règle core.md).
 
+import { weatherCatalog } from "../../data";
 import { Atoms } from "../../store/atoms";
 import { PetsService } from "../pets";
 import type { ContextualLine } from "./dialogue";
-
-/**
- * Sous-slots mûrs d'une tuile.
- *
- * Compter les crops prêts ne sert ici qu'à décider s'il y a de quoi en parler :
- * on veut un effectif, pas les identifiants. La récolte, elle, passe par
- * `workflowScan`, qui résout les vrais `slotId` (les plantes sparse en ont des
- * non contigus) ; s'appuyer sur ces index-ci pour agir serait une erreur.
- */
-function matureSubSlotCount(obj: unknown, now: number): number {
-  const slots = (obj as { slots?: unknown })?.slots;
-  if (!Array.isArray(slots)) return 0;
-  let count = 0;
-  for (const slot of slots) {
-    const end = (slot as { endTime?: unknown } | null)?.endTime;
-    if (typeof end === "number" && end > 0 && end <= now) count++;
-  }
-  return count;
-}
+import {
+  harvestMessage,
+  hungryPetMessage,
+  ripeCropCount,
+  sellMessage,
+  weatherDisplayName,
+  weatherMessage,
+} from "./dialogueLines";
+import { EmoteType } from "./emoteTypes";
+import { weatherEmote } from "./reactions";
 
 /** Seuil de faim en dessous duquel un pet est signalé. */
 const HUNGRY_PET_THRESHOLD_PCT = 25;
-
-const plural = (count: number, singular: string, pluralForm: string) =>
-  count === 1 ? singular : pluralForm;
 
 /**
  * Interroge l'état du jeu et rend les répliques pertinentes, par priorité
@@ -64,20 +54,9 @@ export async function collectContextualLines(): Promise<ContextualLine[]> {
 }
 
 async function readyHarvestLine(): Promise<ContextualLine | null> {
-  const tileObjects = await Atoms.data.gardenTileObjects.get();
-  if (!tileObjects || typeof tileObjects !== "object") return null;
-
-  const now = Date.now();
-  let ready = 0;
-  for (const obj of Object.values(tileObjects as Record<string, unknown>)) {
-    ready += matureSubSlotCount(obj, now);
-  }
+  const ready = ripeCropCount(await Atoms.data.gardenTileObjects.get(), Date.now());
   if (ready === 0) return null;
-
-  return {
-    key: "harvest",
-    message: `${ready} ${plural(ready, "crop is", "crops are")} ready to harvest, by the way.`,
-  };
+  return { key: "harvest", message: harvestMessage(ready, Math.random), emote: EmoteType.Clapping };
 }
 
 async function hungryPetLine(): Promise<ContextualLine | null> {
@@ -90,23 +69,20 @@ async function hungryPetLine(): Promise<ContextualLine | null> {
   });
   if (hungry.length === 0) return null;
 
-  return {
-    key: "pets",
-    message: `${hungry.length} ${plural(hungry.length, "pet is", "pets are")} getting hungry.`,
-  };
+  return { key: "pets", message: hungryPetMessage(hungry.length, Math.random), emote: EmoteType.Crying };
 }
 
 async function cropsToSellLine(): Promise<ContextualLine | null> {
   const total = Number(await Atoms.shop.totalCropSellPrice.get());
   if (!Number.isFinite(total) || total <= 0) return null;
-  return {
-    key: "sell",
-    message: `You're carrying ${Math.round(total).toLocaleString("en-US")} coins worth of crops.`,
-  };
+  return { key: "sell", message: sellMessage(total, Math.random), emote: EmoteType.Clapping };
 }
 
 async function weatherLine(): Promise<ContextualLine | null> {
   const weather = await Atoms.data.weather.get();
   if (!weather || typeof weather !== "string") return null;
-  return { key: "weather", message: `We're getting ${weather} right now.` };
+  // Catalogue lu ici, pas à l'import : au `document-start` l'API n'a pas encore
+  // répondu, et une copie figée garderait les noms embarqués toute la session.
+  const name = weatherDisplayName(weather, weatherCatalog);
+  return { key: "weather", message: weatherMessage(weather, name, Math.random), emote: weatherEmote(weather) };
 }

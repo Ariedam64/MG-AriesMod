@@ -34,6 +34,7 @@ stored.set(
     version: 2,
     companion: { enabled: true, mode: "garden", feedThresholdPct: 25, npcId: "NPC_Vendor" },
     misc: { ghostMode: true },
+    companionSession: { startedAt: 1000, lastSeenAt: 2000, announcedHours: 3 },
   })
 );
 
@@ -60,6 +61,11 @@ check("et les reglages de nourrissage", readAriesPath("companion.feedThresholdPc
 check("et le PNJ emprunte", readAriesPath("companion.npcId"), "NPC_Vendor");
 // Les sections deja connues ne doivent pas avoir ete abimees au passage.
 check("les autres sections sont intactes", readAriesPath("misc.ghostMode"), true);
+// La session du companion vit hors de `companion`, que chaque sauvegarde des
+// réglages réécrit en entier : sans sa propre entrée dans la liste blanche,
+// « ça fait 2 h » repartirait de zéro à chaque F5.
+check("la session du companion survit au rechargement", readAriesPath("companionSession.startedAt"), 1000);
+check("avec ses heures deja annoncees", readAriesPath("companionSession.announcedHours"), 3);
 
 console.log("\n--- reglages du companion, repares a la lecture ---");
 {
@@ -73,6 +79,7 @@ console.log("\n--- reglages du companion, repares a la lecture ---");
   // sinon la fonctionnalite n'existe que pour les nouveaux venus.
   check("une carte de question absente du blob est active", settings.askOnScreen, true);
   check("aucun groupe n'a ete consulte", settings.reviewedSettings.length, 0);
+  check("les reactions sont actives chez qui met a jour", settings.reactions, true);
   // Sans critere, aucune vente ne sera proposee : c'est le defaut sur lequel il
   // faut retomber, jamais un critere invente.
   check("aucun critere de conservation par defaut", settings.hatchKeepRules.species.length, 0);
@@ -91,6 +98,10 @@ console.log("\n--- reglages du companion, repares a la lecture ---");
   check("un groupe consulte est note une seule fois", loadCompanionSettings().reviewedSettings.join(","), "harvest");
   check("il ne l'est plus a signaler", isUnreviewed("harvest"), false);
   check("les autres le restent", isUnreviewed("hatch"), true);
+
+  patchCompanionSettings({ reactions: false });
+  check("les reactions se coupent et se retiennent", loadCompanionSettings().reactions, false);
+  check("sauver les reglages n'efface pas la session", readAriesPath("companionSession.startedAt"), 1000);
 
   patchCompanionSettings({ askOnScreen: false });
   check("mais elle se coupe et se retient", loadCompanionSettings().askOnScreen, false);

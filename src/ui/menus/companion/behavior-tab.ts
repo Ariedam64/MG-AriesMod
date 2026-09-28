@@ -104,11 +104,16 @@ export function renderBehaviorTab(view: HTMLElement): void {
     void CompanionService.applySettings({ askOnScreen: on });
   });
 
+  const reactionsToggle = toggle(settings.reactions, (on) => {
+    void CompanionService.applySettings({ reactions: on });
+  });
+
   card.body.append(
     settingRow("Enable", "Brings him out next to you.", enableToggle).row,
     settingRow("Mode", "Follows you, or stays on your plot.", modeSelect).row,
     settingRow("Borrowed NPC", 'Whose look it takes. "In game" means already spawned.', npcSelect).row,
     settingRow("Ask on screen", "Shows his questions at the top, portrait and all.", askToggle).row,
+    settingRow("Reactions", "Comments on weather, sales, milestones and how long you've played.", reactionsToggle).row,
     status
   );
 

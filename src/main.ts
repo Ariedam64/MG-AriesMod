@@ -24,6 +24,7 @@ import { EditorService } from "./services/editor";
 import { installEditorPointerControls } from "./services/editorPointerControls";
 import { CompanionService } from "./services/companion";
 import { startFeedWatch } from "./services/companion/chat/feedWatch";
+import { startReactionWatch } from "./services/companion/reactionWatch";
 import { mountCompanionAsk } from "./ui/companionAsk";
 
 import { initGameVersion } from "./utils/gameVersion";
@@ -100,6 +101,9 @@ import { startPlayerStateReportingWhenGameReady } from "./ariesModAPI/endpoints/
   // rien ne s'exécute sans confirmation (cf. services/companion/chat/proposals.ts).
   CompanionService.autoStart();
   startFeedWatch();
+  // Ses commentaires spontanés : météo, ventes, paliers, temps passé en jeu.
+  // Il ne fait que parler, jamais agir (cf. services/companion/reactions.ts).
+  startReactionWatch();
   // Ses questions s'affichent en haut de l'écran, menu fermé compris. Aucune
   // action de plus : les mêmes confirm/decline que le fil du chat.
   mountCompanionAsk();
