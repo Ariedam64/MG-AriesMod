@@ -121,7 +121,9 @@ async function speak(reaction: Reaction): Promise<void> {
   } finally {
     CompanionService.releaseTask();
   }
-  if (reaction.emote !== null) void CompanionService.emoteWhenStill(reaction.emote).catch(() => {});
+  // Tout de suite : il est déjà arrivé, et la pose doit remplacer la parole
+  // plutôt que la suivre (cf. `emote.ts`).
+  if (reaction.emote !== null) void CompanionService.emote(reaction.emote).catch(() => {});
 }
 
 async function drain(): Promise<void> {

@@ -2,6 +2,7 @@ import {
   CONTEXTUAL_CHANCE,
   DEFAULT_CONTEXTUAL_COOLDOWN_MS,
   initialDialogueState,
+  nextBubbleTimestamp,
   pickDialogueLine,
   type ContextualLine,
   type DialogueState,
@@ -219,6 +220,39 @@ console.log("\n--- répliques propres à chaque météo ---");
   check("nom d'affichage : ancien champ displayName", weatherDisplayName("Frost", { Frost: { displayName: "Snow" } }), "Snow");
   check("nom d'affichage : ID découpé en repli", weatherDisplayName("AmberMoon", {}), "Amber Moon");
   check("nom d'affichage : catalogue illisible", weatherDisplayName("Rain", null), "Rain");
+}
+
+console.log("\n--- une bulle du Talk passe après une bulle du mod ---");
+{
+  // Règle du jeu (bundle 1299, deliverNpcChatBubble) : une bulle ne s'affiche
+  // que si son horodatage dépasse celui de la dernière affichée. Le mod date
+  // ses bulles avec Date.now(), le jeu avec son horloge calée sur le serveur.
+  const deliver = (timestamps: number[]) => {
+    let last = 0;
+    return timestamps.map((ts) => {
+      if (ts > last) {
+        last = ts;
+        return true;
+      }
+      return false;
+    });
+  };
+  const server = 1_000_000;
+  const modAhead = server + 2_000; // horloge du PC en avance de 2 s
+  const talk = server + 500; // Talk du joueur une demi-seconde plus tard
+
+  check("sans correction, le Talk est ignoré", deliver([modAhead, talk]).join(), "true,false");
+
+  let last: number | null = null;
+  const stamped = [modAhead, talk].map((ts) => {
+    const next = nextBubbleTimestamp(last, ts);
+    last = next;
+    return next;
+  });
+  check("avec correction, les deux bulles s'affichent", deliver(stamped).join(), "true,true");
+  check("une bulle déjà plus récente garde son heure", nextBubbleTimestamp(100, 500), 500);
+  check("la toute première garde son heure", nextBubbleTimestamp(null, 42), 42);
+  check("un horodatage illisible reste tel quel", nextBubbleTimestamp(100, NaN as unknown as number), "NaN");
 }
 
 console.log(fails === 0 ? "\nAll checks passed." : `\n${fails} check(s) failed.`);

@@ -54,6 +54,23 @@ export const CONTEXTUAL_CHANCE = 0.25;
 /** Temporisation par défaut d'une même alerte contextuelle. */
 export const DEFAULT_CONTEXTUAL_COOLDOWN_MS = 120_000;
 
+/**
+ * Horodatage à donner à une bulle du companion.
+ *
+ * Le jeu n'affiche une bulle de PNJ que si son horodatage dépasse celui de la
+ * dernière affichée (bundle 1299, `deliverNpcChatBubble`). Or deux horloges
+ * écrivent ces bulles : le mod date les siennes avec `Date.now()`, le jeu les
+ * siennes avec son horloge calée sur le serveur. Un PC en avance de quelques
+ * secondes suffisait pour qu'un Talk juste après une réaction du companion
+ * paraisse plus ancien qu'elle : le texte restait figé, alors que la pose,
+ * elle, se jouait. D'où cette règle : toujours au moins un cran après la
+ * précédente.
+ */
+export function nextBubbleTimestamp(last: number | null, proposed: number): number {
+  if (!Number.isFinite(proposed) || last === null || !Number.isFinite(last)) return proposed;
+  return Math.max(proposed, last + 1);
+}
+
 export function initialDialogueState(): DialogueState {
   return { lastCustomIndex: -1, mutedUntil: {} };
 }

@@ -21,6 +21,8 @@
 // Deux enveloppes concurrentes se marcheraient dessus au démontage.
 
 import { getAtomByLabel } from "../../store/jotai";
+import { nextBubbleTimestamp } from "./dialogue";
+import { markSpoke } from "./emote";
 
 const CHAT_BUBBLES_LABEL = "npcChatBubblesAtom";
 
@@ -42,6 +44,8 @@ let wrapped: Wrapped | null = null;
 let resolver: MessageResolver | null = null;
 /** playerId dont les répliques doivent être réécrites. */
 let targetNpcId: string | null = null;
+/** Horodatage de la dernière bulle de notre PNJ, toutes sources confondues. */
+let lastTimestamp: number | null = null;
 
 /**
  * Réécrit le payload sortant si — et seulement si — il concerne notre PNJ.
@@ -54,18 +58,33 @@ function rewritePayload(payload: unknown): unknown {
   const entries = payload as BubblePayload;
   const entry = entries[targetNpcId];
   if (!entry || typeof entry !== "object") return payload;
-  if (entry[AUTHORED_BY_MOD] === true) return payload;
+  // Toute bulle, la nôtre comme celle du jeu, relance l'animation Talking, qui
+  // masque les poses : `emote.ts` doit savoir quand elle s'éteindra.
+  markSpoke(targetNpcId);
+
+  // Les bulles du mod et celles du jeu ne sont pas datées par la même horloge :
+  // on les remet dans l'ordre, sinon le jeu ignore la plus « ancienne ».
+  const proposed = Number(entry.timestamp);
+  const timestamp = nextBubbleTimestamp(lastTimestamp, proposed);
+  if (Number.isFinite(timestamp)) lastTimestamp = timestamp;
+  const stamped: BubbleEntry = timestamp === proposed ? entry : { ...entry, timestamp };
+
+  if (entry[AUTHORED_BY_MOD] === true) {
+    return stamped === entry ? payload : { ...entries, [targetNpcId]: stamped };
+  }
 
   const original = typeof entry.message === "string" ? entry.message : "";
   let replacement: string | null = null;
   try {
     replacement = resolver(targetNpcId, original);
   } catch {
-    return payload;
+    replacement = null;
   }
-  if (!replacement || replacement === original) return payload;
+  if (!replacement || replacement === original) {
+    return stamped === entry ? payload : { ...entries, [targetNpcId]: stamped };
+  }
 
-  return { ...entries, [targetNpcId]: { ...entry, message: replacement } };
+  return { ...entries, [targetNpcId]: { ...stamped, message: replacement } };
 }
 
 /**
@@ -96,6 +115,7 @@ export function installSpeechRewriter(npcId: string, resolve: MessageResolver): 
 /** Retire l'enveloppe et restaure le `write` d'origine. Sûr à appeler plusieurs fois. */
 export function uninstallSpeechRewriter(): void {
   targetNpcId = null;
+  lastTimestamp = null;
   resolver = null;
   if (!wrapped) return;
   try {

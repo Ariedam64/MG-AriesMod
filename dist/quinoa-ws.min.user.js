@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.220
+// @version      3.2.221
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -3033,10 +3033,10 @@
       const catalog = read(source.key);
       if (!catalog) continue;
       for (const [id, raw] of Object.entries(catalog)) {
-        const record2 = raw;
-        if (!record2 || typeof record2 !== "object") continue;
+        const record = raw;
+        if (!record || typeof record !== "object") continue;
         for (const path of source.paths) {
-          const holder2 = path === null ? record2 : record2[path];
+          const holder2 = path === null ? record : record[path];
           if (!holder2 || typeof holder2 !== "object") continue;
           const url = typeof holder2.sprite === "string" ? holder2.sprite : "";
           if (!url) continue;
@@ -8575,12 +8575,12 @@
   }
   function readCropSize(source) {
     if (!source || typeof source !== "object") return null;
-    const record2 = source;
-    const direct = toFinite(record2.size);
+    const record = source;
+    const direct = toFinite(record.size);
     if (direct != null) return clampCropSize(direct);
-    const legacy = toFinite(record2.targetScale) ?? toFinite(record2.scale);
+    const legacy = toFinite(record.targetScale) ?? toFinite(record.scale);
     if (legacy == null) return null;
-    return legacyScaleToCropSize(legacy, getMaxSizeMultiplier(record2.species));
+    return legacyScaleToCropSize(legacy, getMaxSizeMultiplier(record.species));
   }
 
   // src/services/locker.ts
@@ -16978,6 +16978,12 @@
      */
     engine: null,
     tos: null,
+    /**
+     * The world scope's system registry, where the tile system was found. Other
+     * systems of the same world live there too (`avatar`, for one), so keeping it
+     * lets them be reached without a capture of their own.
+     */
+    worldSystems: null,
     /** Set while `Map.prototype.set` carries our capture wrapper. */
     mapSetPatched: false,
     origMapSet: null,
@@ -17079,6 +17085,7 @@
           const system = tileObjectSystemFrom(value);
           if (system) {
             state2.tos = system;
+            state2.worldSystems = this && typeof this.get === "function" ? this : null;
             publishCapturedGlobals();
             disarmCapture();
           }
@@ -17109,6 +17116,7 @@
     if (state2.tos && isLiveTileObjectSystem(state2.tos)) return;
     if (state2.tos) {
       state2.tos = null;
+      state2.worldSystems = null;
       try {
         shareGlobal("__TILE_OBJECT_SYSTEM__", null);
       } catch {
@@ -17433,6 +17441,13 @@
     };
     entry.raf = requestAnimationFrame(tick3);
     return true;
+  }
+  function getWorldSystem(name) {
+    ensureCapture();
+    const entry = state2.worldSystems?.get(name);
+    if (!entry) return null;
+    const system = entry.system ?? entry;
+    return system && typeof system === "object" && system.destroyed !== true ? system : null;
   }
   var tos = {
     /** À appeler une fois dans le main, le plus tôt possible */
@@ -19969,8 +19984,8 @@
     const cols = Number(mapData?.cols);
     if (!mapData || !Number.isFinite(cols) || cols <= 0) return [];
     const out = [];
-    const collect = (record2, localIdxKey, kind) => {
-      for (const [gidxStr, meta] of Object.entries(record2 || {})) {
+    const collect = (record, localIdxKey, kind) => {
+      for (const [gidxStr, meta] of Object.entries(record || {})) {
         if (meta?.userSlotIdx !== userSlotIdx) continue;
         const gidx = Number(gidxStr);
         if (!Number.isFinite(gidx)) continue;
@@ -20109,12 +20124,12 @@
       if (!slotMatch || !slotMatch.matchSlot) return false;
       const userSlotIdx = slotMatchToIndex(slotMatch);
       friendPreviewGarden = sanitizeGarden(garden2);
-      const installed3 = await installGardenOverlay(
+      const installed4 = await installGardenOverlay(
         "friend",
         userSlotIdx,
         makeGardenTileResolver(() => friendPreviewGarden)
       );
-      if (!installed3) return false;
+      if (!installed4) return false;
       await setOverlayMyDataGarden(friendPreviewGarden);
       friendPreviewUserSlotIdx = userSlotIdx;
       friendPreviewPlayerId = pid;
@@ -21751,10 +21766,10 @@
     return value.startsWith(ROOM_ID_PREFIX);
   }
   function readFirstKey(source, keys, skipRoomIds = false) {
-    const record2 = asRecord(source);
-    if (!record2) return null;
+    const record = asRecord(source);
+    if (!record) return null;
     for (const key2 of keys) {
-      const value = record2[key2];
+      const value = record[key2];
       if (typeof value === "string" && value.length > 0) {
         if (skipRoomIds && looksLikeRoomId(value)) continue;
         return value;
@@ -31848,7 +31863,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.220";
+      return "3.2.221";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -38459,9 +38474,9 @@ next: ${next}`;
     return out;
   }
   var sanitizeFileComponent = (value) => value.replace(/[^a-z0-9_\-]+/gi, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "") || "sprite";
-  var buildSpriteFilename = (record2, mutations) => {
+  var buildSpriteFilename = (record, mutations) => {
     const mutSegment = mutations.length ? `-${mutations.map((m) => sanitizeFileComponent(m)).join("_")}` : "";
-    return `${sanitizeFileComponent(record2.category)}-${sanitizeFileComponent(record2.name)}${mutSegment}.png`;
+    return `${sanitizeFileComponent(record.category)}-${sanitizeFileComponent(record.name)}${mutSegment}.png`;
   };
   var COLOR_SELECTIONS = ["None", ...MUT_G1];
   var CONDITION_SELECTIONS = ["None", ...MUT_G2];
@@ -38611,8 +38626,8 @@ next: ${next}`;
       });
       container.append(heading, row);
     }
-    function previewUrlFor(record2, mutations) {
-      return mutations.length ? composedSpriteUrl(record2.category, record2.name, mutations) : record2.url;
+    function previewUrlFor(record, mutations) {
+      return mutations.length ? composedSpriteUrl(record.category, record.name, mutations) : record.url;
     }
     function renderSpriteCards(records) {
       if (!records.length) {
@@ -38621,37 +38636,37 @@ next: ${next}`;
       }
       const activeMutations = getActiveMutations();
       previewArea.innerHTML = "";
-      records.forEach((record2) => {
+      records.forEach((record) => {
         const card4 = document.createElement("div");
         card4.className = "dd-sprite-grid__item";
-        card4.title = `${record2.category}/${record2.name}`;
+        card4.title = `${record.category}/${record.name}`;
         const imgWrap = document.createElement("div");
         imgWrap.className = "dd-sprite-grid__img";
         imgWrap.style.setProperty("--sprite-size", `${SPRITE_ICON_SIZE}px`);
         const iconSlot = document.createElement("span");
         iconSlot.className = "dd-sprite-grid__icon";
         const img = document.createElement("img");
-        img.alt = record2.name;
+        img.alt = record.name;
         img.decoding = "async";
         img.loading = "lazy";
         img.addEventListener("error", () => {
           if (img.dataset.fallbackApplied) return;
           img.dataset.fallbackApplied = "1";
-          setImageSafe(img, record2.url);
+          setImageSafe(img, record.url);
         });
         iconSlot.appendChild(img);
-        setImageSafe(img, previewUrlFor(record2, activeMutations));
+        setImageSafe(img, previewUrlFor(record, activeMutations));
         imgWrap.appendChild(iconSlot);
         const nameEl = document.createElement("span");
         nameEl.className = "dd-sprite-grid__name";
-        nameEl.textContent = record2.name;
+        nameEl.textContent = record.name;
         const meta = document.createElement("span");
         meta.className = "dd-sprite-grid__meta";
-        meta.textContent = `${record2.category}/${record2.name}`;
+        meta.textContent = `${record.category}/${record.name}`;
         card4.append(imgWrap, nameEl, meta);
         const triggerDownload = () => {
           if (downloadInProgress) return;
-          void downloadSpriteRecord(record2, getActiveMutations());
+          void downloadSpriteRecord(record, getActiveMutations());
         };
         card4.addEventListener("click", triggerDownload);
         card4.addEventListener("keydown", (event) => {
@@ -38702,10 +38717,10 @@ next: ${next}`;
       }, 150);
     });
     void updateList();
-    async function downloadSpriteRecord(record2, mutations) {
-      const bytes = await mgApiGetBinary(previewUrlFor(record2, mutations));
+    async function downloadSpriteRecord(record, mutations) {
+      const bytes = await mgApiGetBinary(previewUrlFor(record, mutations));
       if (!bytes) return;
-      triggerBlobDownload(new Blob([bytes], { type: "image/png" }), buildSpriteFilename(record2, mutations));
+      triggerBlobDownload(new Blob([bytes], { type: "image/png" }), buildSpriteFilename(record, mutations));
     }
     async function downloadVisibleSprites() {
       if (!visibleSpriteRecords.length || downloadInProgress) return;
@@ -38715,10 +38730,10 @@ next: ${next}`;
       try {
         const activeMutations = getActiveMutations();
         const files = [];
-        for (const record2 of visibleSpriteRecords) {
-          const bytes = await mgApiGetBinary(previewUrlFor(record2, activeMutations));
+        for (const record of visibleSpriteRecords) {
+          const bytes = await mgApiGetBinary(previewUrlFor(record, activeMutations));
           if (!bytes) continue;
-          files.push({ name: buildSpriteFilename(record2, activeMutations), dataUrl: arrayBufferToDataUrl(bytes, "image/png") });
+          files.push({ name: buildSpriteFilename(record, activeMutations), dataUrl: arrayBufferToDataUrl(bytes, "image/png") });
           downloadBtn.textContent = `Collected ${files.length}/${visibleSpriteRecords.length}`;
         }
         if (!files.length) return;
@@ -54464,12 +54479,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     const viaLabel = consider(labelMatch, false);
     const viaRect = consider(rectMatch, true);
     const failures = [];
-    const record2 = (retargeted, nodesPoked2) => {
+    const record = (retargeted, nodesPoked2) => {
       debugState3.lastApply[frameKey] = { viaLabel, viaRect, retargeted, nodesPoked: nodesPoked2, failures };
     };
     if (!textures.length) {
       failures.push("no texture found");
-      record2(0, 0);
+      record(0, 0);
       return false;
     }
     let skinSource;
@@ -54477,12 +54492,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       skinSource = sourceOf(Texture.from(canvas));
     } catch (error) {
       failures.push(`Texture.from: ${String(error)}`);
-      record2(0, 0);
+      record(0, 0);
       return false;
     }
     if (!skinSource) {
       failures.push("skin source missing");
-      record2(0, 0);
+      record(0, 0);
       return false;
     }
     const originals = [];
@@ -54499,7 +54514,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     for (const node of nodes) {
       if (pokeNode(node, Texture)) nodesPoked += 1;
     }
-    record2(originals.length, nodesPoked);
+    record(originals.length, nodesPoked);
     if (!originals.length) return false;
     applied.set(frameKey, { originals, nodes });
     return true;
@@ -55771,6 +55786,41 @@ Restore figures are averages; unlucky streaks do worse.`;
     Questioning: 4,
     Love: 5
   };
+  var ENTRY_LEAD_MS = 6e4;
+  function companionEmoteEntry(playerId2, emote, now2) {
+    return { kind: "emote", playerId: playerId2, emoteType: emote, lastTimestampMs: now2 + ENTRY_LEAD_MS };
+  }
+  function mergeEmoteSource(real, fake) {
+    const base = real && typeof real === "object" ? real : {};
+    const entries = Array.isArray(base.entries) ? base.entries : [];
+    const ours = Array.isArray(fake?.entries) ? fake.entries : [];
+    return { ...base, entries: ours.length ? [...entries, ...ours] : entries };
+  }
+  var NPC_TALKING_MS = 3e3;
+  var TALKING_MARGIN_MS = 150;
+  function cutTalking(avatarSystem2, playerId2) {
+    const system = avatarSystem2;
+    if (!system || typeof system.views?.get !== "function") return false;
+    const view = system.views.get(playerId2);
+    if (!view) return false;
+    try {
+      if (typeof system.stopNpcTalking === "function") {
+        system.stopNpcTalking(playerId2, view);
+        return true;
+      }
+      if (typeof view.setTalking === "function") {
+        view.setTalking(false);
+        return true;
+      }
+    } catch {
+    }
+    return false;
+  }
+  function emoteStartDelay(lastSpokeAt2, now2, canCutTalking = false) {
+    if (canCutTalking) return 0;
+    if (lastSpokeAt2 === null) return 0;
+    return Math.max(0, lastSpokeAt2 + NPC_TALKING_MS + TALKING_MARGIN_MS - now2);
+  }
 
   // src/services/companion/reactions.ts
   function pickOne(options, random) {
@@ -57044,7 +57094,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function diagnoseCompanion(npcId, sampleMs = DEFAULT_SAMPLE_MS) {
     const seen = [];
-    const record2 = (entries) => {
+    const record = (entries) => {
       const entry = Array.isArray(entries) ? entries.find((e) => e?.playerId === npcId) : null;
       const pos = entry?.position;
       if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return;
@@ -57054,7 +57104,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     let unsub = null;
     try {
-      unsub = await npcQuinoaUsers.onChangeNow((next) => record2(next));
+      unsub = await npcQuinoaUsers.onChangeNow((next) => record(next));
     } catch {
       return {
         observations: 0,
@@ -57105,6 +57155,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/services/companion/dialogue.ts
   var CONTEXTUAL_CHANCE = 0.25;
   var DEFAULT_CONTEXTUAL_COOLDOWN_MS = 12e4;
+  function nextBubbleTimestamp(last, proposed) {
+    if (!Number.isFinite(proposed) || last === null || !Number.isFinite(last)) return proposed;
+    return Math.max(proposed, last + 1);
+  }
   function initialDialogueState() {
     return { lastCustomIndex: -1, mutedUntil: {} };
   }
@@ -57180,28 +57234,142 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { key: "weather", message: weatherMessage(weather2, name, Math.random), emote: weatherEmote(weather2) };
   }
 
+  // src/services/companion/emote.ts
+  var EMOTE_SOURCE_LABEL = "emoteSourceAtom";
+  function avatarSystem() {
+    try {
+      return getWorldSystem("avatar");
+    } catch {
+      return null;
+    }
+  }
+  var EMOTE_PATCH = {
+    label: EMOTE_SOURCE_LABEL,
+    // Sans elle, le recalcul n'aurait lieu qu'au prochain changement de l'état
+    // de room : la pose partirait en retard, et le retour au repos aussi.
+    extraDeps: [COMPANION_TICK_LABEL],
+    merge: (real, fake) => mergeEmoteSource(real, fake)
+  };
+  var EMOTE_DURATION_MS = 1500;
+  var installed2 = false;
+  var releaseTimer = null;
+  var posing = null;
+  var startTimer = null;
+  var lastSpokeAt = /* @__PURE__ */ new Map();
+  function markSpoke(playerId2, at = Date.now()) {
+    if (playerId2) lastSpokeAt.set(playerId2, at);
+  }
+  async function writeEntries(entries) {
+    const payload = { entries };
+    try {
+      if (!installed2) {
+        ensureTickAtom();
+        await fakeShow(EMOTE_PATCH, payload);
+        installed2 = true;
+      } else {
+        await fakeUpdate(EMOTE_SOURCE_LABEL, payload);
+      }
+      await bumpTick();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  async function rest() {
+    if (!installed2) return;
+    await writeEntries([]);
+  }
+  function cancelPending() {
+    if (releaseTimer === null) return;
+    window.clearTimeout(releaseTimer);
+    releaseTimer = null;
+  }
+  function cancelStart() {
+    if (startTimer === null) return;
+    window.clearTimeout(startTimer);
+    startTimer = null;
+  }
+  async function playEmote(playerId2, emote, durationMs = EMOTE_DURATION_MS) {
+    if (!playerId2 || emote === EmoteType.Idle) return;
+    cancelStart();
+    const avatar3 = avatarSystem();
+    const canCut = !!avatar3?.views?.has?.(playerId2);
+    const delay = emoteStartDelay(lastSpokeAt.get(playerId2) ?? null, Date.now(), canCut);
+    if (delay > 0) {
+      startTimer = window.setTimeout(() => {
+        startTimer = null;
+        void playEmote(playerId2, emote, durationMs);
+      }, delay);
+      return;
+    }
+    if (releaseTimer !== null && posing === playerId2) {
+      cancelPending();
+      await rest();
+      await new Promise((resolve) => setTimeout(resolve, 60));
+    }
+    cancelPending();
+    posing = playerId2;
+    if (canCut) {
+      cutTalking(avatar3, playerId2);
+      window.setTimeout(() => {
+        if (posing === playerId2) cutTalking(avatarSystem(), playerId2);
+      }, 80);
+    }
+    if (!await writeEntries([companionEmoteEntry(playerId2, emote, Date.now())])) {
+      posing = null;
+      return;
+    }
+    releaseTimer = window.setTimeout(() => {
+      releaseTimer = null;
+      posing = null;
+      void rest();
+    }, durationMs);
+  }
+  async function stopEmote() {
+    cancelStart();
+    cancelPending();
+    posing = null;
+    if (!installed2) return;
+    try {
+      await fakeHide(EMOTE_SOURCE_LABEL);
+      await bumpTick();
+    } catch {
+    }
+    installed2 = false;
+  }
+
   // src/services/companion/speech.ts
   var CHAT_BUBBLES_LABEL = "npcChatBubblesAtom";
   var AUTHORED_BY_MOD = "ariesAuthored";
   var wrapped = null;
   var resolver = null;
   var targetNpcId = null;
+  var lastTimestamp = null;
   function rewritePayload(payload) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
     if (!targetNpcId || !resolver) return payload;
     const entries = payload;
     const entry = entries[targetNpcId];
     if (!entry || typeof entry !== "object") return payload;
-    if (entry[AUTHORED_BY_MOD] === true) return payload;
+    markSpoke(targetNpcId);
+    const proposed = Number(entry.timestamp);
+    const timestamp = nextBubbleTimestamp(lastTimestamp, proposed);
+    if (Number.isFinite(timestamp)) lastTimestamp = timestamp;
+    const stamped = timestamp === proposed ? entry : { ...entry, timestamp };
+    if (entry[AUTHORED_BY_MOD] === true) {
+      return stamped === entry ? payload : { ...entries, [targetNpcId]: stamped };
+    }
     const original = typeof entry.message === "string" ? entry.message : "";
     let replacement = null;
     try {
       replacement = resolver(targetNpcId, original);
     } catch {
-      return payload;
+      replacement = null;
     }
-    if (!replacement || replacement === original) return payload;
-    return { ...entries, [targetNpcId]: { ...entry, message: replacement } };
+    if (!replacement || replacement === original) {
+      return stamped === entry ? payload : { ...entries, [targetNpcId]: stamped };
+    }
+    return { ...entries, [targetNpcId]: { ...stamped, message: replacement } };
   }
   function installSpeechRewriter(npcId, resolve) {
     targetNpcId = npcId;
@@ -57219,6 +57387,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function uninstallSpeechRewriter() {
     targetNpcId = null;
+    lastTimestamp = null;
     resolver = null;
     if (!wrapped) return;
     try {
@@ -57226,55 +57395,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
     }
     wrapped = null;
-  }
-
-  // src/services/companion/emote.ts
-  var EMOTES_LABEL = "playerEmoteTypesAtom";
-  var playerEmotes = makeAtom(EMOTES_LABEL);
-  var EMOTE_DURATION_MS = 1500;
-  var releaseTimer = null;
-  var posing = null;
-  function record(previous) {
-    return previous && typeof previous === "object" ? previous : {};
-  }
-  async function rest(playerId2) {
-    try {
-      await playerEmotes.update((previous) => {
-        const current = record(previous);
-        if (!(playerId2 in current)) return current;
-        const next = { ...current };
-        delete next[playerId2];
-        return next;
-      });
-    } catch {
-    }
-  }
-  function cancelPending() {
-    if (releaseTimer === null) return;
-    window.clearTimeout(releaseTimer);
-    releaseTimer = null;
-  }
-  async function playEmote(playerId2, emote, durationMs = EMOTE_DURATION_MS) {
-    if (!playerId2 || emote === EmoteType.Idle) return;
-    cancelPending();
-    posing = playerId2;
-    try {
-      await playerEmotes.update((previous) => ({ ...record(previous), [playerId2]: emote }));
-    } catch {
-      posing = null;
-      return;
-    }
-    releaseTimer = window.setTimeout(() => {
-      releaseTimer = null;
-      posing = null;
-      void rest(playerId2);
-    }, durationMs);
-  }
-  async function stopEmote() {
-    cancelPending();
-    const playerId2 = posing;
-    posing = null;
-    if (playerId2) await rest(playerId2);
   }
 
   // src/services/companion/index.ts
@@ -57383,7 +57503,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       rt.timer = null;
     }
   }
-  function startTimer(rt) {
+  function startTimer2(rt) {
     clearTimer(rt);
     rt.timer = window.setInterval(() => {
       void tick().catch(() => {
@@ -57455,7 +57575,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       );
     } catch {
     }
-    startTimer(rt);
+    startTimer2(rt);
     return true;
   }
   var WALK_TIMEOUT_MS = 5e3;
@@ -57680,7 +57800,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         return next;
       }
       rt.settings = next;
-      startTimer(rt);
+      startTimer2(rt);
       void refreshContextual().catch(() => {
       });
       return next;
@@ -57981,7 +58101,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (slotIdx === null) return IDLE;
     let walking = true;
     let failures = 0;
-    const record2 = (arrived) => {
+    const record = (arrived) => {
       failures = arrived ? 0 : failures + 1;
       if (walking && failures >= GIVE_UP_AFTER) {
         walking = false;
@@ -57992,10 +58112,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     const goTo = async (tile) => {
       if (!walking) return;
       if (!tile) {
-        record2(false);
+        record(false);
         return;
       }
-      record2(await CompanionService.walkTo(tile));
+      record(await CompanionService.walkTo(tile));
     };
     return {
       async toGardenTile(dirtTileIdx) {
@@ -58007,7 +58127,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         const x = Number(position2?.x);
         const y = Number(position2?.y);
         if (!Number.isFinite(x) || !Number.isFinite(y)) {
-          record2(false);
+          record(false);
           return;
         }
         await goTo({ x: Math.round(x), y: Math.round(y) });
@@ -62018,7 +62138,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
 
   // src/services/editorPointerControls.ts
-  var installed2 = false;
+  var installed3 = false;
   var dragMode = null;
   var lastTileKey = null;
   function tileKeyOf(target) {
@@ -62088,8 +62208,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     ev.preventDefault();
   }
   function installEditorPointerControls() {
-    if (installed2 || typeof window === "undefined") return;
-    installed2 = true;
+    if (installed3 || typeof window === "undefined") return;
+    installed3 = true;
     window.addEventListener("pointerdown", (ev) => {
       void handlePointerDown(ev);
     }, true);
@@ -62156,7 +62276,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     } finally {
       CompanionService.releaseTask();
     }
-    if (reaction.emote !== null) void CompanionService.emoteWhenStill(reaction.emote).catch(() => {
+    if (reaction.emote !== null) void CompanionService.emote(reaction.emote).catch(() => {
     });
   }
   async function drain() {

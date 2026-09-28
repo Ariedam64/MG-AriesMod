@@ -35,7 +35,14 @@ import {
   type Reaction,
 } from "../src/services/companion/reactions";
 import { DEFAULT_CUSTOM_LINES, POKE_WINDOW_MS, lineEmote, pokeLine } from "../src/services/companion/dialogueLines";
-import { EmoteType } from "../src/services/companion/emoteTypes";
+import {
+  EmoteType,
+  NPC_TALKING_MS,
+  companionEmoteEntry,
+  cutTalking,
+  emoteStartDelay,
+  mergeEmoteSource,
+} from "../src/services/companion/emoteTypes";
 import type { StatsSnapshot } from "../src/services/stats";
 
 let fails = 0;
@@ -313,6 +320,85 @@ console.log("\n--- clics en boucle ---");
   check("12 clics, vexé", pokeLine(clicks(12), t, r0)?.emote, EmoteType.Angered);
   check("5 clics étalés sur une minute, rien", pokeLine(clicks(5, 15_000), t, r0), "null");
   check("la fenêtre est de 10 s", POKE_WINDOW_MS, 10_000);
+}
+
+console.log("\n--- une pose ne part pas sous l'animation Talking ---");
+{
+  // Bundle 1299 : chaque bulle de PNJ allume Talking pendant 3 s, et Talking
+  // masque l'emote (le tutoriel du jeu coupe Talking pour en jouer une). Une
+  // pose lancée juste après une bulle se jouait donc entièrement cachée.
+  const spoke = 10_000;
+  check("Talking dure 3 s, comme dans le jeu", NPC_TALKING_MS, 3000);
+  check("juste après une bulle, la pose attend la fin de Talking", emoteStartDelay(spoke, spoke + 100) >= NPC_TALKING_MS - 100, true);
+  check("à mi-parcours, elle attend le reste", emoteStartDelay(spoke, spoke + 2000) >= 1000, true);
+  check("Talking fini, elle part tout de suite", emoteStartDelay(spoke, spoke + NPC_TALKING_MS + 1000), 0);
+  check("s'il n'a jamais parlé, elle part tout de suite", emoteStartDelay(null, spoke), 0);
+  // Quand on peut couper Talking nous-mêmes, la pose remplace la parole au lieu
+  // de la suivre : pas de bouche qui bouge avant les points d'interrogation.
+  check("Talking coupable : la pose part tout de suite", emoteStartDelay(spoke, spoke + 100, true), 0);
+}
+
+console.log("\n--- couper Talking sur l'avatar du companion ---");
+{
+  // Formes tirées du bundle 1299 : le système `avatar` tient `views` (une Map
+  // playerId -> vue) et `stopNpcTalking(id, vue)`, qui annule le compte à
+  // rebours de 3 s et éteint Talking.
+  const calls: string[] = [];
+  const view = { setTalking: (on: boolean) => calls.push(`view:${on}`) };
+  const system = {
+    views: new Map([["NPC_Reina", view]]),
+    stopNpcTalking: (id: string, v: unknown) => calls.push(`stop:${id}:${v === view}`),
+  };
+  check("le companion trouvé, Talking est coupé", cutTalking(system, "NPC_Reina"), true);
+  check("par la méthode du jeu, qui annule aussi son minuteur", calls.join(), "stop:NPC_Reina:true");
+
+  calls.length = 0;
+  const noStop = { views: new Map([["NPC_Reina", view]]) };
+  check("sans stopNpcTalking, on éteint la vue directement", cutTalking(noStop, "NPC_Reina") && calls.join() === "view:false", true);
+  check("PNJ absent des vues : rien de coupé", cutTalking(system, "NPC_Other"), false);
+  check("système introuvable : rien de coupé", cutTalking(null, "NPC_Reina"), false);
+  check("système d'une autre forme : rien de coupé", cutTalking({ views: {} }, "NPC_Reina"), false);
+}
+
+console.log("\n--- les emotes passent par la source que le jeu lit ---");
+{
+  // Recopie de la fonction du jeu (bundle 1299, chunk emoteAtoms) qui tire des
+  // entrées du chat les emotes à afficher. `playerEmoteTypesAtom`, que le mod
+  // écrivait, n'existe plus : ce calcul est la seule porte d'entrée.
+  const gameEmoteTypes = (entries: any[], now: number, durationMs: number) => {
+    const types: Record<string, number> = {};
+    const seen = new Set<string>();
+    for (let i = entries.length - 1; i >= 0; --i) {
+      const c = entries[i];
+      if (c?.kind !== "emote" || seen.has(c.playerId)) continue;
+      seen.add(c.playerId);
+      const end = c.lastTimestampMs + durationMs;
+      if (!(c.emoteType === EmoteType.Idle || end <= now)) types[c.playerId] = c.emoteType;
+    }
+    return types;
+  };
+  const now = 1_000_000;
+  const real = {
+    entries: [
+      { kind: "message", playerId: "p1", message: "hi" },
+      { kind: "emote", playerId: "p2", emoteType: EmoteType.Clapping, lastTimestampMs: now - 200 },
+    ],
+    displayDurationMs: 1500,
+  };
+
+  const posing = mergeEmoteSource(real, { entries: [companionEmoteEntry("NPC_Reina", EmoteType.Laughing, now)] });
+  const types = gameEmoteTypes(posing.entries, now, posing.displayDurationMs);
+  check("le jeu voit la pose du companion", types.NPC_Reina, EmoteType.Laughing);
+  check("sans toucher à celle d'un vrai joueur", types.p2, EmoteType.Clapping);
+  check("la durée d'affichage du jeu est gardée", posing.displayDurationMs, 1500);
+  // Datée dans le futur : l'horloge du jeu est calée sur le serveur, la nôtre
+  // non. C'est nous qui retirons l'entrée à la fin de la pose.
+  check("une horloge en avance de 5 s ne l'efface pas", gameEmoteTypes(posing.entries, now + 5_000, 1500).NPC_Reina, EmoteType.Laughing);
+
+  const resting = mergeEmoteSource(real, { entries: [] });
+  check("au repos, rien pour le companion", gameEmoteTypes(resting.entries, now, 1500).NPC_Reina, "undefined");
+  check("et les entrées du jeu passent intactes", resting.entries.length, 2);
+  check("une source illisible ne casse rien", mergeEmoteSource(null, { entries: [] }).entries.length, 0);
 }
 
 console.log("\n--- aucune réplique n'a de tiret cadratin ---");

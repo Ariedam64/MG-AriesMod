@@ -100,6 +100,12 @@ const state = {
    */
   engine: null as any,
   tos: null as any,
+  /**
+   * The world scope's system registry, where the tile system was found. Other
+   * systems of the same world live there too (`avatar`, for one), so keeping it
+   * lets them be reached without a capture of their own.
+   */
+  worldSystems: null as Map<unknown, unknown> | null,
   /** Set while `Map.prototype.set` carries our capture wrapper. */
   mapSetPatched: false,
   origMapSet: null as AnyFn | null,
@@ -251,6 +257,8 @@ function armCapture(): void {
         const system = tileObjectSystemFrom(value);
         if (system) {
           state.tos = system;
+          // The page's Map is not the sandbox's: check the shape, not the class.
+          state.worldSystems = this && typeof this.get === "function" ? this : null;
           publishCapturedGlobals();
           disarmCapture();
         }
@@ -286,6 +294,7 @@ function ensureCapture(): void {
   if (state.tos && isLiveTileObjectSystem(state.tos)) return;
   if (state.tos) {
     state.tos = null;
+    state.worldSystems = null;
     try { shareGlobal("__TILE_OBJECT_SYSTEM__", null); } catch {}
   }
   tryCaptureFromKnownGlobals();
@@ -732,6 +741,21 @@ function flashTileGreen(tx: number, ty: number, opts: FlashTileOpts = {}): boole
 
   entry.raf = requestAnimationFrame(tick);
   return true;
+}
+
+/**
+ * Another system of the world the tile system belongs to, by the name the game
+ * registers it under, or `null`.
+ *
+ * Only available when this module did the capture itself: a tile system read
+ * from another mod's global comes without its registry.
+ */
+export function getWorldSystem(name: string): any | null {
+  ensureCapture();
+  const entry: any = state.worldSystems?.get(name);
+  if (!entry) return null;
+  const system = entry.system ?? entry;
+  return system && typeof system === "object" && system.destroyed !== true ? system : null;
 }
 
 export const tos = {
