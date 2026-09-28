@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "version": "3.2.221",
+      "date": "2026-09-28",
+      "title": "Companion comes alive",
+      "notes": "**Companion**\n\n- He feels a lot more alive: more lines, reactions to what happens in your game, milestones, greetings and emotes\n- New Reactions toggle in the companion tab to turn it off\n\n**Fixes**\n\n- His emotes show again\n- He no longer tells you about preserved crops"
+    },
+    {
       "version": "3.2.219",
       "date": "2026-09-26",
       "title": "Shop fix",
