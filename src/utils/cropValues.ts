@@ -1,5 +1,6 @@
 // appendSpanAtEnd.ts
 import { startCropPriceWatcherViaGardenObject } from "./cropPrice";
+import { onShowCropPriceChange, readShowCropPrice } from "./cropPriceSetting";
 import { coin } from "../data";
 import { lockerService } from "../services/locker";
 import { readSharedGlobal } from "./page-context";
@@ -99,10 +100,13 @@ function updatePanels(
   selectors: PanelSelectors,
   markerClass: string,
   text: string,
-  locked: boolean
+  locked: boolean,
+  showPrice = true
 ): void {
   forEachInner(root, selectors, (inner) => {
-    if (shouldSkipInner(inner, markerClass)) {
+    // Prix coupé depuis le menu Misc : on retire la ligne, mais le cadenas du
+    // Locker reste, il ne dépend pas de ce réglage.
+    if (!showPrice || shouldSkipInner(inner, markerClass)) {
       removeMarker(inner, markerClass);
       updateLockEmoji(inner, locked);
       return;
@@ -148,6 +152,7 @@ export function startCropValuesObserverFromGardenAtom(options: AppendOptions = {
   let lockerReady = !shouldWaitForLocker;
   let lastRenderedValue: number | null | undefined = undefined;
   let lastRenderedLocked: boolean | null | undefined = undefined;
+  let lastRenderedShowPrice: boolean | undefined = undefined;
   let needsRepositionRender = false;
   let qpmObserver: MutationObserver | null = null;
 
@@ -161,18 +166,21 @@ export function startCropValuesObserverFromGardenAtom(options: AppendOptions = {
 
     const value = priceWatcher.get();
     const locked = lockerHarvestAllowed === false;
+    const showPrice = readShowCropPrice();
     if (
       value === lastRenderedValue &&
       locked === lastRenderedLocked &&
+      showPrice === lastRenderedShowPrice &&
       !needsRepositionRender
     ) {
       return;
     }
     lastRenderedValue = value;
     lastRenderedLocked = locked;
+    lastRenderedShowPrice = showPrice;
     needsRepositionRender = false;
-    updatePanels(root, selectors, markerClass, formatCoins(value), locked);
-    logger("render", { value, locked });
+    updatePanels(root, selectors, markerClass, formatCoins(value), locked, showPrice);
+    logger("render", { value, locked, showPrice });
   };
 
   let lockerReadyTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -254,6 +262,7 @@ export function startCropValuesObserverFromGardenAtom(options: AppendOptions = {
 
   render();
   const off = priceWatcher.onChange(render);
+  const offShowPrice = onShowCropPriceChange(() => render());
 
   return {
     stop() {
@@ -262,6 +271,7 @@ export function startCropValuesObserverFromGardenAtom(options: AppendOptions = {
       clearLockerReadyTimeout();
       stopQpmObserver();
       off?.();
+      offShowPrice();
       if (typeof lockerOff === "function") {
         try {
           lockerOff();
@@ -292,7 +302,7 @@ export function appendSpanToAll(opts: Omit<AppendOptions, "log"> = {}): void {
   const text = formatCoins(watcher.get());
   const locked = getLockerHarvestAllowed() === false;
 
-  updatePanels(root, selectors, markerClass, text, locked);
+  updatePanels(root, selectors, markerClass, text, locked, readShowCropPrice());
 }
 
 /* ================= helpers ================= */

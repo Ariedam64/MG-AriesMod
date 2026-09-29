@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.221
+// @version      3.2.222
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -778,13 +778,13 @@
   // src/sprite/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-    const listeners8 = /* @__PURE__ */ new Set();
+    const listeners9 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
     const tick3 = (now2) => {
       const delta = last ? (now2 - last) / (1e3 / 60) : 1;
       last = now2;
-      for (const fn of listeners8) {
+      for (const fn of listeners9) {
         try {
           fn(delta);
         } catch {
@@ -794,14 +794,14 @@
     };
     const ticker = {
       add(fn) {
-        if (!listeners8.size) {
+        if (!listeners9.size) {
           rafId = requestAnimationFrame(tick3);
         }
-        listeners8.add(fn);
+        listeners9.add(fn);
       },
       remove(fn) {
-        listeners8.delete(fn);
-        if (!listeners8.size) {
+        listeners9.delete(fn);
+        if (!listeners9.size) {
           cancelAnimationFrame(rafId);
         }
       },
@@ -8733,9 +8733,9 @@
     let selectedIdx = null;
     let lastInfo = emptySlotInfo();
     let curSig = gardenObjectSignature(cur);
-    const listeners8 = /* @__PURE__ */ new Set();
+    const listeners9 = /* @__PURE__ */ new Set();
     const notify3 = () => {
-      for (const fn of listeners8) {
+      for (const fn of listeners9) {
         try {
           fn(lastInfo);
         } catch {
@@ -8973,11 +8973,11 @@
         return lastInfo;
       },
       onChange(cb) {
-        listeners8.add(cb);
-        return () => listeners8.delete(cb);
+        listeners9.add(cb);
+        return () => listeners9.delete(cb);
       },
       stop() {
-        listeners8.clear();
+        listeners9.clear();
       },
       recompute() {
         recomputeAndNotify();
@@ -30051,9 +30051,9 @@
     let players = void 0;
     let selectedSlotId = null;
     let lastPrice = null;
-    const listeners8 = /* @__PURE__ */ new Set();
+    const listeners9 = /* @__PURE__ */ new Set();
     const notify3 = () => {
-      for (const fn of listeners8) try {
+      for (const fn of listeners9) try {
         fn();
       } catch {
       }
@@ -30120,12 +30120,43 @@
         return lastPrice;
       },
       onChange(cb) {
-        listeners8.add(cb);
-        return () => listeners8.delete(cb);
+        listeners9.add(cb);
+        return () => listeners9.delete(cb);
       },
       stop() {
-        listeners8.clear();
+        listeners9.clear();
       }
+    };
+  }
+
+  // src/utils/cropPriceSetting.ts
+  var PATH_SHOW_CROP_PRICE = "misc.showCropPrice";
+  var listeners6 = /* @__PURE__ */ new Set();
+  function readShowCropPrice() {
+    try {
+      return readAriesPath(PATH_SHOW_CROP_PRICE) !== false;
+    } catch {
+      return true;
+    }
+  }
+  function writeShowCropPrice(on) {
+    const next = !!on;
+    if (readShowCropPrice() === next) return;
+    try {
+      writeAriesPath(PATH_SHOW_CROP_PRICE, next);
+    } catch {
+    }
+    for (const listener of listeners6) {
+      try {
+        listener(next);
+      } catch {
+      }
+    }
+  }
+  function onShowCropPriceChange(cb) {
+    listeners6.add(cb);
+    return () => {
+      listeners6.delete(cb);
     };
   }
 
@@ -30179,9 +30210,9 @@
       queryAll(rootEl, selectors.innerSelector).forEach(callback);
     });
   }
-  function updatePanels(root, selectors, markerClass, text, locked) {
+  function updatePanels(root, selectors, markerClass, text, locked, showPrice = true) {
     forEachInner(root, selectors, (inner) => {
-      if (shouldSkipInner(inner, markerClass)) {
+      if (!showPrice || shouldSkipInner(inner, markerClass)) {
         removeMarker(inner, markerClass);
         updateLockEmoji(inner, locked);
         return;
@@ -30224,6 +30255,7 @@
     let lockerReady = !shouldWaitForLocker;
     let lastRenderedValue = void 0;
     let lastRenderedLocked = void 0;
+    let lastRenderedShowPrice = void 0;
     let needsRepositionRender = false;
     let qpmObserver = null;
     const render = () => {
@@ -30232,14 +30264,16 @@
       cleanupStrayLockedStyles();
       const value = priceWatcher.get();
       const locked = lockerHarvestAllowed === false;
-      if (value === lastRenderedValue && locked === lastRenderedLocked && !needsRepositionRender) {
+      const showPrice = readShowCropPrice();
+      if (value === lastRenderedValue && locked === lastRenderedLocked && showPrice === lastRenderedShowPrice && !needsRepositionRender) {
         return;
       }
       lastRenderedValue = value;
       lastRenderedLocked = locked;
+      lastRenderedShowPrice = showPrice;
       needsRepositionRender = false;
-      updatePanels(root, selectors, markerClass, formatCoins(value), locked);
-      logger("render", { value, locked });
+      updatePanels(root, selectors, markerClass, formatCoins(value), locked, showPrice);
+      logger("render", { value, locked, showPrice });
     };
     let lockerReadyTimeout = null;
     const clearLockerReadyTimeout = () => {
@@ -30312,6 +30346,7 @@
     }
     render();
     const off = priceWatcher.onChange(render);
+    const offShowPrice = onShowCropPriceChange(() => render());
     return {
       stop() {
         if (!running3) return;
@@ -30319,6 +30354,7 @@
         clearLockerReadyTimeout();
         stopQpmObserver();
         off?.();
+        offShowPrice();
         if (typeof lockerOff === "function") {
           try {
             lockerOff();
@@ -30705,7 +30741,8 @@
     };
     const syncValueNodeUnsafe = () => {
       debugState4.objectType = currentGardenObject?.objectType ?? null;
-      if (!running3 || !currentCard2 || currentCard2.destroyed || !geometry || !isPlantObject3(currentGardenObject)) {
+      if (!running3 || !currentCard2 || currentCard2.destroyed || !geometry || !isPlantObject3(currentGardenObject) || // Coupé depuis le menu Misc : le badge disparaît, la carte reste celle du jeu.
+      !readShowCropPrice()) {
         detachValueText();
         return;
       }
@@ -30790,6 +30827,7 @@
       if (card4) syncValueNode();
     });
     const offPrice = priceWatcher.onChange(syncValueNode);
+    const offShowPrice = onShowCropPriceChange(() => syncValueNode());
     let unsubGardenObject = null;
     void (async () => {
       try {
@@ -30816,6 +30854,7 @@
         unsubGardenObject?.();
         offCard();
         offPrice?.();
+        offShowPrice();
         priceWatcher.stop();
         detachValueText();
         currentCard2 = null;
@@ -31863,7 +31902,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.221";
+      return "3.2.222";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -35619,7 +35658,7 @@
   var HATCH_ACTION = "hatchEgg";
   var DOUBLE_HATCH_ACTIONS = /* @__PURE__ */ new Set(["doublehatch", "doublehatchii"]);
   var SEEN_LIMIT = 4e3;
-  var listeners6 = /* @__PURE__ */ new Set();
+  var listeners7 = /* @__PURE__ */ new Set();
   var cachedState = null;
   function emptyCounters() {
     return { species: {}, gold: 0, rainbow: 0, pulls: 0 };
@@ -35685,7 +35724,7 @@
       writeAriesPath(STATE_PATH, state4);
     } catch {
     }
-    for (const listener of listeners6) {
+    for (const listener of listeners7) {
       try {
         listener(state4);
       } catch {
@@ -35810,9 +35849,9 @@
     // since the server's own never resets except on the outcome itself. Only
     // `setOffset` moves a counter by hand.
     subscribe(listener) {
-      listeners6.add(listener);
+      listeners7.add(listener);
       return () => {
-        listeners6.delete(listener);
+        listeners7.delete(listener);
       };
     }
   };
@@ -49627,21 +49666,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       updateSummary2();
     };
     const onPauseState = () => updateControls();
-    const listeners8 = [
+    const listeners9 = [
       [`${config.eventPrefix}:progress`, onProgress],
       [`${config.eventPrefix}:done`, onComplete],
       [`${config.eventPrefix}:error`, onComplete],
       [`${config.eventPrefix}:paused`, onPauseState],
       [`${config.eventPrefix}:resumed`, onPauseState]
     ];
-    for (const [type, handler] of listeners8) window.addEventListener(type, handler);
+    for (const [type, handler] of listeners9) window.addEventListener(type, handler);
     updateSummary2();
     updateControls();
     return {
       root: section2.root,
       cleanup: () => {
         clearSummaryTimer();
-        for (const [type, handler] of listeners8) window.removeEventListener(type, handler);
+        for (const [type, handler] of listeners9) window.removeEventListener(type, handler);
       }
     };
   }
@@ -50438,6 +50477,23 @@ Restore figures are averages; unlucky streaks do worse.`;
     );
     return card4.root;
   }
+  function buildDisplaySection() {
+    const card4 = section(
+      "display",
+      "\u{1F4B0}",
+      "Display",
+      "What the mod adds on top of the game's own screens."
+    );
+    const priceToggle = toggle(readShowCropPrice(), (on) => writeShowCropPrice(on));
+    card4.body.append(
+      settingRow(
+        "Crop price",
+        "Shows a crop's sell price in its tooltip.",
+        priceToggle
+      ).row
+    );
+    return card4.root;
+  }
   function buildStorageSection() {
     const card4 = section(
       "storage",
@@ -50602,6 +50658,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       panelHeader(),
       buildAutoRecoSection(),
       player2.root,
+      buildDisplaySection(),
       buildInventoryGuardSection(),
       buildStorageSection(),
       seedDeleterSection.root,
@@ -59254,10 +59311,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     run: null,
     cancelRequested: false
   };
-  var listeners7 = /* @__PURE__ */ new Set();
+  var listeners8 = /* @__PURE__ */ new Set();
   var nextProposalSeq = 1;
   function notify2() {
-    for (const listener of [...listeners7]) {
+    for (const listener of [...listeners8]) {
       try {
         listener();
       } catch {
@@ -59558,8 +59615,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       return state3.run !== null;
     },
     subscribe(listener) {
-      listeners7.add(listener);
-      return () => listeners7.delete(listener);
+      listeners8.add(listener);
+      return () => listeners8.delete(listener);
     },
     /** Alerte poussée par une source ; ignorée si identique et récente. */
     alert(text) {
@@ -61982,7 +62039,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/utils/antiafk.ts
   function createAntiAfkController(deps) {
     const STOP_EVENTS = ["visibilitychange", "blur", "focus", "focusout", "pagehide", "freeze", "resume"];
-    const listeners8 = [];
+    const listeners9 = [];
     function swallowAll() {
       const add = (target, t) => {
         const h = (e) => {
@@ -61990,7 +62047,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           e.preventDefault?.();
         };
         target.addEventListener(t, h, { capture: true });
-        listeners8.push({ t, h, target });
+        listeners9.push({ t, h, target });
       };
       STOP_EVENTS.forEach((t) => {
         add(document, t);
@@ -61998,11 +62055,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
     }
     function unswallowAll() {
-      for (const { t, h, target } of listeners8) try {
+      for (const { t, h, target } of listeners9) try {
         target.removeEventListener(t, h, { capture: true });
       } catch {
       }
-      listeners8.length = 0;
+      listeners9.length = 0;
     }
     const docProto = Object.getPrototypeOf(document);
     const saved = {

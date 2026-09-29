@@ -11,6 +11,7 @@
 import { Menu } from "../menu";
 import { MiscService, DEFAULT_SEED_DELETE_DELAY_MS, DEFAULT_DECOR_DELETE_DELAY_MS } from "../../services/misc";
 import { getAriesStorage, updateAriesStorage } from "../../utils/localStorage";
+import { readShowCropPrice, writeShowCropPrice } from "../../utils/cropPriceSetting";
 import { createDeleterSection } from "./misc/deleter-section";
 import { openDeleterPicker } from "./misc/deleter-picker";
 import { decorDeleter, seedDeleter } from "../../services/deleters";
@@ -222,6 +223,29 @@ function buildInventoryGuardSection(): HTMLElement {
   return card.root;
 }
 
+/* ===== Section: Display ===== */
+function buildDisplaySection(): HTMLElement {
+  const card = section(
+    "display",
+    "💰",
+    "Display",
+    "What the mod adds on top of the game's own screens.",
+  );
+
+  // Pris en compte tout de suite : les deux affichages du prix s'abonnent au
+  // réglage (cf. utils/cropPriceSetting.ts).
+  const priceToggle = toggle(readShowCropPrice(), on => writeShowCropPrice(on));
+
+  card.body.append(
+    settingRow(
+      "Crop price",
+      "Shows a crop's sell price in its tooltip.",
+      priceToggle,
+    ).row,
+  );
+  return card.root;
+}
+
 /* ===== Section: Storage auto-store ===== */
 function buildStorageSection(): HTMLElement {
   const card = section(
@@ -426,6 +450,7 @@ export async function renderMiscMenu(container: HTMLElement) {
     panelHeader(),
     buildAutoRecoSection(),
     player.root,
+    buildDisplaySection(),
     buildInventoryGuardSection(),
     buildStorageSection(),
     seedDeleterSection.root,

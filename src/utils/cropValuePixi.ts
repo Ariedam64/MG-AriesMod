@@ -12,6 +12,7 @@
 // several live probes), so instead of trying to resize the game's box, we
 // draw our own small rounded badge behind the value text.
 import { startCropPriceWatcherViaGardenObject } from "./cropPrice";
+import { onShowCropPriceChange, readShowCropPrice } from "./cropPriceSetting";
 import { shareGlobal } from "./page-context";
 import { coin } from "../data";
 import { Atoms } from "../store/atoms";
@@ -135,7 +136,15 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
   // earlier version of this code. Every path here must stay exception-safe.
   const syncValueNodeUnsafe = () => {
     debugState.objectType = currentGardenObject?.objectType ?? null;
-    if (!running || !currentCard || currentCard.destroyed || !geometry || !isPlantObject(currentGardenObject)) {
+    if (
+      !running ||
+      !currentCard ||
+      currentCard.destroyed ||
+      !geometry ||
+      !isPlantObject(currentGardenObject) ||
+      // Coupé depuis le menu Misc : le badge disparaît, la carte reste celle du jeu.
+      !readShowCropPrice()
+    ) {
       detachValueText();
       return;
     }
@@ -229,6 +238,7 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
   });
 
   const offPrice = priceWatcher.onChange(syncValueNode);
+  const offShowPrice = onShowCropPriceChange(() => syncValueNode());
 
   let unsubGardenObject: (() => void) | null = null;
   void (async () => {
@@ -255,6 +265,7 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
       unsubGardenObject?.();
       offCard();
       offPrice?.();
+      offShowPrice();
       priceWatcher.stop();
       detachValueText();
       currentCard = null;
