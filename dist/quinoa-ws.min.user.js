@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.222
+// @version      3.2.223
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -4945,6 +4945,7 @@
   var myPetHutchCapacitySlots = makeAtom("myPetHutchCapacitySlotsAtom");
   var shops = makeView("stateAtom", { path: "child.data.shops" });
   var myShopPurchases = makeView("myDataAtom", { path: "shopPurchases" });
+  var myUserSlot = makeAtom("myUserSlotAtom");
   var numPlayers = makeAtom("numPlayersAtom");
   var totalCropSellPrice = makeAtom("totalCropSellPriceAtom");
   var myValidatedSelectedItemIndex = makeAtom("myValidatedSelectedItemIndexAtom");
@@ -5098,6 +5099,7 @@
     shop: {
       shops,
       myShopPurchases,
+      myUserSlot,
       totalCropSellPrice,
       seedShop,
       toolShop,
@@ -13887,6 +13889,66 @@
     };
   }
 
+  // src/utils/shopPurchases.ts
+  var DIRECT_KIND = { seed: "seed", egg: "egg", tool: "tool", decor: "decor" };
+  function isCurrentRestock(entry, shop) {
+    if (!("restockId" in entry)) return true;
+    const current = shop?.restockId;
+    return current != null && entry.restockId === current;
+  }
+  function purchasesForCurrentRestock(shops2, shopPurchases, kindOf) {
+    const out = { seed: {}, egg: {}, tool: {}, decor: {} };
+    if (!shopPurchases || typeof shopPurchases !== "object") return out;
+    for (const shopKey of Object.keys(shopPurchases)) {
+      const entry = shopPurchases[shopKey];
+      if (!entry || typeof entry !== "object") continue;
+      if (!isCurrentRestock(entry, shops2?.[shopKey])) continue;
+      const purch = entry.purchases;
+      if (!purch || typeof purch !== "object") continue;
+      for (const [itemId, count] of Object.entries(purch)) {
+        const n = Number(count) || 0;
+        const kind = DIRECT_KIND[shopKey] ?? kindOf(itemId);
+        if (!kind) continue;
+        out[kind][itemId] = (out[kind][itemId] ?? 0) + n;
+      }
+    }
+    return out;
+  }
+  var CUSTOM_RESTOCK_SHOPS = /* @__PURE__ */ new Set(["seed", "egg", "tool", "decor"]);
+  function resolveShop(key2, shops2, mySlot) {
+    if (CUSTOM_RESTOCK_SHOPS.has(key2)) {
+      const custom = mySlot?.data?.customRestocks?.[key2];
+      if (custom) {
+        const inv = mySlot?.customRestockInventories?.[key2];
+        return inv && inv.restockId === `${key2}:custom:${custom.purchasedAt}` ? inv : null;
+      }
+    }
+    const shop = shops2?.[key2];
+    if (!shop || typeof shop !== "object") return null;
+    if ("restockId" in shop && shop.restockId == null) return null;
+    return shop;
+  }
+  function purchasesKnown(entry, shop) {
+    if (!entry || typeof entry !== "object" || !("restockId" in entry)) return true;
+    if (entry.restockId === shop?.restockId) return true;
+    return Number(entry.startedAtMs) < Number(shop?.startedAtMs);
+  }
+  function playerShopView(shops2, mySlot, kindOf) {
+    const shopPurchases = mySlot?.data?.shopPurchases;
+    const open = {};
+    const keys = new Set(shops2 && typeof shops2 === "object" ? Object.keys(shops2) : []);
+    for (const key2 of CUSTOM_RESTOCK_SHOPS) {
+      if (mySlot?.data?.customRestocks?.[key2]) keys.add(key2);
+    }
+    for (const key2 of keys) {
+      const shop = resolveShop(key2, shops2, mySlot);
+      if (!shop) continue;
+      if (!purchasesKnown(shopPurchases?.[key2], shop)) continue;
+      open[key2] = shop;
+    }
+    return { shops: open, purchases: purchasesForCurrentRestock(open, shopPurchases, kindOf) };
+  }
+
   // src/services/shops.ts
   var SHOP_KEYBINDS = [
     { id: "shops.seeds", modal: "seedShop" },
@@ -13972,8 +14034,8 @@
       if (!built) return;
       let shop = null;
       try {
-        const snap = await Atoms.shop.shops.get();
-        shop = _findShopForItem(snap, kind, it);
+        const [shops2, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
+        shop = _findShopForItem(playerShopView(shops2, slot, () => null).shops, kind, it);
       } catch {
       }
       if (!shop) shop = _fallbackShopFor(kind);
@@ -26796,32 +26858,6 @@
     }
   };
 
-  // src/utils/shopPurchases.ts
-  var DIRECT_KIND = { seed: "seed", egg: "egg", tool: "tool", decor: "decor" };
-  function isCurrentRestock(entry, shop) {
-    if (!("restockId" in entry)) return true;
-    const current = shop?.restockId;
-    return current != null && entry.restockId === current;
-  }
-  function purchasesForCurrentRestock(shops2, shopPurchases, kindOf) {
-    const out = { seed: {}, egg: {}, tool: {}, decor: {} };
-    if (!shopPurchases || typeof shopPurchases !== "object") return out;
-    for (const shopKey of Object.keys(shopPurchases)) {
-      const entry = shopPurchases[shopKey];
-      if (!entry || typeof entry !== "object") continue;
-      if (!isCurrentRestock(entry, shops2?.[shopKey])) continue;
-      const purch = entry.purchases;
-      if (!purch || typeof purch !== "object") continue;
-      for (const [itemId, count] of Object.entries(purch)) {
-        const n = Number(count) || 0;
-        const kind = DIRECT_KIND[shopKey] ?? kindOf(itemId);
-        if (!kind) continue;
-        out[kind][itemId] = (out[kind][itemId] ?? 0) + n;
-      }
-    }
-    return out;
-  }
-
   // src/services/notifier.ts
   var PATH_NOTIFIER_PREFS = "notifier.prefs";
   var PATH_NOTIFIER_RULES = "notifier.rules";
@@ -27417,8 +27453,9 @@
     if (itemId in decorCatalog2) return "decor";
     return null;
   };
-  function _coercePurchases(raw, shops2) {
-    const p = purchasesForCurrentRestock(shops2, raw, _itemKind);
+  function _coercePurchases(view, slot) {
+    const p = view.purchases;
+    const raw = slot?.data?.shopPurchases;
     const startedAt = (k) => Number(raw?.[k]?.startedAtMs ?? raw?.[k]?.createdAt) || 0;
     return {
       seed: { createdAt: startedAt("seed"), purchases: p.seed },
@@ -27428,16 +27465,22 @@
     };
   }
   var _rawShops = null;
-  var _rawPurchases = null;
-  function _notifyPurchases(raw = _rawPurchases) {
-    _rawPurchases = raw;
-    const snap = _coercePurchases(raw, _rawShops);
+  var _rawSlot = null;
+  var _viewOf = (shops2, slot) => playerShopView(shops2, slot, _itemKind);
+  var _sameShopParts = (a, b) => a?.data?.shopPurchases === b?.data?.shopPurchases && a?.data?.customRestocks === b?.data?.customRestocks && a?.customRestockInventories === b?.customRestockInventories;
+  function _emitPurchases() {
+    const snap = _coercePurchases(_viewOf(_rawShops, _rawSlot), _rawSlot);
     _purchasesSubs.forEach((fn) => {
       try {
         fn(snap);
       } catch {
       }
     });
+  }
+  function _notifySlot(slot) {
+    _rawSlot = slot;
+    if (_rawShops != null) _emitShops();
+    _emitPurchases();
   }
   var _shopsSubs = /* @__PURE__ */ new Set();
   function _coerceSnap(raw) {
@@ -27467,16 +27510,19 @@
       decor: { inventory: decorInv, secondsUntilRestock: Number(raw?.decor?.secondsUntilRestock) || 0 }
     };
   }
-  function _notifyShops(raw) {
-    _rawShops = raw;
-    const snap = _coerceSnap(raw);
+  function _emitShops() {
+    const snap = _coerceSnap(_viewOf(_rawShops, _rawSlot).shops);
     _shopsSubs.forEach((fn) => {
       try {
         fn(snap);
       } catch {
       }
     });
-    if (_rawPurchases != null) _notifyPurchases();
+  }
+  function _notifyShops(raw) {
+    _rawShops = raw;
+    _emitShops();
+    if (_rawSlot != null) _emitPurchases();
   }
   var BASE_SHOPS_SET = /* @__PURE__ */ new Set(["Seed", "Egg", "Tool", "Decor"]);
   function _splitEligibleShops(shops2) {
@@ -27587,7 +27633,7 @@
   var ATOM_WAIT_POLL_MS = 400;
   var ATOM_WAIT_TIMEOUT_MS2 = 10 * 6e4;
   var STATE_ATOM_LABEL = "stateAtom";
-  var MY_DATA_ATOM_LABEL = "myDataAtom";
+  var MY_USER_SLOT_ATOM_LABEL = "myUserSlotAtom";
   async function _waitForAtom(label2, keepGoing) {
     const startedAt = Date.now();
     while (keepGoing() && Date.now() - startedAt < ATOM_WAIT_TIMEOUT_MS2) {
@@ -27620,20 +27666,20 @@
   }
   async function _watchPurchases(generation) {
     const isCurrent = () => _watchGeneration === generation;
-    if (!await _waitForAtom(MY_DATA_ATOM_LABEL, isCurrent) || !isCurrent()) return;
+    if (!await _waitForAtom(MY_USER_SLOT_ATOM_LABEL, isCurrent) || !isCurrent()) return;
     if (_unsubPurchases) return;
     try {
-      _unsubPurchases = await Atoms.shop.myShopPurchases.onChange((next) => {
+      _unsubPurchases = await Atoms.shop.myUserSlot.onChange((next) => {
         try {
-          _notifyPurchases(next);
+          _notifySlot(next);
         } catch {
         }
-      });
+      }, _sameShopParts);
     } catch {
     }
     if (!isCurrent()) return;
     try {
-      _notifyPurchases(await Atoms.shop.myShopPurchases.get());
+      _notifySlot(await Atoms.shop.myUserSlot.get());
     } catch {
     }
   }
@@ -27799,7 +27845,8 @@
     async onShopsChangeNow(cb) {
       await _ensureStarted();
       try {
-        cb(_coerceSnap(await Atoms.shop.shops.get()));
+        const [shops2, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
+        cb(_coerceSnap(_viewOf(shops2, slot).shops));
       } catch {
       }
       return this.onShopsChange(cb);
@@ -27813,11 +27860,8 @@
     async onPurchasesChangeNow(cb) {
       await _ensureStarted();
       try {
-        const [raw, shops2] = await Promise.all([
-          Atoms.shop.myShopPurchases.get(),
-          Atoms.shop.shops.get()
-        ]);
-        cb(_coercePurchases(raw, shops2));
+        const [shops2, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
+        cb(_coercePurchases(_viewOf(shops2, slot), slot));
       } catch {
       }
       return this.onPurchasesChange(cb);
@@ -31902,199 +31946,12 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.222";
+      return "3.2.223";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
     }
     return void 0;
-  }
-
-  // src/utils/inventorySelectionLogger.ts
-  var started3 = false;
-  var cachedItems = [];
-  var currentIndex = null;
-  var lastLoggedQuantity = void 0;
-  var desiredButtonQuantity = null;
-  var buttonDiscoveryObserver = null;
-  var buttonVisibilityObserver = null;
-  function getActionButton() {
-    if (typeof document === "undefined") return null;
-    const primaryButton = document.querySelector(
-      "button.chakra-button.css-w004xu"
-    );
-    if (primaryButton) return primaryButton;
-    const growButtons = Array.from(
-      document.querySelectorAll(
-        "button.chakra-button.css-35ruvm"
-      )
-    );
-    return growButtons.find(
-      (button2) => (button2.textContent ?? "").includes("Grow")
-    ) ?? null;
-  }
-  function applyQuantityToButton(button2, quantity) {
-    const quantityContainer = button2.querySelector(".css-telpzl");
-    const readButtonLabel = () => {
-      const clone2 = button2.cloneNode(true);
-      clone2.querySelectorAll(".css-telpzl").forEach((element) => element.remove());
-      return (clone2.textContent ?? "").replace(/\s+/g, " ").trim();
-    };
-    const ensureBaseLabel = () => {
-      const existing = button2.dataset.baseLabel ?? "";
-      const lastQuantity = button2.dataset.lastQuantity;
-      const currentLabel = readButtonLabel();
-      const normalizedCurrentLabel = (() => {
-        if (!currentLabel) return "";
-        if (lastQuantity && lastQuantity.length > 0) {
-          const withSpace = ` \xD7${lastQuantity}`;
-          if (currentLabel.endsWith(withSpace)) {
-            return currentLabel.slice(0, -withSpace.length).replace(/\s+$/, "");
-          }
-          const withoutSpace = `\xD7${lastQuantity}`;
-          if (currentLabel.endsWith(withoutSpace)) {
-            return currentLabel.slice(0, -withoutSpace.length).replace(/\s+$/, "");
-          }
-        }
-        return currentLabel;
-      })();
-      if (normalizedCurrentLabel && normalizedCurrentLabel !== existing) {
-        button2.dataset.baseLabel = normalizedCurrentLabel;
-        return normalizedCurrentLabel;
-      }
-      if (!existing && normalizedCurrentLabel) {
-        button2.dataset.baseLabel = normalizedCurrentLabel;
-        return normalizedCurrentLabel;
-      }
-      return existing;
-    };
-    const setButtonLabel = (label2) => {
-      const contentNode = Array.from(button2.childNodes).find((node) => {
-        if (quantityContainer && node === quantityContainer) return false;
-        const text = node.textContent ?? "";
-        return text.trim().length > 0;
-      });
-      if (contentNode) {
-        contentNode.textContent = label2;
-        return;
-      }
-      const referenceNode = quantityContainer ?? button2.firstChild;
-      button2.insertBefore(document.createTextNode(label2), referenceNode ?? null);
-    };
-    const baseLabel = ensureBaseLabel();
-    if (quantityContainer) {
-      quantityContainer.textContent = "";
-      quantityContainer.style.marginLeft = "";
-      quantityContainer.style.display = "none";
-    }
-    if (quantity == null) {
-      button2.dataset.lastQuantity = "";
-      setButtonLabel(baseLabel);
-      return;
-    }
-    const labelWithQuantity = baseLabel ? `${baseLabel} \xD7${quantity}` : `\xD7${quantity}`;
-    button2.dataset.lastQuantity = String(quantity);
-    setButtonLabel(labelWithQuantity);
-  }
-  function ensureButtonVisibilityObserver(button2) {
-    if (typeof IntersectionObserver === "undefined") return;
-    if (!buttonVisibilityObserver) {
-      buttonVisibilityObserver = new IntersectionObserver((entries) => {
-        entries.filter((entry) => entry.isIntersecting).forEach((entry) => {
-          applyQuantityToButton(entry.target, desiredButtonQuantity);
-        });
-      });
-    } else {
-      buttonVisibilityObserver.disconnect();
-    }
-    buttonVisibilityObserver.observe(button2);
-  }
-  function ensureButtonDiscoveryObserver() {
-    if (typeof document === "undefined") return;
-    if (buttonDiscoveryObserver || typeof MutationObserver === "undefined") return;
-    const target = document.body;
-    if (!target) return;
-    buttonDiscoveryObserver = new MutationObserver(() => {
-      const button2 = getActionButton();
-      if (!button2) return;
-      ensureButtonVisibilityObserver(button2);
-      applyQuantityToButton(button2, desiredButtonQuantity);
-    });
-    buttonDiscoveryObserver.observe(target, { childList: true, subtree: true });
-  }
-  function updateButtonQuantity(quantity) {
-    if (typeof document === "undefined") return;
-    desiredButtonQuantity = quantity;
-    const button2 = getActionButton();
-    if (!button2) {
-      ensureButtonDiscoveryObserver();
-      return;
-    }
-    ensureButtonVisibilityObserver(button2);
-    applyQuantityToButton(button2, quantity);
-  }
-  function normalizeItems(snapshot2) {
-    if (!snapshot2 || !Array.isArray(snapshot2.items)) return [];
-    return snapshot2.items.slice();
-  }
-  function extractQuantity(index) {
-    if (index == null || index < 0 || index >= cachedItems.length) return null;
-    const raw = cachedItems[index];
-    if (!raw) return null;
-    const qty = Number(raw.quantity);
-    return Number.isFinite(qty) ? qty : null;
-  }
-  function logQuantity(force = false) {
-    if (currentIndex == null) {
-      updateButtonQuantity(null);
-      lastLoggedQuantity = null;
-      return;
-    }
-    const qty = extractQuantity(currentIndex);
-    if (!force && qty === lastLoggedQuantity) return;
-    updateButtonQuantity(qty);
-    lastLoggedQuantity = qty;
-  }
-  async function readInventory() {
-    try {
-      return await Atoms.inventory.myInventory.get();
-    } catch (error) {
-      return null;
-    }
-  }
-  async function readSelectedIndex() {
-    try {
-      const value = await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.get();
-      return typeof value === "number" ? value : null;
-    } catch (error) {
-      return null;
-    }
-  }
-  async function startSelectedInventoryQuantityLogger() {
-    if (started3) return;
-    started3 = true;
-    cachedItems = normalizeItems(await readInventory());
-    currentIndex = await readSelectedIndex();
-    logQuantity(true);
-    try {
-      await Atoms.inventory.myInventory.onChange((next) => {
-        cachedItems = normalizeItems(next);
-        logQuantity();
-      });
-    } catch (error) {
-    }
-    try {
-      await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.onChange((next) => {
-        if (typeof next === "number") {
-          currentIndex = next;
-        } else {
-          currentIndex = null;
-        }
-        lastLoggedQuantity = null;
-        logQuantity(true);
-      });
-    } catch (error) {
-    }
   }
 
   // src/utils/inventorySorting.ts
@@ -36899,7 +36756,6 @@
       startInjectSellAllPets();
       startSellAllPetsPixi();
       startInstantFeedWidget();
-      startSelectedInventoryQuantityLogger();
       startInventorySortingObserver();
     })();
   }
@@ -51693,13 +51549,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     stage.tabIndex = 0;
     stage.title = "Click to enlarge";
     stage.setAttribute("aria-label", "Enlarge image");
-    stage.onclick = () => openImageZoom(images[currentIndex2]);
+    stage.onclick = () => openImageZoom(images[currentIndex]);
     stage.onkeydown = (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
-      openImageZoom(images[currentIndex2]);
+      openImageZoom(images[currentIndex]);
     };
-    let currentIndex2 = 0;
+    let currentIndex = 0;
     let transitioning = false;
     const cachedUrls = /* @__PURE__ */ new Map();
     const resolveImageUrl = async (imageUrl) => {
@@ -51815,14 +51671,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     dots.className = "mgt-dots";
     const updateIndicators = () => {
       dots.querySelectorAll("button").forEach((dot, index) => {
-        dot.classList.toggle("is-active", index === currentIndex2);
+        dot.classList.toggle("is-active", index === currentIndex);
       });
     };
     const normalizeIndex = (index) => (index % images.length + images.length) % images.length;
     const goTo = async (rawIndex, direction) => {
       if (transitioning || images.length === 0) return;
       const index = normalizeIndex(rawIndex);
-      if (index === currentIndex2) return;
+      if (index === currentIndex) return;
       transitioning = true;
       try {
         pendingSlide.img.src = await resolveImageUrl(images[index]);
@@ -51855,7 +51711,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         const previousActive = activeSlide;
         activeSlide = pendingSlide;
         pendingSlide = previousActive;
-        currentIndex2 = index;
+        currentIndex = index;
         updateIndicators();
       } catch (error) {
         console.warn("[Carousel] Failed to load image:", images[index], error);
@@ -51871,7 +51727,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       prevBtn.title = "Previous image";
       prevBtn.onclick = (event) => {
         event.stopPropagation();
-        void goTo(currentIndex2 - 1, "prev");
+        void goTo(currentIndex - 1, "prev");
       };
       const nextBtn = document.createElement("button");
       nextBtn.type = "button";
@@ -51880,7 +51736,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       nextBtn.title = "Next image";
       nextBtn.onclick = (event) => {
         event.stopPropagation();
-        void goTo(currentIndex2 + 1, "next");
+        void goTo(currentIndex + 1, "next");
       };
       stage.append(prevBtn, nextBtn);
       images.forEach((_, index) => {
@@ -51888,7 +51744,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         dot.type = "button";
         dot.className = index === 0 ? "mgt-dot is-active" : "mgt-dot";
         dot.title = `Image ${index + 1}`;
-        dot.onclick = () => void goTo(index, index > currentIndex2 ? "next" : "prev");
+        dot.onclick = () => void goTo(index, index > currentIndex ? "next" : "prev");
         dots.appendChild(dot);
       });
       root.append(stage, dots);
@@ -54937,7 +54793,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     rebaked: null
   };
   var skinCanvases = /* @__PURE__ */ new Map();
-  var started4 = false;
+  var started3 = false;
   var watchId = null;
   var retryId = null;
   var lastRenderer = null;
@@ -55098,8 +54954,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   }
   async function initSkins() {
-    if (started4) return;
-    started4 = true;
+    if (started3) return;
+    started3 = true;
     snapshot.enabled = getAriesStorage().skins?.enabled !== false;
     installSkinsDebug();
     try {

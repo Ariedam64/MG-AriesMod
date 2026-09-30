@@ -19,7 +19,7 @@ import {
 import { audio, type PlaybackMode, type TriggerOverrides } from "../utils/audio";
 import { StatsService } from "./stats";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
-import { purchasesForCurrentRestock, type ShopKind } from "../utils/shopPurchases";
+import { playerShopView, type PlayerShopView, type ShopKind } from "../utils/shopPurchases";
 
 export type SectionType = "Seed" | "Egg" | "Tool" | "Decor";
 
@@ -961,8 +961,9 @@ const _itemKind = (itemId: string): ShopKind | null => {
   return null;
 };
 
-function _coercePurchases(raw: any, shops: any): PurchasesSnapshot {
-  const p = purchasesForCurrentRestock(shops, raw, _itemKind);
+function _coercePurchases(view: PlayerShopView, slot: any): PurchasesSnapshot {
+  const p = view.purchases;
+  const raw = slot?.data?.shopPurchases;
   const startedAt = (k: ShopKind) => Number(raw?.[k]?.startedAtMs ?? raw?.[k]?.createdAt) || 0;
   return {
     seed:  { createdAt: startedAt("seed"),  purchases: p.seed  },
@@ -972,19 +973,34 @@ function _coercePurchases(raw: any, shops: any): PurchasesSnapshot {
   };
 }
 
-// Since v1284 the purchase counts only mean something against the live shops'
-// restockId, so both raw values are kept and a restock alone re-derives them.
+// Which shop the player buys from depends on both values: the room's shops,
+// and the player's slot (personal restocks, purchases). Both raw values are
+// kept, and a change to either re-derives the view.
 let _rawShops: any = null;
-let _rawPurchases: any = null;
+let _rawSlot: any = null;
 
-function _notifyPurchases(raw: any = _rawPurchases) {
-  _rawPurchases = raw;
-  const snap = _coercePurchases(raw, _rawShops);
+const _viewOf = (shops: any, slot: any): PlayerShopView => playerShopView(shops, slot, _itemKind);
+
+/** The slot changes on every garden tick; only these parts move the shops. */
+const _sameShopParts = (a: any, b: any): boolean =>
+  a?.data?.shopPurchases === b?.data?.shopPurchases &&
+  a?.data?.customRestocks === b?.data?.customRestocks &&
+  a?.customRestockInventories === b?.customRestockInventories;
+
+function _emitPurchases() {
+  const snap = _coercePurchases(_viewOf(_rawShops, _rawSlot), _rawSlot);
   _purchasesSubs.forEach((fn) => {
     try {
       fn(snap);
     } catch {}
   });
+}
+
+function _notifySlot(slot: any) {
+  _rawSlot = slot;
+  // A personal restock changes the shop itself, not only the counts.
+  if (_rawShops != null) _emitShops();
+  _emitPurchases();
 }
 
 const _shopsSubs = new Set<(s: ShopsSnapshot) => void>();
@@ -1019,17 +1035,21 @@ function _coerceSnap(raw: any): ShopsSnapshot {
   };
 }
 
-function _notifyShops(raw: any) {
-  _rawShops = raw;
-  const snap = _coerceSnap(raw);
+function _emitShops() {
+  const snap = _coerceSnap(_viewOf(_rawShops, _rawSlot).shops);
   _shopsSubs.forEach((fn) => {
     try {
       fn(snap);
     } catch {}
   });
+}
+
+function _notifyShops(raw: any) {
+  _rawShops = raw;
+  _emitShops();
   // After the shops, never before: purchases re-derived against a restock the
   // overlay has not seen yet would make the old stock look unbought.
-  if (_rawPurchases != null) _notifyPurchases();
+  if (_rawSlot != null) _emitPurchases();
 }
 
 const BASE_SHOPS_SET = new Set(["Seed", "Egg", "Tool", "Decor"]);
@@ -1175,7 +1195,7 @@ function _notify() {
 const ATOM_WAIT_POLL_MS = 400;
 const ATOM_WAIT_TIMEOUT_MS = 10 * 60_000;
 const STATE_ATOM_LABEL = "stateAtom";
-const MY_DATA_ATOM_LABEL = "myDataAtom";
+const MY_USER_SLOT_ATOM_LABEL = "myUserSlotAtom";
 
 /**
  * Attend qu'un atom du jeu soit réellement enregistré.
@@ -1218,15 +1238,15 @@ async function _watchShops(generation: number) {
 
 async function _watchPurchases(generation: number) {
   const isCurrent = () => _watchGeneration === generation;
-  if (!(await _waitForAtom(MY_DATA_ATOM_LABEL, isCurrent)) || !isCurrent()) return;
+  if (!(await _waitForAtom(MY_USER_SLOT_ATOM_LABEL, isCurrent)) || !isCurrent()) return;
   if (_unsubPurchases) return;
   try {
-    _unsubPurchases = await Atoms.shop.myShopPurchases.onChange((next: any) => {
-      try { _notifyPurchases(next); } catch {}
-    });
+    _unsubPurchases = await Atoms.shop.myUserSlot.onChange((next: any) => {
+      try { _notifySlot(next); } catch {}
+    }, _sameShopParts);
   } catch {}
   if (!isCurrent()) return;
-  try { _notifyPurchases(await Atoms.shop.myShopPurchases.get()); } catch {}
+  try { _notifySlot(await Atoms.shop.myUserSlot.get()); } catch {}
 }
 
 // ---------- start/stop ----------
@@ -1365,7 +1385,10 @@ export const NotifierService = {
 
   async onShopsChangeNow(cb: (s: ShopsSnapshot) => void): Promise<() => void> {
     await _ensureStarted();
-    try { cb(_coerceSnap(await Atoms.shop.shops.get())); } catch {}
+    try {
+      const [shops, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
+      cb(_coerceSnap(_viewOf(shops, slot).shops));
+    } catch {}
     return this.onShopsChange(cb);
   },
 
@@ -1379,11 +1402,8 @@ export const NotifierService = {
   async onPurchasesChangeNow(cb: (p: PurchasesSnapshot) => void): Promise<() => void> {
     await _ensureStarted();
     try {
-      const [raw, shops] = await Promise.all([
-        (Atoms.shop as any).myShopPurchases.get(),
-        Atoms.shop.shops.get(),
-      ]);
-      cb(_coercePurchases(raw, shops));
+      const [shops, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
+      cb(_coercePurchases(_viewOf(shops, slot), slot));
     } catch {}
     return this.onPurchasesChange(cb);
   },

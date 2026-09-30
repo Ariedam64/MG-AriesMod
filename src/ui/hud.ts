@@ -35,7 +35,6 @@ import { startEggHatchLockIndicator } from "../utils/eggHatchLockIndicator";
 import { startDecorPickupLockIndicator } from "../utils/decorPickupLockIndicator";
 import { fetchRemoteVersion, getLocalVersion } from "../utils/version";
 import { isDiscordSurface } from "../utils/api";
-import { startSelectedInventoryQuantityLogger } from "../utils/inventorySelectionLogger";
 import { startInventorySortingObserver } from "../utils/inventorySorting";
 import { startActivityLogFilterPixi } from "../utils/activityLogFilterPixi";
 import { readAriesPath, writeAriesPath } from "../utils/localStorage";
@@ -1146,7 +1145,6 @@ export function initWatchers(){
       startInjectSellAllPets();
       startSellAllPetsPixi();
       startInstantFeedWidget();
-      startSelectedInventoryQuantityLogger();
       startInventorySortingObserver();
   })();
 }

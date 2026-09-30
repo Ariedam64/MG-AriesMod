@@ -152,6 +152,8 @@ export const myPetHutchCapacitySlots = makeAtom<number>("myPetHutchCapacitySlots
 
 export const shops = makeView<any, any>("stateAtom", { path: "child.data.shops" });
 export const myShopPurchases = makeView<any, any>("myDataAtom", { path: "shopPurchases" });
+/** The local player's userSlot: `data` plus `customRestockInventories`, their personal restocks. */
+export const myUserSlot = makeAtom<any>("myUserSlotAtom");
 
 export const numPlayers = makeAtom<number>("numPlayersAtom");
 export const totalCropSellPrice = makeAtom<number>("totalCropSellPriceAtom");
@@ -442,6 +444,7 @@ export const Atoms = {
   shop: {
     shops,
     myShopPurchases,
+    myUserSlot,
     totalCropSellPrice,
     seedShop,
     toolShop,

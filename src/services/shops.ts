@@ -9,6 +9,7 @@ import { sendToGame } from "../core/webSocketBridge";
 import { Atoms } from "../store/atoms";
 import { pageWindow } from "../utils/page-context";
 import { buildShopPurchaseCommand, readShopViewMode } from "../utils/shopPurchaseMessage";
+import { playerShopView } from "../utils/shopPurchases";
 
 
 export type Kind = "seeds" | "tools" | "eggs" | "decor";
@@ -131,8 +132,10 @@ export const ShopsService = {
 
     let shop: string | null = null;
     try {
-      const snap = await Atoms.shop.shops.get();
-      shop = _findShopForItem(snap, kind, it);
+      // The shops the player can buy from: a closed weather shop still lists
+      // its stock, and a personal restock replaces the room's.
+      const [shops, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
+      shop = _findShopForItem(playerShopView(shops, slot, () => null).shops, kind, it);
     } catch { }
     if (!shop) shop = _fallbackShopFor(kind);
 

@@ -54,3 +54,72 @@ export function purchasesForCurrentRestock(
   }
   return out;
 }
+
+export type PlayerShopView = {
+  /** Only the shops the player can buy from right now, keyed like `shops`. */
+  shops: Record<string, any>;
+  purchases: PurchaseCounts;
+};
+
+/** The shops a player can buy a personal restock of (`myData.customRestocks`). */
+const CUSTOM_RESTOCK_SHOPS = new Set(["seed", "egg", "tool", "decor"]);
+
+/**
+ * The shop the player actually buys from under `key`, or null.
+ *
+ * After buying a personal restock, the player's seed/egg/tool/decor shop is
+ * their own `customRestockInventories[key]`, not the room's, and only once its
+ * restockId matches the purchase. A room shop whose restockId is null is
+ * closed, which is how a weather shop ends with its weather.
+ */
+function resolveShop(key: string, shops: any, mySlot: any): any | null {
+  if (CUSTOM_RESTOCK_SHOPS.has(key)) {
+    const custom = mySlot?.data?.customRestocks?.[key];
+    if (custom) {
+      const inv = mySlot?.customRestockInventories?.[key];
+      return inv && inv.restockId === `${key}:custom:${custom.purchasedAt}` ? inv : null;
+    }
+  }
+  const shop = shops?.[key];
+  if (!shop || typeof shop !== "object") return null;
+  if ("restockId" in shop && shop.restockId == null) return null;
+  return shop;
+}
+
+/**
+ * Whether the purchases recorded for this shop are known. An entry dated after
+ * the shop we hold is not, and the game then shows every item sold out.
+ */
+function purchasesKnown(entry: any, shop: any): boolean {
+  if (!entry || typeof entry !== "object" || !("restockId" in entry)) return true;
+  if (entry.restockId === shop?.restockId) return true;
+  return Number(entry.startedAtMs) < Number(shop?.startedAtMs);
+}
+
+/**
+ * The shops and purchase counts as the game shows them to this player (v1324).
+ *
+ * `shops` is `stateAtom.child.data.shops`, `mySlot` is `myUserSlotAtom`. A shop
+ * is left out when it is closed, when the player's personal restock has not
+ * arrived yet, or when its purchases are unknown: in all three the game has
+ * nothing to sell, so an alert would ring for an item no one can buy.
+ */
+export function playerShopView(
+  shops: any,
+  mySlot: any,
+  kindOf: (itemId: string) => ShopKind | null,
+): PlayerShopView {
+  const shopPurchases = mySlot?.data?.shopPurchases;
+  const open: Record<string, any> = {};
+  const keys = new Set<string>(shops && typeof shops === "object" ? Object.keys(shops) : []);
+  for (const key of CUSTOM_RESTOCK_SHOPS) {
+    if (mySlot?.data?.customRestocks?.[key]) keys.add(key);
+  }
+  for (const key of keys) {
+    const shop = resolveShop(key, shops, mySlot);
+    if (!shop) continue;
+    if (!purchasesKnown(shopPurchases?.[key], shop)) continue;
+    open[key] = shop;
+  }
+  return { shops: open, purchases: purchasesForCurrentRestock(open, shopPurchases, kindOf) };
+}
