@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.224
+// @version      3.2.225
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -31981,7 +31981,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.224";
+      return "3.2.225";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -49631,7 +49631,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       display: "flex",
       flexDirection: "column",
       width: `min(${options.widthPx ?? 420}px, 100%)`,
-      maxHeight: "min(520px, 88vh)",
+      maxHeight: `min(${options.maxHeightPx ?? 520}px, 88vh)`,
       borderRadius: "16px",
       border: `1px solid ${BORDER}`,
       background: "#101620",
@@ -49904,6 +49904,1873 @@ Restore figures are averages; unlucky streaks do worse.`;
       css2(summary, { color: DANGER });
       summary.textContent = "Could not read the inventory.";
     });
+  }
+
+  // src/services/companion/emoteTypes.ts
+  var EmoteType = {
+    Idle: -1,
+    Clapping: 0,
+    Laughing: 1,
+    Angered: 2,
+    Crying: 3,
+    Questioning: 4,
+    Love: 5
+  };
+  var ENTRY_LEAD_MS = 6e4;
+  function companionEmoteEntry(playerId2, emote, now2) {
+    return { kind: "emote", playerId: playerId2, emoteType: emote, lastTimestampMs: now2 + ENTRY_LEAD_MS };
+  }
+  function mergeEmoteSource(real, fake) {
+    const base = real && typeof real === "object" ? real : {};
+    const entries = Array.isArray(base.entries) ? base.entries : [];
+    const ours = Array.isArray(fake?.entries) ? fake.entries : [];
+    return { ...base, entries: ours.length ? [...entries, ...ours] : entries };
+  }
+  var NPC_TALKING_MS = 3e3;
+  var TALKING_MARGIN_MS = 150;
+  function cutTalking(avatarSystem2, playerId2) {
+    const system = avatarSystem2;
+    if (!system || typeof system.views?.get !== "function") return false;
+    const view = system.views.get(playerId2);
+    if (!view) return false;
+    try {
+      if (typeof system.stopNpcTalking === "function") {
+        system.stopNpcTalking(playerId2, view);
+        return true;
+      }
+      if (typeof view.setTalking === "function") {
+        view.setTalking(false);
+        return true;
+      }
+    } catch {
+    }
+    return false;
+  }
+  function emoteStartDelay(lastSpokeAt2, now2, canCutTalking = false) {
+    if (canCutTalking) return 0;
+    if (lastSpokeAt2 === null) return 0;
+    return Math.max(0, lastSpokeAt2 + NPC_TALKING_MS + TALKING_MARGIN_MS - now2);
+  }
+
+  // src/services/companion/reactions.ts
+  function pickOne(options, random) {
+    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
+  }
+  var fmt = (n) => Math.round(n).toLocaleString("en-US");
+  var MILESTONES = Array.from({ length: 14 }, (_, i) => 10 ** (i + 2));
+  function crossedMilestone(prev, next) {
+    if (!Number.isFinite(prev) || !Number.isFinite(next) || next <= prev) return null;
+    let crossed = null;
+    for (const m of MILESTONES) {
+      if (prev < m && next >= m) crossed = m;
+    }
+    return crossed;
+  }
+  function formatMilestone(n) {
+    const units = [
+      [1e15, "quadrillion"],
+      [1e12, "trillion"],
+      [1e9, "billion"],
+      [1e6, "million"]
+    ];
+    for (const [size, word] of units) {
+      if (n >= size) return `${fmt(n / size)} ${word}`;
+    }
+    return fmt(n);
+  }
+  var sumHatched = (s, key2) => {
+    let total = 0;
+    for (const counts of Object.values(s?.pets?.hatchedByType ?? {})) {
+      if (!counts) continue;
+      total += key2 ? Number(counts[key2]) || 0 : (Number(counts.normal) || 0) + (Number(counts.gold) || 0) + (Number(counts.rainbow) || 0);
+    }
+    return total;
+  };
+  var sumAbilityTriggers = (s) => {
+    let total = 0;
+    for (const stat of Object.values(s?.abilities ?? {})) total += Number(stat?.triggers) || 0;
+    return total;
+  };
+  var num = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
+  var STAT_DEFS = [
+    {
+      id: "harvested",
+      read: (s) => num(s?.garden?.totalHarvested),
+      lines: [
+        (n) => `That's ${n} crops harvested! Incredible.`,
+        (n) => `${n} harvests! You're a natural.`,
+        (n) => `Crop number ${n}! We should celebrate.`
+      ]
+    },
+    {
+      id: "planted",
+      read: (s) => num(s?.garden?.totalPlanted),
+      lines: [
+        (n) => `${n} seeds planted! This garden keeps growing.`,
+        (n) => `That's seed number ${n}. Green thumb confirmed.`
+      ]
+    },
+    {
+      id: "watered",
+      read: (s) => num(s?.garden?.watercanUsed),
+      lines: [(n) => `${n} waterings! You really care about these plants.`]
+    },
+    {
+      id: "cropsSold",
+      read: (s) => num(s?.shops?.cropsSoldCount),
+      lines: [
+        (n) => `${n} crops sold! The shop loves you.`,
+        (n) => `That's ${n} crops sold. Business is booming.`
+      ]
+    },
+    {
+      id: "coins",
+      read: (s) => num(s?.shops?.cropsSoldValue) + num(s?.shops?.petsSoldValue),
+      lines: [
+        (n) => `You've earned ${n} coins from sales! So rich.`,
+        (n) => `${n} coins earned. Buy me something nice?`
+      ]
+    },
+    {
+      id: "seedsBought",
+      read: (s) => num(s?.shops?.seedsBought),
+      lines: [(n) => `${n} seeds bought! The shopkeeper knows your name by now.`]
+    },
+    {
+      id: "petsSold",
+      read: (s) => num(s?.shops?.petsSoldCount),
+      lines: [(n) => `${n} pets sold. Hope they found good homes!`]
+    },
+    {
+      id: "hatched",
+      read: (s) => sumHatched(s),
+      lines: [
+        (n) => `${n} pets hatched! That's a whole zoo.`,
+        (n) => `Pet number ${n}! Welcome to the family.`
+      ]
+    },
+    {
+      id: "abilities",
+      read: (s) => sumAbilityTriggers(s),
+      lines: [
+        (n) => `Your pets have used their abilities ${n} times!`,
+        (n) => `${n} pet abilities triggered. Hard workers!`
+      ]
+    }
+  ];
+  function statReactions(prev, next, random) {
+    const out = [];
+    for (const def of STAT_DEFS) {
+      const m = crossedMilestone(def.read(prev), def.read(next));
+      if (m === null) continue;
+      out.push({
+        key: `milestone:${def.id}`,
+        message: pickOne(def.lines, random)(formatMilestone(m)),
+        emote: m >= 1e6 ? EmoteType.Love : EmoteType.Clapping,
+        priority: "high"
+      });
+    }
+    if (sumHatched(next, "rainbow") > sumHatched(prev, "rainbow")) {
+      out.push({
+        key: "hatch:rainbow",
+        message: pickOne(["A RAINBOW pet?! No way!", "Rainbow! I've never seen one up close!", "Look at those colours! A Rainbow pet!"], random),
+        emote: EmoteType.Love,
+        priority: "high"
+      });
+    } else if (sumHatched(next, "gold") > sumHatched(prev, "gold")) {
+      out.push({
+        key: "hatch:gold",
+        message: pickOne(["A Gold pet! Look at it shine!", "Gold! That one's a keeper.", "Shiny! A Gold pet!"], random),
+        emote: EmoteType.Love,
+        priority: "high"
+      });
+    } else if (sumHatched(next) > sumHatched(prev)) {
+      out.push({
+        key: "hatch:normal",
+        message: pickOne(["Welcome to the family, little one!", "A new friend! Hi there!", "Aww, look at the new pet."], random),
+        emote: EmoteType.Clapping,
+        priority: "low"
+      });
+    }
+    const earned = num(next?.shops?.cropsSoldValue) - num(prev?.shops?.cropsSoldValue);
+    if (earned > 0) {
+      const coins = fmt(earned);
+      out.push({
+        key: "sale:crops",
+        message: pickOne(
+          [`Ka-ching! +${coins} coins.`, `Sold! ${coins} coins richer.`, `Nice sale, ${coins} coins!`, `${coins} coins in the bank. Love it.`],
+          random
+        ),
+        emote: EmoteType.Clapping,
+        priority: "low"
+      });
+    }
+    return out;
+  }
+  var WEATHER_EMOTES = {
+    Rain: EmoteType.Laughing,
+    Frost: EmoteType.Clapping,
+    Thunderstorm: EmoteType.Crying,
+    Dawn: EmoteType.Love,
+    AmberMoon: EmoteType.Questioning
+  };
+  function weatherEmote(weatherId) {
+    return WEATHER_EMOTES[weatherId] ?? EmoteType.Questioning;
+  }
+  function weatherChangeReaction(prevId, nextId, prevName, startLine, random) {
+    if (prevId === nextId) return null;
+    if (nextId) {
+      return { key: `weather:${nextId}`, message: startLine, emote: weatherEmote(nextId), priority: "high" };
+    }
+    if (!prevId) return null;
+    return {
+      key: "weather:end",
+      message: pickOne([`The ${prevName} is over. Sunshine's back!`, `And just like that, the ${prevName} is gone.`, `Bye bye, ${prevName}.`], random),
+      emote: null,
+      priority: "low"
+    };
+  }
+  function abilityReaction(event, random) {
+    const who = event.name?.trim() || (event.species ? `your ${event.species}` : "your pet");
+    const Who = who.charAt(0).toUpperCase() + who.slice(1);
+    return {
+      key: "ability",
+      message: pickOne(
+        [`${Who} just used ${event.abilityName}!`, `Go ${who}! ${event.abilityName}!`, `Did you see that? ${Who} used ${event.abilityName}.`],
+        random
+      ),
+      emote: EmoteType.Clapping,
+      priority: "low"
+    };
+  }
+  function eggsReadyReaction(count, random) {
+    if (count <= 0) return null;
+    return {
+      key: "egg",
+      message: count === 1 ? pickOne(["An egg is ready to hatch!", "Ooh, one of your eggs is ready!", "Something's wiggling in that egg. It's ready!"], random) : pickOne([`${count} eggs are ready to hatch!`, `${count} eggs ready! Hatching time?`], random),
+      emote: EmoteType.Clapping,
+      priority: "high"
+    };
+  }
+  function shopReaction(names, random) {
+    const list = names.filter((n) => typeof n === "string" && n.trim());
+    if (list.length === 0) return null;
+    const what = list.length === 1 ? list[0] : list.length === 2 ? `${list[0]} and ${list[1]}` : `${list[0]}, ${list[1]} and more`;
+    const isAre = list.length === 1 ? "is" : "are";
+    return {
+      key: "shop",
+      message: pickOne([`${what} ${isAre} in the shop! Go go go!`, `Ooh, ${what} just showed up in the shop!`, `Quick, ${what} ${isAre} in stock!`], random),
+      emote: EmoteType.Clapping,
+      priority: "high"
+    };
+  }
+  var SHOP_ID = {
+    seed: ["Seed", "species"],
+    egg: ["Egg", "eggId"],
+    tool: ["Tool", "toolId"],
+    decor: ["Decor", "decorId"]
+  };
+  function restockedFollowed(prev, next, isFollowed) {
+    if (!prev || !next) return [];
+    const out = [];
+    for (const kind of Object.keys(SHOP_ID)) {
+      const before = Number(prev[kind]?.secondsUntilRestock) || 0;
+      const after = Number(next[kind]?.secondsUntilRestock) || 0;
+      if (after <= before) continue;
+      const inventory = next[kind]?.inventory;
+      if (!Array.isArray(inventory)) continue;
+      const [prefix, field] = SHOP_ID[kind];
+      for (const item of inventory) {
+        const key2 = item?.[field];
+        const stock = Number(item?.initialStock);
+        if (typeof key2 !== "string" || !key2 || !(stock > 0)) continue;
+        const id = `${prefix}:${key2}`;
+        if (isFollowed(id)) out.push(id);
+      }
+    }
+    return out;
+  }
+  function rareCropReaction(crops, random) {
+    if (crops.length === 0) return null;
+    const first = crops[0];
+    const message = crops.length === 1 ? pickOne([`A ${first.mutation} ${first.species}! Look at that!`, `Whoa, a ${first.mutation} ${first.species} just showed up!`, `${first.mutation}! Your ${first.species} is special.`], random) : pickOne([`${crops.length} rare crops just appeared! Look!`, `Whoa, ${crops.length} special crops at once!`], random);
+    return { key: "rarecrop", message, emote: EmoteType.Love, priority: "high" };
+  }
+  var DROUGHT_STEPS = {
+    gold: [25, 50, 100, 200, 400],
+    rainbow: [100, 250, 500, 1e3, 2e3]
+  };
+  var RELIEF_MIN = { gold: 25, rainbow: 100 };
+  var RARITY_LABEL = { gold: "Gold", rainbow: "Rainbow" };
+  function badLuckReactions(prev, next, eggName3, random) {
+    const out = [];
+    for (const [eggId, after] of Object.entries(next ?? {})) {
+      const before = prev?.[eggId];
+      if (!before || !after) continue;
+      const egg = eggName3(eggId);
+      for (const kind of ["rainbow", "gold"]) {
+        const was = Number(before[kind]) || 0;
+        const now2 = Number(after[kind]) || 0;
+        const label2 = RARITY_LABEL[kind];
+        if (now2 < was) {
+          if (was < RELIEF_MIN[kind]) continue;
+          const tries = was + 1;
+          out.push({
+            key: `hatch:${kind}`,
+            message: pickOne(
+              [`FINALLY! A ${label2} pet after ${tries} tries!`, `${tries} hatches of waiting, and there it is. ${label2}!`, `I told you it was coming! ${label2}, at last!`],
+              random
+            ),
+            emote: EmoteType.Love,
+            priority: "high",
+            weight: 1
+          });
+          continue;
+        }
+        let step = null;
+        for (const s of DROUGHT_STEPS[kind]) if (was < s && now2 >= s) step = s;
+        if (step === null) continue;
+        out.push({
+          key: `badluck:${kind}`,
+          message: pickOne(
+            [
+              `${step} ${egg} hatches without a ${label2}... it's coming, I can feel it.`,
+              `Still no ${label2} after ${step} tries. The game owes you one.`,
+              `${step} in a row with no ${label2}. Hang in there, boss.`
+            ],
+            random
+          ),
+          emote: EmoteType.Crying,
+          priority: "high"
+        });
+      }
+    }
+    return out;
+  }
+  function newRareCrops(prev, next, rare) {
+    if (!prev || typeof prev !== "object" || !next || typeof next !== "object" || rare.size === 0) return [];
+    const seen = /* @__PURE__ */ new Map();
+    const index = (tiles, visit) => {
+      for (const [tileIdx, obj] of Object.entries(tiles)) {
+        const o = obj;
+        if (!o || o.objectType !== "plant" || !Array.isArray(o.slots)) continue;
+        o.slots.forEach((raw, i) => {
+          const s = raw;
+          if (!s) return;
+          const muts = Array.isArray(s.mutations) ? s.mutations.filter((m) => typeof m === "string") : [];
+          const species = typeof s.species === "string" ? s.species : typeof o.species === "string" ? o.species : "crop";
+          visit(`${tileIdx}|${s.slotId ?? i}|${s.startTime ?? ""}`, species, muts);
+        });
+      }
+    };
+    index(prev, (id, _species, muts) => seen.set(id, new Set(muts)));
+    const out = [];
+    index(next, (id, species, muts) => {
+      const before = seen.get(id) ?? /* @__PURE__ */ new Set();
+      for (const m of muts) {
+        if (rare.has(m) && !before.has(m)) out.push({ mutation: m, species });
+      }
+    });
+    return out;
+  }
+  function newlyReadyEggs(tiles, now2, announced) {
+    if (!tiles || typeof tiles !== "object") return [];
+    const out = [];
+    for (const [tileIdx, obj] of Object.entries(tiles)) {
+      const o = obj;
+      if (!o || o.objectType !== "egg") continue;
+      const matured = Number(o.maturedAt);
+      if (!Number.isFinite(matured) || matured <= 0 || matured > now2) continue;
+      const key2 = `${tileIdx}|${o.plantedAt ?? ""}`;
+      if (!announced.has(key2)) out.push(key2);
+    }
+    return out;
+  }
+  function dayPart(hour) {
+    if (hour < 5) return "night";
+    if (hour < 8) return "early";
+    if (hour < 12) return "morning";
+    if (hour < 17) return "afternoon";
+    if (hour < 22) return "evening";
+    return "late";
+  }
+  var DAY_PART_LINES = {
+    night: [
+      "Shouldn't you be asleep?",
+      "The garden's so quiet at night.",
+      "Night owl, huh?",
+      "I'm not tired. You're tired.",
+      "Midnight snacks count as gardening, right?"
+    ],
+    early: ["Early bird gets the best seeds.", "Morning already? I barely slept.", "Nothing beats an early start."],
+    morning: ["Coffee first, crops second.", "Fresh morning, fresh sprouts.", "Morning, boss! Ready for the day?"],
+    afternoon: ["Lunch break in the garden? Good call.", "Nice afternoon for it.", "Afternoon sun, happy plants."],
+    evening: ["Evening already? Time flies in here.", "Love the evening light on the garden.", "One more harvest before dinner?"],
+    late: ["It's getting late, boss.", "Late night gardening session?", "Don't stay up too late, okay?"]
+  };
+  function dayPartLines(hour) {
+    return DAY_PART_LINES[dayPart(hour)];
+  }
+  function holidayOf(date) {
+    const m = date.getMonth() + 1;
+    const d = date.getDate();
+    if (m === 1 && d === 1) return "newyear";
+    if (m === 2 && d === 14) return "valentine";
+    if (m === 4 && d === 1) return "aprilfools";
+    if (m === 10 && d === 31) return "halloween";
+    if (m === 12 && (d === 24 || d === 25)) return "christmas";
+    if (m === 12 && d === 31) return "newyearseve";
+    return null;
+  }
+  var HOLIDAY_LINES = {
+    newyear: ["Happy New Year! New year, new crops.", "First harvest of the year, let's make it count!"],
+    valentine: ["Happy Valentine's Day! I got you a sprout.", "Roses are red, crops are green, best gardener I've ever seen."],
+    aprilfools: ["Did you know crops can talk? April fools!", "I planted a joke. It hasn't grown yet."],
+    halloween: ["Happy Halloween! Any spooky crops tonight?", "Boo! Did I scare you?"],
+    christmas: ["Merry Christmas! Hope Santa brings you rare seeds.", "Best present ever: a full garden."],
+    newyearseve: ["Last day of the year! Let's end it with a big harvest.", "Any resolutions? Mine is more gardening."]
+  };
+  var HOLIDAY_GREETINGS = {
+    newyear: ["Happy New Year, boss!", "Happy New Year! Here's to a great harvest."],
+    valentine: ["Happy Valentine's Day!", "Aww, spending Valentine's Day with me?"],
+    aprilfools: ["Welcome back! Your garden turned into a desert. April fools!", "Happy April Fools! Don't trust anything I say today."],
+    halloween: ["Happy Halloween! Trick or treat?", "Spooky season is here! Happy Halloween!"],
+    christmas: ["Merry Christmas!", "Merry Christmas, boss! Thanks for visiting me."],
+    newyearseve: ["Last day of the year! Glad you're here.", "Happy New Year's Eve!"]
+  };
+  var WEEKEND_LINES = ["Weekend gardening, the best kind.", "No work today? Perfect."];
+  var SUNDAY_LINES = ["Lazy Sunday in the garden."];
+  function timeLines(date) {
+    const out = [...dayPartLines(date.getHours())];
+    const day = date.getDay();
+    if (day === 0 || day === 6) out.push(...WEEKEND_LINES);
+    if (day === 0) out.push(...SUNDAY_LINES);
+    const holiday = holidayOf(date);
+    if (holiday) out.push(...HOLIDAY_LINES[holiday]);
+    return out;
+  }
+  var TIME_LINE_EMOTES = {
+    "Shouldn't you be asleep?": EmoteType.Questioning,
+    "Night owl, huh?": EmoteType.Laughing,
+    "I'm not tired. You're tired.": EmoteType.Laughing,
+    "Midnight snacks count as gardening, right?": EmoteType.Questioning,
+    "Early bird gets the best seeds.": EmoteType.Clapping,
+    "Morning already? I barely slept.": EmoteType.Crying,
+    "Morning, boss! Ready for the day?": EmoteType.Questioning,
+    "Lunch break in the garden? Good call.": EmoteType.Clapping,
+    "Love the evening light on the garden.": EmoteType.Love,
+    "One more harvest before dinner?": EmoteType.Questioning,
+    "Late night gardening session?": EmoteType.Questioning,
+    "Weekend gardening, the best kind.": EmoteType.Love,
+    "No work today? Perfect.": EmoteType.Clapping,
+    "Lazy Sunday in the garden.": EmoteType.Love,
+    "Happy New Year! New year, new crops.": EmoteType.Clapping,
+    "First harvest of the year, let's make it count!": EmoteType.Clapping,
+    "Happy Valentine's Day! I got you a sprout.": EmoteType.Love,
+    "Roses are red, crops are green, best gardener I've ever seen.": EmoteType.Love,
+    "Did you know crops can talk? April fools!": EmoteType.Laughing,
+    "I planted a joke. It hasn't grown yet.": EmoteType.Laughing,
+    "Happy Halloween! Any spooky crops tonight?": EmoteType.Questioning,
+    "Boo! Did I scare you?": EmoteType.Laughing,
+    "Merry Christmas! Hope Santa brings you rare seeds.": EmoteType.Love,
+    "Best present ever: a full garden.": EmoteType.Love,
+    "Last day of the year! Let's end it with a big harvest.": EmoteType.Clapping,
+    "Any resolutions? Mine is more gardening.": EmoteType.Questioning
+  };
+  var SESSION_GAP_MS = 20 * 6e4;
+  function resumeSession(stored, now2) {
+    const s = stored;
+    const lastSeenAt = Number(s?.lastSeenAt);
+    const startedAt = Number(s?.startedAt);
+    const valid = Number.isFinite(lastSeenAt) && lastSeenAt > 0 && Number.isFinite(startedAt) && startedAt > 0 && startedAt <= now2;
+    const storedMet = Number(s?.firstMetAt);
+    const firstMetAt = Number.isFinite(storedMet) && storedMet > 0 && storedMet <= now2 ? storedMet : now2;
+    const celebratedDays = Math.max(0, Math.floor(Number(s?.celebratedDays) || 0));
+    if (valid && now2 - lastSeenAt < SESSION_GAP_MS) {
+      const announcedHours = Math.max(0, Math.floor(Number(s?.announcedHours) || 0));
+      return { session: { startedAt, lastSeenAt: now2, announcedHours, firstMetAt, celebratedDays }, greeting: null };
+    }
+    return {
+      session: { startedAt: now2, lastSeenAt: now2, announcedHours: 0, firstMetAt, celebratedDays },
+      greeting: { first: !valid, awayMs: valid ? now2 - lastSeenAt : 0 }
+    };
+  }
+  var DAY_MS = 24 * 36e5;
+  function greetingReaction(greeting, hour, random, holiday = null) {
+    let lines;
+    if (greeting.first) {
+      lines = ["Hi there! I'll be sticking around.", "Nice to meet you! Let's grow something great."];
+    } else if (greeting.awayMs >= 3 * DAY_MS) {
+      lines = ["Where have you been? I missed you!", "You're back! It's been ages.", "Finally! I was starting to talk to the plants."];
+    } else if (holiday) {
+      lines = HOLIDAY_GREETINGS[holiday];
+    } else if (greeting.awayMs >= DAY_MS) {
+      lines = ["Welcome back! The garden missed you.", "Hey, you're back! Good to see you."];
+    } else {
+      const byPart = {
+        night: ["Hey, night owl! Couldn't sleep?", "Gardening at this hour? I like your style."],
+        early: ["Up with the sun, I see!", "Good morning! You're up early."],
+        morning: ["Good morning! Let's grow something.", "Morning! Ready when you are."],
+        afternoon: ["Good afternoon! Ready to garden?", "Hey! Perfect timing, the plants were asking for you."],
+        evening: ["Good evening! Glad you're here.", "Evening! Let's make it a good one."],
+        late: ["Evening, boss. Late session tonight?", "Hey! Quick one before bed?"]
+      };
+      lines = byPart[dayPart(hour)];
+    }
+    return { key: "session:greeting", message: pickOne(lines, random), emote: EmoteType.Love, priority: "high" };
+  }
+  function anniversarySteps(days) {
+    const steps = [7, 30, 100];
+    for (let year = 1; year * 365 <= days; year++) steps.push(year * 365);
+    return steps;
+  }
+  function anniversaryReaction(firstMetAt, now2, celebratedDays, random) {
+    const days = Math.floor((now2 - firstMetAt) / DAY_MS);
+    let due = null;
+    for (const step of anniversarySteps(days)) if (step <= days && step > celebratedDays) due = step;
+    if (due === null) return { reaction: null, celebratedDays };
+    let lines;
+    if (due === 7) lines = ["One week together already! Thanks for having me.", "A whole week of gardening together!"];
+    else if (due === 30) lines = ["We've been gardening together for a whole month!", "One month together! Time flies."];
+    else if (due === 100) lines = ["100 days together! That's a lot of crops.", "Day 100! Best garden buddy ever."];
+    else {
+      const years = due / 365;
+      lines = years === 1 ? ["Happy anniversary! One year together!", "One year already! Thanks for keeping me around."] : [`Happy anniversary! ${years} years together!`, `${years} years of gardening together. Wow.`];
+    }
+    return {
+      reaction: { key: "anniversary", message: pickOne(lines, random), emote: EmoteType.Love, priority: "high" },
+      celebratedDays: due
+    };
+  }
+  function sessionHours(session2, now2) {
+    return Math.max(0, Math.floor((now2 - session2.startedAt) / 36e5));
+  }
+  function sessionHourReaction(hours, random) {
+    if (hours < 1) return null;
+    let lines;
+    let emote = EmoteType.Clapping;
+    if (hours === 1) {
+      lines = ["We've been at it for an hour already.", "One hour in! Time flies when you're gardening."];
+    } else if (hours === 2) {
+      lines = ["Two hours in! Look at this place.", "Two hours already? Where did the time go?"];
+    } else if (hours < 6) {
+      lines = [`${hours} hours straight. Maybe stretch your legs?`, `${hours} hours! Don't forget to drink some water.`, `${hours} hours already. You're dedicated!`];
+      emote = EmoteType.Questioning;
+    } else {
+      lines = [`${hours} hours?! Are you okay?`, `${hours} hours. I think the plants need a break. And you too.`];
+      emote = EmoteType.Crying;
+    }
+    return { key: `session:hours`, message: pickOne(lines, random), emote, priority: "high" };
+  }
+  function clockReaction(prevHour, hour, sessionMs, random, holiday = null) {
+    if (prevHour === hour) return null;
+    if (hour === 0) {
+      if (holiday) {
+        return { key: "clock:holiday", message: pickOne(HOLIDAY_GREETINGS[holiday], random), emote: EmoteType.Love, priority: "high" };
+      }
+      return {
+        key: "clock:midnight",
+        message: pickOne(["It's midnight! Still going?", "Midnight already. The garden never sleeps, huh?"], random),
+        emote: EmoteType.Questioning,
+        priority: "high"
+      };
+    }
+    if (hour === 6 && sessionMs >= 3 * 36e5) {
+      return {
+        key: "clock:sunrise",
+        message: pickOne(["The sun's coming up. Did we just pull an all-nighter?", "Is that... sunrise? We've been up all night!"], random),
+        emote: EmoteType.Laughing,
+        priority: "high"
+      };
+    }
+    return null;
+  }
+  var REACTION_GAP_MS = 15e3;
+  var REACTION_TTL_MS = {
+    high: 3 * 6e4,
+    low: 1e4
+  };
+  var FAMILY_COOLDOWN_MS = {
+    ability: 5 * 6e4,
+    sale: 6e4,
+    hatch: 6e4,
+    egg: 5 * 6e4,
+    shop: 3e4,
+    rarecrop: 3e4
+  };
+  function initialGateState() {
+    return { lastSpokeAt: 0, mutedUntil: {}, queue: [] };
+  }
+  var familyOf = (key2) => key2.split(":")[0];
+  function offerReaction(state4, reaction, now2) {
+    if (now2 < (state4.mutedUntil[familyOf(reaction.key)] ?? 0)) return state4;
+    const existing = state4.queue.find((q) => q.key === reaction.key);
+    if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state4;
+    const queue = state4.queue.filter((q) => q.key !== reaction.key);
+    queue.push({ ...reaction, at: now2 });
+    return { ...state4, queue };
+  }
+  function takeReaction(state4, now2, busy2) {
+    const queue = state4.queue.filter((q) => now2 - q.at <= REACTION_TTL_MS[q.priority]);
+    const kept = { ...state4, queue };
+    if (busy2 || queue.length === 0 || now2 - state4.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
+    const chosen = queue.find((q) => q.priority === "high") ?? queue[0];
+    const family = familyOf(chosen.key);
+    const { at: _at, ...reaction } = chosen;
+    return {
+      reaction,
+      state: {
+        lastSpokeAt: now2,
+        mutedUntil: { ...state4.mutedUntil, [family]: now2 + (FAMILY_COOLDOWN_MS[family] ?? 0) },
+        // Le reste de la famille qui vient de parler se tait aussi.
+        queue: queue.filter((q) => q !== chosen && (FAMILY_COOLDOWN_MS[family] ? familyOf(q.key) !== family : true))
+      }
+    };
+  }
+
+  // src/services/companion/dialogueLines.ts
+  var LEGACY_DEFAULT_LINES = [
+    "Right behind you, boss.",
+    "Nice patch you've got here.",
+    "Want me to keep an eye on anything?",
+    "I like it here."
+  ];
+  var DEFAULT_CUSTOM_LINES = [
+    ...LEGACY_DEFAULT_LINES,
+    "Lovely day for some gardening.",
+    "I could watch things grow all day. Actually, I do.",
+    "Do the plants talk to you too, or is that just me?",
+    "Careful where you step, something's sprouting.",
+    "I counted the leaves. Lost track at forty.",
+    "One day I'll have a garden of my own.",
+    "Smells like fresh soil. My favourite.",
+    "You've got a green thumb, you know that?",
+    "I'm not lazy, I'm supervising.",
+    "Did that sprout just move?",
+    "If you need a hand, I've got two.",
+    "Water, sun, patience. That's the whole secret.",
+    "I named one of the crops. Don't ask which.",
+    "Some of these are looking really good.",
+    "I'd buy that seed again, honestly.",
+    "Whatever you're doing, keep doing it.",
+    "Is it snack time yet?",
+    "I heard a rumour about a very rare crop.",
+    "The pets seem happy today.",
+    "Big plans for this garden?",
+    "Don't mind me, just enjoying the view.",
+    "I've been practising my whistling. Want to hear?",
+    "You can always count on me.",
+    "Every sprout is a tiny miracle.",
+    "Let me know when it's harvest time.",
+    "What's the rarest thing you've ever grown?",
+    "Right here if you need me.",
+    "I think the bees like you.",
+    "One more row and this place is perfect.",
+    "I'm having a great time, thanks for asking.",
+    "A good mutation is the best kind of surprise.",
+    "Think the weather will change soon?",
+    "Stay hydrated, boss.",
+    "Busy day, huh?",
+    "Who needs a map when you know every tile by heart?",
+    "I'll hold the fort."
+  ];
+  var LINE_EMOTES = {
+    "Nice patch you've got here.": EmoteType.Clapping,
+    "Want me to keep an eye on anything?": EmoteType.Questioning,
+    "I like it here.": EmoteType.Love,
+    "Lovely day for some gardening.": EmoteType.Love,
+    "I could watch things grow all day. Actually, I do.": EmoteType.Laughing,
+    "Do the plants talk to you too, or is that just me?": EmoteType.Questioning,
+    "I counted the leaves. Lost track at forty.": EmoteType.Laughing,
+    "One day I'll have a garden of my own.": EmoteType.Love,
+    "Smells like fresh soil. My favourite.": EmoteType.Love,
+    "You've got a green thumb, you know that?": EmoteType.Clapping,
+    "I'm not lazy, I'm supervising.": EmoteType.Laughing,
+    "Did that sprout just move?": EmoteType.Questioning,
+    "I named one of the crops. Don't ask which.": EmoteType.Laughing,
+    "Some of these are looking really good.": EmoteType.Clapping,
+    "Whatever you're doing, keep doing it.": EmoteType.Clapping,
+    "Is it snack time yet?": EmoteType.Questioning,
+    "Big plans for this garden?": EmoteType.Questioning,
+    "I've been practising my whistling. Want to hear?": EmoteType.Laughing,
+    "Every sprout is a tiny miracle.": EmoteType.Love,
+    "What's the rarest thing you've ever grown?": EmoteType.Questioning,
+    "I think the bees like you.": EmoteType.Laughing,
+    "I'm having a great time, thanks for asking.": EmoteType.Love,
+    "A good mutation is the best kind of surprise.": EmoteType.Clapping,
+    "Think the weather will change soon?": EmoteType.Questioning,
+    "Busy day, huh?": EmoteType.Laughing,
+    ...TIME_LINE_EMOTES
+  };
+  function lineEmote(line) {
+    return LINE_EMOTES[line] ?? null;
+  }
+  var POKE_WINDOW_MS = 1e4;
+  var POKE_THRESHOLD = 5;
+  function pokeLine(talkTimes, now2, random) {
+    const recent = talkTimes.filter((t) => now2 - t <= POKE_WINDOW_MS && t <= now2).length;
+    if (recent < POKE_THRESHOLD) return null;
+    if (recent < 7) {
+      return {
+        message: pickOne2(["Okay okay, I'm listening!", "Yes? I'm right here.", "One at a time, boss!"], random),
+        emote: EmoteType.Laughing
+      };
+    }
+    if (recent < 10) {
+      return {
+        message: pickOne2(["Are you poking me on purpose?", "Is this a game? I like games.", "Hey, that tickles!"], random),
+        emote: EmoteType.Questioning
+      };
+    }
+    return {
+      message: pickOne2(["Stop poking me!", "Okay, I'm ignoring you now.", "I'm going to start charging for this."], random),
+      emote: EmoteType.Angered
+    };
+  }
+  function ripeCropCount(tileObjects, now2) {
+    if (!tileObjects || typeof tileObjects !== "object") return 0;
+    let count = 0;
+    for (const obj of Object.values(tileObjects)) {
+      const slots = obj?.slots;
+      if (!Array.isArray(slots)) continue;
+      for (const slot of slots) {
+        const s = slot;
+        if (!s || s.preserved === true) continue;
+        const end = s.endTime;
+        if (typeof end === "number" && end > 0 && end <= now2) count++;
+      }
+    }
+    return count;
+  }
+  function pickOne2(options, random) {
+    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
+  }
+  var plural = (count, singular, pluralForm) => count === 1 ? singular : pluralForm;
+  function harvestMessage(ready2, random) {
+    const crops = `${ready2} ${plural(ready2, "crop", "crops")}`;
+    const isAre = plural(ready2, "is", "are");
+    return pickOne2(
+      [
+        `${crops} ${isAre} ready to harvest, by the way.`,
+        `Psst, ${crops} ${isAre} ripe and waiting for you.`,
+        `I spotted ${crops} ready to pick.`,
+        `Harvest time! ${crops} ${isAre} good to go.`,
+        `${crops} ${isAre} looking ripe. Just saying.`,
+        `Don't leave them hanging, ${crops} ${isAre} ready.`
+      ],
+      random
+    );
+  }
+  function hungryPetMessage(hungry, random) {
+    const pets = `${hungry} ${plural(hungry, "pet", "pets")}`;
+    const isAre = plural(hungry, "is", "are");
+    return pickOne2(
+      [
+        `${pets} ${isAre} getting hungry.`,
+        `I think ${pets} could use a snack.`,
+        `${pets} ${isAre} giving me the hungry eyes.`,
+        `Someone's tummy is rumbling. ${pets} need${hungry === 1 ? "s" : ""} feeding.`,
+        `Heads up, ${pets} ${isAre} running low on food.`
+      ],
+      random
+    );
+  }
+  function sellMessage(coins, random) {
+    const amount = `${Math.round(coins).toLocaleString("en-US")} coins`;
+    return pickOne2(
+      [
+        `You're carrying ${amount} worth of crops.`,
+        `Your bag's worth ${amount} right now. Shop trip?`,
+        `That's ${amount} of crops in your pockets.`,
+        `Ka-ching! ${amount} worth of crops, ready to sell.`,
+        `You could cash in ${amount} at the shop.`
+      ],
+      random
+    );
+  }
+  var WEATHER_LINES = {
+    Rain: [
+      "It's raining! The crops are loving this.",
+      "Free watering, courtesy of the sky.",
+      "I forgot my umbrella again.",
+      "Listen to that rain. So relaxing.",
+      "Puddle jumping, anyone?",
+      "Rain day. Perfect excuse to stay in the garden."
+    ],
+    Frost: [
+      "Brr, it's snowing! Wrap up warm.",
+      "Snow on the garden. Everything looks so quiet.",
+      "My toes are freezing out here.",
+      "Want to build a snowman after this?",
+      "Careful, it's slippery with all this snow.",
+      "Snowflakes on the leaves. Pretty, isn't it?"
+    ],
+    Thunderstorm: [
+      "Whoa, did you hear that thunder?",
+      "Thunderstorm! Stay away from tall things.",
+      "That lightning made me jump.",
+      "Big storm rolling in. Hold on to your hat.",
+      "I'm not scared of thunder. Much.",
+      "What a storm. The sky's putting on a show."
+    ],
+    Dawn: [
+      "Look at that sunrise.",
+      "Dawn's here. Everything glows.",
+      "Early light is the best light.",
+      "Rise and shine, garden!",
+      "The whole garden looks golden right now.",
+      "I love this time of day."
+    ],
+    AmberMoon: [
+      "The Amber Moon is up. Spooky, right?",
+      "Everything's glowing orange tonight.",
+      "Don't the crops look magical under the Amber Moon?",
+      "An Amber Moon. Doesn't come around often.",
+      "Stay close, strange things happen under the Amber Moon.",
+      "Moonlight like this makes me want to howl."
+    ]
+  };
+  var GENERIC_WEATHER_TEMPLATES = [
+    (name) => `We're getting ${name} right now.`,
+    (name) => `Ooh, ${name}! Good time to be outside.`,
+    (name) => `Looks like ${name} out there.`,
+    (name) => `${name} today. The crops might like that.`,
+    (name) => `Did you notice? ${name} is here.`
+  ];
+  function weatherDisplayName(weatherId, catalog) {
+    const entry = catalog && typeof catalog === "object" ? catalog[weatherId] : void 0;
+    for (const field of ["name", "displayName"]) {
+      const value = entry?.[field];
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+    return weatherId.replace(/([a-z])([A-Z])/g, "$1 $2");
+  }
+  function weatherMessage(weatherId, displayName, random) {
+    const own = WEATHER_LINES[weatherId];
+    if (own && own.length > 0) return pickOne2(own, random);
+    return pickOne2(GENERIC_WEATHER_TEMPLATES, random)(displayName);
+  }
+
+  // src/services/companion/chat/harvest.ts
+  function mutationsOf(row) {
+    return row.mutations;
+  }
+  function rowKey(row) {
+    return `${row.tileIndex}:${row.slotId}`;
+  }
+  function selectionSignature(rows) {
+    return rows.map(rowKey).sort().join("|");
+  }
+  function speciesPresent(rows) {
+    return [...new Set(rows.map((row) => row.species))].sort((a, b) => a.localeCompare(b));
+  }
+  function mutationsPresent(rows) {
+    const all = /* @__PURE__ */ new Set();
+    for (const row of rows) for (const mutation of mutationsOf(row)) all.add(mutation);
+    return [...all].sort((a, b) => a.localeCompare(b));
+  }
+  function tally(rows, of) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const row of rows) {
+      for (const value of of(row)) {
+        if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }
+  var DEFAULT_FILTERS = {
+    species: null,
+    minSizePct: 50,
+    mutations: [],
+    mutationMode: "any",
+    includePreserved: false
+  };
+  function matchesMutations(row, wanted, mode) {
+    if (wanted.length === 0) return true;
+    const present = new Set(mutationsOf(row));
+    switch (mode) {
+      case "all":
+        return wanted.every((mutation) => present.has(mutation));
+      case "none":
+        return wanted.every((mutation) => !present.has(mutation));
+      default:
+        return wanted.some((mutation) => present.has(mutation));
+    }
+  }
+  function filterRows(rows, filters) {
+    const species = filters.species && filters.species.length > 0 ? new Set(filters.species) : null;
+    return rows.filter((row) => {
+      if (!row.ready) return false;
+      if (row.preserved && !filters.includePreserved) return false;
+      if (species && !species.has(row.species)) return false;
+      if (row.sizePct < filters.minSizePct) return false;
+      return matchesMutations(row, filters.mutations, filters.mutationMode);
+    });
+  }
+  function describeFilters(filters) {
+    const species = filters.species ?? [];
+    const subject = species.length > 0 ? `my ${listWords(species)}` : "everything";
+    const qualifiers = [];
+    if (filters.mutations.length > 0) {
+      const list = listWords(filters.mutations);
+      if (filters.mutationMode === "none") qualifiers.push(`without ${list}`);
+      else if (filters.mutationMode === "all") qualifiers.push(`with both ${list}`);
+      else qualifiers.push(`with ${list}`);
+    }
+    if (filters.minSizePct > DEFAULT_FILTERS.minSizePct) {
+      qualifiers.push(`at least ${filters.minSizePct}% size`);
+    }
+    if (filters.includePreserved) qualifiers.push("preserved ones included");
+    if (qualifiers.length === 0) {
+      return species.length > 0 ? `Harvest ${subject}, please` : "Harvest everything that's ready";
+    }
+    return `Harvest ${subject}, ${qualifiers.join(", ")}`;
+  }
+  function groupVariants(rows) {
+    const groups = /* @__PURE__ */ new Map();
+    for (const row of rows) {
+      const mutations = [...mutationsOf(row)].sort();
+      const key2 = `${row.species}|${mutations.join(",")}`;
+      const known = groups.get(key2);
+      if (known) known.count++;
+      else groups.set(key2, { species: row.species, mutations, count: 1 });
+    }
+    return [...groups.values()].sort(
+      (a, b) => b.count - a.count || a.species.localeCompare(b.species) || a.mutations.length - b.mutations.length || a.mutations.join(",").localeCompare(b.mutations.join(","))
+    );
+  }
+  function listWords(words) {
+    if (words.length <= 1) return words[0] ?? "";
+    return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
+  }
+  function describeSelection(rows) {
+    if (rows.length === 0) return "nothing";
+    const bySpecies2 = /* @__PURE__ */ new Map();
+    for (const row of rows) bySpecies2.set(row.species, (bySpecies2.get(row.species) ?? 0) + 1);
+    const parts = [...bySpecies2.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([species, count]) => `${count} ${species}`);
+    const head = parts.slice(0, 3);
+    const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
+    const total = `${rows.length} crop${rows.length === 1 ? "" : "s"}`;
+    if (parts.length === 1) return `${parts[0]} ready`;
+    return `${total} ready: ${listWords(head)}${rest2}`;
+  }
+
+  // src/services/companion/chat/hatch.ts
+  var DEFAULT_KEEP_RULES = {
+    species: [],
+    mutations: [],
+    abilities: [],
+    minMaxStr: null
+  };
+  function hasAnyRule(rules) {
+    return rules.species.length > 0 || rules.mutations.length > 0 || rules.abilities.length > 0 || rules.minMaxStr !== null;
+  }
+  function hasAny(present, wanted) {
+    if (wanted.length === 0) return false;
+    const set2 = new Set(present.map((value) => value.toLowerCase()));
+    return wanted.some((value) => set2.has(value.toLowerCase()));
+  }
+  function matchesKeep(pet, rules) {
+    if (rules.species.includes(pet.species)) return true;
+    if (hasAny(pet.mutations, rules.mutations)) return true;
+    if (rules.abilities.some((ability) => pet.abilities.includes(ability))) return true;
+    if (rules.minMaxStr !== null && pet.maxStrength !== null && pet.maxStrength >= rules.minMaxStr) return true;
+    return false;
+  }
+  var CHEERED_MUTATIONS = ["Rainbow", "Gold"];
+  function hatchCheer(pets, rules) {
+    const kept = pets.filter((pet) => matchesKeep(pet, rules));
+    if (kept.length === 0) return null;
+    for (const mutation of CHEERED_MUTATIONS) {
+      const star = kept.find((pet) => hasAny(pet.mutations, [mutation]));
+      if (star) return { emote: EmoteType.Love, star, mutation };
+    }
+    return { emote: EmoteType.Clapping, star: null, mutation: null };
+  }
+  function isProtected(pet, rules) {
+    return pet.favorited || pet.onTeam || matchesKeep(pet, rules);
+  }
+  function toFavourite(pets, rules) {
+    return pets.filter((pet) => !pet.favorited && matchesKeep(pet, rules));
+  }
+  function toSell(pets, rules) {
+    if (!hasAnyRule(rules)) return [];
+    return pets.filter((pet) => !isProtected(pet, rules));
+  }
+  function petSignature(pets) {
+    return pets.map((pet) => pet.petId).sort().join("|");
+  }
+  function slotSignature2(slots) {
+    return [...slots].sort((a, b) => a - b).join("|");
+  }
+  function bySpecies(pets) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const pet of pets) counts.set(pet.species, (counts.get(pet.species) ?? 0) + 1);
+    return [...counts.entries()].map(([species, count]) => ({ species, count })).sort((a, b) => b.count - a.count || a.species.localeCompare(b.species));
+  }
+  function describeKeep(rules, abilityNames = /* @__PURE__ */ new Map()) {
+    if (!hasAnyRule(rules)) return "Nothing set yet";
+    const parts = [];
+    if (rules.species.length) parts.push(listWords(rules.species));
+    if (rules.mutations.length) parts.push(listWords(rules.mutations));
+    if (rules.abilities.length) {
+      parts.push(listWords(rules.abilities.map((id) => abilityNames.get(id) ?? id)));
+    }
+    if (rules.minMaxStr !== null) parts.push(`max STR ${rules.minMaxStr} and up`);
+    return parts.join(", ");
+  }
+  function describeHatchRequest(count) {
+    return count === 1 ? "Hatch that egg for me" : `Hatch my ${count} eggs`;
+  }
+  function summarizeHatch(slots) {
+    return `${slots.length} egg${slots.length === 1 ? "" : "s"} ready to hatch`;
+  }
+  function summarizeSell(pets) {
+    if (pets.length === 0) return "nothing";
+    const parts = bySpecies(pets).map((entry) => `${entry.count} ${entry.species}`);
+    const head = parts.slice(0, 3);
+    const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
+    if (parts.length === 1) return parts[0];
+    return `${pets.length} pets: ${listWords(head)}${rest2}`;
+  }
+
+  // src/services/companion/settingsShape.ts
+  var COMPANION_MODES = ["follow", "garden"];
+  var MAX_LINE_LENGTH = 160;
+  var MAX_LINES = 50;
+  var SETTINGS_GROUPS = ["feed", "harvest", "hatch"];
+  var DEFAULT_COMPANION_SETTINGS = {
+    enabled: false,
+    mode: "follow",
+    npcId: null,
+    lines: [...DEFAULT_CUSTOM_LINES],
+    contextualEnabled: true,
+    reactions: true,
+    feedAlerts: true,
+    feedThresholdPct: 10,
+    feedFromGarden: true,
+    askOnScreen: true,
+    harvestTeamId: null,
+    hatchTeamId: null,
+    hatchSellTeamId: null,
+    hatchKeepRules: { ...DEFAULT_KEEP_RULES },
+    reviewedSettings: []
+  };
+  function sanitizeLines(raw) {
+    if (!Array.isArray(raw)) return [...DEFAULT_CUSTOM_LINES];
+    return raw.filter((line) => typeof line === "string").map((line) => line.trim().slice(0, MAX_LINE_LENGTH)).filter((line) => line.length > 0).slice(0, MAX_LINES);
+  }
+  function storedLines(raw) {
+    if (raw === void 0) return [...DEFAULT_CUSTOM_LINES];
+    const lines = sanitizeLines(raw);
+    const isLegacy = lines.length === LEGACY_DEFAULT_LINES.length && lines.every((line, i) => line === LEGACY_DEFAULT_LINES[i]);
+    return isLegacy ? [...DEFAULT_CUSTOM_LINES] : lines;
+  }
+  function sanitizeKeepRules(raw) {
+    if (!raw || typeof raw !== "object") return { ...DEFAULT_KEEP_RULES };
+    const source = raw;
+    const names = (value) => Array.isArray(value) ? value.filter((entry) => typeof entry === "string" && entry !== "") : [];
+    const strength = Number(source.minMaxStr);
+    return {
+      species: names(source.species),
+      mutations: names(source.mutations),
+      abilities: names(source.abilities),
+      minMaxStr: Number.isFinite(strength) && strength > 0 ? Math.round(strength) : null
+    };
+  }
+  function teamId(raw) {
+    return typeof raw === "string" && raw ? raw : null;
+  }
+  function clampThreshold(raw) {
+    const value = Math.round(Number(raw));
+    if (!Number.isFinite(value)) return DEFAULT_COMPANION_SETTINGS.feedThresholdPct;
+    return Math.max(1, Math.min(90, value));
+  }
+  function coerceSettings(raw) {
+    if (!raw || typeof raw !== "object") return { ...DEFAULT_COMPANION_SETTINGS };
+    return {
+      enabled: raw.enabled === true,
+      // Les réglages de déplacement persistés par les versions précédentes sont
+      // simplement ignorés : ils sont devenus des constantes.
+      mode: COMPANION_MODES.includes(raw.mode) ? raw.mode : DEFAULT_COMPANION_SETTINGS.mode,
+      npcId: typeof raw.npcId === "string" && raw.npcId ? raw.npcId : null,
+      lines: storedLines(raw.lines),
+      contextualEnabled: raw.contextualEnabled !== false,
+      reactions: raw.reactions !== false,
+      feedAlerts: raw.feedAlerts !== false,
+      feedThresholdPct: clampThreshold(raw.feedThresholdPct),
+      feedFromGarden: raw.feedFromGarden !== false,
+      askOnScreen: raw.askOnScreen !== false,
+      harvestTeamId: teamId(raw.harvestTeamId),
+      hatchTeamId: teamId(raw.hatchTeamId),
+      hatchSellTeamId: teamId(raw.hatchSellTeamId),
+      hatchKeepRules: sanitizeKeepRules(raw.hatchKeepRules),
+      reviewedSettings: SETTINGS_GROUPS.filter(
+        (group) => Array.isArray(raw.reviewedSettings) && raw.reviewedSettings.includes(group)
+      )
+    };
+  }
+
+  // src/services/companion/anchors.ts
+  var myUserSlotIdx = makeAtom("myUserSlotIdxAtom");
+  async function resolveAnchor(request2) {
+    const { mode, map: map2, player: player2 } = request2;
+    if (mode === "garden") {
+      const resolved = await resolveGardenAnchor(map2);
+      if (resolved) return resolved;
+    }
+    return followAnchor(map2, player2);
+  }
+  function followAnchor(map2, player2) {
+    return {
+      anchor: { tile: player2, onArrival: "wander", tracksPlayer: true },
+      isWalkable: map2.isWalkable,
+      effectiveMode: "follow"
+    };
+  }
+  async function resolveGardenAnchor(map2) {
+    const slot = await readMySlotIdx();
+    if (slot === null) return null;
+    const tiles = map2.gardenTilesForSlot(slot);
+    if (tiles.length === 0) return null;
+    const allowed = new Set(tiles);
+    const zone = (x, y) => allowed.has(map2.toIndex(x, y));
+    const positions = tiles.map((tile) => map2.toXY(tile));
+    const center = nearestTo(centroid(positions), positions);
+    const radius = positions.reduce(
+      (max, tile) => Math.max(max, Math.abs(tile.x - center.x), Math.abs(tile.y - center.y)),
+      1
+    );
+    return {
+      anchor: { tile: center, onArrival: "wander", tracksPlayer: false, zone, wanderRadius: radius },
+      isWalkable: map2.isWalkable,
+      effectiveMode: "garden"
+    };
+  }
+  async function readMySlotIdx() {
+    try {
+      const slot = Number(await myUserSlotIdx.get());
+      return Number.isInteger(slot) && slot >= 0 ? slot : null;
+    } catch {
+      return null;
+    }
+  }
+  function centroid(tiles) {
+    let sumX = 0;
+    let sumY = 0;
+    for (const tile of tiles) {
+      sumX += tile.x;
+      sumY += tile.y;
+    }
+    return { x: Math.round(sumX / tiles.length), y: Math.round(sumY / tiles.length) };
+  }
+  function nearestTo(target, tiles) {
+    let best = tiles[0];
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (const tile of tiles) {
+      const distance = Math.abs(tile.x - target.x) + Math.abs(tile.y - target.y);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = tile;
+      }
+    }
+    return { ...best };
+  }
+
+  // src/services/companion/buildings.ts
+  function matchBuildingName(names, required, alternatives) {
+    const wanted = required.map((word) => word.toLowerCase());
+    const either = alternatives.map((word) => word.toLowerCase());
+    for (const name of names) {
+      const key2 = name.toLowerCase().replace(/[^a-z]/g, "");
+      if (!wanted.every((word) => key2.includes(word))) continue;
+      if (either.length > 0 && !either.some((word) => key2.includes(word))) continue;
+      return name;
+    }
+    return null;
+  }
+
+  // src/services/companion/map.ts
+  var mapAtom = makeAtom("mapAtom");
+  function toSet(source) {
+    if (!source) return /* @__PURE__ */ new Set();
+    if (source instanceof Set) return source;
+    try {
+      return new Set(source);
+    } catch {
+      return /* @__PURE__ */ new Set();
+    }
+  }
+  function buildCompanionMap(raw) {
+    if (!raw || !Number.isFinite(raw.cols) || !Number.isFinite(raw.rows)) return null;
+    const cols = Number(raw.cols);
+    const rows = Number(raw.rows);
+    if (cols <= 0 || rows <= 0) return null;
+    const blocked = toSet(raw.collisionTiles);
+    for (const region of raw.conditionalCollisionRegions ?? []) {
+      for (const tile of toSet(region?.tiles)) blocked.add(tile);
+    }
+    const npcSpawns = raw.npcSpawns ?? {};
+    const locations = raw.locations ?? {};
+    const dirtBySlot = raw.userSlotIdxAndDirtTileIdxToGlobalTileIdx ?? [];
+    const boardwalkBySlot = raw.userSlotIdxAndBoardwalkTileIdxToGlobalTileIdx ?? [];
+    return {
+      cols,
+      rows,
+      toIndex: (x, y) => y * cols + x,
+      toXY: (index) => ({ x: index % cols, y: Math.floor(index / cols) }),
+      isWalkable(x, y) {
+        if (!Number.isInteger(x) || !Number.isInteger(y)) return false;
+        if (x < 0 || y < 0 || x >= cols || y >= rows) return false;
+        return !blocked.has(y * cols + x);
+      },
+      npcSpawnLayers: Object.keys(npcSpawns),
+      npcSpawnTile(spawnLayer) {
+        const tile = npcSpawns[spawnLayer];
+        return Number.isFinite(tile) ? Number(tile) : null;
+      },
+      buildingNames: Object.keys(locations),
+      buildingActivationTiles(name) {
+        const tiles = locations[name]?.activationTilesIdxs;
+        return Array.isArray(tiles) ? tiles.filter((t) => Number.isInteger(t)) : [];
+      },
+      findBuilding(required, alternatives) {
+        return matchBuildingName(Object.keys(locations), required, alternatives);
+      },
+      gardenTilesForSlot(userSlotIdx) {
+        if (!Number.isInteger(userSlotIdx) || userSlotIdx < 0) return [];
+        const dirt = dirtBySlot[userSlotIdx];
+        const boardwalk = boardwalkBySlot[userSlotIdx];
+        const tiles = /* @__PURE__ */ new Set();
+        for (const tile of Array.isArray(dirt) ? dirt : []) tiles.add(tile);
+        for (const tile of Array.isArray(boardwalk) ? boardwalk : []) tiles.add(tile);
+        return [...tiles];
+      },
+      gardenTileToGlobal(userSlotIdx, dirtTileIdx) {
+        if (!Number.isInteger(userSlotIdx) || userSlotIdx < 0) return null;
+        if (!Number.isInteger(dirtTileIdx) || dirtTileIdx < 0) return null;
+        const dirt = dirtBySlot[userSlotIdx];
+        if (!Array.isArray(dirt)) return null;
+        const global = dirt[dirtTileIdx];
+        return Number.isInteger(global) ? Number(global) : null;
+      },
+      dirtTileCount(userSlotIdx) {
+        if (!Number.isInteger(userSlotIdx) || userSlotIdx < 0) return 0;
+        const dirt = dirtBySlot[userSlotIdx];
+        return Array.isArray(dirt) ? dirt.length : 0;
+      }
+    };
+  }
+  async function readCompanionMap() {
+    try {
+      return buildCompanionMap(await mapAtom.get());
+    } catch {
+      return null;
+    }
+  }
+  async function onMapChange(cb) {
+    try {
+      return await mapAtom.onChange((raw) => cb(buildCompanionMap(raw)));
+    } catch {
+      return () => {
+      };
+    }
+  }
+
+  // src/services/companion/chat/plant.ts
+  var GARDEN_COLS = 20;
+  var GARDEN_ROWS = 10;
+  var GARDEN_TILE_COUNT = GARDEN_COLS * GARDEN_ROWS;
+  var EMPTY_SCOPE = { tiles: [], occupied: /* @__PURE__ */ new Set(), items: [] };
+  function itemKey(item) {
+    return `${item.kind}:${item.id}`;
+  }
+  function assignmentKey(assignment) {
+    return `${assignment.tileIndex}:${assignment.kind}:${assignment.id}`;
+  }
+  function plantSignature(plan) {
+    return plan.map(assignmentKey).sort().join("|");
+  }
+  function countByItem(plan) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const assignment of plan) {
+      const key2 = itemKey(assignment);
+      const known = counts.get(key2);
+      if (known) known.count++;
+      else counts.set(key2, { kind: assignment.kind, id: assignment.id, name: assignment.name, count: 1 });
+    }
+    return [...counts.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }
+  function stockLeft(plan, items) {
+    const left = new Map(items.map((item) => [itemKey(item), item.stock]));
+    for (const assignment of plan) {
+      const key2 = itemKey(assignment);
+      left.set(key2, (left.get(key2) ?? 0) - 1);
+    }
+    return left;
+  }
+  function viablePlan(plan, scope) {
+    const owned = new Set(scope.tiles);
+    const left = new Map(scope.items.map((item) => [itemKey(item), item.stock]));
+    const kept = [];
+    for (const assignment of plan) {
+      if (!owned.has(assignment.tileIndex)) continue;
+      if (scope.occupied.has(assignment.tileIndex)) continue;
+      const key2 = itemKey(assignment);
+      const remaining = left.get(key2) ?? 0;
+      if (remaining <= 0) continue;
+      left.set(key2, remaining - 1);
+      kept.push(assignment);
+    }
+    return kept;
+  }
+  function listPlantItems(plan) {
+    const parts = countByItem(plan).map((entry) => `${entry.count} ${entry.name}`);
+    if (parts.length === 0) return "nothing";
+    const head = parts.slice(0, 3);
+    const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
+    return `${listWords(head)}${rest2}`;
+  }
+  function describePlan(plan) {
+    if (plan.length === 0) return "Plant nothing";
+    return `Plant ${listPlantItems(plan)} for me`;
+  }
+  function summarizePlan(plan) {
+    if (plan.length === 0) return "nothing";
+    const tiles = `${plan.length} tile${plan.length === 1 ? "" : "s"}`;
+    const parts = countByItem(plan);
+    if (parts.length === 1) return `${parts[0].count} ${parts[0].name} to plant`;
+    return `${listPlantItems(plan)} to plant, over ${tiles}`;
+  }
+
+  // src/services/companion/chat/plantRead.ts
+  async function readOwnedTiles() {
+    let count = 0;
+    try {
+      const [map2, slotIdx] = await Promise.all([readCompanionMap(), readMySlotIdx()]);
+      if (map2 && slotIdx !== null) count = map2.dirtTileCount(slotIdx);
+    } catch {
+      count = 0;
+    }
+    const total = count > 0 ? count : GARDEN_TILE_COUNT;
+    return Array.from({ length: total }, (_, index) => index);
+  }
+  async function readOccupied() {
+    const occupied = /* @__PURE__ */ new Set();
+    let tileObjects = null;
+    try {
+      tileObjects = await Atoms.data.gardenTileObjects.get();
+    } catch {
+      return occupied;
+    }
+    if (!tileObjects || typeof tileObjects !== "object") return occupied;
+    for (const [key2, value] of Object.entries(tileObjects)) {
+      if (!value) continue;
+      const index = Number(key2);
+      if (Number.isInteger(index)) occupied.add(index);
+    }
+    return occupied;
+  }
+  function seedName(species) {
+    const entry = plantCatalog2[species];
+    const name = entry?.seed?.name;
+    return typeof name === "string" && name ? name : species;
+  }
+  function eggName(eggId) {
+    const entry = eggCatalog2[eggId];
+    const name = entry?.name;
+    return typeof name === "string" && name ? name : eggId;
+  }
+  function accumulate(rows, kind, idOf, nameOf2) {
+    const totals = /* @__PURE__ */ new Map();
+    for (const raw of Array.isArray(rows) ? rows : []) {
+      if (!raw || typeof raw !== "object") continue;
+      const row = raw;
+      const id = idOf(row).trim();
+      if (!id) continue;
+      const quantity = Math.floor(Number(row.quantity ?? 0));
+      if (!Number.isFinite(quantity) || quantity <= 0) continue;
+      totals.set(id, (totals.get(id) ?? 0) + quantity);
+    }
+    return [...totals.entries()].map(([id, stock]) => ({ kind, id, name: nameOf2(id), stock })).sort((a, b) => a.name.localeCompare(b.name));
+  }
+  async function readItems() {
+    const [seeds, eggs] = await Promise.all([
+      Atoms.inventory.mySeedInventory.get().catch(() => null),
+      Atoms.inventory.myEggInventory.get().catch(() => null)
+    ]);
+    return [
+      ...accumulate(seeds, "seed", (row) => String(row.species ?? ""), seedName),
+      ...accumulate(eggs, "egg", (row) => String(row.eggId ?? row.id ?? row.species ?? ""), eggName)
+    ];
+  }
+  async function readPlantScope() {
+    const [tiles, occupied, items] = await Promise.all([readOwnedTiles(), readOccupied(), readItems()]);
+    return { tiles, occupied, items };
+  }
+
+  // src/ui/menus/companion/harvest-chips.ts
+  var SPRITE_LOG_TAG2 = "companion-harvest";
+  var ICON_PX = 26;
+  function iconHolder(sizePx) {
+    const box = document.createElement("div");
+    css2(box, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: `${sizePx}px`,
+      height: `${sizePx}px`,
+      flex: "0 0 auto"
+    });
+    return box;
+  }
+  function catalogCropKey(species) {
+    const entry = plantCatalog2[species];
+    const key2 = entry?.crop?.sprite ?? entry?.plant?.sprite;
+    return typeof key2 === "string" && key2 ? key2 : null;
+  }
+  function spellings(...names) {
+    const out = /* @__PURE__ */ new Set();
+    for (const name of names) {
+      const trimmed = (name ?? "").trim();
+      if (!trimmed) continue;
+      out.add(trimmed);
+      out.add(trimmed.replace(/\W+/g, ""));
+    }
+    return [...out];
+  }
+  function spriteBaseName(species) {
+    const last = catalogCropKey(species)?.split("/").pop() ?? null;
+    if (!last) return species;
+    const withoutQuery = last.split(/[?#]/)[0];
+    return withoutQuery.replace(/\.[a-z0-9]+$/i, "") || species;
+  }
+  function attachAtlasCrop(box, species, sizePx) {
+    const candidates = spellings(spriteBaseName(species), species);
+    const bases = candidates.map((value) => value.replace(/icon$/i, "")).filter(Boolean);
+    const all = [.../* @__PURE__ */ new Set([...candidates, ...bases.map((base) => `${base}Icon`)])];
+    if (all.length) attachSpriteIcon(box, ["crop", "tallplant", "plant"], all, sizePx, SPRITE_LOG_TAG2);
+  }
+  function speciesIcon(species, sizePx = ICON_PX) {
+    const box = iconHolder(sizePx);
+    attachAtlasCrop(box, species, sizePx);
+    return box;
+  }
+  function composedUrl(species, mutations) {
+    const key2 = catalogCropKey(species);
+    const parts = key2 ? key2.split(/[?#]/)[0].split("/").filter(Boolean) : [];
+    const segment = parts.length >= 2 ? parts[parts.length - 2] : "";
+    const apiCategory = INTERNAL_TO_API[segment] ?? (isComposableCategory(segment) ? segment : "plants");
+    return composedSpriteUrl(apiCategory, spriteBaseName(species), mutations);
+  }
+  function variantIcon(species, mutations, sizePx = ICON_PX) {
+    if (mutations.length === 0) return speciesIcon(species, sizePx);
+    const box = iconHolder(sizePx);
+    const url = composedUrl(species, mutations);
+    const img = document.createElement("img");
+    img.alt = "";
+    css2(img, { maxWidth: "100%", maxHeight: "100%", imageRendering: "auto" });
+    img.addEventListener("error", () => {
+      console.warn("[companion] composed sprite failed, falling back to the plain crop:", url);
+      box.replaceChildren();
+      attachAtlasCrop(box, species, sizePx);
+    });
+    setImageSafe(img, url);
+    box.append(img);
+    return box;
+  }
+  function mutationIconEl(mutation, sizePx = ICON_PX) {
+    const box = iconHolder(sizePx);
+    const candidates = spellings(mutation).flatMap((name) => [`Mutation${name}`, name]);
+    attachSpriteIcon(box, ["ui", "mutation"], candidates, sizePx, SPRITE_LOG_TAG2);
+    return box;
+  }
+  function spriteTile(options) {
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.title = options.title;
+    css2(tile, {
+      display: "inline-flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: "1px",
+      padding: "5px 6px 3px",
+      borderRadius: "10px",
+      cursor: "pointer",
+      lineHeight: "1",
+      transition: "background 120ms ease, border-color 120ms ease",
+      background: options.selected ? TEAL_DIM : CARD_BG,
+      border: `1px solid ${options.selected ? TEAL_BORDER : BORDER}`
+    });
+    tile.append(options.icon);
+    if (options.count !== void 0) {
+      const count = document.createElement("span");
+      css2(count, { fontSize: "10px", color: options.selected ? TEAL : TEXT_DIM });
+      count.textContent = String(options.count);
+      tile.append(count);
+    }
+    tile.addEventListener("click", options.onClick);
+    tile.addEventListener("mouseenter", () => {
+      if (!options.selected) css2(tile, { background: "rgba(255,255,255,0.06)" });
+    });
+    tile.addEventListener("mouseleave", () => {
+      if (!options.selected) css2(tile, { background: CARD_BG });
+    });
+    return tile;
+  }
+  function labelledTile(options) {
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.title = options.label;
+    css2(tile, {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "6px",
+      padding: "4px 9px 4px 5px",
+      borderRadius: "10px",
+      cursor: "pointer",
+      lineHeight: "1",
+      transition: "background 120ms ease, border-color 120ms ease",
+      background: options.selected ? TEAL_DIM : CARD_BG,
+      border: `1px solid ${options.selected ? TEAL_BORDER : BORDER}`
+    });
+    const name = document.createElement("span");
+    css2(name, {
+      fontSize: "11.5px",
+      fontWeight: options.selected ? "600" : "500",
+      color: options.selected ? TEAL : TEXT,
+      whiteSpace: "nowrap"
+    });
+    name.textContent = options.label;
+    tile.append(options.icon, name);
+    tile.addEventListener("click", options.onClick);
+    tile.addEventListener("mouseenter", () => {
+      if (!options.selected) css2(tile, { background: "rgba(255,255,255,0.06)" });
+    });
+    tile.addEventListener("mouseleave", () => {
+      if (!options.selected) css2(tile, { background: CARD_BG });
+    });
+    return tile;
+  }
+  function allTile(label2, selected, onClick) {
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.textContent = label2;
+    css2(tile, {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      minWidth: "40px",
+      padding: "0 10px",
+      alignSelf: "stretch",
+      borderRadius: "10px",
+      cursor: "pointer",
+      fontSize: "11px",
+      lineHeight: "1",
+      background: selected ? TEAL_DIM : CARD_BG,
+      border: `1px solid ${selected ? TEAL_BORDER : BORDER}`,
+      color: selected ? TEAL : TEXT
+    });
+    tile.addEventListener("click", onClick);
+    return tile;
+  }
+  function tileRow() {
+    const row = document.createElement("div");
+    css2(row, { display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: "5px" });
+    return row;
+  }
+  function segmented(options, selected, onSelect) {
+    const wrap = document.createElement("div");
+    css2(wrap, {
+      display: "inline-flex",
+      padding: "2px",
+      gap: "2px",
+      borderRadius: "9px",
+      background: "rgba(0,0,0,0.22)",
+      border: `1px solid ${BORDER}`
+    });
+    for (const option of options) {
+      const active2 = option.value === selected;
+      const button2 = document.createElement("button");
+      button2.type = "button";
+      if (option.title) button2.title = option.title;
+      button2.textContent = option.label;
+      css2(button2, {
+        padding: "4px 10px",
+        borderRadius: "7px",
+        border: "none",
+        cursor: "pointer",
+        fontSize: "11px",
+        lineHeight: "1",
+        background: active2 ? TEAL_DIM : "transparent",
+        color: active2 ? TEAL : TEXT_DIM
+      });
+      button2.addEventListener("click", () => onSelect(option.value));
+      wrap.append(button2);
+    }
+    return wrap;
+  }
+
+  // src/ui/menus/companion/plant-chips.ts
+  var SPRITE_LOG_TAG3 = "companion-plant";
+  var ICON_PX2 = 24;
+  function iconHolder2(sizePx) {
+    const box = document.createElement("div");
+    css2(box, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: `${sizePx}px`,
+      height: `${sizePx}px`,
+      flex: "0 0 auto"
+    });
+    return box;
+  }
+  function spellings2(...names) {
+    const out = /* @__PURE__ */ new Set();
+    for (const name of names) {
+      const trimmed = (name ?? "").trim();
+      if (!trimmed) continue;
+      for (const form of [trimmed, trimmed.split(/[./]/).pop() ?? trimmed]) {
+        if (!form) continue;
+        out.add(form);
+        out.add(form.replace(/\s+/g, ""));
+      }
+    }
+    return [...out];
+  }
+  function seedCandidates(species, name) {
+    const entry = plantCatalog2[species];
+    const catalogName = typeof entry?.seed?.name === "string" ? entry.seed.name : null;
+    return spellings2(species, catalogName, name);
+  }
+  function eggCandidates(eggId, name) {
+    const entry = eggCatalog2[eggId];
+    const tileRef = typeof entry?.tileRef === "string" ? entry.tileRef : null;
+    const catalogName = typeof entry?.name === "string" ? entry.name : null;
+    return spellings2(eggId, tileRef, catalogName, name);
+  }
+  function plantItemIcon(item, sizePx = ICON_PX2) {
+    const box = iconHolder2(sizePx);
+    const isEgg = item.kind === "egg";
+    const candidates = isEgg ? eggCandidates(item.id, item.name) : seedCandidates(item.id, item.name);
+    if (candidates.length) {
+      attachSpriteIcon(box, isEgg ? ["pet"] : ["seed"], candidates, sizePx, SPRITE_LOG_TAG3);
+    }
+    return box;
+  }
+  function plantItemTitle(item) {
+    return item.kind === "egg" ? `${item.name} (egg)` : item.name;
+  }
+  function plantTile(item, onClick) {
+    const el2 = document.createElement("button");
+    el2.type = "button";
+    el2.title = plantItemTitle(item);
+    css2(el2, {
+      display: "inline-flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: "1px",
+      padding: "5px 6px 3px",
+      borderRadius: "10px",
+      cursor: "pointer",
+      lineHeight: "1",
+      transition: "background 120ms ease, border-color 120ms ease, opacity 120ms ease"
+    });
+    const count = document.createElement("span");
+    css2(count, { fontSize: "10px" });
+    el2.append(plantItemIcon(item), count);
+    el2.addEventListener("click", onClick);
+    return {
+      el: el2,
+      update(left, selected) {
+        const empty = left <= 0;
+        count.textContent = String(Math.max(0, left));
+        css2(el2, {
+          background: selected ? TEAL_DIM : CARD_BG,
+          border: `1px solid ${selected ? TEAL_BORDER : BORDER}`,
+          opacity: empty && !selected ? "0.45" : "1"
+        });
+        css2(count, { color: selected ? TEAL : empty ? WARN : TEXT_DIM });
+      }
+    };
+  }
+
+  // src/ui/menus/misc/garden-view.ts
+  var HALF_GAP_PX = 12;
+  var CELL_ICON_PX = 30;
+  function nameOf(record, id, ...paths) {
+    const entry = record?.[id];
+    for (const path of paths) {
+      let value = entry;
+      for (const key2 of path) value = value?.[key2];
+      if (typeof value === "string" && value) return value;
+    }
+    return id;
+  }
+  function readContent(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const obj = raw;
+    const type = String(obj.objectType ?? "");
+    if (type === "plant" && typeof obj.species === "string") {
+      const id = obj.species;
+      return { kind: "plant", id, name: nameOf(plantCatalog2, id, ["crop", "name"], ["plant", "name"], ["seed", "name"]) };
+    }
+    if (type === "egg") {
+      const id = String(obj.eggId ?? obj.id ?? "");
+      if (!id) return null;
+      return { kind: "egg", id, name: nameOf(eggCatalog2, id, ["name"]) };
+    }
+    if (type === "decor" && typeof obj.decorId === "string") {
+      const id = obj.decorId;
+      return { kind: "decor", id, name: nameOf(decorCatalog2, id, ["name"]) };
+    }
+    return null;
+  }
+  function contentIcon(content, sizePx) {
+    if (content.kind === "plant") return speciesIcon(content.id, sizePx);
+    if (content.kind === "egg") return plantItemIcon({ kind: "egg", id: content.id, name: content.name }, sizePx);
+    const box = document.createElement("div");
+    css2(box, { width: `${sizePx}px`, height: `${sizePx}px`, display: "flex", alignItems: "center", justifyContent: "center" });
+    attachSpriteIcon(box, ["decor"], [content.id, content.name.replace(/\s+/g, "")], sizePx, "garden-view");
+    return box;
+  }
+  function openGardenView(host) {
+    let unsubscribe3 = null;
+    let disposed = false;
+    const modal = openModal2({
+      host,
+      title: "Garden view",
+      widthPx: 960,
+      maxHeightPx: 680,
+      onClose: () => {
+        disposed = true;
+        try {
+          unsubscribe3?.();
+        } catch {
+        }
+      }
+    });
+    const toolbar = document.createElement("div");
+    css2(toolbar, { display: "flex", alignItems: "center", gap: "10px" });
+    const search2 = textField("Find a plant\u2026");
+    css2(search2, { flex: "1" });
+    const summary = document.createElement("div");
+    css2(summary, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap" });
+    toolbar.append(search2, summary);
+    const grid = document.createElement("div");
+    css2(grid, {
+      display: "grid",
+      gridTemplateColumns: `repeat(${GARDEN_COLS / 2}, 1fr) ${HALF_GAP_PX}px repeat(${GARDEN_COLS / 2}, 1fr)`,
+      gridTemplateRows: `repeat(${GARDEN_ROWS}, 1fr)`,
+      gap: "2px",
+      width: "100%",
+      aspectRatio: `${GARDEN_COLS + 0.6} / ${GARDEN_ROWS}`,
+      padding: "6px",
+      borderRadius: "12px",
+      border: `1px solid ${BORDER}`,
+      background: "rgba(0,0,0,0.28)",
+      boxSizing: "border-box"
+    });
+    const hint = document.createElement("div");
+    css2(hint, { fontSize: "10.5px", color: TEXT_DIM, lineHeight: "1.45" });
+    hint.textContent = "Every tile gets the same space here, so nothing hides behind a taller plant. Hover a tile for its name.";
+    modal.body.append(toolbar, grid, hint);
+    const cells = /* @__PURE__ */ new Map();
+    for (let row = 0; row < GARDEN_ROWS; row++) {
+      for (let col = 0; col < GARDEN_COLS; col++) {
+        if (col === GARDEN_COLS / 2) {
+          const spacer2 = document.createElement("div");
+          css2(spacer2, { pointerEvents: "none" });
+          grid.append(spacer2);
+        }
+        const el2 = document.createElement("div");
+        css2(el2, {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: "4px",
+          border: "1px solid transparent",
+          minWidth: "0",
+          minHeight: "0",
+          overflow: "hidden",
+          transition: "opacity 90ms ease, background 90ms ease"
+        });
+        const tileIndex = row * GARDEN_COLS + col;
+        cells.set(tileIndex, { el: el2, shown: null, content: null });
+        grid.append(el2);
+      }
+    }
+    let owned = /* @__PURE__ */ new Set();
+    let tileObjects = {};
+    function matches(content, query) {
+      if (!query) return true;
+      if (!content) return false;
+      return content.name.toLowerCase().includes(query) || content.id.toLowerCase().includes(query);
+    }
+    function applyFilter() {
+      const query = search2.value.trim().toLowerCase();
+      let hits = 0;
+      for (const [tileIndex, cell] of cells) {
+        if (!owned.has(tileIndex)) continue;
+        const hit = !!query && matches(cell.content, query);
+        if (hit) hits++;
+        css2(cell.el, {
+          opacity: !query || hit ? "1" : "0.25",
+          borderColor: hit ? TEAL : cell.content ? TEAL_BORDER : BORDER
+        });
+      }
+      const filled = [...cells.entries()].filter(([index, cell]) => owned.has(index) && cell.content).length;
+      summary.textContent = query ? `${hits} match${hits === 1 ? "" : "es"}` : `${filled} / ${owned.size} tiles used`;
+    }
+    function render() {
+      for (let tileIndex = 0; tileIndex < GARDEN_TILE_COUNT; tileIndex++) {
+        const cell = cells.get(tileIndex);
+        if (!cell) continue;
+        const content = owned.has(tileIndex) ? readContent(tileObjects[String(tileIndex)]) : null;
+        const key2 = !owned.has(tileIndex) ? "absent" : content ? `${content.kind}:${content.id}` : "free";
+        cell.content = content;
+        if (key2 === cell.shown) continue;
+        cell.shown = key2;
+        cell.el.replaceChildren();
+        if (key2 === "absent") {
+          css2(cell.el, { background: "transparent", borderColor: "transparent" });
+          cell.el.title = "";
+          continue;
+        }
+        if (!content) {
+          css2(cell.el, { background: "rgba(255,255,255,0.05)", borderColor: BORDER });
+          cell.el.title = "Empty";
+          continue;
+        }
+        css2(cell.el, { background: TEAL_DIM, borderColor: TEAL_BORDER });
+        cell.el.title = content.kind === "plant" ? content.name : `${content.name} (${content.kind})`;
+        const icon = contentIcon(content, CELL_ICON_PX);
+        css2(icon, { pointerEvents: "none", maxWidth: "100%", maxHeight: "100%" });
+        cell.el.append(icon);
+      }
+      applyFilter();
+    }
+    search2.addEventListener("input", applyFilter);
+    void (async () => {
+      try {
+        owned = new Set(await readOwnedTiles());
+      } catch {
+        owned = new Set(Array.from({ length: GARDEN_TILE_COUNT }, (_, index) => index));
+      }
+      if (disposed) return;
+      try {
+        const unsub = await Atoms.data.gardenTileObjects.onChangeNow((next) => {
+          tileObjects = next && typeof next === "object" ? next : {};
+          render();
+        });
+        if (disposed) unsub?.();
+        else unsubscribe3 = unsub;
+      } catch {
+        render();
+      }
+    })();
+    search2.focus();
   }
 
   // src/services/deleterSources.ts
@@ -50368,7 +52235,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     );
     return card4.root;
   }
-  function buildDisplaySection() {
+  function buildDisplaySection(modalHost) {
     const card4 = section(
       "display",
       "\u{1F4B0}",
@@ -50376,11 +52243,17 @@ Restore figures are averages; unlucky streaks do worse.`;
       "What the mod adds on top of the game's own screens."
     );
     const priceToggle = toggle(readShowCropPrice(), (on) => writeShowCropPrice(on));
+    const gardenViewButton = button("Open", "accent", () => openGardenView(modalHost()));
     card4.body.append(
       settingRow(
         "Crop price",
         "Shows a crop's sell price in its tooltip.",
         priceToggle
+      ).row,
+      settingRow(
+        "Garden view",
+        "Your whole garden as a flat grid, so no plant hides behind another.",
+        gardenViewButton
       ).row
     );
     return card4.root;
@@ -50549,7 +52422,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       panelHeader(),
       buildAutoRecoSection(),
       player2.root,
-      buildDisplaySection(),
+      buildDisplaySection(modalHost),
       buildInventoryGuardSection(),
       buildStorageSection(),
       seedDeleterSection.root,
@@ -55624,1277 +57497,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     return state4.wanderTarget;
   }
 
-  // src/services/companion/buildings.ts
-  function matchBuildingName(names, required, alternatives) {
-    const wanted = required.map((word) => word.toLowerCase());
-    const either = alternatives.map((word) => word.toLowerCase());
-    for (const name of names) {
-      const key2 = name.toLowerCase().replace(/[^a-z]/g, "");
-      if (!wanted.every((word) => key2.includes(word))) continue;
-      if (either.length > 0 && !either.some((word) => key2.includes(word))) continue;
-      return name;
-    }
-    return null;
-  }
-
-  // src/services/companion/map.ts
-  var mapAtom = makeAtom("mapAtom");
-  function toSet(source) {
-    if (!source) return /* @__PURE__ */ new Set();
-    if (source instanceof Set) return source;
-    try {
-      return new Set(source);
-    } catch {
-      return /* @__PURE__ */ new Set();
-    }
-  }
-  function buildCompanionMap(raw) {
-    if (!raw || !Number.isFinite(raw.cols) || !Number.isFinite(raw.rows)) return null;
-    const cols = Number(raw.cols);
-    const rows = Number(raw.rows);
-    if (cols <= 0 || rows <= 0) return null;
-    const blocked = toSet(raw.collisionTiles);
-    for (const region of raw.conditionalCollisionRegions ?? []) {
-      for (const tile of toSet(region?.tiles)) blocked.add(tile);
-    }
-    const npcSpawns = raw.npcSpawns ?? {};
-    const locations = raw.locations ?? {};
-    const dirtBySlot = raw.userSlotIdxAndDirtTileIdxToGlobalTileIdx ?? [];
-    const boardwalkBySlot = raw.userSlotIdxAndBoardwalkTileIdxToGlobalTileIdx ?? [];
-    return {
-      cols,
-      rows,
-      toIndex: (x, y) => y * cols + x,
-      toXY: (index) => ({ x: index % cols, y: Math.floor(index / cols) }),
-      isWalkable(x, y) {
-        if (!Number.isInteger(x) || !Number.isInteger(y)) return false;
-        if (x < 0 || y < 0 || x >= cols || y >= rows) return false;
-        return !blocked.has(y * cols + x);
-      },
-      npcSpawnLayers: Object.keys(npcSpawns),
-      npcSpawnTile(spawnLayer) {
-        const tile = npcSpawns[spawnLayer];
-        return Number.isFinite(tile) ? Number(tile) : null;
-      },
-      buildingNames: Object.keys(locations),
-      buildingActivationTiles(name) {
-        const tiles = locations[name]?.activationTilesIdxs;
-        return Array.isArray(tiles) ? tiles.filter((t) => Number.isInteger(t)) : [];
-      },
-      findBuilding(required, alternatives) {
-        return matchBuildingName(Object.keys(locations), required, alternatives);
-      },
-      gardenTilesForSlot(userSlotIdx) {
-        if (!Number.isInteger(userSlotIdx) || userSlotIdx < 0) return [];
-        const dirt = dirtBySlot[userSlotIdx];
-        const boardwalk = boardwalkBySlot[userSlotIdx];
-        const tiles = /* @__PURE__ */ new Set();
-        for (const tile of Array.isArray(dirt) ? dirt : []) tiles.add(tile);
-        for (const tile of Array.isArray(boardwalk) ? boardwalk : []) tiles.add(tile);
-        return [...tiles];
-      },
-      gardenTileToGlobal(userSlotIdx, dirtTileIdx) {
-        if (!Number.isInteger(userSlotIdx) || userSlotIdx < 0) return null;
-        if (!Number.isInteger(dirtTileIdx) || dirtTileIdx < 0) return null;
-        const dirt = dirtBySlot[userSlotIdx];
-        if (!Array.isArray(dirt)) return null;
-        const global = dirt[dirtTileIdx];
-        return Number.isInteger(global) ? Number(global) : null;
-      },
-      dirtTileCount(userSlotIdx) {
-        if (!Number.isInteger(userSlotIdx) || userSlotIdx < 0) return 0;
-        const dirt = dirtBySlot[userSlotIdx];
-        return Array.isArray(dirt) ? dirt.length : 0;
-      }
-    };
-  }
-  async function readCompanionMap() {
-    try {
-      return buildCompanionMap(await mapAtom.get());
-    } catch {
-      return null;
-    }
-  }
-  async function onMapChange(cb) {
-    try {
-      return await mapAtom.onChange((raw) => cb(buildCompanionMap(raw)));
-    } catch {
-      return () => {
-      };
-    }
-  }
-
-  // src/services/companion/emoteTypes.ts
-  var EmoteType = {
-    Idle: -1,
-    Clapping: 0,
-    Laughing: 1,
-    Angered: 2,
-    Crying: 3,
-    Questioning: 4,
-    Love: 5
-  };
-  var ENTRY_LEAD_MS = 6e4;
-  function companionEmoteEntry(playerId2, emote, now2) {
-    return { kind: "emote", playerId: playerId2, emoteType: emote, lastTimestampMs: now2 + ENTRY_LEAD_MS };
-  }
-  function mergeEmoteSource(real, fake) {
-    const base = real && typeof real === "object" ? real : {};
-    const entries = Array.isArray(base.entries) ? base.entries : [];
-    const ours = Array.isArray(fake?.entries) ? fake.entries : [];
-    return { ...base, entries: ours.length ? [...entries, ...ours] : entries };
-  }
-  var NPC_TALKING_MS = 3e3;
-  var TALKING_MARGIN_MS = 150;
-  function cutTalking(avatarSystem2, playerId2) {
-    const system = avatarSystem2;
-    if (!system || typeof system.views?.get !== "function") return false;
-    const view = system.views.get(playerId2);
-    if (!view) return false;
-    try {
-      if (typeof system.stopNpcTalking === "function") {
-        system.stopNpcTalking(playerId2, view);
-        return true;
-      }
-      if (typeof view.setTalking === "function") {
-        view.setTalking(false);
-        return true;
-      }
-    } catch {
-    }
-    return false;
-  }
-  function emoteStartDelay(lastSpokeAt2, now2, canCutTalking = false) {
-    if (canCutTalking) return 0;
-    if (lastSpokeAt2 === null) return 0;
-    return Math.max(0, lastSpokeAt2 + NPC_TALKING_MS + TALKING_MARGIN_MS - now2);
-  }
-
-  // src/services/companion/reactions.ts
-  function pickOne(options, random) {
-    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
-  }
-  var fmt = (n) => Math.round(n).toLocaleString("en-US");
-  var MILESTONES = Array.from({ length: 14 }, (_, i) => 10 ** (i + 2));
-  function crossedMilestone(prev, next) {
-    if (!Number.isFinite(prev) || !Number.isFinite(next) || next <= prev) return null;
-    let crossed = null;
-    for (const m of MILESTONES) {
-      if (prev < m && next >= m) crossed = m;
-    }
-    return crossed;
-  }
-  function formatMilestone(n) {
-    const units = [
-      [1e15, "quadrillion"],
-      [1e12, "trillion"],
-      [1e9, "billion"],
-      [1e6, "million"]
-    ];
-    for (const [size, word] of units) {
-      if (n >= size) return `${fmt(n / size)} ${word}`;
-    }
-    return fmt(n);
-  }
-  var sumHatched = (s, key2) => {
-    let total = 0;
-    for (const counts of Object.values(s?.pets?.hatchedByType ?? {})) {
-      if (!counts) continue;
-      total += key2 ? Number(counts[key2]) || 0 : (Number(counts.normal) || 0) + (Number(counts.gold) || 0) + (Number(counts.rainbow) || 0);
-    }
-    return total;
-  };
-  var sumAbilityTriggers = (s) => {
-    let total = 0;
-    for (const stat of Object.values(s?.abilities ?? {})) total += Number(stat?.triggers) || 0;
-    return total;
-  };
-  var num = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
-  var STAT_DEFS = [
-    {
-      id: "harvested",
-      read: (s) => num(s?.garden?.totalHarvested),
-      lines: [
-        (n) => `That's ${n} crops harvested! Incredible.`,
-        (n) => `${n} harvests! You're a natural.`,
-        (n) => `Crop number ${n}! We should celebrate.`
-      ]
-    },
-    {
-      id: "planted",
-      read: (s) => num(s?.garden?.totalPlanted),
-      lines: [
-        (n) => `${n} seeds planted! This garden keeps growing.`,
-        (n) => `That's seed number ${n}. Green thumb confirmed.`
-      ]
-    },
-    {
-      id: "watered",
-      read: (s) => num(s?.garden?.watercanUsed),
-      lines: [(n) => `${n} waterings! You really care about these plants.`]
-    },
-    {
-      id: "cropsSold",
-      read: (s) => num(s?.shops?.cropsSoldCount),
-      lines: [
-        (n) => `${n} crops sold! The shop loves you.`,
-        (n) => `That's ${n} crops sold. Business is booming.`
-      ]
-    },
-    {
-      id: "coins",
-      read: (s) => num(s?.shops?.cropsSoldValue) + num(s?.shops?.petsSoldValue),
-      lines: [
-        (n) => `You've earned ${n} coins from sales! So rich.`,
-        (n) => `${n} coins earned. Buy me something nice?`
-      ]
-    },
-    {
-      id: "seedsBought",
-      read: (s) => num(s?.shops?.seedsBought),
-      lines: [(n) => `${n} seeds bought! The shopkeeper knows your name by now.`]
-    },
-    {
-      id: "petsSold",
-      read: (s) => num(s?.shops?.petsSoldCount),
-      lines: [(n) => `${n} pets sold. Hope they found good homes!`]
-    },
-    {
-      id: "hatched",
-      read: (s) => sumHatched(s),
-      lines: [
-        (n) => `${n} pets hatched! That's a whole zoo.`,
-        (n) => `Pet number ${n}! Welcome to the family.`
-      ]
-    },
-    {
-      id: "abilities",
-      read: (s) => sumAbilityTriggers(s),
-      lines: [
-        (n) => `Your pets have used their abilities ${n} times!`,
-        (n) => `${n} pet abilities triggered. Hard workers!`
-      ]
-    }
-  ];
-  function statReactions(prev, next, random) {
-    const out = [];
-    for (const def of STAT_DEFS) {
-      const m = crossedMilestone(def.read(prev), def.read(next));
-      if (m === null) continue;
-      out.push({
-        key: `milestone:${def.id}`,
-        message: pickOne(def.lines, random)(formatMilestone(m)),
-        emote: m >= 1e6 ? EmoteType.Love : EmoteType.Clapping,
-        priority: "high"
-      });
-    }
-    if (sumHatched(next, "rainbow") > sumHatched(prev, "rainbow")) {
-      out.push({
-        key: "hatch:rainbow",
-        message: pickOne(["A RAINBOW pet?! No way!", "Rainbow! I've never seen one up close!", "Look at those colours! A Rainbow pet!"], random),
-        emote: EmoteType.Love,
-        priority: "high"
-      });
-    } else if (sumHatched(next, "gold") > sumHatched(prev, "gold")) {
-      out.push({
-        key: "hatch:gold",
-        message: pickOne(["A Gold pet! Look at it shine!", "Gold! That one's a keeper.", "Shiny! A Gold pet!"], random),
-        emote: EmoteType.Love,
-        priority: "high"
-      });
-    } else if (sumHatched(next) > sumHatched(prev)) {
-      out.push({
-        key: "hatch:normal",
-        message: pickOne(["Welcome to the family, little one!", "A new friend! Hi there!", "Aww, look at the new pet."], random),
-        emote: EmoteType.Clapping,
-        priority: "low"
-      });
-    }
-    const earned = num(next?.shops?.cropsSoldValue) - num(prev?.shops?.cropsSoldValue);
-    if (earned > 0) {
-      const coins = fmt(earned);
-      out.push({
-        key: "sale:crops",
-        message: pickOne(
-          [`Ka-ching! +${coins} coins.`, `Sold! ${coins} coins richer.`, `Nice sale, ${coins} coins!`, `${coins} coins in the bank. Love it.`],
-          random
-        ),
-        emote: EmoteType.Clapping,
-        priority: "low"
-      });
-    }
-    return out;
-  }
-  var WEATHER_EMOTES = {
-    Rain: EmoteType.Laughing,
-    Frost: EmoteType.Clapping,
-    Thunderstorm: EmoteType.Crying,
-    Dawn: EmoteType.Love,
-    AmberMoon: EmoteType.Questioning
-  };
-  function weatherEmote(weatherId) {
-    return WEATHER_EMOTES[weatherId] ?? EmoteType.Questioning;
-  }
-  function weatherChangeReaction(prevId, nextId, prevName, startLine, random) {
-    if (prevId === nextId) return null;
-    if (nextId) {
-      return { key: `weather:${nextId}`, message: startLine, emote: weatherEmote(nextId), priority: "high" };
-    }
-    if (!prevId) return null;
-    return {
-      key: "weather:end",
-      message: pickOne([`The ${prevName} is over. Sunshine's back!`, `And just like that, the ${prevName} is gone.`, `Bye bye, ${prevName}.`], random),
-      emote: null,
-      priority: "low"
-    };
-  }
-  function abilityReaction(event, random) {
-    const who = event.name?.trim() || (event.species ? `your ${event.species}` : "your pet");
-    const Who = who.charAt(0).toUpperCase() + who.slice(1);
-    return {
-      key: "ability",
-      message: pickOne(
-        [`${Who} just used ${event.abilityName}!`, `Go ${who}! ${event.abilityName}!`, `Did you see that? ${Who} used ${event.abilityName}.`],
-        random
-      ),
-      emote: EmoteType.Clapping,
-      priority: "low"
-    };
-  }
-  function eggsReadyReaction(count, random) {
-    if (count <= 0) return null;
-    return {
-      key: "egg",
-      message: count === 1 ? pickOne(["An egg is ready to hatch!", "Ooh, one of your eggs is ready!", "Something's wiggling in that egg. It's ready!"], random) : pickOne([`${count} eggs are ready to hatch!`, `${count} eggs ready! Hatching time?`], random),
-      emote: EmoteType.Clapping,
-      priority: "high"
-    };
-  }
-  function shopReaction(names, random) {
-    const list = names.filter((n) => typeof n === "string" && n.trim());
-    if (list.length === 0) return null;
-    const what = list.length === 1 ? list[0] : list.length === 2 ? `${list[0]} and ${list[1]}` : `${list[0]}, ${list[1]} and more`;
-    const isAre = list.length === 1 ? "is" : "are";
-    return {
-      key: "shop",
-      message: pickOne([`${what} ${isAre} in the shop! Go go go!`, `Ooh, ${what} just showed up in the shop!`, `Quick, ${what} ${isAre} in stock!`], random),
-      emote: EmoteType.Clapping,
-      priority: "high"
-    };
-  }
-  var SHOP_ID = {
-    seed: ["Seed", "species"],
-    egg: ["Egg", "eggId"],
-    tool: ["Tool", "toolId"],
-    decor: ["Decor", "decorId"]
-  };
-  function restockedFollowed(prev, next, isFollowed) {
-    if (!prev || !next) return [];
-    const out = [];
-    for (const kind of Object.keys(SHOP_ID)) {
-      const before = Number(prev[kind]?.secondsUntilRestock) || 0;
-      const after = Number(next[kind]?.secondsUntilRestock) || 0;
-      if (after <= before) continue;
-      const inventory = next[kind]?.inventory;
-      if (!Array.isArray(inventory)) continue;
-      const [prefix, field] = SHOP_ID[kind];
-      for (const item of inventory) {
-        const key2 = item?.[field];
-        const stock = Number(item?.initialStock);
-        if (typeof key2 !== "string" || !key2 || !(stock > 0)) continue;
-        const id = `${prefix}:${key2}`;
-        if (isFollowed(id)) out.push(id);
-      }
-    }
-    return out;
-  }
-  function rareCropReaction(crops, random) {
-    if (crops.length === 0) return null;
-    const first = crops[0];
-    const message = crops.length === 1 ? pickOne([`A ${first.mutation} ${first.species}! Look at that!`, `Whoa, a ${first.mutation} ${first.species} just showed up!`, `${first.mutation}! Your ${first.species} is special.`], random) : pickOne([`${crops.length} rare crops just appeared! Look!`, `Whoa, ${crops.length} special crops at once!`], random);
-    return { key: "rarecrop", message, emote: EmoteType.Love, priority: "high" };
-  }
-  var DROUGHT_STEPS = {
-    gold: [25, 50, 100, 200, 400],
-    rainbow: [100, 250, 500, 1e3, 2e3]
-  };
-  var RELIEF_MIN = { gold: 25, rainbow: 100 };
-  var RARITY_LABEL = { gold: "Gold", rainbow: "Rainbow" };
-  function badLuckReactions(prev, next, eggName3, random) {
-    const out = [];
-    for (const [eggId, after] of Object.entries(next ?? {})) {
-      const before = prev?.[eggId];
-      if (!before || !after) continue;
-      const egg = eggName3(eggId);
-      for (const kind of ["rainbow", "gold"]) {
-        const was = Number(before[kind]) || 0;
-        const now2 = Number(after[kind]) || 0;
-        const label2 = RARITY_LABEL[kind];
-        if (now2 < was) {
-          if (was < RELIEF_MIN[kind]) continue;
-          const tries = was + 1;
-          out.push({
-            key: `hatch:${kind}`,
-            message: pickOne(
-              [`FINALLY! A ${label2} pet after ${tries} tries!`, `${tries} hatches of waiting, and there it is. ${label2}!`, `I told you it was coming! ${label2}, at last!`],
-              random
-            ),
-            emote: EmoteType.Love,
-            priority: "high",
-            weight: 1
-          });
-          continue;
-        }
-        let step = null;
-        for (const s of DROUGHT_STEPS[kind]) if (was < s && now2 >= s) step = s;
-        if (step === null) continue;
-        out.push({
-          key: `badluck:${kind}`,
-          message: pickOne(
-            [
-              `${step} ${egg} hatches without a ${label2}... it's coming, I can feel it.`,
-              `Still no ${label2} after ${step} tries. The game owes you one.`,
-              `${step} in a row with no ${label2}. Hang in there, boss.`
-            ],
-            random
-          ),
-          emote: EmoteType.Crying,
-          priority: "high"
-        });
-      }
-    }
-    return out;
-  }
-  function newRareCrops(prev, next, rare) {
-    if (!prev || typeof prev !== "object" || !next || typeof next !== "object" || rare.size === 0) return [];
-    const seen = /* @__PURE__ */ new Map();
-    const index = (tiles, visit) => {
-      for (const [tileIdx, obj] of Object.entries(tiles)) {
-        const o = obj;
-        if (!o || o.objectType !== "plant" || !Array.isArray(o.slots)) continue;
-        o.slots.forEach((raw, i) => {
-          const s = raw;
-          if (!s) return;
-          const muts = Array.isArray(s.mutations) ? s.mutations.filter((m) => typeof m === "string") : [];
-          const species = typeof s.species === "string" ? s.species : typeof o.species === "string" ? o.species : "crop";
-          visit(`${tileIdx}|${s.slotId ?? i}|${s.startTime ?? ""}`, species, muts);
-        });
-      }
-    };
-    index(prev, (id, _species, muts) => seen.set(id, new Set(muts)));
-    const out = [];
-    index(next, (id, species, muts) => {
-      const before = seen.get(id) ?? /* @__PURE__ */ new Set();
-      for (const m of muts) {
-        if (rare.has(m) && !before.has(m)) out.push({ mutation: m, species });
-      }
-    });
-    return out;
-  }
-  function newlyReadyEggs(tiles, now2, announced) {
-    if (!tiles || typeof tiles !== "object") return [];
-    const out = [];
-    for (const [tileIdx, obj] of Object.entries(tiles)) {
-      const o = obj;
-      if (!o || o.objectType !== "egg") continue;
-      const matured = Number(o.maturedAt);
-      if (!Number.isFinite(matured) || matured <= 0 || matured > now2) continue;
-      const key2 = `${tileIdx}|${o.plantedAt ?? ""}`;
-      if (!announced.has(key2)) out.push(key2);
-    }
-    return out;
-  }
-  function dayPart(hour) {
-    if (hour < 5) return "night";
-    if (hour < 8) return "early";
-    if (hour < 12) return "morning";
-    if (hour < 17) return "afternoon";
-    if (hour < 22) return "evening";
-    return "late";
-  }
-  var DAY_PART_LINES = {
-    night: [
-      "Shouldn't you be asleep?",
-      "The garden's so quiet at night.",
-      "Night owl, huh?",
-      "I'm not tired. You're tired.",
-      "Midnight snacks count as gardening, right?"
-    ],
-    early: ["Early bird gets the best seeds.", "Morning already? I barely slept.", "Nothing beats an early start."],
-    morning: ["Coffee first, crops second.", "Fresh morning, fresh sprouts.", "Morning, boss! Ready for the day?"],
-    afternoon: ["Lunch break in the garden? Good call.", "Nice afternoon for it.", "Afternoon sun, happy plants."],
-    evening: ["Evening already? Time flies in here.", "Love the evening light on the garden.", "One more harvest before dinner?"],
-    late: ["It's getting late, boss.", "Late night gardening session?", "Don't stay up too late, okay?"]
-  };
-  function dayPartLines(hour) {
-    return DAY_PART_LINES[dayPart(hour)];
-  }
-  function holidayOf(date) {
-    const m = date.getMonth() + 1;
-    const d = date.getDate();
-    if (m === 1 && d === 1) return "newyear";
-    if (m === 2 && d === 14) return "valentine";
-    if (m === 4 && d === 1) return "aprilfools";
-    if (m === 10 && d === 31) return "halloween";
-    if (m === 12 && (d === 24 || d === 25)) return "christmas";
-    if (m === 12 && d === 31) return "newyearseve";
-    return null;
-  }
-  var HOLIDAY_LINES = {
-    newyear: ["Happy New Year! New year, new crops.", "First harvest of the year, let's make it count!"],
-    valentine: ["Happy Valentine's Day! I got you a sprout.", "Roses are red, crops are green, best gardener I've ever seen."],
-    aprilfools: ["Did you know crops can talk? April fools!", "I planted a joke. It hasn't grown yet."],
-    halloween: ["Happy Halloween! Any spooky crops tonight?", "Boo! Did I scare you?"],
-    christmas: ["Merry Christmas! Hope Santa brings you rare seeds.", "Best present ever: a full garden."],
-    newyearseve: ["Last day of the year! Let's end it with a big harvest.", "Any resolutions? Mine is more gardening."]
-  };
-  var HOLIDAY_GREETINGS = {
-    newyear: ["Happy New Year, boss!", "Happy New Year! Here's to a great harvest."],
-    valentine: ["Happy Valentine's Day!", "Aww, spending Valentine's Day with me?"],
-    aprilfools: ["Welcome back! Your garden turned into a desert. April fools!", "Happy April Fools! Don't trust anything I say today."],
-    halloween: ["Happy Halloween! Trick or treat?", "Spooky season is here! Happy Halloween!"],
-    christmas: ["Merry Christmas!", "Merry Christmas, boss! Thanks for visiting me."],
-    newyearseve: ["Last day of the year! Glad you're here.", "Happy New Year's Eve!"]
-  };
-  var WEEKEND_LINES = ["Weekend gardening, the best kind.", "No work today? Perfect."];
-  var SUNDAY_LINES = ["Lazy Sunday in the garden."];
-  function timeLines(date) {
-    const out = [...dayPartLines(date.getHours())];
-    const day = date.getDay();
-    if (day === 0 || day === 6) out.push(...WEEKEND_LINES);
-    if (day === 0) out.push(...SUNDAY_LINES);
-    const holiday = holidayOf(date);
-    if (holiday) out.push(...HOLIDAY_LINES[holiday]);
-    return out;
-  }
-  var TIME_LINE_EMOTES = {
-    "Shouldn't you be asleep?": EmoteType.Questioning,
-    "Night owl, huh?": EmoteType.Laughing,
-    "I'm not tired. You're tired.": EmoteType.Laughing,
-    "Midnight snacks count as gardening, right?": EmoteType.Questioning,
-    "Early bird gets the best seeds.": EmoteType.Clapping,
-    "Morning already? I barely slept.": EmoteType.Crying,
-    "Morning, boss! Ready for the day?": EmoteType.Questioning,
-    "Lunch break in the garden? Good call.": EmoteType.Clapping,
-    "Love the evening light on the garden.": EmoteType.Love,
-    "One more harvest before dinner?": EmoteType.Questioning,
-    "Late night gardening session?": EmoteType.Questioning,
-    "Weekend gardening, the best kind.": EmoteType.Love,
-    "No work today? Perfect.": EmoteType.Clapping,
-    "Lazy Sunday in the garden.": EmoteType.Love,
-    "Happy New Year! New year, new crops.": EmoteType.Clapping,
-    "First harvest of the year, let's make it count!": EmoteType.Clapping,
-    "Happy Valentine's Day! I got you a sprout.": EmoteType.Love,
-    "Roses are red, crops are green, best gardener I've ever seen.": EmoteType.Love,
-    "Did you know crops can talk? April fools!": EmoteType.Laughing,
-    "I planted a joke. It hasn't grown yet.": EmoteType.Laughing,
-    "Happy Halloween! Any spooky crops tonight?": EmoteType.Questioning,
-    "Boo! Did I scare you?": EmoteType.Laughing,
-    "Merry Christmas! Hope Santa brings you rare seeds.": EmoteType.Love,
-    "Best present ever: a full garden.": EmoteType.Love,
-    "Last day of the year! Let's end it with a big harvest.": EmoteType.Clapping,
-    "Any resolutions? Mine is more gardening.": EmoteType.Questioning
-  };
-  var SESSION_GAP_MS = 20 * 6e4;
-  function resumeSession(stored, now2) {
-    const s = stored;
-    const lastSeenAt = Number(s?.lastSeenAt);
-    const startedAt = Number(s?.startedAt);
-    const valid = Number.isFinite(lastSeenAt) && lastSeenAt > 0 && Number.isFinite(startedAt) && startedAt > 0 && startedAt <= now2;
-    const storedMet = Number(s?.firstMetAt);
-    const firstMetAt = Number.isFinite(storedMet) && storedMet > 0 && storedMet <= now2 ? storedMet : now2;
-    const celebratedDays = Math.max(0, Math.floor(Number(s?.celebratedDays) || 0));
-    if (valid && now2 - lastSeenAt < SESSION_GAP_MS) {
-      const announcedHours = Math.max(0, Math.floor(Number(s?.announcedHours) || 0));
-      return { session: { startedAt, lastSeenAt: now2, announcedHours, firstMetAt, celebratedDays }, greeting: null };
-    }
-    return {
-      session: { startedAt: now2, lastSeenAt: now2, announcedHours: 0, firstMetAt, celebratedDays },
-      greeting: { first: !valid, awayMs: valid ? now2 - lastSeenAt : 0 }
-    };
-  }
-  var DAY_MS = 24 * 36e5;
-  function greetingReaction(greeting, hour, random, holiday = null) {
-    let lines;
-    if (greeting.first) {
-      lines = ["Hi there! I'll be sticking around.", "Nice to meet you! Let's grow something great."];
-    } else if (greeting.awayMs >= 3 * DAY_MS) {
-      lines = ["Where have you been? I missed you!", "You're back! It's been ages.", "Finally! I was starting to talk to the plants."];
-    } else if (holiday) {
-      lines = HOLIDAY_GREETINGS[holiday];
-    } else if (greeting.awayMs >= DAY_MS) {
-      lines = ["Welcome back! The garden missed you.", "Hey, you're back! Good to see you."];
-    } else {
-      const byPart = {
-        night: ["Hey, night owl! Couldn't sleep?", "Gardening at this hour? I like your style."],
-        early: ["Up with the sun, I see!", "Good morning! You're up early."],
-        morning: ["Good morning! Let's grow something.", "Morning! Ready when you are."],
-        afternoon: ["Good afternoon! Ready to garden?", "Hey! Perfect timing, the plants were asking for you."],
-        evening: ["Good evening! Glad you're here.", "Evening! Let's make it a good one."],
-        late: ["Evening, boss. Late session tonight?", "Hey! Quick one before bed?"]
-      };
-      lines = byPart[dayPart(hour)];
-    }
-    return { key: "session:greeting", message: pickOne(lines, random), emote: EmoteType.Love, priority: "high" };
-  }
-  function anniversarySteps(days) {
-    const steps = [7, 30, 100];
-    for (let year = 1; year * 365 <= days; year++) steps.push(year * 365);
-    return steps;
-  }
-  function anniversaryReaction(firstMetAt, now2, celebratedDays, random) {
-    const days = Math.floor((now2 - firstMetAt) / DAY_MS);
-    let due = null;
-    for (const step of anniversarySteps(days)) if (step <= days && step > celebratedDays) due = step;
-    if (due === null) return { reaction: null, celebratedDays };
-    let lines;
-    if (due === 7) lines = ["One week together already! Thanks for having me.", "A whole week of gardening together!"];
-    else if (due === 30) lines = ["We've been gardening together for a whole month!", "One month together! Time flies."];
-    else if (due === 100) lines = ["100 days together! That's a lot of crops.", "Day 100! Best garden buddy ever."];
-    else {
-      const years = due / 365;
-      lines = years === 1 ? ["Happy anniversary! One year together!", "One year already! Thanks for keeping me around."] : [`Happy anniversary! ${years} years together!`, `${years} years of gardening together. Wow.`];
-    }
-    return {
-      reaction: { key: "anniversary", message: pickOne(lines, random), emote: EmoteType.Love, priority: "high" },
-      celebratedDays: due
-    };
-  }
-  function sessionHours(session2, now2) {
-    return Math.max(0, Math.floor((now2 - session2.startedAt) / 36e5));
-  }
-  function sessionHourReaction(hours, random) {
-    if (hours < 1) return null;
-    let lines;
-    let emote = EmoteType.Clapping;
-    if (hours === 1) {
-      lines = ["We've been at it for an hour already.", "One hour in! Time flies when you're gardening."];
-    } else if (hours === 2) {
-      lines = ["Two hours in! Look at this place.", "Two hours already? Where did the time go?"];
-    } else if (hours < 6) {
-      lines = [`${hours} hours straight. Maybe stretch your legs?`, `${hours} hours! Don't forget to drink some water.`, `${hours} hours already. You're dedicated!`];
-      emote = EmoteType.Questioning;
-    } else {
-      lines = [`${hours} hours?! Are you okay?`, `${hours} hours. I think the plants need a break. And you too.`];
-      emote = EmoteType.Crying;
-    }
-    return { key: `session:hours`, message: pickOne(lines, random), emote, priority: "high" };
-  }
-  function clockReaction(prevHour, hour, sessionMs, random, holiday = null) {
-    if (prevHour === hour) return null;
-    if (hour === 0) {
-      if (holiday) {
-        return { key: "clock:holiday", message: pickOne(HOLIDAY_GREETINGS[holiday], random), emote: EmoteType.Love, priority: "high" };
-      }
-      return {
-        key: "clock:midnight",
-        message: pickOne(["It's midnight! Still going?", "Midnight already. The garden never sleeps, huh?"], random),
-        emote: EmoteType.Questioning,
-        priority: "high"
-      };
-    }
-    if (hour === 6 && sessionMs >= 3 * 36e5) {
-      return {
-        key: "clock:sunrise",
-        message: pickOne(["The sun's coming up. Did we just pull an all-nighter?", "Is that... sunrise? We've been up all night!"], random),
-        emote: EmoteType.Laughing,
-        priority: "high"
-      };
-    }
-    return null;
-  }
-  var REACTION_GAP_MS = 15e3;
-  var REACTION_TTL_MS = {
-    high: 3 * 6e4,
-    low: 1e4
-  };
-  var FAMILY_COOLDOWN_MS = {
-    ability: 5 * 6e4,
-    sale: 6e4,
-    hatch: 6e4,
-    egg: 5 * 6e4,
-    shop: 3e4,
-    rarecrop: 3e4
-  };
-  function initialGateState() {
-    return { lastSpokeAt: 0, mutedUntil: {}, queue: [] };
-  }
-  var familyOf = (key2) => key2.split(":")[0];
-  function offerReaction(state4, reaction, now2) {
-    if (now2 < (state4.mutedUntil[familyOf(reaction.key)] ?? 0)) return state4;
-    const existing = state4.queue.find((q) => q.key === reaction.key);
-    if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state4;
-    const queue = state4.queue.filter((q) => q.key !== reaction.key);
-    queue.push({ ...reaction, at: now2 });
-    return { ...state4, queue };
-  }
-  function takeReaction(state4, now2, busy2) {
-    const queue = state4.queue.filter((q) => now2 - q.at <= REACTION_TTL_MS[q.priority]);
-    const kept = { ...state4, queue };
-    if (busy2 || queue.length === 0 || now2 - state4.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
-    const chosen = queue.find((q) => q.priority === "high") ?? queue[0];
-    const family = familyOf(chosen.key);
-    const { at: _at, ...reaction } = chosen;
-    return {
-      reaction,
-      state: {
-        lastSpokeAt: now2,
-        mutedUntil: { ...state4.mutedUntil, [family]: now2 + (FAMILY_COOLDOWN_MS[family] ?? 0) },
-        // Le reste de la famille qui vient de parler se tait aussi.
-        queue: queue.filter((q) => q !== chosen && (FAMILY_COOLDOWN_MS[family] ? familyOf(q.key) !== family : true))
-      }
-    };
-  }
-
-  // src/services/companion/dialogueLines.ts
-  var LEGACY_DEFAULT_LINES = [
-    "Right behind you, boss.",
-    "Nice patch you've got here.",
-    "Want me to keep an eye on anything?",
-    "I like it here."
-  ];
-  var DEFAULT_CUSTOM_LINES = [
-    ...LEGACY_DEFAULT_LINES,
-    "Lovely day for some gardening.",
-    "I could watch things grow all day. Actually, I do.",
-    "Do the plants talk to you too, or is that just me?",
-    "Careful where you step, something's sprouting.",
-    "I counted the leaves. Lost track at forty.",
-    "One day I'll have a garden of my own.",
-    "Smells like fresh soil. My favourite.",
-    "You've got a green thumb, you know that?",
-    "I'm not lazy, I'm supervising.",
-    "Did that sprout just move?",
-    "If you need a hand, I've got two.",
-    "Water, sun, patience. That's the whole secret.",
-    "I named one of the crops. Don't ask which.",
-    "Some of these are looking really good.",
-    "I'd buy that seed again, honestly.",
-    "Whatever you're doing, keep doing it.",
-    "Is it snack time yet?",
-    "I heard a rumour about a very rare crop.",
-    "The pets seem happy today.",
-    "Big plans for this garden?",
-    "Don't mind me, just enjoying the view.",
-    "I've been practising my whistling. Want to hear?",
-    "You can always count on me.",
-    "Every sprout is a tiny miracle.",
-    "Let me know when it's harvest time.",
-    "What's the rarest thing you've ever grown?",
-    "Right here if you need me.",
-    "I think the bees like you.",
-    "One more row and this place is perfect.",
-    "I'm having a great time, thanks for asking.",
-    "A good mutation is the best kind of surprise.",
-    "Think the weather will change soon?",
-    "Stay hydrated, boss.",
-    "Busy day, huh?",
-    "Who needs a map when you know every tile by heart?",
-    "I'll hold the fort."
-  ];
-  var LINE_EMOTES = {
-    "Nice patch you've got here.": EmoteType.Clapping,
-    "Want me to keep an eye on anything?": EmoteType.Questioning,
-    "I like it here.": EmoteType.Love,
-    "Lovely day for some gardening.": EmoteType.Love,
-    "I could watch things grow all day. Actually, I do.": EmoteType.Laughing,
-    "Do the plants talk to you too, or is that just me?": EmoteType.Questioning,
-    "I counted the leaves. Lost track at forty.": EmoteType.Laughing,
-    "One day I'll have a garden of my own.": EmoteType.Love,
-    "Smells like fresh soil. My favourite.": EmoteType.Love,
-    "You've got a green thumb, you know that?": EmoteType.Clapping,
-    "I'm not lazy, I'm supervising.": EmoteType.Laughing,
-    "Did that sprout just move?": EmoteType.Questioning,
-    "I named one of the crops. Don't ask which.": EmoteType.Laughing,
-    "Some of these are looking really good.": EmoteType.Clapping,
-    "Whatever you're doing, keep doing it.": EmoteType.Clapping,
-    "Is it snack time yet?": EmoteType.Questioning,
-    "Big plans for this garden?": EmoteType.Questioning,
-    "I've been practising my whistling. Want to hear?": EmoteType.Laughing,
-    "Every sprout is a tiny miracle.": EmoteType.Love,
-    "What's the rarest thing you've ever grown?": EmoteType.Questioning,
-    "I think the bees like you.": EmoteType.Laughing,
-    "I'm having a great time, thanks for asking.": EmoteType.Love,
-    "A good mutation is the best kind of surprise.": EmoteType.Clapping,
-    "Think the weather will change soon?": EmoteType.Questioning,
-    "Busy day, huh?": EmoteType.Laughing,
-    ...TIME_LINE_EMOTES
-  };
-  function lineEmote(line) {
-    return LINE_EMOTES[line] ?? null;
-  }
-  var POKE_WINDOW_MS = 1e4;
-  var POKE_THRESHOLD = 5;
-  function pokeLine(talkTimes, now2, random) {
-    const recent = talkTimes.filter((t) => now2 - t <= POKE_WINDOW_MS && t <= now2).length;
-    if (recent < POKE_THRESHOLD) return null;
-    if (recent < 7) {
-      return {
-        message: pickOne2(["Okay okay, I'm listening!", "Yes? I'm right here.", "One at a time, boss!"], random),
-        emote: EmoteType.Laughing
-      };
-    }
-    if (recent < 10) {
-      return {
-        message: pickOne2(["Are you poking me on purpose?", "Is this a game? I like games.", "Hey, that tickles!"], random),
-        emote: EmoteType.Questioning
-      };
-    }
-    return {
-      message: pickOne2(["Stop poking me!", "Okay, I'm ignoring you now.", "I'm going to start charging for this."], random),
-      emote: EmoteType.Angered
-    };
-  }
-  function ripeCropCount(tileObjects, now2) {
-    if (!tileObjects || typeof tileObjects !== "object") return 0;
-    let count = 0;
-    for (const obj of Object.values(tileObjects)) {
-      const slots = obj?.slots;
-      if (!Array.isArray(slots)) continue;
-      for (const slot of slots) {
-        const s = slot;
-        if (!s || s.preserved === true) continue;
-        const end = s.endTime;
-        if (typeof end === "number" && end > 0 && end <= now2) count++;
-      }
-    }
-    return count;
-  }
-  function pickOne2(options, random) {
-    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
-  }
-  var plural = (count, singular, pluralForm) => count === 1 ? singular : pluralForm;
-  function harvestMessage(ready2, random) {
-    const crops = `${ready2} ${plural(ready2, "crop", "crops")}`;
-    const isAre = plural(ready2, "is", "are");
-    return pickOne2(
-      [
-        `${crops} ${isAre} ready to harvest, by the way.`,
-        `Psst, ${crops} ${isAre} ripe and waiting for you.`,
-        `I spotted ${crops} ready to pick.`,
-        `Harvest time! ${crops} ${isAre} good to go.`,
-        `${crops} ${isAre} looking ripe. Just saying.`,
-        `Don't leave them hanging, ${crops} ${isAre} ready.`
-      ],
-      random
-    );
-  }
-  function hungryPetMessage(hungry, random) {
-    const pets = `${hungry} ${plural(hungry, "pet", "pets")}`;
-    const isAre = plural(hungry, "is", "are");
-    return pickOne2(
-      [
-        `${pets} ${isAre} getting hungry.`,
-        `I think ${pets} could use a snack.`,
-        `${pets} ${isAre} giving me the hungry eyes.`,
-        `Someone's tummy is rumbling. ${pets} need${hungry === 1 ? "s" : ""} feeding.`,
-        `Heads up, ${pets} ${isAre} running low on food.`
-      ],
-      random
-    );
-  }
-  function sellMessage(coins, random) {
-    const amount = `${Math.round(coins).toLocaleString("en-US")} coins`;
-    return pickOne2(
-      [
-        `You're carrying ${amount} worth of crops.`,
-        `Your bag's worth ${amount} right now. Shop trip?`,
-        `That's ${amount} of crops in your pockets.`,
-        `Ka-ching! ${amount} worth of crops, ready to sell.`,
-        `You could cash in ${amount} at the shop.`
-      ],
-      random
-    );
-  }
-  var WEATHER_LINES = {
-    Rain: [
-      "It's raining! The crops are loving this.",
-      "Free watering, courtesy of the sky.",
-      "I forgot my umbrella again.",
-      "Listen to that rain. So relaxing.",
-      "Puddle jumping, anyone?",
-      "Rain day. Perfect excuse to stay in the garden."
-    ],
-    Frost: [
-      "Brr, it's snowing! Wrap up warm.",
-      "Snow on the garden. Everything looks so quiet.",
-      "My toes are freezing out here.",
-      "Want to build a snowman after this?",
-      "Careful, it's slippery with all this snow.",
-      "Snowflakes on the leaves. Pretty, isn't it?"
-    ],
-    Thunderstorm: [
-      "Whoa, did you hear that thunder?",
-      "Thunderstorm! Stay away from tall things.",
-      "That lightning made me jump.",
-      "Big storm rolling in. Hold on to your hat.",
-      "I'm not scared of thunder. Much.",
-      "What a storm. The sky's putting on a show."
-    ],
-    Dawn: [
-      "Look at that sunrise.",
-      "Dawn's here. Everything glows.",
-      "Early light is the best light.",
-      "Rise and shine, garden!",
-      "The whole garden looks golden right now.",
-      "I love this time of day."
-    ],
-    AmberMoon: [
-      "The Amber Moon is up. Spooky, right?",
-      "Everything's glowing orange tonight.",
-      "Don't the crops look magical under the Amber Moon?",
-      "An Amber Moon. Doesn't come around often.",
-      "Stay close, strange things happen under the Amber Moon.",
-      "Moonlight like this makes me want to howl."
-    ]
-  };
-  var GENERIC_WEATHER_TEMPLATES = [
-    (name) => `We're getting ${name} right now.`,
-    (name) => `Ooh, ${name}! Good time to be outside.`,
-    (name) => `Looks like ${name} out there.`,
-    (name) => `${name} today. The crops might like that.`,
-    (name) => `Did you notice? ${name} is here.`
-  ];
-  function weatherDisplayName(weatherId, catalog) {
-    const entry = catalog && typeof catalog === "object" ? catalog[weatherId] : void 0;
-    for (const field of ["name", "displayName"]) {
-      const value = entry?.[field];
-      if (typeof value === "string" && value.trim()) return value.trim();
-    }
-    return weatherId.replace(/([a-z])([A-Z])/g, "$1 $2");
-  }
-  function weatherMessage(weatherId, displayName, random) {
-    const own = WEATHER_LINES[weatherId];
-    if (own && own.length > 0) return pickOne2(own, random);
-    return pickOne2(GENERIC_WEATHER_TEMPLATES, random)(displayName);
-  }
-
-  // src/services/companion/chat/harvest.ts
-  function mutationsOf(row) {
-    return row.mutations;
-  }
-  function rowKey(row) {
-    return `${row.tileIndex}:${row.slotId}`;
-  }
-  function selectionSignature(rows) {
-    return rows.map(rowKey).sort().join("|");
-  }
-  function speciesPresent(rows) {
-    return [...new Set(rows.map((row) => row.species))].sort((a, b) => a.localeCompare(b));
-  }
-  function mutationsPresent(rows) {
-    const all = /* @__PURE__ */ new Set();
-    for (const row of rows) for (const mutation of mutationsOf(row)) all.add(mutation);
-    return [...all].sort((a, b) => a.localeCompare(b));
-  }
-  function tally(rows, of) {
-    const counts = /* @__PURE__ */ new Map();
-    for (const row of rows) {
-      for (const value of of(row)) {
-        if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
-      }
-    }
-    return counts;
-  }
-  var DEFAULT_FILTERS = {
-    species: null,
-    minSizePct: 50,
-    mutations: [],
-    mutationMode: "any",
-    includePreserved: false
-  };
-  function matchesMutations(row, wanted, mode) {
-    if (wanted.length === 0) return true;
-    const present = new Set(mutationsOf(row));
-    switch (mode) {
-      case "all":
-        return wanted.every((mutation) => present.has(mutation));
-      case "none":
-        return wanted.every((mutation) => !present.has(mutation));
-      default:
-        return wanted.some((mutation) => present.has(mutation));
-    }
-  }
-  function filterRows(rows, filters) {
-    const species = filters.species && filters.species.length > 0 ? new Set(filters.species) : null;
-    return rows.filter((row) => {
-      if (!row.ready) return false;
-      if (row.preserved && !filters.includePreserved) return false;
-      if (species && !species.has(row.species)) return false;
-      if (row.sizePct < filters.minSizePct) return false;
-      return matchesMutations(row, filters.mutations, filters.mutationMode);
-    });
-  }
-  function describeFilters(filters) {
-    const species = filters.species ?? [];
-    const subject = species.length > 0 ? `my ${listWords(species)}` : "everything";
-    const qualifiers = [];
-    if (filters.mutations.length > 0) {
-      const list = listWords(filters.mutations);
-      if (filters.mutationMode === "none") qualifiers.push(`without ${list}`);
-      else if (filters.mutationMode === "all") qualifiers.push(`with both ${list}`);
-      else qualifiers.push(`with ${list}`);
-    }
-    if (filters.minSizePct > DEFAULT_FILTERS.minSizePct) {
-      qualifiers.push(`at least ${filters.minSizePct}% size`);
-    }
-    if (filters.includePreserved) qualifiers.push("preserved ones included");
-    if (qualifiers.length === 0) {
-      return species.length > 0 ? `Harvest ${subject}, please` : "Harvest everything that's ready";
-    }
-    return `Harvest ${subject}, ${qualifiers.join(", ")}`;
-  }
-  function groupVariants(rows) {
-    const groups = /* @__PURE__ */ new Map();
-    for (const row of rows) {
-      const mutations = [...mutationsOf(row)].sort();
-      const key2 = `${row.species}|${mutations.join(",")}`;
-      const known = groups.get(key2);
-      if (known) known.count++;
-      else groups.set(key2, { species: row.species, mutations, count: 1 });
-    }
-    return [...groups.values()].sort(
-      (a, b) => b.count - a.count || a.species.localeCompare(b.species) || a.mutations.length - b.mutations.length || a.mutations.join(",").localeCompare(b.mutations.join(","))
-    );
-  }
-  function listWords(words) {
-    if (words.length <= 1) return words[0] ?? "";
-    return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
-  }
-  function describeSelection(rows) {
-    if (rows.length === 0) return "nothing";
-    const bySpecies2 = /* @__PURE__ */ new Map();
-    for (const row of rows) bySpecies2.set(row.species, (bySpecies2.get(row.species) ?? 0) + 1);
-    const parts = [...bySpecies2.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([species, count]) => `${count} ${species}`);
-    const head = parts.slice(0, 3);
-    const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
-    const total = `${rows.length} crop${rows.length === 1 ? "" : "s"}`;
-    if (parts.length === 1) return `${parts[0]} ready`;
-    return `${total} ready: ${listWords(head)}${rest2}`;
-  }
-
-  // src/services/companion/chat/hatch.ts
-  var DEFAULT_KEEP_RULES = {
-    species: [],
-    mutations: [],
-    abilities: [],
-    minMaxStr: null
-  };
-  function hasAnyRule(rules) {
-    return rules.species.length > 0 || rules.mutations.length > 0 || rules.abilities.length > 0 || rules.minMaxStr !== null;
-  }
-  function hasAny(present, wanted) {
-    if (wanted.length === 0) return false;
-    const set2 = new Set(present.map((value) => value.toLowerCase()));
-    return wanted.some((value) => set2.has(value.toLowerCase()));
-  }
-  function matchesKeep(pet, rules) {
-    if (rules.species.includes(pet.species)) return true;
-    if (hasAny(pet.mutations, rules.mutations)) return true;
-    if (rules.abilities.some((ability) => pet.abilities.includes(ability))) return true;
-    if (rules.minMaxStr !== null && pet.maxStrength !== null && pet.maxStrength >= rules.minMaxStr) return true;
-    return false;
-  }
-  var CHEERED_MUTATIONS = ["Rainbow", "Gold"];
-  function hatchCheer(pets, rules) {
-    const kept = pets.filter((pet) => matchesKeep(pet, rules));
-    if (kept.length === 0) return null;
-    for (const mutation of CHEERED_MUTATIONS) {
-      const star = kept.find((pet) => hasAny(pet.mutations, [mutation]));
-      if (star) return { emote: EmoteType.Love, star, mutation };
-    }
-    return { emote: EmoteType.Clapping, star: null, mutation: null };
-  }
-  function isProtected(pet, rules) {
-    return pet.favorited || pet.onTeam || matchesKeep(pet, rules);
-  }
-  function toFavourite(pets, rules) {
-    return pets.filter((pet) => !pet.favorited && matchesKeep(pet, rules));
-  }
-  function toSell(pets, rules) {
-    if (!hasAnyRule(rules)) return [];
-    return pets.filter((pet) => !isProtected(pet, rules));
-  }
-  function petSignature(pets) {
-    return pets.map((pet) => pet.petId).sort().join("|");
-  }
-  function slotSignature2(slots) {
-    return [...slots].sort((a, b) => a - b).join("|");
-  }
-  function bySpecies(pets) {
-    const counts = /* @__PURE__ */ new Map();
-    for (const pet of pets) counts.set(pet.species, (counts.get(pet.species) ?? 0) + 1);
-    return [...counts.entries()].map(([species, count]) => ({ species, count })).sort((a, b) => b.count - a.count || a.species.localeCompare(b.species));
-  }
-  function describeKeep(rules, abilityNames = /* @__PURE__ */ new Map()) {
-    if (!hasAnyRule(rules)) return "Nothing set yet";
-    const parts = [];
-    if (rules.species.length) parts.push(listWords(rules.species));
-    if (rules.mutations.length) parts.push(listWords(rules.mutations));
-    if (rules.abilities.length) {
-      parts.push(listWords(rules.abilities.map((id) => abilityNames.get(id) ?? id)));
-    }
-    if (rules.minMaxStr !== null) parts.push(`max STR ${rules.minMaxStr} and up`);
-    return parts.join(", ");
-  }
-  function describeHatchRequest(count) {
-    return count === 1 ? "Hatch that egg for me" : `Hatch my ${count} eggs`;
-  }
-  function summarizeHatch(slots) {
-    return `${slots.length} egg${slots.length === 1 ? "" : "s"} ready to hatch`;
-  }
-  function summarizeSell(pets) {
-    if (pets.length === 0) return "nothing";
-    const parts = bySpecies(pets).map((entry) => `${entry.count} ${entry.species}`);
-    const head = parts.slice(0, 3);
-    const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
-    if (parts.length === 1) return parts[0];
-    return `${pets.length} pets: ${listWords(head)}${rest2}`;
-  }
-
-  // src/services/companion/settingsShape.ts
-  var COMPANION_MODES = ["follow", "garden"];
-  var MAX_LINE_LENGTH = 160;
-  var MAX_LINES = 50;
-  var SETTINGS_GROUPS = ["feed", "harvest", "hatch"];
-  var DEFAULT_COMPANION_SETTINGS = {
-    enabled: false,
-    mode: "follow",
-    npcId: null,
-    lines: [...DEFAULT_CUSTOM_LINES],
-    contextualEnabled: true,
-    reactions: true,
-    feedAlerts: true,
-    feedThresholdPct: 10,
-    feedFromGarden: true,
-    askOnScreen: true,
-    harvestTeamId: null,
-    hatchTeamId: null,
-    hatchSellTeamId: null,
-    hatchKeepRules: { ...DEFAULT_KEEP_RULES },
-    reviewedSettings: []
-  };
-  function sanitizeLines(raw) {
-    if (!Array.isArray(raw)) return [...DEFAULT_CUSTOM_LINES];
-    return raw.filter((line) => typeof line === "string").map((line) => line.trim().slice(0, MAX_LINE_LENGTH)).filter((line) => line.length > 0).slice(0, MAX_LINES);
-  }
-  function storedLines(raw) {
-    if (raw === void 0) return [...DEFAULT_CUSTOM_LINES];
-    const lines = sanitizeLines(raw);
-    const isLegacy = lines.length === LEGACY_DEFAULT_LINES.length && lines.every((line, i) => line === LEGACY_DEFAULT_LINES[i]);
-    return isLegacy ? [...DEFAULT_CUSTOM_LINES] : lines;
-  }
-  function sanitizeKeepRules(raw) {
-    if (!raw || typeof raw !== "object") return { ...DEFAULT_KEEP_RULES };
-    const source = raw;
-    const names = (value) => Array.isArray(value) ? value.filter((entry) => typeof entry === "string" && entry !== "") : [];
-    const strength = Number(source.minMaxStr);
-    return {
-      species: names(source.species),
-      mutations: names(source.mutations),
-      abilities: names(source.abilities),
-      minMaxStr: Number.isFinite(strength) && strength > 0 ? Math.round(strength) : null
-    };
-  }
-  function teamId(raw) {
-    return typeof raw === "string" && raw ? raw : null;
-  }
-  function clampThreshold(raw) {
-    const value = Math.round(Number(raw));
-    if (!Number.isFinite(value)) return DEFAULT_COMPANION_SETTINGS.feedThresholdPct;
-    return Math.max(1, Math.min(90, value));
-  }
-  function coerceSettings(raw) {
-    if (!raw || typeof raw !== "object") return { ...DEFAULT_COMPANION_SETTINGS };
-    return {
-      enabled: raw.enabled === true,
-      // Les réglages de déplacement persistés par les versions précédentes sont
-      // simplement ignorés : ils sont devenus des constantes.
-      mode: COMPANION_MODES.includes(raw.mode) ? raw.mode : DEFAULT_COMPANION_SETTINGS.mode,
-      npcId: typeof raw.npcId === "string" && raw.npcId ? raw.npcId : null,
-      lines: storedLines(raw.lines),
-      contextualEnabled: raw.contextualEnabled !== false,
-      reactions: raw.reactions !== false,
-      feedAlerts: raw.feedAlerts !== false,
-      feedThresholdPct: clampThreshold(raw.feedThresholdPct),
-      feedFromGarden: raw.feedFromGarden !== false,
-      askOnScreen: raw.askOnScreen !== false,
-      harvestTeamId: teamId(raw.harvestTeamId),
-      hatchTeamId: teamId(raw.hatchTeamId),
-      hatchSellTeamId: teamId(raw.hatchSellTeamId),
-      hatchKeepRules: sanitizeKeepRules(raw.hatchKeepRules),
-      reviewedSettings: SETTINGS_GROUPS.filter(
-        (group) => Array.isArray(raw.reviewedSettings) && raw.reviewedSettings.includes(group)
-      )
-    };
-  }
-
-  // src/services/companion/anchors.ts
-  var myUserSlotIdx = makeAtom("myUserSlotIdxAtom");
-  async function resolveAnchor(request2) {
-    const { mode, map: map2, player: player2 } = request2;
-    if (mode === "garden") {
-      const resolved = await resolveGardenAnchor(map2);
-      if (resolved) return resolved;
-    }
-    return followAnchor(map2, player2);
-  }
-  function followAnchor(map2, player2) {
-    return {
-      anchor: { tile: player2, onArrival: "wander", tracksPlayer: true },
-      isWalkable: map2.isWalkable,
-      effectiveMode: "follow"
-    };
-  }
-  async function resolveGardenAnchor(map2) {
-    const slot = await readMySlotIdx();
-    if (slot === null) return null;
-    const tiles = map2.gardenTilesForSlot(slot);
-    if (tiles.length === 0) return null;
-    const allowed = new Set(tiles);
-    const zone = (x, y) => allowed.has(map2.toIndex(x, y));
-    const positions = tiles.map((tile) => map2.toXY(tile));
-    const center = nearestTo(centroid(positions), positions);
-    const radius = positions.reduce(
-      (max, tile) => Math.max(max, Math.abs(tile.x - center.x), Math.abs(tile.y - center.y)),
-      1
-    );
-    return {
-      anchor: { tile: center, onArrival: "wander", tracksPlayer: false, zone, wanderRadius: radius },
-      isWalkable: map2.isWalkable,
-      effectiveMode: "garden"
-    };
-  }
-  async function readMySlotIdx() {
-    try {
-      const slot = Number(await myUserSlotIdx.get());
-      return Number.isInteger(slot) && slot >= 0 ? slot : null;
-    } catch {
-      return null;
-    }
-  }
-  function centroid(tiles) {
-    let sumX = 0;
-    let sumY = 0;
-    for (const tile of tiles) {
-      sumX += tile.x;
-      sumY += tile.y;
-    }
-    return { x: Math.round(sumX / tiles.length), y: Math.round(sumY / tiles.length) };
-  }
-  function nearestTo(target, tiles) {
-    let best = tiles[0];
-    let bestDistance = Number.POSITIVE_INFINITY;
-    for (const tile of tiles) {
-      const distance = Math.abs(tile.x - target.x) + Math.abs(tile.y - target.y);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        best = tile;
-      }
-    }
-    return { ...best };
-  }
-
   // src/services/companion/tick.ts
   var COMPANION_TICK_LABEL = "ariesCompanionTickAtom";
   var CACHE_KEY = `aries/companion/${COMPANION_TICK_LABEL}`;
@@ -58594,138 +59196,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     reporter2.say("report", done, compose(...spaced(petIcons(fed)), " ", done));
   }
 
-  // src/services/companion/chat/plant.ts
-  var GARDEN_COLS = 20;
-  var GARDEN_ROWS = 10;
-  var GARDEN_TILE_COUNT = GARDEN_COLS * GARDEN_ROWS;
-  var EMPTY_SCOPE = { tiles: [], occupied: /* @__PURE__ */ new Set(), items: [] };
-  function itemKey(item) {
-    return `${item.kind}:${item.id}`;
-  }
-  function assignmentKey(assignment) {
-    return `${assignment.tileIndex}:${assignment.kind}:${assignment.id}`;
-  }
-  function plantSignature(plan) {
-    return plan.map(assignmentKey).sort().join("|");
-  }
-  function countByItem(plan) {
-    const counts = /* @__PURE__ */ new Map();
-    for (const assignment of plan) {
-      const key2 = itemKey(assignment);
-      const known = counts.get(key2);
-      if (known) known.count++;
-      else counts.set(key2, { kind: assignment.kind, id: assignment.id, name: assignment.name, count: 1 });
-    }
-    return [...counts.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-  }
-  function stockLeft(plan, items) {
-    const left = new Map(items.map((item) => [itemKey(item), item.stock]));
-    for (const assignment of plan) {
-      const key2 = itemKey(assignment);
-      left.set(key2, (left.get(key2) ?? 0) - 1);
-    }
-    return left;
-  }
-  function viablePlan(plan, scope) {
-    const owned = new Set(scope.tiles);
-    const left = new Map(scope.items.map((item) => [itemKey(item), item.stock]));
-    const kept = [];
-    for (const assignment of plan) {
-      if (!owned.has(assignment.tileIndex)) continue;
-      if (scope.occupied.has(assignment.tileIndex)) continue;
-      const key2 = itemKey(assignment);
-      const remaining = left.get(key2) ?? 0;
-      if (remaining <= 0) continue;
-      left.set(key2, remaining - 1);
-      kept.push(assignment);
-    }
-    return kept;
-  }
-  function listPlantItems(plan) {
-    const parts = countByItem(plan).map((entry) => `${entry.count} ${entry.name}`);
-    if (parts.length === 0) return "nothing";
-    const head = parts.slice(0, 3);
-    const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
-    return `${listWords(head)}${rest2}`;
-  }
-  function describePlan(plan) {
-    if (plan.length === 0) return "Plant nothing";
-    return `Plant ${listPlantItems(plan)} for me`;
-  }
-  function summarizePlan(plan) {
-    if (plan.length === 0) return "nothing";
-    const tiles = `${plan.length} tile${plan.length === 1 ? "" : "s"}`;
-    const parts = countByItem(plan);
-    if (parts.length === 1) return `${parts[0].count} ${parts[0].name} to plant`;
-    return `${listPlantItems(plan)} to plant, over ${tiles}`;
-  }
-
-  // src/services/companion/chat/plantRead.ts
-  async function readOwnedTiles() {
-    let count = 0;
-    try {
-      const [map2, slotIdx] = await Promise.all([readCompanionMap(), readMySlotIdx()]);
-      if (map2 && slotIdx !== null) count = map2.dirtTileCount(slotIdx);
-    } catch {
-      count = 0;
-    }
-    const total = count > 0 ? count : GARDEN_TILE_COUNT;
-    return Array.from({ length: total }, (_, index) => index);
-  }
-  async function readOccupied() {
-    const occupied = /* @__PURE__ */ new Set();
-    let tileObjects = null;
-    try {
-      tileObjects = await Atoms.data.gardenTileObjects.get();
-    } catch {
-      return occupied;
-    }
-    if (!tileObjects || typeof tileObjects !== "object") return occupied;
-    for (const [key2, value] of Object.entries(tileObjects)) {
-      if (!value) continue;
-      const index = Number(key2);
-      if (Number.isInteger(index)) occupied.add(index);
-    }
-    return occupied;
-  }
-  function seedName(species) {
-    const entry = plantCatalog2[species];
-    const name = entry?.seed?.name;
-    return typeof name === "string" && name ? name : species;
-  }
-  function eggName(eggId) {
-    const entry = eggCatalog2[eggId];
-    const name = entry?.name;
-    return typeof name === "string" && name ? name : eggId;
-  }
-  function accumulate(rows, kind, idOf, nameOf) {
-    const totals = /* @__PURE__ */ new Map();
-    for (const raw of Array.isArray(rows) ? rows : []) {
-      if (!raw || typeof raw !== "object") continue;
-      const row = raw;
-      const id = idOf(row).trim();
-      if (!id) continue;
-      const quantity = Math.floor(Number(row.quantity ?? 0));
-      if (!Number.isFinite(quantity) || quantity <= 0) continue;
-      totals.set(id, (totals.get(id) ?? 0) + quantity);
-    }
-    return [...totals.entries()].map(([id, stock]) => ({ kind, id, name: nameOf(id), stock })).sort((a, b) => a.name.localeCompare(b.name));
-  }
-  async function readItems() {
-    const [seeds, eggs] = await Promise.all([
-      Atoms.inventory.mySeedInventory.get().catch(() => null),
-      Atoms.inventory.myEggInventory.get().catch(() => null)
-    ]);
-    return [
-      ...accumulate(seeds, "seed", (row) => String(row.species ?? ""), seedName),
-      ...accumulate(eggs, "egg", (row) => String(row.eggId ?? row.id ?? row.species ?? ""), eggName)
-    ];
-  }
-  async function readPlantScope() {
-    const [tiles, occupied, items] = await Promise.all([readOwnedTiles(), readOccupied(), readItems()]);
-    return { tiles, occupied, items };
-  }
-
   // src/services/companion/chat/plantRun.ts
   function topSeed(plan) {
     const most = countByItem(plan)[0];
@@ -59937,7 +60407,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
 
   // src/ui/menus/companion/chat-icons.ts
-  var SPRITE_LOG_TAG2 = "companion-thread";
+  var SPRITE_LOG_TAG4 = "companion-thread";
   function splitSpriteKey(key2) {
     const parts = key2.split(/[?#]/)[0].split("/").filter(Boolean);
     if (parts.length < 2) return null;
@@ -59965,20 +60435,20 @@ Restore figures are averages; unlucky streaks do worse.`;
   function tagIcon(tag, sizePx) {
     if ("mutation" in tag) {
       const box2 = holder(sizePx);
-      attachSpriteIcon(box2, ["ui", "mutation"], [`Mutation${tag.mutation}`, tag.mutation], sizePx, SPRITE_LOG_TAG2);
+      attachSpriteIcon(box2, ["ui", "mutation"], [`Mutation${tag.mutation}`, tag.mutation], sizePx, SPRITE_LOG_TAG4);
       return box2;
     }
     if ("petThing" in tag) {
       const species = petSpeciesOf(tag.petThing.pet);
       if (!species) return null;
       const box2 = holder(sizePx);
-      attachSpriteIcon(box2, ["pet"], [species, species.replace(/\s+/g, "")], sizePx, SPRITE_LOG_TAG2);
+      attachSpriteIcon(box2, ["pet"], [species, species.replace(/\s+/g, "")], sizePx, SPRITE_LOG_TAG4);
       return box2;
     }
     const split = splitSpriteKey(tag.gameThing.sprite);
     if (!split) return null;
     const box = holder(sizePx);
-    attachSpriteIcon(box, [split.category], [split.name], sizePx, SPRITE_LOG_TAG2);
+    attachSpriteIcon(box, [split.category], [split.name], sizePx, SPRITE_LOG_TAG4);
     return box;
   }
   function tagIcons(tags, sizePx) {
@@ -60236,208 +60706,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     css2(hint, { fontSize: "11px", color: tone === "warn" ? WARN : TEXT_DIM, marginLeft: "auto" });
     hint.textContent = text;
     return hint;
-  }
-
-  // src/ui/menus/companion/harvest-chips.ts
-  var SPRITE_LOG_TAG3 = "companion-harvest";
-  var ICON_PX = 26;
-  function iconHolder(sizePx) {
-    const box = document.createElement("div");
-    css2(box, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: `${sizePx}px`,
-      height: `${sizePx}px`,
-      flex: "0 0 auto"
-    });
-    return box;
-  }
-  function catalogCropKey(species) {
-    const entry = plantCatalog2[species];
-    const key2 = entry?.crop?.sprite ?? entry?.plant?.sprite;
-    return typeof key2 === "string" && key2 ? key2 : null;
-  }
-  function spellings(...names) {
-    const out = /* @__PURE__ */ new Set();
-    for (const name of names) {
-      const trimmed = (name ?? "").trim();
-      if (!trimmed) continue;
-      out.add(trimmed);
-      out.add(trimmed.replace(/\W+/g, ""));
-    }
-    return [...out];
-  }
-  function spriteBaseName(species) {
-    const last = catalogCropKey(species)?.split("/").pop() ?? null;
-    if (!last) return species;
-    const withoutQuery = last.split(/[?#]/)[0];
-    return withoutQuery.replace(/\.[a-z0-9]+$/i, "") || species;
-  }
-  function attachAtlasCrop(box, species, sizePx) {
-    const candidates = spellings(spriteBaseName(species), species);
-    const bases = candidates.map((value) => value.replace(/icon$/i, "")).filter(Boolean);
-    const all = [.../* @__PURE__ */ new Set([...candidates, ...bases.map((base) => `${base}Icon`)])];
-    if (all.length) attachSpriteIcon(box, ["crop", "tallplant", "plant"], all, sizePx, SPRITE_LOG_TAG3);
-  }
-  function speciesIcon(species, sizePx = ICON_PX) {
-    const box = iconHolder(sizePx);
-    attachAtlasCrop(box, species, sizePx);
-    return box;
-  }
-  function composedUrl(species, mutations) {
-    const key2 = catalogCropKey(species);
-    const parts = key2 ? key2.split(/[?#]/)[0].split("/").filter(Boolean) : [];
-    const segment = parts.length >= 2 ? parts[parts.length - 2] : "";
-    const apiCategory = INTERNAL_TO_API[segment] ?? (isComposableCategory(segment) ? segment : "plants");
-    return composedSpriteUrl(apiCategory, spriteBaseName(species), mutations);
-  }
-  function variantIcon(species, mutations, sizePx = ICON_PX) {
-    if (mutations.length === 0) return speciesIcon(species, sizePx);
-    const box = iconHolder(sizePx);
-    const url = composedUrl(species, mutations);
-    const img = document.createElement("img");
-    img.alt = "";
-    css2(img, { maxWidth: "100%", maxHeight: "100%", imageRendering: "auto" });
-    img.addEventListener("error", () => {
-      console.warn("[companion] composed sprite failed, falling back to the plain crop:", url);
-      box.replaceChildren();
-      attachAtlasCrop(box, species, sizePx);
-    });
-    setImageSafe(img, url);
-    box.append(img);
-    return box;
-  }
-  function mutationIconEl(mutation, sizePx = ICON_PX) {
-    const box = iconHolder(sizePx);
-    const candidates = spellings(mutation).flatMap((name) => [`Mutation${name}`, name]);
-    attachSpriteIcon(box, ["ui", "mutation"], candidates, sizePx, SPRITE_LOG_TAG3);
-    return box;
-  }
-  function spriteTile(options) {
-    const tile = document.createElement("button");
-    tile.type = "button";
-    tile.title = options.title;
-    css2(tile, {
-      display: "inline-flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: "1px",
-      padding: "5px 6px 3px",
-      borderRadius: "10px",
-      cursor: "pointer",
-      lineHeight: "1",
-      transition: "background 120ms ease, border-color 120ms ease",
-      background: options.selected ? TEAL_DIM : CARD_BG,
-      border: `1px solid ${options.selected ? TEAL_BORDER : BORDER}`
-    });
-    tile.append(options.icon);
-    if (options.count !== void 0) {
-      const count = document.createElement("span");
-      css2(count, { fontSize: "10px", color: options.selected ? TEAL : TEXT_DIM });
-      count.textContent = String(options.count);
-      tile.append(count);
-    }
-    tile.addEventListener("click", options.onClick);
-    tile.addEventListener("mouseenter", () => {
-      if (!options.selected) css2(tile, { background: "rgba(255,255,255,0.06)" });
-    });
-    tile.addEventListener("mouseleave", () => {
-      if (!options.selected) css2(tile, { background: CARD_BG });
-    });
-    return tile;
-  }
-  function labelledTile(options) {
-    const tile = document.createElement("button");
-    tile.type = "button";
-    tile.title = options.label;
-    css2(tile, {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "6px",
-      padding: "4px 9px 4px 5px",
-      borderRadius: "10px",
-      cursor: "pointer",
-      lineHeight: "1",
-      transition: "background 120ms ease, border-color 120ms ease",
-      background: options.selected ? TEAL_DIM : CARD_BG,
-      border: `1px solid ${options.selected ? TEAL_BORDER : BORDER}`
-    });
-    const name = document.createElement("span");
-    css2(name, {
-      fontSize: "11.5px",
-      fontWeight: options.selected ? "600" : "500",
-      color: options.selected ? TEAL : TEXT,
-      whiteSpace: "nowrap"
-    });
-    name.textContent = options.label;
-    tile.append(options.icon, name);
-    tile.addEventListener("click", options.onClick);
-    tile.addEventListener("mouseenter", () => {
-      if (!options.selected) css2(tile, { background: "rgba(255,255,255,0.06)" });
-    });
-    tile.addEventListener("mouseleave", () => {
-      if (!options.selected) css2(tile, { background: CARD_BG });
-    });
-    return tile;
-  }
-  function allTile(label2, selected, onClick) {
-    const tile = document.createElement("button");
-    tile.type = "button";
-    tile.textContent = label2;
-    css2(tile, {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      minWidth: "40px",
-      padding: "0 10px",
-      alignSelf: "stretch",
-      borderRadius: "10px",
-      cursor: "pointer",
-      fontSize: "11px",
-      lineHeight: "1",
-      background: selected ? TEAL_DIM : CARD_BG,
-      border: `1px solid ${selected ? TEAL_BORDER : BORDER}`,
-      color: selected ? TEAL : TEXT
-    });
-    tile.addEventListener("click", onClick);
-    return tile;
-  }
-  function tileRow() {
-    const row = document.createElement("div");
-    css2(row, { display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: "5px" });
-    return row;
-  }
-  function segmented(options, selected, onSelect) {
-    const wrap = document.createElement("div");
-    css2(wrap, {
-      display: "inline-flex",
-      padding: "2px",
-      gap: "2px",
-      borderRadius: "9px",
-      background: "rgba(0,0,0,0.22)",
-      border: `1px solid ${BORDER}`
-    });
-    for (const option of options) {
-      const active2 = option.value === selected;
-      const button2 = document.createElement("button");
-      button2.type = "button";
-      if (option.title) button2.title = option.title;
-      button2.textContent = option.label;
-      css2(button2, {
-        padding: "4px 10px",
-        borderRadius: "7px",
-        border: "none",
-        cursor: "pointer",
-        fontSize: "11px",
-        lineHeight: "1",
-        background: active2 ? TEAL_DIM : "transparent",
-        color: active2 ? TEAL : TEXT_DIM
-      });
-      button2.addEventListener("click", () => onSelect(option.value));
-      wrap.append(button2);
-    }
-    return wrap;
   }
 
   // src/ui/menus/companion/harvest-fields.ts
@@ -61073,100 +61341,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     void refresh();
   }
 
-  // src/ui/menus/companion/plant-chips.ts
-  var SPRITE_LOG_TAG4 = "companion-plant";
-  var ICON_PX2 = 24;
-  function iconHolder2(sizePx) {
-    const box = document.createElement("div");
-    css2(box, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: `${sizePx}px`,
-      height: `${sizePx}px`,
-      flex: "0 0 auto"
-    });
-    return box;
-  }
-  function spellings2(...names) {
-    const out = /* @__PURE__ */ new Set();
-    for (const name of names) {
-      const trimmed = (name ?? "").trim();
-      if (!trimmed) continue;
-      for (const form of [trimmed, trimmed.split(/[./]/).pop() ?? trimmed]) {
-        if (!form) continue;
-        out.add(form);
-        out.add(form.replace(/\s+/g, ""));
-      }
-    }
-    return [...out];
-  }
-  function seedCandidates(species, name) {
-    const entry = plantCatalog2[species];
-    const catalogName = typeof entry?.seed?.name === "string" ? entry.seed.name : null;
-    return spellings2(species, catalogName, name);
-  }
-  function eggCandidates(eggId, name) {
-    const entry = eggCatalog2[eggId];
-    const tileRef = typeof entry?.tileRef === "string" ? entry.tileRef : null;
-    const catalogName = typeof entry?.name === "string" ? entry.name : null;
-    return spellings2(eggId, tileRef, catalogName, name);
-  }
-  function plantItemIcon(item, sizePx = ICON_PX2) {
-    const box = iconHolder2(sizePx);
-    const isEgg = item.kind === "egg";
-    const candidates = isEgg ? eggCandidates(item.id, item.name) : seedCandidates(item.id, item.name);
-    if (candidates.length) {
-      attachSpriteIcon(box, isEgg ? ["pet"] : ["seed"], candidates, sizePx, SPRITE_LOG_TAG4);
-    }
-    return box;
-  }
-  function plantItemTitle(item) {
-    return item.kind === "egg" ? `${item.name} (egg)` : item.name;
-  }
-  function plantTile(item, onClick) {
-    const el2 = document.createElement("button");
-    el2.type = "button";
-    el2.title = plantItemTitle(item);
-    css2(el2, {
-      display: "inline-flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: "1px",
-      padding: "5px 6px 3px",
-      borderRadius: "10px",
-      cursor: "pointer",
-      lineHeight: "1",
-      transition: "background 120ms ease, border-color 120ms ease, opacity 120ms ease"
-    });
-    const count = document.createElement("span");
-    css2(count, { fontSize: "10px" });
-    el2.append(plantItemIcon(item), count);
-    el2.addEventListener("click", onClick);
-    return {
-      el: el2,
-      update(left, selected) {
-        const empty = left <= 0;
-        count.textContent = String(Math.max(0, left));
-        css2(el2, {
-          background: selected ? TEAL_DIM : CARD_BG,
-          border: `1px solid ${selected ? TEAL_BORDER : BORDER}`,
-          opacity: empty && !selected ? "0.45" : "1"
-        });
-        css2(count, { color: selected ? TEAL : empty ? WARN : TEXT_DIM });
-      }
-    };
-  }
-
   // src/ui/menus/companion/plant-grid.ts
   var MAX_GRID_HEIGHT_PX = 300;
-  var CELL_ICON_PX = 20;
-  var HALF_GAP_PX = 12;
+  var CELL_ICON_PX2 = 20;
+  var HALF_GAP_PX2 = 12;
   function plantGrid(options) {
     const root = document.createElement("div");
     css2(root, {
       display: "grid",
-      gridTemplateColumns: `repeat(${GARDEN_COLS / 2}, 1fr) ${HALF_GAP_PX}px repeat(${GARDEN_COLS / 2}, 1fr)`,
+      gridTemplateColumns: `repeat(${GARDEN_COLS / 2}, 1fr) ${HALF_GAP_PX2}px repeat(${GARDEN_COLS / 2}, 1fr)`,
       gridTemplateRows: `repeat(${GARDEN_ROWS}, 1fr)`,
       gap: "2px",
       height: `min(38vh, ${MAX_GRID_HEIGHT_PX}px)`,
@@ -61256,7 +61439,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       css2(cell.el, { background: TEAL_DIM, borderColor: TEAL_BORDER, cursor: "pointer" });
       cell.el.title = assignment?.name ?? "";
       if (assignment) {
-        const icon = options.iconFor(assignment, CELL_ICON_PX);
+        const icon = options.iconFor(assignment, CELL_ICON_PX2);
         css2(icon, { pointerEvents: "none" });
         cell.el.append(icon);
       }

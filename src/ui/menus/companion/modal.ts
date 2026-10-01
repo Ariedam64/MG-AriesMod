@@ -70,6 +70,8 @@ export type ModalOptions = {
   title: string;
   /** Largeur maximale du panneau. */
   widthPx?: number;
+  /** Hauteur maximale du panneau, bornée de toute façon à 88vh. */
+  maxHeightPx?: number;
   onClose?: () => void;
 };
 
@@ -106,7 +108,7 @@ export function openModal(options: ModalOptions): Modal {
     display: "flex",
     flexDirection: "column",
     width: `min(${options.widthPx ?? 420}px, 100%)`,
-    maxHeight: "min(520px, 88vh)",
+    maxHeight: `min(${options.maxHeightPx ?? 520}px, 88vh)`,
     borderRadius: "16px",
     border: `1px solid ${BORDER}`,
     background: "#101620",

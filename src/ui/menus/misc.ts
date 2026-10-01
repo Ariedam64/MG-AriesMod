@@ -14,12 +14,14 @@ import { getAriesStorage, updateAriesStorage } from "../../utils/localStorage";
 import { readShowCropPrice, writeShowCropPrice } from "../../utils/cropPriceSetting";
 import { createDeleterSection } from "./misc/deleter-section";
 import { openDeleterPicker } from "./misc/deleter-picker";
+import { openGardenView } from "./misc/garden-view";
 import { decorDeleter, seedDeleter } from "../../services/deleters";
 import { getDecorEntries, getSeedEntries, type DeleterEntry } from "../../services/deleterSources";
 import type { DeleterController } from "../../services/deleterRun";
 import {
   TEXT,
   TEXT_DIM,
+  button,
   css,
   ensurePanelStyles,
   numberField,
@@ -224,7 +226,7 @@ function buildInventoryGuardSection(): HTMLElement {
 }
 
 /* ===== Section: Display ===== */
-function buildDisplaySection(): HTMLElement {
+function buildDisplaySection(modalHost: () => HTMLElement): HTMLElement {
   const card = section(
     "display",
     "💰",
@@ -236,11 +238,18 @@ function buildDisplaySection(): HTMLElement {
   // réglage (cf. utils/cropPriceSetting.ts).
   const priceToggle = toggle(readShowCropPrice(), on => writeShowCropPrice(on));
 
+  const gardenViewButton = button("Open", "accent", () => openGardenView(modalHost()));
+
   card.body.append(
     settingRow(
       "Crop price",
       "Shows a crop's sell price in its tooltip.",
       priceToggle,
+    ).row,
+    settingRow(
+      "Garden view",
+      "Your whole garden as a flat grid, so no plant hides behind another.",
+      gardenViewButton,
     ).row,
   );
   return card.root;
@@ -450,7 +459,7 @@ export async function renderMiscMenu(container: HTMLElement) {
     panelHeader(),
     buildAutoRecoSection(),
     player.root,
-    buildDisplaySection(),
+    buildDisplaySection(modalHost),
     buildInventoryGuardSection(),
     buildStorageSection(),
     seedDeleterSection.root,

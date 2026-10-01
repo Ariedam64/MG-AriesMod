@@ -15,7 +15,7 @@ import { readCompanionMap } from "../map";
 import { GARDEN_TILE_COUNT, type PlantItem, type PlantScope } from "./plant";
 
 /** Cases de terre de ma parcelle, dans l'ordre où la map les range. */
-async function readOwnedTiles(): Promise<number[]> {
+export async function readOwnedTiles(): Promise<number[]> {
   let count = 0;
   try {
     const [map, slotIdx] = await Promise.all([readCompanionMap(), readMySlotIdx()]);
