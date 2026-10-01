@@ -1,5 +1,6 @@
 // src/store/atoms.ts
-import { makeAtom, makeAliasedAtom, makeView, HubEq } from "./hub";
+import { makeAtom, makeAliasedAtom, makeView, HubEq, type View } from "./hub";
+import { modalNameOf, nextModalState } from "../utils/modalState";
 
 /* ============================================================================
  * Types
@@ -203,13 +204,35 @@ export const mySelectedItemRotation = makeAtom<any>("mySelectedItemRotationAtom"
 
 export const weather = makeAtom<string | null>("weatherAtom")
 
-// Renommé `activeModalAtom` -> `activeModalStateAtom` côté jeu ; même forme
-// (`string | null`). L’ancien nom reste en repli le temps que les bundles en
-// cache disparaissent.
-export const activeModal = makeAliasedAtom<string | null>([
+// Renommé `activeModalAtom` -> `activeModalStateAtom` côté jeu. Depuis v1342
+// il vaut `{ modal, openId }` au lieu du nom, et `activeModalAtom` est devenu un
+// atom dérivé en lecture seule : on écrit donc toujours dans l'atom d'état.
+// Cette vue garde l'interface `string | null` pour tout le mod et traduit dans
+// la forme que le build utilise (voir utils/modalState.ts).
+const activeModalRaw = makeAliasedAtom<any>([
   "activeModalStateAtom",
   "activeModalAtom",
 ]);
+const sameModal = (a: unknown, b: unknown) => modalNameOf(a) === modalNameOf(b);
+export const activeModal: View<string | null> = {
+  label: activeModalRaw.label,
+  get: async () => modalNameOf(await activeModalRaw.get()),
+  set: async (next) => {
+    const raw = await activeModalRaw.get();
+    const value = nextModalState(raw, next);
+    if (value !== undefined) await activeModalRaw.set(value);
+  },
+  update: async (fn) => {
+    const next = fn(modalNameOf(await activeModalRaw.get()));
+    await activeModal.set(next);
+    return next;
+  },
+  onChange: (cb) =>
+    activeModalRaw.onChange((next, prev) => cb(modalNameOf(next), modalNameOf(prev)), sameModal),
+  onChangeNow: (cb) =>
+    activeModalRaw.onChangeNow((next, prev) => cb(modalNameOf(next), modalNameOf(prev)), sameModal),
+  asSignature: (opts) => activeModalRaw.asSignature(opts as any) as any,
+};
 export const inventoryModalIsActive = makeAtom<boolean>("inventoryModalIsActiveAtom");
 export const avatarTriggerAnimationAtom = makeAtom<AvatarTriggerAnimation | null>("avatarTriggerAnimationAtom")
 

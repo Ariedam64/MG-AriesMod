@@ -5,6 +5,7 @@
 
 import { fakeShow, fakeHide, type FakeConfig } from "./fakeAtoms";
 import { Atoms } from "../store/atoms";
+import { modalNameOf } from "../utils/modalState";
 
 /* --------------------------------- Types -------------------------------- */
 export type ModalId = string;
@@ -51,8 +52,9 @@ export async function closeModal(modalId?: ModalId) {
   }
 }
 
+/** `value` is the raw atom value the gates see, `{ modal, openId }` since v1342. */
 export function isModalOpen(value: any, modalId: ModalId) {
-  return value === modalId;
+  return modalNameOf(value) === modalId;
 }
 
 export async function isModalOpenAsync(modalId: ModalId): Promise<boolean> {
@@ -145,7 +147,7 @@ const SHARED_MYDATA_PATCH: FakeConfig<any> = {
   merge: mergeMyData,
   gate: {
     label: Atoms.ui.activeModal.label,
-    isOpen: (v) => v === "inventory" || v === "journal" || v === "stats" || v === "activityLog",
+    isOpen: (v) => ["inventory", "journal", "stats", "activityLog"].includes(modalNameOf(v) ?? ""),
     autoDisableOnClose: true,
   },
 };
@@ -156,7 +158,7 @@ const INVENTORY_ATOM_PATCH: FakeConfig<any> = {
   merge: (_real: any, fake: any) => fake,
   gate: {
     label: Atoms.ui.activeModal.label,
-    isOpen: (v) => v === "inventory",
+    isOpen: (v) => modalNameOf(v) === "inventory",
     autoDisableOnClose: true,
   },
 };

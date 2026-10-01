@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.223
+// @version      3.2.224
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -4912,6 +4912,23 @@
     };
   }
 
+  // src/utils/modalState.ts
+  function isStateObject(raw) {
+    return !!raw && typeof raw === "object" && "modal" in raw;
+  }
+  function modalNameOf(raw) {
+    if (isStateObject(raw)) return raw.modal ?? null;
+    return typeof raw === "string" ? raw : null;
+  }
+  function nextModalState(raw, next) {
+    if (modalNameOf(raw) === next) return void 0;
+    if (isStateObject(raw)) {
+      const openId = Number.isFinite(raw.openId) ? raw.openId : 0;
+      return { modal: next, openId: openId + 1 };
+    }
+    return next;
+  }
+
   // src/store/atoms.ts
   var position = makeAtom("positionAtom");
   var state = makeAtom("stateAtom");
@@ -4968,10 +4985,28 @@
   var myOwnCurrentDirtTileIndex = makeAtom("myOwnCurrentDirtTileIndexAtom");
   var mySelectedItemRotation = makeAtom("mySelectedItemRotationAtom");
   var weather = makeAtom("weatherAtom");
-  var activeModal = makeAliasedAtom([
+  var activeModalRaw = makeAliasedAtom([
     "activeModalStateAtom",
     "activeModalAtom"
   ]);
+  var sameModal = (a, b) => modalNameOf(a) === modalNameOf(b);
+  var activeModal = {
+    label: activeModalRaw.label,
+    get: async () => modalNameOf(await activeModalRaw.get()),
+    set: async (next) => {
+      const raw = await activeModalRaw.get();
+      const value = nextModalState(raw, next);
+      if (value !== void 0) await activeModalRaw.set(value);
+    },
+    update: async (fn) => {
+      const next = fn(modalNameOf(await activeModalRaw.get()));
+      await activeModal.set(next);
+      return next;
+    },
+    onChange: (cb) => activeModalRaw.onChange((next, prev) => cb(modalNameOf(next), modalNameOf(prev)), sameModal),
+    onChangeNow: (cb) => activeModalRaw.onChangeNow((next, prev) => cb(modalNameOf(next), modalNameOf(prev)), sameModal),
+    asSignature: (opts) => activeModalRaw.asSignature(opts)
+  };
   var inventoryModalIsActive = makeAtom("inventoryModalIsActiveAtom");
   var avatarTriggerAnimationAtom = makeAtom("avatarTriggerAnimationAtom");
   var friendBonusMultiplier = makeAtom("friendBonusMultiplierAtom");
@@ -10302,7 +10337,7 @@
     }
   }
   function isModalOpen(value, modalId) {
-    return value === modalId;
+    return modalNameOf(value) === modalId;
   }
   async function isModalOpenAsync(modalId) {
     try {
@@ -10335,7 +10370,7 @@
     merge: mergeMyData,
     gate: {
       label: Atoms.ui.activeModal.label,
-      isOpen: (v) => v === "inventory" || v === "journal" || v === "stats" || v === "activityLog",
+      isOpen: (v) => ["inventory", "journal", "stats", "activityLog"].includes(modalNameOf(v) ?? ""),
       autoDisableOnClose: true
     }
   };
@@ -10344,7 +10379,7 @@
     merge: (_real, fake) => fake,
     gate: {
       label: Atoms.ui.activeModal.label,
-      isOpen: (v) => v === "inventory",
+      isOpen: (v) => modalNameOf(v) === "inventory",
       autoDisableOnClose: true
     }
   };
@@ -31946,7 +31981,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.223";
+      return "3.2.224";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
