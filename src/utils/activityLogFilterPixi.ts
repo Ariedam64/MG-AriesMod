@@ -27,6 +27,9 @@ import {
   FILTER_TOOLBAR_LABEL,
   activityLogTabOf,
   locateActivityLogAnchors,
+  locateScrollParts,
+  maskTransformFor,
+  planLogRowsShift,
   type ActivityLogTab,
 } from "./activityLogModalLayout";
 
@@ -320,24 +323,46 @@ function refreshToolbarHighlight(toolbarState: ToolbarState): void {
 
 let modalNode: any = null;
 let toolbarState: ToolbarState | null = null;
-let appliedOffset = 0;
-let lastNativeScrollY = 0;
 let findRafId: number | null = null;
 let lastFindCheckAt = 0;
 
-const debugSyncState: { lastError: string | null; anchorsFound: boolean; toolbarBuilt: boolean } = {
+/** What we changed on the game's nodes, so it can be put back. */
+let touchedScroll: { container: any; mask: any } | null = null;
+/** Rows already moved. The game recreates them on every rebuild, so new ones show up unmarked. */
+let shiftedRows = new WeakSet<object>();
+/** First child of the content when we last planned, i.e. the current rebuild, and its shift. */
+let plannedFirst: object | null = null;
+let plannedShift = 0;
+
+const debugSyncState: { lastError: string | null; anchorsFound: boolean; toolbarBuilt: boolean; scrollPartsFound: boolean } = {
   lastError: null,
   anchorsFound: false,
   toolbarBuilt: false,
+  scrollPartsFound: false,
 };
 
+function restoreScroll(): void {
+  if (!touchedScroll) return;
+  const { container, mask } = touchedScroll;
+  try { if (!container.destroyed) container.visible = true; } catch {}
+  try {
+    if (mask && !mask.destroyed) {
+      mask.position.y = 0;
+      mask.scale.y = 1;
+    }
+  } catch {}
+  touchedScroll = null;
+}
+
 function teardownToolbar(): void {
+  restoreScroll();
   if (toolbarState) {
     try { toolbarState.container.destroy({ children: true }); } catch {}
   }
   toolbarState = null;
-  appliedOffset = 0;
-  lastNativeScrollY = 0;
+  shiftedRows = new WeakSet();
+  plannedFirst = null;
+  plannedShift = 0;
 }
 
 function syncToolbar(): void {
@@ -350,16 +375,40 @@ function syncToolbar(): void {
   }
 }
 
+/**
+ * Hides the "Your most recent activity" note and moves this rebuild's rows so
+ * the first one starts under the toolbar. Rows already moved are skipped, so
+ * running it every frame is harmless.
+ */
+function shiftLogRows(content: any, toolbarSpace: number): void {
+  const children: any[] = content.children;
+  const first = children[0];
+  if (!first) return;
+  if (first !== plannedFirst) {
+    const plan = planLogRowsShift(children, toolbarSpace);
+    plannedFirst = first;
+    plannedShift = plan.shift;
+    if (plan.hideFirst) {
+      first.visible = false;
+      shiftedRows.add(first);
+    }
+  }
+  for (const child of children) {
+    if (shiftedRows.has(child)) continue;
+    shiftedRows.add(child);
+    child.position.y += plannedShift;
+  }
+}
+
 // The toolbar sits where the list natively starts, just under the tab bar,
-// and the list is pushed down by the toolbar's height every frame. The game
-// re-places the scroll view on every layout, so its native y is re-read
-// whenever it no longer matches what we left it at.
+// over the space the game gives its "Your most recent activity" note, which is
+// hidden. The scroll view itself is not moved: moving it carried its window
+// past the bottom of the card. Instead its mask loses the toolbar's height at
+// the top, so rows scrolling up vanish under the toolbar, and the rows are
+// moved down by whatever the toolbar needs beyond the note's space.
 //
-// Deliberately does NOT try to shrink or mask the scroll view's visible
-// window: its scroll-range math is owned by a class instance we have no
-// handle on, so telling it "the window got shorter" either overflows past the
-// card or makes the tail of the list unreachable. A purely cosmetic overflow
-// past the card's bottom edge was preferred over breaking reachability.
+// While the filter options are open, the list is hidden: the options can be
+// taller than the room above the list, and drawing both overlaps them.
 function syncToolbarUnsafe(): void {
   if (!modalNode || modalNode.destroyed) { teardownToolbar(); modalNode = null; return; }
   const anchors = locateActivityLogAnchors(modalNode);
@@ -383,24 +432,32 @@ function syncToolbarUnsafe(): void {
   }
 
   const scrollContainer = anchors.scrollViewContainer;
-  const currentScrollY = scrollContainer.position.y;
-  if (Math.abs(currentScrollY - (lastNativeScrollY + appliedOffset)) > 0.5) {
-    lastNativeScrollY = currentScrollY;
-    appliedOffset = 0;
-  }
+  const parts = locateScrollParts(scrollContainer);
+  debugSyncState.scrollPartsFound = !!parts;
 
   const onLogs = activeTab === "logs";
   toolbarState.container.visible = onLogs;
   if (!onLogs && toolbarState.isExpanded) setExpanded(toolbarState, false);
+  toolbarState.container.position.set(scrollContainer.position.x, scrollContainer.position.y);
+  refreshToolbarHighlight(toolbarState);
 
-  const desiredOffset = onLogs ? toolbarState.height + TOOLBAR_GAP_BELOW : 0;
-  if (desiredOffset !== appliedOffset) {
-    scrollContainer.position.y = lastNativeScrollY + desiredOffset;
-    appliedOffset = desiredOffset;
+  if (!onLogs || !parts) {
+    restoreScroll();
+    return;
   }
 
-  toolbarState.container.position.set(scrollContainer.position.x, lastNativeScrollY);
-  refreshToolbarHighlight(toolbarState);
+  touchedScroll = { container: scrollContainer, mask: parts.mask };
+  scrollContainer.visible = !toolbarState.isExpanded;
+
+  // Always the collapsed height: the options panel hides the list rather than
+  // pushing it, so the rows never have to move when it opens.
+  const toolbarSpace = collapsedHeight() + TOOLBAR_GAP_BELOW;
+  const maskHeight = parts.mask.getLocalBounds?.().height ?? 0;
+  const transform = maskTransformFor(maskHeight, toolbarSpace);
+  parts.mask.position.y = transform.y;
+  parts.mask.scale.y = transform.scaleY;
+
+  shiftLogRows(parts.content, toolbarSpace);
 }
 
 function tryFindModal(): void {
@@ -484,7 +541,7 @@ shareGlobal("__MG_ACTIVITY_LOG_TOOLBAR_DEBUG__", {
   get activeTab() {
     return activeTab;
   },
-  get appliedOffset() {
-    return appliedOffset;
+  get scrollPartsFound() {
+    return debugSyncState.scrollPartsFound;
   },
 });

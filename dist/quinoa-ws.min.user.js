@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.226
+// @version      3.2.227
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -10333,6 +10333,27 @@
   }
   function activityLogTabOf(value) {
     return value === "stats" ? "stats" : "logs";
+  }
+  function locateScrollParts(scrollViewContainer) {
+    const children = scrollViewContainer?.children;
+    if (!Array.isArray(children)) return null;
+    const viewport = children.find((child) => child?.mask && Array.isArray(child.children));
+    const content = viewport?.children?.[0];
+    if (!viewport || !content || !Array.isArray(content.children)) return null;
+    return { mask: viewport.mask, content };
+  }
+  function planLogRowsShift(contentChildren, toolbarSpace) {
+    const first = contentChildren[0];
+    const isNote = !!first && typeof first.text === "string" && !(first.children?.length > 0);
+    if (!isNote) return { hideFirst: false, shift: toolbarSpace };
+    const next = contentChildren[1];
+    const firstY = first.position?.y ?? first.y ?? 0;
+    const noteSpace = next ? (next.position?.y ?? next.y ?? firstY) - firstY : first.height ?? 0;
+    return { hideFirst: true, shift: toolbarSpace - noteSpace };
+  }
+  function maskTransformFor(maskGeometryHeight, toolbarSpace) {
+    if (!(maskGeometryHeight > toolbarSpace) || toolbarSpace <= 0) return { y: 0, scaleY: 1 };
+    return { y: toolbarSpace, scaleY: (maskGeometryHeight - toolbarSpace) / maskGeometryHeight };
   }
 
   // src/services/fakeModal.ts
@@ -32022,7 +32043,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.226";
+      return "3.2.227";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -35319,16 +35340,36 @@
   }
   var modalNode = null;
   var toolbarState = null;
-  var appliedOffset = 0;
-  var lastNativeScrollY = 0;
   var findRafId2 = null;
   var lastFindCheckAt2 = 0;
+  var touchedScroll = null;
+  var shiftedRows = /* @__PURE__ */ new WeakSet();
+  var plannedFirst = null;
+  var plannedShift = 0;
   var debugSyncState = {
     lastError: null,
     anchorsFound: false,
-    toolbarBuilt: false
+    toolbarBuilt: false,
+    scrollPartsFound: false
   };
+  function restoreScroll() {
+    if (!touchedScroll) return;
+    const { container, mask } = touchedScroll;
+    try {
+      if (!container.destroyed) container.visible = true;
+    } catch {
+    }
+    try {
+      if (mask && !mask.destroyed) {
+        mask.position.y = 0;
+        mask.scale.y = 1;
+      }
+    } catch {
+    }
+    touchedScroll = null;
+  }
   function teardownToolbar() {
+    restoreScroll();
     if (toolbarState) {
       try {
         toolbarState.container.destroy({ children: true });
@@ -35336,8 +35377,9 @@
       }
     }
     toolbarState = null;
-    appliedOffset = 0;
-    lastNativeScrollY = 0;
+    shiftedRows = /* @__PURE__ */ new WeakSet();
+    plannedFirst = null;
+    plannedShift = 0;
   }
   function syncToolbar() {
     try {
@@ -35346,6 +35388,25 @@
     } catch (error) {
       debugSyncState.lastError = String(error?.message ?? error);
       console.warn("[activityLogFilterPixi] syncToolbar failed", error);
+    }
+  }
+  function shiftLogRows(content, toolbarSpace) {
+    const children = content.children;
+    const first = children[0];
+    if (!first) return;
+    if (first !== plannedFirst) {
+      const plan = planLogRowsShift(children, toolbarSpace);
+      plannedFirst = first;
+      plannedShift = plan.shift;
+      if (plan.hideFirst) {
+        first.visible = false;
+        shiftedRows.add(first);
+      }
+    }
+    for (const child of children) {
+      if (shiftedRows.has(child)) continue;
+      shiftedRows.add(child);
+      child.position.y += plannedShift;
     }
   }
   function syncToolbarUnsafe() {
@@ -35371,21 +35432,25 @@
       debugSyncState.toolbarBuilt = true;
     }
     const scrollContainer = anchors.scrollViewContainer;
-    const currentScrollY = scrollContainer.position.y;
-    if (Math.abs(currentScrollY - (lastNativeScrollY + appliedOffset)) > 0.5) {
-      lastNativeScrollY = currentScrollY;
-      appliedOffset = 0;
-    }
+    const parts = locateScrollParts(scrollContainer);
+    debugSyncState.scrollPartsFound = !!parts;
     const onLogs = activeTab === "logs";
     toolbarState.container.visible = onLogs;
     if (!onLogs && toolbarState.isExpanded) setExpanded(toolbarState, false);
-    const desiredOffset = onLogs ? toolbarState.height + TOOLBAR_GAP_BELOW : 0;
-    if (desiredOffset !== appliedOffset) {
-      scrollContainer.position.y = lastNativeScrollY + desiredOffset;
-      appliedOffset = desiredOffset;
-    }
-    toolbarState.container.position.set(scrollContainer.position.x, lastNativeScrollY);
+    toolbarState.container.position.set(scrollContainer.position.x, scrollContainer.position.y);
     refreshToolbarHighlight(toolbarState);
+    if (!onLogs || !parts) {
+      restoreScroll();
+      return;
+    }
+    touchedScroll = { container: scrollContainer, mask: parts.mask };
+    scrollContainer.visible = !toolbarState.isExpanded;
+    const toolbarSpace = collapsedHeight() + TOOLBAR_GAP_BELOW;
+    const maskHeight = parts.mask.getLocalBounds?.().height ?? 0;
+    const transform = maskTransformFor(maskHeight, toolbarSpace);
+    parts.mask.position.y = transform.y;
+    parts.mask.scale.y = transform.scaleY;
+    shiftLogRows(parts.content, toolbarSpace);
   }
   function tryFindModal() {
     if (!modalOpen2 || modalNode) return;
@@ -35463,8 +35528,8 @@
     get activeTab() {
       return activeTab;
     },
-    get appliedOffset() {
-      return appliedOffset;
+    get scrollPartsFound() {
+      return debugSyncState.scrollPartsFound;
     }
   });
 

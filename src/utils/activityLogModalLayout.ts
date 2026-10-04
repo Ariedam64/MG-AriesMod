@@ -63,3 +63,53 @@ export function activityLogOpenTarget(tab: ActivityLogTab): { modal: string; tab
 export function activityLogTabOf(value: unknown): ActivityLogTab {
   return value === "stats" ? "stats" : "logs";
 }
+
+export interface ScrollParts {
+  /** The Graphics clipping the list; `viewport.mask`. */
+  mask: any;
+  /** What the game fills with rows on every rebuild. */
+  content: any;
+}
+
+/**
+ * The inside of the game's `ScrollableView`: `container` holds
+ * `[viewportMask, viewport]` and `viewport` holds `content`. The viewport is
+ * found as the child carrying a mask rather than by index.
+ */
+export function locateScrollParts(scrollViewContainer: any): ScrollParts | null {
+  const children = scrollViewContainer?.children;
+  if (!Array.isArray(children)) return null;
+  const viewport = children.find((child: any) => child?.mask && Array.isArray(child.children));
+  const content = viewport?.children?.[0];
+  if (!viewport || !content || !Array.isArray(content.children)) return null;
+  return { mask: viewport.mask, content };
+}
+
+/**
+ * How far to move the rows of one rebuild, and whether its first child is the
+ * "Your most recent activity" note.
+ *
+ * The note is always the first thing the Logs tab adds, and the only text
+ * placed directly in the content. It is hidden and its space handed to the
+ * toolbar: rows move by the toolbar's space minus the note's. If the note is
+ * not there (a game change), the rows simply move down by the toolbar's space.
+ */
+export function planLogRowsShift(contentChildren: any[], toolbarSpace: number): { hideFirst: boolean; shift: number } {
+  const first = contentChildren[0];
+  const isNote = !!first && typeof first.text === "string" && !(first.children?.length > 0);
+  if (!isNote) return { hideFirst: false, shift: toolbarSpace };
+  const next = contentChildren[1];
+  const firstY = first.position?.y ?? first.y ?? 0;
+  const noteSpace = next ? (next.position?.y ?? next.y ?? firstY) - firstY : (first.height ?? 0);
+  return { hideFirst: true, shift: toolbarSpace - noteSpace };
+}
+
+/**
+ * The mask, shortened from the top by the toolbar's space so rows scrolling
+ * up vanish under the toolbar instead of showing through it. Expressed on the
+ * mask node, not its geometry: the game redraws the geometry on every resize.
+ */
+export function maskTransformFor(maskGeometryHeight: number, toolbarSpace: number): { y: number; scaleY: number } {
+  if (!(maskGeometryHeight > toolbarSpace) || toolbarSpace <= 0) return { y: 0, scaleY: 1 };
+  return { y: toolbarSpace, scaleY: (maskGeometryHeight - toolbarSpace) / maskGeometryHeight };
+}

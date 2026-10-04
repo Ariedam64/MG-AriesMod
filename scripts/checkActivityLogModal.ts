@@ -16,6 +16,9 @@ import {
   activityLogOpenTarget,
   activityLogTabOf,
   locateActivityLogAnchors,
+  locateScrollParts,
+  maskTransformFor,
+  planLogRowsShift,
 } from "../src/utils/activityLogModalLayout";
 
 let failures = 0;
@@ -70,6 +73,32 @@ function v1396Modal(extra: any[] = []) {
 
 check("a node without the tab bar is not the merged modal", locateActivityLogAnchors(node("X", [node("", [node("a"), node("b"), node("c")])])), null);
 check("a destroyed modal yields nothing", locateActivityLogAnchors({ children: [{ destroyed: true, children: [] }] }), null);
+
+{
+  // ScrollableView in v1396: container [viewportMask, viewport], viewport [content].
+  const mask = { label: "mask" };
+  const content = node("content");
+  const viewport = { label: "", mask, children: [content] };
+  const scroll = node("ScrollableView", [{ label: "", children: [] }, viewport]);
+  const parts = locateScrollParts(scroll);
+  check("the list content is found inside the scroll view", parts?.content === content, true);
+  check("the list mask is found inside the scroll view", parts?.mask === mask, true);
+  check("a scroll view without a masked viewport yields nothing", locateScrollParts(node("x", [node("a")])), null);
+}
+
+{
+  // Logs tab: the note sits at topPadding, the first row starts noteSpace below it.
+  const note = { text: "Your most recent activity. The last 25 logs are saved.", children: [], position: { y: 12 }, height: 14 };
+  const row = { children: [{}], position: { y: 46 } };
+  check("the note is hidden and its 34px go to a 32px toolbar", planLogRowsShift([note, row], 32), { hideFirst: true, shift: -2 });
+  check("a taller toolbar pushes the rows by the difference", planLogRowsShift([note, row], 40), { hideFirst: true, shift: 6 });
+  check("without the note, rows move down by the whole toolbar", planLogRowsShift([row], 32), { hideFirst: false, shift: 32 });
+  check("an empty list moves nothing it does not have", planLogRowsShift([], 32), { hideFirst: false, shift: 32 });
+}
+
+check("the mask loses the toolbar's space at its top", maskTransformFor(400, 32), { y: 32, scaleY: 368 / 400 });
+check("no toolbar, the mask is left alone", maskTransformFor(400, 0), { y: 0, scaleY: 1 });
+check("a mask not yet sized is left alone", maskTransformFor(0, 32), { y: 0, scaleY: 1 });
 
 check("stats opens the activityLog modal on its Stats tab", activityLogOpenTarget("stats"), { modal: "activityLog", tab: "stats" });
 check("logs opens the activityLog modal on its Logs tab", activityLogOpenTarget("logs"), { modal: "activityLog", tab: "logs" });
