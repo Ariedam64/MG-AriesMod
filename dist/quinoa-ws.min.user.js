@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.228
+// @version      3.2.229
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -10342,9 +10342,19 @@
     if (!viewport || !content || !Array.isArray(content.children)) return null;
     return { mask: viewport.mask, content };
   }
+  var LOG_ROW_LABEL = "ActivityLogRow";
+  var STAT_CARD_LABEL = "StatCard";
+  function logsContentKind(contentChildren) {
+    let kind = "unknown";
+    for (const child of contentChildren) {
+      if (child?.label === STAT_CARD_LABEL) return "stats";
+      if (child?.label === LOG_ROW_LABEL) kind = "logs";
+    }
+    return kind;
+  }
   function planLogRowsShift(contentChildren, toolbarSpace) {
     const first = contentChildren[0];
-    const isNote = !!first && first.label !== "ActivityLogRow" && (typeof first.textComponent?.text === "string" || typeof first.text === "string" && !(first.children?.length > 0));
+    const isNote = !!first && first.label !== LOG_ROW_LABEL && (typeof first.textComponent?.text === "string" || typeof first.text === "string" && !(first.children?.length > 0));
     if (!isNote) return { hideFirst: false, shift: toolbarSpace };
     const next = contentChildren[1];
     const firstY = first.position?.y ?? first.y ?? 0;
@@ -32043,7 +32053,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.228";
+      return "3.2.229";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -35434,7 +35444,8 @@
     const scrollContainer = anchors.scrollViewContainer;
     const parts = locateScrollParts(scrollContainer);
     debugSyncState.scrollPartsFound = !!parts;
-    const onLogs = activeTab === "logs";
+    const kind = parts ? logsContentKind(parts.content.children) : "unknown";
+    const onLogs = kind === "unknown" ? activeTab === "logs" : kind === "logs";
     toolbarState.container.visible = onLogs;
     if (!onLogs && toolbarState.isExpanded) setExpanded(toolbarState, false);
     toolbarState.container.position.set(scrollContainer.position.x, scrollContainer.position.y);

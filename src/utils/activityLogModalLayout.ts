@@ -85,9 +85,32 @@ export function locateScrollParts(scrollViewContainer: any): ScrollParts | null 
   return { mask: viewport.mask, content };
 }
 
+/** Labels the game gives the rows of each tab. */
+const LOG_ROW_LABEL = "ActivityLogRow";
+const STAT_CARD_LABEL = "StatCard";
+
 /**
- * How far to move the rows of one rebuild, and whether its first child is the
- * "Your most recent activity" note.
+ * Which tab a rebuild of the shared content belongs to, read off the content.
+ *
+ * `activityLogTabAtom` cannot be trusted for this: the game rebuilds the
+ * content synchronously when the tab changes, and the mod hears about the
+ * change a little later, so for a frame the Stats cards sit under a filter
+ * that still believes it is on Logs. Moving them then left a gap on Stats.
+ * An empty log list and a Stats tab without any card carry neither label;
+ * only then does the caller fall back on the atom.
+ */
+export function logsContentKind(contentChildren: any[]): ActivityLogTab | "unknown" {
+  let kind: ActivityLogTab | "unknown" = "unknown";
+  for (const child of contentChildren) {
+    if (child?.label === STAT_CARD_LABEL) return "stats";
+    if (child?.label === LOG_ROW_LABEL) kind = "logs";
+  }
+  return kind;
+}
+
+/**
+ * How far to move the rows of one Logs rebuild, and whether its first child is
+ * the "Your most recent activity" note. Only ever called on Logs content.
  *
  * The note is always the first thing the Logs tab adds, and the only text
  * placed directly in the content. It is hidden and its space handed to the
@@ -102,7 +125,7 @@ export function planLogRowsShift(contentChildren: any[], toolbarSpace: number): 
   // neither.
   const isNote =
     !!first &&
-    first.label !== "ActivityLogRow" &&
+    first.label !== LOG_ROW_LABEL &&
     (typeof first.textComponent?.text === "string" ||
       (typeof first.text === "string" && !(first.children?.length > 0)));
   if (!isNote) return { hideFirst: false, shift: toolbarSpace };

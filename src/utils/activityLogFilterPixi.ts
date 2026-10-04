@@ -28,6 +28,7 @@ import {
   activityLogTabOf,
   locateActivityLogAnchors,
   locateScrollParts,
+  logsContentKind,
   maskTransformFor,
   planLogRowsShift,
   type ActivityLogTab,
@@ -435,7 +436,11 @@ function syncToolbarUnsafe(): void {
   const parts = locateScrollParts(scrollContainer);
   debugSyncState.scrollPartsFound = !!parts;
 
-  const onLogs = activeTab === "logs";
+  // What the content shows wins over the tab atom, which lags a rebuild by a
+  // moment; the atom only decides when the content carries no row of either
+  // tab (an empty log list).
+  const kind = parts ? logsContentKind(parts.content.children) : "unknown";
+  const onLogs = kind === "unknown" ? activeTab === "logs" : kind === "logs";
   toolbarState.container.visible = onLogs;
   if (!onLogs && toolbarState.isExpanded) setExpanded(toolbarState, false);
   toolbarState.container.position.set(scrollContainer.position.x, scrollContainer.position.y);

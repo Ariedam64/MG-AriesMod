@@ -17,6 +17,7 @@ import {
   activityLogTabOf,
   locateActivityLogAnchors,
   locateScrollParts,
+  logsContentKind,
   maskTransformFor,
   planLogRowsShift,
 } from "../src/utils/activityLogModalLayout";
@@ -97,8 +98,18 @@ check("a destroyed modal yields nothing", locateActivityLogAnchors({ children: [
   const textComponent = { text: "Your most recent activity. The last 25 logs are saved.", children: [] };
   const richNote = { textComponent, children: [textComponent], textWidth: 300, textHeight: 14, position: { y: 12 } };
   check("the game's rich text note is recognised and hidden", planLogRowsShift([richNote, row], 32), { hideFirst: true, shift: -2 });
-  check("without the note, rows move down by the whole toolbar", planLogRowsShift([row], 32), { hideFirst: false, shift: 32 });
-  check("an empty list moves nothing it does not have", planLogRowsShift([], 32), { hideFirst: false, shift: 32 });
+  const logRow = { label: "ActivityLogRow", children: [{}], position: { y: 46 } };
+  check("without the note, log rows move down by the whole toolbar", planLogRowsShift([logRow], 32), { hideFirst: false, shift: 32 });
+  // The Stats tab shares the content, and the hub hears about a tab switch a
+  // little after the game has rebuilt it, so the content must say which tab it
+  // belongs to. Stats opens with a group heading written with the same rich
+  // text component as the note, then StatCards.
+  const heading = { textComponent: { text: "Garden" }, children: [{}], position: { y: 12 } };
+  const statCard = { label: "StatCard", children: [{}], position: { y: 40 } };
+  check("log rows mean the Logs tab", logsContentKind([richNote, logRow]), "logs");
+  check("stat cards mean the Stats tab, even under a rich text heading", logsContentKind([heading, statCard]), "stats");
+  check("an empty log list cannot tell", logsContentKind([richNote, { children: [] }]), "unknown");
+  check("an empty content cannot tell", logsContentKind([]), "unknown");
 }
 
 check("the mask loses the toolbar's space at its top", maskTransformFor(400, 32), { y: 32, scaleY: 368 / 400 });
