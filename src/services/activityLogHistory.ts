@@ -206,7 +206,10 @@ function syncHistory(prevSnapshot: ActivityLogEntry[], nextSnapshot: ActivityLog
 async function reopenFakeActivityLogFromHistory() {
   try {
     const filtered = getFilteredHistoryForReopen();
-    await fakeActivityLogShow(filtered, { open: true });
+    // The modal just opened by itself: only the data is swapped. Re-opening
+    // would also write the Logs tab, and since v1396 the same modal may have
+    // been opened on Stats.
+    await fakeActivityLogShow(filtered, { open: false });
   } catch {
   }
 }

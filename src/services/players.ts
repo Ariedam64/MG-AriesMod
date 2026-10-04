@@ -577,6 +577,9 @@ export const PlayersService = {
         await toastSimple("Stats", "No stats found for this player.", "error");
         return;
       }
+      // Stats now opens the activityLog modal: without the skip, the history
+      // watcher would swap our own logs over this player's data.
+      skipNextActivityLogHistoryReopen();
       await fakeStatsShow(stats, { open: true });
       if (playerName) await toastSimple("Stats", `${playerName}'s stats displayed.`, "info");
     } catch (e: any) {

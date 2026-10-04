@@ -234,6 +234,8 @@ export const activeModal: View<string | null> = {
   asSignature: (opts) => activeModalRaw.asSignature(opts as any) as any,
 };
 export const inventoryModalIsActive = makeAtom<boolean>("inventoryModalIsActiveAtom");
+// Since v1396 Stats and Activity Log share the `activityLog` modal; this picks the tab (`"logs"` | `"stats"`).
+export const activityLogTab = makeAtom<string>("activityLogTabAtom");
 export const avatarTriggerAnimationAtom = makeAtom<AvatarTriggerAnimation | null>("avatarTriggerAnimationAtom")
 
 export const friendBonusMultiplier = makeAtom<any>("friendBonusMultiplierAtom")
@@ -409,7 +411,7 @@ export const myPetsAbilitiesTrigger = {
  * Registry (lecture seule)
  * ==========================================================================*/
 export const Atoms = {
-  ui: { activeModal, inventoryModalIsActive },
+  ui: { activeModal, inventoryModalIsActive, activityLogTab },
   server: { numPlayers, friendBonusMultiplier },
   player: { 
     position, 

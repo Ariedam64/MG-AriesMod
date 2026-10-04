@@ -21,16 +21,21 @@ import { getActivityLogHistory, type ActivityLogEntry } from "../services/activi
 import { fakeActivityLogShow } from "../services/fakeModal";
 import { Atoms } from "../store/atoms";
 import { getSpriteState, getStage, findAcrossBranches, findGraphicsCtor } from "./gardenInfoCardPixi";
+import {
+  ACTIVITY_LOG_MODAL_ID,
+  ACTIVITY_LOG_MODAL_LABEL,
+  FILTER_TOOLBAR_LABEL,
+  activityLogTabOf,
+  locateActivityLogAnchors,
+  type ActivityLogTab,
+} from "./activityLogModalLayout";
 
 const FILTER_STORAGE_KEY = "activityLog.filter";
-const ACTIVITY_LOG_MODAL_ID = "activityLog";
-const ACTIVITY_LOG_MODAL_LABEL = "ActivityLogModal";
 const FIND_RETRY_MS = 1000;
 
 const BUTTON_HEIGHT = 26;
 const BUTTON_PADDING_X = 10;
 const BUTTON_GAP = 6;
-const TOOLBAR_GAP_ABOVE = 4;
 const TOOLBAR_GAP_BELOW = 6;
 const BUTTON_FILL_INACTIVE = 0x7b5a38;
 const BUTTON_FILL_ACTIVE = 0xe3a23d;
@@ -50,6 +55,8 @@ const raf: (cb: (t: number) => void) => number = (pageWindow as any).requestAnim
 
 let activeFilter: ActionKey = loadPersistedFilter();
 let modalOpen = false;
+/** Since v1396 the modal also hosts Stats; the filter only belongs on Logs. */
+let activeTab: ActivityLogTab = "logs";
 
 function loadPersistedFilter(): ActionKey {
   try {
@@ -109,32 +116,6 @@ const debugState = {
   computeFilteredHistory,
 };
 shareGlobal("__MG_ACTIVITY_LOG_FILTER_DEBUG__", debugState);
-
-interface ModalAnchors {
-  modalContainer: any;
-  title: any;
-  divider: any;
-  scrollViewContainer: any;
-}
-
-// Confirmed via a live console check against the running game: `this.container`
-// (found by label) always has [modalContainer, closeButton.view] as its own two
-// children (set by the base modal class), and modalContainer always has
-// [backgroundSprite, title, infoTooltip.container, divider,
-// scrollView.container] in that order (set by the ActivityLogModal subclass's
-// constructor). If a future game build changes this order, this is the one
-// place to update.
-function locateModalAnchors(modalNode: any): ModalAnchors | null {
-  const modalContainer = modalNode?.children?.[0];
-  if (!modalContainer || modalContainer.destroyed) return null;
-  const children = modalContainer.children;
-  if (!Array.isArray(children) || children.length < 5) return null;
-  const title = children[1];
-  const divider = children[3];
-  const scrollViewContainer = children[4];
-  if (!title || !divider || !scrollViewContainer) return null;
-  return { modalContainer, title, divider, scrollViewContainer };
-}
 
 interface ToolbarButton {
   container: any;
@@ -288,6 +269,7 @@ function buildToolbar(graphicsCtor: any, textCtor: any, containerCtor: any, maxW
   const total = history.length;
 
   const container = new containerCtor();
+  container.label = FILTER_TOOLBAR_LABEL;
 
   const closedButton = buildClosedButton(graphicsCtor, textCtor, containerCtor, counts, total);
   container.addChild(closedButton.container);
@@ -339,7 +321,7 @@ function refreshToolbarHighlight(toolbarState: ToolbarState): void {
 let modalNode: any = null;
 let toolbarState: ToolbarState | null = null;
 let appliedOffset = 0;
-let lastNativeDividerY = 0;
+let lastNativeScrollY = 0;
 let findRafId: number | null = null;
 let lastFindCheckAt = 0;
 
@@ -355,7 +337,7 @@ function teardownToolbar(): void {
   }
   toolbarState = null;
   appliedOffset = 0;
-  lastNativeDividerY = 0;
+  lastNativeScrollY = 0;
 }
 
 function syncToolbar(): void {
@@ -368,20 +350,19 @@ function syncToolbar(): void {
   }
 }
 
-// Fixed position between the title and the divider (pushing both the
-// divider and the scroll view down by the toolbar's height every frame,
-// recalculated off the title's own live position — no hardcoded pixels).
+// The toolbar sits where the list natively starts, just under the tab bar,
+// and the list is pushed down by the toolbar's height every frame. The game
+// re-places the scroll view on every layout, so its native y is re-read
+// whenever it no longer matches what we left it at.
+//
 // Deliberately does NOT try to shrink or mask the scroll view's visible
-// window: the scroll view's own scroll-range math is owned by a class
-// instance we have no handle on (confirmed via a live property dump), so
-// any attempt to tell it "the window got shorter" either overflows past the
-// card or makes the tail of the list permanently unreachable by scrolling.
-// Between those two known-bad outcomes, a purely cosmetic overflow past the
-// card's bottom edge was preferred over breaking reachability or covering
-// list items with the toolbar itself.
+// window: its scroll-range math is owned by a class instance we have no
+// handle on, so telling it "the window got shorter" either overflows past the
+// card or makes the tail of the list unreachable. A purely cosmetic overflow
+// past the card's bottom edge was preferred over breaking reachability.
 function syncToolbarUnsafe(): void {
   if (!modalNode || modalNode.destroyed) { teardownToolbar(); modalNode = null; return; }
-  const anchors = locateModalAnchors(modalNode);
+  const anchors = locateActivityLogAnchors(modalNode);
   debugSyncState.anchorsFound = !!anchors;
   if (!anchors) return;
 
@@ -391,7 +372,9 @@ function syncToolbarUnsafe(): void {
     const stage = getStage(state);
     const graphicsCtor = findGraphicsCtor(stage);
     if (!graphicsCtor) return;
-    const maxWidth = safeWidth(anchors.divider, 0);
+    // The list is centred in the card, so its width is the card's minus its
+    // left inset on both sides.
+    const maxWidth = safeWidth(anchors.backgroundSprite, 0) - 2 * (anchors.scrollViewContainer.position?.x ?? 0);
     if (maxWidth <= 0) return;
     const containerCtor = anchors.modalContainer.constructor;
     toolbarState = buildToolbar(graphicsCtor, state.ctors.Text, containerCtor, maxWidth);
@@ -399,21 +382,24 @@ function syncToolbarUnsafe(): void {
     debugSyncState.toolbarBuilt = true;
   }
 
-  const currentDividerY = anchors.divider.position.y;
-  if (Math.abs(currentDividerY - (lastNativeDividerY + appliedOffset)) > 0.5) {
-    lastNativeDividerY = currentDividerY;
+  const scrollContainer = anchors.scrollViewContainer;
+  const currentScrollY = scrollContainer.position.y;
+  if (Math.abs(currentScrollY - (lastNativeScrollY + appliedOffset)) > 0.5) {
+    lastNativeScrollY = currentScrollY;
     appliedOffset = 0;
   }
 
-  const toolbarTopY = anchors.title.position.y + anchors.title.textHeight + TOOLBAR_GAP_ABOVE;
-  const desiredOffset = Math.max(0, toolbarTopY + toolbarState.height + TOOLBAR_GAP_BELOW - lastNativeDividerY);
+  const onLogs = activeTab === "logs";
+  toolbarState.container.visible = onLogs;
+  if (!onLogs && toolbarState.isExpanded) setExpanded(toolbarState, false);
+
+  const desiredOffset = onLogs ? toolbarState.height + TOOLBAR_GAP_BELOW : 0;
   if (desiredOffset !== appliedOffset) {
-    anchors.divider.position.y = lastNativeDividerY + desiredOffset;
-    anchors.scrollViewContainer.position.y += desiredOffset - appliedOffset;
+    scrollContainer.position.y = lastNativeScrollY + desiredOffset;
     appliedOffset = desiredOffset;
   }
 
-  toolbarState.container.position.set(anchors.divider.position.x, toolbarTopY);
+  toolbarState.container.position.set(scrollContainer.position.x, lastNativeScrollY);
   refreshToolbarHighlight(toolbarState);
 }
 
@@ -462,6 +448,13 @@ export function startActivityLogFilterPixi(): void {
       });
     } catch {
     }
+    try {
+      activeTab = activityLogTabOf(await Atoms.ui.activityLogTab.get());
+      await Atoms.ui.activityLogTab.onChange((next) => {
+        activeTab = activityLogTabOf(next);
+      });
+    } catch {
+    }
     if (findRafId == null) findRafId = raf(scheduleFind);
   })();
 }
@@ -486,7 +479,10 @@ shareGlobal("__MG_ACTIVITY_LOG_TOOLBAR_DEBUG__", {
     return modalNode;
   },
   get anchors() {
-    return modalNode ? locateModalAnchors(modalNode) : null;
+    return modalNode ? locateActivityLogAnchors(modalNode) : null;
+  },
+  get activeTab() {
+    return activeTab;
   },
   get appliedOffset() {
     return appliedOffset;

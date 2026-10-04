@@ -6,6 +6,7 @@
 import { fakeShow, fakeHide, type FakeConfig } from "./fakeAtoms";
 import { Atoms } from "../store/atoms";
 import { modalNameOf } from "../utils/modalState";
+import { activityLogOpenTarget, activityLogTabOf, type ActivityLogTab } from "../utils/activityLogModalLayout";
 
 /* --------------------------------- Types -------------------------------- */
 export type ModalId = string;
@@ -147,7 +148,7 @@ const SHARED_MYDATA_PATCH: FakeConfig<any> = {
   merge: mergeMyData,
   gate: {
     label: Atoms.ui.activeModal.label,
-    isOpen: (v) => ["inventory", "journal", "stats", "activityLog"].includes(modalNameOf(v) ?? ""),
+    isOpen: (v) => ["inventory", "journal", "activityLog"].includes(modalNameOf(v) ?? ""),
     autoDisableOnClose: true,
   },
 };
@@ -274,28 +275,42 @@ export async function fakeJournalHide() {
   await closeJournalModal();
 }
 
+/* ===================== Activity log et Stats : une seule modale ===================== */
+// Depuis v1396 la modale `stats` n'existe plus : Stats est un onglet de la
+// modale `activityLog`, choisi par `activityLogTabAtom`. On écrit l'onglet puis
+// la modale, dans l'ordre du jeu. Si la modale est déjà ouverte, elle suit
+// l'onglet d'elle-même.
+
+export const ACTIVITY_LOG_MODAL_ID: ModalId = "activityLog";
+
+async function openActivityLogTab(tab: ActivityLogTab) {
+  const target = activityLogOpenTarget(tab);
+  try { await Atoms.ui.activityLogTab.set(target.tab); } catch {}
+  return openModal(target.modal);
+}
+
+async function isActivityLogTabOpen(tab: ActivityLogTab): Promise<boolean> {
+  if (!(await isModalOpenAsync(ACTIVITY_LOG_MODAL_ID))) return false;
+  try { return activityLogTabOf(await Atoms.ui.activityLogTab.get()) === tab; } catch { return false; }
+}
+
 /* =============================== Spécifique STATS =============================== */
 
-export const STATS_MODAL_ID: ModalId = "stats";
-
 export async function openStatsModal() {
-  return openModal(STATS_MODAL_ID);
+  return openActivityLogTab("stats");
 }
 
 export async function closeStatsModal() {
-  return closeModal(STATS_MODAL_ID);
-}
-
-export function isStatsModalOpen(v: any) {
-  return isModalOpen(v, STATS_MODAL_ID);
+  if (await isActivityLogTabOpen("stats")) await closeModal(ACTIVITY_LOG_MODAL_ID);
 }
 
 export async function isStatsModalOpenAsync(): Promise<boolean> {
-  return isModalOpenAsync(STATS_MODAL_ID);
+  return isActivityLogTabOpen("stats");
 }
 
+/** Attend la fermeture de la modale, pas un changement d'onglet. */
 export async function waitStatsModalClosed(timeoutMs = 120000): Promise<boolean> {
-  return waitModalClosed(STATS_MODAL_ID, timeoutMs);
+  return waitModalClosed(ACTIVITY_LOG_MODAL_ID, timeoutMs);
 }
 
 export async function fakeStatsShow(payload?: any, opts?: { open?: boolean; autoRestoreMs?: number }) {
@@ -316,10 +331,8 @@ export async function fakeStatsHide() {
 
 /* ============================ Spécifique ACTIVITY LOG ============================ */
 
-export const ACTIVITY_LOG_MODAL_ID: ModalId = "activityLog";
-
 export async function openActivityLogModal() {
-  return openModal(ACTIVITY_LOG_MODAL_ID);
+  return openActivityLogTab("logs");
 }
 
 export async function closeActivityLogModal() {

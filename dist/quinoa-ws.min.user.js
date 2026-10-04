@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.225
+// @version      3.2.226
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -5008,6 +5008,7 @@
     asSignature: (opts) => activeModalRaw.asSignature(opts)
   };
   var inventoryModalIsActive = makeAtom("inventoryModalIsActiveAtom");
+  var activityLogTab = makeAtom("activityLogTabAtom");
   var avatarTriggerAnimationAtom = makeAtom("avatarTriggerAnimationAtom");
   var friendBonusMultiplier = makeAtom("friendBonusMultiplierAtom");
   var garden = makeView("myDataAtom", { path: "garden" });
@@ -5077,7 +5078,7 @@
     sig: () => "1"
   });
   var Atoms = {
-    ui: { activeModal, inventoryModalIsActive },
+    ui: { activeModal, inventoryModalIsActive, activityLogTab },
     server: { numPlayers, friendBonusMultiplier },
     player: {
       position,
@@ -10309,6 +10310,31 @@
     _fakeRegistry.delete(label2);
   }
 
+  // src/utils/activityLogModalLayout.ts
+  var ACTIVITY_LOG_MODAL_ID = "activityLog";
+  var ACTIVITY_LOG_MODAL_LABEL = "ActivityLogModal";
+  var FILTER_TOOLBAR_LABEL = "AriesActivityLogFilter";
+  var TAB_BAR_LABELS = /* @__PURE__ */ new Set(["JournalTabs", "JournalTabTaps"]);
+  function locateActivityLogAnchors(modalNode2) {
+    const modalContainer = modalNode2?.children?.[0];
+    if (!modalContainer || modalContainer.destroyed) return null;
+    const children = modalContainer.children;
+    if (!Array.isArray(children) || children.length < 3) return null;
+    const backgroundSprite = children[0];
+    if (!children.some((child) => TAB_BAR_LABELS.has(child?.label))) return null;
+    const scrollViewContainer = children.find(
+      (child, index) => index > 0 && child && !TAB_BAR_LABELS.has(child.label) && child.label !== FILTER_TOOLBAR_LABEL
+    );
+    if (!backgroundSprite || !scrollViewContainer) return null;
+    return { modalContainer, backgroundSprite, scrollViewContainer };
+  }
+  function activityLogOpenTarget(tab) {
+    return { modal: ACTIVITY_LOG_MODAL_ID, tab };
+  }
+  function activityLogTabOf(value) {
+    return value === "stats" ? "stats" : "logs";
+  }
+
   // src/services/fakeModal.ts
   async function openModal(modalId) {
     try {
@@ -10370,7 +10396,7 @@
     merge: mergeMyData,
     gate: {
       label: Atoms.ui.activeModal.label,
-      isOpen: (v) => ["inventory", "journal", "stats", "activityLog"].includes(modalNameOf(v) ?? ""),
+      isOpen: (v) => ["inventory", "journal", "activityLog"].includes(modalNameOf(v) ?? ""),
       autoDisableOnClose: true
     }
   };
@@ -10439,15 +10465,31 @@
     });
     if (shouldOpen) await openJournalModal();
   }
-  var STATS_MODAL_ID = "stats";
+  var ACTIVITY_LOG_MODAL_ID2 = "activityLog";
+  async function openActivityLogTab(tab) {
+    const target = activityLogOpenTarget(tab);
+    try {
+      await Atoms.ui.activityLogTab.set(target.tab);
+    } catch {
+    }
+    return openModal(target.modal);
+  }
+  async function isActivityLogTabOpen(tab) {
+    if (!await isModalOpenAsync(ACTIVITY_LOG_MODAL_ID2)) return false;
+    try {
+      return activityLogTabOf(await Atoms.ui.activityLogTab.get()) === tab;
+    } catch {
+      return false;
+    }
+  }
   async function openStatsModal() {
-    return openModal(STATS_MODAL_ID);
+    return openActivityLogTab("stats");
   }
   async function isStatsModalOpenAsync() {
-    return isModalOpenAsync(STATS_MODAL_ID);
+    return isActivityLogTabOpen("stats");
   }
   async function waitStatsModalClosed(timeoutMs = 12e4) {
-    return waitModalClosed(STATS_MODAL_ID, timeoutMs);
+    return waitModalClosed(ACTIVITY_LOG_MODAL_ID2, timeoutMs);
   }
   async function fakeStatsShow(payload, opts) {
     const shouldOpen = opts?.open !== false;
@@ -10457,15 +10499,14 @@
     });
     if (shouldOpen) await openStatsModal();
   }
-  var ACTIVITY_LOG_MODAL_ID = "activityLog";
   async function openActivityLogModal() {
-    return openModal(ACTIVITY_LOG_MODAL_ID);
+    return openActivityLogTab("logs");
   }
   async function isActivityLogModalOpenAsync() {
-    return isModalOpenAsync(ACTIVITY_LOG_MODAL_ID);
+    return isModalOpenAsync(ACTIVITY_LOG_MODAL_ID2);
   }
   async function waitActivityLogModalClosed(timeoutMs = 12e4) {
-    return waitModalClosed(ACTIVITY_LOG_MODAL_ID, timeoutMs);
+    return waitModalClosed(ACTIVITY_LOG_MODAL_ID2, timeoutMs);
   }
   async function fakeActivityLogShow(payload, opts) {
     const shouldOpen = opts?.open !== false;
@@ -31981,7 +32022,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.225";
+      return "3.2.226";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -34991,7 +35032,7 @@
   async function reopenFakeActivityLogFromHistory() {
     try {
       const filtered = getFilteredHistoryForReopen();
-      await fakeActivityLogShow(filtered, { open: true });
+      await fakeActivityLogShow(filtered, { open: false });
     } catch {
     }
   }
@@ -35043,7 +35084,7 @@
     };
     const onModalChange = async (modalId) => {
       const cur = modalId ?? null;
-      if (cur === ACTIVITY_LOG_MODAL_ID && lastModal !== ACTIVITY_LOG_MODAL_ID) {
+      if (cur === ACTIVITY_LOG_MODAL_ID2 && lastModal !== ACTIVITY_LOG_MODAL_ID2) {
         if (!consumeHistoryReopenSkip()) {
           await reopenFakeActivityLogFromHistory();
         }
@@ -35072,13 +35113,10 @@
 
   // src/utils/activityLogFilterPixi.ts
   var FILTER_STORAGE_KEY = "activityLog.filter";
-  var ACTIVITY_LOG_MODAL_ID2 = "activityLog";
-  var ACTIVITY_LOG_MODAL_LABEL = "ActivityLogModal";
   var FIND_RETRY_MS = 1e3;
   var BUTTON_HEIGHT = 26;
   var BUTTON_PADDING_X2 = 10;
   var BUTTON_GAP2 = 6;
-  var TOOLBAR_GAP_ABOVE = 4;
   var TOOLBAR_GAP_BELOW = 6;
   var BUTTON_FILL_INACTIVE = 8084024;
   var BUTTON_FILL_ACTIVE = 14918205;
@@ -35095,6 +35133,7 @@
   var raf2 = pageWindow.requestAnimationFrame.bind(pageWindow);
   var activeFilter = loadPersistedFilter();
   var modalOpen2 = false;
+  var activeTab = "logs";
   function loadPersistedFilter() {
     try {
       const stored = readAriesPath(FILTER_STORAGE_KEY);
@@ -35144,17 +35183,6 @@
     computeFilteredHistory
   };
   shareGlobal("__MG_ACTIVITY_LOG_FILTER_DEBUG__", debugState2);
-  function locateModalAnchors(modalNode2) {
-    const modalContainer = modalNode2?.children?.[0];
-    if (!modalContainer || modalContainer.destroyed) return null;
-    const children = modalContainer.children;
-    if (!Array.isArray(children) || children.length < 5) return null;
-    const title = children[1];
-    const divider = children[3];
-    const scrollViewContainer = children[4];
-    if (!title || !divider || !scrollViewContainer) return null;
-    return { modalContainer, title, divider, scrollViewContainer };
-  }
   function safeWidth(node, fallback) {
     try {
       const value = node?.width;
@@ -35249,6 +35277,7 @@
     const counts = computeActionCounts(history2);
     const total = history2.length;
     const container = new containerCtor();
+    container.label = FILTER_TOOLBAR_LABEL;
     const closedButton = buildClosedButton(graphicsCtor, textCtor, containerCtor, counts, total);
     container.addChild(closedButton.container);
     const panel = buildOptionsPanel(graphicsCtor, textCtor, containerCtor, maxWidth, counts, total);
@@ -35291,7 +35320,7 @@
   var modalNode = null;
   var toolbarState = null;
   var appliedOffset = 0;
-  var lastNativeDividerY = 0;
+  var lastNativeScrollY = 0;
   var findRafId2 = null;
   var lastFindCheckAt2 = 0;
   var debugSyncState = {
@@ -35308,7 +35337,7 @@
     }
     toolbarState = null;
     appliedOffset = 0;
-    lastNativeDividerY = 0;
+    lastNativeScrollY = 0;
   }
   function syncToolbar() {
     try {
@@ -35325,7 +35354,7 @@
       modalNode = null;
       return;
     }
-    const anchors = locateModalAnchors(modalNode);
+    const anchors = locateActivityLogAnchors(modalNode);
     debugSyncState.anchorsFound = !!anchors;
     if (!anchors) return;
     if (!toolbarState) {
@@ -35334,26 +35363,28 @@
       const stage = getStage(state4);
       const graphicsCtor = findGraphicsCtor(stage);
       if (!graphicsCtor) return;
-      const maxWidth = safeWidth(anchors.divider, 0);
+      const maxWidth = safeWidth(anchors.backgroundSprite, 0) - 2 * (anchors.scrollViewContainer.position?.x ?? 0);
       if (maxWidth <= 0) return;
       const containerCtor = anchors.modalContainer.constructor;
       toolbarState = buildToolbar(graphicsCtor, state4.ctors.Text, containerCtor, maxWidth);
       anchors.modalContainer.addChild(toolbarState.container);
       debugSyncState.toolbarBuilt = true;
     }
-    const currentDividerY = anchors.divider.position.y;
-    if (Math.abs(currentDividerY - (lastNativeDividerY + appliedOffset)) > 0.5) {
-      lastNativeDividerY = currentDividerY;
+    const scrollContainer = anchors.scrollViewContainer;
+    const currentScrollY = scrollContainer.position.y;
+    if (Math.abs(currentScrollY - (lastNativeScrollY + appliedOffset)) > 0.5) {
+      lastNativeScrollY = currentScrollY;
       appliedOffset = 0;
     }
-    const toolbarTopY = anchors.title.position.y + anchors.title.textHeight + TOOLBAR_GAP_ABOVE;
-    const desiredOffset = Math.max(0, toolbarTopY + toolbarState.height + TOOLBAR_GAP_BELOW - lastNativeDividerY);
+    const onLogs = activeTab === "logs";
+    toolbarState.container.visible = onLogs;
+    if (!onLogs && toolbarState.isExpanded) setExpanded(toolbarState, false);
+    const desiredOffset = onLogs ? toolbarState.height + TOOLBAR_GAP_BELOW : 0;
     if (desiredOffset !== appliedOffset) {
-      anchors.divider.position.y = lastNativeDividerY + desiredOffset;
-      anchors.scrollViewContainer.position.y += desiredOffset - appliedOffset;
+      scrollContainer.position.y = lastNativeScrollY + desiredOffset;
       appliedOffset = desiredOffset;
     }
-    toolbarState.container.position.set(anchors.divider.position.x, toolbarTopY);
+    toolbarState.container.position.set(scrollContainer.position.x, lastNativeScrollY);
     refreshToolbarHighlight(toolbarState);
   }
   function tryFindModal() {
@@ -35388,12 +35419,19 @@
     void (async () => {
       try {
         const current = await Atoms.ui.activeModal.get();
-        modalOpen2 = current === ACTIVITY_LOG_MODAL_ID2;
+        modalOpen2 = current === ACTIVITY_LOG_MODAL_ID;
       } catch {
       }
       try {
         await Atoms.ui.activeModal.onChange((next) => {
-          modalOpen2 = next === ACTIVITY_LOG_MODAL_ID2;
+          modalOpen2 = next === ACTIVITY_LOG_MODAL_ID;
+        });
+      } catch {
+      }
+      try {
+        activeTab = activityLogTabOf(await Atoms.ui.activityLogTab.get());
+        await Atoms.ui.activityLogTab.onChange((next) => {
+          activeTab = activityLogTabOf(next);
         });
       } catch {
       }
@@ -35420,7 +35458,10 @@
       return modalNode;
     },
     get anchors() {
-      return modalNode ? locateModalAnchors(modalNode) : null;
+      return modalNode ? locateActivityLogAnchors(modalNode) : null;
+    },
+    get activeTab() {
+      return activeTab;
     },
     get appliedOffset() {
       return appliedOffset;
@@ -55307,6 +55348,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           await toastSimple("Stats", "No stats found for this player.", "error");
           return;
         }
+        skipNextActivityLogHistoryReopen();
         await fakeStatsShow(stats, { open: true });
         if (playerName) await toastSimple("Stats", `${playerName}'s stats displayed.`, "info");
       } catch (e) {
