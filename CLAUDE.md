@@ -23,7 +23,7 @@ There is **no `tsconfig.json` and no typecheck script.** esbuild does the build 
 
 Check suites, all of which must pass before shipping:
 
-`stats` `identity` `commands` `sprites` `cropsize` `harvestfilters` `locker` `abilitylogs` `growslot` `tilecapture` `deleters` `chat` `companion` `dialogue` `storage`
+`stats` `identity` `commands` `sprites` `cropsize` `harvestfilters` `locker` `abilitylogs` `growslot` `tilecapture` `deleters` `chat` `companion` `dialogue` `storage` `wander` `mirror` `afk`
 
 Each is `scripts/check<Name>.ts`, bundled by esbuild and run in node against a DOM stub (`scripts/_nodeStub.cjs` for the ones that pull in UI code). They print `ok`/`FAIL` lines and exit non-zero on failure.
 

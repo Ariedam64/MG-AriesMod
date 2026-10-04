@@ -61,8 +61,18 @@ export type MovementConfig = {
   /** Ticks d'immobilité de l'ancre avant de flâner (ancres qui suivent le joueur). */
   idleTicksBeforeWander: number;
   wanderRadius: number;
-  /** Ticks d'attente entre deux déplacements de flânerie. */
+  /**
+   * Ticks d'attente entre deux déplacements de flânerie : le minimum de la
+   * plage quand `wanderPauseMaxTicks` est fourni, la pause exacte sinon.
+   */
   wanderPauseTicks: number;
+  /**
+   * Borne haute de la pause, tirée à chaque arrêt avec le `random` injecté.
+   *
+   * Une pause fixe se voit : au bout de trois balades on devine la suivante à
+   * la seconde près. Absente, ou sous le minimum, la pause redevient fixe.
+   */
+  wanderPauseMaxTicks?: number;
 };
 
 /**
@@ -82,10 +92,12 @@ export const STEP_INTERVAL_MS = 150;
  */
 export const DEFAULT_MOVEMENT_CONFIG: MovementConfig = {
   followDistance: 2,
-  // 15 s d'immobilité avant de flâner, 30 s d'arrêt entre deux balades.
+  // 15 s d'immobilité avant de flâner, puis 8 à 45 s d'arrêt entre deux
+  // balades, tirés à chaque fois.
   idleTicksBeforeWander: Math.round(15_000 / STEP_INTERVAL_MS),
   wanderRadius: 3,
-  wanderPauseTicks: Math.round(30_000 / STEP_INTERVAL_MS),
+  wanderPauseTicks: Math.round(8_000 / STEP_INTERVAL_MS),
+  wanderPauseMaxTicks: Math.round(45_000 / STEP_INTERVAL_MS),
 };
 
 /**
@@ -124,6 +136,8 @@ export type MovementState = {
   idleTicks: number;
   wanderCooldown: number;
   wanderTarget: XY | null;
+  /** La cible de flânerie courante vient-elle d'un centre d'intérêt ? */
+  wanderTargetIsInterest: boolean;
 };
 
 export type MovementDecision = {
@@ -132,9 +146,45 @@ export type MovementDecision = {
   tile: XY | null;
   /** true quand le déplacement dépasse une case : le jeu coupera au lieu de marcher. */
   teleported: boolean;
+  /**
+   * Centre d'intérêt atteint à ce tick : la tuile où il vient de s'arrêter.
+   *
+   * Signalé une seule fois, au tick où la flânerie constate l'arrivée, pour que
+   * l'appelant joue sa pose sans avoir à comparer des positions lui-même.
+   */
+  interestReached?: XY | null;
 };
 
 export type IsWalkable = (x: number, y: number) => boolean;
+
+/**
+ * Où une flânerie peut mener : ce que reçoit `pickInterest`.
+ *
+ * `isWalkable` est déjà restreint à tout ce que la flânerie accepte (zone du
+ * mode, rayon, ni le centre ni la case courante). Une tuile qu'il refuse sera
+ * refusée de toute façon.
+ */
+export type WanderArea = {
+  center: XY;
+  radius: number;
+  from: XY;
+  isWalkable: IsWalkable;
+};
+
+/**
+ * Propose une destination de flânerie qui a un sens (un crop mûr, un œuf...),
+ * ou `null` pour une balade au hasard. Appelé une fois par nouvelle cible.
+ */
+export type PickInterest = (area: WanderArea) => XY | null;
+
+/**
+ * Ce qu'un pilote de flânerie (`wanderWatch.ts`) branche sur la boucle : le
+ * choix d'une destination, et l'arrivée dessus.
+ */
+export type WanderHooks = {
+  pickInterest: PickInterest;
+  onInterestReached: (tile: XY) => void;
+};
 
 export type MovementInput = {
   anchor: Anchor;
@@ -144,6 +194,8 @@ export type MovementInput = {
   /** Injecté pour rendre la flânerie déterministe sous test. */
   random: () => number;
   config: MovementConfig;
+  /** Facultatif : sans lui, la flânerie reste entièrement au hasard. */
+  pickInterest?: PickInterest | null;
 };
 
 /** Rayon max exploré pour trouver une tuile d'apparition autour de l'ancre. */
@@ -157,7 +209,22 @@ export function initialMovementState(): MovementState {
     idleTicks: 0,
     wanderCooldown: 0,
     wanderTarget: null,
+    wanderTargetIsInterest: false,
   };
+}
+
+/**
+ * Durée d'une pause de flânerie, en ticks.
+ *
+ * Tirée dans `[wanderPauseTicks, wanderPauseMaxTicks]`, bornes comprises. Sans
+ * borne haute exploitable, la pause reste celle d'avant : fixe.
+ */
+export function drawWanderPause(config: MovementConfig, random: () => number): number {
+  const min = Math.max(0, Math.round(config.wanderPauseTicks));
+  const max = config.wanderPauseMaxTicks;
+  if (max === undefined || !Number.isFinite(max) || Math.round(max) <= min) return min;
+  const span = Math.round(max) - min + 1;
+  return min + Math.min(span - 1, Math.floor(random() * span));
 }
 
 export function manhattan(a: XY, b: XY): number {
@@ -263,6 +330,7 @@ const wanderRadiusOf = (anchor: Anchor, config: MovementConfig): number =>
  */
 export function stepMovement(input: MovementInput): MovementDecision {
   const { anchor, isWalkable, random, config } = input;
+  const pickInterest = input.pickInterest ?? null;
   const state: MovementState = { ...input.state };
   const excludeCenter = anchor.tracksPlayer;
   const blocked = anchor.tracksPlayer ? anchor.tile : null;
@@ -281,6 +349,7 @@ export function stepMovement(input: MovementInput): MovementDecision {
     if (state.activity === "wander") {
       state.activity = "pursue";
       state.wanderTarget = null;
+      state.wanderTargetIsInterest = false;
       state.wanderCooldown = 0;
     }
   } else {
@@ -306,6 +375,7 @@ export function stepMovement(input: MovementInput): MovementDecision {
     if (mayWander) {
       state.activity = "wander";
       state.wanderTarget = null;
+      state.wanderTargetIsInterest = false;
       state.wanderCooldown = 0;
     }
   }
@@ -319,22 +389,28 @@ export function stepMovement(input: MovementInput): MovementDecision {
     stepWalkable(x, y) && !(blocked !== null && x === blocked.x && y === blocked.y);
 
   let isGoal: IsGoal | null = null;
+  let interestReached: XY | null = null;
   if (state.activity === "pursue") {
     if (!arrived) {
       isGoal = (x, y) => manhattan({ x, y }, anchor.tile) <= config.followDistance;
     }
   } else {
-    const target = resolveWanderTarget(state, anchor, config, zoneWalkable, random);
+    const wander = resolveWanderTarget(state, anchor, config, zoneWalkable, random, pickInterest);
+    interestReached = wander.interestReached;
+    const target = wander.target;
     if (target) isGoal = (x, y) => x === target.x && y === target.y;
   }
 
-  if (!isGoal) return { state, tile: state.tile, teleported: false };
+  if (!isGoal) return { state, tile: state.tile, teleported: false, interestReached };
 
   const next = findFirstStep(state.tile, isGoal, passable);
   if (!next) {
     // Aucun chemin : rester sur place est la bonne réponse. En flânerie, la
     // cible est inatteignable, on la relâche pour en tirer une autre.
-    if (state.activity === "wander") state.wanderTarget = null;
+    if (state.activity === "wander") {
+      state.wanderTarget = null;
+      state.wanderTargetIsInterest = false;
+    }
     return { state, tile: state.tile, teleported: false };
   }
 
@@ -351,28 +427,62 @@ function resolveWanderTarget(
   anchor: Anchor,
   config: MovementConfig,
   isWalkable: IsWalkable,
-  random: () => number
-): XY | null {
+  random: () => number,
+  pickInterest: PickInterest | null
+): { target: XY | null; interestReached: XY | null } {
   if (state.wanderCooldown > 0) {
     state.wanderCooldown--;
-    return null;
+    return { target: null, interestReached: null };
   }
   if (state.wanderTarget && sameTile(state.wanderTarget, state.tile)) {
+    const reached = state.wanderTargetIsInterest ? { ...state.wanderTarget } : null;
     state.wanderTarget = null;
-    state.wanderCooldown = config.wanderPauseTicks;
-    return null;
+    state.wanderTargetIsInterest = false;
+    state.wanderCooldown = drawWanderPause(config, random);
+    return { target: null, interestReached: reached };
   }
   if (!state.wanderTarget) {
-    state.wanderTarget = pickWanderTarget(
-      anchor.tile,
-      wanderRadiusOf(anchor, config),
-      isWalkable,
-      random
-    );
+    const radius = wanderRadiusOf(anchor, config);
+    const interest = pickInterest && state.tile
+      ? pickInterestSafely(pickInterest, anchor.tile, radius, state.tile, isWalkable)
+      : null;
+    state.wanderTargetIsInterest = interest !== null;
+    state.wanderTarget = interest ?? pickWanderTarget(anchor.tile, radius, isWalkable, random);
     if (!state.wanderTarget) {
-      state.wanderCooldown = config.wanderPauseTicks;
-      return null;
+      state.wanderCooldown = drawWanderPause(config, random);
+      return { target: null, interestReached: null };
     }
   }
-  return state.wanderTarget;
+  return { target: state.wanderTarget, interestReached: null };
+}
+
+/**
+ * Demande un centre d'intérêt, et ne garde la réponse que si la flânerie
+ * l'aurait elle-même acceptée.
+ *
+ * Mêmes règles que `pickWanderTarget` : dans le rayon, dans la zone, ni le
+ * centre ni la case où il se tient déjà. Un fournisseur qui se trompe, ou qui
+ * lève, retombe sur une balade au hasard au lieu d'entraîner le companion
+ * hors de son territoire.
+ */
+function pickInterestSafely(
+  pickInterest: PickInterest,
+  center: XY,
+  radius: number,
+  from: XY,
+  isWalkable: IsWalkable
+): XY | null {
+  const accepts: IsWalkable = (x, y) =>
+    Math.max(Math.abs(x - center.x), Math.abs(y - center.y)) <= radius &&
+    !(x === center.x && y === center.y) &&
+    !(x === from.x && y === from.y) &&
+    isWalkable(x, y);
+  let picked: XY | null = null;
+  try {
+    picked = pickInterest({ center: { ...center }, radius, from: { ...from }, isWalkable: accepts });
+  } catch {
+    return null;
+  }
+  if (!picked || !Number.isInteger(picked.x) || !Number.isInteger(picked.y)) return null;
+  return accepts(picked.x, picked.y) ? { x: picked.x, y: picked.y } : null;
 }

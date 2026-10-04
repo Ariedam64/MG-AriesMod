@@ -1,6 +1,7 @@
 import {
   DEFAULT_MOVEMENT_CONFIG,
   TASK_MOVEMENT_CONFIG,
+  drawWanderPause,
   findNearbyWalkable,
   hasGameCaughtUp,
   initialMovementState,
@@ -11,6 +12,8 @@ import {
   type IsWalkable,
   type MovementConfig,
   type MovementState,
+  type PickInterest,
+  type WanderArea,
   type XY,
 } from "../src/services/companion/movement";
 import { findFirstStep } from "../src/services/companion/pathfinding";
@@ -218,6 +221,219 @@ console.log("\n--- temporisations en millisecondes ---");
   check("repart une fois la pause écoulée", manhattan(state.tile!, after.tile!), 1);
 }
 
+console.log("\n--- pause de flanerie tiree au hasard ---");
+{
+  const ranged = cfg({ wanderPauseTicks: 10, wanderPauseMaxTicks: 20 });
+  check("tirage bas -> borne basse", drawWanderPause(ranged, fixedRandom(0)), 10);
+  check("tirage haut -> borne haute, comprise", drawWanderPause(ranged, fixedRandom(0.9999)), 20);
+  check("tirage median -> au milieu", drawWanderPause(ranged, fixedRandom(0.5)), 15);
+  let outOfRange = 0;
+  const seen = new Set<number>();
+  for (let i = 0; i < 500; i++) {
+    const p = drawWanderPause(ranged, Math.random);
+    seen.add(p);
+    if (p < 10 || p > 20 || !Number.isInteger(p)) outOfRange++;
+  }
+  check("500 tirages restent dans la plage, en ticks entiers", outOfRange, 0);
+  check("et la pause varie vraiment", seen.size > 5, true);
+  // Sans borne haute, ou une borne absurde, la pause d'avant : fixe.
+  check("sans borne haute : pause fixe", drawWanderPause(cfg({ wanderPauseTicks: 7, wanderPauseMaxTicks: undefined }), fixedRandom(0.9)), 7);
+  check("borne haute sous le minimum : pause fixe", drawWanderPause(cfg({ wanderPauseTicks: 7, wanderPauseMaxTicks: 3 }), fixedRandom(0.9)), 7);
+  check("borne haute NaN : pause fixe", drawWanderPause(cfg({ wanderPauseTicks: 7, wanderPauseMaxTicks: NaN }), fixedRandom(0.9)), 7);
+  // Les valeurs par defaut : 8 a 45 s.
+  check("defaut : minimum de 8 s", DEFAULT_MOVEMENT_CONFIG.wanderPauseTicks, ticksFromMs(8_000, 150, 0));
+  check("defaut : maximum de 45 s", DEFAULT_MOVEMENT_CONFIG.wanderPauseMaxTicks, ticksFromMs(45_000, 150, 0));
+}
+{
+  // Bout a bout dans la machine a etats : a l'arrivee sur sa cible, la pause
+  // posee est celle que le tirage donne, pas une constante.
+  const player = { x: 20, y: 20 };
+  const config = cfg({ wanderPauseTicks: 10, wanderPauseMaxTicks: 20 });
+  const arrivedOnTarget = (random: () => number): MovementState =>
+    stepMovement({
+      anchor: playerAnchor(player),
+      state: {
+        ...initialMovementState(),
+        activity: "wander",
+        tile: { x: 21, y: 21 },
+        lastAnchorTile: player,
+        idleTicks: 999,
+        wanderTarget: { x: 21, y: 21 },
+      },
+      isWalkable: openMap,
+      random,
+      config,
+    }).state;
+  check("arrivee, tirage bas -> pause courte", arrivedOnTarget(fixedRandom(0)).wanderCooldown, 10);
+  check("arrivee, tirage haut -> pause longue", arrivedOnTarget(fixedRandom(0.9999)).wanderCooldown, 20);
+}
+
+console.log("\n--- flanerie avec un but ---");
+{
+  const player = { x: 20, y: 20 };
+  const wandering = (over: Partial<MovementState> = {}): MovementState => ({
+    ...initialMovementState(),
+    activity: "wander",
+    tile: { x: 20, y: 21 },
+    lastAnchorTile: player,
+    idleTicks: 999,
+    ...over,
+  });
+  const step = (state: MovementState, pickInterest?: PickInterest | null, config = cfg()) =>
+    stepMovement({ anchor: playerAnchor(player), state, isWalkable: openMap, random: fixedRandom(0), config, pickInterest });
+
+  // Sans crochet : strictement le comportement d'avant (premiere case du balayage).
+  const plain = step(wandering());
+  check("sans crochet : cible au hasard comme avant", `${plain.state.wanderTarget!.x},${plain.state.wanderTarget!.y}`, "17,17");
+  check("sans crochet : cible non marquee comme interet", plain.state.wanderTargetIsInterest, false);
+
+  // Le crochet propose une case valide : elle devient la cible.
+  let seenArea: WanderArea | null = null;
+  const toward = step(wandering(), (area) => {
+    seenArea = area;
+    return { x: 22, y: 21 };
+  });
+  check("interet accepte comme cible", `${toward.state.wanderTarget!.x},${toward.state.wanderTarget!.y}`, "22,21");
+  check("cible marquee comme interet", toward.state.wanderTargetIsInterest, true);
+  check("et il fait un pas vers elle", `${toward.tile!.x},${toward.tile!.y}`, "21,21");
+  const area = seenArea as WanderArea | null;
+  check("le crochet recoit le centre et le rayon", area && `${area.center.x},${area.center.y},${area.radius}`, "20,20,3");
+  check("le crochet recoit la position courante", area && `${area.from.x},${area.from.y}`, "20,21");
+  check("zone du crochet : refuse le centre (le joueur)", area && area.isWalkable(20, 20), false);
+  check("zone du crochet : refuse la case courante", area && area.isWalkable(20, 21), false);
+  check("zone du crochet : refuse hors rayon", area && area.isWalkable(24, 20), false);
+  check("zone du crochet : accepte une case du rayon", area && area.isWalkable(23, 23), true);
+
+  // Une proposition que la flanerie n'aurait pas acceptee retombe sur le hasard.
+  const outside = step(wandering(), () => ({ x: 30, y: 30 }));
+  check("interet hors rayon -> balade au hasard", `${outside.state.wanderTarget!.x},${outside.state.wanderTarget!.y}`, "17,17");
+  check("et la cible n'est pas marquee interet", outside.state.wanderTargetIsInterest, false);
+  const onPlayer = step(wandering(), () => ({ ...player }));
+  check("interet sur le joueur -> refuse", onPlayer.state.wanderTargetIsInterest, false);
+  const blockedMap: IsWalkable = (x, y) => openMap(x, y) && !(x === 22 && y === 21);
+  const onWall = stepMovement({
+    anchor: playerAnchor(player),
+    state: wandering(),
+    isWalkable: blockedMap,
+    random: fixedRandom(0),
+    config: cfg(),
+    pickInterest: () => ({ x: 22, y: 21 }),
+  });
+  check("interet sur une case bloquee -> refuse", onWall.state.wanderTargetIsInterest, false);
+  const fractional = step(wandering(), () => ({ x: 21.5, y: 21 }));
+  check("interet hors grille -> refuse", fractional.state.wanderTargetIsInterest, false);
+  const thrower = step(wandering(), () => {
+    throw new Error("boom");
+  });
+  check("crochet qui leve -> balade au hasard, pas de crash", thrower.state.wanderTarget !== null && !thrower.state.wanderTargetIsInterest, true);
+
+  // Le crochet n'est consulte qu'au tirage d'une nouvelle cible.
+  let calls = 0;
+  const counting: PickInterest = () => {
+    calls++;
+    return { x: 22, y: 21 };
+  };
+  let s = wandering();
+  for (let i = 0; i < 3; i++) s = step(s, counting).state;
+  check("un seul appel pour une seule cible", calls, 1);
+
+  // Pendant la pause, pas de nouvelle cible, donc pas d'appel.
+  calls = 0;
+  step(wandering({ wanderCooldown: 5 }), counting);
+  check("aucun appel pendant la pause", calls, 0);
+
+  // En poursuite, la flanerie ne tourne pas : pas d'appel non plus.
+  calls = 0;
+  stepMovement({
+    anchor: playerAnchor(player),
+    state: { ...initialMovementState(), tile: { x: 10, y: 20 }, lastAnchorTile: player },
+    isWalkable: openMap,
+    random: fixedRandom(0),
+    config: cfg({ idleTicksBeforeWander: 999 }),
+    pickInterest: counting,
+  });
+  check("aucun appel en poursuite", calls, 0);
+}
+{
+  // L'arrivee sur un interet est signalee, une seule fois, et seulement elle.
+  const player = { x: 20, y: 20 };
+  const config = cfg({ wanderPauseTicks: 4, wanderPauseMaxTicks: 4 });
+  let s: MovementState = {
+    ...initialMovementState(),
+    activity: "wander",
+    tile: { x: 20, y: 21 },
+    lastAnchorTile: player,
+    idleTicks: 999,
+  };
+  const reached: XY[] = [];
+  let illegal = 0;
+  let firstPick = true;
+  const pick: PickInterest = () => {
+    if (!firstPick) return null;
+    firstPick = false;
+    return { x: 22, y: 22 };
+  };
+  for (let i = 0; i < 40; i++) {
+    const prev = s.tile!;
+    const d = stepMovement({ anchor: playerAnchor(player), state: s, isWalkable: openMap, random: fixedRandom(0), config, pickInterest: pick });
+    s = d.state;
+    if (d.interestReached) reached.push(d.interestReached);
+    if (d.tile && manhattan(prev, d.tile) > 1) illegal++;
+  }
+  check("arrivee sur l'interet signalee une fois", reached.length, 1);
+  check("a la bonne case", reached[0] && `${reached[0].x},${reached[0].y}`, "22,22");
+  check("aucun pas illegal en allant voir", illegal, 0);
+}
+{
+  // Une balade au hasard qui aboutit ne signale rien.
+  const player = { x: 20, y: 20 };
+  let s: MovementState = {
+    ...initialMovementState(),
+    activity: "wander",
+    tile: { x: 20, y: 21 },
+    lastAnchorTile: player,
+    idleTicks: 999,
+  };
+  let reports = 0;
+  for (let i = 0; i < 40; i++) {
+    const d = stepMovement({ anchor: playerAnchor(player), state: s, isWalkable: openMap, random: fixedRandom(0), config: cfg(), pickInterest: () => null });
+    s = d.state;
+    if (d.interestReached) reports++;
+  }
+  check("balade au hasard : aucune arrivee d'interet signalee", reports, 0);
+}
+{
+  // Le joueur bouge pendant qu'il va voir : l'interet est abandonne, et une
+  // arrivee plus tard sur la meme case par hasard ne le ressuscite pas.
+  const player = { x: 20, y: 20 };
+  let s: MovementState = {
+    ...initialMovementState(),
+    activity: "wander",
+    tile: { x: 20, y: 21 },
+    lastAnchorTile: player,
+    idleTicks: 999,
+  };
+  s = stepMovement({ anchor: playerAnchor(player), state: s, isWalkable: openMap, random: fixedRandom(0), config: cfg(), pickInterest: () => ({ x: 22, y: 22 }) }).state;
+  const moved = stepMovement({ anchor: playerAnchor({ x: 21, y: 20 }), state: s, isWalkable: openMap, random: fixedRandom(0), config: cfg() });
+  check("le joueur bouge : interet relache", moved.state.wanderTargetIsInterest, false);
+  check("et la cible avec", moved.state.wanderTarget, "null");
+}
+{
+  // En mode jardin, un interet hors de la zone est refuse meme dans le rayon.
+  const inGarden: IsWalkable = (x, y) => x >= 10 && x < 16 && y >= 10 && y < 16;
+  const gardenAnchor: Anchor = { tile: { x: 12, y: 12 }, onArrival: "wander", tracksPlayer: false, zone: inGarden, wanderRadius: 5 };
+  const d = stepMovement({
+    anchor: gardenAnchor,
+    state: { ...initialMovementState(), activity: "wander", tile: { x: 12, y: 13 }, lastAnchorTile: { x: 12, y: 12 } },
+    isWalkable: openMap,
+    random: fixedRandom(0),
+    config: cfg(),
+    pickInterest: () => ({ x: 16, y: 12 }),
+  });
+  check("interet hors du jardin -> refuse", d.state.wanderTargetIsInterest, false);
+  check("la cible de repli reste dans le jardin", inGarden(d.state.wanderTarget!.x, d.state.wanderTarget!.y), true);
+}
+
 console.log("\n--- verrou anti-saut (accusé de rendu) ---");
 {
   const tile = { x: 5, y: 5 };
@@ -286,7 +502,7 @@ console.log("\n--- mode jardin (ancre inerte + zone) ---");
       state,
       isWalkable: inGarden,
       random: Math.random,
-      config: cfg({ wanderPauseTicks: 0 }),
+      config: cfg({ wanderPauseTicks: 0, wanderPauseMaxTicks: 0 }),
     });
     state = d.state;
     if (d.tile && !inGarden(d.tile.x, d.tile.y)) escaped = true;

@@ -25,6 +25,9 @@ import { installEditorPointerControls } from "./services/editorPointerControls";
 import { CompanionService } from "./services/companion";
 import { startFeedWatch } from "./services/companion/chat/feedWatch";
 import { startReactionWatch } from "./services/companion/reactionWatch";
+import { startWanderWatch } from "./services/companion/wanderWatch";
+import { startEmoteMirror } from "./services/companion/emoteMirrorWatch";
+import { startAfkWatch } from "./services/companion/afkWatch";
 import { mountCompanionAsk } from "./ui/companionAsk";
 
 import { initGameVersion } from "./utils/gameVersion";
@@ -104,6 +107,11 @@ import { startPlayerStateReportingWhenGameReady } from "./ariesModAPI/endpoints/
   // Ses commentaires spontanés : météo, ventes, paliers, temps passé en jeu.
   // Il ne fait que parler, jamais agir (cf. services/companion/reactions.ts).
   startReactionWatch();
+  // Ce qui le rend vivant sans qu'on lui parle : il va voir ce qui pousse, il
+  // répond aux emotes du joueur, et il s'endort quand le joueur s'absente.
+  startWanderWatch();
+  startEmoteMirror();
+  startAfkWatch();
   // Ses questions s'affichent en haut de l'écran, menu fermé compris. Aucune
   // action de plus : les mêmes confirm/decline que le fil du chat.
   mountCompanionAsk();

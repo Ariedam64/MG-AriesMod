@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.231
+// @version      3.2.232
 // @include      /^https:\/\/1227719606223765687\.discordsays\.com\/.*[?&]mc_shell_frame=1(&|#|$)/
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -170,7 +170,7 @@
     const listeners9 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
-    const tick3 = (now2) => {
+    const tick4 = (now2) => {
       const delta = last ? (now2 - last) / (1e3 / 60) : 1;
       last = now2;
       for (const fn of listeners9) {
@@ -179,12 +179,12 @@
         } catch {
         }
       }
-      rafId = requestAnimationFrame(tick3);
+      rafId = requestAnimationFrame(tick4);
     };
     const ticker = {
       add(fn) {
         if (!listeners9.size) {
-          rafId = requestAnimationFrame(tick3);
+          rafId = requestAnimationFrame(tick4);
         }
         listeners9.add(fn);
       },
@@ -814,20 +814,20 @@
     }
     ctx2.restore();
   }
-  function tallOverlayFromSheet(mutName, state4) {
+  function tallOverlayFromSheet(mutName, state6) {
     const target = String(mutName || "").toLowerCase();
-    for (const k of state4.tex.keys()) {
+    for (const k of state6.tex.keys()) {
       const m = /sprite\/mutation-overlay\/([A-Za-z0-9]+)TallPlant/i.exec(String(k));
       if (!m || !m[1]) continue;
       const prefix = m[1].toLowerCase();
       if (prefix === target) {
-        const t = state4.tex.get(k);
+        const t = state6.tex.get(k);
         if (t) return { tex: t, key: k };
       }
     }
     return null;
   }
-  function findOverlayTexture(itKey, mutName, state4, preferTall) {
+  function findOverlayTexture(itKey, mutName, state6, preferTall) {
     if (!mutName) return null;
     const base = baseNameOf(itKey);
     const aliases = mutationAliases(mutName);
@@ -840,27 +840,27 @@
         `sprite/mutation/${name}`
       ];
       for (const k of tries) {
-        const t = state4.tex.get(k);
+        const t = state6.tex.get(k);
         if (t) return { tex: t, key: k };
       }
       if (preferTall) {
-        const hit = state4.tex.get(`sprite/mutation-overlay/${name}TallPlant`) && {
-          tex: state4.tex.get(`sprite/mutation-overlay/${name}TallPlant`),
+        const hit = state6.tex.get(`sprite/mutation-overlay/${name}TallPlant`) && {
+          tex: state6.tex.get(`sprite/mutation-overlay/${name}TallPlant`),
           key: `sprite/mutation-overlay/${name}TallPlant`
-        } || state4.tex.get(`sprite/mutation-overlay/${name}`) && {
-          tex: state4.tex.get(`sprite/mutation-overlay/${name}`),
+        } || state6.tex.get(`sprite/mutation-overlay/${name}`) && {
+          tex: state6.tex.get(`sprite/mutation-overlay/${name}`),
           key: `sprite/mutation-overlay/${name}`
-        } || tallOverlayFromSheet(mutName, state4);
+        } || tallOverlayFromSheet(mutName, state6);
         if (hit) return hit;
       }
     }
     return null;
   }
-  function findIconTexture(itKey, mutName, isTall, state4) {
+  function findIconTexture(itKey, mutName, isTall, state6) {
     if (!mutName) return null;
     const meta = MUT_META[mutName];
     if (isTall && meta?.tallIconOverride) {
-      const t = state4.tex.get(meta.tallIconOverride);
+      const t = state6.tex.get(meta.tallIconOverride);
       if (t) return t;
     }
     const base = baseNameOf(itKey);
@@ -875,11 +875,11 @@
         `sprite/mutation/${name}/${base}`
       ];
       for (const k of tries) {
-        const t = state4.tex.get(k);
+        const t = state6.tex.get(k);
         if (t) return t;
       }
       if (isTall) {
-        const t = state4.tex.get(`sprite/mutation-overlay/${name}TallPlantIcon`) || state4.tex.get(`sprite/mutation-overlay/${name}TallPlant`);
+        const t = state6.tex.get(`sprite/mutation-overlay/${name}TallPlantIcon`) || state6.tex.get(`sprite/mutation-overlay/${name}TallPlant`);
         if (t) return t;
       }
     }
@@ -919,14 +919,14 @@
       }
     };
   }
-  function textureToCanvas(tex, state4, cfg) {
-    const hit = state4.srcCan.get(tex);
+  function textureToCanvas(tex, state6, cfg) {
+    const hit = state6.srcCan.get(tex);
     if (hit) return hit;
     let c = null;
-    const RDR = state4.renderer;
+    const RDR = state6.renderer;
     try {
       if (RDR?.extract?.canvas && (RDR?.resolution ?? 1) === 1) {
-        const s = new state4.ctors.Sprite(tex);
+        const s = new state6.ctors.Sprite(tex);
         c = RDR.extract.canvas(s);
         s.destroy?.({ children: true, texture: false, baseTexture: false });
       }
@@ -959,18 +959,18 @@
         ctx2.drawImage(src, fr.x, fr.y, fr.width, fr.height, offX, offY, fr.width, fr.height);
       }
     }
-    state4.srcCan.set(tex, c);
-    if (state4.srcCan.size > cfg.srcCanvasMax) {
-      const k = state4.srcCan.keys().next().value;
-      if (k !== void 0) state4.srcCan.delete(k);
+    state6.srcCan.set(tex, c);
+    if (state6.srcCan.size > cfg.srcCanvasMax) {
+      const k = state6.srcCan.keys().next().value;
+      if (k !== void 0) state6.srcCan.delete(k);
     }
     return c;
   }
-  function buildColorLayerSprites(tex, dims, pipeline, state4, cfg, disposables, TextureCtor) {
+  function buildColorLayerSprites(tex, dims, pipeline, state6, cfg, disposables, TextureCtor) {
     const { w, h, aX, aY, basePos } = dims;
     const layers = [];
     for (const step of pipeline) {
-      const clone2 = new state4.ctors.Sprite(tex);
+      const clone2 = new state6.ctors.Sprite(tex);
       clone2.anchor?.set?.(aX, aY);
       clone2.position.set(basePos.x, basePos.y);
       clone2.zIndex = 1;
@@ -981,7 +981,7 @@
       lctx.imageSmoothingEnabled = false;
       lctx.save();
       lctx.translate(w * aX, h * aY);
-      lctx.drawImage(textureToCanvas(tex, state4, cfg), -w * aX, -h * aY);
+      lctx.drawImage(textureToCanvas(tex, state6, cfg), -w * aX, -h * aY);
       lctx.restore();
       applyFilterOnto(lctx, layerCanvas, step.name, step.isTall);
       const filteredTex = TextureCtor.from(layerCanvas);
@@ -991,14 +991,14 @@
     }
     return layers;
   }
-  function buildTallOverlaySprites(itKey, dims, overlayPipeline, state4, cfg, baseCanvas, TextureCtor, disposables) {
+  function buildTallOverlaySprites(itKey, dims, overlayPipeline, state6, cfg, baseCanvas, TextureCtor, disposables) {
     const { w, aX, basePos } = dims;
     if (!baseCanvas) return [];
     const overlays = [];
     for (const step of overlayPipeline) {
-      const hit = step.overlayTall && state4.tex.get(step.overlayTall) && { tex: state4.tex.get(step.overlayTall), key: step.overlayTall } || findOverlayTexture(itKey, step.name, state4, true);
+      const hit = step.overlayTall && state6.tex.get(step.overlayTall) && { tex: state6.tex.get(step.overlayTall), key: step.overlayTall } || findOverlayTexture(itKey, step.name, state6, true);
       if (!hit?.tex) continue;
-      const oCan = textureToCanvas(hit.tex, state4, cfg);
+      const oCan = textureToCanvas(hit.tex, state6, cfg);
       if (!oCan) continue;
       const ow = oCan.width;
       const overlayAnchor = { x: 0, y: 0 };
@@ -1019,7 +1019,7 @@
       mctx.drawImage(baseCanvas, -overlayPos.x, -overlayPos.y);
       const maskedTex = TextureCtor.from(maskedCanvas);
       disposables.push(maskedTex);
-      const ov = new state4.ctors.Sprite(maskedTex);
+      const ov = new state6.ctors.Sprite(maskedTex);
       ov.anchor?.set?.(overlayAnchor.x, overlayAnchor.y);
       ov.position.set(overlayPos.x, overlayPos.y);
       ov.scale.set(1);
@@ -1029,14 +1029,14 @@
     }
     return overlays;
   }
-  function buildIconSprites(itKey, dims, iconPipeline, state4, iconLayout) {
+  function buildIconSprites(itKey, dims, iconPipeline, state6, iconLayout) {
     const { basePos } = dims;
     const icons = [];
     for (const step of iconPipeline) {
       if (step.name === "Gold" || step.name === "Rainbow") continue;
-      const itex = findIconTexture(itKey, step.name, step.isTall, state4);
+      const itex = findIconTexture(itKey, step.name, step.isTall, state6);
       if (!itex) continue;
-      const icon = new state4.ctors.Sprite(itex);
+      const icon = new state6.ctors.Sprite(itex);
       const iconAnchorX = itex?.defaultAnchor?.x ?? 0.5;
       const iconAnchorY = itex?.defaultAnchor?.y ?? 0.5;
       icon.anchor?.set?.(iconAnchorX, iconAnchorY);
@@ -1049,31 +1049,31 @@
     }
     return icons;
   }
-  function lruEvict(state4, cfg) {
+  function lruEvict(state6, cfg) {
     if (!cfg.cacheOn) return;
-    while (state4.lru.size > cfg.cacheMaxEntries || state4.cost > cfg.cacheMaxCost) {
-      const k = state4.lru.keys().next().value;
+    while (state6.lru.size > cfg.cacheMaxEntries || state6.cost > cfg.cacheMaxCost) {
+      const k = state6.lru.keys().next().value;
       if (k === void 0) break;
-      const e = state4.lru.get(k);
-      state4.lru.delete(k);
-      state4.cost = Math.max(0, state4.cost - entryCost(e));
+      const e = state6.lru.get(k);
+      state6.lru.delete(k);
+      state6.cost = Math.max(0, state6.cost - entryCost(e));
     }
   }
-  function clearVariantCache(state4) {
-    state4.lru.clear();
-    state4.cost = 0;
-    state4.srcCan.clear();
+  function clearVariantCache(state6) {
+    state6.lru.clear();
+    state6.cost = 0;
+    state6.srcCan.clear();
   }
-  function renderMutatedTexture(tex, itKey, V, state4, cfg) {
+  function renderMutatedTexture(tex, itKey, V, state6, cfg) {
     try {
-      if (!tex || !state4.renderer || !state4.ctors?.Container || !state4.ctors?.Sprite || !state4.ctors?.Texture) return null;
-      const { Container, Sprite, Texture } = state4.ctors;
+      if (!tex || !state6.renderer || !state6.ctors?.Container || !state6.ctors?.Sprite || !state6.ctors?.Texture) return null;
+      const { Container, Sprite, Texture } = state6.ctors;
       const w = tex?.orig?.width ?? tex?.frame?.width ?? tex?.width ?? 1;
       const h = tex?.orig?.height ?? tex?.frame?.height ?? tex?.height ?? 1;
       const aX = tex?.defaultAnchor?.x ?? 0.5;
       const aY = tex?.defaultAnchor?.y ?? 0.5;
       const basePos = { x: w * aX, y: h * aY };
-      const baseCanvas = textureToCanvas(tex, state4, cfg);
+      const baseCanvas = textureToCanvas(tex, state6, cfg);
       const root = new Container();
       root.sortableChildren = true;
       try {
@@ -1100,14 +1100,14 @@
       const baseName = baseNameOf(itKey);
       const iconLayout = computeIconLayout(tex, baseName, isTall);
       const dims = { w, h, aX, aY, basePos };
-      buildColorLayerSprites(tex, dims, pipeline, state4, cfg, disposables, Texture).forEach((layer) => root.addChild(layer));
+      buildColorLayerSprites(tex, dims, pipeline, state6, cfg, disposables, Texture).forEach((layer) => root.addChild(layer));
       if (isTall) {
-        buildTallOverlaySprites(itKey, dims, overlayPipeline, state4, cfg, baseCanvas, Texture, disposables).forEach((ov) => root.addChild(ov));
+        buildTallOverlaySprites(itKey, dims, overlayPipeline, state6, cfg, baseCanvas, Texture, disposables).forEach((ov) => root.addChild(ov));
       }
-      buildIconSprites(itKey, dims, iconPipeline, state4, iconLayout).forEach((icon) => root.addChild(icon));
-      const RDR = state4.renderer;
+      buildIconSprites(itKey, dims, iconPipeline, state6, iconLayout).forEach((icon) => root.addChild(icon));
+      const RDR = state6.renderer;
       let rt = null;
-      const RectCtor = state4.ctors?.Rectangle;
+      const RectCtor = state6.ctors?.Rectangle;
       const crop = RectCtor ? new RectCtor(0, 0, w, h) : null;
       if (typeof RDR?.generateTexture === "function")
         rt = RDR.generateTexture(root, { resolution: 1, region: crop ?? void 0 });
@@ -1129,36 +1129,36 @@
       return null;
     }
   }
-  function processVariantJobs(state4, cfg) {
-    if (!cfg.jobOn || !state4.open || !state4.jobs.length) return false;
+  function processVariantJobs(state6, cfg) {
+    if (!cfg.jobOn || !state6.open || !state6.jobs.length) return false;
     const now2 = performance.now();
-    const burst = now2 - state4.changedAt <= cfg.jobBurstWindowMs;
+    const burst = now2 - state6.changedAt <= cfg.jobBurstWindowMs;
     const budget = burst ? cfg.jobBurstMs : cfg.jobBudgetMs;
     const t0 = performance.now();
     let done = 0;
     let needsLayout = false;
-    while (state4.jobs.length) {
+    while (state6.jobs.length) {
       if (performance.now() - t0 >= budget) break;
       if (done >= cfg.jobCapPerTick) break;
-      const job = state4.jobs[0];
-      if (job.sig !== state4.sig) {
-        state4.jobs.shift();
-        state4.jobMap.delete(job.k);
+      const job = state6.jobs[0];
+      if (job.sig !== state6.sig) {
+        state6.jobs.shift();
+        state6.jobMap.delete(job.k);
         continue;
       }
       const tex = job.src[job.i];
       if (!tex) {
-        state4.jobs.shift();
-        state4.jobMap.delete(job.k);
+        state6.jobs.shift();
+        state6.jobMap.delete(job.k);
         continue;
       }
-      const ft = renderMutatedTexture(tex, job.itKey, job.V, state4, cfg);
+      const ft = renderMutatedTexture(tex, job.itKey, job.V, state6, cfg);
       if (ft) job.out.push(ft);
       job.i++;
       done++;
       if (job.i >= job.src.length) {
-        state4.jobs.shift();
-        state4.jobMap.delete(job.k);
+        state6.jobs.shift();
+        state6.jobMap.delete(job.k);
         let entry = null;
         if (job.isAnim) {
           if (job.out.length >= 2) entry = { isAnim: true, frames: job.out };
@@ -1168,9 +1168,9 @@
           if (job.out[0]) entry = { isAnim: false, tex: job.out[0] };
         }
         if (entry) {
-          state4.lru.set(job.k, entry);
-          state4.cost += entryCost(entry);
-          lruEvict(state4, cfg);
+          state6.lru.set(job.k, entry);
+          state6.cost += entryCost(entry);
+          lruEvict(state6, cfg);
           needsLayout = true;
         }
       }
@@ -1250,13 +1250,13 @@
       };
       hasMutationFilter = (value) => Boolean(value && FILTERS[value]);
       isTallKey = (k) => /tallplant/i.test(k);
-      computeVariantSignature = (state4) => {
-        if (!state4.mutOn) {
-          const f = hasMutationFilter(state4.f) ? state4.f : null;
+      computeVariantSignature = (state6) => {
+        if (!state6.mutOn) {
+          const f = hasMutationFilter(state6.f) ? state6.f : null;
           const baseMuts = f ? [f] : [];
           return { mode: "F", muts: baseMuts, overlayMuts: baseMuts, selectedMuts: baseMuts, sig: `F:${f ?? ""}` };
         }
-        const raw = state4.mutations.filter((value) => hasMutationFilter(value));
+        const raw = state6.mutations.filter((value) => hasMutationFilter(value));
         const selected = sortMutations(raw);
         const muts = normalizeMutListColor(raw);
         const overlayMuts = normalizeMutListOverlay(raw);
@@ -1319,48 +1319,48 @@
   });
 
   // src/sprite/api/expose.ts
-  function exposeApi(state4, hud) {
+  function exposeApi(state6, hud) {
     const root = globalThis.unsafeWindow || globalThis;
     const api = {
       open() {
         hud.root?.style && (hud.root.style.display = "block");
-        state4.open = true;
+        state6.open = true;
       },
       close() {
         hud.root?.style && (hud.root.style.display = "none");
-        state4.open = false;
+        state6.open = false;
       },
       toggle() {
-        state4.open ? api.close() : api.open();
+        state6.open ? api.close() : api.open();
       },
       setCategory(cat) {
-        state4.cat = cat || "__all__";
+        state6.cat = cat || "__all__";
       },
       setFilterText(text) {
-        state4.q = String(text || "").trim();
+        state6.q = String(text || "").trim();
       },
       setSpriteFilter(name) {
-        state4.f = name;
-        state4.mutOn = false;
+        state6.f = name;
+        state6.mutOn = false;
       },
       setMutation(on, ...muts) {
-        state4.mutOn = !!on;
-        state4.f = "";
-        state4.mutations = state4.mutOn ? muts.filter(Boolean).map((name) => name) : [];
+        state6.mutOn = !!on;
+        state6.f = "";
+        state6.mutations = state6.mutOn ? muts.filter(Boolean).map((name) => name) : [];
       },
       filters() {
         return [];
       },
       categories() {
-        return [...state4.cats.keys()].sort((a, b) => a.localeCompare(b));
+        return [...state6.cats.keys()].sort((a, b) => a.localeCompare(b));
       },
       cacheStats() {
-        return { entries: state4.lru.size, cost: state4.cost };
+        return { entries: state6.lru.size, cost: state6.cost };
       },
       clearCache() {
-        clearVariantCache(state4);
+        clearVariantCache(state6);
       },
-      curVariant: () => curVariant(state4)
+      curVariant: () => curVariant(state6)
     };
     root.MGSpriteCatalog = api;
     return api;
@@ -1433,9 +1433,9 @@
       img.src = cached;
       return;
     }
-    const pending3 = _gmImgPending.get(url);
-    if (pending3) {
-      pending3.push(img);
+    const pending6 = _gmImgPending.get(url);
+    if (pending6) {
+      pending6.push(img);
       return;
     }
     _gmImgPending.set(url, [img]);
@@ -1480,9 +1480,9 @@
         resolve(cached);
         return;
       }
-      const pending3 = _gmAudioPending.get(url);
-      if (pending3) {
-        pending3.push(resolve);
+      const pending6 = _gmAudioPending.get(url);
+      if (pending6) {
+        pending6.push(resolve);
         return;
       }
       _gmAudioPending.set(url, [resolve]);
@@ -1849,16 +1849,16 @@
     return value;
   }
   function writeAriesPath(path, value) {
-    return updateAriesStorage((state4) => {
-      setValueAtPath(state4, path.split(".").filter(Boolean), value);
+    return updateAriesStorage((state6) => {
+      setValueAtPath(state6, path.split(".").filter(Boolean), value);
     });
   }
   function updateAriesPath(path, updater) {
-    return updateAriesStorage((state4) => {
+    return updateAriesStorage((state6) => {
       const parts = path.split(".").filter(Boolean);
-      const currentValue = getValueAtPath(state4, parts);
+      const currentValue = getValueAtPath(state6, parts);
       const next = updater(currentValue);
-      setValueAtPath(state4, parts, next);
+      setValueAtPath(state6, parts, next);
     });
   }
   function setApiKey(apiKey) {
@@ -2397,7 +2397,7 @@
   }
   function parseAbilityColorsFromSwitch(switchBlock) {
     const colors = {};
-    const pending3 = [];
+    const pending6 = [];
     const tokenRe = /case\s*(['"])([^'"]+)\1\s*:|default\s*:|return\s*\{/g;
     const findProp = (segment, prop) => {
       const propRe = new RegExp(`${prop}\\s*:\\s*(['"])([\\s\\S]*?)\\1`);
@@ -2407,35 +2407,35 @@
     let match;
     while ((match = tokenRe.exec(switchBlock)) !== null) {
       if (match[2]) {
-        pending3.push(match[2]);
+        pending6.push(match[2]);
         continue;
       }
       const token = match[0];
       if (token.startsWith("default")) {
-        pending3.length = 0;
+        pending6.length = 0;
         continue;
       }
       if (!token.startsWith("return")) continue;
       const braceIndex = switchBlock.indexOf("{", match.index);
       if (braceIndex === -1) {
-        pending3.length = 0;
+        pending6.length = 0;
         continue;
       }
       const literal = extractBalancedBlock(switchBlock, braceIndex);
       if (!literal) {
-        pending3.length = 0;
+        pending6.length = 0;
         continue;
       }
       const bg = findProp(literal, "bg");
       if (!bg) {
-        pending3.length = 0;
+        pending6.length = 0;
         continue;
       }
       const hover = findProp(literal, "hover") || bg;
-      for (const id of pending3) {
+      for (const id of pending6) {
         if (!colors[id]) colors[id] = { bg, hover };
       }
-      pending3.length = 0;
+      pending6.length = 0;
     }
     return Object.keys(colors).length ? colors : null;
   }
@@ -2451,29 +2451,29 @@
   }
   function parseAbilityColorsFromHexSwitch(switchBlock) {
     const colors = {};
-    const pending3 = [];
+    const pending6 = [];
     const tokenRe = /case\s*([`'"])([^`'"]+)\1\s*:|default\s*:|return\s*([`'"])((?:#|linear-gradient)[^`'"]*)\3/g;
     let match;
     while ((match = tokenRe.exec(switchBlock)) !== null) {
       if (match[2]) {
-        pending3.push(match[2]);
+        pending6.push(match[2]);
         continue;
       }
       if (match[0].startsWith("default")) {
-        pending3.length = 0;
+        pending6.length = 0;
         continue;
       }
       const value = match[4];
       if (!value) {
-        pending3.length = 0;
+        pending6.length = 0;
         continue;
       }
       const bg = value.startsWith("#") ? hexToRgba(value, 0.9) ?? value : value;
       const hover = value.startsWith("#") ? hexToRgba(value, 1) ?? value : value;
-      for (const id of pending3) {
+      for (const id of pending6) {
         if (!colors[id]) colors[id] = { bg, hover };
       }
-      pending3.length = 0;
+      pending6.length = 0;
     }
     return Object.keys(colors).length ? colors : null;
   }
@@ -2527,14 +2527,14 @@
   function startColorPolling() {
     if (captureState.colorPollingTimer) return;
     captureState.colorPollAttempts = 0;
-    const timer3 = setInterval(async () => {
+    const timer4 = setInterval(async () => {
       const success = await enrichAbilitiesWithColors();
       if (success || ++captureState.colorPollAttempts > MAX_COLOR_POLL_ATTEMPTS) {
-        clearInterval(timer3);
+        clearInterval(timer4);
         captureState.colorPollingTimer = null;
       }
     }, COLOR_POLL_INTERVAL_MS);
-    captureState.colorPollingTimer = timer3;
+    captureState.colorPollingTimer = timer4;
   }
   function stopColorPolling() {
     if (captureState.colorPollingTimer) {
@@ -3032,10 +3032,10 @@
   function addCatalogAlias(alias, entry) {
     const key2 = normalizeSpriteName(alias);
     if (!key2) return;
-    const entries = catalogIndex.get(key2) || [];
-    if (entries.some((known) => known.internalCat === entry.internalCat)) return;
-    entries.push(entry);
-    catalogIndex.set(key2, entries);
+    const entries2 = catalogIndex.get(key2) || [];
+    if (entries2.some((known) => known.internalCat === entry.internalCat)) return;
+    entries2.push(entry);
+    catalogIndex.set(key2, entries2);
   }
   function readSpriteUrl(url) {
     const match = /\/assets\/sprites\/([^/]+)\/([^/?#]+)\.[a-z0-9]+(?:[?#]|$)/i.exec(url);
@@ -3084,9 +3084,9 @@
   function findCatalogSprite(internalCats, normTarget) {
     if (!normTarget) return null;
     buildCatalogIndex();
-    const entries = catalogIndex.get(normTarget);
-    if (!entries?.length) return null;
-    for (const entry of entries) {
+    const entries2 = catalogIndex.get(normTarget);
+    if (!entries2?.length) return null;
+    for (const entry of entries2) {
       if (internalCats.has(entry.internalCat)) return entry;
     }
     return null;
@@ -3096,11 +3096,11 @@
     const internalCats = expandCategories(categories);
     const fromCatalog = findCatalogSprite(internalCats, norm3);
     if (fromCatalog) return fromCatalog;
-    const entries = nameIndex.get(norm3);
-    if (!entries?.length) {
+    const entries2 = nameIndex.get(norm3);
+    if (!entries2?.length) {
       return findSpriteFuzzy(categories, norm3);
     }
-    for (const entry of entries) {
+    for (const entry of entries2) {
       if (internalCats.has(entry.internalCat)) return entry;
     }
     return findSpriteFuzzy(categories, norm3);
@@ -3108,16 +3108,16 @@
   function findSpriteFuzzy(categories, normTarget) {
     if (!normTarget) return null;
     const internalCats = expandCategories(categories);
-    for (const [norm3, entries] of nameIndex) {
+    for (const [norm3, entries2] of nameIndex) {
       if (norm3.includes(normTarget) || normTarget.includes(norm3)) {
-        for (const entry of entries) {
+        for (const entry of entries2) {
           if (internalCats.has(entry.internalCat)) return entry;
         }
       }
     }
-    for (const [norm3, entries] of nameIndex) {
+    for (const [norm3, entries2] of nameIndex) {
       if (norm3.includes(normTarget) || normTarget.includes(norm3)) {
-        return entries[0];
+        return entries2[0];
       }
     }
     return null;
@@ -3366,8 +3366,8 @@
     if (!list.length) return "";
     return "|m=" + list.map(normalizeSpriteName).filter(Boolean).sort().join(",");
   }
-  function notifyWarmup(state4) {
-    warmupState = state4;
+  function notifyWarmup(state6) {
+    warmupState = state6;
     warmupListeners.forEach((listener) => {
       try {
         listener(warmupState);
@@ -3609,9 +3609,9 @@
     getSpriteWithMutations: () => getSpriteWithMutations,
     listItemsByCategory: () => listItemsByCategory
   });
-  function findItem(state4, category, id) {
+  function findItem(state6, category, id) {
     const normId = normalizeKey(id);
-    for (const it of state4.items) {
+    for (const it of state6.items) {
       const keyCat = keyCategoryOf(it.key);
       if (!matchesCategory(keyCat, category)) continue;
       const base = normalizeKey(baseNameOf2(it.key));
@@ -3619,22 +3619,22 @@
     }
     return null;
   }
-  function listItemsByCategory(state4, category = "any") {
-    return state4.items.filter((it) => matchesCategory(keyCategoryOf(it.key), category));
+  function listItemsByCategory(state6, category = "any") {
+    return state6.items.filter((it) => matchesCategory(keyCategoryOf(it.key), category));
   }
   function buildVariant(mutations) {
     return buildVariantFromMutations(mutations);
   }
-  function getSpriteWithMutations(params, state4, cfg) {
-    const it = findItem(state4, params.category, params.id);
+  function getSpriteWithMutations(params, state6, cfg) {
+    const it = findItem(state6, params.category, params.id);
     if (!it) return null;
     const tex = it.isAnim ? it.frames?.[0] : it.first;
     if (!tex) return null;
     const V = buildVariantFromMutations(params.mutations);
-    return renderMutatedTexture(tex, it.key, V, state4, cfg);
+    return renderMutatedTexture(tex, it.key, V, state6, cfg);
   }
-  function getBaseSprite(params, state4) {
-    const it = findItem(state4, params.category, params.id);
+  function getBaseSprite(params, state6) {
+    const it = findItem(state6, params.category, params.id);
     if (!it) return null;
     return it.isAnim ? it.frames?.[0] ?? null : it.first;
   }
@@ -5115,7 +5115,7 @@
   }
   function makeAliasedAtom(labels) {
     let resolved = null;
-    async function pick() {
+    async function pick2() {
       if (resolved) return resolved;
       for (const label2 of labels) {
         if (await Store.hasAtom(label2)) {
@@ -5127,11 +5127,11 @@
     }
     return {
       label: labels[0],
-      get: async () => (await pick()).get(),
-      set: async (next) => (await pick()).set(next),
-      update: async (fn) => (await pick()).update(fn),
-      onChange: async (cb, isEqual) => (await pick()).onChange(cb, isEqual),
-      onChangeNow: async (cb, isEqual) => (await pick()).onChangeNow(cb, isEqual),
+      get: async () => (await pick2()).get(),
+      set: async (next) => (await pick2()).set(next),
+      update: async (fn) => (await pick2()).update(fn),
+      onChange: async (cb, isEqual) => (await pick2()).onChange(cb, isEqual),
+      onChangeNow: async (cb, isEqual) => (await pick2()).onChangeNow(cb, isEqual),
       asSignature: (opts) => makeView(resolved?.label ?? labels[0]).asSignature(opts)
     };
   }
@@ -9245,21 +9245,21 @@
     return base;
   }
   function sanitizeState(raw) {
-    const state4 = defaultState();
-    if (!raw || typeof raw !== "object") return state4;
-    state4.enabled = raw.enabled === true;
-    state4.settings = sanitizeSettings(raw.settings);
-    state4.overrides = {};
+    const state6 = defaultState();
+    if (!raw || typeof raw !== "object") return state6;
+    state6.enabled = raw.enabled === true;
+    state6.settings = sanitizeSettings(raw.settings);
+    state6.overrides = {};
     if (raw.overrides && typeof raw.overrides === "object") {
       for (const [key2, value] of Object.entries(raw.overrides)) {
         if (!key2) continue;
-        state4.overrides[key2] = {
+        state6.overrides[key2] = {
           enabled: value?.enabled === true,
           settings: sanitizeSettings(value?.settings)
         };
       }
     }
-    return state4;
+    return state6;
   }
   function cloneSettings(settings) {
     return {
@@ -9277,14 +9277,14 @@
       weatherRecipes: settings.weatherRecipes.map((recipe) => recipe.slice())
     };
   }
-  function cloneState(state4) {
+  function cloneState(state6) {
     const overrides = {};
-    for (const [key2, value] of Object.entries(state4.overrides)) {
+    for (const [key2, value] of Object.entries(state6.overrides)) {
       overrides[key2] = { enabled: value.enabled, settings: cloneSettings(value.settings) };
     }
     return {
-      enabled: state4.enabled,
-      settings: cloneSettings(state4.settings),
+      enabled: state6.enabled,
+      settings: cloneSettings(state6.settings),
       overrides
     };
   }
@@ -9414,8 +9414,8 @@
         if (!obj) return "\u2205";
         if (!isPlantObject(obj)) {
           if (!obj || typeof obj !== "object") return String(obj);
-          const entries = Object.keys(obj).sort().map((key2) => `${key2}:${JSON.stringify(obj[key2])}`);
-          return `other|${entries.join(";")}`;
+          const entries2 = Object.keys(obj).sort().map((key2) => `${key2}:${JSON.stringify(obj[key2])}`);
+          return `other|${entries2.join(";")}`;
         }
         const base = `${obj.objectType}|${obj.species ?? ""}|${obj.plantedAt ?? 0}|${obj.maturedAt ?? 0}`;
         const slots = Array.isArray(obj.slots) ? obj.slots.map((slot) => slotSignature(slot)).join("||") : "";
@@ -10507,7 +10507,7 @@
     if (!atoms.length) {
       throw new Error(`${config.label} introuvable`);
     }
-    const state4 = existing ?? {
+    const state6 = existing ?? {
       config,
       enabled: false,
       payload: null,
@@ -10532,13 +10532,13 @@
           }
         }
         const real = orig(get2);
-        if (!state4.enabled || state4.payload == null) return real;
-        return config.merge ? config.merge(real, state4.payload) : state4.payload;
+        if (!state6.enabled || state6.payload == null) return real;
+        return config.merge ? config.merge(real, state6.payload) : state6.payload;
       };
-      state4.patched.set(a, { readKey, orig });
+      state6.patched.set(a, { readKey, orig });
     }
     if (gateAtom && config.gate?.autoDisableOnClose) {
-      state4.unsubGate = await jSub(gateAtom, async () => {
+      state6.unsubGate = await jSub(gateAtom, async () => {
         let v;
         try {
           v = await jGet(gateAtom);
@@ -10546,12 +10546,12 @@
           v = null;
         }
         const isOpen = config.gate?.isOpen ? config.gate.isOpen(v) : !!v;
-        if (!isOpen && state4.enabled) state4.enabled = false;
+        if (!isOpen && state6.enabled) state6.enabled = false;
       });
     }
-    state4.installed = true;
-    _fakeRegistry.set(key2, state4);
-    return state4;
+    state6.installed = true;
+    _fakeRegistry.set(key2, state6);
+    return state6;
   }
   async function _primePatched(st) {
     const store = await ensureStore();
@@ -11313,7 +11313,7 @@
         }
         startLoop(doc, s) {
           this.stopLoop(doc, s);
-          const tick3 = () => {
+          const tick4 = () => {
             if (!s.pressed) return;
             this.dispatchKey(doc, s.lastTarget || doc, "keydown", s.emit, true);
             if (s.mode === "tap") {
@@ -11323,8 +11323,8 @@
               }, s.keyupDelayMs);
             }
           };
-          tick3();
-          s.tickTimer = this.win.setInterval(tick3, s.rateMs);
+          tick4();
+          s.tickTimer = this.win.setInterval(tick4, s.rateMs);
         }
         stopLoop(doc, s) {
           if (s.tickTimer) {
@@ -11862,14 +11862,14 @@
           if (opts.ariaLabel) b.setAttribute("aria-label", opts.ariaLabel);
           if (opts.onClick) b.addEventListener("click", opts.onClick);
           if (opts.disabled) this.setButtonEnabled(b, false);
-          b.setEnabled = (enabled3) => this.setButtonEnabled(b, enabled3);
+          b.setEnabled = (enabled5) => this.setButtonEnabled(b, enabled5);
           b.setActive = (active2) => b.classList.toggle("active", !!active2);
           return b;
         }
-        setButtonEnabled(button2, enabled3) {
-          button2.disabled = !enabled3;
-          button2.classList.toggle("is-disabled", !enabled3);
-          button2.setAttribute("aria-disabled", (!enabled3).toString());
+        setButtonEnabled(button2, enabled5) {
+          button2.disabled = !enabled5;
+          button2.classList.toggle("is-disabled", !enabled5);
+          button2.setAttribute("aria-disabled", (!enabled5).toString());
         }
         flexRow(opts = {}) {
           const row = document.createElement("div");
@@ -13695,9 +13695,9 @@
     });
   }
   function getCombosForGameAction() {
-    const state4 = gameActiveStates.get(GAME_ACTION_ID);
-    if (!state4) return [];
-    const combo = state4.combo;
+    const state6 = gameActiveStates.get(GAME_ACTION_ID);
+    if (!state6) return [];
+    const combo = state6.combo;
     return typeof combo === "string" && combo.length ? [combo] : [];
   }
   function applyGameActionBlockers() {
@@ -13897,11 +13897,11 @@
     if (typeof raw === "boolean") return raw;
     return void 0;
   }
-  function writeHoldStored(id, enabled3) {
+  function writeHoldStored(id, enabled5) {
     if (typeof window === "undefined") return;
     updateAriesPath(KEYBINDS_HOLD_PATH, (current) => {
       const base = current && typeof current === "object" ? { ...current } : {};
-      base[id] = !!enabled3;
+      base[id] = !!enabled5;
       return base;
     });
   }
@@ -13970,12 +13970,12 @@
   function getKeybindHoldDetection(id) {
     return ensureHoldCache(id);
   }
-  function setKeybindHoldDetection(id, enabled3) {
+  function setKeybindHoldDetection(id, enabled5) {
     if (!holdDefaultMap.has(id)) return;
     const current = ensureHoldCache(id);
-    if (current === enabled3) return;
-    holdCache.set(id, enabled3);
-    writeHoldStored(id, enabled3);
+    if (current === enabled5) return;
+    holdCache.set(id, enabled5);
+    writeHoldStored(id, enabled5);
     emitHoldChange(id);
   }
   function onKeybindHoldDetectionChange(id, cb) {
@@ -14596,9 +14596,9 @@
     const y = Number.isFinite(p?.position?.y) ? Math.round(p.position.y) : 0;
     return `${species}|${name}|xp:${xp}|hg:${hunger}|sc:${scale}|m:${muts}|a:${ab}|pos:${x},${y}`;
   }
-  function snapshotPets(state4) {
+  function snapshotPets(state6) {
     const snap = /* @__PURE__ */ new Map();
-    const arr = Array.isArray(state4) ? state4 : [];
+    const arr = Array.isArray(state6) ? state6 : [];
     for (const it of arr) {
       const id = String(it?.slot?.id ?? "");
       if (!id) continue;
@@ -14666,10 +14666,10 @@
     }
     return infos;
   }
-  function petsStateSig(state4) {
-    if (!Array.isArray(state4)) return "null";
-    if (!state4.length) return "empty";
-    return state4.map((p) => {
+  function petsStateSig(state6) {
+    if (!Array.isArray(state6)) return "null";
+    if (!state6.length) return "empty";
+    return state6.map((p) => {
       const id = String(p?.slot?.id ?? "");
       return `${id}:${petSig(p)}`;
     }).join("|");
@@ -14919,12 +14919,12 @@
           }
         },
         async petPositions(petPositions) {
-          const entries = Object.entries(petPositions ?? {});
-          if (!entries.length) {
+          const entries2 = Object.entries(petPositions ?? {});
+          if (!entries2.length) {
             return;
           }
           const sanitized = {};
-          for (const [id, pos] of entries) {
+          for (const [id, pos] of entries2) {
             const x = Number(pos?.x);
             const y = Number(pos?.y);
             if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
@@ -15135,11 +15135,11 @@
         },
         onPetsDiff(cb) {
           let prevSnap = snapshotPets(null);
-          return this.onPetsChange((state4) => {
-            const nextSnap = snapshotPets(state4);
+          return this.onPetsChange((state6) => {
+            const nextSnap = snapshotPets(state6);
             const d = diffPetsSnapshot(prevSnap, nextSnap);
             if (d.added.length || d.updated.length || d.removed.length) {
-              cb(state4, d);
+              cb(state6, d);
               prevSnap = nextSnap;
             }
           });
@@ -15151,11 +15151,11 @@
           const first = diffPetsSnapshot(prevSnap, nextSnap);
           cb(cur, first);
           prevSnap = nextSnap;
-          return this.onPetsChange((state4) => {
-            nextSnap = snapshotPets(state4);
+          return this.onPetsChange((state6) => {
+            nextSnap = snapshotPets(state6);
             const d = diffPetsSnapshot(prevSnap, nextSnap);
             if (d.added.length || d.updated.length || d.removed.length) {
-              cb(state4, d);
+              cb(state6, d);
               prevSnap = nextSnap;
             }
           });
@@ -15253,11 +15253,11 @@
   }
   function createAutoStore(config) {
     const { logName, storagePath, storageId, storageAtom, inventoryAtom, keyFromItem } = config;
-    let enabled3 = readEnabledFlag(storagePath, false);
+    let enabled5 = readEnabledFlag(storagePath, false);
     let storedKeys = /* @__PURE__ */ new Set();
     let inventoryQty = /* @__PURE__ */ new Map();
     let queue = /* @__PURE__ */ new Set();
-    let busy2 = false;
+    let busy4 = false;
     let inventoryUnsub = null;
     let storageUnsub = null;
     let pendingKeys = /* @__PURE__ */ new Set();
@@ -15278,12 +15278,12 @@
       pendingTimer = window.setTimeout(() => {
         pendingTimer = null;
         const now2 = Date.now();
-        const pending3 = Array.from(pendingKeys);
+        const pending6 = Array.from(pendingKeys);
         pendingKeys.clear();
         pruneRecentMap(removedAtByKey, now2);
         const filtered = [];
         const skipped = [];
-        for (const key2 of pending3) {
+        for (const key2 of pending6) {
           const removedAt = removedAtByKey.get(key2) ?? 0;
           if (removedAt && now2 - removedAt <= RECENT_REMOVE_MS) {
             skipped.push(key2);
@@ -15291,20 +15291,20 @@
             filtered.push(key2);
           }
         }
-        log(`${logName} pending flush`, { pending: pending3, filtered, skipped });
+        log(`${logName} pending flush`, { pending: pending6, filtered, skipped });
         if (filtered.length) queueStore(filtered);
       }, DEBOUNCE_MS);
     }
     async function flushQueue() {
-      if (busy2 || !enabled3) return;
-      busy2 = true;
+      if (busy4 || !enabled5) return;
+      busy4 = true;
       try {
-        while (queue.size && enabled3) {
+        while (queue.size && enabled5) {
           const batch = Array.from(queue);
           queue.clear();
           log(`${logName} flush start`, { batchSize: batch.length, batch });
           for (const key2 of batch) {
-            if (!enabled3) return;
+            if (!enabled5) return;
             if (!storedKeys.has(key2)) {
               log(`${logName} skip (not in storage)`, { key: key2, storageSize: storedKeys.size });
               continue;
@@ -15318,17 +15318,17 @@
           }
         }
       } finally {
-        busy2 = false;
+        busy4 = false;
       }
     }
     async function start2() {
       if (inventoryUnsub || storageUnsub) return;
       if (typeof window === "undefined") return;
-      const generation = ++startGeneration;
-      const isCurrent = () => enabled3 && startGeneration === generation;
+      const generation3 = ++startGeneration;
+      const isCurrent = () => enabled5 && startGeneration === generation3;
       const ready2 = await waitForAtoms(storageAtom, inventoryAtom, isCurrent);
       if (!ready2 || !isCurrent()) {
-        log(`${logName} auto-store aborted`, { ready: ready2, enabled: enabled3 });
+        log(`${logName} auto-store aborted`, { ready: ready2, enabled: enabled5 });
         return;
       }
       if (inventoryUnsub || storageUnsub) return;
@@ -15360,7 +15360,7 @@
       }
       try {
         inventoryUnsub = await inventoryAtom.onChange((next) => {
-          if (!enabled3) return;
+          if (!enabled5) return;
           const prevMap = inventoryQty;
           const nextMap = buildQtyMap(next, keyFromItem);
           const increased = diffIncreases(prevMap, nextMap);
@@ -15395,7 +15395,7 @@
       inventoryUnsub = null;
       storageUnsub = null;
       queue.clear();
-      busy2 = false;
+      busy4 = false;
       storedKeys.clear();
       inventoryQty.clear();
       pendingKeys.clear();
@@ -15410,7 +15410,7 @@
       isEnabled: (def = false) => readEnabledFlag(storagePath, def),
       setEnabled(on) {
         const next = !!on;
-        enabled3 = next;
+        enabled5 = next;
         try {
           writeAriesPath(storagePath, next);
         } catch {
@@ -15423,7 +15423,7 @@
         }
       },
       bootIfEnabled() {
-        if (enabled3) void start2();
+        if (enabled5) void start2();
       }
     };
   }
@@ -15539,7 +15539,7 @@
     const onBlur = () => {
       KEYS.clear();
     };
-    const onVisibility = () => {
+    const onVisibility2 = () => {
       if (document.hidden) KEYS.clear();
     };
     function getDir() {
@@ -15601,7 +15601,7 @@
         window.addEventListener("keydown", onKeyDownCapture, CAPTURE);
         window.addEventListener("keyup", onKeyUpCapture, CAPTURE);
         window.addEventListener("blur", onBlur);
-        document.addEventListener("visibilitychange", onVisibility);
+        document.addEventListener("visibilitychange", onVisibility2);
         rafId = requestAnimationFrame(frame);
       },
       stop() {
@@ -15613,7 +15613,7 @@
         window.removeEventListener("keydown", onKeyDownCapture, CAPTURE);
         window.removeEventListener("keyup", onKeyUpCapture, CAPTURE);
         window.removeEventListener("blur", onBlur);
-        document.removeEventListener("visibilitychange", onVisibility);
+        document.removeEventListener("visibilitychange", onVisibility2);
       },
       setSpeed(n) {
         const v = Math.max(5, Math.floor(n || DEFAULT_DELAY_MS));
@@ -16148,15 +16148,15 @@
     const list = document.getElementById(LIST_ID);
     if (!list) return;
     list.innerHTML = "";
-    const entries = Array.from(selectedMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-    if (entries.length === 0) {
+    const entries2 = Array.from(selectedMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+    if (entries2.length === 0) {
       const empty = document.createElement("div");
       empty.textContent = "No seeds selected.";
       empty.style.opacity = "0.8";
       list.appendChild(empty);
       return;
     }
-    for (const it of entries) list.appendChild(renderListRow(it));
+    for (const it of entries2) list.appendChild(renderListRow(it));
   }
   function totalSelected() {
     let species = 0, qty = 0;
@@ -16413,15 +16413,15 @@
     const list = document.getElementById(LIST_DECOR_ID);
     if (!list) return;
     list.innerHTML = "";
-    const entries = Array.from(selectedDecorMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-    if (entries.length === 0) {
+    const entries2 = Array.from(selectedDecorMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+    if (entries2.length === 0) {
       const empty = document.createElement("div");
       empty.textContent = "No decor selected.";
       empty.style.opacity = "0.8";
       list.appendChild(empty);
       return;
     }
-    for (const it of entries) list.appendChild(renderDecorListRow(it));
+    for (const it of entries2) list.appendChild(renderDecorListRow(it));
   }
   function totalDecorSelected() {
     let kinds = 0, qty = 0;
@@ -16503,9 +16503,9 @@
     }
   }
   async function findFirstEmptySlot() {
-    const state4 = await PlayerService.getGardenState();
-    const dirt = state4?.tileObjects || {};
-    const boardwalk = state4?.boardwalkTileObjects || {};
+    const state6 = await PlayerService.getGardenState();
+    const dirt = state6?.tileObjects || {};
+    const boardwalk = state6?.boardwalkTileObjects || {};
     for (let i = 0; i < 200; i++) {
       const key2 = String(i);
       const has = Object.prototype.hasOwnProperty.call(dirt, key2) && dirt[key2] != null;
@@ -17115,7 +17115,7 @@
     if (states.length > 1) {
       const slider = createSlider(states.length, index);
       const ticks = createTicks(states.map(formatRotationLabel));
-      const apply = () => {
+      const apply2 = () => {
         const rotation2 = states[index] ?? ANGLE_NONE;
         const { spriteIds: spriteIds2, mirrored: mirrored2 } = resolveDecorSpriteState(decorId, rotation2);
         renderSprite(spriteIds2, mirrored2);
@@ -17123,13 +17123,13 @@
       };
       slider.oninput = () => {
         index = Number(slider.value) || 0;
-        apply();
+        apply2();
         onSelect(states[index] ?? ANGLE_NONE);
       };
       const track = createTrackWrap();
       track.append(slider, ticks.root);
       root.appendChild(track);
-      apply();
+      apply2();
       return root;
     }
     const rotation = states[0] ?? ANGLE_NONE;
@@ -17906,8 +17906,8 @@
     state2.highlight.parent = parent;
     return { tx, ty, gidx: info.gidx, color, alpha, thickness };
   }
-  function setDebugHoverHighlight(enabled3, opts = {}) {
-    if (!enabled3) {
+  function setDebugHoverHighlight(enabled5, opts = {}) {
+    if (!enabled5) {
       state2.hoverDebug.cleanup?.();
       state2.hoverDebug.cleanup = null;
       state2.hoverDebug.enabled = false;
@@ -17982,7 +17982,7 @@
     const entry = { raf: 0, baseline: /* @__PURE__ */ new WeakMap(), touched: /* @__PURE__ */ new Set() };
     activeFlashes.set(gidx, entry);
     const start2 = performance.now();
-    const tick3 = (now2) => {
+    const tick4 = (now2) => {
       const progress = Math.min(1, (now2 - start2) / durationMs);
       const mix = startMix * (1 - progress);
       const parent = resolveParent();
@@ -18001,9 +18001,9 @@
         stopFlashTile(gidx);
         return;
       }
-      entry.raf = requestAnimationFrame(tick3);
+      entry.raf = requestAnimationFrame(tick4);
     };
-    entry.raf = requestAnimationFrame(tick3);
+    entry.raf = requestAnimationFrame(tick4);
     return true;
   }
   function getWorldSystem(name) {
@@ -18536,7 +18536,7 @@
     }
     return wrap;
   }
-  function persist(enabled3) {
+  function persist(enabled5) {
   }
   function editorToolbarButtonStyle() {
     return {
@@ -19649,8 +19649,8 @@
       btn.style.transform = selected ? "scale(1.06)" : "scale(1)";
     };
     const selectedId = getSelectedId();
-    const entries = getSideEntries();
-    const sig = `${currentSideMode}:${JSON.stringify(entries)}`;
+    const entries2 = getSideEntries();
+    const sig = `${currentSideMode}:${JSON.stringify(entries2)}`;
     const existingList = sideListWrap.querySelector(
       '[data-editor-side-list="list"]'
     );
@@ -19710,7 +19710,7 @@
       btn.appendChild(icon);
       return btn;
     };
-    for (const it of entries) {
+    for (const it of entries2) {
       const isSelected = selectedId === it.id;
       list.appendChild(makeItem(it.id, it.label, isSelected));
     }
@@ -19834,15 +19834,15 @@
           fontWeight: "600"
         });
         btnAdd.onclick = () => {
-          const state4 = ensureEditorStateForSpecies(selId);
-          const current = state4.slots;
+          const state6 = ensureEditorStateForSpecies(selId);
+          const current = state6.slots;
           if (current.length >= maxSlots) return;
           const defaultScale = computeTargetScaleFromPercent(
             selId,
             DEFAULT_SIZE_PERCENT
           );
           editorPlantSlotsState = {
-            ...state4,
+            ...state6,
             species: selId,
             slots: [
               ...current,
@@ -19872,11 +19872,11 @@
           fontWeight: "600"
         });
         btnRemove.onclick = () => {
-          const state4 = ensureEditorStateForSpecies(selId);
-          const current = state4.slots;
+          const state6 = ensureEditorStateForSpecies(selId);
+          const current = state6.slots;
           if (current.length <= 1) return;
           editorPlantSlotsState = {
-            ...state4,
+            ...state6,
             species: selId,
             slots: current.slice(0, current.length - 1)
           };
@@ -20262,16 +20262,16 @@
       }
       return null;
     }
-    const entries = Object.entries(slots);
-    if (opts.sortObject) entries.sort(([a], [b]) => compareSlotKeys(a, b));
-    for (let i = 0; i < entries.length; i++) {
-      const [, s] = entries[i];
+    const entries2 = Object.entries(slots);
+    if (opts.sortObject) entries2.sort(([a], [b]) => compareSlotKeys(a, b));
+    for (let i = 0; i < entries2.length; i++) {
+      const [, s] = entries2[i];
       if (isMatch(s)) {
         return {
           isArray: false,
           matchSlot: s,
           matchIndex: i,
-          entries,
+          entries: entries2,
           slotsArray: null
         };
       }
@@ -20320,10 +20320,10 @@
       maturedAt: 1760865838723
     };
   }
-  function notify(enabled3) {
+  function notify(enabled5) {
     listeners3.forEach((cb) => {
       try {
-        cb(enabled3);
+        cb(enabled5);
       } catch {
       }
     });
@@ -20360,8 +20360,8 @@
     plannedGarden = { tileObjects: {}, boardwalkTileObjects: {} };
     plannedUserSlotIdx = null;
   }
-  function applyState(enabled3, opts = {}) {
-    const next = !!enabled3;
+  function applyState(enabled5, opts = {}) {
+    const next = !!enabled5;
     const changed = next !== currentEnabled;
     if (next) showOverlay();
     else hideOverlay();
@@ -20896,8 +20896,8 @@
     const mapData = await Atoms.root.map.get().catch(() => null);
     const cols = Number(mapData?.cols);
     if (!mapData || !Number.isFinite(cols)) return null;
-    const entries = tileType === "Dirt" ? Object.entries(mapData?.globalTileIdxToDirtTile || {}) : Object.entries(mapData?.globalTileIdxToBoardwalk || {});
-    for (const [gidxStr, v] of entries) {
+    const entries2 = tileType === "Dirt" ? Object.entries(mapData?.globalTileIdxToDirtTile || {}) : Object.entries(mapData?.globalTileIdxToBoardwalk || {});
+    for (const [gidxStr, v] of entries2) {
       const info = v;
       if (!info || typeof info !== "object") continue;
       const slotOk = Number(info.userSlotIdx) === userSlotIdx;
@@ -21442,8 +21442,8 @@
         isEnabled() {
           return currentEnabled;
         },
-        setEnabled(enabled3) {
-          applyState(enabled3, { persist: true, emit: true });
+        setEnabled(enabled5) {
+          applyState(enabled5, { persist: true, emit: true });
         },
         onChange(listener) {
           listeners3.add(listener);
@@ -22969,13 +22969,13 @@
     } catch {
     }
   }
-  function _clearPendingCreate(localId) {
-    _pendingServerCreates.delete(localId);
-    _pendingCreateSentName.delete(localId);
-    const t = _pendingCreateTimeouts.get(localId);
+  function _clearPendingCreate(localId2) {
+    _pendingServerCreates.delete(localId2);
+    _pendingCreateSentName.delete(localId2);
+    const t = _pendingCreateTimeouts.get(localId2);
     if (t) {
       clearTimeout(t);
-      _pendingCreateTimeouts.delete(localId);
+      _pendingCreateTimeouts.delete(localId2);
     }
   }
   function _createAttemptSig(local) {
@@ -23017,11 +23017,11 @@
     _reconcilingTeams = true;
     try {
       const r = reconcilePetTeams(PetsService._teams, _serverTeams, {
-        sentName: (localId) => _pendingCreateSentName.get(localId),
+        sentName: (localId2) => _pendingCreateSentName.get(localId2),
         knownLocalId: (serverId) => _localTeamIdByServerId.get(serverId),
         newId: _uid
       });
-      for (const localId of r.linkedLocalIds) _clearPendingCreate(localId);
+      for (const localId2 of r.linkedLocalIds) _clearPendingCreate(localId2);
       for (const u of r.pushUpdates) _sendSavePetTeam(u.serverId, u.name, u.petIds);
       for (const local of r.needsCreate) _maybeCreateServerTeam(local);
       for (const t of r.dropped) _localTeamIdByServerId.set(String(t.serverId), t.id);
@@ -23078,7 +23078,7 @@
     _teamSyncEnabled = next;
     writeAriesPath(PATH_PETS_TEAM_SYNC, next);
     if (!next) {
-      for (const localId of Array.from(_pendingServerCreates)) _clearPendingCreate(localId);
+      for (const localId2 of Array.from(_pendingServerCreates)) _clearPendingCreate(localId2);
       return;
     }
     _lastCreateAttemptSig.clear();
@@ -23579,9 +23579,9 @@
         }
         resolve(ok);
       };
-      const check = async (state4) => {
+      const check = async (state6) => {
         const set2 = new Set(
-          (Array.isArray(state4) ? state4 : []).map((p) => String(p?.id || "")).filter(Boolean)
+          (Array.isArray(state6) ? state6 : []).map((p) => String(p?.id || "")).filter(Boolean)
         );
         if (predicate(set2)) {
           stop2(true);
@@ -23590,8 +23590,8 @@
         }
       };
       try {
-        const res = myPetHutchPetItems.onChange((state4) => {
-          void check(state4);
+        const res = myPetHutchPetItems.onChange((state6) => {
+          void check(state6);
         });
         if (typeof res === "function") {
           unsub = res;
@@ -23649,18 +23649,18 @@
       const slots = await stateUserSlots.get();
       const list = Array.isArray(slots) ? slots : [];
       if (!list.length) return null;
-      let roomId = null;
+      let roomId2 = null;
       let accountId = null;
       try {
-        roomId = await playerId.get() ?? null;
+        roomId2 = await playerId.get() ?? null;
       } catch {
       }
       try {
         accountId = readAccountId(await player.get());
       } catch {
       }
-      if (!roomId && !accountId) return null;
-      return findSlotIndex(list, { accountId, roomId });
+      if (!roomId2 && !accountId) return null;
+      return findSlotIndex(list, { accountId, roomId: roomId2 });
     } catch {
       return null;
     }
@@ -23671,9 +23671,9 @@
       const cols = Number(map2?.cols);
       const dirtArrays = Array.isArray(map2?.userSlotIdxAndDirtTileIdxToGlobalTileIdx) ? map2.userSlotIdxAndDirtTileIdxToGlobalTileIdx : [];
       if (!Number.isFinite(cols) || cols <= 0 || !dirtArrays.length) return null;
-      const slotIdx = await _getMyUserSlotIndex();
-      if (slotIdx == null) return null;
-      const dirtGlobals = Array.isArray(dirtArrays[slotIdx]) ? dirtArrays[slotIdx] : [];
+      const slotIdx2 = await _getMyUserSlotIndex();
+      if (slotIdx2 == null) return null;
+      const dirtGlobals = Array.isArray(dirtArrays[slotIdx2]) ? dirtArrays[slotIdx2] : [];
       if (!dirtGlobals.length) return null;
       const localTileIndex = Math.min(Math.max(0, tileOffset), dirtGlobals.length - 1);
       const globalIndex = Number(dirtGlobals[localTileIndex]);
@@ -23972,8 +23972,8 @@
           void _evaluateAll();
           return next;
         },
-        async setPetAutofeedEnabled(petId, enabled3) {
-          return this.setOverride(petId, { enabled: !!enabled3 });
+        async setPetAutofeedEnabled(petId, enabled5) {
+          return this.setOverride(petId, { enabled: !!enabled5 });
         },
         getPetAutofeedEnabled(petId) {
           return this.getOverride(petId).enabled;
@@ -24931,16 +24931,16 @@
       candidates.add("Chilled");
     }
     if (!candidates.size) return null;
-    let pick = null;
+    let pick2 = null;
     let best = -Infinity;
     for (const cand of candidates) {
       const mult = mutationMultiplier(cand) ?? 1;
       if (mult > best) {
         best = mult;
-        pick = cand;
+        pick2 = cand;
       }
     }
-    return pick;
+    return pick2;
   }
   function pickTime(mutations) {
     if (!Array.isArray(mutations)) return null;
@@ -24950,16 +24950,16 @@
       if (isTime(m)) candidates.add(m);
     }
     if (!candidates.size) return null;
-    let pick = null;
+    let pick2 = null;
     let best = -Infinity;
     for (const cand of candidates) {
       const mult = mutationMultiplier(cand) ?? 1;
       if (mult > best) {
         best = mult;
-        pick = cand;
+        pick2 = cand;
       }
     }
-    return pick;
+    return pick2;
   }
   function combineWeatherMultipliers(multipliers) {
     if (!multipliers.length) return 1;
@@ -25155,7 +25155,7 @@
       const type = typeof item?.itemType === "string" ? item.itemType.trim() : "";
       return type === "Pet";
     });
-    const entries = pets.map((pet) => {
+    const entries2 = pets.map((pet) => {
       const info = getPetInfo(pet);
       const id = typeof pet?.id === "string" ? pet.id : null;
       const name = typeof pet?.name === "string" && pet.name.trim() ? pet.name : null;
@@ -25170,18 +25170,18 @@
         coinMultiplier: info.coinMultiplier
       };
     });
-    const totalValue = entries.reduce(
+    const totalValue = entries2.reduce(
       (acc, entry) => acc + (Number.isFinite(entry.value) ? entry.value : 0),
       0
     );
-    return { totalValue, pets: entries };
+    return { totalValue, pets: entries2 };
   }
   function computePlantValues(items, playersInRoom) {
     const plants = items.filter((item) => {
       const type = typeof item?.itemType === "string" ? item.itemType.trim() : "";
       return type === "Plant";
     });
-    const entries = plants.map((plant) => {
+    const entries2 = plants.map((plant) => {
       const id = typeof plant?.id === "string" ? plant.id : null;
       const species = typeof plant?.species === "string" ? plant.species : null;
       const plantedAt = Number.isFinite(plant?.plantedAt) ? plant.plantedAt : null;
@@ -25214,14 +25214,14 @@
         slots: slotEntries
       };
     });
-    const totalValue = entries.reduce(
+    const totalValue = entries2.reduce(
       (acc, entry) => acc + (Number.isFinite(entry.value) ? entry.value : 0),
       0
     );
     return {
       totalValue,
       playersInRoom: Number.isFinite(playersInRoom) ? playersInRoom : null,
-      plants: entries
+      plants: entries2
     };
   }
   function computeCropValues(items, playersInRoom) {
@@ -25229,7 +25229,7 @@
       const type = typeof item?.itemType === "string" ? item.itemType.trim() : "";
       return type === "Produce";
     });
-    const entries = crops.map((crop) => {
+    const entries2 = crops.map((crop) => {
       const id = typeof crop?.id === "string" ? crop.id : null;
       const species = typeof crop?.species === "string" ? crop.species : null;
       const size = readCropSize(crop);
@@ -25243,11 +25243,11 @@
         value
       };
     });
-    const totalValue = entries.reduce(
+    const totalValue = entries2.reduce(
       (acc, entry) => acc + (Number.isFinite(entry.value) ? entry.value : 0),
       0
     );
-    return { totalValue, crops: entries };
+    return { totalValue, crops: entries2 };
   }
   function computeMiscValues(items) {
     const aggregated = {
@@ -25261,7 +25261,7 @@
         const type = typeof item?.itemType === "string" ? item.itemType.trim() : "";
         return type === config.itemType;
       });
-      const entries = filteredItems.map((item) => {
+      const entries2 = filteredItems.map((item) => {
         const rawIdentifier = item?.[config.identifierKey];
         const identifier = toNormalizedIdentifier(rawIdentifier);
         const rawQuantity = item?.quantity;
@@ -25270,11 +25270,11 @@
         const value = quantity != null && coinPrice != null ? coinPrice * quantity : null;
         return config.createEntry(identifier, quantity, coinPrice, value);
       });
-      const totalValue = entries.reduce((acc, entry) => {
+      const totalValue = entries2.reduce((acc, entry) => {
         const entryValue = entry.value;
         return typeof entryValue === "number" && Number.isFinite(entryValue) ? acc + entryValue : acc;
       }, 0);
-      aggregated[config.logKey] = { totalValue, items: entries };
+      aggregated[config.logKey] = { totalValue, items: entries2 };
     }
     return aggregated;
   }
@@ -25455,16 +25455,16 @@
     };
     const HANDLE = options.onClick ?? createDefaultClickHandler(logger);
     ensureStyle(INJ_CLASS, THEME);
-    let running3 = true;
-    let pending3 = false;
+    let running6 = true;
+    let pending6 = false;
     const processAll = () => {
-      if (!running3 || pending3) return;
-      pending3 = true;
+      if (!running6 || pending6) return;
+      pending6 = true;
       requestAnimationFrame(() => {
         try {
           document.querySelectorAll(ROOT_SEL).forEach((root) => processRoot(root));
         } finally {
-          pending3 = false;
+          pending6 = false;
         }
       });
     };
@@ -25492,8 +25492,8 @@
     }
     return {
       stop() {
-        if (!running3) return;
-        running3 = false;
+        if (!running6) return;
+        running6 = false;
         mo.disconnect();
         unhookHistory?.();
         logger("stopped");
@@ -25502,7 +25502,7 @@
         processAll();
       },
       isRunning() {
-        return running3;
+        return running6;
       }
     };
   }
@@ -26576,12 +26576,12 @@
         persistLibrary() {
           if (this.suppressPersist > 0) return;
           try {
-            const entries = [];
+            const entries2 = [];
             for (const [name, data] of this.library.entries()) {
               if (this.builtinDefault && name === this.builtinDefault.name) continue;
-              entries.push({ name, data });
+              entries2.push({ name, data });
             }
-            writeAriesPath(AUDIO_LIBRARY_PATH, entries);
+            writeAriesPath(AUDIO_LIBRARY_PATH, entries2);
           } catch {
           }
         }
@@ -26799,7 +26799,7 @@
           }
           this.persistSettings();
         }
-        resetLibrary(entries) {
+        resetLibrary(entries2) {
           const prevDefault = this.defaultSoundName;
           const prevWeatherDefault = this.weatherDefaultSoundName;
           this.suppressPersist++;
@@ -26807,7 +26807,7 @@
             this.library.clear();
             this.ensureBuiltinPresent();
             const added = [];
-            for (const e of entries) {
+            for (const e of entries2) {
               const safeName = String(e?.name || "").trim();
               if (!safeName) continue;
               if (this.isProtectedSound(safeName)) continue;
@@ -27061,7 +27061,7 @@
           this.stopLoop(key2);
           const stopOverride = normalizeStop(overrides.stop ?? null);
           const loopIntervalOverride = overrides.loopIntervalMs != null && Number.isFinite(overrides.loopIntervalMs) ? Math.max(150, Math.round(overrides.loopIntervalMs)) : null;
-          const state4 = {
+          const state6 = {
             key: key2,
             timer: null,
             plays: 0,
@@ -27076,8 +27076,8 @@
             volumeOverride,
             volume: effectiveVolume
           };
-          this.loops.set(key2, state4);
-          this.scheduleNext(state4, 0);
+          this.loops.set(key2, state6);
+          this.scheduleNext(state6, 0);
         }
         forEachLoop(context, fn) {
           for (const st of this.loops.values()) {
@@ -27252,39 +27252,39 @@
           }
           return true;
         }
-        scheduleNext(state4, delayMs) {
+        scheduleNext(state6, delayMs) {
           const run = async () => {
-            if (state4.stopped) return;
-            const stopConf = state4.stopOverride ?? state4.baseStop;
+            if (state6.stopped) return;
+            const stopConf = state6.stopOverride ?? state6.baseStop;
             if (stopConf.mode === "purchase" && this.purchaseChecker) {
               try {
-                if (this.purchaseChecker(state4.key)) {
-                  this.stopLoop(state4.key);
+                if (this.purchaseChecker(state6.key)) {
+                  this.stopLoop(state6.key);
                   return;
                 }
               } catch {
               }
             }
-            const du = this.resolveToDataUrl(state4.soundOverride, state4.context);
+            const du = this.resolveToDataUrl(state6.soundOverride, state6.context);
             const played = await this.playOnce(
               du,
-              state4.volume,
-              state4.context,
+              state6.volume,
+              state6.context,
               { awaitEnd: true }
             );
-            if (played) state4.plays++;
+            if (played) state6.plays++;
             if (stopConf.mode === "repeat") {
               const max = Math.max(1, stopConf.repeats | 0);
-              if (state4.plays >= max) {
-                this.stopLoop(state4.key);
+              if (state6.plays >= max) {
+                this.stopLoop(state6.key);
                 return;
               }
             }
-            const intervalBase = state4.loopIntervalOverride ?? state4.baseLoopInterval;
+            const intervalBase = state6.loopIntervalOverride ?? state6.baseLoopInterval;
             const gap = Math.max(150, intervalBase | 0);
-            state4.timer = setTimeout(() => this.scheduleNext(state4, 0), gap);
+            state6.timer = setTimeout(() => this.scheduleNext(state6, 0), gap);
           };
-          if (delayMs > 0) state4.timer = setTimeout(run, delayMs);
+          if (delayMs > 0) state6.timer = setTimeout(run, delayMs);
           else run().catch(() => {
           });
         }
@@ -27447,9 +27447,9 @@
     }
     if (!petId) return { enabled: false, thresholdPct: baseThreshold };
     const entry = prefs.pets[petId] ?? {};
-    const enabled3 = entry.enabled ?? false;
+    const enabled5 = entry.enabled ?? false;
     const thresholdPct = clampPct2(entry.thresholdPct ?? baseThreshold);
-    return { enabled: enabled3, thresholdPct };
+    return { enabled: enabled5, thresholdPct };
   }
   async function triggerAlert(key2) {
     try {
@@ -27463,9 +27463,9 @@
       seenBelow.set(petId, false);
       return;
     }
-    const { enabled: enabled3, thresholdPct } = prefFor(petId);
+    const { enabled: enabled5, thresholdPct } = prefFor(petId);
     const hungerPct = PetsService.getHungerPctFor(pet);
-    const below = enabled3 && Number.isFinite(hungerPct) && hungerPct < thresholdPct;
+    const below = enabled5 && Number.isFinite(hungerPct) && hungerPct < thresholdPct;
     const wasBelow = seenBelow.get(petId) === true;
     const loopKey = prefs.generalEnabled ? "pets:general" : `pet:${petId}`;
     const mode = audio.getPlaybackMode?.("pets") ?? "oneshot";
@@ -28174,8 +28174,8 @@
     }
     return false;
   }
-  async function _watchShops(generation) {
-    const isCurrent = () => _watchGeneration === generation;
+  async function _watchShops(generation3) {
+    const isCurrent = () => _watchGeneration === generation3;
     if (!await _waitForAtom(STATE_ATOM_LABEL, isCurrent) || !isCurrent()) return;
     if (_unsubShops) return;
     try {
@@ -28193,8 +28193,8 @@
     } catch {
     }
   }
-  async function _watchPurchases(generation) {
-    const isCurrent = () => _watchGeneration === generation;
+  async function _watchPurchases(generation3) {
+    const isCurrent = () => _watchGeneration === generation3;
     if (!await _waitForAtom(MY_USER_SLOT_ATOM_LABEL, isCurrent) || !isCurrent()) return;
     if (_unsubPurchases) return;
     try {
@@ -28227,9 +28227,9 @@
       window.addEventListener("gemini:data-updated", _onDataUpdated);
     } catch {
     }
-    const generation = ++_watchGeneration;
-    void _watchShops(generation);
-    void _watchPurchases(generation);
+    const generation3 = ++_watchGeneration;
+    void _watchShops(generation3);
+    void _watchPurchases(generation3);
     try {
       const invAtom = _resolveToolInvAtom();
       if (invAtom) {
@@ -28458,7 +28458,7 @@
         return items;
       };
       WEATHER_DEFS = (() => {
-        const entries = [];
+        const entries2 = [];
         for (const [rawName, rawValue] of Object.entries(weatherCatalog2 ?? {})) {
           const safeName = String(rawName || "").trim();
           if (!safeName) continue;
@@ -28470,7 +28470,7 @@
           const weightInCycle = normalizeNumber(rawValue?.weightInCycle);
           const cycle = normalizeCycle(rawValue?.cycle);
           const mutations = normalizeMutations2(rawValue?.mutations);
-          entries.push({
+          entries2.push({
             id: `Weather:${safeName}`,
             name: displayName || safeName,
             atomValue,
@@ -28481,7 +28481,7 @@
             mutations
           });
         }
-        return entries;
+        return entries2;
       })();
       WEATHER_BY_ID = /* @__PURE__ */ new Map();
       WEATHER_BY_ATOM = /* @__PURE__ */ new Map();
@@ -28637,11 +28637,11 @@
           if (!id) return false;
           return !!_getWeatherPref(id).notify;
         },
-        setWeatherNotify(id, enabled3) {
+        setWeatherNotify(id, enabled5) {
           if (!id) return;
           _ensureWeatherPrefsLoaded();
           const pref = _getWeatherPref(id);
-          const next = !!enabled3;
+          const next = !!enabled5;
           if (!!pref.notify === next) return;
           pref.notify = next;
           _weatherPrefs.set(id, pref);
@@ -28683,12 +28683,12 @@
           const popup = !!(bits & 1);
           return { popup, followed: popup };
         },
-        setPopup(id, enabled3) {
-          if (enabled3 && _isRowCapReached(id)) {
+        setPopup(id, enabled5) {
+          if (enabled5 && _isRowCapReached(id)) {
             return;
           }
           const bits = _getPrefBits(id);
-          const next = enabled3 ? bits | 1 : bits & ~1;
+          const next = enabled5 ? bits | 1 : bits & ~1;
           _setPrefBits(id, next);
         },
         setPrefs(id, prefs2) {
@@ -28790,12 +28790,12 @@
 
   // src/utils/gardenInfoCardPixi.ts
   function getSpriteState2() {
-    const state4 = readSharedGlobal("__MG_SPRITE_STATE__");
-    if (!state4?.renderer || !state4.ctors?.Text) return null;
-    return state4;
+    const state6 = readSharedGlobal("__MG_SPRITE_STATE__");
+    if (!state6?.renderer || !state6.ctors?.Text) return null;
+    return state6;
   }
-  function getStage(state4) {
-    return state4.renderer.lastObjectRendered ?? state4.renderer.stage ?? state4.app?.stage ?? null;
+  function getStage(state6) {
+    return state6.renderer.lastObjectRendered ?? state6.renderer.stage ?? state6.app?.stage ?? null;
   }
   function findByLabel(root, label2, limit = 25e3) {
     if (!root) return null;
@@ -28900,9 +28900,9 @@
   }
   function tryFindCardSystem() {
     if (cardSystem) return;
-    const state4 = getSpriteState2();
-    if (!state4) return;
-    const stage = getStage(state4);
+    const state6 = getSpriteState2();
+    if (!state6) return;
+    const stage = getStage(state6);
     const found = findAcrossBranches(stage, (node) => node?.label === CARD_SYSTEM_LABEL);
     if (found) {
       attachToCardSystem(found);
@@ -28993,7 +28993,7 @@
   }
   function startNotificationBellPixi(opts) {
     const iconGlyph = opts.iconGlyph ?? DEFAULT_ICON_GLYPH;
-    let running3 = true;
+    let running6 = true;
     let rail = null;
     let bellContainer = null;
     let bellText = null;
@@ -29043,14 +29043,14 @@
     };
     const computeScreenRect = () => {
       if (!bellContainer || bellContainer.destroyed) return null;
-      const state4 = getSpriteState2();
-      const canvas = state4?.renderer?.canvas || state4?.renderer?.view?.canvas || state4?.renderer?.view;
+      const state6 = getSpriteState2();
+      const canvas = state6?.renderer?.canvas || state6?.renderer?.view?.canvas || state6?.renderer?.view;
       if (!canvas) return null;
       try {
         const rect = canvas.getBoundingClientRect();
-        const renderResolution = Number(state4?.renderer?.resolution) || 1;
-        const stageWidth = Number(state4?.renderer?.screen?.width) || (Number(canvas.width) || 0) / renderResolution;
-        const stageHeight = Number(state4?.renderer?.screen?.height) || (Number(canvas.height) || 0) / renderResolution;
+        const renderResolution = Number(state6?.renderer?.resolution) || 1;
+        const stageWidth = Number(state6?.renderer?.screen?.width) || (Number(canvas.width) || 0) / renderResolution;
+        const stageHeight = Number(state6?.renderer?.screen?.height) || (Number(canvas.height) || 0) / renderResolution;
         const scaleX = stageWidth > 0 ? rect.width / stageWidth : 1;
         const scaleY = stageHeight > 0 ? rect.height / stageHeight : 1;
         debugState4.screenScaleX = scaleX;
@@ -29098,9 +29098,9 @@
         weSetPointerCursor = false;
       }
     };
-    const ensureCanvasListeners = (state4) => {
+    const ensureCanvasListeners = (state6) => {
       if (canvasListenersAttached) return;
-      const canvas = state4.renderer?.canvas || state4.renderer?.view?.canvas || state4.renderer?.view;
+      const canvas = state6.renderer?.canvas || state6.renderer?.view?.canvas || state6.renderer?.view;
       if (!canvas) return;
       canvasEl = canvas;
       pageWindow.addEventListener("pointerdown", onWindowPointerDownCapture, true);
@@ -29117,8 +29117,8 @@
       return null;
     };
     const railLocalScreenBounds = () => {
-      const state4 = getSpriteState2();
-      const screenHeight = Number(state4?.renderer?.screen?.height);
+      const state6 = getSpriteState2();
+      const screenHeight = Number(state6?.renderer?.screen?.height);
       if (!Number.isFinite(screenHeight) || screenHeight <= 0) return null;
       try {
         const top = rail.toLocal({ x: 0, y: 0 }).y;
@@ -29169,14 +29169,14 @@
       }
     };
     const syncUnsafe = () => {
-      if (!running3 || !rail || rail.destroyed) {
+      if (!running6 || !rail || rail.destroyed) {
         removeButton();
         return;
       }
-      const state4 = getSpriteState2();
-      if (!state4?.ctors?.Text) return;
+      const state6 = getSpriteState2();
+      if (!state6?.ctors?.Text) return;
       if (!bellContainer) {
-        const ContainerCtor = state4.ctors.Container ?? rail.constructor;
+        const ContainerCtor = state6.ctors.Container ?? rail.constructor;
         bellContainer = new ContainerCtor();
         bellContainer.label = "GeminiNotificationBell";
         const thisContainer = bellContainer;
@@ -29186,10 +29186,10 @@
         rail.addChild(bellContainer);
       }
       if (!bellText) {
-        bellText = new state4.ctors.Text({ text: iconGlyph, style: { fontSize: DEFAULT_SLOT_SIZE } });
+        bellText = new state6.ctors.Text({ text: iconGlyph, style: { fontSize: DEFAULT_SLOT_SIZE } });
         bellContainer.addChild(bellText);
       }
-      ensureCanvasListeners(state4);
+      ensureCanvasListeners(state6);
       syncGeometry();
       debugState4.hasButton = true;
     };
@@ -29208,7 +29208,7 @@
     };
     const onRailChildrenChanged = () => sync2();
     const restartSearchIfNeeded2 = () => {
-      if (!running3 || rail) return;
+      if (!running6 || rail) return;
       tryFindRail();
       if (!rail && findRafId3 == null) findRafId3 = raf3(scheduleFind3);
     };
@@ -29229,10 +29229,10 @@
       sync2();
     };
     const tryFindRail = () => {
-      if (!running3 || rail) return;
-      const state4 = getSpriteState2();
-      if (!state4) return;
-      const stage = getStage(state4);
+      if (!running6 || rail) return;
+      const state6 = getSpriteState2();
+      if (!state6) return;
+      const stage = getStage(state6);
       const found = findAcrossBranches(stage, (node) => node?.label === RAIL_LABEL);
       if (found) {
         attachToRail(found);
@@ -29246,18 +29246,18 @@
     };
     const scheduleFind3 = (now2) => {
       findRafId3 = null;
-      if (!running3 || rail) return;
+      if (!running6 || rail) return;
       if (now2 - lastFindCheckAt3 >= RAIL_FIND_RETRY_MS) {
         lastFindCheckAt3 = now2;
         tryFindRail();
       }
-      if (!running3 || rail) return;
+      if (!running6 || rail) return;
       findRafId3 = raf3(scheduleFind3);
     };
     const isReachableFromLiveStage = (node) => {
-      const state4 = getSpriteState2();
-      if (!state4) return false;
-      const stage = getStage(state4);
+      const state6 = getSpriteState2();
+      if (!state6) return false;
+      const stage = getStage(state6);
       if (!stage) return false;
       let cur = node;
       let hops = 0;
@@ -29268,7 +29268,7 @@
       return false;
     };
     const periodicRailMaintenance = () => {
-      if (!running3 || !rail || rail.destroyed) return;
+      if (!running6 || !rail || rail.destroyed) return;
       if (!isReachableFromLiveStage(rail)) {
         console.warn("[notificationBellPixi] rail orphaned from the live stage (no destroyed event fired), resetting");
         rail = null;
@@ -29281,7 +29281,7 @@
     };
     const maintenanceIntervalId = pageWindow.setInterval(periodicRailMaintenance, RAIL_REACHABILITY_CHECK_MS);
     const onWindowResize = () => {
-      if (!running3 || !rail || rail.destroyed) return;
+      if (!running6 || !rail || rail.destroyed) return;
       sync2();
     };
     pageWindow.addEventListener("resize", onWindowResize);
@@ -29311,8 +29311,8 @@
     if (!rail) findRafId3 = raf3(scheduleFind3);
     return {
       stop() {
-        if (!running3) return;
-        running3 = false;
+        if (!running6) return;
+        running6 = false;
         if (findRafId3 != null) {
           cancelRaf(findRafId3);
           findRafId3 = null;
@@ -29420,7 +29420,7 @@
     return Math.min(Math.max(value, min), max);
   }
   function startNotificationBellFloating(opts) {
-    let running3 = true;
+    let running6 = true;
     let wiggleAnimation = null;
     const button2 = document.createElement("button");
     button2.type = "button";
@@ -29485,7 +29485,7 @@
       applyDesiredPosition();
     };
     const onWindowResize = () => {
-      if (!running3) return;
+      if (!running6) return;
       applyDesiredPosition();
     };
     let dragState = null;
@@ -29551,7 +29551,7 @@
     applyInitialPosition2();
     const settleTimers = SETTLE_REAPPLY_DELAYS_MS.map(
       (delay) => window.setTimeout(() => {
-        if (running3) applyDesiredPosition();
+        if (running6) applyDesiredPosition();
       }, delay)
     );
     const clearSettleTimers = () => {
@@ -29573,8 +29573,8 @@
     };
     return {
       stop() {
-        if (!running3) return;
-        running3 = false;
+        if (!running6) return;
+        running6 = false;
         stopDrag();
         stopWiggle();
         clearSettleTimers();
@@ -29586,7 +29586,7 @@
         }
       },
       getScreenRect() {
-        if (!running3 || !button2.isConnected) return null;
+        if (!running6 || !button2.isConnected) return null;
         const rect = button2.getBoundingClientRect();
         return {
           left: rect.left,
@@ -29598,7 +29598,7 @@
         };
       },
       setWiggle(active2) {
-        if (!running3) return;
+        if (!running6) return;
         if (!active2) {
           stopWiggle();
           return;
@@ -29925,7 +29925,7 @@
           return Object.keys(overrides).length ? overrides : null;
         }
         triggerMany(ids) {
-          const entries = [];
+          const entries2 = [];
           for (const id of ids) {
             const overrides = this.buildTriggerOverrides(this.rulesById.get(id)) ?? {};
             const mode = this.resolvePlaybackMode(id);
@@ -29933,11 +29933,11 @@
             const vol = overrides.volume;
             const volKey = vol != null ? `vol:${Math.round(Math.max(0, Math.min(1, vol)) * 1e3)}` : "vol:__default__";
             const soundKey = `${soundKeyBase}|${volKey}`;
-            entries.push({ id, overrides, mode, soundKey });
+            entries2.push({ id, overrides, mode, soundKey });
           }
-          if (!entries.length) return;
+          if (!entries2.length) return;
           const grouped = /* @__PURE__ */ new Map();
-          for (const entry of entries) {
+          for (const entry of entries2) {
             const bucket = grouped.get(entry.soundKey) ?? { loops: [], oneshots: [] };
             if (entry.mode === "loop") bucket.loops.push(entry);
             else bucket.oneshots.push(entry);
@@ -30388,8 +30388,8 @@
       try {
         const warmup = getSpriteWarmupState();
         if (!warmup?.completed) {
-          const unsub = onSpriteWarmupProgress((state4) => {
-            if (state4.completed) {
+          const unsub = onSpriteWarmupProgress((state6) => {
+            if (state6.completed) {
               try {
                 unsub();
               } catch {
@@ -31087,7 +31087,7 @@
     const logger = createLogger(options.log);
     const priceWatcher = startCropPriceWatcherViaGardenObject();
     const shouldWaitForLocker = lockerService.getState().enabled;
-    let running3 = true;
+    let running6 = true;
     let lockerHarvestAllowed = getLockerHarvestAllowed();
     let lockerReady = !shouldWaitForLocker;
     let lastRenderedValue = void 0;
@@ -31096,7 +31096,7 @@
     let needsRepositionRender = false;
     let qpmObserver = null;
     const render = () => {
-      if (!running3) return;
+      if (!running6) return;
       if (!lockerReady) return;
       cleanupStrayLockedStyles();
       const value = priceWatcher.get();
@@ -31186,8 +31186,8 @@
     const offShowPrice = onShowCropPriceChange(() => render());
     return {
       stop() {
-        if (!running3) return;
-        running3 = false;
+        if (!running6) return;
+        running6 = false;
         clearLockerReadyTimeout();
         stopQpmObserver();
         off?.();
@@ -31205,7 +31205,7 @@
         render();
       },
       isRunning() {
-        return running3;
+        return running6;
       }
     };
   }
@@ -31552,7 +31552,7 @@
     return coinTexturePromise;
   }
   function startCropValueOverlayInPixi() {
-    let running3 = true;
+    let running6 = true;
     let currentCard2 = null;
     let geometry = null;
     let hitAreaBaseHeight = 0;
@@ -31601,13 +31601,13 @@
     };
     const syncValueNodeUnsafe = () => {
       debugState4.objectType = currentGardenObject?.objectType ?? null;
-      if (!running3 || !currentCard2 || currentCard2.destroyed || !geometry || !isPlantObject3(currentGardenObject) || // Coupé depuis le menu Misc : le badge disparaît, la carte reste celle du jeu.
+      if (!running6 || !currentCard2 || currentCard2.destroyed || !geometry || !isPlantObject3(currentGardenObject) || // Coupé depuis le menu Misc : le badge disparaît, la carte reste celle du jeu.
       !readShowCropPrice()) {
         detachValueText();
         return;
       }
-      const state4 = getSpriteState2();
-      if (!state4) return;
+      const state6 = getSpriteState2();
+      if (!state6) return;
       const value = priceWatcher.get();
       if (value == null) {
         detachValueText();
@@ -31615,27 +31615,27 @@
       }
       const text = formatCoins2(value);
       if (!valueText) {
-        graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state4)));
+        graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state6)));
         if (graphicsCtor) {
           valueBadge = new graphicsCtor();
           currentCard2.addChild(valueBadge);
         }
-        valueText = new state4.ctors.Text({ text, style: VALUE_TEXT_STYLE });
+        valueText = new state6.ctors.Text({ text, style: VALUE_TEXT_STYLE });
         currentCard2.addChild(valueText);
       } else if (valueText.text !== text) {
         valueText.text = text;
       }
-      if (!valueIcon && state4.ctors.Sprite) {
+      if (!valueIcon && state6.ctors.Sprite) {
         if (coinTexture) {
-          valueIcon = new state4.ctors.Sprite(coinTexture);
+          valueIcon = new state6.ctors.Sprite(coinTexture);
           valueIcon.width = VALUE_ICON_SIZE;
           valueIcon.height = VALUE_ICON_SIZE;
           currentCard2.addChild(valueIcon);
         } else if (!iconRetryScheduled) {
           iconRetryScheduled = true;
-          ensureCoinTexture(state4.ctors.Texture).then(() => {
+          ensureCoinTexture(state6.ctors.Texture).then(() => {
             iconRetryScheduled = false;
-            if (running3) syncValueNode();
+            if (running6) syncValueNode();
           });
         }
       }
@@ -31692,7 +31692,7 @@
     void (async () => {
       try {
         currentGardenObject = await Atoms.data.myCurrentGardenObject.get();
-        if (running3) syncValueNode();
+        if (running6) syncValueNode();
       } catch {
       }
       try {
@@ -31701,7 +31701,7 @@
           syncValueNode();
         });
         if (typeof unsub === "function") {
-          if (running3) unsubGardenObject = unsub;
+          if (running6) unsubGardenObject = unsub;
           else unsub();
         }
       } catch {
@@ -31709,8 +31709,8 @@
     })();
     return {
       stop() {
-        if (!running3) return;
-        running3 = false;
+        if (!running6) return;
+        running6 = false;
         unsubGardenObject?.();
         offCard();
         offPrice?.();
@@ -31757,7 +31757,7 @@
     return !!obj && typeof obj === "object" && obj.objectType === "decor";
   }
   function startLockerIndicatorInPixi() {
-    let running3 = true;
+    let running6 = true;
     let currentCard2 = null;
     let geometry = null;
     let border = null;
@@ -31791,13 +31791,13 @@
     };
     const syncUnsafe = () => {
       debugState4.objectType = currentGardenObject?.objectType ?? null;
-      if (!running3 || !currentCard2 || currentCard2.destroyed || !geometry || !isLocked()) {
+      if (!running6 || !currentCard2 || currentCard2.destroyed || !geometry || !isLocked()) {
         removeBorder();
         return;
       }
-      const state4 = getSpriteState2();
+      const state6 = getSpriteState2();
       if (!graphicsCtor) {
-        graphicsCtor = state4 ? findGraphicsCtor(getStage(state4)) : null;
+        graphicsCtor = state6 ? findGraphicsCtor(getStage(state6)) : null;
         if (!graphicsCtor) return;
       }
       if (!border) {
@@ -31812,8 +31812,8 @@
       border.clear();
       border.roundRect(left + inset, top + inset, Math.max(0, width - BORDER_WIDTH), Math.max(0, height - BORDER_WIDTH), BORDER_RADIUS).stroke({ width: BORDER_WIDTH, color: BORDER_COLOR, alpha: 1 });
       debugState4.hasBorder = true;
-      if (!lockIcon && state4?.ctors?.Text) {
-        lockIcon = new state4.ctors.Text({ text: LOCK_ICON_TEXT, style: LOCK_ICON_STYLE });
+      if (!lockIcon && state6?.ctors?.Text) {
+        lockIcon = new state6.ctors.Text({ text: LOCK_ICON_TEXT, style: LOCK_ICON_STYLE });
         currentCard2.addChild(lockIcon);
       }
       if (lockIcon) {
@@ -31846,7 +31846,7 @@
     void (async () => {
       try {
         currentGardenObject = await Atoms.data.myCurrentGardenObject.get();
-        if (running3) sync2();
+        if (running6) sync2();
       } catch {
       }
       try {
@@ -31855,7 +31855,7 @@
           sync2();
         });
         if (typeof unsub === "function") {
-          if (running3) unsubAtom = unsub;
+          if (running6) unsubAtom = unsub;
           else unsub();
         }
       } catch {
@@ -31863,8 +31863,8 @@
     })();
     return {
       stop() {
-        if (!running3) return;
-        running3 = false;
+        if (!running6) return;
+        running6 = false;
         offCard();
         offSlot?.();
         offRestrictions?.();
@@ -31933,7 +31933,7 @@
     return null;
   }
   function startSellAllPetsPixi() {
-    let running3 = true;
+    let running6 = true;
     let actionHud = null;
     let buttonContainer = null;
     let buttonBg = null;
@@ -32039,9 +32039,9 @@
         weSetPointerCursor = false;
       }
     };
-    const ensureCanvasListeners = (state4) => {
+    const ensureCanvasListeners = (state6) => {
       if (canvasListenersAttached) return;
-      const canvas = state4.renderer?.canvas || state4.renderer?.view?.canvas || state4.renderer?.view;
+      const canvas = state6.renderer?.canvas || state6.renderer?.view?.canvas || state6.renderer?.view;
       if (!canvas) return;
       canvasEl = canvas;
       canvas.addEventListener("pointerdown", onCanvasPointerDown);
@@ -32051,7 +32051,7 @@
     };
     const syncUnsafe = () => {
       debugState4.currentAction = actionLabel(currentAction);
-      if (!running3 || !actionHud || actionHud.destroyed || !isSellPetAction(currentAction)) {
+      if (!running6 || !actionHud || actionHud.destroyed || !isSellPetAction(currentAction)) {
         removeButton();
         return;
       }
@@ -32060,16 +32060,16 @@
         removeButton();
         return;
       }
-      const state4 = getSpriteState2();
-      if (!state4?.ctors?.Text) return;
-      const graphicsCtor = findGraphicsCtor(getStage(state4));
+      const state6 = getSpriteState2();
+      if (!state6?.ctors?.Text) return;
+      const graphicsCtor = findGraphicsCtor(getStage(state6));
       if (!graphicsCtor) return;
-      ensureCanvasListeners(state4);
+      ensureCanvasListeners(state6);
       const face = findByLabel(wrapper, BUTTON_FACE_LABEL) ?? wrapper;
       const faceWidth = safeSize(face, "width", 150);
       const faceHeight = safeSize(face, "height", 55);
       if (!buttonContainer) {
-        const ContainerCtor = state4.ctors?.Container ?? actionHud.constructor;
+        const ContainerCtor = state6.ctors?.Container ?? actionHud.constructor;
         buttonContainer = new ContainerCtor();
         const thisContainer = buttonContainer;
         thisContainer.once("destroyed", () => {
@@ -32085,7 +32085,7 @@
           ...existingTextStyle?.fontSize ? { fontSize: existingTextStyle.fontSize } : {},
           ...existingTextStyle?.fontWeight ? { fontWeight: existingTextStyle.fontWeight } : {}
         };
-        buttonText = new state4.ctors.Text({ text: BUTTON_TEXT, style: style2 });
+        buttonText = new state6.ctors.Text({ text: BUTTON_TEXT, style: style2 });
         buttonContainer.addChild(buttonText);
       }
       if (!buttonBg) {
@@ -32144,10 +32144,10 @@
       sync2();
     };
     const tryFindActionHud = () => {
-      if (!running3 || actionHud) return;
-      const state4 = getSpriteState2();
-      if (!state4) return;
-      const stage = getStage(state4);
+      if (!running6 || actionHud) return;
+      const state6 = getSpriteState2();
+      if (!state6) return;
+      const stage = getStage(state6);
       const found = findAcrossBranches(stage, (node) => node?.label === ACTION_HUD_LABEL);
       if (found) {
         attachToActionHud(found);
@@ -32161,16 +32161,16 @@
     };
     const scheduleFind3 = (now2) => {
       findRafId3 = null;
-      if (!running3 || actionHud) return;
+      if (!running6 || actionHud) return;
       if (now2 - lastFindCheckAt3 >= ACTION_HUD_FIND_RETRY_MS) {
         lastFindCheckAt3 = now2;
         tryFindActionHud();
       }
-      if (!running3 || actionHud) return;
+      if (!running6 || actionHud) return;
       findRafId3 = raf3(scheduleFind3);
     };
     const restartSearchIfNeeded2 = () => {
-      if (!running3 || actionHud) return;
+      if (!running6 || actionHud) return;
       tryFindActionHud();
       if (!actionHud && findRafId3 == null) {
         findRafId3 = raf3(scheduleFind3);
@@ -32184,7 +32184,7 @@
     void (async () => {
       try {
         currentAction = await Atoms.player.action.get();
-        if (running3) sync2();
+        if (running6) sync2();
       } catch {
       }
       try {
@@ -32193,7 +32193,7 @@
           sync2();
         });
         if (typeof unsub === "function") {
-          if (running3) unsubAction = unsub;
+          if (running6) unsubAction = unsub;
           else unsub();
         }
       } catch {
@@ -32201,8 +32201,8 @@
     })();
     return {
       stop() {
-        if (!running3) return;
-        running3 = false;
+        if (!running6) return;
+        running6 = false;
         if (findRafId3 != null) {
           cancelRaf(findRafId3);
           findRafId3 = null;
@@ -32262,7 +32262,7 @@
     }
     let bonusFromMultiplier = null;
     let bonusFromPlayers = friendBonusPercentFromPlayers(1);
-    let running3 = true;
+    let running6 = true;
     const disposables = [];
     const resolveCurrentBonus = () => bonusFromMultiplier ?? bonusFromPlayers ?? 0;
     const applyLockState = (locked) => {
@@ -32272,7 +32272,7 @@
       containers.forEach((wrap) => setContainerLocked(wrap, locked));
     };
     const recompute = () => {
-      if (!running3) return;
+      if (!running6) return;
       const requiredPct = lockerRestrictionsService.getRequiredPercent();
       const current = resolveCurrentBonus();
       const locked = requiredPct > 0 && !(Number.isFinite(current) && current + 1e-4 >= requiredPct);
@@ -32317,7 +32317,7 @@
     recompute();
     return {
       stop() {
-        running3 = false;
+        running6 = false;
         disposables.splice(0).forEach((fn) => {
           try {
             fn();
@@ -32436,12 +32436,12 @@
       return { stop() {
       } };
     }
-    let running3 = true;
+    let running6 = true;
     let currentEggId = null;
     const disposables = [];
     const isEggLocked = () => lockerRestrictionsService.isEggLocked(currentEggId);
     const applyLockState = () => {
-      if (!running3) return;
+      if (!running6) return;
       const locked = isEggLocked();
       const containers = Array.from(document.querySelectorAll(CONTAINER_SELECTOR2));
       containers.forEach((el2) => {
@@ -32479,7 +32479,7 @@
     applyLockState();
     return {
       stop() {
-        running3 = false;
+        running6 = false;
         disposables.splice(0).forEach((fn) => {
           try {
             fn();
@@ -32584,11 +32584,11 @@
       return { stop() {
       } };
     }
-    let running3 = true;
+    let running6 = true;
     const disposables = [];
     const isLocked = () => lockerRestrictionsService.isDecorPickupLocked();
     const applyLockState = () => {
-      if (!running3) return;
+      if (!running6) return;
       const locked = isLocked();
       const containers = Array.from(document.querySelectorAll(CONTAINER_SELECTOR3));
       containers.forEach((el2) => {
@@ -32613,7 +32613,7 @@
     applyLockState();
     return {
       stop() {
-        running3 = false;
+        running6 = false;
         disposables.splice(0).forEach((fn) => {
           try {
             fn();
@@ -32804,9 +32804,9 @@
       return null;
     }
     const metaBlock = headerMatch[1];
-    const entries = metaBlock.matchAll(/^\/\/\s*@([^\s]+)\s+(.+)$/gm);
+    const entries2 = metaBlock.matchAll(/^\/\/\s*@([^\s]+)\s+(.+)$/gm);
     const meta = /* @__PURE__ */ new Map();
-    for (const [, rawKey, rawValue] of entries) {
+    for (const [, rawKey, rawValue] of entries2) {
       const key2 = rawKey.trim().toLowerCase();
       const value = rawValue.trim();
       if (!key2) continue;
@@ -32821,7 +32821,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.231";
+      return "3.2.232";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -32842,8 +32842,8 @@
   });
 
   // src/utils/inventorySorting.ts
-  function createDomSnapshot(entries) {
-    return entries.map((entry) => entry.wrapper);
+  function createDomSnapshot(entries2) {
+    return entries2.map((entry) => entry.wrapper);
   }
   function haveDomEntriesChanged(previous, nextEntries) {
     if (!previous) return true;
@@ -32984,17 +32984,17 @@
   }
   function getInventoryDomEntries(container) {
     clearInventoryNoiseText(container);
-    const entries = [];
+    const entries2 = [];
     const children = Array.from(container.children);
     for (const child of children) {
       if (!(child instanceof HTMLElement)) continue;
       const card4 = getInventoryCardElement(child);
       if (card4) {
         alignInventoryStrengthText(card4);
-        entries.push({ wrapper: child, card: card4 });
+        entries2.push({ wrapper: child, card: card4 });
       }
     }
-    return entries;
+    return entries2;
   }
   function updateInventoryCardStrengthText(card4, item) {
     const strengthWrap = card4.querySelector(INVENTORY_STRENGTH_WRAPPER_SELECTOR);
@@ -33158,8 +33158,8 @@
       container.appendChild(target);
     }
   }
-  function assignBaseIndexesToEntries(entries) {
-    entries.forEach((entry, index) => {
+  function assignBaseIndexesToEntries(entries2) {
+    entries2.forEach((entry, index) => {
       entry.wrapper.dataset[INVENTORY_BASE_INDEX_DATASET_KEY] = String(index);
       entry.card.dataset[INVENTORY_BASE_INDEX_DATASET_KEY] = String(index);
     });
@@ -33298,27 +33298,27 @@
   }
   function createDefaultApplySorting(cfg) {
     const stateByGrid = /* @__PURE__ */ new WeakMap();
-    const ensureState = async (grid, filters, entries, searchQuery) => {
+    const ensureState = async (grid, filters, entries2, searchQuery) => {
       const filtersKey = JSON.stringify({ filters });
-      const state4 = stateByGrid.get(grid);
-      const hasAllBaseIndexes = entries.every((e) => readBaseIndex(e) != null);
-      const searchChanged = state4 ? state4.searchQuery !== searchQuery : false;
-      const entryCountChanged = state4 ? state4.entryCount !== entries.length : false;
-      const filtersChanged = state4 ? state4.filtersKey !== filtersKey : false;
-      const baseLengthChanged = state4 ? state4.baseItems.length !== entries.length : false;
-      const needsRebuild = !state4 || filtersChanged || entryCountChanged || baseLengthChanged || !hasAllBaseIndexes || searchChanged;
-      if (state4 && !needsRebuild) {
-        state4.entryByBaseIndex.clear();
-        for (const entry of entries) {
+      const state6 = stateByGrid.get(grid);
+      const hasAllBaseIndexes = entries2.every((e) => readBaseIndex(e) != null);
+      const searchChanged = state6 ? state6.searchQuery !== searchQuery : false;
+      const entryCountChanged = state6 ? state6.entryCount !== entries2.length : false;
+      const filtersChanged = state6 ? state6.filtersKey !== filtersKey : false;
+      const baseLengthChanged = state6 ? state6.baseItems.length !== entries2.length : false;
+      const needsRebuild = !state6 || filtersChanged || entryCountChanged || baseLengthChanged || !hasAllBaseIndexes || searchChanged;
+      if (state6 && !needsRebuild) {
+        state6.entryByBaseIndex.clear();
+        for (const entry of entries2) {
           const baseIndex = readBaseIndex(entry);
           if (baseIndex != null) {
-            state4.entryByBaseIndex.set(baseIndex, entry);
+            state6.entryByBaseIndex.set(baseIndex, entry);
           }
         }
-        state4.filtersKey = filtersKey;
-        state4.searchQuery = searchQuery;
-        state4.entryCount = entries.length;
-        return state4;
+        state6.filtersKey = filtersKey;
+        state6.searchQuery = searchQuery;
+        state6.entryCount = entries2.length;
+        return state6;
       }
       try {
         const inventory = await Atoms.inventory.myInventory.get();
@@ -33328,22 +33328,22 @@
         }
         const items = Array.isArray(inventory.items) ? inventory.items : [];
         const { filteredItems } = filterInventoryItems(items, filters, searchQuery);
-        if (filteredItems.length !== entries.length) {
+        if (filteredItems.length !== entries2.length) {
           console.warn(
-            `[InventorySorting] Nombre d'\xE9l\xE9ments filtr\xE9s (${filteredItems.length}) diff\xE9rent du DOM (${entries.length}). R\xE9organisation annul\xE9e.`
+            `[InventorySorting] Nombre d'\xE9l\xE9ments filtr\xE9s (${filteredItems.length}) diff\xE9rent du DOM (${entries2.length}). R\xE9organisation annul\xE9e.`
           );
           return null;
         }
-        assignBaseIndexesToEntries(entries);
+        assignBaseIndexesToEntries(entries2);
         const newState = {
           filtersKey,
           searchQuery,
-          entryCount: entries.length,
+          entryCount: entries2.length,
           baseItems: filteredItems.slice(),
           entryByBaseIndex: /* @__PURE__ */ new Map(),
-          lastSortKey: state4?.lastSortKey ?? null
+          lastSortKey: state6?.lastSortKey ?? null
         };
-        entries.forEach((entry, index) => {
+        entries2.forEach((entry, index) => {
           newState.entryByBaseIndex.set(index, entry);
         });
         stateByGrid.set(grid, newState);
@@ -33353,69 +33353,69 @@
         return null;
       }
     };
-    const rebaseStateToDomOrder = (state4, entries) => {
-      if (entries.length !== state4.baseItems.length) return false;
+    const rebaseStateToDomOrder = (state6, entries2) => {
+      if (entries2.length !== state6.baseItems.length) return false;
       const reordered = [];
       const used = /* @__PURE__ */ new Set();
-      for (const entry of entries) {
+      for (const entry of entries2) {
         const baseIndex = readBaseIndex(entry);
-        if (baseIndex == null || baseIndex < 0 || baseIndex >= state4.baseItems.length) {
+        if (baseIndex == null || baseIndex < 0 || baseIndex >= state6.baseItems.length) {
           return false;
         }
         if (used.has(baseIndex)) {
           return false;
         }
         used.add(baseIndex);
-        reordered.push(state4.baseItems[baseIndex]);
+        reordered.push(state6.baseItems[baseIndex]);
       }
-      if (reordered.length !== state4.baseItems.length) return false;
+      if (reordered.length !== state6.baseItems.length) return false;
       let changed = false;
       for (let i = 0; i < reordered.length; i++) {
-        if (reordered[i] !== state4.baseItems[i]) {
+        if (reordered[i] !== state6.baseItems[i]) {
           changed = true;
           break;
         }
       }
       if (!changed) return false;
-      state4.baseItems = reordered;
-      assignBaseIndexesToEntries(entries);
-      state4.entryByBaseIndex.clear();
-      entries.forEach((entry, index) => {
-        state4.entryByBaseIndex.set(index, entry);
+      state6.baseItems = reordered;
+      assignBaseIndexesToEntries(entries2);
+      state6.entryByBaseIndex.clear();
+      entries2.forEach((entry, index) => {
+        state6.entryByBaseIndex.set(index, entry);
       });
-      state4.entryCount = entries.length;
+      state6.entryCount = entries2.length;
       return true;
     };
     return async (grid, sortKey, direction) => {
       if (typeof document === "undefined") return;
       const container = getInventoryItemsContainer(grid);
       if (!container) return;
-      const entries = getInventoryDomEntries(container);
-      if (!entries.length) return;
+      const entries2 = getInventoryDomEntries(container);
+      if (!entries2.length) return;
       const filters = getActiveFiltersFromGrid(
         grid,
         cfg.checkboxSelector,
         cfg.checkboxLabelSelector
       );
       const searchQuery = getNormalizedInventorySearchQuery(grid);
-      const state4 = await ensureState(grid, filters, entries, searchQuery);
-      if (!state4) return;
-      const previousSortKey = state4.lastSortKey;
+      const state6 = await ensureState(grid, filters, entries2, searchQuery);
+      if (!state6) return;
+      const previousSortKey = state6.lastSortKey;
       if ((!sortKey || sortKey === "none") && previousSortKey === "none") {
-        rebaseStateToDomOrder(state4, entries);
+        rebaseStateToDomOrder(state6, entries2);
       }
       const baseIndexByItem = /* @__PURE__ */ new Map();
-      state4.baseItems.forEach((item, index) => {
+      state6.baseItems.forEach((item, index) => {
         baseIndexByItem.set(item, index);
       });
       const effectiveDirection = direction && DIRECTION_ORDER.includes(direction) ? direction : DEFAULT_DIRECTION_BY_SORT_KEY[sortKey] ?? "asc";
-      const desiredItems = !sortKey || sortKey === "none" ? state4.baseItems.slice() : sortInventoryItems(state4.baseItems, sortKey, effectiveDirection);
+      const desiredItems = !sortKey || sortKey === "none" ? state6.baseItems.slice() : sortInventoryItems(state6.baseItems, sortKey, effectiveDirection);
       const desiredEntries = [];
       const usedEntries = /* @__PURE__ */ new Set();
       for (const item of desiredItems) {
         const baseIndex = baseIndexByItem.get(item);
         if (baseIndex == null) continue;
-        const entry = state4.entryByBaseIndex.get(baseIndex);
+        const entry = state6.entryByBaseIndex.get(baseIndex);
         if (!entry || usedEntries.has(entry)) continue;
         const value = getInventoryItemValue(item);
         updateInventoryCardValue(entry.card, value);
@@ -33424,14 +33424,14 @@
         desiredEntries.push(entry);
         usedEntries.add(entry);
       }
-      if (desiredEntries.length !== entries.length) {
+      if (desiredEntries.length !== entries2.length) {
         console.warn(
-          `[InventorySorting] Impossible de r\xE9ordonner l'inventaire : correspondances insuffisantes (${desiredEntries.length}/${entries.length}).`
+          `[InventorySorting] Impossible de r\xE9ordonner l'inventaire : correspondances insuffisantes (${desiredEntries.length}/${entries2.length}).`
         );
         return;
       }
       const alreadyOrdered = desiredEntries.every(
-        (entry, index) => entry.wrapper === entries[index]?.wrapper
+        (entry, index) => entry.wrapper === entries2[index]?.wrapper
       );
       if (!alreadyOrdered) {
         const fragment = document.createDocumentFragment();
@@ -33440,14 +33440,14 @@
         });
         container.appendChild(fragment);
       }
-      state4.entryByBaseIndex.clear();
+      state6.entryByBaseIndex.clear();
       desiredEntries.forEach((entry) => {
         const baseIndex = readBaseIndex(entry);
         if (baseIndex != null) {
-          state4.entryByBaseIndex.set(baseIndex, entry);
+          state6.entryByBaseIndex.set(baseIndex, entry);
         }
       });
-      state4.lastSortKey = sortKey;
+      state6.lastSortKey = sortKey;
     };
   }
   function getActiveFiltersFromGrid(grid, checkboxSelector, checkboxLabelSelector) {
@@ -33938,8 +33938,8 @@
         lastSortedDomSnapshot = null;
         return;
       }
-      const entries = getInventoryDomEntries(container);
-      lastSortedDomSnapshot = createDomSnapshot(entries);
+      const entries2 = getInventoryDomEntries(container);
+      lastSortedDomSnapshot = createDomSnapshot(entries2);
     };
     const applySortingWithSnapshot = (target, sortKey, direction) => Promise.resolve(applySorting(target, sortKey, direction)).then(() => {
       updateDomSnapshotForGrid(target);
@@ -34699,11 +34699,11 @@
           const items = Array.isArray(inventory.items) ? inventory.items : [];
           const { filteredItems } = filterInventoryItems(items, filters, searchQuery);
           const container = getInventoryItemsContainer(grid);
-          const entries = container ? getInventoryDomEntries(container) : [];
+          const entries2 = container ? getInventoryDomEntries(container) : [];
           console.log("[InventorySorting] R\xE9sultats filtr\xE9s (recherche) :", filteredItems);
           console.log(
             "[InventorySorting] Nombre d'\xE9l\xE9ments DOM pour la recherche :",
-            entries.length
+            entries2.length
           );
         } catch (error) {
           console.warn(
@@ -34722,18 +34722,18 @@
         rarity2.Celestial
       ].filter(Boolean);
       RARITY_RANK = (() => {
-        const entries = /* @__PURE__ */ new Map();
+        const entries2 = /* @__PURE__ */ new Map();
         RARITY_ORDER.forEach((label2, index) => {
           const key2 = normalize(label2);
           if (key2) {
-            entries.set(key2, index);
+            entries2.set(key2, index);
           }
         });
-        const mythicIndex = entries.get(normalize(rarity2.Mythic));
+        const mythicIndex = entries2.get(normalize(rarity2.Mythic));
         if (typeof mythicIndex === "number") {
-          entries.set(normalize("Mythic"), mythicIndex);
+          entries2.set(normalize("Mythic"), mythicIndex);
         }
-        return entries;
+        return entries2;
       })();
       getRarityRank = (value) => {
         const key2 = normalize(value);
@@ -35329,16 +35329,16 @@
       };
       applyPetItemsToContainer = (container, items) => {
         if (!container) return;
-        const entries = getInventoryDomEntries(container);
-        if (!entries.length) return;
+        const entries2 = getInventoryDomEntries(container);
+        if (!entries2.length) return;
         const petItems = (Array.isArray(items) ? items : []).filter(isPetItem);
         if (!petItems.length) return;
         console.log(
           "[InventorySorting] Hutch apply",
-          { container: container.className, entries: entries.length, items: petItems.length }
+          { container: container.className, entries: entries2.length, items: petItems.length }
         );
         const used = /* @__PURE__ */ new Set();
-        for (const entry of entries) {
+        for (const entry of entries2) {
           const cardName = getPetCardName(entry.card);
           let matchIndex = -1;
           if (cardName) {
@@ -35523,9 +35523,9 @@
   function getActionLabel(action2) {
     const preset = ACTION_LABELS[action2];
     if (preset) return preset;
-    const spaced2 = String(action2 || "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
-    if (!spaced2) return String(action2 || "");
-    return spaced2.split(" ").map((word) => word ? word.charAt(0).toUpperCase() + word.slice(1) : word).join(" ");
+    const spaced3 = String(action2 || "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!spaced3) return String(action2 || "");
+    return spaced3.split(" ").map((word) => word ? word.charAt(0).toUpperCase() + word.slice(1) : word).join(" ");
   }
   function mergeActions(actions) {
     const seen = /* @__PURE__ */ new Set();
@@ -35796,8 +35796,8 @@
       return [];
     }
   }
-  function saveHistory(entries) {
-    const sorted = entries.slice().sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
+  function saveHistory(entries2) {
+    const sorted = entries2.slice().sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
     if (sorted.length > HISTORY_LIMIT) {
       sorted.splice(0, sorted.length - HISTORY_LIMIT);
     }
@@ -36188,15 +36188,15 @@
     debugSyncState.anchorsFound = !!anchors;
     if (!anchors) return;
     if (!toolbarState) {
-      const state4 = getSpriteState2();
-      if (!state4?.ctors?.Text) return;
-      const stage = getStage(state4);
+      const state6 = getSpriteState2();
+      if (!state6?.ctors?.Text) return;
+      const stage = getStage(state6);
       const graphicsCtor = findGraphicsCtor(stage);
       if (!graphicsCtor) return;
       const maxWidth = safeWidth(anchors.backgroundSprite, 0) - 2 * (anchors.scrollViewContainer.position?.x ?? 0);
       if (maxWidth <= 0) return;
       const containerCtor = anchors.modalContainer.constructor;
-      toolbarState = buildToolbar(graphicsCtor, state4.ctors.Text, containerCtor, maxWidth);
+      toolbarState = buildToolbar(graphicsCtor, state6.ctors.Text, containerCtor, maxWidth);
       anchors.modalContainer.addChild(toolbarState.container);
       debugSyncState.toolbarBuilt = true;
     }
@@ -36224,9 +36224,9 @@
   }
   function tryFindModal() {
     if (!modalOpen2 || modalNode) return;
-    const state4 = getSpriteState2();
-    if (!state4) return;
-    const stage = getStage(state4);
+    const state6 = getSpriteState2();
+    if (!state6) return;
+    const stage = getStage(state6);
     const found = findAcrossBranches(stage, (node) => node?.label === ACTIVITY_LOG_MODAL_LABEL);
     if (!found) return;
     modalNode = found;
@@ -36542,18 +36542,18 @@
     };
     return cachedState;
   }
-  function saveState(state4) {
-    if (state4.seenPetIds.length > SEEN_LIMIT) {
-      state4.seenPetIds.splice(0, state4.seenPetIds.length - SEEN_LIMIT);
+  function saveState(state6) {
+    if (state6.seenPetIds.length > SEEN_LIMIT) {
+      state6.seenPetIds.splice(0, state6.seenPetIds.length - SEEN_LIMIT);
     }
-    cachedState = state4;
+    cachedState = state6;
     try {
-      writeAriesPath(STATE_PATH, state4);
+      writeAriesPath(STATE_PATH, state6);
     } catch {
     }
     for (const listener of listeners7) {
       try {
-        listener(state4);
+        listener(state6);
       } catch {
       }
     }
@@ -36584,9 +36584,9 @@
       isPull
     };
   }
-  function extractHatchEvents(entries) {
+  function extractHatchEvents(entries2) {
     const events = [];
-    for (const entry of entries) {
+    for (const entry of entries2) {
       const action2 = typeof entry?.action === "string" ? entry.action.trim() : "";
       if (!action2) continue;
       const timestamp = Number(entry.timestamp) || 0;
@@ -36620,17 +36620,17 @@
     counters.gold = event.hasGold ? 0 : counters.gold + 1;
     counters.rainbow = event.hasRainbow ? 0 : counters.rainbow + 1;
   }
-  function ingest(entries, countStats) {
+  function ingest(entries2, countStats) {
     var _a, _b;
-    const events = extractHatchEvents(entries);
+    const events = extractHatchEvents(entries2);
     if (!events.length) return false;
-    const state4 = loadState();
-    const seen = new Set(state4.seenPetIds);
+    const state6 = loadState();
+    const seen = new Set(state6.seenPetIds);
     let changed = false;
     for (const event of events) {
       if (seen.has(event.petId)) continue;
       seen.add(event.petId);
-      state4.seenPetIds.push(event.petId);
+      state6.seenPetIds.push(event.petId);
       changed = true;
       if (countStats) {
         try {
@@ -36638,12 +36638,12 @@
         } catch {
         }
       }
-      if (event.timestamp > state4.lastHatchAt) state4.lastHatchAt = event.timestamp;
+      if (event.timestamp > state6.lastHatchAt) state6.lastHatchAt = event.timestamp;
       if (!event.isPull || !event.eggId) continue;
-      const counters = (_a = state4.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
+      const counters = (_a = state6.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
       applyPull(counters, event, protectedSpecies(event.eggId));
     }
-    if (changed) saveState(state4);
+    if (changed) saveState(state6);
     return changed;
   }
   async function startHatchTracker() {
@@ -36664,10 +36664,10 @@
     } catch {
     }
     if (firstRun) {
-      const state4 = loadState();
-      state4.bootstrapped = true;
-      state4.trackingStartedAt = Date.now();
-      saveState(state4);
+      const state6 = loadState();
+      state6.bootstrapped = true;
+      state6.trackingStartedAt = Date.now();
+      saveState(state6);
     }
     const current = loadState();
     if (current.bootstrapped && current.trackingStartedAt <= 0) {
@@ -36717,14 +36717,14 @@
         },
         setOffset(eggId, key2, value) {
           var _a;
-          const state4 = loadState();
-          const offsets = (_a = state4.offsets)[eggId] ?? (_a[eggId] = emptyCounters());
+          const state6 = loadState();
+          const offsets = (_a = state6.offsets)[eggId] ?? (_a[eggId] = emptyCounters());
           const next = toCount(value);
           if (key2 === "gold") offsets.gold = next;
           else if (key2 === "rainbow") offsets.rainbow = next;
           else if (next > 0) offsets.species[key2] = next;
           else delete offsets.species[key2];
-          saveState(state4);
+          saveState(state6);
         },
         // Deliberately no reset: a counter that can be cleared is worse than useless,
         // since the server's own never resets except on the outcome itself. Only
@@ -37611,8 +37611,8 @@
         sMini.style.display = "";
       }
     };
-    const offWarmup = onSpriteWarmupProgress((state4) => {
-      warmupState2 = state4;
+    const offWarmup = onSpriteWarmupProgress((state6) => {
+      warmupState2 = state6;
       updateStatus();
     });
     setInterval(updateStatus, 800);
@@ -38120,10 +38120,10 @@
         renderSfx();
       }
     });
-    function setButtonEnabled2(btn, enabled3) {
+    function setButtonEnabled2(btn, enabled5) {
       const setter = btn.setEnabled;
-      if (typeof setter === "function") setter(enabled3);
-      else btn.disabled = !enabled3;
+      if (typeof setter === "function") setter(enabled5);
+      else btn.disabled = !enabled5;
     }
     function stopPlayback() {
       if (stopAtHandler) {
@@ -38601,7 +38601,7 @@
     }
     view.innerHTML = "";
     view.classList.add("dd-debug-view");
-    const entries = /* @__PURE__ */ new Map();
+    const entries2 = /* @__PURE__ */ new Map();
     const records = [];
     let recording = false;
     let selectedRecord = null;
@@ -38722,7 +38722,7 @@
         row.title = label2;
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
-        checkbox.checked = entries.has(label2);
+        checkbox.checked = entries2.has(label2);
         checkbox.className = "dd-atom-list__checkbox";
         const text = document.createElement("span");
         text.className = "dd-atom-list__label";
@@ -38730,45 +38730,45 @@
         row.append(checkbox, text);
         checkbox.addEventListener("change", async () => {
           if (checkbox.checked) {
-            const existing = entries.get(label2);
+            const existing = entries2.get(label2);
             if (existing) {
               existing.atom = atom;
             } else {
-              entries.set(label2, { atom, lastValue: null, unsubscribe: null });
+              entries2.set(label2, { atom, lastValue: null, unsubscribe: null });
             }
             if (recording) {
               const ok = await attachEntry(label2);
               if (!ok) checkbox.checked = false;
             }
           } else {
-            const existing = entries.get(label2);
+            const existing = entries2.get(label2);
             if (existing?.unsubscribe) {
               try {
                 existing.unsubscribe();
               } catch {
               }
             }
-            entries.delete(label2);
+            entries2.delete(label2);
           }
           updateSelectedInfo();
           updateControls();
         });
         matchesWrap.appendChild(row);
-        if (entries.has(label2)) {
-          const existing = entries.get(label2);
+        if (entries2.has(label2)) {
+          const existing = entries2.get(label2);
           if (existing) existing.atom = atom;
         }
       });
       updateSelectedInfo();
     }
     function updateSelectedInfo() {
-      const size = entries.size;
+      const size = entries2.size;
       selectedInfo.textContent = size ? `${size} atom${size > 1 ? "s" : ""} selected.` : "No atom selected.";
     }
     function updateControls() {
       setBtnLabel(btnRecord, recording ? "Stop recording" : "Start recording");
       btnRecord.classList.toggle("active", recording);
-      btnRecord.disabled = !recording && !entries.size;
+      btnRecord.disabled = !recording && !entries2.size;
       btnClear.disabled = records.length === 0;
       btnCopyLog.disabled = records.length === 0;
     }
@@ -38933,7 +38933,7 @@
         stopRecording();
         return;
       }
-      if (!entries.size) {
+      if (!entries2.size) {
         toast("Select at least one atom");
         return;
       }
@@ -38945,11 +38945,11 @@
       }
       recording = true;
       updateControls();
-      for (const label2 of Array.from(entries.keys())) {
+      for (const label2 of Array.from(entries2.keys())) {
         const ok = await attachEntry(label2);
-        if (!ok) entries.delete(label2);
+        if (!ok) entries2.delete(label2);
       }
-      if (!entries.size) {
+      if (!entries2.size) {
         stopRecording();
       }
       updateSelectedInfo();
@@ -38958,7 +38958,7 @@
     function stopRecording() {
       if (!recording) return;
       recording = false;
-      for (const entry of entries.values()) {
+      for (const entry of entries2.values()) {
         if (entry.unsubscribe) {
           try {
             entry.unsubscribe();
@@ -38970,7 +38970,7 @@
       updateControls();
     }
     async function attachEntry(label2) {
-      const entry = entries.get(label2);
+      const entry = entries2.get(label2);
       if (!entry) return false;
       if (entry.unsubscribe) {
         try {
@@ -39026,7 +39026,7 @@
         return true;
       } catch (err) {
         toast(err?.message || `Unable to subscribe to ${label2}`);
-        entries.delete(label2);
+        entries2.delete(label2);
         updateSelectedInfo();
         updateControls();
         return false;
@@ -39072,7 +39072,7 @@ next: ${next}`;
     updateControls();
     view.__atoms_live_cleanup__ = () => {
       stopRecording();
-      for (const entry of entries.values()) {
+      for (const entry of entries2.values()) {
         if (entry.unsubscribe) {
           try {
             entry.unsubscribe();
@@ -39080,7 +39080,7 @@ next: ${next}`;
           }
         }
       }
-      entries.clear();
+      entries2.clear();
       records.length = 0;
       selectedRecord = null;
     };
@@ -39449,8 +39449,8 @@ next: ${next}`;
     const cats = category === ANY_CATEGORY ? Object.keys(catalog.sprites) : [category];
     const out = [];
     for (const cat of cats) {
-      const entries = catalog.sprites[cat] ?? [];
-      for (const entry of entries) {
+      const entries2 = catalog.sprites[cat] ?? [];
+      for (const entry of entries2) {
         out.push({ category: cat, name: entry.name, url: entry.url });
       }
     }
@@ -40989,7 +40989,7 @@ next: ${next}`;
     const onResize = () => syncHeaderToScrollbar();
     window.addEventListener("resize", onResize);
     const lastSeenRefs = /* @__PURE__ */ new Map();
-    let state4 = null;
+    let state6 = null;
     let renderedIds = /* @__PURE__ */ new Set();
     const getFilters = () => ({
       type: selType.value || "all",
@@ -41173,11 +41173,11 @@ next: ${next}`;
     }
     function rebuildGrid() {
       clearBody();
-      if (!state4) {
+      if (!state6) {
         renderEmpty();
         return;
       }
-      const rows = passesFilters(state4.rows);
+      const rows = passesFilters(state6.rows);
       if (!rows.length) {
         renderEmpty();
       } else {
@@ -41187,7 +41187,7 @@ next: ${next}`;
         });
       }
       refreshRulesUI();
-      followedBadge.textContent = `Followed: ${state4.counts.followed}`;
+      followedBadge.textContent = `Followed: ${state6.counts.followed}`;
       syncHeaderToScrollbar();
     }
     function softUpdateBadge(next) {
@@ -41206,11 +41206,11 @@ next: ${next}`;
       } catch {
       }
       unsub = await NotifierService.onChangeNow((s) => {
-        const prev = state4;
-        state4 = s;
+        const prev = state6;
+        state6 = s;
         if (!prev) {
           rebuildGrid();
-          softUpdateRenderedRows(state4);
+          softUpdateRenderedRows(state6);
           return;
         }
         const prevIds = renderedIds;
@@ -41236,7 +41236,7 @@ next: ${next}`;
       }
     })();
     const onFilterChange = () => {
-      if (state4) rebuildGrid();
+      if (state6) rebuildGrid();
     };
     selType.onchange = onFilterChange;
     selRarity.onchange = onFilterChange;
@@ -41730,11 +41730,11 @@ next: ${next}`;
       empty.style.padding = "8px";
       bodyGrid.appendChild(empty);
     };
-    let state4 = null;
+    let state6 = null;
     let stateSig = "";
     const updateDynamicWeatherStats = () => {
-      if (!state4) return;
-      for (const row of state4.rows) {
+      if (!state6) return;
+      for (const row of state6.rows) {
         const target = weatherLastSeenRefs.get(row.id);
         if (target) {
           const { label: label2, title } = formatLastSeen(row.lastSeen, row.isCurrent);
@@ -41746,10 +41746,10 @@ next: ${next}`;
     };
     const rebuildGrid = () => {
       clearGrid();
-      if (!state4 || !state4.rows.length) {
+      if (!state6 || !state6.rows.length) {
         renderEmpty();
       } else {
-        state4.rows.forEach(addRow);
+        state6.rows.forEach(addRow);
         refreshRulesUI();
       }
       syncHeaderToScrollbar();
@@ -41764,7 +41764,7 @@ next: ${next}`;
       }
       try {
         unsubWeather = await NotifierService.onWeatherChangeNow((next) => {
-          state4 = next;
+          state6 = next;
           stateSig = weatherStateSignature(next.rows);
           rebuildGrid();
         });
@@ -41780,7 +41780,7 @@ next: ${next}`;
         const next = await NotifierService.getWeatherState();
         const nextSig = weatherStateSignature(next.rows);
         const changed = nextSig !== stateSig;
-        state4 = next;
+        state6 = next;
         stateSig = nextSig;
         if (changed) rebuildGrid();
         else updateDynamicWeatherStats();
@@ -41928,7 +41928,7 @@ next: ${next}`;
         input.style.opacity = "0";
         input.style.pointerEvents = "none";
         input.tabIndex = -1;
-        const apply = (on) => {
+        const apply2 = (on) => {
           input.checked = on;
           wrap.setAttribute("aria-checked", on ? "true" : "false");
           knob.style.left = on ? "21px" : "3px";
@@ -41948,13 +41948,13 @@ next: ${next}`;
         wrap.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
-          apply(!input.checked);
+          apply2(!input.checked);
           onToggle?.(input.checked);
         });
         box.appendChild(knob);
         wrap.appendChild(input);
         wrap.appendChild(box);
-        apply(false);
+        apply2(false);
         return wrap;
       };
       setSwitchVisual = (wrap, checked) => {
@@ -42455,9 +42455,9 @@ next: ${next}`;
     return { options: _lockerOptionsCache, byKey: _lockerEmojiByKey, bySeedName: _lockerEmojisBySeedName };
   }
   function formatMutationLabel(key2) {
-    const spaced2 = key2.replace(/_/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/\s+/g, " ").trim();
-    if (!spaced2) return key2;
-    return spaced2.charAt(0).toUpperCase() + spaced2.slice(1);
+    const spaced3 = key2.replace(/_/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/\s+/g, " ").trim();
+    if (!spaced3) return key2;
+    return spaced3.charAt(0).toUpperCase() + spaced3.slice(1);
   }
   function normalizeWeatherSelection(selection) {
     selection.forEach((tag) => {
@@ -42649,12 +42649,12 @@ next: ${next}`;
       target.weatherRecipes.push(set2);
     });
   }
-  function serializeSettingsState(state4) {
-    normalizeWeatherSelection(state4.weatherSelected);
-    state4.weatherRecipes.forEach((set2) => normalizeRecipeSelection(set2));
-    const mode = state4.scaleLockMode === "MINIMUM" ? "MINIMUM" : state4.scaleLockMode === "MAXIMUM" ? "MAXIMUM" : state4.scaleLockMode === "NONE" ? "NONE" : "RANGE";
-    let minScale = Math.max(50, Math.min(100, Math.round(state4.minScalePct || 50)));
-    let maxScale = Math.max(50, Math.min(100, Math.round(state4.maxScalePct || 100)));
+  function serializeSettingsState(state6) {
+    normalizeWeatherSelection(state6.weatherSelected);
+    state6.weatherRecipes.forEach((set2) => normalizeRecipeSelection(set2));
+    const mode = state6.scaleLockMode === "MINIMUM" ? "MINIMUM" : state6.scaleLockMode === "MAXIMUM" ? "MAXIMUM" : state6.scaleLockMode === "NONE" ? "NONE" : "RANGE";
+    let minScale = Math.max(50, Math.min(100, Math.round(state6.minScalePct || 50)));
+    let maxScale = Math.max(50, Math.min(100, Math.round(state6.maxScalePct || 100)));
     if (mode === "RANGE") {
       maxScale = Math.max(51, Math.min(100, maxScale));
       if (maxScale <= minScale) {
@@ -42674,14 +42674,14 @@ next: ${next}`;
       minScalePct: minScale,
       maxScalePct: maxScale,
       scaleLockMode: mode,
-      lockMode: state4.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
-      minInventory: Math.max(0, Math.min(999, Math.round(state4.minInventory || 91))),
-      avoidNormal: !!state4.avoidNormal,
-      includeNormal: !state4.avoidNormal,
-      visualMutations: Array.from(state4.visualMutations),
-      weatherMode: state4.weatherMode,
-      weatherSelected: Array.from(state4.weatherSelected),
-      weatherRecipes: state4.weatherRecipes.map((set2) => Array.from(set2))
+      lockMode: state6.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
+      minInventory: Math.max(0, Math.min(999, Math.round(state6.minInventory || 91))),
+      avoidNormal: !!state6.avoidNormal,
+      includeNormal: !state6.avoidNormal,
+      visualMutations: Array.from(state6.visualMutations),
+      weatherMode: state6.weatherMode,
+      weatherSelected: Array.from(state6.weatherSelected),
+      weatherRecipes: state6.weatherRecipes.map((set2) => Array.from(set2))
     };
   }
   function setCheck(input, value) {
@@ -42841,7 +42841,7 @@ next: ${next}`;
       button2.style.background = "rgba(255,255,255,0.04)";
     };
   }
-  function createLockerSettingsCard(ui, state4, opts = {}) {
+  function createLockerSettingsCard(ui, state6, opts = {}) {
     const card4 = document.createElement("div");
     card4.dataset.lockerSettingsCard = "1";
     card4.style.border = "1px solid rgba(255,255,255,0.10)";
@@ -42857,7 +42857,7 @@ next: ${next}`;
     let recipesTitleElement = null;
     const updateRecipeTitleText = () => {
       if (!recipesTitleElement) return;
-      const prefix = state4.lockMode === "ALLOW" ? "Allow" : "Lock";
+      const prefix = state6.lockMode === "ALLOW" ? "Allow" : "Lock";
       recipesTitleElement.textContent = `${prefix} when any recipe row matches (OR between rows)`;
     };
     const makeSection = (titleText, content) => {
@@ -42904,10 +42904,10 @@ next: ${next}`;
         { value: "lock", label: "Lock" },
         { value: "allow", label: "Allow" }
       ],
-      fromLockMode(state4.lockMode),
+      fromLockMode(state6.lockMode),
       (value) => {
         if (isProgrammaticLockMode) return;
-        state4.lockMode = toLockMode(value);
+        state6.lockMode = toLockMode(value);
         updateLockModeUI();
         opts.onChange?.();
       },
@@ -42922,14 +42922,14 @@ next: ${next}`;
       display: "none"
     });
     const locksEverySize = () => {
-      if ((state4.lockMode ?? "LOCK") !== "LOCK") return false;
-      switch (state4.scaleLockMode) {
+      if ((state6.lockMode ?? "LOCK") !== "LOCK") return false;
+      switch (state6.scaleLockMode) {
         case "RANGE":
-          return state4.minScalePct <= 50 && state4.maxScalePct >= 100;
+          return state6.minScalePct <= 50 && state6.maxScalePct >= 100;
         case "MINIMUM":
-          return state4.minScalePct <= 50;
+          return state6.minScalePct <= 50;
         case "MAXIMUM":
-          return state4.maxScalePct >= 100;
+          return state6.maxScalePct >= 100;
         default:
           return false;
       }
@@ -42941,7 +42941,7 @@ next: ${next}`;
     };
     lockModeRow.append(lockModeSegmented, lockModeHint, lockWarning);
     const updateLockModeUI = () => {
-      const value = fromLockMode(state4.lockMode);
+      const value = fromLockMode(state6.lockMode);
       const current = lockModeSegmented.get?.();
       if (current !== value) {
         isProgrammaticLockMode = true;
@@ -42964,9 +42964,9 @@ next: ${next}`;
     scaleModeRow.style.flexWrap = "wrap";
     scaleModeRow.style.justifyContent = "center";
     scaleModeRow.style.gap = "12px";
-    const minSlider = ui.slider(50, 100, 1, state4.minScalePct);
+    const minSlider = ui.slider(50, 100, 1, state6.minScalePct);
     applyStyles(minSlider, { width: "min(420px, 100%)" });
-    const maxSlider = ui.slider(50, 100, 1, state4.maxScalePct);
+    const maxSlider = ui.slider(50, 100, 1, state6.maxScalePct);
     applyStyles(maxSlider, { width: "min(420px, 100%)" });
     const toMode = (value) => {
       switch (value) {
@@ -42993,7 +42993,7 @@ next: ${next}`;
       }
     };
     let isProgrammaticScaleMode = false;
-    const initialScaleMode = fromMode(state4.scaleLockMode);
+    const initialScaleMode = fromMode(state6.scaleLockMode);
     const scaleModeSegmented = ui.segmented(
       [
         { value: "none", label: "None" },
@@ -43009,7 +43009,7 @@ next: ${next}`;
       { ariaLabel: "Scale lock mode" }
     );
     scaleModeRow.append(scaleModeSegmented);
-    const scaleSlider = ui.rangeDual(50, 100, 1, state4.minScalePct, state4.maxScalePct);
+    const scaleSlider = ui.rangeDual(50, 100, 1, state6.minScalePct, state6.maxScalePct);
     applyStyles(scaleSlider.root, {
       width: "min(420px, 100%)",
       marginLeft: "auto",
@@ -43073,8 +43073,8 @@ next: ${next}`;
     const applyScaleRange = (commit, notify3 = commit) => {
       let minValue = parseInt(scaleMinSlider.value, 10);
       let maxValue = parseInt(scaleMaxSlider.value, 10);
-      if (!Number.isFinite(minValue)) minValue = state4.minScalePct;
-      if (!Number.isFinite(maxValue)) maxValue = state4.maxScalePct;
+      if (!Number.isFinite(minValue)) minValue = state6.minScalePct;
+      if (!Number.isFinite(maxValue)) maxValue = state6.maxScalePct;
       minValue = Math.max(50, Math.min(99, minValue));
       maxValue = Math.max(51, Math.min(100, maxValue));
       if (maxValue <= minValue) {
@@ -43089,44 +43089,44 @@ next: ${next}`;
       scaleMinValue.textContent = `${minValue}`;
       scaleMaxValue.textContent = `${maxValue}`;
       if (commit) {
-        state4.minScalePct = minValue;
-        state4.maxScalePct = maxValue;
+        state6.minScalePct = minValue;
+        state6.maxScalePct = maxValue;
         updateLockWarning();
         if (notify3) opts.onChange?.();
       }
     };
     const applyScaleMinimum = (commit, notify3 = commit) => {
       let minValue = parseInt(minSlider.value, 10);
-      if (!Number.isFinite(minValue)) minValue = state4.minScalePct;
+      if (!Number.isFinite(minValue)) minValue = state6.minScalePct;
       minValue = Math.max(50, Math.min(100, minValue));
       minSlider.value = String(minValue);
       scaleMinimumValue.textContent = `${minValue}`;
       if (commit) {
-        state4.minScalePct = minValue;
+        state6.minScalePct = minValue;
         updateLockWarning();
         if (notify3) opts.onChange?.();
       }
     };
     const applyScaleMaximum = (commit, notify3 = commit) => {
       let maxValue = parseInt(maxSlider.value, 10);
-      if (!Number.isFinite(maxValue)) maxValue = state4.maxScalePct;
+      if (!Number.isFinite(maxValue)) maxValue = state6.maxScalePct;
       maxValue = Math.max(50, Math.min(100, maxValue));
       maxSlider.value = String(maxValue);
       scaleMaximumValue.textContent = `${maxValue}`;
       if (commit) {
-        state4.maxScalePct = maxValue;
+        state6.maxScalePct = maxValue;
         updateLockWarning();
         if (notify3) opts.onChange?.();
       }
     };
     const updateScaleModeUI = () => {
-      const isRange = state4.scaleLockMode === "RANGE";
-      const isMin = state4.scaleLockMode === "MINIMUM";
-      const isMax = state4.scaleLockMode === "MAXIMUM";
+      const isRange = state6.scaleLockMode === "RANGE";
+      const isMin = state6.scaleLockMode === "MINIMUM";
+      const isMax = state6.scaleLockMode === "MAXIMUM";
       rangeControls.style.display = isRange ? "" : "none";
       minControls.style.display = isMin ? "" : "none";
       maxControls.style.display = isMax ? "" : "none";
-      const segValue = fromMode(state4.scaleLockMode);
+      const segValue = fromMode(state6.scaleLockMode);
       if (scaleModeSegmented.get?.() !== segValue) {
         isProgrammaticScaleMode = true;
         try {
@@ -43138,16 +43138,16 @@ next: ${next}`;
       updateLockWarning();
     };
     const applyScaleMode = (mode, notify3) => {
-      const prevMode = state4.scaleLockMode;
-      state4.scaleLockMode = mode;
+      const prevMode = state6.scaleLockMode;
+      state6.scaleLockMode = mode;
       if (mode === "RANGE") {
-        scaleSlider.setValues(state4.minScalePct, state4.maxScalePct);
+        scaleSlider.setValues(state6.minScalePct, state6.maxScalePct);
         applyScaleRange(prevMode !== mode, false);
       } else if (mode === "MINIMUM") {
-        minSlider.value = String(state4.minScalePct);
+        minSlider.value = String(state6.minScalePct);
         applyScaleMinimum(prevMode !== mode, false);
       } else if (mode === "MAXIMUM") {
-        maxSlider.value = String(state4.maxScalePct);
+        maxSlider.value = String(state6.maxScalePct);
         applyScaleMaximum(prevMode !== mode, false);
       }
       updateScaleModeUI();
@@ -43166,7 +43166,7 @@ next: ${next}`;
     applyScaleRange(false);
     applyScaleMinimum(false);
     applyScaleMaximum(false);
-    applyScaleMode(state4.scaleLockMode, false);
+    applyScaleMode(state6.scaleLockMode, false);
     const colorsRow = centerRow();
     colorsRow.style.flexWrap = "wrap";
     colorsRow.style.gap = "8px";
@@ -43232,24 +43232,24 @@ next: ${next}`;
       button2.style.cursor = button2.disabled ? "default" : "pointer";
     };
     const updateColorButtons = () => {
-      updateColorButtonVisual(btnNormal, state4.avoidNormal);
-      updateColorButtonVisual(btnGold, state4.visualMutations.has("Gold"));
-      updateColorButtonVisual(btnRainbow, state4.visualMutations.has("Rainbow"));
+      updateColorButtonVisual(btnNormal, state6.avoidNormal);
+      updateColorButtonVisual(btnGold, state6.visualMutations.has("Gold"));
+      updateColorButtonVisual(btnRainbow, state6.visualMutations.has("Rainbow"));
     };
     btnNormal.addEventListener("click", () => {
-      state4.avoidNormal = !state4.avoidNormal;
+      state6.avoidNormal = !state6.avoidNormal;
       updateColorButtons();
       opts.onChange?.();
     });
     btnGold.addEventListener("click", () => {
-      if (state4.visualMutations.has("Gold")) state4.visualMutations.delete("Gold");
-      else state4.visualMutations.add("Gold");
+      if (state6.visualMutations.has("Gold")) state6.visualMutations.delete("Gold");
+      else state6.visualMutations.add("Gold");
       updateColorButtons();
       opts.onChange?.();
     });
     btnRainbow.addEventListener("click", () => {
-      if (state4.visualMutations.has("Rainbow")) state4.visualMutations.delete("Rainbow");
-      else state4.visualMutations.add("Rainbow");
+      if (state6.visualMutations.has("Rainbow")) state6.visualMutations.delete("Rainbow");
+      else state6.visualMutations.add("Rainbow");
       updateColorButtons();
       opts.onChange?.();
     });
@@ -43271,7 +43271,7 @@ next: ${next}`;
       }
       opts.onChange?.();
     };
-    const updateMainWeatherSelection = applyWeatherSelection(state4.weatherSelected);
+    const updateMainWeatherSelection = applyWeatherSelection(state6.weatherSelected);
     const weatherToggles = WEATHER_MUTATIONS.map((info) => {
       const toggle2 = createWeatherMutationToggle({
         key: info.key,
@@ -43287,7 +43287,7 @@ next: ${next}`;
       return toggle2;
     });
     const updateWeatherMutationsDisabled = () => {
-      const disabled = card4.dataset.disabled === "1" || state4.weatherMode === "RECIPES";
+      const disabled = card4.dataset.disabled === "1" || state6.weatherMode === "RECIPES";
       weatherGrid.style.opacity = disabled ? "0.55" : "";
       weatherGrid.style.pointerEvents = disabled ? "none" : "";
       weatherToggles.forEach((toggle2) => toggle2.setDisabled(disabled));
@@ -43305,7 +43305,7 @@ next: ${next}`;
       wrap.append(input, span);
       input.addEventListener("change", () => {
         if (!input.checked) return;
-        state4.weatherMode = value;
+        state6.weatherMode = value;
         recipesWrap.style.display = value === "RECIPES" ? "" : "none";
         updateWeatherMutationsDisabled();
         opts.onChange?.();
@@ -43367,10 +43367,10 @@ next: ${next}`;
       if (editingRecipeIndex === null) return;
       const draft = new Set(editingRecipeDraft);
       normalizeRecipeSelection(draft);
-      if (editingRecipeIndex === state4.weatherRecipes.length) {
-        state4.weatherRecipes.push(draft);
-      } else if (editingRecipeIndex >= 0 && editingRecipeIndex < state4.weatherRecipes.length) {
-        state4.weatherRecipes[editingRecipeIndex] = draft;
+      if (editingRecipeIndex === state6.weatherRecipes.length) {
+        state6.weatherRecipes.push(draft);
+      } else if (editingRecipeIndex >= 0 && editingRecipeIndex < state6.weatherRecipes.length) {
+        state6.weatherRecipes[editingRecipeIndex] = draft;
       }
       editingRecipeIndex = null;
       editingRecipeDraft = /* @__PURE__ */ new Set();
@@ -43379,8 +43379,8 @@ next: ${next}`;
     };
     const deleteRecipeAt = (index) => {
       if (index < 0) return;
-      if (index < state4.weatherRecipes.length) {
-        state4.weatherRecipes.splice(index, 1);
+      if (index < state6.weatherRecipes.length) {
+        state6.weatherRecipes.splice(index, 1);
       }
       if (editingRecipeIndex !== null) {
         if (index === editingRecipeIndex) {
@@ -43512,14 +43512,14 @@ next: ${next}`;
     }
     function repaintRecipes() {
       recipesList.innerHTML = "";
-      const hasDraftNew = editingRecipeIndex !== null && editingRecipeIndex === state4.weatherRecipes.length;
-      const totalRows = state4.weatherRecipes.length + (hasDraftNew ? 1 : 0);
+      const hasDraftNew = editingRecipeIndex !== null && editingRecipeIndex === state6.weatherRecipes.length;
+      const totalRows = state6.weatherRecipes.length + (hasDraftNew ? 1 : 0);
       if (totalRows === 0) {
         recipesList.appendChild(emptyRecipes);
         applyDisabled();
         return;
       }
-      state4.weatherRecipes.forEach((set2, index) => {
+      state6.weatherRecipes.forEach((set2, index) => {
         normalizeRecipeSelection(set2);
         const isEditing = editingRecipeIndex === index;
         const selection = isEditing ? editingRecipeDraft : set2;
@@ -43563,7 +43563,7 @@ next: ${next}`;
           styleBtnFullWidth(btnValidate, "\u2714\uFE0F");
           btnValidate.onclick = commitEditingRecipe;
           actions.append(btnCancel, btnValidate);
-          if (editingRecipeIndex !== null && editingRecipeIndex < state4.weatherRecipes.length) {
+          if (editingRecipeIndex !== null && editingRecipeIndex < state6.weatherRecipes.length) {
             const btnDelete = document.createElement("button");
             styleBtnFullWidth(btnDelete, "\u{1F5D1}\uFE0F");
             btnDelete.title = "Delete";
@@ -43632,7 +43632,7 @@ next: ${next}`;
       applyDisabled();
     }
     btnAddRecipe.onclick = () => {
-      startEditingRecipe(state4.weatherRecipes.length);
+      startEditingRecipe(state6.weatherRecipes.length);
     };
     recipesWrap.append(recipesHeader, recipesList);
     card4.append(
@@ -43645,19 +43645,19 @@ next: ${next}`;
     );
     const refresh = () => {
       updateLockModeUI();
-      scaleSlider.setValues(state4.minScalePct, state4.maxScalePct);
-      minSlider.value = String(state4.minScalePct);
-      maxSlider.value = String(state4.maxScalePct);
+      scaleSlider.setValues(state6.minScalePct, state6.maxScalePct);
+      minSlider.value = String(state6.minScalePct);
+      maxSlider.value = String(state6.maxScalePct);
       applyScaleRange(false);
       applyScaleMinimum(false);
       applyScaleMaximum(false);
-      applyScaleMode(state4.scaleLockMode, false);
+      applyScaleMode(state6.scaleLockMode, false);
       updateColorButtons();
-      weatherToggles.forEach((toggle2) => toggle2.setChecked(state4.weatherSelected.has(toggle2.key)));
-      radioAny.input.checked = state4.weatherMode === "ANY";
-      radioAll.input.checked = state4.weatherMode === "ALL";
-      radioRecipes.input.checked = state4.weatherMode === "RECIPES";
-      recipesWrap.style.display = state4.weatherMode === "RECIPES" ? "" : "none";
+      weatherToggles.forEach((toggle2) => toggle2.setChecked(state6.weatherSelected.has(toggle2.key)));
+      radioAny.input.checked = state6.weatherMode === "ANY";
+      radioAll.input.checked = state6.weatherMode === "ALL";
+      radioRecipes.input.checked = state6.weatherMode === "RECIPES";
+      recipesWrap.style.display = state6.weatherMode === "RECIPES" ? "" : "none";
       updateWeatherMutationsDisabled();
       repaintRecipes();
     };
@@ -43669,7 +43669,7 @@ next: ${next}`;
     return { root: card4, refresh, setDisabled };
   }
   function createRestrictionsTabRenderer(ui) {
-    let state4 = lockerRestrictionsService.getState();
+    let state6 = lockerRestrictionsService.getState();
     let bonusFromMultiplier = null;
     let bonusFromPlayers = friendBonusPercentFromPlayers(1);
     let eggOptions = [];
@@ -43705,7 +43705,7 @@ next: ${next}`;
       textShadow: "0 1px 1px rgba(0, 0, 0, 0.5)"
     });
     sliderHeader.append(sliderTitle, sliderValue);
-    const initialRequiredPct = friendBonusPercentFromPlayers(state4.minRequiredPlayers) ?? 0;
+    const initialRequiredPct = friendBonusPercentFromPlayers(state6.minRequiredPlayers) ?? 0;
     const slider = ui.slider(0, FRIEND_BONUS_MAX, FRIEND_BONUS_STEP, initialRequiredPct);
     slider.style.width = "100%";
     sliderWrap.append(sliderHeader, slider);
@@ -43746,10 +43746,10 @@ next: ${next}`;
     decorSubtitle.style.fontSize = "12.5px";
     decorSubtitle.style.opacity = "0.85";
     decorText.append(decorSubtitle);
-    const decorToggle = ui.switch(state4.decorPickupLocked);
+    const decorToggle = ui.switch(state6.decorPickupLocked);
     decorToggle.addEventListener("change", () => {
       const locked = !!decorToggle.checked;
-      state4.decorPickupLocked = locked;
+      state6.decorPickupLocked = locked;
       lockerRestrictionsService.setDecorPickupLocked(locked);
     });
     decorRow.append(decorText, decorToggle);
@@ -43878,7 +43878,7 @@ next: ${next}`;
     const refreshRarityRow = () => {
       const rules = lockerRestrictionsService.getSellAllPetsRules();
       const selected = Array.isArray(rules.protectedRarities) ? rules.protectedRarities : [];
-      const enabled3 = rules.enabled !== false;
+      const enabled5 = rules.enabled !== false;
       const selectedSet = new Set(selected);
       raritySelectedArea.innerHTML = "";
       if (selected.length === 0) {
@@ -43941,8 +43941,8 @@ next: ${next}`;
         if (remaining.length === 0) rarityPickerOpen = false;
       }
       rarityAddBtn.textContent = rarityPickerOpen ? "\xD7" : "+";
-      rarityRow.style.opacity = enabled3 ? "1" : "0.6";
-      rarityRow.style.pointerEvents = enabled3 ? "auto" : "none";
+      rarityRow.style.opacity = enabled5 ? "1" : "0.6";
+      rarityRow.style.pointerEvents = enabled5 ? "auto" : "none";
     };
     let rarityPickerOutsideHandler = null;
     rarityAddBtn.addEventListener("click", (ev) => {
@@ -44001,8 +44001,8 @@ next: ${next}`;
       toggle2.style.fontSize = "14px";
       toggle2.style.fontWeight = "700";
       toggle2.addEventListener("click", () => {
-        const next = !Boolean(state4.eggLocks?.[opt.id]);
-        state4.eggLocks = { ...state4.eggLocks || {}, [opt.id]: next };
+        const next = !Boolean(state6.eggLocks?.[opt.id]);
+        state6.eggLocks = { ...state6.eggLocks || {}, [opt.id]: next };
         lockerRestrictionsService.setEggLock(opt.id, next);
         renderEggList();
       });
@@ -44030,7 +44030,7 @@ next: ${next}`;
           eggRowCache.set(id, entry);
         }
         entry.name.textContent = opt.name || id;
-        const locked = !!state4.eggLocks?.[id];
+        const locked = !!state6.eggLocks?.[id];
         updateEggToggleAppearance(entry.toggle, locked);
         fragment.appendChild(entry.row);
       });
@@ -44057,25 +44057,25 @@ next: ${next}`;
     };
     const refreshSellAllPetsControls = () => {
       const rules = lockerRestrictionsService.getSellAllPetsRules();
-      const enabled3 = rules.enabled !== false;
+      const enabled5 = rules.enabled !== false;
       const protectGold = rules.protectGold !== false;
       const protectRainbow = rules.protectRainbow !== false;
       const protectMaxStr = rules.protectMaxStr !== false;
-      setCheck(sellEnableToggle, enabled3);
+      setCheck(sellEnableToggle, enabled5);
       setCheck(sellGoldToggle, protectGold);
       setCheck(sellRainbowToggle, protectRainbow);
       setCheck(sellMaxStrToggle, protectMaxStr);
       sellMaxStrInput.value = String(clampMaxStr(rules.maxStrThreshold));
-      sellGoldToggle.disabled = !enabled3;
-      sellRainbowToggle.disabled = !enabled3;
-      sellMaxStrToggle.disabled = !enabled3;
-      const maxStrDisabled = !enabled3 || !protectMaxStr;
+      sellGoldToggle.disabled = !enabled5;
+      sellRainbowToggle.disabled = !enabled5;
+      sellMaxStrToggle.disabled = !enabled5;
+      const maxStrDisabled = !enabled5 || !protectMaxStr;
       sellMaxStrInput.disabled = maxStrDisabled;
       sellMaxStrWrap.style.opacity = maxStrDisabled ? "0.6" : "1";
       sellMaxStrWrap.style.pointerEvents = maxStrDisabled ? "none" : "auto";
-      setRuleRowDisabled(sellGoldRow.row, !enabled3);
-      setRuleRowDisabled(sellRainbowRow.row, !enabled3);
-      setRuleRowDisabled(sellMaxStrRow.row, !enabled3);
+      setRuleRowDisabled(sellGoldRow.row, !enabled5);
+      setRuleRowDisabled(sellRainbowRow.row, !enabled5);
+      setRuleRowDisabled(sellMaxStrRow.row, !enabled5);
       refreshRarityRow();
     };
     const setStatusTone = (tone) => {
@@ -44085,9 +44085,9 @@ next: ${next}`;
       statusBadge.style.color = palette.color;
     };
     const updateStatus = () => {
-      const requiredPct = clampPercent4(friendBonusPercentFromPlayers(state4.minRequiredPlayers) ?? 0);
+      const requiredPct = clampPercent4(friendBonusPercentFromPlayers(state6.minRequiredPlayers) ?? 0);
       const currentPct = resolveCurrentBonus();
-      const requiredPlayers = state4.minRequiredPlayers;
+      const requiredPlayers = state6.minRequiredPlayers;
       const currentPlayers = currentPct != null ? percentToRequiredFriendCount(currentPct) : null;
       const allowed = requiredPct <= 0 || currentPct != null && currentPct + 1e-4 >= requiredPct;
       if (requiredPct <= 0) {
@@ -44104,17 +44104,17 @@ next: ${next}`;
       const raw = Number(slider.value);
       const pct = clampPercent4(Number.isFinite(raw) ? raw : 0);
       updateSliderValue(pct);
-      state4.minRequiredPlayers = percentToRequiredFriendCount(pct);
+      state6.minRequiredPlayers = percentToRequiredFriendCount(pct);
       updateStatus();
       if (commit) {
-        lockerRestrictionsService.setMinRequiredPlayers(state4.minRequiredPlayers);
+        lockerRestrictionsService.setMinRequiredPlayers(state6.minRequiredPlayers);
       }
     };
     slider.addEventListener("input", () => handleSliderInput(false));
     slider.addEventListener("change", () => handleSliderInput(true));
     sellEnableToggle.addEventListener("change", () => {
-      const enabled3 = !!sellEnableToggle.checked;
-      lockerRestrictionsService.setSellAllPetsRules({ enabled: enabled3 });
+      const enabled5 = !!sellEnableToggle.checked;
+      lockerRestrictionsService.setSellAllPetsRules({ enabled: enabled5 });
       refreshSellAllPetsControls();
     });
     sellGoldToggle.addEventListener("change", () => {
@@ -44133,9 +44133,9 @@ next: ${next}`;
       lockerRestrictionsService.setSellAllPetsRules({ maxStrThreshold: next });
     });
     const syncFromService = (next) => {
-      state4 = { ...next };
-      setCheck(decorToggle, state4.decorPickupLocked);
-      updateSliderValue(friendBonusPercentFromPlayers(state4.minRequiredPlayers) ?? 0);
+      state6 = { ...next };
+      setCheck(decorToggle, state6.decorPickupLocked);
+      updateSliderValue(friendBonusPercentFromPlayers(state6.minRequiredPlayers) ?? 0);
       updateStatus();
       renderEggList();
       refreshSellAllPetsControls();
@@ -44748,12 +44748,12 @@ next: ${next}`;
           this.global = { enabled: false, settings: createDefaultSettings(), hasPersistedSettings: true };
           this.syncFromService(initial);
         }
-        applyPersisted(state4) {
-          this.global.enabled = !!state4.enabled;
-          hydrateSettingsFromPersisted(this.global.settings, state4.settings);
+        applyPersisted(state6) {
+          this.global.enabled = !!state6.enabled;
+          hydrateSettingsFromPersisted(this.global.settings, state6.settings);
           this.global.hasPersistedSettings = true;
           const seen = /* @__PURE__ */ new Set();
-          Object.entries(state4.overrides ?? {}).forEach(([key2, value]) => {
+          Object.entries(state6.overrides ?? {}).forEach(([key2, value]) => {
             const entry = this.ensureOverride(key2, { silent: true });
             entry.enabled = !!value?.enabled;
             hydrateSettingsFromPersisted(entry.settings, value?.settings);
@@ -44778,14 +44778,14 @@ next: ${next}`;
             }
           }
         }
-        syncFromService(state4) {
+        syncFromService(state6) {
           this.syncing = true;
-          this.applyPersisted(state4);
+          this.applyPersisted(state6);
           this.emit();
           this.syncing = false;
         }
-        setGlobalEnabled(enabled3) {
-          this.global.enabled = !!enabled3;
+        setGlobalEnabled(enabled5) {
+          this.global.enabled = !!enabled5;
           this.persistGlobal();
           this.emit();
         }
@@ -44807,9 +44807,9 @@ next: ${next}`;
         getOverride(key2) {
           return this.overrides.get(key2);
         }
-        setOverrideEnabled(key2, enabled3) {
+        setOverrideEnabled(key2, enabled5) {
           const entry = this.ensureOverride(key2, { silent: true });
-          entry.enabled = !!enabled3;
+          entry.enabled = !!enabled5;
           this.persistOverride(key2);
           this.emit();
         }
@@ -45136,11 +45136,11 @@ next: ${next}`;
       });
     });
   }
-  function getMutationsForState(state4) {
+  function getMutationsForState(state6) {
     const mutations = [];
-    if (state4.color !== "None") mutations.push(state4.color);
-    if (state4.weatherCondition !== "None") mutations.push(state4.weatherCondition);
-    if (state4.weatherLighting !== "None") mutations.push(state4.weatherLighting);
+    if (state6.color !== "None") mutations.push(state6.color);
+    if (state6.weatherCondition !== "None") mutations.push(state6.weatherCondition);
+    if (state6.weatherLighting !== "None") mutations.push(state6.weatherLighting);
     return mutations.map((label2) => normalizeMutationLabelForSprite(label2));
   }
   function normalizeMutationLabelForSprite(label2) {
@@ -45149,9 +45149,9 @@ next: ${next}`;
     const overridden = MUTATION_SPRITE_OVERRIDES[normalized.toLowerCase()];
     return overridden ?? normalized;
   }
-  function computePrice(speciesKey, state4, size) {
-    const mutations = getMutationsForState(state4);
-    const friendPlayers = clampFriendPlayers(state4.friendPlayers);
+  function computePrice(speciesKey, state6, size) {
+    const mutations = getMutationsForState(state6);
+    const friendPlayers = clampFriendPlayers(state6.friendPlayers);
     const pricingOptions = { ...DefaultPricing, friendPlayers };
     const value = estimateProduceValue(speciesKey, size, mutations, pricingOptions);
     return Number.isFinite(value) && value > 0 ? value : null;
@@ -45337,9 +45337,9 @@ next: ${next}`;
       const getStateForKey = (key2) => {
         const existing = states.get(key2);
         if (existing) return existing;
-        const state4 = { ...DEFAULT_STATE2 };
-        states.set(key2, state4);
-        return state4;
+        const state6 = { ...DEFAULT_STATE2 };
+        states.set(key2, state6);
+        return state6;
       };
       let selectedKey = null;
       let currentBaseWeight = null;
@@ -45352,8 +45352,8 @@ next: ${next}`;
           dot.style.background = isSelected ? "rgba(94,234,212,0.85)" : "rgba(255,255,255,0.20)";
         });
       };
-      function renderColorSegment(state4, interactive) {
-        const active2 = state4?.color ?? COLOR_MUTATION_LABELS[0];
+      function renderColorSegment(state6, interactive) {
+        const active2 = state6?.color ?? COLOR_MUTATION_LABELS[0];
         const segmented2 = createSegmentedControl(
           COLOR_MUTATION_LABELS,
           active2,
@@ -45374,8 +45374,8 @@ next: ${next}`;
         refs.colorMutations.innerHTML = "";
         refs.colorMutations.appendChild(segmented2);
       }
-      function renderWeatherConditions(state4, interactive) {
-        const active2 = state4?.weatherCondition ?? WEATHER_CONDITION_LABELS[0];
+      function renderWeatherConditions(state6, interactive) {
+        const active2 = state6?.weatherCondition ?? WEATHER_CONDITION_LABELS[0];
         const segmented2 = createSegmentedControl(
           WEATHER_CONDITION_LABELS,
           active2,
@@ -45394,8 +45394,8 @@ next: ${next}`;
         refs.weatherConditions.innerHTML = "";
         refs.weatherConditions.appendChild(segmented2);
       }
-      function renderWeatherLighting(state4, interactive) {
-        const active2 = state4?.weatherLighting ?? WEATHER_LIGHTING_LABELS[0];
+      function renderWeatherLighting(state6, interactive) {
+        const active2 = state6?.weatherLighting ?? WEATHER_LIGHTING_LABELS[0];
         const segmented2 = createSegmentedControl(
           WEATHER_LIGHTING_LABELS,
           active2,
@@ -45414,8 +45414,8 @@ next: ${next}`;
         refs.weatherLighting.innerHTML = "";
         refs.weatherLighting.appendChild(segmented2);
       }
-      function renderFriendBonus(state4, interactive) {
-        const active2 = friendPlayersToLabel(state4?.friendPlayers ?? FRIEND_BONUS_MIN_PLAYERS);
+      function renderFriendBonus(state6, interactive) {
+        const active2 = friendPlayersToLabel(state6?.friendPlayers ?? FRIEND_BONUS_MIN_PLAYERS);
         const segmented2 = createSegmentedControl(
           FRIEND_BONUS_LABELS,
           active2,
@@ -45438,8 +45438,8 @@ next: ${next}`;
           refs.priceValue.textContent = "\u2014";
           return;
         }
-        const state4 = getStateForKey(key2);
-        refs.priceValue.textContent = formatCoinValue(computePrice(key2, state4, state4.sizePercent));
+        const state6 = getStateForKey(key2);
+        refs.priceValue.textContent = formatCoinValue(computePrice(key2, state6, state6.sizePercent));
       }
       function updateSprite() {
         const key2 = selectedKey;
@@ -45447,10 +45447,10 @@ next: ${next}`;
           resetCropSimulationSprite(refs.sprite);
           return;
         }
-        const state4 = getStateForKey(key2);
+        const state6 = getStateForKey(key2);
         const option = optionByKey.get(key2);
         const fallbackEmoji = getLockerSeedEmojiForKey(key2) || (option?.seedName ? getLockerSeedEmojiForSeedName(option.seedName) : void 0) || "\u{1F331}";
-        const mutations = getMutationsForState(state4);
+        const mutations = getMutationsForState(state6);
         const candidates = buildSpriteCandidates2(key2, option);
         const categories = getSpriteCategoriesForKey(key2, option?.seedName, option?.cropName);
         applyCropSimulationSprite(refs.sprite, key2, {
@@ -45475,22 +45475,22 @@ next: ${next}`;
           return;
         }
         currentBaseWeight = getBaseWeightForSpecies(key2);
-        const state4 = getStateForKey(key2);
+        const state6 = getStateForKey(key2);
         refs.sizeSlider.disabled = false;
-        applySizePercent(refs, state4.sizePercent, key2, currentBaseWeight);
-        renderColorSegment(state4, true);
-        renderWeatherConditions(state4, true);
-        renderWeatherLighting(state4, true);
-        renderFriendBonus(state4, true);
+        applySizePercent(refs, state6.sizePercent, key2, currentBaseWeight);
+        renderColorSegment(state6, true);
+        renderWeatherConditions(state6, true);
+        renderWeatherLighting(state6, true);
+        renderFriendBonus(state6, true);
         updateSprite();
         updateOutputs();
       }
       slider.addEventListener("input", () => {
         if (!selectedKey) return;
-        const state4 = getStateForKey(selectedKey);
+        const state6 = getStateForKey(selectedKey);
         const raw = Number(slider.value);
         const value = clamp2(Math.round(raw), SIZE_MIN, SIZE_MAX);
-        state4.sizePercent = value;
+        state6.sizePercent = value;
         applySizePercent(refs, value, selectedKey, currentBaseWeight);
         updateOutputs();
       });
@@ -46174,9 +46174,9 @@ next: ${next}`;
     };
     return btn;
   }
-  function setButtonEnabled(btn, enabled3) {
-    btn.disabled = !enabled3;
-    css2(btn, { opacity: enabled3 ? "1" : "0.35", pointerEvents: enabled3 ? "auto" : "none" });
+  function setButtonEnabled(btn, enabled5) {
+    btn.disabled = !enabled5;
+    css2(btn, { opacity: enabled5 ? "1" : "0.35", pointerEvents: enabled5 ? "auto" : "none" });
   }
   function toggle(checked, onChange) {
     const wrap = document.createElement("label");
@@ -46570,15 +46570,15 @@ next: ${next}`;
     const body = document.createElement("div");
     css2(body, { display: "flex", flexDirection: "column", gap: "8px" });
     let collapsed = opts.collapsed;
-    const apply = () => {
+    const apply2 = () => {
       body.style.display = collapsed ? "none" : "flex";
       chevron.style.transform = collapsed ? "rotate(0deg)" : "rotate(90deg)";
       head.setAttribute("aria-expanded", collapsed ? "false" : "true");
     };
-    apply();
+    apply2();
     head.addEventListener("click", () => {
       collapsed = !collapsed;
-      apply();
+      apply2();
       opts.onToggle(collapsed);
     });
     root.append(head, body);
@@ -46791,8 +46791,8 @@ next: ${next}`;
     return hasGold ? "gold" : "normal";
   }
   function isTableEmpty(stats) {
-    const entries = Object.values(stats.pets?.hatchedByType ?? {});
-    return entries.length === 0 || entries.every((counts) => totalOf(counts) <= 0);
+    const entries2 = Object.values(stats.pets?.hatchedByType ?? {});
+    return entries2.length === 0 || entries2.every((counts) => totalOf(counts) <= 0);
   }
   function addSpecies(map2, species, mutations) {
     const name = typeof species === "string" ? species.trim() : "";
@@ -46945,7 +46945,7 @@ next: ${next}`;
       }
     }
     let rafId = null;
-    const schedule = () => {
+    const schedule2 = () => {
       if (!view.isConnected) {
         cleanup2();
         return;
@@ -46956,8 +46956,8 @@ next: ${next}`;
         repaint();
       });
     };
-    const stopStats = StatsService.subscribe(schedule);
-    const stopTracker = HatchTracker.subscribe(schedule);
+    const stopStats = StatsService.subscribe(schedule2);
+    const stopTracker = HatchTracker.subscribe(schedule2);
     function cleanup2() {
       try {
         stopStats();
@@ -50721,39 +50721,39 @@ Restore figures are averages; unlucky streaks do worse.`;
         for (const item of sorted.slice(0, MAX_VISIBLE_CHIPS)) chips.append(buildChip(item));
         if (sorted.length > MAX_VISIBLE_CHIPS) chips.append(overflowChip(sorted.length - MAX_VISIBLE_CHIPS));
       }
-      const running3 = config.isRunning();
+      const running6 = config.isRunning();
       const estimateMs = totalQty * (config.estimateDelayMs + EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS);
-      const finishTimestamp = running3 ? estimatedFinish : estimateMs > 0 ? Date.now() + estimateMs : null;
+      const finishTimestamp = running6 ? estimatedFinish : estimateMs > 0 ? Date.now() + estimateMs : null;
       estimate.textContent = totalQty <= 0 ? "" : finishTimestamp ? `About ${formatDurationShort(estimateMs)} \xB7 done around ${formatFinishTime(finishTimestamp)}` : `About ${formatDurationShort(estimateMs)}`;
       const hasSelection = groupCount > 0 && totalQty > 0;
-      setButtonEnabled(btnDelete, hasSelection && !running3);
-      setButtonEnabled(btnClear, hasSelection && !running3);
-      setButtonEnabled(btnSelect, !running3);
+      setButtonEnabled(btnDelete, hasSelection && !running6);
+      setButtonEnabled(btnClear, hasSelection && !running6);
+      setButtonEnabled(btnSelect, !running6);
       clearSummaryTimer();
-      if (!running3 && totalQty > 0) {
+      if (!running6 && totalQty > 0) {
         summaryTimer = window.setTimeout(() => updateSummary2(), 1e3);
       }
     }
     function updateControls() {
-      const running3 = config.isRunning();
+      const running6 = config.isRunning();
       const paused = config.isPaused();
-      css2(progressWrap, { display: running3 ? "flex" : "none" });
-      css2(stats, { display: running3 ? "none" : "flex" });
-      css2(chips, { display: running3 ? "none" : "flex" });
-      btnPause.hidden = !running3 || paused;
-      btnPlay.hidden = !running3 || !paused;
-      btnStop.hidden = !running3;
-      btnDelete.hidden = running3;
-      if (running3) {
+      css2(progressWrap, { display: running6 ? "flex" : "none" });
+      css2(stats, { display: running6 ? "none" : "flex" });
+      css2(chips, { display: running6 ? "none" : "flex" });
+      btnPause.hidden = !running6 || paused;
+      btnPlay.hidden = !running6 || !paused;
+      btnStop.hidden = !running6;
+      btnDelete.hidden = running6;
+      if (running6) {
         const ratio = progress.total > 0 ? progress.done / progress.total : 0;
         bar.set(ratio, paused ? "warn" : "accent");
         progressTargetEl.textContent = paused ? `Paused \xB7 ${progress.target || "-"}` : progress.target || "-";
         progressCount.textContent = `${formatNum2(progress.done)} / ${formatNum2(progress.total)}`;
         estimate.textContent = "";
       }
-      setButtonEnabled(btnPause, running3 && !paused);
-      setButtonEnabled(btnPlay, running3 && paused);
-      setButtonEnabled(btnStop, running3);
+      setButtonEnabled(btnPause, running6 && !paused);
+      setButtonEnabled(btnPlay, running6 && paused);
+      setButtonEnabled(btnStop, running6);
     }
     async function runSelect() {
       await config.openSelector();
@@ -50765,10 +50765,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       const estimateMs = totalQty * (config.estimateDelayMs + EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS);
       estimatedFinish = estimateMs > 0 ? Date.now() + estimateMs : null;
       clearSummaryTimer();
-      const pending3 = config.runDelete(config.runDelayMs);
+      const pending6 = config.runDelete(config.runDelayMs);
       updateControls();
       updateSummary2();
-      if (pending3) await pending3;
+      if (pending6) await pending6;
       estimatedFinish = null;
       updateControls();
       updateSummary2();
@@ -50995,7 +50995,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       onClose: options.onClose
     });
     const picked = new Map(options.initial);
-    let entries = [];
+    let entries2 = [];
     let filter = "";
     const controls = document.createElement("div");
     css2(controls, { display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", marginBottom: "10px" });
@@ -51049,8 +51049,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       return box;
     }
     function visibleEntries() {
-      if (!filter) return entries;
-      return entries.filter(
+      if (!filter) return entries2;
+      return entries2.filter(
         (entry) => entry.label.toLowerCase().includes(filter) || entry.id.toLowerCase().includes(filter)
       );
     }
@@ -51058,7 +51058,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       let groups = 0;
       let units = 0;
       let fromStorage = 0;
-      for (const entry of entries) {
+      for (const entry of entries2) {
         const qty = picked.get(entry.id) ?? 0;
         if (qty <= 0) continue;
         groups += 1;
@@ -51133,7 +51133,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (rows.length === 0) {
         const empty = document.createElement("div");
         css2(empty, { padding: "14px", textAlign: "center", fontSize: "12px", color: TEXT_DIM });
-        empty.textContent = entries.length === 0 ? `You have no ${options.unitNoun} to delete, in your inventory or your ${options.storageNoun}.` : "No match.";
+        empty.textContent = entries2.length === 0 ? `You have no ${options.unitNoun} to delete, in your inventory or your ${options.storageNoun}.` : "No match.";
         list.append(empty);
       } else {
         for (const entry of rows) list.append(buildRow(entry));
@@ -51147,16 +51147,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     updateSummary2();
     void options.loadEntries().then((loaded) => {
       if (!modal.isOpen()) return;
-      entries = loaded;
+      entries2 = loaded;
       for (const [id, qty] of [...picked]) {
-        const entry = entries.find((e) => e.id === id);
+        const entry = entries2.find((e) => e.id === id);
         if (!entry) picked.delete(id);
         else picked.set(id, Math.min(qty, entry.total));
       }
       renderRows();
     }).catch(() => {
       if (!modal.isOpen()) return;
-      entries = [];
+      entries2 = [];
       renderRows();
       css2(summary, { color: DANGER });
       summary.textContent = "Could not read the inventory.";
@@ -51180,9 +51180,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function mergeEmoteSource(real, fake) {
     const base = real && typeof real === "object" ? real : {};
-    const entries = Array.isArray(base.entries) ? base.entries : [];
+    const entries2 = Array.isArray(base.entries) ? base.entries : [];
     const ours = Array.isArray(fake?.entries) ? fake.entries : [];
-    return { ...base, entries: ours.length ? [...entries, ...ours] : entries };
+    return { ...base, entries: ours.length ? [...entries2, ...ours] : entries2 };
   }
   function cutTalking(avatarSystem2, playerId2) {
     const system = avatarSystem2;
@@ -51374,12 +51374,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     const message = crops.length === 1 ? pickOne([`A ${first.mutation} ${first.species}! Look at that!`, `Whoa, a ${first.mutation} ${first.species} just showed up!`, `${first.mutation}! Your ${first.species} is special.`], random) : pickOne([`${crops.length} rare crops just appeared! Look!`, `Whoa, ${crops.length} special crops at once!`], random);
     return { key: "rarecrop", message, emote: EmoteType.Love, priority: "high" };
   }
-  function badLuckReactions(prev, next, eggName3, random) {
+  function badLuckReactions(prev, next, eggName4, random) {
     const out = [];
     for (const [eggId, after] of Object.entries(next ?? {})) {
       const before = prev?.[eggId];
       if (!before || !after) continue;
-      const egg = eggName3(eggId);
+      const egg = eggName4(eggId);
       for (const kind of ["rainbow", "gold"]) {
         const was = Number(before[kind]) || 0;
         const now2 = Number(after[kind]) || 0;
@@ -51598,18 +51598,18 @@ Restore figures are averages; unlucky streaks do worse.`;
   function initialGateState() {
     return { lastSpokeAt: 0, mutedUntil: {}, queue: [] };
   }
-  function offerReaction(state4, reaction, now2) {
-    if (now2 < (state4.mutedUntil[familyOf(reaction.key)] ?? 0)) return state4;
-    const existing = state4.queue.find((q) => q.key === reaction.key);
-    if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state4;
-    const queue = state4.queue.filter((q) => q.key !== reaction.key);
+  function offerReaction(state6, reaction, now2) {
+    if (now2 < (state6.mutedUntil[familyOf(reaction.key)] ?? 0)) return state6;
+    const existing = state6.queue.find((q) => q.key === reaction.key);
+    if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state6;
+    const queue = state6.queue.filter((q) => q.key !== reaction.key);
     queue.push({ ...reaction, at: now2 });
-    return { ...state4, queue };
+    return { ...state6, queue };
   }
-  function takeReaction(state4, now2, busy2) {
-    const queue = state4.queue.filter((q) => now2 - q.at <= REACTION_TTL_MS[q.priority]);
-    const kept = { ...state4, queue };
-    if (busy2 || queue.length === 0 || now2 - state4.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
+  function takeReaction(state6, now2, busy4) {
+    const queue = state6.queue.filter((q) => now2 - q.at <= REACTION_TTL_MS[q.priority]);
+    const kept = { ...state6, queue };
+    if (busy4 || queue.length === 0 || now2 - state6.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
     const chosen = queue.find((q) => q.priority === "high") ?? queue[0];
     const family = familyOf(chosen.key);
     const { at: _at, ...reaction } = chosen;
@@ -51617,7 +51617,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       reaction,
       state: {
         lastSpokeAt: now2,
-        mutedUntil: { ...state4.mutedUntil, [family]: now2 + (FAMILY_COOLDOWN_MS[family] ?? 0) },
+        mutedUntil: { ...state6.mutedUntil, [family]: now2 + (FAMILY_COOLDOWN_MS[family] ?? 0) },
         // Le reste de la famille qui vient de parler se tait aussi.
         queue: queue.filter((q) => q !== chosen && (FAMILY_COOLDOWN_MS[family] ? familyOf(q.key) !== family : true))
       }
@@ -52576,8 +52576,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function readOwnedTiles() {
     let count = 0;
     try {
-      const [map2, slotIdx] = await Promise.all([readCompanionMap(), readMySlotIdx()]);
-      if (map2 && slotIdx !== null) count = map2.dirtTileCount(slotIdx);
+      const [map2, slotIdx2] = await Promise.all([readCompanionMap(), readMySlotIdx()]);
+      if (map2 && slotIdx2 !== null) count = map2.dirtTileCount(slotIdx2);
     } catch {
       count = 0;
     }
@@ -53160,16 +53160,16 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function mergeEntries(inventory, storage, label2) {
     const ids = /* @__PURE__ */ new Set([...inventory.keys(), ...storage.keys()]);
-    const entries = [];
+    const entries2 = [];
     for (const id of ids) {
       const invQty = inventory.get(id) ?? 0;
       const storeQty = storage.get(id) ?? 0;
       const total = invQty + storeQty;
       if (total <= 0) continue;
-      entries.push({ id, label: label2(id), invQty, storeQty, total });
+      entries2.push({ id, label: label2(id), invQty, storeQty, total });
     }
-    entries.sort((a, b) => a.label.localeCompare(b.label));
-    return entries;
+    entries2.sort((a, b) => a.label.localeCompare(b.label));
+    return entries2;
   }
   function entryLimit(guardEnabled2) {
     return guardEnabled2 ? INVENTORY_ENTRY_LIMIT_GUARDED : INVENTORY_ENTRY_LIMIT;
@@ -53255,7 +53255,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/services/deleterRun.ts
   function createDeleterController(kind) {
     const selection = /* @__PURE__ */ new Map();
-    let running3 = false;
+    let running6 = false;
     let paused = false;
     let cancelled = false;
     let resumeWaiter = null;
@@ -53280,7 +53280,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return hasRoomForWithdrawal(plan, count, kind.isGuardEnabled());
     }
     async function run(delayMs) {
-      if (running3) {
+      if (running6) {
         kind.toast(kind.toastTitle, "Deletion already in progress.", "info");
         return;
       }
@@ -53288,8 +53288,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         kind.toast(kind.toastTitle, `No ${kind.unitNoun} selected.`, "info");
         return;
       }
-      const entries = await kind.loadEntries();
-      const byId = new Map(entries.map((entry) => [entry.id, entry]));
+      const entries2 = await kind.loadEntries();
+      const byId = new Map(entries2.map((entry) => [entry.id, entry]));
       const tasks = [];
       for (const picked of selection.values()) {
         const entry = byId.get(picked.id);
@@ -53311,7 +53311,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         );
         return;
       }
-      running3 = true;
+      running6 = true;
       paused = false;
       cancelled = false;
       let done = 0;
@@ -53362,7 +53362,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         emit("error", { message });
         kind.toast(kind.toastTitle, message, "error");
       } finally {
-        running3 = false;
+        running6 = false;
         paused = false;
         cancelled = false;
         resumeWaiter = null;
@@ -53370,29 +53370,29 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return {
       getSelection: () => Array.from(selection.values()),
-      setSelection(entries) {
+      setSelection(entries2) {
         selection.clear();
-        for (const entry of entries) {
+        for (const entry of entries2) {
           if (entry && entry.id && entry.qty > 0) selection.set(entry.id, { ...entry });
         }
       },
       clearSelection: () => selection.clear(),
       run,
-      isRunning: () => running3,
+      isRunning: () => running6,
       isPaused: () => paused,
       pause() {
-        if (!running3 || paused) return;
+        if (!running6 || paused) return;
         paused = true;
         emit("paused");
       },
       resume() {
-        if (!running3 || !paused) return;
+        if (!running6 || !paused) return;
         paused = false;
         resumeWaiter?.();
         emit("resumed");
       },
       cancel() {
-        if (!running3) return;
+        if (!running6) return;
         cancelled = true;
         paused = false;
         resumeWaiter?.();
@@ -53907,8 +53907,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     writeRawStorage(JSON.stringify(backups));
   }
   function listBackups() {
-    const entries = readBackups();
-    return [...entries].sort((a, b) => b.timestamp - a.timestamp);
+    const entries2 = readBackups();
+    return [...entries2].sort((a, b) => b.timestamp - a.timestamp);
   }
   function saveBackup(name) {
     const normalizedName = name.trim() || `Backup ${(/* @__PURE__ */ new Date()).toLocaleString()}`;
@@ -55045,7 +55045,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         pendingSlide.img.src = await resolveImageUrl(images[index]);
         await pendingSlide.img.decode().catch(() => void 0);
         const offset = direction === "next" ? SWAP_OFFSET_PX : -SWAP_OFFSET_PX;
-        const running3 = [];
+        const running6 = [];
         if (!prefersReduced) {
           const outgoing = activeSlide.root.animate(
             [
@@ -55061,14 +55061,14 @@ Restore figures are averages; unlucky streaks do worse.`;
             ],
             { duration: SWAP_DURATION_MS, easing: SWAP_EASING, fill: "forwards" }
           );
-          running3.push(outgoing, incoming);
+          running6.push(outgoing, incoming);
           await Promise.all([outgoing.finished, incoming.finished]);
         }
         activeSlide.root.style.transform = "";
         activeSlide.root.style.opacity = "0";
         pendingSlide.root.style.transform = "";
         pendingSlide.root.style.opacity = "1";
-        running3.forEach((animation) => animation.cancel());
+        running6.forEach((animation) => animation.cancel());
         const previousActive = activeSlide;
         activeSlide = pendingSlide;
         pendingSlide = previousActive;
@@ -55572,20 +55572,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     view.appendChild(wrapper);
     const showLoading = () => {
       viewContainer.innerHTML = "";
-      const state4 = document.createElement("div");
-      state4.className = "mgt-state";
+      const state6 = document.createElement("div");
+      state6.className = "mgt-state";
       const spinner = document.createElement("div");
       spinner.className = "mgt-spinner";
       const text = document.createElement("p");
       text.className = "mgt-state__text";
       text.textContent = "Fetching the latest tools...";
-      state4.append(spinner, text);
-      viewContainer.appendChild(state4);
+      state6.append(spinner, text);
+      viewContainer.appendChild(state6);
     };
     const showError = (message) => {
       viewContainer.innerHTML = "";
-      const state4 = document.createElement("div");
-      state4.className = "mgt-state";
+      const state6 = document.createElement("div");
+      state6.className = "mgt-state";
       const title = document.createElement("span");
       title.className = "mgt-state__title";
       title.textContent = "Couldn't load the tools";
@@ -55597,8 +55597,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       retry.className = "mgt-action is-primary";
       retry.textContent = "Retry";
       retry.onclick = () => void init2();
-      state4.append(title, text, retry);
-      viewContainer.appendChild(state4);
+      state6.append(title, text, retry);
+      viewContainer.appendChild(state6);
     };
     let tools = [];
     let listViewRoot = null;
@@ -56108,8 +56108,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     wrap.appendChild(
       card2([sectionLabel2("Saved gardens"), statusEl, listWrap])
     );
-    const unsubChange = EditorService.onChange((enabled3) => {
-      toggle2.querySelector("input").checked = enabled3;
+    const unsubChange = EditorService.onChange((enabled5) => {
+      toggle2.querySelector("input").checked = enabled5;
       renderSavedList();
     });
     const unsubSaved = EditorService.onSavedGardensChange(renderSavedList);
@@ -56176,8 +56176,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       (on) => setKeybindHoldDetection(action2.id, on)
     );
     control.title = holdDetection.description || holdDetection.label;
-    const detach = onKeybindHoldDetectionChange(action2.id, (enabled3) => {
-      control.setChecked?.(enabled3);
+    const detach = onKeybindHoldDetectionChange(action2.id, (enabled5) => {
+      control.setChecked?.(enabled5);
     });
     wrap.append(label2, control);
     return { root: wrap, detach };
@@ -56251,8 +56251,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       resetBtn.title = "Restore default shortcut";
       controls.appendChild(resetBtn);
     }
-    function setEnabled(btn, enabled3) {
-      if (btn) setButtonEnabled(btn, enabled3);
+    function setEnabled(btn, enabled5) {
+      if (btn) setButtonEnabled(btn, enabled5);
     }
     function updateButtons2(current) {
       setEnabled(clearBtn, hotkeyToString(current).length > 0);
@@ -56359,11 +56359,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/services/players.ts
-  function findPlayersDeep(state4) {
-    if (!state4 || typeof state4 !== "object") return [];
+  function findPlayersDeep(state6) {
+    if (!state6 || typeof state6 !== "object") return [];
     const out = [];
     const seen = /* @__PURE__ */ new Set();
-    const stack = [state4];
+    const stack = [state6];
     while (stack.length) {
       const cur = stack.pop();
       if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
@@ -56389,14 +56389,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     const raw = st?.child?.data?.userSlots ?? st?.fullState?.child?.data?.userSlots ?? st?.data?.userSlots;
     if (Array.isArray(raw)) return raw;
     if (raw && typeof raw === "object") {
-      const entries = Object.entries(raw);
-      entries.sort((a, b) => {
+      const entries2 = Object.entries(raw);
+      entries2.sort((a, b) => {
         const ai = Number(a[0]);
         const bi = Number(b[0]);
         if (Number.isFinite(ai) && Number.isFinite(bi)) return ai - bi;
         return a[0].localeCompare(b[0]);
       });
-      return entries.map(([, v]) => v);
+      return entries2.map(([, v]) => v);
     }
     return [];
   }
@@ -57653,13 +57653,13 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/skins/applier.ts
   function collectGameMatches() {
-    const state4 = getSpriteState();
-    const roots = [state4.app?.stage, state4.renderer?.lastObjectRendered, state4.renderer?.stage];
+    const state6 = getSpriteState();
+    const roots = [state6.app?.stage, state6.renderer?.lastObjectRendered, state6.renderer?.stage];
     const byLabel = /* @__PURE__ */ new Map();
     const byRect = /* @__PURE__ */ new Map();
     const seenNodes = /* @__PURE__ */ new Set();
     let visited = 0;
-    const catalogTextures = new Set(state4.tex.values());
+    const catalogTextures = new Set(state6.tex.values());
     const add = (bucket, key2, texture, node) => {
       let match = bucket.get(key2);
       if (!match) {
@@ -57792,14 +57792,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   function applySkinTexture(target, canvas, getIndex = collectGameMatches) {
     const frameKey = target.frameKey;
     revertSkin(frameKey);
-    const state4 = getSpriteState();
-    const Texture = state4.ctors?.Texture;
+    const state6 = getSpriteState();
+    const Texture = state6.ctors?.Texture;
     if (!Texture?.from) return false;
     const stage = getIndex();
     const labelMatch = stage.byLabel.get(frameKey);
     const { x, y, w, h } = target.occupiedRect;
     const rectMatch = stage.byRect.get(rectKey(x, y, w, h));
-    const atlasSource = sourceOf(state4.tex.get(frameKey));
+    const atlasSource = sourceOf(state6.tex.get(frameKey));
     const textures = [];
     const nodes = [];
     const cached = lookupCachedTexture(frameKey);
@@ -57918,14 +57918,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   function renderFrameToCanvas(frameKey) {
     const cached = canvasCache.get(frameKey);
     if (cached) return cached;
-    const state4 = getSpriteState();
-    const texture = state4.tex.get(frameKey);
-    const ctors = state4.ctors;
-    if (!texture || !ctors?.Sprite || !state4.renderer?.extract) return null;
+    const state6 = getSpriteState();
+    const texture = state6.tex.get(frameKey);
+    const ctors = state6.ctors;
+    if (!texture || !ctors?.Sprite || !state6.renderer?.extract) return null;
     let sprite = null;
     try {
       sprite = new ctors.Sprite(texture);
-      const canvas = state4.renderer.extract.canvas(sprite, { resolution: 1 });
+      const canvas = state6.renderer.extract.canvas(sprite, { resolution: 1 });
       if (!canvas) return null;
       if (canvasCache.size >= CACHE_MAX) {
         canvasCache.delete(canvasCache.keys().next().value);
@@ -57986,14 +57986,14 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/skins/gameCaches.ts
   function holders() {
-    const state4 = getSpriteState();
+    const state6 = getSpriteState();
     const root = globalThis.unsafeWindow || globalThis;
     return [
       getPixiApp(),
-      state4.app,
-      state4.app?.app,
-      state4.renderer,
-      state4.renderer?.app,
+      state6.app,
+      state6.app?.app,
+      state6.renderer,
+      state6.renderer?.app,
       root.__PIXI_APP__,
       root.app
     ].filter(Boolean);
@@ -58048,9 +58048,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/skins/debug.ts
   function inspectFrame(frameKey, occupiedRect) {
-    const state4 = getSpriteState();
+    const state6 = getSpriteState();
     const stage = collectGameMatches();
-    const catalogTexture = state4.tex.get(frameKey);
+    const catalogTexture = state6.tex.get(frameKey);
     const atlasSource = sourceOf2(catalogTexture);
     const describe = (match) => (match?.nodes ?? []).map((node) => ({
       ctor: node?.constructor?.name,
@@ -58085,7 +58085,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function findOnStage(substring = "") {
-    const state4 = getSpriteState();
+    const state6 = getSpriteState();
     const stage = collectGameMatches();
     const needle = substring.toLowerCase();
     const labels = [...stage.byLabel.keys()].filter((label2) => label2.toLowerCase().includes(needle)).sort();
@@ -58110,7 +58110,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       unlabelledRects: unlabelled.slice(0, 40),
       unlabelledRectCount: unlabelled.length,
       catalogRect: (() => {
-        const rect = frameRectOf2(state4.tex.get(substring));
+        const rect = frameRectOf2(state6.tex.get(substring));
         return rect ? rectKey2(rect.x, rect.y, rect.width, rect.height) : null;
       })()
     };
@@ -58288,10 +58288,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function areSkinsEnabled() {
     return snapshot.enabled;
   }
-  async function setSkinsEnabled(enabled3) {
-    snapshot.enabled = enabled3;
+  async function setSkinsEnabled(enabled5) {
+    snapshot.enabled = enabled5;
     updateAriesStorage((current) => {
-      current.skins = { ...current.skins || {}, enabled: enabled3 };
+      current.skins = { ...current.skins || {}, enabled: enabled5 };
     });
     await reapply();
   }
@@ -58352,13 +58352,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function retryPending() {
     if (!snapshot.enabled || retriesLeft <= 0) return;
-    const pending3 = [...snapshot.results.values()].filter((result) => !result.applied);
-    if (!pending3.length) return;
+    const pending6 = [...snapshot.results.values()].filter((result) => !result.applied);
+    if (!pending6.length) return;
     retriesLeft -= 1;
     const targets = await loadTargets();
     const index = sharedStageIndex();
     let changed = false;
-    for (const result of pending3) {
+    for (const result of pending6) {
       const canvas = skinCanvases.get(result.frameKey);
       const target = targets.get(result.frameKey);
       if (!canvas || !target) continue;
@@ -58480,8 +58480,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (observer) return observer;
     if (typeof IntersectionObserver === "undefined") return null;
     observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
+      (entries2) => {
+        for (const entry of entries2) {
           if (!entry.isIntersecting) continue;
           const render = pending.get(entry.target);
           if (!render) continue;
@@ -58653,7 +58653,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return row;
   }
   function buildDetail(options) {
-    const { object, entries, results, onError, onChanged } = options;
+    const { object, entries: entries2, results, onError, onChanged } = options;
     const host = document.createElement("div");
     css2(host, { display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" });
     if (!object) {
@@ -58696,7 +58696,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     object.slots.forEach((target, index) => {
       list.appendChild(
         buildSlot(target, index, {
-          entry: entries.get(target.frameKey),
+          entry: entries2.get(target.frameKey),
           result: results.get(target.frameKey),
           onError,
           onChanged
@@ -58979,8 +58979,16 @@ Restore figures are averages; unlucky streaks do worse.`;
       lastAnchorTile: null,
       idleTicks: 0,
       wanderCooldown: 0,
-      wanderTarget: null
+      wanderTarget: null,
+      wanderTargetIsInterest: false
     };
+  }
+  function drawWanderPause(config, random) {
+    const min = Math.max(0, Math.round(config.wanderPauseTicks));
+    const max = config.wanderPauseMaxTicks;
+    if (max === void 0 || !Number.isFinite(max) || Math.round(max) <= min) return min;
+    const span = Math.round(max) - min + 1;
+    return min + Math.min(span - 1, Math.floor(random() * span));
   }
   function manhattan(a, b) {
     return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
@@ -59023,81 +59031,101 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function stepMovement(input) {
     const { anchor, isWalkable, random, config } = input;
-    const state4 = { ...input.state };
+    const pickInterest2 = input.pickInterest ?? null;
+    const state6 = { ...input.state };
     const excludeCenter = anchor.tracksPlayer;
     const blocked = anchor.tracksPlayer ? anchor.tile : null;
     const zone = anchor.zone;
     const zoneWalkable = (x, y) => isWalkable(x, y) && (!zone || zone(x, y));
-    const insideZone = !zone || !state4.tile || zone(state4.tile.x, state4.tile.y);
+    const insideZone = !zone || !state6.tile || zone(state6.tile.x, state6.tile.y);
     const stepWalkable = insideZone ? zoneWalkable : isWalkable;
-    const anchorMoved = !sameTile(state4.lastAnchorTile, anchor.tile);
-    state4.lastAnchorTile = { ...anchor.tile };
+    const anchorMoved = !sameTile(state6.lastAnchorTile, anchor.tile);
+    state6.lastAnchorTile = { ...anchor.tile };
     if (anchorMoved) {
-      state4.idleTicks = 0;
-      if (state4.activity === "wander") {
-        state4.activity = "pursue";
-        state4.wanderTarget = null;
-        state4.wanderCooldown = 0;
+      state6.idleTicks = 0;
+      if (state6.activity === "wander") {
+        state6.activity = "pursue";
+        state6.wanderTarget = null;
+        state6.wanderTargetIsInterest = false;
+        state6.wanderCooldown = 0;
       }
     } else {
-      state4.idleTicks++;
+      state6.idleTicks++;
     }
-    if (!state4.tile) {
+    if (!state6.tile) {
       const spawn = findNearbyWalkable(anchor.tile, zoneWalkable, excludeCenter) ?? findNearbyWalkable(anchor.tile, isWalkable, excludeCenter);
-      state4.tile = spawn;
-      return { state: state4, tile: spawn, teleported: spawn !== null };
+      state6.tile = spawn;
+      return { state: state6, tile: spawn, teleported: spawn !== null };
     }
-    const arrived = manhattan(state4.tile, anchor.tile) <= config.followDistance;
-    if (state4.activity === "pursue" && arrived && anchor.onArrival === "wander") {
-      const mayWander = !anchor.tracksPlayer || state4.idleTicks >= config.idleTicksBeforeWander;
+    const arrived = manhattan(state6.tile, anchor.tile) <= config.followDistance;
+    if (state6.activity === "pursue" && arrived && anchor.onArrival === "wander") {
+      const mayWander = !anchor.tracksPlayer || state6.idleTicks >= config.idleTicksBeforeWander;
       if (mayWander) {
-        state4.activity = "wander";
-        state4.wanderTarget = null;
-        state4.wanderCooldown = 0;
+        state6.activity = "wander";
+        state6.wanderTarget = null;
+        state6.wanderTargetIsInterest = false;
+        state6.wanderCooldown = 0;
       }
     }
     const passable = (x, y) => stepWalkable(x, y) && !(blocked !== null && x === blocked.x && y === blocked.y);
     let isGoal = null;
-    if (state4.activity === "pursue") {
+    let interestReached = null;
+    if (state6.activity === "pursue") {
       if (!arrived) {
         isGoal = (x, y) => manhattan({ x, y }, anchor.tile) <= config.followDistance;
       }
     } else {
-      const target = resolveWanderTarget(state4, anchor, config, zoneWalkable, random);
+      const wander = resolveWanderTarget(state6, anchor, config, zoneWalkable, random, pickInterest2);
+      interestReached = wander.interestReached;
+      const target = wander.target;
       if (target) isGoal = (x, y) => x === target.x && y === target.y;
     }
-    if (!isGoal) return { state: state4, tile: state4.tile, teleported: false };
-    const next = findFirstStep(state4.tile, isGoal, passable);
+    if (!isGoal) return { state: state6, tile: state6.tile, teleported: false, interestReached };
+    const next = findFirstStep(state6.tile, isGoal, passable);
     if (!next) {
-      if (state4.activity === "wander") state4.wanderTarget = null;
-      return { state: state4, tile: state4.tile, teleported: false };
+      if (state6.activity === "wander") {
+        state6.wanderTarget = null;
+        state6.wanderTargetIsInterest = false;
+      }
+      return { state: state6, tile: state6.tile, teleported: false };
     }
-    state4.tile = next;
-    return { state: state4, tile: next, teleported: false };
+    state6.tile = next;
+    return { state: state6, tile: next, teleported: false };
   }
-  function resolveWanderTarget(state4, anchor, config, isWalkable, random) {
-    if (state4.wanderCooldown > 0) {
-      state4.wanderCooldown--;
-      return null;
+  function resolveWanderTarget(state6, anchor, config, isWalkable, random, pickInterest2) {
+    if (state6.wanderCooldown > 0) {
+      state6.wanderCooldown--;
+      return { target: null, interestReached: null };
     }
-    if (state4.wanderTarget && sameTile(state4.wanderTarget, state4.tile)) {
-      state4.wanderTarget = null;
-      state4.wanderCooldown = config.wanderPauseTicks;
-      return null;
+    if (state6.wanderTarget && sameTile(state6.wanderTarget, state6.tile)) {
+      const reached = state6.wanderTargetIsInterest ? { ...state6.wanderTarget } : null;
+      state6.wanderTarget = null;
+      state6.wanderTargetIsInterest = false;
+      state6.wanderCooldown = drawWanderPause(config, random);
+      return { target: null, interestReached: reached };
     }
-    if (!state4.wanderTarget) {
-      state4.wanderTarget = pickWanderTarget(
-        anchor.tile,
-        wanderRadiusOf(anchor, config),
-        isWalkable,
-        random
-      );
-      if (!state4.wanderTarget) {
-        state4.wanderCooldown = config.wanderPauseTicks;
-        return null;
+    if (!state6.wanderTarget) {
+      const radius = wanderRadiusOf(anchor, config);
+      const interest = pickInterest2 && state6.tile ? pickInterestSafely(pickInterest2, anchor.tile, radius, state6.tile, isWalkable) : null;
+      state6.wanderTargetIsInterest = interest !== null;
+      state6.wanderTarget = interest ?? pickWanderTarget(anchor.tile, radius, isWalkable, random);
+      if (!state6.wanderTarget) {
+        state6.wanderCooldown = drawWanderPause(config, random);
+        return { target: null, interestReached: null };
       }
     }
-    return state4.wanderTarget;
+    return { target: state6.wanderTarget, interestReached: null };
+  }
+  function pickInterestSafely(pickInterest2, center, radius, from, isWalkable) {
+    const accepts = (x, y) => Math.max(Math.abs(x - center.x), Math.abs(y - center.y)) <= radius && !(x === center.x && y === center.y) && !(x === from.x && y === from.y) && isWalkable(x, y);
+    let picked = null;
+    try {
+      picked = pickInterest2({ center: { ...center }, radius, from: { ...from }, isWalkable: accepts });
+    } catch {
+      return null;
+    }
+    if (!picked || !Number.isInteger(picked.x) || !Number.isInteger(picked.y)) return null;
+    return accepts(picked.x, picked.y) ? { x: picked.x, y: picked.y } : null;
   }
   var STEP_INTERVAL_MS, DEFAULT_MOVEMENT_CONFIG, TASK_MOVEMENT_CONFIG, ATTENTION_MOVEMENT_CONFIG, SPAWN_SEARCH_RADIUS, wanderRadiusOf;
   var init_movement = __esm({
@@ -59106,10 +59134,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       STEP_INTERVAL_MS = 150;
       DEFAULT_MOVEMENT_CONFIG = {
         followDistance: 2,
-        // 15 s d'immobilité avant de flâner, 30 s d'arrêt entre deux balades.
+        // 15 s d'immobilité avant de flâner, puis 8 à 45 s d'arrêt entre deux
+        // balades, tirés à chaque fois.
         idleTicksBeforeWander: Math.round(15e3 / STEP_INTERVAL_MS),
         wanderRadius: 3,
-        wanderPauseTicks: Math.round(3e4 / STEP_INTERVAL_MS)
+        wanderPauseTicks: Math.round(8e3 / STEP_INTERVAL_MS),
+        wanderPauseMaxTicks: Math.round(45e3 / STEP_INTERVAL_MS)
       };
       TASK_MOVEMENT_CONFIG = {
         ...DEFAULT_MOVEMENT_CONFIG,
@@ -59291,8 +59321,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function diagnoseCompanion(npcId, sampleMs = DEFAULT_SAMPLE_MS) {
     const seen = [];
-    const record = (entries) => {
-      const entry = Array.isArray(entries) ? entries.find((e) => e?.playerId === npcId) : null;
+    const record = (entries2) => {
+      const entry = Array.isArray(entries2) ? entries2.find((e) => e?.playerId === npcId) : null;
       const pos = entry?.position;
       if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return;
       const last = seen[seen.length - 1];
@@ -59369,28 +59399,28 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function pickDialogueLine(input) {
     const { contextual, customLines, nowMs: nowMs2, random, cooldownMs } = input;
-    const state4 = {
+    const state6 = {
       lastCustomIndex: input.state.lastCustomIndex,
       mutedUntil: { ...input.state.mutedUntil }
     };
     const lines = customLines.filter((line) => typeof line === "string" && line.trim().length > 0);
     const available = contextual.filter(
-      (candidate) => candidate?.message && nowMs2 >= (state4.mutedUntil[candidate.key] ?? 0)
+      (candidate) => candidate?.message && nowMs2 >= (state6.mutedUntil[candidate.key] ?? 0)
     );
     if (available.length > 0 && (lines.length === 0 || random() < CONTEXTUAL_CHANCE)) {
       const candidate = available[Math.min(available.length - 1, Math.floor(random() * available.length))];
-      state4.mutedUntil[candidate.key] = nowMs2 + cooldownMs;
-      return { message: candidate.message, emote: candidate.emote ?? null, custom: false, state: state4 };
+      state6.mutedUntil[candidate.key] = nowMs2 + cooldownMs;
+      return { message: candidate.message, emote: candidate.emote ?? null, custom: false, state: state6 };
     }
-    if (lines.length === 0) return { message: null, emote: null, custom: false, state: state4 };
+    if (lines.length === 0) return { message: null, emote: null, custom: false, state: state6 };
     if (lines.length === 1) {
-      state4.lastCustomIndex = 0;
-      return { message: lines[0], emote: null, custom: true, state: state4 };
+      state6.lastCustomIndex = 0;
+      return { message: lines[0], emote: null, custom: true, state: state6 };
     }
     let index = Math.min(lines.length - 1, Math.floor(random() * lines.length));
-    if (index === state4.lastCustomIndex) index = (index + 1) % lines.length;
-    state4.lastCustomIndex = index;
-    return { message: lines[index], emote: null, custom: true, state: state4 };
+    if (index === state6.lastCustomIndex) index = (index + 1) % lines.length;
+    state6.lastCustomIndex = index;
+    return { message: lines[index], emote: null, custom: true, state: state6 };
   }
   var CONTEXTUAL_CHANCE, DEFAULT_CONTEXTUAL_COOLDOWN_MS;
   var init_dialogue = __esm({
@@ -59468,8 +59498,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   function markSpoke(playerId2, at = Date.now()) {
     if (playerId2) lastSpokeAt.set(playerId2, at);
   }
-  async function writeEntries(entries) {
-    const payload = { entries };
+  async function writeEntries(entries2) {
+    const payload = { entries: entries2 };
     try {
       if (!installed2) {
         ensureTickAtom();
@@ -59574,8 +59604,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   function rewritePayload(payload) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
     if (!targetNpcId || !resolver) return payload;
-    const entries = payload;
-    const entry = entries[targetNpcId];
+    const entries2 = payload;
+    const entry = entries2[targetNpcId];
     if (!entry || typeof entry !== "object") return payload;
     markSpoke(targetNpcId);
     const proposed = Number(entry.timestamp);
@@ -59583,7 +59613,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (Number.isFinite(timestamp)) lastTimestamp = timestamp;
     const stamped = timestamp === proposed ? entry : { ...entry, timestamp };
     if (entry[AUTHORED_BY_MOD] === true) {
-      return stamped === entry ? payload : { ...entries, [targetNpcId]: stamped };
+      return stamped === entry ? payload : { ...entries2, [targetNpcId]: stamped };
     }
     const original = typeof entry.message === "string" ? entry.message : "";
     let replacement = null;
@@ -59593,9 +59623,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       replacement = null;
     }
     if (!replacement || replacement === original) {
-      return stamped === entry ? payload : { ...entries, [targetNpcId]: stamped };
+      return stamped === entry ? payload : { ...entries2, [targetNpcId]: stamped };
     }
-    return { ...entries, [targetNpcId]: { ...stamped, message: replacement } };
+    return { ...entries2, [targetNpcId]: { ...stamped, message: replacement } };
   }
   function installSpeechRewriter(npcId, resolve) {
     targetNpcId = npcId;
@@ -59682,9 +59712,17 @@ Restore figures are averages; unlucky streaks do worse.`;
       state: rt.movement,
       isWalkable,
       random: Math.random,
-      config: rt.task ? TASK_MOVEMENT_CONFIG : rt.attention ? ATTENTION_MOVEMENT_CONFIG : DEFAULT_MOVEMENT_CONFIG
+      config: rt.task ? TASK_MOVEMENT_CONFIG : rt.attention ? ATTENTION_MOVEMENT_CONFIG : DEFAULT_MOVEMENT_CONFIG,
+      // Pas de flânerie à but pendant une tâche ou une attente de réponse.
+      pickInterest: rt.task || rt.attention ? null : wanderHooks?.pickInterest ?? null
     });
     rt.movement = decision.state;
+    if (decision.interestReached && wanderHooks) {
+      try {
+        wanderHooks.onInterestReached(decision.interestReached);
+      } catch {
+      }
+    }
     if (!decision.tile) return;
     await setCompanionTile(rt.npcId, rt.map.toIndex(decision.tile.x, decision.tile.y));
   }
@@ -59789,8 +59827,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     try {
       rt.unsubs.push(
-        await npcQuinoaUsers2.onChangeNow((entries) => {
-          const entry = Array.isArray(entries) ? entries.find((e) => e?.playerId === rt.npcId) : null;
+        await npcQuinoaUsers2.onChangeNow((entries2) => {
+          const entry = Array.isArray(entries2) ? entries2.find((e) => e?.playerId === rt.npcId) : null;
           const tile = roundTile(entry?.position ?? null);
           if (tile) rt.observedTile = tile;
         })
@@ -59811,7 +59849,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     startTimer2(rt);
     return true;
   }
-  var CHAT_BUBBLE_MIN_INTERVAL_MS, RENDER_WAIT_TIMEOUT_MS, CONTEXTUAL_REFRESH_MS, npcChatBubbles, npcQuinoaUsers2, runtime, starting, WALK_TIMEOUT_MS, ARRIVAL_POLL_MS, NEARBY_DISTANCE, STILL_POLL_MS, STILL_TIMEOUT_MS, stillToken, CompanionService;
+  var CHAT_BUBBLE_MIN_INTERVAL_MS, RENDER_WAIT_TIMEOUT_MS, CONTEXTUAL_REFRESH_MS, npcChatBubbles, npcQuinoaUsers2, runtime, starting, wanderHooks, WALK_TIMEOUT_MS, ARRIVAL_POLL_MS, NEARBY_DISTANCE, STILL_POLL_MS, STILL_TIMEOUT_MS, stillToken, CompanionService;
   var init_companion = __esm({
     "src/services/companion/index.ts"() {
       init_atoms();
@@ -59836,6 +59874,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       npcQuinoaUsers2 = makeAtom("npcQuinoaUsersAtom");
       runtime = null;
       starting = null;
+      wanderHooks = null;
       WALK_TIMEOUT_MS = 5e3;
       ARRIVAL_POLL_MS = 50;
       NEARBY_DISTANCE = 3;
@@ -59845,6 +59884,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       CompanionService = {
         isRunning() {
           return runtime !== null;
+        },
+        /** Branche (ou débranche, avec `null`) le pilote de flânerie à but. */
+        setWanderHooks(hooks3) {
+          wanderHooks = hooks3;
         },
         /**
          * Position de la tuile de terre d'un crop, dans la parcelle du joueur.
@@ -60379,8 +60422,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/services/companion/chat/walk.ts
   async function createWalker(onGiveUp) {
     if (!CompanionService.isRunning()) return IDLE;
-    const slotIdx = await readMySlotIdx();
-    if (slotIdx === null) return IDLE;
+    const slotIdx2 = await readMySlotIdx();
+    if (slotIdx2 === null) return IDLE;
     let walking = true;
     let failures = 0;
     const record = (arrived) => {
@@ -60402,7 +60445,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return {
       async toGardenTile(dirtTileIdx) {
         if (!walking) return;
-        await goTo(CompanionService.gardenTileXY(slotIdx, dirtTileIdx));
+        await goTo(CompanionService.gardenTileXY(slotIdx2, dirtTileIdx));
       },
       async toPosition(position2) {
         if (!walking) return;
@@ -60767,7 +60810,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return candidates;
   }
   function isSettled(picks, stillFeedable) {
-    return !picks.some((pick) => stillFeedable.has(pick.petId));
+    return !picks.some((pick2) => stillFeedable.has(pick2.petId));
   }
   function describeFeed(candidates) {
     if (candidates.length === 0) return "nothing";
@@ -60880,21 +60923,21 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function findFeedable(search2) {
     return (await reviewFeeding(search2)).candidates;
   }
-  function iconOf2(pick) {
-    return petThing(pick.pet, "") ?? petSpeciesIcon(pick.petSpecies);
+  function iconOf2(pick2) {
+    return petThing(pick2.pet, "") ?? petSpeciesIcon(pick2.petSpecies);
   }
   function feedBubble(picks) {
     const only = picks.length === 1 ? picks[0] : null;
     if (only) return compose(iconOf2(only), ` ${only.petName} is at ${only.hungerPct}%. Feed it?`);
     const seen = /* @__PURE__ */ new Set();
-    const icons = picks.filter((pick) => !seen.has(pick.petSpecies) && seen.add(pick.petSpecies)).slice(0, 2).map(iconOf2);
+    const icons = picks.filter((pick2) => !seen.has(pick2.petSpecies) && seen.add(pick2.petSpecies)).slice(0, 2).map(iconOf2);
     return compose(...spaced(icons.filter((icon) => icon !== null)), ` ${picks.length} pets are hungry. Feed them all?`);
   }
   function feedQuestion(picks) {
-    const listed = picks.flatMap((pick, index) => [
+    const listed = picks.flatMap((pick2, index) => [
       index === 0 ? "" : ", ",
-      iconOf2(pick),
-      ` ${pick.petName} (${pick.hungerPct}%)`
+      iconOf2(pick2),
+      ` ${pick2.petName} (${pick2.hungerPct}%)`
     ]);
     return compose(
       picks.length === 1 ? "" : `${picks.length} pets are hungry: `,
@@ -60920,10 +60963,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function petIcons(picks) {
     const seen = /* @__PURE__ */ new Set();
     const icons = [];
-    for (const pick of picks) {
-      if (seen.has(pick.petSpecies) || icons.length >= 2) continue;
-      seen.add(pick.petSpecies);
-      const icon = petThing(pick.pet, "") ?? petSpeciesIcon(pick.petSpecies);
+    for (const pick2 of picks) {
+      if (seen.has(pick2.petSpecies) || icons.length >= 2) continue;
+      seen.add(pick2.petSpecies);
+      const icon = petThing(pick2.pet, "") ?? petSpeciesIcon(pick2.petSpecies);
       if (icon) icons.push(icon);
     }
     return icons;
@@ -60968,15 +61011,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     const walker = await createWalker((message) => reporter2.say("system", message));
     const fed = [];
     const failures = [];
-    for (const pick of picks) {
+    for (const pick2 of picks) {
       if (reporter2.stopped()) break;
-      const outcome = await runFeed(pick, walker);
+      const outcome = await runFeed(pick2, walker);
       if (outcome.ok) {
-        fed.push(pick);
-        const fedLine = `${pick.petName} has been fed.`;
-        reporter2.say("system", fedLine, compose(petThing(pick.pet, "") ?? petSpeciesIcon(pick.petSpecies), " ", fedLine));
+        fed.push(pick2);
+        const fedLine = `${pick2.petName} has been fed.`;
+        reporter2.say("system", fedLine, compose(petThing(pick2.pet, "") ?? petSpeciesIcon(pick2.petSpecies), " ", fedLine));
       } else {
-        failures.push(`${pick.petName} (${outcome.reason})`);
+        failures.push(`${pick2.petName} (${outcome.reason})`);
       }
       reporter2.progress(fed.length + failures.length, picks.length);
     }
@@ -60987,7 +61030,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     const tail = failures.length > 0 ? ` I could not manage ${failures.join(", ")}.` : "";
-    const fedNames = fed.map((pick) => pick.petName);
+    const fedNames = fed.map((pick2) => pick2.petName);
     const names = fedNames.length === 1 ? fedNames[0] : `${fedNames.slice(0, -1).join(", ")} and ${fedNames[fedNames.length - 1]}`;
     const done = `${cancelled ? "Stopped there. " : ""}Fed ${names}.${tail}`;
     reporter2.say("report", done, compose(...spaced(petIcons(fed)), " ", done));
@@ -61995,15 +62038,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     CompanionChat.dropStaleProposal();
-    const pending3 = CompanionChat.getProposal();
+    const pending6 = CompanionChat.getProposal();
     const alertsOn = settings.feedAlerts;
-    if (pending3?.commandId !== "feed" && !alertsOn) {
+    if (pending6?.commandId !== "feed" && !alertsOn) {
       releaseIfIdle();
       return;
     }
     const picks = await findFeedable().catch(() => []);
-    if (pending3?.commandId === "feed") {
-      const withdrawn = CompanionChat.withdrawFeedIfSettled(new Set(picks.map((pick) => pick.petId)));
+    if (pending6?.commandId === "feed") {
+      const withdrawn = CompanionChat.withdrawFeedIfSettled(new Set(picks.map((pick2) => pick2.petId)));
       if (withdrawn) lastOfferedSignature = "";
       else await announceIfNeeded(picks);
     }
@@ -62149,11 +62192,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       status
     );
     refresh();
-    const timer3 = window.setInterval(refresh, STATUS_REFRESH_MS);
+    const timer4 = window.setInterval(refresh, STATUS_REFRESH_MS);
     view.append(card4.root);
     view.__cleanup__ = () => {
       disposed = true;
-      clearInterval(timer3);
+      clearInterval(timer4);
     };
   }
   var STATUS_REFRESH_MS, MODE_LABELS;
@@ -62567,9 +62610,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     let shownIdentity = null;
     return {
       root,
-      setStatus(text, busy2) {
+      setStatus(text, busy4) {
         status.textContent = text;
-        css2(status, { color: busy2 ? TEAL : TEXT_DIM });
+        css2(status, { color: busy4 ? TEAL : TEXT_DIM });
       },
       setIdentity(identity) {
         if (identity.npcId === shownIdentity) return;
@@ -62743,11 +62786,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     root.append(count, sprites);
     return {
       root,
-      update(total, entries, hidden) {
+      update(total, entries2, hidden) {
         count.textContent = total === 0 ? "Nothing to pick" : `${total} crop${total === 1 ? "" : "s"}`;
         sprites.innerHTML = "";
-        sprites.style.display = entries.length === 0 ? "none" : "flex";
-        for (const entry of entries) {
+        sprites.style.display = entries2.length === 0 ? "none" : "flex";
+        for (const entry of entries2) {
           const pair = document.createElement("div");
           pair.title = entry.label;
           css2(pair, { display: "flex", alignItems: "center", gap: "3px" });
@@ -63065,7 +63108,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       host,
       title: "What should I harvest?",
       widthPx: 460,
-      onClose: () => clearInterval(timer3)
+      onClose: () => clearInterval(timer4)
     });
     const speciesCard = filterCard("", "Species");
     const mutationCard = filterCard("", "Mutations");
@@ -63254,7 +63297,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (!modal.isOpen()) return;
       render();
     }
-    const timer3 = window.setInterval(() => void refresh(), REFRESH_MS);
+    const timer4 = window.setInterval(() => void refresh(), REFRESH_MS);
     render();
     void refresh();
     return { close: modal.close };
@@ -63284,7 +63327,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       host,
       title: "Who needs feeding?",
       widthPx: 420,
-      onClose: () => clearInterval(timer3)
+      onClose: () => clearInterval(timer4)
     });
     const list = document.createElement("div");
     css2(list, { display: "flex", flexDirection: "column", gap: "7px" });
@@ -63350,7 +63393,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (!modal.isOpen()) return;
       render();
     }
-    const timer3 = window.setInterval(() => void refresh(), REFRESH_MS2);
+    const timer4 = window.setInterval(() => void refresh(), REFRESH_MS2);
     render();
     void refresh();
   }
@@ -63510,7 +63553,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       title: "What should I plant?",
       widthPx: 700,
       onClose: () => {
-        clearInterval(timer3);
+        clearInterval(timer4);
         grid.destroy();
       }
     });
@@ -63665,7 +63708,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       plan = new Map(viablePlan([...plan.values()], scope).map((entry) => [entry.tileIndex, entry]));
       render();
     }
-    const timer3 = window.setInterval(() => void refresh(), REFRESH_MS3);
+    const timer4 = window.setInterval(() => void refresh(), REFRESH_MS3);
     render();
     void refresh();
   }
@@ -63750,7 +63793,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       host,
       title: "Hatching",
       widthPx: 470,
-      onClose: () => clearInterval(timer3)
+      onClose: () => clearInterval(timer4)
     });
     const speciesCard = filterCard("", "Keep species");
     const mutationCard = filterCard("", "Keep mutations");
@@ -63926,7 +63969,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (!modal.isOpen()) return;
       render();
     }
-    const timer3 = window.setInterval(() => void refresh(), REFRESH_MS4);
+    const timer4 = window.setInterval(() => void refresh(), REFRESH_MS4);
     render();
     void refresh();
   }
@@ -64639,15 +64682,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return eggId.replace(/([a-z])([A-Z])/g, "$1 $2");
   }
-  function luckOf(state4) {
+  function luckOf(state6) {
     const out = {};
-    for (const [eggId, counters] of Object.entries(state4?.counters ?? {})) {
+    for (const [eggId, counters] of Object.entries(state6?.counters ?? {})) {
       out[eggId] = { gold: Number(counters?.gold) || 0, rainbow: Number(counters?.rainbow) || 0 };
     }
     return out;
   }
-  function onHatchTracker(state4) {
-    const next = luckOf(state4);
+  function onHatchTracker(state6) {
+    const next = luckOf(state6);
     const prev = prevLuck;
     prevLuck = next;
     if (!prev) return;
@@ -64666,8 +64709,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (ids.length === 0) return;
     let names = ids.map((id) => id.split(":").slice(1).join(":"));
     try {
-      const state4 = await NotifierService.get();
-      const byId = new Map(state4.rows.map((row) => [row.id, row.name]));
+      const state6 = await NotifierService.get();
+      const byId = new Map(state6.rows.map((row) => [row.id, row.name]));
       names = ids.map((id, i) => byId.get(id) ?? names[i]);
     } catch {
     }
@@ -64688,7 +64731,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     try {
       prevLuck = luckOf(HatchTracker.getState());
-      add(HatchTracker.subscribe((state4) => onHatchTracker(state4)));
+      add(HatchTracker.subscribe((state6) => onHatchTracker(state6)));
     } catch {
     }
     try {
@@ -64771,6 +64814,917 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/services/companion/wanderInterest.ts
+  function pickOne3(options, random) {
+    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
+  }
+  function normalizeTs2(value) {
+    const raw = typeof value === "number" ? value : Number(value);
+    if (!Number.isFinite(raw) || raw <= 0) return null;
+    return raw < 1e11 ? raw * 1e3 : raw;
+  }
+  function interestLine(kind, label2, random) {
+    return pickOne3(LINES[kind], random)(label2);
+  }
+  function plantInterest(plant, dirtIdx, input) {
+    const slots = Array.isArray(plant.slots) ? plant.slots : [];
+    let best = null;
+    const consider = (found) => {
+      if (!best || KIND_RANK[found.kind] > KIND_RANK[best.kind]) best = found;
+    };
+    for (const raw of slots) {
+      const slot = raw;
+      if (!slot || typeof slot !== "object") continue;
+      const speciesId = typeof slot.species === "string" && slot.species ? slot.species : typeof plant.species === "string" && plant.species ? plant.species : null;
+      if (!speciesId) continue;
+      const crop = input.cropName(speciesId);
+      const mutations = Array.isArray(slot.mutations) ? slot.mutations.filter((m) => typeof m === "string") : [];
+      const rare = mutations.find((m) => input.rareMutations.has(m));
+      if (rare) {
+        consider({ dirtIdx, kind: "rare", label: `${input.mutationName(rare)} ${crop}` });
+        continue;
+      }
+      if (slot.preserved === true) continue;
+      const end = normalizeTs2(slot.endTime);
+      if (end === null) continue;
+      if (end <= input.now) {
+        consider({ dirtIdx, kind: "ripe", label: crop });
+        continue;
+      }
+      const start2 = normalizeTs2(slot.startTime);
+      const growth = start2 !== null && end > start2 ? (input.now - start2) / (end - start2) : 0;
+      if (end - input.now <= ALMOST_READY_MS || growth >= ALMOST_READY_GROWTH) {
+        consider({ dirtIdx, kind: "almostRipe", label: crop });
+      }
+    }
+    return best;
+  }
+  function eggInterest(egg, dirtIdx, input) {
+    const matured = normalizeTs2(egg.maturedAt);
+    if (matured === null) return null;
+    const eggId = typeof egg.eggId === "string" && egg.eggId ? egg.eggId : null;
+    const label2 = eggId ? input.eggName(eggId) : "egg";
+    if (matured <= input.now) return { dirtIdx, kind: "eggReady", label: label2 };
+    if (matured - input.now <= ALMOST_READY_MS) return { dirtIdx, kind: "eggSoon", label: label2 };
+    return null;
+  }
+  function standingTiles(target, area) {
+    const orthogonal = [];
+    const diagonal = [];
+    NEIGHBOURS.forEach(([dx, dy], i) => {
+      const x = target.x + dx;
+      const y = target.y + dy;
+      if (!area.isWalkable(x, y)) return;
+      (i < 4 ? orthogonal : diagonal).push({ x, y });
+    });
+    return orthogonal.length > 0 ? orthogonal : diagonal;
+  }
+  function listInterests(input) {
+    const tiles = input.tileObjects;
+    if (!tiles || typeof tiles !== "object") return [];
+    const { area } = input;
+    const out = [];
+    for (const [key2, raw] of Object.entries(tiles)) {
+      const obj = raw;
+      if (!obj || typeof obj !== "object") continue;
+      const dirtIdx = Number(key2);
+      if (!Number.isInteger(dirtIdx) || dirtIdx < 0) continue;
+      const found = obj.objectType === "plant" ? plantInterest(obj, dirtIdx, input) : obj.objectType === "egg" ? eggInterest(obj, dirtIdx, input) : null;
+      if (!found) continue;
+      const target = input.tileXY(dirtIdx);
+      if (!target) continue;
+      if (Math.max(Math.abs(target.x - area.center.x), Math.abs(target.y - area.center.y)) > area.radius + 1) continue;
+      const spots = standingTiles(target, area);
+      if (spots.length === 0) continue;
+      out.push({ target: { ...target }, dirtTileIdx: dirtIdx, kind: found.kind, label: found.label, spots });
+    }
+    return out;
+  }
+  function pickWanderInterest(input) {
+    const chance = input.chance ?? INTEREST_CHANCE;
+    if (!(input.random() < chance)) return null;
+    const all = listInterests(input);
+    if (all.length === 0) return null;
+    const kinds = [...new Set(all.map((i) => i.kind))];
+    const total = kinds.reduce((sum, k) => sum + KIND_WEIGHT[k], 0);
+    let roll = input.random() * total;
+    let kind = kinds[kinds.length - 1];
+    for (const k of kinds) {
+      roll -= KIND_WEIGHT[k];
+      if (roll < 0) {
+        kind = k;
+        break;
+      }
+    }
+    const chosen = pickOne3(
+      all.filter((i) => i.kind === kind),
+      input.random
+    );
+    return {
+      tile: { ...pickOne3(chosen.spots, input.random) },
+      target: chosen.target,
+      dirtTileIdx: chosen.dirtTileIdx,
+      kind: chosen.kind,
+      label: chosen.label,
+      emote: KIND_EMOTE[chosen.kind],
+      line: interestLine(chosen.kind, chosen.label, input.random)
+    };
+  }
+  function shouldComment(input) {
+    if (input.busy) return false;
+    if (input.distanceToPlayer === null || input.distanceToPlayer > COMMENT_MAX_DISTANCE) return false;
+    if (input.lastCommentAt > 0 && input.now - input.lastCommentAt < COMMENT_COOLDOWN_MS) return false;
+    return input.random() < COMMENT_CHANCE;
+  }
+  var INTEREST_CHANCE, ALMOST_READY_MS, ALMOST_READY_GROWTH, KIND_WEIGHT, KIND_EMOTE, KIND_RANK, withArticle, LINES, NEIGHBOURS, COMMENT_CHANCE, COMMENT_COOLDOWN_MS, COMMENT_MAX_DISTANCE;
+  var init_wanderInterest = __esm({
+    "src/services/companion/wanderInterest.ts"() {
+      init_emoteTypes();
+      INTEREST_CHANCE = 0.5;
+      ALMOST_READY_MS = 2 * 6e4;
+      ALMOST_READY_GROWTH = 0.9;
+      KIND_WEIGHT = {
+        rare: 5,
+        eggReady: 3,
+        ripe: 2,
+        almostRipe: 2,
+        eggSoon: 2
+      };
+      KIND_EMOTE = {
+        rare: EmoteType.Love,
+        ripe: EmoteType.Clapping,
+        eggReady: EmoteType.Clapping,
+        almostRipe: EmoteType.Questioning,
+        eggSoon: EmoteType.Questioning
+      };
+      KIND_RANK = {
+        rare: 4,
+        eggReady: 3,
+        ripe: 2,
+        almostRipe: 1,
+        eggSoon: 0
+      };
+      withArticle = (label2) => `${/^[aeiou]/i.test(label2) ? "an" : "a"} ${label2}`;
+      LINES = {
+        rare: [
+          (l) => `Ooh, ${withArticle(l)}.`,
+          (l) => `Look at this ${l}!`,
+          (l) => `${withArticle(l).replace(/^a/, "A")}. Pretty, isn't it?`,
+          (l) => `I could stare at this ${l} all day.`
+        ],
+        ripe: [
+          (l) => `This ${l} looks ready.`,
+          (l) => `Mm, this ${l} is ripe.`,
+          () => `This one's ready to pick.`
+        ],
+        almostRipe: [
+          () => `This one's almost ready.`,
+          (l) => `Just a little longer, ${l}.`,
+          (l) => `Almost there, little ${l}.`
+        ],
+        eggReady: [
+          () => `This egg is ready to hatch!`,
+          (l) => `Something's wiggling in this ${l}.`,
+          () => `I think this one wants out.`
+        ],
+        eggSoon: [
+          (l) => `This ${l} is about to hatch.`,
+          () => `Any minute now...`,
+          () => `I can hear something in there.`
+        ]
+      };
+      NEIGHBOURS = [
+        [0, 1],
+        [1, 0],
+        [-1, 0],
+        [0, -1],
+        [1, 1],
+        [-1, 1],
+        [1, -1],
+        [-1, -1]
+      ];
+      COMMENT_CHANCE = 0.25;
+      COMMENT_COOLDOWN_MS = 3 * 6e4;
+      COMMENT_MAX_DISTANCE = 8;
+    }
+  });
+
+  // src/services/companion/wanderWatch.ts
+  function busy2() {
+    if (!CompanionService.isRunning()) return true;
+    if (CompanionService.isBusy()) return true;
+    try {
+      if (CompanionChat.isRunning() || CompanionChat.getProposal()) return true;
+    } catch {
+    }
+    return false;
+  }
+  function rareMutations2() {
+    const out = /* @__PURE__ */ new Set();
+    try {
+      for (const [key2, def] of Object.entries(mutationCatalog2 ?? {})) {
+        if (Number(def?.baseChance) > 0) out.add(key2);
+      }
+    } catch {
+    }
+    return out;
+  }
+  function cropName2(species) {
+    try {
+      const entry = plantCatalog2?.[species];
+      const name = entry?.crop?.name ?? entry?.name;
+      if (typeof name === "string" && name.trim()) return name.trim();
+    } catch {
+    }
+    return spaced2(species);
+  }
+  function mutationName(mutation) {
+    try {
+      const name = mutationCatalog2?.[mutation]?.name;
+      if (typeof name === "string" && name.trim()) return name.trim();
+    } catch {
+    }
+    return spaced2(mutation);
+  }
+  function eggName3(eggId) {
+    try {
+      const name = eggCatalog2?.[eggId]?.name;
+      if (typeof name === "string" && name.trim()) return name.trim();
+    } catch {
+    }
+    return spaced2(eggId);
+  }
+  function pickInterest(area) {
+    pending3 = null;
+    if (!running3 || busy2()) return null;
+    const slot = slotIdx;
+    if (slot === null || !latestGarden2) return null;
+    const interest = pickWanderInterest({
+      tileObjects: latestGarden2,
+      tileXY: (dirtTileIdx) => CompanionService.gardenTileXY(slot, dirtTileIdx),
+      now: Date.now(),
+      area,
+      random: Math.random,
+      rareMutations: rareMutations2(),
+      cropName: cropName2,
+      mutationName,
+      eggName: eggName3
+    });
+    if (!interest) return null;
+    pending3 = { interest, at: Date.now() };
+    return interest.tile;
+  }
+  function onInterestReached(tile) {
+    const current = pending3;
+    pending3 = null;
+    if (!current || !running3) return;
+    const { interest, at } = current;
+    const now2 = Date.now();
+    if (now2 - at > PENDING_TTL_MS) return;
+    if (interest.tile.x !== tile.x || interest.tile.y !== tile.y) return;
+    if (busy2()) return;
+    const still = latestGarden2?.[String(interest.dirtTileIdx)];
+    if (!still || typeof still !== "object") return;
+    let reactions = false;
+    try {
+      reactions = loadCompanionSettings().reactions;
+    } catch {
+    }
+    const speak3 = reactions && shouldComment({
+      now: now2,
+      lastCommentAt,
+      distanceToPlayer: CompanionService.distanceToPlayer(),
+      busy: false,
+      random: Math.random
+    });
+    void (async () => {
+      if (speak3) {
+        lastCommentAt = now2;
+        await CompanionService.say(interest.line);
+      }
+      await CompanionService.emote(interest.emote);
+    })().catch(() => {
+    });
+  }
+  async function refreshSlot() {
+    slotIdx = await readMySlotIdx();
+  }
+  async function subscribe3() {
+    try {
+      const unsub = await Atoms.data.gardenTileObjects.onChangeNow((next) => {
+        latestGarden2 = next;
+      });
+      if (typeof unsub === "function") unsubscribers3.push(unsub);
+    } catch {
+    }
+  }
+  function startWanderWatch() {
+    if (running3) return;
+    running3 = true;
+    CompanionService.setWanderHooks(hooks2);
+    void subscribe3().catch(() => {
+    });
+    void refreshSlot().catch(() => {
+    });
+    timers2.push(
+      window.setInterval(() => {
+        void refreshSlot().catch(() => {
+        });
+      }, SLOT_REFRESH_MS)
+    );
+  }
+  var SLOT_REFRESH_MS, PENDING_TTL_MS, running3, unsubscribers3, timers2, latestGarden2, slotIdx, pending3, lastCommentAt, spaced2, hooks2;
+  var init_wanderWatch = __esm({
+    "src/services/companion/wanderWatch.ts"() {
+      init_data();
+      init_atoms();
+      init_companion();
+      init_anchors();
+      init_chat();
+      init_state4();
+      init_wanderInterest();
+      SLOT_REFRESH_MS = 3e4;
+      PENDING_TTL_MS = 6e4;
+      running3 = false;
+      unsubscribers3 = [];
+      timers2 = [];
+      latestGarden2 = null;
+      slotIdx = null;
+      pending3 = null;
+      lastCommentAt = 0;
+      spaced2 = (id) => id.replace(/([a-z])([A-Z])/g, "$1 $2");
+      hooks2 = { pickInterest, onInterestReached };
+    }
+  });
+
+  // src/services/companion/emoteMirror.ts
+  function latestOwnEmote(entries2, playerId2, ignoreIds = []) {
+    if (!playerId2 || !Array.isArray(entries2) || ignoreIds.includes(playerId2)) return null;
+    let best = null;
+    for (const raw of entries2) {
+      const entry = raw;
+      if (!entry || entry.kind !== "emote" || entry.playerId !== playerId2) continue;
+      const emote = entry.emoteType;
+      const at = entry.lastTimestampMs;
+      if (typeof emote !== "number" || !PLAYABLE.has(emote)) continue;
+      if (typeof at !== "number" || !Number.isFinite(at)) continue;
+      if (!best || at > best.at) best = { emote, at };
+    }
+    return best;
+  }
+  function initialMirrorState() {
+    return {
+      primed: false,
+      scope: null,
+      seenAt: Number.NEGATIVE_INFINITY,
+      streakCount: 0,
+      streakAnswers: 0,
+      streakLastAt: Number.NEGATIVE_INFINITY,
+      streakSpamRolled: false,
+      lastMirrorAt: Number.NEGATIVE_INFINITY,
+      lastLineAt: Number.NEGATIVE_INFINITY,
+      lastSpamLineAt: Number.NEGATIVE_INFINITY
+    };
+  }
+  function observeOwnEmote(state6, read) {
+    if (!read) return { state: state6, fresh: null };
+    if (!state6.primed || state6.scope !== read.scope) {
+      return {
+        state: { ...state6, primed: true, scope: read.scope, seenAt: read.latest?.at ?? Number.NEGATIVE_INFINITY },
+        fresh: null
+      };
+    }
+    const latest = read.latest;
+    if (!latest || latest.at <= state6.seenAt) return { state: state6, fresh: null };
+    return { state: { ...state6, seenAt: latest.at }, fresh: latest };
+  }
+  function pick(list, random) {
+    const i = Math.floor(random() * list.length);
+    return list[Math.min(list.length - 1, Math.max(0, i))];
+  }
+  function mirrorEmoteFor(played, random) {
+    switch (played) {
+      case EmoteType.Crying:
+        return random() < 0.6 ? EmoteType.Love : EmoteType.Crying;
+      case EmoteType.Angered:
+        return random() < 0.6 ? EmoteType.Questioning : EmoteType.Crying;
+      default:
+        return played;
+    }
+  }
+  function mirrorDelay(random) {
+    const span = MIRROR_DELAY_MAX_MS - MIRROR_DELAY_MIN_MS;
+    const r = Math.min(1, Math.max(0, random()));
+    return Math.round(MIRROR_DELAY_MIN_MS + r * span);
+  }
+  function decideMirror(state6, played, ctx2) {
+    const { now: now2, random } = ctx2;
+    let next = now2 - state6.streakLastAt > STREAK_GAP_MS ? { ...state6, streakCount: 1, streakAnswers: 0, streakSpamRolled: false, streakLastAt: now2 } : { ...state6, streakCount: state6.streakCount + 1, streakLastAt: now2 };
+    if (!ctx2.available || ctx2.distance === null || ctx2.distance > MIRROR_MAX_DISTANCE) {
+      return { state: next, action: null };
+    }
+    if (next.streakCount >= SPAM_THRESHOLD && !next.streakSpamRolled && now2 - next.lastSpamLineAt >= SPAM_LINE_COOLDOWN_MS) {
+      next = { ...next, streakSpamRolled: true };
+      if (random() < SPAM_LINE_CHANCE) {
+        next = { ...next, lastSpamLineAt: now2, lastLineAt: now2, lastMirrorAt: now2 };
+        return { state: next, action: { kind: "line", line: pick(SPAM_LINES, random), delayMs: mirrorDelay(random) } };
+      }
+    }
+    if (now2 - next.lastMirrorAt < MIRROR_COOLDOWN_MS) return { state: next, action: null };
+    if (next.streakAnswers >= STREAK_MAX_ANSWERS) return { state: next, action: null };
+    if (next.streakAnswers >= 1 && random() >= SECOND_ANSWER_CHANCE) {
+      return { state: { ...next, streakAnswers: STREAK_MAX_ANSWERS }, action: null };
+    }
+    const emote = mirrorEmoteFor(played.emote, random);
+    const delayMs = mirrorDelay(random);
+    let line = null;
+    if (now2 - next.lastLineAt >= LINE_COOLDOWN_MS && random() < LINE_CHANCE) {
+      const lines = MIRROR_LINES[played.emote];
+      if (lines && lines.length) line = pick(lines, random);
+    }
+    next = {
+      ...next,
+      streakAnswers: next.streakAnswers + 1,
+      lastMirrorAt: now2,
+      lastLineAt: line ? now2 : next.lastLineAt
+    };
+    return { state: next, action: { kind: "mirror", emote, delayMs, line } };
+  }
+  var MIRROR_MAX_DISTANCE, MIRROR_COOLDOWN_MS, MIRROR_DELAY_MIN_MS, MIRROR_DELAY_MAX_MS, STREAK_GAP_MS, STREAK_MAX_ANSWERS, SECOND_ANSWER_CHANCE, LINE_CHANCE, LINE_COOLDOWN_MS, SPAM_THRESHOLD, SPAM_LINE_CHANCE, SPAM_LINE_COOLDOWN_MS, PLAYABLE, MIRROR_LINES, SPAM_LINES;
+  var init_emoteMirror = __esm({
+    "src/services/companion/emoteMirror.ts"() {
+      init_emoteTypes();
+      MIRROR_MAX_DISTANCE = 8;
+      MIRROR_COOLDOWN_MS = 6e3;
+      MIRROR_DELAY_MIN_MS = 400;
+      MIRROR_DELAY_MAX_MS = 1200;
+      STREAK_GAP_MS = 12e3;
+      STREAK_MAX_ANSWERS = 2;
+      SECOND_ANSWER_CHANCE = 0.5;
+      LINE_CHANCE = 1 / 6;
+      LINE_COOLDOWN_MS = 12e4;
+      SPAM_THRESHOLD = 6;
+      SPAM_LINE_CHANCE = 0.3;
+      SPAM_LINE_COOLDOWN_MS = 3e5;
+      PLAYABLE = new Set(
+        Object.values(EmoteType).filter((value) => value !== EmoteType.Idle)
+      );
+      MIRROR_LINES = {
+        [EmoteType.Clapping]: ["Bravo!", "Woo!", "Nice one!"],
+        [EmoteType.Laughing]: ["Haha!", "Hehe.", "Too funny."],
+        [EmoteType.Angered]: ["Uh oh.", "Easy there.", "What happened?"],
+        [EmoteType.Crying]: ["Aww.", "There, there.", "I'm here."],
+        [EmoteType.Questioning]: ["Hmm?", "No idea either.", "Good question."],
+        [EmoteType.Love]: ["Aww.", "Same!", "Right back at you!"]
+      };
+      SPAM_LINES = ["Okay okay, I get it!", "Alright, alright!", "You're on a roll, huh?"];
+    }
+  });
+
+  // src/services/companion/emoteMirrorWatch.ts
+  function enabled3() {
+    try {
+      const settings = loadCompanionSettings();
+      return settings.enabled && settings.reactions;
+    } catch {
+      return false;
+    }
+  }
+  function busy3() {
+    if (!CompanionService.isRunning()) return true;
+    if (CompanionService.isBusy()) return true;
+    try {
+      if (CompanionChat.isRunning() || CompanionChat.getProposal()) return true;
+    } catch {
+    }
+    return false;
+  }
+  function cancelPending2() {
+    if (pending4 === null) return;
+    window.clearTimeout(pending4);
+    pending4 = null;
+  }
+  async function perform(action2) {
+    if (!running4 || !enabled3() || busy3()) return;
+    if (action2.line) {
+      try {
+        await CompanionService.say(action2.line);
+      } catch {
+      }
+    }
+    if (action2.kind === "mirror") await CompanionService.emote(action2.emote);
+  }
+  function schedule(action2) {
+    cancelPending2();
+    pending4 = window.setTimeout(() => {
+      pending4 = null;
+      void perform(action2).catch(() => {
+      });
+    }, action2.delayMs);
+  }
+  function currentRead() {
+    if (!localId || !Array.isArray(entries)) return null;
+    const npcId = CompanionService.getNpcId();
+    return {
+      scope: `${roomId ?? ""}|${localId}`,
+      latest: latestOwnEmote(entries, localId, npcId ? [npcId] : [])
+    };
+  }
+  function process() {
+    const seen = observeOwnEmote(state4, currentRead());
+    state4 = seen.state;
+    if (!seen.fresh) return;
+    const decided = decideMirror(state4, seen.fresh, {
+      now: Date.now(),
+      available: enabled3() && !busy3(),
+      distance: CompanionService.distanceToPlayer(),
+      random: Math.random
+    });
+    state4 = decided.state;
+    if (decided.action) schedule(decided.action);
+  }
+  function onRoomState(next) {
+    const data = next?.data;
+    roomId = typeof data?.roomId === "string" ? data.roomId : null;
+    entries = data?.chat?.entries;
+    process();
+  }
+  function onPlayerId(next) {
+    localId = typeof next === "string" && next ? next : null;
+    process();
+  }
+  function sameChat(a, b) {
+    const da = a?.data;
+    const db = b?.data;
+    return da?.roomId === db?.roomId && da?.chat?.entries === db?.chat?.entries;
+  }
+  async function subscribe4(gen) {
+    const add = (unsub) => {
+      if (typeof unsub !== "function") return;
+      if (!running4 || gen !== generation) {
+        try {
+          unsub();
+        } catch {
+        }
+        return;
+      }
+      unsubscribers4.push(unsub);
+    };
+    try {
+      add(await Atoms.player.playerId.onChangeNow((next) => {
+        if (gen === generation) onPlayerId(next);
+      }));
+    } catch {
+    }
+    try {
+      add(await Atoms.root.state.onChangeNow((next) => {
+        if (gen === generation) onRoomState(next);
+      }, sameChat));
+    } catch {
+    }
+  }
+  function startEmoteMirror() {
+    if (running4) return;
+    running4 = true;
+    state4 = initialMirrorState();
+    localId = null;
+    roomId = null;
+    entries = void 0;
+    void subscribe4(++generation).catch(() => {
+    });
+  }
+  var running4, generation, unsubscribers4, state4, pending4, localId, roomId, entries;
+  var init_emoteMirrorWatch = __esm({
+    "src/services/companion/emoteMirrorWatch.ts"() {
+      init_atoms();
+      init_companion();
+      init_chat();
+      init_emoteMirror();
+      init_state4();
+      running4 = false;
+      generation = 0;
+      unsubscribers4 = [];
+      state4 = initialMirrorState();
+      pending4 = null;
+      localId = null;
+      roomId = null;
+      entries = void 0;
+    }
+  });
+
+  // src/services/companion/afk.ts
+  function pickOne4(options, random) {
+    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
+  }
+  function initialAfkState(now2) {
+    return { phase: "active", quietSince: now2, phaseSince: now2, asked: false, nextSnoreAt: null, lastSnore: null };
+  }
+  function snoreDelay(asleepForMs, random) {
+    const slow = asleepForMs >= SNORE_SLOW_AFTER_MS;
+    const min = slow ? SNORE_SLOW_MIN_MS : SNORE_MIN_MS;
+    const max = slow ? SNORE_SLOW_MAX_MS : SNORE_MAX_MS;
+    const r = Math.min(Math.max(random(), 0), 1);
+    return Math.round(min + (max - min) * r);
+  }
+  function snoreLine(last, random) {
+    const pool = random() < DREAM_CHANCE ? DREAM_LINES : SNORE_LINES;
+    const options = pool.filter((line) => line !== last);
+    return pickOne4(options.length > 0 ? options : pool, random);
+  }
+  function wakeSilently(state6, now2) {
+    const effects = state6.phase === "asleep" ? [{ kind: "release" }] : [];
+    return { state: initialAfkState(now2), effects };
+  }
+  function afkTick(state6, input, random) {
+    const { now: now2, busy: busy4, hidden } = input;
+    if (state6.phase === "asleep") {
+      if (busy4) return wakeSilently(state6, now2);
+      if (state6.nextSnoreAt === null || now2 < state6.nextSnoreAt) return { state: state6, effects: [] };
+      const asleepFor = now2 - state6.phaseSince;
+      const nextSnoreAt = now2 + snoreDelay(asleepFor, random);
+      if (hidden) return { state: { ...state6, nextSnoreAt }, effects: [] };
+      const message = snoreLine(state6.lastSnore, random);
+      return {
+        state: { ...state6, nextSnoreAt, lastSnore: message },
+        effects: [say({ message, emote: null }, false)]
+      };
+    }
+    if (busy4) return { state: state6, effects: [] };
+    if (state6.phase === "active") {
+      if (now2 - state6.quietSince < AFK_IDLE_AFTER_MS) return { state: state6, effects: [] };
+      const next2 = { ...state6, phase: "idle", phaseSince: now2, asked: !hidden };
+      return { state: next2, effects: hidden ? [] : [say(pickOne4(IDLE_LINES, random), true)] };
+    }
+    if (now2 - state6.phaseSince < AFK_ASLEEP_AFTER_MS) return { state: state6, effects: [] };
+    const next = {
+      ...state6,
+      phase: "asleep",
+      phaseSince: now2,
+      nextSnoreAt: now2 + snoreDelay(0, random),
+      lastSnore: null
+    };
+    const effects = hidden ? [] : [say(pickOne4(FALL_ASLEEP_LINES, random), true)];
+    effects.push({ kind: "hold" });
+    return { state: next, effects };
+  }
+  function afkActivity(state6, input, random) {
+    const { now: now2, busy: busy4 } = input;
+    if (state6.phase === "active") {
+      return { state: { ...state6, quietSince: now2 }, effects: [] };
+    }
+    if (state6.phase === "idle") {
+      const effects2 = [];
+      if (state6.asked && !busy4 && random() < RETURN_LINE_CHANCE) effects2.push(say(pickOne4(RETURN_LINES, random), false));
+      return { state: initialAfkState(now2), effects: effects2 };
+    }
+    const asleepFor = now2 - state6.phaseSince;
+    const effects = [];
+    if (!busy4 && asleepFor >= WAKE_LINE_MIN_ASLEEP_MS) {
+      const pool = asleepFor >= SNORE_SLOW_AFTER_MS ? LONG_WAKE_LINES : WAKE_LINES;
+      effects.push(say(pickOne4(pool, random), false));
+    }
+    effects.push({ kind: "release" });
+    return { state: initialAfkState(now2), effects };
+  }
+  function afkReset(state6, now2) {
+    return wakeSilently(state6, now2);
+  }
+  var AFK_IDLE_AFTER_MS, AFK_ASLEEP_AFTER_MS, SNORE_MIN_MS, SNORE_MAX_MS, SNORE_SLOW_AFTER_MS, SNORE_SLOW_MIN_MS, SNORE_SLOW_MAX_MS, WAKE_LINE_MIN_ASLEEP_MS, RETURN_LINE_CHANCE, DREAM_CHANCE, IDLE_LINES, RETURN_LINES, FALL_ASLEEP_LINES, SNORE_LINES, DREAM_LINES, WAKE_LINES, LONG_WAKE_LINES, say;
+  var init_afk = __esm({
+    "src/services/companion/afk.ts"() {
+      init_emoteTypes();
+      AFK_IDLE_AFTER_MS = 3 * 6e4;
+      AFK_ASLEEP_AFTER_MS = 6 * 6e4;
+      SNORE_MIN_MS = 45e3;
+      SNORE_MAX_MS = 9e4;
+      SNORE_SLOW_AFTER_MS = 30 * 6e4;
+      SNORE_SLOW_MIN_MS = 3 * 6e4;
+      SNORE_SLOW_MAX_MS = 6 * 6e4;
+      WAKE_LINE_MIN_ASLEEP_MS = 6e4;
+      RETURN_LINE_CHANCE = 0.3;
+      DREAM_CHANCE = 0.12;
+      IDLE_LINES = [
+        { message: "Hello? You still there?", emote: EmoteType.Questioning },
+        { message: "Did you fall asleep on me?", emote: EmoteType.Questioning },
+        { message: "Psst... are you still with me?", emote: EmoteType.Questioning },
+        { message: "It's very quiet all of a sudden...", emote: EmoteType.Questioning }
+      ];
+      RETURN_LINES = [
+        { message: "Oh, there you are!", emote: EmoteType.Laughing },
+        { message: "Welcome back!", emote: EmoteType.Love },
+        { message: "Ah, you're still here. Good.", emote: null }
+      ];
+      FALL_ASLEEP_LINES = [
+        { message: "I'll just rest my eyes...", emote: null },
+        { message: "Yawn... wake me up if anything grows.", emote: null },
+        { message: "Okay... a tiny nap. Just a tiny one...", emote: null },
+        { message: "I'll keep watch... with my eyes closed...", emote: null }
+      ];
+      SNORE_LINES = [
+        "Zzz...",
+        "Zzz... zzz...",
+        "zzz... carrots...",
+        "Mmh... five more minutes...",
+        "*snore*",
+        "Zzz... mmh..."
+      ];
+      DREAM_LINES = [
+        "Zzz... no, the golden one is mine...",
+        "Mmh... a pumpkin... the size of a house...",
+        "zzz... don't eat the seeds, little bunny...",
+        "Zzz... I'm the best gardener in the world...",
+        "Mmh... rain... more rain... perfect..."
+      ];
+      WAKE_LINES = [
+        { message: "Huh? I wasn't sleeping!", emote: EmoteType.Questioning },
+        { message: "I'm up! I'm up!", emote: EmoteType.Laughing },
+        { message: "Oh, you're back!", emote: EmoteType.Laughing },
+        { message: "Wha-? Oh, it's you. Hi!", emote: EmoteType.Questioning }
+      ];
+      LONG_WAKE_LINES = [
+        { message: "You were gone forever! I may have napped. A little.", emote: EmoteType.Laughing },
+        { message: "Oh! You're back! I kept the garden safe. Mostly by sleeping.", emote: EmoteType.Laughing },
+        { message: "Huh? What time is it? Welcome back!", emote: EmoteType.Questioning }
+      ];
+      say = (line, approach) => ({
+        kind: "say",
+        message: line.message,
+        emote: line.emote,
+        approach
+      });
+    }
+  });
+
+  // src/services/companion/afkWatch.ts
+  function enabled4() {
+    try {
+      const settings = loadCompanionSettings();
+      return settings.enabled && settings.reactions;
+    } catch {
+      return false;
+    }
+  }
+  function isHidden() {
+    try {
+      return typeof document !== "undefined" && document.hidden === true;
+    } catch {
+      return false;
+    }
+  }
+  function chatActive() {
+    try {
+      return CompanionChat.isRunning() || CompanionChat.getProposal() !== null;
+    } catch {
+      return false;
+    }
+  }
+  function othersBusy() {
+    if (!CompanionService.isRunning()) return true;
+    if (chatActive()) return true;
+    if (ownHold) return !CompanionService.isHoldingAttention();
+    return CompanionService.isBusy();
+  }
+  function releaseOwnHold() {
+    if (!ownHold) return;
+    ownHold = false;
+    if (chatActive()) return;
+    if (CompanionService.isHoldingAttention()) CompanionService.releaseAttention();
+  }
+  async function sayLine(effect) {
+    if (!CompanionService.isRunning() || othersBusy() || isHidden()) return;
+    if (effect.approach) {
+      try {
+        await CompanionService.comeToPlayer();
+        if (!running5) return;
+        await CompanionService.say(effect.message, { force: true });
+      } finally {
+        CompanionService.releaseTask();
+      }
+    } else {
+      const distance = CompanionService.distanceToPlayer();
+      if (distance === null || distance > NEAR_DISTANCE) return;
+      await CompanionService.say(effect.message, { force: true });
+    }
+    if (effect.emote !== null) void CompanionService.emote(effect.emote).catch(() => {
+    });
+  }
+  async function perform2(effect, gen) {
+    if (effect.kind === "release") {
+      releaseOwnHold();
+      return;
+    }
+    if (!running5 || gen !== generation2) return;
+    if (effect.kind === "hold") {
+      if (!CompanionService.isRunning()) return;
+      CompanionService.holdAttention();
+      ownHold = true;
+      return;
+    }
+    await sayLine(effect);
+  }
+  function apply(step) {
+    state5 = step.state;
+    const gen = generation2;
+    for (const effect of step.effects) {
+      pending5++;
+      chain = chain.then(() => perform2(effect, gen)).catch(() => {
+      }).finally(() => {
+        pending5--;
+      });
+    }
+  }
+  function tick3() {
+    if (!running5) return;
+    const now2 = Date.now();
+    if (!enabled4() || !CompanionService.isRunning()) {
+      apply(afkReset(state5, now2));
+      return;
+    }
+    if (pending5 > 0) return;
+    apply(afkTick(state5, { now: now2, busy: othersBusy(), hidden: isHidden() }, Math.random));
+  }
+  function noteActivity() {
+    if (!running5) return;
+    const now2 = Date.now();
+    if (state5.phase === "active" && now2 - lastNotedAt < ACTIVITY_THROTTLE_MS) return;
+    lastNotedAt = now2;
+    if (!enabled4() || !CompanionService.isRunning()) return;
+    apply(afkActivity(state5, { now: now2, busy: othersBusy() }, Math.random));
+  }
+  function onInput(event) {
+    if (!event.isTrusted) return;
+    noteActivity();
+  }
+  function onVisibility() {
+    if (!isHidden()) noteActivity();
+  }
+  function onPosition(next) {
+    const pos = next;
+    const x = Math.round(Number(pos?.x));
+    const y = Math.round(Number(pos?.y));
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const prev = lastTile;
+    lastTile = { x, y };
+    if (prev && (prev.x !== x || prev.y !== y)) noteActivity();
+  }
+  async function subscribe5(gen) {
+    try {
+      const unsub = await Atoms.player.position.onChangeNow((next) => onPosition(next));
+      if (gen !== generation2 || !running5) unsub();
+      else unsubscribers5.push(unsub);
+    } catch {
+    }
+  }
+  function startAfkWatch() {
+    if (running5) return;
+    running5 = true;
+    const gen = ++generation2;
+    state5 = initialAfkState(Date.now());
+    lastNotedAt = 0;
+    lastTile = null;
+    try {
+      for (const type of INPUT_EVENTS) window.addEventListener(type, onInput, { capture: true, passive: true });
+      document.addEventListener("visibilitychange", onVisibility);
+      unsubscribers5.push(() => {
+        for (const type of INPUT_EVENTS) window.removeEventListener(type, onInput, { capture: true });
+        document.removeEventListener("visibilitychange", onVisibility);
+      });
+    } catch {
+    }
+    void subscribe5(gen).catch(() => {
+    });
+    timer2 = window.setInterval(() => {
+      try {
+        tick3();
+      } catch {
+      }
+    }, TICK_MS);
+  }
+  var TICK_MS, ACTIVITY_THROTTLE_MS, NEAR_DISTANCE, INPUT_EVENTS, running5, generation2, state5, timer2, unsubscribers5, ownHold, pending5, chain, lastNotedAt, lastTile;
+  var init_afkWatch = __esm({
+    "src/services/companion/afkWatch.ts"() {
+      init_atoms();
+      init_companion();
+      init_chat();
+      init_afk();
+      init_state4();
+      TICK_MS = 5e3;
+      ACTIVITY_THROTTLE_MS = 1e3;
+      NEAR_DISTANCE = 8;
+      INPUT_EVENTS = ["keydown", "pointerdown", "pointermove", "wheel", "touchstart"];
+      running5 = false;
+      generation2 = 0;
+      state5 = initialAfkState(0);
+      timer2 = null;
+      unsubscribers5 = [];
+      ownHold = false;
+      pending5 = 0;
+      chain = Promise.resolve();
+      lastNotedAt = 0;
+      lastTile = null;
+    }
+  });
+
   // src/ui/companionAsk.ts
   function ensureStyle2() {
     if (document.getElementById(STYLE_ID6)) return;
@@ -64832,9 +65786,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     document.head.appendChild(style2);
   }
   function hide() {
-    if (timer2 !== null) {
-      window.clearInterval(timer2);
-      timer2 = null;
+    if (timer3 !== null) {
+      window.clearInterval(timer3);
+      timer3 = null;
     }
     card3?.remove();
     card3 = null;
@@ -64893,14 +65847,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     card3 = root;
     clockBar = fill;
     shownId = proposal.id;
-    timer2 = window.setInterval(() => {
+    timer3 = window.setInterval(() => {
       const left = PROPOSAL_TTL_MS - (Date.now() - proposal.createdAtMs);
       if (left <= 0) {
         hide();
         return;
       }
       if (clockBar) clockBar.style.width = `${left / PROPOSAL_TTL_MS * 100}%`;
-    }, TICK_MS);
+    }, TICK_MS2);
   }
   function sync() {
     const proposal = CompanionChat.getProposal();
@@ -64922,7 +65876,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     unsubscribe2 = CompanionChat.subscribe(sync);
     sync();
   }
-  var CARD_ID, STYLE_ID6, Z_INDEX, ICON_PX4, TICK_MS, ACCENT3, TEXT5, TEXT_DIM5, card3, clockBar, timer2, shownId, unsubscribe2;
+  var CARD_ID, STYLE_ID6, Z_INDEX, ICON_PX4, TICK_MS2, ACCENT3, TEXT5, TEXT_DIM5, card3, clockBar, timer3, shownId, unsubscribe2;
   var init_companionAsk = __esm({
     "src/ui/companionAsk.ts"() {
       init_chat();
@@ -64935,13 +65889,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       STYLE_ID6 = "mgCompanionAskStyle";
       Z_INDEX = "2000050";
       ICON_PX4 = 17;
-      TICK_MS = 100;
+      TICK_MS2 = 100;
       ACCENT3 = "#5eead4";
       TEXT5 = "#e7eef7";
       TEXT_DIM5 = "rgba(231,238,247,0.68)";
       card3 = null;
       clockBar = null;
-      timer2 = null;
+      timer3 = null;
       shownId = null;
       unsubscribe2 = null;
     }
@@ -65226,7 +66180,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!Array.isArray(payload.entries)) {
       throw new Error("Invalid changelog payload: 'entries' is not an array");
     }
-    const entries = [];
+    const entries2 = [];
     for (const entry of payload.entries) {
       if (!entry || typeof entry !== "object") {
         console.warn("[Changelog] Skipping invalid entry:", entry);
@@ -65246,7 +66200,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const images = Array.isArray(e.images) ? e.images.filter(
         (img) => typeof img === "string" && img.trim().length > 0
       ) : [];
-      entries.push({
+      entries2.push({
         version,
         notes,
         date: typeof e.date === "string" ? e.date : void 0,
@@ -65254,7 +66208,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         images
       });
     }
-    return entries;
+    return entries2;
   }
   async function fetchChangelog() {
     const url = `${RAW_BASE_URL3}/refs/heads/${REPO_BRANCH3}/${CHANGELOG_FILE_PATH}?t=${Date.now()}`;
@@ -65263,8 +66217,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return parseChangelogPayload(raw);
   }
   async function fetchChangelogEntryForVersion(version) {
-    const entries = await fetchChangelog();
-    return entries.find((entry) => entry.version === version) ?? null;
+    const entries2 = await fetchChangelog();
+    return entries2.find((entry) => entry.version === version) ?? null;
   }
   var REPO_OWNER3, REPO_NAME3, REPO_BRANCH3, CHANGELOG_FILE_PATH, RAW_BASE_URL3;
   var init_changelog = __esm({
@@ -65478,11 +66432,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!Number.isFinite(value)) return 1;
     return Math.max(1, Math.min(6, value));
   }
-  function findPlayersDeep2(state4) {
-    if (!state4 || typeof state4 !== "object") return [];
+  function findPlayersDeep2(state6) {
+    if (!state6 || typeof state6 !== "object") return [];
     const out = [];
     const seen = /* @__PURE__ */ new Set();
-    const stack = [state4];
+    const stack = [state6];
     while (stack.length) {
       const cur = stack.pop();
       if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
@@ -65508,29 +66462,29 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return [...byId.values()];
   }
-  function getPlayersArray2(state4) {
-    const direct = state4?.fullState?.data?.players ?? state4?.data?.players ?? state4?.players;
-    return Array.isArray(direct) ? direct : findPlayersDeep2(state4);
+  function getPlayersArray2(state6) {
+    const direct = state6?.fullState?.data?.players ?? state6?.data?.players ?? state6?.players;
+    return Array.isArray(direct) ? direct : findPlayersDeep2(state6);
   }
-  function getSlotsArray2(state4) {
-    const raw = state4?.child?.data?.userSlots ?? state4?.fullState?.child?.data?.userSlots ?? state4?.data?.userSlots;
+  function getSlotsArray2(state6) {
+    const raw = state6?.child?.data?.userSlots ?? state6?.fullState?.child?.data?.userSlots ?? state6?.data?.userSlots;
     if (Array.isArray(raw)) return raw;
     if (raw && typeof raw === "object") {
-      const entries = Object.entries(raw);
-      entries.sort((a, b) => {
+      const entries2 = Object.entries(raw);
+      entries2.sort((a, b) => {
         const ai = Number(a[0]);
         const bi = Number(b[0]);
         if (Number.isFinite(ai) && Number.isFinite(bi)) return ai - bi;
         return a[0].localeCompare(b[0]);
       });
-      return entries.map(([, value]) => value);
+      return entries2.map(([, value]) => value);
     }
     return [];
   }
-  async function getMyAccountId(state4) {
+  async function getMyAccountId(state6) {
     try {
       const me = await player.get();
-      const snapshot2 = state4 ?? await Atoms.root.state.get();
+      const snapshot2 = state6 ?? await Atoms.root.state.get();
       return resolveMyAccountId(me, getPlayersArray2(snapshot2));
     } catch {
       return null;
@@ -65556,11 +66510,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function buildPlayerStatePayload(options = {}) {
     try {
-      const state4 = await Atoms.root.state.get();
-      if (!state4 || typeof state4 !== "object") return null;
-      const players = getPlayersArray2(state4);
+      const state6 = await Atoms.root.state.get();
+      if (!state6 || typeof state6 !== "object") return null;
+      const players = getPlayersArray2(state6);
       const normalizedPlayers = Array.isArray(players) ? players : [];
-      const slots = getSlotsArray2(state4).filter((slot2) => !!slot2);
+      const slots = getSlotsArray2(state6).filter((slot2) => !!slot2);
       const coinsById = /* @__PURE__ */ new Map();
       for (const slot2 of slots) {
         const slotData2 = slot2?.data ?? slot2;
@@ -65581,7 +66535,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         };
       });
       if (slots.length === 0) return null;
-      const myAccountId = options.playerId ?? await getMyAccountId(state4);
+      const myAccountId = options.playerId ?? await getMyAccountId(state6);
       const slot = selectSlotForAccount(slots, {
         slotIndex: options.slotIndex,
         accountId: myAccountId
@@ -65598,7 +66552,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const coinCandidate = slotData?.coinsCount ?? slot?.coinsCount ?? slotData?.coins ?? slot?.coins ?? null;
       const coinValue = Number(coinCandidate);
       const coinsRaw = Number.isFinite(coinValue) ? coinValue : null;
-      const roomId = state4?.data?.roomId ?? state4?.fullState?.data?.roomId ?? state4?.roomId ?? null;
+      const roomId2 = state6?.data?.roomId ?? state6?.fullState?.data?.roomId ?? state6?.roomId ?? null;
       let playersCount = normalizedPlayers.length > 0 ? normalizedPlayers.length : slots.length;
       try {
         const atomValue = await Atoms.server.numPlayers.get();
@@ -65616,7 +66570,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         modVersion,
         coins: coinsRaw,
         room: {
-          id: roomId,
+          id: roomId2,
           isPrivate: options.roomIsPrivate ?? null,
           playersCount,
           userSlots
@@ -65642,13 +66596,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!Array.isArray(log2)) return null;
     return log2.filter((entry) => entry?.action !== "feedPet");
   }
-  function sanitizeStateForComparison(state4) {
-    const sanitizedActivityLog = sanitizeActivityLogForCompare(state4.activityLog ?? null);
-    if (sanitizedActivityLog === state4.activityLog) {
-      return state4;
+  function sanitizeStateForComparison(state6) {
+    const sanitizedActivityLog = sanitizeActivityLogForCompare(state6.activityLog ?? null);
+    if (sanitizedActivityLog === state6.activityLog) {
+      return state6;
     }
     return {
-      ...state4,
+      ...state6,
       activityLog: sanitizedActivityLog
     };
   }
@@ -65685,9 +66639,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return false;
   }
-  async function tryInitializeReporting(state4) {
+  async function tryInitializeReporting(state6) {
     if (gameReadyTriggered) return;
-    const snapshot2 = state4 ?? await Atoms.root.state.get();
+    const snapshot2 = state6 ?? await Atoms.root.state.get();
     const players = Array.isArray(snapshot2?.data?.players) ? snapshot2.data.players : [];
     if (players.length === 0) return;
     const myAccountId = await getMyAccountId(snapshot2);
@@ -65824,6 +66778,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_companion();
       init_feedWatch();
       init_reactionWatch();
+      init_wanderWatch();
+      init_emoteMirrorWatch();
+      init_afkWatch();
       init_companionAsk();
       init_gameVersion();
       init_mgVersion();
@@ -65877,6 +66834,9 @@ Restore figures are averages; unlucky streaks do worse.`;
         CompanionService.autoStart();
         startFeedWatch();
         startReactionWatch();
+        startWanderWatch();
+        startEmoteMirror();
+        startAfkWatch();
         mountCompanionAsk();
         shareGlobal("Companion", CompanionService);
         showAutoRecoDisabledNoticeOnce();

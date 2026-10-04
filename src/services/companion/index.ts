@@ -21,6 +21,7 @@ import {
   type Anchor,
   type IsWalkable,
   type MovementState,
+  type WanderHooks,
   type XY,
 } from "./movement";
 import { onMapChange, readCompanionMap, type CompanionMap } from "./map";
@@ -131,6 +132,12 @@ type Runtime = {
 let runtime: Runtime | null = null;
 let starting: Promise<boolean> | null = null;
 
+/**
+ * Pilote de flânerie branché par `wanderWatch.ts`. Hors du runtime : la veille
+ * démarre au boot, avant que le companion ne soit forcément apparu.
+ */
+let wanderHooks: WanderHooks | null = null;
+
 function roundTile(pos: { x?: unknown; y?: unknown } | null | undefined): XY | null {
   const x = Number(pos?.x);
   const y = Number(pos?.y);
@@ -203,8 +210,15 @@ async function tick(): Promise<void> {
       : rt.attention
         ? ATTENTION_MOVEMENT_CONFIG
         : DEFAULT_MOVEMENT_CONFIG,
+    // Pas de flânerie à but pendant une tâche ou une attente de réponse.
+    pickInterest: rt.task || rt.attention ? null : wanderHooks?.pickInterest ?? null,
   });
   rt.movement = decision.state;
+  if (decision.interestReached && wanderHooks) {
+    try {
+      wanderHooks.onInterestReached(decision.interestReached);
+    } catch {}
+  }
 
   if (!decision.tile) return;
   await setCompanionTile(rt.npcId, rt.map.toIndex(decision.tile.x, decision.tile.y));
@@ -396,6 +410,11 @@ let stillToken = 0;
 export const CompanionService = {
   isRunning(): boolean {
     return runtime !== null;
+  },
+
+  /** Branche (ou débranche, avec `null`) le pilote de flânerie à but. */
+  setWanderHooks(hooks: WanderHooks | null): void {
+    wanderHooks = hooks;
   },
 
   /**
