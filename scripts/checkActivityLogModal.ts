@@ -92,6 +92,11 @@ check("a destroyed modal yields nothing", locateActivityLogAnchors({ children: [
   const row = { children: [{}], position: { y: 46 } };
   check("the note is hidden and its 34px go to a 32px toolbar", planLogRowsShift([note, row], 32), { hideFirst: true, shift: -2 });
   check("a taller toolbar pushes the rows by the difference", planLogRowsShift([note, row], 40), { hideFirst: true, shift: 6 });
+  // The real note: the game's rich text component, a Container wrapping a Pixi
+  // Text in `textComponent`, with no `text` of its own.
+  const textComponent = { text: "Your most recent activity. The last 25 logs are saved.", children: [] };
+  const richNote = { textComponent, children: [textComponent], textWidth: 300, textHeight: 14, position: { y: 12 } };
+  check("the game's rich text note is recognised and hidden", planLogRowsShift([richNote, row], 32), { hideFirst: true, shift: -2 });
   check("without the note, rows move down by the whole toolbar", planLogRowsShift([row], 32), { hideFirst: false, shift: 32 });
   check("an empty list moves nothing it does not have", planLogRowsShift([], 32), { hideFirst: false, shift: 32 });
 }

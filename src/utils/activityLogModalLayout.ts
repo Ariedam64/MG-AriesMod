@@ -96,7 +96,15 @@ export function locateScrollParts(scrollViewContainer: any): ScrollParts | null 
  */
 export function planLogRowsShift(contentChildren: any[], toolbarSpace: number): { hideFirst: boolean; shift: number } {
   const first = contentChildren[0];
-  const isNote = !!first && typeof first.text === "string" && !(first.children?.length > 0);
+  // The game writes the note with its rich text component, a Container that
+  // wraps a Pixi Text in `textComponent` and has no `text` of its own. A bare
+  // Text is accepted too. Log rows are labelled `ActivityLogRow` and carry
+  // neither.
+  const isNote =
+    !!first &&
+    first.label !== "ActivityLogRow" &&
+    (typeof first.textComponent?.text === "string" ||
+      (typeof first.text === "string" && !(first.children?.length > 0)));
   if (!isNote) return { hideFirst: false, shift: toolbarSpace };
   const next = contentChildren[1];
   const firstY = first.position?.y ?? first.y ?? 0;

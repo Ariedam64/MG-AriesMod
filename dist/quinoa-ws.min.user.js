@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.227
+// @version      3.2.228
 // @match        https://1227719606223765687.discordsays.com/*
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -10344,7 +10344,7 @@
   }
   function planLogRowsShift(contentChildren, toolbarSpace) {
     const first = contentChildren[0];
-    const isNote = !!first && typeof first.text === "string" && !(first.children?.length > 0);
+    const isNote = !!first && first.label !== "ActivityLogRow" && (typeof first.textComponent?.text === "string" || typeof first.text === "string" && !(first.children?.length > 0));
     if (!isNote) return { hideFirst: false, shift: toolbarSpace };
     const next = contentChildren[1];
     const firstY = first.position?.y ?? first.y ?? 0;
@@ -32043,7 +32043,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.227";
+      return "3.2.228";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
