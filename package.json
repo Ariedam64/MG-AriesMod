@@ -26,6 +26,7 @@
     "check:shopmessage": "esbuild scripts/checkShopPurchaseMessage.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkShopPurchaseMessage.cjs --log-level=error && node node_modules/.cache/checkShopPurchaseMessage.cjs",
     "check:modalstate": "esbuild scripts/checkModalState.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkModalState.cjs --log-level=error && node node_modules/.cache/checkModalState.cjs",
     "check:activitylogmodal": "esbuild scripts/checkActivityLogModal.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkActivityLogModal.cjs --log-level=error && node node_modules/.cache/checkActivityLogModal.cjs",
+    "check:discordframes": "esbuild scripts/checkDiscordFrames.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkDiscordFrames.cjs --log-level=error && node node_modules/.cache/checkDiscordFrames.cjs",
     "watch": "node esbuild.config.mjs --watch",
     "serve": "npx http-server dist -p 5174 --cors"
   },
