@@ -15,6 +15,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { isDiscordHostFrame } from "../src/utils/discordFrame";
 
 let failures = 0;
 
@@ -65,6 +66,18 @@ check("Discord: the host frame around it does not", runsOn(discordHost), false);
 check("Discord: a marker that only looks alike is not the game frame", runsOn(`${discordHost}&mc_shell_frame_x=1`), false);
 check("Discord: the game frame of a host nested in a host gets it too", runsOn(`https://1227719606223765687.discordsays.com/r/abc?${launch}&mc_shell_frame=1`), true);
 check("Discord: the top page is never touched", runsOn("https://discord.com/channels/@me/1412369893080305765"), false);
+
+// The header alone is not enough: a personal loader header, or a manager that
+// widens the rule, still injects into the host. The bundle then checks for
+// itself before loading anything.
+const at = (url: string) => {
+  const u = new URL(url);
+  return { hostname: u.hostname, search: u.search };
+};
+check("code: the Discord host frame is recognised", isDiscordHostFrame(at(discordHost)), true);
+check("code: the Discord game frame is not the host", isDiscordHostFrame(at(discordGame)), false);
+check("code: a look-alike marker does not make a game frame", isDiscordHostFrame(at(`${discordHost}&mc_shell_frame_x=1`)), true);
+check("code: a web room is never a Discord host", isDiscordHostFrame(at("https://magicgarden.gg/r/ABCD")), false);
 
 check("web: a magicgarden.gg room", runsOn("https://magicgarden.gg/r/ABCD"), true);
 check("web: a magiccircle.gg room", runsOn("https://magiccircle.gg/r/ABCD"), true);

@@ -18,7 +18,7 @@ await fs.mkdir(outDir, { recursive: true });
 const modVersion = meta.match(/^\/\/ @version\s+(\S+)/m)?.[1] ?? '0.0.0';
 
 const baseOptions = {
-  entryPoints: [path.join(__dirname, 'src', 'main.ts')],
+  entryPoints: [path.join(__dirname, 'src', 'entry.ts')],
   bundle: true,
   format: 'iife',
   target: 'es2020',
