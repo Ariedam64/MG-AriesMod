@@ -68,13 +68,11 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   "DeletePetTeam",
   "MovePetTeam",
   "SetPetTeamEmblem",
-  // Inventory / storage
-  "MoveInventoryItem",
+  // Inventory / storage. Since v1422 MoveItem is the only move message; the
+  // five it replaced (PutItemInStorage, RetrieveItemFromStorage,
+  // SwapItemWithStorage, MoveInventoryItem, MoveStorageItem) are gone.
+  "MoveItem",
   "ToggleLockItem",
-  "PutItemInStorage",
-  "RetrieveItemFromStorage",
-  "MoveStorageItem",
-  "SwapItemWithStorage",
   "LogItems",
   // Shop / misc
   "PurchaseShopItem",

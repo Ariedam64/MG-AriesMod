@@ -6,6 +6,7 @@ import { randomClientId } from "../core/quinoaCommands";
 import { Atoms, onFavoriteIds, onFavoriteIdsNow, getFavoriteIdSet } from "../store/atoms";
 import { ShopsService } from "./shops";
 import { readCropSize } from "../utils/cropSize";
+import { buildMoveItemCommand, INVENTORY as INVENTORY_PLACE, type MoveItemParams } from "../utils/moveItemMessage";
 
 export type XY = { x: number; y: number };
 
@@ -420,56 +421,31 @@ export const PlayerService = {
     try { sendToGame({ type: "PlacePet", itemId, position, tileType, localTileIndex }); } catch (err) {  }
   },
 
+  /** Every item move goes through here: see `utils/moveItemMessage.ts`. */
+  async moveItem(params: MoveItemParams) {
+    const command = buildMoveItemCommand(params);
+    if (!command) return;
+    try { sendToGame(command); } catch (err) { }
+  },
+
   /**
    * `quantity` pulls back part of a stack; omitting it takes the whole entry
    * (the game's own drag-and-drop leaves it out for unique items).
    */
-  async retrieveItemFromStorage(itemId: string, storageId: string, toInventoryIndex?: number, quantity?: number){
-    try {
-      sendToGame({
-        type: "RetrieveItemFromStorage",
-        itemId,
-        storageId,
-        ...(toInventoryIndex !== undefined && { toInventoryIndex }),
-        ...(quantity !== undefined && { quantity: Math.max(1, Math.floor(quantity)) }),
-      })
-    } catch (err) { }
+  async retrieveItemFromStorage(itemId: string, storageId: string, quantity?: number) {
+    await this.moveItem({ from: storageId, to: INVENTORY_PLACE, itemId, quantity });
   },
 
-  async putItemInStorage(itemId: string, storageId: string, toStorageIndex?: number){
-    try { sendToGame({ type: "PutItemInStorage", itemId, storageId, ...(toStorageIndex !== undefined && { toStorageIndex }) }) } catch (err) { }
+  async putItemInStorage(itemId: string, storageId: string) {
+    await this.moveItem({ from: INVENTORY_PLACE, to: storageId, itemId });
   },
 
-  async putItemInFeedingTrough(
-    itemId: string = "61b1dfd3-c550-4ed2-9b50-c58de4e17c2f",
-    toStorageIndex: number = 0,
-    scopePath: string[] = ["Room", "Quinoa"],
-  ){
-    try {
-      sendToGame({
-        scopePath,
-        type: "PutItemInStorage",
-        itemId,
-        storageId: "FeedingTrough",
-        toStorageIndex,
-      });
-    } catch (err) { }
+  async putItemInFeedingTrough(itemId: string) {
+    await this.putItemInStorage(itemId, "FeedingTrough");
   },
 
-  async retrieveItemFromFeedingTrough(
-    itemId: string = "25eb1a47-5956-4aa9-a74e-924b6585d09b",
-    toInventoryIndex: number = 34,
-    scopePath: string[] = ["Room", "Quinoa"],
-  ){
-    try {
-      sendToGame({
-        scopePath,
-        type: "RetrieveItemFromStorage",
-        itemId,
-        storageId: "FeedingTrough",
-        toInventoryIndex,
-      });
-    } catch (err) { }
+  async retrieveItemFromFeedingTrough(itemId: string) {
+    await this.retrieveItemFromStorage(itemId, "FeedingTrough");
   },
 
 

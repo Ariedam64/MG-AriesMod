@@ -6,7 +6,7 @@
 // The game keys stackable items by their raw id: `species` for seeds,
 // `decorId` for decor, the same value `mySelectedItemIdAtom` carries. That id
 // merges the two sources and addresses every command the deleter sends
-// (`Wish`, `RetrieveItemFromStorage`), so it is what an entry is keyed on.
+// (`Wish`, `MoveItem`), so it is what an entry is keyed on.
 //
 // Storage items can only be deleted after they are pulled back into the
 // inventory, and the inventory is capped by entry count, hence the capacity

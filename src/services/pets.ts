@@ -2075,41 +2075,6 @@ async function _getHutchInfo(): Promise<{ capacity: number; used: number; free: 
   return { capacity, used, free: Math.max(0, capacity - used) };
 }
 
-async function _findFreeInventoryIndex(): Promise<number | undefined> {
-  try {
-    const inv = await Atoms.inventory.myInventory.get();
-    const items: any[] = Array.isArray(inv?.items) ? inv.items : Array.isArray(inv) ? inv : [];
-    for (let i = 0; i < items.length; i++) {
-      if (!items[i]) return i;
-    }
-    return items.length;
-  } catch {
-    return undefined;
-  }
-}
-
-async function _findFreeHutchIndex(): Promise<number | undefined> {
-  try {
-    const hutch = await myPetHutchPetItems.get();
-    const items: any[] = Array.isArray(hutch) ? hutch : [];
-    const hasStorageIndices = items.some(it => typeof it?.storageIndex === "number");
-    if (hasStorageIndices) {
-      const used = new Set(items.filter(it => typeof it?.storageIndex === "number").map(it => it.storageIndex as number));
-      const { capacity } = await _getHutchInfo();
-      for (let i = 0; i < capacity; i++) {
-        if (!used.has(i)) return i;
-      }
-      return capacity;
-    }
-    for (let i = 0; i < items.length; i++) {
-      if (!items[i]) return i;
-    }
-    return items.length;
-  } catch {
-    return undefined;
-  }
-}
-
 /* --------------------------------- Helpers: active pets -------------------------------- */
 async function _getActivePetSlotIds(): Promise<string[]> {
   try {
@@ -2223,8 +2188,7 @@ async function _moveSparePetToHutch(
       return id && !hutchItemsSet.has(id) && !activeSlots.includes(id) && !targetSet.has(id);
     });
     if (!spare) return false;
-    const hutIdx = await _findFreeHutchIndex();
-    await PlayerService.putItemInStorage(spare.id, "PetHutch", hutIdx);
+    await PlayerService.putItemInStorage(spare.id, "PetHutch");
     void _waitForHutchState(set => set.has(String(spare.id)), 3000);
     return true;
   } catch {
@@ -2355,8 +2319,7 @@ async function _equipPetIds(
         await PlayerService.storePet(currentId);
         activeSlots[slot] = "";
         if (freeHutch > 0) {
-          const hutIdx = await _findFreeHutchIndex();
-          await PlayerService.putItemInStorage(currentId, "PetHutch", hutIdx);
+          await PlayerService.putItemInStorage(currentId, "PetHutch");
           freeHutch--;
           void _waitForHutchState(set => set.has(currentId), 3000);
         }
@@ -2399,8 +2362,7 @@ async function _equipPetIds(
         }
       }
       try {
-        const invIdx = await _findFreeInventoryIndex();
-        await PlayerService.retrieveItemFromStorage(targetId, "PetHutch", invIdx);
+        await PlayerService.retrieveItemFromStorage(targetId, "PetHutch");
         hutchItemsSet.delete(targetId);
         freeHutch++; // retrieving frees one hutch space
         void _waitForHutchState(set => !set.has(targetId), 3000);
@@ -2424,8 +2386,7 @@ async function _equipPetIds(
       activeSlots[slot] = targetId;
       if (freeHutch > 0) {
         try {
-          const hutIdx = await _findFreeHutchIndex();
-          await PlayerService.putItemInStorage(currentId, "PetHutch", hutIdx);
+          await PlayerService.putItemInStorage(currentId, "PetHutch");
           freeHutch--;
           void _waitForHutchState(set => set.has(currentId), 3000);
         } catch {}

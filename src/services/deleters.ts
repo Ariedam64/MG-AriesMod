@@ -34,7 +34,7 @@ const guardEnabled = () => {
 };
 
 const withdraw = async (id: string, storageId: string, qty: number): Promise<void> => {
-  await PlayerService.retrieveItemFromStorage(id, storageId, undefined, qty);
+  await PlayerService.retrieveItemFromStorage(id, storageId, qty);
 };
 
 export const seedDeleter: DeleterController = createDeleterController({

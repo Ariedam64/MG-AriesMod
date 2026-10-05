@@ -91,10 +91,10 @@ check(
   {
     ...buildQuinoaMessage({
       scopePath: ["Room", "Quinoa"],
-      type: "PutItemInStorage",
+      type: "MoveItem",
+      from: "inventory",
+      to: "FeedingTrough",
       itemId: "a",
-      storageId: "FeedingTrough",
-      toStorageIndex: 0,
     }),
     requestId: "<id>",
   },
@@ -104,10 +104,10 @@ check(
     requestId: "<id>",
     commandSequence: 42,
     command: {
-      type: "PutItemInStorage",
+      type: "MoveItem",
+      from: "inventory",
+      to: "FeedingTrough",
       itemId: "a",
-      storageId: "FeedingTrough",
-      toStorageIndex: 0,
     },
   }
 );

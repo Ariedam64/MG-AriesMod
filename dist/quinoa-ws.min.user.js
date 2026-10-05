@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arie's Mod
 // @namespace    Quinoa
-// @version      3.2.232
+// @version      3.2.233
 // @include      /^https:\/\/1227719606223765687\.discordsays\.com\/.*[?&]mc_shell_frame=1(&|#|$)/
 // @match        https://magiccircle.gg/r/*
 // @match        https://magicgarden.gg/r/*
@@ -4506,13 +4506,11 @@
         "DeletePetTeam",
         "MovePetTeam",
         "SetPetTeamEmblem",
-        // Inventory / storage
-        "MoveInventoryItem",
+        // Inventory / storage. Since v1422 MoveItem is the only move message; the
+        // five it replaced (PutItemInStorage, RetrieveItemFromStorage,
+        // SwapItemWithStorage, MoveInventoryItem, MoveStorageItem) are gone.
+        "MoveItem",
         "ToggleLockItem",
-        "PutItemInStorage",
-        "RetrieveItemFromStorage",
-        "MoveStorageItem",
-        "SwapItemWithStorage",
         "LogItems",
         // Shop / misc
         "PurchaseShopItem",
@@ -14547,6 +14545,32 @@
     }
   });
 
+  // src/utils/moveItemMessage.ts
+  function buildMoveItemCommand(params) {
+    const { from, to, itemId } = params;
+    if (!nonEmpty(from) || !nonEmpty(to) || !nonEmpty(itemId)) return null;
+    if (from !== to && from !== INVENTORY && to !== INVENTORY) return null;
+    const command = { type: "MoveItem", from, to, itemId };
+    const quantity = Math.floor(Number(params.quantity));
+    if (params.quantity !== void 0 && Number.isFinite(quantity) && quantity >= 1) {
+      command.quantity = quantity;
+    }
+    if (nonEmpty(params.beforeItemId) && params.beforeItemId !== itemId) {
+      command.beforeItemId = params.beforeItemId;
+    }
+    if (nonEmpty(params.evictionItemId) && params.evictionItemId !== itemId) {
+      command.evictionItemId = params.evictionItemId;
+    }
+    return command;
+  }
+  var INVENTORY, nonEmpty;
+  var init_moveItemMessage = __esm({
+    "src/utils/moveItemMessage.ts"() {
+      INVENTORY = "inventory";
+      nonEmpty = (value) => typeof value === "string" && value.length > 0;
+    }
+  });
+
   // src/services/player.ts
   function slotSig2(o) {
     if (!o) return "\u2205";
@@ -14719,6 +14743,7 @@
       init_atoms();
       init_shops();
       init_cropSize();
+      init_moveItemMessage();
       PlayerService = {
         /* ------------------------- Position / Déplacement ------------------------- */
         getPosition() {
@@ -14872,51 +14897,30 @@
           } catch (err) {
           }
         },
+        /** Every item move goes through here: see `utils/moveItemMessage.ts`. */
+        async moveItem(params) {
+          const command = buildMoveItemCommand(params);
+          if (!command) return;
+          try {
+            sendToGame(command);
+          } catch (err) {
+          }
+        },
         /**
          * `quantity` pulls back part of a stack; omitting it takes the whole entry
          * (the game's own drag-and-drop leaves it out for unique items).
          */
-        async retrieveItemFromStorage(itemId, storageId, toInventoryIndex, quantity) {
-          try {
-            sendToGame({
-              type: "RetrieveItemFromStorage",
-              itemId,
-              storageId,
-              ...toInventoryIndex !== void 0 && { toInventoryIndex },
-              ...quantity !== void 0 && { quantity: Math.max(1, Math.floor(quantity)) }
-            });
-          } catch (err) {
-          }
+        async retrieveItemFromStorage(itemId, storageId, quantity) {
+          await this.moveItem({ from: storageId, to: INVENTORY, itemId, quantity });
         },
-        async putItemInStorage(itemId, storageId, toStorageIndex) {
-          try {
-            sendToGame({ type: "PutItemInStorage", itemId, storageId, ...toStorageIndex !== void 0 && { toStorageIndex } });
-          } catch (err) {
-          }
+        async putItemInStorage(itemId, storageId) {
+          await this.moveItem({ from: INVENTORY, to: storageId, itemId });
         },
-        async putItemInFeedingTrough(itemId = "61b1dfd3-c550-4ed2-9b50-c58de4e17c2f", toStorageIndex = 0, scopePath = ["Room", "Quinoa"]) {
-          try {
-            sendToGame({
-              scopePath,
-              type: "PutItemInStorage",
-              itemId,
-              storageId: "FeedingTrough",
-              toStorageIndex
-            });
-          } catch (err) {
-          }
+        async putItemInFeedingTrough(itemId) {
+          await this.putItemInStorage(itemId, "FeedingTrough");
         },
-        async retrieveItemFromFeedingTrough(itemId = "25eb1a47-5956-4aa9-a74e-924b6585d09b", toInventoryIndex = 34, scopePath = ["Room", "Quinoa"]) {
-          try {
-            sendToGame({
-              scopePath,
-              type: "RetrieveItemFromStorage",
-              itemId,
-              storageId: "FeedingTrough",
-              toInventoryIndex
-            });
-          } catch (err) {
-          }
+        async retrieveItemFromFeedingTrough(itemId) {
+          await this.retrieveItemFromStorage(itemId, "FeedingTrough");
         },
         async petPositions(petPositions) {
           const entries2 = Object.entries(petPositions ?? {});
@@ -23496,39 +23500,6 @@
     }
     return { capacity, used, free: Math.max(0, capacity - used) };
   }
-  async function _findFreeInventoryIndex() {
-    try {
-      const inv = await Atoms.inventory.myInventory.get();
-      const items = Array.isArray(inv?.items) ? inv.items : Array.isArray(inv) ? inv : [];
-      for (let i = 0; i < items.length; i++) {
-        if (!items[i]) return i;
-      }
-      return items.length;
-    } catch {
-      return void 0;
-    }
-  }
-  async function _findFreeHutchIndex() {
-    try {
-      const hutch = await myPetHutchPetItems.get();
-      const items = Array.isArray(hutch) ? hutch : [];
-      const hasStorageIndices = items.some((it) => typeof it?.storageIndex === "number");
-      if (hasStorageIndices) {
-        const used = new Set(items.filter((it) => typeof it?.storageIndex === "number").map((it) => it.storageIndex));
-        const { capacity } = await _getHutchInfo();
-        for (let i = 0; i < capacity; i++) {
-          if (!used.has(i)) return i;
-        }
-        return capacity;
-      }
-      for (let i = 0; i < items.length; i++) {
-        if (!items[i]) return i;
-      }
-      return items.length;
-    } catch {
-      return void 0;
-    }
-  }
   async function _getActivePetSlotIds() {
     try {
       const primitives = await Atoms.pets.myPrimitivePetSlots.get();
@@ -23636,8 +23607,7 @@
         return id && !hutchItemsSet.has(id) && !activeSlots.includes(id) && !targetSet.has(id);
       });
       if (!spare) return false;
-      const hutIdx = await _findFreeHutchIndex();
-      await PlayerService.putItemInStorage(spare.id, "PetHutch", hutIdx);
+      await PlayerService.putItemInStorage(spare.id, "PetHutch");
       void _waitForHutchState((set2) => set2.has(String(spare.id)), 3e3);
       return true;
     } catch {
@@ -23745,8 +23715,7 @@
           await PlayerService.storePet(currentId);
           activeSlots[slot] = "";
           if (freeHutch > 0) {
-            const hutIdx = await _findFreeHutchIndex();
-            await PlayerService.putItemInStorage(currentId, "PetHutch", hutIdx);
+            await PlayerService.putItemInStorage(currentId, "PetHutch");
             freeHutch--;
             void _waitForHutchState((set2) => set2.has(currentId), 3e3);
           }
@@ -23787,8 +23756,7 @@
           }
         }
         try {
-          const invIdx = await _findFreeInventoryIndex();
-          await PlayerService.retrieveItemFromStorage(targetId, "PetHutch", invIdx);
+          await PlayerService.retrieveItemFromStorage(targetId, "PetHutch");
           hutchItemsSet.delete(targetId);
           freeHutch++;
           void _waitForHutchState((set2) => !set2.has(targetId), 3e3);
@@ -23811,8 +23779,7 @@
         activeSlots[slot] = targetId;
         if (freeHutch > 0) {
           try {
-            const hutIdx = await _findFreeHutchIndex();
-            await PlayerService.putItemInStorage(currentId, "PetHutch", hutIdx);
+            await PlayerService.putItemInStorage(currentId, "PetHutch");
             freeHutch--;
             void _waitForHutchState((set2) => set2.has(currentId), 3e3);
           } catch {
@@ -32821,7 +32788,7 @@
   }
   function getLocalVersion() {
     if (true) {
-      return "3.2.232";
+      return "3.2.233";
     }
     if (typeof GM_info !== "undefined" && GM_info?.script?.version) {
       return GM_info.script.version;
@@ -53430,7 +53397,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
       };
       withdraw = async (id, storageId, qty) => {
-        await PlayerService.retrieveItemFromStorage(id, storageId, void 0, qty);
+        await PlayerService.retrieveItemFromStorage(id, storageId, qty);
       };
       seedDeleter = createDeleterController({
         eventPrefix: "qws:seeddeleter",

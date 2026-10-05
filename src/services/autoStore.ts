@@ -32,7 +32,7 @@ export interface AutoStoreConfig {
   logName: string;
   /** Chemin de persistance sous la racine `aries_mod`, ex. `misc.autoStoreSeedSiloEnabled`. */
   storagePath: string;
-  /** `storageId` envoyé à `PutItemInStorage`, ex. "SeedSilo". */
+  /** Destination (`to`) du `MoveItem`, ex. "SeedSilo". */
   storageId: string;
   /** Atom listant le contenu du stockage. */
   storageAtom: AutoStoreAtom;
