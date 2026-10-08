@@ -44613,348 +44613,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/pets/teamBuilder.ts
-  function abilityTrigger(id) {
-    return petAbilities2[id]?.trigger;
-  }
-  function isAfkEligibleAbility(id) {
-    return abilityTrigger(id) === "continuous";
-  }
-  function isHungerRestoreAbility(id) {
-    return id === "HungerRestore" || id === "HungerRestoreII" || id === "HungerRestoreIII" || id === "SnowyHungerRestore";
-  }
-  function isHungerBoostAbility(id) {
-    return id === "HungerBoost" || id === "HungerBoostII" || id === "HungerBoostIII" || id === "SnowyHungerBoost";
-  }
-  function petAbilityIds(pet) {
-    return Array.isArray(pet.abilities) ? pet.abilities : [];
-  }
-  function sustainScore(pet) {
-    const abilities = petAbilityIds(pet);
-    const hasRestore = abilities.some(isHungerRestoreAbility);
-    const hasBoost = abilities.some(isHungerBoostAbility);
-    if (hasRestore && hasBoost) return 2;
-    if (hasRestore || hasBoost) return 1;
-    return 0;
-  }
-  function pickSustainPet(pets, category, afkOnly) {
-    const NOT_USEFUL = Number.POSITIVE_INFINITY;
-    const wantedMutations = category ? categoryGrantedMutations(category) : /* @__PURE__ */ new Set();
-    const ranked = pets.map((pet) => {
-      const abilities = petAbilityIds(pet);
-      const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
-      const tierIndex = category ? bestTierIndex(category, relevant) : -1;
-      const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
-      return {
-        pet,
-        score: sustainScore(pet),
-        hardAvoidCount,
-        // Lower is better; pets that do nothing for the goal sort last.
-        goalRank: tierIndex === -1 ? NOT_USEFUL : tierIndex,
-        effectiveStrength: getPetMaxStrength(pet) - GRANTER_STRENGTH_PENALTY * softAvoidCount
-      };
-    }).filter((candidate) => candidate.score > 0);
-    if (!ranked.length) return null;
-    ranked.sort((a, b) => {
-      if (a.score !== b.score) return b.score - a.score;
-      if (a.hardAvoidCount !== b.hardAvoidCount) return a.hardAvoidCount - b.hardAvoidCount;
-      if (a.goalRank !== b.goalRank) return a.goalRank - b.goalRank;
-      if (a.effectiveStrength !== b.effectiveStrength) return b.effectiveStrength - a.effectiveStrength;
-      return a.pet.petSpecies.localeCompare(b.pet.petSpecies);
-    });
-    return ranked[0].pet;
-  }
-  function getBestSustainPet(pets) {
-    return pickSustainPet(pets, null, false);
-  }
-  function abilityGrantedMutations(abilityId) {
-    const raw = getAbilityRawParameters(abilityId).grantedMutations;
-    return Array.isArray(raw) ? raw.filter((m) => typeof m === "string") : [];
-  }
-  function petGrantedMutations(pet) {
-    const mutations = /* @__PURE__ */ new Set();
-    for (const abilityId of petAbilityIds(pet)) {
-      for (const mutation of abilityGrantedMutations(abilityId)) mutations.add(mutation);
-    }
-    return Array.from(mutations);
-  }
-  function categoryGrantedMutations(category) {
-    const mutations = /* @__PURE__ */ new Set();
-    for (const abilityId of category.abilityIds) {
-      for (const mutation of abilityGrantedMutations(abilityId)) mutations.add(mutation);
-    }
-    return mutations;
-  }
-  function granterPenaltyFor(pet, wanted) {
-    let hardAvoidCount = 0;
-    let softAvoidCount = 0;
-    for (const mutation of petGrantedMutations(pet)) {
-      if (wanted.has(mutation)) continue;
-      if (HARD_AVOID_MUTATIONS.has(mutation)) hardAvoidCount += 1;
-      else if (SOFT_AVOID_MUTATIONS.has(mutation)) softAvoidCount += 1;
-    }
-    return { hardAvoidCount, softAvoidCount };
-  }
-  function countUnwantedGranters(teamPets, wanted) {
-    let hardAvoidCount = 0;
-    let softAvoidCount = 0;
-    for (const pet of teamPets) {
-      const penalty = granterPenaltyFor(pet, wanted);
-      hardAvoidCount += penalty.hardAvoidCount;
-      softAvoidCount += penalty.softAvoidCount;
-    }
-    return { hardAvoidCount, softAvoidCount };
-  }
-  function combinations(items, size) {
-    if (size <= 0 || size > items.length) return [];
-    const out = [];
-    const current = [];
-    const walk = (start2) => {
-      if (current.length === size) {
-        out.push([...current]);
-        return;
-      }
-      for (let i = start2; i < items.length; i += 1) {
-        current.push(items[i]);
-        walk(i + 1);
-        current.pop();
-      }
-    };
-    walk(0);
-    return out;
-  }
-  function categoryCombinedProbability(category, teamPets) {
-    let missAll = 1;
-    for (const pet of teamPets) {
-      const abilities = petAbilityIds(pet).filter(isAfkEligibleAbility);
-      const tierIndex = bestTierIndex(category, abilities);
-      if (tierIndex === -1) continue;
-      const stats = computeAbilityStatsAtRatio(category.abilityIds[tierIndex], getStrengthRatio(pet));
-      if (!stats || stats.effectiveProbability === null) continue;
-      missAll *= 1 - stats.effectiveProbability / 100;
-    }
-    return 1 - missAll;
-  }
-  function pickAfkTeam(category, pets, maxSlots) {
-    const qualifying = rankCandidates(category, pets, true).slice(0, AFK_POOL_LIMIT);
-    if (!qualifying.length) return null;
-    const feeders = pets.filter((pet) => sustainScore(pet) > 0).sort((a, b) => sustainScore(b) - sustainScore(a) || getPetMaxStrength(b) - getPetMaxStrength(a)).slice(0, AFK_FEEDER_LIMIT);
-    const poolById = /* @__PURE__ */ new Map();
-    for (const pet of [...qualifying, ...feeders]) poolById.set(pet.id, pet);
-    const pool = Array.from(poolById.values());
-    const qualifyingIds = new Set(qualifying.map((pet) => pet.id));
-    const wantedMutations = categoryGrantedMutations(category);
-    let best = null;
-    for (const combo of combinations(pool, Math.min(maxSlots, pool.length))) {
-      if (!combo.some((pet) => qualifyingIds.has(pet.id))) continue;
-      if (!combo.some((pet) => sustainScore(pet) > 0)) continue;
-      const { hardAvoidCount, softAvoidCount } = countUnwantedGranters(combo, wantedMutations);
-      const strength = combo.reduce((sum, pet) => sum + getPetMaxStrength(pet), 0);
-      const sustained = computeTeamAutonomy(combo).status === "sustained";
-      const candidate = {
-        pets: combo,
-        sustained,
-        // Only meaningful while the team still runs dry: dodging a granter must
-        // not cost you a real feeder. Once the team sustains itself, extra
-        // hunger capability buys nothing and the later tiers decide.
-        sustainCapability: sustained ? 0 : combo.reduce((sum, pet) => sum + sustainScore(pet), 0),
-        hardAvoidCount,
-        probability: categoryCombinedProbability(category, combo),
-        // Soft-avoided granters cost GRANTER_STRENGTH_PENALTY each, so such a
-        // pet only wins when it is more than that much stronger.
-        effectiveStrength: strength - GRANTER_STRENGTH_PENALTY * softAvoidCount
-      };
-      if (!best || isBetterAfkTeam(candidate, best)) best = candidate;
-    }
-    return best?.pets ?? null;
-  }
-  function isBetterAfkTeam(candidate, best) {
-    if (candidate.sustained !== best.sustained) return candidate.sustained;
-    if (candidate.sustainCapability !== best.sustainCapability) {
-      return candidate.sustainCapability > best.sustainCapability;
-    }
-    if (candidate.hardAvoidCount !== best.hardAvoidCount) {
-      return candidate.hardAvoidCount < best.hardAvoidCount;
-    }
-    if (candidate.probability !== best.probability) return candidate.probability > best.probability;
-    return candidate.effectiveStrength > best.effectiveStrength;
-  }
-  function bestTierIndex(category, abilities) {
-    let best = -1;
-    for (const id of abilities) {
-      const idx = category.abilityIds.indexOf(id);
-      if (idx === -1) continue;
-      if (best === -1 || idx < best) best = idx;
-    }
-    return best;
-  }
-  function rankCandidates(category, pets, afkOnly) {
-    const wantedMutations = categoryGrantedMutations(category);
-    const ranked = pets.map((pet) => {
-      const abilities = petAbilityIds(pet);
-      const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
-      const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
-      return {
-        pet,
-        tierIndex: bestTierIndex(category, relevant),
-        hardAvoidCount,
-        // Same handicap as the AFK ranking: a soft-avoided granter only wins
-        // when it is more than GRANTER_STRENGTH_PENALTY stronger.
-        effectiveStrength: getPetMaxStrength(pet) - GRANTER_STRENGTH_PENALTY * softAvoidCount
-      };
-    }).filter((c) => c.tierIndex !== -1);
-    const speciesCount = /* @__PURE__ */ new Map();
-    for (const c of ranked) {
-      speciesCount.set(c.pet.petSpecies, (speciesCount.get(c.pet.petSpecies) ?? 0) + 1);
-    }
-    ranked.sort((a, b) => {
-      if (a.tierIndex !== b.tierIndex) return a.tierIndex - b.tierIndex;
-      if (a.hardAvoidCount !== b.hardAvoidCount) return a.hardAvoidCount - b.hardAvoidCount;
-      if (a.effectiveStrength !== b.effectiveStrength) return b.effectiveStrength - a.effectiveStrength;
-      const aCount = speciesCount.get(a.pet.petSpecies) ?? 0;
-      const bCount = speciesCount.get(b.pet.petSpecies) ?? 0;
-      if (aCount !== bCount) return bCount - aCount;
-      return a.pet.petSpecies.localeCompare(b.pet.petSpecies);
-    });
-    return ranked.map((c) => c.pet);
-  }
-  function qualifyingCategories(pet) {
-    const abilities = petAbilityIds(pet);
-    return CATEGORIES.filter((c) => bestTierIndex(c, abilities) !== -1);
-  }
-  function findUnusedPets(pets, usedIds, sustainPet) {
-    const unused = [];
-    const seenIds = /* @__PURE__ */ new Set();
-    for (const pet of pets) {
-      if (usedIds.has(pet.id) || seenIds.has(pet.id)) continue;
-      seenIds.add(pet.id);
-      const outrankedIn = qualifyingCategories(pet).map((c) => c.label);
-      const outrankedAsSustain = sustainScore(pet) > 0 && sustainPet?.id !== pet.id;
-      const untracked = !outrankedIn.length && !outrankedAsSustain;
-      unused.push({ pet, outrankedIn, outrankedAsSustain, untracked });
-    }
-    return unused;
-  }
-  function mergeTeamsWithSamePets(teams2) {
-    const order = [];
-    const byKey = /* @__PURE__ */ new Map();
-    for (const team of teams2) {
-      const key2 = `${team.mode}::${team.petIds.slice().sort().join(",")}`;
-      const existing = byKey.get(key2);
-      if (existing) {
-        existing.categories.push(...team.categories);
-        existing.focusAbilityIds = dedupe([...existing.focusAbilityIds, ...team.focusAbilityIds]);
-      } else {
-        byKey.set(key2, {
-          ...team,
-          categories: [...team.categories],
-          focusAbilityIds: [...team.focusAbilityIds]
-        });
-        order.push(key2);
-      }
-    }
-    return order.map((key2) => byKey.get(key2));
-  }
-  function dedupe(ids) {
-    return Array.from(new Set(ids));
-  }
-  function buildSuggestedTeams(pets) {
-    const sustainPet = getBestSustainPet(pets);
-    const teams2 = [];
-    const usedIds = /* @__PURE__ */ new Set();
-    if (sustainPet) usedIds.add(sustainPet.id);
-    for (const category of CATEGORIES) {
-      const categoryRef = {
-        id: category.id,
-        label: category.label,
-        shortLabel: category.shortLabel,
-        icon: category.icon,
-        abilityId: category.abilityIds[0]
-      };
-      const maxSlots = category.maxTeamSlots ?? 3;
-      const focusAbilityIds = [category.abilityIds[0]];
-      let activeCandidates = rankCandidates(category, pets, false).slice(0, maxSlots);
-      if (activeCandidates.length && activeCandidates.length < maxSlots && category.paddingParentId) {
-        const parent = CATEGORIES_BY_ID.get(category.paddingParentId);
-        if (parent) {
-          const already = new Set(activeCandidates.map((p) => p.id));
-          const padding = rankCandidates(parent, pets, false).filter((p) => !already.has(p.id));
-          const before = activeCandidates.length;
-          activeCandidates = [...activeCandidates, ...padding].slice(0, maxSlots);
-          if (activeCandidates.length > before) focusAbilityIds.push(parent.abilityIds[0]);
-        }
-      }
-      if (activeCandidates.length && activeCandidates.length < maxSlots && category.paddingSiblingIds?.length) {
-        const already = new Set(activeCandidates.map((p) => p.id));
-        const siblingPool = [];
-        const siblingByPetId = /* @__PURE__ */ new Map();
-        for (const siblingId of category.paddingSiblingIds) {
-          const sibling = CATEGORIES_BY_ID.get(siblingId);
-          if (!sibling) continue;
-          for (const p of rankCandidates(sibling, pets, false)) {
-            if (!already.has(p.id)) {
-              siblingPool.push(p);
-              already.add(p.id);
-              siblingByPetId.set(p.id, sibling);
-            }
-          }
-        }
-        activeCandidates = [...activeCandidates, ...siblingPool].slice(0, maxSlots);
-        for (const pet of activeCandidates) {
-          const sibling = siblingByPetId.get(pet.id);
-          if (sibling) focusAbilityIds.push(sibling.abilityIds[0]);
-        }
-      }
-      activeCandidates.forEach((p) => usedIds.add(p.id));
-      if (activeCandidates.length) {
-        teams2.push({
-          categories: [categoryRef],
-          mode: "active",
-          petIds: activeCandidates.map((p) => p.id),
-          focusAbilityIds: dedupe(focusAbilityIds)
-        });
-      }
-      if (category.afkCapable) {
-        const afkTeam = pickAfkTeam(category, pets, maxSlots);
-        if (afkTeam?.length) {
-          afkTeam.forEach((p) => usedIds.add(p.id));
-          teams2.push({
-            categories: [categoryRef],
-            mode: "afk",
-            // Only the category's own ability. A feeder in this team may well
-            // carry it too (that is often why it was picked), and the stats
-            // layer counts whatever abilities the pets actually have.
-            petIds: afkTeam.map((p) => p.id),
-            focusAbilityIds: [category.abilityIds[0]]
-          });
-        }
-      }
-      const afkRelevant = !category.afkCapable && category.paddingParentId != null && !!CATEGORIES_BY_ID.get(category.paddingParentId)?.afkCapable;
-      const fillerSustainPet = pickSustainPet(pets, category, false);
-      if (afkRelevant && fillerSustainPet && activeCandidates.length > 0 && activeCandidates.length < maxSlots && !activeCandidates.some((p) => p.id === fillerSustainPet.id)) {
-        usedIds.add(fillerSustainPet.id);
-        teams2.push({
-          categories: [categoryRef],
-          mode: "afk",
-          petIds: [...activeCandidates.map((p) => p.id), fillerSustainPet.id],
-          focusAbilityIds: dedupe(focusAbilityIds)
-        });
-      }
-    }
-    return {
-      teams: mergeTeamsWithSamePets(teams2),
-      sustainPet,
-      unusedPets: findUnusedPets(pets, usedIds, sustainPet)
-    };
-  }
-  var CATEGORIES, HARD_AVOID_MUTATIONS, SOFT_AVOID_MUTATIONS, GRANTER_STRENGTH_PENALTY, AFK_POOL_LIMIT, AFK_FEEDER_LIMIT, CATEGORIES_BY_ID;
-  var init_teamBuilder = __esm({
-    "src/features/pets/teamBuilder.ts"() {
+  // src/features/pets/teamBuilderCategories.ts
+  var CATEGORIES, CATEGORIES_BY_ID;
+  var init_teamBuilderCategories = __esm({
+    "src/features/pets/teamBuilderCategories.ts"() {
       "use strict";
-      init_data();
-      init_petValue();
-      init_abilityStats();
-      init_teamStats();
       CATEGORIES = [
         {
           id: "cropSize",
@@ -45392,12 +45055,358 @@ Restore figures are averages; unlucky streaks do worse.`;
           abilityIds: ["Thundercharger"]
         }
       ];
+      CATEGORIES_BY_ID = new Map(CATEGORIES.map((c) => [c.id, c]));
+    }
+  });
+
+  // src/features/pets/teamBuilder.ts
+  function abilityTrigger(id) {
+    return petAbilities2[id]?.trigger;
+  }
+  function isAfkEligibleAbility(id) {
+    return abilityTrigger(id) === "continuous";
+  }
+  function isHungerRestoreAbility(id) {
+    return id === "HungerRestore" || id === "HungerRestoreII" || id === "HungerRestoreIII" || id === "SnowyHungerRestore";
+  }
+  function isHungerBoostAbility(id) {
+    return id === "HungerBoost" || id === "HungerBoostII" || id === "HungerBoostIII" || id === "SnowyHungerBoost";
+  }
+  function petAbilityIds(pet) {
+    return Array.isArray(pet.abilities) ? pet.abilities : [];
+  }
+  function sustainScore(pet) {
+    const abilities = petAbilityIds(pet);
+    const hasRestore = abilities.some(isHungerRestoreAbility);
+    const hasBoost = abilities.some(isHungerBoostAbility);
+    if (hasRestore && hasBoost) return 2;
+    if (hasRestore || hasBoost) return 1;
+    return 0;
+  }
+  function pickSustainPet(pets, category, afkOnly) {
+    const NOT_USEFUL = Number.POSITIVE_INFINITY;
+    const wantedMutations = category ? categoryGrantedMutations(category) : /* @__PURE__ */ new Set();
+    const ranked = pets.map((pet) => {
+      const abilities = petAbilityIds(pet);
+      const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
+      const tierIndex = category ? bestTierIndex(category, relevant) : -1;
+      const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
+      return {
+        pet,
+        score: sustainScore(pet),
+        hardAvoidCount,
+        // Lower is better; pets that do nothing for the goal sort last.
+        goalRank: tierIndex === -1 ? NOT_USEFUL : tierIndex,
+        effectiveStrength: getPetMaxStrength(pet) - GRANTER_STRENGTH_PENALTY * softAvoidCount
+      };
+    }).filter((candidate) => candidate.score > 0);
+    if (!ranked.length) return null;
+    ranked.sort((a, b) => {
+      if (a.score !== b.score) return b.score - a.score;
+      if (a.hardAvoidCount !== b.hardAvoidCount) return a.hardAvoidCount - b.hardAvoidCount;
+      if (a.goalRank !== b.goalRank) return a.goalRank - b.goalRank;
+      if (a.effectiveStrength !== b.effectiveStrength) return b.effectiveStrength - a.effectiveStrength;
+      return a.pet.petSpecies.localeCompare(b.pet.petSpecies);
+    });
+    return ranked[0].pet;
+  }
+  function getBestSustainPet(pets) {
+    return pickSustainPet(pets, null, false);
+  }
+  function abilityGrantedMutations(abilityId) {
+    const raw = getAbilityRawParameters(abilityId).grantedMutations;
+    return Array.isArray(raw) ? raw.filter((m) => typeof m === "string") : [];
+  }
+  function petGrantedMutations(pet) {
+    const mutations = /* @__PURE__ */ new Set();
+    for (const abilityId of petAbilityIds(pet)) {
+      for (const mutation of abilityGrantedMutations(abilityId)) mutations.add(mutation);
+    }
+    return Array.from(mutations);
+  }
+  function categoryGrantedMutations(category) {
+    const mutations = /* @__PURE__ */ new Set();
+    for (const abilityId of category.abilityIds) {
+      for (const mutation of abilityGrantedMutations(abilityId)) mutations.add(mutation);
+    }
+    return mutations;
+  }
+  function granterPenaltyFor(pet, wanted) {
+    let hardAvoidCount = 0;
+    let softAvoidCount = 0;
+    for (const mutation of petGrantedMutations(pet)) {
+      if (wanted.has(mutation)) continue;
+      if (HARD_AVOID_MUTATIONS.has(mutation)) hardAvoidCount += 1;
+      else if (SOFT_AVOID_MUTATIONS.has(mutation)) softAvoidCount += 1;
+    }
+    return { hardAvoidCount, softAvoidCount };
+  }
+  function countUnwantedGranters(teamPets, wanted) {
+    let hardAvoidCount = 0;
+    let softAvoidCount = 0;
+    for (const pet of teamPets) {
+      const penalty = granterPenaltyFor(pet, wanted);
+      hardAvoidCount += penalty.hardAvoidCount;
+      softAvoidCount += penalty.softAvoidCount;
+    }
+    return { hardAvoidCount, softAvoidCount };
+  }
+  function combinations(items, size) {
+    if (size <= 0 || size > items.length) return [];
+    const out = [];
+    const current = [];
+    const walk = (start2) => {
+      if (current.length === size) {
+        out.push([...current]);
+        return;
+      }
+      for (let i = start2; i < items.length; i += 1) {
+        current.push(items[i]);
+        walk(i + 1);
+        current.pop();
+      }
+    };
+    walk(0);
+    return out;
+  }
+  function categoryCombinedProbability(category, teamPets) {
+    let missAll = 1;
+    for (const pet of teamPets) {
+      const abilities = petAbilityIds(pet).filter(isAfkEligibleAbility);
+      const tierIndex = bestTierIndex(category, abilities);
+      if (tierIndex === -1) continue;
+      const stats = computeAbilityStatsAtRatio(category.abilityIds[tierIndex], getStrengthRatio(pet));
+      if (!stats || stats.effectiveProbability === null) continue;
+      missAll *= 1 - stats.effectiveProbability / 100;
+    }
+    return 1 - missAll;
+  }
+  function pickAfkTeam(category, pets, maxSlots) {
+    const qualifying = rankCandidates(category, pets, true).slice(0, AFK_POOL_LIMIT);
+    if (!qualifying.length) return null;
+    const feeders = pets.filter((pet) => sustainScore(pet) > 0).sort((a, b) => sustainScore(b) - sustainScore(a) || getPetMaxStrength(b) - getPetMaxStrength(a)).slice(0, AFK_FEEDER_LIMIT);
+    const poolById = /* @__PURE__ */ new Map();
+    for (const pet of [...qualifying, ...feeders]) poolById.set(pet.id, pet);
+    const pool = Array.from(poolById.values());
+    const qualifyingIds = new Set(qualifying.map((pet) => pet.id));
+    const wantedMutations = categoryGrantedMutations(category);
+    let best = null;
+    for (const combo of combinations(pool, Math.min(maxSlots, pool.length))) {
+      if (!combo.some((pet) => qualifyingIds.has(pet.id))) continue;
+      if (!combo.some((pet) => sustainScore(pet) > 0)) continue;
+      const { hardAvoidCount, softAvoidCount } = countUnwantedGranters(combo, wantedMutations);
+      const strength = combo.reduce((sum, pet) => sum + getPetMaxStrength(pet), 0);
+      const sustained = computeTeamAutonomy(combo).status === "sustained";
+      const candidate = {
+        pets: combo,
+        sustained,
+        // Only meaningful while the team still runs dry: dodging a granter must
+        // not cost you a real feeder. Once the team sustains itself, extra
+        // hunger capability buys nothing and the later tiers decide.
+        sustainCapability: sustained ? 0 : combo.reduce((sum, pet) => sum + sustainScore(pet), 0),
+        hardAvoidCount,
+        probability: categoryCombinedProbability(category, combo),
+        // Soft-avoided granters cost GRANTER_STRENGTH_PENALTY each, so such a
+        // pet only wins when it is more than that much stronger.
+        effectiveStrength: strength - GRANTER_STRENGTH_PENALTY * softAvoidCount
+      };
+      if (!best || isBetterAfkTeam(candidate, best)) best = candidate;
+    }
+    return best?.pets ?? null;
+  }
+  function isBetterAfkTeam(candidate, best) {
+    if (candidate.sustained !== best.sustained) return candidate.sustained;
+    if (candidate.sustainCapability !== best.sustainCapability) {
+      return candidate.sustainCapability > best.sustainCapability;
+    }
+    if (candidate.hardAvoidCount !== best.hardAvoidCount) {
+      return candidate.hardAvoidCount < best.hardAvoidCount;
+    }
+    if (candidate.probability !== best.probability) return candidate.probability > best.probability;
+    return candidate.effectiveStrength > best.effectiveStrength;
+  }
+  function bestTierIndex(category, abilities) {
+    let best = -1;
+    for (const id of abilities) {
+      const idx = category.abilityIds.indexOf(id);
+      if (idx === -1) continue;
+      if (best === -1 || idx < best) best = idx;
+    }
+    return best;
+  }
+  function rankCandidates(category, pets, afkOnly) {
+    const wantedMutations = categoryGrantedMutations(category);
+    const ranked = pets.map((pet) => {
+      const abilities = petAbilityIds(pet);
+      const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
+      const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
+      return {
+        pet,
+        tierIndex: bestTierIndex(category, relevant),
+        hardAvoidCount,
+        // Same handicap as the AFK ranking: a soft-avoided granter only wins
+        // when it is more than GRANTER_STRENGTH_PENALTY stronger.
+        effectiveStrength: getPetMaxStrength(pet) - GRANTER_STRENGTH_PENALTY * softAvoidCount
+      };
+    }).filter((c) => c.tierIndex !== -1);
+    const speciesCount = /* @__PURE__ */ new Map();
+    for (const c of ranked) {
+      speciesCount.set(c.pet.petSpecies, (speciesCount.get(c.pet.petSpecies) ?? 0) + 1);
+    }
+    ranked.sort((a, b) => {
+      if (a.tierIndex !== b.tierIndex) return a.tierIndex - b.tierIndex;
+      if (a.hardAvoidCount !== b.hardAvoidCount) return a.hardAvoidCount - b.hardAvoidCount;
+      if (a.effectiveStrength !== b.effectiveStrength) return b.effectiveStrength - a.effectiveStrength;
+      const aCount = speciesCount.get(a.pet.petSpecies) ?? 0;
+      const bCount = speciesCount.get(b.pet.petSpecies) ?? 0;
+      if (aCount !== bCount) return bCount - aCount;
+      return a.pet.petSpecies.localeCompare(b.pet.petSpecies);
+    });
+    return ranked.map((c) => c.pet);
+  }
+  function qualifyingCategories(pet) {
+    const abilities = petAbilityIds(pet);
+    return CATEGORIES.filter((c) => bestTierIndex(c, abilities) !== -1);
+  }
+  function findUnusedPets(pets, usedIds, sustainPet) {
+    const unused = [];
+    const seenIds = /* @__PURE__ */ new Set();
+    for (const pet of pets) {
+      if (usedIds.has(pet.id) || seenIds.has(pet.id)) continue;
+      seenIds.add(pet.id);
+      const outrankedIn = qualifyingCategories(pet).map((c) => c.label);
+      const outrankedAsSustain = sustainScore(pet) > 0 && sustainPet?.id !== pet.id;
+      const untracked = !outrankedIn.length && !outrankedAsSustain;
+      unused.push({ pet, outrankedIn, outrankedAsSustain, untracked });
+    }
+    return unused;
+  }
+  function mergeTeamsWithSamePets(teams2) {
+    const order = [];
+    const byKey = /* @__PURE__ */ new Map();
+    for (const team of teams2) {
+      const key2 = `${team.mode}::${team.petIds.slice().sort().join(",")}`;
+      const existing = byKey.get(key2);
+      if (existing) {
+        existing.categories.push(...team.categories);
+        existing.focusAbilityIds = dedupe([...existing.focusAbilityIds, ...team.focusAbilityIds]);
+      } else {
+        byKey.set(key2, {
+          ...team,
+          categories: [...team.categories],
+          focusAbilityIds: [...team.focusAbilityIds]
+        });
+        order.push(key2);
+      }
+    }
+    return order.map((key2) => byKey.get(key2));
+  }
+  function dedupe(ids) {
+    return Array.from(new Set(ids));
+  }
+  function buildSuggestedTeams(pets) {
+    const sustainPet = getBestSustainPet(pets);
+    const teams2 = [];
+    const usedIds = /* @__PURE__ */ new Set();
+    if (sustainPet) usedIds.add(sustainPet.id);
+    for (const category of CATEGORIES) {
+      const categoryRef = {
+        id: category.id,
+        label: category.label,
+        shortLabel: category.shortLabel,
+        icon: category.icon,
+        abilityId: category.abilityIds[0]
+      };
+      const maxSlots = category.maxTeamSlots ?? 3;
+      const focusAbilityIds = [category.abilityIds[0]];
+      let activeCandidates = rankCandidates(category, pets, false).slice(0, maxSlots);
+      if (activeCandidates.length && activeCandidates.length < maxSlots && category.paddingParentId) {
+        const parent = CATEGORIES_BY_ID.get(category.paddingParentId);
+        if (parent) {
+          const already = new Set(activeCandidates.map((p) => p.id));
+          const padding = rankCandidates(parent, pets, false).filter((p) => !already.has(p.id));
+          const before = activeCandidates.length;
+          activeCandidates = [...activeCandidates, ...padding].slice(0, maxSlots);
+          if (activeCandidates.length > before) focusAbilityIds.push(parent.abilityIds[0]);
+        }
+      }
+      if (activeCandidates.length && activeCandidates.length < maxSlots && category.paddingSiblingIds?.length) {
+        const already = new Set(activeCandidates.map((p) => p.id));
+        const siblingPool = [];
+        const siblingByPetId = /* @__PURE__ */ new Map();
+        for (const siblingId of category.paddingSiblingIds) {
+          const sibling = CATEGORIES_BY_ID.get(siblingId);
+          if (!sibling) continue;
+          for (const p of rankCandidates(sibling, pets, false)) {
+            if (!already.has(p.id)) {
+              siblingPool.push(p);
+              already.add(p.id);
+              siblingByPetId.set(p.id, sibling);
+            }
+          }
+        }
+        activeCandidates = [...activeCandidates, ...siblingPool].slice(0, maxSlots);
+        for (const pet of activeCandidates) {
+          const sibling = siblingByPetId.get(pet.id);
+          if (sibling) focusAbilityIds.push(sibling.abilityIds[0]);
+        }
+      }
+      activeCandidates.forEach((p) => usedIds.add(p.id));
+      if (activeCandidates.length) {
+        teams2.push({
+          categories: [categoryRef],
+          mode: "active",
+          petIds: activeCandidates.map((p) => p.id),
+          focusAbilityIds: dedupe(focusAbilityIds)
+        });
+      }
+      if (category.afkCapable) {
+        const afkTeam = pickAfkTeam(category, pets, maxSlots);
+        if (afkTeam?.length) {
+          afkTeam.forEach((p) => usedIds.add(p.id));
+          teams2.push({
+            categories: [categoryRef],
+            mode: "afk",
+            // Only the category's own ability. A feeder in this team may well
+            // carry it too (that is often why it was picked), and the stats
+            // layer counts whatever abilities the pets actually have.
+            petIds: afkTeam.map((p) => p.id),
+            focusAbilityIds: [category.abilityIds[0]]
+          });
+        }
+      }
+      const afkRelevant = !category.afkCapable && category.paddingParentId != null && !!CATEGORIES_BY_ID.get(category.paddingParentId)?.afkCapable;
+      const fillerSustainPet = pickSustainPet(pets, category, false);
+      if (afkRelevant && fillerSustainPet && activeCandidates.length > 0 && activeCandidates.length < maxSlots && !activeCandidates.some((p) => p.id === fillerSustainPet.id)) {
+        usedIds.add(fillerSustainPet.id);
+        teams2.push({
+          categories: [categoryRef],
+          mode: "afk",
+          petIds: [...activeCandidates.map((p) => p.id), fillerSustainPet.id],
+          focusAbilityIds: dedupe(focusAbilityIds)
+        });
+      }
+    }
+    return {
+      teams: mergeTeamsWithSamePets(teams2),
+      sustainPet,
+      unusedPets: findUnusedPets(pets, usedIds, sustainPet)
+    };
+  }
+  var HARD_AVOID_MUTATIONS, SOFT_AVOID_MUTATIONS, GRANTER_STRENGTH_PENALTY, AFK_POOL_LIMIT, AFK_FEEDER_LIMIT;
+  var init_teamBuilder = __esm({
+    "src/features/pets/teamBuilder.ts"() {
+      "use strict";
+      init_data();
+      init_petValue();
+      init_abilityStats();
+      init_teamStats();
+      init_teamBuilderCategories();
       HARD_AVOID_MUTATIONS = /* @__PURE__ */ new Set(["Gold"]);
       SOFT_AVOID_MUTATIONS = /* @__PURE__ */ new Set(["Rainbow"]);
       GRANTER_STRENGTH_PENALTY = 10;
       AFK_POOL_LIMIT = 6;
       AFK_FEEDER_LIMIT = 4;
-      CATEGORIES_BY_ID = new Map(CATEGORIES.map((c) => [c.id, c]));
     }
   });
 
