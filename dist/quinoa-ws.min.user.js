@@ -48109,9 +48109,6 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/chat/harvest.ts
-  function mutationsOf(row) {
-    return row.mutations;
-  }
   function rowKey(row) {
     return `${row.tileIndex}:${row.slotId}`;
   }
@@ -48123,7 +48120,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function mutationsPresent(rows) {
     const all = /* @__PURE__ */ new Set();
-    for (const row of rows) for (const mutation of mutationsOf(row)) all.add(mutation);
+    for (const row of rows) for (const mutation of row.mutations) all.add(mutation);
     return [...all].sort((a, b) => a.localeCompare(b));
   }
   function tally(rows, of) {
@@ -48137,7 +48134,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function matchesMutations(row, wanted, mode) {
     if (wanted.length === 0) return true;
-    const present = new Set(mutationsOf(row));
+    const present = new Set(row.mutations);
     switch (mode) {
       case "all":
         return wanted.every((mutation) => present.has(mutation));
@@ -48179,7 +48176,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function groupVariants(rows) {
     const groups = /* @__PURE__ */ new Map();
     for (const row of rows) {
-      const mutations = [...mutationsOf(row)].sort();
+      const mutations = [...row.mutations].sort();
       const key2 = `${row.species}|${mutations.join(",")}`;
       const known = groups.get(key2);
       if (known) known.count++;
@@ -57405,153 +57402,48 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/chat/gardenScan.ts
   function slotCropSize(slot, species) {
-    const size = readCropSize({ ...slot, species: slot.species ?? species });
-    if (size != null) return size;
-    return CROP_SIZE_MIN;
+    return readCropSize({ ...slot, species: slot.species ?? species }) ?? CROP_SIZE_MIN;
   }
-  function scanGarden(tileObjects, selectedSpecies) {
+  function scanGarden(tileObjects, species) {
     const plants = [];
-    const allCrops = [];
+    if (!tileObjects) return { plants };
     const now2 = Date.now();
-    if (!tileObjects || !selectedSpecies.size) {
-      return emptyResult();
-    }
     for (const [tileIdx, tileRaw] of Object.entries(tileObjects)) {
       const tile = tileRaw;
       if (!tile || tile.objectType !== "plant") continue;
-      const species = tile.species;
-      if (!species || !selectedSpecies.has(species)) continue;
+      const plantSpecies = tile.species;
+      if (!plantSpecies || species && !species.has(plantSpecies)) continue;
       const slots = tile.slots;
       if (!Array.isArray(slots) || !slots.length) continue;
-      const crops = [];
-      for (let si = 0; si < slots.length; si++) {
-        const slot = slots[si];
+      const crops = slots.map((slot, index) => {
         const rawSlotId = slot.slotId;
-        const slotId = Number.isFinite(rawSlotId) ? Number(rawSlotId) : si;
         const startTime = Number(slot.startTime) || 0;
         const endTime = Number(slot.endTime) || 0;
-        const mutations = Array.isArray(slot.mutations) ? slot.mutations : [];
-        let growthPct = 0;
         const duration = endTime - startTime;
-        if (duration > 0) {
-          const elapsed = now2 - startTime;
-          growthPct = Math.max(0, Math.min(100, elapsed / duration * 100));
-        } else {
-          growthPct = 100;
-        }
-        const size = slotCropSize(slot, species);
-        const colorMuts = [];
-        const weatherMuts = [];
-        const timeMuts = [];
-        for (const m of mutations) {
-          if (colorMutations().has(m)) colorMuts.push(m);
-          else if (WEATHER_MUTATIONS.has(m)) weatherMuts.push(m);
-          else if (TIME_MUTATIONS.has(m)) timeMuts.push(m);
-        }
-        const crop = {
-          slotIndex: slotId,
-          species: slot.species ?? species,
+        const growthPct = duration > 0 ? Math.max(0, Math.min(100, (now2 - startTime) / duration * 100)) : 100;
+        return {
+          slotIndex: Number.isFinite(rawSlotId) ? Number(rawSlotId) : index,
+          species: slot.species ?? plantSpecies,
           startTime,
           endTime,
-          size,
-          mutations,
+          mutations: Array.isArray(slot.mutations) ? slot.mutations : [],
           growthPct,
-          sizePct: size,
-          colorMutations: colorMuts,
-          weatherMutations: weatherMuts,
-          timeMutations: timeMuts,
+          sizePct: slotCropSize(slot, plantSpecies),
           preserved: slot.preserved === true
         };
-        crops.push(crop);
-        allCrops.push(crop);
-      }
-      plants.push({
-        tileIndex: Number(tileIdx),
-        species,
-        crops
       });
+      plants.push({ tileIndex: Number(tileIdx), species: plantSpecies, crops });
     }
-    if (!allCrops.length) return emptyResult();
-    const total = allCrops.length;
-    const avgGrowthPct = allCrops.reduce((s, c) => s + c.growthPct, 0) / total;
-    const avgSizePct = allCrops.reduce((s, c) => s + c.sizePct, 0) / total;
-    const cropsWithColor = allCrops.filter((c) => c.colorMutations.length > 0).length;
-    const colorMutationPct = cropsWithColor / total * 100;
-    const weatherMutationPcts = {};
-    for (const wm of WEATHER_MUTATIONS) {
-      const count = allCrops.filter((c) => c.weatherMutations.includes(wm)).length;
-      weatherMutationPcts[wm] = count / total * 100;
-    }
-    const timeMutationPcts = {};
-    for (const tm of TIME_MUTATIONS) {
-      const count = allCrops.filter((c) => c.timeMutations.includes(tm)).length;
-      timeMutationPcts[tm] = count / total * 100;
-    }
-    const cropsAtMaxSize = allCrops.filter((c) => c.sizePct >= CROP_SIZE_MAX).length;
-    const sizeCompletePct = cropsAtMaxSize / total * 100;
-    const harvestTargets = [];
-    for (const plant of plants) {
-      for (const crop of plant.crops) {
-        if (crop.growthPct >= 100) {
-          harvestTargets.push({ tileIndex: plant.tileIndex, slotIndex: crop.slotIndex });
-        }
-      }
-    }
-    return {
-      totalCrops: total,
-      plants,
-      avgGrowthPct: Math.round(avgGrowthPct * 100) / 100,
-      avgSizePct: Math.round(avgSizePct * 100) / 100,
-      colorMutationPct: Math.round(colorMutationPct * 100) / 100,
-      weatherMutationPcts,
-      timeMutationPcts,
-      sizeCompletePct: Math.round(sizeCompletePct * 100) / 100,
-      matureCropCount: harvestTargets.length,
-      harvestTargets
-    };
+    return { plants };
   }
-  function emptyResult() {
-    return {
-      totalCrops: 0,
-      plants: [],
-      avgGrowthPct: 0,
-      avgSizePct: 50,
-      colorMutationPct: 0,
-      weatherMutationPcts: {},
-      timeMutationPcts: {},
-      sizeCompletePct: 0,
-      matureCropCount: 0,
-      harvestTargets: []
-    };
-  }
-  var colorMutations, WEATHER_MUTATIONS, TIME_MUTATIONS;
   var init_gardenScan = __esm({
     "src/features/companion/chat/gardenScan.ts"() {
       "use strict";
-      init_data();
       init_cropSize();
-      colorMutations = memoOnCatalogs(() => new Set(
-        Object.keys(mutationCatalog2).filter((k) => {
-          const entry = mutationCatalog2[k];
-          return entry.group !== void 0 ? entry.group === "Growth" : !entry.tileRef;
-        })
-      ));
-      WEATHER_MUTATIONS = /* @__PURE__ */ new Set(["Wet", "Chilled", "Frozen", "Thunderstruck"]);
-      TIME_MUTATIONS = /* @__PURE__ */ new Set(["Dawnlit", "Amberlit", "Dawncharged", "Ambercharged"]);
     }
   });
 
   // src/features/companion/chat/gardenRead.ts
-  function speciesInGarden(tileObjects) {
-    const species = /* @__PURE__ */ new Set();
-    for (const raw of Object.values(tileObjects)) {
-      const tile = raw;
-      if (!tile || tile.objectType !== "plant") continue;
-      const name = tile.species;
-      if (typeof name === "string" && name) species.add(name);
-    }
-    return species;
-  }
   async function readHarvestRows() {
     let tileObjects = null;
     try {
@@ -57560,23 +57452,19 @@ Restore figures are averages; unlucky streaks do worse.`;
       return [];
     }
     if (!tileObjects || typeof tileObjects !== "object") return [];
-    const species = speciesInGarden(tileObjects);
-    if (species.size === 0) return [];
-    const scan = scanGarden(tileObjects, species);
     const now2 = Date.now();
     const rows = [];
-    for (const plant of scan.plants) {
+    for (const plant of scanGarden(tileObjects).plants) {
       for (const crop of plant.crops) {
         rows.push({
           tileIndex: plant.tileIndex,
-          // `slotIndex` porte le slotId résolu par scanGarden, pas un index de tableau.
           slotId: crop.slotIndex,
           species: crop.species,
           sizePct: crop.sizePct,
           growthPct: Math.round(crop.growthPct),
-          mutations: Array.isArray(crop.mutations) ? crop.mutations : [],
+          mutations: crop.mutations,
           ready: crop.endTime > 0 && crop.endTime <= now2,
-          preserved: crop.preserved === true
+          preserved: crop.preserved
         });
       }
     }
@@ -57590,7 +57478,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         return lockerService.allowsHarvest({
           seedKey: row.species,
           sizePercent: row.sizePct,
-          mutations: mutationsOf(row)
+          mutations: row.mutations
         });
       } catch {
         return false;
@@ -57604,7 +57492,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_atoms();
       init_locker();
       init_gardenScan();
-      init_harvest();
     }
   });
 
@@ -59229,7 +59116,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         ),
         selectionRow({
           values: mutations,
-          counts: tally(available, mutationsOf),
+          counts: tally(available, (row) => row.mutations),
           selected: filters.mutations.length === 0 ? null : filters.mutations,
           iconFor: (name) => cachedIcon(`mutation:${name}`, () => mutationIconEl(name, TILE_ICON_PX)),
           onPick: (name) => {

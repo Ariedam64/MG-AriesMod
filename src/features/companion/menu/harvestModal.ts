@@ -21,7 +21,6 @@ import {
   describeFilters,
   filterRows,
   groupVariants,
-  mutationsOf,
   mutationsPresent,
   speciesPresent,
   tally,
@@ -151,7 +150,7 @@ export function openHarvestModal(host: HTMLElement, onAsk: (request: ChatRequest
       ),
       selectionRow({
         values: mutations,
-        counts: tally(available, mutationsOf),
+        counts: tally(available, (row) => row.mutations),
         selected: filters.mutations.length === 0 ? null : filters.mutations,
         iconFor: (name) => cachedIcon(`mutation:${name}`, () => mutationIconEl(name, TILE_ICON_PX)),
         onPick: (name) => {
