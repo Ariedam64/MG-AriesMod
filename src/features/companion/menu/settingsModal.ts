@@ -10,7 +10,7 @@
 
 import { loadCompanionSettings, type SettingsGroup } from "../state";
 import { describeKeep, hasAnyRule } from "../chat/hatch";
-import { teamName } from "../chat/teamSwap";
+import { teamName } from "../chat/crew";
 import { openFeedSettingsModal } from "./feedSettingsModal";
 import { openHarvestSettingsModal } from "./harvestSettingsModal";
 import { openHatchSettingsModal } from "./hatchSettingsModal";

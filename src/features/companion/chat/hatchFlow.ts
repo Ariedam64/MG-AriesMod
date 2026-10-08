@@ -8,8 +8,8 @@
 import { loadCompanionSettings } from "../state";
 import { hasAnyRule, toFavourite, toSell, type KeepRules, type PetRow } from "./hatch";
 import { readHatchScope, type HatchScope } from "./hatchRead";
-import type { SellPlan } from "./hatchRun";
 import type { HatchStop } from "./hatchRun";
+import type { SellPlan } from "./sellRun";
 
 /** Recalcule les œufs prêts au moment de la confirmation. */
 export type HatchProvider = () => Promise<number[]>;

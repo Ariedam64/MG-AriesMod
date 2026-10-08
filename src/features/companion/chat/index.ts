@@ -33,9 +33,10 @@ import { countByItem, plantSignature, summarizePlan, type PlantAssignment } from
 import { executePlantBatch } from "./plantRun";
 import { petSignature, slotSignature, summarizeHatch, summarizeSell, toSell, type KeepRules } from "./hatch";
 import { readHatchScope } from "./hatchRead";
-import { executeHatchBatch, executeSellBatch, type HatchStop, type SellPlan } from "./hatchRun";
+import { executeHatchBatch, type HatchStop } from "./hatchRun";
+import { executeSellBatch, type SellPlan } from "./sellRun";
 import { afterHatch, hatchProvider, sellProvider, type HatchProvider, type SellProvider } from "./hatchFlow";
-import { teamName } from "./teamSwap";
+import { teamName } from "./crew";
 import { loadCompanionSettings } from "../state";
 import { explain, isExpired, verdict, type Proposal } from "./proposals";
 

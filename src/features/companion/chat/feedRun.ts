@@ -1,40 +1,34 @@
-// src/services/companion/chat/feedRun.ts
-// Exécute un nourrissage : de l'inventaire, ou en récoltant d'abord.
+// Runs a feeding: from the bag, or by picking a crop first.
 //
-// Le cas « depuis le jardin » repose sur un détail du protocole : c'est le
-// *client* qui invente l'identifiant de la produce à naître et l'envoie dans
-// `HarvestCrop.cropItemId` (bundle 1125). On le fabrique donc nous-mêmes, on
-// récolte avec, et on nourrit avec le même identifiant — sans avoir à deviner
-// lequel des crops fraîchement ramassés est le bon.
+// Feeding from the garden relies on a protocol detail: the *client* makes up
+// the id of the produce about to exist and sends it in `HarvestCrop.cropItemId`
+// (bundle 1125). So the id is made here, the crop is picked with it, and the
+// pet is fed with that same id, with no guessing which freshly picked crop is
+// the right one.
 //
-// Le companion fait le trajet : jusqu'au crop s'il doit le cueillir, puis
-// jusqu'au pet. C'est du décor, et ça n'empêche jamais l'action.
+// The companion walks there: to the crop if he has to pick it, then to the
+// pet. Only for show, and it never prevents the action.
 
+import { sleep } from "../../../lib/async";
 import { randomClientId } from "../../../game/ws/commands";
-import { PetsService } from "../../pets/pets";
 import { PlayerService, type PetInfo } from "../../../game/player";
+import { PetsService } from "../../pets/pets";
 import { StatsService } from "../../stats/stats";
 import type { XY } from "../movement";
-import { petIcon, petIcons, type FeedCandidate } from "./feed";
-import { createWalker, type Walker } from "./walk";
-import type { BatchReporter } from "./batch";
+import { SETTLE_MS, runSteps, type BatchReporter, type Pacer } from "./batch";
 import { compose, spaced } from "./bubbleTags";
-
-/** Temps laissé au serveur pour créer la produce avant de la donner. */
-const AFTER_HARVEST_MS = 700;
-/** Un nourrissage n'est pas instantané côté serveur ; on ne mitraille pas. */
-const AFTER_FEED_MS = 400;
+import { hireCrew } from "./crew";
+import { petIcon, petIcons, type FeedCandidate } from "./feed";
+import { listWords } from "./harvest";
+import type { Walker } from "./walk";
 
 type FeedOutcome = { ok: true } | { ok: false; reason: string };
 
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-
 /**
- * Où se trouve le pet à l'instant présent.
+ * Where the pet is right now.
  *
- * Relu au moment d'y aller plutôt que capturé à la proposition : un pet se
- * promène, et marcher vers l'endroit où il était il y a une minute donnerait
- * exactement l'inverse de l'effet recherché.
+ * Read when he sets off rather than captured with the proposal: pets roam,
+ * and walking to where one stood a minute ago would look exactly wrong.
  */
 async function petPosition(petId: string): Promise<XY | null> {
   try {
@@ -46,7 +40,7 @@ async function petPosition(petId: string): Promise<XY | null> {
   }
 }
 
-async function runFeed(candidate: FeedCandidate, walker: Walker): Promise<FeedOutcome> {
+async function feedOne(candidate: FeedCandidate, walker: Walker, pace: Pacer): Promise<FeedOutcome> {
   let cropItemId: string;
 
   if (candidate.source.kind === "inventory") {
@@ -54,72 +48,73 @@ async function runFeed(candidate: FeedCandidate, walker: Walker): Promise<FeedOu
   } else {
     await walker.toGardenTile(candidate.source.row.tileIndex);
 
-    // On force l'identifiant pour pouvoir le redonner tout de suite après.
+    // The id is chosen here so it can be handed over right after.
     cropItemId = randomClientId();
+    await pace.wait();
     try {
       await PlayerService.harvestCrop(candidate.source.row.tileIndex, candidate.source.row.slotId, cropItemId);
     } catch {
       return { ok: false, reason: "could not pick it" };
+    } finally {
+      pace.mark();
     }
     StatsService.incrementGardenStat("totalHarvested", 1);
-    await sleep(AFTER_HARVEST_MS);
+    // The produce must exist on the server before it can be fed.
+    await sleep(SETTLE_MS);
   }
 
   await walker.toPosition(await petPosition(candidate.petId));
 
+  await pace.wait();
   try {
     await PlayerService.feedPet(candidate.petId, cropItemId);
   } catch {
     return { ok: false, reason: "the feed did not go through" };
+  } finally {
+    pace.mark();
   }
-  await sleep(AFTER_FEED_MS);
   return { ok: true };
 }
 
 /**
- * Nourrit les pets confirmés, un par un.
+ * Feeds the confirmed pets, one by one.
  *
- * Le bilan tombe au fur et à mesure plutôt qu'à la fin : sur plusieurs pets,
- * les trajets prennent du temps, et un silence prolongé ressemble à une panne.
+ * Each result is said as it comes rather than at the end: across several pets
+ * the walks take a while, and a long silence looks like a breakdown.
  */
 export async function executeFeedBatch(picks: FeedCandidate[], reporter: BatchReporter): Promise<void> {
-  const who = petIcons(picks);
   const opening = picks.length === 1 ? "On it." : `On it. Feeding ${picks.length} of them.`;
-  reporter.say("reply", opening, compose(...spaced(who), " ", opening));
+  reporter.say("reply", opening, compose(...spaced(petIcons(picks)), " ", opening));
 
-  const walker = await createWalker((message) => reporter.say("system", message));
-
-  // Les candidats eux-mêmes, pas leurs noms : le bilan a besoin de leur espèce
-  // pour poser les bonnes icônes.
+  // The candidates themselves, not their names: the report needs their
+  // species to put the right icons on.
   const fed: FeedCandidate[] = [];
   const failures: string[] = [];
 
-  for (const pick of picks) {
-    if (reporter.stopped()) break;
-    const outcome = await runFeed(pick, walker);
-    if (outcome.ok) {
-      fed.push(pick);
-      const fedLine = `${pick.petName} has been fed.`;
-      reporter.say("system", fedLine, compose(petIcon(pick), " ", fedLine));
-    } else {
-      failures.push(`${pick.petName} (${outcome.reason})`);
-    }
-    reporter.progress(fed.length + failures.length, picks.length);
-  }
+  await runSteps({
+    items: picks,
+    reporter,
+    hire: () => hireCrew(reporter),
+    async step(pick, walker, pace) {
+      const outcome = await feedOne(pick, walker, pace);
+      if (outcome.ok) {
+        fed.push(pick);
+        const fedLine = `${pick.petName} has been fed.`;
+        reporter.say("system", fedLine, compose(petIcon(pick), " ", fedLine));
+      } else {
+        failures.push(`${pick.petName} (${outcome.reason})`);
+      }
+    },
+  });
 
-  walker.release();
   const cancelled = reporter.stopped();
-
   if (fed.length === 0) {
     reporter.say("report", `That did not work: ${failures.join(", ") || "nothing went through"}.`);
     return;
   }
   const tail = failures.length > 0 ? ` I could not manage ${failures.join(", ")}.` : "";
-  const fedNames = fed.map((pick) => pick.petName);
-  const names =
-    fedNames.length === 1 ? fedNames[0] : `${fedNames.slice(0, -1).join(", ")} and ${fedNames[fedNames.length - 1]}`;
-  // La bulle compte plutôt qu'elle n'énumère : trois noms tiennent dans le fil,
-  // pas au-dessus de sa tête.
-  const done = `${cancelled ? "Stopped there. " : ""}Fed ${names}.${tail}`;
+  // The bubble shows icons rather than a list: three names fit in the thread,
+  // not above his head.
+  const done = `${cancelled ? "Stopped there. " : ""}Fed ${listWords(fed.map((pick) => pick.petName))}.${tail}`;
   reporter.say("report", done, compose(...spaced(petIcons(fed)), " ", done));
 }

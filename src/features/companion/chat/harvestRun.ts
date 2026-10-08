@@ -1,43 +1,41 @@
-// src/services/companion/chat/harvestRun.ts
-// Exécution d'un lot de récolte confirmé.
+// Runs a confirmed harvest.
 //
-// Le companion marche jusqu'à chaque crop avant de le cueillir. C'est purement
-// visuel — le serveur accepte la commande d'où qu'on soit — mais c'est ce qui
-// donne à voir qu'il travaille plutôt que de vider un jardin depuis un coin de
-// la carte.
+// The companion walks to each crop before picking it. That is only for show,
+// since the server accepts the command from anywhere, but it is what makes him
+// look like he is working rather than emptying a garden from a corner of the
+// map.
 
+import { sleep } from "../../../lib/async";
 import { PlayerService } from "../../../game/player";
 import { StatsService } from "../../stats/stats";
 import { loadCompanionSettings } from "../state";
-import { PROGRESS_EVERY, SETTLE_MS, pacer, sleep, type BatchReporter } from "./batch";
-import { wearTeam } from "./teamSwap";
-import { createWalker } from "./walk";
+import { SETTLE_MS, runSteps, type BatchReporter } from "./batch";
+import { cropIcon } from "./bubbleIcons";
+import { compose } from "./bubbleTags";
+import { hireCrew } from "./crew";
 import { readHarvestRows } from "./gardenRead";
 import { groupVariants, rowKey, type HarvestRow } from "./harvest";
-import { compose } from "./bubbleTags";
-import { cropIcon } from "./bubbleIcons";
 
-/** Le crop dominant d'un lot, pour l'icone d'une bulle. */
+/** The batch's main crop, for a bubble's icon. */
 function topCrop(rows: HarvestRow[]) {
   const top = groupVariants(rows)[0];
   return top ? cropIcon(top.species) : null;
 }
 
 /**
- * Rend compte d'un lot en relisant le jardin.
+ * Reports on a batch by reading the garden again.
  *
- * `HarvestCrop` part sans accusé de réception : le serveur ne répond rien, et
- * une commande refusée (inventaire plein, crop déjà pris) est indiscernable
- * d'une commande acceptée. Compter les envois reviendrait donc à annoncer un
- * succès qu'on n'a pas constaté. On relit le jardin et on regarde ce qui a
- * réellement disparu.
+ * `HarvestCrop` gets no acknowledgement: the server answers nothing, and a
+ * refused command (full bag, crop already gone) looks just like an accepted
+ * one. Counting what was sent would announce a success nobody saw, so the
+ * garden is read again to see what really went.
  *
- * Un crop récolté quitte la liste, ou repart en croissance s'il repousse : dans
- * les deux cas il cesse d'être mûr. Ceux qui le sont restés n'ont pas été pris.
+ * A harvested crop leaves the list, or starts growing again if it regrows:
+ * either way it stops being ripe. Those still ripe were not taken.
  *
- * On relit le jardin brut, pas le périmètre du Locker : la question est « est-il
- * encore mûr ? », pas « aurais-je encore le droit d'y toucher ? ». Une règle
- * modifiée pendant le lot ferait sinon passer un crop intact pour récolté.
+ * The raw garden is read, not the Locker's scope: the question is "is it still
+ * ripe?", not "may I still touch it?". A rule changed during the batch would
+ * otherwise pass an untouched crop off as harvested.
  */
 async function report(attempted: HarvestRow[], cancelled: boolean, reporter: BatchReporter): Promise<void> {
   if (attempted.length === 0) {
@@ -57,10 +55,7 @@ async function report(attempted: HarvestRow[], cancelled: boolean, reporter: Bat
   const stopped = cancelled ? " before you stopped me" : "";
 
   if (!fresh) {
-    reporter.say(
-      "report",
-      `Sent all ${attempted.length}${stopped}, but I could not check they landed.`
-    );
+    reporter.say("report", `Sent all ${attempted.length}${stopped}, but I could not check they landed.`);
     return;
   }
 
@@ -76,48 +71,34 @@ async function report(attempted: HarvestRow[], cancelled: boolean, reporter: Bat
     return;
   }
   if (picked === 0) {
-    reporter.say(
-      "report",
-      "None went through. Still ripe, so your bag is probably full."
-    );
+    reporter.say("report", "None went through. Still ripe, so your bag is probably full.");
     return;
   }
   reporter.say("report", `Got ${picked} of ${attempted.length}${stopped}. ${stillRipe} still ripe.`);
 }
 
-/** Récolte le lot confirmé, crop par crop. */
+/** Harvests the confirmed batch, crop by crop. */
 export async function executeHarvestBatch(rows: HarvestRow[], reporter: BatchReporter): Promise<void> {
   const opening = `On it. Picking ${rows.length} now.`;
   reporter.say("reply", opening, compose(topCrop(rows), " ", opening));
 
-  // L'équipe d'abord : certaines capacités agissent à la récolte, et les
-  // enfiler après coup ne servirait plus à rien.
-  const team = await wearTeam(loadCompanionSettings().harvestTeamId, reporter);
-  const walker = await createWalker((message) => reporter.say("system", message));
-
   const attempted: HarvestRow[] = [];
-  const pace = pacer();
-  for (const row of rows) {
-    if (reporter.stopped()) break;
-
-    // Le trajet compte comme de l'attente : il espace les envois tout autant
-    // qu'un sommeil, et l'ajouter à l'écart le paierait deux fois.
-    await walker.toGardenTile(row.tileIndex);
-    await pace.wait();
-    attempted.push(row);
-    await PlayerService.harvestCrop(row.tileIndex, row.slotId);
-    pace.mark();
-
-    const done = attempted.length;
-    reporter.progress(done, rows.length);
-    if (done % PROGRESS_EVERY === 0 && done < rows.length) {
-      reporter.say("system", `${done} of ${rows.length} so far...`);
-    }
-  }
-
-  // Rendu à son mode : sans cela il resterait planté sur le dernier crop.
-  walker.release();
-  await team.restore();
+  await runSteps({
+    items: rows,
+    reporter,
+    // The team goes on before the first crop: some abilities act on harvest.
+    hire: () => hireCrew(reporter, { teamId: loadCompanionSettings().harvestTeamId }),
+    async step(row, walker, pace) {
+      // The walk counts as waiting: it spaces the commands out as well as a
+      // sleep would, and adding it to the gap would pay it twice.
+      await walker.toGardenTile(row.tileIndex);
+      await pace.wait();
+      attempted.push(row);
+      await PlayerService.harvestCrop(row.tileIndex, row.slotId);
+      pace.mark();
+    },
+    progressNote: (done, total) => `${done} of ${total} so far...`,
+  });
 
   await report(attempted, reporter.stopped(), reporter);
 }
