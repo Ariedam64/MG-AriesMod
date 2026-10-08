@@ -14,6 +14,7 @@ import {
 } from "../../ui/kit/sprites/iconCache";
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
 import { getPetStrength, getPetMaxStrength } from "../../data/rules/petValue";
+import { makeDraggable, placeInViewport, readStoredPosition, storePosition, type ScreenPosition } from "../../ui/kit/floating";
 
 const DEFAULT_LABEL = "Instant Feed";
 const MAX_BUTTONS = 3;
@@ -35,7 +36,6 @@ type ActivePetSlot = {
   targetScale?: number;
 };
 
-type WidgetPosition = { left: number; top: number };
 
 let started = false;
 let enabled = true;
@@ -45,7 +45,7 @@ let activePets: ActivePetSlot[] = [];
 let activePetsSig = "";
 let widget: HTMLDivElement | null = null;
 let widgetButtons: HTMLButtonElement[] = [];
-let savedPos: WidgetPosition | null = null;
+let savedPos: ScreenPosition | null = null;
 let positioned = false;
 
 export function isInstantFeedWidgetEnabled(): boolean {
@@ -67,7 +67,7 @@ export function startInstantFeedWidget(): void {
   started = true;
 
   enabled = isInstantFeedWidgetEnabled();
-  savedPos = readSavedPosition();
+  savedPos = readStoredPosition(POS_PATH);
 
   const mount = () => {
     ensureWidget();
@@ -137,35 +137,10 @@ function syncVisibility(): void {
 
 /* ------------------------------ Positioning ----------------------------- */
 
-function readSavedPosition(): WidgetPosition | null {
-  const raw = readAriesPath<unknown>(POS_PATH);
-  if (!raw || typeof raw !== "object") return null;
-  const left = Number((raw as Record<string, unknown>).left);
-  const top = Number((raw as Record<string, unknown>).top);
-  if (!Number.isFinite(left) || !Number.isFinite(top)) return null;
-  return { left, top };
-}
-
-function persistPosition(pos: WidgetPosition): void {
-  savedPos = pos;
-  writeAriesPath(POS_PATH, { left: Math.round(pos.left), top: Math.round(pos.top) });
-}
-
-function clampCoord(value: number, min: number, max: number): number {
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
-  if (max < min) return min;
-  return Math.min(Math.max(value, min), max);
-}
-
-function applyPosition(left: number, top: number): WidgetPosition {
+function applyPosition(left: number, top: number): ScreenPosition {
   if (!widget) return { left, top };
-  const width = widget.offsetWidth;
-  const height = widget.offsetHeight;
-  const boundedLeft = clampCoord(left, SCREEN_MARGIN, window.innerWidth - width - SCREEN_MARGIN);
-  const boundedTop = clampCoord(top, SCREEN_MARGIN, window.innerHeight - height - SCREEN_MARGIN);
-  widget.style.left = `${Math.round(boundedLeft)}px`;
-  widget.style.top = `${Math.round(boundedTop)}px`;
-  return { left: boundedLeft, top: boundedTop };
+  const size = { width: widget.offsetWidth, height: widget.offsetHeight };
+  return placeInViewport(widget, { left, top }, size, SCREEN_MARGIN);
 }
 
 function applyInitialPosition(): void {
@@ -227,64 +202,19 @@ function ensureWidget(): HTMLDivElement {
     widgetButtons.push(btn);
   }
 
-  installDragHandlers(el);
+  makeDraggable(el, {
+    ignore: (target) => !!target.closest("button"),
+    moveTo: (pos) => applyPosition(pos.left, pos.top),
+    onDrop: (pos) => {
+      savedPos = pos;
+      storePosition(POS_PATH, pos);
+    },
+  });
   document.body.appendChild(el);
   widget = el;
   positioned = false;
   updateButtons();
   return el;
-}
-
-function installDragHandlers(el: HTMLDivElement): void {
-  let dragState: {
-    pointerId: number;
-    startX: number;
-    startY: number;
-    baseLeft: number;
-    baseTop: number;
-    lastPos: WidgetPosition;
-  } | null = null;
-
-  const onDragMove = (ev: PointerEvent) => {
-    if (!dragState || ev.pointerId !== dragState.pointerId) return;
-    const dx = ev.clientX - dragState.startX;
-    const dy = ev.clientY - dragState.startY;
-    dragState.lastPos = applyPosition(dragState.baseLeft + dx, dragState.baseTop + dy);
-  };
-
-  const stopDrag = (ev?: PointerEvent) => {
-    if (!dragState) return;
-    if (ev && ev.pointerId !== dragState.pointerId) return;
-    document.removeEventListener("pointermove", onDragMove);
-    document.removeEventListener("pointerup", stopDrag);
-    document.removeEventListener("pointercancel", stopDrag);
-    try { el.releasePointerCapture(dragState.pointerId); } catch {}
-    persistPosition(dragState.lastPos);
-    dragState = null;
-    el.style.cursor = "grab";
-  };
-
-  el.addEventListener("pointerdown", (ev: PointerEvent) => {
-    if (ev.button !== 0) return;
-    const target = ev.target as HTMLElement | null;
-    if (target && target.closest("button")) return;
-    if (dragState) stopDrag();
-    const rect = el.getBoundingClientRect();
-    dragState = {
-      pointerId: ev.pointerId,
-      startX: ev.clientX,
-      startY: ev.clientY,
-      baseLeft: rect.left,
-      baseTop: rect.top,
-      lastPos: { left: rect.left, top: rect.top },
-    };
-    try { el.setPointerCapture(ev.pointerId); } catch {}
-    document.addEventListener("pointermove", onDragMove);
-    document.addEventListener("pointerup", stopDrag);
-    document.addEventListener("pointercancel", stopDrag);
-    el.style.cursor = "grabbing";
-    ev.preventDefault();
-  });
 }
 
 function createHeader(): HTMLDivElement {

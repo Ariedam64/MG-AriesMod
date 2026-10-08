@@ -7,6 +7,7 @@
 import { BELL_GLYPH, BELL_RING_DURATION_MS, BELL_RING_SEQUENCE, type BellController, type ScreenRect } from "./ring";
 import { readAriesPath, writeAriesPath } from "../../../platform/storage";
 import { h } from "../../../ui/kit/dom";
+import { makeDraggable, placeInViewport, readStoredPosition, storePosition, type ScreenPosition } from "../../../ui/kit/floating";
 
 // Stored under the `notifier` section, one of the top-level sections the
 // storage keeps when it reloads the aries_mod blob: an unknown top-level key
@@ -39,8 +40,6 @@ const RING_KEYFRAMES: Keyframe[] = BELL_RING_SEQUENCE.map(({ offset, deg }) => (
   offset,
 }));
 
-type WidgetPosition = { left: number; top: number };
-
 export interface FloatingBellOptions {
   onClick: () => void;
   /** Called whenever the widget moves (drag, viewport clamp). */
@@ -56,25 +55,6 @@ export function setFloatingBellEnabled(value: boolean): void {
   try {
     window.dispatchEvent(new CustomEvent(BELL_MODE_EVENT, { detail: { floating: value } }));
   } catch {}
-}
-
-function readSavedPosition(): WidgetPosition | null {
-  const raw = readAriesPath<unknown>(POS_PATH);
-  if (!raw || typeof raw !== "object") return null;
-  const left = Number((raw as Record<string, unknown>).left);
-  const top = Number((raw as Record<string, unknown>).top);
-  if (!Number.isFinite(left) || !Number.isFinite(top)) return null;
-  return { left, top };
-}
-
-function persistPosition(pos: WidgetPosition): void {
-  writeAriesPath(POS_PATH, { left: Math.round(pos.left), top: Math.round(pos.top) });
-}
-
-function clampCoord(value: number, min: number, max: number): number {
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
-  if (max < min) return min;
-  return Math.min(Math.max(value, min), max);
 }
 
 export function startFloatingBell(opts: FloatingBellOptions): BellController {
@@ -118,16 +98,13 @@ export function startFloatingBell(opts: FloatingBellOptions): BellController {
   } as CSSStyleDeclaration);
   button.appendChild(icon);
 
-  const applyPosition = (left: number, top: number): WidgetPosition => {
-    const boundedLeft = clampCoord(left, SCREEN_MARGIN, window.innerWidth - BUTTON_SIZE - SCREEN_MARGIN);
-    const boundedTop = clampCoord(top, SCREEN_MARGIN, window.innerHeight - BUTTON_SIZE - SCREEN_MARGIN);
-    button.style.left = `${Math.round(boundedLeft)}px`;
-    button.style.top = `${Math.round(boundedTop)}px`;
+  const applyPosition = (pos: ScreenPosition): ScreenPosition => {
+    const placed = placeInViewport(button, pos, { width: BUTTON_SIZE, height: BUTTON_SIZE }, SCREEN_MARGIN);
     try { opts.onMoved?.(); } catch {}
-    return { left: boundedLeft, top: boundedTop };
+    return placed;
   };
 
-  const defaultPosition = (): WidgetPosition => ({
+  const defaultPosition = (): ScreenPosition => ({
     left: window.innerWidth - BUTTON_SIZE - DEFAULT_RIGHT_GAP,
     top: window.innerHeight * DEFAULT_TOP_RATIO,
   });
@@ -136,18 +113,18 @@ export function startFloatingBell(opts: FloatingBellOptions): BellController {
   // only. Otherwise a provisional viewport (a Discord iframe not resized yet,
   // the game canvas still settling) would overwrite the restored position
   // with its shrunk version, and nothing would find it again.
-  let desiredPosition: WidgetPosition | null = null;
+  let desiredPosition: ScreenPosition | null = null;
   // Until the player moves the bell, the default is recomputed on every
   // viewport change, since it depends on the window size too.
   let usingDefaultPosition = true;
 
   const applyDesiredPosition = () => {
     const target = usingDefaultPosition || !desiredPosition ? defaultPosition() : desiredPosition;
-    applyPosition(target.left, target.top);
+    applyPosition(target);
   };
 
   const applyInitialPosition = () => {
-    const saved = readSavedPosition();
+    const saved = readStoredPosition(POS_PATH);
     desiredPosition = saved;
     usingDefaultPosition = !saved;
     applyDesiredPosition();
@@ -159,68 +136,18 @@ export function startFloatingBell(opts: FloatingBellOptions): BellController {
   };
 
   // Drag to move; a press that never travels past the threshold is a click.
-  let dragState: {
-    pointerId: number;
-    startX: number;
-    startY: number;
-    baseLeft: number;
-    baseTop: number;
-    lastPos: WidgetPosition;
-    dragged: boolean;
-  } | null = null;
+  const detachDrag = makeDraggable(button, {
+    thresholdPx: DRAG_THRESHOLD_PX,
+    stopPropagation: true,
+    moveTo: (pos) => {
+      desiredPosition = applyPosition(pos);
+      usingDefaultPosition = false;
+      return desiredPosition;
+    },
+    onDrop: (pos) => storePosition(POS_PATH, pos),
+    onClick: () => opts.onClick(),
+  });
 
-  const onDragMove = (ev: PointerEvent) => {
-    if (!dragState || ev.pointerId !== dragState.pointerId) return;
-    const dx = ev.clientX - dragState.startX;
-    const dy = ev.clientY - dragState.startY;
-    if (!dragState.dragged && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
-    dragState.dragged = true;
-    dragState.lastPos = applyPosition(dragState.baseLeft + dx, dragState.baseTop + dy);
-    desiredPosition = dragState.lastPos;
-    usingDefaultPosition = false;
-  };
-
-  const stopDrag = (ev?: PointerEvent) => {
-    if (!dragState) return;
-    if (ev && ev.pointerId !== dragState.pointerId) return;
-    document.removeEventListener("pointermove", onDragMove);
-    document.removeEventListener("pointerup", stopDrag);
-    document.removeEventListener("pointercancel", stopDrag);
-    try { button.releasePointerCapture(dragState.pointerId); } catch {}
-    const wasDrag = dragState.dragged;
-    if (wasDrag) persistPosition(dragState.lastPos);
-    dragState = null;
-    button.style.cursor = "grab";
-    if (!wasDrag && ev?.type === "pointerup") {
-      try { opts.onClick(); } catch (error) {
-        console.error("[FloatingBell] onClick error:", error);
-      }
-    }
-  };
-
-  const onPointerDown = (ev: PointerEvent) => {
-    if (ev.button !== 0) return;
-    if (dragState) stopDrag();
-    const rect = button.getBoundingClientRect();
-    dragState = {
-      pointerId: ev.pointerId,
-      startX: ev.clientX,
-      startY: ev.clientY,
-      baseLeft: rect.left,
-      baseTop: rect.top,
-      lastPos: { left: rect.left, top: rect.top },
-      dragged: false,
-    };
-    try { button.setPointerCapture(ev.pointerId); } catch {}
-    document.addEventListener("pointermove", onDragMove);
-    document.addEventListener("pointerup", stopDrag);
-    document.addEventListener("pointercancel", stopDrag);
-    button.style.cursor = "grabbing";
-    ev.preventDefault();
-    ev.stopPropagation();
-  };
-
-  button.addEventListener("pointerdown", onPointerDown);
   window.addEventListener("resize", onWindowResize);
   document.body.appendChild(button);
   applyInitialPosition();
@@ -248,11 +175,10 @@ export function startFloatingBell(opts: FloatingBellOptions): BellController {
     stop() {
       if (!running) return;
       running = false;
-      stopDrag();
+      detachDrag();
       stopWiggle();
       clearSettleTimers();
       window.removeEventListener("resize", onWindowResize);
-      button.removeEventListener("pointerdown", onPointerDown);
       try { button.remove(); } catch {}
     },
 

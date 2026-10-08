@@ -62,7 +62,8 @@
     "check:inventoryfriends": "esbuild scripts/checkInventoryFriendBonus.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkInventoryFriendBonus.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkInventoryFriendBonus.cjs",
     "check:debugsockets": "esbuild scripts/checkDebugSocketCapture.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkDebugSocketCapture.cjs --log-level=error && node node_modules/.cache/checkDebugSocketCapture.cjs",
     "check:ghostmode": "esbuild scripts/checkGhostMode.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkGhostMode.cjs --log-level=error && node node_modules/.cache/checkGhostMode.cjs",
-    "check:inventorysummary": "esbuild scripts/checkInventoryValueSummary.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkInventoryValueSummary.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkInventoryValueSummary.cjs"
+    "check:inventorysummary": "esbuild scripts/checkInventoryValueSummary.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkInventoryValueSummary.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkInventoryValueSummary.cjs",
+    "check:floating": "esbuild scripts/checkFloating.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkFloating.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkFloating.cjs"
   },
   "devDependencies": {
     "@types/tampermonkey": "^5.0.4",

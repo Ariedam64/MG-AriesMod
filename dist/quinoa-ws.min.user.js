@@ -21969,6 +21969,107 @@
     }
   });
 
+  // src/ui/kit/floating.ts
+  function readStoredPosition(path) {
+    const raw = readAriesPath(path);
+    if (!raw || typeof raw !== "object") return null;
+    const left = Number(raw.left);
+    const top = Number(raw.top);
+    if (!Number.isFinite(left) || !Number.isFinite(top)) return null;
+    return { left, top };
+  }
+  function storePosition(path, pos) {
+    writeAriesPath(path, { left: Math.round(pos.left), top: Math.round(pos.top) });
+  }
+  function clampCoord(value, min, max) {
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
+    if (max < min) return min;
+    return Math.min(Math.max(value, min), max);
+  }
+  function clampToViewport(pos, size, margin, viewport = { width: window.innerWidth, height: window.innerHeight }) {
+    return {
+      left: clampCoord(pos.left, margin, viewport.width - size.width - margin),
+      top: clampCoord(pos.top, margin, viewport.height - size.height - margin)
+    };
+  }
+  function placeInViewport(el, pos, size, margin) {
+    const placed = clampToViewport(pos, size, margin);
+    el.style.left = `${Math.round(placed.left)}px`;
+    el.style.top = `${Math.round(placed.top)}px`;
+    return placed;
+  }
+  function makeDraggable2(el, opts) {
+    const threshold = opts.thresholdPx ?? 0;
+    let drag = null;
+    const onMove = (ev) => {
+      if (!drag || ev.pointerId !== drag.pointerId) return;
+      const dx = ev.clientX - drag.startX;
+      const dy = ev.clientY - drag.startY;
+      if (!drag.moved && Math.hypot(dx, dy) < threshold) return;
+      drag.moved = true;
+      drag.last = opts.moveTo({ left: drag.base.left + dx, top: drag.base.top + dy });
+    };
+    const stop = (ev) => {
+      if (!drag) return;
+      if (ev && ev.pointerId !== drag.pointerId) return;
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", stop);
+      document.removeEventListener("pointercancel", stop);
+      try {
+        el.releasePointerCapture(drag.pointerId);
+      } catch {
+      }
+      const { moved, last } = drag;
+      drag = null;
+      el.style.cursor = "grab";
+      if (moved) opts.onDrop(last);
+      else if (ev?.type === "pointerup") {
+        try {
+          opts.onClick?.();
+        } catch (error) {
+          console.error("[Aries] floating widget click failed:", error);
+        }
+      }
+    };
+    const onDown = (ev) => {
+      if (ev.button !== 0) return;
+      const target = ev.target;
+      if (target && opts.ignore?.(target)) return;
+      if (drag) stop();
+      const rect = el.getBoundingClientRect();
+      const base = { left: rect.left, top: rect.top };
+      drag = {
+        pointerId: ev.pointerId,
+        startX: ev.clientX,
+        startY: ev.clientY,
+        base,
+        last: base,
+        moved: threshold <= 0
+      };
+      try {
+        el.setPointerCapture(ev.pointerId);
+      } catch {
+      }
+      document.addEventListener("pointermove", onMove);
+      document.addEventListener("pointerup", stop);
+      document.addEventListener("pointercancel", stop);
+      el.style.cursor = "grabbing";
+      ev.preventDefault();
+      if (opts.stopPropagation) ev.stopPropagation();
+    };
+    el.addEventListener("pointerdown", onDown);
+    return () => {
+      stop();
+      el.removeEventListener("pointerdown", onDown);
+    };
+  }
+  var init_floating = __esm({
+    "src/ui/kit/floating.ts"() {
+      "use strict";
+      init_storage();
+    }
+  });
+
   // src/features/notifier/bell/floatingBell.ts
   function isFloatingBellEnabled() {
     return readAriesPath(ENABLED_PATH, false) === true;
@@ -21979,22 +22080,6 @@
       window.dispatchEvent(new CustomEvent(BELL_MODE_EVENT, { detail: { floating: value } }));
     } catch {
     }
-  }
-  function readSavedPosition() {
-    const raw = readAriesPath(POS_PATH);
-    if (!raw || typeof raw !== "object") return null;
-    const left = Number(raw.left);
-    const top = Number(raw.top);
-    if (!Number.isFinite(left) || !Number.isFinite(top)) return null;
-    return { left, top };
-  }
-  function persistPosition(pos) {
-    writeAriesPath(POS_PATH, { left: Math.round(pos.left), top: Math.round(pos.top) });
-  }
-  function clampCoord(value, min, max) {
-    if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
-    if (max < min) return min;
-    return Math.min(Math.max(value, min), max);
   }
   function startFloatingBell(opts) {
     let running = true;
@@ -22034,16 +22119,13 @@
       transformOrigin: "50% 0%"
     });
     button2.appendChild(icon2);
-    const applyPosition2 = (left, top) => {
-      const boundedLeft = clampCoord(left, SCREEN_MARGIN, window.innerWidth - BUTTON_SIZE - SCREEN_MARGIN);
-      const boundedTop = clampCoord(top, SCREEN_MARGIN, window.innerHeight - BUTTON_SIZE - SCREEN_MARGIN);
-      button2.style.left = `${Math.round(boundedLeft)}px`;
-      button2.style.top = `${Math.round(boundedTop)}px`;
+    const applyPosition2 = (pos) => {
+      const placed = placeInViewport(button2, pos, { width: BUTTON_SIZE, height: BUTTON_SIZE }, SCREEN_MARGIN);
       try {
         opts.onMoved?.();
       } catch {
       }
-      return { left: boundedLeft, top: boundedTop };
+      return placed;
     };
     const defaultPosition = () => ({
       left: window.innerWidth - BUTTON_SIZE - DEFAULT_RIGHT_GAP,
@@ -22053,10 +22135,10 @@
     let usingDefaultPosition = true;
     const applyDesiredPosition = () => {
       const target = usingDefaultPosition || !desiredPosition ? defaultPosition() : desiredPosition;
-      applyPosition2(target.left, target.top);
+      applyPosition2(target);
     };
     const applyInitialPosition2 = () => {
-      const saved = readSavedPosition();
+      const saved = readStoredPosition(POS_PATH);
       desiredPosition = saved;
       usingDefaultPosition = !saved;
       applyDesiredPosition();
@@ -22065,64 +22147,17 @@
       if (!running) return;
       applyDesiredPosition();
     };
-    let dragState = null;
-    const onDragMove = (ev) => {
-      if (!dragState || ev.pointerId !== dragState.pointerId) return;
-      const dx = ev.clientX - dragState.startX;
-      const dy = ev.clientY - dragState.startY;
-      if (!dragState.dragged && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
-      dragState.dragged = true;
-      dragState.lastPos = applyPosition2(dragState.baseLeft + dx, dragState.baseTop + dy);
-      desiredPosition = dragState.lastPos;
-      usingDefaultPosition = false;
-    };
-    const stopDrag = (ev) => {
-      if (!dragState) return;
-      if (ev && ev.pointerId !== dragState.pointerId) return;
-      document.removeEventListener("pointermove", onDragMove);
-      document.removeEventListener("pointerup", stopDrag);
-      document.removeEventListener("pointercancel", stopDrag);
-      try {
-        button2.releasePointerCapture(dragState.pointerId);
-      } catch {
-      }
-      const wasDrag = dragState.dragged;
-      if (wasDrag) persistPosition(dragState.lastPos);
-      dragState = null;
-      button2.style.cursor = "grab";
-      if (!wasDrag && ev?.type === "pointerup") {
-        try {
-          opts.onClick();
-        } catch (error) {
-          console.error("[FloatingBell] onClick error:", error);
-        }
-      }
-    };
-    const onPointerDown = (ev) => {
-      if (ev.button !== 0) return;
-      if (dragState) stopDrag();
-      const rect = button2.getBoundingClientRect();
-      dragState = {
-        pointerId: ev.pointerId,
-        startX: ev.clientX,
-        startY: ev.clientY,
-        baseLeft: rect.left,
-        baseTop: rect.top,
-        lastPos: { left: rect.left, top: rect.top },
-        dragged: false
-      };
-      try {
-        button2.setPointerCapture(ev.pointerId);
-      } catch {
-      }
-      document.addEventListener("pointermove", onDragMove);
-      document.addEventListener("pointerup", stopDrag);
-      document.addEventListener("pointercancel", stopDrag);
-      button2.style.cursor = "grabbing";
-      ev.preventDefault();
-      ev.stopPropagation();
-    };
-    button2.addEventListener("pointerdown", onPointerDown);
+    const detachDrag = makeDraggable2(button2, {
+      thresholdPx: DRAG_THRESHOLD_PX,
+      stopPropagation: true,
+      moveTo: (pos) => {
+        desiredPosition = applyPosition2(pos);
+        usingDefaultPosition = false;
+        return desiredPosition;
+      },
+      onDrop: (pos) => storePosition(POS_PATH, pos),
+      onClick: () => opts.onClick()
+    });
     window.addEventListener("resize", onWindowResize);
     document.body.appendChild(button2);
     applyInitialPosition2();
@@ -22152,11 +22187,10 @@
       stop() {
         if (!running) return;
         running = false;
-        stopDrag();
+        detachDrag();
         stopWiggle();
         clearSettleTimers();
         window.removeEventListener("resize", onWindowResize);
-        button2.removeEventListener("pointerdown", onPointerDown);
         try {
           button2.remove();
         } catch {
@@ -22196,6 +22230,7 @@
       init_ring();
       init_storage();
       init_dom2();
+      init_floating();
       ENABLED_PATH = "notifier.floatingBell.enabled";
       POS_PATH = "notifier.floatingBell.pos";
       BELL_MODE_EVENT = "qws:alerts-bell-mode-changed";
@@ -25566,7 +25601,7 @@
     if (started3) return;
     started3 = true;
     enabled = isInstantFeedWidgetEnabled();
-    savedPos = readSavedPosition2();
+    savedPos = readStoredPosition(POS_PATH2);
     const mount = () => {
       ensureWidget();
       syncVisibility();
@@ -25632,32 +25667,10 @@
     if (!positioned) applyInitialPosition();
     else clampIntoViewport();
   }
-  function readSavedPosition2() {
-    const raw = readAriesPath(POS_PATH2);
-    if (!raw || typeof raw !== "object") return null;
-    const left = Number(raw.left);
-    const top = Number(raw.top);
-    if (!Number.isFinite(left) || !Number.isFinite(top)) return null;
-    return { left, top };
-  }
-  function persistPosition2(pos) {
-    savedPos = pos;
-    writeAriesPath(POS_PATH2, { left: Math.round(pos.left), top: Math.round(pos.top) });
-  }
-  function clampCoord2(value, min, max) {
-    if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
-    if (max < min) return min;
-    return Math.min(Math.max(value, min), max);
-  }
   function applyPosition(left, top) {
     if (!widget) return { left, top };
-    const width = widget.offsetWidth;
-    const height = widget.offsetHeight;
-    const boundedLeft = clampCoord2(left, SCREEN_MARGIN2, window.innerWidth - width - SCREEN_MARGIN2);
-    const boundedTop = clampCoord2(top, SCREEN_MARGIN2, window.innerHeight - height - SCREEN_MARGIN2);
-    widget.style.left = `${Math.round(boundedLeft)}px`;
-    widget.style.top = `${Math.round(boundedTop)}px`;
-    return { left: boundedLeft, top: boundedTop };
+    const size = { width: widget.offsetWidth, height: widget.offsetHeight };
+    return placeInViewport(widget, { left, top }, size, SCREEN_MARGIN2);
   }
   function applyInitialPosition() {
     if (!widget) return;
@@ -25709,59 +25722,19 @@
       buttonsRow.appendChild(btn);
       widgetButtons.push(btn);
     }
-    installDragHandlers(el);
+    makeDraggable2(el, {
+      ignore: (target) => !!target.closest("button"),
+      moveTo: (pos) => applyPosition(pos.left, pos.top),
+      onDrop: (pos) => {
+        savedPos = pos;
+        storePosition(POS_PATH2, pos);
+      }
+    });
     document.body.appendChild(el);
     widget = el;
     positioned = false;
     updateButtons();
     return el;
-  }
-  function installDragHandlers(el) {
-    let dragState = null;
-    const onDragMove = (ev) => {
-      if (!dragState || ev.pointerId !== dragState.pointerId) return;
-      const dx = ev.clientX - dragState.startX;
-      const dy = ev.clientY - dragState.startY;
-      dragState.lastPos = applyPosition(dragState.baseLeft + dx, dragState.baseTop + dy);
-    };
-    const stopDrag = (ev) => {
-      if (!dragState) return;
-      if (ev && ev.pointerId !== dragState.pointerId) return;
-      document.removeEventListener("pointermove", onDragMove);
-      document.removeEventListener("pointerup", stopDrag);
-      document.removeEventListener("pointercancel", stopDrag);
-      try {
-        el.releasePointerCapture(dragState.pointerId);
-      } catch {
-      }
-      persistPosition2(dragState.lastPos);
-      dragState = null;
-      el.style.cursor = "grab";
-    };
-    el.addEventListener("pointerdown", (ev) => {
-      if (ev.button !== 0) return;
-      const target = ev.target;
-      if (target && target.closest("button")) return;
-      if (dragState) stopDrag();
-      const rect = el.getBoundingClientRect();
-      dragState = {
-        pointerId: ev.pointerId,
-        startX: ev.clientX,
-        startY: ev.clientY,
-        baseLeft: rect.left,
-        baseTop: rect.top,
-        lastPos: { left: rect.left, top: rect.top }
-      };
-      try {
-        el.setPointerCapture(ev.pointerId);
-      } catch {
-      }
-      document.addEventListener("pointermove", onDragMove);
-      document.addEventListener("pointerup", stopDrag);
-      document.addEventListener("pointercancel", stopDrag);
-      el.style.cursor = "grabbing";
-      ev.preventDefault();
-    });
   }
   function createHeader() {
     const header = document.createElement("div");
@@ -26045,6 +26018,7 @@
       init_iconCache();
       init_storage();
       init_petValue();
+      init_floating();
       DEFAULT_LABEL = "Instant Feed";
       MAX_BUTTONS = 3;
       ICON_SIZE = 18;
@@ -38243,7 +38217,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     opt.value = value;
     sel.appendChild(opt);
   }
-  function makeDraggable2(pop, handle, ignore) {
+  function makeDraggable3(pop, handle, ignore) {
     const place = (left, top) => {
       pop.style.left = `${Math.round(clampBetween(left, MARGIN2, window.innerWidth - pop.offsetWidth - MARGIN2))}px`;
       pop.style.top = `${Math.round(clampBetween(top, MARGIN2, window.innerHeight - pop.offsetHeight - MARGIN2))}px`;
@@ -38333,7 +38307,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const closeBtn = button("\u2715", { variant: "ghost", size: "xs", ariaLabel: "Close", onClick: closeRuleEditor });
     header.append(titles, closeBtn);
     pop.appendChild(header);
-    makeDraggable2(pop, header, closeBtn);
+    makeDraggable3(pop, header, closeBtn);
     const soundSelect = select2();
     const selectedSound = current3?.sound ?? "";
     const names = audio.listSounds();
