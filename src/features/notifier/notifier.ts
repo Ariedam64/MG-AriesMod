@@ -1,4 +1,3 @@
-import { Subscriptions } from "../../lib/emitter";
 import { ShopFeed, type PurchasesSnapshot, type ShopsSnapshot } from "../shops/shopFeed";
 import { InventoryCaps } from "./inventoryCaps";
 import { NotifierRules, type NotifierRule } from "./rules";
@@ -9,11 +8,10 @@ import { WeatherAlerts, type WeatherState } from "./weatherAlerts";
  * The alerts service: starts the shop feed, the inventory caps and the
  * weather watcher together, and hands each listener the current value before
  * its first change. Started on first use by the overlay, the menu or the
- * companion, whichever comes first.
+ * companion, whichever comes first, and runs for the rest of the session.
  */
 
 let started = false;
-const subscriptions = new Subscriptions();
 
 const onCatalogsUpdated = () => {
   try {
@@ -29,33 +27,17 @@ async function ensureStarted(): Promise<void> {
     ShopRows.rebuild();
   } catch {}
   window.addEventListener("gemini:data-updated", onCatalogsUpdated);
-  subscriptions.add(() => window.removeEventListener("gemini:data-updated", onCatalogsUpdated));
 
   // Not awaited: the HUD mounts the overlay long before the game registers
   // its atoms, and the feed pushes as soon as they arrive.
   ShopFeed.start();
-  subscriptions.add(() => ShopFeed.stop());
 
-  subscriptions.add(InventoryCaps.onChange(() => ShopRows.refresh()));
-  subscriptions.add(() => InventoryCaps.stop());
+  InventoryCaps.onChange(() => ShopRows.refresh());
   await InventoryCaps.start();
-
-  subscriptions.add(() => WeatherAlerts.stop());
   await WeatherAlerts.start();
 }
 
-function stop(): void {
-  subscriptions.dispose();
-  started = false;
-}
-
 export const NotifierService = {
-  /** Starts everything; resolves to the function that stops it. */
-  async start(): Promise<() => void> {
-    await ensureStarted();
-    return stop;
-  },
-
   async get(): Promise<NotifierState> {
     await ensureStarted();
     return ShopRows.state();

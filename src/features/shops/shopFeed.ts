@@ -1,5 +1,5 @@
 import { Atoms } from "../../game/store/atoms";
-import { Emitter, Subscriptions } from "../../lib/emitter";
+import { Emitter } from "../../lib/emitter";
 import { decorCatalog, eggCatalog, plantCatalog, toolCatalog } from "../../data";
 import { playerShopView, type PlayerShopView, type ShopKind } from "./purchases";
 
@@ -78,7 +78,6 @@ let rawShops: unknown = null;
 let rawSlot: unknown = null;
 const shopsChanged = new Emitter<ShopsSnapshot>();
 const purchasesChanged = new Emitter<PurchasesSnapshot>();
-const watchers = new Subscriptions();
 let watching = false;
 
 const emitShops = () => shopsChanged.emit(toShopsSnapshot(viewOf(rawShops, rawSlot).shops));
@@ -112,13 +111,8 @@ export const ShopFeed = {
   start(): void {
     if (watching) return;
     watching = true;
-    watchers.add(Atoms.shop.shops.onChangeNow((next) => onShops(next)));
-    watchers.add(Atoms.shop.myUserSlot.onChangeNow((next) => onSlot(next), sameShopParts));
-  },
-
-  stop(): void {
-    watchers.dispose();
-    watching = false;
+    void Atoms.shop.shops.onChangeNow((next) => onShops(next));
+    void Atoms.shop.myUserSlot.onChangeNow((next) => onSlot(next), sameShopParts);
   },
 
   onShopsChange(cb: (snap: ShopsSnapshot) => void): () => void {

@@ -36,7 +36,7 @@ function rarityLabel(raw: string): string {
     case "common":
       return "Common";
     default:
-      return rarity || "—";
+      return rarity || "-";
   }
 }
 

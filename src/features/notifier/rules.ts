@@ -2,14 +2,12 @@ import { readAriesPath, writeAriesPath } from "../../platform/storage";
 import { Emitter } from "../../lib/emitter";
 import { clamp } from "../../lib/math";
 import { audio, type PlaybackMode, type TriggerOverrides } from "./audio/audio";
+import { LoopDefaults, MIN_LOOP_INTERVAL_MS, clampLoopInterval, type NotifierContext } from "./playbackDefaults";
 
 /**
  * Custom alert rules: per item (`Seed:Carrot`) or per weather (`Weather:Rain`)
- * overrides of the sound, volume and loop settings, plus the loop defaults of
- * the shops and weather alerts.
+ * overrides of the sound, volume and loop settings.
  */
-
-export type NotifierContext = "shops" | "weather";
 
 type StopMode = "manual" | "purchase";
 
@@ -31,16 +29,7 @@ type StoredRule = {
   loopIntervalMs?: number;
 };
 
-export type ContextStopDefaults = {
-  stopMode: StopMode;
-  stopRepeats: number | null;
-  loopIntervalMs: number;
-};
-
 const RULES_PATH = "notifier.rules";
-const LOOP_DEFAULTS_PATH = "notifier.loopDefaults";
-
-const MIN_LOOP_INTERVAL_MS = 150;
 
 const hasOwn = (obj: object, key: string) => Object.prototype.hasOwnProperty.call(obj, key);
 
@@ -167,7 +156,7 @@ export const NotifierRules = {
 };
 
 /** Whether a rule overrides anything at all. */
-function hasRule(rule: NotifierRule | null | undefined): rule is NotifierRule {
+export function hasRule(rule: NotifierRule | null | undefined): rule is NotifierRule {
   return !!(rule && (rule.sound || rule.volume != null || rule.playbackMode || rule.stopMode || rule.loopIntervalMs != null));
 }
 
@@ -186,7 +175,7 @@ export function ruleOverrides(rule: NotifierRule | null | undefined): TriggerOve
 }
 
 /** A sound name short enough for a summary line. */
-function shortSoundName(name: string): string {
+export function shortSoundName(name: string): string {
   return name.length > 32 ? `${name.slice(0, 29)}…` : name;
 }
 
@@ -216,52 +205,59 @@ export function formatRuleSummary(rule?: NotifierRule | null): string {
   return parts.join(" • ");
 }
 
-/* ============================== Loop defaults ============================== */
+/* =============================== Rule editor =============================== */
 
-// Only the loop interval is really per context: shop loops always stop on
-// purchase and weather alerts never loop. The stop fields are still written,
-// in the shape older builds stored.
-let loopIntervals: Partial<Record<NotifierContext, number>> = {};
-let loopDefaultsLoaded = false;
-
-const normalizeInterval = (ms: number) => Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(ms || 0));
-
-function ensureLoopDefaultsLoaded(): void {
-  if (loopDefaultsLoaded) return;
-  loopDefaultsLoaded = true;
-  loopIntervals = {};
-  const stored = readAriesPath<Record<string, any>>(LOOP_DEFAULTS_PATH);
-  if (!stored || typeof stored !== "object") return;
-  for (const context of ["shops", "weather"] as const) {
-    const entry = stored[context];
-    if (!entry) continue;
-    const raw = Number(entry.loopIntervalMs);
-    loopIntervals[context] = normalizeInterval(Number.isFinite(raw) ? raw : audio.getLoopInterval(context));
-  }
+/** What a rule falls back to in a context, which the rule editor shows as its defaults. */
+export function ruleDefaults(context: NotifierContext) {
+  const playback = audio.getPlaybackSettings(context);
+  const loop = LoopDefaults.get(context);
+  return {
+    soundName: (playback.defaultSoundName || "").trim() || "Default",
+    volume: clamp(playback.volume || 0, 0, 1),
+    mode: playback.mode,
+    stopMode: loop.stopMode,
+    loopIntervalMs: Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(loop.loopIntervalMs)),
+  };
 }
 
-function saveLoopDefaults(): void {
-  const out: Record<string, ContextStopDefaults> = {};
-  for (const context of ["shops", "weather"] as const) {
-    const loopIntervalMs = loopIntervals[context];
-    if (loopIntervalMs == null) continue;
-    out[context] = { stopMode: context === "shops" ? "purchase" : "manual", stopRepeats: null, loopIntervalMs };
-  }
-  writeAriesPath(LOOP_DEFAULTS_PATH, out);
-}
-
-export const LoopDefaults = {
-  get(context: NotifierContext): ContextStopDefaults {
-    ensureLoopDefaultsLoaded();
-    const loopIntervalMs = normalizeInterval(loopIntervals[context] ?? audio.getLoopInterval(context));
-    return { stopMode: context === "shops" ? "purchase" : "manual", stopRepeats: null, loopIntervalMs };
-  },
-
-  /** Remembers a context's loop interval; an invalid one keeps the current value. */
-  setLoopInterval(context: NotifierContext, ms: number): void {
-    ensureLoopDefaultsLoaded();
-    const current = LoopDefaults.get(context).loopIntervalMs;
-    loopIntervals[context] = Number.isFinite(ms) ? normalizeInterval(ms) : current;
-    saveLoopDefaults();
-  },
+/** The rule editor's fields, as the player left them. */
+export type RuleEditorValues = {
+  sound: string;
+  volumePct: number;
+  mode: string;
+  stop: string;
+  /** The loop interval as typed; empty means the default. */
+  interval: string;
 };
+
+/**
+ * The rule the editor's fields describe. A value equal to the context's
+ * default is not stored, so the rule keeps following the default. Only shop
+ * alerts loop; setting a loop field on a one-shot context turns looping on.
+ */
+export function rulePatchFromEditor(context: NotifierContext, values: RuleEditorValues): Partial<NotifierRule> {
+  const defaults = ruleDefaults(context);
+  const canLoop = context === "shops";
+
+  let playbackMode: PlaybackMode | null = values.mode === "oneshot" || values.mode === "loop" ? values.mode : null;
+  if (playbackMode === defaults.mode) playbackMode = null;
+
+  let stopMode: StopMode | null = canLoop && values.stop === "purchase" ? "purchase" : null;
+  if (stopMode === defaults.stopMode) stopMode = null;
+
+  let loopIntervalMs: number | null = null;
+  const typed = values.interval.trim();
+  if (canLoop && typed && Number.isFinite(Number(typed))) {
+    const interval = clampLoopInterval(typed, defaults.loopIntervalMs);
+    if (interval !== defaults.loopIntervalMs) loopIntervalMs = interval;
+  }
+
+  const ratio = clamp(Math.round(values.volumePct) || 0, 0, 100) / 100;
+  const volume = Math.abs(ratio - defaults.volume) > 0.001 ? ratio : null;
+
+  if (canLoop && !playbackMode && defaults.mode !== "loop" && (stopMode != null || loopIntervalMs != null)) {
+    playbackMode = "loop";
+  }
+
+  return { sound: values.sound.trim() || null, volume, playbackMode, stopMode, loopIntervalMs };
+}

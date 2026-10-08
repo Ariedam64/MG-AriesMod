@@ -2923,7 +2923,7 @@
   function makeView(sourceLabel, opts = {}) {
     const { path } = opts;
     const pick2 = (src) => path ? getAtPath(src, path) : src;
-    const listen = (subscribe5) => async (cb, isEqual = Object.is) => {
+    const listen2 = (subscribe5) => async (cb, isEqual = Object.is) => {
       let prev;
       return subscribe5(sourceLabel, (src) => {
         const v = pick2(src);
@@ -2943,8 +2943,8 @@
         const prev = await Store.select(sourceLabel);
         return Store.set(sourceLabel, path ? setAtPath(prev, path, next) : next);
       },
-      onChange: listen(Store.subscribe),
-      onChangeNow: listen(Store.subscribeImmediate)
+      onChange: listen2(Store.subscribe),
+      onChangeNow: listen2(Store.subscribeImmediate)
     };
   }
   function makeAtom(label2) {
@@ -7716,11 +7716,11 @@
       const defaults = out[key2];
       out[key2] = isRecord(defaults) && isRecord(value) ? { ...defaults, ...value } : value;
     }
-    for (const [legacyKey, [section2, field]] of Object.entries(LEGACY_ROOT_KEYS)) {
+    for (const [legacyKey, [section2, field2]] of Object.entries(LEGACY_ROOT_KEYS)) {
       if (!(legacyKey in raw)) continue;
       const target = isRecord(out[section2]) ? out[section2] : {};
       out[section2] = target;
-      if (target[field] === void 0) target[field] = raw[legacyKey];
+      if (target[field2] === void 0) target[field2] = raw[legacyKey];
     }
     return out;
   }
@@ -8075,7 +8075,7 @@
         queueStore(initialKeys);
       }
     }
-    function stop2() {
+    function stop() {
       startGeneration++;
       try {
         inventoryUnsub?.();
@@ -8112,7 +8112,7 @@
         if (next) {
           void start2();
         } else {
-          stop2();
+          stop();
         }
       },
       bootIfEnabled() {
@@ -9154,8 +9154,8 @@
     if (!document.getElementById(OVERLAY_DECOR_ID)) removeOverlayKeyGuards();
   }
   function renderListRow(item) {
-    const row = document.createElement("div");
-    setStyles(row, {
+    const row2 = document.createElement("div");
+    setStyles(row2, {
       display: "grid",
       gridTemplateColumns: "1fr auto",
       alignItems: "center",
@@ -9221,8 +9221,8 @@
       await repatchFakeSeedInventoryWithSelection();
     };
     controls.append(qty, remove);
-    row.append(name, controls);
-    return row;
+    row2.append(name, controls);
+    return row2;
   }
   function refreshList() {
     const list = document.getElementById(LIST_ID);
@@ -9418,8 +9418,8 @@
     if (!document.getElementById(OVERLAY_ID2)) removeOverlayKeyGuards();
   }
   function renderDecorListRow(item) {
-    const row = document.createElement("div");
-    setStyles(row, {
+    const row2 = document.createElement("div");
+    setStyles(row2, {
       display: "grid",
       gridTemplateColumns: "1fr auto",
       alignItems: "center",
@@ -9486,8 +9486,8 @@
       await repatchFakeDecorInventoryWithSelection();
     };
     controls.append(qty, remove);
-    row.append(name, controls);
-    return row;
+    row2.append(name, controls);
+    return row2;
   }
   function refreshDecorList() {
     const list = document.getElementById(LIST_DECOR_ID);
@@ -10259,9 +10259,9 @@
   function buildCatalogIndex() {
     const read = catalogReader;
     if (!read) return;
-    const loaded = CATALOG_SOURCES.filter((source) => read(source.key)).length;
-    if (loaded === catalogSourcesIndexed) return;
-    catalogSourcesIndexed = loaded;
+    const loaded2 = CATALOG_SOURCES.filter((source) => read(source.key)).length;
+    if (loaded2 === catalogSourcesIndexed) return;
+    catalogSourcesIndexed = loaded2;
     catalogIndex.clear();
     for (const source of CATALOG_SOURCES) {
       const catalog = read(source.key);
@@ -12715,13 +12715,13 @@
         const mode = chk._currentMode || "percent";
         chk.checked = mode === "custom";
       });
-      slotsList.querySelectorAll("[data-custom-row-slot]").forEach((row) => {
-        const mode = row._currentMode || "percent";
-        row.style.display = mode === "custom" ? "flex" : "none";
+      slotsList.querySelectorAll("[data-custom-row-slot]").forEach((row2) => {
+        const mode = row2._currentMode || "percent";
+        row2.style.display = mode === "custom" ? "flex" : "none";
       });
-      slotsList.querySelectorAll("[data-slider-row-slot]").forEach((row) => {
-        const mode = row._currentMode || "percent";
-        row.style.display = mode === "custom" ? "none" : "";
+      slotsList.querySelectorAll("[data-slider-row-slot]").forEach((row2) => {
+        const mode = row2._currentMode || "percent";
+        row2.style.display = mode === "custom" ? "none" : "";
       });
     };
     slots.forEach((slot, idx) => {
@@ -12947,21 +12947,21 @@
         }
       };
       const installGameKeyBlocker = (inp) => {
-        const stop2 = (ev) => {
+        const stop = (ev) => {
           ev.stopImmediatePropagation?.();
           ev.stopPropagation();
         };
         const attach2 = () => {
-          window.addEventListener("keydown", stop2, true);
-          window.addEventListener("keyup", stop2, true);
+          window.addEventListener("keydown", stop, true);
+          window.addEventListener("keyup", stop, true);
         };
         const detach = () => {
-          window.removeEventListener("keydown", stop2, true);
-          window.removeEventListener("keyup", stop2, true);
+          window.removeEventListener("keydown", stop, true);
+          window.removeEventListener("keyup", stop, true);
         };
         inp.addEventListener("focus", attach2);
         inp.addEventListener("blur", detach);
-        inp.addEventListener("keydown", stop2);
+        inp.addEventListener("keydown", stop);
       };
       const installCharGuard = (inp) => {
         const allowed = /* @__PURE__ */ new Set([
@@ -13190,13 +13190,13 @@
           s.value = String(s._currentPct ?? refPct);
         }
       });
-      slotsList.querySelectorAll("[data-slider-row-slot]").forEach((row) => {
-        row.style.display = mode === "custom" ? "none" : "";
-        row._currentMode = mode;
+      slotsList.querySelectorAll("[data-slider-row-slot]").forEach((row2) => {
+        row2.style.display = mode === "custom" ? "none" : "";
+        row2._currentMode = mode;
       });
-      slotsList.querySelectorAll("[data-custom-row-slot]").forEach((row) => {
-        row.style.display = mode === "custom" ? "flex" : "none";
-        row._currentMode = mode;
+      slotsList.querySelectorAll("[data-custom-row-slot]").forEach((row2) => {
+        row2.style.display = mode === "custom" ? "flex" : "none";
+        row2._currentMode = mode;
       });
       slotsList.querySelectorAll("input[data-scale-input-slot]").forEach((inp) => {
         if (mode === "custom") {
@@ -13557,21 +13557,21 @@
         });
         customRow.append(customLabel, customInput);
         const installGameKeyBlocker = (inp) => {
-          const stop2 = (ev) => {
+          const stop = (ev) => {
             ev.stopImmediatePropagation?.();
             ev.stopPropagation();
           };
           const attach2 = () => {
-            window.addEventListener("keydown", stop2, true);
-            window.addEventListener("keyup", stop2, true);
+            window.addEventListener("keydown", stop, true);
+            window.addEventListener("keyup", stop, true);
           };
           const detach = () => {
-            window.removeEventListener("keydown", stop2, true);
-            window.removeEventListener("keyup", stop2, true);
+            window.removeEventListener("keydown", stop, true);
+            window.removeEventListener("keyup", stop, true);
           };
           inp.addEventListener("focus", attach2);
           inp.addEventListener("blur", detach);
-          inp.addEventListener("keydown", stop2);
+          inp.addEventListener("keydown", stop);
         };
         installGameKeyBlocker(customInput);
         const formatScaleLabel = (val) => String(clampSizePercent(val));
@@ -13653,11 +13653,11 @@
           sideRightWrap.querySelectorAll("[data-size-label]").forEach((lab) => {
             lab.textContent = currentMode === "custom" ? formatScaleLabel(currentScale) : `${currentPct}`;
           });
-          sideRightWrap.querySelectorAll("[data-scale-row]").forEach((row) => {
-            row.remove();
+          sideRightWrap.querySelectorAll("[data-scale-row]").forEach((row2) => {
+            row2.remove();
           });
-          sideRightWrap.querySelectorAll("[data-custom-row]").forEach((row) => {
-            row.style.display = showPercentMode ? "none" : "flex";
+          sideRightWrap.querySelectorAll("[data-custom-row]").forEach((row2) => {
+            row2.style.display = showPercentMode ? "none" : "flex";
           });
         };
         const applySlotPatch = (patch) => {
@@ -19396,7 +19396,7 @@
           }
         }
       };
-      const stop2 = (ok) => {
+      const stop = (ok) => {
         if (stopped) return;
         stopped = true;
         if (unsub) {
@@ -19412,9 +19412,9 @@
           (Array.isArray(state7) ? state7 : []).map((p) => String(p?.id || "")).filter(Boolean)
         );
         if (predicate(set2)) {
-          stop2(true);
+          stop(true);
         } else if (Date.now() >= deadline) {
-          stop2(false);
+          stop(false);
         }
       };
       try {
@@ -19434,11 +19434,11 @@
           });
         }
       } catch {
-        stop2(false);
+        stop(false);
         return;
       }
       void check();
-      setTimeout(() => stop2(false), timeoutMs + 50);
+      setTimeout(() => stop(false), timeoutMs + 50);
     });
   }
   function _alignTargetsToActiveSlots(targets, activeSlots) {
@@ -19875,13 +19875,13 @@
         },
         async startAutofeedWatcher(onTrigger) {
           _userTriggerCb = onTrigger ?? null;
-          const stop2 = await PlayerService.onPetsChangeNow((arr) => {
+          const stop = await PlayerService.onPetsChangeNow((arr) => {
             _currentPets = Array.isArray(arr) ? arr.slice() : [];
             void _evaluateAll();
           });
           return () => {
             try {
-              stop2();
+              stop();
             } catch {
             }
             _currentPets = [];
@@ -20311,7 +20311,7 @@
             ingest2(await myActivityLog.get());
           } catch {
           }
-          let stop2 = null;
+          let stop = null;
           try {
             const res = await myActivityLog.onChange((next) => {
               try {
@@ -20319,12 +20319,12 @@
               } catch {
               }
             });
-            if (typeof res === "function") stop2 = res;
+            if (typeof res === "function") stop = res;
           } catch {
           }
           return () => {
             try {
-              stop2?.();
+              stop?.();
             } catch {
             }
           };
@@ -20644,10 +20644,10 @@
     const ordered = [...keys.filter((k) => !BASE_SHOP_KEYS.includes(k)), ...keys.filter((k) => BASE_SHOP_KEYS.includes(k))];
     const target = itemIdOf(kind, it);
     if (target == null) return null;
-    const field = ITEM_FIELD[kind];
+    const field2 = ITEM_FIELD[kind];
     for (const key2 of ordered) {
       const inv = shops2[key2]?.inventory;
-      if (Array.isArray(inv) && inv.some((entry) => entry && typeof entry === "object" && entry[field] === target)) {
+      if (Array.isArray(inv) && inv.some((entry) => entry && typeof entry === "object" && entry[field2] === target)) {
         return key2;
       }
     }
@@ -21816,15 +21816,15 @@
       list.style.overflow = "auto";
       list.style.paddingRight = "4px";
       const buildPetRow = (entry) => {
-        const row = document.createElement("div");
-        row.style.display = "grid";
-        row.style.gridTemplateColumns = "48px 1fr";
-        row.style.gap = "10px";
-        row.style.alignItems = "center";
-        row.style.padding = "6px 8px";
-        row.style.border = "1px solid rgba(255,255,255,0.08)";
-        row.style.borderRadius = "10px";
-        row.style.background = "rgba(255,255,255,0.03)";
+        const row2 = document.createElement("div");
+        row2.style.display = "grid";
+        row2.style.gridTemplateColumns = "48px 1fr";
+        row2.style.gap = "10px";
+        row2.style.alignItems = "center";
+        row2.style.padding = "6px 8px";
+        row2.style.border = "1px solid rgba(255,255,255,0.08)";
+        row2.style.borderRadius = "10px";
+        row2.style.background = "rgba(255,255,255,0.03)";
         const imgWrap = document.createElement("div");
         imgWrap.style.width = "48px";
         imgWrap.style.height = "48px";
@@ -21877,8 +21877,8 @@
           reasons.appendChild(chip2);
         }
         info.append(name, reasons);
-        row.append(imgWrap, info);
-        return row;
+        row2.append(imgWrap, info);
+        return row2;
       };
       for (const entry of flagged) {
         list.appendChild(buildPetRow(entry));
@@ -22027,8 +22027,8 @@
     root.querySelectorAll(`.${injectedClass}`).forEach((n) => n.remove());
   }
   function ensureStyle2(injectedClass, theme) {
-    const STYLE_ID11 = `${injectedClass}-style`;
-    if (document.getElementById(STYLE_ID11)) return;
+    const STYLE_ID12 = `${injectedClass}-style`;
+    if (document.getElementById(STYLE_ID12)) return;
     const css4 = `
 .${injectedClass}{
   font-synthesis: none;
@@ -22083,7 +22083,7 @@
 }
 `.trim();
     const s = document.createElement("style");
-    s.id = STYLE_ID11;
+    s.id = STYLE_ID12;
     s.textContent = css4;
     document.head.appendChild(s);
   }
@@ -22702,29 +22702,29 @@
     return null;
   }
   function applyStored(target, stored) {
-    const loaded = /* @__PURE__ */ new Set();
+    const loaded2 = /* @__PURE__ */ new Set();
     if (typeof stored.volume === "number") {
       target.volume = clamp(stored.volume, 0, 1);
-      loaded.add("volume");
+      loaded2.add("volume");
     }
     if (stored.mode === "loop" || stored.mode === "oneshot") {
       target.mode = stored.mode;
-      loaded.add("mode");
+      loaded2.add("mode");
     }
-    const stop2 = stored.stop && typeof stored.stop === "object" ? readStop(stored.stop) : null;
-    if (stop2) {
-      target.stop = stop2;
-      loaded.add("stop");
+    const stop = stored.stop && typeof stored.stop === "object" ? readStop(stored.stop) : null;
+    if (stop) {
+      target.stop = stop;
+      loaded2.add("stop");
     }
     if (typeof stored.loopIntervalMs === "number" && Number.isFinite(stored.loopIntervalMs)) {
       target.loopIntervalMs = Math.max(MIN_LOOP_GAP_MS, Math.floor(stored.loopIntervalMs));
-      loaded.add("loopIntervalMs");
+      loaded2.add("loopIntervalMs");
     }
     if (typeof stored.defaultSoundName === "string") {
       target.defaultSoundName = stored.defaultSoundName.trim() || null;
-      loaded.add("defaultSoundName");
+      loaded2.add("defaultSoundName");
     }
-    return loaded;
+    return loaded2;
   }
   var SETTINGS_PATH, AUDIO_CONTEXTS, MIN_LOOP_GAP_MS, DEFAULT_VOLUME, DEFAULT_LOOP_INTERVAL_MS, DEFAULT_MIN_PLAY_GAP_MS, freshContext, AudioSettings;
   var init_settings2 = __esm({
@@ -22776,12 +22776,12 @@
           for (const key2 of ["weather", "pets"]) {
             const target = this.contexts[key2];
             const conf = contexts[key2];
-            const loaded = conf && typeof conf === "object" ? applyStored(target, conf) : /* @__PURE__ */ new Set();
-            if (!loaded.has("volume")) target.volume = shops2.volume;
-            if (!loaded.has("mode")) target.mode = shops2.mode;
-            if (!loaded.has("stop")) target.stop = { mode: shops2.stop.mode };
-            if (!loaded.has("loopIntervalMs")) target.loopIntervalMs = shops2.loopIntervalMs;
-            if (!loaded.has("defaultSoundName")) target.defaultSoundName = shops2.defaultSoundName;
+            const loaded2 = conf && typeof conf === "object" ? applyStored(target, conf) : /* @__PURE__ */ new Set();
+            if (!loaded2.has("volume")) target.volume = shops2.volume;
+            if (!loaded2.has("mode")) target.mode = shops2.mode;
+            if (!loaded2.has("stop")) target.stop = { mode: shops2.stop.mode };
+            if (!loaded2.has("loopIntervalMs")) target.loopIntervalMs = shops2.loopIntervalMs;
+            if (!loaded2.has("defaultSoundName")) target.defaultSoundName = shops2.defaultSoundName;
           }
         }
         save() {
@@ -23106,8 +23106,8 @@
         runLoop(state7) {
           const run = async () => {
             if (state7.stopped) return;
-            const stop2 = state7.stopOverride ?? state7.baseStop;
-            if (stop2.mode === "purchase" && this.purchaseChecker) {
+            const stop = state7.stopOverride ?? state7.baseStop;
+            if (stop.mode === "purchase" && this.purchaseChecker) {
               try {
                 if (this.purchaseChecker(state7.key)) {
                   this.stopLoop(state7.key);
@@ -23957,9 +23957,9 @@
       }
     }
   }
-  function onChildAddedUnsafe(row) {
-    if (row?.label !== CARD_ROW_LABEL) return;
-    const card5 = findByLabel(row, OBJECT_CARD_LABEL);
+  function onChildAddedUnsafe(row2) {
+    if (row2?.label !== CARD_ROW_LABEL) return;
+    const card5 = findByLabel(row2, OBJECT_CARD_LABEL);
     if (!card5) return;
     currentCard = card5;
     const geometry = computeGeometry(card5);
@@ -23971,9 +23971,9 @@
     });
     notifyListeners2(card5, geometry);
   }
-  function onChildAdded(row) {
+  function onChildAdded(row2) {
     try {
-      onChildAddedUnsafe(row);
+      onChildAddedUnsafe(row2);
     } catch (error) {
       console.warn("[gardenInfoCardPixi] onChildAdded failed", error);
     }
@@ -24965,7 +24965,7 @@
     const n = purchases[kind]?.purchases?.[raw];
     return typeof n === "number" && n > 0 ? n : 0;
   }
-  var ITEM_TYPE_KIND, viewOf, sameShopParts, rawShops, rawSlot, shopsChanged, purchasesChanged, watchers, watching, emitShops, emitPurchases, ShopFeed, ALERT_ID_PREFIX;
+  var ITEM_TYPE_KIND, viewOf, sameShopParts, rawShops, rawSlot, shopsChanged, purchasesChanged, watching, emitShops, emitPurchases, ShopFeed, ALERT_ID_PREFIX;
   var init_shopFeed = __esm({
     "src/features/shops/shopFeed.ts"() {
       "use strict";
@@ -24980,7 +24980,6 @@
       rawSlot = null;
       shopsChanged = new Emitter();
       purchasesChanged = new Emitter();
-      watchers = new Subscriptions();
       watching = false;
       emitShops = () => shopsChanged.emit(toShopsSnapshot(viewOf(rawShops, rawSlot).shops));
       emitPurchases = () => purchasesChanged.emit(toPurchasesSnapshot(viewOf(rawShops, rawSlot), rawSlot));
@@ -24993,12 +24992,8 @@
         start() {
           if (watching) return;
           watching = true;
-          watchers.add(Atoms.shop.shops.onChangeNow((next) => onShops(next)));
-          watchers.add(Atoms.shop.myUserSlot.onChangeNow((next) => onSlot(next), sameShopParts));
-        },
-        stop() {
-          watchers.dispose();
-          watching = false;
+          void Atoms.shop.shops.onChangeNow((next) => onShops(next));
+          void Atoms.shop.myUserSlot.onChangeNow((next) => onSlot(next), sameShopParts);
         },
         onShopsChange(cb) {
           return shopsChanged.on(cb);
@@ -25018,6 +25013,71 @@
         }
       };
       ALERT_ID_PREFIX = { seed: "Seed", egg: "Egg", tool: "Tool", decor: "Decor" };
+    }
+  });
+
+  // src/features/notifier/playbackDefaults.ts
+  function clampLoopInterval(raw, fallback) {
+    const text2 = typeof raw === "string" ? raw.trim() : raw;
+    const n = text2 === "" || text2 == null ? NaN : Number(text2);
+    const value = Number.isFinite(n) ? n : fallback;
+    return Math.max(MIN_LOOP_INTERVAL_MS, Math.min(MAX_LOOP_INTERVAL_MS, Math.floor(value)));
+  }
+  function ensureLoaded() {
+    if (loaded) return;
+    loaded = true;
+    loopIntervals = {};
+    const stored = readAriesPath(LOOP_DEFAULTS_PATH);
+    if (!stored || typeof stored !== "object") return;
+    for (const context of ["shops", "weather"]) {
+      const entry = stored[context];
+      if (!entry) continue;
+      const raw = Number(entry.loopIntervalMs);
+      loopIntervals[context] = normalizeInterval(Number.isFinite(raw) ? raw : audio.getLoopInterval(context));
+    }
+  }
+  function save() {
+    const out = {};
+    for (const context of ["shops", "weather"]) {
+      const loopIntervalMs = loopIntervals[context];
+      if (loopIntervalMs == null) continue;
+      out[context] = { stopMode: context === "shops" ? "purchase" : "manual", stopRepeats: null, loopIntervalMs };
+    }
+    writeAriesPath(LOOP_DEFAULTS_PATH, out);
+  }
+  function setContextPlayback(context, mode, loopIntervalMs) {
+    audio.setPlaybackMode(context === "weather" ? "oneshot" : mode, context);
+    audio.setLoopInterval(loopIntervalMs, context);
+    if (context === "shops" && mode === "loop") audio.setStopPurchase(context);
+    else audio.setStopManual(context);
+    if (context !== "pets") LoopDefaults.setLoopInterval(context, loopIntervalMs);
+  }
+  var LOOP_DEFAULTS_PATH, MIN_LOOP_INTERVAL_MS, MAX_LOOP_INTERVAL_MS, loopIntervals, loaded, normalizeInterval, LoopDefaults;
+  var init_playbackDefaults = __esm({
+    "src/features/notifier/playbackDefaults.ts"() {
+      "use strict";
+      init_storage();
+      init_audio();
+      LOOP_DEFAULTS_PATH = "notifier.loopDefaults";
+      MIN_LOOP_INTERVAL_MS = 150;
+      MAX_LOOP_INTERVAL_MS = 1e4;
+      loopIntervals = {};
+      loaded = false;
+      normalizeInterval = (ms) => Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(ms || 0));
+      LoopDefaults = {
+        get(context) {
+          ensureLoaded();
+          const loopIntervalMs = normalizeInterval(loopIntervals[context] ?? audio.getLoopInterval(context));
+          return { stopMode: context === "shops" ? "purchase" : "manual", stopRepeats: null, loopIntervalMs };
+        },
+        /** Remembers a context's loop interval; an invalid one keeps the current value. */
+        setLoopInterval(context, ms) {
+          ensureLoaded();
+          const current = LoopDefaults.get(context).loopIntervalMs;
+          loopIntervals[context] = Number.isFinite(ms) ? normalizeInterval(ms) : current;
+          save();
+        }
+      };
     }
   });
 
@@ -25082,6 +25142,9 @@
     saveRules();
     rulesChanged.emit(rulesSnapshot());
   }
+  function hasRule(rule) {
+    return !!(rule && (rule.sound || rule.volume != null || rule.playbackMode || rule.stopMode || rule.loopIntervalMs != null));
+  }
   function ruleOverrides(rule) {
     if (!rule) return null;
     const overrides = {};
@@ -25120,29 +25183,38 @@
     }
     return parts.join(" \u2022 ");
   }
-  function ensureLoopDefaultsLoaded() {
-    if (loopDefaultsLoaded) return;
-    loopDefaultsLoaded = true;
-    loopIntervals = {};
-    const stored = readAriesPath(LOOP_DEFAULTS_PATH);
-    if (!stored || typeof stored !== "object") return;
-    for (const context of ["shops", "weather"]) {
-      const entry = stored[context];
-      if (!entry) continue;
-      const raw = Number(entry.loopIntervalMs);
-      loopIntervals[context] = normalizeInterval(Number.isFinite(raw) ? raw : audio.getLoopInterval(context));
-    }
+  function ruleDefaults(context) {
+    const playback = audio.getPlaybackSettings(context);
+    const loop = LoopDefaults.get(context);
+    return {
+      soundName: (playback.defaultSoundName || "").trim() || "Default",
+      volume: clamp(playback.volume || 0, 0, 1),
+      mode: playback.mode,
+      stopMode: loop.stopMode,
+      loopIntervalMs: Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(loop.loopIntervalMs))
+    };
   }
-  function saveLoopDefaults() {
-    const out = {};
-    for (const context of ["shops", "weather"]) {
-      const loopIntervalMs = loopIntervals[context];
-      if (loopIntervalMs == null) continue;
-      out[context] = { stopMode: context === "shops" ? "purchase" : "manual", stopRepeats: null, loopIntervalMs };
+  function rulePatchFromEditor(context, values) {
+    const defaults = ruleDefaults(context);
+    const canLoop = context === "shops";
+    let playbackMode = values.mode === "oneshot" || values.mode === "loop" ? values.mode : null;
+    if (playbackMode === defaults.mode) playbackMode = null;
+    let stopMode = canLoop && values.stop === "purchase" ? "purchase" : null;
+    if (stopMode === defaults.stopMode) stopMode = null;
+    let loopIntervalMs = null;
+    const typed = values.interval.trim();
+    if (canLoop && typed && Number.isFinite(Number(typed))) {
+      const interval = clampLoopInterval(typed, defaults.loopIntervalMs);
+      if (interval !== defaults.loopIntervalMs) loopIntervalMs = interval;
     }
-    writeAriesPath(LOOP_DEFAULTS_PATH, out);
+    const ratio = clamp(Math.round(values.volumePct) || 0, 0, 100) / 100;
+    const volume = Math.abs(ratio - defaults.volume) > 1e-3 ? ratio : null;
+    if (canLoop && !playbackMode && defaults.mode !== "loop" && (stopMode != null || loopIntervalMs != null)) {
+      playbackMode = "loop";
+    }
+    return { sound: values.sound.trim() || null, volume, playbackMode, stopMode, loopIntervalMs };
   }
-  var RULES_PATH, LOOP_DEFAULTS_PATH, MIN_LOOP_INTERVAL_MS, hasOwn, rules2, rulesLoaded, rulesChanged, copyRule, NotifierRules, loopIntervals, loopDefaultsLoaded, normalizeInterval, LoopDefaults;
+  var RULES_PATH, hasOwn, rules2, rulesLoaded, rulesChanged, copyRule, NotifierRules;
   var init_rules = __esm({
     "src/features/notifier/rules.ts"() {
       "use strict";
@@ -25150,9 +25222,8 @@
       init_emitter();
       init_math();
       init_audio();
+      init_playbackDefaults();
       RULES_PATH = "notifier.rules";
-      LOOP_DEFAULTS_PATH = "notifier.loopDefaults";
-      MIN_LOOP_INTERVAL_MS = 150;
       hasOwn = (obj, key2) => Object.prototype.hasOwnProperty.call(obj, key2);
       rules2 = /* @__PURE__ */ new Map();
       rulesLoaded = false;
@@ -25186,23 +25257,6 @@
         onChange(cb) {
           ensureRulesLoaded();
           return rulesChanged.on(cb);
-        }
-      };
-      loopIntervals = {};
-      loopDefaultsLoaded = false;
-      normalizeInterval = (ms) => Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(ms || 0));
-      LoopDefaults = {
-        get(context) {
-          ensureLoopDefaultsLoaded();
-          const loopIntervalMs = normalizeInterval(loopIntervals[context] ?? audio.getLoopInterval(context));
-          return { stopMode: context === "shops" ? "purchase" : "manual", stopRepeats: null, loopIntervalMs };
-        },
-        /** Remembers a context's loop interval; an invalid one keeps the current value. */
-        setLoopInterval(context, ms) {
-          ensureLoopDefaultsLoaded();
-          const current = LoopDefaults.get(context).loopIntervalMs;
-          loopIntervals[context] = Number.isFinite(ms) ? normalizeInterval(ms) : current;
-          saveLoopDefaults();
         }
       };
     }
@@ -25243,11 +25297,11 @@
     } catch {
     }
     try {
-      watchers2.add(await view.onChange(update));
+      await view.onChange(update);
     } catch {
     }
   }
-  var toolCounts, decorCounts, changed, watchers2, InventoryCaps;
+  var toolCounts, decorCounts, changed, InventoryCaps;
   var init_inventoryCaps = __esm({
     "src/features/notifier/inventoryCaps.ts"() {
       "use strict";
@@ -25257,7 +25311,6 @@
       toolCounts = /* @__PURE__ */ new Map();
       decorCounts = /* @__PURE__ */ new Map();
       changed = new Emitter();
-      watchers2 = new Subscriptions();
       InventoryCaps = {
         async start() {
           await follow(Atoms.inventory.myToolInventory, (items) => {
@@ -25266,9 +25319,6 @@
           await follow(Atoms.inventory.myDecorInventory, (items) => {
             decorCounts = countsOf(items, (it) => it?.decorId ?? it?.id);
           });
-        },
-        stop() {
-          watchers2.dispose();
         },
         /** Fires after every inventory update. */
         onChange(cb) {
@@ -25383,10 +25433,10 @@
         /** Re-reads every row's alert (followed, capped) and tells the listeners. */
         refresh() {
           if (!state2) return;
-          for (const row of state2.rows) {
-            const popup = followedIds().has(row.id) && !isCapReached(row.id);
-            row.popup = popup;
-            row.followed = popup;
+          for (const row2 of state2.rows) {
+            const popup = followedIds().has(row2.id) && !isCapReached(row2.id);
+            row2.popup = popup;
+            row2.followed = popup;
           }
           state2 = {
             ...state2,
@@ -25694,8 +25744,8 @@
           for (const item of items) this.el.appendChild(this.renderRow(item));
         }
         renderRow({ id, qty }) {
-          const row = h("div");
-          Object.assign(row.style, {
+          const row2 = h("div");
+          Object.assign(row2.style, {
             display: "grid",
             gridTemplateColumns: "24px 1fr max-content max-content max-content",
             alignItems: "center",
@@ -25739,8 +25789,8 @@
               btn.title = "Unavailable";
             }
           }
-          row.append(shopItemIcon(id, itemName(id), 24, "alerts-overlay"), title, count, buyBtn, buyAllBtn);
-          return row;
+          row2.append(shopItemIcon(id, itemName(id), 24, "alerts-overlay"), title, count, buyBtn, buyAllBtn);
+          return row2;
         }
         async buy(id, btn, label2, purchase) {
           const stock = findStockItem(this.alerts.shopsSnapshot(), id);
@@ -25752,10 +25802,10 @@
         }
         /** Lets the panel scroll without the wheel or touch reaching the game's canvas. */
         stopScrollReachingGame() {
-          const stop2 = (e) => e.stopPropagation();
+          const stop = (e) => e.stopPropagation();
           const opts = { passive: true, capture: true };
           for (const type of ["wheel", "mousewheel", "DOMMouseScroll", "touchmove"]) {
-            this.el.addEventListener(type, stop2, opts);
+            this.el.addEventListener(type, stop, opts);
           }
         }
       };
@@ -25770,9 +25820,9 @@
     const kindLc = rawKind.toLowerCase();
     const kind = kindLc === "weather" || kindLc === "lunar" || kindLc === "base" ? kindLc : "unknown";
     const meta = { kind, rawKind: rawKind || void 0 };
-    for (const field of ["startWindowMin", "startWindowMax", "durationMinutes", "periodMinutes"]) {
-      const value = finiteNumber(entry[field]);
-      if (value !== void 0) meta[field] = value;
+    for (const field2 of ["startWindowMin", "startWindowMax", "durationMinutes", "periodMinutes"]) {
+      const value = finiteNumber(entry[field2]);
+      if (value !== void 0) meta[field2] = value;
     }
     return meta;
   }
@@ -25958,7 +26008,7 @@
     if (def) savePrefs2();
     recomputeState();
   }
-  var PREFS_PATH2, prefs2, prefsLoaded, state3, stateSig, currentId, currentValue, changed3, watchers3, weatherStateSignature, WeatherAlerts;
+  var PREFS_PATH2, prefs2, prefsLoaded, state3, stateSig, currentId, currentValue, changed3, weatherStateSignature, WeatherAlerts;
   var init_weatherAlerts = __esm({
     "src/features/notifier/weatherAlerts.ts"() {
       "use strict";
@@ -25977,7 +26027,6 @@
       currentId = null;
       currentValue = null;
       changed3 = new Emitter();
-      watchers3 = new Subscriptions();
       weatherStateSignature = (rows) => JSON.stringify(rows.map((r) => [r.id, r.notify ? 1 : 0, r.lastSeen || 0, r.isCurrent ? 1 : 0]));
       WeatherAlerts = {
         /** Reads the weather once, then follows it. */
@@ -25988,22 +26037,14 @@
           } catch {
           }
           try {
-            watchers3.add(
-              await view.onChange((next) => {
-                try {
-                  onWeather(next);
-                } catch {
-                }
-              })
-            );
+            await view.onChange((next) => {
+              try {
+                onWeather(next);
+              } catch {
+              }
+            });
           } catch {
           }
-        },
-        stop() {
-          watchers3.dispose();
-          if (currentId) audio.stopLoop(currentId);
-          currentId = null;
-          currentValue = null;
         },
         state() {
           if (!state3) recomputeState();
@@ -26035,31 +26076,21 @@
     } catch {
     }
     window.addEventListener("gemini:data-updated", onCatalogsUpdated);
-    subscriptions.add(() => window.removeEventListener("gemini:data-updated", onCatalogsUpdated));
     ShopFeed.start();
-    subscriptions.add(() => ShopFeed.stop());
-    subscriptions.add(InventoryCaps.onChange(() => ShopRows.refresh()));
-    subscriptions.add(() => InventoryCaps.stop());
+    InventoryCaps.onChange(() => ShopRows.refresh());
     await InventoryCaps.start();
-    subscriptions.add(() => WeatherAlerts.stop());
     await WeatherAlerts.start();
   }
-  function stop() {
-    subscriptions.dispose();
-    started2 = false;
-  }
-  var started2, subscriptions, onCatalogsUpdated, NotifierService;
+  var started2, onCatalogsUpdated, NotifierService;
   var init_notifier = __esm({
     "src/features/notifier/notifier.ts"() {
       "use strict";
-      init_emitter();
       init_shopFeed();
       init_inventoryCaps();
       init_rules();
       init_shopRows();
       init_weatherAlerts();
       started2 = false;
-      subscriptions = new Subscriptions();
       onCatalogsUpdated = () => {
         try {
           ShopRows.rebuild();
@@ -26067,11 +26098,6 @@
         }
       };
       NotifierService = {
-        /** Starts everything; resolves to the function that stops it. */
-        async start() {
-          await ensureStarted();
-          return stop;
-        },
         async get() {
           await ensureStarted();
           return ShopRows.state();
@@ -26950,9 +26976,9 @@
   function queryAll(root, sel) {
     return Array.from(root.querySelectorAll(sel));
   }
-  function createLogger(option) {
-    if (typeof option === "function") return option;
-    if (option) return (...args) => console.debug("[AppendCropPrice/GO]", ...args);
+  function createLogger(option2) {
+    if (typeof option2 === "function") return option2;
+    if (option2) return (...args) => console.debug("[AppendCropPrice/GO]", ...args);
     return () => {
     };
   }
@@ -29749,10 +29775,10 @@
     const prev = prevValue ?? select3.value ?? null;
     select3.innerHTML = "";
     for (const value of DIRECTION_ORDER) {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = labels[value] ?? value;
-      select3.appendChild(option);
+      const option2 = document.createElement("option");
+      option2.value = value;
+      option2.textContent = labels[value] ?? value;
+      select3.appendChild(option2);
     }
     if (prev && DIRECTION_ORDER.includes(prev)) {
       select3.value = prev;
@@ -30625,8 +30651,8 @@
       clampNumber2 = (value, min, max) => Math.max(min, Math.min(max, value));
       collectSpeciesCandidates = (source, out) => {
         if (!source || typeof source !== "object") return;
-        for (const field of SPECIES_FIELDS) {
-          const raw = source[field];
+        for (const field2 of SPECIES_FIELDS) {
+          const raw = source[field2];
           if (typeof raw === "string") {
             const value = raw.trim();
             if (value) out.add(value);
@@ -31146,23 +31172,23 @@
         const entry = lookup.getEntry(identifier);
         return pickFirstNestedString(entry, lookup.getRarityPaths);
       };
-      readNestedValue = (item, field, parser) => {
+      readNestedValue = (item, field2, parser) => {
         if (!item || typeof item !== "object") return null;
         const sources = [item, item.item, item.data];
         for (const source of sources) {
           if (!source || typeof source !== "object") continue;
-          const raw = source[field];
+          const raw = source[field2];
           const parsed = parser(raw);
           if (parsed != null) return parsed;
         }
         return null;
       };
-      readNestedStringField = (item, field) => readNestedValue(item, field, (value) => {
+      readNestedStringField = (item, field2) => readNestedValue(item, field2, (value) => {
         if (typeof value !== "string") return null;
         const trimmed = value.trim();
         return trimmed ? trimmed : null;
       });
-      readNestedNumberField = (item, field) => readNestedValue(item, field, (value) => {
+      readNestedNumberField = (item, field2) => readNestedValue(item, field2, (value) => {
         if (typeof value === "number" && Number.isFinite(value)) return value;
         if (typeof value === "string" && value.trim()) {
           const parsed = Number(value);
@@ -31799,9 +31825,9 @@
     } catch {
     }
     return async () => {
-      for (const stop2 of stops) {
+      for (const stop of stops) {
         try {
-          await stop2();
+          await stop();
         } catch {
         }
       }
@@ -33338,7 +33364,7 @@
     let pressTimer = null;
     let repeatTimer = null;
     let repeated = false;
-    const stop2 = () => {
+    const stop = () => {
       if (pressTimer != null) clearTimeout(pressTimer);
       if (repeatTimer != null) clearInterval(repeatTimer);
       pressTimer = repeatTimer = null;
@@ -33352,7 +33378,7 @@
       }, 300);
       btn.setPointerCapture?.(ev.pointerId);
     });
-    for (const type of ["pointerup", "pointercancel", "pointerleave", "blur"]) btn.addEventListener(type, stop2);
+    for (const type of ["pointerup", "pointercancel", "pointerleave", "blur"]) btn.addEventListener(type, stop);
     btn.addEventListener("click", (e) => {
       if (repeated) {
         e.preventDefault();
@@ -33392,9 +33418,9 @@
       input.onchange = () => {
         if (input.checked) onChange(value);
       };
-      const row = h("label", "qmm-radio-label");
-      row.append(input, label2);
-      wrap.appendChild(row);
+      const row2 = h("label", "qmm-radio-label");
+      row2.append(input, label2);
+      wrap.appendChild(row2);
     }
     return wrap;
   }
@@ -33633,15 +33659,15 @@
 
   // src/ui/kit/layout.ts
   function settingRow(title, hint, control, opts = {}) {
-    const row = h("div", "qmm-setting-row");
-    if (opts.icon) row.appendChild(iconBox(opts.icon, ROW_ICON_PX, opts.iconTag ?? "panel"));
+    const row2 = h("div", "qmm-setting-row");
+    if (opts.icon) row2.appendChild(iconBox(opts.icon, ROW_ICON_PX, opts.iconTag ?? "panel"));
     const text2 = h("div", "qmm-setting-row__text");
     text2.appendChild(h("div", "qmm-setting-row__title", title));
     if (hint) text2.appendChild(h("div", "qmm-setting-row__hint", hint));
     const controls = h("div", "qmm-setting-row__controls");
     controls.appendChild(control);
-    row.append(text2, controls);
-    return { row, controls };
+    row2.append(text2, controls);
+    return { row: row2, controls };
   }
   function collapsibleCard(opts) {
     const root = plainCard();
@@ -33681,13 +33707,13 @@
     return { root, label: label2 };
   }
   function flexRow(opts = {}) {
-    const row = h("div", ["qmm-flex", opts.className].filter(Boolean).join(" "));
-    row.style.alignItems = ALIGN[opts.align ?? "center"];
-    row.style.justifyContent = JUSTIFY[opts.justify ?? "start"];
-    row.style.gap = `${opts.gap ?? 8}px`;
-    row.style.flexWrap = opts.wrap === false ? "nowrap" : "wrap";
-    if (opts.fullWidth) row.style.width = "100%";
-    return row;
+    const row2 = h("div", ["qmm-flex", opts.className].filter(Boolean).join(" "));
+    row2.style.alignItems = ALIGN[opts.align ?? "center"];
+    row2.style.justifyContent = JUSTIFY[opts.justify ?? "start"];
+    row2.style.gap = `${opts.gap ?? 8}px`;
+    row2.style.flexWrap = opts.wrap === false ? "nowrap" : "wrap";
+    if (opts.fullWidth) row2.style.width = "100%";
+    return row2;
   }
   var ROW_ICON_PX, JUSTIFY, ALIGN;
   var init_layout = __esm({
@@ -34566,8 +34592,8 @@
       themeList.innerHTML = "";
       const themes = catalog?.themes ?? [];
       themes.forEach((theme) => {
-        const row = document.createElement("div");
-        row.className = "dd-audio-row";
+        const row2 = document.createElement("div");
+        row2.className = "dd-audio-row";
         const infoWrap = document.createElement("div");
         infoWrap.className = "dd-audio-row__info";
         const title = document.createElement("div");
@@ -34577,7 +34603,7 @@
         urlEl.className = "dd-audio-url";
         urlEl.textContent = [theme.music && "music", theme.ambience && "ambience"].filter(Boolean).join(" \xB7 ") || "(no tracks)";
         infoWrap.append(title, urlEl);
-        row.appendChild(infoWrap);
+        row2.appendChild(infoWrap);
         const actions = ui.flexRow({ gap: 6, wrap: true, align: "center" });
         actions.className = "dd-audio-actions";
         if (theme.music) {
@@ -34603,8 +34629,8 @@
           size: "sm",
           onClick: () => copy([theme.music, theme.ambience].filter(Boolean).join("\n"))
         }));
-        row.appendChild(actions);
-        themeList.appendChild(row);
+        row2.appendChild(actions);
+        themeList.appendChild(row2);
       });
       themeList.style.display = themes.length ? "" : "none";
       themeEmpty.style.display = themes.length ? "none" : "block";
@@ -34619,8 +34645,8 @@
       for (const item of items) {
         if (!rx.test(item.name)) continue;
         visibleSfx.push(item);
-        const row = document.createElement("div");
-        row.className = "dd-audio-row";
+        const row2 = document.createElement("div");
+        row2.className = "dd-audio-row";
         const infoWrap = document.createElement("div");
         infoWrap.className = "dd-audio-row__info";
         const title = document.createElement("div");
@@ -34630,7 +34656,7 @@
         meta.className = "dd-audio-meta";
         meta.textContent = `${formatTime2(item.start)} \u2192 ${formatTime2(item.end)} (${item.duration.toFixed(2)}s)`;
         infoWrap.append(title, meta);
-        row.appendChild(infoWrap);
+        row2.appendChild(infoWrap);
         const actions = ui.flexRow({ gap: 6, wrap: false, align: "center" });
         actions.className = "dd-audio-actions";
         const playBtn = ui.btn("Play", {
@@ -34646,8 +34672,8 @@
           onClick: () => copy(atlasUrl)
         });
         actions.append(playBtn, copyBtn);
-        row.appendChild(actions);
-        sfxList.appendChild(row);
+        row2.appendChild(actions);
+        sfxList.appendChild(row2);
       }
       sfxInfo.textContent = items.length ? `${visibleSfx.length} / ${items.length} SFX shown.` : "No SFX loaded yet.";
       sfxList.style.display = visibleSfx.length ? "" : "none";
@@ -35123,9 +35149,9 @@
       matchesWrap.innerHTML = "";
       emptyMatches.style.display = atoms.length ? "none" : "block";
       atoms.map((atom) => ({ atom, label: String(atom?.debugLabel || atom?.label || "<unknown>") })).sort((a, b) => a.label.localeCompare(b.label)).forEach(({ atom, label: label2 }) => {
-        const row = document.createElement("label");
-        row.className = "dd-atom-list__item";
-        row.title = label2;
+        const row2 = document.createElement("label");
+        row2.className = "dd-atom-list__item";
+        row2.title = label2;
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.checked = entries2.has(label2);
@@ -35133,7 +35159,7 @@
         const text2 = document.createElement("span");
         text2.className = "dd-atom-list__label";
         text2.textContent = label2;
-        row.append(checkbox, text2);
+        row2.append(checkbox, text2);
         checkbox.addEventListener("change", async () => {
           if (checkbox.checked) {
             const existing = entries2.get(label2);
@@ -35159,7 +35185,7 @@
           updateSelectedInfo();
           updateControls();
         });
-        matchesWrap.appendChild(row);
+        matchesWrap.appendChild(row2);
         if (entries2.has(label2)) {
           const existing = entries2.get(label2);
           if (existing) existing.atom = atom;
@@ -35186,26 +35212,26 @@
         return;
       }
       records.forEach((rec, idx) => {
-        const row = document.createElement("div");
-        row.className = "atoms-log-row";
-        row.dataset.idx = String(idx);
-        row.style.display = "grid";
-        row.style.gridTemplateColumns = "minmax(120px, 160px) minmax(0, 1fr)";
-        row.style.gap = "12px";
-        row.style.padding = "10px 12px";
-        row.style.margin = "4px 0";
-        row.style.borderRadius = "12px";
-        row.style.border = "1px solid rgba(255,255,255,.12)";
+        const row2 = document.createElement("div");
+        row2.className = "atoms-log-row";
+        row2.dataset.idx = String(idx);
+        row2.style.display = "grid";
+        row2.style.gridTemplateColumns = "minmax(120px, 160px) minmax(0, 1fr)";
+        row2.style.gap = "12px";
+        row2.style.padding = "10px 12px";
+        row2.style.margin = "4px 0";
+        row2.style.borderRadius = "12px";
+        row2.style.border = "1px solid rgba(255,255,255,.12)";
         const isSelected = selectedRecord === idx;
-        row.style.background = isSelected ? "rgba(92,126,255,.16)" : "rgba(11,16,22,.85)";
-        row.style.borderColor = isSelected ? "rgba(92,126,255,.42)" : "rgba(255,255,255,.12)";
-        row.style.cursor = "pointer";
-        row.addEventListener("mouseenter", () => {
-          row.style.borderColor = "rgba(255,255,255,.28)";
+        row2.style.background = isSelected ? "rgba(92,126,255,.16)" : "rgba(11,16,22,.85)";
+        row2.style.borderColor = isSelected ? "rgba(92,126,255,.42)" : "rgba(255,255,255,.12)";
+        row2.style.cursor = "pointer";
+        row2.addEventListener("mouseenter", () => {
+          row2.style.borderColor = "rgba(255,255,255,.28)";
         });
-        row.addEventListener("mouseleave", () => {
+        row2.addEventListener("mouseleave", () => {
           const sel = selectedRecord === idx;
-          row.style.borderColor = sel ? "rgba(92,126,255,.42)" : "rgba(255,255,255,.12)";
+          row2.style.borderColor = sel ? "rgba(92,126,255,.42)" : "rgba(255,255,255,.12)";
         });
         const left = document.createElement("div");
         left.style.display = "flex";
@@ -35224,13 +35250,13 @@
         summary.style.whiteSpace = "pre-wrap";
         const prefix = rec.type === "initial" ? "[initial] " : "";
         summary.textContent = prefix + summarizeValue(rec.next);
-        row.append(left, summary);
-        row.addEventListener("click", () => {
+        row2.append(left, summary);
+        row2.addEventListener("click", () => {
           selectedRecord = idx;
           renderRecords(false);
           updateDetails(rec);
         });
-        logWrap.appendChild(row);
+        logWrap.appendChild(row2);
       });
       if (autoScroll) logWrap.scrollTop = logWrap.scrollHeight;
       if (selectedRecord != null && !records[selectedRecord]) {
@@ -35524,8 +35550,8 @@ next: ${next}`;
     let mutePatterns = [];
     const setSelectedRow = (fid) => {
       selectedId = fid;
-      [...logWrap.querySelectorAll("[data-fid]")].forEach((row) => {
-        row.classList.toggle("selected", String(fid || "") === row.dataset.fid);
+      [...logWrap.querySelectorAll("[data-fid]")].forEach((row2) => {
+        row2.classList.toggle("selected", String(fid || "") === row2.dataset.fid);
       });
       if (fid != null) {
         const f = framesMap.get(fid);
@@ -35750,9 +35776,9 @@ next: ${next}`;
       return acts;
     }
     function buildRow(f) {
-      const row = document.createElement("div");
-      row.className = "ws-row";
-      row.dataset.fid = String(f.id);
+      const row2 = document.createElement("div");
+      row2.className = "ws-row";
+      row2.dataset.fid = String(f.id);
       const ts = document.createElement("div");
       ts.className = "ts";
       ts.textContent = fmtTime(f.t);
@@ -35764,18 +35790,18 @@ next: ${next}`;
       body.className = "body";
       body.innerHTML = `<code>${escapeLite(f.text)}</code>`;
       const acts = rowActions(f.id, f);
-      row.append(ts, arrow, body, acts);
-      row.onclick = () => setSelectedRow(f.id);
-      row.ondblclick = () => {
+      row2.append(ts, arrow, body, acts);
+      row2.onclick = () => setSelectedRow(f.id);
+      row2.ondblclick = () => {
         ta.value = f.text;
         setSelectedRow(f.id);
       };
-      return row;
+      return row2;
     }
     function appendOne(f) {
       if (!passesFilters(f)) return;
-      const row = buildRow(f);
-      logWrap.appendChild(row);
+      const row2 = buildRow(f);
+      logWrap.appendChild(row2);
       updateEmptyState();
       if (autoScroll) logWrap.scrollTop = logWrap.scrollHeight;
     }
@@ -35956,10 +35982,10 @@ next: ${next}`;
       allOption.textContent = categories.length ? "All categories" : "No categories";
       categorySelect.appendChild(allOption);
       categories.forEach((category) => {
-        const option = document.createElement("option");
-        option.value = category;
-        option.textContent = category;
-        categorySelect.appendChild(option);
+        const option2 = document.createElement("option");
+        option2.value = category;
+        option2.textContent = category;
+        categorySelect.appendChild(option2);
       });
       const valid = categories.includes(selectedCategory);
       selectedCategory = valid ? selectedCategory : ANY_CATEGORY;
@@ -35990,24 +36016,24 @@ next: ${next}`;
       const heading = document.createElement("span");
       heading.className = "dd-sprite-mutation-group-title";
       heading.textContent = label2;
-      const row = document.createElement("div");
-      row.className = "dd-sprite-mutation-buttons";
-      options.forEach((option) => {
+      const row2 = document.createElement("div");
+      row2.className = "dd-sprite-mutation-buttons";
+      options.forEach((option2) => {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "dd-sprite-mutation-btn";
-        btn.textContent = option === "None" ? "None" : option;
-        if (mutationFilters[key2] === option) btn.classList.add("active");
-        btn.setAttribute("aria-pressed", mutationFilters[key2] === option ? "true" : "false");
+        btn.textContent = option2 === "None" ? "None" : option2;
+        if (mutationFilters[key2] === option2) btn.classList.add("active");
+        btn.setAttribute("aria-pressed", mutationFilters[key2] === option2 ? "true" : "false");
         btn.addEventListener("click", () => {
-          if (mutationFilters[key2] === option) return;
-          mutationFilters[key2] = option;
+          if (mutationFilters[key2] === option2) return;
+          mutationFilters[key2] = option2;
           renderMutationControls();
           if (visibleSpriteRecords.length) renderSpriteCards(visibleSpriteRecords);
         });
-        row.appendChild(btn);
+        row2.appendChild(btn);
       });
-      container.append(heading, row);
+      container.append(heading, row2);
     }
     function previewUrlFor(record, mutations) {
       return mutations.length ? composedSpriteUrl(record.category, record.name, mutations) : record.url;
@@ -36482,7 +36508,7 @@ next: ${next}`;
       case "common":
         return "Common";
       default:
-        return rarity3 || "\u2014";
+        return rarity3 || "-";
     }
   }
   function ensureCelestialKeyframes() {
@@ -37001,13 +37027,13 @@ next: ${next}`;
       return section2;
     };
     const centerRow = () => {
-      const row = document.createElement("div");
-      row.style.display = "flex";
-      row.style.flexWrap = "wrap";
-      row.style.justifyContent = "center";
-      row.style.alignItems = "center";
-      row.style.gap = "8px";
-      return row;
+      const row2 = document.createElement("div");
+      row2.style.display = "flex";
+      row2.style.flexWrap = "wrap";
+      row2.style.justifyContent = "center";
+      row2.style.alignItems = "center";
+      row2.style.gap = "8px";
+      return row2;
     };
     const toLockMode = (value) => value === "allow" ? "ALLOW" : "LOCK";
     const fromLockMode = (mode) => mode === "ALLOW" ? "allow" : "lock";
@@ -37644,7 +37670,7 @@ next: ${next}`;
         normalizeRecipeSelection(set2);
         const isEditing2 = editingRecipeIndex === index;
         const selection = isEditing2 ? editingRecipeDraft : set2;
-        const row = applyStyles(document.createElement("div"), {
+        const row2 = applyStyles(document.createElement("div"), {
           display: "flex",
           gap: isEditing2 ? "10px" : "12px",
           border: "1px solid rgba(255,255,255,0.10)",
@@ -37655,12 +37681,12 @@ next: ${next}`;
           width: "100%"
         });
         if (isEditing2) {
-          row.style.flexDirection = "column";
+          row2.style.flexDirection = "column";
         } else {
-          row.style.flexDirection = "row";
-          row.style.alignItems = "center";
-          row.style.justifyContent = "space-between";
-          row.style.flexWrap = "wrap";
+          row2.style.flexDirection = "row";
+          row2.style.alignItems = "center";
+          row2.style.justifyContent = "space-between";
+          row2.style.flexWrap = "wrap";
         }
         const summary = document.createElement("div");
         renderRecipeSummary(summary, selection);
@@ -37668,10 +37694,10 @@ next: ${next}`;
           summary.style.flex = "1 1 auto";
           summary.style.minWidth = "220px";
         }
-        row.appendChild(summary);
+        row2.appendChild(summary);
         if (isEditing2) {
           const toggleGrid = buildRecipeToggleGrid(selection, () => renderRecipeSummary(summary, selection));
-          row.appendChild(toggleGrid);
+          row2.appendChild(toggleGrid);
           const actions = applyStyles(document.createElement("div"), {
             display: "flex",
             gap: "8px",
@@ -37692,7 +37718,7 @@ next: ${next}`;
             btnDelete.onclick = () => deleteRecipeAt(index);
             actions.append(btnDelete);
           }
-          row.appendChild(actions);
+          row2.appendChild(actions);
         } else {
           const actions = applyStyles(document.createElement("div"), {
             display: "flex",
@@ -37713,13 +37739,13 @@ next: ${next}`;
           btnDelete.setAttribute("aria-label", "Delete");
           btnDelete.onclick = () => deleteRecipeAt(index);
           actions.append(btnEdit, btnDelete);
-          row.appendChild(actions);
+          row2.appendChild(actions);
         }
-        recipesList.appendChild(row);
+        recipesList.appendChild(row2);
       });
       if (hasDraftNew && editingRecipeIndex !== null) {
         const selection = editingRecipeDraft;
-        const row = applyStyles(document.createElement("div"), {
+        const row2 = applyStyles(document.createElement("div"), {
           display: "flex",
           flexDirection: "column",
           gap: "10px",
@@ -37732,9 +37758,9 @@ next: ${next}`;
         });
         const summary = document.createElement("div");
         renderRecipeSummary(summary, selection);
-        row.appendChild(summary);
+        row2.appendChild(summary);
         const toggleGrid = buildRecipeToggleGrid(selection, () => renderRecipeSummary(summary, selection));
-        row.appendChild(toggleGrid);
+        row2.appendChild(toggleGrid);
         const actions = applyStyles(document.createElement("div"), {
           display: "flex",
           gap: "8px",
@@ -37747,8 +37773,8 @@ next: ${next}`;
         styleBtnFullWidth(btnValidate, "\u2714\uFE0F");
         btnValidate.onclick = commitEditingRecipe;
         actions.append(btnCancel, btnValidate);
-        row.appendChild(actions);
-        recipesList.appendChild(row);
+        row2.appendChild(actions);
+        recipesList.appendChild(row2);
       }
       applyDisabled();
     }
@@ -37897,7 +37923,7 @@ next: ${next}`;
       marginTop: "6px"
     });
     const createRuleRow = (title, subtitle) => {
-      const row = applyStyles(document.createElement("div"), {
+      const row2 = applyStyles(document.createElement("div"), {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
@@ -37928,8 +37954,8 @@ next: ${next}`;
         alignItems: "center",
         gap: "8px"
       });
-      row.append(text2, controls);
-      return { row, controls };
+      row2.append(text2, controls);
+      return { row: row2, controls };
     };
     const sellRulesInitial = lockerRestrictionsService.getSellAllPetsRules();
     const sellEnableToggle = ui.switch(sellRulesInitial.enabled);
@@ -38104,7 +38130,7 @@ next: ${next}`;
     };
     let renderEggList;
     const createEggRow = (opt) => {
-      const row = applyStyles(document.createElement("div"), {
+      const row2 = applyStyles(document.createElement("div"), {
         display: "grid",
         gridTemplateColumns: "auto auto 1fr",
         alignItems: "center",
@@ -38131,8 +38157,8 @@ next: ${next}`;
       name.style.fontWeight = "600";
       name.style.color = "#e7eef7";
       const icon = createEggIcon(opt.id, opt.name, 32);
-      row.append(toggle2, icon, name);
-      return { row, toggle: toggle2, name };
+      row2.append(toggle2, icon, name);
+      return { row: row2, toggle: toggle2, name };
     };
     renderEggList = () => {
       eggList.innerHTML = "";
@@ -38173,8 +38199,8 @@ next: ${next}`;
       if (!Number.isFinite(value)) return 0;
       return Math.max(0, Math.min(100, Math.round(value)));
     };
-    const setRuleRowDisabled = (row, disabled) => {
-      row.style.opacity = disabled ? "0.6" : "1";
+    const setRuleRowDisabled = (row2, disabled) => {
+      row2.style.opacity = disabled ? "0.6" : "1";
     };
     const refreshSellAllPetsControls = () => {
       const rules3 = lockerRestrictionsService.getSellAllPetsRules();
@@ -39000,7 +39026,7 @@ next: ${next}`;
     const filename = str.split("/").pop() || "";
     return filename.replace(/\.[a-z0-9]+(\?.*)?$/i, "") || null;
   }
-  function buildSpriteCandidates2(primary, option) {
+  function buildSpriteCandidates2(primary, option2) {
     const candidates = /* @__PURE__ */ new Set();
     const addCandidate = (value) => {
       if (!value) return;
@@ -39009,14 +39035,14 @@ next: ${next}`;
       candidates.add(trimmed);
       candidates.add(trimmed.replace(/\W+/g, ""));
     };
-    if (option?.spriteKey) {
-      const spriteName = extractSpriteNameFromUrl(option.spriteKey);
+    if (option2?.spriteKey) {
+      const spriteName = extractSpriteNameFromUrl(option2.spriteKey);
       if (spriteName) addCandidate(spriteName);
     }
     addCandidate(primary);
-    if (option) {
-      addCandidate(option.cropName);
-      addCandidate(option.seedName);
+    if (option2) {
+      addCandidate(option2.cropName);
+      addCandidate(option2.seedName);
     }
     const baseCandidates = Array.from(candidates).map((value) => value.replace(/icon$/i, "")).filter(Boolean);
     const expanded = Array.from(
@@ -39063,7 +39089,7 @@ next: ${next}`;
     el.innerHTML = "";
     delete el.dataset.mgHasSprite;
   }
-  function createSeedSpriteIcon(option, fallback, size, logTag) {
+  function createSeedSpriteIcon(option2, fallback, size, logTag) {
     const wrap = applyStyles2(document.createElement("span"), {
       width: `${size}px`,
       height: `${size}px`,
@@ -39072,8 +39098,8 @@ next: ${next}`;
       justifyContent: "center"
     });
     wrap.textContent = fallback && fallback.trim().length > 0 ? fallback : "??";
-    const candidates = buildSpriteCandidates2(option.key, option);
-    const categories = getSpriteCategoriesForKey(option?.key, option?.seedName, option?.cropName);
+    const candidates = buildSpriteCandidates2(option2.key, option2);
+    const categories = getSpriteCategoriesForKey(option2?.key, option2?.seedName, option2?.cropName);
     attachSpriteIcon(wrap, categories, candidates, size, logTag);
     return wrap;
   }
@@ -39565,11 +39591,11 @@ next: ${next}`;
           return;
         }
         const state7 = getStateForKey(key2);
-        const option = optionByKey.get(key2);
-        const fallbackEmoji = getLockerSeedEmojiForKey(key2) || (option?.seedName ? getLockerSeedEmojiForSeedName(option.seedName) : void 0) || "\u{1F331}";
+        const option2 = optionByKey.get(key2);
+        const fallbackEmoji = getLockerSeedEmojiForKey(key2) || (option2?.seedName ? getLockerSeedEmojiForSeedName(option2.seedName) : void 0) || "\u{1F331}";
         const mutations = getMutationsForState(state7);
-        const candidates = buildSpriteCandidates2(key2, option);
-        const categories = getSpriteCategoriesForKey(key2, option?.seedName, option?.cropName);
+        const candidates = buildSpriteCandidates2(key2, option2);
+        const categories = getSpriteCategoriesForKey(key2, option2?.seedName, option2?.cropName);
         applyCropSimulationSprite(refs.sprite, key2, {
           fallback: fallbackEmoji,
           candidates,
@@ -40118,10 +40144,10 @@ next: ${next}`;
   function selectField(options) {
     const el = select2({ small: true });
     for (const [value, label2] of options) {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = label2;
-      el.appendChild(option);
+      const option2 = document.createElement("option");
+      option2.value = value;
+      option2.textContent = label2;
+      el.appendChild(option2);
     }
     return el;
   }
@@ -40189,14 +40215,14 @@ next: ${next}`;
     });
   }
   function gridRow() {
-    const row = document.createElement("div");
-    css(row, {
+    const row2 = document.createElement("div");
+    css(row2, {
       display: "grid",
       gridTemplateColumns: GRID_TEMPLATE,
       alignItems: "center",
       gap: "6px"
     });
-    return row;
+    return row2;
   }
   function headerCell(label2, align = "center") {
     const cell = document.createElement("span");
@@ -40230,10 +40256,10 @@ next: ${next}`;
     cell.textContent = formatInt(value);
     return cell;
   }
-  function speciesCell(row) {
+  function speciesCell(row2) {
     const cell = document.createElement("span");
     css(cell, { display: "flex", alignItems: "center", gap: "7px", minWidth: "0" });
-    cell.appendChild(iconBox(`sprite/pet/${row.species}`, SPECIES_ICON_PX, "hatch"));
+    cell.appendChild(iconBox(`sprite/pet/${row2.species}`, SPECIES_ICON_PX, "hatch"));
     const label2 = document.createElement("span");
     css(label2, {
       fontSize: "12.5px",
@@ -40242,12 +40268,12 @@ next: ${next}`;
       textOverflow: "ellipsis",
       whiteSpace: "nowrap"
     });
-    label2.textContent = row.species;
+    label2.textContent = row2.species;
     cell.appendChild(label2);
-    if (row.share !== void 0) {
+    if (row2.share !== void 0) {
       const share = document.createElement("span");
       css(share, { fontSize: "10px", color: TEXT_DIM, whiteSpace: "nowrap", flex: "0 0 auto" });
-      const percent = row.share * 100;
+      const percent = row2.share * 100;
       share.textContent = `${percent >= 1 ? Math.round(percent) : percent.toFixed(1)}%`;
       cell.appendChild(share);
     }
@@ -40268,14 +40294,14 @@ next: ${next}`;
     let totalNormal = 0;
     let totalGold = 0;
     let totalRainbow = 0;
-    for (const row of rows) {
-      const counts = countsFor(stats, row.species);
+    for (const row2 of rows) {
+      const counts = countsFor(stats, row2.species);
       totalNormal += counts.normal ?? 0;
       totalGold += counts.gold ?? 0;
       totalRainbow += counts.rainbow ?? 0;
       const line = gridRow();
       line.append(
-        speciesCell(row),
+        speciesCell(row2),
         numberCell(counts.normal, TEXT),
         numberCell(counts.gold, GOLD),
         numberCell(counts.rainbow, RAINBOW),
@@ -40336,8 +40362,8 @@ next: ${next}`;
     const remaining = Math.max(0, ceiling - misses);
     const due = remaining === 0;
     const near = !due && remaining <= NEAR_GUARANTEE_PULLS;
-    const row = document.createElement("div");
-    css(row, {
+    const row2 = document.createElement("div");
+    css(row2, {
       display: "grid",
       gridTemplateColumns: ROW_TEMPLATE,
       alignItems: "center",
@@ -40381,7 +40407,7 @@ next: ${next}`;
     const isFloor = offset <= 0;
     value.textContent = due ? "Guaranteed" : `${isFloor ? "\u2265 " : ""}${formatInt2(misses)} / ${formatInt2(ceiling)}`;
     value.title = due ? `Due: the next pull is forced (threshold ${formatInt2(target.threshold)}).` : isFloor ? `At least ${formatInt2(remaining)} more misses before the guarantee (threshold ${formatInt2(target.threshold)}). The game keeps its own counter private, so this only counts hatches seen since tracking began. Set your real counter to correct it.` : `${formatInt2(remaining)} more misses before the guarantee (threshold ${formatInt2(target.threshold)}).`;
-    row.append(label2, bar.root, value);
+    row2.append(label2, bar.root, value);
     if (showOffsets) {
       const input = numberField(0, ceiling, 1, offset);
       css(input, { width: "70px", padding: "5px 7px", fontSize: "11px" });
@@ -40389,11 +40415,11 @@ next: ${next}`;
       input.addEventListener("change", () => {
         HatchTracker.setOffset(egg.eggId, target.key, Number(input.value));
       });
-      row.appendChild(input);
+      row2.appendChild(input);
     } else {
-      row.appendChild(document.createElement("span"));
+      row2.appendChild(document.createElement("span"));
     }
-    return row;
+    return row2;
   }
   function trackingNote() {
     const note = document.createElement("div");
@@ -42169,8 +42195,8 @@ Not a sum \u2014 it is 1 minus the product of every pet missing.${perHour}
     }
     const magnitude = perProcMagnitude(group2);
     if (magnitude) {
-      const row = document.createElement("div");
-      Object.assign(row.style, {
+      const row2 = document.createElement("div");
+      Object.assign(row2.style, {
         display: "flex",
         alignItems: "baseline",
         justifyContent: "space-between",
@@ -42178,7 +42204,7 @@ Not a sum \u2014 it is 1 minus the product of every pet missing.${perHour}
         fontSize: "10px",
         marginTop: "1px"
       });
-      row.title = group2.contributors.length > 1 ? "What a single proc gives. Each pet applies its own value, so this is\na range across the team \u2014 the values never add up." : "What a single proc gives.";
+      row2.title = group2.contributors.length > 1 ? "What a single proc gives. Each pet applies its own value, so this is\na range across the team \u2014 the values never add up." : "What a single proc gives.";
       const label2 = document.createElement("span");
       label2.textContent = "per proc";
       label2.style.color = MUTED;
@@ -42187,8 +42213,8 @@ Not a sum \u2014 it is 1 minus the product of every pet missing.${perHour}
       amount.style.fontWeight = "600";
       amount.style.flex = "0 0 auto";
       amount.style.fontVariantNumeric = "tabular-nums";
-      row.append(label2, amount);
-      block.appendChild(row);
+      row2.append(label2, amount);
+      block.appendChild(row2);
     }
     return block;
   }
@@ -42273,8 +42299,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       color2 = MUTED;
       title = `No known hunger data for: ${autonomy.speciesMissingDepletion.join(", ")}.`;
     }
-    const row = document.createElement("div");
-    Object.assign(row.style, {
+    const row2 = document.createElement("div");
+    Object.assign(row2.style, {
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
@@ -42285,7 +42311,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       border: "1px solid rgba(255,255,255,0.05)",
       fontSize: "10px"
     });
-    row.title = title;
+    row2.title = title;
     const label2 = document.createElement("span");
     label2.textContent = "\u{1F356} Lasts without feeding (from full)";
     label2.style.color = MUTED;
@@ -42298,8 +42324,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     valueSpan.style.fontWeight = "600";
     valueSpan.style.flex = "0 0 auto";
     valueSpan.style.fontVariantNumeric = "tabular-nums";
-    row.append(label2, valueSpan);
-    return row;
+    row2.append(label2, valueSpan);
+    return row2;
   }
   function renderTeamStats(pets, options = {}) {
     const wrap = document.createElement("div");
@@ -42612,13 +42638,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     return `outranked in: ${parts.join(", ")}`;
   }
   function renderUnusedRow(info) {
-    const row = document.createElement("div");
-    row.style.display = "flex";
-    row.style.alignItems = "center";
-    row.style.gap = "6px";
-    row.style.padding = "3px 0";
-    row.style.opacity = "0.75";
-    row.appendChild(renderPetChip(info.pet));
+    const row2 = document.createElement("div");
+    row2.style.display = "flex";
+    row2.style.alignItems = "center";
+    row2.style.gap = "6px";
+    row2.style.padding = "3px 0";
+    row2.style.opacity = "0.75";
+    row2.appendChild(renderPetChip(info.pet));
     const reason = document.createElement("span");
     reason.textContent = unusedReasonText(info);
     reason.style.fontSize = "10px";
@@ -42628,8 +42654,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     reason.style.overflow = "hidden";
     reason.style.textOverflow = "ellipsis";
     reason.style.maxWidth = "45%";
-    row.appendChild(reason);
-    return row;
+    row2.appendChild(reason);
+    return row2;
   }
   function renderUnusedSection(unusedPets, ui) {
     const card5 = ui.card(`\u{1F5D1}\uFE0F Not used in any team (${unusedPets.length})`, { tone: "muted", compactHeader: true, gap: 4 });
@@ -42983,8 +43009,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       return cell;
     }
     function logRow(log2) {
-      const row = document.createElement("div");
-      css(row, {
+      const row2 = document.createElement("div");
+      css(row2, {
         display: "grid",
         gridTemplateColumns: ROW_TEMPLATE2,
         alignItems: "center",
@@ -42996,8 +43022,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         // A tick from this session reads at a glance without a legend.
         borderLeft: log2.isActiveSession ? `2px solid ${TEAL}` : `1px solid ${BORDER}`
       });
-      row.append(whenCell(log2), petCell(log2), abilityCell(log2), detailsCell(log2));
-      return row;
+      row2.append(whenCell(log2), petCell(log2), abilityCell(log2), detailsCell(log2));
+      return row2;
     }
     function applyFilters() {
       let result = logs.slice();
@@ -43024,10 +43050,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       ];
       selAbility.innerHTML = "";
       for (const [value, label2] of options) {
-        const option = document.createElement("option");
-        option.value = value;
-        option.textContent = label2;
-        selAbility.appendChild(option);
+        const option2 = document.createElement("option");
+        option2.value = value;
+        option2.textContent = label2;
+        selAbility.appendChild(option2);
       }
       selAbility.value = options.some(([value]) => value === current) ? current : "";
     }
@@ -43223,7 +43249,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       cardSection.root.style.maxWidth = "720px";
       return cardSection.root;
     };
-    const row = (opts) => ui.flexRow({ justify: opts?.justify ?? "center" });
+    const row2 = (opts) => ui.flexRow({ justify: opts?.justify ?? "center" });
     const wrap = document.createElement("div");
     wrap.style.display = "grid";
     wrap.style.gridTemplateColumns = "minmax(220px, 280px) minmax(0, 1fr)";
@@ -43668,7 +43694,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     card5.style.minHeight = "0";
     right.appendChild(card5);
     const secName = (() => {
-      const r = row();
+      const r = row2();
       r.style.width = "100%";
       const nameInput = ui.inputText("Team name", "");
       nameInput.id = "pets.teams.editor.name";
@@ -44200,13 +44226,13 @@ Restore figures are averages; unlucky streaks do worse.`;
         return { crop, name };
       }).sort((a, b) => a.name.localeCompare(b.name));
       cropEntries.forEach(({ crop, name }) => {
-        const row = document.createElement("div");
-        row.style.display = "grid";
-        row.style.gridTemplateColumns = "1fr auto";
-        row.style.alignItems = "center";
-        row.style.gap = "8px";
-        row.style.padding = "6px 4px";
-        row.style.borderBottom = "1px solid #ffffff12";
+        const row2 = document.createElement("div");
+        row2.style.display = "grid";
+        row2.style.gridTemplateColumns = "1fr auto";
+        row2.style.alignItems = "center";
+        row2.style.gap = "8px";
+        row2.style.padding = "6px 4px";
+        row2.style.borderBottom = "1px solid #ffffff12";
         const labelWrap = document.createElement("div");
         labelWrap.style.display = "flex";
         labelWrap.style.flexDirection = "column";
@@ -44226,8 +44252,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         sw.addEventListener("change", () => {
           PetsService.setInstantFeedCropAllowed(species, crop, sw.checked);
         });
-        row.append(labelWrap, sw);
-        body.appendChild(row);
+        row2.append(labelWrap, sw);
+        body.appendChild(row2);
       });
     };
     vtabs.onSelect((id) => {
@@ -44713,8 +44739,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     function buildRow(entry) {
       const qty = picked.get(entry.id) ?? 0;
       const selected = qty > 0;
-      const row = document.createElement("div");
-      css(row, {
+      const row2 = document.createElement("div");
+      css(row2, {
         display: "flex",
         alignItems: "center",
         gap: "8px",
@@ -44724,7 +44750,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         background: selected ? TEAL_DIM : CARD_BG,
         cursor: "pointer"
       });
-      row.addEventListener("click", () => {
+      row2.addEventListener("click", () => {
         if ((picked.get(entry.id) ?? 0) > 0) picked.delete(entry.id);
         else picked.set(entry.id, entry.total);
         renderRows();
@@ -44763,8 +44789,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         else picked.delete(entry.id);
         renderRows();
       });
-      row.append(buildIcon(entry.id), label2, amount);
-      return row;
+      row2.append(buildIcon(entry.id), label2, amount);
+      return row2;
     }
     function renderRows() {
       if (!modal.isOpen()) return;
@@ -44785,9 +44811,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     loading.textContent = "Reading inventory\u2026";
     list.append(loading);
     updateSummary2();
-    void options.loadEntries().then((loaded) => {
+    void options.loadEntries().then((loaded2) => {
       if (!modal.isOpen()) return;
-      entries2 = loaded;
+      entries2 = loaded2;
       for (const [id, qty] of [...picked]) {
         const entry = entries2.find((e) => e.id === id);
         if (!entry) picked.delete(id);
@@ -45002,35 +45028,35 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/chat/harvest.ts
-  function mutationsOf(row) {
-    return row.mutations;
+  function mutationsOf(row2) {
+    return row2.mutations;
   }
-  function rowKey(row) {
-    return `${row.tileIndex}:${row.slotId}`;
+  function rowKey(row2) {
+    return `${row2.tileIndex}:${row2.slotId}`;
   }
   function selectionSignature(rows) {
     return rows.map(rowKey).sort().join("|");
   }
   function speciesPresent(rows) {
-    return [...new Set(rows.map((row) => row.species))].sort((a, b) => a.localeCompare(b));
+    return [...new Set(rows.map((row2) => row2.species))].sort((a, b) => a.localeCompare(b));
   }
   function mutationsPresent(rows) {
     const all = /* @__PURE__ */ new Set();
-    for (const row of rows) for (const mutation of mutationsOf(row)) all.add(mutation);
+    for (const row2 of rows) for (const mutation of mutationsOf(row2)) all.add(mutation);
     return [...all].sort((a, b) => a.localeCompare(b));
   }
   function tally(rows, of) {
     const counts = /* @__PURE__ */ new Map();
-    for (const row of rows) {
-      for (const value of of(row)) {
+    for (const row2 of rows) {
+      for (const value of of(row2)) {
         if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
       }
     }
     return counts;
   }
-  function matchesMutations(row, wanted, mode) {
+  function matchesMutations(row2, wanted, mode) {
     if (wanted.length === 0) return true;
-    const present = new Set(mutationsOf(row));
+    const present = new Set(mutationsOf(row2));
     switch (mode) {
       case "all":
         return wanted.every((mutation) => present.has(mutation));
@@ -45042,12 +45068,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function filterRows(rows, filters) {
     const species = filters.species && filters.species.length > 0 ? new Set(filters.species) : null;
-    return rows.filter((row) => {
-      if (!row.ready) return false;
-      if (row.preserved && !filters.includePreserved) return false;
-      if (species && !species.has(row.species)) return false;
-      if (row.sizePct < filters.minSizePct) return false;
-      return matchesMutations(row, filters.mutations, filters.mutationMode);
+    return rows.filter((row2) => {
+      if (!row2.ready) return false;
+      if (row2.preserved && !filters.includePreserved) return false;
+      if (species && !species.has(row2.species)) return false;
+      if (row2.sizePct < filters.minSizePct) return false;
+      return matchesMutations(row2, filters.mutations, filters.mutationMode);
     });
   }
   function describeFilters(filters) {
@@ -45071,12 +45097,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function groupVariants(rows) {
     const groups = /* @__PURE__ */ new Map();
-    for (const row of rows) {
-      const mutations = [...mutationsOf(row)].sort();
-      const key2 = `${row.species}|${mutations.join(",")}`;
+    for (const row2 of rows) {
+      const mutations = [...mutationsOf(row2)].sort();
+      const key2 = `${row2.species}|${mutations.join(",")}`;
       const known = groups.get(key2);
       if (known) known.count++;
-      else groups.set(key2, { species: row.species, mutations, count: 1 });
+      else groups.set(key2, { species: row2.species, mutations, count: 1 });
     }
     return [...groups.values()].sort(
       (a, b) => b.count - a.count || a.species.localeCompare(b.species) || a.mutations.length - b.mutations.length || a.mutations.join(",").localeCompare(b.mutations.join(","))
@@ -45089,7 +45115,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function describeSelection(rows) {
     if (rows.length === 0) return "nothing";
     const bySpecies2 = /* @__PURE__ */ new Map();
-    for (const row of rows) bySpecies2.set(row.species, (bySpecies2.get(row.species) ?? 0) + 1);
+    for (const row2 of rows) bySpecies2.set(row2.species, (bySpecies2.get(row2.species) ?? 0) + 1);
     const parts = [...bySpecies2.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([species, count]) => `${count} ${species}`);
     const head = parts.slice(0, 3);
     const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
@@ -45216,10 +45242,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     const totals = /* @__PURE__ */ new Map();
     for (const raw of Array.isArray(rows) ? rows : []) {
       if (!raw || typeof raw !== "object") continue;
-      const row = raw;
-      const id = idOf(row).trim();
+      const row2 = raw;
+      const id = idOf(row2).trim();
       if (!id) continue;
-      const quantity = Math.floor(Number(row.quantity ?? 0));
+      const quantity = Math.floor(Number(row2.quantity ?? 0));
       if (!Number.isFinite(quantity) || quantity <= 0) continue;
       totals.set(id, (totals.get(id) ?? 0) + quantity);
     }
@@ -45231,8 +45257,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       Atoms.inventory.myEggInventory.get().catch(() => null)
     ]);
     return [
-      ...accumulate(seeds, "seed", (row) => String(row.species ?? ""), seedName),
-      ...accumulate(eggs, "egg", (row) => String(row.eggId ?? row.id ?? row.species ?? ""), eggName2)
+      ...accumulate(seeds, "seed", (row2) => String(row2.species ?? ""), seedName),
+      ...accumulate(eggs, "egg", (row2) => String(row2.eggId ?? row2.id ?? row2.species ?? ""), eggName2)
     ];
   }
   async function readPlantScope() {
@@ -45417,9 +45443,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     return tile;
   }
   function tileRow() {
-    const row = document.createElement("div");
-    css(row, { display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: "5px" });
-    return row;
+    const row2 = document.createElement("div");
+    css(row2, { display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: "5px" });
+    return row2;
   }
   function segmented2(options, selected, onSelect) {
     const wrap = document.createElement("div");
@@ -45431,12 +45457,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       background: "rgba(0,0,0,0.22)",
       border: `1px solid ${BORDER}`
     });
-    for (const option of options) {
-      const active2 = option.value === selected;
+    for (const option2 of options) {
+      const active2 = option2.value === selected;
       const button3 = document.createElement("button");
       button3.type = "button";
-      if (option.title) button3.title = option.title;
-      button3.textContent = option.label;
+      if (option2.title) button3.title = option2.title;
+      button3.textContent = option2.label;
       css(button3, {
         padding: "4px 10px",
         borderRadius: "7px",
@@ -45447,7 +45473,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         background: active2 ? TEAL_DIM : "transparent",
         color: active2 ? TEAL : TEXT_DIM
       });
-      button3.addEventListener("click", () => onSelect(option.value));
+      button3.addEventListener("click", () => onSelect(option2.value));
       wrap.append(button3);
     }
     return wrap;
@@ -45637,7 +45663,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     hint.textContent = "Every tile gets the same space here, so nothing hides behind a taller plant. Hover a tile for its name.";
     modal.body.append(toolbar, grid, hint);
     const cells = /* @__PURE__ */ new Map();
-    for (let row = 0; row < GARDEN_ROWS; row++) {
+    for (let row2 = 0; row2 < GARDEN_ROWS; row2++) {
       for (let col = 0; col < GARDEN_COLS; col++) {
         if (col === GARDEN_COLS / 2) {
           const spacer2 = document.createElement("div");
@@ -45656,7 +45682,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           overflow: "hidden",
           transition: "opacity 90ms ease, background 90ms ease"
         });
-        const tileIndex = row * GARDEN_COLS + col;
+        const tileIndex = row2 * GARDEN_COLS + col;
         cells.set(tileIndex, { el, shown: null, content: null });
         grid.append(el);
       }
@@ -46292,7 +46318,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const player2 = buildPlayerSection();
     const modalHost = () => ui.root.closest(".qws-win") ?? ui.root;
     const pickFor = (controller, opts) => new Promise((resolve) => {
-      let loaded = [];
+      let loaded2 = [];
       openDeleterPicker({
         host: modalHost(),
         title: opts.title,
@@ -46302,13 +46328,13 @@ Restore figures are averages; unlucky streaks do worse.`;
         fallbackIcon: opts.fallbackIcon,
         initial: new Map(controller.getSelection().map((entry) => [entry.id, entry.qty])),
         loadEntries: async () => {
-          loaded = await opts.loadEntries();
-          return loaded;
+          loaded2 = await opts.loadEntries();
+          return loaded2;
         },
         onConfirm: (picked) => {
           controller.setSelection(
             Array.from(picked, ([id, qty]) => {
-              const entry = loaded.find((candidate) => candidate.id === id);
+              const entry = loaded2.find((candidate) => candidate.id === id);
               return {
                 id,
                 qty,
@@ -46768,8 +46794,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     backups.forEach((entry) => {
-      const row = createBackupRow(entry, statusLine, listHolder);
-      listHolder.appendChild(row);
+      const row2 = createBackupRow(entry, statusLine, listHolder);
+      listHolder.appendChild(row2);
     });
   }
   function renderDataTab(view, ui) {
@@ -47044,12 +47070,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     grid.style.overflow = "hidden";
     grid.style.marginBottom = "14px";
     runtimeRows.forEach(([label2, value], i) => {
-      const row = document.createElement("div");
-      row.style.display = "flex";
-      row.style.justifyContent = "space-between";
-      row.style.alignItems = "center";
-      row.style.padding = "8px 12px";
-      row.style.background = i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent";
+      const row2 = document.createElement("div");
+      row2.style.display = "flex";
+      row2.style.justifyContent = "space-between";
+      row2.style.alignItems = "center";
+      row2.style.padding = "8px 12px";
+      row2.style.background = i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent";
       const labelEl = document.createElement("span");
       labelEl.textContent = label2;
       labelEl.style.fontSize = "12px";
@@ -47059,8 +47085,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       valueEl.style.fontSize = "12px";
       valueEl.style.fontWeight = "600";
       valueEl.style.color = "#e7eef7";
-      row.append(labelEl, valueEl);
-      grid.appendChild(row);
+      row2.append(labelEl, valueEl);
+      grid.appendChild(row2);
     });
     view.appendChild(grid);
     const supportBlock = document.createElement("div");
@@ -47149,316 +47175,295 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/notifier/menu.ts
-  function renderSettingsTab(view, ui) {
-    view.innerHTML = "";
-    void PetAlertService.start().catch(() => {
-    });
-    const section2 = (title) => {
-      const card5 = ui.card(title, { tone: "muted" });
-      card5.body.style.display = "grid";
-      card5.body.style.gap = "10px";
-      return card5;
-    };
-    const row = (labelTxt, control, opts) => {
-      const { root: r, label: label2 } = ui.formRow(labelTxt, control, { alignTop: opts?.alignTop, labelWidth: "160px" });
-      label2.style.opacity = "0.9";
-      label2.style.fontWeight = "600";
-      return r;
-    };
-    const radio2 = (name, value, text2) => {
-      const chip2 = ui.toggleChip(text2, { type: "radio", name, value });
-      chip2.root.classList.add("qmm-radio-chip");
-      return { label: chip2.root, input: chip2.input };
-    };
-    const makeSelect = (id) => {
-      const sel = ui.select({ id, width: "180px" });
-      return sel;
-    };
-    const playIconBtn = (title = "Play") => {
-      return ui.btn("", { icon: "\u25B6", size: "sm", tooltip: title, ariaLabel: title });
-    };
-    const smallBtn2 = (txt) => ui.btn(txt, { size: "sm" });
-    const errorBar2 = () => ui.errorBar();
-    const root = document.createElement("div");
-    Object.assign(root.style, {
-      display: "grid",
-      gridTemplateRows: "1fr",
-      gap: "12px",
-      height: "54vh",
-      minHeight: "0",
+  // src/features/notifier/menu/petsTab.ts
+  function petAvatar(pet) {
+    const avatar3 = h("div");
+    Object.assign(avatar3.style, {
+      width: `${AVATAR_SIZE}px`,
+      height: `${AVATAR_SIZE}px`,
+      borderRadius: "8px",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: color.mutedBg,
+      border: `1px solid ${color.border}`,
       overflow: "hidden"
     });
-    view.appendChild(root);
-    const bellSection = section2("Notification bell");
-    root.appendChild(bellSection.root);
-    const bellRow = document.createElement("label");
-    Object.assign(bellRow.style, {
+    const species = String(pet?.slot?.petSpecies ?? "").trim();
+    const glyph = h("span", void 0, species ? species.charAt(0).toUpperCase() : "\u{1F43E}");
+    glyph.style.fontSize = "28px";
+    glyph.setAttribute("aria-hidden", "true");
+    avatar3.appendChild(glyph);
+    if (species) {
+      const mutations = pet?.slot?.mutations;
+      attachSpriteIcon(avatar3, ["pet"], [species], 36, "alerts-pet", {
+        mutations: Array.isArray(mutations) ? mutations : void 0
+      });
+    }
+    return avatar3;
+  }
+  function petRow(pet) {
+    const slot = pet?.slot;
+    const hunger = PetsService.getHungerPctFor(pet);
+    const row2 = h("div");
+    Object.assign(row2.style, {
       display: "flex",
       alignItems: "center",
-      gap: "8px",
-      cursor: "pointer"
+      justifyContent: "space-between",
+      gap: "10px",
+      padding: "6px 8px",
+      borderRadius: "8px",
+      border: `1px solid ${color.border}`,
+      background: color.cardBg
     });
-    const bellSwitch = ui.switch(isFloatingBellEnabled());
-    bellSwitch.addEventListener("change", () => {
-      setFloatingBellEnabled(bellSwitch.checked);
+    const left = h("div");
+    Object.assign(left.style, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+    const name = h("div", void 0, String(slot?.name || slot?.petSpecies || "Pet"));
+    Object.assign(name.style, { fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
+    left.append(petAvatar(pet), name);
+    const hungerValue = h("div", void 0, Number.isFinite(hunger) ? `${hunger}%` : "-");
+    Object.assign(hungerValue.style, { fontWeight: "700", color: color.gold });
+    row2.append(left, hungerValue);
+    return row2;
+  }
+  function generalCard() {
+    const general = card("General notifications", { tone: "muted", align: "stretch" });
+    const toggle2 = switchInput(PetAlertService.isGeneralEnabled(), (on) => {
+      PetAlertService.setGeneralEnabled(on);
+      toggle2.checked = PetAlertService.isGeneralEnabled();
     });
-    const bellLabel = document.createElement("span");
-    bellLabel.textContent = "Floating bell (movable widget)";
-    bellLabel.style.fontSize = "13px";
-    bellRow.append(bellSwitch, bellLabel);
-    bellSection.body.appendChild(bellRow);
-    const bellHint = document.createElement("div");
-    bellHint.textContent = "Detaches the bell from the game's icon rail and shows it as a draggable floating button instead. Use this if the bell is missing or misplaced on your screen.";
-    Object.assign(bellHint.style, {
-      opacity: "0.7",
-      fontSize: "12px",
-      lineHeight: "1.4"
+    const toggleRow = flexRow({ justify: "start", gap: 10 });
+    const toggleLabel = h("div", void 0, "Use a shared threshold for all pets");
+    toggleLabel.style.opacity = "0.9";
+    toggleRow.append(toggle2, toggleLabel);
+    const threshold = numberInput(1, 100, 1, PetAlertService.getGeneralThresholdPct());
+    threshold.addEventListener("change", () => {
+      const typed = Number(threshold.value);
+      const next = Math.max(1, Math.min(100, typed || PetAlertService.getGeneralThresholdPct()));
+      threshold.value = String(PetAlertService.setGeneralThresholdPct(next));
     });
-    bellSection.body.appendChild(bellHint);
-    const s1 = section2("Audio & Playback");
-    root.appendChild(s1.root);
-    const contextControls = {};
-    const contextOrder = [
-      { key: "shops", label: "Shops", allowPurchase: true, showStop: true },
-      { key: "weather", label: "Weather", allowPurchase: false },
-      { key: "pets", label: "Pets", allowPurchase: true, showStop: false }
-    ];
-    for (const cfg of contextOrder) {
-      const card5 = document.createElement("div");
-      Object.assign(card5.style, {
-        display: "grid",
-        gap: "12px",
-        padding: "16px",
-        borderRadius: "12px",
-        border: "1px solid #1f2429",
-        background: "#111821"
-      });
-      const heading = document.createElement("div");
-      heading.textContent = cfg.label;
-      heading.style.fontWeight = "700";
-      heading.style.fontSize = "14px";
-      heading.style.letterSpacing = "0.02em";
-      card5.appendChild(heading);
-      const defaultWrap = document.createElement("div");
-      defaultWrap.style.display = "flex";
-      defaultWrap.style.alignItems = "center";
-      defaultWrap.style.gap = "8px";
-      const select3 = makeSelect(`ap.defaultSound.${cfg.key}`);
-      select3.dataset.soundSelect = cfg.key;
-      const playBtn = playIconBtn(`Play ${cfg.label.toLowerCase()} sound`);
-      defaultWrap.append(select3, playBtn);
-      card5.appendChild(row("Default sound", defaultWrap));
-      const volumeWrap = document.createElement("div");
-      volumeWrap.style.display = "flex";
-      volumeWrap.style.alignItems = "center";
-      volumeWrap.style.gap = "10px";
-      const volumeRange = document.createElement("input");
-      volumeRange.type = "range";
-      volumeRange.min = "0";
-      volumeRange.max = "100";
-      volumeRange.step = "1";
-      volumeRange.style.width = "220px";
-      const volumeValue = document.createElement("span");
-      volumeValue.style.minWidth = "32px";
-      volumeValue.style.textAlign = "right";
-      volumeWrap.append(volumeRange, volumeValue);
-      card5.appendChild(row("Volume", volumeWrap));
-      const modeWrap = document.createElement("div");
-      modeWrap.style.display = "flex";
-      modeWrap.style.gap = "12px";
-      const modeOne = radio2(`ap.mode.${cfg.key}`, "oneshot", "One-shot");
-      modeWrap.append(modeOne.label);
-      let modeLoop = null;
-      if (cfg.allowPurchase) {
-        modeLoop = radio2(`ap.mode.${cfg.key}`, "loop", "Loop");
-        modeWrap.append(modeLoop.label);
+    general.body.append(
+      formRow("Enable general", toggleRow, { labelWidth: "180px" }).root,
+      formRow("General threshold (%)", threshold.wrap, { labelWidth: "180px" }).root
+    );
+    return general.root;
+  }
+  function renderPetsTab(view) {
+    view.replaceChildren();
+    void PetAlertService.start().catch(() => {
+    });
+    const layout = plainCard();
+    Object.assign(layout.style, {
+      display: "grid",
+      gridTemplateColumns: "minmax(220px, 260px) minmax(0, 1fr)",
+      alignItems: "stretch",
+      height: "54vh",
+      overflow: "hidden"
+    });
+    view.appendChild(layout);
+    const petList = h("div");
+    Object.assign(petList.style, {
+      display: "grid",
+      gridTemplateColumns: "1fr",
+      alignContent: "start",
+      rowGap: "6px",
+      overflow: "auto",
+      padding: "6px",
+      border: `1px solid ${color.border}`,
+      borderRadius: "10px"
+    });
+    const right = h("div");
+    Object.assign(right.style, { display: "flex", flexDirection: "column", gap: "10px", overflow: "auto", minHeight: "0" });
+    right.appendChild(generalCard());
+    layout.append(petList, right);
+    const renderPets = (pets) => {
+      if (!pets.length) {
+        const empty = h("div", void 0, "No active pets.");
+        empty.style.opacity = "0.75";
+        petList.replaceChildren(empty);
+        return;
       }
-      card5.appendChild(row("Playback mode", modeWrap));
-      let stopRow;
-      let loopInput;
-      let loopWrap;
-      if (cfg.allowPurchase) {
-        const stopWrap = document.createElement("div");
-        stopWrap.style.display = "flex";
-        stopWrap.style.flexDirection = "column";
-        stopWrap.style.gap = "10px";
-        const stopInfo = document.createElement("div");
-        stopInfo.textContent = cfg.showStop === false ? "Loops keep repeating; stop manually by disabling the alert." : "Loops stop automatically when the item is purchased.";
-        stopInfo.style.opacity = "0.75";
-        stopInfo.style.fontSize = "12px";
-        stopInfo.style.lineHeight = "1.4";
-        if (cfg.key !== "pets") {
-          loopWrap = document.createElement("div");
-          loopWrap.style.display = "flex";
-          loopWrap.style.flexDirection = "column";
-          loopWrap.style.gap = "4px";
-          const loopTitle = document.createElement("div");
-          loopTitle.textContent = "Loop interval";
-          loopTitle.style.opacity = "0.8";
-          loopTitle.style.fontSize = "12px";
-          loopTitle.style.fontWeight = "600";
-          const loopBox = document.createElement("div");
-          loopBox.style.display = "inline-flex";
-          loopBox.style.alignItems = "center";
-          loopBox.style.gap = "8px";
-          loopInput = document.createElement("input");
-          loopInput.type = "number";
-          loopInput.min = "150";
-          loopInput.max = "10000";
-          loopInput.step = "50";
-          loopInput.style.width = "100px";
-          loopInput.style.textAlign = "center";
-          const loopLabel = document.createElement("span");
-          loopLabel.textContent = "ms between plays";
-          loopLabel.style.opacity = "0.85";
-          loopBox.append(loopInput, loopLabel);
-          loopWrap.append(loopTitle, loopBox);
-          stopWrap.append(stopInfo, loopWrap);
-        } else {
-          stopWrap.append(stopInfo);
-        }
-        if (cfg.showStop !== false) {
-          stopRow = row("Stop condition", stopWrap);
-        } else {
-          stopRow = row("Loop interval", stopWrap);
-        }
-        card5.appendChild(stopRow);
-      } else {
-        const info = document.createElement("div");
-        info.textContent = "Weather alerts play once per trigger.";
-        info.style.opacity = "0.75";
-        info.style.fontSize = "12px";
-        info.style.lineHeight = "1.4";
-        card5.appendChild(row("Details", info));
-      }
-      contextControls[cfg.key] = {
-        container: card5,
-        select: select3,
-        playBtn,
-        volumeRange,
-        volumeValue,
-        modeOneshot: modeOne.input,
-        modeLoop: modeLoop?.input,
-        stopRow,
-        loopInput,
-        loopWrap
-      };
-      s1.body.appendChild(card5);
+      petList.replaceChildren(...pets.map(petRow));
+    };
+    PetsService.onPetsChangeNow((pets) => renderPets(Array.isArray(pets) ? pets.slice(0, ACTIVE_PET_SLOTS2) : [])).catch(
+      () => renderPets([])
+    );
+  }
+  var ACTIVE_PET_SLOTS2, AVATAR_SIZE;
+  var init_petsTab = __esm({
+    "src/features/notifier/menu/petsTab.ts"() {
+      "use strict";
+      init_card();
+      init_dom();
+      init_fields();
+      init_layout();
+      init_theme();
+      init_toggles();
+      init_iconCache();
+      init_pets();
+      init_petAlerts();
+      ACTIVE_PET_SLOTS2 = 3;
+      AVATAR_SIZE = 40;
     }
-    const s1Err = errorBar2();
-    s1.body.appendChild(s1Err.el);
-    const s2 = section2("Sound library");
-    root.appendChild(s2.root);
-    const importRow = document.createElement("div");
-    Object.assign(importRow.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-      width: "100%"
-    });
-    const fileInput = document.createElement("input");
-    fileInput.type = "file";
-    fileInput.accept = "audio/*";
-    fileInput.multiple = true;
-    fileInput.style.display = "none";
-    const fileCard = document.createElement("div");
-    Object.assign(fileCard.style, {
+  });
+
+  // src/features/notifier/menu/soundLibrary.ts
+  function dropZone(onFiles) {
+    const input = h("input");
+    input.type = "file";
+    input.accept = "audio/*";
+    input.multiple = true;
+    input.style.display = "none";
+    const zone = h("div");
+    zone.tabIndex = 0;
+    zone.setAttribute("role", "button");
+    zone.setAttribute("aria-label", "Select audio files");
+    Object.assign(zone.style, {
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
       gap: "6px",
       padding: "18px 22px",
-      width: "100%",
       minHeight: "110px",
       borderRadius: "14px",
-      border: "1px dashed #5d6a7d",
-      background: "linear-gradient(180deg, #0b141c, #091018)",
+      border: `1px dashed ${color.borderStrong}`,
+      background: color.mutedBg,
       transition: "border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease",
       cursor: "pointer",
       textAlign: "center"
     });
-    fileCard.tabIndex = 0;
-    fileCard.setAttribute("role", "button");
-    fileCard.setAttribute("aria-label", "Select audio files");
-    const fileCardTitle = document.createElement("div");
-    fileCardTitle.textContent = "Select audio files";
-    Object.assign(fileCardTitle.style, {
-      fontWeight: "600",
-      fontSize: "14px",
-      letterSpacing: "0.02em"
-    });
-    const fileStatus = document.createElement("div");
-    const defaultStatusText = "Click to browse or drop files";
-    fileStatus.textContent = defaultStatusText;
-    Object.assign(fileStatus.style, {
-      fontSize: "12px",
-      opacity: "0.75"
-    });
-    fileCard.append(fileCardTitle, fileStatus);
-    const setFileCardActive = (active2) => {
-      if (active2) {
-        fileCard.style.borderColor = "#6fc3ff";
-        fileCard.style.boxShadow = "0 0 0 3px #6fc3ff22";
-        fileCard.style.background = "linear-gradient(180deg, #102030, #0b1826)";
-      } else {
-        fileCard.style.borderColor = "#5d6a7d";
-        fileCard.style.boxShadow = "none";
-        fileCard.style.background = "linear-gradient(180deg, #0b141c, #091018)";
-      }
+    const title = h("div", void 0, "Select audio files");
+    Object.assign(title.style, { fontWeight: "600", fontSize: "14px", letterSpacing: "0.02em" });
+    const status2 = h("div", void 0, DROP_HINT);
+    Object.assign(status2.style, { fontSize: "12px", opacity: "0.75" });
+    zone.append(title, status2);
+    const highlight = (on) => {
+      zone.style.borderColor = on ? color.accentBorderHover : color.borderStrong;
+      zone.style.boxShadow = on ? `0 0 0 3px ${color.accentSoft}` : "none";
+      zone.style.background = on ? color.accentSoft : color.mutedBg;
     };
-    fileCard.addEventListener("mouseenter", () => setFileCardActive(true));
-    fileCard.addEventListener("mouseleave", () => setFileCardActive(document.activeElement === fileCard));
-    fileCard.addEventListener("focus", () => setFileCardActive(true));
-    fileCard.addEventListener("blur", () => setFileCardActive(false));
-    fileCard.addEventListener("dragover", (ev) => {
+    const settle = () => highlight(document.activeElement === zone);
+    const take = async (files) => {
+      status2.textContent = !files?.length ? DROP_HINT : files.length === 1 ? files[0].name : `${files.length} files selected`;
+      await onFiles(files);
+      status2.textContent = DROP_HINT;
+      input.value = "";
+      settle();
+    };
+    zone.addEventListener("mouseenter", () => highlight(true));
+    zone.addEventListener("mouseleave", settle);
+    zone.addEventListener("focus", () => highlight(true));
+    zone.addEventListener("blur", () => highlight(false));
+    zone.addEventListener("dragover", (ev) => {
       ev.preventDefault();
-      setFileCardActive(true);
+      highlight(true);
       if (ev.dataTransfer) ev.dataTransfer.dropEffect = "copy";
     });
-    fileCard.addEventListener("dragleave", () => setFileCardActive(document.activeElement === fileCard));
-    const triggerFileSelect = () => fileInput.click();
-    fileCard.addEventListener("click", triggerFileSelect);
-    fileCard.addEventListener("keydown", (ev) => {
+    zone.addEventListener("dragleave", settle);
+    zone.addEventListener("drop", (ev) => {
+      ev.preventDefault();
+      void take(ev.dataTransfer?.files || null);
+    });
+    zone.addEventListener("click", () => input.click());
+    zone.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter" || ev.key === " ") {
         ev.preventDefault();
-        triggerFileSelect();
+        input.click();
       }
     });
-    const displaySelection = (files) => {
-      if (!files || !files.length) {
-        fileStatus.textContent = defaultStatusText;
+    input.onchange = () => void take(input.files);
+    const wrap = h("div");
+    wrap.append(input, zone);
+    return wrap;
+  }
+  function soundRow(name, onChange) {
+    const defaultFor = CONTEXT_LABELS.filter(([key2]) => audio.getDefaultSoundName(key2) === name);
+    const usedByShopsOrWeather = defaultFor.some(([key2]) => key2 !== "pets");
+    const row2 = h("div");
+    Object.assign(row2.style, {
+      display: "grid",
+      gridTemplateColumns: "minmax(0, 1fr) auto",
+      gap: "12px",
+      alignItems: "center",
+      padding: "8px 10px",
+      borderRadius: "8px",
+      border: `1px solid ${defaultFor.length ? color.accentBorder : color.border}`,
+      background: color.cardBg
+    });
+    const info = h("div");
+    Object.assign(info.style, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+    const title = h("span", void 0, name);
+    Object.assign(title.style, { fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
+    info.appendChild(title);
+    for (const [, label2] of defaultFor) info.appendChild(pill(label2, "ok"));
+    const actions = h("div");
+    Object.assign(actions.style, { display: "flex", gap: "6px", justifyContent: "flex-end", flexWrap: "wrap" });
+    actions.appendChild(
+      button("\u25B6", { size: "sm", title: "Preview", onClick: () => void audio.trigger("preview", { sound: name }, "shops").catch(() => {
+      }) })
+    );
+    for (const [key2, label2] of CONTEXT_LABELS) {
+      actions.appendChild(
+        button(`Set ${label2.toLowerCase()}`, {
+          size: "sm",
+          title: `Set as ${label2.toLowerCase()} default`,
+          onClick: () => {
+            audio.setDefaultSoundByName(name, key2);
+            onChange();
+          }
+        })
+      );
+    }
+    const remove = button("Remove", {
+      size: "sm",
+      title: "Remove from library",
+      onClick: () => {
+        audio.unregisterSound(name);
+        onChange();
+      }
+    });
+    if (audio.isProtectedSound(name) || usedByShopsOrWeather) {
+      remove.setEnabled(false);
+      remove.title = audio.isProtectedSound(name) ? "Built-in sound cannot be removed" : "Currently used as default";
+    }
+    actions.appendChild(remove);
+    row2.append(info, actions);
+    return row2;
+  }
+  function soundLibraryCard(onLibraryChange) {
+    const section2 = card("Sound library", { tone: "muted" });
+    const errors = errorBar();
+    const list = h("div");
+    Object.assign(list.style, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "6px",
+      maxHeight: "240px",
+      overflowY: "auto",
+      minHeight: "0",
+      padding: "4px 4px 4px 0"
+    });
+    const refresh = () => {
+      const names = audio.listSounds();
+      if (!names.length) {
+        const empty = h("div", void 0, "No sounds in the library.");
+        Object.assign(empty.style, { opacity: "0.75", textAlign: "center", padding: "12px 6px" });
+        list.replaceChildren(empty);
         return;
       }
-      fileStatus.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
+      list.replaceChildren(...names.map((name) => soundRow(name, onLibraryChange)));
     };
-    fileCard.addEventListener("drop", async (ev) => {
-      ev.preventDefault();
-      const files = ev.dataTransfer?.files || null;
-      displaySelection(files);
-      await handleFiles(files);
-      displaySelection(null);
-      setFileCardActive(document.activeElement === fileCard);
-    });
-    importRow.append(fileInput, fileCard);
-    s2.body.appendChild(importRow);
-    const tip = document.createElement("div");
-    tip.textContent = "MP3, WAV, OGG \u2014 limited to \u2264 10 s and \u2264 200 KB.";
-    tip.style.opacity = "0.75";
-    tip.style.fontSize = "12px";
-    s2.body.appendChild(tip);
-    const listWrap = document.createElement("div");
-    Object.assign(listWrap.style, {
-      display: "grid",
-      gridTemplateRows: "auto 1fr",
-      gap: "6px",
-      border: "1px solid #4445",
-      borderRadius: "10px",
-      background: "#10161c",
-      padding: "10px"
-    });
-    const listHeader = document.createElement("div");
+    const importFiles = async (files) => {
+      errors.clear();
+      if (!files?.length) return;
+      const { added, errors: failures } = await audio.importFiles(Array.from(files));
+      if (failures.length) errors.show(failures[failures.length - 1]);
+      if (added.length) onLibraryChange();
+    };
+    const tip = h("div", void 0, "MP3, WAV, OGG, at most 10 s and 200 KB.");
+    Object.assign(tip.style, { opacity: "0.75", fontSize: "12px" });
+    const listHeader = h("div");
     Object.assign(listHeader.style, {
       display: "grid",
       gridTemplateColumns: "minmax(0, 1fr) auto",
@@ -47468,395 +47473,730 @@ Restore figures are averages; unlucky streaks do worse.`;
       textTransform: "uppercase",
       opacity: "0.65",
       paddingBottom: "4px",
-      borderBottom: "1px solid #ffffff14"
+      borderBottom: `1px solid ${color.border}`
     });
-    const headName = document.createElement("span");
-    headName.textContent = "Sound";
-    const headActions = document.createElement("span");
-    headActions.textContent = "Actions";
-    headActions.style.justifySelf = "end";
-    listHeader.append(headName, headActions);
-    const listBody = document.createElement("div");
-    Object.assign(listBody.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "6px",
-      maxHeight: "240px",
-      overflowY: "auto",
-      paddingRight: "4px",
-      minHeight: "0",
-      padding: "4px 0"
-    });
-    listWrap.append(listHeader, listBody);
-    s2.body.appendChild(listWrap);
-    const s2Err = errorBar2();
-    s2.body.appendChild(s2Err.el);
-    const sanitizeLoopInput = (input, fallback) => {
-      const trimmed = (input.value || "").trim();
-      const raw = trimmed ? Number(trimmed) : NaN;
-      const normalized = Number.isFinite(raw) ? raw : fallback;
-      const clamped = Math.max(150, Math.min(1e4, Math.floor(normalized)));
-      input.value = String(clamped);
-      return clamped;
-    };
-    const updateStopVisibility = (context) => {
-      const controls = contextControls[context];
-      const loopChecked = controls.modeLoop?.checked ?? false;
-      if (controls.stopRow) controls.stopRow.style.display = loopChecked ? "" : "none";
-      if (controls.loopWrap) controls.loopWrap.style.display = loopChecked ? "flex" : "none";
-    };
-    const applyMode = (context, mode) => {
-      if (context === "weather" && mode === "loop") {
-        audio.setPlaybackMode("oneshot", context);
-        contextControls[context].modeOneshot.checked = true;
-        contextControls[context].modeLoop && (contextControls[context].modeLoop.checked = false);
-        updateStopVisibility(context);
-        return;
-      }
-      audio.setPlaybackMode(mode, context);
-      updateStopVisibility(context);
-    };
-    const applyShopsStop = () => {
-      const controls = contextControls.shops;
-      if (!controls.loopInput) return;
-      const loopMs = sanitizeLoopInput(controls.loopInput, audio.getLoopInterval("shops"));
-      audio.setLoopInterval(loopMs, "shops");
-      if (!controls.modeLoop?.checked) {
-        if (controls.modeLoop) controls.modeLoop.checked = true;
-        controls.modeOneshot.checked = false;
-        applyMode("shops", "loop");
-      }
-      audio.setStopPurchase("shops");
-      LoopDefaults.setLoopInterval("shops", loopMs);
-      return loopMs;
-    };
-    for (const cfg of contextOrder) {
-      const controls = contextControls[cfg.key];
-      controls.select.addEventListener("change", () => {
-        audio.setDefaultSoundByName(controls.select.value, cfg.key);
-        renderLibList();
-      });
-      controls.playBtn.addEventListener("click", () => {
-        audio.trigger("preview", { sound: controls.select.value }, cfg.key).catch(() => {
-        });
-      });
-      controls.volumeRange.addEventListener("input", () => {
-        const value = Math.max(0, Math.min(100, parseInt(controls.volumeRange.value || "0", 10) || 0));
-        controls.volumeValue.textContent = `${value}%`;
-        audio.setVolume(value / 100, cfg.key);
-      });
-      controls.modeOneshot.addEventListener("change", () => {
-        if (!controls.modeOneshot.checked) return;
-        applyMode(cfg.key, "oneshot");
-        if (cfg.key === "shops") {
-          const loopMs = controls.loopInput ? sanitizeLoopInput(controls.loopInput, audio.getLoopInterval("shops")) : audio.getLoopInterval("shops");
-          audio.setLoopInterval(loopMs, "shops");
-          audio.setStopManual("shops");
-          LoopDefaults.setLoopInterval("shops", loopMs);
-        }
-      });
-      controls.modeLoop?.addEventListener("change", () => {
-        if (!controls.modeLoop?.checked) return;
-        applyMode(cfg.key, "loop");
-        if (cfg.key === "shops") applyShopsStop();
-      });
-      if (cfg.allowPurchase) {
-        controls.loopInput?.addEventListener("change", applyShopsStop);
-        controls.loopInput?.addEventListener("blur", applyShopsStop);
-      }
-    }
-    const refreshAllSoundSelects = () => {
-      const names = audio.listSounds();
-      const applyOptions = (sel, context) => {
-        const current = sel.value;
-        sel.innerHTML = "";
-        for (const n of names) {
-          const option = document.createElement("option");
-          option.value = n;
-          option.textContent = n;
-          sel.appendChild(option);
-        }
-        const preferred = audio.getDefaultSoundName(context);
-        if (names.includes(current)) sel.value = current;
-        else if (preferred && names.includes(preferred)) sel.value = preferred;
-        else if (names.length) sel.value = names[0];
-      };
-      for (const cfg of contextOrder) {
-        applyOptions(contextControls[cfg.key].select, cfg.key);
-      }
-      const all = Array.from(document.querySelectorAll("select[data-sound-select]"));
-      for (const sel of all) {
-        const ctx2 = sel.dataset.soundSelect || "shops";
-        if (contextControls[ctx2]?.select === sel) continue;
-        applyOptions(sel, ctx2);
-      }
-    };
-    const renderLibList = () => {
-      listBody.replaceChildren();
-      const names = audio.listSounds();
-      if (!names.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No sounds in the library.";
-        empty.style.opacity = "0.75";
-        empty.style.textAlign = "center";
-        empty.style.padding = "12px 6px";
-        listBody.appendChild(empty);
-        return;
-      }
-      const defaultShops = audio.getDefaultSoundName("shops");
-      const defaultWeather = audio.getDefaultSoundName("weather");
-      for (const name of names) {
-        const row2 = document.createElement("div");
-        Object.assign(row2.style, {
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) auto",
-          gap: "12px",
-          alignItems: "center",
-          padding: "8px 10px",
-          borderRadius: "8px",
-          border: "1px solid #1f2429",
-          background: "#151b22"
-        });
-        const info = document.createElement("div");
-        Object.assign(info.style, {
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          minWidth: "0"
-        });
-        const title = document.createElement("span");
-        title.textContent = name;
-        title.style.fontWeight = "600";
-        title.style.overflow = "hidden";
-        title.style.textOverflow = "ellipsis";
-        title.style.whiteSpace = "nowrap";
-        info.appendChild(title);
-        const badges = document.createElement("div");
-        badges.style.display = "flex";
-        badges.style.gap = "6px";
-        const makeBadge = (label2) => {
-          const badge2 = document.createElement("span");
-          badge2.textContent = label2;
-          Object.assign(badge2.style, {
-            fontSize: "11px",
-            padding: "2px 6px",
-            borderRadius: "999px",
-            background: "#2b5cff33",
-            border: "1px solid #2b5cff66",
-            color: "#9cbcff",
-            fontWeight: "600",
-            textTransform: "uppercase",
-            letterSpacing: "0.04em"
-          });
-          return badge2;
-        };
-        const isShopsDefault = defaultShops === name;
-        const isWeatherDefault = defaultWeather === name;
-        const isPetsDefault = audio.getDefaultSoundName("pets") === name;
-        if (isShopsDefault) badges.appendChild(makeBadge("Shops"));
-        if (isWeatherDefault) badges.appendChild(makeBadge("Weather"));
-        if (isPetsDefault) badges.appendChild(makeBadge("Pets"));
-        if (badges.childElementCount) info.appendChild(badges);
-        if (isShopsDefault || isWeatherDefault || isPetsDefault) {
-          row2.style.borderColor = "#2b5cff99";
-          row2.style.boxShadow = "0 0 0 1px #2b5cff33";
-        }
-        const actions = document.createElement("div");
-        Object.assign(actions.style, {
-          display: "flex",
-          gap: "6px",
-          justifyContent: "flex-end",
-          flexWrap: "wrap"
-        });
-        const btnPlay = smallBtn2("\u25B6");
-        const btnSetShops = smallBtn2("Set shops");
-        const btnSetWeather = smallBtn2("Set weather");
-        const btnSetPets = smallBtn2("Set pets");
-        const btnDel = smallBtn2("Remove");
-        btnPlay.title = "Preview";
-        btnSetShops.title = "Set as shops default";
-        btnSetWeather.title = "Set as weather default";
-        btnSetPets.title = "Set as pets default";
-        btnDel.title = "Remove from library";
-        const isProtected2 = typeof audio.isProtectedSound === "function" && audio.isProtectedSound(name);
-        if (isProtected2 || isShopsDefault || isWeatherDefault) {
-          btnDel.disabled = true;
-          btnDel.style.opacity = "0.6";
-          if (isProtected2) btnDel.title = "Built-in sound cannot be removed";
-          else btnDel.title = "Currently used as default";
-        }
-        btnPlay.onclick = () => audio.trigger("preview", { sound: name }, "shops").catch(() => {
-        });
-        btnSetShops.onclick = () => {
-          audio.setDefaultSoundByName(name, "shops");
-          refreshAllSoundSelects();
-          renderLibList();
-        };
-        btnSetWeather.onclick = () => {
-          audio.setDefaultSoundByName(name, "weather");
-          refreshAllSoundSelects();
-          renderLibList();
-        };
-        btnSetPets.onclick = () => {
-          audio.setDefaultSoundByName(name, "pets");
-          refreshAllSoundSelects();
-          renderLibList();
-        };
-        btnDel.onclick = () => {
-          audio.unregisterSound(name);
-          refreshAllSoundSelects();
-          renderLibList();
-        };
-        actions.append(btnPlay, btnSetShops, btnSetWeather, btnSetPets, btnDel);
-        row2.append(info, actions);
-        listBody.appendChild(row2);
-      }
-    };
-    const syncContext = (context) => {
-      const controls = contextControls[context];
-      const settings = audio.getPlaybackSettings(context);
-      const names = audio.listSounds();
-      if (settings.defaultSoundName && names.includes(settings.defaultSoundName)) {
-        controls.select.value = settings.defaultSoundName;
-      }
-      const volPercent = Math.round(settings.volume * 100);
-      controls.volumeRange.value = String(volPercent);
-      controls.volumeValue.textContent = `${volPercent}%`;
-      if (controls.modeLoop && settings.mode === "loop") controls.modeLoop.checked = true;
-      else controls.modeOneshot.checked = true;
-      const defaults = context === "shops" || context === "weather" ? LoopDefaults.get(context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: settings.loopIntervalMs };
-      const fallbackLoop = Math.max(
-        150,
-        Math.min(1e4, Math.floor(defaults.loopIntervalMs || settings.loopIntervalMs || 150))
-      );
-      const loopMs = controls.loopInput ? sanitizeLoopInput(controls.loopInput, fallbackLoop) : fallbackLoop;
-      audio.setLoopInterval(loopMs, context);
-      if (context === "shops") {
-        if (controls.modeLoop?.checked) {
-          audio.setStopPurchase("shops");
-          LoopDefaults.setLoopInterval("shops", loopMs);
-        } else {
-          audio.setStopManual("shops");
-          LoopDefaults.setLoopInterval("shops", loopMs);
-        }
-      } else if (context === "weather") {
-        applyMode("weather", "oneshot");
-        audio.setStopManual("weather");
-        LoopDefaults.setLoopInterval("weather", loopMs);
-      } else if (context === "pets") {
-        audio.setLoopInterval(loopMs, "pets");
-        audio.setStopManual("pets");
-      }
-      updateStopVisibility(context);
-    };
-    const syncFromAudio = () => {
-      refreshAllSoundSelects();
-      syncContext("shops");
-      syncContext("weather");
-      syncContext("pets");
-      renderLibList();
-    };
-    const handleFiles = async (files) => {
-      s2Err.clear();
-      if (!files || !files.length) return;
-      const { added, errors } = await audio.importFiles(Array.from(files));
-      if (errors.length) s2Err.show(errors[errors.length - 1]);
-      if (added.length) {
-        refreshAllSoundSelects();
-        renderLibList();
-      }
-      fileInput.value = "";
-    };
-    fileInput.onchange = async () => {
-      const files = fileInput.files;
-      displaySelection(files);
-      await handleFiles(files);
-      displaySelection(null);
-      setFileCardActive(document.activeElement === fileCard);
-    };
-    syncFromAudio();
-    const scroller = document.createElement("div");
-    Object.assign(scroller.style, {
-      overflow: "auto",
-      minHeight: "0",
-      height: "100%",
+    const actionsHead = h("span", void 0, "Actions");
+    actionsHead.style.justifySelf = "end";
+    listHeader.append(h("span", void 0, "Sound"), actionsHead);
+    const listCard = h("div");
+    Object.assign(listCard.style, {
       display: "grid",
-      gap: "12px"
+      gridTemplateRows: "auto 1fr",
+      gap: "6px",
+      border: `1px solid ${color.border}`,
+      borderRadius: "10px",
+      background: color.mutedBg,
+      padding: "10px"
     });
-    scroller.append(s1.root, s2.root);
-    root.appendChild(scroller);
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          prev?.();
-        } catch {
+    listCard.append(listHeader, list);
+    section2.body.append(dropZone(importFiles), tip, listCard, errors.el);
+    refresh();
+    return { root: section2.root, refresh };
+  }
+  var CONTEXT_LABELS, DROP_HINT;
+  var init_soundLibrary = __esm({
+    "src/features/notifier/menu/soundLibrary.ts"() {
+      "use strict";
+      init_badges();
+      init_button();
+      init_card();
+      init_dom();
+      init_theme();
+      init_audio();
+      CONTEXT_LABELS = [
+        ["shops", "Shops"],
+        ["weather", "Weather"],
+        ["pets", "Pets"]
+      ];
+      DROP_HINT = "Click to browse or drop files";
+    }
+  });
+
+  // src/features/notifier/menu/settingsTab.ts
+  function row(label2, control) {
+    const { root, label: labelEl } = formRow(label2, control, { labelWidth: "160px" });
+    labelEl.style.opacity = "0.9";
+    return root;
+  }
+  function bellCard() {
+    const bell = card("Notification bell", { tone: "muted" });
+    const toggle2 = switchInput(isFloatingBellEnabled(), (on) => setFloatingBellEnabled(on));
+    bell.body.appendChild(
+      settingRow(
+        "Floating bell (movable widget)",
+        "Detaches the bell from the game's icon rail and shows it as a draggable floating button instead. Use this if the bell is missing or misplaced on your screen.",
+        toggle2
+      ).row
+    );
+    return bell.root;
+  }
+  function renderSettingsTab(view) {
+    view.replaceChildren();
+    void PetAlertService.start().catch(() => {
+    });
+    const root = h("div");
+    Object.assign(root.style, {
+      display: "grid",
+      gridTemplateRows: "auto 1fr",
+      gap: "12px",
+      height: "54vh",
+      minHeight: "0",
+      overflow: "hidden"
+    });
+    view.appendChild(root);
+    const contexts = [];
+    const library = soundLibraryCard(() => {
+      for (const ctx2 of contexts) ctx2.fillSounds();
+      library.refresh();
+    });
+    for (const spec of CONTEXTS) {
+      contexts.push(new ContextSoundCard(spec, () => library.refresh()));
+    }
+    const audioCard = card("Audio & Playback", { tone: "muted" });
+    audioCard.body.append(...contexts.map((ctx2) => ctx2.root));
+    const scroller = h("div");
+    Object.assign(scroller.style, { overflow: "auto", minHeight: "0", height: "100%", display: "grid", alignContent: "start", gap: "12px" });
+    scroller.append(audioCard.root, library.root);
+    root.append(bellCard(), scroller);
+    for (const ctx2 of contexts) {
+      ctx2.fillSounds();
+      ctx2.sync();
+    }
+    library.refresh();
+  }
+  var CONTEXTS, muted, ContextSoundCard;
+  var init_settingsTab = __esm({
+    "src/features/notifier/menu/settingsTab.ts"() {
+      "use strict";
+      init_badges();
+      init_button();
+      init_card();
+      init_dom();
+      init_fields();
+      init_layout();
+      init_segmented();
+      init_sliders();
+      init_toggles();
+      init_audio();
+      init_floatingBell();
+      init_petAlerts();
+      init_playbackDefaults();
+      init_soundLibrary();
+      CONTEXTS = [
+        { key: "shops", label: "Shops", canLoop: true, info: "Loops stop automatically when the item is purchased." },
+        { key: "weather", label: "Weather", canLoop: false, info: "Weather alerts play once per trigger." },
+        { key: "pets", label: "Pets", canLoop: true, info: "Loops keep repeating; stop manually by disabling the alert." }
+      ];
+      muted = (el) => Object.assign(el.style, { opacity: "0.75", fontSize: "12px", lineHeight: "1.4" });
+      ContextSoundCard = class {
+        constructor(spec, onDefaultChange) {
+          this.spec = spec;
+          this.onDefaultChange = onDefaultChange;
+          this.root = plainCard();
+          this.volume = slider(0, 100, 1, 0);
+          this.volumeValue = pill("0%");
+          this.mode = null;
+          this.loopRow = null;
+          this.loopInput = null;
+          this.soundSelect = select2({ id: `ap.defaultSound.${spec.key}`, width: "180px" });
+          const heading = h("div", void 0, spec.label);
+          Object.assign(heading.style, { fontWeight: "700", fontSize: "14px", letterSpacing: "0.02em" });
+          this.root.appendChild(heading);
+          const play = button("", { icon: "\u25B6", size: "sm", tooltip: `Play ${spec.label.toLowerCase()} sound`, ariaLabel: `Play ${spec.label.toLowerCase()} sound` });
+          play.addEventListener("click", () => {
+            audio.trigger("preview", { sound: this.soundSelect.value }, spec.key).catch(() => {
+            });
+          });
+          this.soundSelect.addEventListener("change", () => {
+            audio.setDefaultSoundByName(this.soundSelect.value, spec.key);
+            this.onDefaultChange();
+          });
+          const soundRow2 = h("div");
+          Object.assign(soundRow2.style, { display: "flex", alignItems: "center", gap: "8px" });
+          soundRow2.append(this.soundSelect, play);
+          this.root.appendChild(row("Default sound", soundRow2));
+          this.volume.addEventListener("input", () => {
+            const pct = Math.max(0, Math.min(100, Math.round(Number(this.volume.value)) || 0));
+            this.volumeValue.textContent = `${pct}%`;
+            audio.setVolume(pct / 100, spec.key);
+          });
+          const volumeRow = h("div");
+          Object.assign(volumeRow.style, { display: "flex", alignItems: "center", gap: "10px" });
+          volumeRow.append(this.volume, this.volumeValue);
+          this.root.appendChild(row("Volume", volumeRow));
+          if (!spec.canLoop) {
+            this.root.appendChild(row("Playback mode", pill("One-shot")));
+            const info2 = h("div", void 0, spec.info);
+            muted(info2);
+            this.root.appendChild(row("Details", info2));
+            return;
+          }
+          this.mode = segmented(
+            [
+              { value: "oneshot", label: "One-shot" },
+              { value: "loop", label: "Loop" }
+            ],
+            audio.getPlaybackMode(spec.key),
+            (mode) => this.apply(mode)
+          );
+          this.root.appendChild(row("Playback mode", this.mode));
+          const loopDetails = h("div");
+          Object.assign(loopDetails.style, { display: "flex", flexDirection: "column", gap: "10px" });
+          const info = h("div", void 0, spec.info);
+          muted(info);
+          loopDetails.appendChild(info);
+          if (spec.key === "shops") {
+            const stored = clampLoopInterval("", LoopDefaults.get("shops").loopIntervalMs);
+            this.loopInput = numberInput(MIN_LOOP_INTERVAL_MS, MAX_LOOP_INTERVAL_MS, 50, stored);
+            this.loopInput.addEventListener("change", () => this.apply("loop"));
+            this.loopInput.addEventListener("blur", () => this.apply("loop"));
+            const interval = h("div");
+            Object.assign(interval.style, { display: "inline-flex", alignItems: "center", gap: "8px" });
+            const unit = h("span", void 0, "ms between plays");
+            unit.style.opacity = "0.85";
+            interval.append(this.loopInput.wrap, unit);
+            loopDetails.appendChild(interval);
+          }
+          this.loopRow = row(spec.key === "shops" ? "Stop condition" : "Loop interval", loopDetails);
+          this.root.appendChild(this.loopRow);
+        }
+        /** The loop interval in the field, or the stored one, kept in range and written back. */
+        loopInterval() {
+          const fallback = this.spec.key === "pets" ? audio.getLoopInterval("pets") : LoopDefaults.get(this.spec.key).loopIntervalMs;
+          const ms = clampLoopInterval(this.loopInput?.value, fallback);
+          if (this.loopInput) this.loopInput.value = String(ms);
+          return ms;
+        }
+        apply(mode) {
+          if (this.mode && this.mode.get() !== mode) return this.mode.set(mode);
+          setContextPlayback(this.spec.key, mode, this.loopInterval());
+          if (this.loopRow) this.loopRow.style.display = mode === "loop" ? "" : "none";
+        }
+        /** Lists the library's sounds, keeping the selection when it still exists. */
+        fillSounds() {
+          const names = audio.listSounds();
+          const current = this.soundSelect.value;
+          this.soundSelect.replaceChildren(
+            ...names.map((name) => {
+              const opt = h("option", void 0, name);
+              opt.value = name;
+              return opt;
+            })
+          );
+          const preferred = audio.getDefaultSoundName(this.spec.key);
+          if (names.includes(current)) this.soundSelect.value = current;
+          else if (preferred && names.includes(preferred)) this.soundSelect.value = preferred;
+          else if (names.length) this.soundSelect.value = names[0];
+        }
+        /** Shows the engine's settings, and re-applies them so the stored ones agree. */
+        sync() {
+          const settings = audio.getPlaybackSettings(this.spec.key);
+          if (settings.defaultSoundName && audio.listSounds().includes(settings.defaultSoundName)) {
+            this.soundSelect.value = settings.defaultSoundName;
+          }
+          const pct = Math.round(settings.volume * 100);
+          this.volume.value = String(pct);
+          this.volumeValue.textContent = `${pct}%`;
+          this.apply(this.spec.canLoop && settings.mode === "loop" ? "loop" : "oneshot");
         }
       };
-    })();
-  }
-  function renderShopTab(view, ui) {
-    view.innerHTML = "";
-    view.style.cssText = "";
-    if (!document.getElementById("qws-rule-style")) {
-      const style = document.createElement("style");
-      style.id = "qws-rule-style";
-      style.textContent = `
-:root {
-  /* PATCH: z-index centralis\xE9 */
-  --qws-z-popover: 99999999999999;
-}
+    }
+  });
 
-/* PATCH: bouton engrenage carr\xE9, centr\xE9, plus gros */
+  // src/features/notifier/menu/styles.ts
+  function ensureMenuStyles() {
+    if (document.getElementById(STYLE_ID4)) return;
+    const style = document.createElement("style");
+    style.id = STYLE_ID4;
+    style.textContent = CSS2;
+    document.head.appendChild(style);
+  }
+  var STYLE_ID4, CSS2;
+  var init_styles2 = __esm({
+    "src/features/notifier/menu/styles.ts"() {
+      "use strict";
+      STYLE_ID4 = "qws-rule-style";
+      CSS2 = `
 .qws-rule-btn {
   display: inline-grid;
   place-items: center;
   width: 32px;
   height: 32px;
+  min-width: 32px;
   padding: 0;
   border-radius: 8px;
   line-height: 1;
-  font-size: 18px; /* taille de l'ic\xF4ne */
-  min-width: 32px; /* \xE9vite les r\xE9tr\xE9cissements */
+  font-size: 18px;
   box-sizing: border-box;
 }
 .qws-rule-btn[data-active="1"] {
-  background: linear-gradient(180deg, #1b2735, #101821);
-  box-shadow: 0 0 0 1px #658dff88 inset;
-  color: #c7daff;
+  color: var(--qmm-accent);
+  background: var(--qmm-accent-soft);
+  border-color: var(--qmm-accent-border);
 }
-
-/* PATCH: popover toujours devant */
 .qws-rule-popover {
-  position: fixed !important;
-  z-index: var(--qws-z-popover) !important;
+  position: fixed;
+  z-index: 99999999999999;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  color: #f1f6ff;
+  min-width: 260px;
+  max-width: 320px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--qmm-border-strong);
+  background: var(--qmm-gradient-panel);
+  box-shadow: var(--qmm-shadow-panel);
+  color: var(--qmm-text);
 }
-.qws-rule-popover .qws-rule-field {
-  display: grid;
-  gap: 6px;
-}
-.qws-rule-popover .qws-rule-field label {
-  font-weight: 600;
-  font-size: 13px;
-}
-.qws-rule-popover .qws-rule-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-/* PATCH: r\xE9serve un espace pour le r\xE9sum\xE9 afin d'\xE9viter tout shift */
-[data-role="rule-hint"] {
-  min-height: 1.2em;  /* ~1 ligne r\xE9serv\xE9e */
+.qws-rule-popover .qws-rule-field { display: grid; gap: 6px; }
+.qws-rule-popover .qws-rule-field > label { font-weight: 600; font-size: 13px; }
+.qws-rule-popover .qws-rule-hint { opacity: .7; font-size: 11px; }
+.qws-rule-popover .qws-rule-actions { display: flex; justify-content: space-between; gap: 8px; }
+.qws-rule-summary {
+  min-height: 1.2em;
+  opacity: .75;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 `;
-      document.head.appendChild(style);
     }
-    const wrap = document.createElement("div");
+  });
+
+  // src/features/notifier/menu/ruleEditor.ts
+  function closeRuleEditor() {
+    popover?.remove();
+    popover = null;
+    teardown.dispose();
+    teardown = new Subscriptions();
+  }
+  function listen(type, handler, options) {
+    document.addEventListener(type, handler, options);
+    teardown.add(() => document.removeEventListener(type, handler, options));
+  }
+  function field(label2, ...controls) {
+    const wrap = h("div", "qws-rule-field");
+    wrap.append(h("label", void 0, label2), ...controls);
+    return wrap;
+  }
+  function option(sel, value, text2) {
+    const opt = h("option", void 0, text2);
+    opt.value = value;
+    sel.appendChild(opt);
+  }
+  function makeDraggable3(pop, handle, ignore) {
+    const place = (left, top) => {
+      pop.style.left = `${Math.round(clampBetween(left, MARGIN2, window.innerWidth - pop.offsetWidth - MARGIN2))}px`;
+      pop.style.top = `${Math.round(clampBetween(top, MARGIN2, window.innerHeight - pop.offsetHeight - MARGIN2))}px`;
+    };
+    let drag = null;
+    const onMove = (ev) => {
+      if (drag && ev.pointerId === drag.pointerId) place(drag.left + ev.clientX - drag.x, drag.top + ev.clientY - drag.y);
+    };
+    const onEnd = (ev) => {
+      if (!drag || ev && ev.pointerId !== drag.pointerId) return;
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onEnd);
+      document.removeEventListener("pointercancel", onEnd);
+      try {
+        handle.releasePointerCapture(drag.pointerId);
+      } catch {
+      }
+      drag = null;
+    };
+    const onDown = (ev) => {
+      if (ev.button !== 0 || ignore.contains(ev.target)) return;
+      onEnd();
+      const rect = pop.getBoundingClientRect();
+      drag = { pointerId: ev.pointerId, x: ev.clientX, y: ev.clientY, left: rect.left, top: rect.top };
+      try {
+        handle.setPointerCapture(ev.pointerId);
+      } catch {
+      }
+      document.addEventListener("pointermove", onMove);
+      document.addEventListener("pointerup", onEnd);
+      document.addEventListener("pointercancel", onEnd);
+      ev.preventDefault();
+    };
+    handle.addEventListener("pointerdown", onDown);
+    teardown.add(() => {
+      handle.removeEventListener("pointerdown", onDown);
+      onEnd();
+    });
+  }
+  function placeNear(pop, anchor) {
+    const anchorRect = anchor.getBoundingClientRect();
+    const width = pop.offsetWidth;
+    const height = pop.offsetHeight;
+    const left = anchorRect.right - width;
+    let top = anchorRect.bottom + 8;
+    if (top + height > window.innerHeight - MARGIN2) top = anchorRect.top - height - 8;
+    if (top < MARGIN2) top = MARGIN2;
+    pop.style.left = `${Math.round(clampBetween(left, MARGIN2, window.innerWidth - width - MARGIN2))}px`;
+    pop.style.top = `${Math.round(clampBetween(top, MARGIN2, window.innerHeight - height - MARGIN2))}px`;
+  }
+  function digitsOnly(input) {
+    const editing = /* @__PURE__ */ new Set(["Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"]);
+    input.addEventListener("keydown", (ev) => {
+      ev.stopPropagation();
+      ev.stopImmediatePropagation();
+      if (ev.ctrlKey || ev.metaKey || ev.altKey || /^[0-9]$/.test(ev.key) || editing.has(ev.key)) return;
+      ev.preventDefault();
+    });
+    input.addEventListener("input", () => {
+      const digits = input.value.replace(/\D+/g, "");
+      if (digits !== input.value) input.value = digits;
+    });
+  }
+  function openRuleEditor(target, anchor) {
+    closeRuleEditor();
+    ensureMenuStyles();
+    const current = NotifierRules.get(target.id);
+    const defaults = ruleDefaults(target.context);
+    const canLoop = target.context === "shops";
+    const pop = h("div", "qws-rule-popover");
+    const header = h("div");
+    Object.assign(header.style, {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: "12px",
+      cursor: "move",
+      userSelect: "none",
+      touchAction: "none"
+    });
+    const titles = h("div");
+    const title = h("div", void 0, target.name);
+    Object.assign(title.style, { fontWeight: "700", fontSize: "14px", lineHeight: "1.2" });
+    const subtitle = h("div", "qws-rule-hint", target.type);
+    subtitle.style.fontSize = "12px";
+    titles.append(title, subtitle);
+    const closeBtn = button("\u2715", { variant: "ghost", size: "xs", ariaLabel: "Close", onClick: closeRuleEditor });
+    header.append(titles, closeBtn);
+    pop.appendChild(header);
+    makeDraggable3(pop, header, closeBtn);
+    const soundSelect = select2();
+    const selectedSound = current?.sound ?? "";
+    const names = audio.listSounds();
+    option(soundSelect, "", defaults.soundName);
+    for (const name of names) {
+      if (name !== defaults.soundName || selectedSound === name) option(soundSelect, name, name);
+    }
+    if (selectedSound && !names.includes(selectedSound)) option(soundSelect, selectedSound, shortSoundName(selectedSound));
+    soundSelect.value = selectedSound;
+    pop.appendChild(field("Sound", soundSelect));
+    const defaultVolumePct = Math.round(defaults.volume * 100);
+    const initialVolumePct = Math.round(clamp(current?.volume ?? defaults.volume, 0, 1) * 100);
+    const volumeRange = slider(0, 100, 1, initialVolumePct, { fill: true });
+    const volumeValue = pill(`${initialVolumePct}%`);
+    volumeRange.addEventListener("input", () => {
+      volumeValue.textContent = `${clamp(Math.round(Number(volumeRange.value)) || 0, 0, 100)}%`;
+    });
+    const volumeRow = h("div");
+    Object.assign(volumeRow.style, { display: "flex", alignItems: "center", gap: "10px" });
+    volumeRow.append(volumeRange, volumeValue);
+    pop.appendChild(field("Volume", volumeRow, h("div", "qws-rule-hint", `Default: ${defaultVolumePct}%`)));
+    const modeSelect = select2();
+    const modes = canLoop ? defaults.mode === "loop" ? ["loop", "oneshot"] : ["oneshot", "loop"] : ["oneshot"];
+    for (const mode of modes) option(modeSelect, mode, mode === "loop" ? "Loop" : "One-shot");
+    modeSelect.value = canLoop ? current?.playbackMode ?? defaults.mode : "oneshot";
+    modeSelect.disabled = !canLoop;
+    pop.appendChild(field("Playback mode", modeSelect));
+    const stopSelect = select2();
+    option(stopSelect, "purchase", "Until purchase");
+    const stopField = field("Stop condition", stopSelect);
+    const intervalInput = h("input", "qmm-input qmm-input--sm");
+    intervalInput.type = "number";
+    intervalInput.min = String(MIN_LOOP_INTERVAL_MS);
+    intervalInput.step = "50";
+    intervalInput.inputMode = "numeric";
+    intervalInput.placeholder = String(defaults.loopIntervalMs);
+    intervalInput.value = current?.loopIntervalMs != null ? String(current.loopIntervalMs) : "";
+    digitsOnly(intervalInput);
+    const intervalField = field("Loop interval (ms)", intervalInput);
+    const showLoopFields = () => {
+      const show = canLoop && modeSelect.value === "loop";
+      stopField.style.display = show ? "grid" : "none";
+      intervalField.style.display = show ? "grid" : "none";
+    };
+    if (canLoop) {
+      pop.append(stopField, intervalField);
+      modeSelect.addEventListener("change", showLoopFields);
+      intervalInput.addEventListener("input", () => {
+        if (modeSelect.value === "loop") return;
+        modeSelect.value = "loop";
+        showLoopFields();
+      });
+    }
+    showLoopFields();
+    pop.appendChild(
+      h("div", "qws-rule-hint", "Use defaults by leaving values unchanged (matching the default volume keeps it inherited).")
+    );
+    const actions = h("div", "qws-rule-actions");
+    const clearBtn = button("Clear", { variant: "ghost", size: "sm", disabled: !current });
+    clearBtn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      NotifierRules.clear(target.id);
+      closeRuleEditor();
+    });
+    const saveBtn = button("Save", { variant: "primary", size: "sm" });
+    saveBtn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      NotifierRules.set(
+        target.id,
+        rulePatchFromEditor(target.context, {
+          sound: soundSelect.value,
+          volumePct: Number(volumeRange.value),
+          mode: modeSelect.value,
+          stop: stopSelect.value,
+          interval: intervalInput.value
+        })
+      );
+      closeRuleEditor();
+    });
+    actions.append(clearBtn, saveBtn);
+    pop.appendChild(actions);
+    document.body.appendChild(pop);
+    placeNear(pop, anchor);
+    popover = pop;
+    const onOutside = (ev) => {
+      const t = ev.target;
+      if (t && !pop.contains(t) && !anchor.contains(t)) closeRuleEditor();
+    };
+    const timer2 = window.setTimeout(() => listen("pointerdown", onOutside, { capture: true }));
+    teardown.add(() => window.clearTimeout(timer2));
+    listen(
+      "keydown",
+      (ev) => {
+        if (!pop.contains(ev.target)) ev.stopImmediatePropagation();
+      },
+      { capture: true }
+    );
+    listen(
+      "wheel",
+      (ev) => {
+        if (pop.contains(ev.target)) ev.stopImmediatePropagation();
+      },
+      { capture: true, passive: true }
+    );
+  }
+  var MARGIN2, popover, teardown, clampBetween;
+  var init_ruleEditor = __esm({
+    "src/features/notifier/menu/ruleEditor.ts"() {
+      "use strict";
+      init_math();
+      init_emitter();
+      init_badges();
+      init_button();
+      init_dom();
+      init_fields();
+      init_sliders();
+      init_audio();
+      init_playbackDefaults();
+      init_rules();
+      init_styles2();
+      MARGIN2 = 12;
+      popover = null;
+      teardown = new Subscriptions();
+      clampBetween = (value, a, b) => clamp(value, Math.min(a, b), Math.max(a, b));
+    }
+  });
+
+  // src/features/notifier/menu/alertGrid.ts
+  function headCell(text2, align) {
+    const el = h("div", void 0, text2);
+    Object.assign(el.style, {
+      fontWeight: "600",
+      opacity: "0.9",
+      padding: "4px 6px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: align === "left" ? "flex-start" : "center"
+    });
+    return el;
+  }
+  function centeredCell(child) {
+    const cell = h("div");
+    Object.assign(cell.style, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderBottom: CELL_BORDER,
+      padding: "4px 6px",
+      boxSizing: "border-box"
+    });
+    cell.appendChild(child);
+    return cell;
+  }
+  function ruleSummaryLine() {
+    const el = h("div", "qws-rule-summary");
+    el.style.visibility = "hidden";
+    return el;
+  }
+  var CELL_BORDER, AlertGrid;
+  var init_alertGrid = __esm({
+    "src/features/notifier/menu/alertGrid.ts"() {
+      "use strict";
+      init_button();
+      init_card();
+      init_dom();
+      init_toggles();
+      init_rules();
+      init_ruleEditor();
+      init_styles2();
+      CELL_BORDER = "1px solid var(--qmm-border)";
+      AlertGrid = class {
+        /** `firstColumnMin` is the item column's minimum width. */
+        constructor(headers, firstColumnMin, emptyText) {
+          this.emptyText = emptyText;
+          this.rows = /* @__PURE__ */ new Map();
+          ensureMenuStyles();
+          const columns = `minmax(${firstColumnMin}, 1fr) 9rem 7rem 8rem`;
+          this.root = plainCard();
+          Object.assign(this.root.style, { display: "grid", gridTemplateRows: "auto 1fr", overflow: "hidden", minHeight: "0" });
+          this.head = h("div");
+          Object.assign(this.head.style, {
+            display: "grid",
+            gridTemplateColumns: columns,
+            justifyContent: "start",
+            borderBottom: "1px solid var(--qmm-border-strong)",
+            padding: "0 0 4px 0",
+            boxSizing: "border-box"
+          });
+          this.head.append(
+            headCell(headers[0], "left"),
+            headCell(headers[1], "center"),
+            headCell(headers[2], "center"),
+            headCell(headers[3], "center")
+          );
+          this.body = h("div");
+          Object.assign(this.body.style, {
+            display: "grid",
+            gridTemplateColumns: columns,
+            justifyContent: "start",
+            gridAutoRows: "auto",
+            alignContent: "start",
+            minHeight: "0",
+            height: "100%",
+            overflow: "auto",
+            overscrollBehavior: "contain",
+            width: "100%",
+            scrollbarGutter: "stable"
+          });
+          this.root.append(this.head, this.body);
+          new ResizeObserver(() => this.alignHeader()).observe(this.body);
+          window.addEventListener("resize", () => this.alignHeader());
+        }
+        alignHeader() {
+          this.head.style.paddingRight = `${this.body.offsetWidth - this.body.clientWidth}px`;
+        }
+        /** Replaces every row; an empty list shows the empty text. */
+        setRows(rows) {
+          closeRuleEditor();
+          this.body.replaceChildren();
+          this.rows.clear();
+          if (!rows.length) {
+            const empty = h("div", void 0, this.emptyText);
+            Object.assign(empty.style, { opacity: "0.75", gridColumn: "1 / -1", padding: "8px" });
+            this.body.appendChild(empty);
+          }
+          for (const row2 of rows) this.addRow(row2);
+          this.alignHeader();
+        }
+        addRow(row2) {
+          row2.item.style.borderBottom = CELL_BORDER;
+          const toggle2 = switchInput(row2.alertOn, (on) => row2.onAlertChange(on));
+          const gear = button("", { icon: "\u2699", size: "sm", tooltip: "Custom rule", ariaLabel: `Custom rule for ${row2.name}` });
+          gear.classList.add("qws-rule-btn");
+          gear.addEventListener("click", (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            openRuleEditor({ id: row2.id, name: row2.name, type: row2.type, context: row2.context }, gear);
+          });
+          this.body.append(row2.item, centeredCell(row2.detail), centeredCell(toggle2), centeredCell(gear));
+          const rendered = { gear, summary: row2.summary, toggle: toggle2 };
+          this.rows.set(row2.id, rendered);
+          this.showRule(rendered, row2.id);
+        }
+        /** Redraws every row's rule button and summary. */
+        refreshRules() {
+          for (const [id, row2] of this.rows) this.showRule(row2, id);
+        }
+        showRule(row2, id) {
+          const rule = NotifierRules.get(id);
+          const summary = hasRule(rule) ? formatRuleSummary(rule) : "";
+          row2.gear.dataset.active = hasRule(rule) ? "1" : "0";
+          row2.gear.title = summary ? `Custom rule: ${summary}` : "Custom rule";
+          if (row2.summary) {
+            row2.summary.textContent = summary;
+            row2.summary.style.visibility = summary ? "visible" : "hidden";
+          }
+        }
+        /** Updates one row's switch without redrawing it. `locked` greys it out with a reason. */
+        setAlert(id, on, locked = null) {
+          const row2 = this.rows.get(id);
+          if (!row2) return;
+          row2.toggle.checked = on;
+          row2.toggle.disabled = !!locked;
+          row2.toggle.title = locked ?? "";
+        }
+        renderedIds() {
+          return new Set(this.rows.keys());
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/menu/shopsTab.ts
+  function filterSelect(id, minWidth, options) {
+    const sel = select2({ id, width: minWidth });
+    for (const [value, text2] of options) {
+      const opt = h("option", void 0, text2);
+      opt.value = value;
+      sel.appendChild(opt);
+    }
+    sel.value = "all";
+    return sel;
+  }
+  function weatherChip(weather2, only) {
+    const tint = only ? color.warn : color.accent;
+    const chip2 = h("span", void 0, weather2);
+    Object.assign(chip2.style, {
+      padding: "1px 6px",
+      borderRadius: "999px",
+      fontSize: "10px",
+      fontWeight: "600",
+      background: only ? color.warnSoft : color.accentSoft,
+      color: tint,
+      border: `1px solid ${only ? color.warnBorder : color.accentBorder}`
+    });
+    chip2.title = only ? `Only available during ${weather2}` : `Also available during ${weather2}`;
+    return chip2;
+  }
+  function itemCell(row2) {
+    const cell = h("div");
+    Object.assign(cell.style, { display: "flex", alignItems: "center", gap: "6px", padding: "4px 6px" });
+    const icon = shopItemIcon(row2.id, row2.name, 40, "alerts");
+    Object.assign(icon.style, { borderRadius: "8px", background: color.mutedBg, marginRight: "6px" });
+    const text2 = h("div");
+    Object.assign(text2.style, { display: "flex", flexDirection: "column", gap: "2px", lineHeight: "1.15", minWidth: "0", flex: "1 1 auto" });
+    const title = h("div", void 0, row2.name);
+    Object.assign(title.style, { fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
+    const sub = h("div");
+    Object.assign(sub.style, { opacity: "0.7", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" });
+    sub.appendChild(h("span", void 0, row2.type));
+    for (const weather2 of row2.weathers ?? []) sub.appendChild(weatherChip(weather2, !!row2.weatherOnly));
+    text2.append(title, sub);
+    cell.append(icon, text2);
+    return cell;
+  }
+  function renderShopsTab(view) {
+    view.replaceChildren();
+    const wrap = h("div");
     Object.assign(wrap.style, {
       display: "grid",
       gridTemplateRows: "auto 1fr",
@@ -47867,1576 +48207,290 @@ Restore figures are averages; unlucky streaks do worse.`;
       position: "relative"
     });
     view.appendChild(wrap);
-    const header = document.createElement("div");
-    header.style.display = "flex";
-    header.style.flexWrap = "wrap";
-    header.style.alignItems = "center";
-    header.style.gap = "10px";
-    header.style.rowGap = "8px";
+    const typeSelect = filterSelect("shop.filter.type", "140px", TYPE_FILTERS);
+    const raritySelect = filterSelect("shop.filter.rarity", "160px", RARITY_FILTERS);
+    const followedCount = pill("Followed: 0");
+    followedCount.title = "Items with Overlay enabled";
+    followedCount.style.marginLeft = "auto";
+    const header = h("div");
+    Object.assign(header.style, { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", rowGap: "8px" });
+    header.append(
+      h("label", "qmm-label", "Type"),
+      typeSelect,
+      h("label", "qmm-label", "Rarity"),
+      raritySelect,
+      followedCount
+    );
     wrap.appendChild(header);
-    const lblType = ui.label("Type");
-    const selType = document.createElement("select");
-    selType.className = "qmm-input";
-    selType.style.minWidth = "140px";
-    selType.id = "shop.filter.type";
-    [
-      ["all", "All"],
-      ["seed", "Seeds"],
-      ["egg", "Eggs"],
-      ["tool", "Tools"],
-      ["decor", "Decor"]
-    ].forEach(([v, t]) => {
-      const o = document.createElement("option");
-      o.value = v;
-      o.textContent = t;
-      selType.appendChild(o);
-    });
-    selType.value = "all";
-    const lblRarity = ui.label("Rarity");
-    const selRarity = document.createElement("select");
-    selRarity.className = "qmm-input";
-    selRarity.style.minWidth = "160px";
-    selRarity.id = "shop.filter.rarity";
-    [
-      ["all", "All"],
-      ["common", "Common"],
-      ["uncommon", "Uncommon"],
-      ["rare", "Rare"],
-      ["legendary", "Legendary"],
-      ["mythical", "Mythical"],
-      ["divine", "Divine"],
-      ["celestial", "Celestial"]
-    ].forEach(([v, t]) => {
-      const o = document.createElement("option");
-      o.value = v;
-      o.textContent = t;
-      selRarity.appendChild(o);
-    });
-    selRarity.value = "all";
-    const followedBadge = document.createElement("div");
-    followedBadge.id = "shop.followedCount";
-    followedBadge.textContent = "Followed: 0";
-    followedBadge.title = "Items with Overlay enabled";
-    followedBadge.style.padding = "6px 10px";
-    followedBadge.style.borderRadius = "999px";
-    followedBadge.style.border = "1px solid #4445";
-    followedBadge.style.background = "#1f2328";
-    followedBadge.style.color = "#e7eef7";
-    followedBadge.style.fontWeight = "600";
-    followedBadge.style.marginLeft = "auto";
-    followedBadge.style.width = "115px";
-    header.append(lblType, selType, lblRarity, selRarity, followedBadge);
-    const card5 = document.createElement("div");
-    card5.style.border = "1px solid #4445";
-    card5.style.borderRadius = "10px";
-    card5.style.padding = "10px";
-    card5.style.background = "#0f1318";
-    card5.style.overflow = "hidden";
-    card5.style.display = "grid";
-    card5.style.gridTemplateRows = "auto 1fr";
-    card5.style.minHeight = "0";
-    wrap.appendChild(card5);
-    const headerGrid = document.createElement("div");
-    const COLS = "minmax(200px, 1fr) 9rem 7rem 8rem";
-    headerGrid.style.display = "grid";
-    headerGrid.style.gridTemplateColumns = COLS;
-    headerGrid.style.justifyContent = "start";
-    headerGrid.style.columnGap = "0";
-    headerGrid.style.borderBottom = "1px solid #ffffff1a";
-    headerGrid.style.padding = "0 0 4px 0";
-    headerGrid.style.position = "sticky";
-    headerGrid.style.top = "0";
-    headerGrid.append(
-      mkHeadCell("Item", "left"),
-      mkHeadCell("Rarity"),
-      mkHeadCell("Notify"),
-      mkHeadCell("Custom rules")
-    );
-    card5.appendChild(headerGrid);
-    const bodyGrid = document.createElement("div");
-    bodyGrid.style.display = "grid";
-    bodyGrid.style.gridTemplateColumns = COLS;
-    bodyGrid.style.justifyContent = "start";
-    bodyGrid.style.gridAutoRows = "auto";
-    bodyGrid.style.alignContent = "start";
-    bodyGrid.style.minHeight = "0";
-    bodyGrid.style.height = "100%";
-    bodyGrid.style.overflow = "auto";
-    bodyGrid.style.overscrollBehavior = "contain";
-    bodyGrid.style.width = "100%";
-    bodyGrid.style.scrollbarGutter = "stable";
-    card5.appendChild(bodyGrid);
-    const refreshRulesUI = () => {
-      const kids = Array.from(bodyGrid.children);
-      for (let i = 0; i + 3 < kids.length; i += 4) {
-        const itemCell = kids[i];
-        const ruleCell = kids[i + 3];
-        const id = itemCell?.dataset?.id;
-        if (!id) continue;
-        applyRuleState(itemCell, ruleCell ?? null, NotifierRules.get(id));
-      }
-    };
-    const softUpdateRenderedRows = (next) => {
-      const byId = new Map(next.rows.map((r) => [r.id, r]));
-      const kids = Array.from(bodyGrid.children);
-      for (let i = 0; i + 3 < kids.length; i += 4) {
-        const itemCell = kids[i];
-        const popupCell = kids[i + 2];
-        const ruleCell = kids[i + 3];
-        const id = itemCell.dataset.id;
-        const row = byId.get(id);
-        if (!row) continue;
-        const popupSwitch = popupCell.querySelector("label");
-        if (popupSwitch) setSwitchVisual(popupSwitch, !!row.popup);
-        itemCell.dataset.follow = row.followed ? "1" : "0";
-        applyRuleState(itemCell, ruleCell ?? null, NotifierRules.get(id));
-        const capped = isCapReached(id);
-        if (popupSwitch) setSwitchCapState(popupSwitch, capped);
-      }
-    };
-    const syncHeaderToScrollbar = () => {
-      const sbw = bodyGrid.offsetWidth - bodyGrid.clientWidth;
-      headerGrid.style.boxSizing = "border-box";
-      headerGrid.style.paddingRight = `${sbw}px`;
-    };
-    syncHeaderToScrollbar();
-    const resizeObserver = new ResizeObserver(syncHeaderToScrollbar);
-    resizeObserver.observe(bodyGrid);
-    const onResize = () => syncHeaderToScrollbar();
-    window.addEventListener("resize", onResize);
+    const grid = new AlertGrid(["Item", "Rarity", "Notify", "Custom rules"], "200px", "No items.");
+    wrap.appendChild(grid.root);
     let state7 = null;
-    let renderedIds = /* @__PURE__ */ new Set();
-    const getFilters = () => ({
-      type: selType.value || "all",
-      rarity: selRarity.value || "all"
+    const filters = () => ({
+      type: typeSelect.value || "all",
+      rarity: raritySelect.value || "all"
     });
-    const passesFilters = (rows) => ShopRows.filter(rows, getFilters());
-    const mkItemCell = (row) => {
-      const wrap2 = document.createElement("div");
-      Object.assign(wrap2.style, {
-        display: "flex",
-        alignItems: "center",
-        gap: "6px",
-        padding: "4px 6px",
-        borderBottom: "1px solid #ffffff12"
-      });
-      const ICON = 40;
-      const iconWrap = document.createElement("div");
-      Object.assign(iconWrap.style, {
-        width: `${ICON}px`,
-        height: `${ICON}px`,
-        flex: `0 0 ${ICON}px`,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: "8px",
-        background: "#101820",
-        marginRight: "6px",
-        aspectRatio: "1 / 1"
-      });
-      const iconFallback = row.type === "Seed" ? "\u{1F331}" : row.type === "Egg" ? "\u{1F95A}" : row.type === "Tool" ? "\u{1F9F0}" : "\u{1F3E0}";
-      const icon = document.createElement("span");
-      icon.textContent = iconFallback;
-      icon.style.fontSize = `${ICON - 10}px`;
-      icon.setAttribute("aria-hidden", "true");
-      iconWrap.appendChild(icon);
-      const spriteCategories = row.type === "Seed" ? ["seed"] : row.type === "Egg" ? ["pet"] : row.type === "Tool" ? ["item"] : row.type === "Decor" ? ["decor"] : null;
-      if (spriteCategories) {
-        const baseId = row.id.split(":")[1] ?? row.name ?? row.id;
-        const candidatesSet = /* @__PURE__ */ new Set();
-        const addCandidate = (value) => {
-          if (!value) return;
-          const trimmed = value.trim();
-          if (!trimmed) return;
-          candidatesSet.add(trimmed);
-          candidatesSet.add(trimmed.replace(/\s+/g, ""));
-          if (row.type === "Seed" || row.type === "Egg") {
-            const stripped = trimmed.replace(/(?:seed|egg)$/i, "").trim();
-            if (stripped) {
-              candidatesSet.add(stripped);
-              candidatesSet.add(stripped.replace(/\s+/g, ""));
-            }
-          }
-        };
-        addCandidate(baseId);
-        addCandidate(row.id);
-        addCandidate(row.name);
-        const candidates = Array.from(candidatesSet).filter(Boolean);
-        if (candidates.length) {
-          attachSpriteIcon(iconWrap, spriteCategories, candidates, ICON, "alerts");
-        }
+    const visibleRows = (s) => ShopRows.filter(s.rows, filters());
+    const updateRows = (s) => {
+      for (const row2 of s.rows) {
+        grid.setAlert(row2.id, row2.popup, isCapReached(row2.id) ? CAPPED_REASON : null);
       }
-      const col = document.createElement("div");
-      Object.assign(col.style, {
-        display: "flex",
-        flexDirection: "column",
-        gap: "2px",
-        lineHeight: "1.15",
-        minWidth: "0",
-        // autorise l'ellipsis
-        flex: "1 1 auto"
-      });
-      const title = document.createElement("div");
-      title.textContent = row.name;
-      Object.assign(title.style, {
-        fontWeight: "700",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap"
-      });
-      const sub = document.createElement("div");
-      sub.style.opacity = "0.7";
-      sub.style.fontSize = "12px";
-      sub.style.display = "flex";
-      sub.style.alignItems = "center";
-      sub.style.gap = "6px";
-      const sectionLabel5 = document.createElement("span");
-      sectionLabel5.textContent = row.type;
-      sub.appendChild(sectionLabel5);
-      if (row.weathers?.length || row.weatherOnly) {
-        const weathers = row.weathers && row.weathers.length ? row.weathers : [];
-        for (const w of weathers) {
-          const badge2 = document.createElement("span");
-          badge2.textContent = w;
-          Object.assign(badge2.style, {
-            padding: "1px 6px",
-            borderRadius: "999px",
-            fontSize: "10px",
-            fontWeight: "600",
-            background: row.weatherOnly ? "rgba(250, 204, 21, 0.18)" : "rgba(96, 165, 250, 0.18)",
-            color: row.weatherOnly ? "#facc15" : "#60a5fa",
-            border: row.weatherOnly ? "1px solid rgba(250, 204, 21, 0.35)" : "1px solid rgba(96, 165, 250, 0.35)"
-          });
-          badge2.title = row.weatherOnly ? `Only available during ${w}` : `Also available during ${w}`;
-          sub.appendChild(badge2);
-        }
-      }
-      const ruleHint = document.createElement("div");
-      ruleHint.dataset.role = "rule-hint";
-      ruleHint.style.display = "none";
-      ruleHint.style.opacity = "0.75";
-      ruleHint.style.fontSize = "11px";
-      ruleHint.style.whiteSpace = "nowrap";
-      ruleHint.style.overflow = "hidden";
-      ruleHint.style.textOverflow = "ellipsis";
-      ruleHint.style.minHeight = "1.2em";
-      ruleHint.style.visibility = "hidden";
-      col.append(title, sub, ruleHint);
-      wrap2.append(iconWrap, col);
-      return wrap2;
+      followedCount.textContent = `Followed: ${s.counts.followed}`;
     };
-    const addRow = (row) => {
-      const itemCell = mkItemCell(row);
-      itemCell.dataset.id = row.id;
-      itemCell.dataset.type = row.type;
-      itemCell.dataset.follow = row.followed ? "1" : "0";
-      itemCell.dataset.context = "shops";
-      const rarityCell = document.createElement("div");
-      rarityCell.style.display = "flex";
-      rarityCell.style.alignItems = "center";
-      rarityCell.style.justifyContent = "center";
-      rarityCell.style.borderBottom = "1px solid #ffffff12";
-      rarityCell.appendChild(rarityBadge(String(row.rarity ?? "\u2014")));
-      const popupSwitch = createSwitch((on) => {
-        try {
-          ShopRows.setFollowed(row.id, !!on);
-        } catch {
-        }
-        const cur = NotifierService.getPref(row.id);
-        itemCell.dataset.follow = cur.followed ? "1" : "0";
-      });
-      setSwitchVisual(popupSwitch, !!row.popup);
-      popupSwitch.style.padding = "0";
-      const popupCell = wrapCell(popupSwitch);
-      const capped = isCapReached(row.id);
-      setSwitchCapState(popupSwitch, capped);
-      const gearBtn = ui.btn("", {
-        icon: "\u2699",
-        size: "sm",
-        tooltip: "Custom rule",
-        ariaLabel: `Custom rule for ${row.name}`
-      });
-      gearBtn.dataset.role = "rule";
-      gearBtn.classList.add("qws-rule-btn");
-      gearBtn.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        openRuleEditor(ui, {
-          id: row.id,
-          name: row.name,
-          type: row.type,
-          context: "shops"
-        }, gearBtn);
-      });
-      const ruleCell = wrapCell(gearBtn);
-      ruleCell.dataset.role = "rule-cell";
-      bodyGrid.append(itemCell, rarityCell, popupCell, ruleCell);
-      applyRuleState(itemCell, ruleCell, NotifierRules.get(row.id));
-    };
-    function clearBody() {
-      closeRuleEditor();
-      bodyGrid.innerHTML = "";
-      renderedIds = /* @__PURE__ */ new Set();
-    }
-    function renderEmpty() {
-      const empty = document.createElement("div");
-      empty.textContent = "No items.";
-      empty.style.opacity = "0.75";
-      empty.style.gridColumn = "1 / -1";
-      empty.style.padding = "8px";
-      bodyGrid.appendChild(empty);
-    }
-    function rebuildGrid() {
-      clearBody();
+    const rebuild = () => {
       if (!state7) {
-        renderEmpty();
+        grid.setRows([]);
         return;
       }
-      const rows = passesFilters(state7.rows);
-      if (!rows.length) {
-        renderEmpty();
-      } else {
-        rows.forEach((r) => {
-          addRow(r);
-          renderedIds.add(r.id);
-        });
-      }
-      refreshRulesUI();
-      followedBadge.textContent = `Followed: ${state7.counts.followed}`;
-      syncHeaderToScrollbar();
-    }
-    function softUpdateBadge(next) {
-      followedBadge.textContent = `Followed: ${next.counts.followed}`;
-    }
-    function filteredIdSet(s) {
-      const set2 = /* @__PURE__ */ new Set();
-      for (const r of passesFilters(s.rows)) set2.add(r.id);
-      return set2;
-    }
-    let unsub = null;
-    let unsubRules = null;
-    (async () => {
-      try {
-        await NotifierService.start();
-      } catch {
-      }
-      unsub = await NotifierService.onChangeNow((s) => {
+      grid.setRows(
+        visibleRows(state7).map((row2) => ({
+          id: row2.id,
+          name: row2.name,
+          type: row2.type,
+          context: "shops",
+          item: itemCell(row2),
+          detail: rarityBadge(String(row2.rarity ?? "-")),
+          alertOn: row2.popup,
+          onAlertChange: (on) => ShopRows.setFollowed(row2.id, on)
+        }))
+      );
+      updateRows(state7);
+    };
+    typeSelect.onchange = () => state7 && rebuild();
+    raritySelect.onchange = () => state7 && rebuild();
+    void (async () => {
+      await NotifierService.onChangeNow((next) => {
         const prev = state7;
-        state7 = s;
-        if (!prev) {
-          rebuildGrid();
-          softUpdateRenderedRows(state7);
-          return;
-        }
-        const prevIds = renderedIds;
-        const nextIds = filteredIdSet(s);
-        let needRebuild = false;
-        if (prevIds.size !== nextIds.size) needRebuild = true;
-        else {
-          for (const id of nextIds) if (!prevIds.has(id)) {
-            needRebuild = true;
-            break;
-          }
-        }
-        if (needRebuild) {
-          rebuildGrid();
-        } else {
-          softUpdateBadge(s);
-          softUpdateRenderedRows(s);
-        }
-      });
-      try {
-        unsubRules = await NotifierService.onRulesChangeNow(() => refreshRulesUI());
-      } catch {
-      }
-    })();
-    const onFilterChange = () => {
-      if (state7) rebuildGrid();
-    };
-    selType.onchange = onFilterChange;
-    selRarity.onchange = onFilterChange;
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          unsub?.();
-        } catch {
-        }
-        try {
-          unsubRules?.();
-        } catch {
-        }
-        try {
-          resizeObserver.disconnect();
-        } catch {
-        }
-        try {
-          window.removeEventListener("resize", onResize);
-        } catch {
-        }
-        try {
-          closeRuleEditor();
-        } catch {
-        }
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-  }
-  function renderPetAlertsTab(view, ui) {
-    view.innerHTML = "";
-    void PetAlertService.start().catch(() => {
-    });
-    const card5 = document.createElement("div");
-    Object.assign(card5.style, {
-      display: "grid",
-      gridTemplateColumns: "minmax(220px, 260px) minmax(0, 1fr)",
-      gap: "10px",
-      alignItems: "stretch",
-      height: "54vh",
-      overflow: "hidden",
-      border: "1px solid #4445",
-      borderRadius: "10px",
-      padding: "10px",
-      background: "#0f1318"
-    });
-    view.appendChild(card5);
-    const petList = document.createElement("div");
-    Object.assign(petList.style, {
-      display: "grid",
-      gridTemplateColumns: "1fr",
-      rowGap: "6px",
-      overflow: "auto",
-      padding: "6px",
-      border: "1px solid #4445",
-      borderRadius: "10px"
-    });
-    card5.appendChild(petList);
-    const right = document.createElement("div");
-    Object.assign(right.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-      overflow: "auto",
-      minHeight: "0"
-    });
-    card5.appendChild(right);
-    let pets = [];
-    let unsubPets = null;
-    let generalEnabled = PetAlertService.isGeneralEnabled();
-    const formRow2 = (labelTxt, control) => {
-      const { root } = ui.formRow(labelTxt, control, { labelWidth: "180px" });
-      return root;
-    };
-    const generalCard = ui.card("General notifications", { tone: "muted", align: "stretch" });
-    generalCard.body.style.display = "grid";
-    generalCard.body.style.gap = "10px";
-    const generalRow = ui.flexRow({ justify: "start", gap: 10 });
-    const generalSw = ui.switch(PetAlertService.isGeneralEnabled());
-    const generalLbl = document.createElement("div");
-    generalLbl.textContent = "Use a shared threshold for all pets";
-    generalLbl.style.opacity = "0.9";
-    generalRow.append(generalSw, generalLbl);
-    generalCard.body.append(formRow2("Enable general", generalRow));
-    const generalInput = ui.inputNumber(1, 100, 1, PetAlertService.getGeneralThresholdPct());
-    generalCard.body.append(formRow2("General threshold (%)", generalInput.wrap ?? generalInput));
-    right.appendChild(generalCard.root);
-    const syncGeneralUI = () => {
-      generalEnabled = PetAlertService.isGeneralEnabled();
-      generalSw.checked = generalEnabled;
-      generalInput.value = String(PetAlertService.getGeneralThresholdPct());
-    };
-    generalSw.onchange = () => {
-      PetAlertService.setGeneralEnabled(generalSw.checked);
-      syncGeneralUI();
-    };
-    generalInput.addEventListener("change", () => {
-      const next = Math.max(1, Math.min(100, Number(generalInput.value) || PetAlertService.getGeneralThresholdPct()));
-      generalInput.value = String(PetAlertService.setGeneralThresholdPct(next));
-    });
-    syncGeneralUI();
-    const renderPetList = () => {
-      petList.innerHTML = "";
-      if (!pets.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No active pets.";
-        empty.style.opacity = "0.75";
-        petList.appendChild(empty);
-        return;
-      }
-      for (const pet of pets) {
-        const slot = pet?.slot ?? {};
-        const name = String(slot?.name || slot?.petSpecies || "Pet");
-        const hunger = PetsService.getHungerPctFor(pet);
-        const hungerText = Number.isFinite(hunger) ? `${hunger}%` : "\u2014";
-        const row = document.createElement("div");
-        row.style.display = "flex";
-        row.style.alignItems = "center";
-        row.style.justifyContent = "space-between";
-        row.style.gap = "10px";
-        row.style.width = "100%";
-        row.style.textAlign = "left";
-        row.style.padding = "6px 8px";
-        row.style.borderRadius = "8px";
-        row.style.border = "1px solid #4445";
-        row.style.background = "#121820";
-        const left = document.createElement("div");
-        left.style.display = "flex";
-        left.style.alignItems = "center";
-        left.style.gap = "8px";
-        left.style.minWidth = "0";
-        const avatar3 = document.createElement("div");
-        avatar3.style.width = "40px";
-        avatar3.style.height = "40px";
-        avatar3.style.borderRadius = "8px";
-        avatar3.style.display = "inline-flex";
-        avatar3.style.alignItems = "center";
-        avatar3.style.justifyContent = "center";
-        avatar3.style.background = "#111821";
-        avatar3.style.border = "1px solid #1f2429";
-        avatar3.style.overflow = "hidden";
-        const useEmojiFallback = () => {
-          avatar3.replaceChildren();
-          const span = document.createElement("span");
-          span.textContent = "\u{1F43E}";
-          span.style.fontSize = "28px";
-          span.setAttribute("aria-hidden", "true");
-          avatar3.appendChild(span);
-        };
-        const setIcon = (species2, mutations2) => {
-          const speciesLabel = String(species2 ?? "").trim();
-          avatar3.replaceChildren();
-          if (!speciesLabel) {
-            useEmojiFallback();
-            return;
-          }
-          const span = document.createElement("span");
-          span.textContent = speciesLabel.charAt(0).toUpperCase() || "\u0110Y?\xF3";
-          span.style.fontSize = "28px";
-          span.setAttribute("aria-hidden", "true");
-          avatar3.appendChild(span);
-          attachSpriteIcon(avatar3, ["pet"], [speciesLabel], 36, "alerts-pet", {
-            mutations: Array.isArray(mutations2) ? mutations2 : void 0
-          });
-        };
-        const species = String(slot?.petSpecies || "");
-        const mutations = slot?.mutations ?? pet?.mutations;
-        setIcon(species, Array.isArray(mutations) ? mutations : void 0);
-        const titleWrap = document.createElement("div");
-        titleWrap.style.display = "flex";
-        titleWrap.style.flexDirection = "column";
-        titleWrap.style.gap = "2px";
-        titleWrap.style.minWidth = "0";
-        const title = document.createElement("div");
-        title.textContent = name;
-        title.style.fontWeight = "600";
-        title.style.overflow = "hidden";
-        title.style.textOverflow = "ellipsis";
-        title.style.whiteSpace = "nowrap";
-        titleWrap.append(title);
-        left.append(avatar3, titleWrap);
-        const hungerValue = document.createElement("div");
-        hungerValue.textContent = hungerText;
-        hungerValue.style.fontWeight = "700";
-        hungerValue.style.color = "#FFD84D";
-        row.append(left, hungerValue);
-        petList.appendChild(row);
-      }
-    };
-    (async () => {
-      try {
-        unsubPets = await PetsService.onPetsChangeNow((arr) => {
-          pets = Array.isArray(arr) ? arr.slice(0, 3) : [];
-          renderPetList();
-        });
-      } catch {
-        pets = [];
-        renderPetList();
-      }
-    })();
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          unsubPets?.();
-        } catch {
-        }
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-  }
-  function renderWeatherTab(view, ui) {
-    view.innerHTML = "";
-    view.style.cssText = "";
-    const wrap = document.createElement("div");
-    Object.assign(wrap.style, {
-      display: "grid",
-      gridTemplateRows: "1fr",
-      height: "54vh",
-      overflow: "hidden",
-      minHeight: "0"
-    });
-    view.appendChild(wrap);
-    const card5 = document.createElement("div");
-    card5.style.border = "1px solid #4445";
-    card5.style.borderRadius = "10px";
-    card5.style.padding = "10px";
-    card5.style.background = "#0f1318";
-    card5.style.overflow = "hidden";
-    card5.style.display = "grid";
-    card5.style.gridTemplateRows = "auto 1fr";
-    card5.style.minHeight = "0";
-    wrap.appendChild(card5);
-    const headerGrid = document.createElement("div");
-    const COLS = "minmax(240px, 1fr) 9rem 7rem 8rem";
-    headerGrid.style.display = "grid";
-    headerGrid.style.gridTemplateColumns = COLS;
-    headerGrid.style.justifyContent = "start";
-    headerGrid.style.columnGap = "0";
-    headerGrid.style.borderBottom = "1px solid #ffffff1a";
-    headerGrid.style.padding = "0 0 4px 0";
-    headerGrid.style.position = "sticky";
-    headerGrid.style.top = "0";
-    headerGrid.append(
-      mkHeadCell("Weather", "left"),
-      mkHeadCell("Last seen"),
-      mkHeadCell("Notify"),
-      mkHeadCell("Custom rules")
-    );
-    card5.appendChild(headerGrid);
-    const bodyGrid = document.createElement("div");
-    bodyGrid.style.display = "grid";
-    bodyGrid.style.gridTemplateColumns = COLS;
-    bodyGrid.style.justifyContent = "start";
-    bodyGrid.style.gridAutoRows = "auto";
-    bodyGrid.style.alignContent = "start";
-    bodyGrid.style.minHeight = "0";
-    bodyGrid.style.height = "100%";
-    bodyGrid.style.overflow = "auto";
-    bodyGrid.style.overscrollBehavior = "contain";
-    bodyGrid.style.width = "100%";
-    bodyGrid.style.scrollbarGutter = "stable";
-    card5.appendChild(bodyGrid);
-    const weatherLastSeenRefs = /* @__PURE__ */ new Map();
-    const refreshRulesUI = () => {
-      const kids = Array.from(bodyGrid.children);
-      for (let i = 0; i + 3 < kids.length; i += 4) {
-        const itemCell = kids[i];
-        const ruleCell = kids[i + 3];
-        const id = itemCell?.dataset?.id;
-        if (!id) continue;
-        applyRuleState(itemCell, ruleCell ?? null, NotifierRules.get(id));
-      }
-    };
-    const syncHeaderToScrollbar = () => {
-      const sbw = bodyGrid.offsetWidth - bodyGrid.clientWidth;
-      headerGrid.style.boxSizing = "border-box";
-      headerGrid.style.paddingRight = `${sbw}px`;
-    };
-    syncHeaderToScrollbar();
-    const resizeObserver = new ResizeObserver(syncHeaderToScrollbar);
-    resizeObserver.observe(bodyGrid);
-    const onResize = () => syncHeaderToScrollbar();
-    window.addEventListener("resize", onResize);
-    const makeItemCell = (row) => {
-      const wrapCellDiv = document.createElement("div");
-      Object.assign(wrapCellDiv.style, {
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        padding: "6px",
-        borderBottom: "1px solid #ffffff12"
-      });
-      const ICON = 40;
-      const iconWrap = document.createElement("div");
-      Object.assign(iconWrap.style, {
-        width: `${ICON}px`,
-        height: `${ICON}px`,
-        flex: `0 0 ${ICON}px`,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: "8px",
-        background: "#101820"
-      });
-      const weatherIcon = document.createElement("span");
-      weatherIcon.textContent = row.name.trim().charAt(0) || "\u{1F326}";
-      weatherIcon.style.fontSize = `${ICON - 8}px`;
-      weatherIcon.setAttribute("aria-hidden", "true");
-      iconWrap.appendChild(weatherIcon);
-      const weatherCategories = ["ui", "weather", "mutation"];
-      const candidateSet = /* @__PURE__ */ new Set();
-      const addCandidate = (value) => {
-        if (!value) return;
-        const trimmed = value.trim();
-        if (trimmed) {
-          candidateSet.add(trimmed);
-          candidateSet.add(trimmed.replace(/\s+/g, ""));
-        }
-      };
-      addCandidate(row.name);
-      addCandidate(row.atomValue);
-      addCandidate(row.id);
-      const bases = Array.from(candidateSet).map((value) => value.replace(/icon$/i, ""));
-      const candidates = Array.from(
-        new Set(
-          bases.map((base) => `${base}Icon`).concat(Array.from(candidateSet))
-        ).values()
-      ).filter(Boolean);
-      if (candidates.length) {
-        attachSpriteIcon(iconWrap, weatherCategories, candidates, ICON, "alerts-weather");
-      }
-      const col = document.createElement("div");
-      Object.assign(col.style, {
-        display: "flex",
-        flexDirection: "column",
-        gap: "4px",
-        lineHeight: "1.2",
-        minWidth: "0",
-        flex: "1 1 auto"
-      });
-      const headerRow = document.createElement("div");
-      Object.assign(headerRow.style, {
-        display: "flex",
-        alignItems: "center",
-        gap: "6px",
-        minWidth: "0"
-      });
-      const title = document.createElement("div");
-      title.textContent = row.name;
-      Object.assign(title.style, {
-        fontWeight: "700",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-        flex: "1 1 auto"
-      });
-      headerRow.appendChild(title);
-      if (row.isCurrent) {
-        const badge2 = document.createElement("span");
-        badge2.textContent = "Current";
-        Object.assign(badge2.style, {
-          fontSize: "11px",
-          padding: "2px 6px",
-          borderRadius: "999px",
-          background: "#2b5cff33",
-          border: "1px solid #2b5cff66",
-          color: "#9cbcff",
-          fontWeight: "600",
-          whiteSpace: "nowrap"
-        });
-        headerRow.appendChild(badge2);
-      }
-      const mutationsLabel = document.createElement("div");
-      mutationsLabel.textContent = "Mutations";
-      Object.assign(mutationsLabel.style, {
-        fontSize: "11px",
-        opacity: "0.7",
-        fontWeight: "600"
-      });
-      const mutationsList = document.createElement("div");
-      Object.assign(mutationsList.style, {
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "6px",
-        alignItems: "flex-start",
-        fontSize: "12px",
-        lineHeight: "1.3",
-        opacity: row.mutations.length ? "0.85" : "0.6"
-      });
-      if (row.mutations.length) {
-        for (const mutation of row.mutations) {
-          const chip2 = document.createElement("span");
-          chip2.textContent = formatWeatherMutation(mutation);
-          Object.assign(chip2.style, {
-            display: "inline-flex",
-            alignItems: "center",
-            padding: "2px 8px",
-            borderRadius: "999px",
-            background: "#ffffff12",
-            whiteSpace: "nowrap"
-          });
-          mutationsList.appendChild(chip2);
-        }
-      } else {
-        const chip2 = document.createElement("span");
-        chip2.textContent = "No mutation effects.";
-        chip2.style.whiteSpace = "nowrap";
-        mutationsList.appendChild(chip2);
-      }
-      const ruleHint = document.createElement("div");
-      ruleHint.dataset.role = "rule-hint";
-      ruleHint.style.opacity = "0.75";
-      ruleHint.style.fontSize = "11px";
-      ruleHint.style.whiteSpace = "nowrap";
-      ruleHint.style.overflow = "hidden";
-      ruleHint.style.textOverflow = "ellipsis";
-      ruleHint.style.minHeight = "1.2em";
-      ruleHint.style.visibility = "hidden";
-      col.append(headerRow, mutationsLabel, mutationsList, ruleHint);
-      wrapCellDiv.append(iconWrap, col);
-      if (row.isCurrent) {
-        wrapCellDiv.style.background = "linear-gradient(180deg, #1b2735, #141d25)";
-        wrapCellDiv.style.borderRadius = "8px";
-      }
-      return wrapCellDiv;
-    };
-    const addRow = (row) => {
-      const itemCell = makeItemCell(row);
-      itemCell.dataset.id = row.id;
-      itemCell.dataset.context = "weather";
-      itemCell.dataset.current = row.isCurrent ? "1" : "0";
-      const lastSeenInfo = document.createElement("div");
-      const { label: label2, title } = formatLastSeen(row.lastSeen, row.isCurrent);
-      lastSeenInfo.textContent = label2;
-      lastSeenInfo.title = title;
-      lastSeenInfo.style.fontWeight = "600";
-      lastSeenInfo.style.opacity = label2 === "Never" ? "0.7" : "1";
-      lastSeenInfo.style.whiteSpace = "nowrap";
-      const lastSeenCell = wrapCell(lastSeenInfo);
-      weatherLastSeenRefs.set(row.id, lastSeenInfo);
-      const notifySwitch = createSwitch((on) => {
-        try {
-          WeatherAlerts.setNotify(row.id, !!on);
-        } catch {
-        }
-      });
-      setSwitchVisual(notifySwitch, !!row.notify);
-      notifySwitch.style.padding = "0";
-      const notifyCell = wrapCell(notifySwitch);
-      const gearBtn = ui.btn("", {
-        icon: "\u2699",
-        size: "sm",
-        tooltip: "Custom rule",
-        ariaLabel: `Custom rule for ${row.name}`
-      });
-      gearBtn.dataset.role = "rule";
-      gearBtn.classList.add("qws-rule-btn");
-      gearBtn.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        openRuleEditor(ui, {
-          id: row.id,
-          name: row.name,
-          type: row.type,
-          context: "weather"
-        }, gearBtn);
-      });
-      const ruleCell = wrapCell(gearBtn);
-      ruleCell.dataset.role = "rule-cell";
-      bodyGrid.append(itemCell, lastSeenCell, notifyCell, ruleCell);
-      applyRuleState(itemCell, ruleCell, NotifierRules.get(row.id));
-    };
-    const clearGrid = () => {
-      closeRuleEditor();
-      bodyGrid.innerHTML = "";
-      weatherLastSeenRefs.clear();
-    };
-    const renderEmpty = () => {
-      const empty = document.createElement("div");
-      empty.textContent = "No weather entries.";
-      empty.style.opacity = "0.75";
-      empty.style.gridColumn = "1 / -1";
-      empty.style.padding = "8px";
-      bodyGrid.appendChild(empty);
-    };
-    let state7 = null;
-    let stateSig2 = "";
-    const updateDynamicWeatherStats = () => {
-      if (!state7) return;
-      for (const row of state7.rows) {
-        const target = weatherLastSeenRefs.get(row.id);
-        if (target) {
-          const { label: label2, title } = formatLastSeen(row.lastSeen, row.isCurrent);
-          target.textContent = label2;
-          target.title = title;
-          target.style.opacity = label2 === "Never" ? "0.7" : "1";
-        }
-      }
-    };
-    const rebuildGrid = () => {
-      clearGrid();
-      if (!state7 || !state7.rows.length) {
-        renderEmpty();
-      } else {
-        state7.rows.forEach(addRow);
-        refreshRulesUI();
-      }
-      syncHeaderToScrollbar();
-      updateDynamicWeatherStats();
-    };
-    let unsubWeather = null;
-    let unsubRules = null;
-    (async () => {
-      try {
-        await NotifierService.start();
-      } catch {
-      }
-      try {
-        unsubWeather = await NotifierService.onWeatherChangeNow((next) => {
-          state7 = next;
-          stateSig2 = weatherStateSignature(next.rows);
-          rebuildGrid();
-        });
-      } catch {
-      }
-      try {
-        unsubRules = await NotifierService.onRulesChangeNow(() => refreshRulesUI());
-      } catch {
-      }
-    })();
-    const refreshWeatherState = async () => {
-      try {
-        const next = await NotifierService.getWeatherState();
-        const nextSig = weatherStateSignature(next.rows);
-        const changed4 = nextSig !== stateSig2;
         state7 = next;
-        stateSig2 = nextSig;
-        if (changed4) rebuildGrid();
-        else updateDynamicWeatherStats();
-      } catch {
-      }
-    };
-    const dynamicTimer = window.setInterval(updateDynamicWeatherStats, 3e4);
-    const weatherRefreshTimer = window.setInterval(() => {
-      void refreshWeatherState();
-    }, 6e4);
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          unsubWeather?.();
-        } catch {
-        }
-        try {
-          unsubRules?.();
-        } catch {
-        }
-        try {
-          resizeObserver.disconnect();
-        } catch {
-        }
-        try {
-          window.removeEventListener("resize", onResize);
-        } catch {
-        }
-        try {
-          window.clearInterval(dynamicTimer);
-        } catch {
-        }
-        try {
-          window.clearInterval(weatherRefreshTimer);
-        } catch {
-        }
-        try {
-          closeRuleEditor();
-        } catch {
-        }
-        try {
-          prev?.();
-        } catch {
-        }
-      };
+        const rendered = grid.renderedIds();
+        const ids = visibleRows(next).map((r) => r.id);
+        if (!prev || ids.length !== rendered.size || ids.some((id) => !rendered.has(id))) rebuild();
+        else updateRows(next);
+      });
+      NotifierRules.onChange(() => grid.refreshRules());
     })();
   }
-  function renderNotifierMenu(root) {
-    const ui = new Menu({ id: "alerts", compact: true, windowSelector: ".qws-win" });
-    ui.addTab("shops", "\u{1F6D2} Shops", (view) => renderShopTab(view, ui));
-    ui.addTab("weather", "\u{1F326} Weather", (view) => renderWeatherTab(view, ui));
-    ui.addTab("pets", "\u{1F43E} Pets", (view) => renderPetAlertsTab(view, ui));
-    ui.addTab("settings", "\u2699\uFE0F Settings", (view) => renderSettingsTab(view, ui));
-    ui.mount(root);
-  }
-  var rulePopover, detachRuleDocHandler, detachRuleKeyBlocker, detachRuleWheelBlocker, detachRuleDragHandler, closeRuleEditor, setSwitchCapState, createSwitch, setSwitchVisual, wrapCell, mkHeadCell, applyRuleState, openRuleEditor;
-  var init_menu8 = __esm({
-    "src/features/notifier/menu.ts"() {
+  var TYPE_FILTERS, RARITY_FILTERS, CAPPED_REASON;
+  var init_shopsTab = __esm({
+    "src/features/notifier/menu/shopsTab.ts"() {
       "use strict";
-      init_menu();
+      init_badges();
+      init_theme();
+      init_dom();
+      init_fields();
+      init_rarityBadge();
+      init_inventoryCaps();
+      init_itemIcon();
       init_notifier();
       init_rules();
       init_shopRows();
-      init_weatherAlerts();
-      init_weather();
-      init_inventoryCaps();
-      init_audio();
-      init_petAlerts();
-      init_pets();
-      init_iconCache();
-      init_rarityBadge();
-      init_floatingBell();
-      rulePopover = null;
-      detachRuleDocHandler = null;
-      detachRuleKeyBlocker = null;
-      detachRuleWheelBlocker = null;
-      detachRuleDragHandler = null;
-      closeRuleEditor = () => {
-        if (rulePopover) {
-          try {
-            rulePopover.remove();
-          } catch {
-          }
-          rulePopover = null;
-        }
-        if (detachRuleDocHandler) {
-          detachRuleDocHandler();
-          detachRuleDocHandler = null;
-        }
-        if (detachRuleKeyBlocker) {
-          detachRuleKeyBlocker();
-          detachRuleKeyBlocker = null;
-        }
-        if (detachRuleWheelBlocker) {
-          detachRuleWheelBlocker();
-          detachRuleWheelBlocker = null;
-        }
-        if (detachRuleDragHandler) {
-          detachRuleDragHandler();
-          detachRuleDragHandler = null;
-        }
-      };
-      setSwitchCapState = (wrap, capped) => {
-        if (capped) {
-          wrap.setAttribute("aria-disabled", "true");
-          wrap.style.opacity = "0.5";
-          wrap.style.pointerEvents = "none";
-          wrap.style.cursor = "not-allowed";
-          wrap.title = "Max owned \u2014 notifications disabled";
-        } else {
-          wrap.removeAttribute("aria-disabled");
-          wrap.style.opacity = "";
-          wrap.style.pointerEvents = "";
-          wrap.style.cursor = "";
-          wrap.removeAttribute("title");
-        }
-      };
-      createSwitch = (onToggle) => {
-        const wrap = document.createElement("label");
-        wrap.style.display = "inline-flex";
-        wrap.style.alignItems = "center";
-        wrap.style.justifyContent = "center";
-        wrap.style.width = "100%";
-        wrap.style.padding = "4px 6px";
-        wrap.style.userSelect = "none";
-        wrap.setAttribute("role", "switch");
-        wrap.setAttribute("aria-checked", "false");
-        const box = document.createElement("span");
-        box.style.position = "relative";
-        box.style.width = "42px";
-        box.style.height = "24px";
-        box.style.borderRadius = "999px";
-        box.style.background = "#1f2328";
-        box.style.border = "1px solid #4446";
-        box.style.display = "inline-block";
-        box.style.boxShadow = "inset 0 0 0 1px #0005";
-        const knob = document.createElement("span");
-        knob.style.position = "absolute";
-        knob.style.top = "50%";
-        knob.style.left = "3px";
-        knob.style.transform = "translateY(-50%)";
-        knob.style.width = "18px";
-        knob.style.height = "18px";
-        knob.style.borderRadius = "50%";
-        knob.style.background = "#e7eef7";
-        knob.style.boxShadow = "0 1px 2px rgba(0,0,0,.7)";
-        knob.style.transition = "left 160ms ease, transform 160ms ease";
-        const input = document.createElement("input");
-        input.type = "checkbox";
-        input.style.position = "absolute";
-        input.style.opacity = "0";
-        input.style.pointerEvents = "none";
-        input.tabIndex = -1;
-        const apply2 = (on) => {
-          input.checked = on;
-          wrap.setAttribute("aria-checked", on ? "true" : "false");
-          knob.style.left = on ? "21px" : "3px";
-          knob.style.transform = on ? "translateY(-50%) scale(1.02)" : "translateY(-50%) scale(1)";
-          if (on) {
-            box.style.background = "linear-gradient(180deg, #2b5cff, #1e40ff)";
-            box.style.borderColor = "#7aa2ff";
-            box.style.boxShadow = "0 0 0 2px #7aa2ff55, inset 0 0 0 1px #0005";
-          } else {
-            box.style.background = "#1f2328";
-            box.style.borderColor = "#4446";
-            box.style.boxShadow = "inset 0 0 0 1px #0005";
-          }
-        };
-        input.disabled = true;
-        wrap.addEventListener("mousedown", (e) => e.preventDefault());
-        wrap.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          apply2(!input.checked);
-          onToggle?.(input.checked);
-        });
-        box.appendChild(knob);
-        wrap.appendChild(input);
-        wrap.appendChild(box);
-        apply2(false);
-        return wrap;
-      };
-      setSwitchVisual = (wrap, checked) => {
-        const input = wrap.querySelector("input");
-        const box = wrap.querySelector("span");
-        const knob = box?.querySelector("span");
-        if (!input || !box || !knob) return;
-        input.checked = !!checked;
-        knob.style.left = checked ? "21px" : "3px";
-        knob.style.transform = checked ? "translateY(-50%) scale(1.02)" : "translateY(-50%) scale(1)";
-        if (checked) {
-          box.style.background = "linear-gradient(180deg, #2b5cff, #1e40ff)";
-          box.style.borderColor = "#7aa2ff";
-          box.style.boxShadow = "0 0 0 2px #7aa2ff55, inset 0 0 0 1px #0005";
-          wrap.setAttribute("aria-checked", "true");
-        } else {
-          box.style.background = "#1f2328";
-          box.style.borderColor = "#4446";
-          box.style.boxShadow = "inset 0 0 0 1px #0005";
-          wrap.setAttribute("aria-checked", "false");
-        }
-      };
-      wrapCell = (child) => {
-        const d = document.createElement("div");
-        d.style.display = "flex";
-        d.style.alignItems = "center";
-        d.style.justifyContent = "center";
-        d.style.borderBottom = "1px solid #ffffff12";
-        d.style.padding = "4px 6px";
-        d.style.boxSizing = "border-box";
-        d.appendChild(child);
-        return d;
-      };
-      mkHeadCell = (txt, align = "center") => {
-        const el = document.createElement("div");
-        el.textContent = txt;
-        el.style.fontWeight = "600";
-        el.style.opacity = "0.9";
-        el.style.padding = "4px 6px";
-        el.style.display = "flex";
-        el.style.alignItems = "center";
-        el.style.justifyContent = align === "left" ? "flex-start" : "center";
-        return el;
-      };
-      applyRuleState = (itemCell, ruleCell, rule) => {
-        const gearBtn = ruleCell?.querySelector("button[data-role='rule']") ?? null;
-        const hint = itemCell.querySelector('[data-role="rule-hint"]');
-        const hasRule = !!(rule && (rule.sound || rule.volume != null || rule.playbackMode || rule.stopMode || rule.loopIntervalMs != null));
-        const summary = hasRule ? formatRuleSummary(rule) : "";
-        if (gearBtn) {
-          gearBtn.dataset.active = hasRule ? "1" : "0";
-          gearBtn.title = hasRule && summary ? `Custom rule \u2014 ${summary}` : "Custom rule";
-        }
-        if (hint) {
-          if (hasRule && summary) {
-            hint.textContent = summary;
-            hint.style.visibility = "visible";
-          } else {
-            hint.textContent = "";
-            hint.style.visibility = "hidden";
-          }
-        }
-      };
-      openRuleEditor = (ui, row, anchor) => {
-        closeRuleEditor();
-        const pop = document.createElement("div");
-        pop.className = "qws-rule-popover";
-        Object.assign(pop.style, {
-          position: "fixed",
-          zIndex: "var(--qws-z-popover)",
-          minWidth: "260px",
-          maxWidth: "320px",
-          padding: "14px 16px",
-          borderRadius: "14px",
-          border: "1px solid #32404e",
-          background: "linear-gradient(180deg, #111923, #0b131c)",
-          boxShadow: "0 16px 40px rgba(0,0,0,0.45)"
-        });
-        const margin = 12;
-        const clampPosition = (value, min, max) => {
-          if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
-          if (max >= min) {
-            return Math.min(Math.max(value, min), max);
-          }
-          return Math.min(Math.max(value, max), min);
-        };
-        const applyPosition2 = (left2, top2) => {
-          const width2 = pop.offsetWidth;
-          const height2 = pop.offsetHeight;
-          const boundedLeft = clampPosition(left2, margin, window.innerWidth - width2 - margin);
-          const boundedTop = clampPosition(top2, margin, window.innerHeight - height2 - margin);
-          pop.style.left = `${Math.round(boundedLeft)}px`;
-          pop.style.top = `${Math.round(boundedTop)}px`;
-          return { left: boundedLeft, top: boundedTop };
-        };
-        const header = document.createElement("div");
-        header.style.display = "flex";
-        header.style.justifyContent = "space-between";
-        header.style.alignItems = "flex-start";
-        header.style.gap = "12px";
-        header.style.cursor = "move";
-        header.style.userSelect = "none";
-        header.style.touchAction = "none";
-        const titleWrap = document.createElement("div");
-        const title = document.createElement("div");
-        title.textContent = row.name;
-        title.style.fontWeight = "700";
-        title.style.fontSize = "14px";
-        title.style.lineHeight = "1.2";
-        const subtitle = document.createElement("div");
-        subtitle.textContent = row.type;
-        subtitle.style.opacity = "0.7";
-        subtitle.style.fontSize = "12px";
-        titleWrap.append(title, subtitle);
-        const closeBtn = document.createElement("button");
-        closeBtn.type = "button";
-        closeBtn.textContent = "\u2715";
-        Object.assign(closeBtn.style, {
-          background: "transparent",
-          border: "none",
-          color: "#c8d7e8",
-          fontSize: "16px",
-          lineHeight: "1",
-          cursor: "pointer"
-        });
-        closeBtn.addEventListener("click", (ev) => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          closeRuleEditor();
-        });
-        header.append(titleWrap, closeBtn);
-        let dragState = null;
-        const onDragMove = (ev) => {
-          if (!dragState) return;
-          if (ev.pointerId !== dragState.pointerId) return;
-          const dx = ev.clientX - dragState.startX;
-          const dy = ev.clientY - dragState.startY;
-          applyPosition2(dragState.baseLeft + dx, dragState.baseTop + dy);
-        };
-        const stopDrag = (ev) => {
-          if (!dragState) return;
-          if (ev && ev.pointerId !== dragState.pointerId) return;
-          document.removeEventListener("pointermove", onDragMove);
-          document.removeEventListener("pointerup", stopDrag);
-          document.removeEventListener("pointercancel", stopDrag);
-          try {
-            header.releasePointerCapture(dragState.pointerId);
-          } catch {
-          }
-          dragState = null;
-        };
-        const onPointerDown = (ev) => {
-          if (ev.button !== 0) return;
-          const target = ev.target;
-          if (target && closeBtn.contains(target)) return;
-          if (dragState) stopDrag();
-          const rect = pop.getBoundingClientRect();
-          dragState = {
-            pointerId: ev.pointerId,
-            startX: ev.clientX,
-            startY: ev.clientY,
-            baseLeft: rect.left,
-            baseTop: rect.top
+      init_alertGrid();
+      TYPE_FILTERS = [
+        ["all", "All"],
+        ["seed", "Seeds"],
+        ["egg", "Eggs"],
+        ["tool", "Tools"],
+        ["decor", "Decor"]
+      ];
+      RARITY_FILTERS = [
+        ["all", "All"],
+        ["common", "Common"],
+        ["uncommon", "Uncommon"],
+        ["rare", "Rare"],
+        ["legendary", "Legendary"],
+        ["mythical", "Mythical"],
+        ["divine", "Divine"],
+        ["celestial", "Celestial"]
+      ];
+      CAPPED_REASON = "Max owned, notifications disabled";
+    }
+  });
+
+  // src/features/notifier/menu/weatherTab.ts
+  function weatherSpriteCandidates(row2) {
+    const names = /* @__PURE__ */ new Set();
+    for (const value of [row2.name, row2.atomValue, row2.id]) {
+      const trimmed = value?.trim();
+      if (!trimmed) continue;
+      names.add(trimmed);
+      names.add(trimmed.replace(/\s+/g, ""));
+    }
+    const icons = [...names].map((value) => `${value.replace(/icon$/i, "")}Icon`);
+    return [.../* @__PURE__ */ new Set([...icons, ...names])].filter(Boolean);
+  }
+  function weatherIcon(row2) {
+    const size = 40;
+    const wrap = h("div");
+    Object.assign(wrap.style, {
+      width: `${size}px`,
+      height: `${size}px`,
+      flex: `0 0 ${size}px`,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: "8px",
+      background: color.mutedBg
+    });
+    const glyph = h("span", void 0, row2.name.trim().charAt(0) || "\u{1F326}");
+    glyph.style.fontSize = `${size - 8}px`;
+    glyph.setAttribute("aria-hidden", "true");
+    wrap.appendChild(glyph);
+    attachSpriteIcon(wrap, ["ui", "weather", "mutation"], weatherSpriteCandidates(row2), size, "alerts-weather");
+    return wrap;
+  }
+  function mutationList(row2) {
+    const list = h("div");
+    Object.assign(list.style, {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "6px",
+      alignItems: "flex-start",
+      fontSize: "12px",
+      lineHeight: "1.3",
+      opacity: row2.mutations.length ? "0.85" : "0.6"
+    });
+    if (!row2.mutations.length) {
+      const none = h("span", void 0, "No mutation effects.");
+      none.style.whiteSpace = "nowrap";
+      list.appendChild(none);
+      return list;
+    }
+    for (const mutation of row2.mutations) {
+      const chip2 = h("span", void 0, formatWeatherMutation(mutation));
+      Object.assign(chip2.style, {
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "2px 8px",
+        borderRadius: "999px",
+        background: color.hoverBg,
+        whiteSpace: "nowrap"
+      });
+      list.appendChild(chip2);
+    }
+    return list;
+  }
+  function itemCell2(row2, summary) {
+    const cell = h("div");
+    Object.assign(cell.style, { display: "flex", alignItems: "center", gap: "8px", padding: "6px" });
+    if (row2.isCurrent) {
+      cell.style.background = color.accentSoft;
+      cell.style.borderRadius = "8px";
+    }
+    const text2 = h("div");
+    Object.assign(text2.style, { display: "flex", flexDirection: "column", gap: "4px", lineHeight: "1.2", minWidth: "0", flex: "1 1 auto" });
+    const titleRow = h("div");
+    Object.assign(titleRow.style, { display: "flex", alignItems: "center", gap: "6px", minWidth: "0" });
+    const title = h("div", void 0, row2.name);
+    Object.assign(title.style, { fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 auto" });
+    titleRow.appendChild(title);
+    if (row2.isCurrent) titleRow.appendChild(pill("Current", "ok"));
+    const mutationsLabel = h("div", void 0, "Mutations");
+    Object.assign(mutationsLabel.style, { fontSize: "11px", opacity: "0.7", fontWeight: "600" });
+    text2.append(titleRow, mutationsLabel, mutationList(row2), summary);
+    cell.append(weatherIcon(row2), text2);
+    return cell;
+  }
+  function showLastSeen(el, row2) {
+    const { label: label2, title } = formatLastSeen(row2.lastSeen, row2.isCurrent);
+    el.textContent = label2;
+    el.title = title;
+    el.style.opacity = label2 === "Never" ? "0.7" : "1";
+  }
+  function renderWeatherTab(view) {
+    view.replaceChildren();
+    const wrap = h("div");
+    Object.assign(wrap.style, { display: "grid", gridTemplateRows: "1fr", height: "54vh", overflow: "hidden", minHeight: "0" });
+    view.appendChild(wrap);
+    const grid = new AlertGrid(["Weather", "Last seen", "Notify", "Custom rules"], "240px", "No weather entries.");
+    wrap.appendChild(grid.root);
+    const lastSeenLabels = /* @__PURE__ */ new Map();
+    let state7 = null;
+    let stateSig2 = "";
+    const refreshLastSeen = () => {
+      for (const row2 of state7?.rows ?? []) {
+        const el = lastSeenLabels.get(row2.id);
+        if (el) showLastSeen(el, row2);
+      }
+    };
+    const rebuild = () => {
+      lastSeenLabels.clear();
+      grid.setRows(
+        (state7?.rows ?? []).map((row2) => {
+          const summary = ruleSummaryLine();
+          const lastSeen = h("div");
+          Object.assign(lastSeen.style, { fontWeight: "600", whiteSpace: "nowrap" });
+          showLastSeen(lastSeen, row2);
+          lastSeenLabels.set(row2.id, lastSeen);
+          return {
+            id: row2.id,
+            name: row2.name,
+            type: row2.type,
+            context: "weather",
+            item: itemCell2(row2, summary),
+            summary,
+            detail: lastSeen,
+            alertOn: row2.notify,
+            onAlertChange: (on) => WeatherAlerts.setNotify(row2.id, on)
           };
-          try {
-            header.setPointerCapture(ev.pointerId);
-          } catch {
-          }
-          document.addEventListener("pointermove", onDragMove);
-          document.addEventListener("pointerup", stopDrag);
-          document.addEventListener("pointercancel", stopDrag);
-          ev.preventDefault();
-        };
-        header.addEventListener("pointerdown", onPointerDown);
-        detachRuleDragHandler = () => {
-          header.removeEventListener("pointerdown", onPointerDown);
-          stopDrag();
-        };
-        pop.appendChild(header);
-        const current = NotifierRules.get(row.id);
-        const defaults = audio.getPlaybackSettings(row.context);
-        const contextDefaults = row.context === "shops" || row.context === "weather" ? LoopDefaults.get(row.context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: defaults.loopIntervalMs };
-        const allowPurchase = row.context === "shops";
-        const defaultSoundName = (() => {
-          const label2 = (defaults.defaultSoundName || "").trim();
-          return label2 || "Default";
-        })();
-        const formatModeLabel = (mode) => mode === "loop" ? "Loop" : "One-shot";
-        const defaultIntervalMs = Math.max(
-          150,
-          Math.floor(contextDefaults.loopIntervalMs ?? defaults.loopIntervalMs ?? 150)
-        );
-        const soundField = document.createElement("div");
-        soundField.className = "qws-rule-field";
-        const soundLabel = document.createElement("label");
-        soundLabel.textContent = "Sound";
-        const soundSelect = document.createElement("select");
-        soundSelect.className = "qmm-input";
-        soundSelect.style.width = "100%";
-        const populateSoundOptions = () => {
-          const selected = current?.sound ?? "";
-          soundSelect.innerHTML = "";
-          const optDefault = document.createElement("option");
-          optDefault.value = "";
-          optDefault.textContent = defaultSoundName;
-          soundSelect.appendChild(optDefault);
-          const names = audio.listSounds();
-          for (const name of names) {
-            if (name === defaultSoundName && selected !== name) continue;
-            const opt = document.createElement("option");
-            opt.value = name;
-            opt.textContent = name;
-            soundSelect.appendChild(opt);
-          }
-          if (selected && !names.includes(selected)) {
-            const extra = document.createElement("option");
-            extra.value = selected;
-            extra.textContent = selected.length > 32 ? `${selected.slice(0, 29)}\u2026` : selected;
-            extra.dataset.extra = "1";
-            soundSelect.appendChild(extra);
-          }
-          soundSelect.value = selected;
-        };
-        populateSoundOptions();
-        soundField.append(soundLabel, soundSelect);
-        pop.appendChild(soundField);
-        const baseVolume = Math.max(0, Math.min(1, defaults.volume || 0));
-        const defaultVolumePct = Math.round(baseVolume * 100);
-        const volumeField = document.createElement("div");
-        volumeField.className = "qws-rule-field";
-        const volumeLabel = document.createElement("label");
-        volumeLabel.textContent = "Volume";
-        const volumeWrap = document.createElement("div");
-        volumeWrap.style.display = "flex";
-        volumeWrap.style.alignItems = "center";
-        volumeWrap.style.gap = "10px";
-        const volumeRange = document.createElement("input");
-        volumeRange.type = "range";
-        volumeRange.min = "0";
-        volumeRange.max = "100";
-        volumeRange.step = "1";
-        volumeRange.style.width = "100%";
-        const volumeValue = document.createElement("span");
-        volumeValue.style.minWidth = "38px";
-        volumeValue.style.textAlign = "right";
-        const applyVolumeDisplay = (value) => {
-          const clamped = Math.max(0, Math.min(100, Math.round(value)));
-          volumeRange.value = String(clamped);
-          volumeValue.textContent = `${clamped}%`;
-        };
-        const initialVolume = current?.volume != null ? current.volume : baseVolume;
-        applyVolumeDisplay(Math.round(Math.max(0, Math.min(1, initialVolume)) * 100));
-        volumeRange.addEventListener("input", () => {
-          const raw = Number(volumeRange.value);
-          const clamped = Number.isFinite(raw) ? Math.max(0, Math.min(100, Math.round(raw))) : defaultVolumePct;
-          applyVolumeDisplay(clamped);
-        });
-        const volumeHint = document.createElement("div");
-        volumeHint.textContent = `Default: ${defaultVolumePct}%`;
-        volumeHint.style.opacity = "0.7";
-        volumeHint.style.fontSize = "11px";
-        volumeHint.style.marginTop = "4px";
-        volumeWrap.append(volumeRange, volumeValue);
-        volumeField.append(volumeLabel, volumeWrap, volumeHint);
-        pop.appendChild(volumeField);
-        const modeField = document.createElement("div");
-        modeField.className = "qws-rule-field";
-        const modeLabel = document.createElement("label");
-        modeLabel.textContent = "Playback mode";
-        const modeSelect = document.createElement("select");
-        modeSelect.className = "qmm-input";
-        const modeOptions = allowPurchase ? defaults.mode === "loop" ? ["loop", "oneshot"] : ["oneshot", "loop"] : ["oneshot"];
-        modeOptions.forEach((value) => {
-          const opt = document.createElement("option");
-          opt.value = value;
-          opt.textContent = formatModeLabel(value);
-          modeSelect.appendChild(opt);
-        });
-        const initialMode = allowPurchase ? current?.playbackMode ?? defaults.mode : "oneshot";
-        modeSelect.value = initialMode === "loop" && !allowPurchase ? "oneshot" : initialMode;
-        if (!allowPurchase) modeSelect.disabled = true;
-        modeField.append(modeLabel, modeSelect);
-        pop.appendChild(modeField);
-        let stopSelect = null;
-        const stopField = document.createElement("div");
-        stopField.className = "qws-rule-field";
-        if (allowPurchase) {
-          const stopLabel = document.createElement("label");
-          stopLabel.textContent = "Stop condition";
-          stopSelect = document.createElement("select");
-          stopSelect.className = "qmm-input";
-          const stopOption = document.createElement("option");
-          stopOption.value = "purchase";
-          stopOption.textContent = "Until purchase";
-          stopSelect.appendChild(stopOption);
-          const initialStopMode = current?.stopMode ?? contextDefaults.stopMode;
-          stopSelect.value = initialStopMode === "purchase" ? "purchase" : "purchase";
-          stopField.append(stopLabel, stopSelect);
-          pop.appendChild(stopField);
-        }
-        const intervalField = document.createElement("div");
-        intervalField.className = "qws-rule-field";
-        const intervalLabel = document.createElement("label");
-        intervalLabel.textContent = "Loop interval (ms)";
-        const intervalInput = document.createElement("input");
-        intervalInput.type = "number";
-        intervalInput.className = "qmm-input";
-        intervalInput.min = "150";
-        intervalInput.step = "50";
-        intervalInput.placeholder = String(defaultIntervalMs);
-        intervalInput.value = current?.loopIntervalMs != null ? String(current.loopIntervalMs) : "";
-        intervalInput.inputMode = "numeric";
-        intervalField.append(intervalLabel, intervalInput);
-        if (allowPurchase) pop.appendChild(intervalField);
-        const enforceIntegerOnly = (input) => {
-          input.addEventListener("keydown", (ev) => {
-            ev.stopPropagation();
-            ev.stopImmediatePropagation();
-            if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
-            const key2 = ev.key;
-            if (/^[0-9]$/.test(key2)) return;
-            if (key2 === "Backspace" || key2 === "Delete" || key2 === "Tab" || key2 === "Enter" || key2 === "ArrowLeft" || key2 === "ArrowRight" || key2 === "ArrowUp" || key2 === "ArrowDown" || key2 === "Home" || key2 === "End") {
-              return;
-            }
-            ev.preventDefault();
-          });
-          input.addEventListener("input", () => {
-            const sanitized = input.value.replace(/\D+/g, "");
-            if (sanitized !== input.value) input.value = sanitized;
-          });
-        };
-        enforceIntegerOnly(intervalInput);
-        const resolveMode = () => {
-          const raw = modeSelect.value;
-          if (raw === "oneshot" || raw === "loop") return raw;
-          return allowPurchase ? defaults.mode : "oneshot";
-        };
-        const updateLoopVisibility = () => {
-          if (!allowPurchase) {
-            stopField.style.display = "none";
-            intervalField.style.display = "none";
-            return;
-          }
-          const mode = resolveMode();
-          const showLoop = mode === "loop";
-          stopField.style.display = showLoop ? "grid" : "none";
-          intervalField.style.display = showLoop ? "grid" : "none";
-        };
-        const forceLoopMode = () => {
-          if (!allowPurchase) return;
-          if (modeSelect.value === "loop") return;
-          modeSelect.value = "loop";
-          updateLoopVisibility();
-        };
-        modeSelect.addEventListener("change", () => {
-          updateLoopVisibility();
-        });
-        if (allowPurchase && stopSelect) {
-          stopSelect.addEventListener("change", () => {
-            forceLoopMode();
-          });
-        }
-        if (allowPurchase) intervalInput.addEventListener("input", forceLoopMode);
-        updateLoopVisibility();
-        const hint = document.createElement("div");
-        hint.textContent = "Use defaults by leaving values unchanged (matching the default volume keeps it inherited).";
-        hint.style.opacity = "0.7";
-        hint.style.fontSize = "12px";
-        pop.appendChild(hint);
-        const actions = document.createElement("div");
-        actions.className = "qws-rule-actions";
-        const clearBtn = ui.btn("Clear", { variant: "ghost", size: "sm" });
-        clearBtn.addEventListener("click", (ev) => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          NotifierRules.clear(row.id);
-          closeRuleEditor();
-        });
-        if (!current) ui.setButtonEnabled(clearBtn, false);
-        const saveBtn = ui.btn("Save", { variant: "primary", size: "sm" });
-        saveBtn.addEventListener("click", (ev) => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          const sound = soundSelect.value?.trim() || null;
-          const modeRaw = modeSelect.value || "";
-          const stopRaw = stopSelect?.value || "";
-          const intervalRaw = intervalInput.value?.trim();
-          const volRaw = Math.max(0, Math.min(100, parseInt(volumeRange.value || "", 10) || 0));
-          const volRatio = volRaw / 100;
-          let playbackMode = modeRaw === "oneshot" || modeRaw === "loop" ? modeRaw : null;
-          if (playbackMode === defaults.mode) playbackMode = null;
-          let stopMode = allowPurchase ? stopRaw === "purchase" ? "purchase" : null : null;
-          if (stopMode != null && stopMode === contextDefaults.stopMode) {
-            stopMode = null;
-          }
-          let loopIntervalMs = null;
-          if (allowPurchase && intervalRaw) {
-            const parsed = Number(intervalRaw);
-            if (Number.isFinite(parsed)) {
-              const normalized = Math.max(150, Math.min(1e4, Math.floor(parsed)));
-              if (normalized !== defaultIntervalMs) loopIntervalMs = normalized;
-            }
-          }
-          let volume = null;
-          if (Math.abs(volRatio - baseVolume) > 1e-3) {
-            volume = Math.max(0, Math.min(1, volRatio));
-          }
-          if (allowPurchase && !playbackMode && defaults.mode !== "loop" && (stopMode != null || loopIntervalMs != null)) {
-            playbackMode = "loop";
-          }
-          NotifierRules.set(row.id, {
-            sound,
-            volume,
-            playbackMode,
-            stopMode,
-            loopIntervalMs
-          });
-          closeRuleEditor();
-        });
-        actions.append(clearBtn, saveBtn);
-        pop.appendChild(actions);
-        document.body.appendChild(pop);
-        const anchorRect = anchor.getBoundingClientRect();
-        const width = pop.offsetWidth;
-        const height = pop.offsetHeight;
-        let left = anchorRect.right - width;
-        let top = anchorRect.bottom + 8;
-        if (left < margin) left = margin;
-        if (left + width > window.innerWidth - margin) left = window.innerWidth - width - margin;
-        if (top + height > window.innerHeight - margin) top = anchorRect.top - height - 8;
-        if (top < margin) top = margin;
-        applyPosition2(left, top);
-        const onDocPointer = (ev) => {
-          const target = ev.target;
-          if (!target) return;
-          if (pop.contains(target)) return;
-          if (anchor.contains(target)) return;
-          closeRuleEditor();
-        };
-        setTimeout(() => document.addEventListener("pointerdown", onDocPointer, true));
-        detachRuleDocHandler = () => document.removeEventListener("pointerdown", onDocPointer, true);
-        const keyBlocker = (ev) => {
-          if (!rulePopover) return;
-          if (rulePopover.contains(ev.target)) return;
-          ev.stopImmediatePropagation();
-        };
-        document.addEventListener("keydown", keyBlocker, true);
-        detachRuleKeyBlocker = () => document.removeEventListener("keydown", keyBlocker, true);
-        const wheelBlocker = (ev) => {
-          const t = ev.target;
-          if (rulePopover && t && rulePopover.contains(t)) {
-            ev.stopImmediatePropagation();
-          }
-        };
-        document.addEventListener("wheel", wheelBlocker, { capture: true, passive: true });
-        detachRuleWheelBlocker = () => {
-          document.removeEventListener("wheel", wheelBlocker, { capture: true });
-        };
-        rulePopover = pop;
-      };
+        })
+      );
+    };
+    const show = (next) => {
+      const sig = weatherStateSignature(next.rows);
+      const changed4 = sig !== stateSig2;
+      state7 = next;
+      stateSig2 = sig;
+      if (changed4) rebuild();
+      else refreshLastSeen();
+    };
+    void (async () => {
+      await NotifierService.onWeatherChangeNow((next) => {
+        state7 = next;
+        stateSig2 = weatherStateSignature(next.rows);
+        rebuild();
+      });
+      NotifierRules.onChange(() => grid.refreshRules());
+    })();
+    window.setInterval(refreshLastSeen, LAST_SEEN_REFRESH_MS);
+    window.setInterval(() => {
+      NotifierService.getWeatherState().then(show).catch(() => {
+      });
+    }, STATE_REFRESH_MS);
+  }
+  var LAST_SEEN_REFRESH_MS, STATE_REFRESH_MS;
+  var init_weatherTab = __esm({
+    "src/features/notifier/menu/weatherTab.ts"() {
+      "use strict";
+      init_badges();
+      init_dom();
+      init_theme();
+      init_iconCache();
+      init_notifier();
+      init_rules();
+      init_weather();
+      init_weatherAlerts();
+      init_alertGrid();
+      LAST_SEEN_REFRESH_MS = 3e4;
+      STATE_REFRESH_MS = 6e4;
+    }
+  });
+
+  // src/features/notifier/menu/menu.ts
+  function renderNotifierMenu(root) {
+    const ui = new Menu({ id: "alerts", compact: true, windowSelector: ".qws-win" });
+    ui.addTab("shops", "\u{1F6D2} Shops", renderShopsTab);
+    ui.addTab("weather", "\u{1F326} Weather", renderWeatherTab);
+    ui.addTab("pets", "\u{1F43E} Pets", renderPetsTab);
+    ui.addTab("settings", "\u2699\uFE0F Settings", renderSettingsTab);
+    ui.mount(root);
+  }
+  var init_menu8 = __esm({
+    "src/features/notifier/menu/menu.ts"() {
+      "use strict";
+      init_menu();
+      init_petsTab();
+      init_settingsTab();
+      init_shopsTab();
+      init_weatherTab();
     }
   });
 
@@ -49645,10 +48699,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     return chip2;
   }
   function createTagRow(tags) {
-    const row = document.createElement("div");
-    row.className = "mgt-tags";
-    tags.forEach((tag) => row.appendChild(createTagChip(tag)));
-    return row;
+    const row2 = document.createElement("div");
+    row2.className = "mgt-tags";
+    tags.forEach((tag) => row2.appendChild(createTagChip(tag)));
+    return row2;
   }
   var init_tag = __esm({
     "src/features/tools/tag.ts"() {
@@ -50073,8 +49127,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function createActions(actions) {
     if (!actions?.length) return null;
-    const row = document.createElement("div");
-    row.className = "mgt-actions";
+    const row2 = document.createElement("div");
+    row2.className = "mgt-actions";
     actions.forEach((action2, index) => {
       const button3 = document.createElement("button");
       button3.type = "button";
@@ -50086,9 +49140,9 @@ Restore figures are averages; unlucky streaks do worse.`;
           console.warn("[Tools] Failed to open link:", action2.url);
         }
       };
-      row.appendChild(button3);
+      row2.appendChild(button3);
     });
-    return row;
+    return row2;
   }
   function renderDetailView(tool, onBack) {
     const root = document.createElement("div");
@@ -50124,9 +49178,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/tools/styles.ts
   function ensureToolsStyles() {
-    if (document.getElementById(STYLE_ID4)) return;
+    if (document.getElementById(STYLE_ID5)) return;
     const style = document.createElement("style");
-    style.id = STYLE_ID4;
+    style.id = STYLE_ID5;
     style.textContent = `
 /* \u2500\u2500 reset for the interactive elements \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 .mgt-chip, .mgt-back, .mgt-action, .mgt-nav, .mgt-dot {
@@ -50368,11 +49422,11 @@ Restore figures are averages; unlucky streaks do worse.`;
 `;
     document.head.appendChild(style);
   }
-  var STYLE_ID4, ACCENT2, ACCENT_2, TEXT2, TEXT_DIM2, BORDER2, SURFACE;
-  var init_styles2 = __esm({
+  var STYLE_ID5, ACCENT2, ACCENT_2, TEXT2, TEXT_DIM2, BORDER2, SURFACE;
+  var init_styles3 = __esm({
     "src/features/tools/styles.ts"() {
       "use strict";
-      STYLE_ID4 = "gemini-tools-styles";
+      STYLE_ID5 = "gemini-tools-styles";
       ACCENT2 = "#5eead4";
       ACCENT_2 = "#2dd4bf";
       TEXT2 = "#e7eef7";
@@ -50534,7 +49588,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_fetchTools();
       init_listView();
       init_detailView();
-      init_styles2();
+      init_styles3();
       init_transition();
       WRAPPER_WIDTH_PX = 720;
     }
@@ -50542,9 +49596,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/editor/menu.ts
   function ensureStyles2() {
-    if (document.getElementById(STYLE_ID5)) return;
+    if (document.getElementById(STYLE_ID6)) return;
     const st = document.createElement("style");
-    st.id = STYLE_ID5;
+    st.id = STYLE_ID6;
     st.textContent = `
 .qws-ed-scroll::-webkit-scrollbar { width: 6px; }
 .qws-ed-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -50829,8 +49883,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     wrap.appendChild(
       card3([sectionLabel3("Current garden"), nameInput, actRow])
     );
-    const dropZone = document.createElement("div");
-    css2(dropZone, {
+    const dropZone2 = document.createElement("div");
+    css2(dropZone2, {
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
@@ -50851,14 +49905,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     dropTitle.textContent = "Drop a garden JSON file here";
     const dropHint = document.createElement("div");
     dropHint.textContent = "\u2026or click to browse";
-    dropZone.append(dropTitle, dropHint);
+    dropZone2.append(dropTitle, dropHint);
     const fileInput = document.createElement("input");
     fileInput.type = "file";
     fileInput.accept = ".json,application/json,text/plain";
     fileInput.multiple = true;
     css2(fileInput, { display: "none" });
     const setDropActive = (active2) => {
-      css2(dropZone, {
+      css2(dropZone2, {
         borderColor: active2 ? TEAL_BRD_HI : BORDER_HI,
         background: active2 ? TEAL_DIM2 : "rgba(255,255,255,0.03)"
       });
@@ -50891,25 +49945,25 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       setStatus(importedCount === 1 ? `Imported "${lastName}".` : `Imported ${importedCount} gardens.`);
     };
-    dropZone.onclick = () => fileInput.click();
+    dropZone2.onclick = () => fileInput.click();
     fileInput.onchange = () => {
       void importFiles(fileInput.files);
       fileInput.value = "";
     };
-    dropZone.addEventListener("dragover", (ev) => {
+    dropZone2.addEventListener("dragover", (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
       setDropActive(true);
     });
-    dropZone.addEventListener("dragleave", () => setDropActive(false));
-    dropZone.addEventListener("drop", (ev) => {
+    dropZone2.addEventListener("dragleave", () => setDropActive(false));
+    dropZone2.addEventListener("drop", (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
       setDropActive(false);
       void importFiles(ev.dataTransfer?.files);
     });
     wrap.appendChild(
-      card3([sectionLabel3("Import"), dropZone, fileInput])
+      card3([sectionLabel3("Import"), dropZone2, fileInput])
     );
     const listWrap = document.createElement("div");
     css2(listWrap, { display: "flex", flexDirection: "column", gap: "6px" });
@@ -50929,8 +49983,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       const editorOn = EditorService.isEnabled();
       for (const g of items) {
-        const row = document.createElement("div");
-        css2(row, {
+        const row2 = document.createElement("div");
+        css2(row2, {
           display: "flex",
           alignItems: "center",
           gap: "8px",
@@ -50940,8 +49994,8 @@ Restore figures are averages; unlucky streaks do worse.`;
           border: `1px solid ${BORDER3}`,
           transition: "border-color 120ms ease"
         });
-        row.onmouseenter = () => css2(row, { borderColor: BORDER_HI });
-        row.onmouseleave = () => css2(row, { borderColor: BORDER3 });
+        row2.onmouseenter = () => css2(row2, { borderColor: BORDER_HI });
+        row2.onmouseleave = () => css2(row2, { borderColor: BORDER3 });
         const nameEl = document.createElement("div");
         css2(nameEl, {
           flex: "1",
@@ -50989,8 +50043,8 @@ Restore figures are averages; unlucky streaks do worse.`;
             renderSavedList();
           }
         });
-        row.append(nameEl, loadBtn, expBtn, delBtn);
-        listWrap.appendChild(row);
+        row2.append(nameEl, loadBtn, expBtn, delBtn);
+        listWrap.appendChild(row2);
       }
     };
     renderSavedList();
@@ -51013,14 +50067,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
   }
-  var STYLE_ID5, TEAL2, TEAL_DIM2, TEAL_MID, TEAL_BORDER2, TEAL_BRD_HI, BORDER3, BORDER_HI, CARD_BG2, CARD_BG_HI, TEXT3, TEXT_DIM3, DANGER2, DANGER_DIM, DANGER_BRD, DANGER_HI, DANGER_BRD_HI, css2;
+  var STYLE_ID6, TEAL2, TEAL_DIM2, TEAL_MID, TEAL_BORDER2, TEAL_BRD_HI, BORDER3, BORDER_HI, CARD_BG2, CARD_BG_HI, TEXT3, TEXT_DIM3, DANGER2, DANGER_DIM, DANGER_BRD, DANGER_HI, DANGER_BRD_HI, css2;
   var init_menu10 = __esm({
     "src/features/editor/menu.ts"() {
       "use strict";
       init_toast();
       init_editor();
       init_download();
-      STYLE_ID5 = "qws-editor-menu-css";
+      STYLE_ID6 = "qws-editor-menu-css";
       TEAL2 = "#5eead4";
       TEAL_DIM2 = "rgba(94,234,212,0.12)";
       TEAL_MID = "rgba(94,234,212,0.22)";
@@ -51073,8 +50127,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { root: wrap, detach };
   }
   function createKeybindRow(ui, action2) {
-    const row = document.createElement("div");
-    css(row, {
+    const row2 = document.createElement("div");
+    css(row2, {
       display: "flex",
       alignItems: "center",
       gap: "10px",
@@ -51085,7 +50139,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       flexShrink: "0"
     });
     if (action2.icon) {
-      row.appendChild(iconBox(action2.icon, ICON_BOX_PX, "keybinds"));
+      row2.appendChild(iconBox(action2.icon, ICON_BOX_PX, "keybinds"));
     }
     const labelCol = document.createElement("div");
     css(labelCol, { display: "flex", flexDirection: "column", gap: "2px", flex: "1 1 auto", minWidth: "0" });
@@ -51149,14 +50203,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       setEnabled(resetBtn, hotkeyToString(current) !== defaultString);
     }
     updateButtons2(getKeybind(action2.id));
-    const stop2 = onKeybindChange(action2.id, (hk) => {
+    const stop = onKeybindChange(action2.id, (hk) => {
       hotkeyButton2.refreshHotkey(hk);
       updateButtons2(hk);
     });
-    ui.on("unmounted", stop2);
+    ui.on("unmounted", stop);
     if (detachHold) ui.on("unmounted", detachHold);
-    row.append(labelCol, controls);
-    return row;
+    row2.append(labelCol, controls);
+    return row2;
   }
   async function renderKeybindsMenu(container) {
     ensurePanelStyles();
@@ -51938,9 +50992,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/room/menu.ts
   function ensureStyles3() {
-    if (document.getElementById(STYLE_ID6)) return;
+    if (document.getElementById(STYLE_ID7)) return;
     const st = document.createElement("style");
-    st.id = STYLE_ID6;
+    st.id = STYLE_ID7;
     st.textContent = `
 .qws-rm-scroll::-webkit-scrollbar { width: 6px; }
 .qws-rm-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -52488,7 +51542,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     await refresh(true);
   }
-  var STYLE_ID6, TEAL3, TEAL_DIM3, TEAL_MID2, TEAL_BORDER3, TEAL_BORDER_HI, BORDER4, BORDER_HI2, CARD_BG3, CARD_BG_HI2, TEXT4, TEXT_DIM4, GREEN, PLAYER_POSITION_AVAILABLE, PLAYER_POSITION_UNAVAILABLE_HINT, css3, ICO, ICONS;
+  var STYLE_ID7, TEAL3, TEAL_DIM3, TEAL_MID2, TEAL_BORDER3, TEAL_BORDER_HI, BORDER4, BORDER_HI2, CARD_BG3, CARD_BG_HI2, TEXT4, TEXT_DIM4, GREEN, PLAYER_POSITION_AVAILABLE, PLAYER_POSITION_UNAVAILABLE_HINT, css3, ICO, ICONS;
   var init_menu12 = __esm({
     "src/features/room/menu.ts"() {
       "use strict";
@@ -52497,7 +51551,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_format();
       init_fakeModal();
       init_pageContext();
-      STYLE_ID6 = "qws-room-menu-css";
+      STYLE_ID7 = "qws-room-menu-css";
       TEAL3 = "#5eead4";
       TEAL_DIM3 = "rgba(94,234,212,0.12)";
       TEAL_MID2 = "rgba(94,234,212,0.22)";
@@ -52599,9 +51653,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
     }
     if (sourceOf(texture) === source) return true;
-    for (const field of ["_source", "baseTexture", "_baseTexture"]) {
+    for (const field2 of ["_source", "baseTexture", "_baseTexture"]) {
       try {
-        texture[field] = source;
+        texture[field2] = source;
         if (sourceOf(texture) === source) return true;
       } catch {
       }
@@ -53314,7 +52368,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const targets = await loadTargets();
       snapshot.objects = groupTargets(targets);
       const rows = await listSkins();
-      snapshot.entries = new Map(rows.map((row) => [row.frameKey, row]));
+      snapshot.entries = new Map(rows.map((row2) => [row2.frameKey, row2]));
       snapshot.ready = true;
       notifyChanged();
       startTimers();
@@ -53457,8 +52511,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function buildSlot(target, index, deps) {
     const { entry, result, onError, onChanged } = deps;
-    const row = document.createElement("div");
-    css(row, {
+    const row2 = document.createElement("div");
+    css(row2, {
       display: "flex",
       flexDirection: "column",
       gap: "8px",
@@ -53535,8 +52589,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     }
     body.append(before, arrow, after, dims, spacer2, actions);
-    row.append(head, body);
-    return row;
+    row2.append(head, body);
+    return row2;
   }
   function buildDetail(options) {
     const { object, entries: entries2, results, onError, onChanged } = options;
@@ -53713,10 +52767,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       all.textContent = "All";
       categorySelect.appendChild(all);
       for (const category of categories) {
-        const option = document.createElement("option");
-        option.value = category;
-        option.textContent = category;
-        categorySelect.appendChild(option);
+        const option2 = document.createElement("option");
+        option2.value = category;
+        option2.textContent = category;
+        categorySelect.appendChild(option2);
       }
       categorySelect.value = categories.includes(previous) ? previous : ALL_CATEGORIES;
       menuState.category = categorySelect.value;
@@ -54359,9 +53413,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (after <= before) continue;
       const inventory = next[kind]?.inventory;
       if (!Array.isArray(inventory)) continue;
-      const [prefix, field] = SHOP_ID[kind];
+      const [prefix, field2] = SHOP_ID[kind];
       for (const item of inventory) {
-        const key2 = item?.[field];
+        const key2 = item?.[field2];
         const stock = Number(item?.initialStock);
         if (typeof key2 !== "string" || !key2 || !(stock > 0)) continue;
         const id = `${prefix}:${key2}`;
@@ -54896,8 +53950,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function weatherDisplayName(weatherId, catalog) {
     const entry = catalog && typeof catalog === "object" ? catalog[weatherId] : void 0;
-    for (const field of ["name", "displayName"]) {
-      const value = entry?.[field];
+    for (const field2 of ["name", "displayName"]) {
+      const value = entry?.[field2];
       if (typeof value === "string" && value.trim()) return value.trim();
     }
     return spaceWords(weatherId);
@@ -56624,13 +55678,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function readHarvestable() {
     const rows = await readHarvestRows();
-    const ripe = rows.filter((row) => row.ready);
-    const allowed = ripe.filter((row) => {
+    const ripe = rows.filter((row2) => row2.ready);
+    const allowed = ripe.filter((row2) => {
       try {
         return lockerService.allowsHarvest({
-          seedKey: row.species,
-          sizePercent: row.sizePct,
-          mutations: mutationsOf(row)
+          seedKey: row2.species,
+          sizePercent: row2.sizePct,
+          mutations: mutationsOf(row2)
         });
       } catch {
         return false;
@@ -56661,7 +55715,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     await sleep6(SETTLE_MS);
     let fresh = null;
     try {
-      fresh = (await readHarvestRows()).filter((row) => row.ready);
+      fresh = (await readHarvestRows()).filter((row2) => row2.ready);
     } catch {
       fresh = null;
     }
@@ -56674,7 +55728,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     const targeted = new Set(attempted.map(rowKey));
-    const stillRipe = fresh.filter((row) => targeted.has(rowKey(row))).length;
+    const stillRipe = fresh.filter((row2) => targeted.has(rowKey(row2))).length;
     const picked = attempted.length - stillRipe;
     if (picked > 0) StatsService.incrementGardenStat("totalHarvested", picked);
     if (stillRipe === 0) {
@@ -56698,12 +55752,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     const walker = await createWalker((message) => reporter2.say("system", message));
     const attempted = [];
     const pace = pacer();
-    for (const row of rows) {
+    for (const row2 of rows) {
       if (reporter2.stopped()) break;
-      await walker.toGardenTile(row.tileIndex);
+      await walker.toGardenTile(row2.tileIndex);
       await pace.wait();
-      attempted.push(row);
-      await PlayerService.harvestCrop(row.tileIndex, row.slotId);
+      attempted.push(row2);
+      await PlayerService.harvestCrop(row2.tileIndex, row2.slotId);
       pace.mark();
       const done = attempted.length;
       reporter2.progress(done, rows.length);
@@ -56838,7 +55892,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         source = { kind: "inventory", itemId: String(fromInventory.id), species: String(fromInventory.species) };
       } else {
         const rows = await gardenRows();
-        const fromGarden = rows.find((row) => allowed.has(row.species) && !claimed.has(`garden:${rowKey(row)}`));
+        const fromGarden = rows.find((row2) => allowed.has(row2.species) && !claimed.has(`garden:${rowKey(row2)}`));
         if (fromGarden && allowGarden) {
           claimed.add(`garden:${rowKey(fromGarden)}`);
           source = { kind: "garden", row: fromGarden, species: fromGarden.species };
@@ -57242,11 +56296,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       return null;
     }
   }
-  async function reportHatch(attempted, stop2, reporter2) {
+  async function reportHatch(attempted, stop, reporter2) {
     if (attempted.length === 0) {
       reporter2.say(
         "report",
-        stop2 === "full" ? "Your bag was already full, so I opened none." : "Stopped before I opened any."
+        stop === "full" ? "Your bag was already full, so I opened none." : "Stopped before I opened any."
       );
       return;
     }
@@ -57260,7 +56314,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       reporter2.say("report", "None opened. They are all still there.");
       return;
     }
-    const tail = stop2 === "full" ? " Your bag is full now." : stop2 === "cancelled" ? " Stopped there." : "";
+    const tail = stop === "full" ? " Your bag is full now." : stop === "cancelled" ? " Stopped there." : "";
     if (hatched === attempted.length) {
       reporter2.say("report", `${hatched} hatched.${tail}`);
       return;
@@ -57299,19 +56353,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     const walker = await createWalker((message) => reporter2.say("system", message));
     const attempted = [];
     let count = await readInventoryCount();
-    let stop2 = "done";
+    let stop = "done";
     const known = new Set((await readPetRows()).map((pet) => pet.petId));
     const pace = pacer();
     for (const slot of slots) {
       if (reporter2.stopped()) {
-        stop2 = "cancelled";
+        stop = "cancelled";
         break;
       }
       if (attempted.length % RECOUNT_EVERY === 0 || count >= INVENTORY_CAPACITY - NEAR_CAPACITY) {
         count = await readInventoryCount();
       }
       if (count >= INVENTORY_CAPACITY) {
-        stop2 = "full";
+        stop = "full";
         break;
       }
       await walker.toGardenTile(slot);
@@ -57328,8 +56382,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     walker.release();
     await team.restore();
-    await reportHatch(attempted, stop2, reporter2);
-    return stop2;
+    await reportHatch(attempted, stop, reporter2);
+    return stop;
   }
   async function goToSellShop(walker, reporter2) {
     if (!walker.walking) return;
@@ -57469,10 +56523,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       };
     };
   }
-  function afterHatch(stop2, scope, rules3, sellable) {
+  function afterHatch(stop, scope, rules3, sellable) {
     const waiting = scope.readySlots.length;
     const eggs = waiting > 0 ? ` ${waiting} egg${waiting === 1 ? "" : "s"} still waiting.` : "";
-    if (stop2 === "full") {
+    if (stop === "full") {
       if (sellable.length > 0) return `Your bag is full.${eggs}`;
       return hasAnyRule(rules3) ? `Your bag is full, nothing in it is up for sale.${eggs}` : `Your bag is full.${eggs} Nothing set to keep, so I am not selling.`;
     }
@@ -57703,12 +56757,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return stopped;
   }
-  async function afterHatchBatch(rules3, stop2) {
-    if (stop2 === "cancelled") return;
+  async function afterHatchBatch(rules3, stop) {
+    if (stop === "cancelled") return;
     const scope = await readHatchScope().catch(() => null);
     if (!scope) return;
     const sellable = toSell(scope.pets, rules3);
-    const note = afterHatch(stop2, scope, rules3, sellable);
+    const note = afterHatch(stop, scope, rules3, sellable);
     if (note) post("companion", "system", note);
     if (sellable.length === 0) return;
     await proposeSellPlan(sellProvider(rules3), rules3);
@@ -57931,11 +56985,11 @@ Restore figures are averages; unlucky streaks do worse.`;
           } else if (captured.kind === "plant") {
             await runBatch((r) => executePlantBatch(captured.plan, r));
           } else if (captured.kind === "hatch") {
-            let stop2 = "done";
+            let stop = "done";
             await runBatch(async (r) => {
-              stop2 = await executeHatchBatch(captured.slots, r);
+              stop = await executeHatchBatch(captured.slots, r);
             });
-            await afterHatchBatch(captured.rules, stop2);
+            await afterHatchBatch(captured.rules, stop);
           } else if (captured.kind === "sell") {
             const stopped = await runBatch((r) => executeSellBatch(captured.plan, r));
             if (!stopped) await afterSellBatch(captured.rules);
@@ -58499,15 +57553,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (isCentered(message)) return systemLine(message.text, message.icons, message.positioned);
     const outgoing = message.from === "you";
     const alerting = message.kind === "alert";
-    const row = document.createElement("div");
-    css(row, {
+    const row2 = document.createElement("div");
+    css(row2, {
       display: "flex",
       gap: "8px",
       alignItems: "flex-end",
       justifyContent: outgoing ? "flex-end" : "flex-start",
       ...flags.isFirstInGroup ? {} : { marginTop: "-4px" }
     });
-    if (!outgoing) row.append(flags.isLastInGroup ? avatar2(identity) : spacer());
+    if (!outgoing) row2.append(flags.isLastInGroup ? avatar2(identity) : spacer());
     const column = document.createElement("div");
     css(column, {
       maxWidth: "78%",
@@ -58536,8 +57590,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       stamp.textContent = formatMessageTime(message.atMs);
       column.append(stamp);
     }
-    row.append(column);
-    return row;
+    row2.append(column);
+    return row2;
   }
   function chatHeader(name) {
     const root = document.createElement("div");
@@ -58672,13 +57726,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function fieldRow(label2, control) {
-    const row = document.createElement("div");
-    css(row, { display: "flex", alignItems: "center", gap: "10px", justifyContent: "space-between" });
+    const row2 = document.createElement("div");
+    css(row2, { display: "flex", alignItems: "center", gap: "10px", justifyContent: "space-between" });
     const text2 = document.createElement("div");
     css(text2, { fontSize: "11.5px", color: TEXT });
     text2.textContent = label2;
-    row.append(text2, control);
-    return row;
+    row2.append(text2, control);
+    return row2;
   }
   function toggleIn(current, value) {
     const next = new Set(current ?? []);
@@ -58687,10 +57741,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     return next.size === 0 ? null : [...next];
   }
   function selectionRow(options) {
-    const row = tileRow();
-    row.append(allTile(options.allLabel, options.selected === null, options.onClear));
+    const row2 = tileRow();
+    row2.append(allTile(options.allLabel, options.selected === null, options.onClear));
     for (const value of options.values) {
-      row.append(
+      row2.append(
         spriteTile({
           icon: options.iconFor(value),
           title: value,
@@ -58700,7 +57754,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         })
       );
     }
-    return row;
+    return row2;
   }
   function nameList(values, fallback) {
     if (values.length === 0) return fallback;
@@ -58850,10 +57904,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       teams = [];
     }
     for (const team of teams) {
-      const option = document.createElement("option");
-      option.value = team.id;
-      option.textContent = team.name;
-      el.append(option);
+      const option2 = document.createElement("option");
+      option2.value = team.id;
+      option2.textContent = team.name;
+      el.append(option2);
     }
     el.value = current && teams.some((team) => team.id === current) ? current : NO_TEAM;
     el.addEventListener("change", () => onPick(el.value === NO_TEAM ? null : el.value));
@@ -59086,7 +58140,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       speciesCard.body.append(
         selectionRow({
           values: speciesPresent(available),
-          counts: tally(available, (row) => [row.species]),
+          counts: tally(available, (row2) => [row2.species]),
           selected: filters.species,
           iconFor: (name) => cachedIcon(`species:${name}`, () => speciesIcon(name, TILE_ICON_PX)),
           onPick: (name) => {
@@ -59161,9 +58215,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       const control = document.createElement("div");
       css(control, { display: "flex", alignItems: "center", gap: "10px", flex: "1", minWidth: "0" });
       control.append(sizeSlider, sizeValue);
-      const row = fieldRow("Minimum size", control);
-      css(row, { gap: "14px" });
-      sizeCard.body.append(row);
+      const row2 = fieldRow("Minimum size", control);
+      css(row2, { gap: "14px" });
+      sizeCard.body.append(row2);
     }
     const preservedRow = document.createElement("div");
     css(preservedRow, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
@@ -59173,7 +58227,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const preservedControl = document.createElement("div");
     preservedRow.append(preservedControl);
     function renderPreserved() {
-      const ripe = scope.rows.filter((row) => row.ready && row.preserved).length;
+      const ripe = scope.rows.filter((row2) => row2.ready && row2.preserved).length;
       preservedLabel.textContent = ripe === 0 ? "Preserved crops" : `Preserved crops (${ripe} ripe)`;
       preservedControl.replaceChildren(
         segmented2(
@@ -59317,7 +58371,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     css(askButton, { marginLeft: "auto" });
     modal.footer.append(askButton);
-    function row(candidate) {
+    function row2(candidate) {
       const line = document.createElement("div");
       css(line, {
         display: "flex",
@@ -59345,7 +58399,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     function render() {
       if (!modal.isOpen()) return;
       list.innerHTML = "";
-      for (const candidate of picks) list.append(row(candidate));
+      for (const candidate of picks) list.append(row2(candidate));
       empty.style.display = picks.length === 0 ? "" : "none";
       askButton.disabled = picks.length === 0;
     }
@@ -59424,14 +58478,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       return cell;
     }
-    for (let row = 0; row < GARDEN_ROWS; row++) {
+    for (let row2 = 0; row2 < GARDEN_ROWS; row2++) {
       for (let col = 0; col < GARDEN_COLS; col++) {
         if (col === GARDEN_COLS / 2) {
           const spacer2 = document.createElement("div");
           css(spacer2, { pointerEvents: "none" });
           root.append(spacer2);
         }
-        const tileIndex = row * GARDEN_COLS + col;
+        const tileIndex = row2 * GARDEN_COLS + col;
         const el = buildCell(tileIndex);
         cells.set(tileIndex, { el, shown: null });
         root.append(el);
@@ -59524,10 +58578,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     function paletteGroup(title) {
       const root = document.createElement("div");
       css(root, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
-      const row = document.createElement("div");
-      css(row, { display: "flex", flexWrap: "wrap", gap: "5px" });
-      root.append(sectionLabel2(title), row);
-      return { root, row };
+      const row2 = document.createElement("div");
+      css(row2, { display: "flex", flexWrap: "wrap", gap: "5px" });
+      root.append(sectionLabel2(title), row2);
+      return { root, row: row2 };
     }
     const seedGroup = paletteGroup("Seeds");
     const eggGroup = paletteGroup("Eggs");
@@ -59774,19 +58828,19 @@ Restore figures are averages; unlucky streaks do worse.`;
       return list.includes(value) ? list.filter((entry) => entry !== value) : [...list, value];
     }
     function chipRow(values, selected, labelFor, iconFor, onPick, named = false) {
-      const row = tileRow();
+      const row2 = tileRow();
       for (const value of values) {
         const shared = { icon: iconFor(value), selected: selected.includes(value), onClick: () => onPick(value) };
-        row.append(
+        row2.append(
           named ? labelledTile({ ...shared, label: labelFor(value) }) : spriteTile({ ...shared, title: labelFor(value) })
         );
       }
-      return row;
+      return row2;
     }
-    function scrollable(row) {
+    function scrollable(row2) {
       const box = document.createElement("div");
       css(box, { maxHeight: `${ABILITY_LIST_MAX_PX}px`, overflowY: "auto", overscrollBehavior: "contain" });
-      box.append(row);
+      box.append(row2);
       return box;
     }
     function offered(available, picked) {
@@ -60109,14 +59163,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       thread.scrollTop = thread.scrollHeight;
     }
     function confirmRow(proposalId) {
-      const row = document.createElement("div");
-      css(row, { display: "flex", gap: "6px", alignSelf: "flex-start", marginLeft: "34px", marginTop: "2px" });
-      row.append(
+      const row2 = document.createElement("div");
+      css(row2, { display: "flex", gap: "6px", alignSelf: "flex-start", marginLeft: "34px", marginTop: "2px" });
+      row2.append(
         button2("Yes, go ahead", "accent", () => void CompanionChat.confirm(proposalId).catch(() => {
         })),
         button2("Not now", "neutral", () => CompanionChat.decline(proposalId))
       );
-      return row;
+      return row2;
     }
     const actionsButton = button2("Actions", "neutral", () => {
       openActionsModal(host, (request2) => {
@@ -60665,7 +59719,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     let names = ids.map((id) => id.split(":").slice(1).join(":"));
     try {
       const state7 = await NotifierService.get();
-      const byId = new Map(state7.rows.map((row) => [row.id, row.name]));
+      const byId = new Map(state7.rows.map((row2) => [row2.id, row2.name]));
       names = ids.map((id, i) => byId.get(id) ?? names[i]);
     } catch {
     }
@@ -61572,9 +60626,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/menu/askBanner.ts
   function ensureStyle3() {
-    if (document.getElementById(STYLE_ID7)) return;
+    if (document.getElementById(STYLE_ID8)) return;
     const style = document.createElement("style");
-    style.id = STYLE_ID7;
+    style.id = STYLE_ID8;
     style.textContent = `
 #${CARD_ID} {
   position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
@@ -61721,7 +60775,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     unsubscribe = CompanionChat.subscribe(sync);
     sync();
   }
-  var CARD_ID, STYLE_ID7, Z_INDEX, ICON_PX4, TICK_MS, ACCENT3, TEXT5, TEXT_DIM5, card4, clockBar, timer, shownId, unsubscribe;
+  var CARD_ID, STYLE_ID8, Z_INDEX, ICON_PX4, TICK_MS, ACCENT3, TEXT5, TEXT_DIM5, card4, clockBar, timer, shownId, unsubscribe;
   var init_askBanner = __esm({
     "src/features/companion/menu/askBanner.ts"() {
       "use strict";
@@ -61732,7 +60786,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_chatIcons();
       init_npcAvatar();
       CARD_ID = "mgCompanionAsk";
-      STYLE_ID7 = "mgCompanionAskStyle";
+      STYLE_ID8 = "mgCompanionAskStyle";
       Z_INDEX = "2000050";
       ICON_PX4 = 17;
       TICK_MS = 100;
@@ -61749,9 +60803,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/autoReco/disabledNotice.ts
   function ensureStyle4() {
-    if (document.getElementById(STYLE_ID8)) return;
+    if (document.getElementById(STYLE_ID9)) return;
     const style = document.createElement("style");
-    style.id = STYLE_ID8;
+    style.id = STYLE_ID9;
     style.textContent = `
     #${OVERLAY_ID4} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #${OVERLAY_ID4} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; width: 420px; border: 1px solid rgba(255,255,255,.15); }
@@ -61795,21 +60849,21 @@ Restore figures are averages; unlucky streaks do worse.`;
     document.body.appendChild(overlay2);
     button3?.focus();
   }
-  var OVERLAY_ID4, STYLE_ID8;
+  var OVERLAY_ID4, STYLE_ID9;
   var init_disabledNotice = __esm({
     "src/features/autoReco/disabledNotice.ts"() {
       "use strict";
       init_storage();
       OVERLAY_ID4 = "mgAutoRecoDisabledNotice";
-      STYLE_ID8 = "mgAutoRecoDisabledNoticeStyle";
+      STYLE_ID9 = "mgAutoRecoDisabledNoticeStyle";
     }
   });
 
   // src/features/room/privacyNotice.ts
   function ensureStyle5() {
-    if (document.getElementById(STYLE_ID9)) return;
+    if (document.getElementById(STYLE_ID10)) return;
     const style = document.createElement("style");
-    style.id = STYLE_ID9;
+    style.id = STYLE_ID10;
     style.textContent = `
     #${OVERLAY_ID5} { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.65); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #${OVERLAY_ID5} .box { background: #0f1318; color: #fff; padding: 24px 28px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); text-align: center; max-width: 92vw; width: 440px; border: 1px solid rgba(255,255,255,.15); }
@@ -61863,13 +60917,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     document.body.appendChild(overlay2);
   }
-  var OVERLAY_ID5, STYLE_ID9, HUB_INSTALL_URL;
+  var OVERLAY_ID5, STYLE_ID10, HUB_INSTALL_URL;
   var init_privacyNotice = __esm({
     "src/features/room/privacyNotice.ts"() {
       "use strict";
       init_storage();
       OVERLAY_ID5 = "mgRoomPrivacyNotice";
-      STYLE_ID9 = "mgRoomPrivacyNoticeStyle";
+      STYLE_ID10 = "mgRoomPrivacyNoticeStyle";
       HUB_INSTALL_URL = "https://github.com/Ariedam64/MG-CommunityHub/raw/refs/heads/main/dist/mg-community-hub.user.js";
     }
   });
@@ -61938,9 +60992,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/changelog/notice.ts
   function ensureStyle6() {
-    if (document.getElementById(STYLE_ID10)) return;
+    if (document.getElementById(STYLE_ID11)) return;
     const style = document.createElement("style");
-    style.id = STYLE_ID10;
+    style.id = STYLE_ID11;
     style.textContent = `
 #${OVERLAY_ID6} {
   position: fixed; inset: 0; z-index: ${OVERLAY_Z_INDEX2};
@@ -62052,7 +61106,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     ensureStyle6();
     document.body.appendChild(buildOverlay(entry));
   }
-  var OVERLAY_ID6, STYLE_ID10, OVERLAY_Z_INDEX2, ACCENT4, ACCENT_22, TEXT6, TEXT_DIM6;
+  var OVERLAY_ID6, STYLE_ID11, OVERLAY_Z_INDEX2, ACCENT4, ACCENT_22, TEXT6, TEXT_DIM6;
   var init_notice = __esm({
     "src/features/changelog/notice.ts"() {
       "use strict";
@@ -62061,9 +61115,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_fetchChangelog();
       init_markdown();
       init_carousel();
-      init_styles2();
+      init_styles3();
       OVERLAY_ID6 = "mgChangelogNotice";
-      STYLE_ID10 = "mgChangelogNoticeStyle";
+      STYLE_ID11 = "mgChangelogNoticeStyle";
       OVERLAY_Z_INDEX2 = "2147483647";
       ACCENT4 = "#5eead4";
       ACCENT_22 = "#2dd4bf";

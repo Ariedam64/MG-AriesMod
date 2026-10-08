@@ -14,7 +14,7 @@ import { renderCalculatorMenu } from "./features/calculator/menu";
 import { renderPetsMenu } from "./features/pets/menu";
 import { renderMiscMenu } from "./features/misc/menu";
 import { renderSettingsMenu } from "./features/settings/menu";
-import { renderNotifierMenu } from "./features/notifier/menu";
+import { renderNotifierMenu } from "./features/notifier/menu/menu";
 import { renderToolsMenu } from "./features/tools/menu";
 import { renderEditorMenu } from "./features/editor/menu";
 import { renderKeybindsMenu } from "./features/keybinds/menu";

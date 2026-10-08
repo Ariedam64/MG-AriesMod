@@ -1,6 +1,6 @@
 import { Atoms } from "../../game/store/atoms";
 import type { View } from "../../game/store/hub";
-import { Emitter, Subscriptions } from "../../lib/emitter";
+import { Emitter } from "../../lib/emitter";
 import { decorCatalog, toolCatalog } from "../../data";
 
 /**
@@ -12,7 +12,6 @@ import { decorCatalog, toolCatalog } from "../../data";
 let toolCounts = new Map<string, number>();
 let decorCounts = new Map<string, number>();
 const changed = new Emitter<void>();
-const watchers = new Subscriptions();
 
 function isCapReachedIn(catalog: Record<string, any>, counts: Map<string, number>, itemId: string): boolean {
   const meta = catalog[itemId];
@@ -51,7 +50,7 @@ async function follow<T>(view: View<T>, apply: (value: T) => void): Promise<void
     update(await view.get());
   } catch {}
   try {
-    watchers.add(await view.onChange(update));
+    await view.onChange(update);
   } catch {}
 }
 
@@ -63,10 +62,6 @@ export const InventoryCaps = {
     await follow(Atoms.inventory.myDecorInventory, (items) => {
       decorCounts = countsOf(items, (it) => it?.decorId ?? it?.id);
     });
-  },
-
-  stop(): void {
-    watchers.dispose();
   },
 
   /** Fires after every inventory update. */

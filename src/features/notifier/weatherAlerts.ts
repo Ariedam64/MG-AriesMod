@@ -1,5 +1,5 @@
 import { Atoms } from "../../game/store/atoms";
-import { Emitter, Subscriptions } from "../../lib/emitter";
+import { Emitter } from "../../lib/emitter";
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
 import { StatsService } from "../stats/stats";
 import { audio, type TriggerOverrides } from "./audio/audio";
@@ -43,7 +43,6 @@ let currentId: string | null = null;
 let currentValue: string | null = null;
 
 const changed = new Emitter<WeatherState>();
-const watchers = new Subscriptions();
 
 /** What a redraw of the Weather tab depends on. */
 export const weatherStateSignature = (rows: WeatherRow[]): string =>
@@ -140,21 +139,12 @@ export const WeatherAlerts = {
       onWeather(await view.get(), true);
     } catch {}
     try {
-      watchers.add(
-        await view.onChange((next) => {
-          try {
-            onWeather(next);
-          } catch {}
-        }),
-      );
+      await view.onChange((next) => {
+        try {
+          onWeather(next);
+        } catch {}
+      });
     } catch {}
-  },
-
-  stop(): void {
-    watchers.dispose();
-    if (currentId) audio.stopLoop(currentId);
-    currentId = null;
-    currentValue = null;
   },
 
   state(): WeatherState {
