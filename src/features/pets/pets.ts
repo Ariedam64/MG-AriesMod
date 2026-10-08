@@ -11,7 +11,7 @@ import { fakeInventoryShow, fakeInventoryDisable, closeInventoryPanel, isInvento
 import { Atoms, myPetHutchPetItems, myNumPetHutchItems, myPetHutchCapacitySlots, isMyInventoryAtMaxLength, stateUserSlots, playerId, player as playerAtom, myActivityLog } from "../../game/store/atoms";
 import { readAccountId, findSlotIndex } from "../../game/playerIdentity";
 import { toastSimple } from "../../ui/toast";
-import { Hotkey, matchHotkey, stringToHotkey } from "../../ui/kit/menu";
+import { Hotkey, matchHotkey, stringToHotkey } from "../../lib/hotkey";
 import {
   getKeybind,
   getPetTeamActionId,

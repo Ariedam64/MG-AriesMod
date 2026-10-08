@@ -1,9 +1,9 @@
 // src/services/keybinds.ts
 import { inGameHotkeys } from "../../game/ingameHotkeys";
-import { hotkeyToString, matchHotkey, stringToHotkey, type Hotkey } from "../../ui/kit/menu";
+import { hotkeyToString, matchHotkey, stringToHotkey, type Hotkey } from "../../lib/hotkey";
 import { readAriesPath, updateAriesPath } from "../../platform/storage";
 
-export type { Hotkey } from "../../ui/kit/menu";
+export type { Hotkey } from "../../lib/hotkey";
 
 export type KeybindId =
   | "gui.toggle"

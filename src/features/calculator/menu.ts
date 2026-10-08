@@ -15,6 +15,7 @@ import {
   type LockerSeedOption,
 } from "../locker/menu";
 import { Menu } from "../../ui/kit/menu";
+import { segmented as segmentedControl } from "../../ui/kit/segmented";
 import { attachSpriteIcon, getSpriteObjectUrlByName } from "../../ui/kit/sprites/iconCache";
 
 const ROOT_CLASS = "mg-crop-simulation";
@@ -84,10 +85,6 @@ type CalculatorRefs = {
   friendBonus: HTMLDivElement;
   priceValue: HTMLSpanElement;
 };
-
-const segmentedUi = new Menu({ compact: true });
-const ensureMenuStyles = (segmentedUi as unknown as { ensureStyles?: () => void }).ensureStyles;
-ensureMenuStyles?.call(segmentedUi);
 
 const priceFormatter = new Intl.NumberFormat("en-US");
 const weightFormatter = new Intl.NumberFormat("en-US", {
@@ -757,7 +754,7 @@ function createSegmentedControl<T extends string>(
 ): HTMLDivElement {
   const coerced = coerceLabel(selectedLabel, labels) as T;
   const items = labels.map(label => ({ value: label, label, disabled: !interactive }));
-  const segmented = segmentedUi.segmented<T>(
+  const segmented = segmentedControl<T>(
     items,
     coerced,
     interactive && onSelect ? value => onSelect(value) : undefined,
