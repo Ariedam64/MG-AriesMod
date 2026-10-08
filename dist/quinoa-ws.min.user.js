@@ -184,8 +184,8 @@
     return spriteContext.state;
   }
   function getReadySpriteState() {
-    const state5 = spriteContext.state;
-    return state5.renderer && state5.ctors?.Text ? state5 : null;
+    const state7 = spriteContext.state;
+    return state7.renderer && state7.ctors?.Text ? state7 : null;
   }
   function getPixiApp() {
     return pixiHooks?.app ?? spriteContext.state.app;
@@ -221,13 +221,13 @@
   // src/game/sprites/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-    const listeners5 = /* @__PURE__ */ new Set();
+    const listeners4 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
     const tick3 = (now2) => {
       const delta = last ? (now2 - last) / (1e3 / 60) : 1;
       last = now2;
-      for (const fn of listeners5) {
+      for (const fn of listeners4) {
         try {
           fn(delta);
         } catch {
@@ -237,14 +237,14 @@
     };
     const ticker = {
       add(fn) {
-        if (!listeners5.size) {
+        if (!listeners4.size) {
           rafId = requestAnimationFrame(tick3);
         }
-        listeners5.add(fn);
+        listeners4.add(fn);
       },
       remove(fn) {
-        listeners5.delete(fn);
-        if (!listeners5.size) {
+        listeners4.delete(fn);
+        if (!listeners4.size) {
           cancelAnimationFrame(rafId);
         }
       },
@@ -524,7 +524,7 @@
   function canvasOf(renderer) {
     return renderer?.canvas || renderer?.view?.canvas || renderer?.view || null;
   }
-  function watchRendererHealth(state5, hooks3) {
+  function watchRendererHealth(state7, hooks3) {
     const pageWin = pageWindow;
     let staleStreak = 0;
     let needsCtorsRederive = false;
@@ -542,7 +542,7 @@
         if (needsCtorsRederive) {
           debugState3.ctorsRederiveAttempts += 1;
           try {
-            state5.ctors = getCtors(state5.app ?? state5.renderer);
+            state7.ctors = getCtors(state7.app ?? state7.renderer);
             needsCtorsRederive = false;
             debugState3.lastCtorsRederiveError = null;
             console.info("[MG SpriteCatalog] re-derived ctors from the new renderer");
@@ -550,7 +550,7 @@
             debugState3.lastCtorsRederiveError = String(error?.message ?? error);
           }
         }
-        const canvas = canvasOf(state5.renderer);
+        const canvas = canvasOf(state7.renderer);
         const canvasHealthy = !!canvas && typeof document !== "undefined" && document.contains(canvas);
         if (canvasHealthy) {
           staleStreak = 0;
@@ -561,13 +561,13 @@
         debugState3.staleStreak = staleStreak;
         if (staleStreak < REQUIRED_STALE_STREAK) return;
         const freshRenderer = hooks3.renderer;
-        if (!freshRenderer || freshRenderer === state5.renderer) return;
+        if (!freshRenderer || freshRenderer === state7.renderer) return;
         const freshCanvas = canvasOf(freshRenderer);
         if (!freshCanvas || typeof document === "undefined" || !document.contains(freshCanvas)) return;
         console.info("[MG SpriteCatalog] renderer canvas went stale, re-resolved a fresh one");
         debugState3.swaps.push({ at: Date.now(), fromCanvasInDoc: canvasHealthy });
-        state5.renderer = freshRenderer;
-        if (hooks3.app) state5.app = hooks3.app;
+        state7.renderer = freshRenderer;
+        if (hooks3.app) state7.app = hooks3.app;
         needsCtorsRederive = true;
         staleStreak = 0;
         debugState3.staleStreak = 0;
@@ -675,15 +675,15 @@
     return typeof GM_xmlhttpRequest === "function";
   }
   function gmRequest(req, kind) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, reject2) => {
       if (!hasGm()) {
-        reject(new Error("GM_xmlhttpRequest not available"));
+        reject2(new Error("GM_xmlhttpRequest not available"));
         return;
       }
       let deadline;
       if (req.timeoutMs) {
         deadline = setTimeout(
-          () => reject(new Error(`Hard timeout for ${req.url}`)),
+          () => reject2(new Error(`Hard timeout for ${req.url}`)),
           req.timeoutMs + HARD_DEADLINE_GRACE_MS
         );
       }
@@ -698,11 +698,11 @@
         },
         onerror: () => {
           settle();
-          reject(new Error(`Network error for ${req.url}`));
+          reject2(new Error(`Network error for ${req.url}`));
         },
         ontimeout: () => {
           settle();
-          reject(new Error(`Timeout for ${req.url}`));
+          reject2(new Error(`Timeout for ${req.url}`));
         }
       };
       if (kind !== "text") details.responseType = kind;
@@ -764,7 +764,7 @@
 
   // src/game/sprites/data/assetFetcher.ts
   function blobToImage(blob) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, reject2) => {
       const url = URL.createObjectURL(blob);
       const img = new Image();
       img.decoding = "async";
@@ -774,7 +774,7 @@
       };
       img.onerror = () => {
         URL.revokeObjectURL(url);
-        reject(new Error("decode fail"));
+        reject2(new Error("decode fail"));
       };
       img.src = url;
     });
@@ -1097,20 +1097,20 @@
     }
     ctx2.restore();
   }
-  function tallOverlayFromSheet(mutName, state5) {
+  function tallOverlayFromSheet(mutName, state7) {
     const target = String(mutName || "").toLowerCase();
-    for (const k of state5.tex.keys()) {
+    for (const k of state7.tex.keys()) {
       const m = /sprite\/mutation-overlay\/([A-Za-z0-9]+)TallPlant/i.exec(String(k));
       if (!m || !m[1]) continue;
       const prefix = m[1].toLowerCase();
       if (prefix === target) {
-        const t = state5.tex.get(k);
+        const t = state7.tex.get(k);
         if (t) return { tex: t, key: k };
       }
     }
     return null;
   }
-  function findOverlayTexture(itKey, mutName, state5, preferTall) {
+  function findOverlayTexture(itKey, mutName, state7, preferTall) {
     if (!mutName) return null;
     const base = baseNameOf(itKey);
     const aliases = mutationAliases(mutName);
@@ -1123,27 +1123,27 @@
         `sprite/mutation/${name}`
       ];
       for (const k of tries) {
-        const t = state5.tex.get(k);
+        const t = state7.tex.get(k);
         if (t) return { tex: t, key: k };
       }
       if (preferTall) {
-        const hit = state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`) && {
-          tex: state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`),
+        const hit = state7.tex.get(`sprite/mutation-overlay/${name}TallPlant`) && {
+          tex: state7.tex.get(`sprite/mutation-overlay/${name}TallPlant`),
           key: `sprite/mutation-overlay/${name}TallPlant`
-        } || state5.tex.get(`sprite/mutation-overlay/${name}`) && {
-          tex: state5.tex.get(`sprite/mutation-overlay/${name}`),
+        } || state7.tex.get(`sprite/mutation-overlay/${name}`) && {
+          tex: state7.tex.get(`sprite/mutation-overlay/${name}`),
           key: `sprite/mutation-overlay/${name}`
-        } || tallOverlayFromSheet(mutName, state5);
+        } || tallOverlayFromSheet(mutName, state7);
         if (hit) return hit;
       }
     }
     return null;
   }
-  function findIconTexture(itKey, mutName, isTall, state5) {
+  function findIconTexture(itKey, mutName, isTall, state7) {
     if (!mutName) return null;
     const meta = MUT_META[mutName];
     if (isTall && meta?.tallIconOverride) {
-      const t = state5.tex.get(meta.tallIconOverride);
+      const t = state7.tex.get(meta.tallIconOverride);
       if (t) return t;
     }
     const base = baseNameOf(itKey);
@@ -1158,11 +1158,11 @@
         `sprite/mutation/${name}/${base}`
       ];
       for (const k of tries) {
-        const t = state5.tex.get(k);
+        const t = state7.tex.get(k);
         if (t) return t;
       }
       if (isTall) {
-        const t = state5.tex.get(`sprite/mutation-overlay/${name}TallPlantIcon`) || state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`);
+        const t = state7.tex.get(`sprite/mutation-overlay/${name}TallPlantIcon`) || state7.tex.get(`sprite/mutation-overlay/${name}TallPlant`);
         if (t) return t;
       }
     }
@@ -1202,14 +1202,14 @@
       }
     };
   }
-  function textureToCanvas(tex, state5, cfg) {
-    const hit = state5.srcCan.get(tex);
+  function textureToCanvas(tex, state7, cfg) {
+    const hit = state7.srcCan.get(tex);
     if (hit) return hit;
     let c = null;
-    const RDR = state5.renderer;
+    const RDR = state7.renderer;
     try {
       if (RDR?.extract?.canvas && (RDR?.resolution ?? 1) === 1) {
-        const s = new state5.ctors.Sprite(tex);
+        const s = new state7.ctors.Sprite(tex);
         c = RDR.extract.canvas(s);
         s.destroy?.({ children: true, texture: false, baseTexture: false });
       }
@@ -1242,18 +1242,18 @@
         ctx2.drawImage(src, fr.x, fr.y, fr.width, fr.height, offX, offY, fr.width, fr.height);
       }
     }
-    state5.srcCan.set(tex, c);
-    if (state5.srcCan.size > cfg.srcCanvasMax) {
-      const k = state5.srcCan.keys().next().value;
-      if (k !== void 0) state5.srcCan.delete(k);
+    state7.srcCan.set(tex, c);
+    if (state7.srcCan.size > cfg.srcCanvasMax) {
+      const k = state7.srcCan.keys().next().value;
+      if (k !== void 0) state7.srcCan.delete(k);
     }
     return c;
   }
-  function buildColorLayerSprites(tex, dims, pipeline, state5, cfg, disposables, TextureCtor) {
+  function buildColorLayerSprites(tex, dims, pipeline, state7, cfg, disposables, TextureCtor) {
     const { w, h: h2, aX, aY, basePos } = dims;
     const layers = [];
     for (const step of pipeline) {
-      const clone2 = new state5.ctors.Sprite(tex);
+      const clone2 = new state7.ctors.Sprite(tex);
       clone2.anchor?.set?.(aX, aY);
       clone2.position.set(basePos.x, basePos.y);
       clone2.zIndex = 1;
@@ -1264,7 +1264,7 @@
       lctx.imageSmoothingEnabled = false;
       lctx.save();
       lctx.translate(w * aX, h2 * aY);
-      lctx.drawImage(textureToCanvas(tex, state5, cfg), -w * aX, -h2 * aY);
+      lctx.drawImage(textureToCanvas(tex, state7, cfg), -w * aX, -h2 * aY);
       lctx.restore();
       applyFilterOnto(lctx, layerCanvas, step.name, step.isTall);
       const filteredTex = TextureCtor.from(layerCanvas);
@@ -1274,14 +1274,14 @@
     }
     return layers;
   }
-  function buildTallOverlaySprites(itKey, dims, overlayPipeline, state5, cfg, baseCanvas, TextureCtor, disposables) {
+  function buildTallOverlaySprites(itKey, dims, overlayPipeline, state7, cfg, baseCanvas, TextureCtor, disposables) {
     const { aX, basePos } = dims;
     if (!baseCanvas) return [];
     const overlays = [];
     for (const step of overlayPipeline) {
-      const hit = step.overlayTall && state5.tex.get(step.overlayTall) && { tex: state5.tex.get(step.overlayTall), key: step.overlayTall } || findOverlayTexture(itKey, step.name, state5, true);
+      const hit = step.overlayTall && state7.tex.get(step.overlayTall) && { tex: state7.tex.get(step.overlayTall), key: step.overlayTall } || findOverlayTexture(itKey, step.name, state7, true);
       if (!hit?.tex) continue;
-      const oCan = textureToCanvas(hit.tex, state5, cfg);
+      const oCan = textureToCanvas(hit.tex, state7, cfg);
       if (!oCan) continue;
       const ow = oCan.width;
       const overlayAnchor = { x: 0, y: 0 };
@@ -1302,7 +1302,7 @@
       mctx.drawImage(baseCanvas, -overlayPos.x, -overlayPos.y);
       const maskedTex = TextureCtor.from(maskedCanvas);
       disposables.push(maskedTex);
-      const ov = new state5.ctors.Sprite(maskedTex);
+      const ov = new state7.ctors.Sprite(maskedTex);
       ov.anchor?.set?.(overlayAnchor.x, overlayAnchor.y);
       ov.position.set(overlayPos.x, overlayPos.y);
       ov.scale.set(1);
@@ -1312,14 +1312,14 @@
     }
     return overlays;
   }
-  function buildIconSprites(itKey, dims, iconPipeline, state5, iconLayout) {
+  function buildIconSprites(itKey, dims, iconPipeline, state7, iconLayout) {
     const { basePos } = dims;
     const icons = [];
     for (const step of iconPipeline) {
       if (step.name === "Gold" || step.name === "Rainbow") continue;
-      const itex = findIconTexture(itKey, step.name, step.isTall, state5);
+      const itex = findIconTexture(itKey, step.name, step.isTall, state7);
       if (!itex) continue;
-      const icon2 = new state5.ctors.Sprite(itex);
+      const icon2 = new state7.ctors.Sprite(itex);
       const iconAnchorX = itex?.defaultAnchor?.x ?? 0.5;
       const iconAnchorY = itex?.defaultAnchor?.y ?? 0.5;
       icon2.anchor?.set?.(iconAnchorX, iconAnchorY);
@@ -1332,31 +1332,31 @@
     }
     return icons;
   }
-  function lruEvict(state5, cfg) {
+  function lruEvict(state7, cfg) {
     if (!cfg.cacheOn) return;
-    while (state5.lru.size > cfg.cacheMaxEntries || state5.cost > cfg.cacheMaxCost) {
-      const k = state5.lru.keys().next().value;
+    while (state7.lru.size > cfg.cacheMaxEntries || state7.cost > cfg.cacheMaxCost) {
+      const k = state7.lru.keys().next().value;
       if (k === void 0) break;
-      const e = state5.lru.get(k);
-      state5.lru.delete(k);
-      state5.cost = Math.max(0, state5.cost - entryCost(e));
+      const e = state7.lru.get(k);
+      state7.lru.delete(k);
+      state7.cost = Math.max(0, state7.cost - entryCost(e));
     }
   }
-  function clearVariantCache(state5) {
-    state5.lru.clear();
-    state5.cost = 0;
-    state5.srcCan.clear();
+  function clearVariantCache(state7) {
+    state7.lru.clear();
+    state7.cost = 0;
+    state7.srcCan.clear();
   }
-  function renderMutatedTexture(tex, itKey, V, state5, cfg) {
+  function renderMutatedTexture(tex, itKey, V, state7, cfg) {
     try {
-      if (!tex || !state5.renderer || !state5.ctors?.Container || !state5.ctors?.Sprite || !state5.ctors?.Texture) return null;
-      const { Container, Sprite, Texture } = state5.ctors;
+      if (!tex || !state7.renderer || !state7.ctors?.Container || !state7.ctors?.Sprite || !state7.ctors?.Texture) return null;
+      const { Container, Sprite, Texture } = state7.ctors;
       const w = tex?.orig?.width ?? tex?.frame?.width ?? tex?.width ?? 1;
       const h2 = tex?.orig?.height ?? tex?.frame?.height ?? tex?.height ?? 1;
       const aX = tex?.defaultAnchor?.x ?? 0.5;
       const aY = tex?.defaultAnchor?.y ?? 0.5;
       const basePos = { x: w * aX, y: h2 * aY };
-      const baseCanvas = textureToCanvas(tex, state5, cfg);
+      const baseCanvas = textureToCanvas(tex, state7, cfg);
       const root4 = new Container();
       root4.sortableChildren = true;
       try {
@@ -1383,14 +1383,14 @@
       const baseName = baseNameOf(itKey);
       const iconLayout = computeIconLayout(tex, baseName, isTall);
       const dims = { w, h: h2, aX, aY, basePos };
-      buildColorLayerSprites(tex, dims, pipeline, state5, cfg, disposables, Texture).forEach((layer2) => root4.addChild(layer2));
+      buildColorLayerSprites(tex, dims, pipeline, state7, cfg, disposables, Texture).forEach((layer2) => root4.addChild(layer2));
       if (isTall) {
-        buildTallOverlaySprites(itKey, dims, overlayPipeline, state5, cfg, baseCanvas, Texture, disposables).forEach((ov) => root4.addChild(ov));
+        buildTallOverlaySprites(itKey, dims, overlayPipeline, state7, cfg, baseCanvas, Texture, disposables).forEach((ov) => root4.addChild(ov));
       }
-      buildIconSprites(itKey, dims, iconPipeline, state5, iconLayout).forEach((icon2) => root4.addChild(icon2));
-      const RDR = state5.renderer;
+      buildIconSprites(itKey, dims, iconPipeline, state7, iconLayout).forEach((icon2) => root4.addChild(icon2));
+      const RDR = state7.renderer;
       let rt = null;
-      const RectCtor = state5.ctors?.Rectangle;
+      const RectCtor = state7.ctors?.Rectangle;
       const crop = RectCtor ? new RectCtor(0, 0, w, h2) : null;
       if (typeof RDR?.generateTexture === "function")
         rt = RDR.generateTexture(root4, { resolution: 1, region: crop ?? void 0 });
@@ -1412,36 +1412,36 @@
       return null;
     }
   }
-  function processVariantJobs(state5, cfg) {
-    if (!cfg.jobOn || !state5.open || !state5.jobs.length) return false;
+  function processVariantJobs(state7, cfg) {
+    if (!cfg.jobOn || !state7.open || !state7.jobs.length) return false;
     const now2 = performance.now();
-    const burst = now2 - state5.changedAt <= cfg.jobBurstWindowMs;
+    const burst = now2 - state7.changedAt <= cfg.jobBurstWindowMs;
     const budget = burst ? cfg.jobBurstMs : cfg.jobBudgetMs;
     const t0 = performance.now();
     let done = 0;
     let needsLayout = false;
-    while (state5.jobs.length) {
+    while (state7.jobs.length) {
       if (performance.now() - t0 >= budget) break;
       if (done >= cfg.jobCapPerTick) break;
-      const job = state5.jobs[0];
-      if (job.sig !== state5.sig) {
-        state5.jobs.shift();
-        state5.jobMap.delete(job.k);
+      const job = state7.jobs[0];
+      if (job.sig !== state7.sig) {
+        state7.jobs.shift();
+        state7.jobMap.delete(job.k);
         continue;
       }
       const tex = job.src[job.i];
       if (!tex) {
-        state5.jobs.shift();
-        state5.jobMap.delete(job.k);
+        state7.jobs.shift();
+        state7.jobMap.delete(job.k);
         continue;
       }
-      const ft = renderMutatedTexture(tex, job.itKey, job.V, state5, cfg);
+      const ft = renderMutatedTexture(tex, job.itKey, job.V, state7, cfg);
       if (ft) job.out.push(ft);
       job.i++;
       done++;
       if (job.i >= job.src.length) {
-        state5.jobs.shift();
-        state5.jobMap.delete(job.k);
+        state7.jobs.shift();
+        state7.jobMap.delete(job.k);
         let entry = null;
         if (job.isAnim) {
           if (job.out.length >= 2) entry = { isAnim: true, frames: job.out };
@@ -1451,9 +1451,9 @@
           if (job.out[0]) entry = { isAnim: false, tex: job.out[0] };
         }
         if (entry) {
-          state5.lru.set(job.k, entry);
-          state5.cost += entryCost(entry);
-          lruEvict(state5, cfg);
+          state7.lru.set(job.k, entry);
+          state7.cost += entryCost(entry);
+          lruEvict(state7, cfg);
           needsLayout = true;
         }
       }
@@ -1534,13 +1534,13 @@
       };
       hasMutationFilter = (value) => Boolean(value && FILTERS[value]);
       isTallKey = (k) => /tallplant/i.test(k);
-      computeVariantSignature = (state5) => {
-        if (!state5.mutOn) {
-          const f = hasMutationFilter(state5.f) ? state5.f : null;
+      computeVariantSignature = (state7) => {
+        if (!state7.mutOn) {
+          const f = hasMutationFilter(state7.f) ? state7.f : null;
           const baseMuts = f ? [f] : [];
           return { mode: "F", muts: baseMuts, overlayMuts: baseMuts, selectedMuts: baseMuts, sig: `F:${f ?? ""}` };
         }
-        const raw = state5.mutations.filter((value) => hasMutationFilter(value));
+        const raw = state7.mutations.filter((value) => hasMutationFilter(value));
         const selected = sortMutations(raw);
         const muts = normalizeMutListColor(raw);
         const overlayMuts = normalizeMutListOverlay(raw);
@@ -1603,48 +1603,48 @@
   });
 
   // src/game/sprites/api/expose.ts
-  function exposeApi(state5, hud) {
+  function exposeApi(state7, hud) {
     const root4 = pageWindow;
     const api = {
       open() {
         hud.root?.style && (hud.root.style.display = "block");
-        state5.open = true;
+        state7.open = true;
       },
       close() {
         hud.root?.style && (hud.root.style.display = "none");
-        state5.open = false;
+        state7.open = false;
       },
       toggle() {
-        state5.open ? api.close() : api.open();
+        state7.open ? api.close() : api.open();
       },
       setCategory(cat) {
-        state5.cat = cat || "__all__";
+        state7.cat = cat || "__all__";
       },
       setFilterText(text2) {
-        state5.q = String(text2 || "").trim();
+        state7.q = String(text2 || "").trim();
       },
       setSpriteFilter(name) {
-        state5.f = name;
-        state5.mutOn = false;
+        state7.f = name;
+        state7.mutOn = false;
       },
       setMutation(on, ...muts) {
-        state5.mutOn = !!on;
-        state5.f = "";
-        state5.mutations = state5.mutOn ? muts.filter(Boolean).map((name) => name) : [];
+        state7.mutOn = !!on;
+        state7.f = "";
+        state7.mutations = state7.mutOn ? muts.filter(Boolean).map((name) => name) : [];
       },
       filters() {
         return [];
       },
       categories() {
-        return [...state5.cats.keys()].sort((a, b) => a.localeCompare(b));
+        return [...state7.cats.keys()].sort((a, b) => a.localeCompare(b));
       },
       cacheStats() {
-        return { entries: state5.lru.size, cost: state5.cost };
+        return { entries: state7.lru.size, cost: state7.cost };
       },
       clearCache() {
-        clearVariantCache(state5);
+        clearVariantCache(state7);
       },
-      curVariant: () => curVariant(state5)
+      curVariant: () => curVariant(state7)
     };
     root4.MGSpriteCatalog = api;
     return api;
@@ -1665,9 +1665,9 @@
     getSpriteWithMutations: () => getSpriteWithMutations,
     listItemsByCategory: () => listItemsByCategory
   });
-  function findItem(state5, category, id) {
+  function findItem(state7, category, id) {
     const normId = normalizeKey(id);
-    for (const it of state5.items) {
+    for (const it of state7.items) {
       const keyCat = keyCategoryOf(it.key);
       if (!matchesCategory(keyCat, category)) continue;
       const base = normalizeKey(baseNameOf2(it.key));
@@ -1675,22 +1675,22 @@
     }
     return null;
   }
-  function listItemsByCategory(state5, category = "any") {
-    return state5.items.filter((it) => matchesCategory(keyCategoryOf(it.key), category));
+  function listItemsByCategory(state7, category = "any") {
+    return state7.items.filter((it) => matchesCategory(keyCategoryOf(it.key), category));
   }
   function buildVariant(mutations) {
     return buildVariantFromMutations(mutations);
   }
-  function getSpriteWithMutations(params, state5, cfg) {
-    const it = findItem(state5, params.category, params.id);
+  function getSpriteWithMutations(params, state7, cfg) {
+    const it = findItem(state7, params.category, params.id);
     if (!it) return null;
     const tex = it.isAnim ? it.frames?.[0] : it.first;
     if (!tex) return null;
     const V = buildVariantFromMutations(params.mutations);
-    return renderMutatedTexture(tex, it.key, V, state5, cfg);
+    return renderMutatedTexture(tex, it.key, V, state7, cfg);
   }
-  function getBaseSprite(params, state5) {
-    const it = findItem(state5, params.category, params.id);
+  function getBaseSprite(params, state7) {
+    const it = findItem(state7, params.category, params.id);
     if (!it) return null;
     return it.isAnim ? it.frames?.[0] ?? null : it.first;
   }
@@ -2469,9 +2469,9 @@
     patchSocketSend();
     const wrapped2 = WrappedWebSocket;
     wrapped2.prototype = NativeWS.prototype;
-    for (const state5 of ["OPEN", "CLOSED", "CLOSING", "CONNECTING"]) {
+    for (const state7 of ["OPEN", "CLOSED", "CLOSING", "CONNECTING"]) {
       try {
-        wrapped2[state5] = NativeWS[state5];
+        wrapped2[state7] = NativeWS[state7];
       } catch {
       }
     }
@@ -2501,10 +2501,10 @@
 
   // src/lib/dom.ts
   function addStyle(css5) {
-    const style2 = document.createElement("style");
-    style2.textContent = css5;
-    document.head.appendChild(style2);
-    return style2;
+    const style = document.createElement("style");
+    style.textContent = css5;
+    document.head.appendChild(style);
+    return style;
   }
   var init_dom = __esm({
     "src/lib/dom.ts"() {
@@ -3102,10 +3102,10 @@
     if (typeof document === "undefined" || typeof document.getElementById !== "function") return;
     injected = true;
     if (document.getElementById(STYLE_ID)) return;
-    const style2 = document.createElement("style");
-    style2.id = STYLE_ID;
-    style2.textContent = [themeVariables(), chromeCss, controlsCss, containersCss].join("\n");
-    (document.head || document.documentElement).appendChild(style2);
+    const style = document.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent = [themeVariables(), chromeCss, controlsCss, containersCss].join("\n");
+    (document.head || document.documentElement).appendChild(style);
   }
   var STYLE_ID, injected;
   var init_styles = __esm({
@@ -3269,8 +3269,8 @@
       "use strict";
       init_dialog();
       countdownText = (ms) => {
-        const seconds = Math.max(0, Math.ceil(ms / 1e3));
-        return `The game will reconnect in ${seconds} ${seconds <= 1 ? "second" : "seconds"}...`;
+        const seconds2 = Math.max(0, Math.ceil(ms / 1e3));
+        return `The game will reconnect in ${seconds2} ${seconds2 <= 1 ? "second" : "seconds"}...`;
       };
     }
   });
@@ -3329,11 +3329,11 @@
       const defaults = out[key2];
       out[key2] = isRecord(defaults) && isRecord(value) ? { ...defaults, ...value } : value;
     }
-    for (const [legacyKey, [section4, field]] of Object.entries(LEGACY_ROOT_KEYS)) {
+    for (const [legacyKey, [section4, field2]] of Object.entries(LEGACY_ROOT_KEYS)) {
       if (!(legacyKey in raw)) continue;
       const target = isRecord(out[section4]) ? out[section4] : {};
       out[section4] = target;
-      if (target[field] === void 0) target[field] = raw[legacyKey];
+      if (target[field2] === void 0) target[field2] = raw[legacyKey];
     }
     return out;
   }
@@ -3467,12 +3467,12 @@
     return value === void 0 ? fallback : value;
   }
   function writeAriesPath(path, value) {
-    return updateAriesStorage((state5) => setValueAtPath(state5, splitPath(path), value));
+    return updateAriesStorage((state7) => setValueAtPath(state7, splitPath(path), value));
   }
   function updateAriesPath(path, updater) {
-    return updateAriesStorage((state5) => {
+    return updateAriesStorage((state7) => {
       const parts = splitPath(path);
-      setValueAtPath(state5, parts, updater(getValueAtPath(state5, parts)));
+      setValueAtPath(state7, parts, updater(getValueAtPath(state7, parts)));
     });
   }
   function readLocalValue(key2) {
@@ -4131,7 +4131,7 @@
   function makeView(sourceLabel, opts = {}) {
     const { path } = opts;
     const pick2 = (src) => path ? getAtPath(src, path) : src;
-    const listen = (subscribe5) => async (cb, isEqual = Object.is) => {
+    const listen2 = (subscribe5) => async (cb, isEqual = Object.is) => {
       let prev;
       return subscribe5(sourceLabel, (src) => {
         const v = pick2(src);
@@ -4151,8 +4151,8 @@
         const prev = await Store.select(sourceLabel);
         return Store.set(sourceLabel, path ? setAtPath(prev, path, next) : next);
       },
-      onChange: listen(Store.subscribe),
-      onChangeNow: listen(Store.subscribeImmediate)
+      onChange: listen2(Store.subscribe),
+      onChangeNow: listen2(Store.subscribeImmediate)
     };
   }
   function makeAtom(label2) {
@@ -4449,31 +4449,31 @@
     }
     return infos;
   }
-  function petsStateSig(state5) {
-    if (!Array.isArray(state5)) return "null";
-    if (!state5.length) return "empty";
-    return state5.map((p) => `${String(p?.slot?.id ?? "")}:${petSig(p)}`).join("|");
+  function petsStateSig(state7) {
+    if (!Array.isArray(state7)) return "null";
+    if (!state7.length) return "empty";
+    return state7.map((p) => `${String(p?.slot?.id ?? "")}:${petSig(p)}`).join("|");
   }
   function watchPets(cb, seed) {
     let lastInfos = seed?.infos ?? null;
     let lastPrimitives = seed?.primitives ?? null;
     let prevSig = null;
-    const emit = () => {
+    const emit2 = () => {
       const next = normalizePetsState(lastInfos, lastPrimitives);
       const sig = petsStateSig(next);
       if (sig === prevSig) return;
       prevSig = sig;
       cb(next);
     };
-    if (seed) emit();
+    if (seed) emit2();
     const subs = [
       Atoms.pets.myPetInfos.onChange((next) => {
         lastInfos = next;
-        emit();
+        emit2();
       }),
       Atoms.pets.myPrimitivePetSlots.onChange((next) => {
         lastPrimitives = next;
-        emit();
+        emit2();
       })
     ];
     return () => {
@@ -4724,11 +4724,11 @@
     for (const atom of [storage, inventory]) {
       if (!await waitForAtom(atom.label, { timeoutMs: remainingMs(), keepGoing })) return false;
     }
-    const loaded = await waitUntil(
+    const loaded2 = await waitUntil(
       async () => !keepGoing() || Array.isArray(await inventory.get()),
       { timeoutMs: remainingMs(), intervalMs: INVENTORY_POLL_MS }
     );
-    return !!loaded && keepGoing();
+    return !!loaded2 && keepGoing();
   }
   function createAutoStore(config) {
     const { logName, storagePath, storageId, storageAtom, inventoryAtom, keyFromItem } = config;
@@ -4861,7 +4861,7 @@
         queueStore(initialKeys);
       }
     }
-    function stop2() {
+    function stop() {
       startGeneration++;
       try {
         inventoryUnsub?.();
@@ -4898,7 +4898,7 @@
         if (next) {
           void start2();
         } else {
-          stop2();
+          stop();
         }
       },
       bootIfEnabled() {
@@ -5660,7 +5660,7 @@
     if (!atoms.length) {
       throw new Error(`${config.label} not found`);
     }
-    const state5 = existing ?? {
+    const state7 = existing ?? {
       config,
       enabled: false,
       payload: null,
@@ -5685,13 +5685,13 @@
           }
         }
         const real = orig(get);
-        if (!state5.enabled || state5.payload == null) return real;
-        return config.merge ? config.merge(real, state5.payload) : state5.payload;
+        if (!state7.enabled || state7.payload == null) return real;
+        return config.merge ? config.merge(real, state7.payload) : state7.payload;
       };
-      state5.patched.set(a, { readKey, orig });
+      state7.patched.set(a, { readKey, orig });
     }
     if (gateAtom && config.gate?.autoDisableOnClose) {
-      state5.unsubGate = await jSub(gateAtom, async () => {
+      state7.unsubGate = await jSub(gateAtom, async () => {
         let v;
         try {
           v = await jGet(gateAtom);
@@ -5699,12 +5699,12 @@
           v = null;
         }
         const isOpen = config.gate?.isOpen ? config.gate.isOpen(v) : !!v;
-        if (!isOpen && state5.enabled) state5.enabled = false;
+        if (!isOpen && state7.enabled) state7.enabled = false;
       });
     }
-    state5.installed = true;
-    _fakeRegistry.set(key2, state5);
-    return state5;
+    state7.installed = true;
+    _fakeRegistry.set(key2, state7);
+    return state7;
   }
   async function _primePatched(st) {
     const store = await ensureStore();
@@ -6821,10 +6821,10 @@
   function isPetAbilityAction(action2) {
     return PET_ABILITY_ACTIONS.includes(action2);
   }
-  function formatTime(seconds) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor(seconds % 3600 / 60);
-    const secs = Math.floor(seconds % 60);
+  function formatTime(seconds2) {
+    const hours = Math.floor(seconds2 / 3600);
+    const minutes = Math.floor(seconds2 % 3600 / 60);
+    const secs = Math.floor(seconds2 % 60);
     if (hours > 0) return `${hours}h ${minutes}m`;
     if (minutes > 0) return `${minutes}m ${secs}s`;
     return `${secs}s`;
@@ -10607,7 +10607,7 @@
   function applyEdit(states, idx, applyAll, next) {
     const targets = applyAll ? states.map((_, i) => i) : [idx];
     return {
-      states: states.map((state5, i) => targets.includes(i) ? { ...next } : state5),
+      states: states.map((state7, i) => targets.includes(i) ? { ...next } : state7),
       size: next.size,
       targets
     };
@@ -10652,23 +10652,23 @@
       mutations: Array.isArray(slot.mutations) ? slot.mutations : []
     };
   }
-  function syncBrushSlots(state5, species, maxSlots) {
-    if (state5.species !== species) {
+  function syncBrushSlots(state7, species, maxSlots) {
+    if (state7.species !== species) {
       return { species, slots: Array.from({ length: maxSlots }, defaultBrushSlot), applyAll: false };
     }
-    const kept = state5.slots.slice(0, maxSlots);
+    const kept = state7.slots.slice(0, maxSlots);
     const slots = (kept.length ? kept : [defaultBrushSlot()]).map(normalizeSlot);
-    return { ...state5, slots, applyAll: !!state5.applyAll };
+    return { ...state7, slots, applyAll: !!state7.applyAll };
   }
-  function patchBrushSlot(state5, idx, mode, patch) {
-    const hit = targetsOf(state5, idx);
-    return { ...state5, slots: state5.slots.map((c, i) => hit(i) ? { ...c, sizeMode: mode, ...patch } : c) };
+  function patchBrushSlot(state7, idx, mode, patch) {
+    const hit = targetsOf(state7, idx);
+    return { ...state7, slots: state7.slots.map((c, i) => hit(i) ? { ...c, sizeMode: mode, ...patch } : c) };
   }
-  function toggleBrushMutation(state5, idx, mutationId) {
-    const hit = targetsOf(state5, idx);
+  function toggleBrushMutation(state7, idx, mutationId) {
+    const hit = targetsOf(state7, idx);
     return {
-      ...state5,
-      slots: state5.slots.map((c, i) => {
+      ...state7,
+      slots: state7.slots.map((c, i) => {
         if (!hit(i)) return c;
         const prev = Array.isArray(c.mutations) ? c.mutations : [];
         const mutations = prev.includes(mutationId) ? prev.filter((m) => m !== mutationId) : [...prev, mutationId];
@@ -10706,9 +10706,9 @@
         sizeMode: "percent",
         mutations: []
       });
-      targetsOf = (state5, idx) => (i) => state5.applyAll || i === idx;
-      addBrushSlot = (state5, maxSlots) => state5.slots.length >= maxSlots ? state5 : { ...state5, slots: [...state5.slots, defaultBrushSlot()] };
-      removeBrushSlot = (state5) => state5.slots.length <= 1 ? state5 : { ...state5, slots: state5.slots.slice(0, -1) };
+      targetsOf = (state7, idx) => (i) => state7.applyAll || i === idx;
+      addBrushSlot = (state7, maxSlots) => state7.slots.length >= maxSlots ? state7 : { ...state7, slots: [...state7.slots, defaultBrushSlot()] };
+      removeBrushSlot = (state7) => state7.slots.length <= 1 ? state7 : { ...state7, slots: state7.slots.slice(0, -1) };
       brushSlotSize = (cfg) => clampSizePercent(cfg.sizeMode === "custom" ? cfg.customScale : cfg.sizePercent);
       makeGrowSlot = (species, size, mutations = []) => ({
         species,
@@ -11163,10 +11163,10 @@
         url: `${apiBase}/assets/sprites/${apiCat}/${item.name}.png`
       };
       indexEntries.push(entry);
-      const norm3 = normalizeSpriteName(item.name);
-      const arr = nameIndex.get(norm3) || [];
+      const norm2 = normalizeSpriteName(item.name);
+      const arr = nameIndex.get(norm2) || [];
       arr.push(entry);
-      nameIndex.set(norm3, arr);
+      nameIndex.set(norm2, arr);
     }
   }
   function spriteIndexSize() {
@@ -11204,9 +11204,9 @@
   function buildCatalogIndex() {
     const read2 = catalogReader;
     if (!read2) return;
-    const loaded = CATALOG_SOURCES.filter((source) => read2(source.key)).length;
-    if (loaded === catalogSourcesIndexed) return;
-    catalogSourcesIndexed = loaded;
+    const loaded2 = CATALOG_SOURCES.filter((source) => read2(source.key)).length;
+    if (loaded2 === catalogSourcesIndexed) return;
+    catalogSourcesIndexed = loaded2;
     catalogIndex.clear();
     for (const source of CATALOG_SOURCES) {
       const catalog = read2(source.key);
@@ -11239,31 +11239,31 @@
     return null;
   }
   function findSprite(categories, candidateId) {
-    const norm3 = normalizeSpriteName(candidateId);
+    const norm2 = normalizeSpriteName(candidateId);
     const internalCats = expandCategories(categories);
-    const fromCatalog = findCatalogSprite(internalCats, norm3);
+    const fromCatalog = findCatalogSprite(internalCats, norm2);
     if (fromCatalog) return fromCatalog;
-    const entries2 = nameIndex.get(norm3);
+    const entries2 = nameIndex.get(norm2);
     if (!entries2?.length) {
-      return findSpriteFuzzy(categories, norm3);
+      return findSpriteFuzzy(categories, norm2);
     }
     for (const entry of entries2) {
       if (internalCats.has(entry.internalCat)) return entry;
     }
-    return findSpriteFuzzy(categories, norm3);
+    return findSpriteFuzzy(categories, norm2);
   }
   function findSpriteFuzzy(categories, normTarget) {
     if (!normTarget) return null;
     const internalCats = expandCategories(categories);
-    for (const [norm3, entries2] of nameIndex) {
-      if (norm3.includes(normTarget) || normTarget.includes(norm3)) {
+    for (const [norm2, entries2] of nameIndex) {
+      if (norm2.includes(normTarget) || normTarget.includes(norm2)) {
         for (const entry of entries2) {
           if (internalCats.has(entry.internalCat)) return entry;
         }
       }
     }
-    for (const [norm3, entries2] of nameIndex) {
-      if (norm3.includes(normTarget) || normTarget.includes(norm3)) {
+    for (const [norm2, entries2] of nameIndex) {
+      if (norm2.includes(normTarget) || normTarget.includes(norm2)) {
         return entries2[0];
       }
     }
@@ -11488,11 +11488,11 @@
   function loadImage(url) {
     let promise = imageCache.get(url);
     if (promise) return promise;
-    promise = getSpriteObjectUrl(url).then((objectUrl) => new Promise((resolve, reject) => {
+    promise = getSpriteObjectUrl(url).then((objectUrl) => new Promise((resolve, reject2) => {
       const img = new Image();
       img.decoding = "async";
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("Image decode failed"));
+      img.onerror = () => reject2(new Error("Image decode failed"));
       img.src = objectUrl;
     }));
     imageCache.set(url, promise);
@@ -11513,8 +11513,8 @@
     if (!list.length) return "";
     return "|m=" + list.map(normalizeSpriteName).filter(Boolean).sort().join(",");
   }
-  function notifyWarmup(state5) {
-    warmupState = state5;
+  function notifyWarmup(state7) {
+    warmupState = state7;
     warmupListeners.forEach((listener) => {
       try {
         listener(warmupState);
@@ -11698,9 +11698,9 @@
   // src/features/editor/decorRotation.ts
   function ensureSliderStyle() {
     if (document.getElementById(STYLE_ID2)) return;
-    const style2 = document.createElement("style");
-    style2.id = STYLE_ID2;
-    style2.textContent = `
+    const style = document.createElement("style");
+    style.id = STYLE_ID2;
+    style.textContent = `
 .${SLIDER_CLASS} {
   -webkit-appearance: none; appearance: none;
   width: 100%; height: ${THUMB_SIZE_PX}px;
@@ -11725,7 +11725,7 @@
 }
 .${SLIDER_CLASS}:focus-visible { outline: 2px solid ${color.accent}; outline-offset: 2px; }
   `;
-    document.head.appendChild(style2);
+    document.head.appendChild(style);
   }
   function getEntry(decorId) {
     if (!decorId) return null;
@@ -12169,8 +12169,8 @@
     return tag;
   }
   function mutationPicker(onToggle, prefix) {
-    const row3 = document.createElement("div");
-    Object.assign(row3.style, { display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" });
+    const row4 = document.createElement("div");
+    Object.assign(row4.style, { display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" });
     const dropdown = document.createElement("div");
     Object.assign(dropdown.style, {
       display: "none",
@@ -12183,10 +12183,10 @@
     });
     const render = (active3) => {
       const wasOpen = dropdown.style.display !== "none";
-      row3.replaceChildren();
+      row4.replaceChildren();
       dropdown.replaceChildren();
-      if (prefix) row3.appendChild(prefix);
-      for (const id of sortMutationIds(active3)) row3.appendChild(mutationToggle(id, true, () => onToggle(id)));
+      if (prefix) row4.appendChild(prefix);
+      for (const id of sortMutationIds(active3)) row4.appendChild(mutationToggle(id, true, () => onToggle(id)));
       const available = orderedMutationKeys().map(storedMutationIdFor).filter((id) => !active3.includes(id));
       if (!available.length) {
         dropdown.style.display = "none";
@@ -12201,10 +12201,10 @@
         dropdown.style.display = open ? "flex" : "none";
         plus.style.background = open ? PLUS_BG_OPEN : PLUS_BG_CLOSED;
       };
-      row3.appendChild(plus);
+      row4.appendChild(plus);
       for (const id of available) dropdown.appendChild(mutationToggle(id, false, () => onToggle(id)));
     };
-    return { row: row3, dropdown, render };
+    return { row: row4, dropdown, render };
   }
   var orderedMutationKeys, sortMutationIds, FALLBACK_COLORS, ICON_CATEGORIES, TILE_PX, PLUS_BG_CLOSED, PLUS_BG_OPEN;
   var init_mutationPicker = __esm({
@@ -12302,8 +12302,8 @@
     return el;
   }
   function iconWithName(icon2, name, fontSize2) {
-    const row3 = document.createElement("div");
-    Object.assign(row3.style, { display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" });
+    const row4 = document.createElement("div");
+    Object.assign(row4.style, { display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" });
     const nameEl = document.createElement("div");
     nameEl.textContent = name;
     Object.assign(nameEl.style, {
@@ -12315,8 +12315,8 @@
       textAlign: "center",
       maxWidth: "100%"
     });
-    row3.append(icon2, nameEl);
-    return row3;
+    row4.append(icon2, nameEl);
+    return row4;
   }
   var EDITOR_LAYER, appendToPage;
   var init_panelChrome = __esm({
@@ -12463,7 +12463,7 @@
     let pressTimer = null;
     let repeatTimer = null;
     let repeated = false;
-    const stop2 = () => {
+    const stop = () => {
       if (pressTimer != null) clearTimeout(pressTimer);
       if (repeatTimer != null) clearInterval(repeatTimer);
       pressTimer = repeatTimer = null;
@@ -12477,7 +12477,7 @@
       }, 300);
       btn.setPointerCapture?.(ev.pointerId);
     });
-    for (const type of ["pointerup", "pointercancel", "pointerleave", "blur"]) btn.addEventListener(type, stop2);
+    for (const type of ["pointerup", "pointercancel", "pointerleave", "blur"]) btn.addEventListener(type, stop);
     btn.addEventListener("click", (e) => {
       if (repeated) {
         e.preventDefault();
@@ -12517,9 +12517,9 @@
       input.onchange = () => {
         if (input.checked) onChange(value);
       };
-      const row3 = h("label", "qmm-radio-label");
-      row3.append(input, label2);
-      wrap.appendChild(row3);
+      const row4 = h("label", "qmm-radio-label");
+      row4.append(input, label2);
+      wrap.appendChild(row4);
     }
     return wrap;
   }
@@ -12593,19 +12593,19 @@
 
   // src/features/editor/ui/inputGuards.ts
   function blockGameKeys(input) {
-    const stop2 = (ev) => {
+    const stop = (ev) => {
       ev.stopImmediatePropagation();
       ev.stopPropagation();
     };
     input.addEventListener("focus", () => {
-      window.addEventListener("keydown", stop2, true);
-      window.addEventListener("keyup", stop2, true);
+      window.addEventListener("keydown", stop, true);
+      window.addEventListener("keyup", stop, true);
     });
     input.addEventListener("blur", () => {
-      window.removeEventListener("keydown", stop2, true);
-      window.removeEventListener("keyup", stop2, true);
+      window.removeEventListener("keydown", stop, true);
+      window.removeEventListener("keyup", stop, true);
     });
-    input.addEventListener("keydown", stop2);
+    input.addEventListener("keydown", stop);
   }
   function keepSizeCharacters(input) {
     input.addEventListener("input", () => {
@@ -12650,15 +12650,15 @@
     return { value, modeLabel, modeSwitch, slider: range, customRow, customInput, show };
   }
   function sizeHeader(value, beside) {
-    const row3 = smallRow();
-    row3.style.opacity = "0.85";
+    const row4 = smallRow();
+    row4.style.opacity = "0.85";
     const label2 = document.createElement("span");
     label2.textContent = "Size";
-    row3.appendChild(label2);
-    if (beside) row3.appendChild(beside);
+    row4.appendChild(label2);
+    if (beside) row4.appendChild(beside);
     value.style.marginLeft = "auto";
-    row3.appendChild(value);
-    return row3;
+    row4.appendChild(value);
+    return row4;
   }
   var smallRow;
   var init_sizeControls = __esm({
@@ -12670,9 +12670,9 @@
       init_cropSize();
       init_inputGuards();
       smallRow = () => {
-        const row3 = document.createElement("div");
-        Object.assign(row3.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "11px" });
-        return row3;
+        const row4 = document.createElement("div");
+        Object.assign(row4.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "11px" });
+        return row4;
       };
     }
   });
@@ -12703,7 +12703,7 @@
       if (!edit) return;
       sizes = edit.states;
       for (const i of edit.targets) modes[i] = sizes[i].mode;
-      sizes.forEach((state5, i) => boxes[i]?.showSize(state5));
+      sizes.forEach((state7, i) => boxes[i]?.showSize(state7));
       writeSlots(edit.targets, () => ({ size: edit.size }));
     };
     const toggleMutation = (idx, id) => {
@@ -12732,8 +12732,8 @@
     content2.appendChild(list);
   }
   function slotCountRow(species, count, maxSlots) {
-    const row3 = document.createElement("div");
-    Object.assign(row3.style, {
+    const row4 = document.createElement("div");
+    Object.assign(row4.style, {
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
@@ -12744,11 +12744,11 @@
     const label2 = document.createElement("span");
     label2.textContent = `Slots ${count}/${maxSlots}`;
     const editSlots = (edit) => {
-      const changed = updateGardenObjectAtCurrentTile((obj) => {
+      const changed5 = updateGardenObjectAtCurrentTile((obj) => {
         if (obj?.objectType !== "plant") return obj;
         return { ...obj, slots: edit(Array.isArray(obj.slots) ? obj.slots.slice() : []) };
       });
-      if (changed) currentItemChanged.emit();
+      if (changed5) currentItemChanged.emit();
     };
     const remove = roundButton("-", () => {
       if (count > 1) editSlots((slots) => slots.slice(0, Math.max(1, slots.length - 1)));
@@ -12762,19 +12762,19 @@
     const buttons = document.createElement("div");
     Object.assign(buttons.style, { display: "flex", gap: "6px", alignItems: "center" });
     buttons.append(remove, add);
-    row3.append(label2, buttons);
-    return row3;
+    row4.append(label2, buttons);
+    return row4;
   }
   function editAllRow() {
-    const row3 = document.createElement("label");
-    Object.assign(row3.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", opacity: "0.9", cursor: "pointer" });
-    row3.append(
+    const row4 = document.createElement("label");
+    Object.assign(row4.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", opacity: "0.9", cursor: "pointer" });
+    row4.append(
       switchInput(editAllSlots, (on) => {
         editAllSlots = on;
       }),
       document.createTextNode("Edit all slots together")
     );
-    return row3;
+    return row4;
   }
   function plantSlotBox(handlers) {
     const size = sizeControls("Use custom size");
@@ -12791,7 +12791,7 @@
     root4.append(sizeHeader(size.value), size.modeLabel, size.slider, size.customRow, mutationsWrap);
     return {
       root: root4,
-      showSize: (state5) => size.show({ pct: state5.pct, mode: state5.mode, customText: String(state5.size) }),
+      showSize: (state7) => size.show({ pct: state7.pct, mode: state7.mode, customText: String(state7.size) }),
       showMutations: (list) => mutations.render(list)
     };
   }
@@ -12880,17 +12880,17 @@
     for (const cfg of brushSlotsFor(id).slots) {
       if (cfg.enabled) cfg.mutations.forEach((m) => active3.add(m));
     }
-    const row3 = document.createElement("div");
-    Object.assign(row3.style, { display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "center" });
+    const row4 = document.createElement("div");
+    Object.assign(row4.style, { display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "center" });
     if (active3.size) {
-      for (const mutationId of sortMutationIds([...active3])) row3.appendChild(mutationTag(mutationId));
+      for (const mutationId of sortMutationIds([...active3])) row4.appendChild(mutationTag(mutationId));
     } else {
       const none = document.createElement("div");
       none.textContent = "No mutations";
       Object.assign(none.style, { opacity: "0.7", fontSize: "11px" });
-      row3.appendChild(none);
+      row4.appendChild(none);
     }
-    into.appendChild(row3);
+    into.appendChild(row4);
   }
   var root, content, stopFollowing;
   var init_currentItemPanel = __esm({
@@ -13078,20 +13078,20 @@
   }
   function selectedEntryRow(id) {
     const label2 = entryLabel(picker.mode, id);
-    const row3 = document.createElement("div");
-    Object.assign(row3.style, { display: "grid", gridTemplateColumns: "auto 1fr", alignItems: "center", gap: "10px" });
+    const row4 = document.createElement("div");
+    Object.assign(row4.style, { display: "grid", gridTemplateColumns: "auto 1fr", alignItems: "center", gap: "10px" });
     const name = document.createElement("div");
     name.textContent = label2;
     Object.assign(name.style, { fontWeight: "700", fontSize: "15px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" });
-    row3.append(entryIcon(picker.mode === "decor" ? "decor" : "plant", id, label2, 48), name);
-    return row3;
+    row4.append(entryIcon(picker.mode === "decor" ? "decor" : "plant", id, label2, 48), name);
+    return row4;
   }
   function brushSlotsPanel(species, rerender) {
     const maxSlots = getMaxSlotsForSpecies(species);
-    const state5 = brushSlotsFor(species);
+    const state7 = brushSlotsFor(species);
     const panel = document.createElement("div");
     Object.assign(panel.style, { display: "grid", gap: "6px", marginTop: "6px", width: "100%" });
-    if (maxSlots > 1) panel.append(...slotCountRows(species, state5, maxSlots, rerender));
+    if (maxSlots > 1) panel.append(...slotCountRows(species, state7, maxSlots, rerender));
     const list = document.createElement("div");
     Object.assign(list.style, { display: "grid", gap: "6px" });
     const boxes = [];
@@ -13101,7 +13101,7 @@
         if (i !== from) boxes[i]?.(cfg);
       });
     };
-    state5.slots.forEach((cfg, idx) => {
+    state7.slots.forEach((cfg, idx) => {
       const { root: root4, show } = brushSlotBox(species, idx, cfg, syncOthers, rerender);
       boxes.push(show);
       list.appendChild(root4);
@@ -13109,13 +13109,13 @@
     panel.appendChild(list);
     return panel;
   }
-  function slotCountRows(species, state5, maxSlots, rerender) {
+  function slotCountRows(species, state7, maxSlots, rerender) {
     const header = document.createElement("div");
     Object.assign(header.style, { display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", opacity: "0.9" });
     const right = document.createElement("div");
     Object.assign(right.style, { display: "flex", gap: "6px", alignItems: "center" });
     const count = document.createElement("span");
-    count.textContent = `${state5.slots.length}/${maxSlots}`;
+    count.textContent = `${state7.slots.length}/${maxSlots}`;
     right.append(
       count,
       roundButton("-", () => {
@@ -13132,7 +13132,7 @@
     header.append(title, right);
     const applyAllRow = document.createElement("label");
     Object.assign(applyAllRow.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", opacity: "0.9", cursor: "pointer" });
-    const applyAll = switchInput(state5.applyAll, (on) => {
+    const applyAll = switchInput(state7.applyAll, (on) => {
       editBrushSlots(species, (s) => ({ ...s, applyAll: on }));
       rerender();
     });
@@ -13441,14 +13441,14 @@
   });
 
   // src/features/editor/editor.ts
-  function applyState(enabled5, emit) {
+  function applyState(enabled5, emit2) {
     const wasEnabled = editorSession.enabled;
     if (enabled5 && !wasEnabled) forgetCurrentEditorTile();
     setEditorUiShown(enabled5);
     if (enabled5 && !wasEnabled) void startPlannedGarden();
     else if (!enabled5 && wasEnabled) void stopPlannedGarden();
     editorSession.enabled = enabled5;
-    if (emit && enabled5 !== wasEnabled) enabledChanged.emit(enabled5);
+    if (emit2 && enabled5 !== wasEnabled) enabledChanged.emit(enabled5);
   }
   var enabledChanged, EditorService;
   var init_editor = __esm({
@@ -13649,9 +13649,9 @@
     let selectedIdx = null;
     let lastInfo = emptySlotInfo();
     let curSig = gardenObjectSignature(cur);
-    const listeners5 = /* @__PURE__ */ new Set();
+    const listeners4 = /* @__PURE__ */ new Set();
     const notify2 = () => {
-      for (const fn of listeners5) {
+      for (const fn of listeners4) {
         try {
           fn(lastInfo);
         } catch {
@@ -13852,13 +13852,13 @@
         run();
       };
       myCurrentSortedGrowSlotIndices.onChange((v) => {
-        const changed = refreshSorted(v);
-        if (!changed) return;
+        const changed5 = refreshSorted(v);
+        if (!changed5) return;
         deferUntilIndexChanges();
       });
       myCurrentGardenObject.onChange((v) => {
-        const changed = refreshGarden(v);
-        if (!changed) return;
+        const changed5 = refreshGarden(v);
+        if (!changed5) return;
         deferUntilIndexChanges();
       });
       myCurrentGrowSlotIndex.onChange((idx) => {
@@ -13886,11 +13886,11 @@
         return lastInfo;
       },
       onChange(cb) {
-        listeners5.add(cb);
-        return () => listeners5.delete(cb);
+        listeners4.add(cb);
+        return () => listeners4.delete(cb);
       },
       stop() {
-        listeners5.clear();
+        listeners4.clear();
       },
       recompute() {
         recomputeAndNotify();
@@ -13971,21 +13971,21 @@
     return base;
   }
   function sanitizeState(raw) {
-    const state5 = defaultState();
-    if (!raw || typeof raw !== "object") return state5;
-    state5.enabled = raw.enabled === true;
-    state5.settings = sanitizeSettings(raw.settings);
-    state5.overrides = {};
+    const state7 = defaultState();
+    if (!raw || typeof raw !== "object") return state7;
+    state7.enabled = raw.enabled === true;
+    state7.settings = sanitizeSettings(raw.settings);
+    state7.overrides = {};
     if (raw.overrides && typeof raw.overrides === "object") {
       for (const [key2, value] of Object.entries(raw.overrides)) {
         if (!key2) continue;
-        state5.overrides[key2] = {
+        state7.overrides[key2] = {
           enabled: value?.enabled === true,
           settings: sanitizeSettings(value?.settings)
         };
       }
     }
-    return state5;
+    return state7;
   }
   function cloneSettings(settings) {
     return {
@@ -14003,14 +14003,14 @@
       weatherRecipes: settings.weatherRecipes.map((recipe) => recipe.slice())
     };
   }
-  function cloneState(state5) {
+  function cloneState(state7) {
     const overrides = {};
-    for (const [key2, value] of Object.entries(state5.overrides)) {
+    for (const [key2, value] of Object.entries(state7.overrides)) {
       overrides[key2] = { enabled: value.enabled, settings: cloneSettings(value.settings) };
     }
     return {
-      enabled: state5.enabled,
-      settings: cloneSettings(state5.settings),
+      enabled: state7.enabled,
+      settings: cloneSettings(state7.settings),
       overrides
     };
   }
@@ -14914,186 +14914,120 @@
   });
 
   // src/features/stats/stats.ts
+  function readCount(value, fallback, integer) {
+    const num2 = Number(value);
+    const positive = Math.max(0, Number.isFinite(num2) ? num2 : fallback);
+    return integer ? Math.floor(positive) : positive;
+  }
+  function unwrapNestedSnapshot2(raw) {
+    let cur = raw;
+    for (let guard = 0; guard < 10 && isRecord2(cur) && isRecord2(cur.snapshot); guard++) cur = cur.snapshot;
+    return cur;
+  }
   function createDefaultStats(createdAt = Date.now()) {
     const hatchedByType = {};
-    for (const species of Object.keys(petCatalog2)) {
-      hatchedByType[species.toLowerCase()] = { normal: 0, gold: 0, rainbow: 0 };
-    }
+    for (const species of Object.keys(petCatalog2)) hatchedByType[species.toLowerCase()] = zeroHatched();
     const abilities = {};
-    for (const abilityId of Object.keys(petAbilities2)) {
-      abilities[abilityId] = { triggers: 0, totalValue: 0 };
-    }
+    for (const abilityId of Object.keys(petAbilities2)) abilities[abilityId] = { triggers: 0, totalValue: 0 };
     const weather2 = {};
-    for (const key2 of Object.keys(weatherCatalog2)) {
-      weather2[key2.toLowerCase()] = { triggers: 0 };
-    }
-    return {
-      createdAt,
-      garden: {
-        totalPlanted: 0,
-        totalHarvested: 0,
-        totalDestroyed: 0,
-        watercanUsed: 0,
-        waterTimeSavedMs: 0
-      },
-      shops: {
-        seedsBought: 0,
-        decorBought: 0,
-        eggsBought: 0,
-        toolsBought: 0,
-        cropsSoldCount: 0,
-        cropsSoldValue: 0,
-        petsSoldCount: 0,
-        petsSoldValue: 0
-      },
-      pets: { hatchedByType },
-      abilities,
-      weather: weather2
-    };
+    for (const key2 of Object.keys(weatherCatalog2)) weather2[key2.toLowerCase()] = { triggers: 0 };
+    const garden3 = Object.fromEntries(Object.keys(GARDEN_INT_KEYS).map((k) => [k, 0]));
+    const shops2 = Object.fromEntries(Object.keys(SHOP_INT_KEYS).map((k) => [k, 0]));
+    return { createdAt, garden: garden3, shops: shops2, pets: { hatchedByType }, abilities, weather: weather2 };
   }
-  function normalizeHatchedCounts(value, fallback) {
-    if (!isRecord2(value)) return { ...fallback };
-    return {
-      normal: toPositiveInt(value.normal, fallback.normal),
-      gold: toPositiveInt(value.gold, fallback.gold),
-      rainbow: toPositiveInt(value.rainbow, fallback.rainbow)
-    };
+  function readGroup(raw, base, intKeys) {
+    if (!isRecord2(raw)) return base;
+    const out = { ...base };
+    for (const key2 of Object.keys(intKeys)) {
+      out[key2] = readCount(raw[key2], base[key2], intKeys[key2]);
+    }
+    return out;
   }
   function normalizeStats(raw) {
-    const fallbackCreatedAt = Date.now();
-    const base = createDefaultStats(fallbackCreatedAt);
+    const now2 = Date.now();
+    const base = createDefaultStats(now2);
     if (!isRecord2(raw)) return base;
     if (Object.prototype.hasOwnProperty.call(raw, "createdAt")) {
-      base.createdAt = toPositiveTimestamp(raw.createdAt, fallbackCreatedAt);
+      const createdAt = Number(raw.createdAt);
+      base.createdAt = Number.isFinite(createdAt) && createdAt > 0 ? Math.floor(createdAt) : now2;
     }
-    if (isRecord2(raw.garden)) {
-      base.garden = {
-        totalPlanted: toPositiveInt(raw.garden.totalPlanted, base.garden.totalPlanted),
-        totalHarvested: toPositiveInt(raw.garden.totalHarvested, base.garden.totalHarvested),
-        totalDestroyed: toPositiveInt(raw.garden.totalDestroyed, base.garden.totalDestroyed),
-        watercanUsed: toPositiveInt(raw.garden.watercanUsed, base.garden.watercanUsed),
-        waterTimeSavedMs: toPositiveInt(raw.garden.waterTimeSavedMs, base.garden.waterTimeSavedMs)
-      };
-    }
-    if (isRecord2(raw.shops)) {
-      base.shops = {
-        seedsBought: toPositiveInt(raw.shops.seedsBought, base.shops.seedsBought),
-        decorBought: toPositiveInt(raw.shops.decorBought, base.shops.decorBought),
-        eggsBought: toPositiveInt(raw.shops.eggsBought, base.shops.eggsBought),
-        toolsBought: toPositiveInt(raw.shops.toolsBought, base.shops.toolsBought),
-        cropsSoldCount: toPositiveInt(raw.shops.cropsSoldCount, base.shops.cropsSoldCount),
-        cropsSoldValue: toPositiveNumber(raw.shops.cropsSoldValue, base.shops.cropsSoldValue),
-        petsSoldCount: toPositiveInt(raw.shops.petsSoldCount, base.shops.petsSoldCount),
-        petsSoldValue: toPositiveNumber(raw.shops.petsSoldValue, base.shops.petsSoldValue)
-      };
-    }
+    base.garden = readGroup(raw.garden, base.garden, GARDEN_INT_KEYS);
+    base.shops = readGroup(raw.shops, base.shops, SHOP_INT_KEYS);
     if (isRecord2(raw.pets) && isRecord2(raw.pets.hatchedByType)) {
       for (const [key2, counts] of Object.entries(raw.pets.hatchedByType)) {
-        if (typeof key2 !== "string") continue;
-        const normalizedKey = key2.toLowerCase();
-        const fallback = base.pets.hatchedByType[normalizedKey] ?? { normal: 0, gold: 0, rainbow: 0 };
-        base.pets.hatchedByType[normalizedKey] = normalizeHatchedCounts(counts, fallback);
+        const species = key2.toLowerCase();
+        const fallback = base.pets.hatchedByType[species] ?? zeroHatched();
+        base.pets.hatchedByType[species] = isRecord2(counts) ? {
+          normal: readCount(counts.normal, fallback.normal, true),
+          gold: readCount(counts.gold, fallback.gold, true),
+          rainbow: readCount(counts.rainbow, fallback.rainbow, true)
+        } : { ...fallback };
       }
     }
     if (isRecord2(raw.abilities)) {
       for (const [key2, value] of Object.entries(raw.abilities)) {
-        if (typeof key2 !== "string" || !isRecord2(value)) continue;
+        if (!isRecord2(value)) continue;
         base.abilities[key2] = {
-          triggers: toPositiveInt(value.triggers, base.abilities[key2]?.triggers ?? 0),
-          totalValue: toPositiveNumber(value.totalValue, base.abilities[key2]?.totalValue ?? 0)
+          triggers: readCount(value.triggers, base.abilities[key2]?.triggers ?? 0, true),
+          totalValue: readCount(value.totalValue, base.abilities[key2]?.totalValue ?? 0, false)
         };
       }
     }
     if (isRecord2(raw.weather)) {
       for (const [key2, value] of Object.entries(raw.weather)) {
-        if (typeof key2 !== "string" || !isRecord2(value)) continue;
-        const normalizedKey = key2.toLowerCase();
-        const fallback = base.weather[normalizedKey] ?? { triggers: 0 };
-        base.weather[normalizedKey] = {
-          triggers: toPositiveInt(value.triggers, fallback.triggers)
-        };
+        if (!isRecord2(value)) continue;
+        const weather2 = key2.toLowerCase();
+        base.weather[weather2] = { triggers: readCount(value.triggers, base.weather[weather2]?.triggers ?? 0, true) };
       }
     }
     return base;
   }
+  function writeToStorage(stats) {
+    memoryStore = cloneStats(stats);
+    writeAriesPath(STORAGE_PATH, memoryStore);
+    return memoryStore;
+  }
   function readFromStorage() {
     if (memoryStore) return cloneStats(memoryStore);
-    const rawWrapped = readAriesPath("stats");
-    const raw = unwrapMaybeNestedSnapshot(rawWrapped);
+    const stored = readAriesPath(STORAGE_PATH);
+    const raw = unwrapNestedSnapshot2(stored);
     if (!raw) {
       const fresh = createDefaultStats();
-      memoryStore = cloneStats(fresh);
-      writeAriesPath("stats", memoryStore);
+      writeToStorage(fresh);
       return fresh;
     }
     const normalized = normalizeStats(raw);
     memoryStore = cloneStats(normalized);
-    if (rawWrapped !== raw) {
-      writeAriesPath("stats", memoryStore);
-    }
+    if (stored !== raw) writeAriesPath(STORAGE_PATH, memoryStore);
     return normalized;
-  }
-  function emitUpdate(stats) {
-    const snapshot2 = cloneStats(stats);
-    for (const listener of listeners) {
-      try {
-        listener(snapshot2);
-      } catch (error) {
-        console.error("[StatsService] Listener error", error);
-      }
-    }
-  }
-  function writeToStorage(stats) {
-    const snapshot2 = cloneStats(stats);
-    memoryStore = snapshot2;
-    writeAriesPath("stats", snapshot2);
-    return snapshot2;
   }
   function adjustValue(current, delta, integer) {
     const a = Number(current);
     const b = Number(delta);
-    const sum = Number.isFinite(a) ? a : 0;
-    const next = sum + (Number.isFinite(b) ? b : 0);
-    const clamped = Math.max(0, next);
-    return integer ? Math.floor(clamped) : clamped;
+    const next = Math.max(0, (Number.isFinite(a) ? a : 0) + (Number.isFinite(b) ? b : 0));
+    return integer ? Math.floor(next) : next;
   }
   function updateStats(mutator) {
     const current = readFromStorage();
-    const before = JSON.stringify(current);
     const draft = cloneStats(current);
     mutator(draft);
-    const after = JSON.stringify(draft);
-    if (before === after) return current;
+    if (JSON.stringify(current) === JSON.stringify(draft)) return current;
     const stored = writeToStorage(draft);
-    emitUpdate(stored);
+    changed.emit(cloneStats(stored));
     return stored;
   }
-  function requireAbilityEntry(stats, abilityId) {
-    if (!stats.abilities[abilityId]) {
-      stats.abilities[abilityId] = { triggers: 0, totalValue: 0 };
-    }
-    return stats.abilities[abilityId];
+  function entryOf2(table, key2, fresh) {
+    if (!table[key2]) table[key2] = fresh();
+    return table[key2];
   }
-  function requireWeatherEntry(stats, weatherId) {
-    const key2 = weatherId.toLowerCase();
-    if (!stats.weather[key2]) {
-      stats.weather[key2] = { triggers: 0 };
-    }
-    return stats.weather[key2];
-  }
-  function requirePetEntry(stats, species) {
-    const key2 = species.toLowerCase();
-    if (!stats.pets.hatchedByType[key2]) {
-      stats.pets.hatchedByType[key2] = { normal: 0, gold: 0, rainbow: 0 };
-    }
-    return stats.pets.hatchedByType[key2];
-  }
-  var GARDEN_INT_KEYS, SHOP_INT_KEYS, ABILITY_INT_KEYS, WEATHER_INT_KEYS, memoryStore, listeners, isRecord2, toNumber, toPositiveNumber, toPositiveInt, toPositiveTimestamp, cloneStats, unwrapMaybeNestedSnapshot, StatsService;
+  var STORAGE_PATH, GARDEN_INT_KEYS, SHOP_INT_KEYS, ABILITY_INT_KEYS, memoryStore, changed, isRecord2, zeroHatched, cloneStats, StatsService;
   var init_stats = __esm({
     "src/features/stats/stats.ts"() {
       "use strict";
       init_data();
+      init_emitter();
       init_storage();
+      STORAGE_PATH = "stats";
       GARDEN_INT_KEYS = {
         totalPlanted: true,
         totalHarvested: true,
@@ -15115,70 +15049,23 @@
         triggers: true,
         totalValue: false
       };
-      WEATHER_INT_KEYS = {
-        triggers: true
-      };
       memoryStore = null;
-      listeners = /* @__PURE__ */ new Set();
+      changed = new Emitter();
       isRecord2 = (value) => typeof value === "object" && value !== null;
-      toNumber = (value, fallback = 0) => {
-        const num2 = Number(value);
-        if (!Number.isFinite(num2)) return fallback;
-        return num2;
-      };
-      toPositiveNumber = (value, fallback = 0) => {
-        const num2 = toNumber(value, fallback);
-        return Math.max(0, num2);
-      };
-      toPositiveInt = (value, fallback = 0) => {
-        const num2 = toPositiveNumber(value, fallback);
-        return Math.floor(num2);
-      };
-      toPositiveTimestamp = (value, fallback) => {
-        const num2 = Number(value);
-        if (!Number.isFinite(num2) || num2 <= 0) return fallback;
-        return Math.floor(num2);
-      };
+      zeroHatched = () => ({ normal: 0, gold: 0, rainbow: 0 });
       cloneStats = (stats) => ({
         createdAt: stats.createdAt,
         garden: { ...stats.garden },
         shops: { ...stats.shops },
         pets: {
-          hatchedByType: Object.fromEntries(
-            Object.entries(stats.pets.hatchedByType).map(([key2, counts]) => [key2, { ...counts }])
-          )
+          hatchedByType: Object.fromEntries(Object.entries(stats.pets.hatchedByType).map(([key2, counts]) => [key2, { ...counts }]))
         },
-        abilities: Object.fromEntries(
-          Object.entries(stats.abilities).map(([key2, value]) => [key2, { ...value }])
-        ),
-        weather: Object.fromEntries(
-          Object.entries(stats.weather).map(([key2, value]) => [key2, { ...value }])
-        )
+        abilities: Object.fromEntries(Object.entries(stats.abilities).map(([key2, value]) => [key2, { ...value }])),
+        weather: Object.fromEntries(Object.entries(stats.weather).map(([key2, value]) => [key2, { ...value }]))
       });
-      unwrapMaybeNestedSnapshot = (raw) => {
-        let cur = raw;
-        let guard = 0;
-        while (guard++ < 10 && isRecord2(cur) && "snapshot" in cur && isRecord2(cur.snapshot)) {
-          cur = cur.snapshot;
-        }
-        return cur;
-      };
       StatsService = {
-        storageKey: "stats",
         getSnapshot() {
           return readFromStorage();
-        },
-        setSnapshot(snapshot2) {
-          const normalized = normalizeStats(unwrapMaybeNestedSnapshot(snapshot2));
-          const stored = writeToStorage(normalized);
-          emitUpdate(stored);
-          return stored;
-        },
-        reset() {
-          const fresh = createDefaultStats();
-          const stored = writeToStorage(fresh);
-          emitUpdate(stored);
-          return stored;
         },
         update(mutator) {
           return updateStats(mutator);
@@ -15195,27 +15082,24 @@
         },
         incrementPetHatched(species, rarityKey = "normal", amount = 1) {
           return updateStats((draft) => {
-            const entry = requirePetEntry(draft, species);
+            const entry = entryOf2(draft.pets.hatchedByType, species.toLowerCase(), zeroHatched);
             entry[rarityKey] = adjustValue(entry[rarityKey], amount, true);
           });
         },
         incrementAbilityStat(abilityId, key2, amount = 1) {
           return updateStats((draft) => {
-            const entry = requireAbilityEntry(draft, abilityId);
+            const entry = entryOf2(draft.abilities, abilityId, () => ({ triggers: 0, totalValue: 0 }));
             entry[key2] = adjustValue(entry[key2], amount, ABILITY_INT_KEYS[key2]);
           });
         },
-        incrementWeatherStat(weatherId, key2 = "triggers", amount = 1) {
+        incrementWeatherStat(weatherId, amount = 1) {
           return updateStats((draft) => {
-            const entry = requireWeatherEntry(draft, weatherId);
-            entry[key2] = adjustValue(entry[key2], amount, WEATHER_INT_KEYS[key2]);
+            const entry = entryOf2(draft.weather, weatherId.toLowerCase(), () => ({ triggers: 0 }));
+            entry.triggers = adjustValue(entry.triggers, amount, true);
           });
         },
         subscribe(listener) {
-          listeners.add(listener);
-          return () => {
-            listeners.delete(listener);
-          };
+          return changed.on(listener);
         }
       };
     }
@@ -15651,7 +15535,7 @@
   // src/features/pets/abilityLogs.ts
   function persist2() {
     try {
-      writeAriesPath(STORAGE_PATH, {
+      writeAriesPath(STORAGE_PATH2, {
         version: 1,
         cutoff: cutoffMs,
         logs: logs.map((entry) => ({
@@ -15666,7 +15550,7 @@
   }
   function restoreAbilityLogs() {
     try {
-      const saved = readAriesPath(STORAGE_PATH);
+      const saved = readAriesPath(STORAGE_PATH2);
       if (!saved || typeof saved !== "object") return;
       const restored = [];
       for (const item of Array.isArray(saved.logs) ? saved.logs : []) {
@@ -15756,15 +15640,15 @@
       ingest2(await myActivityLog.get());
     } catch {
     }
-    let stop2 = null;
+    let stop = null;
     try {
       const res = await myActivityLog.onChange((next) => ingest2(next));
-      if (typeof res === "function") stop2 = res;
+      if (typeof res === "function") stop = res;
     } catch {
     }
     return () => {
       try {
-        stop2?.();
+        stop?.();
       } catch {
       }
     };
@@ -15793,7 +15677,7 @@
     changes.emit(getAbilityLogs());
     persist2();
   }
-  var STORAGE_PATH, MAX_ENTRIES, CUTOFF_SKEW_MS, logs, seenKeys, cutoffMs, sessionStart, changes, entryKey, time12, optionalString;
+  var STORAGE_PATH2, MAX_ENTRIES, CUTOFF_SKEW_MS, logs, seenKeys, cutoffMs, sessionStart, changes, entryKey, time12, optionalString;
   var init_abilityLogs = __esm({
     "src/features/pets/abilityLogs.ts"() {
       "use strict";
@@ -15804,7 +15688,7 @@
       init_abilityNames();
       init_abilityLogText();
       init_inventoryPets();
-      STORAGE_PATH = "pets.abilityLogs";
+      STORAGE_PATH2 = "pets.abilityLogs";
       MAX_ENTRIES = 500;
       CUTOFF_SKEW_MS = 1500;
       logs = [];
@@ -15844,8 +15728,8 @@
     writeAriesPath(INSTANT_FEED_PATH, all);
   }
   function getInstantFeedAllowedCrops(species) {
-    const rules2 = instantFeedRules(species);
-    return new Set(getCompatibleCropsForSpecies(canonicalSpecies(String(species || ""))).filter((c) => isAllowed(rules2, c)));
+    const rules3 = instantFeedRules(species);
+    return new Set(getCompatibleCropsForSpecies(canonicalSpecies(String(species || ""))).filter((c) => isAllowed(rules3, c)));
   }
   function getCompatibleCropsForSpecies(species) {
     const entry = catalogEntry(species);
@@ -15872,7 +15756,7 @@
       INSTANT_FEED_PATH = "pets.instantFeed";
       DEFAULT_THRESHOLD_PCT = 10;
       DEFAULT_MAX_HUNGER = 3e3;
-      isAllowed = (rules2, crop) => rules2[crop] ? !!rules2[crop].allowed : true;
+      isAllowed = (rules3, crop) => rules3[crop] ? !!rules3[crop].allowed : true;
       catalogEntry = (species) => petCatalog2[species];
     }
   });
@@ -16096,7 +15980,7 @@
 
   // src/features/pets/teamStore.ts
   function load2() {
-    const saved = readAriesPath(STORAGE_PATH2) ?? [];
+    const saved = readAriesPath(STORAGE_PATH3) ?? [];
     if (!Array.isArray(saved)) return [];
     const seen = /* @__PURE__ */ new Set();
     const out = [];
@@ -16119,7 +16003,7 @@
     for (const t of list) {
       if (t?.serverId && t?.id) localIdByServerId.set(String(t.serverId), String(t.id));
     }
-    writeAriesPath(STORAGE_PATH2, list);
+    writeAriesPath(STORAGE_PATH3, list);
   }
   function teamsRef() {
     return teams;
@@ -16169,13 +16053,13 @@
     }
     return `t_${Date.now().toString(36)}_${Math.random().toString(16).slice(2)}`;
   }
-  var STORAGE_PATH2, SLOT_COUNT, localIdByServerId, changes2, normalizeSlots, teams, copy;
+  var STORAGE_PATH3, SLOT_COUNT, localIdByServerId, changes2, normalizeSlots, teams, copy;
   var init_teamStore = __esm({
     "src/features/pets/teamStore.ts"() {
       "use strict";
       init_emitter();
       init_storage();
-      STORAGE_PATH2 = "pets.teams";
+      STORAGE_PATH3 = "pets.teams";
       SLOT_COUNT = 3;
       localIdByServerId = /* @__PURE__ */ new Map();
       changes2 = new Emitter();
@@ -16880,29 +16764,29 @@
     };
     for (let slot = 0; slot < MAX_TEAM_SLOTS; slot++) {
       const targetId = aligned[slot];
-      const currentId = String(activeSlots[slot] ?? "");
-      if (targetId && targetId === currentId) {
+      const currentId2 = String(activeSlots[slot] ?? "");
+      if (targetId && targetId === currentId2) {
         skipped++;
         continue;
       }
       if (!targetId) {
-        if (currentId) {
+        if (currentId2) {
           try {
-            await PlayerService.storePet(currentId);
+            await PlayerService.storePet(currentId2);
             activeSlots[slot] = "";
-            await storeInHutch(currentId);
+            await storeInHutch(currentId2);
           } catch {
           }
         }
         continue;
       }
-      if (currentId && inHutch.has(targetId)) {
+      if (currentId2 && inHutch.has(targetId)) {
         try {
-          await PlayerService.swapPetFromStorage(currentId, targetId, "PetHutch");
+          await PlayerService.swapPetFromStorage(currentId2, targetId, "PetHutch");
           swapped++;
           activeSlots[slot] = targetId;
           inHutch.delete(targetId);
-          inHutch.add(currentId);
+          inHutch.add(currentId2);
         } catch {
           try {
             await place(targetId);
@@ -16940,7 +16824,7 @@
           continue;
         }
       }
-      if (!currentId) {
+      if (!currentId2) {
         try {
           await place(targetId);
           activeSlots[slot] = targetId;
@@ -16949,11 +16833,11 @@
         continue;
       }
       try {
-        await PlayerService.swapPet(currentId, targetId);
+        await PlayerService.swapPet(currentId2, targetId);
         swapped++;
         activeSlots[slot] = targetId;
         try {
-          await storeInHutch(currentId);
+          await storeInHutch(currentId2);
         } catch {
         }
       } catch {
@@ -17751,65 +17635,46 @@
       "keydown",
       (event) => {
         if (shouldIgnoreKeydown(event)) return;
-        for (const { id, modal } of SHOP_KEYBINDS) {
-          if (!eventMatchesKeybind(id, event)) continue;
-          event.preventDefault();
-          event.stopPropagation();
-          void openModal(modal);
-          break;
-        }
+        const bind = SHOP_KEYBINDS.find(({ id }) => eventMatchesKeybind(id, event));
+        if (!bind) return;
+        event.preventDefault();
+        event.stopPropagation();
+        void openModal(bind.modal);
       },
       true
     );
   }
-  function _fallbackShopFor(kind) {
-    return kind === "seeds" ? "seed" : kind === "tools" ? "tool" : kind === "eggs" ? "egg" : "decor";
+  function itemIdOf(kind, it) {
+    if (kind === "seeds") return it.species ?? it.name;
+    if (kind === "tools") return it.toolId ?? it.id;
+    if (kind === "eggs") return it.eggId ?? it.id;
+    return it.decorId ?? it.id;
   }
-  function _buildPurchasePayload(kind, it) {
-    if (kind === "seeds") {
-      const species = it.species ?? it.name;
-      return species ? { item: { itemType: "Seed", species: String(species) }, stat: "seedsBought" } : null;
-    }
-    if (kind === "tools") {
-      const toolId = it.toolId ?? it.id;
-      return toolId ? { item: { itemType: "Tool", toolId: String(toolId) }, stat: "toolsBought" } : null;
-    }
-    if (kind === "eggs") {
-      const eggId = it.eggId ?? it.id;
-      return eggId ? { item: { itemType: "Egg", eggId: String(eggId) }, stat: "eggsBought" } : null;
-    }
-    if (kind === "decor") {
-      const decorId = it.decorId ?? it.id;
-      return decorId ? { item: { itemType: "Decor", decorId: String(decorId) }, stat: "decorBought" } : null;
+  function buildPurchasePayload(kind, it) {
+    const id = itemIdOf(kind, it);
+    if (!id) return null;
+    const value = String(id);
+    if (kind === "seeds") return { item: { itemType: "Seed", species: value }, stat: "seedsBought" };
+    if (kind === "tools") return { item: { itemType: "Tool", toolId: value }, stat: "toolsBought" };
+    if (kind === "eggs") return { item: { itemType: "Egg", eggId: value }, stat: "eggsBought" };
+    return { item: { itemType: "Decor", decorId: value }, stat: "decorBought" };
+  }
+  function findShopForItem(shops2, kind, it) {
+    if (!shops2 || typeof shops2 !== "object") return null;
+    const keys = Object.keys(shops2);
+    const ordered = [...keys.filter((k) => !BASE_SHOP_KEYS.includes(k)), ...keys.filter((k) => BASE_SHOP_KEYS.includes(k))];
+    const target = itemIdOf(kind, it);
+    if (target == null) return null;
+    const field2 = ITEM_FIELD[kind];
+    for (const key2 of ordered) {
+      const inv = shops2[key2]?.inventory;
+      if (Array.isArray(inv) && inv.some((entry) => entry && typeof entry === "object" && entry[field2] === target)) {
+        return key2;
+      }
     }
     return null;
   }
-  function _findShopForItem(snap, kind, it) {
-    if (!snap || typeof snap !== "object") return null;
-    const keys = Object.keys(snap);
-    const weatherKeys = keys.filter((k) => !BASE_SHOP_KEYS.includes(k));
-    const baseKeys = keys.filter((k) => BASE_SHOP_KEYS.includes(k));
-    const ordered = [...weatherKeys, ...baseKeys];
-    const targetSpecies = it.species ?? it.name;
-    const targetToolId = it.toolId ?? it.id;
-    const targetEggId = it.eggId ?? it.id;
-    const targetDecorId = it.decorId ?? it.id;
-    const matches = (entry) => {
-      if (!entry || typeof entry !== "object") return false;
-      if (kind === "seeds") return targetSpecies != null && entry.species === targetSpecies;
-      if (kind === "tools") return targetToolId != null && entry.toolId === targetToolId;
-      if (kind === "eggs") return targetEggId != null && entry.eggId === targetEggId;
-      if (kind === "decor") return targetDecorId != null && entry.decorId === targetDecorId;
-      return false;
-    };
-    for (const k of ordered) {
-      const inv = snap[k]?.inventory;
-      if (!Array.isArray(inv)) continue;
-      if (inv.some(matches)) return k;
-    }
-    return null;
-  }
-  var SHOP_KEYBINDS, shopKeybindsInstalled, BASE_SHOP_KEYS, ShopsService;
+  var SHOP_KEYBINDS, shopKeybindsInstalled, BASE_SHOP_KEYS, BASE_SHOP_OF, ITEM_FIELD, ShopsService;
   var init_shops = __esm({
     "src/features/shops/shops.ts"() {
       "use strict";
@@ -17830,22 +17695,33 @@
       ];
       shopKeybindsInstalled = false;
       BASE_SHOP_KEYS = ["seed", "egg", "tool", "decor"];
+      BASE_SHOP_OF = { seeds: "seed", tools: "tool", eggs: "egg", decor: "decor" };
+      ITEM_FIELD = { seeds: "species", tools: "toolId", eggs: "eggId", decor: "decorId" };
       ShopsService = {
-        /** Achat unitaire : envoie le bon message au jeu. */
+        /** Buys one of the item. */
         async buyOne(kind, it) {
           return ShopsService.buy(kind, it, 1);
         },
-        /** Achete `quantity` exemplaires en une seule commande, comme le Buy All du jeu. */
+        /**
+         * Buys `count` of the item, one purchase at a time. The server takes a
+         * `quantity` since v1292, but the game only sends it when the player can pay
+         * for the whole stack and has room for it, and the mod knows neither. Unit
+         * purchases still buy what the player can afford.
+         */
+        async buyEach(kind, it, count) {
+          for (let i = 0; i < count; i++) await ShopsService.buyOne(kind, it);
+        },
+        /** Buys `quantity` of the item in one command, like the game's own Buy All. */
         async buy(kind, it, quantity) {
-          const built = _buildPurchasePayload(kind, it);
+          const built = buildPurchasePayload(kind, it);
           if (!built) return;
           let shop = null;
           try {
             const [shops2, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
-            shop = _findShopForItem(playerShopView(shops2, slot, () => null).shops, kind, it);
+            shop = findShopForItem(playerShopView(shops2, slot, () => null).shops, kind, it);
           } catch {
           }
-          if (!shop) shop = _fallbackShopFor(kind);
+          if (!shop) shop = BASE_SHOP_OF[kind];
           try {
             let storage = null;
             try {
@@ -18584,15 +18460,15 @@
     return total.toLocaleString("en-US");
   }
   async function confirmHighValuePetSale(pets, logger) {
-    const rules2 = lockerRestrictionsService.getSellAllPetsRules();
-    if (!rules2?.enabled) return true;
+    const rules3 = lockerRestrictionsService.getSellAllPetsRules();
+    if (!rules3?.enabled) return true;
     const mutationProtect = /* @__PURE__ */ new Set();
-    if (rules2.protectGold) mutationProtect.add("gold");
-    if (rules2.protectRainbow) mutationProtect.add("rainbow");
-    const maxStrThreshold = Number.isFinite(rules2.maxStrThreshold) ? Math.max(0, Math.min(100, Math.round(rules2.maxStrThreshold))) : 0;
-    const checkMaxStr = !!rules2.protectMaxStr;
+    if (rules3.protectGold) mutationProtect.add("gold");
+    if (rules3.protectRainbow) mutationProtect.add("rainbow");
+    const maxStrThreshold = Number.isFinite(rules3.maxStrThreshold) ? Math.max(0, Math.min(100, Math.round(rules3.maxStrThreshold))) : 0;
+    const checkMaxStr = !!rules3.protectMaxStr;
     const protectedRarities = new Set(
-      Array.isArray(rules2.protectedRarities) ? rules2.protectedRarities : []
+      Array.isArray(rules3.protectedRarities) ? rules3.protectedRarities : []
     );
     if (mutationProtect.size === 0 && !checkMaxStr && protectedRarities.size === 0) return true;
     const flagged = [];
@@ -18689,15 +18565,15 @@
       list.style.overflow = "auto";
       list.style.paddingRight = "4px";
       const buildPetRow = (entry) => {
-        const row3 = document.createElement("div");
-        row3.style.display = "grid";
-        row3.style.gridTemplateColumns = "48px 1fr";
-        row3.style.gap = "10px";
-        row3.style.alignItems = "center";
-        row3.style.padding = "6px 8px";
-        row3.style.border = "1px solid rgba(255,255,255,0.08)";
-        row3.style.borderRadius = "10px";
-        row3.style.background = "rgba(255,255,255,0.03)";
+        const row4 = document.createElement("div");
+        row4.style.display = "grid";
+        row4.style.gridTemplateColumns = "48px 1fr";
+        row4.style.gap = "10px";
+        row4.style.alignItems = "center";
+        row4.style.padding = "6px 8px";
+        row4.style.border = "1px solid rgba(255,255,255,0.08)";
+        row4.style.borderRadius = "10px";
+        row4.style.background = "rgba(255,255,255,0.03)";
         const imgWrap = document.createElement("div");
         imgWrap.style.width = "48px";
         imgWrap.style.height = "48px";
@@ -18750,8 +18626,8 @@
           reasons.appendChild(chip);
         }
         info.append(name, reasons);
-        row3.append(imgWrap, info);
-        return row3;
+        row4.append(imgWrap, info);
+        return row4;
       };
       for (const entry of flagged) {
         list.appendChild(buildPetRow(entry));
@@ -18900,8 +18776,8 @@
     root4.querySelectorAll(`.${injectedClass}`).forEach((n) => n.remove());
   }
   function ensureStyle(injectedClass, theme) {
-    const STYLE_ID5 = `${injectedClass}-style`;
-    if (document.getElementById(STYLE_ID5)) return;
+    const STYLE_ID6 = `${injectedClass}-style`;
+    if (document.getElementById(STYLE_ID6)) return;
     const css5 = `
 .${injectedClass}{
   font-synthesis: none;
@@ -18956,7 +18832,7 @@
 }
 `.trim();
     const s = document.createElement("style");
-    s.id = STYLE_ID5;
+    s.id = STYLE_ID6;
     s.textContent = css5;
     document.head.appendChild(s);
   }
@@ -19374,13 +19250,13 @@
         /* --------- rapid-fire (API) --------- */
         startRapidFire(opts) {
           const trigger = normalizeCombo(opts.trigger);
-          const emit = normalizeCombo(opts.emit ?? opts.trigger);
+          const emit2 = normalizeCombo(opts.emit ?? opts.trigger);
           const rateMs = 1e3 / Math.max(1, opts.rateHz ?? 12);
           const mode = opts.mode ?? "tap";
           const keyupDelayMs = opts.keyupDelayMs ?? 20;
           this.sessions.set(trigger, {
             trigger: parseComboSpec(trigger),
-            emit: parseComboSpec(emit),
+            emit: parseComboSpec(emit2),
             rateMs,
             mode,
             keyupDelayMs,
@@ -19680,666 +19556,557 @@
     }
   });
 
-  // src/features/notifier/audio.ts
-  function clamp01(v) {
-    return Math.max(0, Math.min(1, v));
+  // src/features/notifier/audio/encode.ts
+  function reject(toast3, detail) {
+    try {
+      toastSimple("Audio import", toast3, "error").catch(() => {
+      });
+    } catch {
+    }
+    throw new Error(detail);
   }
-  function looksLikeDataURL(s) {
-    return /^data:audio\/[a-z0-9.+-]+;base64,/i.test(s.trim());
+  function checkDuration(buffer, maxSeconds) {
+    if (buffer.duration <= maxSeconds) return;
+    const duration = seconds(buffer.duration);
+    const limit = seconds(maxSeconds);
+    reject(`File duration is ${duration}s (limit: ${limit}s).`, `Audio duration ${duration}s exceeds limit of ${limit}s.`);
   }
+  function newAudioContext() {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    return new Ctx();
+  }
+  async function decode(file) {
+    const bytes = await file.arrayBuffer();
+    const ctx2 = newAudioContext();
+    try {
+      return await new Promise((resolve, fail) => ctx2.decodeAudioData(bytes.slice(0), resolve, fail));
+    } catch {
+      throw new Error("Failed to decode audio file.");
+    } finally {
+      await ctx2.close().catch(() => {
+      });
+    }
+  }
+  function readAsDataUrl(blob) {
+    return new Promise((resolve, fail) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = fail;
+      reader.readAsDataURL(blob);
+    });
+  }
+  function pickEncoderMime() {
+    if (typeof MediaRecorder === "undefined") return null;
+    for (const mime of ENCODER_MIMES) {
+      try {
+        if (MediaRecorder.isTypeSupported?.(mime)) return mime;
+      } catch {
+      }
+    }
+    return null;
+  }
+  async function reencode(buffer, mime, bitsPerSecond) {
+    const ctx2 = newAudioContext();
+    const dest = ctx2.createMediaStreamDestination();
+    const src = ctx2.createBufferSource();
+    src.buffer = buffer;
+    const gain = ctx2.createGain();
+    gain.gain.value = 0.9;
+    src.connect(gain).connect(dest);
+    const chunks = [];
+    const recorder = new MediaRecorder(dest.stream, { mimeType: mime, bitsPerSecond });
+    const recorded = new Promise((resolve, fail) => {
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size) chunks.push(e.data);
+      };
+      recorder.onerror = (e) => fail(e.error || new Error("MediaRecorder error"));
+      recorder.onstop = () => {
+        try {
+          resolve(new Blob(chunks, { type: mime }));
+        } catch (err) {
+          fail(err);
+        }
+      };
+    });
+    recorder.start();
+    src.start();
+    await new Promise((done) => {
+      src.onended = () => done();
+    });
+    recorder.stop();
+    const out = await recorded;
+    await ctx2.close().catch(() => {
+    });
+    return out;
+  }
+  async function encodeSoundFile(file, limits = SOUND_LIMITS) {
+    if (!file || !(file instanceof File)) throw new Error("No file provided.");
+    const extension = (file.name?.split(".").pop() || "").toLowerCase();
+    const allowedMimes = ALLOWED_MIMES_BY_EXTENSION.get(extension);
+    if (!extension || !allowedMimes) {
+      reject("Unsupported audio format. Allowed formats: MP3, WAV, OGG.", `Unsupported audio extension: ${extension || "unknown"}`);
+    }
+    const type = (file.type || "").toLowerCase();
+    if (!type || !allowedMimes.has(type)) {
+      reject(
+        "File extension and MIME type must match (MP3, WAV, OGG only).",
+        type ? `MIME type ${type} is not valid for .${extension} files.` : `Missing MIME type for .${extension} files.`
+      );
+    }
+    const kb = (bytes) => Math.round(bytes / 1024);
+    if (file.size > limits.maxInputBytes) {
+      throw new Error(`Input file too large (${kb(file.size)}KB). Limit is ${kb(limits.maxInputBytes)}KB.`);
+    }
+    if (file.size <= limits.maxBytes) {
+      checkDuration(await decode(file), limits.maxSeconds);
+      return readAsDataUrl(file);
+    }
+    const mime = pickEncoderMime();
+    if (!mime) throw new Error("Compression unavailable in this browser; file exceeds 200KB.");
+    const buffer = await decode(file);
+    checkDuration(buffer, limits.maxSeconds);
+    for (const bitrate of limits.bitrates) {
+      const blob = await reencode(buffer, mime, bitrate);
+      if (blob.size <= limits.maxBytes) return readAsDataUrl(blob);
+    }
+    reject(
+      `Unable to compress under ${kb(limits.maxBytes)}KB. Try a shorter clip.`,
+      `Could not compress under ${kb(limits.maxBytes)}KB. Try a shorter clip.`
+    );
+  }
+  var SOUND_LIMITS, ALLOWED_MIMES_BY_EXTENSION, ENCODER_MIMES, seconds;
+  var init_encode = __esm({
+    "src/features/notifier/audio/encode.ts"() {
+      "use strict";
+      init_toast();
+      SOUND_LIMITS = {
+        maxBytes: 200 * 1024,
+        maxSeconds: 10,
+        bitrates: [48e3, 32e3, 2e4, 12e3, 8e3],
+        maxInputBytes: 8 * 1024 * 1024
+      };
+      ALLOWED_MIMES_BY_EXTENSION = /* @__PURE__ */ new Map([
+        ["mp3", /* @__PURE__ */ new Set(["audio/mpeg", "audio/mp3"])],
+        ["wav", /* @__PURE__ */ new Set(["audio/wav", "audio/x-wav", "audio/wave"])],
+        ["ogg", /* @__PURE__ */ new Set(["audio/ogg"])]
+      ]);
+      ENCODER_MIMES = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/webm", "audio/ogg", "audio/mp4"];
+      seconds = (s) => s.toFixed(1).replace(/\.0$/, "");
+    }
+  });
+
+  // src/features/notifier/audio/defaultSound.ts
+  var DEFAULT_SOUND_MP3_BASE64;
+  var init_defaultSound = __esm({
+    "src/features/notifier/audio/defaultSound.ts"() {
+      "use strict";
+      DEFAULT_SOUND_MP3_BASE64 = "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yWIx4QmQjniP/DFmXUHhpXgYKiwj0jItaDYoKCJwwYeA8MCCDGJuOoIQJFQEHjhJiW1NwKgKQTnbpNVZyKIIqeEtci87LqvPjrDXFvdx/v/r9eT//////////8X/O/34YjQv//nbVV62e+zRaNdv5k3Nlkv54MsiVZJ2XPNImgx6LJVuEpwRk5xtEkjOFydK6U44SZKtPgOpWFyUrA5KVwmCTAGQasapCi+pBXrShYhskHhSRHScOBoQjCMWFSqaA+hRJoD6EhSXc0qk25kNUMSzoQpY4x2EatYayUjWUjakatczs/X6ssMtcmvSZausPNb1Z7MvsZNtBRrR1vBf8Fl4/xpo2gYAPVqmZh3Zqv0o3AwpxomhWHeCsQjJYtDR7Oz09UeaGmZLiY9UBT1bvBXDXLaLg7lpUq79eJRnBoGZcjQTIU2QmlCpBRpZLpk6gKKER4ApYROtLHiXKhLWJYoV9Wv/+5RE9I8C3GLBgyFE8lsMeDBkI54KgY8CDATVwgApIWj0jpl1oLeWDtoUPes6hly6zueDsS8io9hriUNB3GPDCgoloBCgoCpRstUAnAQHUSTcAmVGcv2VV/9aWqqu212q5xjVZI4mG8LIwk8L0T/zXdc6WGAln0Kv8/jUBpZGq6nVUmNf89VL2oCVJjqk2qiS//YwrDQXEBQxI1VUaWqnglaJ0ZnIUsbjOFEozLLDhrJUFUmZpqv9Vv9mjF7HV2XZv9s/2Paeaw1JVh3NZ3alqp89m2L6vxi1jBjFS8S7FguQVjiwFeb/8O/5ZkxBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr/+5Rk3QDBygs8yCEYED0hV4IEJgwLEY7GIYR+QVyl2chTDDGqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo=";
+    }
+  });
+
+  // src/features/notifier/audio/library.ts
   function toDataUrl(dataOrBase64, mime = "audio/mpeg") {
     const s = (dataOrBase64 || "").trim();
     if (!s) return "";
-    if (looksLikeDataURL(s)) return s;
-    return `data:${mime};base64,${s}`;
+    return looksLikeDataUrl(s) ? s : `data:${mime};base64,${s}`;
   }
-  var EMBED_DEFAULT_MP3_BASE64, AUDIO_SETTINGS_PATH, AUDIO_LIBRARY_PATH, AudioNotifier, audio;
-  var init_audio = __esm({
-    "src/features/notifier/audio.ts"() {
+  var LIBRARY_PATH, BUILTIN_SOUND_NAME, DATA_URL_RE, looksLikeDataUrl, SoundLibrary;
+  var init_library = __esm({
+    "src/features/notifier/audio/library.ts"() {
       "use strict";
-      init_toast();
       init_storage();
-      EMBED_DEFAULT_MP3_BASE64 = "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yWIx4QmQjniP/DFmXUHhpXgYKiwj0jItaDYoKCJwwYeA8MCCDGJuOoIQJFQEHjhJiW1NwKgKQTnbpNVZyKIIqeEtci87LqvPjrDXFvdx/v/r9eT//////////8X/O/34YjQv//nbVV62e+zRaNdv5k3Nlkv54MsiVZJ2XPNImgx6LJVuEpwRk5xtEkjOFydK6U44SZKtPgOpWFyUrA5KVwmCTAGQasapCi+pBXrShYhskHhSRHScOBoQjCMWFSqaA+hRJoD6EhSXc0qk25kNUMSzoQpY4x2EatYayUjWUjakatczs/X6ssMtcmvSZausPNb1Z7MvsZNtBRrR1vBf8Fl4/xpo2gYAPVqmZh3Zqv0o3AwpxomhWHeCsQjJYtDR7Oz09UeaGmZLiY9UBT1bvBXDXLaLg7lpUq79eJRnBoGZcjQTIU2QmlCpBRpZLpk6gKKER4ApYROtLHiXKhLWJYoV9Wv/+5RE9I8C3GLBgyFE8lsMeDBkI54KgY8CDATVwgApIWj0jpl1oLeWDtoUPes6hly6zueDsS8io9hriUNB3GPDCgoloBCgoCpRstUAnAQHUSTcAmVGcv2VV/9aWqqu212q5xjVZI4mG8LIwk8L0T/zXdc6WGAln0Kv8/jUBpZGq6nVUmNf89VL2oCVJjqk2qiS//YwrDQXEBQxI1VUaWqnglaJ0ZnIUsbjOFEozLLDhrJUFUmZpqv9Vv9mjF7HV2XZv9s/2Paeaw1JVh3NZ3alqp89m2L6vxi1jBjFS8S7FguQVjiwFeb/8O/5ZkxBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr/+5Rk3QDBygs8yCEYED0hV4IEJgwLEY7GIYR+QVyl2chTDDGqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo=";
-      AUDIO_SETTINGS_PATH = "audio.settings";
-      AUDIO_LIBRARY_PATH = "audio.library";
-      AudioNotifier = class {
-        constructor(opts) {
-          // ===== Core state
+      init_defaultSound();
+      LIBRARY_PATH = "audio.library";
+      BUILTIN_SOUND_NAME = "Default";
+      DATA_URL_RE = /^data:audio\/[a-z0-9.+-]+(?:;[a-z0-9.+-]+=[^;,]*)*;base64,/i;
+      looksLikeDataUrl = (s) => DATA_URL_RE.test(s.trim());
+      SoundLibrary = class {
+        constructor() {
+          this.sounds = /* @__PURE__ */ new Map();
+          this.builtinDataUrl = toDataUrl(DEFAULT_SOUND_MP3_BASE64);
+          this.sounds.set(BUILTIN_SOUND_NAME, this.builtinDataUrl);
+        }
+        load() {
+          const stored = readAriesPath(LIBRARY_PATH);
+          if (!Array.isArray(stored)) return;
+          this.sounds.clear();
+          this.sounds.set(BUILTIN_SOUND_NAME, this.builtinDataUrl);
+          for (const entry of stored) {
+            const name = String(entry?.name || "").trim();
+            const data = String(entry?.data || "").trim();
+            if (!name || !data || name === BUILTIN_SOUND_NAME) continue;
+            this.sounds.set(name, toDataUrl(data));
+          }
+        }
+        save() {
+          const entries2 = [];
+          for (const [name, data] of this.sounds) {
+            if (name !== BUILTIN_SOUND_NAME) entries2.push({ name, data });
+          }
+          writeAriesPath(LIBRARY_PATH, entries2);
+        }
+        names() {
+          return Array.from(this.sounds.keys());
+        }
+        has(name) {
+          return this.sounds.has(name);
+        }
+        get(name) {
+          return this.sounds.get(name);
+        }
+        isBuiltin(name) {
+          return name === BUILTIN_SOUND_NAME;
+        }
+        /** Adds or replaces a sound. */
+        add(name, dataUrl) {
+          this.sounds.set(name, dataUrl);
+          this.save();
+        }
+        /** Removes a sound; the built-in one stays. Returns whether anything was removed. */
+        remove(name) {
+          if (this.isBuiltin(name) || !this.sounds.delete(name)) return false;
+          this.save();
+          return true;
+        }
+        /** A name not taken yet, from a file name: "Ding", then "Ding (2)"... */
+        uniqueName(raw) {
+          const base = String(raw || "Sound").replace(/\.[a-z0-9]+$/i, "").trim() || "Sound";
+          if (!this.sounds.has(base)) return base;
+          let i = 2;
+          while (this.sounds.has(`${base} (${i})`)) i++;
+          return `${base} (${i})`;
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/audio/settings.ts
+  function readStop(value) {
+    const mode = value?.mode;
+    if (mode === "purchase") return { mode: "purchase" };
+    if (mode === "manual" || mode === "repeat") return { mode: "manual" };
+    return null;
+  }
+  function applyStored(target, stored) {
+    const loaded2 = /* @__PURE__ */ new Set();
+    if (typeof stored.volume === "number") {
+      target.volume = clamp(stored.volume, 0, 1);
+      loaded2.add("volume");
+    }
+    if (stored.mode === "loop" || stored.mode === "oneshot") {
+      target.mode = stored.mode;
+      loaded2.add("mode");
+    }
+    const stop = stored.stop && typeof stored.stop === "object" ? readStop(stored.stop) : null;
+    if (stop) {
+      target.stop = stop;
+      loaded2.add("stop");
+    }
+    if (typeof stored.loopIntervalMs === "number" && Number.isFinite(stored.loopIntervalMs)) {
+      target.loopIntervalMs = Math.max(MIN_LOOP_GAP_MS, Math.floor(stored.loopIntervalMs));
+      loaded2.add("loopIntervalMs");
+    }
+    if (typeof stored.defaultSoundName === "string") {
+      target.defaultSoundName = stored.defaultSoundName.trim() || null;
+      loaded2.add("defaultSoundName");
+    }
+    return loaded2;
+  }
+  var SETTINGS_PATH, AUDIO_CONTEXTS, MIN_LOOP_GAP_MS, DEFAULT_VOLUME, DEFAULT_LOOP_INTERVAL_MS, DEFAULT_MIN_PLAY_GAP_MS, freshContext, AudioSettings;
+  var init_settings3 = __esm({
+    "src/features/notifier/audio/settings.ts"() {
+      "use strict";
+      init_math();
+      init_storage();
+      SETTINGS_PATH = "audio.settings";
+      AUDIO_CONTEXTS = ["shops", "weather", "pets"];
+      MIN_LOOP_GAP_MS = 150;
+      DEFAULT_VOLUME = 0.7;
+      DEFAULT_LOOP_INTERVAL_MS = 1500;
+      DEFAULT_MIN_PLAY_GAP_MS = 1200;
+      freshContext = () => ({
+        volume: DEFAULT_VOLUME,
+        mode: "oneshot",
+        stop: { mode: "manual" },
+        loopIntervalMs: DEFAULT_LOOP_INTERVAL_MS,
+        defaultSoundName: null
+      });
+      AudioSettings = class {
+        constructor() {
           this.enabled = true;
-          this.volume = 0.7;
-          this.minPlayGapMs = 1200;
+          this.minPlayGapMs = DEFAULT_MIN_PLAY_GAP_MS;
+          this.contexts = {
+            shops: freshContext(),
+            weather: freshContext(),
+            pets: freshContext()
+          };
+        }
+        /**
+         * Reads the stored settings. The shops' settings also sit at the top level,
+         * where builds before per-context settings kept them, and a weather or pets
+         * field never stored falls back to the shops' value.
+         */
+        load() {
+          const stored = readAriesPath(SETTINGS_PATH);
+          if (!stored || typeof stored !== "object") return;
+          if (typeof stored.enabled === "boolean") this.enabled = stored.enabled;
+          if (typeof stored.minPlayGapMs === "number") this.minPlayGapMs = Math.max(0, stored.minPlayGapMs | 0);
+          const shops2 = this.contexts.shops;
+          applyStored(shops2, {
+            ...stored,
+            loopIntervalMs: typeof stored.loopIntervalMs === "number" ? Math.max(MIN_LOOP_GAP_MS, stored.loopIntervalMs | 0) : void 0
+          });
+          const contexts = stored.contexts && typeof stored.contexts === "object" ? stored.contexts : {};
+          const shopsStored = contexts.shops;
+          if (shopsStored && typeof shopsStored === "object") applyStored(shops2, shopsStored);
+          for (const key2 of ["weather", "pets"]) {
+            const target = this.contexts[key2];
+            const conf = contexts[key2];
+            const loaded2 = conf && typeof conf === "object" ? applyStored(target, conf) : /* @__PURE__ */ new Set();
+            if (!loaded2.has("volume")) target.volume = shops2.volume;
+            if (!loaded2.has("mode")) target.mode = shops2.mode;
+            if (!loaded2.has("stop")) target.stop = { mode: shops2.stop.mode };
+            if (!loaded2.has("loopIntervalMs")) target.loopIntervalMs = shops2.loopIntervalMs;
+            if (!loaded2.has("defaultSoundName")) target.defaultSoundName = shops2.defaultSoundName;
+          }
+        }
+        save() {
+          const { shops: shops2 } = this.contexts;
+          const contexts = Object.fromEntries(AUDIO_CONTEXTS.map((key2) => [key2, { ...this.contexts[key2] }]));
+          writeAriesPath(SETTINGS_PATH, {
+            enabled: this.enabled,
+            volume: shops2.volume,
+            minPlayGapMs: this.minPlayGapMs,
+            mode: shops2.mode,
+            stop: shops2.stop,
+            loopIntervalMs: shops2.loopIntervalMs,
+            defaultSoundName: shops2.defaultSoundName,
+            contexts
+          });
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/audio/audio.ts
+  var clamp01, AudioNotifier, audio;
+  var init_audio = __esm({
+    "src/features/notifier/audio/audio.ts"() {
+      "use strict";
+      init_math();
+      init_encode();
+      init_library();
+      init_settings3();
+      clamp01 = (v) => clamp(v, 0, 1);
+      AudioNotifier = class {
+        constructor() {
+          this.settings = new AudioSettings();
+          this.library = new SoundLibrary();
           this.lastPlayTs = 0;
-          // ===== Sound Library (name -> dataURL)
-          this.library = /* @__PURE__ */ new Map();
-          this.defaultSoundName = null;
-          // Legacy fallback (pour compat)
-          this.defaultSoundDataUrl = null;
-          // Playback logic
-          this.mode = "oneshot";
-          this.stopConf = { mode: "manual" };
-          this.loopIntervalMs = 1500;
-          this.weatherMode = "oneshot";
-          this.weatherStopConf = { mode: "manual" };
-          this.weatherLoopIntervalMs = 1500;
-          this.petMode = "oneshot";
-          this.petStopConf = { mode: "manual" };
-          this.petLoopIntervalMs = 1500;
           this.loops = /* @__PURE__ */ new Map();
           this.oneshotQueue = [];
           this.oneshotQueueTimer = null;
           this.oneshotProcessing = false;
-          this.weatherVolume = 0.7;
-          this.weatherDefaultSoundName = null;
-          this.petVolume = 0.7;
-          this.petDefaultSoundName = null;
-          // WebAudio priming (optional)
           this.audioCtx = null;
           this.primed = false;
-          this.builtinDefault = null;
-          this.suppressPersist = 0;
-          if (opts?.minPlayGapMs != null) this.minPlayGapMs = Math.max(0, opts.minPlayGapMs | 0);
-          if (opts?.volume != null) this.volume = clamp01(opts.volume);
-          this.suppressPersist++;
-          try {
-            if (EMBED_DEFAULT_MP3_BASE64 && EMBED_DEFAULT_MP3_BASE64.trim() && EMBED_DEFAULT_MP3_BASE64.indexOf("TODO:") === -1) {
-              const dataUrl = toDataUrl(EMBED_DEFAULT_MP3_BASE64);
-              this.registerSound("Default", dataUrl);
-              this.defaultSoundName = "Default";
-              this.builtinDefault = { name: "Default", dataUrl };
-            }
-            if (opts?.defaultSound) {
-              const du = toDataUrl(opts.defaultSound);
-              this.defaultSoundDataUrl = du;
-              this.registerSound("LegacyDefault", du);
-              this.defaultSoundName = "LegacyDefault";
-            }
-          } finally {
-            this.suppressPersist--;
-          }
-          this.loadFromStorage();
-          this.ensureBuiltinPresent();
-          if (this.ensureDefaultSoundValidity()) this.persistSettings();
+          this.library.load();
+          this.settings.load();
+          if (this.ensureValidDefaults()) this.settings.save();
         }
-        ensureBuiltinPresent() {
-          if (this.builtinDefault && !this.library.has(this.builtinDefault.name)) {
-            this.library.set(this.builtinDefault.name, this.builtinDefault.dataUrl);
-          }
+        ctx(context) {
+          return this.settings.contexts[context];
         }
-        ensureDefaultSoundValidity() {
-          let changed = false;
-          const fallback = () => {
-            if (this.builtinDefault && this.library.has(this.builtinDefault.name)) {
-              return this.builtinDefault.name;
-            }
-            const first = this.library.keys().next();
-            return first.done ? null : first.value;
-          };
-          const ensureName = (current, prefer) => {
-            if (current && this.library.has(current)) return current;
+        /**
+         * Points every context's default sound at a sound that exists: the shops
+         * fall back to the built-in sound, weather and pets to the shops' sound.
+         * Returns whether anything changed.
+         */
+        ensureValidDefaults() {
+          const fallback = this.library.names()[0] ?? null;
+          const valid = (name, prefer) => {
+            if (name && this.library.has(name)) return name;
             if (prefer && this.library.has(prefer)) return prefer;
-            return fallback();
+            return fallback;
           };
-          const nextShops = ensureName(this.defaultSoundName);
-          if (nextShops !== this.defaultSoundName) {
-            this.defaultSoundName = nextShops;
-            changed = true;
-          }
-          const nextWeather = ensureName(this.weatherDefaultSoundName, nextShops);
-          if (nextWeather !== this.weatherDefaultSoundName) {
-            this.weatherDefaultSoundName = nextWeather;
-            changed = true;
-          }
-          const nextPets = ensureName(this.petDefaultSoundName, nextShops);
-          if (nextPets !== this.petDefaultSoundName) {
-            this.petDefaultSoundName = nextPets;
-            changed = true;
-          }
-          return changed;
-        }
-        persistSettings() {
-          if (this.suppressPersist > 0) return;
-          try {
-            const payload = {
-              enabled: this.enabled,
-              volume: this.volume,
-              minPlayGapMs: this.minPlayGapMs,
-              mode: this.mode,
-              stop: this.stopConf,
-              loopIntervalMs: this.loopIntervalMs,
-              defaultSoundName: this.defaultSoundName,
-              contexts: {
-                shops: {
-                  volume: this.volume,
-                  mode: this.mode,
-                  stop: this.stopConf,
-                  loopIntervalMs: this.loopIntervalMs,
-                  defaultSoundName: this.defaultSoundName
-                },
-                weather: {
-                  volume: this.weatherVolume,
-                  mode: this.weatherMode,
-                  stop: this.weatherStopConf,
-                  loopIntervalMs: this.weatherLoopIntervalMs,
-                  defaultSoundName: this.weatherDefaultSoundName
-                },
-                pets: {
-                  volume: this.petVolume,
-                  mode: this.petMode,
-                  stop: this.petStopConf,
-                  loopIntervalMs: this.petLoopIntervalMs,
-                  defaultSoundName: this.petDefaultSoundName
-                }
-              }
-            };
-            writeAriesPath(AUDIO_SETTINGS_PATH, payload);
-          } catch {
-          }
-        }
-        persistLibrary() {
-          if (this.suppressPersist > 0) return;
-          try {
-            const entries2 = [];
-            for (const [name, data] of this.library.entries()) {
-              if (this.builtinDefault && name === this.builtinDefault.name) continue;
-              entries2.push({ name, data });
+          let changed5 = false;
+          const shops2 = valid(this.ctx("shops").defaultSoundName);
+          for (const key2 of AUDIO_CONTEXTS) {
+            const target = this.ctx(key2);
+            const next = key2 === "shops" ? shops2 : valid(target.defaultSoundName, shops2);
+            if (next !== target.defaultSoundName) {
+              target.defaultSoundName = next;
+              changed5 = true;
             }
-            writeAriesPath(AUDIO_LIBRARY_PATH, entries2);
-          } catch {
           }
+          return changed5;
         }
-        loadFromStorage() {
-          this.suppressPersist++;
-          try {
-            try {
-              const parsed = readAriesPath(AUDIO_LIBRARY_PATH);
-              if (Array.isArray(parsed)) {
-                this.library.clear();
-                this.ensureBuiltinPresent();
-                for (const entry of parsed) {
-                  const name = String(entry && entry.name || "").trim();
-                  const data = String(entry && entry.data || "").trim();
-                  if (!name || !data) continue;
-                  if (this.builtinDefault && name === this.builtinDefault.name) continue;
-                  this.library.set(name, looksLikeDataURL(data) ? data : toDataUrl(data));
-                }
-              }
-            } catch (err) {
-            }
-            try {
-              const parsed = readAriesPath(AUDIO_SETTINGS_PATH);
-              if (parsed && typeof parsed === "object") {
-                if (typeof parsed.enabled === "boolean") this.enabled = parsed.enabled;
-                if (typeof parsed.minPlayGapMs === "number") this.minPlayGapMs = Math.max(0, parsed.minPlayGapMs | 0);
-                if (typeof parsed.volume === "number") this.volume = clamp01(parsed.volume);
-                if (parsed.mode === "loop" || parsed.mode === "oneshot") this.mode = parsed.mode;
-                if (parsed.stop && typeof parsed.stop === "object") {
-                  const stopMode = parsed.stop.mode;
-                  if (stopMode === "purchase") {
-                    this.stopConf = { mode: "purchase" };
-                  } else if (stopMode === "manual") {
-                    this.stopConf = { mode: "manual" };
-                  } else if (stopMode === "repeat") {
-                    this.stopConf = { mode: "manual" };
-                  }
-                }
-                if (typeof parsed.loopIntervalMs === "number") this.loopIntervalMs = Math.max(150, parsed.loopIntervalMs | 0);
-                if (typeof parsed.defaultSoundName === "string") {
-                  const nm = parsed.defaultSoundName.trim();
-                  this.defaultSoundName = nm ? nm : null;
-                }
-                let weatherVolumeLoaded = false;
-                let weatherModeLoaded = false;
-                let weatherStopLoaded = false;
-                let weatherLoopLoaded = false;
-                let weatherDefaultLoaded = false;
-                let petVolumeLoaded = false;
-                let petModeLoaded = false;
-                let petStopLoaded = false;
-                let petLoopLoaded = false;
-                let petDefaultLoaded = false;
-                const applyContext = (ctx2, conf) => {
-                  if (!conf || typeof conf !== "object") return;
-                  const applyVolume = (value) => {
-                    if (typeof value !== "number") return;
-                    const normalized = clamp01(value);
-                    if (ctx2 === "weather") {
-                      this.weatherVolume = normalized;
-                      weatherVolumeLoaded = true;
-                    } else if (ctx2 === "pets") {
-                      this.petVolume = normalized;
-                      petVolumeLoaded = true;
-                    } else this.volume = normalized;
-                  };
-                  const applyMode = (value) => {
-                    if (value === "loop" || value === "oneshot") {
-                      if (ctx2 === "weather") {
-                        this.weatherMode = value;
-                        weatherModeLoaded = true;
-                      } else if (ctx2 === "pets") {
-                        this.petMode = value;
-                        petModeLoaded = true;
-                      } else this.mode = value;
-                    }
-                  };
-                  const applyStop = (value) => {
-                    if (!value || typeof value !== "object") return;
-                    const mode = value.mode;
-                    if (mode === "purchase") {
-                      if (ctx2 === "weather") {
-                        this.weatherStopConf = { mode: "purchase" };
-                        weatherStopLoaded = true;
-                      } else if (ctx2 === "pets") {
-                        this.petStopConf = { mode: "purchase" };
-                        petStopLoaded = true;
-                      } else this.stopConf = { mode: "purchase" };
-                    } else if (mode === "manual") {
-                      if (ctx2 === "weather") {
-                        this.weatherStopConf = { mode: "manual" };
-                        weatherStopLoaded = true;
-                      } else if (ctx2 === "pets") {
-                        this.petStopConf = { mode: "manual" };
-                        petStopLoaded = true;
-                      } else this.stopConf = { mode: "manual" };
-                    } else if (mode === "repeat") {
-                      if (ctx2 === "weather") {
-                        this.weatherStopConf = { mode: "manual" };
-                        weatherStopLoaded = true;
-                      } else if (ctx2 === "pets") {
-                        this.petStopConf = { mode: "manual" };
-                        petStopLoaded = true;
-                      } else {
-                        this.stopConf = { mode: "manual" };
-                      }
-                    }
-                  };
-                  const applyLoop = (value) => {
-                    if (typeof value !== "number" || !Number.isFinite(value)) return;
-                    const normalized = Math.max(150, Math.floor(value));
-                    if (ctx2 === "weather") {
-                      this.weatherLoopIntervalMs = normalized;
-                      weatherLoopLoaded = true;
-                    } else if (ctx2 === "pets") {
-                      this.petLoopIntervalMs = normalized;
-                      petLoopLoaded = true;
-                    } else this.loopIntervalMs = normalized;
-                  };
-                  const applyDefault = (value) => {
-                    if (typeof value !== "string") return;
-                    const nm = value.trim();
-                    if (ctx2 === "weather") {
-                      this.weatherDefaultSoundName = nm ? nm : null;
-                      weatherDefaultLoaded = true;
-                    } else if (ctx2 === "pets") {
-                      this.petDefaultSoundName = nm ? nm : null;
-                      petDefaultLoaded = true;
-                    } else this.defaultSoundName = nm ? nm : null;
-                  };
-                  applyVolume(conf.volume);
-                  applyMode(conf.mode);
-                  applyStop(conf.stop);
-                  applyLoop(conf.loopIntervalMs);
-                  applyDefault(conf.defaultSoundName);
-                };
-                if (parsed.contexts && typeof parsed.contexts === "object") {
-                  applyContext("shops", parsed.contexts.shops);
-                  applyContext("weather", parsed.contexts.weather);
-                  applyContext("pets", parsed.contexts.pets);
-                }
-                if (!weatherVolumeLoaded) this.weatherVolume = this.volume;
-                if (!weatherModeLoaded) this.weatherMode = this.mode;
-                if (!weatherStopLoaded) {
-                  this.weatherStopConf = this.stopConf.mode === "purchase" ? { mode: "purchase" } : { mode: "manual" };
-                }
-                if (!weatherLoopLoaded) this.weatherLoopIntervalMs = this.loopIntervalMs;
-                if (!weatherDefaultLoaded) this.weatherDefaultSoundName = this.defaultSoundName;
-                if (!petVolumeLoaded) this.petVolume = this.volume;
-                if (!petModeLoaded) this.petMode = this.mode;
-                if (!petStopLoaded) {
-                  this.petStopConf = this.stopConf.mode === "purchase" ? { mode: "purchase" } : { mode: "manual" };
-                }
-                if (!petLoopLoaded) this.petLoopIntervalMs = this.loopIntervalMs;
-                if (!petDefaultLoaded) this.petDefaultSoundName = this.defaultSoundName;
-              }
-            } catch (err) {
-            }
-          } finally {
-            this.suppressPersist--;
-          }
+        /* ================================ Library ================================ */
+        listSounds() {
+          return this.library.names();
         }
         isProtectedSound(name) {
-          return !!(this.builtinDefault && this.builtinDefault.name === name);
+          return this.library.isBuiltin(name);
         }
-        // =========================
-        // Sound Library API
-        // =========================
-        /** Add or replace a sound in the registry by name. Accepts dataURL or bare base64. */
-        registerSound(name, dataOrBase64, mime) {
-          const safeName = String(name || "").trim();
-          if (!safeName) return;
-          const dataUrl = toDataUrl(dataOrBase64, mime || "audio/mpeg");
-          this.library.set(safeName, dataUrl);
-          const prevDefault = this.defaultSoundName;
-          const prevWeatherDefault = this.weatherDefaultSoundName;
-          const prevPetDefault = this.petDefaultSoundName;
-          if (!this.defaultSoundName) this.defaultSoundName = safeName;
-          if (!this.weatherDefaultSoundName) this.weatherDefaultSoundName = safeName;
-          if (!this.petDefaultSoundName) this.petDefaultSoundName = safeName;
-          this.ensureBuiltinPresent();
-          this.persistLibrary();
-          if (prevDefault !== this.defaultSoundName || prevWeatherDefault !== this.weatherDefaultSoundName || prevPetDefault !== this.petDefaultSoundName) {
-            this.persistSettings();
+        registerSound(name, dataUrl) {
+          this.library.add(name, dataUrl);
+          let defaultsChanged = false;
+          for (const key2 of AUDIO_CONTEXTS) {
+            if (!this.ctx(key2).defaultSoundName) {
+              this.ctx(key2).defaultSoundName = name;
+              defaultsChanged = true;
+            }
           }
+          if (defaultsChanged) this.settings.save();
         }
         unregisterSound(name) {
-          if (this.isProtectedSound(name)) return;
-          const existed = this.library.delete(name);
-          if (!existed) return;
-          const prevDefault = this.defaultSoundName;
-          const prevWeatherDefault = this.weatherDefaultSoundName;
-          const prevPetDefault = this.petDefaultSoundName;
-          if (prevDefault === name) this.defaultSoundName = null;
-          if (prevWeatherDefault === name) this.weatherDefaultSoundName = null;
-          if (prevPetDefault === name) this.petDefaultSoundName = null;
-          const changed = prevDefault === name || prevWeatherDefault === name || prevPetDefault === name || this.ensureDefaultSoundValidity();
-          this.persistLibrary();
-          if (changed) this.persistSettings();
+          if (!this.library.remove(name)) return;
+          let wasDefault = false;
+          for (const key2 of AUDIO_CONTEXTS) {
+            if (this.ctx(key2).defaultSoundName === name) {
+              this.ctx(key2).defaultSoundName = null;
+              wasDefault = true;
+            }
+          }
+          if (wasDefault || this.ensureValidDefaults()) this.settings.save();
         }
-        listSounds() {
-          return Array.from(this.library.keys());
+        /**
+         * Imports audio files into the library, under unique names. A context with
+         * no default sound yet gets the first one imported. Returns the names added
+         * and an error line per file that failed.
+         */
+        async importFiles(files) {
+          const added = [];
+          const errors = [];
+          for (const file of files) {
+            try {
+              const dataUrl = await encodeSoundFile(file);
+              const name = this.library.uniqueName(file.name);
+              this.registerSound(name, dataUrl);
+              added.push(name);
+            } catch (e) {
+              errors.push(`Failed for "${file.name}": ${e?.message || e}`);
+            }
+          }
+          if (added.length) {
+            for (const key2 of AUDIO_CONTEXTS) {
+              if (!this.getDefaultSoundName(key2)) this.setDefaultSoundByName(added[0], key2);
+            }
+          }
+          return { added, errors };
         }
         setDefaultSoundByName(name, context = "shops") {
-          if (!this.library.has(name)) return;
-          if (context === "weather") {
-            if (this.weatherDefaultSoundName === name) return;
-            this.weatherDefaultSoundName = name;
-          } else if (context === "pets") {
-            if (this.petDefaultSoundName === name) return;
-            this.petDefaultSoundName = name;
-          } else {
-            if (this.defaultSoundName === name) return;
-            this.defaultSoundName = name;
-          }
-          this.persistSettings();
+          if (!this.library.has(name) || this.ctx(context).defaultSoundName === name) return;
+          this.ctx(context).defaultSoundName = name;
+          this.settings.save();
         }
-        resetLibrary(entries2) {
-          const prevDefault = this.defaultSoundName;
-          const prevWeatherDefault = this.weatherDefaultSoundName;
-          this.suppressPersist++;
-          try {
-            this.library.clear();
-            this.ensureBuiltinPresent();
-            const added = [];
-            for (const e of entries2) {
-              const safeName = String(e?.name || "").trim();
-              if (!safeName) continue;
-              if (this.isProtectedSound(safeName)) continue;
-              const dataUrl = looksLikeDataURL(e.data) ? e.data : toDataUrl(e.data);
-              this.library.set(safeName, dataUrl);
-              added.push(safeName);
-            }
-            if (added.length) {
-              this.defaultSoundName = added[0];
-              this.weatherDefaultSoundName = added[0];
-            }
-          } finally {
-            this.suppressPersist--;
-          }
-          const changed = this.ensureDefaultSoundValidity() || prevDefault !== this.defaultSoundName || prevWeatherDefault !== this.weatherDefaultSoundName;
-          this.persistLibrary();
-          if (changed) this.persistSettings();
-        }
-        setNotificationBase64(dataUriOrBase64) {
-          const du = dataUriOrBase64 && dataUriOrBase64.trim() ? looksLikeDataURL(dataUriOrBase64) ? dataUriOrBase64 : toDataUrl(dataUriOrBase64) : "";
-          this.defaultSoundDataUrl = du || null;
-          if (du) {
-            this.registerSound("LegacyDefault", du);
-            this.defaultSoundName = "LegacyDefault";
-            this.weatherDefaultSoundName = "LegacyDefault";
-          }
-          this.persistSettings();
-        }
+        /** The context's default sound; weather and pets fall back to the shops' one. */
         getDefaultSoundName(context = "shops") {
-          if (context === "weather") {
-            return this.weatherDefaultSoundName ?? this.defaultSoundName;
-          }
-          if (context === "pets") {
-            return this.petDefaultSoundName ?? this.defaultSoundName;
-          }
-          return this.defaultSoundName;
+          const own = this.ctx(context).defaultSoundName;
+          return context === "shops" ? own : own ?? this.ctx("shops").defaultSoundName;
         }
+        /** A sound name or data URL as a playable data URL; nothing means the context's default. */
         resolveToDataUrl(src, context) {
           if (!src) {
-            const name = context === "weather" ? this.weatherDefaultSoundName ?? this.defaultSoundName : context === "pets" ? this.petDefaultSoundName ?? this.defaultSoundName : this.defaultSoundName;
-            if (name && this.library.has(name)) return this.library.get(name);
-            return this.defaultSoundDataUrl || null;
+            const name = this.getDefaultSoundName(context);
+            return name && this.library.get(name) || null;
           }
           const s = src.trim();
-          if (this.library.has(s)) return this.library.get(s);
-          if (looksLikeDataURL(s)) return s;
+          const named = this.library.get(s);
+          if (named) return named;
+          if (looksLikeDataUrl(s)) return s;
           if (/^[A-Za-z0-9+/=\s]+$/.test(s) && s.length > 100) return toDataUrl(s);
           return null;
         }
-        // =========================
-        // Settings API (Playback)
-        // =========================
-        setEnabled(on) {
-          const next = !!on;
-          if (this.enabled === next) return;
-          this.enabled = next;
-          this.persistSettings();
-        }
-        isEnabled() {
-          return this.enabled;
-        }
-        setMute(muted) {
-          this.setEnabled(!muted);
-        }
-        isMuted() {
-          return !this.enabled;
-        }
+        /* =============================== Settings ================================ */
         setVolume(v, context = "shops") {
           const next = clamp01(v);
-          if (context === "weather") {
-            if (this.weatherVolume === next) return;
-            this.weatherVolume = next;
-          } else if (context === "pets") {
-            if (this.petVolume === next) return;
-            this.petVolume = next;
-          } else {
-            if (this.volume === next) return;
-            this.volume = next;
-          }
+          if (this.ctx(context).volume === next) return;
+          this.ctx(context).volume = next;
           this.forEachLoop(context, (st) => {
-            st.baseVolume = next;
             if (st.volumeOverride == null) st.volume = next;
           });
-          this.persistSettings();
-        }
-        getVolume(context = "shops") {
-          if (context === "weather") return this.weatherVolume;
-          if (context === "pets") return this.petVolume;
-          return this.volume;
-        }
-        setMinPlayGap(ms) {
-          const next = Math.max(0, ms | 0);
-          if (this.minPlayGapMs === next) return;
-          this.minPlayGapMs = next;
-          this.persistSettings();
-        }
-        getMinPlayGap() {
-          return this.minPlayGapMs;
+          this.settings.save();
         }
         setPlaybackMode(mode, context = "shops") {
-          if (context === "weather") {
-            if (this.weatherMode === mode) return;
-            this.weatherMode = mode;
-          } else if (context === "pets") {
-            if (this.petMode === mode) return;
-            this.petMode = mode;
-          } else {
-            if (this.mode === mode) return;
-            this.mode = mode;
-          }
-          this.persistSettings();
+          if (this.ctx(context).mode === mode) return;
+          this.ctx(context).mode = mode;
+          this.settings.save();
         }
         getPlaybackMode(context = "shops") {
-          if (context === "weather") return this.weatherMode;
-          if (context === "pets") return this.petMode;
-          return this.mode;
+          return this.ctx(context).mode;
         }
-        setStopRepeat(repeats, context = "shops") {
-          this.setStopManual(context);
+        setStop(mode, context) {
+          if (this.ctx(context).stop.mode === mode) return;
+          this.ctx(context).stop = { mode };
+          this.forEachLoop(context, (st) => {
+            st.baseStop = { mode };
+          });
+          this.settings.save();
         }
         setStopManual(context = "shops") {
-          if (context === "weather") {
-            if (this.weatherStopConf.mode === "manual") return;
-            this.weatherStopConf = { mode: "manual" };
-          } else if (context === "pets") {
-            if (this.petStopConf.mode === "manual") return;
-            this.petStopConf = { mode: "manual" };
-          } else {
-            if (this.stopConf.mode === "manual") return;
-            this.stopConf = { mode: "manual" };
-          }
-          this.forEachLoop(context, (st) => {
-            st.baseStop = { mode: "manual" };
-          });
-          this.persistSettings();
+          this.setStop("manual", context);
         }
         setStopPurchase(context = "shops") {
-          if (context === "weather") {
-            if (this.weatherStopConf.mode === "purchase") return;
-            this.weatherStopConf = { mode: "purchase" };
-          } else if (context === "pets") {
-            if (this.petStopConf.mode === "purchase") return;
-            this.petStopConf = { mode: "purchase" };
-          } else {
-            if (this.stopConf.mode === "purchase") return;
-            this.stopConf = { mode: "purchase" };
-          }
-          this.forEachLoop(context, (st) => {
-            st.baseStop = { mode: "purchase" };
-          });
-          this.persistSettings();
-        }
-        clearStopCondition(context = "shops") {
-          this.setStopManual(context);
+          this.setStop("purchase", context);
         }
         setLoopInterval(ms, context = "shops") {
-          const next = Math.max(150, ms | 0);
-          if (context === "weather") {
-            if (this.weatherLoopIntervalMs === next) return;
-            this.weatherLoopIntervalMs = next;
-          } else if (context === "pets") {
-            if (this.petLoopIntervalMs === next) return;
-            this.petLoopIntervalMs = next;
-          } else {
-            if (this.loopIntervalMs === next) return;
-            this.loopIntervalMs = next;
-          }
+          const next = Math.max(MIN_LOOP_GAP_MS, ms | 0);
+          if (this.ctx(context).loopIntervalMs === next) return;
+          this.ctx(context).loopIntervalMs = next;
           this.forEachLoop(context, (st) => {
             st.baseLoopInterval = next;
           });
-          this.persistSettings();
+          this.settings.save();
         }
         getLoopInterval(context = "shops") {
-          if (context === "weather") return this.weatherLoopIntervalMs;
-          if (context === "pets") return this.petLoopIntervalMs;
-          return this.loopIntervalMs;
+          return this.ctx(context).loopIntervalMs;
         }
         setPurchaseChecker(fn) {
           this.purchaseChecker = fn;
         }
         getPlaybackSettings(context = "shops") {
-          const volume = this.getVolume(context);
-          const mode = this.getPlaybackMode(context);
-          const stop2 = context === "weather" ? this.weatherStopConf : context === "pets" ? this.petStopConf : this.stopConf;
-          const stopSnapshot = stop2.mode === "purchase" ? { mode: "purchase" } : { mode: "manual" };
-          const loopIntervalMs = this.getLoopInterval(context);
-          const defaultSoundName = this.getDefaultSoundName(context);
+          const ctx2 = this.ctx(context);
           return {
-            enabled: this.enabled,
-            volume,
-            minPlayGapMs: this.minPlayGapMs,
-            mode,
-            stop: stopSnapshot,
-            loopIntervalMs,
-            primed: this.primed,
-            defaultSoundName,
-            hasLegacyDefault: !!this.defaultSoundDataUrl,
-            librarySize: this.library.size,
-            libraryNames: this.listSounds()
+            volume: ctx2.volume,
+            mode: ctx2.mode,
+            stop: { mode: ctx2.stop.mode },
+            loopIntervalMs: ctx2.loopIntervalMs,
+            defaultSoundName: this.getDefaultSoundName(context)
           };
         }
-        // =========================
-        // Actions
-        // =========================
-        async notify(context = "shops") {
-          const du = this.resolveToDataUrl(null, context);
-          await this.playOnce(du, this.getVolume(context), context);
-        }
-        async playNotify(context = "shops") {
-          await this.notify(context);
-        }
+        /* =============================== Playback ================================ */
         /**
-         * Trigger using the current mode.
-         * @param key  Unique key (e.g. item id). "global" if generic.
-         * @param sound Optional: NAME from registry or a dataURL/bare base64 to override.
+         * Plays the alert `key` in the context's mode (or the override's). A loop
+         * replaces any loop already running under the same key.
          */
         async trigger(key2 = "global", overrides = {}, context = "shops") {
-          const normalizeSound = (raw) => {
-            if (typeof raw !== "string") return void 0;
-            const trimmed = raw.trim();
-            return trimmed ? trimmed : void 0;
-          };
-          const normalizeStop = (raw) => {
-            if (!raw) return null;
-            if (raw.mode === "purchase") return { mode: "purchase" };
-            if (raw.mode === "manual") return { mode: "manual" };
-            if (raw.mode === "repeat") return { mode: "manual" };
-            return { mode: "manual" };
-          };
-          const normalizeVolume = (raw) => {
-            if (raw == null) return null;
-            const n = Number(raw);
-            if (!Number.isFinite(n)) return null;
-            return clamp01(n);
-          };
-          const sound = normalizeSound(overrides.sound ?? null);
-          const baseMode = this.getPlaybackMode(context);
-          const mode = overrides.mode === "oneshot" || overrides.mode === "loop" ? overrides.mode : baseMode;
-          const baseStopSource = context === "weather" ? this.weatherStopConf : context === "pets" ? this.petStopConf : this.stopConf;
-          const baseStop = baseStopSource.mode === "purchase" ? { mode: "purchase" } : { mode: "manual" };
-          const baseLoopInterval = this.getLoopInterval(context);
-          const baseVolume = this.getVolume(context);
-          const volumeOverride = normalizeVolume(overrides.volume ?? null);
-          const effectiveVolume2 = volumeOverride ?? baseVolume;
+          const sound = typeof overrides.sound === "string" && overrides.sound.trim() ? overrides.sound.trim() : void 0;
+          const mode = overrides.mode === "oneshot" || overrides.mode === "loop" ? overrides.mode : this.ctx(context).mode;
+          const rawVolume = overrides.volume == null ? NaN : Number(overrides.volume);
+          const volumeOverride = Number.isFinite(rawVolume) ? clamp01(rawVolume) : null;
+          const volume = volumeOverride ?? this.ctx(context).volume;
+          this.stopLoop(key2);
           if (mode === "oneshot") {
-            this.stopLoop(key2);
-            const du = this.resolveToDataUrl(sound ?? null, context);
-            this.enqueueOneshot({ key: key2, dataUrl: du, volume: effectiveVolume2, context });
+            this.enqueueOneshot({ key: key2, dataUrl: this.resolveToDataUrl(sound ?? null, context), volume, context });
             return;
           }
-          this.stopLoop(key2);
-          const stopOverride = normalizeStop(overrides.stop ?? null);
-          const loopIntervalOverride = overrides.loopIntervalMs != null && Number.isFinite(overrides.loopIntervalMs) ? Math.max(150, Math.round(overrides.loopIntervalMs)) : null;
-          const state5 = {
+          const stopOverride = overrides.stop ? { mode: overrides.stop.mode === "purchase" ? "purchase" : "manual" } : null;
+          const interval = overrides.loopIntervalMs;
+          const state7 = {
             key: key2,
-            timer: null,
-            plays: 0,
-            soundOverride: sound,
-            stopped: false,
-            stopOverride,
-            loopIntervalOverride,
             context,
-            baseStop,
-            baseLoopInterval,
-            baseVolume,
+            timer: null,
+            stopped: false,
+            soundOverride: sound,
+            stopOverride,
+            loopIntervalOverride: interval != null && Number.isFinite(interval) ? Math.max(MIN_LOOP_GAP_MS, Math.round(interval)) : null,
+            baseStop: { mode: this.ctx(context).stop.mode },
+            baseLoopInterval: this.ctx(context).loopIntervalMs,
             volumeOverride,
-            volume: effectiveVolume2
+            volume
           };
-          this.loops.set(key2, state5);
-          this.scheduleNext(state5, 0);
+          this.loops.set(key2, state7);
+          this.runLoop(state7);
         }
         forEachLoop(context, fn) {
           for (const st of this.loops.values()) {
@@ -20350,440 +20117,193 @@
           const st = this.loops.get(key2);
           if (!st) return;
           st.stopped = true;
-          if (st.timer != null) {
-            clearTimeout(st.timer);
-            st.timer = null;
-          }
+          if (st.timer != null) clearTimeout(st.timer);
+          st.timer = null;
           this.loops.delete(key2);
         }
-        stopAllLoops(context) {
-          if (context) {
-            for (const [k, st] of this.loops) {
-              if (st.context === context) this.stopLoop(k);
-            }
-            return;
-          }
-          for (const [k] of this.loops) this.stopLoop(k);
+        stopAllLoops() {
+          for (const key2 of [...this.loops.keys()]) this.stopLoop(key2);
         }
-        /** Prime audio once on a user gesture for stricter browsers. */
+        /** Unlocks audio on a user gesture, for browsers that block sound until one. */
         async prime() {
           try {
             if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (this.audioCtx.state === "suspended") await this.audioCtx.resume();
-            const o = this.audioCtx.createOscillator();
-            const g = this.audioCtx.createGain();
-            g.gain.value = 1e-4;
-            o.connect(g).connect(this.audioCtx.destination);
-            o.start();
-            o.stop(this.audioCtx.currentTime + 0.02);
-            this.primed = true;
+            const osc = this.audioCtx.createOscillator();
+            const gain = this.audioCtx.createGain();
+            gain.gain.value = 1e-4;
+            osc.connect(gain).connect(this.audioCtx.destination);
+            osc.start();
+            osc.stop(this.audioCtx.currentTime + 0.02);
           } catch {
-            this.primed = true;
           }
+          this.primed = true;
         }
-        // =========================
-        // Import / compression ≤ 200 KB
-        // =========================
-        async importFileAsSound(file, opts = {}) {
-          const {
-            name,
-            maxBytes = 200 * 1024,
-            maxSeconds = 10,
-            bitrates = [48e3, 32e3, 2e4, 12e3, 8e3],
-            maxInputBytes = 8 * 1024 * 1024
-          } = opts;
-          const notifyInvalid = (description) => {
-            try {
-              toastSimple("Audio import", description, "error").catch(() => {
-              });
-            } catch {
-            }
-          };
-          let decoded = null;
-          const ensureDecoded = async () => {
-            if (!decoded) decoded = await this.decodeFileToBuffer(file);
-            return decoded;
-          };
-          if (!file || !(file instanceof File)) throw new Error("No file provided.");
-          const allowedMimeByExtension = /* @__PURE__ */ new Map([
-            ["mp3", /* @__PURE__ */ new Set(["audio/mpeg", "audio/mp3"])],
-            ["wav", /* @__PURE__ */ new Set(["audio/wav", "audio/x-wav", "audio/wave"])],
-            ["ogg", /* @__PURE__ */ new Set(["audio/ogg"])]
-          ]);
-          const fileType = (file.type || "").toLowerCase();
-          const fileExtension = (file.name?.split(".").pop() || "").toLowerCase();
-          if (!fileExtension || !allowedMimeByExtension.has(fileExtension)) {
-            notifyInvalid("Unsupported audio format. Allowed formats: MP3, WAV, OGG.");
-            throw new Error(`Unsupported audio extension: ${fileExtension || "unknown"}`);
-          }
-          const allowedMimes = allowedMimeByExtension.get(fileExtension);
-          if (!fileType || !allowedMimes.has(fileType)) {
-            notifyInvalid("File extension and MIME type must match (MP3, WAV, OGG only).");
-            throw new Error(
-              fileType ? `MIME type ${fileType} is not valid for .${fileExtension} files.` : `Missing MIME type for .${fileExtension} files.`
-            );
-          }
-          if (file.size > maxInputBytes) throw new Error(`Input file too large (${Math.round(file.size / 1024)}KB). Limit is ${Math.round(maxInputBytes / 1024)}KB.`);
-          if (file.size <= maxBytes) {
-            const buf = await ensureDecoded();
-            if (buf.duration > maxSeconds) {
-              const duration = buf.duration;
-              const formattedLimit = maxSeconds.toFixed(1).replace(/\.0$/, "");
-              const formattedDuration = duration.toFixed(1).replace(/\.0$/, "");
-              notifyInvalid(`File duration is ${formattedDuration}s (limit: ${formattedLimit}s).`);
-              throw new Error(`Audio duration ${formattedDuration}s exceeds limit of ${formattedLimit}s.`);
-            }
-            const dataUrl = await this.blobToDataURL(file);
-            const finalName = this.uniqueName(name || file.name);
-            this.registerSound(finalName, dataUrl);
-            return { name: finalName, dataUrl, bytes: file.size, wasCompressed: false };
-          }
-          const mime = this.chooseAudioMime();
-          const canEncode = !!mime && typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported?.(mime);
-          if (!canEncode) throw new Error("Compression unavailable in this browser; file exceeds 200KB.");
-          decoded = await ensureDecoded();
-          if (decoded.duration > maxSeconds) {
-            const duration = decoded.duration;
-            const formattedLimit = maxSeconds.toFixed(1).replace(/\.0$/, "");
-            const formattedDuration = duration.toFixed(1).replace(/\.0$/, "");
-            notifyInvalid(`File duration is ${formattedDuration}s (limit: ${formattedLimit}s).`);
-            throw new Error(`Audio duration ${formattedDuration}s exceeds limit of ${formattedLimit}s.`);
-          }
-          for (const br of bitrates) {
-            const blob = await this.recordBufferToBlob(decoded, mime, br);
-            if (blob.size <= maxBytes) {
-              const dataUrl = await this.blobToDataURL(blob);
-              const finalName = this.uniqueName(name || file.name);
-              this.registerSound(finalName, dataUrl);
-              return { name: finalName, dataUrl, bytes: blob.size, wasCompressed: true };
-            }
-          }
-          notifyInvalid(`Unable to compress under ${Math.round(maxBytes / 1024)}KB. Try a shorter clip.`);
-          throw new Error(`Could not compress under ${Math.round(maxBytes / 1024)}KB. Try a shorter clip.`);
-        }
-        // =========================
-        // Internals
-        // =========================
-        async playOnce(dataUrl, volume, _context, opts = {}) {
-          if (!this.enabled) return true;
+        /**
+         * Plays one sound. Returns false when it came too soon after the previous
+         * one (the caller retries). Without a sound, beeps if audio is unlocked.
+         */
+        async playOnce(dataUrl, volume, awaitEnd = false) {
+          if (!this.settings.enabled) return true;
           const now2 = Date.now();
-          if (now2 - this.lastPlayTs < this.minPlayGapMs) return false;
+          if (now2 - this.lastPlayTs < this.settings.minPlayGapMs) return false;
           this.lastPlayTs = now2;
           if (!dataUrl) {
             if (this.primed && this.audioCtx) {
               try {
-                const o = this.audioCtx.createOscillator();
-                const g = this.audioCtx.createGain();
-                g.gain.value = volume * 0.1;
-                o.frequency.value = 880;
-                o.connect(g).connect(this.audioCtx.destination);
-                o.start();
-                o.stop(this.audioCtx.currentTime + 0.06);
+                const osc = this.audioCtx.createOscillator();
+                const gain = this.audioCtx.createGain();
+                gain.gain.value = volume * 0.1;
+                osc.frequency.value = 880;
+                osc.connect(gain).connect(this.audioCtx.destination);
+                osc.start();
+                osc.stop(this.audioCtx.currentTime + 0.06);
               } catch {
               }
             }
             return true;
           }
           try {
-            const a = new Audio();
-            a.src = dataUrl;
-            a.volume = volume;
-            a.muted = !this.enabled;
-            a.crossOrigin = "anonymous";
-            const awaitEnd = opts?.awaitEnd === true;
-            let endPromise = null;
-            let resolveEnd = null;
+            const el = new Audio();
+            el.src = dataUrl;
+            el.volume = volume;
+            el.crossOrigin = "anonymous";
+            let ended = null;
+            let finish = null;
             if (awaitEnd) {
-              endPromise = new Promise((resolve) => {
-                const cleanup2 = () => {
-                  a.removeEventListener("ended", cleanup2);
-                  a.removeEventListener("error", cleanup2);
+              ended = new Promise((resolve) => {
+                const done = () => {
+                  el.removeEventListener("ended", done);
+                  el.removeEventListener("error", done);
                   resolve();
                 };
-                resolveEnd = cleanup2;
-                a.addEventListener("ended", cleanup2);
-                a.addEventListener("error", cleanup2);
+                finish = done;
+                el.addEventListener("ended", done);
+                el.addEventListener("error", done);
               });
             }
-            const p = a.play();
-            if (p && typeof p.then === "function") await p.catch(() => {
-              resolveEnd?.();
-            });
-            if (endPromise) await endPromise;
+            await el.play().catch(() => finish?.());
+            if (ended) await ended;
           } catch {
           }
           return true;
         }
-        scheduleNext(state5, delayMs) {
+        /** One loop iteration: check the stop condition, play to the end, wait the interval, repeat. */
+        runLoop(state7) {
           const run = async () => {
-            if (state5.stopped) return;
-            const stopConf = state5.stopOverride ?? state5.baseStop;
-            if (stopConf.mode === "purchase" && this.purchaseChecker) {
+            if (state7.stopped) return;
+            const stop = state7.stopOverride ?? state7.baseStop;
+            if (stop.mode === "purchase" && this.purchaseChecker) {
               try {
-                if (this.purchaseChecker(state5.key)) {
-                  this.stopLoop(state5.key);
+                if (this.purchaseChecker(state7.key)) {
+                  this.stopLoop(state7.key);
                   return;
                 }
               } catch {
               }
             }
-            const du = this.resolveToDataUrl(state5.soundOverride, state5.context);
-            const played = await this.playOnce(
-              du,
-              state5.volume,
-              state5.context,
-              { awaitEnd: true }
-            );
-            if (played) state5.plays++;
-            if (stopConf.mode === "repeat") {
-              const max = Math.max(1, stopConf.repeats | 0);
-              if (state5.plays >= max) {
-                this.stopLoop(state5.key);
-                return;
-              }
-            }
-            const intervalBase = state5.loopIntervalOverride ?? state5.baseLoopInterval;
-            const gap = Math.max(150, intervalBase | 0);
-            state5.timer = setTimeout(() => this.scheduleNext(state5, 0), gap);
-          };
-          if (delayMs > 0) state5.timer = setTimeout(run, delayMs);
-          else run().catch(() => {
-          });
-        }
-        enqueueOneshot(entry) {
-          if (entry.context === "weather") {
-            const idx = this.oneshotQueue.findIndex((item) => item.context !== "weather");
-            if (idx === -1) this.oneshotQueue.push(entry);
-            else this.oneshotQueue.splice(idx, 0, entry);
-          } else {
-            this.oneshotQueue.push(entry);
-          }
-          this.scheduleOneshotProcessing();
-        }
-        scheduleOneshotProcessing() {
-          if (!this.oneshotQueue.length) return;
-          if (this.oneshotQueueTimer != null) return;
-          const delta = Date.now() - this.lastPlayTs;
-          const wait = Math.max(0, this.minPlayGapMs - delta);
-          this.oneshotQueueTimer = window.setTimeout(() => {
-            this.oneshotQueueTimer = null;
-            if (this.oneshotProcessing) return;
-            this.processOneshotQueue();
-          }, wait);
-        }
-        processOneshotQueue() {
-          if (this.oneshotProcessing) return;
-          if (!this.oneshotQueue.length) return;
-          const next = this.oneshotQueue.shift();
-          this.oneshotProcessing = true;
-          const run = async () => {
-            let replay = false;
-            try {
-              const played = await this.playOnce(next.dataUrl, next.volume, next.context);
-              replay = !played;
-            } finally {
-              this.oneshotProcessing = false;
-              if (replay) this.enqueueOneshot(next);
-              this.scheduleOneshotProcessing();
-            }
+            await this.playOnce(this.resolveToDataUrl(state7.soundOverride, state7.context), state7.volume, true);
+            if (state7.stopped) return;
+            const gap = Math.max(MIN_LOOP_GAP_MS, (state7.loopIntervalOverride ?? state7.baseLoopInterval) | 0);
+            state7.timer = window.setTimeout(() => this.runLoop(state7), gap);
           };
           run().catch(() => {
           });
         }
-        // ===== Helpers import/compress =====
-        chooseAudioMime() {
-          const candidates = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/webm", "audio/ogg", "audio/mp4"];
-          for (const m of candidates) {
+        /** Weather one-shots jump ahead of the shops' and pets' ones. */
+        enqueueOneshot(entry) {
+          const firstOther = entry.context === "weather" ? this.oneshotQueue.findIndex((item) => item.context !== "weather") : -1;
+          if (firstOther === -1) this.oneshotQueue.push(entry);
+          else this.oneshotQueue.splice(firstOther, 0, entry);
+          this.scheduleOneshots();
+        }
+        scheduleOneshots() {
+          if (!this.oneshotQueue.length || this.oneshotQueueTimer != null) return;
+          const wait = Math.max(0, this.settings.minPlayGapMs - (Date.now() - this.lastPlayTs));
+          this.oneshotQueueTimer = window.setTimeout(() => {
+            this.oneshotQueueTimer = null;
+            if (!this.oneshotProcessing) this.playNextOneshot();
+          }, wait);
+        }
+        playNextOneshot() {
+          const next = this.oneshotQueue.shift();
+          if (!next) return;
+          this.oneshotProcessing = true;
+          void (async () => {
+            let tooSoon = false;
             try {
-              if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported?.(m)) return m;
-            } catch {
+              tooSoon = !await this.playOnce(next.dataUrl, next.volume);
+            } finally {
+              this.oneshotProcessing = false;
+              if (tooSoon) this.enqueueOneshot(next);
+              this.scheduleOneshots();
             }
-          }
-          return null;
-        }
-        uniqueName(raw) {
-          const base = String(raw || "Sound").replace(/\.[a-z0-9]+$/i, "").trim() || "Sound";
-          if (!this.library.has(base)) return base;
-          let i = 2;
-          while (this.library.has(`${base} (${i})`)) i++;
-          return `${base} (${i})`;
-        }
-        async blobToDataURL(blob) {
-          return await new Promise((resolve, reject) => {
-            const fr = new FileReader();
-            fr.onload = () => resolve(String(fr.result));
-            fr.onerror = reject;
-            fr.readAsDataURL(blob);
+          })().catch(() => {
           });
-        }
-        async decodeFileToBuffer(file) {
-          const arrayBuf = await file.arrayBuffer();
-          const Ctx = window.AudioContext || window.webkitAudioContext;
-          const ctx2 = new Ctx();
-          try {
-            const buf = await new Promise((res, rej) => {
-              ctx2.decodeAudioData(arrayBuf.slice(0), res, rej);
-            });
-            await ctx2.close().catch(() => {
-            });
-            return buf;
-          } catch (e) {
-            try {
-              await ctx2.close();
-            } catch {
-            }
-            throw new Error("Failed to decode audio file.");
-          }
-        }
-        async recordBufferToBlob(buffer, mime, bitsPerSecond) {
-          const Ctx = window.AudioContext || window.webkitAudioContext;
-          const ctx2 = new Ctx();
-          const dest = ctx2.createMediaStreamDestination();
-          const src = ctx2.createBufferSource();
-          src.buffer = buffer;
-          const gain = ctx2.createGain();
-          gain.gain.value = 0.9;
-          src.connect(gain).connect(dest);
-          const chunks = [];
-          const rec = new MediaRecorder(dest.stream, { mimeType: mime, bitsPerSecond });
-          const recorded = new Promise((resolve, reject) => {
-            rec.ondataavailable = (e) => {
-              if (e.data && e.data.size) chunks.push(e.data);
-            };
-            rec.onerror = (e) => reject(e.error || new Error("MediaRecorder error"));
-            rec.onstop = () => {
-              try {
-                resolve(new Blob(chunks, { type: mime }));
-              } catch (err) {
-                reject(err);
-              }
-            };
-          });
-          rec.start();
-          src.start();
-          await new Promise((res) => {
-            src.onended = () => res();
-          });
-          rec.stop();
-          const out = await recorded;
-          try {
-            await ctx2.close();
-          } catch {
-          }
-          return out;
         }
       };
-      audio = new AudioNotifier({
-        minPlayGapMs: 1200,
-        volume: 0.7
-      });
+      audio = new AudioNotifier();
     }
   });
 
   // src/features/notifier/petAlerts.ts
   function loadPrefs() {
-    try {
-      const parsed = readAriesPath("pets.alerts");
-      if (parsed && typeof parsed === "object") {
-        prefs = {
-          globalEnabled: parsed.globalEnabled !== false,
-          generalEnabled: !!parsed.generalEnabled,
-          defaultThresholdPct: clampPct(parsed.defaultThresholdPct ?? prefs.defaultThresholdPct),
-          pets: typeof parsed.pets === "object" && parsed.pets ? parsed.pets : {}
-        };
-      }
-    } catch {
-    }
-    return prefs;
+    const stored = readAriesPath(PREFS_PATH);
+    if (!stored || typeof stored !== "object") return;
+    prefs = {
+      globalEnabled: stored.globalEnabled !== false,
+      generalEnabled: !!stored.generalEnabled,
+      defaultThresholdPct: clampPct(stored.defaultThresholdPct ?? prefs.defaultThresholdPct),
+      pets: typeof stored.pets === "object" && stored.pets ? stored.pets : {}
+    };
   }
   function savePrefs() {
-    try {
-      writeAriesPath("pets.alerts", prefs);
-    } catch {
-    }
+    writeAriesPath(PREFS_PATH, prefs);
   }
   function prefFor(petId) {
     const baseThreshold = clampPct(prefs.defaultThresholdPct);
-    if (prefs.generalEnabled) {
-      return { enabled: prefs.globalEnabled !== false, thresholdPct: baseThreshold };
-    }
+    if (prefs.generalEnabled) return { enabled: prefs.globalEnabled !== false, thresholdPct: baseThreshold };
     if (!petId) return { enabled: false, thresholdPct: baseThreshold };
     const entry = prefs.pets[petId] ?? {};
-    const enabled5 = entry.enabled ?? false;
-    const thresholdPct = clampPct(entry.thresholdPct ?? baseThreshold);
-    return { enabled: enabled5, thresholdPct };
-  }
-  async function triggerAlert(key2) {
-    try {
-      await audio.trigger(key2, {}, "pets");
-    } catch {
-    }
+    return { enabled: entry.enabled ?? false, thresholdPct: clampPct(entry.thresholdPct ?? baseThreshold) };
   }
   function evaluatePet(pet) {
     const petId = String(pet?.slot?.id || "");
     if (!petId || !prefs.globalEnabled) {
-      seenBelow.set(petId, false);
+      wasBelow.set(petId, false);
       return;
     }
     const { enabled: enabled5, thresholdPct } = prefFor(petId);
     const hungerPct = PetsService.getHungerPctFor(pet);
     const below = enabled5 && Number.isFinite(hungerPct) && hungerPct < thresholdPct;
-    const wasBelow = seenBelow.get(petId) === true;
     const loopKey = prefs.generalEnabled ? "pets:general" : `pet:${petId}`;
-    const mode = audio.getPlaybackMode?.("pets") ?? "oneshot";
-    if (below) {
-      if (mode === "loop") {
-        void triggerAlert(loopKey);
-      } else if (!wasBelow) {
-        void triggerAlert(loopKey);
-      }
-    } else {
-      try {
-        audio.stopLoop(loopKey);
-      } catch {
-      }
+    if (!below) {
+      audio.stopLoop(loopKey);
+    } else if (audio.getPlaybackMode("pets") === "loop" || !wasBelow.get(petId)) {
+      audio.trigger(loopKey, {}, "pets").catch(() => {
+      });
     }
-    seenBelow.set(petId, below);
+    wasBelow.set(petId, below);
   }
-  async function evaluateAll(pets = null) {
-    const list = pets ?? lastPets;
-    for (const pet of Array.isArray(list) ? list : []) {
+  function evaluateAll() {
+    for (const pet of lastPets) {
       try {
         evaluatePet(pet);
       } catch {
       }
     }
   }
-  async function ensureStarted() {
-    if (started) return;
-    loadPrefs();
-    try {
-      unsubPets = await PetsService.onPetsChangeNow((arr) => {
-        lastPets = Array.isArray(arr) ? arr.slice(0, 3) : [];
-        void evaluateAll(lastPets);
-      });
-    } catch {
-      unsubPets = null;
-    }
-    started = true;
-  }
-  function stop() {
-    try {
-      unsubPets?.();
-    } catch {
-    }
-    unsubPets = null;
-    started = false;
-    seenBelow.clear();
-  }
-  var clampPct, prefs, started, unsubPets, lastPets, seenBelow, PetAlertService;
+  var PREFS_PATH, ACTIVE_PET_SLOTS, clampPct, prefs, started, lastPets, wasBelow, PetAlertService;
   var init_petAlerts = __esm({
     "src/features/notifier/petAlerts.ts"() {
       "use strict";
       init_pets();
-      init_audio();
+      init_math();
       init_storage();
-      clampPct = (v) => Math.max(1, Math.min(100, Math.round(v)));
+      init_audio();
+      PREFS_PATH = "pets.alerts";
+      ACTIVE_PET_SLOTS = 3;
+      clampPct = (v) => clamp(Math.round(v), 1, 100);
       prefs = {
         globalEnabled: true,
         generalEnabled: false,
@@ -20791,1263 +20311,46 @@
         pets: {}
       };
       started = false;
-      unsubPets = null;
       lastPets = [];
-      seenBelow = /* @__PURE__ */ new Map();
+      wasBelow = /* @__PURE__ */ new Map();
       PetAlertService = {
         async start() {
-          await ensureStarted();
-          return () => stop();
-        },
-        isGlobalEnabled() {
-          return prefs.globalEnabled !== false;
-        },
-        setGlobalEnabled(on) {
-          prefs.globalEnabled = !!on;
-          if (!on) seenBelow.clear();
-          savePrefs();
+          if (started) return;
+          loadPrefs();
+          try {
+            await PetsService.onPetsChangeNow((pets) => {
+              lastPets = Array.isArray(pets) ? pets.slice(0, ACTIVE_PET_SLOTS) : [];
+              evaluateAll();
+            });
+          } catch {
+          }
+          started = true;
         },
         isGeneralEnabled() {
           return !!prefs.generalEnabled;
         },
         setGeneralEnabled(on) {
-          prefs.generalEnabled = !!on;
+          prefs.generalEnabled = on;
           savePrefs();
-          void this.refreshNow();
+          evaluateAll();
         },
         getGeneralThresholdPct() {
           return clampPct(prefs.defaultThresholdPct);
         },
+        /** Sets the shared threshold and returns it as stored (whole percent, 1 to 100). */
         setGeneralThresholdPct(pct) {
-          const next = clampPct(pct);
-          prefs.defaultThresholdPct = next;
+          prefs.defaultThresholdPct = clampPct(pct);
           savePrefs();
-          void this.refreshNow();
-          return next;
-        },
-        getDefaultThresholdPct() {
-          return clampPct(prefs.defaultThresholdPct);
-        },
-        setDefaultThresholdPct(pct) {
-          const next = clampPct(pct);
-          prefs.defaultThresholdPct = next;
-          savePrefs();
-          return next;
-        },
-        isPetEnabled(petId) {
-          return prefFor(petId).enabled;
-        },
-        setPetEnabled(petId, on) {
-          if (!petId) return;
-          prefs.pets[petId] = { ...prefs.pets[petId] || {}, enabled: !!on };
-          savePrefs();
-          void evaluateAll();
-        },
-        getPetThresholdPct(petId) {
-          return prefFor(petId).thresholdPct;
-        },
-        setPetThresholdPct(petId, pct) {
-          if (!petId) return this.getDefaultThresholdPct();
-          const next = clampPct(pct);
-          prefs.pets[petId] = { ...prefs.pets[petId] || {}, thresholdPct: next };
-          savePrefs();
-          void evaluateAll();
-          return next;
-        },
-        async refreshNow() {
-          await evaluateAll();
-        }
-      };
-    }
-  });
-
-  // src/features/notifier/notifier.ts
-  function _ensureRulesLoaded() {
-    if (_rulesLoaded) return;
-    _rulesLoaded = true;
-    _rules = /* @__PURE__ */ new Map();
-    try {
-      const obj = readAriesPath(PATH_NOTIFIER_RULES);
-      if (obj && typeof obj === "object") {
-        for (const [id, value] of Object.entries(obj)) {
-          const norm3 = _normalizeRule(value);
-          if (norm3) _rules.set(String(id), norm3);
-        }
-      }
-    } catch {
-      _rules = /* @__PURE__ */ new Map();
-    }
-  }
-  function _normalizeRule(raw) {
-    const patch = {};
-    if (_hasOwn.call(raw ?? {}, "sound")) patch.sound = raw?.sound ?? null;
-    if (_hasOwn.call(raw ?? {}, "volume")) patch.volume = raw?.volume ?? null;
-    if (_hasOwn.call(raw ?? {}, "playbackMode")) patch.playbackMode = raw?.playbackMode ?? null;
-    if (_hasOwn.call(raw ?? {}, "stopMode")) patch.stopMode = raw?.stopMode ?? null;
-    if (_hasOwn.call(raw ?? {}, "stopRepeats")) patch.stopRepeats = raw?.stopRepeats ?? null;
-    if (_hasOwn.call(raw ?? {}, "loopIntervalMs")) patch.loopIntervalMs = raw?.loopIntervalMs ?? null;
-    return _mergeRule(void 0, patch);
-  }
-  function _saveRules() {
-    if (!_rulesLoaded) return;
-    try {
-      const obj = {};
-      for (const [id, rule] of _rules.entries()) {
-        obj[id] = { ...rule };
-      }
-      writeAriesPath(PATH_NOTIFIER_RULES, obj);
-    } catch {
-    }
-  }
-  function _ensureWeatherPrefsLoaded() {
-    if (_weatherPrefsLoaded) return;
-    _weatherPrefsLoaded = true;
-    _weatherPrefs = /* @__PURE__ */ new Map();
-    try {
-      const obj = readAriesPath(PATH_NOTIFIER_WEATHER);
-      if (obj && typeof obj === "object") {
-        for (const [id, value] of Object.entries(obj)) {
-          if (!id) continue;
-          const pref = {};
-          if (typeof value?.notify === "boolean") pref.notify = !!value.notify;
-          if (typeof value?.lastSeen === "number" && Number.isFinite(value.lastSeen)) {
-            pref.lastSeen = Number(value.lastSeen);
-          }
-          _weatherPrefs.set(String(id), pref);
-        }
-      }
-    } catch {
-      _weatherPrefs = /* @__PURE__ */ new Map();
-    }
-  }
-  function _saveWeatherPrefs() {
-    if (!_weatherPrefsLoaded) return;
-    try {
-      const obj = {};
-      for (const [id, pref] of _weatherPrefs.entries()) {
-        const entry = {};
-        if (pref.notify) entry.notify = true;
-        if (typeof pref.lastSeen === "number" && Number.isFinite(pref.lastSeen)) entry.lastSeen = pref.lastSeen;
-        if (entry.notify || entry.lastSeen != null) obj[id] = entry;
-      }
-      writeAriesPath(PATH_NOTIFIER_WEATHER, obj);
-    } catch {
-    }
-  }
-  function _getWeatherPref(id) {
-    _ensureWeatherPrefsLoaded();
-    const existing = _weatherPrefs.get(id);
-    if (existing) return existing;
-    const fresh = {};
-    _weatherPrefs.set(id, fresh);
-    return fresh;
-  }
-  function _ensureContextDefaultsLoaded() {
-    if (_contextDefaultsLoaded) return;
-    _contextDefaultsLoaded = true;
-    _contextDefaults = {};
-    try {
-      const obj = readAriesPath(PATH_NOTIFIER_DEFAULTS);
-      if (obj && typeof obj === "object") {
-        for (const [context, value] of Object.entries(obj)) {
-          const ctx2 = context;
-          if (ctx2 !== "shops" && ctx2 !== "weather") continue;
-          const modeRaw = value?.stopMode;
-          const stopMode = modeRaw === "purchase" ? "purchase" : "manual";
-          const repeatsRaw = Number(value?.stopRepeats);
-          const stopRepeats = Number.isFinite(repeatsRaw) ? Math.max(1, Math.floor(repeatsRaw)) : null;
-          const intervalRaw = Number(value?.loopIntervalMs);
-          const playback = audio.getPlaybackSettings(ctx2);
-          const baseLoop = Number.isFinite(intervalRaw) ? intervalRaw : playback.loopIntervalMs;
-          const loopIntervalMs = Math.max(150, Math.floor(baseLoop || 0));
-          _contextDefaults[ctx2] = { stopMode, stopRepeats, loopIntervalMs };
-        }
-      }
-    } catch {
-      _contextDefaults = {};
-    }
-  }
-  function _saveContextDefaults() {
-    if (!_contextDefaultsLoaded) return;
-    try {
-      const obj = {};
-      for (const [ctx2, value] of Object.entries(_contextDefaults)) {
-        if (!value) continue;
-        const loopIntervalMs = Math.max(150, Math.floor(value.loopIntervalMs | 0));
-        const normalizedRepeats = value.stopRepeats != null ? Math.max(1, Math.floor(value.stopRepeats | 0)) : null;
-        obj[ctx2] = {
-          stopMode: value.stopMode,
-          stopRepeats: normalizedRepeats,
-          loopIntervalMs
-        };
-      }
-      writeAriesPath(PATH_NOTIFIER_DEFAULTS, obj);
-    } catch {
-    }
-  }
-  function _getContextStopDefaultsInternal(context) {
-    _ensureContextDefaultsLoaded();
-    const stored = _contextDefaults[context];
-    const playback = audio.getPlaybackSettings(context);
-    const playbackLoop = Math.max(150, Math.floor(playback.loopIntervalMs || 0));
-    const storedLoop = stored?.loopIntervalMs;
-    const loopIntervalMs = Math.max(150, Math.floor(storedLoop ?? playbackLoop));
-    const storedMode = stored?.stopMode === "purchase" ? "purchase" : null;
-    const playbackMode = playback.stop.mode === "purchase" ? "purchase" : null;
-    if (context === "shops") {
-      const stopMode = storedMode ?? playbackMode ?? "purchase";
-      return { stopMode, stopRepeats: null, loopIntervalMs };
-    }
-    return { stopMode: "manual", stopRepeats: null, loopIntervalMs };
-  }
-  function _notifyWeather() {
-    if (!_weatherState) return;
-    _weatherSubs.forEach((fn) => {
-      try {
-        fn(_weatherState);
-      } catch {
-      }
-    });
-  }
-  function _recomputeWeatherState() {
-    _ensureWeatherPrefsLoaded();
-    const rows = weatherIndex().defs.map((def) => {
-      const pref = _getWeatherPref(def.id);
-      const notify2 = !!pref.notify;
-      const lastSeen = typeof pref.lastSeen === "number" && Number.isFinite(pref.lastSeen) ? pref.lastSeen : null;
-      return {
-        id: def.id,
-        name: def.name,
-        type: def.type,
-        atomValue: def.atomValue,
-        notify: notify2,
-        lastSeen,
-        isCurrent: def.id === _currentWeatherId,
-        description: def.description,
-        cycle: def.cycle ? { ...def.cycle } : null,
-        weightInCycle: def.weightInCycle,
-        mutations: def.mutations.map((mutation) => ({ ...mutation }))
-      };
-    });
-    const sig = JSON.stringify(rows.map((r) => [r.id, r.notify ? 1 : 0, r.lastSeen || 0, r.isCurrent ? 1 : 0]));
-    const changed = sig !== _weatherSig;
-    _weatherSig = sig;
-    _weatherState = {
-      updatedAt: Date.now(),
-      currentId: _currentWeatherId,
-      rows
-    };
-    if (changed) _notifyWeather();
-  }
-  function _buildWeatherOverrides(id) {
-    const overrides = {};
-    const rule = _rules.get(id);
-    if (rule?.sound) overrides.sound = rule.sound;
-    if (rule?.volume != null) overrides.volume = rule.volume;
-    overrides.mode = "oneshot";
-    return overrides;
-  }
-  function _triggerWeatherNotification(id) {
-    const def = weatherIndex().byId.get(id);
-    if (!def) return;
-    const overrides = _buildWeatherOverrides(id);
-    audio.trigger(id, overrides, "weather").catch(() => {
-    });
-  }
-  function _handleWeatherUpdate(raw, opts = {}) {
-    const normalize2 = (value) => {
-      if (value == null) return "";
-      if (typeof value === "string") return value.trim();
-      return String(value || "").trim();
-    };
-    const nextValue = normalize2(raw);
-    if (!opts.force && _currentWeatherValue === nextValue) return;
-    const lookupKey = nextValue.toLowerCase();
-    const { byAtom, byName } = weatherIndex();
-    let def = byAtom.get(lookupKey) || byName.get(lookupKey);
-    if (!def && lookupKey) {
-      const noSpace = lookupKey.replace(/\s+/g, "");
-      def = byName.get(noSpace);
-    }
-    const prevId = _currentWeatherId;
-    const now2 = Date.now();
-    if (def) {
-      const pref = _getWeatherPref(def.id);
-      pref.lastSeen = now2;
-      _weatherPrefs.set(def.id, pref);
-    }
-    _currentWeatherId = def?.id ?? null;
-    _currentWeatherValue = nextValue;
-    if (_currentWeatherId) {
-      StatsService.incrementWeatherStat(_currentWeatherId.replace("Weather:", ""));
-    }
-    if (prevId && prevId !== _currentWeatherId) {
-      audio.stopLoop(prevId);
-    }
-    if (def && _getWeatherPref(def.id).notify) {
-      _triggerWeatherNotification(def.id);
-    }
-    if (def) _saveWeatherPrefs();
-    _recomputeWeatherState();
-  }
-  function _rulesEqual(a, b) {
-    if (!a && !b) return true;
-    if (!a || !b) return false;
-    return a.sound === b.sound && a.volume === b.volume && a.playbackMode === b.playbackMode && a.stopMode === b.stopMode && a.loopIntervalMs === b.loopIntervalMs;
-  }
-  function _sanitizeSound(value) {
-    if (typeof value !== "string") return void 0;
-    const trimmed = value.trim();
-    return trimmed ? trimmed : void 0;
-  }
-  function _sanitizeVolume(value) {
-    if (value == null) return void 0;
-    const num2 = Number(value);
-    if (!Number.isFinite(num2)) return void 0;
-    const normalized = num2 > 1 ? num2 / 100 : num2;
-    const clamped = Math.max(0, Math.min(1, normalized));
-    return clamped;
-  }
-  function _sanitizePlaybackMode(value) {
-    if (value == null) return void 0;
-    const v = String(value);
-    return v === "oneshot" || v === "loop" ? v : void 0;
-  }
-  function _sanitizeStopMode(value) {
-    if (value == null) return void 0;
-    const v = String(value);
-    if (v === "purchase") return "purchase";
-    return void 0;
-  }
-  function _sanitizeLoopInterval(value) {
-    if (value == null) return void 0;
-    const n = Number(value);
-    if (!Number.isFinite(n)) return void 0;
-    const normalized = Math.max(150, Math.floor(n));
-    return normalized >= 150 ? normalized : void 0;
-  }
-  function _mergeRule(prev, patch) {
-    const next = { ...prev ?? {} };
-    if (_hasOwn.call(patch, "sound")) {
-      const s = _sanitizeSound(patch.sound);
-      if (s) next.sound = s;
-      else delete next.sound;
-    }
-    if (_hasOwn.call(patch, "volume")) {
-      const vol = _sanitizeVolume(patch.volume);
-      if (vol != null) next.volume = vol;
-      else delete next.volume;
-    }
-    if (_hasOwn.call(patch, "playbackMode")) {
-      const mode = _sanitizePlaybackMode(patch.playbackMode);
-      if (mode) next.playbackMode = mode;
-      else delete next.playbackMode;
-    }
-    if (_hasOwn.call(patch, "stopMode")) {
-      const mode = _sanitizeStopMode(patch.stopMode);
-      if (mode) next.stopMode = mode;
-      else delete next.stopMode;
-      delete next.stopRepeats;
-    }
-    if (_hasOwn.call(patch, "stopRepeats")) {
-      delete next.stopRepeats;
-    }
-    if (_hasOwn.call(patch, "loopIntervalMs")) {
-      const interval = _sanitizeLoopInterval(patch.loopIntervalMs);
-      if (interval != null) next.loopIntervalMs = interval;
-      else delete next.loopIntervalMs;
-    }
-    return Object.keys(next).length ? next : null;
-  }
-  function _rulesSnapshot() {
-    _ensureRulesLoaded();
-    const out = {};
-    for (const [id, rule] of _rules.entries()) {
-      out[id] = {
-        ...rule.sound ? { sound: rule.sound } : {},
-        ...rule.volume != null ? { volume: rule.volume } : {},
-        ...rule.playbackMode ? { playbackMode: rule.playbackMode } : {},
-        ...rule.stopMode ? { stopMode: rule.stopMode } : {},
-        ...rule.loopIntervalMs != null ? { loopIntervalMs: rule.loopIntervalMs } : {}
-      };
-    }
-    return out;
-  }
-  function _emitRules() {
-    if (!_rulesLoaded) return;
-    const snap = _rulesSnapshot();
-    _rulesSubs.forEach((fn) => {
-      try {
-        fn(snap);
-      } catch {
-      }
-    });
-  }
-  function _loadPrefs() {
-    try {
-      const obj = readAriesPath(PATH_NOTIFIER_PREFS) ?? {};
-      const m = /* @__PURE__ */ new Map();
-      if (obj && typeof obj === "object") {
-        for (const [k, v] of Object.entries(obj)) {
-          const n = Number(v) | 0;
-          const popupBits = n & 1;
-          if (k && popupBits !== void 0) m.set(String(k), popupBits);
-        }
-      }
-      _prefs = m;
-    } catch {
-      _prefs = /* @__PURE__ */ new Map();
-    }
-  }
-  function _savePrefs() {
-    try {
-      const obj = {};
-      for (const [k, v] of _prefs) obj[k] = v & 1;
-      writeAriesPath(PATH_NOTIFIER_PREFS, obj);
-    } catch {
-    }
-  }
-  function _isCapReachedForCatalog(catalog, inv, itemId) {
-    const meta = catalog[itemId];
-    if (!meta) return false;
-    const q = inv.get(itemId) || 0;
-    if (meta.isOneTimePurchase && q >= 1) return true;
-    const max = Number(meta.maxInventoryQuantity);
-    if (Number.isFinite(max) && max > 0 && q >= max) return true;
-    return false;
-  }
-  function _isToolCapReached(toolId) {
-    return _isCapReachedForCatalog(toolCatalog2, _toolInv, toolId);
-  }
-  function _isDecorCapReached(decorId) {
-    return _isCapReachedForCatalog(decorCatalog2, _decorInv, decorId);
-  }
-  function _isRowCapReached(id) {
-    if (id.startsWith("Tool:")) return _isToolCapReached(id.slice(5));
-    if (id.startsWith("Decor:")) return _isDecorCapReached(id.slice(6));
-    return false;
-  }
-  function _updateToolInv(raw) {
-    try {
-      const arr = Array.isArray(raw) ? raw : [];
-      _toolInv = new Map(arr.map((it) => [String(it.toolId), Number(it.quantity) || 0]));
-    } catch {
-      _toolInv = /* @__PURE__ */ new Map();
-    }
-    _recomputeFromCacheAndNotify();
-  }
-  function _updateDecorInv(raw) {
-    try {
-      const arr = Array.isArray(raw) ? raw : [];
-      const next = /* @__PURE__ */ new Map();
-      for (const it of arr) {
-        const id = String(it?.decorId ?? it?.id ?? "");
-        if (!id) continue;
-        next.set(id, Number(it?.quantity) || 0);
-      }
-      _decorInv = next;
-    } catch {
-      _decorInv = /* @__PURE__ */ new Map();
-    }
-    _recomputeFromCacheAndNotify();
-  }
-  function _resolveToolInvAtom() {
-    const a = Atoms;
-    return a.inventory?.myToolInventory ?? a.shop?.myToolInventory ?? a.myToolInventoryAtom ?? null;
-  }
-  function _resolveDecorInvAtom() {
-    const a = Atoms;
-    return a.inventory?.myDecorInventory ?? a.shop?.myDecorInventory ?? a.myDecorInventoryAtom ?? null;
-  }
-  function _computeSig(ids) {
-    return ids.slice().sort().join("|");
-  }
-  function _coercePurchases(view, slot) {
-    const p = view.purchases;
-    const raw = slot?.data?.shopPurchases;
-    const startedAt = (k) => Number(raw?.[k]?.startedAtMs ?? raw?.[k]?.createdAt) || 0;
-    return {
-      seed: { createdAt: startedAt("seed"), purchases: p.seed },
-      egg: { createdAt: startedAt("egg"), purchases: p.egg },
-      tool: { createdAt: startedAt("tool"), purchases: p.tool },
-      decor: { createdAt: startedAt("decor"), purchases: p.decor }
-    };
-  }
-  function _emitPurchases() {
-    const snap = _coercePurchases(_viewOf(_rawShops, _rawSlot), _rawSlot);
-    _purchasesSubs.forEach((fn) => {
-      try {
-        fn(snap);
-      } catch {
-      }
-    });
-  }
-  function _notifySlot(slot) {
-    _rawSlot = slot;
-    if (_rawShops != null) _emitShops();
-    _emitPurchases();
-  }
-  function _coerceSnap(raw) {
-    const seedInv = [];
-    const eggInv = [];
-    const toolInv = [];
-    const decorInv = [];
-    if (raw && typeof raw === "object") {
-      for (const shopKey of Object.keys(raw)) {
-        const shop = raw[shopKey];
-        if (!shop || typeof shop !== "object") continue;
-        const inv = Array.isArray(shop.inventory) ? shop.inventory : [];
-        for (const item of inv) {
-          if (!item || typeof item !== "object") continue;
-          const t = item.itemType;
-          if (t === "Seed") seedInv.push(item);
-          else if (t === "Egg") eggInv.push(item);
-          else if (t === "Tool") toolInv.push(item);
-          else if (t === "Decor") decorInv.push(item);
-        }
-      }
-    }
-    return {
-      seed: { inventory: seedInv, secondsUntilRestock: Number(raw?.seed?.secondsUntilRestock) || 0 },
-      egg: { inventory: eggInv, secondsUntilRestock: Number(raw?.egg?.secondsUntilRestock) || 0 },
-      tool: { inventory: toolInv, secondsUntilRestock: Number(raw?.tool?.secondsUntilRestock) || 0 },
-      decor: { inventory: decorInv, secondsUntilRestock: Number(raw?.decor?.secondsUntilRestock) || 0 }
-    };
-  }
-  function _emitShops() {
-    const snap = _coerceSnap(_viewOf(_rawShops, _rawSlot).shops);
-    _shopsSubs.forEach((fn) => {
-      try {
-        fn(snap);
-      } catch {
-      }
-    });
-  }
-  function _notifyShops(raw) {
-    _rawShops = raw;
-    _emitShops();
-    if (_rawSlot != null) _emitPurchases();
-  }
-  function _splitEligibleShops(shops2) {
-    const arr = Array.isArray(shops2) ? shops2.map((s) => String(s ?? "").trim()).filter(Boolean) : [];
-    let base = null;
-    const weathers = [];
-    for (const s of arr) {
-      if (BASE_SHOPS_SET.has(s)) base = s;
-      else weathers.push(s);
-    }
-    return { base, weathers };
-  }
-  function _buildRowsFromCatalogs() {
-    const out = [];
-    const seen = /* @__PURE__ */ new Set();
-    const addRow = (id, type, name, rarity3, weathers, weatherOnly) => {
-      if (seen.has(id)) return;
-      seen.add(id);
-      const bits = _getPrefBits(id);
-      const popup = !!(bits & 1);
-      out.push({
-        id,
-        type,
-        name,
-        rarity: rarity3,
-        popup,
-        followed: popup,
-        weatherOnly: weatherOnly || void 0,
-        weathers: weathers.length ? weathers : void 0
-      });
-    };
-    const sources = [
-      { catalog: plantCatalog2, naturalSection: "Seed", pickEntry: (raw) => raw?.seed ?? raw },
-      { catalog: eggCatalog2, naturalSection: "Egg", pickEntry: (raw) => raw },
-      { catalog: toolCatalog2, naturalSection: "Tool", pickEntry: (raw) => raw },
-      { catalog: decorCatalog2, naturalSection: "Decor", pickEntry: (raw) => raw }
-    ];
-    for (const { catalog, naturalSection, pickEntry } of sources) {
-      if (!catalog || typeof catalog !== "object") continue;
-      for (const key2 of Object.keys(catalog)) {
-        const entry = pickEntry(catalog[key2]);
-        if (!entry || typeof entry !== "object") continue;
-        const { base, weathers } = _splitEligibleShops(entry.eligibleShops);
-        if (!base && weathers.length === 0) continue;
-        const section4 = base ?? naturalSection;
-        const id = `${section4}:${key2}`;
-        const name = typeof entry.name === "string" && entry.name.trim() ? String(entry.name) : key2;
-        const rawRarity = typeof entry.rarity === "string" ? entry.rarity : void 0;
-        const rarity3 = rawRarity ? DISPLAY_RARITY[rawRarity] ?? rawRarity : void 0;
-        addRow(id, section4, name, rarity3, weathers, !base);
-      }
-    }
-    return out;
-  }
-  function _recomputeRowsFromCatalogs() {
-    const rows = _buildRowsFromCatalogs();
-    _rowsById.clear();
-    for (const row3 of rows) _rowsById.set(row3.id, row3);
-    const followed = rows.reduce((n, r) => n + (r.followed ? 1 : 0), 0);
-    const next = {
-      updatedAt: Date.now(),
-      rows,
-      counts: { items: rows.length, followed }
-    };
-    const sig = _computeSig(rows.map((r) => r.id));
-    const changed = sig !== _lastSig;
-    _state = next;
-    if (changed) {
-      _lastSig = sig;
-      _notify();
-    }
-  }
-  function _recomputeFromCacheAndNotify() {
-    if (!_state) return;
-    for (const [id, row3] of _rowsById) {
-      const bits = _getPrefBits(id);
-      let popup = !!(bits & 1);
-      if (_isRowCapReached(id)) popup = false;
-      row3.popup = popup;
-      row3.followed = popup;
-    }
-    const rows = Array.from(_rowsById.values());
-    const followed = rows.reduce((n, r) => n + (r.followed ? 1 : 0), 0);
-    _state = {
-      ..._state,
-      updatedAt: Date.now(),
-      rows,
-      counts: { items: rows.length, followed }
-    };
-    _notify();
-  }
-  function _notify() {
-    if (!_state) return;
-    const snap = { ..._state, rows: _state.rows.slice() };
-    _subs.forEach((fn) => {
-      try {
-        fn(snap);
-      } catch {
-      }
-    });
-  }
-  async function _waitForAtom(label2, keepGoing) {
-    const startedAt = Date.now();
-    while (keepGoing() && Date.now() - startedAt < ATOM_WAIT_TIMEOUT_MS) {
-      try {
-        if (await Store.hasAtom(label2)) return true;
-      } catch {
-      }
-      await new Promise((resolve) => setTimeout(resolve, ATOM_WAIT_POLL_MS));
-    }
-    return false;
-  }
-  async function _watchShops(generation3) {
-    const isCurrent = () => _watchGeneration === generation3;
-    if (!await _waitForAtom(STATE_ATOM_LABEL, isCurrent) || !isCurrent()) return;
-    if (_unsubShops) return;
-    try {
-      _unsubShops = await Atoms.shop.shops.onChange((next) => {
-        try {
-          _notifyShops(next);
-        } catch {
-        }
-      });
-    } catch {
-    }
-    if (!isCurrent()) return;
-    try {
-      _notifyShops(await Atoms.shop.shops.get());
-    } catch {
-    }
-  }
-  async function _watchPurchases(generation3) {
-    const isCurrent = () => _watchGeneration === generation3;
-    if (!await _waitForAtom(MY_USER_SLOT_ATOM_LABEL, isCurrent) || !isCurrent()) return;
-    if (_unsubPurchases) return;
-    try {
-      _unsubPurchases = await Atoms.shop.myUserSlot.onChange((next) => {
-        try {
-          _notifySlot(next);
-        } catch {
-        }
-      }, _sameShopParts);
-    } catch {
-    }
-    if (!isCurrent()) return;
-    try {
-      _notifySlot(await Atoms.shop.myUserSlot.get());
-    } catch {
-    }
-  }
-  async function _ensureStarted() {
-    if (_started) {
-      return;
-    }
-    _started = true;
-    _loadPrefs();
-    _ensureRulesLoaded();
-    try {
-      _recomputeRowsFromCatalogs();
-    } catch {
-    }
-    try {
-      window.addEventListener("gemini:data-updated", _onDataUpdated);
-    } catch {
-    }
-    const generation3 = ++_watchGeneration;
-    void _watchShops(generation3);
-    void _watchPurchases(generation3);
-    try {
-      const invAtom = _resolveToolInvAtom();
-      if (invAtom) {
-        try {
-          _updateToolInv(await invAtom.get());
-        } catch (err) {
-        }
-        try {
-          _unsubToolInv = await invAtom.onChange((next) => {
-            try {
-              _updateToolInv(next);
-            } catch {
-            }
-          });
-        } catch (err) {
-        }
-      }
-    } catch (err) {
-    }
-    try {
-      const decorAtom = _resolveDecorInvAtom();
-      if (decorAtom) {
-        try {
-          _updateDecorInv(await decorAtom.get());
-        } catch {
-        }
-        try {
-          _unsubDecorInv = await decorAtom.onChange((next) => {
-            try {
-              _updateDecorInv(next);
-            } catch {
-            }
-          });
-        } catch {
-        }
-      }
-    } catch {
-    }
-    try {
-      const weatherAtom = Atoms.data?.weather;
-      if (weatherAtom) {
-        try {
-          _handleWeatherUpdate(await weatherAtom.get(), { force: true });
-        } catch (err) {
-        }
-        try {
-          _unsubWeather = await weatherAtom.onChange((next) => {
-            try {
-              _handleWeatherUpdate(next);
-            } catch {
-            }
-          });
-        } catch (err) {
-        }
-      } else {
-      }
-    } catch (err) {
-    }
-  }
-  function _stop() {
-    _watchGeneration++;
-    try {
-      window.removeEventListener("gemini:data-updated", _onDataUpdated);
-    } catch {
-    }
-    try {
-      _unsubShops?.();
-    } catch {
-    }
-    _unsubShops = null;
-    try {
-      _unsubPurchases?.();
-    } catch {
-    }
-    _unsubPurchases = null;
-    try {
-      _unsubToolInv?.();
-    } catch {
-    }
-    _unsubToolInv = null;
-    try {
-      _unsubDecorInv?.();
-    } catch {
-    }
-    _unsubDecorInv = null;
-    try {
-      _unsubWeather?.();
-    } catch {
-    }
-    _unsubWeather = null;
-    if (_currentWeatherId) {
-      try {
-        audio.stopLoop(_currentWeatherId);
-      } catch {
-      }
-    }
-    _currentWeatherId = null;
-    _currentWeatherValue = null;
-    _started = false;
-  }
-  var PATH_NOTIFIER_PREFS, PATH_NOTIFIER_RULES, PATH_NOTIFIER_WEATHER, PATH_NOTIFIER_DEFAULTS, DISPLAY_RARITY, norm2, formatRuleSummary, formatLastSeen, weatherStateSignature, formatWeatherMutation, normalizeNumber, normalizeCycle, normalizeMutations2, mutatorMutations, trimmedString, weatherIndex, _prefs, _weatherPrefs, _weatherPrefsLoaded, _contextDefaults, _contextDefaultsLoaded, _rules, _rulesLoaded, _rulesSubs, _hasOwn, _weatherState, _weatherSig, _weatherSubs, _currentWeatherId, _currentWeatherValue, _unsubWeather, _getPrefBits, _setPrefBits, _rowsById, _lastSig, _state, _unsubShops, _unsubPurchases, _watchGeneration, _subs, _toolInv, _decorInv, _unsubToolInv, _unsubDecorInv, _purchasesSubs, _itemKind, _rawShops, _rawSlot, _viewOf, _sameShopParts, _shopsSubs, BASE_SHOPS_SET, _onDataUpdated, ATOM_WAIT_POLL_MS, ATOM_WAIT_TIMEOUT_MS, STATE_ATOM_LABEL, MY_USER_SLOT_ATOM_LABEL, _started, NotifierService;
-  var init_notifier = __esm({
-    "src/features/notifier/notifier.ts"() {
-      "use strict";
-      init_atoms();
-      init_api();
-      init_data();
-      init_format();
-      init_audio();
-      init_stats();
-      init_storage();
-      init_purchases();
-      PATH_NOTIFIER_PREFS = "notifier.prefs";
-      PATH_NOTIFIER_RULES = "notifier.rules";
-      PATH_NOTIFIER_WEATHER = "notifier.weatherPrefs";
-      PATH_NOTIFIER_DEFAULTS = "notifier.loopDefaults";
-      DISPLAY_RARITY = {
-        [rarity2.Common]: "Common",
-        [rarity2.Uncommon]: "Uncommon",
-        [rarity2.Rare]: "Rare",
-        [rarity2.Legendary]: "Legendary",
-        [rarity2.Mythic]: "Mythical",
-        // MGData's API returns "Mythic" while rarityMap.Mythic is "Mythical".
-        Mythic: "Mythical",
-        [rarity2.Divine]: "Divine",
-        [rarity2.Celestial]: "Celestial"
-      };
-      norm2 = (s) => String(s ?? "").toLowerCase();
-      formatRuleSummary = (rule) => {
-        if (!rule) return "";
-        const parts = [];
-        if (rule.sound) {
-          const names = audio.listSounds();
-          const label2 = names.includes(rule.sound) ? rule.sound : rule.sound.length > 32 ? `${rule.sound.slice(0, 29)}\u2026` : rule.sound;
-          parts.push(`Sound: ${label2}`);
-        }
-        if (rule.volume != null) {
-          const pct = Math.round(Math.max(0, Math.min(1, Number(rule.volume))) * 100);
-          parts.push(`Volume: ${pct}%`);
-        }
-        if (rule.playbackMode === "oneshot") parts.push("Mode: One-shot");
-        else if (rule.playbackMode === "loop") parts.push("Mode: Loop");
-        if (rule.stopMode === "purchase") parts.push("Stop: Until purchase");
-        else if (rule.stopMode === "manual") parts.push("Stop: Manual");
-        if (rule.loopIntervalMs != null) {
-          const raw = Number(rule.loopIntervalMs);
-          if (Number.isFinite(raw)) {
-            const ms = Math.max(1, Math.round(raw));
-            const seconds = ms / 1e3;
-            const label2 = seconds >= 1 ? `${(seconds >= 10 ? Math.round(seconds) : Math.round(seconds * 10) / 10).toFixed(seconds >= 10 ? 0 : 1)} s` : `${ms} ms`;
-            parts.push(`Interval: ${label2}`);
-          }
-        }
-        return parts.join(" \u2022 ");
-      };
-      formatLastSeen = (timestamp, isCurrent) => {
-        if (isCurrent) {
-          const title = timestamp ? new Date(timestamp).toLocaleString() : "Currently active";
-          return { label: "Now", title };
-        }
-        if (!timestamp) return { label: "Never", title: "Never seen" };
-        const now2 = Date.now();
-        const diff = Math.max(0, now2 - timestamp);
-        let label2;
-        if (diff < 45e3) label2 = "Just now";
-        else if (diff < 9e4) label2 = "1 min ago";
-        else if (diff < 60 * 60 * 1e3) {
-          const mins = Math.round(diff / 6e4);
-          label2 = `${mins} min${mins > 1 ? "s" : ""} ago`;
-        } else if (diff < 36 * 60 * 60 * 1e3) {
-          const hours = Math.round(diff / 36e5);
-          label2 = `${hours} hour${hours > 1 ? "s" : ""} ago`;
-        } else {
-          const days = Math.round(diff / 864e5);
-          label2 = `${days} day${days > 1 ? "s" : ""} ago`;
-        }
-        return { label: label2, title: new Date(timestamp).toLocaleString() };
-      };
-      weatherStateSignature = (rows) => JSON.stringify(
-        rows.map((r) => [r.id, r.notify ? 1 : 0, r.lastSeen || 0, r.isCurrent ? 1 : 0])
-      );
-      formatWeatherMutation = (mutation) => {
-        const parts = [mutation.name];
-        if (mutation.multiplier != null) {
-          const raw = Number(mutation.multiplier);
-          if (Number.isFinite(raw)) {
-            const rounded = Math.abs(raw - Math.round(raw)) < 0.01 ? Math.round(raw) : Math.round(raw * 100) / 100;
-            parts[0] = `${parts[0]} \xD7${rounded}`;
-          }
-        }
-        return parts.join(" ");
-      };
-      normalizeNumber = (value) => {
-        const num2 = typeof value === "number" ? value : Number(value);
-        return Number.isFinite(num2) ? num2 : void 0;
-      };
-      normalizeCycle = (raw) => {
-        if (!raw || typeof raw !== "object") return null;
-        const rawKind = typeof raw.kind === "string" ? raw.kind.trim() : "";
-        const kindLc = rawKind.toLowerCase();
-        let kind = "unknown";
-        if (kindLc === "weather" || kindLc === "lunar" || kindLc === "base") kind = kindLc;
-        const meta = { kind, rawKind: rawKind || void 0 };
-        const startWindowMin = normalizeNumber(raw.startWindowMin);
-        if (startWindowMin !== void 0) meta.startWindowMin = startWindowMin;
-        const startWindowMax = normalizeNumber(raw.startWindowMax);
-        if (startWindowMax !== void 0) meta.startWindowMax = startWindowMax;
-        const durationMinutes = normalizeNumber(raw.durationMinutes);
-        if (durationMinutes !== void 0) meta.durationMinutes = durationMinutes;
-        const periodMinutes = normalizeNumber(raw.periodMinutes);
-        if (periodMinutes !== void 0) meta.periodMinutes = periodMinutes;
-        return meta;
-      };
-      normalizeMutations2 = (raw) => {
-        if (!Array.isArray(raw)) return [];
-        const items = [];
-        for (const entry of raw) {
-          if (!entry || typeof entry !== "object") continue;
-          const name = typeof entry.name === "string" ? entry.name.trim() : "";
-          if (!name) continue;
-          const mutation = { name };
-          const multiplier = normalizeNumber(entry.multiplier);
-          if (multiplier !== void 0) mutation.multiplier = multiplier;
-          const conditional = typeof entry.conditional === "string" ? entry.conditional.trim() : "";
-          if (conditional) mutation.conditional = conditional;
-          items.push(mutation);
-        }
-        return items;
-      };
-      mutatorMutations = (mutator) => {
-        const id = typeof mutator?.mutation === "string" ? mutator.mutation : "";
-        if (!id) return [];
-        const entry = mutationCatalog2[id];
-        const mutation = { name: typeof entry?.name === "string" && entry.name ? entry.name : id };
-        const multiplier = normalizeNumber(entry?.coinMultiplier);
-        if (multiplier !== void 0) mutation.multiplier = multiplier;
-        return [mutation];
-      };
-      trimmedString = (value) => typeof value === "string" ? value.trim() : "";
-      weatherIndex = memoOnCatalogs(() => {
-        const defs = [];
-        for (const [rawName, rawValue] of Object.entries(weatherCatalog2 ?? {})) {
-          const entry = rawValue ?? {};
-          const safeName = String(rawName || "").trim();
-          if (!safeName) continue;
-          const rawDisplayName = trimmedString(entry.displayName) || trimmedString(entry.name);
-          const displayName = spaceWords(rawDisplayName || safeName).replace(/_/g, " ").replace(/\s+/g, " ").trim();
-          const atomValue = "atomValue" in entry ? trimmedString(entry.atomValue) : entry.mutator ? safeName : "";
-          const type = atomValue || displayName;
-          const description = trimmedString(entry.description) || null;
-          const weightInCycle = normalizeNumber(entry.weightInCycle);
-          const cycle = normalizeCycle(entry.cycle);
-          const mutations = Array.isArray(entry.mutations) ? normalizeMutations2(entry.mutations) : mutatorMutations(entry.mutator);
-          defs.push({
-            id: `Weather:${safeName}`,
-            name: displayName || safeName,
-            atomValue,
-            type,
-            description,
-            cycle,
-            weightInCycle: weightInCycle ?? null,
-            mutations
-          });
-        }
-        const byId = /* @__PURE__ */ new Map();
-        const byAtom = /* @__PURE__ */ new Map();
-        const byName = /* @__PURE__ */ new Map();
-        for (const def of defs) {
-          byId.set(def.id, def);
-          byName.set(def.name.toLowerCase(), def);
-          byAtom.set(def.atomValue.toLowerCase(), def);
-          byName.set(def.id.slice("Weather:".length).toLowerCase(), def);
-        }
-        return { defs, byId, byAtom, byName };
-      });
-      _prefs = /* @__PURE__ */ new Map();
-      _weatherPrefs = /* @__PURE__ */ new Map();
-      _weatherPrefsLoaded = false;
-      _contextDefaults = {};
-      _contextDefaultsLoaded = false;
-      _rules = /* @__PURE__ */ new Map();
-      _rulesLoaded = false;
-      _rulesSubs = /* @__PURE__ */ new Set();
-      _hasOwn = Object.prototype.hasOwnProperty;
-      _weatherState = null;
-      _weatherSig = null;
-      _weatherSubs = /* @__PURE__ */ new Set();
-      _currentWeatherId = null;
-      _currentWeatherValue = null;
-      _unsubWeather = null;
-      _getPrefBits = (id) => (_prefs.get(id) ?? 0) & 1;
-      _setPrefBits = (id, bits) => {
-        if (!id) return;
-        const masked = bits & 1;
-        if (masked) _prefs.set(id, masked);
-        else _prefs.delete(id);
-        _savePrefs();
-        _recomputeFromCacheAndNotify();
-      };
-      _rowsById = /* @__PURE__ */ new Map();
-      _lastSig = "";
-      _state = null;
-      _unsubShops = null;
-      _unsubPurchases = null;
-      _watchGeneration = 0;
-      _subs = /* @__PURE__ */ new Set();
-      _toolInv = /* @__PURE__ */ new Map();
-      _decorInv = /* @__PURE__ */ new Map();
-      _unsubToolInv = null;
-      _unsubDecorInv = null;
-      _purchasesSubs = /* @__PURE__ */ new Set();
-      _itemKind = (itemId) => {
-        if (itemId in plantCatalog2) return "seed";
-        if (itemId in eggCatalog2) return "egg";
-        if (itemId in toolCatalog2) return "tool";
-        if (itemId in decorCatalog2) return "decor";
-        return null;
-      };
-      _rawShops = null;
-      _rawSlot = null;
-      _viewOf = (shops2, slot) => playerShopView(shops2, slot, _itemKind);
-      _sameShopParts = (a, b) => a?.data?.shopPurchases === b?.data?.shopPurchases && a?.data?.customRestocks === b?.data?.customRestocks && a?.customRestockInventories === b?.customRestockInventories;
-      _shopsSubs = /* @__PURE__ */ new Set();
-      BASE_SHOPS_SET = /* @__PURE__ */ new Set(["Seed", "Egg", "Tool", "Decor"]);
-      _onDataUpdated = (_evt) => {
-        try {
-          _recomputeRowsFromCatalogs();
-        } catch {
-        }
-      };
-      ATOM_WAIT_POLL_MS = 400;
-      ATOM_WAIT_TIMEOUT_MS = 10 * 6e4;
-      STATE_ATOM_LABEL = "stateAtom";
-      MY_USER_SLOT_ATOM_LABEL = "myUserSlotAtom";
-      _started = false;
-      NotifierService = {
-        // lifecycle
-        async start() {
-          await _ensureStarted();
-          return () => _stop();
-        },
-        async get() {
-          await _ensureStarted();
-          if (!_state) {
-            try {
-              _recomputeRowsFromCatalogs();
-            } catch {
-            }
-          }
-          return _state;
-        },
-        onChange(cb) {
-          _subs.add(cb);
-          return () => {
-            _subs.delete(cb);
-          };
-        },
-        async onChangeNow(cb) {
-          await _ensureStarted();
-          if (_state) cb(_state);
-          else {
-            try {
-              _recomputeRowsFromCatalogs();
-            } catch {
-            }
-            if (_state) cb(_state);
-          }
-          return this.onChange(cb);
-        },
-        onShopsChange(cb) {
-          _shopsSubs.add(cb);
-          return () => {
-            _shopsSubs.delete(cb);
-          };
-        },
-        async onShopsChangeNow(cb) {
-          await _ensureStarted();
-          try {
-            const [shops2, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
-            cb(_coerceSnap(_viewOf(shops2, slot).shops));
-          } catch {
-          }
-          return this.onShopsChange(cb);
-        },
-        onPurchasesChange(cb) {
-          _purchasesSubs.add(cb);
-          return () => {
-            _purchasesSubs.delete(cb);
-          };
-        },
-        async onPurchasesChangeNow(cb) {
-          await _ensureStarted();
-          try {
-            const [shops2, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
-            cb(_coercePurchases(_viewOf(shops2, slot), slot));
-          } catch {
-          }
-          return this.onPurchasesChange(cb);
-        },
-        async getWeatherState() {
-          await _ensureStarted();
-          if (!_weatherState) _recomputeWeatherState();
-          return _weatherState;
-        },
-        onWeatherChange(cb) {
-          _weatherSubs.add(cb);
-          return () => {
-            _weatherSubs.delete(cb);
-          };
-        },
-        async onWeatherChangeNow(cb) {
-          await _ensureStarted();
-          if (!_weatherState) _recomputeWeatherState();
-          if (_weatherState) cb(_weatherState);
-          return this.onWeatherChange(cb);
-        },
-        getWeatherNotify(id) {
-          if (!id) return false;
-          return !!_getWeatherPref(id).notify;
-        },
-        setWeatherNotify(id, enabled5) {
-          if (!id) return;
-          _ensureWeatherPrefsLoaded();
-          const pref = _getWeatherPref(id);
-          const next = !!enabled5;
-          if (!!pref.notify === next) return;
-          pref.notify = next;
-          _weatherPrefs.set(id, pref);
-          _saveWeatherPrefs();
-          if (!next) {
-            try {
-              audio.stopLoop(id);
-            } catch {
-            }
-          } else if (_currentWeatherId === id) {
-            _triggerWeatherNotification(id);
-          }
-          _recomputeWeatherState();
-        },
-        getContextStopDefaults(context) {
-          return _getContextStopDefaultsInternal(context);
-        },
-        setContextStopDefaults(context, conf) {
-          if (context !== "shops" && context !== "weather") return;
-          _ensureContextDefaultsLoaded();
-          const current = _getContextStopDefaultsInternal(context);
-          const loopRaw = Number(conf?.loopIntervalMs);
-          const loopIntervalMs = Number.isFinite(loopRaw) ? Math.max(150, Math.floor(loopRaw)) : current.loopIntervalMs;
-          const normalizedMode = conf.stopMode === "purchase" ? "purchase" : "manual";
-          const normalized = {
-            stopMode: context === "weather" ? "manual" : normalizedMode,
-            stopRepeats: null,
-            loopIntervalMs
-          };
-          _contextDefaults[context] = normalized;
-          _saveContextDefaults();
-        },
-        // prefs (popup only)
-        getPref(id) {
-          if (_isRowCapReached(id)) {
-            return { popup: false, followed: false };
-          }
-          const bits = _getPrefBits(id);
-          const popup = !!(bits & 1);
-          return { popup, followed: popup };
-        },
-        setPopup(id, enabled5) {
-          if (enabled5 && _isRowCapReached(id)) {
-            return;
-          }
-          const bits = _getPrefBits(id);
-          const next = enabled5 ? bits | 1 : bits & ~1;
-          _setPrefBits(id, next);
-        },
-        setPrefs(id, prefs2) {
-          const bits = _getPrefBits(id);
-          let next = bits;
-          if (typeof prefs2.popup === "boolean") next = prefs2.popup ? next | 1 : next & ~1;
-          _setPrefBits(id, next);
-        },
-        clearPrefs(id) {
-          _setPrefBits(id, 0);
-        },
-        isIdCapped(id) {
-          return _isRowCapReached(id);
-        },
-        // pure filter util (no side-effects)
-        filterRows(rows, f) {
-          let arr = rows.slice();
-          const ft = f.type ?? "all";
-          if (ft && ft !== "all") {
-            arr = arr.filter((r) => r.type.toLowerCase() === ft);
-          }
-          const fr = f.rarity ?? "all";
-          if (fr !== "all") {
-            arr = arr.filter((r) => norm2(r.rarity) === fr);
-          }
-          return arr;
-        },
-        getRule(id) {
-          if (!id) return null;
-          _ensureRulesLoaded();
-          const rule = _rules.get(id);
-          if (!rule) return null;
-          return {
-            ...rule.sound ? { sound: rule.sound } : {},
-            ...rule.volume != null ? { volume: rule.volume } : {},
-            ...rule.playbackMode ? { playbackMode: rule.playbackMode } : {},
-            ...rule.stopMode ? { stopMode: rule.stopMode } : {},
-            ...rule.loopIntervalMs != null ? { loopIntervalMs: rule.loopIntervalMs } : {}
-          };
-        },
-        getAllRules() {
-          return _rulesSnapshot();
-        },
-        setRule(id, patch) {
-          if (!id || !patch || typeof patch !== "object") return;
-          _ensureRulesLoaded();
-          const prev = _rules.get(id);
-          const next = _mergeRule(prev, patch);
-          if (_rulesEqual(prev, next)) return;
-          if (next) _rules.set(id, next);
-          else _rules.delete(id);
-          _saveRules();
-          _emitRules();
-        },
-        clearRule(id) {
-          if (!id) return;
-          _ensureRulesLoaded();
-          const existed = _rules.delete(id);
-          if (existed) {
-            _saveRules();
-            _emitRules();
-          }
-        },
-        onRulesChange(cb) {
-          _ensureRulesLoaded();
-          _rulesSubs.add(cb);
-          return () => {
-            _rulesSubs.delete(cb);
-          };
-        },
-        async onRulesChangeNow(cb) {
-          await _ensureStarted();
-          cb(_rulesSnapshot());
-          return this.onRulesChange(cb);
+          evaluateAll();
+          return prefs.defaultThresholdPct;
         }
       };
     }
   });
 
   // src/game/pixi/gardenInfoCard.ts
-  function getStage(state5) {
-    return state5.renderer.lastObjectRendered ?? state5.renderer.stage ?? state5.app?.stage ?? null;
+  function getStage(state7) {
+    return state7.renderer.lastObjectRendered ?? state7.renderer.stage ?? state7.app?.stage ?? null;
   }
   function findByLabel(root4, label2, limit = 25e3) {
     if (!root4) return null;
@@ -22104,7 +20407,7 @@
     return { top: contentTop - extraTopOffset, width, height };
   }
   function notifyListeners(card4, geometry) {
-    for (const listener of listeners2) {
+    for (const listener of listeners) {
       try {
         listener(card4, geometry);
       } catch (error) {
@@ -22112,9 +20415,9 @@
       }
     }
   }
-  function onChildAddedUnsafe(row3) {
-    if (row3?.label !== CARD_ROW_LABEL) return;
-    const card4 = findByLabel(row3, OBJECT_CARD_LABEL);
+  function onChildAddedUnsafe(row4) {
+    if (row4?.label !== CARD_ROW_LABEL) return;
+    const card4 = findByLabel(row4, OBJECT_CARD_LABEL);
     if (!card4) return;
     currentCard = card4;
     const geometry = computeGeometry(card4);
@@ -22126,9 +20429,9 @@
     });
     notifyListeners(card4, geometry);
   }
-  function onChildAdded(row3) {
+  function onChildAdded(row4) {
     try {
-      onChildAddedUnsafe(row3);
+      onChildAddedUnsafe(row4);
     } catch (error) {
       console.warn("[gardenInfoCardPixi] onChildAdded failed", error);
     }
@@ -22152,9 +20455,9 @@
   }
   function tryFindCardSystem() {
     if (cardSystem) return;
-    const state5 = getReadySpriteState();
-    if (!state5) return;
-    const stage = getStage(state5);
+    const state7 = getReadySpriteState();
+    if (!state7) return;
+    const stage = getStage(state7);
     const found = findAcrossBranches(stage, (node) => node?.label === CARD_SYSTEM_LABEL);
     if (found) {
       attachToCardSystem(found);
@@ -22169,24 +20472,24 @@
   function scheduleFind(now2) {
     findRafId = null;
     debugState.rafTicks += 1;
-    if (!listeners2.size || cardSystem) return;
+    if (!listeners.size || cardSystem) return;
     if (now2 - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
       lastFindCheckAt = now2;
       tryFindCardSystem();
     }
-    if (!listeners2.size || cardSystem) return;
+    if (!listeners.size || cardSystem) return;
     findRafId = raf(scheduleFind);
   }
   function restartSearchIfNeeded() {
-    if (!listeners2.size || cardSystem) return;
+    if (!listeners.size || cardSystem) return;
     tryFindCardSystem();
     if (!cardSystem && findRafId == null) {
       findRafId = raf(scheduleFind);
     }
   }
   function watchGardenInfoCard(listener) {
-    listeners2.add(listener);
-    debugState.listenerCount = listeners2.size;
+    listeners.add(listener);
+    debugState.listenerCount = listeners.size;
     restartSearchIfNeeded();
     if (currentCard) {
       try {
@@ -22196,11 +20499,11 @@
       }
     }
     return () => {
-      listeners2.delete(listener);
-      debugState.listenerCount = listeners2.size;
+      listeners.delete(listener);
+      debugState.listenerCount = listeners.size;
     };
   }
-  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners2, debugState, raf;
+  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners, debugState, raf;
   var init_gardenInfoCard = __esm({
     "src/game/pixi/gardenInfoCard.ts"() {
       "use strict";
@@ -22220,7 +20523,7 @@
       findAttempts = 0;
       findRafId = null;
       lastFindCheckAt = 0;
-      listeners2 = /* @__PURE__ */ new Set();
+      listeners = /* @__PURE__ */ new Set();
       debugState = {
         findAttempts: 0,
         attached: false,
@@ -22233,7 +20536,7 @@
     }
   });
 
-  // src/features/notifier/bellPixi.ts
+  // src/features/notifier/bell/ring.ts
   function bellRingAngleAt(cycleOffset) {
     for (let i = 1; i < BELL_RING_SEQUENCE.length; i++) {
       const next = BELL_RING_SEQUENCE[i];
@@ -22245,8 +20548,32 @@
     }
     return 0;
   }
-  function startNotificationBellPixi(opts) {
-    const iconGlyph = opts.iconGlyph ?? DEFAULT_ICON_GLYPH;
+  var BELL_RING_SEQUENCE, BELL_RING_DURATION_MS, BELL_GLYPH, DEG_TO_RAD;
+  var init_ring = __esm({
+    "src/features/notifier/bell/ring.ts"() {
+      "use strict";
+      BELL_RING_SEQUENCE = [
+        { offset: 0, deg: 0 },
+        { offset: 0.05, deg: 15 },
+        { offset: 0.1, deg: -13 },
+        { offset: 0.15, deg: 11 },
+        { offset: 0.2, deg: -9 },
+        { offset: 0.25, deg: 7 },
+        { offset: 0.3, deg: -5 },
+        { offset: 0.35, deg: 3 },
+        { offset: 0.4, deg: -2 },
+        { offset: 0.45, deg: 1 },
+        { offset: 0.5, deg: 0 },
+        { offset: 1, deg: 0 }
+      ];
+      BELL_RING_DURATION_MS = 1600;
+      BELL_GLYPH = "\u{1F514}";
+      DEG_TO_RAD = Math.PI / 180;
+    }
+  });
+
+  // src/features/notifier/bell/pixiBell.ts
+  function startPixiBell(opts) {
     let running6 = true;
     let rail = null;
     let bellContainer = null;
@@ -22292,19 +20619,19 @@
       try {
         opts.onClick();
       } catch (error) {
-        console.error("[notificationBellPixi] onClick error:", error);
+        console.error("[PixiBell] onClick error:", error);
       }
     };
     const computeScreenRect = () => {
       if (!bellContainer || bellContainer.destroyed) return null;
-      const state5 = getReadySpriteState();
-      const canvas = state5?.renderer?.canvas || state5?.renderer?.view?.canvas || state5?.renderer?.view;
+      const state7 = getReadySpriteState();
+      const canvas = state7?.renderer?.canvas || state7?.renderer?.view?.canvas || state7?.renderer?.view;
       if (!canvas) return null;
       try {
         const rect = canvas.getBoundingClientRect();
-        const renderResolution = Number(state5?.renderer?.resolution) || 1;
-        const stageWidth = Number(state5?.renderer?.screen?.width) || (Number(canvas.width) || 0) / renderResolution;
-        const stageHeight = Number(state5?.renderer?.screen?.height) || (Number(canvas.height) || 0) / renderResolution;
+        const renderResolution = Number(state7?.renderer?.resolution) || 1;
+        const stageWidth = Number(state7?.renderer?.screen?.width) || (Number(canvas.width) || 0) / renderResolution;
+        const stageHeight = Number(state7?.renderer?.screen?.height) || (Number(canvas.height) || 0) / renderResolution;
         const scaleX = stageWidth > 0 ? rect.width / stageWidth : 1;
         const scaleY = stageHeight > 0 ? rect.height / stageHeight : 1;
         debugState3.screenScaleX = scaleX;
@@ -22352,9 +20679,9 @@
         weSetPointerCursor = false;
       }
     };
-    const ensureCanvasListeners = (state5) => {
+    const ensureCanvasListeners = (state7) => {
       if (canvasListenersAttached) return;
-      const canvas = state5.renderer?.canvas || state5.renderer?.view?.canvas || state5.renderer?.view;
+      const canvas = state7.renderer?.canvas || state7.renderer?.view?.canvas || state7.renderer?.view;
       if (!canvas) return;
       canvasEl = canvas;
       pageWindow.addEventListener("pointerdown", onWindowPointerDownCapture, true);
@@ -22371,8 +20698,8 @@
       return null;
     };
     const railLocalScreenBounds = () => {
-      const state5 = getReadySpriteState();
-      const screenHeight = Number(state5?.renderer?.screen?.height);
+      const state7 = getReadySpriteState();
+      const screenHeight = Number(state7?.renderer?.screen?.height);
       if (!Number.isFinite(screenHeight) || screenHeight <= 0) return null;
       try {
         const top = rail.toLocal({ x: 0, y: 0 }).y;
@@ -22427,10 +20754,10 @@
         removeButton();
         return;
       }
-      const state5 = getReadySpriteState();
-      if (!state5?.ctors?.Text) return;
+      const state7 = getReadySpriteState();
+      if (!state7?.ctors?.Text) return;
       if (!bellContainer) {
-        const ContainerCtor = state5.ctors.Container ?? rail.constructor;
+        const ContainerCtor = state7.ctors.Container ?? rail.constructor;
         bellContainer = new ContainerCtor();
         bellContainer.label = "GeminiNotificationBell";
         const thisContainer = bellContainer;
@@ -22440,10 +20767,10 @@
         rail.addChild(bellContainer);
       }
       if (!bellText) {
-        bellText = new state5.ctors.Text({ text: iconGlyph, style: { fontSize: DEFAULT_SLOT_SIZE } });
+        bellText = new state7.ctors.Text({ text: BELL_GLYPH, style: { fontSize: DEFAULT_SLOT_SIZE } });
         bellContainer.addChild(bellText);
       }
-      ensureCanvasListeners(state5);
+      ensureCanvasListeners(state7);
       syncGeometry();
       debugState3.hasButton = true;
     };
@@ -22453,7 +20780,7 @@
         debugState3.lastError = null;
       } catch (error) {
         debugState3.lastError = String(error?.message ?? error);
-        console.warn("[notificationBellPixi] sync failed, clearing button", error);
+        console.warn("[PixiBell] sync failed, clearing button", error);
         try {
           removeButton();
         } catch {
@@ -22479,14 +20806,14 @@
         }
       });
       debugState3.attached = true;
-      console.info(`[notificationBellPixi] attached to ${RAIL_LABEL} after ${findAttempts2} attempt(s)`);
+      console.info(`[PixiBell] attached to ${RAIL_LABEL} after ${findAttempts2} attempt(s)`);
       sync2();
     };
     const tryFindRail = () => {
       if (!running6 || rail) return;
-      const state5 = getReadySpriteState();
-      if (!state5) return;
-      const stage = getStage(state5);
+      const state7 = getReadySpriteState();
+      if (!state7) return;
+      const stage = getStage(state7);
       const found = findAcrossBranches(stage, (node) => node?.label === RAIL_LABEL);
       if (found) {
         attachToRail(found);
@@ -22495,7 +20822,7 @@
       findAttempts2 += 1;
       debugState3.findAttempts = findAttempts2;
       if (findAttempts2 % RAIL_FIND_LOG_EVERY === 0) {
-        console.info(`[notificationBellPixi] still searching for ${RAIL_LABEL} (${findAttempts2} attempts so far)`);
+        console.info(`[PixiBell] still searching for ${RAIL_LABEL} (${findAttempts2} attempts so far)`);
       }
     };
     const scheduleFind2 = (now2) => {
@@ -22509,9 +20836,9 @@
       findRafId3 = raf3(scheduleFind2);
     };
     const isReachableFromLiveStage = (node) => {
-      const state5 = getReadySpriteState();
-      if (!state5) return false;
-      const stage = getStage(state5);
+      const state7 = getReadySpriteState();
+      if (!state7) return false;
+      const stage = getStage(state7);
       if (!stage) return false;
       let cur = node;
       let hops = 0;
@@ -22524,7 +20851,7 @@
     const periodicRailMaintenance = () => {
       if (!running6 || !rail || rail.destroyed) return;
       if (!isReachableFromLiveStage(rail)) {
-        console.warn("[notificationBellPixi] rail orphaned from the live stage (no destroyed event fired), resetting");
+        console.warn("[PixiBell] rail orphaned from the live stage (no destroyed event fired), resetting");
         rail = null;
         debugState3.attached = false;
         removeButton();
@@ -22611,44 +20938,28 @@
       }
     };
   }
-  var RAIL_LABEL, RAIL_FIND_RETRY_MS, RAIL_FIND_LOG_EVERY, RAIL_REACHABILITY_CHECK_MS, RAIL_REACHABILITY_MAX_HOPS, CHAT_SLOT_MARKER_LABEL, DEFAULT_ICON_GLYPH, DEFAULT_SLOT_SIZE, DEFAULT_SLOT_SPACING, SLOT_OCCUPIED_TOLERANCE_RATIO, MAX_SLOT_SEARCH_STEPS, BELL_RING_SEQUENCE, BELL_RING_DURATION_MS, DEG_TO_RAD;
-  var init_bellPixi = __esm({
-    "src/features/notifier/bellPixi.ts"() {
+  var RAIL_LABEL, RAIL_FIND_RETRY_MS, RAIL_FIND_LOG_EVERY, RAIL_REACHABILITY_CHECK_MS, RAIL_REACHABILITY_MAX_HOPS, CHAT_SLOT_MARKER_LABEL, DEFAULT_SLOT_SIZE, DEFAULT_SLOT_SPACING, SLOT_OCCUPIED_TOLERANCE_RATIO, MAX_SLOT_SEARCH_STEPS;
+  var init_pixiBell = __esm({
+    "src/features/notifier/bell/pixiBell.ts"() {
       "use strict";
       init_gardenInfoCard();
       init_context();
       init_pageContext();
+      init_ring();
       RAIL_LABEL = "RightSideRail";
       RAIL_FIND_RETRY_MS = 1e3;
       RAIL_FIND_LOG_EVERY = 30;
       RAIL_REACHABILITY_CHECK_MS = 2e3;
       RAIL_REACHABILITY_MAX_HOPS = 64;
       CHAT_SLOT_MARKER_LABEL = "RightSideRailChatBadge";
-      DEFAULT_ICON_GLYPH = "\u{1F514}";
       DEFAULT_SLOT_SIZE = 45;
       DEFAULT_SLOT_SPACING = 52;
       SLOT_OCCUPIED_TOLERANCE_RATIO = 0.5;
       MAX_SLOT_SEARCH_STEPS = 20;
-      BELL_RING_SEQUENCE = [
-        { offset: 0, deg: 0 },
-        { offset: 0.05, deg: 15 },
-        { offset: 0.1, deg: -13 },
-        { offset: 0.15, deg: 11 },
-        { offset: 0.2, deg: -9 },
-        { offset: 0.25, deg: 7 },
-        { offset: 0.3, deg: -5 },
-        { offset: 0.35, deg: 3 },
-        { offset: 0.4, deg: -2 },
-        { offset: 0.45, deg: 1 },
-        { offset: 0.5, deg: 0 },
-        { offset: 1, deg: 0 }
-      ];
-      BELL_RING_DURATION_MS = 1600;
-      DEG_TO_RAD = Math.PI / 180;
     }
   });
 
-  // src/features/notifier/bellFloating.ts
+  // src/features/notifier/bell/floatingBell.ts
   function isFloatingBellEnabled() {
     return readAriesPath(ENABLED_PATH, false) === true;
   }
@@ -22675,10 +20986,10 @@
     if (max < min) return min;
     return Math.min(Math.max(value, min), max);
   }
-  function startNotificationBellFloating(opts) {
+  function startFloatingBell(opts) {
     let running6 = true;
     let wiggleAnimation = null;
-    const button3 = document.createElement("button");
+    const button3 = h("button");
     button3.type = "button";
     button3.setAttribute("data-notification-bell-widget", "1");
     button3.title = "Notifications";
@@ -22695,9 +21006,9 @@
       justifyContent: "center",
       padding: "0",
       borderRadius: "50%",
-      border: "1px solid #32404e",
-      background: "linear-gradient(180deg, #111923, #0b131c)",
-      boxShadow: "0 10px 28px rgba(0,0,0,0.45)",
+      border: "1px solid var(--qmm-border-strong)",
+      background: "var(--qmm-gradient-panel)",
+      boxShadow: "var(--qmm-shadow-window)",
       cursor: "grab",
       userSelect: "none",
       touchAction: "none"
@@ -22773,7 +21084,7 @@
         try {
           opts.onClick();
         } catch (error) {
-          console.error("[notificationBellFloating] onClick error:", error);
+          console.error("[FloatingBell] onClick error:", error);
         }
       }
     };
@@ -22868,16 +21179,16 @@
       }
     };
   }
-  var ENABLED_PATH, POS_PATH, BELL_MODE_EVENT, BELL_GLYPH, BUTTON_SIZE, ICON_FONT_SIZE, BELL_WIDGET_Z_INDEX, SCREEN_MARGIN, DEFAULT_RIGHT_GAP, DEFAULT_TOP_RATIO, SETTLE_REAPPLY_DELAYS_MS, DRAG_THRESHOLD_PX, RING_KEYFRAMES;
-  var init_bellFloating = __esm({
-    "src/features/notifier/bellFloating.ts"() {
+  var ENABLED_PATH, POS_PATH, BELL_MODE_EVENT, BUTTON_SIZE, ICON_FONT_SIZE, BELL_WIDGET_Z_INDEX, SCREEN_MARGIN, DEFAULT_RIGHT_GAP, DEFAULT_TOP_RATIO, SETTLE_REAPPLY_DELAYS_MS, DRAG_THRESHOLD_PX, RING_KEYFRAMES;
+  var init_floatingBell = __esm({
+    "src/features/notifier/bell/floatingBell.ts"() {
       "use strict";
-      init_bellPixi();
+      init_ring();
       init_storage();
+      init_dom2();
       ENABLED_PATH = "notifier.floatingBell.enabled";
       POS_PATH = "notifier.floatingBell.pos";
       BELL_MODE_EVENT = "qws:alerts-bell-mode-changed";
-      BELL_GLYPH = "\u{1F514}";
       BUTTON_SIZE = 44;
       ICON_FONT_SIZE = 24;
       BELL_WIDGET_Z_INDEX = 1999900;
@@ -22893,53 +21204,808 @@
     }
   });
 
-  // src/features/notifier/overlay.ts
-  function iconOf(id, size = 24) {
-    const wrap = document.createElement("div");
+  // src/features/notifier/itemIcon.ts
+  function spriteCandidates2(type, key2, name) {
+    const out = /* @__PURE__ */ new Set();
+    const add = (value) => {
+      const trimmed = value?.trim();
+      if (!trimmed) return;
+      out.add(trimmed);
+      out.add(trimmed.replace(/\s+/g, ""));
+      if (type === "Seed" || type === "Egg") {
+        const stripped = trimmed.replace(/(?:seed|egg)$/i, "").trim();
+        if (stripped) {
+          out.add(stripped);
+          out.add(stripped.replace(/\s+/g, ""));
+        }
+      }
+    };
+    add(key2);
+    add(name);
+    const names = [...out];
+    for (const value of names) {
+      const base = value.replace(/icon$/i, "");
+      if (base) out.add(`${base}Icon`);
+    }
+    return [...out];
+  }
+  function shopItemIcon(id, name, size, logTag) {
+    const [type = "", key2 = ""] = id.split(":");
+    const wrap = h("div");
     Object.assign(wrap.style, {
       width: `${size}px`,
       height: `${size}px`,
+      flex: `0 0 ${size}px`,
       display: "inline-flex",
       alignItems: "center",
-      justifyContent: "center",
-      flex: `0 0 ${size}px`
+      justifyContent: "center"
     });
-    const [rawType] = id.split(":");
-    const fallback = rawType === "Seed" ? "seed" : rawType === "Egg" ? "egg" : rawType === "Tool" ? "tool" : rawType === "Decor" ? "decor" : "item";
-    const span = document.createElement("span");
-    span.textContent = fallback;
-    span.style.fontSize = `${Math.max(10, size - 2)}px`;
-    span.setAttribute("aria-hidden", "true");
-    wrap.appendChild(span);
-    const categories = rawType === "Seed" ? ["seed"] : rawType === "Egg" ? ["pet"] : rawType === "Tool" ? ["item"] : rawType === "Decor" ? ["decor"] : null;
-    if (categories) {
-      const label2 = labelOf(id);
-      const candidatesSet = /* @__PURE__ */ new Set();
-      const addCandidate = (value) => {
-        if (!value) return;
-        const trimmed = value.trim();
-        if (!trimmed) return;
-        candidatesSet.add(trimmed);
-        candidatesSet.add(trimmed.replace(/\s+/g, ""));
-        const last = trimmed.split(/[./]/).pop();
-        if (last && last !== trimmed) {
-          candidatesSet.add(last);
-          candidatesSet.add(last.replace(/\s+/g, ""));
-        }
-      };
-      addCandidate(id.split(":")[1]);
-      addCandidate(label2);
-      if (rawType) addCandidate(rawType);
-      const originals = Array.from(candidatesSet);
-      const iconized = originals.map((value) => value.replace(/icon$/i, "")).filter(Boolean).map((value) => `${value}Icon`);
-      const candidates = Array.from(/* @__PURE__ */ new Set([...originals, ...iconized])).filter(Boolean);
-      if (candidates.length) {
-        attachSpriteIcon(wrap, categories, candidates, size, "alerts-overlay");
-      }
-    }
+    const glyph = h("span", void 0, FALLBACK_GLYPH[type] ?? "\u{1F3E0}");
+    glyph.style.fontSize = `${Math.max(10, Math.round(size * 0.75))}px`;
+    glyph.setAttribute("aria-hidden", "true");
+    wrap.appendChild(glyph);
+    const categories = SPRITE_CATEGORIES[type];
+    const candidates = spriteCandidates2(type, key2 || name, name);
+    if (categories && candidates.length) attachSpriteIcon(wrap, categories, candidates, size, logTag);
     return wrap;
   }
-  function labelOf(id) {
+  var FALLBACK_GLYPH, SPRITE_CATEGORIES;
+  var init_itemIcon = __esm({
+    "src/features/notifier/itemIcon.ts"() {
+      "use strict";
+      init_dom2();
+      init_iconCache();
+      FALLBACK_GLYPH = { Seed: "\u{1F331}", Egg: "\u{1F95A}", Tool: "\u{1F9F0}", Decor: "\u{1F3E0}" };
+      SPRITE_CATEGORIES = {
+        Seed: ["seed"],
+        Egg: ["pet"],
+        Tool: ["item"],
+        Decor: ["decor"]
+      };
+    }
+  });
+
+  // src/features/shops/shopFeed.ts
+  function itemKind(itemId) {
+    if (itemId in plantCatalog2) return "seed";
+    if (itemId in eggCatalog2) return "egg";
+    if (itemId in toolCatalog2) return "tool";
+    if (itemId in decorCatalog2) return "decor";
+    return null;
+  }
+  function toShopsSnapshot(shops2) {
+    const snap = {
+      seed: { inventory: [], secondsUntilRestock: Number(shops2?.seed?.secondsUntilRestock) || 0 },
+      egg: { inventory: [], secondsUntilRestock: Number(shops2?.egg?.secondsUntilRestock) || 0 },
+      tool: { inventory: [], secondsUntilRestock: Number(shops2?.tool?.secondsUntilRestock) || 0 },
+      decor: { inventory: [], secondsUntilRestock: Number(shops2?.decor?.secondsUntilRestock) || 0 }
+    };
+    if (!shops2 || typeof shops2 !== "object") return snap;
+    for (const shop of Object.values(shops2)) {
+      if (!shop || typeof shop !== "object" || !Array.isArray(shop.inventory)) continue;
+      for (const item of shop.inventory) {
+        if (!item || typeof item !== "object") continue;
+        const kind = ITEM_TYPE_KIND[item.itemType];
+        if (kind) snap[kind].inventory.push(item);
+      }
+    }
+    return snap;
+  }
+  function toPurchasesSnapshot(view, slot) {
+    const raw = slot?.data?.shopPurchases;
+    const startedAt = (kind) => Number(raw?.[kind]?.startedAtMs ?? raw?.[kind]?.createdAt) || 0;
+    const section4 = (kind) => ({ createdAt: startedAt(kind), purchases: view.purchases[kind] });
+    return { seed: section4("seed"), egg: section4("egg"), tool: section4("tool"), decor: section4("decor") };
+  }
+  function onShops(shops2) {
+    rawShops = shops2;
+    emitShops();
+    if (rawSlot != null) emitPurchases();
+  }
+  function onSlot(slot) {
+    rawSlot = slot;
+    if (rawShops != null) emitShops();
+    emitPurchases();
+  }
+  async function readBoth() {
+    return Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
+  }
+  function shopItemId(kind, item) {
+    const key2 = kind === "seed" ? item.species : kind === "egg" ? item.eggId : kind === "tool" ? item.toolId : item.decorId;
+    if (key2 == null) return null;
+    return `${ALERT_ID_PREFIX[kind]}:${key2}`;
+  }
+  function purchasedCount(id, purchases) {
+    if (!purchases) return 0;
+    const [type, raw] = String(id).split(":");
+    const kind = type === "Seed" ? "seed" : type === "Egg" ? "egg" : type === "Tool" ? "tool" : "decor";
+    const n = purchases[kind]?.purchases?.[raw];
+    return typeof n === "number" && n > 0 ? n : 0;
+  }
+  var ITEM_TYPE_KIND, viewOf, sameShopParts, rawShops, rawSlot, shopsChanged, purchasesChanged, watching, emitShops, emitPurchases, ShopFeed, ALERT_ID_PREFIX;
+  var init_shopFeed = __esm({
+    "src/features/shops/shopFeed.ts"() {
+      "use strict";
+      init_atoms();
+      init_emitter();
+      init_data();
+      init_purchases();
+      ITEM_TYPE_KIND = { Seed: "seed", Egg: "egg", Tool: "tool", Decor: "decor" };
+      viewOf = (shops2, slot) => playerShopView(shops2, slot, itemKind);
+      sameShopParts = (a, b) => a?.data?.shopPurchases === b?.data?.shopPurchases && a?.data?.customRestocks === b?.data?.customRestocks && a?.customRestockInventories === b?.customRestockInventories;
+      rawShops = null;
+      rawSlot = null;
+      shopsChanged = new Emitter();
+      purchasesChanged = new Emitter();
+      watching = false;
+      emitShops = () => shopsChanged.emit(toShopsSnapshot(viewOf(rawShops, rawSlot).shops));
+      emitPurchases = () => purchasesChanged.emit(toPurchasesSnapshot(viewOf(rawShops, rawSlot), rawSlot));
+      ShopFeed = {
+        /**
+         * Follows the room's shops and the player's slot. The atoms may not exist
+         * yet (the HUD mounts the overlay at document-start): the subscriptions
+         * attach once the game registers them, and push the current value then.
+         */
+        start() {
+          if (watching) return;
+          watching = true;
+          void Atoms.shop.shops.onChangeNow((next) => onShops(next));
+          void Atoms.shop.myUserSlot.onChangeNow((next) => onSlot(next), sameShopParts);
+        },
+        onShopsChange(cb) {
+          return shopsChanged.on(cb);
+        },
+        onPurchasesChange(cb) {
+          return purchasesChanged.on(cb);
+        },
+        /** The shops right now, read from the store rather than the last push. */
+        async readShops() {
+          const [shops2, slot] = await readBoth();
+          return toShopsSnapshot(viewOf(shops2, slot).shops);
+        },
+        /** The purchases right now, read from the store rather than the last push. */
+        async readPurchases() {
+          const [shops2, slot] = await readBoth();
+          return toPurchasesSnapshot(viewOf(shops2, slot), slot);
+        }
+      };
+      ALERT_ID_PREFIX = { seed: "Seed", egg: "Egg", tool: "Tool", decor: "Decor" };
+    }
+  });
+
+  // src/features/notifier/playbackDefaults.ts
+  function clampLoopInterval(raw, fallback) {
+    const text2 = typeof raw === "string" ? raw.trim() : raw;
+    const n = text2 === "" || text2 == null ? NaN : Number(text2);
+    const value = Number.isFinite(n) ? n : fallback;
+    return Math.max(MIN_LOOP_INTERVAL_MS, Math.min(MAX_LOOP_INTERVAL_MS, Math.floor(value)));
+  }
+  function ensureLoaded() {
+    if (loaded) return;
+    loaded = true;
+    loopIntervals = {};
+    const stored = readAriesPath(LOOP_DEFAULTS_PATH);
+    if (!stored || typeof stored !== "object") return;
+    for (const context of ["shops", "weather"]) {
+      const entry = stored[context];
+      if (!entry) continue;
+      const raw = Number(entry.loopIntervalMs);
+      loopIntervals[context] = normalizeInterval(Number.isFinite(raw) ? raw : audio.getLoopInterval(context));
+    }
+  }
+  function save2() {
+    const out = {};
+    for (const context of ["shops", "weather"]) {
+      const loopIntervalMs = loopIntervals[context];
+      if (loopIntervalMs == null) continue;
+      out[context] = { stopMode: context === "shops" ? "purchase" : "manual", stopRepeats: null, loopIntervalMs };
+    }
+    writeAriesPath(LOOP_DEFAULTS_PATH, out);
+  }
+  function setContextPlayback(context, mode, loopIntervalMs) {
+    audio.setPlaybackMode(context === "weather" ? "oneshot" : mode, context);
+    audio.setLoopInterval(loopIntervalMs, context);
+    if (context === "shops" && mode === "loop") audio.setStopPurchase(context);
+    else audio.setStopManual(context);
+    if (context !== "pets") LoopDefaults.setLoopInterval(context, loopIntervalMs);
+  }
+  var LOOP_DEFAULTS_PATH, MIN_LOOP_INTERVAL_MS, MAX_LOOP_INTERVAL_MS, loopIntervals, loaded, normalizeInterval, LoopDefaults;
+  var init_playbackDefaults = __esm({
+    "src/features/notifier/playbackDefaults.ts"() {
+      "use strict";
+      init_storage();
+      init_audio();
+      LOOP_DEFAULTS_PATH = "notifier.loopDefaults";
+      MIN_LOOP_INTERVAL_MS = 150;
+      MAX_LOOP_INTERVAL_MS = 1e4;
+      loopIntervals = {};
+      loaded = false;
+      normalizeInterval = (ms) => Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(ms || 0));
+      LoopDefaults = {
+        get(context) {
+          ensureLoaded();
+          const loopIntervalMs = normalizeInterval(loopIntervals[context] ?? audio.getLoopInterval(context));
+          return { stopMode: context === "shops" ? "purchase" : "manual", stopRepeats: null, loopIntervalMs };
+        },
+        /** Remembers a context's loop interval; an invalid one keeps the current value. */
+        setLoopInterval(context, ms) {
+          ensureLoaded();
+          const current = LoopDefaults.get(context).loopIntervalMs;
+          loopIntervals[context] = Number.isFinite(ms) ? normalizeInterval(ms) : current;
+          save2();
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/rules.ts
+  function sanitizeVolume(value) {
+    if (value == null) return void 0;
+    const num2 = Number(value);
+    if (!Number.isFinite(num2)) return void 0;
+    return clamp(num2 > 1 ? num2 / 100 : num2, 0, 1);
+  }
+  function sanitizeLoopInterval(value) {
+    if (value == null) return void 0;
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(n)) : void 0;
+  }
+  function mergeRule(prev, patch) {
+    const next = { ...prev ?? {} };
+    const set2 = (key2, value) => {
+      if (value === void 0) delete next[key2];
+      else next[key2] = value;
+    };
+    if (hasOwn(patch, "sound")) {
+      const sound = typeof patch.sound === "string" ? patch.sound.trim() : "";
+      set2("sound", sound || void 0);
+    }
+    if (hasOwn(patch, "volume")) set2("volume", sanitizeVolume(patch.volume));
+    if (hasOwn(patch, "playbackMode")) {
+      const mode = patch.playbackMode;
+      set2("playbackMode", mode === "oneshot" || mode === "loop" ? mode : void 0);
+    }
+    if (hasOwn(patch, "stopMode")) set2("stopMode", patch.stopMode === "purchase" ? "purchase" : void 0);
+    if (hasOwn(patch, "loopIntervalMs")) set2("loopIntervalMs", sanitizeLoopInterval(patch.loopIntervalMs));
+    return Object.keys(next).length ? next : null;
+  }
+  function rulesEqual(a, b) {
+    if (!a || !b) return !a && !b;
+    return a.sound === b.sound && a.volume === b.volume && a.playbackMode === b.playbackMode && a.stopMode === b.stopMode && a.loopIntervalMs === b.loopIntervalMs;
+  }
+  function ensureRulesLoaded() {
+    if (rulesLoaded) return;
+    rulesLoaded = true;
+    rules2 = /* @__PURE__ */ new Map();
+    const stored = readAriesPath(RULES_PATH);
+    if (!stored || typeof stored !== "object") return;
+    for (const [id, raw] of Object.entries(stored)) {
+      const rule = mergeRule(void 0, raw && typeof raw === "object" ? raw : {});
+      if (rule) rules2.set(String(id), rule);
+    }
+  }
+  function saveRules() {
+    const out = {};
+    for (const [id, rule] of rules2) out[id] = { ...rule };
+    writeAriesPath(RULES_PATH, out);
+  }
+  function rulesSnapshot() {
+    ensureRulesLoaded();
+    const out = {};
+    for (const [id, rule] of rules2) out[id] = copyRule(rule);
+    return out;
+  }
+  function commitRules() {
+    saveRules();
+    rulesChanged.emit(rulesSnapshot());
+  }
+  function hasRule(rule) {
+    return !!(rule && (rule.sound || rule.volume != null || rule.playbackMode || rule.stopMode || rule.loopIntervalMs != null));
+  }
+  function ruleOverrides(rule) {
+    if (!rule) return null;
+    const overrides = {};
+    if (rule.sound) overrides.sound = rule.sound;
+    if (rule.volume != null && Number.isFinite(rule.volume)) overrides.volume = clamp(Number(rule.volume), 0, 1);
+    if (rule.playbackMode === "loop" || rule.playbackMode === "oneshot") overrides.mode = rule.playbackMode;
+    if (rule.stopMode === "purchase" || rule.stopMode === "manual") overrides.stop = { mode: rule.stopMode };
+    if (rule.loopIntervalMs != null && Number.isFinite(rule.loopIntervalMs)) {
+      overrides.loopIntervalMs = Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(Number(rule.loopIntervalMs)));
+    }
+    return Object.keys(overrides).length ? overrides : null;
+  }
+  function shortSoundName(name) {
+    return name.length > 32 ? `${name.slice(0, 29)}\u2026` : name;
+  }
+  function formatInterval(ms) {
+    const seconds2 = ms / 1e3;
+    if (seconds2 < 1) return `${ms} ms`;
+    return seconds2 >= 10 ? `${Math.round(seconds2)} s` : `${(Math.round(seconds2 * 10) / 10).toFixed(1)} s`;
+  }
+  function formatRuleSummary(rule) {
+    if (!rule) return "";
+    const parts = [];
+    if (rule.sound) {
+      const label2 = audio.listSounds().includes(rule.sound) ? rule.sound : shortSoundName(rule.sound);
+      parts.push(`Sound: ${label2}`);
+    }
+    if (rule.volume != null) parts.push(`Volume: ${Math.round(clamp(Number(rule.volume), 0, 1) * 100)}%`);
+    if (rule.playbackMode === "oneshot") parts.push("Mode: One-shot");
+    else if (rule.playbackMode === "loop") parts.push("Mode: Loop");
+    if (rule.stopMode === "purchase") parts.push("Stop: Until purchase");
+    else if (rule.stopMode === "manual") parts.push("Stop: Manual");
+    if (rule.loopIntervalMs != null) {
+      const raw = Number(rule.loopIntervalMs);
+      if (Number.isFinite(raw)) parts.push(`Interval: ${formatInterval(Math.max(1, Math.round(raw)))}`);
+    }
+    return parts.join(" \u2022 ");
+  }
+  function ruleDefaults(context) {
+    const playback = audio.getPlaybackSettings(context);
+    const loop = LoopDefaults.get(context);
+    return {
+      soundName: (playback.defaultSoundName || "").trim() || "Default",
+      volume: clamp(playback.volume || 0, 0, 1),
+      mode: playback.mode,
+      stopMode: loop.stopMode,
+      loopIntervalMs: Math.max(MIN_LOOP_INTERVAL_MS, Math.floor(loop.loopIntervalMs))
+    };
+  }
+  function rulePatchFromEditor(context, values) {
+    const defaults = ruleDefaults(context);
+    const canLoop = context === "shops";
+    let playbackMode = values.mode === "oneshot" || values.mode === "loop" ? values.mode : null;
+    if (playbackMode === defaults.mode) playbackMode = null;
+    let stopMode = canLoop && values.stop === "purchase" ? "purchase" : null;
+    if (stopMode === defaults.stopMode) stopMode = null;
+    let loopIntervalMs = null;
+    const typed = values.interval.trim();
+    if (canLoop && typed && Number.isFinite(Number(typed))) {
+      const interval = clampLoopInterval(typed, defaults.loopIntervalMs);
+      if (interval !== defaults.loopIntervalMs) loopIntervalMs = interval;
+    }
+    const ratio = clamp(Math.round(values.volumePct) || 0, 0, 100) / 100;
+    const volume = Math.abs(ratio - defaults.volume) > 1e-3 ? ratio : null;
+    if (canLoop && !playbackMode && defaults.mode !== "loop" && (stopMode != null || loopIntervalMs != null)) {
+      playbackMode = "loop";
+    }
+    return { sound: values.sound.trim() || null, volume, playbackMode, stopMode, loopIntervalMs };
+  }
+  var RULES_PATH, hasOwn, rules2, rulesLoaded, rulesChanged, copyRule, NotifierRules;
+  var init_rules = __esm({
+    "src/features/notifier/rules.ts"() {
+      "use strict";
+      init_storage();
+      init_emitter();
+      init_math();
+      init_audio();
+      init_playbackDefaults();
+      RULES_PATH = "notifier.rules";
+      hasOwn = (obj, key2) => Object.prototype.hasOwnProperty.call(obj, key2);
+      rules2 = /* @__PURE__ */ new Map();
+      rulesLoaded = false;
+      rulesChanged = new Emitter();
+      copyRule = (rule) => ({ ...rule });
+      NotifierRules = {
+        get(id) {
+          if (!id) return null;
+          ensureRulesLoaded();
+          const rule = rules2.get(id);
+          return rule ? copyRule(rule) : null;
+        },
+        getAll() {
+          return rulesSnapshot();
+        },
+        set(id, patch) {
+          if (!id || !patch || typeof patch !== "object") return;
+          ensureRulesLoaded();
+          const prev = rules2.get(id);
+          const next = mergeRule(prev, patch);
+          if (rulesEqual(prev, next)) return;
+          if (next) rules2.set(id, next);
+          else rules2.delete(id);
+          commitRules();
+        },
+        clear(id) {
+          if (!id) return;
+          ensureRulesLoaded();
+          if (rules2.delete(id)) commitRules();
+        },
+        onChange(cb) {
+          ensureRulesLoaded();
+          return rulesChanged.on(cb);
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/inventoryCaps.ts
+  function isCapReachedIn(catalog, counts, itemId) {
+    const meta = catalog[itemId];
+    if (!meta) return false;
+    const owned2 = counts.get(itemId) || 0;
+    if (meta.isOneTimePurchase && owned2 >= 1) return true;
+    const max = Number(meta.maxInventoryQuantity);
+    return Number.isFinite(max) && max > 0 && owned2 >= max;
+  }
+  function isCapReached(id) {
+    if (id.startsWith("Tool:")) return isCapReachedIn(toolCatalog2, toolCounts, id.slice(5));
+    if (id.startsWith("Decor:")) return isCapReachedIn(decorCatalog2, decorCounts, id.slice(6));
+    return false;
+  }
+  function countsOf(items, idOf) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const item of Array.isArray(items) ? items : []) {
+      const id = String(idOf(item) ?? "");
+      if (id) counts.set(id, Number(item?.quantity) || 0);
+    }
+    return counts;
+  }
+  async function follow(view, apply2) {
+    const update = (value) => {
+      try {
+        apply2(value);
+      } catch {
+      }
+      changed2.emit();
+    };
+    try {
+      update(await view.get());
+    } catch {
+    }
+    try {
+      await view.onChange(update);
+    } catch {
+    }
+  }
+  var toolCounts, decorCounts, changed2, InventoryCaps;
+  var init_inventoryCaps = __esm({
+    "src/features/notifier/inventoryCaps.ts"() {
+      "use strict";
+      init_atoms();
+      init_emitter();
+      init_data();
+      toolCounts = /* @__PURE__ */ new Map();
+      decorCounts = /* @__PURE__ */ new Map();
+      changed2 = new Emitter();
+      InventoryCaps = {
+        async start() {
+          await follow(Atoms.inventory.myToolInventory, (items) => {
+            toolCounts = countsOf(items, (it) => it?.toolId);
+          });
+          await follow(Atoms.inventory.myDecorInventory, (items) => {
+            decorCounts = countsOf(items, (it) => it?.decorId ?? it?.id);
+          });
+        },
+        /** Fires after every inventory update. */
+        onChange(cb) {
+          return changed2.on(cb);
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/shopRows.ts
+  function followedIds() {
+    if (followed) return followed;
+    followed = /* @__PURE__ */ new Set();
+    const stored = readAriesPath(FOLLOWED_PATH);
+    if (stored && typeof stored === "object") {
+      for (const [id, bits] of Object.entries(stored)) {
+        if (id && (Number(bits) | 0) & 1) followed.add(id);
+      }
+    }
+    return followed;
+  }
+  function saveFollowed() {
+    const out = {};
+    for (const id of followedIds()) out[id] = 1;
+    writeAriesPath(FOLLOWED_PATH, out);
+  }
+  function splitEligibleShops(shops2) {
+    const names = Array.isArray(shops2) ? shops2.map((s) => String(s ?? "").trim()).filter(Boolean) : [];
+    let base = null;
+    const weathers = [];
+    for (const name of names) {
+      if (BASE_SHOPS.has(name)) base = name;
+      else weathers.push(name);
+    }
+    return { base, weathers };
+  }
+  function buildRows() {
+    const rows = [];
+    const seen = /* @__PURE__ */ new Set();
+    const sources = [
+      { catalog: plantCatalog2, section: "Seed", entryOf: (raw) => raw?.seed ?? raw },
+      { catalog: eggCatalog2, section: "Egg", entryOf: (raw) => raw },
+      { catalog: toolCatalog2, section: "Tool", entryOf: (raw) => raw },
+      { catalog: decorCatalog2, section: "Decor", entryOf: (raw) => raw }
+    ];
+    for (const { catalog, section: naturalSection, entryOf: entryOf3 } of sources) {
+      if (!catalog || typeof catalog !== "object") continue;
+      for (const key2 of Object.keys(catalog)) {
+        const entry = entryOf3(catalog[key2]);
+        if (!entry || typeof entry !== "object") continue;
+        const { base, weathers } = splitEligibleShops(entry.eligibleShops);
+        if (!base && weathers.length === 0) continue;
+        const section4 = base ?? naturalSection;
+        const id = `${section4}:${key2}`;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const rawRarity = typeof entry.rarity === "string" ? entry.rarity : void 0;
+        const popup = followedIds().has(id);
+        rows.push({
+          id,
+          type: section4,
+          name: typeof entry.name === "string" && entry.name.trim() ? String(entry.name) : key2,
+          rarity: rawRarity ? DISPLAY_RARITY[rawRarity] ?? rawRarity : void 0,
+          popup,
+          followed: popup,
+          weatherOnly: !base || void 0,
+          weathers: weathers.length ? weathers : void 0
+        });
+      }
+    }
+    return rows;
+  }
+  var FOLLOWED_PATH, followed, DISPLAY_RARITY, BASE_SHOPS, state2, idsSig, changed3, countFollowed, emit, ShopRows;
+  var init_shopRows = __esm({
+    "src/features/notifier/shopRows.ts"() {
+      "use strict";
+      init_data();
+      init_emitter();
+      init_storage();
+      init_inventoryCaps();
+      FOLLOWED_PATH = "notifier.prefs";
+      followed = null;
+      DISPLAY_RARITY = {
+        [rarity2.Common]: "Common",
+        [rarity2.Uncommon]: "Uncommon",
+        [rarity2.Rare]: "Rare",
+        [rarity2.Legendary]: "Legendary",
+        [rarity2.Mythic]: "Mythical",
+        // The live API returns "Mythic" while rarityMap.Mythic is "Mythical".
+        Mythic: "Mythical",
+        [rarity2.Divine]: "Divine",
+        [rarity2.Celestial]: "Celestial"
+      };
+      BASE_SHOPS = /* @__PURE__ */ new Set(["Seed", "Egg", "Tool", "Decor"]);
+      state2 = null;
+      idsSig = "";
+      changed3 = new Emitter();
+      countFollowed = (rows) => rows.reduce((n, r) => n + (r.followed ? 1 : 0), 0);
+      emit = () => {
+        if (state2) changed3.emit({ ...state2, rows: state2.rows.slice() });
+      };
+      ShopRows = {
+        /** Rebuilds the rows from the catalogs. Listeners hear of it only when the set of items changed. */
+        rebuild() {
+          const rows = buildRows();
+          state2 = { updatedAt: Date.now(), rows, counts: { items: rows.length, followed: countFollowed(rows) } };
+          const sig = rows.map((r) => r.id).sort().join("|");
+          if (sig === idsSig) return;
+          idsSig = sig;
+          emit();
+        },
+        /** Re-reads every row's alert (followed, capped) and tells the listeners. */
+        refresh() {
+          if (!state2) return;
+          for (const row4 of state2.rows) {
+            const popup = followedIds().has(row4.id) && !isCapReached(row4.id);
+            row4.popup = popup;
+            row4.followed = popup;
+          }
+          state2 = {
+            ...state2,
+            updatedAt: Date.now(),
+            rows: state2.rows.slice(),
+            counts: { items: state2.rows.length, followed: countFollowed(state2.rows) }
+          };
+          emit();
+        },
+        state() {
+          if (!state2) ShopRows.rebuild();
+          return state2;
+        },
+        onChange(cb) {
+          return changed3.on(cb);
+        },
+        /** Whether an item's alert is on. A capped item reads as off. */
+        isFollowed(id) {
+          return !isCapReached(id) && followedIds().has(id);
+        },
+        /** Turns an item's alert on or off. Turning on a capped item does nothing. */
+        setFollowed(id, enabled5) {
+          if (!id || enabled5 && isCapReached(id)) return;
+          if (enabled5) followedIds().add(id);
+          else followedIds().delete(id);
+          saveFollowed();
+          ShopRows.refresh();
+        },
+        /** Filters rows by type and rarity, as the Shops tab's selects ask. */
+        filter(rows, filters) {
+          const type = filters.type ?? "all";
+          const rarity3 = filters.rarity ?? "all";
+          return rows.filter(
+            (r) => (type === "all" || r.type.toLowerCase() === type) && (rarity3 === "all" || String(r.rarity ?? "").toLowerCase() === rarity3)
+          );
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/shopAlerts.ts
+  function findStockItem(shops2, id) {
+    if (!shops2) return null;
+    const [prefix, raw] = String(id).split(":");
+    const kind = KIND_OF_PREFIX[prefix];
+    if (!kind || !raw) return null;
+    const item = shops2[kind]?.inventory?.find((it) => shopItemId(kind, it) === `${prefix}:${raw}`);
+    return item ? { kind: BUY_KIND[kind], item } : null;
+  }
+  var SHOP_KINDS, BUY_KIND, KIND_OF_PREFIX, SHOP_UPDATES_TO_ARM, PURCHASE_UPDATES_TO_ARM, ShopAlerts;
+  var init_shopAlerts = __esm({
+    "src/features/notifier/shopAlerts.ts"() {
+      "use strict";
+      init_emitter();
+      init_shopFeed();
+      init_audio();
+      init_rules();
+      init_shopRows();
+      SHOP_KINDS = ["seed", "tool", "egg", "decor"];
+      BUY_KIND = { seed: "seeds", egg: "eggs", tool: "tools", decor: "decor" };
+      KIND_OF_PREFIX = { Seed: "seed", Egg: "egg", Tool: "tool", Decor: "decor" };
+      SHOP_UPDATES_TO_ARM = 3;
+      PURCHASE_UPDATES_TO_ARM = 2;
+      ShopAlerts = class {
+        constructor() {
+          this.shops = null;
+          this.purchases = null;
+          this.rules = /* @__PURE__ */ new Map();
+          this.available = [];
+          this.listedIds = /* @__PURE__ */ new Set();
+          this.prevListedIds = /* @__PURE__ */ new Set();
+          this.shopUpdates = 0;
+          this.purchaseUpdates = 0;
+          this.armed = false;
+          this.justRestocked = false;
+          this.changed = new Emitter();
+          audio.setPurchaseChecker((itemId) => {
+            if (!itemId || this.listedIds.has(itemId)) return false;
+            return purchasedCount(itemId, this.purchases) > 0;
+          });
+        }
+        /** Fires with the listed items after every update, before any sound starts. */
+        onChange(cb) {
+          return this.changed.on(cb);
+        }
+        items() {
+          return this.available;
+        }
+        shopsSnapshot() {
+          return this.shops;
+        }
+        setShops(next) {
+          const prev = this.shops;
+          this.shops = next;
+          this.shopUpdates++;
+          this.justRestocked = !!prev && SHOP_KINDS.some((k) => (prev[k]?.secondsUntilRestock ?? 0) < (next[k]?.secondsUntilRestock ?? 0));
+          this.update();
+        }
+        setPurchases(next) {
+          this.purchases = next;
+          this.purchaseUpdates++;
+          this.update();
+        }
+        /** The followed items changed. */
+        refresh() {
+          this.update();
+        }
+        setRules(rules3) {
+          this.rules.clear();
+          for (const [id, rule] of Object.entries(rules3)) {
+            if (id && rule) this.rules.set(id, { ...rule });
+          }
+          this.restartLoops();
+        }
+        /* ================================ Listing ================================ */
+        listAvailable(shops2, purchases) {
+          const out = [];
+          for (const kind of SHOP_KINDS) {
+            for (const item of shops2[kind].inventory) {
+              const id = shopItemId(kind, item);
+              if (!id || !ShopRows.isFollowed(id)) continue;
+              const remaining = Math.max(Number(item.initialStock) - purchasedCount(id, purchases), 0);
+              if (remaining > 0) out.push({ id, qty: remaining });
+            }
+          }
+          return out;
+        }
+        update() {
+          const shops2 = this.shops;
+          const purchases = this.purchases;
+          if (!shops2 || !purchases) return;
+          this.available = this.listAvailable(shops2, purchases);
+          this.changed.emit(this.available);
+          const listed = new Set(this.available.map((r) => r.id));
+          this.listedIds = listed;
+          if (!this.armed) {
+            const shopsEmpty = SHOP_KINDS.every((k) => (shops2[k]?.inventory?.length ?? 0) === 0);
+            const settled = this.shopUpdates >= SHOP_UPDATES_TO_ARM && this.purchaseUpdates >= PURCHASE_UPDATES_TO_ARM && !shopsEmpty;
+            if (settled) {
+              this.armed = true;
+              if (listed.size > 0) this.ring(listed);
+              this.justRestocked = false;
+            }
+            this.prevListedIds = listed;
+            return;
+          }
+          if (listed.size === 0) {
+            audio.stopAllLoops();
+          } else if (this.justRestocked) {
+            this.ring(listed);
+            this.stopLoopsLeaving(listed);
+          } else {
+            const appeared = [...listed].filter((id) => !this.prevListedIds.has(id));
+            if (appeared.length) this.ring(appeared);
+            this.stopLoopsLeaving(listed);
+          }
+          this.prevListedIds = listed;
+          this.justRestocked = false;
+        }
+        stopLoopsLeaving(listed) {
+          for (const id of this.prevListedIds) {
+            if (!listed.has(id)) audio.stopLoop(id);
+          }
+        }
+        /* ================================ Sounds ================================= */
+        playbackModeOf(id) {
+          const rule = this.rules.get(id);
+          const baseMode = audio.getPlaybackMode("shops");
+          if (!rule) return baseMode;
+          if (rule.playbackMode === "loop" || rule.playbackMode === "oneshot") return rule.playbackMode;
+          if ((rule.stopMode || rule.loopIntervalMs != null) && baseMode === "loop") return "loop";
+          return baseMode;
+        }
+        /**
+         * Rings for these items. Items sharing a sound and volume ring once
+         * together: every loop starts, and a one-shot plays only when no loop
+         * shares its sound.
+         */
+        ring(ids) {
+          const groups = /* @__PURE__ */ new Map();
+          for (const id of ids) {
+            const overrides = ruleOverrides(this.rules.get(id)) ?? {};
+            const sound = overrides.sound ? overrides.sound.trim().toLowerCase() : "__default__";
+            const volume = overrides.volume != null ? Math.round(overrides.volume * 1e3) : "__default__";
+            const key2 = `sound:${sound}|vol:${volume}`;
+            const group2 = groups.get(key2) ?? { loops: [], oneshots: [] };
+            if (this.playbackModeOf(id) === "loop") group2.loops.push({ id, overrides });
+            else group2.oneshots.push({ id, overrides });
+            groups.set(key2, group2);
+          }
+          for (const { loops, oneshots } of groups.values()) {
+            if (loops.length) {
+              for (const entry of loops) audio.trigger(entry.id, entry.overrides, "shops").catch(() => {
+              });
+            } else if (oneshots.length) {
+              audio.trigger(oneshots[0].id, oneshots[0].overrides, "shops").catch(() => {
+              });
+            }
+          }
+        }
+        /** Restarts the loops of listed items so a changed rule takes effect. */
+        restartLoops() {
+          const loopIds = [...this.listedIds].filter((id) => this.playbackModeOf(id) === "loop");
+          for (const id of loopIds) audio.stopLoop(id);
+          if (loopIds.length) this.ring(loopIds);
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/buyPanel.ts
+  function itemName(id) {
     const [type, raw] = id.split(":");
     switch (type) {
       case "Seed":
@@ -22954,604 +22020,614 @@
         return raw;
     }
   }
-  function purchasedCountForId(id, purchases) {
-    if (!purchases) return 0;
-    const [type, raw] = String(id).split(":");
-    const sec = type === "Seed" ? purchases.seed : type === "Egg" ? purchases.egg : type === "Tool" ? purchases.tool : purchases.decor;
-    if (!sec || !sec.purchases) return 0;
-    const n = sec.purchases[raw];
-    return typeof n === "number" && n > 0 ? n : 0;
+  async function withBusyButton(btn, label2, purchase) {
+    btn.disabled = true;
+    const labelEl = btn.querySelector(".label");
+    if (labelEl) labelEl.textContent = "Buying...";
+    try {
+      await purchase();
+    } catch {
+    } finally {
+      if (labelEl) labelEl.textContent = label2;
+      btn.disabled = false;
+    }
   }
-  async function renderOverlay() {
-    const overlay2 = new OverlayBarebone();
-    const unsubPurch = await NotifierService.onPurchasesChangeNow((p) => overlay2.setPurchases(p));
-    const unsubShops = await NotifierService.onShopsChangeNow((s) => overlay2.setShops(s));
-    const unsubState = await NotifierService.onChangeNow(() => overlay2.notifyStateUpdated());
-    const unsubRules = await NotifierService.onRulesChangeNow((rules2) => overlay2.setRules(rules2));
-    window.__qws_cleanup_notifier = () => {
-      try {
-        unsubShops();
-      } catch {
-      }
-      try {
-        unsubPurch();
-      } catch {
-      }
-      try {
-        unsubState();
-      } catch {
-      }
-      try {
-        unsubRules();
-      } catch {
-      }
-      try {
-        overlay2.destroy();
-      } catch {
-      }
-    };
-  }
-  var OVERLAY_REPOSITION_INTERVAL_MS, style, setProps, OverlayBarebone;
-  var init_overlay2 = __esm({
-    "src/features/notifier/overlay.ts"() {
+  var ROW_BORDER, BuyPanel;
+  var init_buyPanel = __esm({
+    "src/features/notifier/buyPanel.ts"() {
       "use strict";
-      init_notifier();
-      init_shops();
-      init_audio();
       init_names();
-      init_iconCache();
-      init_bellPixi();
-      init_bellFloating();
-      OVERLAY_REPOSITION_INTERVAL_MS = 1e3;
-      style = (el, s) => Object.assign(el.style, s);
-      setProps = (el, props) => {
-        for (const [k, v] of Object.entries(props)) el.style.setProperty(k, v);
-      };
-      OverlayBarebone = class {
-        constructor() {
-          this.slot = document.createElement("div");
-          this.badge = document.createElement("span");
-          this.panel = document.createElement("div");
-          this.bell = null;
-          this.repositionIntervalId = null;
-          this.onWindowResize = null;
-          this.onBellModeChanged = null;
-          // Prime audio au premier clic utilisateur (une seule fois, tous modes)
-          this.audioPrimedOnce = false;
-          this.lastShops = null;
-          this.lastPurch = null;
-          // Suivi des IDs visibles dans l'overlay (pour loops & diff)
-          this.prevOverlayIds = /* @__PURE__ */ new Set();
-          this.currentOverlayIds = /* @__PURE__ */ new Set();
-          this.rulesById = /* @__PURE__ */ new Map();
-          this.shopUpdates = 0;
-          this.purchasesUpdates = 0;
-          this.bootArmed = false;
-          this.justRestocked = false;
-          // Items à afficher dans l'overlay (déjà filtrés)
-          this.rows = [];
-          this.lastPanelSig = null;
-          // Un seul handler de clic partagé par les deux implémentations de cloche
-          // (Pixi dans le rail du jeu, ou widget DOM flottant).
-          this.handleBellClick = async () => {
-            if (!this.audioPrimedOnce) {
-              this.audioPrimedOnce = true;
-              try {
-                await audio.prime();
-              } catch {
-              }
-            }
-            const on = this.panel.style.display !== "block";
-            this.panel.style.display = on ? "block" : "none";
-            if (on) {
-              this.updatePanelPosition();
-              this.renderPanel();
-              this.updateBadgePosition();
-            }
-            this.updateBellWiggle();
-          };
-          this.slot = this.createSlot();
-          this.slot.id = "qws-notifier-slot";
-          globalThis.__qws_notifier_slot = this.slot;
-          this.badge = this.createBadge();
-          this.panel = this.createPanel();
-          this.installScrollGuards(this.panel);
-          this.startBell();
-          this.onBellModeChanged = () => this.startBell();
-          window.addEventListener(BELL_MODE_EVENT, this.onBellModeChanged);
-          this.slot.append(this.badge, this.panel);
-          document.body.appendChild(this.slot);
-          window.addEventListener("pointerdown", (e) => {
-            if (this.panel.style.display !== "block") return;
-            const t = e.target;
-            if (!this.slot.contains(t) && !this.isClickOnBellButton(e.clientX, e.clientY)) {
-              this.panel.style.display = "none";
-            }
+      init_button();
+      init_dom2();
+      init_shops();
+      init_itemIcon();
+      init_shopAlerts();
+      ROW_BORDER = "1px solid var(--qmm-border)";
+      BuyPanel = class {
+        constructor(alerts) {
+          this.alerts = alerts;
+          this.lastSig = null;
+          this.el = h("div");
+          this.el.setAttribute("role", "dialog");
+          this.el.setAttribute("aria-label", "Tracked items available");
+          Object.assign(this.el.style, {
+            position: "fixed",
+            width: "min(340px, 80vw)",
+            maxHeight: "50vh",
+            overflow: "auto",
+            // Keeps the scroll, and touch gestures, from reaching the game.
+            overscrollBehavior: "contain",
+            touchAction: "pan-y",
+            borderRadius: "var(--chakra-radii-card, 12px)",
+            border: "1px solid var(--qmm-border-strong)",
+            background: "var(--qmm-panel-bg)",
+            backdropFilter: "blur(8px)",
+            color: "var(--qmm-text)",
+            boxShadow: "var(--qmm-shadow-window)",
+            padding: "8px",
+            display: "none",
+            zIndex: "var(--chakra-zIndices-DialogModal, 7010)",
+            pointerEvents: "auto"
           });
-          this.onWindowResize = () => this.repositionOverlay();
-          window.addEventListener("resize", this.onWindowResize);
-          this.repositionIntervalId = window.setInterval(
-            () => this.repositionOverlay(),
-            OVERLAY_REPOSITION_INTERVAL_MS
-          );
-          audio.setPurchaseChecker((itemId) => {
-            if (!itemId) return false;
-            if (this.currentOverlayIds.has(itemId)) return false;
-            return purchasedCountForId(itemId, this.lastPurch) > 0;
-          });
+          this.el.style.setProperty("-webkit-backdrop-filter", "blur(8px)");
+          this.stopScrollReachingGame();
         }
-        // (Re)crée la cloche dans le mode courant. Appelé au boot et à chaque
-        // toggle du setting "floating bell" — l'ancienne implémentation est
-        // arrêtée proprement avant d'instancier l'autre.
-        startBell() {
-          if (this.bell) {
-            try {
-              this.bell.stop();
-            } catch {
-            }
-            this.bell = null;
-          }
-          const onClick = () => {
-            void this.handleBellClick();
-          };
-          const floating = isFloatingBellEnabled();
-          this.bell = floating ? startNotificationBellFloating({ onClick, onMoved: () => this.repositionOverlay() }) : startNotificationBellPixi({ onClick });
-          this.slot.style.zIndex = floating ? String(BELL_WIDGET_Z_INDEX + 1) : "9999";
-          this.repositionOverlay();
-          this.updateBellWiggle();
+        get isOpen() {
+          return this.el.style.display === "block";
         }
-        isClickOnBellButton(clientX, clientY) {
-          const rect = this.bell?.getScreenRect();
-          if (!rect) return false;
-          return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+        setOpen(open) {
+          this.el.style.display = open ? "block" : "none";
         }
-        destroy() {
-          if (this.repositionIntervalId != null) {
-            window.clearInterval(this.repositionIntervalId);
-            this.repositionIntervalId = null;
-          }
-          if (this.onWindowResize) {
-            window.removeEventListener("resize", this.onWindowResize);
-            this.onWindowResize = null;
-          }
-          if (this.onBellModeChanged) {
-            window.removeEventListener(BELL_MODE_EVENT, this.onBellModeChanged);
-            this.onBellModeChanged = null;
-          }
-          if (this.bell) {
-            try {
-              this.bell.stop();
-            } catch {
-            }
-            this.bell = null;
-          }
-          try {
-            this.slot.remove();
-          } catch {
-          }
-          try {
-            if (globalThis.__qws_notifier_slot === this.slot) {
-              delete globalThis.__qws_notifier_slot;
-            }
-          } catch {
-          }
-          try {
-            audio.stopAllLoops();
-          } catch {
-          }
-        }
-        /* ========= SETTERS (subs) ========= */
-        setShops(s) {
-          const prev = this.lastShops;
-          this.lastShops = s;
-          this.shopUpdates++;
-          this.justRestocked = !!(prev && ((prev.seed?.secondsUntilRestock ?? 0) < (s.seed?.secondsUntilRestock ?? 0) || (prev.tool?.secondsUntilRestock ?? 0) < (s.tool?.secondsUntilRestock ?? 0) || (prev.egg?.secondsUntilRestock ?? 0) < (s.egg?.secondsUntilRestock ?? 0) || (prev.decor?.secondsUntilRestock ?? 0) < (s.decor?.secondsUntilRestock ?? 0)));
-          this.recompute();
-        }
-        setPurchases(p) {
-          this.lastPurch = p;
-          this.purchasesUpdates++;
-          this.recompute();
-        }
-        notifyStateUpdated() {
-          void this.recompute();
-        }
-        setRules(rules2) {
-          this.rulesById.clear();
-          for (const [id, rule] of Object.entries(rules2)) {
-            if (!id || !rule) continue;
-            this.rulesById.set(id, { ...rule });
-          }
-          this.refreshActiveLoops();
-        }
-        /* ========= Core compute ========= */
-        buildTriggerOverrides(rule) {
-          if (!rule) return null;
-          const overrides = {};
-          if (rule.sound) overrides.sound = rule.sound;
-          if (rule.volume != null && Number.isFinite(rule.volume)) {
-            overrides.volume = Math.max(0, Math.min(1, Number(rule.volume)));
-          }
-          if (rule.playbackMode === "loop" || rule.playbackMode === "oneshot") {
-            overrides.mode = rule.playbackMode;
-          }
-          if (rule.stopMode === "purchase") overrides.stop = { mode: "purchase" };
-          else if (rule.stopMode === "manual") overrides.stop = { mode: "manual" };
-          if (rule.loopIntervalMs != null && Number.isFinite(rule.loopIntervalMs)) {
-            overrides.loopIntervalMs = Math.max(150, Math.floor(Number(rule.loopIntervalMs)));
-          }
-          return Object.keys(overrides).length ? overrides : null;
-        }
-        triggerMany(ids) {
-          const entries2 = [];
-          for (const id of ids) {
-            const overrides = this.buildTriggerOverrides(this.rulesById.get(id)) ?? {};
-            const mode = this.resolvePlaybackMode(id);
-            const soundKeyBase = overrides.sound ? `sound:${overrides.sound.trim().toLowerCase()}` : "sound:__default__";
-            const vol = overrides.volume;
-            const volKey = vol != null ? `vol:${Math.round(Math.max(0, Math.min(1, vol)) * 1e3)}` : "vol:__default__";
-            const soundKey = `${soundKeyBase}|${volKey}`;
-            entries2.push({ id, overrides, mode, soundKey });
-          }
-          if (!entries2.length) return;
-          const grouped = /* @__PURE__ */ new Map();
-          for (const entry of entries2) {
-            const bucket = grouped.get(entry.soundKey) ?? { loops: [], oneshots: [] };
-            if (entry.mode === "loop") bucket.loops.push(entry);
-            else bucket.oneshots.push(entry);
-            grouped.set(entry.soundKey, bucket);
-          }
-          for (const { loops, oneshots } of grouped.values()) {
-            if (loops.length) {
-              for (const entry of loops) {
-                audio.trigger(entry.id, entry.overrides, "shops").catch(() => {
-                });
-              }
-              continue;
-            }
-            if (oneshots.length) {
-              const first = oneshots[0];
-              audio.trigger(first.id, first.overrides, "shops").catch(() => {
-              });
-            }
-          }
-        }
-        resolvePlaybackMode(id) {
-          const rule = this.rulesById.get(id);
-          const baseMode = audio.getPlaybackMode("shops");
-          if (!rule) return baseMode;
-          if (rule.playbackMode === "loop") return "loop";
-          if (rule.playbackMode === "oneshot") return "oneshot";
-          if ((rule.stopMode || rule.loopIntervalMs != null) && baseMode === "loop") return "loop";
-          return baseMode;
-        }
-        refreshActiveLoops() {
-          if (!this.currentOverlayIds.size) return;
-          const loopIds = [];
-          for (const id of this.currentOverlayIds) {
-            if (this.resolvePlaybackMode(id) === "loop") {
-              audio.stopLoop(id);
-              loopIds.push(id);
-            }
-          }
-          if (loopIds.length) this.triggerMany(loopIds);
-        }
-        async recompute() {
-          if (!this.lastShops || !this.lastPurch) return;
-          const out = [];
-          const consider = (id, initialStock) => {
-            const pref = NotifierService.getPref?.(id) || {};
-            if (!pref.popup) return;
-            const bought = purchasedCountForId(id, this.lastPurch);
-            const remaining = Math.max(initialStock - bought, 0);
-            if (remaining > 0) out.push({ id, qty: remaining });
-          };
-          for (const it of this.lastShops.seed.inventory) consider(`Seed:${it.species}`, it.initialStock);
-          for (const it of this.lastShops.tool.inventory) consider(`Tool:${it.toolId}`, it.initialStock);
-          for (const it of this.lastShops.egg.inventory) consider(`Egg:${it.eggId}`, it.initialStock);
-          for (const it of this.lastShops.decor.inventory) consider(`Decor:${it.decorId}`, it.initialStock);
-          this.rows = out;
-          this.renderBadge();
-          if (this.panel.style.display === "block") this.renderPanel();
-          this.updateBellWiggle();
-          const overlayIds = new Set(out.map((r) => r.id));
-          this.currentOverlayIds = overlayIds;
-          const shopEmpty = (this.lastShops.seed?.inventory?.length ?? 0) + (this.lastShops.tool?.inventory?.length ?? 0) + (this.lastShops.egg?.inventory?.length ?? 0) + (this.lastShops.decor?.inventory?.length ?? 0) === 0;
-          const ready = this.shopUpdates >= 3 && this.purchasesUpdates >= 2 && !shopEmpty;
-          if (!this.bootArmed) {
-            if (!ready) {
-              this.prevOverlayIds = overlayIds;
-              return;
-            }
-            this.bootArmed = true;
-            if (overlayIds.size > 0) {
-              this.triggerMany(overlayIds);
-            }
-            this.prevOverlayIds = overlayIds;
-            this.justRestocked = false;
-            return;
-          }
-          if (overlayIds.size === 0) {
-            audio.stopAllLoops();
-            this.prevOverlayIds = overlayIds;
-            this.justRestocked = false;
-            return;
-          }
-          if (this.justRestocked) {
-            this.triggerMany(overlayIds);
-            for (const oldId of this.prevOverlayIds) {
-              if (!overlayIds.has(oldId)) audio.stopLoop(oldId);
-            }
-            this.prevOverlayIds = overlayIds;
-            this.justRestocked = false;
-            return;
-          }
-          const newIds = [];
-          for (const id of overlayIds) {
-            if (!this.prevOverlayIds.has(id)) {
-              newIds.push(id);
-            }
-          }
-          if (newIds.length) this.triggerMany(newIds);
-          for (const oldId of this.prevOverlayIds) {
-            if (!overlayIds.has(oldId)) {
-              audio.stopLoop(oldId);
-            }
-          }
-          this.prevOverlayIds = overlayIds;
-          this.justRestocked = false;
-        }
-        /* ========= Render ========= */
-        renderBadge() {
-          const n = this.rows.length;
-          this.badge.textContent = n ? String(n) : "";
-          style(this.badge, { display: n ? "inline-flex" : "none" });
-          this.updateBadgePosition();
-        }
-        resolveShopItem(id) {
-          if (!this.lastShops) return null;
-          const [type, raw] = String(id).split(":");
-          if (!type || !raw) return null;
-          if (type === "Seed") {
-            const item = this.lastShops.seed?.inventory?.find((it) => String(it.species) === raw);
-            return item ? { kind: "seeds", item } : null;
-          }
-          if (type === "Tool") {
-            const item = this.lastShops.tool?.inventory?.find((it) => String(it.toolId) === raw);
-            return item ? { kind: "tools", item } : null;
-          }
-          if (type === "Egg") {
-            const item = this.lastShops.egg?.inventory?.find((it) => String(it.eggId) === raw);
-            return item ? { kind: "eggs", item } : null;
-          }
-          if (type === "Decor") {
-            const item = this.lastShops.decor?.inventory?.find((it) => String(it.decorId) === raw);
-            return item ? { kind: "decor", item } : null;
-          }
-          return null;
-        }
-        async handleBuyClick(id, btn) {
-          const resolved = this.resolveShopItem(id);
-          if (!resolved) {
-            btn.disabled = true;
-            return;
-          }
-          btn.disabled = true;
-          const prevLabel = btn.textContent;
-          btn.textContent = "Buying...";
-          try {
-            await Promise.resolve(ShopsService.buyOne(resolved.kind, resolved.item));
-          } catch {
-          } finally {
-            btn.textContent = prevLabel || "Buy";
-            btn.disabled = false;
-          }
-        }
-        async handleBuyAllClick(id, btn) {
-          const resolved = this.resolveShopItem(id);
-          if (!resolved) {
-            btn.disabled = true;
-            return;
-          }
-          const available = this.rows.find((r) => r.id === id)?.qty ?? 0;
-          if (available <= 0) {
-            btn.disabled = true;
-            return;
-          }
-          btn.disabled = true;
-          const prevLabel = btn.textContent;
-          btn.textContent = "Buying...";
-          try {
-            for (let i = 0; i < available; i++) {
-              await Promise.resolve(ShopsService.buyOne(resolved.kind, resolved.item));
-            }
-          } catch {
-          } finally {
-            btn.textContent = prevLabel || "Buy all";
-            btn.disabled = false;
-          }
-        }
-        renderPanel() {
-          const sig = JSON.stringify(this.rows.map((r) => [r.id, r.qty]));
-          if (sig === this.lastPanelSig) return;
-          this.lastPanelSig = sig;
-          this.panel.replaceChildren();
-          const head = document.createElement("div");
-          head.textContent = "Tracked items available";
-          style(head, {
+        /** Redraws the list, unless the items and quantities are unchanged. */
+        render(items) {
+          const sig = JSON.stringify(items.map((r) => [r.id, r.qty]));
+          if (sig === this.lastSig) return;
+          this.lastSig = sig;
+          const head = h("div", void 0, "Tracked items available");
+          Object.assign(head.style, {
             fontWeight: "700",
             opacity: "0.9",
             padding: "4px 2px",
-            borderBottom: "1px solid var(--qws-border-2, #ffffff14)",
+            borderBottom: ROW_BORDER,
             marginBottom: "4px"
           });
-          this.panel.appendChild(head);
-          if (!this.rows.length) {
-            const empty = document.createElement("div");
-            empty.textContent = "No tracked items are available.";
-            style(empty, { opacity: "0.75", padding: "8px 2px" });
-            this.panel.appendChild(empty);
+          this.el.replaceChildren(head);
+          if (!items.length) {
+            const empty = h("div", void 0, "No tracked items are available.");
+            Object.assign(empty.style, { opacity: "0.75", padding: "8px 2px" });
+            this.el.appendChild(empty);
             return;
           }
-          for (const r of this.rows) {
-            const row3 = document.createElement("div");
-            Object.assign(row3.style, {
-              display: "grid",
-              gridTemplateColumns: "24px 1fr max-content max-content max-content",
-              alignItems: "center",
-              gap: "8px",
-              padding: "6px 4px",
-              borderBottom: "1px solid var(--qws-border-2, #ffffff14)"
-            });
-            const icon2 = iconOf(r.id, 24);
-            const title = document.createElement("div");
-            title.textContent = labelOf(r.id);
-            Object.assign(title.style, {
-              fontWeight: "600",
-              fontSize: "12px",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              color: "var(--qws-text, #e7eef7)"
-            });
-            const qty = document.createElement("div");
-            qty.textContent = `\xD7${r.qty}`;
-            Object.assign(qty.style, {
-              fontVariantNumeric: "tabular-nums",
-              opacity: "0.9",
-              color: "var(--qws-text-dim, #b9c3cf)",
-              textAlign: "right"
-            });
-            const buyBtn = document.createElement("button");
-            buyBtn.type = "button";
-            buyBtn.textContent = "Buy";
-            Object.assign(buyBtn.style, {
-              padding: "4px 10px",
-              borderRadius: "10px",
-              border: "1px solid var(--qws-border, #ffffff33)",
-              background: "var(--qws-accent, #7aa2ff)",
-              color: "#0b1017",
-              fontWeight: "700",
-              cursor: "pointer",
-              fontSize: "12px",
-              boxShadow: "var(--qws-shadow, 0 6px 18px rgba(0,0,0,.35))",
-              transition: "filter 120ms ease, transform 120ms ease"
-            });
-            buyBtn.onmouseenter = () => {
-              buyBtn.style.filter = "brightness(1.05)";
-            };
-            buyBtn.onmouseleave = () => {
-              buyBtn.style.filter = "";
-              buyBtn.style.transform = "";
-            };
-            buyBtn.onmousedown = () => {
-              buyBtn.style.transform = "translateY(1px)";
-            };
-            buyBtn.onmouseup = () => {
-              buyBtn.style.transform = "";
-            };
-            buyBtn.onclick = (e) => {
-              e.stopPropagation();
-              void this.handleBuyClick(r.id, buyBtn);
-            };
-            if (!this.resolveShopItem(r.id)) {
-              buyBtn.disabled = true;
-              buyBtn.style.opacity = "0.6";
-              buyBtn.style.cursor = "not-allowed";
-              buyBtn.title = "Unavailable";
-            }
-            const buyAllBtn = document.createElement("button");
-            buyAllBtn.type = "button";
-            buyAllBtn.textContent = "Buy all";
-            Object.assign(buyAllBtn.style, {
-              padding: "4px 10px",
-              borderRadius: "10px",
-              border: "1px solid var(--qws-border, #ffffff33)",
-              background: "var(--qws-panel, #111823cc)",
-              color: "var(--qws-text, #e7eef7)",
-              fontWeight: "700",
-              cursor: "pointer",
-              fontSize: "12px",
-              boxShadow: "var(--qws-shadow, 0 6px 18px rgba(0,0,0,.35))",
-              transition: "filter 120ms ease, transform 120ms ease"
-            });
-            buyAllBtn.onmouseenter = () => {
-              buyAllBtn.style.filter = "brightness(1.08)";
-            };
-            buyAllBtn.onmouseleave = () => {
-              buyAllBtn.style.filter = "";
-              buyAllBtn.style.transform = "";
-            };
-            buyAllBtn.onmousedown = () => {
-              buyAllBtn.style.transform = "translateY(1px)";
-            };
-            buyAllBtn.onmouseup = () => {
-              buyAllBtn.style.transform = "";
-            };
-            buyAllBtn.onclick = (e) => {
-              e.stopPropagation();
-              void this.handleBuyAllClick(r.id, buyAllBtn);
-            };
-            if (!this.resolveShopItem(r.id)) {
+          for (const item of items) this.el.appendChild(this.renderRow(item));
+        }
+        renderRow({ id, qty }) {
+          const row4 = h("div");
+          Object.assign(row4.style, {
+            display: "grid",
+            gridTemplateColumns: "24px 1fr max-content max-content max-content",
+            alignItems: "center",
+            gap: "8px",
+            padding: "6px 4px",
+            borderBottom: ROW_BORDER
+          });
+          const title = h("div", void 0, itemName(id));
+          Object.assign(title.style, {
+            fontWeight: "600",
+            fontSize: "12px",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap"
+          });
+          const count = h("div", void 0, `\xD7${qty}`);
+          Object.assign(count.style, {
+            fontVariantNumeric: "tabular-nums",
+            opacity: "0.9",
+            color: "var(--qmm-text-soft)",
+            textAlign: "right"
+          });
+          const buyBtn = button("Buy", { size: "xs", variant: "primary" });
+          const buyAllBtn = button("Buy all", { size: "xs" });
+          buyBtn.onclick = (e) => {
+            e.stopPropagation();
+            void this.buy(id, buyBtn, "Buy", (stock) => ShopsService.buyOne(stock.kind, stock.item));
+          };
+          buyAllBtn.onclick = (e) => {
+            e.stopPropagation();
+            const available = this.alerts.items().find((r) => r.id === id)?.qty ?? 0;
+            if (available <= 0) {
               buyAllBtn.disabled = true;
-              buyAllBtn.style.opacity = "0.6";
-              buyAllBtn.style.cursor = "not-allowed";
-              buyAllBtn.title = "Unavailable";
+              return;
             }
-            row3.append(icon2, title, qty, buyBtn, buyAllBtn);
-            this.panel.appendChild(row3);
+            void this.buy(id, buyAllBtn, "Buy all", (stock) => ShopsService.buyEach(stock.kind, stock.item, available));
+          };
+          if (!findStockItem(this.alerts.shopsSnapshot(), id)) {
+            for (const btn of [buyBtn, buyAllBtn]) {
+              btn.setEnabled(false);
+              btn.title = "Unavailable";
+            }
+          }
+          row4.append(shopItemIcon(id, itemName(id), 24, "alerts-overlay"), title, count, buyBtn, buyAllBtn);
+          return row4;
+        }
+        async buy(id, btn, label2, purchase) {
+          const stock = findStockItem(this.alerts.shopsSnapshot(), id);
+          if (!stock) {
+            btn.disabled = true;
+            return;
+          }
+          await withBusyButton(btn, label2, () => purchase(stock));
+        }
+        /** Lets the panel scroll without the wheel or touch reaching the game's canvas. */
+        stopScrollReachingGame() {
+          const stop = (e) => e.stopPropagation();
+          const opts = { passive: true, capture: true };
+          for (const type of ["wheel", "mousewheel", "DOMMouseScroll", "touchmove"]) {
+            this.el.addEventListener(type, stop, opts);
           }
         }
-        /* ========= DOM bits ========= */
-        createSlot() {
-          const d = document.createElement("div");
-          style(d, {
+      };
+    }
+  });
+
+  // src/features/notifier/weather.ts
+  function readCycle(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const entry = raw;
+    const rawKind = trimmedString(entry.kind);
+    const kindLc = rawKind.toLowerCase();
+    const kind = kindLc === "weather" || kindLc === "lunar" || kindLc === "base" ? kindLc : "unknown";
+    const meta = { kind, rawKind: rawKind || void 0 };
+    for (const field2 of ["startWindowMin", "startWindowMax", "durationMinutes", "periodMinutes"]) {
+      const value = finiteNumber2(entry[field2]);
+      if (value !== void 0) meta[field2] = value;
+    }
+    return meta;
+  }
+  function readMutations(raw) {
+    if (!Array.isArray(raw)) return [];
+    const items = [];
+    for (const entry of raw) {
+      if (!entry || typeof entry !== "object") continue;
+      const name = trimmedString(entry.name);
+      if (!name) continue;
+      const mutation = { name };
+      const multiplier = finiteNumber2(entry.multiplier);
+      if (multiplier !== void 0) mutation.multiplier = multiplier;
+      const conditional = trimmedString(entry.conditional);
+      if (conditional) mutation.conditional = conditional;
+      items.push(mutation);
+    }
+    return items;
+  }
+  function readMutator(mutator) {
+    const id = trimmedString(mutator?.mutation);
+    if (!id) return [];
+    const entry = mutationCatalog2[id];
+    const mutation = { name: typeof entry?.name === "string" && entry.name ? entry.name : id };
+    const multiplier = finiteNumber2(entry?.coinMultiplier);
+    if (multiplier !== void 0) mutation.multiplier = multiplier;
+    return [mutation];
+  }
+  function readWeather(key2, value) {
+    const entry = value ?? {};
+    const safeName = String(key2 || "").trim();
+    if (!safeName) return null;
+    const rawDisplayName = trimmedString(entry.displayName) || trimmedString(entry.name);
+    const displayName = spaceWords(rawDisplayName || safeName).replace(/_/g, " ").replace(/\s+/g, " ").trim();
+    const atomValue = "atomValue" in entry ? trimmedString(entry.atomValue) : entry.mutator ? safeName : "";
+    return {
+      id: `${WEATHER_ID_PREFIX}${safeName}`,
+      name: displayName || safeName,
+      atomValue,
+      type: atomValue || displayName,
+      description: trimmedString(entry.description) || null,
+      cycle: readCycle(entry.cycle),
+      weightInCycle: finiteNumber2(entry.weightInCycle) ?? null,
+      mutations: Array.isArray(entry.mutations) ? readMutations(entry.mutations) : readMutator(entry.mutator)
+    };
+  }
+  function weatherDefs() {
+    return weatherIndex().defs;
+  }
+  function weatherById(id) {
+    return weatherIndex().byId.get(id);
+  }
+  function weatherForAtomValue(value) {
+    const key2 = value.toLowerCase();
+    const { byAtom, byName } = weatherIndex();
+    return byAtom.get(key2) || byName.get(key2) || (key2 ? byName.get(key2.replace(/\s+/g, "")) : void 0);
+  }
+  function formatWeatherMutation(mutation) {
+    const raw = Number(mutation.multiplier);
+    if (mutation.multiplier == null || !Number.isFinite(raw)) return mutation.name;
+    const rounded = Math.abs(raw - Math.round(raw)) < 0.01 ? Math.round(raw) : Math.round(raw * 100) / 100;
+    return `${mutation.name} \xD7${rounded}`;
+  }
+  function formatLastSeen(timestamp, isCurrent) {
+    if (isCurrent) {
+      return { label: "Now", title: timestamp ? new Date(timestamp).toLocaleString() : "Currently active" };
+    }
+    if (!timestamp) return { label: "Never", title: "Never seen" };
+    const diff = Math.max(0, Date.now() - timestamp);
+    const plural3 = (n, unit) => `${n} ${unit}${n > 1 ? "s" : ""} ago`;
+    let label2;
+    if (diff < 45e3) label2 = "Just now";
+    else if (diff < 9e4) label2 = "1 min ago";
+    else if (diff < 36e5) label2 = plural3(Math.round(diff / 6e4), "min");
+    else if (diff < 36 * 36e5) label2 = plural3(Math.round(diff / 36e5), "hour");
+    else label2 = plural3(Math.round(diff / 864e5), "day");
+    return { label: label2, title: new Date(timestamp).toLocaleString() };
+  }
+  var WEATHER_ID_PREFIX, finiteNumber2, trimmedString, weatherIndex;
+  var init_weather = __esm({
+    "src/features/notifier/weather.ts"() {
+      "use strict";
+      init_data();
+      init_format();
+      WEATHER_ID_PREFIX = "Weather:";
+      finiteNumber2 = (value) => {
+        const num2 = typeof value === "number" ? value : Number(value);
+        return Number.isFinite(num2) ? num2 : void 0;
+      };
+      trimmedString = (value) => typeof value === "string" ? value.trim() : "";
+      weatherIndex = memoOnCatalogs(() => {
+        const defs = [];
+        for (const [key2, value] of Object.entries(weatherCatalog2 ?? {})) {
+          const def = readWeather(key2, value);
+          if (def) defs.push(def);
+        }
+        const byId = /* @__PURE__ */ new Map();
+        const byAtom = /* @__PURE__ */ new Map();
+        const byName = /* @__PURE__ */ new Map();
+        for (const def of defs) {
+          byId.set(def.id, def);
+          byName.set(def.name.toLowerCase(), def);
+          byAtom.set(def.atomValue.toLowerCase(), def);
+          byName.set(def.id.slice(WEATHER_ID_PREFIX.length).toLowerCase(), def);
+        }
+        return { defs, byId, byAtom, byName };
+      });
+    }
+  });
+
+  // src/features/notifier/weatherAlerts.ts
+  function ensurePrefsLoaded() {
+    if (prefsLoaded) return;
+    prefsLoaded = true;
+    prefs2 = /* @__PURE__ */ new Map();
+    const stored = readAriesPath(PREFS_PATH2);
+    if (!stored || typeof stored !== "object") return;
+    for (const [id, value] of Object.entries(stored)) {
+      if (!id) continue;
+      const pref = {};
+      if (typeof value?.notify === "boolean") pref.notify = value.notify;
+      if (typeof value?.lastSeen === "number" && Number.isFinite(value.lastSeen)) pref.lastSeen = value.lastSeen;
+      prefs2.set(String(id), pref);
+    }
+  }
+  function savePrefs2() {
+    const out = {};
+    for (const [id, pref] of prefs2) {
+      const entry = {};
+      if (pref.notify) entry.notify = true;
+      if (typeof pref.lastSeen === "number" && Number.isFinite(pref.lastSeen)) entry.lastSeen = pref.lastSeen;
+      if (entry.notify || entry.lastSeen != null) out[id] = entry;
+    }
+    writeAriesPath(PREFS_PATH2, out);
+  }
+  function prefOf(id) {
+    ensurePrefsLoaded();
+    let pref = prefs2.get(id);
+    if (!pref) {
+      pref = {};
+      prefs2.set(id, pref);
+    }
+    return pref;
+  }
+  function recomputeState() {
+    const rows = weatherDefs().map((def) => {
+      const pref = prefOf(def.id);
+      return {
+        ...def,
+        notify: !!pref.notify,
+        lastSeen: typeof pref.lastSeen === "number" && Number.isFinite(pref.lastSeen) ? pref.lastSeen : null,
+        isCurrent: def.id === currentId,
+        cycle: def.cycle ? { ...def.cycle } : null,
+        mutations: def.mutations.map((mutation) => ({ ...mutation }))
+      };
+    });
+    const sig = weatherStateSignature(rows);
+    const isNew = sig !== stateSig;
+    stateSig = sig;
+    state3 = { updatedAt: Date.now(), currentId, rows };
+    if (isNew) changed4.emit(state3);
+  }
+  function ring(id) {
+    if (!weatherById(id)) return;
+    const rule = NotifierRules.get(id);
+    const overrides = { mode: "oneshot" };
+    if (rule?.sound) overrides.sound = rule.sound;
+    if (rule?.volume != null) overrides.volume = rule.volume;
+    audio.trigger(id, overrides, "weather").catch(() => {
+    });
+  }
+  function onWeather(raw, force = false) {
+    const value = raw == null ? "" : String(raw).trim();
+    if (!force && currentValue === value) return;
+    const def = weatherForAtomValue(value);
+    const prevId = currentId;
+    if (def) prefOf(def.id).lastSeen = Date.now();
+    currentId = def?.id ?? null;
+    currentValue = value;
+    if (currentId) StatsService.incrementWeatherStat(currentId.replace(WEATHER_ID_PREFIX, ""));
+    if (prevId && prevId !== currentId) audio.stopLoop(prevId);
+    if (def && prefOf(def.id).notify) ring(def.id);
+    if (def) savePrefs2();
+    recomputeState();
+  }
+  var PREFS_PATH2, prefs2, prefsLoaded, state3, stateSig, currentId, currentValue, changed4, weatherStateSignature, WeatherAlerts;
+  var init_weatherAlerts = __esm({
+    "src/features/notifier/weatherAlerts.ts"() {
+      "use strict";
+      init_atoms();
+      init_emitter();
+      init_storage();
+      init_stats();
+      init_audio();
+      init_rules();
+      init_weather();
+      PREFS_PATH2 = "notifier.weatherPrefs";
+      prefs2 = /* @__PURE__ */ new Map();
+      prefsLoaded = false;
+      state3 = null;
+      stateSig = null;
+      currentId = null;
+      currentValue = null;
+      changed4 = new Emitter();
+      weatherStateSignature = (rows) => JSON.stringify(rows.map((r) => [r.id, r.notify ? 1 : 0, r.lastSeen || 0, r.isCurrent ? 1 : 0]));
+      WeatherAlerts = {
+        /** Reads the weather once, then follows it. */
+        async start() {
+          const view = Atoms.data.weather;
+          try {
+            onWeather(await view.get(), true);
+          } catch {
+          }
+          try {
+            await view.onChange((next) => {
+              try {
+                onWeather(next);
+              } catch {
+              }
+            });
+          } catch {
+          }
+        },
+        state() {
+          if (!state3) recomputeState();
+          return state3;
+        },
+        onChange(cb) {
+          return changed4.on(cb);
+        },
+        setNotify(id, enabled5) {
+          if (!id) return;
+          const pref = prefOf(id);
+          if (!!pref.notify === enabled5) return;
+          pref.notify = enabled5;
+          savePrefs2();
+          if (!enabled5) audio.stopLoop(id);
+          else if (currentId === id) ring(id);
+          recomputeState();
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/notifier.ts
+  async function ensureStarted() {
+    if (started2) return;
+    started2 = true;
+    try {
+      ShopRows.rebuild();
+    } catch {
+    }
+    window.addEventListener("gemini:data-updated", onCatalogsUpdated);
+    ShopFeed.start();
+    InventoryCaps.onChange(() => ShopRows.refresh());
+    await InventoryCaps.start();
+    await WeatherAlerts.start();
+  }
+  var started2, onCatalogsUpdated, NotifierService;
+  var init_notifier = __esm({
+    "src/features/notifier/notifier.ts"() {
+      "use strict";
+      init_shopFeed();
+      init_inventoryCaps();
+      init_rules();
+      init_shopRows();
+      init_weatherAlerts();
+      started2 = false;
+      onCatalogsUpdated = () => {
+        try {
+          ShopRows.rebuild();
+        } catch {
+        }
+      };
+      NotifierService = {
+        async get() {
+          await ensureStarted();
+          return ShopRows.state();
+        },
+        async onChangeNow(cb) {
+          await ensureStarted();
+          cb(ShopRows.state());
+          return ShopRows.onChange(cb);
+        },
+        async onShopsChangeNow(cb) {
+          await ensureStarted();
+          try {
+            cb(await ShopFeed.readShops());
+          } catch {
+          }
+          return ShopFeed.onShopsChange(cb);
+        },
+        async onPurchasesChangeNow(cb) {
+          await ensureStarted();
+          try {
+            cb(await ShopFeed.readPurchases());
+          } catch {
+          }
+          return ShopFeed.onPurchasesChange(cb);
+        },
+        async getWeatherState() {
+          await ensureStarted();
+          return WeatherAlerts.state();
+        },
+        async onWeatherChangeNow(cb) {
+          await ensureStarted();
+          cb(WeatherAlerts.state());
+          return WeatherAlerts.onChange(cb);
+        },
+        async onRulesChangeNow(cb) {
+          await ensureStarted();
+          cb(NotifierRules.getAll());
+          return NotifierRules.onChange(cb);
+        },
+        /** Whether an item's alert is on. A capped item reads as off. */
+        getPref(id) {
+          const on = ShopRows.isFollowed(id);
+          return { popup: on, followed: on };
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/overlay.ts
+  async function renderOverlay() {
+    const alerts = new ShopAlerts();
+    new Overlay(alerts);
+    await NotifierService.onPurchasesChangeNow((p) => alerts.setPurchases(p));
+    await NotifierService.onShopsChangeNow((s) => alerts.setShops(s));
+    await NotifierService.onChangeNow(() => alerts.refresh());
+    await NotifierService.onRulesChangeNow((rules3) => alerts.setRules(rules3));
+  }
+  var REPOSITION_INTERVAL_MS, SLOT_Z_INDEX, Overlay;
+  var init_overlay2 = __esm({
+    "src/features/notifier/overlay.ts"() {
+      "use strict";
+      init_dom2();
+      init_audio();
+      init_pixiBell();
+      init_floatingBell();
+      init_buyPanel();
+      init_notifier();
+      init_shopAlerts();
+      REPOSITION_INTERVAL_MS = 1e3;
+      SLOT_Z_INDEX = 9999;
+      Overlay = class {
+        constructor(alerts) {
+          /** A fixed stacking context holding the badge and the panel. */
+          this.slot = h("div");
+          this.badge = h("span");
+          this.bell = null;
+          this.items = [];
+          this.audioPrimed = false;
+          this.panel = new BuyPanel(alerts);
+          this.styleSlot();
+          this.styleBadge();
+          this.slot.id = "qws-notifier-slot";
+          this.slot.append(this.badge, this.panel.el);
+          document.body.appendChild(this.slot);
+          this.startBell();
+          window.addEventListener(BELL_MODE_EVENT, () => this.startBell());
+          window.addEventListener("pointerdown", (e) => this.closeOnOutsideClick(e));
+          window.addEventListener("resize", () => this.reposition());
+          window.setInterval(() => this.reposition(), REPOSITION_INTERVAL_MS);
+          alerts.onChange((items) => this.show(items));
+        }
+        show(items) {
+          this.items = items;
+          this.badge.textContent = items.length ? String(items.length) : "";
+          this.badge.style.display = items.length ? "inline-flex" : "none";
+          this.placeBadge();
+          if (this.panel.isOpen) this.panel.render(items);
+          this.updateWiggle();
+        }
+        /** (Re)creates the bell in the current mode, stopping the other one first. */
+        startBell() {
+          this.bell?.stop();
+          const onClick = () => void this.toggleBell();
+          const floating = isFloatingBellEnabled();
+          this.bell = floating ? startFloatingBell({ onClick, onMoved: () => this.reposition() }) : startPixiBell({ onClick });
+          this.slot.style.zIndex = String(floating ? BELL_WIDGET_Z_INDEX + 1 : SLOT_Z_INDEX);
+          this.reposition();
+          this.updateWiggle();
+        }
+        async toggleBell() {
+          if (!this.audioPrimed) {
+            this.audioPrimed = true;
+            try {
+              await audio.prime();
+            } catch {
+            }
+          }
+          const open = !this.panel.isOpen;
+          this.panel.setOpen(open);
+          if (open) {
+            this.placePanel();
+            this.panel.render(this.items);
+            this.placeBadge();
+          }
+          this.updateWiggle();
+        }
+        closeOnOutsideClick(e) {
+          if (!this.panel.isOpen) return;
+          if (this.slot.contains(e.target) || this.isOnBell(e.clientX, e.clientY)) return;
+          this.panel.setOpen(false);
+        }
+        isOnBell(x, y) {
+          const rect = this.bell?.getScreenRect();
+          return !!rect && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+        }
+        reposition() {
+          this.placeBadge();
+          if (this.panel.isOpen) this.placePanel();
+        }
+        placeBadge() {
+          const rect = this.bell?.getScreenRect();
+          if (!rect) return;
+          this.badge.style.top = `${rect.top - 4}px`;
+          this.badge.style.right = `${window.innerWidth - rect.right - 4}px`;
+        }
+        placePanel() {
+          const rect = this.bell?.getScreenRect();
+          if (!rect) return;
+          this.panel.el.style.top = `${rect.bottom + 8}px`;
+          this.panel.el.style.right = `${window.innerWidth - rect.right}px`;
+        }
+        /** The bell rings while items wait and the panel is closed. */
+        updateWiggle() {
+          this.bell?.setWiggle(this.items.length > 0 && !this.panel.isOpen);
+        }
+        styleSlot() {
+          Object.assign(this.slot.style, {
             position: "fixed",
             top: "0",
             right: "0",
             pointerEvents: "none",
-            zIndex: "9999",
+            zIndex: String(SLOT_Z_INDEX),
             fontFamily: "var(--chakra-fonts-body, GreyCliff CF), system-ui, sans-serif",
             color: "var(--chakra-colors-chakra-body-text, #e7eef7)",
             userSelect: "none"
           });
-          setProps(d, {
-            "-webkit-font-smoothing": "antialiased",
-            "-webkit-text-size-adjust": "100%",
-            "text-rendering": "optimizeLegibility"
-          });
-          return d;
+          this.slot.style.setProperty("-webkit-font-smoothing", "antialiased");
+          this.slot.style.setProperty("-webkit-text-size-adjust", "100%");
+          this.slot.style.setProperty("text-rendering", "optimizeLegibility");
         }
-        repositionOverlay() {
-          this.updateBadgePosition();
-          if (this.panel.style.display === "block") this.updatePanelPosition();
-        }
-        updateBadgePosition() {
-          const rect = this.bell?.getScreenRect();
-          if (rect && this.badge) {
-            style(this.badge, {
-              top: `${rect.top - 4}px`,
-              right: `${window.innerWidth - rect.right - 4}px`
-            });
-          }
-        }
-        updatePanelPosition() {
-          const rect = this.bell?.getScreenRect();
-          if (rect && this.panel) {
-            style(this.panel, {
-              position: "fixed",
-              top: `${rect.bottom + 8}px`,
-              right: `${window.innerWidth - rect.right}px`
-            });
-          }
-        }
-        updateBellWiggle() {
-          const shouldWiggle = this.rows.length > 0 && this.panel.style.display !== "block";
-          this.bell?.setWiggle(shouldWiggle);
-        }
-        createBadge() {
-          const badge2 = document.createElement("span");
-          style(badge2, {
+        /** The game's own red notification bubble. */
+        styleBadge() {
+          Object.assign(this.badge.style, {
             position: "fixed",
             minWidth: "18px",
             height: "18px",
@@ -23569,44 +22645,6 @@
             pointerEvents: "none",
             zIndex: "10000"
           });
-          return badge2;
-        }
-        createPanel() {
-          const panel = document.createElement("div");
-          panel.setAttribute("role", "dialog");
-          panel.setAttribute("aria-label", "Tracked items available");
-          style(panel, {
-            position: "fixed",
-            width: "min(340px, 80vw)",
-            // ← largeur réduite (était 360px)
-            maxHeight: "50vh",
-            overflow: "auto",
-            overscrollBehavior: "contain",
-            // ← empêche le scroll de "remonter" au jeu
-            touchAction: "pan-y",
-            // ← gestes tactiles = scroll vertical, pas zoom/pan global
-            borderRadius: "var(--chakra-radii-card, 12px)",
-            border: "1px solid var(--qws-border, #ffffff22)",
-            background: "var(--qws-panel, #111823cc)",
-            backdropFilter: "blur(var(--qws-blur, 8px))",
-            color: "var(--qws-text, #e7eef7)",
-            boxShadow: "var(--qws-shadow, 0 10px 36px rgba(0,0,0,.45))",
-            padding: "8px",
-            display: "none",
-            zIndex: "var(--chakra-zIndices-DialogModal, 7010)",
-            pointerEvents: "auto"
-          });
-          setProps(panel, { "-webkit-backdrop-filter": "blur(var(--qws-blur, 8px))" });
-          return panel;
-        }
-        installScrollGuards(el) {
-          const stop2 = (e) => {
-            e.stopPropagation();
-          };
-          el.addEventListener("wheel", stop2, { passive: true, capture: true });
-          el.addEventListener("mousewheel", stop2, { passive: true, capture: true });
-          el.addEventListener("DOMMouseScroll", stop2, { passive: true, capture: true });
-          el.addEventListener("touchmove", stop2, { passive: true, capture: true });
         }
       };
     }
@@ -23626,8 +22664,8 @@
     const win = globalThis;
     if (win[GLOBAL_START_FLAG]) return;
     win[GLOBAL_START_FLAG] = true;
-    if (started2) return;
-    started2 = true;
+    if (started3) return;
+    started3 = true;
     enabled = isInstantFeedWidgetEnabled();
     savedPos = readSavedPosition2();
     const mount = () => {
@@ -23643,8 +22681,8 @@
       try {
         const warmup = getSpriteWarmupState();
         if (!warmup?.completed) {
-          const unsub = onSpriteWarmupProgress((state5) => {
-            if (state5.completed) {
+          const unsub = onSpriteWarmupProgress((state7) => {
+            if (state7.completed) {
               try {
                 unsub();
               } catch {
@@ -24097,7 +23135,7 @@
       }
     }
   }
-  var DEFAULT_LABEL, MAX_BUTTONS, ICON_SIZE, WIDGET_Z_INDEX, SCREEN_MARGIN2, DEFAULT_TOP, GLOBAL_START_FLAG, INVENTORY_CARD_ATOM, ENABLED_PATH2, POS_PATH2, started2, enabled, modalOpen, inventoryCardOpen, activePets, activePetsSig, widget, widgetButtons, savedPos, positioned;
+  var DEFAULT_LABEL, MAX_BUTTONS, ICON_SIZE, WIDGET_Z_INDEX, SCREEN_MARGIN2, DEFAULT_TOP, GLOBAL_START_FLAG, INVENTORY_CARD_ATOM, ENABLED_PATH2, POS_PATH2, started3, enabled, modalOpen, inventoryCardOpen, activePets, activePetsSig, widget, widgetButtons, savedPos, positioned;
   var init_feedWidget = __esm({
     "src/features/pets/feedWidget.ts"() {
       "use strict";
@@ -24118,7 +23156,7 @@
       INVENTORY_CARD_ATOM = "inventoryCardIsOpenAtom";
       ENABLED_PATH2 = "pets.instantFeedWidget.enabled";
       POS_PATH2 = "pets.instantFeedWidget.pos";
-      started2 = false;
+      started3 = false;
       enabled = true;
       modalOpen = false;
       inventoryCardOpen = false;
@@ -24157,9 +23195,9 @@
     let players = void 0;
     let selectedSlotId = null;
     let lastPrice = null;
-    const listeners5 = /* @__PURE__ */ new Set();
+    const listeners4 = /* @__PURE__ */ new Set();
     const notify2 = () => {
-      for (const fn of listeners5) try {
+      for (const fn of listeners4) try {
         fn();
       } catch {
       }
@@ -24226,11 +23264,11 @@
         return lastPrice;
       },
       onChange(cb) {
-        listeners5.add(cb);
-        return () => listeners5.delete(cb);
+        listeners4.add(cb);
+        return () => listeners4.delete(cb);
       },
       stop() {
-        listeners5.clear();
+        listeners4.clear();
       }
     };
   }
@@ -24260,7 +23298,7 @@
       writeAriesPath(PATH_SHOW_CROP_PRICE, next);
     } catch {
     }
-    for (const listener of listeners3) {
+    for (const listener of listeners2) {
       try {
         listener(next);
       } catch {
@@ -24268,18 +23306,18 @@
     }
   }
   function onShowCropPriceChange(cb) {
-    listeners3.add(cb);
+    listeners2.add(cb);
     return () => {
-      listeners3.delete(cb);
+      listeners2.delete(cb);
     };
   }
-  var PATH_SHOW_CROP_PRICE, listeners3;
+  var PATH_SHOW_CROP_PRICE, listeners2;
   var init_setting = __esm({
     "src/features/cropPrice/setting.ts"() {
       "use strict";
       init_storage();
       PATH_SHOW_CROP_PRICE = "misc.showCropPrice";
-      listeners3 = /* @__PURE__ */ new Set();
+      listeners2 = /* @__PURE__ */ new Set();
     }
   });
 
@@ -24295,9 +23333,9 @@
   function queryAll(root4, sel) {
     return Array.from(root4.querySelectorAll(sel));
   }
-  function createLogger(option) {
-    if (typeof option === "function") return option;
-    if (option) return (...args) => console.debug("[AppendCropPrice/GO]", ...args);
+  function createLogger(option2) {
+    if (typeof option2 === "function") return option2;
+    if (option2) return (...args) => console.debug("[AppendCropPrice/GO]", ...args);
     return () => {
     };
   }
@@ -24866,9 +23904,9 @@
         detachValueText();
         return;
       }
-      const state5 = getReadySpriteState();
-      const ctors = state5?.ctors;
-      if (!state5 || !ctors) return;
+      const state7 = getReadySpriteState();
+      const ctors = state7?.ctors;
+      if (!state7 || !ctors) return;
       const value = priceWatcher.get();
       if (value == null) {
         detachValueText();
@@ -24876,7 +23914,7 @@
       }
       const text2 = formatCoins2(value);
       if (!valueText) {
-        graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state5)));
+        graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state7)));
         if (graphicsCtor) {
           valueBadge = new graphicsCtor();
           currentCard2.addChild(valueBadge);
@@ -25058,9 +24096,9 @@
         removeBorder();
         return;
       }
-      const state5 = getReadySpriteState();
+      const state7 = getReadySpriteState();
       if (!graphicsCtor) {
-        graphicsCtor = state5 ? findGraphicsCtor(getStage(state5)) : null;
+        graphicsCtor = state7 ? findGraphicsCtor(getStage(state7)) : null;
         if (!graphicsCtor) return;
       }
       if (!border) {
@@ -25075,8 +24113,8 @@
       border.clear();
       border.roundRect(left + inset, top + inset, Math.max(0, width - BORDER_WIDTH), Math.max(0, height - BORDER_WIDTH), BORDER_RADIUS).stroke({ width: BORDER_WIDTH, color: BORDER_COLOR, alpha: 1 });
       debugState3.hasBorder = true;
-      if (!lockIcon && state5?.ctors?.Text) {
-        lockIcon = new state5.ctors.Text({ text: LOCK_ICON_TEXT, style: LOCK_ICON_STYLE });
+      if (!lockIcon && state7?.ctors?.Text) {
+        lockIcon = new state7.ctors.Text({ text: LOCK_ICON_TEXT, style: LOCK_ICON_STYLE });
         currentCard2.addChild(lockIcon);
       }
       if (lockIcon) {
@@ -25304,9 +24342,9 @@
         weSetPointerCursor = false;
       }
     };
-    const ensureCanvasListeners = (state5) => {
+    const ensureCanvasListeners = (state7) => {
       if (canvasListenersAttached) return;
-      const canvas = state5.renderer?.canvas || state5.renderer?.view?.canvas || state5.renderer?.view;
+      const canvas = state7.renderer?.canvas || state7.renderer?.view?.canvas || state7.renderer?.view;
       if (!canvas) return;
       canvasEl = canvas;
       canvas.addEventListener("pointerdown", onCanvasPointerDown);
@@ -25325,16 +24363,16 @@
         removeButton();
         return;
       }
-      const state5 = getReadySpriteState();
-      if (!state5?.ctors?.Text) return;
-      const graphicsCtor = findGraphicsCtor(getStage(state5));
+      const state7 = getReadySpriteState();
+      if (!state7?.ctors?.Text) return;
+      const graphicsCtor = findGraphicsCtor(getStage(state7));
       if (!graphicsCtor) return;
-      ensureCanvasListeners(state5);
+      ensureCanvasListeners(state7);
       const face = findByLabel(wrapper, BUTTON_FACE_LABEL) ?? wrapper;
       const faceWidth = safeSize(face, "width", 150);
       const faceHeight = safeSize(face, "height", 55);
       if (!buttonContainer) {
-        const ContainerCtor = state5.ctors?.Container ?? actionHud.constructor;
+        const ContainerCtor = state7.ctors?.Container ?? actionHud.constructor;
         buttonContainer = new ContainerCtor();
         const thisContainer = buttonContainer;
         thisContainer.once("destroyed", () => {
@@ -25344,13 +24382,13 @@
       }
       if (!buttonText) {
         const existingTextStyle = findAnyTextStyle(wrapper);
-        const style2 = {
+        const style = {
           ...BUTTON_TEXT_STYLE,
           ...existingTextStyle?.fontFamily ? { fontFamily: existingTextStyle.fontFamily } : {},
           ...existingTextStyle?.fontSize ? { fontSize: existingTextStyle.fontSize } : {},
           ...existingTextStyle?.fontWeight ? { fontWeight: existingTextStyle.fontWeight } : {}
         };
-        buttonText = new state5.ctors.Text({ text: BUTTON_TEXT, style: style2 });
+        buttonText = new state7.ctors.Text({ text: BUTTON_TEXT, style });
         buttonContainer.addChild(buttonText);
       }
       if (!buttonBg) {
@@ -25410,9 +24448,9 @@
     };
     const tryFindActionHud = () => {
       if (!running6 || actionHud) return;
-      const state5 = getReadySpriteState();
-      if (!state5) return;
-      const stage = getStage(state5);
+      const state7 = getReadySpriteState();
+      if (!state7) return;
+      const stage = getStage(state7);
       const found = findAcrossBranches(stage, (node) => node?.label === ACTION_HUD_LABEL);
       if (found) {
         attachToActionHud(found);
@@ -26061,11 +25099,11 @@
   });
 
   // src/features/inventory/itemInfo.ts
-  function readNestedValue(item, field, parse) {
+  function readNestedValue(item, field2, parse) {
     if (!item || typeof item !== "object") return null;
     for (const source of [item, item.item, item.data]) {
       if (!source || typeof source !== "object") continue;
-      const parsed = parse(source[field]);
+      const parsed = parse(source[field2]);
       if (parsed != null) return parsed;
     }
     return null;
@@ -26117,8 +25155,8 @@
   }
   function collectSpeciesCandidates(source, out) {
     if (!source || typeof source !== "object") return;
-    for (const field of SPECIES_FIELDS) {
-      const value = stringOrEmpty(source[field]);
+    for (const field2 of SPECIES_FIELDS) {
+      const value = stringOrEmpty(source[field2]);
       if (value) out.add(value);
     }
   }
@@ -26196,7 +25234,7 @@
       return false;
     };
     const abilityNames = Array.isArray(item?.abilities) ? item.abilities.map(petAbilityName).filter(Boolean) : [];
-    const ownString = (field) => typeof item?.[field] === "string" ? item[field] : null;
+    const ownString = (field2) => typeof item?.[field2] === "string" ? item[field2] : null;
     const candidates = [
       getInventoryItemName(item),
       ...["species", "seedSpecies", "plantSpecies", "petSpecies", "eggId", "decorId", "toolId", "id"].map(ownString),
@@ -26214,8 +25252,8 @@
       normalize = (s) => (s ?? "").trim().toLowerCase();
       stringOrEmpty = (value) => typeof value === "string" ? value.trim() : "";
       itemTypeOf = (item) => stringOrEmpty(item?.itemType);
-      readNestedString = (item, field) => readNestedValue(item, field, (value) => stringOrEmpty(value) || null);
-      readNestedNumber = (item, field) => readNestedValue(item, field, (value) => {
+      readNestedString = (item, field2) => readNestedValue(item, field2, (value) => stringOrEmpty(value) || null);
+      readNestedNumber = (item, field2) => readNestedValue(item, field2, (value) => {
         if (typeof value === "number" && Number.isFinite(value)) return value;
         if (typeof value === "string" && value.trim()) {
           const parsed = Number(value);
@@ -26241,8 +25279,8 @@
 
   // src/features/inventory/petStrength.ts
   function statsFor(item) {
-    for (const field of ["petSpecies", "species", "name"]) {
-      const candidate = readNestedString(item, field);
+    for (const field2 of ["petSpecies", "species", "name"]) {
+      const candidate = readNestedString(item, field2);
       if (!candidate) continue;
       const key2 = speciesKey(candidate);
       const stats = key2 ? petStatsBySpecies().get(key2) : void 0;
@@ -26369,7 +25407,7 @@
       init_itemInfo();
       init_petStrength();
       compareText = (a, b) => a.localeCompare(b, void 0, { sensitivity: "base" });
-      stringField = (item, field) => typeof item?.[field] === "string" ? item[field] : "";
+      stringField = (item, field2) => typeof item?.[field2] === "string" ? item[field2] : "";
       ownValue = (item) => typeof item?.value === "number" ? item.value : null;
       sortedMutationLabel = (mutations) => mutations.slice().sort(compareText).join("\0");
     }
@@ -26551,28 +25589,28 @@
   function applyBadgeTone(badge2, tone) {
     if (badge2.dataset.tmStrengthTone === tone) return;
     badge2.dataset.tmStrengthTone = tone;
-    const style2 = badge2.style;
-    style2.backgroundImage = "";
-    style2.backgroundColor = "";
-    style2.color = "";
-    style2.backgroundClip = "";
-    style2.webkitBackgroundClip = "";
-    style2.backgroundOrigin = "";
-    style2.webkitTextFillColor = "";
-    style2.fontWeight = "700";
+    const style = badge2.style;
+    style.backgroundImage = "";
+    style.backgroundColor = "";
+    style.color = "";
+    style.backgroundClip = "";
+    style.webkitBackgroundClip = "";
+    style.backgroundOrigin = "";
+    style.webkitTextFillColor = "";
+    style.fontWeight = "700";
     if (tone === "rainbow") {
-      style2.color = "transparent";
-      style2.backgroundImage = `linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25)), ${RAINBOW_TEXT}`;
-      style2.backgroundClip = "padding-box, text";
-      style2.webkitBackgroundClip = "padding-box, text";
-      style2.backgroundOrigin = "padding-box, text";
-      style2.webkitTextFillColor = "transparent";
+      style.color = "transparent";
+      style.backgroundImage = `linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25)), ${RAINBOW_TEXT}`;
+      style.backgroundClip = "padding-box, text";
+      style.webkitBackgroundClip = "padding-box, text";
+      style.backgroundOrigin = "padding-box, text";
+      style.webkitTextFillColor = "transparent";
     } else if (tone === "gold") {
-      style2.color = GAME_YELLOW;
-      style2.backgroundColor = GAME_YELLOW_SOFT;
+      style.color = GAME_YELLOW;
+      style.backgroundColor = GAME_YELLOW_SOFT;
     } else {
-      style2.color = "#8fd3ff";
-      style2.backgroundColor = "rgba(79, 166, 255, 0.28)";
+      style.color = "#8fd3ff";
+      style.backgroundColor = "rgba(79, 166, 255, 0.28)";
     }
   }
   function ensureBadge(textEl, before) {
@@ -26665,11 +25703,11 @@
       if (wrap.style.pointerEvents) wrap.style.pointerEvents = "";
       return;
     }
-    const row3 = ancestorContaining(wrap, FAVORITE_BUTTON_SELECTOR) ?? ancestorContaining(card4, FAVORITE_BUTTON_SELECTOR);
-    const favorite = row3?.querySelector(FAVORITE_BUTTON_SELECTOR);
-    if (!row3 || !favorite) return;
+    const row4 = ancestorContaining(wrap, FAVORITE_BUTTON_SELECTOR) ?? ancestorContaining(card4, FAVORITE_BUTTON_SELECTOR);
+    const favorite = row4?.querySelector(FAVORITE_BUTTON_SELECTOR);
+    if (!row4 || !favorite) return;
     const anchor = favorite.querySelector("svg") ?? favorite.querySelector(".chakra-icon") ?? favorite;
-    const rowRect = row3.getBoundingClientRect();
+    const rowRect = row4.getBoundingClientRect();
     if (!rowRect.width) return;
     const GAP_PX_MAX = 5;
     const GAP_PX_NON_MAX = 7;
@@ -26941,40 +25979,40 @@
   });
 
   // src/features/inventory/domSorter.ts
-  function indexEntries2(state5, entries2) {
-    state5.entryByBaseIndex.clear();
+  function indexEntries2(state7, entries2) {
+    state7.entryByBaseIndex.clear();
     for (const entry of entries2) {
       const baseIndex = readBaseIndex(entry);
-      if (baseIndex != null) state5.entryByBaseIndex.set(baseIndex, entry);
+      if (baseIndex != null) state7.entryByBaseIndex.set(baseIndex, entry);
     }
   }
-  function rebaseToDomOrder(state5, entries2) {
-    if (entries2.length !== state5.baseItems.length) return false;
+  function rebaseToDomOrder(state7, entries2) {
+    if (entries2.length !== state7.baseItems.length) return false;
     const used = /* @__PURE__ */ new Set();
     const reordered = [];
     for (const entry of entries2) {
       const baseIndex = readBaseIndex(entry);
-      if (baseIndex == null || baseIndex < 0 || baseIndex >= state5.baseItems.length || used.has(baseIndex)) return false;
+      if (baseIndex == null || baseIndex < 0 || baseIndex >= state7.baseItems.length || used.has(baseIndex)) return false;
       used.add(baseIndex);
-      reordered.push(state5.baseItems[baseIndex]);
+      reordered.push(state7.baseItems[baseIndex]);
     }
-    if (reordered.every((item, i) => item === state5.baseItems[i])) return false;
-    state5.baseItems = reordered;
+    if (reordered.every((item, i) => item === state7.baseItems[i])) return false;
+    state7.baseItems = reordered;
     assignBaseIndexes(entries2);
-    state5.entryByBaseIndex.clear();
-    entries2.forEach((entry, index) => state5.entryByBaseIndex.set(index, entry));
-    state5.entryCount = entries2.length;
+    state7.entryByBaseIndex.clear();
+    entries2.forEach((entry, index) => state7.entryByBaseIndex.set(index, entry));
+    state7.entryCount = entries2.length;
     return true;
   }
   function createDomSorter() {
     const stateByGrid = /* @__PURE__ */ new WeakMap();
     async function ensureState(grid, filters, entries2, searchQuery) {
       const filtersKey = JSON.stringify({ filters });
-      const state5 = stateByGrid.get(grid);
-      const reusable = state5 && state5.filtersKey === filtersKey && state5.searchQuery === searchQuery && state5.entryCount === entries2.length && state5.baseItems.length === entries2.length && entries2.every((entry) => readBaseIndex(entry) != null);
-      if (state5 && reusable) {
-        indexEntries2(state5, entries2);
-        return state5;
+      const state7 = stateByGrid.get(grid);
+      const reusable = state7 && state7.filtersKey === filtersKey && state7.searchQuery === searchQuery && state7.entryCount === entries2.length && state7.baseItems.length === entries2.length && entries2.every((entry) => readBaseIndex(entry) != null);
+      if (state7 && reusable) {
+        indexEntries2(state7, entries2);
+        return state7;
       }
       try {
         const inventory = await Atoms.inventory.myInventory.get();
@@ -26992,7 +26030,7 @@
           entryCount: entries2.length,
           baseItems: shown.slice(),
           entryByBaseIndex: new Map(entries2.map((entry, index) => [index, entry])),
-          lastSortKey: state5?.lastSortKey ?? null
+          lastSortKey: state7?.lastSortKey ?? null
         };
         stateByGrid.set(grid, next);
         return next;
@@ -27006,18 +26044,18 @@
       if (!container) return;
       const entries2 = getDomEntries(container);
       if (!entries2.length) return;
-      const state5 = await ensureState(grid, getActiveFilters(grid), entries2, getSearchQuery(grid));
-      if (!state5) return;
+      const state7 = await ensureState(grid, getActiveFilters(grid), entries2, getSearchQuery(grid));
+      if (!state7) return;
       const unsorted = !sortKey || sortKey === "none";
-      if (unsorted && state5.lastSortKey === "none") rebaseToDomOrder(state5, entries2);
-      const baseIndexByItem = new Map(state5.baseItems.map((item, index) => [item, index]));
+      if (unsorted && state7.lastSortKey === "none") rebaseToDomOrder(state7, entries2);
+      const baseIndexByItem = new Map(state7.baseItems.map((item, index) => [item, index]));
       const effectiveDirection = isSortDirection(direction) ? direction : DEFAULT_DIRECTION[sortKey] ?? "asc";
-      const desiredItems = unsorted ? state5.baseItems.slice() : sortInventoryItems(state5.baseItems, sortKey, effectiveDirection);
+      const desiredItems = unsorted ? state7.baseItems.slice() : sortInventoryItems(state7.baseItems, sortKey, effectiveDirection);
       const desiredEntries = [];
       const used = /* @__PURE__ */ new Set();
       for (const item of desiredItems) {
         const baseIndex = baseIndexByItem.get(item);
-        const entry = baseIndex == null ? void 0 : state5.entryByBaseIndex.get(baseIndex);
+        const entry = baseIndex == null ? void 0 : state7.entryByBaseIndex.get(baseIndex);
         if (!entry || used.has(entry)) continue;
         updateCardValue(entry.card, getInventoryItemValue(item), showValues);
         updateStrengthText(entry.card, item);
@@ -27034,8 +26072,8 @@
         for (const entry of desiredEntries) fragment.appendChild(entry.wrapper);
         container.appendChild(fragment);
       }
-      indexEntries2(state5, desiredEntries);
-      state5.lastSortKey = sortKey;
+      indexEntries2(state7, desiredEntries);
+      state7.lastSortKey = sortKey;
     };
   }
   var init_domSorter = __esm({
@@ -27149,7 +26187,7 @@
     write(SORT_DIRECTION_PATH, direction);
   }
   var SORT_KEY_PATH, SORT_DIRECTION_PATH, SHOW_VALUES_PATH, loadSortKey, loadSortDirection, loadShowValues, saveShowValues;
-  var init_settings3 = __esm({
+  var init_settings4 = __esm({
     "src/features/inventory/settings.ts"() {
       "use strict";
       init_storage();
@@ -27179,8 +26217,8 @@
     const wrap = document.createElement("div");
     wrap.className = WRAP_CLASS;
     Object.assign(wrap.style, { display: "block", width: "100%", gridColumn: "1 / -1", flex: "0 0 auto", contain: "layout style" });
-    const row3 = document.createElement("div");
-    Object.assign(row3.style, {
+    const row4 = document.createElement("div");
+    Object.assign(row4.style, {
       display: "flex",
       alignItems: "center",
       flexWrap: "wrap",
@@ -27203,8 +26241,8 @@
     const divider = document.createElement("span");
     Object.assign(divider.style, { alignSelf: "stretch", width: "1px", minHeight: "24px", background: color.border, flex: "0 0 auto" });
     const summary = new ValueSummary();
-    row3.append(caption("Sort by:"), sortSelect, caption("Order:"), directionSelect, divider, showValuesLabel, summary.el);
-    wrap.appendChild(row3);
+    row4.append(caption("Sort by:"), sortSelect, caption("Order:"), directionSelect, divider, showValuesLabel, summary.el);
+    wrap.appendChild(row4);
     const bar = { wrap, sortSelect, directionSelect, showValues, summary, lastSortKey: null, lastDirection: null };
     const picked = () => {
       bar.lastSortKey = sortSelect.value || "none";
@@ -27440,12 +26478,12 @@
   function startInventorySortingObserver() {
     if (typeof window === "undefined" || typeof document === "undefined") return () => {
     };
-    let stop2 = null;
+    let stop = null;
     let waiter = null;
     const attachIfReady = () => {
-      if (stop2) return true;
+      if (stop) return true;
       if (!document.querySelector(GRID_SELECTOR) && !document.querySelector(PET_HUTCH_ROOT_SELECTOR)) return false;
-      stop2 = attachInventorySorting();
+      stop = attachInventorySorting();
       return true;
     };
     const start2 = () => {
@@ -27465,7 +26503,7 @@
     return () => {
       document.removeEventListener("DOMContentLoaded", start2);
       waiter?.disconnect();
-      stop2?.();
+      stop?.();
     };
   }
   var GRID_ATTRIBUTES;
@@ -27478,7 +26516,7 @@
       init_filters();
       init_inventoryDom();
       init_petHutch();
-      init_settings3();
+      init_settings4();
       init_sortBar();
       init_sortOptions();
       init_value();
@@ -27731,8 +26769,8 @@
     const pick2 = (c) => typeof c === "string" && c.trim() ? c : null;
     const direct = pick2(p.id) ?? pick2(p.pet?.id);
     if (direct) return direct;
-    for (const field of IDENTITY_FIELDS) {
-      const value = pick2(p[field]);
+    for (const field2 of IDENTITY_FIELDS) {
+      const value = pick2(p[field2]);
       if (value) return value;
     }
     return null;
@@ -27781,16 +26819,16 @@
     if (!added.length && !updated.length) return;
     const byKey = /* @__PURE__ */ new Map();
     for (const entry of getActivityLogHistory()) byKey.set(entryKey2(entry), entry);
-    let changed = false;
+    let changed5 = false;
     for (const entry of [...updated, ...added]) {
       const key2 = entryKey2(entry);
       const cur = byKey.get(key2);
       if (!cur || !entriesEqual(cur, entry)) {
         byKey.set(key2, entry);
-        changed = true;
+        changed5 = true;
       }
     }
-    if (changed) saveHistory(Array.from(byKey.values()));
+    if (changed5) saveHistory(Array.from(byKey.values()));
   }
   var HISTORY_STORAGE_KEY, HISTORY_LIMIT, IDENTITY_FIELDS, entriesEqual;
   var init_history = __esm({
@@ -28073,14 +27111,14 @@
     }
   }
   function buildToolbarInto(anchors) {
-    const state5 = getReadySpriteState();
-    if (!state5?.ctors?.Text) return null;
-    const graphicsCtor = findGraphicsCtor(getStage(state5));
+    const state7 = getReadySpriteState();
+    if (!state7?.ctors?.Text) return null;
+    const graphicsCtor = findGraphicsCtor(getStage(state7));
     if (!graphicsCtor) return null;
     const maxWidth = safeWidth(anchors.backgroundSprite, 0) - 2 * (anchors.scrollViewContainer.position?.x ?? 0);
     if (maxWidth <= 0) return null;
     const built = buildFilterToolbar(
-      { Graphics: graphicsCtor, Text: state5.ctors.Text, Container: anchors.modalContainer.constructor },
+      { Graphics: graphicsCtor, Text: state7.ctors.Text, Container: anchors.modalContainer.constructor },
       maxWidth
     );
     anchors.modalContainer.addChild(built.container);
@@ -28131,9 +27169,9 @@
   }
   function tryFindModal() {
     if (!isActivityLogModalOpen() || modalNode) return;
-    const state5 = getReadySpriteState();
-    if (!state5) return;
-    const found = findAcrossBranches(getStage(state5), (node) => node?.label === ACTIVITY_LOG_MODAL_LABEL);
+    const state7 = getReadySpriteState();
+    if (!state7) return;
+    const found = findAcrossBranches(getStage(state7), (node) => node?.label === ACTIVITY_LOG_MODAL_LABEL);
     if (!found) return;
     modalNode = found;
     found.once("destroyed", () => {
@@ -28315,7 +27353,7 @@
   function isRecord3(value) {
     return typeof value === "object" && value !== null;
   }
-  function toPositiveNumber2(value) {
+  function toPositiveNumber(value) {
     const n = Number(value);
     return Number.isFinite(n) && n > 0 ? n : null;
   }
@@ -28337,7 +27375,7 @@
       ["gold", GOLD_MUTATION],
       ["rainbow", RAINBOW_MUTATION]
     ]) {
-      const chance = toPositiveNumber2(mutationEntry(mutationId)?.baseChance) ?? 0;
+      const chance = toPositiveNumber(mutationEntry(mutationId)?.baseChance) ?? 0;
       if (chance <= 0) continue;
       targets.push({
         key: key2,
@@ -28354,11 +27392,11 @@
     const out = /* @__PURE__ */ new Map();
     let total = 0;
     for (const value of Object.values(weights)) {
-      total += toPositiveNumber2(value) ?? 0;
+      total += toPositiveNumber(value) ?? 0;
     }
     if (total <= 0) return out;
     for (const [species, value] of Object.entries(weights)) {
-      const weight = toPositiveNumber2(value);
+      const weight = toPositiveNumber(value);
       if (weight === null) continue;
       out.set(species, weight / total);
     }
@@ -28372,7 +27410,7 @@
     const species = declared ? Object.keys(declared) : Array.from(chances.keys());
     for (const id of species) {
       const chance = chances.get(id) ?? 0;
-      const declaredThreshold = declared ? toPositiveNumber2(declared[id]) : null;
+      const declaredThreshold = declared ? toPositiveNumber(declared[id]) : null;
       if (declaredThreshold === null && (chance <= 0 || chance > MAX_PROTECTED_CHANCE)) continue;
       const threshold = declaredThreshold ?? thresholdForChance(chance);
       if (threshold <= 0) continue;
@@ -28492,16 +27530,16 @@
     };
     return cachedState;
   }
-  function saveState(state5) {
-    if (state5.seenPetIds.length > SEEN_LIMIT) {
-      state5.seenPetIds.splice(0, state5.seenPetIds.length - SEEN_LIMIT);
+  function saveState(state7) {
+    if (state7.seenPetIds.length > SEEN_LIMIT) {
+      state7.seenPetIds.splice(0, state7.seenPetIds.length - SEEN_LIMIT);
     }
-    cachedState = state5;
+    cachedState = state7;
     try {
-      writeAriesPath(STATE_PATH, state5);
+      writeAriesPath(STATE_PATH, state7);
     } catch {
     }
-    changes4.emit(state5);
+    changes4.emit(state7);
   }
   function readPet(raw, eggIdFallback, timestamp, isPull) {
     if (!isRecord4(raw)) return null;
@@ -28569,27 +27607,27 @@
     var _a, _b;
     const events = extractHatchEvents(entries2);
     if (!events.length) return false;
-    const state5 = loadState();
-    const seen = new Set(state5.seenPetIds);
-    let changed = false;
+    const state7 = loadState();
+    const seen = new Set(state7.seenPetIds);
+    let changed5 = false;
     for (const event of events) {
       if (seen.has(event.petId)) continue;
       seen.add(event.petId);
-      state5.seenPetIds.push(event.petId);
-      changed = true;
+      state7.seenPetIds.push(event.petId);
+      changed5 = true;
       if (countStats) {
         try {
           StatsService.incrementPetHatched(event.species, rarityOf(event));
         } catch {
         }
       }
-      if (event.timestamp > state5.lastHatchAt) state5.lastHatchAt = event.timestamp;
+      if (event.timestamp > state7.lastHatchAt) state7.lastHatchAt = event.timestamp;
       if (!event.isPull || !event.eggId) continue;
-      const counters = (_a = state5.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
+      const counters = (_a = state7.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
       applyPull(counters, event, protectedSpecies(event.eggId));
     }
-    if (changed) saveState(state5);
-    return changed;
+    if (changed5) saveState(state7);
+    return changed5;
   }
   async function startHatchTracker() {
     const firstRun = !loadState().bootstrapped;
@@ -28609,10 +27647,10 @@
     } catch {
     }
     if (firstRun) {
-      const state5 = loadState();
-      state5.bootstrapped = true;
-      state5.trackingStartedAt = Date.now();
-      saveState(state5);
+      const state7 = loadState();
+      state7.bootstrapped = true;
+      state7.trackingStartedAt = Date.now();
+      saveState(state7);
     }
     const current = loadState();
     if (current.bootstrapped && current.trackingStartedAt <= 0) {
@@ -28664,14 +27702,14 @@
         },
         setOffset(eggId, key2, value) {
           var _a;
-          const state5 = loadState();
-          const offsets = (_a = state5.offsets)[eggId] ?? (_a[eggId] = emptyCounters());
+          const state7 = loadState();
+          const offsets = (_a = state7.offsets)[eggId] ?? (_a[eggId] = emptyCounters());
           const next = toCount(value);
           if (key2 === "gold") offsets.gold = next;
           else if (key2 === "rainbow") offsets.rainbow = next;
           else if (next > 0) offsets.species[key2] = next;
           else delete offsets.species[key2];
-          saveState(state5);
+          saveState(state7);
         },
         // Deliberately no reset: a counter that can be cleared is worse than useless,
         // since the server's own never resets except on the outcome itself. Only
@@ -29162,8 +28200,8 @@
       setTone(mini, level);
       mini.style.display = level === "ok" ? "none" : "";
     };
-    onSpriteWarmupProgress((state5) => {
-      warmup = state5;
+    onSpriteWarmupProgress((state7) => {
+      warmup = state7;
       update();
     });
     setInterval(update, 800);
@@ -29504,15 +28542,15 @@
 
   // src/ui/kit/layout.ts
   function settingRow(title, hint2, control, opts = {}) {
-    const row3 = h("div", "qmm-setting-row");
-    if (opts.icon) row3.appendChild(iconBox(opts.icon, ROW_ICON_PX, opts.iconTag ?? "panel"));
+    const row4 = h("div", "qmm-setting-row");
+    if (opts.icon) row4.appendChild(iconBox(opts.icon, ROW_ICON_PX, opts.iconTag ?? "panel"));
     const text2 = h("div", "qmm-setting-row__text");
     text2.appendChild(h("div", "qmm-setting-row__title", title));
     if (hint2) text2.appendChild(h("div", "qmm-setting-row__hint", hint2));
     const controls = h("div", "qmm-setting-row__controls");
     controls.appendChild(control);
-    row3.append(text2, controls);
-    return { row: row3, controls };
+    row4.append(text2, controls);
+    return { row: row4, controls };
   }
   function collapsibleCard(opts) {
     const root4 = plainCard();
@@ -29552,13 +28590,13 @@
     return { root: root4, label: label2 };
   }
   function flexRow(opts = {}) {
-    const row3 = h("div", ["qmm-flex", opts.className].filter(Boolean).join(" "));
-    row3.style.alignItems = ALIGN[opts.align ?? "center"];
-    row3.style.justifyContent = JUSTIFY[opts.justify ?? "start"];
-    row3.style.gap = `${opts.gap ?? 8}px`;
-    row3.style.flexWrap = opts.wrap === false ? "nowrap" : "wrap";
-    if (opts.fullWidth) row3.style.width = "100%";
-    return row3;
+    const row4 = h("div", ["qmm-flex", opts.className].filter(Boolean).join(" "));
+    row4.style.alignItems = ALIGN[opts.align ?? "center"];
+    row4.style.justifyContent = JUSTIFY[opts.justify ?? "start"];
+    row4.style.gap = `${opts.gap ?? 8}px`;
+    row4.style.flexWrap = opts.wrap === false ? "nowrap" : "wrap";
+    if (opts.fullWidth) row4.style.width = "100%";
+    return row4;
   }
   var ROW_ICON_PX, JUSTIFY, ALIGN;
   var init_layout = __esm({
@@ -30058,10 +29096,10 @@
     if (!catalogPromise) catalogPromise = fetchAudioCatalog();
     return catalogPromise;
   }
-  function formatTime2(seconds) {
-    if (!Number.isFinite(seconds)) return "-";
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
+  function formatTime2(seconds2) {
+    if (!Number.isFinite(seconds2)) return "-";
+    const m = Math.floor(seconds2 / 60);
+    const s = Math.floor(seconds2 % 60);
     return `${m}:${s.toString().padStart(2, "0")}`;
   }
   function renderAudioPlayerTab(view) {
@@ -30196,8 +29234,8 @@
       themeList.innerHTML = "";
       const themes = catalog?.themes ?? [];
       themes.forEach((theme) => {
-        const row3 = document.createElement("div");
-        row3.className = "dd-audio-row";
+        const row4 = document.createElement("div");
+        row4.className = "dd-audio-row";
         const infoWrap = document.createElement("div");
         infoWrap.className = "dd-audio-row__info";
         const title = document.createElement("div");
@@ -30207,7 +29245,7 @@
         urlEl.className = "dd-audio-url";
         urlEl.textContent = [theme.music && "music", theme.ambience && "ambience"].filter(Boolean).join(" \xB7 ") || "(no tracks)";
         infoWrap.append(title, urlEl);
-        row3.appendChild(infoWrap);
+        row4.appendChild(infoWrap);
         const actions2 = flexRow({ gap: 6, wrap: true, align: "center" });
         actions2.className = "dd-audio-actions";
         if (theme.music) {
@@ -30233,8 +29271,8 @@
           size: "sm",
           onClick: () => copy2([theme.music, theme.ambience].filter(Boolean).join("\n"))
         }));
-        row3.appendChild(actions2);
-        themeList.appendChild(row3);
+        row4.appendChild(actions2);
+        themeList.appendChild(row4);
       });
       themeList.style.display = themes.length ? "" : "none";
       themeEmpty.style.display = themes.length ? "none" : "block";
@@ -30249,8 +29287,8 @@
       for (const item of items) {
         if (!rx.test(item.name)) continue;
         visibleSfx.push(item);
-        const row3 = document.createElement("div");
-        row3.className = "dd-audio-row";
+        const row4 = document.createElement("div");
+        row4.className = "dd-audio-row";
         const infoWrap = document.createElement("div");
         infoWrap.className = "dd-audio-row__info";
         const title = document.createElement("div");
@@ -30260,7 +29298,7 @@
         meta.className = "dd-audio-meta";
         meta.textContent = `${formatTime2(item.start)} \u2192 ${formatTime2(item.end)} (${item.duration.toFixed(2)}s)`;
         infoWrap.append(title, meta);
-        row3.appendChild(infoWrap);
+        row4.appendChild(infoWrap);
         const actions2 = flexRow({ gap: 6, wrap: false, align: "center" });
         actions2.className = "dd-audio-actions";
         const playBtn = button("Play", {
@@ -30276,8 +29314,8 @@
           onClick: () => copy2(atlasUrl)
         });
         actions2.append(playBtn, copyBtn);
-        row3.appendChild(actions2);
-        sfxList.appendChild(row3);
+        row4.appendChild(actions2);
+        sfxList.appendChild(row4);
       }
       sfxInfo.textContent = items.length ? `${visibleSfx.length} / ${items.length} SFX shown.` : "No SFX loaded yet.";
       sfxList.style.display = visibleSfx.length ? "" : "none";
@@ -30745,9 +29783,9 @@
       matchesWrap.innerHTML = "";
       emptyMatches.style.display = atoms.length ? "none" : "block";
       atoms.map((atom) => ({ atom, label: String(atom?.debugLabel || atom?.label || "<unknown>") })).sort((a, b) => a.label.localeCompare(b.label)).forEach(({ atom, label: label2 }) => {
-        const row3 = document.createElement("label");
-        row3.className = "dd-atom-list__item";
-        row3.title = label2;
+        const row4 = document.createElement("label");
+        row4.className = "dd-atom-list__item";
+        row4.title = label2;
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.checked = entries2.has(label2);
@@ -30755,7 +29793,7 @@
         const text2 = document.createElement("span");
         text2.className = "dd-atom-list__label";
         text2.textContent = label2;
-        row3.append(checkbox, text2);
+        row4.append(checkbox, text2);
         checkbox.addEventListener("change", async () => {
           if (checkbox.checked) {
             const existing = entries2.get(label2);
@@ -30781,7 +29819,7 @@
           updateSelectedInfo();
           updateControls();
         });
-        matchesWrap.appendChild(row3);
+        matchesWrap.appendChild(row4);
         if (entries2.has(label2)) {
           const existing = entries2.get(label2);
           if (existing) existing.atom = atom;
@@ -30808,9 +29846,9 @@
         return;
       }
       records.forEach((rec, idx) => {
-        const row3 = document.createElement("div");
-        row3.className = selectedRecord === idx ? "dd-atom-entry dd-atom-entry--row is-selected" : "dd-atom-entry dd-atom-entry--row";
-        row3.dataset.idx = String(idx);
+        const row4 = document.createElement("div");
+        row4.className = selectedRecord === idx ? "dd-atom-entry dd-atom-entry--row is-selected" : "dd-atom-entry dd-atom-entry--row";
+        row4.dataset.idx = String(idx);
         const left = document.createElement("div");
         left.style.display = "flex";
         left.style.flexDirection = "column";
@@ -30828,13 +29866,13 @@
         summary.style.whiteSpace = "pre-wrap";
         const prefix = rec.type === "initial" ? "[initial] " : "";
         summary.textContent = prefix + summarizeValue(rec.next);
-        row3.append(left, summary);
-        row3.addEventListener("click", () => {
+        row4.append(left, summary);
+        row4.addEventListener("click", () => {
           selectedRecord = idx;
           renderRecords(false);
           updateDetails(rec);
         });
-        logWrap.appendChild(row3);
+        logWrap.appendChild(row4);
       });
       if (autoScroll) logWrap.scrollTop = logWrap.scrollHeight;
       if (selectedRecord != null && !records[selectedRecord]) {
@@ -31111,8 +30149,8 @@ next: ${next}`;
     let mutePatterns = [];
     const setSelectedRow = (fid) => {
       selectedId = fid;
-      [...logWrap.querySelectorAll("[data-fid]")].forEach((row3) => {
-        row3.classList.toggle("selected", String(fid || "") === row3.dataset.fid);
+      [...logWrap.querySelectorAll("[data-fid]")].forEach((row4) => {
+        row4.classList.toggle("selected", String(fid || "") === row4.dataset.fid);
       });
       if (fid != null) {
         const f = frameById(fid);
@@ -31315,9 +30353,9 @@ next: ${next}`;
       return acts;
     }
     function buildRow(f) {
-      const row3 = document.createElement("div");
-      row3.className = "ws-row";
-      row3.dataset.fid = String(f.id);
+      const row4 = document.createElement("div");
+      row4.className = "ws-row";
+      row4.dataset.fid = String(f.id);
       const ts = document.createElement("div");
       ts.className = "ts";
       ts.textContent = fmtTime(f.t);
@@ -31328,18 +30366,18 @@ next: ${next}`;
       body.className = "body";
       body.innerHTML = `<code>${escapeLite(f.text)}</code>`;
       const acts = rowActions(f.id, f);
-      row3.append(ts, arrow, body, acts);
-      row3.onclick = () => setSelectedRow(f.id);
-      row3.ondblclick = () => {
+      row4.append(ts, arrow, body, acts);
+      row4.onclick = () => setSelectedRow(f.id);
+      row4.ondblclick = () => {
         ta.value = f.text;
         setSelectedRow(f.id);
       };
-      return row3;
+      return row4;
     }
     function appendOne(f) {
       if (!passesFilters(f)) return;
-      const row3 = buildRow(f);
-      logWrap.appendChild(row3);
+      const row4 = buildRow(f);
+      logWrap.appendChild(row4);
       updateEmptyState();
       if (autoScroll) logWrap.scrollTop = logWrap.scrollHeight;
     }
@@ -31656,10 +30694,10 @@ next: ${next}`;
       allOption.textContent = categories.length ? "All categories" : "No categories";
       categorySelect.appendChild(allOption);
       categories.forEach((category) => {
-        const option = document.createElement("option");
-        option.value = category;
-        option.textContent = category;
-        categorySelect.appendChild(option);
+        const option2 = document.createElement("option");
+        option2.value = category;
+        option2.textContent = category;
+        categorySelect.appendChild(option2);
       });
       const valid = categories.includes(selectedCategory);
       selectedCategory = valid ? selectedCategory : ANY_CATEGORY;
@@ -31690,24 +30728,24 @@ next: ${next}`;
       const heading = document.createElement("span");
       heading.className = "dd-sprite-mutation-group-title";
       heading.textContent = label2;
-      const row3 = document.createElement("div");
-      row3.className = "dd-sprite-mutation-buttons";
-      options2.forEach((option) => {
+      const row4 = document.createElement("div");
+      row4.className = "dd-sprite-mutation-buttons";
+      options2.forEach((option2) => {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "dd-sprite-mutation-btn";
-        btn.textContent = option === "None" ? "None" : option;
-        if (mutationFilters[key2] === option) btn.classList.add("active");
-        btn.setAttribute("aria-pressed", mutationFilters[key2] === option ? "true" : "false");
+        btn.textContent = option2 === "None" ? "None" : option2;
+        if (mutationFilters[key2] === option2) btn.classList.add("active");
+        btn.setAttribute("aria-pressed", mutationFilters[key2] === option2 ? "true" : "false");
         btn.addEventListener("click", () => {
-          if (mutationFilters[key2] === option) return;
-          mutationFilters[key2] = option;
+          if (mutationFilters[key2] === option2) return;
+          mutationFilters[key2] = option2;
           renderMutationControls();
           if (visibleSpriteRecords.length) renderSpriteCards(visibleSpriteRecords);
         });
-        row3.appendChild(btn);
+        row4.appendChild(btn);
       });
-      container.append(heading, row3);
+      container.append(heading, row4);
     }
     function previewUrlFor(record2, mutations) {
       return mutations.length ? composedSpriteUrl(record2.category, record2.name, mutations) : record2.url;
@@ -31986,32 +31024,45 @@ next: ${next}`;
     }
   });
 
-  // src/features/notifier/menu.ts
-  function rarityBadge(raw) {
+  // src/ui/kit/rarityBadge.ts
+  function rarityLabel(raw) {
     const rarity3 = String(raw || "").trim();
-    const key2 = (() => {
-      const k = rarity3.toLowerCase();
-      if (k === "mythic" || k === "mythical") return "Mythical";
-      if (k === "celestial") return "Celestial";
-      if (k === "divine") return "Divine";
-      if (k === "legendary") return "Legendary";
-      if (k === "rare") return "Rare";
-      if (k === "uncommon") return "Uncommon";
-      if (k === "common") return "Common";
-      return rarity3 || "\u2014";
-    })();
-    const COLORS = {
-      Common: "#E7E7E7",
-      Uncommon: "#67BD4D",
-      Rare: "#0071C6",
-      Legendary: "#FFC734",
-      Mythical: "#9944A7",
-      Divine: "#FF7835",
-      Celestial: null
-    };
-    const darkText = /* @__PURE__ */ new Set(["Common", "Uncommon", "Legendary", "Divine"]);
-    const el = document.createElement("div");
-    el.textContent = key2;
+    switch (rarity3.toLowerCase()) {
+      // The live API says "Mythic" where the bundled catalog says "Mythical".
+      case "mythic":
+      case "mythical":
+        return "Mythical";
+      case "celestial":
+        return "Celestial";
+      case "divine":
+        return "Divine";
+      case "legendary":
+        return "Legendary";
+      case "rare":
+        return "Rare";
+      case "uncommon":
+        return "Uncommon";
+      case "common":
+        return "Common";
+      default:
+        return rarity3 || "-";
+    }
+  }
+  function ensureCelestialKeyframes() {
+    if (document.getElementById(CELESTIAL_KEYFRAMES_ID)) return;
+    const style = document.createElement("style");
+    style.id = CELESTIAL_KEYFRAMES_ID;
+    style.textContent = `
+@keyframes qwsCelestialShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}`;
+    document.head.appendChild(style);
+  }
+  function rarityBadge(raw) {
+    const label2 = rarityLabel(raw);
+    const el = h("div", void 0, label2);
     Object.assign(el.style, {
       display: "inline-flex",
       justifyContent: "center",
@@ -32021,23 +31072,13 @@ next: ${next}`;
       fontSize: "12px",
       fontWeight: "700",
       margin: "2px auto",
-      color: darkText.has(key2) ? "#0b0b0b" : "#ffffff",
+      color: DARK_TEXT.has(label2) ? "#0b0b0b" : "#ffffff",
       boxShadow: "0 0 0 1px #0006 inset",
       lineHeight: "1.1",
       whiteSpace: "nowrap"
     });
-    if (key2 === "Celestial") {
-      if (!document.getElementById("qws-celestial-kf")) {
-        const style2 = document.createElement("style");
-        style2.id = "qws-celestial-kf";
-        style2.textContent = `
-@keyframes qwsCelestialShift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}`;
-        document.head.appendChild(style2);
-      }
+    if (label2 === "Celestial") {
+      ensureCelestialKeyframes();
       el.style.background = `linear-gradient(130deg,
       rgb(0,180,216) 0%,
       rgb(124,42,232) 40%,
@@ -32046,2310 +31087,25 @@ next: ${next}`;
       el.style.backgroundSize = "200% 200%";
       el.style.animation = "qwsCelestialShift 4s linear infinite";
     } else {
-      el.style.background = COLORS[key2] || "#444";
+      el.style.background = RARITY_COLORS[label2] || "#444";
     }
     return el;
   }
-  function renderSettingsTab(view, ui) {
-    view.innerHTML = "";
-    void PetAlertService.start().catch(() => {
-    });
-    const section4 = (title) => {
-      const card4 = ui.card(title, { tone: "muted" });
-      card4.body.style.display = "grid";
-      card4.body.style.gap = "10px";
-      return card4;
-    };
-    const row3 = (labelTxt, control, opts) => {
-      const { root: r, label: label2 } = ui.formRow(labelTxt, control, { alignTop: opts?.alignTop, labelWidth: "160px" });
-      label2.style.opacity = "0.9";
-      label2.style.fontWeight = "600";
-      return r;
-    };
-    const radio2 = (name, value, text2) => {
-      const chip = ui.toggleChip(text2, { type: "radio", name, value });
-      chip.root.classList.add("qmm-radio-chip");
-      return { label: chip.root, input: chip.input };
-    };
-    const makeSelect = (id) => {
-      const sel = ui.select({ id, width: "180px" });
-      return sel;
-    };
-    const playIconBtn = (title = "Play") => {
-      return ui.btn("", { icon: "\u25B6", size: "sm", tooltip: title, ariaLabel: title });
-    };
-    const smallBtn = (txt) => ui.btn(txt, { size: "sm" });
-    const errorBar2 = () => ui.errorBar();
-    const root4 = document.createElement("div");
-    Object.assign(root4.style, {
-      display: "grid",
-      gridTemplateRows: "1fr",
-      gap: "12px",
-      height: "54vh",
-      minHeight: "0",
-      overflow: "hidden"
-    });
-    view.appendChild(root4);
-    const bellSection = section4("Notification bell");
-    root4.appendChild(bellSection.root);
-    const bellRow = document.createElement("label");
-    Object.assign(bellRow.style, {
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      cursor: "pointer"
-    });
-    const bellSwitch = ui.switch(isFloatingBellEnabled());
-    bellSwitch.addEventListener("change", () => {
-      setFloatingBellEnabled(bellSwitch.checked);
-    });
-    const bellLabel = document.createElement("span");
-    bellLabel.textContent = "Floating bell (movable widget)";
-    bellLabel.style.fontSize = "13px";
-    bellRow.append(bellSwitch, bellLabel);
-    bellSection.body.appendChild(bellRow);
-    const bellHint = document.createElement("div");
-    bellHint.textContent = "Detaches the bell from the game's icon rail and shows it as a draggable floating button instead. Use this if the bell is missing or misplaced on your screen.";
-    Object.assign(bellHint.style, {
-      opacity: "0.7",
-      fontSize: "12px",
-      lineHeight: "1.4"
-    });
-    bellSection.body.appendChild(bellHint);
-    const s1 = section4("Audio & Playback");
-    root4.appendChild(s1.root);
-    const contextControls = {};
-    const contextOrder = [
-      { key: "shops", label: "Shops", allowPurchase: true, showStop: true },
-      { key: "weather", label: "Weather", allowPurchase: false },
-      { key: "pets", label: "Pets", allowPurchase: true, showStop: false }
-    ];
-    for (const cfg of contextOrder) {
-      const card4 = document.createElement("div");
-      Object.assign(card4.style, {
-        display: "grid",
-        gap: "12px",
-        padding: "16px",
-        borderRadius: "12px",
-        border: "1px solid #1f2429",
-        background: "#111821"
-      });
-      const heading = document.createElement("div");
-      heading.textContent = cfg.label;
-      heading.style.fontWeight = "700";
-      heading.style.fontSize = "14px";
-      heading.style.letterSpacing = "0.02em";
-      card4.appendChild(heading);
-      const defaultWrap = document.createElement("div");
-      defaultWrap.style.display = "flex";
-      defaultWrap.style.alignItems = "center";
-      defaultWrap.style.gap = "8px";
-      const select3 = makeSelect(`ap.defaultSound.${cfg.key}`);
-      select3.dataset.soundSelect = cfg.key;
-      const playBtn = playIconBtn(`Play ${cfg.label.toLowerCase()} sound`);
-      defaultWrap.append(select3, playBtn);
-      card4.appendChild(row3("Default sound", defaultWrap));
-      const volumeWrap = document.createElement("div");
-      volumeWrap.style.display = "flex";
-      volumeWrap.style.alignItems = "center";
-      volumeWrap.style.gap = "10px";
-      const volumeRange = document.createElement("input");
-      volumeRange.type = "range";
-      volumeRange.min = "0";
-      volumeRange.max = "100";
-      volumeRange.step = "1";
-      volumeRange.style.width = "220px";
-      const volumeValue = document.createElement("span");
-      volumeValue.style.minWidth = "32px";
-      volumeValue.style.textAlign = "right";
-      volumeWrap.append(volumeRange, volumeValue);
-      card4.appendChild(row3("Volume", volumeWrap));
-      const modeWrap = document.createElement("div");
-      modeWrap.style.display = "flex";
-      modeWrap.style.gap = "12px";
-      const modeOne = radio2(`ap.mode.${cfg.key}`, "oneshot", "One-shot");
-      modeWrap.append(modeOne.label);
-      let modeLoop = null;
-      if (cfg.allowPurchase) {
-        modeLoop = radio2(`ap.mode.${cfg.key}`, "loop", "Loop");
-        modeWrap.append(modeLoop.label);
-      }
-      card4.appendChild(row3("Playback mode", modeWrap));
-      let stopRow;
-      let loopInput;
-      let loopWrap;
-      if (cfg.allowPurchase) {
-        const stopWrap = document.createElement("div");
-        stopWrap.style.display = "flex";
-        stopWrap.style.flexDirection = "column";
-        stopWrap.style.gap = "10px";
-        const stopInfo = document.createElement("div");
-        stopInfo.textContent = cfg.showStop === false ? "Loops keep repeating; stop manually by disabling the alert." : "Loops stop automatically when the item is purchased.";
-        stopInfo.style.opacity = "0.75";
-        stopInfo.style.fontSize = "12px";
-        stopInfo.style.lineHeight = "1.4";
-        if (cfg.key !== "pets") {
-          loopWrap = document.createElement("div");
-          loopWrap.style.display = "flex";
-          loopWrap.style.flexDirection = "column";
-          loopWrap.style.gap = "4px";
-          const loopTitle = document.createElement("div");
-          loopTitle.textContent = "Loop interval";
-          loopTitle.style.opacity = "0.8";
-          loopTitle.style.fontSize = "12px";
-          loopTitle.style.fontWeight = "600";
-          const loopBox = document.createElement("div");
-          loopBox.style.display = "inline-flex";
-          loopBox.style.alignItems = "center";
-          loopBox.style.gap = "8px";
-          loopInput = document.createElement("input");
-          loopInput.type = "number";
-          loopInput.min = "150";
-          loopInput.max = "10000";
-          loopInput.step = "50";
-          loopInput.style.width = "100px";
-          loopInput.style.textAlign = "center";
-          const loopLabel = document.createElement("span");
-          loopLabel.textContent = "ms between plays";
-          loopLabel.style.opacity = "0.85";
-          loopBox.append(loopInput, loopLabel);
-          loopWrap.append(loopTitle, loopBox);
-          stopWrap.append(stopInfo, loopWrap);
-        } else {
-          stopWrap.append(stopInfo);
-        }
-        if (cfg.showStop !== false) {
-          stopRow = row3("Stop condition", stopWrap);
-        } else {
-          stopRow = row3("Loop interval", stopWrap);
-        }
-        card4.appendChild(stopRow);
-      } else {
-        const info = document.createElement("div");
-        info.textContent = "Weather alerts play once per trigger.";
-        info.style.opacity = "0.75";
-        info.style.fontSize = "12px";
-        info.style.lineHeight = "1.4";
-        card4.appendChild(row3("Details", info));
-      }
-      contextControls[cfg.key] = {
-        container: card4,
-        select: select3,
-        playBtn,
-        volumeRange,
-        volumeValue,
-        modeOneshot: modeOne.input,
-        modeLoop: modeLoop?.input,
-        stopRow,
-        loopInput,
-        loopWrap
-      };
-      s1.body.appendChild(card4);
-    }
-    const s1Err = errorBar2();
-    s1.body.appendChild(s1Err.el);
-    const s2 = section4("Sound library");
-    root4.appendChild(s2.root);
-    const importRow = document.createElement("div");
-    Object.assign(importRow.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-      width: "100%"
-    });
-    const fileInput = document.createElement("input");
-    fileInput.type = "file";
-    fileInput.accept = "audio/*";
-    fileInput.multiple = true;
-    fileInput.style.display = "none";
-    const fileCard = document.createElement("div");
-    Object.assign(fileCard.style, {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "6px",
-      padding: "18px 22px",
-      width: "100%",
-      minHeight: "110px",
-      borderRadius: "14px",
-      border: "1px dashed #5d6a7d",
-      background: "linear-gradient(180deg, #0b141c, #091018)",
-      transition: "border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease",
-      cursor: "pointer",
-      textAlign: "center"
-    });
-    fileCard.tabIndex = 0;
-    fileCard.setAttribute("role", "button");
-    fileCard.setAttribute("aria-label", "Select audio files");
-    const fileCardTitle = document.createElement("div");
-    fileCardTitle.textContent = "Select audio files";
-    Object.assign(fileCardTitle.style, {
-      fontWeight: "600",
-      fontSize: "14px",
-      letterSpacing: "0.02em"
-    });
-    const fileStatus = document.createElement("div");
-    const defaultStatusText = "Click to browse or drop files";
-    fileStatus.textContent = defaultStatusText;
-    Object.assign(fileStatus.style, {
-      fontSize: "12px",
-      opacity: "0.75"
-    });
-    fileCard.append(fileCardTitle, fileStatus);
-    const setFileCardActive = (active3) => {
-      if (active3) {
-        fileCard.style.borderColor = "#6fc3ff";
-        fileCard.style.boxShadow = "0 0 0 3px #6fc3ff22";
-        fileCard.style.background = "linear-gradient(180deg, #102030, #0b1826)";
-      } else {
-        fileCard.style.borderColor = "#5d6a7d";
-        fileCard.style.boxShadow = "none";
-        fileCard.style.background = "linear-gradient(180deg, #0b141c, #091018)";
-      }
-    };
-    fileCard.addEventListener("mouseenter", () => setFileCardActive(true));
-    fileCard.addEventListener("mouseleave", () => setFileCardActive(document.activeElement === fileCard));
-    fileCard.addEventListener("focus", () => setFileCardActive(true));
-    fileCard.addEventListener("blur", () => setFileCardActive(false));
-    fileCard.addEventListener("dragover", (ev) => {
-      ev.preventDefault();
-      setFileCardActive(true);
-      if (ev.dataTransfer) ev.dataTransfer.dropEffect = "copy";
-    });
-    fileCard.addEventListener("dragleave", () => setFileCardActive(document.activeElement === fileCard));
-    const triggerFileSelect = () => fileInput.click();
-    fileCard.addEventListener("click", triggerFileSelect);
-    fileCard.addEventListener("keydown", (ev) => {
-      if (ev.key === "Enter" || ev.key === " ") {
-        ev.preventDefault();
-        triggerFileSelect();
-      }
-    });
-    const displaySelection = (files) => {
-      if (!files || !files.length) {
-        fileStatus.textContent = defaultStatusText;
-        return;
-      }
-      fileStatus.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
-    };
-    fileCard.addEventListener("drop", async (ev) => {
-      ev.preventDefault();
-      const files = ev.dataTransfer?.files || null;
-      displaySelection(files);
-      await handleFiles(files);
-      displaySelection(null);
-      setFileCardActive(document.activeElement === fileCard);
-    });
-    importRow.append(fileInput, fileCard);
-    s2.body.appendChild(importRow);
-    const tip = document.createElement("div");
-    tip.textContent = "MP3, WAV, OGG \u2014 limited to \u2264 10 s and \u2264 200 KB.";
-    tip.style.opacity = "0.75";
-    tip.style.fontSize = "12px";
-    s2.body.appendChild(tip);
-    const listWrap2 = document.createElement("div");
-    Object.assign(listWrap2.style, {
-      display: "grid",
-      gridTemplateRows: "auto 1fr",
-      gap: "6px",
-      border: "1px solid #4445",
-      borderRadius: "10px",
-      background: "#10161c",
-      padding: "10px"
-    });
-    const listHeader = document.createElement("div");
-    Object.assign(listHeader.style, {
-      display: "grid",
-      gridTemplateColumns: "minmax(0, 1fr) auto",
-      gap: "12px",
-      fontSize: "12px",
-      letterSpacing: "0.05em",
-      textTransform: "uppercase",
-      opacity: "0.65",
-      paddingBottom: "4px",
-      borderBottom: "1px solid #ffffff14"
-    });
-    const headName = document.createElement("span");
-    headName.textContent = "Sound";
-    const headActions = document.createElement("span");
-    headActions.textContent = "Actions";
-    headActions.style.justifySelf = "end";
-    listHeader.append(headName, headActions);
-    const listBody = document.createElement("div");
-    Object.assign(listBody.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "6px",
-      maxHeight: "240px",
-      overflowY: "auto",
-      paddingRight: "4px",
-      minHeight: "0",
-      padding: "4px 0"
-    });
-    listWrap2.append(listHeader, listBody);
-    s2.body.appendChild(listWrap2);
-    const s2Err = errorBar2();
-    s2.body.appendChild(s2Err.el);
-    const sanitizeLoopInput = (input, fallback) => {
-      const trimmed = (input.value || "").trim();
-      const raw = trimmed ? Number(trimmed) : NaN;
-      const normalized = Number.isFinite(raw) ? raw : fallback;
-      const clamped = Math.max(150, Math.min(1e4, Math.floor(normalized)));
-      input.value = String(clamped);
-      return clamped;
-    };
-    const updateStopVisibility = (context) => {
-      const controls = contextControls[context];
-      const loopChecked = controls.modeLoop?.checked ?? false;
-      if (controls.stopRow) controls.stopRow.style.display = loopChecked ? "" : "none";
-      if (controls.loopWrap) controls.loopWrap.style.display = loopChecked ? "flex" : "none";
-    };
-    const applyMode = (context, mode) => {
-      if (context === "weather" && mode === "loop") {
-        audio.setPlaybackMode("oneshot", context);
-        contextControls[context].modeOneshot.checked = true;
-        contextControls[context].modeLoop && (contextControls[context].modeLoop.checked = false);
-        updateStopVisibility(context);
-        return;
-      }
-      audio.setPlaybackMode(mode, context);
-      updateStopVisibility(context);
-    };
-    const applyShopsStop = () => {
-      const controls = contextControls.shops;
-      if (!controls.loopInput) return;
-      const loopMs = sanitizeLoopInput(controls.loopInput, audio.getLoopInterval("shops"));
-      audio.setLoopInterval(loopMs, "shops");
-      if (!controls.modeLoop?.checked) {
-        if (controls.modeLoop) controls.modeLoop.checked = true;
-        controls.modeOneshot.checked = false;
-        applyMode("shops", "loop");
-      }
-      audio.setStopPurchase("shops");
-      NotifierService.setContextStopDefaults("shops", { stopMode: "purchase", stopRepeats: null, loopIntervalMs: loopMs });
-      return loopMs;
-    };
-    for (const cfg of contextOrder) {
-      const controls = contextControls[cfg.key];
-      controls.select.addEventListener("change", () => {
-        audio.setDefaultSoundByName(controls.select.value, cfg.key);
-        renderLibList();
-      });
-      controls.playBtn.addEventListener("click", () => {
-        audio.trigger("preview", { sound: controls.select.value }, cfg.key).catch(() => {
-        });
-      });
-      controls.volumeRange.addEventListener("input", () => {
-        const value = Math.max(0, Math.min(100, parseInt(controls.volumeRange.value || "0", 10) || 0));
-        controls.volumeValue.textContent = `${value}%`;
-        audio.setVolume(value / 100, cfg.key);
-      });
-      controls.modeOneshot.addEventListener("change", () => {
-        if (!controls.modeOneshot.checked) return;
-        applyMode(cfg.key, "oneshot");
-        if (cfg.key === "shops") {
-          const loopMs = controls.loopInput ? sanitizeLoopInput(controls.loopInput, audio.getLoopInterval("shops")) : audio.getLoopInterval("shops");
-          audio.setLoopInterval(loopMs, "shops");
-          audio.setStopManual("shops");
-          NotifierService.setContextStopDefaults("shops", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
-        }
-      });
-      controls.modeLoop?.addEventListener("change", () => {
-        if (!controls.modeLoop?.checked) return;
-        applyMode(cfg.key, "loop");
-        if (cfg.key === "shops") applyShopsStop();
-      });
-      if (cfg.allowPurchase) {
-        controls.loopInput?.addEventListener("change", applyShopsStop);
-        controls.loopInput?.addEventListener("blur", applyShopsStop);
-      }
-    }
-    const refreshAllSoundSelects = () => {
-      const names = audio.listSounds();
-      const applyOptions = (sel, context) => {
-        const current = sel.value;
-        sel.innerHTML = "";
-        for (const n of names) {
-          const option = document.createElement("option");
-          option.value = n;
-          option.textContent = n;
-          sel.appendChild(option);
-        }
-        const preferred = audio.getDefaultSoundName(context);
-        if (names.includes(current)) sel.value = current;
-        else if (preferred && names.includes(preferred)) sel.value = preferred;
-        else if (names.length) sel.value = names[0];
-      };
-      for (const cfg of contextOrder) {
-        applyOptions(contextControls[cfg.key].select, cfg.key);
-      }
-      const all = Array.from(document.querySelectorAll("select[data-sound-select]"));
-      for (const sel of all) {
-        const ctx2 = sel.dataset.soundSelect || "shops";
-        if (contextControls[ctx2]?.select === sel) continue;
-        applyOptions(sel, ctx2);
-      }
-    };
-    const renderLibList = () => {
-      listBody.replaceChildren();
-      const names = audio.listSounds();
-      if (!names.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No sounds in the library.";
-        empty.style.opacity = "0.75";
-        empty.style.textAlign = "center";
-        empty.style.padding = "12px 6px";
-        listBody.appendChild(empty);
-        return;
-      }
-      const defaultShops = audio.getDefaultSoundName("shops");
-      const defaultWeather = audio.getDefaultSoundName("weather");
-      for (const name of names) {
-        const row4 = document.createElement("div");
-        Object.assign(row4.style, {
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) auto",
-          gap: "12px",
-          alignItems: "center",
-          padding: "8px 10px",
-          borderRadius: "8px",
-          border: "1px solid #1f2429",
-          background: "#151b22"
-        });
-        const info = document.createElement("div");
-        Object.assign(info.style, {
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          minWidth: "0"
-        });
-        const title = document.createElement("span");
-        title.textContent = name;
-        title.style.fontWeight = "600";
-        title.style.overflow = "hidden";
-        title.style.textOverflow = "ellipsis";
-        title.style.whiteSpace = "nowrap";
-        info.appendChild(title);
-        const badges = document.createElement("div");
-        badges.style.display = "flex";
-        badges.style.gap = "6px";
-        const makeBadge = (label2) => {
-          const badge2 = document.createElement("span");
-          badge2.textContent = label2;
-          Object.assign(badge2.style, {
-            fontSize: "11px",
-            padding: "2px 6px",
-            borderRadius: "999px",
-            background: "#2b5cff33",
-            border: "1px solid #2b5cff66",
-            color: "#9cbcff",
-            fontWeight: "600",
-            textTransform: "uppercase",
-            letterSpacing: "0.04em"
-          });
-          return badge2;
-        };
-        const isShopsDefault = defaultShops === name;
-        const isWeatherDefault = defaultWeather === name;
-        const isPetsDefault = audio.getDefaultSoundName("pets") === name;
-        if (isShopsDefault) badges.appendChild(makeBadge("Shops"));
-        if (isWeatherDefault) badges.appendChild(makeBadge("Weather"));
-        if (isPetsDefault) badges.appendChild(makeBadge("Pets"));
-        if (badges.childElementCount) info.appendChild(badges);
-        if (isShopsDefault || isWeatherDefault || isPetsDefault) {
-          row4.style.borderColor = "#2b5cff99";
-          row4.style.boxShadow = "0 0 0 1px #2b5cff33";
-        }
-        const actions2 = document.createElement("div");
-        Object.assign(actions2.style, {
-          display: "flex",
-          gap: "6px",
-          justifyContent: "flex-end",
-          flexWrap: "wrap"
-        });
-        const btnPlay = smallBtn("\u25B6");
-        const btnSetShops = smallBtn("Set shops");
-        const btnSetWeather = smallBtn("Set weather");
-        const btnSetPets = smallBtn("Set pets");
-        const btnDel = smallBtn("Remove");
-        btnPlay.title = "Preview";
-        btnSetShops.title = "Set as shops default";
-        btnSetWeather.title = "Set as weather default";
-        btnSetPets.title = "Set as pets default";
-        btnDel.title = "Remove from library";
-        const isProtected2 = typeof audio.isProtectedSound === "function" && audio.isProtectedSound(name);
-        if (isProtected2 || isShopsDefault || isWeatherDefault) {
-          btnDel.disabled = true;
-          btnDel.style.opacity = "0.6";
-          if (isProtected2) btnDel.title = "Built-in sound cannot be removed";
-          else btnDel.title = "Currently used as default";
-        }
-        btnPlay.onclick = () => audio.trigger("preview", { sound: name }, "shops").catch(() => {
-        });
-        btnSetShops.onclick = () => {
-          audio.setDefaultSoundByName(name, "shops");
-          refreshAllSoundSelects();
-          renderLibList();
-        };
-        btnSetWeather.onclick = () => {
-          audio.setDefaultSoundByName(name, "weather");
-          refreshAllSoundSelects();
-          renderLibList();
-        };
-        btnSetPets.onclick = () => {
-          audio.setDefaultSoundByName(name, "pets");
-          refreshAllSoundSelects();
-          renderLibList();
-        };
-        btnDel.onclick = () => {
-          audio.unregisterSound(name);
-          refreshAllSoundSelects();
-          renderLibList();
-        };
-        actions2.append(btnPlay, btnSetShops, btnSetWeather, btnSetPets, btnDel);
-        row4.append(info, actions2);
-        listBody.appendChild(row4);
-      }
-    };
-    const syncContext = (context) => {
-      const controls = contextControls[context];
-      const settings = audio.getPlaybackSettings(context);
-      const names = audio.listSounds();
-      if (settings.defaultSoundName && names.includes(settings.defaultSoundName)) {
-        controls.select.value = settings.defaultSoundName;
-      }
-      const volPercent = Math.round(settings.volume * 100);
-      controls.volumeRange.value = String(volPercent);
-      controls.volumeValue.textContent = `${volPercent}%`;
-      if (controls.modeLoop && settings.mode === "loop") controls.modeLoop.checked = true;
-      else controls.modeOneshot.checked = true;
-      const defaults = context === "shops" || context === "weather" ? NotifierService.getContextStopDefaults(context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: settings.loopIntervalMs };
-      const fallbackLoop = Math.max(
-        150,
-        Math.min(1e4, Math.floor(defaults.loopIntervalMs || settings.loopIntervalMs || 150))
-      );
-      const loopMs = controls.loopInput ? sanitizeLoopInput(controls.loopInput, fallbackLoop) : fallbackLoop;
-      audio.setLoopInterval(loopMs, context);
-      if (context === "shops") {
-        if (controls.modeLoop?.checked) {
-          audio.setStopPurchase("shops");
-          NotifierService.setContextStopDefaults("shops", { stopMode: "purchase", stopRepeats: null, loopIntervalMs: loopMs });
-        } else {
-          audio.setStopManual("shops");
-          NotifierService.setContextStopDefaults("shops", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
-        }
-      } else if (context === "weather") {
-        applyMode("weather", "oneshot");
-        audio.setStopManual("weather");
-        NotifierService.setContextStopDefaults("weather", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
-      } else if (context === "pets") {
-        audio.setLoopInterval(loopMs, "pets");
-        audio.setStopManual("pets");
-      }
-      updateStopVisibility(context);
-    };
-    const syncFromAudio = () => {
-      refreshAllSoundSelects();
-      syncContext("shops");
-      syncContext("weather");
-      syncContext("pets");
-      renderLibList();
-    };
-    const handleFiles = async (files) => {
-      s2Err.clear();
-      if (!files || !files.length) return;
-      const added = [];
-      for (const f of Array.from(files)) {
-        try {
-          const res = await audio.importFileAsSound(f, {
-            maxBytes: 200 * 1024,
-            maxSeconds: 10,
-            bitrates: [48e3, 32e3, 2e4, 12e3, 8e3],
-            maxInputBytes: 8 * 1024 * 1024
-          });
-          added.push(res.name);
-        } catch (e) {
-          s2Err.show(`Failed for "${f.name}": ${e?.message || e}`);
-        }
-      }
-      if (added.length) {
-        refreshAllSoundSelects();
-        renderLibList();
-        for (const cfg of contextOrder) {
-          if (!audio.getDefaultSoundName(cfg.key)) {
-            audio.setDefaultSoundByName(added[0], cfg.key);
-          }
-        }
-        refreshAllSoundSelects();
-        renderLibList();
-      }
-      fileInput.value = "";
-    };
-    fileInput.onchange = async () => {
-      const files = fileInput.files;
-      displaySelection(files);
-      await handleFiles(files);
-      displaySelection(null);
-      setFileCardActive(document.activeElement === fileCard);
-    };
-    syncFromAudio();
-    const scroller = document.createElement("div");
-    Object.assign(scroller.style, {
-      overflow: "auto",
-      minHeight: "0",
-      height: "100%",
-      display: "grid",
-      gap: "12px"
-    });
-    scroller.append(s1.root, s2.root);
-    root4.appendChild(scroller);
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-  }
-  function renderShopTab(view, ui) {
-    view.innerHTML = "";
-    view.style.cssText = "";
-    if (!document.getElementById("qws-rule-style")) {
-      const style2 = document.createElement("style");
-      style2.id = "qws-rule-style";
-      style2.textContent = `
-:root {
-  /* PATCH: z-index centralis\xE9 */
-  --qws-z-popover: 99999999999999;
-}
-
-/* PATCH: bouton engrenage carr\xE9, centr\xE9, plus gros */
-.qws-rule-btn {
-  display: inline-grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border-radius: 8px;
-  line-height: 1;
-  font-size: 18px; /* taille de l'ic\xF4ne */
-  min-width: 32px; /* \xE9vite les r\xE9tr\xE9cissements */
-  box-sizing: border-box;
-}
-.qws-rule-btn[data-active="1"] {
-  background: linear-gradient(180deg, #1b2735, #101821);
-  box-shadow: 0 0 0 1px #658dff88 inset;
-  color: #c7daff;
-}
-
-/* PATCH: popover toujours devant */
-.qws-rule-popover {
-  position: fixed !important;
-  z-index: var(--qws-z-popover) !important;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  color: #f1f6ff;
-}
-.qws-rule-popover .qws-rule-field {
-  display: grid;
-  gap: 6px;
-}
-.qws-rule-popover .qws-rule-field label {
-  font-weight: 600;
-  font-size: 13px;
-}
-.qws-rule-popover .qws-rule-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-/* PATCH: r\xE9serve un espace pour le r\xE9sum\xE9 afin d'\xE9viter tout shift */
-[data-role="rule-hint"] {
-  min-height: 1.2em;  /* ~1 ligne r\xE9serv\xE9e */
-}
-`;
-      document.head.appendChild(style2);
-    }
-    const wrap = document.createElement("div");
-    Object.assign(wrap.style, {
-      display: "grid",
-      gridTemplateRows: "auto 1fr",
-      gap: "10px",
-      height: "54vh",
-      overflow: "hidden",
-      minHeight: "0",
-      position: "relative"
-    });
-    view.appendChild(wrap);
-    const header = document.createElement("div");
-    header.style.display = "flex";
-    header.style.flexWrap = "wrap";
-    header.style.alignItems = "center";
-    header.style.gap = "10px";
-    header.style.rowGap = "8px";
-    wrap.appendChild(header);
-    const lblType = ui.label("Type");
-    const selType = document.createElement("select");
-    selType.className = "qmm-input";
-    selType.style.minWidth = "140px";
-    selType.id = "shop.filter.type";
-    [
-      ["all", "All"],
-      ["seed", "Seeds"],
-      ["egg", "Eggs"],
-      ["tool", "Tools"],
-      ["decor", "Decor"]
-    ].forEach(([v, t]) => {
-      const o = document.createElement("option");
-      o.value = v;
-      o.textContent = t;
-      selType.appendChild(o);
-    });
-    selType.value = "all";
-    const lblRarity = ui.label("Rarity");
-    const selRarity = document.createElement("select");
-    selRarity.className = "qmm-input";
-    selRarity.style.minWidth = "160px";
-    selRarity.id = "shop.filter.rarity";
-    [
-      ["all", "All"],
-      ["common", "Common"],
-      ["uncommon", "Uncommon"],
-      ["rare", "Rare"],
-      ["legendary", "Legendary"],
-      ["mythical", "Mythical"],
-      ["divine", "Divine"],
-      ["celestial", "Celestial"]
-    ].forEach(([v, t]) => {
-      const o = document.createElement("option");
-      o.value = v;
-      o.textContent = t;
-      selRarity.appendChild(o);
-    });
-    selRarity.value = "all";
-    const followedBadge = document.createElement("div");
-    followedBadge.id = "shop.followedCount";
-    followedBadge.textContent = "Followed: 0";
-    followedBadge.title = "Items with Overlay enabled";
-    followedBadge.style.padding = "6px 10px";
-    followedBadge.style.borderRadius = "999px";
-    followedBadge.style.border = "1px solid #4445";
-    followedBadge.style.background = "#1f2328";
-    followedBadge.style.color = "#e7eef7";
-    followedBadge.style.fontWeight = "600";
-    followedBadge.style.marginLeft = "auto";
-    followedBadge.style.width = "115px";
-    header.append(lblType, selType, lblRarity, selRarity, followedBadge);
-    const card4 = document.createElement("div");
-    card4.style.border = "1px solid #4445";
-    card4.style.borderRadius = "10px";
-    card4.style.padding = "10px";
-    card4.style.background = "#0f1318";
-    card4.style.overflow = "hidden";
-    card4.style.display = "grid";
-    card4.style.gridTemplateRows = "auto 1fr";
-    card4.style.minHeight = "0";
-    wrap.appendChild(card4);
-    const headerGrid = document.createElement("div");
-    const COLS = "minmax(200px, 1fr) 9rem 7rem 8rem";
-    headerGrid.style.display = "grid";
-    headerGrid.style.gridTemplateColumns = COLS;
-    headerGrid.style.justifyContent = "start";
-    headerGrid.style.columnGap = "0";
-    headerGrid.style.borderBottom = "1px solid #ffffff1a";
-    headerGrid.style.padding = "0 0 4px 0";
-    headerGrid.style.position = "sticky";
-    headerGrid.style.top = "0";
-    headerGrid.append(
-      mkHeadCell("Item", "left"),
-      mkHeadCell("Rarity"),
-      mkHeadCell("Notify"),
-      mkHeadCell("Custom rules")
-    );
-    card4.appendChild(headerGrid);
-    const bodyGrid = document.createElement("div");
-    bodyGrid.style.display = "grid";
-    bodyGrid.style.gridTemplateColumns = COLS;
-    bodyGrid.style.justifyContent = "start";
-    bodyGrid.style.gridAutoRows = "auto";
-    bodyGrid.style.alignContent = "start";
-    bodyGrid.style.minHeight = "0";
-    bodyGrid.style.height = "100%";
-    bodyGrid.style.overflow = "auto";
-    bodyGrid.style.overscrollBehavior = "contain";
-    bodyGrid.style.width = "100%";
-    bodyGrid.style.scrollbarGutter = "stable";
-    card4.appendChild(bodyGrid);
-    const refreshRulesUI = () => {
-      const kids = Array.from(bodyGrid.children);
-      for (let i = 0; i + 3 < kids.length; i += 4) {
-        const itemCell = kids[i];
-        const ruleCell = kids[i + 3];
-        const id = itemCell?.dataset?.id;
-        if (!id) continue;
-        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
-      }
-    };
-    const softUpdateRenderedRows = (next) => {
-      const byId = new Map(next.rows.map((r) => [r.id, r]));
-      const kids = Array.from(bodyGrid.children);
-      for (let i = 0; i + 3 < kids.length; i += 4) {
-        const itemCell = kids[i];
-        const popupCell = kids[i + 2];
-        const ruleCell = kids[i + 3];
-        const id = itemCell.dataset.id;
-        const row3 = byId.get(id);
-        if (!row3) continue;
-        const popupSwitch = popupCell.querySelector("label");
-        if (popupSwitch) setSwitchVisual(popupSwitch, !!row3.popup);
-        itemCell.dataset.follow = row3.followed ? "1" : "0";
-        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
-        const capped = NotifierService.isIdCapped?.(id) ?? false;
-        if (popupSwitch) setSwitchCapState(popupSwitch, capped);
-      }
-    };
-    const syncHeaderToScrollbar = () => {
-      const sbw = bodyGrid.offsetWidth - bodyGrid.clientWidth;
-      headerGrid.style.boxSizing = "border-box";
-      headerGrid.style.paddingRight = `${sbw}px`;
-    };
-    syncHeaderToScrollbar();
-    const resizeObserver = new ResizeObserver(syncHeaderToScrollbar);
-    resizeObserver.observe(bodyGrid);
-    const onResize = () => syncHeaderToScrollbar();
-    window.addEventListener("resize", onResize);
-    let state5 = null;
-    let renderedIds = /* @__PURE__ */ new Set();
-    const getFilters = () => ({
-      type: selType.value || "all",
-      rarity: selRarity.value || "all"
-    });
-    const passesFilters = (rows) => NotifierService.filterRows(rows, getFilters());
-    const mkItemCell = (row3) => {
-      const wrap2 = document.createElement("div");
-      Object.assign(wrap2.style, {
-        display: "flex",
-        alignItems: "center",
-        gap: "6px",
-        padding: "4px 6px",
-        borderBottom: "1px solid #ffffff12"
-      });
-      const ICON = 40;
-      const iconWrap = document.createElement("div");
-      Object.assign(iconWrap.style, {
-        width: `${ICON}px`,
-        height: `${ICON}px`,
-        flex: `0 0 ${ICON}px`,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: "8px",
-        background: "#101820",
-        marginRight: "6px",
-        aspectRatio: "1 / 1"
-      });
-      const iconFallback = row3.type === "Seed" ? "\u{1F331}" : row3.type === "Egg" ? "\u{1F95A}" : row3.type === "Tool" ? "\u{1F9F0}" : "\u{1F3E0}";
-      const icon2 = document.createElement("span");
-      icon2.textContent = iconFallback;
-      icon2.style.fontSize = `${ICON - 10}px`;
-      icon2.setAttribute("aria-hidden", "true");
-      iconWrap.appendChild(icon2);
-      const spriteCategories2 = row3.type === "Seed" ? ["seed"] : row3.type === "Egg" ? ["pet"] : row3.type === "Tool" ? ["item"] : row3.type === "Decor" ? ["decor"] : null;
-      if (spriteCategories2) {
-        const baseId = row3.id.split(":")[1] ?? row3.name ?? row3.id;
-        const candidatesSet = /* @__PURE__ */ new Set();
-        const addCandidate = (value) => {
-          if (!value) return;
-          const trimmed = value.trim();
-          if (!trimmed) return;
-          candidatesSet.add(trimmed);
-          candidatesSet.add(trimmed.replace(/\s+/g, ""));
-          if (row3.type === "Seed" || row3.type === "Egg") {
-            const stripped = trimmed.replace(/(?:seed|egg)$/i, "").trim();
-            if (stripped) {
-              candidatesSet.add(stripped);
-              candidatesSet.add(stripped.replace(/\s+/g, ""));
-            }
-          }
-        };
-        addCandidate(baseId);
-        addCandidate(row3.id);
-        addCandidate(row3.name);
-        const candidates = Array.from(candidatesSet).filter(Boolean);
-        if (candidates.length) {
-          attachSpriteIcon(iconWrap, spriteCategories2, candidates, ICON, "alerts");
-        }
-      }
-      const col = document.createElement("div");
-      Object.assign(col.style, {
-        display: "flex",
-        flexDirection: "column",
-        gap: "2px",
-        lineHeight: "1.15",
-        minWidth: "0",
-        // autorise l'ellipsis
-        flex: "1 1 auto"
-      });
-      const title = document.createElement("div");
-      title.textContent = row3.name;
-      Object.assign(title.style, {
-        fontWeight: "700",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap"
-      });
-      const sub = document.createElement("div");
-      sub.style.opacity = "0.7";
-      sub.style.fontSize = "12px";
-      sub.style.display = "flex";
-      sub.style.alignItems = "center";
-      sub.style.gap = "6px";
-      const sectionLabel3 = document.createElement("span");
-      sectionLabel3.textContent = row3.type;
-      sub.appendChild(sectionLabel3);
-      if (row3.weathers?.length || row3.weatherOnly) {
-        const weathers = row3.weathers && row3.weathers.length ? row3.weathers : [];
-        for (const w of weathers) {
-          const badge2 = document.createElement("span");
-          badge2.textContent = w;
-          Object.assign(badge2.style, {
-            padding: "1px 6px",
-            borderRadius: "999px",
-            fontSize: "10px",
-            fontWeight: "600",
-            background: row3.weatherOnly ? "rgba(250, 204, 21, 0.18)" : "rgba(96, 165, 250, 0.18)",
-            color: row3.weatherOnly ? "#facc15" : "#60a5fa",
-            border: row3.weatherOnly ? "1px solid rgba(250, 204, 21, 0.35)" : "1px solid rgba(96, 165, 250, 0.35)"
-          });
-          badge2.title = row3.weatherOnly ? `Only available during ${w}` : `Also available during ${w}`;
-          sub.appendChild(badge2);
-        }
-      }
-      const ruleHint = document.createElement("div");
-      ruleHint.dataset.role = "rule-hint";
-      ruleHint.style.display = "none";
-      ruleHint.style.opacity = "0.75";
-      ruleHint.style.fontSize = "11px";
-      ruleHint.style.whiteSpace = "nowrap";
-      ruleHint.style.overflow = "hidden";
-      ruleHint.style.textOverflow = "ellipsis";
-      ruleHint.style.minHeight = "1.2em";
-      ruleHint.style.visibility = "hidden";
-      col.append(title, sub, ruleHint);
-      wrap2.append(iconWrap, col);
-      return wrap2;
-    };
-    const addRow = (row3) => {
-      const itemCell = mkItemCell(row3);
-      itemCell.dataset.id = row3.id;
-      itemCell.dataset.type = row3.type;
-      itemCell.dataset.follow = row3.followed ? "1" : "0";
-      itemCell.dataset.context = "shops";
-      const rarityCell = document.createElement("div");
-      rarityCell.style.display = "flex";
-      rarityCell.style.alignItems = "center";
-      rarityCell.style.justifyContent = "center";
-      rarityCell.style.borderBottom = "1px solid #ffffff12";
-      rarityCell.appendChild(rarityBadge(String(row3.rarity ?? "\u2014")));
-      const popupSwitch = createSwitch((on) => {
-        try {
-          NotifierService.setPopup(row3.id, !!on);
-        } catch {
-        }
-        const cur = NotifierService.getPref(row3.id);
-        itemCell.dataset.follow = cur.followed ? "1" : "0";
-      });
-      setSwitchVisual(popupSwitch, !!row3.popup);
-      popupSwitch.style.padding = "0";
-      const popupCell = wrapCell(popupSwitch);
-      const capped = NotifierService.isIdCapped?.(row3.id) ?? false;
-      setSwitchCapState(popupSwitch, capped);
-      const gearBtn = ui.btn("", {
-        icon: "\u2699",
-        size: "sm",
-        tooltip: "Custom rule",
-        ariaLabel: `Custom rule for ${row3.name}`
-      });
-      gearBtn.dataset.role = "rule";
-      gearBtn.classList.add("qws-rule-btn");
-      gearBtn.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        openRuleEditor(ui, {
-          id: row3.id,
-          name: row3.name,
-          type: row3.type,
-          context: "shops"
-        }, gearBtn);
-      });
-      const ruleCell = wrapCell(gearBtn);
-      ruleCell.dataset.role = "rule-cell";
-      bodyGrid.append(itemCell, rarityCell, popupCell, ruleCell);
-      applyRuleState(itemCell, ruleCell, NotifierService.getRule(row3.id));
-    };
-    function clearBody() {
-      closeRuleEditor();
-      bodyGrid.innerHTML = "";
-      renderedIds = /* @__PURE__ */ new Set();
-    }
-    function renderEmpty() {
-      const empty = document.createElement("div");
-      empty.textContent = "No items.";
-      empty.style.opacity = "0.75";
-      empty.style.gridColumn = "1 / -1";
-      empty.style.padding = "8px";
-      bodyGrid.appendChild(empty);
-    }
-    function rebuildGrid() {
-      clearBody();
-      if (!state5) {
-        renderEmpty();
-        return;
-      }
-      const rows = passesFilters(state5.rows);
-      if (!rows.length) {
-        renderEmpty();
-      } else {
-        rows.forEach((r) => {
-          addRow(r);
-          renderedIds.add(r.id);
-        });
-      }
-      refreshRulesUI();
-      followedBadge.textContent = `Followed: ${state5.counts.followed}`;
-      syncHeaderToScrollbar();
-    }
-    function softUpdateBadge(next) {
-      followedBadge.textContent = `Followed: ${next.counts.followed}`;
-    }
-    function filteredIdSet(s) {
-      const set2 = /* @__PURE__ */ new Set();
-      for (const r of passesFilters(s.rows)) set2.add(r.id);
-      return set2;
-    }
-    let unsub = null;
-    let unsubRules = null;
-    (async () => {
-      try {
-        await NotifierService.start();
-      } catch {
-      }
-      unsub = await NotifierService.onChangeNow((s) => {
-        const prev = state5;
-        state5 = s;
-        if (!prev) {
-          rebuildGrid();
-          softUpdateRenderedRows(state5);
-          return;
-        }
-        const prevIds = renderedIds;
-        const nextIds = filteredIdSet(s);
-        let needRebuild = false;
-        if (prevIds.size !== nextIds.size) needRebuild = true;
-        else {
-          for (const id of nextIds) if (!prevIds.has(id)) {
-            needRebuild = true;
-            break;
-          }
-        }
-        if (needRebuild) {
-          rebuildGrid();
-        } else {
-          softUpdateBadge(s);
-          softUpdateRenderedRows(s);
-        }
-      });
-      try {
-        unsubRules = await NotifierService.onRulesChangeNow(() => refreshRulesUI());
-      } catch {
-      }
-    })();
-    const onFilterChange = () => {
-      if (state5) rebuildGrid();
-    };
-    selType.onchange = onFilterChange;
-    selRarity.onchange = onFilterChange;
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          unsub?.();
-        } catch {
-        }
-        try {
-          unsubRules?.();
-        } catch {
-        }
-        try {
-          resizeObserver.disconnect();
-        } catch {
-        }
-        try {
-          window.removeEventListener("resize", onResize);
-        } catch {
-        }
-        try {
-          closeRuleEditor();
-        } catch {
-        }
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-  }
-  function renderPetAlertsTab(view, ui) {
-    view.innerHTML = "";
-    void PetAlertService.start().catch(() => {
-    });
-    const card4 = document.createElement("div");
-    Object.assign(card4.style, {
-      display: "grid",
-      gridTemplateColumns: "minmax(220px, 260px) minmax(0, 1fr)",
-      gap: "10px",
-      alignItems: "stretch",
-      height: "54vh",
-      overflow: "hidden",
-      border: "1px solid #4445",
-      borderRadius: "10px",
-      padding: "10px",
-      background: "#0f1318"
-    });
-    view.appendChild(card4);
-    const petList = document.createElement("div");
-    Object.assign(petList.style, {
-      display: "grid",
-      gridTemplateColumns: "1fr",
-      rowGap: "6px",
-      overflow: "auto",
-      padding: "6px",
-      border: "1px solid #4445",
-      borderRadius: "10px"
-    });
-    card4.appendChild(petList);
-    const right = document.createElement("div");
-    Object.assign(right.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-      overflow: "auto",
-      minHeight: "0"
-    });
-    card4.appendChild(right);
-    let pets = [];
-    let unsubPets2 = null;
-    let generalEnabled = PetAlertService.isGeneralEnabled();
-    const formRow2 = (labelTxt, control) => {
-      const { root: root4 } = ui.formRow(labelTxt, control, { labelWidth: "180px" });
-      return root4;
-    };
-    const generalCard = ui.card("General notifications", { tone: "muted", align: "stretch" });
-    generalCard.body.style.display = "grid";
-    generalCard.body.style.gap = "10px";
-    const generalRow = ui.flexRow({ justify: "start", gap: 10 });
-    const generalSw = ui.switch(PetAlertService.isGeneralEnabled());
-    const generalLbl = document.createElement("div");
-    generalLbl.textContent = "Use a shared threshold for all pets";
-    generalLbl.style.opacity = "0.9";
-    generalRow.append(generalSw, generalLbl);
-    generalCard.body.append(formRow2("Enable general", generalRow));
-    const generalInput = ui.inputNumber(1, 100, 1, PetAlertService.getGeneralThresholdPct());
-    generalCard.body.append(formRow2("General threshold (%)", generalInput.wrap ?? generalInput));
-    right.appendChild(generalCard.root);
-    const syncGeneralUI = () => {
-      generalEnabled = PetAlertService.isGeneralEnabled();
-      generalSw.checked = generalEnabled;
-      generalInput.value = String(PetAlertService.getGeneralThresholdPct());
-    };
-    generalSw.onchange = () => {
-      PetAlertService.setGeneralEnabled(generalSw.checked);
-      syncGeneralUI();
-    };
-    generalInput.addEventListener("change", () => {
-      const next = Math.max(1, Math.min(100, Number(generalInput.value) || PetAlertService.getGeneralThresholdPct()));
-      generalInput.value = String(PetAlertService.setGeneralThresholdPct(next));
-    });
-    syncGeneralUI();
-    const renderPetList = () => {
-      petList.innerHTML = "";
-      if (!pets.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No active pets.";
-        empty.style.opacity = "0.75";
-        petList.appendChild(empty);
-        return;
-      }
-      for (const pet of pets) {
-        const slot = pet?.slot ?? {};
-        const name = String(slot?.name || slot?.petSpecies || "Pet");
-        const hunger = PetsService.getHungerPctFor(pet);
-        const hungerText = Number.isFinite(hunger) ? `${hunger}%` : "\u2014";
-        const row3 = document.createElement("div");
-        row3.style.display = "flex";
-        row3.style.alignItems = "center";
-        row3.style.justifyContent = "space-between";
-        row3.style.gap = "10px";
-        row3.style.width = "100%";
-        row3.style.textAlign = "left";
-        row3.style.padding = "6px 8px";
-        row3.style.borderRadius = "8px";
-        row3.style.border = "1px solid #4445";
-        row3.style.background = "#121820";
-        const left = document.createElement("div");
-        left.style.display = "flex";
-        left.style.alignItems = "center";
-        left.style.gap = "8px";
-        left.style.minWidth = "0";
-        const avatar3 = document.createElement("div");
-        avatar3.style.width = "40px";
-        avatar3.style.height = "40px";
-        avatar3.style.borderRadius = "8px";
-        avatar3.style.display = "inline-flex";
-        avatar3.style.alignItems = "center";
-        avatar3.style.justifyContent = "center";
-        avatar3.style.background = "#111821";
-        avatar3.style.border = "1px solid #1f2429";
-        avatar3.style.overflow = "hidden";
-        const useEmojiFallback = () => {
-          avatar3.replaceChildren();
-          const span = document.createElement("span");
-          span.textContent = "\u{1F43E}";
-          span.style.fontSize = "28px";
-          span.setAttribute("aria-hidden", "true");
-          avatar3.appendChild(span);
-        };
-        const setIcon = (species2, mutations2) => {
-          const speciesLabel = String(species2 ?? "").trim();
-          avatar3.replaceChildren();
-          if (!speciesLabel) {
-            useEmojiFallback();
-            return;
-          }
-          const span = document.createElement("span");
-          span.textContent = speciesLabel.charAt(0).toUpperCase() || "\u0110Y?\xF3";
-          span.style.fontSize = "28px";
-          span.setAttribute("aria-hidden", "true");
-          avatar3.appendChild(span);
-          attachSpriteIcon(avatar3, ["pet"], [speciesLabel], 36, "alerts-pet", {
-            mutations: Array.isArray(mutations2) ? mutations2 : void 0
-          });
-        };
-        const species = String(slot?.petSpecies || "");
-        const mutations = slot?.mutations ?? pet?.mutations;
-        setIcon(species, Array.isArray(mutations) ? mutations : void 0);
-        const titleWrap = document.createElement("div");
-        titleWrap.style.display = "flex";
-        titleWrap.style.flexDirection = "column";
-        titleWrap.style.gap = "2px";
-        titleWrap.style.minWidth = "0";
-        const title = document.createElement("div");
-        title.textContent = name;
-        title.style.fontWeight = "600";
-        title.style.overflow = "hidden";
-        title.style.textOverflow = "ellipsis";
-        title.style.whiteSpace = "nowrap";
-        titleWrap.append(title);
-        left.append(avatar3, titleWrap);
-        const hungerValue = document.createElement("div");
-        hungerValue.textContent = hungerText;
-        hungerValue.style.fontWeight = "700";
-        hungerValue.style.color = "#FFD84D";
-        row3.append(left, hungerValue);
-        petList.appendChild(row3);
-      }
-    };
-    (async () => {
-      try {
-        unsubPets2 = await PetsService.onPetsChangeNow((arr) => {
-          pets = Array.isArray(arr) ? arr.slice(0, 3) : [];
-          renderPetList();
-        });
-      } catch {
-        pets = [];
-        renderPetList();
-      }
-    })();
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          unsubPets2?.();
-        } catch {
-        }
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-  }
-  function renderWeatherTab(view, ui) {
-    view.innerHTML = "";
-    view.style.cssText = "";
-    const wrap = document.createElement("div");
-    Object.assign(wrap.style, {
-      display: "grid",
-      gridTemplateRows: "1fr",
-      height: "54vh",
-      overflow: "hidden",
-      minHeight: "0"
-    });
-    view.appendChild(wrap);
-    const card4 = document.createElement("div");
-    card4.style.border = "1px solid #4445";
-    card4.style.borderRadius = "10px";
-    card4.style.padding = "10px";
-    card4.style.background = "#0f1318";
-    card4.style.overflow = "hidden";
-    card4.style.display = "grid";
-    card4.style.gridTemplateRows = "auto 1fr";
-    card4.style.minHeight = "0";
-    wrap.appendChild(card4);
-    const headerGrid = document.createElement("div");
-    const COLS = "minmax(240px, 1fr) 9rem 7rem 8rem";
-    headerGrid.style.display = "grid";
-    headerGrid.style.gridTemplateColumns = COLS;
-    headerGrid.style.justifyContent = "start";
-    headerGrid.style.columnGap = "0";
-    headerGrid.style.borderBottom = "1px solid #ffffff1a";
-    headerGrid.style.padding = "0 0 4px 0";
-    headerGrid.style.position = "sticky";
-    headerGrid.style.top = "0";
-    headerGrid.append(
-      mkHeadCell("Weather", "left"),
-      mkHeadCell("Last seen"),
-      mkHeadCell("Notify"),
-      mkHeadCell("Custom rules")
-    );
-    card4.appendChild(headerGrid);
-    const bodyGrid = document.createElement("div");
-    bodyGrid.style.display = "grid";
-    bodyGrid.style.gridTemplateColumns = COLS;
-    bodyGrid.style.justifyContent = "start";
-    bodyGrid.style.gridAutoRows = "auto";
-    bodyGrid.style.alignContent = "start";
-    bodyGrid.style.minHeight = "0";
-    bodyGrid.style.height = "100%";
-    bodyGrid.style.overflow = "auto";
-    bodyGrid.style.overscrollBehavior = "contain";
-    bodyGrid.style.width = "100%";
-    bodyGrid.style.scrollbarGutter = "stable";
-    card4.appendChild(bodyGrid);
-    const weatherLastSeenRefs = /* @__PURE__ */ new Map();
-    const refreshRulesUI = () => {
-      const kids = Array.from(bodyGrid.children);
-      for (let i = 0; i + 3 < kids.length; i += 4) {
-        const itemCell = kids[i];
-        const ruleCell = kids[i + 3];
-        const id = itemCell?.dataset?.id;
-        if (!id) continue;
-        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
-      }
-    };
-    const syncHeaderToScrollbar = () => {
-      const sbw = bodyGrid.offsetWidth - bodyGrid.clientWidth;
-      headerGrid.style.boxSizing = "border-box";
-      headerGrid.style.paddingRight = `${sbw}px`;
-    };
-    syncHeaderToScrollbar();
-    const resizeObserver = new ResizeObserver(syncHeaderToScrollbar);
-    resizeObserver.observe(bodyGrid);
-    const onResize = () => syncHeaderToScrollbar();
-    window.addEventListener("resize", onResize);
-    const makeItemCell = (row3) => {
-      const wrapCellDiv = document.createElement("div");
-      Object.assign(wrapCellDiv.style, {
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        padding: "6px",
-        borderBottom: "1px solid #ffffff12"
-      });
-      const ICON = 40;
-      const iconWrap = document.createElement("div");
-      Object.assign(iconWrap.style, {
-        width: `${ICON}px`,
-        height: `${ICON}px`,
-        flex: `0 0 ${ICON}px`,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: "8px",
-        background: "#101820"
-      });
-      const weatherIcon = document.createElement("span");
-      weatherIcon.textContent = row3.name.trim().charAt(0) || "\u{1F326}";
-      weatherIcon.style.fontSize = `${ICON - 8}px`;
-      weatherIcon.setAttribute("aria-hidden", "true");
-      iconWrap.appendChild(weatherIcon);
-      const weatherCategories = ["ui", "weather", "mutation"];
-      const candidateSet = /* @__PURE__ */ new Set();
-      const addCandidate = (value) => {
-        if (!value) return;
-        const trimmed = value.trim();
-        if (trimmed) {
-          candidateSet.add(trimmed);
-          candidateSet.add(trimmed.replace(/\s+/g, ""));
-        }
-      };
-      addCandidate(row3.name);
-      addCandidate(row3.atomValue);
-      addCandidate(row3.id);
-      const bases = Array.from(candidateSet).map((value) => value.replace(/icon$/i, ""));
-      const candidates = Array.from(
-        new Set(
-          bases.map((base) => `${base}Icon`).concat(Array.from(candidateSet))
-        ).values()
-      ).filter(Boolean);
-      if (candidates.length) {
-        attachSpriteIcon(iconWrap, weatherCategories, candidates, ICON, "alerts-weather");
-      }
-      const col = document.createElement("div");
-      Object.assign(col.style, {
-        display: "flex",
-        flexDirection: "column",
-        gap: "4px",
-        lineHeight: "1.2",
-        minWidth: "0",
-        flex: "1 1 auto"
-      });
-      const headerRow = document.createElement("div");
-      Object.assign(headerRow.style, {
-        display: "flex",
-        alignItems: "center",
-        gap: "6px",
-        minWidth: "0"
-      });
-      const title = document.createElement("div");
-      title.textContent = row3.name;
-      Object.assign(title.style, {
-        fontWeight: "700",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-        flex: "1 1 auto"
-      });
-      headerRow.appendChild(title);
-      if (row3.isCurrent) {
-        const badge2 = document.createElement("span");
-        badge2.textContent = "Current";
-        Object.assign(badge2.style, {
-          fontSize: "11px",
-          padding: "2px 6px",
-          borderRadius: "999px",
-          background: "#2b5cff33",
-          border: "1px solid #2b5cff66",
-          color: "#9cbcff",
-          fontWeight: "600",
-          whiteSpace: "nowrap"
-        });
-        headerRow.appendChild(badge2);
-      }
-      const mutationsLabel = document.createElement("div");
-      mutationsLabel.textContent = "Mutations";
-      Object.assign(mutationsLabel.style, {
-        fontSize: "11px",
-        opacity: "0.7",
-        fontWeight: "600"
-      });
-      const mutationsList = document.createElement("div");
-      Object.assign(mutationsList.style, {
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "6px",
-        alignItems: "flex-start",
-        fontSize: "12px",
-        lineHeight: "1.3",
-        opacity: row3.mutations.length ? "0.85" : "0.6"
-      });
-      if (row3.mutations.length) {
-        for (const mutation of row3.mutations) {
-          const chip = document.createElement("span");
-          chip.textContent = formatWeatherMutation(mutation);
-          Object.assign(chip.style, {
-            display: "inline-flex",
-            alignItems: "center",
-            padding: "2px 8px",
-            borderRadius: "999px",
-            background: "#ffffff12",
-            whiteSpace: "nowrap"
-          });
-          mutationsList.appendChild(chip);
-        }
-      } else {
-        const chip = document.createElement("span");
-        chip.textContent = "No mutation effects.";
-        chip.style.whiteSpace = "nowrap";
-        mutationsList.appendChild(chip);
-      }
-      const ruleHint = document.createElement("div");
-      ruleHint.dataset.role = "rule-hint";
-      ruleHint.style.opacity = "0.75";
-      ruleHint.style.fontSize = "11px";
-      ruleHint.style.whiteSpace = "nowrap";
-      ruleHint.style.overflow = "hidden";
-      ruleHint.style.textOverflow = "ellipsis";
-      ruleHint.style.minHeight = "1.2em";
-      ruleHint.style.visibility = "hidden";
-      col.append(headerRow, mutationsLabel, mutationsList, ruleHint);
-      wrapCellDiv.append(iconWrap, col);
-      if (row3.isCurrent) {
-        wrapCellDiv.style.background = "linear-gradient(180deg, #1b2735, #141d25)";
-        wrapCellDiv.style.borderRadius = "8px";
-      }
-      return wrapCellDiv;
-    };
-    const addRow = (row3) => {
-      const itemCell = makeItemCell(row3);
-      itemCell.dataset.id = row3.id;
-      itemCell.dataset.context = "weather";
-      itemCell.dataset.current = row3.isCurrent ? "1" : "0";
-      const lastSeenInfo = document.createElement("div");
-      const { label: label2, title } = formatLastSeen(row3.lastSeen, row3.isCurrent);
-      lastSeenInfo.textContent = label2;
-      lastSeenInfo.title = title;
-      lastSeenInfo.style.fontWeight = "600";
-      lastSeenInfo.style.opacity = label2 === "Never" ? "0.7" : "1";
-      lastSeenInfo.style.whiteSpace = "nowrap";
-      const lastSeenCell = wrapCell(lastSeenInfo);
-      weatherLastSeenRefs.set(row3.id, lastSeenInfo);
-      const notifySwitch = createSwitch((on) => {
-        try {
-          NotifierService.setWeatherNotify(row3.id, !!on);
-        } catch {
-        }
-      });
-      setSwitchVisual(notifySwitch, !!row3.notify);
-      notifySwitch.style.padding = "0";
-      const notifyCell = wrapCell(notifySwitch);
-      const gearBtn = ui.btn("", {
-        icon: "\u2699",
-        size: "sm",
-        tooltip: "Custom rule",
-        ariaLabel: `Custom rule for ${row3.name}`
-      });
-      gearBtn.dataset.role = "rule";
-      gearBtn.classList.add("qws-rule-btn");
-      gearBtn.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        openRuleEditor(ui, {
-          id: row3.id,
-          name: row3.name,
-          type: row3.type,
-          context: "weather"
-        }, gearBtn);
-      });
-      const ruleCell = wrapCell(gearBtn);
-      ruleCell.dataset.role = "rule-cell";
-      bodyGrid.append(itemCell, lastSeenCell, notifyCell, ruleCell);
-      applyRuleState(itemCell, ruleCell, NotifierService.getRule(row3.id));
-    };
-    const clearGrid = () => {
-      closeRuleEditor();
-      bodyGrid.innerHTML = "";
-      weatherLastSeenRefs.clear();
-    };
-    const renderEmpty = () => {
-      const empty = document.createElement("div");
-      empty.textContent = "No weather entries.";
-      empty.style.opacity = "0.75";
-      empty.style.gridColumn = "1 / -1";
-      empty.style.padding = "8px";
-      bodyGrid.appendChild(empty);
-    };
-    let state5 = null;
-    let stateSig = "";
-    const updateDynamicWeatherStats = () => {
-      if (!state5) return;
-      for (const row3 of state5.rows) {
-        const target = weatherLastSeenRefs.get(row3.id);
-        if (target) {
-          const { label: label2, title } = formatLastSeen(row3.lastSeen, row3.isCurrent);
-          target.textContent = label2;
-          target.title = title;
-          target.style.opacity = label2 === "Never" ? "0.7" : "1";
-        }
-      }
-    };
-    const rebuildGrid = () => {
-      clearGrid();
-      if (!state5 || !state5.rows.length) {
-        renderEmpty();
-      } else {
-        state5.rows.forEach(addRow);
-        refreshRulesUI();
-      }
-      syncHeaderToScrollbar();
-      updateDynamicWeatherStats();
-    };
-    let unsubWeather = null;
-    let unsubRules = null;
-    (async () => {
-      try {
-        await NotifierService.start();
-      } catch {
-      }
-      try {
-        unsubWeather = await NotifierService.onWeatherChangeNow((next) => {
-          state5 = next;
-          stateSig = weatherStateSignature(next.rows);
-          rebuildGrid();
-        });
-      } catch {
-      }
-      try {
-        unsubRules = await NotifierService.onRulesChangeNow(() => refreshRulesUI());
-      } catch {
-      }
-    })();
-    const refreshWeatherState = async () => {
-      try {
-        const next = await NotifierService.getWeatherState();
-        const nextSig = weatherStateSignature(next.rows);
-        const changed = nextSig !== stateSig;
-        state5 = next;
-        stateSig = nextSig;
-        if (changed) rebuildGrid();
-        else updateDynamicWeatherStats();
-      } catch {
-      }
-    };
-    const dynamicTimer = window.setInterval(updateDynamicWeatherStats, 3e4);
-    const weatherRefreshTimer = window.setInterval(() => {
-      void refreshWeatherState();
-    }, 6e4);
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          unsubWeather?.();
-        } catch {
-        }
-        try {
-          unsubRules?.();
-        } catch {
-        }
-        try {
-          resizeObserver.disconnect();
-        } catch {
-        }
-        try {
-          window.removeEventListener("resize", onResize);
-        } catch {
-        }
-        try {
-          window.clearInterval(dynamicTimer);
-        } catch {
-        }
-        try {
-          window.clearInterval(weatherRefreshTimer);
-        } catch {
-        }
-        try {
-          closeRuleEditor();
-        } catch {
-        }
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-  }
-  function renderNotifierMenu(root4) {
-    const ui = new Menu({ id: "alerts", compact: true, windowSelector: ".qws-win" });
-    ui.addTab("shops", "\u{1F6D2} Shops", (view) => renderShopTab(view, ui));
-    ui.addTab("weather", "\u{1F326} Weather", (view) => renderWeatherTab(view, ui));
-    ui.addTab("pets", "\u{1F43E} Pets", (view) => renderPetAlertsTab(view, ui));
-    ui.addTab("settings", "\u2699\uFE0F Settings", (view) => renderSettingsTab(view, ui));
-    ui.mount(root4);
-  }
-  var rulePopover, detachRuleDocHandler, detachRuleKeyBlocker, detachRuleWheelBlocker, detachRuleDragHandler, closeRuleEditor, setSwitchCapState, createSwitch, setSwitchVisual, wrapCell, mkHeadCell, applyRuleState, openRuleEditor;
-  var init_menu3 = __esm({
-    "src/features/notifier/menu.ts"() {
+  var RARITY_COLORS, DARK_TEXT, CELESTIAL_KEYFRAMES_ID;
+  var init_rarityBadge = __esm({
+    "src/ui/kit/rarityBadge.ts"() {
       "use strict";
-      init_menu();
-      init_notifier();
-      init_audio();
-      init_petAlerts();
-      init_pets();
-      init_iconCache();
-      init_bellFloating();
-      rulePopover = null;
-      detachRuleDocHandler = null;
-      detachRuleKeyBlocker = null;
-      detachRuleWheelBlocker = null;
-      detachRuleDragHandler = null;
-      closeRuleEditor = () => {
-        if (rulePopover) {
-          try {
-            rulePopover.remove();
-          } catch {
-          }
-          rulePopover = null;
-        }
-        if (detachRuleDocHandler) {
-          detachRuleDocHandler();
-          detachRuleDocHandler = null;
-        }
-        if (detachRuleKeyBlocker) {
-          detachRuleKeyBlocker();
-          detachRuleKeyBlocker = null;
-        }
-        if (detachRuleWheelBlocker) {
-          detachRuleWheelBlocker();
-          detachRuleWheelBlocker = null;
-        }
-        if (detachRuleDragHandler) {
-          detachRuleDragHandler();
-          detachRuleDragHandler = null;
-        }
+      init_dom2();
+      RARITY_COLORS = {
+        Common: "#E7E7E7",
+        Uncommon: "#67BD4D",
+        Rare: "#0071C6",
+        Legendary: "#FFC734",
+        Mythical: "#9944A7",
+        Divine: "#FF7835"
       };
-      setSwitchCapState = (wrap, capped) => {
-        if (capped) {
-          wrap.setAttribute("aria-disabled", "true");
-          wrap.style.opacity = "0.5";
-          wrap.style.pointerEvents = "none";
-          wrap.style.cursor = "not-allowed";
-          wrap.title = "Max owned \u2014 notifications disabled";
-        } else {
-          wrap.removeAttribute("aria-disabled");
-          wrap.style.opacity = "";
-          wrap.style.pointerEvents = "";
-          wrap.style.cursor = "";
-          wrap.removeAttribute("title");
-        }
-      };
-      createSwitch = (onToggle) => {
-        const wrap = document.createElement("label");
-        wrap.style.display = "inline-flex";
-        wrap.style.alignItems = "center";
-        wrap.style.justifyContent = "center";
-        wrap.style.width = "100%";
-        wrap.style.padding = "4px 6px";
-        wrap.style.userSelect = "none";
-        wrap.setAttribute("role", "switch");
-        wrap.setAttribute("aria-checked", "false");
-        const box2 = document.createElement("span");
-        box2.style.position = "relative";
-        box2.style.width = "42px";
-        box2.style.height = "24px";
-        box2.style.borderRadius = "999px";
-        box2.style.background = "#1f2328";
-        box2.style.border = "1px solid #4446";
-        box2.style.display = "inline-block";
-        box2.style.boxShadow = "inset 0 0 0 1px #0005";
-        const knob = document.createElement("span");
-        knob.style.position = "absolute";
-        knob.style.top = "50%";
-        knob.style.left = "3px";
-        knob.style.transform = "translateY(-50%)";
-        knob.style.width = "18px";
-        knob.style.height = "18px";
-        knob.style.borderRadius = "50%";
-        knob.style.background = "#e7eef7";
-        knob.style.boxShadow = "0 1px 2px rgba(0,0,0,.7)";
-        knob.style.transition = "left 160ms ease, transform 160ms ease";
-        const input = document.createElement("input");
-        input.type = "checkbox";
-        input.style.position = "absolute";
-        input.style.opacity = "0";
-        input.style.pointerEvents = "none";
-        input.tabIndex = -1;
-        const apply2 = (on) => {
-          input.checked = on;
-          wrap.setAttribute("aria-checked", on ? "true" : "false");
-          knob.style.left = on ? "21px" : "3px";
-          knob.style.transform = on ? "translateY(-50%) scale(1.02)" : "translateY(-50%) scale(1)";
-          if (on) {
-            box2.style.background = "linear-gradient(180deg, #2b5cff, #1e40ff)";
-            box2.style.borderColor = "#7aa2ff";
-            box2.style.boxShadow = "0 0 0 2px #7aa2ff55, inset 0 0 0 1px #0005";
-          } else {
-            box2.style.background = "#1f2328";
-            box2.style.borderColor = "#4446";
-            box2.style.boxShadow = "inset 0 0 0 1px #0005";
-          }
-        };
-        input.disabled = true;
-        wrap.addEventListener("mousedown", (e) => e.preventDefault());
-        wrap.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          apply2(!input.checked);
-          onToggle?.(input.checked);
-        });
-        box2.appendChild(knob);
-        wrap.appendChild(input);
-        wrap.appendChild(box2);
-        apply2(false);
-        return wrap;
-      };
-      setSwitchVisual = (wrap, checked) => {
-        const input = wrap.querySelector("input");
-        const box2 = wrap.querySelector("span");
-        const knob = box2?.querySelector("span");
-        if (!input || !box2 || !knob) return;
-        input.checked = !!checked;
-        knob.style.left = checked ? "21px" : "3px";
-        knob.style.transform = checked ? "translateY(-50%) scale(1.02)" : "translateY(-50%) scale(1)";
-        if (checked) {
-          box2.style.background = "linear-gradient(180deg, #2b5cff, #1e40ff)";
-          box2.style.borderColor = "#7aa2ff";
-          box2.style.boxShadow = "0 0 0 2px #7aa2ff55, inset 0 0 0 1px #0005";
-          wrap.setAttribute("aria-checked", "true");
-        } else {
-          box2.style.background = "#1f2328";
-          box2.style.borderColor = "#4446";
-          box2.style.boxShadow = "inset 0 0 0 1px #0005";
-          wrap.setAttribute("aria-checked", "false");
-        }
-      };
-      wrapCell = (child) => {
-        const d = document.createElement("div");
-        d.style.display = "flex";
-        d.style.alignItems = "center";
-        d.style.justifyContent = "center";
-        d.style.borderBottom = "1px solid #ffffff12";
-        d.style.padding = "4px 6px";
-        d.style.boxSizing = "border-box";
-        d.appendChild(child);
-        return d;
-      };
-      mkHeadCell = (txt, align = "center") => {
-        const el = document.createElement("div");
-        el.textContent = txt;
-        el.style.fontWeight = "600";
-        el.style.opacity = "0.9";
-        el.style.padding = "4px 6px";
-        el.style.display = "flex";
-        el.style.alignItems = "center";
-        el.style.justifyContent = align === "left" ? "flex-start" : "center";
-        return el;
-      };
-      applyRuleState = (itemCell, ruleCell, rule) => {
-        const gearBtn = ruleCell?.querySelector("button[data-role='rule']") ?? null;
-        const hint2 = itemCell.querySelector('[data-role="rule-hint"]');
-        const hasRule = !!(rule && (rule.sound || rule.volume != null || rule.playbackMode || rule.stopMode || rule.loopIntervalMs != null));
-        const summary = hasRule ? formatRuleSummary(rule) : "";
-        if (gearBtn) {
-          gearBtn.dataset.active = hasRule ? "1" : "0";
-          gearBtn.title = hasRule && summary ? `Custom rule \u2014 ${summary}` : "Custom rule";
-        }
-        if (hint2) {
-          if (hasRule && summary) {
-            hint2.textContent = summary;
-            hint2.style.visibility = "visible";
-          } else {
-            hint2.textContent = "";
-            hint2.style.visibility = "hidden";
-          }
-        }
-      };
-      openRuleEditor = (ui, row3, anchor) => {
-        closeRuleEditor();
-        const pop = document.createElement("div");
-        pop.className = "qws-rule-popover";
-        Object.assign(pop.style, {
-          position: "fixed",
-          zIndex: "var(--qws-z-popover)",
-          minWidth: "260px",
-          maxWidth: "320px",
-          padding: "14px 16px",
-          borderRadius: "14px",
-          border: "1px solid #32404e",
-          background: "linear-gradient(180deg, #111923, #0b131c)",
-          boxShadow: "0 16px 40px rgba(0,0,0,0.45)"
-        });
-        const margin = 12;
-        const clampPosition = (value, min, max) => {
-          if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
-          if (max >= min) {
-            return Math.min(Math.max(value, min), max);
-          }
-          return Math.min(Math.max(value, max), min);
-        };
-        const applyPosition2 = (left2, top2) => {
-          const width2 = pop.offsetWidth;
-          const height2 = pop.offsetHeight;
-          const boundedLeft = clampPosition(left2, margin, window.innerWidth - width2 - margin);
-          const boundedTop = clampPosition(top2, margin, window.innerHeight - height2 - margin);
-          pop.style.left = `${Math.round(boundedLeft)}px`;
-          pop.style.top = `${Math.round(boundedTop)}px`;
-          return { left: boundedLeft, top: boundedTop };
-        };
-        const header = document.createElement("div");
-        header.style.display = "flex";
-        header.style.justifyContent = "space-between";
-        header.style.alignItems = "flex-start";
-        header.style.gap = "12px";
-        header.style.cursor = "move";
-        header.style.userSelect = "none";
-        header.style.touchAction = "none";
-        const titleWrap = document.createElement("div");
-        const title = document.createElement("div");
-        title.textContent = row3.name;
-        title.style.fontWeight = "700";
-        title.style.fontSize = "14px";
-        title.style.lineHeight = "1.2";
-        const subtitle = document.createElement("div");
-        subtitle.textContent = row3.type;
-        subtitle.style.opacity = "0.7";
-        subtitle.style.fontSize = "12px";
-        titleWrap.append(title, subtitle);
-        const closeBtn = document.createElement("button");
-        closeBtn.type = "button";
-        closeBtn.textContent = "\u2715";
-        Object.assign(closeBtn.style, {
-          background: "transparent",
-          border: "none",
-          color: "#c8d7e8",
-          fontSize: "16px",
-          lineHeight: "1",
-          cursor: "pointer"
-        });
-        closeBtn.addEventListener("click", (ev) => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          closeRuleEditor();
-        });
-        header.append(titleWrap, closeBtn);
-        let dragState = null;
-        const onDragMove = (ev) => {
-          if (!dragState) return;
-          if (ev.pointerId !== dragState.pointerId) return;
-          const dx = ev.clientX - dragState.startX;
-          const dy = ev.clientY - dragState.startY;
-          applyPosition2(dragState.baseLeft + dx, dragState.baseTop + dy);
-        };
-        const stopDrag = (ev) => {
-          if (!dragState) return;
-          if (ev && ev.pointerId !== dragState.pointerId) return;
-          document.removeEventListener("pointermove", onDragMove);
-          document.removeEventListener("pointerup", stopDrag);
-          document.removeEventListener("pointercancel", stopDrag);
-          try {
-            header.releasePointerCapture(dragState.pointerId);
-          } catch {
-          }
-          dragState = null;
-        };
-        const onPointerDown = (ev) => {
-          if (ev.button !== 0) return;
-          const target = ev.target;
-          if (target && closeBtn.contains(target)) return;
-          if (dragState) stopDrag();
-          const rect = pop.getBoundingClientRect();
-          dragState = {
-            pointerId: ev.pointerId,
-            startX: ev.clientX,
-            startY: ev.clientY,
-            baseLeft: rect.left,
-            baseTop: rect.top
-          };
-          try {
-            header.setPointerCapture(ev.pointerId);
-          } catch {
-          }
-          document.addEventListener("pointermove", onDragMove);
-          document.addEventListener("pointerup", stopDrag);
-          document.addEventListener("pointercancel", stopDrag);
-          ev.preventDefault();
-        };
-        header.addEventListener("pointerdown", onPointerDown);
-        detachRuleDragHandler = () => {
-          header.removeEventListener("pointerdown", onPointerDown);
-          stopDrag();
-        };
-        pop.appendChild(header);
-        const current = NotifierService.getRule(row3.id);
-        const defaults = audio.getPlaybackSettings(row3.context);
-        const contextDefaults = row3.context === "shops" || row3.context === "weather" ? NotifierService.getContextStopDefaults(row3.context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: defaults.loopIntervalMs };
-        const allowPurchase = row3.context === "shops";
-        const defaultSoundName = (() => {
-          const label2 = (defaults.defaultSoundName || "").trim();
-          return label2 || "Default";
-        })();
-        const formatModeLabel = (mode) => mode === "loop" ? "Loop" : "One-shot";
-        const defaultIntervalMs = Math.max(
-          150,
-          Math.floor(contextDefaults.loopIntervalMs ?? defaults.loopIntervalMs ?? 150)
-        );
-        const soundField = document.createElement("div");
-        soundField.className = "qws-rule-field";
-        const soundLabel = document.createElement("label");
-        soundLabel.textContent = "Sound";
-        const soundSelect = document.createElement("select");
-        soundSelect.className = "qmm-input";
-        soundSelect.style.width = "100%";
-        const populateSoundOptions = () => {
-          const selected = current?.sound ?? "";
-          soundSelect.innerHTML = "";
-          const optDefault = document.createElement("option");
-          optDefault.value = "";
-          optDefault.textContent = defaultSoundName;
-          soundSelect.appendChild(optDefault);
-          const names = audio.listSounds();
-          for (const name of names) {
-            if (name === defaultSoundName && selected !== name) continue;
-            const opt = document.createElement("option");
-            opt.value = name;
-            opt.textContent = name;
-            soundSelect.appendChild(opt);
-          }
-          if (selected && !names.includes(selected)) {
-            const extra = document.createElement("option");
-            extra.value = selected;
-            extra.textContent = selected.length > 32 ? `${selected.slice(0, 29)}\u2026` : selected;
-            extra.dataset.extra = "1";
-            soundSelect.appendChild(extra);
-          }
-          soundSelect.value = selected;
-        };
-        populateSoundOptions();
-        soundField.append(soundLabel, soundSelect);
-        pop.appendChild(soundField);
-        const baseVolume = Math.max(0, Math.min(1, defaults.volume || 0));
-        const defaultVolumePct = Math.round(baseVolume * 100);
-        const volumeField = document.createElement("div");
-        volumeField.className = "qws-rule-field";
-        const volumeLabel = document.createElement("label");
-        volumeLabel.textContent = "Volume";
-        const volumeWrap = document.createElement("div");
-        volumeWrap.style.display = "flex";
-        volumeWrap.style.alignItems = "center";
-        volumeWrap.style.gap = "10px";
-        const volumeRange = document.createElement("input");
-        volumeRange.type = "range";
-        volumeRange.min = "0";
-        volumeRange.max = "100";
-        volumeRange.step = "1";
-        volumeRange.style.width = "100%";
-        const volumeValue = document.createElement("span");
-        volumeValue.style.minWidth = "38px";
-        volumeValue.style.textAlign = "right";
-        const applyVolumeDisplay = (value) => {
-          const clamped = Math.max(0, Math.min(100, Math.round(value)));
-          volumeRange.value = String(clamped);
-          volumeValue.textContent = `${clamped}%`;
-        };
-        const initialVolume = current?.volume != null ? current.volume : baseVolume;
-        applyVolumeDisplay(Math.round(Math.max(0, Math.min(1, initialVolume)) * 100));
-        volumeRange.addEventListener("input", () => {
-          const raw = Number(volumeRange.value);
-          const clamped = Number.isFinite(raw) ? Math.max(0, Math.min(100, Math.round(raw))) : defaultVolumePct;
-          applyVolumeDisplay(clamped);
-        });
-        const volumeHint = document.createElement("div");
-        volumeHint.textContent = `Default: ${defaultVolumePct}%`;
-        volumeHint.style.opacity = "0.7";
-        volumeHint.style.fontSize = "11px";
-        volumeHint.style.marginTop = "4px";
-        volumeWrap.append(volumeRange, volumeValue);
-        volumeField.append(volumeLabel, volumeWrap, volumeHint);
-        pop.appendChild(volumeField);
-        const modeField = document.createElement("div");
-        modeField.className = "qws-rule-field";
-        const modeLabel = document.createElement("label");
-        modeLabel.textContent = "Playback mode";
-        const modeSelect = document.createElement("select");
-        modeSelect.className = "qmm-input";
-        const modeOptions = allowPurchase ? defaults.mode === "loop" ? ["loop", "oneshot"] : ["oneshot", "loop"] : ["oneshot"];
-        modeOptions.forEach((value) => {
-          const opt = document.createElement("option");
-          opt.value = value;
-          opt.textContent = formatModeLabel(value);
-          modeSelect.appendChild(opt);
-        });
-        const initialMode = allowPurchase ? current?.playbackMode ?? defaults.mode : "oneshot";
-        modeSelect.value = initialMode === "loop" && !allowPurchase ? "oneshot" : initialMode;
-        if (!allowPurchase) modeSelect.disabled = true;
-        modeField.append(modeLabel, modeSelect);
-        pop.appendChild(modeField);
-        let stopSelect = null;
-        const stopField = document.createElement("div");
-        stopField.className = "qws-rule-field";
-        if (allowPurchase) {
-          const stopLabel = document.createElement("label");
-          stopLabel.textContent = "Stop condition";
-          stopSelect = document.createElement("select");
-          stopSelect.className = "qmm-input";
-          const stopOption = document.createElement("option");
-          stopOption.value = "purchase";
-          stopOption.textContent = "Until purchase";
-          stopSelect.appendChild(stopOption);
-          const initialStopMode = current?.stopMode ?? contextDefaults.stopMode;
-          stopSelect.value = initialStopMode === "purchase" ? "purchase" : "purchase";
-          stopField.append(stopLabel, stopSelect);
-          pop.appendChild(stopField);
-        }
-        const intervalField = document.createElement("div");
-        intervalField.className = "qws-rule-field";
-        const intervalLabel = document.createElement("label");
-        intervalLabel.textContent = "Loop interval (ms)";
-        const intervalInput = document.createElement("input");
-        intervalInput.type = "number";
-        intervalInput.className = "qmm-input";
-        intervalInput.min = "150";
-        intervalInput.step = "50";
-        intervalInput.placeholder = String(defaultIntervalMs);
-        intervalInput.value = current?.loopIntervalMs != null ? String(current.loopIntervalMs) : "";
-        intervalInput.inputMode = "numeric";
-        intervalField.append(intervalLabel, intervalInput);
-        if (allowPurchase) pop.appendChild(intervalField);
-        const enforceIntegerOnly = (input) => {
-          input.addEventListener("keydown", (ev) => {
-            ev.stopPropagation();
-            ev.stopImmediatePropagation();
-            if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
-            const key2 = ev.key;
-            if (/^[0-9]$/.test(key2)) return;
-            if (key2 === "Backspace" || key2 === "Delete" || key2 === "Tab" || key2 === "Enter" || key2 === "ArrowLeft" || key2 === "ArrowRight" || key2 === "ArrowUp" || key2 === "ArrowDown" || key2 === "Home" || key2 === "End") {
-              return;
-            }
-            ev.preventDefault();
-          });
-          input.addEventListener("input", () => {
-            const sanitized = input.value.replace(/\D+/g, "");
-            if (sanitized !== input.value) input.value = sanitized;
-          });
-        };
-        enforceIntegerOnly(intervalInput);
-        const resolveMode = () => {
-          const raw = modeSelect.value;
-          if (raw === "oneshot" || raw === "loop") return raw;
-          return allowPurchase ? defaults.mode : "oneshot";
-        };
-        const updateLoopVisibility = () => {
-          if (!allowPurchase) {
-            stopField.style.display = "none";
-            intervalField.style.display = "none";
-            return;
-          }
-          const mode = resolveMode();
-          const showLoop = mode === "loop";
-          stopField.style.display = showLoop ? "grid" : "none";
-          intervalField.style.display = showLoop ? "grid" : "none";
-        };
-        const forceLoopMode = () => {
-          if (!allowPurchase) return;
-          if (modeSelect.value === "loop") return;
-          modeSelect.value = "loop";
-          updateLoopVisibility();
-        };
-        modeSelect.addEventListener("change", () => {
-          updateLoopVisibility();
-        });
-        if (allowPurchase && stopSelect) {
-          stopSelect.addEventListener("change", () => {
-            forceLoopMode();
-          });
-        }
-        if (allowPurchase) intervalInput.addEventListener("input", forceLoopMode);
-        updateLoopVisibility();
-        const hint2 = document.createElement("div");
-        hint2.textContent = "Use defaults by leaving values unchanged (matching the default volume keeps it inherited).";
-        hint2.style.opacity = "0.7";
-        hint2.style.fontSize = "12px";
-        pop.appendChild(hint2);
-        const actions2 = document.createElement("div");
-        actions2.className = "qws-rule-actions";
-        const clearBtn = ui.btn("Clear", { variant: "ghost", size: "sm" });
-        clearBtn.addEventListener("click", (ev) => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          NotifierService.clearRule(row3.id);
-          closeRuleEditor();
-        });
-        if (!current) ui.setButtonEnabled(clearBtn, false);
-        const saveBtn = ui.btn("Save", { variant: "primary", size: "sm" });
-        saveBtn.addEventListener("click", (ev) => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          const sound = soundSelect.value?.trim() || null;
-          const modeRaw = modeSelect.value || "";
-          const stopRaw = stopSelect?.value || "";
-          const intervalRaw = intervalInput.value?.trim();
-          const volRaw = Math.max(0, Math.min(100, parseInt(volumeRange.value || "", 10) || 0));
-          const volRatio = volRaw / 100;
-          let playbackMode = modeRaw === "oneshot" || modeRaw === "loop" ? modeRaw : null;
-          if (playbackMode === defaults.mode) playbackMode = null;
-          let stopMode = allowPurchase ? stopRaw === "purchase" ? "purchase" : null : null;
-          if (stopMode != null && stopMode === contextDefaults.stopMode) {
-            stopMode = null;
-          }
-          let loopIntervalMs = null;
-          if (allowPurchase && intervalRaw) {
-            const parsed = Number(intervalRaw);
-            if (Number.isFinite(parsed)) {
-              const normalized = Math.max(150, Math.min(1e4, Math.floor(parsed)));
-              if (normalized !== defaultIntervalMs) loopIntervalMs = normalized;
-            }
-          }
-          let volume = null;
-          if (Math.abs(volRatio - baseVolume) > 1e-3) {
-            volume = Math.max(0, Math.min(1, volRatio));
-          }
-          if (allowPurchase && !playbackMode && defaults.mode !== "loop" && (stopMode != null || loopIntervalMs != null)) {
-            playbackMode = "loop";
-          }
-          NotifierService.setRule(row3.id, {
-            sound,
-            volume,
-            playbackMode,
-            stopMode,
-            loopIntervalMs
-          });
-          closeRuleEditor();
-        });
-        actions2.append(clearBtn, saveBtn);
-        pop.appendChild(actions2);
-        document.body.appendChild(pop);
-        const anchorRect = anchor.getBoundingClientRect();
-        const width = pop.offsetWidth;
-        const height = pop.offsetHeight;
-        let left = anchorRect.right - width;
-        let top = anchorRect.bottom + 8;
-        if (left < margin) left = margin;
-        if (left + width > window.innerWidth - margin) left = window.innerWidth - width - margin;
-        if (top + height > window.innerHeight - margin) top = anchorRect.top - height - 8;
-        if (top < margin) top = margin;
-        applyPosition2(left, top);
-        const onDocPointer = (ev) => {
-          const target = ev.target;
-          if (!target) return;
-          if (pop.contains(target)) return;
-          if (anchor.contains(target)) return;
-          closeRuleEditor();
-        };
-        setTimeout(() => document.addEventListener("pointerdown", onDocPointer, true));
-        detachRuleDocHandler = () => document.removeEventListener("pointerdown", onDocPointer, true);
-        const keyBlocker = (ev) => {
-          if (!rulePopover) return;
-          if (rulePopover.contains(ev.target)) return;
-          ev.stopImmediatePropagation();
-        };
-        document.addEventListener("keydown", keyBlocker, true);
-        detachRuleKeyBlocker = () => document.removeEventListener("keydown", keyBlocker, true);
-        const wheelBlocker = (ev) => {
-          const t = ev.target;
-          if (rulePopover && t && rulePopover.contains(t)) {
-            ev.stopImmediatePropagation();
-          }
-        };
-        document.addEventListener("wheel", wheelBlocker, { capture: true, passive: true });
-        detachRuleWheelBlocker = () => {
-          document.removeEventListener("wheel", wheelBlocker, { capture: true });
-        };
-        rulePopover = pop;
-      };
+      DARK_TEXT = /* @__PURE__ */ new Set(["Common", "Uncommon", "Legendary", "Divine"]);
+      CELESTIAL_KEYFRAMES_ID = "qws-celestial-kf";
     }
   });
 
@@ -34577,12 +31333,12 @@ next: ${next}`;
       target.weatherRecipes.push(set2);
     });
   }
-  function serializeSettingsState(state5) {
-    normalizeWeatherSelection(state5.weatherSelected);
-    state5.weatherRecipes.forEach((set2) => normalizeRecipeSelection(set2));
-    const mode = state5.scaleLockMode === "MINIMUM" ? "MINIMUM" : state5.scaleLockMode === "MAXIMUM" ? "MAXIMUM" : state5.scaleLockMode === "NONE" ? "NONE" : "RANGE";
-    let minScale = Math.max(50, Math.min(100, Math.round(state5.minScalePct || 50)));
-    let maxScale = Math.max(50, Math.min(100, Math.round(state5.maxScalePct || 100)));
+  function serializeSettingsState(state7) {
+    normalizeWeatherSelection(state7.weatherSelected);
+    state7.weatherRecipes.forEach((set2) => normalizeRecipeSelection(set2));
+    const mode = state7.scaleLockMode === "MINIMUM" ? "MINIMUM" : state7.scaleLockMode === "MAXIMUM" ? "MAXIMUM" : state7.scaleLockMode === "NONE" ? "NONE" : "RANGE";
+    let minScale = Math.max(50, Math.min(100, Math.round(state7.minScalePct || 50)));
+    let maxScale = Math.max(50, Math.min(100, Math.round(state7.maxScalePct || 100)));
     if (mode === "RANGE") {
       maxScale = Math.max(51, Math.min(100, maxScale));
       if (maxScale <= minScale) {
@@ -34602,14 +31358,14 @@ next: ${next}`;
       minScalePct: minScale,
       maxScalePct: maxScale,
       scaleLockMode: mode,
-      lockMode: state5.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
-      minInventory: Math.max(0, Math.min(999, Math.round(state5.minInventory || 91))),
-      avoidNormal: !!state5.avoidNormal,
-      includeNormal: !state5.avoidNormal,
-      visualMutations: Array.from(state5.visualMutations),
-      weatherMode: state5.weatherMode,
-      weatherSelected: Array.from(state5.weatherSelected),
-      weatherRecipes: state5.weatherRecipes.map((set2) => Array.from(set2))
+      lockMode: state7.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
+      minInventory: Math.max(0, Math.min(999, Math.round(state7.minInventory || 91))),
+      avoidNormal: !!state7.avoidNormal,
+      includeNormal: !state7.avoidNormal,
+      visualMutations: Array.from(state7.visualMutations),
+      weatherMode: state7.weatherMode,
+      weatherSelected: Array.from(state7.weatherSelected),
+      weatherRecipes: state7.weatherRecipes.map((set2) => Array.from(set2))
     };
   }
   function setCheck(input, value) {
@@ -34769,7 +31525,7 @@ next: ${next}`;
       button3.style.background = "rgba(255,255,255,0.04)";
     };
   }
-  function createLockerSettingsCard(ui, state5, opts = {}) {
+  function createLockerSettingsCard(ui, state7, opts = {}) {
     const card4 = document.createElement("div");
     card4.dataset.lockerSettingsCard = "1";
     card4.style.border = "1px solid rgba(255,255,255,0.10)";
@@ -34785,7 +31541,7 @@ next: ${next}`;
     let recipesTitleElement = null;
     const updateRecipeTitleText = () => {
       if (!recipesTitleElement) return;
-      const prefix = state5.lockMode === "ALLOW" ? "Allow" : "Lock";
+      const prefix = state7.lockMode === "ALLOW" ? "Allow" : "Lock";
       recipesTitleElement.textContent = `${prefix} when any recipe row matches (OR between rows)`;
     };
     const makeSection = (titleText, content2) => {
@@ -34808,13 +31564,13 @@ next: ${next}`;
       return section4;
     };
     const centerRow = () => {
-      const row3 = document.createElement("div");
-      row3.style.display = "flex";
-      row3.style.flexWrap = "wrap";
-      row3.style.justifyContent = "center";
-      row3.style.alignItems = "center";
-      row3.style.gap = "8px";
-      return row3;
+      const row4 = document.createElement("div");
+      row4.style.display = "flex";
+      row4.style.flexWrap = "wrap";
+      row4.style.justifyContent = "center";
+      row4.style.alignItems = "center";
+      row4.style.gap = "8px";
+      return row4;
     };
     const toLockMode = (value) => value === "allow" ? "ALLOW" : "LOCK";
     const fromLockMode = (mode) => mode === "ALLOW" ? "allow" : "lock";
@@ -34832,10 +31588,10 @@ next: ${next}`;
         { value: "lock", label: "Lock" },
         { value: "allow", label: "Allow" }
       ],
-      fromLockMode(state5.lockMode),
+      fromLockMode(state7.lockMode),
       (value) => {
         if (isProgrammaticLockMode) return;
-        state5.lockMode = toLockMode(value);
+        state7.lockMode = toLockMode(value);
         updateLockModeUI();
         opts.onChange?.();
       },
@@ -34850,14 +31606,14 @@ next: ${next}`;
       display: "none"
     });
     const locksEverySize = () => {
-      if ((state5.lockMode ?? "LOCK") !== "LOCK") return false;
-      switch (state5.scaleLockMode) {
+      if ((state7.lockMode ?? "LOCK") !== "LOCK") return false;
+      switch (state7.scaleLockMode) {
         case "RANGE":
-          return state5.minScalePct <= 50 && state5.maxScalePct >= 100;
+          return state7.minScalePct <= 50 && state7.maxScalePct >= 100;
         case "MINIMUM":
-          return state5.minScalePct <= 50;
+          return state7.minScalePct <= 50;
         case "MAXIMUM":
-          return state5.maxScalePct >= 100;
+          return state7.maxScalePct >= 100;
         default:
           return false;
       }
@@ -34869,7 +31625,7 @@ next: ${next}`;
     };
     lockModeRow.append(lockModeSegmented, lockModeHint, lockWarning);
     const updateLockModeUI = () => {
-      const value = fromLockMode(state5.lockMode);
+      const value = fromLockMode(state7.lockMode);
       const current = lockModeSegmented.get?.();
       if (current !== value) {
         isProgrammaticLockMode = true;
@@ -34892,9 +31648,9 @@ next: ${next}`;
     scaleModeRow.style.flexWrap = "wrap";
     scaleModeRow.style.justifyContent = "center";
     scaleModeRow.style.gap = "12px";
-    const minSlider = ui.slider(50, 100, 1, state5.minScalePct);
+    const minSlider = ui.slider(50, 100, 1, state7.minScalePct);
     applyStyles(minSlider, { width: "min(420px, 100%)" });
-    const maxSlider = ui.slider(50, 100, 1, state5.maxScalePct);
+    const maxSlider = ui.slider(50, 100, 1, state7.maxScalePct);
     applyStyles(maxSlider, { width: "min(420px, 100%)" });
     const toMode = (value) => {
       switch (value) {
@@ -34921,7 +31677,7 @@ next: ${next}`;
       }
     };
     let isProgrammaticScaleMode = false;
-    const initialScaleMode = fromMode(state5.scaleLockMode);
+    const initialScaleMode = fromMode(state7.scaleLockMode);
     const scaleModeSegmented = ui.segmented(
       [
         { value: "none", label: "None" },
@@ -34937,7 +31693,7 @@ next: ${next}`;
       { ariaLabel: "Scale lock mode" }
     );
     scaleModeRow.append(scaleModeSegmented);
-    const scaleSlider = ui.rangeDual(50, 100, 1, state5.minScalePct, state5.maxScalePct);
+    const scaleSlider = ui.rangeDual(50, 100, 1, state7.minScalePct, state7.maxScalePct);
     applyStyles(scaleSlider.root, {
       width: "min(420px, 100%)",
       marginLeft: "auto",
@@ -35001,8 +31757,8 @@ next: ${next}`;
     const applyScaleRange = (commit, notify2 = commit) => {
       let minValue = parseInt(scaleMinSlider.value, 10);
       let maxValue = parseInt(scaleMaxSlider.value, 10);
-      if (!Number.isFinite(minValue)) minValue = state5.minScalePct;
-      if (!Number.isFinite(maxValue)) maxValue = state5.maxScalePct;
+      if (!Number.isFinite(minValue)) minValue = state7.minScalePct;
+      if (!Number.isFinite(maxValue)) maxValue = state7.maxScalePct;
       minValue = Math.max(50, Math.min(99, minValue));
       maxValue = Math.max(51, Math.min(100, maxValue));
       if (maxValue <= minValue) {
@@ -35017,44 +31773,44 @@ next: ${next}`;
       scaleMinValue.textContent = `${minValue}`;
       scaleMaxValue.textContent = `${maxValue}`;
       if (commit) {
-        state5.minScalePct = minValue;
-        state5.maxScalePct = maxValue;
+        state7.minScalePct = minValue;
+        state7.maxScalePct = maxValue;
         updateLockWarning();
         if (notify2) opts.onChange?.();
       }
     };
     const applyScaleMinimum = (commit, notify2 = commit) => {
       let minValue = parseInt(minSlider.value, 10);
-      if (!Number.isFinite(minValue)) minValue = state5.minScalePct;
+      if (!Number.isFinite(minValue)) minValue = state7.minScalePct;
       minValue = Math.max(50, Math.min(100, minValue));
       minSlider.value = String(minValue);
       scaleMinimumValue.textContent = `${minValue}`;
       if (commit) {
-        state5.minScalePct = minValue;
+        state7.minScalePct = minValue;
         updateLockWarning();
         if (notify2) opts.onChange?.();
       }
     };
     const applyScaleMaximum = (commit, notify2 = commit) => {
       let maxValue = parseInt(maxSlider.value, 10);
-      if (!Number.isFinite(maxValue)) maxValue = state5.maxScalePct;
+      if (!Number.isFinite(maxValue)) maxValue = state7.maxScalePct;
       maxValue = Math.max(50, Math.min(100, maxValue));
       maxSlider.value = String(maxValue);
       scaleMaximumValue.textContent = `${maxValue}`;
       if (commit) {
-        state5.maxScalePct = maxValue;
+        state7.maxScalePct = maxValue;
         updateLockWarning();
         if (notify2) opts.onChange?.();
       }
     };
     const updateScaleModeUI = () => {
-      const isRange = state5.scaleLockMode === "RANGE";
-      const isMin = state5.scaleLockMode === "MINIMUM";
-      const isMax = state5.scaleLockMode === "MAXIMUM";
+      const isRange = state7.scaleLockMode === "RANGE";
+      const isMin = state7.scaleLockMode === "MINIMUM";
+      const isMax = state7.scaleLockMode === "MAXIMUM";
       rangeControls.style.display = isRange ? "" : "none";
       minControls.style.display = isMin ? "" : "none";
       maxControls.style.display = isMax ? "" : "none";
-      const segValue = fromMode(state5.scaleLockMode);
+      const segValue = fromMode(state7.scaleLockMode);
       if (scaleModeSegmented.get?.() !== segValue) {
         isProgrammaticScaleMode = true;
         try {
@@ -35066,16 +31822,16 @@ next: ${next}`;
       updateLockWarning();
     };
     const applyScaleMode = (mode, notify2) => {
-      const prevMode = state5.scaleLockMode;
-      state5.scaleLockMode = mode;
+      const prevMode = state7.scaleLockMode;
+      state7.scaleLockMode = mode;
       if (mode === "RANGE") {
-        scaleSlider.setValues(state5.minScalePct, state5.maxScalePct);
+        scaleSlider.setValues(state7.minScalePct, state7.maxScalePct);
         applyScaleRange(prevMode !== mode, false);
       } else if (mode === "MINIMUM") {
-        minSlider.value = String(state5.minScalePct);
+        minSlider.value = String(state7.minScalePct);
         applyScaleMinimum(prevMode !== mode, false);
       } else if (mode === "MAXIMUM") {
-        maxSlider.value = String(state5.maxScalePct);
+        maxSlider.value = String(state7.maxScalePct);
         applyScaleMaximum(prevMode !== mode, false);
       }
       updateScaleModeUI();
@@ -35094,7 +31850,7 @@ next: ${next}`;
     applyScaleRange(false);
     applyScaleMinimum(false);
     applyScaleMaximum(false);
-    applyScaleMode(state5.scaleLockMode, false);
+    applyScaleMode(state7.scaleLockMode, false);
     const colorsRow = centerRow();
     colorsRow.style.flexWrap = "wrap";
     colorsRow.style.gap = "8px";
@@ -35160,24 +31916,24 @@ next: ${next}`;
       button3.style.cursor = button3.disabled ? "default" : "pointer";
     };
     const updateColorButtons = () => {
-      updateColorButtonVisual(btnNormal, state5.avoidNormal);
-      updateColorButtonVisual(btnGold, state5.visualMutations.has("Gold"));
-      updateColorButtonVisual(btnRainbow, state5.visualMutations.has("Rainbow"));
+      updateColorButtonVisual(btnNormal, state7.avoidNormal);
+      updateColorButtonVisual(btnGold, state7.visualMutations.has("Gold"));
+      updateColorButtonVisual(btnRainbow, state7.visualMutations.has("Rainbow"));
     };
     btnNormal.addEventListener("click", () => {
-      state5.avoidNormal = !state5.avoidNormal;
+      state7.avoidNormal = !state7.avoidNormal;
       updateColorButtons();
       opts.onChange?.();
     });
     btnGold.addEventListener("click", () => {
-      if (state5.visualMutations.has("Gold")) state5.visualMutations.delete("Gold");
-      else state5.visualMutations.add("Gold");
+      if (state7.visualMutations.has("Gold")) state7.visualMutations.delete("Gold");
+      else state7.visualMutations.add("Gold");
       updateColorButtons();
       opts.onChange?.();
     });
     btnRainbow.addEventListener("click", () => {
-      if (state5.visualMutations.has("Rainbow")) state5.visualMutations.delete("Rainbow");
-      else state5.visualMutations.add("Rainbow");
+      if (state7.visualMutations.has("Rainbow")) state7.visualMutations.delete("Rainbow");
+      else state7.visualMutations.add("Rainbow");
       updateColorButtons();
       opts.onChange?.();
     });
@@ -35199,7 +31955,7 @@ next: ${next}`;
       }
       opts.onChange?.();
     };
-    const updateMainWeatherSelection = applyWeatherSelection(state5.weatherSelected);
+    const updateMainWeatherSelection = applyWeatherSelection(state7.weatherSelected);
     const weatherToggles = weatherMutations().map((info) => {
       const toggle2 = createWeatherMutationToggle({
         key: info.key,
@@ -35215,7 +31971,7 @@ next: ${next}`;
       return toggle2;
     });
     const updateWeatherMutationsDisabled = () => {
-      const disabled = card4.dataset.disabled === "1" || state5.weatherMode === "RECIPES";
+      const disabled = card4.dataset.disabled === "1" || state7.weatherMode === "RECIPES";
       weatherGrid.style.opacity = disabled ? "0.55" : "";
       weatherGrid.style.pointerEvents = disabled ? "none" : "";
       weatherToggles.forEach((toggle2) => toggle2.setDisabled(disabled));
@@ -35233,7 +31989,7 @@ next: ${next}`;
       wrap.append(input, span);
       input.addEventListener("change", () => {
         if (!input.checked) return;
-        state5.weatherMode = value;
+        state7.weatherMode = value;
         recipesWrap.style.display = value === "RECIPES" ? "" : "none";
         updateWeatherMutationsDisabled();
         opts.onChange?.();
@@ -35295,10 +32051,10 @@ next: ${next}`;
       if (editingRecipeIndex === null) return;
       const draft = new Set(editingRecipeDraft);
       normalizeRecipeSelection(draft);
-      if (editingRecipeIndex === state5.weatherRecipes.length) {
-        state5.weatherRecipes.push(draft);
-      } else if (editingRecipeIndex >= 0 && editingRecipeIndex < state5.weatherRecipes.length) {
-        state5.weatherRecipes[editingRecipeIndex] = draft;
+      if (editingRecipeIndex === state7.weatherRecipes.length) {
+        state7.weatherRecipes.push(draft);
+      } else if (editingRecipeIndex >= 0 && editingRecipeIndex < state7.weatherRecipes.length) {
+        state7.weatherRecipes[editingRecipeIndex] = draft;
       }
       editingRecipeIndex = null;
       editingRecipeDraft = /* @__PURE__ */ new Set();
@@ -35307,8 +32063,8 @@ next: ${next}`;
     };
     const deleteRecipeAt = (index) => {
       if (index < 0) return;
-      if (index < state5.weatherRecipes.length) {
-        state5.weatherRecipes.splice(index, 1);
+      if (index < state7.weatherRecipes.length) {
+        state7.weatherRecipes.splice(index, 1);
       }
       if (editingRecipeIndex !== null) {
         if (index === editingRecipeIndex) {
@@ -35440,18 +32196,18 @@ next: ${next}`;
     }
     function repaintRecipes() {
       recipesList.innerHTML = "";
-      const hasDraftNew = editingRecipeIndex !== null && editingRecipeIndex === state5.weatherRecipes.length;
-      const totalRows = state5.weatherRecipes.length + (hasDraftNew ? 1 : 0);
+      const hasDraftNew = editingRecipeIndex !== null && editingRecipeIndex === state7.weatherRecipes.length;
+      const totalRows = state7.weatherRecipes.length + (hasDraftNew ? 1 : 0);
       if (totalRows === 0) {
         recipesList.appendChild(emptyRecipes);
         applyDisabled();
         return;
       }
-      state5.weatherRecipes.forEach((set2, index) => {
+      state7.weatherRecipes.forEach((set2, index) => {
         normalizeRecipeSelection(set2);
         const isEditing2 = editingRecipeIndex === index;
         const selection = isEditing2 ? editingRecipeDraft : set2;
-        const row3 = applyStyles(document.createElement("div"), {
+        const row4 = applyStyles(document.createElement("div"), {
           display: "flex",
           gap: isEditing2 ? "10px" : "12px",
           border: "1px solid rgba(255,255,255,0.10)",
@@ -35462,12 +32218,12 @@ next: ${next}`;
           width: "100%"
         });
         if (isEditing2) {
-          row3.style.flexDirection = "column";
+          row4.style.flexDirection = "column";
         } else {
-          row3.style.flexDirection = "row";
-          row3.style.alignItems = "center";
-          row3.style.justifyContent = "space-between";
-          row3.style.flexWrap = "wrap";
+          row4.style.flexDirection = "row";
+          row4.style.alignItems = "center";
+          row4.style.justifyContent = "space-between";
+          row4.style.flexWrap = "wrap";
         }
         const summary = document.createElement("div");
         renderRecipeSummary(summary, selection);
@@ -35475,10 +32231,10 @@ next: ${next}`;
           summary.style.flex = "1 1 auto";
           summary.style.minWidth = "220px";
         }
-        row3.appendChild(summary);
+        row4.appendChild(summary);
         if (isEditing2) {
           const toggleGrid = buildRecipeToggleGrid(selection, () => renderRecipeSummary(summary, selection));
-          row3.appendChild(toggleGrid);
+          row4.appendChild(toggleGrid);
           const actions2 = applyStyles(document.createElement("div"), {
             display: "flex",
             gap: "8px",
@@ -35491,7 +32247,7 @@ next: ${next}`;
           styleBtnFullWidth(btnValidate, "\u2714\uFE0F");
           btnValidate.onclick = commitEditingRecipe;
           actions2.append(btnCancel, btnValidate);
-          if (editingRecipeIndex !== null && editingRecipeIndex < state5.weatherRecipes.length) {
+          if (editingRecipeIndex !== null && editingRecipeIndex < state7.weatherRecipes.length) {
             const btnDelete = document.createElement("button");
             styleBtnFullWidth(btnDelete, "\u{1F5D1}\uFE0F");
             btnDelete.title = "Delete";
@@ -35499,7 +32255,7 @@ next: ${next}`;
             btnDelete.onclick = () => deleteRecipeAt(index);
             actions2.append(btnDelete);
           }
-          row3.appendChild(actions2);
+          row4.appendChild(actions2);
         } else {
           const actions2 = applyStyles(document.createElement("div"), {
             display: "flex",
@@ -35520,13 +32276,13 @@ next: ${next}`;
           btnDelete.setAttribute("aria-label", "Delete");
           btnDelete.onclick = () => deleteRecipeAt(index);
           actions2.append(btnEdit, btnDelete);
-          row3.appendChild(actions2);
+          row4.appendChild(actions2);
         }
-        recipesList.appendChild(row3);
+        recipesList.appendChild(row4);
       });
       if (hasDraftNew && editingRecipeIndex !== null) {
         const selection = editingRecipeDraft;
-        const row3 = applyStyles(document.createElement("div"), {
+        const row4 = applyStyles(document.createElement("div"), {
           display: "flex",
           flexDirection: "column",
           gap: "10px",
@@ -35539,9 +32295,9 @@ next: ${next}`;
         });
         const summary = document.createElement("div");
         renderRecipeSummary(summary, selection);
-        row3.appendChild(summary);
+        row4.appendChild(summary);
         const toggleGrid = buildRecipeToggleGrid(selection, () => renderRecipeSummary(summary, selection));
-        row3.appendChild(toggleGrid);
+        row4.appendChild(toggleGrid);
         const actions2 = applyStyles(document.createElement("div"), {
           display: "flex",
           gap: "8px",
@@ -35554,13 +32310,13 @@ next: ${next}`;
         styleBtnFullWidth(btnValidate, "\u2714\uFE0F");
         btnValidate.onclick = commitEditingRecipe;
         actions2.append(btnCancel, btnValidate);
-        row3.appendChild(actions2);
-        recipesList.appendChild(row3);
+        row4.appendChild(actions2);
+        recipesList.appendChild(row4);
       }
       applyDisabled();
     }
     btnAddRecipe.onclick = () => {
-      startEditingRecipe(state5.weatherRecipes.length);
+      startEditingRecipe(state7.weatherRecipes.length);
     };
     recipesWrap.append(recipesHeader, recipesList);
     card4.append(
@@ -35573,19 +32329,19 @@ next: ${next}`;
     );
     const refresh = () => {
       updateLockModeUI();
-      scaleSlider.setValues(state5.minScalePct, state5.maxScalePct);
-      minSlider.value = String(state5.minScalePct);
-      maxSlider.value = String(state5.maxScalePct);
+      scaleSlider.setValues(state7.minScalePct, state7.maxScalePct);
+      minSlider.value = String(state7.minScalePct);
+      maxSlider.value = String(state7.maxScalePct);
       applyScaleRange(false);
       applyScaleMinimum(false);
       applyScaleMaximum(false);
-      applyScaleMode(state5.scaleLockMode, false);
+      applyScaleMode(state7.scaleLockMode, false);
       updateColorButtons();
-      weatherToggles.forEach((toggle2) => toggle2.setChecked(state5.weatherSelected.has(toggle2.key)));
-      radioAny.input.checked = state5.weatherMode === "ANY";
-      radioAll.input.checked = state5.weatherMode === "ALL";
-      radioRecipes.input.checked = state5.weatherMode === "RECIPES";
-      recipesWrap.style.display = state5.weatherMode === "RECIPES" ? "" : "none";
+      weatherToggles.forEach((toggle2) => toggle2.setChecked(state7.weatherSelected.has(toggle2.key)));
+      radioAny.input.checked = state7.weatherMode === "ANY";
+      radioAll.input.checked = state7.weatherMode === "ALL";
+      radioRecipes.input.checked = state7.weatherMode === "RECIPES";
+      recipesWrap.style.display = state7.weatherMode === "RECIPES" ? "" : "none";
       updateWeatherMutationsDisabled();
       repaintRecipes();
     };
@@ -35597,7 +32353,7 @@ next: ${next}`;
     return { root: card4, refresh, setDisabled };
   }
   function createRestrictionsTabRenderer(ui) {
-    let state5 = lockerRestrictionsService.getState();
+    let state7 = lockerRestrictionsService.getState();
     let bonusFromMultiplier = null;
     let bonusFromPlayers = friendBonusPercentFromPlayers(1);
     let eggOptions = [];
@@ -35633,7 +32389,7 @@ next: ${next}`;
       textShadow: "0 1px 1px rgba(0, 0, 0, 0.5)"
     });
     sliderHeader.append(sliderTitle, sliderValue);
-    const initialRequiredPct = friendBonusPercentFromPlayers(state5.minRequiredPlayers) ?? 0;
+    const initialRequiredPct = friendBonusPercentFromPlayers(state7.minRequiredPlayers) ?? 0;
     const slider2 = ui.slider(0, FRIEND_BONUS_MAX, FRIEND_BONUS_STEP, initialRequiredPct);
     slider2.style.width = "100%";
     sliderWrap.append(sliderHeader, slider2);
@@ -35674,10 +32430,10 @@ next: ${next}`;
     decorSubtitle.style.fontSize = "12.5px";
     decorSubtitle.style.opacity = "0.85";
     decorText.append(decorSubtitle);
-    const decorToggle = ui.switch(state5.decorPickupLocked);
+    const decorToggle = ui.switch(state7.decorPickupLocked);
     decorToggle.addEventListener("change", () => {
       const locked = !!decorToggle.checked;
-      state5.decorPickupLocked = locked;
+      state7.decorPickupLocked = locked;
       lockerRestrictionsService.setDecorPickupLocked(locked);
     });
     decorRow.append(decorText, decorToggle);
@@ -35704,7 +32460,7 @@ next: ${next}`;
       marginTop: "6px"
     });
     const createRuleRow = (title, subtitle) => {
-      const row3 = applyStyles(document.createElement("div"), {
+      const row4 = applyStyles(document.createElement("div"), {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
@@ -35735,8 +32491,8 @@ next: ${next}`;
         alignItems: "center",
         gap: "8px"
       });
-      row3.append(text2, controls);
-      return { row: row3, controls };
+      row4.append(text2, controls);
+      return { row: row4, controls };
     };
     const sellRulesInitial = lockerRestrictionsService.getSellAllPetsRules();
     const sellEnableToggle = ui.switch(sellRulesInitial.enabled);
@@ -35804,9 +32560,9 @@ next: ${next}`;
     rarityRow.append(rarityRowHeader, raritySelectedArea, rarityPickerArea);
     let rarityPickerOpen = false;
     const refreshRarityRow = () => {
-      const rules2 = lockerRestrictionsService.getSellAllPetsRules();
-      const selected = Array.isArray(rules2.protectedRarities) ? rules2.protectedRarities : [];
-      const enabled5 = rules2.enabled !== false;
+      const rules3 = lockerRestrictionsService.getSellAllPetsRules();
+      const selected = Array.isArray(rules3.protectedRarities) ? rules3.protectedRarities : [];
+      const enabled5 = rules3.enabled !== false;
       const selectedSet = new Set(selected);
       raritySelectedArea.innerHTML = "";
       if (selected.length === 0) {
@@ -35911,7 +32667,7 @@ next: ${next}`;
     };
     let renderEggList;
     const createEggRow = (opt) => {
-      const row3 = applyStyles(document.createElement("div"), {
+      const row4 = applyStyles(document.createElement("div"), {
         display: "grid",
         gridTemplateColumns: "auto auto 1fr",
         alignItems: "center",
@@ -35929,8 +32685,8 @@ next: ${next}`;
       toggle2.style.fontSize = "14px";
       toggle2.style.fontWeight = "700";
       toggle2.addEventListener("click", () => {
-        const next = !Boolean(state5.eggLocks?.[opt.id]);
-        state5.eggLocks = { ...state5.eggLocks || {}, [opt.id]: next };
+        const next = !Boolean(state7.eggLocks?.[opt.id]);
+        state7.eggLocks = { ...state7.eggLocks || {}, [opt.id]: next };
         lockerRestrictionsService.setEggLock(opt.id, next);
         renderEggList();
       });
@@ -35938,8 +32694,8 @@ next: ${next}`;
       name.style.fontWeight = "600";
       name.style.color = "#e7eef7";
       const icon2 = createEggIcon(opt.id, opt.name, 32);
-      row3.append(toggle2, icon2, name);
-      return { row: row3, toggle: toggle2, name };
+      row4.append(toggle2, icon2, name);
+      return { row: row4, toggle: toggle2, name };
     };
     renderEggList = () => {
       eggList.innerHTML = "";
@@ -35958,7 +32714,7 @@ next: ${next}`;
           eggRowCache.set(id, entry);
         }
         entry.name.textContent = opt.name || id;
-        const locked = !!state5.eggLocks?.[id];
+        const locked = !!state7.eggLocks?.[id];
         updateEggToggleAppearance(entry.toggle, locked);
         fragment.appendChild(entry.row);
       });
@@ -35980,20 +32736,20 @@ next: ${next}`;
       if (!Number.isFinite(value)) return 0;
       return Math.max(0, Math.min(100, Math.round(value)));
     };
-    const setRuleRowDisabled = (row3, disabled) => {
-      row3.style.opacity = disabled ? "0.6" : "1";
+    const setRuleRowDisabled = (row4, disabled) => {
+      row4.style.opacity = disabled ? "0.6" : "1";
     };
     const refreshSellAllPetsControls = () => {
-      const rules2 = lockerRestrictionsService.getSellAllPetsRules();
-      const enabled5 = rules2.enabled !== false;
-      const protectGold = rules2.protectGold !== false;
-      const protectRainbow = rules2.protectRainbow !== false;
-      const protectMaxStr = rules2.protectMaxStr !== false;
+      const rules3 = lockerRestrictionsService.getSellAllPetsRules();
+      const enabled5 = rules3.enabled !== false;
+      const protectGold = rules3.protectGold !== false;
+      const protectRainbow = rules3.protectRainbow !== false;
+      const protectMaxStr = rules3.protectMaxStr !== false;
       setCheck(sellEnableToggle, enabled5);
       setCheck(sellGoldToggle, protectGold);
       setCheck(sellRainbowToggle, protectRainbow);
       setCheck(sellMaxStrToggle, protectMaxStr);
-      sellMaxStrInput.value = String(clampMaxStr(rules2.maxStrThreshold));
+      sellMaxStrInput.value = String(clampMaxStr(rules3.maxStrThreshold));
       sellGoldToggle.disabled = !enabled5;
       sellRainbowToggle.disabled = !enabled5;
       sellMaxStrToggle.disabled = !enabled5;
@@ -36013,9 +32769,9 @@ next: ${next}`;
       statusBadge.style.color = palette.color;
     };
     const updateStatus = () => {
-      const requiredPct = clampPercent2(friendBonusPercentFromPlayers(state5.minRequiredPlayers) ?? 0);
+      const requiredPct = clampPercent2(friendBonusPercentFromPlayers(state7.minRequiredPlayers) ?? 0);
       const currentPct = resolveCurrentBonus();
-      const requiredPlayers = state5.minRequiredPlayers;
+      const requiredPlayers = state7.minRequiredPlayers;
       const currentPlayers = currentPct != null ? percentToRequiredFriendCount(currentPct) : null;
       const allowed = requiredPct <= 0 || currentPct != null && currentPct + 1e-4 >= requiredPct;
       if (requiredPct <= 0) {
@@ -36032,10 +32788,10 @@ next: ${next}`;
       const raw = Number(slider2.value);
       const pct = clampPercent2(Number.isFinite(raw) ? raw : 0);
       updateSliderValue(pct);
-      state5.minRequiredPlayers = percentToRequiredFriendCount(pct);
+      state7.minRequiredPlayers = percentToRequiredFriendCount(pct);
       updateStatus();
       if (commit) {
-        lockerRestrictionsService.setMinRequiredPlayers(state5.minRequiredPlayers);
+        lockerRestrictionsService.setMinRequiredPlayers(state7.minRequiredPlayers);
       }
     };
     slider2.addEventListener("input", () => handleSliderInput(false));
@@ -36061,9 +32817,9 @@ next: ${next}`;
       lockerRestrictionsService.setSellAllPetsRules({ maxStrThreshold: next });
     });
     const syncFromService = (next) => {
-      state5 = { ...next };
-      setCheck(decorToggle, state5.decorPickupLocked);
-      updateSliderValue(friendBonusPercentFromPlayers(state5.minRequiredPlayers) ?? 0);
+      state7 = { ...next };
+      setCheck(decorToggle, state7.decorPickupLocked);
+      updateSliderValue(friendBonusPercentFromPlayers(state7.minRequiredPlayers) ?? 0);
       updateStatus();
       renderEggList();
       refreshSellAllPetsControls();
@@ -36551,7 +33307,7 @@ next: ${next}`;
     ui.on("unmounted", cleanup2);
   }
   var NO_WEATHER_TAG, SEED_EMOJIS, _lockerOptionsCache, _lockerEmojiByKey, _lockerEmojisBySeedName, getLockerSeedOptions, getLockerSeedEmojiForKey, getLockerSeedEmojiForSeedName, weatherMutationLabel, weatherMutations, createNoWeatherIcon, isWeatherMutationAvailable, WEATHER_RECIPE_GROUPS, WEATHER_RECIPE_GROUP_MEMBERS, applyStyles, weatherModeNameSeq, LockerMenuStore;
-  var init_menu4 = __esm({
+  var init_menu3 = __esm({
     "src/features/locker/menu.ts"() {
       "use strict";
       init_menu();
@@ -36560,7 +33316,7 @@ next: ${next}`;
       init_restrictions();
       init_atoms();
       init_iconCache();
-      init_menu3();
+      init_rarityBadge();
       NO_WEATHER_TAG = "NoWeatherEffect";
       SEED_EMOJIS = [
         "\u{1F955}",
@@ -36676,12 +33432,12 @@ next: ${next}`;
           this.global = { enabled: false, settings: createDefaultSettings(), hasPersistedSettings: true };
           this.syncFromService(initial);
         }
-        applyPersisted(state5) {
-          this.global.enabled = !!state5.enabled;
-          hydrateSettingsFromPersisted(this.global.settings, state5.settings);
+        applyPersisted(state7) {
+          this.global.enabled = !!state7.enabled;
+          hydrateSettingsFromPersisted(this.global.settings, state7.settings);
           this.global.hasPersistedSettings = true;
           const seen = /* @__PURE__ */ new Set();
-          Object.entries(state5.overrides ?? {}).forEach(([key2, value]) => {
+          Object.entries(state7.overrides ?? {}).forEach(([key2, value]) => {
             const entry = this.ensureOverride(key2, { silent: true });
             entry.enabled = !!value?.enabled;
             hydrateSettingsFromPersisted(entry.settings, value?.settings);
@@ -36706,9 +33462,9 @@ next: ${next}`;
             }
           }
         }
-        syncFromService(state5) {
+        syncFromService(state7) {
           this.syncing = true;
-          this.applyPersisted(state5);
+          this.applyPersisted(state7);
           this.emit();
           this.syncing = false;
         }
@@ -36784,13 +33540,13 @@ next: ${next}`;
   });
 
   // src/features/calculator/compute.ts
-  function mutationsOf(state5) {
-    return [state5.color, state5.weather, state5.lighting].filter((label2) => label2 !== "None");
+  function mutationsOf(state7) {
+    return [state7.color, state7.weather, state7.lighting].filter((label2) => label2 !== "None");
   }
-  function calculatorPrice(species, state5) {
-    const value = estimateProduceValue(species, state5.size, mutationsOf(state5), {
+  function calculatorPrice(species, state7) {
+    const value = estimateProduceValue(species, state7.size, mutationsOf(state7), {
       ...DefaultPricing,
-      friendPlayers: clampFriendPlayers(state5.friendPlayers)
+      friendPlayers: clampFriendPlayers(state7.friendPlayers)
     });
     return Number.isFinite(value) && value > 0 ? value : null;
   }
@@ -36897,7 +33653,7 @@ next: ${next}`;
     const file = String(path || "").trim().split("/").pop() || "";
     return file.replace(/\.[a-z0-9]+(\?.*)?$/i, "") || null;
   }
-  function spriteCandidates2(species, option) {
+  function spriteCandidates3(species, option2) {
     const names = /* @__PURE__ */ new Set();
     const add = (value) => {
       const trimmed = String(value ?? "").trim();
@@ -36905,23 +33661,23 @@ next: ${next}`;
       names.add(trimmed);
       names.add(trimmed.replace(/\W+/g, ""));
     };
-    if (option?.spriteKey) add(spriteNameFromPath(option.spriteKey));
+    if (option2?.spriteKey) add(spriteNameFromPath(option2.spriteKey));
     add(species);
-    if (option) {
-      add(option.cropName);
-      add(option.seedName);
+    if (option2) {
+      add(option2.cropName);
+      add(option2.seedName);
     }
     const iconNames = Array.from(names, (name) => name.replace(/icon$/i, "")).filter(Boolean);
     const all = Array.from(/* @__PURE__ */ new Set([...iconNames.map((name) => `${name}Icon`), ...names])).filter(Boolean);
     return all.length ? all : [species];
   }
-  function spriteCategories(option) {
-    for (const name of [option.key, option.seedName, option.cropName]) {
+  function spriteCategories(option2) {
+    for (const name of [option2.key, option2.seedName, option2.cropName]) {
       if (PLANT_FIRST_SPECIES.has(String(name ?? "").trim().toLowerCase())) return ["plant", "tallplant", "crop"];
     }
     return [...DEFAULT_CATEGORIES];
   }
-  function cropListIcon(option, emoji, size) {
+  function cropListIcon(option2, emoji, size) {
     const wrap = h("span", void 0, emoji.trim() ? emoji : "??");
     Object.assign(wrap.style, {
       width: `${size}px`,
@@ -36930,7 +33686,7 @@ next: ${next}`;
       alignItems: "center",
       justifyContent: "center"
     });
-    attachSpriteIcon(wrap, spriteCategories(option), spriteCandidates2(option.key, option), size, "calculator-list");
+    attachSpriteIcon(wrap, spriteCategories(option2), spriteCandidates3(option2.key, option2), size, "calculator-list");
     return wrap;
   }
   function cropPreview() {
@@ -36954,10 +33710,10 @@ next: ${next}`;
     };
     return {
       root: root4,
-      show(option, mutations, emoji) {
+      show(option2, mutations, emoji) {
         fallback.textContent = emoji.trim() ? emoji : "??";
         syncFallback();
-        attachSpriteIcon(layer2, spriteCategories(option), spriteCandidates2(option.key, option), PREVIEW_SPRITE_PX, "calculator", {
+        attachSpriteIcon(layer2, spriteCategories(option2), spriteCandidates3(option2.key, option2), PREVIEW_SPRITE_PX, "calculator", {
           mutations: mutations.length ? mutations.map((m) => MUTATION_SPRITE_NAMES[m] ?? m) : void 0,
           onSpriteApplied: syncFallback
         });
@@ -36999,8 +33755,8 @@ next: ${next}`;
   });
 
   // src/features/calculator/menu.ts
-  function seedEmoji(option, key2) {
-    return getLockerSeedEmojiForKey(key2) || (option?.seedName ? getLockerSeedEmojiForSeedName(option.seedName) : void 0) || "\u{1F331}";
+  function seedEmoji(option2, key2) {
+    return getLockerSeedEmojiForKey(key2) || (option2?.seedName ? getLockerSeedEmojiForSeedName(option2.seedName) : void 0) || "\u{1F331}";
   }
   function section(title) {
     const card4 = plainCard();
@@ -37110,9 +33866,9 @@ next: ${next}`;
     const listIcons = /* @__PURE__ */ new Map();
     let selectedKey = null;
     const stateFor = (key2) => {
-      let state5 = states.get(key2);
-      if (!state5) states.set(key2, state5 = defaultCalculatorState());
-      return state5;
+      let state7 = states.get(key2);
+      if (!state7) states.set(key2, state7 = defaultCalculatorState());
+      return state7;
     };
     function refreshPrice() {
       price.value.textContent = selectedKey ? formatCoins3(calculatorPrice(selectedKey, stateFor(selectedKey))) : "\u2014";
@@ -37124,29 +33880,29 @@ next: ${next}`;
       weight.textContent = formatWeight(selectedKey ? calculatorWeight(selectedKey, size) : null);
     }
     function refreshSprite() {
-      const option = selectedKey ? optionByKey.get(selectedKey) : void 0;
-      if (!selectedKey || !option) {
+      const option2 = selectedKey ? optionByKey.get(selectedKey) : void 0;
+      if (!selectedKey || !option2) {
         preview.clear();
         return;
       }
-      preview.show(option, mutationsOf(stateFor(selectedKey)), seedEmoji(option, selectedKey));
+      preview.show(option2, mutationsOf(stateFor(selectedKey)), seedEmoji(option2, selectedKey));
     }
     function renderPickers() {
-      const state5 = selectedKey ? stateFor(selectedKey) : defaultCalculatorState();
+      const state7 = selectedKey ? stateFor(selectedKey) : defaultCalculatorState();
       const live = selectedKey != null;
-      const pick2 = (field, spriteChanges) => live ? (value) => {
-        state5[field] = value;
+      const pick2 = (field2, spriteChanges) => live ? (value) => {
+        state7[field2] = value;
         if (spriteChanges) refreshSprite();
         refreshPrice();
       } : void 0;
-      colorHost.replaceChildren(optionPicker(COLOR_LABELS, state5.color, "Mutations", pick2("color", true)));
-      weatherHost.replaceChildren(optionPicker(WEATHER_LABELS, state5.weather, "Weather condition", pick2("weather", true)));
-      lightingHost.replaceChildren(optionPicker(LIGHTING_LABELS, state5.lighting, "Weather lighting", pick2("lighting", true)));
+      colorHost.replaceChildren(optionPicker(COLOR_LABELS, state7.color, "Mutations", pick2("color", true)));
+      weatherHost.replaceChildren(optionPicker(WEATHER_LABELS, state7.weather, "Weather condition", pick2("weather", true)));
+      lightingHost.replaceChildren(optionPicker(LIGHTING_LABELS, state7.lighting, "Weather lighting", pick2("lighting", true)));
       const pickFriends = pick2("friendPlayers", false);
       friendHost.replaceChildren(
         optionPicker(
           FRIEND_BONUS_LABELS,
-          friendPlayersLabel(state5.friendPlayers),
+          friendPlayersLabel(state7.friendPlayers),
           "Friend bonus",
           pickFriends && ((label2) => pickFriends(friendPlayersOf(label2)))
         )
@@ -37177,8 +33933,8 @@ next: ${next}`;
       renderItem: (item, btn) => {
         let icon2 = listIcons.get(item.id);
         if (!icon2) {
-          const option = optionByKey.get(item.id);
-          icon2 = option ? cropListIcon(option, seedEmoji(option, option.key), LIST_ICON_PX) : h("span");
+          const option2 = optionByKey.get(item.id);
+          icon2 = option2 ? cropListIcon(option2, seedEmoji(option2, option2.key), LIST_ICON_PX) : h("span");
           listIcons.set(item.id, icon2);
         }
         const label2 = h("span", void 0, item.title);
@@ -37191,8 +33947,8 @@ next: ${next}`;
       const options2 = getLockerSeedOptions();
       optionByKey.clear();
       listIcons.clear();
-      for (const option of options2) optionByKey.set(option.key, option);
-      tabs.setItems(options2.map((option) => ({ id: option.key, title: option.cropName || option.key })));
+      for (const option2 of options2) optionByKey.set(option2.key, option2);
+      tabs.setItems(options2.map((option2) => ({ id: option2.key, title: option2.cropName || option2.key })));
       const selected = tabs.getSelected()?.id ?? null;
       if (!selected && options2.length) {
         tabs.select(options2[0].key);
@@ -37212,13 +33968,13 @@ next: ${next}`;
     ui.mount(container);
   }
   var LIST_ICON_PX;
-  var init_menu5 = __esm({
+  var init_menu4 = __esm({
     "src/features/calculator/menu.ts"() {
       "use strict";
       init_data();
       init_cropSize();
       init_math();
-      init_menu4();
+      init_menu3();
       init_menu();
       init_card();
       init_dom2();
@@ -37248,14 +34004,14 @@ next: ${next}`;
     });
   }
   function gridRow() {
-    const row3 = document.createElement("div");
-    css(row3, {
+    const row4 = document.createElement("div");
+    css(row4, {
       display: "grid",
       gridTemplateColumns: GRID_TEMPLATE,
       alignItems: "center",
       gap: "6px"
     });
-    return row3;
+    return row4;
   }
   function headerCell(label2, align = "center") {
     const cell = document.createElement("span");
@@ -37289,10 +34045,10 @@ next: ${next}`;
     cell.textContent = formatInteger(value);
     return cell;
   }
-  function speciesCell(row3) {
+  function speciesCell(row4) {
     const cell = document.createElement("span");
     css(cell, { display: "flex", alignItems: "center", gap: "7px", minWidth: "0" });
-    cell.appendChild(iconBox(`sprite/pet/${row3.species}`, SPECIES_ICON_PX, "hatch"));
+    cell.appendChild(iconBox(`sprite/pet/${row4.species}`, SPECIES_ICON_PX, "hatch"));
     const label2 = document.createElement("span");
     css(label2, {
       fontSize: "12.5px",
@@ -37301,12 +34057,12 @@ next: ${next}`;
       textOverflow: "ellipsis",
       whiteSpace: "nowrap"
     });
-    label2.textContent = row3.species;
+    label2.textContent = row4.species;
     cell.appendChild(label2);
-    if (row3.share !== void 0) {
+    if (row4.share !== void 0) {
       const share = document.createElement("span");
       css(share, { fontSize: "10px", color: color.textDim, whiteSpace: "nowrap", flex: "0 0 auto" });
-      const percent = row3.share * 100;
+      const percent = row4.share * 100;
       share.textContent = `${percent >= 1 ? Math.round(percent) : percent.toFixed(1)}%`;
       cell.appendChild(share);
     }
@@ -37327,14 +34083,14 @@ next: ${next}`;
     let totalNormal = 0;
     let totalGold = 0;
     let totalRainbow = 0;
-    for (const row3 of rows) {
-      const counts = countsFor(stats, row3.species);
+    for (const row4 of rows) {
+      const counts = countsFor(stats, row4.species);
       totalNormal += counts.normal ?? 0;
       totalGold += counts.gold ?? 0;
       totalRainbow += counts.rainbow ?? 0;
       const line = gridRow();
       line.append(
-        speciesCell(row3),
+        speciesCell(row4),
         numberCell(counts.normal, color.text),
         numberCell(counts.gold, color.gold),
         numberCell(counts.rainbow, color.rainbow),
@@ -37370,7 +34126,7 @@ next: ${next}`;
       init_format();
       init_icons();
       init_theme();
-      css = (el, style2) => Object.assign(el.style, style2);
+      css = (el, style) => Object.assign(el.style, style);
       SPECIES_ICON_PX = 24;
       HEADER_ICON_PX = 18;
       GRID_TEMPLATE = "minmax(0, 2.2fr) repeat(4, minmax(54px, 1fr))";
@@ -37396,8 +34152,8 @@ next: ${next}`;
     const remaining = Math.max(0, ceiling - misses);
     const due = remaining === 0;
     const near = !due && remaining <= NEAR_GUARANTEE_PULLS;
-    const row3 = document.createElement("div");
-    css2(row3, {
+    const row4 = document.createElement("div");
+    css2(row4, {
       display: "grid",
       gridTemplateColumns: ROW_TEMPLATE,
       alignItems: "center",
@@ -37441,7 +34197,7 @@ next: ${next}`;
     const isFloor = offset <= 0;
     value.textContent = due ? "Guaranteed" : `${isFloor ? "\u2265 " : ""}${formatInteger(misses)} / ${formatInteger(ceiling)}`;
     value.title = due ? `Due: the next pull is forced (threshold ${formatInteger(target.threshold)}).` : isFloor ? `At least ${formatInteger(remaining)} more misses before the guarantee (threshold ${formatInteger(target.threshold)}). The game keeps its own counter private, so this only counts hatches seen since tracking began. Set your real counter to correct it.` : `${formatInteger(remaining)} more misses before the guarantee (threshold ${formatInteger(target.threshold)}).`;
-    row3.append(label2, bar.root, value);
+    row4.append(label2, bar.root, value);
     if (showOffsets) {
       const input = textInput("", String(offset), { small: true });
       Object.assign(input, { type: "number", min: "0", max: String(ceiling), step: "1" });
@@ -37450,11 +34206,11 @@ next: ${next}`;
       input.addEventListener("change", () => {
         HatchTracker.setOffset(egg.eggId, target.key, Number(input.value));
       });
-      row3.appendChild(input);
+      row4.appendChild(input);
     } else {
-      row3.appendChild(document.createElement("span"));
+      row4.appendChild(document.createElement("span"));
     }
-    return row3;
+    return row4;
   }
   function trackingNote() {
     const note = document.createElement("div");
@@ -37542,7 +34298,7 @@ next: ${next}`;
       init_icons();
       init_layout();
       init_theme();
-      css2 = (el, style2) => Object.assign(el.style, style2);
+      css2 = (el, style) => Object.assign(el.style, style);
       EGG_ICON_PX = 30;
       TARGET_ICON_PX = 22;
       RARITY_ICON_PX = 20;
@@ -37875,8 +34631,8 @@ next: ${next}`;
     return el;
   }
   function cropRow(species, crop, name) {
-    const row3 = document.createElement("div");
-    Object.assign(row3.style, {
+    const row4 = document.createElement("div");
+    Object.assign(row4.style, {
       display: "grid",
       gridTemplateColumns: "1fr auto",
       alignItems: "center",
@@ -37900,8 +34656,8 @@ next: ${next}`;
       PetsService.isInstantFeedCropAllowed(species, crop),
       (on) => PetsService.setInstantFeedCropAllowed(species, crop, on)
     );
-    row3.append(label2, toggle2);
-    return row3;
+    row4.append(label2, toggle2);
+    return row4;
   }
   function renderFeedingTab(view) {
     view.replaceChildren();
@@ -37969,7 +34725,7 @@ next: ${next}`;
       init_theme();
       init_toggles();
       init_vtabs();
-      init_menu3();
+      init_rarityBadge();
       init_feedWidget();
       init_pets();
       init_petIcon();
@@ -38142,10 +34898,10 @@ next: ${next}`;
   function options(el, entries2) {
     el.replaceChildren(
       ...entries2.map(([value, label2]) => {
-        const option = document.createElement("option");
-        option.value = value;
-        option.textContent = label2;
-        return option;
+        const option2 = document.createElement("option");
+        option2.value = value;
+        option2.textContent = label2;
+        return option2;
       })
     );
   }
@@ -38306,8 +35062,8 @@ next: ${next}`;
       return cell;
     }
     function logRow(log2) {
-      const row3 = document.createElement("div");
-      css3(row3, {
+      const row4 = document.createElement("div");
+      css3(row4, {
         display: "grid",
         gridTemplateColumns: ROW_TEMPLATE2,
         alignItems: "center",
@@ -38319,8 +35075,8 @@ next: ${next}`;
         // A proc from this session reads at a glance without a legend.
         borderLeft: log2.isActiveSession ? `2px solid ${color.accent}` : `1px solid ${color.border}`
       });
-      row3.append(whenCell(log2), petCell(log2), abilityCell(log2), detailsCell(log2));
-      return row3;
+      row4.append(whenCell(log2), petCell(log2), abilityCell(log2), detailsCell(log2));
+      return row4;
     }
     function applyFilters() {
       let result = logs2.slice();
@@ -38428,7 +35184,7 @@ next: ${next}`;
       init_abilityChips();
       init_pets();
       init_petIcon();
-      css3 = (el, style2) => Object.assign(el.style, style2);
+      css3 = (el, style) => Object.assign(el.style, style);
       PANEL_WIDTH = "min(760px, 88vw)";
       LIST_MAX_HEIGHT = "min(56vh, 520px)";
       PET_ICON_PX = 24;
@@ -38952,8 +35708,8 @@ Not a sum: it is 1 minus the product of every pet missing.${perHour}
     }
     const magnitude = perProcMagnitude(group2);
     if (magnitude) {
-      const row3 = document.createElement("div");
-      Object.assign(row3.style, {
+      const row4 = document.createElement("div");
+      Object.assign(row4.style, {
         display: "flex",
         alignItems: "baseline",
         justifyContent: "space-between",
@@ -38961,7 +35717,7 @@ Not a sum: it is 1 minus the product of every pet missing.${perHour}
         fontSize: "10px",
         marginTop: "1px"
       });
-      row3.title = group2.contributors.length > 1 ? "What a single proc gives. Each pet applies its own value, so this is\na range across the team; the values never add up." : "What a single proc gives.";
+      row4.title = group2.contributors.length > 1 ? "What a single proc gives. Each pet applies its own value, so this is\na range across the team; the values never add up." : "What a single proc gives.";
       const label2 = document.createElement("span");
       label2.textContent = "per proc";
       label2.style.color = MUTED;
@@ -38970,8 +35726,8 @@ Not a sum: it is 1 minus the product of every pet missing.${perHour}
       amount.style.fontWeight = "600";
       amount.style.flex = "0 0 auto";
       amount.style.fontVariantNumeric = "tabular-nums";
-      row3.append(label2, amount);
-      block.appendChild(row3);
+      row4.append(label2, amount);
+      block.appendChild(row4);
     }
     return block;
   }
@@ -39056,8 +35812,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       tint = MUTED;
       title = `No known hunger data for: ${autonomy.speciesMissingDepletion.join(", ")}.`;
     }
-    const row3 = document.createElement("div");
-    Object.assign(row3.style, {
+    const row4 = document.createElement("div");
+    Object.assign(row4.style, {
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
@@ -39068,7 +35824,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       border: `1px solid ${color.border}`,
       fontSize: "10px"
     });
-    row3.title = title;
+    row4.title = title;
     const label2 = document.createElement("span");
     label2.textContent = "\u{1F356} Lasts without feeding (from full)";
     label2.style.color = MUTED;
@@ -39081,8 +35837,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     valueSpan.style.fontWeight = "600";
     valueSpan.style.flex = "0 0 auto";
     valueSpan.style.fontVariantNumeric = "tabular-nums";
-    row3.append(label2, valueSpan);
-    return row3;
+    row4.append(label2, valueSpan);
+    return row4;
   }
   function renderTeamStats(pets, options2 = {}) {
     const wrap = document.createElement("div");
@@ -39524,10 +36280,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     function teamRow(team, index, view) {
       const selected = team.id === view.selectedId;
       const active3 = team.id === view.activeTeamId;
-      const row3 = document.createElement("div");
-      row3.dataset.index = String(index);
-      row3.dataset.teamId = team.id;
-      Object.assign(row3.style, {
+      const row4 = document.createElement("div");
+      row4.dataset.index = String(index);
+      row4.dataset.teamId = team.id;
+      Object.assign(row4.style, {
         height: "36px",
         padding: "0 10px",
         borderRadius: "8px",
@@ -39563,23 +36319,23 @@ Restore figures are averages; unlucky streaks do worse.`;
         minis.appendChild(petIcon(id ? view.pets.get(String(id)) ?? null : null, MINI_ICON_PX));
       }
       const grab = grabHandle();
-      row3.append(dot, label2, minis, grab);
-      row3.onmouseenter = () => {
-        if (!selected) row3.style.borderColor = color.accentBorder;
+      row4.append(dot, label2, minis, grab);
+      row4.onmouseenter = () => {
+        if (!selected) row4.style.borderColor = color.accentBorder;
       };
-      row3.onmouseleave = () => {
-        if (!selected) row3.style.borderColor = color.border;
+      row4.onmouseleave = () => {
+        if (!selected) row4.style.borderColor = color.border;
       };
-      row3.onclick = () => handlers.onSelect(team.id);
+      row4.onclick = () => handlers.onSelect(team.id);
       grab.addEventListener("dragstart", (ev) => {
         draggingIndex = index;
-        draggingHeight = row3.getBoundingClientRect().height;
-        row3.classList.add("qmm-dragging");
+        draggingHeight = row4.getBoundingClientRect().height;
+        row4.classList.add("qmm-dragging");
         ev.dataTransfer?.setData("text/plain", String(index));
         if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "move";
         try {
-          const ghost = row3.cloneNode(true);
-          Object.assign(ghost.style, { width: `${row3.getBoundingClientRect().width}px`, position: "absolute", top: "-9999px" });
+          const ghost = row4.cloneNode(true);
+          Object.assign(ghost.style, { width: `${row4.getBoundingClientRect().width}px`, position: "absolute", top: "-9999px" });
           document.body.appendChild(ghost);
           ev.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
           setTimeout(() => ghost.remove(), 0);
@@ -39587,18 +36343,18 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
       });
       grab.addEventListener("dragend", () => {
-        row3.classList.remove("qmm-dragging");
+        row4.classList.remove("qmm-dragging");
         resetDrag();
       });
-      row3.addEventListener("dragover", (ev) => {
-        const bounds = row3.getBoundingClientRect();
+      row4.addEventListener("dragover", (ev) => {
+        const bounds = row4.getBoundingClientRect();
         trackDrag(ev, ev.clientY < bounds.top + bounds.height / 2 ? index : index + 1);
       });
-      row3.addEventListener("drop", (ev) => {
+      row4.addEventListener("drop", (ev) => {
         ev.stopPropagation();
         drop(ev);
       });
-      return row3;
+      return row4;
     }
     function render(view) {
       teams2 = view.teams;
@@ -40749,13 +37505,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     return `outranked in: ${parts.join(", ")}`;
   }
   function renderUnusedRow(info) {
-    const row3 = document.createElement("div");
-    row3.style.display = "flex";
-    row3.style.alignItems = "center";
-    row3.style.gap = "6px";
-    row3.style.padding = "3px 0";
-    row3.style.opacity = "0.75";
-    row3.appendChild(renderPetChip(info.pet));
+    const row4 = document.createElement("div");
+    row4.style.display = "flex";
+    row4.style.alignItems = "center";
+    row4.style.gap = "6px";
+    row4.style.padding = "3px 0";
+    row4.style.opacity = "0.75";
+    row4.appendChild(renderPetChip(info.pet));
     const reason = document.createElement("span");
     reason.textContent = unusedReasonText(info);
     reason.style.fontSize = "10px";
@@ -40765,8 +37521,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     reason.style.overflow = "hidden";
     reason.style.textOverflow = "ellipsis";
     reason.style.maxWidth = "45%";
-    row3.appendChild(reason);
-    return row3;
+    row4.appendChild(reason);
+    return row4;
   }
   function renderUnusedSection(unusedPets) {
     const section4 = card(`\u{1F5D1}\uFE0F Not used in any team (${unusedPets.length})`, { tone: "muted", compactHeader: true, gap: 4 });
@@ -40908,7 +37664,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     detachOpenTabListener = () => window.removeEventListener(OPEN_TAB_EVENT, onOpenTab);
   }
   var OPEN_TAB_EVENT, TABS, detachOpenTabListener;
-  var init_menu6 = __esm({
+  var init_menu5 = __esm({
     "src/features/pets/menu.ts"() {
       "use strict";
       init_menu();
@@ -41166,13 +37922,13 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/deleters/deleters.ts
   async function findFirstEmptySlot() {
-    const state5 = await PlayerService.getGardenState();
+    const state7 = await PlayerService.getGardenState();
     const isFree = (objects, index) => objects?.[String(index)] == null;
     for (let i = 0; i < DIRT_TILE_COUNT; i++) {
-      if (isFree(state5?.tileObjects, i)) return { tileType: "Dirt", index: i };
+      if (isFree(state7?.tileObjects, i)) return { tileType: "Dirt", index: i };
     }
     for (let i = 0; i < BOARDWALK_TILE_COUNT; i++) {
-      if (isFree(state5?.boardwalkTileObjects, i)) return { tileType: "Boardwalk", index: i };
+      if (isFree(state7?.boardwalkTileObjects, i)) return { tileType: "Boardwalk", index: i };
     }
     return null;
   }
@@ -41442,8 +38198,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     function buildRow(entry) {
       const qty = picked.get(entry.id) ?? 0;
-      const row3 = h("div", qty > 0 ? "qws-del-row is-selected" : "qws-del-row");
-      row3.addEventListener("click", () => {
+      const row4 = h("div", qty > 0 ? "qws-del-row is-selected" : "qws-del-row");
+      row4.addEventListener("click", () => {
         if ((picked.get(entry.id) ?? 0) > 0) picked.delete(entry.id);
         else picked.set(entry.id, entry.total);
         renderRows();
@@ -41471,8 +38227,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         else picked.delete(entry.id);
         renderRows();
       });
-      row3.append(buildIcon(entry.id), text2, amount);
-      return row3;
+      row4.append(buildIcon(entry.id), text2, amount);
+      return row4;
     }
     function renderRows() {
       if (!modal.isOpen()) return;
@@ -41493,9 +38249,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     list.append(h("div", "qws-del-note", "Reading inventory\u2026"));
     updateSummary();
-    void options2.loadEntries().then((loaded) => {
+    void options2.loadEntries().then((loaded2) => {
       if (!modal.isOpen()) return;
-      entries2 = loaded;
+      entries2 = loaded2;
       for (const [id, qty] of [...picked]) {
         const entry = entries2.find((e) => e.id === id);
         if (!entry) picked.delete(id);
@@ -41750,11 +38506,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       CHIP_SPRITE_PX = 22;
       formatDurationShort = (ms) => {
         if (ms < 1e3) return `${ms} ms`;
-        const seconds = ms / 1e3;
-        if (seconds < 10) return `${seconds.toFixed(1)} s`;
-        if (seconds < 90) return `${Math.round(seconds)} s`;
-        const minutes = Math.floor(seconds / 60);
-        const rest2 = Math.round(seconds % 60);
+        const seconds2 = ms / 1e3;
+        if (seconds2 < 10) return `${seconds2.toFixed(1)} s`;
+        if (seconds2 < 90) return `${Math.round(seconds2)} s`;
+        const minutes = Math.floor(seconds2 / 60);
+        const rest2 = Math.round(seconds2 % 60);
         return rest2 === 0 ? `${minutes} min` : `${minutes} min ${rest2} s`;
       };
       formatFinishTime = (timestamp) => new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -41891,35 +38647,35 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/chat/harvest.ts
-  function mutationsOf2(row3) {
-    return row3.mutations;
+  function mutationsOf2(row4) {
+    return row4.mutations;
   }
-  function rowKey(row3) {
-    return `${row3.tileIndex}:${row3.slotId}`;
+  function rowKey(row4) {
+    return `${row4.tileIndex}:${row4.slotId}`;
   }
   function selectionSignature(rows) {
     return rows.map(rowKey).sort().join("|");
   }
   function speciesPresent(rows) {
-    return [...new Set(rows.map((row3) => row3.species))].sort((a, b) => a.localeCompare(b));
+    return [...new Set(rows.map((row4) => row4.species))].sort((a, b) => a.localeCompare(b));
   }
   function mutationsPresent(rows) {
     const all = /* @__PURE__ */ new Set();
-    for (const row3 of rows) for (const mutation of mutationsOf2(row3)) all.add(mutation);
+    for (const row4 of rows) for (const mutation of mutationsOf2(row4)) all.add(mutation);
     return [...all].sort((a, b) => a.localeCompare(b));
   }
   function tally(rows, of) {
     const counts = /* @__PURE__ */ new Map();
-    for (const row3 of rows) {
-      for (const value of of(row3)) {
+    for (const row4 of rows) {
+      for (const value of of(row4)) {
         if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
       }
     }
     return counts;
   }
-  function matchesMutations(row3, wanted, mode) {
+  function matchesMutations(row4, wanted, mode) {
     if (wanted.length === 0) return true;
-    const present = new Set(mutationsOf2(row3));
+    const present = new Set(mutationsOf2(row4));
     switch (mode) {
       case "all":
         return wanted.every((mutation) => present.has(mutation));
@@ -41931,12 +38687,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function filterRows(rows, filters) {
     const species = filters.species && filters.species.length > 0 ? new Set(filters.species) : null;
-    return rows.filter((row3) => {
-      if (!row3.ready) return false;
-      if (row3.preserved && !filters.includePreserved) return false;
-      if (species && !species.has(row3.species)) return false;
-      if (row3.sizePct < filters.minSizePct) return false;
-      return matchesMutations(row3, filters.mutations, filters.mutationMode);
+    return rows.filter((row4) => {
+      if (!row4.ready) return false;
+      if (row4.preserved && !filters.includePreserved) return false;
+      if (species && !species.has(row4.species)) return false;
+      if (row4.sizePct < filters.minSizePct) return false;
+      return matchesMutations(row4, filters.mutations, filters.mutationMode);
     });
   }
   function describeFilters(filters) {
@@ -41960,12 +38716,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function groupVariants(rows) {
     const groups = /* @__PURE__ */ new Map();
-    for (const row3 of rows) {
-      const mutations = [...mutationsOf2(row3)].sort();
-      const key2 = `${row3.species}|${mutations.join(",")}`;
+    for (const row4 of rows) {
+      const mutations = [...mutationsOf2(row4)].sort();
+      const key2 = `${row4.species}|${mutations.join(",")}`;
       const known = groups.get(key2);
       if (known) known.count++;
-      else groups.set(key2, { species: row3.species, mutations, count: 1 });
+      else groups.set(key2, { species: row4.species, mutations, count: 1 });
     }
     return [...groups.values()].sort(
       (a, b) => b.count - a.count || a.species.localeCompare(b.species) || a.mutations.length - b.mutations.length || a.mutations.join(",").localeCompare(b.mutations.join(","))
@@ -41978,7 +38734,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function describeSelection(rows) {
     if (rows.length === 0) return "nothing";
     const bySpecies2 = /* @__PURE__ */ new Map();
-    for (const row3 of rows) bySpecies2.set(row3.species, (bySpecies2.get(row3.species) ?? 0) + 1);
+    for (const row4 of rows) bySpecies2.set(row4.species, (bySpecies2.get(row4.species) ?? 0) + 1);
     const parts = [...bySpecies2.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([species, count]) => `${count} ${species}`);
     const head = parts.slice(0, 3);
     const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
@@ -42291,10 +39047,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     const totals = /* @__PURE__ */ new Map();
     for (const raw of Array.isArray(rows) ? rows : []) {
       if (!raw || typeof raw !== "object") continue;
-      const row3 = raw;
-      const id = idOf(row3).trim();
+      const row4 = raw;
+      const id = idOf(row4).trim();
       if (!id) continue;
-      const quantity = Math.floor(Number(row3.quantity ?? 0));
+      const quantity = Math.floor(Number(row4.quantity ?? 0));
       if (!Number.isFinite(quantity) || quantity <= 0) continue;
       totals.set(id, (totals.get(id) ?? 0) + quantity);
     }
@@ -42306,8 +39062,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       Atoms.inventory.myEggInventory.get().catch(() => null)
     ]);
     return [
-      ...accumulate(seeds, "seed", (row3) => String(row3.species ?? ""), seedName),
-      ...accumulate(eggs, "egg", (row3) => String(row3.eggId ?? row3.id ?? row3.species ?? ""), eggName2)
+      ...accumulate(seeds, "seed", (row4) => String(row4.species ?? ""), seedName),
+      ...accumulate(eggs, "egg", (row4) => String(row4.eggId ?? row4.id ?? row4.species ?? ""), eggName2)
     ];
   }
   async function readPlantScope() {
@@ -42338,10 +39094,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function selectField(options2) {
     const el = select2({ small: true });
     for (const [value, label2] of options2) {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = label2;
-      el.appendChild(option);
+      const option2 = document.createElement("option");
+      option2.value = value;
+      option2.textContent = label2;
+      el.appendChild(option2);
     }
     return el;
   }
@@ -42381,7 +39137,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       WARN = color.warn;
       GOLD = color.gold;
       RAINBOW = color.rainbow;
-      css4 = (el, style2) => Object.assign(el.style, style2);
+      css4 = (el, style) => Object.assign(el.style, style);
       ensurePanelStyles = ensureKitStyles;
       sectionLabel2 = sectionLabel;
       VARIANT = { accent: "primary", neutral: "default", danger: "danger" };
@@ -42552,9 +39308,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     return tile;
   }
   function tileRow() {
-    const row3 = document.createElement("div");
-    css4(row3, { display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: "5px" });
-    return row3;
+    const row4 = document.createElement("div");
+    css4(row4, { display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: "5px" });
+    return row4;
   }
   function segmented2(options2, selected, onSelect) {
     const wrap = document.createElement("div");
@@ -42566,12 +39322,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       background: "rgba(0,0,0,0.22)",
       border: `1px solid ${BORDER}`
     });
-    for (const option of options2) {
-      const active3 = option.value === selected;
+    for (const option2 of options2) {
+      const active3 = option2.value === selected;
       const button3 = document.createElement("button");
       button3.type = "button";
-      if (option.title) button3.title = option.title;
-      button3.textContent = option.label;
+      if (option2.title) button3.title = option2.title;
+      button3.textContent = option2.label;
       css4(button3, {
         padding: "4px 10px",
         borderRadius: "7px",
@@ -42582,7 +39338,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         background: active3 ? TEAL_DIM : "transparent",
         color: active3 ? TEAL : TEXT_DIM
       });
-      button3.addEventListener("click", () => onSelect(option.value));
+      button3.addEventListener("click", () => onSelect(option2.value));
       wrap.append(button3);
     }
     return wrap;
@@ -42758,11 +39514,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     );
     modal.body.append(toolbar2, grid, hint2);
     const cells = /* @__PURE__ */ new Map();
-    for (let row3 = 0; row3 < GARDEN_ROWS; row3++) {
+    for (let row4 = 0; row4 < GARDEN_ROWS; row4++) {
       for (let col = 0; col < GARDEN_COLS; col++) {
         if (col === GARDEN_COLS / 2) grid.append(h("div"));
         const el = h("div", "qws-gv-cell");
-        cells.set(row3 * GARDEN_COLS + col, { el, shown: null, content: null });
+        cells.set(row4 * GARDEN_COLS + col, { el, shown: null, content: null });
         grid.append(el);
       }
     }
@@ -42935,10 +39691,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const snapSeconds = (value) => Math.max(0, Math.min(AUTO_RECO_MAX_SECONDS, Math.round(value / AUTO_RECO_STEP_SECONDS) * AUTO_RECO_STEP_SECONDS));
     const applySeconds = (raw, persist3) => {
-      const seconds = snapSeconds(raw);
-      delaySlider.value = String(seconds);
-      delayValue.textContent = formatShortDuration(seconds);
-      if (persist3) writeAutoRecoDelayMs(seconds * 1e3);
+      const seconds2 = snapSeconds(raw);
+      delaySlider.value = String(seconds2);
+      delayValue.textContent = formatShortDuration(seconds2);
+      if (persist3) writeAutoRecoDelayMs(seconds2 * 1e3);
     };
     delaySlider.addEventListener("input", () => applySeconds(Number(delaySlider.value), false));
     delaySlider.addEventListener("change", () => applySeconds(Number(delaySlider.value), true));
@@ -43082,19 +39838,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     const player2 = buildPlayerSection();
     const modalHost = () => ui.root.closest(".qws-win") ?? ui.root;
     const pickFor = (controller, opts) => new Promise((resolve) => {
-      let loaded = [];
+      let loaded2 = [];
       openDeleterPicker({
         ...opts,
         host: modalHost(),
         initial: new Map(controller.getSelection().map((entry) => [entry.id, entry.qty])),
         loadEntries: async () => {
-          loaded = await opts.loadEntries();
-          return loaded;
+          loaded2 = await opts.loadEntries();
+          return loaded2;
         },
         onConfirm: (picked) => {
           controller.setSelection(
             Array.from(picked, ([id, qty]) => {
-              const entry = loaded.find((candidate) => candidate.id === id);
+              const entry = loaded2.find((candidate) => candidate.id === id);
               return {
                 id,
                 qty,
@@ -43185,7 +39941,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   var PANEL_WIDTH_PX, AUTO_RECO_MAX_SECONDS, AUTO_RECO_STEP_SECONDS, MOVE_DELAY_MIN_MS, MOVE_DELAY_MAX_MS, MOVE_DELAY_DEFAULT_MS, formatShortDuration;
-  var init_menu7 = __esm({
+  var init_menu6 = __esm({
     "src/features/misc/menu.ts"() {
       "use strict";
       init_storage();
@@ -43214,9 +39970,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       MOVE_DELAY_MIN_MS = 10;
       MOVE_DELAY_MAX_MS = 1e3;
       MOVE_DELAY_DEFAULT_MS = 50;
-      formatShortDuration = (seconds) => {
-        if (seconds <= 0) return "Instant";
-        const total = Math.max(0, Math.round(seconds));
+      formatShortDuration = (seconds2) => {
+        if (seconds2 <= 0) return "Instant";
+        const total = Math.max(0, Math.round(seconds2));
         if (total < 60) return `${total} s`;
         const minutes = Math.floor(total / 60);
         const rest2 = total % 60;
@@ -43633,9 +40389,9 @@ Restore figures are averages; unlucky streaks do worse.`;
           }
         })
       );
-      const row3 = h("div", "qws-set-backup");
-      row3.append(head, actions2);
-      return row3;
+      const row4 = h("div", "qws-set-backup");
+      row4.append(head, actions2);
+      return row4;
     };
     function refresh() {
       const backups = listBackups();
@@ -43775,9 +40531,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     ];
     const grid = h("div", "qws-set-grid");
     for (const [label2, value] of runtimeRows) {
-      const row3 = h("div", "qws-set-grid__row");
-      row3.append(h("span", "qws-set-grid__label", label2), h("span", "qws-set-grid__value", value));
-      grid.appendChild(row3);
+      const row4 = h("div", "qws-set-grid__row");
+      row4.append(h("span", "qws-set-grid__label", label2), h("span", "qws-set-grid__value", value));
+      grid.appendChild(row4);
     }
     const support = h("div", "qws-set-support");
     support.append(
@@ -43817,12 +40573,1331 @@ Restore figures are averages; unlucky streaks do worse.`;
     ]);
     ui.switchTo("settings-data");
   }
-  var init_menu8 = __esm({
+  var init_menu7 = __esm({
     "src/features/settings/menu.ts"() {
       "use strict";
       init_menu();
       init_dataTab();
       init_infosTab();
+    }
+  });
+
+  // src/features/notifier/menu/petsTab.ts
+  function petAvatar(pet) {
+    const avatar3 = h("div");
+    Object.assign(avatar3.style, {
+      width: `${AVATAR_SIZE}px`,
+      height: `${AVATAR_SIZE}px`,
+      borderRadius: "8px",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: color.mutedBg,
+      border: `1px solid ${color.border}`,
+      overflow: "hidden"
+    });
+    const species = String(pet?.slot?.petSpecies ?? "").trim();
+    const glyph = h("span", void 0, species ? species.charAt(0).toUpperCase() : "\u{1F43E}");
+    glyph.style.fontSize = "28px";
+    glyph.setAttribute("aria-hidden", "true");
+    avatar3.appendChild(glyph);
+    if (species) {
+      const mutations = pet?.slot?.mutations;
+      attachSpriteIcon(avatar3, ["pet"], [species], 36, "alerts-pet", {
+        mutations: Array.isArray(mutations) ? mutations : void 0
+      });
+    }
+    return avatar3;
+  }
+  function petRow(pet) {
+    const slot = pet?.slot;
+    const hunger = PetsService.getHungerPctFor(pet);
+    const row4 = h("div");
+    Object.assign(row4.style, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "10px",
+      padding: "6px 8px",
+      borderRadius: "8px",
+      border: `1px solid ${color.border}`,
+      background: color.cardBg
+    });
+    const left = h("div");
+    Object.assign(left.style, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+    const name = h("div", void 0, String(slot?.name || slot?.petSpecies || "Pet"));
+    Object.assign(name.style, { fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
+    left.append(petAvatar(pet), name);
+    const hungerValue = h("div", void 0, Number.isFinite(hunger) ? `${hunger}%` : "-");
+    Object.assign(hungerValue.style, { fontWeight: "700", color: color.gold });
+    row4.append(left, hungerValue);
+    return row4;
+  }
+  function generalCard() {
+    const general = card("General notifications", { tone: "muted", align: "stretch" });
+    const toggle2 = switchInput(PetAlertService.isGeneralEnabled(), (on) => {
+      PetAlertService.setGeneralEnabled(on);
+      toggle2.checked = PetAlertService.isGeneralEnabled();
+    });
+    const toggleRow = flexRow({ justify: "start", gap: 10 });
+    const toggleLabel = h("div", void 0, "Use a shared threshold for all pets");
+    toggleLabel.style.opacity = "0.9";
+    toggleRow.append(toggle2, toggleLabel);
+    const threshold = numberInput(1, 100, 1, PetAlertService.getGeneralThresholdPct());
+    threshold.addEventListener("change", () => {
+      const typed = Number(threshold.value);
+      const next = Math.max(1, Math.min(100, typed || PetAlertService.getGeneralThresholdPct()));
+      threshold.value = String(PetAlertService.setGeneralThresholdPct(next));
+    });
+    general.body.append(
+      formRow("Enable general", toggleRow, { labelWidth: "180px" }).root,
+      formRow("General threshold (%)", threshold.wrap, { labelWidth: "180px" }).root
+    );
+    return general.root;
+  }
+  function renderPetsTab(view) {
+    view.replaceChildren();
+    void PetAlertService.start().catch(() => {
+    });
+    const layout = plainCard();
+    Object.assign(layout.style, {
+      display: "grid",
+      gridTemplateColumns: "minmax(220px, 260px) minmax(0, 1fr)",
+      alignItems: "stretch",
+      height: "54vh",
+      overflow: "hidden"
+    });
+    view.appendChild(layout);
+    const petList = h("div");
+    Object.assign(petList.style, {
+      display: "grid",
+      gridTemplateColumns: "1fr",
+      alignContent: "start",
+      rowGap: "6px",
+      overflow: "auto",
+      padding: "6px",
+      border: `1px solid ${color.border}`,
+      borderRadius: "10px"
+    });
+    const right = h("div");
+    Object.assign(right.style, { display: "flex", flexDirection: "column", gap: "10px", overflow: "auto", minHeight: "0" });
+    right.appendChild(generalCard());
+    layout.append(petList, right);
+    const renderPets = (pets) => {
+      if (!pets.length) {
+        const empty = h("div", void 0, "No active pets.");
+        empty.style.opacity = "0.75";
+        petList.replaceChildren(empty);
+        return;
+      }
+      petList.replaceChildren(...pets.map(petRow));
+    };
+    PetsService.onPetsChangeNow((pets) => renderPets(Array.isArray(pets) ? pets.slice(0, ACTIVE_PET_SLOTS2) : [])).catch(
+      () => renderPets([])
+    );
+  }
+  var ACTIVE_PET_SLOTS2, AVATAR_SIZE;
+  var init_petsTab = __esm({
+    "src/features/notifier/menu/petsTab.ts"() {
+      "use strict";
+      init_card();
+      init_dom2();
+      init_fields();
+      init_layout();
+      init_theme();
+      init_toggles();
+      init_iconCache();
+      init_pets();
+      init_petAlerts();
+      ACTIVE_PET_SLOTS2 = 3;
+      AVATAR_SIZE = 40;
+    }
+  });
+
+  // src/features/notifier/menu/soundLibrary.ts
+  function dropZone(onFiles) {
+    const input = h("input");
+    input.type = "file";
+    input.accept = "audio/*";
+    input.multiple = true;
+    input.style.display = "none";
+    const zone = h("div");
+    zone.tabIndex = 0;
+    zone.setAttribute("role", "button");
+    zone.setAttribute("aria-label", "Select audio files");
+    Object.assign(zone.style, {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "6px",
+      padding: "18px 22px",
+      minHeight: "110px",
+      borderRadius: "14px",
+      border: `1px dashed ${color.borderStrong}`,
+      background: color.mutedBg,
+      transition: "border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease",
+      cursor: "pointer",
+      textAlign: "center"
+    });
+    const title = h("div", void 0, "Select audio files");
+    Object.assign(title.style, { fontWeight: "600", fontSize: "14px", letterSpacing: "0.02em" });
+    const status2 = h("div", void 0, DROP_HINT2);
+    Object.assign(status2.style, { fontSize: "12px", opacity: "0.75" });
+    zone.append(title, status2);
+    const highlight = (on) => {
+      zone.style.borderColor = on ? color.accentBorderHover : color.borderStrong;
+      zone.style.boxShadow = on ? `0 0 0 3px ${color.accentSoft}` : "none";
+      zone.style.background = on ? color.accentSoft : color.mutedBg;
+    };
+    const settle = () => highlight(document.activeElement === zone);
+    const take = async (files) => {
+      status2.textContent = !files?.length ? DROP_HINT2 : files.length === 1 ? files[0].name : `${files.length} files selected`;
+      await onFiles(files);
+      status2.textContent = DROP_HINT2;
+      input.value = "";
+      settle();
+    };
+    zone.addEventListener("mouseenter", () => highlight(true));
+    zone.addEventListener("mouseleave", settle);
+    zone.addEventListener("focus", () => highlight(true));
+    zone.addEventListener("blur", () => highlight(false));
+    zone.addEventListener("dragover", (ev) => {
+      ev.preventDefault();
+      highlight(true);
+      if (ev.dataTransfer) ev.dataTransfer.dropEffect = "copy";
+    });
+    zone.addEventListener("dragleave", settle);
+    zone.addEventListener("drop", (ev) => {
+      ev.preventDefault();
+      void take(ev.dataTransfer?.files || null);
+    });
+    zone.addEventListener("click", () => input.click());
+    zone.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        input.click();
+      }
+    });
+    input.onchange = () => void take(input.files);
+    const wrap = h("div");
+    wrap.append(input, zone);
+    return wrap;
+  }
+  function soundRow(name, onChange) {
+    const defaultFor = CONTEXT_LABELS.filter(([key2]) => audio.getDefaultSoundName(key2) === name);
+    const usedByShopsOrWeather = defaultFor.some(([key2]) => key2 !== "pets");
+    const row4 = h("div");
+    Object.assign(row4.style, {
+      display: "grid",
+      gridTemplateColumns: "minmax(0, 1fr) auto",
+      gap: "12px",
+      alignItems: "center",
+      padding: "8px 10px",
+      borderRadius: "8px",
+      border: `1px solid ${defaultFor.length ? color.accentBorder : color.border}`,
+      background: color.cardBg
+    });
+    const info = h("div");
+    Object.assign(info.style, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+    const title = h("span", void 0, name);
+    Object.assign(title.style, { fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
+    info.appendChild(title);
+    for (const [, label2] of defaultFor) info.appendChild(pill(label2, "ok"));
+    const actions2 = h("div");
+    Object.assign(actions2.style, { display: "flex", gap: "6px", justifyContent: "flex-end", flexWrap: "wrap" });
+    actions2.appendChild(
+      button("\u25B6", { size: "sm", title: "Preview", onClick: () => void audio.trigger("preview", { sound: name }, "shops").catch(() => {
+      }) })
+    );
+    for (const [key2, label2] of CONTEXT_LABELS) {
+      actions2.appendChild(
+        button(`Set ${label2.toLowerCase()}`, {
+          size: "sm",
+          title: `Set as ${label2.toLowerCase()} default`,
+          onClick: () => {
+            audio.setDefaultSoundByName(name, key2);
+            onChange();
+          }
+        })
+      );
+    }
+    const remove = button("Remove", {
+      size: "sm",
+      title: "Remove from library",
+      onClick: () => {
+        audio.unregisterSound(name);
+        onChange();
+      }
+    });
+    if (audio.isProtectedSound(name) || usedByShopsOrWeather) {
+      remove.setEnabled(false);
+      remove.title = audio.isProtectedSound(name) ? "Built-in sound cannot be removed" : "Currently used as default";
+    }
+    actions2.appendChild(remove);
+    row4.append(info, actions2);
+    return row4;
+  }
+  function soundLibraryCard(onLibraryChange) {
+    const section4 = card("Sound library", { tone: "muted" });
+    const errors = errorBar();
+    const list = h("div");
+    Object.assign(list.style, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "6px",
+      maxHeight: "240px",
+      overflowY: "auto",
+      minHeight: "0",
+      padding: "4px 4px 4px 0"
+    });
+    const refresh = () => {
+      const names = audio.listSounds();
+      if (!names.length) {
+        const empty = h("div", void 0, "No sounds in the library.");
+        Object.assign(empty.style, { opacity: "0.75", textAlign: "center", padding: "12px 6px" });
+        list.replaceChildren(empty);
+        return;
+      }
+      list.replaceChildren(...names.map((name) => soundRow(name, onLibraryChange)));
+    };
+    const importFiles = async (files) => {
+      errors.clear();
+      if (!files?.length) return;
+      const { added, errors: failures } = await audio.importFiles(Array.from(files));
+      if (failures.length) errors.show(failures[failures.length - 1]);
+      if (added.length) onLibraryChange();
+    };
+    const tip = h("div", void 0, "MP3, WAV, OGG, at most 10 s and 200 KB.");
+    Object.assign(tip.style, { opacity: "0.75", fontSize: "12px" });
+    const listHeader = h("div");
+    Object.assign(listHeader.style, {
+      display: "grid",
+      gridTemplateColumns: "minmax(0, 1fr) auto",
+      gap: "12px",
+      fontSize: "12px",
+      letterSpacing: "0.05em",
+      textTransform: "uppercase",
+      opacity: "0.65",
+      paddingBottom: "4px",
+      borderBottom: `1px solid ${color.border}`
+    });
+    const actionsHead = h("span", void 0, "Actions");
+    actionsHead.style.justifySelf = "end";
+    listHeader.append(h("span", void 0, "Sound"), actionsHead);
+    const listCard = h("div");
+    Object.assign(listCard.style, {
+      display: "grid",
+      gridTemplateRows: "auto 1fr",
+      gap: "6px",
+      border: `1px solid ${color.border}`,
+      borderRadius: "10px",
+      background: color.mutedBg,
+      padding: "10px"
+    });
+    listCard.append(listHeader, list);
+    section4.body.append(dropZone(importFiles), tip, listCard, errors.el);
+    refresh();
+    return { root: section4.root, refresh };
+  }
+  var CONTEXT_LABELS, DROP_HINT2;
+  var init_soundLibrary = __esm({
+    "src/features/notifier/menu/soundLibrary.ts"() {
+      "use strict";
+      init_badges();
+      init_button();
+      init_card();
+      init_dom2();
+      init_theme();
+      init_audio();
+      CONTEXT_LABELS = [
+        ["shops", "Shops"],
+        ["weather", "Weather"],
+        ["pets", "Pets"]
+      ];
+      DROP_HINT2 = "Click to browse or drop files";
+    }
+  });
+
+  // src/features/notifier/menu/settingsTab.ts
+  function row(label2, control) {
+    const { root: root4, label: labelEl } = formRow(label2, control, { labelWidth: "160px" });
+    labelEl.style.opacity = "0.9";
+    return root4;
+  }
+  function bellCard() {
+    const bell = card("Notification bell", { tone: "muted" });
+    const toggle2 = switchInput(isFloatingBellEnabled(), (on) => setFloatingBellEnabled(on));
+    bell.body.appendChild(
+      settingRow(
+        "Floating bell (movable widget)",
+        "Detaches the bell from the game's icon rail and shows it as a draggable floating button instead. Use this if the bell is missing or misplaced on your screen.",
+        toggle2
+      ).row
+    );
+    return bell.root;
+  }
+  function renderSettingsTab(view) {
+    view.replaceChildren();
+    void PetAlertService.start().catch(() => {
+    });
+    const root4 = h("div");
+    Object.assign(root4.style, {
+      display: "grid",
+      gridTemplateRows: "auto 1fr",
+      gap: "12px",
+      height: "54vh",
+      minHeight: "0",
+      overflow: "hidden"
+    });
+    view.appendChild(root4);
+    const contexts = [];
+    const library = soundLibraryCard(() => {
+      for (const ctx2 of contexts) ctx2.fillSounds();
+      library.refresh();
+    });
+    for (const spec of CONTEXTS) {
+      contexts.push(new ContextSoundCard(spec, () => library.refresh()));
+    }
+    const audioCard = card("Audio & Playback", { tone: "muted" });
+    audioCard.body.append(...contexts.map((ctx2) => ctx2.root));
+    const scroller = h("div");
+    Object.assign(scroller.style, { overflow: "auto", minHeight: "0", height: "100%", display: "grid", alignContent: "start", gap: "12px" });
+    scroller.append(audioCard.root, library.root);
+    root4.append(bellCard(), scroller);
+    for (const ctx2 of contexts) {
+      ctx2.fillSounds();
+      ctx2.sync();
+    }
+    library.refresh();
+  }
+  var CONTEXTS, muted, ContextSoundCard;
+  var init_settingsTab = __esm({
+    "src/features/notifier/menu/settingsTab.ts"() {
+      "use strict";
+      init_badges();
+      init_button();
+      init_card();
+      init_dom2();
+      init_fields();
+      init_layout();
+      init_segmented();
+      init_sliders();
+      init_toggles();
+      init_audio();
+      init_floatingBell();
+      init_petAlerts();
+      init_playbackDefaults();
+      init_soundLibrary();
+      CONTEXTS = [
+        { key: "shops", label: "Shops", canLoop: true, info: "Loops stop automatically when the item is purchased." },
+        { key: "weather", label: "Weather", canLoop: false, info: "Weather alerts play once per trigger." },
+        { key: "pets", label: "Pets", canLoop: true, info: "Loops keep repeating; stop manually by disabling the alert." }
+      ];
+      muted = (el) => Object.assign(el.style, { opacity: "0.75", fontSize: "12px", lineHeight: "1.4" });
+      ContextSoundCard = class {
+        constructor(spec, onDefaultChange) {
+          this.spec = spec;
+          this.onDefaultChange = onDefaultChange;
+          this.root = plainCard();
+          this.volume = slider(0, 100, 1, 0);
+          this.volumeValue = pill("0%");
+          this.mode = null;
+          this.loopRow = null;
+          this.loopInput = null;
+          this.soundSelect = select2({ id: `ap.defaultSound.${spec.key}`, width: "180px" });
+          const heading = h("div", void 0, spec.label);
+          Object.assign(heading.style, { fontWeight: "700", fontSize: "14px", letterSpacing: "0.02em" });
+          this.root.appendChild(heading);
+          const play = button("", { icon: "\u25B6", size: "sm", tooltip: `Play ${spec.label.toLowerCase()} sound`, ariaLabel: `Play ${spec.label.toLowerCase()} sound` });
+          play.addEventListener("click", () => {
+            audio.trigger("preview", { sound: this.soundSelect.value }, spec.key).catch(() => {
+            });
+          });
+          this.soundSelect.addEventListener("change", () => {
+            audio.setDefaultSoundByName(this.soundSelect.value, spec.key);
+            this.onDefaultChange();
+          });
+          const soundRow2 = h("div");
+          Object.assign(soundRow2.style, { display: "flex", alignItems: "center", gap: "8px" });
+          soundRow2.append(this.soundSelect, play);
+          this.root.appendChild(row("Default sound", soundRow2));
+          this.volume.addEventListener("input", () => {
+            const pct = Math.max(0, Math.min(100, Math.round(Number(this.volume.value)) || 0));
+            this.volumeValue.textContent = `${pct}%`;
+            audio.setVolume(pct / 100, spec.key);
+          });
+          const volumeRow = h("div");
+          Object.assign(volumeRow.style, { display: "flex", alignItems: "center", gap: "10px" });
+          volumeRow.append(this.volume, this.volumeValue);
+          this.root.appendChild(row("Volume", volumeRow));
+          if (!spec.canLoop) {
+            this.root.appendChild(row("Playback mode", pill("One-shot")));
+            const info2 = h("div", void 0, spec.info);
+            muted(info2);
+            this.root.appendChild(row("Details", info2));
+            return;
+          }
+          this.mode = segmented(
+            [
+              { value: "oneshot", label: "One-shot" },
+              { value: "loop", label: "Loop" }
+            ],
+            audio.getPlaybackMode(spec.key),
+            (mode) => this.apply(mode)
+          );
+          this.root.appendChild(row("Playback mode", this.mode));
+          const loopDetails = h("div");
+          Object.assign(loopDetails.style, { display: "flex", flexDirection: "column", gap: "10px" });
+          const info = h("div", void 0, spec.info);
+          muted(info);
+          loopDetails.appendChild(info);
+          if (spec.key === "shops") {
+            const stored = clampLoopInterval("", LoopDefaults.get("shops").loopIntervalMs);
+            this.loopInput = numberInput(MIN_LOOP_INTERVAL_MS, MAX_LOOP_INTERVAL_MS, 50, stored);
+            this.loopInput.addEventListener("change", () => this.apply("loop"));
+            this.loopInput.addEventListener("blur", () => this.apply("loop"));
+            const interval = h("div");
+            Object.assign(interval.style, { display: "inline-flex", alignItems: "center", gap: "8px" });
+            const unit = h("span", void 0, "ms between plays");
+            unit.style.opacity = "0.85";
+            interval.append(this.loopInput.wrap, unit);
+            loopDetails.appendChild(interval);
+          }
+          this.loopRow = row(spec.key === "shops" ? "Stop condition" : "Loop interval", loopDetails);
+          this.root.appendChild(this.loopRow);
+        }
+        /** The loop interval in the field, or the stored one, kept in range and written back. */
+        loopInterval() {
+          const fallback = this.spec.key === "pets" ? audio.getLoopInterval("pets") : LoopDefaults.get(this.spec.key).loopIntervalMs;
+          const ms = clampLoopInterval(this.loopInput?.value, fallback);
+          if (this.loopInput) this.loopInput.value = String(ms);
+          return ms;
+        }
+        apply(mode) {
+          if (this.mode && this.mode.get() !== mode) return this.mode.set(mode);
+          setContextPlayback(this.spec.key, mode, this.loopInterval());
+          if (this.loopRow) this.loopRow.style.display = mode === "loop" ? "" : "none";
+        }
+        /** Lists the library's sounds, keeping the selection when it still exists. */
+        fillSounds() {
+          const names = audio.listSounds();
+          const current = this.soundSelect.value;
+          this.soundSelect.replaceChildren(
+            ...names.map((name) => {
+              const opt = h("option", void 0, name);
+              opt.value = name;
+              return opt;
+            })
+          );
+          const preferred = audio.getDefaultSoundName(this.spec.key);
+          if (names.includes(current)) this.soundSelect.value = current;
+          else if (preferred && names.includes(preferred)) this.soundSelect.value = preferred;
+          else if (names.length) this.soundSelect.value = names[0];
+        }
+        /** Shows the engine's settings, and re-applies them so the stored ones agree. */
+        sync() {
+          const settings = audio.getPlaybackSettings(this.spec.key);
+          if (settings.defaultSoundName && audio.listSounds().includes(settings.defaultSoundName)) {
+            this.soundSelect.value = settings.defaultSoundName;
+          }
+          const pct = Math.round(settings.volume * 100);
+          this.volume.value = String(pct);
+          this.volumeValue.textContent = `${pct}%`;
+          this.apply(this.spec.canLoop && settings.mode === "loop" ? "loop" : "oneshot");
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/menu/styles.ts
+  function ensureMenuStyles() {
+    if (document.getElementById(STYLE_ID3)) return;
+    const style = document.createElement("style");
+    style.id = STYLE_ID3;
+    style.textContent = CSS2;
+    document.head.appendChild(style);
+  }
+  var STYLE_ID3, CSS2;
+  var init_styles5 = __esm({
+    "src/features/notifier/menu/styles.ts"() {
+      "use strict";
+      STYLE_ID3 = "qws-rule-style";
+      CSS2 = `
+.qws-rule-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  border-radius: 8px;
+  line-height: 1;
+  font-size: 18px;
+  box-sizing: border-box;
+}
+.qws-rule-btn[data-active="1"] {
+  color: var(--qmm-accent);
+  background: var(--qmm-accent-soft);
+  border-color: var(--qmm-accent-border);
+}
+.qws-rule-popover {
+  position: fixed;
+  z-index: 99999999999999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 260px;
+  max-width: 320px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--qmm-border-strong);
+  background: var(--qmm-gradient-panel);
+  box-shadow: var(--qmm-shadow-panel);
+  color: var(--qmm-text);
+}
+.qws-rule-popover .qws-rule-field { display: grid; gap: 6px; }
+.qws-rule-popover .qws-rule-field > label { font-weight: 600; font-size: 13px; }
+.qws-rule-popover .qws-rule-hint { opacity: .7; font-size: 11px; }
+.qws-rule-popover .qws-rule-actions { display: flex; justify-content: space-between; gap: 8px; }
+.qws-rule-summary {
+  min-height: 1.2em;
+  opacity: .75;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+`;
+    }
+  });
+
+  // src/features/notifier/menu/ruleEditor.ts
+  function closeRuleEditor() {
+    popover?.remove();
+    popover = null;
+    teardown.dispose();
+    teardown = new Subscriptions();
+  }
+  function listen(type, handler, options2) {
+    document.addEventListener(type, handler, options2);
+    teardown.add(() => document.removeEventListener(type, handler, options2));
+  }
+  function field(label2, ...controls) {
+    const wrap = h("div", "qws-rule-field");
+    wrap.append(h("label", void 0, label2), ...controls);
+    return wrap;
+  }
+  function option(sel, value, text2) {
+    const opt = h("option", void 0, text2);
+    opt.value = value;
+    sel.appendChild(opt);
+  }
+  function makeDraggable2(pop, handle, ignore) {
+    const place = (left, top) => {
+      pop.style.left = `${Math.round(clampBetween(left, MARGIN2, window.innerWidth - pop.offsetWidth - MARGIN2))}px`;
+      pop.style.top = `${Math.round(clampBetween(top, MARGIN2, window.innerHeight - pop.offsetHeight - MARGIN2))}px`;
+    };
+    let drag = null;
+    const onMove = (ev) => {
+      if (drag && ev.pointerId === drag.pointerId) place(drag.left + ev.clientX - drag.x, drag.top + ev.clientY - drag.y);
+    };
+    const onEnd = (ev) => {
+      if (!drag || ev && ev.pointerId !== drag.pointerId) return;
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onEnd);
+      document.removeEventListener("pointercancel", onEnd);
+      try {
+        handle.releasePointerCapture(drag.pointerId);
+      } catch {
+      }
+      drag = null;
+    };
+    const onDown = (ev) => {
+      if (ev.button !== 0 || ignore.contains(ev.target)) return;
+      onEnd();
+      const rect = pop.getBoundingClientRect();
+      drag = { pointerId: ev.pointerId, x: ev.clientX, y: ev.clientY, left: rect.left, top: rect.top };
+      try {
+        handle.setPointerCapture(ev.pointerId);
+      } catch {
+      }
+      document.addEventListener("pointermove", onMove);
+      document.addEventListener("pointerup", onEnd);
+      document.addEventListener("pointercancel", onEnd);
+      ev.preventDefault();
+    };
+    handle.addEventListener("pointerdown", onDown);
+    teardown.add(() => {
+      handle.removeEventListener("pointerdown", onDown);
+      onEnd();
+    });
+  }
+  function placeNear(pop, anchor) {
+    const anchorRect = anchor.getBoundingClientRect();
+    const width = pop.offsetWidth;
+    const height = pop.offsetHeight;
+    const left = anchorRect.right - width;
+    let top = anchorRect.bottom + 8;
+    if (top + height > window.innerHeight - MARGIN2) top = anchorRect.top - height - 8;
+    if (top < MARGIN2) top = MARGIN2;
+    pop.style.left = `${Math.round(clampBetween(left, MARGIN2, window.innerWidth - width - MARGIN2))}px`;
+    pop.style.top = `${Math.round(clampBetween(top, MARGIN2, window.innerHeight - height - MARGIN2))}px`;
+  }
+  function digitsOnly(input) {
+    const editing = /* @__PURE__ */ new Set(["Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"]);
+    input.addEventListener("keydown", (ev) => {
+      ev.stopPropagation();
+      ev.stopImmediatePropagation();
+      if (ev.ctrlKey || ev.metaKey || ev.altKey || /^[0-9]$/.test(ev.key) || editing.has(ev.key)) return;
+      ev.preventDefault();
+    });
+    input.addEventListener("input", () => {
+      const digits = input.value.replace(/\D+/g, "");
+      if (digits !== input.value) input.value = digits;
+    });
+  }
+  function openRuleEditor(target, anchor) {
+    closeRuleEditor();
+    ensureMenuStyles();
+    const current = NotifierRules.get(target.id);
+    const defaults = ruleDefaults(target.context);
+    const canLoop = target.context === "shops";
+    const pop = h("div", "qws-rule-popover");
+    const header = h("div");
+    Object.assign(header.style, {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: "12px",
+      cursor: "move",
+      userSelect: "none",
+      touchAction: "none"
+    });
+    const titles = h("div");
+    const title = h("div", void 0, target.name);
+    Object.assign(title.style, { fontWeight: "700", fontSize: "14px", lineHeight: "1.2" });
+    const subtitle = h("div", "qws-rule-hint", target.type);
+    subtitle.style.fontSize = "12px";
+    titles.append(title, subtitle);
+    const closeBtn = button("\u2715", { variant: "ghost", size: "xs", ariaLabel: "Close", onClick: closeRuleEditor });
+    header.append(titles, closeBtn);
+    pop.appendChild(header);
+    makeDraggable2(pop, header, closeBtn);
+    const soundSelect = select2();
+    const selectedSound = current?.sound ?? "";
+    const names = audio.listSounds();
+    option(soundSelect, "", defaults.soundName);
+    for (const name of names) {
+      if (name !== defaults.soundName || selectedSound === name) option(soundSelect, name, name);
+    }
+    if (selectedSound && !names.includes(selectedSound)) option(soundSelect, selectedSound, shortSoundName(selectedSound));
+    soundSelect.value = selectedSound;
+    pop.appendChild(field("Sound", soundSelect));
+    const defaultVolumePct = Math.round(defaults.volume * 100);
+    const initialVolumePct = Math.round(clamp(current?.volume ?? defaults.volume, 0, 1) * 100);
+    const volumeRange = slider(0, 100, 1, initialVolumePct, { fill: true });
+    const volumeValue = pill(`${initialVolumePct}%`);
+    volumeRange.addEventListener("input", () => {
+      volumeValue.textContent = `${clamp(Math.round(Number(volumeRange.value)) || 0, 0, 100)}%`;
+    });
+    const volumeRow = h("div");
+    Object.assign(volumeRow.style, { display: "flex", alignItems: "center", gap: "10px" });
+    volumeRow.append(volumeRange, volumeValue);
+    pop.appendChild(field("Volume", volumeRow, h("div", "qws-rule-hint", `Default: ${defaultVolumePct}%`)));
+    const modeSelect = select2();
+    const modes = canLoop ? defaults.mode === "loop" ? ["loop", "oneshot"] : ["oneshot", "loop"] : ["oneshot"];
+    for (const mode of modes) option(modeSelect, mode, mode === "loop" ? "Loop" : "One-shot");
+    modeSelect.value = canLoop ? current?.playbackMode ?? defaults.mode : "oneshot";
+    modeSelect.disabled = !canLoop;
+    pop.appendChild(field("Playback mode", modeSelect));
+    const stopSelect = select2();
+    option(stopSelect, "purchase", "Until purchase");
+    const stopField = field("Stop condition", stopSelect);
+    const intervalInput = h("input", "qmm-input qmm-input--sm");
+    intervalInput.type = "number";
+    intervalInput.min = String(MIN_LOOP_INTERVAL_MS);
+    intervalInput.step = "50";
+    intervalInput.inputMode = "numeric";
+    intervalInput.placeholder = String(defaults.loopIntervalMs);
+    intervalInput.value = current?.loopIntervalMs != null ? String(current.loopIntervalMs) : "";
+    digitsOnly(intervalInput);
+    const intervalField = field("Loop interval (ms)", intervalInput);
+    const showLoopFields = () => {
+      const show = canLoop && modeSelect.value === "loop";
+      stopField.style.display = show ? "grid" : "none";
+      intervalField.style.display = show ? "grid" : "none";
+    };
+    if (canLoop) {
+      pop.append(stopField, intervalField);
+      modeSelect.addEventListener("change", showLoopFields);
+      intervalInput.addEventListener("input", () => {
+        if (modeSelect.value === "loop") return;
+        modeSelect.value = "loop";
+        showLoopFields();
+      });
+    }
+    showLoopFields();
+    pop.appendChild(
+      h("div", "qws-rule-hint", "Use defaults by leaving values unchanged (matching the default volume keeps it inherited).")
+    );
+    const actions2 = h("div", "qws-rule-actions");
+    const clearBtn = button("Clear", { variant: "ghost", size: "sm", disabled: !current });
+    clearBtn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      NotifierRules.clear(target.id);
+      closeRuleEditor();
+    });
+    const saveBtn = button("Save", { variant: "primary", size: "sm" });
+    saveBtn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      NotifierRules.set(
+        target.id,
+        rulePatchFromEditor(target.context, {
+          sound: soundSelect.value,
+          volumePct: Number(volumeRange.value),
+          mode: modeSelect.value,
+          stop: stopSelect.value,
+          interval: intervalInput.value
+        })
+      );
+      closeRuleEditor();
+    });
+    actions2.append(clearBtn, saveBtn);
+    pop.appendChild(actions2);
+    document.body.appendChild(pop);
+    placeNear(pop, anchor);
+    popover = pop;
+    const onOutside = (ev) => {
+      const t = ev.target;
+      if (t && !pop.contains(t) && !anchor.contains(t)) closeRuleEditor();
+    };
+    const timer2 = window.setTimeout(() => listen("pointerdown", onOutside, { capture: true }));
+    teardown.add(() => window.clearTimeout(timer2));
+    listen(
+      "keydown",
+      (ev) => {
+        if (!pop.contains(ev.target)) ev.stopImmediatePropagation();
+      },
+      { capture: true }
+    );
+    listen(
+      "wheel",
+      (ev) => {
+        if (pop.contains(ev.target)) ev.stopImmediatePropagation();
+      },
+      { capture: true, passive: true }
+    );
+  }
+  var MARGIN2, popover, teardown, clampBetween;
+  var init_ruleEditor = __esm({
+    "src/features/notifier/menu/ruleEditor.ts"() {
+      "use strict";
+      init_math();
+      init_emitter();
+      init_badges();
+      init_button();
+      init_dom2();
+      init_fields();
+      init_sliders();
+      init_audio();
+      init_playbackDefaults();
+      init_rules();
+      init_styles5();
+      MARGIN2 = 12;
+      popover = null;
+      teardown = new Subscriptions();
+      clampBetween = (value, a, b) => clamp(value, Math.min(a, b), Math.max(a, b));
+    }
+  });
+
+  // src/features/notifier/menu/alertGrid.ts
+  function headCell(text2, align) {
+    const el = h("div", void 0, text2);
+    Object.assign(el.style, {
+      fontWeight: "600",
+      opacity: "0.9",
+      padding: "4px 6px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: align === "left" ? "flex-start" : "center"
+    });
+    return el;
+  }
+  function centeredCell(child) {
+    const cell = h("div");
+    Object.assign(cell.style, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderBottom: CELL_BORDER,
+      padding: "4px 6px",
+      boxSizing: "border-box"
+    });
+    cell.appendChild(child);
+    return cell;
+  }
+  function ruleSummaryLine() {
+    const el = h("div", "qws-rule-summary");
+    el.style.visibility = "hidden";
+    return el;
+  }
+  var CELL_BORDER, AlertGrid;
+  var init_alertGrid = __esm({
+    "src/features/notifier/menu/alertGrid.ts"() {
+      "use strict";
+      init_button();
+      init_card();
+      init_dom2();
+      init_toggles();
+      init_rules();
+      init_ruleEditor();
+      init_styles5();
+      CELL_BORDER = "1px solid var(--qmm-border)";
+      AlertGrid = class {
+        /** `firstColumnMin` is the item column's minimum width. */
+        constructor(headers, firstColumnMin, emptyText) {
+          this.emptyText = emptyText;
+          this.rows = /* @__PURE__ */ new Map();
+          ensureMenuStyles();
+          const columns = `minmax(${firstColumnMin}, 1fr) 9rem 7rem 8rem`;
+          this.root = plainCard();
+          Object.assign(this.root.style, { display: "grid", gridTemplateRows: "auto 1fr", overflow: "hidden", minHeight: "0" });
+          this.head = h("div");
+          Object.assign(this.head.style, {
+            display: "grid",
+            gridTemplateColumns: columns,
+            justifyContent: "start",
+            borderBottom: "1px solid var(--qmm-border-strong)",
+            padding: "0 0 4px 0",
+            boxSizing: "border-box"
+          });
+          this.head.append(
+            headCell(headers[0], "left"),
+            headCell(headers[1], "center"),
+            headCell(headers[2], "center"),
+            headCell(headers[3], "center")
+          );
+          this.body = h("div");
+          Object.assign(this.body.style, {
+            display: "grid",
+            gridTemplateColumns: columns,
+            justifyContent: "start",
+            gridAutoRows: "auto",
+            alignContent: "start",
+            minHeight: "0",
+            height: "100%",
+            overflow: "auto",
+            overscrollBehavior: "contain",
+            width: "100%",
+            scrollbarGutter: "stable"
+          });
+          this.root.append(this.head, this.body);
+          new ResizeObserver(() => this.alignHeader()).observe(this.body);
+          window.addEventListener("resize", () => this.alignHeader());
+        }
+        alignHeader() {
+          this.head.style.paddingRight = `${this.body.offsetWidth - this.body.clientWidth}px`;
+        }
+        /** Replaces every row; an empty list shows the empty text. */
+        setRows(rows) {
+          closeRuleEditor();
+          this.body.replaceChildren();
+          this.rows.clear();
+          if (!rows.length) {
+            const empty = h("div", void 0, this.emptyText);
+            Object.assign(empty.style, { opacity: "0.75", gridColumn: "1 / -1", padding: "8px" });
+            this.body.appendChild(empty);
+          }
+          for (const row4 of rows) this.addRow(row4);
+          this.alignHeader();
+        }
+        addRow(row4) {
+          row4.item.style.borderBottom = CELL_BORDER;
+          const toggle2 = switchInput(row4.alertOn, (on) => row4.onAlertChange(on));
+          const gear = button("", { icon: "\u2699", size: "sm", tooltip: "Custom rule", ariaLabel: `Custom rule for ${row4.name}` });
+          gear.classList.add("qws-rule-btn");
+          gear.addEventListener("click", (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            openRuleEditor({ id: row4.id, name: row4.name, type: row4.type, context: row4.context }, gear);
+          });
+          this.body.append(row4.item, centeredCell(row4.detail), centeredCell(toggle2), centeredCell(gear));
+          const rendered = { gear, summary: row4.summary, toggle: toggle2 };
+          this.rows.set(row4.id, rendered);
+          this.showRule(rendered, row4.id);
+        }
+        /** Redraws every row's rule button and summary. */
+        refreshRules() {
+          for (const [id, row4] of this.rows) this.showRule(row4, id);
+        }
+        showRule(row4, id) {
+          const rule = NotifierRules.get(id);
+          const summary = hasRule(rule) ? formatRuleSummary(rule) : "";
+          row4.gear.dataset.active = hasRule(rule) ? "1" : "0";
+          row4.gear.title = summary ? `Custom rule: ${summary}` : "Custom rule";
+          if (row4.summary) {
+            row4.summary.textContent = summary;
+            row4.summary.style.visibility = summary ? "visible" : "hidden";
+          }
+        }
+        /** Updates one row's switch without redrawing it. `locked` greys it out with a reason. */
+        setAlert(id, on, locked = null) {
+          const row4 = this.rows.get(id);
+          if (!row4) return;
+          row4.toggle.checked = on;
+          row4.toggle.disabled = !!locked;
+          row4.toggle.title = locked ?? "";
+        }
+        renderedIds() {
+          return new Set(this.rows.keys());
+        }
+      };
+    }
+  });
+
+  // src/features/notifier/menu/shopsTab.ts
+  function filterSelect(id, minWidth, options2) {
+    const sel = select2({ id, width: minWidth });
+    for (const [value, text2] of options2) {
+      const opt = h("option", void 0, text2);
+      opt.value = value;
+      sel.appendChild(opt);
+    }
+    sel.value = "all";
+    return sel;
+  }
+  function weatherChip(weather2, only) {
+    const tint = only ? color.warn : color.accent;
+    const chip = h("span", void 0, weather2);
+    Object.assign(chip.style, {
+      padding: "1px 6px",
+      borderRadius: "999px",
+      fontSize: "10px",
+      fontWeight: "600",
+      background: only ? color.warnSoft : color.accentSoft,
+      color: tint,
+      border: `1px solid ${only ? color.warnBorder : color.accentBorder}`
+    });
+    chip.title = only ? `Only available during ${weather2}` : `Also available during ${weather2}`;
+    return chip;
+  }
+  function itemCell(row4) {
+    const cell = h("div");
+    Object.assign(cell.style, { display: "flex", alignItems: "center", gap: "6px", padding: "4px 6px" });
+    const icon2 = shopItemIcon(row4.id, row4.name, 40, "alerts");
+    Object.assign(icon2.style, { borderRadius: "8px", background: color.mutedBg, marginRight: "6px" });
+    const text2 = h("div");
+    Object.assign(text2.style, { display: "flex", flexDirection: "column", gap: "2px", lineHeight: "1.15", minWidth: "0", flex: "1 1 auto" });
+    const title = h("div", void 0, row4.name);
+    Object.assign(title.style, { fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
+    const sub = h("div");
+    Object.assign(sub.style, { opacity: "0.7", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" });
+    sub.appendChild(h("span", void 0, row4.type));
+    for (const weather2 of row4.weathers ?? []) sub.appendChild(weatherChip(weather2, !!row4.weatherOnly));
+    text2.append(title, sub);
+    cell.append(icon2, text2);
+    return cell;
+  }
+  function renderShopsTab(view) {
+    view.replaceChildren();
+    const wrap = h("div");
+    Object.assign(wrap.style, {
+      display: "grid",
+      gridTemplateRows: "auto 1fr",
+      gap: "10px",
+      height: "54vh",
+      overflow: "hidden",
+      minHeight: "0",
+      position: "relative"
+    });
+    view.appendChild(wrap);
+    const typeSelect = filterSelect("shop.filter.type", "140px", TYPE_FILTERS);
+    const raritySelect = filterSelect("shop.filter.rarity", "160px", RARITY_FILTERS);
+    const followedCount = pill("Followed: 0");
+    followedCount.title = "Items with Overlay enabled";
+    followedCount.style.marginLeft = "auto";
+    const header = h("div");
+    Object.assign(header.style, { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", rowGap: "8px" });
+    header.append(
+      h("label", "qmm-label", "Type"),
+      typeSelect,
+      h("label", "qmm-label", "Rarity"),
+      raritySelect,
+      followedCount
+    );
+    wrap.appendChild(header);
+    const grid = new AlertGrid(["Item", "Rarity", "Notify", "Custom rules"], "200px", "No items.");
+    wrap.appendChild(grid.root);
+    let state7 = null;
+    const filters = () => ({
+      type: typeSelect.value || "all",
+      rarity: raritySelect.value || "all"
+    });
+    const visibleRows = (s) => ShopRows.filter(s.rows, filters());
+    const updateRows = (s) => {
+      for (const row4 of s.rows) {
+        grid.setAlert(row4.id, row4.popup, isCapReached(row4.id) ? CAPPED_REASON : null);
+      }
+      followedCount.textContent = `Followed: ${s.counts.followed}`;
+    };
+    const rebuild2 = () => {
+      if (!state7) {
+        grid.setRows([]);
+        return;
+      }
+      grid.setRows(
+        visibleRows(state7).map((row4) => ({
+          id: row4.id,
+          name: row4.name,
+          type: row4.type,
+          context: "shops",
+          item: itemCell(row4),
+          detail: rarityBadge(String(row4.rarity ?? "-")),
+          alertOn: row4.popup,
+          onAlertChange: (on) => ShopRows.setFollowed(row4.id, on)
+        }))
+      );
+      updateRows(state7);
+    };
+    typeSelect.onchange = () => state7 && rebuild2();
+    raritySelect.onchange = () => state7 && rebuild2();
+    void (async () => {
+      await NotifierService.onChangeNow((next) => {
+        const prev = state7;
+        state7 = next;
+        const rendered = grid.renderedIds();
+        const ids = visibleRows(next).map((r) => r.id);
+        if (!prev || ids.length !== rendered.size || ids.some((id) => !rendered.has(id))) rebuild2();
+        else updateRows(next);
+      });
+      NotifierRules.onChange(() => grid.refreshRules());
+    })();
+  }
+  var TYPE_FILTERS, RARITY_FILTERS, CAPPED_REASON;
+  var init_shopsTab = __esm({
+    "src/features/notifier/menu/shopsTab.ts"() {
+      "use strict";
+      init_badges();
+      init_theme();
+      init_dom2();
+      init_fields();
+      init_rarityBadge();
+      init_inventoryCaps();
+      init_itemIcon();
+      init_notifier();
+      init_rules();
+      init_shopRows();
+      init_alertGrid();
+      TYPE_FILTERS = [
+        ["all", "All"],
+        ["seed", "Seeds"],
+        ["egg", "Eggs"],
+        ["tool", "Tools"],
+        ["decor", "Decor"]
+      ];
+      RARITY_FILTERS = [
+        ["all", "All"],
+        ["common", "Common"],
+        ["uncommon", "Uncommon"],
+        ["rare", "Rare"],
+        ["legendary", "Legendary"],
+        ["mythical", "Mythical"],
+        ["divine", "Divine"],
+        ["celestial", "Celestial"]
+      ];
+      CAPPED_REASON = "Max owned, notifications disabled";
+    }
+  });
+
+  // src/features/notifier/menu/weatherTab.ts
+  function weatherSpriteCandidates(row4) {
+    const names = /* @__PURE__ */ new Set();
+    for (const value of [row4.name, row4.atomValue, row4.id]) {
+      const trimmed = value?.trim();
+      if (!trimmed) continue;
+      names.add(trimmed);
+      names.add(trimmed.replace(/\s+/g, ""));
+    }
+    const icons = [...names].map((value) => `${value.replace(/icon$/i, "")}Icon`);
+    return [.../* @__PURE__ */ new Set([...icons, ...names])].filter(Boolean);
+  }
+  function weatherIcon(row4) {
+    const size = 40;
+    const wrap = h("div");
+    Object.assign(wrap.style, {
+      width: `${size}px`,
+      height: `${size}px`,
+      flex: `0 0 ${size}px`,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: "8px",
+      background: color.mutedBg
+    });
+    const glyph = h("span", void 0, row4.name.trim().charAt(0) || "\u{1F326}");
+    glyph.style.fontSize = `${size - 8}px`;
+    glyph.setAttribute("aria-hidden", "true");
+    wrap.appendChild(glyph);
+    attachSpriteIcon(wrap, ["ui", "weather", "mutation"], weatherSpriteCandidates(row4), size, "alerts-weather");
+    return wrap;
+  }
+  function mutationList(row4) {
+    const list = h("div");
+    Object.assign(list.style, {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "6px",
+      alignItems: "flex-start",
+      fontSize: "12px",
+      lineHeight: "1.3",
+      opacity: row4.mutations.length ? "0.85" : "0.6"
+    });
+    if (!row4.mutations.length) {
+      const none = h("span", void 0, "No mutation effects.");
+      none.style.whiteSpace = "nowrap";
+      list.appendChild(none);
+      return list;
+    }
+    for (const mutation of row4.mutations) {
+      const chip = h("span", void 0, formatWeatherMutation(mutation));
+      Object.assign(chip.style, {
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "2px 8px",
+        borderRadius: "999px",
+        background: color.hoverBg,
+        whiteSpace: "nowrap"
+      });
+      list.appendChild(chip);
+    }
+    return list;
+  }
+  function itemCell2(row4, summary) {
+    const cell = h("div");
+    Object.assign(cell.style, { display: "flex", alignItems: "center", gap: "8px", padding: "6px" });
+    if (row4.isCurrent) {
+      cell.style.background = color.accentSoft;
+      cell.style.borderRadius = "8px";
+    }
+    const text2 = h("div");
+    Object.assign(text2.style, { display: "flex", flexDirection: "column", gap: "4px", lineHeight: "1.2", minWidth: "0", flex: "1 1 auto" });
+    const titleRow = h("div");
+    Object.assign(titleRow.style, { display: "flex", alignItems: "center", gap: "6px", minWidth: "0" });
+    const title = h("div", void 0, row4.name);
+    Object.assign(title.style, { fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 auto" });
+    titleRow.appendChild(title);
+    if (row4.isCurrent) titleRow.appendChild(pill("Current", "ok"));
+    const mutationsLabel = h("div", void 0, "Mutations");
+    Object.assign(mutationsLabel.style, { fontSize: "11px", opacity: "0.7", fontWeight: "600" });
+    text2.append(titleRow, mutationsLabel, mutationList(row4), summary);
+    cell.append(weatherIcon(row4), text2);
+    return cell;
+  }
+  function showLastSeen(el, row4) {
+    const { label: label2, title } = formatLastSeen(row4.lastSeen, row4.isCurrent);
+    el.textContent = label2;
+    el.title = title;
+    el.style.opacity = label2 === "Never" ? "0.7" : "1";
+  }
+  function renderWeatherTab(view) {
+    view.replaceChildren();
+    const wrap = h("div");
+    Object.assign(wrap.style, { display: "grid", gridTemplateRows: "1fr", height: "54vh", overflow: "hidden", minHeight: "0" });
+    view.appendChild(wrap);
+    const grid = new AlertGrid(["Weather", "Last seen", "Notify", "Custom rules"], "240px", "No weather entries.");
+    wrap.appendChild(grid.root);
+    const lastSeenLabels = /* @__PURE__ */ new Map();
+    let state7 = null;
+    let stateSig2 = "";
+    const refreshLastSeen = () => {
+      for (const row4 of state7?.rows ?? []) {
+        const el = lastSeenLabels.get(row4.id);
+        if (el) showLastSeen(el, row4);
+      }
+    };
+    const rebuild2 = () => {
+      lastSeenLabels.clear();
+      grid.setRows(
+        (state7?.rows ?? []).map((row4) => {
+          const summary = ruleSummaryLine();
+          const lastSeen = h("div");
+          Object.assign(lastSeen.style, { fontWeight: "600", whiteSpace: "nowrap" });
+          showLastSeen(lastSeen, row4);
+          lastSeenLabels.set(row4.id, lastSeen);
+          return {
+            id: row4.id,
+            name: row4.name,
+            type: row4.type,
+            context: "weather",
+            item: itemCell2(row4, summary),
+            summary,
+            detail: lastSeen,
+            alertOn: row4.notify,
+            onAlertChange: (on) => WeatherAlerts.setNotify(row4.id, on)
+          };
+        })
+      );
+    };
+    const show = (next) => {
+      const sig = weatherStateSignature(next.rows);
+      const changed5 = sig !== stateSig2;
+      state7 = next;
+      stateSig2 = sig;
+      if (changed5) rebuild2();
+      else refreshLastSeen();
+    };
+    void (async () => {
+      await NotifierService.onWeatherChangeNow((next) => {
+        state7 = next;
+        stateSig2 = weatherStateSignature(next.rows);
+        rebuild2();
+      });
+      NotifierRules.onChange(() => grid.refreshRules());
+    })();
+    window.setInterval(refreshLastSeen, LAST_SEEN_REFRESH_MS);
+    window.setInterval(() => {
+      NotifierService.getWeatherState().then(show).catch(() => {
+      });
+    }, STATE_REFRESH_MS);
+  }
+  var LAST_SEEN_REFRESH_MS, STATE_REFRESH_MS;
+  var init_weatherTab = __esm({
+    "src/features/notifier/menu/weatherTab.ts"() {
+      "use strict";
+      init_badges();
+      init_dom2();
+      init_theme();
+      init_iconCache();
+      init_notifier();
+      init_rules();
+      init_weather();
+      init_weatherAlerts();
+      init_alertGrid();
+      LAST_SEEN_REFRESH_MS = 3e4;
+      STATE_REFRESH_MS = 6e4;
+    }
+  });
+
+  // src/features/notifier/menu/menu.ts
+  function renderNotifierMenu(root4) {
+    const ui = new Menu({ id: "alerts", compact: true, windowSelector: ".qws-win" });
+    ui.addTab("shops", "\u{1F6D2} Shops", renderShopsTab);
+    ui.addTab("weather", "\u{1F326} Weather", renderWeatherTab);
+    ui.addTab("pets", "\u{1F43E} Pets", renderPetsTab);
+    ui.addTab("settings", "\u2699\uFE0F Settings", renderSettingsTab);
+    ui.mount(root4);
+  }
+  var init_menu8 = __esm({
+    "src/features/notifier/menu/menu.ts"() {
+      "use strict";
+      init_menu();
+      init_petsTab();
+      init_settingsTab();
+      init_shopsTab();
+      init_weatherTab();
     }
   });
 
@@ -43996,9 +42071,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/tools/tag.ts
   function createTagRow(tags) {
-    const row3 = h("div", "mgt-tags");
-    for (const tag of tags) row3.appendChild(h("span", "mgt-tag", tag));
-    return row3;
+    const row4 = h("div", "mgt-tags");
+    for (const tag of tags) row4.appendChild(h("span", "mgt-tag", tag));
+    return row4;
   }
   var init_tag = __esm({
     "src/features/tools/tag.ts"() {
@@ -44384,10 +42459,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function createActions(actions2) {
     if (!actions2?.length) return null;
-    const row3 = document.createElement("div");
-    row3.className = "mgt-actions";
+    const row4 = document.createElement("div");
+    row4.className = "mgt-actions";
     actions2.forEach((action2, index) => {
-      row3.appendChild(
+      row4.appendChild(
         button(action2.label, {
           // The first link is the main one; the rest stay secondary.
           variant: index === 0 ? "primary" : "default",
@@ -44398,7 +42473,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         })
       );
     });
-    return row3;
+    return row4;
   }
   function renderDetailView(tool, onBack) {
     const root4 = document.createElement("div");
@@ -44428,10 +42503,10 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/tools/styles.ts
   function ensureToolsStyles() {
-    if (document.getElementById(STYLE_ID3)) return;
-    const style2 = document.createElement("style");
-    style2.id = STYLE_ID3;
-    style2.textContent = `
+    if (document.getElementById(STYLE_ID4)) return;
+    const style = document.createElement("style");
+    style.id = STYLE_ID4;
+    style.textContent = `
 .mgt-card:focus-visible, .mgt-nav:focus-visible, .mgt-dot:focus-visible {
   outline: 2px solid var(--qmm-accent);
   outline-offset: 2px;
@@ -44641,13 +42716,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   .mgt-spinner { animation-duration: 2s; }
 }
 `;
-    document.head.appendChild(style2);
+    document.head.appendChild(style);
   }
-  var STYLE_ID3;
-  var init_styles5 = __esm({
+  var STYLE_ID4;
+  var init_styles6 = __esm({
     "src/features/tools/styles.ts"() {
       "use strict";
-      STYLE_ID3 = "gemini-tools-styles";
+      STYLE_ID4 = "gemini-tools-styles";
     }
   });
 
@@ -44730,18 +42805,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     wrapper.appendChild(viewContainer);
     view.appendChild(wrapper);
     const showLoading = () => {
-      const state5 = h("div", "mgt-state");
-      state5.append(h("div", "mgt-spinner"), h("p", "mgt-state__text", "Fetching the latest tools..."));
-      viewContainer.replaceChildren(state5);
+      const state7 = h("div", "mgt-state");
+      state7.append(h("div", "mgt-spinner"), h("p", "mgt-state__text", "Fetching the latest tools..."));
+      viewContainer.replaceChildren(state7);
     };
     const showError = (message2) => {
-      const state5 = h("div", "mgt-state");
-      state5.append(
+      const state7 = h("div", "mgt-state");
+      state7.append(
         h("span", "mgt-state__title", "Couldn't load the tools"),
         h("p", "mgt-state__text", message2),
         button("Retry", { variant: "primary", onClick: () => init() })
       );
-      viewContainer.replaceChildren(state5);
+      viewContainer.replaceChildren(state7);
     };
     let tools = [];
     let listViewRoot = null;
@@ -44791,7 +42866,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_fetchTools();
       init_listView();
       init_detailView();
-      init_styles5();
+      init_styles6();
       init_transition();
       WRAPPER_WIDTH_PX = 720;
     }
@@ -44822,7 +42897,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function modeCard() {
-    const head = row("12px");
+    const head = row2("12px");
     head.style.justifyContent = "space-between";
     const title = document.createElement("div");
     Object.assign(title.style, { fontSize: "13px", fontWeight: "600", color: color.text });
@@ -44834,7 +42909,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     desc.textContent = "Sandbox garden with every plant and decor unlocked. Left click to place, right click to remove, drag to paint.";
     return { root: card2(head, desc), modeSwitch };
   }
-  function dropZone(onFiles) {
+  function dropZone2(onFiles) {
     const zone = document.createElement("div");
     const idle = { borderColor: color.borderHover, background: color.cardBg };
     Object.assign(zone.style, {
@@ -44905,9 +42980,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     wrap.appendChild(mode.root);
     const nameInput = textInput("Garden name\u2026");
     Object.assign(nameInput.style, { width: "100%", boxSizing: "border-box" });
-    const actions2 = row();
+    const actions2 = row2();
     const grow = { flex: "1" };
-    const save2 = button("Save current garden", {
+    const save3 = button("Save current garden", {
       variant: "primary",
       lockWhilePending: true,
       onClick: async () => {
@@ -44923,9 +42998,9 @@ Restore figures are averages; unlucky streaks do worse.`;
         status2.set(ok ? "Garden cleared." : "Clear failed.", ok ? "ok" : "err");
       }
     });
-    Object.assign(save2.style, grow);
+    Object.assign(save3.style, grow);
     Object.assign(clear.style, grow);
-    actions2.append(save2, clear);
+    actions2.append(save3, clear);
     wrap.appendChild(card2(sectionLabel("Current garden"), nameInput, actions2));
     const importFiles = async (files) => {
       const list = Array.from(files || []);
@@ -44946,11 +43021,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (!imported) return status2.set("Import failed (invalid JSON).", "err");
       status2.set(imported === 1 ? `Imported "${lastName}".` : `Imported ${imported} gardens.`);
     };
-    wrap.appendChild(card2(sectionLabel("Import"), ...dropZone((files) => void importFiles(files))));
+    wrap.appendChild(card2(sectionLabel("Import"), ...dropZone2((files) => void importFiles(files))));
     const listWrap2 = document.createElement("div");
     Object.assign(listWrap2.style, { display: "flex", flexDirection: "column", gap: "6px" });
     const savedRow = (g, editorOn) => {
-      const el = row();
+      const el = row2();
       Object.assign(el.style, {
         padding: "10px 12px",
         background: color.cardBg,
@@ -45031,7 +43106,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     subs.add(EditorService.onSavedGardensChange(renderSavedList));
     container.__cleanup__ = () => subs.dispose();
   }
-  var STATUS_CLEAR_MS, TONE_COLOR, row, fileSafeName;
+  var STATUS_CLEAR_MS, TONE_COLOR, row2, fileSafeName;
   var init_menu10 = __esm({
     "src/features/editor/menu.ts"() {
       "use strict";
@@ -45049,7 +43124,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_savedGardens();
       STATUS_CLEAR_MS = 4e3;
       TONE_COLOR = { ok: color.accent, warn: color.warn, err: color.danger };
-      row = (gap = "8px") => {
+      row2 = (gap = "8px") => {
         const el = document.createElement("div");
         Object.assign(el.style, { display: "flex", alignItems: "center", gap });
         return el;
@@ -45071,9 +43146,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
   }
   function whileConnected(owner2, subscribe5, cb) {
-    const stop2 = subscribe5((value) => {
+    const stop = subscribe5((value) => {
       if (owner2.isConnected) cb(value);
-      else stop2();
+      else stop();
     });
   }
   function holdControl(action2) {
@@ -45097,7 +43172,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       allowModifierOnly: action2.allowModifierOnly
     });
     keyButton.style.flexShrink = "0";
-    const { row: row3, controls } = settingRow(action2.label, action2.hint ?? null, keyButton, {
+    const { row: row4, controls } = settingRow(action2.label, action2.hint ?? null, keyButton, {
       icon: action2.icon,
       iconTag: "keybinds"
     });
@@ -45118,8 +43193,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     const resetButton = defaultString ? button("\u27F2", { size: "sm", title: "Restore default shortcut", onClick: () => resetKeybind(action2.id) }) : null;
     if (resetButton) controls.appendChild(resetButton);
     refresh(getKeybind(action2.id));
-    whileConnected(row3, (cb) => onKeybindChange(action2.id, cb), refresh);
-    return row3;
+    whileConnected(row4, (cb) => onKeybindChange(action2.id, cb), refresh);
+    return row4;
   }
   function renderKeybindsMenu(container) {
     const ui = new Menu({ id: "keybinds", compact: true });
@@ -45167,11 +43242,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/room/roomState.ts
-  function findPlayersDeep(state5) {
-    if (!state5 || typeof state5 !== "object") return [];
+  function findPlayersDeep(state7) {
+    if (!state7 || typeof state7 !== "object") return [];
     const out = [];
     const seen = /* @__PURE__ */ new Set();
-    const stack = [state5];
+    const stack = [state7];
     while (stack.length) {
       const cur = stack.pop();
       if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
@@ -45189,12 +43264,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     for (const p of out) if (p?.id) byId.set(String(p.id), p);
     return [...byId.values()];
   }
-  function playersOf(state5) {
-    const direct = state5?.fullState?.data?.players ?? state5?.data?.players ?? state5?.players;
-    return Array.isArray(direct) ? direct : findPlayersDeep(state5);
+  function playersOf(state7) {
+    const direct = state7?.fullState?.data?.players ?? state7?.data?.players ?? state7?.players;
+    return Array.isArray(direct) ? direct : findPlayersDeep(state7);
   }
-  function slotsOf(state5) {
-    const raw = state5?.child?.data?.userSlots ?? state5?.fullState?.child?.data?.userSlots ?? state5?.data?.userSlots;
+  function slotsOf(state7) {
+    const raw = state7?.child?.data?.userSlots ?? state7?.fullState?.child?.data?.userSlots ?? state7?.data?.userSlots;
     if (Array.isArray(raw)) return raw;
     if (raw && typeof raw === "object") {
       const entries2 = Object.entries(raw);
@@ -45212,17 +43287,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     const raw = slot?.userId ?? slot?.playerId ?? slot?.id;
     return raw != null ? String(raw) : "";
   }
-  function slotOf(state5, playerId2) {
-    for (const slot of slotsOf(state5)) if (slotOwnerId(slot) === String(playerId2)) return slot;
+  function slotOf(state7, playerId2) {
+    for (const slot of slotsOf(state7)) if (slotOwnerId(slot) === String(playerId2)) return slot;
     return null;
   }
-  function playersInSlotOrder(state5) {
-    const players = playersOf(state5);
+  function playersInSlotOrder(state7) {
+    const players = playersOf(state7);
     const byId = /* @__PURE__ */ new Map();
     for (const p of players) byId.set(String(p.id), p);
     const out = [];
     const seen = /* @__PURE__ */ new Set();
-    for (const slot of slotsOf(state5)) {
+    for (const slot of slotsOf(state7)) {
       const pid = slotOwnerId(slot);
       if (!pid || seen.has(pid)) continue;
       const p = byId.get(pid);
@@ -45306,9 +43381,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
     }
     try {
-      const state5 = await Atoms.root.state.get();
+      const state7 = await Atoms.root.state.get();
       const seen = /* @__PURE__ */ new Set();
-      const stack = [state5];
+      const stack = [state7];
       while (stack.length) {
         const cur = stack.pop();
         if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
@@ -45341,8 +43416,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
     }
     try {
-      const state5 = await Atoms.root.state.get();
-      const cols = Number(state5?.map?.cols ?? state5?.child?.data?.map?.cols ?? state5?.fullState?.map?.cols);
+      const state7 = await Atoms.root.state.get();
+      const cols = Number(state7?.map?.cols ?? state7?.child?.data?.map?.cols ?? state7?.fullState?.map?.cols);
       if (Number.isFinite(cols) && cols > 0) return cols;
     } catch {
     }
@@ -45362,9 +43437,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/room/players.ts
   async function listPlayers() {
-    const state5 = await Atoms.root.state.get();
-    if (!state5) return [];
-    const ordered = playersInSlotOrder(state5);
+    const state7 = await Atoms.root.state.get();
+    if (!state7) return [];
+    const ordered = playersInSlotOrder(state7);
     const spawns = await sortedSpawnTiles();
     return ordered.map((p, i) => ({ ...p, gardenPosition: spawns[i] ?? null }));
   }
@@ -45377,13 +43452,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
   }
   async function playerSlot(playerId2) {
-    const state5 = await Atoms.root.state.get();
-    return state5 ? slotOf(state5, playerId2) : null;
+    const state7 = await Atoms.root.state.get();
+    return state7 ? slotOf(state7, playerId2) : null;
   }
   async function playerName(playerId2) {
     try {
-      const state5 = await Atoms.root.state.get();
-      const p = playersOf(state5).find((x) => String(x?.id) === String(playerId2));
+      const state7 = await Atoms.root.state.get();
+      const p = playersOf(state7).find((x) => String(x?.id) === String(playerId2));
       return p && typeof p.name === "string" && p.name ? p.name : null;
     } catch {
       return null;
@@ -45593,7 +43668,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     el.append(sectionLabel(title), ...content2);
     return el;
   }
-  function row2(...children) {
+  function row3(...children) {
     const el = h("div");
     Object.assign(el.style, { display: "flex", gap: "8px" });
     for (const child of children) child.style.flex = "1";
@@ -45667,7 +43742,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     Object.assign(info.style, { display: "flex", flexDirection: "column", gap: "4px", minWidth: "0", flex: "1" });
     info.append(nameLine(player2.name || player2.id, 15, 700), onlineStatus(player2.isConnected ?? false, 11));
     profile.append(avatar(player2, 46), info);
-    const teleport = row2(
+    const teleport = row3(
       unavailableButton("To player", "teleport"),
       // Teleporting to a garden does not need live positions: it uses the map's spawn tiles.
       button("To garden", {
@@ -45702,10 +43777,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     content2.append(
       profile,
       section3("Teleport", teleport),
-      section3("Follow", row2(unavailableButton("Follow player", "follow"))),
+      section3("Follow", row3(unavailableButton("Follow player", "follow"))),
       section3("Inspect", inspectGrid),
       section3("Editor", inspectButton("Save player garden", "save", () => saveGardenWithEditor(player2))),
-      section3("Crop values", row2(inventory.card, garden3.card))
+      section3("Crop values", row3(inventory.card, garden3.card))
     );
     void (async () => {
       try {
@@ -45817,13 +43892,13 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/skins/applier.ts
   function collectGameMatches() {
-    const state5 = getSpriteState();
-    const roots = [state5.app?.stage, state5.renderer?.lastObjectRendered, state5.renderer?.stage];
+    const state7 = getSpriteState();
+    const roots = [state7.app?.stage, state7.renderer?.lastObjectRendered, state7.renderer?.stage];
     const byLabel = /* @__PURE__ */ new Map();
     const byRect = /* @__PURE__ */ new Map();
     const seenNodes = /* @__PURE__ */ new Set();
     let visited = 0;
-    const catalogTextures = new Set(state5.tex.values());
+    const catalogTextures = new Set(state7.tex.values());
     const add = (bucket, key2, texture, node) => {
       let match = bucket.get(key2);
       if (!match) {
@@ -45885,9 +43960,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
     }
     if (sourceOf(texture) === source) return true;
-    for (const field of ["_source", "baseTexture", "_baseTexture"]) {
+    for (const field2 of ["_source", "baseTexture", "_baseTexture"]) {
       try {
-        texture[field] = source;
+        texture[field2] = source;
         if (sourceOf(texture) === source) return true;
       } catch {
       }
@@ -45955,14 +44030,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   function applySkinTexture(target, canvas, getIndex = collectGameMatches) {
     const frameKey = target.frameKey;
     revertSkin(frameKey);
-    const state5 = getSpriteState();
-    const Texture = state5.ctors?.Texture;
+    const state7 = getSpriteState();
+    const Texture = state7.ctors?.Texture;
     if (!Texture?.from) return false;
     const stage = getIndex();
     const labelMatch = stage.byLabel.get(frameKey);
     const { x, y, w, h: h2 } = target.occupiedRect;
     const rectMatch = stage.byRect.get(rectKey(x, y, w, h2));
-    const atlasSource = sourceOf(state5.tex.get(frameKey));
+    const atlasSource = sourceOf(state7.tex.get(frameKey));
     const textures = [];
     const nodes = [];
     const cached2 = lookupCachedTexture(frameKey);
@@ -46080,14 +44155,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   function renderFrameToCanvas(frameKey) {
     const cached2 = canvasCache.get(frameKey);
     if (cached2) return cached2;
-    const state5 = getSpriteState();
-    const texture = state5.tex.get(frameKey);
-    const ctors = state5.ctors;
-    if (!texture || !ctors?.Sprite || !state5.renderer?.extract) return null;
+    const state7 = getSpriteState();
+    const texture = state7.tex.get(frameKey);
+    const ctors = state7.ctors;
+    if (!texture || !ctors?.Sprite || !state7.renderer?.extract) return null;
     let sprite = null;
     try {
       sprite = new ctors.Sprite(texture);
-      const canvas = state5.renderer.extract.canvas(sprite, { resolution: 1 });
+      const canvas = state7.renderer.extract.canvas(sprite, { resolution: 1 });
       if (!canvas) return null;
       if (canvasCache.size >= CACHE_MAX) {
         canvasCache.delete(canvasCache.keys().next().value);
@@ -46150,13 +44225,13 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/skins/gameCaches.ts
   function holders() {
-    const state5 = getSpriteState();
+    const state7 = getSpriteState();
     return [
       getPixiApp(),
-      state5.app,
-      state5.app?.app,
-      state5.renderer,
-      state5.renderer?.app,
+      state7.app,
+      state7.app?.app,
+      state7.renderer,
+      state7.renderer?.app,
       pageWindow.__PIXI_APP__,
       pageWindow.app
     ].filter(Boolean);
@@ -46213,9 +44288,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/skins/debug.ts
   function inspectFrame(frameKey, occupiedRect) {
-    const state5 = getSpriteState();
+    const state7 = getSpriteState();
     const stage = collectGameMatches();
-    const catalogTexture = state5.tex.get(frameKey);
+    const catalogTexture = state7.tex.get(frameKey);
     const atlasSource = sourceOf(catalogTexture);
     const describe = (match) => (match?.nodes ?? []).map((node) => ({
       ctor: node?.constructor?.name,
@@ -46250,7 +44325,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function findOnStage(substring = "") {
-    const state5 = getSpriteState();
+    const state7 = getSpriteState();
     const stage = collectGameMatches();
     const needle = substring.toLowerCase();
     const labels = [...stage.byLabel.keys()].filter((label2) => label2.toLowerCase().includes(needle)).sort();
@@ -46275,7 +44350,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       unlabelledRects: unlabelled.slice(0, 40),
       unlabelledRectCount: unlabelled.length,
       catalogRect: (() => {
-        const rect = frameRectOf(state5.tex.get(substring));
+        const rect = frameRectOf(state7.tex.get(substring));
         return rect ? rectKey2(rect.x, rect.y, rect.width, rect.height) : null;
       })()
     };
@@ -46308,7 +44383,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/skins/store.ts
   function openDb() {
     if (dbPromise) return dbPromise;
-    dbPromise = new Promise((resolve, reject) => {
+    dbPromise = new Promise((resolve, reject2) => {
       const request2 = indexedDB.open(DB_NAME, DB_VERSION);
       request2.onupgradeneeded = () => {
         const db = request2.result;
@@ -46317,7 +44392,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
       };
       request2.onsuccess = () => resolve(request2.result);
-      request2.onerror = () => reject(request2.error ?? new Error("IndexedDB open failed"));
+      request2.onerror = () => reject2(request2.error ?? new Error("IndexedDB open failed"));
     });
     dbPromise.catch(() => {
       dbPromise = null;
@@ -46326,11 +44401,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function runTransaction(mode, work) {
     return openDb().then(
-      (db) => new Promise((resolve, reject) => {
+      (db) => new Promise((resolve, reject2) => {
         const tx = db.transaction(STORE_NAME, mode);
         const request2 = work(tx.objectStore(STORE_NAME));
         request2.onsuccess = () => resolve(request2.result);
-        request2.onerror = () => reject(request2.error ?? new Error("IndexedDB request failed"));
+        request2.onerror = () => reject2(request2.error ?? new Error("IndexedDB request failed"));
       })
     );
   }
@@ -46514,16 +44589,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     retriesLeft -= 1;
     const targets = await loadTargets();
     const index = sharedStageIndex();
-    let changed = false;
+    let changed5 = false;
     for (const result of pending6) {
       const canvas = skinCanvases.get(result.frameKey);
       const target = targets.get(result.frameKey);
       if (!canvas || !target) continue;
       if (!applySkinTexture(target, canvas, index)) continue;
       snapshot.results.set(result.frameKey, { frameKey: result.frameKey, applied: true });
-      changed = true;
+      changed5 = true;
     }
-    if (!changed) return;
+    if (!changed5) return;
     snapshot.rebaked = rebakeAll();
     notifyChanged();
   }
@@ -46578,15 +44653,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   }
   async function initSkins() {
-    if (started3) return;
-    started3 = true;
+    if (started4) return;
+    started4 = true;
     snapshot.enabled = getAriesStorage().skins?.enabled !== false;
     installSkinsDebug();
     try {
       const targets = await loadTargets();
       snapshot.objects = groupTargets(targets);
       const rows = await listSkins();
-      snapshot.entries = new Map(rows.map((row3) => [row3.frameKey, row3]));
+      snapshot.entries = new Map(rows.map((row4) => [row4.frameKey, row4]));
       snapshot.ready = true;
       notifyChanged();
       startTimers();
@@ -46597,7 +44672,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       notifyChanged();
     }
   }
-  var RENDERER_WATCH_MS, RETRY_PASS_MS, MAX_RETRY_PASSES, snapshot, skinCanvases, started3, watchId, retryId, lastRenderer, applyChain, retriesLeft, skinsChanged;
+  var RENDERER_WATCH_MS, RETRY_PASS_MS, MAX_RETRY_PASSES, snapshot, skinCanvases, started4, watchId, retryId, lastRenderer, applyChain, retriesLeft, skinsChanged;
   var init_skins = __esm({
     "src/features/skins/index.ts"() {
       "use strict";
@@ -46624,7 +44699,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         rebaked: null
       };
       skinCanvases = /* @__PURE__ */ new Map();
-      started3 = false;
+      started4 = false;
       watchId = null;
       retryId = null;
       lastRenderer = null;
@@ -46715,7 +44790,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function buildSlot(target, index, deps) {
     const { entry, result, onError, onChanged } = deps;
-    const row3 = h("div", "qws-skins-slot");
+    const row4 = h("div", "qws-skins-slot");
     const before = thumbBox();
     mountThumb(before, target, null, SLOT_THUMB_PX);
     const after = thumbBox(!entry);
@@ -46781,8 +44856,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       h("div", "qws-skins-slot__spacer"),
       actions2
     );
-    row3.append(head, body);
-    return row3;
+    row4.append(head, body);
+    return row4;
   }
   function buildDetail(options2) {
     const { object, entries: entries2, results, onError, onChanged } = options2;
@@ -46836,7 +44911,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     addStyle(SKINS_CSS);
   }
   var SKINS_CSS, injected5;
-  var init_styles6 = __esm({
+  var init_styles7 = __esm({
     "src/features/skins/styles.ts"() {
       "use strict";
       init_dom();
@@ -46973,10 +45048,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       all.textContent = "All";
       categorySelect.appendChild(all);
       for (const category of categories) {
-        const option = document.createElement("option");
-        option.value = category;
-        option.textContent = category;
-        categorySelect.appendChild(option);
+        const option2 = document.createElement("option");
+        option2.value = category;
+        option2.textContent = category;
+        categorySelect.appendChild(option2);
       }
       categorySelect.value = categories.includes(previous) ? previous : ALL_CATEGORIES;
       menuState.category = categorySelect.value;
@@ -47069,7 +45144,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_detail();
       init_thumb();
       init_skins();
-      init_styles6();
+      init_styles7();
       ALL_CATEGORIES = "__all__";
       MAX_VISIBLE = 400;
       GRID_THUMB_PX = 52;
@@ -47183,89 +45258,89 @@ Restore figures are averages; unlucky streaks do worse.`;
   function stepMovement(input) {
     const { anchor, isWalkable, random, config } = input;
     const pickInterest2 = input.pickInterest ?? null;
-    const state5 = { ...input.state };
+    const state7 = { ...input.state };
     const excludeCenter = anchor.tracksPlayer;
     const blocked = anchor.tracksPlayer ? anchor.tile : null;
     const zone = anchor.zone;
     const zoneWalkable = (x, y) => isWalkable(x, y) && (!zone || zone(x, y));
-    const insideZone = !zone || !state5.tile || zone(state5.tile.x, state5.tile.y);
+    const insideZone = !zone || !state7.tile || zone(state7.tile.x, state7.tile.y);
     const stepWalkable = insideZone ? zoneWalkable : isWalkable;
-    const anchorMoved = !sameTile(state5.lastAnchorTile, anchor.tile);
-    state5.lastAnchorTile = { ...anchor.tile };
+    const anchorMoved = !sameTile(state7.lastAnchorTile, anchor.tile);
+    state7.lastAnchorTile = { ...anchor.tile };
     if (anchorMoved) {
-      state5.idleTicks = 0;
-      if (state5.activity === "wander") {
-        state5.activity = "pursue";
-        state5.wanderTarget = null;
-        state5.wanderTargetIsInterest = false;
-        state5.wanderCooldown = 0;
+      state7.idleTicks = 0;
+      if (state7.activity === "wander") {
+        state7.activity = "pursue";
+        state7.wanderTarget = null;
+        state7.wanderTargetIsInterest = false;
+        state7.wanderCooldown = 0;
       }
     } else {
-      state5.idleTicks++;
+      state7.idleTicks++;
     }
-    if (!state5.tile) {
+    if (!state7.tile) {
       const spawn = findNearbyWalkable(anchor.tile, zoneWalkable, excludeCenter) ?? findNearbyWalkable(anchor.tile, isWalkable, excludeCenter);
-      state5.tile = spawn;
-      return { state: state5, tile: spawn, teleported: spawn !== null };
+      state7.tile = spawn;
+      return { state: state7, tile: spawn, teleported: spawn !== null };
     }
-    const arrived = manhattan(state5.tile, anchor.tile) <= config.followDistance;
-    if (state5.activity === "pursue" && arrived && anchor.onArrival === "wander") {
-      const mayWander = !anchor.tracksPlayer || state5.idleTicks >= config.idleTicksBeforeWander;
+    const arrived = manhattan(state7.tile, anchor.tile) <= config.followDistance;
+    if (state7.activity === "pursue" && arrived && anchor.onArrival === "wander") {
+      const mayWander = !anchor.tracksPlayer || state7.idleTicks >= config.idleTicksBeforeWander;
       if (mayWander) {
-        state5.activity = "wander";
-        state5.wanderTarget = null;
-        state5.wanderTargetIsInterest = false;
-        state5.wanderCooldown = 0;
+        state7.activity = "wander";
+        state7.wanderTarget = null;
+        state7.wanderTargetIsInterest = false;
+        state7.wanderCooldown = 0;
       }
     }
     const passable = (x, y) => stepWalkable(x, y) && !(blocked !== null && x === blocked.x && y === blocked.y);
     let isGoal = null;
     let interestReached = null;
-    if (state5.activity === "pursue") {
+    if (state7.activity === "pursue") {
       if (!arrived) {
         isGoal = (x, y) => manhattan({ x, y }, anchor.tile) <= config.followDistance;
       }
     } else {
-      const wander = resolveWanderTarget(state5, anchor, config, zoneWalkable, random, pickInterest2);
+      const wander = resolveWanderTarget(state7, anchor, config, zoneWalkable, random, pickInterest2);
       interestReached = wander.interestReached;
       const target = wander.target;
       if (target) isGoal = (x, y) => x === target.x && y === target.y;
     }
-    if (!isGoal) return { state: state5, tile: state5.tile, teleported: false, interestReached };
-    const next = findFirstStep(state5.tile, isGoal, passable);
+    if (!isGoal) return { state: state7, tile: state7.tile, teleported: false, interestReached };
+    const next = findFirstStep(state7.tile, isGoal, passable);
     if (!next) {
-      if (state5.activity === "wander") {
-        state5.wanderTarget = null;
-        state5.wanderTargetIsInterest = false;
+      if (state7.activity === "wander") {
+        state7.wanderTarget = null;
+        state7.wanderTargetIsInterest = false;
       }
-      return { state: state5, tile: state5.tile, teleported: false };
+      return { state: state7, tile: state7.tile, teleported: false };
     }
-    state5.tile = next;
-    return { state: state5, tile: next, teleported: false };
+    state7.tile = next;
+    return { state: state7, tile: next, teleported: false };
   }
-  function resolveWanderTarget(state5, anchor, config, isWalkable, random, pickInterest2) {
-    if (state5.wanderCooldown > 0) {
-      state5.wanderCooldown--;
+  function resolveWanderTarget(state7, anchor, config, isWalkable, random, pickInterest2) {
+    if (state7.wanderCooldown > 0) {
+      state7.wanderCooldown--;
       return { target: null, interestReached: null };
     }
-    if (state5.wanderTarget && sameTile(state5.wanderTarget, state5.tile)) {
-      const reached = state5.wanderTargetIsInterest ? { ...state5.wanderTarget } : null;
-      state5.wanderTarget = null;
-      state5.wanderTargetIsInterest = false;
-      state5.wanderCooldown = drawWanderPause(config, random);
+    if (state7.wanderTarget && sameTile(state7.wanderTarget, state7.tile)) {
+      const reached = state7.wanderTargetIsInterest ? { ...state7.wanderTarget } : null;
+      state7.wanderTarget = null;
+      state7.wanderTargetIsInterest = false;
+      state7.wanderCooldown = drawWanderPause(config, random);
       return { target: null, interestReached: reached };
     }
-    if (!state5.wanderTarget) {
+    if (!state7.wanderTarget) {
       const radius2 = wanderRadiusOf(anchor, config);
-      const interest = pickInterest2 && state5.tile ? pickInterestSafely(pickInterest2, anchor.tile, radius2, state5.tile, isWalkable) : null;
-      state5.wanderTargetIsInterest = interest !== null;
-      state5.wanderTarget = interest ?? pickWanderTarget(anchor.tile, radius2, isWalkable, random);
-      if (!state5.wanderTarget) {
-        state5.wanderCooldown = drawWanderPause(config, random);
+      const interest = pickInterest2 && state7.tile ? pickInterestSafely(pickInterest2, anchor.tile, radius2, state7.tile, isWalkable) : null;
+      state7.wanderTargetIsInterest = interest !== null;
+      state7.wanderTarget = interest ?? pickWanderTarget(anchor.tile, radius2, isWalkable, random);
+      if (!state7.wanderTarget) {
+        state7.wanderCooldown = drawWanderPause(config, random);
         return { target: null, interestReached: null };
       }
     }
-    return { target: state5.wanderTarget, interestReached: null };
+    return { target: state7.wanderTarget, interestReached: null };
   }
   function pickInterestSafely(pickInterest2, center, radius2, from, isWalkable) {
     const accepts = (x, y) => Math.max(Math.abs(x - center.x), Math.abs(y - center.y)) <= radius2 && !(x === center.x && y === center.y) && !(x === from.x && y === from.y) && isWalkable(x, y);
@@ -47621,9 +45696,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (after <= before) continue;
       const inventory = next[kind]?.inventory;
       if (!Array.isArray(inventory)) continue;
-      const [prefix, field] = SHOP_ID[kind];
+      const [prefix, field2] = SHOP_ID[kind];
       for (const item of inventory) {
-        const key2 = item?.[field];
+        const key2 = item?.[field2];
         const stock = Number(item?.initialStock);
         if (typeof key2 !== "string" || !key2 || !(stock > 0)) continue;
         const id = `${prefix}:${key2}`;
@@ -47862,18 +45937,18 @@ Restore figures are averages; unlucky streaks do worse.`;
   function initialGateState() {
     return { lastSpokeAt: 0, mutedUntil: {}, queue: [] };
   }
-  function offerReaction(state5, reaction, now2) {
-    if (now2 < (state5.mutedUntil[familyOf(reaction.key)] ?? 0)) return state5;
-    const existing = state5.queue.find((q) => q.key === reaction.key);
-    if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state5;
-    const queue = state5.queue.filter((q) => q.key !== reaction.key);
+  function offerReaction(state7, reaction, now2) {
+    if (now2 < (state7.mutedUntil[familyOf(reaction.key)] ?? 0)) return state7;
+    const existing = state7.queue.find((q) => q.key === reaction.key);
+    if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state7;
+    const queue = state7.queue.filter((q) => q.key !== reaction.key);
     queue.push({ ...reaction, at: now2 });
-    return { ...state5, queue };
+    return { ...state7, queue };
   }
-  function takeReaction(state5, now2, busy4) {
-    const queue = state5.queue.filter((q) => now2 - q.at <= REACTION_TTL_MS[q.priority]);
-    const kept = { ...state5, queue };
-    if (busy4 || queue.length === 0 || now2 - state5.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
+  function takeReaction(state7, now2, busy4) {
+    const queue = state7.queue.filter((q) => now2 - q.at <= REACTION_TTL_MS[q.priority]);
+    const kept = { ...state7, queue };
+    if (busy4 || queue.length === 0 || now2 - state7.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
     const chosen = queue.find((q) => q.priority === "high") ?? queue[0];
     const family = familyOf(chosen.key);
     const { at: _at, ...reaction } = chosen;
@@ -47881,7 +45956,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       reaction,
       state: {
         lastSpokeAt: now2,
-        mutedUntil: { ...state5.mutedUntil, [family]: now2 + (FAMILY_COOLDOWN_MS[family] ?? 0) },
+        mutedUntil: { ...state7.mutedUntil, [family]: now2 + (FAMILY_COOLDOWN_MS[family] ?? 0) },
         // Le reste de la famille qui vient de parler se tait aussi.
         queue: queue.filter((q) => q !== chosen && (FAMILY_COOLDOWN_MS[family] ? familyOf(q.key) !== family : true))
       }
@@ -48158,8 +46233,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function weatherDisplayName(weatherId, catalog) {
     const entry = catalog && typeof catalog === "object" ? catalog[weatherId] : void 0;
-    for (const field of ["name", "displayName"]) {
-      const value = entry?.[field];
+    for (const field2 of ["name", "displayName"]) {
+      const value = entry?.[field2];
       if (typeof value === "string" && value.trim()) return value.trim();
     }
     return spaceWords(weatherId);
@@ -48305,23 +46380,23 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/chat/hatch.ts
-  function hasAnyRule(rules2) {
-    return rules2.species.length > 0 || rules2.mutations.length > 0 || rules2.abilities.length > 0 || rules2.minMaxStr !== null;
+  function hasAnyRule(rules3) {
+    return rules3.species.length > 0 || rules3.mutations.length > 0 || rules3.abilities.length > 0 || rules3.minMaxStr !== null;
   }
   function hasAny(present, wanted) {
     if (wanted.length === 0) return false;
     const set2 = new Set(present.map((value) => value.toLowerCase()));
     return wanted.some((value) => set2.has(value.toLowerCase()));
   }
-  function matchesKeep(pet, rules2) {
-    if (rules2.species.includes(pet.species)) return true;
-    if (hasAny(pet.mutations, rules2.mutations)) return true;
-    if (rules2.abilities.some((ability) => pet.abilities.includes(ability))) return true;
-    if (rules2.minMaxStr !== null && pet.maxStrength !== null && pet.maxStrength >= rules2.minMaxStr) return true;
+  function matchesKeep(pet, rules3) {
+    if (rules3.species.includes(pet.species)) return true;
+    if (hasAny(pet.mutations, rules3.mutations)) return true;
+    if (rules3.abilities.some((ability) => pet.abilities.includes(ability))) return true;
+    if (rules3.minMaxStr !== null && pet.maxStrength !== null && pet.maxStrength >= rules3.minMaxStr) return true;
     return false;
   }
-  function hatchCheer(pets, rules2) {
-    const kept = pets.filter((pet) => matchesKeep(pet, rules2));
+  function hatchCheer(pets, rules3) {
+    const kept = pets.filter((pet) => matchesKeep(pet, rules3));
     if (kept.length === 0) return null;
     for (const mutation of CHEERED_MUTATIONS) {
       const star = kept.find((pet) => hasAny(pet.mutations, [mutation]));
@@ -48329,15 +46404,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return { emote: EmoteType.Clapping, star: null, mutation: null };
   }
-  function isProtected(pet, rules2) {
-    return pet.favorited || pet.onTeam || matchesKeep(pet, rules2);
+  function isProtected(pet, rules3) {
+    return pet.favorited || pet.onTeam || matchesKeep(pet, rules3);
   }
-  function toFavourite(pets, rules2) {
-    return pets.filter((pet) => !pet.favorited && matchesKeep(pet, rules2));
+  function toFavourite(pets, rules3) {
+    return pets.filter((pet) => !pet.favorited && matchesKeep(pet, rules3));
   }
-  function toSell(pets, rules2) {
-    if (!hasAnyRule(rules2)) return [];
-    return pets.filter((pet) => !isProtected(pet, rules2));
+  function toSell(pets, rules3) {
+    if (!hasAnyRule(rules3)) return [];
+    return pets.filter((pet) => !isProtected(pet, rules3));
   }
   function petSignature(pets) {
     return pets.map((pet) => pet.petId).sort().join("|");
@@ -48350,15 +46425,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     for (const pet of pets) counts.set(pet.species, (counts.get(pet.species) ?? 0) + 1);
     return [...counts.entries()].map(([species, count]) => ({ species, count })).sort((a, b) => b.count - a.count || a.species.localeCompare(b.species));
   }
-  function describeKeep(rules2, abilityNames = /* @__PURE__ */ new Map()) {
-    if (!hasAnyRule(rules2)) return "Nothing set yet";
+  function describeKeep(rules3, abilityNames = /* @__PURE__ */ new Map()) {
+    if (!hasAnyRule(rules3)) return "Nothing set yet";
     const parts = [];
-    if (rules2.species.length) parts.push(listWords(rules2.species));
-    if (rules2.mutations.length) parts.push(listWords(rules2.mutations));
-    if (rules2.abilities.length) {
-      parts.push(listWords(rules2.abilities.map((id) => abilityNames.get(id) ?? id)));
+    if (rules3.species.length) parts.push(listWords(rules3.species));
+    if (rules3.mutations.length) parts.push(listWords(rules3.mutations));
+    if (rules3.abilities.length) {
+      parts.push(listWords(rules3.abilities.map((id) => abilityNames.get(id) ?? id)));
     }
-    if (rules2.minMaxStr !== null) parts.push(`max STR ${rules2.minMaxStr} and up`);
+    if (rules3.minMaxStr !== null) parts.push(`max STR ${rules3.minMaxStr} and up`);
     return parts.join(", ");
   }
   function describeHatchRequest(count) {
@@ -48478,10 +46553,10 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/state.ts
   function loadCompanionSettings() {
-    return coerceSettings(readAriesPath(STORAGE_PATH3, void 0));
+    return coerceSettings(readAriesPath(STORAGE_PATH4, void 0));
   }
   function saveCompanionSettings(settings) {
-    writeAriesPath(STORAGE_PATH3, settings);
+    writeAriesPath(STORAGE_PATH4, settings);
   }
   function patchCompanionSettings(patch) {
     saveCompanionSettings({ ...loadCompanionSettings(), ...patch });
@@ -48495,14 +46570,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (current.includes(group2)) return;
     patchCompanionSettings({ reviewedSettings: [...current, group2] });
   }
-  var STORAGE_PATH3;
+  var STORAGE_PATH4;
   var init_state3 = __esm({
     "src/features/companion/state.ts"() {
       "use strict";
       init_storage();
       init_settingsShape();
       init_settingsShape();
-      STORAGE_PATH3 = "companion";
+      STORAGE_PATH4 = "companion";
     }
   });
 
@@ -48594,28 +46669,28 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function pickDialogueLine(input) {
     const { contextual, customLines, nowMs, random, cooldownMs } = input;
-    const state5 = {
+    const state7 = {
       lastCustomIndex: input.state.lastCustomIndex,
       mutedUntil: { ...input.state.mutedUntil }
     };
     const lines = customLines.filter((line) => typeof line === "string" && line.trim().length > 0);
     const available = contextual.filter(
-      (candidate) => candidate?.message && nowMs >= (state5.mutedUntil[candidate.key] ?? 0)
+      (candidate) => candidate?.message && nowMs >= (state7.mutedUntil[candidate.key] ?? 0)
     );
     if (available.length > 0 && (lines.length === 0 || random() < CONTEXTUAL_CHANCE)) {
       const candidate = available[Math.min(available.length - 1, Math.floor(random() * available.length))];
-      state5.mutedUntil[candidate.key] = nowMs + cooldownMs;
-      return { message: candidate.message, emote: candidate.emote ?? null, custom: false, state: state5 };
+      state7.mutedUntil[candidate.key] = nowMs + cooldownMs;
+      return { message: candidate.message, emote: candidate.emote ?? null, custom: false, state: state7 };
     }
-    if (lines.length === 0) return { message: null, emote: null, custom: false, state: state5 };
+    if (lines.length === 0) return { message: null, emote: null, custom: false, state: state7 };
     if (lines.length === 1) {
-      state5.lastCustomIndex = 0;
-      return { message: lines[0], emote: null, custom: true, state: state5 };
+      state7.lastCustomIndex = 0;
+      return { message: lines[0], emote: null, custom: true, state: state7 };
     }
     let index = Math.min(lines.length - 1, Math.floor(random() * lines.length));
-    if (index === state5.lastCustomIndex) index = (index + 1) % lines.length;
-    state5.lastCustomIndex = index;
-    return { message: lines[index], emote: null, custom: true, state: state5 };
+    if (index === state7.lastCustomIndex) index = (index + 1) % lines.length;
+    state7.lastCustomIndex = index;
+    return { message: lines[index], emote: null, custom: true, state: state7 };
   }
   var CONTEXTUAL_CHANCE, DEFAULT_CONTEXTUAL_COOLDOWN_MS;
   var init_dialogue = __esm({
@@ -49522,14 +47597,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     return duplicate ? log2 : append(log2, message2);
   }
   function clearProposal(log2, proposalId) {
-    let changed = false;
+    let changed5 = false;
     const messages = log2.messages.map((entry) => {
       if (entry.proposalId !== proposalId) return entry;
-      changed = true;
+      changed5 = true;
       const { proposalId: _dropped, ...rest2 } = entry;
       return rest2;
     });
-    return changed ? { ...log2, messages } : log2;
+    return changed5 ? { ...log2, messages } : log2;
   }
   var MAX_MESSAGES;
   var init_log = __esm({
@@ -49886,13 +47961,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function readHarvestable() {
     const rows = await readHarvestRows();
-    const ripe = rows.filter((row3) => row3.ready);
-    const allowed = ripe.filter((row3) => {
+    const ripe = rows.filter((row4) => row4.ready);
+    const allowed = ripe.filter((row4) => {
       try {
         return lockerService.allowsHarvest({
-          seedKey: row3.species,
-          sizePercent: row3.sizePct,
-          mutations: mutationsOf2(row3)
+          seedKey: row4.species,
+          sizePercent: row4.sizePct,
+          mutations: mutationsOf2(row4)
         });
       } catch {
         return false;
@@ -49923,7 +47998,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     await sleep3(SETTLE_MS);
     let fresh = null;
     try {
-      fresh = (await readHarvestRows()).filter((row3) => row3.ready);
+      fresh = (await readHarvestRows()).filter((row4) => row4.ready);
     } catch {
       fresh = null;
     }
@@ -49936,7 +48011,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     const targeted = new Set(attempted.map(rowKey));
-    const stillRipe = fresh.filter((row3) => targeted.has(rowKey(row3))).length;
+    const stillRipe = fresh.filter((row4) => targeted.has(rowKey(row4))).length;
     const picked = attempted.length - stillRipe;
     if (picked > 0) StatsService.incrementGardenStat("totalHarvested", picked);
     if (stillRipe === 0) {
@@ -49960,12 +48035,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     const walker = await createWalker((message2) => reporter2.say("system", message2));
     const attempted = [];
     const pace = pacer();
-    for (const row3 of rows) {
+    for (const row4 of rows) {
       if (reporter2.stopped()) break;
-      await walker.toGardenTile(row3.tileIndex);
+      await walker.toGardenTile(row4.tileIndex);
       await pace.wait();
-      attempted.push(row3);
-      await PlayerService.harvestCrop(row3.tileIndex, row3.slotId);
+      attempted.push(row4);
+      await PlayerService.harvestCrop(row4.tileIndex, row4.slotId);
       pace.mark();
       const done = attempted.length;
       reporter2.progress(done, rows.length);
@@ -50045,13 +48120,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function allowedCropsFor(petId, species) {
     const compatibles = PetsService.getCompatibleCropsForSpecies(species);
-    let rules2 = {};
+    let rules3 = {};
     try {
-      rules2 = PetsService.getOverride(petId).crops ?? {};
+      rules3 = PetsService.getOverride(petId).crops ?? {};
     } catch {
-      rules2 = {};
+      rules3 = {};
     }
-    return new Set(compatibles.filter((crop) => rules2[crop] ? rules2[crop].allowed : true));
+    return new Set(compatibles.filter((crop) => rules3[crop] ? rules3[crop].allowed : true));
   }
   async function reviewFeeding(search2) {
     const settings = loadCompanionSettings();
@@ -50100,7 +48175,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         source = { kind: "inventory", itemId: String(fromInventory.id), species: String(fromInventory.species) };
       } else {
         const rows = await gardenRows();
-        const fromGarden = rows.find((row3) => allowed.has(row3.species) && !claimed.has(`garden:${rowKey(row3)}`));
+        const fromGarden = rows.find((row4) => allowed.has(row4.species) && !claimed.has(`garden:${rowKey(row4)}`));
         if (fromGarden && allowGarden) {
           claimed.add(`garden:${rowKey(fromGarden)}`);
           source = { kind: "garden", row: fromGarden, species: fromGarden.species };
@@ -50128,20 +48203,20 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function findFeedable(search2) {
     return (await reviewFeeding(search2)).candidates;
   }
-  function iconOf2(pick2) {
+  function iconOf(pick2) {
     return petThing(pick2.pet, "") ?? petSpeciesIcon(pick2.petSpecies);
   }
   function feedBubble(picks) {
     const only = picks.length === 1 ? picks[0] : null;
-    if (only) return compose(iconOf2(only), ` ${only.petName} is at ${only.hungerPct}%. Feed it?`);
+    if (only) return compose(iconOf(only), ` ${only.petName} is at ${only.hungerPct}%. Feed it?`);
     const seen = /* @__PURE__ */ new Set();
-    const icons = picks.filter((pick2) => !seen.has(pick2.petSpecies) && seen.add(pick2.petSpecies)).slice(0, 2).map(iconOf2);
+    const icons = picks.filter((pick2) => !seen.has(pick2.petSpecies) && seen.add(pick2.petSpecies)).slice(0, 2).map(iconOf);
     return compose(...spaced(icons.filter((icon2) => icon2 !== null)), ` ${picks.length} pets are hungry. Feed them all?`);
   }
   function feedQuestion(picks) {
     const listed = picks.flatMap((pick2, index) => [
       index === 0 ? "" : ", ",
-      iconOf2(pick2),
+      iconOf(pick2),
       ` ${pick2.petName} (${pick2.hungerPct}%)`
     ]);
     return compose(
@@ -50504,11 +48579,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       return null;
     }
   }
-  async function reportHatch(attempted, stop2, reporter2) {
+  async function reportHatch(attempted, stop, reporter2) {
     if (attempted.length === 0) {
       reporter2.say(
         "report",
-        stop2 === "full" ? "Your bag was already full, so I opened none." : "Stopped before I opened any."
+        stop === "full" ? "Your bag was already full, so I opened none." : "Stopped before I opened any."
       );
       return;
     }
@@ -50522,20 +48597,20 @@ Restore figures are averages; unlucky streaks do worse.`;
       reporter2.say("report", "None opened. They are all still there.");
       return;
     }
-    const tail = stop2 === "full" ? " Your bag is full now." : stop2 === "cancelled" ? " Stopped there." : "";
+    const tail = stop === "full" ? " Your bag is full now." : stop === "cancelled" ? " Stopped there." : "";
     if (hatched === attempted.length) {
       reporter2.say("report", `${hatched} hatched.${tail}`);
       return;
     }
     reporter2.say("report", `${hatched} of ${attempted.length} hatched.${tail}`);
   }
-  async function announceHatchling(known, rules2, reporter2) {
+  async function announceHatchling(known, rules3, reporter2) {
     const pets = await readPetRows();
     if (pets.length === 0) return;
     const born = pets.filter((pet) => !known.has(pet.petId));
     for (const pet of born) known.add(pet.petId);
     if (born.length === 0) return;
-    const cheer = hatchCheer(born, rules2);
+    const cheer = hatchCheer(born, rules3);
     const mutation = cheer?.mutation ?? null;
     const timing = mutation ? CHEER_TIMING[mutation] : void 0;
     const lines = mutation ? CHEER_LINES[mutation] : void 0;
@@ -50561,19 +48636,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     const walker = await createWalker((message2) => reporter2.say("system", message2));
     const attempted = [];
     let count = await readInventoryCount();
-    let stop2 = "done";
+    let stop = "done";
     const known = new Set((await readPetRows()).map((pet) => pet.petId));
     const pace = pacer();
     for (const slot of slots) {
       if (reporter2.stopped()) {
-        stop2 = "cancelled";
+        stop = "cancelled";
         break;
       }
       if (attempted.length % RECOUNT_EVERY === 0 || count >= INVENTORY_CAPACITY - NEAR_CAPACITY) {
         count = await readInventoryCount();
       }
       if (count >= INVENTORY_CAPACITY) {
-        stop2 = "full";
+        stop = "full";
         break;
       }
       await walker.toGardenTile(slot);
@@ -50590,8 +48665,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     walker.release();
     await team.restore();
-    await reportHatch(attempted, stop2, reporter2);
-    return stop2;
+    await reportHatch(attempted, stop, reporter2);
+    return stop;
   }
   async function goToSellShop(walker, reporter2) {
     if (!walker.walking) return;
@@ -50721,22 +48796,22 @@ Restore figures are averages; unlucky streaks do worse.`;
   function hatchProvider() {
     return async () => (await readHatchScope()).readySlots;
   }
-  function sellProvider(rules2) {
+  function sellProvider(rules3) {
     return async () => {
       const scope = await readHatchScope();
       return {
-        favourite: toFavourite(scope.pets, rules2),
-        sell: toSell(scope.pets, rules2),
+        favourite: toFavourite(scope.pets, rules3),
+        sell: toSell(scope.pets, rules3),
         teamId: loadCompanionSettings().hatchSellTeamId
       };
     };
   }
-  function afterHatch(stop2, scope, rules2, sellable) {
+  function afterHatch(stop, scope, rules3, sellable) {
     const waiting = scope.readySlots.length;
     const eggs = waiting > 0 ? ` ${waiting} egg${waiting === 1 ? "" : "s"} still waiting.` : "";
-    if (stop2 === "full") {
+    if (stop === "full") {
       if (sellable.length > 0) return `Your bag is full.${eggs}`;
-      return hasAnyRule(rules2) ? `Your bag is full, nothing in it is up for sale.${eggs}` : `Your bag is full.${eggs} Nothing set to keep, so I am not selling.`;
+      return hasAnyRule(rules3) ? `Your bag is full, nothing in it is up for sale.${eggs}` : `Your bag is full.${eggs} Nothing set to keep, so I am not selling.`;
     }
     return sellable.length > 0 ? "All open. Now the ones you did not want." : null;
   }
@@ -50782,7 +48857,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/chat/index.ts
   function notify() {
-    for (const listener of [...listeners4]) {
+    for (const listener of [...listeners3]) {
       try {
         listener();
       } catch {
@@ -50791,9 +48866,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function post(from, kind, text2, proposalId, extra = {}) {
     const shown = extra.thread ?? extra.bubble;
-    state2 = {
-      ...state2,
-      log: append(state2.log, {
+    state4 = {
+      ...state4,
+      log: append(state4.log, {
         from,
         kind,
         text: shown?.message ?? text2,
@@ -50823,9 +48898,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
   }
   function dropStaleProposal() {
-    const proposal = state2.proposal;
+    const proposal = state4.proposal;
     if (!proposal || !isExpired(proposal, Date.now())) return;
-    state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposal.id) };
+    state4 = { ...state4, proposal: null, captured: null, log: clearProposal(state4.log, proposal.id) };
     notify();
   }
   function harvestBubble(rows, sentence) {
@@ -50857,7 +48932,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       rows.length,
       withTeam(selectionSignature(rows), team)
     );
-    state2 = { ...state2, proposal, captured: { kind: "harvest", provider, rows } };
+    state4 = { ...state4, proposal, captured: { kind: "harvest", provider, rows } };
     const held = scope.lockedOut > 0 ? ` I am leaving ${scope.lockedOut} locked one${scope.lockedOut === 1 ? "" : "s"} alone.` : "";
     const sentence = `I can see ${proposal.summary}.${held}${teamPromise(team)} Want me to pick them?`;
     post("companion", "reply", sentence, proposal.id, { bubble: harvestBubble(rows, sentence) });
@@ -50875,7 +48950,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     const proposal = openProposal("feed", describeFeed(picks), picks.length, feedSignature(picks));
-    state2 = { ...state2, proposal, captured: { kind: "feed", provider, picks } };
+    state4 = { ...state4, proposal, captured: { kind: "feed", provider, picks } };
     const listed = feedQuestion(picks);
     post("companion", "reply", listed.message, proposal.id, {
       bubble: feedBubble(picks),
@@ -50895,14 +48970,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     const proposal = openProposal("plant", summarizePlan(plan), plan.length, plantSignature(plan));
-    state2 = { ...state2, proposal, captured: { kind: "plant", provider, plan } };
+    state4 = { ...state4, proposal, captured: { kind: "plant", provider, plan } };
     const most = countByItem(plan)[0];
     const sentence = `That is ${proposal.summary}. Want me to get started?`;
     post("companion", "reply", sentence, proposal.id, {
       bubble: compose(most?.kind === "seed" ? seedIcon(most.id) : null, " ", sentence)
     });
   }
-  async function proposeHatchSlots(provider, rules2) {
+  async function proposeHatchSlots(provider, rules3) {
     let slots;
     try {
       slots = await provider();
@@ -50916,14 +48991,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const team = loadCompanionSettings().hatchTeamId;
     const proposal = openProposal("hatch", summarizeHatch(slots), slots.length, withTeam(slotSignature2(slots), team));
-    state2 = { ...state2, proposal, captured: { kind: "hatch", provider, rules: rules2, slots } };
+    state4 = { ...state4, proposal, captured: { kind: "hatch", provider, rules: rules3, slots } };
     const kinds = await readHatchScope().then((scope) => scope.eggIds).catch(() => []);
     const sentence = `${proposal.summary}.${teamPromise(team)} Want me to open them?`;
     post("companion", "reply", sentence, proposal.id, {
       bubble: compose(kinds.length === 1 ? eggIcon(kinds[0]) : null, " ", sentence)
     });
   }
-  async function proposeSellPlan(provider, rules2) {
+  async function proposeSellPlan(provider, rules3) {
     let plan;
     try {
       plan = await provider();
@@ -50937,7 +49012,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const signature = withTeam(`${petSignature(plan.sell)}/${petSignature(plan.favourite)}`, plan.teamId);
     const proposal = openProposal("sell", summarizeSell(plan.sell), plan.sell.length, signature);
-    state2 = { ...state2, proposal, captured: { kind: "sell", provider, rules: rules2, plan } };
+    state4 = { ...state4, proposal, captured: { kind: "sell", provider, rules: rules3, plan } };
     const keeping = plan.favourite.length > 0 ? ` I would favourite the ${plan.favourite.length} you keep first.` : "";
     const sentence = `That would be ${proposal.summary}.${keeping}${teamPromise(plan.teamId)} Should I?`;
     post("companion", "reply", sentence, proposal.id, {
@@ -50947,9 +49022,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   function reporter() {
     return {
       say: (kind, text2, spoken, force) => post("companion", kind, text2, void 0, { bubble: spoken, force }),
-      stopped: () => state2.cancelRequested,
+      stopped: () => state4.cancelRequested,
       progress: (done, total) => {
-        state2 = { ...state2, run: { done, total } };
+        state4 = { ...state4, run: { done, total } };
         notify();
       }
     };
@@ -50959,28 +49034,28 @@ Restore figures are averages; unlucky streaks do worse.`;
     try {
       await run(reporter());
     } finally {
-      stopped = state2.cancelRequested;
-      state2 = { ...state2, run: null, cancelRequested: false };
+      stopped = state4.cancelRequested;
+      state4 = { ...state4, run: null, cancelRequested: false };
       notify();
     }
     return stopped;
   }
-  async function afterHatchBatch(rules2, stop2) {
-    if (stop2 === "cancelled") return;
+  async function afterHatchBatch(rules3, stop) {
+    if (stop === "cancelled") return;
     const scope = await readHatchScope().catch(() => null);
     if (!scope) return;
-    const sellable = toSell(scope.pets, rules2);
-    const note = afterHatch(stop2, scope, rules2, sellable);
+    const sellable = toSell(scope.pets, rules3);
+    const note = afterHatch(stop, scope, rules3, sellable);
     if (note) post("companion", "system", note);
     if (sellable.length === 0) return;
-    await proposeSellPlan(sellProvider(rules2), rules2);
+    await proposeSellPlan(sellProvider(rules3), rules3);
   }
-  async function afterSellBatch(rules2) {
+  async function afterSellBatch(rules3) {
     const provider = hatchProvider();
     const slots = await provider().catch(() => []);
     if (slots.length === 0) return;
     post("companion", "system", "There is room again.");
-    await proposeHatchSlots(provider, rules2);
+    await proposeHatchSlots(provider, rules3);
   }
   function teamPromise(teamId2) {
     const name = teamName(teamId2);
@@ -51023,7 +49098,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (captured.kind === "sell") return captured.plan.sell.length;
     return captured.picks.length;
   }
-  var ALERT_DEDUPE_MS, state2, listeners4, nextProposalSeq, ACCEPTANCE, CompanionChat;
+  var ALERT_DEDUPE_MS, state4, listeners3, nextProposalSeq, ACCEPTANCE, CompanionChat;
   var init_chat = __esm({
     "src/features/companion/chat/index.ts"() {
       "use strict";
@@ -51049,14 +49124,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_state3();
       init_proposals();
       ALERT_DEDUPE_MS = 6e4;
-      state2 = {
+      state4 = {
         log: emptyLog(),
         proposal: null,
         captured: null,
         run: null,
         cancelRequested: false
       };
-      listeners4 = /* @__PURE__ */ new Set();
+      listeners3 = /* @__PURE__ */ new Set();
       nextProposalSeq = 1;
       ACCEPTANCE = {
         harvest: "Yes, go ahead",
@@ -51068,7 +49143,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       };
       CompanionChat = {
         getLog() {
-          return state2.log;
+          return state4.log;
         },
         /** Retire une question à laquelle il est trop tard pour répondre. */
         dropStaleProposal() {
@@ -51083,9 +49158,9 @@ Restore figures are averages; unlucky streaks do worse.`;
          * le joueur lui-même qui vient de le couper.
          */
         withdrawProposal() {
-          const proposal = state2.proposal;
+          const proposal = state4.proposal;
           if (!proposal) return;
-          state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposal.id) };
+          state4 = { ...state4, proposal: null, captured: null, log: clearProposal(state4.log, proposal.id) };
           notify();
         },
         /**
@@ -51100,32 +49175,32 @@ Restore figures are averages; unlucky streaks do worse.`;
          * vérification de périmètre à la confirmation qui protège du reste.
          */
         withdrawFeedIfSettled(stillFeedable) {
-          const proposal = state2.proposal;
-          const captured = state2.captured;
+          const proposal = state4.proposal;
+          const captured = state4.captured;
           if (!proposal || captured?.kind !== "feed") return false;
           if (!isSettled(captured.picks, stillFeedable)) return false;
-          state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposal.id) };
+          state4 = { ...state4, proposal: null, captured: null, log: clearProposal(state4.log, proposal.id) };
           post("companion", "system", "Never mind, your pets are sorted.");
           return true;
         },
         getProposal() {
-          return state2.proposal;
+          return state4.proposal;
         },
         getRun() {
-          return state2.run;
+          return state4.run;
         },
         isRunning() {
-          return state2.run !== null;
+          return state4.run !== null;
         },
         subscribe(listener) {
-          listeners4.add(listener);
-          return () => listeners4.delete(listener);
+          listeners3.add(listener);
+          return () => listeners3.delete(listener);
         },
         /** Alerte poussée par une source ; ignorée si identique et récente. */
         alert(text2) {
-          state2 = {
-            ...state2,
-            log: appendAlertOnce(state2.log, { from: "companion", kind: "alert", text: text2, atMs: Date.now() }, ALERT_DEDUPE_MS)
+          state4 = {
+            ...state4,
+            log: appendAlertOnce(state4.log, { from: "companion", kind: "alert", text: text2, atMs: Date.now() }, ALERT_DEDUPE_MS)
           };
           notify();
         },
@@ -51137,7 +49212,7 @@ Restore figures are averages; unlucky streaks do worse.`;
          */
         async proposeHarvest(request2) {
           post("you", "command", request2.label);
-          if (state2.run) {
+          if (state4.run) {
             post("companion", "system", "Hold on, still on the last batch.");
             return;
           }
@@ -51155,14 +49230,14 @@ Restore figures are averages; unlucky streaks do worse.`;
          */
         async offerFeed(provider) {
           dropStaleProposal();
-          if (state2.run || state2.proposal) return false;
+          if (state4.run || state4.proposal) return false;
           await proposeFeedScope(provider);
-          return state2.proposal !== null;
+          return state4.proposal !== null;
         },
         /** Confirme et exécute. C'est le seul chemin qui déclenche une action. */
         async confirm(proposalId) {
-          const proposal = state2.proposal;
-          const captured = state2.captured;
+          const proposal = state4.proposal;
+          const captured = state4.captured;
           if (!proposal || proposal.id !== proposalId || !captured) {
             post("companion", "system", explain("unknown"));
             return;
@@ -51175,29 +49250,29 @@ Restore figures are averages; unlucky streaks do worse.`;
           }
           const decision = verdict(proposal, signature, Date.now());
           if (!decision.ok) {
-            state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposalId) };
+            state4 = { ...state4, proposal: null, captured: null, log: clearProposal(state4.log, proposalId) };
             post("companion", "system", explain(decision.reason));
             if (decision.reason === "changed" || decision.reason === "expired") await reproposeSame(captured);
             return;
           }
-          state2 = {
-            ...state2,
+          state4 = {
+            ...state4,
             proposal: null,
             captured: null,
             run: { done: 0, total: capturedSize(captured) },
             cancelRequested: false,
-            log: clearProposal(state2.log, proposalId)
+            log: clearProposal(state4.log, proposalId)
           };
           if (captured.kind === "harvest") {
             await runBatch((r) => executeHarvestBatch(captured.rows, r));
           } else if (captured.kind === "plant") {
             await runBatch((r) => executePlantBatch(captured.plan, r));
           } else if (captured.kind === "hatch") {
-            let stop2 = "done";
+            let stop = "done";
             await runBatch(async (r) => {
-              stop2 = await executeHatchBatch(captured.slots, r);
+              stop = await executeHatchBatch(captured.slots, r);
             });
-            await afterHatchBatch(captured.rules, stop2);
+            await afterHatchBatch(captured.rules, stop);
           } else if (captured.kind === "sell") {
             const stopped = await runBatch((r) => executeSellBatch(captured.plan, r));
             if (!stopped) await afterSellBatch(captured.rules);
@@ -51207,15 +49282,15 @@ Restore figures are averages; unlucky streaks do worse.`;
         },
         /** Écarte la proposition en cours sans rien exécuter. */
         decline(proposalId) {
-          if (state2.proposal?.id !== proposalId) return;
-          state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposalId) };
+          if (state4.proposal?.id !== proposalId) return;
+          state4 = { ...state4, proposal: null, captured: null, log: clearProposal(state4.log, proposalId) };
           post("you", "command", "Not now");
           post("companion", "system", "Alright, leaving them be.");
         },
         /** Interrompt un lot en cours. */
         cancelRun() {
-          if (!state2.run) return;
-          state2 = { ...state2, cancelRequested: true };
+          if (!state4.run) return;
+          state4 = { ...state4, cancelRequested: true };
           notify();
         }
       };
@@ -51761,15 +49836,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (isCentered(message2)) return systemLine(message2.text, message2.icons, message2.positioned);
     const outgoing = message2.from === "you";
     const alerting = message2.kind === "alert";
-    const row3 = document.createElement("div");
-    css4(row3, {
+    const row4 = document.createElement("div");
+    css4(row4, {
       display: "flex",
       gap: "8px",
       alignItems: "flex-end",
       justifyContent: outgoing ? "flex-end" : "flex-start",
       ...flags.isFirstInGroup ? {} : { marginTop: "-4px" }
     });
-    if (!outgoing) row3.append(flags.isLastInGroup ? avatar2(identity) : spacer());
+    if (!outgoing) row4.append(flags.isLastInGroup ? avatar2(identity) : spacer());
     const column = document.createElement("div");
     css4(column, {
       maxWidth: "78%",
@@ -51798,8 +49873,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       stamp.textContent = formatMessageTime(message2.atMs);
       column.append(stamp);
     }
-    row3.append(column);
-    return row3;
+    row4.append(column);
+    return row4;
   }
   function chatHeader(name) {
     const root4 = document.createElement("div");
@@ -51934,13 +50009,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function fieldRow(label2, control) {
-    const row3 = document.createElement("div");
-    css4(row3, { display: "flex", alignItems: "center", gap: "10px", justifyContent: "space-between" });
+    const row4 = document.createElement("div");
+    css4(row4, { display: "flex", alignItems: "center", gap: "10px", justifyContent: "space-between" });
     const text2 = document.createElement("div");
     css4(text2, { fontSize: "11.5px", color: TEXT });
     text2.textContent = label2;
-    row3.append(text2, control);
-    return row3;
+    row4.append(text2, control);
+    return row4;
   }
   function toggleIn(current, value) {
     const next = new Set(current ?? []);
@@ -51949,10 +50024,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     return next.size === 0 ? null : [...next];
   }
   function selectionRow(options2) {
-    const row3 = tileRow();
-    row3.append(allTile(options2.allLabel, options2.selected === null, options2.onClear));
+    const row4 = tileRow();
+    row4.append(allTile(options2.allLabel, options2.selected === null, options2.onClear));
     for (const value of options2.values) {
-      row3.append(
+      row4.append(
         spriteTile({
           icon: options2.iconFor(value),
           title: value,
@@ -51962,7 +50037,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         })
       );
     }
-    return row3;
+    return row4;
   }
   function nameList(values, fallback) {
     if (values.length === 0) return fallback;
@@ -52112,10 +50187,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       teams2 = [];
     }
     for (const team of teams2) {
-      const option = document.createElement("option");
-      option.value = team.id;
-      option.textContent = team.name;
-      el.append(option);
+      const option2 = document.createElement("option");
+      option2.value = team.id;
+      option2.textContent = team.name;
+      el.append(option2);
     }
     el.value = current && teams2.some((team) => team.id === current) ? current : NO_TEAM;
     el.addEventListener("change", () => onPick(el.value === NO_TEAM ? null : el.value));
@@ -52348,7 +50423,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       speciesCard.body.append(
         selectionRow({
           values: speciesPresent(available),
-          counts: tally(available, (row3) => [row3.species]),
+          counts: tally(available, (row4) => [row4.species]),
           selected: filters.species,
           iconFor: (name) => cachedIcon(`species:${name}`, () => speciesIcon(name, TILE_ICON_PX)),
           onPick: (name) => {
@@ -52423,9 +50498,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       const control = document.createElement("div");
       css4(control, { display: "flex", alignItems: "center", gap: "10px", flex: "1", minWidth: "0" });
       control.append(sizeSlider, sizeValue);
-      const row3 = fieldRow("Minimum size", control);
-      css4(row3, { gap: "14px" });
-      sizeCard.body.append(row3);
+      const row4 = fieldRow("Minimum size", control);
+      css4(row4, { gap: "14px" });
+      sizeCard.body.append(row4);
     }
     const preservedRow = document.createElement("div");
     css4(preservedRow, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
@@ -52435,7 +50510,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const preservedControl = document.createElement("div");
     preservedRow.append(preservedControl);
     function renderPreserved() {
-      const ripe = scope.rows.filter((row3) => row3.ready && row3.preserved).length;
+      const ripe = scope.rows.filter((row4) => row4.ready && row4.preserved).length;
       preservedLabel.textContent = ripe === 0 ? "Preserved crops" : `Preserved crops (${ripe} ripe)`;
       preservedControl.replaceChildren(
         segmented2(
@@ -52579,7 +50654,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     css4(askButton, { marginLeft: "auto" });
     modal.footer.append(askButton);
-    function row3(candidate) {
+    function row4(candidate) {
       const line = document.createElement("div");
       css4(line, {
         display: "flex",
@@ -52607,7 +50682,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     function render() {
       if (!modal.isOpen()) return;
       list.innerHTML = "";
-      for (const candidate of picks) list.append(row3(candidate));
+      for (const candidate of picks) list.append(row4(candidate));
       empty.style.display = picks.length === 0 ? "" : "none";
       askButton.disabled = picks.length === 0;
     }
@@ -52686,14 +50761,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       return cell;
     }
-    for (let row3 = 0; row3 < GARDEN_ROWS; row3++) {
+    for (let row4 = 0; row4 < GARDEN_ROWS; row4++) {
       for (let col = 0; col < GARDEN_COLS; col++) {
         if (col === GARDEN_COLS / 2) {
           const spacer2 = document.createElement("div");
           css4(spacer2, { pointerEvents: "none" });
           root4.append(spacer2);
         }
-        const tileIndex = row3 * GARDEN_COLS + col;
+        const tileIndex = row4 * GARDEN_COLS + col;
         const el = buildCell(tileIndex);
         cells.set(tileIndex, { el, shown: null });
         root4.append(el);
@@ -52786,10 +50861,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     function paletteGroup(title) {
       const root4 = document.createElement("div");
       css4(root4, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
-      const row3 = document.createElement("div");
-      css4(row3, { display: "flex", flexWrap: "wrap", gap: "5px" });
-      root4.append(sectionLabel2(title), row3);
-      return { root: root4, row: row3 };
+      const row4 = document.createElement("div");
+      css4(row4, { display: "flex", flexWrap: "wrap", gap: "5px" });
+      root4.append(sectionLabel2(title), row4);
+      return { root: root4, row: row4 };
     }
     const seedGroup = paletteGroup("Seeds");
     const eggGroup = paletteGroup("Eggs");
@@ -53007,7 +51082,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/menu/hatchModal.ts
   function openHatchModal(host, onAsk) {
     let scope = EMPTY_HATCH_SCOPE;
-    let rules2 = { ...loadCompanionSettings().hatchKeepRules };
+    let rules3 = { ...loadCompanionSettings().hatchKeepRules };
     const iconCache = /* @__PURE__ */ new Map();
     const cachedIcon = (key2, make) => {
       let known = iconCache.get(key2);
@@ -53028,7 +51103,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const abilityCard = filterCard("", "Keep abilities");
     const strengthCard = filterCard("", "Keep by strength");
     function commit(next) {
-      rules2 = next;
+      rules3 = next;
       patchCompanionSettings({ hatchKeepRules: next });
       render();
     }
@@ -53036,19 +51111,19 @@ Restore figures are averages; unlucky streaks do worse.`;
       return list.includes(value) ? list.filter((entry) => entry !== value) : [...list, value];
     }
     function chipRow(values, selected, labelFor2, iconFor, onPick, named = false) {
-      const row3 = tileRow();
+      const row4 = tileRow();
       for (const value of values) {
         const shared = { icon: iconFor(value), selected: selected.includes(value), onClick: () => onPick(value) };
-        row3.append(
+        row4.append(
           named ? labelledTile({ ...shared, label: labelFor2(value) }) : spriteTile({ ...shared, title: labelFor2(value) })
         );
       }
-      return row3;
+      return row4;
     }
-    function scrollable(row3) {
+    function scrollable(row4) {
       const box2 = document.createElement("div");
       css4(box2, { maxHeight: `${ABILITY_LIST_MAX_PX}px`, overflowY: "auto", overscrollBehavior: "contain" });
-      box2.append(row3);
+      box2.append(row4);
       return box2;
     }
     function offered(available, picked) {
@@ -53056,37 +51131,37 @@ Restore figures are averages; unlucky streaks do worse.`;
       return [...all].sort((a, b) => a.localeCompare(b));
     }
     function renderSpecies() {
-      const values = offered(scope.possibleSpecies, rules2.species);
+      const values = offered(scope.possibleSpecies, rules3.species);
       speciesCard.root.style.display = values.length > 0 ? "flex" : "none";
       if (values.length === 0) return;
       speciesCard.body.replaceChildren(
         chipRow(
           values,
-          rules2.species,
+          rules3.species,
           (name) => name,
           (name) => cachedIcon(`species:${name}`, () => petSpeciesIcon2(name, TILE_ICON_PX2)),
-          (name) => commit({ ...rules2, species: toggled(rules2.species, name) })
+          (name) => commit({ ...rules3, species: toggled(rules3.species, name) })
         )
       );
-      speciesCard.setSummary(summarize(rules2.species.length), rules2.species.length > 0);
+      speciesCard.setSummary(summarize(rules3.species.length), rules3.species.length > 0);
     }
     function renderMutations() {
-      const values = offered(scope.presentMutations, rules2.mutations);
+      const values = offered(scope.presentMutations, rules3.mutations);
       mutationCard.root.style.display = values.length > 0 ? "flex" : "none";
       if (values.length === 0) return;
       mutationCard.body.replaceChildren(
         chipRow(
           values,
-          rules2.mutations,
+          rules3.mutations,
           (name) => name,
           (name) => cachedIcon(`mutation:${name}`, () => mutationIconEl(name, TILE_ICON_PX2)),
-          (name) => commit({ ...rules2, mutations: toggled(rules2.mutations, name) })
+          (name) => commit({ ...rules3, mutations: toggled(rules3.mutations, name) })
         )
       );
-      mutationCard.setSummary(summarize(rules2.mutations.length), rules2.mutations.length > 0);
+      mutationCard.setSummary(summarize(rules3.mutations.length), rules3.mutations.length > 0);
     }
     function renderAbilities() {
-      const values = offered(scope.possibleAbilities.map((entry) => entry.id), rules2.abilities);
+      const values = offered(scope.possibleAbilities.map((entry) => entry.id), rules3.abilities);
       abilityCard.root.style.display = values.length > 0 ? "flex" : "none";
       if (values.length === 0) return;
       const names = new Map(scope.possibleAbilities.map((entry) => [entry.id, entry.name]));
@@ -53094,24 +51169,24 @@ Restore figures are averages; unlucky streaks do worse.`;
         scrollable(
           chipRow(
             values,
-            rules2.abilities,
+            rules3.abilities,
             (id) => names.get(id) ?? id,
             (id) => cachedIcon(`ability:${id}`, () => abilityIcon(id, ABILITY_ICON_PX)),
-            (id) => commit({ ...rules2, abilities: toggled(rules2.abilities, id) }),
+            (id) => commit({ ...rules3, abilities: toggled(rules3.abilities, id) }),
             true
           )
         )
       );
-      abilityCard.setSummary(summarize(rules2.abilities.length), rules2.abilities.length > 0);
+      abilityCard.setSummary(summarize(rules3.abilities.length), rules3.abilities.length > 0);
     }
     const strengthField = numberField(MIN_STR, MAX_STR, 1, DEFAULT_STR);
     strengthField.addEventListener("change", () => {
       const value = Math.max(MIN_STR, Math.min(MAX_STR, Math.round(Number(strengthField.value) || DEFAULT_STR)));
       strengthField.value = String(value);
-      commit({ ...rules2, minMaxStr: value });
+      commit({ ...rules3, minMaxStr: value });
     });
-    const strengthToggle = toggle(rules2.minMaxStr !== null, (on) => {
-      commit({ ...rules2, minMaxStr: on ? Number(strengthField.value) || DEFAULT_STR : null });
+    const strengthToggle = toggle(rules3.minMaxStr !== null, (on) => {
+      commit({ ...rules3, minMaxStr: on ? Number(strengthField.value) || DEFAULT_STR : null });
     });
     {
       const control = document.createElement("div");
@@ -53146,7 +51221,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         // Rappelé à la confirmation : c'est ce qui détecte qu'un œuf a éclos ou
         // mûri entre-temps.
         provider: hatchProvider(),
-        rules: rules2
+        rules: rules3
       });
       modal.close();
     });
@@ -53173,16 +51248,16 @@ Restore figures are averages; unlucky streaks do worse.`;
       renderSpecies();
       renderMutations();
       renderAbilities();
-      strengthField.disabled = rules2.minMaxStr === null;
-      if (rules2.minMaxStr !== null) strengthField.value = String(rules2.minMaxStr);
-      css4(strengthField, { opacity: rules2.minMaxStr === null ? "0.45" : "1" });
+      strengthField.disabled = rules3.minMaxStr === null;
+      if (rules3.minMaxStr !== null) strengthField.value = String(rules3.minMaxStr);
+      css4(strengthField, { opacity: rules3.minMaxStr === null ? "0.45" : "1" });
       strengthCard.setSummary(
-        rules2.minMaxStr === null ? "Off" : `${rules2.minMaxStr} and up`,
-        rules2.minMaxStr !== null
+        rules3.minMaxStr === null ? "Off" : `${rules3.minMaxStr} and up`,
+        rules3.minMaxStr !== null
       );
       const waiting = scope.totalEggs - scope.readySlots.length;
       ready.textContent = scope.readySlots.length === 0 ? "No egg is ready" : `${scope.readySlots.length} egg${scope.readySlots.length === 1 ? "" : "s"} ready`;
-      if (!hasAnyRule(rules2)) {
+      if (!hasAnyRule(rules3)) {
         note.textContent = "Nothing set to keep, so I will not offer to sell. Favourites and your active team are always safe.";
         css4(note, { color: WARN });
       } else {
@@ -53371,14 +51446,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       thread.scrollTop = thread.scrollHeight;
     }
     function confirmRow(proposalId) {
-      const row3 = document.createElement("div");
-      css4(row3, { display: "flex", gap: "6px", alignSelf: "flex-start", marginLeft: "34px", marginTop: "2px" });
-      row3.append(
+      const row4 = document.createElement("div");
+      css4(row4, { display: "flex", gap: "6px", alignSelf: "flex-start", marginLeft: "34px", marginTop: "2px" });
+      row4.append(
         button2("Yes, go ahead", "accent", () => void CompanionChat.confirm(proposalId).catch(() => {
         })),
         button2("Not now", "neutral", () => CompanionChat.decline(proposalId))
       );
-      return row3;
+      return row4;
     }
     const actionsButton = button2("Actions", "neutral", () => {
       openActionsModal(host, (request2) => {
@@ -53869,7 +51944,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const crops = newRareCrops(prev, next, rareMutations()).map((c) => ({ ...c, species: cropName(c.species) }));
     offer(rareCropReaction(crops, Math.random));
   }
-  function onWeather(next) {
+  function onWeather2(next) {
     const id = typeof next === "string" && next ? next : null;
     const prev = prevWeather;
     prevWeather = id;
@@ -53903,21 +51978,21 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (first) return;
     offer(abilityReaction({ name: newest.name, species: newest.species, abilityName: newest.abilityName }, Math.random));
   }
-  function luckOf(state5) {
+  function luckOf(state7) {
     const out = {};
-    for (const [eggId, counters] of Object.entries(state5?.counters ?? {})) {
+    for (const [eggId, counters] of Object.entries(state7?.counters ?? {})) {
       out[eggId] = { gold: Number(counters?.gold) || 0, rainbow: Number(counters?.rainbow) || 0 };
     }
     return out;
   }
-  function onHatchTracker(state5) {
-    const next = luckOf(state5);
+  function onHatchTracker(state7) {
+    const next = luckOf(state7);
     const prev = prevLuck;
     prevLuck = next;
     if (!prev) return;
     for (const reaction of badLuckReactions(prev, next, eggName, Math.random)) offer(reaction);
   }
-  async function onShops(next) {
+  async function onShops2(next) {
     const prev = prevShops;
     prevShops = next;
     const ids = restockedFollowed(prev, next, (id) => {
@@ -53930,8 +52005,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (ids.length === 0) return;
     let names = ids.map((id) => id.split(":").slice(1).join(":"));
     try {
-      const state5 = await NotifierService.get();
-      const byId = new Map(state5.rows.map((row3) => [row3.id, row3.name]));
+      const state7 = await NotifierService.get();
+      const byId = new Map(state7.rows.map((row4) => [row4.id, row4.name]));
       names = ids.map((id, i) => byId.get(id) ?? names[i]);
     } catch {
     }
@@ -53942,7 +52017,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (typeof unsub === "function") unsubscribers2.push(unsub);
     };
     try {
-      add(await Atoms.data.weather.onChangeNow((next) => onWeather(next)));
+      add(await Atoms.data.weather.onChangeNow((next) => onWeather2(next)));
     } catch {
     }
     try {
@@ -53952,7 +52027,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     try {
       prevLuck = luckOf(HatchTracker.getState());
-      add(HatchTracker.subscribe((state5) => onHatchTracker(state5)));
+      add(HatchTracker.subscribe((state7) => onHatchTracker(state7)));
     } catch {
     }
     try {
@@ -53960,7 +52035,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
     }
     try {
-      add(await NotifierService.onShopsChangeNow((next) => void onShops(next).catch(() => {
+      add(await NotifierService.onShopsChangeNow((next) => void onShops2(next).catch(() => {
       })));
     } catch {
     }
@@ -54386,17 +52461,17 @@ Restore figures are averages; unlucky streaks do worse.`;
       lastSpamLineAt: Number.NEGATIVE_INFINITY
     };
   }
-  function observeOwnEmote(state5, read2) {
-    if (!read2) return { state: state5, fresh: null };
-    if (!state5.primed || state5.scope !== read2.scope) {
+  function observeOwnEmote(state7, read2) {
+    if (!read2) return { state: state7, fresh: null };
+    if (!state7.primed || state7.scope !== read2.scope) {
       return {
-        state: { ...state5, primed: true, scope: read2.scope, seenAt: read2.latest?.at ?? Number.NEGATIVE_INFINITY },
+        state: { ...state7, primed: true, scope: read2.scope, seenAt: read2.latest?.at ?? Number.NEGATIVE_INFINITY },
         fresh: null
       };
     }
     const latest = read2.latest;
-    if (!latest || latest.at <= state5.seenAt) return { state: state5, fresh: null };
-    return { state: { ...state5, seenAt: latest.at }, fresh: latest };
+    if (!latest || latest.at <= state7.seenAt) return { state: state7, fresh: null };
+    return { state: { ...state7, seenAt: latest.at }, fresh: latest };
   }
   function pick(list, random) {
     const i = Math.floor(random() * list.length);
@@ -54417,9 +52492,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     const r = Math.min(1, Math.max(0, random()));
     return Math.round(MIRROR_DELAY_MIN_MS + r * span);
   }
-  function decideMirror(state5, played, ctx2) {
+  function decideMirror(state7, played, ctx2) {
     const { now: now2, random } = ctx2;
-    let next = now2 - state5.streakLastAt > STREAK_GAP_MS ? { ...state5, streakCount: 1, streakAnswers: 0, streakSpamRolled: false, streakLastAt: now2 } : { ...state5, streakCount: state5.streakCount + 1, streakLastAt: now2 };
+    let next = now2 - state7.streakLastAt > STREAK_GAP_MS ? { ...state7, streakCount: 1, streakAnswers: 0, streakSpamRolled: false, streakLastAt: now2 } : { ...state7, streakCount: state7.streakCount + 1, streakLastAt: now2 };
     if (!ctx2.available || ctx2.distance === null || ctx2.distance > MIRROR_MAX_DISTANCE) {
       return { state: next, action: null };
     }
@@ -54532,16 +52607,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function process() {
-    const seen = observeOwnEmote(state3, currentRead());
-    state3 = seen.state;
+    const seen = observeOwnEmote(state5, currentRead());
+    state5 = seen.state;
     if (!seen.fresh) return;
-    const decided = decideMirror(state3, seen.fresh, {
+    const decided = decideMirror(state5, seen.fresh, {
       now: Date.now(),
       available: enabled3() && !busy3(),
       distance: CompanionService.distanceToPlayer(),
       random: Math.random
     });
-    state3 = decided.state;
+    state5 = decided.state;
     if (decided.action) schedule(decided.action);
   }
   function onRoomState(next) {
@@ -54587,14 +52662,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   function startEmoteMirror() {
     if (running4) return;
     running4 = true;
-    state3 = initialMirrorState();
+    state5 = initialMirrorState();
     localId = null;
     roomId = null;
     entries = void 0;
     void subscribe3(++generation).catch(() => {
     });
   }
-  var running4, generation, unsubscribers4, state3, pending4, localId, roomId, entries;
+  var running4, generation, unsubscribers4, state5, pending4, localId, roomId, entries;
   var init_emoteMirrorWatch = __esm({
     "src/features/companion/emoteMirrorWatch.ts"() {
       "use strict";
@@ -54606,7 +52681,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       running4 = false;
       generation = 0;
       unsubscribers4 = [];
-      state3 = initialMirrorState();
+      state5 = initialMirrorState();
       pending4 = null;
       localId = null;
       roomId = null;
@@ -54621,17 +52696,17 @@ Restore figures are averages; unlucky streaks do worse.`;
   function initialAfkState(now2) {
     return { phase: "active", quietSince: now2, phaseSince: now2, asked: false, nextSnoreAt: null, lastSnore: null };
   }
-  function afkActivity(state5, input, random) {
+  function afkActivity(state7, input, random) {
     const { now: now2, busy: busy4 } = input;
-    if (state5.phase === "active") {
-      return { state: { ...state5, quietSince: now2 }, effects: [] };
+    if (state7.phase === "active") {
+      return { state: { ...state7, quietSince: now2 }, effects: [] };
     }
-    if (state5.phase === "idle") {
+    if (state7.phase === "idle") {
       const effects2 = [];
-      if (state5.asked && !busy4 && random() < RETURN_LINE_CHANCE) effects2.push(say(pickOne4(RETURN_LINES, random), false));
+      if (state7.asked && !busy4 && random() < RETURN_LINE_CHANCE) effects2.push(say(pickOne4(RETURN_LINES, random), false));
       return { state: initialAfkState(now2), effects: effects2 };
     }
-    const asleepFor = now2 - state5.phaseSince;
+    const asleepFor = now2 - state7.phaseSince;
     const effects = [];
     if (!busy4 && asleepFor >= WAKE_LINE_MIN_ASLEEP_MS) {
       const pool = asleepFor >= SNORE_SLOW_AFTER_MS ? LONG_WAKE_LINES : WAKE_LINES;
@@ -54751,7 +52826,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     await sayLine(effect);
   }
   function apply(step) {
-    state4 = step.state;
+    state6 = step.state;
     const gen = generation2;
     for (const effect of step.effects) {
       pending5++;
@@ -54764,10 +52839,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function noteActivity() {
     if (!running5) return;
     const now2 = Date.now();
-    if (state4.phase === "active" && now2 - lastNotedAt < ACTIVITY_THROTTLE_MS) return;
+    if (state6.phase === "active" && now2 - lastNotedAt < ACTIVITY_THROTTLE_MS) return;
     lastNotedAt = now2;
     if (!enabled4() || !CompanionService.isRunning()) return;
-    apply(afkActivity(state4, { now: now2, busy: othersBusy() }, Math.random));
+    apply(afkActivity(state6, { now: now2, busy: othersBusy() }, Math.random));
   }
   function onInput(event) {
     if (!event.isTrusted) return;
@@ -54797,7 +52872,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (running5) return;
     running5 = true;
     const gen = ++generation2;
-    state4 = initialAfkState(Date.now());
+    state6 = initialAfkState(Date.now());
     lastNotedAt = 0;
     lastTile = null;
     try {
@@ -54812,7 +52887,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     void subscribe4(gen).catch(() => {
     });
   }
-  var ACTIVITY_THROTTLE_MS, NEAR_DISTANCE, INPUT_EVENTS, running5, generation2, state4, unsubscribers5, ownHold, pending5, chain, lastNotedAt, lastTile;
+  var ACTIVITY_THROTTLE_MS, NEAR_DISTANCE, INPUT_EVENTS, running5, generation2, state6, unsubscribers5, ownHold, pending5, chain, lastNotedAt, lastTile;
   var init_afkWatch = __esm({
     "src/features/companion/afkWatch.ts"() {
       "use strict";
@@ -54826,7 +52901,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       INPUT_EVENTS = ["keydown", "pointerdown", "pointermove", "wheel", "touchstart"];
       running5 = false;
       generation2 = 0;
-      state4 = initialAfkState(0);
+      state6 = initialAfkState(0);
       unsubscribers5 = [];
       ownHold = false;
       pending5 = 0;
@@ -54838,10 +52913,10 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/menu/askBanner.ts
   function ensureStyle2() {
-    if (document.getElementById(STYLE_ID4)) return;
-    const style2 = document.createElement("style");
-    style2.id = STYLE_ID4;
-    style2.textContent = `
+    if (document.getElementById(STYLE_ID5)) return;
+    const style = document.createElement("style");
+    style.id = STYLE_ID5;
+    style.textContent = `
 #${CARD_ID} {
   position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
   z-index: ${Z_INDEX};
@@ -54894,7 +52969,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   background: linear-gradient(90deg, ${ACCENT2}, rgba(94,234,212,0.45));
 }
 `;
-    document.head.appendChild(style2);
+    document.head.appendChild(style);
   }
   function hide() {
     if (timer !== null) {
@@ -54987,7 +53062,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     unsubscribe = CompanionChat.subscribe(sync);
     sync();
   }
-  var CARD_ID, STYLE_ID4, Z_INDEX, ICON_PX5, TICK_MS, ACCENT2, TEXT2, TEXT_DIM2, card3, clockBar, timer, shownId, unsubscribe;
+  var CARD_ID, STYLE_ID5, Z_INDEX, ICON_PX5, TICK_MS, ACCENT2, TEXT2, TEXT_DIM2, card3, clockBar, timer, shownId, unsubscribe;
   var init_askBanner = __esm({
     "src/features/companion/menu/askBanner.ts"() {
       "use strict";
@@ -54998,7 +53073,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_chatIcons();
       init_npcAvatar();
       CARD_ID = "mgCompanionAsk";
-      STYLE_ID4 = "mgCompanionAskStyle";
+      STYLE_ID5 = "mgCompanionAskStyle";
       Z_INDEX = "2000050";
       ICON_PX5 = 17;
       TICK_MS = 100;
@@ -55228,7 +53303,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_button();
       init_dom2();
       init_carousel();
-      init_styles5();
+      init_styles6();
       init_fetchChangelog();
       OVERLAY_ID3 = "mgChangelogNotice";
       NOTICE_CSS = `
@@ -55345,11 +53420,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!Number.isFinite(value)) return 1;
     return Math.max(1, Math.min(6, value));
   }
-  function findPlayersDeep2(state5) {
-    if (!state5 || typeof state5 !== "object") return [];
+  function findPlayersDeep2(state7) {
+    if (!state7 || typeof state7 !== "object") return [];
     const out = [];
     const seen = /* @__PURE__ */ new Set();
-    const stack = [state5];
+    const stack = [state7];
     while (stack.length) {
       const cur = stack.pop();
       if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
@@ -55375,12 +53450,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return [...byId.values()];
   }
-  function getPlayersArray(state5) {
-    const direct = state5?.fullState?.data?.players ?? state5?.data?.players ?? state5?.players;
-    return Array.isArray(direct) ? direct : findPlayersDeep2(state5);
+  function getPlayersArray(state7) {
+    const direct = state7?.fullState?.data?.players ?? state7?.data?.players ?? state7?.players;
+    return Array.isArray(direct) ? direct : findPlayersDeep2(state7);
   }
-  function getSlotsArray(state5) {
-    const raw = state5?.child?.data?.userSlots ?? state5?.fullState?.child?.data?.userSlots ?? state5?.data?.userSlots;
+  function getSlotsArray(state7) {
+    const raw = state7?.child?.data?.userSlots ?? state7?.fullState?.child?.data?.userSlots ?? state7?.data?.userSlots;
     if (Array.isArray(raw)) return raw;
     if (raw && typeof raw === "object") {
       const entries2 = Object.entries(raw);
@@ -55394,10 +53469,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return [];
   }
-  async function getMyAccountId(state5) {
+  async function getMyAccountId(state7) {
     try {
       const me = await player.get();
-      const snapshot2 = state5 ?? await Atoms.root.state.get();
+      const snapshot2 = state7 ?? await Atoms.root.state.get();
       return resolveMyAccountId(me, getPlayersArray(snapshot2));
     } catch {
       return null;
@@ -55423,11 +53498,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function buildPlayerStatePayload(options2 = {}) {
     try {
-      const state5 = await Atoms.root.state.get();
-      if (!state5 || typeof state5 !== "object") return null;
-      const players = getPlayersArray(state5);
+      const state7 = await Atoms.root.state.get();
+      if (!state7 || typeof state7 !== "object") return null;
+      const players = getPlayersArray(state7);
       const normalizedPlayers = Array.isArray(players) ? players : [];
-      const slots = getSlotsArray(state5).filter((slot2) => !!slot2);
+      const slots = getSlotsArray(state7).filter((slot2) => !!slot2);
       const coinsById = /* @__PURE__ */ new Map();
       for (const slot2 of slots) {
         const slotData2 = slot2?.data ?? slot2;
@@ -55448,7 +53523,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         };
       });
       if (slots.length === 0) return null;
-      const myAccountId = options2.playerId ?? await getMyAccountId(state5);
+      const myAccountId = options2.playerId ?? await getMyAccountId(state7);
       const slot = selectSlotForAccount(slots, {
         slotIndex: options2.slotIndex,
         accountId: myAccountId
@@ -55465,7 +53540,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const coinCandidate = slotData?.coinsCount ?? slot?.coinsCount ?? slotData?.coins ?? slot?.coins ?? null;
       const coinValue = Number(coinCandidate);
       const coinsRaw = Number.isFinite(coinValue) ? coinValue : null;
-      const roomId2 = state5?.data?.roomId ?? state5?.fullState?.data?.roomId ?? state5?.roomId ?? null;
+      const roomId2 = state7?.data?.roomId ?? state7?.fullState?.data?.roomId ?? state7?.roomId ?? null;
       let playersCount = normalizedPlayers.length > 0 ? normalizedPlayers.length : slots.length;
       try {
         const atomValue = await Atoms.server.numPlayers.get();
@@ -55532,9 +53607,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return false;
   }
-  async function tryInitializeReporting(state5) {
+  async function tryInitializeReporting(state7) {
     if (gameReadyTriggered) return;
-    const snapshot2 = state5 ?? await Atoms.root.state.get();
+    const snapshot2 = state7 ?? await Atoms.root.state.get();
     const players = Array.isArray(snapshot2?.data?.players) ? snapshot2.data.players : [];
     if (players.length === 0) return;
     const myAccountId = await getMyAccountId(snapshot2);
@@ -55654,12 +53729,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_outgoingCounters();
       init_hud();
       init_menu2();
+      init_menu3();
       init_menu4();
       init_menu5();
       init_menu6();
       init_menu7();
       init_menu8();
-      init_menu3();
       init_menu9();
       init_menu10();
       init_menu11();

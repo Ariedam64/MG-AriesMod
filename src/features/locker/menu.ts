@@ -24,7 +24,7 @@ import {
 } from "./restrictions";
 import { Atoms } from "../../game/store/atoms";
 import { attachSpriteIcon, attachWeatherSpriteIcon } from "../../ui/kit/sprites/iconCache";
-import { rarityBadge } from "../notifier/menu";
+import { rarityBadge } from "../../ui/kit/rarityBadge";
 
 // Reuse tag definitions from garden menu for consistency
 type VisualTag = "Gold" | "Rainbow";

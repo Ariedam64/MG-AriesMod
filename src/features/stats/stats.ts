@@ -1,12 +1,12 @@
-// src/services/stats.ts
-// Gestion de l'état des statistiques utilisateur et persistance dans localStorage.
-
-import {
-  petAbilities,
-  petCatalog,
-  weatherCatalog,
-} from "../../data";
+import { petAbilities, petCatalog, weatherCatalog } from "../../data";
+import { Emitter } from "../../lib/emitter";
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
+
+/**
+ * The player's lifetime stats (garden, shops, hatches, abilities, weathers),
+ * kept in storage under `stats`. Every change is saved at once and pushed to
+ * the listeners as a fresh copy.
+ */
 
 type GardenStats = {
   totalPlanted: number;
@@ -53,6 +53,9 @@ export type StatsSnapshot = {
 
 export type PetHatchRarity = keyof HatchedCounts;
 
+const STORAGE_PATH = "stats";
+
+/** Which stats count whole things; the others are sums (coins) and may have decimals. */
 const GARDEN_INT_KEYS: Record<keyof GardenStats, boolean> = {
   totalPlanted: true,
   totalHarvested: true,
@@ -77,281 +80,161 @@ const ABILITY_INT_KEYS: Record<keyof AbilityStats, boolean> = {
   totalValue: false,
 };
 
-const WEATHER_INT_KEYS: Record<keyof WeatherStats, boolean> = {
-  triggers: true,
-};
-
 let memoryStore: StatsSnapshot | null = null;
-type StatsListener = (stats: StatsSnapshot) => void;
-const listeners = new Set<StatsListener>();
+const changed = new Emitter<StatsSnapshot>();
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 
-const toNumber = (value: unknown, fallback = 0): number => {
+/** A finite value at or above zero, else `fallback`; floored when `integer`. */
+function readCount(value: unknown, fallback: number, integer: boolean): number {
   const num = Number(value);
-  if (!Number.isFinite(num)) return fallback;
-  return num;
-};
+  const positive = Math.max(0, Number.isFinite(num) ? num : fallback);
+  return integer ? Math.floor(positive) : positive;
+}
 
-const toPositiveNumber = (value: unknown, fallback = 0): number => {
-  const num = toNumber(value, fallback);
-  return Math.max(0, num);
-};
-
-const toPositiveInt = (value: unknown, fallback = 0): number => {
-  const num = toPositiveNumber(value, fallback);
-  return Math.floor(num);
-};
-
-const toPositiveTimestamp = (value: unknown, fallback: number): number => {
-  const num = Number(value);
-  if (!Number.isFinite(num) || num <= 0) return fallback;
-  return Math.floor(num);
-};
+const zeroHatched = (): HatchedCounts => ({ normal: 0, gold: 0, rainbow: 0 });
 
 const cloneStats = (stats: StatsSnapshot): StatsSnapshot => ({
   createdAt: stats.createdAt,
   garden: { ...stats.garden },
   shops: { ...stats.shops },
   pets: {
-    hatchedByType: Object.fromEntries(
-      Object.entries(stats.pets.hatchedByType).map(([key, counts]) => [key, { ...counts }]),
-    ),
+    hatchedByType: Object.fromEntries(Object.entries(stats.pets.hatchedByType).map(([key, counts]) => [key, { ...counts }])),
   },
-  abilities: Object.fromEntries(
-    Object.entries(stats.abilities).map(([key, value]) => [key, { ...value }]),
-  ),
-  weather: Object.fromEntries(
-    Object.entries(stats.weather).map(([key, value]) => [key, { ...value }]),
-  ),
+  abilities: Object.fromEntries(Object.entries(stats.abilities).map(([key, value]) => [key, { ...value }])),
+  weather: Object.fromEntries(Object.entries(stats.weather).map(([key, value]) => [key, { ...value }])),
 });
 
-const unwrapMaybeNestedSnapshot = (raw: unknown): unknown => {
+/** Older builds stored the stats wrapped in `{ snapshot: ... }`, sometimes several times. */
+function unwrapNestedSnapshot(raw: unknown): unknown {
   let cur: unknown = raw;
-  let guard = 0;
-  while (guard++ < 10 && isRecord(cur) && "snapshot" in cur && isRecord((cur as any).snapshot)) {
-    cur = (cur as any).snapshot;
-  }
+  for (let guard = 0; guard < 10 && isRecord(cur) && isRecord(cur.snapshot); guard++) cur = cur.snapshot;
   return cur;
-};
+}
 
+/** Zeroed stats, with an entry for every pet, ability and weather the catalogs know. */
 function createDefaultStats(createdAt = Date.now()): StatsSnapshot {
   const hatchedByType: Record<string, HatchedCounts> = {};
-  for (const species of Object.keys(petCatalog)) {
-    hatchedByType[species.toLowerCase()] = { normal: 0, gold: 0, rainbow: 0 };
-  }
+  for (const species of Object.keys(petCatalog)) hatchedByType[species.toLowerCase()] = zeroHatched();
 
   const abilities: Record<string, AbilityStats> = {};
-  for (const abilityId of Object.keys(petAbilities)) {
-    abilities[abilityId] = { triggers: 0, totalValue: 0 };
-  }
+  for (const abilityId of Object.keys(petAbilities)) abilities[abilityId] = { triggers: 0, totalValue: 0 };
 
   const weather: Record<string, WeatherStats> = {};
-  for (const key of Object.keys(weatherCatalog)) {
-    weather[key.toLowerCase()] = { triggers: 0 };
+  for (const key of Object.keys(weatherCatalog)) weather[key.toLowerCase()] = { triggers: 0 };
+
+  const garden = Object.fromEntries(Object.keys(GARDEN_INT_KEYS).map((k) => [k, 0])) as GardenStats;
+  const shops = Object.fromEntries(Object.keys(SHOP_INT_KEYS).map((k) => [k, 0])) as ShopStats;
+  return { createdAt, garden, shops, pets: { hatchedByType }, abilities, weather };
+}
+
+/** Reads every known field of a stored group, keeping the defaults for the rest. */
+function readGroup<T extends Record<string, number>>(raw: unknown, base: T, intKeys: Record<keyof T, boolean>): T {
+  if (!isRecord(raw)) return base;
+  const out = { ...base };
+  for (const key of Object.keys(intKeys) as Array<keyof T & string>) {
+    (out as Record<string, number>)[key] = readCount(raw[key], base[key], intKeys[key]);
   }
-
-  return {
-    createdAt,
-    garden: {
-      totalPlanted: 0,
-      totalHarvested: 0,
-      totalDestroyed: 0,
-      watercanUsed: 0,
-      waterTimeSavedMs: 0,
-    },
-    shops: {
-      seedsBought: 0,
-      decorBought: 0,
-      eggsBought: 0,
-      toolsBought: 0,
-      cropsSoldCount: 0,
-      cropsSoldValue: 0,
-      petsSoldCount: 0,
-      petsSoldValue: 0,
-    },
-    pets: { hatchedByType },
-    abilities,
-    weather,
-  };
+  return out;
 }
 
-function normalizeHatchedCounts(value: unknown, fallback: HatchedCounts): HatchedCounts {
-  if (!isRecord(value)) return { ...fallback };
-  return {
-    normal: toPositiveInt(value.normal, fallback.normal),
-    gold: toPositiveInt(value.gold, fallback.gold),
-    rainbow: toPositiveInt(value.rainbow, fallback.rainbow),
-  };
-}
-
+/** Stored stats, repaired: every count a finite number at or above zero, keys in lower case where they should be. */
 function normalizeStats(raw: unknown): StatsSnapshot {
-  const fallbackCreatedAt = Date.now();
-  const base = createDefaultStats(fallbackCreatedAt);
+  const now = Date.now();
+  const base = createDefaultStats(now);
   if (!isRecord(raw)) return base;
 
   if (Object.prototype.hasOwnProperty.call(raw, "createdAt")) {
-    base.createdAt = toPositiveTimestamp(raw.createdAt, fallbackCreatedAt);
+    const createdAt = Number(raw.createdAt);
+    base.createdAt = Number.isFinite(createdAt) && createdAt > 0 ? Math.floor(createdAt) : now;
   }
-
-  if (isRecord(raw.garden)) {
-    base.garden = {
-      totalPlanted: toPositiveInt(raw.garden.totalPlanted, base.garden.totalPlanted),
-      totalHarvested: toPositiveInt(raw.garden.totalHarvested, base.garden.totalHarvested),
-      totalDestroyed: toPositiveInt(raw.garden.totalDestroyed, base.garden.totalDestroyed),
-      watercanUsed: toPositiveInt(raw.garden.watercanUsed, base.garden.watercanUsed),
-      waterTimeSavedMs: toPositiveInt(raw.garden.waterTimeSavedMs, base.garden.waterTimeSavedMs),
-    };
-  }
-
-  if (isRecord(raw.shops)) {
-    base.shops = {
-      seedsBought: toPositiveInt(raw.shops.seedsBought, base.shops.seedsBought),
-      decorBought: toPositiveInt(raw.shops.decorBought, base.shops.decorBought),
-      eggsBought: toPositiveInt(raw.shops.eggsBought, base.shops.eggsBought),
-      toolsBought: toPositiveInt(raw.shops.toolsBought, base.shops.toolsBought),
-      cropsSoldCount: toPositiveInt(raw.shops.cropsSoldCount, base.shops.cropsSoldCount),
-      cropsSoldValue: toPositiveNumber(raw.shops.cropsSoldValue, base.shops.cropsSoldValue),
-      petsSoldCount: toPositiveInt(raw.shops.petsSoldCount, base.shops.petsSoldCount),
-      petsSoldValue: toPositiveNumber(raw.shops.petsSoldValue, base.shops.petsSoldValue),
-    };
-  }
+  base.garden = readGroup(raw.garden, base.garden, GARDEN_INT_KEYS);
+  base.shops = readGroup(raw.shops, base.shops, SHOP_INT_KEYS);
 
   if (isRecord(raw.pets) && isRecord(raw.pets.hatchedByType)) {
     for (const [key, counts] of Object.entries(raw.pets.hatchedByType)) {
-      if (typeof key !== "string") continue;
-      const normalizedKey = key.toLowerCase();
-      const fallback = base.pets.hatchedByType[normalizedKey] ?? { normal: 0, gold: 0, rainbow: 0 };
-      base.pets.hatchedByType[normalizedKey] = normalizeHatchedCounts(counts, fallback);
+      const species = key.toLowerCase();
+      const fallback = base.pets.hatchedByType[species] ?? zeroHatched();
+      base.pets.hatchedByType[species] = isRecord(counts)
+        ? {
+            normal: readCount(counts.normal, fallback.normal, true),
+            gold: readCount(counts.gold, fallback.gold, true),
+            rainbow: readCount(counts.rainbow, fallback.rainbow, true),
+          }
+        : { ...fallback };
     }
   }
 
   if (isRecord(raw.abilities)) {
     for (const [key, value] of Object.entries(raw.abilities)) {
-      if (typeof key !== "string" || !isRecord(value)) continue;
+      if (!isRecord(value)) continue;
       base.abilities[key] = {
-        triggers: toPositiveInt(value.triggers, base.abilities[key]?.triggers ?? 0),
-        totalValue: toPositiveNumber(value.totalValue, base.abilities[key]?.totalValue ?? 0),
+        triggers: readCount(value.triggers, base.abilities[key]?.triggers ?? 0, true),
+        totalValue: readCount(value.totalValue, base.abilities[key]?.totalValue ?? 0, false),
       };
     }
   }
 
   if (isRecord(raw.weather)) {
     for (const [key, value] of Object.entries(raw.weather)) {
-      if (typeof key !== "string" || !isRecord(value)) continue;
-      const normalizedKey = key.toLowerCase();
-      const fallback = base.weather[normalizedKey] ?? { triggers: 0 };
-      base.weather[normalizedKey] = {
-        triggers: toPositiveInt(value.triggers, fallback.triggers),
-      };
+      if (!isRecord(value)) continue;
+      const weather = key.toLowerCase();
+      base.weather[weather] = { triggers: readCount(value.triggers, base.weather[weather]?.triggers ?? 0, true) };
     }
   }
 
   return base;
 }
 
+function writeToStorage(stats: StatsSnapshot): StatsSnapshot {
+  memoryStore = cloneStats(stats);
+  writeAriesPath(STORAGE_PATH, memoryStore);
+  return memoryStore;
+}
+
 function readFromStorage(): StatsSnapshot {
   if (memoryStore) return cloneStats(memoryStore);
 
-  const rawWrapped = readAriesPath<unknown>("stats");
-  const raw = unwrapMaybeNestedSnapshot(rawWrapped);
+  const stored = readAriesPath<unknown>(STORAGE_PATH);
+  const raw = unwrapNestedSnapshot(stored);
   if (!raw) {
     const fresh = createDefaultStats();
-    memoryStore = cloneStats(fresh);
-    writeAriesPath("stats", memoryStore);
+    writeToStorage(fresh);
     return fresh;
   }
   const normalized = normalizeStats(raw);
   memoryStore = cloneStats(normalized);
-  if (rawWrapped !== raw) {
-    // Clean up legacy nested { snapshot: { ... } } structure by persisting the flattened payload.
-    writeAriesPath("stats", memoryStore);
-  }
+  // Flatten a legacy `{ snapshot }` wrapper in storage.
+  if (stored !== raw) writeAriesPath(STORAGE_PATH, memoryStore);
   return normalized;
 }
 
-function emitUpdate(stats: StatsSnapshot) {
-  const snapshot = cloneStats(stats);
-  for (const listener of listeners) {
-    try {
-      listener(snapshot);
-    } catch (error) {
-      console.error("[StatsService] Listener error", error);
-    }
-  }
-}
-
-function writeToStorage(stats: StatsSnapshot): StatsSnapshot {
-  const snapshot = cloneStats(stats);
-  memoryStore = snapshot;
-  writeAriesPath("stats", snapshot);
-  return snapshot;
-}
-
+/** `current + delta`, never below zero, floored for whole-number stats. */
 function adjustValue(current: number, delta: number, integer: boolean): number {
   const a = Number(current);
   const b = Number(delta);
-  const sum = Number.isFinite(a) ? a : 0;
-  const next = sum + (Number.isFinite(b) ? b : 0);
-  const clamped = Math.max(0, next);
-  return integer ? Math.floor(clamped) : clamped;
+  const next = Math.max(0, (Number.isFinite(a) ? a : 0) + (Number.isFinite(b) ? b : 0));
+  return integer ? Math.floor(next) : next;
 }
 
 function updateStats(mutator: (draft: StatsSnapshot) => void): StatsSnapshot {
   const current = readFromStorage();
-  const before = JSON.stringify(current);
   const draft = cloneStats(current);
   mutator(draft);
-  const after = JSON.stringify(draft);
-  if (before === after) return current;
+  if (JSON.stringify(current) === JSON.stringify(draft)) return current;
   const stored = writeToStorage(draft);
-  emitUpdate(stored);
+  changed.emit(cloneStats(stored));
   return stored;
 }
 
-function requireAbilityEntry(stats: StatsSnapshot, abilityId: string): AbilityStats {
-  if (!stats.abilities[abilityId]) {
-    stats.abilities[abilityId] = { triggers: 0, totalValue: 0 };
-  }
-  return stats.abilities[abilityId];
-}
-
-function requireWeatherEntry(stats: StatsSnapshot, weatherId: string): WeatherStats {
-  const key = weatherId.toLowerCase();
-  if (!stats.weather[key]) {
-    stats.weather[key] = { triggers: 0 };
-  }
-  return stats.weather[key];
-}
-
-function requirePetEntry(stats: StatsSnapshot, species: string): HatchedCounts {
-  const key = species.toLowerCase();
-  if (!stats.pets.hatchedByType[key]) {
-    stats.pets.hatchedByType[key] = { normal: 0, gold: 0, rainbow: 0 };
-  }
-  return stats.pets.hatchedByType[key];
+function entryOf<T>(table: Record<string, T>, key: string, fresh: () => T): T {
+  if (!table[key]) table[key] = fresh();
+  return table[key];
 }
 
 export const StatsService = {
-  storageKey: "stats",
-
   getSnapshot(): StatsSnapshot {
     return readFromStorage();
-  },
-
-  setSnapshot(snapshot: StatsSnapshot): StatsSnapshot {
-    const normalized = normalizeStats(unwrapMaybeNestedSnapshot(snapshot));
-    const stored = writeToStorage(normalized);
-    emitUpdate(stored);
-    return stored;
-  },
-
-  reset(): StatsSnapshot {
-    const fresh = createDefaultStats();
-    const stored = writeToStorage(fresh);
-    emitUpdate(stored);
-    return stored;
   },
 
   update(mutator: (draft: StatsSnapshot) => void): StatsSnapshot {
@@ -372,35 +255,26 @@ export const StatsService = {
 
   incrementPetHatched(species: string, rarityKey: PetHatchRarity = "normal", amount = 1): StatsSnapshot {
     return updateStats((draft) => {
-      const entry = requirePetEntry(draft, species);
+      const entry = entryOf(draft.pets.hatchedByType, species.toLowerCase(), zeroHatched);
       entry[rarityKey] = adjustValue(entry[rarityKey], amount, true);
     });
   },
 
-  incrementAbilityStat(
-    abilityId: string,
-    key: keyof AbilityStats,
-    amount = 1,
-  ): StatsSnapshot {
+  incrementAbilityStat(abilityId: string, key: keyof AbilityStats, amount = 1): StatsSnapshot {
     return updateStats((draft) => {
-      const entry = requireAbilityEntry(draft, abilityId);
+      const entry = entryOf(draft.abilities, abilityId, () => ({ triggers: 0, totalValue: 0 }));
       entry[key] = adjustValue(entry[key], amount, ABILITY_INT_KEYS[key]);
     });
   },
 
-  incrementWeatherStat(weatherId: string, key: keyof WeatherStats = "triggers", amount = 1): StatsSnapshot {
+  incrementWeatherStat(weatherId: string, amount = 1): StatsSnapshot {
     return updateStats((draft) => {
-      const entry = requireWeatherEntry(draft, weatherId);
-      entry[key] = adjustValue(entry[key], amount, WEATHER_INT_KEYS[key]);
+      const entry = entryOf(draft.weather, weatherId.toLowerCase(), () => ({ triggers: 0 }));
+      entry.triggers = adjustValue(entry.triggers, amount, true);
     });
   },
 
-  subscribe(listener: StatsListener): () => void {
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
+  subscribe(listener: (stats: StatsSnapshot) => void): () => void {
+    return changed.on(listener);
   },
 };
-
-

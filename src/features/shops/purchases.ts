@@ -1,4 +1,3 @@
-// src/utils/shopPurchases.ts
 // How many of each item the player bought in the shops' CURRENT restock.
 
 export type ShopKind = "seed" | "egg" | "tool" | "decor";

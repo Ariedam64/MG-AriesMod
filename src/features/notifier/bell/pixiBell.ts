@@ -1,126 +1,55 @@
-// notificationBellPixi.ts
-// Adds a Pixi-rendered "Notifications" bell as an extra slot on the game's
-// own `RightSideRail` (the vertical icon rail — Chat, Leaderboard, Stats,
-// etc.). That whole rail used to be a real DOM toolbar (buttons with
-// aria-labels), which is what the old `startInjectGamePanelButton` cloned
-// into. A recent game build moved it entirely to native Pixi rendering
-// (same migration that moved the garden info card and action prompts to
-// Pixi), so there's no DOM button left to anchor next to anymore — this
-// button lives directly in the Pixi scene graph instead.
-//
-// The rest of the notifier UI (badge, panel, sounds) stays plain DOM; only
-// the anchor point moves from `document.querySelector('button[...]')` to
-// this controller's `getScreenRect()`.
-import { getStage, findAcrossBranches, findByLabel } from "../../game/pixi/gardenInfoCard";
-import { getReadySpriteState } from "../../game/sprites/context";
-import { pageWindow, shareGlobal } from "../../platform/pageContext";
+// The notification bell drawn as an extra slot on the game's own
+// `RightSideRail`, the vertical icon rail (Chat, Leaderboard, Stats...). The
+// rail used to be a DOM toolbar the bell was cloned into; the game moved it to
+// native Pixi rendering, so the bell now lives in the Pixi scene graph. The
+// badge, panel and sounds stay plain DOM and anchor on `getScreenRect()`.
+import { getStage, findAcrossBranches, findByLabel } from "../../../game/pixi/gardenInfoCard";
+import { getReadySpriteState } from "../../../game/sprites/context";
+import { pageWindow, shareGlobal } from "../../../platform/pageContext";
+import { BELL_GLYPH, BELL_RING_DURATION_MS, bellRingAngleAt, type BellController, type ScreenRect } from "./ring";
 
 const RAIL_LABEL = "RightSideRail";
 const RAIL_FIND_RETRY_MS = 1000;
 const RAIL_FIND_LOG_EVERY = 30;
-// Recovery from a renderer rebuild (e.g. WebGL context loss after the tab
-// is backgrounded a while) normally relies on the rail's `"destroyed"`
-// event to know to re-search — but that only fires if the game actually
-// calls `.destroy()` on the old tree instead of just abandoning it for GC.
-// If it doesn't, `rail` stays a stale-but-non-destroyed reference forever
-// and the bell never comes back. This periodic check catches that case by
-// verifying `rail` is still actually reachable from the *current* live
-// stage, independent of whether `.destroy()` ever fired.
+// After a renderer rebuild (a WebGL context lost while the tab sat in the
+// background) the rail's "destroyed" event tells the bell to search again,
+// but only if the game calls `.destroy()` on the old tree rather than leaving
+// it to the garbage collector. When it does not, `rail` stays a stale
+// reference and the bell never comes back, so this periodic check verifies
+// the rail is still reachable from the live stage.
 const RAIL_REACHABILITY_CHECK_MS = 2000;
 const RAIL_REACHABILITY_MAX_HOPS = 64;
-// The rail's icon slots aren't individually labeled, so there's no direct
-// way to say "the Chat slot" by name — but only the Chat slot carries this
-// unread-badge child, which makes it identifiable. Anchoring on it directly
-// (rather than "whatever's currently the rail's last child") matters
-// because the rail's other icons (friend bonus, weather status, ...) load
-// in asynchronously and conditionally: anchoring on "last child" made the
-// bell hop further down the rail every time a new icon streamed in after
-// it, instead of staying put right under Chat.
+// The rail's slots carry no label of their own, but only the Chat slot has
+// this unread-badge child, which identifies it. The bell anchors right under
+// Chat: anchoring on the rail's last child made it hop down every time one of
+// the conditional icons (friend bonus, weather status...) streamed in.
 const CHAT_SLOT_MARKER_LABEL = "RightSideRailChatBadge";
 
-const DEFAULT_ICON_GLYPH = "\u{1F514}"; // 🔔
 const DEFAULT_SLOT_SIZE = 45;
 const DEFAULT_SLOT_SPACING = 52;
 // A candidate slot counts as taken when an existing icon sits within half a
-// slot of it — loose enough to absorb sub-pixel layout jitter, tight enough
-// not to skip genuinely free slots.
+// slot of it: loose enough to absorb sub-pixel jitter, tight enough not to
+// skip a free slot.
 const SLOT_OCCUPIED_TOLERANCE_RATIO = 0.5;
 const MAX_SLOT_SEARCH_STEPS = 20;
 
-// Classic "bell ring" motion, shared with the floating DOM bell
-// (notificationBellFloating.ts): a burst of fast, decaying swings around
-// the bell's mounting point over the first half of the cycle, then a rest
-// until the next ring — reads as a bell actually ringing rather than a
-// slow metronome sway. Offsets are fractions of one cycle.
-export const BELL_RING_SEQUENCE: ReadonlyArray<{ offset: number; deg: number }> = [
-  { offset: 0, deg: 0 },
-  { offset: 0.05, deg: 15 },
-  { offset: 0.1, deg: -13 },
-  { offset: 0.15, deg: 11 },
-  { offset: 0.2, deg: -9 },
-  { offset: 0.25, deg: 7 },
-  { offset: 0.3, deg: -5 },
-  { offset: 0.35, deg: 3 },
-  { offset: 0.4, deg: -2 },
-  { offset: 0.45, deg: 1 },
-  { offset: 0.5, deg: 0 },
-  { offset: 1, deg: 0 },
-];
-export const BELL_RING_DURATION_MS = 1600;
-
-const DEG_TO_RAD = Math.PI / 180;
-
-/** Ring angle (radians) at a given position in the cycle (0..1), linearly
- * interpolated between the sequence's keyframes. */
-function bellRingAngleAt(cycleOffset: number): number {
-  for (let i = 1; i < BELL_RING_SEQUENCE.length; i++) {
-    const next = BELL_RING_SEQUENCE[i];
-    if (cycleOffset > next.offset) continue;
-    const prev = BELL_RING_SEQUENCE[i - 1];
-    const span = next.offset - prev.offset;
-    const ratio = span > 0 ? (cycleOffset - prev.offset) / span : 0;
-    return (prev.deg + (next.deg - prev.deg) * ratio) * DEG_TO_RAD;
-  }
-  return 0;
-}
-
-export interface ScreenRect {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-  width: number;
-  height: number;
-}
-
-export interface NotificationBellPixiOptions {
+export interface PixiBellOptions {
   onClick: () => void;
-  /** Glyph drawn as the icon. Defaults to a bell emoji. */
-  iconGlyph?: string;
 }
 
-export interface NotificationBellPixiController {
-  stop(): void;
-  /** Current on-screen bounding box of the bell, in page (client) coordinates. */
-  getScreenRect(): ScreenRect | null;
-  setWiggle(active: boolean): void;
-}
-
-interface NotificationBellPixiDebugState {
+interface PixiBellDebugState {
   attached: boolean;
   findAttempts: number;
   hasButton: boolean;
   lastError: string | null;
   /** Rail-local Y the bell was last placed at. */
   slotY: number | null;
-  /** CSS px per stage unit — 1 unless the canvas is CSS-scaled (zoom/DPR). */
+  /** CSS px per stage unit: 1 unless the canvas is CSS-scaled (zoom, DPR). */
   screenScaleX: number | null;
   screenScaleY: number | null;
 }
 
-export function startNotificationBellPixi(opts: NotificationBellPixiOptions): NotificationBellPixiController {
-  const iconGlyph = opts.iconGlyph ?? DEFAULT_ICON_GLYPH;
-
+export function startPixiBell(opts: PixiBellOptions): BellController {
   let running = true;
   let rail: any = null;
   let bellContainer: any = null;
@@ -136,16 +65,15 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
   let wiggleT = 0;
   let wiggleLastFrameAt: number | null = null;
 
-  // Pixi's own EventSystem never dispatches real clicks to anything we add
-  // to this game's tree (confirmed the same way sellAllPetsPixi.ts did:
-  // even `stage.on('pointerdown', ...)` never fires despite native canvas
-  // pointerdown firing) — so clicks are hit-tested directly from a native
-  // DOM listener on the canvas instead of relying on `eventMode`.
+  // Pixi's EventSystem never dispatches clicks to anything the mod adds to
+  // the game's tree (even `stage.on("pointerdown")` stays silent while the
+  // canvas gets native pointerdowns), so clicks are hit-tested from a native
+  // DOM listener instead of relying on `eventMode`.
   let canvasEl: any = null;
   let canvasListenersAttached = false;
   let weSetPointerCursor = false;
 
-  const debugState: NotificationBellPixiDebugState = {
+  const debugState: PixiBellDebugState = {
     attached: false,
     findAttempts: 0,
     hasButton: false,
@@ -174,21 +102,18 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
 
   const onClick = () => {
     try { opts.onClick(); } catch (error) {
-      console.error("[notificationBellPixi] onClick error:", error);
+      console.error("[PixiBell] onClick error:", error);
     }
   };
 
-  // Computes the bell's current on-screen box in page (client) coordinates.
-  // Shared by the public `getScreenRect()` (used by notificationOverlay.ts
-  // to place the badge/panel) and the native hit-test below.
+  // The bell's on-screen box in page (client) coordinates, for the overlay's
+  // badge and panel and for the hit-test below.
   //
-  // `toGlobal` yields stage/screen units, which only equal CSS pixels when
-  // the canvas is displayed at exactly `renderer.screen` size. That doesn't
-  // hold under Windows display scaling, browser zoom, or Discord's Activity
-  // iframe, where the canvas gets CSS-scaled — without the ratio below the
-  // DOM badge/panel and the click hit-test drift proportionally (the same
-  // mismatch pointerToTile in tileObjectSystemApi.ts corrects, in the other
-  // direction).
+  // `toGlobal` yields stage units, which equal CSS pixels only when the
+  // canvas is displayed at exactly `renderer.screen` size. Windows display
+  // scaling, browser zoom and Discord's Activity iframe all CSS-scale the
+  // canvas, and without the ratio below the badge, the panel and the
+  // hit-test drift proportionally.
   const computeScreenRect = (): ScreenRect | null => {
     if (!bellContainer || bellContainer.destroyed) return null;
     const state = getReadySpriteState();
@@ -224,14 +149,12 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
     return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
   };
 
-  // Capture-phase, on `window` rather than a bubble listener on the canvas:
-  // the game's own pointerdown handler (movement) is already attached
-  // directly on the canvas by the time we get here, so a bubble listener on
-  // that same element runs too late to stop it — same-element listeners
-  // fire in registration order regardless of the capture flag. A capturing
-  // listener higher up the tree runs before the event ever reaches the
-  // canvas, so `stopPropagation` here actually prevents the game from
-  // seeing the click (which was moving the character under the bell).
+  // Capture phase on `window`, not a listener on the canvas: the game's own
+  // pointerdown handler (movement) is already on the canvas, and listeners
+  // on one element fire in registration order whatever their capture flag.
+  // A capturing listener higher up runs before the event reaches the canvas,
+  // so `stopPropagation` keeps the click from also walking the character
+  // under the bell.
   const onWindowPointerDownCapture = (ev: PointerEvent) => {
     if (!hitTestButton(ev.clientX, ev.clientY)) return;
     ev.stopPropagation();
@@ -319,18 +242,16 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
     const isSlotOccupied = (y: number): boolean =>
       ys.some((siblingY) => Math.abs(siblingY - y) < spacing * SLOT_OCCUPIED_TOLERANCE_RATIO);
 
-    // Chat hasn't loaded into the rail yet — anchor after whatever exists so
-    // far; the next resync (rail's childAdded/childRemoved) re-anchors on
-    // Chat as soon as it appears.
+    // Before Chat loads into the rail, anchor after whatever is there; the
+    // next resync (childAdded, childRemoved) re-anchors on Chat.
     const chatSlot = findChatSlot();
     const anchorY = chatSlot
       ? (Number(chatSlot.y) || 0)
       : (ys.length ? ys[ys.length - 1] : -spacing);
 
-    // The game parks its own conditional icons (friend bonus, weather
-    // status, ...) right below Chat too, so `chat.y + spacing` is already
-    // taken for some players — walk down to the first genuinely free slot
-    // instead of stacking the bell on top of whatever loaded there.
+    // The game parks its conditional icons (friend bonus, weather status...)
+    // right below Chat too, so walk down to the first free slot rather than
+    // stack the bell on one of them.
     let nextY = anchorY + spacing;
     for (let step = 0; step < MAX_SLOT_SEARCH_STEPS && isSlotOccupied(nextY); step++) {
       nextY += spacing;
@@ -380,9 +301,8 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
       bellContainer = new ContainerCtor();
       bellContainer.label = "GeminiNotificationBell";
       const thisContainer = bellContainer;
-      // Mirrors sellAllPetsPixi.ts: the game can destroy/rebuild the rail's
-      // whole subtree without telling us — drop our stale reference instead
-      // of crashing the next time we touch it.
+      // The game can rebuild the rail's subtree without notice: drop the
+      // stale reference rather than crash on it later.
       thisContainer.once("destroyed", () => {
         if (bellContainer === thisContainer) forgetButtonRefs();
       });
@@ -390,7 +310,7 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
     }
 
     if (!bellText) {
-      bellText = new state.ctors.Text({ text: iconGlyph, style: { fontSize: DEFAULT_SLOT_SIZE } });
+      bellText = new state.ctors.Text({ text: BELL_GLYPH, style: { fontSize: DEFAULT_SLOT_SIZE } });
       bellContainer.addChild(bellText);
     }
 
@@ -405,7 +325,7 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
       debugState.lastError = null;
     } catch (error) {
       debugState.lastError = String((error as Error)?.message ?? error);
-      console.warn("[notificationBellPixi] sync failed, clearing button", error);
+      console.warn("[PixiBell] sync failed, clearing button", error);
       try { removeButton(); } catch {}
     }
   };
@@ -431,7 +351,7 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
       }
     });
     debugState.attached = true;
-    console.info(`[notificationBellPixi] attached to ${RAIL_LABEL} after ${findAttempts} attempt(s)`);
+    console.info(`[PixiBell] attached to ${RAIL_LABEL} after ${findAttempts} attempt(s)`);
     sync();
   };
 
@@ -448,7 +368,7 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
     findAttempts += 1;
     debugState.findAttempts = findAttempts;
     if (findAttempts % RAIL_FIND_LOG_EVERY === 0) {
-      console.info(`[notificationBellPixi] still searching for ${RAIL_LABEL} (${findAttempts} attempts so far)`);
+      console.info(`[PixiBell] still searching for ${RAIL_LABEL} (${findAttempts} attempts so far)`);
     }
   };
 
@@ -480,20 +400,18 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
   const periodicRailMaintenance = () => {
     if (!running || !rail || rail.destroyed) return;
     if (!isReachableFromLiveStage(rail)) {
-      console.warn("[notificationBellPixi] rail orphaned from the live stage (no destroyed event fired), resetting");
+      console.warn("[PixiBell] rail orphaned from the live stage (no destroyed event fired), resetting");
       rail = null;
       debugState.attached = false;
       removeButton();
       restartSearchIfNeeded();
       return;
     }
-    // Re-sync even when the rail looks healthy: the button can be
-    // legitimately missing here (sync bailed because the Text ctor wasn't
-    // captured yet at attach time, or a transient sync error removed it),
-    // and `childAdded`/`childRemoved` never refire on an already-complete
-    // rail — without this retry the bell would stay absent forever. It also
-    // re-runs the slot geometry, so the bell follows the rail's layout
-    // after window resizes or late-loading conditional icons.
+    // Re-sync even when the rail looks healthy. The button can be missing
+    // (the Text constructor was not captured yet at attach time, or a sync
+    // error removed it), and childAdded/childRemoved never fire again on a
+    // complete rail, so without this the bell would stay away for good. It
+    // also re-runs the slot geometry after resizes and late icons.
     sync();
   };
   const maintenanceIntervalId = (pageWindow as any).setInterval(periodicRailMaintenance, RAIL_REACHABILITY_CHECK_MS);

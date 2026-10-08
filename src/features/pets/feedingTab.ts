@@ -6,7 +6,7 @@ import { card } from "../../ui/kit/card";
 import { color } from "../../ui/kit/theme";
 import { switchInput } from "../../ui/kit/toggles";
 import { VTabs, type VTabItem } from "../../ui/kit/vtabs";
-import { rarityBadge } from "../notifier/menu";
+import { rarityBadge } from "../../ui/kit/rarityBadge";
 import { isInstantFeedWidgetEnabled, setInstantFeedWidgetEnabled } from "./feedWidget";
 import { PetsService } from "./pets";
 import { petIcon } from "./petIcon";
