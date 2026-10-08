@@ -27637,6 +27637,76 @@
     }
   });
 
+  // src/features/sellAllPets/actionHud.ts
+  function watchActionHud(watch) {
+    const raf3 = pageWindow.requestAnimationFrame.bind(pageWindow);
+    const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
+    let running6 = true;
+    let hud = null;
+    let attempts = 0;
+    let rafId = null;
+    let lastCheckAt = 0;
+    const attach2 = (found) => {
+      hud = found;
+      found.once("destroyed", () => {
+        if (hud !== found) return;
+        hud = null;
+        watch.detach();
+        search2();
+      });
+      console.info(`[sellAllPets] attached to ${ACTION_HUD_LABEL} after ${attempts} attempt(s)`);
+      watch.attach(found);
+    };
+    const tryFind = () => {
+      if (!running6 || hud) return;
+      const state5 = getReadySpriteState();
+      if (!state5) return;
+      const found = findAcrossBranches(getStage(state5), (node) => node?.label === ACTION_HUD_LABEL);
+      if (found) {
+        attach2(found);
+        return;
+      }
+      attempts += 1;
+      watch.onSearch?.(attempts);
+      if (attempts % LOG_EVERY === 0) {
+        console.info(`[sellAllPets] still searching for ${ACTION_HUD_LABEL} (${attempts} attempts so far)`);
+      }
+    };
+    const tick3 = (now) => {
+      rafId = null;
+      if (!running6 || hud) return;
+      if (now - lastCheckAt >= RETRY_MS) {
+        lastCheckAt = now;
+        tryFind();
+      }
+      if (running6 && !hud) rafId = raf3(tick3);
+    };
+    const search2 = () => {
+      tryFind();
+      if (running6 && !hud && rafId == null) rafId = raf3(tick3);
+    };
+    search2();
+    return {
+      stop() {
+        running6 = false;
+        if (rafId != null) cancelRaf(rafId);
+        rafId = null;
+      }
+    };
+  }
+  var ACTION_HUD_LABEL, RETRY_MS, LOG_EVERY;
+  var init_actionHud = __esm({
+    "src/features/sellAllPets/actionHud.ts"() {
+      "use strict";
+      init_gardenInfoCard();
+      init_context();
+      init_pageContext();
+      ACTION_HUD_LABEL = "ActionHud";
+      RETRY_MS = 1e3;
+      LOG_EVERY = 30;
+    }
+  });
+
   // src/features/sellAllPets/pixiButton.ts
   function isSellPetAction(action2) {
     if (typeof action2 === "string") return SELL_PET_ACTION_TYPES.has(action2);
@@ -27683,9 +27753,6 @@
     let buttonBg = null;
     let buttonText = null;
     let currentAction = null;
-    let findAttempts2 = 0;
-    let findRafId3 = null;
-    let lastFindCheckAt3 = 0;
     let canvasEl = null;
     let canvasListenersAttached = false;
     let weSetPointerCursor = false;
@@ -27864,7 +27931,7 @@
         debugState4.lastError = null;
       } catch (error) {
         debugState4.lastError = String(error?.message ?? error);
-        console.warn("[sellAllPetsPixi] sync failed, clearing button", error);
+        console.warn("[sellAllPets] Pixi button sync failed, clearing button", error);
         try {
           removeButton();
         } catch {
@@ -27872,92 +27939,46 @@
       }
     };
     const onChildAdded2 = () => sync2();
-    const attachToActionHud = (hud) => {
-      actionHud = hud;
-      actionHud.on("childAdded", onChildAdded2);
-      actionHud.once("destroyed", () => {
-        if (actionHud === hud) {
-          actionHud = null;
-          debugState4.attached = false;
-          removeButton();
-          restartSearchIfNeeded2();
-        }
-      });
-      debugState4.attached = true;
-      console.info(`[sellAllPetsPixi] attached to ${ACTION_HUD_LABEL} after ${findAttempts2} attempt(s)`);
-      sync2();
-    };
-    const tryFindActionHud = () => {
-      if (!running6 || actionHud) return;
-      const state5 = getReadySpriteState();
-      if (!state5) return;
-      const stage = getStage(state5);
-      const found = findAcrossBranches(stage, (node) => node?.label === ACTION_HUD_LABEL);
-      if (found) {
-        attachToActionHud(found);
-        return;
+    const hudWatch = watchActionHud({
+      attach(hud) {
+        actionHud = hud;
+        hud.on("childAdded", onChildAdded2);
+        debugState4.attached = true;
+        sync2();
+      },
+      detach() {
+        actionHud = null;
+        debugState4.attached = false;
+        removeButton();
+      },
+      onSearch(attempts) {
+        debugState4.findAttempts = attempts;
       }
-      findAttempts2 += 1;
-      debugState4.findAttempts = findAttempts2;
-      if (findAttempts2 % ACTION_HUD_FIND_LOG_EVERY === 0) {
-        console.info(`[sellAllPetsPixi] still searching for ${ACTION_HUD_LABEL} (${findAttempts2} attempts so far)`);
-      }
-    };
-    const scheduleFind3 = (now) => {
-      findRafId3 = null;
-      if (!running6 || actionHud) return;
-      if (now - lastFindCheckAt3 >= ACTION_HUD_FIND_RETRY_MS) {
-        lastFindCheckAt3 = now;
-        tryFindActionHud();
-      }
-      if (!running6 || actionHud) return;
-      findRafId3 = raf3(scheduleFind3);
-    };
-    const restartSearchIfNeeded2 = () => {
-      if (!running6 || actionHud) return;
-      tryFindActionHud();
-      if (!actionHud && findRafId3 == null) {
-        findRafId3 = raf3(scheduleFind3);
-      }
-    };
-    tryFindActionHud();
-    if (!actionHud) {
-      findRafId3 = raf3(scheduleFind3);
-    }
-    let unsubAction = null;
-    void (async () => {
-      try {
-        currentAction = await Atoms.player.action.get();
-        if (running6) sync2();
-      } catch {
-      }
-      try {
-        const unsub = await Atoms.player.action.onChange((next) => {
-          currentAction = next;
-          sync2();
-        });
-        if (typeof unsub === "function") {
-          if (running6) unsubAction = unsub;
-          else unsub();
-        }
-      } catch {
-      }
-    })();
+    });
+    const subs = new Subscriptions();
+    void Atoms.player.action.get().then((initial) => {
+      currentAction = initial;
+      if (running6) sync2();
+    }).catch(() => {
+    });
+    subs.add(
+      Atoms.player.action.onChange((next) => {
+        currentAction = next;
+        sync2();
+      })
+    );
     return {
       stop() {
         if (!running6) return;
         running6 = false;
-        if (findRafId3 != null) {
-          cancelRaf(findRafId3);
-          findRafId3 = null;
-        }
+        hudWatch.stop();
         if (actionHud) {
           try {
             actionHud.off("childAdded", onChildAdded2);
           } catch {
           }
         }
-        unsubAction?.();
+        subs.dispose();
         if (canvasListenersAttached && canvasEl) {
           try {
             canvasEl.removeEventListener("pointerdown", onCanvasPointerDown);
@@ -27972,7 +27993,7 @@
       }
     };
   }
-  var ACTION_HUD_LABEL, BUTTON_FACE_LABEL, ACTION_HUD_FIND_RETRY_MS, ACTION_HUD_FIND_LOG_EVERY, SELL_PET_ACTION_TYPES, BUTTON_GAP, BUTTON_TEXT, BUTTON_TEXT_STYLE, BUTTON_PADDING_X, BUTTON_RADIUS, BUTTON_FILL_COLOR, BUTTON_BORDER_COLOR, BUTTON_BORDER_WIDTH, HOVER_SCALE, HOVER_SCALE_EASE, HOVER_SCALE_SETTLE_EPSILON;
+  var BUTTON_FACE_LABEL, SELL_PET_ACTION_TYPES, BUTTON_GAP, BUTTON_TEXT, BUTTON_TEXT_STYLE, BUTTON_PADDING_X, BUTTON_RADIUS, BUTTON_FILL_COLOR, BUTTON_BORDER_COLOR, BUTTON_BORDER_WIDTH, HOVER_SCALE, HOVER_SCALE_EASE, HOVER_SCALE_SETTLE_EPSILON;
   var init_pixiButton = __esm({
     "src/features/sellAllPets/pixiButton.ts"() {
       "use strict";
@@ -27980,11 +28001,10 @@
       init_context();
       init_pageContext();
       init_flow();
+      init_actionHud();
       init_atoms();
-      ACTION_HUD_LABEL = "ActionHud";
+      init_emitter();
       BUTTON_FACE_LABEL = "McButtonFace";
-      ACTION_HUD_FIND_RETRY_MS = 1e3;
-      ACTION_HUD_FIND_LOG_EVERY = 30;
       SELL_PET_ACTION_TYPES = /* @__PURE__ */ new Set(["sellPet", "sellRainbowPet", "sellGoldPet"]);
       BUTTON_GAP = 10;
       BUTTON_TEXT = "Sell all Pets";

@@ -20,7 +20,6 @@ import { currentFriendBonus, followFriendBonus } from "./friendBonus";
 let garden: GardenState | null = null;
 let currentGardenObject: any = null;
 
-
 /**
  * Fail-closed fallback for a harvest whose tile cannot be resolved from the
  * garden atom: rely on the locker's own current-slot assessment (fed by

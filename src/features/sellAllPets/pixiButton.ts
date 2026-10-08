@@ -5,21 +5,15 @@
 // (`Atoms.player.action`), not from the button's text: the label varies
 // (Sell Pet, Sell Rainbow Pet, Sell Gold Pet) while the action's type is what
 // the game itself dispatches on.
-import {
-  getStage,
-  findByLabel,
-  findAcrossBranches,
-  findGraphicsCtor,
-} from "../../game/pixi/gardenInfoCard";
+import { getStage, findByLabel, findGraphicsCtor } from "../../game/pixi/gardenInfoCard";
 import { getReadySpriteState } from "../../game/sprites/context";
 import { pageWindow, shareGlobal } from "../../platform/pageContext";
 import { runSellAllPetsFlow } from "./flow";
+import { watchActionHud } from "./actionHud";
 import { Atoms } from "../../game/store/atoms";
+import { Subscriptions } from "../../lib/emitter";
 
-const ACTION_HUD_LABEL = "ActionHud";
 const BUTTON_FACE_LABEL = "McButtonFace";
-const ACTION_HUD_FIND_RETRY_MS = 1000;
-const ACTION_HUD_FIND_LOG_EVERY = 30;
 
 // Matches the game's own action-dispatch identifiers for selling a single
 // pet (seen in its own `case 'sellPet': case 'sellRainbowPet': case
@@ -106,9 +100,6 @@ export function startSellAllPetsPixi(): SellAllPetsPixiController {
   let buttonBg: any = null;
   let buttonText: any = null;
   let currentAction: any = null;
-  let findAttempts = 0;
-  let findRafId: number | null = null;
-  let lastFindCheckAt = 0;
   let canvasEl: any = null;
   let canvasListenersAttached = false;
   let weSetPointerCursor = false;
@@ -125,8 +116,6 @@ export function startSellAllPetsPixi(): SellAllPetsPixiController {
   };
   shareGlobal("__MG_SELL_ALL_PETS_PIXI_DEBUG__", debugState);
 
-  // Driven by requestAnimationFrame, not setInterval, which the browser can
-  // throttle until the target is never found (see game/pixi/gardenInfoCard.ts).
   const raf: (cb: (t: number) => void) => number = (pageWindow as any).requestAnimationFrame.bind(pageWindow);
   const cancelRaf: (id: number) => void = (pageWindow as any).cancelAnimationFrame.bind(pageWindow);
 
@@ -337,102 +326,53 @@ export function startSellAllPetsPixi(): SellAllPetsPixiController {
       debugState.lastError = null;
     } catch (error) {
       debugState.lastError = String((error as Error)?.message ?? error);
-      console.warn("[sellAllPetsPixi] sync failed, clearing button", error);
+      console.warn("[sellAllPets] Pixi button sync failed, clearing button", error);
       try { removeButton(); } catch {}
     }
   };
 
   const onChildAdded = () => sync();
+  const hudWatch = watchActionHud({
+    attach(hud) {
+      actionHud = hud;
+      hud.on("childAdded", onChildAdded);
+      debugState.attached = true;
+      sync();
+    },
+    detach() {
+      actionHud = null;
+      debugState.attached = false;
+      removeButton();
+    },
+    onSearch(attempts) {
+      debugState.findAttempts = attempts;
+    },
+  });
 
-  const attachToActionHud = (hud: any) => {
-    actionHud = hud;
-    actionHud.on("childAdded", onChildAdded);
-    actionHud.once("destroyed", () => {
-      if (actionHud === hud) {
-        actionHud = null;
-        debugState.attached = false;
-        removeButton();
-        // The game can rebuild its whole Pixi tree (a WebGL context lost
-        // while the tab sat in the background), and the search loop stopped
-        // once it found the first one, so it has to look again.
-        restartSearchIfNeeded();
-      }
-    });
-    debugState.attached = true;
-    console.info(`[sellAllPetsPixi] attached to ${ACTION_HUD_LABEL} after ${findAttempts} attempt(s)`);
-    sync();
-  };
-
-  // No attempt cap: the sprite catalog can take any time to be ready, and
-  // searching stops costing anything once found.
-  const tryFindActionHud = () => {
-    if (!running || actionHud) return;
-    const state = getReadySpriteState();
-    if (!state) return;
-    const stage = getStage(state);
-    const found = findAcrossBranches(stage, (node: any) => node?.label === ACTION_HUD_LABEL);
-    if (found) {
-      attachToActionHud(found);
-      return;
-    }
-    findAttempts += 1;
-    debugState.findAttempts = findAttempts;
-    if (findAttempts % ACTION_HUD_FIND_LOG_EVERY === 0) {
-      console.info(`[sellAllPetsPixi] still searching for ${ACTION_HUD_LABEL} (${findAttempts} attempts so far)`);
-    }
-  };
-
-  const scheduleFind = (now: number) => {
-    findRafId = null;
-    if (!running || actionHud) return;
-    if (now - lastFindCheckAt >= ACTION_HUD_FIND_RETRY_MS) {
-      lastFindCheckAt = now;
-      tryFindActionHud();
-    }
-    if (!running || actionHud) return;
-    findRafId = raf(scheduleFind);
-  };
-
-  const restartSearchIfNeeded = () => {
-    if (!running || actionHud) return;
-    tryFindActionHud();
-    if (!actionHud && findRafId == null) {
-      findRafId = raf(scheduleFind);
-    }
-  };
-
-  tryFindActionHud();
-  if (!actionHud) {
-    findRafId = raf(scheduleFind);
-  }
-
-  let unsubAction: (() => void) | null = null;
-  void (async () => {
-    try {
-      currentAction = await Atoms.player.action.get();
+  const subs = new Subscriptions();
+  void Atoms.player.action
+    .get()
+    .then((initial) => {
+      currentAction = initial;
       if (running) sync();
-    } catch {}
-    try {
-      const unsub = await Atoms.player.action.onChange((next: any) => {
-        currentAction = next;
-        sync();
-      });
-      if (typeof unsub === "function") {
-        if (running) unsubAction = unsub;
-        else unsub();
-      }
-    } catch {}
-  })();
+    })
+    .catch(() => {});
+  subs.add(
+    Atoms.player.action.onChange((next: any) => {
+      currentAction = next;
+      sync();
+    }),
+  );
 
   return {
     stop() {
       if (!running) return;
       running = false;
-      if (findRafId != null) { cancelRaf(findRafId); findRafId = null; }
+      hudWatch.stop();
       if (actionHud) {
         try { actionHud.off("childAdded", onChildAdded); } catch {}
       }
-      unsubAction?.();
+      subs.dispose();
       if (canvasListenersAttached && canvasEl) {
         try {
           canvasEl.removeEventListener("pointerdown", onCanvasPointerDown);
