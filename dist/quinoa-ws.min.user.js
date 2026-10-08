@@ -221,13 +221,13 @@
   // src/game/sprites/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-    const listeners8 = /* @__PURE__ */ new Set();
+    const listeners7 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
     const tick3 = (now2) => {
       const delta = last ? (now2 - last) / (1e3 / 60) : 1;
       last = now2;
-      for (const fn of listeners8) {
+      for (const fn of listeners7) {
         try {
           fn(delta);
         } catch {
@@ -237,14 +237,14 @@
     };
     const ticker = {
       add(fn) {
-        if (!listeners8.size) {
+        if (!listeners7.size) {
           rafId = requestAnimationFrame(tick3);
         }
-        listeners8.add(fn);
+        listeners7.add(fn);
       },
       remove(fn) {
-        listeners8.delete(fn);
-        if (!listeners8.size) {
+        listeners7.delete(fn);
+        if (!listeners7.size) {
           cancelAnimationFrame(rafId);
         }
       },
@@ -7637,11 +7637,12 @@
     if (abs >= 1e3) return `${fmt2(n / 1e3)}k`;
     return String(n);
   }
-  var INTEGER_FORMAT, spaceWords;
+  var INTEGER_FORMAT, formatInteger, spaceWords;
   var init_format = __esm({
     "src/lib/format.ts"() {
       "use strict";
       INTEGER_FORMAT = new Intl.NumberFormat("en-US");
+      formatInteger = (value, rounding = "floor") => INTEGER_FORMAT.format(Math.max(0, Math[rounding](Number.isFinite(value) ? value : 0)));
       spaceWords = (id) => id.replace(/([a-z])([A-Z])/g, "$1 $2");
     }
   });
@@ -15237,9 +15238,9 @@
     let selectedIdx = null;
     let lastInfo = emptySlotInfo();
     let curSig = gardenObjectSignature(cur);
-    const listeners8 = /* @__PURE__ */ new Set();
+    const listeners7 = /* @__PURE__ */ new Set();
     const notify3 = () => {
-      for (const fn of listeners8) {
+      for (const fn of listeners7) {
         try {
           fn(lastInfo);
         } catch {
@@ -15474,11 +15475,11 @@
         return lastInfo;
       },
       onChange(cb) {
-        listeners8.add(cb);
-        return () => listeners8.delete(cb);
+        listeners7.add(cb);
+        return () => listeners7.delete(cb);
       },
       stop() {
-        listeners8.clear();
+        listeners7.clear();
       },
       recompute() {
         recomputeAndNotify();
@@ -20593,7 +20594,7 @@
   function ensureStyle2(injectedClass, theme) {
     const STYLE_ID11 = `${injectedClass}-style`;
     if (document.getElementById(STYLE_ID11)) return;
-    const css5 = `
+    const css7 = `
 .${injectedClass}{
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
@@ -20648,7 +20649,7 @@
 `.trim();
     const s = document.createElement("style");
     s.id = STYLE_ID11;
-    s.textContent = css5;
+    s.textContent = css7;
     document.head.appendChild(s);
   }
   function hookHistory(onNavigate) {
@@ -25848,9 +25849,9 @@
     let players = void 0;
     let selectedSlotId = null;
     let lastPrice = null;
-    const listeners8 = /* @__PURE__ */ new Set();
+    const listeners7 = /* @__PURE__ */ new Set();
     const notify3 = () => {
-      for (const fn of listeners8) try {
+      for (const fn of listeners7) try {
         fn();
       } catch {
       }
@@ -25917,11 +25918,11 @@
         return lastPrice;
       },
       onChange(cb) {
-        listeners8.add(cb);
-        return () => listeners8.delete(cb);
+        listeners7.add(cb);
+        return () => listeners7.delete(cb);
       },
       stop() {
-        listeners8.clear();
+        listeners7.clear();
       }
     };
   }
@@ -28418,7 +28419,7 @@
   }
   function injectDarkSelectStyles(id = "inv-sort-dark-styles") {
     if (document.getElementById(id)) return;
-    const css5 = `
+    const css7 = `
     .tm-sort-select {
       color: #e7eef7 !important;
       background-color: rgba(17,17,17,0.98) !important;
@@ -28443,7 +28444,7 @@
   `;
     const style2 = document.createElement("style");
     style2.id = id;
-    style2.textContent = css5;
+    style2.textContent = css7;
     document.head.appendChild(style2);
   }
   function createSortingBar(useCustomSelectStyles) {
@@ -31466,12 +31467,7 @@
       writeAriesPath(STATE_PATH, state5);
     } catch {
     }
-    for (const listener of listeners6) {
-      try {
-        listener(state5);
-      } catch {
-      }
-    }
+    changes4.emit(state5);
   }
   function readPet(raw, eggIdFallback, timestamp, isPull) {
     if (!isRecord4(raw)) return null;
@@ -31601,7 +31597,7 @@
       }
     };
   }
-  var STATE_PATH, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, listeners6, cachedState, HatchTracker;
+  var STATE_PATH, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, changes4, cachedState, HatchTracker;
   var init_tracker = __esm({
     "src/features/hatch/tracker.ts"() {
       "use strict";
@@ -31609,12 +31605,13 @@
       init_atoms();
       init_stats();
       init_pity();
+      init_emitter();
       init_storage();
       STATE_PATH = "hatch.tracker";
       HATCH_ACTION = "hatchEgg";
       DOUBLE_HATCH_ACTIONS = /* @__PURE__ */ new Set(["doublehatch", "doublehatchii"]);
       SEEN_LIMIT = 4e3;
-      listeners6 = /* @__PURE__ */ new Set();
+      changes4 = new Emitter();
       cachedState = null;
       HatchTracker = {
         getState() {
@@ -31646,10 +31643,7 @@
         // since the server's own never resets except on the outcome itself. Only
         // `setOffset` moves a counter by hand.
         subscribe(listener) {
-          listeners6.add(listener);
-          return () => {
-            listeners6.delete(listener);
-          };
+          return changes4.on(listener);
         }
       };
     }
@@ -40949,9 +40943,9 @@ next: ${next}`;
   });
 
   // src/lib/dom.ts
-  function addStyle(css5) {
+  function addStyle(css7) {
     const style2 = document.createElement("style");
-    style2.textContent = css5;
+    style2.textContent = css7;
     document.head.appendChild(style2);
     return style2;
   }
@@ -42074,77 +42068,6 @@ next: ${next}`;
     }
   });
 
-  // src/ui/kit/panel.ts
-  function button2(label2, tone, onClick) {
-    return button(label2, { variant: VARIANT[tone], size: "sm", block: true, lockWhilePending: true, onClick });
-  }
-  function toggle(checked, onChange) {
-    return switchInput(checked, onChange);
-  }
-  function range(min, max, step, value) {
-    return slider(min, max, step, value, { fill: true });
-  }
-  function textField(placeholder, value = "") {
-    return textInput(placeholder, value, { small: true });
-  }
-  function selectField(options2) {
-    const el = select2({ small: true });
-    for (const [value, label2] of options2) {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = label2;
-      el.appendChild(option);
-    }
-    return el;
-  }
-  function numberField(min, max, step, value) {
-    const el = h("input", "qws-pnl-input");
-    el.type = "number";
-    el.min = String(min);
-    el.max = String(max);
-    el.step = String(step);
-    el.value = String(value);
-    el.style.width = "78px";
-    el.style.textAlign = "right";
-    return el;
-  }
-  var TEAL, TEAL_DIM, TEAL_BORDER, BORDER, CARD_BG, TEXT, TEXT_DIM, DANGER, WARN, GOLD, RAINBOW, css, ensurePanelStyles, sectionLabel2, card2, pill2, chip, meter2, setButtonEnabled2, VARIANT;
-  var init_panel = __esm({
-    "src/ui/kit/panel.ts"() {
-      "use strict";
-      init_badges();
-      init_button();
-      init_card();
-      init_dom();
-      init_fields();
-      init_sliders();
-      init_styles();
-      init_theme();
-      init_toggles();
-      init_icons();
-      TEAL = color.accent;
-      TEAL_DIM = color.accentSoft;
-      TEAL_BORDER = color.accentBorder;
-      BORDER = color.border;
-      CARD_BG = color.cardBg;
-      TEXT = color.text;
-      TEXT_DIM = color.textDim;
-      DANGER = color.danger;
-      WARN = color.warn;
-      GOLD = color.gold;
-      RAINBOW = color.rainbow;
-      css = (el, style2) => Object.assign(el.style, style2);
-      ensurePanelStyles = ensureKitStyles;
-      sectionLabel2 = sectionLabel;
-      card2 = plainCard;
-      pill2 = (text2) => pill(text2);
-      chip = badge;
-      meter2 = meter;
-      setButtonEnabled2 = setButtonEnabled;
-      VARIANT = { accent: "primary", neutral: "default", danger: "danger" };
-    }
-  });
-
   // src/features/hatch/counts.ts
   function countsFor(stats, species) {
     return stats.pets.hatchedByType[species.toLowerCase()] ?? { normal: 0, gold: 0, rainbow: 0 };
@@ -42178,7 +42101,7 @@ next: ${next}`;
       letterSpacing: "0.06em",
       textTransform: "uppercase",
       textAlign: align,
-      color: TEXT_DIM
+      color: color.textDim
     });
     cell.textContent = label2;
     return cell;
@@ -42190,16 +42113,16 @@ next: ${next}`;
     cell.appendChild(iconBox(mutationIcon(mutationId), HEADER_ICON_PX, "hatch"));
     return cell;
   }
-  function numberCell(value, color2, strong = false) {
+  function numberCell(value, tint, strong = false) {
     const cell = document.createElement("span");
     css(cell, {
       fontSize: "12.5px",
       fontVariantNumeric: "tabular-nums",
       fontWeight: strong ? "700" : "500",
-      color: value > 0 ? color2 : TEXT_DIM,
+      color: value > 0 ? tint : color.textDim,
       textAlign: "center"
     });
-    cell.textContent = formatInt(value);
+    cell.textContent = formatInteger(value);
     return cell;
   }
   function speciesCell(row) {
@@ -42209,7 +42132,7 @@ next: ${next}`;
     const label2 = document.createElement("span");
     css(label2, {
       fontSize: "12.5px",
-      color: TEXT,
+      color: color.text,
       overflow: "hidden",
       textOverflow: "ellipsis",
       whiteSpace: "nowrap"
@@ -42218,7 +42141,7 @@ next: ${next}`;
     cell.appendChild(label2);
     if (row.share !== void 0) {
       const share = document.createElement("span");
-      css(share, { fontSize: "10px", color: TEXT_DIM, whiteSpace: "nowrap", flex: "0 0 auto" });
+      css(share, { fontSize: "10px", color: color.textDim, whiteSpace: "nowrap", flex: "0 0 auto" });
       const percent = row.share * 100;
       share.textContent = `${percent >= 1 ? Math.round(percent) : percent.toFixed(1)}%`;
       cell.appendChild(share);
@@ -42248,41 +42171,42 @@ next: ${next}`;
       const line = gridRow();
       line.append(
         speciesCell(row),
-        numberCell(counts.normal, TEXT),
-        numberCell(counts.gold, GOLD),
-        numberCell(counts.rainbow, RAINBOW),
-        numberCell(totalOf(counts), TEAL, true)
+        numberCell(counts.normal, color.text),
+        numberCell(counts.gold, color.gold),
+        numberCell(counts.rainbow, color.rainbow),
+        numberCell(totalOf(counts), color.accent, true)
       );
       wrap.appendChild(line);
     }
     if (rows.length > 1) {
       const separator = document.createElement("div");
-      css(separator, { height: "1px", background: BORDER, margin: "2px 0" });
+      css(separator, { height: "1px", background: color.border, margin: "2px 0" });
       wrap.appendChild(separator);
       const label2 = document.createElement("span");
-      css(label2, { fontSize: "11px", fontWeight: "700", color: TEXT_DIM, textTransform: "uppercase" });
+      css(label2, { fontSize: "11px", fontWeight: "700", color: color.textDim, textTransform: "uppercase" });
       label2.textContent = "Total";
       const totals = gridRow();
       totals.append(
         label2,
-        numberCell(totalNormal, TEXT, true),
-        numberCell(totalGold, GOLD, true),
-        numberCell(totalRainbow, RAINBOW, true),
-        numberCell(totalNormal + totalGold + totalRainbow, TEAL, true)
+        numberCell(totalNormal, color.text, true),
+        numberCell(totalGold, color.gold, true),
+        numberCell(totalRainbow, color.rainbow, true),
+        numberCell(totalNormal + totalGold + totalRainbow, color.accent, true)
       );
       wrap.appendChild(totals);
     }
     return wrap;
   }
-  var NF_INT, formatInt, SPECIES_ICON_PX, HEADER_ICON_PX, GRID_TEMPLATE;
+  var css, SPECIES_ICON_PX, HEADER_ICON_PX, GRID_TEMPLATE;
   var init_counts = __esm({
     "src/features/hatch/counts.ts"() {
       "use strict";
       init_data();
       init_pity();
-      init_panel();
-      NF_INT = new Intl.NumberFormat("en-US");
-      formatInt = (value) => NF_INT.format(Math.max(0, Math.floor(value || 0)));
+      init_format();
+      init_icons();
+      init_theme();
+      css = (el, style2) => Object.assign(el.style, style2);
       SPECIES_ICON_PX = 24;
       HEADER_ICON_PX = 18;
       GRID_TEMPLATE = "minmax(0, 2.2fr) repeat(4, minmax(54px, 1fr))";
@@ -42309,7 +42233,7 @@ next: ${next}`;
     const due = remaining === 0;
     const near = !due && remaining <= NEAR_GUARANTEE_PULLS;
     const row = document.createElement("div");
-    css(row, {
+    css2(row, {
       display: "grid",
       gridTemplateColumns: ROW_TEMPLATE,
       alignItems: "center",
@@ -42317,15 +42241,15 @@ next: ${next}`;
       padding: "3px 0"
     });
     const label2 = document.createElement("div");
-    css(label2, { display: "flex", alignItems: "center", gap: "6px", minWidth: "0" });
+    css2(label2, { display: "flex", alignItems: "center", gap: "6px", minWidth: "0" });
     label2.title = target.label;
     const icon = iconBox(target.icon, TARGET_ICON_PX, "hatch");
     label2.appendChild(icon);
     if (target.kind === "species") {
       const name = document.createElement("span");
-      css(name, {
+      css2(name, {
         fontSize: "12.5px",
-        color: TEXT,
+        color: color.text,
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap"
@@ -42336,27 +42260,28 @@ next: ${next}`;
     const chance = formatChance(target.chance);
     if (chance) {
       const rate = document.createElement("span");
-      css(rate, { fontSize: "10.5px", color: TEXT_DIM, whiteSpace: "nowrap" });
+      css2(rate, { fontSize: "10.5px", color: color.textDim, whiteSpace: "nowrap" });
       rate.textContent = chance;
       label2.appendChild(rate);
     }
-    const bar = meter2();
+    const bar = meter();
     bar.set(misses / ceiling, due || near ? "warn" : "accent");
     const value = document.createElement("span");
-    css(value, {
+    css2(value, {
       fontSize: "11.5px",
       fontVariantNumeric: "tabular-nums",
-      color: due || near ? WARN : TEXT_DIM,
+      color: due || near ? color.warn : color.textDim,
       whiteSpace: "nowrap",
       textAlign: "right"
     });
     const isFloor = offset <= 0;
-    value.textContent = due ? "Guaranteed" : `${isFloor ? "\u2265 " : ""}${formatInt2(misses)} / ${formatInt2(ceiling)}`;
-    value.title = due ? `Due: the next pull is forced (threshold ${formatInt2(target.threshold)}).` : isFloor ? `At least ${formatInt2(remaining)} more misses before the guarantee (threshold ${formatInt2(target.threshold)}). The game keeps its own counter private, so this only counts hatches seen since tracking began. Set your real counter to correct it.` : `${formatInt2(remaining)} more misses before the guarantee (threshold ${formatInt2(target.threshold)}).`;
+    value.textContent = due ? "Guaranteed" : `${isFloor ? "\u2265 " : ""}${formatInteger(misses)} / ${formatInteger(ceiling)}`;
+    value.title = due ? `Due: the next pull is forced (threshold ${formatInteger(target.threshold)}).` : isFloor ? `At least ${formatInteger(remaining)} more misses before the guarantee (threshold ${formatInteger(target.threshold)}). The game keeps its own counter private, so this only counts hatches seen since tracking began. Set your real counter to correct it.` : `${formatInteger(remaining)} more misses before the guarantee (threshold ${formatInteger(target.threshold)}).`;
     row.append(label2, bar.root, value);
     if (showOffsets) {
-      const input = numberField(0, ceiling, 1, offset);
-      css(input, { width: "70px", padding: "5px 7px", fontSize: "11px" });
+      const input = textInput("", String(offset), { small: true });
+      Object.assign(input, { type: "number", min: "0", max: String(ceiling), step: "1" });
+      css2(input, { width: "70px", padding: "5px 7px", fontSize: "11px", textAlign: "right" });
       input.title = "Your real in-game counter for this outcome. The mod adds what it has seen since.";
       input.addEventListener("change", () => {
         HatchTracker.setOffset(egg.eggId, target.key, Number(input.value));
@@ -42369,7 +42294,7 @@ next: ${next}`;
   }
   function trackingNote() {
     const note = document.createElement("div");
-    css(note, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.45", padding: "1px 0 4px" });
+    css2(note, { fontSize: "10px", color: color.textDim, lineHeight: "1.45", padding: "1px 0 4px" });
     const startedAt = HatchTracker.getTrackingStartedAt();
     const since = startedAt > 0 ? `since ${new Date(startedAt).toLocaleDateString()}` : "since this install started watching";
     note.textContent = `The game keeps its real counters private, so these only count hatches seen ${since}. Hatched before that? Type your in-game counter to correct it.`;
@@ -42377,13 +42302,13 @@ next: ${next}`;
   }
   function eggHeader(egg, pulls) {
     const head = document.createElement("div");
-    css(head, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+    css2(head, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
     head.appendChild(iconBox(`sprite/pet/${egg.eggId}`, EGG_ICON_PX, "hatch"));
     const name = document.createElement("span");
-    css(name, {
+    css2(name, {
       fontSize: "13.5px",
       fontWeight: "600",
-      color: TEXT,
+      color: color.text,
       overflow: "hidden",
       textOverflow: "ellipsis",
       whiteSpace: "nowrap"
@@ -42397,8 +42322,8 @@ next: ${next}`;
       head.appendChild(badge2);
     }
     const seen = document.createElement("span");
-    css(seen, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap", marginLeft: "auto" });
-    seen.textContent = pulls === 1 ? "1 hatch seen" : `${formatInt2(pulls)} hatches seen`;
+    css2(seen, { fontSize: "11px", color: color.textDim, whiteSpace: "nowrap", marginLeft: "auto" });
+    seen.textContent = pulls === 1 ? "1 hatch seen" : `${formatInteger(pulls)} hatches seen`;
     head.appendChild(seen);
     return head;
   }
@@ -42411,23 +42336,23 @@ next: ${next}`;
       onToggle: options2.onToggle
     });
     const panel = document.createElement("div");
-    css(panel, {
+    css2(panel, {
       display: "flex",
       flexDirection: "column",
       gap: "2px",
       padding: "7px 9px",
       borderRadius: "8px",
-      background: CARD_BG,
-      border: `1px solid ${BORDER}`
+      background: color.cardBg,
+      border: `1px solid ${color.border}`
     });
-    panel.appendChild(sectionLabel2("Bad luck protection"));
+    panel.appendChild(sectionLabel("Bad luck protection"));
     panel.appendChild(trackingNote());
     for (const target of egg.targets) {
       panel.appendChild(targetRow(egg, target, showOffsets));
     }
     if (egg.fauna.length) {
       const separator = document.createElement("div");
-      css(separator, { height: "1px", background: BORDER, margin: "5px 0 4px" });
+      css2(separator, { height: "1px", background: color.border, margin: "5px 0 4px" });
       panel.appendChild(separator);
       panel.appendChild(
         speciesCountsGrid(
@@ -42439,17 +42364,21 @@ next: ${next}`;
     card5.body.appendChild(panel);
     return card5.root;
   }
-  var NF_INT2, formatInt2, EGG_ICON_PX, TARGET_ICON_PX, RARITY_ICON_PX, ROW_TEMPLATE, NEAR_GUARANTEE_PULLS;
+  var css2, EGG_ICON_PX, TARGET_ICON_PX, RARITY_ICON_PX, ROW_TEMPLATE, NEAR_GUARANTEE_PULLS;
   var init_eggCard = __esm({
     "src/features/hatch/eggCard.ts"() {
       "use strict";
       init_data();
       init_tracker();
       init_counts();
-      init_panel();
+      init_format();
+      init_badges();
+      init_card();
+      init_fields();
+      init_icons();
       init_layout();
-      NF_INT2 = new Intl.NumberFormat("en-US");
-      formatInt2 = (value) => NF_INT2.format(Math.max(0, Math.floor(value || 0)));
+      init_theme();
+      css2 = (el, style2) => Object.assign(el.style, style2);
       EGG_ICON_PX = 30;
       TARGET_ICON_PX = 22;
       RARITY_ICON_PX = 20;
@@ -42507,12 +42436,12 @@ next: ${next}`;
     let inventory = null;
     let activePets2 = null;
     try {
-      inventory = await myInventory.get();
+      inventory = await Atoms.inventory.myInventory.get();
     } catch (error) {
       console.warn("[PetsHatch] Failed to read inventory data", error);
     }
     try {
-      activePets2 = await myPetInfos.get();
+      activePets2 = await Atoms.pets.myPetInfos.get();
     } catch (error) {
       console.warn("[PetsHatch] Failed to read active pet data", error);
     }
@@ -42564,11 +42493,10 @@ next: ${next}`;
       }
       view.__cleanup__ = void 0;
     }
-    ensurePanelStyles();
-    view.innerHTML = "";
+    view.replaceChildren();
     const wrap = document.createElement("div");
-    wrap.classList.add("qws-pnl-root", "qws-pnl-scroll");
-    css(wrap, {
+    wrap.classList.add("qws-pnl-scroll");
+    Object.assign(wrap.style, {
       display: "flex",
       flexDirection: "column",
       gap: "8px",
@@ -42583,29 +42511,28 @@ next: ${next}`;
     });
     view.appendChild(wrap);
     const header = document.createElement("div");
-    css(header, { display: "flex", alignItems: "center", gap: "8px", flexShrink: "0", padding: "0 2px" });
+    Object.assign(header.style, { display: "flex", alignItems: "center", gap: "8px", flexShrink: "0", padding: "0 2px" });
     const title = document.createElement("div");
-    css(title, { fontSize: "14.5px", fontWeight: "700", color: TEXT, flex: "1 1 auto" });
+    Object.assign(title.style, { fontSize: "14.5px", fontWeight: "700", color: color.text, flex: "1 1 auto" });
     title.textContent = "\u{1F95A} Hatches & bad luck protection";
-    title.title = "Counted from the hatches Arie's Mod has watched \u2014 the game never sends the real counters. Use Calibrate to set your actual head start.";
+    title.title = "Counted from the hatches Arie's Mod has watched: the game never sends the real counters. Use Calibrate to set your actual head start.";
     header.appendChild(title);
     let showOffsets = false;
-    const calibrateBtn = button2("Calibrate", "neutral", () => {
-      showOffsets = !showOffsets;
-      repaint();
+    const calibrateBtn = button("Calibrate", {
+      size: "sm",
+      title: "Show a head start field on every counter.",
+      onClick: () => {
+        showOffsets = !showOffsets;
+        repaint();
+      }
     });
-    calibrateBtn.title = "Show a head start field on every counter.";
     header.appendChild(calibrateBtn);
     wrap.appendChild(header);
     const body = document.createElement("div");
-    css(body, { display: "flex", flexDirection: "column", gap: "8px" });
+    Object.assign(body.style, { display: "flex", flexDirection: "column", gap: "8px" });
     wrap.appendChild(body);
     function repaint() {
-      css(calibrateBtn, {
-        color: showOffsets ? TEAL : TEXT,
-        borderColor: showOffsets ? "rgba(94,234,212,0.3)" : BORDER,
-        background: showOffsets ? "rgba(94,234,212,0.12)" : CARD_BG
-      });
+      calibrateBtn.setActive(showOffsets);
       const stats = StatsService.getSnapshot();
       body.innerHTML = "";
       const eggs = listEggPity();
@@ -42638,7 +42565,7 @@ next: ${next}`;
       }
       if (!body.childElementCount) {
         const empty = document.createElement("div");
-        css(empty, { fontSize: "12.5px", color: TEXT_DIM, padding: "6px 2px" });
+        Object.assign(empty.style, { fontSize: "12.5px", color: color.textDim, padding: "6px 2px" });
         empty.textContent = "No egg data available yet.";
         body.appendChild(empty);
       }
@@ -42688,8 +42615,9 @@ next: ${next}`;
       init_atoms();
       init_eggCard();
       init_counts();
-      init_panel();
+      init_button();
       init_layout();
+      init_theme();
       init_storage();
       OTHER_SECTION_ID = "__other__";
     }
@@ -43086,7 +43014,7 @@ next: ${next}`;
     }
     view.replaceChildren();
     const wrap = document.createElement("div");
-    css2(wrap, {
+    css3(wrap, {
       display: "flex",
       flexDirection: "column",
       gap: "10px",
@@ -43097,28 +43025,28 @@ next: ${next}`;
     });
     view.appendChild(wrap);
     const panel = plainCard();
-    css2(panel, { minHeight: "0" });
+    css3(panel, { minHeight: "0" });
     wrap.appendChild(panel);
     const head = document.createElement("div");
-    css2(head, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
+    css3(head, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
     const title = document.createElement("div");
-    css2(title, { fontSize: "14.5px", fontWeight: "700", color: color.text, flex: "1 1 auto" });
+    css3(title, { fontSize: "14.5px", fontWeight: "700", color: color.text, flex: "1 1 auto" });
     title.textContent = "\u{1F4DD} Ability logs";
     head.appendChild(title);
     const count = document.createElement("span");
-    css2(count, { fontSize: "11px", color: color.textDim, whiteSpace: "nowrap" });
+    css3(count, { fontSize: "11px", color: color.textDim, whiteSpace: "nowrap" });
     head.appendChild(count);
     panel.appendChild(head);
     const toolbar = document.createElement("div");
-    css2(toolbar, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
+    css3(toolbar, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
     const selAbility = select2({ small: true });
     options(selAbility, [["", "All abilities"]]);
-    css2(selAbility, { minWidth: "170px" });
+    css3(selAbility, { minWidth: "170px" });
     const selSort = select2({ small: true });
     options(selSort, [["desc", "Newest first"], ["asc", "Oldest first"]]);
     selSort.value = "desc";
     const inputSearch = textInput("Search pet / ability / details", "", { small: true });
-    css2(inputSearch, { flex: "1 1 200px", minWidth: "160px" });
+    css3(inputSearch, { flex: "1 1 200px", minWidth: "160px" });
     const btnClear = button("\u{1F9F9} Clear", {
       variant: "danger",
       size: "sm",
@@ -43128,7 +43056,7 @@ next: ${next}`;
     toolbar.append(selAbility, selSort, inputSearch, btnClear);
     panel.appendChild(toolbar);
     const columns = document.createElement("div");
-    css2(columns, {
+    css3(columns, {
       display: "grid",
       gridTemplateColumns: ROW_TEMPLATE2,
       gap: "10px",
@@ -43140,7 +43068,7 @@ next: ${next}`;
     panel.appendChild(columns);
     const list = document.createElement("div");
     list.classList.add("qws-pnl-scroll");
-    css2(list, {
+    css3(list, {
       display: "flex",
       flexDirection: "column",
       gap: "3px",
@@ -43156,15 +43084,15 @@ next: ${next}`;
     let search2 = "";
     function whenCell(log2) {
       const cell = document.createElement("div");
-      css2(cell, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
+      css3(cell, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
       if (log2.date) {
         const date = document.createElement("span");
-        css2(date, { fontSize: "10px", color: color.textDim, fontVariantNumeric: "tabular-nums" });
+        css3(date, { fontSize: "10px", color: color.textDim, fontVariantNumeric: "tabular-nums" });
         date.textContent = log2.date;
         cell.appendChild(date);
       }
       const time = document.createElement("span");
-      css2(time, {
+      css3(time, {
         fontSize: "11.5px",
         color: log2.isActiveSession ? color.accent : color.text,
         fontWeight: log2.isActiveSession ? "600" : "500",
@@ -43177,9 +43105,9 @@ next: ${next}`;
     }
     function petCell(log2) {
       const cell = document.createElement("div");
-      css2(cell, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+      css3(cell, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
       const name = document.createElement("span");
-      css2(name, {
+      css3(name, {
         fontSize: "12px",
         color: color.text,
         whiteSpace: "nowrap",
@@ -43194,14 +43122,14 @@ next: ${next}`;
     }
     function abilityCell(log2) {
       const cell = document.createElement("div");
-      css2(cell, { display: "flex", minWidth: "0" });
+      css3(cell, { display: "flex", minWidth: "0" });
       cell.appendChild(abilityPill(log2.abilityId, log2.abilityName || log2.abilityId || "-"));
       return cell;
     }
     function detailsCell(log2) {
       const cell = document.createElement("div");
       const text2 = detailsOf(log2);
-      css2(cell, {
+      css3(cell, {
         fontSize: "11.5px",
         color: color.textDim,
         whiteSpace: "nowrap",
@@ -43215,7 +43143,7 @@ next: ${next}`;
     }
     function logRow(log2) {
       const row = document.createElement("div");
-      css2(row, {
+      css3(row, {
         display: "grid",
         gridTemplateColumns: ROW_TEMPLATE2,
         alignItems: "center",
@@ -43262,7 +43190,7 @@ next: ${next}`;
       list.innerHTML = "";
       if (!visible.length) {
         const empty = document.createElement("div");
-        css2(empty, {
+        css3(empty, {
           fontSize: "12px",
           color: color.textDim,
           textAlign: "center",
@@ -43325,7 +43253,7 @@ next: ${next}`;
       }
     };
   }
-  var css2, PANEL_WIDTH, LIST_MAX_HEIGHT, PET_ICON_PX, ROW_TEMPLATE2, normalizeAbilityKey;
+  var css3, PANEL_WIDTH, LIST_MAX_HEIGHT, PET_ICON_PX, ROW_TEMPLATE2, normalizeAbilityKey;
   var init_logsTab = __esm({
     "src/features/pets/logsTab.ts"() {
       "use strict";
@@ -43336,7 +43264,7 @@ next: ${next}`;
       init_abilityChips();
       init_pets();
       init_petIcon();
-      css2 = (el, style2) => Object.assign(el.style, style2);
+      css3 = (el, style2) => Object.assign(el.style, style2);
       PANEL_WIDTH = "min(760px, 88vw)";
       LIST_MAX_HEIGHT = "min(56vh, 520px)";
       PET_ICON_PX = 24;
@@ -45821,10 +45749,81 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/ui/kit/panel.ts
+  function button2(label2, tone, onClick) {
+    return button(label2, { variant: VARIANT[tone], size: "sm", block: true, lockWhilePending: true, onClick });
+  }
+  function toggle(checked, onChange) {
+    return switchInput(checked, onChange);
+  }
+  function range(min, max, step, value) {
+    return slider(min, max, step, value, { fill: true });
+  }
+  function textField(placeholder, value = "") {
+    return textInput(placeholder, value, { small: true });
+  }
+  function selectField(options2) {
+    const el = select2({ small: true });
+    for (const [value, label2] of options2) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label2;
+      el.appendChild(option);
+    }
+    return el;
+  }
+  function numberField(min, max, step, value) {
+    const el = h("input", "qws-pnl-input");
+    el.type = "number";
+    el.min = String(min);
+    el.max = String(max);
+    el.step = String(step);
+    el.value = String(value);
+    el.style.width = "78px";
+    el.style.textAlign = "right";
+    return el;
+  }
+  var TEAL, TEAL_DIM, TEAL_BORDER, BORDER, CARD_BG, TEXT, TEXT_DIM, DANGER, WARN, GOLD, RAINBOW, css4, ensurePanelStyles, sectionLabel2, card2, pill2, chip, meter2, setButtonEnabled2, VARIANT;
+  var init_panel = __esm({
+    "src/ui/kit/panel.ts"() {
+      "use strict";
+      init_badges();
+      init_button();
+      init_card();
+      init_dom();
+      init_fields();
+      init_sliders();
+      init_styles();
+      init_theme();
+      init_toggles();
+      init_icons();
+      TEAL = color.accent;
+      TEAL_DIM = color.accentSoft;
+      TEAL_BORDER = color.accentBorder;
+      BORDER = color.border;
+      CARD_BG = color.cardBg;
+      TEXT = color.text;
+      TEXT_DIM = color.textDim;
+      DANGER = color.danger;
+      WARN = color.warn;
+      GOLD = color.gold;
+      RAINBOW = color.rainbow;
+      css4 = (el, style2) => Object.assign(el.style, style2);
+      ensurePanelStyles = ensureKitStyles;
+      sectionLabel2 = sectionLabel;
+      card2 = plainCard;
+      pill2 = (text2) => pill(text2);
+      chip = badge;
+      meter2 = meter;
+      setButtonEnabled2 = setButtonEnabled;
+      VARIANT = { accent: "primary", neutral: "default", danger: "danger" };
+    }
+  });
+
   // src/features/deleters/section.ts
   function statTile() {
     const root = document.createElement("div");
-    css(root, {
+    css4(root, {
       flex: "1 1 0",
       minWidth: "0",
       display: "flex",
@@ -45837,9 +45836,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       border: `1px solid ${BORDER}`
     });
     const value = document.createElement("div");
-    css(value, { fontSize: "19px", fontWeight: "700", color: TEXT, lineHeight: "1.1" });
+    css4(value, { fontSize: "19px", fontWeight: "700", color: TEXT, lineHeight: "1.1" });
     const caption = document.createElement("div");
-    css(caption, {
+    css4(caption, {
       fontSize: "9.5px",
       color: TEXT_DIM,
       textTransform: "uppercase",
@@ -45852,18 +45851,18 @@ Restore figures are averages; unlucky streaks do worse.`;
       set: (nextValue, nextCaption, tone) => {
         value.textContent = nextValue;
         caption.textContent = nextCaption;
-        css(value, { color: tone ?? TEXT });
+        css4(value, { color: tone ?? TEXT });
       }
     };
   }
   function createDeleterSection(config) {
     const header = document.createElement("div");
-    css(header, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+    css4(header, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
     const headerText = document.createElement("div");
-    css(headerText, { display: "flex", flexDirection: "column", gap: "3px", minWidth: "0" });
+    css4(headerText, { display: "flex", flexDirection: "column", gap: "3px", minWidth: "0" });
     headerText.append(sectionLabel2(config.title));
     const headerDesc = document.createElement("div");
-    css(headerDesc, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
+    css4(headerDesc, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
     headerDesc.textContent = config.description;
     headerText.append(headerDesc);
     header.append(iconBox(config.headerSprite, 22, "misc"), headerText);
@@ -45873,28 +45872,28 @@ Restore figures are averages; unlucky streaks do worse.`;
       onToggle: config.onToggleCollapsed
     });
     const stats = document.createElement("div");
-    css(stats, { display: "flex", gap: "6px", marginBottom: "8px" });
+    css4(stats, { display: "flex", gap: "6px", marginBottom: "8px" });
     const statGroups = statTile();
     const statUnits = statTile();
     const statStorage = statTile();
     stats.append(statGroups.root, statUnits.root, statStorage.root);
     const chips = document.createElement("div");
-    css(chips, { display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "8px" });
+    css4(chips, { display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "8px" });
     const estimate = document.createElement("div");
-    css(estimate, { fontSize: "11px", color: TEXT_DIM, marginBottom: "10px", minHeight: "14px" });
+    css4(estimate, { fontSize: "11px", color: TEXT_DIM, marginBottom: "10px", minHeight: "14px" });
     const progressWrap = document.createElement("div");
-    css(progressWrap, { display: "none", flexDirection: "column", gap: "6px", marginBottom: "10px" });
+    css4(progressWrap, { display: "none", flexDirection: "column", gap: "6px", marginBottom: "10px" });
     const bar = meter2();
     const progressLine = document.createElement("div");
-    css(progressLine, { display: "flex", alignItems: "center", gap: "8px", fontSize: "11.5px", color: TEXT });
+    css4(progressLine, { display: "flex", alignItems: "center", gap: "8px", fontSize: "11.5px", color: TEXT });
     const progressTargetEl = document.createElement("div");
-    css(progressTargetEl, { flex: "1", minWidth: "0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" });
+    css4(progressTargetEl, { flex: "1", minWidth: "0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" });
     const progressCount = document.createElement("div");
-    css(progressCount, { color: TEXT_DIM, flex: "0 0 auto" });
+    css4(progressCount, { color: TEXT_DIM, flex: "0 0 auto" });
     progressLine.append(progressTargetEl, progressCount);
     progressWrap.append(bar.root, progressLine);
     const actions2 = document.createElement("div");
-    css(actions2, { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" });
+    css4(actions2, { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" });
     const btnSelect = button2(config.selectLabel, "accent", () => runSelect());
     const btnClear = button2(config.clearLabel, "neutral", () => {
       try {
@@ -45904,7 +45903,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       updateSummary2();
     });
     const spacer2 = document.createElement("div");
-    css(spacer2, { flex: "1 1 auto" });
+    css4(spacer2, { flex: "1 1 auto" });
     const btnDelete = button2("Start deleting", "danger", () => runDelete());
     const btnPause = button2("Pause", "neutral", () => {
       config.pause();
@@ -45923,7 +45922,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const progress = { target: "-", done: 0, total: 0 };
     function buildChip(item) {
       const chip2 = document.createElement("div");
-      css(chip2, {
+      css4(chip2, {
         display: "inline-flex",
         alignItems: "center",
         gap: "5px",
@@ -45936,7 +45935,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         maxWidth: "100%"
       });
       const icon = document.createElement("span");
-      css(icon, {
+      css4(icon, {
         width: `${CHIP_SPRITE_PX}px`,
         height: `${CHIP_SPRITE_PX}px`,
         flex: "0 0 auto",
@@ -45948,17 +45947,17 @@ Restore figures are averages; unlucky streaks do worse.`;
       icon.textContent = config.fallbackIcon;
       if (item.id) attachSpriteIcon(icon, config.spriteCategories, [item.id], CHIP_SPRITE_PX, "deleter-chip");
       const name = document.createElement("span");
-      css(name, { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "130px" });
+      css4(name, { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "130px" });
       name.textContent = item.label ?? item.id ?? "?";
       const qty = document.createElement("span");
-      css(qty, { color: TEAL, fontWeight: "600", flex: "0 0 auto" });
+      css4(qty, { color: TEAL, fontWeight: "600", flex: "0 0 auto" });
       qty.textContent = formatNum2(item.qty ?? 0);
       chip2.append(icon, name, qty);
       return chip2;
     }
     function overflowChip(count) {
       const chip2 = document.createElement("div");
-      css(chip2, {
+      css4(chip2, {
         display: "inline-flex",
         alignItems: "center",
         padding: "3px 10px",
@@ -45996,7 +45995,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       chips.innerHTML = "";
       if (groupCount === 0) {
         const empty = document.createElement("div");
-        css(empty, { fontSize: "11px", color: TEXT_DIM });
+        css4(empty, { fontSize: "11px", color: TEXT_DIM });
         empty.textContent = `Nothing picked yet. Choose from your inventory and your ${config.storageLabel}.`;
         chips.append(empty);
       } else {
@@ -46020,9 +46019,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     function updateControls() {
       const running6 = config.isRunning();
       const paused = config.isPaused();
-      css(progressWrap, { display: running6 ? "flex" : "none" });
-      css(stats, { display: running6 ? "none" : "flex" });
-      css(chips, { display: running6 ? "none" : "flex" });
+      css4(progressWrap, { display: running6 ? "flex" : "none" });
+      css4(stats, { display: running6 ? "none" : "flex" });
+      css4(chips, { display: running6 ? "none" : "flex" });
       btnPause.hidden = !running6 || paused;
       btnPlay.hidden = !running6 || !paused;
       btnStop.hidden = !running6;
@@ -46071,21 +46070,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       updateSummary2();
     };
     const onPauseState = () => updateControls();
-    const listeners8 = [
+    const listeners7 = [
       [`${config.eventPrefix}:progress`, onProgress],
       [`${config.eventPrefix}:done`, onComplete],
       [`${config.eventPrefix}:error`, onComplete],
       [`${config.eventPrefix}:paused`, onPauseState],
       [`${config.eventPrefix}:resumed`, onPauseState]
     ];
-    for (const [type, handler] of listeners8) window.addEventListener(type, handler);
+    for (const [type, handler] of listeners7) window.addEventListener(type, handler);
     updateSummary2();
     updateControls();
     return {
       root: section2.root,
       cleanup: () => {
         clearSummaryTimer();
-        for (const [type, handler] of listeners8) window.removeEventListener(type, handler);
+        for (const [type, handler] of listeners7) window.removeEventListener(type, handler);
       }
     };
   }
@@ -46185,9 +46184,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     let entries2 = [];
     let filter = "";
     const controls = document.createElement("div");
-    css(controls, { display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", marginBottom: "10px" });
+    css4(controls, { display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", marginBottom: "10px" });
     const search2 = textField(`Search ${options2.unitNoun}\u2026`);
-    css(search2, { flex: "1 1 160px", minWidth: "120px" });
+    css4(search2, { flex: "1 1 160px", minWidth: "120px" });
     search2.addEventListener("input", () => {
       filter = search2.value.trim().toLowerCase();
       renderRows();
@@ -46206,10 +46205,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       button2("None", "neutral", () => setAll(() => 0))
     );
     const list = document.createElement("div");
-    css(list, { display: "flex", flexDirection: "column", gap: "4px" });
+    css4(list, { display: "flex", flexDirection: "column", gap: "4px" });
     modal.body.append(controls, list);
     const summary = document.createElement("div");
-    css(summary, { flex: "1", minWidth: "0", fontSize: "12px", color: TEXT_DIM });
+    css4(summary, { flex: "1", minWidth: "0", fontSize: "12px", color: TEXT_DIM });
     const btnCancel = button2("Cancel", "neutral", () => modal.close());
     const btnConfirm = button2("Confirm selection", "accent", () => {
       const out = /* @__PURE__ */ new Map();
@@ -46217,11 +46216,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       options2.onConfirm(out);
       modal.close();
     });
-    css(modal.footer, { display: "flex", alignItems: "center", gap: "8px" });
+    css4(modal.footer, { display: "flex", alignItems: "center", gap: "8px" });
     modal.footer.append(summary, btnCancel, btnConfirm);
     function buildIcon(id) {
       const box = document.createElement("span");
-      css(box, {
+      css4(box, {
         width: `${ROW_SPRITE_PX}px`,
         height: `${ROW_SPRITE_PX}px`,
         flex: "0 0 auto",
@@ -46255,13 +46254,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       const storagePart = fromStorage > 0 ? ` \xB7 ${formatNum3(fromStorage)} from the ${options2.storageNoun}` : "";
       summary.textContent = groups === 0 ? "Nothing selected." : `${groups} selected \xB7 ${formatNum3(units)} ${options2.unitNoun}${storagePart}`;
       btnConfirm.disabled = groups === 0;
-      css(btnConfirm, { opacity: groups === 0 ? "0.45" : "1", cursor: groups === 0 ? "default" : "pointer" });
+      css4(btnConfirm, { opacity: groups === 0 ? "0.45" : "1", cursor: groups === 0 ? "default" : "pointer" });
     }
     function buildRow(entry) {
       const qty = picked.get(entry.id) ?? 0;
       const selected = qty > 0;
       const row = document.createElement("div");
-      css(row, {
+      css4(row, {
         display: "flex",
         alignItems: "center",
         gap: "8px",
@@ -46277,12 +46276,12 @@ Restore figures are averages; unlucky streaks do worse.`;
         renderRows();
       });
       const label2 = document.createElement("div");
-      css(label2, { flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "1px" });
+      css4(label2, { flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "1px" });
       const name = document.createElement("div");
-      css(name, { fontSize: "12.5px", color: TEXT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" });
+      css4(name, { fontSize: "12.5px", color: TEXT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" });
       name.textContent = entry.label;
       const detail = document.createElement("div");
-      css(detail, { fontSize: "10.5px", color: TEXT_DIM });
+      css4(detail, { fontSize: "10.5px", color: TEXT_DIM });
       detail.textContent = entry.storeQty > 0 ? `${formatNum3(entry.total)} \xB7 ${formatNum3(entry.invQty)} held, ${formatNum3(entry.storeQty)} in ${options2.storageNoun}` : `${formatNum3(entry.total)} held`;
       label2.append(name, detail);
       const amount = document.createElement("input");
@@ -46291,7 +46290,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       amount.max = String(entry.total);
       amount.step = "1";
       amount.value = String(qty);
-      css(amount, {
+      css4(amount, {
         width: "66px",
         flex: "0 0 auto",
         padding: "4px 6px",
@@ -46319,7 +46318,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const rows = visibleEntries();
       if (rows.length === 0) {
         const empty = document.createElement("div");
-        css(empty, { padding: "14px", textAlign: "center", fontSize: "12px", color: TEXT_DIM });
+        css4(empty, { padding: "14px", textAlign: "center", fontSize: "12px", color: TEXT_DIM });
         empty.textContent = entries2.length === 0 ? `You have no ${options2.unitNoun} to delete, in your inventory or your ${options2.storageNoun}.` : "No match.";
         list.append(empty);
       } else {
@@ -46328,7 +46327,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       updateSummary2();
     }
     const loading = document.createElement("div");
-    css(loading, { padding: "14px", textAlign: "center", fontSize: "12px", color: TEXT_DIM });
+    css4(loading, { padding: "14px", textAlign: "center", fontSize: "12px", color: TEXT_DIM });
     loading.textContent = "Reading inventory\u2026";
     list.append(loading);
     updateSummary2();
@@ -46345,7 +46344,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (!modal.isOpen()) return;
       entries2 = [];
       renderRows();
-      css(summary, { color: DANGER });
+      css4(summary, { color: DANGER });
       summary.textContent = "Could not read the inventory.";
     });
   }
@@ -46803,7 +46802,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/menu/harvestChips.ts
   function iconHolder(sizePx) {
     const box = document.createElement("div");
-    css(box, {
+    css4(box, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -46858,7 +46857,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const url = composedUrl(species, mutations);
     const img = document.createElement("img");
     img.alt = "";
-    css(img, { maxWidth: "100%", maxHeight: "100%", imageRendering: "auto" });
+    css4(img, { maxWidth: "100%", maxHeight: "100%", imageRendering: "auto" });
     img.addEventListener("error", () => {
       console.warn("[companion] composed sprite failed, falling back to the plain crop:", url);
       box.replaceChildren();
@@ -46878,7 +46877,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const tile = document.createElement("button");
     tile.type = "button";
     tile.title = options2.title;
-    css(tile, {
+    css4(tile, {
       display: "inline-flex",
       flexDirection: "column",
       alignItems: "center",
@@ -46894,16 +46893,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     tile.append(options2.icon);
     if (options2.count !== void 0) {
       const count = document.createElement("span");
-      css(count, { fontSize: "10px", color: options2.selected ? TEAL : TEXT_DIM });
+      css4(count, { fontSize: "10px", color: options2.selected ? TEAL : TEXT_DIM });
       count.textContent = String(options2.count);
       tile.append(count);
     }
     tile.addEventListener("click", options2.onClick);
     tile.addEventListener("mouseenter", () => {
-      if (!options2.selected) css(tile, { background: "rgba(255,255,255,0.06)" });
+      if (!options2.selected) css4(tile, { background: "rgba(255,255,255,0.06)" });
     });
     tile.addEventListener("mouseleave", () => {
-      if (!options2.selected) css(tile, { background: CARD_BG });
+      if (!options2.selected) css4(tile, { background: CARD_BG });
     });
     return tile;
   }
@@ -46911,7 +46910,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const tile = document.createElement("button");
     tile.type = "button";
     tile.title = options2.label;
-    css(tile, {
+    css4(tile, {
       display: "inline-flex",
       alignItems: "center",
       gap: "6px",
@@ -46924,7 +46923,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       border: `1px solid ${options2.selected ? TEAL_BORDER : BORDER}`
     });
     const name = document.createElement("span");
-    css(name, {
+    css4(name, {
       fontSize: "11.5px",
       fontWeight: options2.selected ? "600" : "500",
       color: options2.selected ? TEAL : TEXT,
@@ -46934,10 +46933,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     tile.append(options2.icon, name);
     tile.addEventListener("click", options2.onClick);
     tile.addEventListener("mouseenter", () => {
-      if (!options2.selected) css(tile, { background: "rgba(255,255,255,0.06)" });
+      if (!options2.selected) css4(tile, { background: "rgba(255,255,255,0.06)" });
     });
     tile.addEventListener("mouseleave", () => {
-      if (!options2.selected) css(tile, { background: CARD_BG });
+      if (!options2.selected) css4(tile, { background: CARD_BG });
     });
     return tile;
   }
@@ -46945,7 +46944,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const tile = document.createElement("button");
     tile.type = "button";
     tile.textContent = label2;
-    css(tile, {
+    css4(tile, {
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
@@ -46965,12 +46964,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function tileRow() {
     const row = document.createElement("div");
-    css(row, { display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: "5px" });
+    css4(row, { display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: "5px" });
     return row;
   }
   function segmented2(options2, selected, onSelect) {
     const wrap = document.createElement("div");
-    css(wrap, {
+    css4(wrap, {
       display: "inline-flex",
       padding: "2px",
       gap: "2px",
@@ -46984,7 +46983,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       button3.type = "button";
       if (option.title) button3.title = option.title;
       button3.textContent = option.label;
-      css(button3, {
+      css4(button3, {
         padding: "4px 10px",
         borderRadius: "7px",
         border: "none",
@@ -47017,7 +47016,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/menu/plantChips.ts
   function iconHolder2(sizePx) {
     const box = document.createElement("div");
-    css(box, {
+    css4(box, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -47063,7 +47062,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const el = document.createElement("button");
     el.type = "button";
     el.title = plantItemTitle(item);
-    css(el, {
+    css4(el, {
       display: "inline-flex",
       flexDirection: "column",
       alignItems: "center",
@@ -47075,7 +47074,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       transition: "background 120ms ease, border-color 120ms ease, opacity 120ms ease"
     });
     const count = document.createElement("span");
-    css(count, { fontSize: "10px" });
+    css4(count, { fontSize: "10px" });
     el.append(plantItemIcon(item), count);
     el.addEventListener("click", onClick);
     return {
@@ -47083,12 +47082,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       update(left, selected) {
         const empty = left <= 0;
         count.textContent = String(Math.max(0, left));
-        css(el, {
+        css4(el, {
           background: selected ? TEAL_DIM : CARD_BG,
           border: `1px solid ${selected ? TEAL_BORDER : BORDER}`,
           opacity: empty && !selected ? "0.45" : "1"
         });
-        css(count, { color: selected ? TEAL : empty ? WARN : TEXT_DIM });
+        css4(count, { color: selected ? TEAL : empty ? WARN : TEXT_DIM });
       }
     };
   }
@@ -47138,7 +47137,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (content.kind === "plant") return speciesIcon(content.id, sizePx);
     if (content.kind === "egg") return plantItemIcon({ kind: "egg", id: content.id, name: content.name }, sizePx);
     const box = document.createElement("div");
-    css(box, { width: `${sizePx}px`, height: `${sizePx}px`, display: "flex", alignItems: "center", justifyContent: "center" });
+    css4(box, { width: `${sizePx}px`, height: `${sizePx}px`, display: "flex", alignItems: "center", justifyContent: "center" });
     attachSpriteIcon(box, ["decor"], [content.id, content.name.replace(/\s+/g, "")], sizePx, "garden-view");
     return box;
   }
@@ -47159,14 +47158,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     });
     const toolbar = document.createElement("div");
-    css(toolbar, { display: "flex", alignItems: "center", gap: "10px" });
+    css4(toolbar, { display: "flex", alignItems: "center", gap: "10px" });
     const search2 = textField("Find a plant\u2026");
-    css(search2, { flex: "1" });
+    css4(search2, { flex: "1" });
     const summary = document.createElement("div");
-    css(summary, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap" });
+    css4(summary, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap" });
     toolbar.append(search2, summary);
     const grid = document.createElement("div");
-    css(grid, {
+    css4(grid, {
       display: "grid",
       gridTemplateColumns: `repeat(${GARDEN_COLS / 2}, 1fr) ${HALF_GAP_PX}px repeat(${GARDEN_COLS / 2}, 1fr)`,
       gridTemplateRows: `repeat(${GARDEN_ROWS}, 1fr)`,
@@ -47180,7 +47179,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       boxSizing: "border-box"
     });
     const hint = document.createElement("div");
-    css(hint, { fontSize: "10.5px", color: TEXT_DIM, lineHeight: "1.45" });
+    css4(hint, { fontSize: "10.5px", color: TEXT_DIM, lineHeight: "1.45" });
     hint.textContent = "Every tile gets the same space here, so nothing hides behind a taller plant. Hover a tile for its name.";
     modal.body.append(toolbar, grid, hint);
     const cells = /* @__PURE__ */ new Map();
@@ -47188,11 +47187,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       for (let col = 0; col < GARDEN_COLS; col++) {
         if (col === GARDEN_COLS / 2) {
           const spacer2 = document.createElement("div");
-          css(spacer2, { pointerEvents: "none" });
+          css4(spacer2, { pointerEvents: "none" });
           grid.append(spacer2);
         }
         const el = document.createElement("div");
-        css(el, {
+        css4(el, {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -47222,7 +47221,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         if (!owned2.has(tileIndex)) continue;
         const hit = !!query && matches(cell.content, query);
         if (hit) hits++;
-        css(cell.el, {
+        css4(cell.el, {
           opacity: !query || hit ? "1" : "0.25",
           borderColor: hit ? TEAL : cell.content ? TEAL_BORDER : BORDER
         });
@@ -47241,19 +47240,19 @@ Restore figures are averages; unlucky streaks do worse.`;
         cell.shown = key2;
         cell.el.replaceChildren();
         if (key2 === "absent") {
-          css(cell.el, { background: "transparent", borderColor: "transparent" });
+          css4(cell.el, { background: "transparent", borderColor: "transparent" });
           cell.el.title = "";
           continue;
         }
         if (!content) {
-          css(cell.el, { background: "rgba(255,255,255,0.05)", borderColor: BORDER });
+          css4(cell.el, { background: "rgba(255,255,255,0.05)", borderColor: BORDER });
           cell.el.title = "Empty";
           continue;
         }
-        css(cell.el, { background: TEAL_DIM, borderColor: TEAL_BORDER });
+        css4(cell.el, { background: TEAL_DIM, borderColor: TEAL_BORDER });
         cell.el.title = content.kind === "plant" ? content.name : `${content.name} (${content.kind})`;
         const icon = contentIcon(content, CELL_ICON_PX);
-        css(icon, { pointerEvents: "none", maxWidth: "100%", maxHeight: "100%" });
+        css4(icon, { pointerEvents: "none", maxWidth: "100%", maxHeight: "100%" });
         cell.el.append(icon);
       }
       applyFilter();
@@ -47630,12 +47629,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function panelHeader() {
     const head = document.createElement("div");
-    css(head, { display: "flex", flexDirection: "column", gap: "4px", flexShrink: "0", padding: "2px 2px 0" });
+    css4(head, { display: "flex", flexDirection: "column", gap: "4px", flexShrink: "0", padding: "2px 2px 0" });
     const title = document.createElement("div");
-    css(title, { fontSize: "15px", fontWeight: "700", color: TEXT });
+    css4(title, { fontSize: "15px", fontWeight: "700", color: TEXT });
     title.textContent = "\u2699\uFE0F Misc controls";
     const subtitle = document.createElement("div");
-    css(subtitle, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
+    css4(subtitle, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
     subtitle.textContent = "Utility toggles and bulk tools.";
     head.append(title, subtitle);
     return head;
@@ -47650,11 +47649,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     const featureDisabled = MiscService.AUTO_RECO_TEMPORARILY_DISABLED;
     const initialSeconds = Math.round(MiscService.getAutoRecoDelayMs() / 1e3);
     const hint = document.createElement("div");
-    css(hint, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.45", padding: "0 2px" });
+    css4(hint, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.45", padding: "0 2px" });
     const slider2 = range(0, AUTO_RECO_MAX_SECONDS, AUTO_RECO_STEP_SECONDS, initialSeconds);
-    css(slider2, { width: "150px" });
+    css4(slider2, { width: "150px" });
     const sliderValue = pill2(formatShortDuration(initialSeconds));
-    css(sliderValue, { minWidth: "64px", textAlign: "center" });
+    css4(sliderValue, { minWidth: "64px", textAlign: "center" });
     const enabledToggle = toggle(featureDisabled ? false : MiscService.readAutoRecoEnabled(false), (on) => {
       MiscService.writeAutoRecoEnabled(on);
       syncEnabled2(on);
@@ -47666,7 +47665,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (featureDisabled) {
       const input = enabledToggle.querySelector("input");
       if (input) input.disabled = true;
-      css(enabledToggle, { opacity: "0.4", pointerEvents: "none" });
+      css4(enabledToggle, { opacity: "0.4", pointerEvents: "none" });
       slider2.disabled = true;
       hint.textContent = "Auto reconnect has been temporarily disabled at the request of the game developers. It will most likely come back later.";
     } else {
@@ -47682,7 +47681,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     slider2.addEventListener("input", () => applySeconds(Number(slider2.value), false));
     slider2.addEventListener("change", () => applySeconds(Number(slider2.value), true));
     const delayControl = document.createElement("div");
-    css(delayControl, { display: "flex", alignItems: "center", gap: "10px" });
+    css4(delayControl, { display: "flex", alignItems: "center", gap: "10px" });
     delayControl.append(slider2, sliderValue);
     card5.body.append(
       settingRow("Enabled", "Attempts to log back in after a session conflict.", enabledToggle).row,
@@ -47823,7 +47822,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const root = ui.root.querySelector(".qmm-views") ?? ui.root;
     root.innerHTML = "";
     root.classList.add("qws-pnl-root", "qws-pnl-scroll");
-    css(root, {
+    css4(root, {
       display: "flex",
       flexDirection: "column",
       gap: "12px",
@@ -49833,7 +49832,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function sectionLabel3(text2) {
     const el = document.createElement("div");
-    css3(el, {
+    css5(el, {
       fontSize: "10px",
       fontWeight: "700",
       letterSpacing: "0.08em",
@@ -49846,7 +49845,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function card3(children) {
     const el = document.createElement("div");
-    css3(el, {
+    css5(el, {
       padding: "14px",
       background: CARD_BG2,
       borderRadius: "12px",
@@ -49860,7 +49859,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function primaryBtn(label2, onClick) {
     const btn = document.createElement("button");
-    css3(btn, {
+    css5(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -49877,21 +49876,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "1"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css3(btn, { background: TEAL_MID, borderColor: TEAL_BRD_HI });
-    btn.onmouseleave = () => css3(btn, { background: TEAL_DIM2, borderColor: TEAL_BORDER2 });
+    btn.onmouseenter = () => css5(btn, { background: TEAL_MID, borderColor: TEAL_BRD_HI });
+    btn.onmouseleave = () => css5(btn, { background: TEAL_DIM2, borderColor: TEAL_BORDER2 });
     btn.onclick = async () => {
-      css3(btn, { opacity: "0.6", pointerEvents: "none" });
+      css5(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css3(btn, { opacity: "1", pointerEvents: "auto" });
+        css5(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
   }
   function secondaryBtn(label2, onClick) {
     const btn = document.createElement("button");
-    css3(btn, {
+    css5(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -49907,21 +49906,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "1"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css3(btn, { background: CARD_BG_HI, borderColor: BORDER_HI });
-    btn.onmouseleave = () => css3(btn, { background: CARD_BG2, borderColor: BORDER3 });
+    btn.onmouseenter = () => css5(btn, { background: CARD_BG_HI, borderColor: BORDER_HI });
+    btn.onmouseleave = () => css5(btn, { background: CARD_BG2, borderColor: BORDER3 });
     btn.onclick = async () => {
-      css3(btn, { opacity: "0.6", pointerEvents: "none" });
+      css5(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css3(btn, { opacity: "1", pointerEvents: "auto" });
+        css5(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
   }
   function dangerBtn(label2, onClick) {
     const btn = document.createElement("button");
-    css3(btn, {
+    css5(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -49937,21 +49936,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       flexShrink: "0"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css3(btn, { background: DANGER_HI, borderColor: DANGER_BRD_HI });
-    btn.onmouseleave = () => css3(btn, { background: DANGER_DIM, borderColor: DANGER_BRD });
+    btn.onmouseenter = () => css5(btn, { background: DANGER_HI, borderColor: DANGER_BRD_HI });
+    btn.onmouseleave = () => css5(btn, { background: DANGER_DIM, borderColor: DANGER_BRD });
     btn.onclick = async () => {
-      css3(btn, { opacity: "0.6", pointerEvents: "none" });
+      css5(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css3(btn, { opacity: "1", pointerEvents: "auto" });
+        css5(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
   }
   function smallBtn(label2, teal, onClick) {
     const btn = document.createElement("button");
-    css3(btn, {
+    css5(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -49967,14 +49966,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       flexShrink: "0"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css3(btn, { background: teal ? TEAL_MID : CARD_BG_HI, borderColor: teal ? TEAL_BRD_HI : BORDER_HI });
-    btn.onmouseleave = () => css3(btn, { background: teal ? TEAL_DIM2 : CARD_BG2, borderColor: teal ? TEAL_BORDER2 : BORDER3 });
+    btn.onmouseenter = () => css5(btn, { background: teal ? TEAL_MID : CARD_BG_HI, borderColor: teal ? TEAL_BRD_HI : BORDER_HI });
+    btn.onmouseleave = () => css5(btn, { background: teal ? TEAL_DIM2 : CARD_BG2, borderColor: teal ? TEAL_BORDER2 : BORDER3 });
     btn.onclick = async () => {
-      css3(btn, { opacity: "0.6", pointerEvents: "none" });
+      css5(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css3(btn, { opacity: "1", pointerEvents: "auto" });
+        css5(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
@@ -49983,7 +49982,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const input = document.createElement("input");
     input.type = "text";
     input.placeholder = placeholder;
-    css3(input, {
+    css5(input, {
       width: "100%",
       padding: "9px 12px",
       border: `1px solid ${BORDER3}`,
@@ -49995,8 +49994,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       transition: "border-color 150ms ease",
       boxSizing: "border-box"
     });
-    input.addEventListener("focus", () => css3(input, { borderColor: TEAL_BORDER2 }));
-    input.addEventListener("blur", () => css3(input, { borderColor: BORDER3 }));
+    input.addEventListener("focus", () => css5(input, { borderColor: TEAL_BORDER2 }));
+    input.addEventListener("blur", () => css5(input, { borderColor: BORDER3 }));
     return input;
   }
   function createToggle(checked, onChange) {
@@ -50016,10 +50015,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function renderEditorMenu(container) {
     ensureStyles2();
-    css3(container, { padding: "0", overflow: "hidden" });
+    css5(container, { padding: "0", overflow: "hidden" });
     const wrap = document.createElement("div");
     wrap.className = "qws-ed-scroll";
-    css3(wrap, {
+    css5(wrap, {
       display: "flex",
       flexDirection: "column",
       gap: "12px",
@@ -50032,7 +50031,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     container.appendChild(wrap);
     const statusEl = document.createElement("div");
-    css3(statusEl, {
+    css5(statusEl, {
       fontSize: "11px",
       color: TEXT_DIM3,
       minHeight: "16px",
@@ -50049,21 +50048,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       }, 4e3);
     }
     const toggleRow = document.createElement("div");
-    css3(toggleRow, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" });
+    css5(toggleRow, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" });
     const toggleLabel = document.createElement("div");
-    css3(toggleLabel, { fontSize: "13px", fontWeight: "600", color: TEXT3 });
+    css5(toggleLabel, { fontSize: "13px", fontWeight: "600", color: TEXT3 });
     toggleLabel.textContent = "Editor mode";
     const toggle2 = createToggle(EditorService.isEnabled(), (on) => {
       EditorService.setEnabled(on);
     });
     toggleRow.append(toggleLabel, toggle2);
     const desc = document.createElement("div");
-    css3(desc, { fontSize: "11px", color: TEXT_DIM3, lineHeight: "1.5" });
+    css5(desc, { fontSize: "11px", color: TEXT_DIM3, lineHeight: "1.5" });
     desc.textContent = "Sandbox garden with every plant and decor unlocked. Left click to place, right click to remove, drag to paint.";
     wrap.appendChild(card3([toggleRow, desc]));
     const nameInput = styledInput("Garden name\u2026");
     const actRow = document.createElement("div");
-    css3(actRow, { display: "flex", gap: "8px" });
+    css5(actRow, { display: "flex", gap: "8px" });
     actRow.append(
       primaryBtn("Save current garden", async () => {
         const fn = window.qwsEditorSaveGarden;
@@ -50086,7 +50085,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       card3([sectionLabel3("Current garden"), nameInput, actRow])
     );
     const dropZone = document.createElement("div");
-    css3(dropZone, {
+    css5(dropZone, {
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
@@ -50103,7 +50102,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       transition: "border-color 150ms ease, background 150ms ease"
     });
     const dropTitle = document.createElement("div");
-    css3(dropTitle, { fontWeight: "600", fontSize: "12px", color: TEXT3 });
+    css5(dropTitle, { fontWeight: "600", fontSize: "12px", color: TEXT3 });
     dropTitle.textContent = "Drop a garden JSON file here";
     const dropHint = document.createElement("div");
     dropHint.textContent = "\u2026or click to browse";
@@ -50112,9 +50111,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     fileInput.type = "file";
     fileInput.accept = ".json,application/json,text/plain";
     fileInput.multiple = true;
-    css3(fileInput, { display: "none" });
+    css5(fileInput, { display: "none" });
     const setDropActive = (active2) => {
-      css3(dropZone, {
+      css5(dropZone, {
         borderColor: active2 ? TEAL_BRD_HI : BORDER_HI,
         background: active2 ? TEAL_DIM2 : "rgba(255,255,255,0.03)"
       });
@@ -50168,7 +50167,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       card3([sectionLabel3("Import"), dropZone, fileInput])
     );
     const listWrap = document.createElement("div");
-    css3(listWrap, { display: "flex", flexDirection: "column", gap: "6px" });
+    css5(listWrap, { display: "flex", flexDirection: "column", gap: "6px" });
     const renderSavedList = () => {
       const listFn = window.qwsEditorListSavedGardens;
       const loadFn = window.qwsEditorLoadGarden;
@@ -50178,7 +50177,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const items = typeof listFn === "function" ? listFn() : [];
       if (!items.length) {
         const empty = document.createElement("div");
-        css3(empty, { fontSize: "12px", color: TEXT_DIM3, padding: "4px 0" });
+        css5(empty, { fontSize: "12px", color: TEXT_DIM3, padding: "4px 0" });
         empty.textContent = "No saved gardens yet.";
         listWrap.appendChild(empty);
         return;
@@ -50186,7 +50185,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const editorOn = EditorService.isEnabled();
       for (const g of items) {
         const row = document.createElement("div");
-        css3(row, {
+        css5(row, {
           display: "flex",
           alignItems: "center",
           gap: "8px",
@@ -50196,10 +50195,10 @@ Restore figures are averages; unlucky streaks do worse.`;
           border: `1px solid ${BORDER3}`,
           transition: "border-color 120ms ease"
         });
-        row.onmouseenter = () => css3(row, { borderColor: BORDER_HI });
-        row.onmouseleave = () => css3(row, { borderColor: BORDER3 });
+        row.onmouseenter = () => css5(row, { borderColor: BORDER_HI });
+        row.onmouseleave = () => css5(row, { borderColor: BORDER3 });
         const nameEl = document.createElement("div");
-        css3(nameEl, {
+        css5(nameEl, {
           flex: "1",
           fontSize: "12px",
           fontWeight: "600",
@@ -50222,7 +50221,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         });
         loadBtn.disabled = !editorOn;
         if (!editorOn) {
-          css3(loadBtn, { opacity: "0.4", cursor: "not-allowed" });
+          css5(loadBtn, { opacity: "0.4", cursor: "not-allowed" });
           loadBtn.title = "Enable editor mode to load";
         }
         const expBtn = smallBtn("Export", false, async () => {
@@ -50269,7 +50268,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
   }
-  var STYLE_ID5, TEAL2, TEAL_DIM2, TEAL_MID, TEAL_BORDER2, TEAL_BRD_HI, BORDER3, BORDER_HI, CARD_BG2, CARD_BG_HI, TEXT3, TEXT_DIM3, DANGER2, DANGER_DIM, DANGER_BRD, DANGER_HI, DANGER_BRD_HI, css3;
+  var STYLE_ID5, TEAL2, TEAL_DIM2, TEAL_MID, TEAL_BORDER2, TEAL_BRD_HI, BORDER3, BORDER_HI, CARD_BG2, CARD_BG_HI, TEXT3, TEXT_DIM3, DANGER2, DANGER_DIM, DANGER_BRD, DANGER_HI, DANGER_BRD_HI, css5;
   var init_menu10 = __esm({
     "src/features/editor/menu.ts"() {
       "use strict";
@@ -50293,7 +50292,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       DANGER_BRD = "rgba(239,68,68,0.3)";
       DANGER_HI = "rgba(239,68,68,0.2)";
       DANGER_BRD_HI = "rgba(239,68,68,0.55)";
-      css3 = (el, s) => Object.assign(el.style, s);
+      css5 = (el, s) => Object.assign(el.style, s);
     }
   });
 
@@ -51108,7 +51107,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function sectionLabel4(text2) {
     const el = document.createElement("div");
-    css4(el, {
+    css6(el, {
       fontSize: "10px",
       fontWeight: "700",
       letterSpacing: "0.08em",
@@ -51121,7 +51120,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function avatar(player2, size) {
     const el = document.createElement("div");
-    css4(el, {
+    css6(el, {
       width: `${size}px`,
       height: `${size}px`,
       borderRadius: "50%",
@@ -51135,14 +51134,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       overflow: "hidden"
     });
     if (player2.discordAvatarUrl) {
-      css4(el, {
+      css6(el, {
         backgroundImage: `url(${player2.discordAvatarUrl})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         border: `2px solid ${TEAL_BORDER3}`
       });
     } else {
-      css4(el, {
+      css6(el, {
         background: "linear-gradient(135deg, rgba(94,234,212,0.22), rgba(59,130,246,0.22))",
         border: `2px solid rgba(94,234,212,0.2)`
       });
@@ -51152,7 +51151,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function statusPill(online) {
     const wrap = document.createElement("div");
-    css4(wrap, {
+    css6(wrap, {
       display: "flex",
       alignItems: "center",
       gap: "4px",
@@ -51160,7 +51159,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       color: online ? GREEN : TEXT_DIM4
     });
     const dot = document.createElement("span");
-    css4(dot, {
+    css6(dot, {
       width: "6px",
       height: "6px",
       borderRadius: "50%",
@@ -51172,7 +51171,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function primaryBtn2(label2, iconSvg, onClick) {
     const btn = document.createElement("button");
-    css4(btn, {
+    css6(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -51191,16 +51190,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const icon = document.createElement("span");
     icon.innerHTML = iconSvg;
-    css4(icon, { display: "flex", alignItems: "center", flexShrink: "0" });
+    css6(icon, { display: "flex", alignItems: "center", flexShrink: "0" });
     btn.append(icon, document.createTextNode(label2));
-    btn.onmouseenter = () => css4(btn, { background: TEAL_MID2, borderColor: TEAL_BORDER_HI });
-    btn.onmouseleave = () => css4(btn, { background: TEAL_DIM3, borderColor: TEAL_BORDER3 });
+    btn.onmouseenter = () => css6(btn, { background: TEAL_MID2, borderColor: TEAL_BORDER_HI });
+    btn.onmouseleave = () => css6(btn, { background: TEAL_DIM3, borderColor: TEAL_BORDER3 });
     btn.onclick = async () => {
-      css4(btn, { opacity: "0.6", pointerEvents: "none" });
+      css6(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css4(btn, { opacity: "1", pointerEvents: "auto" });
+        css6(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
@@ -51209,13 +51208,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     let isActive = active2;
     const btn = document.createElement("button");
     const applyState2 = () => {
-      css4(btn, {
+      css6(btn, {
         border: `1px solid ${isActive ? TEAL_BORDER_HI : BORDER4}`,
         background: isActive ? TEAL_MID2 : CARD_BG3,
         color: isActive ? TEAL3 : TEXT4
       });
     };
-    css4(btn, {
+    css6(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -51231,22 +51230,22 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const icon = document.createElement("span");
     icon.innerHTML = iconSvg;
-    css4(icon, { display: "flex", alignItems: "center", flexShrink: "0" });
+    css6(icon, { display: "flex", alignItems: "center", flexShrink: "0" });
     btn.append(icon, document.createTextNode(label2));
     applyState2();
     btn.onmouseenter = () => {
-      if (!isActive) css4(btn, { background: CARD_BG_HI2, borderColor: TEAL_BORDER3 });
+      if (!isActive) css6(btn, { background: CARD_BG_HI2, borderColor: TEAL_BORDER3 });
     };
     btn.onmouseleave = applyState2;
     btn.onclick = async () => {
-      css4(btn, { opacity: "0.6", pointerEvents: "none" });
+      css6(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         const next = !isActive;
         await onToggle(next);
         isActive = next;
         applyState2();
       } finally {
-        css4(btn, { opacity: "1", pointerEvents: "auto" });
+        css6(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     btn.__setActive = (v) => {
@@ -51257,7 +51256,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function markUnavailable(btn, hint) {
     btn.title = hint;
-    css4(btn, {
+    css6(btn, {
       opacity: "0.45",
       cursor: "not-allowed",
       filter: "grayscale(1)",
@@ -51274,7 +51273,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function secondaryBtn2(label2, iconSvg, onClick) {
     const btn = document.createElement("button");
-    css4(btn, {
+    css6(btn, {
       display: "flex",
       alignItems: "center",
       gap: "7px",
@@ -51292,25 +51291,25 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const icon = document.createElement("span");
     icon.innerHTML = iconSvg;
-    css4(icon, { display: "flex", alignItems: "center", flexShrink: "0", opacity: "0.7" });
+    css6(icon, { display: "flex", alignItems: "center", flexShrink: "0", opacity: "0.7" });
     btn.append(icon, document.createTextNode(label2));
-    btn.onmouseenter = () => css4(btn, { background: CARD_BG_HI2, borderColor: BORDER_HI2 });
-    btn.onmouseleave = () => css4(btn, { background: CARD_BG3, borderColor: BORDER4 });
+    btn.onmouseenter = () => css6(btn, { background: CARD_BG_HI2, borderColor: BORDER_HI2 });
+    btn.onmouseleave = () => css6(btn, { background: CARD_BG3, borderColor: BORDER4 });
     btn.onclick = async () => {
-      css4(btn, { opacity: "0.6", pointerEvents: "none" });
+      css6(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css4(btn, { opacity: "1", pointerEvents: "auto" });
+        css6(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
   }
   async function renderRoomMenu(root) {
     ensureStyles3();
-    css4(root, { padding: "0", overflow: "hidden" });
+    css6(root, { padding: "0", overflow: "hidden" });
     const wrap = document.createElement("div");
-    css4(wrap, {
+    css6(wrap, {
       display: "flex",
       flexDirection: "row",
       minHeight: "400px",
@@ -51319,7 +51318,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const leftPane = document.createElement("div");
     leftPane.className = "qws-rm-scroll";
-    css4(leftPane, {
+    css6(leftPane, {
       width: "200px",
       flexShrink: "0",
       display: "flex",
@@ -51331,7 +51330,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const rightPane = document.createElement("div");
     rightPane.className = "qws-rm-scroll";
-    css4(rightPane, {
+    css6(rightPane, {
       flex: "1",
       overflowY: "auto",
       padding: "14px 14px 14px 16px",
@@ -51355,7 +51354,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const player2 = playerId2 ? players.find((p) => p.id === playerId2) ?? null : null;
       if (!player2) {
         const hint = document.createElement("div");
-        css4(hint, {
+        css6(hint, {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -51368,15 +51367,15 @@ Restore figures are averages; unlucky streaks do worse.`;
         });
         const iconWrap = document.createElement("div");
         iconWrap.innerHTML = ICONS.user.replace("13", "28").replace("13", "28");
-        css4(iconWrap, { opacity: "0.35" });
+        css6(iconWrap, { opacity: "0.35" });
         hint.append(iconWrap, document.createTextNode("Select a player"));
         rightPane.appendChild(hint);
         return;
       }
       const content = document.createElement("div");
-      css4(content, { display: "flex", flexDirection: "column", gap: "18px" });
+      css6(content, { display: "flex", flexDirection: "column", gap: "18px" });
       const profileCard = document.createElement("div");
-      css4(profileCard, {
+      css6(profileCard, {
         display: "flex",
         alignItems: "center",
         gap: "12px",
@@ -51387,9 +51386,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       const av = avatar(player2, 46);
       const infoBlock = document.createElement("div");
-      css4(infoBlock, { display: "flex", flexDirection: "column", gap: "4px", minWidth: "0", flex: "1" });
+      css6(infoBlock, { display: "flex", flexDirection: "column", gap: "4px", minWidth: "0", flex: "1" });
       const nameEl = document.createElement("div");
-      css4(nameEl, {
+      css6(nameEl, {
         fontSize: "15px",
         fontWeight: "700",
         color: TEXT4,
@@ -51404,7 +51403,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const teleSection = document.createElement("div");
       teleSection.appendChild(sectionLabel4("Teleport"));
       const teleRow = document.createElement("div");
-      css4(teleRow, { display: "flex", gap: "8px" });
+      css6(teleRow, { display: "flex", gap: "8px" });
       const toPlayerBtn = primaryBtn2(
         "To player",
         ICONS.teleport,
@@ -51421,7 +51420,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const followSection = document.createElement("div");
       followSection.appendChild(sectionLabel4("Follow"));
       const followRow = document.createElement("div");
-      css4(followRow, { display: "flex", gap: "8px" });
+      css6(followRow, { display: "flex", gap: "8px" });
       const followPlayerBtn = toggleBtn(
         "Follow player",
         ICONS.follow,
@@ -51445,7 +51444,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const inspectSection = document.createElement("div");
       inspectSection.appendChild(sectionLabel4("Inspect"));
       const inspectGrid = document.createElement("div");
-      css4(inspectGrid, { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" });
+      css6(inspectGrid, { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" });
       inspectGrid.append(
         secondaryBtn2("Inventory", ICONS.inventory, async () => {
           hideWin();
@@ -51504,10 +51503,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       const valSection = document.createElement("div");
       valSection.appendChild(sectionLabel4("Crop values"));
       const valRow = document.createElement("div");
-      css4(valRow, { display: "flex", gap: "8px" });
+      css6(valRow, { display: "flex", gap: "8px" });
       const makeValCard = (label2) => {
         const card5 = document.createElement("div");
-        css4(card5, {
+        css6(card5, {
           flex: "1",
           padding: "11px 14px",
           background: CARD_BG3,
@@ -51518,10 +51517,10 @@ Restore figures are averages; unlucky streaks do worse.`;
           gap: "4px"
         });
         const lbl = document.createElement("div");
-        css4(lbl, { fontSize: "10px", color: TEXT_DIM4, fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" });
+        css6(lbl, { fontSize: "10px", color: TEXT_DIM4, fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" });
         lbl.textContent = label2;
         const val = document.createElement("div");
-        css4(val, { fontSize: "15px", fontWeight: "700", color: "#FFD84D" });
+        css6(val, { fontSize: "15px", fontWeight: "700", color: "#FFD84D" });
         val.textContent = "\u2026";
         card5.append(lbl, val);
         return { card: card5, val };
@@ -51548,7 +51547,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     function createPlayerCard(player2) {
       const isSelected = selectedId === player2.id;
       const card5 = document.createElement("div");
-      css4(card5, {
+      css6(card5, {
         display: "flex",
         alignItems: "center",
         gap: "10px",
@@ -51560,8 +51559,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         transition: "all 120ms ease"
       });
       if (!isSelected) {
-        card5.onmouseenter = () => css4(card5, { background: CARD_BG_HI2, borderColor: "rgba(94,234,212,0.18)" });
-        card5.onmouseleave = () => css4(card5, { background: "rgba(255,255,255,0.02)", borderColor: BORDER4 });
+        card5.onmouseenter = () => css6(card5, { background: CARD_BG_HI2, borderColor: "rgba(94,234,212,0.18)" });
+        card5.onmouseleave = () => css6(card5, { background: "rgba(255,255,255,0.02)", borderColor: BORDER4 });
       }
       card5.onclick = () => {
         selectedId = player2.id;
@@ -51570,9 +51569,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       };
       const av = avatar(player2, 32);
       const info = document.createElement("div");
-      css4(info, { flex: "1", minWidth: "0" });
+      css6(info, { flex: "1", minWidth: "0" });
       const nameEl = document.createElement("div");
-      css4(nameEl, {
+      css6(nameEl, {
         fontSize: "12px",
         fontWeight: "600",
         color: TEXT4,
@@ -51582,7 +51581,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       nameEl.textContent = player2.name || player2.id;
       const st = document.createElement("div");
-      css4(st, {
+      css6(st, {
         display: "flex",
         alignItems: "center",
         gap: "4px",
@@ -51591,7 +51590,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         color: player2.isConnected ? GREEN : TEXT_DIM4
       });
       const dot = document.createElement("span");
-      css4(dot, { width: "5px", height: "5px", borderRadius: "50%", background: player2.isConnected ? GREEN : "rgba(226,232,240,0.3)", flexShrink: "0" });
+      css6(dot, { width: "5px", height: "5px", borderRadius: "50%", background: player2.isConnected ? GREEN : "rgba(226,232,240,0.3)", flexShrink: "0" });
       st.append(dot, document.createTextNode(player2.isConnected ? "Online" : "Offline"));
       info.append(nameEl, st);
       card5.append(av, info);
@@ -51600,20 +51599,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     function renderPlayerList() {
       leftPane.innerHTML = "";
       const header = document.createElement("div");
-      css4(header, {
+      css6(header, {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         marginBottom: "6px"
       });
       const countEl = document.createElement("div");
-      css4(countEl, { fontSize: "10px", fontWeight: "700", letterSpacing: "0.07em", color: TEXT_DIM4, textTransform: "uppercase" });
+      css6(countEl, { fontSize: "10px", fontWeight: "700", letterSpacing: "0.07em", color: TEXT_DIM4, textTransform: "uppercase" });
       countEl.textContent = `${players.length} player${players.length !== 1 ? "s" : ""}`;
       header.appendChild(countEl);
       leftPane.appendChild(header);
       if (players.length === 0) {
         const empty = document.createElement("div");
-        css4(empty, { paddingTop: "16px", textAlign: "center", color: TEXT_DIM4, fontSize: "12px" });
+        css6(empty, { paddingTop: "16px", textAlign: "center", color: TEXT_DIM4, fontSize: "12px" });
         empty.textContent = "No players in room";
         leftPane.appendChild(empty);
         return;
@@ -51643,7 +51642,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     await refresh(true);
   }
-  var STYLE_ID6, TEAL3, TEAL_DIM3, TEAL_MID2, TEAL_BORDER3, TEAL_BORDER_HI, BORDER4, BORDER_HI2, CARD_BG3, CARD_BG_HI2, TEXT4, TEXT_DIM4, GREEN, PLAYER_POSITION_AVAILABLE, PLAYER_POSITION_UNAVAILABLE_HINT, css4, ICO, ICONS;
+  var STYLE_ID6, TEAL3, TEAL_DIM3, TEAL_MID2, TEAL_BORDER3, TEAL_BORDER_HI, BORDER4, BORDER_HI2, CARD_BG3, CARD_BG_HI2, TEXT4, TEXT_DIM4, GREEN, PLAYER_POSITION_AVAILABLE, PLAYER_POSITION_UNAVAILABLE_HINT, css6, ICO, ICONS;
   var init_menu12 = __esm({
     "src/features/room/menu.ts"() {
       "use strict";
@@ -51667,7 +51666,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       GREEN = "#10b981";
       PLAYER_POSITION_AVAILABLE = false;
       PLAYER_POSITION_UNAVAILABLE_HINT = "Temporarily unavailable: the game no longer exposes player positions.";
-      css4 = (el, s) => Object.assign(el.style, s);
+      css6 = (el, s) => Object.assign(el.style, s);
       ICO = (d) => `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
       ICONS = {
         teleport: ICO(`<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/>`),
@@ -52591,7 +52590,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function thumbBox(empty = false) {
     const el = document.createElement("div");
-    css(el, {
+    css4(el, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -52604,7 +52603,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     if (empty) {
       const plus = document.createElement("span");
-      css(plus, { color: TEXT_DIM, fontSize: "18px" });
+      css4(plus, { color: TEXT_DIM, fontSize: "18px" });
       plus.textContent = "+";
       el.appendChild(plus);
     }
@@ -52613,7 +52612,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function buildSlot(target, index, deps) {
     const { entry, result, onError, onChanged } = deps;
     const row = document.createElement("div");
-    css(row, {
+    css4(row, {
       display: "flex",
       flexDirection: "column",
       gap: "8px",
@@ -52625,14 +52624,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     const before = thumbBox();
     mountThumb(before, target, null, SLOT_THUMB_PX);
     const arrow = document.createElement("span");
-    css(arrow, { color: TEXT_DIM, fontSize: "12px" });
+    css4(arrow, { color: TEXT_DIM, fontSize: "12px" });
     arrow.textContent = "\u2192";
     const after = thumbBox(!entry);
     if (entry) mountThumb(after, target, entry.blob, SLOT_THUMB_PX);
     const head = document.createElement("div");
-    css(head, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+    css4(head, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
     const name = document.createElement("div");
-    css(name, {
+    css4(name, {
       fontSize: "11px",
       color: TEXT,
       flex: "1 1 auto",
@@ -52647,20 +52646,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (entry) {
       const applied2 = result?.applied !== false;
       const pill3 = chip(applied2 ? "Active" : "Waiting", applied2 ? "ok" : "warn");
-      css(pill3, { alignSelf: "center", flex: "0 0 auto" });
+      css4(pill3, { alignSelf: "center", flex: "0 0 auto" });
       if (result?.error) pill3.title = result.error;
       head.appendChild(pill3);
     }
     const body = document.createElement("div");
-    css(body, { display: "flex", alignItems: "center", gap: "8px" });
+    css4(body, { display: "flex", alignItems: "center", gap: "8px" });
     const dims = document.createElement("div");
-    css(dims, { fontSize: "10px", color: TEXT_DIM, whiteSpace: "nowrap" });
+    css4(dims, { fontSize: "10px", color: TEXT_DIM, whiteSpace: "nowrap" });
     dims.textContent = `${target.logicalSize.w}\xD7${target.logicalSize.h}`;
     dims.title = "Ideal image size for this slot";
     const spacer2 = document.createElement("div");
-    css(spacer2, { flex: "1 1 auto" });
+    css4(spacer2, { flex: "1 1 auto" });
     const actions2 = document.createElement("div");
-    css(actions2, { display: "flex", gap: "5px", flex: "0 0 auto" });
+    css4(actions2, { display: "flex", gap: "5px", flex: "0 0 auto" });
     if (!target.skinnable) {
       actions2.appendChild(chip(target.blockedReason || "Unavailable", "warn"));
     } else {
@@ -52696,10 +52695,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function buildDetail(options2) {
     const { object, entries: entries2, results, onError, onChanged } = options2;
     const host = document.createElement("div");
-    css(host, { display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" });
+    css4(host, { display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" });
     if (!object) {
       const empty = document.createElement("div");
-      css(empty, { fontSize: "12px", color: TEXT_DIM, textAlign: "center", padding: "28px 0" });
+      css4(empty, { fontSize: "12px", color: TEXT_DIM, textAlign: "center", padding: "28px 0" });
       empty.textContent = "Pick a sprite";
       host.appendChild(empty);
       return host;
@@ -52707,7 +52706,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     host.appendChild(sectionLabel2(object.category));
     if (object.category === "tile") {
       const notice = document.createElement("div");
-      css(notice, {
+      css4(notice, {
         fontSize: "11px",
         color: WARN,
         lineHeight: "1.45",
@@ -52720,7 +52719,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       host.appendChild(notice);
     }
     const title = document.createElement("div");
-    css(title, {
+    css4(title, {
       fontSize: "14px",
       fontWeight: "600",
       color: TEXT,
@@ -52733,7 +52732,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     host.appendChild(title);
     const list = document.createElement("div");
     list.className = "qws-pnl-scroll";
-    css(list, { display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto", minHeight: "0" });
+    css4(list, { display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto", minHeight: "0" });
     object.slots.forEach((target, index) => {
       list.appendChild(
         buildSlot(target, index, {
@@ -52769,10 +52768,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function renderSkinsMenu(container) {
     ensurePanelStyles();
     void initSkins();
-    css(container, { padding: "0", overflow: "hidden" });
+    css4(container, { padding: "0", overflow: "hidden" });
     container.innerHTML = "";
     const root = document.createElement("div");
-    css(root, {
+    css4(root, {
       display: "grid",
       gridTemplateColumns: "minmax(0,1fr) 300px",
       gap: "12px",
@@ -52791,13 +52790,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     container.appendChild(root);
     const browser = card2();
     const detail = card2();
-    css(browser, { overflow: "hidden" });
-    css(detail, { overflow: "hidden" });
+    css4(browser, { overflow: "hidden" });
+    css4(detail, { overflow: "hidden" });
     root.append(browser, detail);
     const header = document.createElement("div");
-    css(header, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" });
+    css4(header, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" });
     const enableWrap = document.createElement("div");
-    css(enableWrap, { display: "flex", alignItems: "center", gap: "8px" });
+    css4(enableWrap, { display: "flex", alignItems: "center", gap: "8px" });
     const enableToggle = toggle(areSkinsEnabled(), (on) => void setSkinsEnabled(on));
     enableToggle.title = "Enable skins";
     enableWrap.append(sectionLabel2("Sprites"), enableToggle);
@@ -52822,20 +52821,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     header.append(enableWrap, clearBtn);
     browser.appendChild(header);
     const filters = document.createElement("div");
-    css(filters, { display: "flex", gap: "8px" });
+    css4(filters, { display: "flex", gap: "8px" });
     const categorySelect = document.createElement("select");
     categorySelect.className = "qws-pnl-input";
-    css(categorySelect, { flex: "0 0 auto", maxWidth: "150px" });
+    css4(categorySelect, { flex: "0 0 auto", maxWidth: "150px" });
     const search2 = document.createElement("input");
     search2.className = "qws-pnl-input";
     search2.type = "search";
     search2.placeholder = "Search";
-    css(search2, { flex: "1 1 auto", minWidth: "0" });
+    css4(search2, { flex: "1 1 auto", minWidth: "0" });
     filters.append(categorySelect, search2);
     browser.appendChild(filters);
     const grid = document.createElement("div");
     grid.className = "qws-pnl-scroll";
-    css(grid, {
+    css4(grid, {
       display: "grid",
       gap: "8px",
       gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))",
@@ -52847,13 +52846,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     browser.appendChild(grid);
     const status2 = document.createElement("div");
-    css(status2, { fontSize: "11px", color: TEXT_DIM, minHeight: "15px" });
+    css4(status2, { fontSize: "11px", color: TEXT_DIM, minHeight: "15px" });
     browser.appendChild(status2);
     const errorEl = document.createElement("div");
-    css(errorEl, { fontSize: "11px", color: DANGER, display: "none" });
+    css4(errorEl, { fontSize: "11px", color: DANGER, display: "none" });
     detail.appendChild(errorEl);
     const detailHost = document.createElement("div");
-    css(detailHost, { display: "flex", flexDirection: "column", minHeight: "0", flex: "1 1 auto" });
+    css4(detailHost, { display: "flex", flexDirection: "column", minHeight: "0", flex: "1 1 auto" });
     detail.appendChild(detailHost);
     const showError = (message2) => {
       errorEl.textContent = message2;
@@ -52914,7 +52913,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       if (!matches.length) {
         const empty = document.createElement("div");
-        css(empty, { gridColumn: "1 / -1", fontSize: "12px", color: TEXT_DIM, padding: "24px 0", textAlign: "center" });
+        css4(empty, { gridColumn: "1 / -1", fontSize: "12px", color: TEXT_DIM, padding: "24px 0", textAlign: "center" });
         empty.textContent = snapshot2.ready ? "No match" : "Loading\u2026";
         grid.appendChild(empty);
       }
@@ -56675,7 +56674,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/chat/index.ts
   function notify2() {
-    for (const listener of [...listeners7]) {
+    for (const listener of [...listeners6]) {
       try {
         listener();
       } catch {
@@ -56916,7 +56915,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (captured.kind === "sell") return captured.plan.sell.length;
     return captured.picks.length;
   }
-  var ALERT_DEDUPE_MS, state2, listeners7, nextProposalSeq, ACCEPTANCE, CompanionChat;
+  var ALERT_DEDUPE_MS, state2, listeners6, nextProposalSeq, ACCEPTANCE, CompanionChat;
   var init_chat = __esm({
     "src/features/companion/chat/index.ts"() {
       "use strict";
@@ -56949,7 +56948,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         run: null,
         cancelRequested: false
       };
-      listeners7 = /* @__PURE__ */ new Set();
+      listeners6 = /* @__PURE__ */ new Set();
       nextProposalSeq = 1;
       ACCEPTANCE = {
         harvest: "Yes, go ahead",
@@ -57011,8 +57010,8 @@ Restore figures are averages; unlucky streaks do worse.`;
           return state2.run !== null;
         },
         subscribe(listener) {
-          listeners7.add(listener);
-          return () => listeners7.delete(listener);
+          listeners6.add(listener);
+          return () => listeners6.delete(listener);
         },
         /** Alerte poussée par une source ; ignorée si identique et récente. */
         alert(text2) {
@@ -57267,7 +57266,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       npcSelect.append(new Option("Unavailable", ""));
     });
     const status2 = document.createElement("div");
-    css(status2, { fontSize: "12px", color: TEXT_DIM, padding: "2px 2px 0" });
+    css4(status2, { fontSize: "12px", color: TEXT_DIM, padding: "2px 2px 0" });
     function refresh() {
       if (disposed) return;
       if (!CompanionService.isRunning()) {
@@ -57488,7 +57487,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function holder(sizePx) {
     const box = document.createElement("span");
-    css(box, {
+    css4(box, {
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
@@ -57592,14 +57591,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function dateSeparator(label2) {
     const wrap = document.createElement("div");
-    css(wrap, { display: "flex", alignItems: "center", gap: "10px", margin: "10px 0 6px" });
+    css4(wrap, { display: "flex", alignItems: "center", gap: "10px", margin: "10px 0 6px" });
     const line = () => {
       const el = document.createElement("div");
-      css(el, { flex: "1", height: "1px", background: BORDER });
+      css4(el, { flex: "1", height: "1px", background: BORDER });
       return el;
     };
     const text2 = document.createElement("div");
-    css(text2, {
+    css4(text2, {
       fontSize: "10px",
       fontWeight: "600",
       color: TEXT_DIM,
@@ -57613,7 +57612,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function systemLine(text2, icons, positioned2 = false) {
     const line = document.createElement("div");
-    css(line, {
+    css4(line, {
       alignSelf: "center",
       fontSize: "11px",
       color: TEXT_DIM,
@@ -57626,7 +57625,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function avatar2(identity, sizePx = AVATAR_PX) {
     const el = document.createElement("div");
-    css(el, {
+    css4(el, {
       width: `${sizePx}px`,
       height: `${sizePx}px`,
       flexShrink: "0",
@@ -57647,7 +57646,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function spacer() {
     const el = document.createElement("div");
-    css(el, { width: `${AVATAR_PX}px`, flexShrink: "0" });
+    css4(el, { width: `${AVATAR_PX}px`, flexShrink: "0" });
     return el;
   }
   function messageRow(message2, flags, identity = null) {
@@ -57655,7 +57654,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const outgoing = message2.from === "you";
     const alerting = message2.kind === "alert";
     const row = document.createElement("div");
-    css(row, {
+    css4(row, {
       display: "flex",
       gap: "8px",
       alignItems: "flex-end",
@@ -57664,7 +57663,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     if (!outgoing) row.append(flags.isLastInGroup ? avatar2(identity) : spacer());
     const column = document.createElement("div");
-    css(column, {
+    css4(column, {
       maxWidth: "78%",
       display: "flex",
       flexDirection: "column",
@@ -57672,7 +57671,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       alignItems: outgoing ? "flex-end" : "flex-start"
     });
     const bubble = document.createElement("div");
-    css(bubble, {
+    css4(bubble, {
       padding: "7px 11px",
       borderRadius: outgoing ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
       fontSize: "12.5px",
@@ -57687,7 +57686,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     column.append(bubble);
     if (flags.isLastInGroup) {
       const stamp = document.createElement("div");
-      css(stamp, { fontSize: "10px", color: TEXT_DIM });
+      css4(stamp, { fontSize: "10px", color: TEXT_DIM });
       stamp.textContent = formatMessageTime(message2.atMs);
       column.append(stamp);
     }
@@ -57696,7 +57695,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function chatHeader(name) {
     const root = document.createElement("div");
-    css(root, {
+    css4(root, {
       display: "flex",
       alignItems: "center",
       gap: "10px",
@@ -57704,15 +57703,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       borderBottom: `1px solid ${BORDER}`
     });
     const portraitSlot = document.createElement("div");
-    css(portraitSlot, { display: "flex", flexShrink: "0" });
+    css4(portraitSlot, { display: "flex", flexShrink: "0" });
     portraitSlot.append(avatar2(null, 32));
     const info = document.createElement("div");
-    css(info, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
+    css4(info, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
     const title = document.createElement("div");
-    css(title, { fontSize: "13px", fontWeight: "600", color: TEXT });
+    css4(title, { fontSize: "13px", fontWeight: "600", color: TEXT });
     title.textContent = name;
     const status2 = document.createElement("div");
-    css(status2, { fontSize: "11px", color: TEXT_DIM });
+    css4(status2, { fontSize: "11px", color: TEXT_DIM });
     info.append(title, status2);
     root.append(portraitSlot, info);
     let shownIdentity = null;
@@ -57720,7 +57719,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       root,
       setStatus(text2, busy4) {
         status2.textContent = text2;
-        css(status2, { color: busy4 ? TEAL : TEXT_DIM });
+        css4(status2, { color: busy4 ? TEAL : TEXT_DIM });
       },
       setIdentity(identity) {
         if (identity.npcId === shownIdentity) return;
@@ -57733,7 +57732,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function threadBody() {
     const body = document.createElement("div");
     body.className = "qws-pnl-scroll";
-    css(body, {
+    css4(body, {
       height: "300px",
       overflowY: "auto",
       padding: "10px",
@@ -57745,7 +57744,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function emptyThread(text2) {
     const wrap = document.createElement("div");
-    css(wrap, {
+    css4(wrap, {
       margin: "auto",
       display: "flex",
       flexDirection: "column",
@@ -57755,14 +57754,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       textAlign: "center"
     });
     const label2 = document.createElement("div");
-    css(label2, { fontSize: "12px", maxWidth: "220px", lineHeight: "1.5" });
+    css4(label2, { fontSize: "12px", maxWidth: "220px", lineHeight: "1.5" });
     label2.textContent = text2;
     wrap.append(label2);
     return wrap;
   }
   function actionBar() {
     const bar = document.createElement("div");
-    css(bar, {
+    css4(bar, {
       display: "flex",
       alignItems: "center",
       flexWrap: "wrap",
@@ -57774,7 +57773,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function barHint(text2, tone = "dim") {
     const hint = document.createElement("div");
-    css(hint, { fontSize: "11px", color: tone === "warn" ? WARN : TEXT_DIM, marginLeft: "auto" });
+    css4(hint, { fontSize: "11px", color: tone === "warn" ? WARN : TEXT_DIM, marginLeft: "auto" });
     hint.textContent = text2;
     return hint;
   }
@@ -57801,7 +57800,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/menu/harvestFields.ts
   function filterCard(icon, title) {
     const summary = document.createElement("div");
-    css(summary, {
+    css4(summary, {
       marginLeft: "auto",
       fontSize: "11px",
       color: TEXT_DIM,
@@ -57812,25 +57811,25 @@ Restore figures are averages; unlucky streaks do worse.`;
       maxWidth: "60%"
     });
     const header = document.createElement("div");
-    css(header, { display: "flex", alignItems: "center", gap: "8px", width: "100%" });
+    css4(header, { display: "flex", alignItems: "center", gap: "8px", width: "100%" });
     header.append(sectionLabel2(icon ? `${icon} ${title}` : title), summary);
     const { root, body } = collapsibleCard({ header, collapsed: true, onToggle: () => {
     } });
-    css(root, { padding: "9px 11px", gap: "9px", flex: "0 0 auto" });
+    css4(root, { padding: "9px 11px", gap: "9px", flex: "0 0 auto" });
     return {
       root,
       body,
       setSummary(text2, active2) {
         summary.textContent = text2;
-        css(summary, { color: active2 ? TEAL : TEXT_DIM });
+        css4(summary, { color: active2 ? TEAL : TEXT_DIM });
       }
     };
   }
   function fieldRow(label2, control) {
     const row = document.createElement("div");
-    css(row, { display: "flex", alignItems: "center", gap: "10px", justifyContent: "space-between" });
+    css4(row, { display: "flex", alignItems: "center", gap: "10px", justifyContent: "space-between" });
     const text2 = document.createElement("div");
-    css(text2, { fontSize: "11.5px", color: TEXT });
+    css4(text2, { fontSize: "11.5px", color: TEXT });
     text2.textContent = label2;
     row.append(text2, control);
     return row;
@@ -57878,7 +57877,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function resultStrip() {
     const root = document.createElement("div");
-    css(root, {
+    css4(root, {
       display: "flex",
       flexDirection: "column",
       gap: "8px",
@@ -57889,9 +57888,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "0 0 auto"
     });
     const count = document.createElement("div");
-    css(count, { fontSize: "13px", fontWeight: "600", color: TEAL });
+    css4(count, { fontSize: "13px", fontWeight: "600", color: TEAL });
     const sprites = document.createElement("div");
-    css(sprites, { display: "flex", alignItems: "flex-end", gap: "10px", flexWrap: "wrap" });
+    css4(sprites, { display: "flex", alignItems: "flex-end", gap: "10px", flexWrap: "wrap" });
     root.append(count, sprites);
     return {
       root,
@@ -57902,16 +57901,16 @@ Restore figures are averages; unlucky streaks do worse.`;
         for (const entry of entries2) {
           const pair = document.createElement("div");
           pair.title = entry.label;
-          css(pair, { display: "flex", alignItems: "center", gap: "3px" });
+          css4(pair, { display: "flex", alignItems: "center", gap: "3px" });
           const tally2 = document.createElement("span");
-          css(tally2, { fontSize: "11px", color: TEXT_DIM });
+          css4(tally2, { fontSize: "11px", color: TEXT_DIM });
           tally2.textContent = String(entry.count);
           pair.append(entry.icon, tally2);
           sprites.append(pair);
         }
         if (hidden > 0) {
           const more = document.createElement("span");
-          css(more, { fontSize: "11px", color: TEXT_DIM, alignSelf: "center" });
+          css4(more, { fontSize: "11px", color: TEXT_DIM, alignSelf: "center" });
           more.textContent = `+${hidden} more`;
           sprites.append(more);
         }
@@ -57920,17 +57919,17 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function lockedNote() {
     const root = document.createElement("div");
-    css(root, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+    css4(root, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
     return {
       root,
       update(lockedOut) {
         if (lockedOut === 0) {
           root.textContent = "Your Locker decides what I leave alone.";
-          css(root, { color: TEXT_DIM });
+          css4(root, { color: TEXT_DIM });
           return;
         }
         root.textContent = `Leaving ${lockedOut} locked crop${lockedOut === 1 ? "" : "s"} alone.`;
-        css(root, { color: WARN });
+        css4(root, { color: WARN });
       }
     };
   }
@@ -57950,7 +57949,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       root.style.display = "none";
       return { root };
     }
-    css(root, {
+    css4(root, {
       display: "flex",
       alignItems: "center",
       gap: "10px",
@@ -57961,12 +57960,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "0 0 auto"
     });
     const text2 = document.createElement("div");
-    css(text2, { fontSize: "11.5px", lineHeight: "1.5", color: TEXT, flex: "1", minWidth: "0" });
+    css4(text2, { fontSize: "11.5px", lineHeight: "1.5", color: TEXT, flex: "1", minWidth: "0" });
     text2.textContent = what;
     const open = document.createElement("button");
     open.type = "button";
     open.textContent = "Set up";
-    css(open, {
+    css4(open, {
       flex: "0 0 auto",
       padding: "6px 11px",
       borderRadius: "9px",
@@ -57993,7 +57992,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function teamSelect(current, onPick) {
     const el = document.createElement("select");
     el.className = "qws-pnl-select";
-    css(el, { fontSize: "12px", color: TEXT, minWidth: "150px" });
+    css4(el, { fontSize: "12px", color: TEXT, minWidth: "150px" });
     const none = document.createElement("option");
     none.value = NO_TEAM;
     none.textContent = "Leave my team alone";
@@ -58043,7 +58042,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       void CompanionService.applySettings({ feedFromGarden: on }).then(checkFeedNow);
     });
     const note = document.createElement("div");
-    css(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+    css4(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
     note.textContent = "He only speaks up when he has something to give. He always asks first.";
     modal.body.append(
       settingRow("Tell me when a pet is starving", "He offers, and waits for your answer.", alerts).row,
@@ -58090,7 +58089,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       void CompanionService.applySettings({ hatchSellTeamId: teamId2 });
     });
     const note = document.createElement("div");
-    css(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+    css4(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
     note.textContent = hatchTeam.empty ? NO_TEAMS_HINT : "The game will not sell a pet on your active team, so a smaller team frees the rest. He asks first, and puts yours back after.";
     modal.body.append(
       settingRow("Team to wear while hatching", "For abilities that change what hatches.", hatchTeam.el).row,
@@ -58177,7 +58176,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       void CompanionService.applySettings({ harvestTeamId: teamId2 });
     });
     const note = document.createElement("div");
-    css(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+    css4(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
     note.textContent = team.empty ? NO_TEAMS_HINT : "He names the team before he picks, and puts yours back after. What he may pick still comes from your Locker.";
     modal.body.append(
       settingRow(
@@ -58300,30 +58299,30 @@ Restore figures are averages; unlucky streaks do worse.`;
       mutationCard.setSummary(summarizeMutations(filters), filters.mutations.length > 0);
     }
     const sizeValue = document.createElement("span");
-    css(sizeValue, { fontSize: "11.5px", color: TEXT, minWidth: "38px", textAlign: "right" });
+    css4(sizeValue, { fontSize: "11.5px", color: TEXT, minWidth: "38px", textAlign: "right" });
     const sizeSlider = document.createElement("input");
     sizeSlider.type = "range";
     sizeSlider.className = "qws-pnl-range";
     sizeSlider.min = "50";
     sizeSlider.max = "100";
     sizeSlider.step = "5";
-    css(sizeSlider, { flex: "1" });
+    css4(sizeSlider, { flex: "1" });
     sizeSlider.addEventListener("input", () => {
       filters = { ...filters, minSizePct: Number(sizeSlider.value) };
       render();
     });
     {
       const control = document.createElement("div");
-      css(control, { display: "flex", alignItems: "center", gap: "10px", flex: "1", minWidth: "0" });
+      css4(control, { display: "flex", alignItems: "center", gap: "10px", flex: "1", minWidth: "0" });
       control.append(sizeSlider, sizeValue);
       const row = fieldRow("Minimum size", control);
-      css(row, { gap: "14px" });
+      css4(row, { gap: "14px" });
       sizeCard.body.append(row);
     }
     const preservedRow = document.createElement("div");
-    css(preservedRow, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
+    css4(preservedRow, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
     const preservedLabel = document.createElement("div");
-    css(preservedLabel, { fontSize: "11.5px", fontWeight: "600", color: TEXT });
+    css4(preservedLabel, { fontSize: "11.5px", fontWeight: "600", color: TEXT });
     preservedRow.append(preservedLabel);
     const preservedControl = document.createElement("div");
     preservedRow.append(preservedControl);
@@ -58362,7 +58361,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       modal.close();
     });
-    css(askButton, { marginLeft: "auto" });
+    css4(askButton, { marginLeft: "auto" });
     const notice = settingsNotice(
       "harvest",
       "Harvest is not set up. I will pick with the team you have on.",
@@ -58447,9 +58446,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       onClose: () => clearInterval(timer2)
     });
     const list = document.createElement("div");
-    css(list, { display: "flex", flexDirection: "column", gap: "7px" });
+    css4(list, { display: "flex", flexDirection: "column", gap: "7px" });
     const empty = document.createElement("div");
-    css(empty, { fontSize: "12px", color: TEXT_DIM, padding: "10px 2px", lineHeight: "1.5" });
+    css4(empty, { fontSize: "12px", color: TEXT_DIM, padding: "10px 2px", lineHeight: "1.5" });
     empty.textContent = "Nobody is hungry, or I have nothing they eat.";
     const notice = settingsNotice(
       "feed",
@@ -58470,11 +58469,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       modal.close();
     });
-    css(askButton, { marginLeft: "auto" });
+    css4(askButton, { marginLeft: "auto" });
     modal.footer.append(askButton);
     function row(candidate) {
       const line = document.createElement("div");
-      css(line, {
+      css4(line, {
         display: "flex",
         alignItems: "center",
         gap: "10px",
@@ -58484,12 +58483,12 @@ Restore figures are averages; unlucky streaks do worse.`;
         background: CARD_BG
       });
       const text2 = document.createElement("div");
-      css(text2, { display: "flex", flexDirection: "column", gap: "2px", flex: "1", minWidth: "0" });
+      css4(text2, { display: "flex", flexDirection: "column", gap: "2px", flex: "1", minWidth: "0" });
       const name = document.createElement("div");
-      css(name, { fontSize: "12.5px", color: TEXT });
+      css4(name, { fontSize: "12.5px", color: TEXT });
       name.textContent = candidate.petName;
       const meta = document.createElement("div");
-      css(meta, { fontSize: "11px", color: candidate.hungerPct <= 5 ? WARN : TEXT_DIM });
+      css4(meta, { fontSize: "11px", color: candidate.hungerPct <= 5 ? WARN : TEXT_DIM });
       meta.textContent = candidate.source.kind === "garden" ? `${candidate.hungerPct}% left, I would pick a ${candidate.source.species}` : `${candidate.hungerPct}% left, I have a ${candidate.source.species} in the bag`;
       text2.append(name, meta);
       const icon = speciesIcon(candidate.source.species, CROP_ICON_PX);
@@ -58532,7 +58531,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/menu/plantGrid.ts
   function plantGrid(options2) {
     const root = document.createElement("div");
-    css(root, {
+    css4(root, {
       display: "grid",
       gridTemplateColumns: `repeat(${GARDEN_COLS / 2}, 1fr) ${HALF_GAP_PX2}px repeat(${GARDEN_COLS / 2}, 1fr)`,
       gridTemplateRows: `repeat(${GARDEN_ROWS}, 1fr)`,
@@ -58559,7 +58558,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     function buildCell(tileIndex) {
       const cell = document.createElement("div");
       cell.dataset.tile = String(tileIndex);
-      css(cell, {
+      css4(cell, {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -58583,7 +58582,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       for (let col = 0; col < GARDEN_COLS; col++) {
         if (col === GARDEN_COLS / 2) {
           const spacer2 = document.createElement("div");
-          css(spacer2, { pointerEvents: "none" });
+          css4(spacer2, { pointerEvents: "none" });
           root.append(spacer2);
         }
         const tileIndex = row * GARDEN_COLS + col;
@@ -58602,12 +58601,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       cell.shown = key2;
       cell.el.replaceChildren();
       if (key2 === "absent") {
-        css(cell.el, { background: "transparent", borderColor: "transparent", cursor: "default" });
+        css4(cell.el, { background: "transparent", borderColor: "transparent", cursor: "default" });
         cell.el.title = "";
         return;
       }
       if (key2 === "occupied") {
-        css(cell.el, {
+        css4(cell.el, {
           background: "rgba(239,68,68,0.22)",
           borderColor: DANGER,
           cursor: "not-allowed"
@@ -58616,16 +58615,16 @@ Restore figures are averages; unlucky streaks do worse.`;
         return;
       }
       if (key2 === "free") {
-        css(cell.el, { background: "rgba(255,255,255,0.05)", borderColor: BORDER, cursor: "pointer" });
+        css4(cell.el, { background: "rgba(255,255,255,0.05)", borderColor: BORDER, cursor: "pointer" });
         cell.el.title = "";
         return;
       }
       const assignment = options2.assignmentAt(tileIndex);
-      css(cell.el, { background: TEAL_DIM, borderColor: TEAL_BORDER, cursor: "pointer" });
+      css4(cell.el, { background: TEAL_DIM, borderColor: TEAL_BORDER, cursor: "pointer" });
       cell.el.title = assignment?.name ?? "";
       if (assignment) {
         const icon = options2.iconFor(assignment, CELL_ICON_PX2);
-        css(icon, { pointerEvents: "none" });
+        css4(icon, { pointerEvents: "none" });
         cell.el.append(icon);
       }
     }
@@ -58678,19 +58677,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     function paletteGroup(title) {
       const root = document.createElement("div");
-      css(root, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
+      css4(root, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
       const row = document.createElement("div");
-      css(row, { display: "flex", flexWrap: "wrap", gap: "5px" });
+      css4(row, { display: "flex", flexWrap: "wrap", gap: "5px" });
       root.append(sectionLabel2(title), row);
       return { root, row };
     }
     const seedGroup = paletteGroup("Seeds");
     const eggGroup = paletteGroup("Eggs");
     const paletteEmpty = document.createElement("div");
-    css(paletteEmpty, { fontSize: "12px", color: TEXT_DIM, lineHeight: "1.5" });
+    css4(paletteEmpty, { fontSize: "12px", color: TEXT_DIM, lineHeight: "1.5" });
     paletteEmpty.textContent = "Nothing to plant. No seeds, no eggs.";
     const hint = document.createElement("div");
-    css(hint, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.5" });
+    css4(hint, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.5" });
     hint.textContent = "Pick one and draw. Right click erases, red is taken.";
     const grid = plantGrid({
       owned: () => owned2,
@@ -58700,7 +58699,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       onPaint: (tileIndex, mode) => paint(tileIndex, mode)
     });
     const strip = document.createElement("div");
-    css(strip, {
+    css4(strip, {
       display: "flex",
       flexDirection: "column",
       gap: "8px",
@@ -58711,9 +58710,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "0 0 auto"
     });
     const stripCount = document.createElement("div");
-    css(stripCount, { fontSize: "13px", fontWeight: "600", color: TEAL });
+    css4(stripCount, { fontSize: "13px", fontWeight: "600", color: TEAL });
     const stripIconRow = document.createElement("div");
-    css(stripIconRow, { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" });
+    css4(stripIconRow, { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" });
     strip.append(stripCount, stripIconRow);
     const clearButton = button2("Clear", "neutral", () => {
       plan = /* @__PURE__ */ new Map();
@@ -58731,7 +58730,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       modal.close();
     });
-    css(askButton, { marginLeft: "auto" });
+    css4(askButton, { marginLeft: "auto" });
     modal.body.append(seedGroup.root, eggGroup.root, paletteEmpty, hint, grid.root, strip);
     modal.footer.append(clearButton, askButton);
     function remainingFor(item) {
@@ -58792,9 +58791,9 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
         const pair = document.createElement("div");
         pair.title = entry.item.name;
-        css(pair, { display: "flex", alignItems: "center", gap: "3px" });
+        css4(pair, { display: "flex", alignItems: "center", gap: "3px" });
         const tally2 = document.createElement("span");
-        css(tally2, { fontSize: "11px", color: TEXT_DIM });
+        css4(tally2, { fontSize: "11px", color: TEXT_DIM });
         tally2.textContent = String(entry.count);
         pair.append(icon, tally2);
         stripIconRow.append(pair);
@@ -58849,7 +58848,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/menu/hatchChips.ts
   function iconHolder3(sizePx) {
     const box = document.createElement("div");
-    css(box, {
+    css4(box, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -58864,7 +58863,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const candidates = [species, species.replace(/\s+/g, "")].filter(Boolean);
     attachSpriteIcon(box, ["pet"], candidates, sizePx, SPRITE_LOG_TAG5, {
       onNoSpriteFound: () => {
-        css(box, { fontSize: "12px", fontWeight: "700", color: TEXT_DIM });
+        css4(box, { fontSize: "12px", fontWeight: "700", color: TEXT_DIM });
         box.textContent = species.charAt(0).toUpperCase();
       }
     });
@@ -58874,7 +58873,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const box = iconHolder3(sizePx);
     const square = document.createElement("span");
     const { bg } = getAbilityChipColors(abilityId);
-    css(square, {
+    css4(square, {
       display: "inline-block",
       width: "13px",
       height: "13px",
@@ -58940,7 +58939,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     function scrollable(row) {
       const box = document.createElement("div");
-      css(box, { maxHeight: `${ABILITY_LIST_MAX_PX}px`, overflowY: "auto", overscrollBehavior: "contain" });
+      css4(box, { maxHeight: `${ABILITY_LIST_MAX_PX}px`, overflowY: "auto", overscrollBehavior: "contain" });
       box.append(row);
       return box;
     }
@@ -59008,7 +59007,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     {
       const control = document.createElement("div");
-      css(control, { display: "flex", alignItems: "center", gap: "10px" });
+      css4(control, { display: "flex", alignItems: "center", gap: "10px" });
       control.append(strengthField, strengthToggle);
       strengthCard.body.append(fieldRow("Keep max STR from", control));
     }
@@ -59016,7 +59015,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return count === 0 ? "None" : `${count} picked`;
     }
     const strip = document.createElement("div");
-    css(strip, {
+    css4(strip, {
       display: "flex",
       flexDirection: "column",
       gap: "5px",
@@ -59027,9 +59026,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "0 0 auto"
     });
     const ready = document.createElement("div");
-    css(ready, { fontSize: "13px", fontWeight: "600", color: TEAL });
+    css4(ready, { fontSize: "13px", fontWeight: "600", color: TEAL });
     const note = document.createElement("div");
-    css(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+    css4(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
     strip.append(ready, note);
     const resetButton = button2("Reset", "neutral", () => commit({ ...DEFAULT_KEEP_RULES }));
     const askButton = button2("Ask to hatch", "accent", () => {
@@ -59043,7 +59042,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       modal.close();
     });
-    css(askButton, { marginLeft: "auto" });
+    css4(askButton, { marginLeft: "auto" });
     const notice = settingsNotice(
       "hatch",
       "Hatching is not set up. I will use the team you have on.",
@@ -59068,7 +59067,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       renderAbilities();
       strengthField.disabled = rules2.minMaxStr === null;
       if (rules2.minMaxStr !== null) strengthField.value = String(rules2.minMaxStr);
-      css(strengthField, { opacity: rules2.minMaxStr === null ? "0.45" : "1" });
+      css4(strengthField, { opacity: rules2.minMaxStr === null ? "0.45" : "1" });
       strengthCard.setSummary(
         rules2.minMaxStr === null ? "Off" : `${rules2.minMaxStr} and up`,
         rules2.minMaxStr !== null
@@ -59077,10 +59076,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       ready.textContent = scope.readySlots.length === 0 ? "No egg is ready" : `${scope.readySlots.length} egg${scope.readySlots.length === 1 ? "" : "s"} ready`;
       if (!hasAnyRule(rules2)) {
         note.textContent = "Nothing set to keep, so I will not offer to sell. Favourites and your active team are always safe.";
-        css(note, { color: WARN });
+        css4(note, { color: WARN });
       } else {
         note.textContent = `Favourites and your active team are never sold.${waiting > 0 ? ` ${waiting} still growing.` : ""}`;
-        css(note, { color: TEXT_DIM });
+        css4(note, { color: TEXT_DIM });
       }
       askButton.disabled = scope.readySlots.length === 0;
     }
@@ -59123,7 +59122,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function openActionsModal(host, onAsk) {
     const modal = openModal2({ host, title: "What can you do?", widthPx: 420 });
     const list = document.createElement("div");
-    css(list, { display: "flex", flexDirection: "column", gap: "8px" });
+    css4(list, { display: "flex", flexDirection: "column", gap: "8px" });
     modal.body.append(list);
     function renderRows(rows) {
       if (!modal.isOpen()) return;
@@ -59220,7 +59219,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function renderChatTab(view) {
     view.innerHTML = "";
     const root = document.createElement("div");
-    css(root, { display: "flex", flexDirection: "column", gap: "8px" });
+    css4(root, { display: "flex", flexDirection: "column", gap: "8px" });
     view.append(root);
     const header = chatHeader("Companion");
     const thread = threadBody();
@@ -59265,7 +59264,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     function confirmRow(proposalId) {
       const row = document.createElement("div");
-      css(row, { display: "flex", gap: "6px", alignSelf: "flex-start", marginLeft: "34px", marginTop: "2px" });
+      css4(row, { display: "flex", gap: "6px", alignSelf: "flex-start", marginLeft: "34px", marginTop: "2px" });
       row.append(
         button2("Yes, go ahead", "accent", () => void CompanionChat.confirm(proposalId).catch(() => {
         })),
@@ -59356,7 +59355,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     ensurePanelStyles();
     const ui = new Menu({ id: "companion", compact: true, windowSelector: ".qws-win" });
     ui.mount(root);
-    css(root, { minWidth: `${MIN_WIDTH_PX}px` });
+    css4(root, { minWidth: `${MIN_WIDTH_PX}px` });
     const TABS2 = ["behavior", "chat"];
     ui.addTab("behavior", "Behavior", (view) => renderBehaviorTab(view));
     ui.addTab("chat", "Chat", (view) => renderChatTab(view));
@@ -59386,7 +59385,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/antiAfk/antiAfk.ts
   function createAntiAfkController(deps) {
     const STOP_EVENTS = ["visibilitychange", "blur", "focus", "focusout", "pagehide", "freeze", "resume"];
-    const listeners8 = [];
+    const listeners7 = [];
     function swallowAll() {
       const add = (target, t) => {
         const h2 = (e) => {
@@ -59394,7 +59393,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           e.preventDefault?.();
         };
         target.addEventListener(t, h2, { capture: true });
-        listeners8.push({ t, h: h2, target });
+        listeners7.push({ t, h: h2, target });
       };
       STOP_EVENTS.forEach((t) => {
         add(document, t);
@@ -59402,11 +59401,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
     }
     function unswallowAll() {
-      for (const { t, h: h2, target } of listeners8) try {
+      for (const { t, h: h2, target } of listeners7) try {
         target.removeEventListener(t, h2, { capture: true });
       } catch {
       }
-      listeners8.length = 0;
+      listeners7.length = 0;
     }
     const docProto = Object.getPrototypeOf(document);
     const saved = {

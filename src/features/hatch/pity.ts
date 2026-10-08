@@ -1,5 +1,3 @@
-// src/services/hatchPity.ts
-//
 // Bad Luck Protection maths for eggs, derived entirely from the game catalogs.
 //
 // The game keeps the real counters server-side (`serverOnly.pityCounters` is
@@ -133,7 +131,7 @@ function speciesTargets(entry: Record<string, unknown>): PityTarget[] {
   const targets: PityTarget[] = [];
 
   // The catalog's own thresholds win wherever they exist. Where the field is
-  // missing — an older egg, or a stale hardcoded fallback — every species at or
+  // missing (an older egg, or a stale bundled fallback), every species at or
   // below the protected rate gets the derived threshold instead, so the panel
   // still shows something truthful rather than nothing.
   const species = declared ? Object.keys(declared) : Array.from(chances.keys());

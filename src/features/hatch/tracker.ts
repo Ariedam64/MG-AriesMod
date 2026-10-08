@@ -1,11 +1,9 @@
-// src/services/hatchTracker.ts
-//
 // Hatch detection from the activity log rather than the websocket.
 //
 // The old path intercepted the outgoing `HatchEgg` message and then polled the
-// inventory for a pet that hadn't been there before. That misses whatever the
-// poll doesn't catch — a reload mid-hatch, a Double Hatch adding two pets at
-// once — and it can only ever say "a pet appeared", not which egg produced it.
+// inventory for a pet that had not been there before. That misses whatever the
+// poll does not catch (a reload mid-hatch, a Double Hatch adding two pets at
+// once), and it can only ever say "a pet appeared", not which egg produced it.
 //
 // The log says both, exactly:
 //   { action: "hatchEgg",  parameters: { eggId, pet } }          → one pull
@@ -18,6 +16,7 @@ import { getActivityLogHistory, type ActivityLogEntry } from "../activityLog/his
 import { myActivityLog } from "../../game/store/atoms";
 import { StatsService } from "../stats/stats";
 import { GOLD_MUTATION, RAINBOW_MUTATION, protectedSpecies } from "./pity";
+import { Emitter } from "../../lib/emitter";
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
 
 const STATE_PATH = "hatch.tracker";
@@ -72,9 +71,7 @@ interface HatchEvent {
   isPull: boolean;
 }
 
-type Listener = (state: HatchTrackerState) => void;
-
-const listeners = new Set<Listener>();
+const changes = new Emitter<HatchTrackerState>();
 let cachedState: HatchTrackerState | null = null;
 
 /* --------------------------------- state --------------------------------- */
@@ -147,9 +144,7 @@ function saveState(state: HatchTrackerState): void {
   }
   cachedState = state;
   try { writeAriesPath(STATE_PATH, state); } catch {}
-  for (const listener of listeners) {
-    try { listener(state); } catch {}
-  }
+  changes.emit(state);
 }
 
 /* ------------------------------- log parsing ------------------------------ */
@@ -222,7 +217,7 @@ function rarityOf(event: HatchEvent): HatchRarity {
  * Applies one pull to an egg's counters.
  *
  * A miss adds one, the outcome resets to zero. Gold and Rainbow are separate
- * rolls: a Rainbow does not clear Gold — the game's own rule is that a
+ * rolls: a Rainbow does not clear Gold. The game's own rule is that a
  * guarantee never downgrades good luck, so an unspent Gold stays due.
  */
 function applyPull(counters: EggCounters, event: HatchEvent, rareSpecies: string[]): void {
@@ -243,7 +238,7 @@ function applyPull(counters: EggCounters, event: HatchEvent, rareSpecies: string
  * `countStats` is false for the first pass over the persisted history: those
  * pets were already tallied by the previous websocket-based detection (or by
  * the inventory seeding), so re-counting them would inflate the table. Their
- * counters are still replayed — a miss count from a partial window is a lower
+ * counters are still replayed: a miss count from a partial window is a lower
  * bound, which is the right shape for it.
  */
 function ingest(entries: ActivityLogEntry[], countStats: boolean): boolean {
@@ -311,9 +306,8 @@ export const HatchTracker = {
   // since the server's own never resets except on the outcome itself. Only
   // `setOffset` moves a counter by hand.
 
-  subscribe(listener: Listener): () => void {
-    listeners.add(listener);
-    return () => { listeners.delete(listener); };
+  subscribe(listener: (state: HatchTrackerState) => void): () => void {
+    return changes.on(listener);
   },
 };
 

@@ -1,5 +1,3 @@
-// src/ui/menus/pets/hatch-egg-card.ts
-//
 // One collapsible card per egg: its Bad Luck Protection progress, then the
 // pets it can hatch and how many of each the player has.
 
@@ -8,22 +6,15 @@ import { HatchTracker, type EggCounters } from "./tracker";
 import type { EggPity, PityTarget } from "./pity";
 import type { StatsSnapshot } from "../stats/stats";
 import { speciesCountsGrid } from "./counts";
-import {
-  BORDER,
-  CARD_BG,
-  TEXT,
-  TEXT_DIM,
-  WARN,
-  css,
-  iconBox,
-  meter,
-  numberField,
-  sectionLabel,
-} from "../../ui/kit/panel";
+import { formatInteger as formatInt } from "../../lib/format";
+import { meter } from "../../ui/kit/badges";
+import { sectionLabel } from "../../ui/kit/card";
+import { textInput } from "../../ui/kit/fields";
+import { iconBox } from "../../ui/kit/icons";
 import { collapsibleCard } from "../../ui/kit/layout";
+import { color } from "../../ui/kit/theme";
 
-const NF_INT = new Intl.NumberFormat("en-US");
-const formatInt = (value: number) => NF_INT.format(Math.max(0, Math.floor(value || 0)));
+const css = (el: HTMLElement, style: Partial<CSSStyleDeclaration>) => Object.assign(el.style, style);
 
 const EGG_ICON_PX = 30;
 const TARGET_ICON_PX = 22;
@@ -81,7 +72,7 @@ function targetRow(egg: EggPity, target: PityTarget, showOffsets: boolean): HTML
     const name = document.createElement("span");
     css(name, {
       fontSize: "12.5px",
-      color: TEXT,
+      color: color.text,
       overflow: "hidden",
       textOverflow: "ellipsis",
       whiteSpace: "nowrap",
@@ -93,7 +84,7 @@ function targetRow(egg: EggPity, target: PityTarget, showOffsets: boolean): HTML
   const chance = formatChance(target.chance);
   if (chance) {
     const rate = document.createElement("span");
-    css(rate, { fontSize: "10.5px", color: TEXT_DIM, whiteSpace: "nowrap" });
+    css(rate, { fontSize: "10.5px", color: color.textDim, whiteSpace: "nowrap" });
     rate.textContent = chance;
     label.appendChild(rate);
   }
@@ -105,7 +96,7 @@ function targetRow(egg: EggPity, target: PityTarget, showOffsets: boolean): HTML
   css(value, {
     fontSize: "11.5px",
     fontVariantNumeric: "tabular-nums",
-    color: due || near ? WARN : TEXT_DIM,
+    color: due || near ? color.warn : color.textDim,
     whiteSpace: "nowrap",
     textAlign: "right",
   });
@@ -125,8 +116,9 @@ function targetRow(egg: EggPity, target: PityTarget, showOffsets: boolean): HTML
   row.append(label, bar.root, value);
 
   if (showOffsets) {
-    const input = numberField(0, ceiling, 1, offset);
-    css(input, { width: "70px", padding: "5px 7px", fontSize: "11px" });
+    const input = textInput("", String(offset), { small: true });
+    Object.assign(input, { type: "number", min: "0", max: String(ceiling), step: "1" });
+    css(input, { width: "70px", padding: "5px 7px", fontSize: "11px", textAlign: "right" });
     input.title = "Your real in-game counter for this outcome. The mod adds what it has seen since.";
     input.addEventListener("change", () => {
       HatchTracker.setOffset(egg.eggId, target.key, Number(input.value));
@@ -150,7 +142,7 @@ function targetRow(egg: EggPity, target: PityTarget, showOffsets: boolean): HTML
  */
 function trackingNote(): HTMLElement {
   const note = document.createElement("div");
-  css(note, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.45", padding: "1px 0 4px" });
+  css(note, { fontSize: "10px", color: color.textDim, lineHeight: "1.45", padding: "1px 0 4px" });
 
   const startedAt = HatchTracker.getTrackingStartedAt();
   const since = startedAt > 0
@@ -173,7 +165,7 @@ function eggHeader(egg: EggPity, pulls: number): HTMLElement {
   css(name, {
     fontSize: "13.5px",
     fontWeight: "600",
-    color: TEXT,
+    color: color.text,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -189,7 +181,7 @@ function eggHeader(egg: EggPity, pulls: number): HTMLElement {
   }
 
   const seen = document.createElement("span");
-  css(seen, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap", marginLeft: "auto" });
+  css(seen, { fontSize: "11px", color: color.textDim, whiteSpace: "nowrap", marginLeft: "auto" });
   seen.textContent = pulls === 1 ? "1 hatch seen" : `${formatInt(pulls)} hatches seen`;
   head.appendChild(seen);
 
@@ -221,8 +213,8 @@ export function createEggCard(options: EggCardOptions): HTMLElement {
     gap: "2px",
     padding: "7px 9px",
     borderRadius: "8px",
-    background: CARD_BG,
-    border: `1px solid ${BORDER}`,
+    background: color.cardBg,
+    border: `1px solid ${color.border}`,
   });
 
   // Species and mutation guarantees are separate rolls, but both are Bad Luck
@@ -235,7 +227,7 @@ export function createEggCard(options: EggCardOptions): HTMLElement {
 
   if (egg.fauna.length) {
     const separator = document.createElement("div");
-    css(separator, { height: "1px", background: BORDER, margin: "5px 0 4px" });
+    css(separator, { height: "1px", background: color.border, margin: "5px 0 4px" });
     panel.appendChild(separator);
 
     panel.appendChild(

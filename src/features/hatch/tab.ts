@@ -1,9 +1,8 @@
-// src/ui/menus/petsHatch.ts
-// "Hatch" tab of the Pets menu: one collapsible card per egg, ordered by the
+// The Hatch tab of the Pets menu: one collapsible card per egg, ordered by the
 // game's own rarity order, holding that egg's Bad Luck Protection progress and
 // the pets it hatches. Species no egg produces fall into a final card.
 //
-// Hatches are detected from the activity log (see services/hatchTracker), not
+// Hatches are detected from the activity log (see tracker.ts), not
 // from the websocket: the log names the egg and the pet outright, and tells a
 // Double Hatch bonus pet apart from a real pull.
 
@@ -11,20 +10,12 @@ import { petCatalog } from "../../data";
 import { HatchTracker } from "./tracker";
 import { listEggPity } from "./pity";
 import { StatsService, type StatsSnapshot } from "../stats/stats";
-import { myInventory, myPetInfos } from "../../game/store/atoms";
+import { Atoms } from "../../game/store/atoms";
 import { createEggCard } from "./eggCard";
 import { countsFor, sortSpeciesByRarity, speciesCountsGrid, totalOf } from "./counts";
-import {
-  BORDER,
-  CARD_BG,
-  TEAL,
-  TEXT,
-  TEXT_DIM,
-  button,
-  css,
-  ensurePanelStyles,
-} from "../../ui/kit/panel";
+import { button } from "../../ui/kit/button";
 import { collapsibleCard } from "../../ui/kit/layout";
+import { color } from "../../ui/kit/theme";
 import { getAriesStorage, updateAriesStorage } from "../../platform/storage";
 
 type HatchedCounts = StatsSnapshot["pets"]["hatchedByType"][string];
@@ -33,7 +24,7 @@ const OTHER_SECTION_ID = "__other__";
 
 /* ------------------------------ collapse state ----------------------------- */
 
-// Cards start closed — eleven eggs expanded at once buries the tab — so what
+// Cards start closed, since eleven eggs expanded at once bury the tab. What
 // persists is the opposite: which ones the player has opened.
 function isCollapsed(sectionId: string): boolean {
   return getAriesStorage().hatch?.expanded?.[sectionId] !== true;
@@ -93,10 +84,10 @@ async function seedFromOwnedPets(stats: StatsSnapshot): Promise<void> {
 
   let inventory: unknown = null;
   let activePets: unknown = null;
-  try { inventory = await myInventory.get(); } catch (error) {
+  try { inventory = await Atoms.inventory.myInventory.get(); } catch (error) {
     console.warn("[PetsHatch] Failed to read inventory data", error);
   }
-  try { activePets = await myPetInfos.get(); } catch (error) {
+  try { activePets = await Atoms.pets.myPetInfos.get(); } catch (error) {
     console.warn("[PetsHatch] Failed to read active pet data", error);
   }
 
@@ -167,14 +158,13 @@ export function renderHatchTab(view: HTMLElement): void {
     (view as any).__cleanup__ = undefined;
   }
 
-  ensurePanelStyles();
-  view.innerHTML = "";
+  view.replaceChildren();
 
   // Style an inner wrapper, never the tab view itself: an inline display on
   // the view would override the menu's .qmm-view show/hide rule.
   const wrap = document.createElement("div");
-  wrap.classList.add("qws-pnl-root", "qws-pnl-scroll");
-  css(wrap, {
+  wrap.classList.add("qws-pnl-scroll");
+  Object.assign(wrap.style, {
     display: "flex",
     flexDirection: "column",
     gap: "8px",
@@ -191,35 +181,34 @@ export function renderHatchTab(view: HTMLElement): void {
 
   /* ----- Header ----- */
   const header = document.createElement("div");
-  css(header, { display: "flex", alignItems: "center", gap: "8px", flexShrink: "0", padding: "0 2px" });
+  Object.assign(header.style, { display: "flex", alignItems: "center", gap: "8px", flexShrink: "0", padding: "0 2px" });
 
   const title = document.createElement("div");
-  css(title, { fontSize: "14.5px", fontWeight: "700", color: TEXT, flex: "1 1 auto" });
+  Object.assign(title.style, { fontSize: "14.5px", fontWeight: "700", color: color.text, flex: "1 1 auto" });
   title.textContent = "🥚 Hatches & bad luck protection";
   title.title =
-    "Counted from the hatches Arie's Mod has watched — the game never sends the real counters. Use Calibrate to set your actual head start.";
+    "Counted from the hatches Arie's Mod has watched: the game never sends the real counters. Use Calibrate to set your actual head start.";
   header.appendChild(title);
 
   let showOffsets = false;
-  const calibrateBtn = button("Calibrate", "neutral", () => {
-    showOffsets = !showOffsets;
-    repaint();
+  const calibrateBtn = button("Calibrate", {
+    size: "sm",
+    title: "Show a head start field on every counter.",
+    onClick: () => {
+      showOffsets = !showOffsets;
+      repaint();
+    },
   });
-  calibrateBtn.title = "Show a head start field on every counter.";
   header.appendChild(calibrateBtn);
   wrap.appendChild(header);
 
   const body = document.createElement("div");
-  css(body, { display: "flex", flexDirection: "column", gap: "8px" });
+  Object.assign(body.style, { display: "flex", flexDirection: "column", gap: "8px" });
   wrap.appendChild(body);
 
   /* ----- Painting ----- */
   function repaint(): void {
-    css(calibrateBtn, {
-      color: showOffsets ? TEAL : TEXT,
-      borderColor: showOffsets ? "rgba(94,234,212,0.3)" : BORDER,
-      background: showOffsets ? "rgba(94,234,212,0.12)" : CARD_BG,
-    });
+    calibrateBtn.setActive(showOffsets);
 
     const stats = StatsService.getSnapshot();
     body.innerHTML = "";
@@ -257,7 +246,7 @@ export function renderHatchTab(view: HTMLElement): void {
 
     if (!body.childElementCount) {
       const empty = document.createElement("div");
-      css(empty, { fontSize: "12.5px", color: TEXT_DIM, padding: "6px 2px" });
+      Object.assign(empty.style, { fontSize: "12.5px", color: color.textDim, padding: "6px 2px" });
       empty.textContent = "No egg data available yet.";
       body.appendChild(empty);
     }
