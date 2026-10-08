@@ -11,21 +11,32 @@ Userscript (Tampermonkey) that hooks the Magic Garden client at runtime. TypeScr
 
 Fixes land here first, then get ported. The fork is **not** a mirror: it has features this repo does not (ReplenishPotion in `services/pets.ts`, its own `chat/gardenRead.ts`), so a blind file copy breaks it. `/port` handles this. Never `cp` a file into the fork without checking whether it diverged.
 
+## Layout
+
+`src/` is organised by feature. A bug in the locker lives in `features/locker/`, logic and menu together.
+
+| Folder | Holds |
+|---|---|
+| `lib/` | helpers that know nothing about the game |
+| `platform/` | the userscript environment: GM requests, `aries_mod` storage, Discord, the mod's own APIs |
+| `game/` | access to the running game: socket hook and commands (`ws/`), jotai store (`store/`), Pixi sprites and tiles, modals, the local player |
+| `data/` | catalogs (live API over the bundled copy) and the shared game rules in `data/rules/` |
+| `features/` | one folder per player-facing feature |
+| `ui/` | HUD, toasts, and the component kit in `ui/kit/` |
+
+`lib/`, `platform/`, `game/` and `data/` never import from `features/` or `ui/`. Features build on them and on `ui/kit/`, and `main.ts` with `ui/hud.ts` puts the features together.
+
 ## Commands
 
 ```bash
 npm run build          # -> dist/quinoa-ws.min.user.js
 npm run watch
-npm run check:<name>   # see below
+npm run typecheck      # strict tsc over src/, esbuild itself never type checks
+npm run check          # every check suite
+npm run check:<name>   # one suite
 ```
 
-There is **no `tsconfig.json` and no typecheck script.** esbuild does the build without type checking, so a type error only shows up in the editor or via `npx tsc --noEmit` on a single file. The check scripts are the real safety net.
-
-Check suites, all of which must pass before shipping:
-
-`stats` `identity` `commands` `sprites` `cropsize` `harvestfilters` `locker` `abilitylogs` `growslot` `tilecapture` `deleters` `chat` `companion` `dialogue` `storage` `wander` `mirror` `afk`
-
-Each is `scripts/check<Name>.ts`, bundled by esbuild and run in node against a DOM stub (`scripts/_nodeStub.cjs` for the ones that pull in UI code). They print `ok`/`FAIL` lines and exit non-zero on failure.
+Each suite is `scripts/check<Name>.ts`, bundled by esbuild and run in node against a DOM stub (`scripts/_nodeStub.cjs` for the ones that pull in UI code). They print `ok`/`FAIL` lines and exit non-zero on failure. All of them, and the typecheck, must pass before shipping.
 
 ## Releasing
 
@@ -50,7 +61,7 @@ Never hardcode game data. It comes from the catalogs in `src/data/`, which merge
 
 Whole number in `[50, 100]`. `multiplier = 1 + (maxSizeMultiplier - 1) * (size - 50) / 50`.
 
-All of it lives in `src/utils/cropSize.ts` and nowhere else. `readCropSize` understands both the current `size` field and the pre-rework `targetScale`. The pre-rework names (`targetScale` on the slot, `maxScale` on the catalog) are dead **for crops** but still live **for pets**, so do not rename them blindly.
+All of it lives in `src/data/rules/cropSize.ts` and nowhere else. `readCropSize` understands both the current `size` field and the pre-rework `targetScale`. The pre-rework names (`targetScale` on the slot, `maxScale` on the catalog) are dead **for crops** but still live **for pets**, so do not rename them blindly.
 
 ## Fixing a bug
 
