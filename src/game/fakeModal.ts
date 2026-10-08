@@ -1,19 +1,22 @@
-// src/features/inventory/fakeInventory.ts
-// ⇒ Générique "fakeModal" + helpers spécifiques "inventory" & "journal"
-// Fix: un seul patch partagé sur myData (merge générique) pour éviter les conflits
-// quand on alterne Inventaire ⇄ Journal.
-
 import { fakeShow, fakeHide, type FakeConfig } from "./fakeAtoms";
 import { Atoms } from "./store/atoms";
 import { modalNameOf } from "./modalState";
-import { activityLogOpenTarget, activityLogTabOf, type ActivityLogTab } from "./activityLogModalLayout";
+import { ACTIVITY_LOG_MODAL_ID, activityLogOpenTarget, activityLogTabOf, type ActivityLogTab } from "./activityLogModalLayout";
 
-/* --------------------------------- Types -------------------------------- */
-export type ModalId = string;
-export type InvPayload = { items?: any[]; favoritedItemIds?: string[] } | any;
+/**
+ * Opening the game's own modals, and opening them on data the mod supplies
+ * (another player's inventory, journal, stats or activity log) by faking the
+ * atoms they read while they are open.
+ */
 
+type ModalId = string;
+type ShowOpts = { open?: boolean; autoRestoreMs?: number };
 
-/* ------------------------------- Modal I/O ------------------------------- */
+export { ACTIVITY_LOG_MODAL_ID };
+export const JOURNAL_MODAL_ID: ModalId = "journal";
+const INVENTORY_MODAL_ID: ModalId = "inventory";
+
+/* ================================ Modal I/O ================================ */
 
 export async function openModal(modalId: ModalId) {
   try {
@@ -21,29 +24,29 @@ export async function openModal(modalId: ModalId) {
     if (current && current !== modalId) {
       await Atoms.ui.activeModal.set(null);
       await Atoms.ui.inventoryModalIsActive.set(false);
-      await new Promise(r => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
     }
     await Atoms.ui.activeModal.set(modalId);
-    await Atoms.ui.inventoryModalIsActive.set(modalId === "inventory");
-  } catch (err) {
-  }
+    await Atoms.ui.inventoryModalIsActive.set(modalId === INVENTORY_MODAL_ID);
+  } catch {}
 }
 
+/**
+ * Closes `modalId` only if it is still the active one, so a modal the player
+ * opened in the meantime survives. Without an argument it closes whatever is
+ * open (auth gate and the like).
+ */
 export async function closeModal(modalId?: ModalId) {
-  // Si on cible une modal précise, on ne ferme QUE si elle est toujours active.
-  // Évite de tuer une modal que l'utilisateur a ouverte entretemps. Sans argument,
-  // on garde le comportement "force close" (auth gate, etc.).
   try {
     if (modalId) {
       const current = await Atoms.ui.activeModal.get();
       if (current !== modalId) return;
     }
     await Atoms.ui.activeModal.set(null);
-    if (modalId === "inventory" || !modalId) {
+    if (modalId === INVENTORY_MODAL_ID || !modalId) {
       await Atoms.ui.inventoryModalIsActive.set(false);
     }
-  } catch (err) {
-  }
+  } catch {}
 }
 
 /** `value` is the raw atom value the gates see, `{ modal, openId }` since v1342. */
@@ -53,9 +56,8 @@ function isModalOpen(value: any, modalId: ModalId) {
 
 async function isModalOpenAsync(modalId: ModalId): Promise<boolean> {
   try {
-    const v = await Atoms.ui.activeModal.get();
-    return isModalOpen(v, modalId);
-  } catch (err) {
+    return isModalOpen(await Atoms.ui.activeModal.get(), modalId);
+  } catch {
     return false;
   }
 }
@@ -64,40 +66,29 @@ async function waitModalClosed(modalId: ModalId, timeoutMs = 120000): Promise<bo
   const t0 = performance.now();
   while (performance.now() - t0 < timeoutMs) {
     try {
-      const v = await Atoms.ui.activeModal.get();
-      if (!isModalOpen(v, modalId)) return true;
+      if (!isModalOpen(await Atoms.ui.activeModal.get(), modalId)) return true;
     } catch {
-      // si l'atom n'est pas lisible, on considère "fermée"
+      // An unreadable atom counts as closed.
       return true;
     }
-    await new Promise(r => setTimeout(r, 80));
+    await new Promise((r) => setTimeout(r, 80));
   }
   return false;
 }
 
-/* --------------------------- Helpers de gate ---------------------------- */
+/* ============================== Faked atoms =============================== */
 
-
-
-const mergeMyData = (real: any, patch: any) => {
-  const base = real && typeof real === "object" ? real : {};
-  const add  = patch && typeof patch === "object" ? patch : {};
-  return { ...base, ...add };
-};
-
-/* ------------------------------- API générique ------------------------------- */
-
-
-/* ============================ Patchs partagés / spécifiques ============================ */
 /**
- * Patch PARTAGÉ sur myData:
- *  - merge générique: { ...real, ...patch }
- *  - gate: actif si inventory, journal, stats ou activityLog est ouvert
- *  => plus de conflit de merge quand on switch.
+ * One patch on myData shared by every faked modal, merged as
+ * `{ ...real, ...patch }` and active while any of them is open. A single patch
+ * is what keeps switching between them from fighting over the merge.
  */
 const SHARED_MYDATA_PATCH: FakeConfig<any> = {
   label: Atoms.data.myData.label,
-  merge: mergeMyData,
+  merge: (real: any, patch: any) => ({
+    ...(real && typeof real === "object" ? real : {}),
+    ...(patch && typeof patch === "object" ? patch : {}),
+  }),
   gate: {
     label: Atoms.ui.activeModal.label,
     isOpen: (v) => ["inventory", "journal", "activityLog"].includes(modalNameOf(v) ?? ""),
@@ -105,125 +96,100 @@ const SHARED_MYDATA_PATCH: FakeConfig<any> = {
   },
 };
 
-/** Patch SPÉCIFIQUE sur myInventoryAtom (utile pour l’UI inventaire). */
+/** The inventory UI also reads myInventoryAtom directly, so it gets its own patch. */
 const INVENTORY_ATOM_PATCH: FakeConfig<any> = {
   label: Atoms.inventory.myInventory.label,
   merge: (_real: any, fake: any) => fake,
   gate: {
     label: Atoms.ui.activeModal.label,
-    isOpen: (v) => modalNameOf(v) === "inventory",
+    isOpen: (v) => modalNameOf(v) === INVENTORY_MODAL_ID,
     autoDisableOnClose: true,
   },
 };
 
-/* ============================ Spécifique INVENTORY ============================ */
+type FakeModal = {
+  /** Fakes the data and, unless `open: false`, opens the modal on it. */
+  show(payload?: any, opts?: ShowOpts): Promise<void>;
+  isOpen(): Promise<boolean>;
+  waitClosed(timeoutMs?: number): Promise<boolean>;
+};
 
-const INVENTORY_MODAL_ID: ModalId = "inventory";
-
-async function openInventoryPanel() {
-  return openModal(INVENTORY_MODAL_ID);
+function defineFakeModal(spec: {
+  /** The key under myData the modal reads. */
+  field: string;
+  /** What to fake when `show` gets no payload. */
+  empty?: unknown;
+  /** The modal whose closing `waitClosed` waits for. */
+  modal: ModalId;
+  open: () => Promise<void>;
+  isOpen?: () => Promise<boolean>;
+  /** "patch" fakes myInventoryAtom too; "clear" drops a leftover inventory patch first. */
+  inventoryAtom?: "patch" | "clear";
+}): FakeModal {
+  return {
+    async show(payload, opts) {
+      const fakeOpts = { openGate: false, autoRestoreMs: opts?.autoRestoreMs };
+      if (spec.inventoryAtom === "clear") await fakeHide(INVENTORY_ATOM_PATCH.label);
+      await fakeShow(SHARED_MYDATA_PATCH, { [spec.field]: payload ?? spec.empty }, fakeOpts);
+      if (spec.inventoryAtom === "patch") await fakeShow(INVENTORY_ATOM_PATCH, payload, fakeOpts);
+      if (opts?.open !== false) await spec.open();
+    },
+    isOpen: spec.isOpen ?? (() => isModalOpenAsync(spec.modal)),
+    waitClosed: (timeoutMs) => waitModalClosed(spec.modal, timeoutMs),
+  };
 }
 
-export async function closeInventoryPanel() {
-  return closeModal(INVENTORY_MODAL_ID);
+/* ================================ Inventory =============================== */
+
+/**
+ * Drops the inventory fake but leaves the modal open: when the mod's flow is
+ * done while the player may still be looking, the real data comes back under
+ * their eyes instead of the modal vanishing.
+ */
+async function disableFakeInventory() {
+  await fakeHide(INVENTORY_ATOM_PATCH.label);
+  await fakeHide(SHARED_MYDATA_PATCH.label);
 }
 
+const closeInventory = () => closeModal(INVENTORY_MODAL_ID);
+
+export const fakeInventory = {
+  ...defineFakeModal({
+    field: "inventory",
+    modal: INVENTORY_MODAL_ID,
+    open: () => openModal(INVENTORY_MODAL_ID),
+    inventoryAtom: "patch",
+  }),
+  disable: disableFakeInventory,
+  close: closeInventory,
+  /** Drops the fake and closes the inventory. */
+  async hide() {
+    await disableFakeInventory();
+    await closeInventory();
+  },
+};
+
+/** Whether a raw active modal value is the inventory. */
 export function isInventoryOpen(v: any) {
   return isModalOpen(v, INVENTORY_MODAL_ID);
 }
 
-export async function isInventoryPanelOpen(): Promise<boolean> {
-  return isModalOpenAsync(INVENTORY_MODAL_ID);
-}
+/* ================================= Journal ================================ */
 
-export async function waitInventoryPanelClosed(timeoutMs = 120000): Promise<boolean> {
-  return waitModalClosed(INVENTORY_MODAL_ID, timeoutMs);
-}
+export const fakeJournal = defineFakeModal({
+  field: "journal",
+  empty: {},
+  modal: JOURNAL_MODAL_ID,
+  open: () => openModal(JOURNAL_MODAL_ID),
+  inventoryAtom: "clear",
+});
 
-/** Active les fakes d’inventaire et ouvre la modale si demandé. */
-export async function fakeInventoryShow(
-  payload: InvPayload,
-  opts?: { open?: boolean; autoRestoreMs?: number }
-) {
-  const shouldOpen = opts?.open !== false;
+/* ========================= Activity log and stats ========================= */
 
-  // 1) Patch partagé dans myData → { inventory: payload }
-  await fakeShow(SHARED_MYDATA_PATCH, { inventory: payload }, {
-    openGate: false,
-    autoRestoreMs: opts?.autoRestoreMs,
-  });
-
-  // 2) Patch spécifique dans myInventoryAtom
-  await fakeShow(INVENTORY_ATOM_PATCH, payload, {
-    openGate: false,
-    autoRestoreMs: opts?.autoRestoreMs,
-  });
-
-  if (shouldOpen) await openInventoryPanel();
-}
-
-/** Désactive les fakes d’inventaire. */
-export async function fakeInventoryHide() {
-  await fakeHide(INVENTORY_ATOM_PATCH.label);
-  await fakeHide(SHARED_MYDATA_PATCH.label);
-  await closeInventoryPanel();
-}
-
-/**
- * Désactive les fakes d'inventaire SANS fermer la modal.
- * Utile quand le mod a fini son flow mais que l'utilisateur est encore
- * potentiellement en train de regarder l'inventaire — on lui rend la vraie
- * donnée sous les yeux au lieu de lui yank la modal.
- */
-export async function fakeInventoryDisable() {
-  await fakeHide(INVENTORY_ATOM_PATCH.label);
-  await fakeHide(SHARED_MYDATA_PATCH.label);
-}
-
-/* =============================== Spécifique JOURNAL =============================== */
-
-export const JOURNAL_MODAL_ID: ModalId = "journal";
-
-async function openJournalModal() {
-  return openModal(JOURNAL_MODAL_ID);
-}
-
-
-
-export async function isJournalModalOpen(): Promise<boolean> {
-  return isModalOpenAsync(JOURNAL_MODAL_ID);
-}
-
-export async function waitJournalModalClosed(timeoutMs = 120000): Promise<boolean> {
-  return waitModalClosed(JOURNAL_MODAL_ID, timeoutMs);
-}
-
-/** Active le fake du journal (via patch partagé myData) et ouvre la modale si demandé. */
-export async function fakeJournalShow(
-  payload?: any,
-  opts?: { open?: boolean; autoRestoreMs?: number }
-) {
-  const shouldOpen = opts?.open !== false;
-
-  // Par sécurité: on s'assure que le patch inventaire spécifique ne reste pas actif
-  await fakeHide(INVENTORY_ATOM_PATCH.label);
-
-  await fakeShow(SHARED_MYDATA_PATCH, { journal: payload ?? {} }, {
-    openGate: false,
-    autoRestoreMs: opts?.autoRestoreMs,
-  });
-
-  if (shouldOpen) await openJournalModal();
-}
-
-
-/* ===================== Activity log et Stats : une seule modale ===================== */
-// Depuis v1396 la modale `stats` n'existe plus : Stats est un onglet de la
-// modale `activityLog`, choisi par `activityLogTabAtom`. On écrit l'onglet puis
-// la modale, dans l'ordre du jeu. Si la modale est déjà ouverte, elle suit
-// l'onglet d'elle-même.
-
-export const ACTIVITY_LOG_MODAL_ID: ModalId = "activityLog";
+// Since v1396 the `stats` modal no longer exists: Stats is a tab of the
+// `activityLog` modal, picked by `activityLogTabAtom`. The tab is written
+// first, then the modal, in the game's order; an already open modal follows
+// the tab by itself.
 
 async function openActivityLogTab(tab: ActivityLogTab) {
   const target = activityLogOpenTarget(tab);
@@ -231,65 +197,21 @@ async function openActivityLogTab(tab: ActivityLogTab) {
   return openModal(target.modal);
 }
 
-async function isActivityLogTabOpen(tab: ActivityLogTab): Promise<boolean> {
-  if (!(await isModalOpenAsync(ACTIVITY_LOG_MODAL_ID))) return false;
-  try { return activityLogTabOf(await Atoms.ui.activityLogTab.get()) === tab; } catch { return false; }
-}
+export const fakeStats = defineFakeModal({
+  field: "stats",
+  empty: {},
+  // Waits for the modal to close, not for a change of tab.
+  modal: ACTIVITY_LOG_MODAL_ID,
+  open: () => openActivityLogTab("stats"),
+  async isOpen() {
+    if (!(await isModalOpenAsync(ACTIVITY_LOG_MODAL_ID))) return false;
+    try { return activityLogTabOf(await Atoms.ui.activityLogTab.get()) === "stats"; } catch { return false; }
+  },
+});
 
-/* =============================== Spécifique STATS =============================== */
-
-async function openStatsModal() {
-  return openActivityLogTab("stats");
-}
-
-
-export async function isStatsModalOpenAsync(): Promise<boolean> {
-  return isActivityLogTabOpen("stats");
-}
-
-/** Attend la fermeture de la modale, pas un changement d'onglet. */
-export async function waitStatsModalClosed(timeoutMs = 120000): Promise<boolean> {
-  return waitModalClosed(ACTIVITY_LOG_MODAL_ID, timeoutMs);
-}
-
-export async function fakeStatsShow(payload?: any, opts?: { open?: boolean; autoRestoreMs?: number }) {
-  const shouldOpen = opts?.open !== false;
-
-  await fakeShow(SHARED_MYDATA_PATCH, { stats: payload ?? {} }, {
-    openGate: false,
-    autoRestoreMs: opts?.autoRestoreMs,
-  });
-
-  if (shouldOpen) await openStatsModal();
-}
-
-
-/* ============================ Spécifique ACTIVITY LOG ============================ */
-
-async function openActivityLogModal() {
-  return openActivityLogTab("logs");
-}
-
-
-
-export async function isActivityLogModalOpenAsync(): Promise<boolean> {
-  return isModalOpenAsync(ACTIVITY_LOG_MODAL_ID);
-}
-
-export async function waitActivityLogModalClosed(timeoutMs = 120000): Promise<boolean> {
-  return waitModalClosed(ACTIVITY_LOG_MODAL_ID, timeoutMs);
-}
-
-export async function fakeActivityLogShow(payload?: any, opts?: { open?: boolean; autoRestoreMs?: number }) {
-  const shouldOpen = opts?.open !== false;
-
-  await fakeShow(SHARED_MYDATA_PATCH, { activityLogs: payload ?? [] }, {
-    openGate: false,
-    autoRestoreMs: opts?.autoRestoreMs,
-  });
-
-  if (shouldOpen) await openActivityLogModal();
-}
-
-
-
+export const fakeActivityLog = defineFakeModal({
+  field: "activityLogs",
+  empty: [],
+  modal: ACTIVITY_LOG_MODAL_ID,
+  open: () => openActivityLogTab("logs"),
+});

@@ -1,6 +1,7 @@
 import { joinPath, relPath } from '../utils/path';
 import type { ManifestBundle, ManifestSrc } from '../types';
 import { getBlob as httpGetBlob, getJSON as httpGetJSON } from '../../../platform/http';
+import { pageWindow } from '../../../platform/pageContext';
 
 // Assets go through GM_xmlhttpRequest first, which crosses into the
 // extension's content-script bridge. That bridge can be slow to attach at
@@ -73,7 +74,7 @@ function getManagedTextures(renderer: any): any[] {
 
 /**
  * Find the game's already-loaded KTX2 base texture by searching the renderer's
- * managed texture list.  The game loads all atlas sheets at startup — we reuse
+ * managed texture list.  The game loads all atlas sheets at startup, and we reuse
  * those rather than loading KTX2 ourselves (which would require PIXI.Assets
  * access that the bundled game doesn't expose).
  *
@@ -86,7 +87,7 @@ export async function loadKtx2AsTexture(
   ctors: any,
   timeoutMs = 3_000,
 ): Promise<unknown> {
-  const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
+  const root: any = pageWindow;
 
   // Strategy 1: Global PIXI.Assets (available when game exposes PIXI).
   const PIXI = root.PIXI;
@@ -145,8 +146,8 @@ function isAtlasJsonPath(path: string): boolean {
 /**
  * Atlas JSON paths listed by the manifest, one per asset.
  *
- * An asset's `src` list holds the same atlas packed at several resolutions —
- * 1x and 2x carry identical frame keys, only the rectangles differ — so exactly
+ * An asset's `src` list holds the same atlas packed at several resolutions:
+ * 1x and 2x carry identical frame keys, only the rectangles differ, so exactly
  * one is taken. The highest resolution wins: its rectangles are true pixels
  * (`meta.scale: 1`), which is what a replacement image should be fitted to.
  * Taking both would index every frame twice with conflicting rectangles.

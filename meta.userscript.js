@@ -22,7 +22,6 @@
 // @connect      mg-api.ariedam.fr
 // @connect      ariedam.fr
 // @connect      cdn.pixabay.com
-// @connect      cdn.jsdelivr.net
 // @connect      magicgarden.gg
 // @connect      i.imgur.com
 // @connect      cdn.discordapp.com

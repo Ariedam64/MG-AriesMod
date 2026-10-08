@@ -1,3 +1,4 @@
+import { pageWindow } from '../../../platform/pageContext';
 // Generic PIXI helpers (lightly typed)
 
 export interface PixiCtors {
@@ -32,7 +33,7 @@ function findAny(root: any, pred: (node: any) => boolean, lim = 25000) {
  * of sprites) would otherwise exhaust the shared budget before the walk
  * ever reaches sibling branches like a UI layer, making anything only
  * found there (e.g. Text nodes) unreachable once the world grows large
- * enough — a race against world size, not a real "not found" result.
+ * enough: a race against world size, not a real "not found" result.
  */
 function findAnyPerBranch(root: any, pred: (node: any) => boolean, limPerBranch = 25000) {
   if (!root) return null;
@@ -59,8 +60,8 @@ function ctorsFromStage(stage: any): PixiCtors | null {
   const anySpr = findAnyPerBranch(stage, (x: any) => x?.texture?.frame && x?.constructor && x?.texture?.constructor && x?.texture?.frame?.constructor);
   if (!anySpr) return null;
   // The game's Rive-based display objects can also expose `.text`/`.style`,
-  // so a bare "has text and style" match can capture a RiveSprite constructor
-  // — whose positional-args constructor then throws on `{ text, style }`
+  // so a bare "has text and style" match can capture a RiveSprite constructor,
+  // whose positional-args constructor then throws on `{ text, style }`
   // (e.g. `artboard.advance` of undefined). Prefer genuine Pixi v8 text nodes
   // (renderPipeId 'text'); keep the loose match as a fallback for other Pixi
   // versions, but never accept Rive artboard nodes.
@@ -80,20 +81,20 @@ function ctorsFromStage(stage: any): PixiCtors | null {
 }
 
 export function getCtors(app: any): PixiCtors {
-  const root: any = (globalThis as any).unsafeWindow || (globalThis as any);
+  const root: any = pageWindow;
   const P = root.PIXI;
   if (P?.Texture && P?.Sprite && P?.Container && P?.Rectangle) {
     return { Container: P.Container, Sprite: P.Sprite, Texture: P.Texture, Rectangle: P.Rectangle, Text: P.Text || null };
   }
 
-  // Stage walk — covers Application path and renderer-only path after first render.
+  // Stage walk: covers Application path and renderer-only path after first render.
   const renderer = app?.renderer ?? app;
   for (const candidate of [app?.stage, renderer?.lastObjectRendered, renderer?.stage]) {
     const hit = ctorsFromStage(candidate);
     if (hit) return hit;
   }
 
-  throw new Error('No Sprite found (ctors) — PIXI not exposed and stage not yet rendered.');
+  throw new Error('No Sprite found (ctors): PIXI not exposed and stage not yet rendered.');
 }
 
 const baseTexOf = (tex: any) => tex?.baseTexture ?? tex?.source?.baseTexture ?? tex?.source ?? tex?._baseTexture ?? null;

@@ -1,5 +1,3 @@
-// src/utils/activityLogModalLayout.ts
-//
 // Since v1396 the game's Stats and Activity Log modals are one: the
 // `activityLog` modal with a Logs tab and a Stats tab, picked by
 // `activityLogTabAtom`. The standalone `stats` modal no longer exists, so

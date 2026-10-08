@@ -8,9 +8,10 @@ export interface HudHandles {
 import type { SpriteState } from '../types';
 import type { MutationName } from '../settings';
 import { curVariant, clearVariantCache } from '../mutations/variantBuilder';
+import { pageWindow } from '../../../platform/pageContext';
 
 export function exposeApi(state: SpriteState, hud: HudHandles) {
-  const root: any = (globalThis as any).unsafeWindow || globalThis;
+  const root: any = pageWindow;
   const api = {
     open() {
       hud.root?.style && (hud.root.style.display = 'block');

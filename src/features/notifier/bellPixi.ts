@@ -11,7 +11,8 @@
 // The rest of the notifier UI (badge, panel, sounds) stays plain DOM; only
 // the anchor point moves from `document.querySelector('button[...]')` to
 // this controller's `getScreenRect()`.
-import { getSpriteState, getStage, findAcrossBranches, findByLabel } from "../../game/pixi/gardenInfoCard";
+import { getStage, findAcrossBranches, findByLabel } from "../../game/pixi/gardenInfoCard";
+import { getReadySpriteState } from "../../game/sprites/context";
 import { pageWindow, shareGlobal } from "../../platform/pageContext";
 
 const RAIL_LABEL = "RightSideRail";
@@ -190,7 +191,7 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
   // direction).
   const computeScreenRect = (): ScreenRect | null => {
     if (!bellContainer || bellContainer.destroyed) return null;
-    const state = getSpriteState();
+    const state = getReadySpriteState();
     const canvas = state?.renderer?.canvas || state?.renderer?.view?.canvas || state?.renderer?.view;
     if (!canvas) return null;
     try {
@@ -282,7 +283,7 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
   // coordinate space, so a candidate slot can be checked against the actual
   // viewport. Null when the renderer's screen size isn't readable.
   const railLocalScreenBounds = (): { top: number; bottom: number } | null => {
-    const state = getSpriteState();
+    const state = getReadySpriteState();
     const screenHeight = Number(state?.renderer?.screen?.height);
     if (!Number.isFinite(screenHeight) || screenHeight <= 0) return null;
     try {
@@ -371,7 +372,7 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
       removeButton();
       return;
     }
-    const state = getSpriteState();
+    const state = getReadySpriteState();
     if (!state?.ctors?.Text) return;
 
     if (!bellContainer) {
@@ -436,7 +437,7 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
 
   const tryFindRail = () => {
     if (!running || rail) return;
-    const state = getSpriteState();
+    const state = getReadySpriteState();
     if (!state) return;
     const stage = getStage(state);
     const found = findAcrossBranches(stage, (node: any) => node?.label === RAIL_LABEL);
@@ -463,7 +464,7 @@ export function startNotificationBellPixi(opts: NotificationBellPixiOptions): No
   };
 
   const isReachableFromLiveStage = (node: any): boolean => {
-    const state = getSpriteState();
+    const state = getReadySpriteState();
     if (!state) return false;
     const stage = getStage(state);
     if (!stage) return false;

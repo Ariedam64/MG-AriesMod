@@ -3,8 +3,9 @@
 // Images are fetched through GM requests, which get past CORS, and kept as
 // object URLs. Mutation colours are painted on a canvas client-side.
 
-import { getJSON, getBlob } from "../../../platform/gm";
-import { withDiscordPollPause } from "../../../platform/ariesApi/discordPolls";
+import { getBlob as httpGetBlob, getJSON as httpGetJSON } from "../../../platform/http";
+
+const SPRITE_REQUEST = { preferGm: true };
 import { MGData } from "../../../data/live";
 import {
   findSprite,
@@ -31,10 +32,9 @@ setCatalogReader((key: SpriteCatalogKey) => MGData.get(key) as Record<string, un
 
 function fetchIndex(): Promise<void> {
   if (indexReady) return indexReady;
-  indexReady = withDiscordPollPause(() =>
-    getJSON<{ items: Array<{ id: string; name: string }> }>(
-      `${API_BASE}/assets/sprite-data?flat=1`,
-    ),
+  indexReady = httpGetJSON<{ items: Array<{ id: string; name: string }> }>(
+    `${API_BASE}/assets/sprite-data?flat=1`,
+    SPRITE_REQUEST,
   )
     .then((data) => {
       setSpriteIndex(data.items || [], API_BASE);
@@ -291,7 +291,7 @@ const objectUrlCache = new Map<string, Promise<string>>();
 function getSpriteObjectUrl(apiUrl: string): Promise<string> {
   let promise = objectUrlCache.get(apiUrl);
   if (promise) return promise;
-  promise = withDiscordPollPause(() => getBlob(apiUrl)).then(blob => URL.createObjectURL(blob));
+  promise = httpGetBlob(apiUrl, SPRITE_REQUEST).then(blob => URL.createObjectURL(blob));
   objectUrlCache.set(apiUrl, promise);
   return promise;
 }
@@ -335,12 +335,6 @@ export function onSpriteWarmupProgress(
   try { listener(warmupState); } catch { /* ignore */ }
   return () => { warmupListeners.delete(listener); };
 }
-
-// No-ops left for game/sprites, which still calls them. Sprites come from the
-// API now, and warm-up is the index fetch. Delete with those calls.
-export function primeSpriteData(_category: string, _spriteId: string, _dataUrl: string): void {}
-
-export function primeWarmupKeys(_keys: string[]): void {}
 
 export function warmupSpriteCache(): void {
   fetchIndex().then(() => {

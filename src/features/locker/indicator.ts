@@ -13,11 +13,11 @@ import { Atoms } from "../../game/store/atoms";
 import { shareGlobal } from "../../platform/pageContext";
 import {
   watchGardenInfoCard,
-  getSpriteState,
   getStage,
   findGraphicsCtor,
   type GardenInfoCardGeometry,
 } from "../../game/pixi/gardenInfoCard";
+import { getReadySpriteState } from "../../game/sprites/context";
 
 // Same purple as the old DOM border (`rgb(188, 53, 215)`).
 const BORDER_COLOR = 0xbc35d7;
@@ -93,7 +93,7 @@ export function startLockerIndicatorInPixi(): LockerIndicatorController {
       removeBorder();
       return;
     }
-    const state = getSpriteState();
+    const state = getReadySpriteState();
     if (!graphicsCtor) {
       graphicsCtor = state ? findGraphicsCtor(getStage(state)) : null;
       if (!graphicsCtor) return;

@@ -18,9 +18,10 @@ import {
   type ActionKey,
 } from "./classification";
 import { getActivityLogHistory, type ActivityLogEntry } from "./history";
-import { fakeActivityLogShow } from "../../game/fakeModal";
+import { fakeActivityLog } from "../../game/fakeModal";
 import { Atoms } from "../../game/store/atoms";
-import { getSpriteState, getStage, findAcrossBranches, findGraphicsCtor } from "../../game/pixi/gardenInfoCard";
+import { getStage, findAcrossBranches, findGraphicsCtor } from "../../game/pixi/gardenInfoCard";
+import { getReadySpriteState } from "../../game/sprites/context";
 import {
   ACTIVITY_LOG_MODAL_ID,
   ACTIVITY_LOG_MODAL_LABEL,
@@ -97,7 +98,7 @@ export function getFilteredHistoryForReopen(): ActivityLogEntry[] {
 async function applyActiveFilter(): Promise<void> {
   if (!modalOpen) return;
   try {
-    await fakeActivityLogShow(computeFilteredHistory(activeFilter), { open: false });
+    await fakeActivityLog.show(computeFilteredHistory(activeFilter), { open: false });
   } catch {
   }
 }
@@ -417,7 +418,7 @@ function syncToolbarUnsafe(): void {
   if (!anchors) return;
 
   if (!toolbarState) {
-    const state = getSpriteState();
+    const state = getReadySpriteState();
     if (!state?.ctors?.Text) return;
     const stage = getStage(state);
     const graphicsCtor = findGraphicsCtor(stage);
@@ -467,7 +468,7 @@ function syncToolbarUnsafe(): void {
 
 function tryFindModal(): void {
   if (!modalOpen || modalNode) return;
-  const state = getSpriteState();
+  const state = getReadySpriteState();
   if (!state) return;
   const stage = getStage(state);
   const found = findAcrossBranches(stage, (node: any) => node?.label === ACTIVITY_LOG_MODAL_LABEL);

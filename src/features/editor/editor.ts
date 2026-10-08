@@ -5285,7 +5285,7 @@ async function removeItemFromGardenAtCurrentTile() {
   void removeGardenObjectAtCurrentTile();
 }
 
-async function removeDecorFromGardenAtCurrentTile() {
+export async function removeDecorFromGardenAtCurrentTile() {
   void removeGardenObjectAtCurrentTile();
 }
 

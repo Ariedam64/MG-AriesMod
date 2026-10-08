@@ -1,4 +1,3 @@
-// src/utils/modalState.ts
 // Reads and writes the game's active modal, whatever shape the build uses.
 //
 // Up to v1324 `activeModalStateAtom` held the modal name (`string | null`).

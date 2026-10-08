@@ -9,7 +9,7 @@ import {
   storageKeyFromSpecies,
   storageKeyFromToolId,
 } from "../autoStore/autoStore";
-import { fakeInventoryShow, isInventoryPanelOpen, waitInventoryPanelClosed, fakeInventoryHide } from "../../game/fakeModal";
+import { fakeInventory } from "../../game/fakeModal";
 import { toastSimple } from "../../ui/toast";
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
 
@@ -778,7 +778,7 @@ function removeOverlayKeyGuards() {
 // Fallback: synthétise ESC si jamais ça jette.
 async function closeSeedInventoryPanel() {
   try {
-    await fakeInventoryHide();
+    await fakeInventory.hide();
   } catch {
     try {
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
@@ -1009,7 +1009,7 @@ async function repatchFakeSeedInventoryWithSelection() {
   }
 
   try {
-    await fakeInventoryShow({ items: patched, favoritedItemIds: [] }, { open: false });
+    await fakeInventory.show({ items: patched, favoritedItemIds: [] }, { open: false });
   } catch {
     // panel fermé entre-temps → on ignore
   }
@@ -1059,7 +1059,7 @@ async function openSeedInventoryPreview() {
       await toastSimple("Seed inventory", "No seeds to display.", "info");
       return;
     }
-    await fakeInventoryShow(buildInventoryShapeFrom(src), { open: true });
+    await fakeInventory.show(buildInventoryShapeFrom(src), { open: true });
   } catch (e: any) {
     await toastSimple("Seed inventory", e?.message || "Failed to open seed inventory.", "error");
   }
@@ -1086,10 +1086,10 @@ async function openSeedSelectorFlow(setWindowVisible?: (v: boolean) => void) {
     showSeedOverlay();
     await beginSelectedNameListener();
 
-    await fakeInventoryShow(buildInventoryShapeFrom(seedSourceCache), { open: true });
+    await fakeInventory.show(buildInventoryShapeFrom(seedSourceCache), { open: true });
 
-    if (await isInventoryPanelOpen()) {
-      await waitInventoryPanelClosed();
+    if (await fakeInventory.isOpen()) {
+      await fakeInventory.waitClosed();
     }
   } catch (e: any) {
     await toastSimple("Seed inventory", e?.message || "Failed to open seed selector.", "error");
@@ -1322,7 +1322,7 @@ async function repatchFakeDecorInventoryWithSelection() {
   }
 
   try {
-    await fakeInventoryShow({ items: patched, favoritedItemIds: [] }, { open: false });
+    await fakeInventory.show({ items: patched, favoritedItemIds: [] }, { open: false });
   } catch {}
 }
 
@@ -1535,10 +1535,10 @@ async function openDecorSelectorFlow(setWindowVisible?: (v: boolean) => void) {
     showDecorOverlay();
     await beginSelectedDecorNameListener();
 
-    await fakeInventoryShow(buildDecorInventoryShapeFrom(decorSourceCache), { open: true });
+    await fakeInventory.show(buildDecorInventoryShapeFrom(decorSourceCache), { open: true });
 
-    if (await isInventoryPanelOpen()) {
-      await waitInventoryPanelClosed();
+    if (await fakeInventory.isOpen()) {
+      await fakeInventory.waitClosed();
     }
   } catch (e: any) {
     await toastSimple("Decor inventory", e?.message || "Failed to open decor selector.", "error");

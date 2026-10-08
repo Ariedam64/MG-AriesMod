@@ -1,9 +1,8 @@
-// src/store/bridge.ts
 // Cross-mod jotai store sharing protocol.
 //
 // Problem: two userscripts (this mod + the standalone Community Hub) must NOT
 // both run the "write-once" store capture (it temporarily patches atom.write
-// on every atom in jotaiAtomCache — two concurrent patchers can corrupt each
+// on every atom in jotaiAtomCache, and two concurrent patchers can corrupt each
 // other).
 //
 // Protocol: the first mod that needs the store publishes a promise under

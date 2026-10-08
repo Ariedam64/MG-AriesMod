@@ -5,7 +5,7 @@
 // browser, but the catalog already holds a Texture per frame built on the
 // game's own source.
 
-import { getSpriteState } from '../index';
+import { getSpriteState } from '../context';
 
 const canvasCache = new Map<string, HTMLCanvasElement>();
 const CACHE_MAX = 600;

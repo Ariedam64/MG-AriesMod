@@ -18,11 +18,11 @@ import { coin } from "../../data";
 import { Atoms } from "../../game/store/atoms";
 import {
   watchGardenInfoCard,
-  getSpriteState,
   getStage,
   findGraphicsCtor,
   type GardenInfoCardGeometry,
 } from "../../game/pixi/gardenInfoCard";
+import { getReadySpriteState } from "../../game/sprites/context";
 
 // Chrome DevTools only shows console output captured while the panel is
 // open — logs from before you open it are gone, not just hidden. So instead
@@ -148,7 +148,7 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
       detachValueText();
       return;
     }
-    const state = getSpriteState();
+    const state = getReadySpriteState();
     const ctors = state?.ctors;
     if (!state || !ctors) return;
 

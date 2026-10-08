@@ -7,7 +7,7 @@ import {
   type CropInventoryState,
 } from "../../game/player";
 import { petCatalog, petAbilities, formatAbilityLog, isPetAbilityAction, memoOnCatalogs } from "../../data";
-import { fakeInventoryShow, fakeInventoryDisable, closeInventoryPanel, isInventoryOpen } from "../../game/fakeModal";
+import { fakeInventory, isInventoryOpen } from "../../game/fakeModal";
 import { Atoms, myPetHutchPetItems, myNumPetHutchItems, myPetHutchCapacitySlots, isMyInventoryAtMaxLength, stateUserSlots, playerId, player as playerAtom, myActivityLog } from "../../game/store/atoms";
 import { readAccountId, findSlotIndex } from "../../game/playerIdentity";
 import { toastSimple } from "../../ui/toast";
@@ -1538,7 +1538,7 @@ export const PetsService = {
       } catch {}
     if (!items.length) return null;
 
-    await fakeInventoryShow(payload, { open: true });
+    await fakeInventory.show(payload, { open: true });
     const selIndex = await _waitValidatedInventoryIndex(20000);
 
     // Si l'user a validé une sélection → on ferme la modal (qu'il a finie d'utiliser).
@@ -1546,9 +1546,9 @@ export const PetsService = {
     // soit il est encore dedans (il verra ses vraies données), soit il est ailleurs et
     // le guard de closeModal aurait été un no-op de toute façon.
     if (selIndex != null && selIndex >= 0 && selIndex < items.length) {
-      await closeInventoryPanel();
+      await fakeInventory.close();
     } else {
-      await fakeInventoryDisable();
+      await fakeInventory.disable();
       return null;
     }
 
@@ -1568,13 +1568,13 @@ export const PetsService = {
     const items: any[] = Array.isArray(payload?.items) ? payload.items : [];
     if (!items.length) return null;
 
-    await fakeInventoryShow(payload, { open: true });
+    await fakeInventory.show(payload, { open: true });
     const selIndex = await _waitValidatedInventoryIndex(20000);
 
     if (selIndex != null && selIndex >= 0 && selIndex < items.length) {
-      await closeInventoryPanel();
+      await fakeInventory.close();
     } else {
-      await fakeInventoryDisable();
+      await fakeInventory.disable();
       return null;
     }
 

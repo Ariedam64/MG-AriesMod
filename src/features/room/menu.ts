@@ -4,16 +4,7 @@
 import { PlayersService, type Player } from "./players";
 import { toastSimple } from "../../ui/toast";
 import { formatPrice } from "../../lib/format";
-import {
-  isActivityLogModalOpenAsync,
-  isInventoryPanelOpen,
-  isJournalModalOpen,
-  isStatsModalOpenAsync,
-  waitActivityLogModalClosed,
-  waitInventoryPanelClosed,
-  waitJournalModalClosed,
-  waitStatsModalClosed,
-} from "../../game/fakeModal";
+import { fakeActivityLog, fakeInventory, fakeJournal, fakeStats } from "../../game/fakeModal";
 import { pageWindow } from "../../platform/pageContext";
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -468,28 +459,28 @@ export async function renderRoomMenu(root: HTMLElement) {
         hideWin();
         try {
           await PlayersService.openInventoryPreview(player.id, player.name);
-          if (await isInventoryPanelOpen()) await waitInventoryPanelClosed();
+          if (await fakeInventory.isOpen()) await fakeInventory.waitClosed();
         } finally { showWin(); }
       }),
       secondaryBtn("Journal", ICONS.journal, async () => {
         hideWin();
         try {
           await PlayersService.openJournalLog(player.id, player.name);
-          if (await isJournalModalOpen()) await waitJournalModalClosed();
+          if (await fakeJournal.isOpen()) await fakeJournal.waitClosed();
         } finally { showWin(); }
       }),
       secondaryBtn("Stats", ICONS.stats, async () => {
         hideWin();
         try {
           await PlayersService.openStatsModal(player.id, player.name);
-          if (await isStatsModalOpenAsync()) await waitStatsModalClosed();
+          if (await fakeStats.isOpen()) await fakeStats.waitClosed();
         } finally { showWin(); }
       }),
       secondaryBtn("Activity log", ICONS.actLog, async () => {
         hideWin();
         try {
           await PlayersService.openActivityLogModal(player.id, player.name);
-          if (await isActivityLogModalOpenAsync()) await waitActivityLogModalClosed();
+          if (await fakeActivityLog.isOpen()) await fakeActivityLog.waitClosed();
         } finally { showWin(); }
       }),
     );

@@ -16,7 +16,7 @@
 // up a skin when they are next generated — a reload does it — and no amount of
 // invalidation from here can refresh one already on screen.
 
-import { getPixiApp, getSpriteState } from '../../game/sprites/index';
+import { getPixiApp, getSpriteState } from '../../game/sprites/context';
 
 interface RenderTextureCache {
   rebakeAll: () => number;

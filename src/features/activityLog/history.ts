@@ -1,5 +1,5 @@
 // src/services/activityLogHistory.ts
-import { ACTIVITY_LOG_MODAL_ID, fakeActivityLogShow } from "../../game/fakeModal";
+import { ACTIVITY_LOG_MODAL_ID, fakeActivityLog } from "../../game/fakeModal";
 import { Atoms, myActivityLog } from "../../game/store/atoms";
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
 import { pageWindow } from "../../platform/pageContext";
@@ -209,7 +209,7 @@ async function reopenFakeActivityLogFromHistory() {
     // The modal just opened by itself: only the data is swapped. Re-opening
     // would also write the Logs tab, and since v1396 the same modal may have
     // been opened on Stats.
-    await fakeActivityLogShow(filtered, { open: false });
+    await fakeActivityLog.show(filtered, { open: false });
   } catch {
   }
 }

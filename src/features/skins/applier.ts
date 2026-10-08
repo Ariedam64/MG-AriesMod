@@ -9,7 +9,7 @@
 // `defaultAnchor` are left exactly as the game computed them, which is why a
 // skinned sprite keeps the original's footprint and anchor in the world.
 
-import { getSpriteState } from '../../game/sprites/index';
+import { getSpriteState } from '../../game/sprites/context';
 import type { SkinTarget } from './types';
 
 const MAX_WALK_NODES = 40_000;
