@@ -1,6 +1,6 @@
 // The garden editor's panels, built in a fake DOM and driven like a player
-// would: the item picker's slot settings, and the current item panel writing
-// a placed plant's slots to the plan.
+// would: the Editor window, the item picker's slot settings, and the current
+// item panel writing a placed plant's slots to the plan.
 //
 // What this guards:
 //   - "Edit all slots together" moves every slot, in the brush and on a
@@ -12,6 +12,7 @@
 // Run with: npm run check:editorpanels
 
 import { installFakeDom } from "./_fakeDom";
+import { renderEditorMenu } from "../src/features/editor/menu";
 import { showItemPicker, hideItemPicker } from "../src/features/editor/ui/itemPicker";
 import { showCurrentItemPanel, hideCurrentItemPanel } from "../src/features/editor/ui/currentItemPanel";
 import { brushSlotsFor, picker } from "../src/features/editor/brush";
@@ -50,6 +51,14 @@ const setValue = (el: El, value: string, type: string) => {
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 async function main(): Promise<void> {
+  /* ------------------------------ editor window ----------------------------- */
+
+  const container = doc.createElement("div");
+  renderEditorMenu(container);
+  check("menu: mode, current garden, import and saved cards", container.children[0].children.length, 4);
+  check("menu: the saved list starts empty", container.textContent.includes("No saved gardens yet."), true);
+  check("menu: the mode switch is a kit switch", all(container, ".qmm-switch").length, 1);
+
   /* --------------------------- picker, brush slots -------------------------- */
 
   // Strawberry grows five slots in the bundled catalog.
