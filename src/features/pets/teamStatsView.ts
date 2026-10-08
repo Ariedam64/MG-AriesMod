@@ -1,9 +1,8 @@
-// src/ui/menus/petsTeamStats.ts
 // Renders what a team is worth: a one-line summary strip plus an expandable
 // breakdown. Shared by the Team Builder cards (collapsed by default) and the
 // Manager tab's equipped team (always open).
 //
-// All maths lives in services/petTeamStats.ts — this file only formats.
+// All maths lives in teamStats.ts; this file only formats.
 
 import {
   computeTeamStats,
@@ -11,11 +10,12 @@ import {
   type EffectGroup,
   type TeamStats,
 } from "./teamStats";
+import { color } from "../../ui/kit/theme";
 import type { InventoryPet } from "./pets";
 
 /**
  * Human labels and units for the game's baseParameter keys. UI vocabulary,
- * not game data — the values themselves always come from the catalog.
+ * not game data: the values themselves always come from the catalog.
  */
 const PARAMETER_LABELS: Record<string, { label: string; unit: string }> = {
   // Crop Size is a whole number in [50, 100]; the boost adds points, not a percentage.
@@ -34,11 +34,12 @@ const PARAMETER_LABELS: Record<string, { label: string; unit: string }> = {
   plantAbilityChanceBoostPercentage: { label: "Plant ability", unit: "%" },
 };
 
-const MUTED = "#94a3b8";
+const MUTED = color.textSoft;
+/** Green for "at its best", kept apart from the teal accent used for selection. */
 const ACCENT = "#34d399";
-const DIM = "#64748b";
+const DIM = color.textDim;
 
-/** Rolls a `continuous` ability gets per hour — the game rolls them each minute. */
+/** Rolls a `continuous` ability gets per hour: the game rolls them each minute. */
 const CONTINUOUS_ROLLS_PER_HOUR = 60;
 
 /**
@@ -64,12 +65,12 @@ function triggerUnit(trigger: string | null): string {
 /**
  * Shading for how close the team is to its OWN ceiling, not to 100%. A team
  * whose pets are all at max strength reads green however small its absolute
- * proc chance is — there is nothing left to improve about it.
+ * proc chance is: there is nothing left to improve about it.
  */
 function fillRatioColor(ratio: number): string {
-  if (ratio >= 0.99) return "#34d399";
+  if (ratio >= 0.99) return ACCENT;
   if (ratio >= 0.9) return "#a3e635";
-  if (ratio >= 0.75) return "#fbbf24";
+  if (ratio >= 0.75) return color.warn;
   return "#f87171";
 }
 
@@ -86,7 +87,7 @@ function mkBar(current: number, atMax: number): HTMLElement {
   Object.assign(track.style, {
     height: "3px",
     borderRadius: "999px",
-    background: "rgba(255,255,255,0.07)",
+    background: color.track,
     overflow: "hidden",
     margin: "3px 0 1px",
   } as CSSStyleDeclaration);
@@ -111,7 +112,7 @@ function formatPercent(value: number): string {
 }
 
 function formatAmount(value: number, unit: string): string {
-  // Coin ranges reach seven digits, where "9900000" is unreadable — group
+  // Coin ranges reach seven digits, where "9900000" is unreadable: group
   // thousands so the magnitude is legible at a glance.
   const decimals = Math.abs(value) >= 10 ? 0 : 1;
   const text = value.toLocaleString("en-US", {
@@ -147,7 +148,7 @@ function primaryParameterKey(group: EffectGroup): string | null {
 /**
  * Titles the card by what the effect does ("Crop size") rather than by the
  * ability's name ("Crop Size Boost"), which only repeated the line below it.
- * Effects with no numeric parameter — granters, Seed Finder, Double Hatch —
+ * Effects with no numeric parameter (granters, Seed Finder, Double Hatch)
  * keep their ability name, since there is nothing else to call them.
  */
 function groupTitle(group: EffectGroup): string {
@@ -204,7 +205,7 @@ function mkNav(nav: GroupNav): HTMLElement {
       cursor: "pointer",
       borderRadius: "3px",
     } as CSSStyleDeclaration);
-    button.onmouseenter = () => { button.style.color = "#e2e8f0"; };
+    button.onmouseenter = () => { button.style.color = color.text; };
     button.onmouseleave = () => { button.style.color = MUTED; };
     button.addEventListener("click", (event) => {
       // The card underneath has its own handlers; stepping must not reach it.
@@ -230,8 +231,8 @@ function renderGroup(group: EffectGroup, nav?: GroupNav): HTMLElement {
   Object.assign(block.style, {
     padding: "5px 7px",
     borderRadius: "7px",
-    background: "rgba(255,255,255,0.025)",
-    border: "1px solid rgba(255,255,255,0.05)",
+    background: color.cardBg,
+    border: `1px solid ${color.border}`,
     marginBottom: "4px",
   } as CSSStyleDeclaration);
 
@@ -276,7 +277,7 @@ function renderGroup(group: EffectGroup, nav?: GroupNav): HTMLElement {
     always.textContent = "always on";
     always.style.fontSize = "12px";
     always.style.color = MUTED;
-    always.title = "This ability has no proc chance — it applies continuously.";
+    always.title = "This ability has no proc chance: it applies continuously.";
     value.appendChild(always);
     block.appendChild(value);
   } else {
@@ -298,7 +299,7 @@ function renderGroup(group: EffectGroup, nav?: GroupNav): HTMLElement {
     unit.style.color = DIM;
     value.append(big, unit);
 
-    // Only worth showing when there is headroom left — repeating the same
+    // Only worth showing when there is headroom left: repeating the same
     // number as "max" on an already-maxed team is noise.
     if (!isMaxed) {
       const ceiling = document.createElement("span");
@@ -310,7 +311,7 @@ function renderGroup(group: EffectGroup, nav?: GroupNav): HTMLElement {
     }
 
     // Rolling once a minute makes an expected hourly count meaningful, but
-    // only for continuous abilities — the rest fire on player actions whose
+    // only for continuous abilities: the rest fire on player actions whose
     // frequency is entirely up to the player.
     const perHour =
       group.trigger === "continuous"
@@ -319,9 +320,9 @@ function renderGroup(group: EffectGroup, nav?: GroupNav): HTMLElement {
 
     value.title =
       `Chance at least one of ${group.contributors.length} pet(s) procs.\n` +
-      `Not a sum — it is 1 minus the product of every pet missing.${perHour}\n\n` +
+      `Not a sum: it is 1 minus the product of every pet missing.${perHour}\n\n` +
       (isMaxed
-        ? "Every pet is at max strength — this is the most this team can do."
+        ? "Every pet is at max strength: this is the most this team can do."
         : `At ${(ratio * 100).toFixed(0)}% of what these same pets would do at max strength ` +
           `(${formatPercent(atMax)}).`);
     block.appendChild(value);
@@ -329,7 +330,7 @@ function renderGroup(group: EffectGroup, nav?: GroupNav): HTMLElement {
   }
 
   // What a proc actually delivers. Labelled "per proc" because it is one
-  // pet's value, not a team total — showing it unqualified is what made the
+  // pet's value, not a team total: showing it unqualified is what made the
   // old summed figure misleading.
   const magnitude = perProcMagnitude(group);
   if (magnitude) {
@@ -345,7 +346,7 @@ function renderGroup(group: EffectGroup, nav?: GroupNav): HTMLElement {
     row.title =
       group.contributors.length > 1
         ? "What a single proc gives. Each pet applies its own value, so this is\n" +
-          "a range across the team — the values never add up."
+          "a range across the team; the values never add up."
         : "What a single proc gives.";
 
     const label = document.createElement("span");
@@ -421,7 +422,7 @@ function renderDetails(stats: TeamStats, groups: EffectGroup[], showAllGroups: b
     const warn = document.createElement("div");
     warn.textContent = `⚠ unknown species: ${stats.unknownSpecies.join(", ")}`;
     warn.style.fontSize = "10px";
-    warn.style.color = "#fbbf24";
+    warn.style.color = color.warn;
     details.appendChild(warn);
   }
 
@@ -436,14 +437,14 @@ function renderDetails(stats: TeamStats, groups: EffectGroup[], showAllGroups: b
 }
 
 /**
- * How long the team can be left alone before a pet needs feeding — the whole
+ * How long the team can be left alone before a pet needs feeding: the whole
  * point of the old "Unattended" label, spelled out.
  */
 function renderFeedRow(stats: TeamStats): HTMLElement {
   const autonomy = stats.autonomy;
 
   let text: string;
-  let color: string;
+  let tint: string;
   let title: string;
 
   const boostLine = autonomy.drainReductionPercent > 0
@@ -458,21 +459,21 @@ function renderFeedRow(stats: TeamStats): HTMLElement {
 
   if (autonomy.status === "sustained") {
     text = "indefinitely";
-    color = ACCENT;
+    tint = ACCENT;
     title =
       "Expected hunger restore covers the drain for every pet, so the team\n" +
       `feeds itself.${boostLine}${restoreLine}${weatherLine}\n\n` +
-      "This is an average — a bad run of Restore luck can still empty a pet.";
+      "This is an average: a bad run of Restore luck can still empty a pet.";
   } else if (autonomy.status === "runs-out" && autonomy.minutesFromFull !== null) {
     text = `~${formatDuration(autonomy.minutesFromFull)}`;
-    color = autonomy.minutesFromFull < 60 ? "#fbbf24" : ACCENT;
+    tint = autonomy.minutesFromFull < 60 ? color.warn : ACCENT;
     title =
       `Starting from full, ${autonomy.limitingPetName ?? "the first pet"} empties first.\n` +
-      `Rates the team itself — current hunger is not taken into account.${boostLine}${restoreLine}${weatherLine}\n\n` +
+      `Rates the team itself: current hunger is not taken into account.${boostLine}${restoreLine}${weatherLine}\n\n` +
       "Restore figures are averages; unlucky streaks do worse.";
   } else {
     text = "unknown";
-    color = MUTED;
+    tint = MUTED;
     title = `No known hunger data for: ${autonomy.speciesMissingDepletion.join(", ")}.`;
   }
 
@@ -484,8 +485,8 @@ function renderFeedRow(stats: TeamStats): HTMLElement {
     gap: "8px",
     padding: "4px 7px",
     borderRadius: "7px",
-    background: "rgba(255,255,255,0.02)",
-    border: "1px solid rgba(255,255,255,0.05)",
+    background: color.cardBg,
+    border: `1px solid ${color.border}`,
     fontSize: "10px",
   } as CSSStyleDeclaration);
   row.title = title;
@@ -499,7 +500,7 @@ function renderFeedRow(stats: TeamStats): HTMLElement {
 
   const valueSpan = document.createElement("span");
   valueSpan.textContent = text;
-  valueSpan.style.color = color;
+  valueSpan.style.color = tint;
   valueSpan.style.fontWeight = "600";
   valueSpan.style.flex = "0 0 auto";
   valueSpan.style.fontVariantNumeric = "tabular-nums";

@@ -43346,7 +43346,7 @@ next: ${next}`;
         "hungerRefundPercentage",
         // Older name for hungerRefundPercentage, still carried by the hardcoded
         // fallback catalog. Absent from the live bundle's `tge` switch only because
-        // the game renamed it — same parameter, so it scales the same way.
+        // the game renamed it: same parameter, so it scales the same way.
         "hungerDepletionRateDecreasePercentage",
         "plantGrowthReductionMinutes",
         "eggGrowthTimeReductionMinutes",
@@ -43592,9 +43592,9 @@ next: ${next}`;
     return trigger && TRIGGER_UNITS[trigger] || "/roll";
   }
   function fillRatioColor(ratio) {
-    if (ratio >= 0.99) return "#34d399";
+    if (ratio >= 0.99) return ACCENT;
     if (ratio >= 0.9) return "#a3e635";
-    if (ratio >= 0.75) return "#fbbf24";
+    if (ratio >= 0.75) return color.warn;
     return "#f87171";
   }
   function mkBar(current, atMax) {
@@ -43603,7 +43603,7 @@ next: ${next}`;
     Object.assign(track.style, {
       height: "3px",
       borderRadius: "999px",
-      background: "rgba(255,255,255,0.07)",
+      background: color.track,
       overflow: "hidden",
       margin: "3px 0 1px"
     });
@@ -43685,7 +43685,7 @@ next: ${next}`;
         borderRadius: "3px"
       });
       button3.onmouseenter = () => {
-        button3.style.color = "#e2e8f0";
+        button3.style.color = color.text;
       };
       button3.onmouseleave = () => {
         button3.style.color = MUTED;
@@ -43710,8 +43710,8 @@ next: ${next}`;
     Object.assign(block.style, {
       padding: "5px 7px",
       borderRadius: "7px",
-      background: "rgba(255,255,255,0.025)",
-      border: "1px solid rgba(255,255,255,0.05)",
+      background: color.cardBg,
+      border: `1px solid ${color.border}`,
       marginBottom: "4px"
     });
     const nameRow = document.createElement("div");
@@ -43751,7 +43751,7 @@ next: ${next}`;
       always.textContent = "always on";
       always.style.fontSize = "12px";
       always.style.color = MUTED;
-      always.title = "This ability has no proc chance \u2014 it applies continuously.";
+      always.title = "This ability has no proc chance: it applies continuously.";
       value.appendChild(always);
       block.appendChild(value);
     } else {
@@ -43780,9 +43780,9 @@ next: ${next}`;
       const perHour = group2.trigger === "continuous" ? `
 About ${(group2.combinedProbability / 100 * CONTINUOUS_ROLLS_PER_HOUR).toFixed(1)} procs per hour.` : "";
       value.title = `Chance at least one of ${group2.contributors.length} pet(s) procs.
-Not a sum \u2014 it is 1 minus the product of every pet missing.${perHour}
+Not a sum: it is 1 minus the product of every pet missing.${perHour}
 
-` + (isMaxed ? "Every pet is at max strength \u2014 this is the most this team can do." : `At ${(ratio * 100).toFixed(0)}% of what these same pets would do at max strength (${formatPercent(atMax)}).`);
+` + (isMaxed ? "Every pet is at max strength: this is the most this team can do." : `At ${(ratio * 100).toFixed(0)}% of what these same pets would do at max strength (${formatPercent(atMax)}).`);
       block.appendChild(value);
       block.appendChild(mkBar(group2.combinedProbability, atMax));
     }
@@ -43797,7 +43797,7 @@ Not a sum \u2014 it is 1 minus the product of every pet missing.${perHour}
         fontSize: "10px",
         marginTop: "1px"
       });
-      row.title = group2.contributors.length > 1 ? "What a single proc gives. Each pet applies its own value, so this is\na range across the team \u2014 the values never add up." : "What a single proc gives.";
+      row.title = group2.contributors.length > 1 ? "What a single proc gives. Each pet applies its own value, so this is\na range across the team; the values never add up." : "What a single proc gives.";
       const label2 = document.createElement("span");
       label2.textContent = "per proc";
       label2.style.color = MUTED;
@@ -43851,7 +43851,7 @@ Not a sum \u2014 it is 1 minus the product of every pet missing.${perHour}
       const warn = document.createElement("div");
       warn.textContent = `\u26A0 unknown species: ${stats.unknownSpecies.join(", ")}`;
       warn.style.fontSize = "10px";
-      warn.style.color = "#fbbf24";
+      warn.style.color = color.warn;
       details.appendChild(warn);
     }
     if (showAllGroups) {
@@ -43865,7 +43865,7 @@ Not a sum \u2014 it is 1 minus the product of every pet missing.${perHour}
   function renderFeedRow(stats) {
     const autonomy = stats.autonomy;
     let text2;
-    let color2;
+    let tint;
     let title;
     const boostLine = autonomy.drainReductionPercent > 0 ? `
 Hunger Boost removes ${autonomy.drainReductionPercent.toFixed(0)}% of the drain.` : "";
@@ -43875,21 +43875,21 @@ Hunger Restore fires ~${autonomy.restoreActivationsPerMinute.toFixed(2)}\xD7/min
 Not counted (needs a specific weather): ${autonomy.weatherGatedHungerAbilities.join(", ")}.` : "";
     if (autonomy.status === "sustained") {
       text2 = "indefinitely";
-      color2 = ACCENT;
+      tint = ACCENT;
       title = `Expected hunger restore covers the drain for every pet, so the team
 feeds itself.${boostLine}${restoreLine}${weatherLine2}
 
-This is an average \u2014 a bad run of Restore luck can still empty a pet.`;
+This is an average: a bad run of Restore luck can still empty a pet.`;
     } else if (autonomy.status === "runs-out" && autonomy.minutesFromFull !== null) {
       text2 = `~${formatDuration(autonomy.minutesFromFull)}`;
-      color2 = autonomy.minutesFromFull < 60 ? "#fbbf24" : ACCENT;
+      tint = autonomy.minutesFromFull < 60 ? color.warn : ACCENT;
       title = `Starting from full, ${autonomy.limitingPetName ?? "the first pet"} empties first.
-Rates the team itself \u2014 current hunger is not taken into account.${boostLine}${restoreLine}${weatherLine2}
+Rates the team itself: current hunger is not taken into account.${boostLine}${restoreLine}${weatherLine2}
 
 Restore figures are averages; unlucky streaks do worse.`;
     } else {
       text2 = "unknown";
-      color2 = MUTED;
+      tint = MUTED;
       title = `No known hunger data for: ${autonomy.speciesMissingDepletion.join(", ")}.`;
     }
     const row = document.createElement("div");
@@ -43900,8 +43900,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       gap: "8px",
       padding: "4px 7px",
       borderRadius: "7px",
-      background: "rgba(255,255,255,0.02)",
-      border: "1px solid rgba(255,255,255,0.05)",
+      background: color.cardBg,
+      border: `1px solid ${color.border}`,
       fontSize: "10px"
     });
     row.title = title;
@@ -43913,7 +43913,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     label2.style.whiteSpace = "nowrap";
     const valueSpan = document.createElement("span");
     valueSpan.textContent = text2;
-    valueSpan.style.color = color2;
+    valueSpan.style.color = tint;
     valueSpan.style.fontWeight = "600";
     valueSpan.style.flex = "0 0 auto";
     valueSpan.style.fontVariantNumeric = "tabular-nums";
@@ -43943,6 +43943,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/pets/teamStatsView.ts"() {
       "use strict";
       init_teamStats();
+      init_theme();
       PARAMETER_LABELS = {
         // Crop Size is a whole number in [50, 100]; the boost adds points, not a percentage.
         sizeIncrease: { label: "Crop size", unit: "" },
@@ -43959,9 +43960,9 @@ Restore figures are averages; unlucky streaks do worse.`;
         maxStrengthIncreasePercentage: { label: "Max STR", unit: "%" },
         plantAbilityChanceBoostPercentage: { label: "Plant ability", unit: "%" }
       };
-      MUTED = "#94a3b8";
+      MUTED = color.textSoft;
       ACCENT = "#34d399";
-      DIM = "#64748b";
+      DIM = color.textDim;
       CONTINUOUS_ROLLS_PER_HOUR = 60;
       TRIGGER_UNITS = {
         continuous: "/min",
@@ -44921,7 +44922,7 @@ Restore figures are averages; unlucky streaks do worse.`;
             categories: [categoryRef],
             mode: "afk",
             // Only the category's own ability. A feeder in this team may well
-            // carry it too — that is often why it was picked — and the stats
+            // carry it too (that is often why it was picked), and the stats
             // layer counts whatever abilities the pets actually have.
             petIds: afkTeam.map((p) => p.id),
             focusAbilityIds: [category.abilityIds[0]]
@@ -45018,7 +45019,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         },
         // Ability ids/tier names here are the game's own naming, not ours: despite
         // the "II" suffix, EggGrowthBoostII is the strongest tier (11min reduction
-        // per baseParameters.eggGrowthTimeReductionMinutes) — EggGrowthBoostII_NEW
+        // per baseParameters.eggGrowthTimeReductionMinutes): EggGrowthBoostII_NEW
         // (9min) is the actual mid tier. Don't "fix" this ordering back to
         // alphabetical/numeral without re-checking baseParameters.
         {
@@ -45147,7 +45148,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           abilityIds: ["Thunderbloom", "ThunderBoost"],
           paddingParentId: "mutationThunderstruck"
         },
-        // Generic weather-mutation chance boost — unlike its Snowy/Dawn/Amber/Thunder
+        // Generic weather-mutation chance boost: unlike its Snowy/Dawn/Amber/Thunder
         // siblings above, ProduceMutationBoost has no requiredWeather in
         // baseParameters: it applies regardless of which weather is active, which
         // makes it one of the more reliable AFK picks in the whole catalog.
@@ -45205,7 +45206,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         // One category per tier rather than a merged "Seeds" bucket: unlike
         // CoinFinder/SellBoost (where a higher tier is strictly the same effect,
         // just bigger), SeedFinder's baseParameters carry no magnitude to compare
-        // tiers by — each tier is its own goal, not a strict upgrade of the last.
+        // tiers by: each tier is its own goal, not a strict upgrade of the last.
         {
           id: "seedFinderI",
           label: "Seed Finder I",
@@ -45238,7 +45239,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           afkCapable: true,
           abilityIds: ["SeedFinderIV"]
         },
-        // Pet XP boosts whichever pets are active — the point is 1-2 dedicated
+        // Pet XP boosts whichever pets are active: the point is 1-2 dedicated
         // boosters plus a slot deliberately left empty for whatever pet you're
         // actually trying to level, so maxTeamSlots caps at 2 instead of 3.
         {
@@ -45284,7 +45285,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         // hatchEgg but do unrelated things (duplicate the hatch, boost the new
         // pet's max strength, give it bonus XP, or boost its gold/rainbow chance).
         // Merged under one tier-ranked list, DoubleHatch (ranked first) silently
-        // crowded out every other ability's pets from ever being suggested — but
+        // crowded out every other ability's pets from ever being suggested. But
         // they all still fire together on the same hatch, so each pads from the
         // other three when it doesn't fill its own slots alone.
         // Sibling padding order follows a value ranking (best first), not
@@ -45292,7 +45293,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         // ceiling, which everything else here is ranked by) > Double Hatch
         // (a whole extra pet) > Pet Mutation Boost (nice-to-have gold/rainbow
         // odds) > Hatch XP Boost (just a shortcut to XP you'd get from feeding
-        // anyway — the weakest of the four).
+        // anyway: the weakest of the four).
         {
           id: "doubleHatch",
           label: "Double Hatch",
@@ -45331,7 +45332,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         },
         // Split out of a single "Sell Session" bucket: DoubleHarvest fires on
         // `harvest` (not selling at all), ProduceRefund and SellBoost fire on
-        // `sellAllCrops`, and PetRefund fires on `sellPet` — three different
+        // `sellAllCrops`, and PetRefund fires on `sellPet`: three different
         // player actions, so three different categories rather than one vague one.
         {
           id: "doubleHarvest",
@@ -45343,7 +45344,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         },
         // Crop Refund ranks above Sell Boost: a flat % more coins is good, but
         // getting an expensive crop back outright is worth more when it's a
-        // high-value one — only matters when a category needs padding from more
+        // high-value one: only matters when a category needs padding from more
         // than one sibling, but keep the declared order consistent regardless.
         {
           id: "cropRefund",
@@ -45371,7 +45372,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           afkCapable: false,
           abilityIds: ["PetRefundII", "PetRefund"]
         },
-        // playerActivated (manual click + cooldown) — never AFK, distinct from the
+        // playerActivated (manual click + cooldown): never AFK, distinct from the
         // Dawnlit/Thunderstruck mutation pipelines since they convert already-
         // mutated crops into a separate resource rather than helping crops mutate.
         {

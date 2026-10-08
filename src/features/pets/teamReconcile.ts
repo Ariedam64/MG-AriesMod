@@ -1,4 +1,3 @@
-// src/services/petTeamReconcile.ts
 // Pure core of the native pet-team sync (see pets.ts). Kept free of atoms and
 // UI so the linking rules can be checked in node.
 
