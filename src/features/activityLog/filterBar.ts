@@ -18,7 +18,7 @@ import {
   type ActionKey,
 } from "./classification";
 import { getActivityLogHistory, type ActivityLogEntry } from "./history";
-import { fakeActivityLogShow } from "../../game/fakeModal";
+import { fakeActivityLog } from "../../game/fakeModal";
 import { Atoms } from "../../game/store/atoms";
 import { getSpriteState, getStage, findAcrossBranches, findGraphicsCtor } from "../../game/pixi/gardenInfoCard";
 import {
@@ -97,7 +97,7 @@ export function getFilteredHistoryForReopen(): ActivityLogEntry[] {
 async function applyActiveFilter(): Promise<void> {
   if (!modalOpen) return;
   try {
-    await fakeActivityLogShow(computeFilteredHistory(activeFilter), { open: false });
+    await fakeActivityLog.show(computeFilteredHistory(activeFilter), { open: false });
   } catch {
   }
 }

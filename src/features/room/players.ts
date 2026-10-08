@@ -2,12 +2,7 @@
 // Service central des actions liées aux joueurs (liste, positions, téléport, follow + journal)
 
 import { toastSimple } from "../../ui/toast";
-import {
-  fakeActivityLogShow,
-  fakeInventoryShow,
-  fakeJournalShow,
-  fakeStatsShow,
-} from "../../game/fakeModal";
+import { fakeActivityLog, fakeInventory, fakeJournal, fakeStats } from "../../game/fakeModal";
 import { skipNextActivityLogHistoryReopen } from "../activityLog/history";
 import { PlayerService } from "../../game/player";
 import { Atoms } from "../../game/store/atoms";
@@ -511,7 +506,7 @@ export const PlayersService = {
         return;
       }
       try {
-        await fakeInventoryShow({ ...inv, items }, { open: true });
+        await fakeInventory.show({ ...inv, items }, { open: true });
       } catch (err: any) {
         await toastSimple("Inventory", err?.message || "Failed to open inventory", "error");
         return;
@@ -532,7 +527,7 @@ export const PlayersService = {
       }
       const safe = journal ?? {};
       try {
-        await fakeJournalShow(safe, { open: true });
+        await fakeJournal.show(safe, { open: true });
       } catch (err: any) {
         await toastSimple("Journal", err?.message || "Failed to open journal.", "error");
         return;
@@ -567,7 +562,7 @@ export const PlayersService = {
       // Stats now opens the activityLog modal: without the skip, the history
       // watcher would swap our own logs over this player's data.
       skipNextActivityLogHistoryReopen();
-      await fakeStatsShow(stats, { open: true });
+      await fakeStats.show(stats, { open: true });
       if (playerName) await toastSimple("Stats", `${playerName}'s stats displayed.`, "info");
     } catch (e: any) {
       await toastSimple("Stats", e?.message || "Failed to open stats modal.", "error");
@@ -582,7 +577,7 @@ export const PlayersService = {
         return;
       }
       skipNextActivityLogHistoryReopen();
-      await fakeActivityLogShow(logs, { open: true });
+      await fakeActivityLog.show(logs, { open: true });
       if (playerName) await toastSimple("Activity log", `${playerName}'s activity log displayed.`, "info");
     } catch (e: any) {
       await toastSimple("Activity log", e?.message || "Failed to open activity log.", "error");
@@ -597,7 +592,7 @@ export const PlayersService = {
       return;
     }
     try {
-      await fakeJournalShow({
+      await fakeJournal.show({
         produce: {
           [String(species)]: {
             variantsLogged: [{ variant: String(variant), createdAt }]
@@ -617,7 +612,7 @@ export const PlayersService = {
       return;
     }
     try {
-      await fakeJournalShow({
+      await fakeJournal.show({
         pets: {
           [String(petSpecies)]: {
             variantsLogged: [{ variant: String(variant), createdAt }]
@@ -637,7 +632,7 @@ export const PlayersService = {
       return;
     }
     try {
-      await fakeJournalShow({
+      await fakeJournal.show({
         pets: {
           [String(petSpecies)]: {
             abilitiesLogged: [{ ability: String(ability), createdAt }]

@@ -9575,8 +9575,8 @@
         await new Promise((r) => requestAnimationFrame(r));
       }
       await Atoms.ui.activeModal.set(modalId);
-      await Atoms.ui.inventoryModalIsActive.set(modalId === "inventory");
-    } catch (err) {
+      await Atoms.ui.inventoryModalIsActive.set(modalId === INVENTORY_MODAL_ID);
+    } catch {
     }
   }
   async function closeModal(modalId) {
@@ -9586,10 +9586,10 @@
         if (current !== modalId) return;
       }
       await Atoms.ui.activeModal.set(null);
-      if (modalId === "inventory" || !modalId) {
+      if (modalId === INVENTORY_MODAL_ID || !modalId) {
         await Atoms.ui.inventoryModalIsActive.set(false);
       }
-    } catch (err) {
+    } catch {
     }
   }
   function isModalOpen(value, modalId) {
@@ -9597,9 +9597,8 @@
   }
   async function isModalOpenAsync(modalId) {
     try {
-      const v = await Atoms.ui.activeModal.get();
-      return isModalOpen(v, modalId);
-    } catch (err) {
+      return isModalOpen(await Atoms.ui.activeModal.get(), modalId);
+    } catch {
       return false;
     }
   }
@@ -9607,8 +9606,7 @@
     const t0 = performance.now();
     while (performance.now() - t0 < timeoutMs) {
       try {
-        const v = await Atoms.ui.activeModal.get();
-        if (!isModalOpen(v, modalId)) return true;
+        if (!isModalOpen(await Atoms.ui.activeModal.get(), modalId)) return true;
       } catch {
         return true;
       }
@@ -9616,59 +9614,25 @@
     }
     return false;
   }
-  async function openInventoryPanel() {
-    return openModal(INVENTORY_MODAL_ID);
+  function defineFakeModal(spec) {
+    return {
+      async show(payload, opts) {
+        const fakeOpts = { openGate: false, autoRestoreMs: opts?.autoRestoreMs };
+        if (spec.inventoryAtom === "clear") await fakeHide(INVENTORY_ATOM_PATCH.label);
+        await fakeShow(SHARED_MYDATA_PATCH, { [spec.field]: payload ?? spec.empty }, fakeOpts);
+        if (spec.inventoryAtom === "patch") await fakeShow(INVENTORY_ATOM_PATCH, payload, fakeOpts);
+        if (opts?.open !== false) await spec.open();
+      },
+      isOpen: spec.isOpen ?? (() => isModalOpenAsync(spec.modal)),
+      waitClosed: (timeoutMs) => waitModalClosed(spec.modal, timeoutMs)
+    };
   }
-  async function closeInventoryPanel() {
-    return closeModal(INVENTORY_MODAL_ID);
+  async function disableFakeInventory() {
+    await fakeHide(INVENTORY_ATOM_PATCH.label);
+    await fakeHide(SHARED_MYDATA_PATCH.label);
   }
   function isInventoryOpen(v) {
     return isModalOpen(v, INVENTORY_MODAL_ID);
-  }
-  async function isInventoryPanelOpen() {
-    return isModalOpenAsync(INVENTORY_MODAL_ID);
-  }
-  async function waitInventoryPanelClosed(timeoutMs = 12e4) {
-    return waitModalClosed(INVENTORY_MODAL_ID, timeoutMs);
-  }
-  async function fakeInventoryShow(payload, opts) {
-    const shouldOpen = opts?.open !== false;
-    await fakeShow(SHARED_MYDATA_PATCH, { inventory: payload }, {
-      openGate: false,
-      autoRestoreMs: opts?.autoRestoreMs
-    });
-    await fakeShow(INVENTORY_ATOM_PATCH, payload, {
-      openGate: false,
-      autoRestoreMs: opts?.autoRestoreMs
-    });
-    if (shouldOpen) await openInventoryPanel();
-  }
-  async function fakeInventoryHide() {
-    await fakeHide(INVENTORY_ATOM_PATCH.label);
-    await fakeHide(SHARED_MYDATA_PATCH.label);
-    await closeInventoryPanel();
-  }
-  async function fakeInventoryDisable() {
-    await fakeHide(INVENTORY_ATOM_PATCH.label);
-    await fakeHide(SHARED_MYDATA_PATCH.label);
-  }
-  async function openJournalModal() {
-    return openModal(JOURNAL_MODAL_ID);
-  }
-  async function isJournalModalOpen() {
-    return isModalOpenAsync(JOURNAL_MODAL_ID);
-  }
-  async function waitJournalModalClosed(timeoutMs = 12e4) {
-    return waitModalClosed(JOURNAL_MODAL_ID, timeoutMs);
-  }
-  async function fakeJournalShow(payload, opts) {
-    const shouldOpen = opts?.open !== false;
-    await fakeHide(INVENTORY_ATOM_PATCH.label);
-    await fakeShow(SHARED_MYDATA_PATCH, { journal: payload ?? {} }, {
-      openGate: false,
-      autoRestoreMs: opts?.autoRestoreMs
-    });
-    if (shouldOpen) await openJournalModal();
   }
   async function openActivityLogTab(tab) {
     const target = activityLogOpenTarget(tab);
@@ -9678,49 +9642,7 @@
     }
     return openModal(target.modal);
   }
-  async function isActivityLogTabOpen(tab) {
-    if (!await isModalOpenAsync(ACTIVITY_LOG_MODAL_ID2)) return false;
-    try {
-      return activityLogTabOf(await Atoms.ui.activityLogTab.get()) === tab;
-    } catch {
-      return false;
-    }
-  }
-  async function openStatsModal() {
-    return openActivityLogTab("stats");
-  }
-  async function isStatsModalOpenAsync() {
-    return isActivityLogTabOpen("stats");
-  }
-  async function waitStatsModalClosed(timeoutMs = 12e4) {
-    return waitModalClosed(ACTIVITY_LOG_MODAL_ID2, timeoutMs);
-  }
-  async function fakeStatsShow(payload, opts) {
-    const shouldOpen = opts?.open !== false;
-    await fakeShow(SHARED_MYDATA_PATCH, { stats: payload ?? {} }, {
-      openGate: false,
-      autoRestoreMs: opts?.autoRestoreMs
-    });
-    if (shouldOpen) await openStatsModal();
-  }
-  async function openActivityLogModal() {
-    return openActivityLogTab("logs");
-  }
-  async function isActivityLogModalOpenAsync() {
-    return isModalOpenAsync(ACTIVITY_LOG_MODAL_ID2);
-  }
-  async function waitActivityLogModalClosed(timeoutMs = 12e4) {
-    return waitModalClosed(ACTIVITY_LOG_MODAL_ID2, timeoutMs);
-  }
-  async function fakeActivityLogShow(payload, opts) {
-    const shouldOpen = opts?.open !== false;
-    await fakeShow(SHARED_MYDATA_PATCH, { activityLogs: payload ?? [] }, {
-      openGate: false,
-      autoRestoreMs: opts?.autoRestoreMs
-    });
-    if (shouldOpen) await openActivityLogModal();
-  }
-  var mergeMyData, SHARED_MYDATA_PATCH, INVENTORY_ATOM_PATCH, INVENTORY_MODAL_ID, JOURNAL_MODAL_ID, ACTIVITY_LOG_MODAL_ID2;
+  var JOURNAL_MODAL_ID, INVENTORY_MODAL_ID, SHARED_MYDATA_PATCH, INVENTORY_ATOM_PATCH, closeInventory, fakeInventory, fakeJournal, fakeStats, fakeActivityLog;
   var init_fakeModal = __esm({
     "src/game/fakeModal.ts"() {
       "use strict";
@@ -9728,14 +9650,14 @@
       init_atoms();
       init_modalState();
       init_activityLogModalLayout();
-      mergeMyData = (real, patch) => {
-        const base = real && typeof real === "object" ? real : {};
-        const add = patch && typeof patch === "object" ? patch : {};
-        return { ...base, ...add };
-      };
+      JOURNAL_MODAL_ID = "journal";
+      INVENTORY_MODAL_ID = "inventory";
       SHARED_MYDATA_PATCH = {
         label: Atoms.data.myData.label,
-        merge: mergeMyData,
+        merge: (real, patch) => ({
+          ...real && typeof real === "object" ? real : {},
+          ...patch && typeof patch === "object" ? patch : {}
+        }),
         gate: {
           label: Atoms.ui.activeModal.label,
           isOpen: (v) => ["inventory", "journal", "activityLog"].includes(modalNameOf(v) ?? ""),
@@ -9747,13 +9669,54 @@
         merge: (_real, fake) => fake,
         gate: {
           label: Atoms.ui.activeModal.label,
-          isOpen: (v) => modalNameOf(v) === "inventory",
+          isOpen: (v) => modalNameOf(v) === INVENTORY_MODAL_ID,
           autoDisableOnClose: true
         }
       };
-      INVENTORY_MODAL_ID = "inventory";
-      JOURNAL_MODAL_ID = "journal";
-      ACTIVITY_LOG_MODAL_ID2 = "activityLog";
+      closeInventory = () => closeModal(INVENTORY_MODAL_ID);
+      fakeInventory = {
+        ...defineFakeModal({
+          field: "inventory",
+          modal: INVENTORY_MODAL_ID,
+          open: () => openModal(INVENTORY_MODAL_ID),
+          inventoryAtom: "patch"
+        }),
+        disable: disableFakeInventory,
+        close: closeInventory,
+        /** Drops the fake and closes the inventory. */
+        async hide() {
+          await disableFakeInventory();
+          await closeInventory();
+        }
+      };
+      fakeJournal = defineFakeModal({
+        field: "journal",
+        empty: {},
+        modal: JOURNAL_MODAL_ID,
+        open: () => openModal(JOURNAL_MODAL_ID),
+        inventoryAtom: "clear"
+      });
+      fakeStats = defineFakeModal({
+        field: "stats",
+        empty: {},
+        // Waits for the modal to close, not for a change of tab.
+        modal: ACTIVITY_LOG_MODAL_ID,
+        open: () => openActivityLogTab("stats"),
+        async isOpen() {
+          if (!await isModalOpenAsync(ACTIVITY_LOG_MODAL_ID)) return false;
+          try {
+            return activityLogTabOf(await Atoms.ui.activityLogTab.get()) === "stats";
+          } catch {
+            return false;
+          }
+        }
+      });
+      fakeActivityLog = defineFakeModal({
+        field: "activityLogs",
+        empty: [],
+        modal: ACTIVITY_LOG_MODAL_ID,
+        open: () => openActivityLogTab("logs")
+      });
     }
   });
 
@@ -10268,7 +10231,7 @@
   }
   async function closeSeedInventoryPanel() {
     try {
-      await fakeInventoryHide();
+      await fakeInventory.hide();
     } catch {
       try {
         document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
@@ -10468,7 +10431,7 @@
       remainingByName.set(disp, remaining - take);
     }
     try {
-      await fakeInventoryShow({ items: patched, favoritedItemIds: [] }, { open: false });
+      await fakeInventory.show({ items: patched, favoritedItemIds: [] }, { open: false });
     } catch {
     }
   }
@@ -10508,7 +10471,7 @@
         await toastSimple("Seed inventory", "No seeds to display.", "info");
         return;
       }
-      await fakeInventoryShow(buildInventoryShapeFrom(src), { open: true });
+      await fakeInventory.show(buildInventoryShapeFrom(src), { open: true });
     } catch (e) {
       await toastSimple("Seed inventory", e?.message || "Failed to open seed inventory.", "error");
     }
@@ -10525,9 +10488,9 @@
       selectedMap.clear();
       showSeedOverlay();
       await beginSelectedNameListener();
-      await fakeInventoryShow(buildInventoryShapeFrom(seedSourceCache), { open: true });
-      if (await isInventoryPanelOpen()) {
-        await waitInventoryPanelClosed();
+      await fakeInventory.show(buildInventoryShapeFrom(seedSourceCache), { open: true });
+      if (await fakeInventory.isOpen()) {
+        await fakeInventory.waitClosed();
       }
     } catch (e) {
       await toastSimple("Seed inventory", e?.message || "Failed to open seed selector.", "error");
@@ -10735,7 +10698,7 @@
       remainingByName.set(disp, remaining - take);
     }
     try {
-      await fakeInventoryShow({ items: patched, favoritedItemIds: [] }, { open: false });
+      await fakeInventory.show({ items: patched, favoritedItemIds: [] }, { open: false });
     } catch {
     }
   }
@@ -10920,9 +10883,9 @@
       selectedDecorMap.clear();
       showDecorOverlay();
       await beginSelectedDecorNameListener();
-      await fakeInventoryShow(buildDecorInventoryShapeFrom(decorSourceCache), { open: true });
-      if (await isInventoryPanelOpen()) {
-        await waitInventoryPanelClosed();
+      await fakeInventory.show(buildDecorInventoryShapeFrom(decorSourceCache), { open: true });
+      if (await fakeInventory.isOpen()) {
+        await fakeInventory.waitClosed();
       }
     } catch (e) {
       await toastSimple("Decor inventory", e?.message || "Failed to open decor selector.", "error");
@@ -23094,12 +23057,12 @@
           } catch {
           }
           if (!items.length) return null;
-          await fakeInventoryShow(payload, { open: true });
+          await fakeInventory.show(payload, { open: true });
           const selIndex = await _waitValidatedInventoryIndex(2e4);
           if (selIndex != null && selIndex >= 0 && selIndex < items.length) {
-            await closeInventoryPanel();
+            await fakeInventory.close();
           } else {
-            await fakeInventoryDisable();
+            await fakeInventory.disable();
             return null;
           }
           const chosenPet = _inventoryItemToPet(items[selIndex]);
@@ -23117,12 +23080,12 @@
           const payload = await this.buildFilteredInventoryByQuery(search2 || "");
           const items = Array.isArray(payload?.items) ? payload.items : [];
           if (!items.length) return null;
-          await fakeInventoryShow(payload, { open: true });
+          await fakeInventory.show(payload, { open: true });
           const selIndex = await _waitValidatedInventoryIndex(2e4);
           if (selIndex != null && selIndex >= 0 && selIndex < items.length) {
-            await closeInventoryPanel();
+            await fakeInventory.close();
           } else {
-            await fakeInventoryDisable();
+            await fakeInventory.disable();
             return null;
           }
           await clearHandSelection();
@@ -34910,7 +34873,7 @@
   async function reopenFakeActivityLogFromHistory() {
     try {
       const filtered = getFilteredHistoryForReopen();
-      await fakeActivityLogShow(filtered, { open: false });
+      await fakeActivityLog.show(filtered, { open: false });
     } catch {
     }
   }
@@ -34962,7 +34925,7 @@
     };
     const onModalChange = async (modalId) => {
       const cur = modalId ?? null;
-      if (cur === ACTIVITY_LOG_MODAL_ID2 && lastModal !== ACTIVITY_LOG_MODAL_ID2) {
+      if (cur === ACTIVITY_LOG_MODAL_ID && lastModal !== ACTIVITY_LOG_MODAL_ID) {
         if (!consumeHistoryReopenSkip()) {
           await reopenFakeActivityLogFromHistory();
         }
@@ -35033,7 +34996,7 @@
   async function applyActiveFilter() {
     if (!modalOpen2) return;
     try {
-      await fakeActivityLogShow(computeFilteredHistory(activeFilter), { open: false });
+      await fakeActivityLog.show(computeFilteredHistory(activeFilter), { open: false });
     } catch {
     }
   }
@@ -54820,7 +54783,7 @@ Restore figures are averages; unlucky streaks do worse.`;
               return;
             }
             try {
-              await fakeInventoryShow({ ...inv, items }, { open: true });
+              await fakeInventory.show({ ...inv, items }, { open: true });
             } catch (err) {
               await toastSimple("Inventory", err?.message || "Failed to open inventory", "error");
               return;
@@ -54840,7 +54803,7 @@ Restore figures are averages; unlucky streaks do worse.`;
             }
             const safe = journal ?? {};
             try {
-              await fakeJournalShow(safe, { open: true });
+              await fakeJournal.show(safe, { open: true });
             } catch (err) {
               await toastSimple("Journal", err?.message || "Failed to open journal.", "error");
               return;
@@ -54870,7 +54833,7 @@ Restore figures are averages; unlucky streaks do worse.`;
               return;
             }
             skipNextActivityLogHistoryReopen();
-            await fakeStatsShow(stats, { open: true });
+            await fakeStats.show(stats, { open: true });
             if (playerName) await toastSimple("Stats", `${playerName}'s stats displayed.`, "info");
           } catch (e) {
             await toastSimple("Stats", e?.message || "Failed to open stats modal.", "error");
@@ -54884,7 +54847,7 @@ Restore figures are averages; unlucky streaks do worse.`;
               return;
             }
             skipNextActivityLogHistoryReopen();
-            await fakeActivityLogShow(logs, { open: true });
+            await fakeActivityLog.show(logs, { open: true });
             if (playerName) await toastSimple("Activity log", `${playerName}'s activity log displayed.`, "info");
           } catch (e) {
             await toastSimple("Activity log", e?.message || "Failed to open activity log.", "error");
@@ -54897,7 +54860,7 @@ Restore figures are averages; unlucky streaks do worse.`;
             return;
           }
           try {
-            await fakeJournalShow({
+            await fakeJournal.show({
               produce: {
                 [String(species)]: {
                   variantsLogged: [{ variant: String(variant), createdAt }]
@@ -54916,7 +54879,7 @@ Restore figures are averages; unlucky streaks do worse.`;
             return;
           }
           try {
-            await fakeJournalShow({
+            await fakeJournal.show({
               pets: {
                 [String(petSpecies)]: {
                   variantsLogged: [{ variant: String(variant), createdAt }]
@@ -54935,7 +54898,7 @@ Restore figures are averages; unlucky streaks do worse.`;
             return;
           }
           try {
-            await fakeJournalShow({
+            await fakeJournal.show({
               pets: {
                 [String(petSpecies)]: {
                   abilitiesLogged: [{ ability: String(ability), createdAt }]
@@ -55466,7 +55429,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           hideWin();
           try {
             await PlayersService.openInventoryPreview(player2.id, player2.name);
-            if (await isInventoryPanelOpen()) await waitInventoryPanelClosed();
+            if (await fakeInventory.isOpen()) await fakeInventory.waitClosed();
           } finally {
             showWin();
           }
@@ -55475,7 +55438,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           hideWin();
           try {
             await PlayersService.openJournalLog(player2.id, player2.name);
-            if (await isJournalModalOpen()) await waitJournalModalClosed();
+            if (await fakeJournal.isOpen()) await fakeJournal.waitClosed();
           } finally {
             showWin();
           }
@@ -55484,7 +55447,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           hideWin();
           try {
             await PlayersService.openStatsModal(player2.id, player2.name);
-            if (await isStatsModalOpenAsync()) await waitStatsModalClosed();
+            if (await fakeStats.isOpen()) await fakeStats.waitClosed();
           } finally {
             showWin();
           }
@@ -55493,7 +55456,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           hideWin();
           try {
             await PlayersService.openActivityLogModal(player2.id, player2.name);
-            if (await isActivityLogModalOpenAsync()) await waitActivityLogModalClosed();
+            if (await fakeActivityLog.isOpen()) await fakeActivityLog.waitClosed();
           } finally {
             showWin();
           }
