@@ -8,7 +8,7 @@ import {
 } from "../shops/shopFeed";
 import type { ShopKind } from "../shops/purchases";
 import type { Kind as BuyKind } from "../shops/shops";
-import { audio, type PlaybackMode, type TriggerOverrides } from "./audio";
+import { audio, type PlaybackMode, type TriggerOverrides } from "./audio/audio";
 import { ruleOverrides, type NotifierRule } from "./rules";
 import { ShopRows } from "./shopRows";
 

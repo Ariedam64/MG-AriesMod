@@ -2,7 +2,7 @@ import { Atoms } from "../../game/store/atoms";
 import { Emitter, Subscriptions } from "../../lib/emitter";
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
 import { StatsService } from "../stats/stats";
-import { audio, type TriggerOverrides } from "./audio";
+import { audio, type TriggerOverrides } from "./audio/audio";
 import { NotifierRules } from "./rules";
 import {
   WEATHER_ID_PREFIX,

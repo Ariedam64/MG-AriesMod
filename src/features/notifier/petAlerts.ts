@@ -2,7 +2,7 @@ import { PetsService } from "../pets/pets";
 import type { PetInfo } from "../../game/player";
 import { clamp } from "../../lib/math";
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
-import { audio } from "./audio";
+import { audio } from "./audio/audio";
 
 /**
  * Hunger alerts for the active pets: a sound when a pet's hunger drops below

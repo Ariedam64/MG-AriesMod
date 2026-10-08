@@ -12,7 +12,7 @@
 //
 // Run with: npm run check:shopalerts
 
-import { audio } from "../src/features/notifier/audio";
+import { audio } from "../src/features/notifier/audio/audio";
 import { ShopRows } from "../src/features/notifier/shopRows";
 import { ShopAlerts, findStockItem } from "../src/features/notifier/shopAlerts";
 import type { PurchasesSnapshot, ShopsSnapshot } from "../src/features/shops/shopFeed";

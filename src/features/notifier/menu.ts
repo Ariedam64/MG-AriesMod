@@ -8,7 +8,7 @@ import { formatLastSeen, formatWeatherMutation } from "./weather";
 import { isCapReached } from "./inventoryCaps";
 
 
-import { audio, type AudioContextKey, type PlaybackMode } from "./audio";
+import { audio, type AudioContextKey, type PlaybackMode } from "./audio/audio";
 import { PetAlertService } from "./petAlerts";
 import { PetsService } from "../pets/pets";
 import type { PetInfo } from "../../game/player";
@@ -1402,28 +1402,9 @@ function renderSettingsTab(view: HTMLElement, ui: Menu) {
   const handleFiles = async (files: FileList | null) => {
     s2Err.clear();
     if (!files || !files.length) return;
-    const added: string[] = [];
-    for (const f of Array.from(files)) {
-      try {
-        const res = await audio.importFileAsSound(f, {
-          maxBytes: 200 * 1024,
-          maxSeconds: 10.0,
-          bitrates: [48000, 32000, 20000, 12000, 8000],
-          maxInputBytes: 8 * 1024 * 1024,
-        });
-        added.push(res.name);
-      } catch (e: any) {
-        s2Err.show(`Failed for "${f.name}": ${e?.message || e}`);
-      }
-    }
+    const { added, errors } = await audio.importFiles(Array.from(files));
+    if (errors.length) s2Err.show(errors[errors.length - 1]);
     if (added.length) {
-      refreshAllSoundSelects();
-      renderLibList();
-      for (const cfg of contextOrder) {
-        if (!audio.getDefaultSoundName(cfg.key)) {
-          audio.setDefaultSoundByName(added[0], cfg.key);
-        }
-      }
       refreshAllSoundSelects();
       renderLibList();
     }

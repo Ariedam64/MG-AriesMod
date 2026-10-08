@@ -42,6 +42,7 @@
     "check:cataloglive": "esbuild scripts/checkCatalogLive.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkCatalogLive.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkCatalogLive.cjs",
     "check:abilitycolors": "esbuild scripts/checkAbilityChipColors.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkAbilityChipColors.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkAbilityChipColors.cjs",
     "check:shopalerts": "esbuild scripts/checkShopAlerts.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkShopAlerts.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkShopAlerts.cjs",
+    "check:alertsounds": "esbuild scripts/checkAlertSounds.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkAlertSounds.cjs --log-level=error && node node_modules/.cache/checkAlertSounds.cjs",
     "check:outgoing": "esbuild scripts/checkOutgoingRules.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/checkOutgoingRules.cjs --log-level=error && node -r ./scripts/_nodeStub.cjs node_modules/.cache/checkOutgoingRules.cjs"
   },
   "devDependencies": {

@@ -1,5 +1,5 @@
 import { h } from "../../ui/kit/dom";
-import { audio } from "./audio";
+import { audio } from "./audio/audio";
 import { startPixiBell } from "./bell/pixiBell";
 import { BELL_MODE_EVENT, BELL_WIDGET_Z_INDEX, isFloatingBellEnabled, startFloatingBell } from "./bell/floatingBell";
 import type { BellController } from "./bell/ring";

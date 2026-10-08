@@ -1,7 +1,7 @@
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
 import { Emitter } from "../../lib/emitter";
 import { clamp } from "../../lib/math";
-import { audio, type PlaybackMode, type TriggerOverrides } from "./audio";
+import { audio, type PlaybackMode, type TriggerOverrides } from "./audio/audio";
 
 /**
  * Custom alert rules: per item (`Seed:Carrot`) or per weather (`Weather:Rain`)
