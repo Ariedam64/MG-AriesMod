@@ -339,7 +339,7 @@ async function loadTextures(base: string, prefetched?: PrefetchedAtlas | null) {
     }
   }
 
-  const { items, cats } = buildItemsFromTextures(ctx.state.tex, ctx.cfg);
+  const { items, cats } = buildItemsFromTextures(ctx.state.tex);
   ctx.state.items = items;
   ctx.state.filtered = items.slice();
   ctx.state.cats = cats;

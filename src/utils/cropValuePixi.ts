@@ -149,7 +149,8 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
       return;
     }
     const state = getSpriteState();
-    if (!state) return;
+    const ctors = state?.ctors;
+    if (!state || !ctors) return;
 
     const value = priceWatcher.get();
     if (value == null) {
@@ -164,21 +165,21 @@ export function startCropValueOverlayInPixi(): PixiCropValueController {
         valueBadge = new graphicsCtor();
         currentCard.addChild(valueBadge);
       }
-      valueText = new state.ctors.Text({ text, style: VALUE_TEXT_STYLE });
+      valueText = new ctors.Text({ text, style: VALUE_TEXT_STYLE });
       currentCard.addChild(valueText);
     } else if (valueText.text !== text) {
       valueText.text = text;
     }
 
-    if (!valueIcon && state.ctors.Sprite) {
+    if (!valueIcon && ctors.Sprite) {
       if (coinTexture) {
-        valueIcon = new state.ctors.Sprite(coinTexture);
+        valueIcon = new ctors.Sprite(coinTexture);
         valueIcon.width = VALUE_ICON_SIZE;
         valueIcon.height = VALUE_ICON_SIZE;
         currentCard.addChild(valueIcon);
       } else if (!iconRetryScheduled) {
         iconRetryScheduled = true;
-        ensureCoinTexture(state.ctors.Texture).then(() => {
+        ensureCoinTexture(ctors.Texture).then(() => {
           iconRetryScheduled = false;
           if (running) syncValueNode();
         });

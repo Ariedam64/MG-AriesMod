@@ -30,12 +30,12 @@
 // @downloadURL  https://github.com/Ariedam64/MG-AriesMod/raw/refs/heads/main/dist/quinoa-ws.min.user.js
 // @updateURL    https://github.com/Ariedam64/MG-AriesMod/raw/refs/heads/main/dist/quinoa-ws.min.user.js
 // ==/UserScript==
+"use strict";
 (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
   var __getOwnPropNames = Object.getOwnPropertyNames;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
-  var __defNormalProp = (obj, key2, value) => key2 in obj ? __defProp(obj, key2, { enumerable: true, configurable: true, writable: true, value }) : obj[key2] = value;
   var __esm = (fn, res) => function __init() {
     return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
   };
@@ -52,12 +52,12 @@
     return to;
   };
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-  var __publicField = (obj, key2, value) => __defNormalProp(obj, typeof key2 !== "symbol" ? key2 + "" : key2, value);
 
   // src/sprite/settings.ts
   var DEFAULT_CFG, MUT_META, MUT_NAMES, MUT_G1, MUT_G2, MUT_G3;
   var init_settings = __esm({
     "src/sprite/settings.ts"() {
+      "use strict";
       DEFAULT_CFG = {
         origin: "https://magicgarden.gg",
         jobOn: true,
@@ -143,6 +143,7 @@
   }
   var init_state = __esm({
     "src/sprite/state.ts"() {
+      "use strict";
       init_settings();
     }
   });
@@ -159,6 +160,7 @@
   var pageWin, sleep;
   var init_async = __esm({
     "src/sprite/utils/async.ts"() {
+      "use strict";
       pageWin = globalThis.unsafeWindow || globalThis;
       sleep = (ms) => new Promise((resolve) => pageWin.setTimeout(resolve, ms));
     }
@@ -288,6 +290,7 @@
   }
   var init_hooks = __esm({
     "src/sprite/pixi/hooks.ts"() {
+      "use strict";
       init_async();
     }
   });
@@ -356,6 +359,7 @@
   var baseTexOf;
   var init_pixi = __esm({
     "src/sprite/utils/pixi.ts"() {
+      "use strict";
       baseTexOf = (tex) => tex?.baseTexture ?? tex?.source?.baseTexture ?? tex?.source ?? tex?._baseTexture ?? null;
     }
   });
@@ -373,11 +377,10 @@
     }
     return out.join("/");
   }
-  function categoryOf(key2, cfg) {
+  function categoryOf(key2) {
     const parts = splitKey(key2);
     const start2 = parts[0] === "sprite" || parts[0] === "sprites" ? 1 : 0;
-    const width = Math.max(1, cfg.catLevels | 0);
-    return parts.slice(start2, start2 + width).join("/") || "misc";
+    return parts[start2] || "misc";
   }
   function animParse(key2) {
     const parts = splitKey(key2);
@@ -392,6 +395,7 @@
   var splitKey, joinPath, dirOf, relPath;
   var init_path = __esm({
     "src/sprite/utils/path.ts"() {
+      "use strict";
       splitKey = (key2) => String(key2 || "").split("/").filter(Boolean);
       joinPath = (base, path) => base.replace(/\/?$/, "/") + String(path || "").replace(/^\//, "");
       dirOf = (path) => path.lastIndexOf("/") >= 0 ? path.slice(0, path.lastIndexOf("/") + 1) : "";
@@ -612,6 +616,7 @@
   var GM_TIMEOUT_MS, netDebugLog, getJSON, getBlob;
   var init_assetFetcher = __esm({
     "src/sprite/data/assetFetcher.ts"() {
+      "use strict";
       init_path();
       GM_TIMEOUT_MS = 5e3;
       netDebugLog = [];
@@ -698,19 +703,20 @@
   var isAtlas;
   var init_atlasToTextures = __esm({
     "src/sprite/pixi/atlasToTextures.ts"() {
+      "use strict";
       init_pixi();
       isAtlas = (j) => j && typeof j === "object" && j.frames && j.meta && typeof j.meta.image === "string";
     }
   });
 
   // src/sprite/data/catalogIndexer.ts
-  function buildItemsFromTextures(tex, cfg) {
+  function buildItemsFromTextures(tex) {
     const keys = [...tex.keys()].sort((a, b) => a.localeCompare(b));
     const used = /* @__PURE__ */ new Set();
     const items = [];
     const cats = /* @__PURE__ */ new Map();
     const addToCat = (key2, item) => {
-      const cat = categoryOf(key2, cfg);
+      const cat = categoryOf(key2);
       if (!cats.has(cat)) cats.set(cat, []);
       cats.get(cat).push(item);
     };
@@ -755,6 +761,7 @@
   }
   var init_catalogIndexer = __esm({
     "src/sprite/data/catalogIndexer.ts"() {
+      "use strict";
       init_path();
     }
   });
@@ -1180,6 +1187,7 @@
   var TILE_SIZE_WORLD, BASE_ICON_SCALE, TALL_PLANT_MUTATION_ICON_SCALE_BOOST, FLOATING_MUTATION_ICONS, MUT_ICON_Y_EXCEPT, MUT_ICON_X_EXCEPT, TALL_OVERLAY_OFFSETS, MUTATION_ORDER, MUTATION_INDEX, sortMutations, SUPPORTED_BLEND_OPS, pickBlendOp, FILTERS, hasMutationFilter, isTallKey, computeVariantSignature, curVariant, normalizeMutListColor, normalizeMutListOverlay, buildMutationPipeline, angleGrad, fillGrad, baseNameOf, entryCost, processJobs;
   var init_variantBuilder = __esm({
     "src/sprite/mutations/variantBuilder.ts"() {
+      "use strict";
       init_settings();
       TILE_SIZE_WORLD = 256;
       BASE_ICON_SCALE = 0.5;
@@ -1367,6 +1375,7 @@
   }
   var init_expose = __esm({
     "src/sprite/api/expose.ts"() {
+      "use strict";
       init_variantBuilder();
     }
   });
@@ -1394,6 +1403,7 @@
   var ORIGIN, sleep2, getJSON2, getBlob2;
   var init_mgCommon = __esm({
     "src/utils/mgCommon.ts"() {
+      "use strict";
       ORIGIN = "https://magicgarden.gg";
       sleep2 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       getJSON2 = async (url) => JSON.parse((await gmGet(url, "text")).responseText);
@@ -1582,6 +1592,7 @@
   var _SAFE_IMG_HOSTS, _gmImgCache, _gmImgPending, _extMimeMap, _gmAudioCache, _gmAudioPending, EMOJI_DATA_CDN_PREFIX, _emojiJson, _emojiPending, _emojiInterceptorInstalled;
   var init_discordCsp = __esm({
     "src/utils/discordCsp.ts"() {
+      "use strict";
       init_events();
       _SAFE_IMG_HOSTS = ["cdn.discordapp.com", "media.discordapp.net"];
       _gmImgCache = /* @__PURE__ */ new Map();
@@ -1607,6 +1618,7 @@
   var DEFAULT_FRIEND_SETTINGS;
   var init_friendSettingsSchema = __esm({
     "src/utils/friendSettingsSchema.ts"() {
+      "use strict";
       DEFAULT_FRIEND_SETTINGS = {
         showOnlineFriendsOnly: false,
         hideRoomFromPublicList: false,
@@ -1975,6 +1987,7 @@
   var ARIES_STORAGE_KEY, ARIES_STORAGE_VERSION, API_KEY_STORAGE_KEY, AUTH_DECLINED_STORAGE_KEY, SEEN_ROOM_PRIVACY_NOTICE_KEY, SEEN_AUTO_RECO_DISABLED_NOTICE_KEY, SEEN_CHANGELOG_VERSION_KEY, DEFAULT_ARIES_STORAGE, ARIES_FLUSH_DELAY_MS, cachedAriesStorage, ariesFlushTimer, ariesFlushPending, ariesLifecycleHooksInstalled;
   var init_localStorage = __esm({
     "src/utils/localStorage.ts"() {
+      "use strict";
       init_friendSettingsSchema();
       ARIES_STORAGE_KEY = "aries_mod";
       ARIES_STORAGE_VERSION = 1;
@@ -2004,6 +2017,7 @@
   var API_BASE_URL, API_ORIGIN, MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND, DEFAULT_HEARTBEAT_INTERVAL;
   var init_config = __esm({
     "src/ariesModAPI/config.ts"() {
+      "use strict";
       API_BASE_URL = "https://ariesmod-api.ariedam.fr/";
       API_ORIGIN = API_BASE_URL.replace(/\/$/, "");
       MAX_UNCHANGED_TICKS_BEFORE_FORCE_SEND = 5;
@@ -2103,6 +2117,7 @@
   }
   var init_http = __esm({
     "src/ariesModAPI/client/http.ts"() {
+      "use strict";
       init_discordCsp();
       init_localStorage();
       init_config();
@@ -2113,6 +2128,7 @@
   // src/ariesModAPI/client/sse.ts
   var init_sse = __esm({
     "src/ariesModAPI/client/sse.ts"() {
+      "use strict";
       init_localStorage();
       init_http();
       init_config();
@@ -2122,6 +2138,7 @@
   // src/ariesModAPI/client/longPoll.ts
   var init_longPoll = __esm({
     "src/ariesModAPI/client/longPoll.ts"() {
+      "use strict";
       init_localStorage();
       init_config();
       init_http();
@@ -2162,6 +2179,7 @@
   var _unifiedConnections, _pollPauseDepth;
   var init_events = __esm({
     "src/ariesModAPI/client/events.ts"() {
+      "use strict";
       init_discordCsp();
       init_sse();
       init_longPoll();
@@ -2193,6 +2211,7 @@
   var sandboxWin, pageWin2, pageWindow, isIsolatedContext;
   var init_page_context = __esm({
     "src/utils/page-context.ts"() {
+      "use strict";
       sandboxWin = window;
       pageWin2 = typeof unsafeWindow !== "undefined" && unsafeWindow ? unsafeWindow : sandboxWin;
       pageWindow = pageWin2;
@@ -2220,15 +2239,15 @@
       colorPollAttempts: 0
     };
   }
-  var STATE_GLOBAL_KEY, captureState;
+  var STATE_GLOBAL_KEY, globals, captureState;
   var init_state2 = __esm({
     "src/data/dynamic/state.ts"() {
+      "use strict";
       init_page_context();
       STATE_GLOBAL_KEY = "__MG_DATA_STATE__";
-      captureState = pageWindow[STATE_GLOBAL_KEY] || createInitialState2();
-      if (!pageWindow[STATE_GLOBAL_KEY]) {
-        pageWindow[STATE_GLOBAL_KEY] = captureState;
-      }
+      globals = pageWindow;
+      captureState = globals[STATE_GLOBAL_KEY] ?? createInitialState2();
+      globals[STATE_GLOBAL_KEY] = captureState;
     }
   });
 
@@ -2236,6 +2255,7 @@
   var MAIN_BUNDLE_PATTERN, QUINOA_VIEW_PATTERN, MAX_COLOR_POLL_ATTEMPTS, COLOR_POLL_INTERVAL_MS, ABILITY_COLOR_ANCHOR;
   var init_constants = __esm({
     "src/data/dynamic/logic/constants.ts"() {
+      "use strict";
       MAIN_BUNDLE_PATTERN = /main-[^/]+\.js(\?|$)/;
       QUINOA_VIEW_PATTERN = /QuinoaView-[^/]+\.js(\?|$)/;
       MAX_COLOR_POLL_ATTEMPTS = 10;
@@ -2364,6 +2384,7 @@
   var pageContext, mainBundleCache, quinoaViewCache;
   var init_bundleParser = __esm({
     "src/data/dynamic/logic/bundleParser.ts"() {
+      "use strict";
       init_page_context();
       init_constants();
       pageContext = pageWindow;
@@ -2545,6 +2566,7 @@
   var DEFAULT_COLOR, STATIC_ABILITY_COLORS;
   var init_abilityColors = __esm({
     "src/data/dynamic/logic/abilityColors.ts"() {
+      "use strict";
       init_state2();
       init_constants();
       init_bundleParser();
@@ -2673,6 +2695,7 @@
   var DEFAULT_WAIT_TIMEOUT_MS, WAIT_POLL_INTERVAL_MS;
   var init_accessors = __esm({
     "src/data/dynamic/logic/accessors.ts"() {
+      "use strict";
       init_state2();
       DEFAULT_WAIT_TIMEOUT_MS = 5e3;
       WAIT_POLL_INTERVAL_MS = 50;
@@ -2724,6 +2747,7 @@
   var API_BASE;
   var init_capture = __esm({
     "src/data/dynamic/logic/capture.ts"() {
+      "use strict";
       init_state2();
       init_mgCommon();
       init_events();
@@ -2878,6 +2902,7 @@
   var PET_ABILITY_ACTIONS;
   var init_abilityFormatter = __esm({
     "src/data/dynamic/logic/abilityFormatter.ts"() {
+      "use strict";
       PET_ABILITY_ACTIONS = [
         "CoinFinderI",
         "CoinFinderII",
@@ -2950,6 +2975,7 @@
   var MGData;
   var init_dynamic = __esm({
     "src/data/dynamic/index.ts"() {
+      "use strict";
       init_abilityColors();
       init_accessors();
       init_capture();
@@ -3125,6 +3151,7 @@
   var INTERNAL_TO_API, API_TO_INTERNAL, SEARCH_CATS, indexEntries, nameIndex, CATALOG_SOURCES, catalogIndex, catalogSourcesIndexed, catalogReader;
   var init_spriteResolver = __esm({
     "src/ui/spriteResolver.ts"() {
+      "use strict";
       INTERNAL_TO_API = {
         plant: "plants",
         tallplant: "tallPlants",
@@ -3513,6 +3540,7 @@
   var API_BASE2, indexReady, MUTATION_ICONS, MUTATION_FILTERS, SUPPORTED_BLEND_OPS2, imageCache, objectUrlCache, spriteDataUrlCache, spriteDataUrlResolved, warmupState, warmupListeners;
   var init_spriteIconCache = __esm({
     "src/ui/spriteIconCache.ts"() {
+      "use strict";
       init_mgCommon();
       init_events();
       init_dynamic();
@@ -3597,6 +3625,7 @@
   var gameVersion;
   var init_gameVersion = __esm({
     "src/utils/gameVersion.ts"() {
+      "use strict";
       gameVersion = null;
     }
   });
@@ -3641,6 +3670,7 @@
   var normalizeKey, categoryAlias, keyCategoryOf, matchesCategory, baseNameOf2;
   var init_spriteApi = __esm({
     "src/sprite/api/spriteApi.ts"() {
+      "use strict";
       init_variantBuilder();
       normalizeKey = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
       categoryAlias = {
@@ -3880,7 +3910,7 @@
         console.warn("[MG SpriteCatalog] skipping atlas (texture load failed)", { path, imgPath, error });
       }
     }
-    const { items, cats } = buildItemsFromTextures(ctx.state.tex, ctx.cfg);
+    const { items, cats } = buildItemsFromTextures(ctx.state.tex);
     ctx.state.items = items;
     ctx.state.filtered = items.slice();
     ctx.state.cats = cats;
@@ -4291,6 +4321,7 @@
   var ctx, hooks, parseFrameCategory, yieldToBrowser, prefetchPromise, atlasBundle, atlasBundleResolve, atlasBundleReady, SKIPPED_ATLAS_PATTERNS;
   var init_sprite = __esm({
     "src/sprite/index.ts"() {
+      "use strict";
       init_state();
       init_hooks();
       init_pixi();
@@ -4354,6 +4385,7 @@
   var NativeWS, NativeWorker, sockets, quinoaWS, workerFound, Workers;
   var init_state3 = __esm({
     "src/core/state.ts"() {
+      "use strict";
       init_page_context();
       NativeWS = pageWindow.WebSocket;
       NativeWorker = pageWindow.Worker;
@@ -4388,6 +4420,7 @@
   }
   var init_parse = __esm({
     "src/core/parse.ts"() {
+      "use strict";
     }
   });
 
@@ -4463,6 +4496,7 @@
   var QUINOA_SCOPE, COMMAND_ENVELOPE_TYPE, COMMAND_TYPES, FIRST_COMMAND_SEQUENCE, MAX_TRACKED_REQUEST_IDS, nextCommandSequence, modCommandsSent, ownRequestIds, randomRequestId;
   var init_quinoaCommands = __esm({
     "src/core/quinoaCommands.ts"() {
+      "use strict";
       QUINOA_SCOPE = ["Room", "Quinoa"];
       COMMAND_ENVELOPE_TYPE = "QuinoaCommand";
       COMMAND_TYPES = /* @__PURE__ */ new Set([
@@ -4555,6 +4589,7 @@
   var STORE_BRIDGE_GLOBAL;
   var init_bridge = __esm({
     "src/store/bridge.ts"() {
+      "use strict";
       init_page_context();
       STORE_BRIDGE_GLOBAL = "__MG_STORE_BRIDGE__";
     }
@@ -4763,6 +4798,7 @@
   var _store, _captureInProgress, _captureError, _lastCapturedVia, ATOM_CACHE_WAIT_MS, WRITE_ONCE_MS, getAtomCache, STORE_OWNER;
   var init_jotai = __esm({
     "src/store/jotai.ts"() {
+      "use strict";
       init_page_context();
       init_bridge();
       _store = null;
@@ -4933,6 +4969,7 @@
   var ATOM_POLL_MS, ATOM_WAIT_TIMEOUT_MS, pendingWaiters, pollTimer, Store;
   var init_api = __esm({
     "src/store/api.ts"() {
+      "use strict";
       init_jotai();
       ATOM_POLL_MS = 250;
       ATOM_WAIT_TIMEOUT_MS = 10 * 6e4;
@@ -5136,6 +5173,7 @@
   var eq, HubEq;
   var init_hub = __esm({
     "src/store/hub.ts"() {
+      "use strict";
       init_api();
       eq = {
         shallow(a, b) {
@@ -5177,6 +5215,7 @@
   }
   var init_modalState = __esm({
     "src/utils/modalState.ts"() {
+      "use strict";
     }
   });
 
@@ -5246,6 +5285,7 @@
   var position, state, map, player, action, myData, myInventory, gardensWithBackfills, myCropInventory, mySeedInventory, myToolInventory, myEggInventory, myDecorInventory, mySeedSiloItems, myDecorShedItems, myToolShackItems, myFeedingTroughItems, myPetInfos, myPetSlotInfos, myPrimitivePetSlots, myPetIdOnSameTile, totalPetSellPrice, myCropItemsToSell, myPetHutchPetItems, isMyInventoryAtMaxLength, myNumPetHutchItems, myPetHutchCapacitySlots, shops, myShopPurchases, myUserSlot, numPlayers, totalCropSellPrice, myValidatedSelectedItemIndex, setSelectedIndexToEnd, mySelectedItemName, mySelectedItemId, myPossiblyNoLongerValidSelectedItemIndex, myCurrentGardenObject, myCurrentSortedGrowSlotIndices, myCurrentGrowSlotIndex, myOwnCurrentGardenObject, isCurrentGrowSlotMature, myOwnCurrentDirtTileIndex, mySelectedItemRotation, weather, activeModalRaw, sameModal, activeModal, inventoryModalIsActive, activityLogTab, avatarTriggerAnimationAtom, friendBonusMultiplier, garden, gardenTileObjects, favoriteIds, playerId, myOwnCurrentGardenObjectType, stateChild, stateChildData, stateShops, stateUserSlots, statePlayers, myActivityLog, seedShop, toolShop, eggShop, decorShop, GardenSlotsSig, PetsByIdSig, PetsByIdStableSig, FavoriteIdsSig, Atoms;
   var init_atoms = __esm({
     "src/store/atoms.ts"() {
+      "use strict";
       init_hub();
       init_modalState();
       position = makeAtom("positionAtom");
@@ -5437,6 +5477,7 @@
   var rarity, harvestType, tileRefsPlants, tileRefsTallPlants, tileRefsSeeds, tileRefsItems, tileRefsPets, tileRefsMutations, tileRefsMutationLabels, tileRefsDecor, plantCatalog, mutationCatalog, eggCatalog, petCatalog, petAbilities, toolCatalog, decorCatalog, weatherCatalog, petHungerDepletionMinutes, coin;
   var init_hardcoded_data_clean = __esm({
     "src/data/hardcoded-data.clean.js"() {
+      "use strict";
       rarity = {
         Common: "Common",
         Uncommon: "Uncommon",
@@ -8808,6 +8849,7 @@
   var plantCatalog2, petCatalog2, petAbilities2, mutationCatalog2, eggCatalog2, toolCatalog2, decorCatalog2, weatherCatalog2, rarity2, coin2, RARITY_SPRITE_NAMES, petHungerDepletionMinutes2, tileRefsMutations2, tileRefsMutationLabels2;
   var init_data = __esm({
     "src/data/index.ts"() {
+      "use strict";
       init_dynamic();
       init_hardcoded_data_clean();
       init_dynamic();
@@ -8890,6 +8932,7 @@
   var CROP_SIZE_MIN, CROP_SIZE_MAX, SIZE_SPAN, LEGACY_SCALE_MIN, LEGACY_FALLBACK_MAX_SCALE;
   var init_cropSize = __esm({
     "src/utils/cropSize.ts"() {
+      "use strict";
       init_data();
       CROP_SIZE_MIN = 50;
       CROP_SIZE_MAX = 100;
@@ -9320,6 +9363,7 @@
   var VISUAL_MUTATIONS, LOCKER_NO_WEATHER_TAG, normalizeMutationTag, canonicalizeWeatherTag, normalizeMutationsList, emptySlotInfo, now, shallowEqualStrings, slotInfosEqual, isPlantObject, slotSignature, gardenObjectSignature, arraySignature, defaultOrder, clamp, extractSeedKey, clampPercent, extractSizePercent, ARIES_LOCKER_STATE_PATH, clampNumber, LockerService, lockerService;
   var init_locker = __esm({
     "src/services/locker.ts"() {
+      "use strict";
       init_atoms();
       init_cropSize();
       init_localStorage();
@@ -9458,14 +9502,14 @@
       clampNumber = (value, min, max) => Math.max(min, Math.min(max, value));
       LockerService = class {
         constructor() {
-          __publicField(this, "state", defaultState());
-          __publicField(this, "listeners", /* @__PURE__ */ new Set());
-          __publicField(this, "slotInfoListeners", /* @__PURE__ */ new Set());
-          __publicField(this, "slotWatcher", null);
-          __publicField(this, "slotWatcherUnsub", null);
-          __publicField(this, "currentSlotInfo", emptySlotInfo());
-          __publicField(this, "currentSlotHarvestAllowed", null);
-          __publicField(this, "lastSlotChangeDetectedAt", null);
+          this.state = defaultState();
+          this.listeners = /* @__PURE__ */ new Set();
+          this.slotInfoListeners = /* @__PURE__ */ new Set();
+          this.slotWatcher = null;
+          this.slotWatcherUnsub = null;
+          this.currentSlotInfo = emptySlotInfo();
+          this.currentSlotHarvestAllowed = null;
+          this.lastSlotChangeDetectedAt = null;
           this.load();
           this.updateSlotWatcher();
         }
@@ -10035,6 +10079,7 @@
   var GARDEN_INT_KEYS, SHOP_INT_KEYS, ABILITY_INT_KEYS, WEATHER_INT_KEYS, memoryStore, listeners, isRecord, toNumber, toPositiveNumber, toPositiveInt, toPositiveTimestamp, cloneStats, unwrapMaybeNestedSnapshot, StatsService, StatsDefaults;
   var init_stats = __esm({
     "src/services/stats.ts"() {
+      "use strict";
       init_data();
       init_localStorage();
       GARDEN_INT_KEYS = {
@@ -10202,6 +10247,7 @@
   var ARIES_LOCKER_RESTRICTIONS_PATH, clampPercent2, roundToStep, VALID_RARITIES, DEFAULT_SELL_ALL_PETS_RULES, DEFAULT_STATE, FRIEND_BONUS_STEP, FRIEND_BONUS_MAX, sanitizePercent, sanitizePlayers, sanitizeEggLocks, sanitizeSellAllPetsRules, requiredPercentFromPlayers, LockerRestrictionsService, lockerRestrictionsService;
   var init_lockerRestrictions = __esm({
     "src/services/lockerRestrictions.ts"() {
+      "use strict";
       init_localStorage();
       ARIES_LOCKER_RESTRICTIONS_PATH = "locker.restrictions";
       clampPercent2 = (value) => Math.max(0, Math.min(50, Math.round(value)));
@@ -10260,8 +10306,8 @@
       requiredPercentFromPlayers = (players) => sanitizePercent((sanitizePlayers(players) - 1) * 10);
       LockerRestrictionsService = class {
         constructor() {
-          __publicField(this, "state", { ...DEFAULT_STATE });
-          __publicField(this, "listeners", /* @__PURE__ */ new Set());
+          this.state = { ...DEFAULT_STATE };
+          this.listeners = /* @__PURE__ */ new Set();
           this.load();
         }
         load() {
@@ -10378,6 +10424,7 @@
   }
   var init_toast = __esm({
     "src/ui/toast.ts"() {
+      "use strict";
       init_jotai();
     }
   });
@@ -10417,6 +10464,7 @@
   }
   var init_api2 = __esm({
     "src/utils/api.ts"() {
+      "use strict";
     }
   });
 
@@ -10464,6 +10512,7 @@
   }
   var init_webSocketBridge = __esm({
     "src/core/webSocketBridge.ts"() {
+      "use strict";
       init_state3();
       init_quinoaCommands();
     }
@@ -10625,6 +10674,7 @@
   var _fakeRegistry;
   var init_fakeAtoms = __esm({
     "src/services/fakeAtoms.ts"() {
+      "use strict";
       init_jotai();
       _fakeRegistry = /* @__PURE__ */ new Map();
     }
@@ -10682,6 +10732,7 @@
   var ACTIVITY_LOG_MODAL_ID, ACTIVITY_LOG_MODAL_LABEL, FILTER_TOOLBAR_LABEL, TAB_BAR_LABELS, LOG_ROW_LABEL, STAT_CARD_LABEL;
   var init_activityLogModalLayout = __esm({
     "src/utils/activityLogModalLayout.ts"() {
+      "use strict";
       ACTIVITY_LOG_MODAL_ID = "activityLog";
       ACTIVITY_LOG_MODAL_LABEL = "ActivityLogModal";
       FILTER_TOOLBAR_LABEL = "AriesActivityLogFilter";
@@ -10849,6 +10900,7 @@
   var mergeMyData, SHARED_MYDATA_PATCH, INVENTORY_ATOM_PATCH, INVENTORY_MODAL_ID, JOURNAL_MODAL_ID, ACTIVITY_LOG_MODAL_ID2;
   var init_fakeModal = __esm({
     "src/services/fakeModal.ts"() {
+      "use strict";
       init_fakeAtoms();
       init_atoms();
       init_modalState();
@@ -10909,6 +10961,7 @@
   var resolveContext, KEYCODE_TABLE, codeToKey, isEditableTarget, normalizeCombo, parseCombo, evToCombo, REMAP_FLAG, RAPID_SYN_FLAG, InGameHotkeys, defaultContext, inGameHotkeys;
   var init_ingameHotkeys = __esm({
     "src/core/ingameHotkeys.ts"() {
+      "use strict";
       init_page_context();
       resolveContext = (context) => {
         if (context) return context;
@@ -11022,22 +11075,20 @@
       RAPID_SYN_FLAG = "__inGameHotkeysRapidSynthetic__";
       InGameHotkeys = class {
         constructor(autoAttach = true, context) {
-          __publicField(this, "win");
-          __publicField(this, "doc");
           // remapper
-          __publicField(this, "enabled", true);
-          __publicField(this, "map", /* @__PURE__ */ new Map());
+          this.enabled = true;
+          this.map = /* @__PURE__ */ new Map();
           // combo normalisé -> spec destination
-          __publicField(this, "blockedSet", /* @__PURE__ */ new Set());
+          this.blockedSet = /* @__PURE__ */ new Set();
           // combos bloqués
-          __publicField(this, "eventBlockers", /* @__PURE__ */ new Set());
-          __publicField(this, "attachedDocs", /* @__PURE__ */ new WeakSet());
+          this.eventBlockers = /* @__PURE__ */ new Set();
+          this.attachedDocs = /* @__PURE__ */ new WeakSet();
           // docs déjà hookés
-          __publicField(this, "observers", []);
-          __publicField(this, "handlers", /* @__PURE__ */ new Map());
-          __publicField(this, "passthrough", /* @__PURE__ */ new Set(["F5", "F12"]));
+          this.observers = [];
+          this.handlers = /* @__PURE__ */ new Map();
+          this.passthrough = /* @__PURE__ */ new Set(["F5", "F12"]);
           // rapid-fire manager
-          __publicField(this, "sessions", /* @__PURE__ */ new Map());
+          this.sessions = /* @__PURE__ */ new Map();
           const ctx2 = resolveContext(context);
           this.win = ctx2.window;
           this.doc = ctx2.document;
@@ -11406,6 +11457,7 @@
   var keybindCaptureCount;
   var init_keyboard = __esm({
     "src/utils/keyboard.ts"() {
+      "use strict";
       keybindCaptureCount = 0;
     }
   });
@@ -11556,6 +11608,7 @@
   var activeHotkeyRecorder, HOTKEY_RECORDING_TIMEOUT_MS, Menu, VTabs, _MOD_CODES, CANONICAL_CODES;
   var init_menu = __esm({
     "src/ui/menu.ts"() {
+      "use strict";
       init_localStorage();
       init_keyboard();
       activeHotkeyRecorder = null;
@@ -11563,19 +11616,13 @@
       Menu = class {
         constructor(opts = {}) {
           this.opts = opts;
-          // NOTE: je rends root public pour pouvoir faire ui.root.appendChild(...) côté menus
-          __publicField(this, "root");
-          __publicField(this, "tabBar");
-          __publicField(this, "views");
-          __publicField(this, "tabs", /* @__PURE__ */ new Map());
-          __publicField(this, "events", /* @__PURE__ */ new Map());
-          __publicField(this, "currentId", null);
-          __publicField(this, "lsKeyActive");
-          __publicField(this, "menuId");
-          __publicField(this, "_altDown", false);
-          __publicField(this, "_insertDown", false);
-          __publicField(this, "_hovering", false);
-          __publicField(this, "_onKey", (e) => {
+          this.tabs = /* @__PURE__ */ new Map();
+          this.events = /* @__PURE__ */ new Map();
+          this.currentId = null;
+          this._altDown = false;
+          this._insertDown = false;
+          this._hovering = false;
+          this._onKey = (e) => {
             if (e.code === "Insert" || e.key === "Insert") {
               this._insertDown = e.type === "keydown";
             }
@@ -11584,20 +11631,20 @@
               this._altDown = alt;
               this._updateAltCursor();
             }
-          });
-          __publicField(this, "_onBlur", () => {
+          };
+          this._onBlur = () => {
             this._altDown = false;
             this._insertDown = false;
             this._updateAltCursor();
-          });
-          __publicField(this, "_onEnter", () => {
+          };
+          this._onEnter = () => {
             this._hovering = true;
             this._updateAltCursor();
-          });
-          __publicField(this, "_onLeave", () => {
+          };
+          this._onLeave = () => {
             this._hovering = false;
             this._updateAltCursor();
-          });
+          };
           this.menuId = this.opts.id || "default";
           this.lsKeyActive = `menu:${this.menuId}:activeTab`;
         }
@@ -13411,16 +13458,11 @@
         constructor(api, opts = {}) {
           this.api = api;
           this.opts = opts;
-          __publicField(this, "root");
-          __publicField(this, "filterWrap", null);
-          __publicField(this, "filterInput", null);
-          __publicField(this, "list");
-          __publicField(this, "listWrap", null);
-          __publicField(this, "items", []);
-          __publicField(this, "selectedId", null);
-          __publicField(this, "onSelectCb");
-          __publicField(this, "renderItemCustom");
-          __publicField(this, "emptyText");
+          this.filterWrap = null;
+          this.filterInput = null;
+          this.listWrap = null;
+          this.items = [];
+          this.selectedId = null;
           this.root = el("div", "qmm-vtabs");
           this.root.style.minWidth = "0";
           this.emptyText = opts.emptyText || "Aucun \xE9l\xE9ment.";
@@ -14030,6 +14072,7 @@
   var SECTION_CONFIG, KEYBINDS_BINDINGS_PATH, KEYBINDS_HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, actionMap, defaultMap, cache, listeners2, holdDefaultMap, holdCache, holdListeners, keybindSections, PET_SECTION_ID, PET_TEAM_ACTION_PREFIX, PET_TEAM_NEXT_ID, PET_TEAM_PREV_ID, petSection, petActionIds, GAME_KEYBIND_TARGETS, GAME_KEYBIND_IDS, gameActiveStates, gameKeybindsInstalled, GAME_ACTION_ID, gameActionBlockers, gameActionBlockedCombos;
   var init_keybinds = __esm({
     "src/services/keybinds.ts"() {
+      "use strict";
       init_ingameHotkeys();
       init_menu();
       init_keyboard();
@@ -14358,6 +14401,7 @@
   var VIEW_MODE_KEY;
   var init_shopPurchaseMessage = __esm({
     "src/utils/shopPurchaseMessage.ts"() {
+      "use strict";
       VIEW_MODE_KEY = /^shop:.*:(.+):viewMode$/;
     }
   });
@@ -14422,6 +14466,7 @@
   var DIRECT_KIND, CUSTOM_RESTOCK_SHOPS;
   var init_shopPurchases = __esm({
     "src/utils/shopPurchases.ts"() {
+      "use strict";
       DIRECT_KIND = { seed: "seed", egg: "egg", tool: "tool", decor: "decor" };
       CUSTOM_RESTOCK_SHOPS = /* @__PURE__ */ new Set(["seed", "egg", "tool", "decor"]);
     }
@@ -14496,6 +14541,7 @@
   var SHOP_KEYBINDS, shopKeybindsInstalled, BASE_SHOP_KEYS, ShopsService;
   var init_shops = __esm({
     "src/services/shops.ts"() {
+      "use strict";
       init_fakeModal();
       init_keybinds();
       init_keyboard();
@@ -14566,6 +14612,7 @@
   var INVENTORY, nonEmpty;
   var init_moveItemMessage = __esm({
     "src/utils/moveItemMessage.ts"() {
+      "use strict";
       INVENTORY = "inventory";
       nonEmpty = (value) => typeof value === "string" && value.length > 0;
     }
@@ -14738,6 +14785,7 @@
   var PlayerService;
   var init_player = __esm({
     "src/services/player.ts"() {
+      "use strict";
       init_webSocketBridge();
       init_quinoaCommands();
       init_atoms();
@@ -15095,13 +15143,9 @@
             emit();
           });
           return () => {
-            try {
-              unsubInfos?.();
-            } catch {
-            }
-            try {
-              unsubPrimitives?.();
-            } catch {
+            for (const sub of [unsubInfos, unsubPrimitives]) {
+              Promise.resolve(sub).then((off) => off?.()).catch(() => {
+              });
             }
           };
         },
@@ -15127,13 +15171,9 @@
             emit();
           });
           return () => {
-            try {
-              unsubInfos?.();
-            } catch {
-            }
-            try {
-              unsubPrimitives?.();
-            } catch {
+            for (const sub of [unsubInfos, unsubPrimitives]) {
+              Promise.resolve(sub).then((off) => off?.()).catch(() => {
+              });
             }
           };
         },
@@ -15434,6 +15474,7 @@
   var LOG_PREFIX, log, DEBOUNCE_MS, RECENT_REMOVE_MS, ATOM_POLL_MS2, ATOM_TIMEOUT_MS, normalizeKey3, normalizeQty, buildQtyMap, buildKeySet, diffIncreases, diffSet, pruneRecentMap, summarizeQtyDelta, readEnabledFlag, storageKeyFromSpecies, storageKeyFromDecorId, storageKeyFromToolId;
   var init_autoStore = __esm({
     "src/services/autoStore.ts"() {
+      "use strict";
       init_player();
       init_api();
       init_localStorage();
@@ -16674,6 +16715,7 @@
   var PATH_GHOST_MODE, PATH_GHOST_DELAY, DEFAULT_DELAY_MS, PATH_AUTO_RECO_ENABLED, PATH_AUTO_RECO_DELAY, AUTO_RECO_MIN_MS, AUTO_RECO_MAX_MS, AUTO_RECO_DEFAULT_MS, AUTO_RECO_TEMPORARILY_DISABLED, PATH_KEEP_INVENTORY_SLOT_FREE, PATH_AUTO_STORE_SEED_SILO_ENABLED, PATH_AUTO_STORE_DECOR_SHED_ENABLED, PATH_AUTO_STORE_TOOL_SHACK_ENABLED, readGhostEnabled, writeGhostEnabled, getGhostDelayMs, setGhostDelayMs, clampAutoRecoDelay, readAutoRecoEnabled, writeAutoRecoEnabled, getAutoRecoDelayMs, setAutoRecoDelayMs, readInventorySlotReserveEnabled, writeInventorySlotReserveEnabled, readAutoStoreSeedSiloEnabled, readAutoStoreDecorShedEnabled, readAutoStoreToolShackEnabled, seedSiloAutoStore, decorShedAutoStore, toolShackAutoStore, selectedMap, seedStockByName, seedSourceCache, selectedDecorMap, decorStockByName, decorSourceCache, _decorDeleteAbort, _decorDeleteBusy, _decorDeletePaused, _decorDeletePauseResolver, NF_US, formatNum, OVERLAY_ID, LIST_ID, SUMMARY_ID, OVERLAY_DECOR_ID, LIST_DECOR_ID, SUMMARY_DECOR_ID, _seedDeleteAbort, _seedDeleteBusy, _seedDeletePaused, _seedDeletePauseResolver, DEFAULT_SEED_DELETE_DELAY_MS, overlayKeyGuardsOn, _btnConfirm, unsubSelectedName, unsubDecorSelectedName, DEFAULT_DECOR_DELETE_DELAY_MS, MiscService;
   var init_misc = __esm({
     "src/services/misc.ts"() {
+      "use strict";
       init_player();
       init_data();
       init_atoms();
@@ -17144,6 +17186,7 @@
   var ANGLE_NONE, ANGLE_MIRRORED_NONE, FULL_TURN_DEGREES, PREVIEW_SIZE_PX, CONTENT_MAX_WIDTH_PX, TRACK_INSET_PX, SPRITE_LOG_TAG, THUMB_SIZE_PX, SLIDER_CLASS, STYLE_ID;
   var init_decorRotation = __esm({
     "src/services/editor/decorRotation.ts"() {
+      "use strict";
       init_data();
       init_spriteIconCache();
       ANGLE_NONE = 0;
@@ -17163,20 +17206,14 @@
   var AudioPlayer, audioPlayer;
   var init_audioPlayer = __esm({
     "src/core/audioPlayer.ts"() {
+      "use strict";
       AudioPlayer = class {
         constructor(opts = {}) {
-          __publicField(this, "found", /* @__PURE__ */ new Set());
-          __publicField(this, "meta", /* @__PURE__ */ new Map());
-          __publicField(this, "groupsMap", /* @__PURE__ */ new Map());
-          // config volume
-          __publicField(this, "atomKey");
-          __publicField(this, "min");
-          __publicField(this, "max");
-          __publicField(this, "gainFactor");
+          this.found = /* @__PURE__ */ new Set();
+          this.meta = /* @__PURE__ */ new Map();
+          this.groupsMap = /* @__PURE__ */ new Map();
           // Howler cache local
-          __publicField(this, "howler", null);
-          // options
-          __publicField(this, "minVariantsPerAutoGroup");
+          this.howler = null;
           this.atomKey = opts.atomKey ?? "soundEffectsVolumeAtom";
           this.min = opts.min ?? 1e-3;
           this.max = opts.max ?? 0.2000000000000001;
@@ -18020,6 +18057,7 @@
   var state2, TILE_OBJECT_SYSTEM_NAME, SCOPE_SEARCH_DEPTH, FARM_TILE_SIZE, activeFlashes, FLASH_DEFAULT_COLOR, FLASH_DEFAULT_MIX, FLASH_DEFAULT_DURATION_MS, tos;
   var init_tileObjectSystemApi = __esm({
     "src/utils/tileObjectSystemApi.ts"() {
+      "use strict";
       init_page_context();
       state2 = {
         /**
@@ -21367,6 +21405,7 @@
   var ARIES_SAVED_GARDENS_PATH, FIXED_SLOT_START, FIXED_SLOT_END, DEFAULT_SIZE_PERCENT, ITEM_PANEL_STYLE_ID, mutationColorMap, MUTATION_ICON_CATEGORIES, MUT_PLUS_BG_CLOSED, MUT_PLUS_BG_OPEN, MUTATION_GROUP_COLOR, MUTATION_GROUP_HYDRO, MUTATION_GROUP_LUNAR, MUTATION_GROUP_OTHER, MUTATION_STEM_MIN_PREFIX, overlayEl, hudToggleBtnEl, currentEnabled, listeners3, savedGardensListeners, sideOverlayEl, sideListWrap, sideRightWrap, currentSideMode, sideSearchQuery, selectedPlantId, selectedDecorId, currentItemOverlayEl, currentItemUnsub, currentItemApplyAll, currentItemSlotModes, overlaysVisible, currentEditorTile, plannedGarden, plannedUserSlotIdx, editorDecorRotation, overlayOwner, overlayHolds, friendGardenPreviewActive, friendPreviewUserSlotIdx, friendPreviewPlayerId, friendPreviewGarden, OVERLAY_MYDATA_PATCH, EditorService, EMPTY_GARDEN, editorPlantSlotsState;
   var init_editor = __esm({
     "src/services/editor.ts"() {
+      "use strict";
       init_atoms();
       init_data();
       init_decorRotation();
@@ -22369,6 +22408,7 @@
   var wsCloseListeners, versionReloadScheduled, autoRecoTimer, autoRecoCountdownInterval, autoRecoOverlay, interceptorsByType, interceptorStatus, interceptorPoll, interceptorTimeout;
   var init_ws_hook = __esm({
     "src/hooks/ws-hook.ts"() {
+      "use strict";
       init_state3();
       init_page_context();
       init_parse();
@@ -22478,6 +22518,7 @@
   var ACCOUNT_ID_KEYS, SLOT_ID_KEYS, ROOM_ID_KEYS, ROOM_ID_PREFIX;
   var init_playerIdentity = __esm({
     "src/utils/playerIdentity.ts"() {
+      "use strict";
       ACCOUNT_ID_KEYS = ["userId", "id", "discordUserId", "databaseUserId"];
       SLOT_ID_KEYS = [...ACCOUNT_ID_KEYS, "playerId"];
       ROOM_ID_KEYS = ["id"];
@@ -22589,6 +22630,7 @@
   var PET_TEAM_NAME_MAX_CLUSTERS;
   var init_petTeamReconcile = __esm({
     "src/services/petTeamReconcile.ts"() {
+      "use strict";
       PET_TEAM_NAME_MAX_CLUSTERS = 16;
     }
   });
@@ -23798,6 +23840,7 @@
   var PATH_PETS_OVERRIDES, PATH_PETS_INSTANT_FEED, PATH_PETS_UI, PATH_PETS_TEAMS, PATH_PETS_TEAM_SEARCH, PATH_PETS_TEAM_SYNC, PATH_PETS_HOTKEYS, PATH_PETS_ABILITY_LOGS, WEATHER_MUTATION_BOOST_IDS, TEAM_HK_MAP, TEAM_HK_UNSUBS, hkNextTeam, hkPrevTeam, unsubNextHotkey, unsubPrevHotkey, orderedTeamIds, lastUsedTeamId, _lastTeamHotkeyAt, _AB, _abilityIdsCache, _s, _sOpt, _n, _sArr, _petCatalogKeyByLc, _teamSearch, _teamSyncEnabled, _localTeamIdByServerId, _serverTeams, _teamSyncStarted, _lastServerTeamsSig, _reconcilingTeams, _reconcileTeamsQueued, _pendingServerCreates, _pendingCreateTimeouts, _pendingCreateSentName, PENDING_CREATE_TIMEOUT_MS, _lastCreateAttemptSig, _invRaw, _activeRaw, _hutchRaw, _invPetsCache, _invUnsub, _activeUnsub, _hutchUnsub, _invSig, _activeSig, _lastAutofeedAttemptAt, _belowThreshold, AUTOF_FEED_MIN_INTERVAL_MS, DEFAULT_OVERRIDE, DEFAULT_UI, DEFAULT_INSTANT_FEED, _currentPets, _userTriggerCb, PetsService, HUTCH_DEFAULT_CAPACITY, MAX_TEAM_SLOTS;
   var init_pets = __esm({
     "src/services/pets.ts"() {
+      "use strict";
       init_player();
       init_data();
       init_fakeModal();
@@ -24663,6 +24706,7 @@
   var COMPANION_PANEL_ID, CHAT_TAB_ID, COMPANION_TAB_EVENT, installed;
   var init_companionKeybind = __esm({
     "src/services/companionKeybind.ts"() {
+      "use strict";
       init_keybinds();
       init_keyboard();
       COMPANION_PANEL_ID = "companion";
@@ -24676,6 +24720,7 @@
   var SEC_PER_HOUR, XP_STRENGTH_MAX, BASE_STRENGTH_FLOOR, getCatalogEntry, getMutationEntry, getTargetScale, getXp, getPetMaxStrength, getBaseStrength, getPetStrength, getPetCoinMultiplier, getPetValue, getPetInfo;
   var init_petCalcul = __esm({
     "src/utils/petCalcul.ts"() {
+      "use strict";
       init_data();
       SEC_PER_HOUR = 3600;
       XP_STRENGTH_MAX = 30;
@@ -25017,6 +25062,7 @@
   var key, lowerKey, MUTATION_MULTIPLIER_BY_KEY, DefaultPricing;
   var init_calculators = __esm({
     "src/utils/calculators.ts"() {
+      "use strict";
       init_data();
       init_cropSize();
       key = (s) => String(s ?? "").trim();
@@ -25319,6 +25365,7 @@
   var INVENTORY_VALUE_CATEGORIES, currentSnapshot, watcherPromise, unsubscribe, computeCounter, listeners4;
   var init_inventoryValue = __esm({
     "src/utils/inventoryValue.ts"() {
+      "use strict";
       init_atoms();
       init_data();
       init_petCalcul();
@@ -26031,6 +26078,7 @@
   var SELL_ALL_PETS_EVENT, SELL_ALL_PETS_DRY_RUN, SELL_ALL_PETS_CONFIRM_MODAL_ID, DEFAULT_THEME, DEFAULTS;
   var init_sellAllPets = __esm({
     "src/utils/sellAllPets.ts"() {
+      "use strict";
       init_atoms();
       init_jotai();
       init_player();
@@ -26097,6 +26145,7 @@
   var sellKeybindsInstalled;
   var init_sell = __esm({
     "src/services/sell.ts"() {
+      "use strict";
       init_player();
       init_keybinds();
       init_keyboard();
@@ -26135,6 +26184,7 @@
   var ACTION_ID, PET_HUTCH_MODAL_ID, petHutchKeybindsInstalled;
   var init_petHutchKeybind = __esm({
     "src/services/petHutchKeybind.ts"() {
+      "use strict";
       init_atoms();
       init_fakeModal();
       init_keybinds();
@@ -26175,6 +26225,7 @@
   var ACTION_ID2, journalKeybindsInstalled;
   var init_journalKeybind = __esm({
     "src/services/journalKeybind.ts"() {
+      "use strict";
       init_atoms();
       init_fakeModal();
       init_keybinds();
@@ -26214,6 +26265,7 @@
   var ACTION_ID3, DECOR_SHED_MODAL_ID, decorShedKeybindsInstalled;
   var init_decorShedKeybind = __esm({
     "src/services/decorShedKeybind.ts"() {
+      "use strict";
       init_atoms();
       init_fakeModal();
       init_keybinds();
@@ -26254,6 +26306,7 @@
   var ACTION_ID4, TOOL_SHACK_MODAL_ID, toolShackKeybindsInstalled;
   var init_toolShackKeybind = __esm({
     "src/services/toolShackKeybind.ts"() {
+      "use strict";
       init_atoms();
       init_fakeModal();
       init_keybinds();
@@ -26294,6 +26347,7 @@
   var ACTION_ID5, SEED_SILO_MODAL_ID, seedSiloKeybindsInstalled;
   var init_seedSiloKeybind = __esm({
     "src/services/seedSiloKeybind.ts"() {
+      "use strict";
       init_atoms();
       init_fakeModal();
       init_keybinds();
@@ -26334,6 +26388,7 @@
   var ACTION_ID6, FEEDING_TROUGH_MODAL_ID, feedingTroughKeybindsInstalled;
   var init_feedingTroughKeybind = __esm({
     "src/services/feedingTroughKeybind.ts"() {
+      "use strict";
       init_atoms();
       init_fakeModal();
       init_keybinds();
@@ -26374,6 +26429,7 @@
   var ACTION_ID7, WEATHER_STATION_MODAL_ID, weatherStationKeybindsInstalled;
   var init_weatherStationKeybind = __esm({
     "src/services/weatherStationKeybind.ts"() {
+      "use strict";
       init_atoms();
       init_fakeModal();
       init_keybinds();
@@ -26400,6 +26456,7 @@
   var EMBED_DEFAULT_MP3_BASE64, AUDIO_SETTINGS_PATH, AUDIO_LIBRARY_PATH, AudioNotifier, audio;
   var init_audio = __esm({
     "src/utils/audio.ts"() {
+      "use strict";
       init_toast();
       init_localStorage();
       EMBED_DEFAULT_MP3_BASE64 = "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yWIx4QmQjniP/DFmXUHhpXgYKiwj0jItaDYoKCJwwYeA8MCCDGJuOoIQJFQEHjhJiW1NwKgKQTnbpNVZyKIIqeEtci87LqvPjrDXFvdx/v/r9eT//////////8X/O/34YjQv//nbVV62e+zRaNdv5k3Nlkv54MsiVZJ2XPNImgx6LJVuEpwRk5xtEkjOFydK6U44SZKtPgOpWFyUrA5KVwmCTAGQasapCi+pBXrShYhskHhSRHScOBoQjCMWFSqaA+hRJoD6EhSXc0qk25kNUMSzoQpY4x2EatYayUjWUjakatczs/X6ssMtcmvSZausPNb1Z7MvsZNtBRrR1vBf8Fl4/xpo2gYAPVqmZh3Zqv0o3AwpxomhWHeCsQjJYtDR7Oz09UeaGmZLiY9UBT1bvBXDXLaLg7lpUq79eJRnBoGZcjQTIU2QmlCpBRpZLpk6gKKER4ApYROtLHiXKhLWJYoV9Wv/+5RE9I8C3GLBgyFE8lsMeDBkI54KgY8CDATVwgApIWj0jpl1oLeWDtoUPes6hly6zueDsS8io9hriUNB3GPDCgoloBCgoCpRstUAnAQHUSTcAmVGcv2VV/9aWqqu212q5xjVZI4mG8LIwk8L0T/zXdc6WGAln0Kv8/jUBpZGq6nVUmNf89VL2oCVJjqk2qiS//YwrDQXEBQxI1VUaWqnglaJ0ZnIUsbjOFEozLLDhrJUFUmZpqv9Vv9mjF7HV2XZv9s/2Paeaw1JVh3NZ3alqp89m2L6vxi1jBjFS8S7FguQVjiwFeb/8O/5ZkxBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr/+5Rk3QDBygs8yCEYED0hV4IEJgwLEY7GIYR+QVyl2chTDDGqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo=";
@@ -26408,40 +26465,38 @@
       AudioNotifier = class {
         constructor(opts) {
           // ===== Core state
-          __publicField(this, "enabled", true);
-          __publicField(this, "volume", 0.7);
-          __publicField(this, "minPlayGapMs", 1200);
-          __publicField(this, "lastPlayTs", 0);
+          this.enabled = true;
+          this.volume = 0.7;
+          this.minPlayGapMs = 1200;
+          this.lastPlayTs = 0;
           // ===== Sound Library (name -> dataURL)
-          __publicField(this, "library", /* @__PURE__ */ new Map());
-          __publicField(this, "defaultSoundName", null);
+          this.library = /* @__PURE__ */ new Map();
+          this.defaultSoundName = null;
           // Legacy fallback (pour compat)
-          __publicField(this, "defaultSoundDataUrl", null);
+          this.defaultSoundDataUrl = null;
           // Playback logic
-          __publicField(this, "mode", "oneshot");
-          __publicField(this, "stopConf", { mode: "manual" });
-          __publicField(this, "loopIntervalMs", 1500);
-          __publicField(this, "weatherMode", "oneshot");
-          __publicField(this, "weatherStopConf", { mode: "manual" });
-          __publicField(this, "weatherLoopIntervalMs", 1500);
-          __publicField(this, "petMode", "oneshot");
-          __publicField(this, "petStopConf", { mode: "manual" });
-          __publicField(this, "petLoopIntervalMs", 1500);
-          __publicField(this, "loops", /* @__PURE__ */ new Map());
-          __publicField(this, "oneshotQueue", []);
-          __publicField(this, "oneshotQueueTimer", null);
-          __publicField(this, "oneshotProcessing", false);
-          __publicField(this, "weatherVolume", 0.7);
-          __publicField(this, "weatherDefaultSoundName", null);
-          __publicField(this, "petVolume", 0.7);
-          __publicField(this, "petDefaultSoundName", null);
-          // Optional purchase checker (for stop: purchase)
-          __publicField(this, "purchaseChecker");
+          this.mode = "oneshot";
+          this.stopConf = { mode: "manual" };
+          this.loopIntervalMs = 1500;
+          this.weatherMode = "oneshot";
+          this.weatherStopConf = { mode: "manual" };
+          this.weatherLoopIntervalMs = 1500;
+          this.petMode = "oneshot";
+          this.petStopConf = { mode: "manual" };
+          this.petLoopIntervalMs = 1500;
+          this.loops = /* @__PURE__ */ new Map();
+          this.oneshotQueue = [];
+          this.oneshotQueueTimer = null;
+          this.oneshotProcessing = false;
+          this.weatherVolume = 0.7;
+          this.weatherDefaultSoundName = null;
+          this.petVolume = 0.7;
+          this.petDefaultSoundName = null;
           // WebAudio priming (optional)
-          __publicField(this, "audioCtx", null);
-          __publicField(this, "primed", false);
-          __publicField(this, "builtinDefault", null);
-          __publicField(this, "suppressPersist", 0);
+          this.audioCtx = null;
+          this.primed = false;
+          this.builtinDefault = null;
+          this.suppressPersist = 0;
           if (opts?.minPlayGapMs != null) this.minPlayGapMs = Math.max(0, opts.minPlayGapMs | 0);
           if (opts?.volume != null) this.volume = clamp01(opts.volume);
           this.suppressPersist++;
@@ -27484,6 +27539,7 @@
   var clampPct2, prefs, started, unsubPets, lastPets, seenBelow, PetAlertService;
   var init_pet_alerts = __esm({
     "src/services/pet-alerts.ts"() {
+      "use strict";
       init_pets();
       init_audio();
       init_localStorage();
@@ -28300,6 +28356,7 @@
   var PATH_NOTIFIER_PREFS, PATH_NOTIFIER_RULES, PATH_NOTIFIER_WEATHER, PATH_NOTIFIER_DEFAULTS, DISPLAY_RARITY, norm2, formatRuleSummary, formatLastSeen, weatherStateSignature, formatWeatherMutation, normalizeNumber, normalizeCycle, normalizeMutations2, WEATHER_DEFS, WEATHER_BY_ID, WEATHER_BY_ATOM, WEATHER_BY_NAME, _prefs, _weatherPrefs, _weatherPrefsLoaded, _contextDefaults, _contextDefaultsLoaded, _rules, _rulesLoaded, _rulesSubs, _hasOwn, _weatherState, _weatherSig, _weatherSubs, _currentWeatherId, _currentWeatherValue, _unsubWeather, _getPrefBits, _setPrefBits, _rowsById, _lastSig, _state, _unsubShops, _unsubPurchases, _watchGeneration, _subs, _toolInv, _decorInv, _unsubToolInv, _unsubDecorInv, _purchasesSubs, _itemKind, _rawShops, _rawSlot, _viewOf, _sameShopParts, _shopsSubs, BASE_SHOPS_SET, _onDataUpdated, ATOM_WAIT_POLL_MS, ATOM_WAIT_TIMEOUT_MS2, STATE_ATOM_LABEL, MY_USER_SLOT_ATOM_LABEL, _started, NotifierService;
   var init_notifier = __esm({
     "src/services/notifier.ts"() {
+      "use strict";
       init_atoms();
       init_api();
       init_data();
@@ -28751,6 +28808,7 @@
   }
   var init_catalogIndex = __esm({
     "src/utils/catalogIndex.ts"() {
+      "use strict";
       init_data();
     }
   });
@@ -28918,6 +28976,7 @@
   var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners5, debugState, raf;
   var init_gardenInfoCardPixi = __esm({
     "src/utils/gardenInfoCardPixi.ts"() {
+      "use strict";
       init_page_context();
       CARD_SYSTEM_LABEL = "GardenInfoCardSystem";
       CARD_ROW_LABEL = "GardenInfoCardRow";
@@ -29327,6 +29386,7 @@
   var RAIL_LABEL, RAIL_FIND_RETRY_MS, RAIL_FIND_LOG_EVERY, RAIL_REACHABILITY_CHECK_MS, RAIL_REACHABILITY_MAX_HOPS, CHAT_SLOT_MARKER_LABEL, DEFAULT_ICON_GLYPH, DEFAULT_SLOT_SIZE, DEFAULT_SLOT_SPACING, SLOT_OCCUPIED_TOLERANCE_RATIO, MAX_SLOT_SEARCH_STEPS, BELL_RING_SEQUENCE, BELL_RING_DURATION_MS, DEG_TO_RAD;
   var init_notificationBellPixi = __esm({
     "src/utils/notificationBellPixi.ts"() {
+      "use strict";
       init_gardenInfoCardPixi();
       init_page_context();
       RAIL_LABEL = "RightSideRail";
@@ -29582,6 +29642,7 @@
   var ENABLED_PATH, POS_PATH, BELL_MODE_EVENT, BELL_GLYPH, BUTTON_SIZE, ICON_FONT_SIZE, BELL_WIDGET_Z_INDEX, SCREEN_MARGIN, DEFAULT_RIGHT_GAP, DEFAULT_TOP_RATIO, SETTLE_REAPPLY_DELAYS_MS, DRAG_THRESHOLD_PX, RING_KEYFRAMES;
   var init_notificationBellFloating = __esm({
     "src/utils/notificationBellFloating.ts"() {
+      "use strict";
       init_notificationBellPixi();
       init_localStorage();
       ENABLED_PATH = "notifier.floatingBell.enabled";
@@ -29704,6 +29765,7 @@
   var OVERLAY_REPOSITION_INTERVAL_MS, style, setProps, OverlayBarebone;
   var init_notificationOverlay = __esm({
     "src/ui/menus/notificationOverlay.ts"() {
+      "use strict";
       init_notifier();
       init_shops();
       init_audio();
@@ -29718,31 +29780,31 @@
       };
       OverlayBarebone = class {
         constructor() {
-          __publicField(this, "slot", document.createElement("div"));
-          __publicField(this, "badge", document.createElement("span"));
-          __publicField(this, "panel", document.createElement("div"));
-          __publicField(this, "bell", null);
-          __publicField(this, "repositionIntervalId", null);
-          __publicField(this, "onWindowResize", null);
-          __publicField(this, "onBellModeChanged", null);
+          this.slot = document.createElement("div");
+          this.badge = document.createElement("span");
+          this.panel = document.createElement("div");
+          this.bell = null;
+          this.repositionIntervalId = null;
+          this.onWindowResize = null;
+          this.onBellModeChanged = null;
           // Prime audio au premier clic utilisateur (une seule fois, tous modes)
-          __publicField(this, "audioPrimedOnce", false);
-          __publicField(this, "lastShops", null);
-          __publicField(this, "lastPurch", null);
+          this.audioPrimedOnce = false;
+          this.lastShops = null;
+          this.lastPurch = null;
           // Suivi des IDs visibles dans l'overlay (pour loops & diff)
-          __publicField(this, "prevOverlayIds", /* @__PURE__ */ new Set());
-          __publicField(this, "currentOverlayIds", /* @__PURE__ */ new Set());
-          __publicField(this, "rulesById", /* @__PURE__ */ new Map());
-          __publicField(this, "shopUpdates", 0);
-          __publicField(this, "purchasesUpdates", 0);
-          __publicField(this, "bootArmed", false);
-          __publicField(this, "justRestocked", false);
+          this.prevOverlayIds = /* @__PURE__ */ new Set();
+          this.currentOverlayIds = /* @__PURE__ */ new Set();
+          this.rulesById = /* @__PURE__ */ new Map();
+          this.shopUpdates = 0;
+          this.purchasesUpdates = 0;
+          this.bootArmed = false;
+          this.justRestocked = false;
           // Items à afficher dans l'overlay (déjà filtrés)
-          __publicField(this, "rows", []);
-          __publicField(this, "lastPanelSig", null);
+          this.rows = [];
+          this.lastPanelSig = null;
           // Un seul handler de clic partagé par les deux implémentations de cloche
           // (Pixi dans le rail du jeu, ou widget DOM flottant).
-          __publicField(this, "handleBellClick", async () => {
+          this.handleBellClick = async () => {
             if (!this.audioPrimedOnce) {
               this.audioPrimedOnce = true;
               try {
@@ -29758,7 +29820,7 @@
               this.updateBadgePosition();
             }
             this.updateBellWiggle();
-          });
+          };
           this.slot = this.createSlot();
           this.slot.id = "qws-notifier-slot";
           globalThis.__qws_notifier_slot = this.slot;
@@ -30812,6 +30874,7 @@
   var DEFAULT_LABEL, MAX_BUTTONS, ICON_SIZE, WIDGET_Z_INDEX, SCREEN_MARGIN2, DEFAULT_TOP, GLOBAL_START_FLAG, INVENTORY_CARD_ATOM, ENABLED_PATH2, POS_PATH2, started2, enabled, modalOpen, inventoryCardOpen, activePets, activePetsSig, widget, widgetButtons, savedPos, positioned;
   var init_instantFeedWidget = __esm({
     "src/utils/instantFeedWidget.ts"() {
+      "use strict";
       init_pets();
       init_player();
       init_api();
@@ -30856,6 +30919,7 @@
   var slotIdOf, bySlotId;
   var init_growSlot = __esm({
     "src/utils/growSlot.ts"() {
+      "use strict";
       slotIdOf = (slot) => Number.isFinite(slot?.slotId) ? slot.slotId : 0;
       bySlotId = (a, b) => slotIdOf(a) - slotIdOf(b);
     }
@@ -30947,6 +31011,7 @@
   var isPlantObject2;
   var init_cropPrice = __esm({
     "src/utils/cropPrice.ts"() {
+      "use strict";
       init_atoms();
       init_calculators();
       init_growSlot();
@@ -30985,6 +31050,7 @@
   var PATH_SHOW_CROP_PRICE, listeners6;
   var init_cropPriceSetting = __esm({
     "src/utils/cropPriceSetting.ts"() {
+      "use strict";
       init_localStorage();
       PATH_SHOW_CROP_PRICE = "misc.showCropPrice";
       listeners6 = /* @__PURE__ */ new Set();
@@ -31460,6 +31526,7 @@
   var DEFAULTS2, OMA_SEL, ICON_CLASS, LABEL_CLASS, LOCK_TEXT_SELECTOR, LOCK_EMOJI, LOCK_BORDER_STYLE, LOCK_BORDER_RADIUS, TOOLTIP_ROOT_CLASSES, LOCK_ICON_CLASS, DATASET_KEY_COLOR, DATASET_KEY_DISPLAY, DATASET_KEY_ALIGN, DATASET_KEY_TEXT, DATASET_KEY_BORDER, DATASET_KEY_BORDER_RADIUS, DATASET_KEY_POSITION, DATASET_KEY_OVERFLOW, LOCK_PREFIX_REGEX, PRICE_FALLBACK, nfUS, formatCoins, hasDOM;
   var init_cropValues = __esm({
     "src/utils/cropValues.ts"() {
+      "use strict";
       init_cropPrice();
       init_cropPriceSetting();
       init_data();
@@ -31574,7 +31641,8 @@
         return;
       }
       const state6 = getSpriteState2();
-      if (!state6) return;
+      const ctors = state6?.ctors;
+      if (!state6 || !ctors) return;
       const value = priceWatcher.get();
       if (value == null) {
         detachValueText();
@@ -31587,20 +31655,20 @@
           valueBadge = new graphicsCtor();
           currentCard2.addChild(valueBadge);
         }
-        valueText = new state6.ctors.Text({ text, style: VALUE_TEXT_STYLE });
+        valueText = new ctors.Text({ text, style: VALUE_TEXT_STYLE });
         currentCard2.addChild(valueText);
       } else if (valueText.text !== text) {
         valueText.text = text;
       }
-      if (!valueIcon && state6.ctors.Sprite) {
+      if (!valueIcon && ctors.Sprite) {
         if (coinTexture) {
-          valueIcon = new state6.ctors.Sprite(coinTexture);
+          valueIcon = new ctors.Sprite(coinTexture);
           valueIcon.width = VALUE_ICON_SIZE;
           valueIcon.height = VALUE_ICON_SIZE;
           currentCard2.addChild(valueIcon);
         } else if (!iconRetryScheduled) {
           iconRetryScheduled = true;
-          ensureCoinTexture(state6.ctors.Texture).then(() => {
+          ensureCoinTexture(ctors.Texture).then(() => {
             iconRetryScheduled = false;
             if (running6) syncValueNode();
           });
@@ -31691,6 +31759,7 @@
   var VALUE_TEXT_STYLE, VALUE_BADGE_GAP, VALUE_ICON_SIZE, VALUE_ICON_GAP, BADGE_PADDING_X, BADGE_PADDING_Y, BADGE_RADIUS, BADGE_COLOR, BADGE_ALPHA, PRICE_FALLBACK2, nfUS2, formatCoins2, coinTexture, coinTexturePromise;
   var init_cropValuePixi = __esm({
     "src/utils/cropValuePixi.ts"() {
+      "use strict";
       init_cropPrice();
       init_cropPriceSetting();
       init_page_context();
@@ -31844,6 +31913,7 @@
   var BORDER_COLOR, BORDER_WIDTH, BORDER_RADIUS, BORDER_EXPAND, LOCK_ICON_TEXT, LOCK_ICON_STYLE, LOCK_ICON_X_NUDGE, LOCK_ICON_Y_NUDGE;
   var init_lockerIndicatorPixi = __esm({
     "src/utils/lockerIndicatorPixi.ts"() {
+      "use strict";
       init_locker();
       init_lockerRestrictions();
       init_atoms();
@@ -32198,6 +32268,7 @@
   var ACTION_HUD_LABEL, BUTTON_FACE_LABEL, ACTION_HUD_FIND_RETRY_MS, ACTION_HUD_FIND_LOG_EVERY, SELL_PET_ACTION_TYPES, BUTTON_GAP, BUTTON_TEXT, BUTTON_TEXT_STYLE, BUTTON_PADDING_X, BUTTON_RADIUS, BUTTON_FILL_COLOR, BUTTON_BORDER_COLOR, BUTTON_BORDER_WIDTH, HOVER_SCALE, HOVER_SCALE_EASE, HOVER_SCALE_SETTLE_EPSILON;
   var init_sellAllPetsPixi = __esm({
     "src/utils/sellAllPetsPixi.ts"() {
+      "use strict";
       init_gardenInfoCardPixi();
       init_page_context();
       init_sellAllPets();
@@ -32383,6 +32454,7 @@
   var CONTAINER_SELECTOR, LOCK_ICON_CLASS2, DATA_BORDER, DATA_RADIUS, DATA_POSITION, DATA_PADDING, DATA_BOX, DATA_SHADOW, DATA_OVERFLOW;
   var init_sellCropsLock = __esm({
     "src/utils/sellCropsLock.ts"() {
+      "use strict";
       init_atoms();
       init_lockerRestrictions();
       CONTAINER_SELECTOR = ".css-vmnhaw";
@@ -32533,6 +32605,7 @@
   var CONTAINER_SELECTOR2, LOCK_CLASS, BORDER_COLOR2, DATA_BORDER2, DATA_RADIUS2, DATA_POSITION2, DATA_OVERFLOW2;
   var init_eggHatchLockIndicator = __esm({
     "src/utils/eggHatchLockIndicator.ts"() {
+      "use strict";
       init_atoms();
       init_lockerRestrictions();
       CONTAINER_SELECTOR2 = ".css-502lyi";
@@ -32663,6 +32736,7 @@
   var CONTAINER_SELECTOR3, LOCK_CLASS2, BORDER_COLOR3, DATA_BORDER3, DATA_RADIUS3, DATA_POSITION3, DATA_OVERFLOW3, DECOR_LABELS;
   var init_decorPickupLockIndicator = __esm({
     "src/utils/decorPickupLockIndicator.ts"() {
+      "use strict";
       init_data();
       init_lockerRestrictions();
       CONTAINER_SELECTOR3 = ".css-502lyi";
@@ -32798,6 +32872,7 @@
   var REPO_OWNER, REPO_NAME, REPO_BRANCH, SCRIPT_FILE_PATH, RAW_BASE_URL, COMMITS_API_URL;
   var init_version = __esm({
     "src/utils/version.ts"() {
+      "use strict";
       init_api2();
       REPO_OWNER = "Ariedam64";
       REPO_NAME = "MG-AriesMod";
@@ -34413,6 +34488,7 @@
   var DEFAULTS3, INVENTORY_SEARCH_INPUT_SELECTOR, BASE_SORT, ORDER, SORT_KEY_PATH, SORT_KEY_SET, SORT_DIRECTION_PATH, SORT_DIRECTION_SET, DEFAULT_DIRECTION_LABEL, DIRECTION_LABELS_DEFAULT, getPetAbilityDisplayName, INVENTORY_VALUE_VISIBILITY_PATH, resolveVisibilityFromStoredValue, loadPersistedInventoryValueVisibility, persistInventoryValueVisibility, shouldDisplayInventoryValues, setShouldDisplayInventoryValues, getShouldDisplayInventoryValues, DEFAULT_DIRECTION_BY_SORT_KEY, DIRECTION_ORDER, isPersistedSortKey, isPersistedSortDirection, loadPersistedSortKey, persistSortKey, loadPersistedSortDirection, persistSortDirection, MAP_EXTRA_BY_FILTER_DEFAULT, FILTER_CONTEXT_ITEM_TYPES_CACHE, FILTER_CONTEXT_LISTENERS, addFilterContextListener, notifyFilterContextListeners, LABEL_BY_VALUE_DEFAULT, INVENTORY_BASE_INDEX_DATASET_KEY, INVENTORY_ITEM_CARD_SELECTORS, INVENTORY_ITEMS_CONTAINER_SELECTOR, INVENTORY_NOISE_SELECTOR, INVENTORY_STRENGTH_WRAPPER_SELECTOR, INVENTORY_STRENGTH_TEXT_SELECTOR, INVENTORY_FAVORITE_BUTTON_SELECTOR, INVENTORY_ITEM_CARD_SELECTOR, INVENTORY_VALUE_CONTAINER_SELECTOR, INVENTORY_VALUE_ELEMENT_CLASS, INVENTORY_VALUE_TEXT_CLASS, INVENTORY_VALUE_DATASET_KEY, FILTERED_VALUE_LOADING, FILTERED_VALUE_UNKNOWN, VALUE_SUMMARY_ICON_CLASS, VALUE_SUMMARY_TEXT_CLASS, VALUE_SUMMARY_ICON_SRC, VALUE_SUMMARY_ICON_BACKGROUND, debounce, labelIsChecked, normalize, createFilterContextKey, areSetsEqual, getCachedItemTypesForKey, getCachedItemTypesForContext, setCachedItemTypesForKey, getInventorySearchInput, getInventorySearchQuery, getNormalizedInventorySearchQuery, logFilteredInventorySearchResults, RARITY_ORDER, RARITY_RANK, getRarityRank, SPECIES_FIELDS, normalizeSpeciesKey, clampNumber2, collectSpeciesCandidates, getInventoryItemSizePercent, collectMutations, getInventoryItemMutations, FILTER_LABEL_TO_ITEM_TYPES, ITEM_TYPE_TO_FILTER_KEYS, getExtrasForFilterKey, getExtrasForItemType, getInventoryCardElement, clearInventoryNoiseText, findAncestorWithDescendant, alignInventoryStrengthText, INVENTORY_COMPACT_VALUE_UNITS, INVENTORY_FULL_VALUE_FORMATTER, formatInventoryItemCompactValue, formatInventoryItemFullValue, getInventoryItemValue, parseStrengthValue, TM_STRENGTH_LABEL_CLASS, TM_STRENGTH_CURRENT_CLASS, TM_STRENGTH_MAX_CLASS, TM_STRENGTH_BADGE_CLASS, TM_STRENGTH_IS_MAX_DATASET_KEY, PET_HUTCH_HEADER_TEXT, PET_INVENTORY_HEADER_TEXT, PET_NAME_SELECTOR, PET_HUTCH_ROOT_SELECTOR, PET_HUTCH_LIST_SELECTOR, PET_HUTCH_INVENTORY_LIST_SELECTOR, PET_HUTCH_VISIBILITY_STYLE, RAINBOW_BADGE_TEXT_GRADIENT, getPetMutationTone, applyStrengthBadgeTone, ensureStrengthBadge, ensureStrengthTextParts, getValueSummaryElement, ensureValueSummaryContent, setValueSummaryText, stringOrEmpty, pickNestedString, pickFirstNestedString, plantCatalogEntry, petCatalogEntry, eggCatalogEntry, toolCatalogEntry, decorCatalogEntry, SEED_NAME_PATHS, SEED_RARITY_PATHS, CROP_NAME_PATHS, CROP_RARITY_PATHS, PLANT_NAME_PATHS, PLANT_RARITY_PATHS, createPlantLookup, CATALOG_LOOKUPS, getCatalogLookup, getInventoryItemName, QUANTITY_ONE_TYPES, getInventoryItemQuantity, getInventoryItemRarity, readNestedValue, readNestedStringField, readNestedNumberField, findSectionContainerByHeaderText, getPetCardName, getPetNameCandidates, isPetItem, applyPetItemsToContainer, setPetHutchContainersHidden, updatePetHutchSections, PET_STATS_BY_SPECIES, lookupPetStats, getPetStrengthInfo, getPetStrength2, compareByNameThenTypeThenId;
   var init_inventorySorting = __esm({
     "src/utils/inventorySorting.ts"() {
+      "use strict";
       init_atoms();
       init_data();
       init_inventoryValue();
@@ -35516,6 +35592,7 @@
   var ACTION_ORDER, ACTION_LABELS, ACTION_MAP, ACTION_MAP_LOWER;
   var init_activityLogClassification = __esm({
     "src/utils/activityLogClassification.ts"() {
+      "use strict";
       ACTION_ORDER = [
         "all",
         "found",
@@ -35902,6 +35979,7 @@
   var SKIP_NEXT_ACTIVITY_LOG_REOPEN_GLOBAL, HISTORY_STORAGE_KEY, HISTORY_LIMIT, skipNextHistoryReopen;
   var init_activityLogHistory = __esm({
     "src/services/activityLogHistory.ts"() {
+      "use strict";
       init_fakeModal();
       init_atoms();
       init_localStorage();
@@ -36243,6 +36321,7 @@
   var FILTER_STORAGE_KEY, FIND_RETRY_MS, BUTTON_HEIGHT, BUTTON_PADDING_X2, BUTTON_GAP2, TOOLBAR_GAP_BELOW, BUTTON_FILL_INACTIVE, BUTTON_FILL_ACTIVE, BUTTON_ALPHA_INACTIVE, BUTTON_ALPHA_ACTIVE, BUTTON_TEXT_STYLE2, BUTTON_RADIUS2, CLOSED_LABEL_PREFIX, CARET_GAP, CARET_CLOSED, CARET_OPEN, CARET_TEXT_STYLE, PANEL_GAP, raf2, activeFilter, modalOpen2, activeTab, debugState2, modalNode, toolbarState, findRafId2, lastFindCheckAt2, touchedScroll, shiftedRows, plannedFirst, plannedShift, debugSyncState;
   var init_activityLogFilterPixi = __esm({
     "src/utils/activityLogFilterPixi.ts"() {
+      "use strict";
       init_localStorage();
       init_page_context();
       init_activityLogClassification();
@@ -36445,6 +36524,7 @@
   var PITY_MULTIPLIER, MAX_PROTECTED_CHANCE, GOLD_MUTATION, RAINBOW_MUTATION;
   var init_hatchPity = __esm({
     "src/services/hatchPity.ts"() {
+      "use strict";
       init_data();
       PITY_MULTIPLIER = 2;
       MAX_PROTECTED_CHANCE = 0.05;
@@ -36656,6 +36736,7 @@
   var STATE_PATH, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, listeners7, cachedState, HatchTracker;
   var init_hatchTracker = __esm({
     "src/services/hatchTracker.ts"() {
+      "use strict";
       init_activityLogHistory();
       init_atoms();
       init_stats();
@@ -37714,6 +37795,7 @@
   }
   var init_hud = __esm({
     "src/ui/hud.ts"() {
+      "use strict";
       init_state3();
       init_jotai();
       init_pets();
@@ -37831,6 +37913,7 @@
   }
   var init_debug_data_shared = __esm({
     "src/ui/menus/debug-data-shared.ts"() {
+      "use strict";
     }
   });
 
@@ -37838,6 +37921,7 @@
   var API_BASE_URL2;
   var init_config2 = __esm({
     "src/mgApi/config.ts"() {
+      "use strict";
       API_BASE_URL2 = "https://mg-api.ariedam.fr";
     }
   });
@@ -37926,6 +38010,7 @@
   }
   var init_http2 = __esm({
     "src/mgApi/client/http.ts"() {
+      "use strict";
       init_discordCsp();
       init_config2();
     }
@@ -37948,6 +38033,7 @@
   var COMPOSE_KEY_PREFIX;
   var init_sprites = __esm({
     "src/mgApi/endpoints/sprites.ts"() {
+      "use strict";
       init_http2();
       COMPOSE_KEY_PREFIX = {
         seeds: "sprite/seed",
@@ -37972,6 +38058,7 @@
   }
   var init_audio2 = __esm({
     "src/mgApi/endpoints/audio.ts"() {
+      "use strict";
       init_http2();
     }
   });
@@ -37979,6 +38066,7 @@
   // src/mgApi/index.ts
   var init_mgApi = __esm({
     "src/mgApi/index.ts"() {
+      "use strict";
       init_config2();
       init_http2();
       init_sprites();
@@ -38244,6 +38332,7 @@
   var catalogPromise;
   var init_debug_data_audio = __esm({
     "src/ui/menus/debug-data-audio.ts"() {
+      "use strict";
       init_debug_data_shared();
       init_discordCsp();
       init_mgApi();
@@ -38438,6 +38527,7 @@
   }
   var init_debug_data_jotai = __esm({
     "src/ui/menus/debug-data-jotai.ts"() {
+      "use strict";
       init_jotai();
       init_debug_data_shared();
     }
@@ -38528,6 +38618,7 @@
   var fmtTime, escapeLite, FrameBuffer, registry, HOOKED_CTOR_FLAG, WS_PATCHED_SEND, hookedOnce;
   var init_debug_data = __esm({
     "src/services/debug-data.ts"() {
+      "use strict";
       init_state3();
       fmtTime = (ms) => {
         const d = new Date(ms);
@@ -38538,7 +38629,7 @@
       FrameBuffer = class {
         constructor(max = 2e3) {
           this.max = max;
-          __publicField(this, "arr", []);
+          this.arr = [];
         }
         push(f) {
           this.arr.push(f);
@@ -39054,6 +39145,7 @@ next: ${next}`;
   }
   var init_debug_data_live_atoms = __esm({
     "src/ui/menus/debug-data-live-atoms.ts"() {
+      "use strict";
       init_jotai();
       init_debug_data();
       init_debug_data_shared();
@@ -39401,6 +39493,7 @@ next: ${next}`;
   }
   var init_debug_data_ws = __esm({
     "src/ui/menus/debug-data-ws.ts"() {
+      "use strict";
       init_debug_data();
       init_debug_data_shared();
     }
@@ -39858,6 +39951,7 @@ next: ${next}`;
   var ANY_CATEGORY, MAX_VISIBLE_SPRITES, SPRITE_ICON_SIZE, catalogPromise2, sanitizeFileComponent, buildSpriteFilename, COLOR_SELECTIONS, CONDITION_SELECTIONS, LIGHTING_SELECTIONS, LOCAL_HEADER_SIGNATURE, CENTRAL_DIR_SIGNATURE, END_SIGNATURE, ZIP_VERSION, ZIP_FLAGS, ZIP_METHOD_STORE, CRC_TABLE;
   var init_debug_data_sprites = __esm({
     "src/ui/menus/debug-data-sprites.ts"() {
+      "use strict";
       init_debug_data_shared();
       init_discordCsp();
       init_settings();
@@ -40008,6 +40102,7 @@ next: ${next}`;
   var stylesInjected;
   var init_debug_data2 = __esm({
     "src/ui/menus/debug-data.ts"() {
+      "use strict";
       init_menu();
       init_debug_data_audio();
       init_debug_data_jotai();
@@ -41807,6 +41902,7 @@ next: ${next}`;
   var rulePopover, detachRuleDocHandler, detachRuleKeyBlocker, detachRuleWheelBlocker, detachRuleDragHandler, closeRuleEditor, setSwitchCapState, createSwitch, setSwitchVisual, wrapCell, mkHeadCell, applyRuleState, openRuleEditor;
   var init_notifier2 = __esm({
     "src/ui/menus/notifier.ts"() {
+      "use strict";
       init_menu();
       init_notifier();
       init_audio();
@@ -44592,6 +44688,7 @@ next: ${next}`;
   var NO_WEATHER_TAG, SEED_EMOJIS, _lockerOptionsCache, _lockerEmojiByKey, _lockerEmojisBySeedName, getLockerSeedOptions, getLockerSeedEmojiForKey, getLockerSeedEmojiForSeedName, WEATHER_MUTATION_LABELS, WEATHER_MUTATIONS, createNoWeatherIcon, isWeatherMutationAvailable, WEATHER_RECIPE_GROUPS, WEATHER_RECIPE_GROUP_MEMBERS, applyStyles, weatherModeNameSeq, LockerMenuStore;
   var init_locker2 = __esm({
     "src/ui/menus/locker.ts"() {
+      "use strict";
       init_menu();
       init_data();
       init_locker();
@@ -44708,10 +44805,9 @@ next: ${next}`;
       weatherModeNameSeq = 0;
       LockerMenuStore = class {
         constructor(initial) {
-          __publicField(this, "global");
-          __publicField(this, "overrides", /* @__PURE__ */ new Map());
-          __publicField(this, "listeners", /* @__PURE__ */ new Set());
-          __publicField(this, "syncing", false);
+          this.overrides = /* @__PURE__ */ new Map();
+          this.listeners = /* @__PURE__ */ new Set();
+          this.syncing = false;
           this.global = { enabled: false, settings: createDefaultSettings(), hasPersistedSettings: true };
           this.syncFromService(initial);
         }
@@ -44832,6 +44928,7 @@ next: ${next}`;
   var ready;
   var init_dom = __esm({
     "src/core/dom.ts"() {
+      "use strict";
       ready = new Promise((res) => {
         if (document.readyState !== "loading") res();
         else addEventListener("DOMContentLoaded", () => res(), { once: true });
@@ -45542,6 +45639,7 @@ next: ${next}`;
   var ROOT_CLASS, SIZE_MIN, SIZE_MAX, COLOR_MUTATION_LABELS, WEATHER_CONDITION_LABELS, WEATHER_LIGHTING_LABELS, FRIEND_BONUS_LABELS, FRIEND_BONUS_MIN_PLAYERS, FRIEND_BONUS_MAX_PLAYERS, COLOR_SEGMENT_METADATA, WEATHER_CONDITION_SEGMENT_METADATA, WEATHER_LIGHTING_SEGMENT_METADATA, MUTATION_SPRITE_OVERRIDES, segmentedUi, ensureMenuStyles, priceFormatter, weightFormatter, DEFAULT_STATE2, BASE_SPRITE_SIZE_PX, DEFAULT_SPRITE_CATEGORIES, PLANT_PRIORITY_IDENTIFIERS, CROP_SIMULATION_CSS, cropSimulationStyleEl, applyStyles2, calculatorStyleEl, MUTATION_UI_SPRITE_NAMES;
   var init_calculator = __esm({
     "src/ui/menus/calculator.ts"() {
+      "use strict";
       init_dom();
       init_data();
       init_calculators();
@@ -45988,6 +46086,7 @@ next: ${next}`;
   var css;
   var init_panel_icons = __esm({
     "src/ui/menus/panel-icons.ts"() {
+      "use strict";
       init_spriteIconCache();
       init_discordCsp();
       css = (el2, style2) => Object.assign(el2.style, style2);
@@ -46268,6 +46367,7 @@ next: ${next}`;
   var STYLE_ID2, ROW_ICON_PX, TEAL, TEAL_DIM, TEAL_BORDER, BORDER, CARD_BG, TEXT, TEXT_DIM, DANGER, WARN, css2, GOLD, RAINBOW, TONES;
   var init_panel_ui = __esm({
     "src/ui/menus/panel-ui.ts"() {
+      "use strict";
       init_panel_icons();
       STYLE_ID2 = "qws-panel-ui-css";
       ROW_ICON_PX = 26;
@@ -46441,6 +46541,7 @@ next: ${next}`;
   var NF_INT, formatInt, SPECIES_ICON_PX, HEADER_ICON_PX, GRID_TEMPLATE;
   var init_hatch_counts = __esm({
     "src/ui/menus/pets/hatch-counts.ts"() {
+      "use strict";
       init_data();
       init_hatchPity();
       init_panel_ui();
@@ -46553,6 +46654,7 @@ next: ${next}`;
   }
   var init_panel_layout = __esm({
     "src/ui/menus/panel-layout.ts"() {
+      "use strict";
       init_panel_ui();
       init_panel_icons();
     }
@@ -46711,6 +46813,7 @@ next: ${next}`;
   var NF_INT2, formatInt2, EGG_ICON_PX, TARGET_ICON_PX, RARITY_ICON_PX, ROW_TEMPLATE, NEAR_GUARANTEE_PULLS;
   var init_hatch_egg_card = __esm({
     "src/ui/menus/pets/hatch-egg-card.ts"() {
+      "use strict";
       init_data();
       init_hatchTracker();
       init_hatch_counts();
@@ -46948,6 +47051,7 @@ next: ${next}`;
   var OTHER_SECTION_ID;
   var init_petsHatch = __esm({
     "src/ui/menus/petsHatch.ts"() {
+      "use strict";
       init_data();
       init_hatchTracker();
       init_hatchPity();
@@ -47017,6 +47121,7 @@ next: ${next}`;
   var MAX_PROBABILITY_PERCENT, MIN_COOLDOWN_RATIO, STRENGTH_SCALE, SCALED_PARAMETER_KEYS, COOLDOWN_PARAMETER_KEY;
   var init_petAbilityStats = __esm({
     "src/services/petAbilityStats.ts"() {
+      "use strict";
       init_data();
       init_petCalcul();
       MAX_PROBABILITY_PERCENT = 100;
@@ -47263,6 +47368,7 @@ next: ${next}`;
   var PERCENT, DRAIN_REDUCTION_KEYS, RESTORE_AMOUNT_KEY, SECONDS_PER_MINUTE, TIER_SUFFIX;
   var init_petTeamStats = __esm({
     "src/services/petTeamStats.ts"() {
+      "use strict";
       init_data();
       init_petCalcul();
       init_petAbilityStats();
@@ -47611,6 +47717,7 @@ next: ${next}`;
   var CATEGORIES, HARD_AVOID_MUTATIONS, SOFT_AVOID_MUTATIONS, GRANTER_STRENGTH_PENALTY, AFK_POOL_LIMIT, AFK_FEEDER_LIMIT, CATEGORIES_BY_ID;
   var init_petTeamBuilder = __esm({
     "src/services/petTeamBuilder.ts"() {
+      "use strict";
       init_data();
       init_petCalcul();
       init_petAbilityStats();
@@ -48198,6 +48305,7 @@ next: ${next}`;
   }
   var init_pets_ability_colors = __esm({
     "src/ui/menus/pets-ability-colors.ts"() {
+      "use strict";
       init_pets();
       init_data();
     }
@@ -48557,6 +48665,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var PARAMETER_LABELS, MUTED, ACCENT, DIM, CONTINUOUS_ROLLS_PER_HOUR, TRIGGER_UNITS;
   var init_petsTeamStats = __esm({
     "src/ui/menus/petsTeamStats.ts"() {
+      "use strict";
       init_petTeamStats();
       PARAMETER_LABELS = {
         // Crop Size is a whole number in [50, 100]; the boost adds points, not a percentage.
@@ -48963,6 +49072,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var miniSpriteCache, TEAM_NAME_MAX_LENGTH, SHORT_WEATHER;
   var init_petsTeamBuilder = __esm({
     "src/ui/menus/petsTeamBuilder.ts"() {
+      "use strict";
       init_pets();
       init_petTeamBuilder();
       init_pets_ability_colors();
@@ -49336,6 +49446,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var PANEL_WIDTH, LIST_MAX_HEIGHT, PET_ICON_PX, ROW_TEMPLATE2, normalizeAbilityKey;
   var init_logs_tab = __esm({
     "src/ui/menus/pets/logs-tab.ts"() {
+      "use strict";
       init_pets();
       init_spriteIconCache();
       init_pets_ability_colors();
@@ -50487,6 +50598,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var detachPetsOpenTabListener;
   var init_pets2 = __esm({
     "src/ui/menus/pets.ts"() {
+      "use strict";
       init_menu();
       init_pets();
       init_petTeamReconcile();
@@ -50776,6 +50888,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var NF_US2, formatNum2, EXTRA_ESTIMATE_BUFFER_PER_DELETE_MS, MAX_VISIBLE_CHIPS, CHIP_SPRITE_PX, formatDurationShort, formatFinishTime;
   var init_deleter_section = __esm({
     "src/ui/menus/misc/deleter-section.ts"() {
+      "use strict";
       init_spriteIconCache();
       init_panel_ui();
       init_panel_icons();
@@ -50949,6 +51062,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_modal = __esm({
     "src/ui/menus/companion/modal.ts"() {
+      "use strict";
       init_panel_ui();
     }
   });
@@ -51132,6 +51246,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var ROW_SPRITE_PX, NF_US3, formatNum3;
   var init_deleter_picker = __esm({
     "src/ui/menus/misc/deleter-picker.ts"() {
+      "use strict";
       init_spriteIconCache();
       init_panel_ui();
       init_modal();
@@ -51177,6 +51292,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var EmoteType, ENTRY_LEAD_MS, NPC_TALKING_MS, TALKING_MARGIN_MS;
   var init_emoteTypes = __esm({
     "src/services/companion/emoteTypes.ts"() {
+      "use strict";
       EmoteType = {
         Idle: -1,
         Clapping: 0,
@@ -51593,6 +51709,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var fmt, MILESTONES, sumHatched, sumAbilityTriggers, num, STAT_DEFS, WEATHER_EMOTES, SHOP_ID, DROUGHT_STEPS, RELIEF_MIN, RARITY_LABEL, DAY_PART_LINES, HOLIDAY_LINES, HOLIDAY_GREETINGS, WEEKEND_LINES, SUNDAY_LINES, TIME_LINE_EMOTES, SESSION_GAP_MS, DAY_MS, REACTION_GAP_MS, REACTION_TTL_MS, FAMILY_COOLDOWN_MS, familyOf;
   var init_reactions = __esm({
     "src/services/companion/reactions.ts"() {
+      "use strict";
       init_emoteTypes();
       fmt = (n) => Math.round(n).toLocaleString("en-US");
       MILESTONES = Array.from({ length: 14 }, (_, i) => 10 ** (i + 2));
@@ -51874,6 +51991,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var LEGACY_DEFAULT_LINES, DEFAULT_CUSTOM_LINES, LINE_EMOTES, POKE_WINDOW_MS, POKE_THRESHOLD, plural, WEATHER_LINES, GENERIC_WEATHER_TEMPLATES;
   var init_dialogueLines = __esm({
     "src/services/companion/dialogueLines.ts"() {
+      "use strict";
       init_emoteTypes();
       init_reactions();
       LEGACY_DEFAULT_LINES = [
@@ -52103,6 +52221,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var DEFAULT_FILTERS;
   var init_harvest = __esm({
     "src/services/companion/chat/harvest.ts"() {
+      "use strict";
       DEFAULT_FILTERS = {
         species: null,
         minSizePct: 50,
@@ -52187,6 +52306,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var DEFAULT_KEEP_RULES, CHEERED_MUTATIONS;
   var init_hatch = __esm({
     "src/services/companion/chat/hatch.ts"() {
+      "use strict";
       init_harvest();
       init_emoteTypes();
       DEFAULT_KEEP_RULES = {
@@ -52257,6 +52377,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var COMPANION_MODES, MAX_LINE_LENGTH, MAX_LINES, SETTINGS_GROUPS, DEFAULT_COMPANION_SETTINGS;
   var init_settingsShape = __esm({
     "src/services/companion/settingsShape.ts"() {
+      "use strict";
       init_dialogueLines();
       init_hatch();
       COMPANION_MODES = ["follow", "garden"];
@@ -52350,6 +52471,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var myUserSlotIdx;
   var init_anchors = __esm({
     "src/services/companion/anchors.ts"() {
+      "use strict";
       init_hub();
       init_settingsShape();
       myUserSlotIdx = makeAtom("myUserSlotIdxAtom");
@@ -52370,6 +52492,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_buildings = __esm({
     "src/services/companion/buildings.ts"() {
+      "use strict";
     }
   });
 
@@ -52461,6 +52584,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var mapAtom;
   var init_map = __esm({
     "src/services/companion/map.ts"() {
+      "use strict";
       init_hub();
       init_buildings();
       mapAtom = makeAtom("mapAtom");
@@ -52531,6 +52655,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var GARDEN_COLS, GARDEN_ROWS, GARDEN_TILE_COUNT, EMPTY_SCOPE;
   var init_plant = __esm({
     "src/services/companion/chat/plant.ts"() {
+      "use strict";
       init_harvest();
       GARDEN_COLS = 20;
       GARDEN_ROWS = 10;
@@ -52606,6 +52731,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_plantRead = __esm({
     "src/services/companion/chat/plantRead.ts"() {
+      "use strict";
       init_atoms();
       init_data();
       init_anchors();
@@ -52816,6 +52942,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var SPRITE_LOG_TAG2, ICON_PX;
   var init_harvest_chips = __esm({
     "src/ui/menus/companion/harvest-chips.ts"() {
+      "use strict";
       init_data();
       init_sprites();
       init_spriteIconCache();
@@ -52912,6 +53039,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var SPRITE_LOG_TAG3, ICON_PX2;
   var init_plant_chips = __esm({
     "src/ui/menus/companion/plant-chips.ts"() {
+      "use strict";
       init_data();
       init_spriteIconCache();
       init_panel_ui();
@@ -53097,6 +53225,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var HALF_GAP_PX, CELL_ICON_PX;
   var init_garden_view = __esm({
     "src/ui/menus/misc/garden-view.ts"() {
+      "use strict";
       init_atoms();
       init_data();
       init_plantRead();
@@ -53189,6 +53318,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var SEED_STORAGE_ID, DECOR_STORAGE_ID, INVENTORY_ENTRY_LIMIT, INVENTORY_ENTRY_LIMIT_GUARDED, toQty, toId, seedLabel, decorLabel;
   var init_deleterSources = __esm({
     "src/services/deleterSources.ts"() {
+      "use strict";
       init_atoms();
       init_data();
       SEED_STORAGE_ID = "SeedSilo";
@@ -53369,6 +53499,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var WITHDRAW_SETTLE_MS, sleep5, formatNum4;
   var init_deleterRun = __esm({
     "src/services/deleterRun.ts"() {
+      "use strict";
       init_deleterSources();
       WITHDRAW_SETTLE_MS = 180;
       sleep5 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -53380,6 +53511,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var sleep6, toast2, guardEnabled, withdraw, seedDeleter, decorDeleter;
   var init_deleters = __esm({
     "src/services/deleters.ts"() {
+      "use strict";
       init_deleterRun();
       init_deleterSources();
       init_misc();
@@ -53793,6 +53925,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var PANEL_WIDTH_PX, AUTO_RECO_MAX_SECONDS, AUTO_RECO_STEP_SECONDS, MOVE_DELAY_MIN_MS, MOVE_DELAY_MAX_MS, MOVE_DELAY_DEFAULT_MS, formatShortDuration;
   var init_misc2 = __esm({
     "src/ui/menus/misc.ts"() {
+      "use strict";
       init_menu();
       init_misc();
       init_localStorage();
@@ -53967,6 +54100,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var STORAGE_KEY, MAX_BACKUPS, DEFAULT_VERSION;
   var init_settings2 = __esm({
     "src/services/settings.ts"() {
+      "use strict";
       init_localStorage();
       STORAGE_KEY = "aries_backups";
       MAX_BACKUPS = 25;
@@ -54039,6 +54173,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_download = __esm({
     "src/utils/download.ts"() {
+      "use strict";
       init_page_context();
     }
   });
@@ -54510,6 +54645,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_settings3 = __esm({
     "src/ui/menus/settings.ts"() {
+      "use strict";
       init_menu();
       init_api2();
       init_version();
@@ -54616,6 +54752,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var REPO_OWNER2, REPO_NAME2, REPO_BRANCH2, TOOLS_FILE_PATH, RAW_BASE_URL2;
   var init_tools = __esm({
     "src/services/tools.ts"() {
+      "use strict";
       init_version();
       REPO_OWNER2 = "Ariedam64";
       REPO_NAME2 = "MG-AriesMod";
@@ -54663,6 +54800,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_markdown = __esm({
     "src/utils/markdown.ts"() {
+      "use strict";
     }
   });
 
@@ -54718,6 +54856,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_image = __esm({
     "src/ui/menus/tools/image.ts"() {
+      "use strict";
       init_mgCommon();
     }
   });
@@ -54737,6 +54876,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_tag = __esm({
     "src/ui/menus/tools/tag.ts"() {
+      "use strict";
     }
   });
 
@@ -54856,6 +54996,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var ALL_FILTER_LABEL;
   var init_list_view = __esm({
     "src/ui/menus/tools/list-view.ts"() {
+      "use strict";
       init_markdown();
       init_image();
       init_tag();
@@ -55091,6 +55232,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var OVERLAY_Z_INDEX, SWAP_DURATION_MS, SWAP_EASING, SWAP_OFFSET_PX, ZOOM_SCALE;
   var init_carousel = __esm({
     "src/ui/menus/tools/carousel.ts"() {
+      "use strict";
       init_image();
       OVERLAY_Z_INDEX = "2147483647";
       SWAP_DURATION_MS = 320;
@@ -55195,6 +55337,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_detail_view = __esm({
     "src/ui/menus/tools/detail-view.ts"() {
+      "use strict";
       init_tools();
       init_markdown();
       init_carousel();
@@ -55452,6 +55595,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var STYLE_ID3, ACCENT2, ACCENT_2, TEXT2, TEXT_DIM2, BORDER2, SURFACE;
   var init_styles = __esm({
     "src/ui/menus/tools/styles.ts"() {
+      "use strict";
       STYLE_ID3 = "gemini-tools-styles";
       ACCENT2 = "#5eead4";
       ACCENT_2 = "#2dd4bf";
@@ -55510,6 +55654,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_transition = __esm({
     "src/ui/menus/tools/transition.ts"() {
+      "use strict";
     }
   });
 
@@ -55608,6 +55753,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var WRAPPER_WIDTH_PX;
   var init_tools2 = __esm({
     "src/ui/menus/tools.ts"() {
+      "use strict";
       init_menu();
       init_tools();
       init_list_view();
@@ -56094,6 +56240,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var STYLE_ID4, TEAL2, TEAL_DIM2, TEAL_MID, TEAL_BORDER2, TEAL_BRD_HI, BORDER3, BORDER_HI, CARD_BG2, CARD_BG_HI, TEXT3, TEXT_DIM3, DANGER2, DANGER_DIM, DANGER_BRD, DANGER_HI, DANGER_BRD_HI, css3;
   var init_editor2 = __esm({
     "src/ui/menus/editor.ts"() {
+      "use strict";
       init_toast();
       init_editor();
       init_download();
@@ -56317,6 +56464,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var ICON_BOX_PX;
   var init_keybinds2 = __esm({
     "src/ui/menus/keybinds.ts"() {
+      "use strict";
       init_menu();
       init_localStorage();
       init_panel_ui();
@@ -56595,6 +56743,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var __cachedSpawnTiles, __spawnLoadPromise, followingState, PET_FOLLOW_INTERVAL_MS, PET_HISTORY_FACTOR, PET_SPACING_STEPS, petFollowState, PlayersService;
   var init_players = __esm({
     "src/services/players.ts"() {
+      "use strict";
       init_toast();
       init_fakeModal();
       init_activityLogHistory();
@@ -57024,6 +57173,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_format = __esm({
     "src/utils/format.ts"() {
+      "use strict";
     }
   });
 
@@ -57582,6 +57732,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var STYLE_ID5, TEAL3, TEAL_DIM3, TEAL_MID2, TEAL_BORDER3, TEAL_BORDER_HI, BORDER4, BORDER_HI2, CARD_BG3, CARD_BG_HI2, TEXT4, TEXT_DIM4, GREEN, PLAYER_POSITION_AVAILABLE, PLAYER_POSITION_UNAVAILABLE_HINT, css4, ICO, ICONS;
   var init_room = __esm({
     "src/ui/menus/room.ts"() {
+      "use strict";
       init_players();
       init_toast();
       init_format();
@@ -57862,6 +58013,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var MAX_WALK_NODES, applied, rectKey, debugState3, frameRectOf, sourceOf;
   var init_applier = __esm({
     "src/skins/applier.ts"() {
+      "use strict";
       init_sprite();
       MAX_WALK_NODES = 4e4;
       applied = /* @__PURE__ */ new Map();
@@ -57911,6 +58063,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var canvasCache, CACHE_MAX;
   var init_frameCanvas = __esm({
     "src/sprite/api/frameCanvas.ts"() {
+      "use strict";
       init_sprite();
       canvasCache = /* @__PURE__ */ new Map();
       CACHE_MAX = 600;
@@ -57947,6 +58100,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_compositor = __esm({
     "src/skins/compositor.ts"() {
+      "use strict";
       init_frameCanvas();
     }
   });
@@ -58008,6 +58162,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var hasRebake;
   var init_gameCaches = __esm({
     "src/skins/gameCaches.ts"() {
+      "use strict";
       init_sprite();
       hasRebake = (value) => !!value && typeof value.rebakeAll === "function";
     }
@@ -58099,6 +58254,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var frameRectOf2, sourceOf2, rectKey2;
   var init_debug = __esm({
     "src/skins/debug.ts"() {
+      "use strict";
       init_sprite();
       init_applier();
       init_gameCaches();
@@ -58155,6 +58311,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var DB_NAME, DB_VERSION, STORE_NAME, MAX_SKIN_FILE_BYTES, dbPromise;
   var init_store = __esm({
     "src/skins/store.ts"() {
+      "use strict";
       DB_NAME = "aries_skins";
       DB_VERSION = 1;
       STORE_NAME = "entries";
@@ -58217,6 +58374,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var targetCache, categoryOfKey, labelOfKey;
   var init_targets = __esm({
     "src/skins/targets.ts"() {
+      "use strict";
       init_sprite();
       init_atlasToTextures();
       init_path();
@@ -58411,6 +58569,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var SKINS_CHANGED_EVENT, RENDERER_WATCH_MS, RETRY_PASS_MS, MAX_RETRY_PASSES, snapshot, skinCanvases, started3, watchId, retryId, lastRenderer, applyChain, retriesLeft;
   var init_skins = __esm({
     "src/skins/index.ts"() {
+      "use strict";
       init_sprite();
       init_localStorage();
       init_applier();
@@ -58494,6 +58653,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var observer, pending;
   var init_skins_thumb = __esm({
     "src/ui/menus/skins-thumb.ts"() {
+      "use strict";
       init_compositor();
       observer = null;
       pending = /* @__PURE__ */ new WeakMap();
@@ -58676,6 +58836,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var SLOT_THUMB_PX;
   var init_skins_detail = __esm({
     "src/ui/menus/skins-detail.ts"() {
+      "use strict";
       init_skins();
       init_skins_thumb();
       init_panel_ui();
@@ -58883,6 +59044,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var ALL_CATEGORIES, MAX_VISIBLE, GRID_THUMB_PX, CONFIRM_RESET_MS, menuState;
   var init_skins2 = __esm({
     "src/ui/menus/skins.ts"() {
+      "use strict";
       init_skins_detail();
       init_skins_thumb();
       init_panel_ui();
@@ -58927,6 +59089,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var MAX_EXPLORED_NODES, STEPS, keyOf;
   var init_pathfinding = __esm({
     "src/services/companion/pathfinding.ts"() {
+      "use strict";
       MAX_EXPLORED_NODES = 12e3;
       STEPS = [
         { x: 0, y: -1 },
@@ -59097,6 +59260,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var STEP_INTERVAL_MS, DEFAULT_MOVEMENT_CONFIG, TASK_MOVEMENT_CONFIG, ATTENTION_MOVEMENT_CONFIG, SPAWN_SEARCH_RADIUS, wanderRadiusOf;
   var init_movement = __esm({
     "src/services/companion/movement.ts"() {
+      "use strict";
       init_pathfinding();
       STEP_INTERVAL_MS = 150;
       DEFAULT_MOVEMENT_CONFIG = {
@@ -59153,6 +59317,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var COMPANION_TICK_LABEL, CACHE_KEY, tickAtom, counter;
   var init_tick = __esm({
     "src/services/companion/tick.ts"() {
+      "use strict";
       init_page_context();
       init_jotai();
       COMPANION_TICK_LABEL = "ariesCompanionTickAtom";
@@ -59226,6 +59391,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var NPC_ID_PREFIX, QUINOA_DATA_LABEL, quinoaData, COMPANION_PATCH, active, currentPayload;
   var init_injection = __esm({
     "src/services/companion/injection.ts"() {
+      "use strict";
       init_fakeAtoms();
       init_hub();
       init_map();
@@ -59272,6 +59438,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var STORAGE_PATH;
   var init_state4 = __esm({
     "src/services/companion/state.ts"() {
+      "use strict";
       init_localStorage();
       init_settingsShape();
       init_settingsShape();
@@ -59348,6 +59515,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var DEFAULT_SAMPLE_MS, npcQuinoaUsers;
   var init_diagnostics = __esm({
     "src/services/companion/diagnostics.ts"() {
+      "use strict";
       init_hub();
       DEFAULT_SAMPLE_MS = 6e3;
       npcQuinoaUsers = makeAtom(
@@ -59392,6 +59560,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var CONTEXTUAL_CHANCE, DEFAULT_CONTEXTUAL_COOLDOWN_MS;
   var init_dialogue = __esm({
     "src/services/companion/dialogue.ts"() {
+      "use strict";
       CONTEXTUAL_CHANCE = 0.25;
       DEFAULT_CONTEXTUAL_COOLDOWN_MS = 12e4;
     }
@@ -59444,6 +59613,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var HUNGRY_PET_THRESHOLD_PCT;
   var init_dialogueContext = __esm({
     "src/services/companion/dialogueContext.ts"() {
+      "use strict";
       init_data();
       init_atoms();
       init_pets();
@@ -59546,6 +59716,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed2, releaseTimer, posing, startTimer, lastSpokeAt;
   var init_emote = __esm({
     "src/services/companion/emote.ts"() {
+      "use strict";
       init_fakeAtoms();
       init_tick();
       init_tileObjectSystemApi();
@@ -59622,6 +59793,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var CHAT_BUBBLES_LABEL, AUTHORED_BY_MOD, wrapped, resolver, targetNpcId, lastTimestamp;
   var init_speech = __esm({
     "src/services/companion/speech.ts"() {
+      "use strict";
       init_jotai();
       init_dialogue();
       init_emote();
@@ -59819,6 +59991,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var CHAT_BUBBLE_MIN_INTERVAL_MS, RENDER_WAIT_TIMEOUT_MS, CONTEXTUAL_REFRESH_MS, npcChatBubbles, npcQuinoaUsers2, runtime, starting, wanderHooks, WALK_TIMEOUT_MS, ARRIVAL_POLL_MS, NEARBY_DISTANCE, STILL_POLL_MS, STILL_TIMEOUT_MS, stillToken, CompanionService;
   var init_companion = __esm({
     "src/services/companion/index.ts"() {
+      "use strict";
       init_atoms();
       init_hub();
       init_movement();
@@ -60139,6 +60312,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var attending;
   var init_attend = __esm({
     "src/services/companion/chat/attend.ts"() {
+      "use strict";
       init_companion();
       attending = null;
     }
@@ -60187,6 +60361,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_bubbleTags = __esm({
     "src/services/companion/chat/bubbleTags.ts"() {
+      "use strict";
     }
   });
 
@@ -60249,6 +60424,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var BUBBLE_ICON_PX, PET_ICON_PX2;
   var init_bubbleIcons = __esm({
     "src/services/companion/chat/bubbleIcons.ts"() {
+      "use strict";
       init_data();
       init_bubbleTags();
       init_spriteResolver();
@@ -60298,6 +60474,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var MAX_MESSAGES;
   var init_log = __esm({
     "src/services/companion/chat/log.ts"() {
+      "use strict";
       MAX_MESSAGES = 200;
     }
   });
@@ -60320,6 +60497,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var ACTION_DELAY_MS, SETTLE_MS, PROGRESS_EVERY, sleep7;
   var init_batch = __esm({
     "src/services/companion/chat/batch.ts"() {
+      "use strict";
       ACTION_DELAY_MS = 400;
       SETTLE_MS = 700;
       PROGRESS_EVERY = 10;
@@ -60375,6 +60553,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var AFTER_TEAM_SWAP_MS, NOT_SWAPPED;
   var init_teamSwap = __esm({
     "src/services/companion/chat/teamSwap.ts"() {
+      "use strict";
       init_pets();
       init_batch();
       AFTER_TEAM_SWAP_MS = 300;
@@ -60446,6 +60625,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var GIVE_UP_AFTER, IDLE;
   var init_walk = __esm({
     "src/services/companion/chat/walk.ts"() {
+      "use strict";
       init_companion();
       init_anchors();
       init_map();
@@ -60589,6 +60769,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var COLOR_MUTATIONS, WEATHER_MUTATIONS2, TIME_MUTATIONS, ALL_KNOWN_MUTATIONS;
   var init_workflowScan = __esm({
     "src/services/workflowScan.ts"() {
+      "use strict";
       init_atoms();
       init_data();
       init_cropSize();
@@ -60667,6 +60848,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_gardenRead = __esm({
     "src/services/companion/chat/gardenRead.ts"() {
+      "use strict";
       init_atoms();
       init_locker();
       init_workflowScan();
@@ -60743,6 +60925,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_harvestRun = __esm({
     "src/services/companion/chat/harvestRun.ts"() {
+      "use strict";
       init_player();
       init_stats();
       init_state4();
@@ -60793,6 +60976,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_feedScope = __esm({
     "src/services/companion/chat/feedScope.ts"() {
+      "use strict";
     }
   });
 
@@ -60914,6 +61098,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_petFeed = __esm({
     "src/services/companion/chat/petFeed.ts"() {
+      "use strict";
       init_state4();
       init_pets();
       init_player();
@@ -61005,6 +61190,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var AFTER_HARVEST_MS, AFTER_FEED_MS, sleep8;
   var init_feedRun = __esm({
     "src/services/companion/chat/feedRun.ts"() {
+      "use strict";
       init_quinoaCommands();
       init_pets();
       init_player();
@@ -61093,6 +61279,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_plantRun = __esm({
     "src/services/companion/chat/plantRun.ts"() {
+      "use strict";
       init_player();
       init_stats();
       init_batch();
@@ -61234,6 +61421,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var INVENTORY_CAPACITY, EMPTY_HATCH_SCOPE;
   var init_hatchRead = __esm({
     "src/services/companion/chat/hatchRead.ts"() {
+      "use strict";
       init_atoms();
       init_data();
       init_petCalcul();
@@ -61447,6 +61635,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var RECOUNT_EVERY, NEAR_CAPACITY, CHEER_TIMING, CHEER_LINES, SELL_BUILDING_WORDS, SELL_BUILDING_ALTERNATIVES;
   var init_hatchRun = __esm({
     "src/services/companion/chat/hatchRun.ts"() {
+      "use strict";
       init_player();
       init_pets();
       init_map();
@@ -61499,6 +61688,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_hatchFlow = __esm({
     "src/services/companion/chat/hatchFlow.ts"() {
+      "use strict";
       init_state4();
       init_hatch();
       init_hatchRead();
@@ -61531,6 +61721,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var PROPOSAL_TTL_MS;
   var init_proposals = __esm({
     "src/services/companion/chat/proposals.ts"() {
+      "use strict";
       PROPOSAL_TTL_MS = 3e4;
     }
   });
@@ -61781,6 +61972,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var ALERT_DEDUPE_MS, state3, listeners8, nextProposalSeq, ACCEPTANCE, CompanionChat;
   var init_chat = __esm({
     "src/services/companion/chat/index.ts"() {
+      "use strict";
       init_companion();
       init_attend();
       init_emoteTypes();
@@ -62057,6 +62249,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var POLL_MS, SETTLE_MS2, REASK_COOLDOWN_MS, timer, settleTimer, unsubscribers, running, lastOfferedSignature, lastOfferedAtMs, announcedProposalId, runTick;
   var init_feedWatch = __esm({
     "src/services/companion/chat/feedWatch.ts"() {
+      "use strict";
       init_companion();
       init_pets();
       init_state4();
@@ -62169,6 +62362,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var STATUS_REFRESH_MS, MODE_LABELS;
   var init_behavior_tab = __esm({
     "src/ui/menus/companion/behavior-tab.ts"() {
+      "use strict";
       init_companion();
       init_feedWatch();
       init_panel_ui();
@@ -62218,6 +62412,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var npcAvatarData, LAYER_ORDER;
   var init_avatar = __esm({
     "src/services/companion/avatar.ts"() {
+      "use strict";
       init_hub();
       init_gameVersion();
       npcAvatarData = makeAtom("npcAvatarDataAtom");
@@ -62329,6 +62524,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var CANVAS_PX, PORTRAIT_PX, HEAD_PADDING, FALLBACK_CROP, pending2;
   var init_npc_avatar = __esm({
     "src/ui/menus/companion/npc-avatar.ts"() {
+      "use strict";
       init_avatar();
       init_discordCsp();
       CANVAS_PX = 128;
@@ -62405,6 +62601,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var SPRITE_LOG_TAG4, TAG_MARKER;
   var init_chat_icons = __esm({
     "src/ui/menus/companion/chat-icons.ts"() {
+      "use strict";
       init_spriteIconCache();
       init_panel_ui();
       SPRITE_LOG_TAG4 = "companion-thread";
@@ -62640,6 +62837,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var GROUP_WINDOW_MS, AVATAR_PX, BUBBLE_ICON_PX2, SYSTEM_ICON_PX, OUTGOING_BG, OUTGOING_BORDER, OUTGOING_TEXT, INCOMING_BG, ALERT_BG, ALERT_BORDER;
   var init_chat_view = __esm({
     "src/ui/menus/companion/chat-view.ts"() {
+      "use strict";
       init_panel_ui();
       init_npc_avatar();
       init_chat_icons();
@@ -62794,6 +62992,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_harvest_fields = __esm({
     "src/ui/menus/companion/harvest-fields.ts"() {
+      "use strict";
       init_panel_ui();
       init_panel_layout();
       init_harvest_chips();
@@ -62840,6 +63039,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_settings_notice = __esm({
     "src/ui/menus/companion/settings-notice.ts"() {
+      "use strict";
       init_state4();
       init_panel_ui();
     }
@@ -62873,6 +63073,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var NO_TEAM, NO_TEAMS_HINT;
   var init_team_select = __esm({
     "src/ui/menus/companion/team-select.ts"() {
+      "use strict";
       init_pets();
       init_panel_ui();
       NO_TEAM = "";
@@ -62920,6 +63121,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var MIN_PCT, MAX_PCT;
   var init_feed_settings_modal = __esm({
     "src/ui/menus/companion/feed-settings-modal.ts"() {
+      "use strict";
       init_companion();
       init_feedWatch();
       init_state4();
@@ -62960,6 +63162,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_hatch_settings_modal = __esm({
     "src/ui/menus/companion/hatch-settings-modal.ts"() {
+      "use strict";
       init_companion();
       init_state4();
       init_panel_ui();
@@ -63010,6 +63213,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_settings_modal = __esm({
     "src/ui/menus/companion/settings-modal.ts"() {
+      "use strict";
       init_state4();
       init_hatch();
       init_teamSwap();
@@ -63048,6 +63252,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_harvest_settings_modal = __esm({
     "src/ui/menus/companion/harvest-settings-modal.ts"() {
+      "use strict";
       init_companion();
       init_state4();
       init_panel_ui();
@@ -63272,6 +63477,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var REFRESH_MS, PREVIEW_ICON_PX, TILE_ICON_PX, MAX_PREVIEW_VARIANTS;
   var init_harvest_modal = __esm({
     "src/ui/menus/companion/harvest-modal.ts"() {
+      "use strict";
       init_gardenRead();
       init_harvest();
       init_panel_ui();
@@ -63367,6 +63573,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var REFRESH_MS2, CROP_ICON_PX;
   var init_feed_modal = __esm({
     "src/ui/menus/companion/feed-modal.ts"() {
+      "use strict";
       init_petFeed();
       init_panel_ui();
       init_harvest_chips();
@@ -63498,6 +63705,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var MAX_GRID_HEIGHT_PX, CELL_ICON_PX2, HALF_GAP_PX2;
   var init_plant_grid = __esm({
     "src/ui/menus/companion/plant-grid.ts"() {
+      "use strict";
       init_plant();
       init_panel_ui();
       MAX_GRID_HEIGHT_PX = 300;
@@ -63682,6 +63890,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var REFRESH_MS3, STRIP_ICON_PX;
   var init_plant_modal = __esm({
     "src/ui/menus/companion/plant-modal.ts"() {
+      "use strict";
       init_plantRead();
       init_plant();
       init_panel_ui();
@@ -63735,6 +63944,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var SPRITE_LOG_TAG5, ICON_PX3;
   var init_hatch_chips = __esm({
     "src/ui/menus/companion/hatch-chips.ts"() {
+      "use strict";
       init_spriteIconCache();
       init_pets_ability_colors();
       init_panel_ui();
@@ -63943,6 +64153,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var REFRESH_MS4, TILE_ICON_PX2, ABILITY_ICON_PX, ABILITY_LIST_MAX_PX, MIN_STR, MAX_STR, DEFAULT_STR;
   var init_hatch_modal = __esm({
     "src/ui/menus/companion/hatch-modal.ts"() {
+      "use strict";
       init_hatchFlow();
       init_hatch();
       init_hatchRead();
@@ -64042,6 +64253,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_actions_modal = __esm({
     "src/ui/menus/companion/actions-modal.ts"() {
+      "use strict";
       init_gardenRead();
       init_petFeed();
       init_plantRead();
@@ -64183,6 +64395,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var EMPTY_HINT, IDENTITY_REFRESH_MS;
   var init_chat_tab = __esm({
     "src/ui/menus/companion/chat-tab.ts"() {
+      "use strict";
       init_chat();
       init_companion();
       init_panel_ui();
@@ -64216,6 +64429,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var MIN_WIDTH_PX;
   var init_companion2 = __esm({
     "src/ui/menus/companion/companion.ts"() {
+      "use strict";
       init_menu();
       init_companionKeybind();
       init_panel_ui();
@@ -64384,6 +64598,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_antiafk = __esm({
     "src/utils/antiafk.ts"() {
+      "use strict";
     }
   });
 
@@ -64470,6 +64685,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var installed3, dragMode, lastTileKey;
   var init_editorPointerControls = __esm({
     "src/services/editorPointerControls.ts"() {
+      "use strict";
       init_tileObjectSystemApi();
       init_editor();
       installed3 = false;
@@ -64745,6 +64961,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var SESSION_PATH, DRAIN_MS, SLOW_TICK_MS, LOW_PRIORITY_MAX_DISTANCE, running2, unsubscribers2, timers, gate, speaking, session, lastHour, prevStats, prevWeather, lastAbilityAt, prevShops, prevLuck, prevGarden, latestGarden, announcedEggs, eggsPrimed, clone;
   var init_reactionWatch = __esm({
     "src/services/companion/reactionWatch.ts"() {
+      "use strict";
       init_data();
       init_atoms();
       init_localStorage();
@@ -64906,6 +65123,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var INTEREST_CHANCE, ALMOST_READY_MS, ALMOST_READY_GROWTH, KIND_WEIGHT, KIND_EMOTE, KIND_RANK, withArticle, LINES, NEIGHBOURS, COMMENT_CHANCE, COMMENT_COOLDOWN_MS, COMMENT_MAX_DISTANCE;
   var init_wanderInterest = __esm({
     "src/services/companion/wanderInterest.ts"() {
+      "use strict";
       init_emoteTypes();
       INTEREST_CHANCE = 0.5;
       ALMOST_READY_MS = 2 * 6e4;
@@ -65103,6 +65321,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var SLOT_REFRESH_MS, PENDING_TTL_MS, running3, unsubscribers3, timers2, latestGarden2, slotIdx, pending3, lastCommentAt, spaced2, hooks2;
   var init_wanderWatch = __esm({
     "src/services/companion/wanderWatch.ts"() {
+      "use strict";
       init_data();
       init_atoms();
       init_companion();
@@ -65220,6 +65439,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var MIRROR_MAX_DISTANCE, MIRROR_COOLDOWN_MS, MIRROR_DELAY_MIN_MS, MIRROR_DELAY_MAX_MS, STREAK_GAP_MS, STREAK_MAX_ANSWERS, SECOND_ANSWER_CHANCE, LINE_CHANCE, LINE_COOLDOWN_MS, SPAM_THRESHOLD, SPAM_LINE_CHANCE, SPAM_LINE_COOLDOWN_MS, PLAYABLE, MIRROR_LINES, SPAM_LINES;
   var init_emoteMirror = __esm({
     "src/services/companion/emoteMirror.ts"() {
+      "use strict";
       init_emoteTypes();
       MIRROR_MAX_DISTANCE = 8;
       MIRROR_COOLDOWN_MS = 6e3;
@@ -65363,6 +65583,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var running4, generation, unsubscribers4, state4, pending4, localId, roomId, entries;
   var init_emoteMirrorWatch = __esm({
     "src/services/companion/emoteMirrorWatch.ts"() {
+      "use strict";
       init_atoms();
       init_companion();
       init_chat();
@@ -65459,6 +65680,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var AFK_IDLE_AFTER_MS, AFK_ASLEEP_AFTER_MS, SNORE_MIN_MS, SNORE_MAX_MS, SNORE_SLOW_AFTER_MS, SNORE_SLOW_MIN_MS, SNORE_SLOW_MAX_MS, WAKE_LINE_MIN_ASLEEP_MS, RETURN_LINE_CHANCE, DREAM_CHANCE, IDLE_LINES, RETURN_LINES, FALL_ASLEEP_LINES, SNORE_LINES, DREAM_LINES, WAKE_LINES, LONG_WAKE_LINES, say;
   var init_afk = __esm({
     "src/services/companion/afk.ts"() {
+      "use strict";
       init_emoteTypes();
       AFK_IDLE_AFTER_MS = 3 * 6e4;
       AFK_ASLEEP_AFTER_MS = 6 * 6e4;
@@ -65670,6 +65892,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var TICK_MS, ACTIVITY_THROTTLE_MS, NEAR_DISTANCE, INPUT_EVENTS, running5, generation2, state5, timer2, unsubscribers5, ownHold, pending5, chain, lastNotedAt, lastTile;
   var init_afkWatch = __esm({
     "src/services/companion/afkWatch.ts"() {
+      "use strict";
       init_atoms();
       init_companion();
       init_chat();
@@ -65846,6 +66069,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var CARD_ID, STYLE_ID6, Z_INDEX, ICON_PX4, TICK_MS2, ACCENT3, TEXT5, TEXT_DIM5, card3, clockBar, timer3, shownId, unsubscribe2;
   var init_companionAsk = __esm({
     "src/ui/companionAsk.ts"() {
+      "use strict";
       init_chat();
       init_proposals();
       init_companion();
@@ -65996,6 +66220,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var VERSION_PATH, VERSION_CACHE_TTL, pendingPromise, cachedVersion, cachedAt, MGVersion;
   var init_mgVersion = __esm({
     "src/utils/mgVersion.ts"() {
+      "use strict";
       init_mgCommon();
       VERSION_PATH = "/platform/v1/version";
       VERSION_CACHE_TTL = 60 * 1e3;
@@ -66064,6 +66289,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var OVERLAY_ID2, STYLE_ID7;
   var init_autoRecoDisabledNotice = __esm({
     "src/ui/autoRecoDisabledNotice.ts"() {
+      "use strict";
       init_localStorage();
       OVERLAY_ID2 = "mgAutoRecoDisabledNotice";
       STYLE_ID7 = "mgAutoRecoDisabledNoticeStyle";
@@ -66131,6 +66357,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var OVERLAY_ID3, STYLE_ID8, HUB_INSTALL_URL;
   var init_roomPrivacyNotice = __esm({
     "src/ui/roomPrivacyNotice.ts"() {
+      "use strict";
       init_localStorage();
       OVERLAY_ID3 = "mgRoomPrivacyNotice";
       STYLE_ID8 = "mgRoomPrivacyNoticeStyle";
@@ -66190,6 +66417,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var REPO_OWNER3, REPO_NAME3, REPO_BRANCH3, CHANGELOG_FILE_PATH, RAW_BASE_URL3;
   var init_changelog = __esm({
     "src/services/changelog.ts"() {
+      "use strict";
       init_version();
       REPO_OWNER3 = "Ariedam64";
       REPO_NAME3 = "MG-AriesMod";
@@ -66318,6 +66546,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var OVERLAY_ID4, STYLE_ID9, OVERLAY_Z_INDEX2, ACCENT4, ACCENT_22, TEXT6, TEXT_DIM6;
   var init_changelogNotice = __esm({
     "src/ui/changelogNotice.ts"() {
+      "use strict";
       init_version();
       init_localStorage();
       init_changelog();
@@ -66388,6 +66617,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   var init_bridge2 = __esm({
     "src/ariesModAPI/auth/bridge.ts"() {
+      "use strict";
       init_localStorage();
       init_config();
     }
@@ -66692,6 +66922,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var gameReadyWatcherInitialized, gameReadyTriggered, preferredReportingIntervalMs, payloadReportingTimer, isPayloadReporting, lastSentPayloadSnapshot, unchangedSnapshotCount, initialSendRetries, MAX_INITIAL_RETRIES;
   var init_state5 = __esm({
     "src/ariesModAPI/endpoints/state.ts"() {
+      "use strict";
       init_atoms();
       init_page_context();
       init_localStorage();
@@ -66721,6 +66952,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var main_exports = {};
   var init_main = __esm({
     "src/main.ts"() {
+      "use strict";
       init_sprite();
       init_ws_hook();
       init_hud();

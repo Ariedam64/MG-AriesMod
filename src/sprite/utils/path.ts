@@ -1,5 +1,3 @@
-import type { SpriteConfig } from '../settings';
-
 export const splitKey = (key: string) => String(key || '').split('/').filter(Boolean);
 
 export const joinPath = (base: string, path?: string) =>
@@ -24,20 +22,11 @@ export const relPath = (base: string, path: string) =>
     ? normalizeSegments(path.startsWith('/') ? path.slice(1) : dirOf(base) + path)
     : path;
 
-export function categoryOf(key: string, cfg: SpriteConfig): string {
+/** First path segment after an optional `sprite/` or `sprites/` prefix. */
+export function categoryOf(key: string): string {
   const parts = splitKey(key);
   const start = parts[0] === 'sprite' || parts[0] === 'sprites' ? 1 : 0;
-  const width = Math.max(1, cfg.catLevels | 0);
-  return parts.slice(start, start + width).join('/') || 'misc';
-}
-
-export function labelOf(key: string, cfg: SpriteConfig): string {
-  const parts = splitKey(key);
-  const start =
-    (parts[0] === 'sprite' || parts[0] === 'sprites' ? 1 : 0) + Math.max(1, cfg.catLevels | 0);
-  const name = parts.slice(start).join('/') || parts[parts.length - 1] || '';
-  if (name.length <= cfg.labelMax) return name;
-  return `${name.slice(0, Math.max(0, cfg.labelMax - 3))}...`;
+  return parts[start] || 'misc';
 }
 
 export const baseNameOf = (key: string) => {

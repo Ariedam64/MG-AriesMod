@@ -2,7 +2,7 @@
 import { getAtomByLabel, jGet, jSet } from "../store/jotai";
 
 export type ToastVariant = "success" | "error" | "info" | "warn";
-export type SimpleToast = { title: any; description?: any; variant?: ToastVariant };
+export type SimpleToast = { title: any; description?: any; variant?: ToastVariant; duration?: number };
 
 // Matches the real "board"-style toast pushed by the game itself for shop
 // announcements (captured live from quinoaToastsAtom). title/subtitle can be

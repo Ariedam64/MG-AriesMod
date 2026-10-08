@@ -25,9 +25,8 @@ function createInitialState(): CaptureState {
 
 const STATE_GLOBAL_KEY = "__MG_DATA_STATE__";
 
-export const captureState: CaptureState =
-  (pageWindow as Record<string, unknown>)[STATE_GLOBAL_KEY] as CaptureState || createInitialState();
+const globals = pageWindow as unknown as Record<string, unknown>;
 
-if (!(pageWindow as Record<string, unknown>)[STATE_GLOBAL_KEY]) {
-  (pageWindow as Record<string, unknown>)[STATE_GLOBAL_KEY] = captureState;
-}
+export const captureState: CaptureState =
+  (globals[STATE_GLOBAL_KEY] as CaptureState | undefined) ?? createInitialState();
+globals[STATE_GLOBAL_KEY] = captureState;

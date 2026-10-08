@@ -1,15 +1,14 @@
-import type { SpriteConfig } from '../settings';
 import type { SpriteItem, AnimFrameGroup, SpriteTexture } from '../types';
 import { animParse, categoryOf } from '../utils/path';
 
-export function buildItemsFromTextures(tex: Map<string, SpriteTexture>, cfg: SpriteConfig) {
+export function buildItemsFromTextures(tex: Map<string, SpriteTexture>) {
   const keys = [...tex.keys()].sort((a, b) => a.localeCompare(b));
   const used = new Set<string>();
   const items: SpriteItem[] = [];
   const cats = new Map<string, SpriteItem[]>();
 
   const addToCat = (key: string, item: SpriteItem) => {
-    const cat = categoryOf(key, cfg);
+    const cat = categoryOf(key);
     if (!cats.has(cat)) cats.set(cat, []);
     cats.get(cat)!.push(item);
   };

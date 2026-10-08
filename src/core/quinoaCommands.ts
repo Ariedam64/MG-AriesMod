@@ -233,7 +233,7 @@ export function buildQuinoaMessage(payload: Record<string, any>): QuinoaMessage 
   const scopePath = rawScopePath ?? QUINOA_SCOPE;
 
   if (!isQuinoaScope(scopePath) || !isQuinoaCommandType(command.type)) {
-    return { scopePath, ...command } as QuinoaMessage;
+    return { scopePath, ...command } as unknown as QuinoaMessage;
   }
 
   const requestId = randomRequestId();

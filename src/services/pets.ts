@@ -7,11 +7,11 @@ import {
   type CropInventoryState,
 } from "./player";
 import { petCatalog, petAbilities, formatAbilityLog, isPetAbilityAction } from "../data";
-import { fakeInventoryShow, fakeInventoryDisable, closeInventoryPanel, isInventoryOpen } from "./fakeModal.ts";
+import { fakeInventoryShow, fakeInventoryDisable, closeInventoryPanel, isInventoryOpen } from "./fakeModal";
 import { Atoms, myPetHutchPetItems, myNumPetHutchItems, myPetHutchCapacitySlots, isMyInventoryAtMaxLength, stateUserSlots, playerId, player as playerAtom, myActivityLog } from "../store/atoms";
 import { readAccountId, findSlotIndex } from "../utils/playerIdentity";
 import { toastSimple } from "../ui/toast";
-import { Hotkey, matchHotkey, stringToHotkey } from "../ui/menu.ts";
+import { Hotkey, matchHotkey, stringToHotkey } from "../ui/menu";
 import {
   getKeybind,
   getPetTeamActionId,

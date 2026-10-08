@@ -631,9 +631,11 @@ export const PlayerService = {
       emit();
     });
 
+    // onChange resolves to the unsubscriber, so calling the promise did nothing.
     return () => {
-      try { unsubInfos?.(); } catch {}
-      try { unsubPrimitives?.(); } catch {}
+      for (const sub of [unsubInfos, unsubPrimitives]) {
+        Promise.resolve(sub).then((off) => off?.()).catch(() => {});
+      }
     };
   },
 
@@ -663,8 +665,9 @@ export const PlayerService = {
     });
 
     return () => {
-      try { unsubInfos?.(); } catch {}
-      try { unsubPrimitives?.(); } catch {}
+      for (const sub of [unsubInfos, unsubPrimitives]) {
+        Promise.resolve(sub).then((off) => off?.()).catch(() => {});
+      }
     };
   },
 
