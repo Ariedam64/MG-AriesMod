@@ -21,6 +21,7 @@ import { PetAlertService } from "./petAlerts";
 import { PetsService } from "../pets/pets";
 import type { PetInfo } from "../../game/player";
 import { attachSpriteIcon } from "../../ui/kit/sprites/iconCache";
+import { rarityBadge } from "../../ui/kit/rarityBadge";
 import { isFloatingBellEnabled, setFloatingBellEnabled } from "./bellFloating";
 
 type RuleEditorRow = {
@@ -192,77 +193,6 @@ const mkHeadCell = (txt: string, align: "center" | "left" = "center") => {
   el.style.justifyContent = align === "left" ? "flex-start" : "center";
   return el;
 };
-
-export function rarityBadge(raw: string) {
-  const rarity = String(raw || "").trim();
-  const key = (() => {
-    const k = rarity.toLowerCase();
-    // MGData's API returns "Mythic" while the hardcoded catalog uses "Mythical".
-    if (k === "mythic" || k === "mythical") return "Mythical";
-    if (k === "celestial") return "Celestial";
-    if (k === "divine") return "Divine";
-    if (k === "legendary") return "Legendary";
-    if (k === "rare") return "Rare";
-    if (k === "uncommon") return "Uncommon";
-    if (k === "common") return "Common";
-    return rarity || "—";
-  })();
-
-  const COLORS: Record<string, string | null> = {
-    Common: "#E7E7E7",
-    Uncommon: "#67BD4D",
-    Rare: "#0071C6",
-    Legendary: "#FFC734",
-    Mythical: "#9944A7",
-    Divine: "#FF7835",
-    Celestial: null,
-  };
-
-  const darkText = new Set(["Common", "Uncommon", "Legendary", "Divine"]);
-
-  const el = document.createElement("div");
-  el.textContent = key;
-  Object.assign(el.style, {
-    display: "inline-flex",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: "4px 8px",
-    borderRadius: "5px",
-    fontSize: "12px",
-    fontWeight: "700",
-    margin: "2px auto",
-    color: darkText.has(key) ? "#0b0b0b" : "#ffffff",
-    boxShadow: "0 0 0 1px #0006 inset",
-    lineHeight: "1.1",
-    whiteSpace: "nowrap",
-  } as CSSStyleDeclaration);
-
-  if (key === "Celestial") {
-    if (!document.getElementById("qws-celestial-kf")) {
-      const style = document.createElement("style");
-      style.id = "qws-celestial-kf";
-      style.textContent = `
-@keyframes qwsCelestialShift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}`;
-      document.head.appendChild(style);
-    }
-    el.style.background = `linear-gradient(130deg,
-      rgb(0,180,216) 0%,
-      rgb(124,42,232) 40%,
-      rgb(160,0,126) 60%,
-      rgb(255,215,0) 100%)`;
-    el.style.backgroundSize = "200% 200%";
-    el.style.animation = "qwsCelestialShift 4s linear infinite";
-  } else {
-    el.style.background = COLORS[key] || "#444";
-  }
-
-  return el;
-}
-
 
 const applyRuleState = (
   itemCell: HTMLDivElement,

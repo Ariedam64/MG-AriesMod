@@ -37285,32 +37285,45 @@ next: ${next}`;
     }
   });
 
-  // src/features/notifier/menu.ts
-  function rarityBadge(raw) {
+  // src/ui/kit/rarityBadge.ts
+  function rarityLabel(raw) {
     const rarity3 = String(raw || "").trim();
-    const key2 = (() => {
-      const k = rarity3.toLowerCase();
-      if (k === "mythic" || k === "mythical") return "Mythical";
-      if (k === "celestial") return "Celestial";
-      if (k === "divine") return "Divine";
-      if (k === "legendary") return "Legendary";
-      if (k === "rare") return "Rare";
-      if (k === "uncommon") return "Uncommon";
-      if (k === "common") return "Common";
-      return rarity3 || "\u2014";
-    })();
-    const COLORS = {
-      Common: "#E7E7E7",
-      Uncommon: "#67BD4D",
-      Rare: "#0071C6",
-      Legendary: "#FFC734",
-      Mythical: "#9944A7",
-      Divine: "#FF7835",
-      Celestial: null
-    };
-    const darkText = /* @__PURE__ */ new Set(["Common", "Uncommon", "Legendary", "Divine"]);
-    const el = document.createElement("div");
-    el.textContent = key2;
+    switch (rarity3.toLowerCase()) {
+      // The live API says "Mythic" where the bundled catalog says "Mythical".
+      case "mythic":
+      case "mythical":
+        return "Mythical";
+      case "celestial":
+        return "Celestial";
+      case "divine":
+        return "Divine";
+      case "legendary":
+        return "Legendary";
+      case "rare":
+        return "Rare";
+      case "uncommon":
+        return "Uncommon";
+      case "common":
+        return "Common";
+      default:
+        return rarity3 || "\u2014";
+    }
+  }
+  function ensureCelestialKeyframes() {
+    if (document.getElementById(CELESTIAL_KEYFRAMES_ID)) return;
+    const style2 = document.createElement("style");
+    style2.id = CELESTIAL_KEYFRAMES_ID;
+    style2.textContent = `
+@keyframes qwsCelestialShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}`;
+    document.head.appendChild(style2);
+  }
+  function rarityBadge(raw) {
+    const label2 = rarityLabel(raw);
+    const el = h("div", void 0, label2);
     Object.assign(el.style, {
       display: "inline-flex",
       justifyContent: "center",
@@ -37320,23 +37333,13 @@ next: ${next}`;
       fontSize: "12px",
       fontWeight: "700",
       margin: "2px auto",
-      color: darkText.has(key2) ? "#0b0b0b" : "#ffffff",
+      color: DARK_TEXT.has(label2) ? "#0b0b0b" : "#ffffff",
       boxShadow: "0 0 0 1px #0006 inset",
       lineHeight: "1.1",
       whiteSpace: "nowrap"
     });
-    if (key2 === "Celestial") {
-      if (!document.getElementById("qws-celestial-kf")) {
-        const style2 = document.createElement("style");
-        style2.id = "qws-celestial-kf";
-        style2.textContent = `
-@keyframes qwsCelestialShift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}`;
-        document.head.appendChild(style2);
-      }
+    if (label2 === "Celestial") {
+      ensureCelestialKeyframes();
       el.style.background = `linear-gradient(130deg,
       rgb(0,180,216) 0%,
       rgb(124,42,232) 40%,
@@ -37345,2310 +37348,25 @@ next: ${next}`;
       el.style.backgroundSize = "200% 200%";
       el.style.animation = "qwsCelestialShift 4s linear infinite";
     } else {
-      el.style.background = COLORS[key2] || "#444";
+      el.style.background = RARITY_COLORS[label2] || "#444";
     }
     return el;
   }
-  function renderSettingsTab(view, ui) {
-    view.innerHTML = "";
-    void PetAlertService.start().catch(() => {
-    });
-    const section2 = (title) => {
-      const card5 = ui.card(title, { tone: "muted" });
-      card5.body.style.display = "grid";
-      card5.body.style.gap = "10px";
-      return card5;
-    };
-    const row = (labelTxt, control, opts) => {
-      const { root: r, label: label2 } = ui.formRow(labelTxt, control, { alignTop: opts?.alignTop, labelWidth: "160px" });
-      label2.style.opacity = "0.9";
-      label2.style.fontWeight = "600";
-      return r;
-    };
-    const radio2 = (name, value, text2) => {
-      const chip2 = ui.toggleChip(text2, { type: "radio", name, value });
-      chip2.root.classList.add("qmm-radio-chip");
-      return { label: chip2.root, input: chip2.input };
-    };
-    const makeSelect = (id) => {
-      const sel = ui.select({ id, width: "180px" });
-      return sel;
-    };
-    const playIconBtn = (title = "Play") => {
-      return ui.btn("", { icon: "\u25B6", size: "sm", tooltip: title, ariaLabel: title });
-    };
-    const smallBtn2 = (txt) => ui.btn(txt, { size: "sm" });
-    const errorBar2 = () => ui.errorBar();
-    const root = document.createElement("div");
-    Object.assign(root.style, {
-      display: "grid",
-      gridTemplateRows: "1fr",
-      gap: "12px",
-      height: "54vh",
-      minHeight: "0",
-      overflow: "hidden"
-    });
-    view.appendChild(root);
-    const bellSection = section2("Notification bell");
-    root.appendChild(bellSection.root);
-    const bellRow = document.createElement("label");
-    Object.assign(bellRow.style, {
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      cursor: "pointer"
-    });
-    const bellSwitch = ui.switch(isFloatingBellEnabled());
-    bellSwitch.addEventListener("change", () => {
-      setFloatingBellEnabled(bellSwitch.checked);
-    });
-    const bellLabel = document.createElement("span");
-    bellLabel.textContent = "Floating bell (movable widget)";
-    bellLabel.style.fontSize = "13px";
-    bellRow.append(bellSwitch, bellLabel);
-    bellSection.body.appendChild(bellRow);
-    const bellHint = document.createElement("div");
-    bellHint.textContent = "Detaches the bell from the game's icon rail and shows it as a draggable floating button instead. Use this if the bell is missing or misplaced on your screen.";
-    Object.assign(bellHint.style, {
-      opacity: "0.7",
-      fontSize: "12px",
-      lineHeight: "1.4"
-    });
-    bellSection.body.appendChild(bellHint);
-    const s1 = section2("Audio & Playback");
-    root.appendChild(s1.root);
-    const contextControls = {};
-    const contextOrder = [
-      { key: "shops", label: "Shops", allowPurchase: true, showStop: true },
-      { key: "weather", label: "Weather", allowPurchase: false },
-      { key: "pets", label: "Pets", allowPurchase: true, showStop: false }
-    ];
-    for (const cfg of contextOrder) {
-      const card5 = document.createElement("div");
-      Object.assign(card5.style, {
-        display: "grid",
-        gap: "12px",
-        padding: "16px",
-        borderRadius: "12px",
-        border: "1px solid #1f2429",
-        background: "#111821"
-      });
-      const heading = document.createElement("div");
-      heading.textContent = cfg.label;
-      heading.style.fontWeight = "700";
-      heading.style.fontSize = "14px";
-      heading.style.letterSpacing = "0.02em";
-      card5.appendChild(heading);
-      const defaultWrap = document.createElement("div");
-      defaultWrap.style.display = "flex";
-      defaultWrap.style.alignItems = "center";
-      defaultWrap.style.gap = "8px";
-      const select3 = makeSelect(`ap.defaultSound.${cfg.key}`);
-      select3.dataset.soundSelect = cfg.key;
-      const playBtn = playIconBtn(`Play ${cfg.label.toLowerCase()} sound`);
-      defaultWrap.append(select3, playBtn);
-      card5.appendChild(row("Default sound", defaultWrap));
-      const volumeWrap = document.createElement("div");
-      volumeWrap.style.display = "flex";
-      volumeWrap.style.alignItems = "center";
-      volumeWrap.style.gap = "10px";
-      const volumeRange = document.createElement("input");
-      volumeRange.type = "range";
-      volumeRange.min = "0";
-      volumeRange.max = "100";
-      volumeRange.step = "1";
-      volumeRange.style.width = "220px";
-      const volumeValue = document.createElement("span");
-      volumeValue.style.minWidth = "32px";
-      volumeValue.style.textAlign = "right";
-      volumeWrap.append(volumeRange, volumeValue);
-      card5.appendChild(row("Volume", volumeWrap));
-      const modeWrap = document.createElement("div");
-      modeWrap.style.display = "flex";
-      modeWrap.style.gap = "12px";
-      const modeOne = radio2(`ap.mode.${cfg.key}`, "oneshot", "One-shot");
-      modeWrap.append(modeOne.label);
-      let modeLoop = null;
-      if (cfg.allowPurchase) {
-        modeLoop = radio2(`ap.mode.${cfg.key}`, "loop", "Loop");
-        modeWrap.append(modeLoop.label);
-      }
-      card5.appendChild(row("Playback mode", modeWrap));
-      let stopRow;
-      let loopInput;
-      let loopWrap;
-      if (cfg.allowPurchase) {
-        const stopWrap = document.createElement("div");
-        stopWrap.style.display = "flex";
-        stopWrap.style.flexDirection = "column";
-        stopWrap.style.gap = "10px";
-        const stopInfo = document.createElement("div");
-        stopInfo.textContent = cfg.showStop === false ? "Loops keep repeating; stop manually by disabling the alert." : "Loops stop automatically when the item is purchased.";
-        stopInfo.style.opacity = "0.75";
-        stopInfo.style.fontSize = "12px";
-        stopInfo.style.lineHeight = "1.4";
-        if (cfg.key !== "pets") {
-          loopWrap = document.createElement("div");
-          loopWrap.style.display = "flex";
-          loopWrap.style.flexDirection = "column";
-          loopWrap.style.gap = "4px";
-          const loopTitle = document.createElement("div");
-          loopTitle.textContent = "Loop interval";
-          loopTitle.style.opacity = "0.8";
-          loopTitle.style.fontSize = "12px";
-          loopTitle.style.fontWeight = "600";
-          const loopBox = document.createElement("div");
-          loopBox.style.display = "inline-flex";
-          loopBox.style.alignItems = "center";
-          loopBox.style.gap = "8px";
-          loopInput = document.createElement("input");
-          loopInput.type = "number";
-          loopInput.min = "150";
-          loopInput.max = "10000";
-          loopInput.step = "50";
-          loopInput.style.width = "100px";
-          loopInput.style.textAlign = "center";
-          const loopLabel = document.createElement("span");
-          loopLabel.textContent = "ms between plays";
-          loopLabel.style.opacity = "0.85";
-          loopBox.append(loopInput, loopLabel);
-          loopWrap.append(loopTitle, loopBox);
-          stopWrap.append(stopInfo, loopWrap);
-        } else {
-          stopWrap.append(stopInfo);
-        }
-        if (cfg.showStop !== false) {
-          stopRow = row("Stop condition", stopWrap);
-        } else {
-          stopRow = row("Loop interval", stopWrap);
-        }
-        card5.appendChild(stopRow);
-      } else {
-        const info = document.createElement("div");
-        info.textContent = "Weather alerts play once per trigger.";
-        info.style.opacity = "0.75";
-        info.style.fontSize = "12px";
-        info.style.lineHeight = "1.4";
-        card5.appendChild(row("Details", info));
-      }
-      contextControls[cfg.key] = {
-        container: card5,
-        select: select3,
-        playBtn,
-        volumeRange,
-        volumeValue,
-        modeOneshot: modeOne.input,
-        modeLoop: modeLoop?.input,
-        stopRow,
-        loopInput,
-        loopWrap
-      };
-      s1.body.appendChild(card5);
-    }
-    const s1Err = errorBar2();
-    s1.body.appendChild(s1Err.el);
-    const s2 = section2("Sound library");
-    root.appendChild(s2.root);
-    const importRow = document.createElement("div");
-    Object.assign(importRow.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-      width: "100%"
-    });
-    const fileInput = document.createElement("input");
-    fileInput.type = "file";
-    fileInput.accept = "audio/*";
-    fileInput.multiple = true;
-    fileInput.style.display = "none";
-    const fileCard = document.createElement("div");
-    Object.assign(fileCard.style, {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "6px",
-      padding: "18px 22px",
-      width: "100%",
-      minHeight: "110px",
-      borderRadius: "14px",
-      border: "1px dashed #5d6a7d",
-      background: "linear-gradient(180deg, #0b141c, #091018)",
-      transition: "border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease",
-      cursor: "pointer",
-      textAlign: "center"
-    });
-    fileCard.tabIndex = 0;
-    fileCard.setAttribute("role", "button");
-    fileCard.setAttribute("aria-label", "Select audio files");
-    const fileCardTitle = document.createElement("div");
-    fileCardTitle.textContent = "Select audio files";
-    Object.assign(fileCardTitle.style, {
-      fontWeight: "600",
-      fontSize: "14px",
-      letterSpacing: "0.02em"
-    });
-    const fileStatus = document.createElement("div");
-    const defaultStatusText = "Click to browse or drop files";
-    fileStatus.textContent = defaultStatusText;
-    Object.assign(fileStatus.style, {
-      fontSize: "12px",
-      opacity: "0.75"
-    });
-    fileCard.append(fileCardTitle, fileStatus);
-    const setFileCardActive = (active2) => {
-      if (active2) {
-        fileCard.style.borderColor = "#6fc3ff";
-        fileCard.style.boxShadow = "0 0 0 3px #6fc3ff22";
-        fileCard.style.background = "linear-gradient(180deg, #102030, #0b1826)";
-      } else {
-        fileCard.style.borderColor = "#5d6a7d";
-        fileCard.style.boxShadow = "none";
-        fileCard.style.background = "linear-gradient(180deg, #0b141c, #091018)";
-      }
-    };
-    fileCard.addEventListener("mouseenter", () => setFileCardActive(true));
-    fileCard.addEventListener("mouseleave", () => setFileCardActive(document.activeElement === fileCard));
-    fileCard.addEventListener("focus", () => setFileCardActive(true));
-    fileCard.addEventListener("blur", () => setFileCardActive(false));
-    fileCard.addEventListener("dragover", (ev) => {
-      ev.preventDefault();
-      setFileCardActive(true);
-      if (ev.dataTransfer) ev.dataTransfer.dropEffect = "copy";
-    });
-    fileCard.addEventListener("dragleave", () => setFileCardActive(document.activeElement === fileCard));
-    const triggerFileSelect = () => fileInput.click();
-    fileCard.addEventListener("click", triggerFileSelect);
-    fileCard.addEventListener("keydown", (ev) => {
-      if (ev.key === "Enter" || ev.key === " ") {
-        ev.preventDefault();
-        triggerFileSelect();
-      }
-    });
-    const displaySelection = (files) => {
-      if (!files || !files.length) {
-        fileStatus.textContent = defaultStatusText;
-        return;
-      }
-      fileStatus.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
-    };
-    fileCard.addEventListener("drop", async (ev) => {
-      ev.preventDefault();
-      const files = ev.dataTransfer?.files || null;
-      displaySelection(files);
-      await handleFiles(files);
-      displaySelection(null);
-      setFileCardActive(document.activeElement === fileCard);
-    });
-    importRow.append(fileInput, fileCard);
-    s2.body.appendChild(importRow);
-    const tip = document.createElement("div");
-    tip.textContent = "MP3, WAV, OGG \u2014 limited to \u2264 10 s and \u2264 200 KB.";
-    tip.style.opacity = "0.75";
-    tip.style.fontSize = "12px";
-    s2.body.appendChild(tip);
-    const listWrap = document.createElement("div");
-    Object.assign(listWrap.style, {
-      display: "grid",
-      gridTemplateRows: "auto 1fr",
-      gap: "6px",
-      border: "1px solid #4445",
-      borderRadius: "10px",
-      background: "#10161c",
-      padding: "10px"
-    });
-    const listHeader = document.createElement("div");
-    Object.assign(listHeader.style, {
-      display: "grid",
-      gridTemplateColumns: "minmax(0, 1fr) auto",
-      gap: "12px",
-      fontSize: "12px",
-      letterSpacing: "0.05em",
-      textTransform: "uppercase",
-      opacity: "0.65",
-      paddingBottom: "4px",
-      borderBottom: "1px solid #ffffff14"
-    });
-    const headName = document.createElement("span");
-    headName.textContent = "Sound";
-    const headActions = document.createElement("span");
-    headActions.textContent = "Actions";
-    headActions.style.justifySelf = "end";
-    listHeader.append(headName, headActions);
-    const listBody = document.createElement("div");
-    Object.assign(listBody.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "6px",
-      maxHeight: "240px",
-      overflowY: "auto",
-      paddingRight: "4px",
-      minHeight: "0",
-      padding: "4px 0"
-    });
-    listWrap.append(listHeader, listBody);
-    s2.body.appendChild(listWrap);
-    const s2Err = errorBar2();
-    s2.body.appendChild(s2Err.el);
-    const sanitizeLoopInput = (input, fallback) => {
-      const trimmed = (input.value || "").trim();
-      const raw = trimmed ? Number(trimmed) : NaN;
-      const normalized = Number.isFinite(raw) ? raw : fallback;
-      const clamped = Math.max(150, Math.min(1e4, Math.floor(normalized)));
-      input.value = String(clamped);
-      return clamped;
-    };
-    const updateStopVisibility = (context) => {
-      const controls = contextControls[context];
-      const loopChecked = controls.modeLoop?.checked ?? false;
-      if (controls.stopRow) controls.stopRow.style.display = loopChecked ? "" : "none";
-      if (controls.loopWrap) controls.loopWrap.style.display = loopChecked ? "flex" : "none";
-    };
-    const applyMode = (context, mode) => {
-      if (context === "weather" && mode === "loop") {
-        audio.setPlaybackMode("oneshot", context);
-        contextControls[context].modeOneshot.checked = true;
-        contextControls[context].modeLoop && (contextControls[context].modeLoop.checked = false);
-        updateStopVisibility(context);
-        return;
-      }
-      audio.setPlaybackMode(mode, context);
-      updateStopVisibility(context);
-    };
-    const applyShopsStop = () => {
-      const controls = contextControls.shops;
-      if (!controls.loopInput) return;
-      const loopMs = sanitizeLoopInput(controls.loopInput, audio.getLoopInterval("shops"));
-      audio.setLoopInterval(loopMs, "shops");
-      if (!controls.modeLoop?.checked) {
-        if (controls.modeLoop) controls.modeLoop.checked = true;
-        controls.modeOneshot.checked = false;
-        applyMode("shops", "loop");
-      }
-      audio.setStopPurchase("shops");
-      NotifierService.setContextStopDefaults("shops", { stopMode: "purchase", stopRepeats: null, loopIntervalMs: loopMs });
-      return loopMs;
-    };
-    for (const cfg of contextOrder) {
-      const controls = contextControls[cfg.key];
-      controls.select.addEventListener("change", () => {
-        audio.setDefaultSoundByName(controls.select.value, cfg.key);
-        renderLibList();
-      });
-      controls.playBtn.addEventListener("click", () => {
-        audio.trigger("preview", { sound: controls.select.value }, cfg.key).catch(() => {
-        });
-      });
-      controls.volumeRange.addEventListener("input", () => {
-        const value = Math.max(0, Math.min(100, parseInt(controls.volumeRange.value || "0", 10) || 0));
-        controls.volumeValue.textContent = `${value}%`;
-        audio.setVolume(value / 100, cfg.key);
-      });
-      controls.modeOneshot.addEventListener("change", () => {
-        if (!controls.modeOneshot.checked) return;
-        applyMode(cfg.key, "oneshot");
-        if (cfg.key === "shops") {
-          const loopMs = controls.loopInput ? sanitizeLoopInput(controls.loopInput, audio.getLoopInterval("shops")) : audio.getLoopInterval("shops");
-          audio.setLoopInterval(loopMs, "shops");
-          audio.setStopManual("shops");
-          NotifierService.setContextStopDefaults("shops", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
-        }
-      });
-      controls.modeLoop?.addEventListener("change", () => {
-        if (!controls.modeLoop?.checked) return;
-        applyMode(cfg.key, "loop");
-        if (cfg.key === "shops") applyShopsStop();
-      });
-      if (cfg.allowPurchase) {
-        controls.loopInput?.addEventListener("change", applyShopsStop);
-        controls.loopInput?.addEventListener("blur", applyShopsStop);
-      }
-    }
-    const refreshAllSoundSelects = () => {
-      const names = audio.listSounds();
-      const applyOptions = (sel, context) => {
-        const current = sel.value;
-        sel.innerHTML = "";
-        for (const n of names) {
-          const option = document.createElement("option");
-          option.value = n;
-          option.textContent = n;
-          sel.appendChild(option);
-        }
-        const preferred = audio.getDefaultSoundName(context);
-        if (names.includes(current)) sel.value = current;
-        else if (preferred && names.includes(preferred)) sel.value = preferred;
-        else if (names.length) sel.value = names[0];
-      };
-      for (const cfg of contextOrder) {
-        applyOptions(contextControls[cfg.key].select, cfg.key);
-      }
-      const all = Array.from(document.querySelectorAll("select[data-sound-select]"));
-      for (const sel of all) {
-        const ctx2 = sel.dataset.soundSelect || "shops";
-        if (contextControls[ctx2]?.select === sel) continue;
-        applyOptions(sel, ctx2);
-      }
-    };
-    const renderLibList = () => {
-      listBody.replaceChildren();
-      const names = audio.listSounds();
-      if (!names.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No sounds in the library.";
-        empty.style.opacity = "0.75";
-        empty.style.textAlign = "center";
-        empty.style.padding = "12px 6px";
-        listBody.appendChild(empty);
-        return;
-      }
-      const defaultShops = audio.getDefaultSoundName("shops");
-      const defaultWeather = audio.getDefaultSoundName("weather");
-      for (const name of names) {
-        const row2 = document.createElement("div");
-        Object.assign(row2.style, {
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) auto",
-          gap: "12px",
-          alignItems: "center",
-          padding: "8px 10px",
-          borderRadius: "8px",
-          border: "1px solid #1f2429",
-          background: "#151b22"
-        });
-        const info = document.createElement("div");
-        Object.assign(info.style, {
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          minWidth: "0"
-        });
-        const title = document.createElement("span");
-        title.textContent = name;
-        title.style.fontWeight = "600";
-        title.style.overflow = "hidden";
-        title.style.textOverflow = "ellipsis";
-        title.style.whiteSpace = "nowrap";
-        info.appendChild(title);
-        const badges = document.createElement("div");
-        badges.style.display = "flex";
-        badges.style.gap = "6px";
-        const makeBadge = (label2) => {
-          const badge2 = document.createElement("span");
-          badge2.textContent = label2;
-          Object.assign(badge2.style, {
-            fontSize: "11px",
-            padding: "2px 6px",
-            borderRadius: "999px",
-            background: "#2b5cff33",
-            border: "1px solid #2b5cff66",
-            color: "#9cbcff",
-            fontWeight: "600",
-            textTransform: "uppercase",
-            letterSpacing: "0.04em"
-          });
-          return badge2;
-        };
-        const isShopsDefault = defaultShops === name;
-        const isWeatherDefault = defaultWeather === name;
-        const isPetsDefault = audio.getDefaultSoundName("pets") === name;
-        if (isShopsDefault) badges.appendChild(makeBadge("Shops"));
-        if (isWeatherDefault) badges.appendChild(makeBadge("Weather"));
-        if (isPetsDefault) badges.appendChild(makeBadge("Pets"));
-        if (badges.childElementCount) info.appendChild(badges);
-        if (isShopsDefault || isWeatherDefault || isPetsDefault) {
-          row2.style.borderColor = "#2b5cff99";
-          row2.style.boxShadow = "0 0 0 1px #2b5cff33";
-        }
-        const actions = document.createElement("div");
-        Object.assign(actions.style, {
-          display: "flex",
-          gap: "6px",
-          justifyContent: "flex-end",
-          flexWrap: "wrap"
-        });
-        const btnPlay = smallBtn2("\u25B6");
-        const btnSetShops = smallBtn2("Set shops");
-        const btnSetWeather = smallBtn2("Set weather");
-        const btnSetPets = smallBtn2("Set pets");
-        const btnDel = smallBtn2("Remove");
-        btnPlay.title = "Preview";
-        btnSetShops.title = "Set as shops default";
-        btnSetWeather.title = "Set as weather default";
-        btnSetPets.title = "Set as pets default";
-        btnDel.title = "Remove from library";
-        const isProtected2 = typeof audio.isProtectedSound === "function" && audio.isProtectedSound(name);
-        if (isProtected2 || isShopsDefault || isWeatherDefault) {
-          btnDel.disabled = true;
-          btnDel.style.opacity = "0.6";
-          if (isProtected2) btnDel.title = "Built-in sound cannot be removed";
-          else btnDel.title = "Currently used as default";
-        }
-        btnPlay.onclick = () => audio.trigger("preview", { sound: name }, "shops").catch(() => {
-        });
-        btnSetShops.onclick = () => {
-          audio.setDefaultSoundByName(name, "shops");
-          refreshAllSoundSelects();
-          renderLibList();
-        };
-        btnSetWeather.onclick = () => {
-          audio.setDefaultSoundByName(name, "weather");
-          refreshAllSoundSelects();
-          renderLibList();
-        };
-        btnSetPets.onclick = () => {
-          audio.setDefaultSoundByName(name, "pets");
-          refreshAllSoundSelects();
-          renderLibList();
-        };
-        btnDel.onclick = () => {
-          audio.unregisterSound(name);
-          refreshAllSoundSelects();
-          renderLibList();
-        };
-        actions.append(btnPlay, btnSetShops, btnSetWeather, btnSetPets, btnDel);
-        row2.append(info, actions);
-        listBody.appendChild(row2);
-      }
-    };
-    const syncContext = (context) => {
-      const controls = contextControls[context];
-      const settings = audio.getPlaybackSettings(context);
-      const names = audio.listSounds();
-      if (settings.defaultSoundName && names.includes(settings.defaultSoundName)) {
-        controls.select.value = settings.defaultSoundName;
-      }
-      const volPercent = Math.round(settings.volume * 100);
-      controls.volumeRange.value = String(volPercent);
-      controls.volumeValue.textContent = `${volPercent}%`;
-      if (controls.modeLoop && settings.mode === "loop") controls.modeLoop.checked = true;
-      else controls.modeOneshot.checked = true;
-      const defaults = context === "shops" || context === "weather" ? NotifierService.getContextStopDefaults(context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: settings.loopIntervalMs };
-      const fallbackLoop = Math.max(
-        150,
-        Math.min(1e4, Math.floor(defaults.loopIntervalMs || settings.loopIntervalMs || 150))
-      );
-      const loopMs = controls.loopInput ? sanitizeLoopInput(controls.loopInput, fallbackLoop) : fallbackLoop;
-      audio.setLoopInterval(loopMs, context);
-      if (context === "shops") {
-        if (controls.modeLoop?.checked) {
-          audio.setStopPurchase("shops");
-          NotifierService.setContextStopDefaults("shops", { stopMode: "purchase", stopRepeats: null, loopIntervalMs: loopMs });
-        } else {
-          audio.setStopManual("shops");
-          NotifierService.setContextStopDefaults("shops", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
-        }
-      } else if (context === "weather") {
-        applyMode("weather", "oneshot");
-        audio.setStopManual("weather");
-        NotifierService.setContextStopDefaults("weather", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
-      } else if (context === "pets") {
-        audio.setLoopInterval(loopMs, "pets");
-        audio.setStopManual("pets");
-      }
-      updateStopVisibility(context);
-    };
-    const syncFromAudio = () => {
-      refreshAllSoundSelects();
-      syncContext("shops");
-      syncContext("weather");
-      syncContext("pets");
-      renderLibList();
-    };
-    const handleFiles = async (files) => {
-      s2Err.clear();
-      if (!files || !files.length) return;
-      const added = [];
-      for (const f of Array.from(files)) {
-        try {
-          const res = await audio.importFileAsSound(f, {
-            maxBytes: 200 * 1024,
-            maxSeconds: 10,
-            bitrates: [48e3, 32e3, 2e4, 12e3, 8e3],
-            maxInputBytes: 8 * 1024 * 1024
-          });
-          added.push(res.name);
-        } catch (e) {
-          s2Err.show(`Failed for "${f.name}": ${e?.message || e}`);
-        }
-      }
-      if (added.length) {
-        refreshAllSoundSelects();
-        renderLibList();
-        for (const cfg of contextOrder) {
-          if (!audio.getDefaultSoundName(cfg.key)) {
-            audio.setDefaultSoundByName(added[0], cfg.key);
-          }
-        }
-        refreshAllSoundSelects();
-        renderLibList();
-      }
-      fileInput.value = "";
-    };
-    fileInput.onchange = async () => {
-      const files = fileInput.files;
-      displaySelection(files);
-      await handleFiles(files);
-      displaySelection(null);
-      setFileCardActive(document.activeElement === fileCard);
-    };
-    syncFromAudio();
-    const scroller = document.createElement("div");
-    Object.assign(scroller.style, {
-      overflow: "auto",
-      minHeight: "0",
-      height: "100%",
-      display: "grid",
-      gap: "12px"
-    });
-    scroller.append(s1.root, s2.root);
-    root.appendChild(scroller);
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-  }
-  function renderShopTab(view, ui) {
-    view.innerHTML = "";
-    view.style.cssText = "";
-    if (!document.getElementById("qws-rule-style")) {
-      const style2 = document.createElement("style");
-      style2.id = "qws-rule-style";
-      style2.textContent = `
-:root {
-  /* PATCH: z-index centralis\xE9 */
-  --qws-z-popover: 99999999999999;
-}
-
-/* PATCH: bouton engrenage carr\xE9, centr\xE9, plus gros */
-.qws-rule-btn {
-  display: inline-grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border-radius: 8px;
-  line-height: 1;
-  font-size: 18px; /* taille de l'ic\xF4ne */
-  min-width: 32px; /* \xE9vite les r\xE9tr\xE9cissements */
-  box-sizing: border-box;
-}
-.qws-rule-btn[data-active="1"] {
-  background: linear-gradient(180deg, #1b2735, #101821);
-  box-shadow: 0 0 0 1px #658dff88 inset;
-  color: #c7daff;
-}
-
-/* PATCH: popover toujours devant */
-.qws-rule-popover {
-  position: fixed !important;
-  z-index: var(--qws-z-popover) !important;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  color: #f1f6ff;
-}
-.qws-rule-popover .qws-rule-field {
-  display: grid;
-  gap: 6px;
-}
-.qws-rule-popover .qws-rule-field label {
-  font-weight: 600;
-  font-size: 13px;
-}
-.qws-rule-popover .qws-rule-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-/* PATCH: r\xE9serve un espace pour le r\xE9sum\xE9 afin d'\xE9viter tout shift */
-[data-role="rule-hint"] {
-  min-height: 1.2em;  /* ~1 ligne r\xE9serv\xE9e */
-}
-`;
-      document.head.appendChild(style2);
-    }
-    const wrap = document.createElement("div");
-    Object.assign(wrap.style, {
-      display: "grid",
-      gridTemplateRows: "auto 1fr",
-      gap: "10px",
-      height: "54vh",
-      overflow: "hidden",
-      minHeight: "0",
-      position: "relative"
-    });
-    view.appendChild(wrap);
-    const header = document.createElement("div");
-    header.style.display = "flex";
-    header.style.flexWrap = "wrap";
-    header.style.alignItems = "center";
-    header.style.gap = "10px";
-    header.style.rowGap = "8px";
-    wrap.appendChild(header);
-    const lblType = ui.label("Type");
-    const selType = document.createElement("select");
-    selType.className = "qmm-input";
-    selType.style.minWidth = "140px";
-    selType.id = "shop.filter.type";
-    [
-      ["all", "All"],
-      ["seed", "Seeds"],
-      ["egg", "Eggs"],
-      ["tool", "Tools"],
-      ["decor", "Decor"]
-    ].forEach(([v, t]) => {
-      const o = document.createElement("option");
-      o.value = v;
-      o.textContent = t;
-      selType.appendChild(o);
-    });
-    selType.value = "all";
-    const lblRarity = ui.label("Rarity");
-    const selRarity = document.createElement("select");
-    selRarity.className = "qmm-input";
-    selRarity.style.minWidth = "160px";
-    selRarity.id = "shop.filter.rarity";
-    [
-      ["all", "All"],
-      ["common", "Common"],
-      ["uncommon", "Uncommon"],
-      ["rare", "Rare"],
-      ["legendary", "Legendary"],
-      ["mythical", "Mythical"],
-      ["divine", "Divine"],
-      ["celestial", "Celestial"]
-    ].forEach(([v, t]) => {
-      const o = document.createElement("option");
-      o.value = v;
-      o.textContent = t;
-      selRarity.appendChild(o);
-    });
-    selRarity.value = "all";
-    const followedBadge = document.createElement("div");
-    followedBadge.id = "shop.followedCount";
-    followedBadge.textContent = "Followed: 0";
-    followedBadge.title = "Items with Overlay enabled";
-    followedBadge.style.padding = "6px 10px";
-    followedBadge.style.borderRadius = "999px";
-    followedBadge.style.border = "1px solid #4445";
-    followedBadge.style.background = "#1f2328";
-    followedBadge.style.color = "#e7eef7";
-    followedBadge.style.fontWeight = "600";
-    followedBadge.style.marginLeft = "auto";
-    followedBadge.style.width = "115px";
-    header.append(lblType, selType, lblRarity, selRarity, followedBadge);
-    const card5 = document.createElement("div");
-    card5.style.border = "1px solid #4445";
-    card5.style.borderRadius = "10px";
-    card5.style.padding = "10px";
-    card5.style.background = "#0f1318";
-    card5.style.overflow = "hidden";
-    card5.style.display = "grid";
-    card5.style.gridTemplateRows = "auto 1fr";
-    card5.style.minHeight = "0";
-    wrap.appendChild(card5);
-    const headerGrid = document.createElement("div");
-    const COLS = "minmax(200px, 1fr) 9rem 7rem 8rem";
-    headerGrid.style.display = "grid";
-    headerGrid.style.gridTemplateColumns = COLS;
-    headerGrid.style.justifyContent = "start";
-    headerGrid.style.columnGap = "0";
-    headerGrid.style.borderBottom = "1px solid #ffffff1a";
-    headerGrid.style.padding = "0 0 4px 0";
-    headerGrid.style.position = "sticky";
-    headerGrid.style.top = "0";
-    headerGrid.append(
-      mkHeadCell("Item", "left"),
-      mkHeadCell("Rarity"),
-      mkHeadCell("Notify"),
-      mkHeadCell("Custom rules")
-    );
-    card5.appendChild(headerGrid);
-    const bodyGrid = document.createElement("div");
-    bodyGrid.style.display = "grid";
-    bodyGrid.style.gridTemplateColumns = COLS;
-    bodyGrid.style.justifyContent = "start";
-    bodyGrid.style.gridAutoRows = "auto";
-    bodyGrid.style.alignContent = "start";
-    bodyGrid.style.minHeight = "0";
-    bodyGrid.style.height = "100%";
-    bodyGrid.style.overflow = "auto";
-    bodyGrid.style.overscrollBehavior = "contain";
-    bodyGrid.style.width = "100%";
-    bodyGrid.style.scrollbarGutter = "stable";
-    card5.appendChild(bodyGrid);
-    const refreshRulesUI = () => {
-      const kids = Array.from(bodyGrid.children);
-      for (let i = 0; i + 3 < kids.length; i += 4) {
-        const itemCell = kids[i];
-        const ruleCell = kids[i + 3];
-        const id = itemCell?.dataset?.id;
-        if (!id) continue;
-        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
-      }
-    };
-    const softUpdateRenderedRows = (next) => {
-      const byId = new Map(next.rows.map((r) => [r.id, r]));
-      const kids = Array.from(bodyGrid.children);
-      for (let i = 0; i + 3 < kids.length; i += 4) {
-        const itemCell = kids[i];
-        const popupCell = kids[i + 2];
-        const ruleCell = kids[i + 3];
-        const id = itemCell.dataset.id;
-        const row = byId.get(id);
-        if (!row) continue;
-        const popupSwitch = popupCell.querySelector("label");
-        if (popupSwitch) setSwitchVisual(popupSwitch, !!row.popup);
-        itemCell.dataset.follow = row.followed ? "1" : "0";
-        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
-        const capped = NotifierService.isIdCapped?.(id) ?? false;
-        if (popupSwitch) setSwitchCapState(popupSwitch, capped);
-      }
-    };
-    const syncHeaderToScrollbar = () => {
-      const sbw = bodyGrid.offsetWidth - bodyGrid.clientWidth;
-      headerGrid.style.boxSizing = "border-box";
-      headerGrid.style.paddingRight = `${sbw}px`;
-    };
-    syncHeaderToScrollbar();
-    const resizeObserver = new ResizeObserver(syncHeaderToScrollbar);
-    resizeObserver.observe(bodyGrid);
-    const onResize = () => syncHeaderToScrollbar();
-    window.addEventListener("resize", onResize);
-    let state5 = null;
-    let renderedIds = /* @__PURE__ */ new Set();
-    const getFilters = () => ({
-      type: selType.value || "all",
-      rarity: selRarity.value || "all"
-    });
-    const passesFilters = (rows) => NotifierService.filterRows(rows, getFilters());
-    const mkItemCell = (row) => {
-      const wrap2 = document.createElement("div");
-      Object.assign(wrap2.style, {
-        display: "flex",
-        alignItems: "center",
-        gap: "6px",
-        padding: "4px 6px",
-        borderBottom: "1px solid #ffffff12"
-      });
-      const ICON = 40;
-      const iconWrap = document.createElement("div");
-      Object.assign(iconWrap.style, {
-        width: `${ICON}px`,
-        height: `${ICON}px`,
-        flex: `0 0 ${ICON}px`,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: "8px",
-        background: "#101820",
-        marginRight: "6px",
-        aspectRatio: "1 / 1"
-      });
-      const iconFallback = row.type === "Seed" ? "\u{1F331}" : row.type === "Egg" ? "\u{1F95A}" : row.type === "Tool" ? "\u{1F9F0}" : "\u{1F3E0}";
-      const icon = document.createElement("span");
-      icon.textContent = iconFallback;
-      icon.style.fontSize = `${ICON - 10}px`;
-      icon.setAttribute("aria-hidden", "true");
-      iconWrap.appendChild(icon);
-      const spriteCategories = row.type === "Seed" ? ["seed"] : row.type === "Egg" ? ["pet"] : row.type === "Tool" ? ["item"] : row.type === "Decor" ? ["decor"] : null;
-      if (spriteCategories) {
-        const baseId = row.id.split(":")[1] ?? row.name ?? row.id;
-        const candidatesSet = /* @__PURE__ */ new Set();
-        const addCandidate = (value) => {
-          if (!value) return;
-          const trimmed = value.trim();
-          if (!trimmed) return;
-          candidatesSet.add(trimmed);
-          candidatesSet.add(trimmed.replace(/\s+/g, ""));
-          if (row.type === "Seed" || row.type === "Egg") {
-            const stripped = trimmed.replace(/(?:seed|egg)$/i, "").trim();
-            if (stripped) {
-              candidatesSet.add(stripped);
-              candidatesSet.add(stripped.replace(/\s+/g, ""));
-            }
-          }
-        };
-        addCandidate(baseId);
-        addCandidate(row.id);
-        addCandidate(row.name);
-        const candidates = Array.from(candidatesSet).filter(Boolean);
-        if (candidates.length) {
-          attachSpriteIcon(iconWrap, spriteCategories, candidates, ICON, "alerts");
-        }
-      }
-      const col = document.createElement("div");
-      Object.assign(col.style, {
-        display: "flex",
-        flexDirection: "column",
-        gap: "2px",
-        lineHeight: "1.15",
-        minWidth: "0",
-        // autorise l'ellipsis
-        flex: "1 1 auto"
-      });
-      const title = document.createElement("div");
-      title.textContent = row.name;
-      Object.assign(title.style, {
-        fontWeight: "700",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap"
-      });
-      const sub = document.createElement("div");
-      sub.style.opacity = "0.7";
-      sub.style.fontSize = "12px";
-      sub.style.display = "flex";
-      sub.style.alignItems = "center";
-      sub.style.gap = "6px";
-      const sectionLabel5 = document.createElement("span");
-      sectionLabel5.textContent = row.type;
-      sub.appendChild(sectionLabel5);
-      if (row.weathers?.length || row.weatherOnly) {
-        const weathers = row.weathers && row.weathers.length ? row.weathers : [];
-        for (const w of weathers) {
-          const badge2 = document.createElement("span");
-          badge2.textContent = w;
-          Object.assign(badge2.style, {
-            padding: "1px 6px",
-            borderRadius: "999px",
-            fontSize: "10px",
-            fontWeight: "600",
-            background: row.weatherOnly ? "rgba(250, 204, 21, 0.18)" : "rgba(96, 165, 250, 0.18)",
-            color: row.weatherOnly ? "#facc15" : "#60a5fa",
-            border: row.weatherOnly ? "1px solid rgba(250, 204, 21, 0.35)" : "1px solid rgba(96, 165, 250, 0.35)"
-          });
-          badge2.title = row.weatherOnly ? `Only available during ${w}` : `Also available during ${w}`;
-          sub.appendChild(badge2);
-        }
-      }
-      const ruleHint = document.createElement("div");
-      ruleHint.dataset.role = "rule-hint";
-      ruleHint.style.display = "none";
-      ruleHint.style.opacity = "0.75";
-      ruleHint.style.fontSize = "11px";
-      ruleHint.style.whiteSpace = "nowrap";
-      ruleHint.style.overflow = "hidden";
-      ruleHint.style.textOverflow = "ellipsis";
-      ruleHint.style.minHeight = "1.2em";
-      ruleHint.style.visibility = "hidden";
-      col.append(title, sub, ruleHint);
-      wrap2.append(iconWrap, col);
-      return wrap2;
-    };
-    const addRow = (row) => {
-      const itemCell = mkItemCell(row);
-      itemCell.dataset.id = row.id;
-      itemCell.dataset.type = row.type;
-      itemCell.dataset.follow = row.followed ? "1" : "0";
-      itemCell.dataset.context = "shops";
-      const rarityCell = document.createElement("div");
-      rarityCell.style.display = "flex";
-      rarityCell.style.alignItems = "center";
-      rarityCell.style.justifyContent = "center";
-      rarityCell.style.borderBottom = "1px solid #ffffff12";
-      rarityCell.appendChild(rarityBadge(String(row.rarity ?? "\u2014")));
-      const popupSwitch = createSwitch((on) => {
-        try {
-          NotifierService.setPopup(row.id, !!on);
-        } catch {
-        }
-        const cur = NotifierService.getPref(row.id);
-        itemCell.dataset.follow = cur.followed ? "1" : "0";
-      });
-      setSwitchVisual(popupSwitch, !!row.popup);
-      popupSwitch.style.padding = "0";
-      const popupCell = wrapCell(popupSwitch);
-      const capped = NotifierService.isIdCapped?.(row.id) ?? false;
-      setSwitchCapState(popupSwitch, capped);
-      const gearBtn = ui.btn("", {
-        icon: "\u2699",
-        size: "sm",
-        tooltip: "Custom rule",
-        ariaLabel: `Custom rule for ${row.name}`
-      });
-      gearBtn.dataset.role = "rule";
-      gearBtn.classList.add("qws-rule-btn");
-      gearBtn.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        openRuleEditor(ui, {
-          id: row.id,
-          name: row.name,
-          type: row.type,
-          context: "shops"
-        }, gearBtn);
-      });
-      const ruleCell = wrapCell(gearBtn);
-      ruleCell.dataset.role = "rule-cell";
-      bodyGrid.append(itemCell, rarityCell, popupCell, ruleCell);
-      applyRuleState(itemCell, ruleCell, NotifierService.getRule(row.id));
-    };
-    function clearBody() {
-      closeRuleEditor();
-      bodyGrid.innerHTML = "";
-      renderedIds = /* @__PURE__ */ new Set();
-    }
-    function renderEmpty() {
-      const empty = document.createElement("div");
-      empty.textContent = "No items.";
-      empty.style.opacity = "0.75";
-      empty.style.gridColumn = "1 / -1";
-      empty.style.padding = "8px";
-      bodyGrid.appendChild(empty);
-    }
-    function rebuildGrid() {
-      clearBody();
-      if (!state5) {
-        renderEmpty();
-        return;
-      }
-      const rows = passesFilters(state5.rows);
-      if (!rows.length) {
-        renderEmpty();
-      } else {
-        rows.forEach((r) => {
-          addRow(r);
-          renderedIds.add(r.id);
-        });
-      }
-      refreshRulesUI();
-      followedBadge.textContent = `Followed: ${state5.counts.followed}`;
-      syncHeaderToScrollbar();
-    }
-    function softUpdateBadge(next) {
-      followedBadge.textContent = `Followed: ${next.counts.followed}`;
-    }
-    function filteredIdSet(s) {
-      const set2 = /* @__PURE__ */ new Set();
-      for (const r of passesFilters(s.rows)) set2.add(r.id);
-      return set2;
-    }
-    let unsub = null;
-    let unsubRules = null;
-    (async () => {
-      try {
-        await NotifierService.start();
-      } catch {
-      }
-      unsub = await NotifierService.onChangeNow((s) => {
-        const prev = state5;
-        state5 = s;
-        if (!prev) {
-          rebuildGrid();
-          softUpdateRenderedRows(state5);
-          return;
-        }
-        const prevIds = renderedIds;
-        const nextIds = filteredIdSet(s);
-        let needRebuild = false;
-        if (prevIds.size !== nextIds.size) needRebuild = true;
-        else {
-          for (const id of nextIds) if (!prevIds.has(id)) {
-            needRebuild = true;
-            break;
-          }
-        }
-        if (needRebuild) {
-          rebuildGrid();
-        } else {
-          softUpdateBadge(s);
-          softUpdateRenderedRows(s);
-        }
-      });
-      try {
-        unsubRules = await NotifierService.onRulesChangeNow(() => refreshRulesUI());
-      } catch {
-      }
-    })();
-    const onFilterChange = () => {
-      if (state5) rebuildGrid();
-    };
-    selType.onchange = onFilterChange;
-    selRarity.onchange = onFilterChange;
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          unsub?.();
-        } catch {
-        }
-        try {
-          unsubRules?.();
-        } catch {
-        }
-        try {
-          resizeObserver.disconnect();
-        } catch {
-        }
-        try {
-          window.removeEventListener("resize", onResize);
-        } catch {
-        }
-        try {
-          closeRuleEditor();
-        } catch {
-        }
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-  }
-  function renderPetAlertsTab(view, ui) {
-    view.innerHTML = "";
-    void PetAlertService.start().catch(() => {
-    });
-    const card5 = document.createElement("div");
-    Object.assign(card5.style, {
-      display: "grid",
-      gridTemplateColumns: "minmax(220px, 260px) minmax(0, 1fr)",
-      gap: "10px",
-      alignItems: "stretch",
-      height: "54vh",
-      overflow: "hidden",
-      border: "1px solid #4445",
-      borderRadius: "10px",
-      padding: "10px",
-      background: "#0f1318"
-    });
-    view.appendChild(card5);
-    const petList = document.createElement("div");
-    Object.assign(petList.style, {
-      display: "grid",
-      gridTemplateColumns: "1fr",
-      rowGap: "6px",
-      overflow: "auto",
-      padding: "6px",
-      border: "1px solid #4445",
-      borderRadius: "10px"
-    });
-    card5.appendChild(petList);
-    const right = document.createElement("div");
-    Object.assign(right.style, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-      overflow: "auto",
-      minHeight: "0"
-    });
-    card5.appendChild(right);
-    let pets = [];
-    let unsubPets2 = null;
-    let generalEnabled = PetAlertService.isGeneralEnabled();
-    const formRow2 = (labelTxt, control) => {
-      const { root } = ui.formRow(labelTxt, control, { labelWidth: "180px" });
-      return root;
-    };
-    const generalCard = ui.card("General notifications", { tone: "muted", align: "stretch" });
-    generalCard.body.style.display = "grid";
-    generalCard.body.style.gap = "10px";
-    const generalRow = ui.flexRow({ justify: "start", gap: 10 });
-    const generalSw = ui.switch(PetAlertService.isGeneralEnabled());
-    const generalLbl = document.createElement("div");
-    generalLbl.textContent = "Use a shared threshold for all pets";
-    generalLbl.style.opacity = "0.9";
-    generalRow.append(generalSw, generalLbl);
-    generalCard.body.append(formRow2("Enable general", generalRow));
-    const generalInput = ui.inputNumber(1, 100, 1, PetAlertService.getGeneralThresholdPct());
-    generalCard.body.append(formRow2("General threshold (%)", generalInput.wrap ?? generalInput));
-    right.appendChild(generalCard.root);
-    const syncGeneralUI = () => {
-      generalEnabled = PetAlertService.isGeneralEnabled();
-      generalSw.checked = generalEnabled;
-      generalInput.value = String(PetAlertService.getGeneralThresholdPct());
-    };
-    generalSw.onchange = () => {
-      PetAlertService.setGeneralEnabled(generalSw.checked);
-      syncGeneralUI();
-    };
-    generalInput.addEventListener("change", () => {
-      const next = Math.max(1, Math.min(100, Number(generalInput.value) || PetAlertService.getGeneralThresholdPct()));
-      generalInput.value = String(PetAlertService.setGeneralThresholdPct(next));
-    });
-    syncGeneralUI();
-    const renderPetList = () => {
-      petList.innerHTML = "";
-      if (!pets.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No active pets.";
-        empty.style.opacity = "0.75";
-        petList.appendChild(empty);
-        return;
-      }
-      for (const pet of pets) {
-        const slot = pet?.slot ?? {};
-        const name = String(slot?.name || slot?.petSpecies || "Pet");
-        const hunger = PetsService.getHungerPctFor(pet);
-        const hungerText = Number.isFinite(hunger) ? `${hunger}%` : "\u2014";
-        const row = document.createElement("div");
-        row.style.display = "flex";
-        row.style.alignItems = "center";
-        row.style.justifyContent = "space-between";
-        row.style.gap = "10px";
-        row.style.width = "100%";
-        row.style.textAlign = "left";
-        row.style.padding = "6px 8px";
-        row.style.borderRadius = "8px";
-        row.style.border = "1px solid #4445";
-        row.style.background = "#121820";
-        const left = document.createElement("div");
-        left.style.display = "flex";
-        left.style.alignItems = "center";
-        left.style.gap = "8px";
-        left.style.minWidth = "0";
-        const avatar3 = document.createElement("div");
-        avatar3.style.width = "40px";
-        avatar3.style.height = "40px";
-        avatar3.style.borderRadius = "8px";
-        avatar3.style.display = "inline-flex";
-        avatar3.style.alignItems = "center";
-        avatar3.style.justifyContent = "center";
-        avatar3.style.background = "#111821";
-        avatar3.style.border = "1px solid #1f2429";
-        avatar3.style.overflow = "hidden";
-        const useEmojiFallback = () => {
-          avatar3.replaceChildren();
-          const span = document.createElement("span");
-          span.textContent = "\u{1F43E}";
-          span.style.fontSize = "28px";
-          span.setAttribute("aria-hidden", "true");
-          avatar3.appendChild(span);
-        };
-        const setIcon = (species2, mutations2) => {
-          const speciesLabel = String(species2 ?? "").trim();
-          avatar3.replaceChildren();
-          if (!speciesLabel) {
-            useEmojiFallback();
-            return;
-          }
-          const span = document.createElement("span");
-          span.textContent = speciesLabel.charAt(0).toUpperCase() || "\u0110Y?\xF3";
-          span.style.fontSize = "28px";
-          span.setAttribute("aria-hidden", "true");
-          avatar3.appendChild(span);
-          attachSpriteIcon(avatar3, ["pet"], [speciesLabel], 36, "alerts-pet", {
-            mutations: Array.isArray(mutations2) ? mutations2 : void 0
-          });
-        };
-        const species = String(slot?.petSpecies || "");
-        const mutations = slot?.mutations ?? pet?.mutations;
-        setIcon(species, Array.isArray(mutations) ? mutations : void 0);
-        const titleWrap = document.createElement("div");
-        titleWrap.style.display = "flex";
-        titleWrap.style.flexDirection = "column";
-        titleWrap.style.gap = "2px";
-        titleWrap.style.minWidth = "0";
-        const title = document.createElement("div");
-        title.textContent = name;
-        title.style.fontWeight = "600";
-        title.style.overflow = "hidden";
-        title.style.textOverflow = "ellipsis";
-        title.style.whiteSpace = "nowrap";
-        titleWrap.append(title);
-        left.append(avatar3, titleWrap);
-        const hungerValue = document.createElement("div");
-        hungerValue.textContent = hungerText;
-        hungerValue.style.fontWeight = "700";
-        hungerValue.style.color = "#FFD84D";
-        row.append(left, hungerValue);
-        petList.appendChild(row);
-      }
-    };
-    (async () => {
-      try {
-        unsubPets2 = await PetsService.onPetsChangeNow((arr) => {
-          pets = Array.isArray(arr) ? arr.slice(0, 3) : [];
-          renderPetList();
-        });
-      } catch {
-        pets = [];
-        renderPetList();
-      }
-    })();
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          unsubPets2?.();
-        } catch {
-        }
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-  }
-  function renderWeatherTab(view, ui) {
-    view.innerHTML = "";
-    view.style.cssText = "";
-    const wrap = document.createElement("div");
-    Object.assign(wrap.style, {
-      display: "grid",
-      gridTemplateRows: "1fr",
-      height: "54vh",
-      overflow: "hidden",
-      minHeight: "0"
-    });
-    view.appendChild(wrap);
-    const card5 = document.createElement("div");
-    card5.style.border = "1px solid #4445";
-    card5.style.borderRadius = "10px";
-    card5.style.padding = "10px";
-    card5.style.background = "#0f1318";
-    card5.style.overflow = "hidden";
-    card5.style.display = "grid";
-    card5.style.gridTemplateRows = "auto 1fr";
-    card5.style.minHeight = "0";
-    wrap.appendChild(card5);
-    const headerGrid = document.createElement("div");
-    const COLS = "minmax(240px, 1fr) 9rem 7rem 8rem";
-    headerGrid.style.display = "grid";
-    headerGrid.style.gridTemplateColumns = COLS;
-    headerGrid.style.justifyContent = "start";
-    headerGrid.style.columnGap = "0";
-    headerGrid.style.borderBottom = "1px solid #ffffff1a";
-    headerGrid.style.padding = "0 0 4px 0";
-    headerGrid.style.position = "sticky";
-    headerGrid.style.top = "0";
-    headerGrid.append(
-      mkHeadCell("Weather", "left"),
-      mkHeadCell("Last seen"),
-      mkHeadCell("Notify"),
-      mkHeadCell("Custom rules")
-    );
-    card5.appendChild(headerGrid);
-    const bodyGrid = document.createElement("div");
-    bodyGrid.style.display = "grid";
-    bodyGrid.style.gridTemplateColumns = COLS;
-    bodyGrid.style.justifyContent = "start";
-    bodyGrid.style.gridAutoRows = "auto";
-    bodyGrid.style.alignContent = "start";
-    bodyGrid.style.minHeight = "0";
-    bodyGrid.style.height = "100%";
-    bodyGrid.style.overflow = "auto";
-    bodyGrid.style.overscrollBehavior = "contain";
-    bodyGrid.style.width = "100%";
-    bodyGrid.style.scrollbarGutter = "stable";
-    card5.appendChild(bodyGrid);
-    const weatherLastSeenRefs = /* @__PURE__ */ new Map();
-    const refreshRulesUI = () => {
-      const kids = Array.from(bodyGrid.children);
-      for (let i = 0; i + 3 < kids.length; i += 4) {
-        const itemCell = kids[i];
-        const ruleCell = kids[i + 3];
-        const id = itemCell?.dataset?.id;
-        if (!id) continue;
-        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
-      }
-    };
-    const syncHeaderToScrollbar = () => {
-      const sbw = bodyGrid.offsetWidth - bodyGrid.clientWidth;
-      headerGrid.style.boxSizing = "border-box";
-      headerGrid.style.paddingRight = `${sbw}px`;
-    };
-    syncHeaderToScrollbar();
-    const resizeObserver = new ResizeObserver(syncHeaderToScrollbar);
-    resizeObserver.observe(bodyGrid);
-    const onResize = () => syncHeaderToScrollbar();
-    window.addEventListener("resize", onResize);
-    const makeItemCell = (row) => {
-      const wrapCellDiv = document.createElement("div");
-      Object.assign(wrapCellDiv.style, {
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        padding: "6px",
-        borderBottom: "1px solid #ffffff12"
-      });
-      const ICON = 40;
-      const iconWrap = document.createElement("div");
-      Object.assign(iconWrap.style, {
-        width: `${ICON}px`,
-        height: `${ICON}px`,
-        flex: `0 0 ${ICON}px`,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: "8px",
-        background: "#101820"
-      });
-      const weatherIcon = document.createElement("span");
-      weatherIcon.textContent = row.name.trim().charAt(0) || "\u{1F326}";
-      weatherIcon.style.fontSize = `${ICON - 8}px`;
-      weatherIcon.setAttribute("aria-hidden", "true");
-      iconWrap.appendChild(weatherIcon);
-      const weatherCategories = ["ui", "weather", "mutation"];
-      const candidateSet = /* @__PURE__ */ new Set();
-      const addCandidate = (value) => {
-        if (!value) return;
-        const trimmed = value.trim();
-        if (trimmed) {
-          candidateSet.add(trimmed);
-          candidateSet.add(trimmed.replace(/\s+/g, ""));
-        }
-      };
-      addCandidate(row.name);
-      addCandidate(row.atomValue);
-      addCandidate(row.id);
-      const bases = Array.from(candidateSet).map((value) => value.replace(/icon$/i, ""));
-      const candidates = Array.from(
-        new Set(
-          bases.map((base) => `${base}Icon`).concat(Array.from(candidateSet))
-        ).values()
-      ).filter(Boolean);
-      if (candidates.length) {
-        attachSpriteIcon(iconWrap, weatherCategories, candidates, ICON, "alerts-weather");
-      }
-      const col = document.createElement("div");
-      Object.assign(col.style, {
-        display: "flex",
-        flexDirection: "column",
-        gap: "4px",
-        lineHeight: "1.2",
-        minWidth: "0",
-        flex: "1 1 auto"
-      });
-      const headerRow = document.createElement("div");
-      Object.assign(headerRow.style, {
-        display: "flex",
-        alignItems: "center",
-        gap: "6px",
-        minWidth: "0"
-      });
-      const title = document.createElement("div");
-      title.textContent = row.name;
-      Object.assign(title.style, {
-        fontWeight: "700",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-        flex: "1 1 auto"
-      });
-      headerRow.appendChild(title);
-      if (row.isCurrent) {
-        const badge2 = document.createElement("span");
-        badge2.textContent = "Current";
-        Object.assign(badge2.style, {
-          fontSize: "11px",
-          padding: "2px 6px",
-          borderRadius: "999px",
-          background: "#2b5cff33",
-          border: "1px solid #2b5cff66",
-          color: "#9cbcff",
-          fontWeight: "600",
-          whiteSpace: "nowrap"
-        });
-        headerRow.appendChild(badge2);
-      }
-      const mutationsLabel = document.createElement("div");
-      mutationsLabel.textContent = "Mutations";
-      Object.assign(mutationsLabel.style, {
-        fontSize: "11px",
-        opacity: "0.7",
-        fontWeight: "600"
-      });
-      const mutationsList = document.createElement("div");
-      Object.assign(mutationsList.style, {
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "6px",
-        alignItems: "flex-start",
-        fontSize: "12px",
-        lineHeight: "1.3",
-        opacity: row.mutations.length ? "0.85" : "0.6"
-      });
-      if (row.mutations.length) {
-        for (const mutation of row.mutations) {
-          const chip2 = document.createElement("span");
-          chip2.textContent = formatWeatherMutation(mutation);
-          Object.assign(chip2.style, {
-            display: "inline-flex",
-            alignItems: "center",
-            padding: "2px 8px",
-            borderRadius: "999px",
-            background: "#ffffff12",
-            whiteSpace: "nowrap"
-          });
-          mutationsList.appendChild(chip2);
-        }
-      } else {
-        const chip2 = document.createElement("span");
-        chip2.textContent = "No mutation effects.";
-        chip2.style.whiteSpace = "nowrap";
-        mutationsList.appendChild(chip2);
-      }
-      const ruleHint = document.createElement("div");
-      ruleHint.dataset.role = "rule-hint";
-      ruleHint.style.opacity = "0.75";
-      ruleHint.style.fontSize = "11px";
-      ruleHint.style.whiteSpace = "nowrap";
-      ruleHint.style.overflow = "hidden";
-      ruleHint.style.textOverflow = "ellipsis";
-      ruleHint.style.minHeight = "1.2em";
-      ruleHint.style.visibility = "hidden";
-      col.append(headerRow, mutationsLabel, mutationsList, ruleHint);
-      wrapCellDiv.append(iconWrap, col);
-      if (row.isCurrent) {
-        wrapCellDiv.style.background = "linear-gradient(180deg, #1b2735, #141d25)";
-        wrapCellDiv.style.borderRadius = "8px";
-      }
-      return wrapCellDiv;
-    };
-    const addRow = (row) => {
-      const itemCell = makeItemCell(row);
-      itemCell.dataset.id = row.id;
-      itemCell.dataset.context = "weather";
-      itemCell.dataset.current = row.isCurrent ? "1" : "0";
-      const lastSeenInfo = document.createElement("div");
-      const { label: label2, title } = formatLastSeen(row.lastSeen, row.isCurrent);
-      lastSeenInfo.textContent = label2;
-      lastSeenInfo.title = title;
-      lastSeenInfo.style.fontWeight = "600";
-      lastSeenInfo.style.opacity = label2 === "Never" ? "0.7" : "1";
-      lastSeenInfo.style.whiteSpace = "nowrap";
-      const lastSeenCell = wrapCell(lastSeenInfo);
-      weatherLastSeenRefs.set(row.id, lastSeenInfo);
-      const notifySwitch = createSwitch((on) => {
-        try {
-          NotifierService.setWeatherNotify(row.id, !!on);
-        } catch {
-        }
-      });
-      setSwitchVisual(notifySwitch, !!row.notify);
-      notifySwitch.style.padding = "0";
-      const notifyCell = wrapCell(notifySwitch);
-      const gearBtn = ui.btn("", {
-        icon: "\u2699",
-        size: "sm",
-        tooltip: "Custom rule",
-        ariaLabel: `Custom rule for ${row.name}`
-      });
-      gearBtn.dataset.role = "rule";
-      gearBtn.classList.add("qws-rule-btn");
-      gearBtn.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        openRuleEditor(ui, {
-          id: row.id,
-          name: row.name,
-          type: row.type,
-          context: "weather"
-        }, gearBtn);
-      });
-      const ruleCell = wrapCell(gearBtn);
-      ruleCell.dataset.role = "rule-cell";
-      bodyGrid.append(itemCell, lastSeenCell, notifyCell, ruleCell);
-      applyRuleState(itemCell, ruleCell, NotifierService.getRule(row.id));
-    };
-    const clearGrid = () => {
-      closeRuleEditor();
-      bodyGrid.innerHTML = "";
-      weatherLastSeenRefs.clear();
-    };
-    const renderEmpty = () => {
-      const empty = document.createElement("div");
-      empty.textContent = "No weather entries.";
-      empty.style.opacity = "0.75";
-      empty.style.gridColumn = "1 / -1";
-      empty.style.padding = "8px";
-      bodyGrid.appendChild(empty);
-    };
-    let state5 = null;
-    let stateSig = "";
-    const updateDynamicWeatherStats = () => {
-      if (!state5) return;
-      for (const row of state5.rows) {
-        const target = weatherLastSeenRefs.get(row.id);
-        if (target) {
-          const { label: label2, title } = formatLastSeen(row.lastSeen, row.isCurrent);
-          target.textContent = label2;
-          target.title = title;
-          target.style.opacity = label2 === "Never" ? "0.7" : "1";
-        }
-      }
-    };
-    const rebuildGrid = () => {
-      clearGrid();
-      if (!state5 || !state5.rows.length) {
-        renderEmpty();
-      } else {
-        state5.rows.forEach(addRow);
-        refreshRulesUI();
-      }
-      syncHeaderToScrollbar();
-      updateDynamicWeatherStats();
-    };
-    let unsubWeather = null;
-    let unsubRules = null;
-    (async () => {
-      try {
-        await NotifierService.start();
-      } catch {
-      }
-      try {
-        unsubWeather = await NotifierService.onWeatherChangeNow((next) => {
-          state5 = next;
-          stateSig = weatherStateSignature(next.rows);
-          rebuildGrid();
-        });
-      } catch {
-      }
-      try {
-        unsubRules = await NotifierService.onRulesChangeNow(() => refreshRulesUI());
-      } catch {
-      }
-    })();
-    const refreshWeatherState = async () => {
-      try {
-        const next = await NotifierService.getWeatherState();
-        const nextSig = weatherStateSignature(next.rows);
-        const changed = nextSig !== stateSig;
-        state5 = next;
-        stateSig = nextSig;
-        if (changed) rebuildGrid();
-        else updateDynamicWeatherStats();
-      } catch {
-      }
-    };
-    const dynamicTimer = window.setInterval(updateDynamicWeatherStats, 3e4);
-    const weatherRefreshTimer = window.setInterval(() => {
-      void refreshWeatherState();
-    }, 6e4);
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          unsubWeather?.();
-        } catch {
-        }
-        try {
-          unsubRules?.();
-        } catch {
-        }
-        try {
-          resizeObserver.disconnect();
-        } catch {
-        }
-        try {
-          window.removeEventListener("resize", onResize);
-        } catch {
-        }
-        try {
-          window.clearInterval(dynamicTimer);
-        } catch {
-        }
-        try {
-          window.clearInterval(weatherRefreshTimer);
-        } catch {
-        }
-        try {
-          closeRuleEditor();
-        } catch {
-        }
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-  }
-  function renderNotifierMenu(root) {
-    const ui = new Menu({ id: "alerts", compact: true, windowSelector: ".qws-win" });
-    ui.addTab("shops", "\u{1F6D2} Shops", (view) => renderShopTab(view, ui));
-    ui.addTab("weather", "\u{1F326} Weather", (view) => renderWeatherTab(view, ui));
-    ui.addTab("pets", "\u{1F43E} Pets", (view) => renderPetAlertsTab(view, ui));
-    ui.addTab("settings", "\u2699\uFE0F Settings", (view) => renderSettingsTab(view, ui));
-    ui.mount(root);
-  }
-  var rulePopover, detachRuleDocHandler, detachRuleKeyBlocker, detachRuleWheelBlocker, detachRuleDragHandler, closeRuleEditor, setSwitchCapState, createSwitch, setSwitchVisual, wrapCell, mkHeadCell, applyRuleState, openRuleEditor;
-  var init_menu3 = __esm({
-    "src/features/notifier/menu.ts"() {
+  var RARITY_COLORS, DARK_TEXT, CELESTIAL_KEYFRAMES_ID;
+  var init_rarityBadge = __esm({
+    "src/ui/kit/rarityBadge.ts"() {
       "use strict";
-      init_menu();
-      init_notifier();
-      init_audio();
-      init_petAlerts();
-      init_pets();
-      init_iconCache();
-      init_bellFloating();
-      rulePopover = null;
-      detachRuleDocHandler = null;
-      detachRuleKeyBlocker = null;
-      detachRuleWheelBlocker = null;
-      detachRuleDragHandler = null;
-      closeRuleEditor = () => {
-        if (rulePopover) {
-          try {
-            rulePopover.remove();
-          } catch {
-          }
-          rulePopover = null;
-        }
-        if (detachRuleDocHandler) {
-          detachRuleDocHandler();
-          detachRuleDocHandler = null;
-        }
-        if (detachRuleKeyBlocker) {
-          detachRuleKeyBlocker();
-          detachRuleKeyBlocker = null;
-        }
-        if (detachRuleWheelBlocker) {
-          detachRuleWheelBlocker();
-          detachRuleWheelBlocker = null;
-        }
-        if (detachRuleDragHandler) {
-          detachRuleDragHandler();
-          detachRuleDragHandler = null;
-        }
+      init_dom();
+      RARITY_COLORS = {
+        Common: "#E7E7E7",
+        Uncommon: "#67BD4D",
+        Rare: "#0071C6",
+        Legendary: "#FFC734",
+        Mythical: "#9944A7",
+        Divine: "#FF7835"
       };
-      setSwitchCapState = (wrap, capped) => {
-        if (capped) {
-          wrap.setAttribute("aria-disabled", "true");
-          wrap.style.opacity = "0.5";
-          wrap.style.pointerEvents = "none";
-          wrap.style.cursor = "not-allowed";
-          wrap.title = "Max owned \u2014 notifications disabled";
-        } else {
-          wrap.removeAttribute("aria-disabled");
-          wrap.style.opacity = "";
-          wrap.style.pointerEvents = "";
-          wrap.style.cursor = "";
-          wrap.removeAttribute("title");
-        }
-      };
-      createSwitch = (onToggle) => {
-        const wrap = document.createElement("label");
-        wrap.style.display = "inline-flex";
-        wrap.style.alignItems = "center";
-        wrap.style.justifyContent = "center";
-        wrap.style.width = "100%";
-        wrap.style.padding = "4px 6px";
-        wrap.style.userSelect = "none";
-        wrap.setAttribute("role", "switch");
-        wrap.setAttribute("aria-checked", "false");
-        const box = document.createElement("span");
-        box.style.position = "relative";
-        box.style.width = "42px";
-        box.style.height = "24px";
-        box.style.borderRadius = "999px";
-        box.style.background = "#1f2328";
-        box.style.border = "1px solid #4446";
-        box.style.display = "inline-block";
-        box.style.boxShadow = "inset 0 0 0 1px #0005";
-        const knob = document.createElement("span");
-        knob.style.position = "absolute";
-        knob.style.top = "50%";
-        knob.style.left = "3px";
-        knob.style.transform = "translateY(-50%)";
-        knob.style.width = "18px";
-        knob.style.height = "18px";
-        knob.style.borderRadius = "50%";
-        knob.style.background = "#e7eef7";
-        knob.style.boxShadow = "0 1px 2px rgba(0,0,0,.7)";
-        knob.style.transition = "left 160ms ease, transform 160ms ease";
-        const input = document.createElement("input");
-        input.type = "checkbox";
-        input.style.position = "absolute";
-        input.style.opacity = "0";
-        input.style.pointerEvents = "none";
-        input.tabIndex = -1;
-        const apply2 = (on) => {
-          input.checked = on;
-          wrap.setAttribute("aria-checked", on ? "true" : "false");
-          knob.style.left = on ? "21px" : "3px";
-          knob.style.transform = on ? "translateY(-50%) scale(1.02)" : "translateY(-50%) scale(1)";
-          if (on) {
-            box.style.background = "linear-gradient(180deg, #2b5cff, #1e40ff)";
-            box.style.borderColor = "#7aa2ff";
-            box.style.boxShadow = "0 0 0 2px #7aa2ff55, inset 0 0 0 1px #0005";
-          } else {
-            box.style.background = "#1f2328";
-            box.style.borderColor = "#4446";
-            box.style.boxShadow = "inset 0 0 0 1px #0005";
-          }
-        };
-        input.disabled = true;
-        wrap.addEventListener("mousedown", (e) => e.preventDefault());
-        wrap.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          apply2(!input.checked);
-          onToggle?.(input.checked);
-        });
-        box.appendChild(knob);
-        wrap.appendChild(input);
-        wrap.appendChild(box);
-        apply2(false);
-        return wrap;
-      };
-      setSwitchVisual = (wrap, checked) => {
-        const input = wrap.querySelector("input");
-        const box = wrap.querySelector("span");
-        const knob = box?.querySelector("span");
-        if (!input || !box || !knob) return;
-        input.checked = !!checked;
-        knob.style.left = checked ? "21px" : "3px";
-        knob.style.transform = checked ? "translateY(-50%) scale(1.02)" : "translateY(-50%) scale(1)";
-        if (checked) {
-          box.style.background = "linear-gradient(180deg, #2b5cff, #1e40ff)";
-          box.style.borderColor = "#7aa2ff";
-          box.style.boxShadow = "0 0 0 2px #7aa2ff55, inset 0 0 0 1px #0005";
-          wrap.setAttribute("aria-checked", "true");
-        } else {
-          box.style.background = "#1f2328";
-          box.style.borderColor = "#4446";
-          box.style.boxShadow = "inset 0 0 0 1px #0005";
-          wrap.setAttribute("aria-checked", "false");
-        }
-      };
-      wrapCell = (child) => {
-        const d = document.createElement("div");
-        d.style.display = "flex";
-        d.style.alignItems = "center";
-        d.style.justifyContent = "center";
-        d.style.borderBottom = "1px solid #ffffff12";
-        d.style.padding = "4px 6px";
-        d.style.boxSizing = "border-box";
-        d.appendChild(child);
-        return d;
-      };
-      mkHeadCell = (txt, align = "center") => {
-        const el = document.createElement("div");
-        el.textContent = txt;
-        el.style.fontWeight = "600";
-        el.style.opacity = "0.9";
-        el.style.padding = "4px 6px";
-        el.style.display = "flex";
-        el.style.alignItems = "center";
-        el.style.justifyContent = align === "left" ? "flex-start" : "center";
-        return el;
-      };
-      applyRuleState = (itemCell, ruleCell, rule) => {
-        const gearBtn = ruleCell?.querySelector("button[data-role='rule']") ?? null;
-        const hint = itemCell.querySelector('[data-role="rule-hint"]');
-        const hasRule = !!(rule && (rule.sound || rule.volume != null || rule.playbackMode || rule.stopMode || rule.loopIntervalMs != null));
-        const summary = hasRule ? formatRuleSummary(rule) : "";
-        if (gearBtn) {
-          gearBtn.dataset.active = hasRule ? "1" : "0";
-          gearBtn.title = hasRule && summary ? `Custom rule \u2014 ${summary}` : "Custom rule";
-        }
-        if (hint) {
-          if (hasRule && summary) {
-            hint.textContent = summary;
-            hint.style.visibility = "visible";
-          } else {
-            hint.textContent = "";
-            hint.style.visibility = "hidden";
-          }
-        }
-      };
-      openRuleEditor = (ui, row, anchor) => {
-        closeRuleEditor();
-        const pop = document.createElement("div");
-        pop.className = "qws-rule-popover";
-        Object.assign(pop.style, {
-          position: "fixed",
-          zIndex: "var(--qws-z-popover)",
-          minWidth: "260px",
-          maxWidth: "320px",
-          padding: "14px 16px",
-          borderRadius: "14px",
-          border: "1px solid #32404e",
-          background: "linear-gradient(180deg, #111923, #0b131c)",
-          boxShadow: "0 16px 40px rgba(0,0,0,0.45)"
-        });
-        const margin = 12;
-        const clampPosition = (value, min, max) => {
-          if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
-          if (max >= min) {
-            return Math.min(Math.max(value, min), max);
-          }
-          return Math.min(Math.max(value, max), min);
-        };
-        const applyPosition2 = (left2, top2) => {
-          const width2 = pop.offsetWidth;
-          const height2 = pop.offsetHeight;
-          const boundedLeft = clampPosition(left2, margin, window.innerWidth - width2 - margin);
-          const boundedTop = clampPosition(top2, margin, window.innerHeight - height2 - margin);
-          pop.style.left = `${Math.round(boundedLeft)}px`;
-          pop.style.top = `${Math.round(boundedTop)}px`;
-          return { left: boundedLeft, top: boundedTop };
-        };
-        const header = document.createElement("div");
-        header.style.display = "flex";
-        header.style.justifyContent = "space-between";
-        header.style.alignItems = "flex-start";
-        header.style.gap = "12px";
-        header.style.cursor = "move";
-        header.style.userSelect = "none";
-        header.style.touchAction = "none";
-        const titleWrap = document.createElement("div");
-        const title = document.createElement("div");
-        title.textContent = row.name;
-        title.style.fontWeight = "700";
-        title.style.fontSize = "14px";
-        title.style.lineHeight = "1.2";
-        const subtitle = document.createElement("div");
-        subtitle.textContent = row.type;
-        subtitle.style.opacity = "0.7";
-        subtitle.style.fontSize = "12px";
-        titleWrap.append(title, subtitle);
-        const closeBtn = document.createElement("button");
-        closeBtn.type = "button";
-        closeBtn.textContent = "\u2715";
-        Object.assign(closeBtn.style, {
-          background: "transparent",
-          border: "none",
-          color: "#c8d7e8",
-          fontSize: "16px",
-          lineHeight: "1",
-          cursor: "pointer"
-        });
-        closeBtn.addEventListener("click", (ev) => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          closeRuleEditor();
-        });
-        header.append(titleWrap, closeBtn);
-        let dragState = null;
-        const onDragMove = (ev) => {
-          if (!dragState) return;
-          if (ev.pointerId !== dragState.pointerId) return;
-          const dx = ev.clientX - dragState.startX;
-          const dy = ev.clientY - dragState.startY;
-          applyPosition2(dragState.baseLeft + dx, dragState.baseTop + dy);
-        };
-        const stopDrag = (ev) => {
-          if (!dragState) return;
-          if (ev && ev.pointerId !== dragState.pointerId) return;
-          document.removeEventListener("pointermove", onDragMove);
-          document.removeEventListener("pointerup", stopDrag);
-          document.removeEventListener("pointercancel", stopDrag);
-          try {
-            header.releasePointerCapture(dragState.pointerId);
-          } catch {
-          }
-          dragState = null;
-        };
-        const onPointerDown = (ev) => {
-          if (ev.button !== 0) return;
-          const target = ev.target;
-          if (target && closeBtn.contains(target)) return;
-          if (dragState) stopDrag();
-          const rect = pop.getBoundingClientRect();
-          dragState = {
-            pointerId: ev.pointerId,
-            startX: ev.clientX,
-            startY: ev.clientY,
-            baseLeft: rect.left,
-            baseTop: rect.top
-          };
-          try {
-            header.setPointerCapture(ev.pointerId);
-          } catch {
-          }
-          document.addEventListener("pointermove", onDragMove);
-          document.addEventListener("pointerup", stopDrag);
-          document.addEventListener("pointercancel", stopDrag);
-          ev.preventDefault();
-        };
-        header.addEventListener("pointerdown", onPointerDown);
-        detachRuleDragHandler = () => {
-          header.removeEventListener("pointerdown", onPointerDown);
-          stopDrag();
-        };
-        pop.appendChild(header);
-        const current = NotifierService.getRule(row.id);
-        const defaults = audio.getPlaybackSettings(row.context);
-        const contextDefaults = row.context === "shops" || row.context === "weather" ? NotifierService.getContextStopDefaults(row.context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: defaults.loopIntervalMs };
-        const allowPurchase = row.context === "shops";
-        const defaultSoundName = (() => {
-          const label2 = (defaults.defaultSoundName || "").trim();
-          return label2 || "Default";
-        })();
-        const formatModeLabel = (mode) => mode === "loop" ? "Loop" : "One-shot";
-        const defaultIntervalMs = Math.max(
-          150,
-          Math.floor(contextDefaults.loopIntervalMs ?? defaults.loopIntervalMs ?? 150)
-        );
-        const soundField = document.createElement("div");
-        soundField.className = "qws-rule-field";
-        const soundLabel = document.createElement("label");
-        soundLabel.textContent = "Sound";
-        const soundSelect = document.createElement("select");
-        soundSelect.className = "qmm-input";
-        soundSelect.style.width = "100%";
-        const populateSoundOptions = () => {
-          const selected = current?.sound ?? "";
-          soundSelect.innerHTML = "";
-          const optDefault = document.createElement("option");
-          optDefault.value = "";
-          optDefault.textContent = defaultSoundName;
-          soundSelect.appendChild(optDefault);
-          const names = audio.listSounds();
-          for (const name of names) {
-            if (name === defaultSoundName && selected !== name) continue;
-            const opt = document.createElement("option");
-            opt.value = name;
-            opt.textContent = name;
-            soundSelect.appendChild(opt);
-          }
-          if (selected && !names.includes(selected)) {
-            const extra = document.createElement("option");
-            extra.value = selected;
-            extra.textContent = selected.length > 32 ? `${selected.slice(0, 29)}\u2026` : selected;
-            extra.dataset.extra = "1";
-            soundSelect.appendChild(extra);
-          }
-          soundSelect.value = selected;
-        };
-        populateSoundOptions();
-        soundField.append(soundLabel, soundSelect);
-        pop.appendChild(soundField);
-        const baseVolume = Math.max(0, Math.min(1, defaults.volume || 0));
-        const defaultVolumePct = Math.round(baseVolume * 100);
-        const volumeField = document.createElement("div");
-        volumeField.className = "qws-rule-field";
-        const volumeLabel = document.createElement("label");
-        volumeLabel.textContent = "Volume";
-        const volumeWrap = document.createElement("div");
-        volumeWrap.style.display = "flex";
-        volumeWrap.style.alignItems = "center";
-        volumeWrap.style.gap = "10px";
-        const volumeRange = document.createElement("input");
-        volumeRange.type = "range";
-        volumeRange.min = "0";
-        volumeRange.max = "100";
-        volumeRange.step = "1";
-        volumeRange.style.width = "100%";
-        const volumeValue = document.createElement("span");
-        volumeValue.style.minWidth = "38px";
-        volumeValue.style.textAlign = "right";
-        const applyVolumeDisplay = (value) => {
-          const clamped = Math.max(0, Math.min(100, Math.round(value)));
-          volumeRange.value = String(clamped);
-          volumeValue.textContent = `${clamped}%`;
-        };
-        const initialVolume = current?.volume != null ? current.volume : baseVolume;
-        applyVolumeDisplay(Math.round(Math.max(0, Math.min(1, initialVolume)) * 100));
-        volumeRange.addEventListener("input", () => {
-          const raw = Number(volumeRange.value);
-          const clamped = Number.isFinite(raw) ? Math.max(0, Math.min(100, Math.round(raw))) : defaultVolumePct;
-          applyVolumeDisplay(clamped);
-        });
-        const volumeHint = document.createElement("div");
-        volumeHint.textContent = `Default: ${defaultVolumePct}%`;
-        volumeHint.style.opacity = "0.7";
-        volumeHint.style.fontSize = "11px";
-        volumeHint.style.marginTop = "4px";
-        volumeWrap.append(volumeRange, volumeValue);
-        volumeField.append(volumeLabel, volumeWrap, volumeHint);
-        pop.appendChild(volumeField);
-        const modeField = document.createElement("div");
-        modeField.className = "qws-rule-field";
-        const modeLabel = document.createElement("label");
-        modeLabel.textContent = "Playback mode";
-        const modeSelect = document.createElement("select");
-        modeSelect.className = "qmm-input";
-        const modeOptions = allowPurchase ? defaults.mode === "loop" ? ["loop", "oneshot"] : ["oneshot", "loop"] : ["oneshot"];
-        modeOptions.forEach((value) => {
-          const opt = document.createElement("option");
-          opt.value = value;
-          opt.textContent = formatModeLabel(value);
-          modeSelect.appendChild(opt);
-        });
-        const initialMode = allowPurchase ? current?.playbackMode ?? defaults.mode : "oneshot";
-        modeSelect.value = initialMode === "loop" && !allowPurchase ? "oneshot" : initialMode;
-        if (!allowPurchase) modeSelect.disabled = true;
-        modeField.append(modeLabel, modeSelect);
-        pop.appendChild(modeField);
-        let stopSelect = null;
-        const stopField = document.createElement("div");
-        stopField.className = "qws-rule-field";
-        if (allowPurchase) {
-          const stopLabel = document.createElement("label");
-          stopLabel.textContent = "Stop condition";
-          stopSelect = document.createElement("select");
-          stopSelect.className = "qmm-input";
-          const stopOption = document.createElement("option");
-          stopOption.value = "purchase";
-          stopOption.textContent = "Until purchase";
-          stopSelect.appendChild(stopOption);
-          const initialStopMode = current?.stopMode ?? contextDefaults.stopMode;
-          stopSelect.value = initialStopMode === "purchase" ? "purchase" : "purchase";
-          stopField.append(stopLabel, stopSelect);
-          pop.appendChild(stopField);
-        }
-        const intervalField = document.createElement("div");
-        intervalField.className = "qws-rule-field";
-        const intervalLabel = document.createElement("label");
-        intervalLabel.textContent = "Loop interval (ms)";
-        const intervalInput = document.createElement("input");
-        intervalInput.type = "number";
-        intervalInput.className = "qmm-input";
-        intervalInput.min = "150";
-        intervalInput.step = "50";
-        intervalInput.placeholder = String(defaultIntervalMs);
-        intervalInput.value = current?.loopIntervalMs != null ? String(current.loopIntervalMs) : "";
-        intervalInput.inputMode = "numeric";
-        intervalField.append(intervalLabel, intervalInput);
-        if (allowPurchase) pop.appendChild(intervalField);
-        const enforceIntegerOnly = (input) => {
-          input.addEventListener("keydown", (ev) => {
-            ev.stopPropagation();
-            ev.stopImmediatePropagation();
-            if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
-            const key2 = ev.key;
-            if (/^[0-9]$/.test(key2)) return;
-            if (key2 === "Backspace" || key2 === "Delete" || key2 === "Tab" || key2 === "Enter" || key2 === "ArrowLeft" || key2 === "ArrowRight" || key2 === "ArrowUp" || key2 === "ArrowDown" || key2 === "Home" || key2 === "End") {
-              return;
-            }
-            ev.preventDefault();
-          });
-          input.addEventListener("input", () => {
-            const sanitized = input.value.replace(/\D+/g, "");
-            if (sanitized !== input.value) input.value = sanitized;
-          });
-        };
-        enforceIntegerOnly(intervalInput);
-        const resolveMode = () => {
-          const raw = modeSelect.value;
-          if (raw === "oneshot" || raw === "loop") return raw;
-          return allowPurchase ? defaults.mode : "oneshot";
-        };
-        const updateLoopVisibility = () => {
-          if (!allowPurchase) {
-            stopField.style.display = "none";
-            intervalField.style.display = "none";
-            return;
-          }
-          const mode = resolveMode();
-          const showLoop = mode === "loop";
-          stopField.style.display = showLoop ? "grid" : "none";
-          intervalField.style.display = showLoop ? "grid" : "none";
-        };
-        const forceLoopMode = () => {
-          if (!allowPurchase) return;
-          if (modeSelect.value === "loop") return;
-          modeSelect.value = "loop";
-          updateLoopVisibility();
-        };
-        modeSelect.addEventListener("change", () => {
-          updateLoopVisibility();
-        });
-        if (allowPurchase && stopSelect) {
-          stopSelect.addEventListener("change", () => {
-            forceLoopMode();
-          });
-        }
-        if (allowPurchase) intervalInput.addEventListener("input", forceLoopMode);
-        updateLoopVisibility();
-        const hint = document.createElement("div");
-        hint.textContent = "Use defaults by leaving values unchanged (matching the default volume keeps it inherited).";
-        hint.style.opacity = "0.7";
-        hint.style.fontSize = "12px";
-        pop.appendChild(hint);
-        const actions = document.createElement("div");
-        actions.className = "qws-rule-actions";
-        const clearBtn = ui.btn("Clear", { variant: "ghost", size: "sm" });
-        clearBtn.addEventListener("click", (ev) => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          NotifierService.clearRule(row.id);
-          closeRuleEditor();
-        });
-        if (!current) ui.setButtonEnabled(clearBtn, false);
-        const saveBtn = ui.btn("Save", { variant: "primary", size: "sm" });
-        saveBtn.addEventListener("click", (ev) => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          const sound = soundSelect.value?.trim() || null;
-          const modeRaw = modeSelect.value || "";
-          const stopRaw = stopSelect?.value || "";
-          const intervalRaw = intervalInput.value?.trim();
-          const volRaw = Math.max(0, Math.min(100, parseInt(volumeRange.value || "", 10) || 0));
-          const volRatio = volRaw / 100;
-          let playbackMode = modeRaw === "oneshot" || modeRaw === "loop" ? modeRaw : null;
-          if (playbackMode === defaults.mode) playbackMode = null;
-          let stopMode = allowPurchase ? stopRaw === "purchase" ? "purchase" : null : null;
-          if (stopMode != null && stopMode === contextDefaults.stopMode) {
-            stopMode = null;
-          }
-          let loopIntervalMs = null;
-          if (allowPurchase && intervalRaw) {
-            const parsed = Number(intervalRaw);
-            if (Number.isFinite(parsed)) {
-              const normalized = Math.max(150, Math.min(1e4, Math.floor(parsed)));
-              if (normalized !== defaultIntervalMs) loopIntervalMs = normalized;
-            }
-          }
-          let volume = null;
-          if (Math.abs(volRatio - baseVolume) > 1e-3) {
-            volume = Math.max(0, Math.min(1, volRatio));
-          }
-          if (allowPurchase && !playbackMode && defaults.mode !== "loop" && (stopMode != null || loopIntervalMs != null)) {
-            playbackMode = "loop";
-          }
-          NotifierService.setRule(row.id, {
-            sound,
-            volume,
-            playbackMode,
-            stopMode,
-            loopIntervalMs
-          });
-          closeRuleEditor();
-        });
-        actions.append(clearBtn, saveBtn);
-        pop.appendChild(actions);
-        document.body.appendChild(pop);
-        const anchorRect = anchor.getBoundingClientRect();
-        const width = pop.offsetWidth;
-        const height = pop.offsetHeight;
-        let left = anchorRect.right - width;
-        let top = anchorRect.bottom + 8;
-        if (left < margin) left = margin;
-        if (left + width > window.innerWidth - margin) left = window.innerWidth - width - margin;
-        if (top + height > window.innerHeight - margin) top = anchorRect.top - height - 8;
-        if (top < margin) top = margin;
-        applyPosition2(left, top);
-        const onDocPointer = (ev) => {
-          const target = ev.target;
-          if (!target) return;
-          if (pop.contains(target)) return;
-          if (anchor.contains(target)) return;
-          closeRuleEditor();
-        };
-        setTimeout(() => document.addEventListener("pointerdown", onDocPointer, true));
-        detachRuleDocHandler = () => document.removeEventListener("pointerdown", onDocPointer, true);
-        const keyBlocker = (ev) => {
-          if (!rulePopover) return;
-          if (rulePopover.contains(ev.target)) return;
-          ev.stopImmediatePropagation();
-        };
-        document.addEventListener("keydown", keyBlocker, true);
-        detachRuleKeyBlocker = () => document.removeEventListener("keydown", keyBlocker, true);
-        const wheelBlocker = (ev) => {
-          const t = ev.target;
-          if (rulePopover && t && rulePopover.contains(t)) {
-            ev.stopImmediatePropagation();
-          }
-        };
-        document.addEventListener("wheel", wheelBlocker, { capture: true, passive: true });
-        detachRuleWheelBlocker = () => {
-          document.removeEventListener("wheel", wheelBlocker, { capture: true });
-        };
-        rulePopover = pop;
-      };
+      DARK_TEXT = /* @__PURE__ */ new Set(["Common", "Uncommon", "Legendary", "Divine"]);
+      CELESTIAL_KEYFRAMES_ID = "qws-celestial-kf";
     }
   });
 
@@ -41850,7 +39568,7 @@ next: ${next}`;
     ui.on("unmounted", cleanup2);
   }
   var NO_WEATHER_TAG, SEED_EMOJIS, _lockerOptionsCache, _lockerEmojiByKey, _lockerEmojisBySeedName, getLockerSeedOptions, getLockerSeedEmojiForKey, getLockerSeedEmojiForSeedName, weatherMutationLabel, weatherMutations, createNoWeatherIcon, isWeatherMutationAvailable, WEATHER_RECIPE_GROUPS, WEATHER_RECIPE_GROUP_MEMBERS, applyStyles, weatherModeNameSeq, LockerMenuStore;
-  var init_menu4 = __esm({
+  var init_menu3 = __esm({
     "src/features/locker/menu.ts"() {
       "use strict";
       init_menu();
@@ -41859,7 +39577,7 @@ next: ${next}`;
       init_restrictions();
       init_atoms();
       init_iconCache();
-      init_menu3();
+      init_rarityBadge();
       NO_WEATHER_TAG = "NoWeatherEffect";
       SEED_EMOJIS = [
         "\u{1F955}",
@@ -42796,14 +40514,14 @@ next: ${next}`;
     ui.mount(container);
   }
   var ROOT_CLASS, SIZE_MIN, SIZE_MAX, COLOR_MUTATION_LABELS, WEATHER_CONDITION_LABELS, WEATHER_LIGHTING_LABELS, FRIEND_BONUS_LABELS, FRIEND_BONUS_MIN_PLAYERS, FRIEND_BONUS_MAX_PLAYERS, COLOR_SEGMENT_METADATA, WEATHER_CONDITION_SEGMENT_METADATA, WEATHER_LIGHTING_SEGMENT_METADATA, MUTATION_SPRITE_OVERRIDES, priceFormatter, weightFormatter, DEFAULT_STATE2, BASE_SPRITE_SIZE_PX, DEFAULT_SPRITE_CATEGORIES, PLANT_PRIORITY_IDENTIFIERS, CROP_SIMULATION_CSS, cropSimulationStyleEl, applyStyles2, calculatorStyleEl, MUTATION_UI_SPRITE_NAMES;
-  var init_menu5 = __esm({
+  var init_menu4 = __esm({
     "src/features/calculator/menu.ts"() {
       "use strict";
       init_dom2();
       init_data();
       init_cropValue();
       init_cropSize();
-      init_menu4();
+      init_menu3();
       init_menu();
       init_segmented();
       init_iconCache();
@@ -47359,7 +45077,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     detachPetsOpenTabListener = () => window.removeEventListener("qws:pets-open-tab", onOpenTab);
   }
   var detachPetsOpenTabListener;
-  var init_menu6 = __esm({
+  var init_menu5 = __esm({
     "src/features/pets/menu.ts"() {
       "use strict";
       init_menu();
@@ -47367,7 +45085,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_teamReconcile();
       init_atoms();
       init_iconCache();
-      init_menu3();
+      init_rarityBadge();
       init_data();
       init_petValue();
       init_feedWidget();
@@ -49523,7 +47241,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   var PANEL_WIDTH_PX, AUTO_RECO_MAX_SECONDS, AUTO_RECO_STEP_SECONDS, MOVE_DELAY_MIN_MS, MOVE_DELAY_MAX_MS, MOVE_DELAY_DEFAULT_MS, formatShortDuration;
-  var init_menu7 = __esm({
+  var init_menu6 = __esm({
     "src/features/misc/menu.ts"() {
       "use strict";
       init_menu();
@@ -50243,7 +47961,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     ]);
     ui.switchTo("settings-data");
   }
-  var init_menu8 = __esm({
+  var init_menu7 = __esm({
     "src/features/settings/menu.ts"() {
       "use strict";
       init_menu();
@@ -50252,6 +47970,2311 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_gameVersion();
       init_backup();
       init_download();
+    }
+  });
+
+  // src/features/notifier/menu.ts
+  function renderSettingsTab(view, ui) {
+    view.innerHTML = "";
+    void PetAlertService.start().catch(() => {
+    });
+    const section2 = (title) => {
+      const card5 = ui.card(title, { tone: "muted" });
+      card5.body.style.display = "grid";
+      card5.body.style.gap = "10px";
+      return card5;
+    };
+    const row = (labelTxt, control, opts) => {
+      const { root: r, label: label2 } = ui.formRow(labelTxt, control, { alignTop: opts?.alignTop, labelWidth: "160px" });
+      label2.style.opacity = "0.9";
+      label2.style.fontWeight = "600";
+      return r;
+    };
+    const radio2 = (name, value, text2) => {
+      const chip2 = ui.toggleChip(text2, { type: "radio", name, value });
+      chip2.root.classList.add("qmm-radio-chip");
+      return { label: chip2.root, input: chip2.input };
+    };
+    const makeSelect = (id) => {
+      const sel = ui.select({ id, width: "180px" });
+      return sel;
+    };
+    const playIconBtn = (title = "Play") => {
+      return ui.btn("", { icon: "\u25B6", size: "sm", tooltip: title, ariaLabel: title });
+    };
+    const smallBtn2 = (txt) => ui.btn(txt, { size: "sm" });
+    const errorBar2 = () => ui.errorBar();
+    const root = document.createElement("div");
+    Object.assign(root.style, {
+      display: "grid",
+      gridTemplateRows: "1fr",
+      gap: "12px",
+      height: "54vh",
+      minHeight: "0",
+      overflow: "hidden"
+    });
+    view.appendChild(root);
+    const bellSection = section2("Notification bell");
+    root.appendChild(bellSection.root);
+    const bellRow = document.createElement("label");
+    Object.assign(bellRow.style, {
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      cursor: "pointer"
+    });
+    const bellSwitch = ui.switch(isFloatingBellEnabled());
+    bellSwitch.addEventListener("change", () => {
+      setFloatingBellEnabled(bellSwitch.checked);
+    });
+    const bellLabel = document.createElement("span");
+    bellLabel.textContent = "Floating bell (movable widget)";
+    bellLabel.style.fontSize = "13px";
+    bellRow.append(bellSwitch, bellLabel);
+    bellSection.body.appendChild(bellRow);
+    const bellHint = document.createElement("div");
+    bellHint.textContent = "Detaches the bell from the game's icon rail and shows it as a draggable floating button instead. Use this if the bell is missing or misplaced on your screen.";
+    Object.assign(bellHint.style, {
+      opacity: "0.7",
+      fontSize: "12px",
+      lineHeight: "1.4"
+    });
+    bellSection.body.appendChild(bellHint);
+    const s1 = section2("Audio & Playback");
+    root.appendChild(s1.root);
+    const contextControls = {};
+    const contextOrder = [
+      { key: "shops", label: "Shops", allowPurchase: true, showStop: true },
+      { key: "weather", label: "Weather", allowPurchase: false },
+      { key: "pets", label: "Pets", allowPurchase: true, showStop: false }
+    ];
+    for (const cfg of contextOrder) {
+      const card5 = document.createElement("div");
+      Object.assign(card5.style, {
+        display: "grid",
+        gap: "12px",
+        padding: "16px",
+        borderRadius: "12px",
+        border: "1px solid #1f2429",
+        background: "#111821"
+      });
+      const heading = document.createElement("div");
+      heading.textContent = cfg.label;
+      heading.style.fontWeight = "700";
+      heading.style.fontSize = "14px";
+      heading.style.letterSpacing = "0.02em";
+      card5.appendChild(heading);
+      const defaultWrap = document.createElement("div");
+      defaultWrap.style.display = "flex";
+      defaultWrap.style.alignItems = "center";
+      defaultWrap.style.gap = "8px";
+      const select3 = makeSelect(`ap.defaultSound.${cfg.key}`);
+      select3.dataset.soundSelect = cfg.key;
+      const playBtn = playIconBtn(`Play ${cfg.label.toLowerCase()} sound`);
+      defaultWrap.append(select3, playBtn);
+      card5.appendChild(row("Default sound", defaultWrap));
+      const volumeWrap = document.createElement("div");
+      volumeWrap.style.display = "flex";
+      volumeWrap.style.alignItems = "center";
+      volumeWrap.style.gap = "10px";
+      const volumeRange = document.createElement("input");
+      volumeRange.type = "range";
+      volumeRange.min = "0";
+      volumeRange.max = "100";
+      volumeRange.step = "1";
+      volumeRange.style.width = "220px";
+      const volumeValue = document.createElement("span");
+      volumeValue.style.minWidth = "32px";
+      volumeValue.style.textAlign = "right";
+      volumeWrap.append(volumeRange, volumeValue);
+      card5.appendChild(row("Volume", volumeWrap));
+      const modeWrap = document.createElement("div");
+      modeWrap.style.display = "flex";
+      modeWrap.style.gap = "12px";
+      const modeOne = radio2(`ap.mode.${cfg.key}`, "oneshot", "One-shot");
+      modeWrap.append(modeOne.label);
+      let modeLoop = null;
+      if (cfg.allowPurchase) {
+        modeLoop = radio2(`ap.mode.${cfg.key}`, "loop", "Loop");
+        modeWrap.append(modeLoop.label);
+      }
+      card5.appendChild(row("Playback mode", modeWrap));
+      let stopRow;
+      let loopInput;
+      let loopWrap;
+      if (cfg.allowPurchase) {
+        const stopWrap = document.createElement("div");
+        stopWrap.style.display = "flex";
+        stopWrap.style.flexDirection = "column";
+        stopWrap.style.gap = "10px";
+        const stopInfo = document.createElement("div");
+        stopInfo.textContent = cfg.showStop === false ? "Loops keep repeating; stop manually by disabling the alert." : "Loops stop automatically when the item is purchased.";
+        stopInfo.style.opacity = "0.75";
+        stopInfo.style.fontSize = "12px";
+        stopInfo.style.lineHeight = "1.4";
+        if (cfg.key !== "pets") {
+          loopWrap = document.createElement("div");
+          loopWrap.style.display = "flex";
+          loopWrap.style.flexDirection = "column";
+          loopWrap.style.gap = "4px";
+          const loopTitle = document.createElement("div");
+          loopTitle.textContent = "Loop interval";
+          loopTitle.style.opacity = "0.8";
+          loopTitle.style.fontSize = "12px";
+          loopTitle.style.fontWeight = "600";
+          const loopBox = document.createElement("div");
+          loopBox.style.display = "inline-flex";
+          loopBox.style.alignItems = "center";
+          loopBox.style.gap = "8px";
+          loopInput = document.createElement("input");
+          loopInput.type = "number";
+          loopInput.min = "150";
+          loopInput.max = "10000";
+          loopInput.step = "50";
+          loopInput.style.width = "100px";
+          loopInput.style.textAlign = "center";
+          const loopLabel = document.createElement("span");
+          loopLabel.textContent = "ms between plays";
+          loopLabel.style.opacity = "0.85";
+          loopBox.append(loopInput, loopLabel);
+          loopWrap.append(loopTitle, loopBox);
+          stopWrap.append(stopInfo, loopWrap);
+        } else {
+          stopWrap.append(stopInfo);
+        }
+        if (cfg.showStop !== false) {
+          stopRow = row("Stop condition", stopWrap);
+        } else {
+          stopRow = row("Loop interval", stopWrap);
+        }
+        card5.appendChild(stopRow);
+      } else {
+        const info = document.createElement("div");
+        info.textContent = "Weather alerts play once per trigger.";
+        info.style.opacity = "0.75";
+        info.style.fontSize = "12px";
+        info.style.lineHeight = "1.4";
+        card5.appendChild(row("Details", info));
+      }
+      contextControls[cfg.key] = {
+        container: card5,
+        select: select3,
+        playBtn,
+        volumeRange,
+        volumeValue,
+        modeOneshot: modeOne.input,
+        modeLoop: modeLoop?.input,
+        stopRow,
+        loopInput,
+        loopWrap
+      };
+      s1.body.appendChild(card5);
+    }
+    const s1Err = errorBar2();
+    s1.body.appendChild(s1Err.el);
+    const s2 = section2("Sound library");
+    root.appendChild(s2.root);
+    const importRow = document.createElement("div");
+    Object.assign(importRow.style, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "12px",
+      width: "100%"
+    });
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "audio/*";
+    fileInput.multiple = true;
+    fileInput.style.display = "none";
+    const fileCard = document.createElement("div");
+    Object.assign(fileCard.style, {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "6px",
+      padding: "18px 22px",
+      width: "100%",
+      minHeight: "110px",
+      borderRadius: "14px",
+      border: "1px dashed #5d6a7d",
+      background: "linear-gradient(180deg, #0b141c, #091018)",
+      transition: "border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease",
+      cursor: "pointer",
+      textAlign: "center"
+    });
+    fileCard.tabIndex = 0;
+    fileCard.setAttribute("role", "button");
+    fileCard.setAttribute("aria-label", "Select audio files");
+    const fileCardTitle = document.createElement("div");
+    fileCardTitle.textContent = "Select audio files";
+    Object.assign(fileCardTitle.style, {
+      fontWeight: "600",
+      fontSize: "14px",
+      letterSpacing: "0.02em"
+    });
+    const fileStatus = document.createElement("div");
+    const defaultStatusText = "Click to browse or drop files";
+    fileStatus.textContent = defaultStatusText;
+    Object.assign(fileStatus.style, {
+      fontSize: "12px",
+      opacity: "0.75"
+    });
+    fileCard.append(fileCardTitle, fileStatus);
+    const setFileCardActive = (active2) => {
+      if (active2) {
+        fileCard.style.borderColor = "#6fc3ff";
+        fileCard.style.boxShadow = "0 0 0 3px #6fc3ff22";
+        fileCard.style.background = "linear-gradient(180deg, #102030, #0b1826)";
+      } else {
+        fileCard.style.borderColor = "#5d6a7d";
+        fileCard.style.boxShadow = "none";
+        fileCard.style.background = "linear-gradient(180deg, #0b141c, #091018)";
+      }
+    };
+    fileCard.addEventListener("mouseenter", () => setFileCardActive(true));
+    fileCard.addEventListener("mouseleave", () => setFileCardActive(document.activeElement === fileCard));
+    fileCard.addEventListener("focus", () => setFileCardActive(true));
+    fileCard.addEventListener("blur", () => setFileCardActive(false));
+    fileCard.addEventListener("dragover", (ev) => {
+      ev.preventDefault();
+      setFileCardActive(true);
+      if (ev.dataTransfer) ev.dataTransfer.dropEffect = "copy";
+    });
+    fileCard.addEventListener("dragleave", () => setFileCardActive(document.activeElement === fileCard));
+    const triggerFileSelect = () => fileInput.click();
+    fileCard.addEventListener("click", triggerFileSelect);
+    fileCard.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        triggerFileSelect();
+      }
+    });
+    const displaySelection = (files) => {
+      if (!files || !files.length) {
+        fileStatus.textContent = defaultStatusText;
+        return;
+      }
+      fileStatus.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
+    };
+    fileCard.addEventListener("drop", async (ev) => {
+      ev.preventDefault();
+      const files = ev.dataTransfer?.files || null;
+      displaySelection(files);
+      await handleFiles(files);
+      displaySelection(null);
+      setFileCardActive(document.activeElement === fileCard);
+    });
+    importRow.append(fileInput, fileCard);
+    s2.body.appendChild(importRow);
+    const tip = document.createElement("div");
+    tip.textContent = "MP3, WAV, OGG \u2014 limited to \u2264 10 s and \u2264 200 KB.";
+    tip.style.opacity = "0.75";
+    tip.style.fontSize = "12px";
+    s2.body.appendChild(tip);
+    const listWrap = document.createElement("div");
+    Object.assign(listWrap.style, {
+      display: "grid",
+      gridTemplateRows: "auto 1fr",
+      gap: "6px",
+      border: "1px solid #4445",
+      borderRadius: "10px",
+      background: "#10161c",
+      padding: "10px"
+    });
+    const listHeader = document.createElement("div");
+    Object.assign(listHeader.style, {
+      display: "grid",
+      gridTemplateColumns: "minmax(0, 1fr) auto",
+      gap: "12px",
+      fontSize: "12px",
+      letterSpacing: "0.05em",
+      textTransform: "uppercase",
+      opacity: "0.65",
+      paddingBottom: "4px",
+      borderBottom: "1px solid #ffffff14"
+    });
+    const headName = document.createElement("span");
+    headName.textContent = "Sound";
+    const headActions = document.createElement("span");
+    headActions.textContent = "Actions";
+    headActions.style.justifySelf = "end";
+    listHeader.append(headName, headActions);
+    const listBody = document.createElement("div");
+    Object.assign(listBody.style, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "6px",
+      maxHeight: "240px",
+      overflowY: "auto",
+      paddingRight: "4px",
+      minHeight: "0",
+      padding: "4px 0"
+    });
+    listWrap.append(listHeader, listBody);
+    s2.body.appendChild(listWrap);
+    const s2Err = errorBar2();
+    s2.body.appendChild(s2Err.el);
+    const sanitizeLoopInput = (input, fallback) => {
+      const trimmed = (input.value || "").trim();
+      const raw = trimmed ? Number(trimmed) : NaN;
+      const normalized = Number.isFinite(raw) ? raw : fallback;
+      const clamped = Math.max(150, Math.min(1e4, Math.floor(normalized)));
+      input.value = String(clamped);
+      return clamped;
+    };
+    const updateStopVisibility = (context) => {
+      const controls = contextControls[context];
+      const loopChecked = controls.modeLoop?.checked ?? false;
+      if (controls.stopRow) controls.stopRow.style.display = loopChecked ? "" : "none";
+      if (controls.loopWrap) controls.loopWrap.style.display = loopChecked ? "flex" : "none";
+    };
+    const applyMode = (context, mode) => {
+      if (context === "weather" && mode === "loop") {
+        audio.setPlaybackMode("oneshot", context);
+        contextControls[context].modeOneshot.checked = true;
+        contextControls[context].modeLoop && (contextControls[context].modeLoop.checked = false);
+        updateStopVisibility(context);
+        return;
+      }
+      audio.setPlaybackMode(mode, context);
+      updateStopVisibility(context);
+    };
+    const applyShopsStop = () => {
+      const controls = contextControls.shops;
+      if (!controls.loopInput) return;
+      const loopMs = sanitizeLoopInput(controls.loopInput, audio.getLoopInterval("shops"));
+      audio.setLoopInterval(loopMs, "shops");
+      if (!controls.modeLoop?.checked) {
+        if (controls.modeLoop) controls.modeLoop.checked = true;
+        controls.modeOneshot.checked = false;
+        applyMode("shops", "loop");
+      }
+      audio.setStopPurchase("shops");
+      NotifierService.setContextStopDefaults("shops", { stopMode: "purchase", stopRepeats: null, loopIntervalMs: loopMs });
+      return loopMs;
+    };
+    for (const cfg of contextOrder) {
+      const controls = contextControls[cfg.key];
+      controls.select.addEventListener("change", () => {
+        audio.setDefaultSoundByName(controls.select.value, cfg.key);
+        renderLibList();
+      });
+      controls.playBtn.addEventListener("click", () => {
+        audio.trigger("preview", { sound: controls.select.value }, cfg.key).catch(() => {
+        });
+      });
+      controls.volumeRange.addEventListener("input", () => {
+        const value = Math.max(0, Math.min(100, parseInt(controls.volumeRange.value || "0", 10) || 0));
+        controls.volumeValue.textContent = `${value}%`;
+        audio.setVolume(value / 100, cfg.key);
+      });
+      controls.modeOneshot.addEventListener("change", () => {
+        if (!controls.modeOneshot.checked) return;
+        applyMode(cfg.key, "oneshot");
+        if (cfg.key === "shops") {
+          const loopMs = controls.loopInput ? sanitizeLoopInput(controls.loopInput, audio.getLoopInterval("shops")) : audio.getLoopInterval("shops");
+          audio.setLoopInterval(loopMs, "shops");
+          audio.setStopManual("shops");
+          NotifierService.setContextStopDefaults("shops", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
+        }
+      });
+      controls.modeLoop?.addEventListener("change", () => {
+        if (!controls.modeLoop?.checked) return;
+        applyMode(cfg.key, "loop");
+        if (cfg.key === "shops") applyShopsStop();
+      });
+      if (cfg.allowPurchase) {
+        controls.loopInput?.addEventListener("change", applyShopsStop);
+        controls.loopInput?.addEventListener("blur", applyShopsStop);
+      }
+    }
+    const refreshAllSoundSelects = () => {
+      const names = audio.listSounds();
+      const applyOptions = (sel, context) => {
+        const current = sel.value;
+        sel.innerHTML = "";
+        for (const n of names) {
+          const option = document.createElement("option");
+          option.value = n;
+          option.textContent = n;
+          sel.appendChild(option);
+        }
+        const preferred = audio.getDefaultSoundName(context);
+        if (names.includes(current)) sel.value = current;
+        else if (preferred && names.includes(preferred)) sel.value = preferred;
+        else if (names.length) sel.value = names[0];
+      };
+      for (const cfg of contextOrder) {
+        applyOptions(contextControls[cfg.key].select, cfg.key);
+      }
+      const all = Array.from(document.querySelectorAll("select[data-sound-select]"));
+      for (const sel of all) {
+        const ctx2 = sel.dataset.soundSelect || "shops";
+        if (contextControls[ctx2]?.select === sel) continue;
+        applyOptions(sel, ctx2);
+      }
+    };
+    const renderLibList = () => {
+      listBody.replaceChildren();
+      const names = audio.listSounds();
+      if (!names.length) {
+        const empty = document.createElement("div");
+        empty.textContent = "No sounds in the library.";
+        empty.style.opacity = "0.75";
+        empty.style.textAlign = "center";
+        empty.style.padding = "12px 6px";
+        listBody.appendChild(empty);
+        return;
+      }
+      const defaultShops = audio.getDefaultSoundName("shops");
+      const defaultWeather = audio.getDefaultSoundName("weather");
+      for (const name of names) {
+        const row2 = document.createElement("div");
+        Object.assign(row2.style, {
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) auto",
+          gap: "12px",
+          alignItems: "center",
+          padding: "8px 10px",
+          borderRadius: "8px",
+          border: "1px solid #1f2429",
+          background: "#151b22"
+        });
+        const info = document.createElement("div");
+        Object.assign(info.style, {
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          minWidth: "0"
+        });
+        const title = document.createElement("span");
+        title.textContent = name;
+        title.style.fontWeight = "600";
+        title.style.overflow = "hidden";
+        title.style.textOverflow = "ellipsis";
+        title.style.whiteSpace = "nowrap";
+        info.appendChild(title);
+        const badges = document.createElement("div");
+        badges.style.display = "flex";
+        badges.style.gap = "6px";
+        const makeBadge = (label2) => {
+          const badge2 = document.createElement("span");
+          badge2.textContent = label2;
+          Object.assign(badge2.style, {
+            fontSize: "11px",
+            padding: "2px 6px",
+            borderRadius: "999px",
+            background: "#2b5cff33",
+            border: "1px solid #2b5cff66",
+            color: "#9cbcff",
+            fontWeight: "600",
+            textTransform: "uppercase",
+            letterSpacing: "0.04em"
+          });
+          return badge2;
+        };
+        const isShopsDefault = defaultShops === name;
+        const isWeatherDefault = defaultWeather === name;
+        const isPetsDefault = audio.getDefaultSoundName("pets") === name;
+        if (isShopsDefault) badges.appendChild(makeBadge("Shops"));
+        if (isWeatherDefault) badges.appendChild(makeBadge("Weather"));
+        if (isPetsDefault) badges.appendChild(makeBadge("Pets"));
+        if (badges.childElementCount) info.appendChild(badges);
+        if (isShopsDefault || isWeatherDefault || isPetsDefault) {
+          row2.style.borderColor = "#2b5cff99";
+          row2.style.boxShadow = "0 0 0 1px #2b5cff33";
+        }
+        const actions = document.createElement("div");
+        Object.assign(actions.style, {
+          display: "flex",
+          gap: "6px",
+          justifyContent: "flex-end",
+          flexWrap: "wrap"
+        });
+        const btnPlay = smallBtn2("\u25B6");
+        const btnSetShops = smallBtn2("Set shops");
+        const btnSetWeather = smallBtn2("Set weather");
+        const btnSetPets = smallBtn2("Set pets");
+        const btnDel = smallBtn2("Remove");
+        btnPlay.title = "Preview";
+        btnSetShops.title = "Set as shops default";
+        btnSetWeather.title = "Set as weather default";
+        btnSetPets.title = "Set as pets default";
+        btnDel.title = "Remove from library";
+        const isProtected2 = typeof audio.isProtectedSound === "function" && audio.isProtectedSound(name);
+        if (isProtected2 || isShopsDefault || isWeatherDefault) {
+          btnDel.disabled = true;
+          btnDel.style.opacity = "0.6";
+          if (isProtected2) btnDel.title = "Built-in sound cannot be removed";
+          else btnDel.title = "Currently used as default";
+        }
+        btnPlay.onclick = () => audio.trigger("preview", { sound: name }, "shops").catch(() => {
+        });
+        btnSetShops.onclick = () => {
+          audio.setDefaultSoundByName(name, "shops");
+          refreshAllSoundSelects();
+          renderLibList();
+        };
+        btnSetWeather.onclick = () => {
+          audio.setDefaultSoundByName(name, "weather");
+          refreshAllSoundSelects();
+          renderLibList();
+        };
+        btnSetPets.onclick = () => {
+          audio.setDefaultSoundByName(name, "pets");
+          refreshAllSoundSelects();
+          renderLibList();
+        };
+        btnDel.onclick = () => {
+          audio.unregisterSound(name);
+          refreshAllSoundSelects();
+          renderLibList();
+        };
+        actions.append(btnPlay, btnSetShops, btnSetWeather, btnSetPets, btnDel);
+        row2.append(info, actions);
+        listBody.appendChild(row2);
+      }
+    };
+    const syncContext = (context) => {
+      const controls = contextControls[context];
+      const settings = audio.getPlaybackSettings(context);
+      const names = audio.listSounds();
+      if (settings.defaultSoundName && names.includes(settings.defaultSoundName)) {
+        controls.select.value = settings.defaultSoundName;
+      }
+      const volPercent = Math.round(settings.volume * 100);
+      controls.volumeRange.value = String(volPercent);
+      controls.volumeValue.textContent = `${volPercent}%`;
+      if (controls.modeLoop && settings.mode === "loop") controls.modeLoop.checked = true;
+      else controls.modeOneshot.checked = true;
+      const defaults = context === "shops" || context === "weather" ? NotifierService.getContextStopDefaults(context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: settings.loopIntervalMs };
+      const fallbackLoop = Math.max(
+        150,
+        Math.min(1e4, Math.floor(defaults.loopIntervalMs || settings.loopIntervalMs || 150))
+      );
+      const loopMs = controls.loopInput ? sanitizeLoopInput(controls.loopInput, fallbackLoop) : fallbackLoop;
+      audio.setLoopInterval(loopMs, context);
+      if (context === "shops") {
+        if (controls.modeLoop?.checked) {
+          audio.setStopPurchase("shops");
+          NotifierService.setContextStopDefaults("shops", { stopMode: "purchase", stopRepeats: null, loopIntervalMs: loopMs });
+        } else {
+          audio.setStopManual("shops");
+          NotifierService.setContextStopDefaults("shops", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
+        }
+      } else if (context === "weather") {
+        applyMode("weather", "oneshot");
+        audio.setStopManual("weather");
+        NotifierService.setContextStopDefaults("weather", { stopMode: "manual", stopRepeats: null, loopIntervalMs: loopMs });
+      } else if (context === "pets") {
+        audio.setLoopInterval(loopMs, "pets");
+        audio.setStopManual("pets");
+      }
+      updateStopVisibility(context);
+    };
+    const syncFromAudio = () => {
+      refreshAllSoundSelects();
+      syncContext("shops");
+      syncContext("weather");
+      syncContext("pets");
+      renderLibList();
+    };
+    const handleFiles = async (files) => {
+      s2Err.clear();
+      if (!files || !files.length) return;
+      const added = [];
+      for (const f of Array.from(files)) {
+        try {
+          const res = await audio.importFileAsSound(f, {
+            maxBytes: 200 * 1024,
+            maxSeconds: 10,
+            bitrates: [48e3, 32e3, 2e4, 12e3, 8e3],
+            maxInputBytes: 8 * 1024 * 1024
+          });
+          added.push(res.name);
+        } catch (e) {
+          s2Err.show(`Failed for "${f.name}": ${e?.message || e}`);
+        }
+      }
+      if (added.length) {
+        refreshAllSoundSelects();
+        renderLibList();
+        for (const cfg of contextOrder) {
+          if (!audio.getDefaultSoundName(cfg.key)) {
+            audio.setDefaultSoundByName(added[0], cfg.key);
+          }
+        }
+        refreshAllSoundSelects();
+        renderLibList();
+      }
+      fileInput.value = "";
+    };
+    fileInput.onchange = async () => {
+      const files = fileInput.files;
+      displaySelection(files);
+      await handleFiles(files);
+      displaySelection(null);
+      setFileCardActive(document.activeElement === fileCard);
+    };
+    syncFromAudio();
+    const scroller = document.createElement("div");
+    Object.assign(scroller.style, {
+      overflow: "auto",
+      minHeight: "0",
+      height: "100%",
+      display: "grid",
+      gap: "12px"
+    });
+    scroller.append(s1.root, s2.root);
+    root.appendChild(scroller);
+    view.__cleanup__ = (() => {
+      const prev = view.__cleanup__;
+      return () => {
+        try {
+          prev?.();
+        } catch {
+        }
+      };
+    })();
+  }
+  function renderShopTab(view, ui) {
+    view.innerHTML = "";
+    view.style.cssText = "";
+    if (!document.getElementById("qws-rule-style")) {
+      const style2 = document.createElement("style");
+      style2.id = "qws-rule-style";
+      style2.textContent = `
+:root {
+  /* PATCH: z-index centralis\xE9 */
+  --qws-z-popover: 99999999999999;
+}
+
+/* PATCH: bouton engrenage carr\xE9, centr\xE9, plus gros */
+.qws-rule-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  line-height: 1;
+  font-size: 18px; /* taille de l'ic\xF4ne */
+  min-width: 32px; /* \xE9vite les r\xE9tr\xE9cissements */
+  box-sizing: border-box;
+}
+.qws-rule-btn[data-active="1"] {
+  background: linear-gradient(180deg, #1b2735, #101821);
+  box-shadow: 0 0 0 1px #658dff88 inset;
+  color: #c7daff;
+}
+
+/* PATCH: popover toujours devant */
+.qws-rule-popover {
+  position: fixed !important;
+  z-index: var(--qws-z-popover) !important;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: #f1f6ff;
+}
+.qws-rule-popover .qws-rule-field {
+  display: grid;
+  gap: 6px;
+}
+.qws-rule-popover .qws-rule-field label {
+  font-weight: 600;
+  font-size: 13px;
+}
+.qws-rule-popover .qws-rule-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* PATCH: r\xE9serve un espace pour le r\xE9sum\xE9 afin d'\xE9viter tout shift */
+[data-role="rule-hint"] {
+  min-height: 1.2em;  /* ~1 ligne r\xE9serv\xE9e */
+}
+`;
+      document.head.appendChild(style2);
+    }
+    const wrap = document.createElement("div");
+    Object.assign(wrap.style, {
+      display: "grid",
+      gridTemplateRows: "auto 1fr",
+      gap: "10px",
+      height: "54vh",
+      overflow: "hidden",
+      minHeight: "0",
+      position: "relative"
+    });
+    view.appendChild(wrap);
+    const header = document.createElement("div");
+    header.style.display = "flex";
+    header.style.flexWrap = "wrap";
+    header.style.alignItems = "center";
+    header.style.gap = "10px";
+    header.style.rowGap = "8px";
+    wrap.appendChild(header);
+    const lblType = ui.label("Type");
+    const selType = document.createElement("select");
+    selType.className = "qmm-input";
+    selType.style.minWidth = "140px";
+    selType.id = "shop.filter.type";
+    [
+      ["all", "All"],
+      ["seed", "Seeds"],
+      ["egg", "Eggs"],
+      ["tool", "Tools"],
+      ["decor", "Decor"]
+    ].forEach(([v, t]) => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = t;
+      selType.appendChild(o);
+    });
+    selType.value = "all";
+    const lblRarity = ui.label("Rarity");
+    const selRarity = document.createElement("select");
+    selRarity.className = "qmm-input";
+    selRarity.style.minWidth = "160px";
+    selRarity.id = "shop.filter.rarity";
+    [
+      ["all", "All"],
+      ["common", "Common"],
+      ["uncommon", "Uncommon"],
+      ["rare", "Rare"],
+      ["legendary", "Legendary"],
+      ["mythical", "Mythical"],
+      ["divine", "Divine"],
+      ["celestial", "Celestial"]
+    ].forEach(([v, t]) => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = t;
+      selRarity.appendChild(o);
+    });
+    selRarity.value = "all";
+    const followedBadge = document.createElement("div");
+    followedBadge.id = "shop.followedCount";
+    followedBadge.textContent = "Followed: 0";
+    followedBadge.title = "Items with Overlay enabled";
+    followedBadge.style.padding = "6px 10px";
+    followedBadge.style.borderRadius = "999px";
+    followedBadge.style.border = "1px solid #4445";
+    followedBadge.style.background = "#1f2328";
+    followedBadge.style.color = "#e7eef7";
+    followedBadge.style.fontWeight = "600";
+    followedBadge.style.marginLeft = "auto";
+    followedBadge.style.width = "115px";
+    header.append(lblType, selType, lblRarity, selRarity, followedBadge);
+    const card5 = document.createElement("div");
+    card5.style.border = "1px solid #4445";
+    card5.style.borderRadius = "10px";
+    card5.style.padding = "10px";
+    card5.style.background = "#0f1318";
+    card5.style.overflow = "hidden";
+    card5.style.display = "grid";
+    card5.style.gridTemplateRows = "auto 1fr";
+    card5.style.minHeight = "0";
+    wrap.appendChild(card5);
+    const headerGrid = document.createElement("div");
+    const COLS = "minmax(200px, 1fr) 9rem 7rem 8rem";
+    headerGrid.style.display = "grid";
+    headerGrid.style.gridTemplateColumns = COLS;
+    headerGrid.style.justifyContent = "start";
+    headerGrid.style.columnGap = "0";
+    headerGrid.style.borderBottom = "1px solid #ffffff1a";
+    headerGrid.style.padding = "0 0 4px 0";
+    headerGrid.style.position = "sticky";
+    headerGrid.style.top = "0";
+    headerGrid.append(
+      mkHeadCell("Item", "left"),
+      mkHeadCell("Rarity"),
+      mkHeadCell("Notify"),
+      mkHeadCell("Custom rules")
+    );
+    card5.appendChild(headerGrid);
+    const bodyGrid = document.createElement("div");
+    bodyGrid.style.display = "grid";
+    bodyGrid.style.gridTemplateColumns = COLS;
+    bodyGrid.style.justifyContent = "start";
+    bodyGrid.style.gridAutoRows = "auto";
+    bodyGrid.style.alignContent = "start";
+    bodyGrid.style.minHeight = "0";
+    bodyGrid.style.height = "100%";
+    bodyGrid.style.overflow = "auto";
+    bodyGrid.style.overscrollBehavior = "contain";
+    bodyGrid.style.width = "100%";
+    bodyGrid.style.scrollbarGutter = "stable";
+    card5.appendChild(bodyGrid);
+    const refreshRulesUI = () => {
+      const kids = Array.from(bodyGrid.children);
+      for (let i = 0; i + 3 < kids.length; i += 4) {
+        const itemCell = kids[i];
+        const ruleCell = kids[i + 3];
+        const id = itemCell?.dataset?.id;
+        if (!id) continue;
+        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
+      }
+    };
+    const softUpdateRenderedRows = (next) => {
+      const byId = new Map(next.rows.map((r) => [r.id, r]));
+      const kids = Array.from(bodyGrid.children);
+      for (let i = 0; i + 3 < kids.length; i += 4) {
+        const itemCell = kids[i];
+        const popupCell = kids[i + 2];
+        const ruleCell = kids[i + 3];
+        const id = itemCell.dataset.id;
+        const row = byId.get(id);
+        if (!row) continue;
+        const popupSwitch = popupCell.querySelector("label");
+        if (popupSwitch) setSwitchVisual(popupSwitch, !!row.popup);
+        itemCell.dataset.follow = row.followed ? "1" : "0";
+        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
+        const capped = NotifierService.isIdCapped?.(id) ?? false;
+        if (popupSwitch) setSwitchCapState(popupSwitch, capped);
+      }
+    };
+    const syncHeaderToScrollbar = () => {
+      const sbw = bodyGrid.offsetWidth - bodyGrid.clientWidth;
+      headerGrid.style.boxSizing = "border-box";
+      headerGrid.style.paddingRight = `${sbw}px`;
+    };
+    syncHeaderToScrollbar();
+    const resizeObserver = new ResizeObserver(syncHeaderToScrollbar);
+    resizeObserver.observe(bodyGrid);
+    const onResize = () => syncHeaderToScrollbar();
+    window.addEventListener("resize", onResize);
+    let state5 = null;
+    let renderedIds = /* @__PURE__ */ new Set();
+    const getFilters = () => ({
+      type: selType.value || "all",
+      rarity: selRarity.value || "all"
+    });
+    const passesFilters = (rows) => NotifierService.filterRows(rows, getFilters());
+    const mkItemCell = (row) => {
+      const wrap2 = document.createElement("div");
+      Object.assign(wrap2.style, {
+        display: "flex",
+        alignItems: "center",
+        gap: "6px",
+        padding: "4px 6px",
+        borderBottom: "1px solid #ffffff12"
+      });
+      const ICON = 40;
+      const iconWrap = document.createElement("div");
+      Object.assign(iconWrap.style, {
+        width: `${ICON}px`,
+        height: `${ICON}px`,
+        flex: `0 0 ${ICON}px`,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "8px",
+        background: "#101820",
+        marginRight: "6px",
+        aspectRatio: "1 / 1"
+      });
+      const iconFallback = row.type === "Seed" ? "\u{1F331}" : row.type === "Egg" ? "\u{1F95A}" : row.type === "Tool" ? "\u{1F9F0}" : "\u{1F3E0}";
+      const icon = document.createElement("span");
+      icon.textContent = iconFallback;
+      icon.style.fontSize = `${ICON - 10}px`;
+      icon.setAttribute("aria-hidden", "true");
+      iconWrap.appendChild(icon);
+      const spriteCategories = row.type === "Seed" ? ["seed"] : row.type === "Egg" ? ["pet"] : row.type === "Tool" ? ["item"] : row.type === "Decor" ? ["decor"] : null;
+      if (spriteCategories) {
+        const baseId = row.id.split(":")[1] ?? row.name ?? row.id;
+        const candidatesSet = /* @__PURE__ */ new Set();
+        const addCandidate = (value) => {
+          if (!value) return;
+          const trimmed = value.trim();
+          if (!trimmed) return;
+          candidatesSet.add(trimmed);
+          candidatesSet.add(trimmed.replace(/\s+/g, ""));
+          if (row.type === "Seed" || row.type === "Egg") {
+            const stripped = trimmed.replace(/(?:seed|egg)$/i, "").trim();
+            if (stripped) {
+              candidatesSet.add(stripped);
+              candidatesSet.add(stripped.replace(/\s+/g, ""));
+            }
+          }
+        };
+        addCandidate(baseId);
+        addCandidate(row.id);
+        addCandidate(row.name);
+        const candidates = Array.from(candidatesSet).filter(Boolean);
+        if (candidates.length) {
+          attachSpriteIcon(iconWrap, spriteCategories, candidates, ICON, "alerts");
+        }
+      }
+      const col = document.createElement("div");
+      Object.assign(col.style, {
+        display: "flex",
+        flexDirection: "column",
+        gap: "2px",
+        lineHeight: "1.15",
+        minWidth: "0",
+        // autorise l'ellipsis
+        flex: "1 1 auto"
+      });
+      const title = document.createElement("div");
+      title.textContent = row.name;
+      Object.assign(title.style, {
+        fontWeight: "700",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap"
+      });
+      const sub = document.createElement("div");
+      sub.style.opacity = "0.7";
+      sub.style.fontSize = "12px";
+      sub.style.display = "flex";
+      sub.style.alignItems = "center";
+      sub.style.gap = "6px";
+      const sectionLabel5 = document.createElement("span");
+      sectionLabel5.textContent = row.type;
+      sub.appendChild(sectionLabel5);
+      if (row.weathers?.length || row.weatherOnly) {
+        const weathers = row.weathers && row.weathers.length ? row.weathers : [];
+        for (const w of weathers) {
+          const badge2 = document.createElement("span");
+          badge2.textContent = w;
+          Object.assign(badge2.style, {
+            padding: "1px 6px",
+            borderRadius: "999px",
+            fontSize: "10px",
+            fontWeight: "600",
+            background: row.weatherOnly ? "rgba(250, 204, 21, 0.18)" : "rgba(96, 165, 250, 0.18)",
+            color: row.weatherOnly ? "#facc15" : "#60a5fa",
+            border: row.weatherOnly ? "1px solid rgba(250, 204, 21, 0.35)" : "1px solid rgba(96, 165, 250, 0.35)"
+          });
+          badge2.title = row.weatherOnly ? `Only available during ${w}` : `Also available during ${w}`;
+          sub.appendChild(badge2);
+        }
+      }
+      const ruleHint = document.createElement("div");
+      ruleHint.dataset.role = "rule-hint";
+      ruleHint.style.display = "none";
+      ruleHint.style.opacity = "0.75";
+      ruleHint.style.fontSize = "11px";
+      ruleHint.style.whiteSpace = "nowrap";
+      ruleHint.style.overflow = "hidden";
+      ruleHint.style.textOverflow = "ellipsis";
+      ruleHint.style.minHeight = "1.2em";
+      ruleHint.style.visibility = "hidden";
+      col.append(title, sub, ruleHint);
+      wrap2.append(iconWrap, col);
+      return wrap2;
+    };
+    const addRow = (row) => {
+      const itemCell = mkItemCell(row);
+      itemCell.dataset.id = row.id;
+      itemCell.dataset.type = row.type;
+      itemCell.dataset.follow = row.followed ? "1" : "0";
+      itemCell.dataset.context = "shops";
+      const rarityCell = document.createElement("div");
+      rarityCell.style.display = "flex";
+      rarityCell.style.alignItems = "center";
+      rarityCell.style.justifyContent = "center";
+      rarityCell.style.borderBottom = "1px solid #ffffff12";
+      rarityCell.appendChild(rarityBadge(String(row.rarity ?? "\u2014")));
+      const popupSwitch = createSwitch((on) => {
+        try {
+          NotifierService.setPopup(row.id, !!on);
+        } catch {
+        }
+        const cur = NotifierService.getPref(row.id);
+        itemCell.dataset.follow = cur.followed ? "1" : "0";
+      });
+      setSwitchVisual(popupSwitch, !!row.popup);
+      popupSwitch.style.padding = "0";
+      const popupCell = wrapCell(popupSwitch);
+      const capped = NotifierService.isIdCapped?.(row.id) ?? false;
+      setSwitchCapState(popupSwitch, capped);
+      const gearBtn = ui.btn("", {
+        icon: "\u2699",
+        size: "sm",
+        tooltip: "Custom rule",
+        ariaLabel: `Custom rule for ${row.name}`
+      });
+      gearBtn.dataset.role = "rule";
+      gearBtn.classList.add("qws-rule-btn");
+      gearBtn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        openRuleEditor(ui, {
+          id: row.id,
+          name: row.name,
+          type: row.type,
+          context: "shops"
+        }, gearBtn);
+      });
+      const ruleCell = wrapCell(gearBtn);
+      ruleCell.dataset.role = "rule-cell";
+      bodyGrid.append(itemCell, rarityCell, popupCell, ruleCell);
+      applyRuleState(itemCell, ruleCell, NotifierService.getRule(row.id));
+    };
+    function clearBody() {
+      closeRuleEditor();
+      bodyGrid.innerHTML = "";
+      renderedIds = /* @__PURE__ */ new Set();
+    }
+    function renderEmpty() {
+      const empty = document.createElement("div");
+      empty.textContent = "No items.";
+      empty.style.opacity = "0.75";
+      empty.style.gridColumn = "1 / -1";
+      empty.style.padding = "8px";
+      bodyGrid.appendChild(empty);
+    }
+    function rebuildGrid() {
+      clearBody();
+      if (!state5) {
+        renderEmpty();
+        return;
+      }
+      const rows = passesFilters(state5.rows);
+      if (!rows.length) {
+        renderEmpty();
+      } else {
+        rows.forEach((r) => {
+          addRow(r);
+          renderedIds.add(r.id);
+        });
+      }
+      refreshRulesUI();
+      followedBadge.textContent = `Followed: ${state5.counts.followed}`;
+      syncHeaderToScrollbar();
+    }
+    function softUpdateBadge(next) {
+      followedBadge.textContent = `Followed: ${next.counts.followed}`;
+    }
+    function filteredIdSet(s) {
+      const set2 = /* @__PURE__ */ new Set();
+      for (const r of passesFilters(s.rows)) set2.add(r.id);
+      return set2;
+    }
+    let unsub = null;
+    let unsubRules = null;
+    (async () => {
+      try {
+        await NotifierService.start();
+      } catch {
+      }
+      unsub = await NotifierService.onChangeNow((s) => {
+        const prev = state5;
+        state5 = s;
+        if (!prev) {
+          rebuildGrid();
+          softUpdateRenderedRows(state5);
+          return;
+        }
+        const prevIds = renderedIds;
+        const nextIds = filteredIdSet(s);
+        let needRebuild = false;
+        if (prevIds.size !== nextIds.size) needRebuild = true;
+        else {
+          for (const id of nextIds) if (!prevIds.has(id)) {
+            needRebuild = true;
+            break;
+          }
+        }
+        if (needRebuild) {
+          rebuildGrid();
+        } else {
+          softUpdateBadge(s);
+          softUpdateRenderedRows(s);
+        }
+      });
+      try {
+        unsubRules = await NotifierService.onRulesChangeNow(() => refreshRulesUI());
+      } catch {
+      }
+    })();
+    const onFilterChange = () => {
+      if (state5) rebuildGrid();
+    };
+    selType.onchange = onFilterChange;
+    selRarity.onchange = onFilterChange;
+    view.__cleanup__ = (() => {
+      const prev = view.__cleanup__;
+      return () => {
+        try {
+          unsub?.();
+        } catch {
+        }
+        try {
+          unsubRules?.();
+        } catch {
+        }
+        try {
+          resizeObserver.disconnect();
+        } catch {
+        }
+        try {
+          window.removeEventListener("resize", onResize);
+        } catch {
+        }
+        try {
+          closeRuleEditor();
+        } catch {
+        }
+        try {
+          prev?.();
+        } catch {
+        }
+      };
+    })();
+  }
+  function renderPetAlertsTab(view, ui) {
+    view.innerHTML = "";
+    void PetAlertService.start().catch(() => {
+    });
+    const card5 = document.createElement("div");
+    Object.assign(card5.style, {
+      display: "grid",
+      gridTemplateColumns: "minmax(220px, 260px) minmax(0, 1fr)",
+      gap: "10px",
+      alignItems: "stretch",
+      height: "54vh",
+      overflow: "hidden",
+      border: "1px solid #4445",
+      borderRadius: "10px",
+      padding: "10px",
+      background: "#0f1318"
+    });
+    view.appendChild(card5);
+    const petList = document.createElement("div");
+    Object.assign(petList.style, {
+      display: "grid",
+      gridTemplateColumns: "1fr",
+      rowGap: "6px",
+      overflow: "auto",
+      padding: "6px",
+      border: "1px solid #4445",
+      borderRadius: "10px"
+    });
+    card5.appendChild(petList);
+    const right = document.createElement("div");
+    Object.assign(right.style, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px",
+      overflow: "auto",
+      minHeight: "0"
+    });
+    card5.appendChild(right);
+    let pets = [];
+    let unsubPets2 = null;
+    let generalEnabled = PetAlertService.isGeneralEnabled();
+    const formRow2 = (labelTxt, control) => {
+      const { root } = ui.formRow(labelTxt, control, { labelWidth: "180px" });
+      return root;
+    };
+    const generalCard = ui.card("General notifications", { tone: "muted", align: "stretch" });
+    generalCard.body.style.display = "grid";
+    generalCard.body.style.gap = "10px";
+    const generalRow = ui.flexRow({ justify: "start", gap: 10 });
+    const generalSw = ui.switch(PetAlertService.isGeneralEnabled());
+    const generalLbl = document.createElement("div");
+    generalLbl.textContent = "Use a shared threshold for all pets";
+    generalLbl.style.opacity = "0.9";
+    generalRow.append(generalSw, generalLbl);
+    generalCard.body.append(formRow2("Enable general", generalRow));
+    const generalInput = ui.inputNumber(1, 100, 1, PetAlertService.getGeneralThresholdPct());
+    generalCard.body.append(formRow2("General threshold (%)", generalInput.wrap ?? generalInput));
+    right.appendChild(generalCard.root);
+    const syncGeneralUI = () => {
+      generalEnabled = PetAlertService.isGeneralEnabled();
+      generalSw.checked = generalEnabled;
+      generalInput.value = String(PetAlertService.getGeneralThresholdPct());
+    };
+    generalSw.onchange = () => {
+      PetAlertService.setGeneralEnabled(generalSw.checked);
+      syncGeneralUI();
+    };
+    generalInput.addEventListener("change", () => {
+      const next = Math.max(1, Math.min(100, Number(generalInput.value) || PetAlertService.getGeneralThresholdPct()));
+      generalInput.value = String(PetAlertService.setGeneralThresholdPct(next));
+    });
+    syncGeneralUI();
+    const renderPetList = () => {
+      petList.innerHTML = "";
+      if (!pets.length) {
+        const empty = document.createElement("div");
+        empty.textContent = "No active pets.";
+        empty.style.opacity = "0.75";
+        petList.appendChild(empty);
+        return;
+      }
+      for (const pet of pets) {
+        const slot = pet?.slot ?? {};
+        const name = String(slot?.name || slot?.petSpecies || "Pet");
+        const hunger = PetsService.getHungerPctFor(pet);
+        const hungerText = Number.isFinite(hunger) ? `${hunger}%` : "\u2014";
+        const row = document.createElement("div");
+        row.style.display = "flex";
+        row.style.alignItems = "center";
+        row.style.justifyContent = "space-between";
+        row.style.gap = "10px";
+        row.style.width = "100%";
+        row.style.textAlign = "left";
+        row.style.padding = "6px 8px";
+        row.style.borderRadius = "8px";
+        row.style.border = "1px solid #4445";
+        row.style.background = "#121820";
+        const left = document.createElement("div");
+        left.style.display = "flex";
+        left.style.alignItems = "center";
+        left.style.gap = "8px";
+        left.style.minWidth = "0";
+        const avatar3 = document.createElement("div");
+        avatar3.style.width = "40px";
+        avatar3.style.height = "40px";
+        avatar3.style.borderRadius = "8px";
+        avatar3.style.display = "inline-flex";
+        avatar3.style.alignItems = "center";
+        avatar3.style.justifyContent = "center";
+        avatar3.style.background = "#111821";
+        avatar3.style.border = "1px solid #1f2429";
+        avatar3.style.overflow = "hidden";
+        const useEmojiFallback = () => {
+          avatar3.replaceChildren();
+          const span = document.createElement("span");
+          span.textContent = "\u{1F43E}";
+          span.style.fontSize = "28px";
+          span.setAttribute("aria-hidden", "true");
+          avatar3.appendChild(span);
+        };
+        const setIcon = (species2, mutations2) => {
+          const speciesLabel = String(species2 ?? "").trim();
+          avatar3.replaceChildren();
+          if (!speciesLabel) {
+            useEmojiFallback();
+            return;
+          }
+          const span = document.createElement("span");
+          span.textContent = speciesLabel.charAt(0).toUpperCase() || "\u0110Y?\xF3";
+          span.style.fontSize = "28px";
+          span.setAttribute("aria-hidden", "true");
+          avatar3.appendChild(span);
+          attachSpriteIcon(avatar3, ["pet"], [speciesLabel], 36, "alerts-pet", {
+            mutations: Array.isArray(mutations2) ? mutations2 : void 0
+          });
+        };
+        const species = String(slot?.petSpecies || "");
+        const mutations = slot?.mutations ?? pet?.mutations;
+        setIcon(species, Array.isArray(mutations) ? mutations : void 0);
+        const titleWrap = document.createElement("div");
+        titleWrap.style.display = "flex";
+        titleWrap.style.flexDirection = "column";
+        titleWrap.style.gap = "2px";
+        titleWrap.style.minWidth = "0";
+        const title = document.createElement("div");
+        title.textContent = name;
+        title.style.fontWeight = "600";
+        title.style.overflow = "hidden";
+        title.style.textOverflow = "ellipsis";
+        title.style.whiteSpace = "nowrap";
+        titleWrap.append(title);
+        left.append(avatar3, titleWrap);
+        const hungerValue = document.createElement("div");
+        hungerValue.textContent = hungerText;
+        hungerValue.style.fontWeight = "700";
+        hungerValue.style.color = "#FFD84D";
+        row.append(left, hungerValue);
+        petList.appendChild(row);
+      }
+    };
+    (async () => {
+      try {
+        unsubPets2 = await PetsService.onPetsChangeNow((arr) => {
+          pets = Array.isArray(arr) ? arr.slice(0, 3) : [];
+          renderPetList();
+        });
+      } catch {
+        pets = [];
+        renderPetList();
+      }
+    })();
+    view.__cleanup__ = (() => {
+      const prev = view.__cleanup__;
+      return () => {
+        try {
+          unsubPets2?.();
+        } catch {
+        }
+        try {
+          prev?.();
+        } catch {
+        }
+      };
+    })();
+  }
+  function renderWeatherTab(view, ui) {
+    view.innerHTML = "";
+    view.style.cssText = "";
+    const wrap = document.createElement("div");
+    Object.assign(wrap.style, {
+      display: "grid",
+      gridTemplateRows: "1fr",
+      height: "54vh",
+      overflow: "hidden",
+      minHeight: "0"
+    });
+    view.appendChild(wrap);
+    const card5 = document.createElement("div");
+    card5.style.border = "1px solid #4445";
+    card5.style.borderRadius = "10px";
+    card5.style.padding = "10px";
+    card5.style.background = "#0f1318";
+    card5.style.overflow = "hidden";
+    card5.style.display = "grid";
+    card5.style.gridTemplateRows = "auto 1fr";
+    card5.style.minHeight = "0";
+    wrap.appendChild(card5);
+    const headerGrid = document.createElement("div");
+    const COLS = "minmax(240px, 1fr) 9rem 7rem 8rem";
+    headerGrid.style.display = "grid";
+    headerGrid.style.gridTemplateColumns = COLS;
+    headerGrid.style.justifyContent = "start";
+    headerGrid.style.columnGap = "0";
+    headerGrid.style.borderBottom = "1px solid #ffffff1a";
+    headerGrid.style.padding = "0 0 4px 0";
+    headerGrid.style.position = "sticky";
+    headerGrid.style.top = "0";
+    headerGrid.append(
+      mkHeadCell("Weather", "left"),
+      mkHeadCell("Last seen"),
+      mkHeadCell("Notify"),
+      mkHeadCell("Custom rules")
+    );
+    card5.appendChild(headerGrid);
+    const bodyGrid = document.createElement("div");
+    bodyGrid.style.display = "grid";
+    bodyGrid.style.gridTemplateColumns = COLS;
+    bodyGrid.style.justifyContent = "start";
+    bodyGrid.style.gridAutoRows = "auto";
+    bodyGrid.style.alignContent = "start";
+    bodyGrid.style.minHeight = "0";
+    bodyGrid.style.height = "100%";
+    bodyGrid.style.overflow = "auto";
+    bodyGrid.style.overscrollBehavior = "contain";
+    bodyGrid.style.width = "100%";
+    bodyGrid.style.scrollbarGutter = "stable";
+    card5.appendChild(bodyGrid);
+    const weatherLastSeenRefs = /* @__PURE__ */ new Map();
+    const refreshRulesUI = () => {
+      const kids = Array.from(bodyGrid.children);
+      for (let i = 0; i + 3 < kids.length; i += 4) {
+        const itemCell = kids[i];
+        const ruleCell = kids[i + 3];
+        const id = itemCell?.dataset?.id;
+        if (!id) continue;
+        applyRuleState(itemCell, ruleCell ?? null, NotifierService.getRule(id));
+      }
+    };
+    const syncHeaderToScrollbar = () => {
+      const sbw = bodyGrid.offsetWidth - bodyGrid.clientWidth;
+      headerGrid.style.boxSizing = "border-box";
+      headerGrid.style.paddingRight = `${sbw}px`;
+    };
+    syncHeaderToScrollbar();
+    const resizeObserver = new ResizeObserver(syncHeaderToScrollbar);
+    resizeObserver.observe(bodyGrid);
+    const onResize = () => syncHeaderToScrollbar();
+    window.addEventListener("resize", onResize);
+    const makeItemCell = (row) => {
+      const wrapCellDiv = document.createElement("div");
+      Object.assign(wrapCellDiv.style, {
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        padding: "6px",
+        borderBottom: "1px solid #ffffff12"
+      });
+      const ICON = 40;
+      const iconWrap = document.createElement("div");
+      Object.assign(iconWrap.style, {
+        width: `${ICON}px`,
+        height: `${ICON}px`,
+        flex: `0 0 ${ICON}px`,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "8px",
+        background: "#101820"
+      });
+      const weatherIcon = document.createElement("span");
+      weatherIcon.textContent = row.name.trim().charAt(0) || "\u{1F326}";
+      weatherIcon.style.fontSize = `${ICON - 8}px`;
+      weatherIcon.setAttribute("aria-hidden", "true");
+      iconWrap.appendChild(weatherIcon);
+      const weatherCategories = ["ui", "weather", "mutation"];
+      const candidateSet = /* @__PURE__ */ new Set();
+      const addCandidate = (value) => {
+        if (!value) return;
+        const trimmed = value.trim();
+        if (trimmed) {
+          candidateSet.add(trimmed);
+          candidateSet.add(trimmed.replace(/\s+/g, ""));
+        }
+      };
+      addCandidate(row.name);
+      addCandidate(row.atomValue);
+      addCandidate(row.id);
+      const bases = Array.from(candidateSet).map((value) => value.replace(/icon$/i, ""));
+      const candidates = Array.from(
+        new Set(
+          bases.map((base) => `${base}Icon`).concat(Array.from(candidateSet))
+        ).values()
+      ).filter(Boolean);
+      if (candidates.length) {
+        attachSpriteIcon(iconWrap, weatherCategories, candidates, ICON, "alerts-weather");
+      }
+      const col = document.createElement("div");
+      Object.assign(col.style, {
+        display: "flex",
+        flexDirection: "column",
+        gap: "4px",
+        lineHeight: "1.2",
+        minWidth: "0",
+        flex: "1 1 auto"
+      });
+      const headerRow = document.createElement("div");
+      Object.assign(headerRow.style, {
+        display: "flex",
+        alignItems: "center",
+        gap: "6px",
+        minWidth: "0"
+      });
+      const title = document.createElement("div");
+      title.textContent = row.name;
+      Object.assign(title.style, {
+        fontWeight: "700",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+        flex: "1 1 auto"
+      });
+      headerRow.appendChild(title);
+      if (row.isCurrent) {
+        const badge2 = document.createElement("span");
+        badge2.textContent = "Current";
+        Object.assign(badge2.style, {
+          fontSize: "11px",
+          padding: "2px 6px",
+          borderRadius: "999px",
+          background: "#2b5cff33",
+          border: "1px solid #2b5cff66",
+          color: "#9cbcff",
+          fontWeight: "600",
+          whiteSpace: "nowrap"
+        });
+        headerRow.appendChild(badge2);
+      }
+      const mutationsLabel = document.createElement("div");
+      mutationsLabel.textContent = "Mutations";
+      Object.assign(mutationsLabel.style, {
+        fontSize: "11px",
+        opacity: "0.7",
+        fontWeight: "600"
+      });
+      const mutationsList = document.createElement("div");
+      Object.assign(mutationsList.style, {
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "6px",
+        alignItems: "flex-start",
+        fontSize: "12px",
+        lineHeight: "1.3",
+        opacity: row.mutations.length ? "0.85" : "0.6"
+      });
+      if (row.mutations.length) {
+        for (const mutation of row.mutations) {
+          const chip2 = document.createElement("span");
+          chip2.textContent = formatWeatherMutation(mutation);
+          Object.assign(chip2.style, {
+            display: "inline-flex",
+            alignItems: "center",
+            padding: "2px 8px",
+            borderRadius: "999px",
+            background: "#ffffff12",
+            whiteSpace: "nowrap"
+          });
+          mutationsList.appendChild(chip2);
+        }
+      } else {
+        const chip2 = document.createElement("span");
+        chip2.textContent = "No mutation effects.";
+        chip2.style.whiteSpace = "nowrap";
+        mutationsList.appendChild(chip2);
+      }
+      const ruleHint = document.createElement("div");
+      ruleHint.dataset.role = "rule-hint";
+      ruleHint.style.opacity = "0.75";
+      ruleHint.style.fontSize = "11px";
+      ruleHint.style.whiteSpace = "nowrap";
+      ruleHint.style.overflow = "hidden";
+      ruleHint.style.textOverflow = "ellipsis";
+      ruleHint.style.minHeight = "1.2em";
+      ruleHint.style.visibility = "hidden";
+      col.append(headerRow, mutationsLabel, mutationsList, ruleHint);
+      wrapCellDiv.append(iconWrap, col);
+      if (row.isCurrent) {
+        wrapCellDiv.style.background = "linear-gradient(180deg, #1b2735, #141d25)";
+        wrapCellDiv.style.borderRadius = "8px";
+      }
+      return wrapCellDiv;
+    };
+    const addRow = (row) => {
+      const itemCell = makeItemCell(row);
+      itemCell.dataset.id = row.id;
+      itemCell.dataset.context = "weather";
+      itemCell.dataset.current = row.isCurrent ? "1" : "0";
+      const lastSeenInfo = document.createElement("div");
+      const { label: label2, title } = formatLastSeen(row.lastSeen, row.isCurrent);
+      lastSeenInfo.textContent = label2;
+      lastSeenInfo.title = title;
+      lastSeenInfo.style.fontWeight = "600";
+      lastSeenInfo.style.opacity = label2 === "Never" ? "0.7" : "1";
+      lastSeenInfo.style.whiteSpace = "nowrap";
+      const lastSeenCell = wrapCell(lastSeenInfo);
+      weatherLastSeenRefs.set(row.id, lastSeenInfo);
+      const notifySwitch = createSwitch((on) => {
+        try {
+          NotifierService.setWeatherNotify(row.id, !!on);
+        } catch {
+        }
+      });
+      setSwitchVisual(notifySwitch, !!row.notify);
+      notifySwitch.style.padding = "0";
+      const notifyCell = wrapCell(notifySwitch);
+      const gearBtn = ui.btn("", {
+        icon: "\u2699",
+        size: "sm",
+        tooltip: "Custom rule",
+        ariaLabel: `Custom rule for ${row.name}`
+      });
+      gearBtn.dataset.role = "rule";
+      gearBtn.classList.add("qws-rule-btn");
+      gearBtn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        openRuleEditor(ui, {
+          id: row.id,
+          name: row.name,
+          type: row.type,
+          context: "weather"
+        }, gearBtn);
+      });
+      const ruleCell = wrapCell(gearBtn);
+      ruleCell.dataset.role = "rule-cell";
+      bodyGrid.append(itemCell, lastSeenCell, notifyCell, ruleCell);
+      applyRuleState(itemCell, ruleCell, NotifierService.getRule(row.id));
+    };
+    const clearGrid = () => {
+      closeRuleEditor();
+      bodyGrid.innerHTML = "";
+      weatherLastSeenRefs.clear();
+    };
+    const renderEmpty = () => {
+      const empty = document.createElement("div");
+      empty.textContent = "No weather entries.";
+      empty.style.opacity = "0.75";
+      empty.style.gridColumn = "1 / -1";
+      empty.style.padding = "8px";
+      bodyGrid.appendChild(empty);
+    };
+    let state5 = null;
+    let stateSig = "";
+    const updateDynamicWeatherStats = () => {
+      if (!state5) return;
+      for (const row of state5.rows) {
+        const target = weatherLastSeenRefs.get(row.id);
+        if (target) {
+          const { label: label2, title } = formatLastSeen(row.lastSeen, row.isCurrent);
+          target.textContent = label2;
+          target.title = title;
+          target.style.opacity = label2 === "Never" ? "0.7" : "1";
+        }
+      }
+    };
+    const rebuildGrid = () => {
+      clearGrid();
+      if (!state5 || !state5.rows.length) {
+        renderEmpty();
+      } else {
+        state5.rows.forEach(addRow);
+        refreshRulesUI();
+      }
+      syncHeaderToScrollbar();
+      updateDynamicWeatherStats();
+    };
+    let unsubWeather = null;
+    let unsubRules = null;
+    (async () => {
+      try {
+        await NotifierService.start();
+      } catch {
+      }
+      try {
+        unsubWeather = await NotifierService.onWeatherChangeNow((next) => {
+          state5 = next;
+          stateSig = weatherStateSignature(next.rows);
+          rebuildGrid();
+        });
+      } catch {
+      }
+      try {
+        unsubRules = await NotifierService.onRulesChangeNow(() => refreshRulesUI());
+      } catch {
+      }
+    })();
+    const refreshWeatherState = async () => {
+      try {
+        const next = await NotifierService.getWeatherState();
+        const nextSig = weatherStateSignature(next.rows);
+        const changed = nextSig !== stateSig;
+        state5 = next;
+        stateSig = nextSig;
+        if (changed) rebuildGrid();
+        else updateDynamicWeatherStats();
+      } catch {
+      }
+    };
+    const dynamicTimer = window.setInterval(updateDynamicWeatherStats, 3e4);
+    const weatherRefreshTimer = window.setInterval(() => {
+      void refreshWeatherState();
+    }, 6e4);
+    view.__cleanup__ = (() => {
+      const prev = view.__cleanup__;
+      return () => {
+        try {
+          unsubWeather?.();
+        } catch {
+        }
+        try {
+          unsubRules?.();
+        } catch {
+        }
+        try {
+          resizeObserver.disconnect();
+        } catch {
+        }
+        try {
+          window.removeEventListener("resize", onResize);
+        } catch {
+        }
+        try {
+          window.clearInterval(dynamicTimer);
+        } catch {
+        }
+        try {
+          window.clearInterval(weatherRefreshTimer);
+        } catch {
+        }
+        try {
+          closeRuleEditor();
+        } catch {
+        }
+        try {
+          prev?.();
+        } catch {
+        }
+      };
+    })();
+  }
+  function renderNotifierMenu(root) {
+    const ui = new Menu({ id: "alerts", compact: true, windowSelector: ".qws-win" });
+    ui.addTab("shops", "\u{1F6D2} Shops", (view) => renderShopTab(view, ui));
+    ui.addTab("weather", "\u{1F326} Weather", (view) => renderWeatherTab(view, ui));
+    ui.addTab("pets", "\u{1F43E} Pets", (view) => renderPetAlertsTab(view, ui));
+    ui.addTab("settings", "\u2699\uFE0F Settings", (view) => renderSettingsTab(view, ui));
+    ui.mount(root);
+  }
+  var rulePopover, detachRuleDocHandler, detachRuleKeyBlocker, detachRuleWheelBlocker, detachRuleDragHandler, closeRuleEditor, setSwitchCapState, createSwitch, setSwitchVisual, wrapCell, mkHeadCell, applyRuleState, openRuleEditor;
+  var init_menu8 = __esm({
+    "src/features/notifier/menu.ts"() {
+      "use strict";
+      init_menu();
+      init_notifier();
+      init_audio();
+      init_petAlerts();
+      init_pets();
+      init_iconCache();
+      init_rarityBadge();
+      init_bellFloating();
+      rulePopover = null;
+      detachRuleDocHandler = null;
+      detachRuleKeyBlocker = null;
+      detachRuleWheelBlocker = null;
+      detachRuleDragHandler = null;
+      closeRuleEditor = () => {
+        if (rulePopover) {
+          try {
+            rulePopover.remove();
+          } catch {
+          }
+          rulePopover = null;
+        }
+        if (detachRuleDocHandler) {
+          detachRuleDocHandler();
+          detachRuleDocHandler = null;
+        }
+        if (detachRuleKeyBlocker) {
+          detachRuleKeyBlocker();
+          detachRuleKeyBlocker = null;
+        }
+        if (detachRuleWheelBlocker) {
+          detachRuleWheelBlocker();
+          detachRuleWheelBlocker = null;
+        }
+        if (detachRuleDragHandler) {
+          detachRuleDragHandler();
+          detachRuleDragHandler = null;
+        }
+      };
+      setSwitchCapState = (wrap, capped) => {
+        if (capped) {
+          wrap.setAttribute("aria-disabled", "true");
+          wrap.style.opacity = "0.5";
+          wrap.style.pointerEvents = "none";
+          wrap.style.cursor = "not-allowed";
+          wrap.title = "Max owned \u2014 notifications disabled";
+        } else {
+          wrap.removeAttribute("aria-disabled");
+          wrap.style.opacity = "";
+          wrap.style.pointerEvents = "";
+          wrap.style.cursor = "";
+          wrap.removeAttribute("title");
+        }
+      };
+      createSwitch = (onToggle) => {
+        const wrap = document.createElement("label");
+        wrap.style.display = "inline-flex";
+        wrap.style.alignItems = "center";
+        wrap.style.justifyContent = "center";
+        wrap.style.width = "100%";
+        wrap.style.padding = "4px 6px";
+        wrap.style.userSelect = "none";
+        wrap.setAttribute("role", "switch");
+        wrap.setAttribute("aria-checked", "false");
+        const box = document.createElement("span");
+        box.style.position = "relative";
+        box.style.width = "42px";
+        box.style.height = "24px";
+        box.style.borderRadius = "999px";
+        box.style.background = "#1f2328";
+        box.style.border = "1px solid #4446";
+        box.style.display = "inline-block";
+        box.style.boxShadow = "inset 0 0 0 1px #0005";
+        const knob = document.createElement("span");
+        knob.style.position = "absolute";
+        knob.style.top = "50%";
+        knob.style.left = "3px";
+        knob.style.transform = "translateY(-50%)";
+        knob.style.width = "18px";
+        knob.style.height = "18px";
+        knob.style.borderRadius = "50%";
+        knob.style.background = "#e7eef7";
+        knob.style.boxShadow = "0 1px 2px rgba(0,0,0,.7)";
+        knob.style.transition = "left 160ms ease, transform 160ms ease";
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.style.position = "absolute";
+        input.style.opacity = "0";
+        input.style.pointerEvents = "none";
+        input.tabIndex = -1;
+        const apply2 = (on) => {
+          input.checked = on;
+          wrap.setAttribute("aria-checked", on ? "true" : "false");
+          knob.style.left = on ? "21px" : "3px";
+          knob.style.transform = on ? "translateY(-50%) scale(1.02)" : "translateY(-50%) scale(1)";
+          if (on) {
+            box.style.background = "linear-gradient(180deg, #2b5cff, #1e40ff)";
+            box.style.borderColor = "#7aa2ff";
+            box.style.boxShadow = "0 0 0 2px #7aa2ff55, inset 0 0 0 1px #0005";
+          } else {
+            box.style.background = "#1f2328";
+            box.style.borderColor = "#4446";
+            box.style.boxShadow = "inset 0 0 0 1px #0005";
+          }
+        };
+        input.disabled = true;
+        wrap.addEventListener("mousedown", (e) => e.preventDefault());
+        wrap.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          apply2(!input.checked);
+          onToggle?.(input.checked);
+        });
+        box.appendChild(knob);
+        wrap.appendChild(input);
+        wrap.appendChild(box);
+        apply2(false);
+        return wrap;
+      };
+      setSwitchVisual = (wrap, checked) => {
+        const input = wrap.querySelector("input");
+        const box = wrap.querySelector("span");
+        const knob = box?.querySelector("span");
+        if (!input || !box || !knob) return;
+        input.checked = !!checked;
+        knob.style.left = checked ? "21px" : "3px";
+        knob.style.transform = checked ? "translateY(-50%) scale(1.02)" : "translateY(-50%) scale(1)";
+        if (checked) {
+          box.style.background = "linear-gradient(180deg, #2b5cff, #1e40ff)";
+          box.style.borderColor = "#7aa2ff";
+          box.style.boxShadow = "0 0 0 2px #7aa2ff55, inset 0 0 0 1px #0005";
+          wrap.setAttribute("aria-checked", "true");
+        } else {
+          box.style.background = "#1f2328";
+          box.style.borderColor = "#4446";
+          box.style.boxShadow = "inset 0 0 0 1px #0005";
+          wrap.setAttribute("aria-checked", "false");
+        }
+      };
+      wrapCell = (child) => {
+        const d = document.createElement("div");
+        d.style.display = "flex";
+        d.style.alignItems = "center";
+        d.style.justifyContent = "center";
+        d.style.borderBottom = "1px solid #ffffff12";
+        d.style.padding = "4px 6px";
+        d.style.boxSizing = "border-box";
+        d.appendChild(child);
+        return d;
+      };
+      mkHeadCell = (txt, align = "center") => {
+        const el = document.createElement("div");
+        el.textContent = txt;
+        el.style.fontWeight = "600";
+        el.style.opacity = "0.9";
+        el.style.padding = "4px 6px";
+        el.style.display = "flex";
+        el.style.alignItems = "center";
+        el.style.justifyContent = align === "left" ? "flex-start" : "center";
+        return el;
+      };
+      applyRuleState = (itemCell, ruleCell, rule) => {
+        const gearBtn = ruleCell?.querySelector("button[data-role='rule']") ?? null;
+        const hint = itemCell.querySelector('[data-role="rule-hint"]');
+        const hasRule = !!(rule && (rule.sound || rule.volume != null || rule.playbackMode || rule.stopMode || rule.loopIntervalMs != null));
+        const summary = hasRule ? formatRuleSummary(rule) : "";
+        if (gearBtn) {
+          gearBtn.dataset.active = hasRule ? "1" : "0";
+          gearBtn.title = hasRule && summary ? `Custom rule \u2014 ${summary}` : "Custom rule";
+        }
+        if (hint) {
+          if (hasRule && summary) {
+            hint.textContent = summary;
+            hint.style.visibility = "visible";
+          } else {
+            hint.textContent = "";
+            hint.style.visibility = "hidden";
+          }
+        }
+      };
+      openRuleEditor = (ui, row, anchor) => {
+        closeRuleEditor();
+        const pop = document.createElement("div");
+        pop.className = "qws-rule-popover";
+        Object.assign(pop.style, {
+          position: "fixed",
+          zIndex: "var(--qws-z-popover)",
+          minWidth: "260px",
+          maxWidth: "320px",
+          padding: "14px 16px",
+          borderRadius: "14px",
+          border: "1px solid #32404e",
+          background: "linear-gradient(180deg, #111923, #0b131c)",
+          boxShadow: "0 16px 40px rgba(0,0,0,0.45)"
+        });
+        const margin = 12;
+        const clampPosition = (value, min, max) => {
+          if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
+          if (max >= min) {
+            return Math.min(Math.max(value, min), max);
+          }
+          return Math.min(Math.max(value, max), min);
+        };
+        const applyPosition2 = (left2, top2) => {
+          const width2 = pop.offsetWidth;
+          const height2 = pop.offsetHeight;
+          const boundedLeft = clampPosition(left2, margin, window.innerWidth - width2 - margin);
+          const boundedTop = clampPosition(top2, margin, window.innerHeight - height2 - margin);
+          pop.style.left = `${Math.round(boundedLeft)}px`;
+          pop.style.top = `${Math.round(boundedTop)}px`;
+          return { left: boundedLeft, top: boundedTop };
+        };
+        const header = document.createElement("div");
+        header.style.display = "flex";
+        header.style.justifyContent = "space-between";
+        header.style.alignItems = "flex-start";
+        header.style.gap = "12px";
+        header.style.cursor = "move";
+        header.style.userSelect = "none";
+        header.style.touchAction = "none";
+        const titleWrap = document.createElement("div");
+        const title = document.createElement("div");
+        title.textContent = row.name;
+        title.style.fontWeight = "700";
+        title.style.fontSize = "14px";
+        title.style.lineHeight = "1.2";
+        const subtitle = document.createElement("div");
+        subtitle.textContent = row.type;
+        subtitle.style.opacity = "0.7";
+        subtitle.style.fontSize = "12px";
+        titleWrap.append(title, subtitle);
+        const closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.textContent = "\u2715";
+        Object.assign(closeBtn.style, {
+          background: "transparent",
+          border: "none",
+          color: "#c8d7e8",
+          fontSize: "16px",
+          lineHeight: "1",
+          cursor: "pointer"
+        });
+        closeBtn.addEventListener("click", (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          closeRuleEditor();
+        });
+        header.append(titleWrap, closeBtn);
+        let dragState = null;
+        const onDragMove = (ev) => {
+          if (!dragState) return;
+          if (ev.pointerId !== dragState.pointerId) return;
+          const dx = ev.clientX - dragState.startX;
+          const dy = ev.clientY - dragState.startY;
+          applyPosition2(dragState.baseLeft + dx, dragState.baseTop + dy);
+        };
+        const stopDrag = (ev) => {
+          if (!dragState) return;
+          if (ev && ev.pointerId !== dragState.pointerId) return;
+          document.removeEventListener("pointermove", onDragMove);
+          document.removeEventListener("pointerup", stopDrag);
+          document.removeEventListener("pointercancel", stopDrag);
+          try {
+            header.releasePointerCapture(dragState.pointerId);
+          } catch {
+          }
+          dragState = null;
+        };
+        const onPointerDown = (ev) => {
+          if (ev.button !== 0) return;
+          const target = ev.target;
+          if (target && closeBtn.contains(target)) return;
+          if (dragState) stopDrag();
+          const rect = pop.getBoundingClientRect();
+          dragState = {
+            pointerId: ev.pointerId,
+            startX: ev.clientX,
+            startY: ev.clientY,
+            baseLeft: rect.left,
+            baseTop: rect.top
+          };
+          try {
+            header.setPointerCapture(ev.pointerId);
+          } catch {
+          }
+          document.addEventListener("pointermove", onDragMove);
+          document.addEventListener("pointerup", stopDrag);
+          document.addEventListener("pointercancel", stopDrag);
+          ev.preventDefault();
+        };
+        header.addEventListener("pointerdown", onPointerDown);
+        detachRuleDragHandler = () => {
+          header.removeEventListener("pointerdown", onPointerDown);
+          stopDrag();
+        };
+        pop.appendChild(header);
+        const current = NotifierService.getRule(row.id);
+        const defaults = audio.getPlaybackSettings(row.context);
+        const contextDefaults = row.context === "shops" || row.context === "weather" ? NotifierService.getContextStopDefaults(row.context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: defaults.loopIntervalMs };
+        const allowPurchase = row.context === "shops";
+        const defaultSoundName = (() => {
+          const label2 = (defaults.defaultSoundName || "").trim();
+          return label2 || "Default";
+        })();
+        const formatModeLabel = (mode) => mode === "loop" ? "Loop" : "One-shot";
+        const defaultIntervalMs = Math.max(
+          150,
+          Math.floor(contextDefaults.loopIntervalMs ?? defaults.loopIntervalMs ?? 150)
+        );
+        const soundField = document.createElement("div");
+        soundField.className = "qws-rule-field";
+        const soundLabel = document.createElement("label");
+        soundLabel.textContent = "Sound";
+        const soundSelect = document.createElement("select");
+        soundSelect.className = "qmm-input";
+        soundSelect.style.width = "100%";
+        const populateSoundOptions = () => {
+          const selected = current?.sound ?? "";
+          soundSelect.innerHTML = "";
+          const optDefault = document.createElement("option");
+          optDefault.value = "";
+          optDefault.textContent = defaultSoundName;
+          soundSelect.appendChild(optDefault);
+          const names = audio.listSounds();
+          for (const name of names) {
+            if (name === defaultSoundName && selected !== name) continue;
+            const opt = document.createElement("option");
+            opt.value = name;
+            opt.textContent = name;
+            soundSelect.appendChild(opt);
+          }
+          if (selected && !names.includes(selected)) {
+            const extra = document.createElement("option");
+            extra.value = selected;
+            extra.textContent = selected.length > 32 ? `${selected.slice(0, 29)}\u2026` : selected;
+            extra.dataset.extra = "1";
+            soundSelect.appendChild(extra);
+          }
+          soundSelect.value = selected;
+        };
+        populateSoundOptions();
+        soundField.append(soundLabel, soundSelect);
+        pop.appendChild(soundField);
+        const baseVolume = Math.max(0, Math.min(1, defaults.volume || 0));
+        const defaultVolumePct = Math.round(baseVolume * 100);
+        const volumeField = document.createElement("div");
+        volumeField.className = "qws-rule-field";
+        const volumeLabel = document.createElement("label");
+        volumeLabel.textContent = "Volume";
+        const volumeWrap = document.createElement("div");
+        volumeWrap.style.display = "flex";
+        volumeWrap.style.alignItems = "center";
+        volumeWrap.style.gap = "10px";
+        const volumeRange = document.createElement("input");
+        volumeRange.type = "range";
+        volumeRange.min = "0";
+        volumeRange.max = "100";
+        volumeRange.step = "1";
+        volumeRange.style.width = "100%";
+        const volumeValue = document.createElement("span");
+        volumeValue.style.minWidth = "38px";
+        volumeValue.style.textAlign = "right";
+        const applyVolumeDisplay = (value) => {
+          const clamped = Math.max(0, Math.min(100, Math.round(value)));
+          volumeRange.value = String(clamped);
+          volumeValue.textContent = `${clamped}%`;
+        };
+        const initialVolume = current?.volume != null ? current.volume : baseVolume;
+        applyVolumeDisplay(Math.round(Math.max(0, Math.min(1, initialVolume)) * 100));
+        volumeRange.addEventListener("input", () => {
+          const raw = Number(volumeRange.value);
+          const clamped = Number.isFinite(raw) ? Math.max(0, Math.min(100, Math.round(raw))) : defaultVolumePct;
+          applyVolumeDisplay(clamped);
+        });
+        const volumeHint = document.createElement("div");
+        volumeHint.textContent = `Default: ${defaultVolumePct}%`;
+        volumeHint.style.opacity = "0.7";
+        volumeHint.style.fontSize = "11px";
+        volumeHint.style.marginTop = "4px";
+        volumeWrap.append(volumeRange, volumeValue);
+        volumeField.append(volumeLabel, volumeWrap, volumeHint);
+        pop.appendChild(volumeField);
+        const modeField = document.createElement("div");
+        modeField.className = "qws-rule-field";
+        const modeLabel = document.createElement("label");
+        modeLabel.textContent = "Playback mode";
+        const modeSelect = document.createElement("select");
+        modeSelect.className = "qmm-input";
+        const modeOptions = allowPurchase ? defaults.mode === "loop" ? ["loop", "oneshot"] : ["oneshot", "loop"] : ["oneshot"];
+        modeOptions.forEach((value) => {
+          const opt = document.createElement("option");
+          opt.value = value;
+          opt.textContent = formatModeLabel(value);
+          modeSelect.appendChild(opt);
+        });
+        const initialMode = allowPurchase ? current?.playbackMode ?? defaults.mode : "oneshot";
+        modeSelect.value = initialMode === "loop" && !allowPurchase ? "oneshot" : initialMode;
+        if (!allowPurchase) modeSelect.disabled = true;
+        modeField.append(modeLabel, modeSelect);
+        pop.appendChild(modeField);
+        let stopSelect = null;
+        const stopField = document.createElement("div");
+        stopField.className = "qws-rule-field";
+        if (allowPurchase) {
+          const stopLabel = document.createElement("label");
+          stopLabel.textContent = "Stop condition";
+          stopSelect = document.createElement("select");
+          stopSelect.className = "qmm-input";
+          const stopOption = document.createElement("option");
+          stopOption.value = "purchase";
+          stopOption.textContent = "Until purchase";
+          stopSelect.appendChild(stopOption);
+          const initialStopMode = current?.stopMode ?? contextDefaults.stopMode;
+          stopSelect.value = initialStopMode === "purchase" ? "purchase" : "purchase";
+          stopField.append(stopLabel, stopSelect);
+          pop.appendChild(stopField);
+        }
+        const intervalField = document.createElement("div");
+        intervalField.className = "qws-rule-field";
+        const intervalLabel = document.createElement("label");
+        intervalLabel.textContent = "Loop interval (ms)";
+        const intervalInput = document.createElement("input");
+        intervalInput.type = "number";
+        intervalInput.className = "qmm-input";
+        intervalInput.min = "150";
+        intervalInput.step = "50";
+        intervalInput.placeholder = String(defaultIntervalMs);
+        intervalInput.value = current?.loopIntervalMs != null ? String(current.loopIntervalMs) : "";
+        intervalInput.inputMode = "numeric";
+        intervalField.append(intervalLabel, intervalInput);
+        if (allowPurchase) pop.appendChild(intervalField);
+        const enforceIntegerOnly = (input) => {
+          input.addEventListener("keydown", (ev) => {
+            ev.stopPropagation();
+            ev.stopImmediatePropagation();
+            if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+            const key2 = ev.key;
+            if (/^[0-9]$/.test(key2)) return;
+            if (key2 === "Backspace" || key2 === "Delete" || key2 === "Tab" || key2 === "Enter" || key2 === "ArrowLeft" || key2 === "ArrowRight" || key2 === "ArrowUp" || key2 === "ArrowDown" || key2 === "Home" || key2 === "End") {
+              return;
+            }
+            ev.preventDefault();
+          });
+          input.addEventListener("input", () => {
+            const sanitized = input.value.replace(/\D+/g, "");
+            if (sanitized !== input.value) input.value = sanitized;
+          });
+        };
+        enforceIntegerOnly(intervalInput);
+        const resolveMode = () => {
+          const raw = modeSelect.value;
+          if (raw === "oneshot" || raw === "loop") return raw;
+          return allowPurchase ? defaults.mode : "oneshot";
+        };
+        const updateLoopVisibility = () => {
+          if (!allowPurchase) {
+            stopField.style.display = "none";
+            intervalField.style.display = "none";
+            return;
+          }
+          const mode = resolveMode();
+          const showLoop = mode === "loop";
+          stopField.style.display = showLoop ? "grid" : "none";
+          intervalField.style.display = showLoop ? "grid" : "none";
+        };
+        const forceLoopMode = () => {
+          if (!allowPurchase) return;
+          if (modeSelect.value === "loop") return;
+          modeSelect.value = "loop";
+          updateLoopVisibility();
+        };
+        modeSelect.addEventListener("change", () => {
+          updateLoopVisibility();
+        });
+        if (allowPurchase && stopSelect) {
+          stopSelect.addEventListener("change", () => {
+            forceLoopMode();
+          });
+        }
+        if (allowPurchase) intervalInput.addEventListener("input", forceLoopMode);
+        updateLoopVisibility();
+        const hint = document.createElement("div");
+        hint.textContent = "Use defaults by leaving values unchanged (matching the default volume keeps it inherited).";
+        hint.style.opacity = "0.7";
+        hint.style.fontSize = "12px";
+        pop.appendChild(hint);
+        const actions = document.createElement("div");
+        actions.className = "qws-rule-actions";
+        const clearBtn = ui.btn("Clear", { variant: "ghost", size: "sm" });
+        clearBtn.addEventListener("click", (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          NotifierService.clearRule(row.id);
+          closeRuleEditor();
+        });
+        if (!current) ui.setButtonEnabled(clearBtn, false);
+        const saveBtn = ui.btn("Save", { variant: "primary", size: "sm" });
+        saveBtn.addEventListener("click", (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          const sound = soundSelect.value?.trim() || null;
+          const modeRaw = modeSelect.value || "";
+          const stopRaw = stopSelect?.value || "";
+          const intervalRaw = intervalInput.value?.trim();
+          const volRaw = Math.max(0, Math.min(100, parseInt(volumeRange.value || "", 10) || 0));
+          const volRatio = volRaw / 100;
+          let playbackMode = modeRaw === "oneshot" || modeRaw === "loop" ? modeRaw : null;
+          if (playbackMode === defaults.mode) playbackMode = null;
+          let stopMode = allowPurchase ? stopRaw === "purchase" ? "purchase" : null : null;
+          if (stopMode != null && stopMode === contextDefaults.stopMode) {
+            stopMode = null;
+          }
+          let loopIntervalMs = null;
+          if (allowPurchase && intervalRaw) {
+            const parsed = Number(intervalRaw);
+            if (Number.isFinite(parsed)) {
+              const normalized = Math.max(150, Math.min(1e4, Math.floor(parsed)));
+              if (normalized !== defaultIntervalMs) loopIntervalMs = normalized;
+            }
+          }
+          let volume = null;
+          if (Math.abs(volRatio - baseVolume) > 1e-3) {
+            volume = Math.max(0, Math.min(1, volRatio));
+          }
+          if (allowPurchase && !playbackMode && defaults.mode !== "loop" && (stopMode != null || loopIntervalMs != null)) {
+            playbackMode = "loop";
+          }
+          NotifierService.setRule(row.id, {
+            sound,
+            volume,
+            playbackMode,
+            stopMode,
+            loopIntervalMs
+          });
+          closeRuleEditor();
+        });
+        actions.append(clearBtn, saveBtn);
+        pop.appendChild(actions);
+        document.body.appendChild(pop);
+        const anchorRect = anchor.getBoundingClientRect();
+        const width = pop.offsetWidth;
+        const height = pop.offsetHeight;
+        let left = anchorRect.right - width;
+        let top = anchorRect.bottom + 8;
+        if (left < margin) left = margin;
+        if (left + width > window.innerWidth - margin) left = window.innerWidth - width - margin;
+        if (top + height > window.innerHeight - margin) top = anchorRect.top - height - 8;
+        if (top < margin) top = margin;
+        applyPosition2(left, top);
+        const onDocPointer = (ev) => {
+          const target = ev.target;
+          if (!target) return;
+          if (pop.contains(target)) return;
+          if (anchor.contains(target)) return;
+          closeRuleEditor();
+        };
+        setTimeout(() => document.addEventListener("pointerdown", onDocPointer, true));
+        detachRuleDocHandler = () => document.removeEventListener("pointerdown", onDocPointer, true);
+        const keyBlocker = (ev) => {
+          if (!rulePopover) return;
+          if (rulePopover.contains(ev.target)) return;
+          ev.stopImmediatePropagation();
+        };
+        document.addEventListener("keydown", keyBlocker, true);
+        detachRuleKeyBlocker = () => document.removeEventListener("keydown", keyBlocker, true);
+        const wheelBlocker = (ev) => {
+          const t = ev.target;
+          if (rulePopover && t && rulePopover.contains(t)) {
+            ev.stopImmediatePropagation();
+          }
+        };
+        document.addEventListener("wheel", wheelBlocker, { capture: true, passive: true });
+        detachRuleWheelBlocker = () => {
+          document.removeEventListener("wheel", wheelBlocker, { capture: true });
+        };
+        rulePopover = pop;
+      };
     }
   });
 
@@ -63279,12 +63302,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_outgoingCounters();
       init_hud();
       init_menu2();
+      init_menu3();
       init_menu4();
       init_menu5();
       init_menu6();
       init_menu7();
       init_menu8();
-      init_menu3();
       init_menu9();
       init_menu10();
       init_menu11();

@@ -10,7 +10,7 @@ import type { PetTeam } from "./pets";
 import { petTeamName } from "./teamReconcile";
 import { onActivePetsStructuralChangeNow } from "../../game/store/atoms";
 import { attachSpriteIcon } from "../../ui/kit/sprites/iconCache";
-import { rarityBadge } from "../notifier/menu";
+import { rarityBadge } from "../../ui/kit/rarityBadge";
 import { petCatalog, plantCatalog } from "../../data";
 import { getPetStrength, getPetMaxStrength } from "../../data/rules/petValue";
 import {
