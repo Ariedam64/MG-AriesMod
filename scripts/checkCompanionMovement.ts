@@ -18,6 +18,7 @@ import {
 } from "../src/features/companion/movement";
 import { findFirstStep } from "../src/features/companion/pathfinding";
 import { matchBuildingName } from "../src/features/companion/buildings";
+import { buildCompanionMap } from "../src/features/companion/mapView";
 
 let fails = 0;
 const check = (label: string, got: unknown, want: unknown) => {
@@ -715,6 +716,35 @@ console.log("\n--- reperage des batiments ---");
   // Deviner serait pire que rendre null : l'appelant sait quoi faire d'une absence.
   check("rien ne correspond : on n'invente pas", matchBuildingName(names, ["barn"], []), null);
   check("le second groupe peut tout ecarter", matchBuildingName(names, ["pet"], ["barn"]), null);
+}
+
+console.log("\n--- la grille vue par le companion ---");
+{
+  // 4 x 3, deux tuiles bloquees, dont une seulement sous condition.
+  const map = buildCompanionMap({
+    cols: 4,
+    rows: 3,
+    collisionTiles: [1],
+    conditionalCollisionRegions: [{ condition: "shopClosed", tiles: [6] }],
+    npcSpawns: { Reina: 9 },
+    userSlotIdxAndDirtTileIdxToGlobalTileIdx: [[4, 5], [10, 11]],
+    userSlotIdxAndBoardwalkTileIdxToGlobalTileIdx: [[8]],
+    locations: { Pet_Shop: { activationTilesIdxs: [2, 3] } },
+  });
+  check("la grille se construit", map !== null, true);
+  check("index -> xy", JSON.stringify(map?.toXY(6)), JSON.stringify({ x: 2, y: 1 }));
+  check("xy -> index", map?.toIndex(2, 1), 6);
+  check("une tuile libre se traverse", map?.isWalkable(0, 0), true);
+  check("une collision bloque", map?.isWalkable(1, 0), false);
+  check("une collision conditionnelle bloque aussi", map?.isWalkable(2, 1), false);
+  check("hors de la grille, rien ne passe", map?.isWalkable(4, 0), false);
+  check("la tuile de terre locale devient globale", map?.gardenTileToGlobal(1, 1), 11);
+  check("un index de terre absent rend null", map?.gardenTileToGlobal(1, 5), null);
+  check("le nombre de cases de terre d'une parcelle", map?.dirtTileCount(0), 2);
+  check("la parcelle compte la terre et le ponton", map?.gardenTilesForSlot(0).join(","), "4,5,8");
+  check("le point d'apparition d'un PNJ", map?.npcSpawnTile("Reina"), 9);
+  check("un batiment se trouve par fragments", map?.findBuilding(["pet"], ["shop"]), "Pet_Shop");
+  check("une map sans dimensions ne se construit pas", buildCompanionMap({ cols: 0, rows: 3 }), null);
 }
 
 console.log(fails === 0 ? "\nAll checks passed." : `\n${fails} check(s) failed.`);

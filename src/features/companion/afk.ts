@@ -1,79 +1,79 @@
-// src/services/companion/afk.ts
-// Le companion remarque que le joueur ne bouge plus, s'endort, et se réveille.
+// The companion notices the player has stopped moving, falls asleep, and
+// wakes up.
 //
-// Module PUR : aucun import qui touche au jeu, horloge et hasard injectés. Tout
-// ce qui décide QUAND changer de phase et QUOI dire se vérifie hors navigateur
-// (scripts/checkCompanionAfk.ts). Les abonnements et l'exécution des effets
-// vivent dans `afkWatch.ts`.
+// Pure: clock and chance passed in. Everything deciding WHEN to change phase
+// and WHAT to say is checked outside the browser (scripts/checkCompanionAfk.ts).
+// The subscriptions and the effects run in `afkWatch.ts`.
 //
-// Trois phases :
-//  - `active` : le joueur est là. Rien à dire.
-//  - `idle` : plus rien depuis quelques minutes. Il vient voir et demande, une
-//    seule fois, si on est toujours là.
-//  - `asleep` : toujours rien. Il s'endort auprès du joueur, et ronfle de temps
-//    en temps, de moins en moins souvent si l'absence dure.
+// Three phases:
+//  - `active`: the player is there. Nothing to say.
+//  - `idle`: nothing for a few minutes. He comes over and asks, once, whether
+//    the player is still there.
+//  - `asleep`: still nothing. He falls asleep by the player and snores now and
+//    then, less and less often as the absence goes on.
 //
-// Deux règles tiennent tout le reste :
-//  - il ne parle jamais quand quelqu'un d'autre l'occupe (`busy`) ni quand
-//    l'onglet est caché (`hidden`) : une bulle que personne ne voit est perdue ;
-//  - seul le joueur fait avancer ou reculer l'horloge d'absence. Une réaction ou
-//    une tâche qui l'occupe ne fait que retarder la phase suivante, sauf s'il dort :
-//    là, elle le réveille, sans un mot puisqu'il est occupé.
+// Two rules hold the rest:
+//  - he never speaks while someone else has him (`busy`) or the tab is hidden
+//    (`hidden`): a bubble nobody sees is lost;
+//  - only the player moves the absence clock. A reaction or a task that takes
+//    him only delays the next phase, unless he is asleep: then it wakes him,
+//    silently since he is busy.
 
+import { pickOne, type Random } from "../../lib/random";
 import { EmoteType } from "./emoteTypes";
 
 /* ------------------------------------------------------------------ */
-/*  Réglages                                                           */
+/*  Settings                                                           */
 /* ------------------------------------------------------------------ */
 
-/** Sans rien de la part du joueur depuis ce délai, il passe en `idle`. */
+/** Nothing from the player for this long, and he goes `idle`. */
 export const AFK_IDLE_AFTER_MS = 3 * 60_000;
-/** Temps passé en `idle` avant de s'endormir. */
+/** Time spent `idle` before falling asleep. */
 export const AFK_ASLEEP_AFTER_MS = 6 * 60_000;
-/** Écart entre deux ronflements, tiré au hasard dans cet intervalle. */
+/** The gap between two snores, drawn in this range. */
 export const SNORE_MIN_MS = 45_000;
 export const SNORE_MAX_MS = 90_000;
-/** Au-delà de ce temps endormi, les ronflements s'espacent beaucoup. */
+/** Asleep for longer than this, the snores spread out a lot. */
 export const SNORE_SLOW_AFTER_MS = 30 * 60_000;
 export const SNORE_SLOW_MIN_MS = 3 * 60_000;
 export const SNORE_SLOW_MAX_MS = 6 * 60_000;
 /**
- * Endormi depuis moins longtemps, il se réveille sans rien dire : sursauter
- * après trente secondes de sieste sonnerait faux.
+ * Asleep for less than this, he wakes without a word: jumping up after
+ * thirty seconds of nap would ring false.
  */
 export const WAKE_LINE_MIN_ASLEEP_MS = 60_000;
-/** Chance d'un petit mot au retour du joueur, quand il avait demandé s'il était là. */
+/** The chance of a word when the player comes back, if he had asked whether they were there. */
 const RETURN_LINE_CHANCE = 0.3;
-/** Chance qu'un ronflement soit une phrase de rêve plutôt qu'un simple « Zzz ». */
+/** The chance a snore is a dream line rather than a plain "Zzz". */
 export const DREAM_CHANCE = 0.12;
 
 /* ------------------------------------------------------------------ */
-/*  Forme                                                              */
+/*  Shape                                                              */
 /* ------------------------------------------------------------------ */
 
 type AfkPhase = "active" | "idle" | "asleep";
 
 export type AfkState = {
   phase: AfkPhase;
-  /** Dernier signe de vie du joueur (ou début de la veille). */
+  /** The player's last sign of life (or when the watch started). */
   quietSince: number;
-  /** Entrée dans la phase courante. */
+  /** When the current phase began. */
   phaseSince: number;
-  /** A posé sa question en `idle`. Le mot de retour n'a de sens qu'après. */
+  /** He asked his question while `idle`. The return line only makes sense after. */
   asked: boolean;
-  /** Prochain ronflement, `null` hors sommeil. */
+  /** The next snore, `null` outside sleep. */
   nextSnoreAt: number | null;
-  /** Dernière réplique de sommeil, pour ne pas répéter la même deux fois de suite. */
+  /** The last sleep line, so the same one is not said twice in a row. */
   lastSnore: string | null;
 };
 
 /**
- * Ce que le pilote doit faire, dans l'ordre.
+ * What the driver must do, in order.
  *
- * `approach` : venir auprès du joueur avant de parler. Sinon la réplique n'est
- * dite que s'il est déjà assez près pour qu'on la lise.
- * `hold` / `release` : le garder auprès du joueur pendant son sommeil, puis le
- * rendre à son mode.
+ * `approach`: come to the player before speaking. Otherwise the line is only
+ * said when he is already close enough to be read.
+ * `hold` / `release`: keep him by the player while he sleeps, then give him
+ * back his mode.
  */
 export type AfkEffect =
   | { kind: "say"; message: string; emote: EmoteType | null; approach: boolean }
@@ -82,18 +82,18 @@ export type AfkEffect =
 
 export type AfkStep = { state: AfkState; effects: AfkEffect[] };
 
-export type AfkTickInput = {
+type AfkTickInput = {
   now: number;
-  /** Occupé par autre chose que nous : tâche, question du chat, série d'actions. */
+  /** Taken by something other than us: a task, a chat question, a batch. */
   busy: boolean;
-  /** Onglet caché : personne ne lirait ce qui serait dit. */
+  /** Tab hidden: nobody would read what is said. */
   hidden: boolean;
 };
 
-export type AfkActivityInput = { now: number; busy: boolean };
+type AfkActivityInput = { now: number; busy: boolean };
 
 /* ------------------------------------------------------------------ */
-/*  Répliques                                                          */
+/*  Lines                                                              */
 /* ------------------------------------------------------------------ */
 
 type Line = { message: string; emote: EmoteType | null };
@@ -127,7 +127,7 @@ export const SNORE_LINES: readonly string[] = [
   "Zzz... mmh...",
 ];
 
-/** Rares : il rêve tout haut. */
+/** Rare: he dreams out loud. */
 export const DREAM_LINES: readonly string[] = [
   "Zzz... no, the golden one is mine...",
   "Mmh... a pumpkin... the size of a house...",
@@ -143,16 +143,12 @@ export const WAKE_LINES: readonly Line[] = [
   { message: "Wha-? Oh, it's you. Hi!", emote: EmoteType.Questioning },
 ];
 
-/** Après une très longue absence, le réveil le dit. */
+/** After a very long absence, the wake-up says so. */
 export const LONG_WAKE_LINES: readonly Line[] = [
   { message: "You were gone forever! I may have napped. A little.", emote: EmoteType.Laughing },
   { message: "Oh! You're back! I kept the garden safe. Mostly by sleeping.", emote: EmoteType.Laughing },
   { message: "Huh? What time is it? Welcome back!", emote: EmoteType.Questioning },
 ];
-
-function pickOne<T>(options: readonly T[], random: () => number): T {
-  return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
-}
 
 const say = (line: Line, approach: boolean): AfkEffect => ({
   kind: "say",
@@ -170,12 +166,12 @@ export function initialAfkState(now: number): AfkState {
 }
 
 /**
- * Délai jusqu'au prochain ronflement, selon le temps déjà passé à dormir.
+ * The time until the next snore, depending on how long he has slept.
  *
- * Au-delà de `SNORE_SLOW_AFTER_MS`, le joueur est parti pour de bon : une bulle
- * par minute sur une heure d'absence ne serait que du bruit.
+ * Past `SNORE_SLOW_AFTER_MS` the player is gone for good: a bubble a minute
+ * over an hour away would only be noise.
  */
-export function snoreDelay(asleepForMs: number, random: () => number): number {
+export function snoreDelay(asleepForMs: number, random: Random): number {
   const slow = asleepForMs >= SNORE_SLOW_AFTER_MS;
   const min = slow ? SNORE_SLOW_MIN_MS : SNORE_MIN_MS;
   const max = slow ? SNORE_SLOW_MAX_MS : SNORE_MAX_MS;
@@ -183,32 +179,31 @@ export function snoreDelay(asleepForMs: number, random: () => number): number {
   return Math.round(min + (max - min) * r);
 }
 
-/** Un ronflement, rarement un rêve, jamais deux fois le même d'affilée. */
-export function snoreLine(last: string | null, random: () => number): string {
+/** A snore, rarely a dream, never the same twice in a row. */
+export function snoreLine(last: string | null, random: Random): string {
   const pool = random() < DREAM_CHANCE ? DREAM_LINES : SNORE_LINES;
   const options = pool.filter((line) => line !== last);
   return pickOne(options.length > 0 ? options : pool, random);
 }
 
-/** Retour en `active` sans un mot. Relâche l'attention s'il dormait. */
+/** Back to `active` without a word. Releases the attention if he was asleep. */
 function wakeSilently(state: AfkState, now: number): AfkStep {
   const effects: AfkEffect[] = state.phase === "asleep" ? [{ kind: "release" }] : [];
   return { state: initialAfkState(now), effects };
 }
 
 /**
- * Un pas d'horloge.
+ * One clock step.
  *
- * Occupé par autre chose : éveillé, on attend simplement, l'horloge d'absence
- * continue de tourner et la phase suivante viendra quand il sera libre ;
- * endormi, il se réveille sans rien dire, puisqu'il a mieux à faire.
+ * Busy with something else: awake, he simply waits, the absence clock keeps
+ * running and the next phase comes once he is free; asleep, he wakes without
+ * a word, since he has better to do.
  *
- * Onglet caché : les phases avancent quand même (le joueur est bel et bien
- * absent), mais rien n'est dit. La question d'`idle` est alors perdue, et le
- * retour sur l'onglet compte comme un signe de vie : c'est là que se joue le
- * réveil, sous les yeux du joueur.
+ * Tab hidden: the phases still move (the player really is away), but nothing
+ * is said. The `idle` question is then lost, and coming back to the tab counts
+ * as a sign of life: that is where the wake-up happens, in front of the player.
  */
-export function afkTick(state: AfkState, input: AfkTickInput, random: () => number): AfkStep {
+export function afkTick(state: AfkState, input: AfkTickInput, random: Random): AfkStep {
   const { now, busy, hidden } = input;
 
   if (state.phase === "asleep") {
@@ -241,21 +236,21 @@ export function afkTick(state: AfkState, input: AfkTickInput, random: () => numb
     nextSnoreAt: now + snoreDelay(0, random),
     lastSnore: null,
   };
-  // Il vient d'abord s'installer auprès du joueur, puis on le retient là.
+  // He first comes to settle by the player, then is held there.
   const effects: AfkEffect[] = hidden ? [] : [say(pickOne(FALL_ASLEEP_LINES, random), true)];
   effects.push({ kind: "hold" });
   return { state: next, effects };
 }
 
 /**
- * Le joueur a donné signe de vie : il a bougé, cliqué, tapé, ou il revient sur
- * l'onglet.
+ * The player gave a sign of life: moved, clicked, typed, or came back to the
+ * tab.
  *
- * Endormi depuis au moins `WAKE_LINE_MIN_ASLEEP_MS`, il sursaute ; moins que ça,
- * il se réveille en silence. En `idle`, un petit mot de temps en temps, et
- * seulement s'il avait vraiment posé sa question.
+ * Asleep for at least `WAKE_LINE_MIN_ASLEEP_MS`, he jumps up; for less, he
+ * wakes silently. While `idle`, a short word now and then, and only if he had
+ * really asked his question.
  */
-export function afkActivity(state: AfkState, input: AfkActivityInput, random: () => number): AfkStep {
+export function afkActivity(state: AfkState, input: AfkActivityInput, random: Random): AfkStep {
   const { now, busy } = input;
 
   if (state.phase === "active") {
@@ -269,8 +264,8 @@ export function afkActivity(state: AfkState, input: AfkActivityInput, random: ()
   }
 
   // asleep
-  // La réplique d'abord, l'attention ensuite : il sursaute là où il dormait,
-  // à côté du joueur, avant de retourner à ses occupations.
+  // The line first, the attention after: he jumps up where he slept, next to
+  // the player, before going back to what he was doing.
   const asleepFor = now - state.phaseSince;
   const effects: AfkEffect[] = [];
   if (!busy && asleepFor >= WAKE_LINE_MIN_ASLEEP_MS) {
@@ -282,8 +277,8 @@ export function afkActivity(state: AfkState, input: AfkActivityInput, random: ()
 }
 
 /**
- * Remise à zéro sans un mot : companion rangé, réglage coupé, veille arrêtée,
- * ou réveil demandé de l'extérieur.
+ * A reset without a word: companion put away, setting switched off, watch
+ * stopped, or a wake-up asked from outside.
  */
 export function afkReset(state: AfkState, now: number): AfkStep {
   return wakeSilently(state, now);

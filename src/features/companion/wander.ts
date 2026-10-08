@@ -1,67 +1,66 @@
-// src/services/companion/wanderInterest.ts
-// Ce qui mérite qu'il aille y jeter un œil quand il flâne.
+// What deserves a look when he wanders.
 //
-// Module PUR : ni store, ni catalogue, ni horloge. Les noms affichés, les
-// mutations rares et la position des tuiles sont fournis par l'appelant
-// (`wanderWatch.ts`), le hasard est injecté. Tout se vérifie hors navigateur
-// (scripts/checkCompanionWander.ts).
+// Pure: no store, no catalog, no clock. Display names, rare mutations and tile
+// positions come from the caller (`wanderWatch.ts`) and chance is passed in.
+// Everything is checked outside the browser (scripts/checkCompanionWander.ts).
 //
-// Le principe : une flânerie sur deux environ, s'il y a quelque chose
-// d'intéressant à portée, il va se poster à côté plutôt que sur une case tirée
-// au hasard. Une fois arrivé il pose, et ne dit quelque chose que de loin en
-// loin : un companion qui commente chaque crop devient vite du bruit.
+// The idea: about one wander in two, if something interesting is in reach, he
+// goes to stand next to it rather than on a random tile. Once there he poses,
+// and only says something now and then: a companion commenting on every crop
+// soon becomes noise.
 
+import { pickOne, type Random } from "../../lib/random";
 import { EmoteType } from "./emoteTypes";
 import type { WanderArea, XY } from "./movement";
 
 export type InterestKind = "rare" | "ripe" | "almostRipe" | "eggReady" | "eggSoon";
 
 export type WanderInterest = {
-  /** Case marchable où il se poste, à côté de l'objet. */
+  /** The walkable tile he stands on, next to the object. */
   tile: XY;
-  /** L'objet lui-même : un crop, un œuf. */
+  /** The object itself: a crop, an egg. */
   target: XY;
-  /** Sa clé dans `tileObjects`, pour vérifier à l'arrivée qu'il est toujours là. */
+  /** Its key in `tileObjects`, to check on arrival that it is still there. */
   dirtTileIdx: number;
   kind: InterestKind;
-  /** Ce qu'il regarde, déjà en clair : « Gold Carrot », « Common Egg ». */
+  /** What he looks at, already readable: "Gold Carrot", "Common Egg". */
   label: string;
   emote: EmoteType;
-  /** Ce qu'il en dirait. Rarement dit : c'est `shouldComment` qui tranche. */
+  /** What he would say about it. Rarely said: `shouldComment` decides. */
   line: string;
 };
 
 export type WanderInterestInput = {
-  /** `garden.tileObjects` du jeu, indexé par case de terre. */
+  /** The game's `garden.tileObjects`, keyed by dirt tile. */
   tileObjects: unknown;
-  /** Position sur la carte d'une case de terre (clé de `tileObjects`). */
+  /** A dirt tile's position on the map (a `tileObjects` key). */
   tileXY: (dirtTileIdx: number) => XY | null;
   now: number;
   area: WanderArea;
-  random: () => number;
-  /** Mutations tirées au hasard (celles qui ont une `baseChance`). */
+  random: Random;
+  /** Mutations rolled at random (those with a `baseChance`). */
   rareMutations: ReadonlySet<string>;
   cropName: (species: string) => string;
   mutationName: (mutation: string) => string;
   eggName: (eggId: string) => string;
-  /** Part des flâneries qui vont vers un centre d'intérêt. Défaut : `INTEREST_CHANCE`. */
+  /** The share of wanders that head for an interest. Default: `INTEREST_CHANCE`. */
   chance?: number;
 };
 
-/** Une flânerie sur deux environ a un but, quand il y en a un. */
+/** About one wander in two has a purpose, when there is one. */
 export const INTEREST_CHANCE = 0.5;
 
-/** En deçà, un crop ou un œuf est « presque prêt ». */
+/** Below this, a crop or an egg is "almost ready". */
 export const ALMOST_READY_MS = 2 * 60_000;
 
-/** Au-delà de cette part de pousse, un crop long est lui aussi presque prêt. */
+/** Past this share of growth, a long crop is almost ready too. */
 const ALMOST_READY_GROWTH = 0.9;
 
 /**
- * Poids de chaque sorte dans le tirage.
+ * Each kind's weight in the draw.
  *
- * On tire d'abord la sorte, puis l'objet : sans ça, un jardin plein de crops
- * mûrs noierait le seul Gold sous vingt carottes ordinaires.
+ * The kind is drawn first, then the object: otherwise a garden full of ripe
+ * crops would drown the one Gold under twenty plain carrots.
  */
 const KIND_WEIGHT: Record<InterestKind, number> = {
   rare: 5,
@@ -71,7 +70,7 @@ const KIND_WEIGHT: Record<InterestKind, number> = {
   eggSoon: 2,
 };
 
-/** Pose jouée à l'arrivée. */
+/** The pose played on arrival. */
 export const KIND_EMOTE: Record<InterestKind, EmoteType> = {
   rare: EmoteType.Love,
   ripe: EmoteType.Clapping,
@@ -80,7 +79,7 @@ export const KIND_EMOTE: Record<InterestKind, EmoteType> = {
   eggSoon: EmoteType.Questioning,
 };
 
-/** Ordre de préférence quand une même plante coche plusieurs cases. */
+/** Preference order when one plant ticks several boxes. */
 const KIND_RANK: Record<InterestKind, number> = {
   rare: 4,
   eggReady: 3,
@@ -89,18 +88,14 @@ const KIND_RANK: Record<InterestKind, number> = {
   eggSoon: 0,
 };
 
-function pickOne<T>(options: readonly T[], random: () => number): T {
-  return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
-}
-
-/** Les horodatages du jeu arrivent en secondes ou en millisecondes selon le champ. */
+/** The game's timestamps come in seconds or milliseconds depending on the field. */
 function normalizeTs(value: unknown): number | null {
   const raw = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(raw) || raw <= 0) return null;
   return raw < 100_000_000_000 ? raw * 1000 : raw;
 }
 
-/** « a Gold Carrot », « an Amber Apple » : les noms viennent du catalogue. */
+/** "a Gold Carrot", "an Amber Apple": the names come from the catalog. */
 const withArticle = (label: string) => `${/^[aeiou]/i.test(label) ? "an" : "a"} ${label}`;
 
 const LINES: Record<InterestKind, ReadonlyArray<(label: string) => string>> = {
@@ -110,43 +105,23 @@ const LINES: Record<InterestKind, ReadonlyArray<(label: string) => string>> = {
     (l) => `${withArticle(l).replace(/^a/, "A")}. Pretty, isn't it?`,
     (l) => `I could stare at this ${l} all day.`,
   ],
-  ripe: [
-    (l) => `This ${l} looks ready.`,
-    (l) => `Mm, this ${l} is ripe.`,
-    () => `This one's ready to pick.`,
-  ],
-  almostRipe: [
-    () => `This one's almost ready.`,
-    (l) => `Just a little longer, ${l}.`,
-    (l) => `Almost there, little ${l}.`,
-  ],
-  eggReady: [
-    () => `This egg is ready to hatch!`,
-    (l) => `Something's wiggling in this ${l}.`,
-    () => `I think this one wants out.`,
-  ],
-  eggSoon: [
-    (l) => `This ${l} is about to hatch.`,
-    () => `Any minute now...`,
-    () => `I can hear something in there.`,
-  ],
+  ripe: [(l) => `This ${l} looks ready.`, (l) => `Mm, this ${l} is ripe.`, () => `This one's ready to pick.`],
+  almostRipe: [() => `This one's almost ready.`, (l) => `Just a little longer, ${l}.`, (l) => `Almost there, little ${l}.`],
+  eggReady: [() => `This egg is ready to hatch!`, (l) => `Something's wiggling in this ${l}.`, () => `I think this one wants out.`],
+  eggSoon: [(l) => `This ${l} is about to hatch.`, () => `Any minute now...`, () => `I can hear something in there.`],
 };
 
-export function interestLine(kind: InterestKind, label: string, random: () => number): string {
+export function interestLine(kind: InterestKind, label: string, random: Random): string {
   return pickOne(LINES[kind], random)(label);
 }
 
 type Found = { dirtIdx: number; kind: InterestKind; label: string };
 
-/** Ce qu'il faut pour repérer les centres d'intérêt, sans le hasard du choix. */
-export type InterestSource = Omit<WanderInterestInput, "chance" | "random">;
+/** What it takes to find the interests, without the chance of the pick. */
+type InterestSource = Omit<WanderInterestInput, "chance" | "random">;
 
-/** Ce qu'une plante a de plus intéressant, ou `null`. */
-function plantInterest(
-  plant: Record<string, unknown>,
-  dirtIdx: number,
-  input: InterestSource
-): Found | null {
+/** The most interesting thing about a plant, or `null`. */
+function plantInterest(plant: Record<string, unknown>, dirtIdx: number, input: InterestSource): Found | null {
   const slots = Array.isArray(plant.slots) ? plant.slots : [];
   let best: Found | null = null;
   const consider = (found: Found) => {
@@ -165,17 +140,15 @@ function plantInterest(
     if (!speciesId) continue;
     const crop = input.cropName(speciesId);
 
-    const mutations = Array.isArray(slot.mutations)
-      ? slot.mutations.filter((m): m is string => typeof m === "string")
-      : [];
+    const mutations = Array.isArray(slot.mutations) ? slot.mutations.filter((m): m is string => typeof m === "string") : [];
     const rare = mutations.find((m) => input.rareMutations.has(m));
     if (rare) {
       consider({ dirtIdx, kind: "rare", label: `${input.mutationName(rare)} ${crop}` });
       continue;
     }
 
-    // Un crop préservé est mûr pour toujours : le joueur l'a figé exprès, il
-    // n'y a rien à y remarquer (cf. `ripeCropCount`).
+    // A preserved crop is ripe forever: the player froze it on purpose, there
+    // is nothing to notice (see `ripeCropCount`).
     if (slot.preserved === true) continue;
     const end = normalizeTs(slot.endTime);
     if (end === null) continue;
@@ -202,7 +175,7 @@ function eggInterest(egg: Record<string, unknown>, dirtIdx: number, input: Inter
   return null;
 }
 
-/** Cases voisines (orthogonales d'abord) où il peut se poster, dans l'ordre. */
+/** Neighbouring tiles (orthogonal first) where he can stand, in order. */
 const NEIGHBOURS: ReadonlyArray<[number, number]> = [
   [0, 1],
   [1, 0],
@@ -215,9 +188,9 @@ const NEIGHBOURS: ReadonlyArray<[number, number]> = [
 ];
 
 /**
- * Cases où se poster pour regarder un objet : les voisines que la flânerie
- * accepte, orthogonales de préférence. Il ne se plante jamais SUR le crop, ça
- * le cacherait.
+ * The tiles to stand on to look at an object: the neighbours the wandering
+ * accepts, orthogonal ones by preference. He never stands ON the crop, it
+ * would hide it.
  */
 function standingTiles(target: XY, area: WanderArea): XY[] {
   const orthogonal: XY[] = [];
@@ -231,21 +204,21 @@ function standingTiles(target: XY, area: WanderArea): XY[] {
   return orthogonal.length > 0 ? orthogonal : diagonal;
 }
 
-/** Un centre d'intérêt avant le choix de la case et de la réplique. */
-export type InterestCandidate = {
+/** An interest before the tile and the line are picked. */
+type InterestCandidate = {
   target: XY;
   dirtTileIdx: number;
   kind: InterestKind;
   label: string;
-  /** Cases d'où le regarder, jamais vide. */
+  /** The tiles to look at it from, never empty. */
   spots: XY[];
 };
 
 /**
- * Tout ce qui, dans le jardin, vaut une visite et se trouve à portée.
+ * Everything in the garden worth a visit and in reach.
  *
- * « À portée » : il existe une case voisine de l'objet que la flânerie
- * accepte. L'objet lui-même peut déborder d'une case de la zone.
+ * "In reach": a tile next to the object that the wandering accepts. The
+ * object itself may sit one tile outside the area.
  */
 export function listInterests(input: InterestSource): InterestCandidate[] {
   const tiles = input.tileObjects;
@@ -269,8 +242,8 @@ export function listInterests(input: InterestSource): InterestCandidate[] {
 
     const target = input.tileXY(dirtIdx);
     if (!target) continue;
-    // Tri grossier avant de chercher une case : hors du rayon + 1, aucune
-    // voisine ne peut être acceptée.
+    // A rough cut before looking for a tile: past the radius plus one, no
+    // neighbour can be accepted.
     if (Math.max(Math.abs(target.x - area.center.x), Math.abs(target.y - area.center.y)) > area.radius + 1) continue;
 
     const spots = standingTiles(target, area);
@@ -281,10 +254,9 @@ export function listInterests(input: InterestSource): InterestCandidate[] {
 }
 
 /**
- * Le centre d'intérêt de cette flânerie, ou `null` pour une balade au hasard.
+ * This wander's interest, or `null` for a random stroll.
  *
- * Le tirage de `chance` passe en premier : la moitié des flâneries ne lisent
- * même pas le jardin.
+ * The `chance` draw comes first: half the wanders do not even read the garden.
  */
 export function pickWanderInterest(input: WanderInterestInput): WanderInterest | null {
   const chance = input.chance ?? INTEREST_CHANCE;
@@ -306,7 +278,7 @@ export function pickWanderInterest(input: WanderInterestInput): WanderInterest |
   }
   const chosen = pickOne(
     all.filter((i) => i.kind === kind),
-    input.random
+    input.random,
   );
   return {
     tile: { ...pickOne(chosen.spots, input.random) },
@@ -320,32 +292,32 @@ export function pickWanderInterest(input: WanderInterestInput): WanderInterest |
 }
 
 /* ------------------------------------------------------------------ */
-/*  Parler, ou se contenter de poser                                   */
+/*  Speaking, or just posing                                           */
 /* ------------------------------------------------------------------ */
 
-/** Une arrivée sur quatre environ s'accompagne d'une réplique. */
+/** About one arrival in four comes with a line. */
 const COMMENT_CHANCE = 0.25;
-/** Au plus une réplique de flânerie toutes les trois minutes. */
+/** At most one wander line every three minutes. */
 export const COMMENT_COOLDOWN_MS = 3 * 60_000;
-/** Au-delà, la bulle s'afficherait hors de l'écran du joueur. */
+/** Past this, the bubble would be off the player's screen. */
 export const COMMENT_MAX_DISTANCE = 8;
 
-export type CommentInput = {
+type CommentInput = {
   now: number;
-  /** Dernière réplique de flânerie. `0` : jamais. */
+  /** The last wander line. `0`: never. */
   lastCommentAt: number;
-  /** Distance au joueur en tuiles, `null` si inconnue. */
+  /** Tiles to the player, `null` when unknown. */
   distanceToPlayer: number | null;
-  /** Une tâche, une question, une série d'actions en cours. */
+  /** A task, a question, a batch in progress. */
   busy: boolean;
-  random: () => number;
+  random: Random;
 };
 
 /**
- * Dit-il quelque chose en arrivant ?
+ * Does he say something on arrival?
  *
- * Le tirage passe en dernier : on ne consomme pas de hasard pour une réplique
- * que les autres conditions interdisent déjà.
+ * The draw comes last: no chance is spent on a line the other conditions
+ * already rule out.
  */
 export function shouldComment(input: CommentInput): boolean {
   if (input.busy) return false;

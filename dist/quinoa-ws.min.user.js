@@ -2922,11 +2922,11 @@
   }
   function makeView(sourceLabel, opts = {}) {
     const { path } = opts;
-    const pick2 = (src) => path ? getAtPath(src, path) : src;
+    const pick = (src) => path ? getAtPath(src, path) : src;
     const listen = (subscribe) => async (cb, isEqual = Object.is) => {
       let prev;
       return subscribe(sourceLabel, (src) => {
-        const v = pick2(src);
+        const v = pick(src);
         if (typeof prev === "undefined" || !isEqual(prev, v)) {
           const p = prev;
           prev = v;
@@ -2937,7 +2937,7 @@
     return {
       label: sourceLabel + (path ? ":" + toPathArray(path).join(".") : ""),
       async get() {
-        return pick2(await Store.select(sourceLabel));
+        return pick(await Store.select(sourceLabel));
       },
       async set(next) {
         const prev = await Store.select(sourceLabel);
@@ -2952,7 +2952,7 @@
   }
   function makeAliasedAtom(labels) {
     let resolved = null;
-    async function pick2() {
+    async function pick() {
       if (resolved) return resolved;
       for (const label2 of labels) {
         if (await Store.hasAtom(label2)) {
@@ -2964,10 +2964,10 @@
     }
     return {
       label: labels[0],
-      get: async () => (await pick2()).get(),
-      set: async (next) => (await pick2()).set(next),
-      onChange: async (cb, isEqual) => (await pick2()).onChange(cb, isEqual),
-      onChangeNow: async (cb, isEqual) => (await pick2()).onChangeNow(cb, isEqual)
+      get: async () => (await pick()).get(),
+      set: async (next) => (await pick()).set(next),
+      onChange: async (cb, isEqual) => (await pick()).onChange(cb, isEqual),
+      onChangeNow: async (cb, isEqual) => (await pick()).onChangeNow(cb, isEqual)
     };
   }
   async function readAndFollow(view, cb) {
@@ -20986,16 +20986,16 @@
       candidates.add("Chilled");
     }
     if (!candidates.size) return null;
-    let pick2 = null;
+    let pick = null;
     let best = -Infinity;
     for (const cand of candidates) {
       const mult = mutationMultiplier(cand) ?? 1;
       if (mult > best) {
         best = mult;
-        pick2 = cand;
+        pick = cand;
       }
     }
-    return pick2;
+    return pick;
   }
   function pickTime(mutations) {
     if (!Array.isArray(mutations)) return null;
@@ -21005,16 +21005,16 @@
       if (isTime(m)) candidates.add(m);
     }
     if (!candidates.size) return null;
-    let pick2 = null;
+    let pick = null;
     let best = -Infinity;
     for (const cand of candidates) {
       const mult = mutationMultiplier(cand) ?? 1;
       if (mult > best) {
         best = mult;
-        pick2 = cand;
+        pick = cand;
       }
     }
-    return pick2;
+    return pick;
   }
   function combineWeatherMultipliers(multipliers) {
     if (!multipliers.length) return 1;
@@ -48013,7 +48013,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/companion/map.ts
+  // src/features/companion/mapView.ts
   function toSet(source) {
     if (!source) return /* @__PURE__ */ new Set();
     if (source instanceof Set) return source;
@@ -48083,6 +48083,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
   }
+  var init_mapView = __esm({
+    "src/features/companion/mapView.ts"() {
+      "use strict";
+      init_buildings();
+    }
+  });
+
+  // src/features/companion/map.ts
   async function readCompanionMap() {
     try {
       return buildCompanionMap(await mapAtom.get());
@@ -48103,7 +48111,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/companion/map.ts"() {
       "use strict";
       init_hub();
-      init_buildings();
+      init_mapView();
       mapAtom = makeAtom("mapAtom");
     }
   });
@@ -54656,10 +54664,10 @@ Restore figures are averages; unlucky streaks do worse.`;
         maxDelta: 0,
         snapCount: 0,
         snapRatio: 0,
-        verdict: "Impossible de s'abonner \xE0 npcQuinoaUsersAtom."
+        verdict: "Could not subscribe to npcQuinoaUsersAtom."
       };
     }
-    await new Promise((resolve) => setTimeout(resolve, sampleMs));
+    await sleep2(sampleMs);
     try {
       unsub?.();
     } catch {
@@ -54688,64 +54696,23 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function buildVerdict(observations, snapCount, maxDelta) {
     if (observations < 2) {
-      return "Aucune position observ\xE9e : le companion ne bouge pas, ou l'atom n'est pas relu. V\xE9rifie qu'il marche pendant la mesure.";
+      return "No position seen: the companion is not moving, or the atom is not read again. Make sure he walks during the sample.";
     }
     if (snapCount === 0) {
-      return "Le jeu ne voit que des pas d'une tuile. La cadence n'est pas en cause : le snap vient d'ailleurs (forceSnap).";
+      return "The game only sees one-tile steps. The rate is not the cause: the snap comes from elsewhere (forceSnap).";
     }
-    return `Le jeu observe des sauts jusqu'\xE0 ${maxDelta} tuiles : la cadence de recalcul est plus lente que notre pas. C'est la cause du snap.`;
+    return `The game sees jumps of up to ${maxDelta} tiles: the recompute rate is slower than our step. That is the cause of the snap.`;
   }
   var DEFAULT_SAMPLE_MS, npcQuinoaUsers;
   var init_diagnostics = __esm({
     "src/features/companion/diagnostics.ts"() {
       "use strict";
+      init_async2();
       init_hub();
       DEFAULT_SAMPLE_MS = 6e3;
       npcQuinoaUsers = makeAtom(
         "npcQuinoaUsersAtom"
       );
-    }
-  });
-
-  // src/features/companion/tick.ts
-  function createTickAtom() {
-    const atom = {};
-    atom.init = 0;
-    atom.read = (get) => get(atom);
-    atom.write = (get, set2, update) => set2(atom, typeof update === "function" ? update(get(atom)) : update);
-    atom.debugLabel = COMPANION_TICK_LABEL;
-    atom.toString = () => COMPANION_TICK_LABEL;
-    return atom;
-  }
-  function ensureTickAtom() {
-    if (tickAtom) return tickAtom;
-    const cache2 = pageWindow.jotaiAtomCache;
-    if (!cache2 || typeof cache2.get !== "function") return null;
-    tickAtom = cache2.get(CACHE_KEY, createTickAtom());
-    return tickAtom;
-  }
-  function isTickAvailable() {
-    return ensureTickAtom() !== null;
-  }
-  async function bumpTick() {
-    const atom = ensureTickAtom();
-    if (!atom) return;
-    counter++;
-    try {
-      await jSet(atom, counter);
-    } catch {
-    }
-  }
-  var COMPANION_TICK_LABEL, CACHE_KEY, tickAtom, counter;
-  var init_tick = __esm({
-    "src/features/companion/tick.ts"() {
-      "use strict";
-      init_pageContext();
-      init_jotai();
-      COMPANION_TICK_LABEL = "ariesCompanionTickAtom";
-      CACHE_KEY = `aries/companion/${COMPANION_TICK_LABEL}`;
-      tickAtom = null;
-      counter = 0;
     }
   });
 
@@ -54798,6 +54765,48 @@ Restore figures are averages; unlucky streaks do worse.`;
       ENTRY_LEAD_MS = 6e4;
       NPC_TALKING_MS = 3e3;
       TALKING_MARGIN_MS = 150;
+    }
+  });
+
+  // src/features/companion/tick.ts
+  function createTickAtom() {
+    const atom = {};
+    atom.init = 0;
+    atom.read = (get) => get(atom);
+    atom.write = (get, set2, update) => set2(atom, typeof update === "function" ? update(get(atom)) : update);
+    atom.debugLabel = COMPANION_TICK_LABEL;
+    atom.toString = () => COMPANION_TICK_LABEL;
+    return atom;
+  }
+  function ensureTickAtom() {
+    if (tickAtom) return tickAtom;
+    const cache2 = pageWindow.jotaiAtomCache;
+    if (!cache2 || typeof cache2.get !== "function") return null;
+    tickAtom = cache2.get(CACHE_KEY, createTickAtom());
+    return tickAtom;
+  }
+  function isTickAvailable() {
+    return ensureTickAtom() !== null;
+  }
+  async function bumpTick() {
+    const atom = ensureTickAtom();
+    if (!atom) return;
+    counter++;
+    try {
+      await jSet(atom, counter);
+    } catch {
+    }
+  }
+  var COMPANION_TICK_LABEL, CACHE_KEY, tickAtom, counter;
+  var init_tick = __esm({
+    "src/features/companion/tick.ts"() {
+      "use strict";
+      init_pageContext();
+      init_jotai();
+      COMPANION_TICK_LABEL = "ariesCompanionTickAtom";
+      CACHE_KEY = `aries/companion/${COMPANION_TICK_LABEL}`;
+      tickAtom = null;
+      counter = 0;
     }
   });
 
@@ -54858,7 +54867,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (releaseTimer !== null && posing === playerId2) {
       cancelPending();
       await rest();
-      await new Promise((resolve) => setTimeout(resolve, 60));
+      await sleep2(60);
     }
     cancelPending();
     posing = playerId2;
@@ -54894,15 +54903,16 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_emote = __esm({
     "src/features/companion/emote.ts"() {
       "use strict";
+      init_async2();
       init_fakeAtoms();
-      init_tick();
       init_tileCapture();
       init_emoteTypes();
+      init_tick();
       EMOTE_SOURCE_LABEL = "emoteSourceAtom";
       EMOTE_PATCH = {
         label: EMOTE_SOURCE_LABEL,
-        // Sans elle, le recalcul n'aurait lieu qu'au prochain changement de l'état
-        // de room : la pose partirait en retard, et le retour au repos aussi.
+        // Without it the recompute would only happen on the next room state change:
+        // the pose would start late, and so would the return to rest.
         extraDeps: [COMPANION_TICK_LABEL],
         merge: (real, fake) => mergeEmoteSource(real, fake)
       };
@@ -54989,8 +54999,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       quinoaData = makeAtom(QUINOA_DATA_LABEL);
       COMPANION_PATCH = {
         label: QUINOA_DATA_LABEL,
-        // Dépendance artificielle : sans elle, le recalcul ne suit que l'état de room
-        // (~420 ms mesuré), trop lent pour les 130 ms d'interpolation d'un pas.
+        // An artificial dependency: without it the recompute only follows the room
+        // state (about 420 ms measured), too slow for a step's 130 ms interpolation.
         extraDeps: [COMPANION_TICK_LABEL],
         merge: (real, fake) => {
           const base = real && typeof real === "object" ? real : {};
@@ -55052,6 +55062,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/lib/random.ts
+  function pickOne(options, random = Math.random) {
+    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
+  }
+  var init_random = __esm({
+    "src/lib/random.ts"() {
+      "use strict";
+    }
+  });
+
   // src/features/companion/dialogue.ts
   function nextBubbleTimestamp(last, proposed) {
     if (!Number.isFinite(proposed) || last === null || !Number.isFinite(last)) return proposed;
@@ -55071,7 +55091,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       (candidate) => candidate?.message && nowMs >= (state3.mutedUntil[candidate.key] ?? 0)
     );
     if (available.length > 0 && (lines.length === 0 || random() < CONTEXTUAL_CHANCE)) {
-      const candidate = available[Math.min(available.length - 1, Math.floor(random() * available.length))];
+      const candidate = pickOne(available, random);
       state3.mutedUntil[candidate.key] = nowMs + cooldownMs;
       return { message: candidate.message, emote: candidate.emote ?? null, custom: false, state: state3 };
     }
@@ -55080,7 +55100,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       state3.lastCustomIndex = 0;
       return { message: lines[0], emote: null, custom: true, state: state3 };
     }
-    let index = Math.min(lines.length - 1, Math.floor(random() * lines.length));
+    let index = pickOne([...lines.keys()], random);
     if (index === state3.lastCustomIndex) index = (index + 1) % lines.length;
     state3.lastCustomIndex = index;
     return { message: lines[index], emote: null, custom: true, state: state3 };
@@ -55089,6 +55109,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_dialogue = __esm({
     "src/features/companion/dialogue.ts"() {
       "use strict";
+      init_random();
       CONTEXTUAL_CHANCE = 0.25;
       DEFAULT_CONTEXTUAL_COOLDOWN_MS = 12e4;
     }
@@ -55246,9 +55267,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         if (isWalkable(x, y)) candidates.push({ x, y });
       }
     }
-    if (candidates.length === 0) return null;
-    const index = Math.min(candidates.length - 1, Math.floor(random() * candidates.length));
-    return candidates[index];
+    return candidates.length === 0 ? null : pickOne(candidates, random);
   }
   function stepMovement(input) {
     const { anchor, isWalkable, random, config } = input;
@@ -55352,12 +55371,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_movement = __esm({
     "src/features/companion/movement.ts"() {
       "use strict";
+      init_random();
       init_pathfinding();
       STEP_INTERVAL_MS = 150;
       DEFAULT_MOVEMENT_CONFIG = {
         followDistance: 2,
-        // 15 s d'immobilité avant de flâner, puis 8 à 45 s d'arrêt entre deux
-        // balades, tirés à chaque fois.
+        // 15 s of stillness before wandering, then 8 to 45 s of pause between two
+        // strolls, drawn every time.
         idleTicksBeforeWander: Math.round(15e3 / STEP_INTERVAL_MS),
         wanderRadius: 3,
         wanderPauseTicks: Math.round(8e3 / STEP_INTERVAL_MS),
@@ -55388,16 +55408,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/companion/runtime.ts"() {
       "use strict";
       current = null;
-    }
-  });
-
-  // src/lib/random.ts
-  function pickOne(options, random = Math.random) {
-    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
-  }
-  var init_random = __esm({
-    "src/lib/random.ts"() {
-      "use strict";
     }
   });
 
@@ -55871,8 +55881,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!raw || typeof raw !== "object") return { ...DEFAULT_COMPANION_SETTINGS };
     return {
       enabled: raw.enabled === true,
-      // Les réglages de déplacement persistés par les versions précédentes sont
-      // simplement ignorés : ils sont devenus des constantes.
+      // Movement settings saved by earlier versions are simply ignored: they
+      // became constants.
       mode: COMPANION_MODES.includes(raw.mode) ? raw.mode : DEFAULT_COMPANION_SETTINGS.mode,
       npcId: typeof raw.npcId === "string" && raw.npcId ? raw.npcId : null,
       lines: storedLines(raw.lines),
@@ -55925,11 +55935,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   function loadCompanionSettings() {
     return coerceSettings(readAriesPath(STORAGE_PATH, void 0));
   }
-  function saveCompanionSettings(settings) {
-    writeAriesPath(STORAGE_PATH, settings);
-  }
   function patchCompanionSettings(patch) {
-    saveCompanionSettings({ ...loadCompanionSettings(), ...patch });
+    writeAriesPath(STORAGE_PATH, { ...loadCompanionSettings(), ...patch });
     return loadCompanionSettings();
   }
   function isUnreviewed(group2) {
@@ -56868,8 +56875,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/companion/chat/bubbleIcons.ts"() {
       "use strict";
       init_data();
-      init_bubbleTags();
       init_resolver();
+      init_bubbleTags();
       BUBBLE_ICON_PX = 28;
       PET_ICON_PX2 = 20;
     }
@@ -56896,7 +56903,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return candidates;
   }
   function isSettled(picks, stillFeedable) {
-    return !picks.some((pick2) => stillFeedable.has(pick2.petId));
+    return !picks.some((pick) => stillFeedable.has(pick.petId));
   }
   function describeFeed(candidates) {
     if (candidates.length === 0) return "nothing";
@@ -56910,16 +56917,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     const rest2 = names.length > 3 ? ` and ${names.length - 3} more` : "";
     return `${candidates.length} pets are hungry: ${head}${rest2}`;
   }
-  function petIcon(pick2) {
-    return petThing(pick2.pet, "") ?? petSpeciesIcon(pick2.petSpecies);
+  function petIcon(pick) {
+    return petThing(pick.pet, "") ?? petSpeciesIcon(pick.petSpecies);
   }
   function petIcons(picks) {
     const seen = /* @__PURE__ */ new Set();
     const icons = [];
-    for (const pick2 of picks) {
-      if (seen.has(pick2.petSpecies) || icons.length >= 2) continue;
-      seen.add(pick2.petSpecies);
-      const icon = petIcon(pick2);
+    for (const pick of picks) {
+      if (seen.has(pick.petSpecies) || icons.length >= 2) continue;
+      seen.add(pick.petSpecies);
+      const icon = petIcon(pick);
       if (icon) icons.push(icon);
     }
     return icons;
@@ -56930,10 +56937,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     return compose(...spaced(petIcons(picks)), ` ${picks.length} pets are hungry. Feed them all?`);
   }
   function feedQuestion(picks) {
-    const listed = picks.flatMap((pick2, index) => [
+    const listed = picks.flatMap((pick, index) => [
       index === 0 ? "" : ", ",
-      petIcon(pick2),
-      ` ${pick2.petName} (${pick2.hungerPct}%)`
+      petIcon(pick),
+      ` ${pick.petName} (${pick.hungerPct}%)`
     ]);
     return compose(
       picks.length === 1 ? "" : `${picks.length} pets are hungry: `,
@@ -57027,13 +57034,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       },
       async toPosition(position2) {
         if (!walking) return;
-        const x = Number(position2?.x);
-        const y = Number(position2?.y);
-        if (!Number.isFinite(x) || !Number.isFinite(y)) {
-          record(false);
-          return;
-        }
-        await goTo({ x: Math.round(x), y: Math.round(y) });
+        await goTo(roundTile(position2));
       },
       async toBuilding(name) {
         if (!walking) return false;
@@ -57060,6 +57061,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_companion();
       init_anchors();
+      init_feeds();
       init_map();
       GIVE_UP_AFTER = 2;
       IDLE = {
@@ -57199,14 +57201,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       items: picks,
       reporter: reporter2,
       hire: () => hireCrew(reporter2),
-      async step(pick2, walker, pace) {
-        const outcome = await feedOne(pick2, walker, pace);
+      async step(pick, walker, pace) {
+        const outcome = await feedOne(pick, walker, pace);
         if (outcome.ok) {
-          fed.push(pick2);
-          const fedLine = `${pick2.petName} has been fed.`;
-          reporter2.say("system", fedLine, compose(petIcon(pick2), " ", fedLine));
+          fed.push(pick);
+          const fedLine = `${pick.petName} has been fed.`;
+          reporter2.say("system", fedLine, compose(petIcon(pick), " ", fedLine));
         } else {
-          failures.push(`${pick2.petName} (${outcome.reason})`);
+          failures.push(`${pick.petName} (${outcome.reason})`);
         }
       }
     });
@@ -57216,7 +57218,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     const tail = failures.length > 0 ? ` I could not manage ${failures.join(", ")}.` : "";
-    const done = `${cancelled ? "Stopped there. " : ""}Fed ${listWords(fed.map((pick2) => pick2.petName))}.${tail}`;
+    const done = `${cancelled ? "Stopped there. " : ""}Fed ${listWords(fed.map((pick) => pick.petName))}.${tail}`;
     reporter2.say("report", done, compose(...spaced(petIcons(fed)), " ", done));
   }
   var init_feedRun = __esm({
@@ -57718,7 +57720,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           }
           const picks = await findFeedable().catch(() => []);
           if (pending3?.commandId === "feed") {
-            const withdrawn = CompanionChat.withdrawFeedIfSettled(new Set(picks.map((pick2) => pick2.petId)));
+            const withdrawn = CompanionChat.withdrawFeedIfSettled(new Set(picks.map((pick) => pick.petId)));
             if (withdrawn) lastOfferedSignature = "";
             else await announceIfNeeded(picks);
           }
@@ -58345,6 +58347,21 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/features/companion/catalogs.ts
+  function rolledMutations() {
+    try {
+      return Object.entries(mutationCatalog2).filter(([, def]) => Number(def?.baseChance) > 0).map(([name]) => name);
+    } catch {
+      return [];
+    }
+  }
+  var init_catalogs = __esm({
+    "src/features/companion/catalogs.ts"() {
+      "use strict";
+      init_data();
+    }
+  });
+
   // src/features/companion/chat/hatchRead.ts
   function normalizeTs(value) {
     const raw = typeof value === "number" ? value : Number(value);
@@ -58448,13 +58465,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       return 0;
     }
   }
-  function rolledMutations() {
-    try {
-      return Object.entries(mutationCatalog2).filter(([, def]) => Number(def?.baseChance) > 0).map(([name]) => name);
-    } catch {
-      return [];
-    }
-  }
   async function readHatchScope() {
     const [eggs, bag] = await Promise.all([scanEggs(), readPets()]);
     const { species, abilities } = whatCouldHatch(eggs.eggIds);
@@ -58480,6 +58490,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_data();
       init_petValue();
       init_pets();
+      init_catalogs();
       INVENTORY_CAPACITY = 98;
       EMPTY_HATCH_SCOPE = {
         readySlots: [],
@@ -60954,9 +60965,6 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/afk.ts
-  function pickOne2(options, random) {
-    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
-  }
   function initialAfkState(now2) {
     return { phase: "active", quietSince: now2, phaseSince: now2, asked: false, nextSnoreAt: null, lastSnore: null };
   }
@@ -60970,7 +60978,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function snoreLine(last, random) {
     const pool = random() < DREAM_CHANCE ? DREAM_LINES : SNORE_LINES;
     const options = pool.filter((line) => line !== last);
-    return pickOne2(options.length > 0 ? options : pool, random);
+    return pickOne(options.length > 0 ? options : pool, random);
   }
   function wakeSilently(state3, now2) {
     const effects = state3.phase === "asleep" ? [{ kind: "release" }] : [];
@@ -60994,7 +61002,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (state3.phase === "active") {
       if (now2 - state3.quietSince < AFK_IDLE_AFTER_MS) return { state: state3, effects: [] };
       const next2 = { ...state3, phase: "idle", phaseSince: now2, asked: !hidden };
-      return { state: next2, effects: hidden ? [] : [say2(pickOne2(IDLE_LINES, random), true)] };
+      return { state: next2, effects: hidden ? [] : [say2(pickOne(IDLE_LINES, random), true)] };
     }
     if (now2 - state3.phaseSince < AFK_ASLEEP_AFTER_MS) return { state: state3, effects: [] };
     const next = {
@@ -61004,7 +61012,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       nextSnoreAt: now2 + snoreDelay(0, random),
       lastSnore: null
     };
-    const effects = hidden ? [] : [say2(pickOne2(FALL_ASLEEP_LINES, random), true)];
+    const effects = hidden ? [] : [say2(pickOne(FALL_ASLEEP_LINES, random), true)];
     effects.push({ kind: "hold" });
     return { state: next, effects };
   }
@@ -61015,14 +61023,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     if (state3.phase === "idle") {
       const effects2 = [];
-      if (state3.asked && !busy && random() < RETURN_LINE_CHANCE) effects2.push(say2(pickOne2(RETURN_LINES, random), false));
+      if (state3.asked && !busy && random() < RETURN_LINE_CHANCE) effects2.push(say2(pickOne(RETURN_LINES, random), false));
       return { state: initialAfkState(now2), effects: effects2 };
     }
     const asleepFor = now2 - state3.phaseSince;
     const effects = [];
     if (!busy && asleepFor >= WAKE_LINE_MIN_ASLEEP_MS) {
       const pool = asleepFor >= SNORE_SLOW_AFTER_MS ? LONG_WAKE_LINES : WAKE_LINES;
-      effects.push(say2(pickOne2(pool, random), false));
+      effects.push(say2(pickOne(pool, random), false));
     }
     effects.push({ kind: "release" });
     return { state: initialAfkState(now2), effects };
@@ -61034,6 +61042,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_afk = __esm({
     "src/features/companion/afk.ts"() {
       "use strict";
+      init_random();
       init_emoteTypes();
       AFK_IDLE_AFTER_MS = 3 * 6e4;
       AFK_ASLEEP_AFTER_MS = 6 * 6e4;
@@ -61294,10 +61303,6 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!latest || latest.at <= state3.seenAt) return { state: state3, fresh: null };
     return { state: { ...state3, seenAt: latest.at }, fresh: latest };
   }
-  function pick(list, random) {
-    const i = Math.floor(random() * list.length);
-    return list[Math.min(list.length - 1, Math.max(0, i))];
-  }
   function mirrorEmoteFor(played, random) {
     switch (played) {
       case EmoteType.Crying:
@@ -61323,7 +61328,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       next = { ...next, streakSpamRolled: true };
       if (random() < SPAM_LINE_CHANCE) {
         next = { ...next, lastSpamLineAt: now2, lastLineAt: now2, lastMirrorAt: now2 };
-        return { state: next, action: { kind: "line", line: pick(SPAM_LINES, random), delayMs: mirrorDelay(random) } };
+        return { state: next, action: { kind: "line", line: pickOne(SPAM_LINES, random), delayMs: mirrorDelay(random) } };
       }
     }
     if (now2 - next.lastMirrorAt < MIRROR_COOLDOWN_MS) return { state: next, action: null };
@@ -61336,7 +61341,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     let line = null;
     if (now2 - next.lastLineAt >= LINE_COOLDOWN_MS && random() < LINE_CHANCE) {
       const lines = MIRROR_LINES[played.emote];
-      if (lines && lines.length) line = pick(lines, random);
+      if (lines && lines.length) line = pickOne(lines, random);
     }
     next = {
       ...next,
@@ -61350,6 +61355,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_emoteMirror = __esm({
     "src/features/companion/emoteMirror.ts"() {
       "use strict";
+      init_random();
       init_emoteTypes();
       MIRROR_MAX_DISTANCE = 8;
       MIRROR_COOLDOWN_MS = 6e3;
@@ -61363,9 +61369,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       SPAM_THRESHOLD = 6;
       SPAM_LINE_CHANCE = 0.3;
       SPAM_LINE_COOLDOWN_MS = 3e5;
-      PLAYABLE = new Set(
-        Object.values(EmoteType).filter((value) => value !== EmoteType.Idle)
-      );
+      PLAYABLE = new Set(Object.values(EmoteType).filter((value) => value !== EmoteType.Idle));
       MIRROR_LINES = {
         [EmoteType.Clapping]: ["Bravo!", "Woo!", "Nice one!"],
         [EmoteType.Laughing]: ["Haha!", "Hehe.", "Too funny."],
@@ -61464,21 +61468,6 @@ Restore figures are averages; unlucky streaks do worse.`;
         );
         scope.add(cancelPending2);
       });
-    }
-  });
-
-  // src/features/companion/catalogs.ts
-  function rolledMutations2() {
-    try {
-      return Object.entries(mutationCatalog2).filter(([, def]) => Number(def?.baseChance) > 0).map(([name]) => name);
-    } catch {
-      return [];
-    }
-  }
-  var init_catalogs = __esm({
-    "src/features/companion/catalogs.ts"() {
-      "use strict";
-      init_data();
     }
   });
 
@@ -62162,7 +62151,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           const prev = prevGarden;
           prevGarden = next;
           if (!prev) return;
-          const crops = newRareCrops(prev, next, new Set(rolledMutations2())).map((c) => ({
+          const crops = newRareCrops(prev, next, new Set(rolledMutations())).map((c) => ({
             ...c,
             species: cropName(c.species)
           }));
@@ -62262,16 +62251,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/wander.ts
-  function pickOne3(options, random) {
-    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
-  }
   function normalizeTs2(value) {
     const raw = typeof value === "number" ? value : Number(value);
     if (!Number.isFinite(raw) || raw <= 0) return null;
     return raw < 1e11 ? raw * 1e3 : raw;
   }
   function interestLine(kind, label2, random) {
-    return pickOne3(LINES[kind], random)(label2);
+    return pickOne(LINES[kind], random)(label2);
   }
   function plantInterest(plant, dirtIdx, input) {
     const slots = Array.isArray(plant.slots) ? plant.slots : [];
@@ -62363,12 +62349,12 @@ Restore figures are averages; unlucky streaks do worse.`;
         break;
       }
     }
-    const chosen = pickOne3(
+    const chosen = pickOne(
       all.filter((i) => i.kind === kind),
       input.random
     );
     return {
-      tile: { ...pickOne3(chosen.spots, input.random) },
+      tile: { ...pickOne(chosen.spots, input.random) },
       target: chosen.target,
       dirtTileIdx: chosen.dirtTileIdx,
       kind: chosen.kind,
@@ -62387,6 +62373,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_wander = __esm({
     "src/features/companion/wander.ts"() {
       "use strict";
+      init_random();
       init_emoteTypes();
       INTEREST_CHANCE = 0.5;
       ALMOST_READY_MS = 2 * 6e4;
@@ -62420,26 +62407,10 @@ Restore figures are averages; unlucky streaks do worse.`;
           (l) => `${withArticle(l).replace(/^a/, "A")}. Pretty, isn't it?`,
           (l) => `I could stare at this ${l} all day.`
         ],
-        ripe: [
-          (l) => `This ${l} looks ready.`,
-          (l) => `Mm, this ${l} is ripe.`,
-          () => `This one's ready to pick.`
-        ],
-        almostRipe: [
-          () => `This one's almost ready.`,
-          (l) => `Just a little longer, ${l}.`,
-          (l) => `Almost there, little ${l}.`
-        ],
-        eggReady: [
-          () => `This egg is ready to hatch!`,
-          (l) => `Something's wiggling in this ${l}.`,
-          () => `I think this one wants out.`
-        ],
-        eggSoon: [
-          (l) => `This ${l} is about to hatch.`,
-          () => `Any minute now...`,
-          () => `I can hear something in there.`
-        ]
+        ripe: [(l) => `This ${l} looks ready.`, (l) => `Mm, this ${l} is ripe.`, () => `This one's ready to pick.`],
+        almostRipe: [() => `This one's almost ready.`, (l) => `Just a little longer, ${l}.`, (l) => `Almost there, little ${l}.`],
+        eggReady: [() => `This egg is ready to hatch!`, (l) => `Something's wiggling in this ${l}.`, () => `I think this one wants out.`],
+        eggSoon: [(l) => `This ${l} is about to hatch.`, () => `Any minute now...`, () => `I can hear something in there.`]
       };
       NEIGHBOURS = [
         [0, 1],
@@ -62489,7 +62460,7 @@ Restore figures are averages; unlucky streaks do worse.`;
             now: Date.now(),
             area,
             random: Math.random,
-            rareMutations: new Set(rolledMutations2()),
+            rareMutations: new Set(rolledMutations()),
             cropName,
             mutationName,
             eggName

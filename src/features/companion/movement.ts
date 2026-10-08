@@ -1,99 +1,91 @@
-// src/services/companion/movement.ts
-// Moteur de déplacement du companion.
+// The companion's movement engine.
 //
-// Modèle : ancre + zone
-// ---------------------
-// Le companion ne « suit le joueur » que dans un cas particulier. En général il
-// rejoint une ANCRE puis, une fois arrivé, flâne autour ou reste en place. La
-// zone praticable lui est fournie via `isWalkable`, déjà restreinte au mode
-// (tuiles du jardin, map entière…).
+// Model: anchor plus area. The companion only "follows the player" in one
+// particular case. In general he heads for an ANCHOR, then, once there,
+// wanders around it or stays put. The walkable area comes through
+// `isWalkable`, already narrowed to the mode (garden tiles, whole map...).
 //
-// Deux axes qu'il ne faut pas confondre :
-//  - le MODE, choisi par l'utilisateur (suivre / jardin / bâtiment) : il vit
-//    dans `anchors.ts` et se résume ici à une ancre + une zone ;
-//  - l'ACTIVITÉ interne (`pursue` / `wander`), gérée ci-dessous.
+// Two axes not to mix up:
+//  - the MODE, chosen by the player (follow / garden): it lives in
+//    `anchors.ts` and comes down to an anchor and an area here;
+//  - the internal ACTIVITY (`pursue` / `wander`), handled below.
 //
-// Ce module est PUR : aucun store, aucun timer, hasard injecté. C'est la seule
-// partie du déplacement testable hors navigateur
-// (scripts/checkCompanionMovement.ts).
+// Pure: no store, no timer, chance passed in. The only part of movement
+// checkable outside the browser (scripts/checkCompanionMovement.ts).
 //
-// Contrainte de rendu qui dicte tout le reste : la couche avatar du jeu anime la
-// marche uniquement si la tuile change d'exactement une case (distance de
-// Manhattan 1). Au-delà, elle coupe. Chaque tick ne produit donc qu'un seul pas
-// orthogonal — ou un saut assumé.
+// The render constraint behind everything else: the game's avatar layer only
+// animates walking when the tile changes by exactly one (Manhattan distance
+// 1). Beyond that it snaps. Each tick therefore makes a single orthogonal
+// step, or a deliberate jump.
 
+import { pickOne, type Random } from "../../lib/random";
 import { findFirstStep, type IsGoal } from "./pathfinding";
 
 export type XY = { x: number; y: number };
 
-/** Activité interne : rejoindre l'ancre, ou flâner autour d'elle. */
+/** Internal activity: reach the anchor, or wander around it. */
 type MovementActivity = "pursue" | "wander";
 
-/**
- * Ce que le companion vise, et comment se comporter une fois arrivé.
- * Produit par `anchors.ts` à partir du mode choisi.
- */
+/** What the companion aims for, and how to behave once there. Built by `anchors.ts`. */
 export type Anchor = {
   tile: XY;
-  /** Une fois l'ancre rejointe : flâner autour, ou ne plus bouger. */
+  /** Once the anchor is reached: wander around it, or stop moving. */
   onArrival: "wander" | "hold";
   /**
-   * L'ancre est-elle le joueur ? Deux conséquences : on attend qu'il soit
-   * inactif avant de flâner, et on ne marche jamais sur sa tuile.
+   * Is the anchor the player? Two consequences: wandering waits for them to
+   * stand still, and their tile is never stepped on.
    */
   tracksPlayer: boolean;
   /**
-   * Territoire du mode, distinct de la marchabilité.
+   * The mode's territory, separate from walkability.
    *
-   * Une fois DANS sa zone, le companion n'en sort plus. Tant qu'il est DEHORS,
-   * il circule librement pour y revenir : sans cette asymétrie, basculer en
-   * mode jardin alors qu'il est ailleurs lui interdirait toute case autour de
-   * lui et le figerait sur place.
+   * Once INSIDE his area the companion stays there. While OUTSIDE he moves
+   * freely to get back: without that asymmetry, switching to garden mode while
+   * he is elsewhere would forbid every tile around him and freeze him.
    */
   zone?: IsWalkable;
-  /** Rayon de flânerie propre au mode. Défaut : config. */
+  /** The mode's own wander radius. Default: the config's. */
   wanderRadius?: number;
 };
 
 export type MovementConfig = {
-  /** Distance à laquelle le companion s'arrête de l'ancre. */
+  /** How far from the anchor the companion stops. */
   followDistance: number;
-  /** Ticks d'immobilité de l'ancre avant de flâner (ancres qui suivent le joueur). */
+  /** Ticks of anchor stillness before wandering (anchors that follow the player). */
   idleTicksBeforeWander: number;
   wanderRadius: number;
   /**
-   * Ticks d'attente entre deux déplacements de flânerie : le minimum de la
-   * plage quand `wanderPauseMaxTicks` est fourni, la pause exacte sinon.
+   * Ticks of pause between two wander moves: the bottom of the range when
+   * `wanderPauseMaxTicks` is set, the exact pause otherwise.
    */
   wanderPauseTicks: number;
   /**
-   * Borne haute de la pause, tirée à chaque arrêt avec le `random` injecté.
+   * The top of the pause, drawn at every stop with the given `random`.
    *
-   * Une pause fixe se voit : au bout de trois balades on devine la suivante à
-   * la seconde près. Absente, ou sous le minimum, la pause redevient fixe.
+   * A fixed pause shows: after three strolls the next one can be predicted to
+   * the second. Missing, or under the bottom, the pause is fixed again.
    */
   wanderPauseMaxTicks?: number;
 };
 
 /**
- * Cadence de la boucle : un pas par tick, donc la vitesse de marche.
+ * The loop's period: one step per tick, so the walking speed.
  *
- * Calée juste au-dessus des 130 ms d'interpolation d'un pas côté jeu. En
- * dessous les pas se chevauchent ; nettement au-dessus la marche redevient un
- * sautillement. À cette cadence, deux pas consécutifs dans la même direction
- * déclenchent en plus le cycle de course du jeu.
+ * Set just above the game's 130 ms step interpolation. Below it steps
+ * overlap; well above, walking turns into hopping. At this rate two steps in
+ * the same direction also trigger the game's run cycle.
  */
 export const STEP_INTERVAL_MS = 150;
 
 /**
- * Réglages de déplacement. Volontairement des CONSTANTES et non des options :
- * ce sont des valeurs calées sur le moteur de rendu du jeu, pas des préférences.
- * Les exposer inviterait à casser la marche sans comprendre pourquoi.
+ * Movement settings. Deliberately CONSTANTS and not options: they are tuned to
+ * the game's renderer, not preferences, and exposing them would invite
+ * breaking the walk without knowing why.
  */
 export const DEFAULT_MOVEMENT_CONFIG: MovementConfig = {
   followDistance: 2,
-  // 15 s d'immobilité avant de flâner, puis 8 à 45 s d'arrêt entre deux
-  // balades, tirés à chaque fois.
+  // 15 s of stillness before wandering, then 8 to 45 s of pause between two
+  // strolls, drawn every time.
   idleTicksBeforeWander: Math.round(15_000 / STEP_INTERVAL_MS),
   wanderRadius: 3,
   wanderPauseTicks: Math.round(8_000 / STEP_INTERVAL_MS),
@@ -101,12 +93,12 @@ export const DEFAULT_MOVEMENT_CONFIG: MovementConfig = {
 };
 
 /**
- * Réglages d'un déplacement sur ordre.
+ * Settings for a walk on order.
  *
- * `followDistance: 0` est la seule différence, et elle est essentielle : en
- * suivi, s'arrêter à deux cases de l'ancre est le comportement voulu — coller
- * au joueur serait pénible. Sur ordre, l'ancre EST la destination, et une
- * arrivée « à deux cases près » ne serait jamais reconnue comme une arrivée.
+ * `followDistance: 0` is the only difference, and it is essential: when
+ * following, stopping two tiles from the anchor is the point, sticking to the
+ * player would be annoying. On order the anchor IS the destination, and
+ * arriving "within two tiles" would never count as arriving.
  */
 export const TASK_MOVEMENT_CONFIG: MovementConfig = {
   ...DEFAULT_MOVEMENT_CONFIG,
@@ -114,13 +106,12 @@ export const TASK_MOVEMENT_CONFIG: MovementConfig = {
 };
 
 /**
- * Réglages tant qu'il attend une réponse.
+ * Settings while he waits on an answer.
  *
- * Il vient de poser une question : deux cases d'écart, la distance de suivi
- * ordinaire, le laissent à portée de vue mais pas à portée de conversation, et
- * un joueur qui se déplace le voit traîner derrière. Une seule case le colle
- * sans le faire monter sur le joueur, ce qu'un `0` provoquerait ici — la tuile
- * du joueur n'est pas libre.
+ * He just asked a question: two tiles away, the usual following distance,
+ * keeps him in sight but not in conversation, and a player on the move sees
+ * him trail behind. One tile keeps him close without stepping on the player,
+ * which `0` would do here, since the player's tile is not free.
  */
 export const ATTENTION_MOVEMENT_CONFIG: MovementConfig = {
   ...DEFAULT_MOVEMENT_CONFIG,
@@ -129,28 +120,28 @@ export const ATTENTION_MOVEMENT_CONFIG: MovementConfig = {
 
 export type MovementState = {
   activity: MovementActivity;
-  /** Position courante du companion. `null` tant qu'il n'est pas apparu. */
+  /** The companion's position. `null` until he has appeared. */
   tile: XY | null;
-  /** Dernière position connue de l'ancre, pour détecter qu'elle a bougé. */
+  /** The anchor's last known position, to notice it moved. */
   lastAnchorTile: XY | null;
   idleTicks: number;
   wanderCooldown: number;
   wanderTarget: XY | null;
-  /** La cible de flânerie courante vient-elle d'un centre d'intérêt ? */
+  /** Does the current wander target come from an interest? */
   wanderTargetIsInterest: boolean;
 };
 
-export type MovementDecision = {
+type MovementDecision = {
   state: MovementState;
-  /** Position à injecter. `null` = aucune position exploitable. */
+  /** The position to inject. `null`: no usable position. */
   tile: XY | null;
-  /** true quand le déplacement dépasse une case : le jeu coupera au lieu de marcher. */
+  /** True when the move is longer than one tile: the game will snap instead of walking. */
   teleported: boolean;
   /**
-   * Centre d'intérêt atteint à ce tick : la tuile où il vient de s'arrêter.
+   * The interest reached on this tick: the tile where he just stopped.
    *
-   * Signalé une seule fois, au tick où la flânerie constate l'arrivée, pour que
-   * l'appelant joue sa pose sans avoir à comparer des positions lui-même.
+   * Reported once, on the tick the wandering sees the arrival, so the caller
+   * plays its pose without comparing positions itself.
    */
   interestReached?: XY | null;
 };
@@ -158,11 +149,11 @@ export type MovementDecision = {
 export type IsWalkable = (x: number, y: number) => boolean;
 
 /**
- * Où une flânerie peut mener : ce que reçoit `pickInterest`.
+ * Where a wander can lead: what `pickInterest` receives.
  *
- * `isWalkable` est déjà restreint à tout ce que la flânerie accepte (zone du
- * mode, rayon, ni le centre ni la case courante). Une tuile qu'il refuse sera
- * refusée de toute façon.
+ * `isWalkable` is already narrowed to everything the wandering accepts (the
+ * mode's area, the radius, neither the centre nor the current tile). A tile it
+ * refuses would be refused anyway.
  */
 export type WanderArea = {
   center: XY;
@@ -172,33 +163,30 @@ export type WanderArea = {
 };
 
 /**
- * Propose une destination de flânerie qui a un sens (un crop mûr, un œuf...),
- * ou `null` pour une balade au hasard. Appelé une fois par nouvelle cible.
+ * Offers a wander destination that means something (a ripe crop, an egg...),
+ * or `null` for a random stroll. Called once per new target.
  */
 export type PickInterest = (area: WanderArea) => XY | null;
 
-/**
- * Ce qu'un pilote de flânerie (`wanderWatch.ts`) branche sur la boucle : le
- * choix d'une destination, et l'arrivée dessus.
- */
+/** What a wandering driver (`wanderWatch.ts`) plugs into the loop: picking a destination, and arriving there. */
 export type WanderHooks = {
   pickInterest: PickInterest;
   onInterestReached: (tile: XY) => void;
 };
 
-export type MovementInput = {
+type MovementInput = {
   anchor: Anchor;
   state: MovementState;
-  /** Déjà restreint à la zone du mode par `anchors.ts`. */
+  /** Already narrowed to the mode's area by `anchors.ts`. */
   isWalkable: IsWalkable;
-  /** Injecté pour rendre la flânerie déterministe sous test. */
-  random: () => number;
+  /** Passed in so wandering is deterministic under test. */
+  random: Random;
   config: MovementConfig;
-  /** Facultatif : sans lui, la flânerie reste entièrement au hasard. */
+  /** Optional: without it, wandering stays fully random. */
   pickInterest?: PickInterest | null;
 };
 
-/** Rayon max exploré pour trouver une tuile d'apparition autour de l'ancre. */
+/** The largest radius searched for a spawn tile around the anchor. */
 const SPAWN_SEARCH_RADIUS = 8;
 
 export function initialMovementState(): MovementState {
@@ -214,12 +202,12 @@ export function initialMovementState(): MovementState {
 }
 
 /**
- * Durée d'une pause de flânerie, en ticks.
+ * A wander pause's length, in ticks.
  *
- * Tirée dans `[wanderPauseTicks, wanderPauseMaxTicks]`, bornes comprises. Sans
- * borne haute exploitable, la pause reste celle d'avant : fixe.
+ * Drawn in `[wanderPauseTicks, wanderPauseMaxTicks]`, both included. Without a
+ * usable top the pause stays fixed.
  */
-export function drawWanderPause(config: MovementConfig, random: () => number): number {
+export function drawWanderPause(config: MovementConfig, random: Random): number {
   const min = Math.max(0, Math.round(config.wanderPauseTicks));
   const max = config.wanderPauseMaxTicks;
   if (max === undefined || !Number.isFinite(max) || Math.round(max) <= min) return min;
@@ -237,11 +225,11 @@ function sameTile(a: XY | null, b: XY | null): boolean {
 }
 
 /**
- * Convertit une durée en nombre de ticks de boucle.
+ * Turns a duration into loop ticks.
  *
- * Les temporisations sont réglées en millisecondes (une durée garde son sens
- * quand on change la vitesse de marche), alors que la machine à états raisonne
- * en ticks. C'est ici que les deux se rejoignent.
+ * Delays are set in milliseconds (a duration keeps its meaning when the
+ * walking speed changes) while the state machine counts ticks. This is where
+ * the two meet.
  */
 export function ticksFromMs(durationMs: number, stepIntervalMs: number, minTicks: number): number {
   if (!Number.isFinite(durationMs) || !Number.isFinite(stepIntervalMs) || stepIntervalMs <= 0) {
@@ -251,14 +239,13 @@ export function ticksFromMs(durationMs: number, stepIntervalMs: number, minTicks
 }
 
 /**
- * Le companion ne doit avancer que lorsque le jeu a effectivement rendu sa
- * position courante.
+ * The companion only moves on once the game has really drawn his current
+ * position.
  *
- * Sans ce verrou, la boucle prend de l'avance sur le recalcul de Jotai et la
- * couche avatar reçoit un saut de plusieurs tuiles : elle coupe au lieu
- * d'animer la marche (elle n'interpole qu'à distance de Manhattan 1).
- *
- * Tant que rien n'a été observé, on n'entrave pas : il faut pouvoir apparaître.
+ * Without this guard the loop gets ahead of Jotai's recompute and the avatar
+ * layer receives a jump of several tiles: it snaps instead of animating the
+ * walk (it only interpolates at Manhattan distance 1). Before anything was
+ * seen nothing is held back: he has to be able to appear.
  */
 export function hasGameCaughtUp(ourTile: XY | null, observedTile: XY | null): boolean {
   if (!ourTile || !observedTile) return true;
@@ -266,25 +253,25 @@ export function hasGameCaughtUp(ourTile: XY | null, observedTile: XY | null): bo
 }
 
 /**
- * Cherche la tuile praticable la plus proche d'un centre, en anneaux croissants.
- * Sert à l'apparition et au rattrapage.
+ * The walkable tile nearest a centre, in growing rings. Used to appear and to
+ * catch up.
  *
- * `excludeCenter` vaut pour une ancre-joueur : deux avatars sur la même case se
- * chevauchent. Pour une ancre inerte (tuile d'activation d'un bâtiment), au
- * contraire, on veut pouvoir s'y poser.
+ * `excludeCenter` is for a player anchor: two avatars on one tile overlap.
+ * For a still anchor (a building's activation tile), on the contrary, he
+ * should be able to stand on it.
  */
 export function findNearbyWalkable(
   center: XY,
   isWalkable: IsWalkable,
   excludeCenter: boolean,
-  maxRadius = SPAWN_SEARCH_RADIUS
+  maxRadius = SPAWN_SEARCH_RADIUS,
 ): XY | null {
   if (!excludeCenter && isWalkable(center.x, center.y)) return { ...center };
 
   for (let radius = 1; radius <= maxRadius; radius++) {
     for (let dx = -radius; dx <= radius; dx++) {
       for (let dy = -radius; dy <= radius; dy++) {
-        // Anneau seulement : on garde le bord du carré courant.
+        // The ring only: the edge of the current square.
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
         const x = center.x + dx;
         const y = center.y + dy;
@@ -295,14 +282,8 @@ export function findNearbyWalkable(
   return null;
 }
 
-
-/** Tuile de flânerie tirée au hasard dans le rayon autour de l'ancre. */
-function pickWanderTarget(
-  center: XY,
-  radius: number,
-  isWalkable: IsWalkable,
-  random: () => number
-): XY | null {
+/** A wander tile drawn at random within the radius around the anchor. */
+function pickWanderTarget(center: XY, radius: number, isWalkable: IsWalkable, random: Random): XY | null {
   const candidates: XY[] = [];
   for (let dx = -radius; dx <= radius; dx++) {
     for (let dy = -radius; dy <= radius; dy++) {
@@ -312,21 +293,17 @@ function pickWanderTarget(
       if (isWalkable(x, y)) candidates.push({ x, y });
     }
   }
-  if (candidates.length === 0) return null;
-  const index = Math.min(candidates.length - 1, Math.floor(random() * candidates.length));
-  return candidates[index];
+  return candidates.length === 0 ? null : pickOne(candidates, random);
 }
 
-const wanderRadiusOf = (anchor: Anchor, config: MovementConfig): number =>
-  anchor.wanderRadius ?? config.wanderRadius;
+const wanderRadiusOf = (anchor: Anchor, config: MovementConfig): number => anchor.wanderRadius ?? config.wanderRadius;
 
 /**
- * Avance le companion d'un tick.
+ * Moves the companion one tick forward.
  *
- * L'ordre compte : on met d'abord à jour le suivi de l'ancre (qui décide de
- * l'activité), puis le rattrapage, puis seulement le déplacement. Un rattrapage
- * doit primer sur la flânerie, sinon le companion peut flâner tranquillement
- * loin de son ancre.
+ * The order matters: first the anchor tracking (which decides the activity),
+ * then catching up, and only then the move. Catching up must beat wandering,
+ * or the companion could wander about far from his anchor.
  */
 export function stepMovement(input: MovementInput): MovementDecision {
   const { anchor, isWalkable, random, config } = input;
@@ -337,11 +314,11 @@ export function stepMovement(input: MovementInput): MovementDecision {
 
   const zone = anchor.zone;
   const zoneWalkable: IsWalkable = (x, y) => isWalkable(x, y) && (!zone || zone(x, y));
-  // Dans sa zone il y reste ; dehors il circule librement pour y revenir.
+  // Inside his area he stays there; outside he moves freely to get back.
   const insideZone = !zone || !state.tile || zone(state.tile.x, state.tile.y);
   const stepWalkable = insideZone ? zoneWalkable : isWalkable;
 
-  // 1. L'ancre a-t-elle bougé, et depuis combien de temps est-elle immobile ?
+  // 1. Did the anchor move, and how long has it been still?
   const anchorMoved = !sameTile(state.lastAnchorTile, anchor.tile);
   state.lastAnchorTile = { ...anchor.tile };
   if (anchorMoved) {
@@ -356,21 +333,20 @@ export function stepMovement(input: MovementInput): MovementDecision {
     state.idleTicks++;
   }
 
-  // 2. Apparition. Seul moment où le companion « surgit » : il n'a pas encore
-  // de position d'où marcher. Tout le reste du temps il se déplace pas à pas.
+  // 2. Appearing. The only time the companion "pops up": he has no position
+  // to walk from yet. The rest of the time he moves step by step.
   if (!state.tile) {
     const spawn =
-      findNearbyWalkable(anchor.tile, zoneWalkable, excludeCenter) ??
-      findNearbyWalkable(anchor.tile, isWalkable, excludeCenter);
+      findNearbyWalkable(anchor.tile, zoneWalkable, excludeCenter) ?? findNearbyWalkable(anchor.tile, isWalkable, excludeCenter);
     state.tile = spawn;
     return { state, tile: spawn, teleported: spawn !== null };
   }
 
-  // 3. Bascule vers la flânerie, une fois l'ancre rejointe.
+  // 3. Switching to wandering, once the anchor is reached.
   const arrived = manhattan(state.tile, anchor.tile) <= config.followDistance;
   if (state.activity === "pursue" && arrived && anchor.onArrival === "wander") {
-    // Une ancre qui suit le joueur attend qu'il soit inactif ; une ancre inerte
-    // (jardin) n'a personne à attendre et peut flâner tout de suite.
+    // An anchor following the player waits for them to be still; a still
+    // anchor (the garden) has nobody to wait for and may wander at once.
     const mayWander = !anchor.tracksPlayer || state.idleTicks >= config.idleTicksBeforeWander;
     if (mayWander) {
       state.activity = "wander";
@@ -380,13 +356,12 @@ export function stepMovement(input: MovementInput): MovementDecision {
     }
   }
 
-  // 4. Déplacement d'un pas, le long du plus court chemin.
+  // 4. One step along the shortest path.
   //
-  // L'arrivée est un prédicat, pas une tuile : en suivi on accepte n'importe
-  // quelle case à `followDistance` du joueur, dont la sienne est exclue. Viser
-  // sa tuile exacte n'aboutirait jamais.
-  const passable: IsWalkable = (x, y) =>
-    stepWalkable(x, y) && !(blocked !== null && x === blocked.x && y === blocked.y);
+  // Arrival is a predicate, not a tile: when following, any tile within
+  // `followDistance` of the player counts, theirs excluded. Aiming at their
+  // exact tile would never get there.
+  const passable: IsWalkable = (x, y) => stepWalkable(x, y) && !(blocked !== null && x === blocked.x && y === blocked.y);
 
   let isGoal: IsGoal | null = null;
   let interestReached: XY | null = null;
@@ -405,8 +380,8 @@ export function stepMovement(input: MovementInput): MovementDecision {
 
   const next = findFirstStep(state.tile, isGoal, passable);
   if (!next) {
-    // Aucun chemin : rester sur place est la bonne réponse. En flânerie, la
-    // cible est inatteignable, on la relâche pour en tirer une autre.
+    // No path: staying put is the right answer. While wandering the target is
+    // out of reach, so it is dropped to draw another.
     if (state.activity === "wander") {
       state.wanderTarget = null;
       state.wanderTargetIsInterest = false;
@@ -418,17 +393,14 @@ export function stepMovement(input: MovementInput): MovementDecision {
   return { state, tile: next, teleported: false };
 }
 
-/**
- * En flânerie : on temporise entre deux déplacements, et on retire une cible
- * dès que la précédente est atteinte.
- */
+/** While wandering: pause between two moves, and draw a new target once the last is reached. */
 function resolveWanderTarget(
   state: MovementState,
   anchor: Anchor,
   config: MovementConfig,
   isWalkable: IsWalkable,
-  random: () => number,
-  pickInterest: PickInterest | null
+  random: Random,
+  pickInterest: PickInterest | null,
 ): { target: XY | null; interestReached: XY | null } {
   if (state.wanderCooldown > 0) {
     state.wanderCooldown--;
@@ -443,9 +415,8 @@ function resolveWanderTarget(
   }
   if (!state.wanderTarget) {
     const radius = wanderRadiusOf(anchor, config);
-    const interest = pickInterest && state.tile
-      ? pickInterestSafely(pickInterest, anchor.tile, radius, state.tile, isWalkable)
-      : null;
+    const interest =
+      pickInterest && state.tile ? pickInterestSafely(pickInterest, anchor.tile, radius, state.tile, isWalkable) : null;
     state.wanderTargetIsInterest = interest !== null;
     state.wanderTarget = interest ?? pickWanderTarget(anchor.tile, radius, isWalkable, random);
     if (!state.wanderTarget) {
@@ -457,20 +428,20 @@ function resolveWanderTarget(
 }
 
 /**
- * Demande un centre d'intérêt, et ne garde la réponse que si la flânerie
- * l'aurait elle-même acceptée.
+ * Asks for an interest, and only keeps the answer if the wandering would have
+ * accepted it itself.
  *
- * Mêmes règles que `pickWanderTarget` : dans le rayon, dans la zone, ni le
- * centre ni la case où il se tient déjà. Un fournisseur qui se trompe, ou qui
- * lève, retombe sur une balade au hasard au lieu d'entraîner le companion
- * hors de son territoire.
+ * The same rules as `pickWanderTarget`: within the radius, inside the area,
+ * neither the centre nor the tile he already stands on. A provider that gets
+ * it wrong, or throws, falls back on a random stroll instead of dragging the
+ * companion out of his territory.
  */
 function pickInterestSafely(
   pickInterest: PickInterest,
   center: XY,
   radius: number,
   from: XY,
-  isWalkable: IsWalkable
+  isWalkable: IsWalkable,
 ): XY | null {
   const accepts: IsWalkable = (x, y) =>
     Math.max(Math.abs(x - center.x), Math.abs(y - center.y)) <= radius &&

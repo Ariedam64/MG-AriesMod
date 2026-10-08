@@ -1,40 +1,40 @@
-// src/services/companion/chat/walk.ts
-// Faire marcher le companion pendant qu'il travaille.
+// Making the companion walk while he works.
 //
-// Purement visuel : le serveur accepte les commandes d'où qu'on soit, et rien
-// ici ne conditionne une action. C'est ce qui donne à voir qu'il fait quelque
-// chose plutôt que de tout déclencher depuis un coin de la carte.
+// Only for show: the server accepts the commands from anywhere, and nothing
+// here gates an action. It is what makes him look like he is doing something
+// rather than triggering everything from a corner of the map.
 //
-// D'où la règle qui gouverne ce fichier : un trajet qui échoue ne doit jamais
-// empêcher l'action. Au pire on renonce à marcher et on continue.
+// Hence the rule of this file: a failed walk must never prevent the action. At
+// worst he stops walking and carries on.
 
 import { CompanionService } from "..";
 import { readMySlotIdx } from "../anchors";
+import { roundTile } from "../feeds";
 import { readCompanionMap } from "../map";
 import type { XY } from "../movement";
 
-/** Deux échecs d'affilée : c'est structurel, pas une case isolée. */
+/** Two failures in a row: it is structural, not one odd tile. */
 const GIVE_UP_AFTER = 2;
 
 export type Walker = {
-  /** Va sur la tuile de terre d'un crop, désignée par son index de parcelle. */
+  /** Goes to a crop's dirt tile, given by its index in the plot. */
   toGardenTile(dirtTileIdx: number): Promise<void>;
-  /** Va sur une position du monde : un pet, par exemple. */
+  /** Goes to a world position: a pet, for one. */
   toPosition(position: XY | null | undefined): Promise<void>;
   /**
-   * Va devant un bâtiment, désigné par sa clé de map.
+   * Goes in front of a building, given by its map key.
    *
-   * Rend `false` quand le bâtiment est introuvable ou qu'on n'a pas marché :
-   * l'appelant décide alors quoi en dire, mais ne renonce jamais à son action.
+   * `false` when the building cannot be found or he did not walk: the caller
+   * decides what to say, but never gives up its action.
    */
   toBuilding(name: string): Promise<boolean>;
-  /** Rend le companion à son mode. À appeler une fois la série finie. */
+  /** Gives the companion back his mode. Call once the run is over. */
   release(): void;
-  /** Faux quand on a renoncé, ou qu'il n'y a personne à faire marcher. */
+  /** False once he gave up, or when there is nobody to walk. */
   readonly walking: boolean;
 };
 
-/** Walker inerte : aucune marche, aucun délai. */
+/** A walker that does nothing: no walk, no delay. */
 const IDLE: Walker = {
   async toGardenTile() {},
   async toPosition() {},
@@ -46,10 +46,10 @@ const IDLE: Walker = {
 };
 
 /**
- * Prépare la marche pour une série d'actions.
+ * Readies walking for a run of actions.
  *
- * `onGiveUp` est appelé une seule fois, quand on renonce : chaque échec coûte
- * son délai d'attente, et insister ralentirait tout le lot pour un décor.
+ * `onGiveUp` is called once, when he gives up: each failure costs its
+ * timeout, and insisting would slow the whole batch for decoration.
  */
 export async function createWalker(onGiveUp: (message: string) => void): Promise<Walker> {
   if (!CompanionService.isRunning()) return IDLE;
@@ -85,23 +85,17 @@ export async function createWalker(onGiveUp: (message: string) => void): Promise
     },
     async toPosition(position) {
       if (!walking) return;
-      const x = Number(position?.x);
-      const y = Number(position?.y);
-      // Les positions du monde sont continues ; la grille, elle, ne l'est pas.
-      if (!Number.isFinite(x) || !Number.isFinite(y)) {
-        record(false);
-        return;
-      }
-      await goTo({ x: Math.round(x), y: Math.round(y) });
+      // World positions are continuous; the grid is not.
+      await goTo(roundTile(position));
     },
     async toBuilding(name) {
       if (!walking) return false;
       const map = await readCompanionMap();
       if (!map) return false;
 
-      // Les tuiles d'activation sont celles depuis lesquelles le jeu propose
-      // d'interagir. On prend la première où l'on peut réellement se tenir :
-      // certaines sont posées sur le bâtiment lui-même, donc infranchissables.
+      // Activation tiles are where the game offers to interact. The first one
+      // he can really stand on is taken: some sit on the building itself and
+      // cannot be walked on.
       const tiles = map.buildingActivationTiles(name);
       const spot = tiles.map((tile) => map.toXY(tile)).find((xy) => map.isWalkable(xy.x, xy.y));
       if (!spot) return false;

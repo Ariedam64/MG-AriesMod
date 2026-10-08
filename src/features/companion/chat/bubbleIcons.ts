@@ -1,56 +1,49 @@
-// src/services/companion/chat/bubbleIcons.ts
-// Les icônes de bulle qui viennent des catalogues du jeu.
+// Bubble icons that come from the game's catalogs.
 //
-// Séparé de `bubbleTags.ts` parce que les catalogues traversent le pont d'état
-// dès l'import : le composeur, lui, doit rester vérifiable hors navigateur.
-//
-// Chaque fabricant rend `null` quand le catalogue ne connaît pas l'objet.
-// `compose` fait alors disparaître le fragment, et la phrase se lit sans image.
-// C'est voulu : une clé d'atlas inventée ne lève pas d'erreur, elle dessine un
-// carré vide, ce qui est pire qu'une phrase nue.
+// Each maker returns `null` when the catalog does not know the object;
+// `compose` then drops the fragment and the sentence reads without a picture.
+// On purpose: a made-up atlas key raises no error, it draws an empty square,
+// which is worse than a bare sentence. Catalogs are read on each call.
 
 import { eggCatalog, petCatalog, plantCatalog } from "../../../data";
-import { mutationChip, type BubbleTag, type GameThingTag, type MutationTag, type PetThingTag } from "./bubbleTags";
 import { API_TO_INTERNAL } from "../../../ui/kit/sprites/resolver";
+import { mutationChip, type BubbleTag, type GameThingTag, type MutationTag, type PetThingTag } from "./bubbleTags";
 
 type CatalogSprite = { name?: unknown; sprite?: unknown; tileRef?: unknown } | undefined;
 
 /**
- * Taille d'une icône en bulle, en pixels.
+ * An icon's size in a bubble, in pixels.
  *
- * Sans elle, le jeu dimensionne l'icône sur sa police — 13 px au zoom courant —
- * et un crop y devient illisible. Le tag n'accepte qu'une valeur absolue, alors
- * que la police du jeu, elle, suit le rendu (13, 15, 21, 33 selon le zoom) : on
- * ne peut donc pas demander « une fois et demie le texte ». On cale sur les
- * paliers du milieu, où la lecture se fait le plus souvent.
+ * Without it the game sizes the icon on its font, 13 px at the usual zoom,
+ * where a crop is unreadable. The tag only takes an absolute value while the
+ * game's font follows the render (13, 15, 21, 33 depending on zoom), so "one
+ * and a half times the text" cannot be asked for. It is set for the middle
+ * steps, where reading happens most.
  */
 const BUBBLE_ICON_PX = 28;
 
 /**
- * Taille d'un animal en bulle, plus petite que le reste.
+ * A pet's size in a bubble, smaller than the rest.
  *
- * Le jeu fait la même distinction dans son propre rendu en ligne : facteur
- * `0.7` pour un animal contre `1.35` pour tout le reste. Leur art porte plus de
- * marge autour du sujet, donc à taille égale ils écrasent la ligne.
- *
- * On garde l'esprit de ce rapport sans aller jusqu'à la moitié, qui rendrait
- * l'animal aussi menu que le texte.
+ * The game makes the same difference in its own inline rendering: a factor of
+ * 0.7 for a pet against 1.35 for everything else. Their art has more margin
+ * around the subject, so at equal size they crush the line. The spirit of that
+ * ratio is kept without going down to half, which would make the pet as small
+ * as the text.
  */
 const PET_ICON_PX = 20;
 
 /**
- * La clé de frame d'atlas d'une entrée de catalogue, façon `sprite/plant/Carrot`.
+ * A catalog entry's atlas frame key, like `sprite/plant/Carrot`.
  *
- * C'est ce que `Sprite.from` résout dans le cache du jeu — les clés viennent
- * des JSON d'atlas, pas du bundle, d'où leur absence du code du jeu.
+ * That is what `Sprite.from` resolves in the game's cache; the keys come from
+ * the atlas JSON, not the bundle. Two shapes depending on the source: the
+ * bundled catalog gives the key in `tileRef`; the live catalog, downloaded
+ * from the mod's API, serves a URL (`.../assets/sprites/plants/Carrot.png?v=1125`)
+ * whose key must be rebuilt: singular category, then name.
  *
- * Deux formes selon la source. Le catalogue embarqué donne directement la clé
- * dans `tileRef`. Le catalogue dynamique, lui, est téléchargé depuis l'API du
- * mod et sert une URL — `…/assets/sprites/plants/Carrot.png?v=1125` — dont il
- * faut refaire la clé : catégorie au singulier, puis nom.
- *
- * On retire la requête AVANT l'extension : l'ordre inverse laisse `?v=1125`
- * collé au nom, et c'est ce qui produisait un carré vide.
+ * The query is cut BEFORE the extension: the other order leaves `?v=1125`
+ * stuck to the name, which drew an empty square.
  */
 function spriteKeyOf(entry: CatalogSprite): string | null {
   if (typeof entry?.tileRef === "string" && entry.tileRef) return entry.tileRef;
@@ -66,7 +59,6 @@ function spriteKeyOf(entry: CatalogSprite): string | null {
   return name && category ? `sprite/${category}/${name}` : null;
 }
 
-
 function thing(entry: CatalogSprite, label: string, iconSizePx = BUBBLE_ICON_PX): GameThingTag | null {
   const sprite = spriteKeyOf(entry);
   if (!sprite) return null;
@@ -79,59 +71,54 @@ function plantEntry(species: string): PlantEntry {
   return (plantCatalog as Record<string, PlantEntry>)[species];
 }
 
-/** Le crop d'une espèce, icône seule. */
+/** A species' crop, icon only. */
 export function cropIcon(species: string): GameThingTag | null {
   const entry = plantEntry(species);
   return thing(entry?.crop ?? entry?.plant, "");
 }
 
-
-/** La graine d'une espèce, icône seule. */
+/** A species' seed, icon only. */
 export function seedIcon(species: string): GameThingTag | null {
   return thing(plantEntry(species)?.seed, "");
 }
 
-/** Un œuf, icône seule. */
+/** An egg, icon only. */
 export function eggIcon(eggId: string): GameThingTag | null {
   return thing((eggCatalog as Record<string, CatalogSprite>)[eggId], "");
 }
 
 /**
- * Une variante de crop : son sprite, puis ses mutations en pastilles.
+ * A crop variant: its sprite, then its mutations as chips.
  *
- * Le jeu ne sait pas empiler une mutation sur un crop dans une bulle — son
- * compositeur de plantes mutées vit dans un cache privé, hors d'atteinte d'un
- * tag. On les met donc côte à côte, ce qui dit la même chose.
- *
- * Les pastilles portent déjà leur nom : la phrase n'a pas à les répéter.
+ * The game cannot stack a mutation on a crop in a bubble: its mutated plant
+ * compositor lives in a private cache no tag reaches. So they go side by side,
+ * which says the same. The chips carry their own names: the sentence need not
+ * repeat them.
  */
 export function variantIcons(species: string, mutations: string[]): BubbleTag[] {
   const crop = cropIcon(species);
   return [...(crop ? [crop] : []), ...mutationChips(mutations)];
 }
 
-/* --------------------------------- Pets ---------------------------------- */
+/* ---------------------------------- pets ---------------------------------- */
 
 /**
- * L'animal d'une espèce, icône plate tirée du catalogue.
+ * A species' pet, as a flat catalog icon.
  *
- * À réserver aux résumés : une vente de vingt-trois animaux n'a pas besoin de
- * vingt-trois rendus composés. Pour montrer UN animal précis, `petThing` fait
- * bien mieux.
+ * For summaries: a sale of twenty-three pets does not need twenty-three
+ * composed renders. To show ONE specific pet, `petThing` does far better.
  */
 export function petSpeciesIcon(species: string): GameThingTag | null {
   return thing((petCatalog as Record<string, CatalogSprite>)[species], "", PET_ICON_PX);
 }
 
 /**
- * Un animal précis, rendu par le moteur du jeu.
+ * A specific pet, drawn by the game's renderer.
  *
- * C'est le seul tag qui compose vraiment : il reçoit l'objet d'inventaire et le
- * passe au rendu d'animal, donc un Gold Bee sort doré. `gameThing` ne le peut
- * pas, il n'empile qu'une texture.
- *
- * Rend `null` sans objet : le tag lèverait une erreur de rendu plutôt que de se
- * contenter d'un carré vide.
+ * The only tag that really composes: it takes the inventory object and hands
+ * it to the pet renderer, so a Gold Bee comes out golden. `gameThing` cannot,
+ * it only stacks a texture. `null` without an object: the tag would raise a
+ * render error rather than settle for an empty square.
  */
 export function petThing(item: unknown, name: string): PetThingTag | null {
   if (!item || typeof item !== "object") return null;
@@ -139,11 +126,11 @@ export function petThing(item: unknown, name: string): PetThingTag | null {
 }
 
 /**
- * Une icône par espèce d'un groupe d'animaux, la plus nombreuse d'abord.
+ * One icon per species of a group of pets, the most numerous first.
  *
- * Le rendu composé d'abord, en prenant le premier animal de chaque espèce comme
- * représentant : c'est le seul chemin qui dessine un pet en bulle. La clé
- * d'atlas ne sert que de repli, pour le fil.
+ * The composed render first, using the first pet of each species: the only
+ * path that draws a pet in a bubble. The atlas key is only a fallback, for
+ * the thread.
  */
 export function petRowIcons(pets: Array<{ species: string; item?: unknown }>, limit = 2): BubbleTag[] {
   const counts = new Map<string, number>();
@@ -163,16 +150,16 @@ export function petRowIcons(pets: Array<{ species: string; item?: unknown }>, li
   return icons;
 }
 
-/* ------------------------------ Mutations -------------------------------- */
+/* ------------------------------- mutations -------------------------------- */
 
 /**
- * Les pastilles d'une liste de mutations.
+ * The chips of a list of mutations.
  *
- * Chaque pastille porte déjà son nom à côté de l'icône : la phrase qui les
- * introduit n'a donc pas à les nommer, elle dirait deux fois la même chose.
+ * Each chip already carries its name next to the icon: the sentence that
+ * introduces them need not name them, it would say it twice.
  */
 export function mutationChips(mutations: string[], backgroundColor?: number): MutationTag[] {
-  // Même taille que les autres icônes : une pastille à la taille du texte se
-  // perdrait à côté d'un crop de 28 px.
+  // The same size as the other icons: a chip at text size would get lost
+  // next to a 28 px crop.
   return mutations.map((mutation) => ({ ...mutationChip(mutation, backgroundColor), iconSizePx: BUBBLE_ICON_PX }));
 }

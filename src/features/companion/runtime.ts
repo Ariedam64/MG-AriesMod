@@ -7,7 +7,7 @@
 import type { Subscriptions } from "../../lib/emitter";
 import type { CompanionMode } from "./anchors";
 import type { ContextualLine, DialogueState } from "./dialogue";
-import type { CompanionMap } from "./map";
+import type { CompanionMap } from "./mapView";
 import type { MovementState, XY } from "./movement";
 
 export type Runtime = {

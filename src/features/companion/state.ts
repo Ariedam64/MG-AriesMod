@@ -1,38 +1,33 @@
-// src/services/companion/state.ts
-// Lecture et écriture des réglages du companion, sous `aries_mod.companion`.
+// Reading and writing the companion's settings, under `aries_mod.companion`.
 //
-// La *forme* de ces réglages vit dans `settingsShape.ts`, qui est pur. Ici ne
-// reste que le stockage, et les deux commodités qui en découlent.
+// Their shape lives in `settingsShape.ts`, which is pure. Only storage is
+// left here, and the two conveniences built on it.
 
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
 import { coerceSettings, type CompanionSettings, type SettingsGroup } from "./settingsShape";
 
-// Ré-exportés pour que les appelants n'aient qu'une porte d'entrée.
+// Re-exported so callers have a single way in.
 export * from "./settingsShape";
 
 const STORAGE_PATH = "companion";
 
-/** Relit la config en réparant toute valeur absente ou invalide. */
+/** Reads the settings, repairing any missing or invalid value. */
 export function loadCompanionSettings(): CompanionSettings {
   return coerceSettings(readAriesPath<Partial<CompanionSettings>>(STORAGE_PATH, undefined));
 }
 
-function saveCompanionSettings(settings: CompanionSettings): void {
-  writeAriesPath(STORAGE_PATH, settings);
-}
-
-/** Met à jour une partie de la config et rend la version consolidée. */
+/** Updates part of the settings and returns the whole, repaired. */
 export function patchCompanionSettings(patch: Partial<CompanionSettings>): CompanionSettings {
-  saveCompanionSettings({ ...loadCompanionSettings(), ...patch });
+  writeAriesPath(STORAGE_PATH, { ...loadCompanionSettings(), ...patch });
   return loadCompanionSettings();
 }
 
-/** Le joueur n'a jamais ouvert cet écran de réglages. */
+/** The player never opened this settings screen. */
 export function isUnreviewed(group: SettingsGroup): boolean {
   return !loadCompanionSettings().reviewedSettings.includes(group);
 }
 
-/** Note qu'un écran de réglages a été ouvert. Idempotent. */
+/** Notes that a settings screen was opened. Idempotent. */
 export function markReviewed(group: SettingsGroup): void {
   const current = loadCompanionSettings().reviewedSettings;
   if (current.includes(group)) return;

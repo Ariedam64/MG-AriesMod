@@ -1,38 +1,38 @@
-// src/services/companion/chat/hatchRead.ts
-// Lit la couvée : les œufs prêts, les animaux déjà là, et la place qui reste.
+// Reads the hatch: the ready eggs, the pets already there, and the room left.
 //
-// Rien n'est écrit en dur. Les espèces que les œufs POSÉS peuvent donner
-// viennent de leur `faunaSpawnWeights`, leurs capacités de
-// `innateAbilityWeights`, et les mutations se déduisent du catalogue (cf.
-// `rolledMutations`) parce qu'elles ne dépendent pas de la sorte d'œuf.
+// Nothing is hardcoded. The species the PLANTED eggs can give come from their
+// `faunaSpawnWeights`, their abilities from `innateAbilityWeights`, and the
+// mutations from the catalog (see `rolledMutations`), since they do not depend
+// on the kind of egg.
 
 import { Atoms } from "../../../game/store/atoms";
-import { eggCatalog, mutationCatalog, petAbilities, petCatalog } from "../../../data";
+import { eggCatalog, petAbilities, petCatalog } from "../../../data";
 import { getPetInfo } from "../../../data/rules/petValue";
 import { PetsService } from "../../pets/pets";
+import { rolledMutations } from "../catalogs";
 import type { PetRow } from "./hatch";
 
 /**
- * Plafond du sac, au-delà duquel une éclosion ne donne plus rien.
+ * The bag's cap, past which a hatch gives nothing.
  *
- * Repris de `eggAutomation.ts`, qui l'a établi à l'usage : le jeu refuse en
- * silence, et rien dans son état ne l'annonce.
+ * Taken from `eggAutomation.ts`, which found it in practice: the game refuses
+ * silently, and nothing in its state says so.
  */
 export const INVENTORY_CAPACITY = 98;
 
 type AbilityChoice = { id: string; name: string };
 
 export type HatchScope = {
-  /** Cases d'œufs prêtes à éclore. */
+  /** Egg tiles ready to hatch. */
   readySlots: number[];
-  /** Œufs en terre, mûrs ou non : de quoi dire ce qui attend encore. */
+  /** Eggs in the ground, ripe or not: to say what is still waiting. */
   totalEggs: number;
-  /** Sortes d'œufs en terre : de quoi mettre la bonne icône sur une bulle. */
+  /** Kinds of egg in the ground: to put the right icon on a bubble. */
   eggIds: string[];
-  /** Espèces que les œufs en terre peuvent donner. Alimente les filtres. */
+  /** Species the eggs in the ground can give. Feeds the filters. */
   possibleSpecies: string[];
   possibleAbilities: AbilityChoice[];
-  /** Mutations qu'un animal peut porter : celles qui se tirent, plus celles vues dans le sac. */
+  /** Mutations a pet can carry: the rolled ones, plus those seen in the bag. */
   presentMutations: string[];
   pets: PetRow[];
   inventoryCount: number;
@@ -51,14 +51,14 @@ export const EMPTY_HATCH_SCOPE: HatchScope = {
   capacity: INVENTORY_CAPACITY,
 };
 
-/** Les horodatages du jeu arrivent en secondes ou en millisecondes selon le champ. */
+/** The game's timestamps come in seconds or milliseconds depending on the field. */
 function normalizeTs(value: unknown): number | null {
   const raw = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(raw) || raw <= 0) return null;
   return raw < 100_000_000_000 ? raw * 1000 : raw;
 }
 
-/** Un œuf sans échéance connue est considéré prêt : c'est le jeu qui tranchera. */
+/** An egg with no known due time counts as ready: the game will decide. */
 function isEggReady(tile: Record<string, unknown>, now: number): boolean {
   const readyAt =
     normalizeTs(tile.maturedAt) ??
@@ -79,7 +79,7 @@ function inventoryItems(raw: unknown): Array<Record<string, unknown>> {
   return list.filter((entry): entry is Record<string, unknown> => !!entry && typeof entry === "object");
 }
 
-/* ------------------------------- Le jardin ------------------------------- */
+/* -------------------------------- garden --------------------------------- */
 
 type EggScan = { readySlots: number[]; totalEggs: number; eggIds: Set<string> };
 
@@ -115,16 +115,11 @@ async function scanEggs(): Promise<EggScan> {
 }
 
 /**
- * Ce que les œufs en terre peuvent donner : espèces, puis capacités innées.
+ * What the eggs in the ground can give: species, then innate abilities.
  *
- * Les œufs posés dans le jardin, et eux seuls. Le filtre décide de ce qu'on
- * garde de CETTE couvée : y faire figurer les vingt-neuf espèces du catalogue
- * noierait les cinq que ces œufs-là peuvent réellement sortir, et les capacités
- * suivent puisqu'elles se déduisent des espèces.
- *
- * Les mutations, elles, ne dépendent pas de la sorte d'œuf : n'importe quel
- * animal peut naître Gold ou Rainbow, d'où leur présence permanente (cf.
- * `rolledMutations`).
+ * The planted eggs only. The filter decides what to keep from THIS hatch:
+ * listing the catalog's twenty-nine species would drown the five these eggs
+ * can really give, and the abilities follow from the species.
  */
 function whatCouldHatch(eggIds: Set<string>): { species: string[]; abilities: AbilityChoice[] } {
   const species = new Set<string>();
@@ -150,7 +145,7 @@ function whatCouldHatch(eggIds: Set<string>): { species: string[]; abilities: Ab
   return { species: [...species].sort((a, b) => a.localeCompare(b)), abilities };
 }
 
-/* -------------------------------- Le sac --------------------------------- */
+/* ---------------------------------- bag ---------------------------------- */
 
 async function readPets(): Promise<{ pets: PetRow[]; inventoryCount: number }> {
   const [inventory, favoriteIds, activeIds] = await Promise.all([
@@ -187,11 +182,10 @@ async function readPets(): Promise<{ pets: PetRow[]; inventoryCount: number }> {
 }
 
 /**
- * Les animaux du sac, sans relire le jardin.
+ * The pets in the bag, without reading the garden.
  *
- * `readHatchScope` scanne aussi les tuiles, les favoris et l'équipe active :
- * beaucoup trop pour la seule question « qui vient d'apparaître ? », posée
- * après chaque œuf.
+ * `readHatchScope` also scans the tiles, the favourites and the active team:
+ * far too much for "who just appeared?", asked after every egg.
  */
 export async function readPetRows(): Promise<PetRow[]> {
   try {
@@ -201,7 +195,7 @@ export async function readPetRows(): Promise<PetRow[]> {
   }
 }
 
-/** Combien d'objets occupent le sac, sans relire tout le reste. */
+/** How many items fill the bag, without reading anything else. */
 export async function readInventoryCount(): Promise<number> {
   try {
     return inventoryItems(await Atoms.inventory.myInventory.get()).length;
@@ -210,37 +204,13 @@ export async function readInventoryCount(): Promise<number> {
   }
 }
 
-/**
- * Les mutations qu'un animal peut tirer en naissant.
- *
- * Le catalogue ne les étiquette pas « animal » ou « plante », mais il les
- * sépare quand même : `baseChance` est la probabilité d'être tiré à la
- * naissance, et seules Gold et Rainbow en ont une. Tout le reste — Wet,
- * Frozen, Dawnlit… — vaut zéro parce que ce sont des effets que
- * l'environnement pose sur une plante, jamais sur un animal.
- *
- * Se déduire du catalogue plutôt que de lister deux noms garde le filtre juste
- * le jour où le jeu en ajoute une troisième, et la source dynamique porte bien
- * ce champ.
- */
-function rolledMutations(): string[] {
-  try {
-    return Object.entries(mutationCatalog as Record<string, { baseChance?: unknown }>)
-      .filter(([, def]) => Number(def?.baseChance) > 0)
-      .map(([name]) => name);
-  } catch {
-    // Sans catalogue lisible, le filtre retombe sur ce qu'on observe dans le
-    // sac : moins pratique, mais jamais faux.
-    return [];
-  }
-}
-
 export async function readHatchScope(): Promise<HatchScope> {
   const [eggs, bag] = await Promise.all([scanEggs(), readPets()]);
   const { species, abilities } = whatCouldHatch(eggs.eggIds);
 
-  // Les tirables d'abord : sans elles, on ne pourrait cocher « garder les
-  // Rainbow » qu'après en avoir déjà eu un, c'est-à-dire trop tard.
+  // The rolled mutations first: without them "keep the Rainbows" could only be
+  // ticked after already having one, which is too late. Without a readable
+  // catalog the filter falls back on what the bag shows: less handy, never wrong.
   const mutations = new Set<string>(rolledMutations());
   for (const pet of bag.pets) for (const mutation of pet.mutations) mutations.add(mutation);
 
@@ -256,4 +226,3 @@ export async function readHatchScope(): Promise<HatchScope> {
     capacity: INVENTORY_CAPACITY,
   };
 }
-

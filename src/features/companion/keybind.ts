@@ -1,23 +1,22 @@
-// src/services/companionKeybind.ts
-// Le raccourci qui ouvre le companion directement sur son fil de discussion.
+// The shortcut that opens the companion straight on its chat.
 //
-// Deux événements plutôt qu'un appel direct : le HUD et les menus vivent dans
-// `src/ui/`, et un service n'a pas à aller y chercher une instance. Le premier
-// ouvre la fenêtre, le second lui dit quel onglet montrer.
+// Two events rather than a direct call: the HUD and the menus live in `ui/`,
+// and a feature has no business reaching for an instance there. The first
+// opens the window, the second tells it which tab to show.
 //
-// L'ordre compte. `qws:open-panel` monte le menu, qui installe au passage son
-// écoute d'onglet ; le second événement ne peut donc partir qu'après. Une
-// fenêtre déjà ouverte est simplement remise au premier plan, et son écoute est
-// toujours en place — les deux cas retombent sur le même enchaînement.
+// The order matters. `qws:open-panel` mounts the menu, which installs its tab
+// listener on the way, so the second event can only go after. A window
+// already open is just brought forward and its listener is still in place, so
+// both cases end up the same.
 
 import { eventMatchesKeybind } from "../keybinds/keybinds";
 import { shouldIgnoreKeydown } from "../../lib/keyboard";
 
-/** Identifiant de la fenêtre, tel que `main.ts` l'enregistre auprès du HUD. */
+/** The window's id, as `main.ts` registers it with the HUD. */
 const COMPANION_PANEL_ID = "companion";
 const CHAT_TAB_ID = "chat";
 
-/** Demande au menu companion de basculer sur un onglet. Écouté par `companion.ts`. */
+/** Asks the companion menu to switch tab. Listened to by `menu/index.ts`. */
 export const COMPANION_TAB_EVENT = "qws:companion-tab";
 
 let installed = false;
@@ -41,6 +40,6 @@ export function installCompanionKeybindsOnce(): void {
       event.stopPropagation();
       openCompanionChat();
     },
-    true
+    true,
   );
 }

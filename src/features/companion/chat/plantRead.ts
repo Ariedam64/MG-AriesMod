@@ -1,12 +1,11 @@
-// src/services/companion/chat/plantRead.ts
-// Lit ce qu'on peut planter, et où il reste de la place.
+// Reads what can be planted, and where there is room.
 //
-// Trois questions, trois sources, et aucune n'est devinée : quelles cases de
-// terre ce joueur possède (la map), lesquelles sont déjà prises (le jardin), et
-// ce qu'il a en réserve (les inventaires de graines et d'œufs).
+// Three questions, three sources, none guessed: which dirt tiles this player
+// owns (the map), which are taken (the garden), and what is in stock (the seed
+// and egg inventories).
 //
-// Contrairement à la récolte, le Locker n'a rien à dire ici : ses règles
-// protègent ce qui pousse, pas les cases vides. Planter n'enlève rien.
+// Unlike harvesting, the Locker has nothing to say here: its rules protect
+// what grows, not empty tiles. Planting takes nothing away.
 
 import { Atoms } from "../../../game/store/atoms";
 import { eggCatalogName, seedCatalogName } from "../../../data/names";
@@ -14,7 +13,7 @@ import { readMySlotIdx } from "../anchors";
 import { readCompanionMap } from "../map";
 import { GARDEN_TILE_COUNT, type PlantItem, type PlantScope } from "./plant";
 
-/** Cases de terre de ma parcelle, dans l'ordre où la map les range. */
+/** The dirt tiles of my plot, in the order the map lists them. */
 export async function readOwnedTiles(): Promise<number[]> {
   let count = 0;
   try {
@@ -24,20 +23,19 @@ export async function readOwnedTiles(): Promise<number[]> {
     count = 0;
   }
 
-  // Map pas encore prête, ou parcelle inconnue : on montre la grille entière
-  // plutôt que rien. Une case en trop se solde par une commande refusée ; une
-  // grille vide, elle, ferait croire que le jardin n'existe pas.
+  // Map not ready, or plot unknown: the whole grid rather than nothing. One
+  // tile too many ends in a refused command; an empty grid would make it look
+  // like the garden does not exist.
   const total = count > 0 ? count : GARDEN_TILE_COUNT;
 
   return Array.from({ length: total }, (_, index) => index);
 }
 
 /**
- * Cases déjà prises.
+ * The tiles already taken.
  *
- * Toute entrée de `tileObjects` compte, quel qu'en soit le contenu : une
- * plante, un œuf en couvaison, un décor, un animal posé. Le détail ne nous
- * intéresse pas, seulement le fait que la case n'est plus libre.
+ * Any entry of `tileObjects` counts, whatever it holds: a plant, an egg
+ * incubating, a decoration, a pet. Only that the tile is no longer free matters.
  */
 async function readOccupied(): Promise<Set<number>> {
   const occupied = new Set<number>();
@@ -61,12 +59,12 @@ async function readOccupied(): Promise<Set<number>> {
 const seedName = (species: string) => seedCatalogName(species) ?? species;
 const eggName = (eggId: string) => eggCatalogName(eggId) ?? eggId;
 
-/** Somme les quantités par identifiant : l'inventaire peut lister deux piles. */
+/** Adds quantities up per id: the inventory may list two stacks. */
 function accumulate(
   rows: unknown,
   kind: PlantItem["kind"],
   idOf: (row: Record<string, unknown>) => string,
-  nameOf: (id: string) => string
+  nameOf: (id: string) => string,
 ): PlantItem[] {
   const totals = new Map<string, number>();
   for (const raw of Array.isArray(rows) ? rows : []) {
@@ -85,11 +83,11 @@ function accumulate(
 }
 
 /**
- * Ce qu'on a en réserve : graines d'abord, œufs ensuite.
+ * What is in stock: seeds first, then eggs.
  *
- * L'espèce d'une graine est déjà la clé du catalogue de plantes, et c'est aussi
- * ce que `PlantSeed` attend : rien à convertir. Les œufs, eux, nomment leur
- * identifiant de plusieurs façons selon la version du jeu, d'où la cascade.
+ * A seed's species is already the plant catalog key, and what `PlantSeed`
+ * expects: nothing to convert. Eggs name their id several ways depending on
+ * the game version, hence the cascade.
  */
 async function readItems(): Promise<PlantItem[]> {
   const [seeds, eggs] = await Promise.all([
@@ -103,7 +101,7 @@ async function readItems(): Promise<PlantItem[]> {
   ];
 }
 
-/** L'état complet dans lequel on dessine un plan, et contre lequel on le rejoue. */
+/** The whole state a plan is drawn in, and replayed against. */
 export async function readPlantScope(): Promise<PlantScope> {
   const [tiles, occupied, items] = await Promise.all([readOwnedTiles(), readOccupied(), readItems()]);
   return { tiles, occupied, items };

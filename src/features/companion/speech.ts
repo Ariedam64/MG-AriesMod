@@ -1,24 +1,18 @@
-// src/services/companion/speech.ts
-// Remplace le texte que le jeu fait dire au PNJ détourné.
+// Replaces the line the game makes the borrowed NPC say.
 //
-// Point d'interception
-// --------------------
-// L'action « Talk » du jeu se résume à :
+// The game's "Talk" action comes down to
 //   set(npcChatBubblesAtom, { [npcId]: { seq, playerId, message, timestamp, tags } })
-// Aucun réseau. En enveloppant le `write` de cet atom primitif, on réécrit
-// `message` AVANT qu'il ne soit stocké : la réplique d'origine n'existe donc
-// jamais, et rien ne clignote — contrairement à une réécriture après coup, où le
-// rendu afficherait le texte du jeu pendant une frame.
+// with nothing on the network. Wrapping this primitive atom's `write`
+// rewrites `message` BEFORE it is stored: the original line never exists, so
+// nothing flickers, unlike a rewrite after the fact where the renderer would
+// show the game's text for a frame.
 //
-// Pourquoi pas `fakeAtoms`
-// ------------------------
-// `fakeAtoms` patche `read()` et appelle l'original SANS receveur. Le `read` et
-// le `write` par défaut de Jotai s'appuient sur `this` : les invoquer détachés
-// les casse. On enveloppe donc ici à la main, avec une fonction classique et
-// `.call(this, …)`.
+// Not through `fakeAtoms`: it patches `read()` and calls the original WITHOUT
+// a receiver, and Jotai's default `read` and `write` rely on `this`. So the
+// wrapping is done by hand here, with a plain function and `.call(this, ...)`.
 //
-// Réservation : ce module est le seul à envelopper `npcChatBubblesAtom.write`.
-// Deux enveloppes concurrentes se marcheraient dessus au démontage.
+// This module is the only one wrapping `npcChatBubblesAtom.write`: two
+// wrappers would trip over each other when taken down.
 
 import { getAtomByLabel } from "../../game/store/jotai";
 import { nextBubbleTimestamp } from "./dialogue";
@@ -27,29 +21,29 @@ import { markSpoke } from "./emote";
 const CHAT_BUBBLES_LABEL = "npcChatBubblesAtom";
 
 /**
- * Marque les bulles que le mod écrit lui-même (`Companion.say`). Sans elle, nos
- * propres messages repasseraient par le résolveur et seraient réécrits.
+ * Marks the bubbles the mod writes itself (`Companion.say`). Without it our
+ * own messages would go through the resolver again and be rewritten.
  */
 export const AUTHORED_BY_MOD = "ariesAuthored";
 
 type BubbleEntry = { playerId?: string; message?: string; [key: string]: unknown };
 type BubblePayload = Record<string, BubbleEntry>;
 
-/** Rend le texte à dire, ou `null` pour laisser passer celui du jeu. */
-export type MessageResolver = (npcId: string, originalMessage: string) => string | null;
+/** Returns the line to say, or `null` to let the game's through. */
+type MessageResolver = (npcId: string, originalMessage: string) => string | null;
 
 type Wrapped = { atom: any; original: (...args: unknown[]) => unknown };
 
 let wrapped: Wrapped | null = null;
 let resolver: MessageResolver | null = null;
-/** playerId dont les répliques doivent être réécrites. */
+/** The playerId whose lines are rewritten. */
 let targetNpcId: string | null = null;
-/** Horodatage de la dernière bulle de notre PNJ, toutes sources confondues. */
+/** Our NPC's last bubble timestamp, whoever wrote it. */
 let lastTimestamp: number | null = null;
 
 /**
- * Réécrit le payload sortant si — et seulement si — il concerne notre PNJ.
- * Les bulles des autres PNJ passent inchangées.
+ * Rewrites the outgoing payload if, and only if, it concerns our NPC. Other
+ * NPCs' bubbles go through untouched.
  */
 function rewritePayload(payload: unknown): unknown {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
@@ -58,12 +52,12 @@ function rewritePayload(payload: unknown): unknown {
   const entries = payload as BubblePayload;
   const entry = entries[targetNpcId];
   if (!entry || typeof entry !== "object") return payload;
-  // Toute bulle, la nôtre comme celle du jeu, relance l'animation Talking, qui
-  // masque les poses : `emote.ts` doit savoir quand elle s'éteindra.
+  // Every bubble, ours as well as the game's, restarts the Talking animation,
+  // which hides poses: `emote.ts` must know when it will stop.
   markSpoke(targetNpcId);
 
-  // Les bulles du mod et celles du jeu ne sont pas datées par la même horloge :
-  // on les remet dans l'ordre, sinon le jeu ignore la plus « ancienne ».
+  // The mod's bubbles and the game's are not dated by the same clock: they
+  // are put back in order, or the game ignores the "older" one.
   const proposed = Number(entry.timestamp);
   const timestamp = nextBubbleTimestamp(lastTimestamp, proposed);
   if (Number.isFinite(timestamp)) lastTimestamp = timestamp;
@@ -88,8 +82,8 @@ function rewritePayload(payload: unknown): unknown {
 }
 
 /**
- * Installe l'enveloppe. Idempotent : réappeler ne fait que remplacer la cible et
- * le résolveur, sans empiler les enveloppes.
+ * Installs the wrapper. Idempotent: calling it again only replaces the target
+ * and the resolver, without stacking wrappers.
  */
 export function installSpeechRewriter(npcId: string, resolve: MessageResolver): boolean {
   targetNpcId = npcId;
@@ -100,10 +94,10 @@ export function installSpeechRewriter(npcId: string, resolve: MessageResolver): 
   if (!atom || typeof atom.write !== "function") return false;
 
   const original = atom.write as (...args: unknown[]) => unknown;
-  // Fonction classique (pas fléchée) : le `write` par défaut de Jotai lit `this`.
+  // A plain function (not an arrow): Jotai's default `write` reads `this`.
   atom.write = function (this: unknown, get: unknown, set: unknown, update: unknown, ...rest: unknown[]) {
-    // Le jeu écrit toujours une valeur ; on ne touche pas aux mises à jour
-    // fonctionnelles, dont on ne peut pas connaître le résultat sans l'appliquer.
+    // The game always writes a value; functional updates are left alone, since
+    // their result is unknown without applying them.
     const next = typeof update === "function" ? update : rewritePayload(update);
     return original.call(this, get, set, next, ...rest);
   };
@@ -112,7 +106,7 @@ export function installSpeechRewriter(npcId: string, resolve: MessageResolver): 
   return true;
 }
 
-/** Retire l'enveloppe et restaure le `write` d'origine. Sûr à appeler plusieurs fois. */
+/** Removes the wrapper and restores the original `write`. Safe to call more than once. */
 export function uninstallSpeechRewriter(): void {
   targetNpcId = null;
   lastTimestamp = null;
@@ -123,4 +117,3 @@ export function uninstallSpeechRewriter(): void {
   } catch {}
   wrapped = null;
 }
-

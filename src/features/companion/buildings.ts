@@ -1,36 +1,26 @@
-// src/services/companion/buildings.ts
-// Retrouver un bâtiment parmi les clés que la map expose.
+// Finding a building among the keys the map exposes.
 //
-// Module PUR, séparé de `map.ts` parce que celui-ci s'abonne à un atome dès
-// l'import : la règle de correspondance mérite d'être vérifiable sans monter
-// tout le pont d'état.
-//
-// Aucun nom de bâtiment n'est écrit en dur dans le mod. La map est la seule
-// source, et ses clés changent d'une version du jeu à l'autre — d'où une
-// recherche par fragments plutôt que par égalité.
+// No building name is written into the mod: the map is the only source, and
+// its keys change from one game version to the next, hence a search by
+// fragments rather than by equality.
 
 /**
- * Le premier bâtiment dont le nom contient tous les fragments de `required` et
- * au moins un de `alternatives`.
+ * The first building whose name holds every fragment of `required` and at
+ * least one of `alternatives`.
  *
- * Le second groupe est ce qui sépare deux lieux parlant de la même chose : la
- * boutique d'animaux et la niche contiennent toutes deux « pet ». Un groupe
- * vide ne contraint rien.
+ * The second group tells apart two places about the same thing: the pet shop
+ * and the kennel both contain "pet". An empty group constrains nothing.
  *
- * Rend `null` quand rien ne correspond. Deviner serait pire : l'appelant sait
- * quoi faire d'une absence, pas d'un mauvais bâtiment.
+ * `null` when nothing matches. Guessing would be worse: the caller knows what
+ * to do with an absence, not with the wrong building.
  */
-export function matchBuildingName(
-  names: string[],
-  required: string[],
-  alternatives: string[]
-): string | null {
+export function matchBuildingName(names: string[], required: string[], alternatives: string[]): string | null {
   const wanted = required.map((word) => word.toLowerCase());
   const either = alternatives.map((word) => word.toLowerCase());
 
   for (const name of names) {
-    // Les clés de map mélangent les casses et les séparateurs : on compare sur
-    // les seules lettres pour que « PetShop » et « pet_shop » se valent.
+    // Map keys mix cases and separators: comparing letters only makes
+    // "PetShop" and "pet_shop" the same.
     const key = name.toLowerCase().replace(/[^a-z]/g, "");
     if (!wanted.every((word) => key.includes(word))) continue;
     if (either.length > 0 && !either.some((word) => key.includes(word))) continue;

@@ -1,22 +1,20 @@
-// src/services/companion/chat/bubbleTags.ts
-// Des icônes du jeu dans la bulle du companion.
+// Game icons inside the companion's bubble.
 //
-// Le jeu accepte un champ `tags` à côté de `message` dans `npcChatBubblesAtom`,
-// et seulement pour les PNJ : le chemin des bulles de joueurs ne le transmet
-// pas. Le companion en étant un, il y a droit.
+// The game accepts a `tags` field next to `message` in `npcChatBubblesAtom`,
+// and only for NPCs: the player bubble path does not pass it on. The companion
+// being one, it qualifies.
 //
-// Le balisage est `<0/>` pour une icône en ligne, `<0>texte</0>` pour styler un
-// fragment, et `tags` est un objet indexé par ce numéro. C'est ce que le jeu
-// utilise lui-même : « With all this Rain, your crops are gonna get soaking
-// <0/>! » avec `{ 0: { mutation: "Wet", backgroundColor } }`.
+// The markup is `<0/>` for an inline icon and `<0>text</0>` to style a
+// fragment, and `tags` is an object keyed by that number. It is what the game
+// uses itself: "With all this Rain, your crops are gonna get soaking <0/>!"
+// with `{ 0: { mutation: "Wet", backgroundColor } }`.
 //
-// Module PUR : il fabrique la ligne, il ne parle pas. Les lectures de
-// catalogue vivent dans `bubbleIcons.ts`, qui lui n'est pas importable hors
-// navigateur — c'est ce qui garde le composeur verifiable.
+// Pure: it builds the line, it does not speak. Catalog reads live in
+// `bubbleIcons.ts`.
 
 /**
- * Une pastille de mutation, telle que le jeu la dessine dans ses propres
- * répliques météo. `icon: false` donne le nom sans la pastille.
+ * A mutation chip, as the game draws it in its own weather lines.
+ * `icon: false` gives the name without the chip.
  */
 export type MutationTag = {
   mutation: string;
@@ -26,34 +24,34 @@ export type MutationTag = {
 };
 
 /**
- * N'importe quel sprite du jeu, désigné par sa clé d'atlas.
+ * Any game sprite, given by its atlas key.
  *
- * Le rendu fait `Sprite.from(sprite)`, donc tout ce que les atlas chargés
- * connaissent passe. Un `name` vide donne l'icône seule, sans libellé.
+ * The renderer does `Sprite.from(sprite)`, so anything the loaded atlases know
+ * goes. An empty `name` gives the icon alone, with no label.
  */
 export type GameThingTag = {
   gameThing: { name: string; sprite: string };
   iconSizePx?: number;
   /**
-   * Le fil sait dessiner cette clé, le jeu non.
+   * The thread can draw this key, the game cannot.
    *
-   * Deux vocabulaires portent le même sens : `tileRef` désigne un sprite dans
-   * les atlas que le mod charge lui-même, `sprite` désigne une entrée du cache
-   * de textures du jeu. Envoyer le premier au jeu donne un carré vide, parce
-   * que `Sprite.from` ne trouve rien.
+   * Two vocabularies carry the same meaning: `tileRef` names a sprite in the
+   * atlases the mod loads itself, `sprite` names an entry in the game's texture
+   * cache. Sending the first to the game draws an empty square, since
+   * `Sprite.from` finds nothing.
    *
-   * Ces tags-là sont donc retirés du message envoyé au jeu. Le balisage reste :
-   * le jeu saute une balise dont le tag manque, sans laisser de trou.
+   * These tags are therefore removed from the message sent to the game. The
+   * markup stays: the game skips a marker whose tag is missing, leaving no gap.
    */
   modOnly?: boolean;
 };
 
 /**
- * Un animal précis, tel que le jeu le dessine partout ailleurs.
+ * A specific pet, as the game draws it everywhere else.
  *
- * `pet` est l'objet d'inventaire, pas un nom : c'est le seul tag qui passe par
- * le moteur de rendu d'animal, donc le seul qui compose réellement ses
- * mutations. Un nom vide donne l'icône seule.
+ * `pet` is the inventory object, not a name: this is the only tag that goes
+ * through the pet renderer, so the only one that really composes its
+ * mutations. An empty name gives the icon alone.
  */
 export type PetThingTag = {
   petThing: { name: string; pet: unknown };
@@ -64,16 +62,16 @@ export type BubbleTag = MutationTag | GameThingTag | PetThingTag;
 
 export type BubbleLine = { message: string; tags?: Record<number, BubbleTag> };
 
-/** Un morceau de phrase : du texte, une icône, ou rien. */
-export type Fragment = string | BubbleTag | null | undefined;
+/** A piece of sentence: text, an icon, or nothing. */
+type Fragment = string | BubbleTag | null | undefined;
 
 /**
- * Assemble une phrase et ses icônes, en numérotant les balises.
+ * Puts a sentence and its icons together, numbering the markers.
  *
- * Les fragments nuls disparaissent sans laisser de trou : c'est ce qui permet
- * aux fabricants ci-dessous de rendre `null` quand le catalogue ne connaît pas
- * l'objet. Une clé d'atlas inconnue ne lèverait pas d'erreur, elle dessinerait
- * un carré vide — pire qu'une phrase sans image.
+ * Null fragments vanish without a gap: that is what lets the icon makers
+ * return `null` when the catalog does not know the object. An unknown atlas key
+ * would raise no error, it would draw an empty square, which is worse than a
+ * sentence without a picture.
  */
 export function compose(...fragments: Fragment[]): BubbleLine {
   const tags: Record<number, BubbleTag> = {};
@@ -91,21 +89,19 @@ export function compose(...fragments: Fragment[]): BubbleLine {
     next += 1;
   }
 
-  // Un objet vide est « truthy » : le laisser passer basculerait le jeu sur son
-  // rendu balisé pour une phrase qui n'a aucune balise.
+  // An empty object is truthy: letting it through would switch the game to
+  // its tagged rendering for a sentence without a single marker.
   const tidy = tidySpacing(message);
   return next === 0 ? { message: tidy } : { message: tidy, tags };
 }
 
 /**
- * Rattrape les blancs laissés par un fragment absent.
+ * Cleans up the blanks a missing fragment leaves.
  *
- * Les phrases sont écrites en supposant l'icône présente ; quand le catalogue
- * ne la connaît pas, elle disparaît et laisse « 12  ready » ou « 12 . Pick ».
- * Nettoyer ici plutôt qu'à chaque appel évite que le prochain point d'appel
- * réintroduise le même défaut.
- *
- * On ne touche jamais aux balises : `<0/>` n'a ni espace ni ponctuation.
+ * Sentences are written assuming the icon is there; when the catalog does not
+ * know it, it vanishes and leaves "12  ready" or "12 . Pick". Cleaning here
+ * rather than at every call keeps the next caller from bringing the flaw back.
+ * Markers are never touched: `<0/>` has neither spaces nor punctuation.
  */
 function tidySpacing(message: string): string {
   return message
@@ -115,36 +111,33 @@ function tidySpacing(message: string): string {
 }
 
 /**
- * Sépare des icônes par une espace, pour les poser à la suite dans une phrase.
+ * Separates icons with a space, to put them one after the other in a sentence.
  *
- * `compose` ne devine pas où couper : sans ça, deux tags collés donnent
- * `<0/><1/>`, et le jeu dessine deux sprites l'un contre l'autre.
+ * `compose` does not guess where to break: without this, two tags side by
+ * side give `<0/><1/>`, and the game draws two sprites touching.
  */
 export function spaced(tags: BubbleTag[]): Fragment[] {
   return tags.flatMap((tag, index) => (index === 0 ? [tag] : [" ", tag]));
 }
 
 /**
- * La pastille d'une mutation.
+ * A mutation's chip.
  *
- * `backgroundColor` est la couleur de bulle du PNJ dans les répliques du jeu,
- * pour que la pastille s'accorde au fond. On la laisse optionnelle : sans elle
- * le jeu retombe sur sa valeur par défaut.
+ * `backgroundColor` is the NPC bubble colour in the game's own lines, so the
+ * chip matches the background. Optional: without it the game uses its default.
  */
 export function mutationChip(mutation: string, backgroundColor?: number): MutationTag {
   return { mutation, ...(backgroundColor === undefined ? {} : { backgroundColor }) };
 }
 
 /**
- * La version d'une ligne que le jeu saura dessiner.
+ * The version of a line the game can draw.
  *
- * Les tags qu'il ne peut pas résoudre partent, **et leur balise avec**. Retirer
- * le seul tag ne suffisait pas : le jeu saute bien la balise orpheline, mais le
- * texte se refermait mal et donnait « 2 . Pick them? ». On recolle donc la
- * phrase et on rend les espaces.
- *
- * Les numéros des tags restants ne bougent pas : ce sont eux que les balises
- * survivantes désignent.
+ * Tags it cannot resolve go, **and their marker with them**. Removing the tag
+ * alone was not enough: the game does skip the orphan marker, but the text
+ * closed up badly into "2 . Pick them?". So the sentence is stitched back and
+ * the spaces fixed. The numbers of the remaining tags do not move: they are
+ * what the surviving markers point to.
  */
 export function forGame(line: BubbleLine): BubbleLine {
   if (!line.tags) return line;
@@ -158,7 +151,7 @@ export function forGame(line: BubbleLine): BubbleLine {
   if (dropped.size === 0) return line;
 
   const message = tidySpacing(
-    line.message.replace(/<(\d+)\/>/g, (marker, index) => (dropped.has(Number(index)) ? "" : marker))
+    line.message.replace(/<(\d+)\/>/g, (marker, index) => (dropped.has(Number(index)) ? "" : marker)),
   );
   return Object.keys(kept).length > 0 ? { message, tags: kept } : { message };
 }
