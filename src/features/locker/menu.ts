@@ -7,13 +7,8 @@ import {
   tileRefsMutationLabels,
   memoOnCatalogs,
 } from "../../data";
-import {
-  lockerService,
-  type LockerSettingsPersisted,
-  type LockerScaleLockMode,
-  type LockerLockMode,
-  type LockerStatePersisted,
-} from "./locker";
+import { lockerService } from "./locker";
+import type { LockerSettingsPersisted, LockerScaleLockMode, LockerLockMode, LockerStatePersisted } from "./settings";
 import {
   FRIEND_BONUS_MAX,
   FRIEND_BONUS_STEP,
@@ -431,8 +426,7 @@ function hydrateSettingsFromPersisted(
   target.maxScalePct = maxScale;
   target.scaleLockMode = mode;
   target.lockMode = src.lockMode === "ALLOW" ? "ALLOW" : "LOCK";
-  target.minInventory = Math.max(0, Math.min(999, Math.round(src.minInventory ?? 91)));
-  target.avoidNormal = src.avoidNormal === true || src.includeNormal === false;
+  target.avoidNormal = src.avoidNormal === true;
   target.visualMutations.clear();
   (src.visualMutations ?? []).forEach(mut => {
     if (mut === "Gold" || mut === "Rainbow") target.visualMutations.add(mut);
@@ -489,9 +483,7 @@ function serializeSettingsState(state: LockerSettingsState): LockerSettingsPersi
     maxScalePct: maxScale,
     scaleLockMode: mode,
     lockMode: state.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
-    minInventory: Math.max(0, Math.min(999, Math.round(state.minInventory || 91))),
     avoidNormal: !!state.avoidNormal,
-    includeNormal: !state.avoidNormal,
     visualMutations: Array.from(state.visualMutations),
     weatherMode: state.weatherMode,
     weatherSelected: Array.from(state.weatherSelected),
@@ -600,7 +592,6 @@ class LockerMenuStore {
     this.overrides.delete(key);
     if (!this.syncing) {
       lockerService.removeOverride(key);
-      lockerService.recomputeCurrentSlot();
     }
     this.emit();
   }
@@ -611,7 +602,6 @@ class LockerMenuStore {
       enabled: this.global.enabled,
       settings: serializeSettingsState(this.global.settings),
     });
-    lockerService.recomputeCurrentSlot();
   }
 
   private persistOverride(key: string): void {
@@ -626,7 +616,6 @@ class LockerMenuStore {
       });
       entry.hasPersistedSettings = true;
     }
-    lockerService.recomputeCurrentSlot();
   }
 }
 
@@ -2904,7 +2893,7 @@ export async function renderLockerMenu(container: HTMLElement) {
   ui.switchTo("locker-general");
 
   const disposables: Array<() => void> = [];
-  disposables.push(lockerService.subscribe(event => store.syncFromService(event.state)));
+  disposables.push(lockerService.subscribe(state => store.syncFromService(state)));
   disposables.push(() => restrictionsTab.destroy());
   disposables.push(() => generalTab.destroy());
   disposables.push(() => overridesTab.destroy());

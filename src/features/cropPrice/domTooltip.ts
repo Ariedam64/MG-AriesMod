@@ -118,7 +118,7 @@ function updatePanels(
 
 function getLockerHarvestAllowed(): boolean | null {
   try {
-    return lockerService.getCurrentSlotSnapshot().harvestAllowed ?? null;
+    return lockerService.currentHarvestAllowed();
   } catch {
     return null;
   }

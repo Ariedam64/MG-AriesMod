@@ -1,18 +1,18 @@
-// src/services/lockerRestrictions.ts
-type LockerRestrictionsState = {
-  /** Minimum players in room (1-6) required to allow selling crops. */
-  minRequiredPlayers: number;
-  /** Per-egg lock map: true means hatching is blocked. */
-  eggLocks: Record<string, boolean>;
-  /** When true, decor pickup (PlaceDecor) is blocked. */
-  decorPickupLocked: boolean;
-  /** Rules for Sell All Pets confirmation. */
-  sellAllPets: SellAllPetsRules;
-};
+// The locker's restrictions on actions other than harvesting: selling crops
+// below a friend bonus, picking up decor, hatching chosen eggs, and the
+// confirmation before Sell All Pets lets protected pets go.
 
 import { readAriesPath, writeAriesPath } from "../../platform/storage";
+import { Emitter } from "../../lib/emitter";
+import { clamp, clampFinite } from "../../lib/math";
 
-const ARIES_LOCKER_RESTRICTIONS_PATH = "locker.restrictions";
+const STORAGE_PATH = "locker.restrictions";
+
+export const FRIEND_BONUS_STEP = 10;
+export const FRIEND_BONUS_MAX = 50;
+const MAX_PLAYERS = 6;
+
+const PET_RARITIES = ["Common", "Uncommon", "Rare", "Legendary", "Mythical", "Divine", "Celestial"] as const;
 
 type SellAllPetsRules = {
   enabled: boolean;
@@ -23,12 +23,14 @@ type SellAllPetsRules = {
   protectedRarities: string[];
 };
 
-const clampPercent = (value: number): number => Math.max(0, Math.min(50, Math.round(value)));
-
-const roundToStep = (value: number, step: number): number =>
-  Math.round(value / step) * step;
-
-const VALID_RARITIES = new Set(["Common", "Uncommon", "Rare", "Legendary", "Mythical", "Divine", "Celestial"]);
+type LockerRestrictionsState = {
+  /** Players in the room (1-6) needed before crops may be sold. */
+  minRequiredPlayers: number;
+  /** Per-egg lock map: true blocks hatching that egg. */
+  eggLocks: Record<string, boolean>;
+  decorPickupLocked: boolean;
+  sellAllPets: SellAllPetsRules;
+};
 
 const DEFAULT_SELL_ALL_PETS_RULES: SellAllPetsRules = {
   enabled: true,
@@ -39,128 +41,101 @@ const DEFAULT_SELL_ALL_PETS_RULES: SellAllPetsRules = {
   protectedRarities: [],
 };
 
-const DEFAULT_STATE: LockerRestrictionsState = {
+const defaultState = (): LockerRestrictionsState => ({
   minRequiredPlayers: 1,
   eggLocks: {},
   decorPickupLocked: false,
   sellAllPets: { ...DEFAULT_SELL_ALL_PETS_RULES },
-};
+});
 
-export const FRIEND_BONUS_STEP = 10;
-export const FRIEND_BONUS_MAX = 50;
+/** A friend bonus percentage on the slider's 10% steps, 0 to 50. */
+const toBonusStep = (value: number): number =>
+  clamp(Math.round(clamp(Math.round(value), 0, FRIEND_BONUS_MAX) / FRIEND_BONUS_STEP) * FRIEND_BONUS_STEP, 0, FRIEND_BONUS_MAX);
 
-const sanitizePercent = (value: number): number => {
-  const clamped = clampPercent(value);
-  return Math.max(0, Math.min(FRIEND_BONUS_MAX, roundToStep(clamped, FRIEND_BONUS_STEP)));
-};
+const toPlayerCount = (value: number): number => (Number.isFinite(value) ? clamp(Math.round(value), 1, MAX_PLAYERS) : 1);
 
-const sanitizePlayers = (value: number): number => {
-  if (!Number.isFinite(value)) return 1;
-  return Math.max(1, Math.min(6, Math.round(value)));
-};
+const percentFromPlayerCount = (players: number): number => clamp((players - 1) * 10, 0, FRIEND_BONUS_MAX);
 
-const sanitizeEggLocks = (raw: any): Record<string, boolean> => {
+/** The bonus as a percentage. The atom has held both 1.0-1.5 and a 1-6 player count. */
+export function friendBonusPercentFromMultiplier(raw: unknown): number | null {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return null;
+  if (n <= 0) return 0;
+  if (n <= 2) return clamp(Math.round((n - 1) * 100), 0, FRIEND_BONUS_MAX);
+  return percentFromPlayerCount(toPlayerCount(n));
+}
+
+export function friendBonusPercentFromPlayers(raw: unknown): number | null {
+  const n = Number(raw);
+  return Number.isFinite(n) ? percentFromPlayerCount(toPlayerCount(n)) : null;
+}
+
+export function percentToRequiredFriendCount(percent: number): number {
+  return clamp(Math.round(toBonusStep(percent) / 10) + 1, 1, MAX_PLAYERS);
+}
+
+const requiredPercentFromPlayers = (players: number): number => toBonusStep((toPlayerCount(players) - 1) * 10);
+
+function sanitizeEggLocks(raw: unknown): Record<string, boolean> {
   const out: Record<string, boolean> = {};
   if (!raw || typeof raw !== "object") return out;
-  for (const [key, value] of Object.entries(raw as Record<string, any>)) {
-    if (!key) continue;
-    out[key] = value === true;
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (key) out[key] = value === true;
   }
   return out;
-};
+}
 
-const sanitizeSellAllPetsRules = (raw: any): SellAllPetsRules => {
+function sanitizeSellAllPetsRules(raw: any): SellAllPetsRules {
   if (!raw || typeof raw !== "object") return { ...DEFAULT_SELL_ALL_PETS_RULES };
-  const maxStrRaw = Number(raw.maxStrThreshold);
-  const maxStrThreshold = Number.isFinite(maxStrRaw)
-    ? Math.max(0, Math.min(100, Math.round(maxStrRaw)))
-    : DEFAULT_SELL_ALL_PETS_RULES.maxStrThreshold;
-  const rawRarities = Array.isArray(raw.protectedRarities) ? raw.protectedRarities : [];
-  const protectedRarities = rawRarities.filter(
-    (r: unknown): r is string => typeof r === "string" && VALID_RARITIES.has(r),
-  );
+  const rarities: readonly string[] = PET_RARITIES;
   return {
     enabled: raw.enabled !== false,
     protectGold: raw.protectGold !== false,
     protectRainbow: raw.protectRainbow !== false,
     protectMaxStr: raw.protectMaxStr !== false,
-    maxStrThreshold,
-    protectedRarities,
+    maxStrThreshold: Math.round(clampFinite(raw.maxStrThreshold, 0, 100, DEFAULT_SELL_ALL_PETS_RULES.maxStrThreshold)),
+    protectedRarities: (Array.isArray(raw.protectedRarities) ? raw.protectedRarities : []).filter(
+      (r: unknown): r is string => typeof r === "string" && rarities.includes(r),
+    ),
   };
-};
-
-export function friendBonusPercentFromMultiplier(raw: unknown): number | null {
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return null;
-  if (n <= 0) return 0;
-
-  // Some sources expose the bonus as 1.0 -> 1.5, others as 1 -> 6 (players count).
-  if (n > 0 && n <= 2) {
-    return clampPercent(Math.round((n - 1) * 100));
-  }
-
-  const clamped = Math.max(1, Math.min(6, Math.round(n)));
-  return clampPercent((clamped - 1) * 10);
 }
 
-export function friendBonusPercentFromPlayers(raw: unknown): number | null {
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return null;
-  const clamped = Math.max(1, Math.min(6, Math.round(n)));
-  return clampPercent((clamped - 1) * 10);
-}
-
-export function percentToRequiredFriendCount(percent: number): number {
-  const pct = sanitizePercent(percent);
-  return Math.max(1, Math.min(6, Math.round(pct / 10) + 1));
-}
-
-const requiredPercentFromPlayers = (players: number): number =>
-  sanitizePercent((sanitizePlayers(players) - 1) * 10);
+const sameRules = (a: SellAllPetsRules, b: SellAllPetsRules): boolean =>
+  a.enabled === b.enabled &&
+  a.protectGold === b.protectGold &&
+  a.protectRainbow === b.protectRainbow &&
+  a.protectMaxStr === b.protectMaxStr &&
+  a.maxStrThreshold === b.maxStrThreshold &&
+  JSON.stringify(a.protectedRarities.slice().sort()) === JSON.stringify(b.protectedRarities.slice().sort());
 
 class LockerRestrictionsService {
-  private state: LockerRestrictionsState = { ...DEFAULT_STATE };
-  private listeners = new Set<(state: LockerRestrictionsState) => void>();
+  private state = defaultState();
+  private readonly changes = new Emitter<LockerRestrictionsState>();
 
   constructor() {
-    this.load();
-  }
-
-  private load(): void {
-    if (typeof window === "undefined") {
-      this.state = { ...DEFAULT_STATE };
-      return;
-    }
-
-    try {
-      const parsed = readAriesPath<any>(ARIES_LOCKER_RESTRICTIONS_PATH) ?? {};
-      const players = sanitizePlayers(Number(parsed?.minRequiredPlayers ?? parsed?.minFriendBonusPct));
-      const eggLocks = sanitizeEggLocks(parsed?.eggLocks);
-      const decorPickupLocked = parsed?.decorPickupLocked === true;
-      const sellAllPets = sanitizeSellAllPetsRules(parsed?.sellAllPets);
-      this.state = { minRequiredPlayers: players, eggLocks, decorPickupLocked, sellAllPets };
-    } catch {
-      this.state = { ...DEFAULT_STATE };
-    }
-  }
-
-  private save(): void {
     if (typeof window === "undefined") return;
     try {
-      writeAriesPath(ARIES_LOCKER_RESTRICTIONS_PATH, this.state);
+      const saved = readAriesPath<any>(STORAGE_PATH) ?? {};
+      this.state = {
+        // Older saves name the setting `minFriendBonusPct`.
+        minRequiredPlayers: toPlayerCount(Number(saved?.minRequiredPlayers ?? saved?.minFriendBonusPct)),
+        eggLocks: sanitizeEggLocks(saved?.eggLocks),
+        decorPickupLocked: saved?.decorPickupLocked === true,
+        sellAllPets: sanitizeSellAllPetsRules(saved?.sellAllPets),
+      };
     } catch {
-      /* ignore */
+      this.state = defaultState();
     }
   }
 
-  private emit(): void {
-    for (const listener of this.listeners) {
+  private update(patch: Partial<LockerRestrictionsState>): void {
+    this.state = { ...this.state, ...patch };
+    if (typeof window !== "undefined") {
       try {
-        listener(this.getState());
-      } catch {
-        /* ignore */
-      }
+        writeAriesPath(STORAGE_PATH, this.state);
+      } catch {}
     }
+    this.changes.emit(this.getState());
   }
 
   getState(): LockerRestrictionsState {
@@ -168,75 +143,49 @@ class LockerRestrictionsService {
   }
 
   getSellAllPetsRules(): SellAllPetsRules {
-    return { ...(this.state.sellAllPets ?? DEFAULT_SELL_ALL_PETS_RULES) };
+    return { ...this.state.sellAllPets };
   }
 
   setSellAllPetsRules(next: Partial<SellAllPetsRules>): void {
-    const current = this.getSellAllPetsRules();
-    const merged = { ...current, ...next };
-    const sanitized = sanitizeSellAllPetsRules(merged);
-    const prev = this.state.sellAllPets;
-    const same =
-      prev?.enabled === sanitized.enabled &&
-      prev?.protectGold === sanitized.protectGold &&
-      prev?.protectRainbow === sanitized.protectRainbow &&
-      prev?.protectMaxStr === sanitized.protectMaxStr &&
-      prev?.maxStrThreshold === sanitized.maxStrThreshold &&
-      JSON.stringify((prev?.protectedRarities ?? []).slice().sort()) ===
-        JSON.stringify(sanitized.protectedRarities.slice().sort());
-    if (same) return;
-    this.state = { ...this.state, sellAllPets: sanitized };
-    this.save();
-    this.emit();
+    const sanitized = sanitizeSellAllPetsRules({ ...this.getSellAllPetsRules(), ...next });
+    if (!sameRules(this.state.sellAllPets, sanitized)) this.update({ sellAllPets: sanitized });
   }
 
   setMinRequiredPlayers(value: number): void {
-    const players = sanitizePlayers(value);
-    if (players === this.state.minRequiredPlayers) return;
-    this.state = { ...this.state, minRequiredPlayers: players };
-    this.save();
-    this.emit();
+    const players = toPlayerCount(value);
+    if (players !== this.state.minRequiredPlayers) this.update({ minRequiredPlayers: players });
   }
 
   setEggLock(eggId: string, locked: boolean): void {
-    if (!eggId) return;
-    const nextLocks = { ...this.state.eggLocks, [eggId]: !!locked };
-    this.state = { ...this.state, eggLocks: nextLocks };
-    this.save();
-    this.emit();
+    if (eggId) this.update({ eggLocks: { ...this.state.eggLocks, [eggId]: !!locked } });
   }
 
   setDecorPickupLocked(locked: boolean): void {
-    if (!!locked === this.state.decorPickupLocked) return;
-    this.state = { ...this.state, decorPickupLocked: !!locked };
-    this.save();
-    this.emit();
+    if (!!locked !== this.state.decorPickupLocked) this.update({ decorPickupLocked: !!locked });
   }
 
   isEggLocked(eggId: string | null | undefined): boolean {
-    if (!eggId) return false;
-    return this.state.eggLocks?.[eggId] === true;
+    return !!eggId && this.state.eggLocks[eggId] === true;
   }
 
-  allowsCropSale(currentFriendBonusPercent: number | null | undefined): boolean {
-    const required = requiredPercentFromPlayers(this.state.minRequiredPlayers);
-    if (required <= 0) return true;
-    if (!Number.isFinite(currentFriendBonusPercent as number)) return false;
-    const current = clampPercent(Number(currentFriendBonusPercent));
-    return current + 0.0001 >= required;
+  isDecorPickupLocked(): boolean {
+    return this.state.decorPickupLocked;
   }
 
   getRequiredPercent(): number {
     return requiredPercentFromPlayers(this.state.minRequiredPlayers);
   }
 
-  isDecorPickupLocked(): boolean {
-    return this.state.decorPickupLocked === true;
+  /** An unknown bonus only passes when no bonus is required. */
+  allowsCropSale(currentFriendBonusPercent: number | null | undefined): boolean {
+    const required = this.getRequiredPercent();
+    if (required <= 0) return true;
+    if (!Number.isFinite(currentFriendBonusPercent as number)) return false;
+    return clamp(Math.round(Number(currentFriendBonusPercent)), 0, FRIEND_BONUS_MAX) + 0.0001 >= required;
   }
 
   subscribe(listener: (state: LockerRestrictionsState) => void): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+    return this.changes.on(listener);
   }
 }
 

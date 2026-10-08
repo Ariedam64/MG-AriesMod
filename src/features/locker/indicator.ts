@@ -69,7 +69,7 @@ export function startLockerIndicatorInPixi(): LockerIndicatorController {
     const eggId = extractEggId(currentGardenObject);
     if (eggId) return lockerRestrictionsService.isEggLocked(eggId);
     if (isDecorObject(currentGardenObject)) return lockerRestrictionsService.isDecorPickupLocked();
-    return lockerService.getCurrentSlotSnapshot().harvestAllowed === false;
+    return lockerService.currentHarvestAllowed() === false;
   };
 
   const removeBorder = () => {

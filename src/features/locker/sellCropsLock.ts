@@ -1,9 +1,5 @@
-import { Atoms } from "../../game/store/atoms";
-import {
-  friendBonusPercentFromMultiplier,
-  friendBonusPercentFromPlayers,
-  lockerRestrictionsService,
-} from "./restrictions";
+import { lockerRestrictionsService } from "./restrictions";
+import { currentFriendBonus, onFriendBonusChange } from "./friendBonus";
 
 const CONTAINER_SELECTOR = ".css-vmnhaw";
 const LOCK_ICON_CLASS = "tm-sell-crops-lock";
@@ -23,12 +19,8 @@ export function startSellCropsLockWatcher(): Controller {
     return { stop() {} };
   }
 
-  let bonusFromMultiplier: number | null = null;
-  let bonusFromPlayers: number | null = friendBonusPercentFromPlayers(1);
   let running = true;
   const disposables: Array<() => void> = [];
-
-  const resolveCurrentBonus = () => bonusFromMultiplier ?? bonusFromPlayers ?? 0;
 
   const applyLockState = (locked: boolean) => {
     const containers = Array.from(
@@ -40,11 +32,7 @@ export function startSellCropsLockWatcher(): Controller {
 
   const recompute = () => {
     if (!running) return;
-    const requiredPct = lockerRestrictionsService.getRequiredPercent();
-    const current = resolveCurrentBonus();
-    const locked =
-      requiredPct > 0 && !(Number.isFinite(current) && current + 0.0001 >= requiredPct);
-    applyLockState(locked);
+    applyLockState(!lockerRestrictionsService.allowsCropSale(currentFriendBonus() ?? 0));
   };
 
   const observeDom = () => {
@@ -53,35 +41,9 @@ export function startSellCropsLockWatcher(): Controller {
     disposables.push(() => mo.disconnect());
   };
 
-  const subscribeAtoms = async () => {
-    try {
-      const initial = await Atoms.server.friendBonusMultiplier.get();
-      bonusFromMultiplier = friendBonusPercentFromMultiplier(initial);
-    } catch {}
-    try {
-      const unsub = await Atoms.server.friendBonusMultiplier.onChange((next) => {
-        bonusFromMultiplier = friendBonusPercentFromMultiplier(next);
-        recompute();
-      });
-      if (typeof unsub === "function") disposables.push(unsub);
-    } catch {}
-
-    try {
-      const initialPlayers = await Atoms.server.numPlayers.get();
-      bonusFromPlayers = friendBonusPercentFromPlayers(initialPlayers);
-    } catch {}
-    try {
-      const unsubPlayers = await Atoms.server.numPlayers.onChange((next) => {
-        bonusFromPlayers = friendBonusPercentFromPlayers(next);
-        recompute();
-      });
-      if (typeof unsubPlayers === "function") disposables.push(unsubPlayers);
-    } catch {}
-  };
-
   observeDom();
   disposables.push(lockerRestrictionsService.subscribe(() => recompute()));
-  void subscribeAtoms();
+  disposables.push(onFriendBonusChange(() => recompute()));
   recompute();
 
   return {

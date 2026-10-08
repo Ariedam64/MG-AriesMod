@@ -224,9 +224,9 @@
     const listeners9 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
-    const tick3 = (now2) => {
-      const delta = last ? (now2 - last) / (1e3 / 60) : 1;
-      last = now2;
+    const tick3 = (now) => {
+      const delta = last ? (now - last) / (1e3 / 60) : 1;
+      last = now;
       for (const fn of listeners9) {
         try {
           fn(delta);
@@ -1414,8 +1414,8 @@
   }
   function processVariantJobs(state5, cfg) {
     if (!cfg.jobOn || !state5.open || !state5.jobs.length) return false;
-    const now2 = performance.now();
-    const burst = now2 - state5.changedAt <= cfg.jobBurstWindowMs;
+    const now = performance.now();
+    const burst = now - state5.changedAt <= cfg.jobBurstWindowMs;
     const budget = burst ? cfg.jobBurstMs : cfg.jobBudgetMs;
     const t0 = performance.now();
     let done = 0;
@@ -2753,10 +2753,10 @@
     return findAtomsByLabel(new RegExp("^" + escape(label2) + "$"))[0] || null;
   }
   function pollPendingWaiters() {
-    const now2 = Date.now();
+    const now = Date.now();
     for (const waiter of Array.from(pendingWaiters)) {
       const atom = getAtomByLabel(waiter.label);
-      const givenUp = now2 >= waiter.expiresAt || waiter.keepGoing && !waiter.keepGoing();
+      const givenUp = now >= waiter.expiresAt || waiter.keepGoing && !waiter.keepGoing();
       if (atom || givenUp) {
         pendingWaiters.delete(waiter);
         waiter.resolve(atom ?? null);
@@ -7970,15 +7970,15 @@
       if (pendingTimer != null) return;
       pendingTimer = window.setTimeout(() => {
         pendingTimer = null;
-        const now2 = Date.now();
+        const now = Date.now();
         const pending6 = Array.from(pendingKeys);
         pendingKeys.clear();
-        pruneRecentMap(removedAtByKey, now2);
+        pruneRecentMap(removedAtByKey, now);
         const filtered = [];
         const skipped = [];
         for (const key2 of pending6) {
           const removedAt = removedAtByKey.get(key2) ?? 0;
-          if (removedAt && now2 - removedAt <= RECENT_REMOVE_MS) {
+          if (removedAt && now - removedAt <= RECENT_REMOVE_MS) {
             skipped.push(key2);
           } else {
             filtered.push(key2);
@@ -8042,8 +8042,8 @@
           const diff = diffSet(prev, nextSet);
           if (diff.added.length || diff.removed.length) {
             if (diff.removed.length) {
-              const now2 = Date.now();
-              for (const key2 of diff.removed) removedAtByKey.set(key2, now2);
+              const now = Date.now();
+              for (const key2 of diff.removed) removedAtByKey.set(key2, now);
             }
             log(`${logName} storage items updated`, { size: nextSet.size, added: diff.added, removed: diff.removed });
           }
@@ -8182,9 +8182,9 @@
         for (const key2 of prev) if (!next.has(key2)) removed.push(key2);
         return { added, removed };
       };
-      pruneRecentMap = (map2, now2, maxAgeMs = RECENT_REMOVE_MS * 4) => {
+      pruneRecentMap = (map2, now, maxAgeMs = RECENT_REMOVE_MS * 4) => {
         for (const [key2, ts] of map2) {
-          if (now2 - ts > maxAgeMs) map2.delete(key2);
+          if (now - ts > maxAgeMs) map2.delete(key2);
         }
       };
       summarizeQtyDelta = (prev, next, keys) => keys.map((key2) => ({
@@ -11495,8 +11495,8 @@
     const entry = { raf: 0, baseline: /* @__PURE__ */ new WeakMap(), touched: /* @__PURE__ */ new Set() };
     activeFlashes.set(gidx, entry);
     const start2 = performance.now();
-    const tick3 = (now2) => {
-      const progress = Math.min(1, (now2 - start2) / durationMs);
+    const tick3 = (now) => {
+      const progress = Math.min(1, (now - start2) / durationMs);
       const mix = startMix * (1 - progress);
       const parent = resolveParent();
       if (parent) {
@@ -14271,7 +14271,7 @@
     if (!pid) return null;
     const garden3 = await getGardenForPlayer(pid);
     if (!garden3) return null;
-    const now2 = Date.now();
+    const now = Date.now();
     const all = readSavedGardens();
     const baseName = name?.trim() || "Untitled";
     const makeUniqueName = (base, existing) => {
@@ -14302,9 +14302,9 @@
       }
     }
     const saved = {
-      id: reuseId || `${now2}-${Math.random().toString(16).slice(2)}`,
+      id: reuseId || `${now}-${Math.random().toString(16).slice(2)}`,
       name: finalName,
-      createdAt: now2,
+      createdAt: now,
       garden: garden3
     };
     let updated = [];
@@ -14344,11 +14344,11 @@
     try {
       const parsed = JSON.parse(raw);
       const garden3 = sanitizeGarden(parsed);
-      const now2 = Date.now();
+      const now = Date.now();
       const saved = {
-        id: `${now2}-${Math.random().toString(16).slice(2)}`,
+        id: `${now}-${Math.random().toString(16).slice(2)}`,
         name: name?.trim() || "Imported garden",
-        createdAt: now2,
+        createdAt: now,
         garden: garden3
       };
       const all = readSavedGardens();
@@ -15205,6 +15205,54 @@
     }
   });
 
+  // src/lib/emitter.ts
+  var Emitter, Subscriptions;
+  var init_emitter = __esm({
+    "src/lib/emitter.ts"() {
+      "use strict";
+      Emitter = class {
+        constructor() {
+          this.listeners = /* @__PURE__ */ new Set();
+        }
+        on(listener) {
+          this.listeners.add(listener);
+          return () => {
+            this.listeners.delete(listener);
+          };
+        }
+        emit(value) {
+          for (const listener of [...this.listeners]) {
+            try {
+              listener(value);
+            } catch (error) {
+              console.error("[Aries] listener failed", error);
+            }
+          }
+        }
+        get size() {
+          return this.listeners.size;
+        }
+        clear() {
+          this.listeners.clear();
+        }
+      };
+      Subscriptions = class {
+        constructor() {
+          this.pending = [];
+        }
+        add(unsubscribe2) {
+          this.pending.push(unsubscribe2);
+        }
+        dispose() {
+          for (const entry of this.pending.splice(0)) {
+            Promise.resolve(entry).then((off) => off?.()).catch(() => {
+            });
+          }
+        }
+      };
+    }
+  });
+
   // src/lib/math.ts
   var clamp, clampFinite;
   var init_math = __esm({
@@ -15218,288 +15266,19 @@
     }
   });
 
-  // src/features/locker/locker.ts
-  function startLockerSlotWatcherViaGardenObject() {
-    if (typeof window === "undefined") {
-      return {
-        get: () => emptySlotInfo(),
-        onChange: () => () => {
-        },
-        stop() {
-        },
-        recompute() {
-        }
-      };
-    }
-    let cur = null;
-    let sortedIdx = null;
-    let sortedIdxSig = arraySignature(sortedIdx);
-    let selectedIdx = null;
-    let lastInfo = emptySlotInfo();
-    let curSig = gardenObjectSignature(cur);
-    const listeners9 = /* @__PURE__ */ new Set();
-    const notify3 = () => {
-      for (const fn of listeners9) {
-        try {
-          fn(lastInfo);
-        } catch {
-        }
-      }
-    };
-    let scheduled = false;
-    const scheduleRecomputeAndNotify = () => {
-      recomputeAndNotify();
-      if (scheduled) return;
-      scheduled = true;
-      const run = () => {
-        scheduled = false;
-        recomputeAndNotify();
-      };
-      if (typeof globalThis !== "undefined" && typeof globalThis.queueMicrotask === "function") {
-        globalThis.queueMicrotask(run);
-      } else if (typeof Promise !== "undefined") {
-        Promise.resolve().then(run);
-      } else if (typeof window !== "undefined" && typeof window.setTimeout === "function") {
-        window.setTimeout(run, 0);
-      } else {
-        run();
-      }
-    };
-    function getOrder(slotCount) {
-      if (!slotCount) return [];
-      if (Array.isArray(sortedIdx) && sortedIdx.length === slotCount) {
-        return sortedIdx.slice();
-      }
-      return defaultOrder(slotCount);
-    }
-    function selectedOrderedPosition(order, slotCount) {
-      if (!slotCount || !order.length) return 0;
-      const raw = Number.isFinite(selectedIdx) ? selectedIdx : 0;
-      const clampedRaw = clamp(raw, 0, slotCount - 1);
-      const pos = order.indexOf(clampedRaw);
-      return pos >= 0 ? pos : 0;
-    }
-    function computeSlotInfo() {
-      const seedKey = extractSeedKey(cur);
-      if (!isPlantObject(cur)) {
-        return {
-          isPlant: false,
-          originalIndex: null,
-          orderedIndex: null,
-          totalSlots: 0,
-          availableSlotCount: 0,
-          slot: null,
-          seedKey,
-          sizePercent: null,
-          mutations: []
-        };
-      }
-      const slots = Array.isArray(cur.slots) ? cur.slots : [];
-      const slotCount = slots.length;
-      if (!slotCount) {
-        return {
-          isPlant: true,
-          originalIndex: null,
-          orderedIndex: null,
-          totalSlots: 0,
-          availableSlotCount: 0,
-          slot: null,
-          seedKey,
-          sizePercent: null,
-          mutations: []
-        };
-      }
-      const order = getOrder(slotCount);
-      const availableIndices = [];
-      for (const idx of order) {
-        if (Number.isInteger(idx) && idx >= 0 && idx < slotCount) {
-          if (slots[idx] != null) availableIndices.push(idx);
-        }
-      }
-      const availableCount = availableIndices.length;
-      if (!availableCount) {
-        return {
-          isPlant: true,
-          originalIndex: null,
-          orderedIndex: null,
-          totalSlots: slotCount,
-          availableSlotCount: 0,
-          slot: null,
-          seedKey,
-          sizePercent: null,
-          mutations: []
-        };
-      }
-      let originalIndex = null;
-      let clampedPos;
-      const bySlotId2 = Number.isFinite(selectedIdx) ? slots.findIndex(
-        (s) => s && typeof s === "object" && s.slotId === selectedIdx
-      ) : -1;
-      if (bySlotId2 >= 0) {
-        originalIndex = bySlotId2;
-        const posInOrder = availableIndices.indexOf(bySlotId2);
-        clampedPos = posInOrder >= 0 ? posInOrder : 0;
-      } else {
-        const pos = selectedOrderedPosition(order, slotCount);
-        clampedPos = clamp(pos, 0, availableCount - 1);
-        originalIndex = availableIndices[clampedPos] ?? null;
-      }
-      const slot = typeof originalIndex === "number" ? slots[originalIndex] ?? null : null;
-      const sizePercent = slot ? extractSizePercent(slot) : null;
-      const mutations = slot ? normalizeMutationsList(slot.mutations) : [];
-      const slotSpecies = slot ? extractSeedKey(slot) : null;
-      const effectiveSeedKey = slotSpecies ?? seedKey;
-      return {
-        isPlant: true,
-        originalIndex: typeof originalIndex === "number" ? originalIndex : null,
-        orderedIndex: clampedPos,
-        totalSlots: slotCount,
-        availableSlotCount: availableCount,
-        slot: slot ?? null,
-        seedKey: effectiveSeedKey,
-        sizePercent,
-        mutations
-      };
-    }
-    function mutationsEqual(a, b) {
-      if (a.length !== b.length) return false;
-      for (let i = 0; i < a.length; i++) {
-        if (a[i] !== b[i]) return false;
-      }
-      return true;
-    }
-    function infosEqual(a, b) {
-      return a.isPlant === b.isPlant && a.originalIndex === b.originalIndex && a.orderedIndex === b.orderedIndex && a.totalSlots === b.totalSlots && a.availableSlotCount === b.availableSlotCount && a.slot === b.slot && a.seedKey === b.seedKey && a.sizePercent === b.sizePercent && mutationsEqual(a.mutations, b.mutations);
-    }
-    function recomputeAndNotify() {
-      const next = computeSlotInfo();
-      if (!infosEqual(next, lastInfo)) {
-        lastInfo = next;
-        notify3();
-      }
-    }
-    (async () => {
-      try {
-        selectedIdx = await myCurrentGrowSlotIndex.get();
-      } catch {
-      }
-      try {
-        const v = await myCurrentSortedGrowSlotIndices.get();
-        sortedIdx = Array.isArray(v) ? v.slice() : null;
-        sortedIdxSig = arraySignature(sortedIdx);
-      } catch {
-      }
-      try {
-        cur = await myCurrentGardenObject.get();
-        curSig = gardenObjectSignature(cur);
-      } catch {
-      }
-      const refreshSorted = (v) => {
-        const next = Array.isArray(v) ? v.slice() : null;
-        const sig = arraySignature(next);
-        if (sig === sortedIdxSig) return false;
-        sortedIdx = next;
-        sortedIdxSig = sig;
-        return true;
-      };
-      const refreshGarden = (v) => {
-        const sig = gardenObjectSignature(v ?? null);
-        if (sig === curSig) return false;
-        cur = v;
-        curSig = sig;
-        return true;
-      };
-      let awaitIndexBeforeRecompute = false;
-      let awaitIndexTimer = null;
-      const clearAwaitIndexTimer = () => {
-        if (awaitIndexTimer == null) return;
-        if (typeof globalThis !== "undefined") {
-          const clearer = globalThis.clearTimeout;
-          if (typeof clearer === "function") {
-            clearer.call(globalThis, awaitIndexTimer);
-          }
-        }
-        awaitIndexTimer = null;
-      };
-      const deferUntilIndexChanges = () => {
-        awaitIndexBeforeRecompute = true;
-        if (awaitIndexTimer != null) return;
-        const run = () => {
-          awaitIndexTimer = null;
-          if (!awaitIndexBeforeRecompute) return;
-          awaitIndexBeforeRecompute = false;
-          scheduleRecomputeAndNotify();
-        };
-        if (typeof globalThis !== "undefined") {
-          const setter = globalThis.setTimeout;
-          if (typeof setter === "function") {
-            awaitIndexTimer = setter.call(globalThis, run, 0);
-            return;
-          }
-        }
-        run();
-      };
-      myCurrentSortedGrowSlotIndices.onChange((v) => {
-        const changed = refreshSorted(v);
-        if (!changed) return;
-        deferUntilIndexChanges();
-      });
-      myCurrentGardenObject.onChange((v) => {
-        const changed = refreshGarden(v);
-        if (!changed) return;
-        deferUntilIndexChanges();
-      });
-      myCurrentGrowSlotIndex.onChange((idx) => {
-        selectedIdx = Number.isFinite(idx) ? idx : 0;
-        void (async () => {
-          try {
-            refreshSorted(await myCurrentSortedGrowSlotIndices.get());
-          } catch {
-          }
-          try {
-            refreshGarden(await myCurrentGardenObject.get());
-          } catch {
-          }
-          if (awaitIndexBeforeRecompute) {
-            awaitIndexBeforeRecompute = false;
-            clearAwaitIndexTimer();
-          }
-          scheduleRecomputeAndNotify();
-        })();
-      });
-      recomputeAndNotify();
-    })();
-    return {
-      get() {
-        return lastInfo;
-      },
-      onChange(cb) {
-        listeners9.add(cb);
-        return () => listeners9.delete(cb);
-      },
-      stop() {
-        listeners9.clear();
-      },
-      recompute() {
-        recomputeAndNotify();
-      }
-    };
-  }
+  // src/features/locker/settings.ts
   function defaultSettings() {
     return {
-      minScalePct: 50,
-      maxScalePct: 100,
-      // "None", not "Range". A 50–100 range is an *active* size criterion that
+      minScalePct: CROP_SIZE_MIN,
+      maxScalePct: CROP_SIZE_MAX,
+      // "None", not "Range". A 50-100 range is an active size criterion that
       // every crop matches, so in LOCK mode it locks the whole species while the
       // sliders sit at their extremes and look like no filter at all. Starting
       // with no size criterion means turning a species on locks nothing until the
       // player actually asks for something.
       scaleLockMode: "NONE",
       lockMode: "LOCK",
-      minInventory: 91,
       avoidNormal: false,
-      includeNormal: true,
-      highlightEnabled: false,
       visualMutations: [],
       weatherMode: "ANY",
       weatherSelected: [],
@@ -15507,86 +15286,58 @@
     };
   }
   function defaultState() {
-    return {
-      enabled: false,
-      settings: defaultSettings(),
-      overrides: {}
-    };
+    return { enabled: false, settings: defaultSettings(), overrides: {} };
   }
-  function sanitizeSettings(raw) {
-    const base = defaultSettings();
-    base.lockMode = raw?.lockMode === "ALLOW" ? "ALLOW" : "LOCK";
-    const rawMode = raw?.scaleLockMode;
-    const scaleMode = rawMode === "MINIMUM" ? "MINIMUM" : rawMode === "MAXIMUM" ? "MAXIMUM" : rawMode === "NONE" ? "NONE" : "RANGE";
-    base.scaleLockMode = scaleMode;
-    const minScaleRaw = Number(raw?.minScalePct);
-    let minScale = Number.isFinite(minScaleRaw) ? clampNumber(Math.round(minScaleRaw), 50, 100) : 50;
-    const maxScaleRaw = Number(raw?.maxScalePct);
-    let maxScale = Number.isFinite(maxScaleRaw) ? clampNumber(Math.round(maxScaleRaw), 50, 100) : 100;
-    if (scaleMode === "RANGE") {
-      maxScale = clampNumber(maxScale, 51, 100);
-      if (maxScale <= minScale) {
-        if (minScale >= 99) {
-          minScale = 99;
-          maxScale = 100;
+  function normalizeScaleRange(mode, rawMin, rawMax) {
+    let min = toCropSize(rawMin, CROP_SIZE_MIN);
+    let max = toCropSize(rawMax, CROP_SIZE_MAX);
+    if (mode === "RANGE") {
+      max = Math.max(CROP_SIZE_MIN + 1, max);
+      if (max <= min) {
+        if (min >= CROP_SIZE_MAX - 1) {
+          min = CROP_SIZE_MAX - 1;
+          max = CROP_SIZE_MAX;
         } else {
-          maxScale = clampNumber(minScale + 1, 51, 100);
+          max = min + 1;
         }
       }
-    } else if (scaleMode === "MAXIMUM") {
-      maxScale = clampNumber(maxScale, 50, 100);
-    } else if (scaleMode === "MINIMUM") {
-      minScale = clampNumber(minScale, 50, 100);
     }
-    base.minScalePct = minScale;
-    base.maxScalePct = maxScale;
-    const minInv = Number(raw?.minInventory);
-    base.minInventory = Number.isFinite(minInv) ? clampNumber(Math.round(minInv), 0, 999) : 91;
-    if (typeof raw?.avoidNormal === "boolean") {
-      base.avoidNormal = raw.avoidNormal;
-    } else {
-      base.avoidNormal = raw?.includeNormal === false;
-    }
-    base.includeNormal = !base.avoidNormal;
-    base.highlightEnabled = raw?.highlightEnabled === true;
-    base.visualMutations = Array.isArray(raw?.visualMutations) ? Array.from(new Set(raw.visualMutations.filter((m) => VISUAL_MUTATIONS.has(m)))) : [];
-    const mode = raw?.weatherMode;
-    base.weatherMode = mode === "ALL" || mode === "RECIPES" ? mode : "ANY";
-    base.weatherSelected = Array.isArray(raw?.weatherSelected) ? Array.from(new Set(raw.weatherSelected.map((m) => String(m || "")).filter(Boolean))) : [];
-    base.weatherRecipes = Array.isArray(raw?.weatherRecipes) ? raw.weatherRecipes.map(
-      (recipe) => Array.isArray(recipe) ? Array.from(new Set(recipe.map((m) => String(m || "")).filter(Boolean))) : []
-    ).filter((arr) => arr.length > 0) : [];
-    return base;
+    return { min, max };
+  }
+  function sanitizeSettings(raw) {
+    const scaleLockMode = toScaleMode(raw?.scaleLockMode);
+    const { min, max } = normalizeScaleRange(scaleLockMode, raw?.minScalePct, raw?.maxScalePct);
+    const weatherMode = raw?.weatherMode;
+    return {
+      minScalePct: min,
+      maxScalePct: max,
+      scaleLockMode,
+      lockMode: raw?.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
+      // Settings saved before `avoidNormal` existed said `includeNormal: false`.
+      avoidNormal: typeof raw?.avoidNormal === "boolean" ? raw.avoidNormal : raw?.includeNormal === false,
+      visualMutations: Array.isArray(raw?.visualMutations) ? Array.from(new Set(raw.visualMutations.filter((m) => m === "Gold" || m === "Rainbow"))) : [],
+      weatherMode: weatherMode === "ALL" || weatherMode === "RECIPES" ? weatherMode : "ANY",
+      weatherSelected: uniqueStrings(raw?.weatherSelected),
+      weatherRecipes: Array.isArray(raw?.weatherRecipes) ? raw.weatherRecipes.map(uniqueStrings).filter((recipe) => recipe.length > 0) : []
+    };
   }
   function sanitizeState(raw) {
     const state5 = defaultState();
     if (!raw || typeof raw !== "object") return state5;
     state5.enabled = raw.enabled === true;
     state5.settings = sanitizeSettings(raw.settings);
-    state5.overrides = {};
     if (raw.overrides && typeof raw.overrides === "object") {
       for (const [key2, value] of Object.entries(raw.overrides)) {
         if (!key2) continue;
-        state5.overrides[key2] = {
-          enabled: value?.enabled === true,
-          settings: sanitizeSettings(value?.settings)
-        };
+        state5.overrides[key2] = { enabled: value?.enabled === true, settings: sanitizeSettings(value?.settings) };
       }
     }
     return state5;
   }
   function cloneSettings(settings) {
     return {
-      minScalePct: settings.minScalePct,
-      maxScalePct: settings.maxScalePct,
-      scaleLockMode: settings.scaleLockMode,
-      lockMode: settings.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
-      minInventory: settings.minInventory,
-      avoidNormal: settings.avoidNormal,
-      includeNormal: settings.includeNormal,
-      highlightEnabled: settings.highlightEnabled === true,
+      ...settings,
       visualMutations: settings.visualMutations.slice(),
-      weatherMode: settings.weatherMode,
       weatherSelected: settings.weatherSelected.slice(),
       weatherRecipes: settings.weatherRecipes.map((recipe) => recipe.slice())
     };
@@ -15596,570 +15347,377 @@
     for (const [key2, value] of Object.entries(state5.overrides)) {
       overrides[key2] = { enabled: value.enabled, settings: cloneSettings(value.settings) };
     }
-    return {
-      enabled: state5.enabled,
-      settings: cloneSettings(state5.settings),
-      overrides
-    };
+    return { enabled: state5.enabled, settings: cloneSettings(state5.settings), overrides };
   }
-  function cloneSlotInfo(info) {
-    return {
-      isPlant: info.isPlant,
-      originalIndex: info.originalIndex,
-      orderedIndex: info.orderedIndex,
-      totalSlots: info.totalSlots,
-      availableSlotCount: info.availableSlotCount,
-      slot: info.slot,
-      seedKey: info.seedKey,
-      sizePercent: info.sizePercent,
-      mutations: info.mutations.slice()
-    };
-  }
-  function mutationsToArrays(raw) {
-    const normalized = normalizeMutationsList(raw);
-    let hasGold = false;
-    let hasRainbow = false;
-    const weather2 = [];
-    for (let i = 0; i < normalized.length; i++) {
-      const tag = String(normalized[i] || "");
-      if (!tag) continue;
-      if (tag === "Gold") {
-        hasGold = true;
-      } else if (tag === "Rainbow") {
-        hasRainbow = true;
-      } else {
-        weather2.push(tag);
-      }
+  var NO_WEATHER_TAG, SCALE_MODES, toScaleMode, toCropSize, uniqueStrings;
+  var init_settings2 = __esm({
+    "src/features/locker/settings.ts"() {
+      "use strict";
+      init_cropSize();
+      init_math();
+      NO_WEATHER_TAG = "NoWeatherEffect";
+      SCALE_MODES = ["MINIMUM", "MAXIMUM", "RANGE", "NONE"];
+      toScaleMode = (raw) => SCALE_MODES.includes(raw) ? raw : "RANGE";
+      toCropSize = (raw, fallback) => {
+        const n = Number(raw);
+        return Number.isFinite(n) ? clamp(Math.round(n), CROP_SIZE_MIN, CROP_SIZE_MAX) : fallback;
+      };
+      uniqueStrings = (raw) => Array.isArray(raw) ? Array.from(new Set(raw.map((tag) => String(tag || "")).filter(Boolean))) : [];
     }
-    return { hasGold, hasRainbow, weather: weather2 };
+  });
+
+  // src/features/locker/harvestRules.ts
+  function normalizeMutationTag(value) {
+    const trimmed = (typeof value === "string" ? value : value == null ? "" : String(value)).trim();
+    if (!trimmed) return "";
+    return MUTATION_ALIASES[trimmed.toLowerCase().replace(/[\s_-]+/g, "")] ?? trimmed;
   }
-  var VISUAL_MUTATIONS, LOCKER_NO_WEATHER_TAG, normalizeMutationTag, canonicalizeWeatherTag, normalizeMutationsList, emptySlotInfo, now, shallowEqualStrings, slotInfosEqual, isPlantObject, slotSignature, gardenObjectSignature, arraySignature, defaultOrder, extractSeedKey, extractSizePercent, ARIES_LOCKER_STATE_PATH, clampNumber, LockerService, lockerService;
-  var init_locker = __esm({
-    "src/features/locker/locker.ts"() {
+  function normalizeMutationsList(raw) {
+    if (!Array.isArray(raw)) return [];
+    return raw.map(normalizeMutationTag).filter(Boolean);
+  }
+  function sizeFilter(settings, size) {
+    const mode = settings.scaleLockMode;
+    if (mode === "NONE") return { hasCriteria: false, matched: false };
+    const { min, max } = normalizeScaleRange(mode, settings.minScalePct, settings.maxScalePct);
+    const aboveMin = size + SIZE_EPSILON >= min;
+    const belowMax = size - SIZE_EPSILON <= max;
+    const matched = mode === "MINIMUM" ? aboveMin : mode === "MAXIMUM" ? belowMax : aboveMin && belowMax;
+    return { hasCriteria: true, matched };
+  }
+  function colorFilter(settings, mutations) {
+    const hasGold = mutations.includes("Gold");
+    const hasRainbow = mutations.includes("Rainbow");
+    const gold = settings.visualMutations.includes("Gold");
+    const rainbow = settings.visualMutations.includes("Rainbow");
+    return {
+      hasCriteria: settings.avoidNormal || gold || rainbow,
+      matched: settings.avoidNormal && !hasGold && !hasRainbow || gold && hasGold || rainbow && hasRainbow
+    };
+  }
+  function carriesTag(required, weather2) {
+    const tag = normalizeMutationTag(required);
+    if (!tag) return null;
+    if (tag === NO_WEATHER_TAG) return weather2.length === 0;
+    return weather2.includes(tag);
+  }
+  function weatherFilter(settings, mutations) {
+    const weather2 = mutations.filter((tag) => tag !== "Gold" && tag !== "Rainbow");
+    if (settings.weatherMode === "RECIPES") {
+      const recipes = settings.weatherRecipes.filter((recipe) => Array.isArray(recipe) && recipe.length > 0);
+      return {
+        hasCriteria: settings.weatherRecipes.length > 0,
+        matched: recipes.some((recipe) => carriesAll(recipe, weather2))
+      };
+    }
+    const selected = settings.weatherSelected;
+    if (!selected.length) return { hasCriteria: false, matched: false };
+    const matched = settings.weatherMode === "ALL" ? carriesAll(selected, weather2) : selected.some((tag) => carriesTag(tag, weather2) === true);
+    return { hasCriteria: true, matched };
+  }
+  function harvestAllowedBy(settings, crop) {
+    const mutations = normalizeMutationsList(crop.mutations);
+    const filters = [sizeFilter(settings, crop.sizePercent), colorFilter(settings, mutations), weatherFilter(settings, mutations)];
+    const blocked = settings.lockMode === "ALLOW" ? filters.some((f) => f.hasCriteria && !f.matched) : filters.some((f) => f.matched);
+    return !blocked;
+  }
+  var MUTATION_ALIASES, SIZE_EPSILON, carriesAll;
+  var init_harvestRules = __esm({
+    "src/features/locker/harvestRules.ts"() {
+      "use strict";
+      init_settings2();
+      MUTATION_ALIASES = {
+        gold: "Gold",
+        rainbow: "Rainbow",
+        wet: "Wet",
+        chilled: "Chilled",
+        frozen: "Frozen",
+        dawn: "Dawnlit",
+        dawnlit: "Dawnlit",
+        dawnlight: "Dawnlit",
+        dawnbound: "Dawnbound",
+        dawncharged: "Dawnbound",
+        dawnradiant: "Dawnbound",
+        amberlit: "Amberlit",
+        amberlight: "Amberlit",
+        amberglow: "Amberlit",
+        ambershine: "Amberlit",
+        amberbound: "Amberbound",
+        ambercharged: "Amberbound",
+        amberradiant: "Amberbound"
+      };
+      SIZE_EPSILON = 1e-4;
+      carriesAll = (tags, weather2) => tags.every((tag) => carriesTag(tag, weather2) === true);
+    }
+  });
+
+  // src/features/locker/slotWatcher.ts
+  function extractSeedKey(obj) {
+    if (!obj || typeof obj !== "object") return null;
+    const fields = obj;
+    for (const key2 of ["seedKey", "species", "seedSpecies", "plantSpecies", "cropSpecies", "speciesId"]) {
+      const value = fields[key2];
+      if (typeof value === "string" && value) return value;
+    }
+    return null;
+  }
+  function extractSizePercent(slot) {
+    if (!slot || typeof slot !== "object") return CROP_SIZE_MAX;
+    return readCropSize(slot) ?? // A pre-rework slot converts its scale with its species' maximum, which
+    // older payloads name under another field.
+    readCropSize({ ...slot, species: extractSeedKey(slot) }) ?? CROP_SIZE_MAX;
+  }
+  function selectedSlotIndex(slots, selectedSlotId) {
+    const available = slots.map((_, i) => i).filter((i) => slots[i] != null);
+    if (!available.length) return null;
+    const bySlotId2 = Number.isFinite(selectedSlotId) ? slots.findIndex((s) => !!s && typeof s === "object" && s.slotId === selectedSlotId) : -1;
+    if (bySlotId2 >= 0) return bySlotId2;
+    const raw = Number.isFinite(selectedSlotId) ? selectedSlotId : 0;
+    const pos = Math.max(0, clamp(raw, 0, slots.length - 1));
+    return available[clamp(pos, 0, available.length - 1)] ?? null;
+  }
+  function selectedSlotInfo(gardenObject, selectedSlotId) {
+    const objectKey = extractSeedKey(gardenObject);
+    if (!isPlantObject(gardenObject)) return { ...emptySlotInfo(), seedKey: objectKey };
+    const slots = Array.isArray(gardenObject.slots) ? gardenObject.slots : [];
+    const slotIndex = selectedSlotIndex(slots, selectedSlotId);
+    const slot = slotIndex == null ? null : slots[slotIndex] ?? null;
+    if (!slot) return { ...emptySlotInfo(), isPlant: true, seedKey: objectKey };
+    return {
+      isPlant: true,
+      slotIndex,
+      slot,
+      // A fruit can be its own species (a FourLeafClover on a Clover plant), and
+      // per-crop overrides are keyed by it.
+      seedKey: extractSeedKey(slot) ?? objectKey,
+      sizePercent: extractSizePercent(slot),
+      mutations: normalizeMutationsList(slot.mutations)
+    };
+  }
+  function slotSignature(slot) {
+    if (!slot) return "\u2205";
+    const start2 = Number.isFinite(slot.startTime) ? slot.startTime : 0;
+    const end = Number.isFinite(slot.endTime) ? slot.endTime : 0;
+    const mutations = Array.isArray(slot.mutations) ? slot.mutations.join(",") : "";
+    return `${slot.species ?? ""}|${start2}|${end}|${readCropSize(slot) ?? 0}|${mutations}`;
+  }
+  function gardenObjectSignature(obj) {
+    if (!obj) return "\u2205";
+    if (!isPlantObject(obj)) {
+      const fields = obj;
+      const entries2 = Object.keys(fields).sort().map((key2) => `${key2}:${JSON.stringify(fields[key2])}`);
+      return `other|${entries2.join(";")}`;
+    }
+    const plant = obj;
+    const slots = Array.isArray(plant.slots) ? plant.slots.map((s) => slotSignature(s)).join("||") : "";
+    return `${plant.objectType}|${plant.species ?? ""}|${plant.plantedAt ?? 0}|${plant.maturedAt ?? 0}|slots:${slots}`;
+  }
+  function startLockerSlotWatcher() {
+    let gardenObject = null;
+    let gardenSig = gardenObjectSignature(null);
+    let selectedSlotId = null;
+    let info = emptySlotInfo();
+    let stopped = false;
+    const changes2 = new Emitter();
+    const subs = new Subscriptions();
+    const recompute = () => {
+      if (stopped) return;
+      const next = selectedSlotInfo(gardenObject, selectedSlotId);
+      if (sameSlotInfo(next, info)) return;
+      info = next;
+      changes2.emit(info);
+    };
+    const recomputeNowAndAfterTick = () => {
+      recompute();
+      queueMicrotask(recompute);
+    };
+    const takeGardenObject = (next) => {
+      const sig = gardenObjectSignature(next ?? null);
+      if (sig === gardenSig) return false;
+      gardenObject = next;
+      gardenSig = sig;
+      return true;
+    };
+    let pendingGardenRecompute = null;
+    const cancelPendingGardenRecompute = () => {
+      if (pendingGardenRecompute != null) clearTimeout(pendingGardenRecompute);
+      pendingGardenRecompute = null;
+    };
+    const recomputeAfterIdSettles = () => {
+      if (pendingGardenRecompute != null) return;
+      pendingGardenRecompute = setTimeout(() => {
+        pendingGardenRecompute = null;
+        recomputeNowAndAfterTick();
+      }, 0);
+    };
+    void (async () => {
+      try {
+        selectedSlotId = await myCurrentGrowSlotIndex.get();
+      } catch {
+      }
+      try {
+        takeGardenObject(await myCurrentGardenObject.get());
+      } catch {
+      }
+      if (stopped) return;
+      subs.add(
+        myCurrentGardenObject.onChange((next) => {
+          if (takeGardenObject(next)) recomputeAfterIdSettles();
+        })
+      );
+      subs.add(
+        myCurrentGrowSlotIndex.onChange(async (id) => {
+          selectedSlotId = Number.isFinite(id) ? id : 0;
+          try {
+            takeGardenObject(await myCurrentGardenObject.get());
+          } catch {
+          }
+          cancelPendingGardenRecompute();
+          recomputeNowAndAfterTick();
+        })
+      );
+      recompute();
+    })();
+    return {
+      get: () => info,
+      onChange: (cb) => changes2.on(cb),
+      stop() {
+        stopped = true;
+        cancelPendingGardenRecompute();
+        changes2.clear();
+        subs.dispose();
+      }
+    };
+  }
+  var emptySlotInfo, isPlantObject, sameStrings, sameSlotInfo;
+  var init_slotWatcher = __esm({
+    "src/features/locker/slotWatcher.ts"() {
       "use strict";
       init_atoms();
       init_cropSize();
-      init_storage();
       init_math();
-      VISUAL_MUTATIONS = /* @__PURE__ */ new Set(["Gold", "Rainbow"]);
-      LOCKER_NO_WEATHER_TAG = "NoWeatherEffect";
-      normalizeMutationTag = (value) => {
-        const raw = typeof value === "string" ? value : value == null ? "" : String(value);
-        const trimmed = raw.trim();
-        if (!trimmed) return "";
-        const collapsed = trimmed.toLowerCase().replace(/[\s_-]+/g, "");
-        switch (collapsed) {
-          case "gold":
-            return "Gold";
-          case "rainbow":
-            return "Rainbow";
-          case "wet":
-            return "Wet";
-          case "chilled":
-            return "Chilled";
-          case "frozen":
-            return "Frozen";
-          case "dawn":
-          case "dawnlit":
-          case "dawnlight":
-            return "Dawnlit";
-          case "dawnbound":
-          case "dawncharged":
-          case "dawnradiant":
-            return "Dawnbound";
-          case "amberlit":
-          case "amberlight":
-          case "amberglow":
-          case "ambershine":
-            return "Amberlit";
-          case "amberbound":
-          case "ambercharged":
-          case "amberradiant":
-            return "Amberbound";
-          default:
-            return trimmed;
-        }
-      };
-      canonicalizeWeatherTag = (value) => {
-        if (value === LOCKER_NO_WEATHER_TAG) return LOCKER_NO_WEATHER_TAG;
-        const normalized = normalizeMutationTag(value);
-        return normalized || null;
-      };
-      normalizeMutationsList = (raw) => {
-        if (!Array.isArray(raw)) return [];
-        const out = [];
-        for (let i = 0; i < raw.length; i++) {
-          const normalized = normalizeMutationTag(raw[i]);
-          if (normalized) out.push(normalized);
-        }
-        return out;
-      };
+      init_emitter();
+      init_harvestRules();
       emptySlotInfo = () => ({
         isPlant: false,
-        originalIndex: null,
-        orderedIndex: null,
-        totalSlots: 0,
-        availableSlotCount: 0,
+        slotIndex: null,
         slot: null,
         seedKey: null,
         sizePercent: null,
         mutations: []
       });
-      now = () => typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
-      shallowEqualStrings = (a, b) => {
-        if (a === b) return true;
-        if (!a || !b) return (a?.length ?? 0) === (b?.length ?? 0);
-        if (a.length !== b.length) return false;
-        for (let i = 0; i < a.length; i++) {
-          if (a[i] !== b[i]) return false;
-        }
-        return true;
-      };
-      slotInfosEqual = (a, b) => a.isPlant === b.isPlant && a.originalIndex === b.originalIndex && a.orderedIndex === b.orderedIndex && a.totalSlots === b.totalSlots && a.availableSlotCount === b.availableSlotCount && a.slot === b.slot && a.seedKey === b.seedKey && a.sizePercent === b.sizePercent && shallowEqualStrings(a.mutations, b.mutations);
-      isPlantObject = (o) => !!o && o.objectType === "plant";
-      slotSignature = (slot) => {
-        if (!slot) return "\u2205";
-        const species = slot.species ?? "";
-        const start2 = Number.isFinite(slot.startTime) ? slot.startTime : 0;
-        const end = Number.isFinite(slot.endTime) ? slot.endTime : 0;
-        const size = readCropSize(slot) ?? 0;
-        const muts = Array.isArray(slot.mutations) ? slot.mutations.join(",") : "";
-        return `${species}|${start2}|${end}|${size}|${muts}`;
-      };
-      gardenObjectSignature = (obj) => {
-        if (!obj) return "\u2205";
-        if (!isPlantObject(obj)) {
-          if (!obj || typeof obj !== "object") return String(obj);
-          const entries2 = Object.keys(obj).sort().map((key2) => `${key2}:${JSON.stringify(obj[key2])}`);
-          return `other|${entries2.join(";")}`;
-        }
-        const base = `${obj.objectType}|${obj.species ?? ""}|${obj.plantedAt ?? 0}|${obj.maturedAt ?? 0}`;
-        const slots = Array.isArray(obj.slots) ? obj.slots.map((slot) => slotSignature(slot)).join("||") : "";
-        return `${base}|slots:${slots}`;
-      };
-      arraySignature = (arr) => Array.isArray(arr) ? arr.join(",") : "\u2205";
-      defaultOrder = (n) => Array.from({ length: n }, (_, i) => i);
-      extractSeedKey = (obj) => {
-        if (!obj || typeof obj !== "object") return null;
-        const fields = obj;
-        for (const key2 of ["seedKey", "species", "seedSpecies", "plantSpecies", "cropSpecies", "speciesId"]) {
-          const value = fields[key2];
-          if (typeof value === "string" && value) return value;
-        }
-        return null;
-      };
-      extractSizePercent = (slot) => {
-        if (!slot || typeof slot !== "object") return CROP_SIZE_MAX;
-        const alias = Number(slot.sizePercent ?? slot.sizePct ?? slot.percent ?? slot.progressPercent);
-        if (Number.isFinite(alias)) {
-          return clamp(Math.round(alias), 0, CROP_SIZE_MAX);
-        }
-        const size = readCropSize(slot);
-        if (size != null) return size;
-        const seedKey = extractSeedKey(slot);
-        if (seedKey) {
-          const fromSeedKey = readCropSize({ ...slot, species: seedKey });
-          if (fromSeedKey != null) return fromSeedKey;
-        }
-        return CROP_SIZE_MAX;
-      };
-      ARIES_LOCKER_STATE_PATH = "locker.state";
-      clampNumber = (value, min, max) => Math.max(min, Math.min(max, value));
+      isPlantObject = (obj) => !!obj && typeof obj === "object" && obj.objectType === "plant";
+      sameStrings = (a, b) => a.length === b.length && a.every((value, i) => value === b[i]);
+      sameSlotInfo = (a, b) => a.isPlant === b.isPlant && a.slotIndex === b.slotIndex && a.slot === b.slot && a.seedKey === b.seedKey && a.sizePercent === b.sizePercent && sameStrings(a.mutations, b.mutations);
+    }
+  });
+
+  // src/features/locker/locker.ts
+  var STATE_PATH, LockerService, lockerService;
+  var init_locker = __esm({
+    "src/features/locker/locker.ts"() {
+      "use strict";
+      init_storage();
+      init_emitter();
+      init_harvestRules();
+      init_settings2();
+      init_slotWatcher();
+      STATE_PATH = "locker.state";
       LockerService = class {
         constructor() {
           this.state = defaultState();
-          this.listeners = /* @__PURE__ */ new Set();
-          this.slotInfoListeners = /* @__PURE__ */ new Set();
+          this.stateChanges = new Emitter();
+          this.slotChanges = new Emitter();
           this.slotWatcher = null;
-          this.slotWatcherUnsub = null;
-          this.currentSlotInfo = emptySlotInfo();
-          this.currentSlotHarvestAllowed = null;
-          this.lastSlotChangeDetectedAt = null;
+          this.currentSlot = { info: emptySlotInfo(), harvestAllowed: null };
           this.load();
-          this.updateSlotWatcher();
+          this.syncSlotWatcher();
         }
         load() {
-          if (typeof window === "undefined") {
-            this.state = defaultState();
-            return;
-          }
-          try {
-            const parsed = readAriesPath(ARIES_LOCKER_STATE_PATH);
-            this.state = sanitizeState(parsed);
-          } catch {
-            this.state = defaultState();
-          }
-        }
-        save() {
           if (typeof window === "undefined") return;
           try {
-            writeAriesPath(ARIES_LOCKER_STATE_PATH, this.state);
+            this.state = sanitizeState(readAriesPath(STATE_PATH));
           } catch {
-          }
-        }
-        emit() {
-          if (!this.listeners.size) return;
-          const snapshot2 = this.getState();
-          const event = { type: "locker-state-changed", state: snapshot2 };
-          for (const listener of this.listeners) {
-            try {
-              listener(event);
-            } catch {
-            }
+            this.state = defaultState();
           }
         }
         setState(next) {
           this.state = next;
-          this.updateSlotWatcher();
-          this.save();
-          this.emit();
-          this.requestSlotWatcherRecompute();
-          this.reapplyCurrentSlotInfo();
-        }
-        updateSlotWatcher() {
-          const shouldWatch = this.state.enabled;
-          if (shouldWatch) {
-            if (!this.slotWatcher) {
-              this.slotWatcher = startLockerSlotWatcherViaGardenObject();
-            }
-            if (this.slotWatcher && !this.slotWatcherUnsub) {
-              try {
-                this.slotWatcherUnsub = this.slotWatcher.onChange((info) => this.handleSlotInfo(info));
-              } catch {
-                this.slotWatcherUnsub = null;
-              }
-            }
+          if (typeof window !== "undefined") {
             try {
-              const info = this.slotWatcher ? this.slotWatcher.get() : emptySlotInfo();
-              this.handleSlotInfo(info, { silent: true });
+              writeAriesPath(STATE_PATH, this.state);
             } catch {
-              this.handleSlotInfo(emptySlotInfo(), { silent: true });
             }
-            return;
           }
-          this.detachSlotWatcher();
+          this.syncSlotWatcher();
+          this.stateChanges.emit(this.getState());
+        }
+        /** The watcher only runs while the locker is on; it is judged again on every settings change. */
+        syncSlotWatcher() {
+          if (this.state.enabled && !this.slotWatcher) {
+            this.slotWatcher = startLockerSlotWatcher();
+            this.slotWatcher.onChange((info) => this.judgeSlot(info, true));
+          } else if (!this.state.enabled && this.slotWatcher) {
+            this.slotWatcher.stop();
+            this.slotWatcher = null;
+          }
+          this.judgeSlot(this.slotWatcher?.get() ?? emptySlotInfo(), false);
+        }
+        judgeSlot(info, log2) {
+          let harvestAllowed = null;
+          if (info.isPlant && info.slot) {
+            try {
+              harvestAllowed = this.allowsHarvest({
+                seedKey: info.seedKey,
+                sizePercent: info.sizePercent ?? 0,
+                mutations: info.mutations
+              });
+            } catch {
+              harvestAllowed = null;
+            }
+          }
+          if (log2) console.log("[Locker] Slot selection", { ...info, harvestAllowed });
+          this.currentSlot = { info, harvestAllowed };
+          this.slotChanges.emit(this.currentSlot);
         }
         getState() {
           return cloneState(this.state);
         }
+        isEnabled() {
+          return this.state.enabled;
+        }
         setGlobalState(next) {
-          const current = this.state;
-          const sanitized = sanitizeSettings(next.settings);
-          const updated = {
-            enabled: !!next.enabled,
-            settings: sanitized,
-            overrides: { ...current.overrides }
-          };
-          this.setState(updated);
+          this.setState({ enabled: !!next.enabled, settings: sanitizeSettings(next.settings), overrides: { ...this.state.overrides } });
         }
         setOverride(seedKey, override) {
           if (!seedKey) return;
-          const sanitized = {
-            enabled: !!override?.enabled,
-            settings: sanitizeSettings(override?.settings)
-          };
-          const overrides = { ...this.state.overrides, [seedKey]: sanitized };
-          this.setState({ ...this.state, overrides });
+          const sanitized = { enabled: !!override?.enabled, settings: sanitizeSettings(override?.settings) };
+          this.setState({ ...this.state, overrides: { ...this.state.overrides, [seedKey]: sanitized } });
         }
         removeOverride(seedKey) {
-          if (!seedKey) return;
-          if (!(seedKey in this.state.overrides)) return;
+          if (!seedKey || !(seedKey in this.state.overrides)) return;
           const overrides = { ...this.state.overrides };
           delete overrides[seedKey];
           this.setState({ ...this.state, overrides });
         }
         subscribe(listener) {
-          this.listeners.add(listener);
-          return () => this.listeners.delete(listener);
+          return this.stateChanges.on(listener);
         }
         onSlotInfoChange(listener) {
-          this.slotInfoListeners.add(listener);
-          return () => this.slotInfoListeners.delete(listener);
+          return this.slotChanges.on(listener);
         }
-        getCurrentSlotSnapshot() {
-          return {
-            info: cloneSlotInfo(this.currentSlotInfo),
-            harvestAllowed: this.currentSlotHarvestAllowed,
-            detectedAt: this.lastSlotChangeDetectedAt
-          };
+        /** The verdict on the selected crop: null when the locker is off or nothing harvestable is selected. */
+        currentHarvestAllowed() {
+          return this.currentSlot.harvestAllowed;
         }
-        requestSlotWatcherRecompute() {
-          if (!this.slotWatcher) return;
-          try {
-            this.slotWatcher.recompute();
-          } catch {
-          }
-        }
-        detachSlotWatcher() {
-          if (this.slotWatcherUnsub) {
-            try {
-              this.slotWatcherUnsub();
-            } catch {
-            }
-            this.slotWatcherUnsub = null;
-          }
-          if (this.slotWatcher) {
-            try {
-              this.slotWatcher.stop();
-            } catch {
-            }
-            this.slotWatcher = null;
-          }
-          this.handleSlotInfo(emptySlotInfo(), { silent: true });
-        }
-        handleSlotInfo(info, opts = {}) {
-          const { silent = false } = opts;
-          const prevInfo = this.currentSlotInfo;
-          const prevHarvestAllowed = this.currentSlotHarvestAllowed;
-          const normalizedMutations = normalizeMutationsList(info.mutations);
-          const nextInfo = { ...info, mutations: normalizedMutations };
-          let computedSizePercent = null;
-          let harvestAllowed = null;
-          let displaySizePercent = null;
-          if (nextInfo.isPlant && nextInfo.slot) {
-            if (typeof nextInfo.sizePercent === "number" && Number.isFinite(nextInfo.sizePercent)) {
-              computedSizePercent = nextInfo.sizePercent;
-            } else {
-              computedSizePercent = extractSizePercent(nextInfo.slot);
-            }
-            try {
-              const assessment = this.assessHarvest({
-                seedKey: nextInfo.seedKey ?? null,
-                sizePercent: computedSizePercent ?? 0,
-                mutations: normalizedMutations
-              });
-              harvestAllowed = assessment.allowed;
-            } catch {
-              harvestAllowed = null;
-            }
-          } else {
-            computedSizePercent = typeof nextInfo.sizePercent === "number" && Number.isFinite(nextInfo.sizePercent) ? nextInfo.sizePercent : null;
-            harvestAllowed = null;
-          }
-          if (typeof computedSizePercent === "number") {
-            displaySizePercent = Math.max(50, Math.min(100, computedSizePercent));
-          }
-          this.currentSlotInfo = nextInfo;
-          this.currentSlotHarvestAllowed = harvestAllowed;
-          if (!silent) {
-            if (nextInfo.isPlant) {
-              if (nextInfo.slot) {
-                console.log("[Locker] Slot selection", {
-                  seedKey: nextInfo.seedKey ?? null,
-                  slotIndex: nextInfo.originalIndex,
-                  orderedIndex: nextInfo.orderedIndex,
-                  sizePercent: computedSizePercent,
-                  displaySizePercent,
-                  harvestAllowed,
-                  mutations: normalizedMutations,
-                  slot: nextInfo.slot
-                });
-              } else {
-                console.log("[Locker] Slot selection", {
-                  isPlant: true,
-                  slotIndex: nextInfo.originalIndex,
-                  orderedIndex: nextInfo.orderedIndex,
-                  totalSlots: nextInfo.totalSlots,
-                  availableSlotCount: nextInfo.availableSlotCount,
-                  seedKey: nextInfo.seedKey ?? null,
-                  displaySizePercent,
-                  slot: nextInfo.slot
-                });
-              }
-            } else {
-              console.log("[Locker] Slot selection", { isPlant: false, slot: nextInfo.slot });
-            }
-            const infoChanged = !slotInfosEqual(prevInfo, nextInfo) || (prevHarvestAllowed ?? null) !== (harvestAllowed ?? null);
-            if (infoChanged) {
-              this.lastSlotChangeDetectedAt = now();
-            }
-          }
-          this.emitSlotInfoChange();
-        }
-        reapplyCurrentSlotInfo() {
-          try {
-            const info = this.slotWatcher ? this.slotWatcher.get() : emptySlotInfo();
-            this.handleSlotInfo(info, { silent: true });
-          } catch {
-            this.handleSlotInfo(emptySlotInfo(), { silent: true });
-          }
-        }
-        recomputeCurrentSlot() {
-          this.requestSlotWatcherRecompute();
-          this.reapplyCurrentSlotInfo();
-        }
-        effectiveSettings(seedKey) {
-          if (!this.state.enabled) {
-            return { enabled: false, settings: this.state.settings };
-          }
-          if (seedKey) {
-            const override = this.state.overrides[seedKey];
-            if (override?.enabled) {
-              return { enabled: true, settings: override.settings };
-            }
-          }
-          return { enabled: true, settings: this.state.settings };
-        }
-        assessHarvest(args) {
-          const effective = this.effectiveSettings(args.seedKey);
-          const filters = this.evaluateLockFilters(effective.settings, args);
-          const lockMode = effective.settings.lockMode === "ALLOW" ? "ALLOW" : "LOCK";
-          if (!effective.enabled) {
-            return { effective, filters, lockMode, allowed: true };
-          }
-          const blocked = lockMode === "ALLOW" ? filters.size.hasCriteria && !filters.size.matched || filters.color.hasCriteria && !filters.color.matched || filters.weather.hasCriteria && !filters.weather.matched : filters.matchAny;
-          return { effective, filters, lockMode, allowed: !blocked };
-        }
-        evaluateLockFilters(settings, args) {
-          const size = { hasCriteria: false, matched: false };
-          const color2 = { hasCriteria: false, matched: false };
-          const weatherInfo = { hasCriteria: false, matched: false };
-          const scaleMode = settings.scaleLockMode === "MAXIMUM" ? "MAXIMUM" : settings.scaleLockMode === "MINIMUM" ? "MINIMUM" : settings.scaleLockMode === "NONE" ? "NONE" : "RANGE";
-          const minScale = clampNumber(Math.round(settings.minScalePct ?? 50), 50, 100);
-          const maxScaleBase = clampNumber(Math.round(settings.maxScalePct ?? 100), 50, 100);
-          const epsilon = 1e-4;
-          let sizeMin = null;
-          let sizeMax = null;
-          if (scaleMode === "RANGE") {
-            size.hasCriteria = true;
-            const maxScaleRaw = clampNumber(maxScaleBase, 51, 100);
-            const maxScale = maxScaleRaw <= minScale ? Math.min(100, Math.max(51, minScale + 1)) : maxScaleRaw;
-            sizeMin = minScale;
-            sizeMax = maxScale;
-            const inRange = args.sizePercent + epsilon >= minScale && args.sizePercent - epsilon <= maxScale;
-            size.matched = inRange;
-          } else if (scaleMode === "MINIMUM") {
-            size.hasCriteria = true;
-            sizeMin = minScale;
-            size.matched = args.sizePercent + epsilon >= minScale;
-          } else if (scaleMode === "MAXIMUM") {
-            size.hasCriteria = true;
-            const maxScale = clampNumber(maxScaleBase, 50, 100);
-            sizeMax = maxScale;
-            size.matched = args.sizePercent - epsilon <= maxScale;
-          }
-          const { hasGold, hasRainbow, weather: weather2 } = mutationsToArrays(args.mutations);
-          const isNormal = !hasGold && !hasRainbow;
-          const avoidGold = settings.visualMutations.includes("Gold");
-          const avoidRainbow = settings.visualMutations.includes("Rainbow");
-          const colorFilters = [
-            settings.avoidNormal ? "normal" : null,
-            avoidGold ? "gold" : null,
-            avoidRainbow ? "rainbow" : null
-          ].filter(Boolean);
-          if (colorFilters.length) {
-            color2.hasCriteria = true;
-            const matches = settings.avoidNormal && isNormal || avoidGold && hasGold || avoidRainbow && hasRainbow;
-            color2.matched = matches;
-          }
-          const selected = settings.weatherSelected ?? [];
-          const mode = settings.weatherMode ?? "ANY";
-          if (mode === "RECIPES") {
-            const recipes = settings.weatherRecipes ?? [];
-            if (recipes.length) {
-              weatherInfo.hasCriteria = true;
-              let recipeMatch = false;
-              for (const recipe of recipes) {
-                if (!Array.isArray(recipe) || recipe.length === 0) continue;
-                let matches = true;
-                for (let j = 0; j < recipe.length; j++) {
-                  const rawTag = recipe[j];
-                  const normalizedRequired = canonicalizeWeatherTag(rawTag);
-                  if (!normalizedRequired) {
-                    matches = false;
-                    break;
-                  }
-                  if (normalizedRequired === LOCKER_NO_WEATHER_TAG) {
-                    if (weather2.length !== 0) {
-                      matches = false;
-                      break;
-                    }
-                    continue;
-                  }
-                  if (!weather2.includes(normalizedRequired)) {
-                    matches = false;
-                    break;
-                  }
-                }
-                if (matches) {
-                  recipeMatch = true;
-                  break;
-                }
-              }
-              weatherInfo.matched = recipeMatch;
-            }
-            const matchAny2 = size.matched || color2.matched || weatherInfo.matched;
-            return { size, color: color2, weather: weatherInfo, matchAny: matchAny2, sizeMin, sizeMax, scaleMode };
-          }
-          if (selected.length) {
-            weatherInfo.hasCriteria = true;
-            if (mode === "ALL") {
-              let allMatch = true;
-              for (let i = 0; i < selected.length; i++) {
-                const requiredRaw = selected[i];
-                const normalizedRequired = canonicalizeWeatherTag(requiredRaw);
-                if (!normalizedRequired) {
-                  allMatch = false;
-                  break;
-                }
-                if (normalizedRequired === LOCKER_NO_WEATHER_TAG) {
-                  if (weather2.length !== 0) {
-                    allMatch = false;
-                    break;
-                  }
-                  continue;
-                }
-                if (!weather2.includes(normalizedRequired)) {
-                  allMatch = false;
-                  break;
-                }
-              }
-              weatherInfo.matched = allMatch;
-            } else {
-              let anyMatch = false;
-              for (let i = 0; i < selected.length; i++) {
-                const requiredRaw = selected[i];
-                const normalizedRequired = canonicalizeWeatherTag(requiredRaw);
-                if (!normalizedRequired) {
-                  continue;
-                }
-                if (normalizedRequired === LOCKER_NO_WEATHER_TAG) {
-                  if (weather2.length === 0) {
-                    anyMatch = true;
-                    break;
-                  }
-                  continue;
-                }
-                if (weather2.includes(normalizedRequired)) {
-                  anyMatch = true;
-                  break;
-                }
-              }
-              weatherInfo.matched = anyMatch;
-            }
-          }
-          const matchAny = size.matched || color2.matched || weatherInfo.matched;
-          return { size, color: color2, weather: weatherInfo, matchAny, sizeMin, sizeMax, scaleMode };
-        }
-        emitSlotInfoChange() {
-          if (!this.slotInfoListeners.size) {
-            return;
-          }
-          const snapshot2 = {
-            type: "locker-slot-info-changed",
-            info: cloneSlotInfo(this.currentSlotInfo),
-            harvestAllowed: this.currentSlotHarvestAllowed,
-            detectedAt: this.lastSlotChangeDetectedAt
-          };
-          for (const listener of this.slotInfoListeners) {
-            try {
-              listener(snapshot2);
-            } catch {
-            }
-          }
+        /** A species override that is switched on replaces the global settings. */
+        settingsFor(seedKey) {
+          const override = seedKey ? this.state.overrides[seedKey] : void 0;
+          return override?.enabled ? override.settings : this.state.settings;
         }
         allowsHarvest(args) {
-          return this.assessHarvest(args).allowed;
+          if (!this.state.enabled) return true;
+          return harvestAllowedBy(this.settingsFor(args.seedKey), args);
         }
       };
       lockerService = new LockerService();
@@ -16171,31 +15729,50 @@
     const n = Number(raw);
     if (!Number.isFinite(n)) return null;
     if (n <= 0) return 0;
-    if (n > 0 && n <= 2) {
-      return clampPercent(Math.round((n - 1) * 100));
-    }
-    const clamped = Math.max(1, Math.min(6, Math.round(n)));
-    return clampPercent((clamped - 1) * 10);
+    if (n <= 2) return clamp(Math.round((n - 1) * 100), 0, FRIEND_BONUS_MAX);
+    return percentFromPlayerCount(toPlayerCount(n));
   }
   function friendBonusPercentFromPlayers(raw) {
     const n = Number(raw);
-    if (!Number.isFinite(n)) return null;
-    const clamped = Math.max(1, Math.min(6, Math.round(n)));
-    return clampPercent((clamped - 1) * 10);
+    return Number.isFinite(n) ? percentFromPlayerCount(toPlayerCount(n)) : null;
   }
   function percentToRequiredFriendCount(percent) {
-    const pct = sanitizePercent(percent);
-    return Math.max(1, Math.min(6, Math.round(pct / 10) + 1));
+    return clamp(Math.round(toBonusStep(percent) / 10) + 1, 1, MAX_PLAYERS);
   }
-  var ARIES_LOCKER_RESTRICTIONS_PATH, clampPercent, roundToStep, VALID_RARITIES, DEFAULT_SELL_ALL_PETS_RULES, DEFAULT_STATE, FRIEND_BONUS_STEP, FRIEND_BONUS_MAX, sanitizePercent, sanitizePlayers, sanitizeEggLocks, sanitizeSellAllPetsRules, requiredPercentFromPlayers, LockerRestrictionsService, lockerRestrictionsService;
+  function sanitizeEggLocks(raw) {
+    const out = {};
+    if (!raw || typeof raw !== "object") return out;
+    for (const [key2, value] of Object.entries(raw)) {
+      if (key2) out[key2] = value === true;
+    }
+    return out;
+  }
+  function sanitizeSellAllPetsRules(raw) {
+    if (!raw || typeof raw !== "object") return { ...DEFAULT_SELL_ALL_PETS_RULES };
+    const rarities = PET_RARITIES;
+    return {
+      enabled: raw.enabled !== false,
+      protectGold: raw.protectGold !== false,
+      protectRainbow: raw.protectRainbow !== false,
+      protectMaxStr: raw.protectMaxStr !== false,
+      maxStrThreshold: Math.round(clampFinite(raw.maxStrThreshold, 0, 100, DEFAULT_SELL_ALL_PETS_RULES.maxStrThreshold)),
+      protectedRarities: (Array.isArray(raw.protectedRarities) ? raw.protectedRarities : []).filter(
+        (r) => typeof r === "string" && rarities.includes(r)
+      )
+    };
+  }
+  var STORAGE_PATH, FRIEND_BONUS_STEP, FRIEND_BONUS_MAX, MAX_PLAYERS, PET_RARITIES, DEFAULT_SELL_ALL_PETS_RULES, defaultState2, toBonusStep, toPlayerCount, percentFromPlayerCount, requiredPercentFromPlayers, sameRules, LockerRestrictionsService, lockerRestrictionsService;
   var init_restrictions = __esm({
     "src/features/locker/restrictions.ts"() {
       "use strict";
       init_storage();
-      ARIES_LOCKER_RESTRICTIONS_PATH = "locker.restrictions";
-      clampPercent = (value) => Math.max(0, Math.min(50, Math.round(value)));
-      roundToStep = (value, step) => Math.round(value / step) * step;
-      VALID_RARITIES = /* @__PURE__ */ new Set(["Common", "Uncommon", "Rare", "Legendary", "Mythical", "Divine", "Celestial"]);
+      init_emitter();
+      init_math();
+      STORAGE_PATH = "locker.restrictions";
+      FRIEND_BONUS_STEP = 10;
+      FRIEND_BONUS_MAX = 50;
+      MAX_PLAYERS = 6;
+      PET_RARITIES = ["Common", "Uncommon", "Rare", "Legendary", "Mythical", "Divine", "Celestial"];
       DEFAULT_SELL_ALL_PETS_RULES = {
         enabled: true,
         protectGold: true,
@@ -16204,146 +15781,122 @@
         maxStrThreshold: 95,
         protectedRarities: []
       };
-      DEFAULT_STATE = {
+      defaultState2 = () => ({
         minRequiredPlayers: 1,
         eggLocks: {},
         decorPickupLocked: false,
         sellAllPets: { ...DEFAULT_SELL_ALL_PETS_RULES }
-      };
-      FRIEND_BONUS_STEP = 10;
-      FRIEND_BONUS_MAX = 50;
-      sanitizePercent = (value) => {
-        const clamped = clampPercent(value);
-        return Math.max(0, Math.min(FRIEND_BONUS_MAX, roundToStep(clamped, FRIEND_BONUS_STEP)));
-      };
-      sanitizePlayers = (value) => {
-        if (!Number.isFinite(value)) return 1;
-        return Math.max(1, Math.min(6, Math.round(value)));
-      };
-      sanitizeEggLocks = (raw) => {
-        const out = {};
-        if (!raw || typeof raw !== "object") return out;
-        for (const [key2, value] of Object.entries(raw)) {
-          if (!key2) continue;
-          out[key2] = value === true;
-        }
-        return out;
-      };
-      sanitizeSellAllPetsRules = (raw) => {
-        if (!raw || typeof raw !== "object") return { ...DEFAULT_SELL_ALL_PETS_RULES };
-        const maxStrRaw = Number(raw.maxStrThreshold);
-        const maxStrThreshold = Number.isFinite(maxStrRaw) ? Math.max(0, Math.min(100, Math.round(maxStrRaw))) : DEFAULT_SELL_ALL_PETS_RULES.maxStrThreshold;
-        const rawRarities = Array.isArray(raw.protectedRarities) ? raw.protectedRarities : [];
-        const protectedRarities = rawRarities.filter(
-          (r) => typeof r === "string" && VALID_RARITIES.has(r)
-        );
-        return {
-          enabled: raw.enabled !== false,
-          protectGold: raw.protectGold !== false,
-          protectRainbow: raw.protectRainbow !== false,
-          protectMaxStr: raw.protectMaxStr !== false,
-          maxStrThreshold,
-          protectedRarities
-        };
-      };
-      requiredPercentFromPlayers = (players) => sanitizePercent((sanitizePlayers(players) - 1) * 10);
+      });
+      toBonusStep = (value) => clamp(Math.round(clamp(Math.round(value), 0, FRIEND_BONUS_MAX) / FRIEND_BONUS_STEP) * FRIEND_BONUS_STEP, 0, FRIEND_BONUS_MAX);
+      toPlayerCount = (value) => Number.isFinite(value) ? clamp(Math.round(value), 1, MAX_PLAYERS) : 1;
+      percentFromPlayerCount = (players) => clamp((players - 1) * 10, 0, FRIEND_BONUS_MAX);
+      requiredPercentFromPlayers = (players) => toBonusStep((toPlayerCount(players) - 1) * 10);
+      sameRules = (a, b) => a.enabled === b.enabled && a.protectGold === b.protectGold && a.protectRainbow === b.protectRainbow && a.protectMaxStr === b.protectMaxStr && a.maxStrThreshold === b.maxStrThreshold && JSON.stringify(a.protectedRarities.slice().sort()) === JSON.stringify(b.protectedRarities.slice().sort());
       LockerRestrictionsService = class {
         constructor() {
-          this.state = { ...DEFAULT_STATE };
-          this.listeners = /* @__PURE__ */ new Set();
-          this.load();
-        }
-        load() {
-          if (typeof window === "undefined") {
-            this.state = { ...DEFAULT_STATE };
-            return;
-          }
-          try {
-            const parsed = readAriesPath(ARIES_LOCKER_RESTRICTIONS_PATH) ?? {};
-            const players = sanitizePlayers(Number(parsed?.minRequiredPlayers ?? parsed?.minFriendBonusPct));
-            const eggLocks = sanitizeEggLocks(parsed?.eggLocks);
-            const decorPickupLocked = parsed?.decorPickupLocked === true;
-            const sellAllPets = sanitizeSellAllPetsRules(parsed?.sellAllPets);
-            this.state = { minRequiredPlayers: players, eggLocks, decorPickupLocked, sellAllPets };
-          } catch {
-            this.state = { ...DEFAULT_STATE };
-          }
-        }
-        save() {
+          this.state = defaultState2();
+          this.changes = new Emitter();
           if (typeof window === "undefined") return;
           try {
-            writeAriesPath(ARIES_LOCKER_RESTRICTIONS_PATH, this.state);
+            const saved = readAriesPath(STORAGE_PATH) ?? {};
+            this.state = {
+              // Older saves name the setting `minFriendBonusPct`.
+              minRequiredPlayers: toPlayerCount(Number(saved?.minRequiredPlayers ?? saved?.minFriendBonusPct)),
+              eggLocks: sanitizeEggLocks(saved?.eggLocks),
+              decorPickupLocked: saved?.decorPickupLocked === true,
+              sellAllPets: sanitizeSellAllPetsRules(saved?.sellAllPets)
+            };
           } catch {
+            this.state = defaultState2();
           }
         }
-        emit() {
-          for (const listener of this.listeners) {
+        update(patch) {
+          this.state = { ...this.state, ...patch };
+          if (typeof window !== "undefined") {
             try {
-              listener(this.getState());
+              writeAriesPath(STORAGE_PATH, this.state);
             } catch {
             }
           }
+          this.changes.emit(this.getState());
         }
         getState() {
           return { ...this.state };
         }
         getSellAllPetsRules() {
-          return { ...this.state.sellAllPets ?? DEFAULT_SELL_ALL_PETS_RULES };
+          return { ...this.state.sellAllPets };
         }
         setSellAllPetsRules(next) {
-          const current = this.getSellAllPetsRules();
-          const merged = { ...current, ...next };
-          const sanitized = sanitizeSellAllPetsRules(merged);
-          const prev = this.state.sellAllPets;
-          const same = prev?.enabled === sanitized.enabled && prev?.protectGold === sanitized.protectGold && prev?.protectRainbow === sanitized.protectRainbow && prev?.protectMaxStr === sanitized.protectMaxStr && prev?.maxStrThreshold === sanitized.maxStrThreshold && JSON.stringify((prev?.protectedRarities ?? []).slice().sort()) === JSON.stringify(sanitized.protectedRarities.slice().sort());
-          if (same) return;
-          this.state = { ...this.state, sellAllPets: sanitized };
-          this.save();
-          this.emit();
+          const sanitized = sanitizeSellAllPetsRules({ ...this.getSellAllPetsRules(), ...next });
+          if (!sameRules(this.state.sellAllPets, sanitized)) this.update({ sellAllPets: sanitized });
         }
         setMinRequiredPlayers(value) {
-          const players = sanitizePlayers(value);
-          if (players === this.state.minRequiredPlayers) return;
-          this.state = { ...this.state, minRequiredPlayers: players };
-          this.save();
-          this.emit();
+          const players = toPlayerCount(value);
+          if (players !== this.state.minRequiredPlayers) this.update({ minRequiredPlayers: players });
         }
         setEggLock(eggId, locked) {
-          if (!eggId) return;
-          const nextLocks = { ...this.state.eggLocks, [eggId]: !!locked };
-          this.state = { ...this.state, eggLocks: nextLocks };
-          this.save();
-          this.emit();
+          if (eggId) this.update({ eggLocks: { ...this.state.eggLocks, [eggId]: !!locked } });
         }
         setDecorPickupLocked(locked) {
-          if (!!locked === this.state.decorPickupLocked) return;
-          this.state = { ...this.state, decorPickupLocked: !!locked };
-          this.save();
-          this.emit();
+          if (!!locked !== this.state.decorPickupLocked) this.update({ decorPickupLocked: !!locked });
         }
         isEggLocked(eggId) {
-          if (!eggId) return false;
-          return this.state.eggLocks?.[eggId] === true;
+          return !!eggId && this.state.eggLocks[eggId] === true;
         }
-        allowsCropSale(currentFriendBonusPercent) {
-          const required = requiredPercentFromPlayers(this.state.minRequiredPlayers);
-          if (required <= 0) return true;
-          if (!Number.isFinite(currentFriendBonusPercent)) return false;
-          const current = clampPercent(Number(currentFriendBonusPercent));
-          return current + 1e-4 >= required;
+        isDecorPickupLocked() {
+          return this.state.decorPickupLocked;
         }
         getRequiredPercent() {
           return requiredPercentFromPlayers(this.state.minRequiredPlayers);
         }
-        isDecorPickupLocked() {
-          return this.state.decorPickupLocked === true;
+        /** An unknown bonus only passes when no bonus is required. */
+        allowsCropSale(currentFriendBonusPercent) {
+          const required = this.getRequiredPercent();
+          if (required <= 0) return true;
+          if (!Number.isFinite(currentFriendBonusPercent)) return false;
+          return clamp(Math.round(Number(currentFriendBonusPercent)), 0, FRIEND_BONUS_MAX) + 1e-4 >= required;
         }
         subscribe(listener) {
-          this.listeners.add(listener);
-          return () => this.listeners.delete(listener);
+          return this.changes.on(listener);
         }
       };
       lockerRestrictionsService = new LockerRestrictionsService();
+    }
+  });
+
+  // src/features/locker/friendBonus.ts
+  function followFriendBonus() {
+    if (following) return;
+    following = true;
+    void readAndFollow(Atoms.server.friendBonusMultiplier, (next) => {
+      fromMultiplier = friendBonusPercentFromMultiplier(next);
+      changes.emit(currentFriendBonus());
+    });
+    void readAndFollow(Atoms.server.numPlayers, (next) => {
+      fromPlayers = friendBonusPercentFromPlayers(next);
+      changes.emit(currentFriendBonus());
+    });
+  }
+  function currentFriendBonus() {
+    followFriendBonus();
+    return fromMultiplier ?? fromPlayers;
+  }
+  function onFriendBonusChange(listener) {
+    followFriendBonus();
+    return changes.on(listener);
+  }
+  var fromMultiplier, fromPlayers, following, changes;
+  var init_friendBonus = __esm({
+    "src/features/locker/friendBonus.ts"() {
+      "use strict";
+      init_atoms();
+      init_hub();
+      init_emitter();
+      init_restrictions();
+      fromMultiplier = null;
+      fromPlayers = null;
+      following = false;
+      changes = new Emitter();
     }
   });
 
@@ -16352,19 +15905,8 @@
     if (!obj || typeof obj !== "object" || obj.objectType !== "egg") return null;
     return typeof obj.eggId === "string" && obj.eggId ? obj.eggId : null;
   }
-  function lockerEnabled() {
-    try {
-      return lockerService.getState().enabled;
-    } catch {
-      return false;
-    }
-  }
   function blockedByCurrentSlot() {
-    try {
-      return lockerEnabled() && lockerService.getCurrentSlotSnapshot().harvestAllowed === false;
-    } catch {
-      return false;
-    }
+    return lockerService.isEnabled() && lockerService.currentHarvestAllowed() === false;
   }
   function harvestedTile(slot) {
     let tile = garden2?.tileObjects?.[String(slot)];
@@ -16400,7 +15942,7 @@
       }
       return;
     }
-    if (!lockerEnabled()) return;
+    if (!lockerService.isEnabled()) return;
     const seedKey = extractSeedKey(cropSlot) ?? extractSeedKey(findGrowSlot(currentGardenObject?.slots, slotsIndex)) ?? extractSeedKey(tile);
     const sizePercent = extractSizePercent(cropSlot);
     const mutations = normalizeMutationsList(cropSlot.mutations);
@@ -16441,7 +15983,7 @@
     return isTileSell || !!t.description?.props?.values?.cropText;
   }
   function checkSellAllCrops() {
-    const currentBonusPct = friendBonusFromMultiplier ?? friendBonusFromPlayers ?? null;
+    const currentBonusPct = currentFriendBonus();
     if (lockerRestrictionsService.allowsCropSale(currentBonusPct)) return;
     const requiredPct = lockerRestrictionsService.getRequiredPercent();
     console.log("[SellAllCrops] Blocked by friend bonus restriction", {
@@ -16469,18 +16011,13 @@
     void readAndFollow(Atoms.data.myCurrentGardenObject, (next) => {
       currentGardenObject = next;
     });
-    void readAndFollow(Atoms.server.friendBonusMultiplier, (next) => {
-      friendBonusFromMultiplier = friendBonusPercentFromMultiplier(next);
-    });
-    void readAndFollow(Atoms.server.numPlayers, (next) => {
-      friendBonusFromPlayers = friendBonusPercentFromPlayers(next);
-    });
+    followFriendBonus();
     interceptOutgoing("HarvestCrop", checkHarvest);
     interceptOutgoing("PickupDecor", checkDecorPickup);
     interceptOutgoing("HatchEgg", checkHatch);
     interceptOutgoing("SellAllCrops", checkSellAllCrops);
   }
-  var garden2, currentGardenObject, friendBonusFromMultiplier, friendBonusFromPlayers, EGG_TOAST_TITLE;
+  var garden2, currentGardenObject, EGG_TOAST_TITLE;
   var init_outgoingRules2 = __esm({
     "src/features/locker/outgoingRules.ts"() {
       "use strict";
@@ -16492,11 +16029,12 @@
       init_toast();
       init_editor();
       init_locker();
+      init_harvestRules();
+      init_slotWatcher();
       init_restrictions();
+      init_friendBonus();
       garden2 = null;
       currentGardenObject = null;
-      friendBonusFromMultiplier = null;
-      friendBonusFromPlayers = null;
       EGG_TOAST_TITLE = "Egg hatch locker";
     }
   });
@@ -19273,9 +18811,9 @@
     const hungerPct = PetsService.getHungerPctFor(pet);
     const thresholdPct = Math.max(1, Math.min(100, ov.thresholdPct | 0 || 10));
     const nowBelow = hungerPct < thresholdPct;
-    const now2 = Date.now();
+    const now = Date.now();
     const lastAttempt = _lastAutofeedAttemptAt.get(petId) || 0;
-    if (nowBelow && now2 - lastAttempt >= AUTOF_FEED_MIN_INTERVAL_MS) {
+    if (nowBelow && now - lastAttempt >= AUTOF_FEED_MIN_INTERVAL_MS) {
       let allowedSet;
       try {
         allowedSet = await PetsService.getPetAllowedCrops(petId);
@@ -19313,7 +18851,7 @@
         chosenItem: chosen,
         didUnfavorite
       });
-      _lastAutofeedAttemptAt.set(petId, now2);
+      _lastAutofeedAttemptAt.set(petId, now);
     }
     if (!nowBelow) {
       _lastAutofeedAttemptAt.delete(petId);
@@ -23264,9 +22802,9 @@
         // =========================
         async playOnce(dataUrl, volume, _context, opts = {}) {
           if (!this.enabled) return true;
-          const now2 = Date.now();
-          if (now2 - this.lastPlayTs < this.minPlayGapMs) return false;
-          this.lastPlayTs = now2;
+          const now = Date.now();
+          if (now - this.lastPlayTs < this.minPlayGapMs) return false;
+          this.lastPlayTs = now;
           if (!dataUrl) {
             if (this.primed && this.audioCtx) {
               try {
@@ -23868,10 +23406,10 @@
       def = byName.get(noSpace);
     }
     const prevId = _currentWeatherId;
-    const now2 = Date.now();
+    const now = Date.now();
     if (def) {
       const pref = _getWeatherPref(def.id);
-      pref.lastSeen = now2;
+      pref.lastSeen = now;
       _weatherPrefs.set(def.id, pref);
     }
     _currentWeatherId = def?.id ?? null;
@@ -24453,8 +23991,8 @@
           return { label: "Now", title };
         }
         if (!timestamp) return { label: "Never", title: "Never seen" };
-        const now2 = Date.now();
-        const diff = Math.max(0, now2 - timestamp);
+        const now = Date.now();
+        const diff = Math.max(0, now - timestamp);
         let label2;
         if (diff < 45e3) label2 = "Just now";
         else if (diff < 9e4) label2 = "1 min ago";
@@ -24964,12 +24502,12 @@
       console.info(`[gardenInfoCardPixi] still searching for ${CARD_SYSTEM_LABEL} (${findAttempts} attempts so far)`);
     }
   }
-  function scheduleFind(now2) {
+  function scheduleFind(now) {
     findRafId = null;
     debugState.rafTicks += 1;
     if (!listeners5.size || cardSystem) return;
-    if (now2 - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
-      lastFindCheckAt = now2;
+    if (now - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
+      lastFindCheckAt = now;
       tryFindCardSystem();
     }
     if (!listeners5.size || cardSystem) return;
@@ -25296,11 +24834,11 @@
         console.info(`[notificationBellPixi] still searching for ${RAIL_LABEL} (${findAttempts2} attempts so far)`);
       }
     };
-    const scheduleFind3 = (now2) => {
+    const scheduleFind3 = (now) => {
       findRafId3 = null;
       if (!running6 || rail) return;
-      if (now2 - lastFindCheckAt3 >= RAIL_FIND_RETRY_MS) {
-        lastFindCheckAt3 = now2;
+      if (now - lastFindCheckAt3 >= RAIL_FIND_RETRY_MS) {
+        lastFindCheckAt3 = now;
         tryFindRail();
       }
       if (!running6 || rail) return;
@@ -27117,7 +26655,7 @@
   }
   function getLockerHarvestAllowed() {
     try {
-      return lockerService.getCurrentSlotSnapshot().harvestAllowed ?? null;
+      return lockerService.currentHarvestAllowed();
     } catch {
       return null;
     }
@@ -27831,7 +27369,7 @@
       const eggId = extractEggId(currentGardenObject2);
       if (eggId) return lockerRestrictionsService.isEggLocked(eggId);
       if (isDecorObject(currentGardenObject2)) return lockerRestrictionsService.isDecorPickupLocked();
-      return lockerService.getCurrentSlotSnapshot().harvestAllowed === false;
+      return lockerService.currentHarvestAllowed() === false;
     };
     const removeBorder = () => {
       if (border) {
@@ -28222,11 +27760,11 @@
         console.info(`[sellAllPetsPixi] still searching for ${ACTION_HUD_LABEL} (${findAttempts2} attempts so far)`);
       }
     };
-    const scheduleFind3 = (now2) => {
+    const scheduleFind3 = (now) => {
       findRafId3 = null;
       if (!running6 || actionHud) return;
-      if (now2 - lastFindCheckAt3 >= ACTION_HUD_FIND_RETRY_MS) {
-        lastFindCheckAt3 = now2;
+      if (now - lastFindCheckAt3 >= ACTION_HUD_FIND_RETRY_MS) {
+        lastFindCheckAt3 = now;
         tryFindActionHud();
       }
       if (!running6 || actionHud) return;
@@ -28325,11 +27863,8 @@
       return { stop() {
       } };
     }
-    let bonusFromMultiplier = null;
-    let bonusFromPlayers = friendBonusPercentFromPlayers(1);
     let running6 = true;
     const disposables = [];
-    const resolveCurrentBonus = () => bonusFromMultiplier ?? bonusFromPlayers ?? 0;
     const applyLockState = (locked) => {
       const containers = Array.from(
         document.querySelectorAll(CONTAINER_SELECTOR)
@@ -28338,47 +27873,16 @@
     };
     const recompute = () => {
       if (!running6) return;
-      const requiredPct = lockerRestrictionsService.getRequiredPercent();
-      const current = resolveCurrentBonus();
-      const locked = requiredPct > 0 && !(Number.isFinite(current) && current + 1e-4 >= requiredPct);
-      applyLockState(locked);
+      applyLockState(!lockerRestrictionsService.allowsCropSale(currentFriendBonus() ?? 0));
     };
     const observeDom = () => {
       const mo = new MutationObserver(() => recompute());
       mo.observe(document.documentElement, { childList: true, subtree: true });
       disposables.push(() => mo.disconnect());
     };
-    const subscribeAtoms = async () => {
-      try {
-        const initial = await Atoms.server.friendBonusMultiplier.get();
-        bonusFromMultiplier = friendBonusPercentFromMultiplier(initial);
-      } catch {
-      }
-      try {
-        const unsub = await Atoms.server.friendBonusMultiplier.onChange((next) => {
-          bonusFromMultiplier = friendBonusPercentFromMultiplier(next);
-          recompute();
-        });
-        if (typeof unsub === "function") disposables.push(unsub);
-      } catch {
-      }
-      try {
-        const initialPlayers = await Atoms.server.numPlayers.get();
-        bonusFromPlayers = friendBonusPercentFromPlayers(initialPlayers);
-      } catch {
-      }
-      try {
-        const unsubPlayers = await Atoms.server.numPlayers.onChange((next) => {
-          bonusFromPlayers = friendBonusPercentFromPlayers(next);
-          recompute();
-        });
-        if (typeof unsubPlayers === "function") disposables.push(unsubPlayers);
-      } catch {
-      }
-    };
     observeDom();
     disposables.push(lockerRestrictionsService.subscribe(() => recompute()));
-    void subscribeAtoms();
+    disposables.push(onFriendBonusChange(() => recompute()));
     recompute();
     return {
       stop() {
@@ -28482,8 +27986,8 @@
   var init_sellCropsLock = __esm({
     "src/features/locker/sellCropsLock.ts"() {
       "use strict";
-      init_atoms();
       init_restrictions();
+      init_friendBonus();
       CONTAINER_SELECTOR = ".css-vmnhaw";
       LOCK_ICON_CLASS2 = "tm-sell-crops-lock";
       DATA_BORDER = "tmSellLockBorder";
@@ -29027,7 +28531,7 @@
     if (currentStrength == null) return;
     const roundedMax = Math.round(maxStrength);
     if (!Number.isFinite(roundedMax) || roundedMax <= 0) return;
-    const safeCurrent = clampNumber2(currentStrength, 0, roundedMax);
+    const safeCurrent = clampNumber(currentStrength, 0, roundedMax);
     const isMax = safeCurrent >= roundedMax;
     const mutationTone = getPetMutationTone(item);
     const parts = ensureStrengthTextParts(textEl);
@@ -30458,7 +29962,7 @@
       }
     };
   }
-  var DEFAULTS3, INVENTORY_SEARCH_INPUT_SELECTOR, BASE_SORT, ORDER, SORT_KEY_PATH, SORT_KEY_SET, SORT_DIRECTION_PATH, SORT_DIRECTION_SET, DEFAULT_DIRECTION_LABEL, DIRECTION_LABELS_DEFAULT, getPetAbilityDisplayName, INVENTORY_VALUE_VISIBILITY_PATH, resolveVisibilityFromStoredValue, loadPersistedInventoryValueVisibility, persistInventoryValueVisibility, shouldDisplayInventoryValues, setShouldDisplayInventoryValues, getShouldDisplayInventoryValues, DEFAULT_DIRECTION_BY_SORT_KEY, DIRECTION_ORDER, isPersistedSortKey, isPersistedSortDirection, loadPersistedSortKey, persistSortKey, loadPersistedSortDirection, persistSortDirection, MAP_EXTRA_BY_FILTER_DEFAULT, FILTER_CONTEXT_ITEM_TYPES_CACHE, FILTER_CONTEXT_LISTENERS, addFilterContextListener, notifyFilterContextListeners, LABEL_BY_VALUE_DEFAULT, INVENTORY_BASE_INDEX_DATASET_KEY, INVENTORY_ITEM_CARD_SELECTORS, INVENTORY_ITEMS_CONTAINER_SELECTOR, INVENTORY_NOISE_SELECTOR, INVENTORY_STRENGTH_WRAPPER_SELECTOR, INVENTORY_STRENGTH_TEXT_SELECTOR, INVENTORY_FAVORITE_BUTTON_SELECTOR, INVENTORY_ITEM_CARD_SELECTOR, INVENTORY_VALUE_CONTAINER_SELECTOR, INVENTORY_VALUE_ELEMENT_CLASS, INVENTORY_VALUE_TEXT_CLASS, INVENTORY_VALUE_DATASET_KEY, FILTERED_VALUE_LOADING, FILTERED_VALUE_UNKNOWN, VALUE_SUMMARY_ICON_CLASS, VALUE_SUMMARY_TEXT_CLASS, VALUE_SUMMARY_ICON_SRC, VALUE_SUMMARY_ICON_BACKGROUND, debounce, labelIsChecked, normalize, createFilterContextKey, areSetsEqual, getCachedItemTypesForKey, getCachedItemTypesForContext, setCachedItemTypesForKey, getInventorySearchInput, getInventorySearchQuery, getNormalizedInventorySearchQuery, logFilteredInventorySearchResults, RARITY_ORDER, RARITY_RANK, getRarityRank, SPECIES_FIELDS, normalizeSpeciesKey, clampNumber2, collectSpeciesCandidates, getInventoryItemSizePercent, collectMutations, getInventoryItemMutations, FILTER_LABEL_TO_ITEM_TYPES, ITEM_TYPE_TO_FILTER_KEYS, getExtrasForFilterKey, getExtrasForItemType, getInventoryCardElement, clearInventoryNoiseText, findAncestorWithDescendant, alignInventoryStrengthText, INVENTORY_COMPACT_VALUE_UNITS, INVENTORY_FULL_VALUE_FORMATTER, formatInventoryItemCompactValue, formatInventoryItemFullValue, getInventoryItemValue, parseStrengthValue, TM_STRENGTH_LABEL_CLASS, TM_STRENGTH_CURRENT_CLASS, TM_STRENGTH_MAX_CLASS, TM_STRENGTH_BADGE_CLASS, TM_STRENGTH_IS_MAX_DATASET_KEY, PET_HUTCH_HEADER_TEXT, PET_INVENTORY_HEADER_TEXT, PET_NAME_SELECTOR, PET_HUTCH_ROOT_SELECTOR, PET_HUTCH_LIST_SELECTOR, PET_HUTCH_INVENTORY_LIST_SELECTOR, PET_HUTCH_VISIBILITY_STYLE, RAINBOW_BADGE_TEXT_GRADIENT, getPetMutationTone, applyStrengthBadgeTone, ensureStrengthBadge, ensureStrengthTextParts, getValueSummaryElement, ensureValueSummaryContent, setValueSummaryText, stringOrEmpty, pickNestedString, pickFirstNestedString, plantCatalogEntry, petCatalogEntry, eggCatalogEntry, toolCatalogEntry, decorCatalogEntry, SEED_NAME_PATHS, SEED_RARITY_PATHS, CROP_NAME_PATHS, CROP_RARITY_PATHS, PLANT_NAME_PATHS, PLANT_RARITY_PATHS, createPlantLookup, CATALOG_LOOKUPS, getCatalogLookup, getInventoryItemName, QUANTITY_ONE_TYPES, getInventoryItemQuantity, getInventoryItemRarity, readNestedValue, readNestedStringField, readNestedNumberField, findSectionContainerByHeaderText, getPetCardName, getPetNameCandidates, isPetItem, applyPetItemsToContainer, setPetHutchContainersHidden, updatePetHutchSections, petStatsBySpecies, lookupPetStats, getPetStrengthInfo, getPetStrength2, compareByNameThenTypeThenId;
+  var DEFAULTS3, INVENTORY_SEARCH_INPUT_SELECTOR, BASE_SORT, ORDER, SORT_KEY_PATH, SORT_KEY_SET, SORT_DIRECTION_PATH, SORT_DIRECTION_SET, DEFAULT_DIRECTION_LABEL, DIRECTION_LABELS_DEFAULT, getPetAbilityDisplayName, INVENTORY_VALUE_VISIBILITY_PATH, resolveVisibilityFromStoredValue, loadPersistedInventoryValueVisibility, persistInventoryValueVisibility, shouldDisplayInventoryValues, setShouldDisplayInventoryValues, getShouldDisplayInventoryValues, DEFAULT_DIRECTION_BY_SORT_KEY, DIRECTION_ORDER, isPersistedSortKey, isPersistedSortDirection, loadPersistedSortKey, persistSortKey, loadPersistedSortDirection, persistSortDirection, MAP_EXTRA_BY_FILTER_DEFAULT, FILTER_CONTEXT_ITEM_TYPES_CACHE, FILTER_CONTEXT_LISTENERS, addFilterContextListener, notifyFilterContextListeners, LABEL_BY_VALUE_DEFAULT, INVENTORY_BASE_INDEX_DATASET_KEY, INVENTORY_ITEM_CARD_SELECTORS, INVENTORY_ITEMS_CONTAINER_SELECTOR, INVENTORY_NOISE_SELECTOR, INVENTORY_STRENGTH_WRAPPER_SELECTOR, INVENTORY_STRENGTH_TEXT_SELECTOR, INVENTORY_FAVORITE_BUTTON_SELECTOR, INVENTORY_ITEM_CARD_SELECTOR, INVENTORY_VALUE_CONTAINER_SELECTOR, INVENTORY_VALUE_ELEMENT_CLASS, INVENTORY_VALUE_TEXT_CLASS, INVENTORY_VALUE_DATASET_KEY, FILTERED_VALUE_LOADING, FILTERED_VALUE_UNKNOWN, VALUE_SUMMARY_ICON_CLASS, VALUE_SUMMARY_TEXT_CLASS, VALUE_SUMMARY_ICON_SRC, VALUE_SUMMARY_ICON_BACKGROUND, debounce, labelIsChecked, normalize, createFilterContextKey, areSetsEqual, getCachedItemTypesForKey, getCachedItemTypesForContext, setCachedItemTypesForKey, getInventorySearchInput, getInventorySearchQuery, getNormalizedInventorySearchQuery, logFilteredInventorySearchResults, RARITY_ORDER, RARITY_RANK, getRarityRank, SPECIES_FIELDS, normalizeSpeciesKey, clampNumber, collectSpeciesCandidates, getInventoryItemSizePercent, collectMutations, getInventoryItemMutations, FILTER_LABEL_TO_ITEM_TYPES, ITEM_TYPE_TO_FILTER_KEYS, getExtrasForFilterKey, getExtrasForItemType, getInventoryCardElement, clearInventoryNoiseText, findAncestorWithDescendant, alignInventoryStrengthText, INVENTORY_COMPACT_VALUE_UNITS, INVENTORY_FULL_VALUE_FORMATTER, formatInventoryItemCompactValue, formatInventoryItemFullValue, getInventoryItemValue, parseStrengthValue, TM_STRENGTH_LABEL_CLASS, TM_STRENGTH_CURRENT_CLASS, TM_STRENGTH_MAX_CLASS, TM_STRENGTH_BADGE_CLASS, TM_STRENGTH_IS_MAX_DATASET_KEY, PET_HUTCH_HEADER_TEXT, PET_INVENTORY_HEADER_TEXT, PET_NAME_SELECTOR, PET_HUTCH_ROOT_SELECTOR, PET_HUTCH_LIST_SELECTOR, PET_HUTCH_INVENTORY_LIST_SELECTOR, PET_HUTCH_VISIBILITY_STYLE, RAINBOW_BADGE_TEXT_GRADIENT, getPetMutationTone, applyStrengthBadgeTone, ensureStrengthBadge, ensureStrengthTextParts, getValueSummaryElement, ensureValueSummaryContent, setValueSummaryText, stringOrEmpty, pickNestedString, pickFirstNestedString, plantCatalogEntry, petCatalogEntry, eggCatalogEntry, toolCatalogEntry, decorCatalogEntry, SEED_NAME_PATHS, SEED_RARITY_PATHS, CROP_NAME_PATHS, CROP_RARITY_PATHS, PLANT_NAME_PATHS, PLANT_RARITY_PATHS, createPlantLookup, CATALOG_LOOKUPS, getCatalogLookup, getInventoryItemName, QUANTITY_ONE_TYPES, getInventoryItemQuantity, getInventoryItemRarity, readNestedValue, readNestedStringField, readNestedNumberField, findSectionContainerByHeaderText, getPetCardName, getPetNameCandidates, isPetItem, applyPetItemsToContainer, setPetHutchContainersHidden, updatePetHutchSections, petStatsBySpecies, lookupPetStats, getPetStrengthInfo, getPetStrength2, compareByNameThenTypeThenId;
   var init_sorting = __esm({
     "src/features/inventory/sorting.ts"() {
       "use strict";
@@ -30765,7 +30269,7 @@
         "seedKey"
       ];
       normalizeSpeciesKey = (value) => value.toLowerCase().replace(/['’`]/g, "").replace(/\s+/g, "").replace(/-/g, "").replace(/(seed|plant|baby|fruit|crop)$/i, "");
-      clampNumber2 = (value, min, max) => Math.max(min, Math.min(max, value));
+      clampNumber = (value, min, max) => Math.max(min, Math.min(max, value));
       collectSpeciesCandidates = (source, out) => {
         if (!source || typeof source !== "object") return;
         for (const field of SPECIES_FIELDS) {
@@ -31482,12 +30986,12 @@
         const xpDenominator = hoursToMature * 3600;
         const xpComponent = xpDenominator > 0 ? Math.min(Math.floor(safeXp / xpDenominator * 30), 30) : 0;
         const minScale = 1;
-        const clampedScale = clampNumber2(targetScale, minScale, maxScale);
+        const clampedScale = clampNumber(targetScale, minScale, maxScale);
         const scaleDenominator = maxScale - minScale;
         const scaleComponent = scaleDenominator > 0 ? Math.floor((clampedScale - minScale) / scaleDenominator * 20 + 80) : 80;
-        const maxStrength = clampNumber2(scaleComponent, 0, 100);
+        const maxStrength = clampNumber(scaleComponent, 0, 100);
         const combined = xpComponent + maxStrength - 30;
-        const strength = clampNumber2(combined, 0, maxStrength);
+        const strength = clampNumber(combined, 0, maxStrength);
         return { strength, maxStrength };
       };
       getPetStrength2 = (item) => {
@@ -32256,10 +31760,10 @@
       }
     });
   }
-  function scheduleFind2(now2) {
+  function scheduleFind2(now) {
     findRafId2 = null;
-    if (modalOpen2 && !modalNode && now2 - lastFindCheckAt2 >= FIND_RETRY_MS) {
-      lastFindCheckAt2 = now2;
+    if (modalOpen2 && !modalNode && now - lastFindCheckAt2 >= FIND_RETRY_MS) {
+      lastFindCheckAt2 = now;
       tryFindModal();
     }
     if (modalNode) syncToolbar();
@@ -32545,7 +32049,7 @@
     if (cachedState) return cachedState;
     let raw = null;
     try {
-      raw = readAriesPath(STATE_PATH);
+      raw = readAriesPath(STATE_PATH2);
     } catch {
     }
     const seenPetIds = [];
@@ -32570,7 +32074,7 @@
     }
     cachedState = state5;
     try {
-      writeAriesPath(STATE_PATH, state5);
+      writeAriesPath(STATE_PATH2, state5);
     } catch {
     }
     for (const listener of listeners7) {
@@ -32708,7 +32212,7 @@
       }
     };
   }
-  var STATE_PATH, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, listeners7, cachedState, HatchTracker;
+  var STATE_PATH2, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, listeners7, cachedState, HatchTracker;
   var init_tracker = __esm({
     "src/features/hatch/tracker.ts"() {
       "use strict";
@@ -32717,7 +32221,7 @@
       init_stats();
       init_pity();
       init_storage();
-      STATE_PATH = "hatch.tracker";
+      STATE_PATH2 = "hatch.tracker";
       HATCH_ACTION = "hatchEgg";
       DOUBLE_HATCH_ACTIONS = /* @__PURE__ */ new Set(["doublehatch", "doublehatchii"]);
       SEEN_LIMIT = 4e3;
@@ -39768,7 +39272,7 @@ next: ${next}`;
     return wrap;
   }
   function createWeatherBadge(tag, options = {}) {
-    if (tag === NO_WEATHER_TAG) {
+    if (tag === NO_WEATHER_TAG2) {
       return createNoWeatherIcon(options);
     }
     const size = Math.max(16, options.size ?? 32);
@@ -39848,8 +39352,7 @@ next: ${next}`;
     target.maxScalePct = maxScale;
     target.scaleLockMode = mode;
     target.lockMode = src.lockMode === "ALLOW" ? "ALLOW" : "LOCK";
-    target.minInventory = Math.max(0, Math.min(999, Math.round(src.minInventory ?? 91)));
-    target.avoidNormal = src.avoidNormal === true || src.includeNormal === false;
+    target.avoidNormal = src.avoidNormal === true;
     target.visualMutations.clear();
     (src.visualMutations ?? []).forEach((mut) => {
       if (mut === "Gold" || mut === "Rainbow") target.visualMutations.add(mut);
@@ -39902,9 +39405,7 @@ next: ${next}`;
       maxScalePct: maxScale,
       scaleLockMode: mode,
       lockMode: state5.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
-      minInventory: Math.max(0, Math.min(999, Math.round(state5.minInventory || 91))),
       avoidNormal: !!state5.avoidNormal,
-      includeNormal: !state5.avoidNormal,
       visualMutations: Array.from(state5.visualMutations),
       weatherMode: state5.weatherMode,
       weatherSelected: Array.from(state5.weatherSelected),
@@ -40902,7 +40403,7 @@ next: ${next}`;
     let eggOptions = [];
     const disposables = [];
     let subsAttached = false;
-    const clampPercent2 = (value) => Math.max(0, Math.min(FRIEND_BONUS_MAX, Math.round(value / FRIEND_BONUS_STEP) * FRIEND_BONUS_STEP));
+    const clampPercent = (value) => Math.max(0, Math.min(FRIEND_BONUS_MAX, Math.round(value / FRIEND_BONUS_STEP) * FRIEND_BONUS_STEP));
     const resolveCurrentBonus = () => bonusFromMultiplier ?? bonusFromPlayers ?? 0;
     const layout = applyStyles(document.createElement("div"), {
       display: "grid",
@@ -41312,7 +40813,7 @@ next: ${next}`;
       statusBadge.style.color = palette.color;
     };
     const updateStatus = () => {
-      const requiredPct = clampPercent2(friendBonusPercentFromPlayers(state5.minRequiredPlayers) ?? 0);
+      const requiredPct = clampPercent(friendBonusPercentFromPlayers(state5.minRequiredPlayers) ?? 0);
       const currentPct = resolveCurrentBonus();
       const requiredPlayers = state5.minRequiredPlayers;
       const currentPlayers = currentPct != null ? percentToRequiredFriendCount(currentPct) : null;
@@ -41329,7 +40830,7 @@ next: ${next}`;
     };
     const handleSliderInput = (commit) => {
       const raw = Number(slider2.value);
-      const pct = clampPercent2(Number.isFinite(raw) ? raw : 0);
+      const pct = clampPercent(Number.isFinite(raw) ? raw : 0);
       updateSliderValue(pct);
       state5.minRequiredPlayers = percentToRequiredFriendCount(pct);
       updateStatus();
@@ -41834,7 +41335,7 @@ next: ${next}`;
     ]);
     ui.switchTo("locker-general");
     const disposables = [];
-    disposables.push(lockerService.subscribe((event) => store.syncFromService(event.state)));
+    disposables.push(lockerService.subscribe((state5) => store.syncFromService(state5)));
     disposables.push(() => restrictionsTab.destroy());
     disposables.push(() => generalTab.destroy());
     disposables.push(() => overridesTab.destroy());
@@ -41849,7 +41350,7 @@ next: ${next}`;
     };
     ui.on("unmounted", cleanup2);
   }
-  var NO_WEATHER_TAG, SEED_EMOJIS, _lockerOptionsCache, _lockerEmojiByKey, _lockerEmojisBySeedName, getLockerSeedOptions, getLockerSeedEmojiForKey, getLockerSeedEmojiForSeedName, weatherMutationLabel, weatherMutations, createNoWeatherIcon, isWeatherMutationAvailable, WEATHER_RECIPE_GROUPS, WEATHER_RECIPE_GROUP_MEMBERS, applyStyles, weatherModeNameSeq, LockerMenuStore;
+  var NO_WEATHER_TAG2, SEED_EMOJIS, _lockerOptionsCache, _lockerEmojiByKey, _lockerEmojisBySeedName, getLockerSeedOptions, getLockerSeedEmojiForKey, getLockerSeedEmojiForSeedName, weatherMutationLabel, weatherMutations, createNoWeatherIcon, isWeatherMutationAvailable, WEATHER_RECIPE_GROUPS, WEATHER_RECIPE_GROUP_MEMBERS, applyStyles, weatherModeNameSeq, LockerMenuStore;
   var init_menu4 = __esm({
     "src/features/locker/menu.ts"() {
       "use strict";
@@ -41860,7 +41361,7 @@ next: ${next}`;
       init_atoms();
       init_iconCache();
       init_menu3();
-      NO_WEATHER_TAG = "NoWeatherEffect";
+      NO_WEATHER_TAG2 = "NoWeatherEffect";
       SEED_EMOJIS = [
         "\u{1F955}",
         "\u{1F353}",
@@ -41907,7 +41408,7 @@ next: ${next}`;
       weatherMutationLabel = (key2) => (tileRefsMutationLabels2 ?? {})[key2] ?? formatMutationLabel(key2);
       weatherMutations = memoOnCatalogs(() => [
         {
-          key: NO_WEATHER_TAG,
+          key: NO_WEATHER_TAG2,
           label: "No weather effect",
           tileRef: null,
           iconFactory: createNoWeatherIcon
@@ -42052,7 +41553,6 @@ next: ${next}`;
           this.overrides.delete(key2);
           if (!this.syncing) {
             lockerService.removeOverride(key2);
-            lockerService.recomputeCurrentSlot();
           }
           this.emit();
         }
@@ -42062,7 +41562,6 @@ next: ${next}`;
             enabled: this.global.enabled,
             settings: serializeSettingsState(this.global.settings)
           });
-          lockerService.recomputeCurrentSlot();
         }
         persistOverride(key2) {
           if (this.syncing) return;
@@ -42076,7 +41575,6 @@ next: ${next}`;
             });
             entry.hasPersistedSettings = true;
           }
-          lockerService.recomputeCurrentSlot();
         }
       };
     }
@@ -42560,7 +42058,7 @@ next: ${next}`;
       const getStateForKey = (key2) => {
         const existing = states.get(key2);
         if (existing) return existing;
-        const state5 = { ...DEFAULT_STATE2 };
+        const state5 = { ...DEFAULT_STATE };
         states.set(key2, state5);
         return state5;
       };
@@ -42795,7 +42293,7 @@ next: ${next}`;
     });
     ui.mount(container);
   }
-  var ROOT_CLASS, SIZE_MIN, SIZE_MAX, COLOR_MUTATION_LABELS, WEATHER_CONDITION_LABELS, WEATHER_LIGHTING_LABELS, FRIEND_BONUS_LABELS, FRIEND_BONUS_MIN_PLAYERS, FRIEND_BONUS_MAX_PLAYERS, COLOR_SEGMENT_METADATA, WEATHER_CONDITION_SEGMENT_METADATA, WEATHER_LIGHTING_SEGMENT_METADATA, MUTATION_SPRITE_OVERRIDES, priceFormatter, weightFormatter, DEFAULT_STATE2, BASE_SPRITE_SIZE_PX, DEFAULT_SPRITE_CATEGORIES, PLANT_PRIORITY_IDENTIFIERS, CROP_SIMULATION_CSS, cropSimulationStyleEl, applyStyles2, calculatorStyleEl, MUTATION_UI_SPRITE_NAMES;
+  var ROOT_CLASS, SIZE_MIN, SIZE_MAX, COLOR_MUTATION_LABELS, WEATHER_CONDITION_LABELS, WEATHER_LIGHTING_LABELS, FRIEND_BONUS_LABELS, FRIEND_BONUS_MIN_PLAYERS, FRIEND_BONUS_MAX_PLAYERS, COLOR_SEGMENT_METADATA, WEATHER_CONDITION_SEGMENT_METADATA, WEATHER_LIGHTING_SEGMENT_METADATA, MUTATION_SPRITE_OVERRIDES, priceFormatter, weightFormatter, DEFAULT_STATE, BASE_SPRITE_SIZE_PX, DEFAULT_SPRITE_CATEGORIES, PLANT_PRIORITY_IDENTIFIERS, CROP_SIMULATION_CSS, cropSimulationStyleEl, applyStyles2, calculatorStyleEl, MUTATION_UI_SPRITE_NAMES;
   var init_menu5 = __esm({
     "src/features/calculator/menu.ts"() {
       "use strict";
@@ -42849,7 +42347,7 @@ next: ${next}`;
         minimumFractionDigits: 3,
         maximumFractionDigits: 3
       });
-      DEFAULT_STATE2 = {
+      DEFAULT_STATE = {
         sizePercent: SIZE_MIN,
         color: "None",
         weatherCondition: "None",
@@ -54991,8 +54489,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/emoteTypes.ts
-  function companionEmoteEntry(playerId2, emote, now2) {
-    return { kind: "emote", playerId: playerId2, emoteType: emote, lastTimestampMs: now2 + ENTRY_LEAD_MS };
+  function companionEmoteEntry(playerId2, emote, now) {
+    return { kind: "emote", playerId: playerId2, emoteType: emote, lastTimestampMs: now + ENTRY_LEAD_MS };
   }
   function mergeEmoteSource(real, fake) {
     const base = real && typeof real === "object" ? real : {};
@@ -55018,10 +54516,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return false;
   }
-  function emoteStartDelay(lastSpokeAt2, now2, canCutTalking = false) {
+  function emoteStartDelay(lastSpokeAt2, now, canCutTalking = false) {
     if (canCutTalking) return 0;
     if (lastSpokeAt2 === null) return 0;
-    return Math.max(0, lastSpokeAt2 + NPC_TALKING_MS + TALKING_MARGIN_MS - now2);
+    return Math.max(0, lastSpokeAt2 + NPC_TALKING_MS + TALKING_MARGIN_MS - now);
   }
   var EmoteType, ENTRY_LEAD_MS, NPC_TALKING_MS, TALKING_MARGIN_MS;
   var init_emoteTypes = __esm({
@@ -55199,9 +54697,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       const egg = eggName3(eggId);
       for (const kind of ["rainbow", "gold"]) {
         const was = Number(before[kind]) || 0;
-        const now2 = Number(after[kind]) || 0;
+        const now = Number(after[kind]) || 0;
         const label2 = RARITY_LABEL[kind];
-        if (now2 < was) {
+        if (now < was) {
           if (was < RELIEF_MIN[kind]) continue;
           const tries = was + 1;
           out.push({
@@ -55217,7 +54715,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           continue;
         }
         let step = null;
-        for (const s of DROUGHT_STEPS[kind]) if (was < s && now2 >= s) step = s;
+        for (const s of DROUGHT_STEPS[kind]) if (was < s && now >= s) step = s;
         if (step === null) continue;
         out.push({
           key: `badluck:${kind}`,
@@ -55262,14 +54760,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     return out;
   }
-  function newlyReadyEggs(tiles, now2, announced) {
+  function newlyReadyEggs(tiles, now, announced) {
     if (!tiles || typeof tiles !== "object") return [];
     const out = [];
     for (const [tileIdx, obj] of Object.entries(tiles)) {
       const o = obj;
       if (!o || o.objectType !== "egg") continue;
       const matured = Number(o.maturedAt);
-      if (!Number.isFinite(matured) || matured <= 0 || matured > now2) continue;
+      if (!Number.isFinite(matured) || matured <= 0 || matured > now) continue;
       const key2 = `${tileIdx}|${o.plantedAt ?? ""}`;
       if (!announced.has(key2)) out.push(key2);
     }
@@ -55306,21 +54804,21 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (holiday) out.push(...HOLIDAY_LINES[holiday]);
     return out;
   }
-  function resumeSession(stored, now2) {
+  function resumeSession(stored, now) {
     const s = stored;
     const lastSeenAt = Number(s?.lastSeenAt);
     const startedAt = Number(s?.startedAt);
-    const valid = Number.isFinite(lastSeenAt) && lastSeenAt > 0 && Number.isFinite(startedAt) && startedAt > 0 && startedAt <= now2;
+    const valid = Number.isFinite(lastSeenAt) && lastSeenAt > 0 && Number.isFinite(startedAt) && startedAt > 0 && startedAt <= now;
     const storedMet = Number(s?.firstMetAt);
-    const firstMetAt = Number.isFinite(storedMet) && storedMet > 0 && storedMet <= now2 ? storedMet : now2;
+    const firstMetAt = Number.isFinite(storedMet) && storedMet > 0 && storedMet <= now ? storedMet : now;
     const celebratedDays = Math.max(0, Math.floor(Number(s?.celebratedDays) || 0));
-    if (valid && now2 - lastSeenAt < SESSION_GAP_MS) {
+    if (valid && now - lastSeenAt < SESSION_GAP_MS) {
       const announcedHours = Math.max(0, Math.floor(Number(s?.announcedHours) || 0));
-      return { session: { startedAt, lastSeenAt: now2, announcedHours, firstMetAt, celebratedDays }, greeting: null };
+      return { session: { startedAt, lastSeenAt: now, announcedHours, firstMetAt, celebratedDays }, greeting: null };
     }
     return {
-      session: { startedAt: now2, lastSeenAt: now2, announcedHours: 0, firstMetAt, celebratedDays },
-      greeting: { first: !valid, awayMs: valid ? now2 - lastSeenAt : 0 }
+      session: { startedAt: now, lastSeenAt: now, announcedHours: 0, firstMetAt, celebratedDays },
+      greeting: { first: !valid, awayMs: valid ? now - lastSeenAt : 0 }
     };
   }
   function greetingReaction(greeting, hour, random, holiday = null) {
@@ -55351,8 +54849,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     for (let year = 1; year * 365 <= days; year++) steps.push(year * 365);
     return steps;
   }
-  function anniversaryReaction(firstMetAt, now2, celebratedDays, random) {
-    const days = Math.floor((now2 - firstMetAt) / DAY_MS);
+  function anniversaryReaction(firstMetAt, now, celebratedDays, random) {
+    const days = Math.floor((now - firstMetAt) / DAY_MS);
     let due = null;
     for (const step of anniversarySteps(days)) if (step <= days && step > celebratedDays) due = step;
     if (due === null) return { reaction: null, celebratedDays };
@@ -55369,8 +54867,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       celebratedDays: due
     };
   }
-  function sessionHours(session2, now2) {
-    return Math.max(0, Math.floor((now2 - session2.startedAt) / 36e5));
+  function sessionHours(session2, now) {
+    return Math.max(0, Math.floor((now - session2.startedAt) / 36e5));
   }
   function sessionHourReaction(hours, random) {
     if (hours < 1) return null;
@@ -55415,26 +54913,26 @@ Restore figures are averages; unlucky streaks do worse.`;
   function initialGateState() {
     return { lastSpokeAt: 0, mutedUntil: {}, queue: [] };
   }
-  function offerReaction(state5, reaction, now2) {
-    if (now2 < (state5.mutedUntil[familyOf(reaction.key)] ?? 0)) return state5;
+  function offerReaction(state5, reaction, now) {
+    if (now < (state5.mutedUntil[familyOf(reaction.key)] ?? 0)) return state5;
     const existing = state5.queue.find((q) => q.key === reaction.key);
     if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state5;
     const queue = state5.queue.filter((q) => q.key !== reaction.key);
-    queue.push({ ...reaction, at: now2 });
+    queue.push({ ...reaction, at: now });
     return { ...state5, queue };
   }
-  function takeReaction(state5, now2, busy4) {
-    const queue = state5.queue.filter((q) => now2 - q.at <= REACTION_TTL_MS[q.priority]);
+  function takeReaction(state5, now, busy4) {
+    const queue = state5.queue.filter((q) => now - q.at <= REACTION_TTL_MS[q.priority]);
     const kept = { ...state5, queue };
-    if (busy4 || queue.length === 0 || now2 - state5.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
+    if (busy4 || queue.length === 0 || now - state5.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
     const chosen = queue.find((q) => q.priority === "high") ?? queue[0];
     const family = familyOf(chosen.key);
     const { at: _at, ...reaction } = chosen;
     return {
       reaction,
       state: {
-        lastSpokeAt: now2,
-        mutedUntil: { ...state5.mutedUntil, [family]: now2 + (FAMILY_COOLDOWN_MS[family] ?? 0) },
+        lastSpokeAt: now,
+        mutedUntil: { ...state5.mutedUntil, [family]: now + (FAMILY_COOLDOWN_MS[family] ?? 0) },
         // Le reste de la famille qui vient de parler se tait aussi.
         queue: queue.filter((q) => q !== chosen && (FAMILY_COOLDOWN_MS[family] ? familyOf(q.key) !== family : true))
       }
@@ -55629,8 +55127,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   function lineEmote(line) {
     return LINE_EMOTES[line] ?? null;
   }
-  function pokeLine(talkTimes, now2, random) {
-    const recent = talkTimes.filter((t) => now2 - t <= POKE_WINDOW_MS && t <= now2).length;
+  function pokeLine(talkTimes, now, random) {
+    const recent = talkTimes.filter((t) => now - t <= POKE_WINDOW_MS && t <= now).length;
     if (recent < POKE_THRESHOLD) return null;
     if (recent < 7) {
       return {
@@ -55649,7 +55147,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       emote: EmoteType.Angered
     };
   }
-  function ripeCropCount(tileObjects, now2) {
+  function ripeCropCount(tileObjects, now) {
     if (!tileObjects || typeof tileObjects !== "object") return 0;
     let count = 0;
     for (const obj of Object.values(tileObjects)) {
@@ -55659,7 +55157,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         const s = slot;
         if (!s || s.preserved === true) continue;
         const end = s.endTime;
-        if (typeof end === "number" && end > 0 && end <= now2) count++;
+        if (typeof end === "number" && end > 0 && end <= now) count++;
       }
     }
     return count;
@@ -56031,10 +55529,10 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/state.ts
   function loadCompanionSettings() {
-    return coerceSettings(readAriesPath(STORAGE_PATH, void 0));
+    return coerceSettings(readAriesPath(STORAGE_PATH2, void 0));
   }
   function saveCompanionSettings(settings) {
-    writeAriesPath(STORAGE_PATH, settings);
+    writeAriesPath(STORAGE_PATH2, settings);
   }
   function patchCompanionSettings(patch) {
     saveCompanionSettings({ ...loadCompanionSettings(), ...patch });
@@ -56048,14 +55546,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (current.includes(group2)) return;
     patchCompanionSettings({ reviewedSettings: [...current, group2] });
   }
-  var STORAGE_PATH;
+  var STORAGE_PATH2;
   var init_state3 = __esm({
     "src/features/companion/state.ts"() {
       "use strict";
       init_storage();
       init_settingsShape();
       init_settingsShape();
-      STORAGE_PATH = "companion";
+      STORAGE_PATH2 = "companion";
     }
   });
 
@@ -56436,9 +55934,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     const rt = runtime;
     if (!rt || !rt.map || !rt.player) return;
     if (!hasGameCaughtUp(rt.movement.tile, rt.observedTile)) {
-      const now2 = Date.now();
-      if (rt.waitingSinceMs === null) rt.waitingSinceMs = now2;
-      if (now2 - rt.waitingSinceMs < RENDER_WAIT_TIMEOUT_MS) return;
+      const now = Date.now();
+      if (rt.waitingSinceMs === null) rt.waitingSinceMs = now;
+      if (now - rt.waitingSinceMs < RENDER_WAIT_TIMEOUT_MS) return;
     }
     rt.waitingSinceMs = null;
     let anchor;
@@ -56481,14 +55979,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   function resolveSpeech() {
     const rt = runtime;
     if (!rt) return null;
-    const now2 = Date.now();
-    rt.talkTimes = [...rt.talkTimes.filter((t) => now2 - t <= POKE_WINDOW_MS), now2];
-    const poke = pokeLine(rt.talkTimes, now2, Math.random);
+    const now = Date.now();
+    rt.talkTimes = [...rt.talkTimes.filter((t) => now - t <= POKE_WINDOW_MS), now];
+    const poke = pokeLine(rt.talkTimes, now, Math.random);
     if (poke) {
       playEmoteSoon(rt, poke.emote);
       return poke.message;
     }
-    const customLines = rt.settings.lines.length > 0 ? [...rt.settings.lines, ...timeLines(new Date(now2))] : [];
+    const customLines = rt.settings.lines.length > 0 ? [...rt.settings.lines, ...timeLines(new Date(now))] : [];
     const picked = pickDialogueLine({
       contextual: rt.settings.contextualEnabled ? rt.contextualCache : [],
       customLines,
@@ -56885,15 +56383,15 @@ Restore figures are averages; unlucky streaks do worse.`;
         async say(message, opts = {}) {
           const rt = runtime;
           if (!rt || !message.trim()) return;
-          const now2 = Date.now();
-          if (!opts.force && now2 - rt.lastBubbleAt < CHAT_BUBBLE_MIN_INTERVAL_MS) return;
-          rt.lastBubbleAt = now2;
+          const now = Date.now();
+          if (!opts.force && now - rt.lastBubbleAt < CHAT_BUBBLE_MIN_INTERVAL_MS) return;
+          rt.lastBubbleAt = now;
           const tagged = opts.tags && Object.keys(opts.tags).length > 0 ? { tags: opts.tags } : {};
           try {
             await npcChatBubbles.set({
               // Marqué comme écrit par le mod : sans ça, l'interception réécrirait
               // notre propre message avec une réplique tirée au hasard.
-              [rt.npcId]: { seq: 0, playerId: rt.npcId, message, timestamp: now2, ...tagged, [AUTHORED_BY_MOD]: true }
+              [rt.npcId]: { seq: 0, playerId: rt.npcId, message, timestamp: now, ...tagged, [AUTHORED_BY_MOD]: true }
             });
           } catch {
           }
@@ -57267,7 +56765,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function scanGarden(tileObjects, selectedSpecies) {
     const plants = [];
     const allCrops = [];
-    const now2 = Date.now();
+    const now = Date.now();
     if (!tileObjects || !selectedSpecies.size) {
       return emptyResult();
     }
@@ -57289,7 +56787,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         let growthPct = 0;
         const duration = endTime - startTime;
         if (duration > 0) {
-          const elapsed = now2 - startTime;
+          const elapsed = now - startTime;
           growthPct = Math.max(0, Math.min(100, elapsed / duration * 100));
         } else {
           growthPct = 100;
@@ -57418,7 +56916,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const species = speciesInGarden(tileObjects);
     if (species.size === 0) return [];
     const scan = scanGarden(tileObjects, species);
-    const now2 = Date.now();
+    const now = Date.now();
     const rows = [];
     for (const plant of scan.plants) {
       for (const crop of plant.crops) {
@@ -57430,7 +56928,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           sizePct: crop.sizePct,
           growthPct: Math.round(crop.growthPct),
           mutations: Array.isArray(crop.mutations) ? crop.mutations : [],
-          ready: crop.endTime > 0 && crop.endTime <= now2,
+          ready: crop.endTime > 0 && crop.endTime <= now,
           preserved: crop.preserved === true
         });
       }
@@ -57904,9 +57402,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!Number.isFinite(raw) || raw <= 0) return null;
     return raw < 1e11 ? raw * 1e3 : raw;
   }
-  function isEggReady(tile, now2) {
+  function isEggReady(tile, now) {
     const readyAt = normalizeTs(tile.maturedAt) ?? normalizeTs(tile.endTime) ?? normalizeTs(tile.readyAt) ?? normalizeTs(tile.hatchTime) ?? null;
-    return readyAt === null || readyAt <= now2;
+    return readyAt === null || readyAt <= now;
   }
   function asStringArray(value) {
     return Array.isArray(value) ? value.filter((entry) => typeof entry === "string") : [];
@@ -57925,7 +57423,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return scan;
     }
     if (!tileObjects || typeof tileObjects !== "object") return scan;
-    const now2 = Date.now();
+    const now = Date.now();
     for (const [key2, raw] of Object.entries(tileObjects)) {
       if (!raw || typeof raw !== "object") continue;
       const tile = raw;
@@ -57936,7 +57434,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       scan.totalEggs++;
       const eggId = String(tile.eggId ?? tile.id ?? tile.species ?? "");
       if (eggId) scan.eggIds.add(eggId);
-      if (isEggReady(tile, now2)) scan.readySlots.push(slot);
+      if (isEggReady(tile, now)) scan.readySlots.push(slot);
     }
     scan.readySlots.sort((a, b) => a - b);
     return scan;
@@ -58823,12 +58321,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     const signature = feedSignature(picks);
-    const now2 = Date.now();
-    if (signature === lastOfferedSignature && now2 - lastOfferedAtMs < REASK_COOLDOWN_MS) return;
+    const now = Date.now();
+    if (signature === lastOfferedSignature && now - lastOfferedAtMs < REASK_COOLDOWN_MS) return;
     const offered = await CompanionChat.offerFeed(() => findFeedable());
     if (!offered) return;
     lastOfferedSignature = signature;
-    lastOfferedAtMs = now2;
+    lastOfferedAtMs = now;
     await announceIfNeeded(picks);
   }
   function scheduleCheck() {
@@ -60895,11 +60393,11 @@ Restore figures are averages; unlucky streaks do worse.`;
         thread.append(emptyThread(EMPTY_HINT));
         return;
       }
-      const now2 = Date.now();
+      const now = Date.now();
       let lastDayLabel = "";
       for (let i = 0; i < messages.length; i++) {
         const message = messages[i];
-        const dayLabel = formatDayLabel(message.atMs, now2);
+        const dayLabel = formatDayLabel(message.atMs, now);
         const startsDay = dayLabel !== "" && dayLabel !== lastDayLabel;
         if (startsDay) {
           thread.append(dateSeparator(dayLabel));
@@ -61363,35 +60861,35 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (resumed.greeting) offer(greetingReaction(resumed.greeting, today.getHours(), Math.random, holidayOf(today)));
     checkAnniversary(Date.now());
   }
-  function checkAnniversary(now2) {
+  function checkAnniversary(now) {
     if (!session) return;
-    const due = anniversaryReaction(session.firstMetAt, now2, session.celebratedDays, Math.random);
+    const due = anniversaryReaction(session.firstMetAt, now, session.celebratedDays, Math.random);
     if (!due.reaction) return;
     session.celebratedDays = due.celebratedDays;
     saveSession();
     offer(due.reaction);
   }
   function slowTick() {
-    const now2 = Date.now();
+    const now = Date.now();
     if (session) {
-      session.lastSeenAt = now2;
-      const hours = sessionHours(session, now2);
+      session.lastSeenAt = now;
+      const hours = sessionHours(session, now);
       if (hours > session.announcedHours) {
         session.announcedHours = hours;
         offer(sessionHourReaction(hours, Math.random));
       }
       saveSession();
-      const date = new Date(now2);
+      const date = new Date(now);
       const hour = date.getHours();
-      offer(clockReaction(lastHour, hour, now2 - session.startedAt, Math.random, holidayOf(date)));
+      offer(clockReaction(lastHour, hour, now - session.startedAt, Math.random, holidayOf(date)));
       lastHour = hour;
-      checkAnniversary(now2);
+      checkAnniversary(now);
     }
-    checkEggs(now2);
+    checkEggs(now);
   }
-  function checkEggs(now2) {
+  function checkEggs(now) {
     if (!latestGarden) return;
-    const fresh = newlyReadyEggs(latestGarden, now2, announcedEggs);
+    const fresh = newlyReadyEggs(latestGarden, now, announcedEggs);
     for (const key2 of fresh) announcedEggs.add(key2);
     if (!eggsPrimed) {
       eggsPrimed = true;
@@ -61827,8 +61325,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     pending3 = null;
     if (!current || !running3) return;
     const { interest, at } = current;
-    const now2 = Date.now();
-    if (now2 - at > PENDING_TTL_MS) return;
+    const now = Date.now();
+    if (now - at > PENDING_TTL_MS) return;
     if (interest.tile.x !== tile.x || interest.tile.y !== tile.y) return;
     if (busy2()) return;
     const still = latestGarden2?.[String(interest.dirtTileIdx)];
@@ -61839,7 +61337,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
     }
     const speak3 = reactions && shouldComment({
-      now: now2,
+      now,
       lastCommentAt,
       distanceToPlayer: CompanionService.distanceToPlayer(),
       busy: false,
@@ -61847,7 +61345,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     void (async () => {
       if (speak3) {
-        lastCommentAt = now2;
+        lastCommentAt = now;
         await CompanionService.say(interest.line);
       }
       await CompanionService.emote(interest.emote);
@@ -61967,19 +61465,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     return Math.round(MIRROR_DELAY_MIN_MS + r * span);
   }
   function decideMirror(state5, played, ctx2) {
-    const { now: now2, random } = ctx2;
-    let next = now2 - state5.streakLastAt > STREAK_GAP_MS ? { ...state5, streakCount: 1, streakAnswers: 0, streakSpamRolled: false, streakLastAt: now2 } : { ...state5, streakCount: state5.streakCount + 1, streakLastAt: now2 };
+    const { now, random } = ctx2;
+    let next = now - state5.streakLastAt > STREAK_GAP_MS ? { ...state5, streakCount: 1, streakAnswers: 0, streakSpamRolled: false, streakLastAt: now } : { ...state5, streakCount: state5.streakCount + 1, streakLastAt: now };
     if (!ctx2.available || ctx2.distance === null || ctx2.distance > MIRROR_MAX_DISTANCE) {
       return { state: next, action: null };
     }
-    if (next.streakCount >= SPAM_THRESHOLD && !next.streakSpamRolled && now2 - next.lastSpamLineAt >= SPAM_LINE_COOLDOWN_MS) {
+    if (next.streakCount >= SPAM_THRESHOLD && !next.streakSpamRolled && now - next.lastSpamLineAt >= SPAM_LINE_COOLDOWN_MS) {
       next = { ...next, streakSpamRolled: true };
       if (random() < SPAM_LINE_CHANCE) {
-        next = { ...next, lastSpamLineAt: now2, lastLineAt: now2, lastMirrorAt: now2 };
+        next = { ...next, lastSpamLineAt: now, lastLineAt: now, lastMirrorAt: now };
         return { state: next, action: { kind: "line", line: pick(SPAM_LINES, random), delayMs: mirrorDelay(random) } };
       }
     }
-    if (now2 - next.lastMirrorAt < MIRROR_COOLDOWN_MS) return { state: next, action: null };
+    if (now - next.lastMirrorAt < MIRROR_COOLDOWN_MS) return { state: next, action: null };
     if (next.streakAnswers >= STREAK_MAX_ANSWERS) return { state: next, action: null };
     if (next.streakAnswers >= 1 && random() >= SECOND_ANSWER_CHANCE) {
       return { state: { ...next, streakAnswers: STREAK_MAX_ANSWERS }, action: null };
@@ -61987,15 +61485,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     const emote = mirrorEmoteFor(played.emote, random);
     const delayMs = mirrorDelay(random);
     let line = null;
-    if (now2 - next.lastLineAt >= LINE_COOLDOWN_MS && random() < LINE_CHANCE) {
+    if (now - next.lastLineAt >= LINE_COOLDOWN_MS && random() < LINE_CHANCE) {
       const lines = MIRROR_LINES[played.emote];
       if (lines && lines.length) line = pick(lines, random);
     }
     next = {
       ...next,
       streakAnswers: next.streakAnswers + 1,
-      lastMirrorAt: now2,
-      lastLineAt: line ? now2 : next.lastLineAt
+      lastMirrorAt: now,
+      lastLineAt: line ? now : next.lastLineAt
     };
     return { state: next, action: { kind: "mirror", emote, delayMs, line } };
   }
@@ -62167,27 +61665,27 @@ Restore figures are averages; unlucky streaks do worse.`;
   function pickOne4(options, random) {
     return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
   }
-  function initialAfkState(now2) {
-    return { phase: "active", quietSince: now2, phaseSince: now2, asked: false, nextSnoreAt: null, lastSnore: null };
+  function initialAfkState(now) {
+    return { phase: "active", quietSince: now, phaseSince: now, asked: false, nextSnoreAt: null, lastSnore: null };
   }
   function afkActivity(state5, input, random) {
-    const { now: now2, busy: busy4 } = input;
+    const { now, busy: busy4 } = input;
     if (state5.phase === "active") {
-      return { state: { ...state5, quietSince: now2 }, effects: [] };
+      return { state: { ...state5, quietSince: now }, effects: [] };
     }
     if (state5.phase === "idle") {
       const effects2 = [];
       if (state5.asked && !busy4 && random() < RETURN_LINE_CHANCE) effects2.push(say(pickOne4(RETURN_LINES, random), false));
-      return { state: initialAfkState(now2), effects: effects2 };
+      return { state: initialAfkState(now), effects: effects2 };
     }
-    const asleepFor = now2 - state5.phaseSince;
+    const asleepFor = now - state5.phaseSince;
     const effects = [];
     if (!busy4 && asleepFor >= WAKE_LINE_MIN_ASLEEP_MS) {
       const pool = asleepFor >= SNORE_SLOW_AFTER_MS ? LONG_WAKE_LINES : WAKE_LINES;
       effects.push(say(pickOne4(pool, random), false));
     }
     effects.push({ kind: "release" });
-    return { state: initialAfkState(now2), effects };
+    return { state: initialAfkState(now), effects };
   }
   var AFK_IDLE_AFTER_MS, AFK_ASLEEP_AFTER_MS, SNORE_SLOW_AFTER_MS, SNORE_SLOW_MIN_MS, SNORE_SLOW_MAX_MS, WAKE_LINE_MIN_ASLEEP_MS, RETURN_LINE_CHANCE, IDLE_LINES, RETURN_LINES, WAKE_LINES, LONG_WAKE_LINES, say;
   var init_afk = __esm({
@@ -62312,11 +61810,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function noteActivity() {
     if (!running5) return;
-    const now2 = Date.now();
-    if (state4.phase === "active" && now2 - lastNotedAt < ACTIVITY_THROTTLE_MS) return;
-    lastNotedAt = now2;
+    const now = Date.now();
+    if (state4.phase === "active" && now - lastNotedAt < ACTIVITY_THROTTLE_MS) return;
+    lastNotedAt = now;
     if (!enabled4() || !CompanionService.isRunning()) return;
-    apply(afkActivity(state4, { now: now2, busy: othersBusy() }, Math.random));
+    apply(afkActivity(state4, { now, busy: othersBusy() }, Math.random));
   }
   function onInput(event) {
     if (!event.isTrusted) return;
