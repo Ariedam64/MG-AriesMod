@@ -1,104 +1,24 @@
-// src/ui/menus/petsTeamBuilder.ts
-// "Team Builder" tab of the Pets menu: scans owned pets and proposes
-// ready-to-save teams per goal category (Active + AFK variants). UI only —
-// all scoring logic lives in services/petTeamBuilder.ts.
+// The Team Builder tab of the Pets menu: scans the pets the player owns and
+// proposes ready-to-save teams per goal, in Active and AFK variants. The
+// scoring lives in teamBuilder.ts; this file only draws it.
 
-import { Menu } from "../../ui/kit/menu";
-import { PetsService, type InventoryPet } from "./pets";
-import { buildSuggestedTeams, type SuggestedTeam, type UnusedPetInfo } from "./teamBuilder";
-import { getAbilityChipColors } from "./abilityColorsTab";
-import { attachSpriteIcon } from "../../ui/kit/sprites/iconCache";
+import { getPetMaxStrength, getPetStrength } from "../../data/rules/petValue";
+import { button } from "../../ui/kit/button";
+import { card } from "../../ui/kit/card";
+import { flexRow } from "../../ui/kit/layout";
+import { color } from "../../ui/kit/theme";
 import { toastSimple } from "../../ui/toast";
-import { getPetStrength, getPetMaxStrength } from "../../data/rules/petValue";
+import { abilityDots } from "./abilityChips";
+import { getAbilityChipColors } from "./abilityChipColors";
+import { PetsService, type InventoryPet } from "./pets";
+import { petIcon } from "./petIcon";
+import { buildSuggestedTeams, type SuggestedTeam, type UnusedPetInfo } from "./teamBuilder";
 import { renderTeamStats } from "./teamStatsView";
 
-const miniSpriteCache = new Map<string, string>();
+const MINI_ICON_PX = 24;
 
-function mkMiniIcon(pet: InventoryPet | null, size = 24): HTMLElement {
-  const holder = document.createElement("div");
-  Object.assign(holder.style, {
-    width: `${size}px`,
-    height: `${size}px`,
-    borderRadius: "9px",
-    background: "linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01) 60%), #161b22",
-    border: "1px solid rgba(255,255,255,0.08)",
-    display: "grid",
-    placeItems: "center",
-    overflow: "hidden",
-    boxShadow: "0 1px 0 #000 inset, 0 1px 2px rgba(0,0,0,0.3)",
-    fontSize: "11px",
-    color: "#e2e8f0",
-    flex: "0 0 auto",
-  } as CSSStyleDeclaration);
-
-  if (!pet) {
-    holder.style.opacity = "0.35";
-    holder.textContent = "·";
-    return holder;
-  }
-
-  const species = pet.petSpecies || "";
-  const mutKey = Array.isArray(pet.mutations) ? pet.mutations.join(",") : "";
-  const cacheKey = `${species}|${mutKey}`;
-
-  const applyImg = (dataUrl: string) => {
-    const img = document.createElement("img");
-    img.src = dataUrl;
-    img.width = size;
-    img.height = size;
-    img.alt = "";
-    img.draggable = false;
-    img.style.width = `${size}px`;
-    img.style.height = `${size}px`;
-    img.style.objectFit = "contain";
-    holder.replaceChildren(img);
-  };
-
-  const cached = miniSpriteCache.get(cacheKey);
-  if (cached) {
-    applyImg(cached);
-    return holder;
-  }
-
-  attachSpriteIcon(holder, ["pet"], species, size, "pet-teambuilder-mini", {
-    mutations: pet.mutations,
-    onSpriteApplied: (img) => { miniSpriteCache.set(cacheKey, img.src); },
-    onNoSpriteFound: () => {
-      holder.textContent = (species || pet.name || "pet").charAt(0).toUpperCase();
-    },
-  });
-  return holder;
-}
-
-function abilityChipsFor(pet: InventoryPet): HTMLElement {
-  const wrap = document.createElement("span");
-  wrap.style.display = "inline-flex";
-  wrap.style.alignItems = "center";
-  wrap.style.gap = "4px";
-
-  const ids = Array.isArray(pet.abilities) ? pet.abilities.filter(Boolean) : [];
-  for (const id of ids) {
-    const chip = document.createElement("span");
-    const { bg, hover } = getAbilityChipColors(id);
-    chip.title = PetsService.getAbilityName(id) || id;
-    Object.assign(chip.style, {
-      display: "inline-block",
-      width: "9px",
-      height: "9px",
-      borderRadius: "3px",
-      background: bg,
-      boxShadow: "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff1a",
-      cursor: "default",
-    } as CSSStyleDeclaration);
-    chip.onmouseenter = () => { chip.style.background = hover; };
-    chip.onmouseleave = () => { chip.style.background = bg; };
-    wrap.appendChild(chip);
-  }
-  return wrap;
-}
-
-// Single line per pet: icon, name (truncates), STR, ability dots — no
-// wrapped second line, that's what made cards tall before.
+// One line per pet: icon, name (cut with an ellipsis), strength, ability
+// dots. A second line is what made the cards tall before.
 function renderPetChip(pet: InventoryPet | undefined): HTMLElement {
   const chip = document.createElement("div");
   Object.assign(chip.style, {
@@ -110,10 +30,10 @@ function renderPetChip(pet: InventoryPet | undefined): HTMLElement {
     borderRadius: "6px",
     transition: "background 100ms ease",
   } as CSSStyleDeclaration);
-  chip.onmouseenter = () => { chip.style.background = "rgba(255,255,255,0.04)"; };
+  chip.onmouseenter = () => { chip.style.background = color.hoverBg; };
   chip.onmouseleave = () => { chip.style.background = "transparent"; };
 
-  chip.appendChild(mkMiniIcon(pet ?? null));
+  chip.appendChild(petIcon(pet ?? null, MINI_ICON_PX));
 
   const nameSpan = document.createElement("span");
   nameSpan.style.fontSize = "11px";
@@ -123,32 +43,32 @@ function renderPetChip(pet: InventoryPet | undefined): HTMLElement {
   nameSpan.style.whiteSpace = "nowrap";
   nameSpan.style.flex = "1 1 auto";
   nameSpan.style.minWidth = "0";
-  nameSpan.textContent = pet ? (pet.name || pet.petSpecies || "?") : "—";
+  nameSpan.textContent = pet ? (pet.name || pet.petSpecies || "?") : "-";
   chip.appendChild(nameSpan);
 
   if (pet) {
     const strBadge = document.createElement("span");
     strBadge.textContent = `${getPetStrength(pet)}/${getPetMaxStrength(pet)}`;
-    strBadge.title = "Strength (current/max) — teams rank by max strength";
+    strBadge.title = "Strength (current/max). Teams rank by max strength.";
     Object.assign(strBadge.style, {
       fontSize: "10px",
       fontVariantNumeric: "tabular-nums",
-      color: "#94a3b8",
-      background: "rgba(255,255,255,0.05)",
+      color: color.textSoft,
+      background: color.hoverBg,
       padding: "1px 6px",
       borderRadius: "999px",
       flex: "0 0 auto",
     } as CSSStyleDeclaration);
     chip.appendChild(strBadge);
-    chip.appendChild(abilityChipsFor(pet));
+    chip.appendChild(abilityDots(pet.abilities, { size: 9, gap: 4 }));
   }
 
   return chip;
 }
 
-// The native pet-team name field caps at 16 characters — most category
-// labels alone already exceed that, so the *saved* name is a compact,
-// truncated version, separate from the full label shown in the card header.
+// The native pet-team name field caps at 16 characters, and most category
+// labels alone already exceed that. So the saved name is a compact, truncated
+// version, separate from the full label shown in the card header.
 const TEAM_NAME_MAX_LENGTH = 16;
 
 // Count by Unicode code point, not UTF-16 code unit, so a single emoji isn't
@@ -164,11 +84,10 @@ function truncateChars(text: string, maxLength: number): string {
   return `${chars.slice(0, maxLength - 1).join("")}…`;
 }
 
-// Weather-exclusive categories carry the weather name as a "(...)" suffix
-// on their label (e.g. "Mutation: Ambershine (Amber Moon)") — reuse that
-// instead of re-deriving it, so a weather-required team's title still
-// calls out which weather it needs, just attached to the shorter ability
-// name instead of the full category label.
+// Weather-exclusive categories carry the weather name as a "(...)" suffix on
+// their label (e.g. "Mutation: Ambershine (Amber Moon)"). Reusing it keeps a
+// weather team's title saying which weather it needs, attached to the shorter
+// ability name instead of the full category label.
 function weatherSuffix(label: string): string {
   return label.match(/\([^)]+\)$/)?.[0] ?? "";
 }
@@ -190,7 +109,7 @@ function shortWeatherSuffix(label: string): string {
 }
 
 // A terse name (category.shortLabel, e.g. "Plant") tried before the full
-// ability name — short enough that most single categories, and even a
+// ability name: short enough that most single categories, and even a
 // two-category merge ("Plant + Egg"), still fit the 16-char limit without
 // falling back to icons.
 function shortCategoryLabel(team: SuggestedTeam): string {
@@ -206,7 +125,7 @@ function shortCategoryLabel(team: SuggestedTeam): string {
 }
 
 // The real ability name (e.g. "Amberlit Granter") reads shorter and more
-// direct than the goal-category label ("Mutation: Ambershine") — dedupe in
+// direct than the goal-category label ("Mutation: Ambershine"). Deduped in
 // case a merge ever lands on the same ability twice.
 function abilityLabel(team: SuggestedTeam): string {
   const seen = new Set<string>();
@@ -233,43 +152,39 @@ function buildSaveName(team: SuggestedTeam, isAfk: boolean): string {
   const fullLabel = abilityLabel(team);
   if (charLength(fullLabel) <= budget) return `${fullLabel}${suffix}`;
 
-  // Neither fits — a truncated half-word ("Plant Growth S…") isn't any
-  // more readable than the icons, so skip straight to icons-only.
+  // Neither fits. A truncated half-word ("Plant Growth S…") is no more
+  // readable than the icons, so go straight to icons only.
   const icons = team.categories.map((c) => c.icon).join("");
   return `${truncateChars(icons, budget)}${suffix}`;
 }
 
-function renderTeamCard(
-  team: SuggestedTeam,
-  petsById: Map<string, InventoryPet>,
-  ui: Menu,
-): HTMLElement {
+function renderTeamCard(team: SuggestedTeam, petsById: Map<string, InventoryPet>): HTMLElement {
   const isAfk = team.mode === "afk";
   const glow = isAfk ? "#38bdf8" : "#34d399";
   const title = isAfk ? `${abilityLabel(team)} (AFK)` : abilityLabel(team);
-  const card = ui.card(title, {
+  const teamCard = card(title, {
     tone: isAfk ? "accent" : "default",
     compactHeader: true,
     gap: 6,
   });
-  Object.assign(card.root.style, {
+  Object.assign(teamCard.root.style, {
     padding: "8px 10px 10px",
     position: "relative",
     overflow: "hidden",
     transition: "transform 140ms ease, box-shadow 140ms ease",
   } as CSSStyleDeclaration);
-  card.root.onmouseenter = () => {
-    card.root.style.transform = "translateY(-2px)";
-    card.root.style.boxShadow = `0 10px 24px rgba(0,0,0,0.35), 0 0 0 1px ${glow}33`;
+  teamCard.root.onmouseenter = () => {
+    teamCard.root.style.transform = "translateY(-2px)";
+    teamCard.root.style.boxShadow = `0 10px 24px rgba(0,0,0,0.35), 0 0 0 1px ${glow}33`;
   };
-  card.root.onmouseleave = () => {
-    card.root.style.transform = "none";
-    card.root.style.boxShadow = "";
+  teamCard.root.onmouseleave = () => {
+    teamCard.root.style.transform = "none";
+    teamCard.root.style.boxShadow = "";
   };
 
-  // Left strip = the ability color(s) this team is built around (same
-  // palette as the ability dots), not just a generic Active/AFK accent —
-  // blended top-to-bottom when the team merges more than one category.
+  // The left strip shows the ability colours the team is built around (the
+  // same palette as the ability dots), blended top to bottom when the team
+  // merges more than one category.
   const stripColors = team.categories.map((c) => getAbilityChipColors(c.abilityId).bg);
   const strip = document.createElement("div");
   Object.assign(strip.style, {
@@ -280,7 +195,7 @@ function renderTeamCard(
     width: "4px",
     background: stripColors.length > 1 ? `linear-gradient(180deg, ${stripColors.join(", ")})` : stripColors[0],
   } as CSSStyleDeclaration);
-  card.root.appendChild(strip);
+  teamCard.root.appendChild(strip);
 
   const petsCol = document.createElement("div");
   petsCol.style.display = "grid";
@@ -288,18 +203,17 @@ function renderTeamCard(
   for (const id of team.petIds) {
     petsCol.appendChild(renderPetChip(petsById.get(id)));
   }
-  card.body.appendChild(petsCol);
+  teamCard.body.appendChild(petsCol);
 
-  // What the team is actually worth at these pets' strengths, restricted to
-  // the goal this team was built for — a Crop Size team reports Crop Size,
-  // not every unrelated ability its pets happen to carry. Collapsed by
-  // default: the grid holds many cards and the one-liner is the scan surface.
+  // What the team is worth at these pets' strengths, for the goal it was built
+  // for only: a Crop Size team reports Crop Size, not every unrelated ability
+  // its pets carry. Collapsed by default, since the grid holds many cards.
   const teamPets = team.petIds
     .map((id) => petsById.get(id))
     .filter((pet): pet is InventoryPet => Boolean(pet));
-  card.body.appendChild(renderTeamStats(teamPets, { focusAbilityIds: team.focusAbilityIds }));
+  teamCard.body.appendChild(renderTeamStats(teamPets, { focusAbilityIds: team.focusAbilityIds }));
 
-  const saveBtn = ui.btn("💾 Save", {
+  const saveBtn = button("💾 Save", {
     variant: "primary",
     size: "sm",
     onClick: () => {
@@ -323,9 +237,9 @@ function renderTeamCard(
     alignSelf: "center",
     flexShrink: "0",
   } as CSSStyleDeclaration);
-  card.body.appendChild(saveBtn);
+  teamCard.body.appendChild(saveBtn);
 
-  return card.root;
+  return teamCard.root;
 }
 
 function unusedReasonText(info: UnusedPetInfo): string {
@@ -359,12 +273,12 @@ function renderUnusedRow(info: UnusedPetInfo): HTMLElement {
   return row;
 }
 
-// Collapsed by default — this list can get long, and it's secondary info
-// compared to the suggested teams above.
-function renderUnusedSection(unusedPets: UnusedPetInfo[], ui: Menu): HTMLElement {
-  const card = ui.card(`🗑️ Not used in any team (${unusedPets.length})`, { tone: "muted", compactHeader: true, gap: 4 });
-  card.root.style.gridColumn = "1 / -1";
-  card.root.style.padding = "8px 10px";
+// Collapsed by default: the list can get long, and it matters less than the
+// suggested teams above.
+function renderUnusedSection(unusedPets: UnusedPetInfo[]): HTMLElement {
+  const section = card(`🗑️ Not used in any team (${unusedPets.length})`, { tone: "muted", compactHeader: true, gap: 4 });
+  section.root.style.gridColumn = "1 / -1";
+  section.root.style.padding = "8px 10px";
 
   const chevron = document.createElement("span");
   chevron.textContent = "▸";
@@ -372,9 +286,9 @@ function renderUnusedSection(unusedPets: UnusedPetInfo[], ui: Menu): HTMLElement
   chevron.style.marginLeft = "8px";
   chevron.style.opacity = "0.6";
   chevron.style.transition = "transform 120ms ease";
-  card.header.appendChild(chevron);
-  card.header.style.cursor = "pointer";
-  card.header.style.userSelect = "none";
+  section.header.appendChild(chevron);
+  section.header.style.cursor = "pointer";
+  section.header.style.userSelect = "none";
 
   const list = document.createElement("div");
   list.style.display = "none";
@@ -382,16 +296,16 @@ function renderUnusedSection(unusedPets: UnusedPetInfo[], ui: Menu): HTMLElement
   for (const info of unusedPets) {
     list.appendChild(renderUnusedRow(info));
   }
-  card.body.appendChild(list);
+  section.body.appendChild(list);
 
   let expanded = false;
-  card.header.addEventListener("click", () => {
+  section.header.addEventListener("click", () => {
     expanded = !expanded;
     list.style.display = expanded ? "grid" : "none";
     chevron.style.transform = expanded ? "rotate(90deg)" : "none";
   });
 
-  return card.root;
+  return section.root;
 }
 
 async function loadTeams(): Promise<{ teams: SuggestedTeam[]; sustainPet: InventoryPet | null; unusedPets: UnusedPetInfo[]; petsById: Map<string, InventoryPet> }> {
@@ -401,7 +315,7 @@ async function loadTeams(): Promise<{ teams: SuggestedTeam[]; sustainPet: Invent
   return { teams, sustainPet, unusedPets, petsById };
 }
 
-export function renderTeamBuilderTab(view: HTMLElement, ui: Menu): void {
+export function renderTeamBuilderTab(view: HTMLElement): void {
   const prevCleanup = (view as any).__cleanup__;
   if (typeof prevCleanup === "function") {
     try { prevCleanup(); } catch {}
@@ -419,11 +333,11 @@ export function renderTeamBuilderTab(view: HTMLElement, ui: Menu): void {
   wrap.style.overflow = "auto";
   view.appendChild(wrap);
 
-  const header = ui.flexRow({ justify: "end", fullWidth: true });
+  const header = flexRow({ justify: "end", fullWidth: true });
   header.style.paddingBottom = "8px";
-  header.style.borderBottom = "1px solid rgba(255,255,255,0.06)";
+  header.style.borderBottom = `1px solid ${color.border}`;
 
-  const refreshBtn = ui.btn("🔄 Refresh", { size: "sm" });
+  const refreshBtn = button("🔄 Refresh", { size: "sm" });
   header.appendChild(refreshBtn);
   wrap.appendChild(header);
 
@@ -450,18 +364,18 @@ export function renderTeamBuilderTab(view: HTMLElement, ui: Menu): void {
 
     if (!teams.length) {
       const empty = document.createElement("div");
-      empty.textContent = "No useful team found — hatch pets with offensive abilities.";
+      empty.textContent = "No useful team found. Hatch pets with offensive abilities.";
       empty.style.opacity = "0.7";
       content.appendChild(empty);
       return;
     }
 
     for (const team of teams) {
-      content.appendChild(renderTeamCard(team, petsById, ui));
+      content.appendChild(renderTeamCard(team, petsById));
     }
 
     if (unusedPets.length) {
-      content.appendChild(renderUnusedSection(unusedPets, ui));
+      content.appendChild(renderUnusedSection(unusedPets));
     }
   }
 

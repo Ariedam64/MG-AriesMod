@@ -78,7 +78,7 @@ export const player = makeAtom<any>("playerAtom");
 const action = makeAtom<any | null>("actionAtom");
 
 const myData = makeAtom<any>("myDataAtom");
-export const myInventory = makeAtom<any>("myInventoryAtom");
+const myInventory = makeAtom<any>("myInventoryAtom");
 
 const myCropInventory = makeAtom<CropItem[] | null>("myCropInventoryAtom");
 const mySeedInventory = makeAtom<SeedItem[] | null>("mySeedInventoryAtom");
@@ -93,7 +93,7 @@ export const myToolShackItems = makeAtom<ToolItem[] | null>("myToolShackItemsAto
 // `game/player.ts` prefer it but fall back to the pet slots below, which carry
 // every field they need. Deliberately not repointed at `petInfosAtom`, which is
 // every pet in the room rather than ours.
-export const myPetInfos = makeAtom<PetState>("myPetInfosAtom");
+const myPetInfos = makeAtom<PetState>("myPetInfosAtom");
 // Renamed `myPrimitivePetSlotsAtom` -> `myPredictedPetSlotsAtom` when the game
 // added prediction and rollback: the same slot array, served from its
 // prediction atoms and including commands still in flight. The old name stays

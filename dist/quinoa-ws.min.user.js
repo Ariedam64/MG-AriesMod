@@ -221,13 +221,13 @@
   // src/game/sprites/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-    const listeners8 = /* @__PURE__ */ new Set();
+    const listeners6 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
     const tick3 = (now2) => {
       const delta = last ? (now2 - last) / (1e3 / 60) : 1;
       last = now2;
-      for (const fn of listeners8) {
+      for (const fn of listeners6) {
         try {
           fn(delta);
         } catch {
@@ -237,14 +237,14 @@
     };
     const ticker = {
       add(fn) {
-        if (!listeners8.size) {
+        if (!listeners6.size) {
           rafId = requestAnimationFrame(tick3);
         }
-        listeners8.add(fn);
+        listeners6.add(fn);
       },
       remove(fn) {
-        listeners8.delete(fn);
-        if (!listeners8.size) {
+        listeners6.delete(fn);
+        if (!listeners6.size) {
           cancelAnimationFrame(rafId);
         }
       },
@@ -650,14 +650,14 @@
     }
   }
   function detectEnvironment() {
-    const framed = isInIframe();
+    const framed2 = isInIframe();
     const referrerHost = hostOf(document.referrer);
-    const embeddedInDiscord = framed && !!referrerHost && /(^|\.)discord(app)?\.com$/i.test(referrerHost);
+    const embeddedInDiscord = framed2 && !!referrerHost && /(^|\.)discord(app)?\.com$/i.test(referrerHost);
     return {
       surface: isDiscordActivityContext() || embeddedInDiscord ? "discord" : "web",
       host: location.hostname,
       origin: location.origin,
-      isInIframe: framed,
+      isInIframe: framed2,
       platform: /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) ? "mobile" : "desktop"
     };
   }
@@ -742,13 +742,13 @@
       return gmRequest(req, kind);
     }
   }
-  async function getOk(url, kind, options) {
-    const res = await request({ ...options, url }, kind);
+  async function getOk(url, kind, options2) {
+    const res = await request({ ...options2, url }, kind);
     if (!res.ok || res.body == null) throw new Error(`HTTP ${res.status} for ${url}`);
     return res.body;
   }
-  async function getJSON(url, options) {
-    return JSON.parse(await getText(url, options));
+  async function getJSON(url, options2) {
+    return JSON.parse(await getText(url, options2));
   }
   var HARD_DEADLINE_GRACE_MS, isOk, getText, getBlob;
   var init_http = __esm({
@@ -757,8 +757,8 @@
       init_environment();
       HARD_DEADLINE_GRACE_MS = 2e3;
       isOk = (status2) => status2 >= 200 && status2 < 300;
-      getText = (url, options) => getOk(url, "text", options);
-      getBlob = (url, options) => getOk(url, "blob", options);
+      getText = (url, options2) => getOk(url, "text", options2);
+      getBlob = (url, options2) => getOk(url, "blob", options2);
     }
   });
 
@@ -2287,10 +2287,10 @@
   function observeOutgoing(type, observer2) {
     return addHandler(observers, type, observer2);
   }
-  function runOutgoing(message) {
-    const type = message?.type;
-    if (typeof type !== "string" || !type) return message;
-    let current = message;
+  function runOutgoing(message2) {
+    const type = message2?.type;
+    if (typeof type !== "string" || !type) return message2;
+    let current = message2;
     for (const rule of [...rules.get(type) ?? []]) {
       try {
         const verdict2 = rule(current);
@@ -2328,17 +2328,17 @@
     if (!conn) return false;
     const original = resolveSendMessage(conn);
     if (!original) return false;
-    original.owner.sendMessage = function(message, ...rest2) {
-      let current = message;
+    original.owner.sendMessage = function(message2, ...rest2) {
+      let current = message2;
       try {
-        const isEnvelope = message?.type === "QuinoaCommand" && message?.command && typeof message.command === "object";
-        if (!isEnvelope && message?.type) {
-          current = runOutgoing(message);
+        const isEnvelope = message2?.type === "QuinoaCommand" && message2?.command && typeof message2.command === "object";
+        if (!isEnvelope && message2?.type) {
+          current = runOutgoing(message2);
           if (current === null) return;
         }
       } catch (error) {
         console.error("[MG-mod] sendMessage hook failed:", error);
-        current = message;
+        current = message2;
       }
       return original.fn.call(this, current, ...rest2);
     };
@@ -2500,9 +2500,9 @@
   });
 
   // src/lib/dom.ts
-  function addStyle(css3) {
+  function addStyle(css6) {
     const style2 = document.createElement("style");
-    style2.textContent = css3;
+    style2.textContent = css6;
     document.head.appendChild(style2);
     return style2;
   }
@@ -3829,12 +3829,12 @@
     };
   }
   async function captureViaWriteOnce() {
-    let cache2 = getAtomCache() ?? null;
-    if (!cache2) {
+    let cache3 = getAtomCache() ?? null;
+    if (!cache3) {
       console.log("[jotai-bridge] Waiting for jotaiAtomCache...");
-      cache2 = await waitUntil(getAtomCache, { timeoutMs: ATOM_CACHE_WAIT_MS, intervalMs: 100 });
+      cache3 = await waitUntil(getAtomCache, { timeoutMs: ATOM_CACHE_WAIT_MS, intervalMs: 100 });
     }
-    if (!cache2) {
+    if (!cache3) {
       console.warn("[jotai-bridge] jotaiAtomCache.cache not found");
       return makePolyfillStore();
     }
@@ -3852,7 +3852,7 @@
         }
       }
     };
-    for (const atom of cache2.values()) {
+    for (const atom of cache3.values()) {
       if (!atom || typeof atom.write !== "function" || atom.__origWrite) continue;
       const orig = atom.write;
       atom.__origWrite = orig;
@@ -3947,10 +3947,10 @@
     return s.sub(atom, cb);
   }
   function findAtomsByLabel(regex) {
-    const cache2 = getAtomCache();
-    if (!cache2) return [];
+    const cache3 = getAtomCache();
+    if (!cache3) return [];
     const out = [];
-    for (const a of cache2.values()) {
+    for (const a of cache3.values()) {
       const label2 = a?.debugLabel || a?.label || "";
       if (regex.test(String(label2))) out.push(a);
     }
@@ -5125,10 +5125,10 @@
     }
     return null;
   }
-  async function fetchBundleByFinder(findUrl, cache2, label2) {
-    if (cache2.value) return cache2.value;
-    if (cache2.inFlight) return cache2.inFlight;
-    cache2.inFlight = (async () => {
+  async function fetchBundleByFinder(findUrl, cache3, label2) {
+    if (cache3.value) return cache3.value;
+    if (cache3.inFlight) return cache3.inFlight;
+    cache3.inFlight = (async () => {
       const MAX_RETRIES = 30;
       const RETRY_INTERVAL = 500;
       let url = null;
@@ -5145,15 +5145,15 @@
         const res = await fetch(url, { credentials: "include" });
         if (!res.ok) return null;
         const text2 = await res.text();
-        cache2.value = text2;
+        cache3.value = text2;
         return text2;
       } catch {
         return null;
       } finally {
-        cache2.inFlight = null;
+        cache3.inFlight = null;
       }
     })();
-    return cache2.inFlight;
+    return cache3.inFlight;
   }
   function fetchMainBundle() {
     return fetchBundleByFinder(findMainBundleUrl, mainBundleCache, "main bundle");
@@ -9583,10 +9583,10 @@
     img.dataset.spriteId = spriteId;
     return img;
   }
-  function attachSpriteIcon(target, categories, id, size, _logTag, options) {
+  function attachSpriteIcon(target, categories, id, size, _logTag, options2) {
     const candidateIds = Array.isArray(id) ? id.map((value) => String(value ?? "").trim()).filter(Boolean) : [String(id ?? "").trim()].filter(Boolean);
     if (!candidateIds.length) return;
-    const mutations = knownMutations(options?.mutations);
+    const mutations = knownMutations(options2?.mutations);
     const mutKey = mutationKeyStr(mutations);
     const hasMutations = mutations.length > 0;
     fetchIndex().then(() => {
@@ -9601,7 +9601,7 @@
         }
       }
       if (!selectedEntry) {
-        options?.onNoSpriteFound?.({ categories, candidates: candidateIds });
+        options2?.onNoSpriteFound?.({ categories, candidates: candidateIds });
         return;
       }
       const entry = selectedEntry;
@@ -9613,7 +9613,7 @@
         requestAnimationFrame(() => {
           if (onlyIfConnected && !target.isConnected) return;
           target.replaceChildren(img);
-          options?.onSpriteApplied?.(img, { category: entry.internalCat, spriteId: entry.name, candidate: selectedCandidate });
+          options2?.onSpriteApplied?.(img, { category: entry.internalCat, spriteId: entry.name, candidate: selectedCandidate });
         });
       };
       if (!hasMutations) {
@@ -10056,8 +10056,8 @@
           if (!("caches" in window)) return;
           try {
             for (const k of await caches.keys()) {
-              const cache2 = await caches.open(k);
-              for (const r of await cache2.keys()) this.add(r.url);
+              const cache3 = await caches.open(k);
+              for (const r of await cache3.keys()) this.add(r.url);
             }
           } catch {
           }
@@ -10809,24 +10809,24 @@
       }
     }
   }
-  async function fakeShow(config, payload, options) {
+  async function fakeShow(config, payload, options2) {
     await ensureStore();
     const st = await _ensureFakeInstalled(config);
     st.payload = payload;
     st.enabled = true;
-    if (options?.merge && !config.merge) {
+    if (options2?.merge && !config.merge) {
       config.merge = (_real, fake) => fake;
     }
     await _primePatched(st);
-    if (options?.openGate && config.gate?.openAction) await config.gate.openAction();
+    if (options2?.openGate && config.gate?.openAction) await config.gate.openAction();
     if (st.autoTimer) {
       clearTimeout(st.autoTimer);
       st.autoTimer = null;
     }
-    if (options?.autoRestoreMs && options.autoRestoreMs > 0) {
+    if (options2?.autoRestoreMs && options2.autoRestoreMs > 0) {
       st.autoTimer = setTimeout(() => {
         void fakeHide(config.label);
-      }, options.autoRestoreMs);
+      }, options2.autoRestoreMs);
     }
   }
   async function fakeUpdate(label2, nextPayload) {
@@ -12163,20 +12163,20 @@
         Object.keys(mutationCatalog2 || {})
       );
       const applyMutationsPatch = (nextMutations) => {
-        const copy2 = nextMutations.slice();
+        const copy3 = nextMutations.slice();
         mutations.length = 0;
-        mutations.push(...copy2);
+        mutations.push(...copy3);
         void updateGardenObjectAtCurrentTile((obj) => {
           if (obj?.objectType !== "plant") return obj;
           const nextSlots = Array.isArray(obj.slots) ? obj.slots.slice() : [];
           if (applyAll) {
             for (let i = 0; i < nextSlots.length; i++) {
-              nextSlots[i] = { ...nextSlots[i] || {}, mutations: copy2.slice() };
+              nextSlots[i] = { ...nextSlots[i] || {}, mutations: copy3.slice() };
             }
           } else {
             nextSlots[idx] = {
               ...nextSlots[idx] || {},
-              mutations: copy2.slice()
+              mutations: copy3.slice()
             };
           }
           return { ...obj, slots: nextSlots };
@@ -13354,12 +13354,12 @@
       if (!slotMatch || !slotMatch.matchSlot) return false;
       const userSlotIdx = slotMatchToIndex(slotMatch);
       friendPreviewGarden = sanitizeGarden(garden3);
-      const installed4 = await installGardenOverlay(
+      const installed6 = await installGardenOverlay(
         "friend",
         userSlotIdx,
         makeGardenTileResolver(() => friendPreviewGarden)
       );
-      if (!installed4) return false;
+      if (!installed6) return false;
       await setOverlayMyDataGarden(friendPreviewGarden);
       friendPreviewUserSlotIdx = userSlotIdx;
       friendPreviewPlayerId = pid;
@@ -14271,27 +14271,27 @@
       return "drop";
     };
   }
-  function purchaseTarget(message) {
-    const item = message?.item ?? {};
-    switch (message?.shop) {
+  function purchaseTarget(message2) {
+    const item = message2?.item ?? {};
+    switch (message2?.shop) {
       case "seed":
-        return { kind: "seed", id: item.species ?? message?.species ?? message?.id };
+        return { kind: "seed", id: item.species ?? message2?.species ?? message2?.id };
       case "egg":
-        return { kind: "egg", id: item.eggId ?? message?.eggId ?? message?.id };
+        return { kind: "egg", id: item.eggId ?? message2?.eggId ?? message2?.id };
       case "tool":
-        return { kind: "tool", id: item.toolId ?? message?.toolId ?? message?.id };
+        return { kind: "tool", id: item.toolId ?? message2?.toolId ?? message2?.id };
       case "decor":
-        return { kind: "decor", id: item.decorId ?? message?.decorId ?? message?.id };
+        return { kind: "decor", id: item.decorId ?? message2?.decorId ?? message2?.id };
       default:
         return null;
     }
   }
-  function checkPurchase(message) {
-    const target = purchaseTarget(message);
+  function checkPurchase(message2) {
+    const target = purchaseTarget(message2);
     if (!target || !inventoryFull()) return;
     const key2 = target.id == null ? "" : String(target.id);
     if (key2 && owned[target.kind].has(key2)) return;
-    console.log(`[PurchaseShopItem:${message.shop}] Blocked by inventory reserve`, { id: target.id });
+    console.log(`[PurchaseShopItem:${message2.shop}] Blocked by inventory reserve`, { id: target.id });
     return "drop";
   }
   function installInventoryReserve() {
@@ -14387,9 +14387,9 @@
     let selectedIdx = null;
     let lastInfo = emptySlotInfo();
     let curSig = gardenObjectSignature(cur);
-    const listeners8 = /* @__PURE__ */ new Set();
+    const listeners6 = /* @__PURE__ */ new Set();
     const notify3 = () => {
-      for (const fn of listeners8) {
+      for (const fn of listeners6) {
         try {
           fn(lastInfo);
         } catch {
@@ -14624,11 +14624,11 @@
         return lastInfo;
       },
       onChange(cb) {
-        listeners8.add(cb);
-        return () => listeners8.delete(cb);
+        listeners6.add(cb);
+        return () => listeners6.delete(cb);
       },
       stop() {
-        listeners8.clear();
+        listeners6.clear();
       },
       recompute() {
         recomputeAndNotify();
@@ -15531,8 +15531,8 @@
     const list = Array.isArray(slots) ? slots : [];
     return list.find((s) => s && typeof s === "object" && s.slotId === slotId) ?? list[slotId] ?? null;
   }
-  function checkHarvest(message) {
-    const { slot, slotsIndex } = message;
+  function checkHarvest(message2) {
+    const { slot, slotsIndex } = message2;
     if (!Number.isInteger(slot) || !Number.isInteger(slotsIndex)) return;
     const tile = harvestedTile(slot);
     if (!tile || typeof tile !== "object" || tile.objectType !== "plant") {
@@ -15964,14 +15964,14 @@
     const value = Number(await read2());
     if (Number.isFinite(value) && value > 0) StatsService.incrementShopStat(stat, value);
   }
-  function countHarvest(message) {
-    if (!Number.isInteger(message?.slot) || !Number.isInteger(message?.slotsIndex)) return;
+  function countHarvest(message2) {
+    if (!Number.isInteger(message2?.slot) || !Number.isInteger(message2?.slotsIndex)) return;
     StatsService.incrementGardenStat("totalHarvested");
   }
-  function countPurchase(message) {
-    const stat = PURCHASE_STATS[message?.shop];
+  function countPurchase(message2) {
+    const stat = PURCHASE_STATS[message2?.shop];
     if (!stat) return;
-    const quantity = Math.max(1, Math.floor(Number(message?.quantity) || 1));
+    const quantity = Math.max(1, Math.floor(Number(message2?.quantity) || 1));
     StatsService.incrementShopStat(stat, quantity);
   }
   function countCropSale() {
@@ -16022,6 +16022,644 @@
         tool: "toolsBought",
         decor: "decorBought"
       };
+    }
+  });
+
+  // src/lib/emitter.ts
+  var Emitter, Subscriptions;
+  var init_emitter = __esm({
+    "src/lib/emitter.ts"() {
+      "use strict";
+      Emitter = class {
+        constructor() {
+          this.listeners = /* @__PURE__ */ new Set();
+        }
+        on(listener) {
+          this.listeners.add(listener);
+          return () => {
+            this.listeners.delete(listener);
+          };
+        }
+        emit(value) {
+          for (const listener of [...this.listeners]) {
+            try {
+              listener(value);
+            } catch (error) {
+              console.error("[Aries] listener failed", error);
+            }
+          }
+        }
+        get size() {
+          return this.listeners.size;
+        }
+        clear() {
+          this.listeners.clear();
+        }
+      };
+      Subscriptions = class {
+        constructor() {
+          this.pending = [];
+        }
+        add(unsubscribe2) {
+          this.pending.push(unsubscribe2);
+        }
+        dispose() {
+          for (const entry of this.pending.splice(0)) {
+            Promise.resolve(entry).then((off) => off?.()).catch(() => {
+            });
+          }
+        }
+      };
+    }
+  });
+
+  // src/features/pets/abilityNames.ts
+  function abilityName(id) {
+    const key2 = String(id ?? "");
+    const name = petAbilities2[key2]?.name;
+    return typeof name === "string" && name.trim() ? name : key2;
+  }
+  function abilityNameWithoutLevel(id) {
+    return abilityName(id).replace(TIER_SUFFIX, "").trim();
+  }
+  function isLoggableAbility(id) {
+    return loggableIds().has(id);
+  }
+  function loggableIds() {
+    const keys = Object.keys(petAbilities2);
+    if (!loggableCache || loggableCache.count !== keys.length) {
+      loggableCache = { count: keys.length, ids: new Set(keys.filter((id) => !WEATHER_MUTATION_BOOST_IDS.has(id))) };
+    }
+    return loggableCache.ids;
+  }
+  var WEATHER_MUTATION_BOOST_IDS, TIER_SUFFIX, loggableCache;
+  var init_abilityNames = __esm({
+    "src/features/pets/abilityNames.ts"() {
+      "use strict";
+      init_data();
+      WEATHER_MUTATION_BOOST_IDS = /* @__PURE__ */ new Set([
+        "ProduceMutationBoost",
+        "ProduceMutationBoostII",
+        "ProduceMutationBoostIII",
+        "DawnBoost",
+        "AmberMoonBoost",
+        "ThunderBoost",
+        "SnowyCropMutationBoost",
+        "PetMutationBoost",
+        "PetMutationBoostII",
+        "PetMutationBoostIII",
+        // A passive chance boost the game itself never logs.
+        "DawnbinderBoost"
+      ]);
+      TIER_SUFFIX = /(?:\s+|-)?(?:I|II|III|IV|V|VI|VII|VIII|IX|X)\s*$/;
+      loggableCache = null;
+    }
+  });
+
+  // src/features/pets/abilityLogText.ts
+  function fallbackText(abilityId, params) {
+    switch (abilityId) {
+      case "HungerBoost":
+      case "HungerBoostII":
+      case "HungerBoostIII":
+      case "SnowyHungerBoost": {
+        const pct = baseParameters(abilityId)["hungerDepletionRateDecreasePercentage"];
+        return pct != null ? `- ${Number(pct).toFixed(0)}% hunger drain` : "Hunger reduced";
+      }
+      case "Copycat":
+        return "Copied another ability";
+      case "DawnCapture": {
+        const capsules = params["capsulesAdded"];
+        const dawnlit = Number(params["dawnlitRemoved"]) || 0;
+        const dawncharged = Number(params["dawnboundRemoved"]) || 0;
+        const absorbed = [];
+        if (dawnlit > 0) absorbed.push(`${formatCount(dawnlit)} Dawnlit`);
+        if (dawncharged > 0) absorbed.push(`${formatCount(dawncharged)} Dawncharged`);
+        const head = capsules != null ? `+ ${formatCount(capsules)} ${plural(capsules, "Dawn Capsule")}` : "Dawn Capsules added";
+        return absorbed.length ? `${head} (${absorbed.join(", ")} absorbed)` : head;
+      }
+      case "Thunderbloom":
+        return "Thunder mutations empowered";
+      case "Thundercharger": {
+        const charged = params["cropsCharged"];
+        return charged != null ? `${formatCount(charged)} ${plural(charged, "crop")} Thundercharged` : "Crops Thundercharged";
+      }
+      default: {
+        const meta = petAbilities2[abilityId];
+        return meta?.description || meta?.name || abilityId;
+      }
+    }
+  }
+  function abilityLogText(abilityId, params) {
+    if (abilityId === "GoldGranter" || abilityId === "RainbowGranter") {
+      const growSlot = params.growSlot;
+      const species = typeof growSlot?.species === "string" ? growSlot.species.trim() : "";
+      if (!species) return null;
+    }
+    if (isPetAbilityAction(abilityId)) {
+      try {
+        const text2 = formatAbilityLog({ action: abilityId, timestamp: 0, parameters: params });
+        if (text2) return text2;
+      } catch {
+      }
+    }
+    return fallbackText(abilityId, params);
+  }
+  function abilityLogValue(abilityId, rawData) {
+    const data = rawData ?? {};
+    const base = baseParameters(abilityId);
+    switch (abilityId) {
+      case "CoinFinderI":
+      case "CoinFinderII":
+      case "CoinFinderIII":
+      case "SnowyCoinFinder":
+      case "DawnCoinFinder":
+      case "ThunderCoinFinder":
+        return nonNegative(firstOf(data, base, ["coinsFound", "coins"]));
+      case "SellBoostI":
+      case "SellBoostII":
+      case "SellBoostIII":
+      case "SellBoostIV":
+        return nonNegative(firstOf(data, base, ["bonusCoins", "coinsEarned"]));
+      case "ProduceEater":
+        return nonNegative(firstOf(data, base, ["sellPrice"]));
+      case "ProduceScaleBoost":
+      case "ProduceScaleBoostII":
+      case "ProduceScaleBoostIII":
+      case "SnowyCropSizeBoost":
+        return nonNegative(firstOf(
+          data,
+          base,
+          ["sizeIncrease", "scaleIncreasePercentage", "cropScaleIncreasePercentage"],
+          ["sizeIncrease", "scaleIncreasePercentage"]
+        ));
+      case "EggGrowthBoost":
+      case "EggGrowthBoostII_NEW":
+      case "EggGrowthBoostII":
+      case "SnowyEggGrowthBoost":
+      case "ThunderEggGrowthBoost":
+        return reductionMs(data, base, ["eggGrowthTimeReductionMinutes", "minutesReduced", "reductionMinutes"], "eggGrowthTimeReductionMinutes");
+      case "PlantGrowthBoost":
+      case "PlantGrowthBoostII":
+      case "PlantGrowthBoostIII":
+      case "SnowyPlantGrowthBoost":
+      case "DawnPlantGrowthBoost":
+      case "AmberPlantGrowthBoost":
+      case "ThunderPlantGrowthBoost":
+        return reductionMs(data, base, ["minutesReduced", "reductionMinutes", "plantGrowthReductionMinutes"], "plantGrowthReductionMinutes");
+      case "PetXpBoost":
+      case "SnowyPetXpBoost":
+      case "PetXpBoostII":
+      case "PetXpBoostIII":
+      case "DawnXpBoost":
+      case "ThunderXpBoost":
+      case "PetAgeBoost":
+      case "PetAgeBoostII":
+      case "PetAgeBoostIII":
+        return nonNegative(firstOf(data, base, ["bonusXp"], ["bonusXp"]));
+      case "DawnCapture":
+        return nonNegative(firstOf(data, base, ["capsulesAdded"]));
+      case "PetHatchSizeBoost":
+      case "PetHatchSizeBoostII":
+      case "PetHatchSizeBoostIII":
+        return nonNegative(firstOf(data, base, ["strengthIncrease"]));
+      case "HungerRestore":
+      case "HungerRestoreII":
+      case "HungerRestoreIII":
+      case "SnowyHungerRestore":
+        return nonNegative(firstOf(data, base, ["hungerRestoreAmount", "hungerRestoredPercentage"], ["hungerRestorePercentage"]));
+      case "HungerBoost":
+      case "HungerBoostII":
+      case "HungerBoostIII":
+      case "SnowyHungerBoost":
+        return nonNegative(firstOf(data, base, ["hungerDepletionRateDecreasePercentage"], ["hungerDepletionRateDecreasePercentage"]));
+      case "Thundercharger":
+        return nonNegative(firstOf(data, base, ["cropsCharged"]));
+      default:
+        return 0;
+    }
+  }
+  var baseParameters, formatCount, plural, nonNegative, firstOf, reductionMs;
+  var init_abilityLogText = __esm({
+    "src/features/pets/abilityLogText.ts"() {
+      "use strict";
+      init_data();
+      baseParameters = (abilityId) => petAbilities2[abilityId]?.baseParameters ?? {};
+      formatCount = (n) => Number.isFinite(Number(n)) ? Math.round(Number(n)).toLocaleString("en-US") : "0";
+      plural = (n, word) => `${word}${Number(n) === 1 ? "" : "s"}`;
+      nonNegative = (value) => {
+        const n = Number(value);
+        return Number.isFinite(n) ? Math.max(0, n) : 0;
+      };
+      firstOf = (data, base, dataKeys, baseKeys = []) => {
+        for (const key2 of dataKeys) if (data[key2] != null) return data[key2];
+        for (const key2 of baseKeys) if (base[key2] != null) return base[key2];
+        return 0;
+      };
+      reductionMs = (data, base, minuteKeys, baseMinuteKey) => {
+        if (data["secondsReduced"] != null) return nonNegative(data["secondsReduced"]) * 1e3;
+        return nonNegative(firstOf(data, base, minuteKeys, [baseMinuteKey])) * 60 * 1e3;
+      };
+    }
+  });
+
+  // src/features/pets/inventoryPets.ts
+  function canonicalSpecies(species) {
+    if (!species) return species;
+    if (petCatalog2[species]) return species;
+    const found = catalogKeyByLowercase().get(species.toLowerCase());
+    if (found) return found;
+    const capitalized = species.charAt(0).toUpperCase() + species.slice(1).toLowerCase();
+    return petCatalog2[capitalized] ? capitalized : species;
+  }
+  function inventoryItemToPet(x) {
+    if (!x || x.itemType !== "Pet") return null;
+    const id = lower(x.id);
+    if (!id) return null;
+    const scale = x.targetScale ?? x.data?.targetScale;
+    return {
+      id,
+      itemType: "Pet",
+      petSpecies: canonicalSpecies(String(x.petSpecies ?? x.data?.petSpecies ?? "").trim()),
+      name: stringOrNull(x.name ?? x.data?.name ?? null),
+      xp: finiteOrZero(x.xp ?? x.data?.xp),
+      hunger: finiteOrZero(x.hunger ?? x.data?.hunger),
+      mutations: stringList(x.mutations ?? x.data?.mutations),
+      targetScale: Number.isFinite(scale) ? Number(scale) : void 0,
+      abilities: stringList(x.abilities ?? x.data?.abilities)
+    };
+  }
+  function activeSlotToPet(entry) {
+    const slot = entry?.slot ?? entry;
+    if (!slot || typeof slot !== "object") return null;
+    const id = lower(slot.id);
+    if (!id) return null;
+    return {
+      id,
+      itemType: "Pet",
+      petSpecies: canonicalSpecies(String(slot.petSpecies ?? slot.species ?? "").trim()),
+      name: stringOrNull(slot.name ?? null),
+      xp: finiteOrZero(slot.xp),
+      hunger: finiteOrZero(slot.hunger),
+      mutations: stringList(slot.mutations),
+      targetScale: Number.isFinite(slot.targetScale) ? Number(slot.targetScale) : void 0,
+      abilities: stringList(slot.abilities)
+    };
+  }
+  function petToInventoryItem(p) {
+    return {
+      id: p.id,
+      itemType: "Pet",
+      petSpecies: canonicalSpecies(p.petSpecies),
+      name: p.name ?? null,
+      xp: p.xp,
+      hunger: p.hunger,
+      mutations: p.mutations.slice(),
+      targetScale: p.targetScale,
+      abilities: p.abilities.slice()
+    };
+  }
+  function stableSignature(list) {
+    return list.filter((p) => !!p).map((p) => JSON.stringify([p.id, p.petSpecies, p.name ?? null, p.mutations, p.targetScale ?? null, p.abilities])).join("\n");
+  }
+  function rebuild() {
+    const byId = /* @__PURE__ */ new Map();
+    for (const pet of hutchRaw.map(inventoryItemToPet)) if (pet) byId.set(pet.id, pet);
+    for (const pet of itemsOf(inventoryRaw).map(inventoryItemToPet)) if (pet) byId.set(pet.id, pet);
+    for (const pet of activeRaw.map(activeSlotToPet)) if (pet) byId.set(pet.id, pet);
+    cache = Array.from(byId.values());
+  }
+  async function startWatchers() {
+    let inventorySig = "";
+    let activeSig = "";
+    try {
+      inventoryRaw = await Atoms.inventory.myInventory.get();
+      inventorySig = stableSignature(itemsOf(inventoryRaw).map(inventoryItemToPet));
+    } catch {
+    }
+    watchers.add(Atoms.inventory.myInventory.onChange((inv) => {
+      const sig = stableSignature(itemsOf(inv).map(inventoryItemToPet));
+      if (sig === inventorySig) return;
+      inventorySig = sig;
+      inventoryRaw = inv;
+      rebuild();
+    }));
+    let primitive = null;
+    try {
+      primitive = await Atoms.pets.myPrimitivePetSlots.get();
+    } catch {
+    }
+    const activeAtom = Array.isArray(primitive) ? Atoms.pets.myPrimitivePetSlots : Atoms.pets.myPetInfos;
+    if (Array.isArray(primitive)) {
+      activeRaw = primitive;
+    } else {
+      try {
+        const infos = await Atoms.pets.myPetInfos.get();
+        activeRaw = Array.isArray(infos) ? infos : [];
+      } catch {
+      }
+    }
+    activeSig = stableSignature(activeRaw.map(activeSlotToPet));
+    watchers.add(activeAtom.onChange((list) => {
+      const next = Array.isArray(list) ? list : [];
+      const sig = stableSignature(next.map(activeSlotToPet));
+      if (sig === activeSig) return;
+      activeSig = sig;
+      activeRaw = next;
+      rebuild();
+    }));
+    try {
+      const hutch = await myPetHutchPetItems.get();
+      hutchRaw = Array.isArray(hutch) ? hutch : [];
+    } catch {
+    }
+    watchers.add(myPetHutchPetItems.onChange((list) => {
+      hutchRaw = Array.isArray(list) ? list : [];
+      rebuild();
+    }));
+    rebuild();
+  }
+  function ensureInventoryWatchers() {
+    if (!watchersStarted) {
+      watchersStarted = true;
+      starting = startWatchers().catch(() => {
+      });
+    }
+    return starting ?? Promise.resolve();
+  }
+  async function getInventoryPets() {
+    await ensureInventoryWatchers();
+    return cache.slice();
+  }
+  function findCachedPet(petId) {
+    return cache.find((p) => p.id === petId) ?? null;
+  }
+  async function getPetLookup() {
+    const owned2 = await getInventoryPets().catch(() => []);
+    if (owned2.length) lastNonEmpty = owned2;
+    const map2 = new Map(lastNonEmpty.map((p) => [p.id, p]));
+    try {
+      for (const entry of await PlayerService.getPets() ?? []) {
+        const pet = activeSlotToPet(entry);
+        if (pet && !map2.has(pet.id)) map2.set(pet.id, pet);
+      }
+    } catch {
+    }
+    return map2;
+  }
+  var lower, stringOrNull, finiteOrZero, stringList, catalogKeyByLowercase, inventoryRaw, activeRaw, hutchRaw, cache, watchersStarted, watchers, itemsOf, starting, lastNonEmpty;
+  var init_inventoryPets = __esm({
+    "src/features/pets/inventoryPets.ts"() {
+      "use strict";
+      init_data();
+      init_player();
+      init_atoms();
+      init_emitter();
+      lower = (v) => (v ?? "").toLowerCase();
+      stringOrNull = (v) => typeof v === "string" ? v : null;
+      finiteOrZero = (v) => Number.isFinite(v) ? v : 0;
+      stringList = (v) => Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+      catalogKeyByLowercase = memoOnCatalogs(
+        () => new Map(Object.keys(petCatalog2).map((k) => [k.toLowerCase(), k]))
+      );
+      inventoryRaw = null;
+      activeRaw = [];
+      hutchRaw = [];
+      cache = [];
+      watchersStarted = false;
+      watchers = new Subscriptions();
+      itemsOf = (inv) => Array.isArray(inv?.items) ? inv.items : Array.isArray(inv) ? inv : [];
+      starting = null;
+      lastNonEmpty = [];
+    }
+  });
+
+  // src/features/pets/abilityLogs.ts
+  function persist3() {
+    try {
+      writeAriesPath(STORAGE_PATH, {
+        version: 1,
+        cutoff: cutoffMs,
+        logs: logs.map((entry) => ({
+          ...entry,
+          species: entry.species ?? null,
+          name: entry.name ?? null,
+          mutations: entry.mutations?.slice()
+        }))
+      });
+    } catch {
+    }
+  }
+  function restoreAbilityLogs() {
+    try {
+      const saved = readAriesPath(STORAGE_PATH);
+      if (!saved || typeof saved !== "object") return;
+      const restored = [];
+      for (const item of Array.isArray(saved.logs) ? saved.logs : []) {
+        if (!item || typeof item !== "object") continue;
+        const abilityId = typeof item.abilityId === "string" ? item.abilityId : "";
+        const performedAt = Number(item.performedAt) || 0;
+        if (!abilityId || !performedAt) continue;
+        const mutations = Array.isArray(item.mutations) ? item.mutations.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
+        restored.push({
+          petId: typeof item.petId === "string" ? item.petId : "",
+          species: optionalString(item.species),
+          name: optionalString(item.name),
+          mutations: mutations.length ? mutations : void 0,
+          abilityId,
+          abilityName: optionalString(item.abilityName) ?? abilityId,
+          data: item.data,
+          performedAt,
+          time12: optionalString(item.time12) ?? time12(performedAt)
+        });
+      }
+      restored.sort((a, b) => a.performedAt - b.performedAt);
+      logs = restored.slice(-MAX_ENTRIES);
+      seenKeys.clear();
+      for (const entry of logs) seenKeys.add(entryKey(entry));
+      const cutoff = Number(saved.cutoff);
+      if (Number.isFinite(cutoff) && cutoff > 0) cutoffMs = cutoff;
+    } catch {
+    }
+  }
+  function push(entry) {
+    logs.push(entry);
+    if (logs.length > MAX_ENTRIES) logs.splice(0, logs.length - MAX_ENTRIES);
+    changes.emit(getAbilityLogs());
+    persist3();
+  }
+  function ingestActivityLogEntry(raw) {
+    if (!raw || typeof raw !== "object") return;
+    const abilityId = typeof raw.action === "string" ? raw.action : "";
+    if (!abilityId || !isLoggableAbility(abilityId)) return;
+    const performedAt = Number(raw.timestamp);
+    if (!Number.isFinite(performedAt) || performedAt <= 0) return;
+    const params = raw.parameters && typeof raw.parameters === "object" ? raw.parameters : {};
+    const petParam = params.pet;
+    const petId = typeof petParam?.id === "string" ? petParam.id : "";
+    if (!petId) return;
+    const key2 = entryKey({ abilityId, petId, performedAt });
+    if (seenKeys.has(key2)) return;
+    seenKeys.add(key2);
+    if (cutoffMs && performedAt < cutoffMs - CUTOFF_SKEW_MS) return;
+    const details = abilityLogText(abilityId, params);
+    if (details === null) return;
+    const cached2 = findCachedPet(petId);
+    const mutationsRaw = Array.isArray(petParam?.mutations) ? petParam.mutations : cached2?.mutations;
+    const mutations = Array.isArray(mutationsRaw) ? mutationsRaw.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
+    try {
+      StatsService.incrementAbilityStat(abilityId, "triggers");
+      const value = abilityLogValue(abilityId, params);
+      if (value > 0) StatsService.incrementAbilityStat(abilityId, "totalValue", value);
+    } catch {
+    }
+    push({
+      petId,
+      species: optionalString(petParam?.petSpecies) ?? (cached2?.petSpecies || void 0),
+      name: optionalString(petParam?.name) ?? (cached2?.name || void 0),
+      mutations: mutations.length ? mutations : void 0,
+      abilityId,
+      abilityName: abilityName(abilityId),
+      data: details,
+      performedAt,
+      time12: time12(performedAt)
+    });
+  }
+  async function startAbilityLogsWatcher() {
+    try {
+      await ensureInventoryWatchers();
+    } catch {
+    }
+    const ingest2 = (rawLogs) => {
+      for (const raw of Array.isArray(rawLogs) ? rawLogs : []) {
+        try {
+          ingestActivityLogEntry(raw);
+        } catch {
+        }
+      }
+    };
+    try {
+      ingest2(await myActivityLog.get());
+    } catch {
+    }
+    let stop2 = null;
+    try {
+      const res = await myActivityLog.onChange((next) => ingest2(next));
+      if (typeof res === "function") stop2 = res;
+    } catch {
+    }
+    return () => {
+      try {
+        stop2?.();
+      } catch {
+      }
+    };
+  }
+  function getAbilityLogs() {
+    return logs.slice().sort((a, b) => b.performedAt - a.performedAt);
+  }
+  function getAbilityLogsSessionStart() {
+    return sessionStart;
+  }
+  function onAbilityLogs(cb) {
+    const off = changes.on(cb);
+    try {
+      cb(getAbilityLogs());
+    } catch {
+    }
+    return off;
+  }
+  function getSeenAbilityIds() {
+    return Array.from(new Set(logs.map((e) => e.abilityId))).sort();
+  }
+  function clearAbilityLogs() {
+    logs = [];
+    seenKeys.clear();
+    cutoffMs = Date.now();
+    changes.emit(getAbilityLogs());
+    persist3();
+  }
+  var STORAGE_PATH, MAX_ENTRIES, CUTOFF_SKEW_MS, logs, seenKeys, cutoffMs, sessionStart, changes, entryKey, time12, optionalString;
+  var init_abilityLogs = __esm({
+    "src/features/pets/abilityLogs.ts"() {
+      "use strict";
+      init_atoms();
+      init_emitter();
+      init_storage();
+      init_stats();
+      init_abilityNames();
+      init_abilityLogText();
+      init_inventoryPets();
+      STORAGE_PATH = "pets.abilityLogs";
+      MAX_ENTRIES = 500;
+      CUTOFF_SKEW_MS = 1500;
+      logs = [];
+      seenKeys = /* @__PURE__ */ new Set();
+      cutoffMs = 0;
+      sessionStart = Date.now();
+      changes = new Emitter();
+      entryKey = (e) => `${e.abilityId}|${e.petId}|${e.performedAt}`;
+      time12 = (ms) => new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+      optionalString = (v) => typeof v === "string" && v ? v : void 0;
+    }
+  });
+
+  // src/features/pets/feeding.ts
+  function readMap(path) {
+    const saved = readAriesPath(path);
+    return saved && typeof saved === "object" ? saved : {};
+  }
+  function getOverride(petId) {
+    const saved = readMap(OVERRIDES_PATH)[petId];
+    return {
+      enabled: !!saved?.enabled,
+      thresholdPct: Math.min(100, Math.max(1, Number(saved?.thresholdPct) || DEFAULT_THRESHOLD_PCT)),
+      crops: { ...saved?.crops || {} }
+    };
+  }
+  function instantFeedRules(species) {
+    return { ...readMap(INSTANT_FEED_PATH)[canonicalSpecies(String(species || ""))]?.crops || {} };
+  }
+  function isInstantFeedCropAllowed(species, crop) {
+    return isAllowed(instantFeedRules(species), crop);
+  }
+  function setInstantFeedCropAllowed(species, crop, allowed) {
+    const key2 = canonicalSpecies(String(species || ""));
+    const all = readMap(INSTANT_FEED_PATH);
+    all[key2] = { crops: { ...all[key2]?.crops || {}, [crop]: { allowed: !!allowed } } };
+    writeAriesPath(INSTANT_FEED_PATH, all);
+  }
+  function getInstantFeedAllowedCrops(species) {
+    const rules2 = instantFeedRules(species);
+    return new Set(getCompatibleCropsForSpecies(canonicalSpecies(String(species || ""))).filter((c) => isAllowed(rules2, c)));
+  }
+  function getCompatibleCropsForSpecies(species) {
+    const entry = catalogEntry(species);
+    const raw = entry?.diet ?? entry?.compatibleCrops ?? entry?.crops ?? [];
+    return (Array.isArray(raw) ? raw : []).filter((c) => typeof c === "string" && c.length > 0);
+  }
+  function maxHungerForSpecies(species) {
+    const v = catalogEntry(species)?.coinsToFullyReplenishHunger;
+    return typeof v === "number" && Number.isFinite(v) && v > 0 ? v : DEFAULT_MAX_HUNGER;
+  }
+  function getHungerPctFor(pet) {
+    const current = Number(pet?.slot?.hunger) || 0;
+    const pct = current / maxHungerForSpecies(String(pet?.slot?.petSpecies || "")) * 100;
+    return +Math.max(0, Math.min(100, pct)).toFixed(1);
+  }
+  var OVERRIDES_PATH, INSTANT_FEED_PATH, DEFAULT_THRESHOLD_PCT, DEFAULT_MAX_HUNGER, isAllowed, catalogEntry;
+  var init_feeding = __esm({
+    "src/features/pets/feeding.ts"() {
+      "use strict";
+      init_data();
+      init_storage();
+      init_inventoryPets();
+      OVERRIDES_PATH = "pets.overrides";
+      INSTANT_FEED_PATH = "pets.instantFeed";
+      DEFAULT_THRESHOLD_PCT = 10;
+      DEFAULT_MAX_HUNGER = 3e3;
+      isAllowed = (rules2, crop) => rules2[crop] ? !!rules2[crop].allowed : true;
+      catalogEntry = (species) => petCatalog2[species];
     }
   });
 
@@ -16242,6 +16880,206 @@
     }
   });
 
+  // src/features/pets/teamStore.ts
+  function load2() {
+    const saved = readAriesPath(STORAGE_PATH2) ?? [];
+    if (!Array.isArray(saved)) return [];
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const t of saved) {
+      const id = String(t?.id || "");
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      out.push({
+        id,
+        name: String(t?.name || "Team"),
+        slots: normalizeSlots(t?.slots),
+        serverId: t?.serverId ? String(t.serverId) : null
+      });
+    }
+    if (out.length !== saved.length) save(out);
+    for (const t of out) if (t.serverId) localIdByServerId.set(t.serverId, t.id);
+    return out;
+  }
+  function save(list) {
+    for (const t of list) {
+      if (t?.serverId && t?.id) localIdByServerId.set(String(t.serverId), String(t.id));
+    }
+    writeAriesPath(STORAGE_PATH2, list);
+  }
+  function teamsRef() {
+    return teams;
+  }
+  function commitTeams(next) {
+    teams = next;
+    save(teams);
+    changes2.emit(getTeams());
+  }
+  function getTeams() {
+    return teams.map(copy);
+  }
+  function getTeamById(teamId2) {
+    const team = teams.find((t) => t.id === teamId2);
+    return team ? copy(team) : null;
+  }
+  function onTeamsChange(cb) {
+    const off = changes2.on(cb);
+    try {
+      cb(getTeams());
+    } catch {
+    }
+    return off;
+  }
+  function rememberLocalId(serverId, localId2) {
+    localIdByServerId.set(serverId, localId2);
+  }
+  function knownLocalId(serverId) {
+    return localIdByServerId.get(serverId);
+  }
+  function teamIdForPets(petIds) {
+    const wanted = new Set(petIds.map((id) => String(id || "")).filter(Boolean));
+    if (!wanted.size) return null;
+    for (const team of teams) {
+      const slots = team.slots.map((id) => String(id || "")).filter(Boolean);
+      if (slots.length !== wanted.size) continue;
+      const slotSet = new Set(slots);
+      if ([...wanted].every((id) => slotSet.has(id))) return team.id;
+    }
+    return null;
+  }
+  function newTeamId() {
+    try {
+      const uuid = globalThis.crypto?.randomUUID?.();
+      if (uuid) return uuid;
+    } catch {
+    }
+    return `t_${Date.now().toString(36)}_${Math.random().toString(16).slice(2)}`;
+  }
+  var STORAGE_PATH2, SLOT_COUNT, localIdByServerId, changes2, normalizeSlots, teams, copy;
+  var init_teamStore = __esm({
+    "src/features/pets/teamStore.ts"() {
+      "use strict";
+      init_emitter();
+      init_storage();
+      STORAGE_PATH2 = "pets.teams";
+      SLOT_COUNT = 3;
+      localIdByServerId = /* @__PURE__ */ new Map();
+      changes2 = new Emitter();
+      normalizeSlots = (slots) => Array.isArray(slots) ? slots.slice(0, SLOT_COUNT).map((x) => x ? String(x) : null) : [null, null, null];
+      teams = load2();
+      copy = (t) => ({ ...t, slots: t.slots.slice(0, SLOT_COUNT) });
+    }
+  });
+
+  // src/features/pets/teamReconcile.ts
+  function serverMemberIds(team) {
+    return Array.isArray(team?.members) ? team.members.map((m) => String(m?.petId || "")).filter(Boolean) : [];
+  }
+  function sameMemberSet(a, b) {
+    const aa = a.filter((x) => !!x).slice().sort();
+    const bb = b.slice().sort();
+    if (aa.length !== bb.length) return false;
+    return aa.every((v, i) => v === bb[i]);
+  }
+  function petTeamName(name) {
+    const trimmed = String(name ?? "").trim();
+    let parts;
+    try {
+      const seg = new Intl.Segmenter(void 0, { granularity: "grapheme" });
+      parts = Array.from(seg.segment(trimmed), (s) => s.segment);
+    } catch {
+      parts = Array.from(trimmed);
+    }
+    return parts.length <= PET_TEAM_NAME_MAX_CLUSTERS ? trimmed : parts.slice(0, PET_TEAM_NAME_MAX_CLUSTERS).join("");
+  }
+  function nameKey(name) {
+    return name ? petTeamName(name).toLowerCase() : "";
+  }
+  function reconcilePetTeams(teams2, serverTeams2, env) {
+    const serverById = new Map(serverTeams2.map((t) => [String(t.id), t]));
+    const linkedServerIds = new Set(teams2.map((t) => t.serverId).filter((v) => !!v));
+    const freeByName = (key2) => key2 ? serverTeams2.filter((t) => !linkedServerIds.has(String(t.id)) && nameKey(t.name) === key2) : [];
+    const result = {
+      teams: teams2,
+      changed: false,
+      linkedLocalIds: [],
+      pushUpdates: [],
+      needsCreate: [],
+      dropped: []
+    };
+    const folded = /* @__PURE__ */ new Set();
+    for (const local of teams2) {
+      if (folded.has(local)) continue;
+      if (local.serverId) {
+        const server = serverById.get(local.serverId);
+        if (!server) continue;
+        const memberIds = serverMemberIds(server);
+        if (server.name !== local.name || !sameMemberSet(local.slots, memberIds)) {
+          local.name = server.name;
+          local.slots = [0, 1, 2].map((i) => memberIds[i] ?? null);
+          result.changed = true;
+        }
+        continue;
+      }
+      const candidates = [...freeByName(nameKey(local.name)), ...freeByName(nameKey(env.sentName(local.id)))];
+      const match = candidates.find((t) => sameMemberSet(local.slots, serverMemberIds(t))) ?? candidates[0];
+      if (match) {
+        local.serverId = String(match.id);
+        linkedServerIds.add(local.serverId);
+        result.linkedLocalIds.push(local.id);
+        const matchMemberIds = serverMemberIds(match);
+        const divergedWhilePending = match.name !== petTeamName(local.name) || !sameMemberSet(local.slots, matchMemberIds);
+        if (divergedWhilePending) {
+          const petIds = local.slots.filter((x) => !!x);
+          if (petIds.length) result.pushUpdates.push({ serverId: local.serverId, name: local.name.trim() || "Team", petIds });
+        } else {
+          local.name = match.name;
+          local.slots = [0, 1, 2].map((i) => matchMemberIds[i] ?? null);
+        }
+        result.changed = true;
+        continue;
+      }
+      const twin = teams2.find((t) => t !== local && !folded.has(t) && !!t.serverId && serverById.has(t.serverId) && nameKey(t.name) === nameKey(local.name) && sameMemberSet(t.slots, local.slots.filter((x) => !!x)));
+      if (twin) {
+        local.serverId = twin.serverId;
+        local.name = twin.name;
+        local.slots = twin.slots.slice();
+        folded.add(twin);
+        result.changed = true;
+        continue;
+      }
+      result.needsCreate.push(local);
+    }
+    result.dropped = teams2.filter((t) => !folded.has(t) && !!t.serverId && !serverById.has(t.serverId));
+    const kept = teams2.filter((t) => !folded.has(t) && (!t.serverId || serverById.has(t.serverId)));
+    if (kept.length !== teams2.length) result.changed = true;
+    const usedLocalIds = new Set(kept.map((t) => t.id));
+    for (const server of serverTeams2) {
+      if (linkedServerIds.has(String(server.id))) continue;
+      const memberIds = serverMemberIds(server);
+      const knownLocalId2 = env.knownLocalId(String(server.id));
+      const importedId = knownLocalId2 && !usedLocalIds.has(knownLocalId2) ? knownLocalId2 : env.newId();
+      usedLocalIds.add(importedId);
+      kept.push({
+        id: importedId,
+        name: server.name,
+        slots: [0, 1, 2].map((i) => memberIds[i] ?? null),
+        serverId: String(server.id)
+      });
+      linkedServerIds.add(String(server.id));
+      result.changed = true;
+    }
+    result.teams = kept;
+    return result;
+  }
+  var PET_TEAM_NAME_MAX_CLUSTERS;
+  var init_teamReconcile = __esm({
+    "src/features/pets/teamReconcile.ts"() {
+      "use strict";
+      PET_TEAM_NAME_MAX_CLUSTERS = 16;
+    }
+  });
+
   // src/game/playerIdentity.ts
   function asRecord(value) {
     return value && typeof value === "object" ? value : null;
@@ -16330,6 +17168,695 @@
     }
   });
 
+  // src/features/pets/teamSync.ts
+  function isTeamSyncEnabled() {
+    return syncEnabled;
+  }
+  function send(message2) {
+    if (!syncEnabled) return;
+    try {
+      sendToGame(message2);
+    } catch {
+    }
+  }
+  function sendSavePetTeam(serverId, name, petIds) {
+    send({ type: "SavePetTeam", teamId: serverId ?? newTeamId(), isCreate: serverId === null, name: petTeamName(name), petIds });
+  }
+  function sendDeletePetTeam(serverId) {
+    send({ type: "DeletePetTeam", teamId: serverId });
+  }
+  function sendApplyPetTeam(serverId) {
+    send({ type: "ApplyPetTeam", teamId: serverId });
+  }
+  function sendMovePetTeam(serverId, toIndex) {
+    send({ type: "MovePetTeam", movePetTeamId: serverId, toPetTeamIndex: toIndex });
+  }
+  function clearPendingCreate(localId2) {
+    const timer2 = pendingCreates.get(localId2);
+    if (timer2) clearTimeout(timer2);
+    pendingCreates.delete(localId2);
+    pendingCreateNames.delete(localId2);
+  }
+  function maybeCreateServerTeam(team) {
+    if (!syncEnabled) return;
+    if (pendingCreates.has(team.id)) return;
+    const petIds = team.slots.filter((x) => !!x);
+    const name = (team.name || "").trim();
+    if (!name || !petIds.length) return;
+    const signature = createSignature(team);
+    if (lastCreateAttempt.get(team.id) === signature) return;
+    lastCreateAttempt.set(team.id, signature);
+    pendingCreateNames.set(team.id, name);
+    pendingCreates.set(team.id, setTimeout(() => clearPendingCreate(team.id), PENDING_CREATE_TIMEOUT_MS));
+    console.warn(`[Pets] Creating native pet team "${name}" (${petIds.length} pet(s)), once, never retried on its own.`);
+    sendSavePetTeam(null, name, petIds);
+  }
+  function reconcile() {
+    if (!syncEnabled) return;
+    if (reconciling) {
+      reconcileQueued = true;
+      return;
+    }
+    reconciling = true;
+    try {
+      const result = reconcilePetTeams(teamsRef(), serverTeams, {
+        sentName: (localId2) => pendingCreateNames.get(localId2),
+        knownLocalId,
+        newId: newTeamId
+      });
+      for (const localId2 of result.linkedLocalIds) clearPendingCreate(localId2);
+      for (const update of result.pushUpdates) sendSavePetTeam(update.serverId, update.name, update.petIds);
+      for (const team of result.needsCreate) maybeCreateServerTeam(team);
+      for (const team of result.dropped) rememberLocalId(String(team.serverId), team.id);
+      if (result.changed) commitTeams(result.teams);
+    } finally {
+      reconciling = false;
+      if (reconcileQueued) {
+        reconcileQueued = false;
+        reconcile();
+      }
+    }
+  }
+  async function myUserSlotIndex() {
+    try {
+      const slots = await stateUserSlots.get();
+      const list = Array.isArray(slots) ? slots : [];
+      if (!list.length) return null;
+      let roomId2 = null;
+      let accountId = null;
+      try {
+        roomId2 = await playerId.get() ?? null;
+      } catch {
+      }
+      try {
+        accountId = readAccountId(await player.get());
+      } catch {
+      }
+      if (!roomId2 && !accountId) return null;
+      return findSlotIndex(list, { accountId, roomId: roomId2 });
+    } catch {
+      return null;
+    }
+  }
+  async function readServerTeams(slots) {
+    try {
+      const index = await myUserSlotIndex();
+      if (index == null) return null;
+      const mySlot = (Array.isArray(slots) ? slots : [])[index];
+      if (!mySlot || typeof mySlot !== "object") return null;
+      const teams2 = mySlot?.data?.petTeams;
+      return Array.isArray(teams2) ? teams2 : null;
+    } catch {
+      return null;
+    }
+  }
+  function serverSignature(list) {
+    try {
+      return list.map((t) => `${t.id}:${t.name}:${serverMemberIds(t).slice().sort().join(",")}`).sort().join("|");
+    } catch {
+      return "";
+    }
+  }
+  async function startPetTeamSync() {
+    if (watcherStarted) return;
+    watcherStarted = true;
+    const apply2 = async (slots) => {
+      const next = await readServerTeams(slots);
+      if (next === null) return;
+      const signature = serverSignature(next);
+      if (signature === lastServerSignature) return;
+      lastServerSignature = signature;
+      serverTeams = next;
+      reconcile();
+    };
+    try {
+      await apply2(await stateUserSlots.get());
+    } catch {
+    }
+    try {
+      await stateUserSlots.onChange((slots) => {
+        void apply2(slots);
+      });
+    } catch {
+    }
+  }
+  function setTeamSyncEnabled(value) {
+    const next = !!value;
+    if (next === syncEnabled) return;
+    syncEnabled = next;
+    writeAriesPath(SYNC_ENABLED_PATH, next);
+    if (!next) {
+      for (const localId2 of Array.from(pendingCreates.keys())) clearPendingCreate(localId2);
+      return;
+    }
+    lastCreateAttempt.clear();
+    reconcile();
+  }
+  var SYNC_ENABLED_PATH, PENDING_CREATE_TIMEOUT_MS, syncEnabled, serverTeams, lastServerSignature, watcherStarted, reconciling, reconcileQueued, pendingCreates, pendingCreateNames, lastCreateAttempt, createSignature;
+  var init_teamSync = __esm({
+    "src/features/pets/teamSync.ts"() {
+      "use strict";
+      init_playerIdentity();
+      init_atoms();
+      init_send();
+      init_storage();
+      init_teamReconcile();
+      init_teamStore();
+      SYNC_ENABLED_PATH = "pets.teamSync";
+      PENDING_CREATE_TIMEOUT_MS = 8e3;
+      syncEnabled = readAriesPath(SYNC_ENABLED_PATH, true) !== false;
+      serverTeams = [];
+      lastServerSignature = "";
+      watcherStarted = false;
+      reconciling = false;
+      reconcileQueued = false;
+      pendingCreates = /* @__PURE__ */ new Map();
+      pendingCreateNames = /* @__PURE__ */ new Map();
+      lastCreateAttempt = /* @__PURE__ */ new Map();
+      createSignature = (team) => `${team.name.trim().toLowerCase()}::${team.slots.filter((x) => !!x).sort().join(",")}`;
+    }
+  });
+
+  // src/features/pets/teams.ts
+  function createTeam(name) {
+    const list = teamsRef();
+    const team = {
+      id: newTeamId(),
+      name: petTeamName(name ?? "") || `Team ${list.length + 1}`,
+      slots: [null, null, null],
+      serverId: null
+    };
+    commitTeams([...list, team]);
+    return team;
+  }
+  function deleteTeam(teamId2) {
+    const list = teamsRef();
+    const removed = list.find((t) => t.id === teamId2);
+    if (!removed) return false;
+    commitTeams(list.filter((t) => t !== removed));
+    if (removed.serverId) sendDeletePetTeam(removed.serverId);
+    return true;
+  }
+  function saveTeam(patch) {
+    const list = teamsRef();
+    const index = list.findIndex((t) => t.id === patch.id);
+    if (index < 0) return null;
+    const current = list[index];
+    const next = {
+      id: current.id,
+      name: typeof patch.name === "string" ? petTeamName(patch.name) : current.name,
+      slots: Array.isArray(patch.slots) ? patch.slots.slice(0, SLOT_COUNT2) : current.slots,
+      serverId: current.serverId ?? null
+    };
+    commitTeams(list.map((t, i) => i === index ? next : t));
+    const petIds = next.slots.filter((x) => !!x);
+    if (!next.serverId) maybeCreateServerTeam(next);
+    else if (petIds.length) sendSavePetTeam(next.serverId, next.name.trim() || "Team", petIds);
+    return next;
+  }
+  function setTeamsOrder(ids) {
+    const byId = new Map(teamsRef().map((t) => [t.id, t]));
+    const next = [];
+    for (const id of ids) {
+      const team = byId.get(id);
+      if (team) {
+        next.push(team);
+        byId.delete(id);
+      }
+    }
+    next.push(...byId.values());
+    commitTeams(next);
+    next.filter((t) => t.serverId).forEach((t, serverIndex) => sendMovePetTeam(t.serverId, serverIndex));
+  }
+  var SLOT_COUNT2;
+  var init_teams = __esm({
+    "src/features/pets/teams.ts"() {
+      "use strict";
+      init_teamReconcile();
+      init_teamStore();
+      init_teamSync();
+      SLOT_COUNT2 = 3;
+    }
+  });
+
+  // src/features/pets/petPicker.ts
+  async function clearHandSelection() {
+    try {
+      await Atoms.inventory.setSelectedIndexToEnd.set(null);
+    } catch {
+    }
+    try {
+      await Atoms.inventory.mySelectedItemId.set(null);
+    } catch {
+    }
+    try {
+      await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.set(null);
+    } catch {
+    }
+    try {
+      await PlayerService.setSelectedItem(null);
+    } catch {
+    }
+    try {
+      await PlayerService.dropObject();
+    } catch {
+    }
+  }
+  async function waitForPickedIndex(timeoutMs) {
+    await clearHandSelection();
+    const deadline = performance.now() + timeoutMs;
+    while (performance.now() < deadline) {
+      try {
+        if (!isInventoryOpen(await Atoms.ui.activeModal.get())) return null;
+      } catch {
+        return null;
+      }
+      try {
+        const index = await Atoms.inventory.myValidatedSelectedItemIndex.get();
+        if (typeof index === "number" && Number.isInteger(index) && index >= 0) return index;
+      } catch {
+      }
+      await sleep2(80);
+    }
+    return null;
+  }
+  async function pickablePets(exclude) {
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    const add = (pet) => {
+      if (!pet || exclude.has(pet.id) || seen.has(pet.id)) return;
+      seen.add(pet.id);
+      out.push(pet);
+    };
+    for (const pet of await getInventoryPets()) add(pet);
+    try {
+      const hutch = await myPetHutchPetItems.get();
+      for (const item of Array.isArray(hutch) ? hutch : []) add(inventoryItemToPet(item));
+      const active2 = await PlayerService.getPets();
+      for (const entry of Array.isArray(active2) ? active2 : []) add(activeSlotToPet(entry));
+    } catch {
+    }
+    return out;
+  }
+  async function chooseSlotPet(teamId2, slotIndex) {
+    const index = Math.max(0, Math.min(2, Math.floor(slotIndex || 0)));
+    const team = getTeamById(teamId2);
+    if (!team) return null;
+    const exclude = /* @__PURE__ */ new Set();
+    team.slots.forEach((id, i) => {
+      if (i !== index && id) exclude.add(String(id));
+    });
+    const pets = await pickablePets(exclude);
+    if (!pets.length) return null;
+    let favoritedItemIds = [];
+    try {
+      const favorites = await Atoms.inventory.favoriteIds.get() || [];
+      const ids = new Set(pets.map((p) => p.id));
+      favoritedItemIds = favorites.filter((id) => ids.has(id));
+    } catch {
+    }
+    await fakeInventory.show({ items: pets.map(petToInventoryItem), favoritedItemIds }, { open: true });
+    const picked = await waitForPickedIndex(PICK_TIMEOUT_MS);
+    if (picked == null || picked >= pets.length) {
+      await fakeInventory.disable();
+      return null;
+    }
+    await fakeInventory.close();
+    const chosen = pets[picked];
+    const slots = team.slots.slice(0, 3);
+    slots[index] = chosen.id;
+    saveTeam({ id: team.id, slots });
+    try {
+      await clearHandSelection();
+    } catch {
+    }
+    return chosen;
+  }
+  var PICK_TIMEOUT_MS;
+  var init_petPicker = __esm({
+    "src/features/pets/petPicker.ts"() {
+      "use strict";
+      init_fakeModal();
+      init_player();
+      init_atoms();
+      init_async2();
+      init_inventoryPets();
+      init_teamStore();
+      init_teams();
+      PICK_TIMEOUT_MS = 2e4;
+    }
+  });
+
+  // src/features/pets/teamSwitch.ts
+  function getLastUsedTeamId() {
+    return lastUsedTeamId;
+  }
+  async function getActivePetIds() {
+    try {
+      const primitives = await Atoms.pets.myPrimitivePetSlots.get();
+      const ids = (Array.isArray(primitives) ? primitives : []).map((p) => String(p?.id || "")).filter(Boolean).slice(0, MAX_TEAM_SLOTS);
+      if (ids.length) return ids;
+      const pets = await PlayerService.getPets();
+      return (Array.isArray(pets) ? pets : []).map((p) => String(p?.slot?.id || "")).filter(Boolean).slice(0, MAX_TEAM_SLOTS);
+    } catch {
+      return [];
+    }
+  }
+  async function getActiveTeamId() {
+    try {
+      return teamIdForPets(await getActivePetIds());
+    } catch {
+      return null;
+    }
+  }
+  function sameSet(a, b) {
+    if (a.length !== b.length) return false;
+    const set2 = new Set(a);
+    return b.every((x) => set2.has(x));
+  }
+  async function waitForTeamEquipped(teamId2, timeoutMs = 2e3) {
+    const target = (getTeamById(teamId2)?.slots ?? []).filter((x) => !!x);
+    const done = await waitUntil(
+      async () => {
+        const pets = await PlayerService.getPets().catch(() => null);
+        const equipped = Array.isArray(pets) ? pets.map((p) => String(p?.slot?.id || "")).filter(Boolean) : [];
+        return sameSet(equipped, target);
+      },
+      { timeoutMs, intervalMs: 80 }
+    );
+    return !!done;
+  }
+  async function hutchInfo() {
+    let capacity = 0;
+    let used = 0;
+    try {
+      const inv = await Atoms.inventory.myInventory.get();
+      const storages = Array.isArray(inv?.storages) ? inv.storages : [];
+      const hutch = storages.find((s) => s?.id === "PetHutch" || s?.decorId === "PetHutch");
+      const slots = Number(hutch?.capacitySlots);
+      if (Number.isFinite(slots) && slots > 0) capacity = slots;
+      if (Array.isArray(hutch?.items)) used = hutch.items.length;
+    } catch {
+    }
+    if (!capacity) {
+      try {
+        const n = Number(await myPetHutchCapacitySlots.get());
+        if (Number.isFinite(n) && n > 0) capacity = n;
+      } catch {
+      }
+    }
+    if (!capacity) capacity = HUTCH_DEFAULT_CAPACITY;
+    if (!used) {
+      try {
+        const n = Number(await myNumPetHutchItems.get());
+        if (Number.isFinite(n) && n > 0) used = n;
+      } catch {
+      }
+    }
+    return { capacity, used, free: Math.max(0, capacity - used) };
+  }
+  async function hutchPetIds() {
+    try {
+      const items = await myPetHutchPetItems.get();
+      return new Set((Array.isArray(items) ? items : []).map((it) => String(it?.id ?? "")).filter(Boolean));
+    } catch {
+      return /* @__PURE__ */ new Set();
+    }
+  }
+  async function moveSparePetToHutch(targets, activeSlots, inHutch) {
+    try {
+      const spare = (await getInventoryPets()).find((p) => {
+        const id = String(p?.id || "");
+        return id && !inHutch.has(id) && !activeSlots.includes(id) && !targets.has(id);
+      });
+      if (!spare) return false;
+      await PlayerService.putItemInStorage(spare.id, "PetHutch");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  async function myDirtTile(tileOffset) {
+    try {
+      const map2 = await Atoms.root.map.get();
+      const cols = Number(map2?.cols);
+      const dirtBySlot = Array.isArray(map2?.userSlotIdxAndDirtTileIdxToGlobalTileIdx) ? map2.userSlotIdxAndDirtTileIdxToGlobalTileIdx : [];
+      if (!Number.isFinite(cols) || cols <= 0 || !dirtBySlot.length) return null;
+      const slotIndex = await myUserSlotIndex();
+      if (slotIndex == null) return null;
+      const dirt = Array.isArray(dirtBySlot[slotIndex]) ? dirtBySlot[slotIndex] : [];
+      if (!dirt.length) return null;
+      const localTileIndex = Math.min(Math.max(0, tileOffset), dirt.length - 1);
+      const globalIndex = Number(dirt[localTileIndex]);
+      if (!Number.isFinite(globalIndex)) return null;
+      return { position: { x: globalIndex % cols, y: Math.floor(globalIndex / cols) }, localTileIndex };
+    } catch {
+      return null;
+    }
+  }
+  async function placePetInMyGarden(petId, tileOffset) {
+    const tile = await myDirtTile(tileOffset);
+    if (tile) {
+      await PlayerService.placePet(petId, tile.position, "Dirt", tile.localTileIndex);
+      return;
+    }
+    await PlayerService.placePet(petId, { x: 0, y: 0 }, "Boardwalk", 64);
+  }
+  function alignTargetsToActiveSlots(targets, activeSlots) {
+    const aligned = new Array(MAX_TEAM_SLOTS).fill("");
+    const remaining = [];
+    for (const id of targets) {
+      const index = activeSlots.indexOf(id);
+      if (index >= 0 && index < MAX_TEAM_SLOTS && !aligned[index]) aligned[index] = id;
+      else remaining.push(id);
+    }
+    for (const id of remaining) {
+      const free = aligned.indexOf("");
+      if (free < 0) break;
+      aligned[free] = id;
+    }
+    return aligned;
+  }
+  async function equipPetIds(rawIds, markTeamId, markUsed = true) {
+    const targets = Array.from(new Set(rawIds.map((v) => String(v || "")).filter(Boolean))).slice(0, MAX_TEAM_SLOTS);
+    const teamToMark = markTeamId ?? teamIdForPets(targets);
+    const finish = (result) => {
+      if (markUsed && teamToMark) lastUsedTeamId = teamToMark;
+      return result;
+    };
+    if (!targets.length) return finish({ swapped: 0, placed: 0, skipped: 0 });
+    const activeSlots = await getActivePetIds();
+    if (sameSet(targets, activeSlots)) return finish({ swapped: 0, placed: 0, skipped: targets.length });
+    let freeHutch = (await hutchInfo()).free;
+    const inHutch = await hutchPetIds();
+    const targetSet = new Set(targets);
+    const aligned = alignTargetsToActiveSlots(targets, activeSlots);
+    let swapped = 0;
+    let placed = 0;
+    let skipped = 0;
+    let placementOffset = 0;
+    const storeInHutch = async (petId) => {
+      if (freeHutch <= 0) return;
+      await PlayerService.putItemInStorage(petId, "PetHutch");
+      freeHutch--;
+    };
+    const place = async (petId) => {
+      await placePetInMyGarden(petId, placementOffset++);
+      placed++;
+    };
+    for (let slot = 0; slot < MAX_TEAM_SLOTS; slot++) {
+      const targetId = aligned[slot];
+      const currentId = String(activeSlots[slot] ?? "");
+      if (targetId && targetId === currentId) {
+        skipped++;
+        continue;
+      }
+      if (!targetId) {
+        if (currentId) {
+          try {
+            await PlayerService.storePet(currentId);
+            activeSlots[slot] = "";
+            await storeInHutch(currentId);
+          } catch {
+          }
+        }
+        continue;
+      }
+      if (currentId && inHutch.has(targetId)) {
+        try {
+          await PlayerService.swapPetFromStorage(currentId, targetId, "PetHutch");
+          swapped++;
+          activeSlots[slot] = targetId;
+          inHutch.delete(targetId);
+          inHutch.add(currentId);
+        } catch {
+          try {
+            await place(targetId);
+          } catch {
+          }
+        }
+        continue;
+      }
+      if (inHutch.has(targetId)) {
+        let inventoryFull2 = false;
+        try {
+          inventoryFull2 = !!await isMyInventoryAtMaxLength.get();
+        } catch {
+        }
+        if (inventoryFull2) {
+          const freed = freeHutch > 0 && await moveSparePetToHutch(targetSet, activeSlots, inHutch);
+          if (!freed) {
+            try {
+              await toastSimple(
+                "Inventory Full",
+                "Cannot equip team: required pets are in the Pet Hutch and your inventory is full.",
+                "error"
+              );
+            } catch {
+            }
+            return finish({ swapped, placed, skipped });
+          }
+          freeHutch--;
+        }
+        try {
+          await PlayerService.retrieveItemFromStorage(targetId, "PetHutch");
+          inHutch.delete(targetId);
+          freeHutch++;
+        } catch {
+          continue;
+        }
+      }
+      if (!currentId) {
+        try {
+          await place(targetId);
+          activeSlots[slot] = targetId;
+        } catch {
+        }
+        continue;
+      }
+      try {
+        await PlayerService.swapPet(currentId, targetId);
+        swapped++;
+        activeSlots[slot] = targetId;
+        try {
+          await storeInHutch(currentId);
+        } catch {
+        }
+      } catch {
+        try {
+          await place(targetId);
+        } catch {
+        }
+      }
+    }
+    return finish({ swapped, placed, skipped });
+  }
+  async function useTeam(teamId2, opts) {
+    const team = getTeams().find((t) => t.id === teamId2);
+    if (!team) throw new Error("Team not found");
+    const petIds = team.slots.filter((x) => typeof x === "string" && x.length > 0).slice(0, MAX_TEAM_SLOTS);
+    if (isTeamSyncEnabled() && team.serverId) {
+      sendApplyPetTeam(team.serverId);
+      if (opts?.markUsed !== false) lastUsedTeamId = teamId2;
+      return { swapped: petIds.length, placed: 0, skipped: 0 };
+    }
+    return equipPetIds(petIds, teamId2, opts?.markUsed !== false);
+  }
+  function usePetIds(petIds) {
+    return equipPetIds(petIds, null);
+  }
+  var MAX_TEAM_SLOTS, HUTCH_DEFAULT_CAPACITY, lastUsedTeamId;
+  var init_teamSwitch = __esm({
+    "src/features/pets/teamSwitch.ts"() {
+      "use strict";
+      init_player();
+      init_atoms();
+      init_async2();
+      init_toast();
+      init_inventoryPets();
+      init_teamStore();
+      init_teamSync();
+      MAX_TEAM_SLOTS = 3;
+      HUTCH_DEFAULT_CAPACITY = 10;
+      lastUsedTeamId = null;
+    }
+  });
+
+  // src/features/pets/pets.ts
+  var PetsService;
+  var init_pets = __esm({
+    "src/features/pets/pets.ts"() {
+      "use strict";
+      init_player();
+      init_atoms();
+      init_pageContext();
+      init_abilityLogs();
+      init_abilityNames();
+      init_feeding();
+      init_inventoryPets();
+      init_petPicker();
+      init_teams();
+      init_teamStore();
+      init_teamSwitch();
+      init_teamSync();
+      PetsService = {
+        // Equipped pets, straight from the player service.
+        getPets() {
+          return PlayerService.getPets();
+        },
+        onPetsChange(cb) {
+          return PlayerService.onPetsChange(cb);
+        },
+        onPetsChangeNow(cb) {
+          return PlayerService.onPetsChangeNow(cb);
+        },
+        getAbilityName: abilityName,
+        getAbilityNameWithoutLevel: abilityNameWithoutLevel,
+        getOverride,
+        getCompatibleCropsForSpecies,
+        getHungerPctFor,
+        getInstantFeedAllowedCrops,
+        isInstantFeedCropAllowed,
+        setInstantFeedCropAllowed,
+        getTeams,
+        getTeamById,
+        /** Calls back at once with the current teams, then on every change. */
+        onTeamsChange,
+        /** Same as `onTeamsChange`, for callers that await their subscription. */
+        async onTeamsChangeNow(cb) {
+          return onTeamsChange(cb);
+        },
+        createTeam,
+        deleteTeam,
+        saveTeam,
+        setTeamsOrder,
+        isTeamSyncEnabled,
+        setTeamSyncEnabled,
+        startPetTeamSync,
+        getInventoryPets,
+        getPetLookup,
+        chooseSlotPet,
+        useTeam,
+        usePetIds,
+        getActivePetIds,
+        getActiveTeamId,
+        getLastUsedTeamId,
+        waitForTeamEquipped,
+        startAbilityLogsWatcher,
+        onAbilityLogs,
+        getAbilityLogsSessionStart,
+        getSeenAbilityIds,
+        clearAbilityLogs
+      };
+      restoreAbilityLogs();
+      try {
+        shareGlobal("QWS_PetsService", PetsService);
+        shareGlobal("QWS_Atoms", Atoms);
+      } catch {
+      }
+    }
+  });
+
   // src/lib/hotkey.ts
   function codesMatch(expected, actual) {
     if (expected === actual) return true;
@@ -16378,22 +17905,22 @@
   function canonicalizeCode(rawCode) {
     const trimmed = rawCode.trim();
     if (!trimmed) return "";
-    const lower = trimmed.toLowerCase();
-    const letter = lower.match(/^key([a-z])$/);
+    const lower2 = trimmed.toLowerCase();
+    const letter = lower2.match(/^key([a-z])$/);
     if (letter) return `Key${letter[1].toUpperCase()}`;
-    const digit = lower.match(/^digit([0-9])$/);
+    const digit = lower2.match(/^digit([0-9])$/);
     if (digit) return `Digit${digit[1]}`;
-    const numpadDigit = lower.match(/^numpad([0-9])$/);
+    const numpadDigit = lower2.match(/^numpad([0-9])$/);
     if (numpadDigit) return `Numpad${numpadDigit[1]}`;
-    if (lower.startsWith("numpad")) {
-      const suffix = lower.slice(6);
+    if (lower2.startsWith("numpad")) {
+      const suffix = lower2.slice(6);
       return suffix ? `Numpad${CANONICAL_CODES[suffix] ?? capitalize(suffix)}` : "Numpad";
     }
-    const fKey = lower.match(/^f([0-9]{1,2})$/);
+    const fKey = lower2.match(/^f([0-9]{1,2})$/);
     if (fKey) return `F${fKey[1]}`;
-    const arrow = lower.match(/^arrow([a-z]+)$/);
+    const arrow = lower2.match(/^arrow([a-z]+)$/);
     if (arrow) return `Arrow${CANONICAL_CODES[arrow[1]] ?? capitalize(arrow[1])}`;
-    return CANONICAL_CODES[lower] ?? capitalize(trimmed);
+    return CANONICAL_CODES[lower2] ?? capitalize(trimmed);
   }
   function prettyCode(code) {
     if (code === "AltLeft" || code === "AltRight") return "Alt";
@@ -16482,6 +18009,1883 @@
         shiftright: "ShiftRight"
       };
       capitalize = (word) => word ? word[0].toUpperCase() + word.slice(1) : "";
+    }
+  });
+
+  // src/lib/keyboard.ts
+  function isKeybindCaptureActive() {
+    return keybindCaptureCount > 0;
+  }
+  function beginKeybindCapture() {
+    keybindCaptureCount++;
+  }
+  function endKeybindCapture() {
+    keybindCaptureCount = Math.max(0, keybindCaptureCount - 1);
+  }
+  function shouldIgnoreKeydown(e) {
+    if (isKeybindCaptureActive()) return true;
+    const el = e.target;
+    if (!el) return false;
+    return el.isContentEditable || el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT";
+  }
+  var keybindCaptureCount;
+  var init_keyboard = __esm({
+    "src/lib/keyboard.ts"() {
+      "use strict";
+      keybindCaptureCount = 0;
+    }
+  });
+
+  // src/features/keybinds/catalog.ts
+  var PET_SECTION_ID, SECTION_CONFIG;
+  var init_catalog = __esm({
+    "src/features/keybinds/catalog.ts"() {
+      "use strict";
+      PET_SECTION_ID = "pets";
+      SECTION_CONFIG = [
+        {
+          id: "gui",
+          title: "GUI",
+          icon: "\u{1F5A5}\uFE0F",
+          description: "Choose how you open and move the overlay.",
+          actions: [
+            {
+              id: "gui.toggle",
+              label: "Toggle menu visibility",
+              icon: "sprite/ui/CameraOff",
+              hint: "Opens or closes the Arie's Mod overlay.",
+              defaultHotkey: { alt: true, code: "KeyX" }
+            },
+            {
+              id: "gui.drag",
+              label: "Drag HUD",
+              icon: "sprite/ui/Touchpad",
+              hint: "Hold to drag menus interfaces around the screen.",
+              defaultHotkey: { alt: true, code: "AltLeft" },
+              allowModifierOnly: true
+            }
+          ]
+        },
+        {
+          id: "shops",
+          title: "Shops",
+          icon: "\u{1F6D2}",
+          description: "Quick shortcuts to every shop tab.",
+          actions: [
+            { id: "shops.seeds", label: "Seeds shop", icon: "sprite/ui/SeedIcon", defaultHotkey: { alt: true, code: "KeyS" } },
+            { id: "shops.eggs", label: "Eggs shop", icon: "sprite/ui/EggIcon", defaultHotkey: { alt: true, code: "KeyE" } },
+            { id: "shops.decors", label: "Decors shop", icon: "sprite/ui/DecorIcon", defaultHotkey: { alt: true, code: "KeyD" } },
+            { id: "shops.tools", label: "Tools shop", icon: "sprite/ui/ToolIcon", defaultHotkey: { alt: true, code: "KeyT" } }
+          ]
+        },
+        {
+          id: "game",
+          title: "Game",
+          icon: "\u{1F3AE}",
+          description: "Remap the in-game actions",
+          actions: [
+            {
+              id: "game.action",
+              label: "Action",
+              icon: "sprite/ui/PickupPin",
+              defaultHotkey: { code: "Space" },
+              holdDetection: { label: "Rapid fire", defaultEnabled: false }
+            },
+            { id: "game.inventory", label: "Inventory", icon: "sprite/ui/InventoryBag", defaultHotkey: { code: "KeyE" } },
+            { id: "game.pet-hutch", label: "Pet hutch", icon: "sprite/decor/PetHutch_1", defaultHotkey: null, allowClear: true },
+            { id: "game.decor-shed", label: "Decor shed", icon: "sprite/decor/DecorShed", defaultHotkey: null, allowClear: true },
+            { id: "game.tool-shack", label: "Tool shack", icon: "sprite/decor/ToolShack", defaultHotkey: null, allowClear: true },
+            { id: "game.seed-silo", label: "Seed silo", icon: "sprite/decor/SeedSilo", defaultHotkey: null, allowClear: true },
+            { id: "game.feeding-trough", label: "Feeding trough", icon: "sprite/decor/FeedingTrough", defaultHotkey: null, allowClear: true },
+            { id: "game.weather-station", label: "Weather station", icon: "sprite/object/WeatherStation", defaultHotkey: null, allowClear: true },
+            { id: "game.journal", label: "Journal", icon: "sprite/ui/JournalStamp", defaultHotkey: null, allowClear: true },
+            { id: "game.move-up", label: "Move up", icon: "https://i.imgur.com/EkbKUgi.png", defaultHotkey: { code: "KeyW" } },
+            { id: "game.move-down", label: "Move down", icon: "https://i.imgur.com/tdJ7IGP.png", defaultHotkey: { code: "KeyS" } },
+            { id: "game.move-left", label: "Move left", icon: "https://i.imgur.com/86VbR70.png", defaultHotkey: { code: "KeyA" } },
+            { id: "game.move-right", label: "Move right", icon: "https://i.imgur.com/Ljzz6td.png", defaultHotkey: { code: "KeyD" } }
+          ]
+        },
+        {
+          id: "sell",
+          title: "Sell",
+          icon: "\u{1F4B0}",
+          description: "Streamline selling actions.",
+          actions: [
+            {
+              id: "sell.sell-all",
+              label: "All crops",
+              icon: "sprite/ui/IconSell",
+              hint: "Trigger the sell-all flow for harvested crops.",
+              defaultHotkey: null
+            },
+            {
+              id: "sell.sell-all-pets",
+              label: "All pets",
+              icon: "sprite/ui/IconShop",
+              hint: "Sell every non-favorited pet in your inventory.",
+              defaultHotkey: null
+            }
+          ]
+        },
+        {
+          id: "companion",
+          title: "Companion",
+          icon: "\u{1F916}",
+          description: "Reach your companion without going through the launcher.",
+          actions: [
+            {
+              id: "companion.chat",
+              label: "Open the chat",
+              // No icon: the `ui` atlas has no chat pictogram, and a made-up key
+              // would show an empty box.
+              hint: "Opens the Companion window straight on its Chat tab.",
+              defaultHotkey: { alt: true, code: "KeyC" }
+            }
+          ]
+        },
+        {
+          id: PET_SECTION_ID,
+          title: "Pets",
+          icon: "\u{1F437}",
+          description: "Assign shortcuts to your pet teams and cycle through them instantly.",
+          actions: [
+            { id: "pets.team.prev", label: "Previous team", defaultHotkey: null },
+            { id: "pets.team.next", label: "Next team", defaultHotkey: null }
+          ]
+        }
+      ];
+    }
+  });
+
+  // src/features/keybinds/keybinds.ts
+  function register(section4, config) {
+    const action2 = {
+      ...config,
+      sectionId: section4.id,
+      defaultHotkey: cloneHotkey(config.defaultHotkey),
+      holdDetection: config.holdDetection ? { ...config.holdDetection } : void 0
+    };
+    actions.set(action2.id, action2);
+    if (action2.holdDetection) holdDefaults.set(action2.id, !!action2.holdDetection.defaultEnabled);
+    section4.actions.push(action2);
+  }
+  function setDynamicActions(sectionId, configs) {
+    const index = SECTION_CONFIG.findIndex((s) => s.id === sectionId);
+    if (index < 0) return;
+    const section4 = sections[index];
+    const fixed = new Set(SECTION_CONFIG[index].actions.map((a) => a.id));
+    for (const old of section4.actions) {
+      if (fixed.has(old.id)) continue;
+      actions.delete(old.id);
+      holdDefaults.delete(old.id);
+      cache2.delete(old.id);
+      holdCache.delete(old.id);
+    }
+    section4.actions = section4.actions.filter((a) => fixed.has(a.id));
+    for (const config of configs) {
+      if (!fixed.has(config.id)) register(section4, config);
+    }
+  }
+  function getKeybindSections() {
+    return sections.map((section4) => ({
+      ...section4,
+      actions: section4.actions.map((action2) => ({
+        ...action2,
+        defaultHotkey: cloneHotkey(action2.defaultHotkey),
+        holdDetection: action2.holdDetection ? { ...action2.holdDetection } : void 0
+      }))
+    }));
+  }
+  function readStored(id) {
+    const raw = readAriesPath(BINDINGS_PATH)?.[id];
+    if (raw == null) return void 0;
+    if (raw === STORED_NONE || typeof raw !== "string") return null;
+    return stringToHotkey(raw) ?? null;
+  }
+  function writeStored(id, hk) {
+    updateAriesPath(BINDINGS_PATH, (current) => {
+      const next = current && typeof current === "object" ? { ...current } : {};
+      if (hk === void 0) delete next[id];
+      else next[id] = hk ? hotkeyToString(hk) : STORED_NONE;
+      return next;
+    });
+  }
+  function readHoldStored(id) {
+    const raw = readAriesPath(HOLD_PATH)?.[id];
+    if (typeof raw === "string") return raw === "1";
+    if (typeof raw === "number") return raw === 1;
+    if (typeof raw === "boolean") return raw;
+    return void 0;
+  }
+  function writeHoldStored(id, enabled5) {
+    updateAriesPath(HOLD_PATH, (current) => {
+      const next = current && typeof current === "object" ? { ...current } : {};
+      next[id] = enabled5;
+      return next;
+    });
+  }
+  function emitterFor(map2, id) {
+    let emitter = map2.get(id);
+    if (!emitter) {
+      emitter = new Emitter();
+      map2.set(id, emitter);
+    }
+    return emitter;
+  }
+  function emitChange(id) {
+    changes3.get(id)?.emit(getKeybind(id));
+  }
+  function emitHoldChange(id) {
+    holdChanges.get(id)?.emit(getKeybindHoldDetection(id));
+  }
+  function onKeybindChange(id, cb) {
+    return emitterFor(changes3, id).on(cb);
+  }
+  function onKeybindHoldDetectionChange(id, cb) {
+    if (!holdDefaults.has(id)) return () => {
+    };
+    return emitterFor(holdChanges, id).on(cb);
+  }
+  function getKeybind(id) {
+    if (!cache2.has(id)) {
+      const stored = readStored(id);
+      cache2.set(id, stored === void 0 ? cloneHotkey(actions.get(id)?.defaultHotkey) : stored);
+    }
+    return cloneHotkey(cache2.get(id));
+  }
+  function getDefaultKeybind(id) {
+    return cloneHotkey(actions.get(id)?.defaultHotkey);
+  }
+  function setKeybind(id, hk) {
+    const next = cloneHotkey(hk);
+    const wanted = hotkeyToString(next);
+    if (hotkeyToString(getKeybind(id)) === wanted) return;
+    if (next) {
+      for (const otherId of actions.keys()) {
+        if (otherId === id || hotkeyToString(getKeybind(otherId)) !== wanted) continue;
+        cache2.set(otherId, null);
+        writeStored(otherId, null);
+        emitChange(otherId);
+      }
+    }
+    cache2.set(id, next);
+    writeStored(id, next);
+    emitChange(id);
+  }
+  function resetKeybind(id) {
+    cache2.delete(id);
+    writeStored(id, void 0);
+    emitChange(id);
+  }
+  function getKeybindHoldDetection(id) {
+    if (!holdDefaults.has(id)) return false;
+    if (!holdCache.has(id)) {
+      const stored = readHoldStored(id);
+      holdCache.set(id, stored === void 0 ? !!holdDefaults.get(id) : stored);
+    }
+    return holdCache.get(id) ?? false;
+  }
+  function setKeybindHoldDetection(id, enabled5) {
+    if (!holdDefaults.has(id) || getKeybindHoldDetection(id) === enabled5) return;
+    holdCache.set(id, enabled5);
+    writeHoldStored(id, enabled5);
+    emitHoldChange(id);
+  }
+  function eventMatchesKeybind(id, e) {
+    return matchHotkey(e, getKeybind(id));
+  }
+  function getKeybindLabel(id) {
+    const hk = getKeybind(id);
+    return hk ? hotkeyToPretty(hk) : UNBOUND_LABEL;
+  }
+  var BINDINGS_PATH, HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, UNBOUND_LABEL, sections, actions, holdDefaults, cache2, holdCache, changes3, holdChanges, cloneHotkey;
+  var init_keybinds = __esm({
+    "src/features/keybinds/keybinds.ts"() {
+      "use strict";
+      init_emitter();
+      init_hotkey();
+      init_storage();
+      init_catalog();
+      BINDINGS_PATH = "keybinds.bindings";
+      HOLD_PATH = "keybinds.hold";
+      ARIES_ROOT_KEY = "aries_mod";
+      STORED_NONE = "__none__";
+      UNBOUND_LABEL = "None";
+      sections = SECTION_CONFIG.map((section4) => ({ ...section4, actions: [] }));
+      actions = /* @__PURE__ */ new Map();
+      holdDefaults = /* @__PURE__ */ new Map();
+      cache2 = /* @__PURE__ */ new Map();
+      holdCache = /* @__PURE__ */ new Map();
+      changes3 = /* @__PURE__ */ new Map();
+      holdChanges = /* @__PURE__ */ new Map();
+      cloneHotkey = (hk) => hk ? { ...hk } : null;
+      for (let i = 0; i < SECTION_CONFIG.length; i++) {
+        for (const config of SECTION_CONFIG[i].actions) register(sections[i], config);
+      }
+      if (typeof window !== "undefined") {
+        window.addEventListener("storage", (event) => {
+          if (event.key !== ARIES_ROOT_KEY) return;
+          cache2.clear();
+          holdCache.clear();
+          for (const id of actions.keys()) emitChange(id);
+          for (const id of holdDefaults.keys()) emitHoldChange(id);
+        });
+      }
+    }
+  });
+
+  // src/features/pets/teamHotkeys.ts
+  function migrateLegacyHotkey(teamId2) {
+    const legacy = readAriesPath(LEGACY_HOTKEYS_PATH) ?? {};
+    if (!legacy[teamId2]) return;
+    const actionId = teamActionId(teamId2);
+    if (!getKeybind(actionId)) {
+      const hk = stringToHotkey(legacy[teamId2]);
+      if (hk) setKeybind(actionId, hk);
+    }
+    const rest2 = { ...legacy };
+    delete rest2[teamId2];
+    writeAriesPath(LEGACY_HOTKEYS_PATH, rest2);
+  }
+  function setPetTeamKeybinds(teams2) {
+    const seen = /* @__PURE__ */ new Set();
+    const unique = teams2.filter((team) => {
+      const id = String(team?.id ?? "");
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+    teamIds = unique.map((team) => String(team.id));
+    setDynamicActions(
+      PET_SECTION_ID,
+      unique.map((team, index) => ({
+        id: teamActionId(String(team.id)),
+        label: `Use team: ${String(team.name ?? "").trim() || `Team ${index + 1}`}`,
+        defaultHotkey: null
+      }))
+    );
+    for (const id of teamIds) migrateLegacyHotkey(id);
+  }
+  async function teamAfterStep(ids, step) {
+    if (!ids.length) return null;
+    let current = null;
+    try {
+      current = await getActiveTeamId();
+    } catch {
+    }
+    if (!current || !ids.includes(current)) current = getLastUsedTeamId();
+    const index = current ? ids.indexOf(current) : -1;
+    if (index < 0) return ids[0];
+    return ids[(index + step + ids.length) % ids.length];
+  }
+  function onKeyDown(e, useTeam2) {
+    if (shouldIgnoreKeydown(e) || !teamIds.length) return;
+    const ids = teamIds.slice();
+    const step = eventMatchesKeybind(PET_TEAM_PREV_ID, e) ? -1 : eventMatchesKeybind(PET_TEAM_NEXT_ID, e) ? 1 : 0;
+    const direct = step ? null : ids.find((id) => eventMatchesKeybind(teamActionId(id), e)) ?? null;
+    if (!step && !direct) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (direct) {
+      useTeam2(direct);
+      return;
+    }
+    void teamAfterStep(ids, step).then((target) => {
+      if (target) useTeam2(target);
+    });
+  }
+  function installPetTeamHotkeys(useTeam2) {
+    if (installed || typeof window === "undefined") return;
+    installed = true;
+    onTeamsChange((teams2) => setPetTeamKeybinds(teams2));
+    window.addEventListener("keydown", (e) => onKeyDown(e, useTeam2), true);
+  }
+  var PET_TEAM_PREV_ID, PET_TEAM_NEXT_ID, LEGACY_HOTKEYS_PATH, teamIds, installed, teamActionId;
+  var init_teamHotkeys = __esm({
+    "src/features/pets/teamHotkeys.ts"() {
+      "use strict";
+      init_hotkey();
+      init_keyboard();
+      init_storage();
+      init_catalog();
+      init_keybinds();
+      init_teamSwitch();
+      init_teamStore();
+      PET_TEAM_PREV_ID = "pets.team.prev";
+      PET_TEAM_NEXT_ID = "pets.team.next";
+      LEGACY_HOTKEYS_PATH = "pets.hotkeys";
+      teamIds = [];
+      installed = false;
+      teamActionId = (teamId2) => `pets.team.${teamId2}`;
+    }
+  });
+
+  // src/game/ws/shopPurchaseMessage.ts
+  function parseViewMode(raw) {
+    if (raw == null) return null;
+    let value = raw;
+    try {
+      value = JSON.parse(raw);
+    } catch {
+    }
+    return value === "list" || value === "grid" ? value : null;
+  }
+  function readShopViewMode(shop, storage) {
+    if (!storage) return "list";
+    try {
+      for (let i = 0; i < storage.length; i++) {
+        const key2 = storage.key(i);
+        if (!key2) continue;
+        const match = VIEW_MODE_KEY.exec(key2);
+        if (!match || match[1] !== shop) continue;
+        const mode = parseViewMode(storage.getItem(key2));
+        if (mode) return mode;
+      }
+    } catch {
+    }
+    return "list";
+  }
+  function buildShopPurchaseCommand(shop, item, viewMode, quantity = 1) {
+    const q = Math.max(1, Math.floor(Number(quantity) || 1));
+    return {
+      type: "PurchaseShopItem",
+      shop,
+      viewMode,
+      item,
+      ...q === 1 ? {} : { quantity: q }
+    };
+  }
+  var VIEW_MODE_KEY;
+  var init_shopPurchaseMessage = __esm({
+    "src/game/ws/shopPurchaseMessage.ts"() {
+      "use strict";
+      VIEW_MODE_KEY = /^shop:.*:(.+):viewMode$/;
+    }
+  });
+
+  // src/features/shops/purchases.ts
+  function isCurrentRestock(entry, shop) {
+    if (!("restockId" in entry)) return true;
+    const current = shop?.restockId;
+    return current != null && entry.restockId === current;
+  }
+  function purchasesForCurrentRestock(shops2, shopPurchases, kindOf) {
+    const out = { seed: {}, egg: {}, tool: {}, decor: {} };
+    if (!shopPurchases || typeof shopPurchases !== "object") return out;
+    for (const shopKey of Object.keys(shopPurchases)) {
+      const entry = shopPurchases[shopKey];
+      if (!entry || typeof entry !== "object") continue;
+      if (!isCurrentRestock(entry, shops2?.[shopKey])) continue;
+      const purch = entry.purchases;
+      if (!purch || typeof purch !== "object") continue;
+      for (const [itemId, count] of Object.entries(purch)) {
+        const n = Number(count) || 0;
+        const kind = DIRECT_KIND[shopKey] ?? kindOf(itemId);
+        if (!kind) continue;
+        out[kind][itemId] = (out[kind][itemId] ?? 0) + n;
+      }
+    }
+    return out;
+  }
+  function resolveShop(key2, shops2, mySlot) {
+    if (CUSTOM_RESTOCK_SHOPS.has(key2)) {
+      const custom = mySlot?.data?.customRestocks?.[key2];
+      if (custom) {
+        const inv = mySlot?.customRestockInventories?.[key2];
+        return inv && inv.restockId === `${key2}:custom:${custom.purchasedAt}` ? inv : null;
+      }
+    }
+    const shop = shops2?.[key2];
+    if (!shop || typeof shop !== "object") return null;
+    if ("restockId" in shop && shop.restockId == null) return null;
+    return shop;
+  }
+  function purchasesKnown(entry, shop) {
+    if (!entry || typeof entry !== "object" || !("restockId" in entry)) return true;
+    if (entry.restockId === shop?.restockId) return true;
+    return Number(entry.startedAtMs) < Number(shop?.startedAtMs);
+  }
+  function playerShopView(shops2, mySlot, kindOf) {
+    const shopPurchases = mySlot?.data?.shopPurchases;
+    const open = {};
+    const keys = new Set(shops2 && typeof shops2 === "object" ? Object.keys(shops2) : []);
+    for (const key2 of CUSTOM_RESTOCK_SHOPS) {
+      if (mySlot?.data?.customRestocks?.[key2]) keys.add(key2);
+    }
+    for (const key2 of keys) {
+      const shop = resolveShop(key2, shops2, mySlot);
+      if (!shop) continue;
+      if (!purchasesKnown(shopPurchases?.[key2], shop)) continue;
+      open[key2] = shop;
+    }
+    return { shops: open, purchases: purchasesForCurrentRestock(open, shopPurchases, kindOf) };
+  }
+  var DIRECT_KIND, CUSTOM_RESTOCK_SHOPS;
+  var init_purchases = __esm({
+    "src/features/shops/purchases.ts"() {
+      "use strict";
+      DIRECT_KIND = { seed: "seed", egg: "egg", tool: "tool", decor: "decor" };
+      CUSTOM_RESTOCK_SHOPS = /* @__PURE__ */ new Set(["seed", "egg", "tool", "decor"]);
+    }
+  });
+
+  // src/features/shops/shops.ts
+  function installShopKeybindsOnce() {
+    if (shopKeybindsInstalled || typeof window === "undefined") return;
+    shopKeybindsInstalled = true;
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (shouldIgnoreKeydown(event)) return;
+        for (const { id, modal } of SHOP_KEYBINDS) {
+          if (!eventMatchesKeybind(id, event)) continue;
+          event.preventDefault();
+          event.stopPropagation();
+          void openModal(modal);
+          break;
+        }
+      },
+      true
+    );
+  }
+  function _fallbackShopFor(kind) {
+    return kind === "seeds" ? "seed" : kind === "tools" ? "tool" : kind === "eggs" ? "egg" : "decor";
+  }
+  function _buildPurchasePayload(kind, it) {
+    if (kind === "seeds") {
+      const species = it.species ?? it.name;
+      return species ? { item: { itemType: "Seed", species: String(species) }, stat: "seedsBought" } : null;
+    }
+    if (kind === "tools") {
+      const toolId = it.toolId ?? it.id;
+      return toolId ? { item: { itemType: "Tool", toolId: String(toolId) }, stat: "toolsBought" } : null;
+    }
+    if (kind === "eggs") {
+      const eggId = it.eggId ?? it.id;
+      return eggId ? { item: { itemType: "Egg", eggId: String(eggId) }, stat: "eggsBought" } : null;
+    }
+    if (kind === "decor") {
+      const decorId = it.decorId ?? it.id;
+      return decorId ? { item: { itemType: "Decor", decorId: String(decorId) }, stat: "decorBought" } : null;
+    }
+    return null;
+  }
+  function _findShopForItem(snap, kind, it) {
+    if (!snap || typeof snap !== "object") return null;
+    const keys = Object.keys(snap);
+    const weatherKeys = keys.filter((k) => !BASE_SHOP_KEYS.includes(k));
+    const baseKeys = keys.filter((k) => BASE_SHOP_KEYS.includes(k));
+    const ordered = [...weatherKeys, ...baseKeys];
+    const targetSpecies = it.species ?? it.name;
+    const targetToolId = it.toolId ?? it.id;
+    const targetEggId = it.eggId ?? it.id;
+    const targetDecorId = it.decorId ?? it.id;
+    const matches = (entry) => {
+      if (!entry || typeof entry !== "object") return false;
+      if (kind === "seeds") return targetSpecies != null && entry.species === targetSpecies;
+      if (kind === "tools") return targetToolId != null && entry.toolId === targetToolId;
+      if (kind === "eggs") return targetEggId != null && entry.eggId === targetEggId;
+      if (kind === "decor") return targetDecorId != null && entry.decorId === targetDecorId;
+      return false;
+    };
+    for (const k of ordered) {
+      const inv = snap[k]?.inventory;
+      if (!Array.isArray(inv)) continue;
+      if (inv.some(matches)) return k;
+    }
+    return null;
+  }
+  var SHOP_KEYBINDS, shopKeybindsInstalled, BASE_SHOP_KEYS, ShopsService;
+  var init_shops = __esm({
+    "src/features/shops/shops.ts"() {
+      "use strict";
+      init_fakeModal();
+      init_keybinds();
+      init_keyboard();
+      init_stats();
+      init_send();
+      init_atoms();
+      init_pageContext();
+      init_shopPurchaseMessage();
+      init_purchases();
+      SHOP_KEYBINDS = [
+        { id: "shops.seeds", modal: "seedShop" },
+        { id: "shops.eggs", modal: "eggShop" },
+        { id: "shops.decors", modal: "decorShop" },
+        { id: "shops.tools", modal: "toolShop" }
+      ];
+      shopKeybindsInstalled = false;
+      BASE_SHOP_KEYS = ["seed", "egg", "tool", "decor"];
+      ShopsService = {
+        /** Achat unitaire : envoie le bon message au jeu. */
+        async buyOne(kind, it) {
+          return ShopsService.buy(kind, it, 1);
+        },
+        /** Achete `quantity` exemplaires en une seule commande, comme le Buy All du jeu. */
+        async buy(kind, it, quantity) {
+          const built = _buildPurchasePayload(kind, it);
+          if (!built) return;
+          let shop = null;
+          try {
+            const [shops2, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
+            shop = _findShopForItem(playerShopView(shops2, slot, () => null).shops, kind, it);
+          } catch {
+          }
+          if (!shop) shop = _fallbackShopFor(kind);
+          try {
+            let storage = null;
+            try {
+              storage = pageWindow.localStorage;
+            } catch {
+            }
+            const command = buildShopPurchaseCommand(shop, built.item, readShopViewMode(shop, storage), quantity);
+            sendToGame(command);
+            StatsService.incrementShopStat(built.stat, Number(command.quantity ?? 1));
+          } catch {
+          }
+        }
+      };
+    }
+  });
+
+  // src/features/companion/keybind.ts
+  function openCompanionChat() {
+    window.dispatchEvent(new CustomEvent("qws:open-panel", { detail: { id: COMPANION_PANEL_ID } }));
+    window.dispatchEvent(new CustomEvent(COMPANION_TAB_EVENT, { detail: { tab: CHAT_TAB_ID } }));
+  }
+  function installCompanionKeybindsOnce() {
+    if (installed2 || typeof window === "undefined") return;
+    installed2 = true;
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (shouldIgnoreKeydown(event)) return;
+        if (!eventMatchesKeybind("companion.chat", event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        openCompanionChat();
+      },
+      true
+    );
+  }
+  var COMPANION_PANEL_ID, CHAT_TAB_ID, COMPANION_TAB_EVENT, installed2;
+  var init_keybind = __esm({
+    "src/features/companion/keybind.ts"() {
+      "use strict";
+      init_keybinds();
+      init_keyboard();
+      COMPANION_PANEL_ID = "companion";
+      CHAT_TAB_ID = "chat";
+      COMPANION_TAB_EVENT = "qws:companion-tab";
+      installed2 = false;
+    }
+  });
+
+  // src/data/rules/petValue.ts
+  var SEC_PER_HOUR, XP_STRENGTH_MAX, BASE_STRENGTH_FLOOR, getCatalogEntry, getMutationEntry, getTargetScale, getXp, getPetMaxStrength, getBaseStrength, getPetStrength, getPetCoinMultiplier, getPetValue, getPetInfo;
+  var init_petValue = __esm({
+    "src/data/rules/petValue.ts"() {
+      "use strict";
+      init_data();
+      SEC_PER_HOUR = 3600;
+      XP_STRENGTH_MAX = 30;
+      BASE_STRENGTH_FLOOR = 30;
+      getCatalogEntry = (species) => {
+        if (!species) return null;
+        const entry = petCatalog2[species];
+        return entry ?? null;
+      };
+      getMutationEntry = (mutation) => {
+        if (!mutation) return null;
+        const entry = mutationCatalog2[mutation];
+        return entry ?? null;
+      };
+      getTargetScale = (pet) => {
+        const raw = pet?.targetScale;
+        return typeof raw === "number" && Number.isFinite(raw) ? raw : 1;
+      };
+      getXp = (pet) => {
+        const raw = pet?.xp;
+        return typeof raw === "number" && Number.isFinite(raw) ? Math.max(0, raw) : 0;
+      };
+      getPetMaxStrength = (pet) => {
+        const entry = getCatalogEntry(pet?.petSpecies ?? "");
+        if (!entry) return 0;
+        const maxScale = typeof entry.maxScale === "number" && entry.maxScale > 1 ? entry.maxScale : 1;
+        const targetScale = getTargetScale(pet);
+        const ratio = maxScale > 1 ? (targetScale - 1) / (maxScale - 1) : 0;
+        const raw = ratio * 20 + 80;
+        const strength = Math.floor(Number.isFinite(raw) ? raw : 0);
+        return Math.max(strength, 0);
+      };
+      getBaseStrength = (maxStrength) => {
+        const base = maxStrength - BASE_STRENGTH_FLOOR;
+        return Math.max(base, 0);
+      };
+      getPetStrength = (pet) => {
+        const entry = getCatalogEntry(pet?.petSpecies ?? "");
+        if (!entry) return 0;
+        const hoursToMature = typeof entry.hoursToMature === "number" && entry.hoursToMature > 0 ? entry.hoursToMature : 1;
+        const maxStrength = getPetMaxStrength(pet);
+        if (maxStrength <= 0) return 0;
+        const xpRate = getXp(pet) / (hoursToMature * SEC_PER_HOUR);
+        const xpComponent = Math.min(Math.floor(xpRate * XP_STRENGTH_MAX), XP_STRENGTH_MAX);
+        const baseStrength = getBaseStrength(maxStrength);
+        const strength = Math.min(baseStrength + xpComponent, maxStrength);
+        return Math.max(strength, 0);
+      };
+      getPetCoinMultiplier = (pet) => {
+        const mutations = Array.isArray(pet?.mutations) ? pet.mutations : [];
+        return mutations.reduce((acc, mutation) => {
+          const entry = getMutationEntry(mutation);
+          const multiplier = entry?.coinMultiplier;
+          if (typeof multiplier === "number" && Number.isFinite(multiplier) && multiplier > 0) {
+            return acc * multiplier;
+          }
+          return acc;
+        }, 1);
+      };
+      getPetValue = (pet) => {
+        const entry = getCatalogEntry(pet?.petSpecies ?? "");
+        if (!entry) return 0;
+        const maturitySellPrice = typeof entry.maturitySellPrice === "number" ? entry.maturitySellPrice : 0;
+        const maxStrength = getPetMaxStrength(pet);
+        if (maxStrength <= 0) return 0;
+        const strength = getPetStrength(pet);
+        const targetScale = getTargetScale(pet);
+        const coinMultiplier = getPetCoinMultiplier(pet);
+        const raw = maturitySellPrice * (strength / maxStrength) * targetScale * coinMultiplier;
+        if (!Number.isFinite(raw)) return 0;
+        return Math.round(Math.max(raw, 0));
+      };
+      getPetInfo = (pet) => ({
+        value: getPetValue(pet),
+        strength: getPetStrength(pet),
+        maxStrength: getPetMaxStrength(pet),
+        coinMultiplier: getPetCoinMultiplier(pet)
+      });
+    }
+  });
+
+  // src/data/rules/cropValue.ts
+  function resolveSpeciesKey(species) {
+    const wanted = key(species).toLowerCase();
+    if (!wanted) return null;
+    for (const k of Object.keys(plantCatalog2)) {
+      if (k.toLowerCase() === wanted) return k;
+    }
+    return null;
+  }
+  function findAnySellPriceNode(obj) {
+    if (!obj || typeof obj !== "object") return null;
+    if (typeof obj.baseSellPrice === "number" && Number.isFinite(obj.baseSellPrice)) {
+      return obj.baseSellPrice;
+    }
+    for (const k of ["produce", "crop", "item", "items", "data"]) {
+      if (obj[k]) {
+        const v = findAnySellPriceNode(obj[k]);
+        if (v != null) return v;
+      }
+    }
+    try {
+      const seen = /* @__PURE__ */ new Set();
+      const stack = [obj];
+      while (stack.length) {
+        const cur = stack.pop();
+        if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
+        seen.add(cur);
+        if (typeof cur.baseSellPrice === "number") {
+          const v = cur.baseSellPrice;
+          if (Number.isFinite(v)) return v;
+        }
+        for (const v of Object.values(cur)) if (v && typeof v === "object") stack.push(v);
+      }
+    } catch {
+    }
+    return null;
+  }
+  function defaultGetBasePrice(species) {
+    const spKey = resolveSpeciesKey(species);
+    if (!spKey) return null;
+    const node = plantCatalog2[spKey];
+    const cands = [
+      node?.produce?.baseSellPrice,
+      node?.crop?.baseSellPrice,
+      node?.item?.baseSellPrice,
+      node?.items?.Produce?.baseSellPrice
+    ].filter((v) => typeof v === "number" && Number.isFinite(v));
+    if (cands.length) return cands[0];
+    return findAnySellPriceNode(node);
+  }
+  function applyRounding(v, mode = "round") {
+    switch (mode) {
+      case "floor":
+        return Math.floor(v);
+      case "ceil":
+        return Math.ceil(v);
+      case "none":
+        return v;
+      case "round":
+      default:
+        return Math.round(v);
+    }
+  }
+  function friendBonusMultiplier2(playersInRoom3) {
+    if (!Number.isFinite(playersInRoom3)) return 1;
+    const n = Math.max(1, Math.min(6, Math.floor(playersInRoom3)));
+    return 1 + (n - 1) * 0.1;
+  }
+  function mutationMultiplier(name) {
+    const k = lowerKey(name);
+    if (!k) return null;
+    const mult = mutationMultipliers()[k];
+    return Number.isFinite(mult) ? mult : null;
+  }
+  function isColor(m) {
+    return m === "Gold" || m === "Rainbow";
+  }
+  function isWeather(m) {
+    return m === "Wet" || m === "Chilled" || m === "Frozen" || m === "Thunderstruck" || m === "Thundercharged";
+  }
+  function isTime(m) {
+    return m === "Dawnlit" || m === "Dawnbound" || m === "Amberlit" || m === "Amberbound";
+  }
+  function normalizeMutationName(m) {
+    const s = lowerKey(m);
+    if (!s) return "";
+    if (s === "amberglow" || s === "ambershine" || s === "amberlight") return "Amberlit";
+    if (s === "dawn" || s === "dawnlight") return "Dawnlit";
+    if (s === "golden") return "Gold";
+    if (s === "gold") return "Gold";
+    if (s === "rainbow") return "Rainbow";
+    if (s === "wet") return "Wet";
+    if (s === "chilled") return "Chilled";
+    if (s === "frozen") return "Frozen";
+    if (s === "thunderstruck" || s === "thunder") return "Thunderstruck";
+    if (s === "thunderstruckground" || s === "thunderstruck_ground") return "Thunderstruck";
+    if (s === "thundercharged" || s === "thunder charged" || s === "thunder-charged") return "Thundercharged";
+    if (s === "dawnlit") return "Dawnlit";
+    if (s === "dawnbound") return "Dawnbound";
+    if (s === "amberlit") return "Amberlit";
+    if (s === "dawncharged" || s === "dawnradiant" || s === "dawn-radiant" || s === "dawn charged") return "Dawnbound";
+    if (s === "amberbound" || s === "ambercharged" || s === "amberradiant" || s === "amber-radiant" || s === "amber charged") return "Amberbound";
+    return m;
+  }
+  function computeColorMultiplier(mutations) {
+    if (!Array.isArray(mutations)) return 1;
+    let best = 1;
+    for (const raw of mutations) {
+      const m = normalizeMutationName(raw);
+      if (isColor(m)) {
+        const mult = mutationMultiplier(m);
+        if (typeof mult === "number" && mult > best) best = mult;
+      }
+    }
+    return best;
+  }
+  function pickWeather(mutations) {
+    if (!Array.isArray(mutations)) return null;
+    const candidates = /* @__PURE__ */ new Set();
+    let hasWet = false;
+    let hasChilled = false;
+    for (const raw of mutations) {
+      const m = normalizeMutationName(raw);
+      if (m === "Wet") {
+        hasWet = true;
+        continue;
+      }
+      if (m === "Chilled") {
+        hasChilled = true;
+        continue;
+      }
+      if (isWeather(m)) candidates.add(m);
+    }
+    if (hasWet && hasChilled) {
+      candidates.add("Frozen");
+    } else if (hasWet) {
+      candidates.add("Wet");
+    } else if (hasChilled) {
+      candidates.add("Chilled");
+    }
+    if (!candidates.size) return null;
+    let pick2 = null;
+    let best = -Infinity;
+    for (const cand of candidates) {
+      const mult = mutationMultiplier(cand) ?? 1;
+      if (mult > best) {
+        best = mult;
+        pick2 = cand;
+      }
+    }
+    return pick2;
+  }
+  function pickTime(mutations) {
+    if (!Array.isArray(mutations)) return null;
+    const candidates = /* @__PURE__ */ new Set();
+    for (const raw of mutations) {
+      const m = normalizeMutationName(raw);
+      if (isTime(m)) candidates.add(m);
+    }
+    if (!candidates.size) return null;
+    let pick2 = null;
+    let best = -Infinity;
+    for (const cand of candidates) {
+      const mult = mutationMultiplier(cand) ?? 1;
+      if (mult > best) {
+        best = mult;
+        pick2 = cand;
+      }
+    }
+    return pick2;
+  }
+  function combineWeatherMultipliers(multipliers) {
+    if (!multipliers.length) return 1;
+    const sum = multipliers.reduce((acc, value) => acc + value, 0);
+    return sum - multipliers.length + 1;
+  }
+  function computeWeatherTimeMultiplier(weather2, time) {
+    if (!weather2 && !time) return 1;
+    const multipliers = [];
+    if (weather2) {
+      const mult = mutationMultiplier(weather2);
+      if (typeof mult === "number") multipliers.push(mult);
+    }
+    if (time) {
+      const mult = mutationMultiplier(time);
+      if (typeof mult === "number") multipliers.push(mult);
+    }
+    if (!multipliers.length) return 1;
+    return combineWeatherMultipliers(multipliers);
+  }
+  function mutationsMultiplier(mutations) {
+    const color2 = computeColorMultiplier(mutations);
+    const weather2 = pickWeather(mutations);
+    const time = pickTime(mutations);
+    const wt = computeWeatherTimeMultiplier(weather2, time);
+    return color2 * wt;
+  }
+  function estimateProduceValue(species, size, mutations, opts) {
+    const getBase = opts?.getBasePrice ?? defaultGetBasePrice;
+    const toMultiplier = opts?.sizeMultiplier ?? cropSizeMultiplier;
+    const round = opts?.rounding ?? "round";
+    const base = getBase(species);
+    if (!(Number.isFinite(base) && base > 0)) return 0;
+    const numericSize = Number(size);
+    if (!Number.isFinite(numericSize)) return 0;
+    const sizeMult = toMultiplier(species, numericSize);
+    if (!Number.isFinite(sizeMult) || sizeMult <= 0) return 0;
+    const mutMult = mutationsMultiplier(mutations);
+    const friendsMult = friendBonusMultiplier2(opts?.friendPlayers);
+    const pre = base * sizeMult * mutMult * friendsMult;
+    const out = Math.max(0, applyRounding(pre, round));
+    return out;
+  }
+  function valueFromInventoryProduce(item, opts, playersInRoom3) {
+    if (!item || item.itemType !== "Produce") return 0;
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
+    const size = readCropSize(item);
+    if (size == null) return 0;
+    return estimateProduceValue(item.species, size, item.mutations, merged);
+  }
+  function valueFromGardenSlot(slot, opts, playersInRoom3) {
+    if (!slot) return 0;
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
+    const size = readCropSize(slot);
+    if (size == null) return 0;
+    return estimateProduceValue(slot.species, size, slot.mutations, merged);
+  }
+  function valueFromGardenPlant(plant, opts, playersInRoom3) {
+    if (!plant || plant.objectType !== "plant" || !Array.isArray(plant.slots)) return 0;
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
+    let sum = 0;
+    for (const s of plant.slots) sum += valueFromGardenSlot(s, merged);
+    return sum;
+  }
+  function sumInventoryValue(items, opts, playersInRoom3) {
+    if (!Array.isArray(items)) return 0;
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
+    let sum = 0;
+    for (const it of items) {
+      if (it?.itemType === "Produce") {
+        sum += valueFromInventoryProduce(it, merged);
+      }
+    }
+    return sum;
+  }
+  function sumGardenValue(garden3, opts, playersInRoom3) {
+    if (!garden3 || typeof garden3 !== "object") return 0;
+    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
+    let sum = 0;
+    for (const k of Object.keys(garden3)) {
+      const p = garden3[k];
+      if (p?.objectType === "plant") {
+        sum += valueFromGardenPlant(p, merged);
+      }
+    }
+    return sum;
+  }
+  var key, lowerKey, mutationMultipliers, DefaultPricing;
+  var init_cropValue = __esm({
+    "src/data/rules/cropValue.ts"() {
+      "use strict";
+      init_data();
+      init_cropSize();
+      key = (s) => String(s ?? "").trim();
+      lowerKey = (s) => key(s).toLowerCase();
+      mutationMultipliers = memoOnCatalogs(() => {
+        const map2 = {};
+        if (!mutationCatalog2 || typeof mutationCatalog2 !== "object") return map2;
+        for (const [rawKey, rawValue] of Object.entries(mutationCatalog2)) {
+          const mult = Number(rawValue?.coinMultiplier);
+          if (!Number.isFinite(mult)) continue;
+          const name = key(rawValue?.name);
+          const lowerName = lowerKey(name);
+          const lowerRawKey = lowerKey(rawKey);
+          if (lowerName) map2[lowerName] = mult;
+          if (lowerRawKey) map2[lowerRawKey] = mult;
+        }
+        return map2;
+      });
+      DefaultPricing = Object.freeze({
+        getBasePrice: defaultGetBasePrice,
+        rounding: "round"
+      });
+    }
+  });
+
+  // src/features/inventory/value.ts
+  function finiteNumber(value) {
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+    if (typeof value === "string" && value.trim()) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  }
+  function identifier(raw) {
+    if (typeof raw === "string") return raw.trim() || null;
+    if (typeof raw === "number") return Number.isFinite(raw) ? String(raw) : null;
+    return null;
+  }
+  function computeInventoryItemValue(item, context = {}) {
+    if (!item || typeof item !== "object") return null;
+    const type = typeof item.itemType === "string" ? item.itemType.trim() : "";
+    const playersInRoom3 = context.playersInRoom ?? void 0;
+    switch (type) {
+      case "":
+        return null;
+      case "Pet": {
+        const value = getPetInfo(item).value;
+        return typeof value === "number" && Number.isFinite(value) ? value : null;
+      }
+      case "Plant": {
+        let total = 0;
+        for (const slot of Array.isArray(item.slots) ? item.slots : []) {
+          const species = typeof slot?.species === "string" ? slot.species : null;
+          const size = readCropSize(slot);
+          if (!species || size == null) continue;
+          const value = estimateProduceValue(species, size, stringMutations(slot), { friendPlayers: playersInRoom3 });
+          if (Number.isFinite(value)) total += value;
+        }
+        return total;
+      }
+      case "Produce": {
+        const value = valueFromInventoryProduce(item, void 0, playersInRoom3);
+        return Number.isFinite(value) ? value : null;
+      }
+      default: {
+        const priced = PRICED_BY_QUANTITY[type];
+        if (!priced) return null;
+        const id = identifier(item[priced.idField]);
+        const quantity = finiteNumber(item.quantity);
+        const coinPrice = id ? finiteNumber(priced.coinPrice(id)) : null;
+        if (quantity == null || coinPrice == null) return null;
+        const value = coinPrice * quantity;
+        return Number.isFinite(value) ? value : null;
+      }
+    }
+  }
+  function loadPlayersInRoomForValues() {
+    playersInRoomLoad ?? (playersInRoomLoad = (async () => {
+      try {
+        const raw = await Atoms.server.numPlayers.get();
+        playersInRoom = Number.isFinite(raw) ? raw : null;
+      } catch {
+        playersInRoom = null;
+      }
+      playersInRoomLoaded.emit();
+    })());
+    return playersInRoomLoad;
+  }
+  var PRICED_BY_QUANTITY, stringMutations, playersInRoom, playersInRoomLoad, playersInRoomLoaded, playersInRoomForValues, onPlayersInRoomLoaded;
+  var init_value = __esm({
+    "src/features/inventory/value.ts"() {
+      "use strict";
+      init_atoms();
+      init_emitter();
+      init_data();
+      init_petValue();
+      init_cropValue();
+      init_cropSize();
+      PRICED_BY_QUANTITY = {
+        Seed: { idField: "species", coinPrice: (id) => plantCatalog2[id]?.seed?.coinPrice },
+        Tool: { idField: "toolId", coinPrice: (id) => toolCatalog2[id]?.coinPrice },
+        Egg: { idField: "eggId", coinPrice: (id) => eggCatalog2[id]?.coinPrice },
+        Decor: { idField: "decorId", coinPrice: (id) => decorCatalog2[id]?.coinPrice }
+      };
+      stringMutations = (slot) => Array.isArray(slot?.mutations) ? slot.mutations.filter((m) => typeof m === "string") : [];
+      playersInRoom = null;
+      playersInRoomLoad = null;
+      playersInRoomLoaded = new Emitter();
+      playersInRoomForValues = () => playersInRoom;
+      onPlayersInRoomLoaded = (listener) => playersInRoomLoaded.on(listener);
+    }
+  });
+
+  // src/features/sellAllPets/domButton.ts
+  function startInjectSellAllPets(options2 = {}) {
+    if (!isBrowser()) return noSSRController();
+    const ROOT_SEL = options2.rootSelector ?? DEFAULTS.rootSelector;
+    const CHECK_SEL = options2.checkSelector ?? DEFAULTS.checkSelector;
+    const BTN_WIDE = options2.buttonSelectorWide ?? DEFAULTS.buttonSelectorWide;
+    const BTN_STRICT = options2.buttonSelectorStrict ?? DEFAULTS.buttonSelectorStrict;
+    const BTN_TEXT = options2.targetText ?? DEFAULTS.targetText;
+    const INJ_TEXT = options2.injectText ?? DEFAULTS.injectText;
+    const INJ_CLASS = options2.injectedClass ?? DEFAULTS.injectedClass;
+    const THEME = options2.theme ?? DEFAULT_THEME;
+    const OBS_HIST = options2.observeHistory ?? true;
+    const logger = typeof options2.log === "function" ? options2.log : options2.log ? (...a) => console.debug("[injectSellAllPets]", ...a) : () => {
+    };
+    const HANDLE = options2.onClick ?? createDefaultClickHandler(logger);
+    ensureStyle(INJ_CLASS, THEME);
+    let running6 = true;
+    let pending6 = false;
+    const processAll = () => {
+      if (!running6 || pending6) return;
+      pending6 = true;
+      requestAnimationFrame(() => {
+        try {
+          document.querySelectorAll(ROOT_SEL).forEach((root) => processRoot(root));
+        } finally {
+          pending6 = false;
+        }
+      });
+    };
+    function processRoot(root) {
+      const gate2 = root.querySelector(CHECK_SEL);
+      if (!gate2) {
+        cleanup(root, INJ_CLASS);
+        return;
+      }
+      const target = findTargetButton(root, BTN_WIDE, BTN_STRICT, BTN_TEXT);
+      if (!target) {
+        cleanup(root, INJ_CLASS);
+        return;
+      }
+      ensureInjectedNextTo(target, INJ_CLASS, INJ_TEXT, (ev, ctx2) => {
+        safeInvokeClick(HANDLE, ev, ctx2, logger);
+      });
+    }
+    const mo = new MutationObserver(processAll);
+    mo.observe(document.documentElement, { childList: true, subtree: true });
+    processAll();
+    let unhookHistory = null;
+    if (OBS_HIST) {
+      unhookHistory = hookHistory(processAll);
+    }
+    return {
+      stop() {
+        if (!running6) return;
+        running6 = false;
+        mo.disconnect();
+        unhookHistory?.();
+        logger("stopped");
+      },
+      runOnce() {
+        processAll();
+      },
+      isRunning() {
+        return running6;
+      }
+    };
+  }
+  async function runSellAllPetsFlow(logger = () => {
+  }) {
+    try {
+      logger("sell-all-pets:log-items");
+    } catch {
+    }
+    await PlayerService.logItems();
+    const pets = await runDefaultSellAllPetsAction(logger);
+    if (pets.length === 0) return;
+    await sellPetsFromInventory(pets, logger);
+  }
+  async function getUnfavoritedInventoryPets() {
+    try {
+      await ensureStore();
+    } catch {
+    }
+    const [inventory, favoriteIds2] = await Promise.all([
+      Atoms.inventory.myInventory.get().catch(() => null),
+      Atoms.inventory.favoriteIds.get().catch(() => [])
+    ]);
+    const favSet = new Set(
+      Array.isArray(favoriteIds2) ? favoriteIds2.filter((id) => typeof id === "string") : []
+    );
+    const items = Array.isArray(inventory?.items) ? inventory.items : [];
+    const availablePets = [];
+    items.forEach((item, index) => {
+      if (!isInventoryPetItem(item)) return;
+      if (favSet.has(item.id)) return;
+      console.log("[sellAllPets] inventory index", index, item);
+      availablePets.push({ ...item, inventoryIndex: index });
+    });
+    return availablePets;
+  }
+  function createDefaultClickHandler(logger) {
+    return async () => {
+      try {
+        logger("sell-all-pets:click");
+      } catch {
+      }
+      await runSellAllPetsFlow(logger);
+    };
+  }
+  async function runDefaultSellAllPetsAction(logger) {
+    const pets = await getUnfavoritedInventoryPets();
+    const detail = { pets, count: pets.length };
+    globalThis.__sellAllPetsCandidates = pets;
+    try {
+      logger("collected-non-favorite-pets", detail);
+    } catch {
+    }
+    try {
+      globalThis.dispatchEvent?.(
+        new CustomEvent(SELL_ALL_PETS_EVENT, { detail })
+      );
+    } catch {
+    }
+    return pets;
+  }
+  async function sellPetsFromInventory(pets, logger) {
+    const toSell2 = pets.filter((pet) => typeof pet?.id === "string" && pet.id.trim().length > 0);
+    if (toSell2.length === 0) {
+      try {
+        logger("no-sellable-pets", { requested: pets.length });
+      } catch {
+      }
+      try {
+        globalThis.__sellAllPetsResult = { attempted: 0, sold: 0, failures: [] };
+      } catch {
+      }
+      return;
+    }
+    if (!await confirmHighValuePetSale(toSell2, logger)) {
+      try {
+        logger("sell-pets:cancelled");
+      } catch {
+      }
+      try {
+        toastSimple("Sell all Pets", "Sale cancelled.", "info");
+      } catch {
+      }
+      return;
+    }
+    const failures = [];
+    let sold = 0;
+    const totalValue = computeTotalPetSellValueFromInventory(toSell2);
+    try {
+      logger("sell-pets:total-value", { attempted: toSell2.length, totalValue });
+    } catch {
+    }
+    if (SELL_ALL_PETS_DRY_RUN) {
+      try {
+        logger("sell-pets:dry-run", { attempted: toSell2.length, totalValue });
+      } catch {
+      }
+      try {
+        toastSimple("Sell all Pets", `Dry run: ${toSell2.length} pets detected (no sale).`, "info");
+      } catch {
+      }
+      try {
+        globalThis.__sellAllPetsResult = { attempted: toSell2.length, sold: 0, failures: [] };
+      } catch {
+      }
+      return;
+    }
+    for (const pet of toSell2) {
+      try {
+        logger("sell-pet:start", { id: pet.id, pet });
+      } catch {
+      }
+      try {
+        await PlayerService.sellPet(pet.id);
+        sold += 1;
+        StatsService.incrementShopStat("petsSoldCount");
+        void (async () => {
+          try {
+            const total = await Atoms.pets.totalPetSellPrice.get();
+            const value = Number(total);
+            if (Number.isFinite(value) && value > 0) {
+              StatsService.incrementShopStat("petsSoldValue", value);
+            }
+          } catch (error) {
+            console.error("[SellPet] Unable to read pet sell price", error);
+          }
+        })();
+        try {
+          logger("sell-pet:success", { id: pet.id, pet });
+        } catch {
+        }
+      } catch (error) {
+        failures.push({ pet, error });
+        try {
+          logger("sell-pet:error", { id: pet.id, error, pet });
+        } catch {
+        }
+      }
+    }
+    if (failures.length === 0) {
+      toastSimple("Sell all Pets", `${sold} pets have been sold for ${totalValue} coins!`, "success");
+    }
+    try {
+      globalThis.__sellAllPetsResult = { attempted: toSell2.length, sold, failures };
+    } catch {
+    }
+    audioPlayer.playSellNotification();
+    try {
+      logger("sell-pets:complete", { attempted: toSell2.length, sold, failures });
+    } catch {
+    }
+  }
+  function computeTotalPetSellValueFromInventory(pets) {
+    if (!pets.length) return "";
+    let total = 0;
+    for (const pet of pets) {
+      const value = computeInventoryItemValue(pet);
+      if (typeof value === "number" && Number.isFinite(value)) {
+        total += value;
+      }
+    }
+    return total.toLocaleString("en-US");
+  }
+  async function confirmHighValuePetSale(pets, logger) {
+    const rules2 = lockerRestrictionsService.getSellAllPetsRules();
+    if (!rules2?.enabled) return true;
+    const mutationProtect = /* @__PURE__ */ new Set();
+    if (rules2.protectGold) mutationProtect.add("gold");
+    if (rules2.protectRainbow) mutationProtect.add("rainbow");
+    const maxStrThreshold = Number.isFinite(rules2.maxStrThreshold) ? Math.max(0, Math.min(100, Math.round(rules2.maxStrThreshold))) : 0;
+    const checkMaxStr = !!rules2.protectMaxStr;
+    const protectedRarities = new Set(
+      Array.isArray(rules2.protectedRarities) ? rules2.protectedRarities : []
+    );
+    if (mutationProtect.size === 0 && !checkMaxStr && protectedRarities.size === 0) return true;
+    const flagged = [];
+    for (const pet of pets) {
+      const rawMutations = Array.isArray(pet?.mutations) ? pet.mutations : [];
+      const mutations = rawMutations.filter((m) => typeof m === "string");
+      const foundMutations = mutationProtect.size ? mutations.map((m) => m.toLowerCase()).filter((m) => mutationProtect.has(m)).map((m) => m === "gold" ? "Gold" : "Rainbow") : [];
+      const hasMutation = foundMutations.length > 0;
+      const maxStrength = getPetInfo(pet)?.maxStrength;
+      const strongEnough = checkMaxStr && typeof maxStrength === "number" && Number.isFinite(maxStrength) ? maxStrength >= maxStrThreshold : false;
+      const petSpecies = String(pet.petSpecies || "").trim();
+      const petEntry = petSpecies ? petCatalog2[petSpecies] : null;
+      const petRarity = petEntry?.rarity ?? "";
+      const hasProtectedRarity = protectedRarities.size > 0 && petRarity !== "" && protectedRarities.has(petRarity);
+      if (!hasMutation && !strongEnough && !hasProtectedRarity) continue;
+      const reasons = [];
+      if (hasMutation) {
+        for (const mut of Array.from(new Set(foundMutations))) {
+          reasons.push(`Mutation: ${mut}`);
+        }
+      }
+      if (strongEnough) {
+        reasons.push(`Max STR: ${Math.floor(maxStrength ?? 0)}`);
+      }
+      if (hasProtectedRarity) {
+        reasons.push(`Rarity: ${petRarity}`);
+      }
+      flagged.push({
+        pet,
+        reasons,
+        maxStrength: typeof maxStrength === "number" && Number.isFinite(maxStrength) ? maxStrength : null,
+        mutations
+      });
+    }
+    if (flagged.length === 0) return true;
+    if (!isBrowser()) {
+      try {
+        logger("sell-pets:confirm-unavailable", { flagged: flagged.length });
+      } catch {
+      }
+      return false;
+    }
+    const confirmed = await showSellAllPetsConfirmModal(flagged);
+    if (!confirmed) {
+      try {
+        logger("sell-pets:confirm-cancelled", { flagged: flagged.length });
+      } catch {
+      }
+    }
+    return confirmed;
+  }
+  function showSellAllPetsConfirmModal(flagged) {
+    return new Promise((resolve) => {
+      if (!isBrowser()) {
+        resolve(false);
+        return;
+      }
+      const existing = document.getElementById(SELL_ALL_PETS_CONFIRM_MODAL_ID);
+      if (existing) existing.remove();
+      const overlay2 = document.createElement("div");
+      overlay2.id = SELL_ALL_PETS_CONFIRM_MODAL_ID;
+      overlay2.style.position = "fixed";
+      overlay2.style.inset = "0";
+      overlay2.style.zIndex = "2147483647";
+      overlay2.style.display = "flex";
+      overlay2.style.alignItems = "center";
+      overlay2.style.justifyContent = "center";
+      overlay2.style.background = "rgba(0,0,0,0.6)";
+      const box2 = document.createElement("div");
+      box2.style.minWidth = "320px";
+      box2.style.maxWidth = "520px";
+      box2.style.background = "#0f1318";
+      box2.style.color = "#ffffff";
+      box2.style.border = "1px solid rgba(255,255,255,0.15)";
+      box2.style.borderRadius = "14px";
+      box2.style.boxShadow = "0 12px 40px rgba(0,0,0,0.45)";
+      box2.style.padding = "18px 20px";
+      box2.style.display = "grid";
+      box2.style.gap = "12px";
+      box2.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+      const title = document.createElement("div");
+      title.textContent = "Confirm sell all pets";
+      title.style.fontSize = "18px";
+      title.style.fontWeight = "800";
+      const body = document.createElement("div");
+      body.textContent = "The following pets match protected rules:";
+      body.style.opacity = "0.9";
+      body.style.fontSize = "13px";
+      body.style.lineHeight = "1.4";
+      const list = document.createElement("div");
+      list.style.display = "grid";
+      list.style.gap = "8px";
+      list.style.maxHeight = "260px";
+      list.style.overflow = "auto";
+      list.style.paddingRight = "4px";
+      const buildPetRow = (entry) => {
+        const row2 = document.createElement("div");
+        row2.style.display = "grid";
+        row2.style.gridTemplateColumns = "48px 1fr";
+        row2.style.gap = "10px";
+        row2.style.alignItems = "center";
+        row2.style.padding = "6px 8px";
+        row2.style.border = "1px solid rgba(255,255,255,0.08)";
+        row2.style.borderRadius = "10px";
+        row2.style.background = "rgba(255,255,255,0.03)";
+        const imgWrap = document.createElement("div");
+        imgWrap.style.width = "48px";
+        imgWrap.style.height = "48px";
+        imgWrap.style.borderRadius = "10px";
+        imgWrap.style.background = "rgba(255,255,255,0.08)";
+        imgWrap.style.display = "flex";
+        imgWrap.style.alignItems = "center";
+        imgWrap.style.justifyContent = "center";
+        imgWrap.style.overflow = "hidden";
+        const label2 = entry.pet.petSpecies || entry.pet.name || "Pet";
+        const fallback = document.createElement("div");
+        fallback.textContent = String(label2).slice(0, 2).toUpperCase();
+        fallback.style.fontSize = "12px";
+        fallback.style.fontWeight = "700";
+        imgWrap.appendChild(fallback);
+        const species = String(entry.pet.petSpecies || "").trim();
+        const mutations = Array.isArray(entry.mutations) ? entry.mutations.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
+        if (species) {
+          attachSpriteIcon(
+            imgWrap,
+            ["pet"],
+            [species, entry.pet.name || ""],
+            48,
+            "sell-all-pets-confirm",
+            {
+              mutations
+            }
+          );
+        }
+        const info = document.createElement("div");
+        info.style.display = "grid";
+        info.style.gap = "4px";
+        const name = document.createElement("div");
+        name.textContent = entry.pet.name ? `${entry.pet.name} (${entry.pet.petSpecies ?? "Pet"})` : entry.pet.petSpecies ?? "Pet";
+        name.style.fontWeight = "700";
+        name.style.fontSize = "13px";
+        const reasons = document.createElement("div");
+        reasons.style.display = "flex";
+        reasons.style.flexWrap = "wrap";
+        reasons.style.gap = "6px";
+        for (const reason of entry.reasons) {
+          const chip = document.createElement("div");
+          chip.textContent = reason;
+          chip.style.fontSize = "11px";
+          chip.style.padding = "2px 6px";
+          chip.style.borderRadius = "999px";
+          chip.style.background = "rgba(122,162,255,0.2)";
+          chip.style.border = "1px solid rgba(122,162,255,0.4)";
+          chip.style.color = "#dbe7ff";
+          reasons.appendChild(chip);
+        }
+        info.append(name, reasons);
+        row2.append(imgWrap, info);
+        return row2;
+      };
+      for (const entry of flagged) {
+        list.appendChild(buildPetRow(entry));
+      }
+      const actions2 = document.createElement("div");
+      actions2.style.display = "flex";
+      actions2.style.justifyContent = "flex-end";
+      actions2.style.gap = "8px";
+      const btnCancel = document.createElement("button");
+      btnCancel.type = "button";
+      btnCancel.textContent = "Cancel";
+      btnCancel.style.padding = "8px 12px";
+      btnCancel.style.borderRadius = "10px";
+      btnCancel.style.border = "1px solid rgba(255,255,255,0.2)";
+      btnCancel.style.background = "transparent";
+      btnCancel.style.color = "#ffffff";
+      btnCancel.style.cursor = "pointer";
+      const btnConfirm = document.createElement("button");
+      btnConfirm.type = "button";
+      btnConfirm.textContent = "Sell";
+      btnConfirm.style.padding = "8px 14px";
+      btnConfirm.style.borderRadius = "10px";
+      btnConfirm.style.border = "1px solid rgba(122,162,255,0.7)";
+      btnConfirm.style.background = "#1a2644";
+      btnConfirm.style.color = "#ffffff";
+      btnConfirm.style.cursor = "pointer";
+      btnConfirm.style.fontWeight = "700";
+      let settled = false;
+      const close = (value) => {
+        if (settled) return;
+        settled = true;
+        overlay2.remove();
+        document.removeEventListener("keydown", onKeyDown2, true);
+        resolve(value);
+      };
+      const onKeyDown2 = (ev) => {
+        if (ev.key === "Escape") {
+          ev.preventDefault();
+          close(false);
+        }
+      };
+      btnCancel.addEventListener("click", () => close(false));
+      btnConfirm.addEventListener("click", () => close(true));
+      overlay2.addEventListener("click", (ev) => {
+        if (ev.target === overlay2) close(false);
+      });
+      actions2.append(btnCancel, btnConfirm);
+      box2.append(title, body, list, actions2);
+      overlay2.appendChild(box2);
+      document.body.appendChild(overlay2);
+      document.addEventListener("keydown", onKeyDown2, true);
+      btnConfirm.focus();
+    });
+  }
+  function safeInvokeClick(handler, ev, ctx2, logger) {
+    try {
+      const result = handler(ev, ctx2);
+      if (isPromiseLike(result)) {
+        result.catch((err) => logClickError(err, logger));
+      }
+    } catch (err) {
+      logClickError(err, logger);
+    }
+  }
+  function logClickError(error, logger) {
+    try {
+      logger("sell-all-click-error", error);
+    } catch {
+    }
+  }
+  function isPromiseLike(value) {
+    return !!value && (typeof value === "object" || typeof value === "function") && typeof value.then === "function";
+  }
+  function isInventoryPetItem(item) {
+    return !!item && item.itemType === "Pet" && typeof item.id === "string";
+  }
+  function isBrowser() {
+    return typeof window !== "undefined" && typeof document !== "undefined";
+  }
+  function noSSRController() {
+    return { stop() {
+    }, runOnce() {
+    }, isRunning: () => false };
+  }
+  function norm(s) {
+    return (s ?? "").replace(/\s+/g, " ").trim();
+  }
+  function getLabel(el) {
+    const t = norm(el.textContent);
+    if (t) return t;
+    const a = norm(el.getAttribute("aria-label"));
+    return a;
+  }
+  function getWords(label2) {
+    return label2.trim().split(/\s+/).filter(Boolean);
+  }
+  function isSellTwoWordLabel(label2) {
+    const words = getWords(label2);
+    return words.length === 2 && /^sell$/i.test(words[0]);
+  }
+  function findTargetButton(scope, btnWide, btnStrict, _btnText) {
+    const all = Array.from(/* @__PURE__ */ new Set([
+      ...Array.from(scope.querySelectorAll(btnWide)),
+      ...Array.from(scope.querySelectorAll(btnStrict))
+    ])).filter((b) => b instanceof HTMLButtonElement).filter((b) => !b.classList.contains(DEFAULTS.injectedClass));
+    const target = all.find((b) => {
+      const label2 = getLabel(b);
+      if (/crops/i.test(label2)) return false;
+      if (isSellTwoWordLabel(label2)) return true;
+      if (/^sell$/i.test(label2.trim()) && b.querySelector("canvas")) return true;
+      return false;
+    });
+    return target ?? null;
+  }
+  function ensureInjectedNextTo(targetBtn, injectedClass, injectedText, onClick) {
+    const parent = targetBtn.parentElement || targetBtn.closest(".McFlex, .css-0") || targetBtn.parentNode;
+    if (!parent) return;
+    let injected6 = parent.querySelector(`.${injectedClass}`);
+    if (injected6) {
+      if (targetBtn.nextElementSibling !== injected6) {
+        parent.insertBefore(injected6, targetBtn.nextSibling);
+      }
+      if (injected6.textContent !== injectedText) injected6.textContent = injectedText;
+      return;
+    }
+    injected6 = document.createElement("button");
+    injected6.type = "button";
+    injected6.className = `${injectedClass} chakra-button`;
+    injected6.textContent = injectedText;
+    injected6.setAttribute("aria-label", injectedText);
+    injected6.title = injectedText;
+    injected6.style.marginLeft = "8px";
+    const cs = getComputedStyle(parent);
+    if (cs.display !== "flex") {
+      injected6.style.display = "inline-flex";
+      injected6.style.alignItems = "center";
+    }
+    injected6.addEventListener("click", (ev) => onClick(ev, {
+      host: targetBtn.closest(DEFAULTS.rootSelector),
+      targetBtn,
+      injectedBtn: injected6
+    }));
+    parent.insertBefore(injected6, targetBtn.nextSibling);
+  }
+  function cleanup(root, injectedClass) {
+    root.querySelectorAll(`.${injectedClass}`).forEach((n) => n.remove());
+  }
+  function ensureStyle(injectedClass, theme) {
+    const STYLE_ID6 = `${injectedClass}-style`;
+    if (document.getElementById(STYLE_ID6)) return;
+    const css6 = `
+.${injectedClass}{
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  cursor: pointer;
+  display: inline-flex;
+  appearance: none;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  white-space: nowrap;
+  vertical-align: middle;
+
+  outline: transparent solid 2px;
+  outline-offset: 2px;
+  line-height: 1.2;
+
+  border-radius: 15px;                        /* aligns with provided design */
+  font-weight: 700;
+  height: auto;
+  min-width: var(--chakra-sizes-10, 2.5rem);
+  box-shadow: rgba(0, 0, 0, 0.3) 0px 4px 12px;
+  transform: translateY(0px);
+  transition: 0.2s;
+
+  border: 2px solid ${theme.border};
+  color: ${theme.text};
+  background: ${theme.bg};
+
+  text-transform: none;
+  overflow: hidden;
+  font-size: 20px;
+  padding-inline-start: var(--chakra-space-4, 1rem);
+  padding-inline-end: var(--chakra-space-4, 1rem);
+  padding-top: var(--chakra-space-3, 0.75rem);
+  padding-bottom: var(--chakra-space-3, 0.75rem);
+
+  -webkit-tap-highlight-color: transparent;
+}
+.${injectedClass}:hover{
+  transform: translateY(-1px);
+  background: ${theme.hoverBg};
+  border-color: ${theme.hoverBorder};
+}
+.${injectedClass}:active{
+  transform: translateY(1px);
+  background: ${theme.activeBg};
+}
+.${injectedClass}:focus-visible{
+  box-shadow: 0 0 0 3px ${theme.ring};
+}
+`.trim();
+    const s = document.createElement("style");
+    s.id = STYLE_ID6;
+    s.textContent = css6;
+    document.head.appendChild(s);
+  }
+  function hookHistory(onNavigate) {
+    const p = history.pushState?.bind(history);
+    const r = history.replaceState?.bind(history);
+    const wrap = (fn) => fn ? function(...args) {
+      const ret = fn.apply(this, args);
+      onNavigate();
+      return ret;
+    } : fn;
+    if (p) history.pushState = wrap(p);
+    if (r) history.replaceState = wrap(r);
+    const onPop = () => onNavigate();
+    window.addEventListener("popstate", onPop);
+    return () => {
+      if (p) history.pushState = p;
+      if (r) history.replaceState = r;
+      window.removeEventListener("popstate", onPop);
+    };
+  }
+  var SELL_ALL_PETS_EVENT, SELL_ALL_PETS_DRY_RUN, SELL_ALL_PETS_CONFIRM_MODAL_ID, DEFAULT_THEME, DEFAULTS;
+  var init_domButton = __esm({
+    "src/features/sellAllPets/domButton.ts"() {
+      "use strict";
+      init_atoms();
+      init_jotai();
+      init_player();
+      init_toast();
+      init_audioPlayer();
+      init_stats();
+      init_value();
+      init_petValue();
+      init_iconCache();
+      init_restrictions();
+      init_data();
+      SELL_ALL_PETS_EVENT = "sell-all-pets:list";
+      SELL_ALL_PETS_DRY_RUN = false;
+      SELL_ALL_PETS_CONFIRM_MODAL_ID = "tm-sellallpets-confirm";
+      DEFAULT_THEME = {
+        text: "var(--chakra-colors-Neutral-TrueWhite, #FFFFFF)",
+        bg: "var(--chakra-colors-Blue-Magic, #0067B4)",
+        border: "var(--chakra-colors-Blue-Light, #48ADF4)",
+        hoverBg: "var(--chakra-colors-Blue-Light, #48ADF4)",
+        hoverBorder: "var(--chakra-colors-Blue-Baby, #25AAE2)",
+        activeBg: "var(--chakra-colors-Blue-Dark, #264093)",
+        ring: "var(--chakra-ring-color, rgba(66,153,225,0.6))"
+      };
+      DEFAULTS = {
+        // conteneur principal du panel modal pet sell
+        rootSelector: ".McFlex.css-1svwxx0",
+        // gate : bloc qui contient le bouton (hash de classe instable côté Chakra)
+        checkSelector: ".McGrid",
+        // nouveau bouton "Sell Pet"
+        buttonSelectorWide: "button.chakra-button.css-1glc7hj, button.chakra-button, button.css-1glc7hj",
+        buttonSelectorStrict: "button.chakra-button.css-1glc7hj",
+        targetText: "Sell Pet",
+        // Back-compat only
+        injectText: "Sell all Pets",
+        injectedClass: "tm-injected-sell-all",
+        styleId: "tm-injected-sell-all-style"
+      };
+    }
+  });
+
+  // src/features/sellAllPets/keybind.ts
+  function installSellKeybindsOnce() {
+    if (sellKeybindsInstalled || typeof window === "undefined") return;
+    sellKeybindsInstalled = true;
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (shouldIgnoreKeydown(event)) return;
+        if (eventMatchesKeybind("sell.sell-all", event)) {
+          event.preventDefault();
+          event.stopPropagation();
+          void PlayerService.sellAllCrops();
+          return;
+        }
+        if (eventMatchesKeybind("sell.sell-all-pets", event)) {
+          event.preventDefault();
+          event.stopPropagation();
+          void runSellAllPetsFlow();
+        }
+      },
+      true
+    );
+  }
+  var sellKeybindsInstalled;
+  var init_keybind2 = __esm({
+    "src/features/sellAllPets/keybind.ts"() {
+      "use strict";
+      init_player();
+      init_keybinds();
+      init_keyboard();
+      init_domButton();
+      sellKeybindsInstalled = false;
+    }
+  });
+
+  // src/features/keybinds/modalToggles.ts
+  async function toggleModal(modalId) {
+    try {
+      if (await Atoms.ui.activeModal.get() === modalId) await closeModal(modalId);
+      else await openModal(modalId);
+    } catch {
+    }
+  }
+  function installModalToggleKeybind(actionId, modalId) {
+    if (installedActions.has(actionId) || typeof window === "undefined") return;
+    installedActions.add(actionId);
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (shouldIgnoreKeydown(event) || !eventMatchesKeybind(actionId, event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        void toggleModal(modalId);
+      },
+      true
+    );
+  }
+  function installModalToggleKeybinds() {
+    for (const [actionId, modalId] of MODAL_TOGGLES) installModalToggleKeybind(actionId, modalId);
+  }
+  var MODAL_TOGGLES, installedActions;
+  var init_modalToggles = __esm({
+    "src/features/keybinds/modalToggles.ts"() {
+      "use strict";
+      init_atoms();
+      init_fakeModal();
+      init_keyboard();
+      init_keybinds();
+      MODAL_TOGGLES = [
+        ["game.pet-hutch", "petHutch"],
+        ["game.journal", JOURNAL_MODAL_ID],
+        ["game.seed-silo", "seedSilo"],
+        ["game.decor-shed", "decorShed"],
+        ["game.tool-shack", "toolShack"],
+        ["game.feeding-trough", "feedingTrough"],
+        ["game.weather-station", "weatherStation"]
+      ];
+      installedActions = /* @__PURE__ */ new Set();
     }
   });
 
@@ -16987,128 +20391,15 @@
     }
   });
 
-  // src/features/keybinds/keybinds.ts
-  function getPetTeamActionId(teamId2) {
-    return `${PET_TEAM_ACTION_PREFIX}${teamId2}`;
-  }
-  function disposePetAction(id) {
-    actionMap.delete(id);
-    defaultMap.delete(id);
-    cache.delete(id);
-    listeners3.delete(id);
-    holdDefaultMap.delete(id);
-    holdCache.delete(id);
-    holdListeners.delete(id);
-  }
-  function registerPetAction(action2, defaultHotkey) {
-    const normalized = {
-      id: action2.id,
-      sectionId: PET_SECTION_ID,
-      label: action2.label,
-      hint: action2.hint,
-      allowModifierOnly: action2.allowModifierOnly,
-      defaultHotkey: cloneHotkey(defaultHotkey),
-      holdDetection: action2.holdDetection ? {
-        label: action2.holdDetection.label,
-        description: action2.holdDetection.description,
-        defaultEnabled: action2.holdDetection.defaultEnabled
-      } : void 0
-    };
-    actionMap.set(normalized.id, normalized);
-    defaultMap.set(normalized.id, cloneHotkey(defaultHotkey));
-    petActionIds.add(normalized.id);
-    petSection.actions.push(normalized);
-  }
-  function updatePetKeybinds(teams) {
-    for (const id of petActionIds) {
-      disposePetAction(id);
-    }
-    petActionIds.clear();
-    petSection.actions = [];
-    registerPetAction(
-      {
-        id: PET_TEAM_PREV_ID,
-        sectionId: PET_SECTION_ID,
-        label: "Previous team",
-        defaultHotkey: null
-      },
-      null
-    );
-    registerPetAction(
-      {
-        id: PET_TEAM_NEXT_ID,
-        sectionId: PET_SECTION_ID,
-        label: "Next team",
-        defaultHotkey: null
-      },
-      null
-    );
-    teams.forEach((team, index) => {
-      const name = String(team?.name || "").trim();
-      const labelName = name.length ? name : `Team ${index + 1}`;
-      registerPetAction(
-        {
-          id: getPetTeamActionId(team.id),
-          sectionId: PET_SECTION_ID,
-          label: `Use team \u2014 ${labelName}`,
-          defaultHotkey: null
-        },
-        null
-      );
-    });
-  }
-  function getCombosForGameAction() {
-    const state5 = gameActiveStates.get(GAME_ACTION_ID);
-    if (!state5) return [];
-    const combo = state5.combo;
-    return typeof combo === "string" && combo.length ? [combo] : [];
-  }
-  function applyGameActionBlockers() {
-    const shouldBlock = gameActionBlockers.size > 0;
-    const desired = /* @__PURE__ */ new Set();
-    if (shouldBlock) {
-      for (const combo of getCombosForGameAction()) {
-        if (combo) desired.add(combo);
-      }
-    }
-    for (const combo of gameActionBlockedCombos) {
-      if (!desired.has(combo)) {
-        try {
-          inGameHotkeys.unblock(combo);
-        } catch {
-        }
-      }
-    }
-    if (shouldBlock) {
-      for (const combo of desired) {
-        if (!gameActionBlockedCombos.has(combo)) {
-          try {
-            inGameHotkeys.block(combo);
-          } catch {
-          }
-        }
-      }
-    }
-    gameActionBlockedCombos.clear();
-    if (shouldBlock) {
-      for (const combo of desired) gameActionBlockedCombos.add(combo);
-    }
-  }
-  function hotkeyToCombo(hk) {
-    if (!hk) return null;
-    const combo = hotkeyToString(hk);
-    return combo.length ? combo : null;
-  }
-  function purgeTargetBindings(emitCombo) {
+  // src/features/keybinds/gameRemap.ts
+  function clearRemapsTo(gameKey) {
     try {
-      inGameHotkeys.unblock(emitCombo);
+      inGameHotkeys.unblock(gameKey);
     } catch {
     }
     try {
-      const curr = inGameHotkeys.current();
-      for (const [from, to] of Object.entries(curr)) {
-        const toCode = String(to).split("+").pop();
-        if (toCode === emitCombo) {
+      for (const [from, to] of Object.entries(inGameHotkeys.current())) {
+        if (String(to).split("+").pop() === gameKey) {
           try {
             inGameHotkeys.remove(from);
           } catch {
@@ -17118,4506 +20409,60 @@
     } catch {
     }
   }
-  function isMac2() {
-    return typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.platform || "");
-  }
-  function codeToDisplay(code) {
-    if (!code) return "";
-    const mKey = code.match(/^Key([A-Z])$/);
-    if (mKey) return mKey[1];
-    const mDigit = code.match(/^Digit([0-9])$/);
-    if (mDigit) return mDigit[1];
-    if (code === "ControlLeft" || code === "ControlRight") return "Ctrl";
-    if (code === "AltLeft" || code === "AltRight") return "Alt";
-    if (code === "ShiftLeft" || code === "ShiftRight") return "Shift";
-    if (code === "MetaLeft" || code === "MetaRight") return isMac2() ? "\xE2\u0152\u02DC" : "Win";
-    if (code === "Space") return "Space";
-    if (code === "Enter") return "Enter";
-    if (code === "Escape") return "Esc";
-    if (code === "Tab") return "Tab";
-    if (code === "Backspace") return "Backspace";
-    if (code === "Delete") return "Del";
-    if (code === "Insert") return "Ins";
-    if (code === "ArrowUp") return "\xE2\u2020\u2018";
-    if (code === "ArrowDown") return "\xE2\u2020\u201C";
-    if (code === "ArrowLeft") return "\xE2\u2020\x90";
-    if (code === "ArrowRight") return "\xE2\u2020\u2019";
-    return code;
-  }
-  function prettyHotkey(hk) {
-    if (!hk) return "\xE2\u20AC\u201D";
-    const mods = [];
-    if (hk.ctrl) mods.push("Ctrl");
-    if (hk.shift) mods.push("Shift");
-    if (hk.alt) mods.push("Alt");
-    if (hk.meta) mods.push(isMac2() ? "\xE2\u0152\u02DC" : "Win");
-    let base = "";
-    const k = hk.key;
-    if (typeof k === "string" && k.length === 1) {
-      base = k.toUpperCase();
-    } else {
-      base = codeToDisplay(hk.code);
-    }
-    const baseIsModifier = base && ["Ctrl", "Shift", "Alt", "\xE2\u0152\u02DC", "Win"].includes(base);
-    const parts = baseIsModifier ? mods : mods.concat(base ? [base] : []);
-    return parts.join(" + ");
-  }
   function syncGameKeybind(id) {
-    if (typeof window === "undefined") return;
-    const emitCombo = GAME_KEYBIND_TARGETS[id];
-    purgeTargetBindings(emitCombo);
-    const prev = gameActiveStates.get(id);
-    if (prev) {
-      if (prev.rapidFire) {
-        try {
-          inGameHotkeys.stopRapidFire(prev.combo);
-        } catch {
-        }
-      }
-      gameActiveStates.delete(id);
-    }
-    const combo = hotkeyToCombo(getKeybind(id));
-    if (!combo) {
-      if (id === GAME_ACTION_ID) {
-        applyGameActionBlockers();
-      }
-      return;
-    }
-    const holdEnabled = getKeybindHoldDetection(id);
-    let replaced = false;
-    if (combo !== emitCombo) {
+    const gameKey = GAME_KEYS[id];
+    clearRemapsTo(gameKey);
+    const previousRapidFire = rapidFireCombos.get(id);
+    if (previousRapidFire) {
       try {
-        inGameHotkeys.replace(emitCombo, combo);
-        replaced = true;
+        inGameHotkeys.stopRapidFire(previousRapidFire);
+      } catch {
+      }
+      rapidFireCombos.delete(id);
+    }
+    const hk = getKeybind(id);
+    const combo = hk ? hotkeyToString(hk) : "";
+    if (!combo) return;
+    if (combo !== gameKey) {
+      try {
+        inGameHotkeys.replace(gameKey, combo);
       } catch {
       }
     }
-    let rapidFire = false;
-    if (holdEnabled) {
+    if (getKeybindHoldDetection(id)) {
       try {
-        inGameHotkeys.startRapidFire({
-          trigger: combo,
-          // on tient la touche choisie
-          emit: combo,
-          // remapper convertira en emitCombo si replace() actif
-          mode: "tap",
-          rateHz: 10
-        });
-        rapidFire = true;
+        inGameHotkeys.startRapidFire({ trigger: combo, emit: combo, mode: "tap", rateHz: 10 });
+        rapidFireCombos.set(id, combo);
       } catch {
       }
     }
-    gameActiveStates.set(id, { combo, replaced, rapidFire });
-    if (id === GAME_ACTION_ID) {
-      applyGameActionBlockers();
-    }
-  }
-  function cloneHotkey(hk) {
-    return hk ? { ...hk } : null;
-  }
-  function hotkeysEqual(a, b) {
-    if (!a && !b) return true;
-    if (!a || !b) return false;
-    return hotkeyToString(a) === hotkeyToString(b);
-  }
-  function readStored(id) {
-    if (typeof window === "undefined") return void 0;
-    const map2 = readAriesPath(KEYBINDS_BINDINGS_PATH);
-    const raw = map2?.[id];
-    if (raw == null) return void 0;
-    if (raw === STORED_NONE) return null;
-    if (typeof raw !== "string") return null;
-    const parsed = stringToHotkey(raw);
-    return parsed ?? null;
-  }
-  function writeStored(id, hk) {
-    if (typeof window === "undefined") return;
-    updateAriesPath(KEYBINDS_BINDINGS_PATH, (current) => {
-      const base = current && typeof current === "object" ? { ...current } : {};
-      if (hk) {
-        base[id] = hotkeyToString(hk);
-      } else {
-        base[id] = STORED_NONE;
-      }
-      return base;
-    });
-  }
-  function removeStored(id) {
-    if (typeof window === "undefined") return;
-    updateAriesPath(KEYBINDS_BINDINGS_PATH, (current) => {
-      const base = current && typeof current === "object" ? { ...current } : {};
-      delete base[id];
-      return base;
-    });
-  }
-  function readHoldStored(id) {
-    if (typeof window === "undefined") return void 0;
-    const map2 = readAriesPath(KEYBINDS_HOLD_PATH);
-    const raw = map2?.[id];
-    if (raw == null) return void 0;
-    if (typeof raw === "string") return raw === "1";
-    if (typeof raw === "number") return raw === 1;
-    if (typeof raw === "boolean") return raw;
-    return void 0;
-  }
-  function writeHoldStored(id, enabled5) {
-    if (typeof window === "undefined") return;
-    updateAriesPath(KEYBINDS_HOLD_PATH, (current) => {
-      const base = current && typeof current === "object" ? { ...current } : {};
-      base[id] = !!enabled5;
-      return base;
-    });
-  }
-  function emitHoldChange(id) {
-    const set2 = holdListeners.get(id);
-    if (!set2 || set2.size === 0) return;
-    const current = getKeybindHoldDetection(id);
-    for (const cb of set2) cb(current);
-  }
-  function emitChange(id) {
-    const set2 = listeners3.get(id);
-    if (!set2 || set2.size === 0) return;
-    const current = cloneHotkey(getKeybind(id));
-    for (const cb of set2) cb(current);
-  }
-  function ensureCache(id) {
-    if (cache.has(id)) {
-      return cloneHotkey(cache.get(id) ?? null);
-    }
-    const stored = readStored(id);
-    const resolved = stored === void 0 ? cloneHotkey(defaultMap.get(id) ?? null) : cloneHotkey(stored);
-    cache.set(id, resolved);
-    return cloneHotkey(resolved);
-  }
-  function ensureHoldCache(id) {
-    if (!holdDefaultMap.has(id)) return false;
-    if (holdCache.has(id)) {
-      return holdCache.get(id) ?? false;
-    }
-    const stored = readHoldStored(id);
-    const resolved = stored === void 0 ? !!holdDefaultMap.get(id) : stored;
-    holdCache.set(id, resolved);
-    return resolved;
-  }
-  function getKeybind(id) {
-    return ensureCache(id);
-  }
-  function getDefaultKeybind(id) {
-    return cloneHotkey(defaultMap.get(id) ?? null);
-  }
-  function setKeybind(id, hk) {
-    const current = getKeybind(id);
-    if (hotkeysEqual(current, hk)) return;
-    const next = cloneHotkey(hk);
-    if (next) {
-      const asString = hotkeyToString(next);
-      for (const otherId of actionMap.keys()) {
-        if (otherId === id) continue;
-        const other = getKeybind(otherId);
-        if (!other) continue;
-        if (hotkeyToString(other) !== asString) continue;
-        cache.set(otherId, null);
-        writeStored(otherId, null);
-        emitChange(otherId);
-      }
-    }
-    cache.set(id, next);
-    writeStored(id, next);
-    emitChange(id);
-  }
-  function resetKeybind(id) {
-    cache.delete(id);
-    removeStored(id);
-    emitChange(id);
-  }
-  function getKeybindHoldDetection(id) {
-    return ensureHoldCache(id);
-  }
-  function setKeybindHoldDetection(id, enabled5) {
-    if (!holdDefaultMap.has(id)) return;
-    const current = ensureHoldCache(id);
-    if (current === enabled5) return;
-    holdCache.set(id, enabled5);
-    writeHoldStored(id, enabled5);
-    emitHoldChange(id);
-  }
-  function onKeybindHoldDetectionChange(id, cb) {
-    if (!holdDefaultMap.has(id)) {
-      return () => {
-      };
-    }
-    const set2 = holdListeners.get(id) ?? /* @__PURE__ */ new Set();
-    if (!holdListeners.has(id)) holdListeners.set(id, set2);
-    set2.add(cb);
-    return () => {
-      set2.delete(cb);
-      if (set2.size === 0) holdListeners.delete(id);
-    };
-  }
-  function onKeybindChange(id, cb) {
-    const set2 = listeners3.get(id) ?? /* @__PURE__ */ new Set();
-    if (!listeners3.has(id)) listeners3.set(id, set2);
-    set2.add(cb);
-    return () => {
-      set2.delete(cb);
-      if (set2.size === 0) listeners3.delete(id);
-    };
-  }
-  function eventMatchesKeybind(id, e) {
-    return matchHotkey(e, getKeybind(id));
   }
   function installGameKeybindsOnce() {
-    if (gameKeybindsInstalled || typeof window === "undefined") return;
-    gameKeybindsInstalled = true;
-    for (const id of GAME_KEYBIND_IDS) {
+    if (installed3 || typeof window === "undefined") return;
+    installed3 = true;
+    for (const id of Object.keys(GAME_KEYS)) {
       syncGameKeybind(id);
       onKeybindChange(id, () => syncGameKeybind(id));
       onKeybindHoldDetectionChange(id, () => syncGameKeybind(id));
     }
   }
-  function getKeybindLabel(id) {
-    return prettyHotkey(getKeybind(id));
-  }
-  function getKeybindSections() {
-    return keybindSections.map((section4) => ({
-      ...section4,
-      actions: section4.actions.map((action2) => ({
-        ...action2,
-        defaultHotkey: cloneHotkey(action2.defaultHotkey),
-        holdDetection: action2.holdDetection ? {
-          label: action2.holdDetection.label,
-          description: action2.holdDetection.description,
-          defaultEnabled: action2.holdDetection.defaultEnabled
-        } : void 0
-      }))
-    }));
-  }
-  var SECTION_CONFIG, KEYBINDS_BINDINGS_PATH, KEYBINDS_HOLD_PATH, ARIES_ROOT_KEY, STORED_NONE, actionMap, defaultMap, cache, listeners3, holdDefaultMap, holdCache, holdListeners, keybindSections, PET_SECTION_ID, PET_TEAM_ACTION_PREFIX, PET_TEAM_NEXT_ID, PET_TEAM_PREV_ID, petSection, petActionIds, GAME_KEYBIND_TARGETS, GAME_KEYBIND_IDS, gameActiveStates, gameKeybindsInstalled, GAME_ACTION_ID, gameActionBlockers, gameActionBlockedCombos;
-  var init_keybinds = __esm({
-    "src/features/keybinds/keybinds.ts"() {
+  var GAME_KEYS, rapidFireCombos, installed3;
+  var init_gameRemap = __esm({
+    "src/features/keybinds/gameRemap.ts"() {
       "use strict";
       init_ingameHotkeys();
       init_hotkey();
-      init_storage();
-      SECTION_CONFIG = [
-        {
-          id: "gui",
-          title: "GUI",
-          icon: "\u{1F5A5}\uFE0F",
-          description: "Choose how you open and move the overlay.",
-          actions: [
-            {
-              id: "gui.toggle",
-              label: "Toggle menu visibility",
-              icon: "sprite/ui/CameraOff",
-              hint: "Opens or closes the Arie's Mod overlay.",
-              defaultHotkey: { alt: true, code: "KeyX" }
-            },
-            {
-              id: "gui.drag",
-              label: "Drag HUD",
-              icon: "sprite/ui/Touchpad",
-              hint: "Hold to drag menus interfaces around the screen.",
-              defaultHotkey: { alt: true, code: "AltLeft" },
-              allowModifierOnly: true
-            }
-          ]
-        },
-        {
-          id: "shops",
-          title: "Shops",
-          icon: "\u{1F6D2}",
-          description: "Quick shortcuts to every shop tab.",
-          actions: [
-            {
-              id: "shops.seeds",
-              label: "Seeds shop",
-              icon: "sprite/ui/SeedIcon",
-              defaultHotkey: { alt: true, code: "KeyS" }
-            },
-            {
-              id: "shops.eggs",
-              label: "Eggs shop",
-              icon: "sprite/ui/EggIcon",
-              defaultHotkey: { alt: true, code: "KeyE" }
-            },
-            {
-              id: "shops.decors",
-              label: "Decors shop",
-              icon: "sprite/ui/DecorIcon",
-              defaultHotkey: { alt: true, code: "KeyD" }
-            },
-            {
-              id: "shops.tools",
-              label: "Tools shop",
-              icon: "sprite/ui/ToolIcon",
-              defaultHotkey: { alt: true, code: "KeyT" }
-            }
-          ]
-        },
-        {
-          id: "game",
-          title: "Game",
-          icon: "\u{1F3AE}",
-          description: "Remap the in-game actions",
-          actions: [
-            {
-              id: "game.action",
-              label: "Action",
-              icon: "sprite/ui/PickupPin",
-              defaultHotkey: { code: "Space" },
-              holdDetection: {
-                label: "Rapid fire",
-                defaultEnabled: false
-              }
-            },
-            {
-              id: "game.inventory",
-              label: "Inventory",
-              icon: "sprite/ui/InventoryBag",
-              defaultHotkey: { code: "KeyE" }
-            },
-            {
-              id: "game.pet-hutch",
-              label: "Pet hutch",
-              icon: "sprite/decor/PetHutch_1",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.decor-shed",
-              label: "Decor shed",
-              icon: "sprite/decor/DecorShed",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.tool-shack",
-              label: "Tool shack",
-              icon: "sprite/decor/ToolShack",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.seed-silo",
-              label: "Seed silo",
-              icon: "sprite/decor/SeedSilo",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.feeding-trough",
-              label: "Feeding trough",
-              icon: "sprite/decor/FeedingTrough",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.weather-station",
-              label: "Weather station",
-              icon: "sprite/object/WeatherStation",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.journal",
-              label: "Journal",
-              icon: "sprite/ui/JournalStamp",
-              defaultHotkey: null,
-              allowClear: true
-            },
-            {
-              id: "game.move-up",
-              label: "Move up",
-              icon: "https://i.imgur.com/EkbKUgi.png",
-              defaultHotkey: { code: "KeyW" }
-            },
-            {
-              id: "game.move-down",
-              label: "Move down",
-              icon: "https://i.imgur.com/tdJ7IGP.png",
-              defaultHotkey: { code: "KeyS" }
-            },
-            {
-              id: "game.move-left",
-              label: "Move left",
-              icon: "https://i.imgur.com/86VbR70.png",
-              defaultHotkey: { code: "KeyA" }
-            },
-            {
-              id: "game.move-right",
-              label: "Move right",
-              icon: "https://i.imgur.com/Ljzz6td.png",
-              defaultHotkey: { code: "KeyD" }
-            }
-          ]
-        },
-        {
-          id: "sell",
-          title: "Sell",
-          icon: "\u{1F4B0}",
-          description: "Streamline selling actions.",
-          actions: [
-            {
-              id: "sell.sell-all",
-              label: "All crops",
-              icon: "sprite/ui/IconSell",
-              hint: "Trigger the sell-all flow for harvested crops.",
-              defaultHotkey: null
-            },
-            {
-              id: "sell.sell-all-pets",
-              label: "All pets",
-              icon: "sprite/ui/IconShop",
-              hint: "Sell every non-favorited pet in your inventory.",
-              defaultHotkey: null
-            }
-          ]
-        },
-        {
-          id: "companion",
-          title: "Companion",
-          icon: "\u{1F916}",
-          description: "Reach your companion without going through the launcher.",
-          actions: [
-            {
-              id: "companion.chat",
-              label: "Open the chat",
-              // Sans icône : l'atlas `ui` n'a pas de pictogramme de conversation, et
-              // en inventer une clé afficherait une case vide (`icon` est optionnel).
-              hint: "Opens the Companion window straight on its Chat tab.",
-              defaultHotkey: { alt: true, code: "KeyC" }
-            }
-          ]
-        }
-      ];
-      KEYBINDS_BINDINGS_PATH = "keybinds.bindings";
-      KEYBINDS_HOLD_PATH = "keybinds.hold";
-      ARIES_ROOT_KEY = "aries_mod";
-      STORED_NONE = "__none__";
-      actionMap = /* @__PURE__ */ new Map();
-      defaultMap = /* @__PURE__ */ new Map();
-      cache = /* @__PURE__ */ new Map();
-      listeners3 = /* @__PURE__ */ new Map();
-      holdDefaultMap = /* @__PURE__ */ new Map();
-      holdCache = /* @__PURE__ */ new Map();
-      holdListeners = /* @__PURE__ */ new Map();
-      keybindSections = SECTION_CONFIG.map((section4) => {
-        const actions = section4.actions.map((action2) => {
-          const normalized = {
-            id: action2.id,
-            sectionId: section4.id,
-            label: action2.label,
-            icon: action2.icon,
-            hint: action2.hint,
-            allowModifierOnly: action2.allowModifierOnly,
-            allowClear: action2.allowClear,
-            defaultHotkey: cloneHotkey(action2.defaultHotkey),
-            holdDetection: action2.holdDetection ? {
-              label: action2.holdDetection.label,
-              description: action2.holdDetection.description,
-              defaultEnabled: action2.holdDetection.defaultEnabled
-            } : void 0
-          };
-          actionMap.set(normalized.id, normalized);
-          defaultMap.set(normalized.id, cloneHotkey(action2.defaultHotkey));
-          if (action2.holdDetection) {
-            holdDefaultMap.set(normalized.id, !!action2.holdDetection.defaultEnabled);
-          }
-          return normalized;
-        });
-        return {
-          id: section4.id,
-          title: section4.title,
-          description: section4.description,
-          icon: section4.icon,
-          actions
-        };
-      });
-      PET_SECTION_ID = "pets";
-      PET_TEAM_ACTION_PREFIX = "pets.team.";
-      PET_TEAM_NEXT_ID = "pets.team.next";
-      PET_TEAM_PREV_ID = "pets.team.prev";
-      petSection = {
-        id: PET_SECTION_ID,
-        title: "Pets",
-        icon: "\u{1F437}",
-        description: "Assign shortcuts to your pet teams and cycle through them instantly.",
-        actions: []
-      };
-      keybindSections.push(petSection);
-      petActionIds = /* @__PURE__ */ new Set();
-      updatePetKeybinds([]);
-      GAME_KEYBIND_TARGETS = {
+      init_keybinds();
+      GAME_KEYS = {
         "game.action": "Space",
         "game.inventory": "KeyE",
         "game.move-up": "KeyW",
-        // Z (AZERTY) == KeyW
         "game.move-down": "KeyS",
-        // S
         "game.move-left": "KeyA",
-        // Q (AZERTY) == KeyA
         "game.move-right": "KeyD"
-        // D
       };
-      GAME_KEYBIND_IDS = [
-        "game.action",
-        "game.inventory",
-        "game.move-up",
-        "game.move-down",
-        "game.move-left",
-        "game.move-right"
-      ];
-      gameActiveStates = /* @__PURE__ */ new Map();
-      gameKeybindsInstalled = false;
-      GAME_ACTION_ID = "game.action";
-      gameActionBlockers = /* @__PURE__ */ new Set();
-      gameActionBlockedCombos = /* @__PURE__ */ new Set();
-      if (typeof window !== "undefined") {
-        window.addEventListener("storage", (event) => {
-          if (event.key !== ARIES_ROOT_KEY) return;
-          cache.clear();
-          holdCache.clear();
-          for (const id of actionMap.keys()) emitChange(id);
-          for (const id of holdDefaultMap.keys()) emitHoldChange(id);
-        });
-      }
-    }
-  });
-
-  // src/lib/keyboard.ts
-  function isKeybindCaptureActive() {
-    return keybindCaptureCount > 0;
-  }
-  function beginKeybindCapture() {
-    keybindCaptureCount++;
-  }
-  function endKeybindCapture() {
-    keybindCaptureCount = Math.max(0, keybindCaptureCount - 1);
-  }
-  function shouldIgnoreKeydown(e) {
-    if (isKeybindCaptureActive()) return true;
-    const el = e.target;
-    if (!el) return false;
-    return el.isContentEditable || el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT";
-  }
-  var keybindCaptureCount;
-  var init_keyboard = __esm({
-    "src/lib/keyboard.ts"() {
-      "use strict";
-      keybindCaptureCount = 0;
-    }
-  });
-
-  // src/features/pets/teamReconcile.ts
-  function serverMemberIds(team) {
-    return Array.isArray(team?.members) ? team.members.map((m) => String(m?.petId || "")).filter(Boolean) : [];
-  }
-  function sameMemberSet(a, b) {
-    const aa = a.filter((x) => !!x).slice().sort();
-    const bb = b.slice().sort();
-    if (aa.length !== bb.length) return false;
-    return aa.every((v, i) => v === bb[i]);
-  }
-  function petTeamName(name) {
-    const trimmed = String(name ?? "").trim();
-    let parts;
-    try {
-      const seg = new Intl.Segmenter(void 0, { granularity: "grapheme" });
-      parts = Array.from(seg.segment(trimmed), (s) => s.segment);
-    } catch {
-      parts = Array.from(trimmed);
-    }
-    return parts.length <= PET_TEAM_NAME_MAX_CLUSTERS ? trimmed : parts.slice(0, PET_TEAM_NAME_MAX_CLUSTERS).join("");
-  }
-  function nameKey(name) {
-    return name ? petTeamName(name).toLowerCase() : "";
-  }
-  function reconcilePetTeams(teams, serverTeams, env) {
-    const serverById = new Map(serverTeams.map((t) => [String(t.id), t]));
-    const linkedServerIds = new Set(teams.map((t) => t.serverId).filter((v) => !!v));
-    const freeByName = (key2) => key2 ? serverTeams.filter((t) => !linkedServerIds.has(String(t.id)) && nameKey(t.name) === key2) : [];
-    const result = {
-      teams,
-      changed: false,
-      linkedLocalIds: [],
-      pushUpdates: [],
-      needsCreate: [],
-      dropped: []
-    };
-    const folded = /* @__PURE__ */ new Set();
-    for (const local of teams) {
-      if (folded.has(local)) continue;
-      if (local.serverId) {
-        const server = serverById.get(local.serverId);
-        if (!server) continue;
-        const memberIds = serverMemberIds(server);
-        if (server.name !== local.name || !sameMemberSet(local.slots, memberIds)) {
-          local.name = server.name;
-          local.slots = [0, 1, 2].map((i) => memberIds[i] ?? null);
-          result.changed = true;
-        }
-        continue;
-      }
-      const candidates = [...freeByName(nameKey(local.name)), ...freeByName(nameKey(env.sentName(local.id)))];
-      const match = candidates.find((t) => sameMemberSet(local.slots, serverMemberIds(t))) ?? candidates[0];
-      if (match) {
-        local.serverId = String(match.id);
-        linkedServerIds.add(local.serverId);
-        result.linkedLocalIds.push(local.id);
-        const matchMemberIds = serverMemberIds(match);
-        const divergedWhilePending = match.name !== petTeamName(local.name) || !sameMemberSet(local.slots, matchMemberIds);
-        if (divergedWhilePending) {
-          const petIds = local.slots.filter((x) => !!x);
-          if (petIds.length) result.pushUpdates.push({ serverId: local.serverId, name: local.name.trim() || "Team", petIds });
-        } else {
-          local.name = match.name;
-          local.slots = [0, 1, 2].map((i) => matchMemberIds[i] ?? null);
-        }
-        result.changed = true;
-        continue;
-      }
-      const twin = teams.find((t) => t !== local && !folded.has(t) && !!t.serverId && serverById.has(t.serverId) && nameKey(t.name) === nameKey(local.name) && sameMemberSet(t.slots, local.slots.filter((x) => !!x)));
-      if (twin) {
-        local.serverId = twin.serverId;
-        local.name = twin.name;
-        local.slots = twin.slots.slice();
-        folded.add(twin);
-        result.changed = true;
-        continue;
-      }
-      result.needsCreate.push(local);
-    }
-    result.dropped = teams.filter((t) => !folded.has(t) && !!t.serverId && !serverById.has(t.serverId));
-    const kept = teams.filter((t) => !folded.has(t) && (!t.serverId || serverById.has(t.serverId)));
-    if (kept.length !== teams.length) result.changed = true;
-    const usedLocalIds = new Set(kept.map((t) => t.id));
-    for (const server of serverTeams) {
-      if (linkedServerIds.has(String(server.id))) continue;
-      const memberIds = serverMemberIds(server);
-      const knownLocalId = env.knownLocalId(String(server.id));
-      const importedId = knownLocalId && !usedLocalIds.has(knownLocalId) ? knownLocalId : env.newId();
-      usedLocalIds.add(importedId);
-      kept.push({
-        id: importedId,
-        name: server.name,
-        slots: [0, 1, 2].map((i) => memberIds[i] ?? null),
-        serverId: String(server.id)
-      });
-      linkedServerIds.add(String(server.id));
-      result.changed = true;
-    }
-    result.teams = kept;
-    return result;
-  }
-  var PET_TEAM_NAME_MAX_CLUSTERS;
-  var init_teamReconcile = __esm({
-    "src/features/pets/teamReconcile.ts"() {
-      "use strict";
-      PET_TEAM_NAME_MAX_CLUSTERS = 16;
-    }
-  });
-
-  // src/features/pets/pets.ts
-  function syncTeamHotkey(teamId2) {
-    const hk = getKeybind(getPetTeamActionId(teamId2));
-    if (hk) TEAM_HK_MAP.set(teamId2, hk);
-    else TEAM_HK_MAP.delete(teamId2);
-  }
-  function syncNextTeamHotkey() {
-    hkNextTeam = getKeybind(PET_TEAM_NEXT_ID);
-  }
-  function syncPrevTeamHotkey() {
-    hkPrevTeam = getKeybind(PET_TEAM_PREV_ID);
-  }
-  function ensureLegacyTeamHotkeyMigration(teamId2) {
-    const hotkeys = readAriesPath(PATH_PETS_HOTKEYS) ?? {};
-    const legacy = hotkeys[teamId2];
-    if (!legacy) return;
-    const actionId = getPetTeamActionId(teamId2);
-    const existing = getKeybind(actionId);
-    if (!existing) {
-      const hk = stringToHotkey(legacy);
-      if (hk) {
-        setKeybind(actionId, hk);
-      }
-    }
-    const clone2 = { ...hotkeys };
-    delete clone2[teamId2];
-    writeAriesPath(PATH_PETS_HOTKEYS, clone2);
-  }
-  function normalizeTeamList(teams) {
-    if (!Array.isArray(teams)) return [];
-    const seen = /* @__PURE__ */ new Set();
-    const out = [];
-    for (const t of teams) {
-      const id = String(t?.id ?? "");
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
-      out.push({ id, name: t?.name ?? null });
-    }
-    return out;
-  }
-  function ensureLastUsedTeamIsValid() {
-    if (!orderedTeamIds.length) {
-      lastUsedTeamId = null;
-      return;
-    }
-    if (!lastUsedTeamId || !orderedTeamIds.includes(lastUsedTeamId)) {
-      lastUsedTeamId = orderedTeamIds[0] ?? null;
-    }
-  }
-  function markTeamAsUsed(teamId2) {
-    lastUsedTeamId = teamId2 ? String(teamId2) : null;
-  }
-  function setTeamsForHotkeys(rawTeams) {
-    for (const unsub of TEAM_HK_UNSUBS.values()) {
-      try {
-        unsub();
-      } catch {
-      }
-    }
-    TEAM_HK_UNSUBS.clear();
-    if (unsubNextHotkey) {
-      try {
-        unsubNextHotkey();
-      } catch {
-      }
-      unsubNextHotkey = null;
-    }
-    if (unsubPrevHotkey) {
-      try {
-        unsubPrevHotkey();
-      } catch {
-      }
-      unsubPrevHotkey = null;
-    }
-    const teams = normalizeTeamList(rawTeams);
-    updatePetKeybinds(teams);
-    orderedTeamIds = teams.map((t) => t.id);
-    ensureLastUsedTeamIsValid();
-    const keep = new Set(orderedTeamIds);
-    for (const teamId2 of Array.from(TEAM_HK_MAP.keys())) {
-      if (!keep.has(teamId2)) TEAM_HK_MAP.delete(teamId2);
-    }
-    teams.forEach((team) => {
-      ensureLegacyTeamHotkeyMigration(team.id);
-      syncTeamHotkey(team.id);
-      const unsub = onKeybindChange(getPetTeamActionId(team.id), () => syncTeamHotkey(team.id));
-      TEAM_HK_UNSUBS.set(team.id, unsub);
-    });
-    syncNextTeamHotkey();
-    syncPrevTeamHotkey();
-    unsubNextHotkey = onKeybindChange(PET_TEAM_NEXT_ID, () => syncNextTeamHotkey());
-    unsubPrevHotkey = onKeybindChange(PET_TEAM_PREV_ID, () => syncPrevTeamHotkey());
-  }
-  function installPetTeamHotkeysOnce(onUseTeam) {
-    const FLAG = "__qws_pet_team_hk_installed";
-    if (window[FLAG]) return;
-    window.addEventListener(
-      "keydown",
-      async (e) => {
-        if (shouldIgnoreKeydown(e)) return;
-        const teamsList = orderedTeamIds.slice();
-        if (!teamsList.length) return;
-        const activeTid = await _currentActiveTeamId();
-        if (activeTid && teamsList.includes(activeTid)) {
-          lastUsedTeamId = activeTid;
-        } else if (!lastUsedTeamId || !teamsList.includes(lastUsedTeamId)) {
-          lastUsedTeamId = teamsList[0] ?? null;
-        }
-        ensureLastUsedTeamIsValid();
-        const useTeam = (teamId2) => {
-          if (!teamId2) return;
-          markTeamAsUsed(teamId2);
-          onUseTeam(teamId2);
-        };
-        if (hkPrevTeam && matchHotkey(e, hkPrevTeam)) {
-          const baseId = lastUsedTeamId && teamsList.includes(lastUsedTeamId) ? lastUsedTeamId : teamsList[teamsList.length - 1] ?? null;
-          const curIdx = baseId ? teamsList.indexOf(baseId) : -1;
-          const nextIdx = curIdx >= 0 ? (curIdx - 1 + teamsList.length) % teamsList.length : teamsList.length - 1;
-          const target = teamsList[nextIdx] ?? null;
-          if (target) {
-            e.preventDefault();
-            e.stopPropagation();
-            useTeam(target);
-            return;
-          }
-        }
-        if (hkNextTeam && matchHotkey(e, hkNextTeam)) {
-          const baseId = lastUsedTeamId && teamsList.includes(lastUsedTeamId) ? lastUsedTeamId : teamsList[0] ?? null;
-          const curIdx = baseId ? teamsList.indexOf(baseId) : -1;
-          const nextIdx = curIdx >= 0 ? (curIdx + 1) % teamsList.length : 0;
-          const target = teamsList[nextIdx] ?? null;
-          if (target) {
-            e.preventDefault();
-            e.stopPropagation();
-            useTeam(target);
-            return;
-          }
-        }
-        for (const [teamId2, hk] of TEAM_HK_MAP) {
-          if (matchHotkey(e, hk)) {
-            e.preventDefault();
-            e.stopPropagation();
-            useTeam(teamId2);
-            break;
-          }
-        }
-      },
-      true
-    );
-    window[FLAG] = true;
-  }
-  function _abilityName(id) {
-    const key2 = String(id ?? "");
-    const raw = typeof _AB?.[key2]?.name === "string" && _AB[key2].name.trim() ? _AB[key2].name : key2;
-    return String(raw);
-  }
-  function petAbilityIds() {
-    const keys = Object.keys(_AB);
-    if (!_abilityIdsCache || _abilityIdsCache.count !== keys.length) {
-      _abilityIdsCache = {
-        count: keys.length,
-        ids: new Set(keys.filter((id) => !WEATHER_MUTATION_BOOST_IDS.has(id)))
-      };
-    }
-    return _abilityIdsCache.ids;
-  }
-  function _abilityLogFallbackText(abilityId, params) {
-    const fmtInt = (n) => Number.isFinite(Number(n)) ? Math.round(Number(n)).toLocaleString("en-US") : "0";
-    switch (abilityId) {
-      case "HungerBoost":
-      case "HungerBoostII":
-      case "HungerBoostIII":
-      case "SnowyHungerBoost": {
-        const base = petAbilities2[abilityId]?.baseParameters ?? {};
-        const pct = base["hungerDepletionRateDecreasePercentage"];
-        return pct != null ? `- ${Number(pct).toFixed(0)}% hunger drain` : "Hunger reduced";
-      }
-      case "Copycat":
-        return "Copied another ability";
-      case "DawnCapture": {
-        const capsules = params["capsulesAdded"];
-        const dawnlit = Number(params["dawnlitRemoved"]) || 0;
-        const dawncharged = Number(params["dawnboundRemoved"]) || 0;
-        const absorbed = [];
-        if (dawnlit > 0) absorbed.push(`${fmtInt(dawnlit)} Dawnlit`);
-        if (dawncharged > 0) absorbed.push(`${fmtInt(dawncharged)} Dawncharged`);
-        const head = capsules != null ? `+ ${fmtInt(capsules)} Dawn Capsule${Number(capsules) === 1 ? "" : "s"}` : "Dawn Capsules added";
-        return absorbed.length ? `${head} (${absorbed.join(", ")} absorbed)` : head;
-      }
-      case "Thunderbloom":
-        return "Thunder mutations empowered";
-      case "Thundercharger": {
-        const charged = params["cropsCharged"];
-        return charged != null ? `${fmtInt(charged)} crop${Number(charged) === 1 ? "" : "s"} Thundercharged` : "Crops Thundercharged";
-      }
-      default: {
-        const meta = petAbilities2[abilityId];
-        return meta?.description || meta?.name || abilityId;
-      }
-    }
-  }
-  function _buildAbilityLogText(abilityId, params) {
-    if (abilityId === "GoldGranter" || abilityId === "RainbowGranter") {
-      const growSlot = params?.growSlot;
-      const species = typeof growSlot?.species === "string" ? growSlot.species.trim() : "";
-      if (!species) return null;
-    }
-    if (isPetAbilityAction(abilityId)) {
-      try {
-        const text2 = formatAbilityLog({ action: abilityId, timestamp: 0, parameters: params });
-        if (text2) return text2;
-      } catch {
-      }
-    }
-    return _abilityLogFallbackText(abilityId, params);
-  }
-  function _abilityNameWithoutLevel(id) {
-    const key2 = String(id ?? "");
-    const raw = typeof _AB?.[key2]?.name === "string" && _AB[key2].name.trim() ? _AB[key2].name : key2;
-    return String(raw).replace(/(?:\s+|-)?(?:I|II|III|IV|V|VI|VII|VIII|IX|X)\s*$/, "").trim();
-  }
-  function _parseTeamSearch(raw) {
-    const s = String(raw || "").trim();
-    const m = s.match(/^(ab|sp):\s*(.*)$/i);
-    if (!m) return { mode: "text", value: s };
-    return { mode: m[1].toLowerCase() === "ab" ? "ability" : "species", value: (m[2] || "").trim() };
-  }
-  async function _abilityNameToPresentIds(name) {
-    await _ensureInventoryWatchersStarted();
-    const target = String(name || "").toLowerCase().trim().replace(/(?:\s+|-)?(?:i|ii|iii|iv|v|vi|vii|viii|ix|x)\s*$/i, "");
-    const ids = /* @__PURE__ */ new Set();
-    if (!target) return ids;
-    for (const p of _invPetsCache) {
-      const abs = Array.isArray(p.abilities) ? p.abilities : [];
-      for (const id of abs) {
-        if (_abilityNameWithoutLevel(id).toLowerCase() === target) ids.add(id);
-      }
-    }
-    return ids;
-  }
-  function _canonicalSpecies(s) {
-    if (!s) return s;
-    if (petCatalog2[s]) return s;
-    const lc = s.toLowerCase();
-    const found = _petCatalogKeyByLc().get(lc);
-    if (found) return found;
-    const t = s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-    return petCatalog2[t] ? t : s;
-  }
-  function _invPetToRawItem(p) {
-    return {
-      id: p.id,
-      itemType: "Pet",
-      petSpecies: _canonicalSpecies(p.petSpecies),
-      name: p.name ?? null,
-      xp: p.xp,
-      hunger: p.hunger,
-      mutations: Array.isArray(p.mutations) ? p.mutations.slice() : [],
-      targetScale: p.targetScale,
-      abilities: Array.isArray(p.abilities) ? p.abilities.slice() : []
-    };
-  }
-  function _dedupeTeams(arr) {
-    const seen = /* @__PURE__ */ new Set();
-    const out = [];
-    for (const t of Array.isArray(arr) ? arr : []) {
-      const id = String(t?.id || "");
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
-      const slots = Array.isArray(t?.slots) ? t.slots.slice(0, 3).map((x) => x ? String(x) : null) : [null, null, null];
-      out.push({ ...t, id, slots });
-    }
-    return out;
-  }
-  function loadTeams() {
-    const arr = readAriesPath(PATH_PETS_TEAMS) ?? [];
-    if (!Array.isArray(arr)) return [];
-    const mapped = arr.map((t) => ({
-      id: String(t?.id || ""),
-      name: String(t?.name || "Team"),
-      slots: Array.isArray(t?.slots) ? t.slots.slice(0, 3).map((x) => x ? String(x) : null) : [null, null, null],
-      serverId: t?.serverId ? String(t.serverId) : null
-    })).filter((t) => t.id);
-    const unique = _dedupeTeams(mapped);
-    if (unique.length !== mapped.length) {
-      try {
-        saveTeams(unique);
-      } catch {
-      }
-    }
-    for (const t of unique) {
-      if (t.serverId) _localTeamIdByServerId.set(t.serverId, t.id);
-    }
-    return unique;
-  }
-  function saveTeams(arr) {
-    for (const t of Array.isArray(arr) ? arr : []) {
-      if (t?.serverId && t?.id) _localTeamIdByServerId.set(String(t.serverId), String(t.id));
-    }
-    writeAriesPath(PATH_PETS_TEAMS, arr);
-  }
-  function _uid() {
-    try {
-      return crypto.randomUUID();
-    } catch {
-      return `t_${Date.now().toString(36)}_${Math.random().toString(16).slice(2)}`;
-    }
-  }
-  function _loadTeamSearchMap() {
-    const obj = readAriesPath(PATH_PETS_TEAM_SEARCH);
-    return obj && typeof obj === "object" ? obj : {};
-  }
-  function _saveTeamSearchMap(map2) {
-    writeAriesPath(PATH_PETS_TEAM_SEARCH, map2);
-  }
-  function _teamIdFromSlots(ids) {
-    const wanted = new Set(ids.map((id) => String(id || "")).filter(Boolean));
-    if (!wanted.size) return null;
-    for (const team of PetsService.getTeams()) {
-      const slots = (Array.isArray(team?.slots) ? team.slots : []).map((id) => String(id || "")).filter(Boolean);
-      if (slots.length !== wanted.size) continue;
-      const set2 = new Set(slots);
-      let ok = true;
-      for (const id of wanted) {
-        if (!set2.has(id)) {
-          ok = false;
-          break;
-        }
-      }
-      if (ok) return team.id;
-    }
-    return null;
-  }
-  async function _currentActiveTeamId() {
-    try {
-      const slots = await _getActivePetSlotIds();
-      return _teamIdFromSlots(slots);
-    } catch {
-      return null;
-    }
-  }
-  function _sendSavePetTeam(teamId2, name, petIds) {
-    if (!_teamSyncEnabled) return;
-    const isCreate = teamId2 === null;
-    const id = teamId2 ?? _newTeamId();
-    try {
-      sendToGame({ type: "SavePetTeam", teamId: id, isCreate, name: petTeamName(name), petIds });
-    } catch {
-    }
-  }
-  function _newTeamId() {
-    try {
-      const uuid = globalThis.crypto?.randomUUID?.();
-      if (uuid) return uuid;
-    } catch {
-    }
-    return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
-  }
-  function _sendDeletePetTeam(teamId2) {
-    if (!_teamSyncEnabled) return;
-    try {
-      sendToGame({ type: "DeletePetTeam", teamId: teamId2 });
-    } catch {
-    }
-  }
-  function _sendApplyPetTeam(teamId2) {
-    if (!_teamSyncEnabled) return;
-    try {
-      sendToGame({ type: "ApplyPetTeam", teamId: teamId2 });
-    } catch {
-    }
-  }
-  function _sendMovePetTeam(teamId2, toIndex) {
-    if (!_teamSyncEnabled) return;
-    try {
-      sendToGame({ type: "MovePetTeam", movePetTeamId: teamId2, toPetTeamIndex: toIndex });
-    } catch {
-    }
-  }
-  function _clearPendingCreate(localId2) {
-    _pendingServerCreates.delete(localId2);
-    _pendingCreateSentName.delete(localId2);
-    const t = _pendingCreateTimeouts.get(localId2);
-    if (t) {
-      clearTimeout(t);
-      _pendingCreateTimeouts.delete(localId2);
-    }
-  }
-  function _createAttemptSig(local) {
-    const petIds = (local.slots || []).filter((x) => !!x).slice().sort();
-    return `${local.name.trim().toLowerCase()}::${petIds.join(",")}`;
-  }
-  function _serverTeamsSig(list) {
-    try {
-      return list.map((t) => `${t.id}:${t.name}:${serverMemberIds(t).slice().sort().join(",")}`).sort().join("|");
-    } catch {
-      return "";
-    }
-  }
-  function _maybeCreateServerTeam(local) {
-    if (!_teamSyncEnabled) return;
-    if (_pendingServerCreates.has(local.id)) return;
-    const petIds = (local.slots || []).filter((x) => !!x);
-    const name = (local.name || "").trim();
-    if (!name || !petIds.length) return;
-    const sig = _createAttemptSig(local);
-    if (_lastCreateAttemptSig.get(local.id) === sig) return;
-    _lastCreateAttemptSig.set(local.id, sig);
-    _pendingServerCreates.add(local.id);
-    _pendingCreateSentName.set(local.id, name);
-    try {
-      console.warn(`[Pets] Creating native pet team "${name}" (${petIds.length} pet(s)) \u2014 one-shot, will not auto-retry.`);
-    } catch {
-    }
-    _sendSavePetTeam(null, name, petIds);
-    const timeout = setTimeout(() => _clearPendingCreate(local.id), PENDING_CREATE_TIMEOUT_MS);
-    _pendingCreateTimeouts.set(local.id, timeout);
-  }
-  function _reconcileTeams() {
-    if (!_teamSyncEnabled) return;
-    if (_reconcilingTeams) {
-      _reconcileTeamsQueued = true;
-      return;
-    }
-    _reconcilingTeams = true;
-    try {
-      const r = reconcilePetTeams(PetsService._teams, _serverTeams, {
-        sentName: (localId2) => _pendingCreateSentName.get(localId2),
-        knownLocalId: (serverId) => _localTeamIdByServerId.get(serverId),
-        newId: _uid
-      });
-      for (const localId2 of r.linkedLocalIds) _clearPendingCreate(localId2);
-      for (const u of r.pushUpdates) _sendSavePetTeam(u.serverId, u.name, u.petIds);
-      for (const local of r.needsCreate) _maybeCreateServerTeam(local);
-      for (const t of r.dropped) _localTeamIdByServerId.set(String(t.serverId), t.id);
-      PetsService._teams = r.teams;
-      if (r.changed) {
-        saveTeams(PetsService._teams);
-        PetsService._notifyTeamSubs();
-      }
-    } finally {
-      _reconcilingTeams = false;
-      if (_reconcileTeamsQueued) {
-        _reconcileTeamsQueued = false;
-        _reconcileTeams();
-      }
-    }
-  }
-  async function _extractServerTeamsFromSlots(slots) {
-    try {
-      const idx = await _getMyUserSlotIndex();
-      if (idx == null) return null;
-      const list = Array.isArray(slots) ? slots : [];
-      const mySlot = list[idx];
-      if (!mySlot || typeof mySlot !== "object") return null;
-      const teams = mySlot?.data?.petTeams;
-      return Array.isArray(teams) ? teams : null;
-    } catch {
-      return null;
-    }
-  }
-  async function _startServerTeamsWatcher() {
-    const applyNext = async (slots) => {
-      const next = await _extractServerTeamsFromSlots(slots);
-      if (next === null) return;
-      const sig = _serverTeamsSig(next);
-      if (sig === _lastServerTeamsSig) return;
-      _lastServerTeamsSig = sig;
-      _serverTeams = next;
-      _reconcileTeams();
-    };
-    try {
-      await applyNext(await stateUserSlots.get());
-    } catch {
-    }
-    try {
-      await stateUserSlots.onChange((slots) => {
-        applyNext(slots);
-      });
-    } catch {
-    }
-  }
-  function _setTeamSyncEnabled(value) {
-    const next = !!value;
-    if (next === _teamSyncEnabled) return;
-    _teamSyncEnabled = next;
-    writeAriesPath(PATH_PETS_TEAM_SYNC, next);
-    if (!next) {
-      for (const localId2 of Array.from(_pendingServerCreates)) _clearPendingCreate(localId2);
-      return;
-    }
-    _lastCreateAttemptSig.clear();
-    _reconcileTeams();
-  }
-  function _inventoryItemToPet(x) {
-    if (!x || x.itemType !== "Pet") return null;
-    const id = _s(x.id);
-    if (!id) return null;
-    const speciesRaw = x.petSpecies ?? x.data?.petSpecies;
-    return {
-      id,
-      itemType: "Pet",
-      petSpecies: _canonicalSpecies(String(speciesRaw ?? "").trim()),
-      name: _sOpt(x.name ?? x.data?.name ?? null),
-      xp: _n(x.xp ?? x.data?.xp),
-      hunger: _n(x.hunger ?? x.data?.hunger),
-      mutations: _sArr(x.mutations ?? x.data?.mutations),
-      targetScale: Number.isFinite(x.targetScale ?? x.data?.targetScale) ? Number(x.targetScale ?? x.data?.targetScale) : void 0,
-      abilities: _sArr(x.abilities ?? x.data?.abilities)
-    };
-  }
-  function _activeSlotToPet(entry) {
-    const slot = entry?.slot ?? entry;
-    if (!slot || typeof slot !== "object") return null;
-    const id = _s(slot.id);
-    if (!id) return null;
-    const speciesRaw = slot.petSpecies ?? slot.species;
-    return {
-      id,
-      itemType: "Pet",
-      petSpecies: _canonicalSpecies(String(speciesRaw ?? "").trim()),
-      name: _sOpt(slot.name ?? null),
-      xp: _n(slot.xp),
-      hunger: _n(slot.hunger),
-      mutations: _sArr(slot.mutations),
-      targetScale: Number.isFinite(slot.targetScale) ? Number(slot.targetScale) : void 0,
-      abilities: _sArr(slot.abilities)
-    };
-  }
-  function _petSigStableNoXpNoHunger(p) {
-    return JSON.stringify({
-      id: p.id,
-      itemType: "Pet",
-      petSpecies: p.petSpecies,
-      name: p.name ?? null,
-      mutations: Array.isArray(p.mutations) ? p.mutations : [],
-      targetScale: Number.isFinite(p.targetScale) ? p.targetScale : null,
-      abilities: Array.isArray(p.abilities) ? p.abilities : []
-    });
-  }
-  function _buildInvSigFromInventory(inv) {
-    const out = /* @__PURE__ */ new Map();
-    const items = Array.isArray(inv?.items) ? inv.items : Array.isArray(inv) ? inv : [];
-    for (const it of items) {
-      const p = _inventoryItemToPet(it);
-      if (p) out.set(p.id, _petSigStableNoXpNoHunger(p));
-    }
-    return out;
-  }
-  function _buildActiveSig(list) {
-    const out = /* @__PURE__ */ new Map();
-    const arr = Array.isArray(list) ? list : [];
-    for (const e of arr) {
-      const p = _activeSlotToPet(e);
-      if (p) out.set(p.id, _petSigStableNoXpNoHunger(p));
-    }
-    return out;
-  }
-  function _mapsEqual(a, b) {
-    if (!a) return false;
-    if (a.size !== b.size) return false;
-    for (const [k, v] of b) if (a.get(k) !== v) return false;
-    return true;
-  }
-  function _rebuildInvPets() {
-    const map2 = /* @__PURE__ */ new Map();
-    const hutchItems = Array.isArray(_hutchRaw) ? _hutchRaw : [];
-    const invItems = Array.isArray(_invRaw?.items) ? _invRaw.items : Array.isArray(_invRaw) ? _invRaw : [];
-    for (const it of hutchItems) {
-      const p = _inventoryItemToPet(it);
-      if (p && p.id) map2.set(p.id, p);
-    }
-    for (const it of invItems) {
-      const p = _inventoryItemToPet(it);
-      if (p && p.id) map2.set(p.id, p);
-    }
-    const act = Array.isArray(_activeRaw) ? _activeRaw : [];
-    for (const e of act) {
-      const p = _activeSlotToPet(e);
-      if (p && p.id) map2.set(p.id, p);
-    }
-    _invPetsCache = Array.from(map2.values());
-  }
-  async function _startInventoryWatcher() {
-    const unsub = await (async () => {
-      try {
-        const cur = await Atoms.inventory.myInventory.get();
-        _invSig = _buildInvSigFromInventory(cur);
-        _invRaw = cur;
-        _rebuildInvPets();
-      } catch {
-      }
-      return Atoms.inventory.myInventory.onChange((inv) => {
-        const nextSig = _buildInvSigFromInventory(inv);
-        if (_mapsEqual(_invSig, nextSig)) return;
-        _invSig = nextSig;
-        _invRaw = inv;
-        _rebuildInvPets();
-      });
-    })();
-    _invUnsub = () => {
-      try {
-        unsub();
-      } catch {
-      }
-    };
-  }
-  async function _startActivePetsWatcher() {
-    const unsub = await (async () => {
-      try {
-        const curPrim = await Atoms.pets.myPrimitivePetSlots.get();
-        if (Array.isArray(curPrim)) {
-          _activeSig = _buildActiveSig(curPrim);
-          _activeRaw = curPrim;
-          _rebuildInvPets();
-          return Atoms.pets.myPrimitivePetSlots.onChange((list) => {
-            const nextSig = _buildActiveSig(list);
-            if (_mapsEqual(_activeSig, nextSig)) return;
-            _activeSig = nextSig;
-            _activeRaw = Array.isArray(list) ? list : [];
-            _rebuildInvPets();
-          });
-        }
-      } catch {
-      }
-      try {
-        const cur = await Atoms.pets.myPetInfos.get();
-        _activeSig = _buildActiveSig(cur);
-        _activeRaw = Array.isArray(cur) ? cur : [];
-        _rebuildInvPets();
-      } catch {
-      }
-      return Atoms.pets.myPetInfos.onChange((list) => {
-        const nextSig = _buildActiveSig(list);
-        if (_mapsEqual(_activeSig, nextSig)) return;
-        _activeSig = nextSig;
-        _activeRaw = Array.isArray(list) ? list : [];
-        _rebuildInvPets();
-      });
-    })();
-    _activeUnsub = () => {
-      try {
-        unsub();
-      } catch {
-      }
-    };
-  }
-  async function _startHutchWatcher() {
-    const unsub = await (async () => {
-      try {
-        const cur = await myPetHutchPetItems.get();
-        _hutchRaw = Array.isArray(cur) ? cur : [];
-        _rebuildInvPets();
-      } catch {
-      }
-      return myPetHutchPetItems.onChange((list) => {
-        _hutchRaw = Array.isArray(list) ? list : [];
-        _rebuildInvPets();
-      });
-    })();
-    _hutchUnsub = () => {
-      try {
-        unsub();
-      } catch {
-      }
-    };
-  }
-  async function _ensureInventoryWatchersStarted() {
-    if (!_invUnsub) await _startInventoryWatcher();
-    if (!_activeUnsub) await _startActivePetsWatcher();
-    if (!_hutchUnsub) await _startHutchWatcher();
-    if (!_invPetsCache.length) {
-      try {
-        const inv = await Atoms.inventory.myInventory.get();
-        let active2 = null;
-        try {
-          active2 = await Atoms.pets.myPrimitivePetSlots.get();
-        } catch {
-        }
-        if (!Array.isArray(active2)) {
-          try {
-            active2 = await Atoms.pets.myPetInfos.get();
-          } catch {
-          }
-        }
-        const hutch = await myPetHutchPetItems.get();
-        _invSig = _buildInvSigFromInventory(inv);
-        _activeSig = _buildActiveSig(active2);
-        _invRaw = inv;
-        _activeRaw = Array.isArray(active2) ? active2 : [];
-        _hutchRaw = Array.isArray(hutch) ? hutch : [];
-        _rebuildInvPets();
-      } catch {
-      }
-    }
-  }
-  async function clearHandSelection() {
-    try {
-      await Atoms.inventory.setSelectedIndexToEnd.set(null);
-    } catch (err) {
-    }
-    try {
-      await Atoms.inventory.mySelectedItemId.set(null);
-    } catch (err) {
-    }
-    try {
-      await Atoms.inventory.myPossiblyNoLongerValidSelectedItemIndex.set(null);
-    } catch (err) {
-    }
-    try {
-      await PlayerService.setSelectedItem(null);
-    } catch (err) {
-    }
-    try {
-      await PlayerService.dropObject();
-    } catch (err) {
-    }
-  }
-  async function _waitValidatedInventoryIndex(timeoutMs = 2e4) {
-    await clearHandSelection();
-    const t0 = performance.now();
-    while (performance.now() - t0 < timeoutMs) {
-      try {
-        const modalVal = await Atoms.ui.activeModal.get();
-        if (!isInventoryOpen(modalVal)) return null;
-      } catch {
-        return null;
-      }
-      try {
-        const v = await Atoms.inventory.myValidatedSelectedItemIndex.get();
-        if (typeof v === "number" && Number.isInteger(v) && v >= 0) return v;
-      } catch {
-      }
-      await new Promise((r) => setTimeout(r, 80));
-    }
-    return null;
-  }
-  function saveOverrides(map2) {
-    writeAriesPath(PATH_PETS_OVERRIDES, map2);
-  }
-  function loadOverrides() {
-    const obj = readAriesPath(PATH_PETS_OVERRIDES);
-    return obj && typeof obj === "object" ? obj : {};
-  }
-  function saveInstantFeedOverrides(map2) {
-    writeAriesPath(PATH_PETS_INSTANT_FEED, map2);
-  }
-  function loadInstantFeedOverrides() {
-    const obj = readAriesPath(PATH_PETS_INSTANT_FEED);
-    return obj && typeof obj === "object" ? obj : {};
-  }
-  function saveUIState(next) {
-    writeAriesPath(PATH_PETS_UI, next);
-  }
-  function loadUIState() {
-    const obj = readAriesPath(PATH_PETS_UI);
-    const merged = { ...DEFAULT_UI, ...obj || {} };
-    return merged;
-  }
-  function cloneOverride(o) {
-    const src = o ?? DEFAULT_OVERRIDE;
-    return {
-      enabled: !!src.enabled,
-      thresholdPct: Math.min(100, Math.max(1, Number(src.thresholdPct) || DEFAULT_OVERRIDE.thresholdPct)),
-      crops: { ...src.crops || {} }
-    };
-  }
-  function cloneInstantFeedOverride(o) {
-    const src = o ?? DEFAULT_INSTANT_FEED;
-    return {
-      crops: { ...src.crops || {} }
-    };
-  }
-  function clampPct(n) {
-    return Math.max(0, Math.min(100, n));
-  }
-  function getCompatibleCropsFromData(species) {
-    const PC = petCatalog2;
-    const entry = PC?.[species];
-    const raw = entry?.diet ?? entry?.compatibleCrops ?? entry?.crops ?? [];
-    const arr = Array.isArray(raw) ? raw : [];
-    return arr.filter((c) => typeof c === "string" && c.length > 0);
-  }
-  function getMaxHungerFromData(species) {
-    const v = petCatalog2?.[species]?.coinsToFullyReplenishHunger;
-    if (typeof v === "number" && Number.isFinite(v) && v > 0) return v;
-    return 3e3;
-  }
-  async function findPetById(petId) {
-    try {
-      const list = await PlayerService.getPets();
-      const arr = Array.isArray(list) ? list : [];
-      return arr.find((p) => String(p?.slot?.id || "") === String(petId)) ?? null;
-    } catch {
-      return null;
-    }
-  }
-  function findFirstCompatibleInvItem(allowed, inv) {
-    const arr = Array.isArray(inv) ? inv : [];
-    for (const it of arr) {
-      const species = String(it?.species || "");
-      if (species && allowed.has(species)) return it;
-    }
-    return null;
-  }
-  function _emitTrigger(payload) {
-    try {
-      _userTriggerCb?.(payload);
-    } catch {
-    }
-  }
-  async function _evaluatePet(pet) {
-    const petId = String(pet?.slot?.id || "");
-    if (!petId) return;
-    const ov = PetsService.getOverride(petId);
-    if (!ov.enabled) {
-      _lastAutofeedAttemptAt.delete(petId);
-      return;
-    }
-    const hungerPct = PetsService.getHungerPctFor(pet);
-    const thresholdPct = Math.max(1, Math.min(100, ov.thresholdPct | 0 || 10));
-    const nowBelow = hungerPct < thresholdPct;
-    const now2 = Date.now();
-    const lastAttempt = _lastAutofeedAttemptAt.get(petId) || 0;
-    if (nowBelow && now2 - lastAttempt >= AUTOF_FEED_MIN_INTERVAL_MS) {
-      let allowedSet;
-      try {
-        allowedSet = await PetsService.getPetAllowedCrops(petId);
-      } catch {
-        const species = String(pet?.slot?.petSpecies || "");
-        allowedSet = new Set(PetsService.getCompatibleCropsForSpecies(species));
-      }
-      const allowed = Array.from(allowedSet);
-      let chosen = null;
-      let didUnfavorite = false;
-      try {
-        const [invRaw, favIdsRaw] = await Promise.all([
-          PlayerService.getCropInventoryState(),
-          PlayerService.getFavoriteIds?.() ?? []
-        ]);
-        const inv = Array.isArray(invRaw) ? invRaw : [];
-        const favSet = new Set(Array.isArray(favIdsRaw) ? favIdsRaw : []);
-        const invNonFav = inv.filter((it) => !favSet.has(String(it?.id)));
-        chosen = findFirstCompatibleInvItem(allowedSet, invNonFav);
-        if (chosen?.id && PlayerService.feedPet) {
-          try {
-            await PlayerService.feedPet(petId, chosen.id);
-          } catch {
-          }
-        }
-      } catch {
-      }
-      _emitTrigger({
-        pet,
-        petId,
-        species: String(pet?.slot?.petSpecies || ""),
-        hungerPct,
-        thresholdPct,
-        allowedCrops: allowed,
-        chosenItem: chosen,
-        didUnfavorite
-      });
-      _lastAutofeedAttemptAt.set(petId, now2);
-    }
-    if (!nowBelow) {
-      _lastAutofeedAttemptAt.delete(petId);
-    }
-  }
-  async function _evaluateAll() {
-    const arr = Array.isArray(_currentPets) ? _currentPets : [];
-    for (const p of arr) {
-      try {
-        await _evaluatePet(p);
-      } catch {
-      }
-    }
-  }
-  async function _getHutchInfo() {
-    let capacity = 0;
-    let used = 0;
-    try {
-      const inv = await Atoms.inventory.myInventory.get();
-      const storages = Array.isArray(inv?.storages) ? inv.storages : [];
-      const hutch = storages.find((s) => s?.id === "PetHutch" || s?.decorId === "PetHutch");
-      const slots = Number(hutch?.capacitySlots);
-      if (Number.isFinite(slots) && slots > 0) capacity = slots;
-      if (Array.isArray(hutch?.items)) used = hutch.items.length;
-    } catch {
-    }
-    if (!capacity) {
-      try {
-        const n = Number(await myPetHutchCapacitySlots.get());
-        if (Number.isFinite(n) && n > 0) capacity = n;
-      } catch {
-      }
-    }
-    if (!capacity) capacity = HUTCH_DEFAULT_CAPACITY;
-    if (!used) {
-      try {
-        const n = Number(await myNumPetHutchItems.get());
-        if (Number.isFinite(n) && n > 0) used = n;
-      } catch {
-      }
-    }
-    return { capacity, used, free: Math.max(0, capacity - used) };
-  }
-  async function _getActivePetSlotIds() {
-    try {
-      const primitives = await Atoms.pets.myPrimitivePetSlots.get();
-      const primList = Array.isArray(primitives) ? primitives : [];
-      const primIds = primList.map((p) => String(p?.id || "")).filter((id) => !!id).slice(0, 3);
-      if (primIds.length) return primIds;
-      const arr = await PlayerService.getPets();
-      const list = Array.isArray(arr) ? arr : [];
-      return list.map((p) => String(p?.slot?.id || "")).filter((id) => !!id).slice(0, 3);
-    } catch {
-      return [];
-    }
-  }
-  async function _waitForHutchState(predicate, timeoutMs = 4e3) {
-    const snapshotMatches = async () => {
-      try {
-        const cur = await myPetHutchPetItems.get();
-        const set2 = new Set(
-          (Array.isArray(cur) ? cur : []).map((p) => String(p?.id || "")).filter(Boolean)
-        );
-        return predicate(set2);
-      } catch {
-        return false;
-      }
-    };
-    if (await snapshotMatches()) return true;
-    return new Promise((resolve) => {
-      const deadline = Date.now() + timeoutMs;
-      let unsub = null;
-      let pendingUnsub = null;
-      let stopped = false;
-      const doUnsub = (fn) => {
-        if (fn) {
-          try {
-            fn();
-          } catch {
-          }
-        }
-      };
-      const stop2 = (ok) => {
-        if (stopped) return;
-        stopped = true;
-        if (unsub) {
-          doUnsub(unsub);
-        } else if (pendingUnsub) {
-          pendingUnsub.then((fn) => doUnsub(fn)).catch(() => {
-          });
-        }
-        resolve(ok);
-      };
-      const check = async (state5) => {
-        const set2 = new Set(
-          (Array.isArray(state5) ? state5 : []).map((p) => String(p?.id || "")).filter(Boolean)
-        );
-        if (predicate(set2)) {
-          stop2(true);
-        } else if (Date.now() >= deadline) {
-          stop2(false);
-        }
-      };
-      try {
-        const res = myPetHutchPetItems.onChange((state5) => {
-          void check(state5);
-        });
-        if (typeof res === "function") {
-          unsub = res;
-        } else if (res && typeof res.then === "function") {
-          pendingUnsub = res;
-          pendingUnsub.then((fn) => {
-            unsub = fn;
-            if (stopped) {
-              doUnsub(fn);
-            }
-          }).catch(() => {
-          });
-        }
-      } catch {
-        stop2(false);
-        return;
-      }
-      void check();
-      setTimeout(() => stop2(false), timeoutMs + 50);
-    });
-  }
-  function _alignTargetsToActiveSlots(targets, activeSlots) {
-    const aligned = new Array(MAX_TEAM_SLOTS).fill("");
-    const remaining = [];
-    for (const id of targets) {
-      const idx = activeSlots.indexOf(id);
-      if (idx >= 0 && idx < MAX_TEAM_SLOTS && !aligned[idx]) aligned[idx] = id;
-      else remaining.push(id);
-    }
-    for (const id of remaining) {
-      const free = aligned.findIndex((v) => v === "");
-      if (free < 0) break;
-      aligned[free] = id;
-    }
-    return aligned;
-  }
-  async function _moveSparePetToHutch(targetSet, activeSlots, hutchItemsSet) {
-    try {
-      const invPets = await PetsService.getInventoryPets();
-      const spare = (Array.isArray(invPets) ? invPets : []).find((p) => {
-        const id = String(p?.id || "");
-        return id && !hutchItemsSet.has(id) && !activeSlots.includes(id) && !targetSet.has(id);
-      });
-      if (!spare) return false;
-      await PlayerService.putItemInStorage(spare.id, "PetHutch");
-      void _waitForHutchState((set2) => set2.has(String(spare.id)), 3e3);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  async function _getMyUserSlotIndex() {
-    try {
-      const slots = await stateUserSlots.get();
-      const list = Array.isArray(slots) ? slots : [];
-      if (!list.length) return null;
-      let roomId2 = null;
-      let accountId = null;
-      try {
-        roomId2 = await playerId.get() ?? null;
-      } catch {
-      }
-      try {
-        accountId = readAccountId(await player.get());
-      } catch {
-      }
-      if (!roomId2 && !accountId) return null;
-      return findSlotIndex(list, { accountId, roomId: roomId2 });
-    } catch {
-      return null;
-    }
-  }
-  async function _getMyDirtTilePlacement(tileOffset) {
-    try {
-      const map2 = await Atoms.root.map.get();
-      const cols = Number(map2?.cols);
-      const dirtArrays = Array.isArray(map2?.userSlotIdxAndDirtTileIdxToGlobalTileIdx) ? map2.userSlotIdxAndDirtTileIdxToGlobalTileIdx : [];
-      if (!Number.isFinite(cols) || cols <= 0 || !dirtArrays.length) return null;
-      const slotIdx2 = await _getMyUserSlotIndex();
-      if (slotIdx2 == null) return null;
-      const dirtGlobals = Array.isArray(dirtArrays[slotIdx2]) ? dirtArrays[slotIdx2] : [];
-      if (!dirtGlobals.length) return null;
-      const localTileIndex = Math.min(Math.max(0, tileOffset), dirtGlobals.length - 1);
-      const globalIndex = Number(dirtGlobals[localTileIndex]);
-      if (!Number.isFinite(globalIndex)) return null;
-      return {
-        position: { x: globalIndex % cols, y: Math.floor(globalIndex / cols) },
-        localTileIndex
-      };
-    } catch {
-      return null;
-    }
-  }
-  async function _placePetInMyGarden(petId, tileOffset) {
-    const tile = await _getMyDirtTilePlacement(tileOffset);
-    if (tile) {
-      await PlayerService.placePet(petId, tile.position, "Dirt", tile.localTileIndex);
-      return;
-    }
-    await PlayerService.placePet(petId, { x: 0, y: 0 }, "Boardwalk", 64);
-  }
-  async function _equipPetIds(targetInvIdsRaw, opts) {
-    const markId = (opts?.markTeamId ?? null) || null;
-    const seenIds = /* @__PURE__ */ new Set();
-    const targetInvIds = (Array.isArray(targetInvIdsRaw) ? targetInvIdsRaw : []).map((v) => String(v || "")).filter((v) => v.length > 0 && !seenIds.has(v) && !!seenIds.add(v)).slice(0, MAX_TEAM_SLOTS);
-    const markResolved = markId ?? _teamIdFromSlots(targetInvIds) ?? null;
-    const shouldMark = opts?.markUsed !== false && !!markResolved;
-    const finish = (res) => {
-      if (shouldMark) markTeamAsUsed(markResolved);
-      return res;
-    };
-    if (!targetInvIds.length) return finish({ swapped: 0, placed: 0, skipped: 0 });
-    const activeSlots = await _getActivePetSlotIds();
-    const sameTeam = targetInvIds.length === activeSlots.length && [...targetInvIds].sort().join("|") === [...activeSlots].sort().join("|");
-    if (sameTeam) return finish({ swapped: 0, placed: 0, skipped: targetInvIds.length });
-    let freeHutch = (await _getHutchInfo()).free;
-    let hutchItemsSet = /* @__PURE__ */ new Set();
-    try {
-      const hutchItems = await myPetHutchPetItems.get();
-      if (Array.isArray(hutchItems)) {
-        hutchItemsSet = new Set(
-          hutchItems.map((it) => String(it?.id ?? "")).filter(Boolean)
-        );
-      }
-    } catch {
-    }
-    const targetSet = new Set(targetInvIds);
-    const aligned = _alignTargetsToActiveSlots(targetInvIds, activeSlots);
-    const notifyInventoryFull = async () => {
-      try {
-        await toastSimple(
-          "Inventory Full",
-          "Cannot equip team: required pets are in the Pet Hutch and your inventory is full.",
-          "error"
-        );
-      } catch {
-      }
-    };
-    let swapped = 0, placed = 0, skipped = 0;
-    let placementOffset = 0;
-    for (let slot = 0; slot < MAX_TEAM_SLOTS; slot++) {
-      const targetId = aligned[slot];
-      const currentId = String(activeSlots[slot] ?? "");
-      if (targetId && targetId === currentId) {
-        skipped++;
-        continue;
-      }
-      if (!targetId && currentId) {
-        try {
-          await PlayerService.storePet(currentId);
-          activeSlots[slot] = "";
-          if (freeHutch > 0) {
-            await PlayerService.putItemInStorage(currentId, "PetHutch");
-            freeHutch--;
-            void _waitForHutchState((set2) => set2.has(currentId), 3e3);
-          }
-        } catch {
-        }
-        continue;
-      }
-      if (!targetId) continue;
-      if (currentId && hutchItemsSet.has(targetId)) {
-        try {
-          await PlayerService.swapPetFromStorage(currentId, targetId, "PetHutch");
-          swapped++;
-          activeSlots[slot] = targetId;
-          hutchItemsSet.delete(targetId);
-          hutchItemsSet.add(currentId);
-        } catch {
-          try {
-            await _placePetInMyGarden(targetId, placementOffset++);
-            placed++;
-          } catch {
-          }
-        }
-        continue;
-      }
-      if (hutchItemsSet.has(targetId)) {
-        let invFull = false;
-        try {
-          invFull = !!await isMyInventoryAtMaxLength.get();
-        } catch {
-        }
-        if (invFull) {
-          const freed = freeHutch > 0 && await _moveSparePetToHutch(targetSet, activeSlots, hutchItemsSet);
-          if (freed) {
-            freeHutch--;
-          } else {
-            await notifyInventoryFull();
-            return finish({ swapped, placed, skipped });
-          }
-        }
-        try {
-          await PlayerService.retrieveItemFromStorage(targetId, "PetHutch");
-          hutchItemsSet.delete(targetId);
-          freeHutch++;
-          void _waitForHutchState((set2) => !set2.has(targetId), 3e3);
-        } catch {
-          continue;
-        }
-      }
-      if (!currentId) {
-        try {
-          await _placePetInMyGarden(targetId, placementOffset++);
-          placed++;
-          activeSlots[slot] = targetId;
-        } catch {
-        }
-        continue;
-      }
-      try {
-        await PlayerService.swapPet(currentId, targetId);
-        swapped++;
-        activeSlots[slot] = targetId;
-        if (freeHutch > 0) {
-          try {
-            await PlayerService.putItemInStorage(currentId, "PetHutch");
-            freeHutch--;
-            void _waitForHutchState((set2) => set2.has(currentId), 3e3);
-          } catch {
-          }
-        }
-      } catch {
-        try {
-          await _placePetInMyGarden(targetId, placementOffset++);
-          placed++;
-        } catch {
-        }
-      }
-    }
-    return finish({ swapped, placed, skipped });
-  }
-  var PATH_PETS_OVERRIDES, PATH_PETS_INSTANT_FEED, PATH_PETS_UI, PATH_PETS_TEAMS, PATH_PETS_TEAM_SEARCH, PATH_PETS_TEAM_SYNC, PATH_PETS_HOTKEYS, PATH_PETS_ABILITY_LOGS, WEATHER_MUTATION_BOOST_IDS, TEAM_HK_MAP, TEAM_HK_UNSUBS, hkNextTeam, hkPrevTeam, unsubNextHotkey, unsubPrevHotkey, orderedTeamIds, lastUsedTeamId, _AB, _abilityIdsCache, _s, _sOpt, _n, _sArr, _petCatalogKeyByLc, _teamSearch, _teamSyncEnabled, _localTeamIdByServerId, _serverTeams, _teamSyncStarted, _lastServerTeamsSig, _reconcilingTeams, _reconcileTeamsQueued, _pendingServerCreates, _pendingCreateTimeouts, _pendingCreateSentName, PENDING_CREATE_TIMEOUT_MS, _lastCreateAttemptSig, _invRaw, _activeRaw, _hutchRaw, _invPetsCache, _invUnsub, _activeUnsub, _hutchUnsub, _invSig, _activeSig, _lastAutofeedAttemptAt, _belowThreshold, AUTOF_FEED_MIN_INTERVAL_MS, DEFAULT_OVERRIDE, DEFAULT_UI, DEFAULT_INSTANT_FEED, _currentPets, _userTriggerCb, PetsService, HUTCH_DEFAULT_CAPACITY, MAX_TEAM_SLOTS;
-  var init_pets = __esm({
-    "src/features/pets/pets.ts"() {
-      "use strict";
-      init_player();
-      init_data();
-      init_fakeModal();
-      init_atoms();
-      init_playerIdentity();
-      init_toast();
-      init_hotkey();
-      init_keybinds();
-      init_keyboard();
-      init_stats();
-      init_storage();
-      init_pageContext();
-      init_send();
-      init_teamReconcile();
-      PATH_PETS_OVERRIDES = "pets.overrides";
-      PATH_PETS_INSTANT_FEED = "pets.instantFeed";
-      PATH_PETS_UI = "pets.ui";
-      PATH_PETS_TEAMS = "pets.teams";
-      PATH_PETS_TEAM_SEARCH = "pets.teamSearch";
-      PATH_PETS_TEAM_SYNC = "pets.teamSync";
-      PATH_PETS_HOTKEYS = "pets.hotkeys";
-      PATH_PETS_ABILITY_LOGS = "pets.abilityLogs";
-      WEATHER_MUTATION_BOOST_IDS = /* @__PURE__ */ new Set([
-        "ProduceMutationBoost",
-        "ProduceMutationBoostII",
-        "ProduceMutationBoostIII",
-        "DawnBoost",
-        "AmberMoonBoost",
-        "ThunderBoost",
-        "SnowyCropMutationBoost",
-        "PetMutationBoost",
-        "PetMutationBoostII",
-        "PetMutationBoostIII",
-        // Passive chance boost; the game itself never logs it (returns nothing).
-        "DawnbinderBoost"
-      ]);
-      TEAM_HK_MAP = /* @__PURE__ */ new Map();
-      TEAM_HK_UNSUBS = /* @__PURE__ */ new Map();
-      hkNextTeam = null;
-      hkPrevTeam = null;
-      unsubNextHotkey = null;
-      unsubPrevHotkey = null;
-      orderedTeamIds = [];
-      lastUsedTeamId = null;
-      _AB = petAbilities2 ?? {};
-      _abilityIdsCache = null;
-      _s = (v) => (v ?? "").toLowerCase();
-      _sOpt = (v) => typeof v === "string" ? v : null;
-      _n = (v) => Number.isFinite(v) ? v : 0;
-      _sArr = (v) => Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
-      _petCatalogKeyByLc = memoOnCatalogs(() => new Map(
-        Object.keys(petCatalog2).map((k) => [k.toLowerCase(), k])
-      ));
-      _teamSearch = _loadTeamSearchMap();
-      _teamSyncEnabled = readAriesPath(PATH_PETS_TEAM_SYNC, true) !== false;
-      _localTeamIdByServerId = /* @__PURE__ */ new Map();
-      _serverTeams = [];
-      _teamSyncStarted = false;
-      _lastServerTeamsSig = "";
-      _reconcilingTeams = false;
-      _reconcileTeamsQueued = false;
-      _pendingServerCreates = /* @__PURE__ */ new Set();
-      _pendingCreateTimeouts = /* @__PURE__ */ new Map();
-      _pendingCreateSentName = /* @__PURE__ */ new Map();
-      PENDING_CREATE_TIMEOUT_MS = 8e3;
-      _lastCreateAttemptSig = /* @__PURE__ */ new Map();
-      _invRaw = null;
-      _activeRaw = [];
-      _hutchRaw = [];
-      _invPetsCache = [];
-      _invUnsub = null;
-      _activeUnsub = null;
-      _hutchUnsub = null;
-      _invSig = null;
-      _activeSig = null;
-      _lastAutofeedAttemptAt = /* @__PURE__ */ new Map();
-      _belowThreshold = /* @__PURE__ */ new Map();
-      AUTOF_FEED_MIN_INTERVAL_MS = 2e3;
-      DEFAULT_OVERRIDE = { enabled: false, thresholdPct: 10, crops: {} };
-      DEFAULT_UI = { selectedPetId: null };
-      DEFAULT_INSTANT_FEED = { crops: {} };
-      _currentPets = [];
-      _userTriggerCb = null;
-      PetsService = {
-        /* --------- Player-facing (UI list/subscribe) --------- */
-        getPets() {
-          return PlayerService.getPets();
-        },
-        onPetsChange(cb) {
-          return PlayerService.onPetsChange(cb);
-        },
-        onPetsChangeNow(cb) {
-          return PlayerService.onPetsChangeNow(cb);
-        },
-        /* ------------------------- Abilities utils ------------------------- */
-        getAbilityName(id) {
-          return _abilityName(id);
-        },
-        getAbilityNameWithoutLevel(id) {
-          return _abilityNameWithoutLevel(id);
-        },
-        /* ------------------------- Autofeed + per-pet UI state ------------------------- */
-        setUIState(next) {
-          const cur = loadUIState();
-          const merged = { ...cur, ...next || {} };
-          saveUIState(merged);
-          return merged;
-        },
-        setSelectedPet(id) {
-          return this.setUIState({ selectedPetId: id });
-        },
-        getSelectedPetId() {
-          return loadUIState().selectedPetId ?? null;
-        },
-        getOverride(petId) {
-          const all = loadOverrides();
-          return cloneOverride(all[petId]);
-        },
-        setOverride(petId, patch) {
-          const all = loadOverrides();
-          const cur = cloneOverride(all[petId]);
-          const next = {
-            enabled: patch.enabled ?? cur.enabled,
-            thresholdPct: Number.isFinite(patch.thresholdPct) ? Math.min(100, Math.max(1, Number(patch.thresholdPct))) : cur.thresholdPct,
-            crops: { ...cur.crops, ...patch.crops || {} }
-          };
-          all[petId] = next;
-          saveOverrides(all);
-          void _evaluateAll();
-          return next;
-        },
-        updateOverride(petId, fn) {
-          const all = loadOverrides();
-          const cur = cloneOverride(all[petId]);
-          const next = cloneOverride(fn(cur));
-          all[petId] = next;
-          saveOverrides(all);
-          void _evaluateAll();
-          return next;
-        },
-        async setPetAutofeedEnabled(petId, enabled5) {
-          return this.setOverride(petId, { enabled: !!enabled5 });
-        },
-        getPetAutofeedEnabled(petId) {
-          return this.getOverride(petId).enabled;
-        },
-        async setPetAutofeedThresholdPct(petId, pct) {
-          const v = Math.min(100, Math.max(1, Math.floor(Number(pct) || 10)));
-          return this.setOverride(petId, { thresholdPct: v });
-        },
-        getPetAutofeedThresholdPct(petId) {
-          return this.getOverride(petId).thresholdPct;
-        },
-        async setPetAllowedCrop(petId, crop, allowed) {
-          return this.updateOverride(petId, (cur) => {
-            const next = cloneOverride(cur);
-            const entry = next.crops[crop] ?? { allowed: true };
-            next.crops[crop] = { allowed: allowed ?? entry.allowed };
-            return next;
-          });
-        },
-        async getPetAllowedCrops(petId) {
-          const ov = this.getOverride(petId);
-          const pet = await findPetById(petId);
-          const species = pet?.slot?.petSpecies || "";
-          const compatibles = this.getCompatibleCropsForSpecies(species);
-          const allowed = /* @__PURE__ */ new Set();
-          for (const c of compatibles) {
-            const rule = ov.crops[c];
-            if (rule ? !!rule.allowed : true) allowed.add(c);
-          }
-          return allowed;
-        },
-        /* ------------------------- Instant feed (per-species) ------------------------- */
-        getInstantFeedOverride(species) {
-          const key2 = _canonicalSpecies(String(species || ""));
-          const all = loadInstantFeedOverrides();
-          return cloneInstantFeedOverride(all[key2]);
-        },
-        isInstantFeedCropAllowed(species, crop) {
-          const ov = this.getInstantFeedOverride(species);
-          const rule = ov.crops[crop];
-          return rule ? !!rule.allowed : true;
-        },
-        setInstantFeedCropAllowed(species, crop, allowed) {
-          const key2 = _canonicalSpecies(String(species || ""));
-          const all = loadInstantFeedOverrides();
-          const cur = cloneInstantFeedOverride(all[key2]);
-          cur.crops[crop] = { allowed: !!allowed };
-          all[key2] = cur;
-          saveInstantFeedOverrides(all);
-          return cloneInstantFeedOverride(cur);
-        },
-        getInstantFeedAllowedCrops(species) {
-          const key2 = _canonicalSpecies(String(species || ""));
-          const compatibles = this.getCompatibleCropsForSpecies(key2);
-          const ov = this.getInstantFeedOverride(key2);
-          const allowed = /* @__PURE__ */ new Set();
-          for (const c of compatibles) {
-            const rule = ov.crops[c];
-            if (rule ? !!rule.allowed : true) allowed.add(c);
-          }
-          return allowed;
-        },
-        getCompatibleCropsForSpecies(species) {
-          return getCompatibleCropsFromData(species);
-        },
-        getMaxHungerForSpecies(species) {
-          return getMaxHungerFromData(species);
-        },
-        getHungerPctFor(pet) {
-          const cur = Number(pet?.slot?.hunger) || 0;
-          const species = String(pet?.slot?.petSpecies || "");
-          const max = this.getMaxHungerForSpecies(species);
-          const pct = cur / max * 100;
-          return +clampPct(pct).toFixed(1);
-        },
-        async startAutofeedWatcher(onTrigger) {
-          _userTriggerCb = onTrigger ?? null;
-          const stop2 = await PlayerService.onPetsChangeNow((arr) => {
-            _currentPets = Array.isArray(arr) ? arr.slice() : [];
-            void _evaluateAll();
-          });
-          return () => {
-            try {
-              stop2();
-            } catch {
-            }
-            _currentPets = [];
-            _belowThreshold.clear();
-            _userTriggerCb = null;
-          };
-        },
-        /* ------------------------- Teams (UI-less core used by UI) ------------------------- */
-        _teams: loadTeams(),
-        _teamSubs: /* @__PURE__ */ new Set(),
-        _notifyTeamSubs() {
-          const snap = this.getTeams();
-          this._teamSubs.forEach((fn) => {
-            try {
-              fn(snap);
-            } catch {
-            }
-          });
-        },
-        getTeams() {
-          return Array.isArray(this._teams) ? this._teams.map((t) => ({ ...t, slots: t.slots.slice(0, 3) })) : [];
-        },
-        onTeamsChange(cb) {
-          this._teamSubs.add(cb);
-          try {
-            cb(this.getTeams());
-          } catch {
-          }
-          return () => {
-            this._teamSubs.delete(cb);
-          };
-        },
-        async onTeamsChangeNow(cb) {
-          const unsub = this.onTeamsChange(cb);
-          try {
-            cb(this.getTeams());
-          } catch {
-          }
-          return unsub;
-        },
-        createTeam(name) {
-          const t = { id: _uid(), name: petTeamName(name ?? "") || `Team ${this._teams.length + 1}`, slots: [null, null, null], serverId: null };
-          this._teams.push(t);
-          saveTeams(this._teams);
-          this._notifyTeamSubs();
-          return t;
-        },
-        deleteTeam(teamId2) {
-          const i = this._teams.findIndex((t) => t.id === teamId2);
-          if (i < 0) return false;
-          const [removed] = this._teams.splice(i, 1);
-          saveTeams(this._teams);
-          this._notifyTeamSubs();
-          if (removed.serverId) _sendDeletePetTeam(removed.serverId);
-          return true;
-        },
-        saveTeam(patch) {
-          const i = this._teams.findIndex((t) => t.id === patch.id);
-          if (i < 0) return null;
-          const cur = this._teams[i];
-          const next = {
-            id: cur.id,
-            name: typeof patch.name === "string" ? petTeamName(patch.name) : cur.name,
-            slots: Array.isArray(patch.slots) ? patch.slots.slice(0, 3) : cur.slots,
-            serverId: cur.serverId ?? null
-          };
-          this._teams[i] = next;
-          saveTeams(this._teams);
-          this._notifyTeamSubs();
-          const petIds = next.slots.filter((x) => !!x);
-          if (next.serverId) {
-            if (petIds.length > 0) _sendSavePetTeam(next.serverId, next.name.trim() || "Team", petIds);
-          } else {
-            _maybeCreateServerTeam(next);
-          }
-          return next;
-        },
-        setTeamsOrder(ids) {
-          const byId = new Map(this._teams.map((t) => [t.id, t]));
-          const next = [];
-          for (const id of ids) {
-            const t = byId.get(id);
-            if (t) {
-              next.push(t);
-              byId.delete(id);
-            }
-          }
-          for (const rest2 of byId.values()) next.push(rest2);
-          this._teams = next;
-          saveTeams(this._teams);
-          this._notifyTeamSubs();
-          let serverIndex = 0;
-          for (const t of next) {
-            if (!t.serverId) continue;
-            _sendMovePetTeam(t.serverId, serverIndex);
-            serverIndex++;
-          }
-        },
-        getTeamById(teamId2) {
-          const t = this._teams.find((t2) => t2.id === teamId2) || null;
-          return t ? { ...t, slots: t.slots.slice(0, 3) } : null;
-        },
-        getTeamSearch(teamId2) {
-          return _teamSearch[teamId2] || "";
-        },
-        setTeamSearch(teamId2, q) {
-          _teamSearch[teamId2] = (q || "").trim();
-          _saveTeamSearchMap(_teamSearch);
-        },
-        /* ------------------------- Inventory filters + pickers ------------------------- */
-        async getInventoryPets() {
-          await _ensureInventoryWatchersStarted();
-          return _invPetsCache.slice();
-        },
-        async buildFilteredInventoryForTeam(teamId2, opts) {
-          await _ensureInventoryWatchersStarted();
-          const { mode, value } = _parseTeamSearch(this.getTeamSearch(teamId2) || "");
-          let list = await this.getInventoryPets();
-          if (mode === "ability" && value) {
-            const idSet = await _abilityNameToPresentIds(value);
-            list = idSet.size ? list.filter((p) => Array.isArray(p.abilities) && p.abilities.some((a) => idSet.has(a))) : [];
-          } else if (mode === "species" && value) {
-            const vv = value.toLowerCase();
-            list = list.filter((p) => (p.petSpecies || "").toLowerCase() === vv);
-          } else if (value) {
-            const q = value.toLowerCase();
-            list = list.filter(
-              (p) => _s(p.id).includes(q) || _s(p.petSpecies).includes(q) || _s(p.name).includes(q) || Array.isArray(p.abilities) && p.abilities.some((a) => _s(a).includes(q) || _s(_abilityName(a)).includes(q)) || Array.isArray(p.mutations) && p.mutations.some((m) => _s(m).includes(q))
-            );
-          }
-          if (opts?.excludeIds?.size) {
-            const ex = opts.excludeIds;
-            list = list.filter((p) => !ex.has(p.id));
-          }
-          const items = list.map(_invPetToRawItem);
-          let favoritedItemIds = [];
-          try {
-            const favAll = await Atoms.inventory.favoriteIds.get().catch(() => []);
-            const keep = new Set(list.map((p) => p.id));
-            favoritedItemIds = (favAll || []).filter((id) => keep.has(id));
-          } catch {
-          }
-          return { items, favoritedItemIds };
-        },
-        async buildFilteredInventoryByQuery(query, opts) {
-          await _ensureInventoryWatchersStarted();
-          const q = (query || "").toLowerCase().trim();
-          let list = await this.getInventoryPets();
-          if (q) {
-            list = list.filter(
-              (p) => _s(p.id).includes(q) || _s(p.petSpecies).includes(q) || _s(p.name).includes(q) || Array.isArray(p.abilities) && p.abilities.some((a) => _s(a).includes(q) || _s(_abilityName(a)).includes(q)) || Array.isArray(p.mutations) && p.mutations.some((m) => _s(m).includes(q))
-            );
-          }
-          if (opts?.excludeIds?.size) {
-            const ex = opts.excludeIds;
-            list = list.filter((p) => !ex.has(p.id));
-          }
-          const items = list.map(_invPetToRawItem);
-          let favoritedItemIds = [];
-          try {
-            const favAll = await Atoms.inventory.favoriteIds.get().catch(() => []);
-            const keep = new Set(list.map((p) => p.id));
-            favoritedItemIds = (favAll || []).filter((id) => keep.has(id));
-          } catch {
-          }
-          return { items, favoritedItemIds };
-        },
-        async chooseSlotPet(teamId2, slotIndex, searchOverride) {
-          const idx = Math.max(0, Math.min(2, Math.floor(slotIndex || 0)));
-          const team = this.getTeamById(teamId2);
-          if (!team) return null;
-          const exclude = /* @__PURE__ */ new Set();
-          team.slots.forEach((id, i) => {
-            if (i !== idx && id) exclude.add(String(id));
-          });
-          const payload = searchOverride && searchOverride.trim().length ? await this.buildFilteredInventoryByQuery(searchOverride, { excludeIds: exclude }) : await this.buildFilteredInventoryForTeam(teamId2, { excludeIds: exclude });
-          const items = Array.isArray(payload?.items) ? payload.items : [];
-          const teamSearch = this.getTeamSearch(teamId2) || "";
-          const applyFilters = async (list) => {
-            let out = Array.isArray(list) ? list : [];
-            if (searchOverride && searchOverride.trim().length) {
-              const q = searchOverride.toLowerCase().trim();
-              if (q) {
-                out = out.filter(
-                  (p) => _s(p.id).includes(q) || _s(p.petSpecies).includes(q) || _s(p.name).includes(q) || Array.isArray(p.abilities) && p.abilities.some((a) => _s(a).includes(q) || _s(_abilityName(a)).includes(q)) || Array.isArray(p.mutations) && p.mutations.some((m) => _s(m).includes(q))
-                );
-              }
-            } else if (teamSearch && teamSearch.trim().length) {
-              const { mode, value } = _parseTeamSearch(teamSearch);
-              if (mode === "ability" && value) {
-                const idSet = await _abilityNameToPresentIds(value);
-                out = idSet.size ? out.filter((p) => Array.isArray(p.abilities) && p.abilities.some((a) => idSet.has(a))) : [];
-              } else if (mode === "species" && value) {
-                const vv = value.toLowerCase();
-                out = out.filter((p) => (p.petSpecies || "").toLowerCase() === vv);
-              } else if (value) {
-                const q = value.toLowerCase();
-                out = out.filter(
-                  (p) => _s(p.id).includes(q) || _s(p.petSpecies).includes(q) || _s(p.name).includes(q) || Array.isArray(p.abilities) && p.abilities.some((a) => _s(a).includes(q) || _s(_abilityName(a)).includes(q)) || Array.isArray(p.mutations) && p.mutations.some((m) => _s(m).includes(q))
-                );
-              }
-            }
-            if (exclude.size) out = out.filter((p) => !exclude.has(p.id));
-            return out;
-          };
-          try {
-            const rawHutch = await myPetHutchPetItems.get();
-            const hutchArr = Array.isArray(rawHutch) ? rawHutch : [];
-            let hutchPets = hutchArr.map((it) => _inventoryItemToPet(it)).filter((p) => !!p);
-            hutchPets = await applyFilters(hutchPets);
-            const seen = new Set(items.map((it) => String(it?.id ?? "")));
-            for (const p of hutchPets) {
-              if (!seen.has(p.id)) {
-                items.push(_invPetToRawItem(p));
-                seen.add(p.id);
-              }
-            }
-            try {
-              const rawActive = await this.getPets();
-              const list = Array.isArray(rawActive) ? rawActive : [];
-              let activePets2 = list.map((p) => _activeSlotToPet(p)).filter((p) => !!p);
-              activePets2 = await applyFilters(activePets2);
-              for (const p of activePets2) {
-                if (!seen.has(p.id)) {
-                  items.push(_invPetToRawItem(p));
-                  seen.add(p.id);
-                }
-              }
-            } catch {
-            }
-          } catch {
-          }
-          if (!items.length) return null;
-          await fakeInventory.show(payload, { open: true });
-          const selIndex = await _waitValidatedInventoryIndex(2e4);
-          if (selIndex != null && selIndex >= 0 && selIndex < items.length) {
-            await fakeInventory.close();
-          } else {
-            await fakeInventory.disable();
-            return null;
-          }
-          const chosenPet = _inventoryItemToPet(items[selIndex]);
-          if (!chosenPet) return null;
-          const next = team.slots.slice(0, 3);
-          next[idx] = String(chosenPet.id);
-          this.saveTeam({ id: team.id, slots: next });
-          try {
-            await clearHandSelection();
-          } catch {
-          }
-          return chosenPet;
-        },
-        async pickPetViaFakeInventory(search2) {
-          const payload = await this.buildFilteredInventoryByQuery(search2 || "");
-          const items = Array.isArray(payload?.items) ? payload.items : [];
-          if (!items.length) return null;
-          await fakeInventory.show(payload, { open: true });
-          const selIndex = await _waitValidatedInventoryIndex(2e4);
-          if (selIndex != null && selIndex >= 0 && selIndex < items.length) {
-            await fakeInventory.close();
-          } else {
-            await fakeInventory.disable();
-            return null;
-          }
-          await clearHandSelection();
-          return _inventoryItemToPet(items[selIndex]);
-        },
-        /* ------------------------- Team switching ------------------------- */
-        async useTeam(teamId2, opts) {
-          const t = this.getTeams().find((tt) => tt.id === teamId2) || null;
-          if (!t) throw new Error("Team not found");
-          const targetInvIds = (t.slots || []).filter((x) => typeof x === "string" && x.length > 0).slice(0, 3);
-          if (_teamSyncEnabled && t.serverId) {
-            _sendApplyPetTeam(t.serverId);
-            if (opts?.markUsed !== false) markTeamAsUsed(teamId2);
-            return { swapped: targetInvIds.length, placed: 0, skipped: 0 };
-          }
-          return _equipPetIds(targetInvIds, { markTeamId: teamId2, markUsed: opts?.markUsed });
-        },
-        /** Whether mod teams mirror the native (in-game) pet teams. Defaults to true. */
-        isTeamSyncEnabled() {
-          return _teamSyncEnabled;
-        },
-        /** Turns the native pet-team mirroring on/off. Existing links are kept when turning it off. */
-        setTeamSyncEnabled(value) {
-          _setTeamSyncEnabled(value);
-        },
-        /** Starts the background watcher that keeps local teams linked to their native (in-game) counterpart. Idempotent. */
-        async startPetTeamSync() {
-          if (_teamSyncStarted) return;
-          _teamSyncStarted = true;
-          try {
-            await _startServerTeamsWatcher();
-          } catch {
-          }
-        },
-        async usePetIds(targetInvIds) {
-          return _equipPetIds(targetInvIds, { markTeamId: null });
-        },
-        async getActivePetIds() {
-          return _getActivePetSlotIds();
-        },
-        /* ------------------------- Ability logs ------------------------- */
-        _logs: [],
-        _logsMax: 500,
-        // Identity key (abilityId|petId|performedAt) of every log entry already ingested from
-        // myActivityLog, so a reconnect resync of the same historical entries can't double-log them.
-        _seenLogKeys: /* @__PURE__ */ new Set(),
-        _logSubs: /* @__PURE__ */ new Set(),
-        _logsCutoffMs: 0,
-        _logsCutoffSkewMs: 1500,
-        _logsStorageKey: PATH_PETS_ABILITY_LOGS,
-        _logsSessionStart: Date.now(),
-        _extractAbilityValue(abilityId, rawData) {
-          const num2 = (value) => {
-            const parsed = Number(value);
-            return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
-          };
-          const data = rawData ?? {};
-          const base = petAbilities2[abilityId]?.baseParameters ?? {};
-          switch (abilityId) {
-            case "CoinFinderI":
-            case "CoinFinderII":
-            case "CoinFinderIII":
-            case "SnowyCoinFinder":
-            case "DawnCoinFinder":
-            case "ThunderCoinFinder": {
-              const value = data["coinsFound"] ?? data["coins"] ?? 0;
-              return num2(value);
-            }
-            case "SellBoostI":
-            case "SellBoostII":
-            case "SellBoostIII":
-            case "SellBoostIV": {
-              const value = data["bonusCoins"] ?? data["coinsEarned"] ?? 0;
-              return num2(value);
-            }
-            case "ProduceEater":
-              return num2(data["sellPrice"] ?? 0);
-            case "ProduceScaleBoost":
-            case "ProduceScaleBoostII":
-            case "ProduceScaleBoostIII":
-            case "SnowyCropSizeBoost": {
-              const inc = data["sizeIncrease"] ?? data["scaleIncreasePercentage"] ?? data["cropScaleIncreasePercentage"] ?? base["sizeIncrease"] ?? base["scaleIncreasePercentage"] ?? 0;
-              return num2(inc);
-            }
-            case "EggGrowthBoost":
-            case "EggGrowthBoostII_NEW":
-            case "EggGrowthBoostII":
-            case "SnowyEggGrowthBoost":
-            case "ThunderEggGrowthBoost": {
-              if (data["secondsReduced"] != null) return num2(data["secondsReduced"]) * 1e3;
-              const minutes = data["eggGrowthTimeReductionMinutes"] ?? data["minutesReduced"] ?? data["reductionMinutes"] ?? base["eggGrowthTimeReductionMinutes"] ?? 0;
-              return num2(minutes) * 60 * 1e3;
-            }
-            case "PlantGrowthBoost":
-            case "PlantGrowthBoostII":
-            case "PlantGrowthBoostIII":
-            case "SnowyPlantGrowthBoost":
-            case "DawnPlantGrowthBoost":
-            case "AmberPlantGrowthBoost":
-            case "ThunderPlantGrowthBoost": {
-              if (data["secondsReduced"] != null) return num2(data["secondsReduced"]) * 1e3;
-              const minutes = data["minutesReduced"] ?? data["reductionMinutes"] ?? data["plantGrowthReductionMinutes"] ?? base["plantGrowthReductionMinutes"] ?? 0;
-              return num2(minutes) * 60 * 1e3;
-            }
-            case "PetXpBoost":
-            case "SnowyPetXpBoost":
-            case "PetXpBoostII":
-            case "PetXpBoostIII":
-            case "DawnXpBoost":
-            case "ThunderXpBoost": {
-              const xp = data["bonusXp"] ?? base["bonusXp"] ?? 0;
-              return num2(xp);
-            }
-            case "DawnCapture": {
-              const value = data["capsulesAdded"] ?? 0;
-              return num2(value);
-            }
-            case "PetAgeBoost":
-            case "PetAgeBoostII":
-            case "PetAgeBoostIII": {
-              const xp = data["bonusXp"] ?? base["bonusXp"] ?? 0;
-              return num2(xp);
-            }
-            case "PetHatchSizeBoost":
-            case "PetHatchSizeBoostII":
-            case "PetHatchSizeBoostIII": {
-              const strength = data["strengthIncrease"] ?? 0;
-              return num2(strength);
-            }
-            case "HungerRestore":
-            case "HungerRestoreII":
-            case "HungerRestoreIII":
-            case "SnowyHungerRestore": {
-              const amount = data["hungerRestoreAmount"] ?? data["hungerRestoredPercentage"] ?? base["hungerRestorePercentage"] ?? 0;
-              return num2(amount);
-            }
-            case "HungerBoost":
-            case "HungerBoostII":
-            case "HungerBoostIII":
-            case "SnowyHungerBoost": {
-              const pct = data["hungerDepletionRateDecreasePercentage"] ?? base["hungerDepletionRateDecreasePercentage"] ?? 0;
-              return num2(pct);
-            }
-            case "Thundercharger":
-              return num2(data["cropsCharged"] ?? 0);
-            default:
-              return 0;
-          }
-        },
-        async startAbilityLogsWatcher() {
-          try {
-            await _ensureInventoryWatchersStarted();
-          } catch {
-          }
-          const ingest2 = (rawLogs) => {
-            const list = Array.isArray(rawLogs) ? rawLogs : [];
-            for (const raw of list) {
-              try {
-                this._ingestActivityLogEntry(raw);
-              } catch {
-              }
-            }
-          };
-          try {
-            ingest2(await myActivityLog.get());
-          } catch {
-          }
-          let stop2 = null;
-          try {
-            const res = await myActivityLog.onChange((next) => {
-              try {
-                ingest2(next);
-              } catch {
-              }
-            });
-            if (typeof res === "function") stop2 = res;
-          } catch {
-          }
-          return () => {
-            try {
-              stop2?.();
-            } catch {
-            }
-          };
-        },
-        _ingestActivityLogEntry(raw) {
-          if (!raw || typeof raw !== "object") return;
-          const abilityId = typeof raw.action === "string" ? raw.action : "";
-          if (!abilityId || !petAbilityIds().has(abilityId)) return;
-          const performedAtNum = Number(raw.timestamp);
-          if (!Number.isFinite(performedAtNum) || performedAtNum <= 0) return;
-          const params = raw.parameters && typeof raw.parameters === "object" ? raw.parameters : {};
-          const petParam = params?.pet;
-          const petId = typeof petParam?.id === "string" ? petParam.id : "";
-          if (!petId) return;
-          const key2 = `${abilityId}|${petId}|${performedAtNum}`;
-          if (this._seenLogKeys.has(key2)) return;
-          this._seenLogKeys.add(key2);
-          if (this._logsCutoffMs && performedAtNum < this._logsCutoffMs - this._logsCutoffSkewMs) {
-            return;
-          }
-          const details = _buildAbilityLogText(abilityId, params);
-          if (details === null) return;
-          const cachedPet = _invPetsCache.find((p) => String(p.id) === petId) || null;
-          const species = typeof petParam?.petSpecies === "string" && petParam.petSpecies || cachedPet?.petSpecies || void 0;
-          const name = typeof petParam?.name === "string" && petParam.name || cachedPet?.name || void 0;
-          const mutationsRaw = Array.isArray(petParam?.mutations) ? petParam.mutations : cachedPet?.mutations;
-          const mutations = Array.isArray(mutationsRaw) ? mutationsRaw.map((m) => String(m ?? "").trim()).filter(Boolean) : void 0;
-          const logLine = {
-            petId,
-            species,
-            name,
-            mutations: mutations && mutations.length ? mutations : void 0,
-            abilityId,
-            abilityName: _abilityName(abilityId),
-            data: details,
-            performedAt: performedAtNum,
-            time12: new Date(performedAtNum).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
-          };
-          try {
-            StatsService.incrementAbilityStat(abilityId, "triggers");
-            const abilityValue = this._extractAbilityValue(abilityId, params);
-            if (abilityValue > 0) {
-              StatsService.incrementAbilityStat(abilityId, "totalValue", abilityValue);
-            }
-          } catch {
-          }
-          this._pushLog(logLine);
-        },
-        getAbilityLogs(opts) {
-          const ids = opts?.abilityIds && opts.abilityIds.length ? new Set(opts.abilityIds) : null;
-          const since = Number.isFinite(opts?.since) ? opts.since : 0;
-          const lim = Math.max(0, Math.floor(opts?.limit ?? 0));
-          let arr = this._logs.filter(
-            (e) => (since ? e.performedAt >= since : true) && (ids ? ids.has(e.abilityId) : true)
-          );
-          arr = arr.sort((a, b) => b.performedAt - a.performedAt);
-          return lim ? arr.slice(0, lim) : arr;
-        },
-        getAbilityLogsSessionStart() {
-          return this._logsSessionStart;
-        },
-        onAbilityLogs(cb) {
-          this._logSubs.add(cb);
-          try {
-            cb(this.getAbilityLogs());
-          } catch {
-          }
-          return () => {
-            this._logSubs.delete(cb);
-          };
-        },
-        getSeenAbilityIds() {
-          const set2 = /* @__PURE__ */ new Set();
-          for (const e of this._logs) set2.add(e.abilityId);
-          return Array.from(set2).sort();
-        },
-        clearAbilityLogs() {
-          this._logs.length = 0;
-          this._seenLogKeys.clear();
-          this._logsCutoffMs = Date.now();
-          this._notifyLogSubs();
-          this._persistAbilityLogs();
-        },
-        _notifyLogSubs() {
-          const snap = this.getAbilityLogs();
-          this._logSubs.forEach((fn) => {
-            try {
-              fn(snap);
-            } catch {
-            }
-          });
-        },
-        _pushLog(e) {
-          this._logs.push(e);
-          if (this._logs.length > this._logsMax) {
-            this._logs.splice(0, this._logs.length - this._logsMax);
-          }
-          this._notifyLogSubs();
-          this._persistAbilityLogs();
-        },
-        _persistAbilityLogs() {
-          try {
-            const payload = {
-              version: 1,
-              cutoff: this._logsCutoffMs,
-              logs: this._logs.map((entry) => ({
-                petId: entry.petId,
-                species: entry.species ?? null,
-                name: entry.name ?? null,
-                mutations: Array.isArray(entry.mutations) ? entry.mutations.slice() : void 0,
-                abilityId: entry.abilityId,
-                abilityName: entry.abilityName,
-                data: entry.data,
-                performedAt: entry.performedAt,
-                time12: entry.time12
-              }))
-            };
-            writeAriesPath(PATH_PETS_ABILITY_LOGS, payload);
-          } catch {
-          }
-        },
-        _restoreAbilityLogsFromStorage() {
-          try {
-            const parsed = readAriesPath(PATH_PETS_ABILITY_LOGS);
-            if (!parsed || typeof parsed !== "object") return;
-            const logsRaw = Array.isArray(parsed.logs) ? parsed.logs : [];
-            const restored = [];
-            for (const item of logsRaw) {
-              if (!item || typeof item !== "object") continue;
-              const abilityId = typeof item.abilityId === "string" ? String(item.abilityId) : "";
-              const performedAt = Number(item.performedAt) || 0;
-              if (!abilityId || !performedAt) continue;
-              const mutsRaw = item.mutations;
-              const mutations = Array.isArray(mutsRaw) ? mutsRaw.map((m) => String(m ?? "").trim()).filter(Boolean) : void 0;
-              restored.push({
-                petId: typeof item.petId === "string" ? String(item.petId) : "",
-                species: typeof item.species === "string" && item.species ? String(item.species) : void 0,
-                name: typeof item.name === "string" && item.name ? String(item.name) : void 0,
-                mutations: mutations && mutations.length ? mutations : void 0,
-                abilityId,
-                abilityName: typeof item.abilityName === "string" && item.abilityName ? String(item.abilityName) : abilityId,
-                data: typeof item.data === "string" ? String(item.data) : item.data,
-                performedAt,
-                time12: typeof item.time12 === "string" && item.time12 ? String(item.time12) : new Date(performedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
-              });
-            }
-            restored.sort((a, b) => a.performedAt - b.performedAt);
-            this._logs = restored.slice(-this._logsMax);
-            this._seenLogKeys.clear();
-            for (const entry of this._logs) {
-              this._seenLogKeys.add(`${entry.abilityId}|${entry.petId}|${entry.performedAt}`);
-            }
-            const cutoff = Number(parsed.cutoff);
-            if (Number.isFinite(cutoff) && cutoff > 0) this._logsCutoffMs = cutoff;
-          } catch {
-          }
-        }
-      };
-      try {
-        PetsService._restoreAbilityLogsFromStorage();
-      } catch {
-      }
-      try {
-        shareGlobal("QWS_PetsService", PetsService);
-        shareGlobal("QWS_Atoms", Atoms);
-      } catch {
-      }
-      HUTCH_DEFAULT_CAPACITY = 10;
-      MAX_TEAM_SLOTS = 3;
-    }
-  });
-
-  // src/game/ws/shopPurchaseMessage.ts
-  function parseViewMode(raw) {
-    if (raw == null) return null;
-    let value = raw;
-    try {
-      value = JSON.parse(raw);
-    } catch {
-    }
-    return value === "list" || value === "grid" ? value : null;
-  }
-  function readShopViewMode(shop, storage) {
-    if (!storage) return "list";
-    try {
-      for (let i = 0; i < storage.length; i++) {
-        const key2 = storage.key(i);
-        if (!key2) continue;
-        const match = VIEW_MODE_KEY.exec(key2);
-        if (!match || match[1] !== shop) continue;
-        const mode = parseViewMode(storage.getItem(key2));
-        if (mode) return mode;
-      }
-    } catch {
-    }
-    return "list";
-  }
-  function buildShopPurchaseCommand(shop, item, viewMode, quantity = 1) {
-    const q = Math.max(1, Math.floor(Number(quantity) || 1));
-    return {
-      type: "PurchaseShopItem",
-      shop,
-      viewMode,
-      item,
-      ...q === 1 ? {} : { quantity: q }
-    };
-  }
-  var VIEW_MODE_KEY;
-  var init_shopPurchaseMessage = __esm({
-    "src/game/ws/shopPurchaseMessage.ts"() {
-      "use strict";
-      VIEW_MODE_KEY = /^shop:.*:(.+):viewMode$/;
-    }
-  });
-
-  // src/features/shops/purchases.ts
-  function isCurrentRestock(entry, shop) {
-    if (!("restockId" in entry)) return true;
-    const current = shop?.restockId;
-    return current != null && entry.restockId === current;
-  }
-  function purchasesForCurrentRestock(shops2, shopPurchases, kindOf) {
-    const out = { seed: {}, egg: {}, tool: {}, decor: {} };
-    if (!shopPurchases || typeof shopPurchases !== "object") return out;
-    for (const shopKey of Object.keys(shopPurchases)) {
-      const entry = shopPurchases[shopKey];
-      if (!entry || typeof entry !== "object") continue;
-      if (!isCurrentRestock(entry, shops2?.[shopKey])) continue;
-      const purch = entry.purchases;
-      if (!purch || typeof purch !== "object") continue;
-      for (const [itemId, count] of Object.entries(purch)) {
-        const n = Number(count) || 0;
-        const kind = DIRECT_KIND[shopKey] ?? kindOf(itemId);
-        if (!kind) continue;
-        out[kind][itemId] = (out[kind][itemId] ?? 0) + n;
-      }
-    }
-    return out;
-  }
-  function resolveShop(key2, shops2, mySlot) {
-    if (CUSTOM_RESTOCK_SHOPS.has(key2)) {
-      const custom = mySlot?.data?.customRestocks?.[key2];
-      if (custom) {
-        const inv = mySlot?.customRestockInventories?.[key2];
-        return inv && inv.restockId === `${key2}:custom:${custom.purchasedAt}` ? inv : null;
-      }
-    }
-    const shop = shops2?.[key2];
-    if (!shop || typeof shop !== "object") return null;
-    if ("restockId" in shop && shop.restockId == null) return null;
-    return shop;
-  }
-  function purchasesKnown(entry, shop) {
-    if (!entry || typeof entry !== "object" || !("restockId" in entry)) return true;
-    if (entry.restockId === shop?.restockId) return true;
-    return Number(entry.startedAtMs) < Number(shop?.startedAtMs);
-  }
-  function playerShopView(shops2, mySlot, kindOf) {
-    const shopPurchases = mySlot?.data?.shopPurchases;
-    const open = {};
-    const keys = new Set(shops2 && typeof shops2 === "object" ? Object.keys(shops2) : []);
-    for (const key2 of CUSTOM_RESTOCK_SHOPS) {
-      if (mySlot?.data?.customRestocks?.[key2]) keys.add(key2);
-    }
-    for (const key2 of keys) {
-      const shop = resolveShop(key2, shops2, mySlot);
-      if (!shop) continue;
-      if (!purchasesKnown(shopPurchases?.[key2], shop)) continue;
-      open[key2] = shop;
-    }
-    return { shops: open, purchases: purchasesForCurrentRestock(open, shopPurchases, kindOf) };
-  }
-  var DIRECT_KIND, CUSTOM_RESTOCK_SHOPS;
-  var init_purchases = __esm({
-    "src/features/shops/purchases.ts"() {
-      "use strict";
-      DIRECT_KIND = { seed: "seed", egg: "egg", tool: "tool", decor: "decor" };
-      CUSTOM_RESTOCK_SHOPS = /* @__PURE__ */ new Set(["seed", "egg", "tool", "decor"]);
-    }
-  });
-
-  // src/features/shops/shops.ts
-  function installShopKeybindsOnce() {
-    if (shopKeybindsInstalled || typeof window === "undefined") return;
-    shopKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        for (const { id, modal } of SHOP_KEYBINDS) {
-          if (!eventMatchesKeybind(id, event)) continue;
-          event.preventDefault();
-          event.stopPropagation();
-          void openModal(modal);
-          break;
-        }
-      },
-      true
-    );
-  }
-  function _fallbackShopFor(kind) {
-    return kind === "seeds" ? "seed" : kind === "tools" ? "tool" : kind === "eggs" ? "egg" : "decor";
-  }
-  function _buildPurchasePayload(kind, it) {
-    if (kind === "seeds") {
-      const species = it.species ?? it.name;
-      return species ? { item: { itemType: "Seed", species: String(species) }, stat: "seedsBought" } : null;
-    }
-    if (kind === "tools") {
-      const toolId = it.toolId ?? it.id;
-      return toolId ? { item: { itemType: "Tool", toolId: String(toolId) }, stat: "toolsBought" } : null;
-    }
-    if (kind === "eggs") {
-      const eggId = it.eggId ?? it.id;
-      return eggId ? { item: { itemType: "Egg", eggId: String(eggId) }, stat: "eggsBought" } : null;
-    }
-    if (kind === "decor") {
-      const decorId = it.decorId ?? it.id;
-      return decorId ? { item: { itemType: "Decor", decorId: String(decorId) }, stat: "decorBought" } : null;
-    }
-    return null;
-  }
-  function _findShopForItem(snap, kind, it) {
-    if (!snap || typeof snap !== "object") return null;
-    const keys = Object.keys(snap);
-    const weatherKeys = keys.filter((k) => !BASE_SHOP_KEYS.includes(k));
-    const baseKeys = keys.filter((k) => BASE_SHOP_KEYS.includes(k));
-    const ordered = [...weatherKeys, ...baseKeys];
-    const targetSpecies = it.species ?? it.name;
-    const targetToolId = it.toolId ?? it.id;
-    const targetEggId = it.eggId ?? it.id;
-    const targetDecorId = it.decorId ?? it.id;
-    const matches = (entry) => {
-      if (!entry || typeof entry !== "object") return false;
-      if (kind === "seeds") return targetSpecies != null && entry.species === targetSpecies;
-      if (kind === "tools") return targetToolId != null && entry.toolId === targetToolId;
-      if (kind === "eggs") return targetEggId != null && entry.eggId === targetEggId;
-      if (kind === "decor") return targetDecorId != null && entry.decorId === targetDecorId;
-      return false;
-    };
-    for (const k of ordered) {
-      const inv = snap[k]?.inventory;
-      if (!Array.isArray(inv)) continue;
-      if (inv.some(matches)) return k;
-    }
-    return null;
-  }
-  var SHOP_KEYBINDS, shopKeybindsInstalled, BASE_SHOP_KEYS, ShopsService;
-  var init_shops = __esm({
-    "src/features/shops/shops.ts"() {
-      "use strict";
-      init_fakeModal();
-      init_keybinds();
-      init_keyboard();
-      init_stats();
-      init_send();
-      init_atoms();
-      init_pageContext();
-      init_shopPurchaseMessage();
-      init_purchases();
-      SHOP_KEYBINDS = [
-        { id: "shops.seeds", modal: "seedShop" },
-        { id: "shops.eggs", modal: "eggShop" },
-        { id: "shops.decors", modal: "decorShop" },
-        { id: "shops.tools", modal: "toolShop" }
-      ];
-      shopKeybindsInstalled = false;
-      BASE_SHOP_KEYS = ["seed", "egg", "tool", "decor"];
-      ShopsService = {
-        /** Achat unitaire : envoie le bon message au jeu. */
-        async buyOne(kind, it) {
-          return ShopsService.buy(kind, it, 1);
-        },
-        /** Achete `quantity` exemplaires en une seule commande, comme le Buy All du jeu. */
-        async buy(kind, it, quantity) {
-          const built = _buildPurchasePayload(kind, it);
-          if (!built) return;
-          let shop = null;
-          try {
-            const [shops2, slot] = await Promise.all([Atoms.shop.shops.get(), Atoms.shop.myUserSlot.get()]);
-            shop = _findShopForItem(playerShopView(shops2, slot, () => null).shops, kind, it);
-          } catch {
-          }
-          if (!shop) shop = _fallbackShopFor(kind);
-          try {
-            let storage = null;
-            try {
-              storage = pageWindow.localStorage;
-            } catch {
-            }
-            const command = buildShopPurchaseCommand(shop, built.item, readShopViewMode(shop, storage), quantity);
-            sendToGame(command);
-            StatsService.incrementShopStat(built.stat, Number(command.quantity ?? 1));
-          } catch {
-          }
-        }
-      };
-    }
-  });
-
-  // src/features/companion/keybind.ts
-  function openCompanionChat() {
-    window.dispatchEvent(new CustomEvent("qws:open-panel", { detail: { id: COMPANION_PANEL_ID } }));
-    window.dispatchEvent(new CustomEvent(COMPANION_TAB_EVENT, { detail: { tab: CHAT_TAB_ID } }));
-  }
-  function installCompanionKeybindsOnce() {
-    if (installed || typeof window === "undefined") return;
-    installed = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind("companion.chat", event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        openCompanionChat();
-      },
-      true
-    );
-  }
-  var COMPANION_PANEL_ID, CHAT_TAB_ID, COMPANION_TAB_EVENT, installed;
-  var init_keybind = __esm({
-    "src/features/companion/keybind.ts"() {
-      "use strict";
-      init_keybinds();
-      init_keyboard();
-      COMPANION_PANEL_ID = "companion";
-      CHAT_TAB_ID = "chat";
-      COMPANION_TAB_EVENT = "qws:companion-tab";
-      installed = false;
-    }
-  });
-
-  // src/lib/emitter.ts
-  var Emitter, Subscriptions;
-  var init_emitter = __esm({
-    "src/lib/emitter.ts"() {
-      "use strict";
-      Emitter = class {
-        constructor() {
-          this.listeners = /* @__PURE__ */ new Set();
-        }
-        on(listener) {
-          this.listeners.add(listener);
-          return () => {
-            this.listeners.delete(listener);
-          };
-        }
-        emit(value) {
-          for (const listener of [...this.listeners]) {
-            try {
-              listener(value);
-            } catch (error) {
-              console.error("[Aries] listener failed", error);
-            }
-          }
-        }
-        get size() {
-          return this.listeners.size;
-        }
-        clear() {
-          this.listeners.clear();
-        }
-      };
-      Subscriptions = class {
-        constructor() {
-          this.pending = [];
-        }
-        add(unsubscribe2) {
-          this.pending.push(unsubscribe2);
-        }
-        dispose() {
-          for (const entry of this.pending.splice(0)) {
-            Promise.resolve(entry).then((off) => off?.()).catch(() => {
-            });
-          }
-        }
-      };
-    }
-  });
-
-  // src/data/rules/petValue.ts
-  var SEC_PER_HOUR, XP_STRENGTH_MAX, BASE_STRENGTH_FLOOR, getCatalogEntry, getMutationEntry, getTargetScale, getXp, getPetMaxStrength, getBaseStrength, getPetStrength, getPetCoinMultiplier, getPetValue, getPetInfo;
-  var init_petValue = __esm({
-    "src/data/rules/petValue.ts"() {
-      "use strict";
-      init_data();
-      SEC_PER_HOUR = 3600;
-      XP_STRENGTH_MAX = 30;
-      BASE_STRENGTH_FLOOR = 30;
-      getCatalogEntry = (species) => {
-        if (!species) return null;
-        const entry = petCatalog2[species];
-        return entry ?? null;
-      };
-      getMutationEntry = (mutation) => {
-        if (!mutation) return null;
-        const entry = mutationCatalog2[mutation];
-        return entry ?? null;
-      };
-      getTargetScale = (pet) => {
-        const raw = pet?.targetScale;
-        return typeof raw === "number" && Number.isFinite(raw) ? raw : 1;
-      };
-      getXp = (pet) => {
-        const raw = pet?.xp;
-        return typeof raw === "number" && Number.isFinite(raw) ? Math.max(0, raw) : 0;
-      };
-      getPetMaxStrength = (pet) => {
-        const entry = getCatalogEntry(pet?.petSpecies ?? "");
-        if (!entry) return 0;
-        const maxScale = typeof entry.maxScale === "number" && entry.maxScale > 1 ? entry.maxScale : 1;
-        const targetScale = getTargetScale(pet);
-        const ratio = maxScale > 1 ? (targetScale - 1) / (maxScale - 1) : 0;
-        const raw = ratio * 20 + 80;
-        const strength = Math.floor(Number.isFinite(raw) ? raw : 0);
-        return Math.max(strength, 0);
-      };
-      getBaseStrength = (maxStrength) => {
-        const base = maxStrength - BASE_STRENGTH_FLOOR;
-        return Math.max(base, 0);
-      };
-      getPetStrength = (pet) => {
-        const entry = getCatalogEntry(pet?.petSpecies ?? "");
-        if (!entry) return 0;
-        const hoursToMature = typeof entry.hoursToMature === "number" && entry.hoursToMature > 0 ? entry.hoursToMature : 1;
-        const maxStrength = getPetMaxStrength(pet);
-        if (maxStrength <= 0) return 0;
-        const xpRate = getXp(pet) / (hoursToMature * SEC_PER_HOUR);
-        const xpComponent = Math.min(Math.floor(xpRate * XP_STRENGTH_MAX), XP_STRENGTH_MAX);
-        const baseStrength = getBaseStrength(maxStrength);
-        const strength = Math.min(baseStrength + xpComponent, maxStrength);
-        return Math.max(strength, 0);
-      };
-      getPetCoinMultiplier = (pet) => {
-        const mutations = Array.isArray(pet?.mutations) ? pet.mutations : [];
-        return mutations.reduce((acc, mutation) => {
-          const entry = getMutationEntry(mutation);
-          const multiplier = entry?.coinMultiplier;
-          if (typeof multiplier === "number" && Number.isFinite(multiplier) && multiplier > 0) {
-            return acc * multiplier;
-          }
-          return acc;
-        }, 1);
-      };
-      getPetValue = (pet) => {
-        const entry = getCatalogEntry(pet?.petSpecies ?? "");
-        if (!entry) return 0;
-        const maturitySellPrice = typeof entry.maturitySellPrice === "number" ? entry.maturitySellPrice : 0;
-        const maxStrength = getPetMaxStrength(pet);
-        if (maxStrength <= 0) return 0;
-        const strength = getPetStrength(pet);
-        const targetScale = getTargetScale(pet);
-        const coinMultiplier = getPetCoinMultiplier(pet);
-        const raw = maturitySellPrice * (strength / maxStrength) * targetScale * coinMultiplier;
-        if (!Number.isFinite(raw)) return 0;
-        return Math.round(Math.max(raw, 0));
-      };
-      getPetInfo = (pet) => ({
-        value: getPetValue(pet),
-        strength: getPetStrength(pet),
-        maxStrength: getPetMaxStrength(pet),
-        coinMultiplier: getPetCoinMultiplier(pet)
-      });
-    }
-  });
-
-  // src/data/rules/cropValue.ts
-  function resolveSpeciesKey(species) {
-    const wanted = key(species).toLowerCase();
-    if (!wanted) return null;
-    for (const k of Object.keys(plantCatalog2)) {
-      if (k.toLowerCase() === wanted) return k;
-    }
-    return null;
-  }
-  function findAnySellPriceNode(obj) {
-    if (!obj || typeof obj !== "object") return null;
-    if (typeof obj.baseSellPrice === "number" && Number.isFinite(obj.baseSellPrice)) {
-      return obj.baseSellPrice;
-    }
-    for (const k of ["produce", "crop", "item", "items", "data"]) {
-      if (obj[k]) {
-        const v = findAnySellPriceNode(obj[k]);
-        if (v != null) return v;
-      }
-    }
-    try {
-      const seen = /* @__PURE__ */ new Set();
-      const stack = [obj];
-      while (stack.length) {
-        const cur = stack.pop();
-        if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
-        seen.add(cur);
-        if (typeof cur.baseSellPrice === "number") {
-          const v = cur.baseSellPrice;
-          if (Number.isFinite(v)) return v;
-        }
-        for (const v of Object.values(cur)) if (v && typeof v === "object") stack.push(v);
-      }
-    } catch {
-    }
-    return null;
-  }
-  function defaultGetBasePrice(species) {
-    const spKey = resolveSpeciesKey(species);
-    if (!spKey) return null;
-    const node = plantCatalog2[spKey];
-    const cands = [
-      node?.produce?.baseSellPrice,
-      node?.crop?.baseSellPrice,
-      node?.item?.baseSellPrice,
-      node?.items?.Produce?.baseSellPrice
-    ].filter((v) => typeof v === "number" && Number.isFinite(v));
-    if (cands.length) return cands[0];
-    return findAnySellPriceNode(node);
-  }
-  function applyRounding(v, mode = "round") {
-    switch (mode) {
-      case "floor":
-        return Math.floor(v);
-      case "ceil":
-        return Math.ceil(v);
-      case "none":
-        return v;
-      case "round":
-      default:
-        return Math.round(v);
-    }
-  }
-  function friendBonusMultiplier2(playersInRoom3) {
-    if (!Number.isFinite(playersInRoom3)) return 1;
-    const n = Math.max(1, Math.min(6, Math.floor(playersInRoom3)));
-    return 1 + (n - 1) * 0.1;
-  }
-  function mutationMultiplier(name) {
-    const k = lowerKey(name);
-    if (!k) return null;
-    const mult = mutationMultipliers()[k];
-    return Number.isFinite(mult) ? mult : null;
-  }
-  function isColor(m) {
-    return m === "Gold" || m === "Rainbow";
-  }
-  function isWeather(m) {
-    return m === "Wet" || m === "Chilled" || m === "Frozen" || m === "Thunderstruck" || m === "Thundercharged";
-  }
-  function isTime(m) {
-    return m === "Dawnlit" || m === "Dawnbound" || m === "Amberlit" || m === "Amberbound";
-  }
-  function normalizeMutationName(m) {
-    const s = lowerKey(m);
-    if (!s) return "";
-    if (s === "amberglow" || s === "ambershine" || s === "amberlight") return "Amberlit";
-    if (s === "dawn" || s === "dawnlight") return "Dawnlit";
-    if (s === "golden") return "Gold";
-    if (s === "gold") return "Gold";
-    if (s === "rainbow") return "Rainbow";
-    if (s === "wet") return "Wet";
-    if (s === "chilled") return "Chilled";
-    if (s === "frozen") return "Frozen";
-    if (s === "thunderstruck" || s === "thunder") return "Thunderstruck";
-    if (s === "thunderstruckground" || s === "thunderstruck_ground") return "Thunderstruck";
-    if (s === "thundercharged" || s === "thunder charged" || s === "thunder-charged") return "Thundercharged";
-    if (s === "dawnlit") return "Dawnlit";
-    if (s === "dawnbound") return "Dawnbound";
-    if (s === "amberlit") return "Amberlit";
-    if (s === "dawncharged" || s === "dawnradiant" || s === "dawn-radiant" || s === "dawn charged") return "Dawnbound";
-    if (s === "amberbound" || s === "ambercharged" || s === "amberradiant" || s === "amber-radiant" || s === "amber charged") return "Amberbound";
-    return m;
-  }
-  function computeColorMultiplier(mutations) {
-    if (!Array.isArray(mutations)) return 1;
-    let best = 1;
-    for (const raw of mutations) {
-      const m = normalizeMutationName(raw);
-      if (isColor(m)) {
-        const mult = mutationMultiplier(m);
-        if (typeof mult === "number" && mult > best) best = mult;
-      }
-    }
-    return best;
-  }
-  function pickWeather(mutations) {
-    if (!Array.isArray(mutations)) return null;
-    const candidates = /* @__PURE__ */ new Set();
-    let hasWet = false;
-    let hasChilled = false;
-    for (const raw of mutations) {
-      const m = normalizeMutationName(raw);
-      if (m === "Wet") {
-        hasWet = true;
-        continue;
-      }
-      if (m === "Chilled") {
-        hasChilled = true;
-        continue;
-      }
-      if (isWeather(m)) candidates.add(m);
-    }
-    if (hasWet && hasChilled) {
-      candidates.add("Frozen");
-    } else if (hasWet) {
-      candidates.add("Wet");
-    } else if (hasChilled) {
-      candidates.add("Chilled");
-    }
-    if (!candidates.size) return null;
-    let pick2 = null;
-    let best = -Infinity;
-    for (const cand of candidates) {
-      const mult = mutationMultiplier(cand) ?? 1;
-      if (mult > best) {
-        best = mult;
-        pick2 = cand;
-      }
-    }
-    return pick2;
-  }
-  function pickTime(mutations) {
-    if (!Array.isArray(mutations)) return null;
-    const candidates = /* @__PURE__ */ new Set();
-    for (const raw of mutations) {
-      const m = normalizeMutationName(raw);
-      if (isTime(m)) candidates.add(m);
-    }
-    if (!candidates.size) return null;
-    let pick2 = null;
-    let best = -Infinity;
-    for (const cand of candidates) {
-      const mult = mutationMultiplier(cand) ?? 1;
-      if (mult > best) {
-        best = mult;
-        pick2 = cand;
-      }
-    }
-    return pick2;
-  }
-  function combineWeatherMultipliers(multipliers) {
-    if (!multipliers.length) return 1;
-    const sum = multipliers.reduce((acc, value) => acc + value, 0);
-    return sum - multipliers.length + 1;
-  }
-  function computeWeatherTimeMultiplier(weather2, time) {
-    if (!weather2 && !time) return 1;
-    const multipliers = [];
-    if (weather2) {
-      const mult = mutationMultiplier(weather2);
-      if (typeof mult === "number") multipliers.push(mult);
-    }
-    if (time) {
-      const mult = mutationMultiplier(time);
-      if (typeof mult === "number") multipliers.push(mult);
-    }
-    if (!multipliers.length) return 1;
-    return combineWeatherMultipliers(multipliers);
-  }
-  function mutationsMultiplier(mutations) {
-    const color2 = computeColorMultiplier(mutations);
-    const weather2 = pickWeather(mutations);
-    const time = pickTime(mutations);
-    const wt = computeWeatherTimeMultiplier(weather2, time);
-    return color2 * wt;
-  }
-  function estimateProduceValue(species, size, mutations, opts) {
-    const getBase = opts?.getBasePrice ?? defaultGetBasePrice;
-    const toMultiplier = opts?.sizeMultiplier ?? cropSizeMultiplier;
-    const round = opts?.rounding ?? "round";
-    const base = getBase(species);
-    if (!(Number.isFinite(base) && base > 0)) return 0;
-    const numericSize = Number(size);
-    if (!Number.isFinite(numericSize)) return 0;
-    const sizeMult = toMultiplier(species, numericSize);
-    if (!Number.isFinite(sizeMult) || sizeMult <= 0) return 0;
-    const mutMult = mutationsMultiplier(mutations);
-    const friendsMult = friendBonusMultiplier2(opts?.friendPlayers);
-    const pre = base * sizeMult * mutMult * friendsMult;
-    const out = Math.max(0, applyRounding(pre, round));
-    return out;
-  }
-  function valueFromInventoryProduce(item, opts, playersInRoom3) {
-    if (!item || item.itemType !== "Produce") return 0;
-    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
-    const size = readCropSize(item);
-    if (size == null) return 0;
-    return estimateProduceValue(item.species, size, item.mutations, merged);
-  }
-  function valueFromGardenSlot(slot, opts, playersInRoom3) {
-    if (!slot) return 0;
-    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
-    const size = readCropSize(slot);
-    if (size == null) return 0;
-    return estimateProduceValue(slot.species, size, slot.mutations, merged);
-  }
-  function valueFromGardenPlant(plant, opts, playersInRoom3) {
-    if (!plant || plant.objectType !== "plant" || !Array.isArray(plant.slots)) return 0;
-    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
-    let sum = 0;
-    for (const s of plant.slots) sum += valueFromGardenSlot(s, merged);
-    return sum;
-  }
-  function sumInventoryValue(items, opts, playersInRoom3) {
-    if (!Array.isArray(items)) return 0;
-    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
-    let sum = 0;
-    for (const it of items) {
-      if (it?.itemType === "Produce") {
-        sum += valueFromInventoryProduce(it, merged);
-      }
-    }
-    return sum;
-  }
-  function sumGardenValue(garden3, opts, playersInRoom3) {
-    if (!garden3 || typeof garden3 !== "object") return 0;
-    const merged = playersInRoom3 == null ? opts : { ...opts, friendPlayers: playersInRoom3 };
-    let sum = 0;
-    for (const k of Object.keys(garden3)) {
-      const p = garden3[k];
-      if (p?.objectType === "plant") {
-        sum += valueFromGardenPlant(p, merged);
-      }
-    }
-    return sum;
-  }
-  var key, lowerKey, mutationMultipliers, DefaultPricing;
-  var init_cropValue = __esm({
-    "src/data/rules/cropValue.ts"() {
-      "use strict";
-      init_data();
-      init_cropSize();
-      key = (s) => String(s ?? "").trim();
-      lowerKey = (s) => key(s).toLowerCase();
-      mutationMultipliers = memoOnCatalogs(() => {
-        const map2 = {};
-        if (!mutationCatalog2 || typeof mutationCatalog2 !== "object") return map2;
-        for (const [rawKey, rawValue] of Object.entries(mutationCatalog2)) {
-          const mult = Number(rawValue?.coinMultiplier);
-          if (!Number.isFinite(mult)) continue;
-          const name = key(rawValue?.name);
-          const lowerName = lowerKey(name);
-          const lowerRawKey = lowerKey(rawKey);
-          if (lowerName) map2[lowerName] = mult;
-          if (lowerRawKey) map2[lowerRawKey] = mult;
-        }
-        return map2;
-      });
-      DefaultPricing = Object.freeze({
-        getBasePrice: defaultGetBasePrice,
-        rounding: "round"
-      });
-    }
-  });
-
-  // src/features/inventory/value.ts
-  function finiteNumber(value) {
-    if (typeof value === "number") return Number.isFinite(value) ? value : null;
-    if (typeof value === "string" && value.trim()) {
-      const parsed = Number(value);
-      return Number.isFinite(parsed) ? parsed : null;
-    }
-    return null;
-  }
-  function identifier(raw) {
-    if (typeof raw === "string") return raw.trim() || null;
-    if (typeof raw === "number") return Number.isFinite(raw) ? String(raw) : null;
-    return null;
-  }
-  function computeInventoryItemValue(item, context = {}) {
-    if (!item || typeof item !== "object") return null;
-    const type = typeof item.itemType === "string" ? item.itemType.trim() : "";
-    const playersInRoom3 = context.playersInRoom ?? void 0;
-    switch (type) {
-      case "":
-        return null;
-      case "Pet": {
-        const value = getPetInfo(item).value;
-        return typeof value === "number" && Number.isFinite(value) ? value : null;
-      }
-      case "Plant": {
-        let total = 0;
-        for (const slot of Array.isArray(item.slots) ? item.slots : []) {
-          const species = typeof slot?.species === "string" ? slot.species : null;
-          const size = readCropSize(slot);
-          if (!species || size == null) continue;
-          const value = estimateProduceValue(species, size, stringMutations(slot), { friendPlayers: playersInRoom3 });
-          if (Number.isFinite(value)) total += value;
-        }
-        return total;
-      }
-      case "Produce": {
-        const value = valueFromInventoryProduce(item, void 0, playersInRoom3);
-        return Number.isFinite(value) ? value : null;
-      }
-      default: {
-        const priced = PRICED_BY_QUANTITY[type];
-        if (!priced) return null;
-        const id = identifier(item[priced.idField]);
-        const quantity = finiteNumber(item.quantity);
-        const coinPrice = id ? finiteNumber(priced.coinPrice(id)) : null;
-        if (quantity == null || coinPrice == null) return null;
-        const value = coinPrice * quantity;
-        return Number.isFinite(value) ? value : null;
-      }
-    }
-  }
-  function loadPlayersInRoomForValues() {
-    playersInRoomLoad ?? (playersInRoomLoad = (async () => {
-      try {
-        const raw = await Atoms.server.numPlayers.get();
-        playersInRoom = Number.isFinite(raw) ? raw : null;
-      } catch {
-        playersInRoom = null;
-      }
-      playersInRoomLoaded.emit();
-    })());
-    return playersInRoomLoad;
-  }
-  var PRICED_BY_QUANTITY, stringMutations, playersInRoom, playersInRoomLoad, playersInRoomLoaded, playersInRoomForValues, onPlayersInRoomLoaded;
-  var init_value = __esm({
-    "src/features/inventory/value.ts"() {
-      "use strict";
-      init_atoms();
-      init_emitter();
-      init_data();
-      init_petValue();
-      init_cropValue();
-      init_cropSize();
-      PRICED_BY_QUANTITY = {
-        Seed: { idField: "species", coinPrice: (id) => plantCatalog2[id]?.seed?.coinPrice },
-        Tool: { idField: "toolId", coinPrice: (id) => toolCatalog2[id]?.coinPrice },
-        Egg: { idField: "eggId", coinPrice: (id) => eggCatalog2[id]?.coinPrice },
-        Decor: { idField: "decorId", coinPrice: (id) => decorCatalog2[id]?.coinPrice }
-      };
-      stringMutations = (slot) => Array.isArray(slot?.mutations) ? slot.mutations.filter((m) => typeof m === "string") : [];
-      playersInRoom = null;
-      playersInRoomLoad = null;
-      playersInRoomLoaded = new Emitter();
-      playersInRoomForValues = () => playersInRoom;
-      onPlayersInRoomLoaded = (listener) => playersInRoomLoaded.on(listener);
-    }
-  });
-
-  // src/features/sellAllPets/domButton.ts
-  function startInjectSellAllPets(options = {}) {
-    if (!isBrowser()) return noSSRController();
-    const ROOT_SEL = options.rootSelector ?? DEFAULTS.rootSelector;
-    const CHECK_SEL = options.checkSelector ?? DEFAULTS.checkSelector;
-    const BTN_WIDE = options.buttonSelectorWide ?? DEFAULTS.buttonSelectorWide;
-    const BTN_STRICT = options.buttonSelectorStrict ?? DEFAULTS.buttonSelectorStrict;
-    const BTN_TEXT = options.targetText ?? DEFAULTS.targetText;
-    const INJ_TEXT = options.injectText ?? DEFAULTS.injectText;
-    const INJ_CLASS = options.injectedClass ?? DEFAULTS.injectedClass;
-    const THEME = options.theme ?? DEFAULT_THEME;
-    const OBS_HIST = options.observeHistory ?? true;
-    const logger = typeof options.log === "function" ? options.log : options.log ? (...a) => console.debug("[injectSellAllPets]", ...a) : () => {
-    };
-    const HANDLE = options.onClick ?? createDefaultClickHandler(logger);
-    ensureStyle(INJ_CLASS, THEME);
-    let running6 = true;
-    let pending6 = false;
-    const processAll = () => {
-      if (!running6 || pending6) return;
-      pending6 = true;
-      requestAnimationFrame(() => {
-        try {
-          document.querySelectorAll(ROOT_SEL).forEach((root) => processRoot(root));
-        } finally {
-          pending6 = false;
-        }
-      });
-    };
-    function processRoot(root) {
-      const gate2 = root.querySelector(CHECK_SEL);
-      if (!gate2) {
-        cleanup(root, INJ_CLASS);
-        return;
-      }
-      const target = findTargetButton(root, BTN_WIDE, BTN_STRICT, BTN_TEXT);
-      if (!target) {
-        cleanup(root, INJ_CLASS);
-        return;
-      }
-      ensureInjectedNextTo(target, INJ_CLASS, INJ_TEXT, (ev, ctx2) => {
-        safeInvokeClick(HANDLE, ev, ctx2, logger);
-      });
-    }
-    const mo = new MutationObserver(processAll);
-    mo.observe(document.documentElement, { childList: true, subtree: true });
-    processAll();
-    let unhookHistory = null;
-    if (OBS_HIST) {
-      unhookHistory = hookHistory(processAll);
-    }
-    return {
-      stop() {
-        if (!running6) return;
-        running6 = false;
-        mo.disconnect();
-        unhookHistory?.();
-        logger("stopped");
-      },
-      runOnce() {
-        processAll();
-      },
-      isRunning() {
-        return running6;
-      }
-    };
-  }
-  async function runSellAllPetsFlow(logger = () => {
-  }) {
-    try {
-      logger("sell-all-pets:log-items");
-    } catch {
-    }
-    await PlayerService.logItems();
-    const pets = await runDefaultSellAllPetsAction(logger);
-    if (pets.length === 0) return;
-    await sellPetsFromInventory(pets, logger);
-  }
-  async function getUnfavoritedInventoryPets() {
-    try {
-      await ensureStore();
-    } catch {
-    }
-    const [inventory, favoriteIds2] = await Promise.all([
-      Atoms.inventory.myInventory.get().catch(() => null),
-      Atoms.inventory.favoriteIds.get().catch(() => [])
-    ]);
-    const favSet = new Set(
-      Array.isArray(favoriteIds2) ? favoriteIds2.filter((id) => typeof id === "string") : []
-    );
-    const items = Array.isArray(inventory?.items) ? inventory.items : [];
-    const availablePets = [];
-    items.forEach((item, index) => {
-      if (!isInventoryPetItem(item)) return;
-      if (favSet.has(item.id)) return;
-      console.log("[sellAllPets] inventory index", index, item);
-      availablePets.push({ ...item, inventoryIndex: index });
-    });
-    return availablePets;
-  }
-  function createDefaultClickHandler(logger) {
-    return async () => {
-      try {
-        logger("sell-all-pets:click");
-      } catch {
-      }
-      await runSellAllPetsFlow(logger);
-    };
-  }
-  async function runDefaultSellAllPetsAction(logger) {
-    const pets = await getUnfavoritedInventoryPets();
-    const detail = { pets, count: pets.length };
-    globalThis.__sellAllPetsCandidates = pets;
-    try {
-      logger("collected-non-favorite-pets", detail);
-    } catch {
-    }
-    try {
-      globalThis.dispatchEvent?.(
-        new CustomEvent(SELL_ALL_PETS_EVENT, { detail })
-      );
-    } catch {
-    }
-    return pets;
-  }
-  async function sellPetsFromInventory(pets, logger) {
-    const toSell2 = pets.filter((pet) => typeof pet?.id === "string" && pet.id.trim().length > 0);
-    if (toSell2.length === 0) {
-      try {
-        logger("no-sellable-pets", { requested: pets.length });
-      } catch {
-      }
-      try {
-        globalThis.__sellAllPetsResult = { attempted: 0, sold: 0, failures: [] };
-      } catch {
-      }
-      return;
-    }
-    if (!await confirmHighValuePetSale(toSell2, logger)) {
-      try {
-        logger("sell-pets:cancelled");
-      } catch {
-      }
-      try {
-        toastSimple("Sell all Pets", "Sale cancelled.", "info");
-      } catch {
-      }
-      return;
-    }
-    const failures = [];
-    let sold = 0;
-    const totalValue = computeTotalPetSellValueFromInventory(toSell2);
-    try {
-      logger("sell-pets:total-value", { attempted: toSell2.length, totalValue });
-    } catch {
-    }
-    if (SELL_ALL_PETS_DRY_RUN) {
-      try {
-        logger("sell-pets:dry-run", { attempted: toSell2.length, totalValue });
-      } catch {
-      }
-      try {
-        toastSimple("Sell all Pets", `Dry run: ${toSell2.length} pets detected (no sale).`, "info");
-      } catch {
-      }
-      try {
-        globalThis.__sellAllPetsResult = { attempted: toSell2.length, sold: 0, failures: [] };
-      } catch {
-      }
-      return;
-    }
-    for (const pet of toSell2) {
-      try {
-        logger("sell-pet:start", { id: pet.id, pet });
-      } catch {
-      }
-      try {
-        await PlayerService.sellPet(pet.id);
-        sold += 1;
-        StatsService.incrementShopStat("petsSoldCount");
-        void (async () => {
-          try {
-            const total = await Atoms.pets.totalPetSellPrice.get();
-            const value = Number(total);
-            if (Number.isFinite(value) && value > 0) {
-              StatsService.incrementShopStat("petsSoldValue", value);
-            }
-          } catch (error) {
-            console.error("[SellPet] Unable to read pet sell price", error);
-          }
-        })();
-        try {
-          logger("sell-pet:success", { id: pet.id, pet });
-        } catch {
-        }
-      } catch (error) {
-        failures.push({ pet, error });
-        try {
-          logger("sell-pet:error", { id: pet.id, error, pet });
-        } catch {
-        }
-      }
-    }
-    if (failures.length === 0) {
-      toastSimple("Sell all Pets", `${sold} pets have been sold for ${totalValue} coins!`, "success");
-    }
-    try {
-      globalThis.__sellAllPetsResult = { attempted: toSell2.length, sold, failures };
-    } catch {
-    }
-    audioPlayer.playSellNotification();
-    try {
-      logger("sell-pets:complete", { attempted: toSell2.length, sold, failures });
-    } catch {
-    }
-  }
-  function computeTotalPetSellValueFromInventory(pets) {
-    if (!pets.length) return "";
-    let total = 0;
-    for (const pet of pets) {
-      const value = computeInventoryItemValue(pet);
-      if (typeof value === "number" && Number.isFinite(value)) {
-        total += value;
-      }
-    }
-    return total.toLocaleString("en-US");
-  }
-  async function confirmHighValuePetSale(pets, logger) {
-    const rules2 = lockerRestrictionsService.getSellAllPetsRules();
-    if (!rules2?.enabled) return true;
-    const mutationProtect = /* @__PURE__ */ new Set();
-    if (rules2.protectGold) mutationProtect.add("gold");
-    if (rules2.protectRainbow) mutationProtect.add("rainbow");
-    const maxStrThreshold = Number.isFinite(rules2.maxStrThreshold) ? Math.max(0, Math.min(100, Math.round(rules2.maxStrThreshold))) : 0;
-    const checkMaxStr = !!rules2.protectMaxStr;
-    const protectedRarities = new Set(
-      Array.isArray(rules2.protectedRarities) ? rules2.protectedRarities : []
-    );
-    if (mutationProtect.size === 0 && !checkMaxStr && protectedRarities.size === 0) return true;
-    const flagged = [];
-    for (const pet of pets) {
-      const rawMutations = Array.isArray(pet?.mutations) ? pet.mutations : [];
-      const mutations = rawMutations.filter((m) => typeof m === "string");
-      const foundMutations = mutationProtect.size ? mutations.map((m) => m.toLowerCase()).filter((m) => mutationProtect.has(m)).map((m) => m === "gold" ? "Gold" : "Rainbow") : [];
-      const hasMutation = foundMutations.length > 0;
-      const maxStrength = getPetInfo(pet)?.maxStrength;
-      const strongEnough = checkMaxStr && typeof maxStrength === "number" && Number.isFinite(maxStrength) ? maxStrength >= maxStrThreshold : false;
-      const petSpecies = String(pet.petSpecies || "").trim();
-      const petEntry = petSpecies ? petCatalog2[petSpecies] : null;
-      const petRarity = petEntry?.rarity ?? "";
-      const hasProtectedRarity = protectedRarities.size > 0 && petRarity !== "" && protectedRarities.has(petRarity);
-      if (!hasMutation && !strongEnough && !hasProtectedRarity) continue;
-      const reasons = [];
-      if (hasMutation) {
-        for (const mut of Array.from(new Set(foundMutations))) {
-          reasons.push(`Mutation: ${mut}`);
-        }
-      }
-      if (strongEnough) {
-        reasons.push(`Max STR: ${Math.floor(maxStrength ?? 0)}`);
-      }
-      if (hasProtectedRarity) {
-        reasons.push(`Rarity: ${petRarity}`);
-      }
-      flagged.push({
-        pet,
-        reasons,
-        maxStrength: typeof maxStrength === "number" && Number.isFinite(maxStrength) ? maxStrength : null,
-        mutations
-      });
-    }
-    if (flagged.length === 0) return true;
-    if (!isBrowser()) {
-      try {
-        logger("sell-pets:confirm-unavailable", { flagged: flagged.length });
-      } catch {
-      }
-      return false;
-    }
-    const confirmed = await showSellAllPetsConfirmModal(flagged);
-    if (!confirmed) {
-      try {
-        logger("sell-pets:confirm-cancelled", { flagged: flagged.length });
-      } catch {
-      }
-    }
-    return confirmed;
-  }
-  function showSellAllPetsConfirmModal(flagged) {
-    return new Promise((resolve) => {
-      if (!isBrowser()) {
-        resolve(false);
-        return;
-      }
-      const existing = document.getElementById(SELL_ALL_PETS_CONFIRM_MODAL_ID);
-      if (existing) existing.remove();
-      const overlay2 = document.createElement("div");
-      overlay2.id = SELL_ALL_PETS_CONFIRM_MODAL_ID;
-      overlay2.style.position = "fixed";
-      overlay2.style.inset = "0";
-      overlay2.style.zIndex = "2147483647";
-      overlay2.style.display = "flex";
-      overlay2.style.alignItems = "center";
-      overlay2.style.justifyContent = "center";
-      overlay2.style.background = "rgba(0,0,0,0.6)";
-      const box2 = document.createElement("div");
-      box2.style.minWidth = "320px";
-      box2.style.maxWidth = "520px";
-      box2.style.background = "#0f1318";
-      box2.style.color = "#ffffff";
-      box2.style.border = "1px solid rgba(255,255,255,0.15)";
-      box2.style.borderRadius = "14px";
-      box2.style.boxShadow = "0 12px 40px rgba(0,0,0,0.45)";
-      box2.style.padding = "18px 20px";
-      box2.style.display = "grid";
-      box2.style.gap = "12px";
-      box2.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
-      const title = document.createElement("div");
-      title.textContent = "Confirm sell all pets";
-      title.style.fontSize = "18px";
-      title.style.fontWeight = "800";
-      const body = document.createElement("div");
-      body.textContent = "The following pets match protected rules:";
-      body.style.opacity = "0.9";
-      body.style.fontSize = "13px";
-      body.style.lineHeight = "1.4";
-      const list = document.createElement("div");
-      list.style.display = "grid";
-      list.style.gap = "8px";
-      list.style.maxHeight = "260px";
-      list.style.overflow = "auto";
-      list.style.paddingRight = "4px";
-      const buildPetRow = (entry) => {
-        const row2 = document.createElement("div");
-        row2.style.display = "grid";
-        row2.style.gridTemplateColumns = "48px 1fr";
-        row2.style.gap = "10px";
-        row2.style.alignItems = "center";
-        row2.style.padding = "6px 8px";
-        row2.style.border = "1px solid rgba(255,255,255,0.08)";
-        row2.style.borderRadius = "10px";
-        row2.style.background = "rgba(255,255,255,0.03)";
-        const imgWrap = document.createElement("div");
-        imgWrap.style.width = "48px";
-        imgWrap.style.height = "48px";
-        imgWrap.style.borderRadius = "10px";
-        imgWrap.style.background = "rgba(255,255,255,0.08)";
-        imgWrap.style.display = "flex";
-        imgWrap.style.alignItems = "center";
-        imgWrap.style.justifyContent = "center";
-        imgWrap.style.overflow = "hidden";
-        const label2 = entry.pet.petSpecies || entry.pet.name || "Pet";
-        const fallback = document.createElement("div");
-        fallback.textContent = String(label2).slice(0, 2).toUpperCase();
-        fallback.style.fontSize = "12px";
-        fallback.style.fontWeight = "700";
-        imgWrap.appendChild(fallback);
-        const species = String(entry.pet.petSpecies || "").trim();
-        const mutations = Array.isArray(entry.mutations) ? entry.mutations.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
-        if (species) {
-          attachSpriteIcon(
-            imgWrap,
-            ["pet"],
-            [species, entry.pet.name || ""],
-            48,
-            "sell-all-pets-confirm",
-            {
-              mutations
-            }
-          );
-        }
-        const info = document.createElement("div");
-        info.style.display = "grid";
-        info.style.gap = "4px";
-        const name = document.createElement("div");
-        name.textContent = entry.pet.name ? `${entry.pet.name} (${entry.pet.petSpecies ?? "Pet"})` : entry.pet.petSpecies ?? "Pet";
-        name.style.fontWeight = "700";
-        name.style.fontSize = "13px";
-        const reasons = document.createElement("div");
-        reasons.style.display = "flex";
-        reasons.style.flexWrap = "wrap";
-        reasons.style.gap = "6px";
-        for (const reason of entry.reasons) {
-          const chip = document.createElement("div");
-          chip.textContent = reason;
-          chip.style.fontSize = "11px";
-          chip.style.padding = "2px 6px";
-          chip.style.borderRadius = "999px";
-          chip.style.background = "rgba(122,162,255,0.2)";
-          chip.style.border = "1px solid rgba(122,162,255,0.4)";
-          chip.style.color = "#dbe7ff";
-          reasons.appendChild(chip);
-        }
-        info.append(name, reasons);
-        row2.append(imgWrap, info);
-        return row2;
-      };
-      for (const entry of flagged) {
-        list.appendChild(buildPetRow(entry));
-      }
-      const actions = document.createElement("div");
-      actions.style.display = "flex";
-      actions.style.justifyContent = "flex-end";
-      actions.style.gap = "8px";
-      const btnCancel = document.createElement("button");
-      btnCancel.type = "button";
-      btnCancel.textContent = "Cancel";
-      btnCancel.style.padding = "8px 12px";
-      btnCancel.style.borderRadius = "10px";
-      btnCancel.style.border = "1px solid rgba(255,255,255,0.2)";
-      btnCancel.style.background = "transparent";
-      btnCancel.style.color = "#ffffff";
-      btnCancel.style.cursor = "pointer";
-      const btnConfirm = document.createElement("button");
-      btnConfirm.type = "button";
-      btnConfirm.textContent = "Sell";
-      btnConfirm.style.padding = "8px 14px";
-      btnConfirm.style.borderRadius = "10px";
-      btnConfirm.style.border = "1px solid rgba(122,162,255,0.7)";
-      btnConfirm.style.background = "#1a2644";
-      btnConfirm.style.color = "#ffffff";
-      btnConfirm.style.cursor = "pointer";
-      btnConfirm.style.fontWeight = "700";
-      let settled = false;
-      const close = (value) => {
-        if (settled) return;
-        settled = true;
-        overlay2.remove();
-        document.removeEventListener("keydown", onKeyDown, true);
-        resolve(value);
-      };
-      const onKeyDown = (ev) => {
-        if (ev.key === "Escape") {
-          ev.preventDefault();
-          close(false);
-        }
-      };
-      btnCancel.addEventListener("click", () => close(false));
-      btnConfirm.addEventListener("click", () => close(true));
-      overlay2.addEventListener("click", (ev) => {
-        if (ev.target === overlay2) close(false);
-      });
-      actions.append(btnCancel, btnConfirm);
-      box2.append(title, body, list, actions);
-      overlay2.appendChild(box2);
-      document.body.appendChild(overlay2);
-      document.addEventListener("keydown", onKeyDown, true);
-      btnConfirm.focus();
-    });
-  }
-  function safeInvokeClick(handler, ev, ctx2, logger) {
-    try {
-      const result = handler(ev, ctx2);
-      if (isPromiseLike(result)) {
-        result.catch((err) => logClickError(err, logger));
-      }
-    } catch (err) {
-      logClickError(err, logger);
-    }
-  }
-  function logClickError(error, logger) {
-    try {
-      logger("sell-all-click-error", error);
-    } catch {
-    }
-  }
-  function isPromiseLike(value) {
-    return !!value && (typeof value === "object" || typeof value === "function") && typeof value.then === "function";
-  }
-  function isInventoryPetItem(item) {
-    return !!item && item.itemType === "Pet" && typeof item.id === "string";
-  }
-  function isBrowser() {
-    return typeof window !== "undefined" && typeof document !== "undefined";
-  }
-  function noSSRController() {
-    return { stop() {
-    }, runOnce() {
-    }, isRunning: () => false };
-  }
-  function norm(s) {
-    return (s ?? "").replace(/\s+/g, " ").trim();
-  }
-  function getLabel(el) {
-    const t = norm(el.textContent);
-    if (t) return t;
-    const a = norm(el.getAttribute("aria-label"));
-    return a;
-  }
-  function getWords(label2) {
-    return label2.trim().split(/\s+/).filter(Boolean);
-  }
-  function isSellTwoWordLabel(label2) {
-    const words = getWords(label2);
-    return words.length === 2 && /^sell$/i.test(words[0]);
-  }
-  function findTargetButton(scope, btnWide, btnStrict, _btnText) {
-    const all = Array.from(/* @__PURE__ */ new Set([
-      ...Array.from(scope.querySelectorAll(btnWide)),
-      ...Array.from(scope.querySelectorAll(btnStrict))
-    ])).filter((b) => b instanceof HTMLButtonElement).filter((b) => !b.classList.contains(DEFAULTS.injectedClass));
-    const target = all.find((b) => {
-      const label2 = getLabel(b);
-      if (/crops/i.test(label2)) return false;
-      if (isSellTwoWordLabel(label2)) return true;
-      if (/^sell$/i.test(label2.trim()) && b.querySelector("canvas")) return true;
-      return false;
-    });
-    return target ?? null;
-  }
-  function ensureInjectedNextTo(targetBtn, injectedClass, injectedText, onClick) {
-    const parent = targetBtn.parentElement || targetBtn.closest(".McFlex, .css-0") || targetBtn.parentNode;
-    if (!parent) return;
-    let injected6 = parent.querySelector(`.${injectedClass}`);
-    if (injected6) {
-      if (targetBtn.nextElementSibling !== injected6) {
-        parent.insertBefore(injected6, targetBtn.nextSibling);
-      }
-      if (injected6.textContent !== injectedText) injected6.textContent = injectedText;
-      return;
-    }
-    injected6 = document.createElement("button");
-    injected6.type = "button";
-    injected6.className = `${injectedClass} chakra-button`;
-    injected6.textContent = injectedText;
-    injected6.setAttribute("aria-label", injectedText);
-    injected6.title = injectedText;
-    injected6.style.marginLeft = "8px";
-    const cs = getComputedStyle(parent);
-    if (cs.display !== "flex") {
-      injected6.style.display = "inline-flex";
-      injected6.style.alignItems = "center";
-    }
-    injected6.addEventListener("click", (ev) => onClick(ev, {
-      host: targetBtn.closest(DEFAULTS.rootSelector),
-      targetBtn,
-      injectedBtn: injected6
-    }));
-    parent.insertBefore(injected6, targetBtn.nextSibling);
-  }
-  function cleanup(root, injectedClass) {
-    root.querySelectorAll(`.${injectedClass}`).forEach((n) => n.remove());
-  }
-  function ensureStyle(injectedClass, theme) {
-    const STYLE_ID6 = `${injectedClass}-style`;
-    if (document.getElementById(STYLE_ID6)) return;
-    const css3 = `
-.${injectedClass}{
-  font-synthesis: none;
-  -webkit-font-smoothing: antialiased;
-  -webkit-text-size-adjust: 100%;
-  cursor: pointer;
-  display: inline-flex;
-  appearance: none;
-  align-items: center;
-  justify-content: center;
-  user-select: none;
-  white-space: nowrap;
-  vertical-align: middle;
-
-  outline: transparent solid 2px;
-  outline-offset: 2px;
-  line-height: 1.2;
-
-  border-radius: 15px;                        /* aligns with provided design */
-  font-weight: 700;
-  height: auto;
-  min-width: var(--chakra-sizes-10, 2.5rem);
-  box-shadow: rgba(0, 0, 0, 0.3) 0px 4px 12px;
-  transform: translateY(0px);
-  transition: 0.2s;
-
-  border: 2px solid ${theme.border};
-  color: ${theme.text};
-  background: ${theme.bg};
-
-  text-transform: none;
-  overflow: hidden;
-  font-size: 20px;
-  padding-inline-start: var(--chakra-space-4, 1rem);
-  padding-inline-end: var(--chakra-space-4, 1rem);
-  padding-top: var(--chakra-space-3, 0.75rem);
-  padding-bottom: var(--chakra-space-3, 0.75rem);
-
-  -webkit-tap-highlight-color: transparent;
-}
-.${injectedClass}:hover{
-  transform: translateY(-1px);
-  background: ${theme.hoverBg};
-  border-color: ${theme.hoverBorder};
-}
-.${injectedClass}:active{
-  transform: translateY(1px);
-  background: ${theme.activeBg};
-}
-.${injectedClass}:focus-visible{
-  box-shadow: 0 0 0 3px ${theme.ring};
-}
-`.trim();
-    const s = document.createElement("style");
-    s.id = STYLE_ID6;
-    s.textContent = css3;
-    document.head.appendChild(s);
-  }
-  function hookHistory(onNavigate) {
-    const p = history.pushState?.bind(history);
-    const r = history.replaceState?.bind(history);
-    const wrap = (fn) => fn ? function(...args) {
-      const ret = fn.apply(this, args);
-      onNavigate();
-      return ret;
-    } : fn;
-    if (p) history.pushState = wrap(p);
-    if (r) history.replaceState = wrap(r);
-    const onPop = () => onNavigate();
-    window.addEventListener("popstate", onPop);
-    return () => {
-      if (p) history.pushState = p;
-      if (r) history.replaceState = r;
-      window.removeEventListener("popstate", onPop);
-    };
-  }
-  var SELL_ALL_PETS_EVENT, SELL_ALL_PETS_DRY_RUN, SELL_ALL_PETS_CONFIRM_MODAL_ID, DEFAULT_THEME, DEFAULTS;
-  var init_domButton = __esm({
-    "src/features/sellAllPets/domButton.ts"() {
-      "use strict";
-      init_atoms();
-      init_jotai();
-      init_player();
-      init_toast();
-      init_audioPlayer();
-      init_stats();
-      init_value();
-      init_petValue();
-      init_iconCache();
-      init_restrictions();
-      init_data();
-      SELL_ALL_PETS_EVENT = "sell-all-pets:list";
-      SELL_ALL_PETS_DRY_RUN = false;
-      SELL_ALL_PETS_CONFIRM_MODAL_ID = "tm-sellallpets-confirm";
-      DEFAULT_THEME = {
-        text: "var(--chakra-colors-Neutral-TrueWhite, #FFFFFF)",
-        bg: "var(--chakra-colors-Blue-Magic, #0067B4)",
-        border: "var(--chakra-colors-Blue-Light, #48ADF4)",
-        hoverBg: "var(--chakra-colors-Blue-Light, #48ADF4)",
-        hoverBorder: "var(--chakra-colors-Blue-Baby, #25AAE2)",
-        activeBg: "var(--chakra-colors-Blue-Dark, #264093)",
-        ring: "var(--chakra-ring-color, rgba(66,153,225,0.6))"
-      };
-      DEFAULTS = {
-        // conteneur principal du panel modal pet sell
-        rootSelector: ".McFlex.css-1svwxx0",
-        // gate : bloc qui contient le bouton (hash de classe instable côté Chakra)
-        checkSelector: ".McGrid",
-        // nouveau bouton "Sell Pet"
-        buttonSelectorWide: "button.chakra-button.css-1glc7hj, button.chakra-button, button.css-1glc7hj",
-        buttonSelectorStrict: "button.chakra-button.css-1glc7hj",
-        targetText: "Sell Pet",
-        // Back-compat only
-        injectText: "Sell all Pets",
-        injectedClass: "tm-injected-sell-all",
-        styleId: "tm-injected-sell-all-style"
-      };
-    }
-  });
-
-  // src/features/sellAllPets/keybind.ts
-  function installSellKeybindsOnce() {
-    if (sellKeybindsInstalled || typeof window === "undefined") return;
-    sellKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (eventMatchesKeybind("sell.sell-all", event)) {
-          event.preventDefault();
-          event.stopPropagation();
-          void PlayerService.sellAllCrops();
-          return;
-        }
-        if (eventMatchesKeybind("sell.sell-all-pets", event)) {
-          event.preventDefault();
-          event.stopPropagation();
-          void runSellAllPetsFlow();
-        }
-      },
-      true
-    );
-  }
-  var sellKeybindsInstalled;
-  var init_keybind2 = __esm({
-    "src/features/sellAllPets/keybind.ts"() {
-      "use strict";
-      init_player();
-      init_keybinds();
-      init_keyboard();
-      init_domButton();
-      sellKeybindsInstalled = false;
-    }
-  });
-
-  // src/features/keybinds/modalToggles/petHutch.ts
-  async function togglePetHutchModal() {
-    try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === PET_HUTCH_MODAL_ID) {
-        await closeModal(PET_HUTCH_MODAL_ID);
-        return;
-      }
-      await openModal(PET_HUTCH_MODAL_ID);
-    } catch {
-    }
-  }
-  function installPetHutchKeybindsOnce() {
-    if (petHutchKeybindsInstalled || typeof window === "undefined") return;
-    petHutchKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind(ACTION_ID, event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void togglePetHutchModal();
-      },
-      true
-    );
-  }
-  var ACTION_ID, PET_HUTCH_MODAL_ID, petHutchKeybindsInstalled;
-  var init_petHutch = __esm({
-    "src/features/keybinds/modalToggles/petHutch.ts"() {
-      "use strict";
-      init_atoms();
-      init_fakeModal();
-      init_keybinds();
-      init_keyboard();
-      ACTION_ID = "game.pet-hutch";
-      PET_HUTCH_MODAL_ID = "petHutch";
-      petHutchKeybindsInstalled = false;
-    }
-  });
-
-  // src/features/keybinds/modalToggles/journal.ts
-  async function toggleJournalModal() {
-    try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === JOURNAL_MODAL_ID) {
-        await closeModal(JOURNAL_MODAL_ID);
-        return;
-      }
-      await openModal(JOURNAL_MODAL_ID);
-    } catch {
-    }
-  }
-  function installJournalKeybindsOnce() {
-    if (journalKeybindsInstalled || typeof window === "undefined") return;
-    journalKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind(ACTION_ID2, event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void toggleJournalModal();
-      },
-      true
-    );
-  }
-  var ACTION_ID2, journalKeybindsInstalled;
-  var init_journal = __esm({
-    "src/features/keybinds/modalToggles/journal.ts"() {
-      "use strict";
-      init_atoms();
-      init_fakeModal();
-      init_keybinds();
-      init_keyboard();
-      ACTION_ID2 = "game.journal";
-      journalKeybindsInstalled = false;
-    }
-  });
-
-  // src/features/keybinds/modalToggles/decorShed.ts
-  async function toggleDecorShedModal() {
-    try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === DECOR_SHED_MODAL_ID) {
-        await closeModal(DECOR_SHED_MODAL_ID);
-        return;
-      }
-      await openModal(DECOR_SHED_MODAL_ID);
-    } catch {
-    }
-  }
-  function installDecorShedKeybindsOnce() {
-    if (decorShedKeybindsInstalled || typeof window === "undefined") return;
-    decorShedKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind(ACTION_ID3, event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void toggleDecorShedModal();
-      },
-      true
-    );
-  }
-  var ACTION_ID3, DECOR_SHED_MODAL_ID, decorShedKeybindsInstalled;
-  var init_decorShed = __esm({
-    "src/features/keybinds/modalToggles/decorShed.ts"() {
-      "use strict";
-      init_atoms();
-      init_fakeModal();
-      init_keybinds();
-      init_keyboard();
-      ACTION_ID3 = "game.decor-shed";
-      DECOR_SHED_MODAL_ID = "decorShed";
-      decorShedKeybindsInstalled = false;
-    }
-  });
-
-  // src/features/keybinds/modalToggles/toolShack.ts
-  async function toggleToolShackModal() {
-    try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === TOOL_SHACK_MODAL_ID) {
-        await closeModal(TOOL_SHACK_MODAL_ID);
-        return;
-      }
-      await openModal(TOOL_SHACK_MODAL_ID);
-    } catch {
-    }
-  }
-  function installToolShackKeybindsOnce() {
-    if (toolShackKeybindsInstalled || typeof window === "undefined") return;
-    toolShackKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind(ACTION_ID4, event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void toggleToolShackModal();
-      },
-      true
-    );
-  }
-  var ACTION_ID4, TOOL_SHACK_MODAL_ID, toolShackKeybindsInstalled;
-  var init_toolShack = __esm({
-    "src/features/keybinds/modalToggles/toolShack.ts"() {
-      "use strict";
-      init_atoms();
-      init_fakeModal();
-      init_keybinds();
-      init_keyboard();
-      ACTION_ID4 = "game.tool-shack";
-      TOOL_SHACK_MODAL_ID = "toolShack";
-      toolShackKeybindsInstalled = false;
-    }
-  });
-
-  // src/features/keybinds/modalToggles/seedSilo.ts
-  async function toggleSeedSiloModal() {
-    try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === SEED_SILO_MODAL_ID) {
-        await closeModal(SEED_SILO_MODAL_ID);
-        return;
-      }
-      await openModal(SEED_SILO_MODAL_ID);
-    } catch {
-    }
-  }
-  function installSeedSiloKeybindsOnce() {
-    if (seedSiloKeybindsInstalled || typeof window === "undefined") return;
-    seedSiloKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind(ACTION_ID5, event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void toggleSeedSiloModal();
-      },
-      true
-    );
-  }
-  var ACTION_ID5, SEED_SILO_MODAL_ID, seedSiloKeybindsInstalled;
-  var init_seedSilo = __esm({
-    "src/features/keybinds/modalToggles/seedSilo.ts"() {
-      "use strict";
-      init_atoms();
-      init_fakeModal();
-      init_keybinds();
-      init_keyboard();
-      ACTION_ID5 = "game.seed-silo";
-      SEED_SILO_MODAL_ID = "seedSilo";
-      seedSiloKeybindsInstalled = false;
-    }
-  });
-
-  // src/features/keybinds/modalToggles/feedingTrough.ts
-  async function toggleFeedingTroughModal() {
-    try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === FEEDING_TROUGH_MODAL_ID) {
-        await closeModal(FEEDING_TROUGH_MODAL_ID);
-        return;
-      }
-      await openModal(FEEDING_TROUGH_MODAL_ID);
-    } catch {
-    }
-  }
-  function installFeedingTroughKeybindsOnce() {
-    if (feedingTroughKeybindsInstalled || typeof window === "undefined") return;
-    feedingTroughKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind(ACTION_ID6, event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void toggleFeedingTroughModal();
-      },
-      true
-    );
-  }
-  var ACTION_ID6, FEEDING_TROUGH_MODAL_ID, feedingTroughKeybindsInstalled;
-  var init_feedingTrough = __esm({
-    "src/features/keybinds/modalToggles/feedingTrough.ts"() {
-      "use strict";
-      init_atoms();
-      init_fakeModal();
-      init_keybinds();
-      init_keyboard();
-      ACTION_ID6 = "game.feeding-trough";
-      FEEDING_TROUGH_MODAL_ID = "feedingTrough";
-      feedingTroughKeybindsInstalled = false;
-    }
-  });
-
-  // src/features/keybinds/modalToggles/weatherStation.ts
-  async function toggleWeatherStationModal() {
-    try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === WEATHER_STATION_MODAL_ID) {
-        await closeModal(WEATHER_STATION_MODAL_ID);
-        return;
-      }
-      await openModal(WEATHER_STATION_MODAL_ID);
-    } catch {
-    }
-  }
-  function installWeatherStationKeybindsOnce() {
-    if (weatherStationKeybindsInstalled || typeof window === "undefined") return;
-    weatherStationKeybindsInstalled = true;
-    window.addEventListener(
-      "keydown",
-      (event) => {
-        if (shouldIgnoreKeydown(event)) return;
-        if (!eventMatchesKeybind(ACTION_ID7, event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void toggleWeatherStationModal();
-      },
-      true
-    );
-  }
-  var ACTION_ID7, WEATHER_STATION_MODAL_ID, weatherStationKeybindsInstalled;
-  var init_weatherStation = __esm({
-    "src/features/keybinds/modalToggles/weatherStation.ts"() {
-      "use strict";
-      init_atoms();
-      init_fakeModal();
-      init_keybinds();
-      init_keyboard();
-      ACTION_ID7 = "game.weather-station";
-      WEATHER_STATION_MODAL_ID = "weatherStation";
-      weatherStationKeybindsInstalled = false;
+      rapidFireCombos = /* @__PURE__ */ new Map();
+      installed3 = false;
     }
   });
 
@@ -22629,7 +21474,7 @@
         prefs = {
           globalEnabled: parsed.globalEnabled !== false,
           generalEnabled: !!parsed.generalEnabled,
-          defaultThresholdPct: clampPct2(parsed.defaultThresholdPct ?? prefs.defaultThresholdPct),
+          defaultThresholdPct: clampPct(parsed.defaultThresholdPct ?? prefs.defaultThresholdPct),
           pets: typeof parsed.pets === "object" && parsed.pets ? parsed.pets : {}
         };
       }
@@ -22644,14 +21489,14 @@
     }
   }
   function prefFor(petId) {
-    const baseThreshold = clampPct2(prefs.defaultThresholdPct);
+    const baseThreshold = clampPct(prefs.defaultThresholdPct);
     if (prefs.generalEnabled) {
       return { enabled: prefs.globalEnabled !== false, thresholdPct: baseThreshold };
     }
     if (!petId) return { enabled: false, thresholdPct: baseThreshold };
     const entry = prefs.pets[petId] ?? {};
     const enabled5 = entry.enabled ?? false;
-    const thresholdPct = clampPct2(entry.thresholdPct ?? baseThreshold);
+    const thresholdPct = clampPct(entry.thresholdPct ?? baseThreshold);
     return { enabled: enabled5, thresholdPct };
   }
   async function triggerAlert(key2) {
@@ -22717,14 +21562,14 @@
     started = false;
     seenBelow.clear();
   }
-  var clampPct2, prefs, started, unsubPets, lastPets, seenBelow, PetAlertService;
+  var clampPct, prefs, started, unsubPets, lastPets, seenBelow, PetAlertService;
   var init_petAlerts = __esm({
     "src/features/notifier/petAlerts.ts"() {
       "use strict";
       init_pets();
       init_audio();
       init_storage();
-      clampPct2 = (v) => Math.max(1, Math.min(100, Math.round(v)));
+      clampPct = (v) => Math.max(1, Math.min(100, Math.round(v)));
       prefs = {
         globalEnabled: true,
         generalEnabled: false,
@@ -22757,20 +21602,20 @@
           void this.refreshNow();
         },
         getGeneralThresholdPct() {
-          return clampPct2(prefs.defaultThresholdPct);
+          return clampPct(prefs.defaultThresholdPct);
         },
         setGeneralThresholdPct(pct) {
-          const next = clampPct2(pct);
+          const next = clampPct(pct);
           prefs.defaultThresholdPct = next;
           savePrefs();
           void this.refreshNow();
           return next;
         },
         getDefaultThresholdPct() {
-          return clampPct2(prefs.defaultThresholdPct);
+          return clampPct(prefs.defaultThresholdPct);
         },
         setDefaultThresholdPct(pct) {
-          const next = clampPct2(pct);
+          const next = clampPct(pct);
           prefs.defaultThresholdPct = next;
           savePrefs();
           return next;
@@ -22789,7 +21634,7 @@
         },
         setPetThresholdPct(petId, pct) {
           if (!petId) return this.getDefaultThresholdPct();
-          const next = clampPct2(pct);
+          const next = clampPct(pct);
           prefs.pets[petId] = { ...prefs.pets[petId] || {}, thresholdPct: next };
           savePrefs();
           void evaluateAll();
@@ -24086,20 +22931,20 @@
     if (found) cachedGraphicsCtor = found;
     return found;
   }
-  function computeGeometry(card5) {
-    const cardBounds = card5.getLocalBounds();
-    const width = card5.hitArea?.width ?? cardBounds.width;
-    const height = card5.hitArea?.height ?? cardBounds.height;
-    const titleRow = (card5.children ?? []).find((c) => c?.label === TITLE_ROW_LABEL);
+  function computeGeometry(card4) {
+    const cardBounds = card4.getLocalBounds();
+    const width = card4.hitArea?.width ?? cardBounds.width;
+    const height = card4.hitArea?.height ?? cardBounds.height;
+    const titleRow = (card4.children ?? []).find((c) => c?.label === TITLE_ROW_LABEL);
     const contentTop = titleRow ? titleRow.position.y + titleRow.getLocalBounds().minY : cardBounds.minY;
     const abilitiesSection = (cardSystem?.children ?? []).find((c) => c?.label === ABILITIES_SECTION_LABEL);
     const extraTopOffset = abilitiesSection ? abilitiesSection.getLocalBounds().height + SECTION_GAP_ESTIMATE : 0;
     return { top: contentTop - extraTopOffset, width, height };
   }
-  function notifyListeners(card5, geometry) {
-    for (const listener of listeners4) {
+  function notifyListeners(card4, geometry) {
+    for (const listener of listeners3) {
       try {
-        listener(card5, geometry);
+        listener(card4, geometry);
       } catch (error) {
         console.warn("[gardenInfoCardPixi] listener failed", error);
       }
@@ -24107,17 +22952,17 @@
   }
   function onChildAddedUnsafe(row2) {
     if (row2?.label !== CARD_ROW_LABEL) return;
-    const card5 = findByLabel(row2, OBJECT_CARD_LABEL);
-    if (!card5) return;
-    currentCard = card5;
-    const geometry = computeGeometry(card5);
-    card5.once("destroyed", () => {
-      if (currentCard === card5) {
+    const card4 = findByLabel(row2, OBJECT_CARD_LABEL);
+    if (!card4) return;
+    currentCard = card4;
+    const geometry = computeGeometry(card4);
+    card4.once("destroyed", () => {
+      if (currentCard === card4) {
         currentCard = null;
         notifyListeners(null, null);
       }
     });
-    notifyListeners(card5, geometry);
+    notifyListeners(card4, geometry);
   }
   function onChildAdded(row2) {
     try {
@@ -24162,24 +23007,24 @@
   function scheduleFind(now2) {
     findRafId = null;
     debugState.rafTicks += 1;
-    if (!listeners4.size || cardSystem) return;
+    if (!listeners3.size || cardSystem) return;
     if (now2 - lastFindCheckAt >= CARD_SYSTEM_FIND_RETRY_MS) {
       lastFindCheckAt = now2;
       tryFindCardSystem();
     }
-    if (!listeners4.size || cardSystem) return;
+    if (!listeners3.size || cardSystem) return;
     findRafId = raf(scheduleFind);
   }
   function restartSearchIfNeeded() {
-    if (!listeners4.size || cardSystem) return;
+    if (!listeners3.size || cardSystem) return;
     tryFindCardSystem();
     if (!cardSystem && findRafId == null) {
       findRafId = raf(scheduleFind);
     }
   }
   function watchGardenInfoCard(listener) {
-    listeners4.add(listener);
-    debugState.listenerCount = listeners4.size;
+    listeners3.add(listener);
+    debugState.listenerCount = listeners3.size;
     restartSearchIfNeeded();
     if (currentCard) {
       try {
@@ -24189,11 +23034,11 @@
       }
     }
     return () => {
-      listeners4.delete(listener);
-      debugState.listenerCount = listeners4.size;
+      listeners3.delete(listener);
+      debugState.listenerCount = listeners3.size;
     };
   }
-  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners4, debugState, raf;
+  var CARD_SYSTEM_LABEL, CARD_ROW_LABEL, OBJECT_CARD_LABEL, TITLE_ROW_LABEL, ABILITIES_SECTION_LABEL, SECTION_GAP_ESTIMATE, CARD_SYSTEM_FIND_RETRY_MS, CARD_SYSTEM_FIND_LOG_EVERY, cachedGraphicsCtor, cardSystem, currentCard, findAttempts, findRafId, lastFindCheckAt, listeners3, debugState, raf;
   var init_gardenInfoCard = __esm({
     "src/game/pixi/gardenInfoCard.ts"() {
       "use strict";
@@ -24213,7 +23058,7 @@
       findAttempts = 0;
       findRafId = null;
       lastFindCheckAt = 0;
-      listeners4 = /* @__PURE__ */ new Set();
+      listeners3 = /* @__PURE__ */ new Set();
       debugState = {
         findAttempts: 0,
         attached: false,
@@ -26049,7 +24894,7 @@
       return `${id}|${species}|${name}|${muts}|${strength}`;
     }).join(";");
   }
-  async function findPetById2(petId) {
+  async function findPetById(petId) {
     try {
       const list = await PetsService.getPets();
       const arr = Array.isArray(list) ? list : [];
@@ -26065,7 +24910,7 @@
     const expectedPetId = petId;
     btn.disabled = true;
     try {
-      const pet = await findPetById2(petId);
+      const pet = await findPetById(petId);
       if (!pet) return;
       const species = String(pet?.slot?.petSpecies || "");
       const compatible = PetsService.getInstantFeedAllowedCrops(species);
@@ -26150,9 +24995,9 @@
     let players = void 0;
     let selectedSlotId = null;
     let lastPrice = null;
-    const listeners8 = /* @__PURE__ */ new Set();
+    const listeners6 = /* @__PURE__ */ new Set();
     const notify3 = () => {
-      for (const fn of listeners8) try {
+      for (const fn of listeners6) try {
         fn();
       } catch {
       }
@@ -26219,11 +25064,11 @@
         return lastPrice;
       },
       onChange(cb) {
-        listeners8.add(cb);
-        return () => listeners8.delete(cb);
+        listeners6.add(cb);
+        return () => listeners6.delete(cb);
       },
       stop() {
-        listeners8.clear();
+        listeners6.clear();
       }
     };
   }
@@ -26253,7 +25098,7 @@
       writeAriesPath(PATH_SHOW_CROP_PRICE, next);
     } catch {
     }
-    for (const listener of listeners5) {
+    for (const listener of listeners4) {
       try {
         listener(next);
       } catch {
@@ -26261,18 +25106,18 @@
     }
   }
   function onShowCropPriceChange(cb) {
-    listeners5.add(cb);
+    listeners4.add(cb);
     return () => {
-      listeners5.delete(cb);
+      listeners4.delete(cb);
     };
   }
-  var PATH_SHOW_CROP_PRICE, listeners5;
+  var PATH_SHOW_CROP_PRICE, listeners4;
   var init_setting = __esm({
     "src/features/cropPrice/setting.ts"() {
       "use strict";
       init_storage();
       PATH_SHOW_CROP_PRICE = "misc.showCropPrice";
-      listeners5 = /* @__PURE__ */ new Set();
+      listeners4 = /* @__PURE__ */ new Set();
     }
   });
 
@@ -26324,19 +25169,19 @@
       return null;
     }
   }
-  function startCropValuesObserverFromGardenAtom(options = {}) {
+  function startCropValuesObserverFromGardenAtom(options2 = {}) {
     if (!hasDOM) {
       return { stop() {
       }, runOnce() {
       }, isRunning: () => false };
     }
     const selectors = {
-      rootSelector: options.rootSelector ?? DEFAULTS2.rootSelector,
-      innerSelector: options.innerSelector ?? DEFAULTS2.innerSelector
+      rootSelector: options2.rootSelector ?? DEFAULTS2.rootSelector,
+      innerSelector: options2.innerSelector ?? DEFAULTS2.innerSelector
     };
-    const markerClass = options.markerClass ?? DEFAULTS2.markerClass;
-    const root = options.root ?? document;
-    const logger = createLogger(options.log);
+    const markerClass = options2.markerClass ?? DEFAULTS2.markerClass;
+    const root = options2.root ?? document;
+    const logger = createLogger(options2.log);
     const priceWatcher = startCropPriceWatcherViaGardenObject();
     const shouldWaitForLocker = lockerService.getState().enabled;
     let running6 = true;
@@ -26932,13 +25777,13 @@
         }
       }
     };
-    const offCard = watchGardenInfoCard((card5, geom) => {
-      currentCard2 = card5;
+    const offCard = watchGardenInfoCard((card4, geom) => {
+      currentCard2 = card4;
       geometry = geom;
-      hitAreaBaseHeight = card5?.hitArea?.height ?? 0;
+      hitAreaBaseHeight = card4?.hitArea?.height ?? 0;
       detachValueText();
-      debugState3.attached = !!card5;
-      if (card5) syncValueNode();
+      debugState3.attached = !!card4;
+      if (card4) syncValueNode();
     });
     const offPrice = priceWatcher.onChange(syncValueNode);
     const offShowPrice = onShowCropPriceChange(() => syncValueNode());
@@ -27090,9 +25935,9 @@
         }
       }
     };
-    const offCard = watchGardenInfoCard((card5, geom) => {
+    const offCard = watchGardenInfoCard((card4, geom) => {
       removeBorder();
-      currentCard2 = card5;
+      currentCard2 = card4;
       geometry = geom;
       sync2();
     });
@@ -28265,7 +27110,7 @@
       speciesKey = (value) => value.toLowerCase().replace(/['’`]/g, "").replace(/\s+/g, "").replace(/-/g, "").replace(/(seed|plant|baby|fruit|crop)$/i, "");
       petStatsBySpecies = memoOnCatalogs(() => {
         const map2 = /* @__PURE__ */ new Map();
-        const register = (key2, stats) => {
+        const register2 = (key2, stats) => {
           if (typeof key2 !== "string") return;
           const normalized = speciesKey(key2);
           if (normalized && !map2.has(normalized)) map2.set(normalized, stats);
@@ -28275,8 +27120,8 @@
           const hoursToMature = Number(entry?.hoursToMature);
           if (!Number.isFinite(maxScale) || maxScale <= 1) continue;
           if (!Number.isFinite(hoursToMature) || hoursToMature <= 0) continue;
-          register(species, { maxScale, hoursToMature });
-          register(entry?.name, { maxScale, hoursToMature });
+          register2(species, { maxScale, hoursToMature });
+          register2(entry?.name, { maxScale, hoursToMature });
         }
         return map2;
       });
@@ -28604,8 +27449,8 @@
     }
     return { label: label2, current, max };
   }
-  function updateStrengthText(card5, item) {
-    const wrap = card5.querySelector(STRENGTH_WRAPPER_SELECTOR);
+  function updateStrengthText(card4, item) {
+    const wrap = card4.querySelector(STRENGTH_WRAPPER_SELECTOR);
     const textEl = wrap?.querySelector(STRENGTH_TEXT_SELECTOR);
     if (!wrap || !textEl) return;
     const info = getPetStrengthInfo(item);
@@ -28642,8 +27487,8 @@
     }
     return null;
   }
-  function alignStrengthText(card5) {
-    const wrap = card5.querySelector(STRENGTH_WRAPPER_SELECTOR);
+  function alignStrengthText(card4) {
+    const wrap = card4.querySelector(STRENGTH_WRAPPER_SELECTOR);
     if (!wrap) return;
     if (wrap.dataset[BASE_TRANSFORM_DATASET_KEY] == null) {
       wrap.dataset[BASE_TRANSFORM_DATASET_KEY] = wrap.style.transform ?? "";
@@ -28658,7 +27503,7 @@
       if (wrap.style.pointerEvents) wrap.style.pointerEvents = "";
       return;
     }
-    const row2 = ancestorContaining(wrap, FAVORITE_BUTTON_SELECTOR) ?? ancestorContaining(card5, FAVORITE_BUTTON_SELECTOR);
+    const row2 = ancestorContaining(wrap, FAVORITE_BUTTON_SELECTOR) ?? ancestorContaining(card4, FAVORITE_BUTTON_SELECTOR);
     const favorite = row2?.querySelector(FAVORITE_BUTTON_SELECTOR);
     if (!row2 || !favorite) return;
     const anchor = favorite.querySelector("svg") ?? favorite.querySelector(".chakra-icon") ?? favorite;
@@ -28742,10 +27587,10 @@
     const entries2 = [];
     for (const child of Array.from(container.children)) {
       if (!(child instanceof HTMLElement)) continue;
-      const card5 = cardOf(child);
-      if (!card5) continue;
-      alignStrengthText(card5);
-      entries2.push({ wrapper: child, card: card5 });
+      const card4 = cardOf(child);
+      if (!card4) continue;
+      alignStrengthText(card4);
+      entries2.push({ wrapper: child, card: card4 });
     }
     return entries2;
   }
@@ -28799,12 +27644,12 @@
     }
     return FULL_FORMAT.format(value);
   }
-  function updateCardValue(card5, value, show) {
-    const container = card5.querySelector(VALUE_CONTAINER_SELECTOR);
+  function updateCardValue(card4, value, show) {
+    const container = card4.querySelector(VALUE_CONTAINER_SELECTOR);
     const current = container?.querySelector(`.${VALUE_ELEMENT_CLASS}`) ?? null;
     if (!container || !show || typeof value !== "number" || !Number.isFinite(value)) {
       if (container) current?.remove();
-      delete card5.dataset[VALUE_DATASET_KEY];
+      delete card4.dataset[VALUE_DATASET_KEY];
       return;
     }
     const target = current ?? Object.assign(document.createElement("div"), { className: VALUE_ELEMENT_CLASS });
@@ -28834,7 +27679,7 @@
     }
     text2.textContent = formatCompactValue(value);
     target.title = formatFullValue(value);
-    card5.dataset[VALUE_DATASET_KEY] = String(value);
+    card4.dataset[VALUE_DATASET_KEY] = String(value);
     if (target.parentElement !== container || target !== container.lastElementChild) container.appendChild(target);
   }
   var VALUE_CONTAINER_SELECTOR, VALUE_ELEMENT_CLASS, VALUE_TEXT_CLASS, VALUE_DATASET_KEY, GAME_YELLOW2, LOADING, UNKNOWN, COMPACT_UNITS, FULL_FORMAT, formatFullValue, COIN_ICON_SRC, ValueSummary;
@@ -29106,7 +27951,7 @@
     }
   }
   var PET_HUTCH_ROOT_SELECTOR, HUTCH_LIST_SELECTOR, INVENTORY_LIST_SELECTOR, PET_NAME_SELECTOR, petSpeciesOf;
-  var init_petHutch2 = __esm({
+  var init_petHutch = __esm({
     "src/features/inventory/petHutch.ts"() {
       "use strict";
       init_atoms();
@@ -29251,9 +28096,9 @@
     input.checked = checked;
     return input;
   }
-  function radioGroup(name, options, selected, onChange) {
+  function radioGroup(name, options2, selected, onChange) {
     const wrap = h("div", "qmm-radio-group");
-    for (const { value, label: label2 } of options) {
+    for (const { value, label: label2 } of options2) {
       const input = radio(name, value, selected === value);
       input.onchange = () => {
         if (input.checked) onChange(value);
@@ -29364,11 +28209,11 @@
     if (bar.wrap.parentElement !== filtersBlock) filtersBlock.appendChild(bar.wrap);
     return bar;
   }
-  function renderSortOptions(select3, options, preferred) {
+  function renderSortOptions(select3, options2, preferred) {
     const previous = preferred ?? select3.value;
-    select3.replaceChildren(...options.map((opt) => new Option(opt.label, opt.value)));
-    if (options.some((o) => o.value === "none")) select3.value = "none";
-    if (previous && previous !== "none" && options.some((o) => o.value === previous)) select3.value = previous;
+    select3.replaceChildren(...options2.map((opt) => new Option(opt.label, opt.value)));
+    if (options2.some((o) => o.value === "none")) select3.value = "none";
+    if (previous && previous !== "none" && options2.some((o) => o.value === previous)) select3.value = previous;
   }
   var WRAP_CLASS, bars;
   var init_sortBar = __esm({
@@ -29506,10 +28351,10 @@
       const domChanged = domOrderChanged(lastSortedOrder, entries2);
       lastContextKey = filterContextKey(filters, search2);
       void current.summary.update(filters, search2);
-      const options = computeSortOptions(filters, shownItemTypes(filters, search2));
-      const offered = (key2) => key2 && options.some((o) => o.value === key2) ? key2 : null;
+      const options2 = computeSortOptions(filters, shownItemTypes(filters, search2));
+      const offered = (key2) => key2 && options2.some((o) => o.value === key2) ? key2 : null;
       if (lastRenderedEntryCount !== entries2.length || !current.sortSelect.options.length) {
-        renderSortOptions(current.sortSelect, options, offered(current.lastSortKey) || offered(loadSortKey()));
+        renderSortOptions(current.sortSelect, options2, offered(current.lastSortKey) || offered(loadSortKey()));
         lastRenderedEntryCount = entries2.length;
       }
       const sortKey = current.sortSelect.value;
@@ -29616,7 +28461,7 @@
       init_domSorter();
       init_filters();
       init_inventoryDom();
-      init_petHutch2();
+      init_petHutch();
       init_settings3();
       init_sortBar();
       init_sortOptions();
@@ -29654,17 +28499,17 @@
     if (!spaced2) return String(action2 || "");
     return spaced2.split(" ").map((word) => word ? word.charAt(0).toUpperCase() + word.slice(1) : word).join(" ");
   }
-  function mergeActions(actions) {
+  function mergeActions(actions2) {
     const seen = /* @__PURE__ */ new Set();
     const ordered = [];
     for (const key2 of ACTION_ORDER) {
       if (key2 === "all") continue;
-      if (actions.includes(key2) && !seen.has(key2)) {
+      if (actions2.includes(key2) && !seen.has(key2)) {
         seen.add(key2);
         ordered.push(key2);
       }
     }
-    for (const action2 of actions) {
+    for (const action2 of actions2) {
       if (action2 === "all") continue;
       if (!seen.has(action2)) {
         seen.add(action2);
@@ -29838,10 +28683,10 @@
     if (typeof raw.action === "string" && raw.action.trim()) entry.action = String(raw.action);
     return entry;
   }
-  function normalizeEntries(logs) {
-    if (!Array.isArray(logs)) return [];
+  function normalizeEntries(logs2) {
+    if (!Array.isArray(logs2)) return [];
     const out = [];
-    for (const raw of logs) {
+    for (const raw of logs2) {
       const entry = normalizeEntry(raw);
       if (entry) out.push(entry);
     }
@@ -29876,7 +28721,7 @@
     }
     return null;
   }
-  function entryKey(entry) {
+  function entryKey2(entry) {
     const action2 = typeof entry.action === "string" ? entry.action : "";
     return `${entry.timestamp}|${action2}|${entryIdentity(entry) ?? "__noid__"}`;
   }
@@ -29898,7 +28743,7 @@
   function diffSnapshots(prev, next) {
     const prevBuckets = /* @__PURE__ */ new Map();
     for (const entry of prev) {
-      const key2 = entryKey(entry);
+      const key2 = entryKey2(entry);
       const bucket = prevBuckets.get(key2);
       if (bucket) bucket.push(entry);
       else prevBuckets.set(key2, [entry]);
@@ -29906,7 +28751,7 @@
     const added = [];
     const updated = [];
     for (const entry of next) {
-      const key2 = entryKey(entry);
+      const key2 = entryKey2(entry);
       const bucket = prevBuckets.get(key2);
       const prevEntry = bucket?.shift();
       if (!prevEntry) added.push(entry);
@@ -29919,10 +28764,10 @@
     const { added, updated } = diffSnapshots(prevSnapshot, nextSnapshot);
     if (!added.length && !updated.length) return;
     const byKey = /* @__PURE__ */ new Map();
-    for (const entry of getActivityLogHistory()) byKey.set(entryKey(entry), entry);
+    for (const entry of getActivityLogHistory()) byKey.set(entryKey2(entry), entry);
     let changed = false;
     for (const entry of [...updated, ...added]) {
-      const key2 = entryKey(entry);
+      const key2 = entryKey2(entry);
       const cur = byKey.get(key2);
       if (!cur || !entriesEqual(cur, entry)) {
         byKey.set(key2, entry);
@@ -30101,13 +28946,13 @@
     container.label = FILTER_TOOLBAR_LABEL;
     const closedButton = buildClosedButton(ctors, closedLabel({ counts, total }));
     container.addChild(closedButton.container);
-    const options = buildOptions(ctors, maxWidth, counts, total);
-    options.container.position.set(0, BUTTON_HEIGHT + PANEL_GAP);
-    options.container.visible = false;
-    container.addChild(options.container);
-    const toolbar2 = { container, closedButton, options, counts, total, isExpanded: false };
+    const options2 = buildOptions(ctors, maxWidth, counts, total);
+    options2.container.position.set(0, BUTTON_HEIGHT + PANEL_GAP);
+    options2.container.visible = false;
+    container.addChild(options2.container);
+    const toolbar2 = { container, closedButton, options: options2, counts, total, isExpanded: false };
     closedButton.container.on("pointertap", () => setExpanded(toolbar2, !toolbar2.isExpanded));
-    for (const button3 of options.buttons) {
+    for (const button3 of options2.buttons) {
       button3.container.on("pointertap", () => {
         setActiveFilter(button3.key);
         setExpanded(toolbar2, false);
@@ -30400,10 +29245,10 @@
   async function startActivityLogHistoryWatcher() {
     const subs = new Subscriptions();
     let lastSnapshot = [];
-    const ingest2 = (logs, prev) => {
+    const ingest2 = (logs2, prev) => {
       try {
         const prevSnapshot = typeof prev !== "undefined" ? normalizeEntries(prev) : lastSnapshot;
-        const nextSnapshot = normalizeEntries(logs);
+        const nextSnapshot = normalizeEntries(logs2);
         syncHistory(prevSnapshot, nextSnapshot);
         lastSnapshot = nextSnapshot;
       } catch {
@@ -30640,12 +29485,7 @@
       writeAriesPath(STATE_PATH, state5);
     } catch {
     }
-    for (const listener of listeners6) {
-      try {
-        listener(state5);
-      } catch {
-      }
-    }
+    changes4.emit(state5);
   }
   function readPet(raw, eggIdFallback, timestamp, isPull) {
     if (!isRecord4(raw)) return null;
@@ -30737,10 +29577,10 @@
   }
   async function startHatchTracker() {
     const firstRun = !loadState().bootstrapped;
-    const consume = (logs, countStats) => {
-      if (!Array.isArray(logs)) return;
+    const consume = (logs2, countStats) => {
+      if (!Array.isArray(logs2)) return;
       try {
-        ingest(logs, countStats);
+        ingest(logs2, countStats);
       } catch {
       }
     };
@@ -30775,7 +29615,7 @@
       }
     };
   }
-  var STATE_PATH, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, listeners6, cachedState, HatchTracker;
+  var STATE_PATH, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, changes4, cachedState, HatchTracker;
   var init_tracker = __esm({
     "src/features/hatch/tracker.ts"() {
       "use strict";
@@ -30783,12 +29623,13 @@
       init_atoms();
       init_stats();
       init_pity();
+      init_emitter();
       init_storage();
       STATE_PATH = "hatch.tracker";
       HATCH_ACTION = "hatchEgg";
       DOUBLE_HATCH_ACTIONS = /* @__PURE__ */ new Set(["doublehatch", "doublehatchii"]);
       SEEN_LIMIT = 4e3;
-      listeners6 = /* @__PURE__ */ new Set();
+      changes4 = new Emitter();
       cachedState = null;
       HatchTracker = {
         getState() {
@@ -30820,10 +29661,7 @@
         // since the server's own never resets except on the outcome itself. Only
         // `setOffset` moves a counter by hand.
         subscribe(listener) {
-          listeners6.add(listener);
-          return () => {
-            listeners6.delete(listener);
-          };
+          return changes4.on(listener);
         }
       };
     }
@@ -31203,7 +30041,7 @@
       btn.dataset.open = open ? "1" : "0";
       btn.classList.toggle("active", open);
     }
-    function register(id, title, render) {
+    function register2(id, title, render) {
       registry2.push({ id, title, render });
       const openBtn = button("Open", { size: "sm" });
       openBtn.dataset.open = "0";
@@ -31222,7 +30060,7 @@
       launch.appendChild(item);
     }
     try {
-      opts?.onRegister?.(register);
+      opts?.onRegister?.(register2);
     } catch (error) {
       console.error("[HUD] panel registration failed:", error);
     }
@@ -31317,14 +30155,8 @@
   function initWatchers() {
     installShopKeybindsOnce();
     installSellKeybindsOnce();
-    installPetHutchKeybindsOnce();
+    installModalToggleKeybinds();
     installGameKeybindsOnce();
-    installJournalKeybindsOnce();
-    installSeedSiloKeybindsOnce();
-    installDecorShedKeybindsOnce();
-    installToolShackKeybindsOnce();
-    installFeedingTroughKeybindsOnce();
-    installWeatherStationKeybindsOnce();
     installCompanionKeybindsOnce();
     const bootToolbar = async () => {
       try {
@@ -31344,25 +30176,8 @@
       } catch {
       }
       try {
-        setTeamsForHotkeys(PetsService.getTeams());
-      } catch {
-      }
-      try {
-        await PetsService.onTeamsChangeNow((teams) => {
-          try {
-            setTeamsForHotkeys(teams);
-          } catch {
-          }
-        });
-      } catch {
-      }
-      try {
-        installPetTeamHotkeysOnce(async (teamId2) => {
-          try {
-            await PetsService.useTeam(teamId2);
-          } catch (e) {
-            console.warn("[Pets] hotkey useTeam failed:", e);
-          }
+        installPetTeamHotkeys((teamId2) => {
+          PetsService.useTeam(teamId2).catch((e) => console.warn("[Pets] hotkey useTeam failed:", e));
         });
       } catch {
       }
@@ -31402,16 +30217,12 @@
       init_sockets();
       init_jotai();
       init_pets();
+      init_teamHotkeys();
       init_shops();
       init_keybind();
       init_keybind2();
-      init_petHutch();
-      init_journal();
-      init_decorShed();
-      init_toolShack();
-      init_seedSilo();
-      init_feedingTrough();
-      init_weatherStation();
+      init_modalToggles();
+      init_gameRemap();
       init_petAlerts();
       init_keybinds();
       init_keyboard();
@@ -31469,9 +30280,9 @@
     const subtitle = opts.subtitle || opts.description;
     if (subtitle) header.appendChild(h("div", "qmm-card__subtitle", subtitle));
     if (opts.actions?.length) {
-      const actions = h("div", "qmm-card__actions");
-      actions.append(...opts.actions);
-      header.appendChild(actions);
+      const actions2 = h("div", "qmm-card__actions");
+      actions2.append(...opts.actions);
+      header.appendChild(actions2);
     }
     const body = h("div", "qmm-card__body");
     root.append(header, body);
@@ -31488,8 +30299,8 @@
     el.hidden = true;
     return {
       el,
-      show(message) {
-        el.textContent = message;
+      show(message2) {
+        el.textContent = message2;
         el.hidden = false;
       },
       clear() {
@@ -31546,7 +30357,7 @@
       if (!recording) return;
       recording = false;
       if (activeRecorder === stopRecording) activeRecorder = null;
-      window.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("keydown", onKeyDown2, true);
       document.removeEventListener("pointerdown", onPointerDown, true);
       window.removeEventListener("blur", onWindowBlur);
       if (recordingTimeout !== null) clearTimeout(recordingTimeout);
@@ -31560,7 +30371,7 @@
       recording = true;
       activeRecorder = stopRecording;
       beginKeybindCapture();
-      window.addEventListener("keydown", onKeyDown, true);
+      window.addEventListener("keydown", onKeyDown2, true);
       document.addEventListener("pointerdown", onPointerDown, true);
       window.addEventListener("blur", onWindowBlur);
       recordingTimeout = window.setTimeout(stopRecording, RECORDING_TIMEOUT_MS);
@@ -31573,7 +30384,7 @@
     const onWindowBlur = (e) => {
       if (e.target === window) stopRecording();
     };
-    function onKeyDown(e) {
+    function onKeyDown2(e) {
       if (!recording) return;
       if (!btn.isConnected) {
         stopRecording();
@@ -32314,8 +31125,8 @@
           return radio(name, value, checked);
         }
         /** Compat: use `radioGroup()` from ./fields. */
-        radioGroup(name, options, selected, onChange) {
-          return radioGroup(name, options, selected, onChange);
+        radioGroup(name, options2, selected, onChange) {
+          return radioGroup(name, options2, selected, onChange);
         }
         /** Compat: use `segmented()` from ./segmented. */
         segmented(items, selected, onChange, opts) {
@@ -32334,8 +31145,8 @@
           return switchInput(checked);
         }
         /** Compat: use `new VTabs()` from ./vtabs. */
-        vtabs(options) {
-          return new VTabs(options);
+        vtabs(options2) {
+          return new VTabs(options2);
         }
         /** Compat: use `hotkeyButton()` from ./hotkey. */
         hotkeyButton(initial, onChange, opts) {
@@ -32368,7 +31179,7 @@
     columns.append(leftCol, rightCol);
     return { columns, leftCol, rightCol };
   }
-  function copy(text2) {
+  function copy2(text2) {
     const str = String(text2 ?? "");
     if (!str.length) return;
     const fallback = () => {
@@ -32557,7 +31368,7 @@
       icon: "\u{1F4CB}",
       onClick: () => {
         if (!visibleSfx.length) return;
-        copy(visibleSfx.map((s) => s.name).join("\n"));
+        copy2(visibleSfx.map((s) => s.name).join("\n"));
       }
     });
     sfxToolbar.append(sfxFilter, btnSfxClear, btnCopyVisible);
@@ -32577,7 +31388,7 @@
         renderSfx();
       }
     });
-    function setButtonEnabled3(btn, enabled5) {
+    function setButtonEnabled2(btn, enabled5) {
       const setter = btn.setEnabled;
       if (typeof setter === "function") setter(enabled5);
       else btn.disabled = !enabled5;
@@ -32632,10 +31443,10 @@
         urlEl.textContent = [theme.music && "music", theme.ambience && "ambience"].filter(Boolean).join(" \xB7 ") || "(no tracks)";
         infoWrap.append(title, urlEl);
         row2.appendChild(infoWrap);
-        const actions = flexRow({ gap: 6, wrap: true, align: "center" });
-        actions.className = "dd-audio-actions";
+        const actions2 = flexRow({ gap: 6, wrap: true, align: "center" });
+        actions2.className = "dd-audio-actions";
         if (theme.music) {
-          actions.appendChild(button("Play music", {
+          actions2.appendChild(button("Play music", {
             icon: "\u25B6\uFE0F",
             size: "sm",
             onClick: () => {
@@ -32644,7 +31455,7 @@
           }));
         }
         if (theme.ambience) {
-          actions.appendChild(button("Play ambience", {
+          actions2.appendChild(button("Play ambience", {
             icon: "\u25B6\uFE0F",
             size: "sm",
             onClick: () => {
@@ -32652,12 +31463,12 @@
             }
           }));
         }
-        actions.appendChild(button("Copy URLs", {
+        actions2.appendChild(button("Copy URLs", {
           icon: "\u{1F4CB}",
           size: "sm",
-          onClick: () => copy([theme.music, theme.ambience].filter(Boolean).join("\n"))
+          onClick: () => copy2([theme.music, theme.ambience].filter(Boolean).join("\n"))
         }));
-        row2.appendChild(actions);
+        row2.appendChild(actions2);
         themeList.appendChild(row2);
       });
       themeList.style.display = themes.length ? "" : "none";
@@ -32685,8 +31496,8 @@
         meta.textContent = `${formatTime2(item.start)} \u2192 ${formatTime2(item.end)} (${item.duration.toFixed(2)}s)`;
         infoWrap.append(title, meta);
         row2.appendChild(infoWrap);
-        const actions = flexRow({ gap: 6, wrap: false, align: "center" });
-        actions.className = "dd-audio-actions";
+        const actions2 = flexRow({ gap: 6, wrap: false, align: "center" });
+        actions2.className = "dd-audio-actions";
         const playBtn = button("Play", {
           icon: "\u25B6\uFE0F",
           size: "sm",
@@ -32697,17 +31508,17 @@
         const copyBtn = button("Copy URL", {
           icon: "\u{1F4CB}",
           size: "sm",
-          onClick: () => copy(atlasUrl)
+          onClick: () => copy2(atlasUrl)
         });
-        actions.append(playBtn, copyBtn);
-        row2.appendChild(actions);
+        actions2.append(playBtn, copyBtn);
+        row2.appendChild(actions2);
         sfxList.appendChild(row2);
       }
       sfxInfo.textContent = items.length ? `${visibleSfx.length} / ${items.length} SFX shown.` : "No SFX loaded yet.";
       sfxList.style.display = visibleSfx.length ? "" : "none";
       sfxEmpty.style.display = visibleSfx.length ? "none" : "block";
-      setButtonEnabled3(btnCopyVisible, visibleSfx.length > 0);
-      setButtonEnabled3(btnSfxClear, sfxFilter.value.trim().length > 0);
+      setButtonEnabled2(btnCopyVisible, visibleSfx.length > 0);
+      setButtonEnabled2(btnSfxClear, sfxFilter.value.trim().length > 0);
     }
     function updateSummary() {
       summaryThemes.innerHTML = `<strong>${catalog?.themes.length ?? 0}</strong> themes`;
@@ -32715,7 +31526,7 @@
       if (!nowPlayingLabel) nowPlaying.textContent = "Not playing.";
     }
     async function refreshAll(forceReload = false) {
-      setButtonEnabled3(btnReload, false);
+      setButtonEnabled2(btnReload, false);
       overviewError.clear();
       try {
         catalog = await loadCatalog(forceReload);
@@ -32726,7 +31537,7 @@
         renderThemes();
         renderSfx();
       } finally {
-        setButtonEnabled3(btnReload, true);
+        setButtonEnabled2(btnReload, true);
       }
     }
     void refreshAll();
@@ -32766,7 +31577,7 @@
         status2.classList.toggle("is-warn", !captured);
       };
       refreshStatus();
-      const actions = flexRow({ gap: 10, align: "center", wrap: true });
+      const actions2 = flexRow({ gap: 10, align: "center", wrap: true });
       const btnCap = button("Capture store", {
         variant: "primary",
         icon: "\u23FA",
@@ -32778,8 +31589,8 @@
           refreshStatus();
         }
       });
-      actions.append(btnCap, status2);
-      section4.body.appendChild(actions);
+      actions2.append(btnCap, status2);
+      section4.body.appendChild(actions2);
     }
     {
       const section4 = card("\u{1F50D} Explore atoms", {
@@ -32791,7 +31602,7 @@
       const q = textInput("regex label (ex: position|health)", "");
       q.classList.add("dd-grow");
       const btnList = button("List", { icon: "\u{1F4C4}", onClick: () => doList() });
-      const btnCopy = button("Copy", { icon: "\u{1F4CB}", onClick: () => copy(pre.textContent || "") });
+      const btnCopy = button("Copy", { icon: "\u{1F4CB}", onClick: () => copy2(pre.textContent || "") });
       queryRow.append(q, btnList, btnCopy);
       const pre = document.createElement("pre");
       stylePre(pre);
@@ -32859,7 +31670,7 @@
           btnSub.textContent = "Unsubscribe";
         }
       });
-      const btnCopy = button("Copy", { icon: "\u{1F4CB}", onClick: () => copy(pre.textContent || "") });
+      const btnCopy = button("Copy", { icon: "\u{1F4CB}", onClick: () => copy2(pre.textContent || "") });
       controls.append(q, btnGet, btnSub, btnCopy);
       const note = document.createElement("p");
       note.className = "dd-inline-note";
@@ -32923,7 +31734,7 @@
           }
         }
       });
-      const btnCopy = button("Copy JSON", { icon: "\u{1F4CB}", onClick: () => copy(ta.value) });
+      const btnCopy = button("Copy JSON", { icon: "\u{1F4CB}", onClick: () => copy2(ta.value) });
       controls.append(q, btnSet, btnCopy);
       section4.body.append(controls, ta);
     }
@@ -33455,7 +32266,7 @@
 previous: ${prev}
 next: ${next}`;
       }).join("\n\n");
-      copy(text2);
+      copy2(text2);
     }
     function snapshot2(value) {
       if (value == null) return value;
@@ -33682,7 +32493,7 @@ next: ${next}`;
       replayToSource = replayToggle.input.checked;
     });
     const btnSend = button("Send", { variant: "primary", icon: "\u{1F4E8}", onClick: () => doSend() });
-    const btnCopyPayload = button("Copy payload", { variant: "ghost", icon: "\u{1F4CB}", onClick: () => copy(ta.value) });
+    const btnCopyPayload = button("Copy payload", { variant: "ghost", icon: "\u{1F4CB}", onClick: () => copy2(ta.value) });
     sendControls.append(asJson, replayToggle.root, btnSend, btnCopyPayload);
     sendCard.body.append(ta, sendControls);
     function refreshSocketPicker() {
@@ -33728,7 +32539,7 @@ next: ${next}`;
         title,
         onClick: () => run()
       });
-      const bCopy = action2("Copy", () => copy(f.text));
+      const bCopy = action2("Copy", () => copy2(f.text));
       const bToEd = action2("\u2192 Editor", () => {
         ta.value = f.text;
         setSelectedRow(fid);
@@ -33778,7 +32589,7 @@ next: ${next}`;
     }
     function copyVisible() {
       const lines = frames.toArray().filter((f) => passesFilters(f)).map((f) => `[${fmtTime(f.t)}] ${f.dir === "in" ? "<-" : "->"} ${f.text}`).join("\n");
-      copy(lines);
+      copy2(lines);
     }
     function replayFrame(f) {
       const target = replayToSource && f.ws ? f.ws : currentWS();
@@ -34090,11 +32901,11 @@ next: ${next}`;
       categorySelect.value = selectedCategory;
       categorySelect.disabled = !categories.length;
     };
-    const renderEmptyState = (message) => {
+    const renderEmptyState = (message2) => {
       previewArea.innerHTML = "";
       const empty = document.createElement("div");
       empty.className = "dd-sprite-grid__empty";
-      empty.textContent = message;
+      empty.textContent = message2;
       previewArea.appendChild(empty);
     };
     const getActiveMutations = () => {
@@ -34109,14 +32920,14 @@ next: ${next}`;
       renderMutationGroup("condition", CONDITION_SELECTIONS, "Weather", mutationGroupContainers.condition);
       renderMutationGroup("lighting", LIGHTING_SELECTIONS, "Lighting", mutationGroupContainers.lighting);
     }
-    function renderMutationGroup(key2, options, label2, container) {
+    function renderMutationGroup(key2, options2, label2, container) {
       container.innerHTML = "";
       const heading = document.createElement("span");
       heading.className = "dd-sprite-mutation-group-title";
       heading.textContent = label2;
       const row2 = document.createElement("div");
       row2.className = "dd-sprite-mutation-buttons";
-      options.forEach((option) => {
+      options2.forEach((option) => {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "dd-sprite-mutation-btn";
@@ -34144,9 +32955,9 @@ next: ${next}`;
       const activeMutations = getActiveMutations();
       previewArea.innerHTML = "";
       records.forEach((record2) => {
-        const card5 = document.createElement("div");
-        card5.className = "dd-sprite-grid__item";
-        card5.title = `${record2.category}/${record2.name}`;
+        const card4 = document.createElement("div");
+        card4.className = "dd-sprite-grid__item";
+        card4.title = `${record2.category}/${record2.name}`;
         const imgWrap = document.createElement("div");
         imgWrap.className = "dd-sprite-grid__img";
         imgWrap.style.setProperty("--sprite-size", `${SPRITE_ICON_SIZE}px`);
@@ -34170,20 +32981,20 @@ next: ${next}`;
         const meta = document.createElement("span");
         meta.className = "dd-sprite-grid__meta";
         meta.textContent = `${record2.category}/${record2.name}`;
-        card5.append(imgWrap, nameEl, meta);
+        card4.append(imgWrap, nameEl, meta);
         const triggerDownload = () => {
           if (downloadInProgress) return;
           void downloadSpriteRecord(record2, getActiveMutations());
         };
-        card5.addEventListener("click", triggerDownload);
-        card5.addEventListener("keydown", (event) => {
+        card4.addEventListener("click", triggerDownload);
+        card4.addEventListener("keydown", (event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
             triggerDownload();
           }
         });
-        card5.tabIndex = 0;
-        previewArea.appendChild(card5);
+        card4.tabIndex = 0;
+        previewArea.appendChild(card4);
       });
     }
     const updateList = async (forceReload = false) => {
@@ -34479,10 +33290,10 @@ next: ${next}`;
     void PetAlertService.start().catch(() => {
     });
     const section4 = (title) => {
-      const card5 = ui.card(title, { tone: "muted" });
-      card5.body.style.display = "grid";
-      card5.body.style.gap = "10px";
-      return card5;
+      const card4 = ui.card(title, { tone: "muted" });
+      card4.body.style.display = "grid";
+      card4.body.style.gap = "10px";
+      return card4;
     };
     const row2 = (labelTxt, control, opts) => {
       const { root: r, label: label2 } = ui.formRow(labelTxt, control, { alignTop: opts?.alignTop, labelWidth: "160px" });
@@ -34549,8 +33360,8 @@ next: ${next}`;
       { key: "pets", label: "Pets", allowPurchase: true, showStop: false }
     ];
     for (const cfg of contextOrder) {
-      const card5 = document.createElement("div");
-      Object.assign(card5.style, {
+      const card4 = document.createElement("div");
+      Object.assign(card4.style, {
         display: "grid",
         gap: "12px",
         padding: "16px",
@@ -34563,7 +33374,7 @@ next: ${next}`;
       heading.style.fontWeight = "700";
       heading.style.fontSize = "14px";
       heading.style.letterSpacing = "0.02em";
-      card5.appendChild(heading);
+      card4.appendChild(heading);
       const defaultWrap = document.createElement("div");
       defaultWrap.style.display = "flex";
       defaultWrap.style.alignItems = "center";
@@ -34572,7 +33383,7 @@ next: ${next}`;
       select3.dataset.soundSelect = cfg.key;
       const playBtn = playIconBtn(`Play ${cfg.label.toLowerCase()} sound`);
       defaultWrap.append(select3, playBtn);
-      card5.appendChild(row2("Default sound", defaultWrap));
+      card4.appendChild(row2("Default sound", defaultWrap));
       const volumeWrap = document.createElement("div");
       volumeWrap.style.display = "flex";
       volumeWrap.style.alignItems = "center";
@@ -34587,7 +33398,7 @@ next: ${next}`;
       volumeValue.style.minWidth = "32px";
       volumeValue.style.textAlign = "right";
       volumeWrap.append(volumeRange, volumeValue);
-      card5.appendChild(row2("Volume", volumeWrap));
+      card4.appendChild(row2("Volume", volumeWrap));
       const modeWrap = document.createElement("div");
       modeWrap.style.display = "flex";
       modeWrap.style.gap = "12px";
@@ -34598,7 +33409,7 @@ next: ${next}`;
         modeLoop = radio2(`ap.mode.${cfg.key}`, "loop", "Loop");
         modeWrap.append(modeLoop.label);
       }
-      card5.appendChild(row2("Playback mode", modeWrap));
+      card4.appendChild(row2("Playback mode", modeWrap));
       let stopRow;
       let loopInput;
       let loopWrap;
@@ -34647,17 +33458,17 @@ next: ${next}`;
         } else {
           stopRow = row2("Loop interval", stopWrap);
         }
-        card5.appendChild(stopRow);
+        card4.appendChild(stopRow);
       } else {
         const info = document.createElement("div");
         info.textContent = "Weather alerts play once per trigger.";
         info.style.opacity = "0.75";
         info.style.fontSize = "12px";
         info.style.lineHeight = "1.4";
-        card5.appendChild(row2("Details", info));
+        card4.appendChild(row2("Details", info));
       }
       contextControls[cfg.key] = {
-        container: card5,
+        container: card4,
         select: select3,
         playBtn,
         volumeRange,
@@ -34668,7 +33479,7 @@ next: ${next}`;
         loopInput,
         loopWrap
       };
-      s1.body.appendChild(card5);
+      s1.body.appendChild(card4);
     }
     const s1Err = errorBar2();
     s1.body.appendChild(s1Err.el);
@@ -34985,8 +33796,8 @@ next: ${next}`;
           row3.style.borderColor = "#2b5cff99";
           row3.style.boxShadow = "0 0 0 1px #2b5cff33";
         }
-        const actions = document.createElement("div");
-        Object.assign(actions.style, {
+        const actions2 = document.createElement("div");
+        Object.assign(actions2.style, {
           display: "flex",
           gap: "6px",
           justifyContent: "flex-end",
@@ -35031,8 +33842,8 @@ next: ${next}`;
           refreshAllSoundSelects();
           renderLibList();
         };
-        actions.append(btnPlay, btnSetShops, btnSetWeather, btnSetPets, btnDel);
-        row3.append(info, actions);
+        actions2.append(btnPlay, btnSetShops, btnSetWeather, btnSetPets, btnDel);
+        row3.append(info, actions2);
         listBody.appendChild(row3);
       }
     };
@@ -35269,16 +34080,16 @@ next: ${next}`;
     followedBadge.style.marginLeft = "auto";
     followedBadge.style.width = "115px";
     header.append(lblType, selType, lblRarity, selRarity, followedBadge);
-    const card5 = document.createElement("div");
-    card5.style.border = "1px solid #4445";
-    card5.style.borderRadius = "10px";
-    card5.style.padding = "10px";
-    card5.style.background = "#0f1318";
-    card5.style.overflow = "hidden";
-    card5.style.display = "grid";
-    card5.style.gridTemplateRows = "auto 1fr";
-    card5.style.minHeight = "0";
-    wrap.appendChild(card5);
+    const card4 = document.createElement("div");
+    card4.style.border = "1px solid #4445";
+    card4.style.borderRadius = "10px";
+    card4.style.padding = "10px";
+    card4.style.background = "#0f1318";
+    card4.style.overflow = "hidden";
+    card4.style.display = "grid";
+    card4.style.gridTemplateRows = "auto 1fr";
+    card4.style.minHeight = "0";
+    wrap.appendChild(card4);
     const headerGrid = document.createElement("div");
     const COLS = "minmax(200px, 1fr) 9rem 7rem 8rem";
     headerGrid.style.display = "grid";
@@ -35295,7 +34106,7 @@ next: ${next}`;
       mkHeadCell("Notify"),
       mkHeadCell("Custom rules")
     );
-    card5.appendChild(headerGrid);
+    card4.appendChild(headerGrid);
     const bodyGrid = document.createElement("div");
     bodyGrid.style.display = "grid";
     bodyGrid.style.gridTemplateColumns = COLS;
@@ -35308,7 +34119,7 @@ next: ${next}`;
     bodyGrid.style.overscrollBehavior = "contain";
     bodyGrid.style.width = "100%";
     bodyGrid.style.scrollbarGutter = "stable";
-    card5.appendChild(bodyGrid);
+    card4.appendChild(bodyGrid);
     const refreshRulesUI = () => {
       const kids = Array.from(bodyGrid.children);
       for (let i = 0; i + 3 < kids.length; i += 4) {
@@ -35632,8 +34443,8 @@ next: ${next}`;
     view.innerHTML = "";
     void PetAlertService.start().catch(() => {
     });
-    const card5 = document.createElement("div");
-    Object.assign(card5.style, {
+    const card4 = document.createElement("div");
+    Object.assign(card4.style, {
       display: "grid",
       gridTemplateColumns: "minmax(220px, 260px) minmax(0, 1fr)",
       gap: "10px",
@@ -35645,7 +34456,7 @@ next: ${next}`;
       padding: "10px",
       background: "#0f1318"
     });
-    view.appendChild(card5);
+    view.appendChild(card4);
     const petList = document.createElement("div");
     Object.assign(petList.style, {
       display: "grid",
@@ -35656,7 +34467,7 @@ next: ${next}`;
       border: "1px solid #4445",
       borderRadius: "10px"
     });
-    card5.appendChild(petList);
+    card4.appendChild(petList);
     const right = document.createElement("div");
     Object.assign(right.style, {
       display: "flex",
@@ -35665,7 +34476,7 @@ next: ${next}`;
       overflow: "auto",
       minHeight: "0"
     });
-    card5.appendChild(right);
+    card4.appendChild(right);
     let pets = [];
     let unsubPets2 = null;
     let generalEnabled = PetAlertService.isGeneralEnabled();
@@ -35825,16 +34636,16 @@ next: ${next}`;
       minHeight: "0"
     });
     view.appendChild(wrap);
-    const card5 = document.createElement("div");
-    card5.style.border = "1px solid #4445";
-    card5.style.borderRadius = "10px";
-    card5.style.padding = "10px";
-    card5.style.background = "#0f1318";
-    card5.style.overflow = "hidden";
-    card5.style.display = "grid";
-    card5.style.gridTemplateRows = "auto 1fr";
-    card5.style.minHeight = "0";
-    wrap.appendChild(card5);
+    const card4 = document.createElement("div");
+    card4.style.border = "1px solid #4445";
+    card4.style.borderRadius = "10px";
+    card4.style.padding = "10px";
+    card4.style.background = "#0f1318";
+    card4.style.overflow = "hidden";
+    card4.style.display = "grid";
+    card4.style.gridTemplateRows = "auto 1fr";
+    card4.style.minHeight = "0";
+    wrap.appendChild(card4);
     const headerGrid = document.createElement("div");
     const COLS = "minmax(240px, 1fr) 9rem 7rem 8rem";
     headerGrid.style.display = "grid";
@@ -35851,7 +34662,7 @@ next: ${next}`;
       mkHeadCell("Notify"),
       mkHeadCell("Custom rules")
     );
-    card5.appendChild(headerGrid);
+    card4.appendChild(headerGrid);
     const bodyGrid = document.createElement("div");
     bodyGrid.style.display = "grid";
     bodyGrid.style.gridTemplateColumns = COLS;
@@ -35864,7 +34675,7 @@ next: ${next}`;
     bodyGrid.style.overscrollBehavior = "contain";
     bodyGrid.style.width = "100%";
     bodyGrid.style.scrollbarGutter = "stable";
-    card5.appendChild(bodyGrid);
+    card4.appendChild(bodyGrid);
     const weatherLastSeenRefs = /* @__PURE__ */ new Map();
     const refreshRulesUI = () => {
       const kids = Array.from(bodyGrid.children);
@@ -36683,8 +35494,8 @@ next: ${next}`;
         hint.style.opacity = "0.7";
         hint.style.fontSize = "12px";
         pop.appendChild(hint);
-        const actions = document.createElement("div");
-        actions.className = "qws-rule-actions";
+        const actions2 = document.createElement("div");
+        actions2.className = "qws-rule-actions";
         const clearBtn = ui.btn("Clear", { variant: "ghost", size: "sm" });
         clearBtn.addEventListener("click", (ev) => {
           ev.preventDefault();
@@ -36733,8 +35544,8 @@ next: ${next}`;
           });
           closeRuleEditor();
         });
-        actions.append(clearBtn, saveBtn);
-        pop.appendChild(actions);
+        actions2.append(clearBtn, saveBtn);
+        pop.appendChild(actions2);
         document.body.appendChild(pop);
         const anchorRect = anchor.getBoundingClientRect();
         const width = pop.offsetWidth;
@@ -36786,10 +35597,10 @@ next: ${next}`;
       spriteKey: def?.crop?.sprite ?? def?.plant?.sprite ?? void 0
     }));
   }
-  function buildLockerEmojiMaps(options) {
+  function buildLockerEmojiMaps(options2) {
     const byKey = /* @__PURE__ */ new Map();
     const bySeedName = /* @__PURE__ */ new Map();
-    options.forEach((opt, index) => {
+    options2.forEach((opt, index) => {
       const emoji = SEED_EMOJIS[index % SEED_EMOJIS.length];
       byKey.set(opt.key, emoji);
       if (opt.seedName) bySeedName.set(opt.seedName, emoji);
@@ -36797,10 +35608,10 @@ next: ${next}`;
     return { byKey, bySeedName };
   }
   function getLockerCache() {
-    const options = buildLockerSeedOptions();
-    if (!_lockerOptionsCache || options.length !== _lockerOptionsCache.length) {
-      _lockerOptionsCache = options;
-      const maps = buildLockerEmojiMaps(options);
+    const options2 = buildLockerSeedOptions();
+    if (!_lockerOptionsCache || options2.length !== _lockerOptionsCache.length) {
+      _lockerOptionsCache = options2;
+      const maps = buildLockerEmojiMaps(options2);
       _lockerEmojiByKey = maps.byKey;
       _lockerEmojisBySeedName = maps.bySeedName;
     }
@@ -36846,9 +35657,9 @@ next: ${next}`;
     wrap.setAttribute("aria-hidden", "true");
     return wrap;
   }
-  function createSeedIcon(seedKey, options = {}) {
-    const size = Math.max(12, options.size ?? 24);
-    const fallback = options.fallback ?? getLockerSeedEmojiForKey(seedKey) ?? getLockerSeedEmojiForSeedName(seedKey) ?? "\u{1F331}";
+  function createSeedIcon(seedKey, options2 = {}) {
+    const size = Math.max(12, options2.size ?? 24);
+    const fallback = options2.fallback ?? getLockerSeedEmojiForKey(seedKey) ?? getLockerSeedEmojiForSeedName(seedKey) ?? "\u{1F331}";
     const wrap = applyStyles(document.createElement("span"), {
       width: `${size}px`,
       height: `${size}px`,
@@ -36857,7 +35668,7 @@ next: ${next}`;
       justifyContent: "center"
     });
     wrap.appendChild(createEmojiIcon(fallback, size));
-    const spriteBaseName2 = options.spriteKey?.split("/").pop();
+    const spriteBaseName2 = options2.spriteKey?.split("/").pop();
     const candidates = spriteBaseName2 ? [spriteBaseName2, seedKey] : seedKey;
     attachSpriteIcon(wrap, ["plant", "tallplant", "crop"], candidates, size, "plant");
     return wrap;
@@ -36892,11 +35703,11 @@ next: ${next}`;
     }
     return wrap;
   }
-  function createWeatherBadge(tag, options = {}) {
+  function createWeatherBadge(tag, options2 = {}) {
     if (tag === NO_WEATHER_TAG) {
-      return createNoWeatherIcon(options);
+      return createNoWeatherIcon(options2);
     }
-    const size = Math.max(16, options.size ?? 32);
+    const size = Math.max(16, options2.size ?? 32);
     const wrap = applyStyles(document.createElement("span"), {
       width: `${size}px`,
       height: `${size}px`,
@@ -36911,7 +35722,7 @@ next: ${next}`;
       lineHeight: "1"
     });
     const label2 = weatherMutationLabel(tag);
-    const fallback = options.fallback ?? label2.charAt(0);
+    const fallback = options2.fallback ?? label2.charAt(0);
     wrap.textContent = fallback || "?";
     wrap.title = label2;
     wrap.setAttribute("aria-label", label2);
@@ -37194,18 +36005,18 @@ next: ${next}`;
     };
   }
   function createLockerSettingsCard(ui, state5, opts = {}) {
-    const card5 = document.createElement("div");
-    card5.dataset.lockerSettingsCard = "1";
-    card5.style.border = "1px solid rgba(255,255,255,0.10)";
-    card5.style.borderRadius = "10px";
-    card5.style.padding = "12px";
-    card5.style.display = "flex";
-    card5.style.flexDirection = "column";
-    card5.style.gap = "12px";
-    card5.style.alignItems = "center";
-    card5.style.overflow = "auto";
-    card5.style.minHeight = "0";
-    card5.style.width = "min(760px, 100%)";
+    const card4 = document.createElement("div");
+    card4.dataset.lockerSettingsCard = "1";
+    card4.style.border = "1px solid rgba(255,255,255,0.10)";
+    card4.style.borderRadius = "10px";
+    card4.style.padding = "12px";
+    card4.style.display = "flex";
+    card4.style.flexDirection = "column";
+    card4.style.gap = "12px";
+    card4.style.alignItems = "center";
+    card4.style.overflow = "auto";
+    card4.style.minHeight = "0";
+    card4.style.width = "min(760px, 100%)";
     let recipesTitleElement = null;
     const updateRecipeTitleText = () => {
       if (!recipesTitleElement) return;
@@ -37639,7 +36450,7 @@ next: ${next}`;
       return toggle2;
     });
     const updateWeatherMutationsDisabled = () => {
-      const disabled = card5.dataset.disabled === "1" || state5.weatherMode === "RECIPES";
+      const disabled = card4.dataset.disabled === "1" || state5.weatherMode === "RECIPES";
       weatherGrid.style.opacity = disabled ? "0.55" : "";
       weatherGrid.style.pointerEvents = disabled ? "none" : "";
       weatherToggles.forEach((toggle2) => toggle2.setDisabled(disabled));
@@ -37699,7 +36510,7 @@ next: ${next}`;
     emptyRecipes.style.textAlign = "center";
     const updateAddRecipeDisabled = () => {
       const editing = editingRecipeIndex !== null;
-      const cardDisabled = card5.dataset.disabled === "1";
+      const cardDisabled = card4.dataset.disabled === "1";
       btnAddRecipe.disabled = editing || cardDisabled;
       btnAddRecipe.style.opacity = editing ? "0.7" : "";
       btnAddRecipe.style.pointerEvents = editing ? "none" : "";
@@ -37806,8 +36617,8 @@ next: ${next}`;
       container.appendChild(badges);
     };
     const applyDisabled = () => {
-      const cardDisabled = card5.dataset.disabled === "1";
-      const inputs = card5.querySelectorAll("input,button,select,textarea");
+      const cardDisabled = card4.dataset.disabled === "1";
+      const inputs = card4.querySelectorAll("input,button,select,textarea");
       inputs.forEach((el) => {
         if (el.dataset.weatherToggle === "main") {
           return;
@@ -37817,7 +36628,7 @@ next: ${next}`;
       });
       updateWeatherMutationsDisabled();
       updateColorButtons();
-      card5.style.opacity = cardDisabled ? "0.55" : "";
+      card4.style.opacity = cardDisabled ? "0.55" : "";
       updateAddRecipeDisabled();
     };
     function buildRecipeToggleGrid(selection, onSelectionChange) {
@@ -37903,7 +36714,7 @@ next: ${next}`;
         if (isEditing2) {
           const toggleGrid = buildRecipeToggleGrid(selection, () => renderRecipeSummary(summary, selection));
           row2.appendChild(toggleGrid);
-          const actions = applyStyles(document.createElement("div"), {
+          const actions2 = applyStyles(document.createElement("div"), {
             display: "flex",
             gap: "8px",
             width: "100%"
@@ -37914,25 +36725,25 @@ next: ${next}`;
           const btnValidate = document.createElement("button");
           styleBtnFullWidth(btnValidate, "\u2714\uFE0F");
           btnValidate.onclick = commitEditingRecipe;
-          actions.append(btnCancel, btnValidate);
+          actions2.append(btnCancel, btnValidate);
           if (editingRecipeIndex !== null && editingRecipeIndex < state5.weatherRecipes.length) {
             const btnDelete = document.createElement("button");
             styleBtnFullWidth(btnDelete, "\u{1F5D1}\uFE0F");
             btnDelete.title = "Delete";
             btnDelete.setAttribute("aria-label", "Delete");
             btnDelete.onclick = () => deleteRecipeAt(index);
-            actions.append(btnDelete);
+            actions2.append(btnDelete);
           }
-          row2.appendChild(actions);
+          row2.appendChild(actions2);
         } else {
-          const actions = applyStyles(document.createElement("div"), {
+          const actions2 = applyStyles(document.createElement("div"), {
             display: "flex",
             gap: "6px",
             alignItems: "center",
             justifyContent: "flex-end",
             flex: "0 0 auto"
           });
-          actions.style.flexWrap = "nowrap";
+          actions2.style.flexWrap = "nowrap";
           const btnEdit = document.createElement("button");
           styleBtnCompact(btnEdit, "\u270F\uFE0F");
           btnEdit.title = "Edit";
@@ -37943,8 +36754,8 @@ next: ${next}`;
           btnDelete.title = "Delete";
           btnDelete.setAttribute("aria-label", "Delete");
           btnDelete.onclick = () => deleteRecipeAt(index);
-          actions.append(btnEdit, btnDelete);
-          row2.appendChild(actions);
+          actions2.append(btnEdit, btnDelete);
+          row2.appendChild(actions2);
         }
         recipesList.appendChild(row2);
       });
@@ -37966,7 +36777,7 @@ next: ${next}`;
         row2.appendChild(summary);
         const toggleGrid = buildRecipeToggleGrid(selection, () => renderRecipeSummary(summary, selection));
         row2.appendChild(toggleGrid);
-        const actions = applyStyles(document.createElement("div"), {
+        const actions2 = applyStyles(document.createElement("div"), {
           display: "flex",
           gap: "8px",
           width: "100%"
@@ -37977,8 +36788,8 @@ next: ${next}`;
         const btnValidate = document.createElement("button");
         styleBtnFullWidth(btnValidate, "\u2714\uFE0F");
         btnValidate.onclick = commitEditingRecipe;
-        actions.append(btnCancel, btnValidate);
-        row2.appendChild(actions);
+        actions2.append(btnCancel, btnValidate);
+        row2.appendChild(actions2);
         recipesList.appendChild(row2);
       }
       applyDisabled();
@@ -37987,7 +36798,7 @@ next: ${next}`;
       startEditingRecipe(state5.weatherRecipes.length);
     };
     recipesWrap.append(recipesHeader, recipesList);
-    card5.append(
+    card4.append(
       makeSection("Harvest mode", lockModeRow),
       makeSection("Filter by size", scaleRow),
       makeSection("Filter by color", colorsRow),
@@ -38014,11 +36825,11 @@ next: ${next}`;
       repaintRecipes();
     };
     const setDisabled = (value) => {
-      card5.dataset.disabled = value ? "1" : "0";
+      card4.dataset.disabled = value ? "1" : "0";
       applyDisabled();
     };
     refresh();
-    return { root: card5, refresh, setDisabled };
+    return { root: card4, refresh, setDisabled };
   }
   function createRestrictionsTabRenderer(ui) {
     let state5 = lockerRestrictionsService.getState();
@@ -38036,13 +36847,13 @@ next: ${next}`;
       width: "100%",
       maxWidth: "1100px"
     });
-    const card5 = ui.card("Friend bonus locker", {
+    const card4 = ui.card("Friend bonus locker", {
       align: "stretch"
     });
-    card5.root.style.width = "100%";
-    card5.header.style.display = "flex";
-    card5.header.style.alignItems = "center";
-    card5.header.style.justifyContent = "space-between";
+    card4.root.style.width = "100%";
+    card4.header.style.display = "flex";
+    card4.header.style.alignItems = "center";
+    card4.header.style.justifyContent = "space-between";
     const sliderWrap = applyStyles(document.createElement("div"), {
       display: "grid",
       gap: "6px"
@@ -38072,14 +36883,14 @@ next: ${next}`;
       letterSpacing: "0.25px"
     });
     statusBadge.style.marginLeft = "auto";
-    card5.header.appendChild(statusBadge);
+    card4.header.appendChild(statusBadge);
     const statusText = applyStyles(document.createElement("div"), {
       fontSize: "12.5px",
       lineHeight: "1.5",
       opacity: "0.92"
     });
-    card5.body.append(sliderWrap, statusText);
-    layout.append(card5.root);
+    card4.body.append(sliderWrap, statusText);
+    layout.append(card4.root);
     const decorCard = ui.card("Decor pick locker", { align: "stretch" });
     decorCard.root.style.width = "100%";
     const decorRow = applyStyles(document.createElement("div"), {
@@ -38561,13 +37372,13 @@ next: ${next}`;
   }
   function extractEggOptions(raw) {
     const seen = /* @__PURE__ */ new Set();
-    const options = [];
+    const options2 = [];
     const add = (id, name) => {
       if (typeof id !== "string" || !id) return;
       if (seen.has(id)) return;
       seen.add(id);
       const label2 = typeof name === "string" && name || typeof raw?.names?.[id] === "string" && raw.names[id] || id;
-      options.push({ id, name: label2 });
+      options2.push({ id, name: label2 });
     };
     const walk = (node) => {
       if (!node || typeof node !== "object") return;
@@ -38582,18 +37393,18 @@ next: ${next}`;
       }
     };
     walk(raw);
-    return options;
+    return options2;
   }
   function extractEggOptionsFromCatalog() {
-    const options = [];
+    const options2 = [];
     const seen = /* @__PURE__ */ new Set();
     for (const [id, raw] of Object.entries(eggCatalog2)) {
       if (!id || seen.has(id)) continue;
       seen.add(id);
       const name = typeof raw?.name === "string" && raw.name || id;
-      options.push({ id, name });
+      options2.push({ id, name });
     }
-    return options;
+    return options2;
   }
   function mergeEggOptions(base, extra) {
     const seen = new Set(base.map((o) => o.id));
@@ -39047,11 +37858,11 @@ next: ${next}`;
           key: key2,
           label: weatherMutationLabel(key2),
           tileRef: value,
-          iconFactory: (options) => createWeatherBadge(key2, options)
+          iconFactory: (options2) => createWeatherBadge(key2, options2)
         }))
       ]);
-      createNoWeatherIcon = (options) => {
-        const size = Math.max(24, options?.size ?? 48);
+      createNoWeatherIcon = (options2) => {
+        const size = Math.max(24, options2?.size ?? 48);
         const wrap = applyStyles(document.createElement("div"), {
           width: `${size}px`,
           height: `${size}px`,
@@ -39427,14 +38238,14 @@ next: ${next}`;
     return getLockerSeedEmojiForKey(key2) || (option?.seedName ? getLockerSeedEmojiForSeedName(option.seedName) : void 0) || "\u{1F331}";
   }
   function section(title) {
-    const card5 = plainCard();
-    Object.assign(card5.style, { padding: "12px", gap: "10px" });
+    const card4 = plainCard();
+    Object.assign(card4.style, { padding: "12px", gap: "10px" });
     if (title) {
       const heading = sectionLabel(title);
       heading.style.textAlign = "center";
-      card5.appendChild(heading);
+      card4.appendChild(heading);
     }
-    return card5;
+    return card4;
   }
   function priceDisplay() {
     const root = h("div");
@@ -39612,14 +38423,14 @@ next: ${next}`;
     });
     listPane.appendChild(tabs.root);
     function renderList() {
-      const options = getLockerSeedOptions();
+      const options2 = getLockerSeedOptions();
       optionByKey.clear();
       listIcons.clear();
-      for (const option of options) optionByKey.set(option.key, option);
-      tabs.setItems(options.map((option) => ({ id: option.key, title: option.cropName || option.key })));
+      for (const option of options2) optionByKey.set(option.key, option);
+      tabs.setItems(options2.map((option) => ({ id: option.key, title: option.cropName || option.key })));
       const selected = tabs.getSelected()?.id ?? null;
-      if (!selected && options.length) {
-        tabs.select(options[0].key);
+      if (!selected && options2.length) {
+        tabs.select(options2[0].key);
         return;
       }
       selectedKey = selected;
@@ -39656,72 +38467,6 @@ next: ${next}`;
     }
   });
 
-  // src/ui/kit/panel.ts
-  function button2(label2, tone, onClick) {
-    return button(label2, { variant: VARIANT[tone], size: "sm", block: true, lockWhilePending: true, onClick });
-  }
-  function toggle(checked, onChange) {
-    return switchInput(checked, onChange);
-  }
-  function textField(placeholder, value = "") {
-    return textInput(placeholder, value, { small: true });
-  }
-  function selectField(options) {
-    const el = select2({ small: true });
-    for (const [value, label2] of options) {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = label2;
-      el.appendChild(option);
-    }
-    return el;
-  }
-  function numberField(min, max, step, value) {
-    const el = h("input", "qws-pnl-input");
-    el.type = "number";
-    el.min = String(min);
-    el.max = String(max);
-    el.step = String(step);
-    el.value = String(value);
-    el.style.width = "78px";
-    el.style.textAlign = "right";
-    return el;
-  }
-  var TEAL, TEAL_DIM, TEAL_BORDER, BORDER, CARD_BG, TEXT, TEXT_DIM, DANGER, WARN, GOLD, RAINBOW, css, ensurePanelStyles, sectionLabel2, card2, meter2, setButtonEnabled2, VARIANT;
-  var init_panel = __esm({
-    "src/ui/kit/panel.ts"() {
-      "use strict";
-      init_badges();
-      init_button();
-      init_card();
-      init_dom2();
-      init_fields();
-      init_sliders();
-      init_styles();
-      init_theme();
-      init_toggles();
-      init_icons();
-      TEAL = color.accent;
-      TEAL_DIM = color.accentSoft;
-      TEAL_BORDER = color.accentBorder;
-      BORDER = color.border;
-      CARD_BG = color.cardBg;
-      TEXT = color.text;
-      TEXT_DIM = color.textDim;
-      DANGER = color.danger;
-      WARN = color.warn;
-      GOLD = color.gold;
-      RAINBOW = color.rainbow;
-      css = (el, style2) => Object.assign(el.style, style2);
-      ensurePanelStyles = ensureKitStyles;
-      sectionLabel2 = sectionLabel;
-      card2 = plainCard;
-      meter2 = meter;
-      setButtonEnabled2 = setButtonEnabled;
-      VARIANT = { accent: "primary", neutral: "default", danger: "danger" };
-    }
-  });
-
   // src/features/hatch/counts.ts
   function countsFor(stats, species) {
     return stats.pets.hatchedByType[species.toLowerCase()] ?? { normal: 0, gold: 0, rainbow: 0 };
@@ -39755,7 +38500,7 @@ next: ${next}`;
       letterSpacing: "0.06em",
       textTransform: "uppercase",
       textAlign: align,
-      color: TEXT_DIM
+      color: color.textDim
     });
     cell.textContent = label2;
     return cell;
@@ -39767,16 +38512,16 @@ next: ${next}`;
     cell.appendChild(iconBox(mutationIcon(mutationId), HEADER_ICON_PX, "hatch"));
     return cell;
   }
-  function numberCell(value, color2, strong = false) {
+  function numberCell(value, tint, strong = false) {
     const cell = document.createElement("span");
     css(cell, {
       fontSize: "12.5px",
       fontVariantNumeric: "tabular-nums",
       fontWeight: strong ? "700" : "500",
-      color: value > 0 ? color2 : TEXT_DIM,
+      color: value > 0 ? tint : color.textDim,
       textAlign: "center"
     });
-    cell.textContent = formatInt(value);
+    cell.textContent = formatInteger(value);
     return cell;
   }
   function speciesCell(row2) {
@@ -39786,7 +38531,7 @@ next: ${next}`;
     const label2 = document.createElement("span");
     css(label2, {
       fontSize: "12.5px",
-      color: TEXT,
+      color: color.text,
       overflow: "hidden",
       textOverflow: "ellipsis",
       whiteSpace: "nowrap"
@@ -39795,7 +38540,7 @@ next: ${next}`;
     cell.appendChild(label2);
     if (row2.share !== void 0) {
       const share = document.createElement("span");
-      css(share, { fontSize: "10px", color: TEXT_DIM, whiteSpace: "nowrap", flex: "0 0 auto" });
+      css(share, { fontSize: "10px", color: color.textDim, whiteSpace: "nowrap", flex: "0 0 auto" });
       const percent = row2.share * 100;
       share.textContent = `${percent >= 1 ? Math.round(percent) : percent.toFixed(1)}%`;
       cell.appendChild(share);
@@ -39825,41 +38570,42 @@ next: ${next}`;
       const line = gridRow();
       line.append(
         speciesCell(row2),
-        numberCell(counts.normal, TEXT),
-        numberCell(counts.gold, GOLD),
-        numberCell(counts.rainbow, RAINBOW),
-        numberCell(totalOf(counts), TEAL, true)
+        numberCell(counts.normal, color.text),
+        numberCell(counts.gold, color.gold),
+        numberCell(counts.rainbow, color.rainbow),
+        numberCell(totalOf(counts), color.accent, true)
       );
       wrap.appendChild(line);
     }
     if (rows.length > 1) {
       const separator = document.createElement("div");
-      css(separator, { height: "1px", background: BORDER, margin: "2px 0" });
+      css(separator, { height: "1px", background: color.border, margin: "2px 0" });
       wrap.appendChild(separator);
       const label2 = document.createElement("span");
-      css(label2, { fontSize: "11px", fontWeight: "700", color: TEXT_DIM, textTransform: "uppercase" });
+      css(label2, { fontSize: "11px", fontWeight: "700", color: color.textDim, textTransform: "uppercase" });
       label2.textContent = "Total";
       const totals = gridRow();
       totals.append(
         label2,
-        numberCell(totalNormal, TEXT, true),
-        numberCell(totalGold, GOLD, true),
-        numberCell(totalRainbow, RAINBOW, true),
-        numberCell(totalNormal + totalGold + totalRainbow, TEAL, true)
+        numberCell(totalNormal, color.text, true),
+        numberCell(totalGold, color.gold, true),
+        numberCell(totalRainbow, color.rainbow, true),
+        numberCell(totalNormal + totalGold + totalRainbow, color.accent, true)
       );
       wrap.appendChild(totals);
     }
     return wrap;
   }
-  var NF_INT, formatInt, SPECIES_ICON_PX, HEADER_ICON_PX, GRID_TEMPLATE;
+  var css, SPECIES_ICON_PX, HEADER_ICON_PX, GRID_TEMPLATE;
   var init_counts = __esm({
     "src/features/hatch/counts.ts"() {
       "use strict";
       init_data();
       init_pity();
-      init_panel();
-      NF_INT = new Intl.NumberFormat("en-US");
-      formatInt = (value) => NF_INT.format(Math.max(0, Math.floor(value || 0)));
+      init_format();
+      init_icons();
+      init_theme();
+      css = (el, style2) => Object.assign(el.style, style2);
       SPECIES_ICON_PX = 24;
       HEADER_ICON_PX = 18;
       GRID_TEMPLATE = "minmax(0, 2.2fr) repeat(4, minmax(54px, 1fr))";
@@ -39886,7 +38632,7 @@ next: ${next}`;
     const due = remaining === 0;
     const near = !due && remaining <= NEAR_GUARANTEE_PULLS;
     const row2 = document.createElement("div");
-    css(row2, {
+    css2(row2, {
       display: "grid",
       gridTemplateColumns: ROW_TEMPLATE,
       alignItems: "center",
@@ -39894,15 +38640,15 @@ next: ${next}`;
       padding: "3px 0"
     });
     const label2 = document.createElement("div");
-    css(label2, { display: "flex", alignItems: "center", gap: "6px", minWidth: "0" });
+    css2(label2, { display: "flex", alignItems: "center", gap: "6px", minWidth: "0" });
     label2.title = target.label;
     const icon2 = iconBox(target.icon, TARGET_ICON_PX, "hatch");
     label2.appendChild(icon2);
     if (target.kind === "species") {
       const name = document.createElement("span");
-      css(name, {
+      css2(name, {
         fontSize: "12.5px",
-        color: TEXT,
+        color: color.text,
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap"
@@ -39913,27 +38659,28 @@ next: ${next}`;
     const chance = formatChance(target.chance);
     if (chance) {
       const rate = document.createElement("span");
-      css(rate, { fontSize: "10.5px", color: TEXT_DIM, whiteSpace: "nowrap" });
+      css2(rate, { fontSize: "10.5px", color: color.textDim, whiteSpace: "nowrap" });
       rate.textContent = chance;
       label2.appendChild(rate);
     }
-    const bar = meter2();
+    const bar = meter();
     bar.set(misses / ceiling, due || near ? "warn" : "accent");
     const value = document.createElement("span");
-    css(value, {
+    css2(value, {
       fontSize: "11.5px",
       fontVariantNumeric: "tabular-nums",
-      color: due || near ? WARN : TEXT_DIM,
+      color: due || near ? color.warn : color.textDim,
       whiteSpace: "nowrap",
       textAlign: "right"
     });
     const isFloor = offset <= 0;
-    value.textContent = due ? "Guaranteed" : `${isFloor ? "\u2265 " : ""}${formatInt2(misses)} / ${formatInt2(ceiling)}`;
-    value.title = due ? `Due: the next pull is forced (threshold ${formatInt2(target.threshold)}).` : isFloor ? `At least ${formatInt2(remaining)} more misses before the guarantee (threshold ${formatInt2(target.threshold)}). The game keeps its own counter private, so this only counts hatches seen since tracking began. Set your real counter to correct it.` : `${formatInt2(remaining)} more misses before the guarantee (threshold ${formatInt2(target.threshold)}).`;
+    value.textContent = due ? "Guaranteed" : `${isFloor ? "\u2265 " : ""}${formatInteger(misses)} / ${formatInteger(ceiling)}`;
+    value.title = due ? `Due: the next pull is forced (threshold ${formatInteger(target.threshold)}).` : isFloor ? `At least ${formatInteger(remaining)} more misses before the guarantee (threshold ${formatInteger(target.threshold)}). The game keeps its own counter private, so this only counts hatches seen since tracking began. Set your real counter to correct it.` : `${formatInteger(remaining)} more misses before the guarantee (threshold ${formatInteger(target.threshold)}).`;
     row2.append(label2, bar.root, value);
     if (showOffsets) {
-      const input = numberField(0, ceiling, 1, offset);
-      css(input, { width: "70px", padding: "5px 7px", fontSize: "11px" });
+      const input = textInput("", String(offset), { small: true });
+      Object.assign(input, { type: "number", min: "0", max: String(ceiling), step: "1" });
+      css2(input, { width: "70px", padding: "5px 7px", fontSize: "11px", textAlign: "right" });
       input.title = "Your real in-game counter for this outcome. The mod adds what it has seen since.";
       input.addEventListener("change", () => {
         HatchTracker.setOffset(egg.eggId, target.key, Number(input.value));
@@ -39946,7 +38693,7 @@ next: ${next}`;
   }
   function trackingNote() {
     const note = document.createElement("div");
-    css(note, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.45", padding: "1px 0 4px" });
+    css2(note, { fontSize: "10px", color: color.textDim, lineHeight: "1.45", padding: "1px 0 4px" });
     const startedAt = HatchTracker.getTrackingStartedAt();
     const since = startedAt > 0 ? `since ${new Date(startedAt).toLocaleDateString()}` : "since this install started watching";
     note.textContent = `The game keeps its real counters private, so these only count hatches seen ${since}. Hatched before that? Type your in-game counter to correct it.`;
@@ -39954,13 +38701,13 @@ next: ${next}`;
   }
   function eggHeader(egg, pulls) {
     const head = document.createElement("div");
-    css(head, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+    css2(head, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
     head.appendChild(iconBox(`sprite/pet/${egg.eggId}`, EGG_ICON_PX, "hatch"));
     const name = document.createElement("span");
-    css(name, {
+    css2(name, {
       fontSize: "13.5px",
       fontWeight: "600",
-      color: TEXT,
+      color: color.text,
       overflow: "hidden",
       textOverflow: "ellipsis",
       whiteSpace: "nowrap"
@@ -39974,37 +38721,37 @@ next: ${next}`;
       head.appendChild(badge2);
     }
     const seen = document.createElement("span");
-    css(seen, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap", marginLeft: "auto" });
-    seen.textContent = pulls === 1 ? "1 hatch seen" : `${formatInt2(pulls)} hatches seen`;
+    css2(seen, { fontSize: "11px", color: color.textDim, whiteSpace: "nowrap", marginLeft: "auto" });
+    seen.textContent = pulls === 1 ? "1 hatch seen" : `${formatInteger(pulls)} hatches seen`;
     head.appendChild(seen);
     return head;
   }
-  function createEggCard(options) {
-    const { egg, stats, showOffsets } = options;
+  function createEggCard(options2) {
+    const { egg, stats, showOffsets } = options2;
     const counters = HatchTracker.getCounters(egg.eggId);
-    const card5 = collapsibleCard({
+    const card4 = collapsibleCard({
       header: eggHeader(egg, counters.pulls),
-      collapsed: options.collapsed,
-      onToggle: options.onToggle
+      collapsed: options2.collapsed,
+      onToggle: options2.onToggle
     });
     const panel = document.createElement("div");
-    css(panel, {
+    css2(panel, {
       display: "flex",
       flexDirection: "column",
       gap: "2px",
       padding: "7px 9px",
       borderRadius: "8px",
-      background: CARD_BG,
-      border: `1px solid ${BORDER}`
+      background: color.cardBg,
+      border: `1px solid ${color.border}`
     });
-    panel.appendChild(sectionLabel2("Bad luck protection"));
+    panel.appendChild(sectionLabel("Bad luck protection"));
     panel.appendChild(trackingNote());
     for (const target of egg.targets) {
       panel.appendChild(targetRow(egg, target, showOffsets));
     }
     if (egg.fauna.length) {
       const separator = document.createElement("div");
-      css(separator, { height: "1px", background: BORDER, margin: "5px 0 4px" });
+      css2(separator, { height: "1px", background: color.border, margin: "5px 0 4px" });
       panel.appendChild(separator);
       panel.appendChild(
         speciesCountsGrid(
@@ -40013,20 +38760,24 @@ next: ${next}`;
         )
       );
     }
-    card5.body.appendChild(panel);
-    return card5.root;
+    card4.body.appendChild(panel);
+    return card4.root;
   }
-  var NF_INT2, formatInt2, EGG_ICON_PX, TARGET_ICON_PX, RARITY_ICON_PX, ROW_TEMPLATE, NEAR_GUARANTEE_PULLS;
+  var css2, EGG_ICON_PX, TARGET_ICON_PX, RARITY_ICON_PX, ROW_TEMPLATE, NEAR_GUARANTEE_PULLS;
   var init_eggCard = __esm({
     "src/features/hatch/eggCard.ts"() {
       "use strict";
       init_data();
       init_tracker();
       init_counts();
-      init_panel();
+      init_format();
+      init_badges();
+      init_card();
+      init_fields();
+      init_icons();
       init_layout();
-      NF_INT2 = new Intl.NumberFormat("en-US");
-      formatInt2 = (value) => NF_INT2.format(Math.max(0, Math.floor(value || 0)));
+      init_theme();
+      css2 = (el, style2) => Object.assign(el.style, style2);
       EGG_ICON_PX = 30;
       TARGET_ICON_PX = 22;
       RARITY_ICON_PX = 20;
@@ -40084,12 +38835,12 @@ next: ${next}`;
     let inventory = null;
     let activePets2 = null;
     try {
-      inventory = await myInventory.get();
+      inventory = await Atoms.inventory.myInventory.get();
     } catch (error) {
       console.warn("[PetsHatch] Failed to read inventory data", error);
     }
     try {
-      activePets2 = await myPetInfos.get();
+      activePets2 = await Atoms.pets.myPetInfos.get();
     } catch (error) {
       console.warn("[PetsHatch] Failed to read active pet data", error);
     }
@@ -40120,9 +38871,9 @@ next: ${next}`;
     const seen = /* @__PURE__ */ new Set();
     const out = [];
     const consider = (species) => {
-      const lower = species.toLowerCase();
-      if (seen.has(lower) || fromEggs.has(lower)) return;
-      seen.add(lower);
+      const lower2 = species.toLowerCase();
+      if (seen.has(lower2) || fromEggs.has(lower2)) return;
+      seen.add(lower2);
       out.push(species);
     };
     for (const species of Object.keys(petCatalog2)) consider(species);
@@ -40132,7 +38883,7 @@ next: ${next}`;
     }
     return sortSpeciesByRarity(out);
   }
-  function renderHatchTab(view, _ui) {
+  function renderHatchTab(view) {
     const prevCleanup = view.__cleanup__;
     if (typeof prevCleanup === "function") {
       try {
@@ -40141,11 +38892,10 @@ next: ${next}`;
       }
       view.__cleanup__ = void 0;
     }
-    ensurePanelStyles();
-    view.innerHTML = "";
+    view.replaceChildren();
     const wrap = document.createElement("div");
-    wrap.classList.add("qws-pnl-root", "qws-pnl-scroll");
-    css(wrap, {
+    wrap.classList.add("qws-pnl-scroll");
+    Object.assign(wrap.style, {
       display: "flex",
       flexDirection: "column",
       gap: "8px",
@@ -40160,29 +38910,28 @@ next: ${next}`;
     });
     view.appendChild(wrap);
     const header = document.createElement("div");
-    css(header, { display: "flex", alignItems: "center", gap: "8px", flexShrink: "0", padding: "0 2px" });
+    Object.assign(header.style, { display: "flex", alignItems: "center", gap: "8px", flexShrink: "0", padding: "0 2px" });
     const title = document.createElement("div");
-    css(title, { fontSize: "14.5px", fontWeight: "700", color: TEXT, flex: "1 1 auto" });
+    Object.assign(title.style, { fontSize: "14.5px", fontWeight: "700", color: color.text, flex: "1 1 auto" });
     title.textContent = "\u{1F95A} Hatches & bad luck protection";
-    title.title = "Counted from the hatches Arie's Mod has watched \u2014 the game never sends the real counters. Use Calibrate to set your actual head start.";
+    title.title = "Counted from the hatches Arie's Mod has watched: the game never sends the real counters. Use Calibrate to set your actual head start.";
     header.appendChild(title);
     let showOffsets = false;
-    const calibrateBtn = button2("Calibrate", "neutral", () => {
-      showOffsets = !showOffsets;
-      repaint();
+    const calibrateBtn = button("Calibrate", {
+      size: "sm",
+      title: "Show a head start field on every counter.",
+      onClick: () => {
+        showOffsets = !showOffsets;
+        repaint();
+      }
     });
-    calibrateBtn.title = "Show a head start field on every counter.";
     header.appendChild(calibrateBtn);
     wrap.appendChild(header);
     const body = document.createElement("div");
-    css(body, { display: "flex", flexDirection: "column", gap: "8px" });
+    Object.assign(body.style, { display: "flex", flexDirection: "column", gap: "8px" });
     wrap.appendChild(body);
     function repaint() {
-      css(calibrateBtn, {
-        color: showOffsets ? TEAL : TEXT,
-        borderColor: showOffsets ? "rgba(94,234,212,0.3)" : BORDER,
-        background: showOffsets ? "rgba(94,234,212,0.12)" : CARD_BG
-      });
+      calibrateBtn.setActive(showOffsets);
       const stats = StatsService.getSnapshot();
       body.innerHTML = "";
       const eggs = listEggPity();
@@ -40203,19 +38952,19 @@ next: ${next}`;
       }
       const others = otherSpecies(stats, fromEggs);
       if (others.length) {
-        const card5 = collapsibleCard({
+        const card4 = collapsibleCard({
           icon: "\u{1F43E}",
           title: "Other pets",
           description: "Species no egg hatches.",
           collapsed: isCollapsed(OTHER_SECTION_ID),
           onToggle: (collapsed) => setCollapsed(OTHER_SECTION_ID, collapsed)
         });
-        card5.body.appendChild(speciesCountsGrid(others.map((species) => ({ species })), stats));
-        body.appendChild(card5.root);
+        card4.body.appendChild(speciesCountsGrid(others.map((species) => ({ species })), stats));
+        body.appendChild(card4.root);
       }
       if (!body.childElementCount) {
         const empty = document.createElement("div");
-        css(empty, { fontSize: "12.5px", color: TEXT_DIM, padding: "6px 2px" });
+        Object.assign(empty.style, { fontSize: "12.5px", color: color.textDim, padding: "6px 2px" });
         empty.textContent = "No egg data available yet.";
         body.appendChild(empty);
       }
@@ -40265,10 +39014,661 @@ next: ${next}`;
       init_atoms();
       init_eggCard();
       init_counts();
-      init_panel();
+      init_button();
       init_layout();
+      init_theme();
       init_storage();
       OTHER_SECTION_ID = "__other__";
+    }
+  });
+
+  // src/features/pets/petIcon.ts
+  function spriteImg(src, size) {
+    const img = document.createElement("img");
+    img.src = src;
+    img.width = size;
+    img.height = size;
+    img.alt = "";
+    img.draggable = false;
+    Object.assign(img.style, { width: `${size}px`, height: `${size}px`, objectFit: "contain" });
+    return img;
+  }
+  function petIcon(pet, size) {
+    const holder2 = document.createElement("div");
+    Object.assign(holder2.style, {
+      width: `${size}px`,
+      height: `${size}px`,
+      flex: "0 0 auto",
+      display: "grid",
+      placeItems: "center",
+      overflow: "hidden",
+      borderRadius: `${Math.round(size / 3.5)}px`,
+      background: color.surface,
+      border: `1px solid ${color.border}`,
+      fontSize: `${Math.max(9, Math.round(size * 0.45))}px`,
+      color: color.text
+    });
+    if (!pet) {
+      holder2.style.opacity = "0.35";
+      holder2.textContent = "\xB7";
+      return holder2;
+    }
+    const species = String(pet.petSpecies ?? "").trim();
+    const mutations = Array.isArray(pet.mutations) ? pet.mutations : [];
+    const cacheKey = `${species}|${mutations.join(",")}`;
+    const cached2 = resolvedSprites.get(cacheKey);
+    if (cached2) {
+      holder2.appendChild(spriteImg(cached2, size));
+      return holder2;
+    }
+    holder2.textContent = (pet.name || species || "pet").charAt(0).toUpperCase();
+    if (species) {
+      attachSpriteIcon(holder2, ["pet"], species, size, "pet-icon", {
+        mutations,
+        onSpriteApplied: (img) => resolvedSprites.set(cacheKey, img.src)
+      });
+    }
+    return holder2;
+  }
+  var resolvedSprites;
+  var init_petIcon = __esm({
+    "src/features/pets/petIcon.ts"() {
+      "use strict";
+      init_theme();
+      init_iconCache();
+      resolvedSprites = /* @__PURE__ */ new Map();
+    }
+  });
+
+  // src/features/pets/feedingTab.ts
+  function speciesItems() {
+    return Object.keys(petCatalog2).map((species) => {
+      const entry = petCatalog2[species];
+      return { id: species, title: String(entry?.name || species), rarity: entry?.rarity };
+    });
+  }
+  function renderSpeciesItem(item, btn) {
+    btn.replaceChildren();
+    btn.style.gridTemplateColumns = "24px 1fr auto";
+    btn.style.gap = "10px";
+    const title = document.createElement("div");
+    title.textContent = item.title || "Pet";
+    Object.assign(title.style, { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: "0" });
+    btn.append(petIcon({ petSpecies: item.id, name: item.title }, LIST_ICON_PX2), title);
+    const rarity3 = String(item.rarity || "").trim();
+    if (rarity3) {
+      const badge2 = rarityBadge(rarity3);
+      badge2.style.margin = "0";
+      badge2.style.alignSelf = "center";
+      btn.appendChild(badge2);
+    }
+  }
+  function message(text2) {
+    const el = document.createElement("div");
+    el.textContent = text2;
+    el.style.opacity = "0.75";
+    return el;
+  }
+  function cropRow(species, crop, name) {
+    const row2 = document.createElement("div");
+    Object.assign(row2.style, {
+      display: "grid",
+      gridTemplateColumns: "1fr auto",
+      alignItems: "center",
+      gap: "8px",
+      padding: "6px 4px",
+      borderBottom: `1px solid ${color.border}`
+    });
+    const label2 = document.createElement("div");
+    Object.assign(label2.style, { display: "flex", flexDirection: "column", gap: "2px" });
+    const nameEl = document.createElement("div");
+    nameEl.textContent = name;
+    nameEl.style.fontSize = "13px";
+    label2.appendChild(nameEl);
+    if (name !== crop) {
+      const idEl = document.createElement("div");
+      idEl.textContent = crop;
+      Object.assign(idEl.style, { fontSize: "11px", opacity: "0.6" });
+      label2.appendChild(idEl);
+    }
+    const toggle2 = switchInput(
+      PetsService.isInstantFeedCropAllowed(species, crop),
+      (on) => PetsService.setInstantFeedCropAllowed(species, crop, on)
+    );
+    row2.append(label2, toggle2);
+    return row2;
+  }
+  function renderFeedingTab(view) {
+    view.replaceChildren();
+    const layout = document.createElement("div");
+    Object.assign(layout.style, {
+      display: "grid",
+      gridTemplateColumns: "minmax(220px, 280px) minmax(0, 1fr)",
+      gap: "10px",
+      alignItems: "stretch",
+      height: "54vh",
+      minHeight: "0"
+    });
+    view.appendChild(layout);
+    const left = document.createElement("div");
+    Object.assign(left.style, { display: "flex", flexDirection: "column", height: "100%", minHeight: "0" });
+    const tabs = new VTabs({
+      emptyText: "No pets found.",
+      fillAvailableHeight: true,
+      renderItem: (item, btn) => renderSpeciesItem(item, btn)
+    });
+    Object.assign(tabs.root.style, { flex: "1 1 auto", minHeight: "0" });
+    left.appendChild(tabs.root);
+    const right = document.createElement("div");
+    Object.assign(right.style, { display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" });
+    const panel = card("\u{1F356} Instant Feed", { tone: "muted", subtitle: "Allow or block crops for the Instant Feed button." });
+    Object.assign(panel.root.style, { display: "grid", gridTemplateRows: "auto 1fr", minHeight: "0", height: "100%" });
+    Object.assign(panel.body.style, { gridTemplateRows: "auto 1fr", minHeight: "0" });
+    right.appendChild(panel.root);
+    layout.append(left, right);
+    const widgetRow = document.createElement("label");
+    Object.assign(widgetRow.style, { display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" });
+    const widgetLabel = document.createElement("span");
+    widgetLabel.textContent = "Show floating Instant Feed widget";
+    widgetLabel.style.fontSize = "13px";
+    widgetRow.append(switchInput(isInstantFeedWidgetEnabled(), setInstantFeedWidgetEnabled), widgetLabel);
+    panel.body.appendChild(widgetRow);
+    const crops = document.createElement("div");
+    Object.assign(crops.style, { display: "flex", flexDirection: "column", gap: "6px", overflow: "auto", minHeight: "0" });
+    panel.body.appendChild(crops);
+    const renderCrops = (species) => {
+      crops.replaceChildren();
+      if (!species) {
+        crops.appendChild(message("Select a pet to configure instant feed crops."));
+        return;
+      }
+      const compatible = Array.from(new Set(PetsService.getCompatibleCropsForSpecies(species).map(String).filter(Boolean)));
+      if (!compatible.length) {
+        crops.appendChild(message("No compatible crops for this pet."));
+        return;
+      }
+      compatible.map((crop) => ({ crop, name: String(plantCatalog2[crop]?.name || crop) })).sort((a, b) => a.name.localeCompare(b.name)).forEach(({ crop, name }) => crops.appendChild(cropRow(species, crop, name)));
+    };
+    const items = speciesItems();
+    tabs.setItems(items);
+    if (items.length) tabs.select(items[0].id);
+    tabs.onSelect((id) => renderCrops(id));
+    renderCrops(items[0]?.id ?? null);
+  }
+  var LIST_ICON_PX2;
+  var init_feedingTab = __esm({
+    "src/features/pets/feedingTab.ts"() {
+      "use strict";
+      init_data();
+      init_card();
+      init_theme();
+      init_toggles();
+      init_vtabs();
+      init_menu3();
+      init_feedWidget();
+      init_pets();
+      init_petIcon();
+      LIST_ICON_PX2 = 22;
+    }
+  });
+
+  // src/features/pets/abilityChipColors.ts
+  function getAbilityChipColors(id) {
+    const key2 = String(id || "");
+    const live = petAbilities2[key2]?.color;
+    if (live && typeof live.bg === "string" && live.bg) {
+      return { bg: live.bg, hover: typeof live.hover === "string" && live.hover ? live.hover : live.bg };
+    }
+    const base = abilityNameWithoutLevel(key2).replace(/[\s\-_]+/g, "").toLowerCase();
+    const matches = (family) => key2.startsWith(family) || base === family.toLowerCase();
+    for (const [families, colors] of FALLBACK_COLORS) {
+      if (families.some(matches)) return colors;
+    }
+    return NEUTRAL;
+  }
+  var solid, NEUTRAL, FALLBACK_COLORS;
+  var init_abilityChipColors = __esm({
+    "src/features/pets/abilityChipColors.ts"() {
+      "use strict";
+      init_data();
+      init_abilityNames();
+      solid = (r, g, b) => ({
+        bg: `rgba(${r},${g},${b},0.9)`,
+        hover: `rgba(${r},${g},${b},1)`
+      });
+      NEUTRAL = { bg: "rgba(100,100,100,0.9)", hover: "rgba(150,150,150,1)" };
+      FALLBACK_COLORS = [
+        [["MoonKisser"], solid(250, 166, 35)],
+        [["DawnKisser"], solid(162, 92, 242)],
+        [["DawnCapture"], solid(178, 90, 158)],
+        [["DawnbinderBoost"], solid(180, 104, 160)],
+        [["ProduceScaleBoost", "SnowyCropSizeBoost"], solid(34, 139, 34)],
+        [["PlantGrowthBoost", "SnowyPlantGrowthBoost", "DawnPlantGrowthBoost", "AmberPlantGrowthBoost", "ThunderPlantGrowthBoost"], solid(0, 128, 128)],
+        [["EggGrowthBoost", "SnowyEggGrowthBoost", "ThunderEggGrowthBoost"], solid(180, 90, 240)],
+        [["PetAgeBoost"], solid(147, 112, 219)],
+        [["PetHatchSizeBoost"], solid(128, 0, 128)],
+        [["PetXpBoost", "SnowyPetXpBoost", "DawnXpBoost", "ThunderXpBoost"], solid(30, 144, 255)],
+        [["HungerBoost", "SnowyHungerBoost"], solid(255, 20, 147)],
+        [["HungerRestore", "SnowyHungerRestore"], solid(255, 105, 180)],
+        [["SellBoost"], solid(220, 20, 60)],
+        [["CoinFinder", "SnowyCoinFinder", "DawnCoinFinder", "ThunderCoinFinder"], solid(180, 150, 0)],
+        [["SeedFinder"], solid(168, 102, 38)],
+        [["ProduceMutationBoost", "SnowyCropMutationBoost", "DawnBoost", "AmberMoonBoost", "ThunderBoost"], solid(140, 15, 70)],
+        [["PetMutationBoost"], solid(160, 50, 100)],
+        [["DoubleHarvest"], solid(0, 120, 180)],
+        [["DoubleHatch"], solid(60, 90, 180)],
+        [["ProduceEater"], solid(255, 69, 0)],
+        [["ProduceRefund"], solid(255, 99, 71)],
+        [["PetRefund"], solid(0, 80, 120)],
+        [["Copycat"], solid(255, 140, 0)],
+        [
+          ["GoldGranter"],
+          {
+            bg: "linear-gradient(135deg, rgba(225,200,55,0.9) 0%, rgba(225,180,10,0.9) 40%, rgba(215,185,45,0.9) 70%, rgba(210,185,45,0.9) 100%)",
+            hover: "linear-gradient(135deg, rgba(220,200,70,1) 0%, rgba(210,175,5,1) 40%, rgba(210,185,55,1) 70%, rgba(200,175,30,1) 100%)"
+          }
+        ],
+        [
+          ["RainbowGranter"],
+          {
+            bg: "linear-gradient(45deg, rgba(200,0,0,0.9), rgba(200,120,0,0.9), rgba(160,170,30,0.9), rgba(60,170,60,0.9), rgba(50,170,170,0.9), rgba(40,150,180,0.9), rgba(20,90,180,0.9), rgba(70,30,150,0.9))",
+            hover: "linear-gradient(45deg, rgba(200,0,0,1), rgba(200,120,0,1), rgba(160,170,30,1), rgba(60,170,60,1), rgba(50,170,170,1), rgba(40,150,180,1), rgba(20,90,180,1), rgba(70,30,150,1))"
+          }
+        ],
+        [["RainDance"], solid(76, 204, 204)],
+        [["SnowGranter"], solid(144, 184, 204)],
+        [["FrostGranter"], solid(148, 160, 204)],
+        [["DawnlitGranter"], solid(196, 124, 180)],
+        [["AmberlitGranter"], solid(204, 144, 96)],
+        [["ThunderstruckGranter"], solid(194, 184, 60)],
+        [["Thundercharger"], solid(31, 163, 130)],
+        [["Thunderbloom"], solid(112, 246, 203)]
+      ];
+    }
+  });
+
+  // src/features/pets/abilityChips.ts
+  function paintOnHover(el, colors, grow) {
+    el.onmouseenter = () => {
+      el.style.background = colors.hover;
+      if (grow) {
+        el.style.transform = "scale(1.08)";
+        el.style.boxShadow = RING_HOVER;
+      }
+    };
+    el.onmouseleave = () => {
+      el.style.background = colors.bg;
+      if (grow) {
+        el.style.transform = "none";
+        el.style.boxShadow = RING;
+      }
+    };
+  }
+  function abilityDots(abilityIds, opts = {}) {
+    const size = opts.size ?? 12;
+    const wrap = document.createElement("span");
+    Object.assign(wrap.style, { display: "inline-flex", alignItems: "center", gap: `${opts.gap ?? 8}px`, lineHeight: "1" });
+    const ids = abilityIds.filter(Boolean);
+    if (!ids.length && opts.emptyText) {
+      const empty = document.createElement("span");
+      empty.textContent = opts.emptyText;
+      Object.assign(empty.style, { opacity: "0.75", fontSize: "12px" });
+      wrap.appendChild(empty);
+      return wrap;
+    }
+    for (const id of ids) {
+      const colors = getAbilityChipColors(id);
+      const dot = document.createElement("span");
+      dot.title = abilityName(id) || id;
+      dot.setAttribute("aria-label", dot.title);
+      Object.assign(dot.style, {
+        display: "inline-block",
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: "3px",
+        background: colors.bg,
+        boxShadow: RING,
+        cursor: "default",
+        transition: "transform 80ms ease, box-shadow 120ms ease, background 120ms ease"
+      });
+      paintOnHover(dot, colors, true);
+      wrap.appendChild(dot);
+    }
+    return wrap;
+  }
+  function abilityPill(abilityId, label2) {
+    const colors = getAbilityChipColors(abilityId);
+    const pill2 = document.createElement("span");
+    pill2.textContent = label2;
+    pill2.title = label2;
+    Object.assign(pill2.style, {
+      display: "inline-block",
+      maxWidth: "100%",
+      padding: "3px 9px",
+      borderRadius: "999px",
+      fontSize: "11px",
+      fontWeight: "700",
+      lineHeight: "1.5",
+      color: "#fff",
+      textShadow: "0 1px 2px rgba(0,0,0,.45)",
+      background: colors.bg,
+      boxShadow: "0 0 0 1px rgba(0,0,0,.35) inset",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      transition: "background 120ms ease"
+    });
+    paintOnHover(pill2, colors, false);
+    return pill2;
+  }
+  var RING, RING_HOVER;
+  var init_abilityChips = __esm({
+    "src/features/pets/abilityChips.ts"() {
+      "use strict";
+      init_theme();
+      init_abilityChipColors();
+      init_abilityNames();
+      RING = `0 0 0 1px rgba(0,0,0,0.4) inset, 0 0 0 1px ${color.border}`;
+      RING_HOVER = `0 0 0 1px rgba(0,0,0,0.4) inset, 0 0 0 1px ${color.borderHover}`;
+    }
+  });
+
+  // src/features/pets/logsTab.ts
+  function options(el, entries2) {
+    el.replaceChildren(
+      ...entries2.map(([value, label2]) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label2;
+        return option;
+      })
+    );
+  }
+  function formatDateMMDDYY(timestamp) {
+    const value = Number(timestamp);
+    if (!Number.isFinite(value)) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    const yy = String(date.getFullYear() % 100).padStart(2, "0");
+    return `${mm}/${dd}/${yy}`;
+  }
+  function detailsOf(log2) {
+    if (typeof log2.data === "string") return log2.data;
+    try {
+      return JSON.stringify(log2.data) ?? "";
+    } catch {
+      return "";
+    }
+  }
+  function renderLogsTab(view) {
+    const prevCleanup = view.__cleanup__;
+    if (typeof prevCleanup === "function") {
+      try {
+        prevCleanup();
+      } catch {
+      }
+      view.__cleanup__ = void 0;
+    }
+    view.replaceChildren();
+    const wrap = document.createElement("div");
+    css3(wrap, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px",
+      width: PANEL_WIDTH,
+      maxWidth: "100%",
+      minHeight: "0",
+      boxSizing: "border-box"
+    });
+    view.appendChild(wrap);
+    const panel = plainCard();
+    css3(panel, { minHeight: "0" });
+    wrap.appendChild(panel);
+    const head = document.createElement("div");
+    css3(head, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
+    const title = document.createElement("div");
+    css3(title, { fontSize: "14.5px", fontWeight: "700", color: color.text, flex: "1 1 auto" });
+    title.textContent = "\u{1F4DD} Ability logs";
+    head.appendChild(title);
+    const count = document.createElement("span");
+    css3(count, { fontSize: "11px", color: color.textDim, whiteSpace: "nowrap" });
+    head.appendChild(count);
+    panel.appendChild(head);
+    const toolbar2 = document.createElement("div");
+    css3(toolbar2, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
+    const selAbility = select2({ small: true });
+    options(selAbility, [["", "All abilities"]]);
+    css3(selAbility, { minWidth: "170px" });
+    const selSort = select2({ small: true });
+    options(selSort, [["desc", "Newest first"], ["asc", "Oldest first"]]);
+    selSort.value = "desc";
+    const inputSearch = textInput("Search pet / ability / details", "", { small: true });
+    css3(inputSearch, { flex: "1 1 200px", minWidth: "160px" });
+    const btnClear = button("\u{1F9F9} Clear", {
+      variant: "danger",
+      size: "sm",
+      title: "Clear all recorded logs",
+      onClick: () => PetsService.clearAbilityLogs()
+    });
+    toolbar2.append(selAbility, selSort, inputSearch, btnClear);
+    panel.appendChild(toolbar2);
+    const columns = document.createElement("div");
+    css3(columns, {
+      display: "grid",
+      gridTemplateColumns: ROW_TEMPLATE2,
+      gap: "10px",
+      padding: "0 8px"
+    });
+    for (const label2 of ["When", "Pet", "Ability", "Details"]) {
+      columns.appendChild(sectionLabel(label2));
+    }
+    panel.appendChild(columns);
+    const list = document.createElement("div");
+    list.classList.add("qws-pnl-scroll");
+    css3(list, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "3px",
+      maxHeight: LIST_MAX_HEIGHT,
+      overflowY: "auto",
+      minHeight: "0"
+    });
+    panel.appendChild(list);
+    const sessionStart2 = PetsService.getAbilityLogsSessionStart?.() ?? 0;
+    let logs2 = [];
+    let abilityFilter = "";
+    let sortDir = "desc";
+    let search2 = "";
+    function whenCell(log2) {
+      const cell = document.createElement("div");
+      css3(cell, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
+      if (log2.date) {
+        const date = document.createElement("span");
+        css3(date, { fontSize: "10px", color: color.textDim, fontVariantNumeric: "tabular-nums" });
+        date.textContent = log2.date;
+        cell.appendChild(date);
+      }
+      const time = document.createElement("span");
+      css3(time, {
+        fontSize: "11.5px",
+        color: log2.isActiveSession ? color.accent : color.text,
+        fontWeight: log2.isActiveSession ? "600" : "500",
+        fontVariantNumeric: "tabular-nums",
+        whiteSpace: "nowrap"
+      });
+      time.textContent = log2.time12;
+      cell.appendChild(time);
+      return cell;
+    }
+    function petCell(log2) {
+      const cell = document.createElement("div");
+      css3(cell, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
+      const name = document.createElement("span");
+      css3(name, {
+        fontSize: "12px",
+        color: color.text,
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis"
+      });
+      name.textContent = log2.petName || log2.species || "Pet";
+      name.title = name.textContent;
+      const icon2 = petIcon({ petSpecies: log2.species, mutations: log2.mutations, name: log2.petName }, PET_ICON_PX);
+      cell.append(icon2, name);
+      return cell;
+    }
+    function abilityCell(log2) {
+      const cell = document.createElement("div");
+      css3(cell, { display: "flex", minWidth: "0" });
+      cell.appendChild(abilityPill(log2.abilityId, log2.abilityName || log2.abilityId || "-"));
+      return cell;
+    }
+    function detailsCell(log2) {
+      const cell = document.createElement("div");
+      const text2 = detailsOf(log2);
+      css3(cell, {
+        fontSize: "11.5px",
+        color: color.textDim,
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        minWidth: "0"
+      });
+      cell.textContent = text2;
+      cell.title = text2;
+      return cell;
+    }
+    function logRow(log2) {
+      const row2 = document.createElement("div");
+      css3(row2, {
+        display: "grid",
+        gridTemplateColumns: ROW_TEMPLATE2,
+        alignItems: "center",
+        gap: "10px",
+        padding: "5px 8px",
+        borderRadius: "8px",
+        background: log2.isActiveSession ? color.accentSoft : color.cardBg,
+        border: `1px solid ${color.border}`,
+        // A proc from this session reads at a glance without a legend.
+        borderLeft: log2.isActiveSession ? `2px solid ${color.accent}` : `1px solid ${color.border}`
+      });
+      row2.append(whenCell(log2), petCell(log2), abilityCell(log2), detailsCell(log2));
+      return row2;
+    }
+    function applyFilters() {
+      let result = logs2.slice();
+      if (abilityFilter.trim()) {
+        const wanted = normalizeAbilityKey(abilityFilter);
+        result = result.filter((log2) => {
+          const byId = normalizeAbilityKey(log2.abilityId);
+          const byName = normalizeAbilityKey(PetsService.getAbilityNameWithoutLevel(log2.abilityId));
+          return byId === wanted || byName === wanted;
+        });
+      }
+      if (search2.trim()) {
+        const needle = search2.toLowerCase();
+        result = result.filter((log2) => (log2.petName || log2.species || "").toLowerCase().includes(needle) || (log2.abilityName || "").toLowerCase().includes(needle) || (log2.abilityId || "").toLowerCase().includes(needle) || detailsOf(log2).toLowerCase().includes(needle) || (log2.petId || "").toLowerCase().includes(needle));
+      }
+      result.sort((a, b) => sortDir === "asc" ? a.performedAt - b.performedAt : b.performedAt - a.performedAt);
+      return result;
+    }
+    function rebuildAbilityOptions() {
+      const current = selAbility.value;
+      const entries2 = [
+        ["", "All abilities"],
+        ...PetsService.getSeenAbilityIds().map((id) => [id, id])
+      ];
+      options(selAbility, entries2);
+      selAbility.value = entries2.some(([value]) => value === current) ? current : "";
+    }
+    function repaint() {
+      const visible = applyFilters();
+      count.textContent = visible.length === logs2.length ? `${logs2.length} entries` : `${visible.length} of ${logs2.length} entries`;
+      list.innerHTML = "";
+      if (!visible.length) {
+        const empty = document.createElement("div");
+        css3(empty, {
+          fontSize: "12px",
+          color: color.textDim,
+          textAlign: "center",
+          padding: "24px 8px"
+        });
+        empty.textContent = logs2.length ? "No log matches these filters." : "\u{1F5D2}\uFE0F No logs yet.";
+        list.appendChild(empty);
+        return;
+      }
+      for (const log2 of visible) list.appendChild(logRow(log2));
+      list.scrollTop = sortDir === "asc" ? list.scrollHeight : 0;
+    }
+    selAbility.onchange = () => {
+      abilityFilter = selAbility.value;
+      repaint();
+    };
+    selSort.onchange = () => {
+      sortDir = selSort.value || "desc";
+      repaint();
+    };
+    inputSearch.addEventListener("input", () => {
+      search2 = inputSearch.value.trim();
+      repaint();
+    });
+    let stopWatcher = null;
+    let unsubLogs = null;
+    void (async () => {
+      try {
+        stopWatcher = await PetsService.startAbilityLogsWatcher();
+        rebuildAbilityOptions();
+        unsubLogs = PetsService.onAbilityLogs((all) => {
+          logs2 = all.map((entry) => ({
+            petId: entry.petId,
+            petName: entry.name ?? null,
+            species: entry.species ?? null,
+            mutations: Array.isArray(entry.mutations) ? entry.mutations.slice() : void 0,
+            abilityId: entry.abilityId,
+            abilityName: entry.abilityName,
+            data: entry.data,
+            performedAt: entry.performedAt,
+            date: formatDateMMDDYY(entry.performedAt),
+            time12: entry.time12,
+            isActiveSession: sessionStart2 > 0 && entry.performedAt >= sessionStart2
+          }));
+          rebuildAbilityOptions();
+          repaint();
+        });
+      } catch {
+      }
+    })();
+    repaint();
+    view.__cleanup__ = () => {
+      try {
+        unsubLogs?.();
+      } catch {
+      }
+      try {
+        stopWatcher?.();
+      } catch {
+      }
+    };
+  }
+  var css3, PANEL_WIDTH, LIST_MAX_HEIGHT, PET_ICON_PX, ROW_TEMPLATE2, normalizeAbilityKey;
+  var init_logsTab = __esm({
+    "src/features/pets/logsTab.ts"() {
+      "use strict";
+      init_button();
+      init_card();
+      init_fields();
+      init_theme();
+      init_abilityChips();
+      init_pets();
+      init_petIcon();
+      css3 = (el, style2) => Object.assign(el.style, style2);
+      PANEL_WIDTH = "min(760px, 88vw)";
+      LIST_MAX_HEIGHT = "min(56vh, 520px)";
+      PET_ICON_PX = 24;
+      ROW_TEMPLATE2 = "104px minmax(120px, 1.2fr) minmax(110px, 0.9fr) minmax(0, 2fr)";
+      normalizeAbilityKey = (value) => String(value ?? "").toLowerCase().replace(/\s+/g, "").replace(/([ivx]+)$/i, "");
     }
   });
 
@@ -40301,10 +39701,10 @@ next: ${next}`;
     if (!definition) return null;
     const safeRatio = Number.isFinite(ratio) && ratio > 0 ? ratio : 0;
     const baseProbability = toFiniteNumber(definition.baseProbability);
-    const baseParameters = definition.baseParameters ?? {};
+    const baseParameters2 = definition.baseParameters ?? {};
     const scaledParameters = {};
     let effectiveCooldownSeconds = null;
-    for (const [key2, rawValue] of Object.entries(baseParameters)) {
+    for (const [key2, rawValue] of Object.entries(baseParameters2)) {
       const value = toFiniteNumber(rawValue);
       if (value === null) continue;
       if (key2 === COOLDOWN_PARAMETER_KEY) {
@@ -40345,7 +39745,7 @@ next: ${next}`;
         "hungerRefundPercentage",
         // Older name for hungerRefundPercentage, still carried by the hardcoded
         // fallback catalog. Absent from the live bundle's `tge` switch only because
-        // the game renamed it — same parameter, so it scales the same way.
+        // the game renamed it: same parameter, so it scales the same way.
         "hungerDepletionRateDecreasePercentage",
         "plantGrowthReductionMinutes",
         "eggGrowthTimeReductionMinutes",
@@ -40386,7 +39786,7 @@ next: ${next}`;
     if (numericKeys.length) {
       return `param:${numericKeys.join("+")}@${stats.trigger ?? "?"}`;
     }
-    return `id:${stats.abilityId.replace(TIER_SUFFIX, "")}`;
+    return `id:${stats.abilityId.replace(TIER_SUFFIX2, "")}`;
   }
   function effectGroupKeyForAbility(abilityId) {
     const stats = computeAbilityStatsAtRatio(abilityId, 1);
@@ -40571,7 +39971,7 @@ next: ${next}`;
       unknownSpecies
     };
   }
-  var PERCENT, DRAIN_REDUCTION_KEYS, RESTORE_AMOUNT_KEY, SECONDS_PER_MINUTE, TIER_SUFFIX;
+  var PERCENT, DRAIN_REDUCTION_KEYS, RESTORE_AMOUNT_KEY, SECONDS_PER_MINUTE, TIER_SUFFIX2;
   var init_teamStats = __esm({
     "src/features/pets/teamStats.ts"() {
       "use strict";
@@ -40582,352 +39982,1041 @@ next: ${next}`;
       DRAIN_REDUCTION_KEYS = ["hungerRefundPercentage", "hungerDepletionRateDecreasePercentage"];
       RESTORE_AMOUNT_KEY = "hungerRestorePercentage";
       SECONDS_PER_MINUTE = 60;
-      TIER_SUFFIX = /(?:_NEW)?(?:IV|I{1,3})$/;
+      TIER_SUFFIX2 = /(?:_NEW)?(?:IV|I{1,3})$/;
     }
   });
 
-  // src/features/pets/teamBuilder.ts
-  function abilityTrigger(id) {
-    return petAbilities2[id]?.trigger;
+  // src/features/pets/teamStatsView.ts
+  function triggerUnit(trigger) {
+    return trigger && TRIGGER_UNITS[trigger] || "/roll";
   }
-  function isAfkEligibleAbility(id) {
-    return abilityTrigger(id) === "continuous";
+  function fillRatioColor(ratio) {
+    if (ratio >= 0.99) return ACCENT;
+    if (ratio >= 0.9) return "#a3e635";
+    if (ratio >= 0.75) return color.warn;
+    return "#f87171";
   }
-  function isHungerRestoreAbility(id) {
-    return id === "HungerRestore" || id === "HungerRestoreII" || id === "HungerRestoreIII" || id === "SnowyHungerRestore";
-  }
-  function isHungerBoostAbility(id) {
-    return id === "HungerBoost" || id === "HungerBoostII" || id === "HungerBoostIII" || id === "SnowyHungerBoost";
-  }
-  function petAbilityIds2(pet) {
-    return Array.isArray(pet.abilities) ? pet.abilities : [];
-  }
-  function sustainScore(pet) {
-    const abilities = petAbilityIds2(pet);
-    const hasRestore = abilities.some(isHungerRestoreAbility);
-    const hasBoost = abilities.some(isHungerBoostAbility);
-    if (hasRestore && hasBoost) return 2;
-    if (hasRestore || hasBoost) return 1;
-    return 0;
-  }
-  function pickSustainPet(pets, category, afkOnly) {
-    const NOT_USEFUL = Number.POSITIVE_INFINITY;
-    const wantedMutations = category ? categoryGrantedMutations(category) : /* @__PURE__ */ new Set();
-    const ranked = pets.map((pet) => {
-      const abilities = petAbilityIds2(pet);
-      const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
-      const tierIndex = category ? bestTierIndex(category, relevant) : -1;
-      const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
-      return {
-        pet,
-        score: sustainScore(pet),
-        hardAvoidCount,
-        // Lower is better; pets that do nothing for the goal sort last.
-        goalRank: tierIndex === -1 ? NOT_USEFUL : tierIndex,
-        effectiveStrength: getPetMaxStrength(pet) - GRANTER_STRENGTH_PENALTY * softAvoidCount
-      };
-    }).filter((candidate) => candidate.score > 0);
-    if (!ranked.length) return null;
-    ranked.sort((a, b) => {
-      if (a.score !== b.score) return b.score - a.score;
-      if (a.hardAvoidCount !== b.hardAvoidCount) return a.hardAvoidCount - b.hardAvoidCount;
-      if (a.goalRank !== b.goalRank) return a.goalRank - b.goalRank;
-      if (a.effectiveStrength !== b.effectiveStrength) return b.effectiveStrength - a.effectiveStrength;
-      return a.pet.petSpecies.localeCompare(b.pet.petSpecies);
+  function mkBar(current, atMax) {
+    const ratio = atMax > 0 ? Math.max(0, Math.min(1, current / atMax)) : 0;
+    const track = document.createElement("div");
+    Object.assign(track.style, {
+      height: "3px",
+      borderRadius: "999px",
+      background: color.track,
+      overflow: "hidden",
+      margin: "3px 0 1px"
     });
-    return ranked[0].pet;
+    const fill = document.createElement("div");
+    Object.assign(fill.style, {
+      height: "100%",
+      width: `${Math.max(1.5, ratio * 100)}%`,
+      borderRadius: "999px",
+      background: fillRatioColor(ratio),
+      opacity: "0.85"
+    });
+    track.appendChild(fill);
+    return track;
   }
-  function getBestSustainPet(pets) {
-    return pickSustainPet(pets, null, false);
+  function formatPercent(value) {
+    if (value >= 10) return `${value.toFixed(1)}%`;
+    if (value >= 1) return `${value.toFixed(2)}%`;
+    return `${value.toFixed(3)}%`;
   }
-  function abilityGrantedMutations(abilityId) {
-    const raw = getAbilityRawParameters(abilityId).grantedMutations;
-    return Array.isArray(raw) ? raw.filter((m) => typeof m === "string") : [];
+  function formatAmount(value, unit) {
+    const decimals = Math.abs(value) >= 10 ? 0 : 1;
+    const text2 = value.toLocaleString("en-US", {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    });
+    return unit ? `${text2}${unit === "%" ? "%" : ` ${unit}`}` : text2;
   }
-  function petGrantedMutations(pet) {
-    const mutations = /* @__PURE__ */ new Set();
-    for (const abilityId of petAbilityIds2(pet)) {
-      for (const mutation of abilityGrantedMutations(abilityId)) mutations.add(mutation);
+  function formatDuration(minutes) {
+    const total = Math.max(0, Math.round(minutes));
+    const hours = Math.floor(total / 60);
+    const mins = total % 60;
+    if (hours > 0) return `${hours}h${String(mins).padStart(2, "0")}`;
+    return `${mins}m`;
+  }
+  function primaryParameterKey(group2) {
+    for (const contributor of group2.contributors) {
+      for (const key2 of Object.keys(contributor.scaledParameters)) {
+        if (PARAMETER_LABELS[key2]) return key2;
+      }
     }
-    return Array.from(mutations);
+    return null;
   }
-  function categoryGrantedMutations(category) {
-    const mutations = /* @__PURE__ */ new Set();
-    for (const abilityId of category.abilityIds) {
-      for (const mutation of abilityGrantedMutations(abilityId)) mutations.add(mutation);
+  function groupTitle(group2) {
+    const key2 = primaryParameterKey(group2);
+    return key2 ? PARAMETER_LABELS[key2].label : group2.label;
+  }
+  function perProcMagnitude(group2) {
+    const key2 = primaryParameterKey(group2);
+    if (!key2) return null;
+    const meta = PARAMETER_LABELS[key2];
+    const values = group2.contributors.map((contributor) => contributor.scaledParameters[key2]).filter((value) => typeof value === "number" && value !== 0);
+    if (!values.length) return null;
+    const low = formatAmount(Math.min(...values), meta.unit);
+    const high = formatAmount(Math.max(...values), meta.unit);
+    return low === high ? high : `${low} \u2013 ${high}`;
+  }
+  function mkNav(nav) {
+    const wrap = document.createElement("div");
+    Object.assign(wrap.style, {
+      display: "flex",
+      alignItems: "center",
+      gap: "2px",
+      flex: "0 0 auto"
+    });
+    const mkArrow = (glyph, delta, label2) => {
+      const button3 = document.createElement("button");
+      button3.type = "button";
+      button3.textContent = glyph;
+      button3.title = label2;
+      Object.assign(button3.style, {
+        border: "none",
+        background: "transparent",
+        color: MUTED,
+        font: "inherit",
+        fontSize: "11px",
+        lineHeight: "1",
+        padding: "0 3px",
+        cursor: "pointer",
+        borderRadius: "3px"
+      });
+      button3.onmouseenter = () => {
+        button3.style.color = color.text;
+      };
+      button3.onmouseleave = () => {
+        button3.style.color = MUTED;
+      };
+      button3.addEventListener("click", (event) => {
+        event.stopPropagation();
+        event.preventDefault();
+        nav.onStep(delta);
+      });
+      return button3;
+    };
+    const counter2 = document.createElement("span");
+    counter2.textContent = `${nav.index + 1}/${nav.total}`;
+    counter2.style.fontSize = "9px";
+    counter2.style.color = DIM;
+    counter2.style.fontVariantNumeric = "tabular-nums";
+    wrap.append(mkArrow("\u2039", -1, "Previous effect"), counter2, mkArrow("\u203A", 1, "Next effect"));
+    return wrap;
+  }
+  function renderGroup(group2, nav) {
+    const block = document.createElement("div");
+    Object.assign(block.style, {
+      padding: "5px 7px",
+      borderRadius: "7px",
+      background: color.cardBg,
+      border: `1px solid ${color.border}`,
+      marginBottom: "4px"
+    });
+    const nameRow = document.createElement("div");
+    Object.assign(nameRow.style, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "6px",
+      minHeight: "13px"
+    });
+    const name = document.createElement("div");
+    const weatherSuffix2 = group2.requiredWeathers.length ? ` \xB7 ${group2.requiredWeathers.join("/")}` : "";
+    name.textContent = `${groupTitle(group2)}${weatherSuffix2}`;
+    Object.assign(name.style, {
+      fontSize: "9px",
+      fontWeight: "600",
+      letterSpacing: "0.05em",
+      textTransform: "uppercase",
+      color: DIM,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    });
+    if (weatherSuffix2) name.title = "Only fires while this weather is active.";
+    nameRow.appendChild(name);
+    if (nav) nameRow.appendChild(mkNav(nav));
+    block.appendChild(nameRow);
+    const value = document.createElement("div");
+    Object.assign(value.style, {
+      display: "flex",
+      alignItems: "baseline",
+      gap: "3px",
+      fontVariantNumeric: "tabular-nums"
+    });
+    if (group2.combinedProbability === null) {
+      const always = document.createElement("span");
+      always.textContent = "always on";
+      always.style.fontSize = "12px";
+      always.style.color = MUTED;
+      always.title = "This ability has no proc chance: it applies continuously.";
+      value.appendChild(always);
+      block.appendChild(value);
+    } else {
+      const atMax = group2.combinedProbabilityAtMax ?? group2.combinedProbability;
+      const ratio = atMax > 0 ? Math.min(1, group2.combinedProbability / atMax) : 1;
+      const isMaxed = ratio >= 0.995;
+      const big = document.createElement("span");
+      big.textContent = formatPercent(group2.combinedProbability);
+      big.style.fontSize = "15px";
+      big.style.fontWeight = "700";
+      big.style.color = fillRatioColor(ratio);
+      big.style.lineHeight = "1.1";
+      const unit = document.createElement("span");
+      unit.textContent = triggerUnit(group2.trigger);
+      unit.style.fontSize = "9px";
+      unit.style.color = DIM;
+      value.append(big, unit);
+      if (!isMaxed) {
+        const ceiling = document.createElement("span");
+        ceiling.textContent = `max ${formatPercent(atMax)}`;
+        ceiling.style.fontSize = "9px";
+        ceiling.style.color = DIM;
+        ceiling.style.marginLeft = "auto";
+        value.appendChild(ceiling);
+      }
+      const perHour = group2.trigger === "continuous" ? `
+About ${(group2.combinedProbability / 100 * CONTINUOUS_ROLLS_PER_HOUR).toFixed(1)} procs per hour.` : "";
+      value.title = `Chance at least one of ${group2.contributors.length} pet(s) procs.
+Not a sum: it is 1 minus the product of every pet missing.${perHour}
+
+` + (isMaxed ? "Every pet is at max strength: this is the most this team can do." : `At ${(ratio * 100).toFixed(0)}% of what these same pets would do at max strength (${formatPercent(atMax)}).`);
+      block.appendChild(value);
+      block.appendChild(mkBar(group2.combinedProbability, atMax));
     }
-    return mutations;
-  }
-  function granterPenaltyFor(pet, wanted) {
-    let hardAvoidCount = 0;
-    let softAvoidCount = 0;
-    for (const mutation of petGrantedMutations(pet)) {
-      if (wanted.has(mutation)) continue;
-      if (HARD_AVOID_MUTATIONS.has(mutation)) hardAvoidCount += 1;
-      else if (SOFT_AVOID_MUTATIONS.has(mutation)) softAvoidCount += 1;
+    const magnitude = perProcMagnitude(group2);
+    if (magnitude) {
+      const row2 = document.createElement("div");
+      Object.assign(row2.style, {
+        display: "flex",
+        alignItems: "baseline",
+        justifyContent: "space-between",
+        gap: "8px",
+        fontSize: "10px",
+        marginTop: "1px"
+      });
+      row2.title = group2.contributors.length > 1 ? "What a single proc gives. Each pet applies its own value, so this is\na range across the team; the values never add up." : "What a single proc gives.";
+      const label2 = document.createElement("span");
+      label2.textContent = "per proc";
+      label2.style.color = MUTED;
+      const amount = document.createElement("span");
+      amount.textContent = magnitude;
+      amount.style.fontWeight = "600";
+      amount.style.flex = "0 0 auto";
+      amount.style.fontVariantNumeric = "tabular-nums";
+      row2.append(label2, amount);
+      block.appendChild(row2);
     }
-    return { hardAvoidCount, softAvoidCount };
+    return block;
   }
-  function countUnwantedGranters(teamPets, wanted) {
-    let hardAvoidCount = 0;
-    let softAvoidCount = 0;
-    for (const pet of teamPets) {
-      const penalty = granterPenaltyFor(pet, wanted);
-      hardAvoidCount += penalty.hardAvoidCount;
-      softAvoidCount += penalty.softAvoidCount;
+  function focusGroups(groups, focusAbilityIds) {
+    const wanted = /* @__PURE__ */ new Set();
+    for (const abilityId of focusAbilityIds) {
+      const key2 = effectGroupKeyForAbility(abilityId);
+      if (key2) wanted.add(key2);
     }
-    return { hardAvoidCount, softAvoidCount };
+    if (!wanted.size) return groups;
+    const focused = groups.filter((group2) => wanted.has(group2.key));
+    return focused.length ? focused : groups;
   }
-  function combinations(items, size) {
-    if (size <= 0 || size > items.length) return [];
-    const out = [];
-    const current = [];
-    const walk = (start2) => {
-      if (current.length === size) {
-        out.push([...current]);
+  function renderGroupCarousel(groups) {
+    const host = document.createElement("div");
+    if (!groups.length) return host;
+    if (groups.length === 1) {
+      host.appendChild(renderGroup(groups[0]));
+      return host;
+    }
+    let index = 0;
+    const paint = () => {
+      host.replaceChildren(
+        renderGroup(groups[index], {
+          index,
+          total: groups.length,
+          onStep: (delta) => {
+            index = (index + delta + groups.length) % groups.length;
+            paint();
+          }
+        })
+      );
+    };
+    paint();
+    return host;
+  }
+  function renderDetails(stats, groups, showAllGroups) {
+    const details = document.createElement("div");
+    details.style.paddingTop = "4px";
+    if (stats.unknownSpecies.length) {
+      const warn = document.createElement("div");
+      warn.textContent = `\u26A0 unknown species: ${stats.unknownSpecies.join(", ")}`;
+      warn.style.fontSize = "10px";
+      warn.style.color = color.warn;
+      details.appendChild(warn);
+    }
+    if (showAllGroups) {
+      for (const group2 of groups) details.appendChild(renderGroup(group2));
+    } else {
+      details.appendChild(renderGroupCarousel(groups));
+    }
+    details.appendChild(renderFeedRow(stats));
+    return details;
+  }
+  function renderFeedRow(stats) {
+    const autonomy = stats.autonomy;
+    let text2;
+    let tint;
+    let title;
+    const boostLine = autonomy.drainReductionPercent > 0 ? `
+Hunger Boost removes ${autonomy.drainReductionPercent.toFixed(0)}% of the drain.` : "";
+    const restoreLine = autonomy.restoreActivationsPerMinute > 0 ? `
+Hunger Restore fires ~${autonomy.restoreActivationsPerMinute.toFixed(2)}\xD7/min on average.` : "";
+    const weatherLine2 = autonomy.weatherGatedHungerAbilities.length ? `
+Not counted (needs a specific weather): ${autonomy.weatherGatedHungerAbilities.join(", ")}.` : "";
+    if (autonomy.status === "sustained") {
+      text2 = "indefinitely";
+      tint = ACCENT;
+      title = `Expected hunger restore covers the drain for every pet, so the team
+feeds itself.${boostLine}${restoreLine}${weatherLine2}
+
+This is an average: a bad run of Restore luck can still empty a pet.`;
+    } else if (autonomy.status === "runs-out" && autonomy.minutesFromFull !== null) {
+      text2 = `~${formatDuration(autonomy.minutesFromFull)}`;
+      tint = autonomy.minutesFromFull < 60 ? color.warn : ACCENT;
+      title = `Starting from full, ${autonomy.limitingPetName ?? "the first pet"} empties first.
+Rates the team itself: current hunger is not taken into account.${boostLine}${restoreLine}${weatherLine2}
+
+Restore figures are averages; unlucky streaks do worse.`;
+    } else {
+      text2 = "unknown";
+      tint = MUTED;
+      title = `No known hunger data for: ${autonomy.speciesMissingDepletion.join(", ")}.`;
+    }
+    const row2 = document.createElement("div");
+    Object.assign(row2.style, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "8px",
+      padding: "4px 7px",
+      borderRadius: "7px",
+      background: color.cardBg,
+      border: `1px solid ${color.border}`,
+      fontSize: "10px"
+    });
+    row2.title = title;
+    const label2 = document.createElement("span");
+    label2.textContent = "\u{1F356} Lasts without feeding (from full)";
+    label2.style.color = MUTED;
+    label2.style.overflow = "hidden";
+    label2.style.textOverflow = "ellipsis";
+    label2.style.whiteSpace = "nowrap";
+    const valueSpan = document.createElement("span");
+    valueSpan.textContent = text2;
+    valueSpan.style.color = tint;
+    valueSpan.style.fontWeight = "600";
+    valueSpan.style.flex = "0 0 auto";
+    valueSpan.style.fontVariantNumeric = "tabular-nums";
+    row2.append(label2, valueSpan);
+    return row2;
+  }
+  function renderTeamStats(pets, options2 = {}) {
+    const wrap = document.createElement("div");
+    wrap.style.display = "grid";
+    wrap.style.gap = "2px";
+    const realPets = pets.filter(Boolean);
+    if (!realPets.length) {
+      const empty = document.createElement("div");
+      empty.textContent = "No pets in this team.";
+      empty.style.fontSize = "10px";
+      empty.style.color = MUTED;
+      wrap.appendChild(empty);
+      return wrap;
+    }
+    const stats = computeTeamStats(realPets);
+    const groups = options2.focusAbilityIds?.length ? focusGroups(stats.groups, options2.focusAbilityIds) : stats.groups;
+    wrap.appendChild(renderDetails(stats, groups, options2.showAllGroups === true));
+    return wrap;
+  }
+  var PARAMETER_LABELS, MUTED, ACCENT, DIM, CONTINUOUS_ROLLS_PER_HOUR, TRIGGER_UNITS;
+  var init_teamStatsView = __esm({
+    "src/features/pets/teamStatsView.ts"() {
+      "use strict";
+      init_teamStats();
+      init_theme();
+      PARAMETER_LABELS = {
+        // Crop Size is a whole number in [50, 100]; the boost adds points, not a percentage.
+        sizeIncrease: { label: "Crop size", unit: "" },
+        scaleIncreasePercentage: { label: "Crop size", unit: "%" },
+        cropSellPriceIncreasePercentage: { label: "Sell price", unit: "%" },
+        mutationChanceIncreasePercentage: { label: "Mutation chance", unit: "%" },
+        hungerRestorePercentage: { label: "Hunger restore", unit: "%" },
+        hungerRefundPercentage: { label: "Hunger refund", unit: "%" },
+        hungerDepletionRateDecreasePercentage: { label: "Hunger drain", unit: "%" },
+        plantGrowthReductionMinutes: { label: "Plant growth", unit: "min" },
+        eggGrowthTimeReductionMinutes: { label: "Egg growth", unit: "min" },
+        baseMaxCoinsFindable: { label: "Coins (max)", unit: "" },
+        bonusXp: { label: "Bonus XP", unit: "" },
+        maxStrengthIncreasePercentage: { label: "Max STR", unit: "%" },
+        plantAbilityChanceBoostPercentage: { label: "Plant ability", unit: "%" }
+      };
+      MUTED = color.textSoft;
+      ACCENT = "#34d399";
+      DIM = color.textDim;
+      CONTINUOUS_ROLLS_PER_HOUR = 60;
+      TRIGGER_UNITS = {
+        continuous: "/min",
+        harvest: "/harvest",
+        sellAllCrops: "/sale",
+        sellPet: "/pet sold",
+        hatchEgg: "/hatch",
+        playerActivated: "/use",
+        weather: "/weather"
+      };
+    }
+  });
+
+  // src/features/pets/teamEditor.ts
+  function framed(title, content) {
+    const section4 = card(title, { tone: "muted", align: "center" });
+    section4.body.append(content);
+    section4.root.style.maxWidth = "720px";
+    return section4.root;
+  }
+  function slotRow(onChoose, onClear) {
+    const root = document.createElement("div");
+    Object.assign(root.style, {
+      display: "grid",
+      gridTemplateColumns: `${SLOT_ICON_PX}px minmax(0,1fr) ${SLOT_BUTTON_PX}px ${SLOT_BUTTON_PX}px`,
+      alignItems: "center",
+      gap: "8px",
+      width: "min(560px, 100%)",
+      border: `1px solid ${color.border}`,
+      borderRadius: "10px",
+      padding: "8px 10px",
+      background: color.cardBg
+    });
+    const iconColumn = document.createElement("div");
+    Object.assign(iconColumn.style, { display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", flexShrink: "0" });
+    const iconWrap = document.createElement("div");
+    Object.assign(iconWrap.style, {
+      width: `${SLOT_ICON_PX}px`,
+      height: `${SLOT_ICON_PX}px`,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center"
+    });
+    const strengthBadge = document.createElement("div");
+    Object.assign(strengthBadge.style, {
+      fontSize: "9px",
+      fontWeight: "700",
+      lineHeight: "1",
+      padding: "1px 4px",
+      borderRadius: "4px",
+      background: "rgba(0,0,0,0.75)",
+      color: "#fff",
+      whiteSpace: "nowrap",
+      display: "none",
+      pointerEvents: "none"
+    });
+    iconColumn.append(iconWrap, strengthBadge);
+    const pawFallback = () => {
+      const paw = document.createElement("span");
+      paw.textContent = "\u{1F43E}";
+      paw.style.fontSize = `${SLOT_ICON_PX - 6}px`;
+      paw.setAttribute("aria-hidden", "true");
+      iconWrap.replaceChildren(paw);
+    };
+    const setIcon = (species, mutations) => {
+      if (!species) {
+        iconWrap.dataset.iconKey = "";
+        pawFallback();
         return;
       }
-      for (let i = start2; i < items.length; i += 1) {
-        current.push(items[i]);
-        walk(i + 1);
-        current.pop();
+      const key2 = `${species}|${mutations.join(",")}`;
+      if (iconWrap.dataset.iconKey === key2 && iconWrap.querySelector("img")) return;
+      iconWrap.dataset.iconKey = key2;
+      attachSpriteIcon(iconWrap, ["pet"], species, SLOT_ICON_PX, "pet-slot", { mutations, onNoSpriteFound: pawFallback });
+    };
+    const text2 = document.createElement("div");
+    Object.assign(text2.style, { display: "flex", flexDirection: "column", gap: "6px", minWidth: "0" });
+    const nameEl = document.createElement("div");
+    Object.assign(nameEl.style, { fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
+    text2.append(nameEl, abilityDots([], { emptyText: "No ability" }));
+    const btnChoose = button("", { icon: "+", tooltip: "Choose a pet", ariaLabel: "Choose a pet" });
+    const btnClear = button("", { icon: "\u2212", variant: "danger", tooltip: "Remove this pet", ariaLabel: "Remove this pet" });
+    const setBusy = (busy4) => {
+      btnChoose.disabled = busy4;
+      btnClear.disabled = busy4;
+    };
+    btnChoose.onclick = async () => {
+      setBusy(true);
+      try {
+        await onChoose();
+      } finally {
+        setBusy(false);
       }
     };
-    walk(0);
-    return out;
-  }
-  function categoryCombinedProbability(category, teamPets) {
-    let missAll = 1;
-    for (const pet of teamPets) {
-      const abilities = petAbilityIds2(pet).filter(isAfkEligibleAbility);
-      const tierIndex = bestTierIndex(category, abilities);
-      if (tierIndex === -1) continue;
-      const stats = computeAbilityStatsAtRatio(category.abilityIds[tierIndex], getStrengthRatio(pet));
-      if (!stats || stats.effectiveProbability === null) continue;
-      missAll *= 1 - stats.effectiveProbability / 100;
-    }
-    return 1 - missAll;
-  }
-  function pickAfkTeam(category, pets, maxSlots) {
-    const qualifying = rankCandidates(category, pets, true).slice(0, AFK_POOL_LIMIT);
-    if (!qualifying.length) return null;
-    const feeders = pets.filter((pet) => sustainScore(pet) > 0).sort((a, b) => sustainScore(b) - sustainScore(a) || getPetMaxStrength(b) - getPetMaxStrength(a)).slice(0, AFK_FEEDER_LIMIT);
-    const poolById = /* @__PURE__ */ new Map();
-    for (const pet of [...qualifying, ...feeders]) poolById.set(pet.id, pet);
-    const pool = Array.from(poolById.values());
-    const qualifyingIds = new Set(qualifying.map((pet) => pet.id));
-    const wantedMutations = categoryGrantedMutations(category);
-    let best = null;
-    for (const combo of combinations(pool, Math.min(maxSlots, pool.length))) {
-      if (!combo.some((pet) => qualifyingIds.has(pet.id))) continue;
-      if (!combo.some((pet) => sustainScore(pet) > 0)) continue;
-      const { hardAvoidCount, softAvoidCount } = countUnwantedGranters(combo, wantedMutations);
-      const strength = combo.reduce((sum, pet) => sum + getPetMaxStrength(pet), 0);
-      const sustained = computeTeamAutonomy(combo).status === "sustained";
-      const candidate = {
-        pets: combo,
-        sustained,
-        // Only meaningful while the team still runs dry: dodging a granter must
-        // not cost you a real feeder. Once the team sustains itself, extra
-        // hunger capability buys nothing and the later tiers decide.
-        sustainCapability: sustained ? 0 : combo.reduce((sum, pet) => sum + sustainScore(pet), 0),
-        hardAvoidCount,
-        probability: categoryCombinedProbability(category, combo),
-        // Soft-avoided granters cost GRANTER_STRENGTH_PENALTY each, so such a
-        // pet only wins when it is more than that much stronger.
-        effectiveStrength: strength - GRANTER_STRENGTH_PENALTY * softAvoidCount
-      };
-      if (!best || isBetterAfkTeam(candidate, best)) best = candidate;
-    }
-    return best?.pets ?? null;
-  }
-  function isBetterAfkTeam(candidate, best) {
-    if (candidate.sustained !== best.sustained) return candidate.sustained;
-    if (candidate.sustainCapability !== best.sustainCapability) {
-      return candidate.sustainCapability > best.sustainCapability;
-    }
-    if (candidate.hardAvoidCount !== best.hardAvoidCount) {
-      return candidate.hardAvoidCount < best.hardAvoidCount;
-    }
-    if (candidate.probability !== best.probability) return candidate.probability > best.probability;
-    return candidate.effectiveStrength > best.effectiveStrength;
-  }
-  function bestTierIndex(category, abilities) {
-    let best = -1;
-    for (const id of abilities) {
-      const idx = category.abilityIds.indexOf(id);
-      if (idx === -1) continue;
-      if (best === -1 || idx < best) best = idx;
-    }
-    return best;
-  }
-  function rankCandidates(category, pets, afkOnly) {
-    const wantedMutations = categoryGrantedMutations(category);
-    const ranked = pets.map((pet) => {
-      const abilities = petAbilityIds2(pet);
-      const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
-      const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
-      return {
-        pet,
-        tierIndex: bestTierIndex(category, relevant),
-        hardAvoidCount,
-        // Same handicap as the AFK ranking: a soft-avoided granter only wins
-        // when it is more than GRANTER_STRENGTH_PENALTY stronger.
-        effectiveStrength: getPetMaxStrength(pet) - GRANTER_STRENGTH_PENALTY * softAvoidCount
-      };
-    }).filter((c) => c.tierIndex !== -1);
-    const speciesCount = /* @__PURE__ */ new Map();
-    for (const c of ranked) {
-      speciesCount.set(c.pet.petSpecies, (speciesCount.get(c.pet.petSpecies) ?? 0) + 1);
-    }
-    ranked.sort((a, b) => {
-      if (a.tierIndex !== b.tierIndex) return a.tierIndex - b.tierIndex;
-      if (a.hardAvoidCount !== b.hardAvoidCount) return a.hardAvoidCount - b.hardAvoidCount;
-      if (a.effectiveStrength !== b.effectiveStrength) return b.effectiveStrength - a.effectiveStrength;
-      const aCount = speciesCount.get(a.pet.petSpecies) ?? 0;
-      const bCount = speciesCount.get(b.pet.petSpecies) ?? 0;
-      if (aCount !== bCount) return bCount - aCount;
-      return a.pet.petSpecies.localeCompare(b.pet.petSpecies);
-    });
-    return ranked.map((c) => c.pet);
-  }
-  function qualifyingCategories(pet) {
-    const abilities = petAbilityIds2(pet);
-    return CATEGORIES.filter((c) => bestTierIndex(c, abilities) !== -1);
-  }
-  function findUnusedPets(pets, usedIds, sustainPet) {
-    const unused = [];
-    const seenIds = /* @__PURE__ */ new Set();
-    for (const pet of pets) {
-      if (usedIds.has(pet.id) || seenIds.has(pet.id)) continue;
-      seenIds.add(pet.id);
-      const outrankedIn = qualifyingCategories(pet).map((c) => c.label);
-      const outrankedAsSustain = sustainScore(pet) > 0 && sustainPet?.id !== pet.id;
-      const untracked = !outrankedIn.length && !outrankedAsSustain;
-      unused.push({ pet, outrankedIn, outrankedAsSustain, untracked });
-    }
-    return unused;
-  }
-  function mergeTeamsWithSamePets(teams) {
-    const order = [];
-    const byKey = /* @__PURE__ */ new Map();
-    for (const team of teams) {
-      const key2 = `${team.mode}::${team.petIds.slice().sort().join(",")}`;
-      const existing = byKey.get(key2);
-      if (existing) {
-        existing.categories.push(...team.categories);
-        existing.focusAbilityIds = dedupe([...existing.focusAbilityIds, ...team.focusAbilityIds]);
+    btnClear.onclick = () => void onClear();
+    root.append(iconColumn, text2, btnChoose, btnClear);
+    function update(pet) {
+      const species = String(pet?.petSpecies || "").trim();
+      setIcon(species, pet?.mutations ?? []);
+      const maxStrength = pet ? getPetMaxStrength(pet) : 0;
+      if (pet && maxStrength > 0) {
+        const strength = getPetStrength(pet);
+        const maxed = strength >= maxStrength;
+        strengthBadge.textContent = maxed ? `${maxStrength}` : `${strength}/${maxStrength}`;
+        strengthBadge.style.color = maxed ? MAX_STRENGTH_COLOR : "#fff";
+        strengthBadge.style.display = "block";
       } else {
-        byKey.set(key2, {
-          ...team,
-          categories: [...team.categories],
-          focusAbilityIds: [...team.focusAbilityIds]
-        });
-        order.push(key2);
+        strengthBadge.style.display = "none";
       }
+      const speciesLabel = species ? species.charAt(0).toUpperCase() + species.slice(1) : "";
+      nameEl.textContent = pet ? pet.name?.trim() || speciesLabel || "Pet" : "None";
+      text2.lastElementChild.replaceWith(abilityDots(pet?.abilities ?? [], { emptyText: "No ability" }));
     }
-    return order.map((key2) => byKey.get(key2));
+    update(null);
+    return { root, update };
   }
-  function dedupe(ids) {
-    return Array.from(new Set(ids));
-  }
-  function buildSuggestedTeams(pets) {
-    const sustainPet = getBestSustainPet(pets);
-    const teams = [];
-    const usedIds = /* @__PURE__ */ new Set();
-    if (sustainPet) usedIds.add(sustainPet.id);
-    for (const category of CATEGORIES) {
-      const categoryRef = {
-        id: category.id,
-        label: category.label,
-        shortLabel: category.shortLabel,
-        icon: category.icon,
-        abilityId: category.abilityIds[0]
-      };
-      const maxSlots = category.maxTeamSlots ?? 3;
-      const focusAbilityIds = [category.abilityIds[0]];
-      let activeCandidates = rankCandidates(category, pets, false).slice(0, maxSlots);
-      if (activeCandidates.length && activeCandidates.length < maxSlots && category.paddingParentId) {
-        const parent = CATEGORIES_BY_ID.get(category.paddingParentId);
-        if (parent) {
-          const already = new Set(activeCandidates.map((p) => p.id));
-          const padding = rankCandidates(parent, pets, false).filter((p) => !already.has(p.id));
-          const before = activeCandidates.length;
-          activeCandidates = [...activeCandidates, ...padding].slice(0, maxSlots);
-          if (activeCandidates.length > before) focusAbilityIds.push(parent.abilityIds[0]);
-        }
+  function createTeamEditor(handlers) {
+    const root = document.createElement("div");
+    Object.assign(root.style, { display: "grid", gridTemplateRows: "auto 1fr", gap: "10px", minHeight: "0" });
+    const header = document.createElement("div");
+    Object.assign(header.style, { display: "flex", alignItems: "center", gap: "8px" });
+    const title = document.createElement("div");
+    title.textContent = "Team editor";
+    Object.assign(title.style, {
+      fontWeight: "700",
+      fontSize: "14px",
+      flex: "1 1 0",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    });
+    const btnUseTeam = button("Use this team", {
+      variant: "primary",
+      size: "sm",
+      disabled: true,
+      onClick: async () => {
+        const team = handlers.selectedTeam();
+        if (team) await handlers.onUseTeam(team);
       }
-      if (activeCandidates.length && activeCandidates.length < maxSlots && category.paddingSiblingIds?.length) {
-        const already = new Set(activeCandidates.map((p) => p.id));
-        const siblingPool = [];
-        const siblingByPetId = /* @__PURE__ */ new Map();
-        for (const siblingId of category.paddingSiblingIds) {
-          const sibling = CATEGORIES_BY_ID.get(siblingId);
-          if (!sibling) continue;
-          for (const p of rankCandidates(sibling, pets, false)) {
-            if (!already.has(p.id)) {
-              siblingPool.push(p);
-              already.add(p.id);
-              siblingByPetId.set(p.id, sibling);
-            }
+    });
+    header.append(title, btnUseTeam);
+    const body = document.createElement("div");
+    Object.assign(body.style, { display: "flex", flexDirection: "column", gap: "12px", overflow: "auto", minHeight: "0" });
+    root.append(header, body);
+    const nameRow = flexRow({ justify: "center", fullWidth: true });
+    const nameInput = textInput("Team name", "");
+    Object.assign(nameInput.style, { flex: "1", minWidth: "0" });
+    nameRow.append(nameInput);
+    body.appendChild(framed("\u{1F3F7}\uFE0F Team name", nameRow));
+    const saveName = () => {
+      const team = handlers.selectedTeam();
+      if (!team) return;
+      const name = petTeamName(nameInput.value);
+      if (nameInput.value.trim().length > name.length) nameInput.value = name;
+      if (name === team.name) return;
+      PetsService.saveTeam({ id: team.id, name });
+      handlers.onRenamed();
+    };
+    nameInput.addEventListener("input", saveName);
+    nameInput.addEventListener("blur", saveName);
+    nameInput.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") nameInput.blur();
+    });
+    const saveSlots = async (slots) => {
+      const team = handlers.selectedTeam();
+      if (!team) return;
+      const saved = PetsService.saveTeam({ id: team.id, slots });
+      await repaint(saved ?? handlers.selectedTeam());
+    };
+    const rows = [0, 1, 2].map(
+      (index) => slotRow(
+        async () => {
+          const team = handlers.selectedTeam();
+          if (!team) return;
+          handlers.setWindowVisible(false);
+          try {
+            await PetsService.chooseSlotPet(team.id, index);
+            await repaint(handlers.selectedTeam());
+          } finally {
+            handlers.setWindowVisible(true);
           }
+        },
+        async () => {
+          const team = handlers.selectedTeam();
+          if (!team) return;
+          const slots = team.slots.slice(0, 3);
+          slots[index] = null;
+          await saveSlots(slots);
         }
-        activeCandidates = [...activeCandidates, ...siblingPool].slice(0, maxSlots);
-        for (const pet of activeCandidates) {
-          const sibling = siblingByPetId.get(pet.id);
-          if (sibling) focusAbilityIds.push(sibling.abilityIds[0]);
+      )
+    );
+    const slotGrid = document.createElement("div");
+    Object.assign(slotGrid.style, { display: "grid", gridTemplateColumns: "1fr", rowGap: "10px", justifyItems: "center" });
+    slotGrid.append(...rows.map((r) => r.root));
+    const btnUseCurrent = button("Current active", {
+      variant: "primary",
+      onClick: async () => {
+        try {
+          const ids = await PetsService.getActivePetIds();
+          await saveSlots([ids[0] || null, ids[1] || null, ids[2] || null]);
+        } catch {
         }
       }
-      activeCandidates.forEach((p) => usedIds.add(p.id));
-      if (activeCandidates.length) {
-        teams.push({
-          categories: [categoryRef],
-          mode: "active",
-          petIds: activeCandidates.map((p) => p.id),
-          focusAbilityIds: dedupe(focusAbilityIds)
+    });
+    const btnClearSlots = button("Clear slots", { onClick: () => saveSlots([null, null, null]) });
+    btnUseCurrent.style.minWidth = btnClearSlots.style.minWidth = "140px";
+    const slotActions = flexRow({ gap: 6, justify: "center" });
+    slotActions.append(btnUseCurrent, btnClearSlots);
+    const slotsColumn = document.createElement("div");
+    Object.assign(slotsColumn.style, { display: "flex", flexDirection: "column", gap: "8px" });
+    slotsColumn.append(slotGrid, slotActions);
+    body.appendChild(framed("\u26A1 Active pets (3 slots)", slotsColumn));
+    const statsHost = document.createElement("div");
+    statsHost.style.width = "100%";
+    body.appendChild(framed("\u{1F4CA} Team stats", statsHost));
+    const statsMessage = (message2) => {
+      const empty = document.createElement("div");
+      empty.textContent = message2;
+      Object.assign(empty.style, { opacity: "0.7", fontSize: "11px" });
+      statsHost.replaceChildren(empty);
+    };
+    const drawnSlotIds = [null, null, null];
+    async function repaint(team) {
+      if (!team) return;
+      const pets = await PetsService.getPetLookup();
+      team.slots.slice(0, 3).forEach((id, i) => {
+        const slotId = id || null;
+        if (drawnSlotIds[i] === slotId) return;
+        drawnSlotIds[i] = slotId;
+        rows[i].update(slotId ? pets.get(slotId) ?? emptyPet(slotId) : null);
+      });
+      const teamPets = team.slots.map((id) => id ? pets.get(String(id)) : void 0).filter((pet) => Boolean(pet));
+      if (teamPets.length) statsHost.replaceChildren(renderTeamStats(teamPets, { showAllGroups: true }));
+      else statsMessage("No pets in this team.");
+    }
+    async function show(team) {
+      const has = !!team;
+      nameInput.disabled = !has;
+      btnClearSlots.setEnabled(has);
+      btnUseCurrent.setEnabled(has);
+      btnUseTeam.setEnabled(has);
+      if (!team) {
+        rows.forEach((r, i) => {
+          r.update(null);
+          drawnSlotIds[i] = null;
         });
+        nameInput.value = "";
+        statsMessage("No team selected.");
+        return;
       }
-      if (category.afkCapable) {
-        const afkTeam = pickAfkTeam(category, pets, maxSlots);
-        if (afkTeam?.length) {
-          afkTeam.forEach((p) => usedIds.add(p.id));
-          teams.push({
-            categories: [categoryRef],
-            mode: "afk",
-            // Only the category's own ability. A feeder in this team may well
-            // carry it too — that is often why it was picked — and the stats
-            // layer counts whatever abilities the pets actually have.
-            petIds: afkTeam.map((p) => p.id),
-            focusAbilityIds: [category.abilityIds[0]]
-          });
+      nameInput.value = String(team.name || "");
+      await repaint(team);
+    }
+    return { root, show, repaint };
+  }
+  var SLOT_ICON_PX, SLOT_BUTTON_PX, MAX_STRENGTH_COLOR, emptyPet;
+  var init_teamEditor = __esm({
+    "src/features/pets/teamEditor.ts"() {
+      "use strict";
+      init_petValue();
+      init_button();
+      init_card();
+      init_fields();
+      init_layout();
+      init_theme();
+      init_iconCache();
+      init_abilityChips();
+      init_pets();
+      init_teamReconcile();
+      init_teamStatsView();
+      SLOT_ICON_PX = 40;
+      SLOT_BUTTON_PX = 34;
+      MAX_STRENGTH_COLOR = "#facc15";
+      emptyPet = (id) => ({
+        id,
+        itemType: "Pet",
+        petSpecies: "",
+        name: null,
+        xp: 0,
+        hunger: 0,
+        mutations: [],
+        abilities: []
+      });
+    }
+  });
+
+  // src/features/pets/teamList.ts
+  function grabHandle() {
+    const grab = document.createElement("span");
+    grab.className = "qmm-grab";
+    grab.title = "Drag to reorder";
+    grab.setAttribute("aria-label", "Drag to reorder");
+    for (let i = 0; i < 6; i += 1) {
+      const dot = document.createElement("span");
+      dot.className = "qmm-grab-dot";
+      grab.appendChild(dot);
+    }
+    grab.draggable = true;
+    return grab;
+  }
+  function createTeamList(handlers) {
+    const root = document.createElement("div");
+    Object.assign(root.style, { display: "grid", gridTemplateRows: "auto 1fr auto", gap: "8px", minHeight: "0" });
+    const syncRow = document.createElement("label");
+    Object.assign(syncRow.style, { display: "flex", alignItems: "center", gap: "8px", padding: "2px 7px", cursor: "pointer" });
+    const syncSwitch = switchInput(handlers.isSyncEnabled(), (on) => handlers.setSyncEnabled(on));
+    syncSwitch.style.flexShrink = "0";
+    const syncLabel = document.createElement("span");
+    syncLabel.textContent = "Sync teams with the game";
+    syncLabel.style.fontSize = "13px";
+    syncRow.append(syncSwitch, syncLabel);
+    const list = document.createElement("div");
+    Object.assign(list.style, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "6px",
+      overflow: "auto",
+      padding: "6px",
+      border: `1px solid ${color.border}`,
+      borderRadius: "10px",
+      background: color.cardBg,
+      scrollBehavior: "smooth",
+      minHeight: "0"
+    });
+    const footer = flexRow({ gap: 6 });
+    const btnNew = button("\u2795 New", { variant: "primary", size: "sm", fullWidth: true, onClick: handlers.onCreate });
+    const btnDelete = button("\u{1F5D1}\uFE0F Delete", { variant: "danger", size: "sm", fullWidth: true, onClick: handlers.onDelete });
+    btnNew.style.flex = btnDelete.style.flex = "1 1 0";
+    footer.append(btnNew, btnDelete);
+    root.append(syncRow, list, footer);
+    let teams2 = [];
+    let draggingIndex = null;
+    let insertIndex = null;
+    let draggingHeight = 0;
+    const rows = () => Array.from(list.children);
+    function insertIndexAt(clientY) {
+      const children = rows();
+      for (let i = 0; i < children.length; i++) {
+        const rect = children[i].getBoundingClientRect();
+        if (clientY < rect.top + rect.height / 2) return i;
+      }
+      return children.length;
+    }
+    function showDropPreview() {
+      const children = rows();
+      children.forEach((el) => el.style.transform = "");
+      if (draggingIndex === null || insertIndex === null) return;
+      const from = draggingIndex;
+      const to = insertIndex;
+      children.forEach((el, i) => {
+        el.style.transition = "transform 120ms ease";
+        if (i === from) return;
+        if (to > from && i > from && i < to) el.style.transform = `translateY(${-draggingHeight}px)`;
+        if (to < from && i >= to && i < from) el.style.transform = `translateY(${draggingHeight}px)`;
+      });
+    }
+    function resetDrag() {
+      for (const el of rows()) {
+        el.style.transform = "";
+        el.style.transition = "";
+      }
+      draggingIndex = null;
+      insertIndex = null;
+      draggingHeight = 0;
+    }
+    function trackDrag(ev, nextInsertIndex) {
+      ev.preventDefault();
+      if (ev.dataTransfer) ev.dataTransfer.dropEffect = "move";
+      if (draggingIndex === null) return;
+      const clamped = Math.max(0, Math.min(teams2.length, nextInsertIndex));
+      if (insertIndex !== clamped) {
+        insertIndex = clamped;
+        showDropPreview();
+      }
+      const bounds = list.getBoundingClientRect();
+      if (ev.clientY < bounds.top + AUTOSCROLL_EDGE_PX) list.scrollTop -= AUTOSCROLL_STEP_PX;
+      else if (ev.clientY > bounds.bottom - AUTOSCROLL_EDGE_PX) list.scrollTop += AUTOSCROLL_STEP_PX;
+    }
+    function drop(ev) {
+      ev.preventDefault();
+      if (draggingIndex === null) return;
+      let target = insertIndex ?? insertIndexAt(ev.clientY);
+      if (target > draggingIndex) target -= 1;
+      target = Math.max(0, Math.min(teams2.length - 1, target));
+      const from = draggingIndex;
+      resetDrag();
+      if (target === from) return;
+      const order = teams2.map((t) => t.id);
+      const [moved] = order.splice(from, 1);
+      order.splice(target, 0, moved);
+      handlers.onReorder(order);
+    }
+    list.addEventListener("dragover", (ev) => trackDrag(ev, insertIndexAt(ev.clientY)));
+    list.addEventListener("drop", drop);
+    function teamRow(team, index, view) {
+      const selected = team.id === view.selectedId;
+      const active2 = team.id === view.activeTeamId;
+      const row2 = document.createElement("div");
+      row2.dataset.index = String(index);
+      row2.dataset.teamId = team.id;
+      Object.assign(row2.style, {
+        height: "36px",
+        padding: "0 10px",
+        borderRadius: "8px",
+        cursor: "pointer",
+        fontSize: "13px",
+        overflow: "hidden",
+        whiteSpace: "nowrap",
+        display: "flex",
+        flex: "0 0 auto",
+        gap: "8px",
+        alignItems: "center",
+        transition: "background 120ms ease, border-color 120ms ease",
+        border: `1px solid ${selected ? color.accentBorderHover : color.border}`,
+        background: selected ? color.accentSoft : color.cardBg
+      });
+      const dot = document.createElement("span");
+      Object.assign(dot.style, {
+        width: "10px",
+        height: "10px",
+        borderRadius: "50%",
+        flex: "0 0 auto",
+        boxShadow: "0 0 0 1px rgba(0,0,0,0.4) inset",
+        background: active2 ? ACTIVE_DOT : INACTIVE_DOT
+      });
+      dot.title = active2 ? "This team is currently active" : "Inactive team";
+      const label2 = document.createElement("span");
+      label2.textContent = team.name || "(unnamed)";
+      Object.assign(label2.style, { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 0" });
+      const minis = document.createElement("div");
+      Object.assign(minis.style, { display: "flex", gap: "4px", alignItems: "center", marginLeft: "auto" });
+      for (let i = 0; i < 3; i++) {
+        const id = team.slots[i];
+        minis.appendChild(petIcon(id ? view.pets.get(String(id)) ?? null : null, MINI_ICON_PX));
+      }
+      const grab = grabHandle();
+      row2.append(dot, label2, minis, grab);
+      row2.onmouseenter = () => {
+        if (!selected) row2.style.borderColor = color.accentBorder;
+      };
+      row2.onmouseleave = () => {
+        if (!selected) row2.style.borderColor = color.border;
+      };
+      row2.onclick = () => handlers.onSelect(team.id);
+      grab.addEventListener("dragstart", (ev) => {
+        draggingIndex = index;
+        draggingHeight = row2.getBoundingClientRect().height;
+        row2.classList.add("qmm-dragging");
+        ev.dataTransfer?.setData("text/plain", String(index));
+        if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "move";
+        try {
+          const ghost = row2.cloneNode(true);
+          Object.assign(ghost.style, { width: `${row2.getBoundingClientRect().width}px`, position: "absolute", top: "-9999px" });
+          document.body.appendChild(ghost);
+          ev.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
+          setTimeout(() => ghost.remove(), 0);
+        } catch {
         }
+      });
+      grab.addEventListener("dragend", () => {
+        row2.classList.remove("qmm-dragging");
+        resetDrag();
+      });
+      row2.addEventListener("dragover", (ev) => {
+        const bounds = row2.getBoundingClientRect();
+        trackDrag(ev, ev.clientY < bounds.top + bounds.height / 2 ? index : index + 1);
+      });
+      row2.addEventListener("drop", (ev) => {
+        ev.stopPropagation();
+        drop(ev);
+      });
+      return row2;
+    }
+    function render(view) {
+      teams2 = view.teams;
+      resetDrag();
+      list.replaceChildren();
+      if (!teams2.length) {
+        const empty = document.createElement("div");
+        empty.textContent = "No teams yet. Create one!";
+        Object.assign(empty.style, { opacity: "0.75", textAlign: "center", padding: "8px" });
+        list.appendChild(empty);
+        return;
       }
-      const afkRelevant = !category.afkCapable && category.paddingParentId != null && !!CATEGORIES_BY_ID.get(category.paddingParentId)?.afkCapable;
-      const fillerSustainPet = pickSustainPet(pets, category, false);
-      if (afkRelevant && fillerSustainPet && activeCandidates.length > 0 && activeCandidates.length < maxSlots && !activeCandidates.some((p) => p.id === fillerSustainPet.id)) {
-        usedIds.add(fillerSustainPet.id);
-        teams.push({
-          categories: [categoryRef],
-          mode: "afk",
-          petIds: [...activeCandidates.map((p) => p.id), fillerSustainPet.id],
-          focusAbilityIds: dedupe(focusAbilityIds)
+      teams2.forEach((team, index) => list.appendChild(teamRow(team, index, view)));
+    }
+    return { root, render };
+  }
+  var ACTIVE_DOT, INACTIVE_DOT, AUTOSCROLL_EDGE_PX, AUTOSCROLL_STEP_PX, MINI_ICON_PX;
+  var init_teamList = __esm({
+    "src/features/pets/teamList.ts"() {
+      "use strict";
+      init_button();
+      init_layout();
+      init_theme();
+      init_toggles();
+      init_petIcon();
+      ACTIVE_DOT = "#48d170";
+      INACTIVE_DOT = "#64748b";
+      AUTOSCROLL_EDGE_PX = 28;
+      AUTOSCROLL_STEP_PX = 18;
+      MINI_ICON_PX = 18;
+    }
+  });
+
+  // src/features/pets/managerTab.ts
+  function renderManagerTab(view, ui) {
+    view.replaceChildren();
+    let teams2 = [];
+    let selectedId = null;
+    let activeTeamId = null;
+    let applyingTeam = false;
+    const selectedTeam = () => teams2.find((t) => t.id === selectedId) ?? null;
+    const layout = document.createElement("div");
+    Object.assign(layout.style, {
+      display: "grid",
+      gridTemplateColumns: "minmax(220px, 280px) minmax(0, 1fr)",
+      gap: "10px",
+      alignItems: "stretch",
+      height: "54vh",
+      overflow: "hidden"
+    });
+    view.appendChild(layout);
+    const list = createTeamList({
+      onSelect(teamId2) {
+        if (selectedId !== teamId2) {
+          selectedId = teamId2;
+          void refreshList(true);
+        }
+        void editor.show(selectedTeam());
+      },
+      onReorder(teamIds2) {
+        PetsService.setTeamsOrder(teamIds2);
+      },
+      onCreate() {
+        selectedId = PetsService.createTeam("New Team").id;
+        void refreshList();
+        void editor.show(selectedTeam());
+      },
+      onDelete() {
+        if (selectedId) PetsService.deleteTeam(selectedId);
+      },
+      isSyncEnabled: () => PetsService.isTeamSyncEnabled(),
+      setSyncEnabled: (on) => PetsService.setTeamSyncEnabled(on)
+    });
+    const editor = createTeamEditor({
+      selectedTeam,
+      onRenamed: () => void refreshList(true),
+      onUseTeam: useTeam2,
+      setWindowVisible: (visible) => ui.setWindowVisible(visible)
+    });
+    layout.append(list.root, editor.root);
+    async function detectActiveTeam() {
+      activeTeamId = null;
+      try {
+        const pets = await PetsService.getPets();
+        const equipped = new Set((Array.isArray(pets) ? pets : []).map((p) => String(p?.slot?.id || "")).filter(Boolean));
+        const match = teams2.find((t) => {
+          const ids = t.slots.filter((x) => !!x);
+          return ids.length === equipped.size && ids.every((id) => equipped.has(id));
         });
+        activeTeamId = match?.id ?? null;
+      } catch {
       }
     }
-    return {
-      teams: mergeTeamsWithSamePets(teams),
-      sustainPet,
-      unusedPets: findUnusedPets(pets, usedIds, sustainPet)
+    async function refreshList(keepActiveTeam = false) {
+      if (!keepActiveTeam) await detectActiveTeam();
+      const pets = await PetsService.getPetLookup();
+      list.render({ teams: teams2, selectedId, activeTeamId, pets });
+      if (!teams2.length) void editor.show(null);
+    }
+    let refreshing = null;
+    let refreshQueued = false;
+    function scheduleRefresh() {
+      if (refreshing) {
+        refreshQueued = true;
+        return refreshing;
+      }
+      const run = async () => {
+        await refreshList();
+        while (refreshQueued) {
+          refreshQueued = false;
+          await refreshList();
+        }
+      };
+      refreshing = run().finally(() => {
+        refreshing = null;
+      });
+      return refreshing;
+    }
+    async function useTeam2(team) {
+      try {
+        applyingTeam = true;
+        activeTeamId = team.id;
+        await refreshList(true);
+        await PetsService.useTeam(team.id);
+        await PetsService.waitForTeamEquipped(team.id);
+        await editor.show(selectedTeam());
+        await refreshList();
+      } catch (e) {
+        console.warn("[Pets] Use this team failed:", e);
+        await refreshList();
+      } finally {
+        applyingTeam = false;
+      }
+    }
+    const stopTeams = PetsService.onTeamsChange((all) => {
+      teams2 = all.slice();
+      if (selectedId && !teams2.some((t) => t.id === selectedId)) selectedId = null;
+      if (!selectedId && teams2.length) selectedId = teams2[0].id;
+      void scheduleRefresh();
+      void editor.show(selectedTeam());
+    });
+    let stopPets = null;
+    void (async () => {
+      try {
+        stopPets = await onActivePetsStructuralChangeNow(async () => {
+          if (applyingTeam) return;
+          await editor.repaint(selectedTeam());
+          await scheduleRefresh();
+        });
+      } catch {
+      }
+    })();
+    const previousCleanup = view.__cleanup__;
+    view.__cleanup__ = () => {
+      try {
+        stopTeams();
+      } catch {
+      }
+      try {
+        stopPets?.();
+      } catch {
+      }
+      try {
+        previousCleanup?.();
+      } catch {
+      }
     };
   }
-  var CATEGORIES, HARD_AVOID_MUTATIONS, SOFT_AVOID_MUTATIONS, GRANTER_STRENGTH_PENALTY, AFK_POOL_LIMIT, AFK_FEEDER_LIMIT, CATEGORIES_BY_ID;
-  var init_teamBuilder = __esm({
-    "src/features/pets/teamBuilder.ts"() {
+  var init_managerTab = __esm({
+    "src/features/pets/managerTab.ts"() {
       "use strict";
-      init_data();
-      init_petValue();
-      init_abilityStats();
-      init_teamStats();
+      init_atoms();
+      init_pets();
+      init_teamEditor();
+      init_teamList();
+    }
+  });
+
+  // src/features/pets/teamBuilderCategories.ts
+  var CATEGORIES, CATEGORIES_BY_ID;
+  var init_teamBuilderCategories = __esm({
+    "src/features/pets/teamBuilderCategories.ts"() {
+      "use strict";
       CATEGORIES = [
         {
           id: "cropSize",
@@ -40992,7 +41081,7 @@ next: ${next}`;
         },
         // Ability ids/tier names here are the game's own naming, not ours: despite
         // the "II" suffix, EggGrowthBoostII is the strongest tier (11min reduction
-        // per baseParameters.eggGrowthTimeReductionMinutes) — EggGrowthBoostII_NEW
+        // per baseParameters.eggGrowthTimeReductionMinutes): EggGrowthBoostII_NEW
         // (9min) is the actual mid tier. Don't "fix" this ordering back to
         // alphabetical/numeral without re-checking baseParameters.
         {
@@ -41121,7 +41210,7 @@ next: ${next}`;
           abilityIds: ["Thunderbloom", "ThunderBoost"],
           paddingParentId: "mutationThunderstruck"
         },
-        // Generic weather-mutation chance boost — unlike its Snowy/Dawn/Amber/Thunder
+        // Generic weather-mutation chance boost: unlike its Snowy/Dawn/Amber/Thunder
         // siblings above, ProduceMutationBoost has no requiredWeather in
         // baseParameters: it applies regardless of which weather is active, which
         // makes it one of the more reliable AFK picks in the whole catalog.
@@ -41179,7 +41268,7 @@ next: ${next}`;
         // One category per tier rather than a merged "Seeds" bucket: unlike
         // CoinFinder/SellBoost (where a higher tier is strictly the same effect,
         // just bigger), SeedFinder's baseParameters carry no magnitude to compare
-        // tiers by — each tier is its own goal, not a strict upgrade of the last.
+        // tiers by: each tier is its own goal, not a strict upgrade of the last.
         {
           id: "seedFinderI",
           label: "Seed Finder I",
@@ -41212,7 +41301,7 @@ next: ${next}`;
           afkCapable: true,
           abilityIds: ["SeedFinderIV"]
         },
-        // Pet XP boosts whichever pets are active — the point is 1-2 dedicated
+        // Pet XP boosts whichever pets are active: the point is 1-2 dedicated
         // boosters plus a slot deliberately left empty for whatever pet you're
         // actually trying to level, so maxTeamSlots caps at 2 instead of 3.
         {
@@ -41258,7 +41347,7 @@ next: ${next}`;
         // hatchEgg but do unrelated things (duplicate the hatch, boost the new
         // pet's max strength, give it bonus XP, or boost its gold/rainbow chance).
         // Merged under one tier-ranked list, DoubleHatch (ranked first) silently
-        // crowded out every other ability's pets from ever being suggested — but
+        // crowded out every other ability's pets from ever being suggested. But
         // they all still fire together on the same hatch, so each pads from the
         // other three when it doesn't fill its own slots alone.
         // Sibling padding order follows a value ranking (best first), not
@@ -41266,7 +41355,7 @@ next: ${next}`;
         // ceiling, which everything else here is ranked by) > Double Hatch
         // (a whole extra pet) > Pet Mutation Boost (nice-to-have gold/rainbow
         // odds) > Hatch XP Boost (just a shortcut to XP you'd get from feeding
-        // anyway — the weakest of the four).
+        // anyway: the weakest of the four).
         {
           id: "doubleHatch",
           label: "Double Hatch",
@@ -41305,7 +41394,7 @@ next: ${next}`;
         },
         // Split out of a single "Sell Session" bucket: DoubleHarvest fires on
         // `harvest` (not selling at all), ProduceRefund and SellBoost fire on
-        // `sellAllCrops`, and PetRefund fires on `sellPet` — three different
+        // `sellAllCrops`, and PetRefund fires on `sellPet`: three different
         // player actions, so three different categories rather than one vague one.
         {
           id: "doubleHarvest",
@@ -41317,7 +41406,7 @@ next: ${next}`;
         },
         // Crop Refund ranks above Sell Boost: a flat % more coins is good, but
         // getting an expensive crop back outright is worth more when it's a
-        // high-value one — only matters when a category needs padding from more
+        // high-value one: only matters when a category needs padding from more
         // than one sibling, but keep the declared order consistent regardless.
         {
           id: "cropRefund",
@@ -41345,7 +41434,7 @@ next: ${next}`;
           afkCapable: false,
           abilityIds: ["PetRefundII", "PetRefund"]
         },
-        // playerActivated (manual click + cooldown) — never AFK, distinct from the
+        // playerActivated (manual click + cooldown): never AFK, distinct from the
         // Dawnlit/Thunderstruck mutation pipelines since they convert already-
         // mutated crops into a separate resource rather than helping crops mutate.
         {
@@ -41365,628 +41454,362 @@ next: ${next}`;
           abilityIds: ["Thundercharger"]
         }
       ];
+      CATEGORIES_BY_ID = new Map(CATEGORIES.map((c) => [c.id, c]));
+    }
+  });
+
+  // src/features/pets/teamBuilder.ts
+  function abilityTrigger(id) {
+    return petAbilities2[id]?.trigger;
+  }
+  function isAfkEligibleAbility(id) {
+    return abilityTrigger(id) === "continuous";
+  }
+  function isHungerRestoreAbility(id) {
+    return id === "HungerRestore" || id === "HungerRestoreII" || id === "HungerRestoreIII" || id === "SnowyHungerRestore";
+  }
+  function isHungerBoostAbility(id) {
+    return id === "HungerBoost" || id === "HungerBoostII" || id === "HungerBoostIII" || id === "SnowyHungerBoost";
+  }
+  function petAbilityIds(pet) {
+    return Array.isArray(pet.abilities) ? pet.abilities : [];
+  }
+  function sustainScore(pet) {
+    const abilities = petAbilityIds(pet);
+    const hasRestore = abilities.some(isHungerRestoreAbility);
+    const hasBoost = abilities.some(isHungerBoostAbility);
+    if (hasRestore && hasBoost) return 2;
+    if (hasRestore || hasBoost) return 1;
+    return 0;
+  }
+  function pickSustainPet(pets, category, afkOnly) {
+    const NOT_USEFUL = Number.POSITIVE_INFINITY;
+    const wantedMutations = category ? categoryGrantedMutations(category) : /* @__PURE__ */ new Set();
+    const ranked = pets.map((pet) => {
+      const abilities = petAbilityIds(pet);
+      const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
+      const tierIndex = category ? bestTierIndex(category, relevant) : -1;
+      const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
+      return {
+        pet,
+        score: sustainScore(pet),
+        hardAvoidCount,
+        // Lower is better; pets that do nothing for the goal sort last.
+        goalRank: tierIndex === -1 ? NOT_USEFUL : tierIndex,
+        effectiveStrength: getPetMaxStrength(pet) - GRANTER_STRENGTH_PENALTY * softAvoidCount
+      };
+    }).filter((candidate) => candidate.score > 0);
+    if (!ranked.length) return null;
+    ranked.sort((a, b) => {
+      if (a.score !== b.score) return b.score - a.score;
+      if (a.hardAvoidCount !== b.hardAvoidCount) return a.hardAvoidCount - b.hardAvoidCount;
+      if (a.goalRank !== b.goalRank) return a.goalRank - b.goalRank;
+      if (a.effectiveStrength !== b.effectiveStrength) return b.effectiveStrength - a.effectiveStrength;
+      return a.pet.petSpecies.localeCompare(b.pet.petSpecies);
+    });
+    return ranked[0].pet;
+  }
+  function getBestSustainPet(pets) {
+    return pickSustainPet(pets, null, false);
+  }
+  function abilityGrantedMutations(abilityId) {
+    const raw = getAbilityRawParameters(abilityId).grantedMutations;
+    return Array.isArray(raw) ? raw.filter((m) => typeof m === "string") : [];
+  }
+  function petGrantedMutations(pet) {
+    const mutations = /* @__PURE__ */ new Set();
+    for (const abilityId of petAbilityIds(pet)) {
+      for (const mutation of abilityGrantedMutations(abilityId)) mutations.add(mutation);
+    }
+    return Array.from(mutations);
+  }
+  function categoryGrantedMutations(category) {
+    const mutations = /* @__PURE__ */ new Set();
+    for (const abilityId of category.abilityIds) {
+      for (const mutation of abilityGrantedMutations(abilityId)) mutations.add(mutation);
+    }
+    return mutations;
+  }
+  function granterPenaltyFor(pet, wanted) {
+    let hardAvoidCount = 0;
+    let softAvoidCount = 0;
+    for (const mutation of petGrantedMutations(pet)) {
+      if (wanted.has(mutation)) continue;
+      if (HARD_AVOID_MUTATIONS.has(mutation)) hardAvoidCount += 1;
+      else if (SOFT_AVOID_MUTATIONS.has(mutation)) softAvoidCount += 1;
+    }
+    return { hardAvoidCount, softAvoidCount };
+  }
+  function countUnwantedGranters(teamPets, wanted) {
+    let hardAvoidCount = 0;
+    let softAvoidCount = 0;
+    for (const pet of teamPets) {
+      const penalty = granterPenaltyFor(pet, wanted);
+      hardAvoidCount += penalty.hardAvoidCount;
+      softAvoidCount += penalty.softAvoidCount;
+    }
+    return { hardAvoidCount, softAvoidCount };
+  }
+  function combinations(items, size) {
+    if (size <= 0 || size > items.length) return [];
+    const out = [];
+    const current = [];
+    const walk = (start2) => {
+      if (current.length === size) {
+        out.push([...current]);
+        return;
+      }
+      for (let i = start2; i < items.length; i += 1) {
+        current.push(items[i]);
+        walk(i + 1);
+        current.pop();
+      }
+    };
+    walk(0);
+    return out;
+  }
+  function categoryCombinedProbability(category, teamPets) {
+    let missAll = 1;
+    for (const pet of teamPets) {
+      const abilities = petAbilityIds(pet).filter(isAfkEligibleAbility);
+      const tierIndex = bestTierIndex(category, abilities);
+      if (tierIndex === -1) continue;
+      const stats = computeAbilityStatsAtRatio(category.abilityIds[tierIndex], getStrengthRatio(pet));
+      if (!stats || stats.effectiveProbability === null) continue;
+      missAll *= 1 - stats.effectiveProbability / 100;
+    }
+    return 1 - missAll;
+  }
+  function pickAfkTeam(category, pets, maxSlots) {
+    const qualifying = rankCandidates(category, pets, true).slice(0, AFK_POOL_LIMIT);
+    if (!qualifying.length) return null;
+    const feeders = pets.filter((pet) => sustainScore(pet) > 0).sort((a, b) => sustainScore(b) - sustainScore(a) || getPetMaxStrength(b) - getPetMaxStrength(a)).slice(0, AFK_FEEDER_LIMIT);
+    const poolById = /* @__PURE__ */ new Map();
+    for (const pet of [...qualifying, ...feeders]) poolById.set(pet.id, pet);
+    const pool = Array.from(poolById.values());
+    const qualifyingIds = new Set(qualifying.map((pet) => pet.id));
+    const wantedMutations = categoryGrantedMutations(category);
+    let best = null;
+    for (const combo of combinations(pool, Math.min(maxSlots, pool.length))) {
+      if (!combo.some((pet) => qualifyingIds.has(pet.id))) continue;
+      if (!combo.some((pet) => sustainScore(pet) > 0)) continue;
+      const { hardAvoidCount, softAvoidCount } = countUnwantedGranters(combo, wantedMutations);
+      const strength = combo.reduce((sum, pet) => sum + getPetMaxStrength(pet), 0);
+      const sustained = computeTeamAutonomy(combo).status === "sustained";
+      const candidate = {
+        pets: combo,
+        sustained,
+        // Only meaningful while the team still runs dry: dodging a granter must
+        // not cost you a real feeder. Once the team sustains itself, extra
+        // hunger capability buys nothing and the later tiers decide.
+        sustainCapability: sustained ? 0 : combo.reduce((sum, pet) => sum + sustainScore(pet), 0),
+        hardAvoidCount,
+        probability: categoryCombinedProbability(category, combo),
+        // Soft-avoided granters cost GRANTER_STRENGTH_PENALTY each, so such a
+        // pet only wins when it is more than that much stronger.
+        effectiveStrength: strength - GRANTER_STRENGTH_PENALTY * softAvoidCount
+      };
+      if (!best || isBetterAfkTeam(candidate, best)) best = candidate;
+    }
+    return best?.pets ?? null;
+  }
+  function isBetterAfkTeam(candidate, best) {
+    if (candidate.sustained !== best.sustained) return candidate.sustained;
+    if (candidate.sustainCapability !== best.sustainCapability) {
+      return candidate.sustainCapability > best.sustainCapability;
+    }
+    if (candidate.hardAvoidCount !== best.hardAvoidCount) {
+      return candidate.hardAvoidCount < best.hardAvoidCount;
+    }
+    if (candidate.probability !== best.probability) return candidate.probability > best.probability;
+    return candidate.effectiveStrength > best.effectiveStrength;
+  }
+  function bestTierIndex(category, abilities) {
+    let best = -1;
+    for (const id of abilities) {
+      const idx = category.abilityIds.indexOf(id);
+      if (idx === -1) continue;
+      if (best === -1 || idx < best) best = idx;
+    }
+    return best;
+  }
+  function rankCandidates(category, pets, afkOnly) {
+    const wantedMutations = categoryGrantedMutations(category);
+    const ranked = pets.map((pet) => {
+      const abilities = petAbilityIds(pet);
+      const relevant = afkOnly ? abilities.filter(isAfkEligibleAbility) : abilities;
+      const { hardAvoidCount, softAvoidCount } = granterPenaltyFor(pet, wantedMutations);
+      return {
+        pet,
+        tierIndex: bestTierIndex(category, relevant),
+        hardAvoidCount,
+        // Same handicap as the AFK ranking: a soft-avoided granter only wins
+        // when it is more than GRANTER_STRENGTH_PENALTY stronger.
+        effectiveStrength: getPetMaxStrength(pet) - GRANTER_STRENGTH_PENALTY * softAvoidCount
+      };
+    }).filter((c) => c.tierIndex !== -1);
+    const speciesCount = /* @__PURE__ */ new Map();
+    for (const c of ranked) {
+      speciesCount.set(c.pet.petSpecies, (speciesCount.get(c.pet.petSpecies) ?? 0) + 1);
+    }
+    ranked.sort((a, b) => {
+      if (a.tierIndex !== b.tierIndex) return a.tierIndex - b.tierIndex;
+      if (a.hardAvoidCount !== b.hardAvoidCount) return a.hardAvoidCount - b.hardAvoidCount;
+      if (a.effectiveStrength !== b.effectiveStrength) return b.effectiveStrength - a.effectiveStrength;
+      const aCount = speciesCount.get(a.pet.petSpecies) ?? 0;
+      const bCount = speciesCount.get(b.pet.petSpecies) ?? 0;
+      if (aCount !== bCount) return bCount - aCount;
+      return a.pet.petSpecies.localeCompare(b.pet.petSpecies);
+    });
+    return ranked.map((c) => c.pet);
+  }
+  function qualifyingCategories(pet) {
+    const abilities = petAbilityIds(pet);
+    return CATEGORIES.filter((c) => bestTierIndex(c, abilities) !== -1);
+  }
+  function findUnusedPets(pets, usedIds, sustainPet) {
+    const unused = [];
+    const seenIds = /* @__PURE__ */ new Set();
+    for (const pet of pets) {
+      if (usedIds.has(pet.id) || seenIds.has(pet.id)) continue;
+      seenIds.add(pet.id);
+      const outrankedIn = qualifyingCategories(pet).map((c) => c.label);
+      const outrankedAsSustain = sustainScore(pet) > 0 && sustainPet?.id !== pet.id;
+      const untracked = !outrankedIn.length && !outrankedAsSustain;
+      unused.push({ pet, outrankedIn, outrankedAsSustain, untracked });
+    }
+    return unused;
+  }
+  function mergeTeamsWithSamePets(teams2) {
+    const order = [];
+    const byKey = /* @__PURE__ */ new Map();
+    for (const team of teams2) {
+      const key2 = `${team.mode}::${team.petIds.slice().sort().join(",")}`;
+      const existing = byKey.get(key2);
+      if (existing) {
+        existing.categories.push(...team.categories);
+        existing.focusAbilityIds = dedupe([...existing.focusAbilityIds, ...team.focusAbilityIds]);
+      } else {
+        byKey.set(key2, {
+          ...team,
+          categories: [...team.categories],
+          focusAbilityIds: [...team.focusAbilityIds]
+        });
+        order.push(key2);
+      }
+    }
+    return order.map((key2) => byKey.get(key2));
+  }
+  function dedupe(ids) {
+    return Array.from(new Set(ids));
+  }
+  function buildSuggestedTeams(pets) {
+    const sustainPet = getBestSustainPet(pets);
+    const teams2 = [];
+    const usedIds = /* @__PURE__ */ new Set();
+    if (sustainPet) usedIds.add(sustainPet.id);
+    for (const category of CATEGORIES) {
+      const categoryRef = {
+        id: category.id,
+        label: category.label,
+        shortLabel: category.shortLabel,
+        icon: category.icon,
+        abilityId: category.abilityIds[0]
+      };
+      const maxSlots = category.maxTeamSlots ?? 3;
+      const focusAbilityIds = [category.abilityIds[0]];
+      let activeCandidates = rankCandidates(category, pets, false).slice(0, maxSlots);
+      if (activeCandidates.length && activeCandidates.length < maxSlots && category.paddingParentId) {
+        const parent = CATEGORIES_BY_ID.get(category.paddingParentId);
+        if (parent) {
+          const already = new Set(activeCandidates.map((p) => p.id));
+          const padding = rankCandidates(parent, pets, false).filter((p) => !already.has(p.id));
+          const before = activeCandidates.length;
+          activeCandidates = [...activeCandidates, ...padding].slice(0, maxSlots);
+          if (activeCandidates.length > before) focusAbilityIds.push(parent.abilityIds[0]);
+        }
+      }
+      if (activeCandidates.length && activeCandidates.length < maxSlots && category.paddingSiblingIds?.length) {
+        const already = new Set(activeCandidates.map((p) => p.id));
+        const siblingPool = [];
+        const siblingByPetId = /* @__PURE__ */ new Map();
+        for (const siblingId of category.paddingSiblingIds) {
+          const sibling = CATEGORIES_BY_ID.get(siblingId);
+          if (!sibling) continue;
+          for (const p of rankCandidates(sibling, pets, false)) {
+            if (!already.has(p.id)) {
+              siblingPool.push(p);
+              already.add(p.id);
+              siblingByPetId.set(p.id, sibling);
+            }
+          }
+        }
+        activeCandidates = [...activeCandidates, ...siblingPool].slice(0, maxSlots);
+        for (const pet of activeCandidates) {
+          const sibling = siblingByPetId.get(pet.id);
+          if (sibling) focusAbilityIds.push(sibling.abilityIds[0]);
+        }
+      }
+      activeCandidates.forEach((p) => usedIds.add(p.id));
+      if (activeCandidates.length) {
+        teams2.push({
+          categories: [categoryRef],
+          mode: "active",
+          petIds: activeCandidates.map((p) => p.id),
+          focusAbilityIds: dedupe(focusAbilityIds)
+        });
+      }
+      if (category.afkCapable) {
+        const afkTeam = pickAfkTeam(category, pets, maxSlots);
+        if (afkTeam?.length) {
+          afkTeam.forEach((p) => usedIds.add(p.id));
+          teams2.push({
+            categories: [categoryRef],
+            mode: "afk",
+            // Only the category's own ability. A feeder in this team may well
+            // carry it too (that is often why it was picked), and the stats
+            // layer counts whatever abilities the pets actually have.
+            petIds: afkTeam.map((p) => p.id),
+            focusAbilityIds: [category.abilityIds[0]]
+          });
+        }
+      }
+      const afkRelevant = !category.afkCapable && category.paddingParentId != null && !!CATEGORIES_BY_ID.get(category.paddingParentId)?.afkCapable;
+      const fillerSustainPet = pickSustainPet(pets, category, false);
+      if (afkRelevant && fillerSustainPet && activeCandidates.length > 0 && activeCandidates.length < maxSlots && !activeCandidates.some((p) => p.id === fillerSustainPet.id)) {
+        usedIds.add(fillerSustainPet.id);
+        teams2.push({
+          categories: [categoryRef],
+          mode: "afk",
+          petIds: [...activeCandidates.map((p) => p.id), fillerSustainPet.id],
+          focusAbilityIds: dedupe(focusAbilityIds)
+        });
+      }
+    }
+    return {
+      teams: mergeTeamsWithSamePets(teams2),
+      sustainPet,
+      unusedPets: findUnusedPets(pets, usedIds, sustainPet)
+    };
+  }
+  var HARD_AVOID_MUTATIONS, SOFT_AVOID_MUTATIONS, GRANTER_STRENGTH_PENALTY, AFK_POOL_LIMIT, AFK_FEEDER_LIMIT;
+  var init_teamBuilder = __esm({
+    "src/features/pets/teamBuilder.ts"() {
+      "use strict";
+      init_data();
+      init_petValue();
+      init_abilityStats();
+      init_teamStats();
+      init_teamBuilderCategories();
       HARD_AVOID_MUTATIONS = /* @__PURE__ */ new Set(["Gold"]);
       SOFT_AVOID_MUTATIONS = /* @__PURE__ */ new Set(["Rainbow"]);
       GRANTER_STRENGTH_PENALTY = 10;
       AFK_POOL_LIMIT = 6;
       AFK_FEEDER_LIMIT = 4;
-      CATEGORIES_BY_ID = new Map(CATEGORIES.map((c) => [c.id, c]));
-    }
-  });
-
-  // src/features/pets/abilityColorsTab.ts
-  function getAbilityChipColors(id) {
-    const key2 = String(id || "");
-    const apiColor = petAbilities2?.[key2]?.color;
-    if (apiColor && typeof apiColor.bg === "string" && apiColor.bg) {
-      const hover = typeof apiColor.hover === "string" && apiColor.hover ? apiColor.hover : apiColor.bg;
-      return { bg: apiColor.bg, hover };
-    }
-    const base = (PetsService.getAbilityNameWithoutLevel?.(key2) || "").replace(/[\s\-_]+/g, "").toLowerCase();
-    const is = (prefix) => key2.startsWith(prefix) || base === prefix.toLowerCase();
-    if (is("MoonKisser")) {
-      return {
-        bg: "rgba(250,166,35,0.9)",
-        hover: "rgba(250,166,35,1)"
-      };
-    }
-    if (is("DawnKisser")) {
-      return {
-        bg: "rgba(162,92,242,0.9)",
-        hover: "rgba(162,92,242,1)"
-      };
-    }
-    if (is("DawnCapture")) {
-      return {
-        bg: "rgba(178,90,158,0.9)",
-        hover: "rgba(178,90,158,1)"
-      };
-    }
-    if (is("DawnbinderBoost")) {
-      return {
-        bg: "rgba(180,104,160,0.9)",
-        hover: "rgba(180,104,160,1)"
-      };
-    }
-    if (is("ProduceScaleBoost") || is("SnowyCropSizeBoost")) {
-      return { bg: "rgba(34,139,34,0.9)", hover: "rgba(34,139,34,1)" };
-    }
-    if (is("PlantGrowthBoost") || is("SnowyPlantGrowthBoost") || is("DawnPlantGrowthBoost") || is("AmberPlantGrowthBoost") || is("ThunderPlantGrowthBoost")) {
-      return { bg: "rgba(0,128,128,0.9)", hover: "rgba(0,128,128,1)" };
-    }
-    if (is("EggGrowthBoost") || is("SnowyEggGrowthBoost") || is("ThunderEggGrowthBoost")) {
-      return { bg: "rgba(180,90,240,0.9)", hover: "rgba(180,90,240,1)" };
-    }
-    if (is("PetAgeBoost")) {
-      return { bg: "rgba(147,112,219,0.9)", hover: "rgba(147,112,219,1)" };
-    }
-    if (is("PetHatchSizeBoost")) {
-      return { bg: "rgba(128,0,128,0.9)", hover: "rgba(128,0,128,1)" };
-    }
-    if (is("PetXpBoost") || is("SnowyPetXpBoost") || is("DawnXpBoost") || is("ThunderXpBoost")) {
-      return { bg: "rgba(30,144,255,0.9)", hover: "rgba(30,144,255,1)" };
-    }
-    if (is("HungerBoost") || is("SnowyHungerBoost")) {
-      return { bg: "rgba(255,20,147,0.9)", hover: "rgba(255,20,147,1)" };
-    }
-    if (is("HungerRestore") || is("SnowyHungerRestore")) {
-      return { bg: "rgba(255,105,180,0.9)", hover: "rgba(255,105,180,1)" };
-    }
-    if (is("SellBoost")) {
-      return { bg: "rgba(220,20,60,0.9)", hover: "rgba(220,20,60,1)" };
-    }
-    if (is("CoinFinder") || is("SnowyCoinFinder") || is("DawnCoinFinder") || is("ThunderCoinFinder")) {
-      return { bg: "rgba(180,150,0,0.9)", hover: "rgba(180,150,0,1)" };
-    }
-    if (is("SeedFinder")) {
-      return {
-        bg: "rgba(168,102,38,0.9)",
-        hover: "rgba(168,102,38,1)"
-      };
-    }
-    if (is("ProduceMutationBoost") || is("SnowyCropMutationBoost") || is("DawnBoost") || is("AmberMoonBoost") || is("ThunderBoost")) {
-      return { bg: "rgba(140,15,70,0.9)", hover: "rgba(140,15,70,1)" };
-    }
-    if (is("PetMutationBoost")) {
-      return { bg: "rgba(160,50,100,0.9)", hover: "rgba(160,50,100,1)" };
-    }
-    if (is("DoubleHarvest")) {
-      return { bg: "rgba(0,120,180,0.9)", hover: "rgba(0,120,180,1)" };
-    }
-    if (is("DoubleHatch")) {
-      return { bg: "rgba(60,90,180,0.9)", hover: "rgba(60,90,180,1)" };
-    }
-    if (is("ProduceEater")) {
-      return { bg: "rgba(255,69,0,0.9)", hover: "rgba(255,69,0,1)" };
-    }
-    if (is("ProduceRefund")) {
-      return { bg: "rgba(255,99,71,0.9)", hover: "rgba(255,99,71,1)" };
-    }
-    if (is("PetRefund")) {
-      return { bg: "rgba(0,80,120,0.9)", hover: "rgba(0,80,120,1)" };
-    }
-    if (is("Copycat")) {
-      return { bg: "rgba(255,140,0,0.9)", hover: "rgba(255,140,0,1)" };
-    }
-    if (is("GoldGranter")) {
-      return {
-        bg: "linear-gradient(135deg, rgba(225,200,55,0.9) 0%, rgba(225,180,10,0.9) 40%, rgba(215,185,45,0.9) 70%, rgba(210,185,45,0.9) 100%)",
-        hover: "linear-gradient(135deg, rgba(220,200,70,1) 0%, rgba(210,175,5,1) 40%, rgba(210,185,55,1) 70%, rgba(200,175,30,1) 100%)"
-      };
-    }
-    if (is("RainbowGranter")) {
-      return {
-        bg: "linear-gradient(45deg, rgba(200,0,0,0.9), rgba(200,120,0,0.9), rgba(160,170,30,0.9), rgba(60,170,60,0.9), rgba(50,170,170,0.9), rgba(40,150,180,0.9), rgba(20,90,180,0.9), rgba(70,30,150,0.9))",
-        hover: "linear-gradient(45deg, rgba(200,0,0,1), rgba(200,120,0,1), rgba(160,170,30,1), rgba(60,170,60,1), rgba(50,170,170,1), rgba(40,150,180,1), rgba(20,90,180,1), rgba(70,30,150,1))"
-      };
-    }
-    if (is("RainDance")) {
-      return { bg: "rgba(76,204,204,0.9)", hover: "rgba(76,204,204,1)" };
-    }
-    if (is("SnowGranter")) {
-      return { bg: "rgba(144,184,204,0.9)", hover: "rgba(144,184,204,1)" };
-    }
-    if (is("FrostGranter")) {
-      return { bg: "rgba(148,160,204,0.9)", hover: "rgba(148,160,204,1)" };
-    }
-    if (is("DawnlitGranter")) {
-      return { bg: "rgba(196,124,180,0.9)", hover: "rgba(196,124,180,1)" };
-    }
-    if (is("AmberlitGranter")) {
-      return { bg: "rgba(204,144,96,0.9)", hover: "rgba(204,144,96,1)" };
-    }
-    if (is("ThunderstruckGranter")) {
-      return { bg: "rgba(194,184,60,0.9)", hover: "rgba(194,184,60,1)" };
-    }
-    if (is("Thundercharger")) {
-      return { bg: "rgba(31,163,130,0.9)", hover: "rgba(31,163,130,1)" };
-    }
-    if (is("Thunderbloom")) {
-      return { bg: "rgba(112,246,203,0.9)", hover: "rgba(112,246,203,1)" };
-    }
-    return {
-      bg: "rgba(100,100,100,0.9)",
-      hover: "rgba(150,150,150,1)"
-    };
-  }
-  var init_abilityColorsTab = __esm({
-    "src/features/pets/abilityColorsTab.ts"() {
-      "use strict";
-      init_pets();
-      init_data();
-    }
-  });
-
-  // src/features/pets/teamStatsView.ts
-  function triggerUnit(trigger) {
-    return trigger && TRIGGER_UNITS[trigger] || "/roll";
-  }
-  function fillRatioColor(ratio) {
-    if (ratio >= 0.99) return "#34d399";
-    if (ratio >= 0.9) return "#a3e635";
-    if (ratio >= 0.75) return "#fbbf24";
-    return "#f87171";
-  }
-  function mkBar(current, atMax) {
-    const ratio = atMax > 0 ? Math.max(0, Math.min(1, current / atMax)) : 0;
-    const track = document.createElement("div");
-    Object.assign(track.style, {
-      height: "3px",
-      borderRadius: "999px",
-      background: "rgba(255,255,255,0.07)",
-      overflow: "hidden",
-      margin: "3px 0 1px"
-    });
-    const fill = document.createElement("div");
-    Object.assign(fill.style, {
-      height: "100%",
-      width: `${Math.max(1.5, ratio * 100)}%`,
-      borderRadius: "999px",
-      background: fillRatioColor(ratio),
-      opacity: "0.85"
-    });
-    track.appendChild(fill);
-    return track;
-  }
-  function formatPercent(value) {
-    if (value >= 10) return `${value.toFixed(1)}%`;
-    if (value >= 1) return `${value.toFixed(2)}%`;
-    return `${value.toFixed(3)}%`;
-  }
-  function formatAmount(value, unit) {
-    const decimals = Math.abs(value) >= 10 ? 0 : 1;
-    const text2 = value.toLocaleString("en-US", {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals
-    });
-    return unit ? `${text2}${unit === "%" ? "%" : ` ${unit}`}` : text2;
-  }
-  function formatDuration(minutes) {
-    const total = Math.max(0, Math.round(minutes));
-    const hours = Math.floor(total / 60);
-    const mins = total % 60;
-    if (hours > 0) return `${hours}h${String(mins).padStart(2, "0")}`;
-    return `${mins}m`;
-  }
-  function primaryParameterKey(group2) {
-    for (const contributor of group2.contributors) {
-      for (const key2 of Object.keys(contributor.scaledParameters)) {
-        if (PARAMETER_LABELS[key2]) return key2;
-      }
-    }
-    return null;
-  }
-  function groupTitle(group2) {
-    const key2 = primaryParameterKey(group2);
-    return key2 ? PARAMETER_LABELS[key2].label : group2.label;
-  }
-  function perProcMagnitude(group2) {
-    const key2 = primaryParameterKey(group2);
-    if (!key2) return null;
-    const meta = PARAMETER_LABELS[key2];
-    const values = group2.contributors.map((contributor) => contributor.scaledParameters[key2]).filter((value) => typeof value === "number" && value !== 0);
-    if (!values.length) return null;
-    const low = formatAmount(Math.min(...values), meta.unit);
-    const high = formatAmount(Math.max(...values), meta.unit);
-    return low === high ? high : `${low} \u2013 ${high}`;
-  }
-  function mkNav(nav) {
-    const wrap = document.createElement("div");
-    Object.assign(wrap.style, {
-      display: "flex",
-      alignItems: "center",
-      gap: "2px",
-      flex: "0 0 auto"
-    });
-    const mkArrow = (glyph, delta, label2) => {
-      const button3 = document.createElement("button");
-      button3.type = "button";
-      button3.textContent = glyph;
-      button3.title = label2;
-      Object.assign(button3.style, {
-        border: "none",
-        background: "transparent",
-        color: MUTED,
-        font: "inherit",
-        fontSize: "11px",
-        lineHeight: "1",
-        padding: "0 3px",
-        cursor: "pointer",
-        borderRadius: "3px"
-      });
-      button3.onmouseenter = () => {
-        button3.style.color = "#e2e8f0";
-      };
-      button3.onmouseleave = () => {
-        button3.style.color = MUTED;
-      };
-      button3.addEventListener("click", (event) => {
-        event.stopPropagation();
-        event.preventDefault();
-        nav.onStep(delta);
-      });
-      return button3;
-    };
-    const counter2 = document.createElement("span");
-    counter2.textContent = `${nav.index + 1}/${nav.total}`;
-    counter2.style.fontSize = "9px";
-    counter2.style.color = DIM;
-    counter2.style.fontVariantNumeric = "tabular-nums";
-    wrap.append(mkArrow("\u2039", -1, "Previous effect"), counter2, mkArrow("\u203A", 1, "Next effect"));
-    return wrap;
-  }
-  function renderGroup(group2, nav) {
-    const block = document.createElement("div");
-    Object.assign(block.style, {
-      padding: "5px 7px",
-      borderRadius: "7px",
-      background: "rgba(255,255,255,0.025)",
-      border: "1px solid rgba(255,255,255,0.05)",
-      marginBottom: "4px"
-    });
-    const nameRow = document.createElement("div");
-    Object.assign(nameRow.style, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "6px",
-      minHeight: "13px"
-    });
-    const name = document.createElement("div");
-    const weatherSuffix2 = group2.requiredWeathers.length ? ` \xB7 ${group2.requiredWeathers.join("/")}` : "";
-    name.textContent = `${groupTitle(group2)}${weatherSuffix2}`;
-    Object.assign(name.style, {
-      fontSize: "9px",
-      fontWeight: "600",
-      letterSpacing: "0.05em",
-      textTransform: "uppercase",
-      color: DIM,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
-    });
-    if (weatherSuffix2) name.title = "Only fires while this weather is active.";
-    nameRow.appendChild(name);
-    if (nav) nameRow.appendChild(mkNav(nav));
-    block.appendChild(nameRow);
-    const value = document.createElement("div");
-    Object.assign(value.style, {
-      display: "flex",
-      alignItems: "baseline",
-      gap: "3px",
-      fontVariantNumeric: "tabular-nums"
-    });
-    if (group2.combinedProbability === null) {
-      const always = document.createElement("span");
-      always.textContent = "always on";
-      always.style.fontSize = "12px";
-      always.style.color = MUTED;
-      always.title = "This ability has no proc chance \u2014 it applies continuously.";
-      value.appendChild(always);
-      block.appendChild(value);
-    } else {
-      const atMax = group2.combinedProbabilityAtMax ?? group2.combinedProbability;
-      const ratio = atMax > 0 ? Math.min(1, group2.combinedProbability / atMax) : 1;
-      const isMaxed = ratio >= 0.995;
-      const big = document.createElement("span");
-      big.textContent = formatPercent(group2.combinedProbability);
-      big.style.fontSize = "15px";
-      big.style.fontWeight = "700";
-      big.style.color = fillRatioColor(ratio);
-      big.style.lineHeight = "1.1";
-      const unit = document.createElement("span");
-      unit.textContent = triggerUnit(group2.trigger);
-      unit.style.fontSize = "9px";
-      unit.style.color = DIM;
-      value.append(big, unit);
-      if (!isMaxed) {
-        const ceiling = document.createElement("span");
-        ceiling.textContent = `max ${formatPercent(atMax)}`;
-        ceiling.style.fontSize = "9px";
-        ceiling.style.color = DIM;
-        ceiling.style.marginLeft = "auto";
-        value.appendChild(ceiling);
-      }
-      const perHour = group2.trigger === "continuous" ? `
-About ${(group2.combinedProbability / 100 * CONTINUOUS_ROLLS_PER_HOUR).toFixed(1)} procs per hour.` : "";
-      value.title = `Chance at least one of ${group2.contributors.length} pet(s) procs.
-Not a sum \u2014 it is 1 minus the product of every pet missing.${perHour}
-
-` + (isMaxed ? "Every pet is at max strength \u2014 this is the most this team can do." : `At ${(ratio * 100).toFixed(0)}% of what these same pets would do at max strength (${formatPercent(atMax)}).`);
-      block.appendChild(value);
-      block.appendChild(mkBar(group2.combinedProbability, atMax));
-    }
-    const magnitude = perProcMagnitude(group2);
-    if (magnitude) {
-      const row2 = document.createElement("div");
-      Object.assign(row2.style, {
-        display: "flex",
-        alignItems: "baseline",
-        justifyContent: "space-between",
-        gap: "8px",
-        fontSize: "10px",
-        marginTop: "1px"
-      });
-      row2.title = group2.contributors.length > 1 ? "What a single proc gives. Each pet applies its own value, so this is\na range across the team \u2014 the values never add up." : "What a single proc gives.";
-      const label2 = document.createElement("span");
-      label2.textContent = "per proc";
-      label2.style.color = MUTED;
-      const amount = document.createElement("span");
-      amount.textContent = magnitude;
-      amount.style.fontWeight = "600";
-      amount.style.flex = "0 0 auto";
-      amount.style.fontVariantNumeric = "tabular-nums";
-      row2.append(label2, amount);
-      block.appendChild(row2);
-    }
-    return block;
-  }
-  function focusGroups(groups, focusAbilityIds) {
-    const wanted = /* @__PURE__ */ new Set();
-    for (const abilityId of focusAbilityIds) {
-      const key2 = effectGroupKeyForAbility(abilityId);
-      if (key2) wanted.add(key2);
-    }
-    if (!wanted.size) return groups;
-    const focused = groups.filter((group2) => wanted.has(group2.key));
-    return focused.length ? focused : groups;
-  }
-  function renderGroupCarousel(groups) {
-    const host = document.createElement("div");
-    if (!groups.length) return host;
-    if (groups.length === 1) {
-      host.appendChild(renderGroup(groups[0]));
-      return host;
-    }
-    let index = 0;
-    const paint = () => {
-      host.replaceChildren(
-        renderGroup(groups[index], {
-          index,
-          total: groups.length,
-          onStep: (delta) => {
-            index = (index + delta + groups.length) % groups.length;
-            paint();
-          }
-        })
-      );
-    };
-    paint();
-    return host;
-  }
-  function renderDetails(stats, groups, showAllGroups) {
-    const details = document.createElement("div");
-    details.style.paddingTop = "4px";
-    if (stats.unknownSpecies.length) {
-      const warn = document.createElement("div");
-      warn.textContent = `\u26A0 unknown species: ${stats.unknownSpecies.join(", ")}`;
-      warn.style.fontSize = "10px";
-      warn.style.color = "#fbbf24";
-      details.appendChild(warn);
-    }
-    if (showAllGroups) {
-      for (const group2 of groups) details.appendChild(renderGroup(group2));
-    } else {
-      details.appendChild(renderGroupCarousel(groups));
-    }
-    details.appendChild(renderFeedRow(stats));
-    return details;
-  }
-  function renderFeedRow(stats) {
-    const autonomy = stats.autonomy;
-    let text2;
-    let color2;
-    let title;
-    const boostLine = autonomy.drainReductionPercent > 0 ? `
-Hunger Boost removes ${autonomy.drainReductionPercent.toFixed(0)}% of the drain.` : "";
-    const restoreLine = autonomy.restoreActivationsPerMinute > 0 ? `
-Hunger Restore fires ~${autonomy.restoreActivationsPerMinute.toFixed(2)}\xD7/min on average.` : "";
-    const weatherLine2 = autonomy.weatherGatedHungerAbilities.length ? `
-Not counted (needs a specific weather): ${autonomy.weatherGatedHungerAbilities.join(", ")}.` : "";
-    if (autonomy.status === "sustained") {
-      text2 = "indefinitely";
-      color2 = ACCENT;
-      title = `Expected hunger restore covers the drain for every pet, so the team
-feeds itself.${boostLine}${restoreLine}${weatherLine2}
-
-This is an average \u2014 a bad run of Restore luck can still empty a pet.`;
-    } else if (autonomy.status === "runs-out" && autonomy.minutesFromFull !== null) {
-      text2 = `~${formatDuration(autonomy.minutesFromFull)}`;
-      color2 = autonomy.minutesFromFull < 60 ? "#fbbf24" : ACCENT;
-      title = `Starting from full, ${autonomy.limitingPetName ?? "the first pet"} empties first.
-Rates the team itself \u2014 current hunger is not taken into account.${boostLine}${restoreLine}${weatherLine2}
-
-Restore figures are averages; unlucky streaks do worse.`;
-    } else {
-      text2 = "unknown";
-      color2 = MUTED;
-      title = `No known hunger data for: ${autonomy.speciesMissingDepletion.join(", ")}.`;
-    }
-    const row2 = document.createElement("div");
-    Object.assign(row2.style, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "8px",
-      padding: "4px 7px",
-      borderRadius: "7px",
-      background: "rgba(255,255,255,0.02)",
-      border: "1px solid rgba(255,255,255,0.05)",
-      fontSize: "10px"
-    });
-    row2.title = title;
-    const label2 = document.createElement("span");
-    label2.textContent = "\u{1F356} Lasts without feeding (from full)";
-    label2.style.color = MUTED;
-    label2.style.overflow = "hidden";
-    label2.style.textOverflow = "ellipsis";
-    label2.style.whiteSpace = "nowrap";
-    const valueSpan = document.createElement("span");
-    valueSpan.textContent = text2;
-    valueSpan.style.color = color2;
-    valueSpan.style.fontWeight = "600";
-    valueSpan.style.flex = "0 0 auto";
-    valueSpan.style.fontVariantNumeric = "tabular-nums";
-    row2.append(label2, valueSpan);
-    return row2;
-  }
-  function renderTeamStats(pets, options = {}) {
-    const wrap = document.createElement("div");
-    wrap.style.display = "grid";
-    wrap.style.gap = "2px";
-    const realPets = pets.filter(Boolean);
-    if (!realPets.length) {
-      const empty = document.createElement("div");
-      empty.textContent = "No pets in this team.";
-      empty.style.fontSize = "10px";
-      empty.style.color = MUTED;
-      wrap.appendChild(empty);
-      return wrap;
-    }
-    const stats = computeTeamStats(realPets);
-    const groups = options.focusAbilityIds?.length ? focusGroups(stats.groups, options.focusAbilityIds) : stats.groups;
-    wrap.appendChild(renderDetails(stats, groups, options.showAllGroups === true));
-    return wrap;
-  }
-  var PARAMETER_LABELS, MUTED, ACCENT, DIM, CONTINUOUS_ROLLS_PER_HOUR, TRIGGER_UNITS;
-  var init_teamStatsView = __esm({
-    "src/features/pets/teamStatsView.ts"() {
-      "use strict";
-      init_teamStats();
-      PARAMETER_LABELS = {
-        // Crop Size is a whole number in [50, 100]; the boost adds points, not a percentage.
-        sizeIncrease: { label: "Crop size", unit: "" },
-        scaleIncreasePercentage: { label: "Crop size", unit: "%" },
-        cropSellPriceIncreasePercentage: { label: "Sell price", unit: "%" },
-        mutationChanceIncreasePercentage: { label: "Mutation chance", unit: "%" },
-        hungerRestorePercentage: { label: "Hunger restore", unit: "%" },
-        hungerRefundPercentage: { label: "Hunger refund", unit: "%" },
-        hungerDepletionRateDecreasePercentage: { label: "Hunger drain", unit: "%" },
-        plantGrowthReductionMinutes: { label: "Plant growth", unit: "min" },
-        eggGrowthTimeReductionMinutes: { label: "Egg growth", unit: "min" },
-        baseMaxCoinsFindable: { label: "Coins (max)", unit: "" },
-        bonusXp: { label: "Bonus XP", unit: "" },
-        maxStrengthIncreasePercentage: { label: "Max STR", unit: "%" },
-        plantAbilityChanceBoostPercentage: { label: "Plant ability", unit: "%" }
-      };
-      MUTED = "#94a3b8";
-      ACCENT = "#34d399";
-      DIM = "#64748b";
-      CONTINUOUS_ROLLS_PER_HOUR = 60;
-      TRIGGER_UNITS = {
-        continuous: "/min",
-        harvest: "/harvest",
-        sellAllCrops: "/sale",
-        sellPet: "/pet sold",
-        hatchEgg: "/hatch",
-        playerActivated: "/use",
-        weather: "/weather"
-      };
     }
   });
 
   // src/features/pets/teamBuilderTab.ts
-  function mkMiniIcon(pet, size = 24) {
-    const holder2 = document.createElement("div");
-    Object.assign(holder2.style, {
-      width: `${size}px`,
-      height: `${size}px`,
-      borderRadius: "9px",
-      background: "linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01) 60%), #161b22",
-      border: "1px solid rgba(255,255,255,0.08)",
-      display: "grid",
-      placeItems: "center",
-      overflow: "hidden",
-      boxShadow: "0 1px 0 #000 inset, 0 1px 2px rgba(0,0,0,0.3)",
-      fontSize: "11px",
-      color: "#e2e8f0",
-      flex: "0 0 auto"
-    });
-    if (!pet) {
-      holder2.style.opacity = "0.35";
-      holder2.textContent = "\xB7";
-      return holder2;
-    }
-    const species = pet.petSpecies || "";
-    const mutKey = Array.isArray(pet.mutations) ? pet.mutations.join(",") : "";
-    const cacheKey = `${species}|${mutKey}`;
-    const applyImg = (dataUrl) => {
-      const img = document.createElement("img");
-      img.src = dataUrl;
-      img.width = size;
-      img.height = size;
-      img.alt = "";
-      img.draggable = false;
-      img.style.width = `${size}px`;
-      img.style.height = `${size}px`;
-      img.style.objectFit = "contain";
-      holder2.replaceChildren(img);
-    };
-    const cached2 = miniSpriteCache.get(cacheKey);
-    if (cached2) {
-      applyImg(cached2);
-      return holder2;
-    }
-    attachSpriteIcon(holder2, ["pet"], species, size, "pet-teambuilder-mini", {
-      mutations: pet.mutations,
-      onSpriteApplied: (img) => {
-        miniSpriteCache.set(cacheKey, img.src);
-      },
-      onNoSpriteFound: () => {
-        holder2.textContent = (species || pet.name || "pet").charAt(0).toUpperCase();
-      }
-    });
-    return holder2;
-  }
-  function abilityChipsFor(pet) {
-    const wrap = document.createElement("span");
-    wrap.style.display = "inline-flex";
-    wrap.style.alignItems = "center";
-    wrap.style.gap = "4px";
-    const ids = Array.isArray(pet.abilities) ? pet.abilities.filter(Boolean) : [];
-    for (const id of ids) {
-      const chip = document.createElement("span");
-      const { bg, hover } = getAbilityChipColors(id);
-      chip.title = PetsService.getAbilityName(id) || id;
-      Object.assign(chip.style, {
-        display: "inline-block",
-        width: "9px",
-        height: "9px",
-        borderRadius: "3px",
-        background: bg,
-        boxShadow: "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff1a",
-        cursor: "default"
-      });
-      chip.onmouseenter = () => {
-        chip.style.background = hover;
-      };
-      chip.onmouseleave = () => {
-        chip.style.background = bg;
-      };
-      wrap.appendChild(chip);
-    }
-    return wrap;
-  }
   function renderPetChip(pet) {
     const chip = document.createElement("div");
     Object.assign(chip.style, {
@@ -41999,12 +41822,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       transition: "background 100ms ease"
     });
     chip.onmouseenter = () => {
-      chip.style.background = "rgba(255,255,255,0.04)";
+      chip.style.background = color.hoverBg;
     };
     chip.onmouseleave = () => {
       chip.style.background = "transparent";
     };
-    chip.appendChild(mkMiniIcon(pet ?? null));
+    chip.appendChild(petIcon(pet ?? null, MINI_ICON_PX2));
     const nameSpan = document.createElement("span");
     nameSpan.style.fontSize = "11px";
     nameSpan.style.fontWeight = "600";
@@ -42013,23 +41836,23 @@ Restore figures are averages; unlucky streaks do worse.`;
     nameSpan.style.whiteSpace = "nowrap";
     nameSpan.style.flex = "1 1 auto";
     nameSpan.style.minWidth = "0";
-    nameSpan.textContent = pet ? pet.name || pet.petSpecies || "?" : "\u2014";
+    nameSpan.textContent = pet ? pet.name || pet.petSpecies || "?" : "-";
     chip.appendChild(nameSpan);
     if (pet) {
       const strBadge = document.createElement("span");
       strBadge.textContent = `${getPetStrength(pet)}/${getPetMaxStrength(pet)}`;
-      strBadge.title = "Strength (current/max) \u2014 teams rank by max strength";
+      strBadge.title = "Strength (current/max). Teams rank by max strength.";
       Object.assign(strBadge.style, {
         fontSize: "10px",
         fontVariantNumeric: "tabular-nums",
-        color: "#94a3b8",
-        background: "rgba(255,255,255,0.05)",
+        color: color.textSoft,
+        background: color.hoverBg,
         padding: "1px 6px",
         borderRadius: "999px",
         flex: "0 0 auto"
       });
       chip.appendChild(strBadge);
-      chip.appendChild(abilityChipsFor(pet));
+      chip.appendChild(abilityDots(pet.abilities, { size: 9, gap: 4 }));
     }
     return chip;
   }
@@ -42084,28 +41907,28 @@ Restore figures are averages; unlucky streaks do worse.`;
     const icons = team.categories.map((c) => c.icon).join("");
     return `${truncateChars(icons, budget)}${suffix}`;
   }
-  function renderTeamCard(team, petsById, ui) {
+  function renderTeamCard(team, petsById) {
     const isAfk = team.mode === "afk";
     const glow = isAfk ? "#38bdf8" : "#34d399";
     const title = isAfk ? `${abilityLabel(team)} (AFK)` : abilityLabel(team);
-    const card5 = ui.card(title, {
+    const teamCard = card(title, {
       tone: isAfk ? "accent" : "default",
       compactHeader: true,
       gap: 6
     });
-    Object.assign(card5.root.style, {
+    Object.assign(teamCard.root.style, {
       padding: "8px 10px 10px",
       position: "relative",
       overflow: "hidden",
       transition: "transform 140ms ease, box-shadow 140ms ease"
     });
-    card5.root.onmouseenter = () => {
-      card5.root.style.transform = "translateY(-2px)";
-      card5.root.style.boxShadow = `0 10px 24px rgba(0,0,0,0.35), 0 0 0 1px ${glow}33`;
+    teamCard.root.onmouseenter = () => {
+      teamCard.root.style.transform = "translateY(-2px)";
+      teamCard.root.style.boxShadow = `0 10px 24px rgba(0,0,0,0.35), 0 0 0 1px ${glow}33`;
     };
-    card5.root.onmouseleave = () => {
-      card5.root.style.transform = "none";
-      card5.root.style.boxShadow = "";
+    teamCard.root.onmouseleave = () => {
+      teamCard.root.style.transform = "none";
+      teamCard.root.style.boxShadow = "";
     };
     const stripColors = team.categories.map((c) => getAbilityChipColors(c.abilityId).bg);
     const strip = document.createElement("div");
@@ -42117,17 +41940,17 @@ Restore figures are averages; unlucky streaks do worse.`;
       width: "4px",
       background: stripColors.length > 1 ? `linear-gradient(180deg, ${stripColors.join(", ")})` : stripColors[0]
     });
-    card5.root.appendChild(strip);
+    teamCard.root.appendChild(strip);
     const petsCol = document.createElement("div");
     petsCol.style.display = "grid";
     petsCol.style.gap = "1px";
     for (const id of team.petIds) {
       petsCol.appendChild(renderPetChip(petsById.get(id)));
     }
-    card5.body.appendChild(petsCol);
+    teamCard.body.appendChild(petsCol);
     const teamPets = team.petIds.map((id) => petsById.get(id)).filter((pet) => Boolean(pet));
-    card5.body.appendChild(renderTeamStats(teamPets, { focusAbilityIds: team.focusAbilityIds }));
-    const saveBtn = ui.btn("\u{1F4BE} Save", {
+    teamCard.body.appendChild(renderTeamStats(teamPets, { focusAbilityIds: team.focusAbilityIds }));
+    const saveBtn = button("\u{1F4BE} Save", {
       variant: "primary",
       size: "sm",
       onClick: () => {
@@ -42151,8 +41974,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       alignSelf: "center",
       flexShrink: "0"
     });
-    card5.body.appendChild(saveBtn);
-    return card5.root;
+    teamCard.body.appendChild(saveBtn);
+    return teamCard.root;
   }
   function unusedReasonText(info) {
     if (info.untracked) return "no tracked ability";
@@ -42180,41 +42003,41 @@ Restore figures are averages; unlucky streaks do worse.`;
     row2.appendChild(reason);
     return row2;
   }
-  function renderUnusedSection(unusedPets, ui) {
-    const card5 = ui.card(`\u{1F5D1}\uFE0F Not used in any team (${unusedPets.length})`, { tone: "muted", compactHeader: true, gap: 4 });
-    card5.root.style.gridColumn = "1 / -1";
-    card5.root.style.padding = "8px 10px";
+  function renderUnusedSection(unusedPets) {
+    const section4 = card(`\u{1F5D1}\uFE0F Not used in any team (${unusedPets.length})`, { tone: "muted", compactHeader: true, gap: 4 });
+    section4.root.style.gridColumn = "1 / -1";
+    section4.root.style.padding = "8px 10px";
     const chevron = document.createElement("span");
     chevron.textContent = "\u25B8";
     chevron.style.display = "inline-block";
     chevron.style.marginLeft = "8px";
     chevron.style.opacity = "0.6";
     chevron.style.transition = "transform 120ms ease";
-    card5.header.appendChild(chevron);
-    card5.header.style.cursor = "pointer";
-    card5.header.style.userSelect = "none";
+    section4.header.appendChild(chevron);
+    section4.header.style.cursor = "pointer";
+    section4.header.style.userSelect = "none";
     const list = document.createElement("div");
     list.style.display = "none";
     list.style.gap = "1px";
     for (const info of unusedPets) {
       list.appendChild(renderUnusedRow(info));
     }
-    card5.body.appendChild(list);
+    section4.body.appendChild(list);
     let expanded = false;
-    card5.header.addEventListener("click", () => {
+    section4.header.addEventListener("click", () => {
       expanded = !expanded;
       list.style.display = expanded ? "grid" : "none";
       chevron.style.transform = expanded ? "rotate(90deg)" : "none";
     });
-    return card5.root;
+    return section4.root;
   }
-  async function loadTeams2() {
+  async function loadTeams() {
     const pets = await PetsService.getInventoryPets();
     const petsById = new Map(pets.map((p) => [p.id, p]));
-    const { teams, sustainPet, unusedPets } = buildSuggestedTeams(pets);
-    return { teams, sustainPet, unusedPets, petsById };
+    const { teams: teams2, sustainPet, unusedPets } = buildSuggestedTeams(pets);
+    return { teams: teams2, sustainPet, unusedPets, petsById };
   }
-  function renderTeamBuilderTab(view, ui) {
+  function renderTeamBuilderTab(view) {
     const prevCleanup = view.__cleanup__;
     if (typeof prevCleanup === "function") {
       try {
@@ -42232,10 +42055,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     wrap.style.maxHeight = "54vh";
     wrap.style.overflow = "auto";
     view.appendChild(wrap);
-    const header = ui.flexRow({ justify: "end", fullWidth: true });
+    const header = flexRow({ justify: "end", fullWidth: true });
     header.style.paddingBottom = "8px";
-    header.style.borderBottom = "1px solid rgba(255,255,255,0.06)";
-    const refreshBtn = ui.btn("\u{1F504} Refresh", { size: "sm" });
+    header.style.borderBottom = `1px solid ${color.border}`;
+    const refreshBtn = button("\u{1F504} Refresh", { size: "sm" });
     header.appendChild(refreshBtn);
     wrap.appendChild(header);
     const content = document.createElement("div");
@@ -42253,21 +42076,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       loading2.textContent = "Loading\u2026";
       loading2.style.opacity = "0.6";
       content.appendChild(loading2);
-      const { teams, unusedPets, petsById } = await loadTeams2();
+      const { teams: teams2, unusedPets, petsById } = await loadTeams();
       if (destroyed || !view.isConnected) return;
       content.innerHTML = "";
-      if (!teams.length) {
+      if (!teams2.length) {
         const empty = document.createElement("div");
-        empty.textContent = "No useful team found \u2014 hatch pets with offensive abilities.";
+        empty.textContent = "No useful team found. Hatch pets with offensive abilities.";
         empty.style.opacity = "0.7";
         content.appendChild(empty);
         return;
       }
-      for (const team of teams) {
-        content.appendChild(renderTeamCard(team, petsById, ui));
+      for (const team of teams2) {
+        content.appendChild(renderTeamCard(team, petsById));
       }
       if (unusedPets.length) {
-        content.appendChild(renderUnusedSection(unusedPets, ui));
+        content.appendChild(renderUnusedSection(unusedPets));
       }
     }
     refreshBtn.addEventListener("click", () => {
@@ -42275,18 +42098,23 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     void repaint();
   }
-  var miniSpriteCache, TEAM_NAME_MAX_LENGTH, SHORT_WEATHER;
+  var MINI_ICON_PX2, TEAM_NAME_MAX_LENGTH, SHORT_WEATHER;
   var init_teamBuilderTab = __esm({
     "src/features/pets/teamBuilderTab.ts"() {
       "use strict";
-      init_pets();
-      init_teamBuilder();
-      init_abilityColorsTab();
-      init_iconCache();
-      init_toast();
       init_petValue();
+      init_button();
+      init_card();
+      init_layout();
+      init_theme();
+      init_toast();
+      init_abilityChips();
+      init_abilityChipColors();
+      init_pets();
+      init_petIcon();
+      init_teamBuilder();
       init_teamStatsView();
-      miniSpriteCache = /* @__PURE__ */ new Map();
+      MINI_ICON_PX2 = 24;
       TEAM_NAME_MAX_LENGTH = 16;
       SHORT_WEATHER = {
         Frost: "Frost",
@@ -42297,1529 +42125,36 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/pets/logsTab.ts
-  function formatDateMMDDYY(timestamp) {
-    const value = Number(timestamp);
-    if (!Number.isFinite(value)) return "";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "";
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const dd = String(date.getDate()).padStart(2, "0");
-    const yy = String(date.getFullYear() % 100).padStart(2, "0");
-    return `${mm}/${dd}/${yy}`;
-  }
-  function detailsOf(log2) {
-    if (typeof log2.data === "string") return log2.data;
-    try {
-      return JSON.stringify(log2.data) ?? "";
-    } catch {
-      return "";
-    }
-  }
-  function renderLogsTab(view) {
-    const prevCleanup = view.__cleanup__;
-    if (typeof prevCleanup === "function") {
-      try {
-        prevCleanup();
-      } catch {
-      }
-      view.__cleanup__ = void 0;
-    }
-    ensurePanelStyles();
-    view.innerHTML = "";
-    const wrap = document.createElement("div");
-    wrap.classList.add("qws-pnl-root");
-    css(wrap, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-      width: PANEL_WIDTH,
-      maxWidth: "100%",
-      minHeight: "0",
-      boxSizing: "border-box"
-    });
-    view.appendChild(wrap);
-    const panel = card2();
-    css(panel, { minHeight: "0" });
-    wrap.appendChild(panel);
-    const head = document.createElement("div");
-    css(head, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
-    const title = document.createElement("div");
-    css(title, { fontSize: "14.5px", fontWeight: "700", color: TEXT, flex: "1 1 auto" });
-    title.textContent = "\u{1F4DD} Ability logs";
-    head.appendChild(title);
-    const count = document.createElement("span");
-    css(count, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap" });
-    head.appendChild(count);
-    panel.appendChild(head);
-    const toolbar2 = document.createElement("div");
-    css(toolbar2, { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" });
-    const selAbility = selectField([["", "All abilities"]]);
-    css(selAbility, { minWidth: "170px" });
-    const selSort = selectField([["desc", "Newest first"], ["asc", "Oldest first"]]);
-    selSort.value = "desc";
-    const inputSearch = textField("Search pet / ability / details");
-    css(inputSearch, { flex: "1 1 200px", minWidth: "160px" });
-    const btnClear = button2("\u{1F9F9} Clear", "danger", () => {
-      try {
-        PetsService.clearAbilityLogs();
-      } catch {
-      }
-    });
-    btnClear.title = "Clear all recorded logs";
-    toolbar2.append(selAbility, selSort, inputSearch, btnClear);
-    panel.appendChild(toolbar2);
-    const columns = document.createElement("div");
-    css(columns, {
-      display: "grid",
-      gridTemplateColumns: ROW_TEMPLATE2,
-      gap: "10px",
-      padding: "0 8px"
-    });
-    for (const label2 of ["When", "Pet", "Ability", "Details"]) {
-      columns.appendChild(sectionLabel2(label2));
-    }
-    panel.appendChild(columns);
-    const list = document.createElement("div");
-    list.classList.add("qws-pnl-scroll");
-    css(list, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "3px",
-      maxHeight: LIST_MAX_HEIGHT,
-      overflowY: "auto",
-      minHeight: "0"
-    });
-    panel.appendChild(list);
-    const sessionStart = PetsService.getAbilityLogsSessionStart?.() ?? 0;
-    const petSpriteCache = /* @__PURE__ */ new Map();
-    let logs = [];
-    let abilityFilter = "";
-    let sortDir = "desc";
-    let search2 = "";
-    function petIcon(log2) {
-      const holder2 = document.createElement("div");
-      css(holder2, {
-        width: `${PET_ICON_PX}px`,
-        height: `${PET_ICON_PX}px`,
-        borderRadius: "7px",
-        background: "rgba(0,0,0,0.22)",
-        border: `1px solid ${BORDER}`,
-        display: "grid",
-        placeItems: "center",
-        overflow: "hidden",
-        fontSize: "11px",
-        color: TEXT,
-        flex: "0 0 auto"
-      });
-      const species = String(log2.species || "").trim();
-      const mutations = Array.isArray(log2.mutations) ? log2.mutations.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
-      const mutationKey = mutations.length ? mutations.map((m) => m.toLowerCase()).sort().join(",") : "";
-      const cacheKey = mutationKey ? `${species}|${mutationKey}` : species;
-      const applyImg = (src) => {
-        const img = document.createElement("img");
-        img.src = src;
-        img.alt = "";
-        img.draggable = false;
-        css(img, {
-          width: `${PET_ICON_PX}px`,
-          height: `${PET_ICON_PX}px`,
-          objectFit: "contain",
-          imageRendering: "auto"
-        });
-        holder2.replaceChildren(img);
-      };
-      const cached2 = cacheKey ? petSpriteCache.get(cacheKey) : void 0;
-      if (cached2) {
-        applyImg(cached2);
-        return holder2;
-      }
-      holder2.textContent = (log2.petName || species || "pet").charAt(0).toUpperCase() || "\u{1F43E}";
-      if (species) {
-        attachSpriteIcon(holder2, ["pet"], species, PET_ICON_PX, "pet-log", {
-          mutations,
-          onSpriteApplied: (img) => {
-            petSpriteCache.set(cacheKey, img.src);
-          }
-        });
-      }
-      return holder2;
-    }
-    function whenCell(log2) {
-      const cell = document.createElement("div");
-      css(cell, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
-      if (log2.date) {
-        const date = document.createElement("span");
-        css(date, { fontSize: "10px", color: TEXT_DIM, fontVariantNumeric: "tabular-nums" });
-        date.textContent = log2.date;
-        cell.appendChild(date);
-      }
-      const time = document.createElement("span");
-      css(time, {
-        fontSize: "11.5px",
-        color: log2.isActiveSession ? TEAL : TEXT,
-        fontWeight: log2.isActiveSession ? "600" : "500",
-        fontVariantNumeric: "tabular-nums",
-        whiteSpace: "nowrap"
-      });
-      time.textContent = log2.time12;
-      cell.appendChild(time);
-      return cell;
-    }
-    function petCell(log2) {
-      const cell = document.createElement("div");
-      css(cell, { display: "flex", alignItems: "center", gap: "8px", minWidth: "0" });
-      const name = document.createElement("span");
-      css(name, {
-        fontSize: "12px",
-        color: TEXT,
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis"
-      });
-      name.textContent = log2.petName || log2.species || "Pet";
-      name.title = name.textContent;
-      cell.append(petIcon(log2), name);
-      return cell;
-    }
-    function abilityCell(log2) {
-      const cell = document.createElement("div");
-      css(cell, { display: "flex", minWidth: "0" });
-      const text2 = log2.abilityName || log2.abilityId || "\u2014";
-      const chip = document.createElement("span");
-      chip.textContent = text2;
-      chip.title = text2;
-      const { bg, hover } = getAbilityChipColors(log2.abilityId);
-      css(chip, {
-        display: "inline-block",
-        maxWidth: "100%",
-        padding: "3px 9px",
-        borderRadius: "999px",
-        fontSize: "11px",
-        fontWeight: "700",
-        lineHeight: "1.5",
-        color: "#fff",
-        textShadow: "0 1px 2px rgba(0,0,0,.45)",
-        background: bg,
-        boxShadow: "0 0 0 1px rgba(0,0,0,.35) inset",
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        transition: "background 120ms ease"
-      });
-      chip.onmouseenter = () => {
-        chip.style.background = hover;
-      };
-      chip.onmouseleave = () => {
-        chip.style.background = bg;
-      };
-      cell.appendChild(chip);
-      return cell;
-    }
-    function detailsCell(log2) {
-      const cell = document.createElement("div");
-      const text2 = detailsOf(log2);
-      css(cell, {
-        fontSize: "11.5px",
-        color: TEXT_DIM,
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        minWidth: "0"
-      });
-      cell.textContent = text2;
-      cell.title = text2;
-      return cell;
-    }
-    function logRow(log2) {
-      const row2 = document.createElement("div");
-      css(row2, {
-        display: "grid",
-        gridTemplateColumns: ROW_TEMPLATE2,
-        alignItems: "center",
-        gap: "10px",
-        padding: "5px 8px",
-        borderRadius: "8px",
-        background: log2.isActiveSession ? "rgba(94,234,212,0.06)" : CARD_BG,
-        border: `1px solid ${BORDER}`,
-        // A tick from this session reads at a glance without a legend.
-        borderLeft: log2.isActiveSession ? `2px solid ${TEAL}` : `1px solid ${BORDER}`
-      });
-      row2.append(whenCell(log2), petCell(log2), abilityCell(log2), detailsCell(log2));
-      return row2;
-    }
-    function applyFilters() {
-      let result = logs.slice();
-      if (abilityFilter.trim()) {
-        const wanted = normalizeAbilityKey(abilityFilter);
-        result = result.filter((log2) => {
-          const byId = normalizeAbilityKey(log2.abilityId);
-          const byName = normalizeAbilityKey(PetsService.getAbilityNameWithoutLevel(log2.abilityId));
-          return byId === wanted || byName === wanted;
-        });
-      }
-      if (search2.trim()) {
-        const needle = search2.toLowerCase();
-        result = result.filter((log2) => (log2.petName || log2.species || "").toLowerCase().includes(needle) || (log2.abilityName || "").toLowerCase().includes(needle) || (log2.abilityId || "").toLowerCase().includes(needle) || detailsOf(log2).toLowerCase().includes(needle) || (log2.petId || "").toLowerCase().includes(needle));
-      }
-      result.sort((a, b) => sortDir === "asc" ? a.performedAt - b.performedAt : b.performedAt - a.performedAt);
-      return result;
-    }
-    function rebuildAbilityOptions() {
-      const current = selAbility.value;
-      const options = [
-        ["", "All abilities"],
-        ...PetsService.getSeenAbilityIds().map((id) => [id, id])
-      ];
-      selAbility.innerHTML = "";
-      for (const [value, label2] of options) {
-        const option = document.createElement("option");
-        option.value = value;
-        option.textContent = label2;
-        selAbility.appendChild(option);
-      }
-      selAbility.value = options.some(([value]) => value === current) ? current : "";
-    }
-    function repaint() {
-      const visible = applyFilters();
-      count.textContent = visible.length === logs.length ? `${logs.length} entries` : `${visible.length} of ${logs.length} entries`;
-      list.innerHTML = "";
-      if (!visible.length) {
-        const empty = document.createElement("div");
-        css(empty, {
-          fontSize: "12px",
-          color: TEXT_DIM,
-          textAlign: "center",
-          padding: "24px 8px"
-        });
-        empty.textContent = logs.length ? "No log matches these filters." : "\u{1F5D2}\uFE0F No logs yet.";
-        list.appendChild(empty);
-        return;
-      }
-      for (const log2 of visible) list.appendChild(logRow(log2));
-      list.scrollTop = sortDir === "asc" ? list.scrollHeight : 0;
-    }
-    selAbility.onchange = () => {
-      abilityFilter = selAbility.value;
-      repaint();
-    };
-    selSort.onchange = () => {
-      sortDir = selSort.value || "desc";
-      repaint();
-    };
-    inputSearch.addEventListener("input", () => {
-      search2 = inputSearch.value.trim();
-      repaint();
-    });
-    let stopWatcher = null;
-    let unsubLogs = null;
-    void (async () => {
-      try {
-        stopWatcher = await PetsService.startAbilityLogsWatcher();
-        rebuildAbilityOptions();
-        unsubLogs = PetsService.onAbilityLogs((all) => {
-          logs = all.map((entry) => ({
-            petId: entry.petId,
-            petName: entry.name ?? null,
-            species: entry.species ?? null,
-            mutations: Array.isArray(entry.mutations) ? entry.mutations.slice() : void 0,
-            abilityId: entry.abilityId,
-            abilityName: entry.abilityName,
-            data: entry.data,
-            performedAt: entry.performedAt,
-            date: formatDateMMDDYY(entry.performedAt),
-            time12: entry.time12,
-            isActiveSession: sessionStart > 0 && entry.performedAt >= sessionStart
-          }));
-          rebuildAbilityOptions();
-          repaint();
-        });
-      } catch {
-      }
-    })();
-    repaint();
-    view.__cleanup__ = () => {
-      try {
-        unsubLogs?.();
-      } catch {
-      }
-      try {
-        stopWatcher?.();
-      } catch {
-      }
-    };
-  }
-  var PANEL_WIDTH, LIST_MAX_HEIGHT, PET_ICON_PX, ROW_TEMPLATE2, normalizeAbilityKey;
-  var init_logsTab = __esm({
-    "src/features/pets/logsTab.ts"() {
-      "use strict";
-      init_pets();
-      init_iconCache();
-      init_abilityColorsTab();
-      init_panel();
-      PANEL_WIDTH = "min(760px, 88vw)";
-      LIST_MAX_HEIGHT = "min(56vh, 520px)";
-      PET_ICON_PX = 24;
-      ROW_TEMPLATE2 = "104px minmax(120px, 1.2fr) minmax(110px, 0.9fr) minmax(0, 2fr)";
-      normalizeAbilityKey = (value) => String(value ?? "").toLowerCase().replace(/\s+/g, "").replace(/([ivx]+)$/i, "");
-    }
-  });
-
   // src/features/pets/menu.ts
-  function renderManagerTab(view, ui) {
-    view.innerHTML = "";
-    let teams = [];
-    let selectedId = null;
-    let activeTeamId = null;
-    let activePetIdSet = /* @__PURE__ */ new Set();
-    let isApplyingTeam = false;
-    let draggingIdx = null;
-    let overInsertIdx = null;
-    let draggingHeight = 0;
-    let invCacheMap = null;
-    const lastRenderedSlotIds = [null, null, null];
-    const miniSpriteCache2 = /* @__PURE__ */ new Map();
-    async function buildPetRenderMap() {
-      let inv = await PetsService.getInventoryPets().catch(() => null);
-      if (!inv || inv.length === 0) {
-      } else {
-        invCacheMap = /* @__PURE__ */ new Map();
-        for (const p of inv) {
-          const id = p?.id != null ? String(p.id) : "";
-          if (id) invCacheMap.set(id, p);
-        }
-      }
-      const map2 = new Map(invCacheMap ?? /* @__PURE__ */ new Map());
-      try {
-        const pets = await PetsService.getPets();
-        const list = Array.isArray(pets) ? pets : [];
-        for (const p of list) {
-          const slot = p?.slot ?? null;
-          const id = String(slot?.id || "");
-          if (!id || map2.has(id)) continue;
-          map2.set(id, {
-            id,
-            itemType: "Pet",
-            petSpecies: String(slot?.petSpecies || "").trim(),
-            name: slot?.name ?? null,
-            xp: Number.isFinite(slot?.xp) ? Number(slot.xp) : 0,
-            hunger: Number.isFinite(slot?.hunger) ? Number(slot.hunger) : 0,
-            mutations: Array.isArray(slot?.mutations) ? slot.mutations.slice() : [],
-            targetScale: Number.isFinite(slot?.targetScale) ? Number(slot.targetScale) : void 0,
-            abilities: Array.isArray(slot?.abilities) ? slot.abilities.slice() : []
-          });
-        }
-      } catch {
-      }
-      return map2;
-    }
-    const mkMiniIcon2 = (pet) => {
-      const size = 18;
-      const holder2 = document.createElement("div");
-      Object.assign(holder2.style, {
-        width: `${size}px`,
-        height: `${size}px`,
-        borderRadius: "6px",
-        background: "#161b22",
-        border: "1px solid #ffffff10",
-        display: "grid",
-        placeItems: "center",
-        overflow: "hidden",
-        boxShadow: "0 1px 0 #000 inset",
-        fontSize: "10px",
-        color: "#e2e8f0"
-      });
-      if (!pet) {
-        holder2.style.opacity = "0.35";
-        holder2.textContent = "\xB7";
-        return holder2;
-      }
-      const species = pet.petSpecies || "";
-      const mutKey = Array.isArray(pet.mutations) ? pet.mutations.join(",") : "";
-      const cacheKey = `${species}|${mutKey}`;
-      const applyImg = (dataUrl) => {
-        const img = document.createElement("img");
-        img.src = dataUrl;
-        img.width = size;
-        img.height = size;
-        img.alt = "";
-        img.draggable = false;
-        img.style.width = `${size}px`;
-        img.style.height = `${size}px`;
-        img.style.objectFit = "contain";
-        img.style.imageRendering = "auto";
-        holder2.replaceChildren(img);
-      };
-      const cached2 = miniSpriteCache2.get(cacheKey);
-      if (cached2) {
-        applyImg(cached2);
-        return holder2;
-      }
-      attachSpriteIcon(holder2, ["pet"], species, size, "pet-team-mini", {
-        mutations: pet.mutations,
-        onSpriteApplied: (img) => {
-          miniSpriteCache2.set(cacheKey, img.src);
-        },
-        onNoSpriteFound: () => {
-          holder2.textContent = (species || pet.name || "pet").charAt(0).toUpperCase();
-        }
-      });
-      return holder2;
-    };
-    const framed = (title, content) => {
-      const cardSection = ui.card(title, { tone: "muted", align: "center" });
-      cardSection.body.append(content);
-      cardSection.root.style.maxWidth = "720px";
-      return cardSection.root;
-    };
-    const row2 = (opts) => ui.flexRow({ justify: opts?.justify ?? "center" });
-    const wrap = document.createElement("div");
-    wrap.style.display = "grid";
-    wrap.style.gridTemplateColumns = "minmax(220px, 280px) minmax(0, 1fr)";
-    wrap.style.gap = "10px";
-    wrap.style.alignItems = "stretch";
-    wrap.style.height = "54vh";
-    wrap.style.overflow = "hidden";
-    view.appendChild(wrap);
-    const left = document.createElement("div");
-    left.style.display = "grid";
-    left.style.gridTemplateRows = "auto 1fr auto";
-    left.style.gap = "8px";
-    left.style.minHeight = "0";
-    wrap.appendChild(left);
-    const syncRow = document.createElement("label");
-    syncRow.style.display = "flex";
-    syncRow.style.alignItems = "center";
-    syncRow.style.gap = "8px";
-    syncRow.style.padding = "2px 7px";
-    syncRow.style.cursor = "pointer";
-    left.appendChild(syncRow);
-    const syncSwitch = ui.switch(PetsService.isTeamSyncEnabled());
-    syncSwitch.style.flexShrink = "0";
-    syncSwitch.addEventListener("change", () => {
-      PetsService.setTeamSyncEnabled(syncSwitch.checked);
-    });
-    const syncLabel = document.createElement("span");
-    syncLabel.textContent = "Sync teams with the game";
-    syncLabel.style.fontSize = "13px";
-    syncRow.append(syncSwitch, syncLabel);
-    const teamList = document.createElement("div");
-    teamList.style.display = "flex";
-    teamList.style.flexDirection = "column";
-    teamList.style.gap = "6px";
-    teamList.style.overflow = "auto";
-    teamList.style.padding = "6px";
-    teamList.style.border = "1px solid var(--qmm-border)";
-    teamList.style.borderRadius = "10px";
-    teamList.style.background = "rgba(255,255,255,0.03)";
-    teamList.style.scrollBehavior = "smooth";
-    teamList.style.minHeight = "0";
-    left.appendChild(teamList);
-    const footer = ui.flexRow({ gap: 6 });
-    left.appendChild(footer);
-    const btnNew = ui.btn("\u2795 New", { variant: "primary", size: "sm", fullWidth: true });
-    btnNew.id = "pets.teams.new";
-    btnNew.style.flex = "1 1 0";
-    const btnDel = ui.btn("\u{1F5D1}\uFE0F Delete", { variant: "danger", size: "sm", fullWidth: true });
-    btnDel.id = "pets.teams.delete";
-    btnDel.style.flex = "1 1 0";
-    footer.append(btnNew, btnDel);
-    function getSelectedTeam() {
-      return teams.find((t) => t.id === selectedId) || null;
-    }
-    function computeInsertIndex(clientY) {
-      const children = Array.from(teamList.children);
-      if (!children.length) return 0;
-      const first = children[0].getBoundingClientRect();
-      if (clientY < first.top + first.height / 2) return 0;
-      for (let i = 0; i < children.length; i++) {
-        const rect = children[i].getBoundingClientRect();
-        const mid = rect.top + rect.height / 2;
-        if (clientY < mid) return i;
-      }
-      return children.length;
-    }
-    function abilitiesBadge(abilities) {
-      const wrap2 = document.createElement("span");
-      wrap2.style.display = "inline-flex";
-      wrap2.style.alignItems = "center";
-      wrap2.style.lineHeight = "1";
-      const SPACING_PX = 8;
-      const SIZE_PX = 12;
-      const RADIUS_PX = 3;
-      const ids = Array.isArray(abilities) ? abilities.filter(Boolean) : [];
-      if (!ids.length) {
-        const empty = document.createElement("span");
-        empty.textContent = "No ability";
-        empty.style.opacity = "0.75";
-        empty.style.fontSize = "12px";
-        wrap2.appendChild(empty);
-        return wrap2;
-      }
-      ids.forEach((id, i) => {
-        const chip = document.createElement("span");
-        const { bg, hover } = getAbilityChipColors(id);
-        chip.title = PetsService.getAbilityName(id) || id;
-        chip.setAttribute("aria-label", chip.title);
-        Object.assign(chip.style, {
-          display: "inline-block",
-          width: `${SIZE_PX}px`,
-          height: `${SIZE_PX}px`,
-          borderRadius: `${RADIUS_PX}px`,
-          marginRight: i === ids.length - 1 ? "0" : `${SPACING_PX}px`,
-          background: bg,
-          transition: "transform 80ms ease, box-shadow 120ms ease, background 120ms ease",
-          cursor: "default",
-          boxShadow: "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff1a"
-        });
-        chip.onmouseenter = () => {
-          chip.style.background = hover;
-          chip.style.transform = "scale(1.08)";
-          chip.style.boxShadow = "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff33";
-        };
-        chip.onmouseleave = () => {
-          chip.style.background = bg;
-          chip.style.transform = "none";
-          chip.style.boxShadow = "0 0 0 1px #0006 inset, 0 0 0 1px #ffffff1a";
-        };
-        wrap2.appendChild(chip);
-      });
-      return wrap2;
-    }
-    function applyLiveTransforms() {
-      const children = Array.from(teamList.children);
-      children.forEach((el) => el.style.transform = "");
-      if (draggingIdx === null || overInsertIdx === null) return;
-      const from = draggingIdx;
-      const to = overInsertIdx;
-      children.forEach((el, idx) => {
-        el.style.transition = "transform 120ms ease";
-        if (idx === from) return;
-        if (to > from && idx > from && idx < to) {
-          el.style.transform = `translateY(${-draggingHeight}px)`;
-        }
-        if (to < from && idx >= to && idx < from) {
-          el.style.transform = `translateY(${draggingHeight}px)`;
-        }
-      });
-    }
-    function clearLiveTransforms() {
-      Array.from(teamList.children).forEach((el) => {
-        el.style.transform = "";
-        el.style.transition = "";
-      });
-    }
-    async function refreshActiveIds() {
-      activeTeamId = null;
-      activePetIdSet = /* @__PURE__ */ new Set();
-      try {
-        const pets = await PetsService.getPets();
-        const equipIds = Array.isArray(pets) ? pets.map((p) => String(p?.slot?.id || "")).filter(Boolean) : [];
-        activePetIdSet = new Set(equipIds);
-        for (const t of teams) {
-          const tIds = (t.slots || []).filter(Boolean);
-          if (tIds.length !== equipIds.length) continue;
-          let same = true;
-          for (const id of tIds) {
-            if (!activePetIdSet.has(id)) {
-              same = false;
-              break;
-            }
-          }
-          if (same) {
-            activeTeamId = t.id;
-            break;
-          }
-        }
-      } catch {
-      }
-    }
-    async function refreshTeamList(skipDetectActive = false) {
-      if (!skipDetectActive) {
-        await refreshActiveIds();
-      }
-      const renderMap = await buildPetRenderMap();
-      clearLiveTransforms();
-      draggingIdx = null;
-      overInsertIdx = null;
-      draggingHeight = 0;
-      teamList.innerHTML = "";
-      if (!teams.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No teams yet. Create one!";
-        empty.style.opacity = "0.75";
-        empty.style.textAlign = "center";
-        empty.style.padding = "8px";
-        teamList.appendChild(empty);
-        hydrateEditor(null);
-        return;
-      }
-      teams.forEach((t, idx) => {
-        const item = document.createElement("div");
-        const isActive = t.id === activeTeamId;
-        item.dataset.index = String(idx);
-        item.dataset.teamId = t.id;
-        item.textContent = "";
-        item.style.height = "36px";
-        item.style.lineHeight = "36px";
-        item.style.padding = "0 10px";
-        item.style.borderRadius = "8px";
-        item.style.cursor = "pointer";
-        item.style.fontSize = "13px";
-        item.style.overflow = "hidden";
-        item.style.whiteSpace = "nowrap";
-        item.style.textOverflow = "ellipsis";
-        item.style.display = "flex";
-        item.style.flex = "0 0 auto";
-        item.style.gap = "8px";
-        item.style.alignItems = "center";
-        item.style.transition = "background 120ms ease, border-color 120ms ease";
-        if (t.id === selectedId) {
-          item.style.border = "1px solid rgba(94,234,212,0.40)";
-          item.style.background = "rgba(94,234,212,0.14)";
-        } else {
-          item.style.border = "1px solid var(--qmm-border-2)";
-          item.style.background = "rgba(255,255,255,0.035)";
-        }
-        const dot = document.createElement("span");
-        dot.style.width = "10px";
-        dot.style.height = "10px";
-        dot.style.borderRadius = "50%";
-        dot.style.boxShadow = "0 0 0 1px #0006 inset";
-        dot.style.background = isActive ? "#48d170" : "#64748b";
-        dot.title = isActive ? "This team is currently active" : "Inactive team";
-        const label2 = document.createElement("span");
-        label2.textContent = t.name || "(unnamed)";
-        label2.style.overflow = "hidden";
-        label2.style.textOverflow = "ellipsis";
-        label2.style.whiteSpace = "nowrap";
-        label2.style.flex = "1 1 0";
-        const minis = document.createElement("div");
-        minis.style.display = "flex";
-        minis.style.gap = "4px";
-        minis.style.alignItems = "center";
-        minis.style.marginLeft = "auto";
-        const slots = Array.isArray(t.slots) ? t.slots.slice(0, 3) : [];
-        slots.forEach((id) => {
-          const pet = id != null ? renderMap.get(String(id)) ?? null : null;
-          minis.appendChild(mkMiniIcon2(pet));
-        });
-        if (slots.length < 3) {
-          for (let i = slots.length; i < 3; i += 1) minis.appendChild(mkMiniIcon2(null));
-        }
-        item.append(dot, label2, minis);
-        const grab = document.createElement("span");
-        grab.className = "qmm-grab";
-        grab.title = "Drag to reorder";
-        grab.setAttribute("aria-label", "Drag to reorder");
-        grab.innerHTML = "";
-        for (let i = 0; i < 6; i += 1) {
-          const dot2 = document.createElement("span");
-          dot2.className = "qmm-grab-dot";
-          grab.appendChild(dot2);
-        }
-        grab.draggable = true;
-        item.onmouseenter = () => {
-          if (t.id !== selectedId) item.style.borderColor = "rgba(94,234,212,0.30)";
-        };
-        item.onmouseleave = () => {
-          if (t.id !== selectedId) item.style.borderColor = "var(--qmm-border-2)";
-        };
-        item.onclick = (ev) => {
-          if (ev.__byDrag) return;
-          const changed = selectedId !== t.id;
-          if (changed) {
-            selectedId = t.id;
-            refreshTeamList(true);
-          }
-          void hydrateEditor(getSelectedTeam());
-        };
-        grab.addEventListener("dragstart", (ev) => {
-          draggingIdx = idx;
-          draggingHeight = item.getBoundingClientRect().height;
-          item.classList.add("qmm-dragging");
-          ev.dataTransfer?.setData("text/plain", String(idx));
-          if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "move";
-          try {
-            const ghost = item.cloneNode(true);
-            ghost.style.width = `${item.getBoundingClientRect().width}px`;
-            ghost.style.position = "absolute";
-            ghost.style.top = "-9999px";
-            document.body.appendChild(ghost);
-            ev.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
-            setTimeout(() => document.body.removeChild(ghost), 0);
-          } catch {
-          }
-        });
-        grab.addEventListener("dragend", () => {
-          item.classList.remove("qmm-dragging");
-          clearLiveTransforms();
-          draggingIdx = null;
-          overInsertIdx = null;
-        });
-        item.addEventListener("dragover", (ev) => {
-          ev.preventDefault();
-          if (ev.dataTransfer) ev.dataTransfer.dropEffect = "move";
-          if (draggingIdx === null) return;
-          const idxOver = Number(ev.currentTarget.dataset.index || -1);
-          if (idxOver < 0) return;
-          const rect = item.getBoundingClientRect();
-          const mid = rect.top + rect.height / 2;
-          const insertIdx = ev.clientY < mid ? idxOver : idxOver + 1;
-          const clamped = Math.max(0, Math.min(teams.length, insertIdx));
-          if (overInsertIdx !== clamped) {
-            overInsertIdx = clamped;
-            applyLiveTransforms();
-          }
-          const edge = 28;
-          const listRect = teamList.getBoundingClientRect();
-          if (ev.clientY < listRect.top + edge) teamList.scrollTop -= 18;
-          else if (ev.clientY > listRect.bottom - edge) teamList.scrollTop += 18;
-        });
-        item.addEventListener("drop", (ev) => {
-          ev.preventDefault();
-          ev.__byDrag = true;
-          if (draggingIdx === null) return;
-          let target = overInsertIdx ?? computeInsertIndex(ev.clientY);
-          if (target > draggingIdx) target -= 1;
-          target = Math.max(0, Math.min(teams.length - 1, target));
-          if (target !== draggingIdx) {
-            const a = teams.slice();
-            const [it] = a.splice(draggingIdx, 1);
-            a.splice(target, 0, it);
-            teams = a;
-            try {
-              PetsService.setTeamsOrder(teams.map((x) => x.id));
-            } catch {
-            }
-          }
-          clearLiveTransforms();
-          draggingIdx = null;
-          overInsertIdx = null;
-          draggingHeight = 0;
-          refreshTeamList();
-        });
-        item.appendChild(grab);
-        teamList.appendChild(item);
-      });
-    }
-    teamList.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-      if (draggingIdx === null) return;
-      const idx = computeInsertIndex(e.clientY);
-      if (overInsertIdx !== idx) {
-        overInsertIdx = idx;
-        applyLiveTransforms();
-      }
-      const edge = 28;
-      const listRect = teamList.getBoundingClientRect();
-      if (e.clientY < listRect.top + edge) teamList.scrollTop -= 18;
-      else if (e.clientY > listRect.bottom - edge) teamList.scrollTop += 18;
-    });
-    teamList.addEventListener("drop", (e) => {
-      e.preventDefault();
-      if (draggingIdx === null) return;
-      let target = overInsertIdx ?? computeInsertIndex(e.clientY);
-      if (target > draggingIdx) target -= 1;
-      target = Math.max(0, Math.min(teams.length - 1, target));
-      if (target !== draggingIdx) {
-        const a = teams.slice();
-        const [it] = a.splice(draggingIdx, 1);
-        a.splice(target, 0, it);
-        teams = a;
-        try {
-          PetsService.setTeamsOrder(teams.map((x) => x.id));
-        } catch {
-        }
-      }
-      clearLiveTransforms();
-      draggingIdx = null;
-      overInsertIdx = null;
-      draggingHeight = 0;
-      refreshTeamList();
-    });
-    btnNew.onclick = () => {
-      const created = PetsService.createTeam("New Team");
-      selectedId = created.id;
-      refreshTeamList();
-      hydrateEditor(getSelectedTeam());
-    };
-    btnDel.onclick = () => {
-      if (!selectedId) return;
-      const ok = PetsService.deleteTeam(selectedId);
-      if (!ok) return;
-    };
-    let teamListRefreshInFlight = null;
-    let teamListRefreshQueued = false;
-    function scheduleTeamListRefresh() {
-      if (teamListRefreshInFlight) {
-        teamListRefreshQueued = true;
-        return teamListRefreshInFlight;
-      }
-      const run = async () => {
-        await refreshTeamList();
-        while (teamListRefreshQueued) {
-          teamListRefreshQueued = false;
-          await refreshTeamList();
-        }
-      };
-      teamListRefreshInFlight = run().finally(() => {
-        teamListRefreshInFlight = null;
-      });
-      return teamListRefreshInFlight;
-    }
-    let unsubTeams = null;
-    (async () => {
-      try {
-        unsubTeams = await PetsService.onTeamsChangeNow(async (all) => {
-          teams = Array.isArray(all) ? all.slice() : [];
-          if (selectedId && !teams.some((t) => t.id === selectedId)) {
-            selectedId = teams[0]?.id ?? null;
-          }
-          if (!selectedId && teams.length) selectedId = teams[0].id;
-          void scheduleTeamListRefresh();
-          setTeamsForHotkeys(teams);
-          await PetsService.getInventoryPets().catch(() => []);
-          await hydrateEditor(getSelectedTeam());
-        });
-      } catch {
-      }
-    })();
-    const right = document.createElement("div");
-    right.style.display = "grid";
-    right.style.gridTemplateRows = "auto 1fr";
-    right.style.gap = "10px";
-    right.style.minHeight = "0";
-    wrap.appendChild(right);
-    const header = document.createElement("div");
-    header.style.display = "flex";
-    header.style.alignItems = "center";
-    header.style.gap = "8px";
-    const headerTitle = document.createElement("div");
-    headerTitle.textContent = "Team editor";
-    headerTitle.style.fontWeight = "700";
-    headerTitle.style.fontSize = "14px";
-    headerTitle.style.flex = "1 1 0";
-    headerTitle.style.overflow = "hidden";
-    headerTitle.style.textOverflow = "ellipsis";
-    headerTitle.style.whiteSpace = "nowrap";
-    const btnUseTeam = ui.btn("Use this team", { variant: "primary", size: "sm" });
-    btnUseTeam.id = "pets.teams.useThisTeam";
-    btnUseTeam.disabled = true;
-    header.append(headerTitle, btnUseTeam);
-    right.appendChild(header);
-    const card5 = document.createElement("div");
-    card5.style.display = "flex";
-    card5.style.flexDirection = "column";
-    card5.style.gap = "12px";
-    card5.style.overflow = "auto";
-    card5.style.minHeight = "0";
-    right.appendChild(card5);
-    const secName = (() => {
-      const r = row2();
-      r.style.width = "100%";
-      const nameInput = ui.inputText("Team name", "");
-      nameInput.id = "pets.teams.editor.name";
-      nameInput.style.flex = "1";
-      nameInput.style.minWidth = "0";
-      r.append(nameInput);
-      card5.appendChild(framed("\u{1F3F7}\uFE0F Team name", r));
-      return { nameInput };
-    })();
-    const secSlots = (() => {
-      const grid = document.createElement("div");
-      grid.style.display = "grid";
-      grid.style.gridTemplateColumns = "1fr";
-      grid.style.rowGap = "10px";
-      grid.style.justifyItems = "center";
-      const mkRow = (idx) => {
-        const root = document.createElement("div");
-        const BTN = 34;
-        const ICON = 40;
-        root.style.display = "grid";
-        root.style.gridTemplateColumns = `${ICON}px minmax(0,1fr) ${BTN}px ${BTN}px`;
-        root.style.alignItems = "center";
-        root.style.gap = "8px";
-        root.style.width = "min(560px, 100%)";
-        root.style.border = "1px solid var(--qmm-border-2)";
-        root.style.borderRadius = "10px";
-        root.style.padding = "8px 10px";
-        root.style.background = "rgba(255,255,255,0.03)";
-        const iconContainer = document.createElement("div");
-        Object.assign(iconContainer.style, {
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "2px",
-          flexShrink: "0"
-        });
-        const iconWrap = document.createElement("div");
-        Object.assign(iconWrap.style, {
-          width: `${ICON}px`,
-          height: `${ICON}px`,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center"
-        });
-        const strBadge = document.createElement("div");
-        Object.assign(strBadge.style, {
-          fontSize: "9px",
-          fontWeight: "700",
-          lineHeight: "1",
-          padding: "1px 4px",
-          borderRadius: "4px",
-          background: "rgba(0,0,0,0.75)",
-          color: "#fff",
-          whiteSpace: "nowrap",
-          display: "none",
-          pointerEvents: "none"
-        });
-        iconContainer.append(iconWrap, strBadge);
-        const useEmojiFallback = () => {
-          iconWrap.replaceChildren();
-          const span = document.createElement("span");
-          span.textContent = "\u{1F43E}";
-          span.style.fontSize = `${Math.max(ICON - 6, 12)}px`;
-          span.setAttribute("aria-hidden", "true");
-          iconWrap.appendChild(span);
-        };
-        const setIcon = (species, mutations) => {
-          const speciesLabel = String(species ?? "").trim();
-          if (!speciesLabel) {
-            iconWrap.replaceChildren();
-            iconWrap.dataset.iconKey = "";
-            useEmojiFallback();
-            return;
-          }
-          const mutKey = Array.isArray(mutations) ? mutations.join(",") : "";
-          const key2 = `${speciesLabel}|${mutKey}`;
-          if (iconWrap.dataset.iconKey === key2 && iconWrap.querySelector("img")) {
-            return;
-          }
-          iconWrap.dataset.iconKey = key2;
-          attachSpriteIcon(iconWrap, ["pet"], speciesLabel, ICON, "pet-slot", {
-            mutations,
-            onNoSpriteFound: () => {
-              iconWrap.replaceChildren();
-              useEmojiFallback();
-            }
-          });
-        };
-        const left2 = document.createElement("div");
-        left2.style.display = "flex";
-        left2.style.flexDirection = "column";
-        left2.style.gap = "6px";
-        left2.style.minWidth = "0";
-        const nameEl = document.createElement("div");
-        nameEl.style.fontWeight = "700";
-        nameEl.textContent = "None";
-        nameEl.style.overflow = "hidden";
-        nameEl.style.textOverflow = "ellipsis";
-        nameEl.style.whiteSpace = "nowrap";
-        let abilitiesEl = abilitiesBadge([]);
-        abilitiesEl.style.display = "inline-block";
-        left2.append(nameEl, abilitiesEl);
-        const btnChoose = ui.btn("", {
-          icon: "+",
-          variant: "secondary",
-          tooltip: "Choose a pet",
-          ariaLabel: "Choose a pet"
-        });
-        const btnClear2 = ui.btn("", {
-          icon: "\u2212",
-          variant: "danger",
-          tooltip: "Remove this pet",
-          ariaLabel: "Remove this pet"
-        });
-        root.append(iconContainer, left2, btnChoose, btnClear2);
-        function update(p) {
-          if (!p) {
-            nameEl.textContent = "None";
-            setIcon(void 0);
-            strBadge.style.display = "none";
-            const fresh2 = abilitiesBadge([]);
-            fresh2.style.display = "inline-block";
-            left2.replaceChild(fresh2, left2.children[1]);
-            abilitiesEl = fresh2;
-            return;
-          }
-          const species = String(p.petSpecies || "").trim();
-          const muts = Array.isArray(p.mutations) ? p.mutations : [];
-          setIcon(species, muts);
-          const str = getPetStrength(p);
-          const maxStr = getPetMaxStrength(p);
-          if (maxStr > 0) {
-            strBadge.textContent = str >= maxStr ? `${maxStr}` : `${str}/${maxStr}`;
-            strBadge.style.color = str >= maxStr ? "#facc15" : "#fff";
-            strBadge.style.display = "block";
-          } else {
-            strBadge.style.display = "none";
-          }
-          const speciesLabel = species ? species.charAt(0).toUpperCase() + species.slice(1) : "";
-          nameEl.textContent = p.name?.trim() || speciesLabel || "Pet";
-          const abs = Array.isArray(p.abilities) ? p.abilities.filter(Boolean) : [];
-          const fresh = abilitiesBadge(abs);
-          fresh.style.display = "inline-block";
-          left2.replaceChild(fresh, left2.children[1]);
-          abilitiesEl = fresh;
-        }
-        btnChoose.onclick = async () => {
-          const t = getSelectedTeam();
-          if (!t) return;
-          btnChoose.disabled = true;
-          btnClear2.disabled = true;
-          ui.setWindowVisible(false);
-          try {
-            await PetsService.chooseSlotPet(t.id, idx);
-            await repaintSlots(getSelectedTeam());
-          } finally {
-            ui.setWindowVisible(true);
-            btnChoose.disabled = false;
-            btnClear2.disabled = false;
-          }
-        };
-        btnClear2.onclick = async () => {
-          const t = getSelectedTeam();
-          if (!t) return;
-          const next = t.slots.slice(0, 3);
-          next[idx] = null;
-          const saved = PetsService.saveTeam({ id: t.id, slots: next });
-          await repaintSlots(saved ?? getSelectedTeam());
-        };
-        return { root, nameEl, abilitiesEl, btnChoose, btnClear: btnClear2, update };
-      };
-      const r0 = mkRow(0);
-      const r1 = mkRow(1);
-      const r2 = mkRow(2);
-      grid.append(r0.root, r1.root, r2.root);
-      const extra = ui.flexRow({ gap: 6, justify: "center" });
-      const btnUseCurrent = ui.btn("Current active", { variant: "primary" });
-      btnUseCurrent.id = "pets.teams.useCurrent";
-      btnUseCurrent.style.minWidth = "140px";
-      const btnClear = ui.btn("Clear slots", { variant: "secondary" });
-      btnClear.id = "pets.teams.clearSlots";
-      btnClear.style.minWidth = "140px";
-      extra.append(btnUseCurrent, btnClear);
-      const wrapSlots = document.createElement("div");
-      wrapSlots.style.display = "flex";
-      wrapSlots.style.flexDirection = "column";
-      wrapSlots.style.gap = "8px";
-      wrapSlots.append(grid, extra);
-      card5.appendChild(framed("\u26A1 Active pets (3 slots)", wrapSlots));
-      return {
-        rows: [r0, r1, r2],
-        btnUseCurrent,
-        btnClear
-      };
-    })();
-    const teamStatsHost = document.createElement("div");
-    teamStatsHost.style.width = "100%";
-    card5.appendChild(framed("\u{1F4CA} Team stats", teamStatsHost));
-    function showTeamStatsMessage(message) {
-      const empty = document.createElement("div");
-      empty.textContent = message;
-      empty.style.opacity = "0.7";
-      empty.style.fontSize = "11px";
-      teamStatsHost.replaceChildren(empty);
-    }
-    async function refreshTeamStats(team) {
-      if (!team) {
-        showTeamStatsMessage("No team selected.");
-        return;
-      }
-      const map2 = await buildPetRenderMap();
-      const pets = (team.slots || []).map((id) => id ? map2.get(String(id)) : void 0).filter((pet) => Boolean(pet));
-      if (!pets.length) {
-        showTeamStatsMessage("No pets in this team.");
-        return;
-      }
-      teamStatsHost.replaceChildren(renderTeamStats(pets, { showAllGroups: true }));
-    }
-    async function repaintSlots(sourceTeam) {
-      const t = sourceTeam ?? getSelectedTeam();
-      if (!t) return;
-      const map2 = await buildPetRenderMap();
-      [0, 1, 2].forEach((i) => {
-        const id = t.slots[i] || null;
-        if (!id) {
-          if (lastRenderedSlotIds[i] !== null) {
-            secSlots.rows[i].update(null);
-            lastRenderedSlotIds[i] = null;
-          }
-          return;
-        }
-        const pet = map2.get(id);
-        if (!pet) {
-          if (lastRenderedSlotIds[i] !== id) {
-            secSlots.rows[i].update({
-              id,
-              itemType: "Pet",
-              petSpecies: "",
-              name: null,
-              xp: 0,
-              hunger: 0,
-              mutations: [],
-              abilities: []
-            });
-            lastRenderedSlotIds[i] = id;
-          }
-          return;
-        }
-        if (lastRenderedSlotIds[i] !== id) {
-          secSlots.rows[i].update(pet);
-          lastRenderedSlotIds[i] = id;
-        }
-      });
-      void refreshTeamStats(t);
-    }
-    async function hydrateEditor(team) {
-      const has = !!team;
-      secName.nameInput.disabled = !has;
-      secSlots.btnClear.disabled = !has;
-      secSlots.btnUseCurrent.disabled = !has;
-      btnUseTeam.disabled = !has;
-      if (!has) {
-        secSlots.rows.forEach((r) => r.update(null));
-        secName.nameInput.value = "";
-        void refreshTeamStats(null);
-        return;
-      }
-      secName.nameInput.value = String(team.name || "");
-      await repaintSlots(team);
-    }
-    const saveNameNow = () => {
-      const t = getSelectedTeam();
-      if (!t) return;
-      const nextName = petTeamName(secName.nameInput.value);
-      if (secName.nameInput.value.trim().length > nextName.length) secName.nameInput.value = nextName;
-      if (nextName === t.name) return;
-      t.name = nextName;
-      PetsService.saveTeam({ id: t.id, name: nextName });
-      refreshTeamList(true);
-    };
-    secName.nameInput.addEventListener("input", () => saveNameNow());
-    secName.nameInput.addEventListener("keydown", (ev) => {
-      if (ev.key === "Enter") {
-        ev.currentTarget.blur();
-        saveNameNow();
-      }
-    });
-    secName.nameInput.addEventListener("blur", () => saveNameNow());
-    secSlots.btnUseCurrent.onclick = async () => {
-      const t = getSelectedTeam();
-      if (!t) return;
-      try {
-        const ids = await PetsService.getActivePetIds();
-        const nextSlots = [ids[0] || null, ids[1] || null, ids[2] || null];
-        const saved = PetsService.saveTeam({ id: t.id, slots: nextSlots });
-        await repaintSlots(saved ?? getSelectedTeam());
-      } catch {
-      }
-    };
-    secSlots.btnClear.onclick = async () => {
-      const t = getSelectedTeam();
-      if (!t) return;
-      const saved = PetsService.saveTeam({ id: t.id, slots: [null, null, null] });
-      await repaintSlots(saved ?? getSelectedTeam());
-    };
-    function sameSet(a, b) {
-      if (a.length !== b.length) return false;
-      const s = new Set(a);
-      for (const x of b) if (!s.has(x)) return false;
-      return true;
-    }
-    async function waitForActiveTeam(team, timeoutMs = 2e3) {
-      const target = (team.slots || []).filter(Boolean);
-      const t0 = performance.now();
-      while (performance.now() - t0 < timeoutMs) {
-        const pets = await PetsService.getPets().catch(() => null);
-        const equip = Array.isArray(pets) ? pets.map((p) => String(p?.slot?.id || "")).filter(Boolean) : [];
-        if (sameSet(equip, target)) return true;
-        await new Promise((r) => setTimeout(r, 80));
-      }
-      return false;
-    }
-    btnUseTeam.onclick = async () => {
-      const t = getSelectedTeam();
-      if (!t) return;
-      try {
-        isApplyingTeam = true;
-        activeTeamId = t.id;
-        await refreshTeamList(true);
-        await PetsService.useTeam(t.id);
-        await waitForActiveTeam(t);
-        await hydrateEditor(getSelectedTeam());
-        await refreshTeamList();
-      } catch (e) {
-        console.warn("[Pets] Use this team failed:", e);
-        await refreshTeamList();
-      } finally {
-        isApplyingTeam = false;
-      }
-    };
-    let unsubPets2 = null;
-    (async () => {
-      try {
-        unsubPets2 = await onActivePetsStructuralChangeNow(async () => {
-          if (isApplyingTeam) return;
-          await repaintSlots(getSelectedTeam());
-          await scheduleTeamListRefresh();
-        });
-      } catch {
-      }
-    })();
-    installPetTeamHotkeysOnce(async (teamId2) => {
-      const t = teams.find((tt) => tt.id === teamId2) || null;
-      try {
-        isApplyingTeam = true;
-        if (t) {
-          activeTeamId = t.id;
-          await refreshTeamList(true);
-        }
-        await PetsService.useTeam(teamId2);
-        if (t) await waitForActiveTeam(t);
-        await hydrateEditor(getSelectedTeam());
-        await refreshTeamList();
-      } catch (e) {
-        console.warn("[Pets] hotkey useTeam failed:", e);
-        await refreshTeamList();
-      } finally {
-        isApplyingTeam = false;
-      }
-    });
-    view.__cleanup__ = (() => {
-      const prev = view.__cleanup__;
-      return () => {
-        try {
-          unsubTeams?.();
-        } catch {
-        }
-        try {
-          unsubPets2?.();
-        } catch {
-        }
-        try {
-          prev?.();
-        } catch {
-        }
-      };
-    })();
-  }
-  function renderFeedingTab(view, ui) {
-    view.innerHTML = "";
-    const wrap = document.createElement("div");
-    wrap.style.display = "grid";
-    wrap.style.gridTemplateColumns = "minmax(220px, 280px) minmax(0, 1fr)";
-    wrap.style.gap = "10px";
-    wrap.style.alignItems = "stretch";
-    wrap.style.height = "54vh";
-    wrap.style.minHeight = "0";
-    view.appendChild(wrap);
-    const left = document.createElement("div");
-    left.style.display = "flex";
-    left.style.flexDirection = "column";
-    left.style.height = "100%";
-    left.style.minHeight = "0";
-    wrap.appendChild(left);
-    const vtabs = ui.vtabs({
-      emptyText: "No pets found.",
-      fillAvailableHeight: true,
-      renderItem: (item, btn) => {
-        btn.innerHTML = "";
-        btn.style.gridTemplateColumns = "24px 1fr auto";
-        btn.style.gap = "10px";
-        const size = 22;
-        const iconWrap = document.createElement("div");
-        Object.assign(iconWrap.style, {
-          width: `${size}px`,
-          height: `${size}px`,
-          borderRadius: "6px",
-          background: "#161b22",
-          border: "1px solid #ffffff10",
-          display: "grid",
-          placeItems: "center",
-          overflow: "hidden",
-          boxShadow: "0 1px 0 #000 inset",
-          fontSize: "11px",
-          color: "#e2e8f0"
-        });
-        const label2 = String(item.title || "Pet");
-        iconWrap.textContent = label2.charAt(0).toUpperCase();
-        attachSpriteIcon(iconWrap, ["pet"], item.id, size, "pet-feeding-list", {
-          onNoSpriteFound: () => {
-            iconWrap.textContent = label2.charAt(0).toUpperCase();
-          }
-        });
-        const textWrap = document.createElement("div");
-        textWrap.style.display = "flex";
-        textWrap.style.flexDirection = "column";
-        textWrap.style.gap = "2px";
-        textWrap.style.minWidth = "0";
-        const titleEl = document.createElement("div");
-        titleEl.textContent = label2;
-        titleEl.style.whiteSpace = "nowrap";
-        titleEl.style.overflow = "hidden";
-        titleEl.style.textOverflow = "ellipsis";
-        textWrap.appendChild(titleEl);
-        const rarity3 = String(item.rarity || "").trim();
-        const badge2 = rarity3 ? rarityBadge(rarity3) : null;
-        if (badge2) {
-          badge2.style.margin = "0";
-          badge2.style.alignSelf = "center";
-        }
-        btn.append(iconWrap, textWrap);
-        if (badge2) btn.appendChild(badge2);
-      }
-    });
-    vtabs.root.style.flex = "1 1 auto";
-    vtabs.root.style.minHeight = "0";
-    left.appendChild(vtabs.root);
-    const right = document.createElement("div");
-    right.style.display = "flex";
-    right.style.flexDirection = "column";
-    right.style.gap = "10px";
-    right.style.minHeight = "0";
-    wrap.appendChild(right);
-    const card5 = ui.card("\u{1F356} Instant Feed", {
-      tone: "muted",
-      subtitle: "Allow or block crops for the Instant Feed button."
-    });
-    card5.root.style.display = "grid";
-    card5.root.style.gridTemplateRows = "auto 1fr";
-    card5.root.style.minHeight = "0";
-    card5.root.style.height = "100%";
-    card5.body.style.gridTemplateRows = "auto 1fr";
-    card5.body.style.minHeight = "0";
-    right.appendChild(card5.root);
-    const widgetRow = document.createElement("label");
-    widgetRow.style.display = "flex";
-    widgetRow.style.alignItems = "center";
-    widgetRow.style.gap = "8px";
-    widgetRow.style.cursor = "pointer";
-    const widgetSwitch = ui.switch(isInstantFeedWidgetEnabled());
-    widgetSwitch.addEventListener("change", () => {
-      setInstantFeedWidgetEnabled(widgetSwitch.checked);
-    });
-    const widgetLabel = document.createElement("span");
-    widgetLabel.textContent = "Show floating Instant Feed widget";
-    widgetLabel.style.fontSize = "13px";
-    widgetRow.append(widgetSwitch, widgetLabel);
-    card5.body.appendChild(widgetRow);
-    const body = document.createElement("div");
-    body.style.display = "flex";
-    body.style.flexDirection = "column";
-    body.style.gap = "6px";
-    body.style.overflow = "auto";
-    body.style.minHeight = "0";
-    card5.body.appendChild(body);
-    const petItems = Object.keys(petCatalog2).map((species) => {
-      const entry = petCatalog2[species];
-      const name = String(entry?.name || species);
-      return {
-        id: species,
-        title: name,
-        rarity: entry?.rarity
-      };
-    });
-    vtabs.setItems(petItems);
-    if (petItems.length) vtabs.select(petItems[0].id);
-    const renderCrops = (species) => {
-      body.innerHTML = "";
-      if (!species) {
-        const empty = document.createElement("div");
-        empty.textContent = "Select a pet to configure instant feed crops.";
-        empty.style.opacity = "0.75";
-        body.appendChild(empty);
-        return;
-      }
-      const compatibles = PetsService.getCompatibleCropsForSpecies(species) ?? [];
-      const seen = /* @__PURE__ */ new Set();
-      const list = compatibles.map((c) => String(c || "")).filter((c) => c && !seen.has(c) && seen.add(c));
-      if (!list.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No compatible crops for this pet.";
-        empty.style.opacity = "0.75";
-        body.appendChild(empty);
-        return;
-      }
-      const cropEntries = list.map((crop) => {
-        const entry = plantCatalog2[crop];
-        const name = String(entry?.name || crop);
-        return { crop, name };
-      }).sort((a, b) => a.name.localeCompare(b.name));
-      cropEntries.forEach(({ crop, name }) => {
-        const row2 = document.createElement("div");
-        row2.style.display = "grid";
-        row2.style.gridTemplateColumns = "1fr auto";
-        row2.style.alignItems = "center";
-        row2.style.gap = "8px";
-        row2.style.padding = "6px 4px";
-        row2.style.borderBottom = "1px solid #ffffff12";
-        const labelWrap = document.createElement("div");
-        labelWrap.style.display = "flex";
-        labelWrap.style.flexDirection = "column";
-        labelWrap.style.gap = "2px";
-        const nameEl = document.createElement("div");
-        nameEl.textContent = name;
-        nameEl.style.fontSize = "13px";
-        labelWrap.appendChild(nameEl);
-        if (name !== crop) {
-          const idEl = document.createElement("div");
-          idEl.textContent = crop;
-          idEl.style.fontSize = "11px";
-          idEl.style.opacity = "0.6";
-          labelWrap.appendChild(idEl);
-        }
-        const sw = ui.switch(PetsService.isInstantFeedCropAllowed(species, crop));
-        sw.addEventListener("change", () => {
-          PetsService.setInstantFeedCropAllowed(species, crop, sw.checked);
-        });
-        row2.append(labelWrap, sw);
-        body.appendChild(row2);
-      });
-    };
-    vtabs.onSelect((id) => {
-      renderCrops(id);
-    });
-    renderCrops(petItems[0]?.id ?? null);
-  }
   function renderPetsMenu(root) {
     const ui = new Menu({ id: "pets", compact: true, windowSelector: ".qws-win" });
     ui.mount(root);
     ui.addTab("manager", "\u{1F9F0} Manager", (view) => renderManagerTab(view, ui));
-    ui.addTab("teambuilder", "\u{1F9E9} Team Builder", (view) => renderTeamBuilderTab(view, ui));
-    ui.addTab("feeding", "\u{1F356} Feeding", (view) => renderFeedingTab(view, ui));
-    ui.addTab("hatch", "\u{1F95A} Hatch", (view) => renderHatchTab(view, ui));
+    ui.addTab("teambuilder", "\u{1F9E9} Team Builder", (view) => renderTeamBuilderTab(view));
+    ui.addTab("feeding", "\u{1F356} Feeding", (view) => renderFeedingTab(view));
+    ui.addTab("hatch", "\u{1F95A} Hatch", (view) => renderHatchTab(view));
     ui.addTab("logs", "\u{1F4DD} Logs", (view) => renderLogsTab(view));
-    const knownTabs = /* @__PURE__ */ new Set(["manager", "feeding", "hatch", "teambuilder", "logs"]);
     const onOpenTab = (ev) => {
       const tab = String(ev.detail?.tab || "");
-      if (knownTabs.has(tab)) ui.switchTo(tab);
+      if (TABS.has(tab)) ui.switchTo(tab);
     };
-    detachPetsOpenTabListener?.();
-    window.addEventListener("qws:pets-open-tab", onOpenTab);
-    detachPetsOpenTabListener = () => window.removeEventListener("qws:pets-open-tab", onOpenTab);
+    detachOpenTabListener?.();
+    window.addEventListener(OPEN_TAB_EVENT, onOpenTab);
+    detachOpenTabListener = () => window.removeEventListener(OPEN_TAB_EVENT, onOpenTab);
   }
-  var detachPetsOpenTabListener;
+  var OPEN_TAB_EVENT, TABS, detachOpenTabListener;
   var init_menu6 = __esm({
     "src/features/pets/menu.ts"() {
       "use strict";
       init_menu();
-      init_pets();
-      init_teamReconcile();
-      init_atoms();
-      init_iconCache();
-      init_menu3();
-      init_data();
-      init_petValue();
-      init_feedWidget();
       init_tab();
-      init_teamBuilderTab();
-      init_teamStatsView();
+      init_feedingTab();
       init_logsTab();
-      init_abilityColorsTab();
-      detachPetsOpenTabListener = null;
+      init_managerTab();
+      init_teamBuilderTab();
+      OPEN_TAB_EVENT = "qws:pets-open-tab";
+      TABS = /* @__PURE__ */ new Set(["manager", "teambuilder", "feeding", "hatch", "logs"]);
+      detachOpenTabListener = null;
     }
   });
 
@@ -44010,8 +42345,8 @@ Restore figures are averages; unlucky streaks do worse.`;
           done > 0 ? "success" : "info"
         );
       } catch (error) {
-        const message = error?.message === "cancelled" ? `Cancelled after ${formatInteger(done)} ${kind.unitNoun}.` : error?.message || "Deletion failed.";
-        kind.toast(kind.toastTitle, message, "error");
+        const message2 = error?.message === "cancelled" ? `Cancelled after ${formatInteger(done)} ${kind.unitNoun}.` : error?.message || "Deletion failed.";
+        kind.toast(kind.toastTitle, message2, "error");
       } finally {
         running6 = false;
         paused = false;
@@ -44090,8 +42425,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       DECOR_DELETE_DELAY_MS = 35;
       DIRT_TILE_COUNT = 200;
       BOARDWALK_TILE_COUNT = 76;
-      toast2 = (title, message, kind) => {
-        void toastSimple(title, message, kind);
+      toast2 = (title, message2, kind) => {
+        void toastSimple(title, message2, kind);
       };
       withdraw = async (id, storageId, qty) => {
         await PlayerService.retrieveItemFromStorage(id, storageId, qty);
@@ -44128,34 +42463,34 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/ui/kit/modal.ts
-  function menuCard(options) {
-    const card5 = h("button", "qmm-menu-card");
-    card5.type = "button";
-    card5.disabled = options.disabled === true;
-    card5.append(h("div", "qmm-menu-card__name", options.name), h("div", "qmm-menu-card__detail", options.detail));
-    if (!card5.disabled) card5.addEventListener("click", options.onClick);
-    return card5;
+  function menuCard(options2) {
+    const card4 = h("button", "qmm-menu-card");
+    card4.type = "button";
+    card4.disabled = options2.disabled === true;
+    card4.append(h("div", "qmm-menu-card__name", options2.name), h("div", "qmm-menu-card__detail", options2.detail));
+    if (!card4.disabled) card4.addEventListener("click", options2.onClick);
+    return card4;
   }
-  function openModal2(options) {
+  function openModal2(options2) {
     let closed = false;
     const scrim = h("div", "qmm-modal-scrim");
-    const hostZ = Number.parseInt(getComputedStyle(options.host).zIndex, 10);
+    const hostZ = Number.parseInt(getComputedStyle(options2.host).zIndex, 10);
     scrim.style.zIndex = String((Number.isFinite(hostZ) ? hostZ : layer.window) + 1);
     const panel = h("div", "qmm-modal");
-    panel.style.width = `min(${options.widthPx ?? 420}px, 100%)`;
-    panel.style.maxHeight = `min(${options.maxHeightPx ?? 520}px, 88vh)`;
+    panel.style.width = `min(${options2.widthPx ?? 420}px, 100%)`;
+    panel.style.maxHeight = `min(${options2.maxHeightPx ?? 520}px, 88vh)`;
     panel.addEventListener("click", (event) => event.stopPropagation());
     const closeButton = h("button", "qmm-modal__close", "\u2715");
     closeButton.type = "button";
     closeButton.title = "Close";
     closeButton.addEventListener("click", () => close());
     const header = h("div", "qmm-modal__head");
-    header.append(h("div", "qmm-modal__title", options.title), closeButton);
+    header.append(h("div", "qmm-modal__title", options2.title), closeButton);
     const body = h("div", "qmm-modal__body qmm-scroll");
     const footer = h("div", "qmm-modal__foot");
     panel.append(header, body, footer);
     scrim.append(panel);
-    function onKeyDown(event) {
+    function onKeyDown2(event) {
       if (event.key === "Escape") {
         event.stopPropagation();
         close();
@@ -44165,15 +42500,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       if (closed) return;
       closed = true;
       clearInterval(hostWatch);
-      document.removeEventListener("keydown", onKeyDown, true);
+      document.removeEventListener("keydown", onKeyDown2, true);
       scrim.remove();
-      options.onClose?.();
+      options2.onClose?.();
     }
     const hostWatch = window.setInterval(() => {
-      if (!options.host.isConnected) close();
+      if (!options2.host.isConnected) close();
     }, 1e3);
     scrim.addEventListener("click", () => close());
-    document.addEventListener("keydown", onKeyDown, true);
+    document.addEventListener("keydown", onKeyDown2, true);
     (document.documentElement || document.body).appendChild(scrim);
     return { body, footer, close, isOpen: () => !closed };
   }
@@ -44267,18 +42602,18 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/deleters/picker.ts
-  function openDeleterPicker(options) {
+  function openDeleterPicker(options2) {
     ensureDeleterStyles();
     const modal = openModal2({
-      host: options.host,
-      title: options.title,
+      host: options2.host,
+      title: options2.title,
       widthPx: 460,
-      onClose: options.onClose
+      onClose: options2.onClose
     });
-    const picked = new Map(options.initial);
+    const picked = new Map(options2.initial);
     let entries2 = [];
     let filter = "";
-    const search2 = textInput(`Search ${options.unitNoun}\u2026`, "", { small: true });
+    const search2 = textInput(`Search ${options2.unitNoun}\u2026`, "", { small: true });
     search2.classList.add("qws-del-search");
     search2.addEventListener("input", () => {
       filter = search2.value.trim().toLowerCase();
@@ -44308,15 +42643,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       onClick: () => {
         const out = /* @__PURE__ */ new Map();
         for (const [id, qty] of picked) if (qty > 0) out.set(id, qty);
-        options.onConfirm(out);
+        options2.onConfirm(out);
         modal.close();
       }
     });
     modal.footer.classList.add("qws-del-footer");
     modal.footer.append(summary, btnCancel, btnConfirm);
     function buildIcon(id) {
-      const box2 = h("span", "qws-del-row__icon", options.fallbackIcon);
-      attachSpriteIcon(box2, options.spriteCategories, [id], ROW_SPRITE_PX, "deleter-picker");
+      const box2 = h("span", "qws-del-row__icon", options2.fallbackIcon);
+      attachSpriteIcon(box2, options2.spriteCategories, [id], ROW_SPRITE_PX, "deleter-picker");
       return box2;
     }
     function visibleEntries() {
@@ -44336,8 +42671,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         units += qty;
         fromStorage += Math.max(0, qty - entry.invQty);
       }
-      const storagePart = fromStorage > 0 ? ` \xB7 ${formatInteger(fromStorage)} from the ${options.storageNoun}` : "";
-      summary.textContent = groups === 0 ? "Nothing selected." : `${groups} selected \xB7 ${formatInteger(units)} ${options.unitNoun}${storagePart}`;
+      const storagePart = fromStorage > 0 ? ` \xB7 ${formatInteger(fromStorage)} from the ${options2.storageNoun}` : "";
+      summary.textContent = groups === 0 ? "Nothing selected." : `${groups} selected \xB7 ${formatInteger(units)} ${options2.unitNoun}${storagePart}`;
       setButtonEnabled(btnConfirm, groups > 0);
     }
     function buildRow(entry) {
@@ -44354,7 +42689,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         h(
           "div",
           "qws-del-row__detail",
-          entry.storeQty > 0 ? `${formatInteger(entry.total)} \xB7 ${formatInteger(entry.invQty)} held, ${formatInteger(entry.storeQty)} in ${options.storageNoun}` : `${formatInteger(entry.total)} held`
+          entry.storeQty > 0 ? `${formatInteger(entry.total)} \xB7 ${formatInteger(entry.invQty)} held, ${formatInteger(entry.storeQty)} in ${options2.storageNoun}` : `${formatInteger(entry.total)} held`
         )
       );
       const amount = h("input", "qmm-input qmm-input--sm qws-del-amount");
@@ -44383,7 +42718,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           h(
             "div",
             "qws-del-note",
-            entries2.length === 0 ? `You have no ${options.unitNoun} to delete, in your inventory or your ${options.storageNoun}.` : "No match."
+            entries2.length === 0 ? `You have no ${options2.unitNoun} to delete, in your inventory or your ${options2.storageNoun}.` : "No match."
           )
         );
       } else {
@@ -44393,7 +42728,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     list.append(h("div", "qws-del-note", "Reading inventory\u2026"));
     updateSummary();
-    void options.loadEntries().then((loaded) => {
+    void options2.loadEntries().then((loaded) => {
       if (!modal.isOpen()) return;
       entries2 = loaded;
       for (const [id, qty] of [...picked]) {
@@ -44498,9 +42833,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       controller.cancel();
       updateControls();
     } });
-    const actions = h("div", "qws-del-actions");
-    actions.append(btnSelect, btnClear, h("div", "qws-del-spacer"), btnDelete, btnPause, btnPlay, btnStop);
-    section4.body.append(stats, chips, estimate, progressWrap, actions);
+    const actions2 = h("div", "qws-del-actions");
+    actions2.append(btnSelect, btnClear, h("div", "qws-del-spacer"), btnDelete, btnPause, btnPlay, btnStop);
+    section4.body.append(stats, chips, estimate, progressWrap, actions2);
     const progress = { target: "-", done: 0, total: 0 };
     function buildChip(item) {
       const icon2 = h("span", "qws-del-chip__icon", config.fallbackIcon);
@@ -44678,7 +43013,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function createGhostController() {
     let delayMs = readGhostDelayMs();
     const held = /* @__PURE__ */ new Set();
-    const onKeyDown = (e) => {
+    const onKeyDown2 = (e) => {
       const key2 = e.key.toLowerCase();
       if (!MOVE_KEYS.has(key2)) return;
       e.preventDefault();
@@ -44742,7 +43077,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         lastTs = 0;
         budgetMs = 0;
         stepping = false;
-        window.addEventListener("keydown", onKeyDown, CAPTURE2);
+        window.addEventListener("keydown", onKeyDown2, CAPTURE2);
         window.addEventListener("keyup", onKeyUp, CAPTURE2);
         window.addEventListener("blur", onBlur);
         document.addEventListener("visibilitychange", onVisibility2);
@@ -44754,7 +43089,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           rafId = null;
         }
         held.clear();
-        window.removeEventListener("keydown", onKeyDown, CAPTURE2);
+        window.removeEventListener("keydown", onKeyDown2, CAPTURE2);
         window.removeEventListener("keyup", onKeyUp, CAPTURE2);
         window.removeEventListener("blur", onBlur);
         document.removeEventListener("visibilitychange", onVisibility2);
@@ -45228,10 +43563,70 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/ui/kit/panel.ts
+  function button2(label2, tone, onClick) {
+    return button(label2, { variant: VARIANT[tone], size: "sm", block: true, lockWhilePending: true, onClick });
+  }
+  function toggle(checked, onChange) {
+    return switchInput(checked, onChange);
+  }
+  function selectField(options2) {
+    const el = select2({ small: true });
+    for (const [value, label2] of options2) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label2;
+      el.appendChild(option);
+    }
+    return el;
+  }
+  function numberField(min, max, step, value) {
+    const el = h("input", "qws-pnl-input");
+    el.type = "number";
+    el.min = String(min);
+    el.max = String(max);
+    el.step = String(step);
+    el.value = String(value);
+    el.style.width = "78px";
+    el.style.textAlign = "right";
+    return el;
+  }
+  var TEAL, TEAL_DIM, TEAL_BORDER, BORDER, CARD_BG, TEXT, TEXT_DIM, DANGER, WARN, GOLD, RAINBOW, css4, ensurePanelStyles, sectionLabel2, VARIANT;
+  var init_panel = __esm({
+    "src/ui/kit/panel.ts"() {
+      "use strict";
+      init_badges();
+      init_button();
+      init_card();
+      init_dom2();
+      init_fields();
+      init_sliders();
+      init_styles();
+      init_theme();
+      init_toggles();
+      init_icons();
+      TEAL = color.accent;
+      TEAL_DIM = color.accentSoft;
+      TEAL_BORDER = color.accentBorder;
+      BORDER = color.border;
+      CARD_BG = color.cardBg;
+      TEXT = color.text;
+      TEXT_DIM = color.textDim;
+      DANGER = color.danger;
+      WARN = color.warn;
+      GOLD = color.gold;
+      RAINBOW = color.rainbow;
+      css4 = (el, style2) => Object.assign(el.style, style2);
+      ensurePanelStyles = ensureKitStyles;
+      sectionLabel2 = sectionLabel;
+      VARIANT = { accent: "primary", neutral: "default", danger: "danger" };
+    }
+  });
+
   // src/features/companion/menu/harvestChips.ts
   function iconHolder(sizePx) {
     const box2 = document.createElement("div");
-    css(box2, {
+    css4(box2, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -45286,7 +43681,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const url = composedUrl(species, mutations);
     const img = document.createElement("img");
     img.alt = "";
-    css(img, { maxWidth: "100%", maxHeight: "100%", imageRendering: "auto" });
+    css4(img, { maxWidth: "100%", maxHeight: "100%", imageRendering: "auto" });
     img.addEventListener("error", () => {
       console.warn("[companion] composed sprite failed, falling back to the plain crop:", url);
       box2.replaceChildren();
@@ -45302,11 +43697,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     attachSpriteIcon(box2, ["ui", "mutation"], candidates, sizePx, SPRITE_LOG_TAG2);
     return box2;
   }
-  function spriteTile(options) {
+  function spriteTile(options2) {
     const tile = document.createElement("button");
     tile.type = "button";
-    tile.title = options.title;
-    css(tile, {
+    tile.title = options2.title;
+    css4(tile, {
       display: "inline-flex",
       flexDirection: "column",
       alignItems: "center",
@@ -45316,30 +43711,30 @@ Restore figures are averages; unlucky streaks do worse.`;
       cursor: "pointer",
       lineHeight: "1",
       transition: "background 120ms ease, border-color 120ms ease",
-      background: options.selected ? TEAL_DIM : CARD_BG,
-      border: `1px solid ${options.selected ? TEAL_BORDER : BORDER}`
+      background: options2.selected ? TEAL_DIM : CARD_BG,
+      border: `1px solid ${options2.selected ? TEAL_BORDER : BORDER}`
     });
-    tile.append(options.icon);
-    if (options.count !== void 0) {
+    tile.append(options2.icon);
+    if (options2.count !== void 0) {
       const count = document.createElement("span");
-      css(count, { fontSize: "10px", color: options.selected ? TEAL : TEXT_DIM });
-      count.textContent = String(options.count);
+      css4(count, { fontSize: "10px", color: options2.selected ? TEAL : TEXT_DIM });
+      count.textContent = String(options2.count);
       tile.append(count);
     }
-    tile.addEventListener("click", options.onClick);
+    tile.addEventListener("click", options2.onClick);
     tile.addEventListener("mouseenter", () => {
-      if (!options.selected) css(tile, { background: "rgba(255,255,255,0.06)" });
+      if (!options2.selected) css4(tile, { background: "rgba(255,255,255,0.06)" });
     });
     tile.addEventListener("mouseleave", () => {
-      if (!options.selected) css(tile, { background: CARD_BG });
+      if (!options2.selected) css4(tile, { background: CARD_BG });
     });
     return tile;
   }
-  function labelledTile(options) {
+  function labelledTile(options2) {
     const tile = document.createElement("button");
     tile.type = "button";
-    tile.title = options.label;
-    css(tile, {
+    tile.title = options2.label;
+    css4(tile, {
       display: "inline-flex",
       alignItems: "center",
       gap: "6px",
@@ -45348,24 +43743,24 @@ Restore figures are averages; unlucky streaks do worse.`;
       cursor: "pointer",
       lineHeight: "1",
       transition: "background 120ms ease, border-color 120ms ease",
-      background: options.selected ? TEAL_DIM : CARD_BG,
-      border: `1px solid ${options.selected ? TEAL_BORDER : BORDER}`
+      background: options2.selected ? TEAL_DIM : CARD_BG,
+      border: `1px solid ${options2.selected ? TEAL_BORDER : BORDER}`
     });
     const name = document.createElement("span");
-    css(name, {
+    css4(name, {
       fontSize: "11.5px",
-      fontWeight: options.selected ? "600" : "500",
-      color: options.selected ? TEAL : TEXT,
+      fontWeight: options2.selected ? "600" : "500",
+      color: options2.selected ? TEAL : TEXT,
       whiteSpace: "nowrap"
     });
-    name.textContent = options.label;
-    tile.append(options.icon, name);
-    tile.addEventListener("click", options.onClick);
+    name.textContent = options2.label;
+    tile.append(options2.icon, name);
+    tile.addEventListener("click", options2.onClick);
     tile.addEventListener("mouseenter", () => {
-      if (!options.selected) css(tile, { background: "rgba(255,255,255,0.06)" });
+      if (!options2.selected) css4(tile, { background: "rgba(255,255,255,0.06)" });
     });
     tile.addEventListener("mouseleave", () => {
-      if (!options.selected) css(tile, { background: CARD_BG });
+      if (!options2.selected) css4(tile, { background: CARD_BG });
     });
     return tile;
   }
@@ -45373,7 +43768,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const tile = document.createElement("button");
     tile.type = "button";
     tile.textContent = label2;
-    css(tile, {
+    css4(tile, {
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
@@ -45393,12 +43788,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function tileRow() {
     const row2 = document.createElement("div");
-    css(row2, { display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: "5px" });
+    css4(row2, { display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: "5px" });
     return row2;
   }
-  function segmented2(options, selected, onSelect) {
+  function segmented2(options2, selected, onSelect) {
     const wrap = document.createElement("div");
-    css(wrap, {
+    css4(wrap, {
       display: "inline-flex",
       padding: "2px",
       gap: "2px",
@@ -45406,13 +43801,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       background: "rgba(0,0,0,0.22)",
       border: `1px solid ${BORDER}`
     });
-    for (const option of options) {
+    for (const option of options2) {
       const active2 = option.value === selected;
       const button3 = document.createElement("button");
       button3.type = "button";
       if (option.title) button3.title = option.title;
       button3.textContent = option.label;
-      css(button3, {
+      css4(button3, {
         padding: "4px 10px",
         borderRadius: "7px",
         border: "none",
@@ -45445,7 +43840,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/menu/plantChips.ts
   function iconHolder2(sizePx) {
     const box2 = document.createElement("div");
-    css(box2, {
+    css4(box2, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -45491,7 +43886,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const el = document.createElement("button");
     el.type = "button";
     el.title = plantItemTitle(item);
-    css(el, {
+    css4(el, {
       display: "inline-flex",
       flexDirection: "column",
       alignItems: "center",
@@ -45503,7 +43898,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       transition: "background 120ms ease, border-color 120ms ease, opacity 120ms ease"
     });
     const count = document.createElement("span");
-    css(count, { fontSize: "10px" });
+    css4(count, { fontSize: "10px" });
     el.append(plantItemIcon(item), count);
     el.addEventListener("click", onClick);
     return {
@@ -45511,12 +43906,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       update(left, selected) {
         const empty = left <= 0;
         count.textContent = String(Math.max(0, left));
-        css(el, {
+        css4(el, {
           background: selected ? TEAL_DIM : CARD_BG,
           border: `1px solid ${selected ? TEAL_BORDER : BORDER}`,
           opacity: empty && !selected ? "0.45" : "1"
         });
-        css(count, { color: selected ? TEAL : empty ? WARN : TEXT_DIM });
+        css4(count, { color: selected ? TEAL : empty ? WARN : TEXT_DIM });
       }
     };
   }
@@ -45743,7 +44138,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return head;
   }
   function buildAutoRecoSection() {
-    const card5 = section2(
+    const card4 = section2(
       "autoReco",
       "\u{1F50C}",
       "Auto reconnect",
@@ -45759,9 +44154,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     Object.assign(delayValue.style, { minWidth: "64px", justifyContent: "center" });
     const enabledToggle = switchInput(featureDisabled ? false : readAutoRecoEnabled(), (on) => {
       writeAutoRecoEnabled(on);
-      syncEnabled(on);
+      syncEnabled2(on);
     });
-    function syncEnabled(on) {
+    function syncEnabled2(on) {
       delaySlider.disabled = featureDisabled || !on;
       hint.textContent = on ? "Automatically log back in if this account is disconnected because it was opened in another session." : "Auto reconnect on session conflict is turned off.";
     }
@@ -45771,29 +44166,29 @@ Restore figures are averages; unlucky streaks do worse.`;
       delaySlider.disabled = true;
       hint.textContent = "Auto reconnect has been temporarily disabled at the request of the game developers. It will most likely come back later.";
     } else {
-      syncEnabled(readAutoRecoEnabled());
+      syncEnabled2(readAutoRecoEnabled());
     }
     const snapSeconds = (value) => Math.max(0, Math.min(AUTO_RECO_MAX_SECONDS, Math.round(value / AUTO_RECO_STEP_SECONDS) * AUTO_RECO_STEP_SECONDS));
-    const applySeconds = (raw, persist3) => {
+    const applySeconds = (raw, persist4) => {
       const seconds = snapSeconds(raw);
       delaySlider.value = String(seconds);
       delayValue.textContent = formatShortDuration(seconds);
-      if (persist3) writeAutoRecoDelayMs(seconds * 1e3);
+      if (persist4) writeAutoRecoDelayMs(seconds * 1e3);
     };
     delaySlider.addEventListener("input", () => applySeconds(Number(delaySlider.value), false));
     delaySlider.addEventListener("change", () => applySeconds(Number(delaySlider.value), true));
     const delayControl = h("div");
     Object.assign(delayControl.style, { display: "flex", alignItems: "center", gap: "10px" });
     delayControl.append(delaySlider, delayValue);
-    card5.body.append(
+    card4.body.append(
       settingRow("Enabled", "Attempts to log back in after a session conflict.", enabledToggle).row,
       settingRow("Delay", "Wait time before reconnecting.", delayControl).row,
       hint
     );
-    return card5.root;
+    return card4.root;
   }
   function buildPlayerSection() {
-    const card5 = section2(
+    const card4 = section2(
       "player",
       "\u{1F47B}",
       "Player controls",
@@ -45815,24 +44210,24 @@ Restore figures are averages; unlucky streaks do worse.`;
       delayInput.value = String(value);
       ghost.setSpeed(value);
     });
-    card5.body.append(
+    card4.body.append(
       settingRow("Ghost mode", "Ignores collisions while you move.", ghostToggle).row,
       settingRow("Move delay (ms)", "Lower values feel faster.", delayInput.wrap).row
     );
     return {
-      root: card5.root,
+      root: card4.root,
       cleanup: () => ghost.stop()
     };
   }
   function buildInventoryGuardSection() {
-    const card5 = section2(
+    const card4 = section2(
       "inventoryGuard",
       "\u{1F392}",
       "Inventory guard",
       "Keep a slot open for swaps and bulk actions."
     );
     const guardToggle = switchInput(readInventorySlotReserveEnabled(), writeInventorySlotReserveEnabled);
-    card5.body.append(
+    card4.body.append(
       settingRow(
         "Keep 1 slot free",
         "Blocks actions that would add a new inventory entry at 99/100.",
@@ -45840,10 +44235,10 @@ Restore figures are averages; unlucky streaks do worse.`;
         { icon: "sprite/ui/InventoryBag", iconTag: "misc" }
       ).row
     );
-    return card5.root;
+    return card4.root;
   }
   function buildDisplaySection(modalHost) {
-    const card5 = section2(
+    const card4 = section2(
       "display",
       "\u{1F4B0}",
       "Display",
@@ -45855,7 +44250,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       size: "sm",
       onClick: () => openGardenView(modalHost())
     });
-    card5.body.append(
+    card4.body.append(
       settingRow("Crop price", "Shows a crop's sell price in its tooltip.", priceToggle).row,
       settingRow(
         "Garden view",
@@ -45863,10 +44258,10 @@ Restore figures are averages; unlucky streaks do worse.`;
         gardenViewButton
       ).row
     );
-    return card5.root;
+    return card4.root;
   }
   function buildStorageSection() {
-    const card5 = section2(
+    const card4 = section2(
       "storage",
       "\u{1F4E6}",
       "Storage auto-store",
@@ -45894,11 +44289,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     ];
     for (const entry of rows) {
       const control = switchInput(entry.store.isEnabled(), (on) => entry.store.setEnabled(on));
-      card5.body.appendChild(
+      card4.body.appendChild(
         settingRow(entry.title, entry.hint, control, { icon: entry.icon, iconTag: "misc" }).row
       );
     }
-    return card5.root;
+    return card4.root;
   }
   async function renderMiscMenu(container) {
     const ui = new Menu({ id: "misc", compact: true });
@@ -46455,8 +44850,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       date.append(h("strong", void 0, "Created:"), ` ${new Date(entry.timestamp).toLocaleDateString()}`);
       const head = h("div", "qws-set-backup__head");
       head.append(h("div", "qws-set-backup__name", entry.name), date);
-      const actions = h("div", "qws-set-backup__actions");
-      actions.append(
+      const actions2 = h("div", "qws-set-backup__actions");
+      actions2.append(
         button("Load", { size: "sm", onClick: () => status2.show(loadBackup(entry.id)) }),
         button("Delete", {
           size: "sm",
@@ -46474,7 +44869,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         })
       );
       const row2 = h("div", "qws-set-backup");
-      row2.append(head, actions);
+      row2.append(head, actions2);
       return row2;
     };
     function refresh() {
@@ -46683,14 +45078,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return entries2;
   }
-  var RAW_BASE_URL2, isNonEmptyString, stringList;
+  var RAW_BASE_URL2, isNonEmptyString, stringList2;
   var init_repoJson = __esm({
     "src/features/tools/repoJson.ts"() {
       "use strict";
       init_http();
       RAW_BASE_URL2 = "https://raw.githubusercontent.com/Ariedam64/MG-AriesMod/refs/heads/main";
       isNonEmptyString = (value) => typeof value === "string" && value.trim().length > 0;
-      stringList = (value) => Array.isArray(value) ? value.filter((item) => typeof item === "string") : void 0;
+      stringList2 = (value) => Array.isArray(value) ? value.filter((item) => typeof item === "string") : void 0;
     }
   });
 
@@ -46713,8 +45108,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       id,
       title,
       description,
-      tags: stringList(e.tags),
-      images: stringList(e.images),
+      tags: stringList2(e.tags),
+      images: stringList2(e.images),
       icon: typeof e.icon === "string" ? e.icon : void 0,
       actions: objectList(e.actions)?.map((action2) => ({
         label: typeof action2.label === "string" ? action2.label : "Open",
@@ -46849,13 +45244,13 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/tools/listView.ts
   function createCard(tool, onSelect) {
-    const card5 = document.createElement("div");
-    card5.className = "mgt-card";
-    card5.setAttribute("role", "button");
-    card5.tabIndex = 0;
-    card5.title = tool.title;
-    card5.onclick = onSelect;
-    card5.onkeydown = (event) => {
+    const card4 = document.createElement("div");
+    card4.className = "mgt-card";
+    card4.setAttribute("role", "button");
+    card4.tabIndex = 0;
+    card4.title = tool.title;
+    card4.onclick = onSelect;
+    card4.onkeydown = (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
       onSelect();
@@ -46874,17 +45269,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     arrow.textContent = "\u2192";
     arrow.setAttribute("aria-hidden", "true");
     head.appendChild(arrow);
-    card5.appendChild(head);
+    card4.appendChild(head);
     const desc = document.createElement("p");
     desc.className = "mgt-card__desc";
     desc.textContent = markdownToPlainText(tool.description);
-    card5.appendChild(desc);
+    card4.appendChild(desc);
     if (tool.tags?.length) {
       const foot = createTagRow(tool.tags);
       foot.classList.add("mgt-card__foot");
-      card5.appendChild(foot);
+      card4.appendChild(foot);
     }
-    return card5;
+    return card4;
   }
   function renderListView(tools, onSelectTool) {
     const root = document.createElement("div");
@@ -47003,13 +45398,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       const dismiss = () => {
         if (closed) return;
         closed = true;
-        document.removeEventListener("keydown", onKeyDown);
+        document.removeEventListener("keydown", onKeyDown2);
         overlay2.remove();
       };
-      const onKeyDown = (event) => {
+      const onKeyDown2 = (event) => {
         if (event.key === "Escape") dismiss();
       };
-      document.addEventListener("keydown", onKeyDown);
+      document.addEventListener("keydown", onKeyDown2);
       const close = h("button", "mgt-nav mgt-zoom__close", "\u2715");
       close.type = "button";
       close.title = "Close";
@@ -47222,11 +45617,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     hero.appendChild(description);
     return hero;
   }
-  function createActions(actions) {
-    if (!actions?.length) return null;
+  function createActions(actions2) {
+    if (!actions2?.length) return null;
     const row2 = document.createElement("div");
     row2.className = "mgt-actions";
-    actions.forEach((action2, index) => {
+    actions2.forEach((action2, index) => {
       row2.appendChild(
         button(action2.label, {
           // The first link is the main one; the rest stay secondary.
@@ -47250,8 +45645,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (tool.images?.length) {
       root.appendChild(renderCarousel(tool.images).root);
     }
-    const actions = createActions(tool.actions);
-    if (actions) root.appendChild(actions);
+    const actions2 = createActions(tool.actions);
+    if (actions2) root.appendChild(actions2);
     return { root };
   }
   var init_detailView = __esm({
@@ -47574,11 +45969,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       state5.append(h("div", "mgt-spinner"), h("p", "mgt-state__text", "Fetching the latest tools..."));
       viewContainer.replaceChildren(state5);
     };
-    const showError = (message) => {
+    const showError = (message2) => {
       const state5 = h("div", "mgt-state");
       state5.append(
         h("span", "mgt-state__title", "Couldn't load the tools"),
-        h("p", "mgt-state__text", message),
+        h("p", "mgt-state__text", message2),
         button("Retry", { variant: "primary", onClick: () => init() })
       );
       viewContainer.replaceChildren(state5);
@@ -47674,7 +46069,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function sectionLabel3(text2) {
     const el = document.createElement("div");
-    css2(el, {
+    css5(el, {
       fontSize: "10px",
       fontWeight: "700",
       letterSpacing: "0.08em",
@@ -47685,9 +46080,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     el.textContent = text2;
     return el;
   }
-  function card3(children) {
+  function card2(children) {
     const el = document.createElement("div");
-    css2(el, {
+    css5(el, {
       padding: "14px",
       background: CARD_BG2,
       borderRadius: "12px",
@@ -47701,7 +46096,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function primaryBtn(label2, onClick) {
     const btn = document.createElement("button");
-    css2(btn, {
+    css5(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -47718,21 +46113,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "1"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css2(btn, { background: TEAL_MID, borderColor: TEAL_BRD_HI });
-    btn.onmouseleave = () => css2(btn, { background: TEAL_DIM2, borderColor: TEAL_BORDER2 });
+    btn.onmouseenter = () => css5(btn, { background: TEAL_MID, borderColor: TEAL_BRD_HI });
+    btn.onmouseleave = () => css5(btn, { background: TEAL_DIM2, borderColor: TEAL_BORDER2 });
     btn.onclick = async () => {
-      css2(btn, { opacity: "0.6", pointerEvents: "none" });
+      css5(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css2(btn, { opacity: "1", pointerEvents: "auto" });
+        css5(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
   }
   function secondaryBtn(label2, onClick) {
     const btn = document.createElement("button");
-    css2(btn, {
+    css5(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -47748,21 +46143,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "1"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css2(btn, { background: CARD_BG_HI, borderColor: BORDER_HI });
-    btn.onmouseleave = () => css2(btn, { background: CARD_BG2, borderColor: BORDER2 });
+    btn.onmouseenter = () => css5(btn, { background: CARD_BG_HI, borderColor: BORDER_HI });
+    btn.onmouseleave = () => css5(btn, { background: CARD_BG2, borderColor: BORDER2 });
     btn.onclick = async () => {
-      css2(btn, { opacity: "0.6", pointerEvents: "none" });
+      css5(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css2(btn, { opacity: "1", pointerEvents: "auto" });
+        css5(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
   }
   function dangerBtn(label2, onClick) {
     const btn = document.createElement("button");
-    css2(btn, {
+    css5(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -47778,21 +46173,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       flexShrink: "0"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css2(btn, { background: DANGER_HI, borderColor: DANGER_BRD_HI });
-    btn.onmouseleave = () => css2(btn, { background: DANGER_DIM, borderColor: DANGER_BRD });
+    btn.onmouseenter = () => css5(btn, { background: DANGER_HI, borderColor: DANGER_BRD_HI });
+    btn.onmouseleave = () => css5(btn, { background: DANGER_DIM, borderColor: DANGER_BRD });
     btn.onclick = async () => {
-      css2(btn, { opacity: "0.6", pointerEvents: "none" });
+      css5(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css2(btn, { opacity: "1", pointerEvents: "auto" });
+        css5(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
   }
   function smallBtn(label2, teal, onClick) {
     const btn = document.createElement("button");
-    css2(btn, {
+    css5(btn, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -47808,14 +46203,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       flexShrink: "0"
     });
     btn.textContent = label2;
-    btn.onmouseenter = () => css2(btn, { background: teal ? TEAL_MID : CARD_BG_HI, borderColor: teal ? TEAL_BRD_HI : BORDER_HI });
-    btn.onmouseleave = () => css2(btn, { background: teal ? TEAL_DIM2 : CARD_BG2, borderColor: teal ? TEAL_BORDER2 : BORDER2 });
+    btn.onmouseenter = () => css5(btn, { background: teal ? TEAL_MID : CARD_BG_HI, borderColor: teal ? TEAL_BRD_HI : BORDER_HI });
+    btn.onmouseleave = () => css5(btn, { background: teal ? TEAL_DIM2 : CARD_BG2, borderColor: teal ? TEAL_BORDER2 : BORDER2 });
     btn.onclick = async () => {
-      css2(btn, { opacity: "0.6", pointerEvents: "none" });
+      css5(btn, { opacity: "0.6", pointerEvents: "none" });
       try {
         await onClick();
       } finally {
-        css2(btn, { opacity: "1", pointerEvents: "auto" });
+        css5(btn, { opacity: "1", pointerEvents: "auto" });
       }
     };
     return btn;
@@ -47824,7 +46219,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const input = document.createElement("input");
     input.type = "text";
     input.placeholder = placeholder;
-    css2(input, {
+    css5(input, {
       width: "100%",
       padding: "9px 12px",
       border: `1px solid ${BORDER2}`,
@@ -47836,8 +46231,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       transition: "border-color 150ms ease",
       boxSizing: "border-box"
     });
-    input.addEventListener("focus", () => css2(input, { borderColor: TEAL_BORDER2 }));
-    input.addEventListener("blur", () => css2(input, { borderColor: BORDER2 }));
+    input.addEventListener("focus", () => css5(input, { borderColor: TEAL_BORDER2 }));
+    input.addEventListener("blur", () => css5(input, { borderColor: BORDER2 }));
     return input;
   }
   function createToggle(checked, onChange) {
@@ -47857,10 +46252,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function renderEditorMenu(container) {
     ensureStyles2();
-    css2(container, { padding: "0", overflow: "hidden" });
+    css5(container, { padding: "0", overflow: "hidden" });
     const wrap = document.createElement("div");
     wrap.className = "qws-ed-scroll";
-    css2(wrap, {
+    css5(wrap, {
       display: "flex",
       flexDirection: "column",
       gap: "12px",
@@ -47873,7 +46268,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     container.appendChild(wrap);
     const statusEl = document.createElement("div");
-    css2(statusEl, {
+    css5(statusEl, {
       fontSize: "11px",
       color: TEXT_DIM2,
       minHeight: "16px",
@@ -47890,21 +46285,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       }, 4e3);
     }
     const toggleRow = document.createElement("div");
-    css2(toggleRow, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" });
+    css5(toggleRow, { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" });
     const toggleLabel = document.createElement("div");
-    css2(toggleLabel, { fontSize: "13px", fontWeight: "600", color: TEXT2 });
+    css5(toggleLabel, { fontSize: "13px", fontWeight: "600", color: TEXT2 });
     toggleLabel.textContent = "Editor mode";
     const toggle2 = createToggle(EditorService.isEnabled(), (on) => {
       EditorService.setEnabled(on);
     });
     toggleRow.append(toggleLabel, toggle2);
     const desc = document.createElement("div");
-    css2(desc, { fontSize: "11px", color: TEXT_DIM2, lineHeight: "1.5" });
+    css5(desc, { fontSize: "11px", color: TEXT_DIM2, lineHeight: "1.5" });
     desc.textContent = "Sandbox garden with every plant and decor unlocked. Left click to place, right click to remove, drag to paint.";
-    wrap.appendChild(card3([toggleRow, desc]));
+    wrap.appendChild(card2([toggleRow, desc]));
     const nameInput = styledInput("Garden name\u2026");
     const actRow = document.createElement("div");
-    css2(actRow, { display: "flex", gap: "8px" });
+    css5(actRow, { display: "flex", gap: "8px" });
     actRow.append(
       primaryBtn("Save current garden", async () => {
         const fn = window.qwsEditorSaveGarden;
@@ -47924,10 +46319,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       })
     );
     wrap.appendChild(
-      card3([sectionLabel3("Current garden"), nameInput, actRow])
+      card2([sectionLabel3("Current garden"), nameInput, actRow])
     );
     const dropZone = document.createElement("div");
-    css2(dropZone, {
+    css5(dropZone, {
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
@@ -47944,7 +46339,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       transition: "border-color 150ms ease, background 150ms ease"
     });
     const dropTitle = document.createElement("div");
-    css2(dropTitle, { fontWeight: "600", fontSize: "12px", color: TEXT2 });
+    css5(dropTitle, { fontWeight: "600", fontSize: "12px", color: TEXT2 });
     dropTitle.textContent = "Drop a garden JSON file here";
     const dropHint = document.createElement("div");
     dropHint.textContent = "\u2026or click to browse";
@@ -47953,9 +46348,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     fileInput.type = "file";
     fileInput.accept = ".json,application/json,text/plain";
     fileInput.multiple = true;
-    css2(fileInput, { display: "none" });
+    css5(fileInput, { display: "none" });
     const setDropActive = (active2) => {
-      css2(dropZone, {
+      css5(dropZone, {
         borderColor: active2 ? TEAL_BRD_HI : BORDER_HI,
         background: active2 ? TEAL_DIM2 : "rgba(255,255,255,0.03)"
       });
@@ -48006,10 +46401,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       void importFiles(ev.dataTransfer?.files);
     });
     wrap.appendChild(
-      card3([sectionLabel3("Import"), dropZone, fileInput])
+      card2([sectionLabel3("Import"), dropZone, fileInput])
     );
     const listWrap = document.createElement("div");
-    css2(listWrap, { display: "flex", flexDirection: "column", gap: "6px" });
+    css5(listWrap, { display: "flex", flexDirection: "column", gap: "6px" });
     const renderSavedList = () => {
       const listFn = window.qwsEditorListSavedGardens;
       const loadFn = window.qwsEditorLoadGarden;
@@ -48019,7 +46414,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const items = typeof listFn === "function" ? listFn() : [];
       if (!items.length) {
         const empty = document.createElement("div");
-        css2(empty, { fontSize: "12px", color: TEXT_DIM2, padding: "4px 0" });
+        css5(empty, { fontSize: "12px", color: TEXT_DIM2, padding: "4px 0" });
         empty.textContent = "No saved gardens yet.";
         listWrap.appendChild(empty);
         return;
@@ -48027,7 +46422,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const editorOn = EditorService.isEnabled();
       for (const g of items) {
         const row2 = document.createElement("div");
-        css2(row2, {
+        css5(row2, {
           display: "flex",
           alignItems: "center",
           gap: "8px",
@@ -48037,10 +46432,10 @@ Restore figures are averages; unlucky streaks do worse.`;
           border: `1px solid ${BORDER2}`,
           transition: "border-color 120ms ease"
         });
-        row2.onmouseenter = () => css2(row2, { borderColor: BORDER_HI });
-        row2.onmouseleave = () => css2(row2, { borderColor: BORDER2 });
+        row2.onmouseenter = () => css5(row2, { borderColor: BORDER_HI });
+        row2.onmouseleave = () => css5(row2, { borderColor: BORDER2 });
         const nameEl = document.createElement("div");
-        css2(nameEl, {
+        css5(nameEl, {
           flex: "1",
           fontSize: "12px",
           fontWeight: "600",
@@ -48063,7 +46458,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         });
         loadBtn.disabled = !editorOn;
         if (!editorOn) {
-          css2(loadBtn, { opacity: "0.4", cursor: "not-allowed" });
+          css5(loadBtn, { opacity: "0.4", cursor: "not-allowed" });
           loadBtn.title = "Enable editor mode to load";
         }
         const expBtn = smallBtn("Export", false, async () => {
@@ -48092,7 +46487,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     renderSavedList();
     wrap.appendChild(
-      card3([sectionLabel3("Saved gardens"), statusEl, listWrap])
+      card2([sectionLabel3("Saved gardens"), statusEl, listWrap])
     );
     const unsubChange = EditorService.onChange((enabled5) => {
       toggle2.querySelector("input").checked = enabled5;
@@ -48110,7 +46505,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
   }
-  var STYLE_ID4, TEAL2, TEAL_DIM2, TEAL_MID, TEAL_BORDER2, TEAL_BRD_HI, BORDER2, BORDER_HI, CARD_BG2, CARD_BG_HI, TEXT2, TEXT_DIM2, DANGER2, DANGER_DIM, DANGER_BRD, DANGER_HI, DANGER_BRD_HI, css2;
+  var STYLE_ID4, TEAL2, TEAL_DIM2, TEAL_MID, TEAL_BORDER2, TEAL_BRD_HI, BORDER2, BORDER_HI, CARD_BG2, CARD_BG_HI, TEXT2, TEXT_DIM2, DANGER2, DANGER_DIM, DANGER_BRD, DANGER_HI, DANGER_BRD_HI, css5;
   var init_menu10 = __esm({
     "src/features/editor/menu.ts"() {
       "use strict";
@@ -48134,7 +46529,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       DANGER_BRD = "rgba(239,68,68,0.3)";
       DANGER_HI = "rgba(239,68,68,0.2)";
       DANGER_BRD_HI = "rgba(239,68,68,0.55)";
-      css2 = (el, s) => Object.assign(el.style, s);
+      css5 = (el, s) => Object.assign(el.style, s);
     }
   });
 
@@ -48150,200 +46545,99 @@ Restore figures are averages; unlucky streaks do worse.`;
       else delete map2[sectionId];
     });
   }
-  function createHoldControl(action2) {
-    const holdDetection = action2.holdDetection;
-    const wrap = document.createElement("div");
-    css(wrap, { display: "flex", alignItems: "center", gap: "7px", flex: "0 0 auto" });
-    const label2 = document.createElement("span");
-    css(label2, { fontSize: "11px", color: TEXT_DIM, whiteSpace: "nowrap" });
-    label2.textContent = holdDetection.label;
-    if (holdDetection.description) label2.title = holdDetection.description;
-    const control = toggle(
-      getKeybindHoldDetection(action2.id),
-      (on) => setKeybindHoldDetection(action2.id, on)
-    );
-    control.title = holdDetection.description || holdDetection.label;
-    const detach = onKeybindHoldDetectionChange(action2.id, (enabled5) => {
-      control.setChecked?.(enabled5);
+  function whileConnected(owner, subscribe5, cb) {
+    const stop2 = subscribe5((value) => {
+      if (owner.isConnected) cb(value);
+      else stop2();
     });
-    wrap.append(label2, control);
-    return { root: wrap, detach };
   }
-  function createKeybindRow(ui, action2) {
-    const row2 = document.createElement("div");
-    css(row2, {
-      display: "flex",
-      alignItems: "center",
-      gap: "10px",
-      padding: "8px 10px",
-      borderRadius: "10px",
-      background: CARD_BG,
-      border: `1px solid ${BORDER}`,
-      flexShrink: "0"
+  function holdControl(action2) {
+    const hold = action2.holdDetection;
+    const wrap = h("div", "qmm-flex");
+    wrap.style.flexWrap = "nowrap";
+    const label2 = h("span", "qmm-setting-row__hint", hold.label);
+    label2.style.whiteSpace = "nowrap";
+    if (hold.description) label2.title = hold.description;
+    const toggle2 = switchInput(getKeybindHoldDetection(action2.id), (on) => setKeybindHoldDetection(action2.id, on));
+    toggle2.title = hold.description || hold.label;
+    whileConnected(wrap, (cb) => onKeybindHoldDetectionChange(action2.id, cb), (on) => toggle2.setChecked(on));
+    wrap.append(label2, toggle2);
+    return wrap;
+  }
+  function keybindRow(action2) {
+    const keyButton = hotkeyButton(getKeybind(action2.id), (hk) => setKeybind(action2.id, hk), {
+      emptyLabel: "Unassigned",
+      listeningLabel: "Press a key",
+      clearable: true,
+      allowModifierOnly: action2.allowModifierOnly
     });
-    if (action2.icon) {
-      row2.appendChild(iconBox(action2.icon, ICON_BOX_PX, "keybinds"));
-    }
-    const labelCol = document.createElement("div");
-    css(labelCol, { display: "flex", flexDirection: "column", gap: "2px", flex: "1 1 auto", minWidth: "0" });
-    const name = document.createElement("div");
-    css(name, { fontSize: "12px", color: TEXT, overflow: "hidden", textOverflow: "ellipsis" });
-    name.textContent = action2.label;
-    labelCol.appendChild(name);
-    if (action2.hint) {
-      const hint = document.createElement("div");
-      css(hint, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.4" });
-      hint.textContent = action2.hint;
-      labelCol.appendChild(hint);
-    }
-    const controls = document.createElement("div");
-    css(controls, { display: "flex", alignItems: "center", gap: "8px", flex: "0 0 auto" });
-    const hotkeyButton2 = ui.hotkeyButton(
-      getKeybind(action2.id),
-      (hk) => setKeybind(action2.id, hk),
-      {
-        emptyLabel: "Unassigned",
-        listeningLabel: "Press a key",
-        clearable: true,
-        allowModifierOnly: action2.allowModifierOnly
-      }
-    );
-    css(hotkeyButton2, { flexShrink: "0" });
-    let detachHold = null;
-    if (action2.holdDetection) {
-      const hold = createHoldControl(action2);
-      detachHold = hold.detach;
-      controls.appendChild(hold.root);
-    }
-    controls.appendChild(hotkeyButton2);
-    const clearBtn = action2.sectionId === "game" && !action2.allowClear ? null : button2("\u2715", "danger", () => {
-      setKeybind(action2.id, null);
-      const refreshed = getKeybind(action2.id);
-      hotkeyButton2.refreshHotkey(refreshed);
-      updateButtons2(refreshed);
+    keyButton.style.flexShrink = "0";
+    const { row: row2, controls } = settingRow(action2.label, action2.hint ?? null, keyButton, {
+      icon: action2.icon,
+      iconTag: "keybinds"
     });
-    if (clearBtn) {
-      clearBtn.title = "Remove this shortcut";
-      controls.appendChild(clearBtn);
-    }
-    const defaultHotkey = getDefaultKeybind(action2.id);
-    const defaultString = hotkeyToString(defaultHotkey);
-    const resetBtn = defaultHotkey ? button2("\u27F2", "neutral", () => {
-      resetKeybind(action2.id);
-      const refreshed = getKeybind(action2.id);
-      hotkeyButton2.refreshHotkey(refreshed);
-      updateButtons2(refreshed);
-    }) : null;
-    if (resetBtn) {
-      resetBtn.title = "Restore default shortcut";
-      controls.appendChild(resetBtn);
-    }
-    function setEnabled(btn, enabled5) {
-      if (btn) setButtonEnabled2(btn, enabled5);
-    }
-    function updateButtons2(current) {
-      setEnabled(clearBtn, hotkeyToString(current).length > 0);
-      setEnabled(resetBtn, hotkeyToString(current) !== defaultString);
-    }
-    updateButtons2(getKeybind(action2.id));
-    const stop2 = onKeybindChange(action2.id, (hk) => {
-      hotkeyButton2.refreshHotkey(hk);
-      updateButtons2(hk);
+    if (action2.holdDetection) controls.insertBefore(holdControl(action2), keyButton);
+    const defaultString = hotkeyToString(getDefaultKeybind(action2.id));
+    const refresh = (hk) => {
+      keyButton.refreshHotkey(hk);
+      clearButton?.setEnabled(hotkeyToString(hk).length > 0);
+      resetButton?.setEnabled(hotkeyToString(hk) !== defaultString);
+    };
+    const clearButton = action2.sectionId === "game" && !action2.allowClear ? null : button("\u2715", {
+      variant: "danger",
+      size: "sm",
+      title: "Remove this shortcut",
+      onClick: () => setKeybind(action2.id, null)
     });
-    ui.on("unmounted", stop2);
-    if (detachHold) ui.on("unmounted", detachHold);
-    row2.append(labelCol, controls);
+    if (clearButton) controls.appendChild(clearButton);
+    const resetButton = defaultString ? button("\u27F2", { size: "sm", title: "Restore default shortcut", onClick: () => resetKeybind(action2.id) }) : null;
+    if (resetButton) controls.appendChild(resetButton);
+    refresh(getKeybind(action2.id));
+    whileConnected(row2, (cb) => onKeybindChange(action2.id, cb), refresh);
     return row2;
   }
-  async function renderKeybindsMenu(container) {
-    ensurePanelStyles();
+  function renderKeybindsMenu(container) {
     const ui = new Menu({ id: "keybinds", compact: true });
     ui.mount(container);
     const root = ui.root.querySelector(".qmm-views") ?? ui.root;
-    root.innerHTML = "";
-    root.classList.add("qws-pnl-root");
-    css(root, {
+    root.replaceChildren();
+    Object.assign(root.style, {
       display: "flex",
       flexDirection: "column",
       gap: "12px",
       width: "620px",
       maxWidth: "100%",
-      // A definite height, not 100%: the HUD window is itself a scroller and has
-      // no fixed height, so `height:100%` would collapse onto the content and
-      // hand the scrollbar back to the whole window.
+      // A definite height, not 100%: the HUD window scrolls itself and has no
+      // fixed height, so 100% would collapse onto the content.
       height: "min(70vh, 600px)",
       overflowY: "auto",
       boxSizing: "border-box"
     });
     for (const section4 of getKeybindSections()) {
-      const sectionCard = card2();
-      sectionCard.dataset.section = section4.id;
-      css(sectionCard, { flexShrink: "0", minHeight: "auto" });
-      const head = document.createElement("button");
-      head.type = "button";
-      css(head, {
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        padding: "0",
-        border: "none",
-        background: "none",
-        cursor: "pointer",
-        textAlign: "left",
-        font: "inherit",
-        color: "inherit"
+      const card4 = collapsibleCard({
+        icon: section4.icon,
+        title: section4.title,
+        description: section4.description,
+        collapsed: isSectionCollapsed2(section4.id),
+        onToggle: (collapsed) => setSectionCollapsed2(section4.id, collapsed)
       });
-      const chevron = document.createElement("span");
-      css(chevron, {
-        color: TEXT_DIM,
-        fontSize: "10px",
-        transition: "transform 140ms ease",
-        flex: "0 0 auto",
-        marginLeft: "auto"
-      });
-      chevron.textContent = "\u25B6";
-      const titles = document.createElement("div");
-      css(titles, { display: "flex", flexDirection: "column", gap: "3px", minWidth: "0", flex: "1 1 auto" });
-      titles.appendChild(sectionLabel2(`${section4.icon} ${section4.title}`));
-      if (section4.description) {
-        const desc = document.createElement("div");
-        css(desc, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
-        desc.textContent = section4.description;
-        titles.appendChild(desc);
-      }
-      head.append(titles, chevron);
-      sectionCard.appendChild(head);
-      const body = document.createElement("div");
-      css(body, { display: "flex", flexDirection: "column", gap: "8px" });
-      for (const action2 of section4.actions) {
-        body.appendChild(createKeybindRow(ui, action2));
-      }
-      sectionCard.appendChild(body);
-      let collapsed = isSectionCollapsed2(section4.id);
-      const applyCollapsed = () => {
-        body.style.display = collapsed ? "none" : "flex";
-        chevron.style.transform = collapsed ? "rotate(0deg)" : "rotate(90deg)";
-        head.setAttribute("aria-expanded", collapsed ? "false" : "true");
-      };
-      applyCollapsed();
-      head.addEventListener("click", () => {
-        collapsed = !collapsed;
-        applyCollapsed();
-        setSectionCollapsed2(section4.id, collapsed);
-      });
-      root.appendChild(sectionCard);
+      card4.root.dataset.section = section4.id;
+      for (const action2 of section4.actions) card4.body.appendChild(keybindRow(action2));
+      root.appendChild(card4.root);
     }
   }
-  var ICON_BOX_PX;
   var init_menu11 = __esm({
     "src/features/keybinds/menu.ts"() {
       "use strict";
-      init_menu();
       init_hotkey();
       init_storage();
-      init_panel();
+      init_button();
+      init_dom2();
+      init_hotkey2();
+      init_layout();
+      init_menu();
+      init_toggles();
       init_keybinds();
-      ICON_BOX_PX = 26;
     }
   });
 
@@ -48458,8 +46752,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return stats && typeof stats === "object" ? stats : null;
   }
   function activityLogsOfSlot(slot) {
-    const logs = slot?.data?.activityLogs ?? slot?.activityLogs;
-    return Array.isArray(logs) ? logs : null;
+    const logs2 = slot?.data?.activityLogs ?? slot?.activityLogs;
+    return Array.isArray(logs2) ? logs2 : null;
   }
   function gardenOfSlot(slot) {
     const g = slot?.data?.garden ?? slot?.garden;
@@ -48676,13 +46970,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function openActivityLog(playerId2, playerName2) {
     try {
-      const logs = activityLogsOfSlot(await playerSlot(playerId2));
-      if (!logs || logs.length === 0) {
+      const logs2 = activityLogsOfSlot(await playerSlot(playerId2));
+      if (!logs2 || logs2.length === 0) {
         await toastSimple("Activity log", "No activity logs for this player.", "info");
         return;
       }
       skipNextActivityLogHistoryReopen();
-      await fakeActivityLog.show(logs, { open: true });
+      await fakeActivityLog.show(logs2, { open: true });
       if (playerName2) await toastSimple("Activity log", `${playerName2}'s activity log displayed.`, "info");
     } catch (error) {
       await toastSimple("Activity log", errorText2(error, "Failed to open activity log."), "error");
@@ -48796,12 +47090,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     return btn;
   }
   function valueCard(label2) {
-    const card5 = plainCard();
-    Object.assign(card5.style, { flex: "1", gap: "4px", padding: "11px 14px" });
+    const card4 = plainCard();
+    Object.assign(card4.style, { flex: "1", gap: "4px", padding: "11px 14px" });
     const value = h("div", void 0, "\u2026");
     Object.assign(value.style, { fontSize: "15px", fontWeight: "700", color: color.gold });
-    card5.append(sectionLabel(label2), value);
-    return { card: card5, value };
+    card4.append(sectionLabel(label2), value);
+    return { card: card4, value };
   }
   function emptyDetail() {
     const hint = h("div");
@@ -49847,12 +48141,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       try {
         const source = await renderFramePreview(target, blob);
         if (!source || !host.isConnected) return;
-        const copy2 = document.createElement("canvas");
-        copy2.width = source.width;
-        copy2.height = source.height;
-        copy2.getContext("2d")?.drawImage(source, 0, 0);
+        const copy3 = document.createElement("canvas");
+        copy3.width = source.width;
+        copy3.height = source.height;
+        copy3.getContext("2d")?.drawImage(source, 0, 0);
         host.textContent = "";
-        host.appendChild(fit(copy2, box2));
+        host.appendChild(fit(copy3, box2));
       } catch {
       }
     };
@@ -49913,11 +48207,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const dims = h("div", "qws-skins-slot__dims", `${target.logicalSize.w}\xD7${target.logicalSize.h}`);
     dims.title = "Ideal image size for this slot";
-    const actions = h("div", "qws-skins-slot__actions");
+    const actions2 = h("div", "qws-skins-slot__actions");
     if (!target.skinnable) {
-      actions.appendChild(badge(target.blockedReason || "Unavailable", "warn"));
+      actions2.appendChild(badge(target.blockedReason || "Unavailable", "warn"));
     } else {
-      actions.appendChild(
+      actions2.appendChild(
         button(entry ? "Replace" : "Set", {
           variant: entry ? "default" : "primary",
           size: "sm",
@@ -49935,7 +48229,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         })
       );
       if (entry) {
-        actions.appendChild(
+        actions2.appendChild(
           button("\u2715", {
             variant: "danger",
             size: "sm",
@@ -49960,13 +48254,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       after,
       dims,
       h("div", "qws-skins-slot__spacer"),
-      actions
+      actions2
     );
     row2.append(head, body);
     return row2;
   }
-  function buildDetail(options) {
-    const { object, entries: entries2, results, onError, onChanged } = options;
+  function buildDetail(options2) {
+    const { object, entries: entries2, results, onError, onChanged } = options2;
     const host = h("div", "qws-skins-detail");
     if (!object) {
       host.appendChild(h("div", "qws-skins-detail__empty", "Pick a sprite"));
@@ -50141,8 +48435,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     errorEl.hidden = true;
     const detailHost = h("div", "qws-skins__detail-host");
     detail.append(errorEl, detailHost);
-    const showError = (message) => {
-      errorEl.textContent = message;
+    const showError = (message2) => {
+      errorEl.textContent = message2;
       errorEl.hidden = false;
     };
     const renderCategories = (objects) => {
@@ -50499,9 +48793,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function ensureTickAtom() {
     if (tickAtom) return tickAtom;
-    const cache2 = pageWindow.jotaiAtomCache;
-    if (!cache2 || typeof cache2.get !== "function") return null;
-    tickAtom = cache2.get(CACHE_KEY, createTickAtom());
+    const cache3 = pageWindow.jotaiAtomCache;
+    if (!cache3 || typeof cache3.get !== "function") return null;
+    tickAtom = cache3.get(CACHE_KEY, createTickAtom());
     return tickAtom;
   }
   function isTickAvailable() {
@@ -50671,8 +48965,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/reactions.ts
-  function pickOne(options, random) {
-    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
+  function pickOne(options2, random) {
+    return options2[Math.min(options2.length - 1, Math.floor(random() * options2.length))];
   }
   function crossedMilestone(prev, next) {
     if (!Number.isFinite(prev) || !Number.isFinite(next) || next <= prev) return null;
@@ -50816,8 +49110,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   function rareCropReaction(crops, random) {
     if (crops.length === 0) return null;
     const first = crops[0];
-    const message = crops.length === 1 ? pickOne([`A ${first.mutation} ${first.species}! Look at that!`, `Whoa, a ${first.mutation} ${first.species} just showed up!`, `${first.mutation}! Your ${first.species} is special.`], random) : pickOne([`${crops.length} rare crops just appeared! Look!`, `Whoa, ${crops.length} special crops at once!`], random);
-    return { key: "rarecrop", message, emote: EmoteType.Love, priority: "high" };
+    const message2 = crops.length === 1 ? pickOne([`A ${first.mutation} ${first.species}! Look at that!`, `Whoa, a ${first.mutation} ${first.species} just showed up!`, `${first.mutation}! Your ${first.species} is special.`], random) : pickOne([`${crops.length} rare crops just appeared! Look!`, `Whoa, ${crops.length} special crops at once!`], random);
+    return { key: "rarecrop", message: message2, emote: EmoteType.Love, priority: "high" };
   }
   function badLuckReactions(prev, next, eggName3, random) {
     const out = [];
@@ -51292,12 +49586,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return count;
   }
-  function pickOne2(options, random) {
-    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
+  function pickOne2(options2, random) {
+    return options2[Math.min(options2.length - 1, Math.floor(random() * options2.length))];
   }
   function harvestMessage(ready, random) {
-    const crops = `${ready} ${plural(ready, "crop", "crops")}`;
-    const isAre = plural(ready, "is", "are");
+    const crops = `${ready} ${plural2(ready, "crop", "crops")}`;
+    const isAre = plural2(ready, "is", "are");
     return pickOne2(
       [
         `${crops} ${isAre} ready to harvest, by the way.`,
@@ -51311,8 +49605,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     );
   }
   function hungryPetMessage(hungry, random) {
-    const pets = `${hungry} ${plural(hungry, "pet", "pets")}`;
-    const isAre = plural(hungry, "is", "are");
+    const pets = `${hungry} ${plural2(hungry, "pet", "pets")}`;
+    const isAre = plural2(hungry, "is", "are");
     return pickOne2(
       [
         `${pets} ${isAre} getting hungry.`,
@@ -51350,7 +49644,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (own && own.length > 0) return pickOne2(own, random);
     return pickOne2(GENERIC_WEATHER_TEMPLATES, random)(displayName);
   }
-  var LEGACY_DEFAULT_LINES, DEFAULT_CUSTOM_LINES, LINE_EMOTES, POKE_WINDOW_MS, POKE_THRESHOLD, plural, WEATHER_LINES, GENERIC_WEATHER_TEMPLATES;
+  var LEGACY_DEFAULT_LINES, DEFAULT_CUSTOM_LINES, LINE_EMOTES, POKE_WINDOW_MS, POKE_THRESHOLD, plural2, WEATHER_LINES, GENERIC_WEATHER_TEMPLATES;
   var init_dialogueLines = __esm({
     "src/features/companion/dialogueLines.ts"() {
       "use strict";
@@ -51432,7 +49726,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       };
       POKE_WINDOW_MS = 1e4;
       POKE_THRESHOLD = 5;
-      plural = (count, singular, pluralForm) => count === 1 ? singular : pluralForm;
+      plural2 = (count, singular, pluralForm) => count === 1 ? singular : pluralForm;
       WEATHER_LINES = {
         Rain: [
           "It's raining! The crops are loving this.",
@@ -51659,10 +49953,10 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/state.ts
   function loadCompanionSettings() {
-    return coerceSettings(readAriesPath(STORAGE_PATH, void 0));
+    return coerceSettings(readAriesPath(STORAGE_PATH3, void 0));
   }
   function saveCompanionSettings(settings) {
-    writeAriesPath(STORAGE_PATH, settings);
+    writeAriesPath(STORAGE_PATH3, settings);
   }
   function patchCompanionSettings(patch) {
     saveCompanionSettings({ ...loadCompanionSettings(), ...patch });
@@ -51676,14 +49970,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (current.includes(group2)) return;
     patchCompanionSettings({ reviewedSettings: [...current, group2] });
   }
-  var STORAGE_PATH;
+  var STORAGE_PATH3;
   var init_state3 = __esm({
     "src/features/companion/state.ts"() {
       "use strict";
       init_storage();
       init_settingsShape();
       init_settingsShape();
-      STORAGE_PATH = "companion";
+      STORAGE_PATH3 = "companion";
     }
   });
 
@@ -51879,10 +50173,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function writeEntries(entries2) {
     const payload = { entries: entries2 };
     try {
-      if (!installed2) {
+      if (!installed4) {
         ensureTickAtom();
         await fakeShow(EMOTE_PATCH, payload);
-        installed2 = true;
+        installed4 = true;
       } else {
         await fakeUpdate(EMOTE_SOURCE_LABEL, payload);
       }
@@ -51893,7 +50187,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   }
   async function rest() {
-    if (!installed2) return;
+    if (!installed4) return;
     await writeEntries([]);
   }
   function cancelPending() {
@@ -51946,15 +50240,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     cancelStart();
     cancelPending();
     posing = null;
-    if (!installed2) return;
+    if (!installed4) return;
     try {
       await fakeHide(EMOTE_SOURCE_LABEL);
       await bumpTick();
     } catch {
     }
-    installed2 = false;
+    installed4 = false;
   }
-  var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed2, releaseTimer, posing, startTimer, lastSpokeAt;
+  var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed4, releaseTimer, posing, startTimer, lastSpokeAt;
   var init_emote = __esm({
     "src/features/companion/emote.ts"() {
       "use strict";
@@ -51971,7 +50265,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         merge: (real, fake) => mergeEmoteSource(real, fake)
       };
       EMOTE_DURATION_MS = 1500;
-      installed2 = false;
+      installed4 = false;
       releaseTimer = null;
       posing = null;
       startTimer = null;
@@ -52229,7 +50523,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     startTimer2(rt);
     return true;
   }
-  var CHAT_BUBBLE_MIN_INTERVAL_MS, RENDER_WAIT_TIMEOUT_MS, CONTEXTUAL_REFRESH_MS, npcChatBubbles, npcQuinoaUsers2, runtime, starting, wanderHooks, WALK_TIMEOUT_MS, ARRIVAL_POLL_MS, NEARBY_DISTANCE, STILL_POLL_MS, STILL_TIMEOUT_MS, stillToken, CompanionService;
+  var CHAT_BUBBLE_MIN_INTERVAL_MS, RENDER_WAIT_TIMEOUT_MS, CONTEXTUAL_REFRESH_MS, npcChatBubbles, npcQuinoaUsers2, runtime, starting2, wanderHooks, WALK_TIMEOUT_MS, ARRIVAL_POLL_MS, NEARBY_DISTANCE, STILL_POLL_MS, STILL_TIMEOUT_MS, stillToken, CompanionService;
   var init_companion = __esm({
     "src/features/companion/index.ts"() {
       "use strict";
@@ -52254,7 +50548,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       npcChatBubbles = makeAtom("npcChatBubblesAtom");
       npcQuinoaUsers2 = makeAtom("npcQuinoaUsersAtom");
       runtime = null;
-      starting = null;
+      starting2 = null;
       wanderHooks = null;
       WALK_TIMEOUT_MS = 5e3;
       ARRIVAL_POLL_MS = 50;
@@ -52434,12 +50728,12 @@ Restore figures are averages; unlucky streaks do worse.`;
         /** Démarre le companion. Idempotent, y compris sur appels concurrents. */
         async start() {
           if (runtime) return true;
-          if (!starting) {
-            starting = startInternal().finally(() => {
-              starting = null;
+          if (!starting2) {
+            starting2 = startInternal().finally(() => {
+              starting2 = null;
             });
           }
-          return starting;
+          return starting2;
         },
         /** Arrête tout et restaure l'atom du jeu. Sûr à appeler plusieurs fois. */
         async stop() {
@@ -52510,9 +50804,9 @@ Restore figures are averages; unlucky streaks do worse.`;
          * annonce venant juste après le message qui l'a déclenchée se faisait jeter,
          * et le companion restait muet au moment précis où il avait à parler.
          */
-        async say(message, opts = {}) {
+        async say(message2, opts = {}) {
           const rt = runtime;
-          if (!rt || !message.trim()) return;
+          if (!rt || !message2.trim()) return;
           const now2 = Date.now();
           if (!opts.force && now2 - rt.lastBubbleAt < CHAT_BUBBLE_MIN_INTERVAL_MS) return;
           rt.lastBubbleAt = now2;
@@ -52521,7 +50815,7 @@ Restore figures are averages; unlucky streaks do worse.`;
             await npcChatBubbles.set({
               // Marqué comme écrit par le mod : sans ça, l'interception réécrirait
               // notre propre message avec une réplique tirée au hasard.
-              [rt.npcId]: { seq: 0, playerId: rt.npcId, message, timestamp: now2, ...tagged, [AUTHORED_BY_MOD]: true }
+              [rt.npcId]: { seq: 0, playerId: rt.npcId, message: message2, timestamp: now2, ...tagged, [AUTHORED_BY_MOD]: true }
             });
           } catch {
           }
@@ -52562,23 +50856,23 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/chat/bubbleTags.ts
   function compose(...fragments) {
     const tags = {};
-    let message = "";
+    let message2 = "";
     let next = 0;
     for (const fragment of fragments) {
       if (fragment === null || fragment === void 0) continue;
       if (typeof fragment === "string") {
-        message += fragment;
+        message2 += fragment;
         continue;
       }
       tags[next] = fragment;
-      message += `<${next}/>`;
+      message2 += `<${next}/>`;
       next += 1;
     }
-    const tidy = tidySpacing(message);
+    const tidy = tidySpacing(message2);
     return next === 0 ? { message: tidy } : { message: tidy, tags };
   }
-  function tidySpacing(message) {
-    return message.replace(/[ \t]{2,}/g, " ").replace(/\s+([.,!?])/g, "$1").trim();
+  function tidySpacing(message2) {
+    return message2.replace(/[ \t]{2,}/g, " ").replace(/\s+([.,!?])/g, "$1").trim();
   }
   function spaced(tags) {
     return tags.flatMap((tag, index) => index === 0 ? [tag] : [" ", tag]);
@@ -52595,10 +50889,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       else kept[Number(index)] = tag;
     }
     if (dropped.size === 0) return line;
-    const message = tidySpacing(
+    const message2 = tidySpacing(
       line.message.replace(/<(\d+)\/>/g, (marker, index) => dropped.has(Number(index)) ? "" : marker)
     );
-    return Object.keys(kept).length > 0 ? { message, tags: kept } : { message };
+    return Object.keys(kept).length > 0 ? { message: message2, tags: kept } : { message: message2 };
   }
   var init_bubbleTags = __esm({
     "src/features/companion/chat/bubbleTags.ts"() {
@@ -52678,16 +50972,16 @@ Restore figures are averages; unlucky streaks do worse.`;
   function emptyLog() {
     return { messages: [], nextSeq: 1 };
   }
-  function append(log2, message) {
+  function append(log2, message2) {
     const entry = {
       id: `m${log2.nextSeq}`,
-      atMs: message.atMs,
-      from: message.from,
-      kind: message.kind,
-      text: message.text,
-      ...message.proposalId ? { proposalId: message.proposalId } : {},
-      ...message.icons && message.icons.length > 0 ? { icons: message.icons } : {},
-      ...message.positioned ? { positioned: true } : {}
+      atMs: message2.atMs,
+      from: message2.from,
+      kind: message2.kind,
+      text: message2.text,
+      ...message2.proposalId ? { proposalId: message2.proposalId } : {},
+      ...message2.icons && message2.icons.length > 0 ? { icons: message2.icons } : {},
+      ...message2.positioned ? { positioned: true } : {}
     };
     const messages = [...log2.messages, entry];
     return {
@@ -52695,12 +50989,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       nextSeq: log2.nextSeq + 1
     };
   }
-  function appendAlertOnce(log2, message, withinMs) {
-    const cutoff = message.atMs - withinMs;
+  function appendAlertOnce(log2, message2, withinMs) {
+    const cutoff = message2.atMs - withinMs;
     const duplicate = log2.messages.some(
-      (entry) => entry.kind === "alert" && entry.text === message.text && entry.atMs >= cutoff
+      (entry) => entry.kind === "alert" && entry.text === message2.text && entry.atMs >= cutoff
     );
-    return duplicate ? log2 : append(log2, message);
+    return duplicate ? log2 : append(log2, message2);
   }
   function clearProposal(log2, proposalId) {
     let changed = false;
@@ -53138,7 +51432,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const opening = `On it. Picking ${rows.length} now.`;
     reporter2.say("reply", opening, compose(topCrop(rows), " ", opening));
     const team = await wearTeam(loadCompanionSettings().harvestTeamId, reporter2);
-    const walker = await createWalker((message) => reporter2.say("system", message));
+    const walker = await createWalker((message2) => reporter2.say("system", message2));
     const attempted = [];
     const pace = pacer();
     for (const row2 of rows) {
@@ -53395,7 +51689,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const who = petIcons(picks);
     const opening = picks.length === 1 ? "On it." : `On it. Feeding ${picks.length} of them.`;
     reporter2.say("reply", opening, compose(...spaced(who), " ", opening));
-    const walker = await createWalker((message) => reporter2.say("system", message));
+    const walker = await createWalker((message2) => reporter2.say("system", message2));
     const fed = [];
     const failures = [];
     for (const pick2 of picks) {
@@ -53444,7 +51738,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const most = countByItem(plan)[0];
     return most?.kind === "seed" ? seedIcon(most.id) : null;
   }
-  async function send(assignment) {
+  async function send2(assignment) {
     if (assignment.kind === "egg") {
       await PlayerService.plantEgg(assignment.tileIndex, assignment.id);
       return;
@@ -53493,7 +51787,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const what = countByItem(plan);
     const opening = what.length === 1 ? `On it. Planting ${plan.length} ${what[0].name} now.` : `On it. Planting ${listPlantItems(plan)} now.`;
     reporter2.say("reply", opening, compose(topSeed(plan), " ", opening));
-    const walker = await createWalker((message) => reporter2.say("system", message));
+    const walker = await createWalker((message2) => reporter2.say("system", message2));
     const attempted = [];
     const pace = pacer();
     for (const assignment of plan) {
@@ -53501,7 +51795,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       await walker.toGardenTile(assignment.tileIndex);
       await pace.wait();
       attempted.push(assignment);
-      await send(assignment);
+      await send2(assignment);
       pace.mark();
       const done = attempted.length;
       reporter2.progress(done, plan.length);
@@ -53739,7 +52033,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     reporter2.say("reply", opening, compose(kinds.length === 1 ? eggIcon(kinds[0]) : null, " ", opening));
     const settings = loadCompanionSettings();
     const team = await wearTeam(settings.hatchTeamId, reporter2);
-    const walker = await createWalker((message) => reporter2.say("system", message));
+    const walker = await createWalker((message2) => reporter2.say("system", message2));
     const attempted = [];
     let count = await readInventoryCount();
     let stop2 = "done";
@@ -53811,7 +52105,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         )
       );
     }
-    const walker = await createWalker((message) => reporter2.say("system", message));
+    const walker = await createWalker((message2) => reporter2.say("system", message2));
     await goToSellShop(walker, reporter2);
     const team = await wearTeam(plan.teamId, reporter2);
     let nowOnTeam = /* @__PURE__ */ new Set();
@@ -53963,7 +52257,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/chat/index.ts
   function notify2() {
-    for (const listener of [...listeners7]) {
+    for (const listener of [...listeners5]) {
       try {
         listener();
       } catch {
@@ -53999,8 +52293,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function speak(line, force = false) {
     const spoken = forGame(line);
-    const message = !spoken.tags && spoken.message.length > MAX_LINE_LENGTH ? `${spoken.message.slice(0, MAX_LINE_LENGTH - 1).trimEnd()}\u2026` : spoken.message;
-    void CompanionService.say(message, { tags: spoken.tags, force }).catch(() => {
+    const message2 = !spoken.tags && spoken.message.length > MAX_LINE_LENGTH ? `${spoken.message.slice(0, MAX_LINE_LENGTH - 1).trimEnd()}\u2026` : spoken.message;
+    void CompanionService.say(message2, { tags: spoken.tags, force }).catch(() => {
     });
   }
   function dropStaleProposal() {
@@ -54204,7 +52498,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (captured.kind === "sell") return captured.plan.sell.length;
     return captured.picks.length;
   }
-  var ALERT_DEDUPE_MS, state2, listeners7, nextProposalSeq, ACCEPTANCE, CompanionChat;
+  var ALERT_DEDUPE_MS, state2, listeners5, nextProposalSeq, ACCEPTANCE, CompanionChat;
   var init_chat = __esm({
     "src/features/companion/chat/index.ts"() {
       "use strict";
@@ -54237,7 +52531,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         run: null,
         cancelRequested: false
       };
-      listeners7 = /* @__PURE__ */ new Set();
+      listeners5 = /* @__PURE__ */ new Set();
       nextProposalSeq = 1;
       ACCEPTANCE = {
         harvest: "Yes, go ahead",
@@ -54299,8 +52593,8 @@ Restore figures are averages; unlucky streaks do worse.`;
           return state2.run !== null;
         },
         subscribe(listener) {
-          listeners7.add(listener);
-          return () => listeners7.delete(listener);
+          listeners5.add(listener);
+          return () => listeners5.delete(listener);
         },
         /** Alerte poussée par une source ; ignorée si identique et récente. */
         alert(text2) {
@@ -54509,7 +52803,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     view.innerHTML = "";
     const settings = CompanionService.getSettings();
     let disposed = false;
-    const card5 = collapsibleCard({
+    const card4 = collapsibleCard({
       icon: "\u{1F9ED}",
       title: "Behavior",
       description: "Is he out, and where he stays.",
@@ -54555,7 +52849,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       npcSelect.append(new Option("Unavailable", ""));
     });
     const status2 = document.createElement("div");
-    css(status2, { fontSize: "12px", color: TEXT_DIM, padding: "2px 2px 0" });
+    css4(status2, { fontSize: "12px", color: TEXT_DIM, padding: "2px 2px 0" });
     function refresh() {
       if (disposed) return;
       if (!CompanionService.isRunning()) {
@@ -54575,7 +52869,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const reactionsToggle = toggle(settings.reactions, (on) => {
       void CompanionService.applySettings({ reactions: on });
     });
-    card5.body.append(
+    card4.body.append(
       settingRow("Enable", "Brings him out next to you.", enableToggle).row,
       settingRow("Mode", "Follows you, or stays on your plot.", modeSelect).row,
       settingRow("Borrowed NPC", 'Whose look it takes. "In game" means already spawned.', npcSelect).row,
@@ -54585,7 +52879,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     );
     refresh();
     const timer2 = window.setInterval(refresh, STATUS_REFRESH_MS);
-    view.append(card5.root);
+    view.append(card4.root);
     view.__cleanup__ = () => {
       disposed = true;
       clearInterval(timer2);
@@ -54776,7 +53070,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function holder(sizePx) {
     const box2 = document.createElement("span");
-    css(box2, {
+    css4(box2, {
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
@@ -54848,8 +53142,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     label2.textContent = text2;
     return [...tagIcons(icons, sizePx), label2];
   }
-  function isCentered(message) {
-    return message.kind === "system";
+  function isCentered(message2) {
+    return message2.kind === "system";
   }
   function isSameGroup(previous, current) {
     if (isCentered(previous) || isCentered(current)) return false;
@@ -54880,14 +53174,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function dateSeparator(label2) {
     const wrap = document.createElement("div");
-    css(wrap, { display: "flex", alignItems: "center", gap: "10px", margin: "10px 0 6px" });
+    css4(wrap, { display: "flex", alignItems: "center", gap: "10px", margin: "10px 0 6px" });
     const line = () => {
       const el = document.createElement("div");
-      css(el, { flex: "1", height: "1px", background: BORDER });
+      css4(el, { flex: "1", height: "1px", background: BORDER });
       return el;
     };
     const text2 = document.createElement("div");
-    css(text2, {
+    css4(text2, {
       fontSize: "10px",
       fontWeight: "600",
       color: TEXT_DIM,
@@ -54901,7 +53195,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function systemLine(text2, icons, positioned2 = false) {
     const line = document.createElement("div");
-    css(line, {
+    css4(line, {
       alignSelf: "center",
       fontSize: "11px",
       color: TEXT_DIM,
@@ -54914,7 +53208,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function avatar2(identity, sizePx = AVATAR_PX) {
     const el = document.createElement("div");
-    css(el, {
+    css4(el, {
       width: `${sizePx}px`,
       height: `${sizePx}px`,
       flexShrink: "0",
@@ -54935,15 +53229,15 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function spacer() {
     const el = document.createElement("div");
-    css(el, { width: `${AVATAR_PX}px`, flexShrink: "0" });
+    css4(el, { width: `${AVATAR_PX}px`, flexShrink: "0" });
     return el;
   }
-  function messageRow(message, flags, identity = null) {
-    if (isCentered(message)) return systemLine(message.text, message.icons, message.positioned);
-    const outgoing = message.from === "you";
-    const alerting = message.kind === "alert";
+  function messageRow(message2, flags, identity = null) {
+    if (isCentered(message2)) return systemLine(message2.text, message2.icons, message2.positioned);
+    const outgoing = message2.from === "you";
+    const alerting = message2.kind === "alert";
     const row2 = document.createElement("div");
-    css(row2, {
+    css4(row2, {
       display: "flex",
       gap: "8px",
       alignItems: "flex-end",
@@ -54952,7 +53246,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     if (!outgoing) row2.append(flags.isLastInGroup ? avatar2(identity) : spacer());
     const column = document.createElement("div");
-    css(column, {
+    css4(column, {
       maxWidth: "78%",
       display: "flex",
       flexDirection: "column",
@@ -54960,7 +53254,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       alignItems: outgoing ? "flex-end" : "flex-start"
     });
     const bubble = document.createElement("div");
-    css(bubble, {
+    css4(bubble, {
       padding: "7px 11px",
       borderRadius: outgoing ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
       fontSize: "12.5px",
@@ -54971,12 +53265,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       border: `1px solid ${outgoing ? OUTGOING_BORDER : alerting ? ALERT_BORDER : BORDER}`,
       color: outgoing ? OUTGOING_TEXT : TEXT
     });
-    bubble.append(...contentOf(message.text, message.icons, message.positioned, BUBBLE_ICON_PX2));
+    bubble.append(...contentOf(message2.text, message2.icons, message2.positioned, BUBBLE_ICON_PX2));
     column.append(bubble);
     if (flags.isLastInGroup) {
       const stamp = document.createElement("div");
-      css(stamp, { fontSize: "10px", color: TEXT_DIM });
-      stamp.textContent = formatMessageTime(message.atMs);
+      css4(stamp, { fontSize: "10px", color: TEXT_DIM });
+      stamp.textContent = formatMessageTime(message2.atMs);
       column.append(stamp);
     }
     row2.append(column);
@@ -54984,7 +53278,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function chatHeader(name) {
     const root = document.createElement("div");
-    css(root, {
+    css4(root, {
       display: "flex",
       alignItems: "center",
       gap: "10px",
@@ -54992,15 +53286,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       borderBottom: `1px solid ${BORDER}`
     });
     const portraitSlot = document.createElement("div");
-    css(portraitSlot, { display: "flex", flexShrink: "0" });
+    css4(portraitSlot, { display: "flex", flexShrink: "0" });
     portraitSlot.append(avatar2(null, 32));
     const info = document.createElement("div");
-    css(info, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
+    css4(info, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
     const title = document.createElement("div");
-    css(title, { fontSize: "13px", fontWeight: "600", color: TEXT });
+    css4(title, { fontSize: "13px", fontWeight: "600", color: TEXT });
     title.textContent = name;
     const status2 = document.createElement("div");
-    css(status2, { fontSize: "11px", color: TEXT_DIM });
+    css4(status2, { fontSize: "11px", color: TEXT_DIM });
     info.append(title, status2);
     root.append(portraitSlot, info);
     let shownIdentity = null;
@@ -55008,7 +53302,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       root,
       setStatus(text2, busy4) {
         status2.textContent = text2;
-        css(status2, { color: busy4 ? TEAL : TEXT_DIM });
+        css4(status2, { color: busy4 ? TEAL : TEXT_DIM });
       },
       setIdentity(identity) {
         if (identity.npcId === shownIdentity) return;
@@ -55021,7 +53315,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function threadBody() {
     const body = document.createElement("div");
     body.className = "qws-pnl-scroll";
-    css(body, {
+    css4(body, {
       height: "300px",
       overflowY: "auto",
       padding: "10px",
@@ -55033,7 +53327,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function emptyThread(text2) {
     const wrap = document.createElement("div");
-    css(wrap, {
+    css4(wrap, {
       margin: "auto",
       display: "flex",
       flexDirection: "column",
@@ -55043,14 +53337,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       textAlign: "center"
     });
     const label2 = document.createElement("div");
-    css(label2, { fontSize: "12px", maxWidth: "220px", lineHeight: "1.5" });
+    css4(label2, { fontSize: "12px", maxWidth: "220px", lineHeight: "1.5" });
     label2.textContent = text2;
     wrap.append(label2);
     return wrap;
   }
   function actionBar() {
     const bar = document.createElement("div");
-    css(bar, {
+    css4(bar, {
       display: "flex",
       alignItems: "center",
       flexWrap: "wrap",
@@ -55062,7 +53356,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function barHint(text2, tone = "dim") {
     const hint = document.createElement("div");
-    css(hint, { fontSize: "11px", color: tone === "warn" ? WARN : TEXT_DIM, marginLeft: "auto" });
+    css4(hint, { fontSize: "11px", color: tone === "warn" ? WARN : TEXT_DIM, marginLeft: "auto" });
     hint.textContent = text2;
     return hint;
   }
@@ -55089,7 +53383,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/menu/harvestFields.ts
   function filterCard(icon2, title) {
     const summary = document.createElement("div");
-    css(summary, {
+    css4(summary, {
       marginLeft: "auto",
       fontSize: "11px",
       color: TEXT_DIM,
@@ -55100,25 +53394,25 @@ Restore figures are averages; unlucky streaks do worse.`;
       maxWidth: "60%"
     });
     const header = document.createElement("div");
-    css(header, { display: "flex", alignItems: "center", gap: "8px", width: "100%" });
+    css4(header, { display: "flex", alignItems: "center", gap: "8px", width: "100%" });
     header.append(sectionLabel2(icon2 ? `${icon2} ${title}` : title), summary);
     const { root, body } = collapsibleCard({ header, collapsed: true, onToggle: () => {
     } });
-    css(root, { padding: "9px 11px", gap: "9px", flex: "0 0 auto" });
+    css4(root, { padding: "9px 11px", gap: "9px", flex: "0 0 auto" });
     return {
       root,
       body,
       setSummary(text2, active2) {
         summary.textContent = text2;
-        css(summary, { color: active2 ? TEAL : TEXT_DIM });
+        css4(summary, { color: active2 ? TEAL : TEXT_DIM });
       }
     };
   }
   function fieldRow(label2, control) {
     const row2 = document.createElement("div");
-    css(row2, { display: "flex", alignItems: "center", gap: "10px", justifyContent: "space-between" });
+    css4(row2, { display: "flex", alignItems: "center", gap: "10px", justifyContent: "space-between" });
     const text2 = document.createElement("div");
-    css(text2, { fontSize: "11.5px", color: TEXT });
+    css4(text2, { fontSize: "11.5px", color: TEXT });
     text2.textContent = label2;
     row2.append(text2, control);
     return row2;
@@ -55129,17 +53423,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     else next.add(value);
     return next.size === 0 ? null : [...next];
   }
-  function selectionRow(options) {
+  function selectionRow(options2) {
     const row2 = tileRow();
-    row2.append(allTile(options.allLabel, options.selected === null, options.onClear));
-    for (const value of options.values) {
+    row2.append(allTile(options2.allLabel, options2.selected === null, options2.onClear));
+    for (const value of options2.values) {
       row2.append(
         spriteTile({
-          icon: options.iconFor(value),
+          icon: options2.iconFor(value),
           title: value,
-          count: options.counts.get(value) ?? 0,
-          selected: options.selected?.includes(value) ?? false,
-          onClick: () => options.onPick(value)
+          count: options2.counts.get(value) ?? 0,
+          selected: options2.selected?.includes(value) ?? false,
+          onClick: () => options2.onPick(value)
         })
       );
     }
@@ -55166,7 +53460,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function resultStrip() {
     const root = document.createElement("div");
-    css(root, {
+    css4(root, {
       display: "flex",
       flexDirection: "column",
       gap: "8px",
@@ -55177,9 +53471,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "0 0 auto"
     });
     const count = document.createElement("div");
-    css(count, { fontSize: "13px", fontWeight: "600", color: TEAL });
+    css4(count, { fontSize: "13px", fontWeight: "600", color: TEAL });
     const sprites = document.createElement("div");
-    css(sprites, { display: "flex", alignItems: "flex-end", gap: "10px", flexWrap: "wrap" });
+    css4(sprites, { display: "flex", alignItems: "flex-end", gap: "10px", flexWrap: "wrap" });
     root.append(count, sprites);
     return {
       root,
@@ -55190,16 +53484,16 @@ Restore figures are averages; unlucky streaks do worse.`;
         for (const entry of entries2) {
           const pair = document.createElement("div");
           pair.title = entry.label;
-          css(pair, { display: "flex", alignItems: "center", gap: "3px" });
+          css4(pair, { display: "flex", alignItems: "center", gap: "3px" });
           const tally2 = document.createElement("span");
-          css(tally2, { fontSize: "11px", color: TEXT_DIM });
+          css4(tally2, { fontSize: "11px", color: TEXT_DIM });
           tally2.textContent = String(entry.count);
           pair.append(entry.icon, tally2);
           sprites.append(pair);
         }
         if (hidden > 0) {
           const more = document.createElement("span");
-          css(more, { fontSize: "11px", color: TEXT_DIM, alignSelf: "center" });
+          css4(more, { fontSize: "11px", color: TEXT_DIM, alignSelf: "center" });
           more.textContent = `+${hidden} more`;
           sprites.append(more);
         }
@@ -55208,17 +53502,17 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function lockedNote() {
     const root = document.createElement("div");
-    css(root, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+    css4(root, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
     return {
       root,
       update(lockedOut) {
         if (lockedOut === 0) {
           root.textContent = "Your Locker decides what I leave alone.";
-          css(root, { color: TEXT_DIM });
+          css4(root, { color: TEXT_DIM });
           return;
         }
         root.textContent = `Leaving ${lockedOut} locked crop${lockedOut === 1 ? "" : "s"} alone.`;
-        css(root, { color: WARN });
+        css4(root, { color: WARN });
       }
     };
   }
@@ -55238,7 +53532,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       root.style.display = "none";
       return { root };
     }
-    css(root, {
+    css4(root, {
       display: "flex",
       alignItems: "center",
       gap: "10px",
@@ -55249,12 +53543,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "0 0 auto"
     });
     const text2 = document.createElement("div");
-    css(text2, { fontSize: "11.5px", lineHeight: "1.5", color: TEXT, flex: "1", minWidth: "0" });
+    css4(text2, { fontSize: "11.5px", lineHeight: "1.5", color: TEXT, flex: "1", minWidth: "0" });
     text2.textContent = what;
     const open = document.createElement("button");
     open.type = "button";
     open.textContent = "Set up";
-    css(open, {
+    css4(open, {
       flex: "0 0 auto",
       padding: "6px 11px",
       borderRadius: "9px",
@@ -55281,26 +53575,26 @@ Restore figures are averages; unlucky streaks do worse.`;
   function teamSelect(current, onPick) {
     const el = document.createElement("select");
     el.className = "qws-pnl-select";
-    css(el, { fontSize: "12px", color: TEXT, minWidth: "150px" });
+    css4(el, { fontSize: "12px", color: TEXT, minWidth: "150px" });
     const none = document.createElement("option");
     none.value = NO_TEAM;
     none.textContent = "Leave my team alone";
     el.append(none);
-    let teams = [];
+    let teams2 = [];
     try {
-      teams = PetsService.getTeams().map((team) => ({ id: team.id, name: team.name }));
+      teams2 = PetsService.getTeams().map((team) => ({ id: team.id, name: team.name }));
     } catch {
-      teams = [];
+      teams2 = [];
     }
-    for (const team of teams) {
+    for (const team of teams2) {
       const option = document.createElement("option");
       option.value = team.id;
       option.textContent = team.name;
       el.append(option);
     }
-    el.value = current && teams.some((team) => team.id === current) ? current : NO_TEAM;
+    el.value = current && teams2.some((team) => team.id === current) ? current : NO_TEAM;
     el.addEventListener("change", () => onPick(el.value === NO_TEAM ? null : el.value));
-    return { el, empty: teams.length === 0 };
+    return { el, empty: teams2.length === 0 };
   }
   var NO_TEAM, NO_TEAMS_HINT;
   var init_teamSelect = __esm({
@@ -55331,7 +53625,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       void CompanionService.applySettings({ feedFromGarden: on }).then(checkFeedNow);
     });
     const note = document.createElement("div");
-    css(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+    css4(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
     note.textContent = "He only speaks up when he has something to give. He always asks first.";
     modal.body.append(
       settingRow("Tell me when a pet is starving", "He offers, and waits for your answer.", alerts).row,
@@ -55378,7 +53672,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       void CompanionService.applySettings({ hatchSellTeamId: teamId2 });
     });
     const note = document.createElement("div");
-    css(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+    css4(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
     note.textContent = hatchTeam.empty ? NO_TEAMS_HINT : "The game will not sell a pet on your active team, so a smaller team frees the rest. He asks first, and puts yours back after.";
     modal.body.append(
       settingRow("Team to wear while hatching", "For abilities that change what hatches.", hatchTeam.el).row,
@@ -55465,7 +53759,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       void CompanionService.applySettings({ harvestTeamId: teamId2 });
     });
     const note = document.createElement("div");
-    css(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+    css4(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
     note.textContent = team.empty ? NO_TEAMS_HINT : "He names the team before he picks, and puts yours back after. What he may pick still comes from your Locker.";
     modal.body.append(
       settingRow(
@@ -55588,30 +53882,30 @@ Restore figures are averages; unlucky streaks do worse.`;
       mutationCard.setSummary(summarizeMutations(filters), filters.mutations.length > 0);
     }
     const sizeValue = document.createElement("span");
-    css(sizeValue, { fontSize: "11.5px", color: TEXT, minWidth: "38px", textAlign: "right" });
+    css4(sizeValue, { fontSize: "11.5px", color: TEXT, minWidth: "38px", textAlign: "right" });
     const sizeSlider = document.createElement("input");
     sizeSlider.type = "range";
     sizeSlider.className = "qws-pnl-range";
     sizeSlider.min = "50";
     sizeSlider.max = "100";
     sizeSlider.step = "5";
-    css(sizeSlider, { flex: "1" });
+    css4(sizeSlider, { flex: "1" });
     sizeSlider.addEventListener("input", () => {
       filters = { ...filters, minSizePct: Number(sizeSlider.value) };
       render();
     });
     {
       const control = document.createElement("div");
-      css(control, { display: "flex", alignItems: "center", gap: "10px", flex: "1", minWidth: "0" });
+      css4(control, { display: "flex", alignItems: "center", gap: "10px", flex: "1", minWidth: "0" });
       control.append(sizeSlider, sizeValue);
       const row2 = fieldRow("Minimum size", control);
-      css(row2, { gap: "14px" });
+      css4(row2, { gap: "14px" });
       sizeCard.body.append(row2);
     }
     const preservedRow = document.createElement("div");
-    css(preservedRow, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
+    css4(preservedRow, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
     const preservedLabel = document.createElement("div");
-    css(preservedLabel, { fontSize: "11.5px", fontWeight: "600", color: TEXT });
+    css4(preservedLabel, { fontSize: "11.5px", fontWeight: "600", color: TEXT });
     preservedRow.append(preservedLabel);
     const preservedControl = document.createElement("div");
     preservedRow.append(preservedControl);
@@ -55650,7 +53944,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       modal.close();
     });
-    css(askButton, { marginLeft: "auto" });
+    css4(askButton, { marginLeft: "auto" });
     const notice = settingsNotice(
       "harvest",
       "Harvest is not set up. I will pick with the team you have on.",
@@ -55735,9 +54029,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       onClose: () => clearInterval(timer2)
     });
     const list = document.createElement("div");
-    css(list, { display: "flex", flexDirection: "column", gap: "7px" });
+    css4(list, { display: "flex", flexDirection: "column", gap: "7px" });
     const empty = document.createElement("div");
-    css(empty, { fontSize: "12px", color: TEXT_DIM, padding: "10px 2px", lineHeight: "1.5" });
+    css4(empty, { fontSize: "12px", color: TEXT_DIM, padding: "10px 2px", lineHeight: "1.5" });
     empty.textContent = "Nobody is hungry, or I have nothing they eat.";
     const notice = settingsNotice(
       "feed",
@@ -55758,11 +54052,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       modal.close();
     });
-    css(askButton, { marginLeft: "auto" });
+    css4(askButton, { marginLeft: "auto" });
     modal.footer.append(askButton);
     function row2(candidate) {
       const line = document.createElement("div");
-      css(line, {
+      css4(line, {
         display: "flex",
         alignItems: "center",
         gap: "10px",
@@ -55772,12 +54066,12 @@ Restore figures are averages; unlucky streaks do worse.`;
         background: CARD_BG
       });
       const text2 = document.createElement("div");
-      css(text2, { display: "flex", flexDirection: "column", gap: "2px", flex: "1", minWidth: "0" });
+      css4(text2, { display: "flex", flexDirection: "column", gap: "2px", flex: "1", minWidth: "0" });
       const name = document.createElement("div");
-      css(name, { fontSize: "12.5px", color: TEXT });
+      css4(name, { fontSize: "12.5px", color: TEXT });
       name.textContent = candidate.petName;
       const meta = document.createElement("div");
-      css(meta, { fontSize: "11px", color: candidate.hungerPct <= 5 ? WARN : TEXT_DIM });
+      css4(meta, { fontSize: "11px", color: candidate.hungerPct <= 5 ? WARN : TEXT_DIM });
       meta.textContent = candidate.source.kind === "garden" ? `${candidate.hungerPct}% left, I would pick a ${candidate.source.species}` : `${candidate.hungerPct}% left, I have a ${candidate.source.species} in the bag`;
       text2.append(name, meta);
       const icon2 = speciesIcon(candidate.source.species, CROP_ICON_PX);
@@ -55818,9 +54112,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/menu/plantGrid.ts
-  function plantGrid(options) {
+  function plantGrid(options2) {
     const root = document.createElement("div");
-    css(root, {
+    css4(root, {
       display: "grid",
       gridTemplateColumns: `repeat(${GARDEN_COLS / 2}, 1fr) ${HALF_GAP_PX2}px repeat(${GARDEN_COLS / 2}, 1fr)`,
       gridTemplateRows: `repeat(${GARDEN_ROWS}, 1fr)`,
@@ -55847,7 +54141,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     function buildCell(tileIndex) {
       const cell = document.createElement("div");
       cell.dataset.tile = String(tileIndex);
-      css(cell, {
+      css4(cell, {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -55860,10 +54154,10 @@ Restore figures are averages; unlucky streaks do worse.`;
         event.preventDefault();
         painting = true;
         mode = event.button === 2 ? "erase" : "assign";
-        options.onPaint(tileIndex, mode);
+        options2.onPaint(tileIndex, mode);
       });
       cell.addEventListener("mouseenter", () => {
-        if (painting) options.onPaint(tileIndex, mode);
+        if (painting) options2.onPaint(tileIndex, mode);
       });
       return cell;
     }
@@ -55871,7 +54165,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       for (let col = 0; col < GARDEN_COLS; col++) {
         if (col === GARDEN_COLS / 2) {
           const spacer2 = document.createElement("div");
-          css(spacer2, { pointerEvents: "none" });
+          css4(spacer2, { pointerEvents: "none" });
           root.append(spacer2);
         }
         const tileIndex = row2 * GARDEN_COLS + col;
@@ -55883,19 +54177,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     function stateKey(tileIndex, owned2, occupied) {
       if (!owned2.has(tileIndex)) return "absent";
       if (occupied.has(tileIndex)) return "occupied";
-      const assignment = options.assignmentAt(tileIndex);
+      const assignment = options2.assignmentAt(tileIndex);
       return assignment ? `set:${assignment.kind}:${assignment.id}` : "free";
     }
     function paintCell(cell, tileIndex, key2) {
       cell.shown = key2;
       cell.el.replaceChildren();
       if (key2 === "absent") {
-        css(cell.el, { background: "transparent", borderColor: "transparent", cursor: "default" });
+        css4(cell.el, { background: "transparent", borderColor: "transparent", cursor: "default" });
         cell.el.title = "";
         return;
       }
       if (key2 === "occupied") {
-        css(cell.el, {
+        css4(cell.el, {
           background: "rgba(239,68,68,0.22)",
           borderColor: DANGER,
           cursor: "not-allowed"
@@ -55904,24 +54198,24 @@ Restore figures are averages; unlucky streaks do worse.`;
         return;
       }
       if (key2 === "free") {
-        css(cell.el, { background: "rgba(255,255,255,0.05)", borderColor: BORDER, cursor: "pointer" });
+        css4(cell.el, { background: "rgba(255,255,255,0.05)", borderColor: BORDER, cursor: "pointer" });
         cell.el.title = "";
         return;
       }
-      const assignment = options.assignmentAt(tileIndex);
-      css(cell.el, { background: TEAL_DIM, borderColor: TEAL_BORDER, cursor: "pointer" });
+      const assignment = options2.assignmentAt(tileIndex);
+      css4(cell.el, { background: TEAL_DIM, borderColor: TEAL_BORDER, cursor: "pointer" });
       cell.el.title = assignment?.name ?? "";
       if (assignment) {
-        const icon2 = options.iconFor(assignment, CELL_ICON_PX2);
-        css(icon2, { pointerEvents: "none" });
+        const icon2 = options2.iconFor(assignment, CELL_ICON_PX2);
+        css4(icon2, { pointerEvents: "none" });
         cell.el.append(icon2);
       }
     }
     return {
       root,
       update() {
-        const owned2 = options.owned();
-        const occupied = options.occupied();
+        const owned2 = options2.owned();
+        const occupied = options2.occupied();
         for (let tileIndex = 0; tileIndex < GARDEN_TILE_COUNT; tileIndex++) {
           const cell = cells.get(tileIndex);
           if (!cell) continue;
@@ -55966,19 +54260,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     function paletteGroup(title) {
       const root = document.createElement("div");
-      css(root, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
+      css4(root, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
       const row2 = document.createElement("div");
-      css(row2, { display: "flex", flexWrap: "wrap", gap: "5px" });
+      css4(row2, { display: "flex", flexWrap: "wrap", gap: "5px" });
       root.append(sectionLabel2(title), row2);
       return { root, row: row2 };
     }
     const seedGroup = paletteGroup("Seeds");
     const eggGroup = paletteGroup("Eggs");
     const paletteEmpty = document.createElement("div");
-    css(paletteEmpty, { fontSize: "12px", color: TEXT_DIM, lineHeight: "1.5" });
+    css4(paletteEmpty, { fontSize: "12px", color: TEXT_DIM, lineHeight: "1.5" });
     paletteEmpty.textContent = "Nothing to plant. No seeds, no eggs.";
     const hint = document.createElement("div");
-    css(hint, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.5" });
+    css4(hint, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.5" });
     hint.textContent = "Pick one and draw. Right click erases, red is taken.";
     const grid = plantGrid({
       owned: () => owned2,
@@ -55988,7 +54282,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       onPaint: (tileIndex, mode) => paint(tileIndex, mode)
     });
     const strip = document.createElement("div");
-    css(strip, {
+    css4(strip, {
       display: "flex",
       flexDirection: "column",
       gap: "8px",
@@ -55999,9 +54293,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "0 0 auto"
     });
     const stripCount = document.createElement("div");
-    css(stripCount, { fontSize: "13px", fontWeight: "600", color: TEAL });
+    css4(stripCount, { fontSize: "13px", fontWeight: "600", color: TEAL });
     const stripIconRow = document.createElement("div");
-    css(stripIconRow, { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" });
+    css4(stripIconRow, { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" });
     strip.append(stripCount, stripIconRow);
     const clearButton = button2("Clear", "neutral", () => {
       plan = /* @__PURE__ */ new Map();
@@ -56019,7 +54313,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       modal.close();
     });
-    css(askButton, { marginLeft: "auto" });
+    css4(askButton, { marginLeft: "auto" });
     modal.body.append(seedGroup.root, eggGroup.root, paletteEmpty, hint, grid.root, strip);
     modal.footer.append(clearButton, askButton);
     function remainingFor(item) {
@@ -56080,9 +54374,9 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
         const pair = document.createElement("div");
         pair.title = entry.item.name;
-        css(pair, { display: "flex", alignItems: "center", gap: "3px" });
+        css4(pair, { display: "flex", alignItems: "center", gap: "3px" });
         const tally2 = document.createElement("span");
-        css(tally2, { fontSize: "11px", color: TEXT_DIM });
+        css4(tally2, { fontSize: "11px", color: TEXT_DIM });
         tally2.textContent = String(entry.count);
         pair.append(icon2, tally2);
         stripIconRow.append(pair);
@@ -56137,7 +54431,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/menu/hatchChips.ts
   function iconHolder3(sizePx) {
     const box2 = document.createElement("div");
-    css(box2, {
+    css4(box2, {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -56152,7 +54446,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const candidates = [species, species.replace(/\s+/g, "")].filter(Boolean);
     attachSpriteIcon(box2, ["pet"], candidates, sizePx, SPRITE_LOG_TAG5, {
       onNoSpriteFound: () => {
-        css(box2, { fontSize: "12px", fontWeight: "700", color: TEXT_DIM });
+        css4(box2, { fontSize: "12px", fontWeight: "700", color: TEXT_DIM });
         box2.textContent = species.charAt(0).toUpperCase();
       }
     });
@@ -56162,7 +54456,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const box2 = iconHolder3(sizePx);
     const square = document.createElement("span");
     const { bg } = getAbilityChipColors(abilityId);
-    css(square, {
+    css4(square, {
       display: "inline-block",
       width: "13px",
       height: "13px",
@@ -56178,7 +54472,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/companion/menu/hatchChips.ts"() {
       "use strict";
       init_iconCache();
-      init_abilityColorsTab();
+      init_abilityChipColors();
       init_panel();
       SPRITE_LOG_TAG5 = "companion-hatch";
       ICON_PX4 = 26;
@@ -56228,7 +54522,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     function scrollable(row2) {
       const box2 = document.createElement("div");
-      css(box2, { maxHeight: `${ABILITY_LIST_MAX_PX}px`, overflowY: "auto", overscrollBehavior: "contain" });
+      css4(box2, { maxHeight: `${ABILITY_LIST_MAX_PX}px`, overflowY: "auto", overscrollBehavior: "contain" });
       box2.append(row2);
       return box2;
     }
@@ -56296,7 +54590,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     {
       const control = document.createElement("div");
-      css(control, { display: "flex", alignItems: "center", gap: "10px" });
+      css4(control, { display: "flex", alignItems: "center", gap: "10px" });
       control.append(strengthField, strengthToggle);
       strengthCard.body.append(fieldRow("Keep max STR from", control));
     }
@@ -56304,7 +54598,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return count === 0 ? "None" : `${count} picked`;
     }
     const strip = document.createElement("div");
-    css(strip, {
+    css4(strip, {
       display: "flex",
       flexDirection: "column",
       gap: "5px",
@@ -56315,9 +54609,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       flex: "0 0 auto"
     });
     const ready = document.createElement("div");
-    css(ready, { fontSize: "13px", fontWeight: "600", color: TEAL });
+    css4(ready, { fontSize: "13px", fontWeight: "600", color: TEAL });
     const note = document.createElement("div");
-    css(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+    css4(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
     strip.append(ready, note);
     const resetButton = button2("Reset", "neutral", () => commit({ ...DEFAULT_KEEP_RULES }));
     const askButton = button2("Ask to hatch", "accent", () => {
@@ -56331,7 +54625,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
       modal.close();
     });
-    css(askButton, { marginLeft: "auto" });
+    css4(askButton, { marginLeft: "auto" });
     const notice = settingsNotice(
       "hatch",
       "Hatching is not set up. I will use the team you have on.",
@@ -56356,7 +54650,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       renderAbilities();
       strengthField.disabled = rules2.minMaxStr === null;
       if (rules2.minMaxStr !== null) strengthField.value = String(rules2.minMaxStr);
-      css(strengthField, { opacity: rules2.minMaxStr === null ? "0.45" : "1" });
+      css4(strengthField, { opacity: rules2.minMaxStr === null ? "0.45" : "1" });
       strengthCard.setSummary(
         rules2.minMaxStr === null ? "Off" : `${rules2.minMaxStr} and up`,
         rules2.minMaxStr !== null
@@ -56365,10 +54659,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       ready.textContent = scope.readySlots.length === 0 ? "No egg is ready" : `${scope.readySlots.length} egg${scope.readySlots.length === 1 ? "" : "s"} ready`;
       if (!hasAnyRule(rules2)) {
         note.textContent = "Nothing set to keep, so I will not offer to sell. Favourites and your active team are always safe.";
-        css(note, { color: WARN });
+        css4(note, { color: WARN });
       } else {
         note.textContent = `Favourites and your active team are never sold.${waiting > 0 ? ` ${waiting} still growing.` : ""}`;
-        css(note, { color: TEXT_DIM });
+        css4(note, { color: TEXT_DIM });
       }
       askButton.disabled = scope.readySlots.length === 0;
     }
@@ -56411,7 +54705,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function openActionsModal(host, onAsk) {
     const modal = openModal2({ host, title: "What can you do?", widthPx: 420 });
     const list = document.createElement("div");
-    css(list, { display: "flex", flexDirection: "column", gap: "8px" });
+    css4(list, { display: "flex", flexDirection: "column", gap: "8px" });
     modal.body.append(list);
     function renderRows(rows) {
       if (!modal.isOpen()) return;
@@ -56508,7 +54802,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function renderChatTab(view) {
     view.innerHTML = "";
     const root = document.createElement("div");
-    css(root, { display: "flex", flexDirection: "column", gap: "8px" });
+    css4(root, { display: "flex", flexDirection: "column", gap: "8px" });
     view.append(root);
     const header = chatHeader("Companion");
     const thread = threadBody();
@@ -56526,8 +54820,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       const now2 = Date.now();
       let lastDayLabel = "";
       for (let i = 0; i < messages.length; i++) {
-        const message = messages[i];
-        const dayLabel = formatDayLabel(message.atMs, now2);
+        const message2 = messages[i];
+        const dayLabel = formatDayLabel(message2.atMs, now2);
         const startsDay = dayLabel !== "" && dayLabel !== lastDayLabel;
         if (startsDay) {
           thread.append(dateSeparator(dayLabel));
@@ -56537,23 +54831,23 @@ Restore figures are averages; unlucky streaks do worse.`;
         const next = i < messages.length - 1 ? messages[i + 1] : null;
         thread.append(
           messageRow(
-            message,
+            message2,
             {
-              isFirstInGroup: !previous || startsDay || !isSameGroup(previous, message),
-              isLastInGroup: !next || !isSameGroup(message, next)
+              isFirstInGroup: !previous || startsDay || !isSameGroup(previous, message2),
+              isLastInGroup: !next || !isSameGroup(message2, next)
             },
             identity
           )
         );
-        if (message.proposalId && proposal && proposal.id === message.proposalId) {
-          thread.append(confirmRow(message.proposalId));
+        if (message2.proposalId && proposal && proposal.id === message2.proposalId) {
+          thread.append(confirmRow(message2.proposalId));
         }
       }
       thread.scrollTop = thread.scrollHeight;
     }
     function confirmRow(proposalId) {
       const row2 = document.createElement("div");
-      css(row2, { display: "flex", gap: "6px", alignSelf: "flex-start", marginLeft: "34px", marginTop: "2px" });
+      css4(row2, { display: "flex", gap: "6px", alignSelf: "flex-start", marginLeft: "34px", marginTop: "2px" });
       row2.append(
         button2("Yes, go ahead", "accent", () => void CompanionChat.confirm(proposalId).catch(() => {
         })),
@@ -56644,8 +54938,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     ensurePanelStyles();
     const ui = new Menu({ id: "companion", compact: true, windowSelector: ".qws-win" });
     ui.mount(root);
-    css(root, { minWidth: `${MIN_WIDTH_PX}px` });
-    const TABS = ["behavior", "chat"];
+    css4(root, { minWidth: `${MIN_WIDTH_PX}px` });
+    const TABS2 = ["behavior", "chat"];
     ui.addTab("behavior", "Behavior", (view) => renderBehaviorTab(view));
     ui.addTab("chat", "Chat", (view) => renderChatTab(view));
     const onTabRequest = (event) => {
@@ -56654,7 +54948,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         return;
       }
       const tab = String(event.detail?.tab ?? "");
-      if (TABS.includes(tab)) ui.switchTo(tab);
+      if (TABS2.includes(tab)) ui.switchTo(tab);
     };
     window.addEventListener(COMPANION_TAB_EVENT, onTabRequest);
   }
@@ -56902,8 +55196,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     ev.preventDefault();
   }
   function installEditorPointerControls() {
-    if (installed3 || typeof window === "undefined") return;
-    installed3 = true;
+    if (installed5 || typeof window === "undefined") return;
+    installed5 = true;
     window.addEventListener("pointerdown", (ev) => {
       void handlePointerDown(ev);
     }, true);
@@ -56914,13 +55208,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     window.addEventListener("pointercancel", handlePointerUp, true);
     window.addEventListener("contextmenu", handleContextMenu, true);
   }
-  var installed3, dragMode, lastTileKey;
+  var installed5, dragMode, lastTileKey;
   var init_pointerControls = __esm({
     "src/features/editor/pointerControls.ts"() {
       "use strict";
       init_tileObjects();
       init_editor();
-      installed3 = false;
+      installed5 = false;
       dragMode = null;
       lastTileKey = null;
     }
@@ -57071,7 +55365,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       offer(reaction);
     }
   }
-  function onAbilityLogs(all) {
+  function onAbilityLogs2(all) {
     if (!Array.isArray(all) || all.length === 0) return;
     const newest = all.reduce((a, b) => b.performedAt > a.performedAt ? b : a);
     const first = lastAbilityAt === 0;
@@ -57133,7 +55427,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
     }
     try {
-      add(PetsService.onAbilityLogs((all) => onAbilityLogs(all)));
+      add(PetsService.onAbilityLogs((all) => onAbilityLogs2(all)));
     } catch {
     }
     try {
@@ -57215,8 +55509,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/wanderInterest.ts
-  function pickOne3(options, random) {
-    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
+  function pickOne3(options2, random) {
+    return options2[Math.min(options2.length - 1, Math.floor(random() * options2.length))];
   }
   function normalizeTs2(value) {
     const raw = typeof value === "number" ? value : Number(value);
@@ -57792,8 +56086,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/afk.ts
-  function pickOne4(options, random) {
-    return options[Math.min(options.length - 1, Math.floor(random() * options.length))];
+  function pickOne4(options2, random) {
+    return options2[Math.min(options2.length - 1, Math.floor(random() * options2.length))];
   }
   function initialAfkState(now2) {
     return { phase: "active", quietSince: now2, phaseSince: now2, asked: false, nextSnoreAt: null, lastSnore: null };
@@ -58078,15 +56372,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       window.clearInterval(timer);
       timer = null;
     }
-    card4?.remove();
-    card4 = null;
+    card3?.remove();
+    card3 = null;
     clockBar = null;
     shownId = null;
   }
   function questionOf(proposal) {
-    const message = CompanionChat.getLog().messages.find((entry) => entry.proposalId === proposal.id);
-    if (!message) return [document.createTextNode(proposal.summary)];
-    return message.positioned ? renderTagged(message.text, message.icons, ICON_PX5) : [document.createTextNode(message.text)];
+    const message2 = CompanionChat.getLog().messages.find((entry) => entry.proposalId === proposal.id);
+    if (!message2) return [document.createTextNode(proposal.summary)];
+    return message2.positioned ? renderTagged(message2.text, message2.icons, ICON_PX5) : [document.createTextNode(message2.text)];
   }
   function build(proposal) {
     ensureStyle2();
@@ -58132,7 +56426,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     clock.append(fill);
     root.append(body, clock);
     document.body.appendChild(root);
-    card4 = root;
+    card3 = root;
     clockBar = fill;
     shownId = proposal.id;
     timer = window.setInterval(() => {
@@ -58164,7 +56458,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     unsubscribe = CompanionChat.subscribe(sync);
     sync();
   }
-  var CARD_ID, STYLE_ID5, Z_INDEX, ICON_PX5, TICK_MS, ACCENT2, TEXT3, TEXT_DIM3, card4, clockBar, timer, shownId, unsubscribe;
+  var CARD_ID, STYLE_ID5, Z_INDEX, ICON_PX5, TICK_MS, ACCENT2, TEXT3, TEXT_DIM3, card3, clockBar, timer, shownId, unsubscribe;
   var init_askBanner = __esm({
     "src/features/companion/menu/askBanner.ts"() {
       "use strict";
@@ -58182,7 +56476,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       ACCENT2 = "#5eead4";
       TEXT3 = "#e7eef7";
       TEXT_DIM3 = "rgba(231,238,247,0.68)";
-      card4 = null;
+      card3 = null;
       clockBar = null;
       timer = null;
       shownId = null;
@@ -58267,9 +56561,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     your room private and invisible to others, install
     <b>MG Community Hub</b>: it adds a privacy setting to hide your room
     from that list.`;
-    const actions = h("div");
-    Object.assign(actions.style, { display: "flex", justifyContent: "center", gap: "12px" });
-    actions.append(
+    const actions2 = h("div");
+    Object.assign(actions2.style, { display: "flex", justifyContent: "center", gap: "12px" });
+    actions2.append(
       button("Get the privacy tool", {
         variant: "primary",
         onClick: () => {
@@ -58283,7 +56577,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       button("Got it", { onClick: close })
     );
     const dialog = box();
-    dialog.append(title, body, actions);
+    dialog.append(title, body, actions2);
     overlay2.appendChild(dialog);
     overlay2.addEventListener("click", (event) => {
       if (event.target === overlay2) close();
@@ -58319,7 +56613,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       date: typeof e.date === "string" ? e.date : void 0,
       title: typeof e.title === "string" ? e.title : void 0,
       // A blank image URL is dropped rather than failing the whole entry.
-      images: (stringList(e.images) ?? []).filter(isNonEmptyString)
+      images: (stringList2(e.images) ?? []).filter(isNonEmptyString)
     };
   }
   async function fetchChangelogEntryForVersion(version) {
@@ -58595,10 +56889,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     return null;
   }
   function normalizeActivityLog(slotData) {
-    const logs = slotData?.activityLog ?? slotData?.activityLogs ?? slotData?.activitylog;
-    return Array.isArray(logs) ? logs : null;
+    const logs2 = slotData?.activityLog ?? slotData?.activityLogs ?? slotData?.activitylog;
+    return Array.isArray(logs2) ? logs2 : null;
   }
-  async function buildPlayerStatePayload(options = {}) {
+  async function buildPlayerStatePayload(options2 = {}) {
     try {
       const state5 = await Atoms.root.state.get();
       if (!state5 || typeof state5 !== "object") return null;
@@ -58625,9 +56919,9 @@ Restore figures are averages; unlucky streaks do worse.`;
         };
       });
       if (slots.length === 0) return null;
-      const myAccountId = options.playerId ?? await getMyAccountId(state5);
+      const myAccountId = options2.playerId ?? await getMyAccountId(state5);
       const slot = selectSlotForAccount(slots, {
-        slotIndex: options.slotIndex,
+        slotIndex: options2.slotIndex,
         accountId: myAccountId
       });
       if (!slot || typeof slot !== "object") {
@@ -58661,7 +56955,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         coins: coinsRaw,
         room: {
           id: roomId2,
-          isPrivate: options.roomIsPrivate ?? null,
+          isPrivate: options2.roomIsPrivate ?? null,
           playersCount,
           userSlots
         },
@@ -58887,20 +57181,20 @@ Restore figures are averages; unlucky streaks do worse.`;
         installEditorPointerControls();
         void initSkins();
         mountHUD({
-          onRegister(register) {
-            register("pets", "\u{1F43E} Pets", renderPetsMenu);
-            register("locker", "\u{1F512} Locker", renderLockerMenu);
-            register("alerts", "\u{1F514} Alerts", renderNotifierMenu);
-            register("calculator", "\u{1F913} Calculator", renderCalculatorMenu);
-            register("room", "\u{1F3E0} Room", renderRoomMenu);
-            register("editor", "\u{1F4DD} Editor", renderEditorMenu);
-            register("skins", "\u{1F3A8} Skins", renderSkinsMenu);
-            register("misc", "\u{1F9E9} Misc", renderMiscMenu);
-            register("keybinds", "\u2328\uFE0F Keybinds", renderKeybindsMenu);
-            register("tools", "\u{1F6E0}\uFE0F Tools", renderToolsMenu);
-            register("settings", "\u2699\uFE0F Settings", renderSettingsMenu);
-            register("companion", "\u{1F916} Companion", renderCompanionMenu);
-            register("debug-data", "\u{1F41E} Debug", renderDebugDataMenu);
+          onRegister(register2) {
+            register2("pets", "\u{1F43E} Pets", renderPetsMenu);
+            register2("locker", "\u{1F512} Locker", renderLockerMenu);
+            register2("alerts", "\u{1F514} Alerts", renderNotifierMenu);
+            register2("calculator", "\u{1F913} Calculator", renderCalculatorMenu);
+            register2("room", "\u{1F3E0} Room", renderRoomMenu);
+            register2("editor", "\u{1F4DD} Editor", renderEditorMenu);
+            register2("skins", "\u{1F3A8} Skins", renderSkinsMenu);
+            register2("misc", "\u{1F9E9} Misc", renderMiscMenu);
+            register2("keybinds", "\u2328\uFE0F Keybinds", renderKeybindsMenu);
+            register2("tools", "\u{1F6E0}\uFE0F Tools", renderToolsMenu);
+            register2("settings", "\u2699\uFE0F Settings", renderSettingsMenu);
+            register2("companion", "\u{1F916} Companion", renderCompanionMenu);
+            register2("debug-data", "\u{1F41E} Debug", renderDebugDataMenu);
           }
         });
         initWatchers();

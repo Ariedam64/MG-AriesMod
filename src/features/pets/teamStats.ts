@@ -1,6 +1,5 @@
-// src/services/petTeamStats.ts
 // Pure aggregation (no DOM) of what a team of up to 3 pets is worth, built on
-// the per-ability model in petAbilityStats.ts.
+// the per-ability model in abilityStats.ts.
 //
 // Two things this deliberately does NOT do:
 //  - It never reports a per-hour rate. The server tick interval for
@@ -54,7 +53,7 @@ type EffectContributor = {
   probabilityAtMax: number | null;
   /**
    * This pet's own effect values, already scaled by its strength. Magnitudes
-   * are per proc and belong to whichever pet fired — they do NOT add up
+   * are per proc and belong to whichever pet fired: they do NOT add up
    * across the team, unlike the proc chance.
    */
   scaledParameters: Record<string, number>;
@@ -66,8 +65,8 @@ export type EffectGroup = {
   /** Data-derived: the contributing ability's own name minus its tier. */
   label: string;
   /**
-   * What makes this effect roll. `continuous` abilities roll once a minute —
-   * the game's own tooltip labels them "chance per minute" — so their
+   * What makes this effect roll. `continuous` abilities roll once a minute
+   * (the game's own tooltip labels them "chance per minute"), so their
    * probability is a per-minute chance. Every other trigger rolls once per
    * matching player action instead, and must not be labelled per minute.
    */
@@ -94,7 +93,7 @@ export type EffectGroup = {
 export type TeamAutonomy = {
   /**
    * `sustained` when expected restore covers drain for every pet (or Hunger
-   * Boost removes drain entirely) — the team never needs feeding on average.
+   * Boost removes drain entirely): the team never needs feeding on average.
    * `runs-out` when at least one pet is projected to empty. `unknown` when a
    * species has no known depletion time.
    */
@@ -115,7 +114,7 @@ export type TeamAutonomy = {
   restoreActivationsPerMinute: number;
   /**
    * Hunger abilities left out because they need a specific weather. Excluded
-   * rather than assumed active, since that weather is never guaranteed — the
+   * rather than assumed active, since that weather is never guaranteed: the
    * UI names them so the figure is not mistaken for a worst case.
    */
   weatherGatedHungerAbilities: string[];
@@ -136,7 +135,7 @@ export type TeamStats = {
   weatherExposure: { weather: string; abilityCount: number }[];
   totalAbilityCount: number;
   autonomy: TeamAutonomy;
-  /** Pets whose species is absent from the catalog — strength is unusable. */
+  /** Pets whose species is absent from the catalog: strength is unusable. */
   unknownSpecies: string[];
 };
 
@@ -205,7 +204,7 @@ export function effectGroupKeyForAbility(abilityId: string): string | null {
 function combineProbabilities(probabilities: number[]): number | null {
   if (!probabilities.length) return null;
   // 1 - Π(1 - p): the chance at least one of them fires on a single roll.
-  // Deliberately not a sum — three 25.92% pets clear 59.35%, not 77.76%.
+  // Deliberately not a sum: three 25.92% pets clear 59.35%, not 77.76%.
   let missAll = 1;
   for (const probability of probabilities) {
     missAll *= 1 - probability / PERCENT;
@@ -223,7 +222,7 @@ function addInto(target: Record<string, number>, source: Record<string, number>)
  * Expected Hunger Restore activations per minute for one ability.
  *
  * The ability's chance is stated per minute, but the game checks it every
- * second, so it can fire more than once in a minute — converting the minute
+ * second, so it can fire more than once in a minute: converting the minute
  * chance to a per-second one and counting 60 checks is what makes a 14%
  * ability average ~0.15 activations/min rather than exactly 0.14.
  */
@@ -246,7 +245,7 @@ type RestoreSource = {
  *
  * Hunger Boost cuts the drain rate team-wide; Hunger Restore periodically
  * refills a random active pet. A team whose expected restore matches its
- * drain never needs feeding at all — reporting the raw depletion time, as an
+ * drain never needs feeding at all: reporting the raw depletion time, as an
  * earlier version did, understated such a team by an order of magnitude.
  *
  * These are averages: a run of bad luck on Restore does worse.

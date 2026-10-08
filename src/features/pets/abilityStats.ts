@@ -1,4 +1,3 @@
-// src/services/petAbilityStats.ts
 // Pure model (no DOM) for what a single pet's ability is actually worth at
 // that pet's current strength.
 //
@@ -28,7 +27,7 @@ const STRENGTH_SCALE = 100;
 /**
  * Parameter keys the game scales by the strength ratio, taken from its `tge`
  * switch. A key absent from this set is passed through unscaled rather than
- * guessed at — `requiredWeather` and `grantedMutations` are not numbers, and
+ * guessed at: `requiredWeather` and `grantedMutations` are not numbers, and
  * inventing a scaling rule for an unknown future key would silently produce
  * wrong figures.
  */
@@ -44,7 +43,7 @@ const SCALED_PARAMETER_KEYS = new Set([
   "hungerRefundPercentage",
   // Older name for hungerRefundPercentage, still carried by the hardcoded
   // fallback catalog. Absent from the live bundle's `tge` switch only because
-  // the game renamed it — same parameter, so it scales the same way.
+  // the game renamed it: same parameter, so it scales the same way.
   "hungerDepletionRateDecreasePercentage",
   "plantGrowthReductionMinutes",
   "eggGrowthTimeReductionMinutes",
@@ -71,7 +70,7 @@ export type AbilityStats = {
   trigger: string | null;
   /**
    * Effective chance in percent for one roll, already scaled by strength and
-   * clamped. Null when the ability has no baseProbability at all — those are
+   * clamped. Null when the ability has no baseProbability at all: those are
    * always-on modifiers (e.g. ProduceMutationBoost), not rolls, and showing
    * them a proc figure would misrepresent how they work.
    */
@@ -92,7 +91,7 @@ function toFiniteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-/** strength/100 — the multiplier the game applies to everything. */
+/** strength/100: the multiplier the game applies to everything. */
 export function getStrengthRatio(pet: PetLike): number {
   return getPetStrength(pet) / STRENGTH_SCALE;
 }
@@ -129,7 +128,7 @@ function getRequiredWeather(abilityId: string): string | null {
 export function computeAbilityStatsAtRatio(abilityId: string, ratio: number): AbilityStats | null {
   const definition = getDefinition(abilityId);
   // The ability catalog is dynamic and may gain ids this build has never
-  // seen — skip them rather than crashing the whole team card.
+  // seen: skip them rather than crashing the whole team card.
   if (!definition) return null;
 
   const safeRatio = Number.isFinite(ratio) && ratio > 0 ? ratio : 0;
