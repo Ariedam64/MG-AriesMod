@@ -1,5 +1,3 @@
-// src/core/quinoaCommands.ts
-//
 // Client-to-server protocol for the Quinoa scope.
 //
 // The game devs are migrating every gameplay action from the flat
@@ -13,7 +11,7 @@
 //
 // Everything here mirrors the live client (magicgarden.gg bundle 1029) message
 // for message: the types it wraps, we wrap; the types it still sends flat, we
-// send flat. That is what keeps us correct in both directions — when the devs
+// send flat. That is what keeps us correct in both directions: when the devs
 // move one of the flat ones into the envelope, it moves here too.
 
 const QUINOA_SCOPE: readonly string[] = ["Room", "Quinoa"];

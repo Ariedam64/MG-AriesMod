@@ -1,4 +1,3 @@
-// src/utils/shopPurchaseMessage.ts
 // Builds the PurchaseShopItem command the way the game sends it.
 //
 // Since v1292 the server rejects a purchase without `viewMode` ("list" or

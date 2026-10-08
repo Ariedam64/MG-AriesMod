@@ -186,8 +186,8 @@
     return spriteContext.state;
   }
   function getReadySpriteState() {
-    const state6 = spriteContext.state;
-    return state6.renderer && state6.ctors?.Text ? state6 : null;
+    const state5 = spriteContext.state;
+    return state5.renderer && state5.ctors?.Text ? state5 : null;
   }
   function getPixiApp() {
     return pixiHooks?.app ?? spriteContext.state.app;
@@ -406,7 +406,7 @@
       const hit = ctorsFromStage(candidate);
       if (hit) return hit;
     }
-    throw new Error("No Sprite found (ctors) \u2014 PIXI not exposed and stage not yet rendered.");
+    throw new Error("No Sprite found (ctors): PIXI not exposed and stage not yet rendered.");
   }
   function rememberBaseTex(tex, atlasBases) {
     const base = baseTexOf(tex);
@@ -527,7 +527,7 @@
   function canvasOf(renderer) {
     return renderer?.canvas || renderer?.view?.canvas || renderer?.view || null;
   }
-  function watchRendererHealth(state6, hooks3) {
+  function watchRendererHealth(state5, hooks3) {
     const pageWin3 = pageWindow;
     let staleStreak = 0;
     let needsCtorsRederive = false;
@@ -545,7 +545,7 @@
         if (needsCtorsRederive) {
           debugState4.ctorsRederiveAttempts += 1;
           try {
-            state6.ctors = getCtors(state6.app ?? state6.renderer);
+            state5.ctors = getCtors(state5.app ?? state5.renderer);
             needsCtorsRederive = false;
             debugState4.lastCtorsRederiveError = null;
             console.info("[MG SpriteCatalog] re-derived ctors from the new renderer");
@@ -553,7 +553,7 @@
             debugState4.lastCtorsRederiveError = String(error?.message ?? error);
           }
         }
-        const canvas = canvasOf(state6.renderer);
+        const canvas = canvasOf(state5.renderer);
         const canvasHealthy = !!canvas && typeof document !== "undefined" && document.contains(canvas);
         if (canvasHealthy) {
           staleStreak = 0;
@@ -564,13 +564,13 @@
         debugState4.staleStreak = staleStreak;
         if (staleStreak < REQUIRED_STALE_STREAK) return;
         const freshRenderer = hooks3.renderer;
-        if (!freshRenderer || freshRenderer === state6.renderer) return;
+        if (!freshRenderer || freshRenderer === state5.renderer) return;
         const freshCanvas = canvasOf(freshRenderer);
         if (!freshCanvas || typeof document === "undefined" || !document.contains(freshCanvas)) return;
         console.info("[MG SpriteCatalog] renderer canvas went stale, re-resolved a fresh one");
         debugState4.swaps.push({ at: Date.now(), fromCanvasInDoc: canvasHealthy });
-        state6.renderer = freshRenderer;
-        if (hooks3.app) state6.app = hooks3.app;
+        state5.renderer = freshRenderer;
+        if (hooks3.app) state5.app = hooks3.app;
         needsCtorsRederive = true;
         staleStreak = 0;
         debugState4.staleStreak = 0;
@@ -1048,20 +1048,20 @@
     }
     ctx2.restore();
   }
-  function tallOverlayFromSheet(mutName, state6) {
+  function tallOverlayFromSheet(mutName, state5) {
     const target = String(mutName || "").toLowerCase();
-    for (const k of state6.tex.keys()) {
+    for (const k of state5.tex.keys()) {
       const m = /sprite\/mutation-overlay\/([A-Za-z0-9]+)TallPlant/i.exec(String(k));
       if (!m || !m[1]) continue;
       const prefix = m[1].toLowerCase();
       if (prefix === target) {
-        const t = state6.tex.get(k);
+        const t = state5.tex.get(k);
         if (t) return { tex: t, key: k };
       }
     }
     return null;
   }
-  function findOverlayTexture(itKey, mutName, state6, preferTall) {
+  function findOverlayTexture(itKey, mutName, state5, preferTall) {
     if (!mutName) return null;
     const base = baseNameOf(itKey);
     const aliases = mutationAliases(mutName);
@@ -1074,27 +1074,27 @@
         `sprite/mutation/${name}`
       ];
       for (const k of tries) {
-        const t = state6.tex.get(k);
+        const t = state5.tex.get(k);
         if (t) return { tex: t, key: k };
       }
       if (preferTall) {
-        const hit = state6.tex.get(`sprite/mutation-overlay/${name}TallPlant`) && {
-          tex: state6.tex.get(`sprite/mutation-overlay/${name}TallPlant`),
+        const hit = state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`) && {
+          tex: state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`),
           key: `sprite/mutation-overlay/${name}TallPlant`
-        } || state6.tex.get(`sprite/mutation-overlay/${name}`) && {
-          tex: state6.tex.get(`sprite/mutation-overlay/${name}`),
+        } || state5.tex.get(`sprite/mutation-overlay/${name}`) && {
+          tex: state5.tex.get(`sprite/mutation-overlay/${name}`),
           key: `sprite/mutation-overlay/${name}`
-        } || tallOverlayFromSheet(mutName, state6);
+        } || tallOverlayFromSheet(mutName, state5);
         if (hit) return hit;
       }
     }
     return null;
   }
-  function findIconTexture(itKey, mutName, isTall, state6) {
+  function findIconTexture(itKey, mutName, isTall, state5) {
     if (!mutName) return null;
     const meta = MUT_META[mutName];
     if (isTall && meta?.tallIconOverride) {
-      const t = state6.tex.get(meta.tallIconOverride);
+      const t = state5.tex.get(meta.tallIconOverride);
       if (t) return t;
     }
     const base = baseNameOf(itKey);
@@ -1109,11 +1109,11 @@
         `sprite/mutation/${name}/${base}`
       ];
       for (const k of tries) {
-        const t = state6.tex.get(k);
+        const t = state5.tex.get(k);
         if (t) return t;
       }
       if (isTall) {
-        const t = state6.tex.get(`sprite/mutation-overlay/${name}TallPlantIcon`) || state6.tex.get(`sprite/mutation-overlay/${name}TallPlant`);
+        const t = state5.tex.get(`sprite/mutation-overlay/${name}TallPlantIcon`) || state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`);
         if (t) return t;
       }
     }
@@ -1153,14 +1153,14 @@
       }
     };
   }
-  function textureToCanvas(tex, state6, cfg) {
-    const hit = state6.srcCan.get(tex);
+  function textureToCanvas(tex, state5, cfg) {
+    const hit = state5.srcCan.get(tex);
     if (hit) return hit;
     let c = null;
-    const RDR = state6.renderer;
+    const RDR = state5.renderer;
     try {
       if (RDR?.extract?.canvas && (RDR?.resolution ?? 1) === 1) {
-        const s = new state6.ctors.Sprite(tex);
+        const s = new state5.ctors.Sprite(tex);
         c = RDR.extract.canvas(s);
         s.destroy?.({ children: true, texture: false, baseTexture: false });
       }
@@ -1193,18 +1193,18 @@
         ctx2.drawImage(src, fr.x, fr.y, fr.width, fr.height, offX, offY, fr.width, fr.height);
       }
     }
-    state6.srcCan.set(tex, c);
-    if (state6.srcCan.size > cfg.srcCanvasMax) {
-      const k = state6.srcCan.keys().next().value;
-      if (k !== void 0) state6.srcCan.delete(k);
+    state5.srcCan.set(tex, c);
+    if (state5.srcCan.size > cfg.srcCanvasMax) {
+      const k = state5.srcCan.keys().next().value;
+      if (k !== void 0) state5.srcCan.delete(k);
     }
     return c;
   }
-  function buildColorLayerSprites(tex, dims, pipeline, state6, cfg, disposables, TextureCtor) {
+  function buildColorLayerSprites(tex, dims, pipeline, state5, cfg, disposables, TextureCtor) {
     const { w, h, aX, aY, basePos } = dims;
     const layers = [];
     for (const step of pipeline) {
-      const clone2 = new state6.ctors.Sprite(tex);
+      const clone2 = new state5.ctors.Sprite(tex);
       clone2.anchor?.set?.(aX, aY);
       clone2.position.set(basePos.x, basePos.y);
       clone2.zIndex = 1;
@@ -1215,7 +1215,7 @@
       lctx.imageSmoothingEnabled = false;
       lctx.save();
       lctx.translate(w * aX, h * aY);
-      lctx.drawImage(textureToCanvas(tex, state6, cfg), -w * aX, -h * aY);
+      lctx.drawImage(textureToCanvas(tex, state5, cfg), -w * aX, -h * aY);
       lctx.restore();
       applyFilterOnto(lctx, layerCanvas, step.name, step.isTall);
       const filteredTex = TextureCtor.from(layerCanvas);
@@ -1225,14 +1225,14 @@
     }
     return layers;
   }
-  function buildTallOverlaySprites(itKey, dims, overlayPipeline, state6, cfg, baseCanvas, TextureCtor, disposables) {
+  function buildTallOverlaySprites(itKey, dims, overlayPipeline, state5, cfg, baseCanvas, TextureCtor, disposables) {
     const { aX, basePos } = dims;
     if (!baseCanvas) return [];
     const overlays = [];
     for (const step of overlayPipeline) {
-      const hit = step.overlayTall && state6.tex.get(step.overlayTall) && { tex: state6.tex.get(step.overlayTall), key: step.overlayTall } || findOverlayTexture(itKey, step.name, state6, true);
+      const hit = step.overlayTall && state5.tex.get(step.overlayTall) && { tex: state5.tex.get(step.overlayTall), key: step.overlayTall } || findOverlayTexture(itKey, step.name, state5, true);
       if (!hit?.tex) continue;
-      const oCan = textureToCanvas(hit.tex, state6, cfg);
+      const oCan = textureToCanvas(hit.tex, state5, cfg);
       if (!oCan) continue;
       const ow = oCan.width;
       const overlayAnchor = { x: 0, y: 0 };
@@ -1253,7 +1253,7 @@
       mctx.drawImage(baseCanvas, -overlayPos.x, -overlayPos.y);
       const maskedTex = TextureCtor.from(maskedCanvas);
       disposables.push(maskedTex);
-      const ov = new state6.ctors.Sprite(maskedTex);
+      const ov = new state5.ctors.Sprite(maskedTex);
       ov.anchor?.set?.(overlayAnchor.x, overlayAnchor.y);
       ov.position.set(overlayPos.x, overlayPos.y);
       ov.scale.set(1);
@@ -1263,14 +1263,14 @@
     }
     return overlays;
   }
-  function buildIconSprites(itKey, dims, iconPipeline, state6, iconLayout) {
+  function buildIconSprites(itKey, dims, iconPipeline, state5, iconLayout) {
     const { basePos } = dims;
     const icons = [];
     for (const step of iconPipeline) {
       if (step.name === "Gold" || step.name === "Rainbow") continue;
-      const itex = findIconTexture(itKey, step.name, step.isTall, state6);
+      const itex = findIconTexture(itKey, step.name, step.isTall, state5);
       if (!itex) continue;
-      const icon = new state6.ctors.Sprite(itex);
+      const icon = new state5.ctors.Sprite(itex);
       const iconAnchorX = itex?.defaultAnchor?.x ?? 0.5;
       const iconAnchorY = itex?.defaultAnchor?.y ?? 0.5;
       icon.anchor?.set?.(iconAnchorX, iconAnchorY);
@@ -1283,31 +1283,31 @@
     }
     return icons;
   }
-  function lruEvict(state6, cfg) {
+  function lruEvict(state5, cfg) {
     if (!cfg.cacheOn) return;
-    while (state6.lru.size > cfg.cacheMaxEntries || state6.cost > cfg.cacheMaxCost) {
-      const k = state6.lru.keys().next().value;
+    while (state5.lru.size > cfg.cacheMaxEntries || state5.cost > cfg.cacheMaxCost) {
+      const k = state5.lru.keys().next().value;
       if (k === void 0) break;
-      const e = state6.lru.get(k);
-      state6.lru.delete(k);
-      state6.cost = Math.max(0, state6.cost - entryCost(e));
+      const e = state5.lru.get(k);
+      state5.lru.delete(k);
+      state5.cost = Math.max(0, state5.cost - entryCost(e));
     }
   }
-  function clearVariantCache(state6) {
-    state6.lru.clear();
-    state6.cost = 0;
-    state6.srcCan.clear();
+  function clearVariantCache(state5) {
+    state5.lru.clear();
+    state5.cost = 0;
+    state5.srcCan.clear();
   }
-  function renderMutatedTexture(tex, itKey, V, state6, cfg) {
+  function renderMutatedTexture(tex, itKey, V, state5, cfg) {
     try {
-      if (!tex || !state6.renderer || !state6.ctors?.Container || !state6.ctors?.Sprite || !state6.ctors?.Texture) return null;
-      const { Container, Sprite, Texture } = state6.ctors;
+      if (!tex || !state5.renderer || !state5.ctors?.Container || !state5.ctors?.Sprite || !state5.ctors?.Texture) return null;
+      const { Container, Sprite, Texture } = state5.ctors;
       const w = tex?.orig?.width ?? tex?.frame?.width ?? tex?.width ?? 1;
       const h = tex?.orig?.height ?? tex?.frame?.height ?? tex?.height ?? 1;
       const aX = tex?.defaultAnchor?.x ?? 0.5;
       const aY = tex?.defaultAnchor?.y ?? 0.5;
       const basePos = { x: w * aX, y: h * aY };
-      const baseCanvas = textureToCanvas(tex, state6, cfg);
+      const baseCanvas = textureToCanvas(tex, state5, cfg);
       const root = new Container();
       root.sortableChildren = true;
       try {
@@ -1334,14 +1334,14 @@
       const baseName = baseNameOf(itKey);
       const iconLayout = computeIconLayout(tex, baseName, isTall);
       const dims = { w, h, aX, aY, basePos };
-      buildColorLayerSprites(tex, dims, pipeline, state6, cfg, disposables, Texture).forEach((layer) => root.addChild(layer));
+      buildColorLayerSprites(tex, dims, pipeline, state5, cfg, disposables, Texture).forEach((layer) => root.addChild(layer));
       if (isTall) {
-        buildTallOverlaySprites(itKey, dims, overlayPipeline, state6, cfg, baseCanvas, Texture, disposables).forEach((ov) => root.addChild(ov));
+        buildTallOverlaySprites(itKey, dims, overlayPipeline, state5, cfg, baseCanvas, Texture, disposables).forEach((ov) => root.addChild(ov));
       }
-      buildIconSprites(itKey, dims, iconPipeline, state6, iconLayout).forEach((icon) => root.addChild(icon));
-      const RDR = state6.renderer;
+      buildIconSprites(itKey, dims, iconPipeline, state5, iconLayout).forEach((icon) => root.addChild(icon));
+      const RDR = state5.renderer;
       let rt = null;
-      const RectCtor = state6.ctors?.Rectangle;
+      const RectCtor = state5.ctors?.Rectangle;
       const crop = RectCtor ? new RectCtor(0, 0, w, h) : null;
       if (typeof RDR?.generateTexture === "function")
         rt = RDR.generateTexture(root, { resolution: 1, region: crop ?? void 0 });
@@ -1363,36 +1363,36 @@
       return null;
     }
   }
-  function processVariantJobs(state6, cfg) {
-    if (!cfg.jobOn || !state6.open || !state6.jobs.length) return false;
+  function processVariantJobs(state5, cfg) {
+    if (!cfg.jobOn || !state5.open || !state5.jobs.length) return false;
     const now2 = performance.now();
-    const burst = now2 - state6.changedAt <= cfg.jobBurstWindowMs;
+    const burst = now2 - state5.changedAt <= cfg.jobBurstWindowMs;
     const budget = burst ? cfg.jobBurstMs : cfg.jobBudgetMs;
     const t0 = performance.now();
     let done = 0;
     let needsLayout = false;
-    while (state6.jobs.length) {
+    while (state5.jobs.length) {
       if (performance.now() - t0 >= budget) break;
       if (done >= cfg.jobCapPerTick) break;
-      const job = state6.jobs[0];
-      if (job.sig !== state6.sig) {
-        state6.jobs.shift();
-        state6.jobMap.delete(job.k);
+      const job = state5.jobs[0];
+      if (job.sig !== state5.sig) {
+        state5.jobs.shift();
+        state5.jobMap.delete(job.k);
         continue;
       }
       const tex = job.src[job.i];
       if (!tex) {
-        state6.jobs.shift();
-        state6.jobMap.delete(job.k);
+        state5.jobs.shift();
+        state5.jobMap.delete(job.k);
         continue;
       }
-      const ft = renderMutatedTexture(tex, job.itKey, job.V, state6, cfg);
+      const ft = renderMutatedTexture(tex, job.itKey, job.V, state5, cfg);
       if (ft) job.out.push(ft);
       job.i++;
       done++;
       if (job.i >= job.src.length) {
-        state6.jobs.shift();
-        state6.jobMap.delete(job.k);
+        state5.jobs.shift();
+        state5.jobMap.delete(job.k);
         let entry = null;
         if (job.isAnim) {
           if (job.out.length >= 2) entry = { isAnim: true, frames: job.out };
@@ -1402,9 +1402,9 @@
           if (job.out[0]) entry = { isAnim: false, tex: job.out[0] };
         }
         if (entry) {
-          state6.lru.set(job.k, entry);
-          state6.cost += entryCost(entry);
-          lruEvict(state6, cfg);
+          state5.lru.set(job.k, entry);
+          state5.cost += entryCost(entry);
+          lruEvict(state5, cfg);
           needsLayout = true;
         }
       }
@@ -1485,13 +1485,13 @@
       };
       hasMutationFilter = (value) => Boolean(value && FILTERS[value]);
       isTallKey = (k) => /tallplant/i.test(k);
-      computeVariantSignature = (state6) => {
-        if (!state6.mutOn) {
-          const f = hasMutationFilter(state6.f) ? state6.f : null;
+      computeVariantSignature = (state5) => {
+        if (!state5.mutOn) {
+          const f = hasMutationFilter(state5.f) ? state5.f : null;
           const baseMuts = f ? [f] : [];
           return { mode: "F", muts: baseMuts, overlayMuts: baseMuts, selectedMuts: baseMuts, sig: `F:${f ?? ""}` };
         }
-        const raw = state6.mutations.filter((value) => hasMutationFilter(value));
+        const raw = state5.mutations.filter((value) => hasMutationFilter(value));
         const selected = sortMutations(raw);
         const muts = normalizeMutListColor(raw);
         const overlayMuts = normalizeMutListOverlay(raw);
@@ -1554,48 +1554,48 @@
   });
 
   // src/game/sprites/api/expose.ts
-  function exposeApi(state6, hud) {
+  function exposeApi(state5, hud) {
     const root = pageWindow;
     const api = {
       open() {
         hud.root?.style && (hud.root.style.display = "block");
-        state6.open = true;
+        state5.open = true;
       },
       close() {
         hud.root?.style && (hud.root.style.display = "none");
-        state6.open = false;
+        state5.open = false;
       },
       toggle() {
-        state6.open ? api.close() : api.open();
+        state5.open ? api.close() : api.open();
       },
       setCategory(cat) {
-        state6.cat = cat || "__all__";
+        state5.cat = cat || "__all__";
       },
       setFilterText(text) {
-        state6.q = String(text || "").trim();
+        state5.q = String(text || "").trim();
       },
       setSpriteFilter(name) {
-        state6.f = name;
-        state6.mutOn = false;
+        state5.f = name;
+        state5.mutOn = false;
       },
       setMutation(on, ...muts) {
-        state6.mutOn = !!on;
-        state6.f = "";
-        state6.mutations = state6.mutOn ? muts.filter(Boolean).map((name) => name) : [];
+        state5.mutOn = !!on;
+        state5.f = "";
+        state5.mutations = state5.mutOn ? muts.filter(Boolean).map((name) => name) : [];
       },
       filters() {
         return [];
       },
       categories() {
-        return [...state6.cats.keys()].sort((a, b) => a.localeCompare(b));
+        return [...state5.cats.keys()].sort((a, b) => a.localeCompare(b));
       },
       cacheStats() {
-        return { entries: state6.lru.size, cost: state6.cost };
+        return { entries: state5.lru.size, cost: state5.cost };
       },
       clearCache() {
-        clearVariantCache(state6);
+        clearVariantCache(state5);
       },
-      curVariant: () => curVariant(state6)
+      curVariant: () => curVariant(state5)
     };
     root.MGSpriteCatalog = api;
     return api;
@@ -1616,9 +1616,9 @@
     getSpriteWithMutations: () => getSpriteWithMutations,
     listItemsByCategory: () => listItemsByCategory
   });
-  function findItem(state6, category, id) {
+  function findItem(state5, category, id) {
     const normId = normalizeKey(id);
-    for (const it of state6.items) {
+    for (const it of state5.items) {
       const keyCat = keyCategoryOf(it.key);
       if (!matchesCategory(keyCat, category)) continue;
       const base = normalizeKey(baseNameOf2(it.key));
@@ -1626,22 +1626,22 @@
     }
     return null;
   }
-  function listItemsByCategory(state6, category = "any") {
-    return state6.items.filter((it) => matchesCategory(keyCategoryOf(it.key), category));
+  function listItemsByCategory(state5, category = "any") {
+    return state5.items.filter((it) => matchesCategory(keyCategoryOf(it.key), category));
   }
   function buildVariant(mutations) {
     return buildVariantFromMutations(mutations);
   }
-  function getSpriteWithMutations(params, state6, cfg) {
-    const it = findItem(state6, params.category, params.id);
+  function getSpriteWithMutations(params, state5, cfg) {
+    const it = findItem(state5, params.category, params.id);
     if (!it) return null;
     const tex = it.isAnim ? it.frames?.[0] : it.first;
     if (!tex) return null;
     const V = buildVariantFromMutations(params.mutations);
-    return renderMutatedTexture(tex, it.key, V, state6, cfg);
+    return renderMutatedTexture(tex, it.key, V, state5, cfg);
   }
-  function getBaseSprite(params, state6) {
-    const it = findItem(state6, params.category, params.id);
+  function getBaseSprite(params, state5) {
+    const it = findItem(state5, params.category, params.id);
     if (!it) return null;
     return it.isAnim ? it.frames?.[0] ?? null : it.first;
   }
@@ -2420,9 +2420,9 @@
     patchSocketSend();
     const wrapped2 = WrappedWebSocket;
     wrapped2.prototype = NativeWS.prototype;
-    for (const state6 of ["OPEN", "CLOSED", "CLOSING", "CONNECTING"]) {
+    for (const state5 of ["OPEN", "CLOSED", "CLOSING", "CONNECTING"]) {
       try {
-        wrapped2[state6] = NativeWS[state6];
+        wrapped2[state5] = NativeWS[state5];
       } catch {
       }
     }
@@ -3208,10 +3208,10 @@
     }
     return infos;
   }
-  function petsStateSig(state6) {
-    if (!Array.isArray(state6)) return "null";
-    if (!state6.length) return "empty";
-    return state6.map((p) => `${String(p?.slot?.id ?? "")}:${petSig(p)}`).join("|");
+  function petsStateSig(state5) {
+    if (!Array.isArray(state5)) return "null";
+    if (!state5.length) return "empty";
+    return state5.map((p) => `${String(p?.slot?.id ?? "")}:${petSig(p)}`).join("|");
   }
   function watchPets(cb, seed) {
     let lastInfos = seed?.infos ?? null;
@@ -8183,16 +8183,16 @@
     return value;
   }
   function writeAriesPath(path, value) {
-    return updateAriesStorage((state6) => {
-      setValueAtPath(state6, path.split(".").filter(Boolean), value);
+    return updateAriesStorage((state5) => {
+      setValueAtPath(state5, path.split(".").filter(Boolean), value);
     });
   }
   function updateAriesPath(path, updater) {
-    return updateAriesStorage((state6) => {
+    return updateAriesStorage((state5) => {
       const parts = path.split(".").filter(Boolean);
-      const currentValue = getValueAtPath(state6, parts);
+      const currentValue = getValueAtPath(state5, parts);
       const next = updater(currentValue);
-      setValueAtPath(state6, parts, next);
+      setValueAtPath(state5, parts, next);
     });
   }
   function setApiKey(apiKey) {
@@ -8630,7 +8630,7 @@
         if (ar === 1 || ar === 2) return k;
       }
     }
-    throw new Error("Impossible de localiser la fonction read() de l'atom");
+    throw new Error("Cannot find the atom's read() function");
   }
   function _getState(label2) {
     return _fakeRegistry.get(label2) || null;
@@ -8647,9 +8647,9 @@
     if (existing?.installed) return existing;
     const atoms = _atomsByExactLabel(config.label);
     if (!atoms.length) {
-      throw new Error(`${config.label} introuvable`);
+      throw new Error(`${config.label} not found`);
     }
-    const state6 = existing ?? {
+    const state5 = existing ?? {
       config,
       enabled: false,
       payload: null,
@@ -8674,13 +8674,13 @@
           }
         }
         const real = orig(get);
-        if (!state6.enabled || state6.payload == null) return real;
-        return config.merge ? config.merge(real, state6.payload) : state6.payload;
+        if (!state5.enabled || state5.payload == null) return real;
+        return config.merge ? config.merge(real, state5.payload) : state5.payload;
       };
-      state6.patched.set(a, { readKey, orig });
+      state5.patched.set(a, { readKey, orig });
     }
     if (gateAtom && config.gate?.autoDisableOnClose) {
-      state6.unsubGate = await jSub(gateAtom, async () => {
+      state5.unsubGate = await jSub(gateAtom, async () => {
         let v;
         try {
           v = await jGet(gateAtom);
@@ -8688,12 +8688,12 @@
           v = null;
         }
         const isOpen = config.gate?.isOpen ? config.gate.isOpen(v) : !!v;
-        if (!isOpen && state6.enabled) state6.enabled = false;
+        if (!isOpen && state5.enabled) state5.enabled = false;
       });
     }
-    state6.installed = true;
-    _fakeRegistry.set(key2, state6);
-    return state6;
+    state5.installed = true;
+    _fakeRegistry.set(key2, state5);
+    return state5;
   }
   async function _primePatched(st) {
     const store = await ensureStore();
@@ -8726,7 +8726,7 @@
   }
   async function fakeUpdate(label2, nextPayload) {
     const st = _getState(label2);
-    if (!st?.installed) throw new Error(`Fake ${label2} non install\xE9`);
+    if (!st?.installed) throw new Error(`Fake ${label2} not installed`);
     st.payload = nextPayload;
     await _forceRepaintViaGate(st.config.gate);
   }
@@ -10005,9 +10005,9 @@
     }
   }
   async function findFirstEmptySlot() {
-    const state6 = await PlayerService.getGardenState();
-    const dirt = state6?.tileObjects || {};
-    const boardwalk = state6?.boardwalkTileObjects || {};
+    const state5 = await PlayerService.getGardenState();
+    const dirt = state5?.tileObjects || {};
+    const boardwalk = state5?.boardwalkTileObjects || {};
     for (let i = 0; i < 200; i++) {
       const key2 = String(i);
       const has = Object.prototype.hasOwnProperty.call(dirt, key2) && dirt[key2] != null;
@@ -10990,8 +10990,8 @@
     if (!list.length) return "";
     return "|m=" + list.map(normalizeSpriteName).filter(Boolean).sort().join(",");
   }
-  function notifyWarmup(state6) {
-    warmupState = state6;
+  function notifyWarmup(state5) {
+    warmupState = state5;
     warmupListeners.forEach((listener) => {
       try {
         listener(warmupState);
@@ -11420,161 +11420,129 @@
   });
 
   // src/game/audioPlayer.ts
-  var AudioPlayer, audioPlayer;
+  function groupKeyOf(name) {
+    const base = String(name || "").replace(/\.mp3$/i, "");
+    const m = base.match(/^([A-Za-z]+)[_\-]/) ?? base.match(/^([A-Za-z]+)\d+$/) ?? base.match(/^([A-Za-z]+)/);
+    return m ? m[1].toLowerCase() : base.toLowerCase();
+  }
+  function extractMp3s(text) {
+    if (!text) return [];
+    const out = [];
+    let m;
+    MP3_IN_TEXT.lastIndex = 0;
+    while (m = MP3_IN_TEXT.exec(text)) out.push(m[1]);
+    return out;
+  }
+  function sameAsset(a, b) {
+    try {
+      const A = new URL(a, location.href).href;
+      const B = new URL(b, location.href).href;
+      return A === B || logicalName(fileName(A)) === logicalName(fileName(B));
+    } catch {
+      return a === b;
+    }
+  }
+  function howler() {
+    return window.Howler && Array.isArray(window.Howler._howls) ? window.Howler : null;
+  }
+  function readGameVolume() {
+    const raw = localStorage.getItem(VOLUME_STORAGE_KEY);
+    if (raw == null) return null;
+    let text = raw;
+    try {
+      const val = JSON.parse(raw);
+      if (typeof val === "number") return val;
+      text = JSON.stringify(val);
+    } catch {
+    }
+    const m = String(text).match(/-?\d+(?:\.\d+)?/);
+    return m ? parseFloat(m[0]) : null;
+  }
+  function effectiveVolume() {
+    const raw = readGameVolume() ?? VOLUME_MAX;
+    const clamped = Math.max(VOLUME_MIN, Math.min(VOLUME_MAX, raw));
+    const setting = Math.abs(clamped - VOLUME_MIN) < 1e-6 ? 0 : clamped;
+    let master = 1;
+    try {
+      if (window.Howler && typeof window.Howler.volume === "function") master = window.Howler.volume();
+    } catch {
+    }
+    return setting * master;
+  }
+  async function fetchText(u) {
+    try {
+      const res = await fetch(u, { mode: "same-origin", credentials: "same-origin" });
+      if (!res.ok) return "";
+      if (!/javascript|ecmascript|css|html/i.test(res.headers.get("content-type") || "")) return "";
+      return await res.text();
+    } catch {
+      return "";
+    }
+  }
+  var VOLUME_STORAGE_KEY, VOLUME_MIN, VOLUME_MAX, MIN_VARIANTS_PER_GROUP, MP3_URL, MP3_IN_TEXT, absolute, fileName, logicalName, AudioPlayer, audioPlayer;
   var init_audioPlayer = __esm({
     "src/game/audioPlayer.ts"() {
       "use strict";
+      VOLUME_STORAGE_KEY = "soundEffectsVolumeAtom";
+      VOLUME_MIN = 1e-3;
+      VOLUME_MAX = 0.2000000000000001;
+      MIN_VARIANTS_PER_GROUP = 2;
+      MP3_URL = /\.mp3(?:[\?#][^\s'"]*)?$/i;
+      MP3_IN_TEXT = /["'`](\/?[^"'`)\s]+?\.mp3(?:\?[^"'`\s]*)?)["'`]/ig;
+      absolute = (u) => {
+        try {
+          return new URL(u, location.href).href;
+        } catch {
+          return u;
+        }
+      };
+      fileName = (u) => {
+        try {
+          return new URL(u, location.href).pathname.split("/").pop() || u;
+        } catch {
+          return String(u);
+        }
+      };
+      logicalName = (name) => name.replace(/-[A-Za-z0-9_=-]{6,}(?=\.mp3$)/i, "");
       AudioPlayer = class {
-        constructor(opts = {}) {
-          this.found = /* @__PURE__ */ new Set();
-          this.meta = /* @__PURE__ */ new Map();
+        constructor() {
+          /** Every mp3 found, by absolute URL, with its name without the hash. */
+          this.found = /* @__PURE__ */ new Map();
           this.groupsMap = /* @__PURE__ */ new Map();
-          // Howler cache local
-          this.howler = null;
-          this.atomKey = opts.atomKey ?? "soundEffectsVolumeAtom";
-          this.min = opts.min ?? 1e-3;
-          this.max = opts.max ?? 0.2000000000000001;
-          this.gainFactor = opts.gainFactor ?? 1;
-          this.minVariantsPerAutoGroup = opts.minVariantsPerAutoGroup ?? 2;
-          if (opts.autoScan) void this.init();
+          void this.scanAll();
         }
-        /** Lance un scan initial et reconstruit les groupes auto. */
-        async init() {
-          await this.scanAll();
+        add(u) {
+          if (!u || !MP3_URL.test(u)) return;
+          const url = absolute(u);
+          if (!this.found.has(url)) this.found.set(url, logicalName(fileName(url)));
         }
-        // ----------------- Utils -----------------
-        abs(u) {
-          try {
-            return new URL(u, location.href).href;
-          } catch {
-            return u;
+        scanPerformance() {
+          for (const entry of performance.getEntriesByType("resource")) {
+            this.add(entry.name);
           }
         }
-        isMP3(u) {
-          return /\.mp3(?:[\?#][^\s'"]*)?$/i.test(u);
-        }
-        fileName(u) {
-          try {
-            return new URL(u, location.href).pathname.split("/").pop() || u;
-          } catch {
-            return String(u);
+        scanHowler() {
+          for (const h of howler()?._howls ?? []) {
+            const src = h && (h._src || h._urls?.[0]);
+            if (src) this.add(src);
           }
-        }
-        logicalName(fileName) {
-          return fileName.replace(/-[A-Za-z0-9_=-]{6,}(?=\.mp3$)/i, "");
-        }
-        clamp(x, a, b) {
-          return Math.max(a, Math.min(b, x));
-        }
-        choose(arr) {
-          return arr && arr.length ? arr[Math.random() * arr.length | 0] : void 0;
-        }
-        toKey(name) {
-          return String(name || "").trim().toLowerCase();
-        }
-        add(u, sourceTag) {
-          if (!u || !this.isMP3(u)) return;
-          const url = this.abs(u);
-          if (!this.found.has(url)) {
-            this.found.add(url);
-            const name = this.fileName(url);
-            this.meta.set(url, { from: /* @__PURE__ */ new Set([sourceTag]), name, logicalName: this.logicalName(name) });
-          } else {
-            this.meta.get(url)?.from.add(sourceTag);
-          }
-        }
-        refreshHowler() {
-          this.howler = window.Howler && Array.isArray(window.Howler._howls) ? window.Howler : null;
-          return this.howler;
-        }
-        sameAsset(a, b) {
-          try {
-            const A = new URL(a, location.href).href;
-            const B = new URL(b, location.href).href;
-            if (A === B) return true;
-            const fn = (p) => new URL(p, location.href).pathname.split("/").pop();
-            const la = this.logicalName(fn(A));
-            const lb = this.logicalName(fn(B));
-            return la === lb;
-          } catch {
-            return a === b;
-          }
-        }
-        readAtomRaw() {
-          const raw = localStorage.getItem(this.atomKey);
-          if (raw == null) return null;
-          try {
-            const val = JSON.parse(raw);
-            if (typeof val === "number") return val;
-            const m = JSON.stringify(val).match(/-?\d+(?:\.\d+)?/);
-            return m ? parseFloat(m[0]) : null;
-          } catch {
-            const m = String(raw).match(/-?\d+(?:\.\d+)?/);
-            return m ? parseFloat(m[0]) : null;
-          }
-        }
-        howlerMaster() {
-          try {
-            return window.Howler && typeof window.Howler.volume === "function" ? window.Howler.volume() : 1;
-          } catch {
-            return 1;
-          }
-        }
-        // 0.001 est considéré comme un vrai mute (→ 0)
-        finalVolumeObj() {
-          let raw = this.readAtomRaw();
-          if (raw == null) raw = this.max;
-          const clamped = this.clamp(raw, this.min, this.max);
-          const nearMute = Math.abs(clamped - this.min) < 1e-6 ? 0 : clamped;
-          const vol = nearMute * this.howlerMaster() * this.gainFactor;
-          return { raw, clamped, vol };
-        }
-        // ----------------- Scanners -----------------
-        async scanPerformance() {
-          performance.getEntriesByType("resource").map((e) => e.name).filter(Boolean).forEach((u) => this.add(u, "perf"));
-        }
-        async scanHowler() {
-          this.refreshHowler();
-          if (!this.howler) return;
-          this.howler._howls.forEach((h) => {
-            const src = h && (h._src || h._urls && h._urls[0]);
-            if (src) this.add(src, "howler");
-          });
         }
         async scanCaches() {
           if (!("caches" in window)) return;
           try {
-            const keys = await caches.keys();
-            for (const k of keys) {
-              const c = await caches.open(k);
-              const reqs = await c.keys();
-              for (const r of reqs) {
-                const u = r.url;
-                if (this.isMP3(u)) this.add(u, `cache:${k}`);
-              }
+            for (const k of await caches.keys()) {
+              const cache2 = await caches.open(k);
+              for (const r of await cache2.keys()) this.add(r.url);
             }
           } catch {
           }
         }
-        async fetchText(u) {
-          try {
-            const res = await fetch(u, { mode: "same-origin", credentials: "same-origin" });
-            if (!res.ok) return "";
-            const ct = res.headers.get("content-type") || "";
-            if (!/javascript|ecmascript|css|html/i.test(ct)) return "";
-            return await res.text();
-          } catch {
-            return "";
-          }
+        scanDOM() {
+          document.querySelectorAll("audio[src]").forEach((a) => this.add(a.getAttribute("src") || ""));
+          document.querySelectorAll("source[src]").forEach((s) => this.add(s.getAttribute("src") || ""));
+          for (const m of extractMp3s(document.documentElement?.outerHTML || "")) this.add(m);
         }
-        extractMp3s(text) {
-          if (!text) return [];
-          const re = /["'`](\/?[^"'`)\s]+?\.mp3(?:\?[^"'`\s]*)?)["'`]/ig;
-          const out = [];
-          let m;
-          while (m = re.exec(text)) out.push(m[1]);
-          return out;
-        }
+        /** The mp3 paths named in the page itself and its same-origin scripts and stylesheets. */
         async scanResourcesForRefs() {
           const urls = /* @__PURE__ */ new Set();
           document.querySelectorAll('script[src],link[rel="stylesheet"][href]').forEach((el2) => {
@@ -11586,119 +11554,36 @@
             }
           });
           urls.add(location.href);
-          const texts = await Promise.all([...urls].map((u) => this.fetchText(u)));
-          texts.forEach((t, i) => {
-            for (const match of this.extractMp3s(t)) this.add(match, `ref:${[...urls][i]}`);
-          });
-        }
-        async scanDOM() {
-          document.querySelectorAll("audio[src]").forEach((a) => this.add(a.getAttribute("src") || "", "dom"));
-          document.querySelectorAll("source[src]").forEach((s) => this.add(s.getAttribute("src") || "", "dom"));
-          const html = document.documentElement?.outerHTML || "";
-          for (const m of this.extractMp3s(html)) this.add(m, "html");
+          const texts = await Promise.all([...urls].map(fetchText));
+          for (const text of texts) for (const m of extractMp3s(text)) this.add(m);
         }
         async scanAll() {
           this.found.clear();
-          this.meta.clear();
-          await Promise.all([
-            this.scanPerformance(),
-            this.scanHowler(),
-            this.scanCaches(),
-            this.scanDOM()
-          ]);
+          this.scanPerformance();
+          this.scanHowler();
+          this.scanDOM();
+          await this.scanCaches();
           await this.scanResourcesForRefs();
-          this.autoGroups({ overwrite: true });
-          return this.urls();
-        }
-        // ----------------- Groupes -----------------
-        inferGroupKey(logicalName) {
-          const base = String(logicalName || "").replace(/\.mp3$/i, "");
-          let m = base.match(/^([A-Za-z]+)[_\-]/);
-          if (m) return m[1].toLowerCase();
-          m = base.match(/^([A-Za-z]+)\d+$/);
-          if (m) return m[1].toLowerCase();
-          m = base.match(/^([A-Za-z]+)/);
-          return m ? m[1].toLowerCase() : base.toLowerCase();
-        }
-        defineGroup(name, matcher) {
-          const key2 = this.toKey(name);
-          const set2 = /* @__PURE__ */ new Set();
-          const items = this.urls().map((u) => [u, this.meta.get(u)]);
-          const test = (url, meta) => {
-            if (!matcher) return false;
-            if (typeof matcher === "function") return !!matcher(url, meta);
-            const ln = meta?.logicalName || meta?.name || url;
-            if (matcher instanceof RegExp) return matcher.test(ln) || matcher.test(url);
-            const txt = String(matcher).toLowerCase();
-            return ln.toLowerCase().startsWith(txt) || url.toLowerCase().includes("/" + txt);
-          };
-          for (const [url, meta] of items)
-            if (test(url, meta && { name: meta.name, logicalName: meta.logicalName })) set2.add(url);
-          this.groupsMap.set(key2, set2);
-          return [...set2];
-        }
-        undefineGroup(name) {
-          this.groupsMap.delete(this.toKey(name));
-        }
-        // --- Unique implémentation publique ---
-        autoGroups({ overwrite = false, minVariants = this.minVariantsPerAutoGroup } = {}) {
-          this.rebuildAutoGroups(overwrite, minVariants);
-          return this.groups();
-        }
-        // Helper privé appelé par autoGroups()
-        rebuildAutoGroups(overwrite, minVariants) {
-          const tmp = /* @__PURE__ */ new Map();
-          for (const [url, m] of this.meta.entries()) {
-            const grp = this.inferGroupKey(m?.logicalName || m?.name || url);
-            if (!tmp.has(grp)) tmp.set(grp, /* @__PURE__ */ new Set());
-            tmp.get(grp).add(url);
+          const groups = /* @__PURE__ */ new Map();
+          for (const [url, name] of this.found) {
+            const key2 = groupKeyOf(name);
+            groups.set(key2, [...groups.get(key2) ?? [], url]);
           }
-          for (const [grp, set2] of tmp.entries()) {
-            if (set2.size < minVariants) continue;
-            if (overwrite || !this.groupsMap.has(grp)) this.groupsMap.set(grp, set2);
+          for (const [key2, list] of groups) {
+            if (list.length >= MIN_VARIANTS_PER_GROUP) this.groupsMap.set(key2, list);
           }
         }
-        groups() {
-          const out = {};
-          for (const [k, set2] of this.groupsMap.entries()) out[k] = [...set2];
-          return out;
-        }
-        getGroup(name) {
-          const set2 = this.groupsMap.get(this.toKey(name));
-          return set2 ? [...set2] : [];
-        }
-        pick(name) {
-          const g = this.getGroup(name);
-          return this.choose(g);
-        }
-        // ----------------- Lecture -----------------
-        findExistingHowlByUrl(url) {
-          this.refreshHowler();
-          if (!this.howler) return null;
-          for (const h of this.howler._howls) {
-            const src = h && (h._src || h._urls && h._urls[0]);
-            if (src && this.sameAsset(src, url)) return h;
+        findExistingHowl(url) {
+          for (const h of howler()?._howls ?? []) {
+            const src = h && (h._src || h._urls?.[0]);
+            if (src && sameAsset(src, url)) return h;
           }
           return null;
         }
-        /** Volume calculé selon config + atom du jeu. */
-        getGameSfxVolume() {
-          return this.finalVolumeObj();
-        }
-        /** Ajoute un offset global (sans toucher à l’atom du jeu). */
-        setGainFactor(g = 1) {
-          this.gainFactor = +g || 1;
-        }
-        /** Permet d’adapter la clé et la plage de l’atom si ça change côté jeu. */
-        setAtomConfig(key2 = "soundEffectsVolumeAtom", min = 1e-3, max = 0.2000000000000001) {
-          this.atomKey = key2;
-          this.min = min;
-          this.max = max;
-        }
-        /** Joue une URL en respectant le volume du jeu et Howler si dispo. */
+        /** Plays a URL at the game's volume, through Howler when it is there. */
         playUrl(url) {
-          const { vol } = this.finalVolumeObj();
-          const existing = this.findExistingHowlByUrl(url);
+          const vol = effectiveVolume();
+          const existing = this.findExistingHowl(url);
           if (existing) {
             try {
               existing.play();
@@ -11725,104 +11610,23 @@
             return null;
           }
         }
-        /** Joue par motif (RegExp ou texte partiel). */
+        /** Plays the first sound whose URL matches (a RegExp, or text matched case-insensitively). */
         playBy(matcher) {
-          const list = this.urls();
           const re = matcher instanceof RegExp ? matcher : new RegExp(String(matcher).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-          const hit = list.find((u) => re.test(u));
+          const hit = [...this.found.keys()].find((u) => re.test(u));
           return hit ? this.playUrl(hit) : null;
         }
-        /** Joue par nom logique exact si possible, sinon via motif. */
-        play(nameOrRegex) {
-          if (typeof nameOrRegex === "string") {
-            const m = this.map();
-            if (m[nameOrRegex]?.[0]) return this.playUrl(m[nameOrRegex][0]);
-          }
-          return this.playBy(nameOrRegex);
-        }
-        /** Joue une entrée d’un groupe (index fixe, ou aléatoire). */
-        playGroup(name, opts = {}) {
-          const { index, random = true, filter } = opts;
-          let list = this.getGroup(name);
+        /** Plays a random variation of a group ("harvest", "plantseed", ...), or null if there is none. */
+        playGroup(name) {
+          const list = this.groupsMap.get(String(name || "").trim().toLowerCase()) ?? [];
           if (!list.length) return null;
-          if (typeof filter === "function") {
-            list = list.filter((u) => {
-              const m = this.meta.get(u);
-              return filter(u, m && { name: m.name, logicalName: m.logicalName });
-            });
-            if (!list.length) return null;
-          }
-          const url = typeof index === "number" ? list[(index % list.length + list.length) % list.length] : random ? this.choose(list) : list[0];
-          return this.playUrl(url);
-        }
-        /** Alias pratique pour jouer une variation aléatoire d’un groupe (ex: "harvest"). */
-        playRandom(name) {
-          return this.playGroup(name, { random: true });
-        }
-        // ----------------- Tables & export -----------------
-        urls() {
-          return [...this.found];
-        }
-        map() {
-          const map2 = {};
-          for (const [url, m] of this.meta.entries()) {
-            const key2 = m.logicalName || m.name;
-            (map2[key2] || (map2[key2] = [])).push(url);
-          }
-          return map2;
-        }
-        info() {
-          return this.urls().map((u) => {
-            const m = this.meta.get(u);
-            return { url: u, name: m?.name, logicalName: m?.logicalName, sources: [...m?.from || []].join(",") };
-          });
-        }
-        /** Exporte JSON (URLs + groupes). Retourne la string. */
-        exportJSON() {
-          return JSON.stringify({ urls: this.info(), groups: this.groups() }, null, 2);
-        }
-        /** Scan public de commodité. */
-        async scan() {
-          return this.scanAll();
-        }
-        /* Helpers */
-        playHarvest() {
-          return this.playGroup("harvest");
-        }
-        playPlantSeed() {
-          return this.playGroup("plantseed");
-        }
-        playWaterPlant() {
-          return this.playBy("water");
-        }
-        playDestroyPlant() {
-          return this.playBy("Break_Dirt");
-        }
-        playDestroyStone() {
-          return this.playBy("Break_Stone");
-        }
-        /** Joue une URL à un volume fixe (0-1), indépendamment du volume SFX du jeu. */
-        playAt(url, volume) {
-          const clampedVol = Math.max(0, Math.min(1, volume));
-          try {
-            const a = new Audio(url);
-            a.volume = clampedVol;
-            void a.play().catch(() => {
-            });
-          } catch {
-          }
+          return this.playUrl(list[Math.random() * list.length | 0]);
         }
         playSellNotification() {
           return this.playBy("Score_PlusOne");
         }
-        playInfoNotification() {
-          return this.playBy("Keyboard_Enter_01");
-        }
-        playBuy() {
-          return this.playGroup("coinbuy");
-        }
       };
-      audioPlayer = new AudioPlayer({ autoScan: true });
+      audioPlayer = new AudioPlayer();
     }
   });
 
@@ -11897,7 +11701,7 @@
     }
   });
 
-  // src/game/pixi/tileObjects.ts
+  // src/game/pixi/tileCapture.ts
   function looksLikeTileObjectSystem(o) {
     return !!(o && typeof o === "object" && o.name === TILE_OBJECT_SYSTEM_NAME && o.tileViews && typeof o.tileViews.get === "function" && typeof o.getOrCreateTileView === "function");
   }
@@ -11952,27 +11756,27 @@
     return null;
   }
   function tryCaptureFromKnownGlobals() {
-    if (!state2.engine) {
+    if (!tileState.engine) {
       const shared = readSharedGlobal("__QUINOA_ENGINE__");
-      if (shared) state2.engine = shared;
+      if (shared) tileState.engine = shared;
     }
-    if (!state2.tos) {
+    if (!tileState.tos) {
       const shared = readSharedGlobal("__TILE_OBJECT_SYSTEM__");
-      if (isLiveTileObjectSystem(shared)) state2.tos = shared;
+      if (isLiveTileObjectSystem(shared)) tileState.tos = shared;
     }
-    if (!state2.tos && state2.engine) state2.tos = findTileObjectSystem(state2.engine);
+    if (!tileState.tos && tileState.engine) tileState.tos = findTileObjectSystem(tileState.engine);
     publishCapturedGlobals();
   }
   function publishCapturedGlobals() {
-    if (state2.engine) shareGlobal("__QUINOA_ENGINE__", state2.engine);
-    if (state2.tos) shareGlobal("__TILE_OBJECT_SYSTEM__", state2.tos);
+    if (tileState.engine) shareGlobal("__QUINOA_ENGINE__", tileState.engine);
+    if (tileState.tos) shareGlobal("__TILE_OBJECT_SYSTEM__", tileState.tos);
   }
   function mapPrototype() {
     const MapCtor = pageWindow?.Map ?? Map;
     return MapCtor?.prototype ?? null;
   }
   function armCapture() {
-    if (state2.tos || state2.mapSetPatched) return;
+    if (tileState.tos || tileState.mapSetPatched) return;
     const proto = mapPrototype();
     const original = proto?.set;
     if (typeof original !== "function") return;
@@ -11982,8 +11786,8 @@
         try {
           const system = tileObjectSystemFrom(value);
           if (system) {
-            state2.tos = system;
-            state2.worldSystems = this && typeof this.get === "function" ? this : null;
+            tileState.tos = system;
+            tileState.worldSystems = this && typeof this.get === "function" ? this : null;
             publishCapturedGlobals();
             disarmCapture();
           }
@@ -11992,60 +11796,49 @@
       }
       return result;
     };
-    state2.origMapSet = original;
-    state2.ourMapSet = wrapper;
-    state2.mapSetPatched = true;
+    tileState.origMapSet = original;
+    tileState.ourMapSet = wrapper;
+    tileState.mapSetPatched = true;
     proto.set = wrapper;
   }
   function disarmCapture() {
-    if (!state2.mapSetPatched) return;
-    state2.mapSetPatched = false;
+    if (!tileState.mapSetPatched) return;
+    tileState.mapSetPatched = false;
     const proto = mapPrototype();
     try {
-      if (proto && state2.origMapSet && proto.set === state2.ourMapSet) {
-        proto.set = state2.origMapSet;
+      if (proto && tileState.origMapSet && proto.set === tileState.ourMapSet) {
+        proto.set = tileState.origMapSet;
       }
     } catch {
     }
-    state2.origMapSet = null;
-    state2.ourMapSet = null;
+    tileState.origMapSet = null;
+    tileState.ourMapSet = null;
   }
   function ensureCapture() {
-    if (state2.tos && isLiveTileObjectSystem(state2.tos)) return;
-    if (state2.tos) {
-      state2.tos = null;
-      state2.worldSystems = null;
+    if (tileState.tos && isLiveTileObjectSystem(tileState.tos)) return;
+    if (tileState.tos) {
+      tileState.tos = null;
+      tileState.worldSystems = null;
       try {
         shareGlobal("__TILE_OBJECT_SYSTEM__", null);
       } catch {
       }
     }
     tryCaptureFromKnownGlobals();
-    if (!state2.tos) armCapture();
-  }
-  function deepClone(v) {
-    try {
-      if (typeof structuredClone === "function") return structuredClone(v);
-    } catch {
-    }
-    try {
-      return JSON.parse(JSON.stringify(v));
-    } catch {
-    }
-    return v;
+    if (!tileState.tos) armCapture();
   }
   function globalIndexFromXY(tx, ty) {
-    const cols = state2.tos?.map?.cols;
+    const cols = tileState.tos?.map?.cols;
     if (!Number.isFinite(cols) || cols <= 0) return null;
     return ty * cols + tx | 0;
   }
   function getTileViewAt(tx, ty, ensureView) {
     const gidx = globalIndexFromXY(tx, ty);
-    if (!state2.tos || gidx == null) return { gidx: null, tv: null };
-    let tv = state2.tos.tileViews?.get?.(gidx) ?? null;
-    if (!tv && ensureView && typeof state2.tos.getOrCreateTileView === "function") {
+    if (!tileState.tos || gidx == null) return { gidx: null, tv: null };
+    let tv = tileState.tos.tileViews?.get?.(gidx) ?? null;
+    if (!tv && ensureView && typeof tileState.tos.getOrCreateTileView === "function") {
       try {
-        tv = state2.tos.getOrCreateTileView(gidx);
+        tv = tileState.tos.getOrCreateTileView(gidx);
       } catch {
       }
     }
@@ -12053,210 +11846,46 @@
   }
   function assertReady() {
     ensureCapture();
-    if (!state2.tos) {
+    if (!tileState.tos) {
       throw new Error("Quinoa tile system not captured. Call tos.init() early (main entry) so it is watching before the world builds.");
     }
   }
-  function getRenderContext() {
-    try {
-      return state2.engine?.reusableContext ?? null;
-    } catch {
-      return null;
+  function getWorldSystem(name) {
+    ensureCapture();
+    const entry = tileState.worldSystems?.get(name);
+    if (!entry) return null;
+    const system = entry.system ?? entry;
+    return system && typeof system === "object" && system.destroyed !== true ? system : null;
+  }
+  var tileState, TILE_OBJECT_SYSTEM_NAME, SCOPE_SEARCH_DEPTH;
+  var init_tileCapture = __esm({
+    "src/game/pixi/tileCapture.ts"() {
+      "use strict";
+      init_pageContext();
+      tileState = {
+        /**
+         * The old monolithic engine. Current builds have none, so this stays null
+         * unless another mod published one; everything below treats it as optional.
+         */
+        engine: null,
+        tos: null,
+        /**
+         * The world scope's system registry, where the tile system was found. Other
+         * systems of the same world live there too (`avatar`, for one), so keeping it
+         * lets them be reached without a capture of their own.
+         */
+        worldSystems: null,
+        /** Set while `Map.prototype.set` carries our capture wrapper. */
+        mapSetPatched: false,
+        origMapSet: null,
+        ourMapSet: null
+      };
+      TILE_OBJECT_SYSTEM_NAME = "tileObject";
+      SCOPE_SEARCH_DEPTH = 6;
     }
-  }
-  function applyTileObject(tx, ty, nextObj, opts = {}) {
-    assertReady();
-    const ensureView = opts.ensureView !== false;
-    const forceUpdate = opts.forceUpdate !== false;
-    const { gidx, tv } = getTileViewAt(tx, ty, ensureView);
-    if (gidx == null) throw new Error("TOS/map cols not available");
-    if (!tv) throw new Error("TileView not available");
-    const before = tv.tileObject;
-    tv.onDataChanged(nextObj);
-    const ctx2 = forceUpdate ? getRenderContext() : null;
-    if (ctx2 && typeof tv.update === "function") {
-      try {
-        tv.update(ctx2);
-      } catch {
-      }
-    }
-    return { tx, ty, gidx, ok: true, before, after: tv.tileObject };
-  }
-  function assertType(obj, type) {
-    if (!obj) throw new Error("No tileObject on this tile");
-    if (obj.objectType !== type) throw new Error(`Wrong objectType: expected "${type}", got "${obj.objectType}"`);
-  }
-  function patchPlantSlot(slot, slotPatch) {
-    const p = slotPatch || {};
-    if ("startTime" in p) slot.startTime = Number(p.startTime);
-    if ("endTime" in p) slot.endTime = Number(p.endTime);
-    if ("size" in p) slot.size = Number(p.size);
-    if ("mutations" in p) {
-      if (!Array.isArray(p.mutations)) throw new Error("mutations must be an array of strings");
-      if (!p.mutations.every((x) => typeof x === "string")) throw new Error("mutations must contain only strings");
-      slot.mutations = p.mutations.slice();
-    }
-  }
-  function getApp() {
-    try {
-      return state2.engine?.app ?? getPixiApp() ?? pageWindow?.__PIXI_APP__ ?? null;
-    } catch {
-      return null;
-    }
-  }
-  function getRenderer() {
-    try {
-      return state2.engine?.app?.renderer ?? getSpriteState().renderer ?? pageWindow?.__PIXI_RENDERER__ ?? getApp()?.renderer ?? null;
-    } catch {
-      return null;
-    }
-  }
-  function getCanvas() {
-    const app = getApp();
-    const renderer = getRenderer();
-    return renderer?.canvas || renderer?.view?.canvas || renderer?.view || app?.view || app?.canvas || null;
-  }
-  function defaultTileSize() {
-    const t = state2.tos;
-    const m = t?.map || {};
-    const candidates = [m.tileSize, m.tileW, m.tileWidth, t?.tileSize, t?.tileW, 64];
-    for (const c of candidates) {
-      if (Number.isFinite(c) && c > 0) return Number(c);
-    }
-    return 64;
-  }
-  function pointerToTile(ev, opts = {}) {
-    assertReady();
-    const canvas = getCanvas();
-    if (!canvas) return null;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
-    const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
-    const x = (ev.clientX - rect.left) * scaleX;
-    const y = (ev.clientY - rect.top) * scaleY;
-    const tileSize = opts.tileSize ?? defaultTileSize();
-    if (!Number.isFinite(tileSize) || tileSize <= 0) return null;
-    const tx = Math.floor(x / tileSize);
-    const ty = Math.floor(y / tileSize);
-    const cols = state2.tos?.map?.cols;
-    const rows = state2.tos?.map?.rows;
-    const inside = Number.isFinite(tx) && Number.isFinite(ty) && (!opts.clamp ? true : (!Number.isFinite(cols) || tx >= 0 && tx < cols) && (!Number.isFinite(rows) || ty >= 0 && ty < rows));
-    return {
-      tx,
-      ty,
-      gidx: inside ? globalIndexFromXY(tx, ty) : null,
-      world: { x, y },
-      inside,
-      canvas,
-      ev
-    };
-  }
-  function pointerToFarmTile(ev) {
-    assertReady();
-    const canvas = getCanvas();
-    const renderer = getRenderer();
-    const worldContainer = state2.tos?.worldContainer;
-    const map2 = state2.tos?.map;
-    if (!canvas || !renderer?.screen || !worldContainer?.toLocal || !map2) return null;
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return null;
-    const global = {
-      x: (ev.clientX - rect.left) * renderer.screen.width / rect.width,
-      y: (ev.clientY - rect.top) * renderer.screen.height / rect.height
-    };
-    const world = worldContainer.toLocal(global);
-    const tx = Math.floor(world.x / FARM_TILE_SIZE);
-    const ty = Math.floor(world.y / FARM_TILE_SIZE);
-    const cols = Number(map2.cols);
-    const rows = Number(map2.rows);
-    if (!Number.isFinite(cols) || tx < 0 || ty < 0 || tx >= cols) return null;
-    if (Number.isFinite(rows) && ty >= rows) return null;
-    return { tx, ty, gidx: tx + ty * cols };
-  }
-  function onPointerTile(listener, opts = {}) {
-    assertReady();
-    const canvas = getCanvas();
-    if (!canvas) throw new Error("Canvas not available on engine");
-    const onMove = (ev) => {
-      const info = pointerToTile(ev, opts);
-      if (info) listener(info);
-    };
-    const onLeave = (ev) => {
-      const info = pointerToTile(ev, opts);
-      if (info) listener({ ...info, inside: false });
-    };
-    canvas.addEventListener("pointermove", onMove);
-    canvas.addEventListener("pointerleave", onLeave);
-    return () => {
-      canvas.removeEventListener("pointermove", onMove);
-      canvas.removeEventListener("pointerleave", onLeave);
-    };
-  }
-  function clearHighlight() {
-    try {
-      state2.highlight.gfx?.parent?.removeChild?.(state2.highlight.gfx);
-    } catch {
-    }
-    state2.highlight.gfx?.destroy?.();
-    state2.highlight.gfx = null;
-    state2.highlight.tile = null;
-    state2.highlight.parent = null;
-  }
-  function highlightTile(tx, ty, color = 65280, opts = {}) {
-    const info = tos.getTileObject(tx, ty, { ensureView: true });
-    const tv = info.tileView;
-    if (!tv) throw new Error("TileView not available");
-    const parent = tv.displayObject || tv.root || tv.container || tv;
-    if (!parent?.addChild) throw new Error("TileView is not a display container");
-    const Graphics = getSpriteState().ctors?.Graphics ?? pageWindow?.PIXI?.Graphics ?? getRenderer()?.PIXI?.Graphics;
-    if (!Graphics) throw new Error("PIXI.Graphics not available");
-    const gfx = state2.highlight.gfx ?? new Graphics();
-    const alpha = opts.alpha ?? 0.8;
-    const thickness = opts.thickness ?? 2;
-    const padding = opts.padding ?? 0;
-    const tileSize = opts.tileSize ?? defaultTileSize();
-    gfx.clear();
-    gfx.lineStyle(thickness, color, alpha);
-    const w = parent?.width ?? tileSize;
-    const h = parent?.height ?? tileSize;
-    gfx.drawRect(-padding, -padding, w + padding * 2, h + padding * 2);
-    gfx.zIndex = 9999;
-    if (gfx.parent !== parent) {
-      try {
-        gfx.parent?.removeChild?.(gfx);
-      } catch {
-      }
-      parent.addChild(gfx);
-    }
-    state2.highlight.gfx = gfx;
-    state2.highlight.tile = { tx, ty };
-    state2.highlight.parent = parent;
-    return { tx, ty, gidx: info.gidx, color, alpha, thickness };
-  }
-  function setDebugHoverHighlight(enabled5, opts = {}) {
-    if (!enabled5) {
-      state2.hoverDebug.cleanup?.();
-      state2.hoverDebug.cleanup = null;
-      state2.hoverDebug.enabled = false;
-      clearHighlight();
-      return false;
-    }
-    assertReady();
-    if (state2.hoverDebug.enabled) return true;
-    const cleanup2 = onPointerTile((info) => {
-      if (!info.inside || info.tx == null || info.ty == null) {
-        clearHighlight();
-        return;
-      }
-      try {
-        highlightTile(info.tx, info.ty, opts.color ?? 65280, opts);
-      } catch {
-      }
-    }, opts);
-    state2.hoverDebug.cleanup = cleanup2;
-    state2.hoverDebug.enabled = true;
-    return true;
-  }
+  });
+
+  // src/game/pixi/tileFlash.ts
   function hasTint(node) {
     return !!(node && typeof node.tint === "number");
   }
@@ -12333,65 +11962,132 @@
     entry.raf = requestAnimationFrame(tick3);
     return true;
   }
-  function getWorldSystem(name) {
-    ensureCapture();
-    const entry = state2.worldSystems?.get(name);
-    if (!entry) return null;
-    const system = entry.system ?? entry;
-    return system && typeof system === "object" && system.destroyed !== true ? system : null;
-  }
-  var state2, TILE_OBJECT_SYSTEM_NAME, SCOPE_SEARCH_DEPTH, FARM_TILE_SIZE, activeFlashes, FLASH_DEFAULT_COLOR, FLASH_DEFAULT_MIX, FLASH_DEFAULT_DURATION_MS, tos;
-  var init_tileObjects = __esm({
-    "src/game/pixi/tileObjects.ts"() {
+  var activeFlashes, FLASH_DEFAULT_COLOR, FLASH_DEFAULT_MIX, FLASH_DEFAULT_DURATION_MS;
+  var init_tileFlash = __esm({
+    "src/game/pixi/tileFlash.ts"() {
       "use strict";
-      init_pageContext();
-      init_context();
-      state2 = {
-        /**
-         * The old monolithic engine. Current builds have none, so this stays null
-         * unless another mod published one; everything below treats it as optional.
-         */
-        engine: null,
-        tos: null,
-        /**
-         * The world scope's system registry, where the tile system was found. Other
-         * systems of the same world live there too (`avatar`, for one), so keeping it
-         * lets them be reached without a capture of their own.
-         */
-        worldSystems: null,
-        /** Set while `Map.prototype.set` carries our capture wrapper. */
-        mapSetPatched: false,
-        origMapSet: null,
-        ourMapSet: null,
-        highlight: {
-          gfx: null,
-          tile: null,
-          parent: null
-        },
-        hoverDebug: {
-          enabled: false,
-          cleanup: null
-        }
-      };
-      TILE_OBJECT_SYSTEM_NAME = "tileObject";
-      SCOPE_SEARCH_DEPTH = 6;
-      FARM_TILE_SIZE = 256;
+      init_tileCapture();
       activeFlashes = /* @__PURE__ */ new Map();
       FLASH_DEFAULT_COLOR = 4906624;
       FLASH_DEFAULT_MIX = 1;
       FLASH_DEFAULT_DURATION_MS = 1e3;
+    }
+  });
+
+  // src/game/pixi/tileObjects.ts
+  function deepClone(v) {
+    try {
+      if (typeof structuredClone === "function") return structuredClone(v);
+    } catch {
+    }
+    try {
+      return JSON.parse(JSON.stringify(v));
+    } catch {
+    }
+    return v;
+  }
+  function getRenderContext() {
+    try {
+      return tileState.engine?.reusableContext ?? null;
+    } catch {
+      return null;
+    }
+  }
+  function applyTileObject(tx, ty, nextObj, opts = {}) {
+    assertReady();
+    const ensureView = opts.ensureView !== false;
+    const forceUpdate = opts.forceUpdate !== false;
+    const { gidx, tv } = getTileViewAt(tx, ty, ensureView);
+    if (gidx == null) throw new Error("TOS/map cols not available");
+    if (!tv) throw new Error("TileView not available");
+    const before = tv.tileObject;
+    tv.onDataChanged(nextObj);
+    const ctx2 = forceUpdate ? getRenderContext() : null;
+    if (ctx2 && typeof tv.update === "function") {
+      try {
+        tv.update(ctx2);
+      } catch {
+      }
+    }
+    return { tx, ty, gidx, ok: true, before, after: tv.tileObject };
+  }
+  function assertType(obj, type) {
+    if (!obj) throw new Error("No tileObject on this tile");
+    if (obj.objectType !== type) throw new Error(`Wrong objectType: expected "${type}", got "${obj.objectType}"`);
+  }
+  function patchPlantSlot(slot, slotPatch) {
+    const p = slotPatch || {};
+    if ("startTime" in p) slot.startTime = Number(p.startTime);
+    if ("endTime" in p) slot.endTime = Number(p.endTime);
+    if ("size" in p) slot.size = Number(p.size);
+    if ("mutations" in p) {
+      if (!Array.isArray(p.mutations)) throw new Error("mutations must be an array of strings");
+      if (!p.mutations.every((x) => typeof x === "string")) throw new Error("mutations must contain only strings");
+      slot.mutations = p.mutations.slice();
+    }
+  }
+  function getApp() {
+    try {
+      return tileState.engine?.app ?? getPixiApp() ?? pageWindow?.__PIXI_APP__ ?? null;
+    } catch {
+      return null;
+    }
+  }
+  function getRenderer() {
+    try {
+      return tileState.engine?.app?.renderer ?? getSpriteState().renderer ?? pageWindow?.__PIXI_RENDERER__ ?? getApp()?.renderer ?? null;
+    } catch {
+      return null;
+    }
+  }
+  function getCanvas() {
+    const app = getApp();
+    const renderer = getRenderer();
+    return renderer?.canvas || renderer?.view?.canvas || renderer?.view || app?.view || app?.canvas || null;
+  }
+  function pointerToFarmTile(ev) {
+    assertReady();
+    const canvas = getCanvas();
+    const renderer = getRenderer();
+    const worldContainer = tileState.tos?.worldContainer;
+    const map2 = tileState.tos?.map;
+    if (!canvas || !renderer?.screen || !worldContainer?.toLocal || !map2) return null;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    const global = {
+      x: (ev.clientX - rect.left) * renderer.screen.width / rect.width,
+      y: (ev.clientY - rect.top) * renderer.screen.height / rect.height
+    };
+    const world = worldContainer.toLocal(global);
+    const tx = Math.floor(world.x / FARM_TILE_SIZE);
+    const ty = Math.floor(world.y / FARM_TILE_SIZE);
+    const cols = Number(map2.cols);
+    const rows = Number(map2.rows);
+    if (!Number.isFinite(cols) || tx < 0 || ty < 0 || tx >= cols) return null;
+    if (Number.isFinite(rows) && ty >= rows) return null;
+    return { tx, ty, gidx: tx + ty * cols };
+  }
+  var FARM_TILE_SIZE, tos;
+  var init_tileObjects = __esm({
+    "src/game/pixi/tileObjects.ts"() {
+      "use strict";
+      init_pageContext();
+      init_tileCapture();
+      init_tileFlash();
+      init_context();
+      FARM_TILE_SIZE = 256;
       tos = {
-        /** À appeler une fois dans le main, le plus tôt possible */
+        /** Call once from main, as early as possible, so the capture watches before the world builds. */
         init() {
           ensureCapture();
-          return { ok: !!state2.tos, engine: state2.engine, tos: state2.tos };
+          return { ok: !!tileState.tos, engine: tileState.engine, tos: tileState.tos };
         },
         isReady() {
           ensureCapture();
-          return !!state2.tos;
+          return !!tileState.tos;
         },
         getStatus() {
-          return { ok: !!state2.tos, engine: state2.engine, tos: state2.tos };
+          return { ok: !!tileState.tos, engine: tileState.engine, tos: tileState.tos };
         },
         /**
          * Frame context for a manual `TileView.update`, or null when the game does not
@@ -12400,9 +12096,9 @@
         getRenderContext,
         /** Get tile object by global index (same index used in WS HarvestCrop slot field). */
         getTileObjectByIndex(gidx) {
-          if (!state2.tos) return null;
+          if (!tileState.tos) return null;
           try {
-            const tv = state2.tos.tileViews?.get?.(gidx) ?? null;
+            const tv = tileState.tos.tileViews?.get?.(gidx) ?? null;
             return tv ? { tileObject: tv.tileObject } : null;
           } catch {
             return null;
@@ -12421,7 +12117,7 @@
             tileObject: tv?.tileObject
           };
         },
-        /** Met la tile à vide (tileObject = null) */
+        /** Empties the tile (tileObject = null). */
         setTileEmpty(tx, ty, opts = {}) {
           return applyTileObject(Number(tx), Number(ty), null, opts);
         },
@@ -12482,21 +12178,11 @@
           if ("maturedAt" in p) next.maturedAt = Number(p.maturedAt);
           return applyTileObject(Number(tx), Number(ty), next, opts);
         },
-        /** Retourne le canvas Pixi du jeu (ou null si pas encore capturé) */
+        /** The game's Pixi canvas, or null before it is known. */
         getCanvas,
-        /** Convertit un événement pointeur en coordonnées de tile (tx, ty) */
-        pointerToTile,
-        /** Comme pointerToTile, mais correct même quand la caméra du jardin n'est pas à l'origine */
+        /** The garden tile under a pointer event, wherever the camera has panned to. */
         pointerToFarmTile,
-        /** Écoute les mouvements pointeur sur le canvas et appelle le callback avec les infos de tile */
-        onPointerTile,
-        /** Dessine un contour autour d'une tile donnée */
-        highlightTile,
-        /** Supprime le contour actif */
-        clearHighlight,
-        /** Active/désactive un mode debug qui highlight la tile sous le pointeur en temps réel */
-        setDebugHoverHighlight,
-        /** Flash vert plein qui s'estompe sur une tile (feedback "placé"/"sélectionné" de l'éditeur) */
+        /** A green flash that fades on a tile (the editor's "placed" and "selected" cue). */
         flashTileGreen
       };
     }
@@ -14163,15 +13849,15 @@
           fontWeight: "600"
         });
         btnAdd.onclick = () => {
-          const state6 = ensureEditorStateForSpecies(selId);
-          const current = state6.slots;
+          const state5 = ensureEditorStateForSpecies(selId);
+          const current = state5.slots;
           if (current.length >= maxSlots) return;
           const defaultScale = computeTargetScaleFromPercent(
             selId,
             DEFAULT_SIZE_PERCENT
           );
           editorPlantSlotsState = {
-            ...state6,
+            ...state5,
             species: selId,
             slots: [
               ...current,
@@ -14201,11 +13887,11 @@
           fontWeight: "600"
         });
         btnRemove.onclick = () => {
-          const state6 = ensureEditorStateForSpecies(selId);
-          const current = state6.slots;
+          const state5 = ensureEditorStateForSpecies(selId);
+          const current = state5.slots;
           if (current.length <= 1) return;
           editorPlantSlotsState = {
-            ...state6,
+            ...state5,
             species: selId,
             slots: current.slice(0, current.length - 1)
           };
@@ -16312,21 +15998,21 @@
     return base;
   }
   function sanitizeState(raw) {
-    const state6 = defaultState();
-    if (!raw || typeof raw !== "object") return state6;
-    state6.enabled = raw.enabled === true;
-    state6.settings = sanitizeSettings(raw.settings);
-    state6.overrides = {};
+    const state5 = defaultState();
+    if (!raw || typeof raw !== "object") return state5;
+    state5.enabled = raw.enabled === true;
+    state5.settings = sanitizeSettings(raw.settings);
+    state5.overrides = {};
     if (raw.overrides && typeof raw.overrides === "object") {
       for (const [key2, value] of Object.entries(raw.overrides)) {
         if (!key2) continue;
-        state6.overrides[key2] = {
+        state5.overrides[key2] = {
           enabled: value?.enabled === true,
           settings: sanitizeSettings(value?.settings)
         };
       }
     }
-    return state6;
+    return state5;
   }
   function cloneSettings(settings) {
     return {
@@ -16344,14 +16030,14 @@
       weatherRecipes: settings.weatherRecipes.map((recipe) => recipe.slice())
     };
   }
-  function cloneState(state6) {
+  function cloneState(state5) {
     const overrides = {};
-    for (const [key2, value] of Object.entries(state6.overrides)) {
+    for (const [key2, value] of Object.entries(state5.overrides)) {
       overrides[key2] = { enabled: value.enabled, settings: cloneSettings(value.settings) };
     }
     return {
-      enabled: state6.enabled,
-      settings: cloneSettings(state6.settings),
+      enabled: state5.enabled,
+      settings: cloneSettings(state5.settings),
       overrides
     };
   }
@@ -19940,41 +19626,71 @@
     }
   });
 
-  // src/game/ingameHotkeys.ts
-  function parseRapid(c) {
-    const parts = String(c).split("+").map((s) => s.trim()).filter(Boolean);
-    let code = "";
-    let ctrl = false, shift = false, alt = false, meta = false;
-    for (const p of parts) {
-      const P = p.toLowerCase();
-      if (P === "ctrl" || P === "control") ctrl = true;
-      else if (P === "shift") shift = true;
-      else if (P === "alt") alt = true;
-      else if (P === "meta" || P === "cmd" || P === "command" || P === "win") meta = true;
-      else code = p;
-    }
-    return { code, ctrl, shift, alt, meta };
+  // src/game/keyCombos.ts
+  function modifierOf(part) {
+    const p = part.toLowerCase();
+    if (p === "ctrl" || p === "control") return "ctrl";
+    if (p === "shift") return "shift";
+    if (p === "alt") return "alt";
+    if (p === "meta" || p === "cmd" || p === "command" || p === "win") return "meta";
+    return null;
   }
-  function joinRapid(c) {
+  function parseComboSpec(c) {
+    const spec = { code: "", ctrl: false, shift: false, alt: false, meta: false };
+    for (const part of String(c).split("+").map((s) => s.trim()).filter(Boolean)) {
+      const mod = modifierOf(part);
+      if (mod) spec[mod] = true;
+      else spec.code = part;
+    }
+    return spec;
+  }
+  function parseCombo(c) {
+    const parsed = parseComboSpec(c);
+    const spec = {};
+    for (const mod of MODIFIER_ORDER) {
+      if (parsed[mod]) spec[mod] = true;
+    }
+    if (parsed.code) {
+      spec.code = parsed.code;
+      spec.key = codeToKey(parsed.code, !!spec.shift);
+    }
+    return spec;
+  }
+  function joinModifiers(mods, code) {
+    mods.sort((a, b) => MODIFIER_ORDER.indexOf(a) - MODIFIER_ORDER.indexOf(b));
+    return (mods.length ? mods.join("+") + "+" : "") + code;
+  }
+  function normalizeCombo(c) {
+    const mods = [];
+    let code = "";
+    for (const part of String(c).split("+").map((s) => s.trim()).filter(Boolean)) {
+      const mod = modifierOf(part);
+      if (mod) mods.push(mod);
+      else code = part;
+    }
+    return joinModifiers(mods, code);
+  }
+  function eventToCombo(e) {
+    const mods = [];
+    if (e.ctrlKey) mods.push("ctrl");
+    if (e.shiftKey) mods.push("shift");
+    if (e.altKey) mods.push("alt");
+    if (e.metaKey) mods.push("meta");
+    return joinModifiers(mods, e.code || "");
+  }
+  function formatCombo(c) {
     const mods = [];
     if (c.ctrl) mods.push("Ctrl");
     if (c.shift) mods.push("Shift");
     if (c.alt) mods.push("Alt");
     if (c.meta) mods.push("Meta");
-    mods.push(c.code);
-    return mods.join("+");
+    return (mods.length ? mods.join("+") + "+" : "") + (c.code || "");
   }
-  var resolveContext, KEYCODE_TABLE, codeToKey, isEditableTarget, normalizeCombo, parseCombo, evToCombo, REMAP_FLAG, RAPID_SYN_FLAG, InGameHotkeys, defaultContext, inGameHotkeys;
-  var init_ingameHotkeys = __esm({
-    "src/game/ingameHotkeys.ts"() {
+  var MODIFIER_ORDER, KEYCODE_TABLE, codeToKey, keyCodeOf, isEditableTarget;
+  var init_keyCombos = __esm({
+    "src/game/keyCombos.ts"() {
       "use strict";
-      init_pageContext();
-      resolveContext = (context) => {
-        if (context) return context;
-        const win = pageWindow ?? window;
-        const doc = win.document ?? document;
-        return { window: win, document: doc };
-      };
+      MODIFIER_ORDER = ["ctrl", "shift", "alt", "meta"];
       KEYCODE_TABLE = {
         KeyA: 65,
         KeyB: 66,
@@ -20031,6 +19747,7 @@
         if (code === "Space") return " ";
         return code;
       };
+      keyCodeOf = (code, key2) => KEYCODE_TABLE[code] ?? (key2 && key2.length === 1 ? key2.toUpperCase().charCodeAt(0) : 0);
       isEditableTarget = (t) => {
         const el2 = t;
         if (!el2 || !el2.tagName) return false;
@@ -20039,43 +19756,21 @@
         const ce = el2.getAttribute && el2.getAttribute("contenteditable");
         return !!(ce && ce !== "false");
       };
-      normalizeCombo = (c) => {
-        const parts = String(c).split("+").map((s) => s.trim()).filter(Boolean);
-        const mods = [];
-        let code = "";
-        for (const p of parts) {
-          const P = p.toLowerCase();
-          if (P === "ctrl" || P === "control") mods.push("ctrl");
-          else if (P === "shift") mods.push("shift");
-          else if (P === "alt") mods.push("alt");
-          else if (P === "meta" || P === "cmd" || P === "command" || P === "win") mods.push("meta");
-          else code = p;
-        }
-        mods.sort((a, b) => ["ctrl", "shift", "alt", "meta"].indexOf(a) - ["ctrl", "shift", "alt", "meta"].indexOf(b));
-        return (mods.length ? mods.join("+") + "+" : "") + code;
-      };
-      parseCombo = (c) => {
-        const parts = String(c).split("+").map((s) => s.trim()).filter(Boolean);
-        const spec = {};
-        for (const p of parts) {
-          const P = p.toLowerCase();
-          if (P === "ctrl" || P === "control") spec.ctrl = true;
-          else if (P === "shift") spec.shift = true;
-          else if (P === "alt") spec.alt = true;
-          else if (P === "meta" || P === "cmd" || P === "command" || P === "win") spec.meta = true;
-          else spec.code = p;
-        }
-        if (spec.code && spec.key === void 0) spec.key = codeToKey(spec.code, !!spec.shift);
-        return spec;
-      };
-      evToCombo = (e) => {
-        const mods = [];
-        if (e.ctrlKey) mods.push("ctrl");
-        if (e.shiftKey) mods.push("shift");
-        if (e.altKey) mods.push("alt");
-        if (e.metaKey) mods.push("meta");
-        mods.sort((a, b) => ["ctrl", "shift", "alt", "meta"].indexOf(a) - ["ctrl", "shift", "alt", "meta"].indexOf(b));
-        return (mods.length ? mods.join("+") + "+" : "") + (e.code || "");
+    }
+  });
+
+  // src/game/ingameHotkeys.ts
+  var resolveContext, REMAP_FLAG, RAPID_SYN_FLAG, InGameHotkeys, defaultContext, inGameHotkeys;
+  var init_ingameHotkeys = __esm({
+    "src/game/ingameHotkeys.ts"() {
+      "use strict";
+      init_pageContext();
+      init_keyCombos();
+      resolveContext = (context) => {
+        if (context) return context;
+        const win = pageWindow ?? window;
+        const doc = win.document ?? document;
+        return { window: win, document: doc };
       };
       REMAP_FLAG = "__inGameHotkeysRemapped__";
       RAPID_SYN_FLAG = "__inGameHotkeysRapidSynthetic__";
@@ -20084,12 +19779,12 @@
           // remapper
           this.enabled = true;
           this.map = /* @__PURE__ */ new Map();
-          // combo normalisé -> spec destination
+          // normalised combo -> target spec
           this.blockedSet = /* @__PURE__ */ new Set();
-          // combos bloqués
+          // blocked combos
           this.eventBlockers = /* @__PURE__ */ new Set();
           this.attachedDocs = /* @__PURE__ */ new WeakSet();
-          // docs déjà hookés
+          // documents already hooked
           this.observers = [];
           this.handlers = /* @__PURE__ */ new Map();
           this.passthrough = /* @__PURE__ */ new Set(["F5", "F12"]);
@@ -20108,7 +19803,7 @@
             }
           }
         }
-        /* --------- on/off remapper --------- */
+        /* --------- remapper on/off --------- */
         enable(flag = true) {
           this.enabled = !!flag;
         }
@@ -20134,17 +19829,10 @@
         }
         current() {
           const out = {};
-          for (const [k, v] of this.map.entries()) {
-            const mods = [];
-            if (v.ctrl) mods.push("Ctrl");
-            if (v.shift) mods.push("Shift");
-            if (v.alt) mods.push("Alt");
-            if (v.meta) mods.push("Meta");
-            out[k] = (mods.length ? mods.join("+") + "+" : "") + (v.code || "");
-          }
+          for (const [k, v] of this.map.entries()) out[k] = formatCombo(v);
           return out;
         }
-        /* --------- blocages --------- */
+        /* --------- blocking --------- */
         block(combo) {
           this.blockedSet.add(normalizeCombo(combo));
         }
@@ -20164,15 +19852,15 @@
             this.eventBlockers.delete(blocker);
           };
         }
-        /* --------- helpers de binding --------- */
-        /** Déplace l’action bindée sur oldBase vers newPhysical et désactive oldBase. */
+        /* --------- binding helpers --------- */
+        /** Moves the action bound to oldBase onto newPhysical and disables oldBase. */
         replace(oldBase, newPhysical) {
           const oldN = normalizeCombo(oldBase);
           const newN = normalizeCombo(newPhysical);
           this.blockedSet.add(oldN);
           this.map.set(newN, parseCombo(oldN));
         }
-        /** Échange réciproquement deux touches (ne bloque pas). */
+        /** Swaps two keys both ways (blocks neither). */
         swap(a, b) {
           const an = normalizeCombo(a), bn = normalizeCombo(b);
           this.map.set(an, parseCombo(bn));
@@ -20214,8 +19902,8 @@
           const mode = opts.mode ?? "tap";
           const keyupDelayMs = opts.keyupDelayMs ?? 20;
           this.sessions.set(trigger, {
-            trigger: parseRapid(trigger),
-            emit: parseRapid(emit),
+            trigger: parseComboSpec(trigger),
+            emit: parseComboSpec(emit),
             rateMs,
             mode,
             keyupDelayMs,
@@ -20260,14 +19948,14 @@
           for (const [key2, s] of this.sessions.entries()) {
             out.push({
               trigger: key2,
-              emit: joinRapid(s.emit),
+              emit: formatCombo(s.emit),
               rateHz: Math.round(1e3 / s.rateMs),
               mode: s.mode
             });
           }
           return out;
         }
-        /* ================= internes ================= */
+        /* ================= internals ================= */
         attachDoc(doc) {
           if (!doc || this.attachedDocs.has(doc)) return;
           const handler = this.makeHandler(doc);
@@ -20302,7 +19990,7 @@
             if (!this.enabled) return;
             if (isEditableTarget(e.target)) return;
             if (this.passthrough.has(e.code)) return;
-            const combo = evToCombo(e);
+            const combo = eventToCombo(e);
             if (this.blockedSet.has(combo)) {
               e.stopImmediatePropagation();
               e.preventDefault();
@@ -20318,7 +20006,7 @@
             const shift = spec.shift ?? e.shiftKey;
             const alt = spec.alt ?? e.altKey;
             const meta = spec.meta ?? e.metaKey;
-            const kc = KEYCODE_TABLE[code] ?? (key2 && key2.length === 1 ? key2.toUpperCase().charCodeAt(0) : 0);
+            const kc = keyCodeOf(code, key2);
             const eventWindow = doc.defaultView || this.win;
             const ne = new eventWindow.KeyboardEvent(e.type, {
               bubbles: true,
@@ -20343,7 +20031,7 @@
             target.dispatchEvent(ne);
           };
         }
-        /* ---------- Rapid-fire internes ---------- */
+        /* ---------- rapid fire internals ---------- */
         handleRapidFireInput(doc, e) {
           if (isEditableTarget(e.target)) return;
           if (e.type === "keydown" && !e.repeat) {
@@ -20407,7 +20095,7 @@
         dispatchKey(doc, target, type, c, repeat) {
           const code = c.code;
           const key2 = codeToKey(code, c.shift);
-          const kc = KEYCODE_TABLE[code] ?? (key2 && key2.length === 1 ? key2.toUpperCase().charCodeAt(0) : 0);
+          const kc = keyCodeOf(code, key2);
           const eventWindow = doc.defaultView || this.win;
           const ev = new eventWindow.KeyboardEvent(type, {
             bubbles: true,
@@ -20437,10 +20125,6 @@
       defaultContext = resolveContext();
       inGameHotkeys = new InGameHotkeys(true, defaultContext);
       shareGlobal("inGameHotkeys", inGameHotkeys);
-      try {
-        window.inGameHotkeys = inGameHotkeys;
-      } catch {
-      }
     }
   });
 
@@ -20515,9 +20199,9 @@
     });
   }
   function getCombosForGameAction() {
-    const state6 = gameActiveStates.get(GAME_ACTION_ID);
-    if (!state6) return [];
-    const combo = state6.combo;
+    const state5 = gameActiveStates.get(GAME_ACTION_ID);
+    if (!state5) return [];
+    const combo = state5.combo;
     return typeof combo === "string" && combo.length ? [combo] : [];
   }
   function applyGameActionBlockers() {
@@ -22207,9 +21891,9 @@
         }
         resolve(ok);
       };
-      const check = async (state6) => {
+      const check = async (state5) => {
         const set2 = new Set(
-          (Array.isArray(state6) ? state6 : []).map((p) => String(p?.id || "")).filter(Boolean)
+          (Array.isArray(state5) ? state5 : []).map((p) => String(p?.id || "")).filter(Boolean)
         );
         if (predicate(set2)) {
           stop2(true);
@@ -22218,8 +21902,8 @@
         }
       };
       try {
-        const res = myPetHutchPetItems.onChange((state6) => {
-          void check(state6);
+        const res = myPetHutchPetItems.onChange((state5) => {
+          void check(state5);
         });
         if (typeof res === "function") {
           unsub = res;
@@ -25911,17 +25595,17 @@
           const baseLoopInterval = this.getLoopInterval(context);
           const baseVolume = this.getVolume(context);
           const volumeOverride = normalizeVolume(overrides.volume ?? null);
-          const effectiveVolume = volumeOverride ?? baseVolume;
+          const effectiveVolume2 = volumeOverride ?? baseVolume;
           if (mode === "oneshot") {
             this.stopLoop(key2);
             const du = this.resolveToDataUrl(sound ?? null, context);
-            this.enqueueOneshot({ key: key2, dataUrl: du, volume: effectiveVolume, context });
+            this.enqueueOneshot({ key: key2, dataUrl: du, volume: effectiveVolume2, context });
             return;
           }
           this.stopLoop(key2);
           const stopOverride = normalizeStop(overrides.stop ?? null);
           const loopIntervalOverride = overrides.loopIntervalMs != null && Number.isFinite(overrides.loopIntervalMs) ? Math.max(150, Math.round(overrides.loopIntervalMs)) : null;
-          const state6 = {
+          const state5 = {
             key: key2,
             timer: null,
             plays: 0,
@@ -25934,10 +25618,10 @@
             baseLoopInterval,
             baseVolume,
             volumeOverride,
-            volume: effectiveVolume
+            volume: effectiveVolume2
           };
-          this.loops.set(key2, state6);
-          this.scheduleNext(state6, 0);
+          this.loops.set(key2, state5);
+          this.scheduleNext(state5, 0);
         }
         forEachLoop(context, fn) {
           for (const st of this.loops.values()) {
@@ -26112,39 +25796,39 @@
           }
           return true;
         }
-        scheduleNext(state6, delayMs) {
+        scheduleNext(state5, delayMs) {
           const run = async () => {
-            if (state6.stopped) return;
-            const stopConf = state6.stopOverride ?? state6.baseStop;
+            if (state5.stopped) return;
+            const stopConf = state5.stopOverride ?? state5.baseStop;
             if (stopConf.mode === "purchase" && this.purchaseChecker) {
               try {
-                if (this.purchaseChecker(state6.key)) {
-                  this.stopLoop(state6.key);
+                if (this.purchaseChecker(state5.key)) {
+                  this.stopLoop(state5.key);
                   return;
                 }
               } catch {
               }
             }
-            const du = this.resolveToDataUrl(state6.soundOverride, state6.context);
+            const du = this.resolveToDataUrl(state5.soundOverride, state5.context);
             const played = await this.playOnce(
               du,
-              state6.volume,
-              state6.context,
+              state5.volume,
+              state5.context,
               { awaitEnd: true }
             );
-            if (played) state6.plays++;
+            if (played) state5.plays++;
             if (stopConf.mode === "repeat") {
               const max = Math.max(1, stopConf.repeats | 0);
-              if (state6.plays >= max) {
-                this.stopLoop(state6.key);
+              if (state5.plays >= max) {
+                this.stopLoop(state5.key);
                 return;
               }
             }
-            const intervalBase = state6.loopIntervalOverride ?? state6.baseLoopInterval;
+            const intervalBase = state5.loopIntervalOverride ?? state5.baseLoopInterval;
             const gap = Math.max(150, intervalBase | 0);
-            state6.timer = setTimeout(() => this.scheduleNext(state6, 0), gap);
+            state5.timer = setTimeout(() => this.scheduleNext(state5, 0), gap);
           };
-          if (delayMs > 0) state6.timer = setTimeout(run, delayMs);
+          if (delayMs > 0) state5.timer = setTimeout(run, delayMs);
           else run().catch(() => {
           });
         }
@@ -27652,8 +27336,8 @@
   });
 
   // src/game/pixi/gardenInfoCard.ts
-  function getStage(state6) {
-    return state6.renderer.lastObjectRendered ?? state6.renderer.stage ?? state6.app?.stage ?? null;
+  function getStage(state5) {
+    return state5.renderer.lastObjectRendered ?? state5.renderer.stage ?? state5.app?.stage ?? null;
   }
   function findByLabel(root, label2, limit = 25e3) {
     if (!root) return null;
@@ -27758,9 +27442,9 @@
   }
   function tryFindCardSystem() {
     if (cardSystem) return;
-    const state6 = getReadySpriteState();
-    if (!state6) return;
-    const stage = getStage(state6);
+    const state5 = getReadySpriteState();
+    if (!state5) return;
+    const stage = getStage(state5);
     const found = findAcrossBranches(stage, (node) => node?.label === CARD_SYSTEM_LABEL);
     if (found) {
       attachToCardSystem(found);
@@ -27903,14 +27587,14 @@
     };
     const computeScreenRect = () => {
       if (!bellContainer || bellContainer.destroyed) return null;
-      const state6 = getReadySpriteState();
-      const canvas = state6?.renderer?.canvas || state6?.renderer?.view?.canvas || state6?.renderer?.view;
+      const state5 = getReadySpriteState();
+      const canvas = state5?.renderer?.canvas || state5?.renderer?.view?.canvas || state5?.renderer?.view;
       if (!canvas) return null;
       try {
         const rect = canvas.getBoundingClientRect();
-        const renderResolution = Number(state6?.renderer?.resolution) || 1;
-        const stageWidth = Number(state6?.renderer?.screen?.width) || (Number(canvas.width) || 0) / renderResolution;
-        const stageHeight = Number(state6?.renderer?.screen?.height) || (Number(canvas.height) || 0) / renderResolution;
+        const renderResolution = Number(state5?.renderer?.resolution) || 1;
+        const stageWidth = Number(state5?.renderer?.screen?.width) || (Number(canvas.width) || 0) / renderResolution;
+        const stageHeight = Number(state5?.renderer?.screen?.height) || (Number(canvas.height) || 0) / renderResolution;
         const scaleX = stageWidth > 0 ? rect.width / stageWidth : 1;
         const scaleY = stageHeight > 0 ? rect.height / stageHeight : 1;
         debugState4.screenScaleX = scaleX;
@@ -27958,9 +27642,9 @@
         weSetPointerCursor = false;
       }
     };
-    const ensureCanvasListeners = (state6) => {
+    const ensureCanvasListeners = (state5) => {
       if (canvasListenersAttached) return;
-      const canvas = state6.renderer?.canvas || state6.renderer?.view?.canvas || state6.renderer?.view;
+      const canvas = state5.renderer?.canvas || state5.renderer?.view?.canvas || state5.renderer?.view;
       if (!canvas) return;
       canvasEl = canvas;
       pageWindow.addEventListener("pointerdown", onWindowPointerDownCapture, true);
@@ -27977,8 +27661,8 @@
       return null;
     };
     const railLocalScreenBounds = () => {
-      const state6 = getReadySpriteState();
-      const screenHeight = Number(state6?.renderer?.screen?.height);
+      const state5 = getReadySpriteState();
+      const screenHeight = Number(state5?.renderer?.screen?.height);
       if (!Number.isFinite(screenHeight) || screenHeight <= 0) return null;
       try {
         const top = rail.toLocal({ x: 0, y: 0 }).y;
@@ -28033,10 +27717,10 @@
         removeButton();
         return;
       }
-      const state6 = getReadySpriteState();
-      if (!state6?.ctors?.Text) return;
+      const state5 = getReadySpriteState();
+      if (!state5?.ctors?.Text) return;
       if (!bellContainer) {
-        const ContainerCtor = state6.ctors.Container ?? rail.constructor;
+        const ContainerCtor = state5.ctors.Container ?? rail.constructor;
         bellContainer = new ContainerCtor();
         bellContainer.label = "GeminiNotificationBell";
         const thisContainer = bellContainer;
@@ -28046,10 +27730,10 @@
         rail.addChild(bellContainer);
       }
       if (!bellText) {
-        bellText = new state6.ctors.Text({ text: iconGlyph, style: { fontSize: DEFAULT_SLOT_SIZE } });
+        bellText = new state5.ctors.Text({ text: iconGlyph, style: { fontSize: DEFAULT_SLOT_SIZE } });
         bellContainer.addChild(bellText);
       }
-      ensureCanvasListeners(state6);
+      ensureCanvasListeners(state5);
       syncGeometry();
       debugState4.hasButton = true;
     };
@@ -28090,9 +27774,9 @@
     };
     const tryFindRail = () => {
       if (!running6 || rail) return;
-      const state6 = getReadySpriteState();
-      if (!state6) return;
-      const stage = getStage(state6);
+      const state5 = getReadySpriteState();
+      if (!state5) return;
+      const stage = getStage(state5);
       const found = findAcrossBranches(stage, (node) => node?.label === RAIL_LABEL);
       if (found) {
         attachToRail(found);
@@ -28115,9 +27799,9 @@
       findRafId3 = raf3(scheduleFind3);
     };
     const isReachableFromLiveStage = (node) => {
-      const state6 = getReadySpriteState();
-      if (!state6) return false;
-      const stage = getStage(state6);
+      const state5 = getReadySpriteState();
+      if (!state5) return false;
+      const stage = getStage(state5);
       if (!stage) return false;
       let cur = node;
       let hops = 0;
@@ -29249,8 +28933,8 @@
       try {
         const warmup = getSpriteWarmupState();
         if (!warmup?.completed) {
-          const unsub = onSpriteWarmupProgress((state6) => {
-            if (state6.completed) {
+          const unsub = onSpriteWarmupProgress((state5) => {
+            if (state5.completed) {
               try {
                 unsub();
               } catch {
@@ -30472,9 +30156,9 @@
         detachValueText();
         return;
       }
-      const state6 = getReadySpriteState();
-      const ctors = state6?.ctors;
-      if (!state6 || !ctors) return;
+      const state5 = getReadySpriteState();
+      const ctors = state5?.ctors;
+      if (!state5 || !ctors) return;
       const value = priceWatcher.get();
       if (value == null) {
         detachValueText();
@@ -30482,7 +30166,7 @@
       }
       const text = formatCoins2(value);
       if (!valueText) {
-        graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state6)));
+        graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state5)));
         if (graphicsCtor) {
           valueBadge = new graphicsCtor();
           currentCard2.addChild(valueBadge);
@@ -30664,9 +30348,9 @@
         removeBorder();
         return;
       }
-      const state6 = getReadySpriteState();
+      const state5 = getReadySpriteState();
       if (!graphicsCtor) {
-        graphicsCtor = state6 ? findGraphicsCtor(getStage(state6)) : null;
+        graphicsCtor = state5 ? findGraphicsCtor(getStage(state5)) : null;
         if (!graphicsCtor) return;
       }
       if (!border) {
@@ -30681,8 +30365,8 @@
       border.clear();
       border.roundRect(left + inset, top + inset, Math.max(0, width - BORDER_WIDTH), Math.max(0, height - BORDER_WIDTH), BORDER_RADIUS).stroke({ width: BORDER_WIDTH, color: BORDER_COLOR, alpha: 1 });
       debugState4.hasBorder = true;
-      if (!lockIcon && state6?.ctors?.Text) {
-        lockIcon = new state6.ctors.Text({ text: LOCK_ICON_TEXT, style: LOCK_ICON_STYLE });
+      if (!lockIcon && state5?.ctors?.Text) {
+        lockIcon = new state5.ctors.Text({ text: LOCK_ICON_TEXT, style: LOCK_ICON_STYLE });
         currentCard2.addChild(lockIcon);
       }
       if (lockIcon) {
@@ -30910,9 +30594,9 @@
         weSetPointerCursor = false;
       }
     };
-    const ensureCanvasListeners = (state6) => {
+    const ensureCanvasListeners = (state5) => {
       if (canvasListenersAttached) return;
-      const canvas = state6.renderer?.canvas || state6.renderer?.view?.canvas || state6.renderer?.view;
+      const canvas = state5.renderer?.canvas || state5.renderer?.view?.canvas || state5.renderer?.view;
       if (!canvas) return;
       canvasEl = canvas;
       canvas.addEventListener("pointerdown", onCanvasPointerDown);
@@ -30931,16 +30615,16 @@
         removeButton();
         return;
       }
-      const state6 = getReadySpriteState();
-      if (!state6?.ctors?.Text) return;
-      const graphicsCtor = findGraphicsCtor(getStage(state6));
+      const state5 = getReadySpriteState();
+      if (!state5?.ctors?.Text) return;
+      const graphicsCtor = findGraphicsCtor(getStage(state5));
       if (!graphicsCtor) return;
-      ensureCanvasListeners(state6);
+      ensureCanvasListeners(state5);
       const face = findByLabel(wrapper, BUTTON_FACE_LABEL) ?? wrapper;
       const faceWidth = safeSize(face, "width", 150);
       const faceHeight = safeSize(face, "height", 55);
       if (!buttonContainer) {
-        const ContainerCtor = state6.ctors?.Container ?? actionHud.constructor;
+        const ContainerCtor = state5.ctors?.Container ?? actionHud.constructor;
         buttonContainer = new ContainerCtor();
         const thisContainer = buttonContainer;
         thisContainer.once("destroyed", () => {
@@ -30956,7 +30640,7 @@
           ...existingTextStyle?.fontSize ? { fontSize: existingTextStyle.fontSize } : {},
           ...existingTextStyle?.fontWeight ? { fontWeight: existingTextStyle.fontWeight } : {}
         };
-        buttonText = new state6.ctors.Text({ text: BUTTON_TEXT, style: style2 });
+        buttonText = new state5.ctors.Text({ text: BUTTON_TEXT, style: style2 });
         buttonContainer.addChild(buttonText);
       }
       if (!buttonBg) {
@@ -31016,9 +30700,9 @@
     };
     const tryFindActionHud = () => {
       if (!running6 || actionHud) return;
-      const state6 = getReadySpriteState();
-      if (!state6) return;
-      const stage = getStage(state6);
+      const state5 = getReadySpriteState();
+      if (!state5) return;
+      const stage = getStage(state5);
       const found = findAcrossBranches(stage, (node) => node?.label === ACTION_HUD_LABEL);
       if (found) {
         attachToActionHud(found);
@@ -31622,7 +31306,7 @@
       });
     });
   }
-  async function fetchText(url, options) {
+  async function fetchText2(url, options) {
     const preferGM = isDiscordSurface();
     const hasGM = typeof GM_xmlhttpRequest === "function" || typeof GM !== "undefined" && typeof GM.xmlHttpRequest === "function";
     if (preferGM && hasGM) {
@@ -31639,7 +31323,7 @@
   }
   async function fetchLatestCommitSha() {
     try {
-      const responseText = await fetchText(COMMITS_API_URL, {
+      const responseText = await fetchText2(COMMITS_API_URL, {
         headers: { Accept: "application/vnd.github+json" }
       });
       const data = JSON.parse(responseText);
@@ -31654,7 +31338,7 @@
   async function fetchScriptSource() {
     const commitSha = await fetchLatestCommitSha();
     const scriptUrl = commitSha ? `${RAW_BASE_URL}/${commitSha}/dist/${SCRIPT_FILE_PATH}` : `${RAW_BASE_URL}/refs/heads/${REPO_BRANCH}/dist/${SCRIPT_FILE_PATH}?t=${Date.now()}`;
-    return await fetchText(scriptUrl);
+    return await fetchText2(scriptUrl);
   }
   async function fetchRemoteVersion() {
     try {
@@ -32176,25 +31860,25 @@
     const stateByGrid = /* @__PURE__ */ new WeakMap();
     const ensureState = async (grid, filters, entries2, searchQuery) => {
       const filtersKey = JSON.stringify({ filters });
-      const state6 = stateByGrid.get(grid);
+      const state5 = stateByGrid.get(grid);
       const hasAllBaseIndexes = entries2.every((e) => readBaseIndex(e) != null);
-      const searchChanged = state6 ? state6.searchQuery !== searchQuery : false;
-      const entryCountChanged = state6 ? state6.entryCount !== entries2.length : false;
-      const filtersChanged = state6 ? state6.filtersKey !== filtersKey : false;
-      const baseLengthChanged = state6 ? state6.baseItems.length !== entries2.length : false;
-      const needsRebuild = !state6 || filtersChanged || entryCountChanged || baseLengthChanged || !hasAllBaseIndexes || searchChanged;
-      if (state6 && !needsRebuild) {
-        state6.entryByBaseIndex.clear();
+      const searchChanged = state5 ? state5.searchQuery !== searchQuery : false;
+      const entryCountChanged = state5 ? state5.entryCount !== entries2.length : false;
+      const filtersChanged = state5 ? state5.filtersKey !== filtersKey : false;
+      const baseLengthChanged = state5 ? state5.baseItems.length !== entries2.length : false;
+      const needsRebuild = !state5 || filtersChanged || entryCountChanged || baseLengthChanged || !hasAllBaseIndexes || searchChanged;
+      if (state5 && !needsRebuild) {
+        state5.entryByBaseIndex.clear();
         for (const entry of entries2) {
           const baseIndex = readBaseIndex(entry);
           if (baseIndex != null) {
-            state6.entryByBaseIndex.set(baseIndex, entry);
+            state5.entryByBaseIndex.set(baseIndex, entry);
           }
         }
-        state6.filtersKey = filtersKey;
-        state6.searchQuery = searchQuery;
-        state6.entryCount = entries2.length;
-        return state6;
+        state5.filtersKey = filtersKey;
+        state5.searchQuery = searchQuery;
+        state5.entryCount = entries2.length;
+        return state5;
       }
       try {
         const inventory = await Atoms.inventory.myInventory.get();
@@ -32217,7 +31901,7 @@
           entryCount: entries2.length,
           baseItems: filteredItems.slice(),
           entryByBaseIndex: /* @__PURE__ */ new Map(),
-          lastSortKey: state6?.lastSortKey ?? null
+          lastSortKey: state5?.lastSortKey ?? null
         };
         entries2.forEach((entry, index) => {
           newState.entryByBaseIndex.set(index, entry);
@@ -32229,37 +31913,37 @@
         return null;
       }
     };
-    const rebaseStateToDomOrder = (state6, entries2) => {
-      if (entries2.length !== state6.baseItems.length) return false;
+    const rebaseStateToDomOrder = (state5, entries2) => {
+      if (entries2.length !== state5.baseItems.length) return false;
       const reordered = [];
       const used = /* @__PURE__ */ new Set();
       for (const entry of entries2) {
         const baseIndex = readBaseIndex(entry);
-        if (baseIndex == null || baseIndex < 0 || baseIndex >= state6.baseItems.length) {
+        if (baseIndex == null || baseIndex < 0 || baseIndex >= state5.baseItems.length) {
           return false;
         }
         if (used.has(baseIndex)) {
           return false;
         }
         used.add(baseIndex);
-        reordered.push(state6.baseItems[baseIndex]);
+        reordered.push(state5.baseItems[baseIndex]);
       }
-      if (reordered.length !== state6.baseItems.length) return false;
+      if (reordered.length !== state5.baseItems.length) return false;
       let changed = false;
       for (let i = 0; i < reordered.length; i++) {
-        if (reordered[i] !== state6.baseItems[i]) {
+        if (reordered[i] !== state5.baseItems[i]) {
           changed = true;
           break;
         }
       }
       if (!changed) return false;
-      state6.baseItems = reordered;
+      state5.baseItems = reordered;
       assignBaseIndexesToEntries(entries2);
-      state6.entryByBaseIndex.clear();
+      state5.entryByBaseIndex.clear();
       entries2.forEach((entry, index) => {
-        state6.entryByBaseIndex.set(index, entry);
+        state5.entryByBaseIndex.set(index, entry);
       });
-      state6.entryCount = entries2.length;
+      state5.entryCount = entries2.length;
       return true;
     };
     return async (grid, sortKey, direction) => {
@@ -32274,24 +31958,24 @@
         cfg.checkboxLabelSelector
       );
       const searchQuery = getNormalizedInventorySearchQuery(grid);
-      const state6 = await ensureState(grid, filters, entries2, searchQuery);
-      if (!state6) return;
-      const previousSortKey = state6.lastSortKey;
+      const state5 = await ensureState(grid, filters, entries2, searchQuery);
+      if (!state5) return;
+      const previousSortKey = state5.lastSortKey;
       if ((!sortKey || sortKey === "none") && previousSortKey === "none") {
-        rebaseStateToDomOrder(state6, entries2);
+        rebaseStateToDomOrder(state5, entries2);
       }
       const baseIndexByItem = /* @__PURE__ */ new Map();
-      state6.baseItems.forEach((item, index) => {
+      state5.baseItems.forEach((item, index) => {
         baseIndexByItem.set(item, index);
       });
       const effectiveDirection = direction && DIRECTION_ORDER.includes(direction) ? direction : DEFAULT_DIRECTION_BY_SORT_KEY[sortKey] ?? "asc";
-      const desiredItems = !sortKey || sortKey === "none" ? state6.baseItems.slice() : sortInventoryItems(state6.baseItems, sortKey, effectiveDirection);
+      const desiredItems = !sortKey || sortKey === "none" ? state5.baseItems.slice() : sortInventoryItems(state5.baseItems, sortKey, effectiveDirection);
       const desiredEntries = [];
       const usedEntries = /* @__PURE__ */ new Set();
       for (const item of desiredItems) {
         const baseIndex = baseIndexByItem.get(item);
         if (baseIndex == null) continue;
-        const entry = state6.entryByBaseIndex.get(baseIndex);
+        const entry = state5.entryByBaseIndex.get(baseIndex);
         if (!entry || usedEntries.has(entry)) continue;
         const value = getInventoryItemValue(item);
         updateInventoryCardValue(entry.card, value);
@@ -32316,14 +32000,14 @@
         });
         container.appendChild(fragment);
       }
-      state6.entryByBaseIndex.clear();
+      state5.entryByBaseIndex.clear();
       desiredEntries.forEach((entry) => {
         const baseIndex = readBaseIndex(entry);
         if (baseIndex != null) {
-          state6.entryByBaseIndex.set(baseIndex, entry);
+          state5.entryByBaseIndex.set(baseIndex, entry);
         }
       });
-      state6.lastSortKey = sortKey;
+      state5.lastSortKey = sortKey;
     };
   }
   function getActiveFiltersFromGrid(grid, checkboxSelector, checkboxLabelSelector) {
@@ -35066,15 +34750,15 @@
     debugSyncState.anchorsFound = !!anchors;
     if (!anchors) return;
     if (!toolbarState) {
-      const state6 = getReadySpriteState();
-      if (!state6?.ctors?.Text) return;
-      const stage = getStage(state6);
+      const state5 = getReadySpriteState();
+      if (!state5?.ctors?.Text) return;
+      const stage = getStage(state5);
       const graphicsCtor = findGraphicsCtor(stage);
       if (!graphicsCtor) return;
       const maxWidth = safeWidth(anchors.backgroundSprite, 0) - 2 * (anchors.scrollViewContainer.position?.x ?? 0);
       if (maxWidth <= 0) return;
       const containerCtor = anchors.modalContainer.constructor;
-      toolbarState = buildToolbar(graphicsCtor, state6.ctors.Text, containerCtor, maxWidth);
+      toolbarState = buildToolbar(graphicsCtor, state5.ctors.Text, containerCtor, maxWidth);
       anchors.modalContainer.addChild(toolbarState.container);
       debugSyncState.toolbarBuilt = true;
     }
@@ -35102,9 +34786,9 @@
   }
   function tryFindModal() {
     if (!modalOpen2 || modalNode) return;
-    const state6 = getReadySpriteState();
-    if (!state6) return;
-    const stage = getStage(state6);
+    const state5 = getReadySpriteState();
+    if (!state5) return;
+    const stage = getStage(state5);
     const found = findAcrossBranches(stage, (node) => node?.label === ACTIVITY_LOG_MODAL_LABEL);
     if (!found) return;
     modalNode = found;
@@ -35423,18 +35107,18 @@
     };
     return cachedState;
   }
-  function saveState(state6) {
-    if (state6.seenPetIds.length > SEEN_LIMIT) {
-      state6.seenPetIds.splice(0, state6.seenPetIds.length - SEEN_LIMIT);
+  function saveState(state5) {
+    if (state5.seenPetIds.length > SEEN_LIMIT) {
+      state5.seenPetIds.splice(0, state5.seenPetIds.length - SEEN_LIMIT);
     }
-    cachedState = state6;
+    cachedState = state5;
     try {
-      writeAriesPath(STATE_PATH, state6);
+      writeAriesPath(STATE_PATH, state5);
     } catch {
     }
     for (const listener of listeners7) {
       try {
-        listener(state6);
+        listener(state5);
       } catch {
       }
     }
@@ -35505,13 +35189,13 @@
     var _a, _b;
     const events = extractHatchEvents(entries2);
     if (!events.length) return false;
-    const state6 = loadState();
-    const seen = new Set(state6.seenPetIds);
+    const state5 = loadState();
+    const seen = new Set(state5.seenPetIds);
     let changed = false;
     for (const event of events) {
       if (seen.has(event.petId)) continue;
       seen.add(event.petId);
-      state6.seenPetIds.push(event.petId);
+      state5.seenPetIds.push(event.petId);
       changed = true;
       if (countStats) {
         try {
@@ -35519,12 +35203,12 @@
         } catch {
         }
       }
-      if (event.timestamp > state6.lastHatchAt) state6.lastHatchAt = event.timestamp;
+      if (event.timestamp > state5.lastHatchAt) state5.lastHatchAt = event.timestamp;
       if (!event.isPull || !event.eggId) continue;
-      const counters = (_a = state6.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
+      const counters = (_a = state5.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
       applyPull(counters, event, protectedSpecies(event.eggId));
     }
-    if (changed) saveState(state6);
+    if (changed) saveState(state5);
     return changed;
   }
   async function startHatchTracker() {
@@ -35545,10 +35229,10 @@
     } catch {
     }
     if (firstRun) {
-      const state6 = loadState();
-      state6.bootstrapped = true;
-      state6.trackingStartedAt = Date.now();
-      saveState(state6);
+      const state5 = loadState();
+      state5.bootstrapped = true;
+      state5.trackingStartedAt = Date.now();
+      saveState(state5);
     }
     const current = loadState();
     if (current.bootstrapped && current.trackingStartedAt <= 0) {
@@ -35599,14 +35283,14 @@
         },
         setOffset(eggId, key2, value) {
           var _a;
-          const state6 = loadState();
-          const offsets = (_a = state6.offsets)[eggId] ?? (_a[eggId] = emptyCounters());
+          const state5 = loadState();
+          const offsets = (_a = state5.offsets)[eggId] ?? (_a[eggId] = emptyCounters());
           const next = toCount(value);
           if (key2 === "gold") offsets.gold = next;
           else if (key2 === "rainbow") offsets.rainbow = next;
           else if (next > 0) offsets.species[key2] = next;
           else delete offsets.species[key2];
-          saveState(state6);
+          saveState(state5);
         },
         // Deliberately no reset: a counter that can be cleared is worse than useless,
         // since the server's own never resets except on the outcome itself. Only
@@ -36461,8 +36145,8 @@
         sMini.style.display = "";
       }
     };
-    const offWarmup = onSpriteWarmupProgress((state6) => {
-      warmupState2 = state6;
+    const offWarmup = onSpriteWarmupProgress((state5) => {
+      warmupState2 = state5;
       updateStatus();
     });
     setInterval(updateStatus, 800);
@@ -39851,7 +39535,7 @@ next: ${next}`;
     resizeObserver.observe(bodyGrid);
     const onResize = () => syncHeaderToScrollbar();
     window.addEventListener("resize", onResize);
-    let state6 = null;
+    let state5 = null;
     let renderedIds = /* @__PURE__ */ new Set();
     const getFilters = () => ({
       type: selType.value || "all",
@@ -40035,11 +39719,11 @@ next: ${next}`;
     }
     function rebuildGrid() {
       clearBody();
-      if (!state6) {
+      if (!state5) {
         renderEmpty();
         return;
       }
-      const rows = passesFilters(state6.rows);
+      const rows = passesFilters(state5.rows);
       if (!rows.length) {
         renderEmpty();
       } else {
@@ -40049,7 +39733,7 @@ next: ${next}`;
         });
       }
       refreshRulesUI();
-      followedBadge.textContent = `Followed: ${state6.counts.followed}`;
+      followedBadge.textContent = `Followed: ${state5.counts.followed}`;
       syncHeaderToScrollbar();
     }
     function softUpdateBadge(next) {
@@ -40068,11 +39752,11 @@ next: ${next}`;
       } catch {
       }
       unsub = await NotifierService.onChangeNow((s) => {
-        const prev = state6;
-        state6 = s;
+        const prev = state5;
+        state5 = s;
         if (!prev) {
           rebuildGrid();
-          softUpdateRenderedRows(state6);
+          softUpdateRenderedRows(state5);
           return;
         }
         const prevIds = renderedIds;
@@ -40098,7 +39782,7 @@ next: ${next}`;
       }
     })();
     const onFilterChange = () => {
-      if (state6) rebuildGrid();
+      if (state5) rebuildGrid();
     };
     selType.onchange = onFilterChange;
     selRarity.onchange = onFilterChange;
@@ -40592,11 +40276,11 @@ next: ${next}`;
       empty.style.padding = "8px";
       bodyGrid.appendChild(empty);
     };
-    let state6 = null;
+    let state5 = null;
     let stateSig = "";
     const updateDynamicWeatherStats = () => {
-      if (!state6) return;
-      for (const row of state6.rows) {
+      if (!state5) return;
+      for (const row of state5.rows) {
         const target = weatherLastSeenRefs.get(row.id);
         if (target) {
           const { label: label2, title } = formatLastSeen(row.lastSeen, row.isCurrent);
@@ -40608,10 +40292,10 @@ next: ${next}`;
     };
     const rebuildGrid = () => {
       clearGrid();
-      if (!state6 || !state6.rows.length) {
+      if (!state5 || !state5.rows.length) {
         renderEmpty();
       } else {
-        state6.rows.forEach(addRow);
+        state5.rows.forEach(addRow);
         refreshRulesUI();
       }
       syncHeaderToScrollbar();
@@ -40626,7 +40310,7 @@ next: ${next}`;
       }
       try {
         unsubWeather = await NotifierService.onWeatherChangeNow((next) => {
-          state6 = next;
+          state5 = next;
           stateSig = weatherStateSignature(next.rows);
           rebuildGrid();
         });
@@ -40642,7 +40326,7 @@ next: ${next}`;
         const next = await NotifierService.getWeatherState();
         const nextSig = weatherStateSignature(next.rows);
         const changed = nextSig !== stateSig;
-        state6 = next;
+        state5 = next;
         stateSig = nextSig;
         if (changed) rebuildGrid();
         else updateDynamicWeatherStats();
@@ -41505,12 +41189,12 @@ next: ${next}`;
       target.weatherRecipes.push(set2);
     });
   }
-  function serializeSettingsState(state6) {
-    normalizeWeatherSelection(state6.weatherSelected);
-    state6.weatherRecipes.forEach((set2) => normalizeRecipeSelection(set2));
-    const mode = state6.scaleLockMode === "MINIMUM" ? "MINIMUM" : state6.scaleLockMode === "MAXIMUM" ? "MAXIMUM" : state6.scaleLockMode === "NONE" ? "NONE" : "RANGE";
-    let minScale = Math.max(50, Math.min(100, Math.round(state6.minScalePct || 50)));
-    let maxScale = Math.max(50, Math.min(100, Math.round(state6.maxScalePct || 100)));
+  function serializeSettingsState(state5) {
+    normalizeWeatherSelection(state5.weatherSelected);
+    state5.weatherRecipes.forEach((set2) => normalizeRecipeSelection(set2));
+    const mode = state5.scaleLockMode === "MINIMUM" ? "MINIMUM" : state5.scaleLockMode === "MAXIMUM" ? "MAXIMUM" : state5.scaleLockMode === "NONE" ? "NONE" : "RANGE";
+    let minScale = Math.max(50, Math.min(100, Math.round(state5.minScalePct || 50)));
+    let maxScale = Math.max(50, Math.min(100, Math.round(state5.maxScalePct || 100)));
     if (mode === "RANGE") {
       maxScale = Math.max(51, Math.min(100, maxScale));
       if (maxScale <= minScale) {
@@ -41530,14 +41214,14 @@ next: ${next}`;
       minScalePct: minScale,
       maxScalePct: maxScale,
       scaleLockMode: mode,
-      lockMode: state6.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
-      minInventory: Math.max(0, Math.min(999, Math.round(state6.minInventory || 91))),
-      avoidNormal: !!state6.avoidNormal,
-      includeNormal: !state6.avoidNormal,
-      visualMutations: Array.from(state6.visualMutations),
-      weatherMode: state6.weatherMode,
-      weatherSelected: Array.from(state6.weatherSelected),
-      weatherRecipes: state6.weatherRecipes.map((set2) => Array.from(set2))
+      lockMode: state5.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
+      minInventory: Math.max(0, Math.min(999, Math.round(state5.minInventory || 91))),
+      avoidNormal: !!state5.avoidNormal,
+      includeNormal: !state5.avoidNormal,
+      visualMutations: Array.from(state5.visualMutations),
+      weatherMode: state5.weatherMode,
+      weatherSelected: Array.from(state5.weatherSelected),
+      weatherRecipes: state5.weatherRecipes.map((set2) => Array.from(set2))
     };
   }
   function setCheck(input, value) {
@@ -41697,7 +41381,7 @@ next: ${next}`;
       button2.style.background = "rgba(255,255,255,0.04)";
     };
   }
-  function createLockerSettingsCard(ui, state6, opts = {}) {
+  function createLockerSettingsCard(ui, state5, opts = {}) {
     const card4 = document.createElement("div");
     card4.dataset.lockerSettingsCard = "1";
     card4.style.border = "1px solid rgba(255,255,255,0.10)";
@@ -41713,7 +41397,7 @@ next: ${next}`;
     let recipesTitleElement = null;
     const updateRecipeTitleText = () => {
       if (!recipesTitleElement) return;
-      const prefix = state6.lockMode === "ALLOW" ? "Allow" : "Lock";
+      const prefix = state5.lockMode === "ALLOW" ? "Allow" : "Lock";
       recipesTitleElement.textContent = `${prefix} when any recipe row matches (OR between rows)`;
     };
     const makeSection = (titleText, content) => {
@@ -41760,10 +41444,10 @@ next: ${next}`;
         { value: "lock", label: "Lock" },
         { value: "allow", label: "Allow" }
       ],
-      fromLockMode(state6.lockMode),
+      fromLockMode(state5.lockMode),
       (value) => {
         if (isProgrammaticLockMode) return;
-        state6.lockMode = toLockMode(value);
+        state5.lockMode = toLockMode(value);
         updateLockModeUI();
         opts.onChange?.();
       },
@@ -41778,14 +41462,14 @@ next: ${next}`;
       display: "none"
     });
     const locksEverySize = () => {
-      if ((state6.lockMode ?? "LOCK") !== "LOCK") return false;
-      switch (state6.scaleLockMode) {
+      if ((state5.lockMode ?? "LOCK") !== "LOCK") return false;
+      switch (state5.scaleLockMode) {
         case "RANGE":
-          return state6.minScalePct <= 50 && state6.maxScalePct >= 100;
+          return state5.minScalePct <= 50 && state5.maxScalePct >= 100;
         case "MINIMUM":
-          return state6.minScalePct <= 50;
+          return state5.minScalePct <= 50;
         case "MAXIMUM":
-          return state6.maxScalePct >= 100;
+          return state5.maxScalePct >= 100;
         default:
           return false;
       }
@@ -41797,7 +41481,7 @@ next: ${next}`;
     };
     lockModeRow.append(lockModeSegmented, lockModeHint, lockWarning);
     const updateLockModeUI = () => {
-      const value = fromLockMode(state6.lockMode);
+      const value = fromLockMode(state5.lockMode);
       const current = lockModeSegmented.get?.();
       if (current !== value) {
         isProgrammaticLockMode = true;
@@ -41820,9 +41504,9 @@ next: ${next}`;
     scaleModeRow.style.flexWrap = "wrap";
     scaleModeRow.style.justifyContent = "center";
     scaleModeRow.style.gap = "12px";
-    const minSlider = ui.slider(50, 100, 1, state6.minScalePct);
+    const minSlider = ui.slider(50, 100, 1, state5.minScalePct);
     applyStyles(minSlider, { width: "min(420px, 100%)" });
-    const maxSlider = ui.slider(50, 100, 1, state6.maxScalePct);
+    const maxSlider = ui.slider(50, 100, 1, state5.maxScalePct);
     applyStyles(maxSlider, { width: "min(420px, 100%)" });
     const toMode = (value) => {
       switch (value) {
@@ -41849,7 +41533,7 @@ next: ${next}`;
       }
     };
     let isProgrammaticScaleMode = false;
-    const initialScaleMode = fromMode(state6.scaleLockMode);
+    const initialScaleMode = fromMode(state5.scaleLockMode);
     const scaleModeSegmented = ui.segmented(
       [
         { value: "none", label: "None" },
@@ -41865,7 +41549,7 @@ next: ${next}`;
       { ariaLabel: "Scale lock mode" }
     );
     scaleModeRow.append(scaleModeSegmented);
-    const scaleSlider = ui.rangeDual(50, 100, 1, state6.minScalePct, state6.maxScalePct);
+    const scaleSlider = ui.rangeDual(50, 100, 1, state5.minScalePct, state5.maxScalePct);
     applyStyles(scaleSlider.root, {
       width: "min(420px, 100%)",
       marginLeft: "auto",
@@ -41929,8 +41613,8 @@ next: ${next}`;
     const applyScaleRange = (commit, notify3 = commit) => {
       let minValue = parseInt(scaleMinSlider.value, 10);
       let maxValue = parseInt(scaleMaxSlider.value, 10);
-      if (!Number.isFinite(minValue)) minValue = state6.minScalePct;
-      if (!Number.isFinite(maxValue)) maxValue = state6.maxScalePct;
+      if (!Number.isFinite(minValue)) minValue = state5.minScalePct;
+      if (!Number.isFinite(maxValue)) maxValue = state5.maxScalePct;
       minValue = Math.max(50, Math.min(99, minValue));
       maxValue = Math.max(51, Math.min(100, maxValue));
       if (maxValue <= minValue) {
@@ -41945,44 +41629,44 @@ next: ${next}`;
       scaleMinValue.textContent = `${minValue}`;
       scaleMaxValue.textContent = `${maxValue}`;
       if (commit) {
-        state6.minScalePct = minValue;
-        state6.maxScalePct = maxValue;
+        state5.minScalePct = minValue;
+        state5.maxScalePct = maxValue;
         updateLockWarning();
         if (notify3) opts.onChange?.();
       }
     };
     const applyScaleMinimum = (commit, notify3 = commit) => {
       let minValue = parseInt(minSlider.value, 10);
-      if (!Number.isFinite(minValue)) minValue = state6.minScalePct;
+      if (!Number.isFinite(minValue)) minValue = state5.minScalePct;
       minValue = Math.max(50, Math.min(100, minValue));
       minSlider.value = String(minValue);
       scaleMinimumValue.textContent = `${minValue}`;
       if (commit) {
-        state6.minScalePct = minValue;
+        state5.minScalePct = minValue;
         updateLockWarning();
         if (notify3) opts.onChange?.();
       }
     };
     const applyScaleMaximum = (commit, notify3 = commit) => {
       let maxValue = parseInt(maxSlider.value, 10);
-      if (!Number.isFinite(maxValue)) maxValue = state6.maxScalePct;
+      if (!Number.isFinite(maxValue)) maxValue = state5.maxScalePct;
       maxValue = Math.max(50, Math.min(100, maxValue));
       maxSlider.value = String(maxValue);
       scaleMaximumValue.textContent = `${maxValue}`;
       if (commit) {
-        state6.maxScalePct = maxValue;
+        state5.maxScalePct = maxValue;
         updateLockWarning();
         if (notify3) opts.onChange?.();
       }
     };
     const updateScaleModeUI = () => {
-      const isRange = state6.scaleLockMode === "RANGE";
-      const isMin = state6.scaleLockMode === "MINIMUM";
-      const isMax = state6.scaleLockMode === "MAXIMUM";
+      const isRange = state5.scaleLockMode === "RANGE";
+      const isMin = state5.scaleLockMode === "MINIMUM";
+      const isMax = state5.scaleLockMode === "MAXIMUM";
       rangeControls.style.display = isRange ? "" : "none";
       minControls.style.display = isMin ? "" : "none";
       maxControls.style.display = isMax ? "" : "none";
-      const segValue = fromMode(state6.scaleLockMode);
+      const segValue = fromMode(state5.scaleLockMode);
       if (scaleModeSegmented.get?.() !== segValue) {
         isProgrammaticScaleMode = true;
         try {
@@ -41994,16 +41678,16 @@ next: ${next}`;
       updateLockWarning();
     };
     const applyScaleMode = (mode, notify3) => {
-      const prevMode = state6.scaleLockMode;
-      state6.scaleLockMode = mode;
+      const prevMode = state5.scaleLockMode;
+      state5.scaleLockMode = mode;
       if (mode === "RANGE") {
-        scaleSlider.setValues(state6.minScalePct, state6.maxScalePct);
+        scaleSlider.setValues(state5.minScalePct, state5.maxScalePct);
         applyScaleRange(prevMode !== mode, false);
       } else if (mode === "MINIMUM") {
-        minSlider.value = String(state6.minScalePct);
+        minSlider.value = String(state5.minScalePct);
         applyScaleMinimum(prevMode !== mode, false);
       } else if (mode === "MAXIMUM") {
-        maxSlider.value = String(state6.maxScalePct);
+        maxSlider.value = String(state5.maxScalePct);
         applyScaleMaximum(prevMode !== mode, false);
       }
       updateScaleModeUI();
@@ -42022,7 +41706,7 @@ next: ${next}`;
     applyScaleRange(false);
     applyScaleMinimum(false);
     applyScaleMaximum(false);
-    applyScaleMode(state6.scaleLockMode, false);
+    applyScaleMode(state5.scaleLockMode, false);
     const colorsRow = centerRow();
     colorsRow.style.flexWrap = "wrap";
     colorsRow.style.gap = "8px";
@@ -42088,24 +41772,24 @@ next: ${next}`;
       button2.style.cursor = button2.disabled ? "default" : "pointer";
     };
     const updateColorButtons = () => {
-      updateColorButtonVisual(btnNormal, state6.avoidNormal);
-      updateColorButtonVisual(btnGold, state6.visualMutations.has("Gold"));
-      updateColorButtonVisual(btnRainbow, state6.visualMutations.has("Rainbow"));
+      updateColorButtonVisual(btnNormal, state5.avoidNormal);
+      updateColorButtonVisual(btnGold, state5.visualMutations.has("Gold"));
+      updateColorButtonVisual(btnRainbow, state5.visualMutations.has("Rainbow"));
     };
     btnNormal.addEventListener("click", () => {
-      state6.avoidNormal = !state6.avoidNormal;
+      state5.avoidNormal = !state5.avoidNormal;
       updateColorButtons();
       opts.onChange?.();
     });
     btnGold.addEventListener("click", () => {
-      if (state6.visualMutations.has("Gold")) state6.visualMutations.delete("Gold");
-      else state6.visualMutations.add("Gold");
+      if (state5.visualMutations.has("Gold")) state5.visualMutations.delete("Gold");
+      else state5.visualMutations.add("Gold");
       updateColorButtons();
       opts.onChange?.();
     });
     btnRainbow.addEventListener("click", () => {
-      if (state6.visualMutations.has("Rainbow")) state6.visualMutations.delete("Rainbow");
-      else state6.visualMutations.add("Rainbow");
+      if (state5.visualMutations.has("Rainbow")) state5.visualMutations.delete("Rainbow");
+      else state5.visualMutations.add("Rainbow");
       updateColorButtons();
       opts.onChange?.();
     });
@@ -42127,7 +41811,7 @@ next: ${next}`;
       }
       opts.onChange?.();
     };
-    const updateMainWeatherSelection = applyWeatherSelection(state6.weatherSelected);
+    const updateMainWeatherSelection = applyWeatherSelection(state5.weatherSelected);
     const weatherToggles = WEATHER_MUTATIONS.map((info) => {
       const toggle2 = createWeatherMutationToggle({
         key: info.key,
@@ -42143,7 +41827,7 @@ next: ${next}`;
       return toggle2;
     });
     const updateWeatherMutationsDisabled = () => {
-      const disabled = card4.dataset.disabled === "1" || state6.weatherMode === "RECIPES";
+      const disabled = card4.dataset.disabled === "1" || state5.weatherMode === "RECIPES";
       weatherGrid.style.opacity = disabled ? "0.55" : "";
       weatherGrid.style.pointerEvents = disabled ? "none" : "";
       weatherToggles.forEach((toggle2) => toggle2.setDisabled(disabled));
@@ -42161,7 +41845,7 @@ next: ${next}`;
       wrap.append(input, span);
       input.addEventListener("change", () => {
         if (!input.checked) return;
-        state6.weatherMode = value;
+        state5.weatherMode = value;
         recipesWrap.style.display = value === "RECIPES" ? "" : "none";
         updateWeatherMutationsDisabled();
         opts.onChange?.();
@@ -42223,10 +41907,10 @@ next: ${next}`;
       if (editingRecipeIndex === null) return;
       const draft = new Set(editingRecipeDraft);
       normalizeRecipeSelection(draft);
-      if (editingRecipeIndex === state6.weatherRecipes.length) {
-        state6.weatherRecipes.push(draft);
-      } else if (editingRecipeIndex >= 0 && editingRecipeIndex < state6.weatherRecipes.length) {
-        state6.weatherRecipes[editingRecipeIndex] = draft;
+      if (editingRecipeIndex === state5.weatherRecipes.length) {
+        state5.weatherRecipes.push(draft);
+      } else if (editingRecipeIndex >= 0 && editingRecipeIndex < state5.weatherRecipes.length) {
+        state5.weatherRecipes[editingRecipeIndex] = draft;
       }
       editingRecipeIndex = null;
       editingRecipeDraft = /* @__PURE__ */ new Set();
@@ -42235,8 +41919,8 @@ next: ${next}`;
     };
     const deleteRecipeAt = (index) => {
       if (index < 0) return;
-      if (index < state6.weatherRecipes.length) {
-        state6.weatherRecipes.splice(index, 1);
+      if (index < state5.weatherRecipes.length) {
+        state5.weatherRecipes.splice(index, 1);
       }
       if (editingRecipeIndex !== null) {
         if (index === editingRecipeIndex) {
@@ -42368,14 +42052,14 @@ next: ${next}`;
     }
     function repaintRecipes() {
       recipesList.innerHTML = "";
-      const hasDraftNew = editingRecipeIndex !== null && editingRecipeIndex === state6.weatherRecipes.length;
-      const totalRows = state6.weatherRecipes.length + (hasDraftNew ? 1 : 0);
+      const hasDraftNew = editingRecipeIndex !== null && editingRecipeIndex === state5.weatherRecipes.length;
+      const totalRows = state5.weatherRecipes.length + (hasDraftNew ? 1 : 0);
       if (totalRows === 0) {
         recipesList.appendChild(emptyRecipes);
         applyDisabled();
         return;
       }
-      state6.weatherRecipes.forEach((set2, index) => {
+      state5.weatherRecipes.forEach((set2, index) => {
         normalizeRecipeSelection(set2);
         const isEditing = editingRecipeIndex === index;
         const selection = isEditing ? editingRecipeDraft : set2;
@@ -42419,7 +42103,7 @@ next: ${next}`;
           styleBtnFullWidth(btnValidate, "\u2714\uFE0F");
           btnValidate.onclick = commitEditingRecipe;
           actions.append(btnCancel, btnValidate);
-          if (editingRecipeIndex !== null && editingRecipeIndex < state6.weatherRecipes.length) {
+          if (editingRecipeIndex !== null && editingRecipeIndex < state5.weatherRecipes.length) {
             const btnDelete = document.createElement("button");
             styleBtnFullWidth(btnDelete, "\u{1F5D1}\uFE0F");
             btnDelete.title = "Delete";
@@ -42488,7 +42172,7 @@ next: ${next}`;
       applyDisabled();
     }
     btnAddRecipe.onclick = () => {
-      startEditingRecipe(state6.weatherRecipes.length);
+      startEditingRecipe(state5.weatherRecipes.length);
     };
     recipesWrap.append(recipesHeader, recipesList);
     card4.append(
@@ -42501,19 +42185,19 @@ next: ${next}`;
     );
     const refresh = () => {
       updateLockModeUI();
-      scaleSlider.setValues(state6.minScalePct, state6.maxScalePct);
-      minSlider.value = String(state6.minScalePct);
-      maxSlider.value = String(state6.maxScalePct);
+      scaleSlider.setValues(state5.minScalePct, state5.maxScalePct);
+      minSlider.value = String(state5.minScalePct);
+      maxSlider.value = String(state5.maxScalePct);
       applyScaleRange(false);
       applyScaleMinimum(false);
       applyScaleMaximum(false);
-      applyScaleMode(state6.scaleLockMode, false);
+      applyScaleMode(state5.scaleLockMode, false);
       updateColorButtons();
-      weatherToggles.forEach((toggle2) => toggle2.setChecked(state6.weatherSelected.has(toggle2.key)));
-      radioAny.input.checked = state6.weatherMode === "ANY";
-      radioAll.input.checked = state6.weatherMode === "ALL";
-      radioRecipes.input.checked = state6.weatherMode === "RECIPES";
-      recipesWrap.style.display = state6.weatherMode === "RECIPES" ? "" : "none";
+      weatherToggles.forEach((toggle2) => toggle2.setChecked(state5.weatherSelected.has(toggle2.key)));
+      radioAny.input.checked = state5.weatherMode === "ANY";
+      radioAll.input.checked = state5.weatherMode === "ALL";
+      radioRecipes.input.checked = state5.weatherMode === "RECIPES";
+      recipesWrap.style.display = state5.weatherMode === "RECIPES" ? "" : "none";
       updateWeatherMutationsDisabled();
       repaintRecipes();
     };
@@ -42525,7 +42209,7 @@ next: ${next}`;
     return { root: card4, refresh, setDisabled };
   }
   function createRestrictionsTabRenderer(ui) {
-    let state6 = lockerRestrictionsService.getState();
+    let state5 = lockerRestrictionsService.getState();
     let bonusFromMultiplier = null;
     let bonusFromPlayers = friendBonusPercentFromPlayers(1);
     let eggOptions = [];
@@ -42561,7 +42245,7 @@ next: ${next}`;
       textShadow: "0 1px 1px rgba(0, 0, 0, 0.5)"
     });
     sliderHeader.append(sliderTitle, sliderValue);
-    const initialRequiredPct = friendBonusPercentFromPlayers(state6.minRequiredPlayers) ?? 0;
+    const initialRequiredPct = friendBonusPercentFromPlayers(state5.minRequiredPlayers) ?? 0;
     const slider = ui.slider(0, FRIEND_BONUS_MAX, FRIEND_BONUS_STEP, initialRequiredPct);
     slider.style.width = "100%";
     sliderWrap.append(sliderHeader, slider);
@@ -42602,10 +42286,10 @@ next: ${next}`;
     decorSubtitle.style.fontSize = "12.5px";
     decorSubtitle.style.opacity = "0.85";
     decorText.append(decorSubtitle);
-    const decorToggle = ui.switch(state6.decorPickupLocked);
+    const decorToggle = ui.switch(state5.decorPickupLocked);
     decorToggle.addEventListener("change", () => {
       const locked = !!decorToggle.checked;
-      state6.decorPickupLocked = locked;
+      state5.decorPickupLocked = locked;
       lockerRestrictionsService.setDecorPickupLocked(locked);
     });
     decorRow.append(decorText, decorToggle);
@@ -42857,8 +42541,8 @@ next: ${next}`;
       toggle2.style.fontSize = "14px";
       toggle2.style.fontWeight = "700";
       toggle2.addEventListener("click", () => {
-        const next = !Boolean(state6.eggLocks?.[opt.id]);
-        state6.eggLocks = { ...state6.eggLocks || {}, [opt.id]: next };
+        const next = !Boolean(state5.eggLocks?.[opt.id]);
+        state5.eggLocks = { ...state5.eggLocks || {}, [opt.id]: next };
         lockerRestrictionsService.setEggLock(opt.id, next);
         renderEggList();
       });
@@ -42886,7 +42570,7 @@ next: ${next}`;
           eggRowCache.set(id, entry);
         }
         entry.name.textContent = opt.name || id;
-        const locked = !!state6.eggLocks?.[id];
+        const locked = !!state5.eggLocks?.[id];
         updateEggToggleAppearance(entry.toggle, locked);
         fragment.appendChild(entry.row);
       });
@@ -42941,9 +42625,9 @@ next: ${next}`;
       statusBadge.style.color = palette.color;
     };
     const updateStatus = () => {
-      const requiredPct = clampPercent2(friendBonusPercentFromPlayers(state6.minRequiredPlayers) ?? 0);
+      const requiredPct = clampPercent2(friendBonusPercentFromPlayers(state5.minRequiredPlayers) ?? 0);
       const currentPct = resolveCurrentBonus();
-      const requiredPlayers = state6.minRequiredPlayers;
+      const requiredPlayers = state5.minRequiredPlayers;
       const currentPlayers = currentPct != null ? percentToRequiredFriendCount(currentPct) : null;
       const allowed = requiredPct <= 0 || currentPct != null && currentPct + 1e-4 >= requiredPct;
       if (requiredPct <= 0) {
@@ -42960,10 +42644,10 @@ next: ${next}`;
       const raw = Number(slider.value);
       const pct = clampPercent2(Number.isFinite(raw) ? raw : 0);
       updateSliderValue(pct);
-      state6.minRequiredPlayers = percentToRequiredFriendCount(pct);
+      state5.minRequiredPlayers = percentToRequiredFriendCount(pct);
       updateStatus();
       if (commit) {
-        lockerRestrictionsService.setMinRequiredPlayers(state6.minRequiredPlayers);
+        lockerRestrictionsService.setMinRequiredPlayers(state5.minRequiredPlayers);
       }
     };
     slider.addEventListener("input", () => handleSliderInput(false));
@@ -42989,9 +42673,9 @@ next: ${next}`;
       lockerRestrictionsService.setSellAllPetsRules({ maxStrThreshold: next });
     });
     const syncFromService = (next) => {
-      state6 = { ...next };
-      setCheck(decorToggle, state6.decorPickupLocked);
-      updateSliderValue(friendBonusPercentFromPlayers(state6.minRequiredPlayers) ?? 0);
+      state5 = { ...next };
+      setCheck(decorToggle, state5.decorPickupLocked);
+      updateSliderValue(friendBonusPercentFromPlayers(state5.minRequiredPlayers) ?? 0);
       updateStatus();
       renderEggList();
       refreshSellAllPetsControls();
@@ -43604,12 +43288,12 @@ next: ${next}`;
           this.global = { enabled: false, settings: createDefaultSettings(), hasPersistedSettings: true };
           this.syncFromService(initial);
         }
-        applyPersisted(state6) {
-          this.global.enabled = !!state6.enabled;
-          hydrateSettingsFromPersisted(this.global.settings, state6.settings);
+        applyPersisted(state5) {
+          this.global.enabled = !!state5.enabled;
+          hydrateSettingsFromPersisted(this.global.settings, state5.settings);
           this.global.hasPersistedSettings = true;
           const seen = /* @__PURE__ */ new Set();
-          Object.entries(state6.overrides ?? {}).forEach(([key2, value]) => {
+          Object.entries(state5.overrides ?? {}).forEach(([key2, value]) => {
             const entry = this.ensureOverride(key2, { silent: true });
             entry.enabled = !!value?.enabled;
             hydrateSettingsFromPersisted(entry.settings, value?.settings);
@@ -43634,9 +43318,9 @@ next: ${next}`;
             }
           }
         }
-        syncFromService(state6) {
+        syncFromService(state5) {
           this.syncing = true;
-          this.applyPersisted(state6);
+          this.applyPersisted(state5);
           this.emit();
           this.syncing = false;
         }
@@ -43988,11 +43672,11 @@ next: ${next}`;
       });
     });
   }
-  function getMutationsForState(state6) {
+  function getMutationsForState(state5) {
     const mutations = [];
-    if (state6.color !== "None") mutations.push(state6.color);
-    if (state6.weatherCondition !== "None") mutations.push(state6.weatherCondition);
-    if (state6.weatherLighting !== "None") mutations.push(state6.weatherLighting);
+    if (state5.color !== "None") mutations.push(state5.color);
+    if (state5.weatherCondition !== "None") mutations.push(state5.weatherCondition);
+    if (state5.weatherLighting !== "None") mutations.push(state5.weatherLighting);
     return mutations.map((label2) => normalizeMutationLabelForSprite(label2));
   }
   function normalizeMutationLabelForSprite(label2) {
@@ -44001,9 +43685,9 @@ next: ${next}`;
     const overridden = MUTATION_SPRITE_OVERRIDES[normalized.toLowerCase()];
     return overridden ?? normalized;
   }
-  function computePrice(speciesKey, state6, size) {
-    const mutations = getMutationsForState(state6);
-    const friendPlayers = clampFriendPlayers(state6.friendPlayers);
+  function computePrice(speciesKey, state5, size) {
+    const mutations = getMutationsForState(state5);
+    const friendPlayers = clampFriendPlayers(state5.friendPlayers);
     const pricingOptions = { ...DefaultPricing, friendPlayers };
     const value = estimateProduceValue(speciesKey, size, mutations, pricingOptions);
     return Number.isFinite(value) && value > 0 ? value : null;
@@ -44189,9 +43873,9 @@ next: ${next}`;
       const getStateForKey = (key2) => {
         const existing = states.get(key2);
         if (existing) return existing;
-        const state6 = { ...DEFAULT_STATE2 };
-        states.set(key2, state6);
-        return state6;
+        const state5 = { ...DEFAULT_STATE2 };
+        states.set(key2, state5);
+        return state5;
       };
       let selectedKey = null;
       let currentBaseWeight = null;
@@ -44204,8 +43888,8 @@ next: ${next}`;
           dot.style.background = isSelected ? "rgba(94,234,212,0.85)" : "rgba(255,255,255,0.20)";
         });
       };
-      function renderColorSegment(state6, interactive) {
-        const active2 = state6?.color ?? COLOR_MUTATION_LABELS[0];
+      function renderColorSegment(state5, interactive) {
+        const active2 = state5?.color ?? COLOR_MUTATION_LABELS[0];
         const segmented2 = createSegmentedControl(
           COLOR_MUTATION_LABELS,
           active2,
@@ -44226,8 +43910,8 @@ next: ${next}`;
         refs.colorMutations.innerHTML = "";
         refs.colorMutations.appendChild(segmented2);
       }
-      function renderWeatherConditions(state6, interactive) {
-        const active2 = state6?.weatherCondition ?? WEATHER_CONDITION_LABELS[0];
+      function renderWeatherConditions(state5, interactive) {
+        const active2 = state5?.weatherCondition ?? WEATHER_CONDITION_LABELS[0];
         const segmented2 = createSegmentedControl(
           WEATHER_CONDITION_LABELS,
           active2,
@@ -44246,8 +43930,8 @@ next: ${next}`;
         refs.weatherConditions.innerHTML = "";
         refs.weatherConditions.appendChild(segmented2);
       }
-      function renderWeatherLighting(state6, interactive) {
-        const active2 = state6?.weatherLighting ?? WEATHER_LIGHTING_LABELS[0];
+      function renderWeatherLighting(state5, interactive) {
+        const active2 = state5?.weatherLighting ?? WEATHER_LIGHTING_LABELS[0];
         const segmented2 = createSegmentedControl(
           WEATHER_LIGHTING_LABELS,
           active2,
@@ -44266,8 +43950,8 @@ next: ${next}`;
         refs.weatherLighting.innerHTML = "";
         refs.weatherLighting.appendChild(segmented2);
       }
-      function renderFriendBonus(state6, interactive) {
-        const active2 = friendPlayersToLabel(state6?.friendPlayers ?? FRIEND_BONUS_MIN_PLAYERS);
+      function renderFriendBonus(state5, interactive) {
+        const active2 = friendPlayersToLabel(state5?.friendPlayers ?? FRIEND_BONUS_MIN_PLAYERS);
         const segmented2 = createSegmentedControl(
           FRIEND_BONUS_LABELS,
           active2,
@@ -44290,8 +43974,8 @@ next: ${next}`;
           refs.priceValue.textContent = "\u2014";
           return;
         }
-        const state6 = getStateForKey(key2);
-        refs.priceValue.textContent = formatCoinValue(computePrice(key2, state6, state6.sizePercent));
+        const state5 = getStateForKey(key2);
+        refs.priceValue.textContent = formatCoinValue(computePrice(key2, state5, state5.sizePercent));
       }
       function updateSprite() {
         const key2 = selectedKey;
@@ -44299,10 +43983,10 @@ next: ${next}`;
           resetCropSimulationSprite(refs.sprite);
           return;
         }
-        const state6 = getStateForKey(key2);
+        const state5 = getStateForKey(key2);
         const option = optionByKey.get(key2);
         const fallbackEmoji = getLockerSeedEmojiForKey(key2) || (option?.seedName ? getLockerSeedEmojiForSeedName(option.seedName) : void 0) || "\u{1F331}";
-        const mutations = getMutationsForState(state6);
+        const mutations = getMutationsForState(state5);
         const candidates = buildSpriteCandidates2(key2, option);
         const categories = getSpriteCategoriesForKey(key2, option?.seedName, option?.cropName);
         applyCropSimulationSprite(refs.sprite, key2, {
@@ -44327,22 +44011,22 @@ next: ${next}`;
           return;
         }
         currentBaseWeight = getBaseWeightForSpecies(key2);
-        const state6 = getStateForKey(key2);
+        const state5 = getStateForKey(key2);
         refs.sizeSlider.disabled = false;
-        applySizePercent(refs, state6.sizePercent, key2, currentBaseWeight);
-        renderColorSegment(state6, true);
-        renderWeatherConditions(state6, true);
-        renderWeatherLighting(state6, true);
-        renderFriendBonus(state6, true);
+        applySizePercent(refs, state5.sizePercent, key2, currentBaseWeight);
+        renderColorSegment(state5, true);
+        renderWeatherConditions(state5, true);
+        renderWeatherLighting(state5, true);
+        renderFriendBonus(state5, true);
         updateSprite();
         updateOutputs();
       }
       slider.addEventListener("input", () => {
         if (!selectedKey) return;
-        const state6 = getStateForKey(selectedKey);
+        const state5 = getStateForKey(selectedKey);
         const raw = Number(slider.value);
         const value = clamp2(Math.round(raw), SIZE_MIN, SIZE_MAX);
-        state6.sizePercent = value;
+        state5.sizePercent = value;
         applySizePercent(refs, value, selectedKey, currentBaseWeight);
         updateOutputs();
       });
@@ -52468,7 +52152,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function fetchTools() {
     const url = `${RAW_BASE_URL2}/refs/heads/${REPO_BRANCH2}/${TOOLS_FILE_PATH}?t=${Date.now()}`;
     try {
-      const text = await fetchText(url);
+      const text = await fetchText2(url);
       const raw = JSON.parse(text);
       return parseToolsPayload(raw);
     } catch (error) {
@@ -53433,20 +53117,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     view.appendChild(wrapper);
     const showLoading = () => {
       viewContainer.innerHTML = "";
-      const state6 = document.createElement("div");
-      state6.className = "mgt-state";
+      const state5 = document.createElement("div");
+      state5.className = "mgt-state";
       const spinner = document.createElement("div");
       spinner.className = "mgt-spinner";
       const text = document.createElement("p");
       text.className = "mgt-state__text";
       text.textContent = "Fetching the latest tools...";
-      state6.append(spinner, text);
-      viewContainer.appendChild(state6);
+      state5.append(spinner, text);
+      viewContainer.appendChild(state5);
     };
     const showError = (message) => {
       viewContainer.innerHTML = "";
-      const state6 = document.createElement("div");
-      state6.className = "mgt-state";
+      const state5 = document.createElement("div");
+      state5.className = "mgt-state";
       const title = document.createElement("span");
       title.className = "mgt-state__title";
       title.textContent = "Couldn't load the tools";
@@ -53458,8 +53142,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       retry.className = "mgt-action is-primary";
       retry.textContent = "Retry";
       retry.onclick = () => void init();
-      state6.append(title, text, retry);
-      viewContainer.appendChild(state6);
+      state5.append(title, text, retry);
+      viewContainer.appendChild(state5);
     };
     let tools = [];
     let listViewRoot = null;
@@ -54223,11 +53907,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/room/players.ts
-  function findPlayersDeep(state6) {
-    if (!state6 || typeof state6 !== "object") return [];
+  function findPlayersDeep(state5) {
+    if (!state5 || typeof state5 !== "object") return [];
     const out = [];
     const seen = /* @__PURE__ */ new Set();
-    const stack = [state6];
+    const stack = [state5];
     while (stack.length) {
       const cur = stack.pop();
       if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
@@ -55522,13 +55206,13 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/skins/applier.ts
   function collectGameMatches() {
-    const state6 = getSpriteState();
-    const roots = [state6.app?.stage, state6.renderer?.lastObjectRendered, state6.renderer?.stage];
+    const state5 = getSpriteState();
+    const roots = [state5.app?.stage, state5.renderer?.lastObjectRendered, state5.renderer?.stage];
     const byLabel = /* @__PURE__ */ new Map();
     const byRect = /* @__PURE__ */ new Map();
     const seenNodes = /* @__PURE__ */ new Set();
     let visited = 0;
-    const catalogTextures = new Set(state6.tex.values());
+    const catalogTextures = new Set(state5.tex.values());
     const add = (bucket, key2, texture, node) => {
       let match = bucket.get(key2);
       if (!match) {
@@ -55661,14 +55345,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   function applySkinTexture(target, canvas, getIndex = collectGameMatches) {
     const frameKey = target.frameKey;
     revertSkin(frameKey);
-    const state6 = getSpriteState();
-    const Texture = state6.ctors?.Texture;
+    const state5 = getSpriteState();
+    const Texture = state5.ctors?.Texture;
     if (!Texture?.from) return false;
     const stage = getIndex();
     const labelMatch = stage.byLabel.get(frameKey);
     const { x, y, w, h } = target.occupiedRect;
     const rectMatch = stage.byRect.get(rectKey(x, y, w, h));
-    const atlasSource = sourceOf(state6.tex.get(frameKey));
+    const atlasSource = sourceOf(state5.tex.get(frameKey));
     const textures = [];
     const nodes = [];
     const cached = lookupCachedTexture(frameKey);
@@ -55788,14 +55472,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   function renderFrameToCanvas(frameKey) {
     const cached = canvasCache.get(frameKey);
     if (cached) return cached;
-    const state6 = getSpriteState();
-    const texture = state6.tex.get(frameKey);
-    const ctors = state6.ctors;
-    if (!texture || !ctors?.Sprite || !state6.renderer?.extract) return null;
+    const state5 = getSpriteState();
+    const texture = state5.tex.get(frameKey);
+    const ctors = state5.ctors;
+    if (!texture || !ctors?.Sprite || !state5.renderer?.extract) return null;
     let sprite = null;
     try {
       sprite = new ctors.Sprite(texture);
-      const canvas = state6.renderer.extract.canvas(sprite, { resolution: 1 });
+      const canvas = state5.renderer.extract.canvas(sprite, { resolution: 1 });
       if (!canvas) return null;
       if (canvasCache.size >= CACHE_MAX) {
         canvasCache.delete(canvasCache.keys().next().value);
@@ -55858,14 +55542,14 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/skins/gameCaches.ts
   function holders() {
-    const state6 = getSpriteState();
+    const state5 = getSpriteState();
     const root = globalThis.unsafeWindow || globalThis;
     return [
       getPixiApp(),
-      state6.app,
-      state6.app?.app,
-      state6.renderer,
-      state6.renderer?.app,
+      state5.app,
+      state5.app?.app,
+      state5.renderer,
+      state5.renderer?.app,
       root.__PIXI_APP__,
       root.app
     ].filter(Boolean);
@@ -55921,9 +55605,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/skins/debug.ts
   function inspectFrame(frameKey, occupiedRect) {
-    const state6 = getSpriteState();
+    const state5 = getSpriteState();
     const stage = collectGameMatches();
-    const catalogTexture = state6.tex.get(frameKey);
+    const catalogTexture = state5.tex.get(frameKey);
     const atlasSource = sourceOf2(catalogTexture);
     const describe = (match) => (match?.nodes ?? []).map((node) => ({
       ctor: node?.constructor?.name,
@@ -55958,7 +55642,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function findOnStage(substring = "") {
-    const state6 = getSpriteState();
+    const state5 = getSpriteState();
     const stage = collectGameMatches();
     const needle = substring.toLowerCase();
     const labels = [...stage.byLabel.keys()].filter((label2) => label2.toLowerCase().includes(needle)).sort();
@@ -55983,7 +55667,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       unlabelledRects: unlabelled.slice(0, 40),
       unlabelledRectCount: unlabelled.length,
       catalogRect: (() => {
-        const rect = frameRectOf2(state6.tex.get(substring));
+        const rect = frameRectOf2(state5.tex.get(substring));
         return rect ? rectKey2(rect.x, rect.y, rect.width, rect.height) : null;
       })()
     };
@@ -56913,89 +56597,89 @@ Restore figures are averages; unlucky streaks do worse.`;
   function stepMovement(input) {
     const { anchor, isWalkable, random, config } = input;
     const pickInterest2 = input.pickInterest ?? null;
-    const state6 = { ...input.state };
+    const state5 = { ...input.state };
     const excludeCenter = anchor.tracksPlayer;
     const blocked = anchor.tracksPlayer ? anchor.tile : null;
     const zone = anchor.zone;
     const zoneWalkable = (x, y) => isWalkable(x, y) && (!zone || zone(x, y));
-    const insideZone = !zone || !state6.tile || zone(state6.tile.x, state6.tile.y);
+    const insideZone = !zone || !state5.tile || zone(state5.tile.x, state5.tile.y);
     const stepWalkable = insideZone ? zoneWalkable : isWalkable;
-    const anchorMoved = !sameTile(state6.lastAnchorTile, anchor.tile);
-    state6.lastAnchorTile = { ...anchor.tile };
+    const anchorMoved = !sameTile(state5.lastAnchorTile, anchor.tile);
+    state5.lastAnchorTile = { ...anchor.tile };
     if (anchorMoved) {
-      state6.idleTicks = 0;
-      if (state6.activity === "wander") {
-        state6.activity = "pursue";
-        state6.wanderTarget = null;
-        state6.wanderTargetIsInterest = false;
-        state6.wanderCooldown = 0;
+      state5.idleTicks = 0;
+      if (state5.activity === "wander") {
+        state5.activity = "pursue";
+        state5.wanderTarget = null;
+        state5.wanderTargetIsInterest = false;
+        state5.wanderCooldown = 0;
       }
     } else {
-      state6.idleTicks++;
+      state5.idleTicks++;
     }
-    if (!state6.tile) {
+    if (!state5.tile) {
       const spawn = findNearbyWalkable(anchor.tile, zoneWalkable, excludeCenter) ?? findNearbyWalkable(anchor.tile, isWalkable, excludeCenter);
-      state6.tile = spawn;
-      return { state: state6, tile: spawn, teleported: spawn !== null };
+      state5.tile = spawn;
+      return { state: state5, tile: spawn, teleported: spawn !== null };
     }
-    const arrived = manhattan(state6.tile, anchor.tile) <= config.followDistance;
-    if (state6.activity === "pursue" && arrived && anchor.onArrival === "wander") {
-      const mayWander = !anchor.tracksPlayer || state6.idleTicks >= config.idleTicksBeforeWander;
+    const arrived = manhattan(state5.tile, anchor.tile) <= config.followDistance;
+    if (state5.activity === "pursue" && arrived && anchor.onArrival === "wander") {
+      const mayWander = !anchor.tracksPlayer || state5.idleTicks >= config.idleTicksBeforeWander;
       if (mayWander) {
-        state6.activity = "wander";
-        state6.wanderTarget = null;
-        state6.wanderTargetIsInterest = false;
-        state6.wanderCooldown = 0;
+        state5.activity = "wander";
+        state5.wanderTarget = null;
+        state5.wanderTargetIsInterest = false;
+        state5.wanderCooldown = 0;
       }
     }
     const passable = (x, y) => stepWalkable(x, y) && !(blocked !== null && x === blocked.x && y === blocked.y);
     let isGoal = null;
     let interestReached = null;
-    if (state6.activity === "pursue") {
+    if (state5.activity === "pursue") {
       if (!arrived) {
         isGoal = (x, y) => manhattan({ x, y }, anchor.tile) <= config.followDistance;
       }
     } else {
-      const wander = resolveWanderTarget(state6, anchor, config, zoneWalkable, random, pickInterest2);
+      const wander = resolveWanderTarget(state5, anchor, config, zoneWalkable, random, pickInterest2);
       interestReached = wander.interestReached;
       const target = wander.target;
       if (target) isGoal = (x, y) => x === target.x && y === target.y;
     }
-    if (!isGoal) return { state: state6, tile: state6.tile, teleported: false, interestReached };
-    const next = findFirstStep(state6.tile, isGoal, passable);
+    if (!isGoal) return { state: state5, tile: state5.tile, teleported: false, interestReached };
+    const next = findFirstStep(state5.tile, isGoal, passable);
     if (!next) {
-      if (state6.activity === "wander") {
-        state6.wanderTarget = null;
-        state6.wanderTargetIsInterest = false;
+      if (state5.activity === "wander") {
+        state5.wanderTarget = null;
+        state5.wanderTargetIsInterest = false;
       }
-      return { state: state6, tile: state6.tile, teleported: false };
+      return { state: state5, tile: state5.tile, teleported: false };
     }
-    state6.tile = next;
-    return { state: state6, tile: next, teleported: false };
+    state5.tile = next;
+    return { state: state5, tile: next, teleported: false };
   }
-  function resolveWanderTarget(state6, anchor, config, isWalkable, random, pickInterest2) {
-    if (state6.wanderCooldown > 0) {
-      state6.wanderCooldown--;
+  function resolveWanderTarget(state5, anchor, config, isWalkable, random, pickInterest2) {
+    if (state5.wanderCooldown > 0) {
+      state5.wanderCooldown--;
       return { target: null, interestReached: null };
     }
-    if (state6.wanderTarget && sameTile(state6.wanderTarget, state6.tile)) {
-      const reached = state6.wanderTargetIsInterest ? { ...state6.wanderTarget } : null;
-      state6.wanderTarget = null;
-      state6.wanderTargetIsInterest = false;
-      state6.wanderCooldown = drawWanderPause(config, random);
+    if (state5.wanderTarget && sameTile(state5.wanderTarget, state5.tile)) {
+      const reached = state5.wanderTargetIsInterest ? { ...state5.wanderTarget } : null;
+      state5.wanderTarget = null;
+      state5.wanderTargetIsInterest = false;
+      state5.wanderCooldown = drawWanderPause(config, random);
       return { target: null, interestReached: reached };
     }
-    if (!state6.wanderTarget) {
+    if (!state5.wanderTarget) {
       const radius = wanderRadiusOf(anchor, config);
-      const interest = pickInterest2 && state6.tile ? pickInterestSafely(pickInterest2, anchor.tile, radius, state6.tile, isWalkable) : null;
-      state6.wanderTargetIsInterest = interest !== null;
-      state6.wanderTarget = interest ?? pickWanderTarget(anchor.tile, radius, isWalkable, random);
-      if (!state6.wanderTarget) {
-        state6.wanderCooldown = drawWanderPause(config, random);
+      const interest = pickInterest2 && state5.tile ? pickInterestSafely(pickInterest2, anchor.tile, radius, state5.tile, isWalkable) : null;
+      state5.wanderTargetIsInterest = interest !== null;
+      state5.wanderTarget = interest ?? pickWanderTarget(anchor.tile, radius, isWalkable, random);
+      if (!state5.wanderTarget) {
+        state5.wanderCooldown = drawWanderPause(config, random);
         return { target: null, interestReached: null };
       }
     }
-    return { target: state6.wanderTarget, interestReached: null };
+    return { target: state5.wanderTarget, interestReached: null };
   }
   function pickInterestSafely(pickInterest2, center, radius, from, isWalkable) {
     const accepts = (x, y) => Math.max(Math.abs(x - center.x), Math.abs(y - center.y)) <= radius && !(x === center.x && y === center.y) && !(x === from.x && y === from.y) && isWalkable(x, y);
@@ -57592,18 +57276,18 @@ Restore figures are averages; unlucky streaks do worse.`;
   function initialGateState() {
     return { lastSpokeAt: 0, mutedUntil: {}, queue: [] };
   }
-  function offerReaction(state6, reaction, now2) {
-    if (now2 < (state6.mutedUntil[familyOf(reaction.key)] ?? 0)) return state6;
-    const existing = state6.queue.find((q) => q.key === reaction.key);
-    if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state6;
-    const queue = state6.queue.filter((q) => q.key !== reaction.key);
+  function offerReaction(state5, reaction, now2) {
+    if (now2 < (state5.mutedUntil[familyOf(reaction.key)] ?? 0)) return state5;
+    const existing = state5.queue.find((q) => q.key === reaction.key);
+    if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state5;
+    const queue = state5.queue.filter((q) => q.key !== reaction.key);
     queue.push({ ...reaction, at: now2 });
-    return { ...state6, queue };
+    return { ...state5, queue };
   }
-  function takeReaction(state6, now2, busy4) {
-    const queue = state6.queue.filter((q) => now2 - q.at <= REACTION_TTL_MS[q.priority]);
-    const kept = { ...state6, queue };
-    if (busy4 || queue.length === 0 || now2 - state6.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
+  function takeReaction(state5, now2, busy4) {
+    const queue = state5.queue.filter((q) => now2 - q.at <= REACTION_TTL_MS[q.priority]);
+    const kept = { ...state5, queue };
+    if (busy4 || queue.length === 0 || now2 - state5.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
     const chosen = queue.find((q) => q.priority === "high") ?? queue[0];
     const family = familyOf(chosen.key);
     const { at: _at, ...reaction } = chosen;
@@ -57611,7 +57295,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       reaction,
       state: {
         lastSpokeAt: now2,
-        mutedUntil: { ...state6.mutedUntil, [family]: now2 + (FAMILY_COOLDOWN_MS[family] ?? 0) },
+        mutedUntil: { ...state5.mutedUntil, [family]: now2 + (FAMILY_COOLDOWN_MS[family] ?? 0) },
         // Le reste de la famille qui vient de parler se tait aussi.
         queue: queue.filter((q) => q !== chosen && (FAMILY_COOLDOWN_MS[family] ? familyOf(q.key) !== family : true))
       }
@@ -58323,28 +58007,28 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function pickDialogueLine(input) {
     const { contextual, customLines, nowMs, random, cooldownMs } = input;
-    const state6 = {
+    const state5 = {
       lastCustomIndex: input.state.lastCustomIndex,
       mutedUntil: { ...input.state.mutedUntil }
     };
     const lines = customLines.filter((line) => typeof line === "string" && line.trim().length > 0);
     const available = contextual.filter(
-      (candidate) => candidate?.message && nowMs >= (state6.mutedUntil[candidate.key] ?? 0)
+      (candidate) => candidate?.message && nowMs >= (state5.mutedUntil[candidate.key] ?? 0)
     );
     if (available.length > 0 && (lines.length === 0 || random() < CONTEXTUAL_CHANCE)) {
       const candidate = available[Math.min(available.length - 1, Math.floor(random() * available.length))];
-      state6.mutedUntil[candidate.key] = nowMs + cooldownMs;
-      return { message: candidate.message, emote: candidate.emote ?? null, custom: false, state: state6 };
+      state5.mutedUntil[candidate.key] = nowMs + cooldownMs;
+      return { message: candidate.message, emote: candidate.emote ?? null, custom: false, state: state5 };
     }
-    if (lines.length === 0) return { message: null, emote: null, custom: false, state: state6 };
+    if (lines.length === 0) return { message: null, emote: null, custom: false, state: state5 };
     if (lines.length === 1) {
-      state6.lastCustomIndex = 0;
-      return { message: lines[0], emote: null, custom: true, state: state6 };
+      state5.lastCustomIndex = 0;
+      return { message: lines[0], emote: null, custom: true, state: state5 };
     }
     let index = Math.min(lines.length - 1, Math.floor(random() * lines.length));
-    if (index === state6.lastCustomIndex) index = (index + 1) % lines.length;
-    state6.lastCustomIndex = index;
-    return { message: lines[index], emote: null, custom: true, state: state6 };
+    if (index === state5.lastCustomIndex) index = (index + 1) % lines.length;
+    state5.lastCustomIndex = index;
+    return { message: lines[index], emote: null, custom: true, state: state5 };
   }
   var CONTEXTUAL_CHANCE, DEFAULT_CONTEXTUAL_COOLDOWN_MS;
   var init_dialogue = __esm({
@@ -58508,7 +58192,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_fakeAtoms();
       init_tick();
-      init_tileObjects();
+      init_tileCapture();
       init_emoteTypes();
       EMOTE_SOURCE_LABEL = "emoteSourceAtom";
       EMOTE_PATCH = {
@@ -60520,9 +60204,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function post(from, kind, text, proposalId, extra = {}) {
     const shown = extra.thread ?? extra.bubble;
-    state3 = {
-      ...state3,
-      log: append(state3.log, {
+    state2 = {
+      ...state2,
+      log: append(state2.log, {
         from,
         kind,
         text: shown?.message ?? text,
@@ -60552,9 +60236,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
   }
   function dropStaleProposal() {
-    const proposal = state3.proposal;
+    const proposal = state2.proposal;
     if (!proposal || !isExpired(proposal, Date.now())) return;
-    state3 = { ...state3, proposal: null, captured: null, log: clearProposal(state3.log, proposal.id) };
+    state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposal.id) };
     notify2();
   }
   function harvestBubble(rows, sentence) {
@@ -60586,7 +60270,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       rows.length,
       withTeam(selectionSignature(rows), team)
     );
-    state3 = { ...state3, proposal, captured: { kind: "harvest", provider, rows } };
+    state2 = { ...state2, proposal, captured: { kind: "harvest", provider, rows } };
     const held = scope.lockedOut > 0 ? ` I am leaving ${scope.lockedOut} locked one${scope.lockedOut === 1 ? "" : "s"} alone.` : "";
     const sentence = `I can see ${proposal.summary}.${held}${teamPromise(team)} Want me to pick them?`;
     post("companion", "reply", sentence, proposal.id, { bubble: harvestBubble(rows, sentence) });
@@ -60604,7 +60288,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     const proposal = openProposal("feed", describeFeed(picks), picks.length, feedSignature(picks));
-    state3 = { ...state3, proposal, captured: { kind: "feed", provider, picks } };
+    state2 = { ...state2, proposal, captured: { kind: "feed", provider, picks } };
     const listed = feedQuestion(picks);
     post("companion", "reply", listed.message, proposal.id, {
       bubble: feedBubble(picks),
@@ -60624,7 +60308,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return;
     }
     const proposal = openProposal("plant", summarizePlan(plan), plan.length, plantSignature(plan));
-    state3 = { ...state3, proposal, captured: { kind: "plant", provider, plan } };
+    state2 = { ...state2, proposal, captured: { kind: "plant", provider, plan } };
     const most = countByItem(plan)[0];
     const sentence = `That is ${proposal.summary}. Want me to get started?`;
     post("companion", "reply", sentence, proposal.id, {
@@ -60645,7 +60329,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const team = loadCompanionSettings().hatchTeamId;
     const proposal = openProposal("hatch", summarizeHatch(slots), slots.length, withTeam(slotSignature2(slots), team));
-    state3 = { ...state3, proposal, captured: { kind: "hatch", provider, rules: rules2, slots } };
+    state2 = { ...state2, proposal, captured: { kind: "hatch", provider, rules: rules2, slots } };
     const kinds = await readHatchScope().then((scope) => scope.eggIds).catch(() => []);
     const sentence = `${proposal.summary}.${teamPromise(team)} Want me to open them?`;
     post("companion", "reply", sentence, proposal.id, {
@@ -60666,7 +60350,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const signature = withTeam(`${petSignature(plan.sell)}/${petSignature(plan.favourite)}`, plan.teamId);
     const proposal = openProposal("sell", summarizeSell(plan.sell), plan.sell.length, signature);
-    state3 = { ...state3, proposal, captured: { kind: "sell", provider, rules: rules2, plan } };
+    state2 = { ...state2, proposal, captured: { kind: "sell", provider, rules: rules2, plan } };
     const keeping = plan.favourite.length > 0 ? ` I would favourite the ${plan.favourite.length} you keep first.` : "";
     const sentence = `That would be ${proposal.summary}.${keeping}${teamPromise(plan.teamId)} Should I?`;
     post("companion", "reply", sentence, proposal.id, {
@@ -60676,9 +60360,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   function reporter() {
     return {
       say: (kind, text, spoken, force) => post("companion", kind, text, void 0, { bubble: spoken, force }),
-      stopped: () => state3.cancelRequested,
+      stopped: () => state2.cancelRequested,
       progress: (done, total) => {
-        state3 = { ...state3, run: { done, total } };
+        state2 = { ...state2, run: { done, total } };
         notify2();
       }
     };
@@ -60688,8 +60372,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     try {
       await run(reporter());
     } finally {
-      stopped = state3.cancelRequested;
-      state3 = { ...state3, run: null, cancelRequested: false };
+      stopped = state2.cancelRequested;
+      state2 = { ...state2, run: null, cancelRequested: false };
       notify2();
     }
     return stopped;
@@ -60752,7 +60436,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (captured.kind === "sell") return captured.plan.sell.length;
     return captured.picks.length;
   }
-  var ALERT_DEDUPE_MS, state3, listeners8, nextProposalSeq, ACCEPTANCE, CompanionChat;
+  var ALERT_DEDUPE_MS, state2, listeners8, nextProposalSeq, ACCEPTANCE, CompanionChat;
   var init_chat = __esm({
     "src/features/companion/chat/index.ts"() {
       "use strict";
@@ -60778,7 +60462,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_state3();
       init_proposals();
       ALERT_DEDUPE_MS = 6e4;
-      state3 = {
+      state2 = {
         log: emptyLog(),
         proposal: null,
         captured: null,
@@ -60797,7 +60481,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       };
       CompanionChat = {
         getLog() {
-          return state3.log;
+          return state2.log;
         },
         /** Retire une question à laquelle il est trop tard pour répondre. */
         dropStaleProposal() {
@@ -60812,9 +60496,9 @@ Restore figures are averages; unlucky streaks do worse.`;
          * le joueur lui-même qui vient de le couper.
          */
         withdrawProposal() {
-          const proposal = state3.proposal;
+          const proposal = state2.proposal;
           if (!proposal) return;
-          state3 = { ...state3, proposal: null, captured: null, log: clearProposal(state3.log, proposal.id) };
+          state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposal.id) };
           notify2();
         },
         /**
@@ -60829,22 +60513,22 @@ Restore figures are averages; unlucky streaks do worse.`;
          * vérification de périmètre à la confirmation qui protège du reste.
          */
         withdrawFeedIfSettled(stillFeedable) {
-          const proposal = state3.proposal;
-          const captured = state3.captured;
+          const proposal = state2.proposal;
+          const captured = state2.captured;
           if (!proposal || captured?.kind !== "feed") return false;
           if (!isSettled(captured.picks, stillFeedable)) return false;
-          state3 = { ...state3, proposal: null, captured: null, log: clearProposal(state3.log, proposal.id) };
+          state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposal.id) };
           post("companion", "system", "Never mind, your pets are sorted.");
           return true;
         },
         getProposal() {
-          return state3.proposal;
+          return state2.proposal;
         },
         getRun() {
-          return state3.run;
+          return state2.run;
         },
         isRunning() {
-          return state3.run !== null;
+          return state2.run !== null;
         },
         subscribe(listener) {
           listeners8.add(listener);
@@ -60852,9 +60536,9 @@ Restore figures are averages; unlucky streaks do worse.`;
         },
         /** Alerte poussée par une source ; ignorée si identique et récente. */
         alert(text) {
-          state3 = {
-            ...state3,
-            log: appendAlertOnce(state3.log, { from: "companion", kind: "alert", text, atMs: Date.now() }, ALERT_DEDUPE_MS)
+          state2 = {
+            ...state2,
+            log: appendAlertOnce(state2.log, { from: "companion", kind: "alert", text, atMs: Date.now() }, ALERT_DEDUPE_MS)
           };
           notify2();
         },
@@ -60866,7 +60550,7 @@ Restore figures are averages; unlucky streaks do worse.`;
          */
         async proposeHarvest(request2) {
           post("you", "command", request2.label);
-          if (state3.run) {
+          if (state2.run) {
             post("companion", "system", "Hold on, still on the last batch.");
             return;
           }
@@ -60884,14 +60568,14 @@ Restore figures are averages; unlucky streaks do worse.`;
          */
         async offerFeed(provider) {
           dropStaleProposal();
-          if (state3.run || state3.proposal) return false;
+          if (state2.run || state2.proposal) return false;
           await proposeFeedScope(provider);
-          return state3.proposal !== null;
+          return state2.proposal !== null;
         },
         /** Confirme et exécute. C'est le seul chemin qui déclenche une action. */
         async confirm(proposalId) {
-          const proposal = state3.proposal;
-          const captured = state3.captured;
+          const proposal = state2.proposal;
+          const captured = state2.captured;
           if (!proposal || proposal.id !== proposalId || !captured) {
             post("companion", "system", explain("unknown"));
             return;
@@ -60904,18 +60588,18 @@ Restore figures are averages; unlucky streaks do worse.`;
           }
           const decision = verdict(proposal, signature, Date.now());
           if (!decision.ok) {
-            state3 = { ...state3, proposal: null, captured: null, log: clearProposal(state3.log, proposalId) };
+            state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposalId) };
             post("companion", "system", explain(decision.reason));
             if (decision.reason === "changed" || decision.reason === "expired") await reproposeSame(captured);
             return;
           }
-          state3 = {
-            ...state3,
+          state2 = {
+            ...state2,
             proposal: null,
             captured: null,
             run: { done: 0, total: capturedSize(captured) },
             cancelRequested: false,
-            log: clearProposal(state3.log, proposalId)
+            log: clearProposal(state2.log, proposalId)
           };
           if (captured.kind === "harvest") {
             await runBatch((r) => executeHarvestBatch(captured.rows, r));
@@ -60936,15 +60620,15 @@ Restore figures are averages; unlucky streaks do worse.`;
         },
         /** Écarte la proposition en cours sans rien exécuter. */
         decline(proposalId) {
-          if (state3.proposal?.id !== proposalId) return;
-          state3 = { ...state3, proposal: null, captured: null, log: clearProposal(state3.log, proposalId) };
+          if (state2.proposal?.id !== proposalId) return;
+          state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposalId) };
           post("you", "command", "Not now");
           post("companion", "system", "Alright, leaving them be.");
         },
         /** Interrompt un lot en cours. */
         cancelRun() {
-          if (!state3.run) return;
-          state3 = { ...state3, cancelRequested: true };
+          if (!state2.run) return;
+          state2 = { ...state2, cancelRequested: true };
           notify2();
         }
       };
@@ -63645,15 +63329,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return eggId.replace(/([a-z])([A-Z])/g, "$1 $2");
   }
-  function luckOf(state6) {
+  function luckOf(state5) {
     const out = {};
-    for (const [eggId, counters] of Object.entries(state6?.counters ?? {})) {
+    for (const [eggId, counters] of Object.entries(state5?.counters ?? {})) {
       out[eggId] = { gold: Number(counters?.gold) || 0, rainbow: Number(counters?.rainbow) || 0 };
     }
     return out;
   }
-  function onHatchTracker(state6) {
-    const next = luckOf(state6);
+  function onHatchTracker(state5) {
+    const next = luckOf(state5);
     const prev = prevLuck;
     prevLuck = next;
     if (!prev) return;
@@ -63672,8 +63356,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (ids.length === 0) return;
     let names = ids.map((id) => id.split(":").slice(1).join(":"));
     try {
-      const state6 = await NotifierService.get();
-      const byId = new Map(state6.rows.map((row) => [row.id, row.name]));
+      const state5 = await NotifierService.get();
+      const byId = new Map(state5.rows.map((row) => [row.id, row.name]));
       names = ids.map((id, i) => byId.get(id) ?? names[i]);
     } catch {
     }
@@ -63694,7 +63378,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     try {
       prevLuck = luckOf(HatchTracker.getState());
-      add(HatchTracker.subscribe((state6) => onHatchTracker(state6)));
+      add(HatchTracker.subscribe((state5) => onHatchTracker(state5)));
     } catch {
     }
     try {
@@ -64152,17 +63836,17 @@ Restore figures are averages; unlucky streaks do worse.`;
       lastSpamLineAt: Number.NEGATIVE_INFINITY
     };
   }
-  function observeOwnEmote(state6, read) {
-    if (!read) return { state: state6, fresh: null };
-    if (!state6.primed || state6.scope !== read.scope) {
+  function observeOwnEmote(state5, read) {
+    if (!read) return { state: state5, fresh: null };
+    if (!state5.primed || state5.scope !== read.scope) {
       return {
-        state: { ...state6, primed: true, scope: read.scope, seenAt: read.latest?.at ?? Number.NEGATIVE_INFINITY },
+        state: { ...state5, primed: true, scope: read.scope, seenAt: read.latest?.at ?? Number.NEGATIVE_INFINITY },
         fresh: null
       };
     }
     const latest = read.latest;
-    if (!latest || latest.at <= state6.seenAt) return { state: state6, fresh: null };
-    return { state: { ...state6, seenAt: latest.at }, fresh: latest };
+    if (!latest || latest.at <= state5.seenAt) return { state: state5, fresh: null };
+    return { state: { ...state5, seenAt: latest.at }, fresh: latest };
   }
   function pick(list, random) {
     const i = Math.floor(random() * list.length);
@@ -64183,9 +63867,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     const r = Math.min(1, Math.max(0, random()));
     return Math.round(MIRROR_DELAY_MIN_MS + r * span);
   }
-  function decideMirror(state6, played, ctx2) {
+  function decideMirror(state5, played, ctx2) {
     const { now: now2, random } = ctx2;
-    let next = now2 - state6.streakLastAt > STREAK_GAP_MS ? { ...state6, streakCount: 1, streakAnswers: 0, streakSpamRolled: false, streakLastAt: now2 } : { ...state6, streakCount: state6.streakCount + 1, streakLastAt: now2 };
+    let next = now2 - state5.streakLastAt > STREAK_GAP_MS ? { ...state5, streakCount: 1, streakAnswers: 0, streakSpamRolled: false, streakLastAt: now2 } : { ...state5, streakCount: state5.streakCount + 1, streakLastAt: now2 };
     if (!ctx2.available || ctx2.distance === null || ctx2.distance > MIRROR_MAX_DISTANCE) {
       return { state: next, action: null };
     }
@@ -64298,16 +63982,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function process() {
-    const seen = observeOwnEmote(state4, currentRead());
-    state4 = seen.state;
+    const seen = observeOwnEmote(state3, currentRead());
+    state3 = seen.state;
     if (!seen.fresh) return;
-    const decided = decideMirror(state4, seen.fresh, {
+    const decided = decideMirror(state3, seen.fresh, {
       now: Date.now(),
       available: enabled3() && !busy3(),
       distance: CompanionService.distanceToPlayer(),
       random: Math.random
     });
-    state4 = decided.state;
+    state3 = decided.state;
     if (decided.action) schedule(decided.action);
   }
   function onRoomState(next) {
@@ -64353,14 +64037,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   function startEmoteMirror() {
     if (running4) return;
     running4 = true;
-    state4 = initialMirrorState();
+    state3 = initialMirrorState();
     localId = null;
     roomId = null;
     entries = void 0;
     void subscribe3(++generation).catch(() => {
     });
   }
-  var running4, generation, unsubscribers4, state4, pending4, localId, roomId, entries;
+  var running4, generation, unsubscribers4, state3, pending4, localId, roomId, entries;
   var init_emoteMirrorWatch = __esm({
     "src/features/companion/emoteMirrorWatch.ts"() {
       "use strict";
@@ -64372,7 +64056,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       running4 = false;
       generation = 0;
       unsubscribers4 = [];
-      state4 = initialMirrorState();
+      state3 = initialMirrorState();
       pending4 = null;
       localId = null;
       roomId = null;
@@ -64387,17 +64071,17 @@ Restore figures are averages; unlucky streaks do worse.`;
   function initialAfkState(now2) {
     return { phase: "active", quietSince: now2, phaseSince: now2, asked: false, nextSnoreAt: null, lastSnore: null };
   }
-  function afkActivity(state6, input, random) {
+  function afkActivity(state5, input, random) {
     const { now: now2, busy: busy4 } = input;
-    if (state6.phase === "active") {
-      return { state: { ...state6, quietSince: now2 }, effects: [] };
+    if (state5.phase === "active") {
+      return { state: { ...state5, quietSince: now2 }, effects: [] };
     }
-    if (state6.phase === "idle") {
+    if (state5.phase === "idle") {
       const effects2 = [];
-      if (state6.asked && !busy4 && random() < RETURN_LINE_CHANCE) effects2.push(say(pickOne4(RETURN_LINES, random), false));
+      if (state5.asked && !busy4 && random() < RETURN_LINE_CHANCE) effects2.push(say(pickOne4(RETURN_LINES, random), false));
       return { state: initialAfkState(now2), effects: effects2 };
     }
-    const asleepFor = now2 - state6.phaseSince;
+    const asleepFor = now2 - state5.phaseSince;
     const effects = [];
     if (!busy4 && asleepFor >= WAKE_LINE_MIN_ASLEEP_MS) {
       const pool = asleepFor >= SNORE_SLOW_AFTER_MS ? LONG_WAKE_LINES : WAKE_LINES;
@@ -64517,7 +64201,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     await sayLine(effect);
   }
   function apply(step) {
-    state5 = step.state;
+    state4 = step.state;
     const gen = generation2;
     for (const effect of step.effects) {
       pending5++;
@@ -64530,10 +64214,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function noteActivity() {
     if (!running5) return;
     const now2 = Date.now();
-    if (state5.phase === "active" && now2 - lastNotedAt < ACTIVITY_THROTTLE_MS) return;
+    if (state4.phase === "active" && now2 - lastNotedAt < ACTIVITY_THROTTLE_MS) return;
     lastNotedAt = now2;
     if (!enabled4() || !CompanionService.isRunning()) return;
-    apply(afkActivity(state5, { now: now2, busy: othersBusy() }, Math.random));
+    apply(afkActivity(state4, { now: now2, busy: othersBusy() }, Math.random));
   }
   function onInput(event) {
     if (!event.isTrusted) return;
@@ -64563,7 +64247,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (running5) return;
     running5 = true;
     const gen = ++generation2;
-    state5 = initialAfkState(Date.now());
+    state4 = initialAfkState(Date.now());
     lastNotedAt = 0;
     lastTile = null;
     try {
@@ -64578,7 +64262,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     void subscribe4(gen).catch(() => {
     });
   }
-  var ACTIVITY_THROTTLE_MS, NEAR_DISTANCE, INPUT_EVENTS, running5, generation2, state5, unsubscribers5, ownHold, pending5, chain, lastNotedAt, lastTile;
+  var ACTIVITY_THROTTLE_MS, NEAR_DISTANCE, INPUT_EVENTS, running5, generation2, state4, unsubscribers5, ownHold, pending5, chain, lastNotedAt, lastTile;
   var init_afkWatch = __esm({
     "src/features/companion/afkWatch.ts"() {
       "use strict";
@@ -64592,7 +64276,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       INPUT_EVENTS = ["keydown", "pointerdown", "pointermove", "wheel", "touchstart"];
       running5 = false;
       generation2 = 0;
-      state5 = initialAfkState(0);
+      state4 = initialAfkState(0);
       unsubscribers5 = [];
       ownHold = false;
       pending5 = 0;
@@ -64947,7 +64631,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function fetchChangelog() {
     const url = `${RAW_BASE_URL3}/refs/heads/${REPO_BRANCH3}/${CHANGELOG_FILE_PATH}?t=${Date.now()}`;
-    const text = await fetchText(url);
+    const text = await fetchText2(url);
     const raw = JSON.parse(text);
     return parseChangelogPayload(raw);
   }
@@ -65282,11 +64966,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!Number.isFinite(value)) return 1;
     return Math.max(1, Math.min(6, value));
   }
-  function findPlayersDeep2(state6) {
-    if (!state6 || typeof state6 !== "object") return [];
+  function findPlayersDeep2(state5) {
+    if (!state5 || typeof state5 !== "object") return [];
     const out = [];
     const seen = /* @__PURE__ */ new Set();
-    const stack = [state6];
+    const stack = [state5];
     while (stack.length) {
       const cur = stack.pop();
       if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
@@ -65312,12 +64996,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return [...byId.values()];
   }
-  function getPlayersArray2(state6) {
-    const direct = state6?.fullState?.data?.players ?? state6?.data?.players ?? state6?.players;
-    return Array.isArray(direct) ? direct : findPlayersDeep2(state6);
+  function getPlayersArray2(state5) {
+    const direct = state5?.fullState?.data?.players ?? state5?.data?.players ?? state5?.players;
+    return Array.isArray(direct) ? direct : findPlayersDeep2(state5);
   }
-  function getSlotsArray2(state6) {
-    const raw = state6?.child?.data?.userSlots ?? state6?.fullState?.child?.data?.userSlots ?? state6?.data?.userSlots;
+  function getSlotsArray2(state5) {
+    const raw = state5?.child?.data?.userSlots ?? state5?.fullState?.child?.data?.userSlots ?? state5?.data?.userSlots;
     if (Array.isArray(raw)) return raw;
     if (raw && typeof raw === "object") {
       const entries2 = Object.entries(raw);
@@ -65331,10 +65015,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return [];
   }
-  async function getMyAccountId(state6) {
+  async function getMyAccountId(state5) {
     try {
       const me = await player.get();
-      const snapshot2 = state6 ?? await Atoms.root.state.get();
+      const snapshot2 = state5 ?? await Atoms.root.state.get();
       return resolveMyAccountId(me, getPlayersArray2(snapshot2));
     } catch {
       return null;
@@ -65360,11 +65044,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function buildPlayerStatePayload(options = {}) {
     try {
-      const state6 = await Atoms.root.state.get();
-      if (!state6 || typeof state6 !== "object") return null;
-      const players = getPlayersArray2(state6);
+      const state5 = await Atoms.root.state.get();
+      if (!state5 || typeof state5 !== "object") return null;
+      const players = getPlayersArray2(state5);
       const normalizedPlayers = Array.isArray(players) ? players : [];
-      const slots = getSlotsArray2(state6).filter((slot2) => !!slot2);
+      const slots = getSlotsArray2(state5).filter((slot2) => !!slot2);
       const coinsById = /* @__PURE__ */ new Map();
       for (const slot2 of slots) {
         const slotData2 = slot2?.data ?? slot2;
@@ -65385,7 +65069,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         };
       });
       if (slots.length === 0) return null;
-      const myAccountId = options.playerId ?? await getMyAccountId(state6);
+      const myAccountId = options.playerId ?? await getMyAccountId(state5);
       const slot = selectSlotForAccount(slots, {
         slotIndex: options.slotIndex,
         accountId: myAccountId
@@ -65402,7 +65086,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const coinCandidate = slotData?.coinsCount ?? slot?.coinsCount ?? slotData?.coins ?? slot?.coins ?? null;
       const coinValue = Number(coinCandidate);
       const coinsRaw = Number.isFinite(coinValue) ? coinValue : null;
-      const roomId2 = state6?.data?.roomId ?? state6?.fullState?.data?.roomId ?? state6?.roomId ?? null;
+      const roomId2 = state5?.data?.roomId ?? state5?.fullState?.data?.roomId ?? state5?.roomId ?? null;
       let playersCount = normalizedPlayers.length > 0 ? normalizedPlayers.length : slots.length;
       try {
         const atomValue = await Atoms.server.numPlayers.get();
@@ -65446,13 +65130,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!Array.isArray(log2)) return null;
     return log2.filter((entry) => entry?.action !== "feedPet");
   }
-  function sanitizeStateForComparison(state6) {
-    const sanitizedActivityLog = sanitizeActivityLogForCompare(state6.activityLog ?? null);
-    if (sanitizedActivityLog === state6.activityLog) {
-      return state6;
+  function sanitizeStateForComparison(state5) {
+    const sanitizedActivityLog = sanitizeActivityLogForCompare(state5.activityLog ?? null);
+    if (sanitizedActivityLog === state5.activityLog) {
+      return state5;
     }
     return {
-      ...state6,
+      ...state5,
       activityLog: sanitizedActivityLog
     };
   }
@@ -65489,9 +65173,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return false;
   }
-  async function tryInitializeReporting(state6) {
+  async function tryInitializeReporting(state5) {
     if (gameReadyTriggered) return;
-    const snapshot2 = state6 ?? await Atoms.root.state.get();
+    const snapshot2 = state5 ?? await Atoms.root.state.get();
     const players = Array.isArray(snapshot2?.data?.players) ? snapshot2.data.players : [];
     if (players.length === 0) return;
     const myAccountId = await getMyAccountId(snapshot2);

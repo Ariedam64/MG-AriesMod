@@ -1,4 +1,3 @@
-// src/testing/fakes/atoms.ts
 import {
   ensureStore,
   findAtomsByLabel,
@@ -36,7 +35,7 @@ type FakeState = {
 
 const _fakeRegistry = new Map<string, FakeState>();
 
-/* ============================ Utilitaires ============================ */
+/* ============================== Helpers ============================== */
 
 function _atomsByExactLabel(label: string): AnyAtom[] {
   try {
@@ -55,7 +54,7 @@ function _findReadKey(atom: AnyAtom): string {
       if (ar === 1 || ar === 2) return k;
     }
   }
-  throw new Error("Impossible de localiser la fonction read() de l'atom");
+  throw new Error("Cannot find the atom's read() function");
 }
 
 function _getState(label: string): FakeState | null {
@@ -69,7 +68,7 @@ async function _forceRepaintViaGate(gate?: GateConfig) {
   await gate.openAction();
 }
 
-/* ======================== Installation du "fake" ======================= */
+/* ========================= Installing the fake ========================= */
 
 async function _ensureFakeInstalled<T = any>(config: FakeConfig<T>): Promise<FakeState> {
   const key = config.label;
@@ -78,7 +77,7 @@ async function _ensureFakeInstalled<T = any>(config: FakeConfig<T>): Promise<Fak
 
   const atoms = _atomsByExactLabel(config.label);
   if (!atoms.length) {
-    throw new Error(`${config.label} introuvable`);
+    throw new Error(`${config.label} not found`);
   }
 
   const state: FakeState =
@@ -96,13 +95,13 @@ async function _ensureFakeInstalled<T = any>(config: FakeConfig<T>): Promise<Fak
 
   for (const a of atoms) {
     const readKey = _findReadKey(a);
-    // @ts-ignore – Jotai interne; on capture la fonction read originale
+    // @ts-ignore: jotai internals; keep the original read function
     const orig: Function = (a as any)[readKey];
 
-    // Patch de read()
+    // Patch read()
     // eslint-disable-next-line @typescript-eslint/no-loop-func
     (a as any)[readKey] = (get: any) => {
-      // Force la prise en compte de la gate et des deps
+      // Read the gate and the extra deps so jotai tracks them
       try {
         if (gateAtom) get(gateAtom);
       } catch (err) {
@@ -123,7 +122,7 @@ async function _ensureFakeInstalled<T = any>(config: FakeConfig<T>): Promise<Fak
     state.patched.set(a, { readKey, orig });
   }
 
-  // Auto-disable si la gate se ferme (facultatif)
+  // Optionally switch the fake off when the gate closes
   if (gateAtom && config.gate?.autoDisableOnClose) {
     state.unsubGate = await jSub(gateAtom, async () => {
       let v: any;
@@ -162,7 +161,10 @@ async function _primePatched(st: FakeState) {
 
 /* =============================== API =============================== */
 
-
+/**
+ * Makes the atom labelled `config.label` read `payload` (merged over the real
+ * value by `config.merge`) for as long as the fake is on and its gate is open.
+ */
 export async function fakeShow<T = any>(
   config: FakeConfig<T>,
   payload: T,
@@ -174,7 +176,7 @@ export async function fakeShow<T = any>(
   st.enabled = true;
 
   if (options?.merge && !config.merge) {
-    // @ts-ignore – fallback: sans merge custom, on remplace simplement
+    // @ts-ignore: without a custom merge, the fake simply replaces the value
     config.merge = (_real: any, fake: any) => fake;
   }
 
@@ -196,15 +198,15 @@ export async function fakeShow<T = any>(
   }
 }
 
-/** Met à jour le payload du fake (doit être déjà installé) */
+/** Replaces the payload of a fake that is already installed. */
 export async function fakeUpdate<T = any>(label: string, nextPayload: T) {
   const st = _getState(label);
-  if (!st?.installed) throw new Error(`Fake ${label} non installé`);
+  if (!st?.installed) throw new Error(`Fake ${label} not installed`);
   st.payload = nextPayload;
   await _forceRepaintViaGate(st.config.gate);
 }
 
-/** Désactive le fake, mais laisse les patches installés (read() reste hooké) */
+/** Switches the fake off but leaves the patches in place (read() stays hooked). */
 export async function fakeHide(label: string) {
   const st = _getState(label);
   if (!st) return;
@@ -217,6 +219,7 @@ export async function fakeHide(label: string) {
   await _forceRepaintViaGate(st.config.gate);
 }
 
+/** Switches the fake off and puts every patched read() back. */
 export async function fakeDispose(label: string) {
   const st = _getState(label);
   if (!st) return;

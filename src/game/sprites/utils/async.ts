@@ -1,6 +1,6 @@
 import { pageWindow } from '../../../platform/pageContext';
 // Timers must be bound to the real page window, not Tampermonkey's isolated
-// sandbox global — the sandbox realm isn't tied to the page's own rendering
+// sandbox global: the sandbox realm isn't tied to the page's own rendering
 // and its setTimeout/setInterval/requestAnimationFrame can be throttled far
 // more aggressively (observed: retry loops silently getting almost no real
 // attempts without DevTools open, even though a 10s wall-clock deadline

@@ -1,5 +1,3 @@
-// src/utils/moveItemMessage.ts
-//
 // Since v1422 every item move is one message, MoveItem. It replaced
 // PutItemInStorage, RetrieveItemFromStorage, SwapItemWithStorage,
 // MoveInventoryItem and MoveStorageItem, none of which the server accepts any

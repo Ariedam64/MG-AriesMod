@@ -1,4 +1,3 @@
-// gardenInfoCardPixi.ts
 // Shared plumbing for anything that needs to react to the game's Pixi-rendered
 // "garden info" card (the crop/egg/decor details panel). The panel moved from
 // DOM (Chakra `McGrid`/`McFlex`) to native Pixi rendering in a recent game
@@ -11,7 +10,7 @@
 // stay far more stable across builds than internal function/variable names.
 //
 // Multiple features need this same card (the crop coin-value badge and the
-// locker purple-border indicator) — they share this one card-system search
+// locker purple-border indicator); they share this one card-system search
 // via `watchGardenInfoCard` instead of each running their own copy of it.
 import { shareGlobal, pageWindow } from "../../platform/pageContext";
 import { getReadySpriteState } from "../sprites/context";
@@ -29,7 +28,7 @@ export type GardenInfoCardListener = (card: any, geometry: GardenInfoCardGeometr
 const CARD_SYSTEM_LABEL = "GardenInfoCardSystem";
 const CARD_ROW_LABEL = "GardenInfoCardRow";
 const OBJECT_CARD_LABEL = "GardenInfoObjectCard";
-// Anchor on the title row rather than the card's own full bounds — the
+// Anchor on the title row rather than the card's own full bounds: the
 // card's icon can be much taller for large/fully-grown crops, which would
 // otherwise push dependent content up by a varying, crop-dependent amount.
 const TITLE_ROW_LABEL = "GardenInfoObjectTitleRow";
@@ -72,7 +71,7 @@ export function findByLabel(root: any, label: string, limit = 25000): any {
  * Same walk as findByLabel, but gives each top-level branch of `root` its
  * own search budget instead of pooling one `limit` across the whole tree.
  * The game's world/tile layer alone can hold tens of thousands of sprite
- * nodes — a single shared budget starting there exhausts before ever
+ * nodes: a single shared budget starting there exhausts before ever
  * reaching sibling UI layers, making anything only found there (the card
  * system) unreachable once the world grows large enough. That's a race
  * against world size, not a real "not found".
@@ -99,13 +98,13 @@ export function findAcrossBranches(root: any, pred: (node: any) => boolean, limi
 }
 
 // `roundRect`/`clear` are public PIXI.Graphics API methods, so unlike
-// minified identifiers they survive the game's build unchanged — used to
+// minified identifiers they survive the game's build unchanged, so they are used to
 // borrow the game's own Graphics constructor for our own drawn elements.
 //
 // Cached at module level once found: it's a stable class reference for the
 // whole page session, never per-card state. Callers used to re-derive it on
 // every card change, which re-walks the whole stage (including the
-// world/tile layer) — with multiple consumers each doing that on every
+// world/tile layer), and with multiple consumers each doing that on every
 // tooltip open/close while the player walks around, that was visible lag.
 let cachedGraphicsCtor: any = null;
 export function findGraphicsCtor(root: any): any {
@@ -137,7 +136,7 @@ shareGlobal("__MG_GARDEN_INFO_CARD_DEBUG__", debugState);
 function computeGeometry(card: any): GardenInfoCardGeometry {
   const cardBounds = card.getLocalBounds();
   // Prefer the game's own fixed hit-area size over the card's rendered
-  // bounds — a large/grown crop's icon can visually overflow past the
+  // bounds: a large/grown crop's icon can visually overflow past the
   // card's intended box, which throws off anything anchored to it.
   const width = card.hitArea?.width ?? cardBounds.width;
   const height = card.hitArea?.height ?? cardBounds.height;
@@ -165,7 +164,7 @@ function notifyListeners(card: any | null, geometry: GardenInfoCardGeometry | nu
 // Runs synchronously inside the game's own Pixi update loop (triggered from
 // its `addChild` → `childAdded` emit). If this throws, the exception bubbles
 // into the game's own rebuild and aborts it partway through, corrupting its
-// layout — so every path here must stay exception-safe.
+// layout, so every path here must stay exception-safe.
 function onChildAddedUnsafe(row: any) {
   if (row?.label !== CARD_ROW_LABEL) return;
   const card = findByLabel(row, OBJECT_CARD_LABEL);
@@ -200,7 +199,7 @@ function attachToCardSystem(system: any) {
       notifyListeners(null, null);
       // The game can destroy and fully recreate its whole Pixi tree (e.g.
       // WebGL context loss after the tab/window is backgrounded a while,
-      // such as switching away and back with alt-tab) — the search loop
+      // such as switching away and back with alt-tab). The search loop
       // had already stopped scheduling itself once found the first time,
       // so without this it would never look for the new one again.
       restartSearchIfNeeded();
@@ -240,7 +239,7 @@ function tryFindCardSystem() {
 // rendering at all, so piggybacking on it avoids that throttling.
 //
 // Critically, this must be `pageWindow.requestAnimationFrame`, not the bare
-// global — Tampermonkey's sandboxed script context has its own `window`
+// global: Tampermonkey's sandboxed script context has its own `window`
 // separate from the page's real `unsafeWindow` in some injection modes, and
 // that sandbox realm isn't tied to the page's actual rendering.
 const raf: (cb: (t: number) => void) => number = (pageWindow as any).requestAnimationFrame.bind(pageWindow);
@@ -270,7 +269,7 @@ function restartSearchIfNeeded() {
  * Subscribe to the game's Pixi-rendered garden info card. `listener` is
  * called with the card container + its geometry whenever a card is shown,
  * and with `(null, null)` when it's removed. Multiple subscribers share the
- * same underlying card-system search — only one instance of it runs
+ * same underlying card-system search: only one instance of it runs
  * regardless of how many callers subscribe.
  */
 export function watchGardenInfoCard(listener: GardenInfoCardListener): () => void {

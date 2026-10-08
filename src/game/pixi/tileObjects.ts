@@ -1,34 +1,15 @@
-// quinoaTileApi.ts
-// Quinoa Tile API (no HUD, no console, no global exposure)
-// Usage:
-//   // main.ts (le plus tôt possible)
-//   import { tos } from "./quinoaTileApi";
-//   tos.init();
+// Reads and edits the game's garden tiles through its tile object system: what
+// object a tile holds, replacing it locally (the editor's planned garden), and
+// mapping pointer events to tiles. Nothing here talks to the server; a change
+// only lasts until the game repaints the tile from its own state.
 //
-//   // ailleurs
-//   import { tos } from "./quinoaTileApi";
-//   tos.setTileEmpty(15, 15);
-//
-// Capture
-// -------
-// The game used to expose a single engine object carrying `app`, `systems`,
-// `start()` and `destroy()`, and the mod grabbed it by patching
-// `Function.prototype.bind` and watching for that shape. Build 1206 broke that
-// apart into a tree of scopes: the world scope owns `app` and `systems` but has
-// no `start`/`destroy`, and nothing calls `.bind()` on it, so the old predicate
-// could never match again and every editor action threw.
-//
-// What survived is the system itself. `Scope.addSystem` still does
-// `systems.set(system.name, { system, enabled })`, and the tile system is still
-// called `tileObject`, so the capture now watches `Map.prototype.set` for that
-// one key. The patch is installed at boot, fires when the world builds, and
-// takes itself back off straight away.
-//
-// The Pixi app and renderer no longer come from the engine either: they are read
-// from the sprite catalog's shared state, which resolves them through Pixi's own
-// `__PIXI_APP_INIT__` hook.
+// The tile system itself is found by `tileCapture.ts`. The Pixi app and
+// renderer are read from the sprite catalog, which resolves them through
+// Pixi's own `__PIXI_APP_INIT__` hook.
 
-import { pageWindow, readSharedGlobal, shareGlobal } from "../../platform/pageContext";
+import { pageWindow } from "../../platform/pageContext";
+import { assertReady, ensureCapture, getTileViewAt, tileState as state } from "./tileCapture";
+import { flashTileGreen } from "./tileFlash";
 import { getPixiApp, getSpriteState } from "../sprites/context";
 
 export type PlantSlotPatch = {
@@ -36,7 +17,7 @@ export type PlantSlotPatch = {
   endTime?: number;
   /** Whole-number Crop Size in [50, 100]. */
   size?: number;
-  mutations?: string[]; // remplacement total uniquement
+  mutations?: string[]; // replaced as a whole, never merged
 };
 
 export type PlantPatch = {
@@ -63,13 +44,6 @@ export type TileOpts = {
   forceUpdate?: boolean;  // default true
 };
 
-type FlashTileOpts = {
-  color?: number;
-  startAlpha?: number;
-  durationMs?: number;
-};
-
-type AnyFn = (...args: any[]) => any;
 
 type HookStatus = {
   ok: boolean;
@@ -94,213 +68,6 @@ type ApplyResult = {
   after: any;
 };
 
-const state = {
-  /**
-   * The old monolithic engine. Current builds have none, so this stays null
-   * unless another mod published one; everything below treats it as optional.
-   */
-  engine: null as any,
-  tos: null as any,
-  /**
-   * The world scope's system registry, where the tile system was found. Other
-   * systems of the same world live there too (`avatar`, for one), so keeping it
-   * lets them be reached without a capture of their own.
-   */
-  worldSystems: null as Map<unknown, unknown> | null,
-  /** Set while `Map.prototype.set` carries our capture wrapper. */
-  mapSetPatched: false,
-  origMapSet: null as AnyFn | null,
-  ourMapSet: null as AnyFn | null,
-  highlight: {
-    gfx: null as any,
-    tile: null as { tx: number; ty: number } | null,
-    parent: null as any,
-  },
-  hoverDebug: {
-    enabled: false,
-    cleanup: null as null | (() => void),
-  },
-};
-
-/** The name the game gives the tile system, and the key it registers it under. */
-const TILE_OBJECT_SYSTEM_NAME = "tileObject";
-/** How deep to follow a scope tree when searching an engine handed to us. */
-const SCOPE_SEARCH_DEPTH = 6;
-
-function looksLikeTileObjectSystem(o: any): boolean {
-  return !!(o && typeof o === "object"
-    && o.name === TILE_OBJECT_SYSTEM_NAME
-    && o.tileViews && typeof o.tileViews.get === "function"
-    && typeof o.getOrCreateTileView === "function");
-}
-
-/**
- * A registry entry is `{ system, enabled }` since the scope rework; older builds
- * stored the system itself. Accept both so this survives the next reshuffle.
- */
-function tileObjectSystemFrom(value: any): any | null {
-  if (looksLikeTileObjectSystem(value)) return value;
-  if (looksLikeTileObjectSystem(value?.system)) return value.system;
-  return null;
-}
-
-/**
- * A world rebuild (travelling to another village) disposes the tile system and
- * builds a new one. The old object still answers every call, it just paints
- * nothing, so the container it draws into is what says whether it is still real.
- */
-function isLiveTileObjectSystem(o: any): boolean {
-  if (!looksLikeTileObjectSystem(o)) return false;
-  try {
-    return o.worldContainer?.destroyed !== true;
-  } catch {
-    return true;
-  }
-}
-
-function isScopeLike(o: any): boolean {
-  return !!(o && typeof o === "object"
-    && ((o.systems && typeof o.systems.values === "function")
-      || typeof o.addScope === "function"
-      || typeof o.addSystem === "function"));
-}
-
-/**
- * Searches a scope (or the legacy engine) and the scopes below it.
- *
- * Only ever steps into children that are themselves scopes, so handing this a
- * Pixi container by mistake costs one property read rather than a walk of the
- * whole display tree.
- */
-function findTileObjectSystem(scope: any, depth = 0): any | null {
-  if (!scope || typeof scope !== "object" || depth > SCOPE_SEARCH_DEPTH) return null;
-
-  try {
-    const systems = scope.systems;
-    if (systems && typeof systems.values === "function") {
-      for (const entry of systems.values()) {
-        const found = tileObjectSystemFrom(entry);
-        if (found) return found;
-      }
-    }
-  } catch {}
-
-  try {
-    const children = scope.children;
-    if (children && typeof children[Symbol.iterator] === "function") {
-      for (const child of children) {
-        if (!isScopeLike(child)) continue;
-        const found = findTileObjectSystem(child, depth + 1);
-        if (found) return found;
-      }
-    }
-  } catch {}
-
-  // The world scope hangs off the renderer scope, and the player scope points
-  // back at the world scope through `renderer`.
-  for (const key of ["rendererScope", "renderer", "worldScope", "world"]) {
-    try {
-      const next = scope[key];
-      if (!isScopeLike(next)) continue;
-      const found = findTileObjectSystem(next, depth + 1);
-      if (found) return found;
-    } catch {}
-  }
-
-  return null;
-}
-
-function tryCaptureFromKnownGlobals(): void {
-  if (!state.engine) {
-    const shared = readSharedGlobal<any>("__QUINOA_ENGINE__");
-    if (shared) state.engine = shared;
-  }
-  if (!state.tos) {
-    // Another mod may have published one from a world that has since gone away.
-    const shared = readSharedGlobal<any>("__TILE_OBJECT_SYSTEM__");
-    if (isLiveTileObjectSystem(shared)) state.tos = shared;
-  }
-  if (!state.tos && state.engine) state.tos = findTileObjectSystem(state.engine);
-  publishCapturedGlobals();
-}
-
-// Share the captured TOS with other mods (Arie's Mod / Community Hub): only one
-// capture needs to win, the others read these globals. Always overwrites, so a
-// world rebuild replaces a dead system rather than leaving readers on it.
-function publishCapturedGlobals(): void {
-  if (state.engine) shareGlobal("__QUINOA_ENGINE__", state.engine);
-  if (state.tos) shareGlobal("__TILE_OBJECT_SYSTEM__", state.tos);
-}
-
-function mapPrototype(): any {
-  const MapCtor: any = (pageWindow as any)?.Map ?? Map;
-  return MapCtor?.prototype ?? null;
-}
-
-/**
- * Watches `Map.prototype.set` for the one key that identifies the tile system.
- *
- * `Scope.addSystem` registers every system as `systems.set(system.name, …)`, so
- * this fires exactly once per world build, on a string compare that costs
- * nothing. It comes straight back off once it has what it needs.
- */
-function armCapture(): void {
-  if (state.tos || state.mapSetPatched) return;
-
-  const proto = mapPrototype();
-  const original = proto?.set;
-  if (typeof original !== "function") return;
-
-  const wrapper = function (this: any, key: any, value: any) {
-    const result = original.call(this, key, value);
-    if (key === TILE_OBJECT_SYSTEM_NAME) {
-      try {
-        const system = tileObjectSystemFrom(value);
-        if (system) {
-          state.tos = system;
-          // The page's Map is not the sandbox's: check the shape, not the class.
-          state.worldSystems = this && typeof this.get === "function" ? this : null;
-          publishCapturedGlobals();
-          disarmCapture();
-        }
-      } catch {}
-    }
-    return result;
-  };
-
-  state.origMapSet = original;
-  state.ourMapSet = wrapper;
-  state.mapSetPatched = true;
-  proto.set = wrapper;
-}
-
-function disarmCapture(): void {
-  if (!state.mapSetPatched) return;
-  state.mapSetPatched = false;
-
-  const proto = mapPrototype();
-  try {
-    // Someone else may have wrapped us in the meantime; leave their patch alone
-    // rather than unhooking it along with ours.
-    if (proto && state.origMapSet && proto.set === state.ourMapSet) {
-      proto.set = state.origMapSet;
-    }
-  } catch {}
-
-  state.origMapSet = null;
-  state.ourMapSet = null;
-}
-
-function ensureCapture(): void {
-  if (state.tos && isLiveTileObjectSystem(state.tos)) return;
-  if (state.tos) {
-    state.tos = null;
-    state.worldSystems = null;
-    try { shareGlobal("__TILE_OBJECT_SYSTEM__", null); } catch {}
-  }
-  tryCaptureFromKnownGlobals();
-  if (!state.tos) armCapture();
-}
 
 function deepClone<T>(v: T): T {
   try {
@@ -311,32 +78,6 @@ function deepClone<T>(v: T): T {
   return v;
 }
 
-function globalIndexFromXY(tx: number, ty: number): number | null {
-  const cols = state.tos?.map?.cols;
-  if (!Number.isFinite(cols) || cols <= 0) return null;
-  return ((ty * cols) + tx) | 0;
-}
-
-function getTileViewAt(tx: number, ty: number, ensureView: boolean) {
-  const gidx = globalIndexFromXY(tx, ty);
-  if (!state.tos || gidx == null) return { gidx: null as number | null, tv: null as any };
-
-  let tv = state.tos.tileViews?.get?.(gidx) ?? null;
-
-  // Create view if needed
-  if (!tv && ensureView && typeof state.tos.getOrCreateTileView === "function") {
-    try { tv = state.tos.getOrCreateTileView(gidx); } catch {}
-  }
-
-  return { gidx, tv };
-}
-
-function assertReady(): void {
-  ensureCapture();
-  if (!state.tos) {
-    throw new Error("Quinoa tile system not captured. Call tos.init() early (main entry) so it is watching before the world builds.");
-  }
-}
 
 /**
  * The frame context the tile system passes to `TileView.update`.
@@ -388,38 +129,13 @@ function patchPlantSlot(slot: any, slotPatch: PlantSlotPatch) {
   if ("endTime" in p) slot.endTime = Number(p.endTime);
   if ("size" in p) slot.size = Number(p.size);
 
-  // remplacement total uniquement
+  // Replaced as a whole, never merged.
   if ("mutations" in p) {
     if (!Array.isArray(p.mutations)) throw new Error("mutations must be an array of strings");
     if (!p.mutations.every(x => typeof x === "string")) throw new Error("mutations must contain only strings");
     slot.mutations = p.mutations.slice();
   }
 }
-
-type PointerTileInfo = {
-  tx: number;
-  ty: number;
-  gidx: number | null;
-  world: { x: number; y: number };
-  inside: boolean;
-  canvas: HTMLCanvasElement | null;
-  ev: PointerEvent;
-};
-
-type PointerTileListener = (info: PointerTileInfo) => void;
-
-type PointerToTileOpts = {
-  tileSize?: number;
-  clamp?: boolean;
-};
-
-type HighlightOpts = {
-  color?: number;
-  alpha?: number;
-  thickness?: number;
-  padding?: number;
-  tileSize?: number;
-};
 
 /**
  * The Pixi app, wherever it lives: the engine used to own it; now it comes from
@@ -455,58 +171,12 @@ function getCanvas(): HTMLCanvasElement | null {
   return renderer?.canvas || renderer?.view?.canvas || renderer?.view || app?.view || app?.canvas || null;
 }
 
-function defaultTileSize(): number {
-  const t = state.tos as any;
-  const m = t?.map || {};
-  const candidates = [m.tileSize, m.tileW, m.tileWidth, t?.tileSize, t?.tileW, 64];
-  for (const c of candidates) {
-    if (Number.isFinite(c) && c > 0) return Number(c);
-  }
-  return 64;
-}
-
-function pointerToTile(ev: PointerEvent, opts: PointerToTileOpts = {}): PointerTileInfo | null {
-  assertReady();
-  const canvas = getCanvas();
-  if (!canvas) return null;
-
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
-  const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
-  const x = (ev.clientX - rect.left) * scaleX;
-  const y = (ev.clientY - rect.top) * scaleY;
-
-  const tileSize = opts.tileSize ?? defaultTileSize();
-  if (!Number.isFinite(tileSize) || tileSize <= 0) return null;
-
-  const tx = Math.floor(x / tileSize);
-  const ty = Math.floor(y / tileSize);
-  const cols = (state.tos as any)?.map?.cols;
-  const rows = (state.tos as any)?.map?.rows;
-  const inside =
-    Number.isFinite(tx) && Number.isFinite(ty)
-    && (!opts.clamp
-      ? true
-      : (!Number.isFinite(cols) || (tx >= 0 && tx < cols))
-      && (!Number.isFinite(rows) || (ty >= 0 && ty < rows)));
-
-  return {
-    tx,
-    ty,
-    gidx: inside ? globalIndexFromXY(tx, ty) : null,
-    world: { x, y },
-    inside,
-    canvas,
-    ev,
-  };
-}
-
 const FARM_TILE_SIZE = 256;
 
 /**
- * Like pointerToTile, but accounts for the garden camera's pan by projecting through the
- * tile system's worldContainer instead of assuming canvas pixels == world pixels. pointerToTile
- * only works when the camera sits at world origin; this is the version that works everywhere.
+ * The garden tile under a pointer event. Projects through the tile system's
+ * worldContainer, so it stays right wherever the garden camera has panned to,
+ * instead of assuming canvas pixels are world pixels.
  */
 function pointerToFarmTile(ev: PointerEvent): { tx: number; ty: number; gidx: number } | null {
   assertReady();
@@ -535,225 +205,8 @@ function pointerToFarmTile(ev: PointerEvent): { tx: number; ty: number; gidx: nu
   return { tx, ty, gidx: tx + ty * cols };
 }
 
-function onPointerTile(listener: PointerTileListener, opts: PointerToTileOpts = {}): () => void {
-  assertReady();
-  const canvas = getCanvas();
-  if (!canvas) throw new Error("Canvas not available on engine");
-
-  const onMove = (ev: PointerEvent) => {
-    const info = pointerToTile(ev, opts);
-    if (info) listener(info);
-  };
-  const onLeave = (ev: PointerEvent) => {
-    const info = pointerToTile(ev, opts);
-    if (info) listener({ ...info, inside: false });
-  };
-
-  canvas.addEventListener("pointermove", onMove);
-  canvas.addEventListener("pointerleave", onLeave);
-
-  return () => {
-    canvas.removeEventListener("pointermove", onMove);
-    canvas.removeEventListener("pointerleave", onLeave);
-  };
-}
-
-function clearHighlight() {
-  try { state.highlight.gfx?.parent?.removeChild?.(state.highlight.gfx); } catch {}
-  state.highlight.gfx?.destroy?.();
-  state.highlight.gfx = null;
-  state.highlight.tile = null;
-  state.highlight.parent = null;
-}
-
-function highlightTile(tx: number, ty: number, color = 0x00ff00, opts: HighlightOpts = {}) {
-  const info = tos.getTileObject(tx, ty, { ensureView: true });
-  const tv = info.tileView as any;
-  if (!tv) throw new Error("TileView not available");
-
-  const parent = tv.displayObject || tv.root || tv.container || tv;
-  if (!parent?.addChild) throw new Error("TileView is not a display container");
-
-  const Graphics =
-    getSpriteState().ctors?.Graphics
-    ?? (pageWindow as any)?.PIXI?.Graphics
-    ?? getRenderer()?.PIXI?.Graphics;
-  if (!Graphics) throw new Error("PIXI.Graphics not available");
-
-  const gfx = state.highlight.gfx ?? new Graphics();
-  const alpha = opts.alpha ?? 0.8;
-  const thickness = opts.thickness ?? 2;
-  const padding = opts.padding ?? 0;
-  const tileSize = opts.tileSize ?? defaultTileSize();
-
-  gfx.clear();
-  gfx.lineStyle(thickness, color, alpha);
-  const w = (parent as any)?.width ?? tileSize;
-  const h = (parent as any)?.height ?? tileSize;
-  gfx.drawRect(-padding, -padding, w + padding * 2, h + padding * 2);
-  gfx.zIndex = 9999;
-
-  if (gfx.parent !== parent) {
-    try { gfx.parent?.removeChild?.(gfx); } catch {}
-    parent.addChild(gfx);
-  }
-
-  state.highlight.gfx = gfx;
-  state.highlight.tile = { tx, ty };
-  state.highlight.parent = parent;
-  return { tx, ty, gidx: info.gidx, color, alpha, thickness };
-}
-
-function setDebugHoverHighlight(enabled: boolean, opts: HighlightOpts & PointerToTileOpts = {}) {
-  if (!enabled) {
-    state.hoverDebug.cleanup?.();
-    state.hoverDebug.cleanup = null;
-    state.hoverDebug.enabled = false;
-    clearHighlight();
-    return false;
-  }
-
-  assertReady();
-  if (state.hoverDebug.enabled) return true;
-
-  const cleanup = onPointerTile((info) => {
-    if (!info.inside || info.tx == null || info.ty == null) {
-      clearHighlight();
-      return;
-    }
-    try { highlightTile(info.tx, info.ty, opts.color ?? 0x00ff00, opts); } catch {}
-  }, opts);
-
-  state.hoverDebug.cleanup = cleanup;
-  state.hoverDebug.enabled = true;
-  return true;
-}
-
-type FlashEntry = {
-  raf: number;
-  baseline: WeakMap<any, number>;
-  touched: Set<any>;
-};
-
-const activeFlashes = new Map<number, FlashEntry>();
-
-const FLASH_DEFAULT_COLOR = 0x4ade80;
-const FLASH_DEFAULT_MIX = 1;
-const FLASH_DEFAULT_DURATION_MS = 1000;
-
-function hasTint(node: any): boolean {
-  return !!(node && typeof node.tint === "number");
-}
-
-/** Depth-first walk collecting every tintable node (Sprite/Graphics/Mesh) under `root`. */
-function collectTintable(root: any, cap = 900): any[] {
-  const out: any[] = [];
-  const stack = [root];
-  while (stack.length && out.length < cap) {
-    const node = stack.pop();
-    if (!node) continue;
-    if (hasTint(node)) out.push(node);
-    const children = node.children;
-    if (Array.isArray(children)) for (const child of children) stack.push(child);
-  }
-  return out;
-}
-
-function lerpColor(from: number, to: number, t: number): number {
-  const r0 = (from >> 16) & 255, g0 = (from >> 8) & 255, b0 = from & 255;
-  const r1 = (to >> 16) & 255, g1 = (to >> 8) & 255, b1 = to & 255;
-  const r = Math.round(r0 + (r1 - r0) * t);
-  const g = Math.round(g0 + (g1 - g0) * t);
-  const b = Math.round(b0 + (b1 - b0) * t);
-  return (r << 16) | (g << 8) | b;
-}
-
-function stopFlashTile(gidx: number): void {
-  const entry = activeFlashes.get(gidx);
-  if (!entry) return;
-  cancelAnimationFrame(entry.raf);
-  for (const node of entry.touched) {
-    const base = entry.baseline.get(node);
-    if (base == null) continue;
-    try { node.tint = base; } catch {}
-  }
-  activeFlashes.delete(gidx);
-}
-
-/**
- * Briefly tints every sprite on a tile (the crop/decor itself, not a shape drawn over it) green,
- * then eases back to each sprite's own original tint over `durationMs` - used by the editor as a
- * "just placed" / "selected" cue. Tinting (rather than an overlay) follows the sprite's actual
- * silhouette for free, and preserves any pre-existing tint (e.g. a Gold mutation) since it eases
- * back to what each sprite already had, not to white. Re-resolves the tile's sprites on every
- * frame - capturing a fresh baseline for any newly-appeared node - so a mid-fade tileView rebuild
- * (the editor repaints the whole planned garden every 1s) doesn't desync or leave a stuck tint.
- */
-function flashTileGreen(tx: number, ty: number, opts: FlashTileOpts = {}): boolean {
-  const { gidx } = getTileViewAt(Number(tx), Number(ty), true);
-  if (gidx == null) return false;
-
-  stopFlashTile(gidx);
-
-  const color = opts.color ?? FLASH_DEFAULT_COLOR;
-  const startMix = opts.startAlpha ?? FLASH_DEFAULT_MIX;
-  const durationMs = Math.max(1, opts.durationMs ?? FLASH_DEFAULT_DURATION_MS);
-
-  const resolveParent = () => {
-    const { tv } = getTileViewAt(Number(tx), Number(ty), false);
-    return tv?.displayObject || tv?.root || tv?.container || tv || null;
-  };
-
-  if (!resolveParent()) return false;
-
-  const entry: FlashEntry = { raf: 0, baseline: new WeakMap(), touched: new Set() };
-  activeFlashes.set(gidx, entry);
-
-  const start = performance.now();
-
-  const tick = (now: number) => {
-    const progress = Math.min(1, (now - start) / durationMs);
-    const mix = startMix * (1 - progress);
-
-    const parent = resolveParent();
-    if (parent) {
-      for (const node of collectTintable(parent)) {
-        if (!entry.baseline.has(node)) entry.baseline.set(node, node.tint);
-        entry.touched.add(node);
-        const base = entry.baseline.get(node)!;
-        try { node.tint = lerpColor(base, color, mix); } catch {}
-      }
-    }
-
-    if (progress >= 1) {
-      stopFlashTile(gidx);
-      return;
-    }
-
-    entry.raf = requestAnimationFrame(tick);
-  };
-
-  entry.raf = requestAnimationFrame(tick);
-  return true;
-}
-
-/**
- * Another system of the world the tile system belongs to, by the name the game
- * registers it under, or `null`.
- *
- * Only available when this module did the capture itself: a tile system read
- * from another mod's global comes without its registry.
- */
-export function getWorldSystem(name: string): any | null {
-  ensureCapture();
-  const entry: any = state.worldSystems?.get(name);
-  if (!entry) return null;
-  const system = entry.system ?? entry;
-  return system && typeof system === "object" && system.destroyed !== true ? system : null;
-}
-
 export const tos = {
-  /** À appeler une fois dans le main, le plus tôt possible */
+  /** Call once from main, as early as possible, so the capture watches before the world builds. */
   init(): HookStatus {
     ensureCapture();
     return { ok: !!state.tos, engine: state.engine, tos: state.tos };
@@ -801,7 +254,7 @@ export const tos = {
     };
   },
 
-  /** Met la tile à vide (tileObject = null) */
+  /** Empties the tile (tileObject = null). */
   setTileEmpty(tx: number, ty: number, opts: TileOpts = {}): ApplyResult {
     return applyTileObject(Number(tx), Number(ty), null, opts);
   },
@@ -881,27 +334,12 @@ export const tos = {
     return applyTileObject(Number(tx), Number(ty), next, opts);
   },
 
-  /** Retourne le canvas Pixi du jeu (ou null si pas encore capturé) */
+  /** The game's Pixi canvas, or null before it is known. */
   getCanvas,
 
-  /** Convertit un événement pointeur en coordonnées de tile (tx, ty) */
-  pointerToTile,
-
-  /** Comme pointerToTile, mais correct même quand la caméra du jardin n'est pas à l'origine */
+  /** The garden tile under a pointer event, wherever the camera has panned to. */
   pointerToFarmTile,
 
-  /** Écoute les mouvements pointeur sur le canvas et appelle le callback avec les infos de tile */
-  onPointerTile,
-
-  /** Dessine un contour autour d'une tile donnée */
-  highlightTile,
-
-  /** Supprime le contour actif */
-  clearHighlight,
-
-  /** Active/désactive un mode debug qui highlight la tile sous le pointeur en temps réel */
-  setDebugHoverHighlight,
-
-  /** Flash vert plein qui s'estompe sur une tile (feedback "placé"/"sélectionné" de l'éditeur) */
+  /** A green flash that fades on a tile (the editor's "placed" and "selected" cue). */
   flashTileGreen,
 };

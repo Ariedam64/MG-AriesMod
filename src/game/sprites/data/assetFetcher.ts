@@ -104,7 +104,7 @@ async function gm(url: string, type: 'text' | 'blob' | 'json' = 'text') {
   recordNetDebug(entry);
 
   // GM's own `timeout` still depends on the bridge being alive to enforce
-  // it — if the bridge never attaches at all, add a hard ceiling on top.
+  // it; if the bridge never attaches at all, add a hard ceiling on top.
   let hardTimeoutId: any = null;
   const hardTimeout = new Promise<never>((_, reject) => {
     hardTimeoutId = root.setTimeout(() => reject(new Error(`Hard timeout (${url})`)), GM_TIMEOUT_MS + 2_000);
@@ -122,7 +122,7 @@ async function gm(url: string, type: 'text' | 'blob' | 'json' = 'text') {
     entry.ok = false;
     entry.error = error instanceof Error ? error.message : String(error);
 
-    // GM path failed or hung — fall back to a real fetch so this never ends
+    // GM path failed or hung: fall back to a real fetch so this never ends
     // up permanently pending and blocking the whole sprite catalog boot.
     const fallbackEntry: NetDebugEntry = { url, path: 'gm-timeout-fallback', startedAt: Date.now(), finishedAt: null, ok: null, error: null };
     recordNetDebug(fallbackEntry);
@@ -206,7 +206,7 @@ function getManagedTextures(renderer: any): any[] {
 
 /**
  * Find the game's already-loaded KTX2 base texture by searching the renderer's
- * managed texture list.  The game loads all atlas sheets at startup — we reuse
+ * managed texture list.  The game loads all atlas sheets at startup, and we reuse
  * those rather than loading KTX2 ourselves (which would require PIXI.Assets
  * access that the bundled game doesn't expose).
  *
@@ -278,8 +278,8 @@ function isAtlasJsonPath(path: string): boolean {
 /**
  * Atlas JSON paths listed by the manifest, one per asset.
  *
- * An asset's `src` list holds the same atlas packed at several resolutions —
- * 1x and 2x carry identical frame keys, only the rectangles differ — so exactly
+ * An asset's `src` list holds the same atlas packed at several resolutions:
+ * 1x and 2x carry identical frame keys, only the rectangles differ, so exactly
  * one is taken. The highest resolution wins: its rectangles are true pixels
  * (`meta.scale: 1`), which is what a replacement image should be fitted to.
  * Taking both would index every frame twice with conflicting rectangles.

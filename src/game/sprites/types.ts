@@ -105,7 +105,7 @@ export interface SpriteContext {
  * One entry of an asset's `src` list: a bare path, or a resolution variant.
  *
  * The game used to list plain paths and now lists `{ src, resolution }` objects
- * — the same atlas packed at 1x and 2x. Both forms are accepted so the mod
+ * (the same atlas packed at 1x and 2x). Both forms are accepted so the mod
  * keeps working across the change.
  */
 export type ManifestSrc = string | { src?: string; resolution?: number };

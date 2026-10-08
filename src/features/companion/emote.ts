@@ -31,7 +31,7 @@
 
 import { fakeHide, fakeShow, fakeUpdate, type FakeConfig } from "../../game/fakeAtoms";
 import { COMPANION_TICK_LABEL, bumpTick, ensureTickAtom } from "./tick";
-import { getWorldSystem } from "../../game/pixi/tileObjects";
+import { getWorldSystem } from "../../game/pixi/tileCapture";
 import { EmoteType, companionEmoteEntry, cutTalking, emoteStartDelay, mergeEmoteSource } from "./emoteTypes";
 
 const EMOTE_SOURCE_LABEL = "emoteSourceAtom";
