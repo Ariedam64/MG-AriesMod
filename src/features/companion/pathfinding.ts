@@ -1,32 +1,26 @@
-// src/services/companion/pathfinding.ts
-// Parcours en largeur (BFS) sur la grille marchable.
+// Breadth-first search over the walkable grid.
 //
-// Pourquoi ce module existe
-// -------------------------
-// Le déplacement était glouton : on tentait l'axe du plus grand écart, puis
-// l'autre. Deux candidats seulement, donc aucune capacité à contourner. Pire,
-// une fois ALIGNÉ sur un axe (`dy === 0`), il n'existe même plus de candidat
-// vertical : un simple mur en face suffisait à figer le companion.
+// Movement used to be greedy: try the axis with the largest gap, then the
+// other. Only two candidates, so no way around anything; worse, once ALIGNED
+// on an axis there was no vertical candidate at all, and a single wall ahead
+// froze the companion. The BFS removes that whole class of block. The map is
+// 101 by 60, about 6,000 tiles: a full search costs a fraction of a
+// millisecond, nothing next to a step every 150 ms.
 //
-// Le BFS supprime toute cette classe de blocages. La map fait 101 x 60, soit
-// ~6 000 tuiles : une recherche complète coûte une fraction de milliseconde,
-// négligeable face au pas toutes les 150 ms.
-//
-// Module PUR : aucun import à l'exécution, hasard et état exclus. Testé par
-// scripts/checkCompanionMovement.ts.
+// Pure: checked by scripts/checkCompanionMovement.ts.
 
 import type { IsWalkable, XY } from "./movement";
 
-/** Vrai si la tuile est une arrivée acceptable. */
+/** True when the tile is an acceptable arrival. */
 export type IsGoal = (x: number, y: number) => boolean;
 
 /**
- * Borne de sécurité, au-delà de la taille de la map connue (101 x 60).
- * Empêche une map inattendue de transformer un pas en balayage sans fin.
+ * A safety bound, above the known map size (101 by 60). Stops an unexpected
+ * map from turning one step into an endless sweep.
  */
 const MAX_EXPLORED_NODES = 12_000;
 
-/** Déplacements possibles : orthogonaux, comme la marche du jeu. */
+/** Possible moves: orthogonal, like the game's walking. */
 const STEPS: ReadonlyArray<XY> = [
   { x: 0, y: -1 },
   { x: 0, y: 1 },
@@ -37,28 +31,26 @@ const STEPS: ReadonlyArray<XY> = [
 const keyOf = (x: number, y: number): string => `${x},${y}`;
 
 /**
- * Rend le PREMIER pas du plus court chemin de `from` vers l'arrivée la plus
- * proche, ou `null` si aucune n'est atteignable.
+ * The FIRST step of the shortest path from `from` to the nearest arrival, or
+ * `null` when none can be reached.
  *
- * L'arrivée est un prédicat et non une tuile : c'est ce qui permet au même code
- * de servir au suivi (« n'importe quelle case à moins de N du joueur », alors
- * que la case du joueur elle-même est interdite) et à la flânerie (« cette
- * case précise »). Viser une tuile exacte aurait échoué dans le premier cas.
- *
- * Une arrivée doit être marchable : on ne propose jamais un pas vers une case
- * où le companion ne peut pas se tenir.
+ * The arrival is a predicate, not a tile: that lets the same code serve
+ * following ("any tile within N of the player", while the player's own tile is
+ * off limits) and wandering ("this exact tile"). Aiming at an exact tile would
+ * fail in the first case. An arrival must be walkable: a step is never
+ * offered towards a tile he cannot stand on.
  */
 export function findFirstStep(
   from: XY,
   isGoal: IsGoal,
   isWalkable: IsWalkable,
-  maxExploredNodes: number = MAX_EXPLORED_NODES
+  maxExploredNodes: number = MAX_EXPLORED_NODES,
 ): XY | null {
-  // Déjà arrivé : rien à faire, et surtout pas un pas « pour bouger ».
+  // Already there: nothing to do, and certainly not a step "to move".
   if (isGoal(from.x, from.y)) return null;
 
-  // Pour chaque tuile atteinte, le premier pas du chemin qui y mène : c'est la
-  // seule chose que l'appelant consomme, inutile de reconstruire le chemin.
+  // For each tile reached, the first step of the path that leads there: that
+  // is all the caller uses, so the path is never rebuilt.
   const firstStepTo = new Map<string, XY>();
   const seen = new Set<string>([keyOf(from.x, from.y)]);
   let frontier: XY[] = [from];
@@ -79,8 +71,8 @@ export function findFirstStep(
         explored++;
         if (!isWalkable(x, y)) continue;
 
-        // Un voisin direct de `from` EST le premier pas ; plus loin, on hérite
-        // du premier pas de la tuile d'où l'on vient.
+        // A direct neighbour of `from` IS the first step; further out, the
+        // first step of the tile we came from is inherited.
         const firstStep = stepToTile ?? { x, y };
         if (isGoal(x, y)) return firstStep;
 

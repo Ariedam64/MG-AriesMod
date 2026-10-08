@@ -1,48 +1,64 @@
-// src/ui/menus/companion/hatch-modal.ts
-// Faire éclore, et dire ce qu'on veut garder.
+// Hatching, and saying what to keep.
 //
-// Les critères ne décident pas de ce qui éclot — on ouvre ce qui est mûr, sans
-// condition. Ils décident de ce qui survit quand le sac déborde, et c'est pour
-// ça qu'ils se règlent ici, avant, plutôt qu'au moment où il faudra trancher
-// vite.
+// The rules do not decide what hatches: what is ripe opens, no conditions.
+// They decide what survives when the bag overflows, which is why they are set
+// here, beforehand, rather than when a quick decision is needed.
 //
-// Un critère laissé vide ne veut pas dire « tout » mais « rien » : sans aucun
-// critère, il ne proposera aucune vente. C'est volontairement l'inverse de la
-// popup de récolte, parce qu'ici l'erreur ne se rattrape pas.
+// A rule left empty does not mean "everything" but "nothing": with no rule he
+// offers no sale. The opposite of the harvest popup on purpose, since here a
+// mistake cannot be undone.
 //
-// La popup n'ouvre rien et ne vend rien. Elle produit une *demande*, que le
-// chat transforme en question à confirmer (cf. `chat/proposals.ts`).
+// The popup opens and sells nothing. It makes a *request*, which the chat
+// turns into a question to confirm (see `chat/proposals.ts`).
 
-import type { HarvestRequest } from "../chat";
-import { hatchProvider } from "../chat/hatchFlow";
-import {
-  DEFAULT_KEEP_RULES,
-  describeHatchRequest,
-  hasAnyRule,
-  type KeepRules,
-} from "../chat/hatch";
+import { button } from "../../../ui/kit/button";
+import { numberInput } from "../../../ui/kit/fields";
+import { openModal } from "../../../ui/kit/modal";
+import { color } from "../../../ui/kit/theme";
+import { switchInput } from "../../../ui/kit/toggles";
+import type { ChatRequest } from "../chat";
+import { hatchRequest } from "../chat/commands/hatch";
+import { DEFAULT_KEEP_RULES, describeHatchRequest, hasAnyRule, type KeepRules } from "../chat/hatch";
 import { EMPTY_HATCH_SCOPE, readHatchScope, type HatchScope } from "../chat/hatchRead";
 import { loadCompanionSettings, patchCompanionSettings } from "../state";
-import { BORDER, TEAL, TEXT_DIM, WARN, button, css, numberField, toggle } from "../../../ui/kit/panel";
+import { styled } from "./dom";
 import { labelledTile, mutationIconEl, spriteTile, tileRow } from "./harvestChips";
-import { fieldRow, filterCard } from "./harvestFields";
+import { fieldRow, filterCard, resultBox } from "./harvestFields";
 import { abilityIcon, petSpeciesIcon } from "./hatchChips";
-import { openModal } from "../../../ui/kit/modal";
-import { settingsNotice } from "./settingsNotice";
 import { openHatchSettingsModal } from "./hatchSettingsModal";
+import { settingsNotice } from "./settingsNotice";
+import { openSettingsModal } from "./settingsModal";
 
-/** Les œufs mûrissent pendant qu'on règle les critères. */
+/** Eggs ripen while the rules are being set. */
 const REFRESH_MS = 4000;
 const TILE_ICON_PX = 26;
-/** La pastille d'une capacité tient dans sa vignette nommée, plus serrée. */
+/** An ability's chip fits its named tile, tighter. */
 const ABILITY_ICON_PX = 16;
-/** Au-delà, la liste des capacités défile plutôt que de pousser le reste dehors. */
+/** Past this, the ability list scrolls rather than pushing the rest out. */
 const ABILITY_LIST_MAX_PX = 190;
 const MIN_STR = 1;
 const MAX_STR = 100;
 const DEFAULT_STR = 95;
 
-export function openHatchModal(host: HTMLElement, onAsk: (request: HarvestRequest) => void): void {
+/** Toggles a value in a rule list. Empty means that rule keeps nothing. */
+function toggled(list: string[], value: string): string[] {
+  return list.includes(value) ? list.filter((entry) => entry !== value) : [...list, value];
+}
+
+/**
+ * The values offered: those seen, plus those already ticked.
+ *
+ * A saved rule must stay in view even when nothing carries it any more:
+ * otherwise a hatch with no egg in the ground, or an emptied bag, would hide
+ * the box needed to untick it. These are the player's settings.
+ */
+function offered(available: string[], picked: string[]): string[] {
+  return [...new Set([...available, ...picked])].sort((a, b) => a.localeCompare(b));
+}
+
+const summarize = (count: number): string => (count === 0 ? "None" : `${count} picked`);
+
+export function openHatchModal(host: HTMLElement, onAsk: (request: ChatRequest) => void): void {
   let scope: HatchScope = EMPTY_HATCH_SCOPE;
   let rules: KeepRules = { ...loadCompanionSettings().hatchKeepRules };
   const iconCache = new Map<string, HTMLElement>();
@@ -63,19 +79,16 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: HarvestReques
     onClose: () => clearInterval(timer),
   });
 
-  const speciesCard = filterCard("", "Keep species");
-  const mutationCard = filterCard("", "Keep mutations");
-  const abilityCard = filterCard("", "Keep abilities");
-  const strengthCard = filterCard("", "Keep by strength");
-
-  /* --------------------------- Règles persistées --------------------------- */
+  const speciesCard = filterCard("Keep species");
+  const mutationCard = filterCard("Keep mutations");
+  const abilityCard = filterCard("Keep abilities");
+  const strengthCard = filterCard("Keep by strength");
 
   /**
-   * Les critères sont enregistrés à chaque geste.
+   * The rules are saved on every change.
    *
-   * C'est un réglage, pas une demande : il resservira à la couvée suivante et
-   * à la vente qui la suit. Ce qu'il ne fait pas, c'est déclencher quoi que ce
-   * soit — aucune vente ne part sans un oui qui la vise.
+   * A setting, not a request: it serves the next hatch and the sale after it.
+   * What it never does is trigger anything: no sale goes without a yes to it.
    */
   function commit(next: KeepRules): void {
     rules = next;
@@ -83,19 +96,12 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: HarvestReques
     render();
   }
 
-  /** Bascule une valeur dans une liste de critères. Vide = ce critère ne garde rien. */
-  function toggled(list: string[], value: string): string[] {
-    return list.includes(value) ? list.filter((entry) => entry !== value) : [...list, value];
-  }
-
-  /* ------------------------------- Contenus -------------------------------- */
-
   /**
-   * Rangée de vignettes sans entrée « tout » : ici, rien coché veut dire rien gardé.
+   * A row of tiles with no "all" entry: here nothing ticked means nothing kept.
    *
-   * Aucun effectif sous les sprites. Ces critères décrivent ce qu'on voudra
-   * garder, pas ce qu'on possède : afficher « 0 » sous une capacité qu'on
-   * cherche justement à obtenir n'apprend rien et se lit comme une indisponibilité.
+   * No counts under the sprites. These rules describe what will be wanted,
+   * not what is owned: a "0" under an ability being sought teaches nothing and
+   * reads as unavailable.
    */
   function chipRow(
     values: string[],
@@ -103,90 +109,75 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: HarvestReques
     labelFor: (value: string) => string,
     iconFor: (value: string) => HTMLElement,
     onPick: (value: string) => void,
-    named = false
+    named = false,
   ): HTMLElement {
     const row = tileRow();
     for (const value of values) {
       const shared = { icon: iconFor(value), selected: selected.includes(value), onClick: () => onPick(value) };
-      row.append(
-        named
-          ? labelledTile({ ...shared, label: labelFor(value) })
-          : spriteTile({ ...shared, title: labelFor(value) })
-      );
+      row.append(named ? labelledTile({ ...shared, label: labelFor(value) }) : spriteTile({ ...shared, title: labelFor(value) }));
     }
     return row;
   }
 
-  /**
-   * Enferme une longue liste dans une hauteur tenable.
-   *
-   * Les capacités se comptent par dizaines : déroulées d'un bloc, elles
-   * repoussent le bandeau et le bouton hors de la fenêtre.
-   */
+  /** Keeps a long list to a bearable height: abilities come by the dozen. */
   function scrollable(row: HTMLElement): HTMLElement {
-    const box = document.createElement("div");
-    css(box, { maxHeight: `${ABILITY_LIST_MAX_PX}px`, overflowY: "auto", overscrollBehavior: "contain" });
+    const box = styled("div", { maxHeight: `${ABILITY_LIST_MAX_PX}px`, overflowY: "auto", overscrollBehavior: "contain" });
     box.append(row);
     return box;
   }
 
   /**
-   * Les valeurs proposées : celles qu'on observe, plus celles déjà cochées.
+   * Fills one rule card, or hides it when there is nothing to offer.
    *
-   * Un critère enregistré doit rester visible même quand plus rien ne le porte
-   * — sinon une couvée sans œuf en terre, ou un sac vidé, ferait disparaître la
-   * case sans laquelle on ne peut plus le décocher. Ce sont des réglages du
-   * joueur : ils ne s'effacent pas parce que le jeu a changé d'humeur.
+   * "flex", not "": the card would otherwise drop to block and its header
+   * button would stop filling the width.
    */
-  function offered(available: string[], picked: string[]): string[] {
-    const all = new Set([...available, ...picked]);
-    return [...all].sort((a, b) => a.localeCompare(b));
+  function renderCard(
+    card: ReturnType<typeof filterCard>,
+    values: string[],
+    picked: string[],
+    content: () => HTMLElement,
+  ): void {
+    card.root.style.display = values.length > 0 ? "flex" : "none";
+    if (values.length === 0) return;
+    card.body.replaceChildren(content());
+    card.setSummary(summarize(picked.length), picked.length > 0);
   }
 
   function renderSpecies(): void {
     const values = offered(scope.possibleSpecies, rules.species);
-    // « flex » et non « », sinon la carte retombe en bloc et son en-tête, qui
-    // est un bouton, cesse de prendre toute la largeur.
-    speciesCard.root.style.display = values.length > 0 ? "flex" : "none";
-    if (values.length === 0) return;
-
-    speciesCard.body.replaceChildren(
+    renderCard(speciesCard, values, rules.species, () =>
       chipRow(
         values,
         rules.species,
         (name) => name,
         (name) => cachedIcon(`species:${name}`, () => petSpeciesIcon(name, TILE_ICON_PX)),
-        (name) => commit({ ...rules, species: toggled(rules.species, name) })
-      )
+        (name) => commit({ ...rules, species: toggled(rules.species, name) }),
+      ),
     );
-    speciesCard.setSummary(summarize(rules.species.length), rules.species.length > 0);
   }
 
   function renderMutations(): void {
     const values = offered(scope.presentMutations, rules.mutations);
-    mutationCard.root.style.display = values.length > 0 ? "flex" : "none";
-    if (values.length === 0) return;
-
-    mutationCard.body.replaceChildren(
+    renderCard(mutationCard, values, rules.mutations, () =>
       chipRow(
         values,
         rules.mutations,
         (name) => name,
         (name) => cachedIcon(`mutation:${name}`, () => mutationIconEl(name, TILE_ICON_PX)),
-        (name) => commit({ ...rules, mutations: toggled(rules.mutations, name) })
-      )
+        (name) => commit({ ...rules, mutations: toggled(rules.mutations, name) }),
+      ),
     );
-    mutationCard.setSummary(summarize(rules.mutations.length), rules.mutations.length > 0);
   }
 
   function renderAbilities(): void {
-    const values = offered(scope.possibleAbilities.map((entry) => entry.id), rules.abilities);
-    abilityCard.root.style.display = values.length > 0 ? "flex" : "none";
-    if (values.length === 0) return;
-
+    const values = offered(
+      scope.possibleAbilities.map((entry) => entry.id),
+      rules.abilities,
+    );
     const names = new Map(scope.possibleAbilities.map((entry) => [entry.id, entry.name]));
-    // Nommées : un carré de couleur ne se reconnaît pas, et il y en a des dizaines.
-    abilityCard.body.replaceChildren(
+    // Named: a coloured square cannot be recognised, and there are dozens.
+    renderCard(abilityCard, values, rules.abilities, () =>
       scrollable(
         chipRow(
           values,
@@ -194,94 +185,62 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: HarvestReques
           (id) => names.get(id) ?? id,
           (id) => cachedIcon(`ability:${id}`, () => abilityIcon(id, ABILITY_ICON_PX)),
           (id) => commit({ ...rules, abilities: toggled(rules.abilities, id) }),
-          true
-        )
-      )
+          true,
+        ),
+      ),
     );
-    abilityCard.setSummary(summarize(rules.abilities.length), rules.abilities.length > 0);
   }
 
-  const strengthField = numberField(MIN_STR, MAX_STR, 1, DEFAULT_STR);
+  const strengthField = numberInput(MIN_STR, MAX_STR, 1, DEFAULT_STR);
   strengthField.addEventListener("change", () => {
     const value = Math.max(MIN_STR, Math.min(MAX_STR, Math.round(Number(strengthField.value) || DEFAULT_STR)));
     strengthField.value = String(value);
     commit({ ...rules, minMaxStr: value });
   });
 
-  const strengthToggle = toggle(rules.minMaxStr !== null, (on) => {
+  const strengthToggle = switchInput(rules.minMaxStr !== null, (on) => {
     commit({ ...rules, minMaxStr: on ? Number(strengthField.value) || DEFAULT_STR : null });
   });
 
   {
-    const control = document.createElement("div");
-    css(control, { display: "flex", alignItems: "center", gap: "10px" });
-    control.append(strengthField, strengthToggle);
+    const control = styled("div", { display: "flex", alignItems: "center", gap: "10px" });
+    control.append(strengthField.wrap, strengthToggle);
     strengthCard.body.append(fieldRow("Keep max STR from", control));
   }
 
-  function summarize(count: number): string {
-    return count === 0 ? "None" : `${count} picked`;
-  }
+  /* --------------------------------- strip ---------------------------------- */
 
-  /* -------------------------------- Bandeau -------------------------------- */
+  const strip = resultBox();
+  strip.root.style.gap = "5px";
+  const note = styled("div", { fontSize: "11px", lineHeight: "1.5", color: color.textDim });
+  strip.root.append(note);
 
-  const strip = document.createElement("div");
-  css(strip, {
-    display: "flex",
-    flexDirection: "column",
-    gap: "5px",
-    padding: "11px 12px",
-    borderRadius: "12px",
-    background: "rgba(94,234,212,0.07)",
-    border: `1px solid ${BORDER}`,
-    flex: "0 0 auto",
-  });
+  /* --------------------------------- footer --------------------------------- */
 
-  const ready = document.createElement("div");
-  css(ready, { fontSize: "13px", fontWeight: "600", color: TEAL });
+  const resetButton = button("Reset", { size: "sm", block: true, onClick: () => commit({ ...DEFAULT_KEEP_RULES }) });
 
-  const note = document.createElement("div");
-  css(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
-
-  strip.append(ready, note);
-
-  /* --------------------------------- Pied ---------------------------------- */
-
-  const resetButton = button("Reset", "neutral", () => commit({ ...DEFAULT_KEEP_RULES }));
-
-  const askButton = button("Ask to hatch", "accent", () => {
-    onAsk({
-      kind: "hatch",
-      label: describeHatchRequest(scope.readySlots.length),
-      // Rappelé à la confirmation : c'est ce qui détecte qu'un œuf a éclos ou
-      // mûri entre-temps.
-      provider: hatchProvider(),
-      rules,
-    });
-    modal.close();
-  });
-  css(askButton, { marginLeft: "auto" });
-
-  const notice = settingsNotice(
-    "hatch",
-    "Hatching is not set up. I will use the team you have on.",
-    () => {
+  const askButton = button("Ask to hatch", {
+    size: "sm",
+    block: true,
+    variant: "primary",
+    onClick: () => {
+      // The eggs are read again at confirmation: that is what notices one that
+      // hatched or ripened meanwhile.
+      onAsk(hatchRequest(describeHatchRequest(scope.readySlots.length), rules));
       modal.close();
-      openHatchSettingsModal(host);
-    }
-  );
+    },
+  });
+  askButton.style.marginLeft = "auto";
 
-  modal.body.append(
-    notice.root,
-    speciesCard.root,
-    mutationCard.root,
-    abilityCard.root,
-    strengthCard.root,
-    strip
-  );
+  const notice = settingsNotice("hatch", "Hatching is not set up. I will use the team you have on.", () => {
+    modal.close();
+    openHatchSettingsModal(host, () => openSettingsModal(host));
+  });
+
+  modal.body.append(notice, speciesCard.root, mutationCard.root, abilityCard.root, strengthCard.root, strip.root);
   modal.footer.append(resetButton, askButton);
 
-  /* --------------------------------- Rendu --------------------------------- */
+  /* --------------------------------- render --------------------------------- */
 
   function render(): void {
     if (!modal.isOpen()) return;
@@ -292,28 +251,22 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: HarvestReques
 
     strengthField.disabled = rules.minMaxStr === null;
     if (rules.minMaxStr !== null) strengthField.value = String(rules.minMaxStr);
-    css(strengthField, { opacity: rules.minMaxStr === null ? "0.45" : "1" });
-    strengthCard.setSummary(
-      rules.minMaxStr === null ? "Off" : `${rules.minMaxStr} and up`,
-      rules.minMaxStr !== null
-    );
+    strengthField.wrap.style.opacity = rules.minMaxStr === null ? "0.45" : "1";
+    strengthCard.setSummary(rules.minMaxStr === null ? "Off" : `${rules.minMaxStr} and up`, rules.minMaxStr !== null);
 
-    const waiting = scope.totalEggs - scope.readySlots.length;
-    ready.textContent =
-      scope.readySlots.length === 0
-        ? "No egg is ready"
-        : `${scope.readySlots.length} egg${scope.readySlots.length === 1 ? "" : "s"} ready`;
+    const ready = scope.readySlots.length;
+    const waiting = scope.totalEggs - ready;
+    strip.headline.textContent = ready === 0 ? "No egg is ready" : `${ready} egg${ready === 1 ? "" : "s"} ready`;
 
     if (!hasAnyRule(rules)) {
-      note.textContent =
-        "Nothing set to keep, so I will not offer to sell. Favourites and your active team are always safe.";
-      css(note, { color: WARN });
+      note.textContent = "Nothing set to keep, so I will not offer to sell. Favourites and your active team are always safe.";
+      note.style.color = color.warn;
     } else {
       note.textContent = `Favourites and your active team are never sold.${waiting > 0 ? ` ${waiting} still growing.` : ""}`;
-      css(note, { color: TEXT_DIM });
+      note.style.color = color.textDim;
     }
 
-    askButton.disabled = scope.readySlots.length === 0;
+    askButton.setEnabled(ready > 0);
   }
 
   async function refresh(): Promise<void> {

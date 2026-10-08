@@ -1,23 +1,20 @@
-// src/services/companion/chat/attend.ts
-// Il vient poser sa question, et il reste là tant qu'on n'a pas répondu.
+// He comes over to ask his question, and stays until it is answered.
 //
-// Deux raisons, et les deux comptent. Une question posée depuis l'autre bout du
-// jardin n'est lue par personne : la bulle s'affiche au-dessus de sa tête, donc
-// hors écran. Et repartir travailler sans attendre la réponse donnerait
-// l'impression qu'il s'en désintéresse.
+// Two reasons, both real. A question asked from across the garden is read by
+// nobody: the bubble shows above his head, off screen. And wandering back to
+// work without waiting for the answer would look like he lost interest.
 //
-// Rien ici ne déclenche d'action. Venir et attendre, c'est du déplacement : la
-// confirmation reste entière, et c'est `chat/proposals.ts` qui la garde.
+// Nothing here triggers an action. Coming over and waiting is movement: the
+// confirmation is untouched, and `proposals.ts` keeps it.
 
 import { CompanionService } from "..";
 
 /**
- * Trajet en cours vers le joueur, avec la question qui l'a motivé.
+ * The walk to the player in progress, with the question behind it.
  *
- * On retient la promesse et pas seulement l'identifiant : un second appel pour
- * la même question doit attendre la MÊME arrivée, pas repartir. Deux `walkTo`
- * concurrents se voleraient la tâche, et le premier annulerait le second en se
- * terminant.
+ * The promise is kept, not just the id: a second call for the same question
+ * must wait for the SAME arrival, not set off again. Two concurrent `walkTo`
+ * would steal each other's task, the first cancelling the second as it ends.
  */
 let attending: { proposalId: string; arrival: Promise<void> } | null = null;
 
@@ -25,23 +22,22 @@ async function walkOver(): Promise<void> {
   try {
     await CompanionService.comeToPlayer();
   } catch {
-    // Un trajet raté ne doit pas emporter la question, qui est l'essentiel.
+    // A failed walk must not take the question down with it.
   }
-  // La tâche l'immobiliserait sur sa case d'arrivée ; l'attention, elle, le
-  // fait suivre le joueur jusqu'à la réponse.
+  // The task would pin him to his arrival tile; attention makes him follow
+  // the player until the answer.
   CompanionService.releaseTask();
   CompanionService.holdAttention();
 }
 
 /**
- * Va poser la question en personne, et reste auprès du joueur.
+ * Goes to ask in person, and stays by the player.
  *
- * Rend `false` quand le companion n'est pas encore incarné — au démarrage, une
- * question peut arriver avant lui. On ne retient alors rien, pour que
- * l'appelant puisse retenter au tour suivant.
+ * `false` while the companion is not out yet: at startup a question can come
+ * before he does. Nothing is remembered then, so the caller can retry.
  *
- * La promesse ne se résout qu'une fois sur place : ce qui doit se voir en jeu,
- * bulle comme emote, a donc de quoi attendre l'arrivée.
+ * Resolves once he is there, so whatever must show in the game, bubble or
+ * emote, can wait for his arrival.
  */
 export function attendToQuestion(proposalId: string): Promise<boolean> {
   if (attending?.proposalId === proposalId) return attending.arrival.then(() => true);
@@ -52,7 +48,7 @@ export function attendToQuestion(proposalId: string): Promise<boolean> {
   return arrival.then(() => true);
 }
 
-/** Plus de question en attente : il retourne à son mode. */
+/** No question waiting any more: he goes back to his mode. */
 export function stopAttending(): void {
   attending = null;
   if (CompanionService.isHoldingAttention()) CompanionService.releaseAttention();

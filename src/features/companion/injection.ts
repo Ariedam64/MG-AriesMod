@@ -1,30 +1,27 @@
-// src/services/companion/injection.ts
-// Socle du companion : fait exister un NPC à la position qu'on décide.
+// The companion's base: makes an NPC stand where we decide.
 //
-// Comment ça marche
-// -----------------
-// Le jeu lit les positions de ses NPC dans `quinoaDataAtom.npcs`, un dico
-// { playerId -> index de tuile } qui vient de l'état de room. On patche le
-// `read()` de cet atom (via le mécanisme `fakeAtoms` déjà en place) pour y
-// injecter notre entrée. Tout le reste suit tout seul : le jeu recalcule
-// npcQuinoaUsersAtom / npcAvatarDataAtom / npcInteractionTilesAtom, crée la vue
-// avatar, et l'anime.
+// The game reads its NPCs' positions from `quinoaDataAtom.npcs`, a map of
+// playerId to tile index that comes from the room state. The `read()` of that
+// atom is patched (through the existing `fakeAtoms` mechanism) to add our
+// entry. Everything else follows: the game recomputes npcQuinoaUsersAtom,
+// npcAvatarDataAtom and npcInteractionTilesAtom, creates the avatar view and
+// animates it.
 //
-// Pourquoi ça anime la marche gratuitement : la couche avatar interpole entre
-// deux tuiles adjacentes et déclenche le cycle de marche/course. Il suffit donc
-// de faire avancer l'index d'une case à la fois (cf. movement.ts).
+// Walking comes for free: the avatar layer interpolates between two adjacent
+// tiles and plays the walk or run cycle, so the index only has to move one
+// tile at a time (see movement.ts).
 //
-// Réservation de label : ce module est le SEUL à poser un fake sur
-// `quinoaDataAtom`. Le registre de fakeAtoms est indexé par label, donc deux
-// modules qui patchent le même atom s'écrasent mutuellement (c'est pour ça que
-// fakeModal et editor partagent déjà un patch unique sur `myDataAtom`).
+// This module is the ONLY one faking `quinoaDataAtom`. The fakeAtoms registry
+// is keyed by label, so two modules patching the same atom overwrite each
+// other (which is why fakeModal and the editor already share a single patch
+// on `myDataAtom`).
 
 import { fakeShow, fakeUpdate, fakeHide, fakeDispose, type FakeConfig } from "../../game/fakeAtoms";
 import { makeAtom } from "../../game/store/hub";
 import { readCompanionMap } from "./map";
 import { COMPANION_TICK_LABEL, bumpTick, ensureTickAtom } from "./tick";
 
-/** Préfixe des identifiants de NPC du jeu : `NPC_Reina`, `NPC_Wade`, ... */
+/** The prefix of the game's NPC ids: `NPC_Reina`, `NPC_Wade`, ... */
 const NPC_ID_PREFIX = "NPC_";
 
 const QUINOA_DATA_LABEL = "quinoaDataAtom";
@@ -34,15 +31,14 @@ const quinoaData = makeAtom<{ npcs?: Record<string, number> | null } | null>(QUI
 type NpcsPatch = { npcs: Record<string, number> };
 
 /**
- * Notre entrée écrase celle du jeu pour le même playerId (le companion est
- * prioritaire, y compris pendant l'événement météo du marchand détourné).
- * Les boutiques météo sont des bâtiments distincts des NPC : les déplacer
- * n'empêche donc pas d'y accéder.
+ * Our entry overrides the game's for the same playerId (the companion wins,
+ * including during the borrowed merchant's weather event). Weather shops are
+ * buildings separate from the NPCs, so moving the NPC does not block them.
  */
 const COMPANION_PATCH: FakeConfig<NpcsPatch> = {
   label: QUINOA_DATA_LABEL,
-  // Dépendance artificielle : sans elle, le recalcul ne suit que l'état de room
-  // (~420 ms mesuré), trop lent pour les 130 ms d'interpolation d'un pas.
+  // An artificial dependency: without it the recompute only follows the room
+  // state (about 420 ms measured), too slow for a step's 130 ms interpolation.
   extraDeps: [COMPANION_TICK_LABEL],
   merge: (real: any, fake: any) => {
     const base = real && typeof real === "object" ? real : {};
@@ -56,28 +52,27 @@ export type NpcIdentity = {
   playerId: string;
   name: string;
   spawnLayer: string;
-  /** true si le jeu le fait exister en ce moment (marchand météo actif, PNJ permanent). */
+  /** True when the game has it out right now (active weather merchant, permanent NPC). */
   present: boolean;
-  /** Tuile d'apparition native, utile comme position de repli. */
+  /** The native spawn tile, useful as a fallback position. */
   spawnTile: number | null;
 };
 
-/** true quand le merge est effectivement appliqué (patch posé ET actif). */
+/** True while the merge really applies (patch installed AND active). */
 let active = false;
 let currentPayload: NpcsPatch = { npcs: {} };
 
 /**
- * Roster des NPC, dérivé à l'exécution — jamais écrit en dur.
+ * The NPC roster, worked out at run time, never hardcoded.
  *
- * Deux sources complémentaires :
- *  - `mapAtom.npcSpawns`, dont les clés sont les noms de layer d'apparition, qui
- *    sont exactement les noms des NPC. Cette source les liste TOUS, y compris
- *    les marchands météo absents.
- *  - `quinoaDataAtom.npcs`, qui ne contient que ceux présents à l'instant T,
- *    mais donne leurs vrais playerId.
+ * Two sources that complete each other:
+ *  - `mapAtom.npcSpawns`, whose keys are the spawn layer names, which are
+ *    exactly the NPCs' names. It lists them ALL, absent weather merchants included.
+ *  - `quinoaDataAtom.npcs`, which only holds those present right now, but
+ *    gives their real playerIds.
  *
- * Les identifiants observés font foi ; le préfixe n'est qu'un repli pour les
- * NPC absents, qu'on ne peut pas observer.
+ * Observed ids win; the prefix is only a fallback for absent NPCs, which
+ * cannot be observed.
  */
 export async function listNpcIdentities(): Promise<NpcIdentity[]> {
   const map = await readCompanionMap();
@@ -96,7 +91,7 @@ export async function listNpcIdentities(): Promise<NpcIdentity[]> {
     });
   }
 
-  // Un NPC présent mais absent des layers (map inattendue) ne doit pas manquer.
+  // An NPC present but missing from the layers (an unexpected map) must not be left out.
   for (const playerId of presentIds) {
     if (byId.has(playerId)) continue;
     const name = playerId.startsWith(NPC_ID_PREFIX) ? playerId.slice(NPC_ID_PREFIX.length) : playerId;
@@ -106,13 +101,13 @@ export async function listNpcIdentities(): Promise<NpcIdentity[]> {
   return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** playerId des NPC que le jeu fait exister en ce moment. */
+/** The playerIds of the NPCs the game has out right now. */
 async function readPresentNpcIds(): Promise<string[]> {
   try {
     const data = await quinoaData.get();
     const npcs = data?.npcs;
     if (!npcs || typeof npcs !== "object") return [];
-    // Nos propres injections ne comptent pas comme des NPC "du jeu".
+    // Our own injections are not "game" NPCs.
     return Object.keys(npcs).filter((id) => !(id in currentPayload.npcs));
   } catch {
     return [];
@@ -120,39 +115,39 @@ async function readPresentNpcIds(): Promise<string[]> {
 }
 
 /**
- * Installe et ACTIVE le patch (idempotent).
+ * Installs AND activates the patch (idempotent).
  *
- * `active` suit l'état effectif du fake, pas seulement la pose du patch :
- * `fakeHide` désactive le merge sans retirer le hook, donc sans ce drapeau une
- * réactivation repasserait en early-return et le companion resterait invisible.
+ * `active` follows the fake's real state, not just the patch being installed:
+ * `fakeHide` turns the merge off without removing the hook, so without this
+ * flag reactivating would return early and the companion would stay invisible.
  */
 export async function installInjection(): Promise<void> {
   if (active) return;
-  // Le tick doit exister avant la première lecture patchée, sinon `extraDeps`
-  // ne résout rien et la dépendance n'est jamais enregistrée.
+  // The tick must exist before the first patched read, or `extraDeps`
+  // resolves nothing and the dependency is never registered.
   ensureTickAtom();
   await fakeShow(COMPANION_PATCH, currentPayload);
   active = true;
 }
 
-/** Place le companion sur une tuile. C'est le seul appel de la boucle de jeu. */
+/** Puts the companion on a tile. The movement loop's only call. */
 export async function setCompanionTile(playerId: string, tileIndex: number): Promise<void> {
   if (!Number.isInteger(tileIndex) || tileIndex < 0) return;
   currentPayload = { npcs: { [playerId]: tileIndex } };
   if (!active) {
     ensureTickAtom();
-    // fakeShow réutilise le patch déjà posé et le réactive avec ce payload.
+    // fakeShow reuses the patch already installed and reactivates it with this payload.
     await fakeShow(COMPANION_PATCH, currentPayload);
     active = true;
     return;
   }
   await fakeUpdate(QUINOA_DATA_LABEL, currentPayload);
-  // Le payload seul ne déclenche aucun recalcul : c'est le tick qui pousse la
-  // nouvelle position jusqu'au rendu, avant le pas suivant.
+  // The payload alone triggers no recompute: the tick pushes the new position
+  // all the way to the screen before the next step.
   await bumpTick();
 }
 
-/** Retire le companion mais garde le patch en place (réactivation instantanée). */
+/** Removes the companion but keeps the patch in place (instant reactivation). */
 export async function hideCompanion(): Promise<void> {
   if (!active) return;
   currentPayload = { npcs: {} };
@@ -160,7 +155,7 @@ export async function hideCompanion(): Promise<void> {
   await fakeHide(QUINOA_DATA_LABEL);
 }
 
-/** Retire le patch et restaure le `read()` d'origine. */
+/** Removes the patch and restores the original `read()`. */
 export async function disposeInjection(): Promise<void> {
   currentPayload = { npcs: {} };
   active = false;

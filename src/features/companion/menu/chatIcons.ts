@@ -1,28 +1,24 @@
-// src/ui/menus/companion/chat-icons.ts
-// Dessine dans le fil les vignettes que la bulle affiche en jeu.
+// Draws in the thread the thumbnails the bubble shows in the game.
 //
-// Deux mécaniques pour une même intention. En jeu, le companion pose un tag et
-// c'est le moteur du jeu qui dessine. Ici, on est dans du DOM : le balisage du
-// jeu s'y afficherait en toutes lettres, donc on redessine les mêmes objets
-// avec l'atlas du mod.
-//
-// La description vient du même endroit dans les deux cas — les tags de la
-// bulle — ce qui évite que le menu finisse par dire autre chose que la bulle.
+// Two mechanisms, one intent. In the game the companion sets a tag and the
+// game's engine draws it. Here we are in the DOM, where the game's markup
+// would show as is, so the same objects are drawn again from the mod's atlas.
+// The description comes from the same place in both cases, the bubble's tags,
+// so the menu never ends up saying something other than the bubble.
 
 import { attachSpriteIcon } from "../../../ui/kit/sprites/iconCache";
-import { css } from "../../../ui/kit/panel";
 import type { BubbleTag } from "../chat/bubbleTags";
+import { iconSlot } from "./dom";
 
 const SPRITE_LOG_TAG = "companion-thread";
 
 /**
- * Découpe une clé d'atlas en catégorie et nom.
+ * Splits an atlas key into category and name.
  *
- * Les tags portent le chemin complet (`sprite/plant/Carrot`) parce que c'est ce
- * que le jeu attend ; le résolveur du mod, lui, veut les deux moitiés
- * séparément. On retire la requête avant l'extension : un catalogue servi en
- * direct ajoute `?v=1125`, et l'ordre inverse laisserait l'extension collée au
- * nom.
+ * Tags carry the full path (`sprite/plant/Carrot`) because that is what the
+ * game expects; the mod's resolver wants the two halves apart. The query goes
+ * before the extension: a live catalog adds `?v=1125`, and the other order
+ * would leave the extension stuck to the name.
  */
 function splitSpriteKey(key: string): { category: string; name: string } | null {
   const parts = key.split(/[?#]/)[0].split("/").filter(Boolean);
@@ -32,37 +28,29 @@ function splitSpriteKey(key: string): { category: string; name: string } | null 
 }
 
 function holder(sizePx: number): HTMLElement {
-  const box = document.createElement("span");
-  css(box, {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: `${sizePx}px`,
-    height: `${sizePx}px`,
-    verticalAlign: "-4px",
-    marginRight: "4px",
-    flexShrink: "0",
-  });
+  const box = iconSlot(sizePx, true);
+  box.style.verticalAlign = "-4px";
+  box.style.marginRight = "4px";
   return box;
 }
 
-/** L'espèce d'un animal, lue sur l'objet d'inventaire que porte le tag. */
+/** A pet's species, read on the inventory object the tag carries. */
 function petSpeciesOf(pet: unknown): string | null {
   const species = (pet as { petSpecies?: unknown } | null)?.petSpecies;
   return typeof species === "string" && species ? species : null;
 }
 
 /**
- * Une vignette pour un tag de bulle, ou `null` si on ne sait pas la dessiner.
+ * A thumbnail for a bubble tag, or `null` when it cannot be drawn.
  *
- * Rendre `null` plutôt qu'une case vide : le texte se suffit, et un carré gris
- * devant chaque message serait pire que pas d'image du tout.
+ * `null` rather than an empty box: the text stands on its own, and a grey
+ * square in front of every message would be worse than no picture.
  */
 function tagIcon(tag: BubbleTag, sizePx: number): HTMLElement | null {
   if ("mutation" in tag) {
     const box = holder(sizePx);
-    // L'atlas `ui` porte les pastilles rondes ; la catégorie `mutation` porte
-    // les calques appliqués sur la plante, illisibles à cette taille.
+    // The `ui` atlas holds the round badges; the `mutation` category holds the
+    // overlays put on the plant, unreadable at this size.
     attachSpriteIcon(box, ["ui", "mutation"], [`Mutation${tag.mutation}`, tag.mutation], sizePx, SPRITE_LOG_TAG);
     return box;
   }
@@ -82,24 +70,21 @@ function tagIcon(tag: BubbleTag, sizePx: number): HTMLElement | null {
   return box;
 }
 
-/** Toutes les vignettes d'un message, dans l'ordre où la bulle les pose. */
+/** All of a message's thumbnails, in the order the bubble places them. */
 export function tagIcons(tags: BubbleTag[] | undefined, sizePx: number): HTMLElement[] {
   if (!tags || tags.length === 0) return [];
   return tags.map((tag) => tagIcon(tag, sizePx)).filter((icon): icon is HTMLElement => icon !== null);
 }
 
-/** Le même balisage que le jeu : `<0/>` pour une icône en ligne. */
+/** The game's markup: `<0/>` for an inline icon. */
 const TAG_MARKER = /<(\d+)\/>/g;
 
 /**
- * Découpe une phrase balisée et rend ses morceaux, icônes à leur place.
+ * Cuts up a tagged sentence and returns its pieces, icons in place.
  *
- * C'est ce qui sépare « un sprite puis trois noms » de « chaque nom avec son
- * sprite ». Le fil a la place de nommer, autant que l'image soit à côté de ce
- * qu'elle désigne.
- *
- * Une balise qui pointe vers une icône introuvable disparaît simplement : le
- * texte autour se referme dessus.
+ * That is the difference between "a sprite then three names" and "each name
+ * with its sprite". A marker pointing to an icon that cannot be found simply
+ * vanishes, and the text around closes over it.
  */
 export function renderTagged(text: string, tags: BubbleTag[] | undefined, sizePx: number): Node[] {
   if (!tags || tags.length === 0) return [document.createTextNode(text)];

@@ -1,29 +1,28 @@
-// src/services/companion/chat/proposals.ts
-// Cycle proposition → confirmation. C'est le module qui porte la conformité :
-// l'automatisation n'est pas autorisée sur le mod, et tout ce qui l'empêche est ici.
+// The proposal and confirmation cycle. This module keeps the mod within its
+// rules: automation is not allowed, and everything that prevents it is here.
 //
-// Règle : toute exécution doit être traçable à une décision humaine prise
-// quelques secondes plus tôt.
+// The rule: every run must trace back to a human decision taken a few seconds
+// earlier.
 //
-// INTERDITS — ne pas contourner en croyant améliorer le confort :
-//   1. Pas de « ne plus me demander » ni de « toujours autoriser ».
-//   2. Pas de file d'attente ni de planification.
-//   3. Pas de bouton « refaire » : chaque exécution repart d'une proposition fraîche.
-//   4. Rien ne se déclenche tout seul.
+// FORBIDDEN, do not work around these thinking it improves comfort:
+//   1. No "don't ask me again" and no "always allow".
+//   2. No queue and no scheduling.
+//   3. No "do it again" button: every run starts from a fresh proposal.
+//   4. Nothing triggers on its own.
 //
-// Module PUR : horloge injectée, aucun timer, aucun effet.
+// Pure: the clock is passed in, no timer, no effect.
 
-/** Au-delà, une confirmation n'est plus une décision mais un déclencheur. */
+/** Past this, a confirmation is no longer a decision but a trigger. */
 export const PROPOSAL_TTL_MS = 30_000;
 
 export type Proposal = {
   id: string;
   commandId: string;
-  /** Résumé exact montré à l'utilisateur au moment de la proposition. */
+  /** The exact summary shown to the player with the proposal. */
   summary: string;
-  /** Taille du lot proposé. */
+  /** The proposed batch's size. */
   size: number;
-  /** Signature du lot, pour détecter qu'il a changé depuis. */
+  /** The batch's signature, to notice it changed since. */
   signature: string;
   createdAtMs: number;
 };
@@ -37,12 +36,12 @@ export function isExpired(proposal: Proposal, nowMs: number, ttlMs = PROPOSAL_TT
 }
 
 /**
- * Décide si une proposition peut être exécutée.
+ * Decides whether a proposal may run.
  *
- * `currentSignature` est la signature du lot recalculée à l'instant de la
- * confirmation. Si elle diffère, on refuse : l'utilisateur doit reconfirmer ce
- * qu'il voit réellement. Sinon on récolterait 40 crops sur une confirmation qui
- * en annonçait 12, parce que d'autres ont mûri entre-temps.
+ * `currentSignature` is the batch's signature worked out again at the moment
+ * of confirmation. If it differs, the run is refused: the player must confirm
+ * what they really see. Otherwise 40 crops would be harvested on a
+ * confirmation that announced 12, because others ripened meanwhile.
  */
 export function verdict(
   proposal: Proposal | null,
@@ -57,18 +56,38 @@ export function verdict(
   return { ok: true };
 }
 
-/** Message affiché quand une confirmation est refusée. */
+/** The message shown when a confirmation is refused. */
 export function explain(reason: Exclude<ProposalVerdict, { ok: true }>["reason"]): string {
   switch (reason) {
     case "expired":
       return "That went stale while I waited. Let me have another look.";
     case "changed":
-      // Vaut pour toutes les commandes : un crop qui mûrit comme un pet qui a
-      // été nourri entre-temps.
+      // True for every command: a crop that ripened as much as a pet fed meanwhile.
       return "Things moved while I was waiting. Here is what I see now.";
     case "empty":
       return "There is nothing left to do there.";
     default:
       return "I lost track of that one, sorry. Ask me again.";
   }
+}
+
+/**
+ * The work team is part of the confirmed scope.
+ *
+ * Without it in the signature, changing the work team between the question
+ * and the answer would have him wear a team the player never saw named. With
+ * it, the proposal is refused and asked again.
+ */
+export function withTeam(signature: string, teamId: string | null): string {
+  return `${signature}#team:${teamId ?? ""}`;
+}
+
+/**
+ * What he says about the team he would wear, if any.
+ *
+ * A team swap touches what the player built by hand: it cannot slip into a yes
+ * to a question that never mentioned it.
+ */
+export function teamPromise(teamName: string | null): string {
+  return teamName ? ` I would wear ${teamName}, then give yours back.` : "";
 }

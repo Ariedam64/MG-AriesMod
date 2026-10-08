@@ -1,31 +1,31 @@
-// src/ui/menus/companion/harvest-fields.ts
-// Cartes de filtre de la popup de récolte, et le bandeau de résultat.
+// The harvest popup's filter cards, and the result strip.
 //
-// Tout est replié au départ, et chaque carte porte son réglage en en-tête. On
-// voit donc l'ensemble des critères d'un coup d'œil, et on n'ouvre que celui
-// qu'on veut changer — au lieu d'avoir tous les contrôles déployés en même
-// temps. Les résumés sont aussi la contrepartie des tuiles sans libellé : les
-// sprites disent quoi choisir, l'en-tête dit ce qui est choisi, en toutes lettres.
+// Everything starts folded, and each card shows its setting in its header.
+// All the criteria can be read at a glance and only the one to change gets
+// opened. The summaries are also the counterpart of the unlabelled tiles: the
+// sprites say what to pick, the header says what is picked, in words.
 
-import { BORDER, TEAL, TEXT, TEXT_DIM, WARN, css, sectionLabel } from "../../../ui/kit/panel";
+import { sectionLabel } from "../../../ui/kit/card";
 import { collapsibleCard } from "../../../ui/kit/layout";
-import { allTile, spriteTile, tileRow } from "./harvestChips";
+import { color } from "../../../ui/kit/theme";
 import type { HarvestFilters } from "../chat/harvest";
+import { listWords } from "../chat/harvest";
+import { styled } from "./dom";
+import { allTile, spriteTile, tileRow } from "./harvestChips";
 
-export type FilterCard = {
+type FilterCard = {
   root: HTMLElement;
   body: HTMLElement;
-  /** Résumé affiché à droite du titre. `active` = le réglage n'est plus par défaut. */
+  /** The summary on the right of the title. `active`: the setting is no longer the default. */
   setSummary(text: string, active: boolean): void;
 };
 
-/** Carte repliée, titre à gauche, état courant à droite. */
-export function filterCard(icon: string, title: string): FilterCard {
-  const summary = document.createElement("div");
-  css(summary, {
+/** A folded card, title on the left, current state on the right. */
+export function filterCard(title: string): FilterCard {
+  const summary = styled("div", {
     marginLeft: "auto",
     fontSize: "11px",
-    color: TEXT_DIM,
+    color: color.textDim,
     textAlign: "right",
     overflow: "hidden",
     textOverflow: "ellipsis",
@@ -33,39 +33,32 @@ export function filterCard(icon: string, title: string): FilterCard {
     maxWidth: "60%",
   });
 
-  const header = document.createElement("div");
-  css(header, { display: "flex", alignItems: "center", gap: "8px", width: "100%" });
-  header.append(sectionLabel(icon ? `${icon} ${title}` : title), summary);
+  const header = styled("div", { display: "flex", alignItems: "center", gap: "8px", width: "100%" });
+  header.append(sectionLabel(title), summary);
 
   const { root, body } = collapsibleCard({ header, collapsed: true, onToggle: () => {} });
-  css(root, { padding: "9px 11px", gap: "9px", flex: "0 0 auto" });
+  Object.assign(root.style, { padding: "9px 11px", gap: "9px", flex: "0 0 auto" });
 
   return {
     root,
     body,
     setSummary(text, active) {
       summary.textContent = text;
-      css(summary, { color: active ? TEAL : TEXT_DIM });
+      summary.style.color = active ? color.accent : color.textDim;
     },
   };
 }
 
-/** Ligne de champ à l'intérieur d'une carte : un intitulé, un contrôle. */
+/** A field line inside a card: a label, a control. */
 export function fieldRow(label: string, control: HTMLElement): HTMLElement {
-  const row = document.createElement("div");
-  css(row, { display: "flex", alignItems: "center", gap: "10px", justifyContent: "space-between" });
-
-  const text = document.createElement("div");
-  css(text, { fontSize: "11.5px", color: TEXT });
-  text.textContent = label;
-
-  row.append(text, control);
+  const row = styled("div", { display: "flex", alignItems: "center", gap: "10px", justifyContent: "space-between" });
+  row.append(styled("div", { fontSize: "11.5px", color: color.text }, label), control);
   return row;
 }
 
-/* ------------------------- Sélection par tuiles -------------------------- */
+/* ---------------------------- tile selection ----------------------------- */
 
-/** Bascule une valeur dans un filtre multiple ; vide ⇒ `null` ⇒ « tout ». */
+/** Toggles a value in a multiple filter; empty means `null`, which means "all". */
 export function toggleIn(current: string[] | null, value: string): string[] | null {
   const next = new Set(current ?? []);
   if (next.has(value)) next.delete(value);
@@ -73,10 +66,10 @@ export function toggleIn(current: string[] | null, value: string): string[] | nu
   return next.size === 0 ? null : [...next];
 }
 
-export type SelectionRowOptions = {
+type SelectionRowOptions = {
   values: string[];
   counts: Map<string, number>;
-  /** `null` = aucun filtre, donc l'entrée « tout » est active. */
+  /** `null`: no filter, so the "all" entry is active. */
   selected: string[] | null;
   iconFor(value: string): HTMLElement;
   onPick(value: string): void;
@@ -84,7 +77,7 @@ export type SelectionRowOptions = {
   allLabel: string;
 };
 
-/** Grille de tuiles précédée de son entrée « tout ». */
+/** A grid of tiles led by its "all" entry. */
 export function selectionRow(options: SelectionRowOptions): HTMLElement {
   const row = tileRow();
   row.append(allTile(options.allLabel, options.selected === null, options.onClear));
@@ -96,20 +89,19 @@ export function selectionRow(options: SelectionRowOptions): HTMLElement {
         count: options.counts.get(value) ?? 0,
         selected: options.selected?.includes(value) ?? false,
         onClick: () => options.onPick(value),
-      })
+      }),
     );
   }
   return row;
 }
 
-/* ------------------------------- Résumés -------------------------------- */
+/* -------------------------------- summaries ------------------------------- */
 
-/** « Carrot and Tomato », ou « 4 kinds » au-delà de trois. */
+/** "Carrot and Tomato", or "4 kinds" past three. */
 function nameList(values: string[], fallback: string): string {
   if (values.length === 0) return fallback;
   if (values.length > 3) return `${values.length} kinds`;
-  if (values.length === 1) return values[0];
-  return `${values.slice(0, -1).join(", ")} and ${values[values.length - 1]}`;
+  return listWords(values);
 }
 
 export function summarizeSpecies(filters: HarvestFilters): string {
@@ -128,87 +120,79 @@ export function summarizeSize(filters: HarvestFilters): string {
   return filters.minSizePct > 50 ? `${filters.minSizePct}% and up` : "Any size";
 }
 
-/* -------------------------------- Aperçu -------------------------------- */
+/* --------------------------------- strips --------------------------------- */
 
-type PreviewEntry = { icon: HTMLElement; label: string; count: number };
-
-export type ResultStrip = {
-  root: HTMLElement;
-  /** `entries` porte une vignette par variante, déjà montée, avec son effectif. */
-  update(total: number, entries: PreviewEntry[], hidden: number): void;
-};
-
-/**
- * Ce que le companion s'apprête à récolter, en vignettes.
- *
- * Une par apparence réellement présente, mutations comprises. C'est ce qui
- * remplace une liste ligne à ligne : on ne veut pas cent entrées, on veut
- * reconnaître ce qu'on va cueillir.
- */
-export function resultStrip(): ResultStrip {
-  const root = document.createElement("div");
-  css(root, {
+/** The coloured box at the bottom of a popup: a headline, then whatever the popup puts under it. */
+export function resultBox(): { root: HTMLElement; headline: HTMLElement } {
+  const root = styled("div", {
     display: "flex",
     flexDirection: "column",
     gap: "8px",
     padding: "11px 12px",
     borderRadius: "12px",
-    background: "rgba(94,234,212,0.07)",
-    border: `1px solid ${BORDER}`,
+    background: color.accentSoft,
+    border: `1px solid ${color.border}`,
     flex: "0 0 auto",
   });
+  const headline = styled("div", { fontSize: "13px", fontWeight: "600", color: color.accent });
+  root.append(headline);
+  return { root, headline };
+}
 
-  const count = document.createElement("div");
-  css(count, { fontSize: "13px", fontWeight: "600", color: TEAL });
+/** A sprite and its count, side by side. */
+export function countedIcon(icon: HTMLElement, label: string, count: number): HTMLElement {
+  const pair = styled("div", { display: "flex", alignItems: "center", gap: "3px" });
+  pair.title = label;
+  pair.append(icon, styled("span", { fontSize: "11px", color: color.textDim }, String(count)));
+  return pair;
+}
 
-  const sprites = document.createElement("div");
-  css(sprites, { display: "flex", alignItems: "flex-end", gap: "10px", flexWrap: "wrap" });
+type PreviewEntry = { icon: HTMLElement; label: string; count: number };
 
-  root.append(count, sprites);
+type ResultStrip = {
+  root: HTMLElement;
+  /** `entries` holds one ready thumbnail per variant, with its count. */
+  update(total: number, entries: PreviewEntry[], hidden: number): void;
+};
+
+/**
+ * What the companion is about to harvest, as thumbnails.
+ *
+ * One per look really present, mutations included. It replaces a line by line
+ * list: nobody wants a hundred entries, they want to recognise what will be picked.
+ */
+export function resultStrip(): ResultStrip {
+  const { root, headline } = resultBox();
+  const sprites = styled("div", { display: "flex", alignItems: "flex-end", gap: "10px", flexWrap: "wrap" });
+  root.append(sprites);
 
   return {
     root,
     update(total, entries, hidden) {
-      count.textContent = total === 0 ? "Nothing to pick" : `${total} crop${total === 1 ? "" : "s"}`;
-      sprites.innerHTML = "";
+      headline.textContent = total === 0 ? "Nothing to pick" : `${total} crop${total === 1 ? "" : "s"}`;
+      sprites.replaceChildren(...entries.map((entry) => countedIcon(entry.icon, entry.label, entry.count)));
       sprites.style.display = entries.length === 0 ? "none" : "flex";
-
-      for (const entry of entries) {
-        const pair = document.createElement("div");
-        pair.title = entry.label;
-        css(pair, { display: "flex", alignItems: "center", gap: "3px" });
-        const tally = document.createElement("span");
-        css(tally, { fontSize: "11px", color: TEXT_DIM });
-        tally.textContent = String(entry.count);
-        pair.append(entry.icon, tally);
-        sprites.append(pair);
-      }
-
       if (hidden > 0) {
-        const more = document.createElement("span");
-        css(more, { fontSize: "11px", color: TEXT_DIM, alignSelf: "center" });
-        more.textContent = `+${hidden} more`;
-        sprites.append(more);
+        sprites.append(styled("span", { fontSize: "11px", color: color.textDim, alignSelf: "center" }, `+${hidden} more`));
       }
     },
   };
 }
 
-/** Note explicative sous le bandeau : ce que le Locker met de côté. */
+/** The note under the strip: what the Locker sets aside. */
 export function lockedNote(): { root: HTMLElement; update(lockedOut: number): void } {
-  const root = document.createElement("div");
-  css(root, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
+  const root = styled("div", { fontSize: "11px", lineHeight: "1.5", color: color.textDim });
 
   return {
     root,
     update(lockedOut) {
       if (lockedOut === 0) {
         root.textContent = "Your Locker decides what I leave alone.";
-        css(root, { color: TEXT_DIM });
+        root.style.color = color.textDim;
         return;
       }
       root.textContent = `Leaving ${lockedOut} locked crop${lockedOut === 1 ? "" : "s"} alone.`;
-      css(root, { color: WARN });
+      root.style.color = color.warn;
     },
   };
 }

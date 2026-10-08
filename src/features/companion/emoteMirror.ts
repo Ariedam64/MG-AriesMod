@@ -1,76 +1,68 @@
-// src/services/companion/emoteMirror.ts
-// Le companion répond aux emotes du joueur.
+// The companion answers the player's emotes.
 //
-// Le joueur applaudit, le companion applaudit avec lui un instant plus tard ;
-// le joueur pleure, le companion le console. Tout ce qui décide vit ici, pur :
-// le hasard et l'horloge sont passés en paramètre, et rien ne touche au jeu.
-// Les abonnements vivent à part, dans `emoteMirrorWatch.ts`, et ne décident de
-// rien.
+// The player claps, the companion claps along a moment later; the player
+// cries, the companion comforts them. Everything that decides is here, pure:
+// chance and clock are passed in and nothing touches the game. The
+// subscriptions live apart, in `emoteMirrorWatch.ts`, and decide nothing.
 //
-// D'où viennent les emotes du joueur
-// ----------------------------------
-// Relevé dans le bundle live (1400) : le bouton d'emote du chat envoie
-// `{ type: "Emote", emoteType }` au serveur et ne garde rien en local. L'emote
-// revient dans l'état de room, `stateAtom.data.chat.entries`, sous la forme
-// `{ kind: "emote", playerId, emoteType, seq, lastSeq, lastTimestampMs, count }`.
-// Une même emote répétée ne crée pas de nouvelle entrée : elle incrémente
-// `count` et avance `lastTimestampMs`. C'est donc cette date, et elle seule,
-// qui dit qu'une emote vient d'être jouée.
+// Where the player's emotes come from (live bundle 1400): the chat's emote
+// button sends `{ type: "Emote", emoteType }` to the server and keeps nothing
+// locally. The emote comes back in the room state, `stateAtom.data.chat.entries`,
+// as `{ kind: "emote", playerId, emoteType, seq, lastSeq, lastTimestampMs, count }`.
+// Repeating an emote creates no new entry: it bumps `count` and moves
+// `lastTimestampMs` forward. So that date, and only it, says an emote was just
+// played.
 
+import { pickOne, type Random } from "../../lib/random";
 import { EmoteType } from "./emoteTypes";
 
-export type Random = () => number;
-
-/** Au-delà, il ne voit pas l'emote : il ne répond pas. Même seuil que les réactions `low`. */
+/** Past this he does not see the emote, so he does not answer. Same bound as `low` reactions. */
 export const MIRROR_MAX_DISTANCE = 8;
-/** Écart minimal entre deux réponses. */
+/** Minimum gap between two answers. */
 export const MIRROR_COOLDOWN_MS = 6_000;
-/** Délai de réaction, tiré entre ces deux bornes : le temps de voir, puis de répondre. */
+/** Reaction delay, drawn between these: the time to see, then to answer. */
 export const MIRROR_DELAY_MIN_MS = 400;
 export const MIRROR_DELAY_MAX_MS = 1_200;
 
 /**
- * Deux emotes plus rapprochées que ça appartiennent à la même série.
+ * Two emotes closer than this belong to the same streak.
  *
- * Une série, c'est le joueur qui martèle le bouton : le companion répond à la
- * première, peut-être à une seconde, puis laisse passer jusqu'à ce que le
- * joueur se calme.
+ * A streak is the player hammering the button: the companion answers the
+ * first, maybe a second, then lets it go until the player calms down.
  */
 export const STREAK_GAP_MS = 12_000;
-/** Réponses au plus par série. */
+/** At most this many answers per streak. */
 const STREAK_MAX_ANSWERS = 2;
-/** Chance de répondre une seconde fois dans la même série. Tirée une seule fois. */
+/** The chance of answering a second time in the same streak. Drawn once. */
 const SECOND_ANSWER_CHANCE = 0.5;
 
-/** Une réponse sur six environ s'accompagne d'un mot. */
+/** About one answer in six comes with a word. */
 const LINE_CHANCE = 1 / 6;
-/** Jamais plus d'un mot toutes les deux minutes. */
+/** Never more than one word every two minutes. */
 export const LINE_COOLDOWN_MS = 120_000;
 
-/** À partir de tant d'emotes dans une série, il peut le faire remarquer. */
+/** From this many emotes in a streak, he may point it out. */
 export const SPAM_THRESHOLD = 6;
-/** Chance qu'il le fasse remarquer, tirée une fois par série. */
+/** The chance he points it out, drawn once per streak. */
 const SPAM_LINE_CHANCE = 0.3;
-/** Et au plus une fois toutes les cinq minutes. */
+/** And at most once every five minutes. */
 export const SPAM_LINE_COOLDOWN_MS = 300_000;
 
-/** Emotes qu'un joueur peut jouer, c'est-à-dire toutes sauf la posture de repos. */
-const PLAYABLE: ReadonlySet<number> = new Set(
-  Object.values(EmoteType).filter((value) => value !== EmoteType.Idle)
-);
+/** The emotes a player can play: all but the resting pose. */
+const PLAYABLE: ReadonlySet<number> = new Set(Object.values(EmoteType).filter((value) => value !== EmoteType.Idle));
 
 export type OwnEmote = { emote: EmoteType; at: number };
 
 /**
- * Emote la plus récente d'un joueur parmi les entrées du chat de la room.
+ * A player's latest emote among the room chat's entries.
  *
- * `ignoreIds` écarte des ids à coup sûr étrangers au joueur, le PNJ du
- * companion en premier : ce ne sont jamais ses emotes à lui.
+ * `ignoreIds` leaves out ids that are surely not the player's, the
+ * companion's NPC first: those are never their emotes.
  */
 export function latestOwnEmote(
   entries: unknown,
   playerId: string | null | undefined,
-  ignoreIds: readonly string[] = []
+  ignoreIds: readonly string[] = [],
 ): OwnEmote | null {
   if (!playerId || !Array.isArray(entries) || ignoreIds.includes(playerId)) return null;
   let best: OwnEmote | null = null;
@@ -87,18 +79,18 @@ export function latestOwnEmote(
 }
 
 export type MirrorState = {
-  /** Faux tant que le premier relevé n'a pas été pris comme référence. */
+  /** False until the first reading has been taken as the reference. */
   primed: boolean;
-  /** Room et joueur du relevé de référence : en changer, c'est repartir de zéro. */
+  /** The reference reading's room and player: changing either starts over. */
   scope: string | null;
-  /** Date de la plus récente emote déjà vue. Seule une emote plus récente compte. */
+  /** The date of the latest emote already seen. Only a newer one counts. */
   seenAt: number;
 
-  /** Emotes de la série en cours, réponses données, et date (horloge locale) de la dernière. */
+  /** The current streak's emotes, answers given, and (local clock) date of the last one. */
   streakCount: number;
   streakAnswers: number;
   streakLastAt: number;
-  /** La remarque sur la série a déjà été tirée, réussie ou non. */
+  /** The remark about the streak was already drawn, successful or not. */
   streakSpamRolled: boolean;
 
   lastMirrorAt: number;
@@ -121,25 +113,21 @@ export function initialMirrorState(): MirrorState {
   };
 }
 
-/** Ce que la veille a lu : `null` tant que la room ou le joueur ne sont pas connus. */
+/** What the watch read: `null` while the room or the player is not known yet. */
 export type MirrorRead = { scope: string; latest: OwnEmote | null } | null;
 
 /**
- * Tient le relevé à jour, et dit si une emote vient d'être jouée.
+ * Keeps the reading current, and says whether an emote was just played.
  *
- * Le premier relevé exploitable ne fait que noter ce qui existait déjà : les
- * emotes jouées avant le démarrage de la veille ne sont pas des nouvelles. Il
- * en va de même à chaque changement de room, dont l'historique de chat
- * pourrait contenir une vieille emote du joueur.
+ * The first usable reading only notes what was already there: emotes played
+ * before the watch started are not news. The same goes for every room change,
+ * whose chat history could hold an old emote of the player.
  *
- * Un relevé inexploitable (état de room pas encore chargé, id du joueur
- * inconnu) ne sert pas de référence : il laisserait passer pour neuves les
- * emotes qu'on découvrirait au relevé suivant.
+ * An unusable reading (room state not loaded, player id unknown) does not
+ * serve as the reference: it would let the emotes found at the next reading
+ * pass for new ones.
  */
-export function observeOwnEmote(
-  state: MirrorState,
-  read: MirrorRead
-): { state: MirrorState; fresh: OwnEmote | null } {
+export function observeOwnEmote(state: MirrorState, read: MirrorRead): { state: MirrorState; fresh: OwnEmote | null } {
   if (!read) return { state, fresh: null };
   if (!state.primed || state.scope !== read.scope) {
     return {
@@ -152,18 +140,12 @@ export function observeOwnEmote(
   return { state: { ...state, seenAt: latest.at }, fresh: latest };
 }
 
-function pick<T>(list: readonly T[], random: Random): T {
-  const i = Math.floor(random() * list.length);
-  return list[Math.min(list.length - 1, Math.max(0, i))];
-}
-
 /**
- * L'emote qu'il rend.
+ * The emote he answers with.
  *
- * La même, le plus souvent : partager le moment, c'est faire pareil. Deux
- * exceptions. Le joueur pleure : il le console (Love) ou pleure avec lui. Le
- * joueur se fâche : il s'en étonne ou s'en attriste, mais ne se fâche jamais
- * en retour.
+ * The same one, most of the time: sharing the moment is doing the same. Two
+ * exceptions. The player cries: he comforts them (Love) or cries along. The
+ * player is angry: he wonders or saddens, but never gets angry back.
  */
 export function mirrorEmoteFor(played: EmoteType, random: Random): EmoteType {
   switch (played) {
@@ -176,14 +158,14 @@ export function mirrorEmoteFor(played: EmoteType, random: Random): EmoteType {
   }
 }
 
-/** Délai avant de répondre, entier, dans `[MIRROR_DELAY_MIN_MS, MIRROR_DELAY_MAX_MS]`. */
+/** The delay before answering, a whole number in `[MIRROR_DELAY_MIN_MS, MIRROR_DELAY_MAX_MS]`. */
 export function mirrorDelay(random: Random): number {
   const span = MIRROR_DELAY_MAX_MS - MIRROR_DELAY_MIN_MS;
   const r = Math.min(1, Math.max(0, random()));
   return Math.round(MIRROR_DELAY_MIN_MS + r * span);
 }
 
-/** Le petit mot qui accompagne parfois la réponse, selon ce que le joueur a joué. */
+/** The word that sometimes comes with the answer, depending on what the player played. */
 export const MIRROR_LINES: Readonly<Record<number, readonly string[]>> = {
   [EmoteType.Clapping]: ["Bravo!", "Woo!", "Nice one!"],
   [EmoteType.Laughing]: ["Haha!", "Hehe.", "Too funny."],
@@ -193,33 +175,33 @@ export const MIRROR_LINES: Readonly<Record<number, readonly string[]>> = {
   [EmoteType.Love]: ["Aww.", "Same!", "Right back at you!"],
 };
 
-/** Ce qu'il dit quand le joueur martèle le bouton. */
+/** What he says when the player hammers the button. */
 export const SPAM_LINES: readonly string[] = ["Okay okay, I get it!", "Alright, alright!", "You're on a roll, huh?"];
 
 export type MirrorAction =
   | { kind: "mirror"; emote: EmoteType; delayMs: number; line: string | null }
   | { kind: "line"; line: string; delayMs: number };
 
-export type MirrorContext = {
+type MirrorContext = {
   now: number;
-  /** Faux quand il est occupé, rangé, ou que ses réactions sont coupées. */
+  /** False when he is busy, put away, or his reactions are off. */
   available: boolean;
-  /** Distance en tuiles jusqu'au joueur, `null` quand on ne sait pas. */
+  /** Tiles to the player, `null` when unknown. */
   distance: number | null;
   random: Random;
 };
 
 /**
- * Décide de la réponse à une emote neuve du joueur.
+ * Decides the answer to a new emote from the player.
  *
- * La série est tenue à jour dans tous les cas, qu'il réponde ou non : un
- * joueur qui martèle le bouton pendant que le companion est loin martèle
- * quand même, et ce n'est pas en arrivant qu'il doit répondre à la sixième.
+ * The streak is kept current either way, answered or not: a player hammering
+ * the button while the companion is far away is hammering all the same, and it
+ * is not on arriving that he should answer the sixth one.
  */
 export function decideMirror(
   state: MirrorState,
   played: OwnEmote,
-  ctx: MirrorContext
+  ctx: MirrorContext,
 ): { state: MirrorState; action: MirrorAction | null } {
   const { now, random } = ctx;
   let next: MirrorState =
@@ -227,30 +209,26 @@ export function decideMirror(
       ? { ...state, streakCount: 1, streakAnswers: 0, streakSpamRolled: false, streakLastAt: now }
       : { ...state, streakCount: state.streakCount + 1, streakLastAt: now };
 
-  // Occupé, ou trop loin pour avoir vu : il ne répond pas.
+  // Busy, or too far to have seen it: he does not answer.
   if (!ctx.available || ctx.distance === null || ctx.distance > MIRROR_MAX_DISTANCE) {
     return { state: next, action: null };
   }
 
-  // Le joueur insiste : une remarque, rarement, une fois par série au plus.
-  if (
-    next.streakCount >= SPAM_THRESHOLD &&
-    !next.streakSpamRolled &&
-    now - next.lastSpamLineAt >= SPAM_LINE_COOLDOWN_MS
-  ) {
+  // The player insists: a remark, rarely, at most once per streak.
+  if (next.streakCount >= SPAM_THRESHOLD && !next.streakSpamRolled && now - next.lastSpamLineAt >= SPAM_LINE_COOLDOWN_MS) {
     next = { ...next, streakSpamRolled: true };
     if (random() < SPAM_LINE_CHANCE) {
       next = { ...next, lastSpamLineAt: now, lastLineAt: now, lastMirrorAt: now };
-      return { state: next, action: { kind: "line", line: pick(SPAM_LINES, random), delayMs: mirrorDelay(random) } };
+      return { state: next, action: { kind: "line", line: pickOne(SPAM_LINES, random), delayMs: mirrorDelay(random) } };
     }
   }
 
   if (now - next.lastMirrorAt < MIRROR_COOLDOWN_MS) return { state: next, action: null };
   if (next.streakAnswers >= STREAK_MAX_ANSWERS) return { state: next, action: null };
 
-  // Une seconde réponse dans la même série n'est pas acquise. Le tirage ne se
-  // fait qu'une fois : raté, la série est close, sinon il finirait toujours
-  // par répondre à force d'emotes.
+  // A second answer in the same streak is not a given. The draw happens once:
+  // missed, the streak is closed, or he would always end up answering by sheer
+  // number of emotes.
   if (next.streakAnswers >= 1 && random() >= SECOND_ANSWER_CHANCE) {
     return { state: { ...next, streakAnswers: STREAK_MAX_ANSWERS }, action: null };
   }
@@ -260,7 +238,7 @@ export function decideMirror(
   let line: string | null = null;
   if (now - next.lastLineAt >= LINE_COOLDOWN_MS && random() < LINE_CHANCE) {
     const lines = MIRROR_LINES[played.emote];
-    if (lines && lines.length) line = pick(lines, random);
+    if (lines && lines.length) line = pickOne(lines, random);
   }
 
   next = {

@@ -17,7 +17,7 @@ import {
   feedSignature,
   isSettled,
   type FeedCandidate,
-} from "../src/features/companion/chat/feedScope";
+} from "../src/features/companion/chat/feed";
 import {
   countByItem,
   describePlan,
@@ -31,6 +31,7 @@ import {
 } from "../src/features/companion/chat/plant";
 import {
   DEFAULT_KEEP_RULES,
+  afterHatchNote,
   describeKeep,
   hatchCheer,
   isProtected,
@@ -48,14 +49,15 @@ import { EmoteType } from "../src/features/companion/emoteTypes";
 import {
   MAX_MESSAGES,
   append,
-  appendAlertOnce,
   clearProposal,
   emptyLog,
 } from "../src/features/companion/chat/log";
 import {
   PROPOSAL_TTL_MS,
   isExpired,
+  teamPromise,
   verdict,
+  withTeam,
   type Proposal,
 } from "../src/features/companion/chat/proposals";
 
@@ -546,20 +548,38 @@ console.log("\n--- journal ---");
   // Le journal ne mute jamais son entree : l'UI compare les references.
   check("l'entree n'est pas mutee", log.messages[1].proposalId, "p1");
 
-  // Les sources d'alertes reemettent le meme etat a chaque rafraichissement.
-  let alerts = emptyLog();
-  alerts = appendAlertOnce(alerts, { from: "companion", kind: "alert", text: "3 pets hungry", atMs: at(0) }, 1000);
-  alerts = appendAlertOnce(alerts, { from: "companion", kind: "alert", text: "3 pets hungry", atMs: at(500) }, 1000);
-  check("une alerte repetee ne double pas le fil", alerts.messages.length, 1);
-  alerts = appendAlertOnce(alerts, { from: "companion", kind: "alert", text: "3 pets hungry", atMs: at(2000) }, 1000);
-  check("passe la fenetre, elle repasse", alerts.messages.length, 2);
-
   let long = emptyLog();
   for (let i = 0; i < MAX_MESSAGES + 10; i++) {
     long = append(long, { from: "companion", kind: "system", text: `m${i}`, atMs: at(i) });
   }
   check("le journal est borne", long.messages.length, MAX_MESSAGES);
   check("ce sont les plus anciens qui partent", long.messages[0].text, "m10");
+}
+
+console.log("\n--- equipe de travail ---");
+{
+  check("l'equipe entre dans la signature", withTeam("a|b", "t1"), "a|b#team:t1");
+  check("sans equipe, la signature le dit aussi", withTeam("a|b", null), "a|b#team:");
+  check("une equipe change la signature", withTeam("a|b", "t1") === withTeam("a|b", "t2"), false);
+  check("la question nomme l'equipe portee", teamPromise("Harvesters"), " I would wear Harvesters, then give yours back.");
+  check("et ne dit rien sans equipe", teamPromise(null), "");
+}
+
+console.log("\n--- apres la couvee ---");
+{
+  const rules = { ...DEFAULT_KEEP_RULES, species: ["Bee"] };
+  check("couvee finie, rien a vendre : il se tait", afterHatchNote("done", 0, rules, 0), null);
+  check("couvee finie, des ventes possibles", afterHatchNote("done", 0, rules, 2), "All open. Now the ones you did not want.");
+  check(
+    "sac plein sans critere : il le dit",
+    afterHatchNote("full", 3, DEFAULT_KEEP_RULES, 0),
+    "Your bag is full. 3 eggs still waiting. Nothing set to keep, so I am not selling."
+  );
+  check(
+    "sac plein avec critere, rien a vendre",
+    afterHatchNote("full", 1, rules, 0),
+    "Your bag is full, nothing in it is up for sale. 1 egg still waiting."
+  );
 }
 
 console.log(fails === 0 ? "\nAll checks passed." : `\n${fails} check(s) failed.`);

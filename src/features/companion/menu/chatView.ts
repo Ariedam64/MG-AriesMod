@@ -1,50 +1,40 @@
-// src/ui/menus/companion/chat-view.ts
-// Rendu du fil de discussion, calé sur le chat du Community Hub.
+// Draws the chat thread, modelled on the Community Hub chat.
 //
-// Purement présentationnel : rien ici ne lit le jeu ni n'envoie de commande.
+// Presentation only: nothing here reads the game or sends a command.
 //
-// Le fil n'est pas symétrique. Le joueur n'écrit pas : ses bulles sont des
-// *commandes* qu'il a déclenchées, et elles s'affichent à droite. Le companion
-// répond à gauche. Les messages `system` (progression, refus, annulation) ne
-// sont l'énoncé de personne : ils s'affichent centrés, comme un fil d'événement.
+// The thread is not symmetric. The player does not type: their bubbles are
+// *commands* they triggered, shown on the right. The companion answers on the
+// left. `system` messages (progress, refusals, cancellations) are nobody's
+// words: they show centred, like an event log.
 
-import { BORDER, TEAL, TEXT, TEXT_DIM, WARN, css } from "../../../ui/kit/panel";
-import { fillWithPortrait } from "./npcAvatar";
-import type { ChatMessage } from "../chat/log";
+import { color } from "../../../ui/kit/theme";
 import type { BubbleTag } from "../chat/bubbleTags";
+import type { ChatMessage } from "../chat/log";
 import { renderTagged, tagIcons } from "./chatIcons";
+import { styled } from "./dom";
+import { fillWithPortrait } from "./npcAvatar";
 
-/** Deux messages du même auteur dans cette fenêtre sont collés visuellement. */
+/** Two messages from the same author within this window are drawn together. */
 const GROUP_WINDOW_MS = 2 * 60 * 1000;
 
 const AVATAR_PX = 26;
-/** Assez grand pour se lire, assez petit pour ne pas bousculer la ligne. */
+/** Big enough to read, small enough not to push the line around. */
 const BUBBLE_ICON_PX = 18;
 const SYSTEM_ICON_PX = 15;
-const OUTGOING_BG = "rgba(94,234,212,0.14)";
-const OUTGOING_BORDER = "rgba(94,234,212,0.22)";
-const OUTGOING_TEXT = "#d1fae5";
-const INCOMING_BG = "rgba(255,255,255,0.06)";
-const ALERT_BG = "rgba(251,191,36,0.10)";
-const ALERT_BORDER = "rgba(251,191,36,0.28)";
 
 /**
- * Le contenu d'un message : ses vignettes et son texte.
+ * A message's content: its thumbnails and its text.
  *
- * Deux dispositions, selon ce qu'on sait. Quand le texte porte le balisage, on
- * le découpe et chaque icône va à sa place, contre ce qu'elle désigne. Sinon
- * les vignettes viennent d'une bulle écrite pour une autre phrase : on les
- * groupe devant, faute de savoir où elles allaient.
+ * When the text carries the markup, it is cut up and each icon goes in its
+ * place, next to what it names. Otherwise the thumbnails come from a bubble
+ * written for another sentence, and gather in front.
  */
 function contentOf(text: string, icons: BubbleTag[] | undefined, positioned: boolean | undefined, sizePx: number): Node[] {
   if (positioned) return renderTagged(text, icons, sizePx);
-
-  const label = document.createElement("span");
-  label.textContent = text;
-  return [...tagIcons(icons, sizePx), label];
+  return [...tagIcons(icons, sizePx), styled("span", {}, text)];
 }
 
-/** Un message centré n'appartient à aucune colonne : il ne se groupe pas. */
+/** A centred message belongs to no column: it never groups. */
 function isCentered(message: ChatMessage): boolean {
   return message.kind === "system";
 }
@@ -63,7 +53,7 @@ function formatMessageTime(atMs: number): string {
   }
 }
 
-/** Étiquette de séparateur : « Today », « Yesterday », sinon la date. */
+/** A separator label: "Today", "Yesterday", otherwise the date. */
 export function formatDayLabel(atMs: number, nowMs: number): string {
   const startOfDay = (ms: number) => {
     const date = new Date(ms);
@@ -81,58 +71,52 @@ export function formatDayLabel(atMs: number, nowMs: number): string {
 }
 
 export function dateSeparator(label: string): HTMLElement {
-  const wrap = document.createElement("div");
-  css(wrap, { display: "flex", alignItems: "center", gap: "10px", margin: "10px 0 6px" });
-
-  const line = () => {
-    const el = document.createElement("div");
-    css(el, { flex: "1", height: "1px", background: BORDER });
-    return el;
-  };
-
-  const text = document.createElement("div");
-  css(text, {
-    fontSize: "10px",
-    fontWeight: "600",
-    color: TEXT_DIM,
-    whiteSpace: "nowrap",
-    textTransform: "uppercase",
-    letterSpacing: "0.5px",
-  });
-  text.textContent = label;
-
+  const line = () => styled("div", { flex: "1", height: "1px", background: color.border });
+  const text = styled(
+    "div",
+    {
+      fontSize: "10px",
+      fontWeight: "600",
+      color: color.textDim,
+      whiteSpace: "nowrap",
+      textTransform: "uppercase",
+      letterSpacing: "0.5px",
+    },
+    label,
+  );
+  const wrap = styled("div", { display: "flex", alignItems: "center", gap: "10px", margin: "10px 0 6px" });
   wrap.append(line(), text, line());
   return wrap;
 }
 
-/** Ligne d'événement centrée : progression, refus, annulation. */
+/** A centred event line: progress, refusal, cancellation. */
 function systemLine(text: string, icons?: BubbleTag[], positioned = false): HTMLElement {
-  const line = document.createElement("div");
-  css(line, {
+  const line = styled("div", {
     alignSelf: "center",
     fontSize: "11px",
-    color: TEXT_DIM,
+    color: color.textDim,
     textAlign: "center",
     padding: "2px 8px",
     maxWidth: "90%",
   });
-
-  // Ces lignes portent les nouvelles au fil de l'eau : « ce pet a été nourri »,
-  // « un Bee est sorti ». C'est là que la vignette apprend le plus.
+  // These lines carry the news as it comes ("this pet was fed", "a Bee came
+  // out"): that is where a thumbnail tells the most.
   line.append(...contentOf(text, icons, positioned, SYSTEM_ICON_PX));
   return line;
 }
 
+/** What it takes to draw the portrait: the identity for the outfit, the name for the fallback. */
+export type NpcIdentityView = { npcId: string | null; name: string | null };
+
 /**
- * Portrait du companion : celui du PNJ dont il emprunte l'apparence.
+ * The companion's portrait: the one of the NPC whose look he borrows.
  *
- * Composé depuis ses cosmétiques, comme le jeu compose ses personnages.
- * L'initiale est posée d'abord et sert de repli : la tenue arrive de façon
- * asynchrone, et peut ne pas arriver du tout.
+ * Composed from its cosmetics, like the game composes its characters. The
+ * initial goes first and stays as the fallback: the outfit arrives
+ * asynchronously, and may not arrive at all.
  */
 function avatar(identity: NpcIdentityView | null, sizePx = AVATAR_PX): HTMLElement {
-  const el = document.createElement("div");
-  css(el, {
+  const el = styled("div", {
     width: `${sizePx}px`,
     height: `${sizePx}px`,
     flexShrink: "0",
@@ -143,8 +127,8 @@ function avatar(identity: NpcIdentityView | null, sizePx = AVATAR_PX): HTMLEleme
     justifyContent: "center",
     fontSize: `${Math.round(sizePx * 0.45)}px`,
     fontWeight: "600",
-    color: TEAL,
-    background: "linear-gradient(135deg, rgba(94,234,212,0.25), rgba(59,130,246,0.25))",
+    color: color.accent,
+    background: color.accentHover,
   });
 
   const name = (identity?.name ?? "").trim();
@@ -153,35 +137,23 @@ function avatar(identity: NpcIdentityView | null, sizePx = AVATAR_PX): HTMLEleme
   return el;
 }
 
-function spacer(): HTMLElement {
-  const el = document.createElement("div");
-  css(el, { width: `${AVATAR_PX}px`, flexShrink: "0" });
-  return el;
-}
-
-/** De quoi dessiner le portrait : l'identité pour la tenue, le nom pour le repli. */
-export type NpcIdentityView = { npcId: string | null; name: string | null };
-
-export type BubbleFlags = {
+type BubbleFlags = {
   isFirstInGroup: boolean;
   isLastInGroup: boolean;
 };
 
 /**
- * Une ligne du fil : avatar (dernier du groupe seulement) + bulle + horodatage.
+ * One thread row: avatar (last of a group only), bubble and time.
  *
- * L'avatar n'apparaît que sur le dernier message d'un groupe, avec un
- * espaceur ailleurs : sans lui, les bulles d'un même groupe se décaleraient
- * les unes par rapport aux autres.
+ * The avatar only shows on a group's last message, with a spacer elsewhere:
+ * without it the bubbles of one group would not line up.
  */
 export function messageRow(message: ChatMessage, flags: BubbleFlags, identity: NpcIdentityView | null = null): HTMLElement {
   if (isCentered(message)) return systemLine(message.text, message.icons, message.positioned);
 
   const outgoing = message.from === "you";
-  const alerting = message.kind === "alert";
 
-  const row = document.createElement("div");
-  css(row, {
+  const row = styled("div", {
     display: "flex",
     gap: "8px",
     alignItems: "flex-end",
@@ -189,10 +161,9 @@ export function messageRow(message: ChatMessage, flags: BubbleFlags, identity: N
     ...(flags.isFirstInGroup ? {} : { marginTop: "-4px" }),
   });
 
-  if (!outgoing) row.append(flags.isLastInGroup ? avatar(identity) : spacer());
+  if (!outgoing) row.append(flags.isLastInGroup ? avatar(identity) : styled("div", { width: `${AVATAR_PX}px`, flexShrink: "0" }));
 
-  const column = document.createElement("div");
-  css(column, {
+  const column = styled("div", {
     maxWidth: "78%",
     display: "flex",
     flexDirection: "column",
@@ -200,64 +171,51 @@ export function messageRow(message: ChatMessage, flags: BubbleFlags, identity: N
     alignItems: outgoing ? "flex-end" : "flex-start",
   });
 
-  const bubble = document.createElement("div");
-  css(bubble, {
+  const bubble = styled("div", {
     padding: "7px 11px",
     borderRadius: outgoing ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
     fontSize: "12.5px",
     lineHeight: "1.5",
     wordBreak: "break-word",
     whiteSpace: "pre-wrap",
-    background: outgoing ? OUTGOING_BG : alerting ? ALERT_BG : INCOMING_BG,
-    border: `1px solid ${outgoing ? OUTGOING_BORDER : alerting ? ALERT_BORDER : BORDER}`,
-    color: outgoing ? OUTGOING_TEXT : TEXT,
+    background: outgoing ? color.accentSoft : color.hoverBg,
+    border: `1px solid ${outgoing ? color.accentBorder : color.border}`,
+    color: color.text,
   });
   bubble.append(...contentOf(message.text, message.icons, message.positioned, BUBBLE_ICON_PX));
   column.append(bubble);
 
   if (flags.isLastInGroup) {
-    const stamp = document.createElement("div");
-    css(stamp, { fontSize: "10px", color: TEXT_DIM });
-    stamp.textContent = formatMessageTime(message.atMs);
-    column.append(stamp);
+    column.append(styled("div", { fontSize: "10px", color: color.textDim }, formatMessageTime(message.atMs)));
   }
 
   row.append(column);
   return row;
 }
 
-export type ChatHeader = {
+type ChatHeader = {
   root: HTMLElement;
   setStatus(text: string, busy: boolean): void;
-  /** Le PNJ emprunté n'est connu qu'une fois le companion démarré. */
+  /** The borrowed NPC is only known once the companion has started. */
   setIdentity(identity: NpcIdentityView): void;
 };
 
-/** En-tête façon conversation : interlocuteur à gauche, son état en sous-titre. */
+/** A conversation header: who is talking on the left, their state underneath. */
 export function chatHeader(name: string): ChatHeader {
-  const root = document.createElement("div");
-  css(root, {
+  const root = styled("div", {
     display: "flex",
     alignItems: "center",
     gap: "10px",
     padding: "8px 10px",
-    borderBottom: `1px solid ${BORDER}`,
+    borderBottom: `1px solid ${color.border}`,
   });
 
-  const portraitSlot = document.createElement("div");
-  css(portraitSlot, { display: "flex", flexShrink: "0" });
+  const portraitSlot = styled("div", { display: "flex", flexShrink: "0" });
   portraitSlot.append(avatar(null, 32));
 
-  const info = document.createElement("div");
-  css(info, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
-
-  const title = document.createElement("div");
-  css(title, { fontSize: "13px", fontWeight: "600", color: TEXT });
-  title.textContent = name;
-
-  const status = document.createElement("div");
-  css(status, { fontSize: "11px", color: TEXT_DIM });
-
+  const title = styled("div", { fontSize: "13px", fontWeight: "600", color: color.text }, name);
+  const status = styled("div", { fontSize: "11px", color: color.textDim });
+  const info = styled("div", { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
   info.append(title, status);
   root.append(portraitSlot, info);
 
@@ -267,10 +225,10 @@ export function chatHeader(name: string): ChatHeader {
     root,
     setStatus(text, busy) {
       status.textContent = text;
-      css(status, { color: busy ? TEAL : TEXT_DIM });
+      status.style.color = busy ? color.accent : color.textDim;
     },
     setIdentity(identity) {
-      // Refaire le portrait à chaque rendu relancerait la composition.
+      // Redrawing the portrait on every render would compose it again.
       if (identity.npcId === shownIdentity) return;
       shownIdentity = identity.npcId;
       portraitSlot.replaceChildren(avatar(identity, 32));
@@ -279,11 +237,9 @@ export function chatHeader(name: string): ChatHeader {
   };
 }
 
-/** Conteneur du fil : hauteur fixe pour que la mise en page ne saute pas. */
+/** The thread's container: a fixed height so the layout does not jump. */
 export function threadBody(): HTMLElement {
-  const body = document.createElement("div");
-  body.className = "qws-pnl-scroll";
-  css(body, {
+  const body = styled("div", {
     height: "300px",
     overflowY: "auto",
     padding: "10px",
@@ -291,48 +247,38 @@ export function threadBody(): HTMLElement {
     flexDirection: "column",
     gap: "5px",
   });
+  body.className = "qmm-scroll";
   return body;
 }
 
-/** Placeholder tant qu'aucun message n'a été échangé. */
+/** A placeholder while nothing has been said yet. */
 export function emptyThread(text: string): HTMLElement {
-  const wrap = document.createElement("div");
-  css(wrap, {
+  const wrap = styled("div", {
     margin: "auto",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     gap: "8px",
-    color: TEXT_DIM,
+    color: color.textDim,
     textAlign: "center",
   });
-
-  const label = document.createElement("div");
-  css(label, { fontSize: "12px", maxWidth: "220px", lineHeight: "1.5" });
-  label.textContent = text;
-
-  wrap.append(label);
+  wrap.append(styled("div", { fontSize: "12px", maxWidth: "220px", lineHeight: "1.5" }, text));
   return wrap;
 }
 
-/** Barre du bas : elle remplace le champ de saisie, on n'y envoie que des actions. */
+/** The bottom bar: it stands in for an input field, and only sends actions. */
 export function actionBar(): HTMLElement {
-  const bar = document.createElement("div");
-  css(bar, {
+  return styled("div", {
     display: "flex",
     alignItems: "center",
     flexWrap: "wrap",
     gap: "6px",
     padding: "8px 10px",
-    borderTop: `1px solid ${BORDER}`,
+    borderTop: `1px solid ${color.border}`,
   });
-  return bar;
 }
 
-/** Note discrète dans la barre d'actions. */
+/** A quiet note in the action bar. */
 export function barHint(text: string, tone: "dim" | "warn" = "dim"): HTMLElement {
-  const hint = document.createElement("div");
-  css(hint, { fontSize: "11px", color: tone === "warn" ? WARN : TEXT_DIM, marginLeft: "auto" });
-  hint.textContent = text;
-  return hint;
+  return styled("div", { fontSize: "11px", color: tone === "warn" ? color.warn : color.textDim, marginLeft: "auto" }, text);
 }

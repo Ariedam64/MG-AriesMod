@@ -1,33 +1,27 @@
-// src/services/companion/tick.ts
-// Atom "tick" qui sert de dépendance artificielle à l'injection du companion.
+// A "tick" atom used as an artificial dependency of the companion's injection.
 //
-// Pourquoi
-// --------
-// Jotai ne recalcule un atom dérivé que si une de ses dépendances change. Notre
-// patch sur `quinoaDataAtom` ne dépend que de l'état de room, mis à jour environ
-// toutes les 420 ms (mesuré). Or la couche avatar n'interpole un pas que sur
-// 130 ms et COUPE dès que deux positions consécutives sont distantes de plus
-// d'une tuile : à 420 ms de cadence, le companion se téléportait.
+// Jotai only recomputes a derived atom when one of its dependencies changes.
+// Our patch on `quinoaDataAtom` only depends on the room state, updated about
+// every 420 ms (measured). But the avatar layer interpolates a step over only
+// 130 ms and SNAPS as soon as two positions in a row are more than one tile
+// apart: at a 420 ms rate the companion teleported.
 //
-// En déclarant ce tick dans les `extraDeps` du patch, le `read()` de
-// `quinoaDataAtom` en devient dépendant ; l'incrémenter force donc un recalcul
-// immédiat de toute la chaîne NPC, à la cadence qu'on choisit.
+// Listing this tick in the patch's `extraDeps` makes `quinoaDataAtom`'s read
+// depend on it, so bumping it forces the whole NPC chain to recompute at once,
+// at the rate we choose.
 //
-// Construire l'atom à la main
-// ---------------------------
-// Jotai n'est pas exposé par le jeu, mais un atom primitif v2 n'est qu'un objet
-// { init, read, write }. On le construit par fermeture (jamais via `this`) :
-// `fakeAtoms` réassigne `read` en fonction fléchée et appelle l'original sans
-// receveur, donc un `read` qui dépendrait de `this` casserait.
-//
-// On l'enregistre ensuite dans `jotaiAtomCache`, que `getAtomByLabel` parcourt.
+// The game does not expose Jotai, but a v2 primitive atom is only an object
+// `{ init, read, write }`. It is built with closures (never `this`):
+// `fakeAtoms` reassigns `read` as an arrow function and calls the original
+// with no receiver, so a `read` relying on `this` would break. It is then
+// registered in `jotaiAtomCache`, which `getAtomByLabel` walks.
 
 import { pageWindow } from "../../platform/pageContext";
 import { jSet } from "../../game/store/jotai";
 
 export const COMPANION_TICK_LABEL = "ariesCompanionTickAtom";
 
-/** Clé d'enregistrement dans le cache d'atomes du jeu. */
+/** Registration key in the game's atom cache. */
 const CACHE_KEY = `aries/companion/${COMPANION_TICK_LABEL}`;
 
 type AtomCache = { cache: Map<unknown, unknown>; get(key: unknown, value: unknown): unknown };
@@ -38,7 +32,7 @@ let counter = 0;
 function createTickAtom(): any {
   const atom: any = {};
   atom.init = 0;
-  // Fermeture sur `atom`, pas `this` : cf. note d'en-tête.
+  // Closes over `atom`, not `this`: see the header.
   atom.read = (get: (a: unknown) => unknown) => get(atom);
   atom.write = (get: (a: unknown) => unknown, set: (a: unknown, v: unknown) => void, update: unknown) =>
     set(atom, typeof update === "function" ? (update as (p: unknown) => unknown)(get(atom)) : update);
@@ -48,28 +42,29 @@ function createTickAtom(): any {
 }
 
 /**
- * Crée et enregistre l'atom une seule fois.
- * Rend `null` si le cache d'atomes du jeu n'est pas encore là.
+ * Creates and registers the atom once. `null` while the game's atom cache is
+ * not there yet.
  */
 export function ensureTickAtom(): any | null {
   if (tickAtom) return tickAtom;
   const cache = (pageWindow as any).jotaiAtomCache as AtomCache | undefined;
   if (!cache || typeof cache.get !== "function") return null;
-  // `get(key, value)` enregistre si absent : idempotent entre rechargements du HUD.
+  // `get(key, value)` registers when absent: idempotent across HUD reloads.
   tickAtom = cache.get(CACHE_KEY, createTickAtom());
   return tickAtom;
 }
 
-/** true si le tick est utilisable, donc si le recalcul forcé est disponible. */
+/** True when the tick is usable, so the forced recompute is available. */
 export function isTickAvailable(): boolean {
   return ensureTickAtom() !== null;
 }
 
 /**
- * Force un recalcul immédiat de la chaîne NPC.
- * Sans effet (et sans erreur) si le tick n'a pas pu être enregistré : la boucle
- * retombe alors sur la cadence naturelle du jeu, plus lente mais jamais saccadée
- * grâce au verrou de `index.ts`.
+ * Forces the NPC chain to recompute now.
+ *
+ * Does nothing (and throws nothing) when the tick could not be registered:
+ * the loop then falls back on the game's own rate, slower but never jerky
+ * thanks to the render guard in `motion.ts`.
  */
 export async function bumpTick(): Promise<void> {
   const atom = ensureTickAtom();

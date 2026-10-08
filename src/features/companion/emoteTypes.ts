@@ -1,16 +1,15 @@
-// src/services/companion/emoteTypes.ts
-// Les emotes du jeu, en valeurs nues.
+// The game's emotes as bare values, and the rules around playing one.
 //
-// Séparé de `emote.ts`, qui traverse le pont d'état dès l'import : les règles
-// qui décident QUELLE emote jouer doivent rester vérifiables hors navigateur.
+// Kept apart from `emote.ts`, which reaches the game store: the rules deciding
+// WHICH emote to play must stay checkable outside the browser.
 
 /**
- * Les emotes du jeu, telles que son enum les numérote.
+ * The game's emotes, as its enum numbers them.
  *
- * Relevé dans le bundle live, chunk `RoomConnection` :
+ * Read in the live bundle, chunk `RoomConnection`:
  * `Idle=-1, Clapping=0, Laughing=1, Angered=2, Crying=3, Questioning=4, Love=5`.
- * La barre du chat n'expose que 0 à 5 ; `-1` est la posture de repos, et c'est
- * aussi ce que la couche avatar applique à toute vue absente du dico.
+ * The chat bar only offers 0 to 5; `-1` is the resting pose, and also what the
+ * avatar layer applies to any view missing from the map.
  */
 export const EmoteType = {
   Idle: -1,
@@ -25,38 +24,36 @@ export const EmoteType = {
 export type EmoteType = (typeof EmoteType)[keyof typeof EmoteType];
 
 /**
- * Ce que lit `emoteSourceAtom` : les entrées du chat de la room, et la durée
- * d'affichage d'une emote.
+ * What `emoteSourceAtom` reads: the room chat's entries, and how long an emote
+ * shows.
  *
- * Le jeu ne stocke plus les emotes nulle part (bundle 1299, chunk emoteAtoms).
- * Il les recalcule à partir des entrées `kind: "emote"` du chat : la plus
- * récente de chaque joueur s'affiche, jusqu'à `lastTimestampMs` plus la durée.
- * `playerEmoteTypesAtom`, que le mod écrivait, a disparu avec ce changement, et
- * son écriture ne faisait plus rien.
+ * The game no longer stores emotes anywhere (bundle 1299, chunk emoteAtoms). It
+ * works them out from the chat's `kind: "emote"` entries: each player's latest
+ * shows until `lastTimestampMs` plus the duration. `playerEmoteTypesAtom`,
+ * which the mod used to write, went with that change, and writing it did nothing.
  */
 type EmoteSource = { entries: unknown[]; displayDurationMs: number; [key: string]: unknown };
 
 /**
- * Avance donnée à la date de nos entrées.
+ * How far ahead our entries are dated.
  *
- * L'horloge du jeu est calée sur le serveur et le mod n'y a pas accès : une
- * entrée datée de notre `Date.now()` pourrait naître déjà expirée. Datée dans
- * le futur, elle reste affichée, et c'est `emote.ts` qui la retire à la fin de
- * la pose.
+ * The game's clock is synced to the server and the mod cannot reach it: an
+ * entry dated with our `Date.now()` could be born already expired. Dated in
+ * the future it stays shown, and `emote.ts` removes it when the pose ends.
  */
 const ENTRY_LEAD_MS = 60_000;
 
-/** Entrée de chat qui fait poser le companion. */
+/** The chat entry that makes the companion pose. */
 export function companionEmoteEntry(playerId: string, emote: EmoteType, now: number) {
   return { kind: "emote", playerId, emoteType: emote, lastTimestampMs: now + ENTRY_LEAD_MS };
 }
 
 /**
- * Ajoute nos entrées à la source des emotes, APRÈS celles du jeu : le jeu
- * retient la plus récente de chaque joueur en partant de la fin.
+ * Adds our entries to the emote source, AFTER the game's: the game keeps each
+ * player's latest, starting from the end.
  *
- * Seul le calcul des emotes lit cette source ; le fil du chat lit l'état de
- * room directement, donc nos entrées n'y apparaissent pas.
+ * Only the emote computation reads this source; the chat thread reads the
+ * room state directly, so our entries do not show there.
  */
 export function mergeEmoteSource(real: unknown, fake: { entries?: unknown[] } | null | undefined): EmoteSource {
   const base = real && typeof real === "object" ? (real as EmoteSource) : ({} as EmoteSource);
@@ -66,24 +63,25 @@ export function mergeEmoteSource(real: unknown, fake: { entries?: unknown[] } | 
 }
 
 /**
- * Durée de l'animation Talking d'un PNJ après chaque bulle.
+ * How long an NPC's Talking animation lasts after each bubble.
  *
- * Relevé dans le bundle live (1299) : `pulseNpcTalking` allume Talking à chaque
- * bulle et l'éteint au bout de `xu = 3e3`, en repartant de zéro si une autre
- * bulle arrive entre-temps.
+ * Read in the live bundle (1299): `pulseNpcTalking` turns Talking on with
+ * every bubble and off after `xu = 3e3`, starting over if another bubble comes
+ * in the meantime.
  */
 export const NPC_TALKING_MS = 3000;
 
-/** Un souffle après la fin de Talking, pour ne pas tomber pile sur l'extinction. */
+/** A breath after Talking ends, so as not to land right on it. */
 const TALKING_MARGIN_MS = 150;
 
 /**
- * Éteint Talking sur l'avatar d'un PNJ. Rend `true` si c'est fait.
+ * Turns Talking off on an NPC's avatar. `true` when done.
  *
- * Le système `avatar` du jeu (bundle 1299) tient ses vues dans `views`, une Map
- * playerId -> vue, et `stopNpcTalking(id, vue)` annule le compte à rebours de
- * 3 s avant d'éteindre Talking : c'est la voie à prendre, sinon le minuteur du
- * jeu le rallumerait pour rien. À défaut, on éteint la vue elle-même.
+ * The game's `avatar` system (bundle 1299) keeps its views in `views`, a Map
+ * of playerId to view, and `stopNpcTalking(id, view)` cancels the 3 s
+ * countdown before turning Talking off: that is the way to go, or the game's
+ * timer would turn it back on for nothing. Failing that, the view itself is
+ * turned off.
  */
 export function cutTalking(avatarSystem: unknown, playerId: string): boolean {
   const system = avatarSystem as {
@@ -107,13 +105,13 @@ export function cutTalking(avatarSystem: unknown, playerId: string): boolean {
 }
 
 /**
- * Attente avant de pouvoir jouer une pose.
+ * The wait before a pose can play.
  *
- * Talking et l'emote se superposent mal : la bouche continue de bouger sous la
- * pose, et le tutoriel du jeu éteint d'ailleurs Talking chaque fois qu'il fait
- * poser un PNJ. Quand on sait l'éteindre nous-mêmes (`canCutTalking`, cf.
- * `cutTalking`), la pose remplace la parole et part tout de suite. Sinon, on
- * attend qu'il ait fini de parler.
+ * Talking and an emote overlap badly: the mouth keeps moving under the pose,
+ * and the game's tutorial turns Talking off whenever it makes an NPC pose.
+ * When we can turn it off ourselves (`canCutTalking`, see `cutTalking`), the
+ * pose replaces the speech and goes at once. Otherwise it waits until he has
+ * finished talking.
  */
 export function emoteStartDelay(lastSpokeAt: number | null, now: number, canCutTalking = false): number {
   if (canCutTalking) return 0;

@@ -1,21 +1,18 @@
-// src/ui/menus/companion/hatch-settings-modal.ts
-// Réglages de la couvée : avec quelle équipe il ouvre, avec quelle il vend.
+// Hatching settings: which team he hatches with, which he sells with.
 //
-// Deux équipes et rien d'autre. Ce qu'on garde se choisit dans la popup Hatch,
-// au moment où on lance la couvée et où on voit ce qu'il y a dans le sac ; ici
-// ne vit que ce qui ne dépend pas d'une couvée en particulier.
+// Two teams and nothing else. What to keep is chosen in the Hatch popup, when
+// the hatch starts and the bag is in sight; only what does not depend on one
+// hatch lives here.
 
 import { CompanionService } from "..";
-import { loadCompanionSettings, markReviewed } from "../state";
-import { TEXT_DIM, button, css } from "../../../ui/kit/panel";
 import { settingRow } from "../../../ui/kit/layout";
-import { NO_TEAMS_HINT, teamSelect } from "./teamSelect";
 import { openModal } from "../../../ui/kit/modal";
-import { openSettingsModal } from "./settingsModal";
+import { loadCompanionSettings, markReviewed } from "../state";
+import { NO_TEAMS_HINT, addBackButton, settingsHint, teamSelect } from "./settingsParts";
 
-export function openHatchSettingsModal(host: HTMLElement): void {
-  // Ouvrir l'écran suffit : ne rien y changer est un choix, et le rappeler
-  // indéfiniment reviendrait à harceler.
+export function openHatchSettingsModal(host: HTMLElement, back: () => void): void {
+  // Opening the screen is enough: leaving it as it is is a choice, and
+  // reminding them forever would be nagging.
   markReviewed("hatch");
 
   const modal = openModal({ host, title: "Hatching", widthPx: 460 });
@@ -29,23 +26,14 @@ export function openHatchSettingsModal(host: HTMLElement): void {
     void CompanionService.applySettings({ hatchSellTeamId: teamId });
   });
 
-  const note = document.createElement("div");
-  css(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
-  note.textContent = hatchTeam.empty
-    ? NO_TEAMS_HINT
-    : "The game will not sell a pet on your active team, so a smaller team frees the rest. He asks first, and puts yours back after.";
-
   modal.body.append(
     settingRow("Team to wear while hatching", "For abilities that change what hatches.", hatchTeam.el).row,
-    settingRow("Team to wear while selling", "Only during the sale. Yours comes straight back after.", sellTeam.el)
-      .row,
-    note
+    settingRow("Team to wear while selling", "Only during the sale. Yours comes straight back after.", sellTeam.el).row,
+    settingsHint(
+      hatchTeam.empty
+        ? NO_TEAMS_HINT
+        : "The game will not sell a pet on your active team, so a smaller team frees the rest. He asks first, and puts yours back after.",
+    ),
   );
-
-  modal.footer.append(
-    button("Back", "neutral", () => {
-      modal.close();
-      openSettingsModal(host);
-    })
-  );
+  addBackButton(modal, back);
 }

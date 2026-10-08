@@ -1,31 +1,29 @@
-// src/services/companion/chat/plantRun.ts
-// Exécution d'un plan de plantation confirmé.
+// Runs a confirmed planting plan.
 //
-// Le companion marche jusqu'à chaque case avant de poser ce qu'elle attend.
-// C'est purement visuel — le serveur accepte la commande d'où qu'on soit — mais
-// c'est ce qui donne à voir qu'il travaille plutôt que de faire pousser un
-// jardin entier depuis un coin de la carte.
+// The companion walks to each tile before putting down what it waits for.
+// Only for show, since the server accepts the command from anywhere, but it is
+// what makes him look like he works rather than growing a garden from a corner.
 //
-// Comme `PlantSeed` et `GrowEgg` partent sans accusé de réception, on ne compte
-// pas les envois : on relit le jardin et on regarde quelles cases se sont
-// remplies.
+// `PlantSeed` and `GrowEgg` get no acknowledgement, so the sends are not
+// counted: the garden is read again to see which tiles filled up.
 
+import { sleep } from "../../../lib/async";
 import { PlayerService } from "../../../game/player";
 import { StatsService } from "../../stats/stats";
-import { PROGRESS_EVERY, SETTLE_MS, pacer, sleep, type BatchReporter } from "./batch";
-import { createWalker } from "./walk";
-import { readPlantScope } from "./plantRead";
-import { countByItem, listPlantItems, type PlantAssignment } from "./plant";
-import { compose } from "./bubbleTags";
+import { SETTLE_MS, runSteps, type BatchReporter } from "./batch";
 import { seedIcon } from "./bubbleIcons";
+import { compose } from "./bubbleTags";
+import { hireCrew } from "./crew";
+import { countByItem, listPlantItems, type PlantAssignment } from "./plant";
+import { readPlantScope } from "./plantRead";
 
-/** La graine dominante d'un plan. Un oeuf n'en a pas, et rend donc `null`. */
+/** The plan's main seed. An egg has none, and gives `null`. */
 function topSeed(plan: PlantAssignment[]) {
   const most = countByItem(plan)[0];
   return most?.kind === "seed" ? seedIcon(most.id) : null;
 }
 
-/** Pose une graine ou un œuf. Une commande par sorte, un seul appelant. */
+/** Puts down a seed or an egg. */
 async function send(assignment: PlantAssignment): Promise<void> {
   if (assignment.kind === "egg") {
     await PlayerService.plantEgg(assignment.tileIndex, assignment.id);
@@ -35,10 +33,10 @@ async function send(assignment: PlantAssignment): Promise<void> {
 }
 
 /**
- * Combien de cases visées se sont réellement remplies.
+ * How many targeted tiles really filled up.
  *
- * Rend `null` quand on n'a pas pu relire le jardin : annoncer un succès qu'on
- * n'a pas constaté serait pire que d'avouer qu'on ne sait pas.
+ * `null` when the garden could not be read again: announcing a success nobody
+ * saw would be worse than admitting he does not know.
  */
 async function countPlanted(attempted: PlantAssignment[]): Promise<number | null> {
   try {
@@ -49,7 +47,7 @@ async function countPlanted(attempted: PlantAssignment[]): Promise<number | null
   }
 }
 
-/** Rend compte du lot, en relisant le jardin plutôt qu'en comptant les envois. */
+/** Reports on the batch by reading the garden, not by counting the sends. */
 async function report(attempted: PlantAssignment[], cancelled: boolean, reporter: BatchReporter): Promise<void> {
   if (attempted.length === 0) {
     reporter.say("report", "Stopped before I planted anything.");
@@ -61,10 +59,7 @@ async function report(attempted: PlantAssignment[], cancelled: boolean, reporter
   const stopped = cancelled ? " before you stopped me" : "";
 
   if (planted === null) {
-    reporter.say(
-      "report",
-      `Planted all ${attempted.length}${stopped}, but I could not check.`
-    );
+    reporter.say("report", `Planted all ${attempted.length}${stopped}, but I could not check.`);
     return;
   }
 
@@ -76,21 +71,17 @@ async function report(attempted: PlantAssignment[], cancelled: boolean, reporter
     return;
   }
   if (planted === 0) {
-    reporter.say(
-      "report",
-      "None took. The tiles are still bare, so the seeds probably ran out."
-    );
+    reporter.say("report", "None took. The tiles are still bare, so the seeds probably ran out.");
     return;
   }
   reporter.say("report", `Planted ${planted} of ${attempted.length}${stopped}. The rest would not go in.`);
 }
 
 /**
- * Plante le lot confirmé, case par case.
+ * Plants the confirmed plan, tile by tile.
  *
- * On exécute le plan tel qu'il a été proposé : ni recalcul, ni rattrapage. Si
- * le jardin a bougé entre-temps, c'est la vérification de signature, en amont,
- * qui a déjà refusé et reposé la question.
+ * The plan runs as it was proposed: no recount, no catching up. If the garden
+ * moved meanwhile, the signature check upstream already refused and asked again.
  */
 export async function executePlantBatch(plan: PlantAssignment[], reporter: BatchReporter): Promise<void> {
   const what = countByItem(plan);
@@ -100,29 +91,21 @@ export async function executePlantBatch(plan: PlantAssignment[], reporter: Batch
       : `On it. Planting ${listPlantItems(plan)} now.`;
   reporter.say("reply", opening, compose(topSeed(plan), " ", opening));
 
-  const walker = await createWalker((message) => reporter.say("system", message));
-
   const attempted: PlantAssignment[] = [];
-  const pace = pacer();
-  for (const assignment of plan) {
-    if (reporter.stopped()) break;
-
-    // Le trajet compte comme de l'attente : voir `pacer`.
-    await walker.toGardenTile(assignment.tileIndex);
-    await pace.wait();
-    attempted.push(assignment);
-    await send(assignment);
-    pace.mark();
-
-    const done = attempted.length;
-    reporter.progress(done, plan.length);
-    if (done % PROGRESS_EVERY === 0 && done < plan.length) {
-      reporter.say("system", `${done} of ${plan.length} in the ground so far...`);
-    }
-  }
-
-  // Rendu à son mode : sans cela il resterait planté sur la dernière case.
-  walker.release();
+  await runSteps({
+    items: plan,
+    reporter,
+    hire: () => hireCrew(reporter),
+    async step(assignment, walker, pace) {
+      // The walk counts as waiting: see `pacer`.
+      await walker.toGardenTile(assignment.tileIndex);
+      await pace.wait();
+      attempted.push(assignment);
+      await send(assignment);
+      pace.mark();
+    },
+    progressNote: (done, total) => `${done} of ${total} in the ground so far...`,
+  });
 
   await report(attempted, reporter.stopped(), reporter);
 }

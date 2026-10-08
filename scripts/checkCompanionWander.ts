@@ -1,6 +1,6 @@
 // Vérifie ce qui donne un but à ses flâneries, et quand il en parle.
 //
-// Tout est pur (src/services/companion/wanderInterest.ts et movement.ts) : la
+// Tout est pur (src/features/companion/wander.ts et movement.ts) : la
 // lecture du jardin et les poses vivent à part, dans wanderWatch.ts, et ne
 // décident de rien.
 //
@@ -19,7 +19,7 @@ import {
   shouldComment,
   type InterestKind,
   type WanderInterestInput,
-} from "../src/features/companion/wanderInterest";
+} from "../src/features/companion/wander";
 import {
   DEFAULT_MOVEMENT_CONFIG,
   drawWanderPause,

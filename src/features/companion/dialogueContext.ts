@@ -1,14 +1,8 @@
-// src/services/companion/dialogueContext.ts
-// Fournisseurs de répliques contextuelles : la seule partie du dialogue qui lit
-// l'état du jeu.
+// Contextual line providers: the only part of the dialogue that reads the game.
 //
-// Séparé de `dialogue.ts` (qui reste pur et testable hors navigateur) pour la
-// même raison que `movement.ts` l'est : la logique de choix se teste, la lecture
-// de l'état se branche. Le compte et la tournure des phrases vivent dans
-// `dialogueLines.ts`, pur lui aussi.
-//
-// Aucune donnée de jeu n'est écrite en dur : tout passe par les atomes et les
-// services existants (règle core.md).
+// Kept apart from `dialogue.ts`, which stays pure and checked outside the
+// browser. Counting and phrasing live in `dialogueLines.ts`, pure as well. No
+// game data is hardcoded: everything goes through the atoms and services.
 
 import { weatherCatalog } from "../../data";
 import { Atoms } from "../../game/store/atoms";
@@ -20,18 +14,18 @@ import {
   ripeCropCount,
   sellMessage,
   weatherDisplayName,
+  weatherEmote,
   weatherMessage,
 } from "./dialogueLines";
 import { EmoteType } from "./emoteTypes";
-import { weatherEmote } from "./reactions";
 
-/** Seuil de faim en dessous duquel un pet est signalé. */
+/** Hunger below which a pet gets mentioned. */
 const HUNGRY_PET_THRESHOLD_PCT = 25;
 
 /**
- * Interroge l'état du jeu et rend les répliques pertinentes, par priorité
- * décroissante. Chaque fournisseur est isolé : une lecture qui échoue rend
- * simplement `null` et n'empêche pas les autres de répondre.
+ * Reads the game and returns the lines worth saying, most important first.
+ * Each provider is isolated: a read that fails gives `null` and does not stop
+ * the others from answering.
  */
 export async function collectContextualLines(): Promise<ContextualLine[]> {
   const providers: Array<() => Promise<ContextualLine | null>> = [
@@ -47,7 +41,7 @@ export async function collectContextualLines(): Promise<ContextualLine[]> {
       const line = await provider();
       if (line) lines.push(line);
     } catch {
-      // Un fournisseur muet ne doit jamais empêcher les autres de parler.
+      // A silent provider must never stop the others.
     }
   }
   return lines;
@@ -81,8 +75,8 @@ async function cropsToSellLine(): Promise<ContextualLine | null> {
 async function weatherLine(): Promise<ContextualLine | null> {
   const weather = await Atoms.data.weather.get();
   if (!weather || typeof weather !== "string") return null;
-  // Catalogue lu ici, pas à l'import : au `document-start` l'API n'a pas encore
-  // répondu, et une copie figée garderait les noms embarqués toute la session.
+  // The catalog is read here, not at import: at document-start the API has not
+  // answered, and a frozen copy would keep the bundled names all session.
   const name = weatherDisplayName(weather, weatherCatalog);
   return { key: "weather", message: weatherMessage(weather, name, Math.random), emote: weatherEmote(weather) };
 }

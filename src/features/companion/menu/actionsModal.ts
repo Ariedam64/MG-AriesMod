@@ -1,43 +1,47 @@
-// src/ui/menus/companion/actions-modal.ts
-// Ce que le companion sait faire, et ce qu'il peut faire là, maintenant.
+// What the companion can do, and what he can do right now.
 //
-// Une action indisponible reste visible mais grisée, avec la raison : la faire
-// disparaître laisserait croire qu'elle n'existe pas.
+// An unavailable action stays visible but greyed out, with the reason: hiding
+// it would suggest it does not exist.
 
-import type { HarvestRequest } from "../chat";
-import { readHarvestable } from "../chat/gardenRead";
-import { reviewFeeding, type FeedReview } from "../chat/petFeed";
-import { readPlantScope } from "../chat/plantRead";
-import { EMPTY_SCOPE, type PlantScope } from "../chat/plant";
-import { EMPTY_HATCH_SCOPE, readHatchScope, type HatchScope } from "../chat/hatchRead";
-import { css } from "../../../ui/kit/panel";
-import { openHarvestModal } from "./harvestModal";
-import { openFeedModal } from "./feedModal";
-import { openPlantModal } from "./plantModal";
-import { openHatchModal } from "./hatchModal";
 import { menuCard, openModal } from "../../../ui/kit/modal";
+import type { ChatRequest } from "../chat";
+import { reviewFeeding, type FeedReview } from "../chat/feedRead";
+import { readHarvestable } from "../chat/gardenRead";
+import { EMPTY_HATCH_SCOPE, readHatchScope, type HatchScope } from "../chat/hatchRead";
+import { EMPTY_SCOPE, type PlantScope } from "../chat/plant";
+import { readPlantScope } from "../chat/plantRead";
+import { styled } from "./dom";
+import { openFeedModal } from "./feedModal";
+import { openHarvestModal } from "./harvestModal";
+import { openHatchModal } from "./hatchModal";
+import { openPlantModal } from "./plantModal";
 
 type ActionRow = {
   name: string;
-  /** Ce que l'action fait, en une ligne. */
+  /** What the action does, in one line. */
   description: string;
-  /** Rendu quand l'action ne peut rien faire pour l'instant. */
+  /** Shown when the action cannot do anything right now. */
   unavailable: string | null;
   run(): void;
 };
 
-export function openActionsModal(host: HTMLElement, onAsk: (request: HarvestRequest) => void): void {
+const DESCRIPTIONS = {
+  harvest: "Pick what your Locker lets me touch.",
+  feed: "Feed a pet something it likes.",
+  plant: "Draw where your seeds and eggs go.",
+  hatch: "Open ripe eggs and sort what hatches.",
+};
+
+export function openActionsModal(host: HTMLElement, onAsk: (request: ChatRequest) => void): void {
   const modal = openModal({ host, title: "What can you do?", widthPx: 420 });
 
-  const list = document.createElement("div");
-  css(list, { display: "flex", flexDirection: "column", gap: "8px" });
+  const list = styled("div", { display: "flex", flexDirection: "column", gap: "8px" });
   modal.body.append(list);
 
   function renderRows(rows: ActionRow[]): void {
     if (!modal.isOpen()) return;
-    list.innerHTML = "";
-    for (const action of rows) {
-      list.append(
+    list.replaceChildren(
+      ...rows.map((action) =>
         menuCard({
           name: action.name,
           detail: action.unavailable ?? action.description,
@@ -46,9 +50,9 @@ export function openActionsModal(host: HTMLElement, onAsk: (request: HarvestRequ
             modal.close();
             action.run();
           },
-        })
-      );
-    }
+        }),
+      ),
+    );
   }
 
   async function refresh(): Promise<void> {
@@ -67,7 +71,7 @@ export function openActionsModal(host: HTMLElement, onAsk: (request: HarvestRequ
     renderRows([
       {
         name: "Harvest",
-        description: "Pick what your Locker lets me touch.",
+        description: DESCRIPTIONS.harvest,
         unavailable:
           harvestable.rows.length > 0
             ? null
@@ -78,8 +82,8 @@ export function openActionsModal(host: HTMLElement, onAsk: (request: HarvestRequ
       },
       {
         name: "Feed a pet",
-        description: "Feed a pet something it likes.",
-        // « Rien à faire » recouvrait trois situations : on dit laquelle.
+        description: DESCRIPTIONS.feed,
+        // "Nothing to do" used to cover three cases: it says which.
         unavailable:
           feedable.candidates.length > 0
             ? null
@@ -92,21 +96,17 @@ export function openActionsModal(host: HTMLElement, onAsk: (request: HarvestRequ
       },
       {
         name: "Plant",
-        description: "Draw where your seeds and eggs go.",
-        // Deux blocages bien distincts : rien à semer, ou nulle part où semer.
+        description: DESCRIPTIONS.plant,
+        // Two distinct blocks: nothing to sow, or nowhere to sow it.
         unavailable:
-          plantable.items.length === 0
-            ? "You have no seeds and no eggs."
-            : freeTiles === 0
-              ? "Your plot is full."
-              : null,
+          plantable.items.length === 0 ? "You have no seeds and no eggs." : freeTiles === 0 ? "Your plot is full." : null,
         run: () => openPlantModal(host, onAsk),
       },
       {
         name: "Hatch",
-        description: "Open ripe eggs and sort what hatches.",
-        // Un sac déjà plein n'est pas « rien à faire » : c'est une éclosion qui
-        // ne donnerait rien, et ça se dit autrement.
+        description: DESCRIPTIONS.hatch,
+        // A bag already full is not "nothing to do": it is a hatch that would
+        // give nothing, and that is said differently.
         unavailable:
           hatchable.readySlots.length === 0
             ? hatchable.totalEggs > 0
@@ -120,12 +120,18 @@ export function openActionsModal(host: HTMLElement, onAsk: (request: HarvestRequ
     ]);
   }
 
-  // Rendu immédiat pour que la popup ne s'ouvre pas vide, puis état réel.
+  // Drawn at once so the popup does not open empty, then the real state.
+  const checking = (name: string, description: string): ActionRow => ({
+    name,
+    description,
+    unavailable: "Checking...",
+    run: () => {},
+  });
   renderRows([
-    { name: "Harvest", description: "Pick what your Locker lets me touch.", unavailable: "Checking...", run: () => {} },
-    { name: "Feed a pet", description: "Feed a pet something it likes.", unavailable: "Checking...", run: () => {} },
-    { name: "Plant", description: "Draw where your seeds and eggs go.", unavailable: "Checking...", run: () => {} },
-    { name: "Hatch", description: "Open ripe eggs and sort what hatches.", unavailable: "Checking...", run: () => {} },
+    checking("Harvest", DESCRIPTIONS.harvest),
+    checking("Feed a pet", DESCRIPTIONS.feed),
+    checking("Plant", DESCRIPTIONS.plant),
+    checking("Hatch", DESCRIPTIONS.hatch),
   ]);
   void refresh();
 }

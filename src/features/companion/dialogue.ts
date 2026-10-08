@@ -1,70 +1,67 @@
-// src/services/companion/dialogue.ts
-// Choisit ce que le companion dit quand on lui parle.
+// Picks what the companion says when he is talked to.
 //
-// Deux sources, mêlées dans un même tirage :
-//  1. les répliques contextuelles, qui signalent quelque chose d'utile
-//     (récolte prête, pet affamé, météo, crops à vendre), avec une probabilité
-//     fixe (`CONTEXTUAL_CHANCE`) ;
-//  2. sinon, une phrase perso tirée de la liste réglée par l'utilisateur.
+// Two sources, mixed in one draw:
+//  1. contextual lines, which point out something useful (a harvest ready, a
+//     hungry pet, the weather, crops to sell), at a fixed chance
+//     (`CONTEXTUAL_CHANCE`);
+//  2. otherwise, a free line from the list the player set.
 //
-// Ce module ne contient QUE la sélection, et n'importe rien : `pickDialogueLine`
-// est pure (hasard et horloge injectés), donc testable hors navigateur
-// (scripts/checkCompanionDialogue.ts). La lecture de l'état du jeu vit dans
-// `dialogueContext.ts`.
+// Only the picking lives here: `pickDialogueLine` is pure (chance and clock
+// passed in) and checked outside the browser (scripts/checkCompanionDialogue.ts).
+// Reading the game is in `dialogueContext.ts`.
+
+import { pickOne } from "../../lib/random";
 
 /**
- * Une réplique contextuelle, identifiée pour pouvoir être temporisée.
+ * A contextual line, with a key so it can be put on cooldown.
  *
- * `emote` est la valeur d'enum du jeu (cf. `emoteTypes.ts`), gardée en nombre
- * nu pour que ce module reste sans import.
+ * `emote` is the game's enum value (see `emoteTypes.ts`), kept as a bare number.
  */
 export type ContextualLine = { key: string; message: string; emote?: number | null };
 
 export type DialogueState = {
-  /** Index de la dernière phrase perso, pour ne pas la répéter d'affilée. */
+  /** The last free line's index, so it is not repeated twice in a row. */
   lastCustomIndex: number;
-  /** Par clé de fournisseur : date avant laquelle il doit rester muet. */
+  /** Per provider key: the time before which it stays quiet. */
   mutedUntil: Record<string, number>;
 };
 
-export type PickInput = {
-  /** Candidats contextuels, par ordre de priorité décroissante. */
+type PickInput = {
+  /** Contextual candidates, most important first. */
   contextual: ContextualLine[];
   customLines: string[];
   state: DialogueState;
   nowMs: number;
   random: () => number;
-  /** Temps pendant lequel une même alerte ne se répète pas. */
+  /** How long the same alert is not repeated. */
   cooldownMs: number;
 };
 
-export type PickResult = {
-  /** `null` = rien à dire : la réplique d'origine du jeu passe alors telle quelle. */
+type PickResult = {
+  /** `null`: nothing to say, the game's own line goes through as is. */
   message: string | null;
-  /** Pose d'une réplique contextuelle. Pour une phrase perso, l'appelant la déduit du texte. */
+  /** A contextual line's pose. For a free line the caller works it out from the text. */
   emote: number | null;
-  /** Vrai quand la réplique vient des phrases perso. */
+  /** True when the line comes from the free lines. */
   custom: boolean;
   state: DialogueState;
 };
 
-/** Probabilité, à chaque Talk, qu'une alerte disponible sorte plutôt qu'une phrase perso. */
+/** The chance, on each Talk, that an available alert comes out rather than a free line. */
 export const CONTEXTUAL_CHANCE = 0.25;
 
-/** Temporisation par défaut d'une même alerte contextuelle. */
+/** The default cooldown of a contextual alert. */
 export const DEFAULT_CONTEXTUAL_COOLDOWN_MS = 120_000;
 
 /**
- * Horodatage à donner à une bulle du companion.
+ * The timestamp to give a companion bubble.
  *
- * Le jeu n'affiche une bulle de PNJ que si son horodatage dépasse celui de la
- * dernière affichée (bundle 1299, `deliverNpcChatBubble`). Or deux horloges
- * écrivent ces bulles : le mod date les siennes avec `Date.now()`, le jeu les
- * siennes avec son horloge calée sur le serveur. Un PC en avance de quelques
- * secondes suffisait pour qu'un Talk juste après une réaction du companion
- * paraisse plus ancien qu'elle : le texte restait figé, alors que la pose,
- * elle, se jouait. D'où cette règle : toujours au moins un cran après la
- * précédente.
+ * The game only shows an NPC bubble whose timestamp is past the last one shown
+ * (bundle 1299, `deliverNpcChatBubble`). But two clocks write these bubbles:
+ * the mod dates its own with `Date.now()`, the game with its clock synced to
+ * the server. A PC a few seconds ahead was enough for a Talk right after a
+ * companion reaction to look older than it: the text stayed frozen while the
+ * pose played. Hence the rule: always at least one tick after the previous.
  */
 export function nextBubbleTimestamp(last: number | null, proposed: number): number {
   if (!Number.isFinite(proposed) || last === null || !Number.isFinite(last)) return proposed;
@@ -75,10 +72,7 @@ export function initialDialogueState(): DialogueState {
   return { lastCustomIndex: -1, mutedUntil: {} };
 }
 
-/**
- * Choisit la prochaine réplique. Pure : rejoue à l'identique pour un même
- * `random` et un même `nowMs`.
- */
+/** Picks the next line. Pure: the same `random` and `nowMs` give the same answer. */
 export function pickDialogueLine(input: PickInput): PickResult {
   const { contextual, customLines, nowMs, random, cooldownMs } = input;
   const state: DialogueState = {
@@ -88,28 +82,27 @@ export function pickDialogueLine(input: PickInput): PickResult {
 
   const lines = customLines.filter((line) => typeof line === "string" && line.trim().length > 0);
 
-  // 1. Une alerte, une fois sur quatre environ, tirée parmi celles qui ne sont
-  //    pas temporisées. Elles passaient autrefois toujours en premier : le
-  //    joueur les entendait toutes d'affilée au début, puis plus rien que des
-  //    phrases perso jusqu'à la fin de leur temporisation. Sans phrase perso,
-  //    il n'y a pas d'autre choix que l'alerte.
+  // 1. An alert, about one time in four, drawn among those not on cooldown.
+  //    They used to always come first: the player heard them all in a row at
+  //    the start, then only free lines until their cooldown ended. With no
+  //    free line, the alert is the only choice.
   const available = contextual.filter(
-    (candidate) => candidate?.message && nowMs >= (state.mutedUntil[candidate.key] ?? 0)
+    (candidate) => candidate?.message && nowMs >= (state.mutedUntil[candidate.key] ?? 0),
   );
   if (available.length > 0 && (lines.length === 0 || random() < CONTEXTUAL_CHANCE)) {
-    const candidate = available[Math.min(available.length - 1, Math.floor(random() * available.length))];
+    const candidate = pickOne(available, random);
     state.mutedUntil[candidate.key] = nowMs + cooldownMs;
     return { message: candidate.message, emote: candidate.emote ?? null, custom: false, state };
   }
 
-  // 2. Phrase perso, en évitant de répéter la précédente.
+  // 2. A free line, avoiding the previous one.
   if (lines.length === 0) return { message: null, emote: null, custom: false, state };
   if (lines.length === 1) {
     state.lastCustomIndex = 0;
     return { message: lines[0], emote: null, custom: true, state };
   }
 
-  let index = Math.min(lines.length - 1, Math.floor(random() * lines.length));
+  let index = pickOne([...lines.keys()], random);
   if (index === state.lastCustomIndex) index = (index + 1) % lines.length;
   state.lastCustomIndex = index;
   return { message: lines[index], emote: null, custom: true, state };

@@ -177,15 +177,15 @@
   });
 
   // src/game/sprites/context.ts
-  function setPixiHooks(hooks3) {
-    pixiHooks = hooks3;
+  function setPixiHooks(hooks2) {
+    pixiHooks = hooks2;
   }
   function getSpriteState() {
     return spriteContext.state;
   }
   function getReadySpriteState() {
-    const state7 = spriteContext.state;
-    return state7.renderer && state7.ctors?.Text ? state7 : null;
+    const state5 = spriteContext.state;
+    return state5.renderer && state5.ctors?.Text ? state5 : null;
   }
   function getPixiApp() {
     return pixiHooks?.app ?? spriteContext.state.app;
@@ -221,30 +221,30 @@
   // src/game/sprites/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-    const listeners3 = /* @__PURE__ */ new Set();
+    const listeners2 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
-    const tick3 = (now) => {
+    const tick = (now) => {
       const delta = last ? (now - last) / (1e3 / 60) : 1;
       last = now;
-      for (const fn of listeners3) {
+      for (const fn of listeners2) {
         try {
           fn(delta);
         } catch {
         }
       }
-      rafId = requestAnimationFrame(tick3);
+      rafId = requestAnimationFrame(tick);
     };
     const ticker = {
       add(fn) {
-        if (!listeners3.size) {
-          rafId = requestAnimationFrame(tick3);
+        if (!listeners2.size) {
+          rafId = requestAnimationFrame(tick);
         }
-        listeners3.add(fn);
+        listeners2.add(fn);
       },
       remove(fn) {
-        listeners3.delete(fn);
-        if (!listeners3.size) {
+        listeners2.delete(fn);
+        if (!listeners2.size) {
           cancelAnimationFrame(rafId);
         }
       },
@@ -419,7 +419,7 @@
   });
 
   // src/game/sprites/pixi/resolvePixi.ts
-  async function resolvePixiFast(hooks3) {
+  async function resolvePixiFast(hooks2) {
     const root4 = pageWindow;
     const debugInfo = {
       startedAt: Date.now(),
@@ -445,7 +445,7 @@
       const retry = check();
       if (retry) return resolved("fast-check-retry", retry);
     }
-    const waited = await waitForPixi(hooks3);
+    const waited = await waitForPixi(hooks2);
     return resolved("waitForPixi-fallback", { app: waited.app, renderer: waited.renderer, version: waited.version });
   }
   function inspectStage(root4) {
@@ -524,7 +524,7 @@
   function canvasOf(renderer) {
     return renderer?.canvas || renderer?.view?.canvas || renderer?.view || null;
   }
-  function watchRendererHealth(state7, hooks3) {
+  function watchRendererHealth(state5, hooks2) {
     const pageWin = pageWindow;
     let staleStreak = 0;
     let needsCtorsRederive = false;
@@ -542,7 +542,7 @@
         if (needsCtorsRederive) {
           debugState3.ctorsRederiveAttempts += 1;
           try {
-            state7.ctors = getCtors(state7.app ?? state7.renderer);
+            state5.ctors = getCtors(state5.app ?? state5.renderer);
             needsCtorsRederive = false;
             debugState3.lastCtorsRederiveError = null;
             console.info("[MG SpriteCatalog] re-derived ctors from the new renderer");
@@ -550,7 +550,7 @@
             debugState3.lastCtorsRederiveError = String(error?.message ?? error);
           }
         }
-        const canvas = canvasOf(state7.renderer);
+        const canvas = canvasOf(state5.renderer);
         const canvasHealthy = !!canvas && typeof document !== "undefined" && document.contains(canvas);
         if (canvasHealthy) {
           staleStreak = 0;
@@ -560,14 +560,14 @@
         staleStreak += 1;
         debugState3.staleStreak = staleStreak;
         if (staleStreak < REQUIRED_STALE_STREAK) return;
-        const freshRenderer = hooks3.renderer;
-        if (!freshRenderer || freshRenderer === state7.renderer) return;
+        const freshRenderer = hooks2.renderer;
+        if (!freshRenderer || freshRenderer === state5.renderer) return;
         const freshCanvas = canvasOf(freshRenderer);
         if (!freshCanvas || typeof document === "undefined" || !document.contains(freshCanvas)) return;
         console.info("[MG SpriteCatalog] renderer canvas went stale, re-resolved a fresh one");
         debugState3.swaps.push({ at: Date.now(), fromCanvasInDoc: canvasHealthy });
-        state7.renderer = freshRenderer;
-        if (hooks3.app) state7.app = hooks3.app;
+        state5.renderer = freshRenderer;
+        if (hooks2.app) state5.app = hooks2.app;
         needsCtorsRederive = true;
         staleStreak = 0;
         debugState3.staleStreak = 0;
@@ -1097,20 +1097,20 @@
     }
     ctx2.restore();
   }
-  function tallOverlayFromSheet(mutName, state7) {
+  function tallOverlayFromSheet(mutName, state5) {
     const target = String(mutName || "").toLowerCase();
-    for (const k of state7.tex.keys()) {
+    for (const k of state5.tex.keys()) {
       const m = /sprite\/mutation-overlay\/([A-Za-z0-9]+)TallPlant/i.exec(String(k));
       if (!m || !m[1]) continue;
       const prefix = m[1].toLowerCase();
       if (prefix === target) {
-        const t = state7.tex.get(k);
+        const t = state5.tex.get(k);
         if (t) return { tex: t, key: k };
       }
     }
     return null;
   }
-  function findOverlayTexture(itKey, mutName, state7, preferTall) {
+  function findOverlayTexture(itKey, mutName, state5, preferTall) {
     if (!mutName) return null;
     const base = baseNameOf(itKey);
     const aliases = mutationAliases(mutName);
@@ -1123,27 +1123,27 @@
         `sprite/mutation/${name}`
       ];
       for (const k of tries) {
-        const t = state7.tex.get(k);
+        const t = state5.tex.get(k);
         if (t) return { tex: t, key: k };
       }
       if (preferTall) {
-        const hit = state7.tex.get(`sprite/mutation-overlay/${name}TallPlant`) && {
-          tex: state7.tex.get(`sprite/mutation-overlay/${name}TallPlant`),
+        const hit = state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`) && {
+          tex: state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`),
           key: `sprite/mutation-overlay/${name}TallPlant`
-        } || state7.tex.get(`sprite/mutation-overlay/${name}`) && {
-          tex: state7.tex.get(`sprite/mutation-overlay/${name}`),
+        } || state5.tex.get(`sprite/mutation-overlay/${name}`) && {
+          tex: state5.tex.get(`sprite/mutation-overlay/${name}`),
           key: `sprite/mutation-overlay/${name}`
-        } || tallOverlayFromSheet(mutName, state7);
+        } || tallOverlayFromSheet(mutName, state5);
         if (hit) return hit;
       }
     }
     return null;
   }
-  function findIconTexture(itKey, mutName, isTall, state7) {
+  function findIconTexture(itKey, mutName, isTall, state5) {
     if (!mutName) return null;
     const meta = MUT_META[mutName];
     if (isTall && meta?.tallIconOverride) {
-      const t = state7.tex.get(meta.tallIconOverride);
+      const t = state5.tex.get(meta.tallIconOverride);
       if (t) return t;
     }
     const base = baseNameOf(itKey);
@@ -1158,11 +1158,11 @@
         `sprite/mutation/${name}/${base}`
       ];
       for (const k of tries) {
-        const t = state7.tex.get(k);
+        const t = state5.tex.get(k);
         if (t) return t;
       }
       if (isTall) {
-        const t = state7.tex.get(`sprite/mutation-overlay/${name}TallPlantIcon`) || state7.tex.get(`sprite/mutation-overlay/${name}TallPlant`);
+        const t = state5.tex.get(`sprite/mutation-overlay/${name}TallPlantIcon`) || state5.tex.get(`sprite/mutation-overlay/${name}TallPlant`);
         if (t) return t;
       }
     }
@@ -1202,14 +1202,14 @@
       }
     };
   }
-  function textureToCanvas(tex, state7, cfg) {
-    const hit = state7.srcCan.get(tex);
+  function textureToCanvas(tex, state5, cfg) {
+    const hit = state5.srcCan.get(tex);
     if (hit) return hit;
     let c = null;
-    const RDR = state7.renderer;
+    const RDR = state5.renderer;
     try {
       if (RDR?.extract?.canvas && (RDR?.resolution ?? 1) === 1) {
-        const s = new state7.ctors.Sprite(tex);
+        const s = new state5.ctors.Sprite(tex);
         c = RDR.extract.canvas(s);
         s.destroy?.({ children: true, texture: false, baseTexture: false });
       }
@@ -1242,18 +1242,18 @@
         ctx2.drawImage(src, fr.x, fr.y, fr.width, fr.height, offX, offY, fr.width, fr.height);
       }
     }
-    state7.srcCan.set(tex, c);
-    if (state7.srcCan.size > cfg.srcCanvasMax) {
-      const k = state7.srcCan.keys().next().value;
-      if (k !== void 0) state7.srcCan.delete(k);
+    state5.srcCan.set(tex, c);
+    if (state5.srcCan.size > cfg.srcCanvasMax) {
+      const k = state5.srcCan.keys().next().value;
+      if (k !== void 0) state5.srcCan.delete(k);
     }
     return c;
   }
-  function buildColorLayerSprites(tex, dims, pipeline, state7, cfg, disposables, TextureCtor) {
+  function buildColorLayerSprites(tex, dims, pipeline, state5, cfg, disposables, TextureCtor) {
     const { w, h: h2, aX, aY, basePos } = dims;
     const layers = [];
     for (const step of pipeline) {
-      const clone2 = new state7.ctors.Sprite(tex);
+      const clone2 = new state5.ctors.Sprite(tex);
       clone2.anchor?.set?.(aX, aY);
       clone2.position.set(basePos.x, basePos.y);
       clone2.zIndex = 1;
@@ -1264,7 +1264,7 @@
       lctx.imageSmoothingEnabled = false;
       lctx.save();
       lctx.translate(w * aX, h2 * aY);
-      lctx.drawImage(textureToCanvas(tex, state7, cfg), -w * aX, -h2 * aY);
+      lctx.drawImage(textureToCanvas(tex, state5, cfg), -w * aX, -h2 * aY);
       lctx.restore();
       applyFilterOnto(lctx, layerCanvas, step.name, step.isTall);
       const filteredTex = TextureCtor.from(layerCanvas);
@@ -1274,14 +1274,14 @@
     }
     return layers;
   }
-  function buildTallOverlaySprites(itKey, dims, overlayPipeline, state7, cfg, baseCanvas, TextureCtor, disposables) {
+  function buildTallOverlaySprites(itKey, dims, overlayPipeline, state5, cfg, baseCanvas, TextureCtor, disposables) {
     const { aX, basePos } = dims;
     if (!baseCanvas) return [];
     const overlays = [];
     for (const step of overlayPipeline) {
-      const hit = step.overlayTall && state7.tex.get(step.overlayTall) && { tex: state7.tex.get(step.overlayTall), key: step.overlayTall } || findOverlayTexture(itKey, step.name, state7, true);
+      const hit = step.overlayTall && state5.tex.get(step.overlayTall) && { tex: state5.tex.get(step.overlayTall), key: step.overlayTall } || findOverlayTexture(itKey, step.name, state5, true);
       if (!hit?.tex) continue;
-      const oCan = textureToCanvas(hit.tex, state7, cfg);
+      const oCan = textureToCanvas(hit.tex, state5, cfg);
       if (!oCan) continue;
       const ow = oCan.width;
       const overlayAnchor = { x: 0, y: 0 };
@@ -1302,7 +1302,7 @@
       mctx.drawImage(baseCanvas, -overlayPos.x, -overlayPos.y);
       const maskedTex = TextureCtor.from(maskedCanvas);
       disposables.push(maskedTex);
-      const ov = new state7.ctors.Sprite(maskedTex);
+      const ov = new state5.ctors.Sprite(maskedTex);
       ov.anchor?.set?.(overlayAnchor.x, overlayAnchor.y);
       ov.position.set(overlayPos.x, overlayPos.y);
       ov.scale.set(1);
@@ -1312,14 +1312,14 @@
     }
     return overlays;
   }
-  function buildIconSprites(itKey, dims, iconPipeline, state7, iconLayout) {
+  function buildIconSprites(itKey, dims, iconPipeline, state5, iconLayout) {
     const { basePos } = dims;
     const icons = [];
     for (const step of iconPipeline) {
       if (step.name === "Gold" || step.name === "Rainbow") continue;
-      const itex = findIconTexture(itKey, step.name, step.isTall, state7);
+      const itex = findIconTexture(itKey, step.name, step.isTall, state5);
       if (!itex) continue;
-      const icon2 = new state7.ctors.Sprite(itex);
+      const icon2 = new state5.ctors.Sprite(itex);
       const iconAnchorX = itex?.defaultAnchor?.x ?? 0.5;
       const iconAnchorY = itex?.defaultAnchor?.y ?? 0.5;
       icon2.anchor?.set?.(iconAnchorX, iconAnchorY);
@@ -1332,31 +1332,31 @@
     }
     return icons;
   }
-  function lruEvict(state7, cfg) {
+  function lruEvict(state5, cfg) {
     if (!cfg.cacheOn) return;
-    while (state7.lru.size > cfg.cacheMaxEntries || state7.cost > cfg.cacheMaxCost) {
-      const k = state7.lru.keys().next().value;
+    while (state5.lru.size > cfg.cacheMaxEntries || state5.cost > cfg.cacheMaxCost) {
+      const k = state5.lru.keys().next().value;
       if (k === void 0) break;
-      const e = state7.lru.get(k);
-      state7.lru.delete(k);
-      state7.cost = Math.max(0, state7.cost - entryCost(e));
+      const e = state5.lru.get(k);
+      state5.lru.delete(k);
+      state5.cost = Math.max(0, state5.cost - entryCost(e));
     }
   }
-  function clearVariantCache(state7) {
-    state7.lru.clear();
-    state7.cost = 0;
-    state7.srcCan.clear();
+  function clearVariantCache(state5) {
+    state5.lru.clear();
+    state5.cost = 0;
+    state5.srcCan.clear();
   }
-  function renderMutatedTexture(tex, itKey, V, state7, cfg) {
+  function renderMutatedTexture(tex, itKey, V, state5, cfg) {
     try {
-      if (!tex || !state7.renderer || !state7.ctors?.Container || !state7.ctors?.Sprite || !state7.ctors?.Texture) return null;
-      const { Container, Sprite, Texture } = state7.ctors;
+      if (!tex || !state5.renderer || !state5.ctors?.Container || !state5.ctors?.Sprite || !state5.ctors?.Texture) return null;
+      const { Container, Sprite, Texture } = state5.ctors;
       const w = tex?.orig?.width ?? tex?.frame?.width ?? tex?.width ?? 1;
       const h2 = tex?.orig?.height ?? tex?.frame?.height ?? tex?.height ?? 1;
       const aX = tex?.defaultAnchor?.x ?? 0.5;
       const aY = tex?.defaultAnchor?.y ?? 0.5;
       const basePos = { x: w * aX, y: h2 * aY };
-      const baseCanvas = textureToCanvas(tex, state7, cfg);
+      const baseCanvas = textureToCanvas(tex, state5, cfg);
       const root4 = new Container();
       root4.sortableChildren = true;
       try {
@@ -1383,14 +1383,14 @@
       const baseName = baseNameOf(itKey);
       const iconLayout = computeIconLayout(tex, baseName, isTall);
       const dims = { w, h: h2, aX, aY, basePos };
-      buildColorLayerSprites(tex, dims, pipeline, state7, cfg, disposables, Texture).forEach((layer2) => root4.addChild(layer2));
+      buildColorLayerSprites(tex, dims, pipeline, state5, cfg, disposables, Texture).forEach((layer2) => root4.addChild(layer2));
       if (isTall) {
-        buildTallOverlaySprites(itKey, dims, overlayPipeline, state7, cfg, baseCanvas, Texture, disposables).forEach((ov) => root4.addChild(ov));
+        buildTallOverlaySprites(itKey, dims, overlayPipeline, state5, cfg, baseCanvas, Texture, disposables).forEach((ov) => root4.addChild(ov));
       }
-      buildIconSprites(itKey, dims, iconPipeline, state7, iconLayout).forEach((icon2) => root4.addChild(icon2));
-      const RDR = state7.renderer;
+      buildIconSprites(itKey, dims, iconPipeline, state5, iconLayout).forEach((icon2) => root4.addChild(icon2));
+      const RDR = state5.renderer;
       let rt = null;
-      const RectCtor = state7.ctors?.Rectangle;
+      const RectCtor = state5.ctors?.Rectangle;
       const crop = RectCtor ? new RectCtor(0, 0, w, h2) : null;
       if (typeof RDR?.generateTexture === "function")
         rt = RDR.generateTexture(root4, { resolution: 1, region: crop ?? void 0 });
@@ -1412,36 +1412,36 @@
       return null;
     }
   }
-  function processVariantJobs(state7, cfg) {
-    if (!cfg.jobOn || !state7.open || !state7.jobs.length) return false;
+  function processVariantJobs(state5, cfg) {
+    if (!cfg.jobOn || !state5.open || !state5.jobs.length) return false;
     const now = performance.now();
-    const burst = now - state7.changedAt <= cfg.jobBurstWindowMs;
+    const burst = now - state5.changedAt <= cfg.jobBurstWindowMs;
     const budget = burst ? cfg.jobBurstMs : cfg.jobBudgetMs;
     const t0 = performance.now();
     let done = 0;
     let needsLayout = false;
-    while (state7.jobs.length) {
+    while (state5.jobs.length) {
       if (performance.now() - t0 >= budget) break;
       if (done >= cfg.jobCapPerTick) break;
-      const job = state7.jobs[0];
-      if (job.sig !== state7.sig) {
-        state7.jobs.shift();
-        state7.jobMap.delete(job.k);
+      const job = state5.jobs[0];
+      if (job.sig !== state5.sig) {
+        state5.jobs.shift();
+        state5.jobMap.delete(job.k);
         continue;
       }
       const tex = job.src[job.i];
       if (!tex) {
-        state7.jobs.shift();
-        state7.jobMap.delete(job.k);
+        state5.jobs.shift();
+        state5.jobMap.delete(job.k);
         continue;
       }
-      const ft = renderMutatedTexture(tex, job.itKey, job.V, state7, cfg);
+      const ft = renderMutatedTexture(tex, job.itKey, job.V, state5, cfg);
       if (ft) job.out.push(ft);
       job.i++;
       done++;
       if (job.i >= job.src.length) {
-        state7.jobs.shift();
-        state7.jobMap.delete(job.k);
+        state5.jobs.shift();
+        state5.jobMap.delete(job.k);
         let entry = null;
         if (job.isAnim) {
           if (job.out.length >= 2) entry = { isAnim: true, frames: job.out };
@@ -1451,9 +1451,9 @@
           if (job.out[0]) entry = { isAnim: false, tex: job.out[0] };
         }
         if (entry) {
-          state7.lru.set(job.k, entry);
-          state7.cost += entryCost(entry);
-          lruEvict(state7, cfg);
+          state5.lru.set(job.k, entry);
+          state5.cost += entryCost(entry);
+          lruEvict(state5, cfg);
           needsLayout = true;
         }
       }
@@ -1534,13 +1534,13 @@
       };
       hasMutationFilter = (value) => Boolean(value && FILTERS[value]);
       isTallKey = (k) => /tallplant/i.test(k);
-      computeVariantSignature = (state7) => {
-        if (!state7.mutOn) {
-          const f = hasMutationFilter(state7.f) ? state7.f : null;
+      computeVariantSignature = (state5) => {
+        if (!state5.mutOn) {
+          const f = hasMutationFilter(state5.f) ? state5.f : null;
           const baseMuts = f ? [f] : [];
           return { mode: "F", muts: baseMuts, overlayMuts: baseMuts, selectedMuts: baseMuts, sig: `F:${f ?? ""}` };
         }
-        const raw = state7.mutations.filter((value) => hasMutationFilter(value));
+        const raw = state5.mutations.filter((value) => hasMutationFilter(value));
         const selected = sortMutations(raw);
         const muts = normalizeMutListColor(raw);
         const overlayMuts = normalizeMutListOverlay(raw);
@@ -1603,48 +1603,48 @@
   });
 
   // src/game/sprites/api/expose.ts
-  function exposeApi(state7, hud) {
+  function exposeApi(state5, hud) {
     const root4 = pageWindow;
     const api = {
       open() {
         hud.root?.style && (hud.root.style.display = "block");
-        state7.open = true;
+        state5.open = true;
       },
       close() {
         hud.root?.style && (hud.root.style.display = "none");
-        state7.open = false;
+        state5.open = false;
       },
       toggle() {
-        state7.open ? api.close() : api.open();
+        state5.open ? api.close() : api.open();
       },
       setCategory(cat) {
-        state7.cat = cat || "__all__";
+        state5.cat = cat || "__all__";
       },
       setFilterText(text2) {
-        state7.q = String(text2 || "").trim();
+        state5.q = String(text2 || "").trim();
       },
       setSpriteFilter(name) {
-        state7.f = name;
-        state7.mutOn = false;
+        state5.f = name;
+        state5.mutOn = false;
       },
       setMutation(on, ...muts) {
-        state7.mutOn = !!on;
-        state7.f = "";
-        state7.mutations = state7.mutOn ? muts.filter(Boolean).map((name) => name) : [];
+        state5.mutOn = !!on;
+        state5.f = "";
+        state5.mutations = state5.mutOn ? muts.filter(Boolean).map((name) => name) : [];
       },
       filters() {
         return [];
       },
       categories() {
-        return [...state7.cats.keys()].sort((a, b) => a.localeCompare(b));
+        return [...state5.cats.keys()].sort((a, b) => a.localeCompare(b));
       },
       cacheStats() {
-        return { entries: state7.lru.size, cost: state7.cost };
+        return { entries: state5.lru.size, cost: state5.cost };
       },
       clearCache() {
-        clearVariantCache(state7);
+        clearVariantCache(state5);
       },
-      curVariant: () => curVariant(state7)
+      curVariant: () => curVariant(state5)
     };
     root4.MGSpriteCatalog = api;
     return api;
@@ -1665,9 +1665,9 @@
     getSpriteWithMutations: () => getSpriteWithMutations,
     listItemsByCategory: () => listItemsByCategory
   });
-  function findItem(state7, category, id) {
+  function findItem(state5, category, id) {
     const normId = normalizeKey(id);
-    for (const it of state7.items) {
+    for (const it of state5.items) {
       const keyCat = keyCategoryOf(it.key);
       if (!matchesCategory(keyCat, category)) continue;
       const base = normalizeKey(baseNameOf2(it.key));
@@ -1675,22 +1675,22 @@
     }
     return null;
   }
-  function listItemsByCategory(state7, category = "any") {
-    return state7.items.filter((it) => matchesCategory(keyCategoryOf(it.key), category));
+  function listItemsByCategory(state5, category = "any") {
+    return state5.items.filter((it) => matchesCategory(keyCategoryOf(it.key), category));
   }
   function buildVariant(mutations) {
     return buildVariantFromMutations(mutations);
   }
-  function getSpriteWithMutations(params, state7, cfg) {
-    const it = findItem(state7, params.category, params.id);
+  function getSpriteWithMutations(params, state5, cfg) {
+    const it = findItem(state5, params.category, params.id);
     if (!it) return null;
     const tex = it.isAnim ? it.frames?.[0] : it.first;
     if (!tex) return null;
     const V = buildVariantFromMutations(params.mutations);
-    return renderMutatedTexture(tex, it.key, V, state7, cfg);
+    return renderMutatedTexture(tex, it.key, V, state5, cfg);
   }
-  function getBaseSprite(params, state7) {
-    const it = findItem(state7, params.category, params.id);
+  function getBaseSprite(params, state5) {
+    const it = findItem(state5, params.category, params.id);
     if (!it) return null;
     return it.isAnim ? it.frames?.[0] ?? null : it.first;
   }
@@ -2274,11 +2274,11 @@
     if (list) list.push(handler);
     else map2.set(type, [handler]);
     return () => {
-      const current2 = map2.get(type);
-      if (!current2) return;
-      const index = current2.indexOf(handler);
-      if (index !== -1) current2.splice(index, 1);
-      if (current2.length === 0) map2.delete(type);
+      const current3 = map2.get(type);
+      if (!current3) return;
+      const index = current3.indexOf(handler);
+      if (index !== -1) current3.splice(index, 1);
+      if (current3.length === 0) map2.delete(type);
     };
   }
   function interceptOutgoing(type, rule) {
@@ -2290,22 +2290,22 @@
   function runOutgoing(message2) {
     const type = message2?.type;
     if (typeof type !== "string" || !type) return message2;
-    let current2 = message2;
+    let current3 = message2;
     for (const rule of [...rules.get(type) ?? []]) {
       try {
-        const verdict2 = rule(current2);
+        const verdict2 = rule(current3);
         if (verdict2 === "drop") return null;
-        if (verdict2 && typeof verdict2 === "object") current2 = verdict2.replace;
+        if (verdict2 && typeof verdict2 === "object") current3 = verdict2.replace;
       } catch {
       }
     }
     for (const observer2 of [...observers.get(type) ?? []]) {
       try {
-        observer2(current2);
+        observer2(current3);
       } catch {
       }
     }
-    return current2;
+    return current3;
   }
   var rules, observers;
   var init_outgoing = __esm({
@@ -2329,18 +2329,18 @@
     const original = resolveSendMessage(conn);
     if (!original) return false;
     original.owner.sendMessage = function(message2, ...rest2) {
-      let current2 = message2;
+      let current3 = message2;
       try {
         const isEnvelope = message2?.type === "QuinoaCommand" && message2?.command && typeof message2.command === "object";
         if (!isEnvelope && message2?.type) {
-          current2 = runOutgoing(message2);
-          if (current2 === null) return;
+          current3 = runOutgoing(message2);
+          if (current3 === null) return;
         }
       } catch (error) {
         console.error("[MG-mod] sendMessage hook failed:", error);
-        current2 = message2;
+        current3 = message2;
       }
-      return original.fn.call(this, current2, ...rest2);
+      return original.fn.call(this, current3, ...rest2);
     };
     status = "installed";
     shareGlobal(INSTALLED_FLAG, true);
@@ -2469,9 +2469,9 @@
     patchSocketSend();
     const wrapped2 = WrappedWebSocket;
     wrapped2.prototype = NativeWS.prototype;
-    for (const state7 of ["OPEN", "CLOSED", "CLOSING", "CONNECTING"]) {
+    for (const state5 of ["OPEN", "CLOSED", "CLOSING", "CONNECTING"]) {
       try {
-        wrapped2[state7] = NativeWS[state7];
+        wrapped2[state5] = NativeWS[state5];
       } catch {
       }
     }
@@ -2500,9 +2500,9 @@
   });
 
   // src/lib/dom.ts
-  function addStyle(css5) {
+  function addStyle(css4) {
     const style = document.createElement("style");
-    style.textContent = css5;
+    style.textContent = css4;
     document.head.appendChild(style);
     return style;
   }
@@ -3176,15 +3176,15 @@
     } else if (onClick) {
       btn.addEventListener("click", () => void onClick());
     }
-    btn.setEnabled = (enabled5) => setButtonEnabled(btn, enabled5);
+    btn.setEnabled = (enabled2) => setButtonEnabled(btn, enabled2);
     btn.setActive = (active3) => btn.classList.toggle("active", !!active3);
     if (opts.disabled) setButtonEnabled(btn, false);
     return btn;
   }
-  function setButtonEnabled(btn, enabled5) {
-    btn.disabled = !enabled5;
-    btn.classList.toggle("is-disabled", !enabled5);
-    btn.setAttribute("aria-disabled", String(!enabled5));
+  function setButtonEnabled(btn, enabled2) {
+    btn.disabled = !enabled2;
+    btn.classList.toggle("is-disabled", !enabled2);
+    btn.setAttribute("aria-disabled", String(!enabled2));
   }
   var init_button = __esm({
     "src/ui/kit/button.ts"() {
@@ -3310,11 +3310,11 @@
     };
   }
   function unwrapNestedSnapshot(raw) {
-    let current2 = raw;
-    for (let depth = 0; depth < 10 && isRecord(current2) && isRecord(current2.snapshot); depth++) {
-      current2 = current2.snapshot;
+    let current3 = raw;
+    for (let depth = 0; depth < 10 && isRecord(current3) && isRecord(current3.snapshot); depth++) {
+      current3 = current3.snapshot;
     }
-    return current2 ?? raw;
+    return current3 ?? raw;
   }
   function normalizeAriesStorage(raw) {
     const out = createDefaultAriesStorage();
@@ -3431,23 +3431,23 @@
     }, FLUSH_DELAY_MS);
   }
   function getValueAtPath(obj, path) {
-    let current2 = obj;
+    let current3 = obj;
     for (const segment of path) {
-      if (!current2 || typeof current2 !== "object") return void 0;
-      current2 = current2[segment];
+      if (!current3 || typeof current3 !== "object") return void 0;
+      current3 = current3[segment];
     }
-    return current2;
+    return current3;
   }
   function setValueAtPath(obj, path, value) {
     if (!path.length) return;
-    let current2 = obj;
+    let current3 = obj;
     for (const key2 of path.slice(0, -1)) {
-      if (!current2[key2] || typeof current2[key2] !== "object") current2[key2] = {};
-      current2 = current2[key2];
+      if (!current3[key2] || typeof current3[key2] !== "object") current3[key2] = {};
+      current3 = current3[key2];
     }
     const last = path[path.length - 1];
-    if (value === void 0) delete current2[last];
-    else current2[last] = value;
+    if (value === void 0) delete current3[last];
+    else current3[last] = value;
   }
   function getAriesStorage() {
     return load();
@@ -3456,23 +3456,23 @@
     persist(data);
   }
   function updateAriesStorage(mutator) {
-    const current2 = load();
-    mutator(current2);
-    current2.version = ARIES_STORAGE_VERSION;
-    persist(current2);
-    return current2;
+    const current3 = load();
+    mutator(current3);
+    current3.version = ARIES_STORAGE_VERSION;
+    persist(current3);
+    return current3;
   }
   function readAriesPath(path, fallback) {
     const value = getValueAtPath(load(), splitPath(path));
     return value === void 0 ? fallback : value;
   }
   function writeAriesPath(path, value) {
-    return updateAriesStorage((state7) => setValueAtPath(state7, splitPath(path), value));
+    return updateAriesStorage((state5) => setValueAtPath(state5, splitPath(path), value));
   }
   function updateAriesPath(path, updater) {
-    return updateAriesStorage((state7) => {
+    return updateAriesStorage((state5) => {
       const parts = splitPath(path);
-      setValueAtPath(state7, parts, updater(getValueAtPath(state7, parts)));
+      setValueAtPath(state5, parts, updater(getValueAtPath(state5, parts)));
     });
   }
   function readLocalValue(key2) {
@@ -3764,8 +3764,8 @@
     if (existing) return existing.promise;
     const promise = capture().then((store) => {
       if (store.__polyfill) {
-        const current2 = getBridge();
-        if (current2 && current2.promise === promise) {
+        const current3 = getBridge();
+        if (current3 && current3.promise === promise) {
           delete pageWindow[STORE_BRIDGE_GLOBAL];
         }
       }
@@ -4050,8 +4050,8 @@
       attachedUnsub = unsub;
       if (!immediate) return;
       try {
-        const current2 = await jGet(atom2);
-        if (!cancelled && current2 !== void 0) cb(current2);
+        const current3 = await jGet(atom2);
+        if (!cancelled && current3 !== void 0) cb(current3);
       } catch {
       }
     };
@@ -4130,11 +4130,11 @@
   }
   function makeView(sourceLabel, opts = {}) {
     const { path } = opts;
-    const pick2 = (src) => path ? getAtPath(src, path) : src;
-    const listen2 = (subscribe5) => async (cb, isEqual = Object.is) => {
+    const pick = (src) => path ? getAtPath(src, path) : src;
+    const listen2 = (subscribe) => async (cb, isEqual = Object.is) => {
       let prev;
-      return subscribe5(sourceLabel, (src) => {
-        const v = pick2(src);
+      return subscribe(sourceLabel, (src) => {
+        const v = pick(src);
         if (typeof prev === "undefined" || !isEqual(prev, v)) {
           const p = prev;
           prev = v;
@@ -4145,7 +4145,7 @@
     return {
       label: sourceLabel + (path ? ":" + toPathArray(path).join(".") : ""),
       async get() {
-        return pick2(await Store.select(sourceLabel));
+        return pick(await Store.select(sourceLabel));
       },
       async set(next) {
         const prev = await Store.select(sourceLabel);
@@ -4160,7 +4160,7 @@
   }
   function makeAliasedAtom(labels) {
     let resolved = null;
-    async function pick2() {
+    async function pick() {
       if (resolved) return resolved;
       for (const label2 of labels) {
         if (await Store.hasAtom(label2)) {
@@ -4172,10 +4172,10 @@
     }
     return {
       label: labels[0],
-      get: async () => (await pick2()).get(),
-      set: async (next) => (await pick2()).set(next),
-      onChange: async (cb, isEqual) => (await pick2()).onChange(cb, isEqual),
-      onChangeNow: async (cb, isEqual) => (await pick2()).onChangeNow(cb, isEqual)
+      get: async () => (await pick()).get(),
+      set: async (next) => (await pick()).set(next),
+      onChange: async (cb, isEqual) => (await pick()).onChange(cb, isEqual),
+      onChangeNow: async (cb, isEqual) => (await pick()).onChangeNow(cb, isEqual)
     };
   }
   async function readAndFollow(view, cb) {
@@ -4445,10 +4445,10 @@
     }
     return infos;
   }
-  function petsStateSig(state7) {
-    if (!Array.isArray(state7)) return "null";
-    if (!state7.length) return "empty";
-    return state7.map((p) => `${String(p?.slot?.id ?? "")}:${petSig(p)}`).join("|");
+  function petsStateSig(state5) {
+    if (!Array.isArray(state5)) return "null";
+    if (!state5.length) return "empty";
+    return state5.map((p) => `${String(p?.slot?.id ?? "")}:${petSig(p)}`).join("|");
   }
   function watchPets(cb, seed) {
     let lastInfos = seed?.infos ?? null;
@@ -4684,8 +4684,8 @@
         },
         /** Locks or unlocks an item to match `shouldBeFavorite`, and returns the state it ends in. */
         async ensureFavoriteItem(itemId, shouldBeFavorite) {
-          const current2 = (await this.getFavoriteIdSet()).has(itemId);
-          if (current2 === shouldBeFavorite) return current2;
+          const current3 = (await this.getFavoriteIdSet()).has(itemId);
+          if (current3 === shouldBeFavorite) return current3;
           await this.toggleFavoriteItem(itemId);
           return shouldBeFavorite;
         },
@@ -4728,11 +4728,11 @@
   }
   function createAutoStore(config) {
     const { logName, storagePath, storageId, storageAtom, inventoryAtom, keyFromItem } = config;
-    let enabled5 = readStoredFlag(storagePath);
+    let enabled2 = readStoredFlag(storagePath);
     let storedKeys = /* @__PURE__ */ new Set();
     let inventoryQty = /* @__PURE__ */ new Map();
     const queue = /* @__PURE__ */ new Set();
-    let busy4 = false;
+    let busy = false;
     let inventoryUnsub = null;
     let storageUnsub = null;
     const pendingKeys = /* @__PURE__ */ new Set();
@@ -4753,12 +4753,12 @@
       pendingTimer = window.setTimeout(() => {
         pendingTimer = null;
         const now = Date.now();
-        const pending6 = Array.from(pendingKeys);
+        const pending3 = Array.from(pendingKeys);
         pendingKeys.clear();
         pruneRecentMap(removedAtByKey, now);
         const filtered = [];
         const skipped = [];
-        for (const key2 of pending6) {
+        for (const key2 of pending3) {
           const removedAt = removedAtByKey.get(key2) ?? 0;
           if (removedAt && now - removedAt <= RECENT_REMOVE_MS) {
             skipped.push(key2);
@@ -4766,20 +4766,20 @@
             filtered.push(key2);
           }
         }
-        log(`${logName} pending flush`, { pending: pending6, filtered, skipped });
+        log(`${logName} pending flush`, { pending: pending3, filtered, skipped });
         if (filtered.length) queueStore(filtered);
       }, DEBOUNCE_MS);
     }
     async function flushQueue() {
-      if (busy4 || !enabled5) return;
-      busy4 = true;
+      if (busy || !enabled2) return;
+      busy = true;
       try {
-        while (queue.size && enabled5) {
+        while (queue.size && enabled2) {
           const batch = Array.from(queue);
           queue.clear();
           log(`${logName} flush start`, { batchSize: batch.length, batch });
           for (const key2 of batch) {
-            if (!enabled5) return;
+            if (!enabled2) return;
             if (!storedKeys.has(key2)) {
               log(`${logName} skip (not in storage)`, { key: key2, storageSize: storedKeys.size });
               continue;
@@ -4793,17 +4793,17 @@
           }
         }
       } finally {
-        busy4 = false;
+        busy = false;
       }
     }
     async function start2() {
       if (inventoryUnsub || storageUnsub) return;
       if (typeof window === "undefined") return;
-      const generation3 = ++startGeneration;
-      const isCurrent = () => enabled5 && startGeneration === generation3;
+      const generation = ++startGeneration;
+      const isCurrent = () => enabled2 && startGeneration === generation;
       const ready = await waitUntilReady(storageAtom, inventoryAtom, isCurrent);
       if (!ready || !isCurrent()) {
-        log(`${logName} auto-store aborted`, { ready, enabled: enabled5 });
+        log(`${logName} auto-store aborted`, { ready, enabled: enabled2 });
         return;
       }
       if (inventoryUnsub || storageUnsub) return;
@@ -4835,7 +4835,7 @@
       }
       try {
         inventoryUnsub = await inventoryAtom.onChange((next) => {
-          if (!enabled5) return;
+          if (!enabled2) return;
           const prevMap = inventoryQty;
           const nextMap = buildQtyMap(next, keyFromItem);
           const increased = diffIncreases(prevMap, nextMap);
@@ -4870,7 +4870,7 @@
       inventoryUnsub = null;
       storageUnsub = null;
       queue.clear();
-      busy4 = false;
+      busy = false;
       storedKeys.clear();
       inventoryQty.clear();
       pendingKeys.clear();
@@ -4885,7 +4885,7 @@
       isEnabled: () => readStoredFlag(storagePath),
       setEnabled(on) {
         const next = !!on;
-        enabled5 = next;
+        enabled2 = next;
         try {
           writeAriesPath(storagePath, next);
         } catch {
@@ -4898,7 +4898,7 @@
         }
       },
       bootIfEnabled() {
-        if (enabled5) void start2();
+        if (enabled2) void start2();
       }
     };
   }
@@ -5109,8 +5109,8 @@
       const index = slots.findIndex(isMatch);
       return index >= 0 ? { slot: slots[index], index } : null;
     }
-    const entries2 = Object.entries(slots).sort(([a], [b]) => compareSlotKeys(a, b));
-    for (const [key2, slot] of entries2) {
+    const entries = Object.entries(slots).sort(([a], [b]) => compareSlotKeys(a, b));
+    for (const [key2, slot] of entries) {
       if (!isMatch(slot)) continue;
       const index = Number(key2);
       return { slot, index: Number.isFinite(index) ? index : 0 };
@@ -5370,7 +5370,7 @@
     const entry = { raf: 0, baseline: /* @__PURE__ */ new WeakMap(), touched: /* @__PURE__ */ new Set() };
     activeFlashes.set(gidx, entry);
     const start2 = performance.now();
-    const tick3 = (now) => {
+    const tick = (now) => {
       const progress = Math.min(1, (now - start2) / durationMs);
       const mix = startMix * (1 - progress);
       const parent = resolveParent();
@@ -5389,9 +5389,9 @@
         stopFlashTile(gidx);
         return;
       }
-      entry.raf = requestAnimationFrame(tick3);
+      entry.raf = requestAnimationFrame(tick);
     };
-    entry.raf = requestAnimationFrame(tick3);
+    entry.raf = requestAnimationFrame(tick);
     return true;
   }
   var activeFlashes, FLASH_DEFAULT_COLOR, FLASH_DEFAULT_MIX, FLASH_DEFAULT_DURATION_MS;
@@ -5642,11 +5642,11 @@
   function _getState(label2) {
     return _fakeRegistry.get(label2) || null;
   }
-  async function _forceRepaintViaGate(gate2) {
-    if (!gate2?.closeAction || !gate2?.openAction) return;
-    await gate2.closeAction();
+  async function _forceRepaintViaGate(gate) {
+    if (!gate?.closeAction || !gate?.openAction) return;
+    await gate.closeAction();
     await new Promise((r) => setTimeout(r, 0));
-    await gate2.openAction();
+    await gate.openAction();
   }
   async function _ensureFakeInstalled(config) {
     const key2 = config.label;
@@ -5656,7 +5656,7 @@
     if (!atoms.length) {
       throw new Error(`${config.label} not found`);
     }
-    const state7 = existing ?? {
+    const state5 = existing ?? {
       config,
       enabled: false,
       payload: null,
@@ -5681,13 +5681,13 @@
           }
         }
         const real = orig(get);
-        if (!state7.enabled || state7.payload == null) return real;
-        return config.merge ? config.merge(real, state7.payload) : state7.payload;
+        if (!state5.enabled || state5.payload == null) return real;
+        return config.merge ? config.merge(real, state5.payload) : state5.payload;
       };
-      state7.patched.set(a, { readKey, orig });
+      state5.patched.set(a, { readKey, orig });
     }
     if (gateAtom && config.gate?.autoDisableOnClose) {
-      state7.unsubGate = await jSub(gateAtom, async () => {
+      state5.unsubGate = await jSub(gateAtom, async () => {
         let v;
         try {
           v = await jGet(gateAtom);
@@ -5695,12 +5695,12 @@
           v = null;
         }
         const isOpen = config.gate?.isOpen ? config.gate.isOpen(v) : !!v;
-        if (!isOpen && state7.enabled) state7.enabled = false;
+        if (!isOpen && state5.enabled) state5.enabled = false;
       });
     }
-    state7.installed = true;
-    _fakeRegistry.set(key2, state7);
-    return state7;
+    state5.installed = true;
+    _fakeRegistry.set(key2, state5);
+    return state5;
   }
   async function _primePatched(st) {
     const store = await ensureStore();
@@ -6504,7 +6504,7 @@
   }
   function parseAbilityColorsFromSwitch(switchBlock) {
     const colors = {};
-    const pending6 = [];
+    const pending3 = [];
     const tokenRe = /case\s*(['"])([^'"]+)\1\s*:|default\s*:|return\s*\{/g;
     const findProp = (segment, prop) => {
       const propRe = new RegExp(`${prop}\\s*:\\s*(['"])([\\s\\S]*?)\\1`);
@@ -6514,35 +6514,35 @@
     let match;
     while ((match = tokenRe.exec(switchBlock)) !== null) {
       if (match[2]) {
-        pending6.push(match[2]);
+        pending3.push(match[2]);
         continue;
       }
       const token = match[0];
       if (token.startsWith("default")) {
-        pending6.length = 0;
+        pending3.length = 0;
         continue;
       }
       if (!token.startsWith("return")) continue;
       const braceIndex = switchBlock.indexOf("{", match.index);
       if (braceIndex === -1) {
-        pending6.length = 0;
+        pending3.length = 0;
         continue;
       }
       const literal = extractBalancedBlock(switchBlock, braceIndex);
       if (!literal) {
-        pending6.length = 0;
+        pending3.length = 0;
         continue;
       }
       const bg = findProp(literal, "bg");
       if (!bg) {
-        pending6.length = 0;
+        pending3.length = 0;
         continue;
       }
       const hover = findProp(literal, "hover") || bg;
-      for (const id of pending6) {
+      for (const id of pending3) {
         if (!colors[id]) colors[id] = { bg, hover };
       }
-      pending6.length = 0;
+      pending3.length = 0;
     }
     return Object.keys(colors).length ? colors : null;
   }
@@ -6558,29 +6558,29 @@
   }
   function parseAbilityColorsFromHexSwitch(switchBlock) {
     const colors = {};
-    const pending6 = [];
+    const pending3 = [];
     const tokenRe = /case\s*([`'"])([^`'"]+)\1\s*:|default\s*:|return\s*([`'"])((?:#|linear-gradient)[^`'"]*)\3/g;
     let match;
     while ((match = tokenRe.exec(switchBlock)) !== null) {
       if (match[2]) {
-        pending6.push(match[2]);
+        pending3.push(match[2]);
         continue;
       }
       if (match[0].startsWith("default")) {
-        pending6.length = 0;
+        pending3.length = 0;
         continue;
       }
       const value = match[4];
       if (!value) {
-        pending6.length = 0;
+        pending3.length = 0;
         continue;
       }
       const bg = value.startsWith("#") ? hexToRgba(value, 0.9) ?? value : value;
       const hover = value.startsWith("#") ? hexToRgba(value, 1) ?? value : value;
-      for (const id of pending6) {
+      for (const id of pending3) {
         if (!colors[id]) colors[id] = { bg, hover };
       }
-      pending6.length = 0;
+      pending3.length = 0;
     }
     return Object.keys(colors).length ? colors : null;
   }
@@ -10603,7 +10603,7 @@
   function applyEdit(states, idx, applyAll, next) {
     const targets = applyAll ? states.map((_, i) => i) : [idx];
     return {
-      states: states.map((state7, i) => targets.includes(i) ? { ...next } : state7),
+      states: states.map((state5, i) => targets.includes(i) ? { ...next } : state5),
       size: next.size,
       targets
     };
@@ -10618,8 +10618,8 @@
     return applyEdit(states, idx, applyAll, { pct: clampSizePercent(size), size, mode: "custom" });
   }
   function editSlotMode(states, idx, mode, applyAll) {
-    const current2 = states[idx];
-    const size = mode === "custom" ? current2.size : clampSizePercent(current2.size);
+    const current3 = states[idx];
+    const size = mode === "custom" ? current3.size : clampSizePercent(current3.size);
     return applyEdit(states, idx, applyAll, { pct: clampSizePercent(size), size, mode });
   }
   var init_slotSize = __esm({
@@ -10648,23 +10648,23 @@
       mutations: Array.isArray(slot.mutations) ? slot.mutations : []
     };
   }
-  function syncBrushSlots(state7, species, maxSlots) {
-    if (state7.species !== species) {
+  function syncBrushSlots(state5, species, maxSlots) {
+    if (state5.species !== species) {
       return { species, slots: Array.from({ length: maxSlots }, defaultBrushSlot), applyAll: false };
     }
-    const kept = state7.slots.slice(0, maxSlots);
+    const kept = state5.slots.slice(0, maxSlots);
     const slots = (kept.length ? kept : [defaultBrushSlot()]).map(normalizeSlot);
-    return { ...state7, slots, applyAll: !!state7.applyAll };
+    return { ...state5, slots, applyAll: !!state5.applyAll };
   }
-  function patchBrushSlot(state7, idx, mode, patch) {
-    const hit = targetsOf(state7, idx);
-    return { ...state7, slots: state7.slots.map((c, i) => hit(i) ? { ...c, sizeMode: mode, ...patch } : c) };
+  function patchBrushSlot(state5, idx, mode, patch) {
+    const hit = targetsOf(state5, idx);
+    return { ...state5, slots: state5.slots.map((c, i) => hit(i) ? { ...c, sizeMode: mode, ...patch } : c) };
   }
-  function toggleBrushMutation(state7, idx, mutationId) {
-    const hit = targetsOf(state7, idx);
+  function toggleBrushMutation(state5, idx, mutationId) {
+    const hit = targetsOf(state5, idx);
     return {
-      ...state7,
-      slots: state7.slots.map((c, i) => {
+      ...state5,
+      slots: state5.slots.map((c, i) => {
         if (!hit(i)) return c;
         const prev = Array.isArray(c.mutations) ? c.mutations : [];
         const mutations = prev.includes(mutationId) ? prev.filter((m) => m !== mutationId) : [...prev, mutationId];
@@ -10702,9 +10702,9 @@
         sizeMode: "percent",
         mutations: []
       });
-      targetsOf = (state7, idx) => (i) => state7.applyAll || i === idx;
-      addBrushSlot = (state7, maxSlots) => state7.slots.length >= maxSlots ? state7 : { ...state7, slots: [...state7.slots, defaultBrushSlot()] };
-      removeBrushSlot = (state7) => state7.slots.length <= 1 ? state7 : { ...state7, slots: state7.slots.slice(0, -1) };
+      targetsOf = (state5, idx) => (i) => state5.applyAll || i === idx;
+      addBrushSlot = (state5, maxSlots) => state5.slots.length >= maxSlots ? state5 : { ...state5, slots: [...state5.slots, defaultBrushSlot()] };
+      removeBrushSlot = (state5) => state5.slots.length <= 1 ? state5 : { ...state5, slots: state5.slots.slice(0, -1) };
       brushSlotSize = (cfg) => clampSizePercent(cfg.sizeMode === "custom" ? cfg.customScale : cfg.sizePercent);
       makeGrowSlot = (species, size, mutations = []) => ({
         species,
@@ -10919,9 +10919,9 @@
     try {
       const target = getCurrentEditorTile();
       if (!target) return false;
-      const current2 = readTileObjectAt(target);
-      if (!current2) return false;
-      const updated = updater(current2);
+      const current3 = readTileObjectAt(target);
+      if (!current3) return false;
+      const updated = updater(current3);
       const next = updated?.objectType === "plant" ? { ...updated, slots: ensureSlotIds(updated.slots) } : updated;
       setPlannedGarden(withTileObject(getPlannedGarden(), target.tileType, target.localTileIndex, next));
       if (next) void repaintTile(target, next);
@@ -11175,10 +11175,10 @@
   function addCatalogAlias(alias, entry) {
     const key2 = normalizeSpriteName(alias);
     if (!key2) return;
-    const entries2 = catalogIndex.get(key2) || [];
-    if (entries2.some((known) => known.internalCat === entry.internalCat)) return;
-    entries2.push(entry);
-    catalogIndex.set(key2, entries2);
+    const entries = catalogIndex.get(key2) || [];
+    if (entries.some((known) => known.internalCat === entry.internalCat)) return;
+    entries.push(entry);
+    catalogIndex.set(key2, entries);
   }
   function readSpriteUrl(url) {
     const match = /\/assets\/sprites\/([^/]+)\/([^/?#]+)\.[a-z0-9]+(?:[?#]|$)/i.exec(url);
@@ -11227,9 +11227,9 @@
   function findCatalogSprite(internalCats, normTarget) {
     if (!normTarget) return null;
     buildCatalogIndex();
-    const entries2 = catalogIndex.get(normTarget);
-    if (!entries2?.length) return null;
-    for (const entry of entries2) {
+    const entries = catalogIndex.get(normTarget);
+    if (!entries?.length) return null;
+    for (const entry of entries) {
       if (internalCats.has(entry.internalCat)) return entry;
     }
     return null;
@@ -11239,11 +11239,11 @@
     const internalCats = expandCategories(categories);
     const fromCatalog = findCatalogSprite(internalCats, norm);
     if (fromCatalog) return fromCatalog;
-    const entries2 = nameIndex.get(norm);
-    if (!entries2?.length) {
+    const entries = nameIndex.get(norm);
+    if (!entries?.length) {
       return findSpriteFuzzy(categories, norm);
     }
-    for (const entry of entries2) {
+    for (const entry of entries) {
       if (internalCats.has(entry.internalCat)) return entry;
     }
     return findSpriteFuzzy(categories, norm);
@@ -11251,16 +11251,16 @@
   function findSpriteFuzzy(categories, normTarget) {
     if (!normTarget) return null;
     const internalCats = expandCategories(categories);
-    for (const [norm, entries2] of nameIndex) {
+    for (const [norm, entries] of nameIndex) {
       if (norm.includes(normTarget) || normTarget.includes(norm)) {
-        for (const entry of entries2) {
+        for (const entry of entries) {
           if (internalCats.has(entry.internalCat)) return entry;
         }
       }
     }
-    for (const [norm, entries2] of nameIndex) {
+    for (const [norm, entries] of nameIndex) {
       if (norm.includes(normTarget) || normTarget.includes(norm)) {
-        return entries2[0];
+        return entries[0];
       }
     }
     return null;
@@ -11509,8 +11509,8 @@
     if (!list.length) return "";
     return "|m=" + list.map(normalizeSpriteName).filter(Boolean).sort().join(",");
   }
-  function notifyWarmup(state7) {
-    warmupState = state7;
+  function notifyWarmup(state5) {
+    warmupState = state5;
     warmupListeners.forEach((listener) => {
       try {
         listener(warmupState);
@@ -11876,7 +11876,7 @@
     if (states.length > 1) {
       const slider2 = createSlider(states.length, index);
       const ticks = createTicks(states.map(formatRotationLabel));
-      const apply2 = () => {
+      const apply = () => {
         const rotation2 = states[index] ?? ANGLE_NONE;
         const { spriteIds: spriteIds2, mirrored: mirrored2 } = resolveDecorSpriteState(decorId, rotation2);
         renderSprite(spriteIds2, mirrored2);
@@ -11884,13 +11884,13 @@
       };
       slider2.oninput = () => {
         index = Number(slider2.value) || 0;
-        apply2();
+        apply();
         onSelect(states[index] ?? ANGLE_NONE);
       };
       const track = createTrackWrap();
       track.append(slider2, ticks.root);
       root4.appendChild(track);
-      apply2();
+      apply();
       return root4;
     }
     const rotation = states[0] ?? ANGLE_NONE;
@@ -12165,8 +12165,8 @@
     return tag;
   }
   function mutationPicker(onToggle, prefix) {
-    const row4 = document.createElement("div");
-    Object.assign(row4.style, { display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" });
+    const row5 = document.createElement("div");
+    Object.assign(row5.style, { display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" });
     const dropdown = document.createElement("div");
     Object.assign(dropdown.style, {
       display: "none",
@@ -12179,10 +12179,10 @@
     });
     const render = (active3) => {
       const wasOpen = dropdown.style.display !== "none";
-      row4.replaceChildren();
+      row5.replaceChildren();
       dropdown.replaceChildren();
-      if (prefix) row4.appendChild(prefix);
-      for (const id of sortMutationIds(active3)) row4.appendChild(mutationToggle(id, true, () => onToggle(id)));
+      if (prefix) row5.appendChild(prefix);
+      for (const id of sortMutationIds(active3)) row5.appendChild(mutationToggle(id, true, () => onToggle(id)));
       const available = orderedMutationKeys().map(storedMutationIdFor).filter((id) => !active3.includes(id));
       if (!available.length) {
         dropdown.style.display = "none";
@@ -12197,10 +12197,10 @@
         dropdown.style.display = open ? "flex" : "none";
         plus.style.background = open ? PLUS_BG_OPEN : PLUS_BG_CLOSED;
       };
-      row4.appendChild(plus);
+      row5.appendChild(plus);
       for (const id of available) dropdown.appendChild(mutationToggle(id, false, () => onToggle(id)));
     };
-    return { row: row4, dropdown, render };
+    return { row: row5, dropdown, render };
   }
   var orderedMutationKeys, sortMutationIds, FALLBACK_COLORS, ICON_CATEGORIES, TILE_PX, PLUS_BG_CLOSED, PLUS_BG_OPEN;
   var init_mutationPicker = __esm({
@@ -12298,8 +12298,8 @@
     return el;
   }
   function iconWithName(icon2, name, fontSize2) {
-    const row4 = document.createElement("div");
-    Object.assign(row4.style, { display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" });
+    const row5 = document.createElement("div");
+    Object.assign(row5.style, { display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" });
     const nameEl = document.createElement("div");
     nameEl.textContent = name;
     Object.assign(nameEl.style, {
@@ -12311,8 +12311,8 @@
       textAlign: "center",
       maxWidth: "100%"
     });
-    row4.append(icon2, nameEl);
-    return row4;
+    row5.append(icon2, nameEl);
+    return row5;
   }
   var EDITOR_LAYER, appendToPage;
   var init_panelChrome = __esm({
@@ -12513,9 +12513,9 @@
       input.onchange = () => {
         if (input.checked) onChange(value);
       };
-      const row4 = h("label", "qmm-radio-label");
-      row4.append(input, label2);
-      wrap.appendChild(row4);
+      const row5 = h("label", "qmm-radio-label");
+      row5.append(input, label2);
+      wrap.appendChild(row5);
     }
     return wrap;
   }
@@ -12646,15 +12646,15 @@
     return { value, modeLabel, modeSwitch, slider: range, customRow, customInput, show };
   }
   function sizeHeader(value, beside) {
-    const row4 = smallRow();
-    row4.style.opacity = "0.85";
+    const row5 = smallRow();
+    row5.style.opacity = "0.85";
     const label2 = document.createElement("span");
     label2.textContent = "Size";
-    row4.appendChild(label2);
-    if (beside) row4.appendChild(beside);
+    row5.appendChild(label2);
+    if (beside) row5.appendChild(beside);
     value.style.marginLeft = "auto";
-    row4.appendChild(value);
-    return row4;
+    row5.appendChild(value);
+    return row5;
   }
   var smallRow;
   var init_sizeControls = __esm({
@@ -12666,9 +12666,9 @@
       init_cropSize();
       init_inputGuards();
       smallRow = () => {
-        const row4 = document.createElement("div");
-        Object.assign(row4.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "11px" });
-        return row4;
+        const row5 = document.createElement("div");
+        Object.assign(row5.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "11px" });
+        return row5;
       };
     }
   });
@@ -12699,12 +12699,12 @@
       if (!edit) return;
       sizes = edit.states;
       for (const i of edit.targets) modes[i] = sizes[i].mode;
-      sizes.forEach((state7, i) => boxes[i]?.showSize(state7));
+      sizes.forEach((state5, i) => boxes[i]?.showSize(state5));
       writeSlots(edit.targets, () => ({ size: edit.size }));
     };
     const toggleMutation = (idx, id) => {
-      const current2 = mutationLists[idx];
-      const next = current2.includes(id) ? current2.filter((m) => m !== id) : [...current2, id];
+      const current3 = mutationLists[idx];
+      const next = current3.includes(id) ? current3.filter((m) => m !== id) : [...current3, id];
       const targets = editAllSlots ? allIndices() : [idx];
       for (const t of targets) mutationLists[t] = next.slice();
       writeSlots(targets, () => ({ mutations: next.slice() }));
@@ -12728,8 +12728,8 @@
     content2.appendChild(list);
   }
   function slotCountRow(species, count, maxSlots) {
-    const row4 = document.createElement("div");
-    Object.assign(row4.style, {
+    const row5 = document.createElement("div");
+    Object.assign(row5.style, {
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
@@ -12758,19 +12758,19 @@
     const buttons = document.createElement("div");
     Object.assign(buttons.style, { display: "flex", gap: "6px", alignItems: "center" });
     buttons.append(remove, add);
-    row4.append(label2, buttons);
-    return row4;
+    row5.append(label2, buttons);
+    return row5;
   }
   function editAllRow() {
-    const row4 = document.createElement("label");
-    Object.assign(row4.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", opacity: "0.9", cursor: "pointer" });
-    row4.append(
+    const row5 = document.createElement("label");
+    Object.assign(row5.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", opacity: "0.9", cursor: "pointer" });
+    row5.append(
       switchInput(editAllSlots, (on) => {
         editAllSlots = on;
       }),
       document.createTextNode("Edit all slots together")
     );
-    return row4;
+    return row5;
   }
   function plantSlotBox(handlers) {
     const size = sizeControls("Use custom size");
@@ -12787,7 +12787,7 @@
     root4.append(sizeHeader(size.value), size.modeLabel, size.slider, size.customRow, mutationsWrap);
     return {
       root: root4,
-      showSize: (state7) => size.show({ pct: state7.pct, mode: state7.mode, customText: String(state7.size) }),
+      showSize: (state5) => size.show({ pct: state5.pct, mode: state5.mode, customText: String(state5.size) }),
       showMutations: (list) => mutations.render(list)
     };
   }
@@ -12876,17 +12876,17 @@
     for (const cfg of brushSlotsFor(id).slots) {
       if (cfg.enabled) cfg.mutations.forEach((m) => active3.add(m));
     }
-    const row4 = document.createElement("div");
-    Object.assign(row4.style, { display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "center" });
+    const row5 = document.createElement("div");
+    Object.assign(row5.style, { display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "center" });
     if (active3.size) {
-      for (const mutationId of sortMutationIds([...active3])) row4.appendChild(mutationTag(mutationId));
+      for (const mutationId of sortMutationIds([...active3])) row5.appendChild(mutationTag(mutationId));
     } else {
       const none = document.createElement("div");
       none.textContent = "No mutations";
       Object.assign(none.style, { opacity: "0.7", fontSize: "11px" });
-      row4.appendChild(none);
+      row5.appendChild(none);
     }
-    into.appendChild(row4);
+    into.appendChild(row5);
   }
   var root, content, stopFollowing;
   var init_currentItemPanel = __esm({
@@ -12975,9 +12975,9 @@
     const reduceMotion = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
     const canAnimate = typeof rail.animate === "function";
     if (canAnimate) rail.style.transition = "none";
-    let current2 = null;
+    let current3 = null;
     let animation = null;
-    const apply2 = (left, width) => {
+    const apply = (left, width) => {
       rail.style.transform = `translate3d(${left}px,0,0)`;
       rail.style.width = `${width}px`;
     };
@@ -13011,16 +13011,16 @@
         const dpr = window.devicePixelRatio || 1;
         const snap = (x) => Math.round(x * dpr) / dpr;
         const target = { left: snap(left), width: snap(width) };
-        const previous = current2;
-        current2 = target;
+        const previous = current3;
+        current3 = target;
         animation?.cancel();
         animation = null;
         const shouldAnimate = animate && canAnimate && !reduceMotion?.matches && previous != null && previous.width > 0 && target.width > 0;
         if (!shouldAnimate) {
-          apply2(target.left, target.width);
+          apply(target.left, target.width);
           return;
         }
-        apply2(previous.left, previous.width);
+        apply(previous.left, previous.width);
         animation = rail.animate(
           [
             { transform: `translate3d(${previous.left}px,0,0)`, width: `${previous.width}px`, opacity: 0.92 },
@@ -13029,7 +13029,7 @@
           { duration: 260, easing: "cubic-bezier(.22,.7,.28,1)", fill: "forwards" }
         );
         const finish = () => {
-          apply2(target.left, target.width);
+          apply(target.left, target.width);
           animation = null;
         };
         animation.addEventListener("finish", finish, { once: true });
@@ -13074,20 +13074,20 @@
   }
   function selectedEntryRow(id) {
     const label2 = entryLabel(picker.mode, id);
-    const row4 = document.createElement("div");
-    Object.assign(row4.style, { display: "grid", gridTemplateColumns: "auto 1fr", alignItems: "center", gap: "10px" });
+    const row5 = document.createElement("div");
+    Object.assign(row5.style, { display: "grid", gridTemplateColumns: "auto 1fr", alignItems: "center", gap: "10px" });
     const name = document.createElement("div");
     name.textContent = label2;
     Object.assign(name.style, { fontWeight: "700", fontSize: "15px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" });
-    row4.append(entryIcon(picker.mode === "decor" ? "decor" : "plant", id, label2, 48), name);
-    return row4;
+    row5.append(entryIcon(picker.mode === "decor" ? "decor" : "plant", id, label2, 48), name);
+    return row5;
   }
   function brushSlotsPanel(species, rerender) {
     const maxSlots = getMaxSlotsForSpecies(species);
-    const state7 = brushSlotsFor(species);
+    const state5 = brushSlotsFor(species);
     const panel = document.createElement("div");
     Object.assign(panel.style, { display: "grid", gap: "6px", marginTop: "6px", width: "100%" });
-    if (maxSlots > 1) panel.append(...slotCountRows(species, state7, maxSlots, rerender));
+    if (maxSlots > 1) panel.append(...slotCountRows(species, state5, maxSlots, rerender));
     const list = document.createElement("div");
     Object.assign(list.style, { display: "grid", gap: "6px" });
     const boxes = [];
@@ -13097,7 +13097,7 @@
         if (i !== from) boxes[i]?.(cfg);
       });
     };
-    state7.slots.forEach((cfg, idx) => {
+    state5.slots.forEach((cfg, idx) => {
       const { root: root4, show } = brushSlotBox(species, idx, cfg, syncOthers, rerender);
       boxes.push(show);
       list.appendChild(root4);
@@ -13105,13 +13105,13 @@
     panel.appendChild(list);
     return panel;
   }
-  function slotCountRows(species, state7, maxSlots, rerender) {
+  function slotCountRows(species, state5, maxSlots, rerender) {
     const header = document.createElement("div");
     Object.assign(header.style, { display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", opacity: "0.9" });
     const right = document.createElement("div");
     Object.assign(right.style, { display: "flex", gap: "6px", alignItems: "center" });
     const count = document.createElement("span");
-    count.textContent = `${state7.slots.length}/${maxSlots}`;
+    count.textContent = `${state5.slots.length}/${maxSlots}`;
     right.append(
       count,
       roundButton("-", () => {
@@ -13128,7 +13128,7 @@
     header.append(title, right);
     const applyAllRow = document.createElement("label");
     Object.assign(applyAllRow.style, { display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", opacity: "0.9", cursor: "pointer" });
-    const applyAll = switchInput(state7.applyAll, (on) => {
+    const applyAll = switchInput(state5.applyAll, (on) => {
       editBrushSlots(species, (s) => ({ ...s, applyAll: on }));
       rerender();
     });
@@ -13302,8 +13302,8 @@
   function renderEntryGrid() {
     if (!listWrap) return;
     const selectedId = getSelectedId();
-    const entries2 = pickerEntries();
-    const signature = `${picker.mode}:${JSON.stringify(entries2)}`;
+    const entries = pickerEntries();
+    const signature = `${picker.mode}:${JSON.stringify(entries)}`;
     const existing = listWrap.querySelector('[data-editor-side-list="list"]');
     if (existing && existing.dataset.sig === signature) {
       existing.querySelectorAll("button[data-id]").forEach((btn) => {
@@ -13311,7 +13311,7 @@
       });
       return;
     }
-    if (!entries2.length) {
+    if (!entries.length) {
       listWrap.replaceChildren(hint("No entries."));
       return;
     }
@@ -13319,7 +13319,7 @@
     grid.dataset.editorSideList = "list";
     grid.dataset.sig = signature;
     Object.assign(grid.style, { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(34px, 1fr))", gap: "4px" });
-    for (const entry of entries2) grid.appendChild(entryButton(entry.id, entry.label, entry.id === selectedId));
+    for (const entry of entries) grid.appendChild(entryButton(entry.id, entry.label, entry.id === selectedId));
     listWrap.replaceChildren(grid);
   }
   var root2, listWrap, detailsWrap;
@@ -13437,14 +13437,14 @@
   });
 
   // src/features/editor/editor.ts
-  function applyState(enabled5, emit2) {
+  function applyState(enabled2, emit2) {
     const wasEnabled = editorSession.enabled;
-    if (enabled5 && !wasEnabled) forgetCurrentEditorTile();
-    setEditorUiShown(enabled5);
-    if (enabled5 && !wasEnabled) void startPlannedGarden();
-    else if (!enabled5 && wasEnabled) void stopPlannedGarden();
-    editorSession.enabled = enabled5;
-    if (emit2 && enabled5 !== wasEnabled) enabledChanged.emit(enabled5);
+    if (enabled2 && !wasEnabled) forgetCurrentEditorTile();
+    setEditorUiShown(enabled2);
+    if (enabled2 && !wasEnabled) void startPlannedGarden();
+    else if (!enabled2 && wasEnabled) void stopPlannedGarden();
+    editorSession.enabled = enabled2;
+    if (emit2 && enabled2 !== wasEnabled) enabledChanged.emit(enabled2);
   }
   var enabledChanged, EditorService;
   var init_editor = __esm({
@@ -13464,8 +13464,8 @@
         isEnabled() {
           return editorSession.enabled;
         },
-        setEnabled(enabled5) {
-          applyState(!!enabled5, true);
+        setEnabled(enabled2) {
+          applyState(!!enabled2, true);
         },
         onChange(listener) {
           return enabledChanged.on(listener);
@@ -13585,8 +13585,8 @@
   async function editGameToasts(edit) {
     const atom = getAtomByLabel(TOASTS_ATOM);
     if (!atom) return false;
-    const current2 = await jGet(atom).catch(() => []);
-    const list = Array.isArray(current2) ? current2 : [];
+    const current3 = await jGet(atom).catch(() => []);
+    const list = Array.isArray(current3) ? current3 : [];
     const next = edit(list.slice());
     const unchanged = next.length === list.length && next.every((toast3, i) => toast3 === list[i]);
     if (!unchanged) await jSet(atom, next);
@@ -13682,17 +13682,17 @@
     };
   }
   function sanitizeState(raw) {
-    const state7 = defaultState();
-    if (!raw || typeof raw !== "object") return state7;
-    state7.enabled = raw.enabled === true;
-    state7.settings = sanitizeSettings(raw.settings);
+    const state5 = defaultState();
+    if (!raw || typeof raw !== "object") return state5;
+    state5.enabled = raw.enabled === true;
+    state5.settings = sanitizeSettings(raw.settings);
     if (raw.overrides && typeof raw.overrides === "object") {
       for (const [key2, value] of Object.entries(raw.overrides)) {
         if (!key2) continue;
-        state7.overrides[key2] = { enabled: value?.enabled === true, settings: sanitizeSettings(value?.settings) };
+        state5.overrides[key2] = { enabled: value?.enabled === true, settings: sanitizeSettings(value?.settings) };
       }
     }
-    return state7;
+    return state5;
   }
   function cloneSettings(settings) {
     return {
@@ -13702,12 +13702,12 @@
       weatherRecipes: settings.weatherRecipes.map((recipe) => recipe.slice())
     };
   }
-  function cloneState(state7) {
+  function cloneState(state5) {
     const overrides = {};
-    for (const [key2, value] of Object.entries(state7.overrides)) {
+    for (const [key2, value] of Object.entries(state5.overrides)) {
       overrides[key2] = { enabled: value.enabled, settings: cloneSettings(value.settings) };
     }
-    return { enabled: state7.enabled, settings: cloneSettings(state7.settings), overrides };
+    return { enabled: state5.enabled, settings: cloneSettings(state5.settings), overrides };
   }
   var NO_WEATHER_TAG, SCALE_MODES, toScaleMode, toCropSize, uniqueStrings;
   var init_settings3 = __esm({
@@ -13876,8 +13876,8 @@
     if (!obj) return "\u2205";
     if (!isPlantObject(obj)) {
       const fields = obj;
-      const entries2 = Object.keys(fields).sort().map((key2) => `${key2}:${JSON.stringify(fields[key2])}`);
-      return `other|${entries2.join(";")}`;
+      const entries = Object.keys(fields).sort().map((key2) => `${key2}:${JSON.stringify(fields[key2])}`);
+      return `other|${entries.join(";")}`;
     }
     const plant = obj;
     const slots = Array.isArray(plant.slots) ? plant.slots.map((s) => slotSignature(s)).join("||") : "";
@@ -13889,14 +13889,14 @@
     let selectedSlotId = null;
     let info = emptySlotInfo();
     let stopped = false;
-    const changes7 = new Emitter();
+    const changes8 = new Emitter();
     const subs = new Subscriptions();
     const recompute = () => {
       if (stopped) return;
       const next = selectedSlotInfo(gardenObject, selectedSlotId);
       if (sameSlotInfo(next, info)) return;
       info = next;
-      changes7.emit(info);
+      changes8.emit(info);
     };
     const recomputeNowAndAfterTick = () => {
       recompute();
@@ -13951,11 +13951,11 @@
     })();
     return {
       get: () => info,
-      onChange: (cb) => changes7.on(cb),
+      onChange: (cb) => changes8.on(cb),
       stop() {
         stopped = true;
         cancelPendingGardenRecompute();
-        changes7.clear();
+        changes8.clear();
         subs.dispose();
       }
     };
@@ -14499,17 +14499,17 @@
     if (stored !== raw) writeAriesPath(STORAGE_PATH2, memoryStore);
     return normalized;
   }
-  function adjustValue(current2, delta, integer) {
-    const a = Number(current2);
+  function adjustValue(current3, delta, integer) {
+    const a = Number(current3);
     const b = Number(delta);
     const next = Math.max(0, (Number.isFinite(a) ? a : 0) + (Number.isFinite(b) ? b : 0));
     return integer ? Math.floor(next) : next;
   }
   function updateStats(mutator) {
-    const current2 = readFromStorage();
-    const draft = cloneStats(current2);
+    const current3 = readFromStorage();
+    const draft = cloneStats(current3);
     mutator(draft);
-    if (JSON.stringify(current2) === JSON.stringify(draft)) return current2;
+    if (JSON.stringify(current3) === JSON.stringify(draft)) return current3;
     const stored = writeToStorage(draft);
     changed.emit(cloneStats(stored));
     return stored;
@@ -15239,8 +15239,8 @@
     return typeof v === "number" && Number.isFinite(v) && v > 0 ? v : DEFAULT_MAX_HUNGER;
   }
   function getHungerPctFor(pet) {
-    const current2 = Number(pet?.slot?.hunger) || 0;
-    const pct = current2 / maxHungerForSpecies(String(pet?.slot?.petSpecies || "")) * 100;
+    const current3 = Number(pet?.slot?.hunger) || 0;
+    const pct = current3 / maxHungerForSpecies(String(pet?.slot?.petSpecies || "")) * 100;
     return +Math.max(0, Math.min(100, pct)).toFixed(1);
   }
   var OVERRIDES_PATH, INSTANT_FEED_PATH, DEFAULT_THRESHOLD_PCT, DEFAULT_MAX_HUNGER, isAllowed, catalogEntry;
@@ -15324,8 +15324,8 @@
   // src/game/fakeModal.ts
   async function openModal(modalId) {
     try {
-      const current2 = await Atoms.ui.activeModal.get();
-      if (current2 && current2 !== modalId) {
+      const current3 = await Atoms.ui.activeModal.get();
+      if (current3 && current3 !== modalId) {
         await Atoms.ui.activeModal.set(null);
         await Atoms.ui.inventoryModalIsActive.set(false);
         await new Promise((r) => requestAnimationFrame(r));
@@ -15338,8 +15338,8 @@
   async function closeModal(modalId) {
     try {
       if (modalId) {
-        const current2 = await Atoms.ui.activeModal.get();
-        if (current2 !== modalId) return;
+        const current3 = await Atoms.ui.activeModal.get();
+        if (current3 !== modalId) return;
       }
       await Atoms.ui.activeModal.set(null);
       if (modalId === INVENTORY_MODAL_ID || !modalId) {
@@ -15526,8 +15526,8 @@
     }
     return off;
   }
-  function rememberLocalId(serverId, localId2) {
-    localIdByServerId.set(serverId, localId2);
+  function rememberLocalId(serverId, localId) {
+    localIdByServerId.set(serverId, localId);
   }
   function knownLocalId(serverId) {
     return localIdByServerId.get(serverId);
@@ -15787,11 +15787,11 @@
   function sendMovePetTeam(serverId, toIndex) {
     send({ type: "MovePetTeam", movePetTeamId: serverId, toPetTeamIndex: toIndex });
   }
-  function clearPendingCreate(localId2) {
-    const timer2 = pendingCreates.get(localId2);
+  function clearPendingCreate(localId) {
+    const timer2 = pendingCreates.get(localId);
     if (timer2) clearTimeout(timer2);
-    pendingCreates.delete(localId2);
-    pendingCreateNames.delete(localId2);
+    pendingCreates.delete(localId);
+    pendingCreateNames.delete(localId);
   }
   function maybeCreateServerTeam(team) {
     if (!syncEnabled) return;
@@ -15816,11 +15816,11 @@
     reconciling = true;
     try {
       const result = reconcilePetTeams(teamsRef(), serverTeams, {
-        sentName: (localId2) => pendingCreateNames.get(localId2),
+        sentName: (localId) => pendingCreateNames.get(localId),
         knownLocalId,
         newId: newTeamId
       });
-      for (const localId2 of result.linkedLocalIds) clearPendingCreate(localId2);
+      for (const localId of result.linkedLocalIds) clearPendingCreate(localId);
       for (const update of result.pushUpdates) sendSavePetTeam(update.serverId, update.name, update.petIds);
       for (const team of result.needsCreate) maybeCreateServerTeam(team);
       for (const team of result.dropped) rememberLocalId(String(team.serverId), team.id);
@@ -15838,18 +15838,18 @@
       const slots = await stateUserSlots.get();
       const list = Array.isArray(slots) ? slots : [];
       if (!list.length) return null;
-      let roomId2 = null;
+      let roomId = null;
       let accountId = null;
       try {
-        roomId2 = await playerId.get() ?? null;
+        roomId = await playerId.get() ?? null;
       } catch {
       }
       try {
         accountId = readAccountId(await player.get());
       } catch {
       }
-      if (!roomId2 && !accountId) return null;
-      return findSlotIndex(list, { accountId, roomId: roomId2 });
+      if (!roomId && !accountId) return null;
+      return findSlotIndex(list, { accountId, roomId });
     } catch {
       return null;
     }
@@ -15876,7 +15876,7 @@
   async function startPetTeamSync() {
     if (watcherStarted) return;
     watcherStarted = true;
-    const apply2 = async (slots) => {
+    const apply = async (slots) => {
       const next = await readServerTeams(slots);
       if (next === null) return;
       const signature = serverSignature(next);
@@ -15886,12 +15886,12 @@
       reconcile();
     };
     try {
-      await apply2(await stateUserSlots.get());
+      await apply(await stateUserSlots.get());
     } catch {
     }
     try {
       await stateUserSlots.onChange((slots) => {
-        void apply2(slots);
+        void apply(slots);
       });
     } catch {
     }
@@ -15902,7 +15902,7 @@
     syncEnabled = next;
     writeAriesPath(SYNC_ENABLED_PATH, next);
     if (!next) {
-      for (const localId2 of Array.from(pendingCreates.keys())) clearPendingCreate(localId2);
+      for (const localId of Array.from(pendingCreates.keys())) clearPendingCreate(localId);
       return;
     }
     lastCreateAttempt.clear();
@@ -15957,12 +15957,12 @@
     const list = teamsRef();
     const index = list.findIndex((t) => t.id === patch.id);
     if (index < 0) return null;
-    const current2 = list[index];
+    const current3 = list[index];
     const next = {
-      id: current2.id,
-      name: typeof patch.name === "string" ? petTeamName(patch.name) : current2.name,
-      slots: Array.isArray(patch.slots) ? patch.slots.slice(0, SLOT_COUNT2) : current2.slots,
-      serverId: current2.serverId ?? null
+      id: current3.id,
+      name: typeof patch.name === "string" ? petTeamName(patch.name) : current3.name,
+      slots: Array.isArray(patch.slots) ? patch.slots.slice(0, SLOT_COUNT2) : current3.slots,
+      serverId: current3.serverId ?? null
     };
     commitTeams(list.map((t, i) => i === index ? next : t));
     const petIds = next.slots.filter((x) => !!x);
@@ -16799,8 +16799,8 @@
     return stringToHotkey(raw) ?? null;
   }
   function writeStored(id, hk) {
-    updateAriesPath(BINDINGS_PATH, (current2) => {
-      const next = current2 && typeof current2 === "object" ? { ...current2 } : {};
+    updateAriesPath(BINDINGS_PATH, (current3) => {
+      const next = current3 && typeof current3 === "object" ? { ...current3 } : {};
       if (hk === void 0) delete next[id];
       else next[id] = hk ? hotkeyToString(hk) : STORED_NONE;
       return next;
@@ -16813,10 +16813,10 @@
     if (typeof raw === "boolean") return raw;
     return void 0;
   }
-  function writeHoldStored(id, enabled5) {
-    updateAriesPath(HOLD_PATH, (current2) => {
-      const next = current2 && typeof current2 === "object" ? { ...current2 } : {};
-      next[id] = enabled5;
+  function writeHoldStored(id, enabled2) {
+    updateAriesPath(HOLD_PATH, (current3) => {
+      const next = current3 && typeof current3 === "object" ? { ...current3 } : {};
+      next[id] = enabled2;
       return next;
     });
   }
@@ -16881,10 +16881,10 @@
     }
     return holdCache.get(id) ?? false;
   }
-  function setKeybindHoldDetection(id, enabled5) {
-    if (!holdDefaults.has(id) || getKeybindHoldDetection(id) === enabled5) return;
-    holdCache.set(id, enabled5);
-    writeHoldStored(id, enabled5);
+  function setKeybindHoldDetection(id, enabled2) {
+    if (!holdDefaults.has(id) || getKeybindHoldDetection(id) === enabled2) return;
+    holdCache.set(id, enabled2);
+    writeHoldStored(id, enabled2);
     emitHoldChange(id);
   }
   function eventMatchesKeybind(id, e) {
@@ -16964,13 +16964,13 @@
   }
   async function teamAfterStep(ids, step) {
     if (!ids.length) return null;
-    let current2 = null;
+    let current3 = null;
     try {
-      current2 = await getActiveTeamId();
+      current3 = await getActiveTeamId();
     } catch {
     }
-    if (!current2 || !ids.includes(current2)) current2 = getLastUsedTeamId();
-    const index = current2 ? ids.indexOf(current2) : -1;
+    if (!current3 || !ids.includes(current3)) current3 = getLastUsedTeamId();
+    const index = current3 ? ids.indexOf(current3) : -1;
     if (index < 0) return ids[0];
     return ids[(index + step + ids.length) % ids.length];
   }
@@ -17062,8 +17062,8 @@
   // src/features/shops/purchases.ts
   function isCurrentRestock(entry, shop) {
     if (!("restockId" in entry)) return true;
-    const current2 = shop?.restockId;
-    return current2 != null && entry.restockId === current2;
+    const current3 = shop?.restockId;
+    return current3 != null && entry.restockId === current3;
   }
   function purchasesForCurrentRestock(shops2, shopPurchases, kindOf) {
     const out = { seed: {}, egg: {}, tool: {}, decor: {} };
@@ -17496,16 +17496,16 @@
       candidates.add("Chilled");
     }
     if (!candidates.size) return null;
-    let pick2 = null;
+    let pick = null;
     let best = -Infinity;
     for (const cand of candidates) {
       const mult = mutationMultiplier(cand) ?? 1;
       if (mult > best) {
         best = mult;
-        pick2 = cand;
+        pick = cand;
       }
     }
-    return pick2;
+    return pick;
   }
   function pickTime(mutations) {
     if (!Array.isArray(mutations)) return null;
@@ -17515,16 +17515,16 @@
       if (isTime(m)) candidates.add(m);
     }
     if (!candidates.size) return null;
-    let pick2 = null;
+    let pick = null;
     let best = -Infinity;
     for (const cand of candidates) {
       const mult = mutationMultiplier(cand) ?? 1;
       if (mult > best) {
         best = mult;
-        pick2 = cand;
+        pick = cand;
       }
     }
-    return pick2;
+    return pick;
   }
   function combineWeatherMultipliers(multipliers) {
     if (!multipliers.length) return 1;
@@ -17823,8 +17823,8 @@
 
   // src/features/sellAllPets/confirmModal.ts
   function petRow({ pet, reasons, mutations }) {
-    const row4 = document.createElement("div");
-    Object.assign(row4.style, {
+    const row5 = document.createElement("div");
+    Object.assign(row5.style, {
       display: "grid",
       gridTemplateColumns: `${ICON_PX}px 1fr`,
       gap: "10px",
@@ -17863,8 +17863,8 @@
     const info = document.createElement("div");
     Object.assign(info.style, { display: "grid", gap: "4px" });
     info.append(name, chips);
-    row4.append(icon2, info);
-    return row4;
+    row5.append(icon2, info);
+    return row5;
   }
   function confirmProtectedPetSale(flagged) {
     current?.close();
@@ -17891,8 +17891,8 @@
       intro.textContent = "The following pets match protected rules:";
       Object.assign(intro.style, { fontSize: "13px", lineHeight: "1.4", color: color.textSoft });
       modal.body.append(intro, ...flagged.map(petRow));
-      const spacer2 = document.createElement("div");
-      spacer2.style.flex = "1";
+      const spacer = document.createElement("div");
+      spacer.style.flex = "1";
       const sell = button("Sell", {
         variant: "primary",
         onClick: () => {
@@ -17900,7 +17900,7 @@
           modal.close();
         }
       });
-      modal.footer.append(spacer2, button("Cancel", { onClick: () => modal.close() }), sell);
+      modal.footer.append(spacer, button("Cancel", { onClick: () => modal.close() }), sell);
       sell.focus();
     });
   }
@@ -18543,7 +18543,7 @@
         }
         startLoop(doc, s) {
           this.stopLoop(doc, s);
-          const tick3 = () => {
+          const tick = () => {
             if (!s.pressed) return;
             this.dispatchKey(doc, s.lastTarget || doc, "keydown", s.emit, true);
             if (s.mode === "tap") {
@@ -18553,8 +18553,8 @@
               }, s.keyupDelayMs);
             }
           };
-          tick3();
-          s.tickTimer = this.win.setInterval(tick3, s.rateMs);
+          tick();
+          s.tickTimer = this.win.setInterval(tick, s.rateMs);
         }
         stopLoop(doc, s) {
           if (s.tickTimer) {
@@ -18873,11 +18873,11 @@
           }
         }
         save() {
-          const entries2 = [];
+          const entries = [];
           for (const [name, data] of this.sounds) {
-            if (name !== BUILTIN_SOUND_NAME) entries2.push({ name, data });
+            if (name !== BUILTIN_SOUND_NAME) entries.push({ name, data });
           }
-          writeAriesPath(LIBRARY_PATH, entries2);
+          writeAriesPath(LIBRARY_PATH, entries);
         }
         names() {
           return Array.from(this.sounds.keys());
@@ -19226,7 +19226,7 @@
           }
           const stopOverride = overrides.stop ? { mode: overrides.stop.mode === "purchase" ? "purchase" : "manual" } : null;
           const interval = overrides.loopIntervalMs;
-          const state7 = {
+          const state5 = {
             key: key2,
             context,
             timer: null,
@@ -19239,8 +19239,8 @@
             volumeOverride,
             volume
           };
-          this.loops.set(key2, state7);
-          this.runLoop(state7);
+          this.loops.set(key2, state5);
+          this.runLoop(state5);
         }
         forEachLoop(context, fn) {
           for (const st of this.loops.values()) {
@@ -19323,23 +19323,23 @@
           return true;
         }
         /** One loop iteration: check the stop condition, play to the end, wait the interval, repeat. */
-        runLoop(state7) {
+        runLoop(state5) {
           const run = async () => {
-            if (state7.stopped) return;
-            const stop = state7.stopOverride ?? state7.baseStop;
+            if (state5.stopped) return;
+            const stop = state5.stopOverride ?? state5.baseStop;
             if (stop.mode === "purchase" && this.purchaseChecker) {
               try {
-                if (this.purchaseChecker(state7.key)) {
-                  this.stopLoop(state7.key);
+                if (this.purchaseChecker(state5.key)) {
+                  this.stopLoop(state5.key);
                   return;
                 }
               } catch {
               }
             }
-            await this.playOnce(this.resolveToDataUrl(state7.soundOverride, state7.context), state7.volume, true);
-            if (state7.stopped) return;
-            const gap = Math.max(MIN_LOOP_GAP_MS, (state7.loopIntervalOverride ?? state7.baseLoopInterval) | 0);
-            state7.timer = window.setTimeout(() => this.runLoop(state7), gap);
+            await this.playOnce(this.resolveToDataUrl(state5.soundOverride, state5.context), state5.volume, true);
+            if (state5.stopped) return;
+            const gap = Math.max(MIN_LOOP_GAP_MS, (state5.loopIntervalOverride ?? state5.baseLoopInterval) | 0);
+            state5.timer = window.setTimeout(() => this.runLoop(state5), gap);
           };
           run().catch(() => {
           });
@@ -19407,9 +19407,9 @@
       wasBelow.set(petId, false);
       return;
     }
-    const { enabled: enabled5, thresholdPct } = prefFor(petId);
+    const { enabled: enabled2, thresholdPct } = prefFor(petId);
     const hungerPct = PetsService.getHungerPctFor(pet);
-    const below = enabled5 && Number.isFinite(hungerPct) && hungerPct < thresholdPct;
+    const below = enabled2 && Number.isFinite(hungerPct) && hungerPct < thresholdPct;
     const loopKey = prefs.generalEnabled ? "pets:general" : `pet:${petId}`;
     if (!below) {
       audio.stopLoop(loopKey);
@@ -19483,8 +19483,8 @@
   });
 
   // src/game/pixi/gardenInfoCard.ts
-  function getStage(state7) {
-    return state7.renderer.lastObjectRendered ?? state7.renderer.stage ?? state7.app?.stage ?? null;
+  function getStage(state5) {
+    return state5.renderer.lastObjectRendered ?? state5.renderer.stage ?? state5.app?.stage ?? null;
   }
   function findByLabel(root4, label2, limit = 25e3) {
     if (!root4) return null;
@@ -19549,9 +19549,9 @@
       }
     }
   }
-  function onChildAddedUnsafe(row4) {
-    if (row4?.label !== CARD_ROW_LABEL) return;
-    const card4 = findByLabel(row4, OBJECT_CARD_LABEL);
+  function onChildAddedUnsafe(row5) {
+    if (row5?.label !== CARD_ROW_LABEL) return;
+    const card4 = findByLabel(row5, OBJECT_CARD_LABEL);
     if (!card4) return;
     currentCard = card4;
     const geometry = computeGeometry(card4);
@@ -19563,9 +19563,9 @@
     });
     notifyListeners(card4, geometry);
   }
-  function onChildAdded(row4) {
+  function onChildAdded(row5) {
     try {
-      onChildAddedUnsafe(row4);
+      onChildAddedUnsafe(row5);
     } catch (error) {
       console.warn("[gardenInfoCardPixi] onChildAdded failed", error);
     }
@@ -19589,9 +19589,9 @@
   }
   function tryFindCardSystem() {
     if (cardSystem) return;
-    const state7 = getReadySpriteState();
-    if (!state7) return;
-    const stage = getStage(state7);
+    const state5 = getReadySpriteState();
+    if (!state5) return;
+    const stage = getStage(state5);
     const found = findAcrossBranches(stage, (node) => node?.label === CARD_SYSTEM_LABEL);
     if (found) {
       attachToCardSystem(found);
@@ -19708,7 +19708,7 @@
 
   // src/features/notifier/bell/pixiBell.ts
   function startPixiBell(opts) {
-    let running6 = true;
+    let running = true;
     let rail = null;
     let bellContainer = null;
     let bellText = null;
@@ -19758,14 +19758,14 @@
     };
     const computeScreenRect = () => {
       if (!bellContainer || bellContainer.destroyed) return null;
-      const state7 = getReadySpriteState();
-      const canvas = state7?.renderer?.canvas || state7?.renderer?.view?.canvas || state7?.renderer?.view;
+      const state5 = getReadySpriteState();
+      const canvas = state5?.renderer?.canvas || state5?.renderer?.view?.canvas || state5?.renderer?.view;
       if (!canvas) return null;
       try {
         const rect = canvas.getBoundingClientRect();
-        const renderResolution = Number(state7?.renderer?.resolution) || 1;
-        const stageWidth = Number(state7?.renderer?.screen?.width) || (Number(canvas.width) || 0) / renderResolution;
-        const stageHeight = Number(state7?.renderer?.screen?.height) || (Number(canvas.height) || 0) / renderResolution;
+        const renderResolution = Number(state5?.renderer?.resolution) || 1;
+        const stageWidth = Number(state5?.renderer?.screen?.width) || (Number(canvas.width) || 0) / renderResolution;
+        const stageHeight = Number(state5?.renderer?.screen?.height) || (Number(canvas.height) || 0) / renderResolution;
         const scaleX = stageWidth > 0 ? rect.width / stageWidth : 1;
         const scaleY = stageHeight > 0 ? rect.height / stageHeight : 1;
         debugState3.screenScaleX = scaleX;
@@ -19813,9 +19813,9 @@
         weSetPointerCursor = false;
       }
     };
-    const ensureCanvasListeners = (state7) => {
+    const ensureCanvasListeners = (state5) => {
       if (canvasListenersAttached) return;
-      const canvas = state7.renderer?.canvas || state7.renderer?.view?.canvas || state7.renderer?.view;
+      const canvas = state5.renderer?.canvas || state5.renderer?.view?.canvas || state5.renderer?.view;
       if (!canvas) return;
       canvasEl = canvas;
       pageWindow.addEventListener("pointerdown", onWindowPointerDownCapture, true);
@@ -19832,8 +19832,8 @@
       return null;
     };
     const railLocalScreenBounds = () => {
-      const state7 = getReadySpriteState();
-      const screenHeight = Number(state7?.renderer?.screen?.height);
+      const state5 = getReadySpriteState();
+      const screenHeight = Number(state5?.renderer?.screen?.height);
       if (!Number.isFinite(screenHeight) || screenHeight <= 0) return null;
       try {
         const top = rail.toLocal({ x: 0, y: 0 }).y;
@@ -19884,14 +19884,14 @@
       }
     };
     const syncUnsafe = () => {
-      if (!running6 || !rail || rail.destroyed) {
+      if (!running || !rail || rail.destroyed) {
         removeButton();
         return;
       }
-      const state7 = getReadySpriteState();
-      if (!state7?.ctors?.Text) return;
+      const state5 = getReadySpriteState();
+      if (!state5?.ctors?.Text) return;
       if (!bellContainer) {
-        const ContainerCtor = state7.ctors.Container ?? rail.constructor;
+        const ContainerCtor = state5.ctors.Container ?? rail.constructor;
         bellContainer = new ContainerCtor();
         bellContainer.label = "GeminiNotificationBell";
         const thisContainer = bellContainer;
@@ -19901,10 +19901,10 @@
         rail.addChild(bellContainer);
       }
       if (!bellText) {
-        bellText = new state7.ctors.Text({ text: BELL_GLYPH, style: { fontSize: DEFAULT_SLOT_SIZE } });
+        bellText = new state5.ctors.Text({ text: BELL_GLYPH, style: { fontSize: DEFAULT_SLOT_SIZE } });
         bellContainer.addChild(bellText);
       }
-      ensureCanvasListeners(state7);
+      ensureCanvasListeners(state5);
       syncGeometry();
       debugState3.hasButton = true;
     };
@@ -19923,7 +19923,7 @@
     };
     const onRailChildrenChanged = () => sync2();
     const restartSearchIfNeeded2 = () => {
-      if (!running6 || rail) return;
+      if (!running || rail) return;
       tryFindRail();
       if (!rail && findRafId3 == null) findRafId3 = raf3(scheduleFind2);
     };
@@ -19944,10 +19944,10 @@
       sync2();
     };
     const tryFindRail = () => {
-      if (!running6 || rail) return;
-      const state7 = getReadySpriteState();
-      if (!state7) return;
-      const stage = getStage(state7);
+      if (!running || rail) return;
+      const state5 = getReadySpriteState();
+      if (!state5) return;
+      const stage = getStage(state5);
       const found = findAcrossBranches(stage, (node) => node?.label === RAIL_LABEL);
       if (found) {
         attachToRail(found);
@@ -19961,18 +19961,18 @@
     };
     const scheduleFind2 = (now) => {
       findRafId3 = null;
-      if (!running6 || rail) return;
+      if (!running || rail) return;
       if (now - lastFindCheckAt3 >= RAIL_FIND_RETRY_MS) {
         lastFindCheckAt3 = now;
         tryFindRail();
       }
-      if (!running6 || rail) return;
+      if (!running || rail) return;
       findRafId3 = raf3(scheduleFind2);
     };
     const isReachableFromLiveStage = (node) => {
-      const state7 = getReadySpriteState();
-      if (!state7) return false;
-      const stage = getStage(state7);
+      const state5 = getReadySpriteState();
+      if (!state5) return false;
+      const stage = getStage(state5);
       if (!stage) return false;
       let cur = node;
       let hops = 0;
@@ -19983,7 +19983,7 @@
       return false;
     };
     const periodicRailMaintenance = () => {
-      if (!running6 || !rail || rail.destroyed) return;
+      if (!running || !rail || rail.destroyed) return;
       if (!isReachableFromLiveStage(rail)) {
         console.warn("[PixiBell] rail orphaned from the live stage (no destroyed event fired), resetting");
         rail = null;
@@ -19996,7 +19996,7 @@
     };
     const maintenanceIntervalId = pageWindow.setInterval(periodicRailMaintenance, RAIL_REACHABILITY_CHECK_MS);
     const onWindowResize = () => {
-      if (!running6 || !rail || rail.destroyed) return;
+      if (!running || !rail || rail.destroyed) return;
       sync2();
     };
     pageWindow.addEventListener("resize", onWindowResize);
@@ -20026,8 +20026,8 @@
     if (!rail) findRafId3 = raf3(scheduleFind2);
     return {
       stop() {
-        if (!running6) return;
-        running6 = false;
+        if (!running) return;
+        running = false;
         if (findRafId3 != null) {
           cancelRaf(findRafId3);
           findRafId3 = null;
@@ -20121,14 +20121,14 @@
     return Math.min(Math.max(value, min), max);
   }
   function startFloatingBell(opts) {
-    let running6 = true;
+    let running = true;
     let wiggleAnimation = null;
-    const button3 = h("button");
-    button3.type = "button";
-    button3.setAttribute("data-notification-bell-widget", "1");
-    button3.title = "Notifications";
-    button3.setAttribute("aria-label", "Notifications");
-    Object.assign(button3.style, {
+    const button2 = h("button");
+    button2.type = "button";
+    button2.setAttribute("data-notification-bell-widget", "1");
+    button2.title = "Notifications";
+    button2.setAttribute("aria-label", "Notifications");
+    Object.assign(button2.style, {
       position: "fixed",
       left: "-9999px",
       top: "-9999px",
@@ -20157,12 +20157,12 @@
       // Swing around the bell's mounting point (top center), not its middle.
       transformOrigin: "50% 0%"
     });
-    button3.appendChild(icon2);
+    button2.appendChild(icon2);
     const applyPosition2 = (left, top) => {
       const boundedLeft = clampCoord(left, SCREEN_MARGIN, window.innerWidth - BUTTON_SIZE - SCREEN_MARGIN);
       const boundedTop = clampCoord(top, SCREEN_MARGIN, window.innerHeight - BUTTON_SIZE - SCREEN_MARGIN);
-      button3.style.left = `${Math.round(boundedLeft)}px`;
-      button3.style.top = `${Math.round(boundedTop)}px`;
+      button2.style.left = `${Math.round(boundedLeft)}px`;
+      button2.style.top = `${Math.round(boundedTop)}px`;
       try {
         opts.onMoved?.();
       } catch {
@@ -20186,7 +20186,7 @@
       applyDesiredPosition();
     };
     const onWindowResize = () => {
-      if (!running6) return;
+      if (!running) return;
       applyDesiredPosition();
     };
     let dragState = null;
@@ -20207,13 +20207,13 @@
       document.removeEventListener("pointerup", stopDrag);
       document.removeEventListener("pointercancel", stopDrag);
       try {
-        button3.releasePointerCapture(dragState.pointerId);
+        button2.releasePointerCapture(dragState.pointerId);
       } catch {
       }
       const wasDrag = dragState.dragged;
       if (wasDrag) persistPosition(dragState.lastPos);
       dragState = null;
-      button3.style.cursor = "grab";
+      button2.style.cursor = "grab";
       if (!wasDrag && ev?.type === "pointerup") {
         try {
           opts.onClick();
@@ -20225,7 +20225,7 @@
     const onPointerDown = (ev) => {
       if (ev.button !== 0) return;
       if (dragState) stopDrag();
-      const rect = button3.getBoundingClientRect();
+      const rect = button2.getBoundingClientRect();
       dragState = {
         pointerId: ev.pointerId,
         startX: ev.clientX,
@@ -20236,23 +20236,23 @@
         dragged: false
       };
       try {
-        button3.setPointerCapture(ev.pointerId);
+        button2.setPointerCapture(ev.pointerId);
       } catch {
       }
       document.addEventListener("pointermove", onDragMove);
       document.addEventListener("pointerup", stopDrag);
       document.addEventListener("pointercancel", stopDrag);
-      button3.style.cursor = "grabbing";
+      button2.style.cursor = "grabbing";
       ev.preventDefault();
       ev.stopPropagation();
     };
-    button3.addEventListener("pointerdown", onPointerDown);
+    button2.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("resize", onWindowResize);
-    document.body.appendChild(button3);
+    document.body.appendChild(button2);
     applyInitialPosition2();
     const settleTimers = SETTLE_REAPPLY_DELAYS_MS.map(
       (delay) => window.setTimeout(() => {
-        if (running6) applyDesiredPosition();
+        if (running) applyDesiredPosition();
       }, delay)
     );
     const clearSettleTimers = () => {
@@ -20274,21 +20274,21 @@
     };
     return {
       stop() {
-        if (!running6) return;
-        running6 = false;
+        if (!running) return;
+        running = false;
         stopDrag();
         stopWiggle();
         clearSettleTimers();
         window.removeEventListener("resize", onWindowResize);
-        button3.removeEventListener("pointerdown", onPointerDown);
+        button2.removeEventListener("pointerdown", onPointerDown);
         try {
-          button3.remove();
+          button2.remove();
         } catch {
         }
       },
       getScreenRect() {
-        if (!running6 || !button3.isConnected) return null;
-        const rect = button3.getBoundingClientRect();
+        if (!running || !button2.isConnected) return null;
+        const rect = button2.getBoundingClientRect();
         return {
           left: rect.left,
           top: rect.top,
@@ -20299,7 +20299,7 @@
         };
       },
       setWiggle(active3) {
-        if (!running6) return;
+        if (!running) return;
         if (!active3) {
           stopWiggle();
           return;
@@ -20564,8 +20564,8 @@
         /** Remembers a context's loop interval; an invalid one keeps the current value. */
         setLoopInterval(context, ms) {
           ensureLoaded();
-          const current2 = LoopDefaults.get(context).loopIntervalMs;
-          loopIntervals[context] = Number.isFinite(ms) ? normalizeInterval(ms) : current2;
+          const current3 = LoopDefaults.get(context).loopIntervalMs;
+          loopIntervals[context] = Number.isFinite(ms) ? normalizeInterval(ms) : current3;
           save2();
         }
       };
@@ -20775,10 +20775,10 @@
     }
     return counts;
   }
-  async function follow(view, apply2) {
+  async function follow(view, apply) {
     const update = (value) => {
       try {
-        apply2(value);
+        apply(value);
       } catch {
       }
       changed2.emit();
@@ -20924,10 +20924,10 @@
         /** Re-reads every row's alert (followed, capped) and tells the listeners. */
         refresh() {
           if (!state2) return;
-          for (const row4 of state2.rows) {
-            const popup = followedIds().has(row4.id) && !isCapReached(row4.id);
-            row4.popup = popup;
-            row4.followed = popup;
+          for (const row5 of state2.rows) {
+            const popup = followedIds().has(row5.id) && !isCapReached(row5.id);
+            row5.popup = popup;
+            row5.followed = popup;
           }
           state2 = {
             ...state2,
@@ -20949,9 +20949,9 @@
           return !isCapReached(id) && followedIds().has(id);
         },
         /** Turns an item's alert on or off. Turning on a capped item does nothing. */
-        setFollowed(id, enabled5) {
-          if (!id || enabled5 && isCapReached(id)) return;
-          if (enabled5) followedIds().add(id);
+        setFollowed(id, enabled2) {
+          if (!id || enabled2 && isCapReached(id)) return;
+          if (enabled2) followedIds().add(id);
           else followedIds().delete(id);
           saveFollowed();
           ShopRows.refresh();
@@ -21235,8 +21235,8 @@
           for (const item of items) this.el.appendChild(this.renderRow(item));
         }
         renderRow({ id, qty }) {
-          const row4 = h("div");
-          Object.assign(row4.style, {
+          const row5 = h("div");
+          Object.assign(row5.style, {
             display: "grid",
             gridTemplateColumns: "24px 1fr max-content max-content max-content",
             alignItems: "center",
@@ -21280,8 +21280,8 @@
               btn.title = "Unavailable";
             }
           }
-          row4.append(shopItemIcon(id, itemName(id), 24, "alerts-overlay"), title, count, buyBtn, buyAllBtn);
-          return row4;
+          row5.append(shopItemIcon(id, itemName(id), 24, "alerts-overlay"), title, count, buyBtn, buyAllBtn);
+          return row5;
         }
         async buy(id, btn, label2, purchase) {
           const stock = findStockItem(this.alerts.shopsSnapshot(), id);
@@ -21544,13 +21544,13 @@
         onChange(cb) {
           return changed4.on(cb);
         },
-        setNotify(id, enabled5) {
+        setNotify(id, enabled2) {
           if (!id) return;
           const pref = prefOf(id);
-          if (!!pref.notify === enabled5) return;
-          pref.notify = enabled5;
+          if (!!pref.notify === enabled2) return;
+          pref.notify = enabled2;
           savePrefs2();
-          if (!enabled5) audio.stopLoop(id);
+          if (!enabled2) audio.stopLoop(id);
           else if (currentId === id) ring(id);
           recomputeState();
         }
@@ -21815,8 +21815,8 @@
       try {
         const warmup = getSpriteWarmupState();
         if (!warmup?.completed) {
-          const unsub = onSpriteWarmupProgress((state7) => {
-            if (state7.completed) {
+          const unsub = onSpriteWarmupProgress((state5) => {
+            if (state5.completed) {
               try {
                 unsub();
               } catch {
@@ -22309,7 +22309,7 @@
     let players = void 0;
     let selectedSlotId = null;
     let price = null;
-    const changes7 = new Emitter();
+    const changes8 = new Emitter();
     const subs = new Subscriptions();
     const computePrice = () => {
       if (!isPlantObject2(gardenObject)) return null;
@@ -22321,7 +22321,7 @@
       const next = computePrice();
       if (next === price) return;
       price = next;
-      changes7.emit();
+      changes8.emit();
     };
     let scheduled = false;
     const scheduleRecompute = () => {
@@ -22362,9 +22362,9 @@
     })();
     return {
       get: () => price,
-      onChange: (cb) => changes7.on(cb),
+      onChange: (cb) => changes8.on(cb),
       stop() {
-        changes7.clear();
+        changes8.clear();
         subs.dispose();
       }
     };
@@ -22450,10 +22450,10 @@
   }
   function startDomLockIndicator(opts) {
     const subs = new Subscriptions();
-    let running6 = true;
+    let running = true;
     const elements = () => Array.from(document.querySelectorAll(opts.selector));
     const refresh = () => {
-      if (!running6) return;
+      if (!running) return;
       const locked = opts.isLocked();
       for (const el of elements()) {
         if (locked && opts.isTarget(el)) markLocked(el, opts.look);
@@ -22468,7 +22468,7 @@
       refresh,
       add: (unsubscribe2) => subs.add(unsubscribe2),
       stop() {
-        running6 = false;
+        running = false;
         subs.dispose();
         for (const el of elements()) unmarkLocked(el, opts.look.owner);
       }
@@ -22499,13 +22499,13 @@
   // src/features/cropPrice/domTooltip.ts
   function startCropValuesObserverFromGardenAtom() {
     const priceWatcher = startCropPriceWatcherViaGardenObject();
-    let running6 = true;
+    let running = true;
     let harvestAllowed = lockerService.currentHarvestAllowed();
     let lockerReady = !lockerService.isEnabled();
     let needsReposition = false;
     let last = null;
     const render = () => {
-      if (!running6 || !lockerReady) return;
+      if (!running || !lockerReady) return;
       unmarkStrayTooltips();
       const next = { value: priceWatcher.get(), locked: harvestAllowed === false, showPrice: readShowCropPrice() };
       if (!needsReposition && last && last.value === next.value && last.locked === next.locked && last.showPrice === next.showPrice) {
@@ -22549,8 +22549,8 @@
     const offShowPrice = onShowCropPriceChange(render);
     return {
       stop() {
-        if (!running6) return;
-        running6 = false;
+        if (!running) return;
+        running = false;
         if (readyTimer != null) clearTimeout(readyTimer);
         qpmObserver.disconnect();
         offPrice();
@@ -22713,7 +22713,7 @@
     return coinTexturePromise;
   }
   function startCropValueOverlayInPixi() {
-    let running6 = true;
+    let running = true;
     let currentCard2 = null;
     let geometry = null;
     let hitAreaBaseHeight = 0;
@@ -22762,14 +22762,14 @@
     };
     const syncValueNodeUnsafe = () => {
       debugState3.objectType = currentGardenObject2?.objectType ?? null;
-      if (!running6 || !currentCard2 || currentCard2.destroyed || !geometry || !isPlantObject3(currentGardenObject2) || // Switched off in the Misc menu: the card is left as the game drew it.
+      if (!running || !currentCard2 || currentCard2.destroyed || !geometry || !isPlantObject3(currentGardenObject2) || // Switched off in the Misc menu: the card is left as the game drew it.
       !readShowCropPrice()) {
         detachValueText();
         return;
       }
-      const state7 = getReadySpriteState();
-      const ctors = state7?.ctors;
-      if (!state7 || !ctors) return;
+      const state5 = getReadySpriteState();
+      const ctors = state5?.ctors;
+      if (!state5 || !ctors) return;
       const value = priceWatcher.get();
       if (value == null) {
         detachValueText();
@@ -22777,7 +22777,7 @@
       }
       const text2 = formatInteger(value, "round");
       if (!valueText) {
-        graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state7)));
+        graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state5)));
         if (graphicsCtor) {
           valueBadge = new graphicsCtor();
           currentCard2.addChild(valueBadge);
@@ -22797,7 +22797,7 @@
           iconRetryScheduled = true;
           ensureCoinTexture(ctors.Texture).then(() => {
             iconRetryScheduled = false;
-            if (running6) syncValueNode();
+            if (running) syncValueNode();
           });
         }
       }
@@ -22866,8 +22866,8 @@
     );
     return {
       stop() {
-        if (!running6) return;
-        running6 = false;
+        if (!running) return;
+        running = false;
         subs.dispose();
         priceWatcher.stop();
         detachValueText();
@@ -22907,7 +22907,7 @@
     return !!obj && typeof obj === "object" && obj.objectType === "decor";
   }
   function startLockerIndicatorInPixi() {
-    let running6 = true;
+    let running = true;
     let currentCard2 = null;
     let geometry = null;
     let border = null;
@@ -22941,13 +22941,13 @@
     };
     const syncUnsafe = () => {
       debugState3.objectType = currentGardenObject2?.objectType ?? null;
-      if (!running6 || !currentCard2 || currentCard2.destroyed || !geometry || !isLocked()) {
+      if (!running || !currentCard2 || currentCard2.destroyed || !geometry || !isLocked()) {
         removeBorder();
         return;
       }
-      const state7 = getReadySpriteState();
+      const state5 = getReadySpriteState();
       if (!graphicsCtor) {
-        graphicsCtor = state7 ? findGraphicsCtor(getStage(state7)) : null;
+        graphicsCtor = state5 ? findGraphicsCtor(getStage(state5)) : null;
         if (!graphicsCtor) return;
       }
       if (!border) {
@@ -22962,8 +22962,8 @@
       border.clear();
       border.roundRect(left + inset, top + inset, Math.max(0, width - BORDER_WIDTH), Math.max(0, height - BORDER_WIDTH), BORDER_RADIUS).stroke({ width: BORDER_WIDTH, color: BORDER_COLOR, alpha: 1 });
       debugState3.hasBorder = true;
-      if (!lockIcon && state7?.ctors?.Text) {
-        lockIcon = new state7.ctors.Text({ text: LOCK_ICON_TEXT, style: LOCK_ICON_STYLE });
+      if (!lockIcon && state5?.ctors?.Text) {
+        lockIcon = new state5.ctors.Text({ text: LOCK_ICON_TEXT, style: LOCK_ICON_STYLE });
         currentCard2.addChild(lockIcon);
       }
       if (lockIcon) {
@@ -23008,8 +23008,8 @@
     );
     return {
       stop() {
-        if (!running6) return;
-        running6 = false;
+        if (!running) return;
+        running = false;
         subs.dispose();
         removeBorder();
         currentCard2 = null;
@@ -23102,12 +23102,12 @@
   }
   function startInjectSellAllPets() {
     ensureStyle();
-    let pending6 = false;
+    let pending3 = false;
     const processPanels = () => {
-      if (pending6) return;
-      pending6 = true;
+      if (pending3) return;
+      pending3 = true;
       requestAnimationFrame(() => {
-        pending6 = false;
+        pending3 = false;
         for (const panel of Array.from(document.querySelectorAll(PANEL_SELECTOR2))) {
           const target = panel.querySelector(PANEL_GATE_SELECTOR) ? findSellPetButton(panel) : null;
           if (target) placeNextTo(target);
@@ -23147,7 +23147,7 @@
   function watchActionHud(watch) {
     const raf3 = pageWindow.requestAnimationFrame.bind(pageWindow);
     const cancelRaf = pageWindow.cancelAnimationFrame.bind(pageWindow);
-    let running6 = true;
+    let running = true;
     let hud = null;
     let attempts = 0;
     let rafId = null;
@@ -23164,10 +23164,10 @@
       watch.attach(found);
     };
     const tryFind = () => {
-      if (!running6 || hud) return;
-      const state7 = getReadySpriteState();
-      if (!state7) return;
-      const found = findAcrossBranches(getStage(state7), (node) => node?.label === ACTION_HUD_LABEL);
+      if (!running || hud) return;
+      const state5 = getReadySpriteState();
+      if (!state5) return;
+      const found = findAcrossBranches(getStage(state5), (node) => node?.label === ACTION_HUD_LABEL);
       if (found) {
         attach2(found);
         return;
@@ -23178,23 +23178,23 @@
         console.info(`[sellAllPets] still searching for ${ACTION_HUD_LABEL} (${attempts} attempts so far)`);
       }
     };
-    const tick3 = (now) => {
+    const tick = (now) => {
       rafId = null;
-      if (!running6 || hud) return;
+      if (!running || hud) return;
       if (now - lastCheckAt >= RETRY_MS) {
         lastCheckAt = now;
         tryFind();
       }
-      if (running6 && !hud) rafId = raf3(tick3);
+      if (running && !hud) rafId = raf3(tick);
     };
     const search2 = () => {
       tryFind();
-      if (running6 && !hud && rafId == null) rafId = raf3(tick3);
+      if (running && !hud && rafId == null) rafId = raf3(tick);
     };
     search2();
     return {
       stop() {
-        running6 = false;
+        running = false;
         if (rafId != null) cancelRaf(rafId);
         rafId = null;
       }
@@ -23253,7 +23253,7 @@
     return null;
   }
   function startSellAllPetsPixi() {
-    let running6 = true;
+    let running = true;
     let actionHud = null;
     let buttonContainer = null;
     let buttonBg = null;
@@ -23356,9 +23356,9 @@
         weSetPointerCursor = false;
       }
     };
-    const ensureCanvasListeners = (state7) => {
+    const ensureCanvasListeners = (state5) => {
       if (canvasListenersAttached) return;
-      const canvas = state7.renderer?.canvas || state7.renderer?.view?.canvas || state7.renderer?.view;
+      const canvas = state5.renderer?.canvas || state5.renderer?.view?.canvas || state5.renderer?.view;
       if (!canvas) return;
       canvasEl = canvas;
       canvas.addEventListener("pointerdown", onCanvasPointerDown);
@@ -23368,7 +23368,7 @@
     };
     const syncUnsafe = () => {
       debugState3.currentAction = actionLabel(currentAction);
-      if (!running6 || !actionHud || actionHud.destroyed || !isSellPetAction(currentAction)) {
+      if (!running || !actionHud || actionHud.destroyed || !isSellPetAction(currentAction)) {
         removeButton();
         return;
       }
@@ -23377,16 +23377,16 @@
         removeButton();
         return;
       }
-      const state7 = getReadySpriteState();
-      if (!state7?.ctors?.Text) return;
-      const graphicsCtor = findGraphicsCtor(getStage(state7));
+      const state5 = getReadySpriteState();
+      if (!state5?.ctors?.Text) return;
+      const graphicsCtor = findGraphicsCtor(getStage(state5));
       if (!graphicsCtor) return;
-      ensureCanvasListeners(state7);
+      ensureCanvasListeners(state5);
       const face = findByLabel(wrapper, BUTTON_FACE_LABEL) ?? wrapper;
       const faceWidth = safeSize(face, "width", 150);
       const faceHeight = safeSize(face, "height", 55);
       if (!buttonContainer) {
-        const ContainerCtor = state7.ctors?.Container ?? actionHud.constructor;
+        const ContainerCtor = state5.ctors?.Container ?? actionHud.constructor;
         buttonContainer = new ContainerCtor();
         const thisContainer = buttonContainer;
         thisContainer.once("destroyed", () => {
@@ -23402,7 +23402,7 @@
           ...existingTextStyle?.fontSize ? { fontSize: existingTextStyle.fontSize } : {},
           ...existingTextStyle?.fontWeight ? { fontWeight: existingTextStyle.fontWeight } : {}
         };
-        buttonText = new state7.ctors.Text({ text: BUTTON_TEXT, style });
+        buttonText = new state5.ctors.Text({ text: BUTTON_TEXT, style });
         buttonContainer.addChild(buttonText);
       }
       if (!buttonBg) {
@@ -23464,7 +23464,7 @@
     const subs = new Subscriptions();
     void Atoms.player.action.get().then((initial) => {
       currentAction = initial;
-      if (running6) sync2();
+      if (running) sync2();
     }).catch(() => {
     });
     subs.add(
@@ -23475,8 +23475,8 @@
     );
     return {
       stop() {
-        if (!running6) return;
-        running6 = false;
+        if (!running) return;
+        running = false;
         hudWatch.stop();
         if (actionHud) {
           try {
@@ -23706,9 +23706,9 @@
   }
   function firstNestedString(source, paths) {
     for (const path of paths) {
-      let current2 = source;
-      for (const key2 of path) current2 = current2 && typeof current2 === "object" ? current2[key2] : void 0;
-      const value = stringOrEmpty(current2);
+      let current3 = source;
+      for (const key2 of path) current3 = current3 && typeof current3 === "object" ? current3[key2] : void 0;
+      const value = stringOrEmpty(current3);
       if (value) return value;
     }
     return "";
@@ -24234,16 +24234,16 @@
   }
   function ensureParts(textEl) {
     let label2 = textEl.querySelector(`.${LABEL_CLASS}`);
-    let current2 = textEl.querySelector(`.${CURRENT_CLASS}`);
+    let current3 = textEl.querySelector(`.${CURRENT_CLASS}`);
     let max = textEl.querySelector(`.${MAX_CLASS}`);
-    if (!label2 || !current2 || !max) {
+    if (!label2 || !current3 || !max) {
       textEl.textContent = "";
       label2 = Object.assign(document.createElement("span"), { className: LABEL_CLASS });
-      current2 = Object.assign(document.createElement("span"), { className: CURRENT_CLASS });
+      current3 = Object.assign(document.createElement("span"), { className: CURRENT_CLASS });
       max = Object.assign(document.createElement("span"), { className: MAX_CLASS });
-      textEl.append(label2, current2, max);
+      textEl.append(label2, current3, max);
     }
-    return { label: label2, current: current2, max };
+    return { label: label2, current: current3, max };
   }
   function updateStrengthText(card4, item) {
     const wrap = card4.querySelector(STRENGTH_WRAPPER_SELECTOR);
@@ -24256,11 +24256,11 @@
     if (currentStrength == null) return;
     const max = Math.round(info.maxStrength);
     if (!Number.isFinite(max) || max <= 0) return;
-    const current2 = clamp(currentStrength, 0, max);
-    const isMax = current2 >= max;
+    const current3 = clamp(currentStrength, 0, max);
+    const isMax = current3 >= max;
     const parts = ensureParts(textEl);
     setText(parts.label, "STR ");
-    setText(parts.current, String(current2));
+    setText(parts.current, String(current3));
     parts.current.style.setProperty("color", "#ffffff", "important");
     parts.current.style.setProperty("font-weight", "700", "important");
     if (isMax) {
@@ -24278,8 +24278,8 @@
     wrap.dataset[IS_MAX_DATASET_KEY] = isMax ? "1" : "0";
   }
   function ancestorContaining(start2, selector) {
-    for (let current2 = start2; current2; current2 = current2.parentElement) {
-      if (current2.querySelector(selector)) return current2;
+    for (let current3 = start2; current3; current3 = current3.parentElement) {
+      if (current3.querySelector(selector)) return current3;
     }
     return null;
   }
@@ -24299,11 +24299,11 @@
       if (wrap.style.pointerEvents) wrap.style.pointerEvents = "";
       return;
     }
-    const row4 = ancestorContaining(wrap, FAVORITE_BUTTON_SELECTOR) ?? ancestorContaining(card4, FAVORITE_BUTTON_SELECTOR);
-    const favorite = row4?.querySelector(FAVORITE_BUTTON_SELECTOR);
-    if (!row4 || !favorite) return;
+    const row5 = ancestorContaining(wrap, FAVORITE_BUTTON_SELECTOR) ?? ancestorContaining(card4, FAVORITE_BUTTON_SELECTOR);
+    const favorite = row5?.querySelector(FAVORITE_BUTTON_SELECTOR);
+    if (!row5 || !favorite) return;
     const anchor = favorite.querySelector("svg") ?? favorite.querySelector(".chakra-icon") ?? favorite;
-    const rowRect = row4.getBoundingClientRect();
+    const rowRect = row5.getBoundingClientRect();
     if (!rowRect.width) return;
     const GAP_PX_MAX = 5;
     const GAP_PX_NON_MAX = 7;
@@ -24380,22 +24380,22 @@
   }
   function getDomEntries(container) {
     clearNoiseText(container);
-    const entries2 = [];
+    const entries = [];
     for (const child of Array.from(container.children)) {
       if (!(child instanceof HTMLElement)) continue;
       const card4 = cardOf(child);
       if (!card4) continue;
       alignStrengthText(card4);
-      entries2.push({ wrapper: child, card: card4 });
+      entries.push({ wrapper: child, card: card4 });
     }
-    return entries2;
+    return entries;
   }
-  function domOrderChanged(previous, entries2) {
-    if (!previous || previous.length !== entries2.length) return true;
-    return entries2.some((entry, i) => previous[i] !== entry.wrapper);
+  function domOrderChanged(previous, entries) {
+    if (!previous || previous.length !== entries.length) return true;
+    return entries.some((entry, i) => previous[i] !== entry.wrapper);
   }
-  function assignBaseIndexes(entries2) {
-    entries2.forEach((entry, index) => {
+  function assignBaseIndexes(entries) {
+    entries.forEach((entry, index) => {
       entry.wrapper.dataset[BASE_INDEX_DATASET_KEY] = String(index);
       entry.card.dataset[BASE_INDEX_DATASET_KEY] = String(index);
     });
@@ -24410,8 +24410,8 @@
     const header = Array.from(document.querySelectorAll("p.chakra-text")).find(
       (el) => (el.textContent ?? "").trim() === headerText
     );
-    for (let current2 = header ?? null; current2 && current2 !== document.body; current2 = current2.parentElement) {
-      const next = current2.nextElementSibling;
+    for (let current3 = header ?? null; current3 && current3 !== document.body; current3 = current3.parentElement) {
+      const next = current3.nextElementSibling;
       if (next?.querySelector(ITEM_CARD_SELECTOR)) return next;
     }
     return null;
@@ -24428,7 +24428,7 @@
       ITEM_CARD_SELECTOR = ITEM_CARD_SELECTORS.join(", ");
       NOISE_SELECTOR = ".McFlex.css-1tkifdd, .chakra-text.css-glp3xv, .chakra-text.css-repqgl, .chakra-text.css-ah6ymv";
       BASE_INDEX_DATASET_KEY = "tmInventoryBaseIndex";
-      domOrderOf = (entries2) => entries2.map((entry) => entry.wrapper);
+      domOrderOf = (entries) => entries.map((entry) => entry.wrapper);
     }
   });
 
@@ -24442,13 +24442,13 @@
   }
   function updateCardValue(card4, value, show) {
     const container = card4.querySelector(VALUE_CONTAINER_SELECTOR);
-    const current2 = container?.querySelector(`.${VALUE_ELEMENT_CLASS}`) ?? null;
+    const current3 = container?.querySelector(`.${VALUE_ELEMENT_CLASS}`) ?? null;
     if (!container || !show || typeof value !== "number" || !Number.isFinite(value)) {
-      if (container) current2?.remove();
+      if (container) current3?.remove();
       delete card4.dataset[VALUE_DATASET_KEY];
       return;
     }
-    const target = current2 ?? Object.assign(document.createElement("div"), { className: VALUE_ELEMENT_CLASS });
+    const target = current3 ?? Object.assign(document.createElement("div"), { className: VALUE_ELEMENT_CLASS });
     Object.assign(target.style, {
       fontSynthesis: "none",
       WebkitFontSmoothing: "antialiased",
@@ -24575,58 +24575,58 @@
   });
 
   // src/features/inventory/domSorter.ts
-  function indexEntries2(state7, entries2) {
-    state7.entryByBaseIndex.clear();
-    for (const entry of entries2) {
+  function indexEntries2(state5, entries) {
+    state5.entryByBaseIndex.clear();
+    for (const entry of entries) {
       const baseIndex = readBaseIndex(entry);
-      if (baseIndex != null) state7.entryByBaseIndex.set(baseIndex, entry);
+      if (baseIndex != null) state5.entryByBaseIndex.set(baseIndex, entry);
     }
   }
-  function rebaseToDomOrder(state7, entries2) {
-    if (entries2.length !== state7.baseItems.length) return false;
+  function rebaseToDomOrder(state5, entries) {
+    if (entries.length !== state5.baseItems.length) return false;
     const used = /* @__PURE__ */ new Set();
     const reordered = [];
-    for (const entry of entries2) {
+    for (const entry of entries) {
       const baseIndex = readBaseIndex(entry);
-      if (baseIndex == null || baseIndex < 0 || baseIndex >= state7.baseItems.length || used.has(baseIndex)) return false;
+      if (baseIndex == null || baseIndex < 0 || baseIndex >= state5.baseItems.length || used.has(baseIndex)) return false;
       used.add(baseIndex);
-      reordered.push(state7.baseItems[baseIndex]);
+      reordered.push(state5.baseItems[baseIndex]);
     }
-    if (reordered.every((item, i) => item === state7.baseItems[i])) return false;
-    state7.baseItems = reordered;
-    assignBaseIndexes(entries2);
-    state7.entryByBaseIndex.clear();
-    entries2.forEach((entry, index) => state7.entryByBaseIndex.set(index, entry));
-    state7.entryCount = entries2.length;
+    if (reordered.every((item, i) => item === state5.baseItems[i])) return false;
+    state5.baseItems = reordered;
+    assignBaseIndexes(entries);
+    state5.entryByBaseIndex.clear();
+    entries.forEach((entry, index) => state5.entryByBaseIndex.set(index, entry));
+    state5.entryCount = entries.length;
     return true;
   }
   function createDomSorter() {
     const stateByGrid = /* @__PURE__ */ new WeakMap();
-    async function ensureState(grid, filters, entries2, searchQuery) {
+    async function ensureState(grid, filters, entries, searchQuery) {
       const filtersKey = JSON.stringify({ filters });
-      const state7 = stateByGrid.get(grid);
-      const reusable = state7 && state7.filtersKey === filtersKey && state7.searchQuery === searchQuery && state7.entryCount === entries2.length && state7.baseItems.length === entries2.length && entries2.every((entry) => readBaseIndex(entry) != null);
-      if (state7 && reusable) {
-        indexEntries2(state7, entries2);
-        return state7;
+      const state5 = stateByGrid.get(grid);
+      const reusable = state5 && state5.filtersKey === filtersKey && state5.searchQuery === searchQuery && state5.entryCount === entries.length && state5.baseItems.length === entries.length && entries.every((entry) => readBaseIndex(entry) != null);
+      if (state5 && reusable) {
+        indexEntries2(state5, entries);
+        return state5;
       }
       try {
         const inventory = await Atoms.inventory.myInventory.get();
         if (!inventory || typeof inventory !== "object") return null;
         const items = Array.isArray(inventory.items) ? inventory.items : [];
         const shown = filterInventoryItems(items, filters, searchQuery);
-        if (shown.length !== entries2.length) {
-          console.warn(`[InventorySorting] ${shown.length} filtered items but ${entries2.length} cards, not reordering.`);
+        if (shown.length !== entries.length) {
+          console.warn(`[InventorySorting] ${shown.length} filtered items but ${entries.length} cards, not reordering.`);
           return null;
         }
-        assignBaseIndexes(entries2);
+        assignBaseIndexes(entries);
         const next = {
           filtersKey,
           searchQuery,
-          entryCount: entries2.length,
+          entryCount: entries.length,
           baseItems: shown.slice(),
-          entryByBaseIndex: new Map(entries2.map((entry, index) => [index, entry])),
-          lastSortKey: state7?.lastSortKey ?? null
+          entryByBaseIndex: new Map(entries.map((entry, index) => [index, entry])),
+          lastSortKey: state5?.lastSortKey ?? null
         };
         stateByGrid.set(grid, next);
         return next;
@@ -24638,20 +24638,20 @@
     return async (grid, sortKey, direction, showValues) => {
       const container = getItemsContainer(grid);
       if (!container) return;
-      const entries2 = getDomEntries(container);
-      if (!entries2.length) return;
-      const state7 = await ensureState(grid, getActiveFilters(grid), entries2, getSearchQuery(grid));
-      if (!state7) return;
+      const entries = getDomEntries(container);
+      if (!entries.length) return;
+      const state5 = await ensureState(grid, getActiveFilters(grid), entries, getSearchQuery(grid));
+      if (!state5) return;
       const unsorted = !sortKey || sortKey === "none";
-      if (unsorted && state7.lastSortKey === "none") rebaseToDomOrder(state7, entries2);
-      const baseIndexByItem = new Map(state7.baseItems.map((item, index) => [item, index]));
+      if (unsorted && state5.lastSortKey === "none") rebaseToDomOrder(state5, entries);
+      const baseIndexByItem = new Map(state5.baseItems.map((item, index) => [item, index]));
       const effectiveDirection = isSortDirection(direction) ? direction : DEFAULT_DIRECTION[sortKey] ?? "asc";
-      const desiredItems = unsorted ? state7.baseItems.slice() : sortInventoryItems(state7.baseItems, sortKey, effectiveDirection);
+      const desiredItems = unsorted ? state5.baseItems.slice() : sortInventoryItems(state5.baseItems, sortKey, effectiveDirection);
       const desiredEntries = [];
       const used = /* @__PURE__ */ new Set();
       for (const item of desiredItems) {
         const baseIndex = baseIndexByItem.get(item);
-        const entry = baseIndex == null ? void 0 : state7.entryByBaseIndex.get(baseIndex);
+        const entry = baseIndex == null ? void 0 : state5.entryByBaseIndex.get(baseIndex);
         if (!entry || used.has(entry)) continue;
         updateCardValue(entry.card, getInventoryItemValue(item), showValues);
         updateStrengthText(entry.card, item);
@@ -24659,17 +24659,17 @@
         desiredEntries.push(entry);
         used.add(entry);
       }
-      if (desiredEntries.length !== entries2.length) {
-        console.warn(`[InventorySorting] Only ${desiredEntries.length} of ${entries2.length} cards matched, not reordering.`);
+      if (desiredEntries.length !== entries.length) {
+        console.warn(`[InventorySorting] Only ${desiredEntries.length} of ${entries.length} cards matched, not reordering.`);
         return;
       }
-      if (!desiredEntries.every((entry, index) => entry.wrapper === entries2[index]?.wrapper)) {
+      if (!desiredEntries.every((entry, index) => entry.wrapper === entries[index]?.wrapper)) {
         const fragment = document.createDocumentFragment();
         for (const entry of desiredEntries) fragment.appendChild(entry.wrapper);
         container.appendChild(fragment);
       }
-      indexEntries2(state7, desiredEntries);
-      state7.lastSortKey = sortKey;
+      indexEntries2(state5, desiredEntries);
+      state5.lastSortKey = sortKey;
     };
   }
   var init_domSorter = __esm({
@@ -24701,12 +24701,12 @@
   }
   function applyPetsToList(container, items) {
     if (!container) return;
-    const entries2 = getDomEntries(container);
+    const entries = getDomEntries(container);
     const pets = (Array.isArray(items) ? items : []).filter(isPetItem);
-    if (!entries2.length || !pets.length) return;
+    if (!entries.length || !pets.length) return;
     const used = /* @__PURE__ */ new Set();
     const firstUnused = (match) => pets.findIndex((pet, i) => !used.has(i) && match(pet));
-    for (const entry of entries2) {
+    for (const entry of entries) {
       const cardName = normalize(entry.card.querySelector(PET_NAME_SELECTOR)?.textContent ?? "");
       let index = cardName ? firstUnused((pet) => nameCandidates(pet).includes(cardName)) : -1;
       if (index < 0) index = firstUnused(() => true);
@@ -24813,8 +24813,8 @@
     const wrap = document.createElement("div");
     wrap.className = WRAP_CLASS;
     Object.assign(wrap.style, { display: "block", width: "100%", gridColumn: "1 / -1", flex: "0 0 auto", contain: "layout style" });
-    const row4 = document.createElement("div");
-    Object.assign(row4.style, {
+    const row5 = document.createElement("div");
+    Object.assign(row5.style, {
       display: "flex",
       alignItems: "center",
       flexWrap: "wrap",
@@ -24837,8 +24837,8 @@
     const divider = document.createElement("span");
     Object.assign(divider.style, { alignSelf: "stretch", width: "1px", minHeight: "24px", background: color.border, flex: "0 0 auto" });
     const summary = new ValueSummary();
-    row4.append(caption("Sort by:"), sortSelect, caption("Order:"), directionSelect, divider, showValuesLabel, summary.el);
-    wrap.appendChild(row4);
+    row5.append(caption("Sort by:"), sortSelect, caption("Order:"), directionSelect, divider, showValuesLabel, summary.el);
+    wrap.appendChild(row5);
     const bar = { wrap, sortSelect, directionSelect, showValues, summary, lastSortKey: null, lastDirection: null };
     const picked = () => {
       bar.lastSortKey = sortSelect.value || "none";
@@ -24962,13 +24962,13 @@
       const target = resolveGrid();
       if (target && bar) void bar.summary.update(getActiveFilters(target), getSearchQuery(target));
     };
-    function pickDirection(current2, sortKey) {
+    function pickDirection(current3, sortKey) {
       const fallback = DEFAULT_DIRECTION[sortKey] ?? "asc";
       const saved = loadSortDirection();
-      const preferred = isSortDirection(current2.lastDirection) && current2.lastDirection || saved || fallback;
-      current2.directionSelect.value = preferred;
-      if (!isSortDirection(current2.directionSelect.value)) current2.directionSelect.value = fallback;
-      return current2.directionSelect.value;
+      const preferred = isSortDirection(current3.lastDirection) && current3.lastDirection || saved || fallback;
+      current3.directionSelect.value = preferred;
+      if (!isSortDirection(current3.directionSelect.value)) current3.directionSelect.value = fallback;
+      return current3.directionSelect.value;
     }
     function update() {
       const target = resolveGrid();
@@ -24980,9 +24980,9 @@
         loadValuesOnNextShow = false;
         void loadPlayersInRoomForValues();
       }
-      const current2 = ensureSortBar(target, handlers);
-      if (!current2) return;
-      bar = current2;
+      const current3 = ensureSortBar(target, handlers);
+      if (!current3) return;
+      bar = current3;
       if (!gridListeners) {
         gridListeners = new Subscriptions();
         gridListeners.add(onPlayersInRoomLoaded(refreshSummary));
@@ -24992,32 +24992,32 @@
           })
         );
       }
-      current2.showValues.checked = showValues;
+      current3.showValues.checked = showValues;
       const filters = getActiveFilters(target);
       const search2 = getSearchQuery(target);
       const container = getItemsContainer(target);
       observeNoise(container);
-      const entries2 = container ? getDomEntries(container) : [];
-      const domChanged = domOrderChanged(lastSortedOrder, entries2);
+      const entries = container ? getDomEntries(container) : [];
+      const domChanged = domOrderChanged(lastSortedOrder, entries);
       lastContextKey = filterContextKey(filters, search2);
-      void current2.summary.update(filters, search2);
+      void current3.summary.update(filters, search2);
       const options2 = computeSortOptions(filters, shownItemTypes(filters, search2));
-      const offered = (key2) => key2 && options2.some((o) => o.value === key2) ? key2 : null;
-      if (lastRenderedEntryCount !== entries2.length || !current2.sortSelect.options.length) {
-        renderSortOptions(current2.sortSelect, options2, offered(current2.lastSortKey) || offered(loadSortKey()));
-        lastRenderedEntryCount = entries2.length;
+      const offered2 = (key2) => key2 && options2.some((o) => o.value === key2) ? key2 : null;
+      if (lastRenderedEntryCount !== entries.length || !current3.sortSelect.options.length) {
+        renderSortOptions(current3.sortSelect, options2, offered2(current3.lastSortKey) || offered2(loadSortKey()));
+        lastRenderedEntryCount = entries.length;
       }
-      const sortKey = current2.sortSelect.value;
-      current2.lastSortKey = sortKey;
-      const direction = pickDirection(current2, sortKey);
-      current2.lastDirection = direction;
+      const sortKey = current3.sortSelect.value;
+      current3.lastSortKey = sortKey;
+      const direction = pickDirection(current3, sortKey);
+      current3.lastDirection = direction;
       if (sortKey !== lastAppliedSortKey || direction !== lastAppliedDirection || domChanged) {
         lastAppliedSortKey = sortKey;
         lastAppliedDirection = direction;
         saveSort(sortKey, direction);
         void sortGrid(target, sortKey, direction);
       } else {
-        lastSortedOrder = domOrderOf(entries2);
+        lastSortedOrder = domOrderOf(entries);
       }
     }
     const refresh = debounce(update, 120);
@@ -25036,10 +25036,10 @@
       });
     };
     const bodyObserver = new MutationObserver(() => {
-      const current2 = grid && document.contains(grid) ? grid : null;
-      if (grid && !current2) setGrid(null);
+      const current3 = grid && document.contains(grid) ? grid : null;
+      if (grid && !current3) setGrid(null);
       const next = document.querySelector(GRID_SELECTOR);
-      if (next !== current2) {
+      if (next !== current3) {
         setGrid(next);
         if (next) update();
       }
@@ -25362,11 +25362,11 @@
   function entryIdentity(entry) {
     const p = entry?.parameters;
     if (!p) return null;
-    const pick2 = (c) => typeof c === "string" && c.trim() ? c : null;
-    const direct = pick2(p.id) ?? pick2(p.pet?.id);
+    const pick = (c) => typeof c === "string" && c.trim() ? c : null;
+    const direct = pick(p.id) ?? pick(p.pet?.id);
     if (direct) return direct;
     for (const field2 of IDENTITY_FIELDS) {
-      const value = pick2(p[field2]);
+      const value = pick(p[field2]);
       if (value) return value;
     }
     return null;
@@ -25382,8 +25382,8 @@
       return [];
     }
   }
-  function saveHistory(entries2) {
-    const sorted = entries2.slice().sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
+  function saveHistory(entries) {
+    const sorted = entries.slice().sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
     if (sorted.length > HISTORY_LIMIT) sorted.splice(0, sorted.length - HISTORY_LIMIT);
     try {
       writeAriesPath(HISTORY_STORAGE_KEY, sorted);
@@ -25532,12 +25532,12 @@
       alpha: active3 ? BUTTON_ALPHA_ACTIVE : BUTTON_ALPHA_INACTIVE
     });
   }
-  function layoutClosedButton(button3) {
-    const width = button3.text.width + BUTTON_PADDING_X2 * 2 + CARET_GAP + button3.caret.width;
-    button3.bg.clear();
-    drawButtonBg(button3.bg, width, true);
-    button3.text.position.set(BUTTON_PADDING_X2, (BUTTON_HEIGHT - button3.text.height) / 2);
-    button3.caret.position.set(width - BUTTON_PADDING_X2 - button3.caret.width, (BUTTON_HEIGHT - button3.caret.height) / 2);
+  function layoutClosedButton(button2) {
+    const width = button2.text.width + BUTTON_PADDING_X2 * 2 + CARET_GAP + button2.caret.width;
+    button2.bg.clear();
+    drawButtonBg(button2.bg, width, true);
+    button2.text.position.set(BUTTON_PADDING_X2, (BUTTON_HEIGHT - button2.text.height) / 2);
+    button2.caret.position.set(width - BUTTON_PADDING_X2 - button2.caret.width, (BUTTON_HEIGHT - button2.caret.height) / 2);
   }
   function buildClosedButton(ctors, label2) {
     const text2 = new ctors.Text({ text: label2, style: TEXT_STYLE });
@@ -25549,9 +25549,9 @@
     container.addChild(caret);
     container.eventMode = "static";
     container.cursor = "pointer";
-    const button3 = { container, bg, text: text2, caret };
-    layoutClosedButton(button3);
-    return button3;
+    const button2 = { container, bg, text: text2, caret };
+    layoutClosedButton(button2);
+    return button2;
   }
   function buildOptions(ctors, maxWidth, counts, total) {
     const keys = ["all", ...mergeActions(Array.from(counts.keys()))];
@@ -25570,14 +25570,14 @@
       const bg = new ctors.Graphics();
       drawButtonBg(bg, width, key2 === active3);
       text2.position.set(BUTTON_PADDING_X2, (BUTTON_HEIGHT - text2.height) / 2);
-      const button3 = new ctors.Container();
-      button3.addChild(bg);
-      button3.addChild(text2);
-      button3.position.set(x, y);
-      button3.eventMode = "static";
-      button3.cursor = "pointer";
-      container.addChild(button3);
-      buttons.push({ container: button3, bg, key: key2 });
+      const button2 = new ctors.Container();
+      button2.addChild(bg);
+      button2.addChild(text2);
+      button2.position.set(x, y);
+      button2.eventMode = "static";
+      button2.cursor = "pointer";
+      container.addChild(button2);
+      buttons.push({ container: button2, bg, key: key2 });
       x += width + BUTTON_GAP2;
     }
     return { container, buttons, height: y + BUTTON_HEIGHT };
@@ -25602,9 +25602,9 @@
     container.addChild(options2.container);
     const toolbar2 = { container, closedButton, options: options2, counts, total, isExpanded: false };
     closedButton.container.on("pointertap", () => setExpanded(toolbar2, !toolbar2.isExpanded));
-    for (const button3 of options2.buttons) {
-      button3.container.on("pointertap", () => {
-        setActiveFilter(button3.key);
+    for (const button2 of options2.buttons) {
+      button2.container.on("pointertap", () => {
+        setActiveFilter(button2.key);
         setExpanded(toolbar2, false);
       });
     }
@@ -25612,11 +25612,11 @@
   }
   function refreshToolbarHighlight(toolbar2) {
     const active3 = getActiveFilter();
-    for (const button3 of toolbar2.options.buttons) {
-      if (button3.bg.destroyed) continue;
-      const width = button3.bg.getLocalBounds().width;
-      button3.bg.clear();
-      drawButtonBg(button3.bg, width, button3.key === active3);
+    for (const button2 of toolbar2.options.buttons) {
+      if (button2.bg.destroyed) continue;
+      const width = button2.bg.getLocalBounds().width;
+      button2.bg.clear();
+      drawButtonBg(button2.bg, width, button2.key === active3);
     }
     const label2 = closedLabel(toolbar2);
     if (toolbar2.closedButton.text.text !== label2) {
@@ -25707,14 +25707,14 @@
     }
   }
   function buildToolbarInto(anchors) {
-    const state7 = getReadySpriteState();
-    if (!state7?.ctors?.Text) return null;
-    const graphicsCtor = findGraphicsCtor(getStage(state7));
+    const state5 = getReadySpriteState();
+    if (!state5?.ctors?.Text) return null;
+    const graphicsCtor = findGraphicsCtor(getStage(state5));
     if (!graphicsCtor) return null;
     const maxWidth = safeWidth(anchors.backgroundSprite, 0) - 2 * (anchors.scrollViewContainer.position?.x ?? 0);
     if (maxWidth <= 0) return null;
     const built = buildFilterToolbar(
-      { Graphics: graphicsCtor, Text: state7.ctors.Text, Container: anchors.modalContainer.constructor },
+      { Graphics: graphicsCtor, Text: state5.ctors.Text, Container: anchors.modalContainer.constructor },
       maxWidth
     );
     anchors.modalContainer.addChild(built.container);
@@ -25765,9 +25765,9 @@
   }
   function tryFindModal() {
     if (!isActivityLogModalOpen() || modalNode) return;
-    const state7 = getReadySpriteState();
-    if (!state7) return;
-    const found = findAcrossBranches(getStage(state7), (node) => node?.label === ACTIVITY_LOG_MODAL_LABEL);
+    const state5 = getReadySpriteState();
+    if (!state5) return;
+    const found = findAcrossBranches(getStage(state5), (node) => node?.label === ACTIVITY_LOG_MODAL_LABEL);
     if (!found) return;
     modalNode = found;
     found.once("destroyed", () => {
@@ -26126,16 +26126,16 @@
     };
     return cachedState;
   }
-  function saveState(state7) {
-    if (state7.seenPetIds.length > SEEN_LIMIT) {
-      state7.seenPetIds.splice(0, state7.seenPetIds.length - SEEN_LIMIT);
+  function saveState(state5) {
+    if (state5.seenPetIds.length > SEEN_LIMIT) {
+      state5.seenPetIds.splice(0, state5.seenPetIds.length - SEEN_LIMIT);
     }
-    cachedState = state7;
+    cachedState = state5;
     try {
-      writeAriesPath(STATE_PATH2, state7);
+      writeAriesPath(STATE_PATH2, state5);
     } catch {
     }
-    changes6.emit(state7);
+    changes6.emit(state5);
   }
   function readPet(raw, eggIdFallback, timestamp, isPull) {
     if (!isRecord4(raw)) return null;
@@ -26163,9 +26163,9 @@
       isPull
     };
   }
-  function extractHatchEvents(entries2) {
+  function extractHatchEvents(entries) {
     const events = [];
-    for (const entry of entries2) {
+    for (const entry of entries) {
       const action2 = typeof entry?.action === "string" ? entry.action.trim() : "";
       if (!action2) continue;
       const timestamp = Number(entry.timestamp) || 0;
@@ -26199,17 +26199,17 @@
     counters.gold = event.hasGold ? 0 : counters.gold + 1;
     counters.rainbow = event.hasRainbow ? 0 : counters.rainbow + 1;
   }
-  function ingest(entries2, countStats) {
+  function ingest(entries, countStats) {
     var _a, _b;
-    const events = extractHatchEvents(entries2);
+    const events = extractHatchEvents(entries);
     if (!events.length) return false;
-    const state7 = loadState();
-    const seen = new Set(state7.seenPetIds);
+    const state5 = loadState();
+    const seen = new Set(state5.seenPetIds);
     let changed5 = false;
     for (const event of events) {
       if (seen.has(event.petId)) continue;
       seen.add(event.petId);
-      state7.seenPetIds.push(event.petId);
+      state5.seenPetIds.push(event.petId);
       changed5 = true;
       if (countStats) {
         try {
@@ -26217,12 +26217,12 @@
         } catch {
         }
       }
-      if (event.timestamp > state7.lastHatchAt) state7.lastHatchAt = event.timestamp;
+      if (event.timestamp > state5.lastHatchAt) state5.lastHatchAt = event.timestamp;
       if (!event.isPull || !event.eggId) continue;
-      const counters = (_a = state7.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
+      const counters = (_a = state5.counters)[_b = event.eggId] ?? (_a[_b] = emptyCounters());
       applyPull(counters, event, protectedSpecies(event.eggId));
     }
-    if (changed5) saveState(state7);
+    if (changed5) saveState(state5);
     return changed5;
   }
   async function startHatchTracker() {
@@ -26243,15 +26243,15 @@
     } catch {
     }
     if (firstRun) {
-      const state7 = loadState();
-      state7.bootstrapped = true;
-      state7.trackingStartedAt = Date.now();
-      saveState(state7);
+      const state5 = loadState();
+      state5.bootstrapped = true;
+      state5.trackingStartedAt = Date.now();
+      saveState(state5);
     }
-    const current2 = loadState();
-    if (current2.bootstrapped && current2.trackingStartedAt <= 0) {
-      current2.trackingStartedAt = current2.lastHatchAt > 0 ? current2.lastHatchAt : Date.now();
-      saveState(current2);
+    const current3 = loadState();
+    if (current3.bootstrapped && current3.trackingStartedAt <= 0) {
+      current3.trackingStartedAt = current3.lastHatchAt > 0 ? current3.lastHatchAt : Date.now();
+      saveState(current3);
     }
     let unsubscribe2 = null;
     try {
@@ -26298,14 +26298,14 @@
         },
         setOffset(eggId, key2, value) {
           var _a;
-          const state7 = loadState();
-          const offsets = (_a = state7.offsets)[eggId] ?? (_a[eggId] = emptyCounters());
+          const state5 = loadState();
+          const offsets = (_a = state5.offsets)[eggId] ?? (_a[eggId] = emptyCounters());
           const next = toCount(value);
           if (key2 === "gold") offsets.gold = next;
           else if (key2 === "rainbow") offsets.rainbow = next;
           else if (next > 0) offsets.species[key2] = next;
           else delete offsets.species[key2];
-          saveState(state7);
+          saveState(state5);
         },
         // Deliberately no reset: a counter that can be cleared is worse than useless,
         // since the server's own never resets except on the outcome itself. Only
@@ -26763,8 +26763,8 @@
       setTone(mini, level);
       mini.style.display = level === "ok" ? "none" : "";
     };
-    onSpriteWarmupProgress((state7) => {
-      warmup = state7;
+    onSpriteWarmupProgress((state5) => {
+      warmup = state5;
       update();
     });
     setInterval(update, 800);
@@ -27011,9 +27011,9 @@
     }
   }
   function toBlobUrl(url, defaultMime) {
-    let pending6 = blobUrls.get(url);
-    if (!pending6) {
-      pending6 = gmRequest({ url }, "arraybuffer").then(
+    let pending3 = blobUrls.get(url);
+    if (!pending3) {
+      pending3 = gmRequest({ url }, "arraybuffer").then(
         (res) => {
           if (!res.body) {
             blobUrls.delete(url);
@@ -27028,9 +27028,9 @@
           return url;
         }
       );
-      blobUrls.set(url, pending6);
+      blobUrls.set(url, pending3);
     }
-    return pending6;
+    return pending3;
   }
   function setImageSafe(img, url) {
     if (!url) return;
@@ -27105,15 +27105,15 @@
 
   // src/ui/kit/layout.ts
   function settingRow(title, hint2, control, opts = {}) {
-    const row4 = h("div", "qmm-setting-row");
-    if (opts.icon) row4.appendChild(iconBox(opts.icon, ROW_ICON_PX, opts.iconTag ?? "panel"));
+    const row5 = h("div", "qmm-setting-row");
+    if (opts.icon) row5.appendChild(iconBox(opts.icon, ROW_ICON_PX, opts.iconTag ?? "panel"));
     const text2 = h("div", "qmm-setting-row__text");
     text2.appendChild(h("div", "qmm-setting-row__title", title));
     if (hint2) text2.appendChild(h("div", "qmm-setting-row__hint", hint2));
     const controls = h("div", "qmm-setting-row__controls");
     controls.appendChild(control);
-    row4.append(text2, controls);
-    return { row: row4, controls };
+    row5.append(text2, controls);
+    return { row: row5, controls };
   }
   function collapsibleCard(opts) {
     const root4 = plainCard();
@@ -27131,14 +27131,14 @@
     head.append(titles, h("span", "qmm-collapse__chevron", "\u25B6"));
     const body = h("div", "qmm-collapse__body");
     let collapsed = opts.collapsed;
-    const apply2 = () => {
+    const apply = () => {
       root4.classList.toggle("is-collapsed", collapsed);
       head.setAttribute("aria-expanded", collapsed ? "false" : "true");
     };
-    apply2();
+    apply();
     head.addEventListener("click", () => {
       collapsed = !collapsed;
-      apply2();
+      apply();
       opts.onToggle(collapsed);
     });
     root4.append(head, body);
@@ -27153,13 +27153,13 @@
     return { root: root4, label: label2 };
   }
   function flexRow(opts = {}) {
-    const row4 = h("div", ["qmm-flex", opts.className].filter(Boolean).join(" "));
-    row4.style.alignItems = ALIGN[opts.align ?? "center"];
-    row4.style.justifyContent = JUSTIFY[opts.justify ?? "start"];
-    row4.style.gap = `${opts.gap ?? 8}px`;
-    row4.style.flexWrap = opts.wrap === false ? "nowrap" : "wrap";
-    if (opts.fullWidth) row4.style.width = "100%";
-    return row4;
+    const row5 = h("div", ["qmm-flex", opts.className].filter(Boolean).join(" "));
+    row5.style.alignItems = ALIGN[opts.align ?? "center"];
+    row5.style.justifyContent = JUSTIFY[opts.justify ?? "start"];
+    row5.style.gap = `${opts.gap ?? 8}px`;
+    row5.style.flexWrap = opts.wrap === false ? "nowrap" : "wrap";
+    if (opts.fullWidth) row5.style.width = "100%";
+    return row5;
   }
   var ROW_ICON_PX, JUSTIFY, ALIGN;
   var init_layout = __esm({
@@ -27447,8 +27447,8 @@
           return button(label2, typeof onClickOrOpts === "function" ? { onClick: onClickOrOpts } : onClickOrOpts);
         }
         /** Compat: use `setButtonEnabled()` from ./button. */
-        setButtonEnabled(btn, enabled5) {
-          setButtonEnabled(btn, enabled5);
+        setButtonEnabled(btn, enabled2) {
+          setButtonEnabled(btn, enabled2);
         }
         /** Compat: use `flexRow()` from ./layout. */
         flexRow(opts) {
@@ -27754,10 +27754,10 @@
         renderSfx();
       }
     });
-    function setButtonEnabled2(btn, enabled5) {
+    function setButtonEnabled2(btn, enabled2) {
       const setter = btn.setEnabled;
-      if (typeof setter === "function") setter(enabled5);
-      else btn.disabled = !enabled5;
+      if (typeof setter === "function") setter(enabled2);
+      else btn.disabled = !enabled2;
     }
     function stopPlayback() {
       if (stopAtHandler) {
@@ -27797,8 +27797,8 @@
       themeList.innerHTML = "";
       const themes = catalog?.themes ?? [];
       themes.forEach((theme) => {
-        const row4 = document.createElement("div");
-        row4.className = "dd-audio-row";
+        const row5 = document.createElement("div");
+        row5.className = "dd-audio-row";
         const infoWrap = document.createElement("div");
         infoWrap.className = "dd-audio-row__info";
         const title = document.createElement("div");
@@ -27808,7 +27808,7 @@
         urlEl.className = "dd-audio-url";
         urlEl.textContent = [theme.music && "music", theme.ambience && "ambience"].filter(Boolean).join(" \xB7 ") || "(no tracks)";
         infoWrap.append(title, urlEl);
-        row4.appendChild(infoWrap);
+        row5.appendChild(infoWrap);
         const actions2 = flexRow({ gap: 6, wrap: true, align: "center" });
         actions2.className = "dd-audio-actions";
         if (theme.music) {
@@ -27834,8 +27834,8 @@
           size: "sm",
           onClick: () => copy2([theme.music, theme.ambience].filter(Boolean).join("\n"))
         }));
-        row4.appendChild(actions2);
-        themeList.appendChild(row4);
+        row5.appendChild(actions2);
+        themeList.appendChild(row5);
       });
       themeList.style.display = themes.length ? "" : "none";
       themeEmpty.style.display = themes.length ? "none" : "block";
@@ -27850,8 +27850,8 @@
       for (const item of items) {
         if (!rx.test(item.name)) continue;
         visibleSfx.push(item);
-        const row4 = document.createElement("div");
-        row4.className = "dd-audio-row";
+        const row5 = document.createElement("div");
+        row5.className = "dd-audio-row";
         const infoWrap = document.createElement("div");
         infoWrap.className = "dd-audio-row__info";
         const title = document.createElement("div");
@@ -27861,7 +27861,7 @@
         meta.className = "dd-audio-meta";
         meta.textContent = `${formatTime2(item.start)} \u2192 ${formatTime2(item.end)} (${item.duration.toFixed(2)}s)`;
         infoWrap.append(title, meta);
-        row4.appendChild(infoWrap);
+        row5.appendChild(infoWrap);
         const actions2 = flexRow({ gap: 6, wrap: false, align: "center" });
         actions2.className = "dd-audio-actions";
         const playBtn = button("Play", {
@@ -27877,8 +27877,8 @@
           onClick: () => copy2(atlasUrl)
         });
         actions2.append(playBtn, copyBtn);
-        row4.appendChild(actions2);
-        sfxList.appendChild(row4);
+        row5.appendChild(actions2);
+        sfxList.appendChild(row5);
       }
       sfxInfo.textContent = items.length ? `${visibleSfx.length} / ${items.length} SFX shown.` : "No SFX loaded yet.";
       sfxList.style.display = visibleSfx.length ? "" : "none";
@@ -28230,7 +28230,7 @@
     }
     view.innerHTML = "";
     view.classList.add("dd-debug-view");
-    const entries2 = /* @__PURE__ */ new Map();
+    const entries = /* @__PURE__ */ new Map();
     const records = [];
     let recording = false;
     let selectedRecord = null;
@@ -28346,58 +28346,58 @@
       matchesWrap.innerHTML = "";
       emptyMatches.style.display = atoms.length ? "none" : "block";
       atoms.map((atom) => ({ atom, label: String(atom?.debugLabel || atom?.label || "<unknown>") })).sort((a, b) => a.label.localeCompare(b.label)).forEach(({ atom, label: label2 }) => {
-        const row4 = document.createElement("label");
-        row4.className = "dd-atom-list__item";
-        row4.title = label2;
+        const row5 = document.createElement("label");
+        row5.className = "dd-atom-list__item";
+        row5.title = label2;
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
-        checkbox.checked = entries2.has(label2);
+        checkbox.checked = entries.has(label2);
         checkbox.className = "dd-atom-list__checkbox";
         const text2 = document.createElement("span");
         text2.className = "dd-atom-list__label";
         text2.textContent = label2;
-        row4.append(checkbox, text2);
+        row5.append(checkbox, text2);
         checkbox.addEventListener("change", async () => {
           if (checkbox.checked) {
-            const existing = entries2.get(label2);
+            const existing = entries.get(label2);
             if (existing) {
               existing.atom = atom;
             } else {
-              entries2.set(label2, { atom, lastValue: null, unsubscribe: null });
+              entries.set(label2, { atom, lastValue: null, unsubscribe: null });
             }
             if (recording) {
               const ok = await attachEntry(label2);
               if (!ok) checkbox.checked = false;
             }
           } else {
-            const existing = entries2.get(label2);
+            const existing = entries.get(label2);
             if (existing?.unsubscribe) {
               try {
                 existing.unsubscribe();
               } catch {
               }
             }
-            entries2.delete(label2);
+            entries.delete(label2);
           }
           updateSelectedInfo();
           updateControls();
         });
-        matchesWrap.appendChild(row4);
-        if (entries2.has(label2)) {
-          const existing = entries2.get(label2);
+        matchesWrap.appendChild(row5);
+        if (entries.has(label2)) {
+          const existing = entries.get(label2);
           if (existing) existing.atom = atom;
         }
       });
       updateSelectedInfo();
     }
     function updateSelectedInfo() {
-      const size = entries2.size;
+      const size = entries.size;
       selectedInfo.textContent = size ? `${size} atom${size > 1 ? "s" : ""} selected.` : "No atom selected.";
     }
     function updateControls() {
       setBtnLabel(btnRecord, recording ? "Stop recording" : "Start recording");
       btnRecord.classList.toggle("active", recording);
-      btnRecord.disabled = !recording && !entries2.size;
+      btnRecord.disabled = !recording && !entries.size;
       btnClear.disabled = records.length === 0;
       btnCopyLog.disabled = records.length === 0;
     }
@@ -28409,9 +28409,9 @@
         return;
       }
       records.forEach((rec, idx) => {
-        const row4 = document.createElement("div");
-        row4.className = selectedRecord === idx ? "dd-atom-entry dd-atom-entry--row is-selected" : "dd-atom-entry dd-atom-entry--row";
-        row4.dataset.idx = String(idx);
+        const row5 = document.createElement("div");
+        row5.className = selectedRecord === idx ? "dd-atom-entry dd-atom-entry--row is-selected" : "dd-atom-entry dd-atom-entry--row";
+        row5.dataset.idx = String(idx);
         const left = document.createElement("div");
         left.style.display = "flex";
         left.style.flexDirection = "column";
@@ -28429,13 +28429,13 @@
         summary.style.whiteSpace = "pre-wrap";
         const prefix = rec.type === "initial" ? "[initial] " : "";
         summary.textContent = prefix + summarizeValue(rec.next);
-        row4.append(left, summary);
-        row4.addEventListener("click", () => {
+        row5.append(left, summary);
+        row5.addEventListener("click", () => {
           selectedRecord = idx;
           renderRecords(false);
           updateDetails(rec);
         });
-        logWrap.appendChild(row4);
+        logWrap.appendChild(row5);
       });
       if (autoScroll) logWrap.scrollTop = logWrap.scrollHeight;
       if (selectedRecord != null && !records[selectedRecord]) {
@@ -28523,7 +28523,7 @@
         stopRecording();
         return;
       }
-      if (!entries2.size) {
+      if (!entries.size) {
         toast("Select at least one atom");
         return;
       }
@@ -28535,11 +28535,11 @@
       }
       recording = true;
       updateControls();
-      for (const label2 of Array.from(entries2.keys())) {
+      for (const label2 of Array.from(entries.keys())) {
         const ok = await attachEntry(label2);
-        if (!ok) entries2.delete(label2);
+        if (!ok) entries.delete(label2);
       }
-      if (!entries2.size) {
+      if (!entries.size) {
         stopRecording();
       }
       updateSelectedInfo();
@@ -28548,7 +28548,7 @@
     function stopRecording() {
       if (!recording) return;
       recording = false;
-      for (const entry of entries2.values()) {
+      for (const entry of entries.values()) {
         if (entry.unsubscribe) {
           try {
             entry.unsubscribe();
@@ -28560,7 +28560,7 @@
       updateControls();
     }
     async function attachEntry(label2) {
-      const entry = entries2.get(label2);
+      const entry = entries.get(label2);
       if (!entry) return false;
       if (entry.unsubscribe) {
         try {
@@ -28616,7 +28616,7 @@
         return true;
       } catch (err) {
         toast(err?.message || `Unable to subscribe to ${label2}`);
-        entries2.delete(label2);
+        entries.delete(label2);
         updateSelectedInfo();
         updateControls();
         return false;
@@ -28662,7 +28662,7 @@ next: ${next}`;
     updateControls();
     view.__atoms_live_cleanup__ = () => {
       stopRecording();
-      for (const entry of entries2.values()) {
+      for (const entry of entries.values()) {
         if (entry.unsubscribe) {
           try {
             entry.unsubscribe();
@@ -28670,7 +28670,7 @@ next: ${next}`;
           }
         }
       }
-      entries2.clear();
+      entries.clear();
       records.length = 0;
       selectedRecord = null;
     };
@@ -28712,8 +28712,8 @@ next: ${next}`;
     let mutePatterns = [];
     const setSelectedRow = (fid) => {
       selectedId = fid;
-      [...logWrap.querySelectorAll("[data-fid]")].forEach((row4) => {
-        row4.classList.toggle("selected", String(fid || "") === row4.dataset.fid);
+      [...logWrap.querySelectorAll("[data-fid]")].forEach((row5) => {
+        row5.classList.toggle("selected", String(fid || "") === row5.dataset.fid);
       });
       if (fid != null) {
         const f = frameById(fid);
@@ -28916,9 +28916,9 @@ next: ${next}`;
       return acts;
     }
     function buildRow(f) {
-      const row4 = document.createElement("div");
-      row4.className = "ws-row";
-      row4.dataset.fid = String(f.id);
+      const row5 = document.createElement("div");
+      row5.className = "ws-row";
+      row5.dataset.fid = String(f.id);
       const ts = document.createElement("div");
       ts.className = "ts";
       ts.textContent = fmtTime(f.t);
@@ -28929,18 +28929,18 @@ next: ${next}`;
       body.className = "body";
       body.innerHTML = `<code>${escapeLite(f.text)}</code>`;
       const acts = rowActions(f.id, f);
-      row4.append(ts, arrow, body, acts);
-      row4.onclick = () => setSelectedRow(f.id);
-      row4.ondblclick = () => {
+      row5.append(ts, arrow, body, acts);
+      row5.onclick = () => setSelectedRow(f.id);
+      row5.ondblclick = () => {
         ta.value = f.text;
         setSelectedRow(f.id);
       };
-      return row4;
+      return row5;
     }
     function appendOne(f) {
       if (!passesFilters(f)) return;
-      const row4 = buildRow(f);
-      logWrap.appendChild(row4);
+      const row5 = buildRow(f);
+      logWrap.appendChild(row5);
       updateEmptyState();
       if (autoScroll) logWrap.scrollTop = logWrap.scrollHeight;
     }
@@ -29158,8 +29158,8 @@ next: ${next}`;
     const cats = category === ANY_CATEGORY ? Object.keys(catalog.sprites) : [category];
     const out = [];
     for (const cat of cats) {
-      const entries2 = catalog.sprites[cat] ?? [];
-      for (const entry of entries2) {
+      const entries = catalog.sprites[cat] ?? [];
+      for (const entry of entries) {
         out.push({ category: cat, name: entry.name, url: entry.url });
       }
     }
@@ -29291,8 +29291,8 @@ next: ${next}`;
       const heading = document.createElement("span");
       heading.className = "dd-sprite-mutation-group-title";
       heading.textContent = label2;
-      const row4 = document.createElement("div");
-      row4.className = "dd-sprite-mutation-buttons";
+      const row5 = document.createElement("div");
+      row5.className = "dd-sprite-mutation-buttons";
       options2.forEach((option2) => {
         const btn = document.createElement("button");
         btn.type = "button";
@@ -29306,9 +29306,9 @@ next: ${next}`;
           renderMutationControls();
           if (visibleSpriteRecords.length) renderSpriteCards(visibleSpriteRecords);
         });
-        row4.appendChild(btn);
+        row5.appendChild(btn);
       });
-      container.append(heading, row4);
+      container.append(heading, row5);
     }
     function previewUrlFor(record2, mutations) {
       return mutations.length ? composedSpriteUrl(record2.category, record2.name, mutations) : record2.url;
@@ -29327,8 +29327,8 @@ next: ${next}`;
         const imgWrap = document.createElement("div");
         imgWrap.className = "dd-sprite-grid__img";
         imgWrap.style.setProperty("--sprite-size", `${SPRITE_ICON_SIZE}px`);
-        const iconSlot = document.createElement("span");
-        iconSlot.className = "dd-sprite-grid__icon";
+        const iconSlot2 = document.createElement("span");
+        iconSlot2.className = "dd-sprite-grid__icon";
         const img = document.createElement("img");
         img.alt = record2.name;
         img.decoding = "async";
@@ -29338,9 +29338,9 @@ next: ${next}`;
           img.dataset.fallbackApplied = "1";
           setImageSafe(img, record2.url);
         });
-        iconSlot.appendChild(img);
+        iconSlot2.appendChild(img);
         setImageSafe(img, previewUrlFor(record2, activeMutations));
-        imgWrap.appendChild(iconSlot);
+        imgWrap.appendChild(iconSlot2);
         const nameEl = document.createElement("span");
         nameEl.className = "dd-sprite-grid__name";
         nameEl.textContent = record2.name;
@@ -29907,12 +29907,12 @@ next: ${next}`;
     }
     return summary;
   }
-  function weatherRecipeEditor(state7, onChange) {
+  function weatherRecipeEditor(state5, onChange) {
     const root4 = document.createElement("div");
     root4.className = "lk-recipes";
     const title = document.createElement("div");
     title.className = "lk-recipes__title";
-    const addButton = button("+ Recipe", { size: "sm", onClick: () => startEditing(state7.weatherRecipes.length) });
+    const addButton = button("+ Recipe", { size: "sm", onClick: () => startEditing(state5.weatherRecipes.length) });
     const head = document.createElement("div");
     head.className = "lk-recipes__head";
     head.append(title, addButton);
@@ -29923,7 +29923,7 @@ next: ${next}`;
     let draft = /* @__PURE__ */ new Set();
     const startEditing = (index) => {
       editingIndex = index;
-      draft = new Set(state7.weatherRecipes[index] ?? []);
+      draft = new Set(state5.weatherRecipes[index] ?? []);
       normalizeRecipe(draft);
       repaint();
     };
@@ -29936,14 +29936,14 @@ next: ${next}`;
       if (editingIndex === null) return;
       const recipe = new Set(draft);
       normalizeRecipe(recipe);
-      if (editingIndex === state7.weatherRecipes.length) state7.weatherRecipes.push(recipe);
-      else if (editingIndex >= 0 && editingIndex < state7.weatherRecipes.length) state7.weatherRecipes[editingIndex] = recipe;
+      if (editingIndex === state5.weatherRecipes.length) state5.weatherRecipes.push(recipe);
+      else if (editingIndex >= 0 && editingIndex < state5.weatherRecipes.length) state5.weatherRecipes[editingIndex] = recipe;
       stopEditing();
       onChange();
     };
     const remove = (index) => {
       if (index < 0) return;
-      if (index < state7.weatherRecipes.length) state7.weatherRecipes.splice(index, 1);
+      if (index < state5.weatherRecipes.length) state5.weatherRecipes.splice(index, 1);
       if (editingIndex !== null) {
         if (index === editingIndex) {
           editingIndex = null;
@@ -29956,8 +29956,8 @@ next: ${next}`;
       onChange();
     };
     function editingRow(index) {
-      const row4 = document.createElement("div");
-      row4.className = "lk-recipe is-editing";
+      const row5 = document.createElement("div");
+      row5.className = "lk-recipe is-editing";
       const summary = showSummary(document.createElement("div"), draft);
       const tiles = /* @__PURE__ */ new Map();
       const grid = weatherGrid(true);
@@ -29983,33 +29983,33 @@ next: ${next}`;
         button("\u274C", { size: "sm", tooltip: "Cancel", onClick: stopEditing }),
         button("\u2714\uFE0F", { size: "sm", tooltip: "Save", onClick: commit })
       );
-      if (index < state7.weatherRecipes.length) {
+      if (index < state5.weatherRecipes.length) {
         actions2.append(button("\u{1F5D1}\uFE0F", { size: "sm", tooltip: "Delete", ariaLabel: "Delete", onClick: () => remove(index) }));
       }
-      row4.append(summary, grid, actions2);
-      return row4;
+      row5.append(summary, grid, actions2);
+      return row5;
     }
     function savedRow(recipe, index) {
-      const row4 = document.createElement("div");
-      row4.className = "lk-recipe";
+      const row5 = document.createElement("div");
+      row5.className = "lk-recipe";
       const actions2 = document.createElement("div");
       actions2.className = "lk-recipe__actions";
       actions2.append(
         button("\u270F\uFE0F", { size: "xs", tooltip: "Edit", ariaLabel: "Edit", onClick: () => startEditing(index) }),
         button("\u{1F5D1}\uFE0F", { size: "xs", tooltip: "Delete", ariaLabel: "Delete", onClick: () => remove(index) })
       );
-      row4.append(showSummary(document.createElement("div"), recipe), actions2);
-      return row4;
+      row5.append(showSummary(document.createElement("div"), recipe), actions2);
+      return row5;
     }
     function repaint() {
-      title.textContent = `${state7.lockMode === "ALLOW" ? "Allow" : "Lock"} when any recipe row matches (OR between rows)`;
+      title.textContent = `${state5.lockMode === "ALLOW" ? "Allow" : "Lock"} when any recipe row matches (OR between rows)`;
       addButton.setEnabled(editingIndex === null);
       list.replaceChildren();
-      state7.weatherRecipes.forEach((recipe, index) => {
+      state5.weatherRecipes.forEach((recipe, index) => {
         normalizeRecipe(recipe);
         list.appendChild(index === editingIndex ? editingRow(index) : savedRow(recipe, index));
       });
-      if (editingIndex !== null && editingIndex === state7.weatherRecipes.length) {
+      if (editingIndex !== null && editingIndex === state5.weatherRecipes.length) {
         list.appendChild(editingRow(editingIndex));
       }
       if (!list.childElementCount) {
@@ -30039,7 +30039,7 @@ next: ${next}`;
     root4.append(div("qmm-label", label2), value);
     return { root: root4, value };
   }
-  function lockerSettingsCard(state7, onChange) {
+  function lockerSettingsCard(state5, onChange) {
     const root4 = div("lk-settings");
     root4.dataset.lockerSettingsCard = "1";
     const lockModeHint = div("lk-hint");
@@ -30049,11 +30049,11 @@ next: ${next}`;
         { value: "lock", label: "Lock" },
         { value: "allow", label: "Allow" }
       ],
-      state7.lockMode === "ALLOW" ? "allow" : "lock",
+      state5.lockMode === "ALLOW" ? "allow" : "lock",
       (value) => {
         const next = value === "allow" ? "ALLOW" : "LOCK";
-        if (next === state7.lockMode) return;
-        state7.lockMode = next;
+        if (next === state5.lockMode) return;
+        state5.lockMode = next;
         showLockMode();
         recipes.refresh();
         onChange();
@@ -30061,14 +30061,14 @@ next: ${next}`;
       { ariaLabel: "Harvest mode" }
     );
     const locksEverySize = () => {
-      if (state7.lockMode !== "LOCK") return false;
-      switch (state7.scaleLockMode) {
+      if (state5.lockMode !== "LOCK") return false;
+      switch (state5.scaleLockMode) {
         case "RANGE":
-          return state7.minScalePct <= CROP_SIZE_MIN && state7.maxScalePct >= CROP_SIZE_MAX;
+          return state5.minScalePct <= CROP_SIZE_MIN && state5.maxScalePct >= CROP_SIZE_MAX;
         case "MINIMUM":
-          return state7.minScalePct <= CROP_SIZE_MIN;
+          return state5.minScalePct <= CROP_SIZE_MIN;
         case "MAXIMUM":
-          return state7.maxScalePct >= CROP_SIZE_MAX;
+          return state5.maxScalePct >= CROP_SIZE_MAX;
         default:
           return false;
       }
@@ -30079,7 +30079,7 @@ next: ${next}`;
       lockWarning.textContent = blocked ? "This size filter covers every size, so nothing can be harvested. Pick None to stop filtering by size." : "";
     };
     const showLockMode = () => {
-      const value = state7.lockMode === "ALLOW" ? "allow" : "lock";
+      const value = state5.lockMode === "ALLOW" ? "allow" : "lock";
       if (lockMode.get() !== value) lockMode.set(value);
       lockModeHint.textContent = value === "allow" ? "Harvest only when every active filter category matches" : "Harvest is locked whenever any active filter matches";
       showLockWarning();
@@ -30098,13 +30098,13 @@ next: ${next}`;
         { value: "maximum", label: "Maximum" },
         { value: "ranged", label: "Range" }
       ],
-      scaleValueOf(state7.scaleLockMode),
+      scaleValueOf(state5.scaleLockMode),
       (value) => {
         const mode = SCALE_MODES2[value];
-        if (mode === state7.scaleLockMode) return;
-        state7.scaleLockMode = mode;
+        if (mode === state5.scaleLockMode) return;
+        state5.scaleLockMode = mode;
         if (mode === "RANGE") {
-          range.setValues(state7.minScalePct, state7.maxScalePct);
+          range.setValues(state5.minScalePct, state5.maxScalePct);
           readRange(true);
         }
         showScale();
@@ -30112,9 +30112,9 @@ next: ${next}`;
       },
       { ariaLabel: "Scale lock mode" }
     );
-    const minSlider = slider(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state7.minScalePct, { fill: true });
-    const maxSlider = slider(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state7.maxScalePct, { fill: true });
-    const range = rangeDual(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state7.minScalePct, state7.maxScalePct);
+    const minSlider = slider(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state5.minScalePct, { fill: true });
+    const maxSlider = slider(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state5.maxScalePct, { fill: true });
+    const range = rangeDual(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state5.minScalePct, state5.maxScalePct);
     for (const el of [minSlider, maxSlider, range.root]) el.classList.add("lk-slider");
     const minValue = sliderValue("Minimum");
     const maxValue = sliderValue("Maximum");
@@ -30134,16 +30134,16 @@ next: ${next}`;
       rangeMin.value.textContent = String(min);
       rangeMax.value.textContent = String(max);
       if (!commit) return;
-      state7.minScalePct = min;
-      state7.maxScalePct = max;
+      state5.minScalePct = min;
+      state5.maxScalePct = max;
       showLockWarning();
     };
     const readSingle = (input, read2, key2, commit) => {
       const n = Number.parseInt(input.value, 10);
-      const value = Number.isFinite(n) ? n : state7[key2];
+      const value = Number.isFinite(n) ? n : state5[key2];
       read2.value.textContent = String(value);
       if (!commit) return;
-      state7[key2] = value;
+      state5[key2] = value;
       showLockWarning();
     };
     minSlider.addEventListener("input", () => readSingle(minSlider, minValue, "minScalePct", false));
@@ -30164,27 +30164,27 @@ next: ${next}`;
       });
     }
     const showScale = () => {
-      const mode = state7.scaleLockMode;
+      const mode = state5.scaleLockMode;
       if (scaleMode.get() !== scaleValueOf(mode)) scaleMode.set(scaleValueOf(mode));
       minControls.hidden = mode !== "MINIMUM";
       maxControls.hidden = mode !== "MAXIMUM";
       rangeControls.hidden = mode !== "RANGE";
-      minSlider.value = String(state7.minScalePct);
-      maxSlider.value = String(state7.maxScalePct);
-      minValue.value.textContent = String(state7.minScalePct);
-      maxValue.value.textContent = String(state7.maxScalePct);
-      range.setValues(state7.minScalePct, state7.maxScalePct);
+      minSlider.value = String(state5.minScalePct);
+      maxSlider.value = String(state5.maxScalePct);
+      minValue.value.textContent = String(state5.minScalePct);
+      maxValue.value.textContent = String(state5.maxScalePct);
+      range.setValues(state5.minScalePct, state5.maxScalePct);
       readRange(false);
       showLockWarning();
     };
     const sizeStack = div("lk-column");
     sizeStack.append(scaleMode, minControls, maxControls, rangeControls);
-    const colorButton = (label2, modifier, isOn, toggle2) => {
+    const colorButton = (label2, modifier, isOn, toggle) => {
       const btn = button(label2, {
         size: "sm",
         tooltip: "Active filters influence harvest conditions",
         onClick: () => {
-          toggle2();
+          toggle();
           showColors();
           onChange();
         }
@@ -30195,21 +30195,21 @@ next: ${next}`;
     };
     const colorButtons = [];
     const toggleVisual = (tag) => {
-      if (!state7.visualMutations.delete(tag)) state7.visualMutations.add(tag);
+      if (!state5.visualMutations.delete(tag)) state5.visualMutations.add(tag);
     };
     const colors = div("qmm-flex");
     colors.style.justifyContent = "center";
     colors.append(
-      colorButton("Normal", "normal", () => state7.avoidNormal, () => state7.avoidNormal = !state7.avoidNormal),
-      colorButton("Gold", "gold", () => state7.visualMutations.has("Gold"), () => toggleVisual("Gold")),
-      colorButton("Rainbow", "rainbow", () => state7.visualMutations.has("Rainbow"), () => toggleVisual("Rainbow"))
+      colorButton("Normal", "normal", () => state5.avoidNormal, () => state5.avoidNormal = !state5.avoidNormal),
+      colorButton("Gold", "gold", () => state5.visualMutations.has("Gold"), () => toggleVisual("Gold")),
+      colorButton("Rainbow", "rainbow", () => state5.visualMutations.has("Rainbow"), () => toggleVisual("Rainbow"))
     );
     const showColors = () => colorButtons.forEach(({ btn, isOn }) => btn.setActive(isOn()));
     const mainGrid = weatherGrid(false);
     const mainTiles = weatherMutations().map((info) => {
       const tile = weatherTile(info, false, (checked) => {
-        if (checked) state7.weatherSelected.add(info.key);
-        else state7.weatherSelected.delete(info.key);
+        if (checked) state5.weatherSelected.add(info.key);
+        else state5.weatherSelected.delete(info.key);
         onChange();
       });
       mainGrid.appendChild(tile.root);
@@ -30223,22 +30223,22 @@ next: ${next}`;
         { value: "ALL", label: "All match (AND)" },
         { value: "RECIPES", label: "Recipes (match rows)" }
       ],
-      state7.weatherMode,
+      state5.weatherMode,
       (value) => {
-        state7.weatherMode = value;
+        state5.weatherMode = value;
         showWeatherMode();
         onChange();
       }
     );
     weatherMode.classList.add("qmm-flex");
     weatherMode.style.justifyContent = "center";
-    const recipes = weatherRecipeEditor(state7, onChange);
+    const recipes = weatherRecipeEditor(state5, onChange);
     const recipesSection = section("Weather recipes", recipes.root);
     const showWeatherMode = () => {
       for (const input of Array.from(weatherMode.querySelectorAll("input"))) {
-        input.checked = input.value === state7.weatherMode;
+        input.checked = input.value === state5.weatherMode;
       }
-      const recipeMode = state7.weatherMode === "RECIPES";
+      const recipeMode = state5.weatherMode === "RECIPES";
       mainGrid.classList.toggle("is-disabled", recipeMode);
       mainGrid.inert = recipeMode;
       recipesSection.hidden = !recipeMode;
@@ -30255,7 +30255,7 @@ next: ${next}`;
       showLockMode();
       showScale();
       showColors();
-      mainTiles.forEach((tile) => tile.setChecked(state7.weatherSelected.has(tile.key)));
+      mainTiles.forEach((tile) => tile.setChecked(state5.weatherSelected.has(tile.key)));
       showWeatherMode();
       recipes.refresh();
     };
@@ -30359,8 +30359,8 @@ next: ${next}`;
         return;
       }
       const seed = getLockerSeedOptions().find((opt) => opt.key === key2);
-      const toggle2 = switchInput(entry.enabled, (on) => store.setOverrideEnabled(key2, on));
-      const header = card(seed?.cropName || key2, { actions: [toggle2] });
+      const toggle = switchInput(entry.enabled, (on) => store.setOverrideEnabled(key2, on));
+      const header = card(seed?.cropName || key2, { actions: [toggle] });
       header.root.classList.add("lk-wide");
       header.header.prepend(seedIcon(key2, 32, seed?.spriteKey));
       header.root.removeChild(header.body);
@@ -30374,7 +30374,7 @@ next: ${next}`;
       showStatus();
       detail.replaceChildren(header.root, status2, form.root);
       detail.scrollTop = scrollMemory.get(key2) ?? 0;
-      shown = { key: key2, entry, form, toggle: toggle2, showStatus };
+      shown = { key: key2, entry, form, toggle, showStatus };
     }
     const refresh = () => {
       list.setItems(listItems());
@@ -30548,7 +30548,7 @@ next: ${next}`;
       lockerRestrictionsService.setSellAllPetsRules(patch);
       refresh();
     };
-    const enabled5 = switchInput(rules3().enabled, (on) => save3({ enabled: on }));
+    const enabled2 = switchInput(rules3().enabled, (on) => save3({ enabled: on }));
     const gold = switchInput(rules3().protectGold, (on) => save3({ protectGold: on }));
     const rainbow = switchInput(rules3().protectRainbow, (on) => save3({ protectRainbow: on }));
     const maxStr = switchInput(rules3().protectMaxStr, (on) => save3({ protectMaxStr: on }));
@@ -30562,7 +30562,7 @@ next: ${next}`;
     const maxStrControls = document.createElement("div");
     maxStrControls.className = "qmm-flex";
     maxStrControls.append(maxStr, maxStrValue.wrap);
-    const enabledRow = settingRow("Enable protection rules", null, enabled5).row;
+    const enabledRow = settingRow("Enable protection rules", null, enabled2).row;
     const goldRow = settingRow("Protect Gold mutation", null, gold).row;
     const rainbowRow = settingRow("Protect Rainbow mutation", null, rainbow).row;
     const maxStrRow = settingRow("Protect pets with Max STR", null, maxStrControls).row;
@@ -30632,19 +30632,19 @@ next: ${next}`;
     };
     body.append(enabledRow, goldRow, rainbowRow, maxStrRow, rarities);
     function refresh() {
-      const current2 = rules3();
-      enabled5.setChecked(current2.enabled);
-      gold.setChecked(current2.protectGold);
-      rainbow.setChecked(current2.protectRainbow);
-      maxStr.setChecked(current2.protectMaxStr);
-      maxStrValue.value = String(current2.maxStrThreshold);
-      for (const row4 of [goldRow, rainbowRow, maxStrRow]) row4.classList.toggle("lk-dim", !current2.enabled);
-      gold.disabled = rainbow.disabled = maxStr.disabled = !current2.enabled;
-      const maxStrOff = !current2.enabled || !current2.protectMaxStr;
+      const current3 = rules3();
+      enabled2.setChecked(current3.enabled);
+      gold.setChecked(current3.protectGold);
+      rainbow.setChecked(current3.protectRainbow);
+      maxStr.setChecked(current3.protectMaxStr);
+      maxStrValue.value = String(current3.maxStrThreshold);
+      for (const row5 of [goldRow, rainbowRow, maxStrRow]) row5.classList.toggle("lk-dim", !current3.enabled);
+      gold.disabled = rainbow.disabled = maxStr.disabled = !current3.enabled;
+      const maxStrOff = !current3.enabled || !current3.protectMaxStr;
       maxStrValue.disabled = maxStrOff;
       maxStrValue.wrap.classList.toggle("lk-dim", maxStrOff);
       maxStrValue.wrap.inert = maxStrOff;
-      rarities.classList.toggle("is-disabled", !current2.enabled);
+      rarities.classList.toggle("is-disabled", !current3.enabled);
       showRarities();
     }
     refresh();
@@ -30727,11 +30727,11 @@ next: ${next}`;
     const rowFor = (egg) => {
       let entry = rows.get(egg.id);
       if (!entry) {
-        const toggle2 = switchInput(false, (locked) => lockerRestrictionsService.setEggLock(egg.id, locked));
-        toggle2.title = "Lock hatching";
-        const { row: row4 } = settingRow(egg.name, null, toggle2);
-        row4.prepend(eggIcon(egg.id, egg.name, 32));
-        entry = { row: row4, title: row4.querySelector(".qmm-setting-row__title"), toggle: toggle2 };
+        const toggle = switchInput(false, (locked) => lockerRestrictionsService.setEggLock(egg.id, locked));
+        toggle.title = "Lock hatching";
+        const { row: row5 } = settingRow(egg.name, null, toggle);
+        row5.prepend(eggIcon(egg.id, egg.name, 32));
+        entry = { row: row5, title: row5.querySelector(".qmm-setting-row__title"), toggle };
         rows.set(egg.id, entry);
       }
       return entry;
@@ -30779,9 +30779,9 @@ next: ${next}`;
     const sellPets = sellPetsRulesCard();
     layout.append(friendBonus.root, decor.root, eggLocks.root, sellPets.root);
     const syncFromService = () => {
-      const state7 = lockerRestrictionsService.getState();
-      decorToggle.setChecked(state7.decorPickupLocked);
-      friendBonus.sync(state7.minRequiredPlayers);
+      const state5 = lockerRestrictionsService.getState();
+      decorToggle.setChecked(state5.decorPickupLocked);
+      friendBonus.sync(state5.minRequiredPlayers);
       eggLocks.render();
       sellPets.refresh();
     };
@@ -30898,27 +30898,27 @@ next: ${next}`;
           return this.changes.on(listener);
         }
         /** Reads the saved state back in. Species the service no longer holds are forgotten. */
-        syncFromService(state7) {
+        syncFromService(state5) {
           this.syncing = true;
           try {
-            this.global.enabled = state7.enabled;
-            readInto(this.global.settings, state7.settings);
-            for (const [key2, value] of Object.entries(state7.overrides)) {
+            this.global.enabled = state5.enabled;
+            readInto(this.global.settings, state5.settings);
+            for (const [key2, value] of Object.entries(state5.overrides)) {
               const entry = this.ensureOverride(key2);
               entry.enabled = value.enabled;
               readInto(entry.settings, value.settings);
               entry.hasPersistedSettings = true;
             }
             for (const key2 of Array.from(this.overrides.keys())) {
-              if (!(key2 in state7.overrides)) this.overrides.delete(key2);
+              if (!(key2 in state5.overrides)) this.overrides.delete(key2);
             }
             this.changes.emit();
           } finally {
             this.syncing = false;
           }
         }
-        setGlobalEnabled(enabled5) {
-          this.global.enabled = enabled5;
+        setGlobalEnabled(enabled2) {
+          this.global.enabled = enabled2;
           this.saveGlobal();
         }
         notifyGlobalSettingsChanged() {
@@ -30936,12 +30936,12 @@ next: ${next}`;
         isOverrideEnabled(key2) {
           return this.overrides.get(key2)?.enabled === true;
         }
-        setOverrideEnabled(key2, enabled5) {
+        setOverrideEnabled(key2, enabled2) {
           const entry = this.ensureOverride(key2);
-          if (enabled5 && !entry.enabled && !entry.hasPersistedSettings) {
+          if (enabled2 && !entry.enabled && !entry.hasPersistedSettings) {
             copyDraft(entry.settings, this.global.settings);
           }
-          entry.enabled = enabled5;
+          entry.enabled = enabled2;
           this.saveOverride(key2);
         }
         notifyOverrideSettingsChanged(key2) {
@@ -30968,23 +30968,23 @@ next: ${next}`;
   function generalTab(store) {
     const root4 = document.createElement("div");
     root4.className = "lk-column";
-    const toggle2 = switchInput(store.global.enabled, (on) => store.setGlobalEnabled(on));
-    const enabled5 = document.createElement("label");
-    enabled5.className = "qmm-flex";
+    const toggle = switchInput(store.global.enabled, (on) => store.setGlobalEnabled(on));
+    const enabled2 = document.createElement("label");
+    enabled2.className = "qmm-flex";
     const enabledText = document.createElement("span");
     enabledText.className = "qmm-label";
     enabledText.textContent = "Enabled";
-    enabled5.append(enabledText, toggle2);
+    enabled2.append(enabledText, toggle);
     const header = card("Global locker", {
       subtitle: "Set the rules for locking or allowing harvests using the filters below",
-      actions: [enabled5]
+      actions: [enabled2]
     });
     header.root.classList.add("lk-wide");
     header.root.removeChild(header.body);
     const form = lockerSettingsCard(store.global.settings, () => store.notifyGlobalSettingsChanged());
     root4.append(header.root, form.root);
     const update = () => {
-      toggle2.setChecked(store.global.enabled);
+      toggle.setChecked(store.global.enabled);
       form.setDisabled(!store.global.enabled);
       form.refresh();
     };
@@ -31011,7 +31011,7 @@ next: ${next}`;
       { id: "locker-restrictions", title: "Restrictions", render: (view) => tabs.restrictions.render(view) }
     ]);
     ui.switchTo("locker-general");
-    const offService = lockerService.subscribe((state7) => store.syncFromService(state7));
+    const offService = lockerService.subscribe((state5) => store.syncFromService(state5));
     ui.on("unmounted", () => {
       offService();
       Object.values(tabs).forEach((tab) => tab.destroy());
@@ -31033,13 +31033,13 @@ next: ${next}`;
   });
 
   // src/features/calculator/compute.ts
-  function mutationsOf(state7) {
-    return [state7.color, state7.weather, state7.lighting].filter((label2) => label2 !== "None");
+  function mutationsOf(state5) {
+    return [state5.color, state5.weather, state5.lighting].filter((label2) => label2 !== "None");
   }
-  function calculatorPrice(species, state7) {
-    const value = estimateProduceValue(species, state7.size, mutationsOf(state7), {
+  function calculatorPrice(species, state5) {
+    const value = estimateProduceValue(species, state5.size, mutationsOf(state5), {
       ...DefaultPricing,
-      friendPlayers: clampFriendPlayers(state7.friendPlayers)
+      friendPlayers: clampFriendPlayers(state5.friendPlayers)
     });
     return Number.isFinite(value) && value > 0 ? value : null;
   }
@@ -31080,9 +31080,9 @@ next: ${next}`;
   });
 
   // src/features/calculator/mutationPicker.ts
-  function showIcon(button3, label2) {
+  function showIcon(button2, label2) {
     const iconName = MUTATION_ICON_NAMES[label2];
-    const labelSpan = button3.querySelector(".qmm-seg__btn-label");
+    const labelSpan = button2.querySelector(".qmm-seg__btn-label");
     if (!iconName || !labelSpan) return;
     void getSpriteObjectUrlByName(["ui"], iconName).then((url) => {
       if (!url) return;
@@ -31105,8 +31105,8 @@ next: ${next}`;
       { ariaLabel, fullWidth: true }
     );
     control.style.setProperty("--seg-pad", "6px");
-    for (const button3 of control.querySelectorAll(".qmm-seg__btn")) {
-      Object.assign(button3.style, {
+    for (const button2 of control.querySelectorAll(".qmm-seg__btn")) {
+      Object.assign(button2.style, {
         flex: "1 1 0",
         minWidth: "0",
         display: "flex",
@@ -31114,7 +31114,7 @@ next: ${next}`;
         fontSize: "11px",
         fontWeight: "600"
       });
-      showIcon(button3, button3.dataset.value ?? "");
+      showIcon(button2, button2.dataset.value ?? "");
     }
     return control;
   }
@@ -31359,9 +31359,9 @@ next: ${next}`;
     const listIcons = /* @__PURE__ */ new Map();
     let selectedKey = null;
     const stateFor = (key2) => {
-      let state7 = states.get(key2);
-      if (!state7) states.set(key2, state7 = defaultCalculatorState());
-      return state7;
+      let state5 = states.get(key2);
+      if (!state5) states.set(key2, state5 = defaultCalculatorState());
+      return state5;
     };
     function refreshPrice() {
       price.value.textContent = selectedKey ? formatCoins(calculatorPrice(selectedKey, stateFor(selectedKey))) : "\u2014";
@@ -31381,21 +31381,21 @@ next: ${next}`;
       preview.show(option2, mutationsOf(stateFor(selectedKey)), seedEmoji(option2, selectedKey));
     }
     function renderPickers() {
-      const state7 = selectedKey ? stateFor(selectedKey) : defaultCalculatorState();
+      const state5 = selectedKey ? stateFor(selectedKey) : defaultCalculatorState();
       const live = selectedKey != null;
-      const pick2 = (field2, spriteChanges) => live ? (value) => {
-        state7[field2] = value;
+      const pick = (field2, spriteChanges) => live ? (value) => {
+        state5[field2] = value;
         if (spriteChanges) refreshSprite();
         refreshPrice();
       } : void 0;
-      colorHost.replaceChildren(optionPicker(COLOR_LABELS, state7.color, "Mutations", pick2("color", true)));
-      weatherHost.replaceChildren(optionPicker(WEATHER_LABELS, state7.weather, "Weather condition", pick2("weather", true)));
-      lightingHost.replaceChildren(optionPicker(LIGHTING_LABELS, state7.lighting, "Weather lighting", pick2("lighting", true)));
-      const pickFriends = pick2("friendPlayers", false);
+      colorHost.replaceChildren(optionPicker(COLOR_LABELS, state5.color, "Mutations", pick("color", true)));
+      weatherHost.replaceChildren(optionPicker(WEATHER_LABELS, state5.weather, "Weather condition", pick("weather", true)));
+      lightingHost.replaceChildren(optionPicker(LIGHTING_LABELS, state5.lighting, "Weather lighting", pick("lighting", true)));
+      const pickFriends = pick("friendPlayers", false);
       friendHost.replaceChildren(
         optionPicker(
           FRIEND_BONUS_LABELS,
-          friendPlayersLabel(state7.friendPlayers),
+          friendPlayersLabel(state5.friendPlayers),
           "Friend bonus",
           pickFriends && ((label2) => pickFriends(friendPlayersOf(label2)))
         )
@@ -31497,14 +31497,14 @@ next: ${next}`;
     });
   }
   function gridRow() {
-    const row4 = document.createElement("div");
-    css(row4, {
+    const row5 = document.createElement("div");
+    css(row5, {
       display: "grid",
       gridTemplateColumns: GRID_TEMPLATE,
       alignItems: "center",
       gap: "6px"
     });
-    return row4;
+    return row5;
   }
   function headerCell(label2, align = "center") {
     const cell = document.createElement("span");
@@ -31538,10 +31538,10 @@ next: ${next}`;
     cell.textContent = formatInteger(value);
     return cell;
   }
-  function speciesCell(row4) {
+  function speciesCell(row5) {
     const cell = document.createElement("span");
     css(cell, { display: "flex", alignItems: "center", gap: "7px", minWidth: "0" });
-    cell.appendChild(iconBox(`sprite/pet/${row4.species}`, SPECIES_ICON_PX, "hatch"));
+    cell.appendChild(iconBox(`sprite/pet/${row5.species}`, SPECIES_ICON_PX, "hatch"));
     const label2 = document.createElement("span");
     css(label2, {
       fontSize: "12.5px",
@@ -31550,12 +31550,12 @@ next: ${next}`;
       textOverflow: "ellipsis",
       whiteSpace: "nowrap"
     });
-    label2.textContent = row4.species;
+    label2.textContent = row5.species;
     cell.appendChild(label2);
-    if (row4.share !== void 0) {
+    if (row5.share !== void 0) {
       const share = document.createElement("span");
       css(share, { fontSize: "10px", color: color.textDim, whiteSpace: "nowrap", flex: "0 0 auto" });
-      const percent = row4.share * 100;
+      const percent = row5.share * 100;
       share.textContent = `${percent >= 1 ? Math.round(percent) : percent.toFixed(1)}%`;
       cell.appendChild(share);
     }
@@ -31576,14 +31576,14 @@ next: ${next}`;
     let totalNormal = 0;
     let totalGold = 0;
     let totalRainbow = 0;
-    for (const row4 of rows) {
-      const counts = countsFor(stats, row4.species);
+    for (const row5 of rows) {
+      const counts = countsFor(stats, row5.species);
       totalNormal += counts.normal ?? 0;
       totalGold += counts.gold ?? 0;
       totalRainbow += counts.rainbow ?? 0;
       const line = gridRow();
       line.append(
-        speciesCell(row4),
+        speciesCell(row5),
         numberCell(counts.normal, color.text),
         numberCell(counts.gold, color.gold),
         numberCell(counts.rainbow, color.rainbow),
@@ -31645,8 +31645,8 @@ next: ${next}`;
     const remaining = Math.max(0, ceiling - misses);
     const due = remaining === 0;
     const near = !due && remaining <= NEAR_GUARANTEE_PULLS;
-    const row4 = document.createElement("div");
-    css2(row4, {
+    const row5 = document.createElement("div");
+    css2(row5, {
       display: "grid",
       gridTemplateColumns: ROW_TEMPLATE,
       alignItems: "center",
@@ -31690,7 +31690,7 @@ next: ${next}`;
     const isFloor = offset <= 0;
     value.textContent = due ? "Guaranteed" : `${isFloor ? "\u2265 " : ""}${formatInteger(misses)} / ${formatInteger(ceiling)}`;
     value.title = due ? `Due: the next pull is forced (threshold ${formatInteger(target.threshold)}).` : isFloor ? `At least ${formatInteger(remaining)} more misses before the guarantee (threshold ${formatInteger(target.threshold)}). The game keeps its own counter private, so this only counts hatches seen since tracking began. Set your real counter to correct it.` : `${formatInteger(remaining)} more misses before the guarantee (threshold ${formatInteger(target.threshold)}).`;
-    row4.append(label2, bar.root, value);
+    row5.append(label2, bar.root, value);
     if (showOffsets) {
       const input = textInput("", String(offset), { small: true });
       Object.assign(input, { type: "number", min: "0", max: String(ceiling), step: "1" });
@@ -31699,11 +31699,11 @@ next: ${next}`;
       input.addEventListener("change", () => {
         HatchTracker.setOffset(egg.eggId, target.key, Number(input.value));
       });
-      row4.appendChild(input);
+      row5.appendChild(input);
     } else {
-      row4.appendChild(document.createElement("span"));
+      row5.appendChild(document.createElement("span"));
     }
-    return row4;
+    return row5;
   }
   function trackingNote() {
     const note = document.createElement("div");
@@ -31805,8 +31805,8 @@ next: ${next}`;
     return getAriesStorage().hatch?.expanded?.[sectionId] !== true;
   }
   function setCollapsed(sectionId, collapsed) {
-    updateAriesStorage((current2) => {
-      const hatch = current2.hatch ?? (current2.hatch = {});
+    updateAriesStorage((current3) => {
+      const hatch = current3.hatch ?? (current3.hatch = {});
       const map2 = hatch.expanded ?? (hatch.expanded = {});
       if (collapsed) delete map2[sectionId];
       else map2[sectionId] = true;
@@ -31832,8 +31832,8 @@ next: ${next}`;
     return hasGold ? "gold" : "normal";
   }
   function isTableEmpty(stats) {
-    const entries2 = Object.values(stats.pets?.hatchedByType ?? {});
-    return entries2.length === 0 || entries2.every((counts) => totalOf(counts) <= 0);
+    const entries = Object.values(stats.pets?.hatchedByType ?? {});
+    return entries.length === 0 || entries.every((counts) => totalOf(counts) <= 0);
   }
   function addSpecies(map2, species, mutations) {
     const name = typeof species === "string" ? species.trim() : "";
@@ -31984,7 +31984,7 @@ next: ${next}`;
       }
     }
     let rafId = null;
-    const schedule2 = () => {
+    const schedule = () => {
       if (!view.isConnected) {
         cleanup();
         return;
@@ -31995,8 +31995,8 @@ next: ${next}`;
         repaint();
       });
     };
-    const stopStats = StatsService.subscribe(schedule2);
-    const stopTracker = HatchTracker.subscribe(schedule2);
+    const stopStats = StatsService.subscribe(schedule);
+    const stopTracker = HatchTracker.subscribe(schedule);
     function cleanup() {
       try {
         stopStats();
@@ -32124,8 +32124,8 @@ next: ${next}`;
     return el;
   }
   function cropRow(species, crop, name) {
-    const row4 = document.createElement("div");
-    Object.assign(row4.style, {
+    const row5 = document.createElement("div");
+    Object.assign(row5.style, {
       display: "grid",
       gridTemplateColumns: "1fr auto",
       alignItems: "center",
@@ -32145,12 +32145,12 @@ next: ${next}`;
       Object.assign(idEl.style, { fontSize: "11px", opacity: "0.6" });
       label2.appendChild(idEl);
     }
-    const toggle2 = switchInput(
+    const toggle = switchInput(
       PetsService.isInstantFeedCropAllowed(species, crop),
       (on) => PetsService.setInstantFeedCropAllowed(species, crop, on)
     );
-    row4.append(label2, toggle2);
-    return row4;
+    row5.append(label2, toggle);
+    return row5;
   }
   function renderFeedingTab(view) {
     view.replaceChildren();
@@ -32388,9 +32388,9 @@ next: ${next}`;
   });
 
   // src/features/pets/logsTab.ts
-  function options(el, entries2) {
+  function options(el, entries) {
     el.replaceChildren(
-      ...entries2.map(([value, label2]) => {
+      ...entries.map(([value, label2]) => {
         const option2 = document.createElement("option");
         option2.value = value;
         option2.textContent = label2;
@@ -32555,8 +32555,8 @@ next: ${next}`;
       return cell;
     }
     function logRow(log2) {
-      const row4 = document.createElement("div");
-      css3(row4, {
+      const row5 = document.createElement("div");
+      css3(row5, {
         display: "grid",
         gridTemplateColumns: ROW_TEMPLATE2,
         alignItems: "center",
@@ -32568,8 +32568,8 @@ next: ${next}`;
         // A proc from this session reads at a glance without a legend.
         borderLeft: log2.isActiveSession ? `2px solid ${color.accent}` : `1px solid ${color.border}`
       });
-      row4.append(whenCell(log2), petCell(log2), abilityCell(log2), detailsCell(log2));
-      return row4;
+      row5.append(whenCell(log2), petCell(log2), abilityCell(log2), detailsCell(log2));
+      return row5;
     }
     function applyFilters() {
       let result = logs2.slice();
@@ -32589,13 +32589,13 @@ next: ${next}`;
       return result;
     }
     function rebuildAbilityOptions() {
-      const current2 = selAbility.value;
-      const entries2 = [
+      const current3 = selAbility.value;
+      const entries = [
         ["", "All abilities"],
         ...PetsService.getSeenAbilityIds().map((id) => [id, id])
       ];
-      options(selAbility, entries2);
-      selAbility.value = entries2.some(([value]) => value === current2) ? current2 : "";
+      options(selAbility, entries);
+      selAbility.value = entries.some(([value]) => value === current3) ? current3 : "";
     }
     function repaint() {
       const visible = applyFilters();
@@ -33010,8 +33010,8 @@ next: ${next}`;
     if (ratio >= 0.75) return color.warn;
     return "#f87171";
   }
-  function mkBar(current2, atMax) {
-    const ratio = atMax > 0 ? Math.max(0, Math.min(1, current2 / atMax)) : 0;
+  function mkBar(current3, atMax) {
+    const ratio = atMax > 0 ? Math.max(0, Math.min(1, current3 / atMax)) : 0;
     const track = document.createElement("div");
     Object.assign(track.style, {
       height: "3px",
@@ -33082,11 +33082,11 @@ next: ${next}`;
       flex: "0 0 auto"
     });
     const mkArrow = (glyph, delta, label2) => {
-      const button3 = document.createElement("button");
-      button3.type = "button";
-      button3.textContent = glyph;
-      button3.title = label2;
-      Object.assign(button3.style, {
+      const button2 = document.createElement("button");
+      button2.type = "button";
+      button2.textContent = glyph;
+      button2.title = label2;
+      Object.assign(button2.style, {
         border: "none",
         background: "transparent",
         color: MUTED,
@@ -33097,18 +33097,18 @@ next: ${next}`;
         cursor: "pointer",
         borderRadius: "3px"
       });
-      button3.onmouseenter = () => {
-        button3.style.color = color.text;
+      button2.onmouseenter = () => {
+        button2.style.color = color.text;
       };
-      button3.onmouseleave = () => {
-        button3.style.color = MUTED;
+      button2.onmouseleave = () => {
+        button2.style.color = MUTED;
       };
-      button3.addEventListener("click", (event) => {
+      button2.addEventListener("click", (event) => {
         event.stopPropagation();
         event.preventDefault();
         nav.onStep(delta);
       });
-      return button3;
+      return button2;
     };
     const counter2 = document.createElement("span");
     counter2.textContent = `${nav.index + 1}/${nav.total}`;
@@ -33201,8 +33201,8 @@ Not a sum: it is 1 minus the product of every pet missing.${perHour}
     }
     const magnitude = perProcMagnitude(group2);
     if (magnitude) {
-      const row4 = document.createElement("div");
-      Object.assign(row4.style, {
+      const row5 = document.createElement("div");
+      Object.assign(row5.style, {
         display: "flex",
         alignItems: "baseline",
         justifyContent: "space-between",
@@ -33210,7 +33210,7 @@ Not a sum: it is 1 minus the product of every pet missing.${perHour}
         fontSize: "10px",
         marginTop: "1px"
       });
-      row4.title = group2.contributors.length > 1 ? "What a single proc gives. Each pet applies its own value, so this is\na range across the team; the values never add up." : "What a single proc gives.";
+      row5.title = group2.contributors.length > 1 ? "What a single proc gives. Each pet applies its own value, so this is\na range across the team; the values never add up." : "What a single proc gives.";
       const label2 = document.createElement("span");
       label2.textContent = "per proc";
       label2.style.color = MUTED;
@@ -33219,8 +33219,8 @@ Not a sum: it is 1 minus the product of every pet missing.${perHour}
       amount.style.fontWeight = "600";
       amount.style.flex = "0 0 auto";
       amount.style.fontVariantNumeric = "tabular-nums";
-      row4.append(label2, amount);
-      block.appendChild(row4);
+      row5.append(label2, amount);
+      block.appendChild(row5);
     }
     return block;
   }
@@ -33305,8 +33305,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       tint = MUTED;
       title = `No known hunger data for: ${autonomy.speciesMissingDepletion.join(", ")}.`;
     }
-    const row4 = document.createElement("div");
-    Object.assign(row4.style, {
+    const row5 = document.createElement("div");
+    Object.assign(row5.style, {
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
@@ -33317,7 +33317,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       border: `1px solid ${color.border}`,
       fontSize: "10px"
     });
-    row4.title = title;
+    row5.title = title;
     const label2 = document.createElement("span");
     label2.textContent = "\u{1F356} Lasts without feeding (from full)";
     label2.style.color = MUTED;
@@ -33330,8 +33330,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     valueSpan.style.fontWeight = "600";
     valueSpan.style.flex = "0 0 auto";
     valueSpan.style.fontVariantNumeric = "tabular-nums";
-    row4.append(label2, valueSpan);
-    return row4;
+    row5.append(label2, valueSpan);
+    return row5;
   }
   function renderTeamStats(pets, options2 = {}) {
     const wrap = document.createElement("div");
@@ -33458,9 +33458,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     text2.append(nameEl, abilityDots([], { emptyText: "No ability" }));
     const btnChoose = button("", { icon: "+", tooltip: "Choose a pet", ariaLabel: "Choose a pet" });
     const btnClear = button("", { icon: "\u2212", variant: "danger", tooltip: "Remove this pet", ariaLabel: "Remove this pet" });
-    const setBusy = (busy4) => {
-      btnChoose.disabled = busy4;
-      btnClear.disabled = busy4;
+    const setBusy = (busy) => {
+      btnChoose.disabled = busy;
+      btnClear.disabled = busy;
     };
     btnChoose.onclick = async () => {
       setBusy(true);
@@ -33773,10 +33773,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     function teamRow(team, index, view) {
       const selected = team.id === view.selectedId;
       const active3 = team.id === view.activeTeamId;
-      const row4 = document.createElement("div");
-      row4.dataset.index = String(index);
-      row4.dataset.teamId = team.id;
-      Object.assign(row4.style, {
+      const row5 = document.createElement("div");
+      row5.dataset.index = String(index);
+      row5.dataset.teamId = team.id;
+      Object.assign(row5.style, {
         height: "36px",
         padding: "0 10px",
         borderRadius: "8px",
@@ -33812,23 +33812,23 @@ Restore figures are averages; unlucky streaks do worse.`;
         minis.appendChild(petIcon(id ? view.pets.get(String(id)) ?? null : null, MINI_ICON_PX));
       }
       const grab = grabHandle();
-      row4.append(dot, label2, minis, grab);
-      row4.onmouseenter = () => {
-        if (!selected) row4.style.borderColor = color.accentBorder;
+      row5.append(dot, label2, minis, grab);
+      row5.onmouseenter = () => {
+        if (!selected) row5.style.borderColor = color.accentBorder;
       };
-      row4.onmouseleave = () => {
-        if (!selected) row4.style.borderColor = color.border;
+      row5.onmouseleave = () => {
+        if (!selected) row5.style.borderColor = color.border;
       };
-      row4.onclick = () => handlers.onSelect(team.id);
+      row5.onclick = () => handlers.onSelect(team.id);
       grab.addEventListener("dragstart", (ev) => {
         draggingIndex = index;
-        draggingHeight = row4.getBoundingClientRect().height;
-        row4.classList.add("qmm-dragging");
+        draggingHeight = row5.getBoundingClientRect().height;
+        row5.classList.add("qmm-dragging");
         ev.dataTransfer?.setData("text/plain", String(index));
         if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "move";
         try {
-          const ghost = row4.cloneNode(true);
-          Object.assign(ghost.style, { width: `${row4.getBoundingClientRect().width}px`, position: "absolute", top: "-9999px" });
+          const ghost = row5.cloneNode(true);
+          Object.assign(ghost.style, { width: `${row5.getBoundingClientRect().width}px`, position: "absolute", top: "-9999px" });
           document.body.appendChild(ghost);
           ev.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
           setTimeout(() => ghost.remove(), 0);
@@ -33836,18 +33836,18 @@ Restore figures are averages; unlucky streaks do worse.`;
         }
       });
       grab.addEventListener("dragend", () => {
-        row4.classList.remove("qmm-dragging");
+        row5.classList.remove("qmm-dragging");
         resetDrag();
       });
-      row4.addEventListener("dragover", (ev) => {
-        const bounds = row4.getBoundingClientRect();
+      row5.addEventListener("dragover", (ev) => {
+        const bounds = row5.getBoundingClientRect();
         trackDrag(ev, ev.clientY < bounds.top + bounds.height / 2 ? index : index + 1);
       });
-      row4.addEventListener("drop", (ev) => {
+      row5.addEventListener("drop", (ev) => {
         ev.stopPropagation();
         drop(ev);
       });
-      return row4;
+      return row5;
     }
     function render(view) {
       teams2 = view.teams;
@@ -34567,16 +34567,16 @@ Restore figures are averages; unlucky streaks do worse.`;
   function combinations(items, size) {
     if (size <= 0 || size > items.length) return [];
     const out = [];
-    const current2 = [];
+    const current3 = [];
     const walk = (start2) => {
-      if (current2.length === size) {
-        out.push([...current2]);
+      if (current3.length === size) {
+        out.push([...current3]);
         return;
       }
       for (let i = start2; i < items.length; i += 1) {
-        current2.push(items[i]);
+        current3.push(items[i]);
         walk(i + 1);
-        current2.pop();
+        current3.pop();
       }
     };
     walk(0);
@@ -34998,13 +34998,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     return `outranked in: ${parts.join(", ")}`;
   }
   function renderUnusedRow(info) {
-    const row4 = document.createElement("div");
-    row4.style.display = "flex";
-    row4.style.alignItems = "center";
-    row4.style.gap = "6px";
-    row4.style.padding = "3px 0";
-    row4.style.opacity = "0.75";
-    row4.appendChild(renderPetChip(info.pet));
+    const row5 = document.createElement("div");
+    row5.style.display = "flex";
+    row5.style.alignItems = "center";
+    row5.style.gap = "6px";
+    row5.style.padding = "3px 0";
+    row5.style.opacity = "0.75";
+    row5.appendChild(renderPetChip(info.pet));
     const reason = document.createElement("span");
     reason.textContent = unusedReasonText(info);
     reason.style.fontSize = "10px";
@@ -35014,8 +35014,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     reason.style.overflow = "hidden";
     reason.style.textOverflow = "ellipsis";
     reason.style.maxWidth = "45%";
-    row4.appendChild(reason);
-    return row4;
+    row5.appendChild(reason);
+    return row5;
   }
   function renderUnusedSection(unusedPets) {
     const section5 = card(`\u{1F5D1}\uFE0F Not used in any team (${unusedPets.length})`, { tone: "muted", compactHeader: true, gap: 4 });
@@ -35188,16 +35188,16 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function mergeEntries(inventory, storage, label2) {
     const ids = /* @__PURE__ */ new Set([...inventory.keys(), ...storage.keys()]);
-    const entries2 = [];
+    const entries = [];
     for (const id of ids) {
       const invQty = inventory.get(id) ?? 0;
       const storeQty = storage.get(id) ?? 0;
       const total = invQty + storeQty;
       if (total <= 0) continue;
-      entries2.push({ id, label: label2(id), invQty, storeQty, total });
+      entries.push({ id, label: label2(id), invQty, storeQty, total });
     }
-    entries2.sort((a, b) => a.label.localeCompare(b.label));
-    return entries2;
+    entries.sort((a, b) => a.label.localeCompare(b.label));
+    return entries;
   }
   function entryLimit(guardEnabled) {
     return guardEnabled ? INVENTORY_ENTRY_LIMIT_GUARDED : INVENTORY_ENTRY_LIMIT;
@@ -35268,12 +35268,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/deleters/run.ts
   function createDeleterController(kind) {
     const selection = /* @__PURE__ */ new Map();
-    let running6 = false;
+    let running = false;
     let paused = false;
     let cancelled = false;
     let resumeWaiter = null;
     const events = new Emitter();
-    async function gate2() {
+    async function gate() {
       while (paused && !cancelled) {
         await new Promise((resolve) => {
           resumeWaiter = resolve;
@@ -35288,7 +35288,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return hasRoomForWithdrawal(plan, count, kind.isGuardEnabled());
     }
     async function run(delayMs) {
-      if (running6) {
+      if (running) {
         kind.toast(kind.toastTitle, "Deletion already in progress.", "info");
         return;
       }
@@ -35296,8 +35296,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         kind.toast(kind.toastTitle, `No ${kind.unitNoun} selected.`, "info");
         return;
       }
-      const entries2 = await kind.loadEntries();
-      const byId = new Map(entries2.map((entry) => [entry.id, entry]));
+      const entries = await kind.loadEntries();
+      const byId = new Map(entries.map((entry) => [entry.id, entry]));
       const tasks = [];
       for (const picked of selection.values()) {
         const entry = byId.get(picked.id);
@@ -35319,7 +35319,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         );
         return;
       }
-      running6 = true;
+      running = true;
       paused = false;
       cancelled = false;
       let done = 0;
@@ -35330,7 +35330,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           "info"
         );
         for (const task of tasks) {
-          await gate2();
+          await gate();
           const plan = planWithdrawal(task.entry, task.qty);
           if (plan.fromStorage > 0) {
             if (!await ensureRoom(plan)) {
@@ -35345,7 +35345,7 @@ Restore figures are averages; unlucky streaks do worse.`;
             await sleep2(WITHDRAW_SETTLE_MS);
           }
           for (let i = 0; i < task.qty; i++) {
-            await gate2();
+            await gate();
             await kind.deleteOne(task.entry.id, delayMs);
             done += 1;
             events.emit({ type: "progress", done, total, label: task.entry.label });
@@ -35362,7 +35362,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         const message2 = error?.message === "cancelled" ? `Cancelled after ${formatInteger(done)} ${kind.unitNoun}.` : error?.message || "Deletion failed.";
         kind.toast(kind.toastTitle, message2, "error");
       } finally {
-        running6 = false;
+        running = false;
         paused = false;
         cancelled = false;
         resumeWaiter = null;
@@ -35372,29 +35372,29 @@ Restore figures are averages; unlucky streaks do worse.`;
     return {
       events,
       getSelection: () => Array.from(selection.values()),
-      setSelection(entries2) {
+      setSelection(entries) {
         selection.clear();
-        for (const entry of entries2) {
+        for (const entry of entries) {
           if (entry && entry.id && entry.qty > 0) selection.set(entry.id, { ...entry });
         }
       },
       clearSelection: () => selection.clear(),
       run,
-      isRunning: () => running6,
+      isRunning: () => running,
       isPaused: () => paused,
       pause() {
-        if (!running6 || paused) return;
+        if (!running || paused) return;
         paused = true;
         events.emit({ type: "paused" });
       },
       resume() {
-        if (!running6 || !paused) return;
+        if (!running || !paused) return;
         paused = false;
         resumeWaiter?.();
         events.emit({ type: "resumed" });
       },
       cancel() {
-        if (!running6) return;
+        if (!running) return;
         cancelled = true;
         paused = false;
         resumeWaiter?.();
@@ -35415,13 +35415,13 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/deleters/deleters.ts
   async function findFirstEmptySlot() {
-    const state7 = await PlayerService.getGardenState();
+    const state5 = await PlayerService.getGardenState();
     const isFree = (objects, index) => objects?.[String(index)] == null;
     for (let i = 0; i < DIRT_TILE_COUNT; i++) {
-      if (isFree(state7?.tileObjects, i)) return { tileType: "Dirt", index: i };
+      if (isFree(state5?.tileObjects, i)) return { tileType: "Dirt", index: i };
     }
     for (let i = 0; i < BOARDWALK_TILE_COUNT; i++) {
-      if (isFree(state7?.boardwalkTileObjects, i)) return { tileType: "Boardwalk", index: i };
+      if (isFree(state5?.boardwalkTileObjects, i)) return { tileType: "Boardwalk", index: i };
     }
     return null;
   }
@@ -35567,7 +35567,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       onClose: options2.onClose
     });
     const picked = new Map(options2.initial);
-    let entries2 = [];
+    let entries = [];
     let filter = "";
     const search2 = textInput(`Search ${options2.unitNoun}\u2026`, "", { small: true });
     search2.classList.add("qws-del-search");
@@ -35611,8 +35611,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       return box2;
     }
     function visibleEntries() {
-      if (!filter) return entries2;
-      return entries2.filter(
+      if (!filter) return entries;
+      return entries.filter(
         (entry) => entry.label.toLowerCase().includes(filter) || entry.id.toLowerCase().includes(filter)
       );
     }
@@ -35620,7 +35620,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       let groups = 0;
       let units = 0;
       let fromStorage = 0;
-      for (const entry of entries2) {
+      for (const entry of entries) {
         const qty = picked.get(entry.id) ?? 0;
         if (qty <= 0) continue;
         groups += 1;
@@ -35633,8 +35633,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     function buildRow(entry) {
       const qty = picked.get(entry.id) ?? 0;
-      const row4 = h("div", qty > 0 ? "qws-del-row is-selected" : "qws-del-row");
-      row4.addEventListener("click", () => {
+      const row5 = h("div", qty > 0 ? "qws-del-row is-selected" : "qws-del-row");
+      row5.addEventListener("click", () => {
         if ((picked.get(entry.id) ?? 0) > 0) picked.delete(entry.id);
         else picked.set(entry.id, entry.total);
         renderRows();
@@ -35662,8 +35662,8 @@ Restore figures are averages; unlucky streaks do worse.`;
         else picked.delete(entry.id);
         renderRows();
       });
-      row4.append(buildIcon(entry.id), text2, amount);
-      return row4;
+      row5.append(buildIcon(entry.id), text2, amount);
+      return row5;
     }
     function renderRows() {
       if (!modal.isOpen()) return;
@@ -35674,7 +35674,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           h(
             "div",
             "qws-del-note",
-            entries2.length === 0 ? `You have no ${options2.unitNoun} to delete, in your inventory or your ${options2.storageNoun}.` : "No match."
+            entries.length === 0 ? `You have no ${options2.unitNoun} to delete, in your inventory or your ${options2.storageNoun}.` : "No match."
           )
         );
       } else {
@@ -35686,16 +35686,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     updateSummary();
     void options2.loadEntries().then((loaded2) => {
       if (!modal.isOpen()) return;
-      entries2 = loaded2;
+      entries = loaded2;
       for (const [id, qty] of [...picked]) {
-        const entry = entries2.find((e) => e.id === id);
+        const entry = entries.find((e) => e.id === id);
         if (!entry) picked.delete(id);
         else picked.set(id, Math.min(qty, entry.total));
       }
       renderRows();
     }).catch(() => {
       if (!modal.isOpen()) return;
-      entries2 = [];
+      entries = [];
       renderRows();
       summary.classList.add("is-error");
       summary.textContent = "Could not read the inventory.";
@@ -35840,37 +35840,37 @@ Restore figures are averages; unlucky streaks do worse.`;
           chips.append(h("div", "qws-del-chip qws-del-chip--more", `+${sorted.length - MAX_VISIBLE_CHIPS} more`));
         }
       }
-      const running6 = controller.isRunning();
+      const running = controller.isRunning();
       const estimateMs = estimateMsFor(totalQty);
-      const finishTimestamp = running6 ? estimatedFinish : estimateMs > 0 ? Date.now() + estimateMs : null;
+      const finishTimestamp = running ? estimatedFinish : estimateMs > 0 ? Date.now() + estimateMs : null;
       estimate.textContent = totalQty <= 0 ? "" : finishTimestamp ? `About ${formatDurationShort(estimateMs)} \xB7 done around ${formatFinishTime(finishTimestamp)}` : `About ${formatDurationShort(estimateMs)}`;
       const hasSelection = groupCount > 0 && totalQty > 0;
-      setButtonEnabled(btnDelete, hasSelection && !running6);
-      setButtonEnabled(btnClear, hasSelection && !running6);
-      setButtonEnabled(btnSelect, !running6);
+      setButtonEnabled(btnDelete, hasSelection && !running);
+      setButtonEnabled(btnClear, hasSelection && !running);
+      setButtonEnabled(btnSelect, !running);
       clearSummaryTimer();
-      if (!running6 && totalQty > 0) {
+      if (!running && totalQty > 0) {
         summaryTimer = window.setTimeout(() => updateSummary(), 1e3);
       }
     }
     function updateControls() {
-      const running6 = controller.isRunning();
+      const running = controller.isRunning();
       const paused = controller.isPaused();
-      section5.root.classList.toggle("is-running", running6);
-      btnPause.hidden = !running6 || paused;
-      btnPlay.hidden = !running6 || !paused;
-      btnStop.hidden = !running6;
-      btnDelete.hidden = running6;
-      if (running6) {
+      section5.root.classList.toggle("is-running", running);
+      btnPause.hidden = !running || paused;
+      btnPlay.hidden = !running || !paused;
+      btnStop.hidden = !running;
+      btnDelete.hidden = running;
+      if (running) {
         const ratio = progress.total > 0 ? progress.done / progress.total : 0;
         bar.set(ratio, paused ? "warn" : "accent");
         progressTargetEl.textContent = paused ? `Paused \xB7 ${progress.target || "-"}` : progress.target || "-";
         progressCount.textContent = `${formatInteger(progress.done)} / ${formatInteger(progress.total)}`;
         estimate.textContent = "";
       }
-      setButtonEnabled(btnPause, running6 && !paused);
-      setButtonEnabled(btnPlay, running6 && paused);
-      setButtonEnabled(btnStop, running6);
+      setButtonEnabled(btnPause, running && !paused);
+      setButtonEnabled(btnPlay, running && paused);
+      setButtonEnabled(btnStop, running);
     }
     async function runSelect() {
       await config.openSelector();
@@ -35881,10 +35881,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       const estimateMs = estimateMsFor(readSelection().totalQty);
       estimatedFinish = estimateMs > 0 ? Date.now() + estimateMs : null;
       clearSummaryTimer();
-      const pending6 = controller.run(config.runDelayMs);
+      const pending3 = controller.run(config.runDelayMs);
       updateControls();
       updateSummary();
-      await pending6;
+      await pending3;
       estimatedFinish = null;
       updateControls();
       updateSummary();
@@ -35985,7 +35985,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       held.delete(key2);
     };
     const onBlur = () => held.clear();
-    const onVisibility2 = () => {
+    const onVisibility = () => {
       if (document.hidden) held.clear();
     };
     const anyHeld = (keys) => keys.some((key2) => held.has(key2));
@@ -35995,13 +35995,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       return { dx, dy };
     }
     async function step(dx, dy) {
-      let current2;
+      let current3;
       try {
-        current2 = await PlayerService.getPosition();
+        current3 = await PlayerService.getPosition();
       } catch {
       }
-      const x = Math.round(current2?.x ?? 0);
-      const y = Math.round(current2?.y ?? 0);
+      const x = Math.round(current3?.x ?? 0);
+      const y = Math.round(current3?.y ?? 0);
       try {
         await PlayerService.move(x + dx, y + dy);
       } catch {
@@ -36036,7 +36036,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         window.addEventListener("keydown", onKeyDown2, CAPTURE2);
         window.addEventListener("keyup", onKeyUp, CAPTURE2);
         window.addEventListener("blur", onBlur);
-        document.addEventListener("visibilitychange", onVisibility2);
+        document.addEventListener("visibilitychange", onVisibility);
         rafId = requestAnimationFrame(frame);
       },
       stop() {
@@ -36048,7 +36048,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         window.removeEventListener("keydown", onKeyDown2, CAPTURE2);
         window.removeEventListener("keyup", onKeyUp, CAPTURE2);
         window.removeEventListener("blur", onBlur);
-        document.removeEventListener("visibilitychange", onVisibility2);
+        document.removeEventListener("visibilitychange", onVisibility);
       },
       setSpeed(ms) {
         delayMs = normalizeDelay2(ms);
@@ -36082,35 +36082,32 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/chat/harvest.ts
-  function mutationsOf2(row4) {
-    return row4.mutations;
-  }
-  function rowKey(row4) {
-    return `${row4.tileIndex}:${row4.slotId}`;
+  function rowKey(row5) {
+    return `${row5.tileIndex}:${row5.slotId}`;
   }
   function selectionSignature(rows) {
     return rows.map(rowKey).sort().join("|");
   }
   function speciesPresent(rows) {
-    return [...new Set(rows.map((row4) => row4.species))].sort((a, b) => a.localeCompare(b));
+    return [...new Set(rows.map((row5) => row5.species))].sort((a, b) => a.localeCompare(b));
   }
   function mutationsPresent(rows) {
     const all = /* @__PURE__ */ new Set();
-    for (const row4 of rows) for (const mutation of mutationsOf2(row4)) all.add(mutation);
+    for (const row5 of rows) for (const mutation of row5.mutations) all.add(mutation);
     return [...all].sort((a, b) => a.localeCompare(b));
   }
   function tally(rows, of) {
     const counts = /* @__PURE__ */ new Map();
-    for (const row4 of rows) {
-      for (const value of of(row4)) {
+    for (const row5 of rows) {
+      for (const value of of(row5)) {
         if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
       }
     }
     return counts;
   }
-  function matchesMutations(row4, wanted, mode) {
+  function matchesMutations(row5, wanted, mode) {
     if (wanted.length === 0) return true;
-    const present = new Set(mutationsOf2(row4));
+    const present = new Set(row5.mutations);
     switch (mode) {
       case "all":
         return wanted.every((mutation) => present.has(mutation));
@@ -36122,12 +36119,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function filterRows(rows, filters) {
     const species = filters.species && filters.species.length > 0 ? new Set(filters.species) : null;
-    return rows.filter((row4) => {
-      if (!row4.ready) return false;
-      if (row4.preserved && !filters.includePreserved) return false;
-      if (species && !species.has(row4.species)) return false;
-      if (row4.sizePct < filters.minSizePct) return false;
-      return matchesMutations(row4, filters.mutations, filters.mutationMode);
+    return rows.filter((row5) => {
+      if (!row5.ready) return false;
+      if (row5.preserved && !filters.includePreserved) return false;
+      if (species && !species.has(row5.species)) return false;
+      if (row5.sizePct < filters.minSizePct) return false;
+      return matchesMutations(row5, filters.mutations, filters.mutationMode);
     });
   }
   function describeFilters(filters) {
@@ -36151,12 +36148,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function groupVariants(rows) {
     const groups = /* @__PURE__ */ new Map();
-    for (const row4 of rows) {
-      const mutations = [...mutationsOf2(row4)].sort();
-      const key2 = `${row4.species}|${mutations.join(",")}`;
+    for (const row5 of rows) {
+      const mutations = [...row5.mutations].sort();
+      const key2 = `${row5.species}|${mutations.join(",")}`;
       const known = groups.get(key2);
       if (known) known.count++;
-      else groups.set(key2, { species: row4.species, mutations, count: 1 });
+      else groups.set(key2, { species: row5.species, mutations, count: 1 });
     }
     return [...groups.values()].sort(
       (a, b) => b.count - a.count || a.species.localeCompare(b.species) || a.mutations.length - b.mutations.length || a.mutations.join(",").localeCompare(b.mutations.join(","))
@@ -36169,7 +36166,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function describeSelection(rows) {
     if (rows.length === 0) return "nothing";
     const bySpecies2 = /* @__PURE__ */ new Map();
-    for (const row4 of rows) bySpecies2.set(row4.species, (bySpecies2.get(row4.species) ?? 0) + 1);
+    for (const row5 of rows) bySpecies2.set(row5.species, (bySpecies2.get(row5.species) ?? 0) + 1);
     const parts = [...bySpecies2.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([species, count]) => `${count} ${species}`);
     const head = parts.slice(0, 3);
     const rest2 = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
@@ -36355,7 +36352,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/companion/map.ts
+  // src/features/companion/mapView.ts
   function toSet(source) {
     if (!source) return /* @__PURE__ */ new Set();
     if (source instanceof Set) return source;
@@ -36425,6 +36422,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
   }
+  var init_mapView = __esm({
+    "src/features/companion/mapView.ts"() {
+      "use strict";
+      init_buildings();
+    }
+  });
+
+  // src/features/companion/map.ts
   async function readCompanionMap() {
     try {
       return buildCompanionMap(await mapAtom.get());
@@ -36445,7 +36450,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/companion/map.ts"() {
       "use strict";
       init_hub();
-      init_buildings();
+      init_mapView();
       mapAtom = makeAtom("mapAtom");
     }
   });
@@ -36454,8 +36459,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function readOwnedTiles() {
     let count = 0;
     try {
-      const [map2, slotIdx2] = await Promise.all([readCompanionMap(), readMySlotIdx()]);
-      if (map2 && slotIdx2 !== null) count = map2.dirtTileCount(slotIdx2);
+      const [map2, slotIdx] = await Promise.all([readCompanionMap(), readMySlotIdx()]);
+      if (map2 && slotIdx !== null) count = map2.dirtTileCount(slotIdx);
     } catch {
       count = 0;
     }
@@ -36482,10 +36487,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     const totals = /* @__PURE__ */ new Map();
     for (const raw of Array.isArray(rows) ? rows : []) {
       if (!raw || typeof raw !== "object") continue;
-      const row4 = raw;
-      const id = idOf(row4).trim();
+      const row5 = raw;
+      const id = idOf(row5).trim();
       if (!id) continue;
-      const quantity = Math.floor(Number(row4.quantity ?? 0));
+      const quantity = Math.floor(Number(row5.quantity ?? 0));
       if (!Number.isFinite(quantity) || quantity <= 0) continue;
       totals.set(id, (totals.get(id) ?? 0) + quantity);
     }
@@ -36497,8 +36502,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       Atoms.inventory.myEggInventory.get().catch(() => null)
     ]);
     return [
-      ...accumulate(seeds, "seed", (row4) => String(row4.species ?? ""), seedName),
-      ...accumulate(eggs, "egg", (row4) => String(row4.eggId ?? row4.id ?? row4.species ?? ""), eggName2)
+      ...accumulate(seeds, "seed", (row5) => String(row5.species ?? ""), seedName),
+      ...accumulate(eggs, "egg", (row5) => String(row5.eggId ?? row5.id ?? row5.species ?? ""), eggName2)
     ];
   }
   async function readPlantScope() {
@@ -36519,93 +36524,48 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/ui/kit/panel.ts
-  function button2(label2, tone, onClick) {
-    return button(label2, { variant: VARIANT[tone], size: "sm", block: true, lockWhilePending: true, onClick });
-  }
-  function toggle(checked, onChange) {
-    return switchInput(checked, onChange);
-  }
-  function selectField(options2) {
-    const el = select2({ small: true });
-    for (const [value, label2] of options2) {
-      const option2 = document.createElement("option");
-      option2.value = value;
-      option2.textContent = label2;
-      el.appendChild(option2);
-    }
+  // src/features/companion/menu/dom.ts
+  function styled(tag, style, text2) {
+    const el = h(tag, void 0, text2);
+    Object.assign(el.style, style);
     return el;
   }
-  function numberField(min, max, step, value) {
-    const el = h("input", "qws-pnl-input");
-    el.type = "number";
-    el.min = String(min);
-    el.max = String(max);
-    el.step = String(step);
-    el.value = String(value);
-    el.style.width = "78px";
-    el.style.textAlign = "right";
-    return el;
-  }
-  var TEAL, TEAL_DIM, TEAL_BORDER, BORDER, CARD_BG, TEXT, TEXT_DIM, DANGER, WARN, GOLD, RAINBOW, css4, ensurePanelStyles, sectionLabel2, VARIANT;
-  var init_panel = __esm({
-    "src/ui/kit/panel.ts"() {
-      "use strict";
-      init_badges();
-      init_button();
-      init_card();
-      init_dom2();
-      init_fields();
-      init_sliders();
-      init_styles();
-      init_theme();
-      init_toggles();
-      init_icons();
-      TEAL = color.accent;
-      TEAL_DIM = color.accentSoft;
-      TEAL_BORDER = color.accentBorder;
-      BORDER = color.border;
-      CARD_BG = color.cardBg;
-      TEXT = color.text;
-      TEXT_DIM = color.textDim;
-      DANGER = color.danger;
-      WARN = color.warn;
-      GOLD = color.gold;
-      RAINBOW = color.rainbow;
-      css4 = (el, style) => Object.assign(el.style, style);
-      ensurePanelStyles = ensureKitStyles;
-      sectionLabel2 = sectionLabel;
-      VARIANT = { accent: "primary", neutral: "default", danger: "danger" };
-    }
-  });
-
-  // src/features/companion/menu/harvestChips.ts
-  function iconHolder2(sizePx) {
-    const box2 = document.createElement("div");
-    css4(box2, {
-      display: "flex",
+  function iconSlot(sizePx, inline = false) {
+    return styled(inline ? "span" : "div", {
+      display: inline ? "inline-flex" : "flex",
       alignItems: "center",
       justifyContent: "center",
       width: `${sizePx}px`,
       height: `${sizePx}px`,
       flex: "0 0 auto"
     });
-    return box2;
   }
-  function catalogCropKey(species) {
-    const entry = plantCatalog2[species];
-    const key2 = entry?.crop?.sprite ?? entry?.plant?.sprite;
-    return typeof key2 === "string" && key2 ? key2 : null;
-  }
-  function spellings(...names) {
+  function spriteSpellings(...names) {
     const out = /* @__PURE__ */ new Set();
     for (const name of names) {
       const trimmed = (name ?? "").trim();
       if (!trimmed) continue;
-      out.add(trimmed);
-      out.add(trimmed.replace(/\W+/g, ""));
+      for (const form of [trimmed, trimmed.split(/[./]/).pop() ?? trimmed]) {
+        if (!form) continue;
+        out.add(form);
+        out.add(form.replace(/\s+/g, ""));
+        out.add(form.replace(/\W+/g, ""));
+      }
     }
-    return [...out];
+    return [...out].filter(Boolean);
+  }
+  var init_dom3 = __esm({
+    "src/features/companion/menu/dom.ts"() {
+      "use strict";
+      init_dom2();
+    }
+  });
+
+  // src/features/companion/menu/harvestChips.ts
+  function catalogCropKey(species) {
+    const entry = plantCatalog2[species];
+    const key2 = entry?.crop?.sprite ?? entry?.plant?.sprite;
+    return typeof key2 === "string" && key2 ? key2 : null;
   }
   function spriteBaseName(species) {
     const last = catalogCropKey(species)?.split("/").pop() ?? null;
@@ -36614,13 +36574,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     return withoutQuery.replace(/\.[a-z0-9]+$/i, "") || species;
   }
   function attachAtlasCrop(box2, species, sizePx) {
-    const candidates = spellings(spriteBaseName(species), species);
+    const candidates = spriteSpellings(spriteBaseName(species), species);
     const bases = candidates.map((value) => value.replace(/icon$/i, "")).filter(Boolean);
     const all = [.../* @__PURE__ */ new Set([...candidates, ...bases.map((base) => `${base}Icon`)])];
     if (all.length) attachSpriteIcon(box2, ["crop", "tallplant", "plant"], all, sizePx, SPRITE_LOG_TAG2);
   }
   function speciesIcon(species, sizePx = ICON_PX3) {
-    const box2 = iconHolder2(sizePx);
+    const box2 = iconSlot(sizePx);
     attachAtlasCrop(box2, species, sizePx);
     return box2;
   }
@@ -36633,11 +36593,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function variantIcon(species, mutations, sizePx = ICON_PX3) {
     if (mutations.length === 0) return speciesIcon(species, sizePx);
-    const box2 = iconHolder2(sizePx);
+    const box2 = iconSlot(sizePx);
     const url = composedUrl(species, mutations);
-    const img = document.createElement("img");
+    const img = styled("img", { maxWidth: "100%", maxHeight: "100%", imageRendering: "auto" });
     img.alt = "";
-    css4(img, { maxWidth: "100%", maxHeight: "100%", imageRendering: "auto" });
     img.addEventListener("error", () => {
       console.warn("[companion] composed sprite failed, falling back to the plain crop:", url);
       box2.replaceChildren();
@@ -36648,16 +36607,24 @@ Restore figures are averages; unlucky streaks do worse.`;
     return box2;
   }
   function mutationIconEl(mutation, sizePx = ICON_PX3) {
-    const box2 = iconHolder2(sizePx);
-    const candidates = spellings(mutation).flatMap((name) => [`Mutation${name}`, name]);
+    const box2 = iconSlot(sizePx);
+    const candidates = spriteSpellings(mutation).flatMap((name) => [`Mutation${name}`, name]);
     attachSpriteIcon(box2, ["ui", "mutation"], candidates, sizePx, SPRITE_LOG_TAG2);
     return box2;
   }
+  function tileLook(selected) {
+    return {
+      background: selected ? color.accentSoft : color.cardBg,
+      border: `1px solid ${selected ? color.accentBorder : color.border}`
+    };
+  }
+  function hoverable(tile, selected) {
+    if (selected) return;
+    tile.addEventListener("mouseenter", () => tile.style.background = color.hoverBg);
+    tile.addEventListener("mouseleave", () => tile.style.background = color.cardBg);
+  }
   function spriteTile(options2) {
-    const tile = document.createElement("button");
-    tile.type = "button";
-    tile.title = options2.title;
-    css4(tile, {
+    const tile = styled("button", {
       display: "inline-flex",
       flexDirection: "column",
       alignItems: "center",
@@ -36667,30 +36634,22 @@ Restore figures are averages; unlucky streaks do worse.`;
       cursor: "pointer",
       lineHeight: "1",
       transition: "background 120ms ease, border-color 120ms ease",
-      background: options2.selected ? TEAL_DIM : CARD_BG,
-      border: `1px solid ${options2.selected ? TEAL_BORDER : BORDER}`
+      ...tileLook(options2.selected)
     });
+    tile.type = "button";
+    tile.title = options2.title;
     tile.append(options2.icon);
     if (options2.count !== void 0) {
-      const count = document.createElement("span");
-      css4(count, { fontSize: "10px", color: options2.selected ? TEAL : TEXT_DIM });
-      count.textContent = String(options2.count);
-      tile.append(count);
+      tile.append(
+        styled("span", { fontSize: "10px", color: options2.selected ? color.accent : color.textDim }, String(options2.count))
+      );
     }
     tile.addEventListener("click", options2.onClick);
-    tile.addEventListener("mouseenter", () => {
-      if (!options2.selected) css4(tile, { background: "rgba(255,255,255,0.06)" });
-    });
-    tile.addEventListener("mouseleave", () => {
-      if (!options2.selected) css4(tile, { background: CARD_BG });
-    });
+    hoverable(tile, options2.selected);
     return tile;
   }
   function labelledTile(options2) {
-    const tile = document.createElement("button");
-    tile.type = "button";
-    tile.title = options2.label;
-    css4(tile, {
+    const tile = styled("button", {
       display: "inline-flex",
       alignItems: "center",
       gap: "6px",
@@ -36699,84 +36658,69 @@ Restore figures are averages; unlucky streaks do worse.`;
       cursor: "pointer",
       lineHeight: "1",
       transition: "background 120ms ease, border-color 120ms ease",
-      background: options2.selected ? TEAL_DIM : CARD_BG,
-      border: `1px solid ${options2.selected ? TEAL_BORDER : BORDER}`
+      ...tileLook(options2.selected)
     });
-    const name = document.createElement("span");
-    css4(name, {
-      fontSize: "11.5px",
-      fontWeight: options2.selected ? "600" : "500",
-      color: options2.selected ? TEAL : TEXT,
-      whiteSpace: "nowrap"
-    });
-    name.textContent = options2.label;
+    tile.type = "button";
+    tile.title = options2.label;
+    const name = styled(
+      "span",
+      {
+        fontSize: "11.5px",
+        fontWeight: options2.selected ? "600" : "500",
+        color: options2.selected ? color.accent : color.text,
+        whiteSpace: "nowrap"
+      },
+      options2.label
+    );
     tile.append(options2.icon, name);
     tile.addEventListener("click", options2.onClick);
-    tile.addEventListener("mouseenter", () => {
-      if (!options2.selected) css4(tile, { background: "rgba(255,255,255,0.06)" });
-    });
-    tile.addEventListener("mouseleave", () => {
-      if (!options2.selected) css4(tile, { background: CARD_BG });
-    });
+    hoverable(tile, options2.selected);
     return tile;
   }
   function allTile(label2, selected, onClick) {
-    const tile = document.createElement("button");
+    const tile = styled(
+      "button",
+      {
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minWidth: "40px",
+        padding: "0 10px",
+        alignSelf: "stretch",
+        borderRadius: "10px",
+        cursor: "pointer",
+        fontSize: "11px",
+        lineHeight: "1",
+        color: selected ? color.accent : color.text,
+        ...tileLook(selected)
+      },
+      label2
+    );
     tile.type = "button";
-    tile.textContent = label2;
-    css4(tile, {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      minWidth: "40px",
-      padding: "0 10px",
-      alignSelf: "stretch",
-      borderRadius: "10px",
-      cursor: "pointer",
-      fontSize: "11px",
-      lineHeight: "1",
-      background: selected ? TEAL_DIM : CARD_BG,
-      border: `1px solid ${selected ? TEAL_BORDER : BORDER}`,
-      color: selected ? TEAL : TEXT
-    });
     tile.addEventListener("click", onClick);
     return tile;
   }
   function tileRow() {
-    const row4 = document.createElement("div");
-    css4(row4, { display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: "5px" });
-    return row4;
+    return styled("div", { display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: "5px" });
   }
-  function segmented2(options2, selected, onSelect) {
-    const wrap = document.createElement("div");
-    css4(wrap, {
-      display: "inline-flex",
-      padding: "2px",
-      gap: "2px",
-      borderRadius: "9px",
-      background: "rgba(0,0,0,0.22)",
-      border: `1px solid ${BORDER}`
+  function choiceControl(options2, selected, onChange) {
+    let current3 = selected;
+    const control = segmented(
+      options2.map(({ value, label: label2 }) => ({ value, label: label2 })),
+      selected,
+      (value) => {
+        if (value === current3) return;
+        current3 = value;
+        onChange(value);
+      }
+    );
+    control.classList.add("qmm-compact");
+    control.style.fontSize = "11px";
+    control.style.setProperty("--seg-pad", "2px");
+    control.querySelectorAll(".qmm-seg__btn").forEach((btn, i) => {
+      btn.title = options2[i]?.title ?? "";
     });
-    for (const option2 of options2) {
-      const active3 = option2.value === selected;
-      const button3 = document.createElement("button");
-      button3.type = "button";
-      if (option2.title) button3.title = option2.title;
-      button3.textContent = option2.label;
-      css4(button3, {
-        padding: "4px 10px",
-        borderRadius: "7px",
-        border: "none",
-        cursor: "pointer",
-        fontSize: "11px",
-        lineHeight: "1",
-        background: active3 ? TEAL_DIM : "transparent",
-        color: active3 ? TEAL : TEXT_DIM
-      });
-      button3.addEventListener("click", () => onSelect(option2.value));
-      wrap.append(button3);
-    }
-    return wrap;
+    return control;
   }
   var SPRITE_LOG_TAG2, ICON_PX3;
   var init_harvestChips = __esm({
@@ -36784,65 +36728,34 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_data();
       init_sprites2();
+      init_discordCsp();
+      init_segmented();
       init_iconCache();
       init_resolver();
-      init_discordCsp();
-      init_panel();
+      init_theme();
+      init_dom3();
       SPRITE_LOG_TAG2 = "companion-harvest";
       ICON_PX3 = 26;
     }
   });
 
   // src/features/companion/menu/plantChips.ts
-  function iconHolder3(sizePx) {
-    const box2 = document.createElement("div");
-    css4(box2, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: `${sizePx}px`,
-      height: `${sizePx}px`,
-      flex: "0 0 auto"
-    });
-    return box2;
-  }
-  function spellings2(...names) {
-    const out = /* @__PURE__ */ new Set();
-    for (const name of names) {
-      const trimmed = (name ?? "").trim();
-      if (!trimmed) continue;
-      for (const form of [trimmed, trimmed.split(/[./]/).pop() ?? trimmed]) {
-        if (!form) continue;
-        out.add(form);
-        out.add(form.replace(/\s+/g, ""));
-      }
-    }
-    return [...out];
-  }
   function seedCandidates(species, name) {
-    return spellings2(species, seedCatalogName(species), name);
+    return spriteSpellings(species, seedCatalogName(species), name);
   }
   function eggCandidates(eggId, name) {
     const tileRef = eggCatalog2[eggId]?.tileRef;
-    return spellings2(eggId, typeof tileRef === "string" ? tileRef : null, eggCatalogName(eggId), name);
+    return spriteSpellings(eggId, typeof tileRef === "string" ? tileRef : null, eggCatalogName(eggId), name);
   }
   function plantItemIcon(item, sizePx = ICON_PX4) {
-    const box2 = iconHolder3(sizePx);
+    const box2 = iconSlot(sizePx);
     const isEgg = item.kind === "egg";
     const candidates = isEgg ? eggCandidates(item.id, item.name) : seedCandidates(item.id, item.name);
-    if (candidates.length) {
-      attachSpriteIcon(box2, isEgg ? ["pet"] : ["seed"], candidates, sizePx, SPRITE_LOG_TAG3);
-    }
+    if (candidates.length) attachSpriteIcon(box2, isEgg ? ["pet"] : ["seed"], candidates, sizePx, SPRITE_LOG_TAG3);
     return box2;
   }
-  function plantItemTitle(item) {
-    return item.kind === "egg" ? `${item.name} (egg)` : item.name;
-  }
   function plantTile(item, onClick) {
-    const el = document.createElement("button");
-    el.type = "button";
-    el.title = plantItemTitle(item);
-    css4(el, {
+    const el = styled("button", {
       display: "inline-flex",
       flexDirection: "column",
       alignItems: "center",
@@ -36853,8 +36766,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       lineHeight: "1",
       transition: "background 120ms ease, border-color 120ms ease, opacity 120ms ease"
     });
-    const count = document.createElement("span");
-    css4(count, { fontSize: "10px" });
+    el.type = "button";
+    el.title = item.kind === "egg" ? `${item.name} (egg)` : item.name;
+    const count = styled("span", { fontSize: "10px" });
     el.append(plantItemIcon(item), count);
     el.addEventListener("click", onClick);
     return {
@@ -36862,12 +36776,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       update(left, selected) {
         const empty = left <= 0;
         count.textContent = String(Math.max(0, left));
-        css4(el, {
-          background: selected ? TEAL_DIM : CARD_BG,
-          border: `1px solid ${selected ? TEAL_BORDER : BORDER}`,
+        Object.assign(el.style, {
+          background: selected ? color.accentSoft : color.cardBg,
+          border: `1px solid ${selected ? color.accentBorder : color.border}`,
           opacity: empty && !selected ? "0.45" : "1"
         });
-        css4(count, { color: selected ? TEAL : empty ? WARN : TEXT_DIM });
+        count.style.color = selected ? color.accent : empty ? color.warn : color.textDim;
       }
     };
   }
@@ -36878,7 +36792,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_data();
       init_names();
       init_iconCache();
-      init_panel();
+      init_theme();
+      init_dom3();
       SPRITE_LOG_TAG3 = "companion-plant";
       ICON_PX4 = 24;
     }
@@ -36949,11 +36864,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     );
     modal.body.append(toolbar2, grid, hint2);
     const cells = /* @__PURE__ */ new Map();
-    for (let row4 = 0; row4 < GARDEN_ROWS; row4++) {
+    for (let row5 = 0; row5 < GARDEN_ROWS; row5++) {
       for (let col = 0; col < GARDEN_COLS; col++) {
         if (col === GARDEN_COLS / 2) grid.append(h("div"));
         const el = h("div", "qws-gv-cell");
-        cells.set(row4 * GARDEN_COLS + col, { el, shown: null, content: null });
+        cells.set(row5 * GARDEN_COLS + col, { el, shown: null, content: null });
         grid.append(el);
       }
     }
@@ -37067,8 +36982,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return getAriesStorage().misc?.collapsed?.[sectionId] === true;
   }
   function setSectionCollapsed(sectionId, collapsed) {
-    updateAriesStorage((current2) => {
-      const misc = current2.misc ?? (current2.misc = {});
+    updateAriesStorage((current3) => {
+      const misc = current3.misc ?? (current3.misc = {});
       const map2 = misc.collapsed ?? (misc.collapsed = {});
       if (collapsed) map2[sectionId] = true;
       else delete map2[sectionId];
@@ -37537,17 +37452,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     writeRawStorage(JSON.stringify(backups));
   }
   function listBackups() {
-    const entries2 = readBackups();
-    return [...entries2].sort((a, b) => b.timestamp - a.timestamp);
+    const entries = readBackups();
+    return [...entries].sort((a, b) => b.timestamp - a.timestamp);
   }
   function saveBackup(name) {
     const normalizedName = name.trim() || `Backup ${(/* @__PURE__ */ new Date()).toLocaleString()}`;
-    const current2 = ensureVersion(getAriesStorage());
+    const current3 = ensureVersion(getAriesStorage());
     const entry = {
       id: generateId(),
       name: normalizedName,
       timestamp: Date.now(),
-      data: current2
+      data: current3
     };
     const next = [entry, ...readBackups()].slice(0, MAX_BACKUPS);
     persistBackups(next);
@@ -37578,8 +37493,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { success: true, message: "Backup deleted." };
   }
   function exportAllSettings() {
-    const current2 = ensureVersion(getAriesStorage());
-    return JSON.stringify(current2, null, 2);
+    const current3 = ensureVersion(getAriesStorage());
+    return JSON.stringify(current3, null, 2);
   }
   function tryDecodePercentEncodedJson(text2) {
     if (!/^%(?:7B|5B)/i.test(text2)) return null;
@@ -37824,9 +37739,9 @@ Restore figures are averages; unlucky streaks do worse.`;
           }
         })
       );
-      const row4 = h("div", "qws-set-backup");
-      row4.append(head, actions2);
-      return row4;
+      const row5 = h("div", "qws-set-backup");
+      row5.append(head, actions2);
+      return row5;
     };
     function refresh() {
       const backups = listBackups();
@@ -37966,9 +37881,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     ];
     const grid = h("div", "qws-set-grid");
     for (const [label2, value] of runtimeRows) {
-      const row4 = h("div", "qws-set-grid__row");
-      row4.append(h("span", "qws-set-grid__label", label2), h("span", "qws-set-grid__value", value));
-      grid.appendChild(row4);
+      const row5 = h("div", "qws-set-grid__row");
+      row5.append(h("span", "qws-set-grid__label", label2), h("span", "qws-set-grid__value", value));
+      grid.appendChild(row5);
     }
     const support = h("div", "qws-set-support");
     support.append(
@@ -38047,8 +37962,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   function petRow2(pet) {
     const slot = pet?.slot;
     const hunger = PetsService.getHungerPctFor(pet);
-    const row4 = h("div");
-    Object.assign(row4.style, {
+    const row5 = h("div");
+    Object.assign(row5.style, {
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
@@ -38065,19 +37980,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     left.append(petAvatar(pet), name);
     const hungerValue = h("div", void 0, Number.isFinite(hunger) ? `${hunger}%` : "-");
     Object.assign(hungerValue.style, { fontWeight: "700", color: color.gold });
-    row4.append(left, hungerValue);
-    return row4;
+    row5.append(left, hungerValue);
+    return row5;
   }
   function generalCard() {
     const general = card("General notifications", { tone: "muted", align: "stretch" });
-    const toggle2 = switchInput(PetAlertService.isGeneralEnabled(), (on) => {
+    const toggle = switchInput(PetAlertService.isGeneralEnabled(), (on) => {
       PetAlertService.setGeneralEnabled(on);
-      toggle2.checked = PetAlertService.isGeneralEnabled();
+      toggle.checked = PetAlertService.isGeneralEnabled();
     });
     const toggleRow = flexRow({ justify: "start", gap: 10 });
     const toggleLabel = h("div", void 0, "Use a shared threshold for all pets");
     toggleLabel.style.opacity = "0.9";
-    toggleRow.append(toggle2, toggleLabel);
+    toggleRow.append(toggle, toggleLabel);
     const threshold = numberInput(1, 100, 1, PetAlertService.getGeneralThresholdPct());
     threshold.addEventListener("change", () => {
       const typed = Number(threshold.value);
@@ -38222,8 +38137,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   function soundRow(name, onChange) {
     const defaultFor = CONTEXT_LABELS.filter(([key2]) => audio.getDefaultSoundName(key2) === name);
     const usedByShopsOrWeather = defaultFor.some(([key2]) => key2 !== "pets");
-    const row4 = h("div");
-    Object.assign(row4.style, {
+    const row5 = h("div");
+    Object.assign(row5.style, {
       display: "grid",
       gridTemplateColumns: "minmax(0, 1fr) auto",
       gap: "12px",
@@ -38270,8 +38185,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       remove.title = audio.isProtectedSound(name) ? "Built-in sound cannot be removed" : "Currently used as default";
     }
     actions2.appendChild(remove);
-    row4.append(info, actions2);
-    return row4;
+    row5.append(info, actions2);
+    return row5;
   }
   function soundLibraryCard(onLibraryChange) {
     const section5 = card("Sound library", { tone: "muted" });
@@ -38362,12 +38277,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function bellCard() {
     const bell = card("Notification bell", { tone: "muted" });
-    const toggle2 = switchInput(isFloatingBellEnabled(), (on) => setFloatingBellEnabled(on));
+    const toggle = switchInput(isFloatingBellEnabled(), (on) => setFloatingBellEnabled(on));
     bell.body.appendChild(
       settingRow(
         "Floating bell (movable widget)",
         "Detaches the bell from the game's icon rail and shows it as a draggable floating button instead. Use this if the bell is missing or misplaced on your screen.",
-        toggle2
+        toggle
       ).row
     );
     return bell.root;
@@ -38517,7 +38432,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         /** Lists the library's sounds, keeping the selection when it still exists. */
         fillSounds() {
           const names = audio.listSounds();
-          const current2 = this.soundSelect.value;
+          const current3 = this.soundSelect.value;
           this.soundSelect.replaceChildren(
             ...names.map((name) => {
               const opt = h("option", void 0, name);
@@ -38526,7 +38441,7 @@ Restore figures are averages; unlucky streaks do worse.`;
             })
           );
           const preferred = audio.getDefaultSoundName(this.spec.key);
-          if (names.includes(current2)) this.soundSelect.value = current2;
+          if (names.includes(current3)) this.soundSelect.value = current3;
           else if (preferred && names.includes(preferred)) this.soundSelect.value = preferred;
           else if (names.length) this.soundSelect.value = names[0];
         }
@@ -38695,7 +38610,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function openRuleEditor(target, anchor) {
     closeRuleEditor();
     ensureMenuStyles();
-    const current2 = NotifierRules.get(target.id);
+    const current3 = NotifierRules.get(target.id);
     const defaults = ruleDefaults(target.context);
     const canLoop = target.context === "shops";
     const pop = h("div", "qws-rule-popover");
@@ -38720,7 +38635,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     pop.appendChild(header);
     makeDraggable2(pop, header, closeBtn);
     const soundSelect = select2();
-    const selectedSound = current2?.sound ?? "";
+    const selectedSound = current3?.sound ?? "";
     const names = audio.listSounds();
     option(soundSelect, "", defaults.soundName);
     for (const name of names) {
@@ -38730,7 +38645,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     soundSelect.value = selectedSound;
     pop.appendChild(field("Sound", soundSelect));
     const defaultVolumePct = Math.round(defaults.volume * 100);
-    const initialVolumePct = Math.round(clamp(current2?.volume ?? defaults.volume, 0, 1) * 100);
+    const initialVolumePct = Math.round(clamp(current3?.volume ?? defaults.volume, 0, 1) * 100);
     const volumeRange = slider(0, 100, 1, initialVolumePct, { fill: true });
     const volumeValue = pill(`${initialVolumePct}%`);
     volumeRange.addEventListener("input", () => {
@@ -38743,7 +38658,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const modeSelect = select2();
     const modes = canLoop ? defaults.mode === "loop" ? ["loop", "oneshot"] : ["oneshot", "loop"] : ["oneshot"];
     for (const mode of modes) option(modeSelect, mode, mode === "loop" ? "Loop" : "One-shot");
-    modeSelect.value = canLoop ? current2?.playbackMode ?? defaults.mode : "oneshot";
+    modeSelect.value = canLoop ? current3?.playbackMode ?? defaults.mode : "oneshot";
     modeSelect.disabled = !canLoop;
     pop.appendChild(field("Playback mode", modeSelect));
     const stopSelect = select2();
@@ -38755,7 +38670,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     intervalInput.step = "50";
     intervalInput.inputMode = "numeric";
     intervalInput.placeholder = String(defaults.loopIntervalMs);
-    intervalInput.value = current2?.loopIntervalMs != null ? String(current2.loopIntervalMs) : "";
+    intervalInput.value = current3?.loopIntervalMs != null ? String(current3.loopIntervalMs) : "";
     digitsOnly(intervalInput);
     const intervalField = field("Loop interval (ms)", intervalInput);
     const showLoopFields = () => {
@@ -38777,7 +38692,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       h("div", "qws-rule-hint", "Use defaults by leaving values unchanged (matching the default volume keeps it inherited).")
     );
     const actions2 = h("div", "qws-rule-actions");
-    const clearBtn = button("Clear", { variant: "ghost", size: "sm", disabled: !current2 });
+    const clearBtn = button("Clear", { variant: "ghost", size: "sm", disabled: !current3 });
     clearBtn.addEventListener("click", (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
@@ -38946,45 +38861,45 @@ Restore figures are averages; unlucky streaks do worse.`;
             Object.assign(empty.style, { opacity: "0.75", gridColumn: "1 / -1", padding: "8px" });
             this.body.appendChild(empty);
           }
-          for (const row4 of rows) this.addRow(row4);
+          for (const row5 of rows) this.addRow(row5);
           this.alignHeader();
         }
-        addRow(row4) {
-          row4.item.style.borderBottom = CELL_BORDER;
-          const toggle2 = switchInput(row4.alertOn, (on) => row4.onAlertChange(on));
-          const gear = button("", { icon: "\u2699", size: "sm", tooltip: "Custom rule", ariaLabel: `Custom rule for ${row4.name}` });
+        addRow(row5) {
+          row5.item.style.borderBottom = CELL_BORDER;
+          const toggle = switchInput(row5.alertOn, (on) => row5.onAlertChange(on));
+          const gear = button("", { icon: "\u2699", size: "sm", tooltip: "Custom rule", ariaLabel: `Custom rule for ${row5.name}` });
           gear.classList.add("qws-rule-btn");
           gear.addEventListener("click", (ev) => {
             ev.preventDefault();
             ev.stopPropagation();
-            openRuleEditor({ id: row4.id, name: row4.name, type: row4.type, context: row4.context }, gear);
+            openRuleEditor({ id: row5.id, name: row5.name, type: row5.type, context: row5.context }, gear);
           });
-          this.body.append(row4.item, centeredCell(row4.detail), centeredCell(toggle2), centeredCell(gear));
-          const rendered = { gear, summary: row4.summary, toggle: toggle2 };
-          this.rows.set(row4.id, rendered);
-          this.showRule(rendered, row4.id);
+          this.body.append(row5.item, centeredCell(row5.detail), centeredCell(toggle), centeredCell(gear));
+          const rendered = { gear, summary: row5.summary, toggle };
+          this.rows.set(row5.id, rendered);
+          this.showRule(rendered, row5.id);
         }
         /** Redraws every row's rule button and summary. */
         refreshRules() {
-          for (const [id, row4] of this.rows) this.showRule(row4, id);
+          for (const [id, row5] of this.rows) this.showRule(row5, id);
         }
-        showRule(row4, id) {
+        showRule(row5, id) {
           const rule = NotifierRules.get(id);
           const summary = hasRule(rule) ? formatRuleSummary(rule) : "";
-          row4.gear.dataset.active = hasRule(rule) ? "1" : "0";
-          row4.gear.title = summary ? `Custom rule: ${summary}` : "Custom rule";
-          if (row4.summary) {
-            row4.summary.textContent = summary;
-            row4.summary.style.visibility = summary ? "visible" : "hidden";
+          row5.gear.dataset.active = hasRule(rule) ? "1" : "0";
+          row5.gear.title = summary ? `Custom rule: ${summary}` : "Custom rule";
+          if (row5.summary) {
+            row5.summary.textContent = summary;
+            row5.summary.style.visibility = summary ? "visible" : "hidden";
           }
         }
         /** Updates one row's switch without redrawing it. `locked` greys it out with a reason. */
         setAlert(id, on, locked = null) {
-          const row4 = this.rows.get(id);
-          if (!row4) return;
-          row4.toggle.checked = on;
-          row4.toggle.disabled = !!locked;
-          row4.toggle.title = locked ?? "";
+          const row5 = this.rows.get(id);
+          if (!row5) return;
+          row5.toggle.checked = on;
+          row5.toggle.disabled = !!locked;
+          row5.toggle.title = locked ?? "";
         }
         renderedIds() {
           return new Set(this.rows.keys());
@@ -39019,19 +38934,19 @@ Restore figures are averages; unlucky streaks do worse.`;
     chip.title = only ? `Only available during ${weather2}` : `Also available during ${weather2}`;
     return chip;
   }
-  function itemCell(row4) {
+  function itemCell(row5) {
     const cell = h("div");
     Object.assign(cell.style, { display: "flex", alignItems: "center", gap: "6px", padding: "4px 6px" });
-    const icon2 = shopItemIcon(row4.id, row4.name, 40, "alerts");
+    const icon2 = shopItemIcon(row5.id, row5.name, 40, "alerts");
     Object.assign(icon2.style, { borderRadius: "8px", background: color.mutedBg, marginRight: "6px" });
     const text2 = h("div");
     Object.assign(text2.style, { display: "flex", flexDirection: "column", gap: "2px", lineHeight: "1.15", minWidth: "0", flex: "1 1 auto" });
-    const title = h("div", void 0, row4.name);
+    const title = h("div", void 0, row5.name);
     Object.assign(title.style, { fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
     const sub = h("div");
     Object.assign(sub.style, { opacity: "0.7", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" });
-    sub.appendChild(h("span", void 0, row4.type));
-    for (const weather2 of row4.weathers ?? []) sub.appendChild(weatherChip(weather2, !!row4.weatherOnly));
+    sub.appendChild(h("span", void 0, row5.type));
+    for (const weather2 of row5.weathers ?? []) sub.appendChild(weatherChip(weather2, !!row5.weatherOnly));
     text2.append(title, sub);
     cell.append(icon2, text2);
     return cell;
@@ -39066,43 +38981,43 @@ Restore figures are averages; unlucky streaks do worse.`;
     wrap.appendChild(header);
     const grid = new AlertGrid(["Item", "Rarity", "Notify", "Custom rules"], "200px", "No items.");
     wrap.appendChild(grid.root);
-    let state7 = null;
+    let state5 = null;
     const filters = () => ({
       type: typeSelect.value || "all",
       rarity: raritySelect.value || "all"
     });
     const visibleRows = (s) => ShopRows.filter(s.rows, filters());
     const updateRows = (s) => {
-      for (const row4 of s.rows) {
-        grid.setAlert(row4.id, row4.popup, isCapReached(row4.id) ? CAPPED_REASON : null);
+      for (const row5 of s.rows) {
+        grid.setAlert(row5.id, row5.popup, isCapReached(row5.id) ? CAPPED_REASON : null);
       }
       followedCount.textContent = `Followed: ${s.counts.followed}`;
     };
     const rebuild2 = () => {
-      if (!state7) {
+      if (!state5) {
         grid.setRows([]);
         return;
       }
       grid.setRows(
-        visibleRows(state7).map((row4) => ({
-          id: row4.id,
-          name: row4.name,
-          type: row4.type,
+        visibleRows(state5).map((row5) => ({
+          id: row5.id,
+          name: row5.name,
+          type: row5.type,
           context: "shops",
-          item: itemCell(row4),
-          detail: rarityBadge(String(row4.rarity ?? "-")),
-          alertOn: row4.popup,
-          onAlertChange: (on) => ShopRows.setFollowed(row4.id, on)
+          item: itemCell(row5),
+          detail: rarityBadge(String(row5.rarity ?? "-")),
+          alertOn: row5.popup,
+          onAlertChange: (on) => ShopRows.setFollowed(row5.id, on)
         }))
       );
-      updateRows(state7);
+      updateRows(state5);
     };
-    typeSelect.onchange = () => state7 && rebuild2();
-    raritySelect.onchange = () => state7 && rebuild2();
+    typeSelect.onchange = () => state5 && rebuild2();
+    raritySelect.onchange = () => state5 && rebuild2();
     void (async () => {
       await NotifierService.onChangeNow((next) => {
-        const prev = state7;
-        state7 = next;
+        const prev = state5;
+        state5 = next;
         const rendered = grid.renderedIds();
         const ids = visibleRows(next).map((r) => r.id);
         if (!prev || ids.length !== rendered.size || ids.some((id) => !rendered.has(id))) rebuild2();
@@ -39148,9 +39063,9 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/notifier/menu/weatherTab.ts
-  function weatherSpriteCandidates(row4) {
+  function weatherSpriteCandidates(row5) {
     const names = /* @__PURE__ */ new Set();
-    for (const value of [row4.name, row4.atomValue, row4.id]) {
+    for (const value of [row5.name, row5.atomValue, row5.id]) {
       const trimmed = value?.trim();
       if (!trimmed) continue;
       names.add(trimmed);
@@ -39159,7 +39074,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const icons = [...names].map((value) => `${value.replace(/icon$/i, "")}Icon`);
     return [.../* @__PURE__ */ new Set([...icons, ...names])].filter(Boolean);
   }
-  function weatherIcon2(row4) {
+  function weatherIcon2(row5) {
     const size = 40;
     const wrap = h("div");
     Object.assign(wrap.style, {
@@ -39172,14 +39087,14 @@ Restore figures are averages; unlucky streaks do worse.`;
       borderRadius: "8px",
       background: color.mutedBg
     });
-    const glyph = h("span", void 0, row4.name.trim().charAt(0) || "\u{1F326}");
+    const glyph = h("span", void 0, row5.name.trim().charAt(0) || "\u{1F326}");
     glyph.style.fontSize = `${size - 8}px`;
     glyph.setAttribute("aria-hidden", "true");
     wrap.appendChild(glyph);
-    attachSpriteIcon(wrap, ["ui", "weather", "mutation"], weatherSpriteCandidates(row4), size, "alerts-weather");
+    attachSpriteIcon(wrap, ["ui", "weather", "mutation"], weatherSpriteCandidates(row5), size, "alerts-weather");
     return wrap;
   }
-  function mutationList(row4) {
+  function mutationList(row5) {
     const list = h("div");
     Object.assign(list.style, {
       display: "flex",
@@ -39188,15 +39103,15 @@ Restore figures are averages; unlucky streaks do worse.`;
       alignItems: "flex-start",
       fontSize: "12px",
       lineHeight: "1.3",
-      opacity: row4.mutations.length ? "0.85" : "0.6"
+      opacity: row5.mutations.length ? "0.85" : "0.6"
     });
-    if (!row4.mutations.length) {
+    if (!row5.mutations.length) {
       const none = h("span", void 0, "No mutation effects.");
       none.style.whiteSpace = "nowrap";
       list.appendChild(none);
       return list;
     }
-    for (const mutation of row4.mutations) {
+    for (const mutation of row5.mutations) {
       const chip = h("span", void 0, formatWeatherMutation(mutation));
       Object.assign(chip.style, {
         display: "inline-flex",
@@ -39210,10 +39125,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return list;
   }
-  function itemCell2(row4, summary) {
+  function itemCell2(row5, summary) {
     const cell = h("div");
     Object.assign(cell.style, { display: "flex", alignItems: "center", gap: "8px", padding: "6px" });
-    if (row4.isCurrent) {
+    if (row5.isCurrent) {
       cell.style.background = color.accentSoft;
       cell.style.borderRadius = "8px";
     }
@@ -39221,18 +39136,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     Object.assign(text2.style, { display: "flex", flexDirection: "column", gap: "4px", lineHeight: "1.2", minWidth: "0", flex: "1 1 auto" });
     const titleRow = h("div");
     Object.assign(titleRow.style, { display: "flex", alignItems: "center", gap: "6px", minWidth: "0" });
-    const title = h("div", void 0, row4.name);
+    const title = h("div", void 0, row5.name);
     Object.assign(title.style, { fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 auto" });
     titleRow.appendChild(title);
-    if (row4.isCurrent) titleRow.appendChild(pill("Current", "ok"));
+    if (row5.isCurrent) titleRow.appendChild(pill("Current", "ok"));
     const mutationsLabel = h("div", void 0, "Mutations");
     Object.assign(mutationsLabel.style, { fontSize: "11px", opacity: "0.7", fontWeight: "600" });
-    text2.append(titleRow, mutationsLabel, mutationList(row4), summary);
-    cell.append(weatherIcon2(row4), text2);
+    text2.append(titleRow, mutationsLabel, mutationList(row5), summary);
+    cell.append(weatherIcon2(row5), text2);
     return cell;
   }
-  function showLastSeen(el, row4) {
-    const { label: label2, title } = formatLastSeen(row4.lastSeen, row4.isCurrent);
+  function showLastSeen(el, row5) {
+    const { label: label2, title } = formatLastSeen(row5.lastSeen, row5.isCurrent);
     el.textContent = label2;
     el.title = title;
     el.style.opacity = label2 === "Never" ? "0.7" : "1";
@@ -39245,33 +39160,33 @@ Restore figures are averages; unlucky streaks do worse.`;
     const grid = new AlertGrid(["Weather", "Last seen", "Notify", "Custom rules"], "240px", "No weather entries.");
     wrap.appendChild(grid.root);
     const lastSeenLabels = /* @__PURE__ */ new Map();
-    let state7 = null;
+    let state5 = null;
     let stateSig2 = "";
     const refreshLastSeen = () => {
-      for (const row4 of state7?.rows ?? []) {
-        const el = lastSeenLabels.get(row4.id);
-        if (el) showLastSeen(el, row4);
+      for (const row5 of state5?.rows ?? []) {
+        const el = lastSeenLabels.get(row5.id);
+        if (el) showLastSeen(el, row5);
       }
     };
     const rebuild2 = () => {
       lastSeenLabels.clear();
       grid.setRows(
-        (state7?.rows ?? []).map((row4) => {
+        (state5?.rows ?? []).map((row5) => {
           const summary = ruleSummaryLine();
           const lastSeen = h("div");
           Object.assign(lastSeen.style, { fontWeight: "600", whiteSpace: "nowrap" });
-          showLastSeen(lastSeen, row4);
-          lastSeenLabels.set(row4.id, lastSeen);
+          showLastSeen(lastSeen, row5);
+          lastSeenLabels.set(row5.id, lastSeen);
           return {
-            id: row4.id,
-            name: row4.name,
-            type: row4.type,
+            id: row5.id,
+            name: row5.name,
+            type: row5.type,
             context: "weather",
-            item: itemCell2(row4, summary),
+            item: itemCell2(row5, summary),
             summary,
             detail: lastSeen,
-            alertOn: row4.notify,
-            onAlertChange: (on) => WeatherAlerts.setNotify(row4.id, on)
+            alertOn: row5.notify,
+            onAlertChange: (on) => WeatherAlerts.setNotify(row5.id, on)
           };
         })
       );
@@ -39279,14 +39194,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     const show = (next) => {
       const sig = weatherStateSignature(next.rows);
       const changed5 = sig !== stateSig2;
-      state7 = next;
+      state5 = next;
       stateSig2 = sig;
       if (changed5) rebuild2();
       else refreshLastSeen();
     };
     void (async () => {
       await NotifierService.onWeatherChangeNow((next) => {
-        state7 = next;
+        state5 = next;
         stateSig2 = weatherStateSignature(next.rows);
         rebuild2();
       });
@@ -39346,12 +39261,12 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!Array.isArray(list)) {
       throw new Error(`Invalid ${label2.toLowerCase()} payload: '${listKey}' is not an array`);
     }
-    const entries2 = [];
+    const entries = [];
     for (const entry of list) {
-      if (entry && typeof entry === "object") entries2.push(entry);
+      if (entry && typeof entry === "object") entries.push(entry);
       else console.warn(`[${label2}] Skipping invalid entry:`, entry);
     }
-    return entries2;
+    return entries;
   }
   var RAW_BASE_URL2, isNonEmptyString, stringList2;
   var init_repoJson = __esm({
@@ -39398,8 +39313,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function fetchTools() {
     try {
-      const entries2 = await fetchRepoList("tools/tools.json", "tools", "Tools");
-      return entries2.map(parseTool).filter((tool) => tool !== null);
+      const entries = await fetchRepoList("tools/tools.json", "tools", "Tools");
+      return entries.map(parseTool).filter((tool) => tool !== null);
     } catch (error) {
       console.error("[Tools] Failed to fetch tools:", error);
       throw error;
@@ -39506,9 +39421,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/tools/tag.ts
   function createTagRow(tags) {
-    const row4 = h("div", "mgt-tags");
-    for (const tag of tags) row4.appendChild(h("span", "mgt-tag", tag));
-    return row4;
+    const row5 = h("div", "mgt-tags");
+    for (const tag of tags) row5.appendChild(h("span", "mgt-tag", tag));
+    return row5;
   }
   var init_tag = __esm({
     "src/features/tools/tag.ts"() {
@@ -39750,7 +39665,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         pendingSlide.img.src = await resolveImageUrl(images[index]);
         await pendingSlide.img.decode().catch(() => void 0);
         const offset = direction === "next" ? SWAP_OFFSET_PX : -SWAP_OFFSET_PX;
-        const running6 = [];
+        const running = [];
         if (!prefersReduced) {
           const outgoing = activeSlide.root.animate(
             [
@@ -39766,14 +39681,14 @@ Restore figures are averages; unlucky streaks do worse.`;
             ],
             { duration: SWAP_DURATION_MS, easing: SWAP_EASING, fill: "forwards" }
           );
-          running6.push(outgoing, incoming);
+          running.push(outgoing, incoming);
           await Promise.all([outgoing.finished, incoming.finished]);
         }
         activeSlide.root.style.transform = "";
         activeSlide.root.style.opacity = "0";
         pendingSlide.root.style.transform = "";
         pendingSlide.root.style.opacity = "1";
-        running6.forEach((animation) => animation.cancel());
+        running.forEach((animation) => animation.cancel());
         const previousActive = activeSlide;
         activeSlide = pendingSlide;
         pendingSlide = previousActive;
@@ -39894,10 +39809,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function createActions(actions2) {
     if (!actions2?.length) return null;
-    const row4 = document.createElement("div");
-    row4.className = "mgt-actions";
+    const row5 = document.createElement("div");
+    row5.className = "mgt-actions";
     actions2.forEach((action2, index) => {
-      row4.appendChild(
+      row5.appendChild(
         button(action2.label, {
           // The first link is the main one; the rest stay secondary.
           variant: index === 0 ? "primary" : "default",
@@ -39908,7 +39823,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         })
       );
     });
-    return row4;
+    return row5;
   }
   function renderDetailView(tool, onBack) {
     const root4 = document.createElement("div");
@@ -40240,18 +40155,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     wrapper.appendChild(viewContainer);
     view.appendChild(wrapper);
     const showLoading = () => {
-      const state7 = h("div", "mgt-state");
-      state7.append(h("div", "mgt-spinner"), h("p", "mgt-state__text", "Fetching the latest tools..."));
-      viewContainer.replaceChildren(state7);
+      const state5 = h("div", "mgt-state");
+      state5.append(h("div", "mgt-spinner"), h("p", "mgt-state__text", "Fetching the latest tools..."));
+      viewContainer.replaceChildren(state5);
     };
     const showError = (message2) => {
-      const state7 = h("div", "mgt-state");
-      state7.append(
+      const state5 = h("div", "mgt-state");
+      state5.append(
         h("span", "mgt-state__title", "Couldn't load the tools"),
         h("p", "mgt-state__text", message2),
         button("Retry", { variant: "primary", onClick: () => init() })
       );
-      viewContainer.replaceChildren(state7);
+      viewContainer.replaceChildren(state5);
     };
     let tools = [];
     let listViewRoot = null;
@@ -40533,8 +40448,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     wrap.appendChild(card2(sectionLabel("Saved gardens"), status2.el, listWrap2));
     const subs = new Subscriptions();
     subs.add(
-      EditorService.onChange((enabled5) => {
-        mode.modeSwitch.checked = enabled5;
+      EditorService.onChange((enabled2) => {
+        mode.modeSwitch.checked = enabled2;
         renderSavedList();
       })
     );
@@ -40573,15 +40488,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     return getAriesStorage().keybinds?.collapsed?.[sectionId] === true;
   }
   function setSectionCollapsed2(sectionId, collapsed) {
-    updateAriesStorage((current2) => {
-      const keybinds = current2.keybinds ?? (current2.keybinds = {});
+    updateAriesStorage((current3) => {
+      const keybinds = current3.keybinds ?? (current3.keybinds = {});
       const map2 = keybinds.collapsed ?? (keybinds.collapsed = {});
       if (collapsed) map2[sectionId] = true;
       else delete map2[sectionId];
     });
   }
-  function whileConnected(owner2, subscribe5, cb) {
-    const stop = subscribe5((value) => {
+  function whileConnected(owner2, subscribe, cb) {
+    const stop = subscribe((value) => {
       if (owner2.isConnected) cb(value);
       else stop();
     });
@@ -40593,10 +40508,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     const label2 = h("span", "qmm-setting-row__hint", hold.label);
     label2.style.whiteSpace = "nowrap";
     if (hold.description) label2.title = hold.description;
-    const toggle2 = switchInput(getKeybindHoldDetection(action2.id), (on) => setKeybindHoldDetection(action2.id, on));
-    toggle2.title = hold.description || hold.label;
-    whileConnected(wrap, (cb) => onKeybindHoldDetectionChange(action2.id, cb), (on) => toggle2.setChecked(on));
-    wrap.append(label2, toggle2);
+    const toggle = switchInput(getKeybindHoldDetection(action2.id), (on) => setKeybindHoldDetection(action2.id, on));
+    toggle.title = hold.description || hold.label;
+    whileConnected(wrap, (cb) => onKeybindHoldDetectionChange(action2.id, cb), (on) => toggle.setChecked(on));
+    wrap.append(label2, toggle);
     return wrap;
   }
   function keybindRow(action2) {
@@ -40607,7 +40522,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       allowModifierOnly: action2.allowModifierOnly
     });
     keyButton.style.flexShrink = "0";
-    const { row: row4, controls } = settingRow(action2.label, action2.hint ?? null, keyButton, {
+    const { row: row5, controls } = settingRow(action2.label, action2.hint ?? null, keyButton, {
       icon: action2.icon,
       iconTag: "keybinds"
     });
@@ -40628,8 +40543,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     const resetButton = defaultString ? button("\u27F2", { size: "sm", title: "Restore default shortcut", onClick: () => resetKeybind(action2.id) }) : null;
     if (resetButton) controls.appendChild(resetButton);
     refresh(getKeybind(action2.id));
-    whileConnected(row4, (cb) => onKeybindChange(action2.id, cb), refresh);
-    return row4;
+    whileConnected(row5, (cb) => onKeybindChange(action2.id, cb), refresh);
+    return row5;
   }
   function renderKeybindsMenu(container) {
     const ui = new Menu({ id: "keybinds", compact: true });
@@ -40677,11 +40592,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/room/roomState.ts
-  function findPlayersDeep(state7) {
-    if (!state7 || typeof state7 !== "object") return [];
+  function findPlayersDeep(state5) {
+    if (!state5 || typeof state5 !== "object") return [];
     const out = [];
     const seen = /* @__PURE__ */ new Set();
-    const stack = [state7];
+    const stack = [state5];
     while (stack.length) {
       const cur = stack.pop();
       if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
@@ -40699,22 +40614,22 @@ Restore figures are averages; unlucky streaks do worse.`;
     for (const p of out) if (p?.id) byId.set(String(p.id), p);
     return [...byId.values()];
   }
-  function playersOf(state7) {
-    const direct = state7?.fullState?.data?.players ?? state7?.data?.players ?? state7?.players;
-    return Array.isArray(direct) ? direct : findPlayersDeep(state7);
+  function playersOf(state5) {
+    const direct = state5?.fullState?.data?.players ?? state5?.data?.players ?? state5?.players;
+    return Array.isArray(direct) ? direct : findPlayersDeep(state5);
   }
-  function slotsOf(state7) {
-    const raw = state7?.child?.data?.userSlots ?? state7?.fullState?.child?.data?.userSlots ?? state7?.data?.userSlots;
+  function slotsOf(state5) {
+    const raw = state5?.child?.data?.userSlots ?? state5?.fullState?.child?.data?.userSlots ?? state5?.data?.userSlots;
     if (Array.isArray(raw)) return raw;
     if (raw && typeof raw === "object") {
-      const entries2 = Object.entries(raw);
-      entries2.sort((a, b) => {
+      const entries = Object.entries(raw);
+      entries.sort((a, b) => {
         const ai = Number(a[0]);
         const bi = Number(b[0]);
         if (Number.isFinite(ai) && Number.isFinite(bi)) return ai - bi;
         return a[0].localeCompare(b[0]);
       });
-      return entries2.map(([, v]) => v);
+      return entries.map(([, v]) => v);
     }
     return [];
   }
@@ -40722,17 +40637,17 @@ Restore figures are averages; unlucky streaks do worse.`;
     const raw = slot?.userId ?? slot?.playerId ?? slot?.id;
     return raw != null ? String(raw) : "";
   }
-  function slotOf(state7, playerId2) {
-    for (const slot of slotsOf(state7)) if (slotOwnerId(slot) === String(playerId2)) return slot;
+  function slotOf(state5, playerId2) {
+    for (const slot of slotsOf(state5)) if (slotOwnerId(slot) === String(playerId2)) return slot;
     return null;
   }
-  function playersInSlotOrder(state7) {
-    const players = playersOf(state7);
+  function playersInSlotOrder(state5) {
+    const players = playersOf(state5);
     const byId = /* @__PURE__ */ new Map();
     for (const p of players) byId.set(String(p.id), p);
     const out = [];
     const seen = /* @__PURE__ */ new Set();
-    for (const slot of slotsOf(state7)) {
+    for (const slot of slotsOf(state5)) {
       const pid = slotOwnerId(slot);
       if (!pid || seen.has(pid)) continue;
       const p = byId.get(pid);
@@ -40816,9 +40731,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
     }
     try {
-      const state7 = await Atoms.root.state.get();
+      const state5 = await Atoms.root.state.get();
       const seen = /* @__PURE__ */ new Set();
-      const stack = [state7];
+      const stack = [state5];
       while (stack.length) {
         const cur = stack.pop();
         if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
@@ -40851,8 +40766,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     } catch {
     }
     try {
-      const state7 = await Atoms.root.state.get();
-      const cols = Number(state7?.map?.cols ?? state7?.child?.data?.map?.cols ?? state7?.fullState?.map?.cols);
+      const state5 = await Atoms.root.state.get();
+      const cols = Number(state5?.map?.cols ?? state5?.child?.data?.map?.cols ?? state5?.fullState?.map?.cols);
       if (Number.isFinite(cols) && cols > 0) return cols;
     } catch {
     }
@@ -40872,9 +40787,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/room/players.ts
   async function listPlayers() {
-    const state7 = await Atoms.root.state.get();
-    if (!state7) return [];
-    const ordered = playersInSlotOrder(state7);
+    const state5 = await Atoms.root.state.get();
+    if (!state5) return [];
+    const ordered = playersInSlotOrder(state5);
     const spawns = await sortedSpawnTiles();
     return ordered.map((p, i) => ({ ...p, gardenPosition: spawns[i] ?? null }));
   }
@@ -40887,13 +40802,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
   }
   async function playerSlot(playerId2) {
-    const state7 = await Atoms.root.state.get();
-    return state7 ? slotOf(state7, playerId2) : null;
+    const state5 = await Atoms.root.state.get();
+    return state5 ? slotOf(state5, playerId2) : null;
   }
   async function playerName(playerId2) {
     try {
-      const state7 = await Atoms.root.state.get();
-      const p = playersOf(state7).find((x) => String(x?.id) === String(playerId2));
+      const state5 = await Atoms.root.state.get();
+      const p = playersOf(state5).find((x) => String(x?.id) === String(playerId2));
       return p && typeof p.name === "string" && p.name ? p.name : null;
     } catch {
       return null;
@@ -41327,13 +41242,13 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/skins/applier.ts
   function collectGameMatches() {
-    const state7 = getSpriteState();
-    const roots = [state7.app?.stage, state7.renderer?.lastObjectRendered, state7.renderer?.stage];
+    const state5 = getSpriteState();
+    const roots = [state5.app?.stage, state5.renderer?.lastObjectRendered, state5.renderer?.stage];
     const byLabel = /* @__PURE__ */ new Map();
     const byRect = /* @__PURE__ */ new Map();
     const seenNodes = /* @__PURE__ */ new Set();
     let visited = 0;
-    const catalogTextures = new Set(state7.tex.values());
+    const catalogTextures = new Set(state5.tex.values());
     const add = (bucket, key2, texture, node) => {
       let match = bucket.get(key2);
       if (!match) {
@@ -41465,14 +41380,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   function applySkinTexture(target, canvas, getIndex = collectGameMatches) {
     const frameKey = target.frameKey;
     revertSkin(frameKey);
-    const state7 = getSpriteState();
-    const Texture = state7.ctors?.Texture;
+    const state5 = getSpriteState();
+    const Texture = state5.ctors?.Texture;
     if (!Texture?.from) return false;
     const stage = getIndex();
     const labelMatch = stage.byLabel.get(frameKey);
     const { x, y, w, h: h2 } = target.occupiedRect;
     const rectMatch = stage.byRect.get(rectKey(x, y, w, h2));
-    const atlasSource = sourceOf(state7.tex.get(frameKey));
+    const atlasSource = sourceOf(state5.tex.get(frameKey));
     const textures = [];
     const nodes = [];
     const cached2 = lookupCachedTexture(frameKey);
@@ -41590,14 +41505,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   function renderFrameToCanvas(frameKey) {
     const cached2 = canvasCache.get(frameKey);
     if (cached2) return cached2;
-    const state7 = getSpriteState();
-    const texture = state7.tex.get(frameKey);
-    const ctors = state7.ctors;
-    if (!texture || !ctors?.Sprite || !state7.renderer?.extract) return null;
+    const state5 = getSpriteState();
+    const texture = state5.tex.get(frameKey);
+    const ctors = state5.ctors;
+    if (!texture || !ctors?.Sprite || !state5.renderer?.extract) return null;
     let sprite = null;
     try {
       sprite = new ctors.Sprite(texture);
-      const canvas = state7.renderer.extract.canvas(sprite, { resolution: 1 });
+      const canvas = state5.renderer.extract.canvas(sprite, { resolution: 1 });
       if (!canvas) return null;
       if (canvasCache.size >= CACHE_MAX) {
         canvasCache.delete(canvasCache.keys().next().value);
@@ -41660,13 +41575,13 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/skins/gameCaches.ts
   function holders() {
-    const state7 = getSpriteState();
+    const state5 = getSpriteState();
     return [
       getPixiApp(),
-      state7.app,
-      state7.app?.app,
-      state7.renderer,
-      state7.renderer?.app,
+      state5.app,
+      state5.app?.app,
+      state5.renderer,
+      state5.renderer?.app,
       pageWindow.__PIXI_APP__,
       pageWindow.app
     ].filter(Boolean);
@@ -41723,9 +41638,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/skins/debug.ts
   function inspectFrame(frameKey, occupiedRect) {
-    const state7 = getSpriteState();
+    const state5 = getSpriteState();
     const stage = collectGameMatches();
-    const catalogTexture = state7.tex.get(frameKey);
+    const catalogTexture = state5.tex.get(frameKey);
     const atlasSource = sourceOf(catalogTexture);
     const describe = (match) => (match?.nodes ?? []).map((node) => ({
       ctor: node?.constructor?.name,
@@ -41760,7 +41675,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function findOnStage(substring = "") {
-    const state7 = getSpriteState();
+    const state5 = getSpriteState();
     const stage = collectGameMatches();
     const needle = substring.toLowerCase();
     const labels = [...stage.byLabel.keys()].filter((label2) => label2.toLowerCase().includes(needle)).sort();
@@ -41785,7 +41700,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       unlabelledRects: unlabelled.slice(0, 40),
       unlabelledRectCount: unlabelled.length,
       catalogRect: (() => {
-        const rect = frameRectOf(state7.tex.get(substring));
+        const rect = frameRectOf(state5.tex.get(substring));
         return rect ? rectKey2(rect.x, rect.y, rect.width, rect.height) : null;
       })()
     };
@@ -41955,10 +41870,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function areSkinsEnabled() {
     return snapshot.enabled;
   }
-  async function setSkinsEnabled(enabled5) {
-    snapshot.enabled = enabled5;
-    updateAriesStorage((current2) => {
-      current2.skins = { ...current2.skins || {}, enabled: enabled5 };
+  async function setSkinsEnabled(enabled2) {
+    snapshot.enabled = enabled2;
+    updateAriesStorage((current3) => {
+      current3.skins = { ...current3.skins || {}, enabled: enabled2 };
     });
     await reapply();
   }
@@ -42019,13 +41934,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function retryPending() {
     if (!snapshot.enabled || retriesLeft <= 0) return;
-    const pending6 = [...snapshot.results.values()].filter((result) => !result.applied);
-    if (!pending6.length) return;
+    const pending3 = [...snapshot.results.values()].filter((result) => !result.applied);
+    if (!pending3.length) return;
     retriesLeft -= 1;
     const targets = await loadTargets();
     const index = sharedStageIndex();
     let changed5 = false;
-    for (const result of pending6) {
+    for (const result of pending3) {
       const canvas = skinCanvases.get(result.frameKey);
       const target = targets.get(result.frameKey);
       if (!canvas || !target) continue;
@@ -42070,9 +41985,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (watchId === null) {
       lastRenderer = getSpriteState().renderer;
       watchId = pageWindow.setInterval(() => {
-        const current2 = getSpriteState().renderer;
-        if (!current2 || current2 === lastRenderer) return;
-        lastRenderer = current2;
+        const current3 = getSpriteState().renderer;
+        if (!current3 || current3 === lastRenderer) return;
+        lastRenderer = current3;
         if (!snapshot.entries.size) return;
         console.info("[MG Skins] renderer recreated, re-applying skins");
         forgetAppliedState();
@@ -42096,7 +42011,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const targets = await loadTargets();
       snapshot.objects = groupTargets(targets);
       const rows = await listSkins();
-      snapshot.entries = new Map(rows.map((row4) => [row4.frameKey, row4]));
+      snapshot.entries = new Map(rows.map((row5) => [row5.frameKey, row5]));
       snapshot.ready = true;
       notifyChanged();
       startTimers();
@@ -42149,8 +42064,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (observer) return observer;
     if (typeof IntersectionObserver === "undefined") return null;
     observer = new IntersectionObserver(
-      (entries2) => {
-        for (const entry of entries2) {
+      (entries) => {
+        for (const entry of entries) {
           if (!entry.isIntersecting) continue;
           const render = pending.get(entry.target);
           if (!render) continue;
@@ -42225,7 +42140,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function buildSlot(target, index, deps) {
     const { entry, result, onError, onChanged } = deps;
-    const row4 = h("div", "qws-skins-slot");
+    const row5 = h("div", "qws-skins-slot");
     const before = thumbBox();
     mountThumb(before, target, null, SLOT_THUMB_PX);
     const after = thumbBox(!entry);
@@ -42291,11 +42206,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       h("div", "qws-skins-slot__spacer"),
       actions2
     );
-    row4.append(head, body);
-    return row4;
+    row5.append(head, body);
+    return row5;
   }
   function buildDetail(options2) {
-    const { object, entries: entries2, results, onError, onChanged } = options2;
+    const { object, entries, results, onError, onChanged } = options2;
     const host = h("div", "qws-skins-detail");
     if (!object) {
       host.appendChild(h("div", "qws-skins-detail__empty", "Pick a sprite"));
@@ -42314,7 +42229,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     object.slots.forEach((target, index) => {
       list.appendChild(
         buildSlot(target, index, {
-          entry: entries2.get(target.frameKey),
+          entry: entries.get(target.frameKey),
           result: results.get(target.frameKey),
           onError,
           onChanged
@@ -42588,6 +42503,490 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/features/companion/diagnostics.ts
+  function median(values) {
+    if (values.length === 0) return null;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0 ? Math.round((sorted[mid - 1] + sorted[mid]) / 2) : sorted[mid];
+  }
+  async function diagnoseCompanion(npcId, sampleMs = DEFAULT_SAMPLE_MS) {
+    const seen = [];
+    const record2 = (entries) => {
+      const entry = Array.isArray(entries) ? entries.find((e) => e?.playerId === npcId) : null;
+      const pos = entry?.position;
+      if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return;
+      const last = seen[seen.length - 1];
+      if (last && last.x === pos.x && last.y === pos.y) return;
+      seen.push({ atMs: performance.now(), x: pos.x, y: pos.y });
+    };
+    let unsub = null;
+    try {
+      unsub = await npcQuinoaUsers.onChangeNow((next) => record2(next));
+    } catch {
+      return {
+        observations: 0,
+        medianIntervalMs: null,
+        maxDelta: 0,
+        snapCount: 0,
+        snapRatio: 0,
+        verdict: "Could not subscribe to npcQuinoaUsersAtom."
+      };
+    }
+    await sleep2(sampleMs);
+    try {
+      unsub?.();
+    } catch {
+    }
+    const intervals = [];
+    let maxDelta = 0;
+    let snapCount = 0;
+    for (let i = 1; i < seen.length; i++) {
+      const prev = seen[i - 1];
+      const curr = seen[i];
+      intervals.push(curr.atMs - prev.atMs);
+      const delta = Math.abs(curr.x - prev.x) + Math.abs(curr.y - prev.y);
+      if (delta > maxDelta) maxDelta = delta;
+      if (delta > 1) snapCount++;
+    }
+    const transitions = Math.max(0, seen.length - 1);
+    const snapRatio = transitions === 0 ? 0 : snapCount / transitions;
+    return {
+      observations: seen.length,
+      medianIntervalMs: median(intervals),
+      maxDelta,
+      snapCount,
+      snapRatio: Number(snapRatio.toFixed(2)),
+      verdict: buildVerdict(seen.length, snapCount, maxDelta)
+    };
+  }
+  function buildVerdict(observations, snapCount, maxDelta) {
+    if (observations < 2) {
+      return "No position seen: the companion is not moving, or the atom is not read again. Make sure he walks during the sample.";
+    }
+    if (snapCount === 0) {
+      return "The game only sees one-tile steps. The rate is not the cause: the snap comes from elsewhere (forceSnap).";
+    }
+    return `The game sees jumps of up to ${maxDelta} tiles: the recompute rate is slower than our step. That is the cause of the snap.`;
+  }
+  var DEFAULT_SAMPLE_MS, npcQuinoaUsers;
+  var init_diagnostics = __esm({
+    "src/features/companion/diagnostics.ts"() {
+      "use strict";
+      init_async2();
+      init_hub();
+      DEFAULT_SAMPLE_MS = 6e3;
+      npcQuinoaUsers = makeAtom(
+        "npcQuinoaUsersAtom"
+      );
+    }
+  });
+
+  // src/features/companion/emoteTypes.ts
+  function companionEmoteEntry(playerId2, emote, now) {
+    return { kind: "emote", playerId: playerId2, emoteType: emote, lastTimestampMs: now + ENTRY_LEAD_MS };
+  }
+  function mergeEmoteSource(real, fake) {
+    const base = real && typeof real === "object" ? real : {};
+    const entries = Array.isArray(base.entries) ? base.entries : [];
+    const ours = Array.isArray(fake?.entries) ? fake.entries : [];
+    return { ...base, entries: ours.length ? [...entries, ...ours] : entries };
+  }
+  function cutTalking(avatarSystem2, playerId2) {
+    const system = avatarSystem2;
+    if (!system || typeof system.views?.get !== "function") return false;
+    const view = system.views.get(playerId2);
+    if (!view) return false;
+    try {
+      if (typeof system.stopNpcTalking === "function") {
+        system.stopNpcTalking(playerId2, view);
+        return true;
+      }
+      if (typeof view.setTalking === "function") {
+        view.setTalking(false);
+        return true;
+      }
+    } catch {
+    }
+    return false;
+  }
+  function emoteStartDelay(lastSpokeAt2, now, canCutTalking = false) {
+    if (canCutTalking) return 0;
+    if (lastSpokeAt2 === null) return 0;
+    return Math.max(0, lastSpokeAt2 + NPC_TALKING_MS + TALKING_MARGIN_MS - now);
+  }
+  var EmoteType, ENTRY_LEAD_MS, NPC_TALKING_MS, TALKING_MARGIN_MS;
+  var init_emoteTypes = __esm({
+    "src/features/companion/emoteTypes.ts"() {
+      "use strict";
+      EmoteType = {
+        Idle: -1,
+        Clapping: 0,
+        Laughing: 1,
+        Angered: 2,
+        Crying: 3,
+        Questioning: 4,
+        Love: 5
+      };
+      ENTRY_LEAD_MS = 6e4;
+      NPC_TALKING_MS = 3e3;
+      TALKING_MARGIN_MS = 150;
+    }
+  });
+
+  // src/features/companion/tick.ts
+  function createTickAtom() {
+    const atom = {};
+    atom.init = 0;
+    atom.read = (get) => get(atom);
+    atom.write = (get, set2, update) => set2(atom, typeof update === "function" ? update(get(atom)) : update);
+    atom.debugLabel = COMPANION_TICK_LABEL;
+    atom.toString = () => COMPANION_TICK_LABEL;
+    return atom;
+  }
+  function ensureTickAtom() {
+    if (tickAtom) return tickAtom;
+    const cache3 = pageWindow.jotaiAtomCache;
+    if (!cache3 || typeof cache3.get !== "function") return null;
+    tickAtom = cache3.get(CACHE_KEY, createTickAtom());
+    return tickAtom;
+  }
+  function isTickAvailable() {
+    return ensureTickAtom() !== null;
+  }
+  async function bumpTick() {
+    const atom = ensureTickAtom();
+    if (!atom) return;
+    counter++;
+    try {
+      await jSet(atom, counter);
+    } catch {
+    }
+  }
+  var COMPANION_TICK_LABEL, CACHE_KEY, tickAtom, counter;
+  var init_tick = __esm({
+    "src/features/companion/tick.ts"() {
+      "use strict";
+      init_pageContext();
+      init_jotai();
+      COMPANION_TICK_LABEL = "ariesCompanionTickAtom";
+      CACHE_KEY = `aries/companion/${COMPANION_TICK_LABEL}`;
+      tickAtom = null;
+      counter = 0;
+    }
+  });
+
+  // src/features/companion/emote.ts
+  function avatarSystem() {
+    try {
+      return getWorldSystem("avatar");
+    } catch {
+      return null;
+    }
+  }
+  function markSpoke(playerId2, at = Date.now()) {
+    if (playerId2) lastSpokeAt.set(playerId2, at);
+  }
+  async function writeEntries(entries) {
+    const payload = { entries };
+    try {
+      if (!installed5) {
+        ensureTickAtom();
+        await fakeShow(EMOTE_PATCH, payload);
+        installed5 = true;
+      } else {
+        await fakeUpdate(EMOTE_SOURCE_LABEL, payload);
+      }
+      await bumpTick();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  async function rest() {
+    if (!installed5) return;
+    await writeEntries([]);
+  }
+  function cancelPending() {
+    if (releaseTimer === null) return;
+    window.clearTimeout(releaseTimer);
+    releaseTimer = null;
+  }
+  function cancelStart() {
+    if (startTimer === null) return;
+    window.clearTimeout(startTimer);
+    startTimer = null;
+  }
+  async function playEmote(playerId2, emote, durationMs = EMOTE_DURATION_MS) {
+    if (!playerId2 || emote === EmoteType.Idle) return;
+    cancelStart();
+    const avatar3 = avatarSystem();
+    const canCut = !!avatar3?.views?.has?.(playerId2);
+    const delay = emoteStartDelay(lastSpokeAt.get(playerId2) ?? null, Date.now(), canCut);
+    if (delay > 0) {
+      startTimer = window.setTimeout(() => {
+        startTimer = null;
+        void playEmote(playerId2, emote, durationMs);
+      }, delay);
+      return;
+    }
+    if (releaseTimer !== null && posing === playerId2) {
+      cancelPending();
+      await rest();
+      await sleep2(60);
+    }
+    cancelPending();
+    posing = playerId2;
+    if (canCut) {
+      cutTalking(avatar3, playerId2);
+      window.setTimeout(() => {
+        if (posing === playerId2) cutTalking(avatarSystem(), playerId2);
+      }, 80);
+    }
+    if (!await writeEntries([companionEmoteEntry(playerId2, emote, Date.now())])) {
+      posing = null;
+      return;
+    }
+    releaseTimer = window.setTimeout(() => {
+      releaseTimer = null;
+      posing = null;
+      void rest();
+    }, durationMs);
+  }
+  async function stopEmote() {
+    cancelStart();
+    cancelPending();
+    posing = null;
+    if (!installed5) return;
+    try {
+      await fakeHide(EMOTE_SOURCE_LABEL);
+      await bumpTick();
+    } catch {
+    }
+    installed5 = false;
+  }
+  var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed5, releaseTimer, posing, startTimer, lastSpokeAt;
+  var init_emote = __esm({
+    "src/features/companion/emote.ts"() {
+      "use strict";
+      init_async2();
+      init_fakeAtoms();
+      init_tileCapture();
+      init_emoteTypes();
+      init_tick();
+      EMOTE_SOURCE_LABEL = "emoteSourceAtom";
+      EMOTE_PATCH = {
+        label: EMOTE_SOURCE_LABEL,
+        // Without it the recompute would only happen on the next room state change:
+        // the pose would start late, and so would the return to rest.
+        extraDeps: [COMPANION_TICK_LABEL],
+        merge: (real, fake) => mergeEmoteSource(real, fake)
+      };
+      EMOTE_DURATION_MS = 1500;
+      installed5 = false;
+      releaseTimer = null;
+      posing = null;
+      startTimer = null;
+      lastSpokeAt = /* @__PURE__ */ new Map();
+    }
+  });
+
+  // src/features/companion/injection.ts
+  async function listNpcIdentities() {
+    const map2 = await readCompanionMap();
+    const presentIds = new Set(await readPresentNpcIds());
+    const byId = /* @__PURE__ */ new Map();
+    for (const name of map2?.npcSpawnLayers ?? []) {
+      const playerId2 = NPC_ID_PREFIX + name;
+      byId.set(playerId2, {
+        playerId: playerId2,
+        name,
+        spawnLayer: name,
+        present: presentIds.has(playerId2),
+        spawnTile: map2?.npcSpawnTile(name) ?? null
+      });
+    }
+    for (const playerId2 of presentIds) {
+      if (byId.has(playerId2)) continue;
+      const name = playerId2.startsWith(NPC_ID_PREFIX) ? playerId2.slice(NPC_ID_PREFIX.length) : playerId2;
+      byId.set(playerId2, { playerId: playerId2, name, spawnLayer: name, present: true, spawnTile: null });
+    }
+    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }
+  async function readPresentNpcIds() {
+    try {
+      const data = await quinoaData.get();
+      const npcs = data?.npcs;
+      if (!npcs || typeof npcs !== "object") return [];
+      return Object.keys(npcs).filter((id) => !(id in currentPayload.npcs));
+    } catch {
+      return [];
+    }
+  }
+  async function installInjection() {
+    if (active2) return;
+    ensureTickAtom();
+    await fakeShow(COMPANION_PATCH, currentPayload);
+    active2 = true;
+  }
+  async function setCompanionTile(playerId2, tileIndex) {
+    if (!Number.isInteger(tileIndex) || tileIndex < 0) return;
+    currentPayload = { npcs: { [playerId2]: tileIndex } };
+    if (!active2) {
+      ensureTickAtom();
+      await fakeShow(COMPANION_PATCH, currentPayload);
+      active2 = true;
+      return;
+    }
+    await fakeUpdate(QUINOA_DATA_LABEL, currentPayload);
+    await bumpTick();
+  }
+  async function hideCompanion() {
+    if (!active2) return;
+    currentPayload = { npcs: {} };
+    active2 = false;
+    await fakeHide(QUINOA_DATA_LABEL);
+  }
+  async function disposeInjection() {
+    currentPayload = { npcs: {} };
+    active2 = false;
+    await fakeDispose(QUINOA_DATA_LABEL);
+  }
+  var NPC_ID_PREFIX, QUINOA_DATA_LABEL, quinoaData, COMPANION_PATCH, active2, currentPayload;
+  var init_injection = __esm({
+    "src/features/companion/injection.ts"() {
+      "use strict";
+      init_fakeAtoms();
+      init_hub();
+      init_map();
+      init_tick();
+      NPC_ID_PREFIX = "NPC_";
+      QUINOA_DATA_LABEL = "quinoaDataAtom";
+      quinoaData = makeAtom(QUINOA_DATA_LABEL);
+      COMPANION_PATCH = {
+        label: QUINOA_DATA_LABEL,
+        // An artificial dependency: without it the recompute only follows the room
+        // state (about 420 ms measured), too slow for a step's 130 ms interpolation.
+        extraDeps: [COMPANION_TICK_LABEL],
+        merge: (real, fake) => {
+          const base = real && typeof real === "object" ? real : {};
+          const realNpcs = base.npcs && typeof base.npcs === "object" ? base.npcs : {};
+          const fakeNpcs = fake?.npcs && typeof fake.npcs === "object" ? fake.npcs : {};
+          return { ...base, npcs: { ...realNpcs, ...fakeNpcs } };
+        }
+      };
+      active2 = false;
+      currentPayload = { npcs: {} };
+    }
+  });
+
+  // src/lib/random.ts
+  function pickOne(options2, random = Math.random) {
+    return options2[Math.min(options2.length - 1, Math.floor(random() * options2.length))];
+  }
+  var init_random = __esm({
+    "src/lib/random.ts"() {
+      "use strict";
+    }
+  });
+
+  // src/features/companion/dialogue.ts
+  function nextBubbleTimestamp(last, proposed) {
+    if (!Number.isFinite(proposed) || last === null || !Number.isFinite(last)) return proposed;
+    return Math.max(proposed, last + 1);
+  }
+  function initialDialogueState() {
+    return { lastCustomIndex: -1, mutedUntil: {} };
+  }
+  function pickDialogueLine(input) {
+    const { contextual, customLines, nowMs, random, cooldownMs } = input;
+    const state5 = {
+      lastCustomIndex: input.state.lastCustomIndex,
+      mutedUntil: { ...input.state.mutedUntil }
+    };
+    const lines = customLines.filter((line) => typeof line === "string" && line.trim().length > 0);
+    const available = contextual.filter(
+      (candidate) => candidate?.message && nowMs >= (state5.mutedUntil[candidate.key] ?? 0)
+    );
+    if (available.length > 0 && (lines.length === 0 || random() < CONTEXTUAL_CHANCE)) {
+      const candidate = pickOne(available, random);
+      state5.mutedUntil[candidate.key] = nowMs + cooldownMs;
+      return { message: candidate.message, emote: candidate.emote ?? null, custom: false, state: state5 };
+    }
+    if (lines.length === 0) return { message: null, emote: null, custom: false, state: state5 };
+    if (lines.length === 1) {
+      state5.lastCustomIndex = 0;
+      return { message: lines[0], emote: null, custom: true, state: state5 };
+    }
+    let index = pickOne([...lines.keys()], random);
+    if (index === state5.lastCustomIndex) index = (index + 1) % lines.length;
+    state5.lastCustomIndex = index;
+    return { message: lines[index], emote: null, custom: true, state: state5 };
+  }
+  var CONTEXTUAL_CHANCE, DEFAULT_CONTEXTUAL_COOLDOWN_MS;
+  var init_dialogue = __esm({
+    "src/features/companion/dialogue.ts"() {
+      "use strict";
+      init_random();
+      CONTEXTUAL_CHANCE = 0.25;
+      DEFAULT_CONTEXTUAL_COOLDOWN_MS = 12e4;
+    }
+  });
+
+  // src/features/companion/feeds.ts
+  function sharedFeed(subscribe) {
+    const changes8 = new Emitter();
+    let source = null;
+    let latest;
+    const feed = {
+      on(listener) {
+        if (!source) {
+          source = new Subscriptions();
+          source.add(
+            subscribe((value) => {
+              latest = value;
+              changes8.emit(value);
+            }).catch(() => void 0)
+          );
+        }
+        const off = changes8.on(listener);
+        if (latest !== void 0) listener(latest);
+        return () => {
+          off();
+          if (changes8.size > 0 || !source) return;
+          source.dispose();
+          source = null;
+          latest = void 0;
+        };
+      },
+      hold: () => feed.on(() => {
+      }),
+      latest: () => latest
+    };
+    return feed;
+  }
+  function roundTile(pos) {
+    const x = Number(pos?.x);
+    const y = Number(pos?.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return { x: Math.round(x), y: Math.round(y) };
+  }
+  var playerTileFeed, gardenFeed;
+  var init_feeds = __esm({
+    "src/features/companion/feeds.ts"() {
+      "use strict";
+      init_emitter();
+      init_atoms();
+      playerTileFeed = sharedFeed(
+        (push2) => Atoms.player.position.onChangeNow((next) => {
+          const tile = roundTile(next);
+          if (tile) push2(tile);
+        })
+      );
+      gardenFeed = sharedFeed((push2) => Atoms.data.gardenTileObjects.onChangeNow(push2));
+    }
+  });
+
   // src/features/companion/pathfinding.ts
   function findFirstStep(from, isGoal, isWalkable, maxExploredNodes = MAX_EXPLORED_NODES) {
     if (isGoal(from.x, from.y)) return null;
@@ -42686,102 +43085,100 @@ Restore figures are averages; unlucky streaks do worse.`;
         if (isWalkable(x, y)) candidates.push({ x, y });
       }
     }
-    if (candidates.length === 0) return null;
-    const index = Math.min(candidates.length - 1, Math.floor(random() * candidates.length));
-    return candidates[index];
+    return candidates.length === 0 ? null : pickOne(candidates, random);
   }
   function stepMovement(input) {
     const { anchor, isWalkable, random, config } = input;
-    const pickInterest2 = input.pickInterest ?? null;
-    const state7 = { ...input.state };
+    const pickInterest = input.pickInterest ?? null;
+    const state5 = { ...input.state };
     const excludeCenter = anchor.tracksPlayer;
     const blocked = anchor.tracksPlayer ? anchor.tile : null;
     const zone = anchor.zone;
     const zoneWalkable = (x, y) => isWalkable(x, y) && (!zone || zone(x, y));
-    const insideZone = !zone || !state7.tile || zone(state7.tile.x, state7.tile.y);
+    const insideZone = !zone || !state5.tile || zone(state5.tile.x, state5.tile.y);
     const stepWalkable = insideZone ? zoneWalkable : isWalkable;
-    const anchorMoved = !sameTile(state7.lastAnchorTile, anchor.tile);
-    state7.lastAnchorTile = { ...anchor.tile };
+    const anchorMoved = !sameTile(state5.lastAnchorTile, anchor.tile);
+    state5.lastAnchorTile = { ...anchor.tile };
     if (anchorMoved) {
-      state7.idleTicks = 0;
-      if (state7.activity === "wander") {
-        state7.activity = "pursue";
-        state7.wanderTarget = null;
-        state7.wanderTargetIsInterest = false;
-        state7.wanderCooldown = 0;
+      state5.idleTicks = 0;
+      if (state5.activity === "wander") {
+        state5.activity = "pursue";
+        state5.wanderTarget = null;
+        state5.wanderTargetIsInterest = false;
+        state5.wanderCooldown = 0;
       }
     } else {
-      state7.idleTicks++;
+      state5.idleTicks++;
     }
-    if (!state7.tile) {
+    if (!state5.tile) {
       const spawn = findNearbyWalkable(anchor.tile, zoneWalkable, excludeCenter) ?? findNearbyWalkable(anchor.tile, isWalkable, excludeCenter);
-      state7.tile = spawn;
-      return { state: state7, tile: spawn, teleported: spawn !== null };
+      state5.tile = spawn;
+      return { state: state5, tile: spawn, teleported: spawn !== null };
     }
-    const arrived = manhattan(state7.tile, anchor.tile) <= config.followDistance;
-    if (state7.activity === "pursue" && arrived && anchor.onArrival === "wander") {
-      const mayWander = !anchor.tracksPlayer || state7.idleTicks >= config.idleTicksBeforeWander;
+    const arrived = manhattan(state5.tile, anchor.tile) <= config.followDistance;
+    if (state5.activity === "pursue" && arrived && anchor.onArrival === "wander") {
+      const mayWander = !anchor.tracksPlayer || state5.idleTicks >= config.idleTicksBeforeWander;
       if (mayWander) {
-        state7.activity = "wander";
-        state7.wanderTarget = null;
-        state7.wanderTargetIsInterest = false;
-        state7.wanderCooldown = 0;
+        state5.activity = "wander";
+        state5.wanderTarget = null;
+        state5.wanderTargetIsInterest = false;
+        state5.wanderCooldown = 0;
       }
     }
     const passable = (x, y) => stepWalkable(x, y) && !(blocked !== null && x === blocked.x && y === blocked.y);
     let isGoal = null;
     let interestReached = null;
-    if (state7.activity === "pursue") {
+    if (state5.activity === "pursue") {
       if (!arrived) {
         isGoal = (x, y) => manhattan({ x, y }, anchor.tile) <= config.followDistance;
       }
     } else {
-      const wander = resolveWanderTarget(state7, anchor, config, zoneWalkable, random, pickInterest2);
+      const wander = resolveWanderTarget(state5, anchor, config, zoneWalkable, random, pickInterest);
       interestReached = wander.interestReached;
       const target = wander.target;
       if (target) isGoal = (x, y) => x === target.x && y === target.y;
     }
-    if (!isGoal) return { state: state7, tile: state7.tile, teleported: false, interestReached };
-    const next = findFirstStep(state7.tile, isGoal, passable);
+    if (!isGoal) return { state: state5, tile: state5.tile, teleported: false, interestReached };
+    const next = findFirstStep(state5.tile, isGoal, passable);
     if (!next) {
-      if (state7.activity === "wander") {
-        state7.wanderTarget = null;
-        state7.wanderTargetIsInterest = false;
+      if (state5.activity === "wander") {
+        state5.wanderTarget = null;
+        state5.wanderTargetIsInterest = false;
       }
-      return { state: state7, tile: state7.tile, teleported: false };
+      return { state: state5, tile: state5.tile, teleported: false };
     }
-    state7.tile = next;
-    return { state: state7, tile: next, teleported: false };
+    state5.tile = next;
+    return { state: state5, tile: next, teleported: false };
   }
-  function resolveWanderTarget(state7, anchor, config, isWalkable, random, pickInterest2) {
-    if (state7.wanderCooldown > 0) {
-      state7.wanderCooldown--;
+  function resolveWanderTarget(state5, anchor, config, isWalkable, random, pickInterest) {
+    if (state5.wanderCooldown > 0) {
+      state5.wanderCooldown--;
       return { target: null, interestReached: null };
     }
-    if (state7.wanderTarget && sameTile(state7.wanderTarget, state7.tile)) {
-      const reached = state7.wanderTargetIsInterest ? { ...state7.wanderTarget } : null;
-      state7.wanderTarget = null;
-      state7.wanderTargetIsInterest = false;
-      state7.wanderCooldown = drawWanderPause(config, random);
+    if (state5.wanderTarget && sameTile(state5.wanderTarget, state5.tile)) {
+      const reached = state5.wanderTargetIsInterest ? { ...state5.wanderTarget } : null;
+      state5.wanderTarget = null;
+      state5.wanderTargetIsInterest = false;
+      state5.wanderCooldown = drawWanderPause(config, random);
       return { target: null, interestReached: reached };
     }
-    if (!state7.wanderTarget) {
+    if (!state5.wanderTarget) {
       const radius2 = wanderRadiusOf(anchor, config);
-      const interest = pickInterest2 && state7.tile ? pickInterestSafely(pickInterest2, anchor.tile, radius2, state7.tile, isWalkable) : null;
-      state7.wanderTargetIsInterest = interest !== null;
-      state7.wanderTarget = interest ?? pickWanderTarget(anchor.tile, radius2, isWalkable, random);
-      if (!state7.wanderTarget) {
-        state7.wanderCooldown = drawWanderPause(config, random);
+      const interest = pickInterest && state5.tile ? pickInterestSafely(pickInterest, anchor.tile, radius2, state5.tile, isWalkable) : null;
+      state5.wanderTargetIsInterest = interest !== null;
+      state5.wanderTarget = interest ?? pickWanderTarget(anchor.tile, radius2, isWalkable, random);
+      if (!state5.wanderTarget) {
+        state5.wanderCooldown = drawWanderPause(config, random);
         return { target: null, interestReached: null };
       }
     }
-    return { target: state7.wanderTarget, interestReached: null };
+    return { target: state5.wanderTarget, interestReached: null };
   }
-  function pickInterestSafely(pickInterest2, center, radius2, from, isWalkable) {
+  function pickInterestSafely(pickInterest, center, radius2, from, isWalkable) {
     const accepts = (x, y) => Math.max(Math.abs(x - center.x), Math.abs(y - center.y)) <= radius2 && !(x === center.x && y === center.y) && !(x === from.x && y === from.y) && isWalkable(x, y);
     let picked = null;
     try {
-      picked = pickInterest2({ center: { ...center }, radius: radius2, from: { ...from }, isWalkable: accepts });
+      picked = pickInterest({ center: { ...center }, radius: radius2, from: { ...from }, isWalkable: accepts });
     } catch {
       return null;
     }
@@ -42792,12 +43189,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_movement = __esm({
     "src/features/companion/movement.ts"() {
       "use strict";
+      init_random();
       init_pathfinding();
       STEP_INTERVAL_MS = 150;
       DEFAULT_MOVEMENT_CONFIG = {
         followDistance: 2,
-        // 15 s d'immobilité avant de flâner, puis 8 à 45 s d'arrêt entre deux
-        // balades, tirés à chaque fois.
+        // 15 s of stillness before wandering, then 8 to 45 s of pause between two
+        // strolls, drawn every time.
         idleTicksBeforeWander: Math.round(15e3 / STEP_INTERVAL_MS),
         wanderRadius: 3,
         wanderPauseTicks: Math.round(8e3 / STEP_INTERVAL_MS),
@@ -42816,422 +43214,22 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/companion/tick.ts
-  function createTickAtom() {
-    const atom = {};
-    atom.init = 0;
-    atom.read = (get) => get(atom);
-    atom.write = (get, set2, update) => set2(atom, typeof update === "function" ? update(get(atom)) : update);
-    atom.debugLabel = COMPANION_TICK_LABEL;
-    atom.toString = () => COMPANION_TICK_LABEL;
-    return atom;
+  // src/features/companion/runtime.ts
+  function currentRuntime() {
+    return current2;
   }
-  function ensureTickAtom() {
-    if (tickAtom) return tickAtom;
-    const cache3 = pageWindow.jotaiAtomCache;
-    if (!cache3 || typeof cache3.get !== "function") return null;
-    tickAtom = cache3.get(CACHE_KEY, createTickAtom());
-    return tickAtom;
+  function setRuntime(next) {
+    current2 = next;
   }
-  function isTickAvailable() {
-    return ensureTickAtom() !== null;
-  }
-  async function bumpTick() {
-    const atom = ensureTickAtom();
-    if (!atom) return;
-    counter++;
-    try {
-      await jSet(atom, counter);
-    } catch {
-    }
-  }
-  var COMPANION_TICK_LABEL, CACHE_KEY, tickAtom, counter;
-  var init_tick = __esm({
-    "src/features/companion/tick.ts"() {
+  var current2;
+  var init_runtime = __esm({
+    "src/features/companion/runtime.ts"() {
       "use strict";
-      init_pageContext();
-      init_jotai();
-      COMPANION_TICK_LABEL = "ariesCompanionTickAtom";
-      CACHE_KEY = `aries/companion/${COMPANION_TICK_LABEL}`;
-      tickAtom = null;
-      counter = 0;
+      current2 = null;
     }
   });
 
-  // src/features/companion/injection.ts
-  async function listNpcIdentities() {
-    const map2 = await readCompanionMap();
-    const presentIds = new Set(await readPresentNpcIds());
-    const byId = /* @__PURE__ */ new Map();
-    for (const name of map2?.npcSpawnLayers ?? []) {
-      const playerId2 = NPC_ID_PREFIX + name;
-      byId.set(playerId2, {
-        playerId: playerId2,
-        name,
-        spawnLayer: name,
-        present: presentIds.has(playerId2),
-        spawnTile: map2?.npcSpawnTile(name) ?? null
-      });
-    }
-    for (const playerId2 of presentIds) {
-      if (byId.has(playerId2)) continue;
-      const name = playerId2.startsWith(NPC_ID_PREFIX) ? playerId2.slice(NPC_ID_PREFIX.length) : playerId2;
-      byId.set(playerId2, { playerId: playerId2, name, spawnLayer: name, present: true, spawnTile: null });
-    }
-    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }
-  async function readPresentNpcIds() {
-    try {
-      const data = await quinoaData.get();
-      const npcs = data?.npcs;
-      if (!npcs || typeof npcs !== "object") return [];
-      return Object.keys(npcs).filter((id) => !(id in currentPayload.npcs));
-    } catch {
-      return [];
-    }
-  }
-  async function installInjection() {
-    if (active2) return;
-    ensureTickAtom();
-    await fakeShow(COMPANION_PATCH, currentPayload);
-    active2 = true;
-  }
-  async function setCompanionTile(playerId2, tileIndex) {
-    if (!Number.isInteger(tileIndex) || tileIndex < 0) return;
-    currentPayload = { npcs: { [playerId2]: tileIndex } };
-    if (!active2) {
-      ensureTickAtom();
-      await fakeShow(COMPANION_PATCH, currentPayload);
-      active2 = true;
-      return;
-    }
-    await fakeUpdate(QUINOA_DATA_LABEL, currentPayload);
-    await bumpTick();
-  }
-  async function hideCompanion() {
-    if (!active2) return;
-    currentPayload = { npcs: {} };
-    active2 = false;
-    await fakeHide(QUINOA_DATA_LABEL);
-  }
-  async function disposeInjection() {
-    currentPayload = { npcs: {} };
-    active2 = false;
-    await fakeDispose(QUINOA_DATA_LABEL);
-  }
-  var NPC_ID_PREFIX, QUINOA_DATA_LABEL, quinoaData, COMPANION_PATCH, active2, currentPayload;
-  var init_injection = __esm({
-    "src/features/companion/injection.ts"() {
-      "use strict";
-      init_fakeAtoms();
-      init_hub();
-      init_map();
-      init_tick();
-      NPC_ID_PREFIX = "NPC_";
-      QUINOA_DATA_LABEL = "quinoaDataAtom";
-      quinoaData = makeAtom(QUINOA_DATA_LABEL);
-      COMPANION_PATCH = {
-        label: QUINOA_DATA_LABEL,
-        // Dépendance artificielle : sans elle, le recalcul ne suit que l'état de room
-        // (~420 ms mesuré), trop lent pour les 130 ms d'interpolation d'un pas.
-        extraDeps: [COMPANION_TICK_LABEL],
-        merge: (real, fake) => {
-          const base = real && typeof real === "object" ? real : {};
-          const realNpcs = base.npcs && typeof base.npcs === "object" ? base.npcs : {};
-          const fakeNpcs = fake?.npcs && typeof fake.npcs === "object" ? fake.npcs : {};
-          return { ...base, npcs: { ...realNpcs, ...fakeNpcs } };
-        }
-      };
-      active2 = false;
-      currentPayload = { npcs: {} };
-    }
-  });
-
-  // src/features/companion/emoteTypes.ts
-  function companionEmoteEntry(playerId2, emote, now) {
-    return { kind: "emote", playerId: playerId2, emoteType: emote, lastTimestampMs: now + ENTRY_LEAD_MS };
-  }
-  function mergeEmoteSource(real, fake) {
-    const base = real && typeof real === "object" ? real : {};
-    const entries2 = Array.isArray(base.entries) ? base.entries : [];
-    const ours = Array.isArray(fake?.entries) ? fake.entries : [];
-    return { ...base, entries: ours.length ? [...entries2, ...ours] : entries2 };
-  }
-  function cutTalking(avatarSystem2, playerId2) {
-    const system = avatarSystem2;
-    if (!system || typeof system.views?.get !== "function") return false;
-    const view = system.views.get(playerId2);
-    if (!view) return false;
-    try {
-      if (typeof system.stopNpcTalking === "function") {
-        system.stopNpcTalking(playerId2, view);
-        return true;
-      }
-      if (typeof view.setTalking === "function") {
-        view.setTalking(false);
-        return true;
-      }
-    } catch {
-    }
-    return false;
-  }
-  function emoteStartDelay(lastSpokeAt2, now, canCutTalking = false) {
-    if (canCutTalking) return 0;
-    if (lastSpokeAt2 === null) return 0;
-    return Math.max(0, lastSpokeAt2 + NPC_TALKING_MS + TALKING_MARGIN_MS - now);
-  }
-  var EmoteType, ENTRY_LEAD_MS, NPC_TALKING_MS, TALKING_MARGIN_MS;
-  var init_emoteTypes = __esm({
-    "src/features/companion/emoteTypes.ts"() {
-      "use strict";
-      EmoteType = {
-        Idle: -1,
-        Clapping: 0,
-        Laughing: 1,
-        Angered: 2,
-        Crying: 3,
-        Questioning: 4,
-        Love: 5
-      };
-      ENTRY_LEAD_MS = 6e4;
-      NPC_TALKING_MS = 3e3;
-      TALKING_MARGIN_MS = 150;
-    }
-  });
-
-  // src/features/companion/reactions.ts
-  function pickOne(options2, random) {
-    return options2[Math.min(options2.length - 1, Math.floor(random() * options2.length))];
-  }
-  function crossedMilestone(prev, next) {
-    if (!Number.isFinite(prev) || !Number.isFinite(next) || next <= prev) return null;
-    let crossed = null;
-    for (const m of MILESTONES) {
-      if (prev < m && next >= m) crossed = m;
-    }
-    return crossed;
-  }
-  function formatMilestone(n) {
-    const units = [
-      [1e15, "quadrillion"],
-      [1e12, "trillion"],
-      [1e9, "billion"],
-      [1e6, "million"]
-    ];
-    for (const [size, word] of units) {
-      if (n >= size) return `${fmt(n / size)} ${word}`;
-    }
-    return fmt(n);
-  }
-  function statReactions(prev, next, random) {
-    const out = [];
-    for (const def of STAT_DEFS) {
-      const m = crossedMilestone(def.read(prev), def.read(next));
-      if (m === null) continue;
-      out.push({
-        key: `milestone:${def.id}`,
-        message: pickOne(def.lines, random)(formatMilestone(m)),
-        emote: m >= 1e6 ? EmoteType.Love : EmoteType.Clapping,
-        priority: "high"
-      });
-    }
-    if (sumHatched(next, "rainbow") > sumHatched(prev, "rainbow")) {
-      out.push({
-        key: "hatch:rainbow",
-        message: pickOne(["A RAINBOW pet?! No way!", "Rainbow! I've never seen one up close!", "Look at those colours! A Rainbow pet!"], random),
-        emote: EmoteType.Love,
-        priority: "high"
-      });
-    } else if (sumHatched(next, "gold") > sumHatched(prev, "gold")) {
-      out.push({
-        key: "hatch:gold",
-        message: pickOne(["A Gold pet! Look at it shine!", "Gold! That one's a keeper.", "Shiny! A Gold pet!"], random),
-        emote: EmoteType.Love,
-        priority: "high"
-      });
-    } else if (sumHatched(next) > sumHatched(prev)) {
-      out.push({
-        key: "hatch:normal",
-        message: pickOne(["Welcome to the family, little one!", "A new friend! Hi there!", "Aww, look at the new pet."], random),
-        emote: EmoteType.Clapping,
-        priority: "low"
-      });
-    }
-    const earned = num(next?.shops?.cropsSoldValue) - num(prev?.shops?.cropsSoldValue);
-    if (earned > 0) {
-      const coins = fmt(earned);
-      out.push({
-        key: "sale:crops",
-        message: pickOne(
-          [`Ka-ching! +${coins} coins.`, `Sold! ${coins} coins richer.`, `Nice sale, ${coins} coins!`, `${coins} coins in the bank. Love it.`],
-          random
-        ),
-        emote: EmoteType.Clapping,
-        priority: "low"
-      });
-    }
-    return out;
-  }
-  function weatherEmote(weatherId) {
-    return WEATHER_EMOTES[weatherId] ?? EmoteType.Questioning;
-  }
-  function weatherChangeReaction(prevId, nextId, prevName, startLine, random) {
-    if (prevId === nextId) return null;
-    if (nextId) {
-      return { key: `weather:${nextId}`, message: startLine, emote: weatherEmote(nextId), priority: "high" };
-    }
-    if (!prevId) return null;
-    return {
-      key: "weather:end",
-      message: pickOne([`The ${prevName} is over. Sunshine's back!`, `And just like that, the ${prevName} is gone.`, `Bye bye, ${prevName}.`], random),
-      emote: null,
-      priority: "low"
-    };
-  }
-  function abilityReaction(event, random) {
-    const who = event.name?.trim() || (event.species ? `your ${event.species}` : "your pet");
-    const Who = who.charAt(0).toUpperCase() + who.slice(1);
-    return {
-      key: "ability",
-      message: pickOne(
-        [`${Who} just used ${event.abilityName}!`, `Go ${who}! ${event.abilityName}!`, `Did you see that? ${Who} used ${event.abilityName}.`],
-        random
-      ),
-      emote: EmoteType.Clapping,
-      priority: "low"
-    };
-  }
-  function eggsReadyReaction(count, random) {
-    if (count <= 0) return null;
-    return {
-      key: "egg",
-      message: count === 1 ? pickOne(["An egg is ready to hatch!", "Ooh, one of your eggs is ready!", "Something's wiggling in that egg. It's ready!"], random) : pickOne([`${count} eggs are ready to hatch!`, `${count} eggs ready! Hatching time?`], random),
-      emote: EmoteType.Clapping,
-      priority: "high"
-    };
-  }
-  function shopReaction(names, random) {
-    const list = names.filter((n) => typeof n === "string" && n.trim());
-    if (list.length === 0) return null;
-    const what = list.length === 1 ? list[0] : list.length === 2 ? `${list[0]} and ${list[1]}` : `${list[0]}, ${list[1]} and more`;
-    const isAre = list.length === 1 ? "is" : "are";
-    return {
-      key: "shop",
-      message: pickOne([`${what} ${isAre} in the shop! Go go go!`, `Ooh, ${what} just showed up in the shop!`, `Quick, ${what} ${isAre} in stock!`], random),
-      emote: EmoteType.Clapping,
-      priority: "high"
-    };
-  }
-  function restockedFollowed(prev, next, isFollowed) {
-    if (!prev || !next) return [];
-    const out = [];
-    for (const kind of Object.keys(SHOP_ID)) {
-      const before = Number(prev[kind]?.secondsUntilRestock) || 0;
-      const after = Number(next[kind]?.secondsUntilRestock) || 0;
-      if (after <= before) continue;
-      const inventory = next[kind]?.inventory;
-      if (!Array.isArray(inventory)) continue;
-      const [prefix, field2] = SHOP_ID[kind];
-      for (const item of inventory) {
-        const key2 = item?.[field2];
-        const stock = Number(item?.initialStock);
-        if (typeof key2 !== "string" || !key2 || !(stock > 0)) continue;
-        const id = `${prefix}:${key2}`;
-        if (isFollowed(id)) out.push(id);
-      }
-    }
-    return out;
-  }
-  function rareCropReaction(crops, random) {
-    if (crops.length === 0) return null;
-    const first = crops[0];
-    const message2 = crops.length === 1 ? pickOne([`A ${first.mutation} ${first.species}! Look at that!`, `Whoa, a ${first.mutation} ${first.species} just showed up!`, `${first.mutation}! Your ${first.species} is special.`], random) : pickOne([`${crops.length} rare crops just appeared! Look!`, `Whoa, ${crops.length} special crops at once!`], random);
-    return { key: "rarecrop", message: message2, emote: EmoteType.Love, priority: "high" };
-  }
-  function badLuckReactions(prev, next, eggName3, random) {
-    const out = [];
-    for (const [eggId, after] of Object.entries(next ?? {})) {
-      const before = prev?.[eggId];
-      if (!before || !after) continue;
-      const egg = eggName3(eggId);
-      for (const kind of ["rainbow", "gold"]) {
-        const was = Number(before[kind]) || 0;
-        const now = Number(after[kind]) || 0;
-        const label2 = RARITY_LABEL[kind];
-        if (now < was) {
-          if (was < RELIEF_MIN[kind]) continue;
-          const tries = was + 1;
-          out.push({
-            key: `hatch:${kind}`,
-            message: pickOne(
-              [`FINALLY! A ${label2} pet after ${tries} tries!`, `${tries} hatches of waiting, and there it is. ${label2}!`, `I told you it was coming! ${label2}, at last!`],
-              random
-            ),
-            emote: EmoteType.Love,
-            priority: "high",
-            weight: 1
-          });
-          continue;
-        }
-        let step = null;
-        for (const s of DROUGHT_STEPS[kind]) if (was < s && now >= s) step = s;
-        if (step === null) continue;
-        out.push({
-          key: `badluck:${kind}`,
-          message: pickOne(
-            [
-              `${step} ${egg} hatches without a ${label2}... it's coming, I can feel it.`,
-              `Still no ${label2} after ${step} tries. The game owes you one.`,
-              `${step} in a row with no ${label2}. Hang in there, boss.`
-            ],
-            random
-          ),
-          emote: EmoteType.Crying,
-          priority: "high"
-        });
-      }
-    }
-    return out;
-  }
-  function newRareCrops(prev, next, rare) {
-    if (!prev || typeof prev !== "object" || !next || typeof next !== "object" || rare.size === 0) return [];
-    const seen = /* @__PURE__ */ new Map();
-    const index = (tiles, visit) => {
-      for (const [tileIdx, obj] of Object.entries(tiles)) {
-        const o = obj;
-        if (!o || o.objectType !== "plant" || !Array.isArray(o.slots)) continue;
-        o.slots.forEach((raw, i) => {
-          const s = raw;
-          if (!s) return;
-          const muts = Array.isArray(s.mutations) ? s.mutations.filter((m) => typeof m === "string") : [];
-          const species = typeof s.species === "string" ? s.species : typeof o.species === "string" ? o.species : "crop";
-          visit(`${tileIdx}|${s.slotId ?? i}|${s.startTime ?? ""}`, species, muts);
-        });
-      }
-    };
-    index(prev, (id, _species, muts) => seen.set(id, new Set(muts)));
-    const out = [];
-    index(next, (id, species, muts) => {
-      const before = seen.get(id) ?? /* @__PURE__ */ new Set();
-      for (const m of muts) {
-        if (rare.has(m) && !before.has(m)) out.push({ mutation: m, species });
-      }
-    });
-    return out;
-  }
-  function newlyReadyEggs(tiles, now, announced) {
-    if (!tiles || typeof tiles !== "object") return [];
-    const out = [];
-    for (const [tileIdx, obj] of Object.entries(tiles)) {
-      const o = obj;
-      if (!o || o.objectType !== "egg") continue;
-      const matured = Number(o.maturedAt);
-      if (!Number.isFinite(matured) || matured <= 0 || matured > now) continue;
-      const key2 = `${tileIdx}|${o.plantedAt ?? ""}`;
-      if (!announced.has(key2)) out.push(key2);
-    }
-    return out;
-  }
+  // src/features/companion/dialogueTime.ts
   function dayPart(hour) {
     if (hour < 5) return "night";
     if (hour < 8) return "early";
@@ -43263,246 +43261,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (holiday) out.push(...HOLIDAY_LINES[holiday]);
     return out;
   }
-  function resumeSession(stored, now) {
-    const s = stored;
-    const lastSeenAt = Number(s?.lastSeenAt);
-    const startedAt = Number(s?.startedAt);
-    const valid = Number.isFinite(lastSeenAt) && lastSeenAt > 0 && Number.isFinite(startedAt) && startedAt > 0 && startedAt <= now;
-    const storedMet = Number(s?.firstMetAt);
-    const firstMetAt = Number.isFinite(storedMet) && storedMet > 0 && storedMet <= now ? storedMet : now;
-    const celebratedDays = Math.max(0, Math.floor(Number(s?.celebratedDays) || 0));
-    if (valid && now - lastSeenAt < SESSION_GAP_MS) {
-      const announcedHours = Math.max(0, Math.floor(Number(s?.announcedHours) || 0));
-      return { session: { startedAt, lastSeenAt: now, announcedHours, firstMetAt, celebratedDays }, greeting: null };
-    }
-    return {
-      session: { startedAt: now, lastSeenAt: now, announcedHours: 0, firstMetAt, celebratedDays },
-      greeting: { first: !valid, awayMs: valid ? now - lastSeenAt : 0 }
-    };
-  }
-  function greetingReaction(greeting, hour, random, holiday = null) {
-    let lines;
-    if (greeting.first) {
-      lines = ["Hi there! I'll be sticking around.", "Nice to meet you! Let's grow something great."];
-    } else if (greeting.awayMs >= 3 * DAY_MS) {
-      lines = ["Where have you been? I missed you!", "You're back! It's been ages.", "Finally! I was starting to talk to the plants."];
-    } else if (holiday) {
-      lines = HOLIDAY_GREETINGS[holiday];
-    } else if (greeting.awayMs >= DAY_MS) {
-      lines = ["Welcome back! The garden missed you.", "Hey, you're back! Good to see you."];
-    } else {
-      const byPart = {
-        night: ["Hey, night owl! Couldn't sleep?", "Gardening at this hour? I like your style."],
-        early: ["Up with the sun, I see!", "Good morning! You're up early."],
-        morning: ["Good morning! Let's grow something.", "Morning! Ready when you are."],
-        afternoon: ["Good afternoon! Ready to garden?", "Hey! Perfect timing, the plants were asking for you."],
-        evening: ["Good evening! Glad you're here.", "Evening! Let's make it a good one."],
-        late: ["Evening, boss. Late session tonight?", "Hey! Quick one before bed?"]
-      };
-      lines = byPart[dayPart(hour)];
-    }
-    return { key: "session:greeting", message: pickOne(lines, random), emote: EmoteType.Love, priority: "high" };
-  }
-  function anniversarySteps(days) {
-    const steps = [7, 30, 100];
-    for (let year = 1; year * 365 <= days; year++) steps.push(year * 365);
-    return steps;
-  }
-  function anniversaryReaction(firstMetAt, now, celebratedDays, random) {
-    const days = Math.floor((now - firstMetAt) / DAY_MS);
-    let due = null;
-    for (const step of anniversarySteps(days)) if (step <= days && step > celebratedDays) due = step;
-    if (due === null) return { reaction: null, celebratedDays };
-    let lines;
-    if (due === 7) lines = ["One week together already! Thanks for having me.", "A whole week of gardening together!"];
-    else if (due === 30) lines = ["We've been gardening together for a whole month!", "One month together! Time flies."];
-    else if (due === 100) lines = ["100 days together! That's a lot of crops.", "Day 100! Best garden buddy ever."];
-    else {
-      const years = due / 365;
-      lines = years === 1 ? ["Happy anniversary! One year together!", "One year already! Thanks for keeping me around."] : [`Happy anniversary! ${years} years together!`, `${years} years of gardening together. Wow.`];
-    }
-    return {
-      reaction: { key: "anniversary", message: pickOne(lines, random), emote: EmoteType.Love, priority: "high" },
-      celebratedDays: due
-    };
-  }
-  function sessionHours(session2, now) {
-    return Math.max(0, Math.floor((now - session2.startedAt) / 36e5));
-  }
-  function sessionHourReaction(hours, random) {
-    if (hours < 1) return null;
-    let lines;
-    let emote = EmoteType.Clapping;
-    if (hours === 1) {
-      lines = ["We've been at it for an hour already.", "One hour in! Time flies when you're gardening."];
-    } else if (hours === 2) {
-      lines = ["Two hours in! Look at this place.", "Two hours already? Where did the time go?"];
-    } else if (hours < 6) {
-      lines = [`${hours} hours straight. Maybe stretch your legs?`, `${hours} hours! Don't forget to drink some water.`, `${hours} hours already. You're dedicated!`];
-      emote = EmoteType.Questioning;
-    } else {
-      lines = [`${hours} hours?! Are you okay?`, `${hours} hours. I think the plants need a break. And you too.`];
-      emote = EmoteType.Crying;
-    }
-    return { key: `session:hours`, message: pickOne(lines, random), emote, priority: "high" };
-  }
-  function clockReaction(prevHour, hour, sessionMs, random, holiday = null) {
-    if (prevHour === hour) return null;
-    if (hour === 0) {
-      if (holiday) {
-        return { key: "clock:holiday", message: pickOne(HOLIDAY_GREETINGS[holiday], random), emote: EmoteType.Love, priority: "high" };
-      }
-      return {
-        key: "clock:midnight",
-        message: pickOne(["It's midnight! Still going?", "Midnight already. The garden never sleeps, huh?"], random),
-        emote: EmoteType.Questioning,
-        priority: "high"
-      };
-    }
-    if (hour === 6 && sessionMs >= 3 * 36e5) {
-      return {
-        key: "clock:sunrise",
-        message: pickOne(["The sun's coming up. Did we just pull an all-nighter?", "Is that... sunrise? We've been up all night!"], random),
-        emote: EmoteType.Laughing,
-        priority: "high"
-      };
-    }
-    return null;
-  }
-  function initialGateState() {
-    return { lastSpokeAt: 0, mutedUntil: {}, queue: [] };
-  }
-  function offerReaction(state7, reaction, now) {
-    if (now < (state7.mutedUntil[familyOf(reaction.key)] ?? 0)) return state7;
-    const existing = state7.queue.find((q) => q.key === reaction.key);
-    if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state7;
-    const queue = state7.queue.filter((q) => q.key !== reaction.key);
-    queue.push({ ...reaction, at: now });
-    return { ...state7, queue };
-  }
-  function takeReaction(state7, now, busy4) {
-    const queue = state7.queue.filter((q) => now - q.at <= REACTION_TTL_MS[q.priority]);
-    const kept = { ...state7, queue };
-    if (busy4 || queue.length === 0 || now - state7.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
-    const chosen = queue.find((q) => q.priority === "high") ?? queue[0];
-    const family = familyOf(chosen.key);
-    const { at: _at, ...reaction } = chosen;
-    return {
-      reaction,
-      state: {
-        lastSpokeAt: now,
-        mutedUntil: { ...state7.mutedUntil, [family]: now + (FAMILY_COOLDOWN_MS[family] ?? 0) },
-        // Le reste de la famille qui vient de parler se tait aussi.
-        queue: queue.filter((q) => q !== chosen && (FAMILY_COOLDOWN_MS[family] ? familyOf(q.key) !== family : true))
-      }
-    };
-  }
-  var fmt, MILESTONES, sumHatched, sumAbilityTriggers, num, STAT_DEFS, WEATHER_EMOTES, SHOP_ID, DROUGHT_STEPS, RELIEF_MIN, RARITY_LABEL, DAY_PART_LINES, HOLIDAY_LINES, HOLIDAY_GREETINGS, WEEKEND_LINES, SUNDAY_LINES, TIME_LINE_EMOTES, SESSION_GAP_MS, DAY_MS, REACTION_GAP_MS, REACTION_TTL_MS, FAMILY_COOLDOWN_MS, familyOf;
-  var init_reactions = __esm({
-    "src/features/companion/reactions.ts"() {
+  var DAY_PART_LINES, HOLIDAY_LINES, HOLIDAY_GREETINGS, WEEKEND_LINES, SUNDAY_LINES, TIME_LINE_EMOTES;
+  var init_dialogueTime = __esm({
+    "src/features/companion/dialogueTime.ts"() {
       "use strict";
       init_emoteTypes();
-      fmt = (n) => Math.round(n).toLocaleString("en-US");
-      MILESTONES = Array.from({ length: 14 }, (_, i) => 10 ** (i + 2));
-      sumHatched = (s, key2) => {
-        let total = 0;
-        for (const counts of Object.values(s?.pets?.hatchedByType ?? {})) {
-          if (!counts) continue;
-          total += key2 ? Number(counts[key2]) || 0 : (Number(counts.normal) || 0) + (Number(counts.gold) || 0) + (Number(counts.rainbow) || 0);
-        }
-        return total;
-      };
-      sumAbilityTriggers = (s) => {
-        let total = 0;
-        for (const stat of Object.values(s?.abilities ?? {})) total += Number(stat?.triggers) || 0;
-        return total;
-      };
-      num = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
-      STAT_DEFS = [
-        {
-          id: "harvested",
-          read: (s) => num(s?.garden?.totalHarvested),
-          lines: [
-            (n) => `That's ${n} crops harvested! Incredible.`,
-            (n) => `${n} harvests! You're a natural.`,
-            (n) => `Crop number ${n}! We should celebrate.`
-          ]
-        },
-        {
-          id: "planted",
-          read: (s) => num(s?.garden?.totalPlanted),
-          lines: [
-            (n) => `${n} seeds planted! This garden keeps growing.`,
-            (n) => `That's seed number ${n}. Green thumb confirmed.`
-          ]
-        },
-        {
-          id: "watered",
-          read: (s) => num(s?.garden?.watercanUsed),
-          lines: [(n) => `${n} waterings! You really care about these plants.`]
-        },
-        {
-          id: "cropsSold",
-          read: (s) => num(s?.shops?.cropsSoldCount),
-          lines: [
-            (n) => `${n} crops sold! The shop loves you.`,
-            (n) => `That's ${n} crops sold. Business is booming.`
-          ]
-        },
-        {
-          id: "coins",
-          read: (s) => num(s?.shops?.cropsSoldValue) + num(s?.shops?.petsSoldValue),
-          lines: [
-            (n) => `You've earned ${n} coins from sales! So rich.`,
-            (n) => `${n} coins earned. Buy me something nice?`
-          ]
-        },
-        {
-          id: "seedsBought",
-          read: (s) => num(s?.shops?.seedsBought),
-          lines: [(n) => `${n} seeds bought! The shopkeeper knows your name by now.`]
-        },
-        {
-          id: "petsSold",
-          read: (s) => num(s?.shops?.petsSoldCount),
-          lines: [(n) => `${n} pets sold. Hope they found good homes!`]
-        },
-        {
-          id: "hatched",
-          read: (s) => sumHatched(s),
-          lines: [
-            (n) => `${n} pets hatched! That's a whole zoo.`,
-            (n) => `Pet number ${n}! Welcome to the family.`
-          ]
-        },
-        {
-          id: "abilities",
-          read: (s) => sumAbilityTriggers(s),
-          lines: [
-            (n) => `Your pets have used their abilities ${n} times!`,
-            (n) => `${n} pet abilities triggered. Hard workers!`
-          ]
-        }
-      ];
-      WEATHER_EMOTES = {
-        Rain: EmoteType.Laughing,
-        Frost: EmoteType.Clapping,
-        Thunderstorm: EmoteType.Crying,
-        Dawn: EmoteType.Love,
-        AmberMoon: EmoteType.Questioning
-      };
-      SHOP_ID = {
-        seed: ["Seed", "species"],
-        egg: ["Egg", "eggId"],
-        tool: ["Tool", "toolId"],
-        decor: ["Decor", "decorId"]
-      };
-      DROUGHT_STEPS = {
-        gold: [25, 50, 100, 200, 400],
-        rainbow: [100, 250, 500, 1e3, 2e3]
-      };
-      RELIEF_MIN = { gold: 25, rainbow: 100 };
-      RARITY_LABEL = { gold: "Gold", rainbow: "Rainbow" };
       DAY_PART_LINES = {
         night: [
           "Shouldn't you be asleep?",
@@ -43563,22 +43326,6 @@ Restore figures are averages; unlucky streaks do worse.`;
         "Last day of the year! Let's end it with a big harvest.": EmoteType.Clapping,
         "Any resolutions? Mine is more gardening.": EmoteType.Questioning
       };
-      SESSION_GAP_MS = 20 * 6e4;
-      DAY_MS = 24 * 36e5;
-      REACTION_GAP_MS = 15e3;
-      REACTION_TTL_MS = {
-        high: 3 * 6e4,
-        low: 1e4
-      };
-      FAMILY_COOLDOWN_MS = {
-        ability: 5 * 6e4,
-        sale: 6e4,
-        hatch: 6e4,
-        egg: 5 * 6e4,
-        shop: 3e4,
-        rarecrop: 3e4
-      };
-      familyOf = (key2) => key2.split(":")[0];
     }
   });
 
@@ -43591,18 +43338,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (recent < POKE_THRESHOLD) return null;
     if (recent < 7) {
       return {
-        message: pickOne2(["Okay okay, I'm listening!", "Yes? I'm right here.", "One at a time, boss!"], random),
+        message: pickOne(["Okay okay, I'm listening!", "Yes? I'm right here.", "One at a time, boss!"], random),
         emote: EmoteType.Laughing
       };
     }
     if (recent < 10) {
       return {
-        message: pickOne2(["Are you poking me on purpose?", "Is this a game? I like games.", "Hey, that tickles!"], random),
+        message: pickOne(["Are you poking me on purpose?", "Is this a game? I like games.", "Hey, that tickles!"], random),
         emote: EmoteType.Questioning
       };
     }
     return {
-      message: pickOne2(["Stop poking me!", "Okay, I'm ignoring you now.", "I'm going to start charging for this."], random),
+      message: pickOne(["Stop poking me!", "Okay, I'm ignoring you now.", "I'm going to start charging for this."], random),
       emote: EmoteType.Angered
     };
   }
@@ -43621,13 +43368,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return count;
   }
-  function pickOne2(options2, random) {
-    return options2[Math.min(options2.length - 1, Math.floor(random() * options2.length))];
-  }
   function harvestMessage(ready, random) {
     const crops = `${ready} ${plural2(ready, "crop", "crops")}`;
     const isAre = plural2(ready, "is", "are");
-    return pickOne2(
+    return pickOne(
       [
         `${crops} ${isAre} ready to harvest, by the way.`,
         `Psst, ${crops} ${isAre} ripe and waiting for you.`,
@@ -43642,7 +43386,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function hungryPetMessage(hungry, random) {
     const pets = `${hungry} ${plural2(hungry, "pet", "pets")}`;
     const isAre = plural2(hungry, "is", "are");
-    return pickOne2(
+    return pickOne(
       [
         `${pets} ${isAre} getting hungry.`,
         `I think ${pets} could use a snack.`,
@@ -43654,8 +43398,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     );
   }
   function sellMessage(coins, random) {
-    const amount = `${Math.round(coins).toLocaleString("en-US")} coins`;
-    return pickOne2(
+    const amount = `${formatInteger(coins, "round")} coins`;
+    return pickOne(
       [
         `You're carrying ${amount} worth of crops.`,
         `Your bag's worth ${amount} right now. Shop trip?`,
@@ -43676,16 +43420,20 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function weatherMessage(weatherId, displayName, random) {
     const own = WEATHER_LINES[weatherId];
-    if (own && own.length > 0) return pickOne2(own, random);
-    return pickOne2(GENERIC_WEATHER_TEMPLATES, random)(displayName);
+    if (own && own.length > 0) return pickOne(own, random);
+    return pickOne(GENERIC_WEATHER_TEMPLATES, random)(displayName);
   }
-  var LEGACY_DEFAULT_LINES, DEFAULT_CUSTOM_LINES, LINE_EMOTES, POKE_WINDOW_MS, POKE_THRESHOLD, plural2, WEATHER_LINES, GENERIC_WEATHER_TEMPLATES;
+  function weatherEmote(weatherId) {
+    return WEATHER_EMOTES[weatherId] ?? EmoteType.Questioning;
+  }
+  var LEGACY_DEFAULT_LINES, DEFAULT_CUSTOM_LINES, LINE_EMOTES, POKE_WINDOW_MS, POKE_THRESHOLD, plural2, WEATHER_LINES, GENERIC_WEATHER_TEMPLATES, WEATHER_EMOTES;
   var init_dialogueLines = __esm({
     "src/features/companion/dialogueLines.ts"() {
       "use strict";
       init_format();
+      init_random();
+      init_dialogueTime();
       init_emoteTypes();
-      init_reactions();
       LEGACY_DEFAULT_LINES = [
         "Right behind you, boss.",
         "Nice patch you've got here.",
@@ -43811,6 +43559,13 @@ Restore figures are averages; unlucky streaks do worse.`;
         (name) => `${name} today. The crops might like that.`,
         (name) => `Did you notice? ${name} is here.`
       ];
+      WEATHER_EMOTES = {
+        Rain: EmoteType.Laughing,
+        Frost: EmoteType.Clapping,
+        Thunderstorm: EmoteType.Crying,
+        Dawn: EmoteType.Love,
+        AmberMoon: EmoteType.Questioning
+      };
     }
   });
 
@@ -43885,12 +43640,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (parts.length === 1) return parts[0];
     return `${pets.length} pets: ${listWords(head)}${rest2}`;
   }
+  function afterHatchNote(stop, eggsWaiting, rules3, sellable) {
+    const eggs = eggsWaiting > 0 ? ` ${eggsWaiting} egg${eggsWaiting === 1 ? "" : "s"} still waiting.` : "";
+    if (stop === "full") {
+      if (sellable > 0) return `Your bag is full.${eggs}`;
+      return hasAnyRule(rules3) ? `Your bag is full, nothing in it is up for sale.${eggs}` : `Your bag is full.${eggs} Nothing set to keep, so I am not selling.`;
+    }
+    return sellable > 0 ? "All open. Now the ones you did not want." : null;
+  }
   var DEFAULT_KEEP_RULES, CHEERED_MUTATIONS;
   var init_hatch = __esm({
     "src/features/companion/chat/hatch.ts"() {
       "use strict";
-      init_harvest();
       init_emoteTypes();
+      init_harvest();
       DEFAULT_KEEP_RULES = {
         species: [],
         mutations: [],
@@ -43936,8 +43699,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!raw || typeof raw !== "object") return { ...DEFAULT_COMPANION_SETTINGS };
     return {
       enabled: raw.enabled === true,
-      // Les réglages de déplacement persistés par les versions précédentes sont
-      // simplement ignorés : ils sont devenus des constantes.
+      // Movement settings saved by earlier versions are simply ignored: they
+      // became constants.
       mode: COMPANION_MODES.includes(raw.mode) ? raw.mode : DEFAULT_COMPANION_SETTINGS.mode,
       npcId: typeof raw.npcId === "string" && raw.npcId ? raw.npcId : null,
       lines: storedLines(raw.lines),
@@ -43990,20 +43753,17 @@ Restore figures are averages; unlucky streaks do worse.`;
   function loadCompanionSettings() {
     return coerceSettings(readAriesPath(STORAGE_PATH5, void 0));
   }
-  function saveCompanionSettings(settings) {
-    writeAriesPath(STORAGE_PATH5, settings);
-  }
   function patchCompanionSettings(patch) {
-    saveCompanionSettings({ ...loadCompanionSettings(), ...patch });
+    writeAriesPath(STORAGE_PATH5, { ...loadCompanionSettings(), ...patch });
     return loadCompanionSettings();
   }
   function isUnreviewed(group2) {
     return !loadCompanionSettings().reviewedSettings.includes(group2);
   }
   function markReviewed(group2) {
-    const current2 = loadCompanionSettings().reviewedSettings;
-    if (current2.includes(group2)) return;
-    patchCompanionSettings({ reviewedSettings: [...current2, group2] });
+    const current3 = loadCompanionSettings().reviewedSettings;
+    if (current3.includes(group2)) return;
+    patchCompanionSettings({ reviewedSettings: [...current3, group2] });
   }
   var STORAGE_PATH5;
   var init_state3 = __esm({
@@ -44016,123 +43776,135 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/companion/diagnostics.ts
-  function median(values) {
-    if (values.length === 0) return null;
-    const sorted = [...values].sort((a, b) => a - b);
-    const mid = Math.floor(sorted.length / 2);
-    return sorted.length % 2 === 0 ? Math.round((sorted[mid - 1] + sorted[mid]) / 2) : sorted[mid];
+  // src/features/companion/motion.ts
+  function setWanderHooks(hooks2) {
+    wanderHooks = hooks2;
   }
-  async function diagnoseCompanion(npcId, sampleMs = DEFAULT_SAMPLE_MS) {
-    const seen = [];
-    const record2 = (entries2) => {
-      const entry = Array.isArray(entries2) ? entries2.find((e) => e?.playerId === npcId) : null;
-      const pos = entry?.position;
-      if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return;
-      const last = seen[seen.length - 1];
-      if (last && last.x === pos.x && last.y === pos.y) return;
-      seen.push({ atMs: performance.now(), x: pos.x, y: pos.y });
-    };
-    let unsub = null;
-    try {
-      unsub = await npcQuinoaUsers.onChangeNow((next) => record2(next));
-    } catch {
-      return {
-        observations: 0,
-        medianIntervalMs: null,
-        maxDelta: 0,
-        snapCount: 0,
-        snapRatio: 0,
-        verdict: "Impossible de s'abonner \xE0 npcQuinoaUsersAtom."
-      };
+  async function stepCompanion() {
+    const rt = currentRuntime();
+    if (!rt || !rt.map || !rt.player) return;
+    if (!hasGameCaughtUp(rt.movement.tile, rt.observedTile)) {
+      const now = Date.now();
+      if (rt.waitingSinceMs === null) rt.waitingSinceMs = now;
+      if (now - rt.waitingSinceMs < RENDER_WAIT_TIMEOUT_MS) return;
     }
-    await new Promise((resolve) => setTimeout(resolve, sampleMs));
-    try {
-      unsub?.();
-    } catch {
+    rt.waitingSinceMs = null;
+    let anchor;
+    let isWalkable;
+    if (rt.task) {
+      anchor = { tile: rt.task, onArrival: "hold", tracksPlayer: false };
+      isWalkable = rt.map.isWalkable;
+    } else {
+      const resolved = await resolveAnchor({
+        mode: rt.attention ? "follow" : loadCompanionSettings().mode,
+        map: rt.map,
+        player: rt.player
+      });
+      if (resolved.effectiveMode !== rt.effectiveMode) {
+        rt.effectiveMode = resolved.effectiveMode;
+        rt.movement.wanderTarget = null;
+      }
+      anchor = resolved.anchor;
+      isWalkable = resolved.isWalkable;
     }
-    const intervals = [];
-    let maxDelta = 0;
-    let snapCount = 0;
-    for (let i = 1; i < seen.length; i++) {
-      const prev = seen[i - 1];
-      const curr = seen[i];
-      intervals.push(curr.atMs - prev.atMs);
-      const delta = Math.abs(curr.x - prev.x) + Math.abs(curr.y - prev.y);
-      if (delta > maxDelta) maxDelta = delta;
-      if (delta > 1) snapCount++;
+    const decision = stepMovement({
+      anchor,
+      state: rt.movement,
+      isWalkable,
+      random: Math.random,
+      config: rt.task ? TASK_MOVEMENT_CONFIG : rt.attention ? ATTENTION_MOVEMENT_CONFIG : DEFAULT_MOVEMENT_CONFIG,
+      // No purposeful wandering during a task or while waiting on an answer.
+      pickInterest: rt.task || rt.attention ? null : wanderHooks?.pickInterest ?? null
+    });
+    rt.movement = decision.state;
+    if (decision.interestReached && wanderHooks) {
+      try {
+        wanderHooks.onInterestReached(decision.interestReached);
+      } catch {
+      }
     }
-    const transitions = Math.max(0, seen.length - 1);
-    const snapRatio = transitions === 0 ? 0 : snapCount / transitions;
-    return {
-      observations: seen.length,
-      medianIntervalMs: median(intervals),
-      maxDelta,
-      snapCount,
-      snapRatio: Number(snapRatio.toFixed(2)),
-      verdict: buildVerdict(seen.length, snapCount, maxDelta)
-    };
+    if (!decision.tile) return;
+    await setCompanionTile(rt.npcId, rt.map.toIndex(decision.tile.x, decision.tile.y));
   }
-  function buildVerdict(observations, snapCount, maxDelta) {
-    if (observations < 2) {
-      return "Aucune position observ\xE9e : le companion ne bouge pas, ou l'atom n'est pas relu. V\xE9rifie qu'il marche pendant la mesure.";
-    }
-    if (snapCount === 0) {
-      return "Le jeu ne voit que des pas d'une tuile. La cadence n'est pas en cause : le snap vient d'ailleurs (forceSnap).";
-    }
-    return `Le jeu observe des sauts jusqu'\xE0 ${maxDelta} tuiles : la cadence de recalcul est plus lente que notre pas. C'est la cause du snap.`;
-  }
-  var DEFAULT_SAMPLE_MS, npcQuinoaUsers;
-  var init_diagnostics = __esm({
-    "src/features/companion/diagnostics.ts"() {
+  var RENDER_WAIT_TIMEOUT_MS, wanderHooks;
+  var init_motion = __esm({
+    "src/features/companion/motion.ts"() {
       "use strict";
-      init_hub();
-      DEFAULT_SAMPLE_MS = 6e3;
-      npcQuinoaUsers = makeAtom(
-        "npcQuinoaUsersAtom"
-      );
+      init_anchors();
+      init_injection();
+      init_movement();
+      init_runtime();
+      init_state3();
+      RENDER_WAIT_TIMEOUT_MS = 1500;
+      wanderHooks = null;
     }
   });
 
-  // src/features/companion/dialogue.ts
-  function nextBubbleTimestamp(last, proposed) {
-    if (!Number.isFinite(proposed) || last === null || !Number.isFinite(last)) return proposed;
-    return Math.max(proposed, last + 1);
+  // src/features/companion/speech.ts
+  function rewritePayload(payload) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
+    if (!targetNpcId || !resolver) return payload;
+    const entries = payload;
+    const entry = entries[targetNpcId];
+    if (!entry || typeof entry !== "object") return payload;
+    markSpoke(targetNpcId);
+    const proposed = Number(entry.timestamp);
+    const timestamp = nextBubbleTimestamp(lastTimestamp, proposed);
+    if (Number.isFinite(timestamp)) lastTimestamp = timestamp;
+    const stamped = timestamp === proposed ? entry : { ...entry, timestamp };
+    if (entry[AUTHORED_BY_MOD] === true) {
+      return stamped === entry ? payload : { ...entries, [targetNpcId]: stamped };
+    }
+    const original = typeof entry.message === "string" ? entry.message : "";
+    let replacement = null;
+    try {
+      replacement = resolver(targetNpcId, original);
+    } catch {
+      replacement = null;
+    }
+    if (!replacement || replacement === original) {
+      return stamped === entry ? payload : { ...entries, [targetNpcId]: stamped };
+    }
+    return { ...entries, [targetNpcId]: { ...stamped, message: replacement } };
   }
-  function initialDialogueState() {
-    return { lastCustomIndex: -1, mutedUntil: {} };
-  }
-  function pickDialogueLine(input) {
-    const { contextual, customLines, nowMs, random, cooldownMs } = input;
-    const state7 = {
-      lastCustomIndex: input.state.lastCustomIndex,
-      mutedUntil: { ...input.state.mutedUntil }
+  function installSpeechRewriter(npcId, resolve) {
+    targetNpcId = npcId;
+    resolver = resolve;
+    if (wrapped) return true;
+    const atom = getAtomByLabel(CHAT_BUBBLES_LABEL);
+    if (!atom || typeof atom.write !== "function") return false;
+    const original = atom.write;
+    atom.write = function(get, set2, update, ...rest2) {
+      const next = typeof update === "function" ? update : rewritePayload(update);
+      return original.call(this, get, set2, next, ...rest2);
     };
-    const lines = customLines.filter((line) => typeof line === "string" && line.trim().length > 0);
-    const available = contextual.filter(
-      (candidate) => candidate?.message && nowMs >= (state7.mutedUntil[candidate.key] ?? 0)
-    );
-    if (available.length > 0 && (lines.length === 0 || random() < CONTEXTUAL_CHANCE)) {
-      const candidate = available[Math.min(available.length - 1, Math.floor(random() * available.length))];
-      state7.mutedUntil[candidate.key] = nowMs + cooldownMs;
-      return { message: candidate.message, emote: candidate.emote ?? null, custom: false, state: state7 };
-    }
-    if (lines.length === 0) return { message: null, emote: null, custom: false, state: state7 };
-    if (lines.length === 1) {
-      state7.lastCustomIndex = 0;
-      return { message: lines[0], emote: null, custom: true, state: state7 };
-    }
-    let index = Math.min(lines.length - 1, Math.floor(random() * lines.length));
-    if (index === state7.lastCustomIndex) index = (index + 1) % lines.length;
-    state7.lastCustomIndex = index;
-    return { message: lines[index], emote: null, custom: true, state: state7 };
+    wrapped = { atom, original };
+    return true;
   }
-  var CONTEXTUAL_CHANCE, DEFAULT_CONTEXTUAL_COOLDOWN_MS;
-  var init_dialogue = __esm({
-    "src/features/companion/dialogue.ts"() {
+  function uninstallSpeechRewriter() {
+    targetNpcId = null;
+    lastTimestamp = null;
+    resolver = null;
+    if (!wrapped) return;
+    try {
+      wrapped.atom.write = wrapped.original;
+    } catch {
+    }
+    wrapped = null;
+  }
+  var CHAT_BUBBLES_LABEL, AUTHORED_BY_MOD, wrapped, resolver, targetNpcId, lastTimestamp;
+  var init_speech = __esm({
+    "src/features/companion/speech.ts"() {
       "use strict";
-      CONTEXTUAL_CHANCE = 0.25;
-      DEFAULT_CONTEXTUAL_COOLDOWN_MS = 12e4;
+      init_jotai();
+      init_dialogue();
+      init_emote();
+      CHAT_BUBBLES_LABEL = "npcChatBubblesAtom";
+      AUTHORED_BY_MOD = "ariesAuthored";
+      wrapped = null;
+      resolver = null;
+      targetNpcId = null;
+      lastTimestamp = null;
     }
   });
 
@@ -44189,254 +43961,20 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_pets();
       init_dialogueLines();
       init_emoteTypes();
-      init_reactions();
       HUNGRY_PET_THRESHOLD_PCT = 25;
     }
   });
 
-  // src/features/companion/emote.ts
-  function avatarSystem() {
-    try {
-      return getWorldSystem("avatar");
-    } catch {
-      return null;
-    }
-  }
-  function markSpoke(playerId2, at = Date.now()) {
-    if (playerId2) lastSpokeAt.set(playerId2, at);
-  }
-  async function writeEntries(entries2) {
-    const payload = { entries: entries2 };
-    try {
-      if (!installed5) {
-        ensureTickAtom();
-        await fakeShow(EMOTE_PATCH, payload);
-        installed5 = true;
-      } else {
-        await fakeUpdate(EMOTE_SOURCE_LABEL, payload);
-      }
-      await bumpTick();
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  async function rest() {
-    if (!installed5) return;
-    await writeEntries([]);
-  }
-  function cancelPending() {
-    if (releaseTimer === null) return;
-    window.clearTimeout(releaseTimer);
-    releaseTimer = null;
-  }
-  function cancelStart() {
-    if (startTimer === null) return;
-    window.clearTimeout(startTimer);
-    startTimer = null;
-  }
-  async function playEmote(playerId2, emote, durationMs = EMOTE_DURATION_MS) {
-    if (!playerId2 || emote === EmoteType.Idle) return;
-    cancelStart();
-    const avatar3 = avatarSystem();
-    const canCut = !!avatar3?.views?.has?.(playerId2);
-    const delay = emoteStartDelay(lastSpokeAt.get(playerId2) ?? null, Date.now(), canCut);
-    if (delay > 0) {
-      startTimer = window.setTimeout(() => {
-        startTimer = null;
-        void playEmote(playerId2, emote, durationMs);
-      }, delay);
-      return;
-    }
-    if (releaseTimer !== null && posing === playerId2) {
-      cancelPending();
-      await rest();
-      await new Promise((resolve) => setTimeout(resolve, 60));
-    }
-    cancelPending();
-    posing = playerId2;
-    if (canCut) {
-      cutTalking(avatar3, playerId2);
-      window.setTimeout(() => {
-        if (posing === playerId2) cutTalking(avatarSystem(), playerId2);
-      }, 80);
-    }
-    if (!await writeEntries([companionEmoteEntry(playerId2, emote, Date.now())])) {
-      posing = null;
-      return;
-    }
-    releaseTimer = window.setTimeout(() => {
-      releaseTimer = null;
-      posing = null;
-      void rest();
-    }, durationMs);
-  }
-  async function stopEmote() {
-    cancelStart();
-    cancelPending();
-    posing = null;
-    if (!installed5) return;
-    try {
-      await fakeHide(EMOTE_SOURCE_LABEL);
-      await bumpTick();
-    } catch {
-    }
-    installed5 = false;
-  }
-  var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed5, releaseTimer, posing, startTimer, lastSpokeAt;
-  var init_emote = __esm({
-    "src/features/companion/emote.ts"() {
-      "use strict";
-      init_fakeAtoms();
-      init_tick();
-      init_tileCapture();
-      init_emoteTypes();
-      EMOTE_SOURCE_LABEL = "emoteSourceAtom";
-      EMOTE_PATCH = {
-        label: EMOTE_SOURCE_LABEL,
-        // Sans elle, le recalcul n'aurait lieu qu'au prochain changement de l'état
-        // de room : la pose partirait en retard, et le retour au repos aussi.
-        extraDeps: [COMPANION_TICK_LABEL],
-        merge: (real, fake) => mergeEmoteSource(real, fake)
-      };
-      EMOTE_DURATION_MS = 1500;
-      installed5 = false;
-      releaseTimer = null;
-      posing = null;
-      startTimer = null;
-      lastSpokeAt = /* @__PURE__ */ new Map();
-    }
-  });
-
-  // src/features/companion/speech.ts
-  function rewritePayload(payload) {
-    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
-    if (!targetNpcId || !resolver) return payload;
-    const entries2 = payload;
-    const entry = entries2[targetNpcId];
-    if (!entry || typeof entry !== "object") return payload;
-    markSpoke(targetNpcId);
-    const proposed = Number(entry.timestamp);
-    const timestamp = nextBubbleTimestamp(lastTimestamp, proposed);
-    if (Number.isFinite(timestamp)) lastTimestamp = timestamp;
-    const stamped = timestamp === proposed ? entry : { ...entry, timestamp };
-    if (entry[AUTHORED_BY_MOD] === true) {
-      return stamped === entry ? payload : { ...entries2, [targetNpcId]: stamped };
-    }
-    const original = typeof entry.message === "string" ? entry.message : "";
-    let replacement = null;
-    try {
-      replacement = resolver(targetNpcId, original);
-    } catch {
-      replacement = null;
-    }
-    if (!replacement || replacement === original) {
-      return stamped === entry ? payload : { ...entries2, [targetNpcId]: stamped };
-    }
-    return { ...entries2, [targetNpcId]: { ...stamped, message: replacement } };
-  }
-  function installSpeechRewriter(npcId, resolve) {
-    targetNpcId = npcId;
-    resolver = resolve;
-    if (wrapped) return true;
-    const atom = getAtomByLabel(CHAT_BUBBLES_LABEL);
-    if (!atom || typeof atom.write !== "function") return false;
-    const original = atom.write;
-    atom.write = function(get, set2, update, ...rest2) {
-      const next = typeof update === "function" ? update : rewritePayload(update);
-      return original.call(this, get, set2, next, ...rest2);
-    };
-    wrapped = { atom, original };
-    return true;
-  }
-  function uninstallSpeechRewriter() {
-    targetNpcId = null;
-    lastTimestamp = null;
-    resolver = null;
-    if (!wrapped) return;
-    try {
-      wrapped.atom.write = wrapped.original;
-    } catch {
-    }
-    wrapped = null;
-  }
-  var CHAT_BUBBLES_LABEL, AUTHORED_BY_MOD, wrapped, resolver, targetNpcId, lastTimestamp;
-  var init_speech = __esm({
-    "src/features/companion/speech.ts"() {
-      "use strict";
-      init_jotai();
-      init_dialogue();
-      init_emote();
-      CHAT_BUBBLES_LABEL = "npcChatBubblesAtom";
-      AUTHORED_BY_MOD = "ariesAuthored";
-      wrapped = null;
-      resolver = null;
-      targetNpcId = null;
-      lastTimestamp = null;
-    }
-  });
-
-  // src/features/companion/index.ts
-  function roundTile(pos) {
-    const x = Number(pos?.x);
-    const y = Number(pos?.y);
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-    return { x: Math.round(x), y: Math.round(y) };
-  }
-  async function resolveNpcId(preferred) {
-    const roster = await listNpcIdentities();
-    if (roster.length === 0) return preferred;
-    if (preferred && roster.some((n) => n.playerId === preferred)) return preferred;
-    return (roster.find((n) => !n.present) ?? roster[0]).playerId;
-  }
-  async function tick() {
-    const rt = runtime;
-    if (!rt || !rt.map || !rt.player) return;
-    if (!hasGameCaughtUp(rt.movement.tile, rt.observedTile)) {
-      const now = Date.now();
-      if (rt.waitingSinceMs === null) rt.waitingSinceMs = now;
-      if (now - rt.waitingSinceMs < RENDER_WAIT_TIMEOUT_MS) return;
-    }
-    rt.waitingSinceMs = null;
-    let anchor;
-    let isWalkable;
-    if (rt.task) {
-      anchor = { tile: rt.task, onArrival: "hold", tracksPlayer: false };
-      isWalkable = rt.map.isWalkable;
-    } else {
-      const resolved = await resolveAnchor({
-        mode: rt.attention ? "follow" : rt.settings.mode,
-        map: rt.map,
-        player: rt.player
+  // src/features/companion/talk.ts
+  function playEmoteSoon(rt, emote) {
+    const npcId = rt.npcId;
+    setTimeout(() => {
+      if (currentRuntime() === rt) void playEmote(npcId, emote).catch(() => {
       });
-      if (resolved.effectiveMode !== rt.effectiveMode) {
-        rt.effectiveMode = resolved.effectiveMode;
-        rt.movement.wanderTarget = null;
-      }
-      anchor = resolved.anchor;
-      isWalkable = resolved.isWalkable;
-    }
-    const decision = stepMovement({
-      anchor,
-      state: rt.movement,
-      isWalkable,
-      random: Math.random,
-      config: rt.task ? TASK_MOVEMENT_CONFIG : rt.attention ? ATTENTION_MOVEMENT_CONFIG : DEFAULT_MOVEMENT_CONFIG,
-      // Pas de flânerie à but pendant une tâche ou une attente de réponse.
-      pickInterest: rt.task || rt.attention ? null : wanderHooks?.pickInterest ?? null
-    });
-    rt.movement = decision.state;
-    if (decision.interestReached && wanderHooks) {
-      try {
-        wanderHooks.onInterestReached(decision.interestReached);
-      } catch {
-      }
-    }
-    if (!decision.tile) return;
-    await setCompanionTile(rt.npcId, rt.map.toIndex(decision.tile.x, decision.tile.y));
+    }, 0);
   }
   function resolveSpeech() {
-    const rt = runtime;
+    const rt = currentRuntime();
     if (!rt) return null;
     const now = Date.now();
     rt.talkTimes = [...rt.talkTimes.filter((t) => now - t <= POKE_WINDOW_MS), now];
@@ -44445,12 +43983,13 @@ Restore figures are averages; unlucky streaks do worse.`;
       playEmoteSoon(rt, poke.emote);
       return poke.message;
     }
-    const customLines = rt.settings.lines.length > 0 ? [...rt.settings.lines, ...timeLines(new Date(now))] : [];
+    const settings = loadCompanionSettings();
+    const customLines = settings.lines.length > 0 ? [...settings.lines, ...timeLines(new Date(now))] : [];
     const picked = pickDialogueLine({
-      contextual: rt.settings.contextualEnabled ? rt.contextualCache : [],
+      contextual: settings.contextualEnabled ? rt.contextualCache : [],
       customLines,
       state: rt.dialogue,
-      nowMs: Date.now(),
+      nowMs: now,
       random: Math.random,
       cooldownMs: DEFAULT_CONTEXTUAL_COOLDOWN_MS
     });
@@ -44459,402 +43998,355 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (emote !== null) playEmoteSoon(rt, emote);
     return picked.message;
   }
-  function playEmoteSoon(rt, emote) {
-    const npcId = rt.npcId;
-    setTimeout(() => {
-      if (runtime === rt) void playEmote(npcId, emote).catch(() => {
-      });
-    }, 0);
-  }
   async function refreshContextual() {
-    const rt = runtime;
+    const rt = currentRuntime();
     if (!rt) return;
-    rt.contextualCache = rt.settings.contextualEnabled ? await collectContextualLines() : [];
+    rt.contextualCache = loadCompanionSettings().contextualEnabled ? await collectContextualLines() : [];
   }
-  function clearContextualTimer(rt) {
-    if (rt.contextualTimer !== null) {
-      clearInterval(rt.contextualTimer);
-      rt.contextualTimer = null;
-    }
-  }
-  function clearTimer(rt) {
-    if (rt.timer !== null) {
-      clearInterval(rt.timer);
-      rt.timer = null;
-    }
-  }
-  function startTimer2(rt) {
-    clearTimer(rt);
-    rt.timer = window.setInterval(() => {
-      void tick().catch(() => {
+  async function say(message2, opts = {}) {
+    const rt = currentRuntime();
+    if (!rt || !message2.trim()) return;
+    const now = Date.now();
+    if (!opts.force && now - rt.lastBubbleAt < CHAT_BUBBLE_MIN_INTERVAL_MS) return;
+    rt.lastBubbleAt = now;
+    const tagged = opts.tags && Object.keys(opts.tags).length > 0 ? { tags: opts.tags } : {};
+    try {
+      await npcChatBubbles.set({
+        // Marked as written by the mod: otherwise the bubble hook would replace
+        // our own message with a random line.
+        [rt.npcId]: { seq: 0, playerId: rt.npcId, message: message2, timestamp: now, ...tagged, [AUTHORED_BY_MOD]: true }
       });
-    }, STEP_INTERVAL_MS);
+    } catch {
+    }
+  }
+  var CHAT_BUBBLE_MIN_INTERVAL_MS, npcChatBubbles;
+  var init_talk = __esm({
+    "src/features/companion/talk.ts"() {
+      "use strict";
+      init_hub();
+      init_dialogue();
+      init_dialogueContext();
+      init_dialogueLines();
+      init_dialogueTime();
+      init_emote();
+      init_runtime();
+      init_speech();
+      init_state3();
+      CHAT_BUBBLE_MIN_INTERVAL_MS = 250;
+      npcChatBubbles = makeAtom("npcChatBubblesAtom");
+    }
+  });
+
+  // src/features/companion/lifecycle.ts
+  async function resolveNpcId(preferred) {
+    const roster = await listNpcIdentities();
+    if (roster.length === 0) return preferred;
+    if (preferred && roster.some((n) => n.playerId === preferred)) return preferred;
+    return (roster.find((n) => !n.present) ?? roster[0]).playerId;
+  }
+  function every(subscriptions, ms, run) {
+    const id = window.setInterval(() => void run().catch(() => {
+    }), ms);
+    subscriptions.add(() => clearInterval(id));
   }
   async function startInternal() {
-    if (runtime) return true;
+    if (currentRuntime()) return true;
     const settings = loadCompanionSettings();
     const npcId = await resolveNpcId(settings.npcId);
     if (!npcId) return false;
     const map2 = await readCompanionMap();
     const player2 = roundTile(await Atoms.player.position.get().catch(() => null));
     const rt = {
-      settings,
       npcId,
       map: map2,
       movement: initialMovementState(),
       player: player2,
-      timer: null,
-      unsubs: [],
+      subscriptions: new Subscriptions(),
       lastBubbleAt: 0,
       observedTile: null,
       waitingSinceMs: null,
       effectiveMode: settings.mode,
       dialogue: initialDialogueState(),
       contextualCache: [],
-      contextualTimer: null,
       task: null,
       attention: false,
       talkTimes: []
     };
-    runtime = rt;
+    setRuntime(rt);
     await installInjection();
     installSpeechRewriter(npcId, resolveSpeech);
     void refreshContextual().catch(() => {
     });
-    rt.contextualTimer = window.setInterval(() => {
-      void refreshContextual().catch(() => {
-      });
-    }, CONTEXTUAL_REFRESH_MS);
-    try {
-      rt.unsubs.push(
-        await Atoms.player.position.onChangeNow((next) => {
-          const tile = roundTile(next);
-          if (tile) rt.player = tile;
-        })
-      );
-    } catch {
-    }
-    try {
-      rt.unsubs.push(
-        await npcQuinoaUsers2.onChangeNow((entries2) => {
-          const entry = Array.isArray(entries2) ? entries2.find((e) => e?.playerId === rt.npcId) : null;
-          const tile = roundTile(entry?.position ?? null);
-          if (tile) rt.observedTile = tile;
-        })
-      );
-    } catch {
-    }
-    try {
-      rt.unsubs.push(
-        await onMapChange((next) => {
-          rt.map = next;
-          rt.movement = initialMovementState();
-          rt.observedTile = null;
-          rt.waitingSinceMs = null;
-        })
-      );
-    } catch {
-    }
-    startTimer2(rt);
+    every(rt.subscriptions, CONTEXTUAL_REFRESH_MS, refreshContextual);
+    rt.subscriptions.add(
+      playerTileFeed.on((tile) => {
+        rt.player = tile;
+      })
+    );
+    rt.subscriptions.add(
+      npcQuinoaUsers2.onChangeNow((entries) => {
+        const entry = Array.isArray(entries) ? entries.find((e) => e?.playerId === rt.npcId) : null;
+        const tile = roundTile(entry?.position ?? null);
+        if (tile) rt.observedTile = tile;
+      }).catch(() => void 0)
+    );
+    rt.subscriptions.add(
+      onMapChange((next) => {
+        rt.map = next;
+        rt.movement = initialMovementState();
+        rt.observedTile = null;
+        rt.waitingSinceMs = null;
+      })
+    );
+    every(rt.subscriptions, STEP_INTERVAL_MS, stepCompanion);
     return true;
   }
-  var CHAT_BUBBLE_MIN_INTERVAL_MS, RENDER_WAIT_TIMEOUT_MS, CONTEXTUAL_REFRESH_MS, npcChatBubbles, npcQuinoaUsers2, runtime, starting2, wanderHooks, WALK_TIMEOUT_MS, ARRIVAL_POLL_MS, NEARBY_DISTANCE, STILL_POLL_MS, STILL_TIMEOUT_MS, stillToken, CompanionService;
-  var init_companion = __esm({
-    "src/features/companion/index.ts"() {
+  function startRuntime() {
+    if (currentRuntime()) return Promise.resolve(true);
+    if (!starting2) {
+      starting2 = startInternal().finally(() => {
+        starting2 = null;
+      });
+    }
+    return starting2;
+  }
+  async function stopRuntime() {
+    const rt = currentRuntime();
+    setRuntime(null);
+    uninstallSpeechRewriter();
+    await stopEmote();
+    if (rt) {
+      rt.subscriptions.dispose();
+      await hideCompanion();
+    }
+    await disposeInjection();
+  }
+  var CONTEXTUAL_REFRESH_MS, npcQuinoaUsers2, starting2;
+  var init_lifecycle = __esm({
+    "src/features/companion/lifecycle.ts"() {
       "use strict";
+      init_emitter();
       init_atoms();
       init_hub();
-      init_movement();
-      init_map();
-      init_anchors();
-      init_injection();
-      init_state3();
-      init_diagnostics();
-      init_tick();
       init_dialogue();
-      init_dialogueContext();
-      init_dialogueLines();
-      init_reactions();
-      init_speech();
       init_emote();
-      CHAT_BUBBLE_MIN_INTERVAL_MS = 250;
-      RENDER_WAIT_TIMEOUT_MS = 1500;
+      init_feeds();
+      init_injection();
+      init_map();
+      init_motion();
+      init_movement();
+      init_runtime();
+      init_speech();
+      init_state3();
+      init_talk();
       CONTEXTUAL_REFRESH_MS = 1e4;
-      npcChatBubbles = makeAtom("npcChatBubblesAtom");
       npcQuinoaUsers2 = makeAtom("npcQuinoaUsersAtom");
-      runtime = null;
       starting2 = null;
-      wanderHooks = null;
+    }
+  });
+
+  // src/features/companion/tasks.ts
+  async function walkTo(target) {
+    const rt = currentRuntime();
+    if (!rt || !rt.map) return false;
+    const reachable = rt.map.isWalkable(target.x, target.y) ? target : findNearbyWalkable(target, rt.map.isWalkable, true, 2);
+    if (!reachable) return false;
+    rt.task = reachable;
+    rt.movement = { ...rt.movement, activity: "pursue", wanderTarget: null, wanderCooldown: 0 };
+    const deadline = Date.now() + WALK_TIMEOUT_MS;
+    while (Date.now() < deadline) {
+      const now = currentRuntime();
+      if (!now || now.task !== reachable) return false;
+      const here = now.movement.tile;
+      if (here && manhattan(here, reachable) === 0) return true;
+      await sleep2(ARRIVAL_POLL_MS);
+    }
+    return false;
+  }
+  async function comeToPlayer() {
+    const rt = currentRuntime();
+    if (!rt || !rt.map || !rt.player) return false;
+    const here = rt.movement.tile;
+    if (here && manhattan(here, rt.player) <= NEARBY_DISTANCE) return true;
+    const spot = findNearbyWalkable(rt.player, rt.map.isWalkable, true, 3);
+    return spot ? walkTo(spot) : false;
+  }
+  function releaseTask() {
+    const rt = currentRuntime();
+    if (rt) rt.task = null;
+  }
+  function holdAttention() {
+    const rt = currentRuntime();
+    if (rt) rt.attention = true;
+  }
+  function releaseAttention() {
+    const rt = currentRuntime();
+    if (rt) rt.attention = false;
+  }
+  function distanceToPlayer() {
+    const rt = currentRuntime();
+    const here = rt?.movement.tile;
+    if (!rt || !here || !rt.player) return null;
+    return manhattan(here, rt.player);
+  }
+  async function emoteWhenStill(emote, timeoutMs = STILL_TIMEOUT_MS) {
+    const rt = currentRuntime();
+    if (!rt) return;
+    const token = ++stillToken;
+    const deadline = Date.now() + timeoutMs;
+    let previous = null;
+    while (Date.now() < deadline) {
+      await sleep2(STILL_POLL_MS);
+      if (token !== stillToken || currentRuntime() !== rt) return;
+      const here = rt.movement.tile;
+      const still = rt.task === null && here !== null && previous !== null && manhattan(here, previous) === 0;
+      previous = here;
+      if (still) {
+        await playEmote(rt.npcId, emote);
+        return;
+      }
+    }
+  }
+  var WALK_TIMEOUT_MS, ARRIVAL_POLL_MS, NEARBY_DISTANCE, STILL_POLL_MS, STILL_TIMEOUT_MS, stillToken;
+  var init_tasks = __esm({
+    "src/features/companion/tasks.ts"() {
+      "use strict";
+      init_emote();
+      init_movement();
+      init_runtime();
+      init_async2();
       WALK_TIMEOUT_MS = 5e3;
       ARRIVAL_POLL_MS = 50;
       NEARBY_DISTANCE = 3;
       STILL_POLL_MS = 150;
       STILL_TIMEOUT_MS = 1e4;
       stillToken = 0;
+    }
+  });
+
+  // src/features/companion/index.ts
+  var CompanionService;
+  var init_companion = __esm({
+    "src/features/companion/index.ts"() {
+      "use strict";
+      init_diagnostics();
+      init_emote();
+      init_injection();
+      init_lifecycle();
+      init_motion();
+      init_runtime();
+      init_state3();
+      init_talk();
+      init_tasks();
+      init_tick();
       CompanionService = {
         isRunning() {
-          return runtime !== null;
+          return currentRuntime() !== null;
         },
-        /** Branche (ou débranche, avec `null`) le pilote de flânerie à but. */
-        setWanderHooks(hooks3) {
-          wanderHooks = hooks3;
+        /** Plugs in (or, with `null`, unplugs) the purposeful wandering driver. */
+        setWanderHooks(hooks2) {
+          setWanderHooks(hooks2);
         },
         /**
-         * Position de la tuile de terre d'un crop, dans la parcelle du joueur.
+         * Position of a crop's dirt tile in the player's plot.
          *
-         * `dirtTileIdx` est le `slot` du protocole de récolte. Rend `null` quand la
-         * map n'est pas encore lue ou que l'index ne correspond à aucune tuile.
+         * `dirtTileIdx` is the `slot` of the harvest protocol. `null` while the map
+         * is not read yet or when the index matches no tile.
          */
         gardenTileXY(userSlotIdx, dirtTileIdx) {
-          const map2 = runtime?.map;
+          const map2 = currentRuntime()?.map;
           if (!map2) return null;
           const global = map2.gardenTileToGlobal(userSlotIdx, dirtTileIdx);
           return global === null ? null : map2.toXY(global);
         },
-        /**
-         * Envoie le companion sur une tuile et attend qu'il y soit.
-         *
-         * Rend `false` s'il n'y arrive pas dans le temps imparti — l'appelant décide
-         * alors s'il poursuit sans lui. La tâche reste posée : c'est `releaseTask`
-         * qui rend le companion à son mode, une fois toute la série terminée, sinon
-         * il repartirait vers le joueur entre deux crops.
-         *
-         * Une tuile occupée par une plante peut être infranchissable : on vise alors
-         * la case marchable la plus proche, ce qui suffit à « être devant ».
-         */
-        async walkTo(target) {
-          const rt = runtime;
-          if (!rt || !rt.map) return false;
-          const reachable = rt.map.isWalkable(target.x, target.y) ? target : findNearbyWalkable(target, rt.map.isWalkable, true, 2);
-          if (!reachable) return false;
-          rt.task = reachable;
-          rt.movement = { ...rt.movement, activity: "pursue", wanderTarget: null, wanderCooldown: 0 };
-          const deadline = Date.now() + WALK_TIMEOUT_MS;
-          while (Date.now() < deadline) {
-            const here = runtime?.movement.tile;
-            if (!runtime || runtime.task !== reachable) return false;
-            if (here && manhattan(here, reachable) === 0) return true;
-            await new Promise((resolve) => setTimeout(resolve, ARRIVAL_POLL_MS));
-          }
-          return false;
-        },
-        /**
-         * Fait venir le companion auprès du joueur, pour lui parler en face.
-         *
-         * Une bulle apparaît au-dessus du PNJ : lancée depuis l'autre bout de la
-         * carte, elle s'afficherait hors écran et personne ne la verrait. Il faut
-         * donc être là avant d'ouvrir la bouche.
-         *
-         * On vise une case *voisine* : la tuile du joueur est occupée, et se planter
-         * dessus n'aurait aucun sens. Déjà à portée de vue, on ne bouge pas.
-         *
-         * Comme `walkTo`, la tâche reste posée jusqu'à `releaseTask`.
-         */
-        async comeToPlayer() {
-          const rt = runtime;
-          if (!rt || !rt.map || !rt.player) return false;
-          const here = rt.movement.tile;
-          if (here && manhattan(here, rt.player) <= NEARBY_DISTANCE) return true;
-          const spot = findNearbyWalkable(rt.player, rt.map.isWalkable, true, 3);
-          return spot ? CompanionService.walkTo(spot) : false;
-        },
-        /** Rend le companion à son mode après une série de déplacements. */
-        releaseTask() {
-          if (runtime) runtime.task = null;
-        },
-        /** Le fait rester auprès du joueur, quel que soit son mode. */
-        holdAttention() {
-          if (runtime) runtime.attention = true;
-        },
-        /** Le rend à son mode : suivi ou jardin, selon ce qui était réglé. */
-        releaseAttention() {
-          if (runtime) runtime.attention = false;
-        },
-        /** Vrai tant qu'il attend une réponse auprès du joueur. */
+        walkTo,
+        comeToPlayer,
+        releaseTask,
+        holdAttention,
+        releaseAttention,
+        /** True while he waits on an answer by the player. */
         isHoldingAttention() {
-          return runtime?.attention === true;
+          return currentRuntime()?.attention === true;
         },
-        /** Occupé : en route pour une tâche, ou en attente d'une réponse. */
+        /** Busy: walking for a task, or waiting on an answer. */
         isBusy() {
-          return runtime !== null && (runtime.task !== null || runtime.attention);
+          const rt = currentRuntime();
+          return rt !== null && (rt.task !== null || rt.attention);
         },
-        /** Distance en tuiles jusqu'au joueur, `null` tant qu'on ne sait pas où ils sont. */
-        distanceToPlayer() {
-          const rt = runtime;
-          const here = rt?.movement.tile;
-          if (!rt || !here || !rt.player) return null;
-          return manhattan(here, rt.player);
-        },
+        distanceToPlayer,
         getNpcId() {
-          return runtime?.npcId ?? null;
+          return currentRuntime()?.npcId ?? null;
         },
         /**
-         * Fait jouer une emote au PNJ, le temps que le jeu s'accorde lui-même.
+         * Plays an emote on the NPC while the game catches up.
          *
-         * Sans effet quand le companion n'est pas incarné : il n'y a alors aucune vue
-         * à animer. C'est du décor local — rien ne part sur le réseau, et l'appelant
-         * n'a donc pas à demander de confirmation pour ça.
-         *
-         * `holdMs` prolonge la pose au-delà de la durée par défaut, pour un moment
-         * qui mérite qu'on s'y arrête.
+         * Does nothing while he is not out: there is no view to animate. Purely
+         * local decoration, nothing goes over the network, so no confirmation is
+         * needed. `holdMs` holds the pose past the default for a moment worth it.
          */
         async emote(emote, holdMs) {
-          const rt = runtime;
+          const rt = currentRuntime();
           if (!rt) return;
           await playEmote(rt.npcId, emote, holdMs);
         },
-        /**
-         * Emote une fois qu'il est arrivé et qu'il ne bouge plus.
-         *
-         * Une pose jouée en pleine marche passe inaperçue : elle se déroule pendant
-         * qu'il glisse d'une case à l'autre, et le joueur ne voit qu'un avatar qui
-         * traverse. On attend donc qu'il soit posé.
-         *
-         * Deux conditions, et il faut les deux. Plus aucune tâche en cours, ce qui
-         * couvre le trajet qu'on vient de lui donner — une question posée juste avant
-         * qu'il parte rejoindre le joueur attend ainsi son arrivée. Et la même tuile
-         * sur deux relevés consécutifs, parce que l'avatar interpole entre deux cases
-         * et qu'il glisse encore un instant après avoir atteint la dernière.
-         *
-         * Le premier relevé ne peut donc jamais déclencher : c'est voulu, ce délai de
-         * grâce laisse le temps à un ordre de déplacement imminent d'être enregistré.
-         *
-         * Abandonne en silence s'il ne se pose jamais. Un joueur qui marche sans
-         * s'arrêter entraîne le companion avec lui, et la question reste de toute
-         * façon lisible dans la bulle comme dans le fil.
-         */
-        async emoteWhenStill(emote, timeoutMs = STILL_TIMEOUT_MS) {
-          const rt = runtime;
-          if (!rt) return;
-          const token = ++stillToken;
-          const deadline = Date.now() + timeoutMs;
-          let previous = null;
-          while (Date.now() < deadline) {
-            await new Promise((resolve) => setTimeout(resolve, STILL_POLL_MS));
-            if (token !== stillToken || runtime !== rt) return;
-            const here = rt.movement.tile;
-            const still = rt.task === null && here !== null && previous !== null && manhattan(here, previous) === 0;
-            previous = here;
-            if (still) {
-              await playEmote(rt.npcId, emote);
-              return;
-            }
-          }
-        },
+        emoteWhenStill,
         getSettings() {
-          return runtime?.settings ?? loadCompanionSettings();
+          return loadCompanionSettings();
         },
         listNpcs() {
           return listNpcIdentities();
         },
-        /** Mode réellement appliqué : diffère du réglage quand un repli a joué. */
+        /** The mode really applied: differs from the setting when it fell back. */
         getEffectiveMode() {
-          return runtime?.effectiveMode ?? null;
+          return currentRuntime()?.effectiveMode ?? null;
         },
-        /** Redémarre le companion au boot s'il était actif à la session précédente. */
+        /** Brings him back at boot if he was out last session. */
         autoStart() {
           try {
             if (!loadCompanionSettings().enabled) return;
-            void CompanionService.start().catch(() => {
+            void startRuntime().catch(() => {
             });
           } catch {
           }
         },
-        /** Démarre le companion. Idempotent, y compris sur appels concurrents. */
-        async start() {
-          if (runtime) return true;
-          if (!starting2) {
-            starting2 = startInternal().finally(() => {
-              starting2 = null;
-            });
-          }
-          return starting2;
-        },
-        /** Arrête tout et restaure l'atom du jeu. Sûr à appeler plusieurs fois. */
-        async stop() {
-          const rt = runtime;
-          runtime = null;
-          uninstallSpeechRewriter();
-          await stopEmote();
-          if (!rt) {
-            await disposeInjection();
-            return;
-          }
-          clearTimer(rt);
-          clearContextualTimer(rt);
-          for (const unsub of rt.unsubs) {
-            try {
-              unsub();
-            } catch {
-            }
-          }
-          rt.unsubs.length = 0;
-          await hideCompanion();
-          await disposeInjection();
-        },
-        /** Applique une modification de config, en redémarrant si nécessaire. */
+        start: startRuntime,
+        stop: stopRuntime,
+        /** Saves a settings change, starting or restarting him when it needs to. */
         async applySettings(patch) {
           const next = patchCompanionSettings(patch);
-          const rt = runtime;
+          const rt = currentRuntime();
           if (!rt) {
-            if (next.enabled) await CompanionService.start();
+            if (next.enabled) await startRuntime();
             return next;
           }
           if (!next.enabled) {
-            await CompanionService.stop();
+            await stopRuntime();
             return next;
           }
-          const npcChanged = patch.npcId !== void 0 && patch.npcId !== rt.npcId;
-          if (npcChanged) {
-            await CompanionService.stop();
-            await CompanionService.start();
+          if (patch.npcId !== void 0 && patch.npcId !== rt.npcId) {
+            await stopRuntime();
+            await startRuntime();
             return next;
           }
-          rt.settings = next;
-          startTimer2(rt);
           void refreshContextual().catch(() => {
           });
           return next;
         },
-        /** Remplace la liste de répliques perso. Utilisable depuis la console. */
+        /** Replaces the custom lines. Usable from the console. */
         async setLines(lines) {
           return CompanionService.applySettings({ lines: sanitizeLines(lines) });
         },
         /**
-         * Mesure ce que le jeu observe réellement comme positions, pour distinguer un
-         * snap dû à la cadence de recalcul d'un snap dû à autre chose.
-         * À lancer pendant que le companion marche.
+         * Measures what positions the game really sees, to tell a snap caused by
+         * the recompute rate from a snap caused by something else. Run it while he
+         * walks.
          */
         async diagnose(sampleMs) {
-          const npcId = runtime?.npcId;
-          if (!npcId) return { error: "Companion inactif : lance d'abord window.Companion.start()." };
+          const npcId = currentRuntime()?.npcId;
+          if (!npcId) return { error: "Companion inactive: run window.Companion.start() first." };
           return { tickAvailable: isTickAvailable(), ...await diagnoseCompanion(npcId, sampleMs) };
         },
-        /**
-         * Fait parler le companion. Point d'entrée du dialogue (phase 3) : le jeu lit
-         * les bulles NPC dans un atom local, aucun envoi réseau n'est impliqué.
-         *
-         * L'anti-rafale protège des séries de messages de progression. `force` est
-         * pour la réplique qu'on tient absolument à faire entendre : sans lui, une
-         * annonce venant juste après le message qui l'a déclenchée se faisait jeter,
-         * et le companion restait muet au moment précis où il avait à parler.
-         */
-        async say(message2, opts = {}) {
-          const rt = runtime;
-          if (!rt || !message2.trim()) return;
-          const now = Date.now();
-          if (!opts.force && now - rt.lastBubbleAt < CHAT_BUBBLE_MIN_INTERVAL_MS) return;
-          rt.lastBubbleAt = now;
-          const tagged = opts.tags && Object.keys(opts.tags).length > 0 ? { tags: opts.tags } : {};
-          try {
-            await npcChatBubbles.set({
-              // Marqué comme écrit par le mod : sans ça, l'interception réécrirait
-              // notre propre message avec une réplique tirée au hasard.
-              [rt.npcId]: { seq: 0, playerId: rt.npcId, message: message2, timestamp: now, ...tagged, [AUTHORED_BY_MOD]: true }
-            });
-          } catch {
-          }
-        }
+        say
       };
     }
   });
@@ -44935,6 +44427,211 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/features/companion/chat/log.ts
+  function emptyLog() {
+    return { messages: [], nextSeq: 1 };
+  }
+  function append(log2, message2) {
+    const entry = {
+      id: `m${log2.nextSeq}`,
+      atMs: message2.atMs,
+      from: message2.from,
+      kind: message2.kind,
+      text: message2.text,
+      ...message2.proposalId ? { proposalId: message2.proposalId } : {},
+      ...message2.icons && message2.icons.length > 0 ? { icons: message2.icons } : {},
+      ...message2.positioned ? { positioned: true } : {}
+    };
+    const messages = [...log2.messages, entry];
+    return {
+      messages: messages.length > MAX_MESSAGES ? messages.slice(messages.length - MAX_MESSAGES) : messages,
+      nextSeq: log2.nextSeq + 1
+    };
+  }
+  function clearProposal(log2, proposalId) {
+    let changed5 = false;
+    const messages = log2.messages.map((entry) => {
+      if (entry.proposalId !== proposalId) return entry;
+      changed5 = true;
+      const { proposalId: _dropped, ...rest2 } = entry;
+      return rest2;
+    });
+    return changed5 ? { ...log2, messages } : log2;
+  }
+  var MAX_MESSAGES;
+  var init_log = __esm({
+    "src/features/companion/chat/log.ts"() {
+      "use strict";
+      MAX_MESSAGES = 200;
+    }
+  });
+
+  // src/features/companion/chat/proposals.ts
+  function isExpired(proposal, nowMs, ttlMs = PROPOSAL_TTL_MS) {
+    return nowMs - proposal.createdAtMs >= ttlMs;
+  }
+  function verdict(proposal, currentSignature, nowMs, ttlMs = PROPOSAL_TTL_MS) {
+    if (!proposal) return { ok: false, reason: "unknown" };
+    if (isExpired(proposal, nowMs, ttlMs)) return { ok: false, reason: "expired" };
+    if (!currentSignature || proposal.size === 0) return { ok: false, reason: "empty" };
+    if (currentSignature !== proposal.signature) return { ok: false, reason: "changed" };
+    return { ok: true };
+  }
+  function explain(reason) {
+    switch (reason) {
+      case "expired":
+        return "That went stale while I waited. Let me have another look.";
+      case "changed":
+        return "Things moved while I was waiting. Here is what I see now.";
+      case "empty":
+        return "There is nothing left to do there.";
+      default:
+        return "I lost track of that one, sorry. Ask me again.";
+    }
+  }
+  function withTeam(signature, teamId2) {
+    return `${signature}#team:${teamId2 ?? ""}`;
+  }
+  function teamPromise(teamName2) {
+    return teamName2 ? ` I would wear ${teamName2}, then give yours back.` : "";
+  }
+  var PROPOSAL_TTL_MS;
+  var init_proposals = __esm({
+    "src/features/companion/chat/proposals.ts"() {
+      "use strict";
+      PROPOSAL_TTL_MS = 3e4;
+    }
+  });
+
+  // src/features/companion/chat/conversation.ts
+  function chatState() {
+    return state4;
+  }
+  function onChatChange(listener) {
+    return changes7.on(listener);
+  }
+  function notify() {
+    changes7.emit();
+  }
+  function speak(line, force = false) {
+    const spoken = forGame(line);
+    const message2 = !spoken.tags && spoken.message.length > MAX_LINE_LENGTH ? `${spoken.message.slice(0, MAX_LINE_LENGTH - 1).trimEnd()}\u2026` : spoken.message;
+    void CompanionService.say(message2, { tags: spoken.tags, force }).catch(() => {
+    });
+  }
+  function post(from, kind, text2, proposalId, extra = {}) {
+    const shown = extra.thread ?? extra.bubble;
+    state4 = {
+      ...state4,
+      log: append(state4.log, {
+        from,
+        kind,
+        text: shown?.message ?? text2,
+        atMs: Date.now(),
+        proposalId,
+        icons: shown?.tags ? Object.values(shown.tags) : void 0,
+        // The thread only places an icon where it goes when it has the markup.
+        positioned: shown !== void 0
+      })
+    };
+    const insist = extra.force ?? proposalId !== void 0;
+    if (from === "companion") {
+      speak(extra.bubble ?? { message: text2 }, insist);
+      if (proposalId !== void 0) {
+        void attendToQuestion(proposalId).catch(() => {
+        });
+        void CompanionService.emoteWhenStill(EmoteType.Questioning).catch(() => {
+        });
+      }
+    }
+    notify();
+  }
+  function ask(command, captured, question) {
+    const proposal = {
+      id: `p${nextProposalSeq++}`,
+      commandId: command.id,
+      summary: question.summary,
+      size: question.size,
+      signature: question.signature,
+      createdAtMs: Date.now()
+    };
+    const held = {
+      command,
+      captured,
+      acceptance: command.acceptance,
+      signature: () => command.signature(captured),
+      repropose: () => command.propose(captured),
+      execute: (run) => command.execute(captured, run)
+    };
+    state4 = { ...state4, proposal, held };
+    post("companion", "reply", question.text, proposal.id, { bubble: question.bubble, thread: question.thread });
+  }
+  function heldFor(command) {
+    return state4.held?.command === command ? state4.held.captured : null;
+  }
+  function closeProposal(proposalId) {
+    if (state4.proposal?.id !== proposalId) return;
+    state4 = { ...state4, proposal: null, held: null, log: clearProposal(state4.log, proposalId) };
+    notify();
+  }
+  function dropStaleProposal() {
+    const proposal = state4.proposal;
+    if (proposal && isExpired(proposal, Date.now())) closeProposal(proposal.id);
+  }
+  function reporter() {
+    return {
+      say: (kind, text2, spoken, force) => post("companion", kind, text2, void 0, { bubble: spoken, force }),
+      stopped: () => state4.cancelRequested,
+      progress: (done, total) => {
+        state4 = { ...state4, run: { done, total } };
+        notify();
+      }
+    };
+  }
+  async function runConfirmed(proposalId, held, total) {
+    state4 = {
+      ...state4,
+      proposal: null,
+      held: null,
+      run: { done: 0, total },
+      cancelRequested: false,
+      log: clearProposal(state4.log, proposalId)
+    };
+    await held.execute(async (run) => {
+      let stopped = false;
+      try {
+        await run(reporter());
+      } finally {
+        stopped = state4.cancelRequested;
+        state4 = { ...state4, run: null, cancelRequested: false };
+        notify();
+      }
+      return stopped;
+    });
+  }
+  function requestStop() {
+    if (!state4.run) return;
+    state4 = { ...state4, cancelRequested: true };
+    notify();
+  }
+  var state4, changes7, nextProposalSeq;
+  var init_conversation = __esm({
+    "src/features/companion/chat/conversation.ts"() {
+      "use strict";
+      init_emitter();
+      init_companion();
+      init_emoteTypes();
+      init_settingsShape();
+      init_attend();
+      init_bubbleTags();
+      init_log();
+      init_proposals();
+      state4 = { log: emptyLog(), proposal: null, held: null, run: null, cancelRequested: false };
+      changes7 = new Emitter();
+      nextProposalSeq = 1;
+    }
+  });
+
   // src/features/companion/chat/bubbleIcons.ts
   function spriteKeyOf(entry) {
     if (typeof entry?.tileRef === "string" && entry.tileRef) return entry.tileRef;
@@ -44996,56 +44693,84 @@ Restore figures are averages; unlucky streaks do worse.`;
     "src/features/companion/chat/bubbleIcons.ts"() {
       "use strict";
       init_data();
-      init_bubbleTags();
       init_resolver();
+      init_bubbleTags();
       BUBBLE_ICON_PX = 28;
       PET_ICON_PX2 = 20;
     }
   });
 
-  // src/features/companion/chat/log.ts
-  function emptyLog() {
-    return { messages: [], nextSeq: 1 };
+  // src/features/companion/chat/feed.ts
+  function feedSignature(candidates) {
+    return candidates.map((candidate) => candidate.petId).sort().join("|");
   }
-  function append(log2, message2) {
-    const entry = {
-      id: `m${log2.nextSeq}`,
-      atMs: message2.atMs,
-      from: message2.from,
-      kind: message2.kind,
-      text: message2.text,
-      ...message2.proposalId ? { proposalId: message2.proposalId } : {},
-      ...message2.icons && message2.icons.length > 0 ? { icons: message2.icons } : {},
-      ...message2.positioned ? { positioned: true } : {}
-    };
-    const messages = [...log2.messages, entry];
-    return {
-      messages: messages.length > MAX_MESSAGES ? messages.slice(messages.length - MAX_MESSAGES) : messages,
-      nextSeq: log2.nextSeq + 1
-    };
+  function disambiguate(candidates) {
+    const byName = /* @__PURE__ */ new Map();
+    for (const candidate of candidates) {
+      const group2 = byName.get(candidate.petName);
+      if (group2) group2.push(candidate);
+      else byName.set(candidate.petName, [candidate]);
+    }
+    for (const group2 of byName.values()) {
+      if (group2.length < 2) continue;
+      const ordered = [...group2].sort((a, b) => a.petId.localeCompare(b.petId));
+      ordered.forEach((candidate, index) => {
+        candidate.petName = `${candidate.petName} #${index + 1}`;
+      });
+    }
+    return candidates;
   }
-  function appendAlertOnce(log2, message2, withinMs) {
-    const cutoff = message2.atMs - withinMs;
-    const duplicate = log2.messages.some(
-      (entry) => entry.kind === "alert" && entry.text === message2.text && entry.atMs >= cutoff
+  function isSettled(picks, stillFeedable) {
+    return !picks.some((pick) => stillFeedable.has(pick.petId));
+  }
+  function describeFeed(candidates) {
+    if (candidates.length === 0) return "nothing";
+    if (candidates.length === 1) {
+      const only = candidates[0];
+      const where = only.source.kind === "garden" ? ", which I would pick first" : "";
+      return `${only.petName} is down to ${only.hungerPct}% and I have ${only.source.species}${where}`;
+    }
+    const names = candidates.map((candidate) => candidate.petName);
+    const head = names.slice(0, 3).join(", ");
+    const rest2 = names.length > 3 ? ` and ${names.length - 3} more` : "";
+    return `${candidates.length} pets are hungry: ${head}${rest2}`;
+  }
+  function petIcon2(pick) {
+    return petThing(pick.pet, "") ?? petSpeciesIcon(pick.petSpecies);
+  }
+  function petIcons(picks) {
+    const seen = /* @__PURE__ */ new Set();
+    const icons = [];
+    for (const pick of picks) {
+      if (seen.has(pick.petSpecies) || icons.length >= 2) continue;
+      seen.add(pick.petSpecies);
+      const icon2 = petIcon2(pick);
+      if (icon2) icons.push(icon2);
+    }
+    return icons;
+  }
+  function feedBubble(picks) {
+    const only = picks.length === 1 ? picks[0] : null;
+    if (only) return compose(petIcon2(only), ` ${only.petName} is at ${only.hungerPct}%. Feed it?`);
+    return compose(...spaced(petIcons(picks)), ` ${picks.length} pets are hungry. Feed them all?`);
+  }
+  function feedQuestion(picks) {
+    const listed = picks.flatMap((pick, index) => [
+      index === 0 ? "" : ", ",
+      petIcon2(pick),
+      ` ${pick.petName} (${pick.hungerPct}%)`
+    ]);
+    return compose(
+      picks.length === 1 ? "" : `${picks.length} pets are hungry: `,
+      ...listed,
+      picks.length === 1 ? ". Should I feed it?" : ". Should I feed all of them?"
     );
-    return duplicate ? log2 : append(log2, message2);
   }
-  function clearProposal(log2, proposalId) {
-    let changed5 = false;
-    const messages = log2.messages.map((entry) => {
-      if (entry.proposalId !== proposalId) return entry;
-      changed5 = true;
-      const { proposalId: _dropped, ...rest2 } = entry;
-      return rest2;
-    });
-    return changed5 ? { ...log2, messages } : log2;
-  }
-  var MAX_MESSAGES;
-  var init_log = __esm({
-    "src/features/companion/chat/log.ts"() {
+  var init_feed = __esm({
+    "src/features/companion/chat/feed.ts"() {
       "use strict";
-      MAX_MESSAGES = 200;
+      init_bubbleTags();
+      init_bubbleIcons();
     }
   });
 
@@ -45053,93 +44778,55 @@ Restore figures are averages; unlucky streaks do worse.`;
   function pacer(minGapMs = ACTION_DELAY_MS) {
     let lastAt = 0;
     return {
-      /** À appeler juste après un envoi. */
       mark() {
         lastAt = Date.now();
       },
-      /** Attend ce qui manque pour respecter l'écart. À appeler juste avant un envoi. */
       async wait() {
         const missing = minGapMs - (Date.now() - lastAt);
-        if (missing > 0) await sleep3(missing);
+        if (missing > 0) await sleep2(missing);
       }
     };
   }
-  var ACTION_DELAY_MS, SETTLE_MS, PROGRESS_EVERY, sleep3;
+  async function runSteps(batch) {
+    const { items, reporter: reporter2 } = batch;
+    const crew = await batch.hire();
+    const pace = pacer();
+    let done = 0;
+    let cancelled = false;
+    try {
+      for (const item of items) {
+        if (reporter2.stopped()) {
+          cancelled = true;
+          break;
+        }
+        if (await batch.step(item, crew.walker, pace) === "halt") break;
+        done++;
+        reporter2.progress(done, items.length);
+        if (batch.progressNote && done % PROGRESS_EVERY === 0 && done < items.length) {
+          reporter2.say("system", batch.progressNote(done, items.length));
+        }
+      }
+    } finally {
+      await crew.dismiss();
+    }
+    return { done, cancelled };
+  }
+  var ACTION_DELAY_MS, SETTLE_MS, PROGRESS_EVERY;
   var init_batch = __esm({
     "src/features/companion/chat/batch.ts"() {
       "use strict";
+      init_async2();
       ACTION_DELAY_MS = 400;
       SETTLE_MS = 700;
       PROGRESS_EVERY = 10;
-      sleep3 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-    }
-  });
-
-  // src/features/companion/chat/teamSwap.ts
-  function teamName(teamId2) {
-    if (!teamId2) return null;
-    try {
-      return PetsService.getTeamById(teamId2)?.name ?? null;
-    } catch {
-      return null;
-    }
-  }
-  async function wearTeam(teamId2, reporter2) {
-    if (!teamId2) return NOT_SWAPPED;
-    const name = teamName(teamId2);
-    if (!name) {
-      reporter2.say("system", "That team is gone, keeping the one you have on.");
-      return NOT_SWAPPED;
-    }
-    let previous = null;
-    try {
-      const ids = await PetsService.getActivePetIds();
-      previous = ids.length ? ids : null;
-    } catch {
-      previous = null;
-    }
-    try {
-      await PetsService.useTeam(teamId2, { markUsed: false });
-      await sleep3(AFTER_TEAM_SWAP_MS);
-    } catch {
-      reporter2.say("system", "The team switch failed, working as I am.");
-      return NOT_SWAPPED;
-    }
-    reporter2.say("system", `Wearing ${name} for this.`);
-    return {
-      wearing: true,
-      async restore() {
-        if (!previous || previous.length === 0) return;
-        try {
-          await PetsService.usePetIds(previous);
-          await sleep3(AFTER_TEAM_SWAP_MS);
-          reporter2.say("system", "Your team is back the way it was.");
-        } catch {
-          reporter2.say("system", "Could not put your team back, sorry.");
-        }
-      }
-    };
-  }
-  var AFTER_TEAM_SWAP_MS, NOT_SWAPPED;
-  var init_teamSwap = __esm({
-    "src/features/companion/chat/teamSwap.ts"() {
-      "use strict";
-      init_pets();
-      init_batch();
-      AFTER_TEAM_SWAP_MS = 300;
-      NOT_SWAPPED = {
-        async restore() {
-        },
-        wearing: false
-      };
     }
   });
 
   // src/features/companion/chat/walk.ts
   async function createWalker(onGiveUp) {
     if (!CompanionService.isRunning()) return IDLE;
-    const slotIdx2 = await readMySlotIdx();
-    if (slotIdx2 === null) return IDLE;
+    const slotIdx = await readMySlotIdx();
+    if (slotIdx === null) return IDLE;
     let walking = true;
     let failures = 0;
     const record2 = (arrived) => {
@@ -45161,17 +44848,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     return {
       async toGardenTile(dirtTileIdx) {
         if (!walking) return;
-        await goTo(CompanionService.gardenTileXY(slotIdx2, dirtTileIdx));
+        await goTo(CompanionService.gardenTileXY(slotIdx, dirtTileIdx));
       },
       async toPosition(position2) {
         if (!walking) return;
-        const x = Number(position2?.x);
-        const y = Number(position2?.y);
-        if (!Number.isFinite(x) || !Number.isFinite(y)) {
-          record2(false);
-          return;
-        }
-        await goTo({ x: Math.round(x), y: Math.round(y) });
+        await goTo(roundTile(position2));
       },
       async toBuilding(name) {
         if (!walking) return false;
@@ -45198,6 +44879,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       "use strict";
       init_companion();
       init_anchors();
+      init_feeds();
       init_map();
       GIVE_UP_AFTER = 2;
       IDLE = {
@@ -45215,155 +44897,373 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/features/companion/chat/crew.ts
+  function teamName(teamId2) {
+    if (!teamId2) return null;
+    try {
+      return PetsService.getTeamById(teamId2)?.name ?? null;
+    } catch {
+      return null;
+    }
+  }
+  async function wearTeam(teamId2, reporter2) {
+    if (!teamId2) return NOT_SWAPPED;
+    const name = teamName(teamId2);
+    if (!name) {
+      reporter2.say("system", "That team is gone, keeping the one you have on.");
+      return NOT_SWAPPED;
+    }
+    let previous = null;
+    try {
+      const ids = await PetsService.getActivePetIds();
+      previous = ids.length ? ids : null;
+    } catch {
+      previous = null;
+    }
+    try {
+      await PetsService.useTeam(teamId2, { markUsed: false });
+      await sleep2(AFTER_TEAM_SWAP_MS);
+    } catch {
+      reporter2.say("system", "The team switch failed, working as I am.");
+      return NOT_SWAPPED;
+    }
+    reporter2.say("system", `Wearing ${name} for this.`);
+    return {
+      async restore() {
+        if (!previous || previous.length === 0) return;
+        try {
+          await PetsService.usePetIds(previous);
+          await sleep2(AFTER_TEAM_SWAP_MS);
+          reporter2.say("system", "Your team is back the way it was.");
+        } catch {
+          reporter2.say("system", "Could not put your team back, sorry.");
+        }
+      }
+    };
+  }
+  async function hireCrew(reporter2, options2 = {}) {
+    const walker = await createWalker((message2) => reporter2.say("system", message2));
+    try {
+      await options2.approach?.(walker);
+      const team = await wearTeam(options2.teamId ?? null, reporter2);
+      return {
+        walker,
+        async dismiss() {
+          walker.release();
+          await team.restore();
+        }
+      };
+    } catch (error) {
+      walker.release();
+      throw error;
+    }
+  }
+  var AFTER_TEAM_SWAP_MS, NOT_SWAPPED;
+  var init_crew = __esm({
+    "src/features/companion/chat/crew.ts"() {
+      "use strict";
+      init_async2();
+      init_pets();
+      init_walk();
+      AFTER_TEAM_SWAP_MS = 300;
+      NOT_SWAPPED = { async restore() {
+      } };
+    }
+  });
+
+  // src/features/companion/chat/feedRun.ts
+  async function petPosition(petId) {
+    try {
+      const pets = await PetsService.getPets() ?? [];
+      const found = pets.find((pet) => String(pet?.slot?.id ?? "") === petId);
+      return found?.position ?? null;
+    } catch {
+      return null;
+    }
+  }
+  async function feedOne(candidate, walker, pace) {
+    let cropItemId;
+    if (candidate.source.kind === "inventory") {
+      cropItemId = candidate.source.itemId;
+    } else {
+      await walker.toGardenTile(candidate.source.row.tileIndex);
+      cropItemId = randomClientId();
+      await pace.wait();
+      try {
+        await PlayerService.harvestCrop(candidate.source.row.tileIndex, candidate.source.row.slotId, cropItemId);
+      } catch {
+        return { ok: false, reason: "could not pick it" };
+      } finally {
+        pace.mark();
+      }
+      StatsService.incrementGardenStat("totalHarvested", 1);
+      await sleep2(SETTLE_MS);
+    }
+    await walker.toPosition(await petPosition(candidate.petId));
+    await pace.wait();
+    try {
+      await PlayerService.feedPet(candidate.petId, cropItemId);
+    } catch {
+      return { ok: false, reason: "the feed did not go through" };
+    } finally {
+      pace.mark();
+    }
+    return { ok: true };
+  }
+  async function executeFeedBatch(picks, reporter2) {
+    const opening = picks.length === 1 ? "On it." : `On it. Feeding ${picks.length} of them.`;
+    reporter2.say("reply", opening, compose(...spaced(petIcons(picks)), " ", opening));
+    const fed = [];
+    const failures = [];
+    await runSteps({
+      items: picks,
+      reporter: reporter2,
+      hire: () => hireCrew(reporter2),
+      async step(pick, walker, pace) {
+        const outcome = await feedOne(pick, walker, pace);
+        if (outcome.ok) {
+          fed.push(pick);
+          const fedLine = `${pick.petName} has been fed.`;
+          reporter2.say("system", fedLine, compose(petIcon2(pick), " ", fedLine));
+        } else {
+          failures.push(`${pick.petName} (${outcome.reason})`);
+        }
+      }
+    });
+    const cancelled = reporter2.stopped();
+    if (fed.length === 0) {
+      reporter2.say("report", `That did not work: ${failures.join(", ") || "nothing went through"}.`);
+      return;
+    }
+    const tail = failures.length > 0 ? ` I could not manage ${failures.join(", ")}.` : "";
+    const done = `${cancelled ? "Stopped there. " : ""}Fed ${listWords(fed.map((pick) => pick.petName))}.${tail}`;
+    reporter2.say("report", done, compose(...spaced(petIcons(fed)), " ", done));
+  }
+  var init_feedRun = __esm({
+    "src/features/companion/chat/feedRun.ts"() {
+      "use strict";
+      init_async2();
+      init_commands();
+      init_player();
+      init_pets();
+      init_stats();
+      init_batch();
+      init_bubbleTags();
+      init_crew();
+      init_feed();
+      init_harvest();
+    }
+  });
+
+  // src/features/companion/chat/commands/feed.ts
+  function feedRequest(label2, provider) {
+    return { label: label2, propose: () => feedCommand.propose({ provider }) };
+  }
+  var feedCommand;
+  var init_feed2 = __esm({
+    "src/features/companion/chat/commands/feed.ts"() {
+      "use strict";
+      init_conversation();
+      init_feed();
+      init_feedRun();
+      feedCommand = {
+        id: "feed",
+        acceptance: "Yes, feed them",
+        async propose({ provider }) {
+          let picks;
+          try {
+            picks = await provider();
+          } catch {
+            post("companion", "system", "Could not check on your pets just now.");
+            return;
+          }
+          if (picks.length === 0) {
+            post("companion", "reply", "Your pets are fine, or I have nothing they eat.");
+            return;
+          }
+          const listed = feedQuestion(picks);
+          ask(feedCommand, { provider, picks }, {
+            summary: describeFeed(picks),
+            size: picks.length,
+            signature: feedSignature(picks),
+            text: listed.message,
+            bubble: feedBubble(picks),
+            thread: listed
+          });
+        },
+        async signature({ provider }) {
+          return feedSignature(await provider());
+        },
+        async execute({ picks }, run) {
+          await run((reporter2) => executeFeedBatch(picks, reporter2));
+        }
+      };
+    }
+  });
+
+  // src/features/companion/chat/index.ts
+  var CompanionChat;
+  var init_chat = __esm({
+    "src/features/companion/chat/index.ts"() {
+      "use strict";
+      init_feed2();
+      init_conversation();
+      init_feed();
+      init_proposals();
+      CompanionChat = {
+        getLog() {
+          return chatState().log;
+        },
+        getProposal() {
+          return chatState().proposal;
+        },
+        getRun() {
+          return chatState().run;
+        },
+        isRunning() {
+          return chatState().run !== null;
+        },
+        subscribe(listener) {
+          return onChatChange(listener);
+        },
+        /** Drops a question it is too late to answer. */
+        dropStaleProposal,
+        /**
+         * Drops the open question without a word.
+         *
+         * For when the companion stops existing: he has no reason to apologise for
+         * taking a question back, he is not there to ask it. `withdrawFeedIfSettled`
+         * comments because the situation changed under the player's eyes; here the
+         * player just switched him off.
+         */
+        withdrawProposal() {
+          const proposal = chatState().proposal;
+          if (proposal) closeProposal(proposal.id);
+        },
+        /**
+         * Drops the feeding question once it has no point left.
+         *
+         * The player fed the pets or changed team: leaving the question open would
+         * keep the companion waiting by the player for a meaningless answer. Only
+         * once NONE of the proposed pets still needs feeding: as long as one does,
+         * the question stands, and the scope check at confirmation covers the rest.
+         */
+        withdrawFeedIfSettled(stillFeedable) {
+          const proposal = chatState().proposal;
+          const held = heldFor(feedCommand);
+          if (!proposal || !held || !isSettled(held.picks, stillFeedable)) return false;
+          closeProposal(proposal.id);
+          post("companion", "system", "Never mind, your pets are sorted.");
+          return true;
+        },
+        /**
+         * A request from the player. Runs nothing: it asks the question.
+         *
+         * The request reads the game again at confirmation, to check the batch did
+         * not change meanwhile.
+         */
+        async ask(request2) {
+          post("you", "command", request2.label);
+          if (chatState().run) {
+            post("companion", "system", "Hold on, still on the last batch.");
+            return;
+          }
+          await request2.propose();
+        },
+        /**
+         * A question from the companion himself, unprompted.
+         *
+         * Asking is not acting: nothing goes until the confirmation is given. He
+         * holds back when a question already waits or a batch runs, since talking
+         * over himself would lose the previous one.
+         */
+        async offerFeed(provider) {
+          dropStaleProposal();
+          if (chatState().run || chatState().proposal) return false;
+          await feedCommand.propose({ provider });
+          return chatState().proposal !== null;
+        },
+        /** Confirms and runs. The only path that triggers an action. */
+        async confirm(proposalId) {
+          const { proposal, held } = chatState();
+          if (!proposal || proposal.id !== proposalId || !held) {
+            post("companion", "system", explain("unknown"));
+            return;
+          }
+          post("you", "command", held.acceptance);
+          const signature = await held.signature().catch(() => null);
+          if (signature === null) {
+            post("companion", "system", "Could not check again, so I am not touching anything.");
+            return;
+          }
+          const decision = verdict(proposal, signature, Date.now());
+          if (!decision.ok) {
+            closeProposal(proposalId);
+            post("companion", "system", explain(decision.reason));
+            if (decision.reason === "changed" || decision.reason === "expired") await held.repropose();
+            return;
+          }
+          await runConfirmed(proposalId, held, proposal.size);
+        },
+        /** Drops the open question without running anything. */
+        decline(proposalId) {
+          if (chatState().proposal?.id !== proposalId) return;
+          closeProposal(proposalId);
+          post("you", "command", "Not now");
+          post("companion", "system", "Alright, leaving them be.");
+        },
+        /** Stops the running batch. */
+        cancelRun() {
+          requestStop();
+        }
+      };
+    }
+  });
+
   // src/features/companion/chat/gardenScan.ts
   function slotCropSize(slot, species) {
-    const size = readCropSize({ ...slot, species: slot.species ?? species });
-    if (size != null) return size;
-    return CROP_SIZE_MIN;
+    return readCropSize({ ...slot, species: slot.species ?? species }) ?? CROP_SIZE_MIN;
   }
-  function scanGarden(tileObjects, selectedSpecies) {
+  function scanGarden(tileObjects, species) {
     const plants = [];
-    const allCrops = [];
+    if (!tileObjects) return { plants };
     const now = Date.now();
-    if (!tileObjects || !selectedSpecies.size) {
-      return emptyResult();
-    }
     for (const [tileIdx, tileRaw] of Object.entries(tileObjects)) {
       const tile = tileRaw;
       if (!tile || tile.objectType !== "plant") continue;
-      const species = tile.species;
-      if (!species || !selectedSpecies.has(species)) continue;
+      const plantSpecies = tile.species;
+      if (!plantSpecies || species && !species.has(plantSpecies)) continue;
       const slots = tile.slots;
       if (!Array.isArray(slots) || !slots.length) continue;
-      const crops = [];
-      for (let si = 0; si < slots.length; si++) {
-        const slot = slots[si];
+      const crops = slots.map((slot, index) => {
         const rawSlotId = slot.slotId;
-        const slotId = Number.isFinite(rawSlotId) ? Number(rawSlotId) : si;
         const startTime = Number(slot.startTime) || 0;
         const endTime = Number(slot.endTime) || 0;
-        const mutations = Array.isArray(slot.mutations) ? slot.mutations : [];
-        let growthPct = 0;
         const duration = endTime - startTime;
-        if (duration > 0) {
-          const elapsed = now - startTime;
-          growthPct = Math.max(0, Math.min(100, elapsed / duration * 100));
-        } else {
-          growthPct = 100;
-        }
-        const size = slotCropSize(slot, species);
-        const colorMuts = [];
-        const weatherMuts = [];
-        const timeMuts = [];
-        for (const m of mutations) {
-          if (colorMutations().has(m)) colorMuts.push(m);
-          else if (WEATHER_MUTATIONS.has(m)) weatherMuts.push(m);
-          else if (TIME_MUTATIONS.has(m)) timeMuts.push(m);
-        }
-        const crop = {
-          slotIndex: slotId,
-          species: slot.species ?? species,
+        const growthPct = duration > 0 ? Math.max(0, Math.min(100, (now - startTime) / duration * 100)) : 100;
+        return {
+          slotIndex: Number.isFinite(rawSlotId) ? Number(rawSlotId) : index,
+          species: slot.species ?? plantSpecies,
           startTime,
           endTime,
-          size,
-          mutations,
+          mutations: Array.isArray(slot.mutations) ? slot.mutations : [],
           growthPct,
-          sizePct: size,
-          colorMutations: colorMuts,
-          weatherMutations: weatherMuts,
-          timeMutations: timeMuts,
+          sizePct: slotCropSize(slot, plantSpecies),
           preserved: slot.preserved === true
         };
-        crops.push(crop);
-        allCrops.push(crop);
-      }
-      plants.push({
-        tileIndex: Number(tileIdx),
-        species,
-        crops
       });
+      plants.push({ tileIndex: Number(tileIdx), species: plantSpecies, crops });
     }
-    if (!allCrops.length) return emptyResult();
-    const total = allCrops.length;
-    const avgGrowthPct = allCrops.reduce((s, c) => s + c.growthPct, 0) / total;
-    const avgSizePct = allCrops.reduce((s, c) => s + c.sizePct, 0) / total;
-    const cropsWithColor = allCrops.filter((c) => c.colorMutations.length > 0).length;
-    const colorMutationPct = cropsWithColor / total * 100;
-    const weatherMutationPcts = {};
-    for (const wm of WEATHER_MUTATIONS) {
-      const count = allCrops.filter((c) => c.weatherMutations.includes(wm)).length;
-      weatherMutationPcts[wm] = count / total * 100;
-    }
-    const timeMutationPcts = {};
-    for (const tm of TIME_MUTATIONS) {
-      const count = allCrops.filter((c) => c.timeMutations.includes(tm)).length;
-      timeMutationPcts[tm] = count / total * 100;
-    }
-    const cropsAtMaxSize = allCrops.filter((c) => c.sizePct >= CROP_SIZE_MAX).length;
-    const sizeCompletePct = cropsAtMaxSize / total * 100;
-    const harvestTargets = [];
-    for (const plant of plants) {
-      for (const crop of plant.crops) {
-        if (crop.growthPct >= 100) {
-          harvestTargets.push({ tileIndex: plant.tileIndex, slotIndex: crop.slotIndex });
-        }
-      }
-    }
-    return {
-      totalCrops: total,
-      plants,
-      avgGrowthPct: Math.round(avgGrowthPct * 100) / 100,
-      avgSizePct: Math.round(avgSizePct * 100) / 100,
-      colorMutationPct: Math.round(colorMutationPct * 100) / 100,
-      weatherMutationPcts,
-      timeMutationPcts,
-      sizeCompletePct: Math.round(sizeCompletePct * 100) / 100,
-      matureCropCount: harvestTargets.length,
-      harvestTargets
-    };
+    return { plants };
   }
-  function emptyResult() {
-    return {
-      totalCrops: 0,
-      plants: [],
-      avgGrowthPct: 0,
-      avgSizePct: 50,
-      colorMutationPct: 0,
-      weatherMutationPcts: {},
-      timeMutationPcts: {},
-      sizeCompletePct: 0,
-      matureCropCount: 0,
-      harvestTargets: []
-    };
-  }
-  var colorMutations, WEATHER_MUTATIONS, TIME_MUTATIONS;
   var init_gardenScan = __esm({
     "src/features/companion/chat/gardenScan.ts"() {
       "use strict";
-      init_data();
       init_cropSize();
-      colorMutations = memoOnCatalogs(() => new Set(
-        Object.keys(mutationCatalog2).filter((k) => {
-          const entry = mutationCatalog2[k];
-          return entry.group !== void 0 ? entry.group === "Growth" : !entry.tileRef;
-        })
-      ));
-      WEATHER_MUTATIONS = /* @__PURE__ */ new Set(["Wet", "Chilled", "Frozen", "Thunderstruck"]);
-      TIME_MUTATIONS = /* @__PURE__ */ new Set(["Dawnlit", "Amberlit", "Dawncharged", "Ambercharged"]);
     }
   });
 
   // src/features/companion/chat/gardenRead.ts
-  function speciesInGarden(tileObjects) {
-    const species = /* @__PURE__ */ new Set();
-    for (const raw of Object.values(tileObjects)) {
-      const tile = raw;
-      if (!tile || tile.objectType !== "plant") continue;
-      const name = tile.species;
-      if (typeof name === "string" && name) species.add(name);
-    }
-    return species;
-  }
   async function readHarvestRows() {
     let tileObjects = null;
     try {
@@ -45372,23 +45272,19 @@ Restore figures are averages; unlucky streaks do worse.`;
       return [];
     }
     if (!tileObjects || typeof tileObjects !== "object") return [];
-    const species = speciesInGarden(tileObjects);
-    if (species.size === 0) return [];
-    const scan = scanGarden(tileObjects, species);
     const now = Date.now();
     const rows = [];
-    for (const plant of scan.plants) {
+    for (const plant of scanGarden(tileObjects).plants) {
       for (const crop of plant.crops) {
         rows.push({
           tileIndex: plant.tileIndex,
-          // `slotIndex` porte le slotId résolu par scanGarden, pas un index de tableau.
           slotId: crop.slotIndex,
           species: crop.species,
           sizePct: crop.sizePct,
           growthPct: Math.round(crop.growthPct),
-          mutations: Array.isArray(crop.mutations) ? crop.mutations : [],
+          mutations: crop.mutations,
           ready: crop.endTime > 0 && crop.endTime <= now,
-          preserved: crop.preserved === true
+          preserved: crop.preserved
         });
       }
     }
@@ -45396,13 +45292,13 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function readHarvestable() {
     const rows = await readHarvestRows();
-    const ripe = rows.filter((row4) => row4.ready);
-    const allowed = ripe.filter((row4) => {
+    const ripe = rows.filter((row5) => row5.ready);
+    const allowed = ripe.filter((row5) => {
       try {
         return lockerService.allowsHarvest({
-          seedKey: row4.species,
-          sizePercent: row4.sizePct,
-          mutations: mutationsOf2(row4)
+          seedKey: row5.species,
+          sizePercent: row5.sizePct,
+          mutations: row5.mutations
         });
       } catch {
         return false;
@@ -45416,135 +45312,10 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_atoms();
       init_locker();
       init_gardenScan();
-      init_harvest();
     }
   });
 
-  // src/features/companion/chat/harvestRun.ts
-  function topCrop(rows) {
-    const top = groupVariants(rows)[0];
-    return top ? cropIcon(top.species) : null;
-  }
-  async function report(attempted, cancelled, reporter2) {
-    if (attempted.length === 0) {
-      reporter2.say("report", "Stopped before I picked anything.");
-      return;
-    }
-    await sleep3(SETTLE_MS);
-    let fresh = null;
-    try {
-      fresh = (await readHarvestRows()).filter((row4) => row4.ready);
-    } catch {
-      fresh = null;
-    }
-    const stopped = cancelled ? " before you stopped me" : "";
-    if (!fresh) {
-      reporter2.say(
-        "report",
-        `Sent all ${attempted.length}${stopped}, but I could not check they landed.`
-      );
-      return;
-    }
-    const targeted = new Set(attempted.map(rowKey));
-    const stillRipe = fresh.filter((row4) => targeted.has(rowKey(row4))).length;
-    const picked = attempted.length - stillRipe;
-    if (picked > 0) StatsService.incrementGardenStat("totalHarvested", picked);
-    if (stillRipe === 0) {
-      const done = cancelled ? `Stopped there. Got ${picked}.` : `All done, ${picked} picked.`;
-      reporter2.say("report", done, compose(topCrop(attempted), " ", done));
-      return;
-    }
-    if (picked === 0) {
-      reporter2.say(
-        "report",
-        "None went through. Still ripe, so your bag is probably full."
-      );
-      return;
-    }
-    reporter2.say("report", `Got ${picked} of ${attempted.length}${stopped}. ${stillRipe} still ripe.`);
-  }
-  async function executeHarvestBatch(rows, reporter2) {
-    const opening = `On it. Picking ${rows.length} now.`;
-    reporter2.say("reply", opening, compose(topCrop(rows), " ", opening));
-    const team = await wearTeam(loadCompanionSettings().harvestTeamId, reporter2);
-    const walker = await createWalker((message2) => reporter2.say("system", message2));
-    const attempted = [];
-    const pace = pacer();
-    for (const row4 of rows) {
-      if (reporter2.stopped()) break;
-      await walker.toGardenTile(row4.tileIndex);
-      await pace.wait();
-      attempted.push(row4);
-      await PlayerService.harvestCrop(row4.tileIndex, row4.slotId);
-      pace.mark();
-      const done = attempted.length;
-      reporter2.progress(done, rows.length);
-      if (done % PROGRESS_EVERY === 0 && done < rows.length) {
-        reporter2.say("system", `${done} of ${rows.length} so far...`);
-      }
-    }
-    walker.release();
-    await team.restore();
-    await report(attempted, reporter2.stopped(), reporter2);
-  }
-  var init_harvestRun = __esm({
-    "src/features/companion/chat/harvestRun.ts"() {
-      "use strict";
-      init_player();
-      init_stats();
-      init_state3();
-      init_batch();
-      init_teamSwap();
-      init_walk();
-      init_gardenRead();
-      init_harvest();
-      init_bubbleTags();
-      init_bubbleIcons();
-    }
-  });
-
-  // src/features/companion/chat/feedScope.ts
-  function feedSignature(candidates) {
-    return candidates.map((candidate) => candidate.petId).sort().join("|");
-  }
-  function disambiguate(candidates) {
-    const byName = /* @__PURE__ */ new Map();
-    for (const candidate of candidates) {
-      const group2 = byName.get(candidate.petName);
-      if (group2) group2.push(candidate);
-      else byName.set(candidate.petName, [candidate]);
-    }
-    for (const group2 of byName.values()) {
-      if (group2.length < 2) continue;
-      const ordered = [...group2].sort((a, b) => a.petId.localeCompare(b.petId));
-      ordered.forEach((candidate, index) => {
-        candidate.petName = `${candidate.petName} #${index + 1}`;
-      });
-    }
-    return candidates;
-  }
-  function isSettled(picks, stillFeedable) {
-    return !picks.some((pick2) => stillFeedable.has(pick2.petId));
-  }
-  function describeFeed(candidates) {
-    if (candidates.length === 0) return "nothing";
-    if (candidates.length === 1) {
-      const only = candidates[0];
-      const where = only.source.kind === "garden" ? ", which I would pick first" : "";
-      return `${only.petName} is down to ${only.hungerPct}% and I have ${only.source.species}${where}`;
-    }
-    const names = candidates.map((candidate) => candidate.petName);
-    const head = names.slice(0, 3).join(", ");
-    const rest2 = names.length > 3 ? ` and ${names.length - 3} more` : "";
-    return `${candidates.length} pets are hungry: ${head}${rest2}`;
-  }
-  var init_feedScope = __esm({
-    "src/features/companion/chat/feedScope.ts"() {
-      "use strict";
-    }
-  });
-
-  // src/features/companion/chat/petFeed.ts
+  // src/features/companion/chat/feedRead.ts
   function petIdOf(pet) {
     return String(pet?.slot?.id ?? "");
   }
@@ -45610,7 +45381,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         source = { kind: "inventory", itemId: String(fromInventory.id), species: String(fromInventory.species) };
       } else {
         const rows = await gardenRows();
-        const fromGarden = rows.find((row4) => allowed.has(row4.species) && !claimed.has(`garden:${rowKey(row4)}`));
+        const fromGarden = rows.find((row5) => allowed.has(row5.species) && !claimed.has(`garden:${rowKey(row5)}`));
         if (fromGarden && allowGarden) {
           claimed.add(`garden:${rowKey(fromGarden)}`);
           source = { kind: "garden", row: fromGarden, species: fromGarden.species };
@@ -45629,7 +45400,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
     }
     return {
-      // Le plus affamé d'abord : c'est celui pour qui la question presse.
+      // The hungriest first: the question is most pressing for them.
       candidates: disambiguate(candidates.sort((a, b) => a.hungerPct - b.hungerPct)),
       hungry: hungry.length,
       waitingOnGardenRule
@@ -45638,220 +45409,305 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function findFeedable(search2) {
     return (await reviewFeeding(search2)).candidates;
   }
-  function iconOf(pick2) {
-    return petThing(pick2.pet, "") ?? petSpeciesIcon(pick2.petSpecies);
-  }
-  function feedBubble(picks) {
-    const only = picks.length === 1 ? picks[0] : null;
-    if (only) return compose(iconOf(only), ` ${only.petName} is at ${only.hungerPct}%. Feed it?`);
-    const seen = /* @__PURE__ */ new Set();
-    const icons = picks.filter((pick2) => !seen.has(pick2.petSpecies) && seen.add(pick2.petSpecies)).slice(0, 2).map(iconOf);
-    return compose(...spaced(icons.filter((icon2) => icon2 !== null)), ` ${picks.length} pets are hungry. Feed them all?`);
-  }
-  function feedQuestion(picks) {
-    const listed = picks.flatMap((pick2, index) => [
-      index === 0 ? "" : ", ",
-      iconOf(pick2),
-      ` ${pick2.petName} (${pick2.hungerPct}%)`
-    ]);
-    return compose(
-      picks.length === 1 ? "" : `${picks.length} pets are hungry: `,
-      ...listed,
-      picks.length === 1 ? ". Should I feed it?" : ". Should I feed all of them?"
-    );
-  }
-  var init_petFeed = __esm({
-    "src/features/companion/chat/petFeed.ts"() {
+  var init_feedRead = __esm({
+    "src/features/companion/chat/feedRead.ts"() {
       "use strict";
       init_state3();
       init_pets();
       init_player();
       init_gardenRead();
       init_harvest();
-      init_feedScope();
-      init_bubbleTags();
-      init_bubbleIcons();
-      init_feedScope();
+      init_feed();
     }
   });
 
-  // src/features/companion/chat/feedRun.ts
-  function petIcons(picks) {
-    const seen = /* @__PURE__ */ new Set();
-    const icons = [];
-    for (const pick2 of picks) {
-      if (seen.has(pick2.petSpecies) || icons.length >= 2) continue;
-      seen.add(pick2.petSpecies);
-      const icon2 = petThing(pick2.pet, "") ?? petSpeciesIcon(pick2.petSpecies);
-      if (icon2) icons.push(icon2);
-    }
-    return icons;
-  }
-  async function petPosition(petId) {
-    try {
-      const pets = await PetsService.getPets() ?? [];
-      const found = pets.find((pet) => String(pet?.slot?.id ?? "") === petId);
-      return found?.position ?? null;
-    } catch {
-      return null;
-    }
-  }
-  async function runFeed(candidate, walker) {
-    let cropItemId;
-    if (candidate.source.kind === "inventory") {
-      cropItemId = candidate.source.itemId;
-    } else {
-      await walker.toGardenTile(candidate.source.row.tileIndex);
-      cropItemId = randomClientId();
-      try {
-        await PlayerService.harvestCrop(candidate.source.row.tileIndex, candidate.source.row.slotId, cropItemId);
-      } catch {
-        return { ok: false, reason: "could not pick it" };
+  // src/features/companion/watch.ts
+  function defineWatcher(name, setup) {
+    let current3 = null;
+    return {
+      start() {
+        if (current3) return;
+        const run = { subscriptions: new Subscriptions(), alive: true };
+        current3 = run;
+        const scope = {
+          // A subscription that fails is simply absent: the watcher works without it.
+          add: (unsubscribe2) => run.subscriptions.add(unsubscribe2 instanceof Promise ? unsubscribe2.catch(() => void 0) : unsubscribe2),
+          every(ms, tick) {
+            const id = setInterval(() => {
+              if (!run.alive) return;
+              try {
+                tick();
+              } catch (error) {
+                console.warn(`[companion] ${name} tick failed`, error);
+              }
+            }, ms);
+            run.subscriptions.add(() => clearInterval(id));
+          },
+          live: (callback) => (...args) => {
+            if (run.alive) callback(...args);
+          },
+          get active() {
+            return run.alive;
+          }
+        };
+        try {
+          setup(scope);
+        } catch (error) {
+          console.warn(`[companion] ${name} failed to start`, error);
+        }
+      },
+      stop() {
+        const run = current3;
+        if (!run) return;
+        current3 = null;
+        run.alive = false;
+        run.subscriptions.dispose();
+      },
+      get running() {
+        return current3 !== null;
       }
-      StatsService.incrementGardenStat("totalHarvested", 1);
-      await sleep4(AFTER_HARVEST_MS);
-    }
-    await walker.toPosition(await petPosition(candidate.petId));
-    try {
-      await PlayerService.feedPet(candidate.petId, cropItemId);
-    } catch {
-      return { ok: false, reason: "the feed did not go through" };
-    }
-    await sleep4(AFTER_FEED_MS);
-    return { ok: true };
+    };
   }
-  async function executeFeedBatch(picks, reporter2) {
-    const who = petIcons(picks);
-    const opening = picks.length === 1 ? "On it." : `On it. Feeding ${picks.length} of them.`;
-    reporter2.say("reply", opening, compose(...spaced(who), " ", opening));
-    const walker = await createWalker((message2) => reporter2.say("system", message2));
-    const fed = [];
-    const failures = [];
-    for (const pick2 of picks) {
-      if (reporter2.stopped()) break;
-      const outcome = await runFeed(pick2, walker);
-      if (outcome.ok) {
-        fed.push(pick2);
-        const fedLine = `${pick2.petName} has been fed.`;
-        reporter2.say("system", fedLine, compose(petThing(pick2.pet, "") ?? petSpeciesIcon(pick2.petSpecies), " ", fedLine));
-      } else {
-        failures.push(`${pick2.petName} (${outcome.reason})`);
-      }
-      reporter2.progress(fed.length + failures.length, picks.length);
-    }
-    walker.release();
-    const cancelled = reporter2.stopped();
-    if (fed.length === 0) {
-      reporter2.say("report", `That did not work: ${failures.join(", ") || "nothing went through"}.`);
-      return;
-    }
-    const tail = failures.length > 0 ? ` I could not manage ${failures.join(", ")}.` : "";
-    const fedNames = fed.map((pick2) => pick2.petName);
-    const names = fedNames.length === 1 ? fedNames[0] : `${fedNames.slice(0, -1).join(", ")} and ${fedNames[fedNames.length - 1]}`;
-    const done = `${cancelled ? "Stopped there. " : ""}Fed ${names}.${tail}`;
-    reporter2.say("report", done, compose(...spaced(petIcons(fed)), " ", done));
-  }
-  var AFTER_HARVEST_MS, AFTER_FEED_MS, sleep4;
-  var init_feedRun = __esm({
-    "src/features/companion/chat/feedRun.ts"() {
+  var init_watch = __esm({
+    "src/features/companion/watch.ts"() {
       "use strict";
-      init_commands();
+      init_emitter();
+    }
+  });
+
+  // src/features/companion/feedWatch.ts
+  function checkFeedNow() {
+    checkNow?.();
+  }
+  var POLL_MS2, SETTLE_MS2, REASK_COOLDOWN_MS, checkNow, feedWatch;
+  var init_feedWatch = __esm({
+    "src/features/companion/feedWatch.ts"() {
+      "use strict";
+      init_companion();
+      init_chat();
+      init_attend();
+      init_bubbleTags();
+      init_feed();
+      init_feedRead();
       init_pets();
-      init_player();
-      init_stats();
-      init_walk();
-      init_bubbleTags();
-      init_bubbleIcons();
-      AFTER_HARVEST_MS = 700;
-      AFTER_FEED_MS = 400;
-      sleep4 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      init_state3();
+      init_watch();
+      POLL_MS2 = 3e4;
+      SETTLE_MS2 = 1500;
+      REASK_COOLDOWN_MS = 10 * 60 * 1e3;
+      checkNow = null;
+      feedWatch = defineWatcher("feed", (scope) => {
+        let settleTimer = null;
+        let lastOfferedSignature = "";
+        let lastOfferedAtMs = 0;
+        let announcedProposalId = null;
+        async function speakInPerson(picks) {
+          try {
+            const line = forGame(feedBubble(picks));
+            await CompanionService.say(line.message, { force: true, tags: line.tags });
+          } catch {
+          }
+        }
+        async function announceIfNeeded(picks) {
+          if (picks.length === 0) return;
+          const proposal = CompanionChat.getProposal();
+          if (proposal?.commandId !== "feed" || proposal.id === announcedProposalId) return;
+          if (!await attendToQuestion(proposal.id)) return;
+          announcedProposalId = proposal.id;
+          await speakInPerson(picks);
+        }
+        function releaseIfIdle() {
+          if (!CompanionChat.getProposal()) stopAttending();
+        }
+        async function check() {
+          if (!scope.active) return;
+          const settings = loadCompanionSettings();
+          if (!settings.enabled) {
+            CompanionChat.withdrawProposal();
+            stopAttending();
+            lastOfferedSignature = "";
+            announcedProposalId = null;
+            return;
+          }
+          CompanionChat.dropStaleProposal();
+          const pending3 = CompanionChat.getProposal();
+          const alertsOn = settings.feedAlerts;
+          if (pending3?.commandId !== "feed" && !alertsOn) {
+            releaseIfIdle();
+            return;
+          }
+          const picks = await findFeedable().catch(() => []);
+          if (pending3?.commandId === "feed") {
+            const withdrawn = CompanionChat.withdrawFeedIfSettled(new Set(picks.map((pick) => pick.petId)));
+            if (withdrawn) lastOfferedSignature = "";
+            else await announceIfNeeded(picks);
+          }
+          releaseIfIdle();
+          if (!alertsOn) return;
+          if (picks.length === 0) {
+            lastOfferedSignature = "";
+            return;
+          }
+          const signature = feedSignature(picks);
+          const now = Date.now();
+          if (signature === lastOfferedSignature && now - lastOfferedAtMs < REASK_COOLDOWN_MS) return;
+          const offered2 = await CompanionChat.offerFeed(() => findFeedable());
+          if (!offered2) return;
+          lastOfferedSignature = signature;
+          lastOfferedAtMs = now;
+          await announceIfNeeded(picks);
+        }
+        const runCheck = () => void check().catch(() => {
+        });
+        function scheduleCheck() {
+          if (settleTimer !== null) return;
+          settleTimer = window.setTimeout(() => {
+            settleTimer = null;
+            runCheck();
+          }, SETTLE_MS2);
+        }
+        try {
+          scope.add(PetsService.onPetsChange(scope.live(scheduleCheck)));
+        } catch {
+        }
+        scope.add(CompanionChat.subscribe(scope.live(releaseIfIdle)));
+        scope.every(POLL_MS2, runCheck);
+        checkNow = () => {
+          lastOfferedSignature = "";
+          runCheck();
+        };
+        scope.add(() => {
+          checkNow = null;
+          if (settleTimer !== null) window.clearTimeout(settleTimer);
+          settleTimer = null;
+        });
+        runCheck();
+      });
     }
   });
 
-  // src/features/companion/chat/plantRun.ts
-  function topSeed(plan) {
-    const most = countByItem(plan)[0];
-    return most?.kind === "seed" ? seedIcon2(most.id) : null;
+  // src/features/companion/menu/behaviorTab.ts
+  function selectWith(options2) {
+    const el = select2({ small: true });
+    for (const [value, label2] of options2) el.append(new Option(label2, value));
+    return el;
   }
-  async function send2(assignment) {
-    if (assignment.kind === "egg") {
-      await PlayerService.plantEgg(assignment.tileIndex, assignment.id);
-      return;
-    }
-    await PlayerService.plantSeed(assignment.tileIndex, assignment.id);
-  }
-  async function countPlanted(attempted) {
-    try {
-      const { occupied } = await readPlantScope();
-      return attempted.filter((assignment) => occupied.has(assignment.tileIndex)).length;
-    } catch {
-      return null;
-    }
-  }
-  async function report2(attempted, cancelled, reporter2) {
-    if (attempted.length === 0) {
-      reporter2.say("report", "Stopped before I planted anything.");
-      return;
-    }
-    await sleep3(SETTLE_MS);
-    const planted = await countPlanted(attempted);
-    const stopped = cancelled ? " before you stopped me" : "";
-    if (planted === null) {
-      reporter2.say(
-        "report",
-        `Planted all ${attempted.length}${stopped}, but I could not check.`
-      );
-      return;
-    }
-    if (planted > 0) StatsService.incrementGardenStat("totalPlanted", planted);
-    if (planted === attempted.length) {
-      const done = cancelled ? `Stopped there. ${planted} are in the ground.` : `All done, ${planted} planted.`;
-      reporter2.say("report", done, compose(topSeed(attempted), " ", done));
-      return;
-    }
-    if (planted === 0) {
-      reporter2.say(
-        "report",
-        "None took. The tiles are still bare, so the seeds probably ran out."
-      );
-      return;
-    }
-    reporter2.say("report", `Planted ${planted} of ${attempted.length}${stopped}. The rest would not go in.`);
-  }
-  async function executePlantBatch(plan, reporter2) {
-    const what = countByItem(plan);
-    const opening = what.length === 1 ? `On it. Planting ${plan.length} ${what[0].name} now.` : `On it. Planting ${listPlantItems(plan)} now.`;
-    reporter2.say("reply", opening, compose(topSeed(plan), " ", opening));
-    const walker = await createWalker((message2) => reporter2.say("system", message2));
-    const attempted = [];
-    const pace = pacer();
-    for (const assignment of plan) {
-      if (reporter2.stopped()) break;
-      await walker.toGardenTile(assignment.tileIndex);
-      await pace.wait();
-      attempted.push(assignment);
-      await send2(assignment);
-      pace.mark();
-      const done = attempted.length;
-      reporter2.progress(done, plan.length);
-      if (done % PROGRESS_EVERY === 0 && done < plan.length) {
-        reporter2.say("system", `${done} of ${plan.length} in the ground so far...`);
+  function renderBehaviorTab(view) {
+    view.innerHTML = "";
+    const settings = CompanionService.getSettings();
+    let disposed = false;
+    const card4 = collapsibleCard({
+      icon: "\u{1F9ED}",
+      title: "Behavior",
+      description: "Is he out, and where he stays.",
+      collapsed: false,
+      onToggle: () => {
       }
+    });
+    const enableToggle = switchInput(settings.enabled, (on) => {
+      void CompanionService.applySettings({ enabled: on }).then(() => {
+        checkFeedNow();
+        refresh();
+      }).catch(() => {
+      });
+    });
+    const modeSelect = selectWith(MODE_LABELS);
+    modeSelect.value = settings.mode;
+    modeSelect.addEventListener("change", () => {
+      void CompanionService.applySettings({ mode: modeSelect.value }).then(refresh).catch(() => {
+      });
+    });
+    const npcSelect = selectWith([["", "Loading\u2026"]]);
+    npcSelect.disabled = true;
+    npcSelect.addEventListener("change", () => {
+      void CompanionService.applySettings({ npcId: npcSelect.value || null }).then(refresh).catch(() => {
+      });
+    });
+    void CompanionService.listNpcs().then((roster) => {
+      if (disposed) return;
+      npcSelect.innerHTML = "";
+      if (roster.length === 0) {
+        npcSelect.append(new Option("No NPC detected", ""));
+        return;
+      }
+      npcSelect.append(new Option("Automatic (an absent NPC)", ""));
+      for (const npc of roster) {
+        npcSelect.append(new Option(npc.present ? `${npc.name} (in game)` : npc.name, npc.playerId));
+      }
+      npcSelect.value = CompanionService.getNpcId() ?? settings.npcId ?? "";
+      npcSelect.disabled = false;
+    }).catch(() => {
+      if (disposed) return;
+      npcSelect.innerHTML = "";
+      npcSelect.append(new Option("Unavailable", ""));
+    });
+    const status2 = styled("div", { fontSize: "12px", color: color.textDim, padding: "2px 2px 0" });
+    function refresh() {
+      if (disposed) return;
+      if (!CompanionService.isRunning()) {
+        status2.textContent = "Inactive.";
+        return;
+      }
+      const npcId = CompanionService.getNpcId();
+      const name = npcId ? npcId.replace(/^NPC_/, "") : "?";
+      const wanted = CompanionService.getSettings().mode;
+      const actual = CompanionService.getEffectiveMode();
+      const fallback = actual && actual !== wanted ? " (no garden found, following you)" : "";
+      status2.textContent = `Active as ${name}${fallback}. Only you can see it.`;
     }
-    walker.release();
-    await report2(attempted, reporter2.stopped(), reporter2);
+    const askToggle = switchInput(settings.askOnScreen, (on) => {
+      void CompanionService.applySettings({ askOnScreen: on });
+    });
+    const reactionsToggle = switchInput(settings.reactions, (on) => {
+      void CompanionService.applySettings({ reactions: on });
+    });
+    card4.body.append(
+      settingRow("Enable", "Brings him out next to you.", enableToggle).row,
+      settingRow("Mode", "Follows you, or stays on your plot.", modeSelect).row,
+      settingRow("Borrowed NPC", 'Whose look it takes. "In game" means already spawned.', npcSelect).row,
+      settingRow("Ask on screen", "Shows his questions at the top, portrait and all.", askToggle).row,
+      settingRow("Reactions", "Comments on weather, sales, milestones and how long you've played.", reactionsToggle).row,
+      status2
+    );
+    refresh();
+    const timer2 = window.setInterval(refresh, STATUS_REFRESH_MS);
+    view.append(card4.root);
+    view.__cleanup__ = () => {
+      disposed = true;
+      clearInterval(timer2);
+    };
   }
-  var init_plantRun = __esm({
-    "src/features/companion/chat/plantRun.ts"() {
+  var STATUS_REFRESH_MS, MODE_LABELS;
+  var init_behaviorTab = __esm({
+    "src/features/companion/menu/behaviorTab.ts"() {
       "use strict";
-      init_player();
-      init_stats();
-      init_batch();
-      init_walk();
-      init_plantRead();
-      init_plant();
-      init_bubbleTags();
-      init_bubbleIcons();
+      init_companion();
+      init_feedWatch();
+      init_fields();
+      init_layout();
+      init_theme();
+      init_toggles();
+      init_dom3();
+      STATUS_REFRESH_MS = 1e3;
+      MODE_LABELS = [
+        ["follow", "Follow me"],
+        ["garden", "Stay in my garden"]
+      ];
+    }
+  });
+
+  // src/features/companion/catalogs.ts
+  function rolledMutations() {
+    try {
+      return Object.entries(mutationCatalog2).filter(([, def]) => Number(def?.baseChance) > 0).map(([name]) => name);
+    } catch {
+      return [];
+    }
+  }
+  var init_catalogs = __esm({
+    "src/features/companion/catalogs.ts"() {
+      "use strict";
+      init_data();
     }
   });
 
@@ -45958,13 +45814,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       return 0;
     }
   }
-  function rolledMutations() {
-    try {
-      return Object.entries(mutationCatalog2).filter(([, def]) => Number(def?.baseChance) > 0).map(([name]) => name);
-    } catch {
-      return [];
-    }
-  }
   async function readHatchScope() {
     const [eggs, bag] = await Promise.all([scanEggs(), readPets()]);
     const { species, abilities } = whatCouldHatch(eggs.eggIds);
@@ -45990,6 +45839,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_data();
       init_petValue();
       init_pets();
+      init_catalogs();
       INVENTORY_CAPACITY = 98;
       EMPTY_HATCH_SCOPE = {
         readySlots: [],
@@ -46002,6 +45852,783 @@ Restore figures are averages; unlucky streaks do worse.`;
         inventoryCount: 0,
         capacity: INVENTORY_CAPACITY
       };
+    }
+  });
+
+  // src/features/companion/menu/settingsParts.ts
+  function teamSelect(current3, onPick) {
+    const el = select2({ small: true, width: "150px" });
+    el.append(new Option("Leave my team alone", NO_TEAM));
+    let teams2 = [];
+    try {
+      teams2 = PetsService.getTeams().map((team) => ({ id: team.id, name: team.name }));
+    } catch {
+      teams2 = [];
+    }
+    for (const team of teams2) el.append(new Option(team.name, team.id));
+    el.value = current3 && teams2.some((team) => team.id === current3) ? current3 : NO_TEAM;
+    el.addEventListener("change", () => onPick(el.value === NO_TEAM ? null : el.value));
+    return { el, empty: teams2.length === 0 };
+  }
+  function settingsHint(text2) {
+    return styled("div", { fontSize: "11px", lineHeight: "1.5", color: color.textDim }, text2);
+  }
+  function addBackButton(modal, back) {
+    modal.footer.append(
+      button("Back", {
+        size: "sm",
+        block: true,
+        onClick: () => {
+          modal.close();
+          back();
+        }
+      })
+    );
+  }
+  var NO_TEAM, NO_TEAMS_HINT;
+  var init_settingsParts = __esm({
+    "src/features/companion/menu/settingsParts.ts"() {
+      "use strict";
+      init_button();
+      init_fields();
+      init_theme();
+      init_pets();
+      init_dom3();
+      NO_TEAM = "";
+      NO_TEAMS_HINT = "No pet teams yet. Build one in the Pets tab.";
+    }
+  });
+
+  // src/features/companion/menu/feedSettingsModal.ts
+  function openFeedSettingsModal(host, back) {
+    markReviewed("feed");
+    const modal = openModal2({ host, title: "Pet feed", widthPx: 440 });
+    const settings = loadCompanionSettings();
+    const alerts = switchInput(settings.feedAlerts, (on) => {
+      void CompanionService.applySettings({ feedAlerts: on }).then(checkFeedNow);
+    });
+    const threshold = numberInput(MIN_PCT, MAX_PCT, 1, settings.feedThresholdPct);
+    threshold.addEventListener("change", () => {
+      const value = Math.max(MIN_PCT, Math.min(MAX_PCT, Math.round(Number(threshold.value) || MIN_PCT)));
+      threshold.value = String(value);
+      void CompanionService.applySettings({ feedThresholdPct: value }).then(checkFeedNow);
+    });
+    const fromGarden = switchInput(settings.feedFromGarden, (on) => {
+      void CompanionService.applySettings({ feedFromGarden: on }).then(checkFeedNow);
+    });
+    modal.body.append(
+      settingRow("Tell me when a pet is starving", "He offers, and waits for your answer.", alerts).row,
+      settingRow("Warn below", `Fullness that worries him (${MIN_PCT} to ${MAX_PCT}).`, threshold.wrap).row,
+      settingRow(
+        "May pick from the garden",
+        "Lets him pick a ripe crop when the bag is empty. Your Locker still applies.",
+        fromGarden
+      ).row,
+      settingsHint("He only speaks up when he has something to give. He always asks first.")
+    );
+    addBackButton(modal, back);
+  }
+  var MIN_PCT, MAX_PCT;
+  var init_feedSettingsModal = __esm({
+    "src/features/companion/menu/feedSettingsModal.ts"() {
+      "use strict";
+      init_companion();
+      init_fields();
+      init_layout();
+      init_modal();
+      init_toggles();
+      init_feedWatch();
+      init_state3();
+      init_settingsParts();
+      MIN_PCT = 1;
+      MAX_PCT = 90;
+    }
+  });
+
+  // src/features/companion/menu/settingsNotice.ts
+  function settingsNotice(group2, what, onOpen) {
+    if (!isUnreviewed(group2)) {
+      return styled("div", { display: "none" });
+    }
+    const root4 = styled("div", {
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      padding: "10px 12px",
+      borderRadius: "12px",
+      background: color.warnSoft,
+      border: `1px solid ${color.border}`,
+      flex: "0 0 auto"
+    });
+    const open = button("Set up", { size: "sm", onClick: onOpen });
+    open.style.flex = "0 0 auto";
+    root4.append(styled("div", { fontSize: "11.5px", lineHeight: "1.5", color: color.text, flex: "1", minWidth: "0" }, what), open);
+    return root4;
+  }
+  var init_settingsNotice = __esm({
+    "src/features/companion/menu/settingsNotice.ts"() {
+      "use strict";
+      init_button();
+      init_theme();
+      init_state3();
+      init_dom3();
+    }
+  });
+
+  // src/features/companion/menu/harvestSettingsModal.ts
+  function openHarvestSettingsModal(host, back) {
+    markReviewed("harvest");
+    const modal = openModal2({ host, title: "Harvest", widthPx: 460 });
+    const settings = loadCompanionSettings();
+    const team = teamSelect(settings.harvestTeamId, (teamId2) => {
+      void CompanionService.applySettings({ harvestTeamId: teamId2 });
+    });
+    modal.body.append(
+      settingRow("Team to wear while harvesting", "For abilities that pay off on harvest.", team.el).row,
+      settingsHint(
+        team.empty ? NO_TEAMS_HINT : "He names the team before he picks, and puts yours back after. What he may pick still comes from your Locker."
+      )
+    );
+    addBackButton(modal, back);
+  }
+  var init_harvestSettingsModal = __esm({
+    "src/features/companion/menu/harvestSettingsModal.ts"() {
+      "use strict";
+      init_companion();
+      init_layout();
+      init_modal();
+      init_state3();
+      init_settingsParts();
+    }
+  });
+
+  // src/features/companion/menu/hatchSettingsModal.ts
+  function openHatchSettingsModal(host, back) {
+    markReviewed("hatch");
+    const modal = openModal2({ host, title: "Hatching", widthPx: 460 });
+    const settings = loadCompanionSettings();
+    const hatchTeam = teamSelect(settings.hatchTeamId, (teamId2) => {
+      void CompanionService.applySettings({ hatchTeamId: teamId2 });
+    });
+    const sellTeam = teamSelect(settings.hatchSellTeamId, (teamId2) => {
+      void CompanionService.applySettings({ hatchSellTeamId: teamId2 });
+    });
+    modal.body.append(
+      settingRow("Team to wear while hatching", "For abilities that change what hatches.", hatchTeam.el).row,
+      settingRow("Team to wear while selling", "Only during the sale. Yours comes straight back after.", sellTeam.el).row,
+      settingsHint(
+        hatchTeam.empty ? NO_TEAMS_HINT : "The game will not sell a pet on your active team, so a smaller team frees the rest. He asks first, and puts yours back after."
+      )
+    );
+    addBackButton(modal, back);
+  }
+  var init_hatchSettingsModal = __esm({
+    "src/features/companion/menu/hatchSettingsModal.ts"() {
+      "use strict";
+      init_companion();
+      init_layout();
+      init_modal();
+      init_state3();
+      init_settingsParts();
+    }
+  });
+
+  // src/features/companion/menu/settingsModal.ts
+  function teamLine(teamId2, verb) {
+    const name = teamName(teamId2);
+    return name ? `Wears ${name} to ${verb}.` : `Keeps your team on while ${verb}.`;
+  }
+  function openSettingsModal(host) {
+    const modal = openModal2({ host, title: "Settings", widthPx: 440 });
+    const settings = loadCompanionSettings();
+    const unseen = (group2) => settings.reviewedSettings.includes(group2) ? "" : " Not set up yet.";
+    const back = () => openSettingsModal(host);
+    const feedDetail = settings.feedAlerts ? `Warns below ${settings.feedThresholdPct}%${settings.feedFromGarden ? ", may pick from the garden" : ", from the bag only"}.` : "Off. He stays quiet about hungry pets.";
+    const keeping = hasAnyRule(settings.hatchKeepRules) ? `Keeps ${describeKeep(settings.hatchKeepRules)}.` : "Nothing set to keep yet.";
+    const entry = (name, detail, open) => menuCard({
+      name,
+      detail,
+      onClick: () => {
+        modal.close();
+        open(host, back);
+      }
+    });
+    modal.body.append(
+      entry("Pet feed", `${feedDetail}${unseen("feed")}`, openFeedSettingsModal),
+      entry("Harvest", `${teamLine(settings.harvestTeamId, "harvest")}${unseen("harvest")}`, openHarvestSettingsModal),
+      entry("Hatching", `${keeping} ${teamLine(settings.hatchSellTeamId, "sell")}${unseen("hatch")}`, openHatchSettingsModal)
+    );
+  }
+  var init_settingsModal = __esm({
+    "src/features/companion/menu/settingsModal.ts"() {
+      "use strict";
+      init_modal();
+      init_crew();
+      init_hatch();
+      init_state3();
+      init_feedSettingsModal();
+      init_harvestSettingsModal();
+      init_hatchSettingsModal();
+    }
+  });
+
+  // src/features/companion/menu/feedModal.ts
+  function row4(candidate) {
+    const line = styled("div", {
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      padding: "9px 11px",
+      borderRadius: "12px",
+      border: `1px solid ${color.border}`,
+      background: color.cardBg
+    });
+    const text2 = styled("div", { display: "flex", flexDirection: "column", gap: "2px", flex: "1", minWidth: "0" });
+    text2.append(
+      styled("div", { fontSize: "12.5px", color: color.text }, candidate.petName),
+      styled(
+        "div",
+        { fontSize: "11px", color: candidate.hungerPct <= 5 ? color.warn : color.textDim },
+        candidate.source.kind === "garden" ? `${candidate.hungerPct}% left, I would pick a ${candidate.source.species}` : `${candidate.hungerPct}% left, I have a ${candidate.source.species} in the bag`
+      )
+    );
+    const icon2 = speciesIcon(candidate.source.species, CROP_ICON_PX);
+    icon2.title = candidate.source.species;
+    line.append(text2, icon2);
+    return line;
+  }
+  function openFeedModal(host, onAsk) {
+    let picks = [];
+    const modal = openModal2({
+      host,
+      title: "Who needs feeding?",
+      widthPx: 420,
+      onClose: () => clearInterval(timer2)
+    });
+    const list = styled("div", { display: "flex", flexDirection: "column", gap: "7px" });
+    const empty = styled(
+      "div",
+      { fontSize: "12px", color: color.textDim, padding: "10px 2px", lineHeight: "1.5" },
+      "Nobody is hungry, or I have nothing they eat."
+    );
+    const notice = settingsNotice("feed", "Pet feed is not set up. I warn below 10% and may pick from the garden.", () => {
+      modal.close();
+      openFeedSettingsModal(host, () => openSettingsModal(host));
+    });
+    modal.body.append(notice, list, empty);
+    const askButton = button("Ask to feed them", {
+      size: "sm",
+      block: true,
+      variant: "primary",
+      onClick: () => {
+        onAsk(feedRequest(picks.length === 1 ? `Feed ${picks[0].petName}` : "Feed my hungry pets", () => findFeedable()));
+        modal.close();
+      }
+    });
+    askButton.style.marginLeft = "auto";
+    modal.footer.append(askButton);
+    function render() {
+      if (!modal.isOpen()) return;
+      list.replaceChildren(...picks.map(row4));
+      empty.style.display = picks.length === 0 ? "" : "none";
+      askButton.setEnabled(picks.length > 0);
+    }
+    async function refresh() {
+      if (!modal.isOpen()) return;
+      picks = await findFeedable().catch(() => []);
+      if (!modal.isOpen()) return;
+      render();
+    }
+    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS);
+    render();
+    void refresh();
+  }
+  var REFRESH_MS, CROP_ICON_PX;
+  var init_feedModal = __esm({
+    "src/features/companion/menu/feedModal.ts"() {
+      "use strict";
+      init_button();
+      init_modal();
+      init_theme();
+      init_feed2();
+      init_feedRead();
+      init_dom3();
+      init_feedSettingsModal();
+      init_harvestChips();
+      init_settingsNotice();
+      init_settingsModal();
+      REFRESH_MS = 5e3;
+      CROP_ICON_PX = 26;
+    }
+  });
+
+  // src/features/companion/chat/harvestRun.ts
+  function topCrop(rows) {
+    const top = groupVariants(rows)[0];
+    return top ? cropIcon(top.species) : null;
+  }
+  async function report(attempted, cancelled, reporter2) {
+    if (attempted.length === 0) {
+      reporter2.say("report", "Stopped before I picked anything.");
+      return;
+    }
+    await sleep2(SETTLE_MS);
+    let fresh = null;
+    try {
+      fresh = (await readHarvestRows()).filter((row5) => row5.ready);
+    } catch {
+      fresh = null;
+    }
+    const stopped = cancelled ? " before you stopped me" : "";
+    if (!fresh) {
+      reporter2.say("report", `Sent all ${attempted.length}${stopped}, but I could not check they landed.`);
+      return;
+    }
+    const targeted = new Set(attempted.map(rowKey));
+    const stillRipe = fresh.filter((row5) => targeted.has(rowKey(row5))).length;
+    const picked = attempted.length - stillRipe;
+    if (picked > 0) StatsService.incrementGardenStat("totalHarvested", picked);
+    if (stillRipe === 0) {
+      const done = cancelled ? `Stopped there. Got ${picked}.` : `All done, ${picked} picked.`;
+      reporter2.say("report", done, compose(topCrop(attempted), " ", done));
+      return;
+    }
+    if (picked === 0) {
+      reporter2.say("report", "None went through. Still ripe, so your bag is probably full.");
+      return;
+    }
+    reporter2.say("report", `Got ${picked} of ${attempted.length}${stopped}. ${stillRipe} still ripe.`);
+  }
+  async function executeHarvestBatch(rows, reporter2) {
+    const opening = `On it. Picking ${rows.length} now.`;
+    reporter2.say("reply", opening, compose(topCrop(rows), " ", opening));
+    const attempted = [];
+    await runSteps({
+      items: rows,
+      reporter: reporter2,
+      // The team goes on before the first crop: some abilities act on harvest.
+      hire: () => hireCrew(reporter2, { teamId: loadCompanionSettings().harvestTeamId }),
+      async step(row5, walker, pace) {
+        await walker.toGardenTile(row5.tileIndex);
+        await pace.wait();
+        attempted.push(row5);
+        await PlayerService.harvestCrop(row5.tileIndex, row5.slotId);
+        pace.mark();
+      },
+      progressNote: (done, total) => `${done} of ${total} so far...`
+    });
+    await report(attempted, reporter2.stopped(), reporter2);
+  }
+  var init_harvestRun = __esm({
+    "src/features/companion/chat/harvestRun.ts"() {
+      "use strict";
+      init_async2();
+      init_player();
+      init_stats();
+      init_state3();
+      init_batch();
+      init_bubbleIcons();
+      init_bubbleTags();
+      init_crew();
+      init_gardenRead();
+      init_harvest();
+    }
+  });
+
+  // src/features/companion/chat/commands/harvest.ts
+  function harvestBubble(rows, sentence) {
+    const top = groupVariants(rows)[0];
+    if (!top) return compose(sentence);
+    return compose(...spaced(variantIcons(top.species, top.mutations)), " ", sentence);
+  }
+  function harvestRequest(label2, provider) {
+    return { label: label2, propose: () => harvestCommand.propose({ provider }) };
+  }
+  var harvestCommand;
+  var init_harvest2 = __esm({
+    "src/features/companion/chat/commands/harvest.ts"() {
+      "use strict";
+      init_state3();
+      init_bubbleIcons();
+      init_bubbleTags();
+      init_conversation();
+      init_crew();
+      init_harvest();
+      init_harvestRun();
+      init_proposals();
+      harvestCommand = {
+        id: "harvest",
+        acceptance: "Yes, go ahead",
+        async propose({ provider }) {
+          let scope;
+          try {
+            scope = await provider();
+          } catch {
+            post("companion", "system", "Could not see your garden just now.");
+            return;
+          }
+          const rows = scope.rows;
+          if (rows.length === 0) {
+            post(
+              "companion",
+              "reply",
+              scope.lockedOut > 0 ? `Your Locker is holding all ${scope.lockedOut}. Nothing I can pick.` : "Nothing is ripe right now."
+            );
+            return;
+          }
+          const team = loadCompanionSettings().harvestTeamId;
+          const summary = describeSelection(rows);
+          const held = scope.lockedOut > 0 ? ` I am leaving ${scope.lockedOut} locked one${scope.lockedOut === 1 ? "" : "s"} alone.` : "";
+          const text2 = `I can see ${summary}.${held}${teamPromise(teamName(team))} Want me to pick them?`;
+          ask(harvestCommand, { provider, rows }, {
+            summary,
+            size: rows.length,
+            signature: withTeam(selectionSignature(rows), team),
+            text: text2,
+            bubble: harvestBubble(rows, text2)
+          });
+        },
+        async signature({ provider }) {
+          return withTeam(selectionSignature((await provider()).rows), loadCompanionSettings().harvestTeamId);
+        },
+        async execute({ rows }, run) {
+          await run((reporter2) => executeHarvestBatch(rows, reporter2));
+        }
+      };
+    }
+  });
+
+  // src/features/companion/menu/harvestFields.ts
+  function filterCard(title) {
+    const summary = styled("div", {
+      marginLeft: "auto",
+      fontSize: "11px",
+      color: color.textDim,
+      textAlign: "right",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+      maxWidth: "60%"
+    });
+    const header = styled("div", { display: "flex", alignItems: "center", gap: "8px", width: "100%" });
+    header.append(sectionLabel(title), summary);
+    const { root: root4, body } = collapsibleCard({ header, collapsed: true, onToggle: () => {
+    } });
+    Object.assign(root4.style, { padding: "9px 11px", gap: "9px", flex: "0 0 auto" });
+    return {
+      root: root4,
+      body,
+      setSummary(text2, active3) {
+        summary.textContent = text2;
+        summary.style.color = active3 ? color.accent : color.textDim;
+      }
+    };
+  }
+  function fieldRow(label2, control) {
+    const row5 = styled("div", { display: "flex", alignItems: "center", gap: "10px", justifyContent: "space-between" });
+    row5.append(styled("div", { fontSize: "11.5px", color: color.text }, label2), control);
+    return row5;
+  }
+  function toggleIn(current3, value) {
+    const next = new Set(current3 ?? []);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    return next.size === 0 ? null : [...next];
+  }
+  function selectionRow(options2) {
+    const row5 = tileRow();
+    row5.append(allTile(options2.allLabel, options2.selected === null, options2.onClear));
+    for (const value of options2.values) {
+      row5.append(
+        spriteTile({
+          icon: options2.iconFor(value),
+          title: value,
+          count: options2.counts.get(value) ?? 0,
+          selected: options2.selected?.includes(value) ?? false,
+          onClick: () => options2.onPick(value)
+        })
+      );
+    }
+    return row5;
+  }
+  function nameList(values, fallback) {
+    if (values.length === 0) return fallback;
+    if (values.length > 3) return `${values.length} kinds`;
+    return listWords(values);
+  }
+  function summarizeSpecies(filters) {
+    return nameList(filters.species ?? [], "All");
+  }
+  function summarizeMutations(filters) {
+    if (filters.mutations.length === 0) return "Any";
+    const list = nameList(filters.mutations, "Any");
+    if (filters.mutationMode === "none") return `Without ${list}`;
+    if (filters.mutationMode === "all") return `All of ${list}`;
+    return list;
+  }
+  function summarizeSize(filters) {
+    return filters.minSizePct > 50 ? `${filters.minSizePct}% and up` : "Any size";
+  }
+  function resultBox() {
+    const root4 = styled("div", {
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+      padding: "11px 12px",
+      borderRadius: "12px",
+      background: color.accentSoft,
+      border: `1px solid ${color.border}`,
+      flex: "0 0 auto"
+    });
+    const headline = styled("div", { fontSize: "13px", fontWeight: "600", color: color.accent });
+    root4.append(headline);
+    return { root: root4, headline };
+  }
+  function countedIcon(icon2, label2, count) {
+    const pair = styled("div", { display: "flex", alignItems: "center", gap: "3px" });
+    pair.title = label2;
+    pair.append(icon2, styled("span", { fontSize: "11px", color: color.textDim }, String(count)));
+    return pair;
+  }
+  function resultStrip() {
+    const { root: root4, headline } = resultBox();
+    const sprites = styled("div", { display: "flex", alignItems: "flex-end", gap: "10px", flexWrap: "wrap" });
+    root4.append(sprites);
+    return {
+      root: root4,
+      update(total, entries, hidden) {
+        headline.textContent = total === 0 ? "Nothing to pick" : `${total} crop${total === 1 ? "" : "s"}`;
+        sprites.replaceChildren(...entries.map((entry) => countedIcon(entry.icon, entry.label, entry.count)));
+        sprites.style.display = entries.length === 0 ? "none" : "flex";
+        if (hidden > 0) {
+          sprites.append(styled("span", { fontSize: "11px", color: color.textDim, alignSelf: "center" }, `+${hidden} more`));
+        }
+      }
+    };
+  }
+  function lockedNote() {
+    const root4 = styled("div", { fontSize: "11px", lineHeight: "1.5", color: color.textDim });
+    return {
+      root: root4,
+      update(lockedOut) {
+        if (lockedOut === 0) {
+          root4.textContent = "Your Locker decides what I leave alone.";
+          root4.style.color = color.textDim;
+          return;
+        }
+        root4.textContent = `Leaving ${lockedOut} locked crop${lockedOut === 1 ? "" : "s"} alone.`;
+        root4.style.color = color.warn;
+      }
+    };
+  }
+  var init_harvestFields = __esm({
+    "src/features/companion/menu/harvestFields.ts"() {
+      "use strict";
+      init_card();
+      init_layout();
+      init_theme();
+      init_harvest();
+      init_dom3();
+      init_harvestChips();
+    }
+  });
+
+  // src/features/companion/menu/harvestModal.ts
+  function openHarvestModal(host, onAsk) {
+    let scope = { rows: [], lockedOut: 0 };
+    let filters = { ...DEFAULT_FILTERS };
+    const iconCache = /* @__PURE__ */ new Map();
+    const cachedIcon = (key2, make) => {
+      let known = iconCache.get(key2);
+      if (!known) {
+        known = make();
+        iconCache.set(key2, known);
+      }
+      return known;
+    };
+    const setFilters = (patch) => {
+      filters = { ...filters, ...patch };
+      render();
+    };
+    const modal = openModal2({
+      host,
+      title: "What should I harvest?",
+      widthPx: 460,
+      onClose: () => clearInterval(timer2)
+    });
+    const speciesCard = filterCard("Species");
+    const mutationCard = filterCard("Mutations");
+    const sizeCard = filterCard("Size");
+    const preview = resultStrip();
+    const note = lockedNote();
+    function scopedTo(without) {
+      const others = without === "species" ? { ...filters, species: null } : { ...filters, mutations: [] };
+      return filterRows(scope.rows, others);
+    }
+    function renderSpecies() {
+      const available = scopedTo("species");
+      speciesCard.body.replaceChildren(
+        selectionRow({
+          values: speciesPresent(available),
+          counts: tally(available, (row5) => [row5.species]),
+          selected: filters.species,
+          iconFor: (name) => cachedIcon(`species:${name}`, () => speciesIcon(name, TILE_ICON_PX)),
+          onPick: (name) => setFilters({ species: toggleIn(filters.species, name) }),
+          onClear: () => setFilters({ species: null }),
+          allLabel: "All"
+        })
+      );
+      speciesCard.setSummary(summarizeSpecies(filters), filters.species !== null);
+    }
+    const modeControl = choiceControl(
+      [
+        { value: "any", label: "Any", title: "Has at least one" },
+        { value: "all", label: "All", title: "Has every one" },
+        { value: "none", label: "None", title: "Has none of them" }
+      ],
+      filters.mutationMode,
+      (value) => setFilters({ mutationMode: value })
+    );
+    const mutationTiles = styled("div", {});
+    mutationCard.body.append(fieldRow("Match", modeControl), mutationTiles);
+    function renderMutations() {
+      const available = scopedTo("mutations");
+      const mutations = mutationsPresent(available);
+      const kept = filters.mutations.filter((name) => mutations.includes(name));
+      if (kept.length !== filters.mutations.length) filters = { ...filters, mutations: kept };
+      mutationCard.root.style.display = mutations.length === 0 ? "none" : "flex";
+      if (mutations.length === 0) return;
+      if (modeControl.get() !== filters.mutationMode) modeControl.set(filters.mutationMode);
+      mutationTiles.replaceChildren(
+        selectionRow({
+          values: mutations,
+          counts: tally(available, (row5) => row5.mutations),
+          selected: filters.mutations.length === 0 ? null : filters.mutations,
+          iconFor: (name) => cachedIcon(`mutation:${name}`, () => mutationIconEl(name, TILE_ICON_PX)),
+          onPick: (name) => setFilters({ mutations: toggleIn(filters.mutations, name) ?? [] }),
+          onClear: () => setFilters({ mutations: [] }),
+          allLabel: "Any"
+        })
+      );
+      mutationCard.setSummary(summarizeMutations(filters), filters.mutations.length > 0);
+    }
+    const sizeValue = styled("span", { fontSize: "11.5px", color: color.text, minWidth: "38px", textAlign: "right" });
+    const sizeSlider = slider(50, 100, 5, filters.minSizePct, { fill: true });
+    sizeSlider.style.flex = "1";
+    sizeSlider.addEventListener("input", () => setFilters({ minSizePct: Number(sizeSlider.value) }));
+    {
+      const control = styled("div", { display: "flex", alignItems: "center", gap: "10px", flex: "1", minWidth: "0" });
+      control.append(sizeSlider, sizeValue);
+      const row5 = fieldRow("Minimum size", control);
+      row5.style.gap = "14px";
+      sizeCard.body.append(row5);
+    }
+    const preservedLabel = styled("div", { fontSize: "11.5px", fontWeight: "600", color: color.text });
+    const preservedControl = choiceControl(
+      [
+        { value: "skip", label: "Leave them", title: "They stay in the ground" },
+        { value: "include", label: "Pick them too", title: "Treated like any other crop" }
+      ],
+      filters.includePreserved ? "include" : "skip",
+      (value) => setFilters({ includePreserved: value === "include" })
+    );
+    const preservedRow = styled("div", { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
+    const preservedHolder = styled("div", {});
+    preservedHolder.append(preservedControl);
+    preservedRow.append(preservedLabel, preservedHolder);
+    function renderPreserved() {
+      const ripe = scope.rows.filter((row5) => row5.ready && row5.preserved).length;
+      preservedLabel.textContent = ripe === 0 ? "Preserved crops" : `Preserved crops (${ripe} ripe)`;
+      const wanted = filters.includePreserved ? "include" : "skip";
+      if (preservedControl.get() !== wanted) preservedControl.set(wanted);
+    }
+    const resetButton = button("Reset", {
+      size: "sm",
+      block: true,
+      onClick: () => {
+        filters = { ...DEFAULT_FILTERS };
+        render();
+      }
+    });
+    const askButton = button("Ask to pick these", {
+      size: "sm",
+      block: true,
+      variant: "primary",
+      onClick: () => {
+        const chosen = filters;
+        onAsk(
+          harvestRequest(describeFilters(chosen), async () => {
+            const fresh = await readHarvestable();
+            return { rows: filterRows(fresh.rows, chosen), lockedOut: fresh.lockedOut };
+          })
+        );
+        modal.close();
+      }
+    });
+    askButton.style.marginLeft = "auto";
+    const notice = settingsNotice("harvest", "Harvest is not set up. I will pick with the team you have on.", () => {
+      modal.close();
+      openHarvestSettingsModal(host, () => openSettingsModal(host));
+    });
+    modal.body.append(notice, preservedRow, speciesCard.root, mutationCard.root, sizeCard.root, preview.root, note.root);
+    modal.footer.append(resetButton, askButton);
+    function render() {
+      if (!modal.isOpen()) return;
+      renderPreserved();
+      renderSpecies();
+      renderMutations();
+      sizeSlider.value = String(filters.minSizePct);
+      sizeValue.textContent = `${filters.minSizePct}%`;
+      sizeCard.setSummary(summarizeSize(filters), filters.minSizePct > DEFAULT_FILTERS.minSizePct);
+      const selected = filterRows(scope.rows, filters);
+      const variants = groupVariants(selected);
+      const shown = variants.slice(0, MAX_PREVIEW_VARIANTS);
+      preview.update(
+        selected.length,
+        shown.map((variant) => {
+          const key2 = `${variant.species}|${variant.mutations.join(",")}`;
+          return {
+            icon: cachedIcon(`variant:${key2}`, () => variantIcon(variant.species, variant.mutations, PREVIEW_ICON_PX)),
+            label: variant.mutations.length ? `${variant.species}: ${variant.mutations.join(", ")}` : variant.species,
+            count: variant.count
+          };
+        }),
+        variants.length - shown.length
+      );
+      note.update(scope.lockedOut);
+      askButton.setEnabled(selected.length > 0);
+    }
+    async function refresh() {
+      if (!modal.isOpen()) return;
+      scope = await readHarvestable().catch(() => ({ rows: [], lockedOut: 0 }));
+      if (!modal.isOpen()) return;
+      render();
+    }
+    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS2);
+    render();
+    void refresh();
+  }
+  var REFRESH_MS2, PREVIEW_ICON_PX, TILE_ICON_PX, MAX_PREVIEW_VARIANTS;
+  var init_harvestModal = __esm({
+    "src/features/companion/menu/harvestModal.ts"() {
+      "use strict";
+      init_button();
+      init_modal();
+      init_sliders();
+      init_theme();
+      init_harvest2();
+      init_gardenRead();
+      init_harvest();
+      init_dom3();
+      init_harvestChips();
+      init_harvestFields();
+      init_harvestSettingsModal();
+      init_settingsNotice();
+      init_settingsModal();
+      REFRESH_MS2 = 4e3;
+      PREVIEW_ICON_PX = 30;
+      TILE_ICON_PX = 26;
+      MAX_PREVIEW_VARIANTS = 10;
     }
   });
 
@@ -46022,7 +46649,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       );
       return;
     }
-    await sleep3(SETTLE_MS);
+    await sleep2(SETTLE_MS);
     const hatched = await countHatched(attempted);
     if (hatched === null) {
       reporter2.say("report", `Opened all ${attempted.length}, but I could not check.`);
@@ -46059,7 +46686,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     reporter2.say("system", line, compose(petThing(star.item, ""), " ", line, ...spaced(mutationChips(shown))), true);
     if (!timing || !lines) return;
-    await sleep3(timing.pauseMs);
+    await sleep2(timing.pauseMs);
     if (!reporter2.stopped()) reporter2.say("system", lines.resume);
   }
   async function executeHatchBatch(slots, reporter2) {
@@ -46067,42 +46694,68 @@ Restore figures are averages; unlucky streaks do worse.`;
     const opening = `On it. Opening ${slots.length} now.`;
     reporter2.say("reply", opening, compose(kinds.length === 1 ? eggIcon2(kinds[0]) : null, " ", opening));
     const settings = loadCompanionSettings();
-    const team = await wearTeam(settings.hatchTeamId, reporter2);
-    const walker = await createWalker((message2) => reporter2.say("system", message2));
     const attempted = [];
-    let count = await readInventoryCount();
+    let count = 0;
     let stop = "done";
-    const known = new Set((await readPetRows()).map((pet) => pet.petId));
-    const pace = pacer();
-    for (const slot of slots) {
-      if (reporter2.stopped()) {
-        stop = "cancelled";
-        break;
-      }
-      if (attempted.length % RECOUNT_EVERY === 0 || count >= INVENTORY_CAPACITY - NEAR_CAPACITY) {
-        count = await readInventoryCount();
-      }
-      if (count >= INVENTORY_CAPACITY) {
-        stop = "full";
-        break;
-      }
-      await walker.toGardenTile(slot);
-      await pace.wait();
-      await PlayerService.hatchEgg(slot);
-      pace.mark();
-      attempted.push(slot);
-      count++;
-      reporter2.progress(attempted.length, slots.length);
-      await announceHatchling(known, settings.hatchKeepRules, reporter2);
-      if (attempted.length % PROGRESS_EVERY === 0 && attempted.length < slots.length) {
-        reporter2.say("system", `${attempted.length} of ${slots.length} open so far...`);
-      }
-    }
-    walker.release();
-    await team.restore();
+    const known = /* @__PURE__ */ new Set();
+    const outcome = await runSteps({
+      items: slots,
+      reporter: reporter2,
+      async hire() {
+        const crew = await hireCrew(reporter2, { teamId: settings.hatchTeamId });
+        for (const pet of await readPetRows()) known.add(pet.petId);
+        return crew;
+      },
+      async step(slot, walker, pace) {
+        if (attempted.length % RECOUNT_EVERY === 0 || count >= INVENTORY_CAPACITY - NEAR_CAPACITY) {
+          count = await readInventoryCount();
+        }
+        if (count >= INVENTORY_CAPACITY) {
+          stop = "full";
+          return "halt";
+        }
+        await walker.toGardenTile(slot);
+        await pace.wait();
+        await PlayerService.hatchEgg(slot);
+        pace.mark();
+        attempted.push(slot);
+        count++;
+        await announceHatchling(known, settings.hatchKeepRules, reporter2);
+      },
+      progressNote: (done, total) => `${done} of ${total} open so far...`
+    });
+    if (outcome.cancelled) stop = "cancelled";
     await reportHatch(attempted, stop, reporter2);
     return stop;
   }
+  var RECOUNT_EVERY, NEAR_CAPACITY, CHEER_TIMING, CHEER_LINES;
+  var init_hatchRun = __esm({
+    "src/features/companion/chat/hatchRun.ts"() {
+      "use strict";
+      init_async2();
+      init_player();
+      init_companion();
+      init_state3();
+      init_batch();
+      init_bubbleIcons();
+      init_bubbleTags();
+      init_crew();
+      init_hatch();
+      init_hatchRead();
+      RECOUNT_EVERY = 5;
+      NEAR_CAPACITY = 5;
+      CHEER_TIMING = {
+        Rainbow: { holdMs: 5e3, pauseMs: 4500 },
+        Gold: { holdMs: 2500, pauseMs: 2250 }
+      };
+      CHEER_LINES = {
+        Rainbow: { cheer: "I have never seen one of those.", resume: "Right. Where was I." },
+        Gold: { cheer: "That one is a beauty.", resume: "Okay, back to it." }
+      };
+    }
+  });
+
+  // src/features/companion/chat/sellRun.ts
   async function goToSellShop(walker, reporter2) {
     if (!walker.walking) return;
     const map2 = await readCompanionMap();
@@ -46115,6 +46768,30 @@ Restore figures are averages; unlucky streaks do worse.`;
     reporter2.say("system", "Heading to the pet shop.");
     const arrived = await walker.toBuilding(shop);
     if (!arrived) reporter2.say("system", "Could not get there, selling from here.");
+  }
+  async function reportSell(attempted, skipped, reporter2) {
+    if (attempted.length === 0) {
+      reporter2.say("report", skipped.length > 0 ? "None of them went through." : "Nothing sold.");
+      return;
+    }
+    await sleep2(SETTLE_MS);
+    let sold = null;
+    try {
+      const left = new Set((await readHatchScope()).pets.map((pet) => pet.petId));
+      sold = attempted.filter((pet) => !left.has(pet.petId)).length;
+    } catch {
+      sold = null;
+    }
+    const tail = skipped.length > 0 ? ` I left ${skipped.length} alone.` : "";
+    if (sold === null) {
+      reporter2.say("report", `Sent all ${attempted.length}, but I could not check.${tail}`);
+      return;
+    }
+    if (sold === 0) {
+      reporter2.say("report", `None of them sold. They are all still in your bag.${tail}`);
+      return;
+    }
+    reporter2.say("report", `${sold} sold.${tail}`);
   }
   async function executeSellBatch(plan, reporter2) {
     const opening = `On it. ${summarizeSell(plan.sell)} going.`;
@@ -46134,100 +46811,60 @@ Restore figures are averages; unlucky streaks do worse.`;
       reporter2.say(
         "system",
         `${plan.favourite.length} kept and favourited.`,
-        compose(
-          petThing(best.item, ""),
-          `${strength} keeping that one${others > 0 ? ` and ${others} more` : ""}.`
-        )
+        compose(petThing(best.item, ""), `${strength} keeping that one${others > 0 ? ` and ${others} more` : ""}.`)
       );
-    }
-    const walker = await createWalker((message2) => reporter2.say("system", message2));
-    await goToSellShop(walker, reporter2);
-    const team = await wearTeam(plan.teamId, reporter2);
-    let nowOnTeam = /* @__PURE__ */ new Set();
-    try {
-      nowOnTeam = new Set(await PetsService.getActivePetIds());
-    } catch {
-      nowOnTeam = /* @__PURE__ */ new Set();
     }
     const attempted = [];
     const skipped = [];
-    const sellPace = pacer();
-    for (const pet of plan.sell) {
-      if (reporter2.stopped()) break;
-      if (nowOnTeam.has(pet.petId)) {
-        skipped.push(pet);
-        continue;
+    let onTeam = /* @__PURE__ */ new Set();
+    await runSteps({
+      items: plan.sell,
+      reporter: reporter2,
+      async hire() {
+        const crew = await hireCrew(reporter2, {
+          teamId: plan.teamId,
+          approach: (walker) => goToSellShop(walker, reporter2)
+        });
+        onTeam = new Set(await PetsService.getActivePetIds().catch(() => []));
+        return crew;
+      },
+      async step(pet, _walker, pace) {
+        if (onTeam.has(pet.petId)) {
+          skipped.push(pet);
+          return;
+        }
+        await pace.wait();
+        try {
+          await PlayerService.sellPet(pet.petId);
+          attempted.push(pet);
+        } catch {
+          skipped.push(pet);
+        }
+        pace.mark();
       }
-      await sellPace.wait();
-      try {
-        await PlayerService.sellPet(pet.petId);
-        attempted.push(pet);
-      } catch {
-        skipped.push(pet);
-      }
-      sellPace.mark();
-      reporter2.progress(attempted.length + skipped.length, plan.sell.length);
-    }
-    await team.restore();
-    walker.release();
+    });
     await reportSell(attempted, skipped, reporter2);
   }
-  async function reportSell(attempted, skipped, reporter2) {
-    if (attempted.length === 0) {
-      reporter2.say("report", skipped.length > 0 ? "None of them went through." : "Nothing sold.");
-      return;
-    }
-    await sleep3(SETTLE_MS);
-    let sold = null;
-    try {
-      const left = new Set((await readHatchScope()).pets.map((pet) => pet.petId));
-      sold = attempted.filter((pet) => !left.has(pet.petId)).length;
-    } catch {
-      sold = null;
-    }
-    const tail = skipped.length > 0 ? ` I left ${skipped.length} alone.` : "";
-    if (sold === null) {
-      reporter2.say("report", `Sent all ${attempted.length}, but I could not check.${tail}`);
-      return;
-    }
-    if (sold === 0) {
-      reporter2.say("report", `None of them sold. They are all still in your bag.${tail}`);
-      return;
-    }
-    reporter2.say("report", `${sold} sold.${tail}`);
-  }
-  var RECOUNT_EVERY, NEAR_CAPACITY, CHEER_TIMING, CHEER_LINES, SELL_BUILDING_WORDS, SELL_BUILDING_ALTERNATIVES;
-  var init_hatchRun = __esm({
-    "src/features/companion/chat/hatchRun.ts"() {
+  var SELL_BUILDING_WORDS, SELL_BUILDING_ALTERNATIVES;
+  var init_sellRun = __esm({
+    "src/features/companion/chat/sellRun.ts"() {
       "use strict";
+      init_async2();
       init_player();
       init_pets();
       init_map();
-      init_state3();
       init_batch();
-      init_teamSwap();
-      init_walk();
-      init_hatchRead();
-      init_hatch();
-      init_companion();
-      init_bubbleTags();
       init_bubbleIcons();
-      RECOUNT_EVERY = 5;
-      NEAR_CAPACITY = 5;
-      CHEER_TIMING = {
-        Rainbow: { holdMs: 5e3, pauseMs: 4500 },
-        Gold: { holdMs: 2500, pauseMs: 2250 }
-      };
-      CHEER_LINES = {
-        Rainbow: { cheer: "I have never seen one of those.", resume: "Right. Where was I." },
-        Gold: { cheer: "That one is a beauty.", resume: "Okay, back to it." }
-      };
+      init_bubbleTags();
+      init_crew();
+      init_hatch();
+      init_hatchRead();
       SELL_BUILDING_WORDS = ["pet"];
       SELL_BUILDING_ALTERNATIVES = ["sell", "shop", "store", "market"];
     }
   });
 
-  // src/features/companion/chat/hatchFlow.ts
+  // src/features/companion/chat/commands/hatch.ts
   function hatchProvider() {
     return async () => (await readHatchScope()).readySlots;
   }
@@ -46241,698 +46878,958 @@ Restore figures are averages; unlucky streaks do worse.`;
       };
     };
   }
-  function afterHatch(stop, scope, rules3, sellable) {
-    const waiting = scope.readySlots.length;
-    const eggs = waiting > 0 ? ` ${waiting} egg${waiting === 1 ? "" : "s"} still waiting.` : "";
-    if (stop === "full") {
-      if (sellable.length > 0) return `Your bag is full.${eggs}`;
-      return hasAnyRule(rules3) ? `Your bag is full, nothing in it is up for sale.${eggs}` : `Your bag is full.${eggs} Nothing set to keep, so I am not selling.`;
-    }
-    return sellable.length > 0 ? "All open. Now the ones you did not want." : null;
-  }
-  var init_hatchFlow = __esm({
-    "src/features/companion/chat/hatchFlow.ts"() {
-      "use strict";
-      init_state3();
-      init_hatch();
-      init_hatchRead();
-    }
-  });
-
-  // src/features/companion/chat/proposals.ts
-  function isExpired(proposal, nowMs, ttlMs = PROPOSAL_TTL_MS) {
-    return nowMs - proposal.createdAtMs >= ttlMs;
-  }
-  function verdict(proposal, currentSignature2, nowMs, ttlMs = PROPOSAL_TTL_MS) {
-    if (!proposal) return { ok: false, reason: "unknown" };
-    if (isExpired(proposal, nowMs, ttlMs)) return { ok: false, reason: "expired" };
-    if (!currentSignature2 || proposal.size === 0) return { ok: false, reason: "empty" };
-    if (currentSignature2 !== proposal.signature) return { ok: false, reason: "changed" };
-    return { ok: true };
-  }
-  function explain(reason) {
-    switch (reason) {
-      case "expired":
-        return "That went stale while I waited. Let me have another look.";
-      case "changed":
-        return "Things moved while I was waiting. Here is what I see now.";
-      case "empty":
-        return "There is nothing left to do there.";
-      default:
-        return "I lost track of that one, sorry. Ask me again.";
-    }
-  }
-  var PROPOSAL_TTL_MS;
-  var init_proposals = __esm({
-    "src/features/companion/chat/proposals.ts"() {
-      "use strict";
-      PROPOSAL_TTL_MS = 3e4;
-    }
-  });
-
-  // src/features/companion/chat/index.ts
-  function notify() {
-    for (const listener of [...listeners2]) {
-      try {
-        listener();
-      } catch {
-      }
-    }
-  }
-  function post(from, kind, text2, proposalId, extra = {}) {
-    const shown = extra.thread ?? extra.bubble;
-    state4 = {
-      ...state4,
-      log: append(state4.log, {
-        from,
-        kind,
-        text: shown?.message ?? text2,
-        atMs: Date.now(),
-        proposalId,
-        icons: shown?.tags ? Object.values(shown.tags) : void 0,
-        // Le fil ne sait afficher une icône à sa place que s'il a le balisage.
-        positioned: shown !== void 0
-      })
-    };
-    const insist = extra.force ?? proposalId !== void 0;
-    if (from === "companion") {
-      speak(extra.bubble ?? { message: text2 }, insist);
-      if (proposalId !== void 0) {
-        void attendToQuestion(proposalId).catch(() => {
-        });
-        void CompanionService.emoteWhenStill(EmoteType.Questioning).catch(() => {
-        });
-      }
-    }
-    notify();
-  }
-  function speak(line, force = false) {
-    const spoken = forGame(line);
-    const message2 = !spoken.tags && spoken.message.length > MAX_LINE_LENGTH ? `${spoken.message.slice(0, MAX_LINE_LENGTH - 1).trimEnd()}\u2026` : spoken.message;
-    void CompanionService.say(message2, { tags: spoken.tags, force }).catch(() => {
-    });
-  }
-  function dropStaleProposal() {
-    const proposal = state4.proposal;
-    if (!proposal || !isExpired(proposal, Date.now())) return;
-    state4 = { ...state4, proposal: null, captured: null, log: clearProposal(state4.log, proposal.id) };
-    notify();
-  }
-  function harvestBubble(rows, sentence) {
-    const top = groupVariants(rows)[0];
-    if (!top) return compose(sentence);
-    return compose(...spaced(variantIcons(top.species, top.mutations)), " ", sentence);
-  }
-  async function proposeHarvestScope(provider) {
-    let scope;
-    try {
-      scope = await provider();
-    } catch {
-      post("companion", "system", "Could not see your garden just now.");
-      return;
-    }
-    const rows = scope.rows;
-    if (rows.length === 0) {
-      post(
-        "companion",
-        "reply",
-        scope.lockedOut > 0 ? `Your Locker is holding all ${scope.lockedOut}. Nothing I can pick.` : "Nothing is ripe right now."
-      );
-      return;
-    }
-    const team = loadCompanionSettings().harvestTeamId;
-    const proposal = openProposal(
-      "harvest",
-      describeSelection(rows),
-      rows.length,
-      withTeam(selectionSignature(rows), team)
-    );
-    state4 = { ...state4, proposal, captured: { kind: "harvest", provider, rows } };
-    const held = scope.lockedOut > 0 ? ` I am leaving ${scope.lockedOut} locked one${scope.lockedOut === 1 ? "" : "s"} alone.` : "";
-    const sentence = `I can see ${proposal.summary}.${held}${teamPromise(team)} Want me to pick them?`;
-    post("companion", "reply", sentence, proposal.id, { bubble: harvestBubble(rows, sentence) });
-  }
-  async function proposeFeedScope(provider) {
-    let picks;
-    try {
-      picks = await provider();
-    } catch {
-      post("companion", "system", "Could not check on your pets just now.");
-      return;
-    }
-    if (picks.length === 0) {
-      post("companion", "reply", "Your pets are fine, or I have nothing they eat.");
-      return;
-    }
-    const proposal = openProposal("feed", describeFeed(picks), picks.length, feedSignature(picks));
-    state4 = { ...state4, proposal, captured: { kind: "feed", provider, picks } };
-    const listed = feedQuestion(picks);
-    post("companion", "reply", listed.message, proposal.id, {
-      bubble: feedBubble(picks),
-      thread: listed
-    });
-  }
-  async function proposePlantPlan(provider) {
-    let plan;
-    try {
-      plan = await provider();
-    } catch {
-      post("companion", "system", "Could not see your garden just now.");
-      return;
-    }
-    if (plan.length === 0) {
-      post("companion", "reply", "Nothing left of that plan. Tiles filled up, or seeds ran out.");
-      return;
-    }
-    const proposal = openProposal("plant", summarizePlan(plan), plan.length, plantSignature(plan));
-    state4 = { ...state4, proposal, captured: { kind: "plant", provider, plan } };
-    const most = countByItem(plan)[0];
-    const sentence = `That is ${proposal.summary}. Want me to get started?`;
-    post("companion", "reply", sentence, proposal.id, {
-      bubble: compose(most?.kind === "seed" ? seedIcon2(most.id) : null, " ", sentence)
-    });
-  }
-  async function proposeHatchSlots(provider, rules3) {
-    let slots;
-    try {
-      slots = await provider();
-    } catch {
-      post("companion", "system", "Could not see your eggs just now.");
-      return;
-    }
-    if (slots.length === 0) {
-      post("companion", "reply", "Nothing is ready to hatch right now.");
-      return;
-    }
-    const team = loadCompanionSettings().hatchTeamId;
-    const proposal = openProposal("hatch", summarizeHatch(slots), slots.length, withTeam(slotSignature2(slots), team));
-    state4 = { ...state4, proposal, captured: { kind: "hatch", provider, rules: rules3, slots } };
-    const kinds = await readHatchScope().then((scope) => scope.eggIds).catch(() => []);
-    const sentence = `${proposal.summary}.${teamPromise(team)} Want me to open them?`;
-    post("companion", "reply", sentence, proposal.id, {
-      bubble: compose(kinds.length === 1 ? eggIcon2(kinds[0]) : null, " ", sentence)
-    });
-  }
-  async function proposeSellPlan(provider, rules3) {
-    let plan;
-    try {
-      plan = await provider();
-    } catch {
-      post("companion", "system", "Could not go through your bag just now.");
-      return;
-    }
-    if (plan.sell.length === 0) {
-      post("companion", "reply", "Nothing in your bag is up for sale.");
-      return;
-    }
-    const signature = withTeam(`${petSignature(plan.sell)}/${petSignature(plan.favourite)}`, plan.teamId);
-    const proposal = openProposal("sell", summarizeSell(plan.sell), plan.sell.length, signature);
-    state4 = { ...state4, proposal, captured: { kind: "sell", provider, rules: rules3, plan } };
-    const keeping = plan.favourite.length > 0 ? ` I would favourite the ${plan.favourite.length} you keep first.` : "";
-    const sentence = `That would be ${proposal.summary}.${keeping}${teamPromise(plan.teamId)} Should I?`;
-    post("companion", "reply", sentence, proposal.id, {
-      bubble: compose(...spaced(petRowIcons(plan.sell)), " ", sentence)
-    });
-  }
-  function reporter() {
-    return {
-      say: (kind, text2, spoken, force) => post("companion", kind, text2, void 0, { bubble: spoken, force }),
-      stopped: () => state4.cancelRequested,
-      progress: (done, total) => {
-        state4 = { ...state4, run: { done, total } };
-        notify();
-      }
-    };
-  }
-  async function runBatch(run) {
-    let stopped = false;
-    try {
-      await run(reporter());
-    } finally {
-      stopped = state4.cancelRequested;
-      state4 = { ...state4, run: null, cancelRequested: false };
-      notify();
-    }
-    return stopped;
-  }
-  async function afterHatchBatch(rules3, stop) {
+  async function afterHatch(rules3, stop) {
     if (stop === "cancelled") return;
     const scope = await readHatchScope().catch(() => null);
     if (!scope) return;
     const sellable = toSell(scope.pets, rules3);
-    const note = afterHatch(stop, scope, rules3, sellable);
+    const note = afterHatchNote(stop, scope.readySlots.length, rules3, sellable.length);
     if (note) post("companion", "system", note);
     if (sellable.length === 0) return;
-    await proposeSellPlan(sellProvider(rules3), rules3);
+    await sellCommand.propose({ provider: sellProvider(rules3), rules: rules3 });
   }
-  async function afterSellBatch(rules3) {
+  async function afterSell(rules3) {
     const provider = hatchProvider();
     const slots = await provider().catch(() => []);
     if (slots.length === 0) return;
     post("companion", "system", "There is room again.");
-    await proposeHatchSlots(provider, rules3);
+    await hatchCommand.propose({ provider, rules: rules3 });
   }
-  function teamPromise(teamId2) {
-    const name = teamName(teamId2);
-    return name ? ` I would wear ${name}, then give yours back.` : "";
+  function hatchRequest(label2, rules3) {
+    return { label: label2, propose: () => hatchCommand.propose({ provider: hatchProvider(), rules: rules3 }) };
   }
-  function withTeam(signature, teamId2) {
-    return `${signature}#team:${teamId2 ?? ""}`;
-  }
-  function openProposal(commandId, summary, size, signature) {
-    return { id: `p${nextProposalSeq++}`, commandId, summary, size, signature, createdAtMs: Date.now() };
-  }
-  async function currentSignature(captured) {
-    try {
-      const settings = loadCompanionSettings();
-      if (captured.kind === "harvest") {
-        return withTeam(selectionSignature((await captured.provider()).rows), settings.harvestTeamId);
-      }
-      if (captured.kind === "plant") return plantSignature(await captured.provider());
-      if (captured.kind === "hatch") return withTeam(slotSignature2(await captured.provider()), settings.hatchTeamId);
-      if (captured.kind === "sell") {
-        const plan = await captured.provider();
-        return withTeam(`${petSignature(plan.sell)}/${petSignature(plan.favourite)}`, plan.teamId);
-      }
-      return feedSignature(await captured.provider());
-    } catch {
-      return null;
-    }
-  }
-  async function reproposeSame(captured) {
-    if (captured.kind === "harvest") await proposeHarvestScope(captured.provider);
-    else if (captured.kind === "plant") await proposePlantPlan(captured.provider);
-    else if (captured.kind === "hatch") await proposeHatchSlots(captured.provider, captured.rules);
-    else if (captured.kind === "sell") await proposeSellPlan(captured.provider, captured.rules);
-    else await proposeFeedScope(captured.provider);
-  }
-  function capturedSize(captured) {
-    if (captured.kind === "harvest") return captured.rows.length;
-    if (captured.kind === "plant") return captured.plan.length;
-    if (captured.kind === "hatch") return captured.slots.length;
-    if (captured.kind === "sell") return captured.plan.sell.length;
-    return captured.picks.length;
-  }
-  var ALERT_DEDUPE_MS, state4, listeners2, nextProposalSeq, ACCEPTANCE, CompanionChat;
-  var init_chat = __esm({
-    "src/features/companion/chat/index.ts"() {
+  var sellSignature, hatchCommand, sellCommand;
+  var init_hatch2 = __esm({
+    "src/features/companion/chat/commands/hatch.ts"() {
       "use strict";
-      init_companion();
-      init_attend();
-      init_emoteTypes();
       init_state3();
-      init_bubbleTags();
       init_bubbleIcons();
-      init_log();
-      init_harvest();
-      init_harvestRun();
-      init_petFeed();
-      init_feedScope();
-      init_feedRun();
-      init_plant();
-      init_plantRun();
+      init_bubbleTags();
+      init_conversation();
+      init_crew();
       init_hatch();
       init_hatchRead();
       init_hatchRun();
-      init_hatchFlow();
-      init_teamSwap();
-      init_state3();
       init_proposals();
-      ALERT_DEDUPE_MS = 6e4;
-      state4 = {
-        log: emptyLog(),
-        proposal: null,
-        captured: null,
-        run: null,
-        cancelRequested: false
+      init_sellRun();
+      sellSignature = (plan) => withTeam(`${petSignature(plan.sell)}/${petSignature(plan.favourite)}`, plan.teamId);
+      hatchCommand = {
+        id: "hatch",
+        acceptance: "Yes, open them",
+        /**
+         * Asks about the eggs ready now.
+         *
+         * The keep rules play no part here: what is ripe gets opened. They travel
+         * with the request because the sale after it will use them.
+         */
+        async propose({ provider, rules: rules3 }) {
+          let slots;
+          try {
+            slots = await provider();
+          } catch {
+            post("companion", "system", "Could not see your eggs just now.");
+            return;
+          }
+          if (slots.length === 0) {
+            post("companion", "reply", "Nothing is ready to hatch right now.");
+            return;
+          }
+          const team = loadCompanionSettings().hatchTeamId;
+          const summary = summarizeHatch(slots);
+          const kinds = await readHatchScope().then((scope) => scope.eggIds).catch(() => []);
+          const text2 = `${summary}.${teamPromise(teamName(team))} Want me to open them?`;
+          ask(hatchCommand, { provider, rules: rules3, slots }, {
+            summary,
+            size: slots.length,
+            signature: withTeam(slotSignature2(slots), team),
+            text: text2,
+            bubble: compose(kinds.length === 1 ? eggIcon2(kinds[0]) : null, " ", text2)
+          });
+        },
+        async signature({ provider }) {
+          return withTeam(slotSignature2(await provider()), loadCompanionSettings().hatchTeamId);
+        },
+        async execute({ slots, rules: rules3 }, run) {
+          let stop = "done";
+          await run(async (reporter2) => {
+            stop = await executeHatchBatch(slots, reporter2);
+          });
+          await afterHatch(rules3, stop);
+        }
       };
-      listeners2 = /* @__PURE__ */ new Set();
-      nextProposalSeq = 1;
-      ACCEPTANCE = {
-        harvest: "Yes, go ahead",
-        feed: "Yes, feed them",
-        plant: "Yes, plant them",
-        hatch: "Yes, open them",
-        // Une vente ne se rattrape pas : la réponse le nomme.
-        sell: "Yes, sell them"
-      };
-      CompanionChat = {
-        getLog() {
-          return state4.log;
-        },
-        /** Retire une question à laquelle il est trop tard pour répondre. */
-        dropStaleProposal() {
-          dropStaleProposal();
-        },
+      sellCommand = {
+        id: "sell",
+        // A sale cannot be undone: the answer names it.
+        acceptance: "Yes, sell them",
         /**
-         * Retire la question en attente, sans un mot.
+         * Asks about the sale: who would go, who would be kept safe first.
          *
-         * Pour le cas où le companion cesse d'exister : il n'a plus à s'excuser de
-         * reprendre une question, il n'est plus là pour la poser. `withdrawFeedIfSettled`
-         * commente parce que la situation a changé sous les yeux du joueur ; ici c'est
-         * le joueur lui-même qui vient de le couper.
+         * The team swap is part of the question when there is one: it touches the
+         * player's team, so it cannot slip into a yes that never mentioned it.
          */
-        withdrawProposal() {
-          const proposal = state4.proposal;
-          if (!proposal) return;
-          state4 = { ...state4, proposal: null, captured: null, log: clearProposal(state4.log, proposal.id) };
-          notify();
-        },
-        /**
-         * Retire la question de nourrissage quand elle n'a plus d'objet.
-         *
-         * Le joueur a nourri les animaux lui-même, ou changé d'équipe : la question
-         * ne veut plus rien dire. La laisser en attente ferait patienter le companion
-         * auprès du joueur pour une réponse sans conséquence.
-         *
-         * On ne se retire que si PLUS AUCUN des animaux proposés n'est concerné :
-         * tant qu'il en reste un, la question garde du sens, et c'est la
-         * vérification de périmètre à la confirmation qui protège du reste.
-         */
-        withdrawFeedIfSettled(stillFeedable) {
-          const proposal = state4.proposal;
-          const captured = state4.captured;
-          if (!proposal || captured?.kind !== "feed") return false;
-          if (!isSettled(captured.picks, stillFeedable)) return false;
-          state4 = { ...state4, proposal: null, captured: null, log: clearProposal(state4.log, proposal.id) };
-          post("companion", "system", "Never mind, your pets are sorted.");
-          return true;
-        },
-        getProposal() {
-          return state4.proposal;
-        },
-        getRun() {
-          return state4.run;
-        },
-        isRunning() {
-          return state4.run !== null;
-        },
-        subscribe(listener) {
-          listeners2.add(listener);
-          return () => listeners2.delete(listener);
-        },
-        /** Alerte poussée par une source ; ignorée si identique et récente. */
-        alert(text2) {
-          state4 = {
-            ...state4,
-            log: appendAlertOnce(state4.log, { from: "companion", kind: "alert", text: text2, atMs: Date.now() }, ALERT_DEDUPE_MS)
-          };
-          notify();
-        },
-        /**
-         * Demande émise par le joueur. N'exécute rien : pose la question.
-         *
-         * `request.provider` sera rappelé à la confirmation pour vérifier que le
-         * périmètre n'a pas changé entre-temps.
-         */
-        async proposeHarvest(request2) {
-          post("you", "command", request2.label);
-          if (state4.run) {
-            post("companion", "system", "Hold on, still on the last batch.");
+        async propose({ provider, rules: rules3 }) {
+          let plan;
+          try {
+            plan = await provider();
+          } catch {
+            post("companion", "system", "Could not go through your bag just now.");
             return;
           }
-          if (request2.kind === "harvest") await proposeHarvestScope(request2.provider);
-          else if (request2.kind === "plant") await proposePlantPlan(request2.provider);
-          else if (request2.kind === "hatch") await proposeHatchSlots(request2.provider, request2.rules);
-          else await proposeFeedScope(request2.provider);
-        },
-        /**
-         * Proposition venue du companion lui-même, sans demande du joueur.
-         *
-         * Poser une question n'est pas agir : rien ne part tant que la confirmation
-         * n'a pas été donnée. On s'abstient si une question attend déjà une réponse
-         * ou si un lot tourne — se couper la parole ferait perdre la précédente.
-         */
-        async offerFeed(provider) {
-          dropStaleProposal();
-          if (state4.run || state4.proposal) return false;
-          await proposeFeedScope(provider);
-          return state4.proposal !== null;
-        },
-        /** Confirme et exécute. C'est le seul chemin qui déclenche une action. */
-        async confirm(proposalId) {
-          const proposal = state4.proposal;
-          const captured = state4.captured;
-          if (!proposal || proposal.id !== proposalId || !captured) {
-            post("companion", "system", explain("unknown"));
+          if (plan.sell.length === 0) {
+            post("companion", "reply", "Nothing in your bag is up for sale.");
             return;
           }
-          post("you", "command", ACCEPTANCE[captured.kind]);
-          const signature = await currentSignature(captured);
-          if (signature === null) {
-            post("companion", "system", "Could not check again, so I am not touching anything.");
-            return;
-          }
-          const decision = verdict(proposal, signature, Date.now());
-          if (!decision.ok) {
-            state4 = { ...state4, proposal: null, captured: null, log: clearProposal(state4.log, proposalId) };
-            post("companion", "system", explain(decision.reason));
-            if (decision.reason === "changed" || decision.reason === "expired") await reproposeSame(captured);
-            return;
-          }
-          state4 = {
-            ...state4,
-            proposal: null,
-            captured: null,
-            run: { done: 0, total: capturedSize(captured) },
-            cancelRequested: false,
-            log: clearProposal(state4.log, proposalId)
-          };
-          if (captured.kind === "harvest") {
-            await runBatch((r) => executeHarvestBatch(captured.rows, r));
-          } else if (captured.kind === "plant") {
-            await runBatch((r) => executePlantBatch(captured.plan, r));
-          } else if (captured.kind === "hatch") {
-            let stop = "done";
-            await runBatch(async (r) => {
-              stop = await executeHatchBatch(captured.slots, r);
-            });
-            await afterHatchBatch(captured.rules, stop);
-          } else if (captured.kind === "sell") {
-            const stopped = await runBatch((r) => executeSellBatch(captured.plan, r));
-            if (!stopped) await afterSellBatch(captured.rules);
-          } else {
-            await runBatch((r) => executeFeedBatch(captured.picks, r));
-          }
+          const summary = summarizeSell(plan.sell);
+          const keeping = plan.favourite.length > 0 ? ` I would favourite the ${plan.favourite.length} you keep first.` : "";
+          const text2 = `That would be ${summary}.${keeping}${teamPromise(teamName(plan.teamId))} Should I?`;
+          ask(sellCommand, { provider, rules: rules3, plan }, {
+            summary,
+            size: plan.sell.length,
+            signature: sellSignature(plan),
+            text: text2,
+            bubble: compose(...spaced(petRowIcons(plan.sell)), " ", text2)
+          });
         },
-        /** Écarte la proposition en cours sans rien exécuter. */
-        decline(proposalId) {
-          if (state4.proposal?.id !== proposalId) return;
-          state4 = { ...state4, proposal: null, captured: null, log: clearProposal(state4.log, proposalId) };
-          post("you", "command", "Not now");
-          post("companion", "system", "Alright, leaving them be.");
+        async signature({ provider }) {
+          return sellSignature(await provider());
         },
-        /** Interrompt un lot en cours. */
-        cancelRun() {
-          if (!state4.run) return;
-          state4 = { ...state4, cancelRequested: true };
-          notify();
+        async execute({ plan, rules: rules3 }, run) {
+          const stopped = await run((reporter2) => executeSellBatch(plan, reporter2));
+          if (!stopped) await afterSell(rules3);
         }
       };
     }
   });
 
-  // src/features/companion/chat/feedWatch.ts
-  async function speakInPerson(picks) {
-    try {
-      const line = forGame(feedBubble(picks));
-      await CompanionService.say(line.message, { force: true, tags: line.tags });
-    } catch {
-    }
+  // src/features/companion/menu/hatchChips.ts
+  function petSpeciesIcon2(species, sizePx = ICON_PX5) {
+    const box2 = iconSlot(sizePx);
+    const candidates = [species, species.replace(/\s+/g, "")].filter(Boolean);
+    attachSpriteIcon(box2, ["pet"], candidates, sizePx, SPRITE_LOG_TAG4, {
+      onNoSpriteFound: () => {
+        Object.assign(box2.style, { fontSize: "12px", fontWeight: "700", color: color.textDim });
+        box2.textContent = species.charAt(0).toUpperCase();
+      }
+    });
+    return box2;
   }
-  async function announceIfNeeded(picks) {
-    if (picks.length === 0) return;
-    const proposal = CompanionChat.getProposal();
-    if (proposal?.commandId !== "feed" || proposal.id === announcedProposalId) return;
-    if (!await attendToQuestion(proposal.id)) return;
-    announcedProposalId = proposal.id;
-    await speakInPerson(picks);
+  function abilityIcon(abilityId, sizePx = ICON_PX5) {
+    const box2 = iconSlot(sizePx);
+    const { bg } = getAbilityChipColors(abilityId);
+    box2.append(
+      styled("span", {
+        display: "inline-block",
+        width: "13px",
+        height: "13px",
+        borderRadius: "4px",
+        background: bg,
+        boxShadow: `0 0 0 1px ${color.fieldBg} inset, 0 0 0 1px ${color.track}`
+      })
+    );
+    return box2;
   }
-  function releaseIfIdle() {
-    if (!CompanionChat.getProposal()) stopAttending();
-  }
-  async function tick2() {
-    const settings = loadCompanionSettings();
-    if (!settings.enabled) {
-      CompanionChat.withdrawProposal();
-      stopAttending();
-      lastOfferedSignature = "";
-      announcedProposalId = null;
-      return;
-    }
-    CompanionChat.dropStaleProposal();
-    const pending6 = CompanionChat.getProposal();
-    const alertsOn = settings.feedAlerts;
-    if (pending6?.commandId !== "feed" && !alertsOn) {
-      releaseIfIdle();
-      return;
-    }
-    const picks = await findFeedable().catch(() => []);
-    if (pending6?.commandId === "feed") {
-      const withdrawn = CompanionChat.withdrawFeedIfSettled(new Set(picks.map((pick2) => pick2.petId)));
-      if (withdrawn) lastOfferedSignature = "";
-      else await announceIfNeeded(picks);
-    }
-    releaseIfIdle();
-    if (!alertsOn) return;
-    if (picks.length === 0) {
-      lastOfferedSignature = "";
-      return;
-    }
-    const signature = feedSignature(picks);
-    const now = Date.now();
-    if (signature === lastOfferedSignature && now - lastOfferedAtMs < REASK_COOLDOWN_MS) return;
-    const offered = await CompanionChat.offerFeed(() => findFeedable());
-    if (!offered) return;
-    lastOfferedSignature = signature;
-    lastOfferedAtMs = now;
-    await announceIfNeeded(picks);
-  }
-  function scheduleCheck() {
-    if (!running || settleTimer !== null) return;
-    settleTimer = window.setTimeout(() => {
-      settleTimer = null;
-      runTick();
-    }, SETTLE_MS2);
-  }
-  function checkFeedNow() {
-    lastOfferedSignature = "";
-    runTick();
-  }
-  function startFeedWatch() {
-    if (running) return;
-    running = true;
-    try {
-      unsubscribers.push(PetsService.onPetsChange(() => scheduleCheck()));
-    } catch {
-    }
-    unsubscribers.push(CompanionChat.subscribe(releaseIfIdle));
-    runTick();
-  }
-  var SETTLE_MS2, REASK_COOLDOWN_MS, settleTimer, unsubscribers, running, lastOfferedSignature, lastOfferedAtMs, announcedProposalId, runTick;
-  var init_feedWatch = __esm({
-    "src/features/companion/chat/feedWatch.ts"() {
+  var SPRITE_LOG_TAG4, ICON_PX5;
+  var init_hatchChips = __esm({
+    "src/features/companion/menu/hatchChips.ts"() {
       "use strict";
-      init_companion();
-      init_pets();
-      init_state3();
-      init_chat();
-      init_petFeed();
-      init_attend();
-      init_bubbleTags();
-      SETTLE_MS2 = 1500;
-      REASK_COOLDOWN_MS = 10 * 60 * 1e3;
-      settleTimer = null;
-      unsubscribers = [];
-      running = false;
-      lastOfferedSignature = "";
-      lastOfferedAtMs = 0;
-      announcedProposalId = null;
-      runTick = () => void tick2().catch(() => {
-      });
+      init_iconCache();
+      init_theme();
+      init_abilityChipColors();
+      init_dom3();
+      SPRITE_LOG_TAG4 = "companion-hatch";
+      ICON_PX5 = 26;
     }
   });
 
-  // src/features/companion/menu/behaviorTab.ts
-  function renderBehaviorTab(view) {
-    view.innerHTML = "";
-    const settings = CompanionService.getSettings();
-    let disposed = false;
-    const card4 = collapsibleCard({
-      icon: "\u{1F9ED}",
-      title: "Behavior",
-      description: "Is he out, and where he stays.",
-      collapsed: false,
-      onToggle: () => {
+  // src/features/companion/menu/hatchModal.ts
+  function toggled(list, value) {
+    return list.includes(value) ? list.filter((entry) => entry !== value) : [...list, value];
+  }
+  function offered(available, picked) {
+    return [.../* @__PURE__ */ new Set([...available, ...picked])].sort((a, b) => a.localeCompare(b));
+  }
+  function openHatchModal(host, onAsk) {
+    let scope = EMPTY_HATCH_SCOPE;
+    let rules3 = { ...loadCompanionSettings().hatchKeepRules };
+    const iconCache = /* @__PURE__ */ new Map();
+    const cachedIcon = (key2, make) => {
+      let known = iconCache.get(key2);
+      if (!known) {
+        known = make();
+        iconCache.set(key2, known);
       }
+      return known;
+    };
+    const modal = openModal2({
+      host,
+      title: "Hatching",
+      widthPx: 470,
+      onClose: () => clearInterval(timer2)
     });
-    const enableToggle = toggle(settings.enabled, (on) => {
-      void CompanionService.applySettings({ enabled: on }).then(() => {
-        checkFeedNow();
-        refresh();
-      }).catch(() => {
-      });
-    });
-    const modeSelect = selectField(MODE_LABELS.map(([value, label2]) => [value, label2]));
-    modeSelect.value = settings.mode;
-    modeSelect.addEventListener("change", () => {
-      void CompanionService.applySettings({ mode: modeSelect.value }).then(refresh).catch(() => {
-      });
-    });
-    const npcSelect = selectField([["", "Loading\u2026"]]);
-    npcSelect.disabled = true;
-    npcSelect.addEventListener("change", () => {
-      void CompanionService.applySettings({ npcId: npcSelect.value || null }).then(refresh).catch(() => {
-      });
-    });
-    void CompanionService.listNpcs().then((roster) => {
-      if (disposed) return;
-      npcSelect.innerHTML = "";
-      if (roster.length === 0) {
-        npcSelect.append(new Option("No NPC detected", ""));
-        return;
-      }
-      npcSelect.append(new Option("Automatic (an absent NPC)", ""));
-      for (const npc of roster) {
-        npcSelect.append(new Option(npc.present ? `${npc.name} (in game)` : npc.name, npc.playerId));
-      }
-      npcSelect.value = CompanionService.getNpcId() ?? settings.npcId ?? "";
-      npcSelect.disabled = false;
-    }).catch(() => {
-      if (disposed) return;
-      npcSelect.innerHTML = "";
-      npcSelect.append(new Option("Unavailable", ""));
-    });
-    const status2 = document.createElement("div");
-    css4(status2, { fontSize: "12px", color: TEXT_DIM, padding: "2px 2px 0" });
-    function refresh() {
-      if (disposed) return;
-      if (!CompanionService.isRunning()) {
-        status2.textContent = "Inactive.";
-        return;
-      }
-      const npcId = CompanionService.getNpcId();
-      const name = npcId ? npcId.replace(/^NPC_/, "") : "?";
-      const wanted = CompanionService.getSettings().mode;
-      const actual = CompanionService.getEffectiveMode();
-      const fallback = actual && actual !== wanted ? " (no garden found, following you)" : "";
-      status2.textContent = `Active as ${name}${fallback}. Only you can see it.`;
+    const speciesCard = filterCard("Keep species");
+    const mutationCard = filterCard("Keep mutations");
+    const abilityCard = filterCard("Keep abilities");
+    const strengthCard = filterCard("Keep by strength");
+    function commit(next) {
+      rules3 = next;
+      patchCompanionSettings({ hatchKeepRules: next });
+      render();
     }
-    const askToggle = toggle(settings.askOnScreen, (on) => {
-      void CompanionService.applySettings({ askOnScreen: on });
+    function chipRow(values, selected, labelFor2, iconFor, onPick, named = false) {
+      const row5 = tileRow();
+      for (const value of values) {
+        const shared = { icon: iconFor(value), selected: selected.includes(value), onClick: () => onPick(value) };
+        row5.append(named ? labelledTile({ ...shared, label: labelFor2(value) }) : spriteTile({ ...shared, title: labelFor2(value) }));
+      }
+      return row5;
+    }
+    function scrollable(row5) {
+      const box2 = styled("div", { maxHeight: `${ABILITY_LIST_MAX_PX}px`, overflowY: "auto", overscrollBehavior: "contain" });
+      box2.append(row5);
+      return box2;
+    }
+    function renderCard(card4, values, picked, content2) {
+      card4.root.style.display = values.length > 0 ? "flex" : "none";
+      if (values.length === 0) return;
+      card4.body.replaceChildren(content2());
+      card4.setSummary(summarize(picked.length), picked.length > 0);
+    }
+    function renderSpecies() {
+      const values = offered(scope.possibleSpecies, rules3.species);
+      renderCard(
+        speciesCard,
+        values,
+        rules3.species,
+        () => chipRow(
+          values,
+          rules3.species,
+          (name) => name,
+          (name) => cachedIcon(`species:${name}`, () => petSpeciesIcon2(name, TILE_ICON_PX2)),
+          (name) => commit({ ...rules3, species: toggled(rules3.species, name) })
+        )
+      );
+    }
+    function renderMutations() {
+      const values = offered(scope.presentMutations, rules3.mutations);
+      renderCard(
+        mutationCard,
+        values,
+        rules3.mutations,
+        () => chipRow(
+          values,
+          rules3.mutations,
+          (name) => name,
+          (name) => cachedIcon(`mutation:${name}`, () => mutationIconEl(name, TILE_ICON_PX2)),
+          (name) => commit({ ...rules3, mutations: toggled(rules3.mutations, name) })
+        )
+      );
+    }
+    function renderAbilities() {
+      const values = offered(
+        scope.possibleAbilities.map((entry) => entry.id),
+        rules3.abilities
+      );
+      const names = new Map(scope.possibleAbilities.map((entry) => [entry.id, entry.name]));
+      renderCard(
+        abilityCard,
+        values,
+        rules3.abilities,
+        () => scrollable(
+          chipRow(
+            values,
+            rules3.abilities,
+            (id) => names.get(id) ?? id,
+            (id) => cachedIcon(`ability:${id}`, () => abilityIcon(id, ABILITY_ICON_PX)),
+            (id) => commit({ ...rules3, abilities: toggled(rules3.abilities, id) }),
+            true
+          )
+        )
+      );
+    }
+    const strengthField = numberInput(MIN_STR, MAX_STR, 1, DEFAULT_STR);
+    strengthField.addEventListener("change", () => {
+      const value = Math.max(MIN_STR, Math.min(MAX_STR, Math.round(Number(strengthField.value) || DEFAULT_STR)));
+      strengthField.value = String(value);
+      commit({ ...rules3, minMaxStr: value });
     });
-    const reactionsToggle = toggle(settings.reactions, (on) => {
-      void CompanionService.applySettings({ reactions: on });
+    const strengthToggle = switchInput(rules3.minMaxStr !== null, (on) => {
+      commit({ ...rules3, minMaxStr: on ? Number(strengthField.value) || DEFAULT_STR : null });
     });
-    card4.body.append(
-      settingRow("Enable", "Brings him out next to you.", enableToggle).row,
-      settingRow("Mode", "Follows you, or stays on your plot.", modeSelect).row,
-      settingRow("Borrowed NPC", 'Whose look it takes. "In game" means already spawned.', npcSelect).row,
-      settingRow("Ask on screen", "Shows his questions at the top, portrait and all.", askToggle).row,
-      settingRow("Reactions", "Comments on weather, sales, milestones and how long you've played.", reactionsToggle).row,
-      status2
-    );
-    refresh();
-    const timer2 = window.setInterval(refresh, STATUS_REFRESH_MS);
-    view.append(card4.root);
-    view.__cleanup__ = () => {
-      disposed = true;
-      clearInterval(timer2);
+    {
+      const control = styled("div", { display: "flex", alignItems: "center", gap: "10px" });
+      control.append(strengthField.wrap, strengthToggle);
+      strengthCard.body.append(fieldRow("Keep max STR from", control));
+    }
+    const strip = resultBox();
+    strip.root.style.gap = "5px";
+    const note = styled("div", { fontSize: "11px", lineHeight: "1.5", color: color.textDim });
+    strip.root.append(note);
+    const resetButton = button("Reset", { size: "sm", block: true, onClick: () => commit({ ...DEFAULT_KEEP_RULES }) });
+    const askButton = button("Ask to hatch", {
+      size: "sm",
+      block: true,
+      variant: "primary",
+      onClick: () => {
+        onAsk(hatchRequest(describeHatchRequest(scope.readySlots.length), rules3));
+        modal.close();
+      }
+    });
+    askButton.style.marginLeft = "auto";
+    const notice = settingsNotice("hatch", "Hatching is not set up. I will use the team you have on.", () => {
+      modal.close();
+      openHatchSettingsModal(host, () => openSettingsModal(host));
+    });
+    modal.body.append(notice, speciesCard.root, mutationCard.root, abilityCard.root, strengthCard.root, strip.root);
+    modal.footer.append(resetButton, askButton);
+    function render() {
+      if (!modal.isOpen()) return;
+      renderSpecies();
+      renderMutations();
+      renderAbilities();
+      strengthField.disabled = rules3.minMaxStr === null;
+      if (rules3.minMaxStr !== null) strengthField.value = String(rules3.minMaxStr);
+      strengthField.wrap.style.opacity = rules3.minMaxStr === null ? "0.45" : "1";
+      strengthCard.setSummary(rules3.minMaxStr === null ? "Off" : `${rules3.minMaxStr} and up`, rules3.minMaxStr !== null);
+      const ready = scope.readySlots.length;
+      const waiting = scope.totalEggs - ready;
+      strip.headline.textContent = ready === 0 ? "No egg is ready" : `${ready} egg${ready === 1 ? "" : "s"} ready`;
+      if (!hasAnyRule(rules3)) {
+        note.textContent = "Nothing set to keep, so I will not offer to sell. Favourites and your active team are always safe.";
+        note.style.color = color.warn;
+      } else {
+        note.textContent = `Favourites and your active team are never sold.${waiting > 0 ? ` ${waiting} still growing.` : ""}`;
+        note.style.color = color.textDim;
+      }
+      askButton.setEnabled(ready > 0);
+    }
+    async function refresh() {
+      if (!modal.isOpen()) return;
+      scope = await readHatchScope().catch(() => EMPTY_HATCH_SCOPE);
+      if (!modal.isOpen()) return;
+      render();
+    }
+    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS3);
+    render();
+    void refresh();
+  }
+  var REFRESH_MS3, TILE_ICON_PX2, ABILITY_ICON_PX, ABILITY_LIST_MAX_PX, MIN_STR, MAX_STR, DEFAULT_STR, summarize;
+  var init_hatchModal = __esm({
+    "src/features/companion/menu/hatchModal.ts"() {
+      "use strict";
+      init_button();
+      init_fields();
+      init_modal();
+      init_theme();
+      init_toggles();
+      init_hatch2();
+      init_hatch();
+      init_hatchRead();
+      init_state3();
+      init_dom3();
+      init_harvestChips();
+      init_harvestFields();
+      init_hatchChips();
+      init_hatchSettingsModal();
+      init_settingsNotice();
+      init_settingsModal();
+      REFRESH_MS3 = 4e3;
+      TILE_ICON_PX2 = 26;
+      ABILITY_ICON_PX = 16;
+      ABILITY_LIST_MAX_PX = 190;
+      MIN_STR = 1;
+      MAX_STR = 100;
+      DEFAULT_STR = 95;
+      summarize = (count) => count === 0 ? "None" : `${count} picked`;
+    }
+  });
+
+  // src/features/companion/chat/plantRun.ts
+  function topSeed(plan) {
+    const most = countByItem(plan)[0];
+    return most?.kind === "seed" ? seedIcon2(most.id) : null;
+  }
+  async function send2(assignment) {
+    if (assignment.kind === "egg") {
+      await PlayerService.plantEgg(assignment.tileIndex, assignment.id);
+      return;
+    }
+    await PlayerService.plantSeed(assignment.tileIndex, assignment.id);
+  }
+  async function countPlanted(attempted) {
+    try {
+      const { occupied } = await readPlantScope();
+      return attempted.filter((assignment) => occupied.has(assignment.tileIndex)).length;
+    } catch {
+      return null;
+    }
+  }
+  async function report2(attempted, cancelled, reporter2) {
+    if (attempted.length === 0) {
+      reporter2.say("report", "Stopped before I planted anything.");
+      return;
+    }
+    await sleep2(SETTLE_MS);
+    const planted = await countPlanted(attempted);
+    const stopped = cancelled ? " before you stopped me" : "";
+    if (planted === null) {
+      reporter2.say("report", `Planted all ${attempted.length}${stopped}, but I could not check.`);
+      return;
+    }
+    if (planted > 0) StatsService.incrementGardenStat("totalPlanted", planted);
+    if (planted === attempted.length) {
+      const done = cancelled ? `Stopped there. ${planted} are in the ground.` : `All done, ${planted} planted.`;
+      reporter2.say("report", done, compose(topSeed(attempted), " ", done));
+      return;
+    }
+    if (planted === 0) {
+      reporter2.say("report", "None took. The tiles are still bare, so the seeds probably ran out.");
+      return;
+    }
+    reporter2.say("report", `Planted ${planted} of ${attempted.length}${stopped}. The rest would not go in.`);
+  }
+  async function executePlantBatch(plan, reporter2) {
+    const what = countByItem(plan);
+    const opening = what.length === 1 ? `On it. Planting ${plan.length} ${what[0].name} now.` : `On it. Planting ${listPlantItems(plan)} now.`;
+    reporter2.say("reply", opening, compose(topSeed(plan), " ", opening));
+    const attempted = [];
+    await runSteps({
+      items: plan,
+      reporter: reporter2,
+      hire: () => hireCrew(reporter2),
+      async step(assignment, walker, pace) {
+        await walker.toGardenTile(assignment.tileIndex);
+        await pace.wait();
+        attempted.push(assignment);
+        await send2(assignment);
+        pace.mark();
+      },
+      progressNote: (done, total) => `${done} of ${total} in the ground so far...`
+    });
+    await report2(attempted, reporter2.stopped(), reporter2);
+  }
+  var init_plantRun = __esm({
+    "src/features/companion/chat/plantRun.ts"() {
+      "use strict";
+      init_async2();
+      init_player();
+      init_stats();
+      init_batch();
+      init_bubbleIcons();
+      init_bubbleTags();
+      init_crew();
+      init_plant();
+      init_plantRead();
+    }
+  });
+
+  // src/features/companion/chat/commands/plant.ts
+  function plantRequest(label2, provider) {
+    return { label: label2, propose: () => plantCommand.propose({ provider }) };
+  }
+  var plantCommand;
+  var init_plant2 = __esm({
+    "src/features/companion/chat/commands/plant.ts"() {
+      "use strict";
+      init_bubbleIcons();
+      init_bubbleTags();
+      init_conversation();
+      init_plant();
+      init_plantRun();
+      plantCommand = {
+        id: "plant",
+        acceptance: "Yes, plant them",
+        /**
+         * Asks about the plan, cut down to what still stands.
+         *
+         * The player drew the plan; the provider does not reinvent it, it holds it
+         * against the garden. A plan that became empty means the tiles filled up or
+         * the seeds ran out, and that gets said rather than asking a pointless question.
+         */
+        async propose({ provider }) {
+          let plan;
+          try {
+            plan = await provider();
+          } catch {
+            post("companion", "system", "Could not see your garden just now.");
+            return;
+          }
+          if (plan.length === 0) {
+            post("companion", "reply", "Nothing left of that plan. Tiles filled up, or seeds ran out.");
+            return;
+          }
+          const summary = summarizePlan(plan);
+          const text2 = `That is ${summary}. Want me to get started?`;
+          const most = countByItem(plan)[0];
+          ask(plantCommand, { provider, plan }, {
+            summary,
+            size: plan.length,
+            signature: plantSignature(plan),
+            text: text2,
+            bubble: compose(most?.kind === "seed" ? seedIcon2(most.id) : null, " ", text2)
+          });
+        },
+        async signature({ provider }) {
+          return plantSignature(await provider());
+        },
+        async execute({ plan }, run) {
+          await run((reporter2) => executePlantBatch(plan, reporter2));
+        }
+      };
+    }
+  });
+
+  // src/features/companion/menu/plantGrid.ts
+  function plantGrid(options2) {
+    const root4 = styled("div", {
+      display: "grid",
+      gridTemplateColumns: `repeat(${GARDEN_COLS / 2}, 1fr) ${HALF_GAP_PX2}px repeat(${GARDEN_COLS / 2}, 1fr)`,
+      gridTemplateRows: `repeat(${GARDEN_ROWS}, 1fr)`,
+      gap: "2px",
+      height: `min(38vh, ${MAX_GRID_HEIGHT_PX}px)`,
+      aspectRatio: `${GARDEN_COLS} / ${GARDEN_ROWS}`,
+      width: "auto",
+      margin: "0 auto",
+      padding: "6px",
+      borderRadius: "12px",
+      border: `1px solid ${color.border}`,
+      background: color.fieldBg,
+      boxSizing: "border-box",
+      flex: "0 0 auto"
+    });
+    root4.addEventListener("contextmenu", (event) => event.preventDefault());
+    const cells = /* @__PURE__ */ new Map();
+    let painting = false;
+    let mode = "assign";
+    const stopPainting = () => {
+      painting = false;
+    };
+    window.addEventListener("mouseup", stopPainting);
+    function buildCell(tileIndex) {
+      const cell = styled("div", {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "4px",
+        userSelect: "none",
+        border: "1px solid transparent",
+        transition: "background 90ms ease"
+      });
+      cell.dataset.tile = String(tileIndex);
+      cell.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        painting = true;
+        mode = event.button === 2 ? "erase" : "assign";
+        options2.onPaint(tileIndex, mode);
+      });
+      cell.addEventListener("mouseenter", () => {
+        if (painting) options2.onPaint(tileIndex, mode);
+      });
+      return cell;
+    }
+    for (let row5 = 0; row5 < GARDEN_ROWS; row5++) {
+      for (let col = 0; col < GARDEN_COLS; col++) {
+        if (col === GARDEN_COLS / 2) root4.append(styled("div", { pointerEvents: "none" }));
+        const tileIndex = row5 * GARDEN_COLS + col;
+        const el = buildCell(tileIndex);
+        cells.set(tileIndex, { el, shown: null });
+        root4.append(el);
+      }
+    }
+    function stateKey(tileIndex, owned2, occupied) {
+      if (!owned2.has(tileIndex)) return "absent";
+      if (occupied.has(tileIndex)) return "occupied";
+      const assignment = options2.assignmentAt(tileIndex);
+      return assignment ? `set:${assignment.kind}:${assignment.id}` : "free";
+    }
+    function paintCell(cell, tileIndex, key2) {
+      cell.shown = key2;
+      cell.el.replaceChildren();
+      if (key2 === "absent") {
+        Object.assign(cell.el.style, { background: "transparent", borderColor: "transparent", cursor: "default" });
+        cell.el.title = "";
+        return;
+      }
+      if (key2 === "occupied") {
+        Object.assign(cell.el.style, { background: color.dangerHover, borderColor: color.danger, cursor: "not-allowed" });
+        cell.el.title = "Something is already growing here";
+        return;
+      }
+      if (key2 === "free") {
+        Object.assign(cell.el.style, { background: color.hoverBg, borderColor: color.border, cursor: "pointer" });
+        cell.el.title = "";
+        return;
+      }
+      const assignment = options2.assignmentAt(tileIndex);
+      Object.assign(cell.el.style, { background: color.accentSoft, borderColor: color.accentBorder, cursor: "pointer" });
+      cell.el.title = assignment?.name ?? "";
+      if (assignment) {
+        const icon2 = options2.iconFor(assignment, CELL_ICON_PX2);
+        icon2.style.pointerEvents = "none";
+        cell.el.append(icon2);
+      }
+    }
+    return {
+      root: root4,
+      update() {
+        const owned2 = options2.owned();
+        const occupied = options2.occupied();
+        for (let tileIndex = 0; tileIndex < GARDEN_TILE_COUNT; tileIndex++) {
+          const cell = cells.get(tileIndex);
+          if (!cell) continue;
+          const key2 = stateKey(tileIndex, owned2, occupied);
+          if (key2 !== cell.shown) paintCell(cell, tileIndex, key2);
+        }
+      },
+      destroy() {
+        window.removeEventListener("mouseup", stopPainting);
+      }
     };
   }
-  var STATUS_REFRESH_MS, MODE_LABELS;
-  var init_behaviorTab = __esm({
-    "src/features/companion/menu/behaviorTab.ts"() {
+  var MAX_GRID_HEIGHT_PX, CELL_ICON_PX2, HALF_GAP_PX2;
+  var init_plantGrid = __esm({
+    "src/features/companion/menu/plantGrid.ts"() {
       "use strict";
-      init_companion();
-      init_feedWatch();
-      init_panel();
-      init_layout();
-      STATUS_REFRESH_MS = 1e3;
-      MODE_LABELS = [
-        ["follow", "Follow me"],
-        ["garden", "Stay in my garden"]
-      ];
+      init_theme();
+      init_plant();
+      init_dom3();
+      MAX_GRID_HEIGHT_PX = 300;
+      CELL_ICON_PX2 = 20;
+      HALF_GAP_PX2 = 12;
+    }
+  });
+
+  // src/features/companion/menu/plantModal.ts
+  function paletteGroup(title) {
+    const root4 = styled("div", { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
+    const row5 = styled("div", { display: "flex", flexWrap: "wrap", gap: "5px" });
+    root4.append(sectionLabel(title), row5);
+    return { root: root4, row: row5 };
+  }
+  function openPlantModal(host, onAsk) {
+    let scope = EMPTY_SCOPE;
+    let plan = /* @__PURE__ */ new Map();
+    let held = null;
+    let owned2 = /* @__PURE__ */ new Set();
+    let tiles = /* @__PURE__ */ new Map();
+    let paletteSignature = "";
+    const stripIcons = /* @__PURE__ */ new Map();
+    const modal = openModal2({
+      host,
+      title: "What should I plant?",
+      widthPx: 700,
+      onClose: () => {
+        clearInterval(timer2);
+        grid.destroy();
+      }
+    });
+    const seedGroup = paletteGroup("Seeds");
+    const eggGroup = paletteGroup("Eggs");
+    const paletteEmpty = styled("div", { fontSize: "12px", color: color.textDim, lineHeight: "1.5" }, "Nothing to plant. No seeds, no eggs.");
+    const hint2 = styled(
+      "div",
+      { fontSize: "11px", color: color.textDim, lineHeight: "1.5" },
+      "Pick one and draw. Right click erases, red is taken."
+    );
+    const grid = plantGrid({
+      owned: () => owned2,
+      occupied: () => scope.occupied,
+      assignmentAt: (tileIndex) => plan.get(tileIndex) ?? null,
+      iconFor: (assignment, sizePx) => plantItemIcon(assignment, sizePx),
+      onPaint: (tileIndex, mode) => paint(tileIndex, mode)
+    });
+    const strip = resultBox();
+    const stripIconRow = styled("div", { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" });
+    strip.root.append(stripIconRow);
+    const clearButton = button("Clear", {
+      size: "sm",
+      block: true,
+      onClick: () => {
+        plan = /* @__PURE__ */ new Map();
+        render();
+      }
+    });
+    const askButton = button("Ask to plant these", {
+      size: "sm",
+      block: true,
+      variant: "primary",
+      onClick: () => {
+        const drawn = [...plan.values()];
+        onAsk(plantRequest(describePlan(drawn), async () => viablePlan(drawn, await readPlantScope())));
+        modal.close();
+      }
+    });
+    askButton.style.marginLeft = "auto";
+    modal.body.append(seedGroup.root, eggGroup.root, paletteEmpty, hint2, grid.root, strip.root);
+    modal.footer.append(clearButton, askButton);
+    function remainingFor(item) {
+      return stockLeft([...plan.values()], scope.items).get(itemKey(item)) ?? 0;
+    }
+    function paint(tileIndex, mode) {
+      if (mode === "erase") {
+        if (plan.delete(tileIndex)) render();
+        return;
+      }
+      if (!held) return;
+      if (!owned2.has(tileIndex) || scope.occupied.has(tileIndex)) return;
+      const current3 = plan.get(tileIndex);
+      if (current3 && itemKey(current3) === itemKey(held)) return;
+      if (current3) plan.delete(tileIndex);
+      if (remainingFor(held) <= 0) {
+        if (current3) plan.set(tileIndex, current3);
+        return;
+      }
+      plan.set(tileIndex, { tileIndex, kind: held.kind, id: held.id, name: held.name });
+      render();
+    }
+    function syncPalette() {
+      const signature = scope.items.map(itemKey).join("|");
+      if (signature === paletteSignature) return;
+      paletteSignature = signature;
+      tiles = /* @__PURE__ */ new Map();
+      seedGroup.row.replaceChildren();
+      eggGroup.row.replaceChildren();
+      for (const item of scope.items) {
+        const tile = plantTile(item, () => {
+          held = item;
+          render();
+        });
+        tiles.set(itemKey(item), tile);
+        (item.kind === "egg" ? eggGroup : seedGroup).row.append(tile.el);
+      }
+      if (held && !tiles.has(itemKey(held))) held = null;
+      if (!held) held = scope.items[0] ?? null;
+    }
+    function renderStrip() {
+      const drawn = [...plan.values()];
+      strip.headline.textContent = drawn.length === 0 ? "Nothing to plant yet" : `${drawn.length} tile${drawn.length === 1 ? "" : "s"}`;
+      stripIconRow.style.display = drawn.length === 0 ? "none" : "flex";
+      stripIconRow.replaceChildren(
+        ...countByItem(drawn).map((entry) => {
+          const key2 = itemKey(entry);
+          let icon2 = stripIcons.get(key2);
+          if (!icon2) {
+            icon2 = plantItemIcon(entry, STRIP_ICON_PX);
+            stripIcons.set(key2, icon2);
+          }
+          return countedIcon(icon2, entry.name, entry.count);
+        })
+      );
+    }
+    function render() {
+      if (!modal.isOpen()) return;
+      syncPalette();
+      const left = stockLeft([...plan.values()], scope.items);
+      for (const item of scope.items) {
+        const key2 = itemKey(item);
+        tiles.get(key2)?.update(left.get(key2) ?? 0, held !== null && itemKey(held) === key2);
+      }
+      const hasItems = scope.items.length > 0;
+      for (const group2 of [seedGroup, eggGroup]) {
+        group2.root.style.display = group2.row.childElementCount > 0 ? "flex" : "none";
+      }
+      paletteEmpty.style.display = hasItems ? "none" : "";
+      hint2.style.display = hasItems ? "" : "none";
+      grid.root.style.display = hasItems ? "grid" : "none";
+      grid.update();
+      renderStrip();
+      askButton.setEnabled(plan.size > 0);
+    }
+    async function refresh() {
+      if (!modal.isOpen()) return;
+      scope = await readPlantScope().catch(() => EMPTY_SCOPE);
+      if (!modal.isOpen()) return;
+      owned2 = new Set(scope.tiles);
+      plan = new Map(viablePlan([...plan.values()], scope).map((entry) => [entry.tileIndex, entry]));
+      render();
+    }
+    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS4);
+    render();
+    void refresh();
+  }
+  var REFRESH_MS4, STRIP_ICON_PX;
+  var init_plantModal = __esm({
+    "src/features/companion/menu/plantModal.ts"() {
+      "use strict";
+      init_button();
+      init_card();
+      init_modal();
+      init_theme();
+      init_plant2();
+      init_plant();
+      init_plantRead();
+      init_dom3();
+      init_harvestFields();
+      init_plantChips();
+      init_plantGrid();
+      REFRESH_MS4 = 4e3;
+      STRIP_ICON_PX = 24;
+    }
+  });
+
+  // src/features/companion/menu/actionsModal.ts
+  function openActionsModal(host, onAsk) {
+    const modal = openModal2({ host, title: "What can you do?", widthPx: 420 });
+    const list = styled("div", { display: "flex", flexDirection: "column", gap: "8px" });
+    modal.body.append(list);
+    function renderRows(rows) {
+      if (!modal.isOpen()) return;
+      list.replaceChildren(
+        ...rows.map(
+          (action2) => menuCard({
+            name: action2.name,
+            detail: action2.unavailable ?? action2.description,
+            disabled: action2.unavailable !== null,
+            onClick: () => {
+              modal.close();
+              action2.run();
+            }
+          })
+        )
+      );
+    }
+    async function refresh() {
+      if (!modal.isOpen()) return;
+      const [harvestable, feedable, plantable, hatchable] = await Promise.all([
+        readHarvestable().catch(() => ({ rows: [], lockedOut: 0 })),
+        reviewFeeding().catch(() => ({ candidates: [], hungry: 0, waitingOnGardenRule: 0 })),
+        readPlantScope().catch(() => EMPTY_SCOPE),
+        readHatchScope().catch(() => EMPTY_HATCH_SCOPE)
+      ]);
+      if (!modal.isOpen()) return;
+      const freeTiles = plantable.tiles.filter((tile) => !plantable.occupied.has(tile)).length;
+      renderRows([
+        {
+          name: "Harvest",
+          description: DESCRIPTIONS.harvest,
+          unavailable: harvestable.rows.length > 0 ? null : harvestable.lockedOut > 0 ? "Everything ripe is locked right now." : "Nothing is ripe yet.",
+          run: () => openHarvestModal(host, onAsk)
+        },
+        {
+          name: "Feed a pet",
+          description: DESCRIPTIONS.feed,
+          // "Nothing to do" used to cover three cases: it says which.
+          unavailable: feedable.candidates.length > 0 ? null : feedable.waitingOnGardenRule > 0 ? `${feedable.waitingOnGardenRule} could eat from the garden, but that is off in Settings.` : feedable.hungry > 0 ? `${feedable.hungry} hungry, but I have nothing they eat.` : "No pet is hungry enough.",
+          run: () => openFeedModal(host, onAsk)
+        },
+        {
+          name: "Plant",
+          description: DESCRIPTIONS.plant,
+          // Two distinct blocks: nothing to sow, or nowhere to sow it.
+          unavailable: plantable.items.length === 0 ? "You have no seeds and no eggs." : freeTiles === 0 ? "Your plot is full." : null,
+          run: () => openPlantModal(host, onAsk)
+        },
+        {
+          name: "Hatch",
+          description: DESCRIPTIONS.hatch,
+          // A bag already full is not "nothing to do": it is a hatch that would
+          // give nothing, and that is said differently.
+          unavailable: hatchable.readySlots.length === 0 ? hatchable.totalEggs > 0 ? `${hatchable.totalEggs} still growing.` : "No eggs in the ground." : hatchable.inventoryCount >= hatchable.capacity ? "Your bag is full." : null,
+          run: () => openHatchModal(host, onAsk)
+        }
+      ]);
+    }
+    const checking = (name, description) => ({
+      name,
+      description,
+      unavailable: "Checking...",
+      run: () => {
+      }
+    });
+    renderRows([
+      checking("Harvest", DESCRIPTIONS.harvest),
+      checking("Feed a pet", DESCRIPTIONS.feed),
+      checking("Plant", DESCRIPTIONS.plant),
+      checking("Hatch", DESCRIPTIONS.hatch)
+    ]);
+    void refresh();
+  }
+  var DESCRIPTIONS;
+  var init_actionsModal = __esm({
+    "src/features/companion/menu/actionsModal.ts"() {
+      "use strict";
+      init_modal();
+      init_feedRead();
+      init_gardenRead();
+      init_hatchRead();
+      init_plant();
+      init_plantRead();
+      init_dom3();
+      init_feedModal();
+      init_harvestModal();
+      init_hatchModal();
+      init_plantModal();
+      DESCRIPTIONS = {
+        harvest: "Pick what your Locker lets me touch.",
+        feed: "Feed a pet something it likes.",
+        plant: "Draw where your seeds and eggs go.",
+        hatch: "Open ripe eggs and sort what hatches."
+      };
+    }
+  });
+
+  // src/features/companion/menu/chatIcons.ts
+  function splitSpriteKey(key2) {
+    const parts = key2.split(/[?#]/)[0].split("/").filter(Boolean);
+    if (parts.length < 2) return null;
+    const name = parts[parts.length - 1].replace(/\.[a-z0-9]+$/i, "");
+    return name ? { category: parts[parts.length - 2], name } : null;
+  }
+  function holder(sizePx) {
+    const box2 = iconSlot(sizePx, true);
+    box2.style.verticalAlign = "-4px";
+    box2.style.marginRight = "4px";
+    return box2;
+  }
+  function petSpeciesOf2(pet) {
+    const species = pet?.petSpecies;
+    return typeof species === "string" && species ? species : null;
+  }
+  function tagIcon(tag, sizePx) {
+    if ("mutation" in tag) {
+      const box3 = holder(sizePx);
+      attachSpriteIcon(box3, ["ui", "mutation"], [`Mutation${tag.mutation}`, tag.mutation], sizePx, SPRITE_LOG_TAG5);
+      return box3;
+    }
+    if ("petThing" in tag) {
+      const species = petSpeciesOf2(tag.petThing.pet);
+      if (!species) return null;
+      const box3 = holder(sizePx);
+      attachSpriteIcon(box3, ["pet"], [species, species.replace(/\s+/g, "")], sizePx, SPRITE_LOG_TAG5);
+      return box3;
+    }
+    const split = splitSpriteKey(tag.gameThing.sprite);
+    if (!split) return null;
+    const box2 = holder(sizePx);
+    attachSpriteIcon(box2, [split.category], [split.name], sizePx, SPRITE_LOG_TAG5);
+    return box2;
+  }
+  function tagIcons(tags, sizePx) {
+    if (!tags || tags.length === 0) return [];
+    return tags.map((tag) => tagIcon(tag, sizePx)).filter((icon2) => icon2 !== null);
+  }
+  function renderTagged(text2, tags, sizePx) {
+    if (!tags || tags.length === 0) return [document.createTextNode(text2)];
+    const out = [];
+    let cursor = 0;
+    for (const match of text2.matchAll(TAG_MARKER)) {
+      const at = match.index ?? 0;
+      if (at > cursor) out.push(document.createTextNode(text2.slice(cursor, at)));
+      cursor = at + match[0].length;
+      const tag = tags[Number(match[1])];
+      const icon2 = tag ? tagIcon(tag, sizePx) : null;
+      if (icon2) out.push(icon2);
+    }
+    if (cursor < text2.length) out.push(document.createTextNode(text2.slice(cursor)));
+    return out;
+  }
+  var SPRITE_LOG_TAG5, TAG_MARKER;
+  var init_chatIcons = __esm({
+    "src/features/companion/menu/chatIcons.ts"() {
+      "use strict";
+      init_iconCache();
+      init_dom3();
+      SPRITE_LOG_TAG5 = "companion-thread";
+      TAG_MARKER = /<(\d+)\/>/g;
     }
   });
 
@@ -47096,94 +47993,18 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/companion/menu/chatIcons.ts
-  function splitSpriteKey(key2) {
-    const parts = key2.split(/[?#]/)[0].split("/").filter(Boolean);
-    if (parts.length < 2) return null;
-    const name = parts[parts.length - 1].replace(/\.[a-z0-9]+$/i, "");
-    return name ? { category: parts[parts.length - 2], name } : null;
-  }
-  function holder(sizePx) {
-    const box2 = document.createElement("span");
-    css4(box2, {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: `${sizePx}px`,
-      height: `${sizePx}px`,
-      verticalAlign: "-4px",
-      marginRight: "4px",
-      flexShrink: "0"
-    });
-    return box2;
-  }
-  function petSpeciesOf2(pet) {
-    const species = pet?.petSpecies;
-    return typeof species === "string" && species ? species : null;
-  }
-  function tagIcon(tag, sizePx) {
-    if ("mutation" in tag) {
-      const box3 = holder(sizePx);
-      attachSpriteIcon(box3, ["ui", "mutation"], [`Mutation${tag.mutation}`, tag.mutation], sizePx, SPRITE_LOG_TAG4);
-      return box3;
-    }
-    if ("petThing" in tag) {
-      const species = petSpeciesOf2(tag.petThing.pet);
-      if (!species) return null;
-      const box3 = holder(sizePx);
-      attachSpriteIcon(box3, ["pet"], [species, species.replace(/\s+/g, "")], sizePx, SPRITE_LOG_TAG4);
-      return box3;
-    }
-    const split = splitSpriteKey(tag.gameThing.sprite);
-    if (!split) return null;
-    const box2 = holder(sizePx);
-    attachSpriteIcon(box2, [split.category], [split.name], sizePx, SPRITE_LOG_TAG4);
-    return box2;
-  }
-  function tagIcons(tags, sizePx) {
-    if (!tags || tags.length === 0) return [];
-    return tags.map((tag) => tagIcon(tag, sizePx)).filter((icon2) => icon2 !== null);
-  }
-  function renderTagged(text2, tags, sizePx) {
-    if (!tags || tags.length === 0) return [document.createTextNode(text2)];
-    const out = [];
-    let cursor = 0;
-    for (const match of text2.matchAll(TAG_MARKER)) {
-      const at = match.index ?? 0;
-      if (at > cursor) out.push(document.createTextNode(text2.slice(cursor, at)));
-      cursor = at + match[0].length;
-      const tag = tags[Number(match[1])];
-      const icon2 = tag ? tagIcon(tag, sizePx) : null;
-      if (icon2) out.push(icon2);
-    }
-    if (cursor < text2.length) out.push(document.createTextNode(text2.slice(cursor)));
-    return out;
-  }
-  var SPRITE_LOG_TAG4, TAG_MARKER;
-  var init_chatIcons = __esm({
-    "src/features/companion/menu/chatIcons.ts"() {
-      "use strict";
-      init_iconCache();
-      init_panel();
-      SPRITE_LOG_TAG4 = "companion-thread";
-      TAG_MARKER = /<(\d+)\/>/g;
-    }
-  });
-
   // src/features/companion/menu/chatView.ts
   function contentOf(text2, icons, positioned2, sizePx) {
     if (positioned2) return renderTagged(text2, icons, sizePx);
-    const label2 = document.createElement("span");
-    label2.textContent = text2;
-    return [...tagIcons(icons, sizePx), label2];
+    return [...tagIcons(icons, sizePx), styled("span", {}, text2)];
   }
   function isCentered(message2) {
     return message2.kind === "system";
   }
-  function isSameGroup(previous, current2) {
-    if (isCentered(previous) || isCentered(current2)) return false;
-    if (previous.from !== current2.from) return false;
-    return current2.atMs - previous.atMs < GROUP_WINDOW_MS;
+  function isSameGroup(previous, current3) {
+    if (isCentered(previous) || isCentered(current3)) return false;
+    if (previous.from !== current3.from) return false;
+    return current3.atMs - previous.atMs < GROUP_WINDOW_MS;
   }
   function formatMessageTime(atMs) {
     try {
@@ -47208,32 +48029,28 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   }
   function dateSeparator(label2) {
-    const wrap = document.createElement("div");
-    css4(wrap, { display: "flex", alignItems: "center", gap: "10px", margin: "10px 0 6px" });
-    const line = () => {
-      const el = document.createElement("div");
-      css4(el, { flex: "1", height: "1px", background: BORDER });
-      return el;
-    };
-    const text2 = document.createElement("div");
-    css4(text2, {
-      fontSize: "10px",
-      fontWeight: "600",
-      color: TEXT_DIM,
-      whiteSpace: "nowrap",
-      textTransform: "uppercase",
-      letterSpacing: "0.5px"
-    });
-    text2.textContent = label2;
+    const line = () => styled("div", { flex: "1", height: "1px", background: color.border });
+    const text2 = styled(
+      "div",
+      {
+        fontSize: "10px",
+        fontWeight: "600",
+        color: color.textDim,
+        whiteSpace: "nowrap",
+        textTransform: "uppercase",
+        letterSpacing: "0.5px"
+      },
+      label2
+    );
+    const wrap = styled("div", { display: "flex", alignItems: "center", gap: "10px", margin: "10px 0 6px" });
     wrap.append(line(), text2, line());
     return wrap;
   }
   function systemLine(text2, icons, positioned2 = false) {
-    const line = document.createElement("div");
-    css4(line, {
+    const line = styled("div", {
       alignSelf: "center",
       fontSize: "11px",
-      color: TEXT_DIM,
+      color: color.textDim,
       textAlign: "center",
       padding: "2px 8px",
       maxWidth: "90%"
@@ -47242,8 +48059,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return line;
   }
   function avatar2(identity, sizePx = AVATAR_PX) {
-    const el = document.createElement("div");
-    css4(el, {
+    const el = styled("div", {
       width: `${sizePx}px`,
       height: `${sizePx}px`,
       flexShrink: "0",
@@ -47254,90 +48070,72 @@ Restore figures are averages; unlucky streaks do worse.`;
       justifyContent: "center",
       fontSize: `${Math.round(sizePx * 0.45)}px`,
       fontWeight: "600",
-      color: TEAL,
-      background: "linear-gradient(135deg, rgba(94,234,212,0.25), rgba(59,130,246,0.25))"
+      color: color.accent,
+      background: color.accentHover
     });
     const name = (identity?.name ?? "").trim();
     if (name) el.textContent = name.charAt(0).toUpperCase();
     fillWithPortrait(el, identity?.npcId ?? null);
     return el;
   }
-  function spacer() {
-    const el = document.createElement("div");
-    css4(el, { width: `${AVATAR_PX}px`, flexShrink: "0" });
-    return el;
-  }
   function messageRow(message2, flags, identity = null) {
     if (isCentered(message2)) return systemLine(message2.text, message2.icons, message2.positioned);
     const outgoing = message2.from === "you";
-    const alerting = message2.kind === "alert";
-    const row4 = document.createElement("div");
-    css4(row4, {
+    const row5 = styled("div", {
       display: "flex",
       gap: "8px",
       alignItems: "flex-end",
       justifyContent: outgoing ? "flex-end" : "flex-start",
       ...flags.isFirstInGroup ? {} : { marginTop: "-4px" }
     });
-    if (!outgoing) row4.append(flags.isLastInGroup ? avatar2(identity) : spacer());
-    const column = document.createElement("div");
-    css4(column, {
+    if (!outgoing) row5.append(flags.isLastInGroup ? avatar2(identity) : styled("div", { width: `${AVATAR_PX}px`, flexShrink: "0" }));
+    const column = styled("div", {
       maxWidth: "78%",
       display: "flex",
       flexDirection: "column",
       gap: flags.isLastInGroup ? "3px" : "0",
       alignItems: outgoing ? "flex-end" : "flex-start"
     });
-    const bubble = document.createElement("div");
-    css4(bubble, {
+    const bubble = styled("div", {
       padding: "7px 11px",
       borderRadius: outgoing ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
       fontSize: "12.5px",
       lineHeight: "1.5",
       wordBreak: "break-word",
       whiteSpace: "pre-wrap",
-      background: outgoing ? OUTGOING_BG : alerting ? ALERT_BG : INCOMING_BG,
-      border: `1px solid ${outgoing ? OUTGOING_BORDER : alerting ? ALERT_BORDER : BORDER}`,
-      color: outgoing ? OUTGOING_TEXT : TEXT
+      background: outgoing ? color.accentSoft : color.hoverBg,
+      border: `1px solid ${outgoing ? color.accentBorder : color.border}`,
+      color: color.text
     });
     bubble.append(...contentOf(message2.text, message2.icons, message2.positioned, BUBBLE_ICON_PX2));
     column.append(bubble);
     if (flags.isLastInGroup) {
-      const stamp = document.createElement("div");
-      css4(stamp, { fontSize: "10px", color: TEXT_DIM });
-      stamp.textContent = formatMessageTime(message2.atMs);
-      column.append(stamp);
+      column.append(styled("div", { fontSize: "10px", color: color.textDim }, formatMessageTime(message2.atMs)));
     }
-    row4.append(column);
-    return row4;
+    row5.append(column);
+    return row5;
   }
   function chatHeader(name) {
-    const root4 = document.createElement("div");
-    css4(root4, {
+    const root4 = styled("div", {
       display: "flex",
       alignItems: "center",
       gap: "10px",
       padding: "8px 10px",
-      borderBottom: `1px solid ${BORDER}`
+      borderBottom: `1px solid ${color.border}`
     });
-    const portraitSlot = document.createElement("div");
-    css4(portraitSlot, { display: "flex", flexShrink: "0" });
+    const portraitSlot = styled("div", { display: "flex", flexShrink: "0" });
     portraitSlot.append(avatar2(null, 32));
-    const info = document.createElement("div");
-    css4(info, { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
-    const title = document.createElement("div");
-    css4(title, { fontSize: "13px", fontWeight: "600", color: TEXT });
-    title.textContent = name;
-    const status2 = document.createElement("div");
-    css4(status2, { fontSize: "11px", color: TEXT_DIM });
+    const title = styled("div", { fontSize: "13px", fontWeight: "600", color: color.text }, name);
+    const status2 = styled("div", { fontSize: "11px", color: color.textDim });
+    const info = styled("div", { display: "flex", flexDirection: "column", gap: "1px", minWidth: "0" });
     info.append(title, status2);
     root4.append(portraitSlot, info);
     let shownIdentity = null;
     return {
       root: root4,
-      setStatus(text2, busy4) {
+      setStatus(text2, busy) {
         status2.textContent = text2;
-        css4(status2, { color: busy4 ? TEAL : TEXT_DIM });
+        status2.style.color = busy ? color.accent : color.textDim;
       },
       setIdentity(identity) {
         if (identity.npcId === shownIdentity) return;
@@ -47348,9 +48146,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function threadBody() {
-    const body = document.createElement("div");
-    body.className = "qws-pnl-scroll";
-    css4(body, {
+    const body = styled("div", {
       height: "300px",
       overflowY: "auto",
       padding: "10px",
@@ -47358,1474 +48154,47 @@ Restore figures are averages; unlucky streaks do worse.`;
       flexDirection: "column",
       gap: "5px"
     });
+    body.className = "qmm-scroll";
     return body;
   }
   function emptyThread(text2) {
-    const wrap = document.createElement("div");
-    css4(wrap, {
+    const wrap = styled("div", {
       margin: "auto",
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
       gap: "8px",
-      color: TEXT_DIM,
+      color: color.textDim,
       textAlign: "center"
     });
-    const label2 = document.createElement("div");
-    css4(label2, { fontSize: "12px", maxWidth: "220px", lineHeight: "1.5" });
-    label2.textContent = text2;
-    wrap.append(label2);
+    wrap.append(styled("div", { fontSize: "12px", maxWidth: "220px", lineHeight: "1.5" }, text2));
     return wrap;
   }
   function actionBar() {
-    const bar = document.createElement("div");
-    css4(bar, {
+    return styled("div", {
       display: "flex",
       alignItems: "center",
       flexWrap: "wrap",
       gap: "6px",
       padding: "8px 10px",
-      borderTop: `1px solid ${BORDER}`
+      borderTop: `1px solid ${color.border}`
     });
-    return bar;
   }
   function barHint(text2, tone = "dim") {
-    const hint2 = document.createElement("div");
-    css4(hint2, { fontSize: "11px", color: tone === "warn" ? WARN : TEXT_DIM, marginLeft: "auto" });
-    hint2.textContent = text2;
-    return hint2;
+    return styled("div", { fontSize: "11px", color: tone === "warn" ? color.warn : color.textDim, marginLeft: "auto" }, text2);
   }
-  var GROUP_WINDOW_MS, AVATAR_PX, BUBBLE_ICON_PX2, SYSTEM_ICON_PX, OUTGOING_BG, OUTGOING_BORDER, OUTGOING_TEXT, INCOMING_BG, ALERT_BG, ALERT_BORDER;
+  var GROUP_WINDOW_MS, AVATAR_PX, BUBBLE_ICON_PX2, SYSTEM_ICON_PX;
   var init_chatView = __esm({
     "src/features/companion/menu/chatView.ts"() {
       "use strict";
-      init_panel();
-      init_npcAvatar();
+      init_theme();
       init_chatIcons();
+      init_dom3();
+      init_npcAvatar();
       GROUP_WINDOW_MS = 2 * 60 * 1e3;
       AVATAR_PX = 26;
       BUBBLE_ICON_PX2 = 18;
       SYSTEM_ICON_PX = 15;
-      OUTGOING_BG = "rgba(94,234,212,0.14)";
-      OUTGOING_BORDER = "rgba(94,234,212,0.22)";
-      OUTGOING_TEXT = "#d1fae5";
-      INCOMING_BG = "rgba(255,255,255,0.06)";
-      ALERT_BG = "rgba(251,191,36,0.10)";
-      ALERT_BORDER = "rgba(251,191,36,0.28)";
-    }
-  });
-
-  // src/features/companion/menu/harvestFields.ts
-  function filterCard(icon2, title) {
-    const summary = document.createElement("div");
-    css4(summary, {
-      marginLeft: "auto",
-      fontSize: "11px",
-      color: TEXT_DIM,
-      textAlign: "right",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      maxWidth: "60%"
-    });
-    const header = document.createElement("div");
-    css4(header, { display: "flex", alignItems: "center", gap: "8px", width: "100%" });
-    header.append(sectionLabel2(icon2 ? `${icon2} ${title}` : title), summary);
-    const { root: root4, body } = collapsibleCard({ header, collapsed: true, onToggle: () => {
-    } });
-    css4(root4, { padding: "9px 11px", gap: "9px", flex: "0 0 auto" });
-    return {
-      root: root4,
-      body,
-      setSummary(text2, active3) {
-        summary.textContent = text2;
-        css4(summary, { color: active3 ? TEAL : TEXT_DIM });
-      }
-    };
-  }
-  function fieldRow(label2, control) {
-    const row4 = document.createElement("div");
-    css4(row4, { display: "flex", alignItems: "center", gap: "10px", justifyContent: "space-between" });
-    const text2 = document.createElement("div");
-    css4(text2, { fontSize: "11.5px", color: TEXT });
-    text2.textContent = label2;
-    row4.append(text2, control);
-    return row4;
-  }
-  function toggleIn(current2, value) {
-    const next = new Set(current2 ?? []);
-    if (next.has(value)) next.delete(value);
-    else next.add(value);
-    return next.size === 0 ? null : [...next];
-  }
-  function selectionRow(options2) {
-    const row4 = tileRow();
-    row4.append(allTile(options2.allLabel, options2.selected === null, options2.onClear));
-    for (const value of options2.values) {
-      row4.append(
-        spriteTile({
-          icon: options2.iconFor(value),
-          title: value,
-          count: options2.counts.get(value) ?? 0,
-          selected: options2.selected?.includes(value) ?? false,
-          onClick: () => options2.onPick(value)
-        })
-      );
-    }
-    return row4;
-  }
-  function nameList(values, fallback) {
-    if (values.length === 0) return fallback;
-    if (values.length > 3) return `${values.length} kinds`;
-    if (values.length === 1) return values[0];
-    return `${values.slice(0, -1).join(", ")} and ${values[values.length - 1]}`;
-  }
-  function summarizeSpecies(filters) {
-    return nameList(filters.species ?? [], "All");
-  }
-  function summarizeMutations(filters) {
-    if (filters.mutations.length === 0) return "Any";
-    const list = nameList(filters.mutations, "Any");
-    if (filters.mutationMode === "none") return `Without ${list}`;
-    if (filters.mutationMode === "all") return `All of ${list}`;
-    return list;
-  }
-  function summarizeSize(filters) {
-    return filters.minSizePct > 50 ? `${filters.minSizePct}% and up` : "Any size";
-  }
-  function resultStrip() {
-    const root4 = document.createElement("div");
-    css4(root4, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "8px",
-      padding: "11px 12px",
-      borderRadius: "12px",
-      background: "rgba(94,234,212,0.07)",
-      border: `1px solid ${BORDER}`,
-      flex: "0 0 auto"
-    });
-    const count = document.createElement("div");
-    css4(count, { fontSize: "13px", fontWeight: "600", color: TEAL });
-    const sprites = document.createElement("div");
-    css4(sprites, { display: "flex", alignItems: "flex-end", gap: "10px", flexWrap: "wrap" });
-    root4.append(count, sprites);
-    return {
-      root: root4,
-      update(total, entries2, hidden) {
-        count.textContent = total === 0 ? "Nothing to pick" : `${total} crop${total === 1 ? "" : "s"}`;
-        sprites.innerHTML = "";
-        sprites.style.display = entries2.length === 0 ? "none" : "flex";
-        for (const entry of entries2) {
-          const pair = document.createElement("div");
-          pair.title = entry.label;
-          css4(pair, { display: "flex", alignItems: "center", gap: "3px" });
-          const tally2 = document.createElement("span");
-          css4(tally2, { fontSize: "11px", color: TEXT_DIM });
-          tally2.textContent = String(entry.count);
-          pair.append(entry.icon, tally2);
-          sprites.append(pair);
-        }
-        if (hidden > 0) {
-          const more = document.createElement("span");
-          css4(more, { fontSize: "11px", color: TEXT_DIM, alignSelf: "center" });
-          more.textContent = `+${hidden} more`;
-          sprites.append(more);
-        }
-      }
-    };
-  }
-  function lockedNote() {
-    const root4 = document.createElement("div");
-    css4(root4, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
-    return {
-      root: root4,
-      update(lockedOut) {
-        if (lockedOut === 0) {
-          root4.textContent = "Your Locker decides what I leave alone.";
-          css4(root4, { color: TEXT_DIM });
-          return;
-        }
-        root4.textContent = `Leaving ${lockedOut} locked crop${lockedOut === 1 ? "" : "s"} alone.`;
-        css4(root4, { color: WARN });
-      }
-    };
-  }
-  var init_harvestFields = __esm({
-    "src/features/companion/menu/harvestFields.ts"() {
-      "use strict";
-      init_panel();
-      init_layout();
-      init_harvestChips();
-    }
-  });
-
-  // src/features/companion/menu/settingsNotice.ts
-  function settingsNotice(group2, what, onOpen) {
-    const root4 = document.createElement("div");
-    if (!isUnreviewed(group2)) {
-      root4.style.display = "none";
-      return { root: root4 };
-    }
-    css4(root4, {
-      display: "flex",
-      alignItems: "center",
-      gap: "10px",
-      padding: "10px 12px",
-      borderRadius: "12px",
-      background: "rgba(251,191,36,0.08)",
-      border: `1px solid ${BORDER}`,
-      flex: "0 0 auto"
-    });
-    const text2 = document.createElement("div");
-    css4(text2, { fontSize: "11.5px", lineHeight: "1.5", color: TEXT, flex: "1", minWidth: "0" });
-    text2.textContent = what;
-    const open = document.createElement("button");
-    open.type = "button";
-    open.textContent = "Set up";
-    css4(open, {
-      flex: "0 0 auto",
-      padding: "6px 11px",
-      borderRadius: "9px",
-      border: `1px solid ${WARN}`,
-      background: "transparent",
-      color: WARN,
-      cursor: "pointer",
-      fontSize: "11.5px",
-      lineHeight: "1"
-    });
-    open.addEventListener("click", onOpen);
-    root4.append(text2, open);
-    return { root: root4 };
-  }
-  var init_settingsNotice = __esm({
-    "src/features/companion/menu/settingsNotice.ts"() {
-      "use strict";
-      init_state3();
-      init_panel();
-    }
-  });
-
-  // src/features/companion/menu/teamSelect.ts
-  function teamSelect(current2, onPick) {
-    const el = document.createElement("select");
-    el.className = "qws-pnl-select";
-    css4(el, { fontSize: "12px", color: TEXT, minWidth: "150px" });
-    const none = document.createElement("option");
-    none.value = NO_TEAM;
-    none.textContent = "Leave my team alone";
-    el.append(none);
-    let teams2 = [];
-    try {
-      teams2 = PetsService.getTeams().map((team) => ({ id: team.id, name: team.name }));
-    } catch {
-      teams2 = [];
-    }
-    for (const team of teams2) {
-      const option2 = document.createElement("option");
-      option2.value = team.id;
-      option2.textContent = team.name;
-      el.append(option2);
-    }
-    el.value = current2 && teams2.some((team) => team.id === current2) ? current2 : NO_TEAM;
-    el.addEventListener("change", () => onPick(el.value === NO_TEAM ? null : el.value));
-    return { el, empty: teams2.length === 0 };
-  }
-  var NO_TEAM, NO_TEAMS_HINT;
-  var init_teamSelect = __esm({
-    "src/features/companion/menu/teamSelect.ts"() {
-      "use strict";
-      init_pets();
-      init_panel();
-      NO_TEAM = "";
-      NO_TEAMS_HINT = "No pet teams yet. Build one in the Pets tab.";
-    }
-  });
-
-  // src/features/companion/menu/feedSettingsModal.ts
-  function openFeedSettingsModal(host) {
-    markReviewed("feed");
-    const modal = openModal2({ host, title: "Pet feed", widthPx: 440 });
-    const settings = loadCompanionSettings();
-    const alerts = toggle(settings.feedAlerts, (on) => {
-      void CompanionService.applySettings({ feedAlerts: on }).then(checkFeedNow);
-    });
-    const threshold = numberField(MIN_PCT, MAX_PCT, 1, settings.feedThresholdPct);
-    threshold.addEventListener("change", () => {
-      const value = Math.max(MIN_PCT, Math.min(MAX_PCT, Math.round(Number(threshold.value) || MIN_PCT)));
-      threshold.value = String(value);
-      void CompanionService.applySettings({ feedThresholdPct: value }).then(checkFeedNow);
-    });
-    const fromGarden = toggle(settings.feedFromGarden, (on) => {
-      void CompanionService.applySettings({ feedFromGarden: on }).then(checkFeedNow);
-    });
-    const note = document.createElement("div");
-    css4(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
-    note.textContent = "He only speaks up when he has something to give. He always asks first.";
-    modal.body.append(
-      settingRow("Tell me when a pet is starving", "He offers, and waits for your answer.", alerts).row,
-      settingRow("Warn below", `Fullness that worries him (${MIN_PCT} to ${MAX_PCT}).`, threshold).row,
-      settingRow(
-        "May pick from the garden",
-        "Lets him pick a ripe crop when the bag is empty. Your Locker still applies.",
-        fromGarden
-      ).row,
-      note
-    );
-    modal.footer.append(
-      button2("Back", "neutral", () => {
-        modal.close();
-        openSettingsModal(host);
-      })
-    );
-  }
-  var MIN_PCT, MAX_PCT;
-  var init_feedSettingsModal = __esm({
-    "src/features/companion/menu/feedSettingsModal.ts"() {
-      "use strict";
-      init_companion();
-      init_feedWatch();
-      init_state3();
-      init_panel();
-      init_layout();
-      init_modal();
-      init_settingsModal();
-      MIN_PCT = 1;
-      MAX_PCT = 90;
-    }
-  });
-
-  // src/features/companion/menu/hatchSettingsModal.ts
-  function openHatchSettingsModal(host) {
-    markReviewed("hatch");
-    const modal = openModal2({ host, title: "Hatching", widthPx: 460 });
-    const settings = loadCompanionSettings();
-    const hatchTeam = teamSelect(settings.hatchTeamId, (teamId2) => {
-      void CompanionService.applySettings({ hatchTeamId: teamId2 });
-    });
-    const sellTeam = teamSelect(settings.hatchSellTeamId, (teamId2) => {
-      void CompanionService.applySettings({ hatchSellTeamId: teamId2 });
-    });
-    const note = document.createElement("div");
-    css4(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
-    note.textContent = hatchTeam.empty ? NO_TEAMS_HINT : "The game will not sell a pet on your active team, so a smaller team frees the rest. He asks first, and puts yours back after.";
-    modal.body.append(
-      settingRow("Team to wear while hatching", "For abilities that change what hatches.", hatchTeam.el).row,
-      settingRow("Team to wear while selling", "Only during the sale. Yours comes straight back after.", sellTeam.el).row,
-      note
-    );
-    modal.footer.append(
-      button2("Back", "neutral", () => {
-        modal.close();
-        openSettingsModal(host);
-      })
-    );
-  }
-  var init_hatchSettingsModal = __esm({
-    "src/features/companion/menu/hatchSettingsModal.ts"() {
-      "use strict";
-      init_companion();
-      init_state3();
-      init_panel();
-      init_layout();
-      init_teamSelect();
-      init_modal();
-      init_settingsModal();
-    }
-  });
-
-  // src/features/companion/menu/settingsModal.ts
-  function teamLine(teamId2, verb) {
-    const name = teamName(teamId2);
-    return name ? `Wears ${name} to ${verb}.` : `Keeps your team on while ${verb}.`;
-  }
-  function openSettingsModal(host) {
-    const modal = openModal2({ host, title: "Settings", widthPx: 440 });
-    const settings = loadCompanionSettings();
-    const unseen = (group2) => settings.reviewedSettings.includes(group2) ? "" : " Not set up yet.";
-    const feedDetail = settings.feedAlerts ? `Warns below ${settings.feedThresholdPct}%${settings.feedFromGarden ? ", may pick from the garden" : ", from the bag only"}.` : "Off. He stays quiet about hungry pets.";
-    const keeping = hasAnyRule(settings.hatchKeepRules) ? `Keeps ${describeKeep(settings.hatchKeepRules)}.` : "Nothing set to keep yet.";
-    modal.body.append(
-      menuCard({
-        name: "Pet feed",
-        detail: `${feedDetail}${unseen("feed")}`,
-        onClick: () => {
-          modal.close();
-          openFeedSettingsModal(host);
-        }
-      }),
-      menuCard({
-        name: "Harvest",
-        detail: `${teamLine(settings.harvestTeamId, "harvest")}${unseen("harvest")}`,
-        onClick: () => {
-          modal.close();
-          openHarvestSettingsModal(host);
-        }
-      }),
-      menuCard({
-        name: "Hatching",
-        detail: `${keeping} ${teamLine(settings.hatchSellTeamId, "sell")}${unseen("hatch")}`,
-        onClick: () => {
-          modal.close();
-          openHatchSettingsModal(host);
-        }
-      })
-    );
-  }
-  var init_settingsModal = __esm({
-    "src/features/companion/menu/settingsModal.ts"() {
-      "use strict";
-      init_state3();
-      init_hatch();
-      init_teamSwap();
-      init_feedSettingsModal();
-      init_harvestSettingsModal();
-      init_hatchSettingsModal();
-      init_modal();
-    }
-  });
-
-  // src/features/companion/menu/harvestSettingsModal.ts
-  function openHarvestSettingsModal(host) {
-    markReviewed("harvest");
-    const modal = openModal2({ host, title: "Harvest", widthPx: 460 });
-    const settings = loadCompanionSettings();
-    const team = teamSelect(settings.harvestTeamId, (teamId2) => {
-      void CompanionService.applySettings({ harvestTeamId: teamId2 });
-    });
-    const note = document.createElement("div");
-    css4(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
-    note.textContent = team.empty ? NO_TEAMS_HINT : "He names the team before he picks, and puts yours back after. What he may pick still comes from your Locker.";
-    modal.body.append(
-      settingRow(
-        "Team to wear while harvesting",
-        "For abilities that pay off on harvest.",
-        team.el
-      ).row,
-      note
-    );
-    modal.footer.append(
-      button2("Back", "neutral", () => {
-        modal.close();
-        openSettingsModal(host);
-      })
-    );
-  }
-  var init_harvestSettingsModal = __esm({
-    "src/features/companion/menu/harvestSettingsModal.ts"() {
-      "use strict";
-      init_companion();
-      init_state3();
-      init_panel();
-      init_layout();
-      init_teamSelect();
-      init_modal();
-      init_settingsModal();
-    }
-  });
-
-  // src/features/companion/menu/harvestModal.ts
-  function openHarvestModal(host, onAsk) {
-    let scope = { rows: [], lockedOut: 0 };
-    let filters = { ...DEFAULT_FILTERS };
-    const iconCache = /* @__PURE__ */ new Map();
-    const cachedIcon = (key2, make) => {
-      let known = iconCache.get(key2);
-      if (!known) {
-        known = make();
-        iconCache.set(key2, known);
-      }
-      return known;
-    };
-    const modal = openModal2({
-      host,
-      title: "What should I harvest?",
-      widthPx: 460,
-      onClose: () => clearInterval(timer2)
-    });
-    const speciesCard = filterCard("", "Species");
-    const mutationCard = filterCard("", "Mutations");
-    const sizeCard = filterCard("", "Size");
-    const preview = resultStrip();
-    const note = lockedNote();
-    function scopedTo(without) {
-      const scope2 = without === "species" ? { ...filters, species: null } : { ...filters, mutations: [] };
-      return filterRows(scope.rows, scope2);
-    }
-    function renderSpecies() {
-      const available = scopedTo("species");
-      speciesCard.body.innerHTML = "";
-      speciesCard.body.append(
-        selectionRow({
-          values: speciesPresent(available),
-          counts: tally(available, (row4) => [row4.species]),
-          selected: filters.species,
-          iconFor: (name) => cachedIcon(`species:${name}`, () => speciesIcon(name, TILE_ICON_PX)),
-          onPick: (name) => {
-            filters = { ...filters, species: toggleIn(filters.species, name) };
-            render();
-          },
-          onClear: () => {
-            filters = { ...filters, species: null };
-            render();
-          },
-          allLabel: "All"
-        })
-      );
-      speciesCard.setSummary(summarizeSpecies(filters), filters.species !== null);
-    }
-    function renderMutations() {
-      const available = scopedTo("mutations");
-      const mutations = mutationsPresent(available);
-      const kept = filters.mutations.filter((name) => mutations.includes(name));
-      if (kept.length !== filters.mutations.length) filters = { ...filters, mutations: kept };
-      mutationCard.root.style.display = mutations.length === 0 ? "none" : "flex";
-      if (mutations.length === 0) return;
-      mutationCard.body.innerHTML = "";
-      mutationCard.body.append(
-        fieldRow(
-          "Match",
-          segmented2(
-            [
-              { value: "any", label: "Any", title: "Has at least one" },
-              { value: "all", label: "All", title: "Has every one" },
-              { value: "none", label: "None", title: "Has none of them" }
-            ],
-            filters.mutationMode,
-            (value) => {
-              filters = { ...filters, mutationMode: value };
-              render();
-            }
-          )
-        ),
-        selectionRow({
-          values: mutations,
-          counts: tally(available, mutationsOf2),
-          selected: filters.mutations.length === 0 ? null : filters.mutations,
-          iconFor: (name) => cachedIcon(`mutation:${name}`, () => mutationIconEl(name, TILE_ICON_PX)),
-          onPick: (name) => {
-            filters = { ...filters, mutations: toggleIn(filters.mutations, name) ?? [] };
-            render();
-          },
-          onClear: () => {
-            filters = { ...filters, mutations: [] };
-            render();
-          },
-          allLabel: "Any"
-        })
-      );
-      mutationCard.setSummary(summarizeMutations(filters), filters.mutations.length > 0);
-    }
-    const sizeValue = document.createElement("span");
-    css4(sizeValue, { fontSize: "11.5px", color: TEXT, minWidth: "38px", textAlign: "right" });
-    const sizeSlider = document.createElement("input");
-    sizeSlider.type = "range";
-    sizeSlider.className = "qws-pnl-range";
-    sizeSlider.min = "50";
-    sizeSlider.max = "100";
-    sizeSlider.step = "5";
-    css4(sizeSlider, { flex: "1" });
-    sizeSlider.addEventListener("input", () => {
-      filters = { ...filters, minSizePct: Number(sizeSlider.value) };
-      render();
-    });
-    {
-      const control = document.createElement("div");
-      css4(control, { display: "flex", alignItems: "center", gap: "10px", flex: "1", minWidth: "0" });
-      control.append(sizeSlider, sizeValue);
-      const row4 = fieldRow("Minimum size", control);
-      css4(row4, { gap: "14px" });
-      sizeCard.body.append(row4);
-    }
-    const preservedRow = document.createElement("div");
-    css4(preservedRow, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
-    const preservedLabel = document.createElement("div");
-    css4(preservedLabel, { fontSize: "11.5px", fontWeight: "600", color: TEXT });
-    preservedRow.append(preservedLabel);
-    const preservedControl = document.createElement("div");
-    preservedRow.append(preservedControl);
-    function renderPreserved() {
-      const ripe = scope.rows.filter((row4) => row4.ready && row4.preserved).length;
-      preservedLabel.textContent = ripe === 0 ? "Preserved crops" : `Preserved crops (${ripe} ripe)`;
-      preservedControl.replaceChildren(
-        segmented2(
-          [
-            { value: "skip", label: "Leave them", title: "They stay in the ground" },
-            { value: "include", label: "Pick them too", title: "Treated like any other crop" }
-          ],
-          filters.includePreserved ? "include" : "skip",
-          (value) => {
-            filters = { ...filters, includePreserved: value === "include" };
-            render();
-          }
-        )
-      );
-    }
-    const resetButton = button2("Reset", "neutral", () => {
-      filters = { ...DEFAULT_FILTERS };
-      render();
-    });
-    const askButton = button2("Ask to pick these", "accent", () => {
-      onAsk({
-        kind: "harvest",
-        label: describeFilters(filters),
-        // Le fournisseur est rappelé à la confirmation : c'est ce qui permet de
-        // détecter que le jardin a changé entre-temps. Il refait le même chemin,
-        // protection du Locker comprise, puis applique les critères.
-        provider: async () => {
-          const fresh = await readHarvestable();
-          return { rows: filterRows(fresh.rows, filters), lockedOut: fresh.lockedOut };
-        }
-      });
-      modal.close();
-    });
-    css4(askButton, { marginLeft: "auto" });
-    const notice = settingsNotice(
-      "harvest",
-      "Harvest is not set up. I will pick with the team you have on.",
-      () => {
-        modal.close();
-        openHarvestSettingsModal(host);
-      }
-    );
-    modal.body.append(
-      notice.root,
-      preservedRow,
-      speciesCard.root,
-      mutationCard.root,
-      sizeCard.root,
-      preview.root,
-      note.root
-    );
-    modal.footer.append(resetButton, askButton);
-    function render() {
-      if (!modal.isOpen()) return;
-      renderPreserved();
-      renderSpecies();
-      renderMutations();
-      sizeSlider.value = String(filters.minSizePct);
-      sizeValue.textContent = `${filters.minSizePct}%`;
-      sizeCard.setSummary(summarizeSize(filters), filters.minSizePct > DEFAULT_FILTERS.minSizePct);
-      const selected = filterRows(scope.rows, filters);
-      const variants = groupVariants(selected);
-      const shown = variants.slice(0, MAX_PREVIEW_VARIANTS);
-      preview.update(
-        selected.length,
-        shown.map((variant) => {
-          const key2 = `${variant.species}|${variant.mutations.join(",")}`;
-          return {
-            icon: cachedIcon(`variant:${key2}`, () => variantIcon(variant.species, variant.mutations, PREVIEW_ICON_PX)),
-            label: variant.mutations.length ? `${variant.species}: ${variant.mutations.join(", ")}` : variant.species,
-            count: variant.count
-          };
-        }),
-        variants.length - shown.length
-      );
-      note.update(scope.lockedOut);
-      askButton.disabled = selected.length === 0;
-    }
-    async function refresh() {
-      if (!modal.isOpen()) return;
-      scope = await readHarvestable().catch(() => ({ rows: [], lockedOut: 0 }));
-      if (!modal.isOpen()) return;
-      render();
-    }
-    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS);
-    render();
-    void refresh();
-    return { close: modal.close };
-  }
-  var REFRESH_MS, PREVIEW_ICON_PX, TILE_ICON_PX, MAX_PREVIEW_VARIANTS;
-  var init_harvestModal = __esm({
-    "src/features/companion/menu/harvestModal.ts"() {
-      "use strict";
-      init_gardenRead();
-      init_harvest();
-      init_panel();
-      init_harvestChips();
-      init_harvestFields();
-      init_modal();
-      init_settingsNotice();
-      init_harvestSettingsModal();
-      REFRESH_MS = 4e3;
-      PREVIEW_ICON_PX = 30;
-      TILE_ICON_PX = 26;
-      MAX_PREVIEW_VARIANTS = 10;
-    }
-  });
-
-  // src/features/companion/menu/feedModal.ts
-  function openFeedModal(host, onAsk) {
-    let picks = [];
-    const modal = openModal2({
-      host,
-      title: "Who needs feeding?",
-      widthPx: 420,
-      onClose: () => clearInterval(timer2)
-    });
-    const list = document.createElement("div");
-    css4(list, { display: "flex", flexDirection: "column", gap: "7px" });
-    const empty = document.createElement("div");
-    css4(empty, { fontSize: "12px", color: TEXT_DIM, padding: "10px 2px", lineHeight: "1.5" });
-    empty.textContent = "Nobody is hungry, or I have nothing they eat.";
-    const notice = settingsNotice(
-      "feed",
-      "Pet feed is not set up. I warn below 10% and may pick from the garden.",
-      () => {
-        modal.close();
-        openFeedSettingsModal(host);
-      }
-    );
-    modal.body.append(notice.root, list, empty);
-    const askButton = button2("Ask to feed them", "accent", () => {
-      onAsk({
-        kind: "feed",
-        label: picks.length === 1 ? `Feed ${picks[0].petName}` : "Feed my hungry pets",
-        // Rappelé à la confirmation : c'est ce qui détecte qu'un pet a été nourri
-        // entre-temps, ou que le crop prévu a disparu.
-        provider: () => findFeedable()
-      });
-      modal.close();
-    });
-    css4(askButton, { marginLeft: "auto" });
-    modal.footer.append(askButton);
-    function row4(candidate) {
-      const line = document.createElement("div");
-      css4(line, {
-        display: "flex",
-        alignItems: "center",
-        gap: "10px",
-        padding: "9px 11px",
-        borderRadius: "12px",
-        border: `1px solid ${BORDER}`,
-        background: CARD_BG
-      });
-      const text2 = document.createElement("div");
-      css4(text2, { display: "flex", flexDirection: "column", gap: "2px", flex: "1", minWidth: "0" });
-      const name = document.createElement("div");
-      css4(name, { fontSize: "12.5px", color: TEXT });
-      name.textContent = candidate.petName;
-      const meta = document.createElement("div");
-      css4(meta, { fontSize: "11px", color: candidate.hungerPct <= 5 ? WARN : TEXT_DIM });
-      meta.textContent = candidate.source.kind === "garden" ? `${candidate.hungerPct}% left, I would pick a ${candidate.source.species}` : `${candidate.hungerPct}% left, I have a ${candidate.source.species} in the bag`;
-      text2.append(name, meta);
-      const icon2 = speciesIcon(candidate.source.species, CROP_ICON_PX);
-      icon2.title = candidate.source.species;
-      line.append(text2, icon2);
-      return line;
-    }
-    function render() {
-      if (!modal.isOpen()) return;
-      list.innerHTML = "";
-      for (const candidate of picks) list.append(row4(candidate));
-      empty.style.display = picks.length === 0 ? "" : "none";
-      askButton.disabled = picks.length === 0;
-    }
-    async function refresh() {
-      if (!modal.isOpen()) return;
-      picks = await findFeedable().catch(() => []);
-      if (!modal.isOpen()) return;
-      render();
-    }
-    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS2);
-    render();
-    void refresh();
-  }
-  var REFRESH_MS2, CROP_ICON_PX;
-  var init_feedModal = __esm({
-    "src/features/companion/menu/feedModal.ts"() {
-      "use strict";
-      init_petFeed();
-      init_panel();
-      init_harvestChips();
-      init_modal();
-      init_settingsNotice();
-      init_feedSettingsModal();
-      REFRESH_MS2 = 5e3;
-      CROP_ICON_PX = 26;
-    }
-  });
-
-  // src/features/companion/menu/plantGrid.ts
-  function plantGrid(options2) {
-    const root4 = document.createElement("div");
-    css4(root4, {
-      display: "grid",
-      gridTemplateColumns: `repeat(${GARDEN_COLS / 2}, 1fr) ${HALF_GAP_PX2}px repeat(${GARDEN_COLS / 2}, 1fr)`,
-      gridTemplateRows: `repeat(${GARDEN_ROWS}, 1fr)`,
-      gap: "2px",
-      height: `min(38vh, ${MAX_GRID_HEIGHT_PX}px)`,
-      aspectRatio: `${GARDEN_COLS} / ${GARDEN_ROWS}`,
-      width: "auto",
-      margin: "0 auto",
-      padding: "6px",
-      borderRadius: "12px",
-      border: `1px solid ${BORDER}`,
-      background: "rgba(0,0,0,0.28)",
-      boxSizing: "border-box",
-      flex: "0 0 auto"
-    });
-    root4.addEventListener("contextmenu", (event) => event.preventDefault());
-    const cells = /* @__PURE__ */ new Map();
-    let painting = false;
-    let mode = "assign";
-    const stopPainting = () => {
-      painting = false;
-    };
-    window.addEventListener("mouseup", stopPainting);
-    function buildCell(tileIndex) {
-      const cell = document.createElement("div");
-      cell.dataset.tile = String(tileIndex);
-      css4(cell, {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: "4px",
-        userSelect: "none",
-        border: "1px solid transparent",
-        transition: "background 90ms ease"
-      });
-      cell.addEventListener("mousedown", (event) => {
-        event.preventDefault();
-        painting = true;
-        mode = event.button === 2 ? "erase" : "assign";
-        options2.onPaint(tileIndex, mode);
-      });
-      cell.addEventListener("mouseenter", () => {
-        if (painting) options2.onPaint(tileIndex, mode);
-      });
-      return cell;
-    }
-    for (let row4 = 0; row4 < GARDEN_ROWS; row4++) {
-      for (let col = 0; col < GARDEN_COLS; col++) {
-        if (col === GARDEN_COLS / 2) {
-          const spacer2 = document.createElement("div");
-          css4(spacer2, { pointerEvents: "none" });
-          root4.append(spacer2);
-        }
-        const tileIndex = row4 * GARDEN_COLS + col;
-        const el = buildCell(tileIndex);
-        cells.set(tileIndex, { el, shown: null });
-        root4.append(el);
-      }
-    }
-    function stateKey(tileIndex, owned2, occupied) {
-      if (!owned2.has(tileIndex)) return "absent";
-      if (occupied.has(tileIndex)) return "occupied";
-      const assignment = options2.assignmentAt(tileIndex);
-      return assignment ? `set:${assignment.kind}:${assignment.id}` : "free";
-    }
-    function paintCell(cell, tileIndex, key2) {
-      cell.shown = key2;
-      cell.el.replaceChildren();
-      if (key2 === "absent") {
-        css4(cell.el, { background: "transparent", borderColor: "transparent", cursor: "default" });
-        cell.el.title = "";
-        return;
-      }
-      if (key2 === "occupied") {
-        css4(cell.el, {
-          background: "rgba(239,68,68,0.22)",
-          borderColor: DANGER,
-          cursor: "not-allowed"
-        });
-        cell.el.title = "Something is already growing here";
-        return;
-      }
-      if (key2 === "free") {
-        css4(cell.el, { background: "rgba(255,255,255,0.05)", borderColor: BORDER, cursor: "pointer" });
-        cell.el.title = "";
-        return;
-      }
-      const assignment = options2.assignmentAt(tileIndex);
-      css4(cell.el, { background: TEAL_DIM, borderColor: TEAL_BORDER, cursor: "pointer" });
-      cell.el.title = assignment?.name ?? "";
-      if (assignment) {
-        const icon2 = options2.iconFor(assignment, CELL_ICON_PX2);
-        css4(icon2, { pointerEvents: "none" });
-        cell.el.append(icon2);
-      }
-    }
-    return {
-      root: root4,
-      update() {
-        const owned2 = options2.owned();
-        const occupied = options2.occupied();
-        for (let tileIndex = 0; tileIndex < GARDEN_TILE_COUNT; tileIndex++) {
-          const cell = cells.get(tileIndex);
-          if (!cell) continue;
-          const key2 = stateKey(tileIndex, owned2, occupied);
-          if (key2 !== cell.shown) paintCell(cell, tileIndex, key2);
-        }
-      },
-      destroy() {
-        window.removeEventListener("mouseup", stopPainting);
-      }
-    };
-  }
-  var MAX_GRID_HEIGHT_PX, CELL_ICON_PX2, HALF_GAP_PX2;
-  var init_plantGrid = __esm({
-    "src/features/companion/menu/plantGrid.ts"() {
-      "use strict";
-      init_plant();
-      init_panel();
-      MAX_GRID_HEIGHT_PX = 300;
-      CELL_ICON_PX2 = 20;
-      HALF_GAP_PX2 = 12;
-    }
-  });
-
-  // src/features/companion/menu/plantModal.ts
-  function openPlantModal(host, onAsk) {
-    let scope = EMPTY_SCOPE;
-    let plan = /* @__PURE__ */ new Map();
-    let held = null;
-    let owned2 = /* @__PURE__ */ new Set();
-    let tiles = /* @__PURE__ */ new Map();
-    let paletteSignature = "";
-    const stripIcons = /* @__PURE__ */ new Map();
-    const modal = openModal2({
-      host,
-      title: "What should I plant?",
-      widthPx: 700,
-      onClose: () => {
-        clearInterval(timer2);
-        grid.destroy();
-      }
-    });
-    function paletteGroup(title) {
-      const root4 = document.createElement("div");
-      css4(root4, { display: "flex", flexDirection: "column", gap: "6px", flex: "0 0 auto" });
-      const row4 = document.createElement("div");
-      css4(row4, { display: "flex", flexWrap: "wrap", gap: "5px" });
-      root4.append(sectionLabel2(title), row4);
-      return { root: root4, row: row4 };
-    }
-    const seedGroup = paletteGroup("Seeds");
-    const eggGroup = paletteGroup("Eggs");
-    const paletteEmpty = document.createElement("div");
-    css4(paletteEmpty, { fontSize: "12px", color: TEXT_DIM, lineHeight: "1.5" });
-    paletteEmpty.textContent = "Nothing to plant. No seeds, no eggs.";
-    const hint2 = document.createElement("div");
-    css4(hint2, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.5" });
-    hint2.textContent = "Pick one and draw. Right click erases, red is taken.";
-    const grid = plantGrid({
-      owned: () => owned2,
-      occupied: () => scope.occupied,
-      assignmentAt: (tileIndex) => plan.get(tileIndex) ?? null,
-      iconFor: (assignment, sizePx) => plantItemIcon(assignment, sizePx),
-      onPaint: (tileIndex, mode) => paint(tileIndex, mode)
-    });
-    const strip = document.createElement("div");
-    css4(strip, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "8px",
-      padding: "11px 12px",
-      borderRadius: "12px",
-      background: "rgba(94,234,212,0.07)",
-      border: `1px solid ${BORDER}`,
-      flex: "0 0 auto"
-    });
-    const stripCount = document.createElement("div");
-    css4(stripCount, { fontSize: "13px", fontWeight: "600", color: TEAL });
-    const stripIconRow = document.createElement("div");
-    css4(stripIconRow, { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" });
-    strip.append(stripCount, stripIconRow);
-    const clearButton = button2("Clear", "neutral", () => {
-      plan = /* @__PURE__ */ new Map();
-      render();
-    });
-    const askButton = button2("Ask to plant these", "accent", () => {
-      const drawn = [...plan.values()];
-      onAsk({
-        kind: "plant",
-        label: describePlan(drawn),
-        // Rappelé à la confirmation : c'est ce qui détecte qu'une case s'est
-        // remplie ou qu'une graine est partie ailleurs entre-temps. Le plan
-        // dessiné ne bouge pas ; c'est le jardin qu'on relit.
-        provider: async () => viablePlan(drawn, await readPlantScope())
-      });
-      modal.close();
-    });
-    css4(askButton, { marginLeft: "auto" });
-    modal.body.append(seedGroup.root, eggGroup.root, paletteEmpty, hint2, grid.root, strip);
-    modal.footer.append(clearButton, askButton);
-    function remainingFor(item) {
-      return stockLeft([...plan.values()], scope.items).get(itemKey(item)) ?? 0;
-    }
-    function paint(tileIndex, mode) {
-      if (mode === "erase") {
-        if (plan.delete(tileIndex)) render();
-        return;
-      }
-      if (!held) return;
-      if (!owned2.has(tileIndex) || scope.occupied.has(tileIndex)) return;
-      const current2 = plan.get(tileIndex);
-      if (current2 && itemKey(current2) === itemKey(held)) return;
-      if (current2) plan.delete(tileIndex);
-      if (remainingFor(held) <= 0) {
-        if (current2) plan.set(tileIndex, current2);
-        return;
-      }
-      plan.set(tileIndex, { tileIndex, kind: held.kind, id: held.id, name: held.name });
-      render();
-    }
-    function syncPalette() {
-      const signature = scope.items.map(itemKey).join("|");
-      if (signature === paletteSignature) return;
-      paletteSignature = signature;
-      tiles = /* @__PURE__ */ new Map();
-      seedGroup.row.replaceChildren();
-      eggGroup.row.replaceChildren();
-      for (const item of scope.items) {
-        const tile = plantTile(item, () => {
-          held = item;
-          render();
-        });
-        tiles.set(itemKey(item), tile);
-        (item.kind === "egg" ? eggGroup : seedGroup).row.append(tile.el);
-      }
-      if (held && !tiles.has(itemKey(held))) held = null;
-      if (!held) held = scope.items[0] ?? null;
-    }
-    function renderStrip() {
-      const drawn = [...plan.values()];
-      stripCount.textContent = drawn.length === 0 ? "Nothing to plant yet" : `${drawn.length} tile${drawn.length === 1 ? "" : "s"}`;
-      stripIconRow.replaceChildren();
-      stripIconRow.style.display = drawn.length === 0 ? "none" : "flex";
-      const counts = /* @__PURE__ */ new Map();
-      for (const assignment of drawn) {
-        const key2 = itemKey(assignment);
-        const known = counts.get(key2);
-        if (known) known.count++;
-        else counts.set(key2, { item: assignment, count: 1 });
-      }
-      for (const [key2, entry] of [...counts.entries()].sort((a, b) => b[1].count - a[1].count)) {
-        let icon2 = stripIcons.get(key2);
-        if (!icon2) {
-          icon2 = plantItemIcon(entry.item, STRIP_ICON_PX);
-          stripIcons.set(key2, icon2);
-        }
-        const pair = document.createElement("div");
-        pair.title = entry.item.name;
-        css4(pair, { display: "flex", alignItems: "center", gap: "3px" });
-        const tally2 = document.createElement("span");
-        css4(tally2, { fontSize: "11px", color: TEXT_DIM });
-        tally2.textContent = String(entry.count);
-        pair.append(icon2, tally2);
-        stripIconRow.append(pair);
-      }
-    }
-    function render() {
-      if (!modal.isOpen()) return;
-      syncPalette();
-      const left = stockLeft([...plan.values()], scope.items);
-      for (const item of scope.items) {
-        const key2 = itemKey(item);
-        tiles.get(key2)?.update(left.get(key2) ?? 0, held !== null && itemKey(held) === key2);
-      }
-      const hasItems = scope.items.length > 0;
-      for (const group2 of [seedGroup, eggGroup]) {
-        group2.root.style.display = group2.row.childElementCount > 0 ? "flex" : "none";
-      }
-      paletteEmpty.style.display = hasItems ? "none" : "";
-      hint2.style.display = hasItems ? "" : "none";
-      grid.root.style.display = hasItems ? "grid" : "none";
-      grid.update();
-      renderStrip();
-      askButton.disabled = plan.size === 0;
-    }
-    async function refresh() {
-      if (!modal.isOpen()) return;
-      scope = await readPlantScope().catch(() => EMPTY_SCOPE);
-      if (!modal.isOpen()) return;
-      owned2 = new Set(scope.tiles);
-      plan = new Map(viablePlan([...plan.values()], scope).map((entry) => [entry.tileIndex, entry]));
-      render();
-    }
-    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS3);
-    render();
-    void refresh();
-  }
-  var REFRESH_MS3, STRIP_ICON_PX;
-  var init_plantModal = __esm({
-    "src/features/companion/menu/plantModal.ts"() {
-      "use strict";
-      init_plantRead();
-      init_plant();
-      init_panel();
-      init_plantChips();
-      init_plantGrid();
-      init_modal();
-      REFRESH_MS3 = 4e3;
-      STRIP_ICON_PX = 24;
-    }
-  });
-
-  // src/features/companion/menu/hatchChips.ts
-  function iconHolder4(sizePx) {
-    const box2 = document.createElement("div");
-    css4(box2, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: `${sizePx}px`,
-      height: `${sizePx}px`,
-      flex: "0 0 auto"
-    });
-    return box2;
-  }
-  function petSpeciesIcon2(species, sizePx = ICON_PX5) {
-    const box2 = iconHolder4(sizePx);
-    const candidates = [species, species.replace(/\s+/g, "")].filter(Boolean);
-    attachSpriteIcon(box2, ["pet"], candidates, sizePx, SPRITE_LOG_TAG5, {
-      onNoSpriteFound: () => {
-        css4(box2, { fontSize: "12px", fontWeight: "700", color: TEXT_DIM });
-        box2.textContent = species.charAt(0).toUpperCase();
-      }
-    });
-    return box2;
-  }
-  function abilityIcon(abilityId, sizePx = ICON_PX5) {
-    const box2 = iconHolder4(sizePx);
-    const square = document.createElement("span");
-    const { bg } = getAbilityChipColors(abilityId);
-    css4(square, {
-      display: "inline-block",
-      width: "13px",
-      height: "13px",
-      borderRadius: "4px",
-      background: bg,
-      boxShadow: "0 0 0 1px rgba(0,0,0,0.4) inset, 0 0 0 1px rgba(255,255,255,0.1)"
-    });
-    box2.append(square);
-    return box2;
-  }
-  var SPRITE_LOG_TAG5, ICON_PX5;
-  var init_hatchChips = __esm({
-    "src/features/companion/menu/hatchChips.ts"() {
-      "use strict";
-      init_iconCache();
-      init_abilityChipColors();
-      init_panel();
-      SPRITE_LOG_TAG5 = "companion-hatch";
-      ICON_PX5 = 26;
-    }
-  });
-
-  // src/features/companion/menu/hatchModal.ts
-  function openHatchModal(host, onAsk) {
-    let scope = EMPTY_HATCH_SCOPE;
-    let rules3 = { ...loadCompanionSettings().hatchKeepRules };
-    const iconCache = /* @__PURE__ */ new Map();
-    const cachedIcon = (key2, make) => {
-      let known = iconCache.get(key2);
-      if (!known) {
-        known = make();
-        iconCache.set(key2, known);
-      }
-      return known;
-    };
-    const modal = openModal2({
-      host,
-      title: "Hatching",
-      widthPx: 470,
-      onClose: () => clearInterval(timer2)
-    });
-    const speciesCard = filterCard("", "Keep species");
-    const mutationCard = filterCard("", "Keep mutations");
-    const abilityCard = filterCard("", "Keep abilities");
-    const strengthCard = filterCard("", "Keep by strength");
-    function commit(next) {
-      rules3 = next;
-      patchCompanionSettings({ hatchKeepRules: next });
-      render();
-    }
-    function toggled(list, value) {
-      return list.includes(value) ? list.filter((entry) => entry !== value) : [...list, value];
-    }
-    function chipRow(values, selected, labelFor2, iconFor, onPick, named = false) {
-      const row4 = tileRow();
-      for (const value of values) {
-        const shared = { icon: iconFor(value), selected: selected.includes(value), onClick: () => onPick(value) };
-        row4.append(
-          named ? labelledTile({ ...shared, label: labelFor2(value) }) : spriteTile({ ...shared, title: labelFor2(value) })
-        );
-      }
-      return row4;
-    }
-    function scrollable(row4) {
-      const box2 = document.createElement("div");
-      css4(box2, { maxHeight: `${ABILITY_LIST_MAX_PX}px`, overflowY: "auto", overscrollBehavior: "contain" });
-      box2.append(row4);
-      return box2;
-    }
-    function offered(available, picked) {
-      const all = /* @__PURE__ */ new Set([...available, ...picked]);
-      return [...all].sort((a, b) => a.localeCompare(b));
-    }
-    function renderSpecies() {
-      const values = offered(scope.possibleSpecies, rules3.species);
-      speciesCard.root.style.display = values.length > 0 ? "flex" : "none";
-      if (values.length === 0) return;
-      speciesCard.body.replaceChildren(
-        chipRow(
-          values,
-          rules3.species,
-          (name) => name,
-          (name) => cachedIcon(`species:${name}`, () => petSpeciesIcon2(name, TILE_ICON_PX2)),
-          (name) => commit({ ...rules3, species: toggled(rules3.species, name) })
-        )
-      );
-      speciesCard.setSummary(summarize(rules3.species.length), rules3.species.length > 0);
-    }
-    function renderMutations() {
-      const values = offered(scope.presentMutations, rules3.mutations);
-      mutationCard.root.style.display = values.length > 0 ? "flex" : "none";
-      if (values.length === 0) return;
-      mutationCard.body.replaceChildren(
-        chipRow(
-          values,
-          rules3.mutations,
-          (name) => name,
-          (name) => cachedIcon(`mutation:${name}`, () => mutationIconEl(name, TILE_ICON_PX2)),
-          (name) => commit({ ...rules3, mutations: toggled(rules3.mutations, name) })
-        )
-      );
-      mutationCard.setSummary(summarize(rules3.mutations.length), rules3.mutations.length > 0);
-    }
-    function renderAbilities() {
-      const values = offered(scope.possibleAbilities.map((entry) => entry.id), rules3.abilities);
-      abilityCard.root.style.display = values.length > 0 ? "flex" : "none";
-      if (values.length === 0) return;
-      const names = new Map(scope.possibleAbilities.map((entry) => [entry.id, entry.name]));
-      abilityCard.body.replaceChildren(
-        scrollable(
-          chipRow(
-            values,
-            rules3.abilities,
-            (id) => names.get(id) ?? id,
-            (id) => cachedIcon(`ability:${id}`, () => abilityIcon(id, ABILITY_ICON_PX)),
-            (id) => commit({ ...rules3, abilities: toggled(rules3.abilities, id) }),
-            true
-          )
-        )
-      );
-      abilityCard.setSummary(summarize(rules3.abilities.length), rules3.abilities.length > 0);
-    }
-    const strengthField = numberField(MIN_STR, MAX_STR, 1, DEFAULT_STR);
-    strengthField.addEventListener("change", () => {
-      const value = Math.max(MIN_STR, Math.min(MAX_STR, Math.round(Number(strengthField.value) || DEFAULT_STR)));
-      strengthField.value = String(value);
-      commit({ ...rules3, minMaxStr: value });
-    });
-    const strengthToggle = toggle(rules3.minMaxStr !== null, (on) => {
-      commit({ ...rules3, minMaxStr: on ? Number(strengthField.value) || DEFAULT_STR : null });
-    });
-    {
-      const control = document.createElement("div");
-      css4(control, { display: "flex", alignItems: "center", gap: "10px" });
-      control.append(strengthField, strengthToggle);
-      strengthCard.body.append(fieldRow("Keep max STR from", control));
-    }
-    function summarize(count) {
-      return count === 0 ? "None" : `${count} picked`;
-    }
-    const strip = document.createElement("div");
-    css4(strip, {
-      display: "flex",
-      flexDirection: "column",
-      gap: "5px",
-      padding: "11px 12px",
-      borderRadius: "12px",
-      background: "rgba(94,234,212,0.07)",
-      border: `1px solid ${BORDER}`,
-      flex: "0 0 auto"
-    });
-    const ready = document.createElement("div");
-    css4(ready, { fontSize: "13px", fontWeight: "600", color: TEAL });
-    const note = document.createElement("div");
-    css4(note, { fontSize: "11px", lineHeight: "1.5", color: TEXT_DIM });
-    strip.append(ready, note);
-    const resetButton = button2("Reset", "neutral", () => commit({ ...DEFAULT_KEEP_RULES }));
-    const askButton = button2("Ask to hatch", "accent", () => {
-      onAsk({
-        kind: "hatch",
-        label: describeHatchRequest(scope.readySlots.length),
-        // Rappelé à la confirmation : c'est ce qui détecte qu'un œuf a éclos ou
-        // mûri entre-temps.
-        provider: hatchProvider(),
-        rules: rules3
-      });
-      modal.close();
-    });
-    css4(askButton, { marginLeft: "auto" });
-    const notice = settingsNotice(
-      "hatch",
-      "Hatching is not set up. I will use the team you have on.",
-      () => {
-        modal.close();
-        openHatchSettingsModal(host);
-      }
-    );
-    modal.body.append(
-      notice.root,
-      speciesCard.root,
-      mutationCard.root,
-      abilityCard.root,
-      strengthCard.root,
-      strip
-    );
-    modal.footer.append(resetButton, askButton);
-    function render() {
-      if (!modal.isOpen()) return;
-      renderSpecies();
-      renderMutations();
-      renderAbilities();
-      strengthField.disabled = rules3.minMaxStr === null;
-      if (rules3.minMaxStr !== null) strengthField.value = String(rules3.minMaxStr);
-      css4(strengthField, { opacity: rules3.minMaxStr === null ? "0.45" : "1" });
-      strengthCard.setSummary(
-        rules3.minMaxStr === null ? "Off" : `${rules3.minMaxStr} and up`,
-        rules3.minMaxStr !== null
-      );
-      const waiting = scope.totalEggs - scope.readySlots.length;
-      ready.textContent = scope.readySlots.length === 0 ? "No egg is ready" : `${scope.readySlots.length} egg${scope.readySlots.length === 1 ? "" : "s"} ready`;
-      if (!hasAnyRule(rules3)) {
-        note.textContent = "Nothing set to keep, so I will not offer to sell. Favourites and your active team are always safe.";
-        css4(note, { color: WARN });
-      } else {
-        note.textContent = `Favourites and your active team are never sold.${waiting > 0 ? ` ${waiting} still growing.` : ""}`;
-        css4(note, { color: TEXT_DIM });
-      }
-      askButton.disabled = scope.readySlots.length === 0;
-    }
-    async function refresh() {
-      if (!modal.isOpen()) return;
-      scope = await readHatchScope().catch(() => EMPTY_HATCH_SCOPE);
-      if (!modal.isOpen()) return;
-      render();
-    }
-    const timer2 = window.setInterval(() => void refresh(), REFRESH_MS4);
-    render();
-    void refresh();
-  }
-  var REFRESH_MS4, TILE_ICON_PX2, ABILITY_ICON_PX, ABILITY_LIST_MAX_PX, MIN_STR, MAX_STR, DEFAULT_STR;
-  var init_hatchModal = __esm({
-    "src/features/companion/menu/hatchModal.ts"() {
-      "use strict";
-      init_hatchFlow();
-      init_hatch();
-      init_hatchRead();
-      init_state3();
-      init_panel();
-      init_harvestChips();
-      init_harvestFields();
-      init_hatchChips();
-      init_modal();
-      init_settingsNotice();
-      init_hatchSettingsModal();
-      REFRESH_MS4 = 4e3;
-      TILE_ICON_PX2 = 26;
-      ABILITY_ICON_PX = 16;
-      ABILITY_LIST_MAX_PX = 190;
-      MIN_STR = 1;
-      MAX_STR = 100;
-      DEFAULT_STR = 95;
-    }
-  });
-
-  // src/features/companion/menu/actionsModal.ts
-  function openActionsModal(host, onAsk) {
-    const modal = openModal2({ host, title: "What can you do?", widthPx: 420 });
-    const list = document.createElement("div");
-    css4(list, { display: "flex", flexDirection: "column", gap: "8px" });
-    modal.body.append(list);
-    function renderRows(rows) {
-      if (!modal.isOpen()) return;
-      list.innerHTML = "";
-      for (const action2 of rows) {
-        list.append(
-          menuCard({
-            name: action2.name,
-            detail: action2.unavailable ?? action2.description,
-            disabled: action2.unavailable !== null,
-            onClick: () => {
-              modal.close();
-              action2.run();
-            }
-          })
-        );
-      }
-    }
-    async function refresh() {
-      if (!modal.isOpen()) return;
-      const [harvestable, feedable, plantable, hatchable] = await Promise.all([
-        readHarvestable().catch(() => ({ rows: [], lockedOut: 0 })),
-        reviewFeeding().catch(() => ({ candidates: [], hungry: 0, waitingOnGardenRule: 0 })),
-        readPlantScope().catch(() => EMPTY_SCOPE),
-        readHatchScope().catch(() => EMPTY_HATCH_SCOPE)
-      ]);
-      if (!modal.isOpen()) return;
-      const freeTiles = plantable.tiles.filter((tile) => !plantable.occupied.has(tile)).length;
-      renderRows([
-        {
-          name: "Harvest",
-          description: "Pick what your Locker lets me touch.",
-          unavailable: harvestable.rows.length > 0 ? null : harvestable.lockedOut > 0 ? "Everything ripe is locked right now." : "Nothing is ripe yet.",
-          run: () => openHarvestModal(host, onAsk)
-        },
-        {
-          name: "Feed a pet",
-          description: "Feed a pet something it likes.",
-          // « Rien à faire » recouvrait trois situations : on dit laquelle.
-          unavailable: feedable.candidates.length > 0 ? null : feedable.waitingOnGardenRule > 0 ? `${feedable.waitingOnGardenRule} could eat from the garden, but that is off in Settings.` : feedable.hungry > 0 ? `${feedable.hungry} hungry, but I have nothing they eat.` : "No pet is hungry enough.",
-          run: () => openFeedModal(host, onAsk)
-        },
-        {
-          name: "Plant",
-          description: "Draw where your seeds and eggs go.",
-          // Deux blocages bien distincts : rien à semer, ou nulle part où semer.
-          unavailable: plantable.items.length === 0 ? "You have no seeds and no eggs." : freeTiles === 0 ? "Your plot is full." : null,
-          run: () => openPlantModal(host, onAsk)
-        },
-        {
-          name: "Hatch",
-          description: "Open ripe eggs and sort what hatches.",
-          // Un sac déjà plein n'est pas « rien à faire » : c'est une éclosion qui
-          // ne donnerait rien, et ça se dit autrement.
-          unavailable: hatchable.readySlots.length === 0 ? hatchable.totalEggs > 0 ? `${hatchable.totalEggs} still growing.` : "No eggs in the ground." : hatchable.inventoryCount >= hatchable.capacity ? "Your bag is full." : null,
-          run: () => openHatchModal(host, onAsk)
-        }
-      ]);
-    }
-    renderRows([
-      { name: "Harvest", description: "Pick what your Locker lets me touch.", unavailable: "Checking...", run: () => {
-      } },
-      { name: "Feed a pet", description: "Feed a pet something it likes.", unavailable: "Checking...", run: () => {
-      } },
-      { name: "Plant", description: "Draw where your seeds and eggs go.", unavailable: "Checking...", run: () => {
-      } },
-      { name: "Hatch", description: "Open ripe eggs and sort what hatches.", unavailable: "Checking...", run: () => {
-      } }
-    ]);
-    void refresh();
-  }
-  var init_actionsModal = __esm({
-    "src/features/companion/menu/actionsModal.ts"() {
-      "use strict";
-      init_gardenRead();
-      init_petFeed();
-      init_plantRead();
-      init_plant();
-      init_hatchRead();
-      init_panel();
-      init_harvestModal();
-      init_feedModal();
-      init_plantModal();
-      init_hatchModal();
-      init_modal();
     }
   });
 
@@ -48836,13 +48205,25 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function renderChatTab(view) {
     view.innerHTML = "";
-    const root4 = document.createElement("div");
-    css4(root4, { display: "flex", flexDirection: "column", gap: "8px" });
+    const root4 = styled("div", { display: "flex", flexDirection: "column", gap: "8px" });
     view.append(root4);
     const header = chatHeader("Companion");
     const thread = threadBody();
     const bar = actionBar();
     const host = view.closest(".qws-win") ?? view;
+    function confirmRow(proposalId) {
+      const row5 = styled("div", { display: "flex", gap: "6px", alignSelf: "flex-start", marginLeft: "34px", marginTop: "2px" });
+      row5.append(
+        button("Yes, go ahead", {
+          ...SMALL,
+          variant: "primary",
+          onClick: () => void CompanionChat.confirm(proposalId).catch(() => {
+          })
+        }),
+        button("Not now", { ...SMALL, onClick: () => CompanionChat.decline(proposalId) })
+      );
+      return row5;
+    }
     function renderThread() {
       thread.innerHTML = "";
       const identity = borrowed();
@@ -48880,29 +48261,18 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       thread.scrollTop = thread.scrollHeight;
     }
-    function confirmRow(proposalId) {
-      const row4 = document.createElement("div");
-      css4(row4, { display: "flex", gap: "6px", alignSelf: "flex-start", marginLeft: "34px", marginTop: "2px" });
-      row4.append(
-        button2("Yes, go ahead", "accent", () => void CompanionChat.confirm(proposalId).catch(() => {
-        })),
-        button2("Not now", "neutral", () => CompanionChat.decline(proposalId))
-      );
-      return row4;
-    }
-    const actionsButton = button2("Actions", "neutral", () => {
-      openActionsModal(host, (request2) => {
-        void CompanionChat.proposeHarvest(request2).catch(() => {
-        });
-      });
+    const actionsButton = button("Actions", {
+      ...SMALL,
+      onClick: () => openActionsModal(host, (request2) => void CompanionChat.ask(request2).catch(() => {
+      }))
     });
-    const settingsButton = button2("Settings", "neutral", () => openSettingsModal(host));
+    const settingsButton = button("Settings", { ...SMALL, onClick: () => openSettingsModal(host) });
     function renderBar() {
       bar.innerHTML = "";
       const run = CompanionChat.getRun();
       if (run) {
         bar.append(
-          button2(`Stop (${run.done}/${run.total})`, "danger", () => CompanionChat.cancelRun()),
+          button(`Stop (${run.done}/${run.total})`, { ...SMALL, variant: "danger", onClick: () => CompanionChat.cancelRun() }),
           barHint("Working on it", "warn")
         );
         return;
@@ -48920,10 +48290,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         header.setStatus("Waiting on you", true);
         return;
       }
-      header.setStatus(
-        CompanionService.isRunning() ? "Ready when you are" : "Not out yet, but I can still help",
-        false
-      );
+      header.setStatus(CompanionService.isRunning() ? "Ready when you are" : "Not out yet, but I can still help", false);
     }
     function renderAll() {
       renderThread();
@@ -48953,28 +48320,28 @@ Restore figures are averages; unlucky streaks do worse.`;
       unsubscribe2();
     };
   }
-  var EMPTY_HINT, IDENTITY_REFRESH_MS;
+  var EMPTY_HINT, IDENTITY_REFRESH_MS, SMALL;
   var init_chatTab = __esm({
     "src/features/companion/menu/chatTab.ts"() {
       "use strict";
+      init_button();
       init_chat();
       init_companion();
-      init_panel();
-      init_chatView();
       init_actionsModal();
+      init_chatView();
+      init_dom3();
       init_settingsModal();
       EMPTY_HINT = "Pick something below. I always ask first.";
       IDENTITY_REFRESH_MS = 2e3;
+      SMALL = { size: "sm", block: true, lockWhilePending: true };
     }
   });
 
   // src/features/companion/menu/index.ts
   function renderCompanionMenu(root4) {
-    ensurePanelStyles();
     const ui = new Menu({ id: "companion", compact: true, windowSelector: ".qws-win" });
     ui.mount(root4);
-    css4(root4, { minWidth: `${MIN_WIDTH_PX}px` });
-    const TABS2 = ["behavior", "chat"];
+    root4.style.minWidth = `${MIN_WIDTH_PX}px`;
     ui.addTab("behavior", "Behavior", (view) => renderBehaviorTab(view));
     ui.addTab("chat", "Chat", (view) => renderChatTab(view));
     const onTabRequest = (event) => {
@@ -48987,16 +48354,16 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
     window.addEventListener(COMPANION_TAB_EVENT, onTabRequest);
   }
-  var MIN_WIDTH_PX;
+  var MIN_WIDTH_PX, TABS2;
   var init_menu14 = __esm({
     "src/features/companion/menu/index.ts"() {
       "use strict";
       init_menu();
       init_keybind();
-      init_panel();
       init_behaviorTab();
       init_chatTab();
       MIN_WIDTH_PX = 460;
+      TABS2 = ["behavior", "chat"];
     }
   });
 
@@ -49119,9 +48486,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     let pingTimer = null;
     async function pingPosition() {
       try {
-        const current2 = await deps.getPosition();
-        if (!current2) return;
-        await deps.pingPosition(Math.round(current2.x), Math.round(current2.y));
+        const current3 = await deps.getPosition();
+        if (!current3) return;
+        await deps.pingPosition(Math.round(current3.x), Math.round(current3.y));
       } catch {
       }
     }
@@ -49259,8 +48626,150 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/companion/reactionWatch.ts
-  function enabled2() {
+  // src/features/companion/afk.ts
+  function initialAfkState(now) {
+    return { phase: "active", quietSince: now, phaseSince: now, asked: false, nextSnoreAt: null, lastSnore: null };
+  }
+  function snoreDelay(asleepForMs, random) {
+    const slow = asleepForMs >= SNORE_SLOW_AFTER_MS;
+    const min = slow ? SNORE_SLOW_MIN_MS : SNORE_MIN_MS;
+    const max = slow ? SNORE_SLOW_MAX_MS : SNORE_MAX_MS;
+    const r = Math.min(Math.max(random(), 0), 1);
+    return Math.round(min + (max - min) * r);
+  }
+  function snoreLine(last, random) {
+    const pool = random() < DREAM_CHANCE ? DREAM_LINES : SNORE_LINES;
+    const options2 = pool.filter((line) => line !== last);
+    return pickOne(options2.length > 0 ? options2 : pool, random);
+  }
+  function wakeSilently(state5, now) {
+    const effects = state5.phase === "asleep" ? [{ kind: "release" }] : [];
+    return { state: initialAfkState(now), effects };
+  }
+  function afkTick(state5, input, random) {
+    const { now, busy, hidden } = input;
+    if (state5.phase === "asleep") {
+      if (busy) return wakeSilently(state5, now);
+      if (state5.nextSnoreAt === null || now < state5.nextSnoreAt) return { state: state5, effects: [] };
+      const asleepFor = now - state5.phaseSince;
+      const nextSnoreAt = now + snoreDelay(asleepFor, random);
+      if (hidden) return { state: { ...state5, nextSnoreAt }, effects: [] };
+      const message2 = snoreLine(state5.lastSnore, random);
+      return {
+        state: { ...state5, nextSnoreAt, lastSnore: message2 },
+        effects: [say2({ message: message2, emote: null }, false)]
+      };
+    }
+    if (busy) return { state: state5, effects: [] };
+    if (state5.phase === "active") {
+      if (now - state5.quietSince < AFK_IDLE_AFTER_MS) return { state: state5, effects: [] };
+      const next2 = { ...state5, phase: "idle", phaseSince: now, asked: !hidden };
+      return { state: next2, effects: hidden ? [] : [say2(pickOne(IDLE_LINES, random), true)] };
+    }
+    if (now - state5.phaseSince < AFK_ASLEEP_AFTER_MS) return { state: state5, effects: [] };
+    const next = {
+      ...state5,
+      phase: "asleep",
+      phaseSince: now,
+      nextSnoreAt: now + snoreDelay(0, random),
+      lastSnore: null
+    };
+    const effects = hidden ? [] : [say2(pickOne(FALL_ASLEEP_LINES, random), true)];
+    effects.push({ kind: "hold" });
+    return { state: next, effects };
+  }
+  function afkActivity(state5, input, random) {
+    const { now, busy } = input;
+    if (state5.phase === "active") {
+      return { state: { ...state5, quietSince: now }, effects: [] };
+    }
+    if (state5.phase === "idle") {
+      const effects2 = [];
+      if (state5.asked && !busy && random() < RETURN_LINE_CHANCE) effects2.push(say2(pickOne(RETURN_LINES, random), false));
+      return { state: initialAfkState(now), effects: effects2 };
+    }
+    const asleepFor = now - state5.phaseSince;
+    const effects = [];
+    if (!busy && asleepFor >= WAKE_LINE_MIN_ASLEEP_MS) {
+      const pool = asleepFor >= SNORE_SLOW_AFTER_MS ? LONG_WAKE_LINES : WAKE_LINES;
+      effects.push(say2(pickOne(pool, random), false));
+    }
+    effects.push({ kind: "release" });
+    return { state: initialAfkState(now), effects };
+  }
+  function afkReset(state5, now) {
+    return wakeSilently(state5, now);
+  }
+  var AFK_IDLE_AFTER_MS, AFK_ASLEEP_AFTER_MS, SNORE_MIN_MS, SNORE_MAX_MS, SNORE_SLOW_AFTER_MS, SNORE_SLOW_MIN_MS, SNORE_SLOW_MAX_MS, WAKE_LINE_MIN_ASLEEP_MS, RETURN_LINE_CHANCE, DREAM_CHANCE, IDLE_LINES, RETURN_LINES, FALL_ASLEEP_LINES, SNORE_LINES, DREAM_LINES, WAKE_LINES, LONG_WAKE_LINES, say2;
+  var init_afk = __esm({
+    "src/features/companion/afk.ts"() {
+      "use strict";
+      init_random();
+      init_emoteTypes();
+      AFK_IDLE_AFTER_MS = 3 * 6e4;
+      AFK_ASLEEP_AFTER_MS = 6 * 6e4;
+      SNORE_MIN_MS = 45e3;
+      SNORE_MAX_MS = 9e4;
+      SNORE_SLOW_AFTER_MS = 30 * 6e4;
+      SNORE_SLOW_MIN_MS = 3 * 6e4;
+      SNORE_SLOW_MAX_MS = 6 * 6e4;
+      WAKE_LINE_MIN_ASLEEP_MS = 6e4;
+      RETURN_LINE_CHANCE = 0.3;
+      DREAM_CHANCE = 0.12;
+      IDLE_LINES = [
+        { message: "Hello? You still there?", emote: EmoteType.Questioning },
+        { message: "Did you fall asleep on me?", emote: EmoteType.Questioning },
+        { message: "Psst... are you still with me?", emote: EmoteType.Questioning },
+        { message: "It's very quiet all of a sudden...", emote: EmoteType.Questioning }
+      ];
+      RETURN_LINES = [
+        { message: "Oh, there you are!", emote: EmoteType.Laughing },
+        { message: "Welcome back!", emote: EmoteType.Love },
+        { message: "Ah, you're still here. Good.", emote: null }
+      ];
+      FALL_ASLEEP_LINES = [
+        { message: "I'll just rest my eyes...", emote: null },
+        { message: "Yawn... wake me up if anything grows.", emote: null },
+        { message: "Okay... a tiny nap. Just a tiny one...", emote: null },
+        { message: "I'll keep watch... with my eyes closed...", emote: null }
+      ];
+      SNORE_LINES = [
+        "Zzz...",
+        "Zzz... zzz...",
+        "zzz... carrots...",
+        "Mmh... five more minutes...",
+        "*snore*",
+        "Zzz... mmh..."
+      ];
+      DREAM_LINES = [
+        "Zzz... no, the golden one is mine...",
+        "Mmh... a pumpkin... the size of a house...",
+        "zzz... don't eat the seeds, little bunny...",
+        "Zzz... I'm the best gardener in the world...",
+        "Mmh... rain... more rain... perfect..."
+      ];
+      WAKE_LINES = [
+        { message: "Huh? I wasn't sleeping!", emote: EmoteType.Questioning },
+        { message: "I'm up! I'm up!", emote: EmoteType.Laughing },
+        { message: "Oh, you're back!", emote: EmoteType.Laughing },
+        { message: "Wha-? Oh, it's you. Hi!", emote: EmoteType.Questioning }
+      ];
+      LONG_WAKE_LINES = [
+        { message: "You were gone forever! I may have napped. A little.", emote: EmoteType.Laughing },
+        { message: "Oh! You're back! I kept the garden safe. Mostly by sleeping.", emote: EmoteType.Laughing },
+        { message: "Huh? What time is it? Welcome back!", emote: EmoteType.Questioning }
+      ];
+      say2 = (line, approach) => ({
+        kind: "say",
+        message: line.message,
+        emote: line.emote,
+        approach
+      });
+    }
+  });
+
+  // src/features/companion/availability.ts
+  function reactionsEnabled() {
     try {
       const settings = loadCompanionSettings();
       return settings.enabled && settings.reactions;
@@ -49268,18 +48777,907 @@ Restore figures are averages; unlucky streaks do worse.`;
       return false;
     }
   }
-  function offer(reaction) {
-    if (!reaction || !enabled2()) return;
-    gate = offerReaction(gate, reaction, Date.now());
-  }
-  function busy() {
-    if (!CompanionService.isRunning()) return true;
-    if (CompanionService.isBusy()) return true;
+  function chatHolds() {
     try {
-      if (CompanionChat.isRunning() || CompanionChat.getProposal()) return true;
+      return CompanionChat.isRunning() || CompanionChat.getProposal() !== null;
     } catch {
+      return false;
     }
-    return false;
+  }
+  function companionBusy() {
+    return !CompanionService.isRunning() || CompanionService.isBusy() || chatHolds();
+  }
+  var init_availability = __esm({
+    "src/features/companion/availability.ts"() {
+      "use strict";
+      init_companion();
+      init_chat();
+      init_state3();
+    }
+  });
+
+  // src/features/companion/afkWatch.ts
+  function isHidden() {
+    try {
+      return typeof document !== "undefined" && document.hidden === true;
+    } catch {
+      return false;
+    }
+  }
+  var TICK_MS, ACTIVITY_THROTTLE_MS, NEAR_DISTANCE, INPUT_EVENTS, afkWatch;
+  var init_afkWatch = __esm({
+    "src/features/companion/afkWatch.ts"() {
+      "use strict";
+      init_companion();
+      init_afk();
+      init_availability();
+      init_feeds();
+      init_watch();
+      TICK_MS = 5e3;
+      ACTIVITY_THROTTLE_MS = 1e3;
+      NEAR_DISTANCE = 8;
+      INPUT_EVENTS = ["keydown", "pointerdown", "pointermove", "wheel", "touchstart"];
+      afkWatch = defineWatcher("afk", (scope) => {
+        let state5 = initialAfkState(Date.now());
+        let ownHold = false;
+        let pending3 = 0;
+        let chain = Promise.resolve();
+        let lastNotedAt = 0;
+        let lastTile = null;
+        function othersBusy() {
+          if (!CompanionService.isRunning()) return true;
+          if (chatHolds()) return true;
+          if (ownHold) return !CompanionService.isHoldingAttention();
+          return CompanionService.isBusy();
+        }
+        function releaseOwnHold() {
+          if (!ownHold) return;
+          ownHold = false;
+          if (chatHolds()) return;
+          if (CompanionService.isHoldingAttention()) CompanionService.releaseAttention();
+        }
+        async function sayLine(effect) {
+          if (!CompanionService.isRunning() || othersBusy() || isHidden()) return;
+          if (effect.approach) {
+            try {
+              await CompanionService.comeToPlayer();
+              if (!scope.active) return;
+              await CompanionService.say(effect.message, { force: true });
+            } finally {
+              CompanionService.releaseTask();
+            }
+          } else {
+            const distance = CompanionService.distanceToPlayer();
+            if (distance === null || distance > NEAR_DISTANCE) return;
+            await CompanionService.say(effect.message, { force: true });
+          }
+          if (effect.emote !== null) void CompanionService.emote(effect.emote).catch(() => {
+          });
+        }
+        async function perform(effect) {
+          if (effect.kind === "release") {
+            releaseOwnHold();
+            return;
+          }
+          if (!scope.active) return;
+          if (effect.kind === "hold") {
+            if (!CompanionService.isRunning()) return;
+            CompanionService.holdAttention();
+            ownHold = true;
+            return;
+          }
+          await sayLine(effect);
+        }
+        function apply(step) {
+          state5 = step.state;
+          for (const effect of step.effects) {
+            pending3++;
+            chain = chain.then(() => perform(effect)).catch(() => {
+            }).finally(() => {
+              pending3--;
+            });
+          }
+        }
+        function tick() {
+          const now = Date.now();
+          if (!reactionsEnabled() || !CompanionService.isRunning()) {
+            apply(afkReset(state5, now));
+            return;
+          }
+          if (pending3 > 0) return;
+          apply(afkTick(state5, { now, busy: othersBusy(), hidden: isHidden() }, Math.random));
+        }
+        function noteActivity() {
+          const now = Date.now();
+          if (state5.phase === "active" && now - lastNotedAt < ACTIVITY_THROTTLE_MS) return;
+          lastNotedAt = now;
+          if (!reactionsEnabled() || !CompanionService.isRunning()) return;
+          apply(afkActivity(state5, { now, busy: othersBusy() }, Math.random));
+        }
+        const onInput = scope.live((event) => {
+          if (event.isTrusted) noteActivity();
+        });
+        const onVisibility = scope.live(() => {
+          if (!isHidden()) noteActivity();
+        });
+        try {
+          for (const type of INPUT_EVENTS) window.addEventListener(type, onInput, { capture: true, passive: true });
+          document.addEventListener("visibilitychange", onVisibility);
+          scope.add(() => {
+            for (const type of INPUT_EVENTS) window.removeEventListener(type, onInput, { capture: true });
+            document.removeEventListener("visibilitychange", onVisibility);
+          });
+        } catch {
+        }
+        scope.add(
+          playerTileFeed.on(
+            scope.live((tile) => {
+              const previous = lastTile;
+              lastTile = tile;
+              if (previous && (previous.x !== tile.x || previous.y !== tile.y)) noteActivity();
+            })
+          )
+        );
+        scope.every(TICK_MS, tick);
+        scope.add(releaseOwnHold);
+      });
+    }
+  });
+
+  // src/features/companion/emoteMirror.ts
+  function latestOwnEmote(entries, playerId2, ignoreIds = []) {
+    if (!playerId2 || !Array.isArray(entries) || ignoreIds.includes(playerId2)) return null;
+    let best = null;
+    for (const raw of entries) {
+      const entry = raw;
+      if (!entry || entry.kind !== "emote" || entry.playerId !== playerId2) continue;
+      const emote = entry.emoteType;
+      const at = entry.lastTimestampMs;
+      if (typeof emote !== "number" || !PLAYABLE.has(emote)) continue;
+      if (typeof at !== "number" || !Number.isFinite(at)) continue;
+      if (!best || at > best.at) best = { emote, at };
+    }
+    return best;
+  }
+  function initialMirrorState() {
+    return {
+      primed: false,
+      scope: null,
+      seenAt: Number.NEGATIVE_INFINITY,
+      streakCount: 0,
+      streakAnswers: 0,
+      streakLastAt: Number.NEGATIVE_INFINITY,
+      streakSpamRolled: false,
+      lastMirrorAt: Number.NEGATIVE_INFINITY,
+      lastLineAt: Number.NEGATIVE_INFINITY,
+      lastSpamLineAt: Number.NEGATIVE_INFINITY
+    };
+  }
+  function observeOwnEmote(state5, read2) {
+    if (!read2) return { state: state5, fresh: null };
+    if (!state5.primed || state5.scope !== read2.scope) {
+      return {
+        state: { ...state5, primed: true, scope: read2.scope, seenAt: read2.latest?.at ?? Number.NEGATIVE_INFINITY },
+        fresh: null
+      };
+    }
+    const latest = read2.latest;
+    if (!latest || latest.at <= state5.seenAt) return { state: state5, fresh: null };
+    return { state: { ...state5, seenAt: latest.at }, fresh: latest };
+  }
+  function mirrorEmoteFor(played, random) {
+    switch (played) {
+      case EmoteType.Crying:
+        return random() < 0.6 ? EmoteType.Love : EmoteType.Crying;
+      case EmoteType.Angered:
+        return random() < 0.6 ? EmoteType.Questioning : EmoteType.Crying;
+      default:
+        return played;
+    }
+  }
+  function mirrorDelay(random) {
+    const span = MIRROR_DELAY_MAX_MS - MIRROR_DELAY_MIN_MS;
+    const r = Math.min(1, Math.max(0, random()));
+    return Math.round(MIRROR_DELAY_MIN_MS + r * span);
+  }
+  function decideMirror(state5, played, ctx2) {
+    const { now, random } = ctx2;
+    let next = now - state5.streakLastAt > STREAK_GAP_MS ? { ...state5, streakCount: 1, streakAnswers: 0, streakSpamRolled: false, streakLastAt: now } : { ...state5, streakCount: state5.streakCount + 1, streakLastAt: now };
+    if (!ctx2.available || ctx2.distance === null || ctx2.distance > MIRROR_MAX_DISTANCE) {
+      return { state: next, action: null };
+    }
+    if (next.streakCount >= SPAM_THRESHOLD && !next.streakSpamRolled && now - next.lastSpamLineAt >= SPAM_LINE_COOLDOWN_MS) {
+      next = { ...next, streakSpamRolled: true };
+      if (random() < SPAM_LINE_CHANCE) {
+        next = { ...next, lastSpamLineAt: now, lastLineAt: now, lastMirrorAt: now };
+        return { state: next, action: { kind: "line", line: pickOne(SPAM_LINES, random), delayMs: mirrorDelay(random) } };
+      }
+    }
+    if (now - next.lastMirrorAt < MIRROR_COOLDOWN_MS) return { state: next, action: null };
+    if (next.streakAnswers >= STREAK_MAX_ANSWERS) return { state: next, action: null };
+    if (next.streakAnswers >= 1 && random() >= SECOND_ANSWER_CHANCE) {
+      return { state: { ...next, streakAnswers: STREAK_MAX_ANSWERS }, action: null };
+    }
+    const emote = mirrorEmoteFor(played.emote, random);
+    const delayMs = mirrorDelay(random);
+    let line = null;
+    if (now - next.lastLineAt >= LINE_COOLDOWN_MS && random() < LINE_CHANCE) {
+      const lines = MIRROR_LINES[played.emote];
+      if (lines && lines.length) line = pickOne(lines, random);
+    }
+    next = {
+      ...next,
+      streakAnswers: next.streakAnswers + 1,
+      lastMirrorAt: now,
+      lastLineAt: line ? now : next.lastLineAt
+    };
+    return { state: next, action: { kind: "mirror", emote, delayMs, line } };
+  }
+  var MIRROR_MAX_DISTANCE, MIRROR_COOLDOWN_MS, MIRROR_DELAY_MIN_MS, MIRROR_DELAY_MAX_MS, STREAK_GAP_MS, STREAK_MAX_ANSWERS, SECOND_ANSWER_CHANCE, LINE_CHANCE, LINE_COOLDOWN_MS, SPAM_THRESHOLD, SPAM_LINE_CHANCE, SPAM_LINE_COOLDOWN_MS, PLAYABLE, MIRROR_LINES, SPAM_LINES;
+  var init_emoteMirror = __esm({
+    "src/features/companion/emoteMirror.ts"() {
+      "use strict";
+      init_random();
+      init_emoteTypes();
+      MIRROR_MAX_DISTANCE = 8;
+      MIRROR_COOLDOWN_MS = 6e3;
+      MIRROR_DELAY_MIN_MS = 400;
+      MIRROR_DELAY_MAX_MS = 1200;
+      STREAK_GAP_MS = 12e3;
+      STREAK_MAX_ANSWERS = 2;
+      SECOND_ANSWER_CHANCE = 0.5;
+      LINE_CHANCE = 1 / 6;
+      LINE_COOLDOWN_MS = 12e4;
+      SPAM_THRESHOLD = 6;
+      SPAM_LINE_CHANCE = 0.3;
+      SPAM_LINE_COOLDOWN_MS = 3e5;
+      PLAYABLE = new Set(Object.values(EmoteType).filter((value) => value !== EmoteType.Idle));
+      MIRROR_LINES = {
+        [EmoteType.Clapping]: ["Bravo!", "Woo!", "Nice one!"],
+        [EmoteType.Laughing]: ["Haha!", "Hehe.", "Too funny."],
+        [EmoteType.Angered]: ["Uh oh.", "Easy there.", "What happened?"],
+        [EmoteType.Crying]: ["Aww.", "There, there.", "I'm here."],
+        [EmoteType.Questioning]: ["Hmm?", "No idea either.", "Good question."],
+        [EmoteType.Love]: ["Aww.", "Same!", "Right back at you!"]
+      };
+      SPAM_LINES = ["Okay okay, I get it!", "Alright, alright!", "You're on a roll, huh?"];
+    }
+  });
+
+  // src/features/companion/emoteMirrorWatch.ts
+  function sameChat(a, b) {
+    const da = a?.data;
+    const db = b?.data;
+    return da?.roomId === db?.roomId && da?.chat?.entries === db?.chat?.entries;
+  }
+  var emoteMirrorWatch;
+  var init_emoteMirrorWatch = __esm({
+    "src/features/companion/emoteMirrorWatch.ts"() {
+      "use strict";
+      init_atoms();
+      init_companion();
+      init_availability();
+      init_emoteMirror();
+      init_watch();
+      emoteMirrorWatch = defineWatcher("emote mirror", (scope) => {
+        let state5 = initialMirrorState();
+        let pending3 = null;
+        let localId = null;
+        let roomId = null;
+        let entries = void 0;
+        function cancelPending2() {
+          if (pending3 === null) return;
+          window.clearTimeout(pending3);
+          pending3 = null;
+        }
+        async function perform(action2) {
+          if (!scope.active || !reactionsEnabled() || companionBusy()) return;
+          if (action2.line) {
+            try {
+              await CompanionService.say(action2.line);
+            } catch {
+            }
+          }
+          if (action2.kind === "mirror") await CompanionService.emote(action2.emote);
+        }
+        function schedule(action2) {
+          cancelPending2();
+          pending3 = window.setTimeout(() => {
+            pending3 = null;
+            void perform(action2).catch(() => {
+            });
+          }, action2.delayMs);
+        }
+        function currentRead() {
+          if (!localId || !Array.isArray(entries)) return null;
+          const npcId = CompanionService.getNpcId();
+          return {
+            scope: `${roomId ?? ""}|${localId}`,
+            latest: latestOwnEmote(entries, localId, npcId ? [npcId] : [])
+          };
+        }
+        function process() {
+          const seen = observeOwnEmote(state5, currentRead());
+          state5 = seen.state;
+          if (!seen.fresh) return;
+          const decided = decideMirror(state5, seen.fresh, {
+            now: Date.now(),
+            available: reactionsEnabled() && !companionBusy(),
+            distance: CompanionService.distanceToPlayer(),
+            random: Math.random
+          });
+          state5 = decided.state;
+          if (decided.action) schedule(decided.action);
+        }
+        scope.add(
+          Atoms.player.playerId.onChangeNow(
+            scope.live((next) => {
+              localId = typeof next === "string" && next ? next : null;
+              process();
+            })
+          )
+        );
+        scope.add(
+          Atoms.root.state.onChangeNow(
+            scope.live((next) => {
+              const data = next?.data;
+              roomId = typeof data?.roomId === "string" ? data.roomId : null;
+              entries = data?.chat?.entries;
+              process();
+            }),
+            sameChat
+          )
+        );
+        scope.add(cancelPending2);
+      });
+    }
+  });
+
+  // src/features/companion/reactions/badLuck.ts
+  function badLuckReactions(prev, next, eggName3, random) {
+    const out = [];
+    for (const [eggId, after] of Object.entries(next ?? {})) {
+      const before = prev?.[eggId];
+      if (!before || !after) continue;
+      const egg = eggName3(eggId);
+      for (const kind of ["rainbow", "gold"]) {
+        const was = Number(before[kind]) || 0;
+        const now = Number(after[kind]) || 0;
+        const label2 = RARITY_LABEL[kind];
+        if (now < was) {
+          if (was < RELIEF_MIN[kind]) continue;
+          const tries = was + 1;
+          out.push({
+            key: `hatch:${kind}`,
+            message: pickOne(
+              [
+                `FINALLY! A ${label2} pet after ${tries} tries!`,
+                `${tries} hatches of waiting, and there it is. ${label2}!`,
+                `I told you it was coming! ${label2}, at last!`
+              ],
+              random
+            ),
+            emote: EmoteType.Love,
+            priority: "high",
+            weight: 1
+          });
+          continue;
+        }
+        let step = null;
+        for (const s of DROUGHT_STEPS[kind]) if (was < s && now >= s) step = s;
+        if (step === null) continue;
+        out.push({
+          key: `badluck:${kind}`,
+          message: pickOne(
+            [
+              `${step} ${egg} hatches without a ${label2}... it's coming, I can feel it.`,
+              `Still no ${label2} after ${step} tries. The game owes you one.`,
+              `${step} in a row with no ${label2}. Hang in there, boss.`
+            ],
+            random
+          ),
+          emote: EmoteType.Crying,
+          priority: "high"
+        });
+      }
+    }
+    return out;
+  }
+  var DROUGHT_STEPS, RELIEF_MIN, RARITY_LABEL;
+  var init_badLuck = __esm({
+    "src/features/companion/reactions/badLuck.ts"() {
+      "use strict";
+      init_random();
+      init_emoteTypes();
+      DROUGHT_STEPS = {
+        gold: [25, 50, 100, 200, 400],
+        rainbow: [100, 250, 500, 1e3, 2e3]
+      };
+      RELIEF_MIN = { gold: 25, rainbow: 100 };
+      RARITY_LABEL = { gold: "Gold", rainbow: "Rainbow" };
+    }
+  });
+
+  // src/features/companion/reactions/events.ts
+  function weatherChangeReaction(prevId, nextId, prevName, startLine, random) {
+    if (prevId === nextId) return null;
+    if (nextId) {
+      return { key: `weather:${nextId}`, message: startLine, emote: weatherEmote(nextId), priority: "high" };
+    }
+    if (!prevId) return null;
+    return {
+      key: "weather:end",
+      message: pickOne(
+        [`The ${prevName} is over. Sunshine's back!`, `And just like that, the ${prevName} is gone.`, `Bye bye, ${prevName}.`],
+        random
+      ),
+      emote: null,
+      priority: "low"
+    };
+  }
+  function abilityReaction(event, random) {
+    const who = event.name?.trim() || (event.species ? `your ${event.species}` : "your pet");
+    const Who = who.charAt(0).toUpperCase() + who.slice(1);
+    return {
+      key: "ability",
+      message: pickOne(
+        [`${Who} just used ${event.abilityName}!`, `Go ${who}! ${event.abilityName}!`, `Did you see that? ${Who} used ${event.abilityName}.`],
+        random
+      ),
+      emote: EmoteType.Clapping,
+      priority: "low"
+    };
+  }
+  function eggsReadyReaction(count, random) {
+    if (count <= 0) return null;
+    return {
+      key: "egg",
+      message: count === 1 ? pickOne(["An egg is ready to hatch!", "Ooh, one of your eggs is ready!", "Something's wiggling in that egg. It's ready!"], random) : pickOne([`${count} eggs are ready to hatch!`, `${count} eggs ready! Hatching time?`], random),
+      emote: EmoteType.Clapping,
+      priority: "high"
+    };
+  }
+  function shopReaction(names, random) {
+    const list = names.filter((n) => typeof n === "string" && n.trim());
+    if (list.length === 0) return null;
+    const what = list.length === 1 ? list[0] : list.length === 2 ? `${list[0]} and ${list[1]}` : `${list[0]}, ${list[1]} and more`;
+    const isAre = list.length === 1 ? "is" : "are";
+    return {
+      key: "shop",
+      message: pickOne(
+        [`${what} ${isAre} in the shop! Go go go!`, `Ooh, ${what} just showed up in the shop!`, `Quick, ${what} ${isAre} in stock!`],
+        random
+      ),
+      emote: EmoteType.Clapping,
+      priority: "high"
+    };
+  }
+  function restockedFollowed(prev, next, isFollowed) {
+    if (!prev || !next) return [];
+    const out = [];
+    for (const kind of Object.keys(SHOP_ID)) {
+      const before = Number(prev[kind]?.secondsUntilRestock) || 0;
+      const after = Number(next[kind]?.secondsUntilRestock) || 0;
+      if (after <= before) continue;
+      const inventory = next[kind]?.inventory;
+      if (!Array.isArray(inventory)) continue;
+      const [prefix, field2] = SHOP_ID[kind];
+      for (const item of inventory) {
+        const key2 = item?.[field2];
+        const stock = Number(item?.initialStock);
+        if (typeof key2 !== "string" || !key2 || !(stock > 0)) continue;
+        const id = `${prefix}:${key2}`;
+        if (isFollowed(id)) out.push(id);
+      }
+    }
+    return out;
+  }
+  function rareCropReaction(crops, random) {
+    if (crops.length === 0) return null;
+    const first = crops[0];
+    const message2 = crops.length === 1 ? pickOne(
+      [
+        `A ${first.mutation} ${first.species}! Look at that!`,
+        `Whoa, a ${first.mutation} ${first.species} just showed up!`,
+        `${first.mutation}! Your ${first.species} is special.`
+      ],
+      random
+    ) : pickOne([`${crops.length} rare crops just appeared! Look!`, `Whoa, ${crops.length} special crops at once!`], random);
+    return { key: "rarecrop", message: message2, emote: EmoteType.Love, priority: "high" };
+  }
+  var SHOP_ID;
+  var init_events = __esm({
+    "src/features/companion/reactions/events.ts"() {
+      "use strict";
+      init_random();
+      init_dialogueLines();
+      init_emoteTypes();
+      SHOP_ID = {
+        seed: ["Seed", "species"],
+        egg: ["Egg", "eggId"],
+        tool: ["Tool", "toolId"],
+        decor: ["Decor", "decorId"]
+      };
+    }
+  });
+
+  // src/features/companion/reactions/garden.ts
+  function newRareCrops(prev, next, rare) {
+    if (!prev || typeof prev !== "object" || !next || typeof next !== "object" || rare.size === 0) return [];
+    const seen = /* @__PURE__ */ new Map();
+    const index = (tiles, visit) => {
+      for (const [tileIdx, obj] of Object.entries(tiles)) {
+        const o = obj;
+        if (!o || o.objectType !== "plant" || !Array.isArray(o.slots)) continue;
+        o.slots.forEach((raw, i) => {
+          const s = raw;
+          if (!s) return;
+          const muts = Array.isArray(s.mutations) ? s.mutations.filter((m) => typeof m === "string") : [];
+          const species = typeof s.species === "string" ? s.species : typeof o.species === "string" ? o.species : "crop";
+          visit(`${tileIdx}|${s.slotId ?? i}|${s.startTime ?? ""}`, species, muts);
+        });
+      }
+    };
+    index(prev, (id, _species, muts) => seen.set(id, new Set(muts)));
+    const out = [];
+    index(next, (id, species, muts) => {
+      const before = seen.get(id) ?? /* @__PURE__ */ new Set();
+      for (const m of muts) {
+        if (rare.has(m) && !before.has(m)) out.push({ mutation: m, species });
+      }
+    });
+    return out;
+  }
+  function newlyReadyEggs(tiles, now, announced) {
+    if (!tiles || typeof tiles !== "object") return [];
+    const out = [];
+    for (const [tileIdx, obj] of Object.entries(tiles)) {
+      const o = obj;
+      if (!o || o.objectType !== "egg") continue;
+      const matured = Number(o.maturedAt);
+      if (!Number.isFinite(matured) || matured <= 0 || matured > now) continue;
+      const key2 = `${tileIdx}|${o.plantedAt ?? ""}`;
+      if (!announced.has(key2)) out.push(key2);
+    }
+    return out;
+  }
+  var init_garden = __esm({
+    "src/features/companion/reactions/garden.ts"() {
+      "use strict";
+    }
+  });
+
+  // src/features/companion/reactions/gate.ts
+  function initialGateState() {
+    return { lastSpokeAt: 0, mutedUntil: {}, queue: [] };
+  }
+  function offerReaction(state5, reaction, now) {
+    if (now < (state5.mutedUntil[familyOf(reaction.key)] ?? 0)) return state5;
+    const existing = state5.queue.find((q) => q.key === reaction.key);
+    if (existing && (existing.weight ?? 0) > (reaction.weight ?? 0)) return state5;
+    const queue = state5.queue.filter((q) => q.key !== reaction.key);
+    queue.push({ ...reaction, at: now });
+    return { ...state5, queue };
+  }
+  function takeReaction(state5, now, busy) {
+    const queue = state5.queue.filter((q) => now - q.at <= REACTION_TTL_MS[q.priority]);
+    const kept = { ...state5, queue };
+    if (busy || queue.length === 0 || now - state5.lastSpokeAt < REACTION_GAP_MS) return { reaction: null, state: kept };
+    const chosen = queue.find((q) => q.priority === "high") ?? queue[0];
+    const family = familyOf(chosen.key);
+    const { at: _at, ...reaction } = chosen;
+    return {
+      reaction,
+      state: {
+        lastSpokeAt: now,
+        mutedUntil: { ...state5.mutedUntil, [family]: now + (FAMILY_COOLDOWN_MS[family] ?? 0) },
+        // The rest of the family that just spoke goes quiet too.
+        queue: queue.filter((q) => q !== chosen && (FAMILY_COOLDOWN_MS[family] ? familyOf(q.key) !== family : true))
+      }
+    };
+  }
+  var REACTION_GAP_MS, REACTION_TTL_MS, FAMILY_COOLDOWN_MS, familyOf;
+  var init_gate = __esm({
+    "src/features/companion/reactions/gate.ts"() {
+      "use strict";
+      REACTION_GAP_MS = 15e3;
+      REACTION_TTL_MS = {
+        high: 3 * 6e4,
+        low: 1e4
+      };
+      FAMILY_COOLDOWN_MS = {
+        ability: 5 * 6e4,
+        sale: 6e4,
+        hatch: 6e4,
+        egg: 5 * 6e4,
+        shop: 3e4,
+        rarecrop: 3e4
+      };
+      familyOf = (key2) => key2.split(":")[0];
+    }
+  });
+
+  // src/features/companion/reactions/milestones.ts
+  function crossedMilestone(prev, next) {
+    if (!Number.isFinite(prev) || !Number.isFinite(next) || next <= prev) return null;
+    let crossed = null;
+    for (const m of MILESTONES) {
+      if (prev < m && next >= m) crossed = m;
+    }
+    return crossed;
+  }
+  function formatMilestone(n) {
+    const units = [
+      [1e15, "quadrillion"],
+      [1e12, "trillion"],
+      [1e9, "billion"],
+      [1e6, "million"]
+    ];
+    for (const [size, word] of units) {
+      if (n >= size) return `${fmt(n / size)} ${word}`;
+    }
+    return fmt(n);
+  }
+  function statReactions(prev, next, random) {
+    const out = [];
+    for (const def of STAT_DEFS) {
+      const m = crossedMilestone(def.read(prev), def.read(next));
+      if (m === null) continue;
+      out.push({
+        key: `milestone:${def.id}`,
+        message: pickOne(def.lines, random)(formatMilestone(m)),
+        emote: m >= 1e6 ? EmoteType.Love : EmoteType.Clapping,
+        priority: "high"
+      });
+    }
+    if (sumHatched(next, "rainbow") > sumHatched(prev, "rainbow")) {
+      out.push({
+        key: "hatch:rainbow",
+        message: pickOne(
+          ["A RAINBOW pet?! No way!", "Rainbow! I've never seen one up close!", "Look at those colours! A Rainbow pet!"],
+          random
+        ),
+        emote: EmoteType.Love,
+        priority: "high"
+      });
+    } else if (sumHatched(next, "gold") > sumHatched(prev, "gold")) {
+      out.push({
+        key: "hatch:gold",
+        message: pickOne(["A Gold pet! Look at it shine!", "Gold! That one's a keeper.", "Shiny! A Gold pet!"], random),
+        emote: EmoteType.Love,
+        priority: "high"
+      });
+    } else if (sumHatched(next) > sumHatched(prev)) {
+      out.push({
+        key: "hatch:normal",
+        message: pickOne(["Welcome to the family, little one!", "A new friend! Hi there!", "Aww, look at the new pet."], random),
+        emote: EmoteType.Clapping,
+        priority: "low"
+      });
+    }
+    const earned = num(next?.shops?.cropsSoldValue) - num(prev?.shops?.cropsSoldValue);
+    if (earned > 0) {
+      const coins = fmt(earned);
+      out.push({
+        key: "sale:crops",
+        message: pickOne(
+          [`Ka-ching! +${coins} coins.`, `Sold! ${coins} coins richer.`, `Nice sale, ${coins} coins!`, `${coins} coins in the bank. Love it.`],
+          random
+        ),
+        emote: EmoteType.Clapping,
+        priority: "low"
+      });
+    }
+    return out;
+  }
+  var fmt, MILESTONES, sumHatched, sumAbilityTriggers, num, STAT_DEFS;
+  var init_milestones = __esm({
+    "src/features/companion/reactions/milestones.ts"() {
+      "use strict";
+      init_random();
+      init_format();
+      init_emoteTypes();
+      fmt = (n) => formatInteger(n, "round");
+      MILESTONES = Array.from({ length: 14 }, (_, i) => 10 ** (i + 2));
+      sumHatched = (s, key2) => {
+        let total = 0;
+        for (const counts of Object.values(s?.pets?.hatchedByType ?? {})) {
+          if (!counts) continue;
+          total += key2 ? Number(counts[key2]) || 0 : (Number(counts.normal) || 0) + (Number(counts.gold) || 0) + (Number(counts.rainbow) || 0);
+        }
+        return total;
+      };
+      sumAbilityTriggers = (s) => {
+        let total = 0;
+        for (const stat of Object.values(s?.abilities ?? {})) total += Number(stat?.triggers) || 0;
+        return total;
+      };
+      num = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
+      STAT_DEFS = [
+        {
+          id: "harvested",
+          read: (s) => num(s?.garden?.totalHarvested),
+          lines: [
+            (n) => `That's ${n} crops harvested! Incredible.`,
+            (n) => `${n} harvests! You're a natural.`,
+            (n) => `Crop number ${n}! We should celebrate.`
+          ]
+        },
+        {
+          id: "planted",
+          read: (s) => num(s?.garden?.totalPlanted),
+          lines: [(n) => `${n} seeds planted! This garden keeps growing.`, (n) => `That's seed number ${n}. Green thumb confirmed.`]
+        },
+        {
+          id: "watered",
+          read: (s) => num(s?.garden?.watercanUsed),
+          lines: [(n) => `${n} waterings! You really care about these plants.`]
+        },
+        {
+          id: "cropsSold",
+          read: (s) => num(s?.shops?.cropsSoldCount),
+          lines: [(n) => `${n} crops sold! The shop loves you.`, (n) => `That's ${n} crops sold. Business is booming.`]
+        },
+        {
+          id: "coins",
+          read: (s) => num(s?.shops?.cropsSoldValue) + num(s?.shops?.petsSoldValue),
+          lines: [(n) => `You've earned ${n} coins from sales! So rich.`, (n) => `${n} coins earned. Buy me something nice?`]
+        },
+        {
+          id: "seedsBought",
+          read: (s) => num(s?.shops?.seedsBought),
+          lines: [(n) => `${n} seeds bought! The shopkeeper knows your name by now.`]
+        },
+        {
+          id: "petsSold",
+          read: (s) => num(s?.shops?.petsSoldCount),
+          lines: [(n) => `${n} pets sold. Hope they found good homes!`]
+        },
+        {
+          id: "hatched",
+          read: (s) => sumHatched(s),
+          lines: [(n) => `${n} pets hatched! That's a whole zoo.`, (n) => `Pet number ${n}! Welcome to the family.`]
+        },
+        {
+          id: "abilities",
+          read: (s) => sumAbilityTriggers(s),
+          lines: [(n) => `Your pets have used their abilities ${n} times!`, (n) => `${n} pet abilities triggered. Hard workers!`]
+        }
+      ];
+    }
+  });
+
+  // src/features/companion/reactions/session.ts
+  function resumeSession(stored, now) {
+    const s = stored;
+    const lastSeenAt = Number(s?.lastSeenAt);
+    const startedAt = Number(s?.startedAt);
+    const valid = Number.isFinite(lastSeenAt) && lastSeenAt > 0 && Number.isFinite(startedAt) && startedAt > 0 && startedAt <= now;
+    const storedMet = Number(s?.firstMetAt);
+    const firstMetAt = Number.isFinite(storedMet) && storedMet > 0 && storedMet <= now ? storedMet : now;
+    const celebratedDays = Math.max(0, Math.floor(Number(s?.celebratedDays) || 0));
+    if (valid && now - lastSeenAt < SESSION_GAP_MS) {
+      const announcedHours = Math.max(0, Math.floor(Number(s?.announcedHours) || 0));
+      return { session: { startedAt, lastSeenAt: now, announcedHours, firstMetAt, celebratedDays }, greeting: null };
+    }
+    return {
+      session: { startedAt: now, lastSeenAt: now, announcedHours: 0, firstMetAt, celebratedDays },
+      greeting: { first: !valid, awayMs: valid ? now - lastSeenAt : 0 }
+    };
+  }
+  function greetingReaction(greeting, hour, random, holiday = null) {
+    let lines;
+    if (greeting.first) {
+      lines = ["Hi there! I'll be sticking around.", "Nice to meet you! Let's grow something great."];
+    } else if (greeting.awayMs >= 3 * DAY_MS) {
+      lines = ["Where have you been? I missed you!", "You're back! It's been ages.", "Finally! I was starting to talk to the plants."];
+    } else if (holiday) {
+      lines = HOLIDAY_GREETINGS[holiday];
+    } else if (greeting.awayMs >= DAY_MS) {
+      lines = ["Welcome back! The garden missed you.", "Hey, you're back! Good to see you."];
+    } else {
+      lines = GREETING_BY_DAY_PART[dayPart(hour)];
+    }
+    return { key: "session:greeting", message: pickOne(lines, random), emote: EmoteType.Love, priority: "high" };
+  }
+  function anniversarySteps(days) {
+    const steps = [7, 30, 100];
+    for (let year = 1; year * 365 <= days; year++) steps.push(year * 365);
+    return steps;
+  }
+  function anniversaryReaction(firstMetAt, now, celebratedDays, random) {
+    const days = Math.floor((now - firstMetAt) / DAY_MS);
+    let due = null;
+    for (const step of anniversarySteps(days)) if (step <= days && step > celebratedDays) due = step;
+    if (due === null) return { reaction: null, celebratedDays };
+    let lines;
+    if (due === 7) lines = ["One week together already! Thanks for having me.", "A whole week of gardening together!"];
+    else if (due === 30) lines = ["We've been gardening together for a whole month!", "One month together! Time flies."];
+    else if (due === 100) lines = ["100 days together! That's a lot of crops.", "Day 100! Best garden buddy ever."];
+    else {
+      const years = due / 365;
+      lines = years === 1 ? ["Happy anniversary! One year together!", "One year already! Thanks for keeping me around."] : [`Happy anniversary! ${years} years together!`, `${years} years of gardening together. Wow.`];
+    }
+    return {
+      reaction: { key: "anniversary", message: pickOne(lines, random), emote: EmoteType.Love, priority: "high" },
+      celebratedDays: due
+    };
+  }
+  function sessionHours(session, now) {
+    return Math.max(0, Math.floor((now - session.startedAt) / HOUR_MS));
+  }
+  function sessionHourReaction(hours, random) {
+    if (hours < 1) return null;
+    let lines;
+    let emote = EmoteType.Clapping;
+    if (hours === 1) {
+      lines = ["We've been at it for an hour already.", "One hour in! Time flies when you're gardening."];
+    } else if (hours === 2) {
+      lines = ["Two hours in! Look at this place.", "Two hours already? Where did the time go?"];
+    } else if (hours < 6) {
+      lines = [
+        `${hours} hours straight. Maybe stretch your legs?`,
+        `${hours} hours! Don't forget to drink some water.`,
+        `${hours} hours already. You're dedicated!`
+      ];
+      emote = EmoteType.Questioning;
+    } else {
+      lines = [`${hours} hours?! Are you okay?`, `${hours} hours. I think the plants need a break. And you too.`];
+      emote = EmoteType.Crying;
+    }
+    return { key: `session:hours`, message: pickOne(lines, random), emote, priority: "high" };
+  }
+  function clockReaction(prevHour, hour, sessionMs, random, holiday = null) {
+    if (prevHour === hour) return null;
+    if (hour === 0) {
+      if (holiday) {
+        return { key: "clock:holiday", message: pickOne(HOLIDAY_GREETINGS[holiday], random), emote: EmoteType.Love, priority: "high" };
+      }
+      return {
+        key: "clock:midnight",
+        message: pickOne(["It's midnight! Still going?", "Midnight already. The garden never sleeps, huh?"], random),
+        emote: EmoteType.Questioning,
+        priority: "high"
+      };
+    }
+    if (hour === 6 && sessionMs >= 3 * HOUR_MS) {
+      return {
+        key: "clock:sunrise",
+        message: pickOne(["The sun's coming up. Did we just pull an all-nighter?", "Is that... sunrise? We've been up all night!"], random),
+        emote: EmoteType.Laughing,
+        priority: "high"
+      };
+    }
+    return null;
+  }
+  var SESSION_GAP_MS, HOUR_MS, DAY_MS, GREETING_BY_DAY_PART;
+  var init_session2 = __esm({
+    "src/features/companion/reactions/session.ts"() {
+      "use strict";
+      init_random();
+      init_dialogueTime();
+      init_emoteTypes();
+      SESSION_GAP_MS = 20 * 6e4;
+      HOUR_MS = 36e5;
+      DAY_MS = 24 * HOUR_MS;
+      GREETING_BY_DAY_PART = {
+        night: ["Hey, night owl! Couldn't sleep?", "Gardening at this hour? I like your style."],
+        early: ["Up with the sun, I see!", "Good morning! You're up early."],
+        morning: ["Good morning! Let's grow something.", "Morning! Ready when you are."],
+        afternoon: ["Good afternoon! Ready to garden?", "Hey! Perfect timing, the plants were asking for you."],
+        evening: ["Good evening! Glad you're here.", "Evening! Let's make it a good one."],
+        late: ["Evening, boss. Late session tonight?", "Hey! Quick one before bed?"]
+      };
+    }
+  });
+
+  // src/features/companion/reactionWatch.ts
+  function luckOf(state5) {
+    const out = {};
+    for (const [eggId, counters] of Object.entries(state5?.counters ?? {})) {
+      out[eggId] = { gold: Number(counters?.gold) || 0, rainbow: Number(counters?.rainbow) || 0 };
+    }
+    return out;
   }
   async function speak2(reaction) {
     const distance = CompanionService.distanceToPlayer();
@@ -49296,217 +49694,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (reaction.emote !== null) void CompanionService.emote(reaction.emote).catch(() => {
     });
   }
-  async function drain() {
-    if (speaking) return;
-    const picked = takeReaction(gate, Date.now(), busy() || !enabled2());
-    gate = picked.state;
-    if (!picked.reaction) return;
-    speaking = true;
-    try {
-      await speak2(picked.reaction);
-    } catch {
-    } finally {
-      speaking = false;
-    }
-  }
-  function saveSession() {
-    if (!session) return;
-    try {
-      writeAriesPath(SESSION_PATH, session);
-    } catch {
-    }
-  }
-  function openSession() {
-    const resumed = resumeSession(readAriesPath(SESSION_PATH, void 0), Date.now());
-    session = resumed.session;
-    saveSession();
-    const today = /* @__PURE__ */ new Date();
-    if (resumed.greeting) offer(greetingReaction(resumed.greeting, today.getHours(), Math.random, holidayOf(today)));
-    checkAnniversary(Date.now());
-  }
-  function checkAnniversary(now) {
-    if (!session) return;
-    const due = anniversaryReaction(session.firstMetAt, now, session.celebratedDays, Math.random);
-    if (!due.reaction) return;
-    session.celebratedDays = due.celebratedDays;
-    saveSession();
-    offer(due.reaction);
-  }
-  function slowTick() {
-    const now = Date.now();
-    if (session) {
-      session.lastSeenAt = now;
-      const hours = sessionHours(session, now);
-      if (hours > session.announcedHours) {
-        session.announcedHours = hours;
-        offer(sessionHourReaction(hours, Math.random));
-      }
-      saveSession();
-      const date = new Date(now);
-      const hour = date.getHours();
-      offer(clockReaction(lastHour, hour, now - session.startedAt, Math.random, holidayOf(date)));
-      lastHour = hour;
-      checkAnniversary(now);
-    }
-    checkEggs(now);
-  }
-  function checkEggs(now) {
-    if (!latestGarden) return;
-    const fresh = newlyReadyEggs(latestGarden, now, announcedEggs);
-    for (const key2 of fresh) announcedEggs.add(key2);
-    if (!eggsPrimed) {
-      eggsPrimed = true;
-      return;
-    }
-    offer(eggsReadyReaction(fresh.length, Math.random));
-  }
-  function rareMutations() {
-    const out = /* @__PURE__ */ new Set();
-    try {
-      for (const [key2, def] of Object.entries(mutationCatalog2 ?? {})) {
-        if (Number(def?.baseChance) > 0) out.add(key2);
-      }
-    } catch {
-    }
-    return out;
-  }
-  function checkGarden() {
-    const next = latestGarden;
-    if (!next || next === prevGarden) return;
-    const prev = prevGarden;
-    prevGarden = next;
-    if (!prev) return;
-    const crops = newRareCrops(prev, next, rareMutations()).map((c) => ({ ...c, species: cropName(c.species) }));
-    offer(rareCropReaction(crops, Math.random));
-  }
-  function onWeather2(next) {
-    const id = typeof next === "string" && next ? next : null;
-    const prev = prevWeather;
-    prevWeather = id;
-    if (prev === void 0) return;
-    const nextName = id ? weatherDisplayName(id, weatherCatalog2) : "";
-    const prevName = prev ? weatherDisplayName(prev, weatherCatalog2) : "";
-    const startLine = id ? weatherMessage(id, nextName, Math.random) : "";
-    offer(weatherChangeReaction(prev, id, prevName, startLine, Math.random));
-  }
-  function onStats(next) {
-    const snapshot2 = clone(next);
-    const prev = prevStats;
-    prevStats = snapshot2;
-    if (!prev) return;
-    let ownRun = false;
-    try {
-      ownRun = CompanionChat.isRunning();
-    } catch {
-    }
-    for (const reaction of statReactions(prev, snapshot2, Math.random)) {
-      if (ownRun && !reaction.key.startsWith("milestone:")) continue;
-      offer(reaction);
-    }
-  }
-  function onAbilityLogs2(all) {
-    if (!Array.isArray(all) || all.length === 0) return;
-    const newest = all.reduce((a, b) => b.performedAt > a.performedAt ? b : a);
-    const first = lastAbilityAt === 0;
-    if (newest.performedAt <= lastAbilityAt) return;
-    lastAbilityAt = newest.performedAt;
-    if (first) return;
-    offer(abilityReaction({ name: newest.name, species: newest.species, abilityName: newest.abilityName }, Math.random));
-  }
-  function luckOf(state7) {
-    const out = {};
-    for (const [eggId, counters] of Object.entries(state7?.counters ?? {})) {
-      out[eggId] = { gold: Number(counters?.gold) || 0, rainbow: Number(counters?.rainbow) || 0 };
-    }
-    return out;
-  }
-  function onHatchTracker(state7) {
-    const next = luckOf(state7);
-    const prev = prevLuck;
-    prevLuck = next;
-    if (!prev) return;
-    for (const reaction of badLuckReactions(prev, next, eggName, Math.random)) offer(reaction);
-  }
-  async function onShops2(next) {
-    const prev = prevShops;
-    prevShops = next;
-    const ids = restockedFollowed(prev, next, (id) => {
-      try {
-        return NotifierService.getPref(id).popup === true;
-      } catch {
-        return false;
-      }
-    });
-    if (ids.length === 0) return;
-    let names = ids.map((id) => id.split(":").slice(1).join(":"));
-    try {
-      const state7 = await NotifierService.get();
-      const byId = new Map(state7.rows.map((row4) => [row4.id, row4.name]));
-      names = ids.map((id, i) => byId.get(id) ?? names[i]);
-    } catch {
-    }
-    offer(shopReaction(names, Math.random));
-  }
-  async function subscribe() {
-    const add = (unsub) => {
-      if (typeof unsub === "function") unsubscribers2.push(unsub);
-    };
-    try {
-      add(await Atoms.data.weather.onChangeNow((next) => onWeather2(next)));
-    } catch {
-    }
-    try {
-      prevStats = clone(StatsService.getSnapshot());
-      add(StatsService.subscribe((next) => onStats(next)));
-    } catch {
-    }
-    try {
-      prevLuck = luckOf(HatchTracker.getState());
-      add(HatchTracker.subscribe((state7) => onHatchTracker(state7)));
-    } catch {
-    }
-    try {
-      add(PetsService.onAbilityLogs((all) => onAbilityLogs2(all)));
-    } catch {
-    }
-    try {
-      add(await NotifierService.onShopsChangeNow((next) => void onShops2(next).catch(() => {
-      })));
-    } catch {
-    }
-    try {
-      add(
-        await Atoms.data.gardenTileObjects.onChangeNow((next) => {
-          latestGarden = next;
-        })
-      );
-    } catch {
-    }
-  }
-  function startReactionWatch() {
-    if (running2) return;
-    running2 = true;
-    openSession();
-    void subscribe().catch(() => {
-    });
-    timers.push(
-      window.setInterval(() => {
-        try {
-          checkGarden();
-        } catch {
-        }
-        void drain().catch(() => {
-        });
-      }, DRAIN_MS),
-      window.setInterval(() => {
-        try {
-          slowTick();
-        } catch {
-        }
-      }, SLOW_TICK_MS)
-    );
-  }
-  var SESSION_PATH, DRAIN_MS, SLOW_TICK_MS, LOW_PRIORITY_MAX_DISTANCE, running2, unsubscribers2, timers, gate, speaking, session, lastHour, prevStats, prevWeather, lastAbilityAt, prevShops, prevLuck, prevGarden, latestGarden, announcedEggs, eggsPrimed, clone;
+  var SESSION_PATH, DRAIN_MS, SLOW_TICK_MS, LOW_PRIORITY_MAX_DISTANCE, clone, reactionWatch;
   var init_reactionWatch = __esm({
     "src/features/companion/reactionWatch.ts"() {
       "use strict";
@@ -49519,45 +49707,219 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_pets();
       init_stats();
       init_companion();
+      init_availability();
+      init_catalogs();
       init_chat();
       init_dialogueLines();
-      init_reactions();
-      init_state3();
+      init_feeds();
+      init_dialogueTime();
+      init_badLuck();
+      init_events();
+      init_garden();
+      init_gate();
+      init_milestones();
+      init_session2();
+      init_watch();
       SESSION_PATH = "companionSession";
       DRAIN_MS = 2e3;
       SLOW_TICK_MS = 3e4;
       LOW_PRIORITY_MAX_DISTANCE = 8;
-      running2 = false;
-      unsubscribers2 = [];
-      timers = [];
-      gate = initialGateState();
-      speaking = false;
-      session = null;
-      lastHour = (/* @__PURE__ */ new Date()).getHours();
-      prevStats = null;
-      prevWeather = void 0;
-      lastAbilityAt = 0;
-      prevShops = null;
-      prevLuck = null;
-      prevGarden = null;
-      latestGarden = null;
-      announcedEggs = /* @__PURE__ */ new Set();
-      eggsPrimed = false;
       clone = (value) => JSON.parse(JSON.stringify(value));
+      reactionWatch = defineWatcher("reactions", (scope) => {
+        let gate = initialGateState();
+        let speaking = false;
+        let session = null;
+        let lastHour = (/* @__PURE__ */ new Date()).getHours();
+        let prevStats = null;
+        let prevWeather = void 0;
+        let lastAbilityAt = 0;
+        let prevShops = null;
+        let prevLuck = null;
+        let prevGarden = null;
+        const announcedEggs = /* @__PURE__ */ new Set();
+        let eggsPrimed = false;
+        function offer(reaction) {
+          if (!reaction || !reactionsEnabled()) return;
+          gate = offerReaction(gate, reaction, Date.now());
+        }
+        async function drain() {
+          if (speaking) return;
+          const picked = takeReaction(gate, Date.now(), companionBusy() || !reactionsEnabled());
+          gate = picked.state;
+          if (!picked.reaction) return;
+          speaking = true;
+          try {
+            await speak2(picked.reaction);
+          } catch {
+          } finally {
+            speaking = false;
+          }
+        }
+        function saveSession() {
+          if (!session) return;
+          try {
+            writeAriesPath(SESSION_PATH, session);
+          } catch {
+          }
+        }
+        function checkAnniversary(now) {
+          if (!session) return;
+          const due = anniversaryReaction(session.firstMetAt, now, session.celebratedDays, Math.random);
+          if (!due.reaction) return;
+          session.celebratedDays = due.celebratedDays;
+          saveSession();
+          offer(due.reaction);
+        }
+        function openSession() {
+          const resumed = resumeSession(readAriesPath(SESSION_PATH, void 0), Date.now());
+          session = resumed.session;
+          saveSession();
+          const today = /* @__PURE__ */ new Date();
+          if (resumed.greeting) offer(greetingReaction(resumed.greeting, today.getHours(), Math.random, holidayOf(today)));
+          checkAnniversary(Date.now());
+        }
+        function checkEggs(now) {
+          const garden3 = gardenFeed.latest();
+          if (!garden3) return;
+          const fresh = newlyReadyEggs(garden3, now, announcedEggs);
+          for (const key2 of fresh) announcedEggs.add(key2);
+          if (!eggsPrimed) {
+            eggsPrimed = true;
+            return;
+          }
+          offer(eggsReadyReaction(fresh.length, Math.random));
+        }
+        function slowTick() {
+          const now = Date.now();
+          if (session) {
+            session.lastSeenAt = now;
+            const hours = sessionHours(session, now);
+            if (hours > session.announcedHours) {
+              session.announcedHours = hours;
+              offer(sessionHourReaction(hours, Math.random));
+            }
+            saveSession();
+            const date = new Date(now);
+            const hour = date.getHours();
+            offer(clockReaction(lastHour, hour, now - session.startedAt, Math.random, holidayOf(date)));
+            lastHour = hour;
+            checkAnniversary(now);
+          }
+          checkEggs(now);
+        }
+        function checkGarden() {
+          const next = gardenFeed.latest();
+          if (!next || next === prevGarden) return;
+          const prev = prevGarden;
+          prevGarden = next;
+          if (!prev) return;
+          const crops = newRareCrops(prev, next, new Set(rolledMutations())).map((c) => ({
+            ...c,
+            species: cropName(c.species)
+          }));
+          offer(rareCropReaction(crops, Math.random));
+        }
+        function onWeather2(next) {
+          const id = typeof next === "string" && next ? next : null;
+          const prev = prevWeather;
+          prevWeather = id;
+          if (prev === void 0) return;
+          const prevName = prev ? weatherDisplayName(prev, weatherCatalog2) : "";
+          const startLine = id ? weatherMessage(id, weatherDisplayName(id, weatherCatalog2), Math.random) : "";
+          offer(weatherChangeReaction(prev, id, prevName, startLine, Math.random));
+        }
+        function onStats(next) {
+          const snapshot2 = clone(next);
+          const prev = prevStats;
+          prevStats = snapshot2;
+          if (!prev) return;
+          let ownRun = false;
+          try {
+            ownRun = CompanionChat.isRunning();
+          } catch {
+          }
+          for (const reaction of statReactions(prev, snapshot2, Math.random)) {
+            if (ownRun && !reaction.key.startsWith("milestone:")) continue;
+            offer(reaction);
+          }
+        }
+        function onAbilityLogs2(all) {
+          if (!Array.isArray(all) || all.length === 0) return;
+          const newest = all.reduce((a, b) => b.performedAt > a.performedAt ? b : a);
+          const first = lastAbilityAt === 0;
+          if (newest.performedAt <= lastAbilityAt) return;
+          lastAbilityAt = newest.performedAt;
+          if (first) return;
+          offer(abilityReaction({ name: newest.name, species: newest.species, abilityName: newest.abilityName }, Math.random));
+        }
+        function onHatchTracker(state5) {
+          const next = luckOf(state5);
+          const prev = prevLuck;
+          prevLuck = next;
+          if (!prev) return;
+          for (const reaction of badLuckReactions(prev, next, eggName, Math.random)) offer(reaction);
+        }
+        async function onShops2(next) {
+          const prev = prevShops;
+          prevShops = next;
+          const ids = restockedFollowed(prev, next, (id) => {
+            try {
+              return NotifierService.getPref(id).popup === true;
+            } catch {
+              return false;
+            }
+          });
+          if (ids.length === 0) return;
+          let names = ids.map((id) => id.split(":").slice(1).join(":"));
+          try {
+            const state5 = await NotifierService.get();
+            const byId = new Map(state5.rows.map((row5) => [row5.id, row5.name]));
+            names = ids.map((id, i) => byId.get(id) ?? names[i]);
+          } catch {
+          }
+          offer(shopReaction(names, Math.random));
+        }
+        openSession();
+        scope.add(saveSession);
+        scope.add(Atoms.data.weather.onChangeNow(scope.live(onWeather2)));
+        try {
+          prevStats = clone(StatsService.getSnapshot());
+          scope.add(StatsService.subscribe(scope.live(onStats)));
+        } catch {
+        }
+        try {
+          prevLuck = luckOf(HatchTracker.getState());
+          scope.add(HatchTracker.subscribe(scope.live(onHatchTracker)));
+        } catch {
+        }
+        try {
+          scope.add(PetsService.onAbilityLogs(scope.live((all) => onAbilityLogs2(all))));
+        } catch {
+        }
+        scope.add(NotifierService.onShopsChangeNow(scope.live((next) => void onShops2(next).catch(() => {
+        }))));
+        scope.add(gardenFeed.hold());
+        scope.every(DRAIN_MS, () => {
+          try {
+            checkGarden();
+          } catch {
+          }
+          void drain().catch(() => {
+          });
+        });
+        scope.every(SLOW_TICK_MS, slowTick);
+      });
     }
   });
 
-  // src/features/companion/wanderInterest.ts
-  function pickOne3(options2, random) {
-    return options2[Math.min(options2.length - 1, Math.floor(random() * options2.length))];
-  }
+  // src/features/companion/wander.ts
   function normalizeTs2(value) {
     const raw = typeof value === "number" ? value : Number(value);
     if (!Number.isFinite(raw) || raw <= 0) return null;
     return raw < 1e11 ? raw * 1e3 : raw;
   }
   function interestLine(kind, label2, random) {
-    return pickOne3(LINES[kind], random)(label2);
+    return pickOne(LINES[kind], random)(label2);
   }
   function plantInterest(plant, dirtIdx, input) {
     const slots = Array.isArray(plant.slots) ? plant.slots : [];
@@ -49649,12 +50011,12 @@ Restore figures are averages; unlucky streaks do worse.`;
         break;
       }
     }
-    const chosen = pickOne3(
+    const chosen = pickOne(
       all.filter((i) => i.kind === kind),
       input.random
     );
     return {
-      tile: { ...pickOne3(chosen.spots, input.random) },
+      tile: { ...pickOne(chosen.spots, input.random) },
       target: chosen.target,
       dirtTileIdx: chosen.dirtTileIdx,
       kind: chosen.kind,
@@ -49670,9 +50032,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     return input.random() < COMMENT_CHANCE;
   }
   var INTEREST_CHANCE, ALMOST_READY_MS, ALMOST_READY_GROWTH, KIND_WEIGHT, KIND_EMOTE, KIND_RANK, withArticle, LINES, NEIGHBOURS, COMMENT_CHANCE, COMMENT_COOLDOWN_MS, COMMENT_MAX_DISTANCE;
-  var init_wanderInterest = __esm({
-    "src/features/companion/wanderInterest.ts"() {
+  var init_wander = __esm({
+    "src/features/companion/wander.ts"() {
       "use strict";
+      init_random();
       init_emoteTypes();
       INTEREST_CHANCE = 0.5;
       ALMOST_READY_MS = 2 * 6e4;
@@ -49706,26 +50069,10 @@ Restore figures are averages; unlucky streaks do worse.`;
           (l) => `${withArticle(l).replace(/^a/, "A")}. Pretty, isn't it?`,
           (l) => `I could stare at this ${l} all day.`
         ],
-        ripe: [
-          (l) => `This ${l} looks ready.`,
-          (l) => `Mm, this ${l} is ripe.`,
-          () => `This one's ready to pick.`
-        ],
-        almostRipe: [
-          () => `This one's almost ready.`,
-          (l) => `Just a little longer, ${l}.`,
-          (l) => `Almost there, little ${l}.`
-        ],
-        eggReady: [
-          () => `This egg is ready to hatch!`,
-          (l) => `Something's wiggling in this ${l}.`,
-          () => `I think this one wants out.`
-        ],
-        eggSoon: [
-          (l) => `This ${l} is about to hatch.`,
-          () => `Any minute now...`,
-          () => `I can hear something in there.`
-        ]
+        ripe: [(l) => `This ${l} looks ready.`, (l) => `Mm, this ${l} is ripe.`, () => `This one's ready to pick.`],
+        almostRipe: [() => `This one's almost ready.`, (l) => `Just a little longer, ${l}.`, (l) => `Almost there, little ${l}.`],
+        eggReady: [() => `This egg is ready to hatch!`, (l) => `Something's wiggling in this ${l}.`, () => `I think this one wants out.`],
+        eggSoon: [(l) => `This ${l} is about to hatch.`, () => `Any minute now...`, () => `I can hear something in there.`]
       };
       NEIGHBOURS = [
         [0, 1],
@@ -49744,605 +50091,115 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/wanderWatch.ts
-  function busy2() {
-    if (!CompanionService.isRunning()) return true;
-    if (CompanionService.isBusy()) return true;
-    try {
-      if (CompanionChat.isRunning() || CompanionChat.getProposal()) return true;
-    } catch {
-    }
-    return false;
-  }
-  function rareMutations2() {
-    const out = /* @__PURE__ */ new Set();
-    try {
-      for (const [key2, def] of Object.entries(mutationCatalog2 ?? {})) {
-        if (Number(def?.baseChance) > 0) out.add(key2);
-      }
-    } catch {
-    }
-    return out;
-  }
-  function pickInterest(area) {
-    pending3 = null;
-    if (!running3 || busy2()) return null;
-    const slot = slotIdx;
-    if (slot === null || !latestGarden2) return null;
-    const interest = pickWanderInterest({
-      tileObjects: latestGarden2,
-      tileXY: (dirtTileIdx) => CompanionService.gardenTileXY(slot, dirtTileIdx),
-      now: Date.now(),
-      area,
-      random: Math.random,
-      rareMutations: rareMutations2(),
-      cropName,
-      mutationName,
-      eggName
-    });
-    if (!interest) return null;
-    pending3 = { interest, at: Date.now() };
-    return interest.tile;
-  }
-  function onInterestReached(tile) {
-    const current2 = pending3;
-    pending3 = null;
-    if (!current2 || !running3) return;
-    const { interest, at } = current2;
-    const now = Date.now();
-    if (now - at > PENDING_TTL_MS) return;
-    if (interest.tile.x !== tile.x || interest.tile.y !== tile.y) return;
-    if (busy2()) return;
-    const still = latestGarden2?.[String(interest.dirtTileIdx)];
-    if (!still || typeof still !== "object") return;
-    let reactions = false;
-    try {
-      reactions = loadCompanionSettings().reactions;
-    } catch {
-    }
-    const speak3 = reactions && shouldComment({
-      now,
-      lastCommentAt,
-      distanceToPlayer: CompanionService.distanceToPlayer(),
-      busy: false,
-      random: Math.random
-    });
-    void (async () => {
-      if (speak3) {
-        lastCommentAt = now;
-        await CompanionService.say(interest.line);
-      }
-      await CompanionService.emote(interest.emote);
-    })().catch(() => {
-    });
-  }
-  async function refreshSlot() {
-    slotIdx = await readMySlotIdx();
-  }
-  async function subscribe2() {
-    try {
-      const unsub = await Atoms.data.gardenTileObjects.onChangeNow((next) => {
-        latestGarden2 = next;
-      });
-      if (typeof unsub === "function") unsubscribers3.push(unsub);
-    } catch {
-    }
-  }
-  function startWanderWatch() {
-    if (running3) return;
-    running3 = true;
-    CompanionService.setWanderHooks(hooks2);
-    void subscribe2().catch(() => {
-    });
-    void refreshSlot().catch(() => {
-    });
-    timers2.push(
-      window.setInterval(() => {
-        void refreshSlot().catch(() => {
-        });
-      }, SLOT_REFRESH_MS)
-    );
-  }
-  var SLOT_REFRESH_MS, PENDING_TTL_MS, running3, unsubscribers3, timers2, latestGarden2, slotIdx, pending3, lastCommentAt, hooks2;
+  var SLOT_REFRESH_MS, PENDING_TTL_MS, wanderWatch;
   var init_wanderWatch = __esm({
     "src/features/companion/wanderWatch.ts"() {
       "use strict";
-      init_data();
       init_names();
-      init_atoms();
       init_companion();
       init_anchors();
-      init_chat();
+      init_availability();
+      init_catalogs();
+      init_feeds();
       init_state3();
-      init_wanderInterest();
+      init_wander();
+      init_watch();
       SLOT_REFRESH_MS = 3e4;
       PENDING_TTL_MS = 6e4;
-      running3 = false;
-      unsubscribers3 = [];
-      timers2 = [];
-      latestGarden2 = null;
-      slotIdx = null;
-      pending3 = null;
-      lastCommentAt = 0;
-      hooks2 = { pickInterest, onInterestReached };
-    }
-  });
-
-  // src/features/companion/emoteMirror.ts
-  function latestOwnEmote(entries2, playerId2, ignoreIds = []) {
-    if (!playerId2 || !Array.isArray(entries2) || ignoreIds.includes(playerId2)) return null;
-    let best = null;
-    for (const raw of entries2) {
-      const entry = raw;
-      if (!entry || entry.kind !== "emote" || entry.playerId !== playerId2) continue;
-      const emote = entry.emoteType;
-      const at = entry.lastTimestampMs;
-      if (typeof emote !== "number" || !PLAYABLE.has(emote)) continue;
-      if (typeof at !== "number" || !Number.isFinite(at)) continue;
-      if (!best || at > best.at) best = { emote, at };
-    }
-    return best;
-  }
-  function initialMirrorState() {
-    return {
-      primed: false,
-      scope: null,
-      seenAt: Number.NEGATIVE_INFINITY,
-      streakCount: 0,
-      streakAnswers: 0,
-      streakLastAt: Number.NEGATIVE_INFINITY,
-      streakSpamRolled: false,
-      lastMirrorAt: Number.NEGATIVE_INFINITY,
-      lastLineAt: Number.NEGATIVE_INFINITY,
-      lastSpamLineAt: Number.NEGATIVE_INFINITY
-    };
-  }
-  function observeOwnEmote(state7, read2) {
-    if (!read2) return { state: state7, fresh: null };
-    if (!state7.primed || state7.scope !== read2.scope) {
-      return {
-        state: { ...state7, primed: true, scope: read2.scope, seenAt: read2.latest?.at ?? Number.NEGATIVE_INFINITY },
-        fresh: null
-      };
-    }
-    const latest = read2.latest;
-    if (!latest || latest.at <= state7.seenAt) return { state: state7, fresh: null };
-    return { state: { ...state7, seenAt: latest.at }, fresh: latest };
-  }
-  function pick(list, random) {
-    const i = Math.floor(random() * list.length);
-    return list[Math.min(list.length - 1, Math.max(0, i))];
-  }
-  function mirrorEmoteFor(played, random) {
-    switch (played) {
-      case EmoteType.Crying:
-        return random() < 0.6 ? EmoteType.Love : EmoteType.Crying;
-      case EmoteType.Angered:
-        return random() < 0.6 ? EmoteType.Questioning : EmoteType.Crying;
-      default:
-        return played;
-    }
-  }
-  function mirrorDelay(random) {
-    const span = MIRROR_DELAY_MAX_MS - MIRROR_DELAY_MIN_MS;
-    const r = Math.min(1, Math.max(0, random()));
-    return Math.round(MIRROR_DELAY_MIN_MS + r * span);
-  }
-  function decideMirror(state7, played, ctx2) {
-    const { now, random } = ctx2;
-    let next = now - state7.streakLastAt > STREAK_GAP_MS ? { ...state7, streakCount: 1, streakAnswers: 0, streakSpamRolled: false, streakLastAt: now } : { ...state7, streakCount: state7.streakCount + 1, streakLastAt: now };
-    if (!ctx2.available || ctx2.distance === null || ctx2.distance > MIRROR_MAX_DISTANCE) {
-      return { state: next, action: null };
-    }
-    if (next.streakCount >= SPAM_THRESHOLD && !next.streakSpamRolled && now - next.lastSpamLineAt >= SPAM_LINE_COOLDOWN_MS) {
-      next = { ...next, streakSpamRolled: true };
-      if (random() < SPAM_LINE_CHANCE) {
-        next = { ...next, lastSpamLineAt: now, lastLineAt: now, lastMirrorAt: now };
-        return { state: next, action: { kind: "line", line: pick(SPAM_LINES, random), delayMs: mirrorDelay(random) } };
-      }
-    }
-    if (now - next.lastMirrorAt < MIRROR_COOLDOWN_MS) return { state: next, action: null };
-    if (next.streakAnswers >= STREAK_MAX_ANSWERS) return { state: next, action: null };
-    if (next.streakAnswers >= 1 && random() >= SECOND_ANSWER_CHANCE) {
-      return { state: { ...next, streakAnswers: STREAK_MAX_ANSWERS }, action: null };
-    }
-    const emote = mirrorEmoteFor(played.emote, random);
-    const delayMs = mirrorDelay(random);
-    let line = null;
-    if (now - next.lastLineAt >= LINE_COOLDOWN_MS && random() < LINE_CHANCE) {
-      const lines = MIRROR_LINES[played.emote];
-      if (lines && lines.length) line = pick(lines, random);
-    }
-    next = {
-      ...next,
-      streakAnswers: next.streakAnswers + 1,
-      lastMirrorAt: now,
-      lastLineAt: line ? now : next.lastLineAt
-    };
-    return { state: next, action: { kind: "mirror", emote, delayMs, line } };
-  }
-  var MIRROR_MAX_DISTANCE, MIRROR_COOLDOWN_MS, MIRROR_DELAY_MIN_MS, MIRROR_DELAY_MAX_MS, STREAK_GAP_MS, STREAK_MAX_ANSWERS, SECOND_ANSWER_CHANCE, LINE_CHANCE, LINE_COOLDOWN_MS, SPAM_THRESHOLD, SPAM_LINE_CHANCE, SPAM_LINE_COOLDOWN_MS, PLAYABLE, MIRROR_LINES, SPAM_LINES;
-  var init_emoteMirror = __esm({
-    "src/features/companion/emoteMirror.ts"() {
-      "use strict";
-      init_emoteTypes();
-      MIRROR_MAX_DISTANCE = 8;
-      MIRROR_COOLDOWN_MS = 6e3;
-      MIRROR_DELAY_MIN_MS = 400;
-      MIRROR_DELAY_MAX_MS = 1200;
-      STREAK_GAP_MS = 12e3;
-      STREAK_MAX_ANSWERS = 2;
-      SECOND_ANSWER_CHANCE = 0.5;
-      LINE_CHANCE = 1 / 6;
-      LINE_COOLDOWN_MS = 12e4;
-      SPAM_THRESHOLD = 6;
-      SPAM_LINE_CHANCE = 0.3;
-      SPAM_LINE_COOLDOWN_MS = 3e5;
-      PLAYABLE = new Set(
-        Object.values(EmoteType).filter((value) => value !== EmoteType.Idle)
-      );
-      MIRROR_LINES = {
-        [EmoteType.Clapping]: ["Bravo!", "Woo!", "Nice one!"],
-        [EmoteType.Laughing]: ["Haha!", "Hehe.", "Too funny."],
-        [EmoteType.Angered]: ["Uh oh.", "Easy there.", "What happened?"],
-        [EmoteType.Crying]: ["Aww.", "There, there.", "I'm here."],
-        [EmoteType.Questioning]: ["Hmm?", "No idea either.", "Good question."],
-        [EmoteType.Love]: ["Aww.", "Same!", "Right back at you!"]
-      };
-      SPAM_LINES = ["Okay okay, I get it!", "Alright, alright!", "You're on a roll, huh?"];
-    }
-  });
-
-  // src/features/companion/emoteMirrorWatch.ts
-  function enabled3() {
-    try {
-      const settings = loadCompanionSettings();
-      return settings.enabled && settings.reactions;
-    } catch {
-      return false;
-    }
-  }
-  function busy3() {
-    if (!CompanionService.isRunning()) return true;
-    if (CompanionService.isBusy()) return true;
-    try {
-      if (CompanionChat.isRunning() || CompanionChat.getProposal()) return true;
-    } catch {
-    }
-    return false;
-  }
-  function cancelPending2() {
-    if (pending4 === null) return;
-    window.clearTimeout(pending4);
-    pending4 = null;
-  }
-  async function perform(action2) {
-    if (!running4 || !enabled3() || busy3()) return;
-    if (action2.line) {
-      try {
-        await CompanionService.say(action2.line);
-      } catch {
-      }
-    }
-    if (action2.kind === "mirror") await CompanionService.emote(action2.emote);
-  }
-  function schedule(action2) {
-    cancelPending2();
-    pending4 = window.setTimeout(() => {
-      pending4 = null;
-      void perform(action2).catch(() => {
-      });
-    }, action2.delayMs);
-  }
-  function currentRead() {
-    if (!localId || !Array.isArray(entries)) return null;
-    const npcId = CompanionService.getNpcId();
-    return {
-      scope: `${roomId ?? ""}|${localId}`,
-      latest: latestOwnEmote(entries, localId, npcId ? [npcId] : [])
-    };
-  }
-  function process() {
-    const seen = observeOwnEmote(state5, currentRead());
-    state5 = seen.state;
-    if (!seen.fresh) return;
-    const decided = decideMirror(state5, seen.fresh, {
-      now: Date.now(),
-      available: enabled3() && !busy3(),
-      distance: CompanionService.distanceToPlayer(),
-      random: Math.random
-    });
-    state5 = decided.state;
-    if (decided.action) schedule(decided.action);
-  }
-  function onRoomState(next) {
-    const data = next?.data;
-    roomId = typeof data?.roomId === "string" ? data.roomId : null;
-    entries = data?.chat?.entries;
-    process();
-  }
-  function onPlayerId(next) {
-    localId = typeof next === "string" && next ? next : null;
-    process();
-  }
-  function sameChat(a, b) {
-    const da = a?.data;
-    const db = b?.data;
-    return da?.roomId === db?.roomId && da?.chat?.entries === db?.chat?.entries;
-  }
-  async function subscribe3(gen) {
-    const add = (unsub) => {
-      if (typeof unsub !== "function") return;
-      if (!running4 || gen !== generation) {
-        try {
-          unsub();
-        } catch {
+      wanderWatch = defineWatcher("wander", (scope) => {
+        let slotIdx = null;
+        let pending3 = null;
+        let lastCommentAt = 0;
+        function pickInterest(area) {
+          pending3 = null;
+          if (!scope.active || companionBusy()) return null;
+          const slot = slotIdx;
+          const garden3 = gardenFeed.latest();
+          if (slot === null || !garden3) return null;
+          const interest = pickWanderInterest({
+            tileObjects: garden3,
+            tileXY: (dirtTileIdx) => CompanionService.gardenTileXY(slot, dirtTileIdx),
+            now: Date.now(),
+            area,
+            random: Math.random,
+            rareMutations: new Set(rolledMutations()),
+            cropName,
+            mutationName,
+            eggName
+          });
+          if (!interest) return null;
+          pending3 = { interest, at: Date.now() };
+          return interest.tile;
         }
-        return;
-      }
-      unsubscribers4.push(unsub);
-    };
-    try {
-      add(await Atoms.player.playerId.onChangeNow((next) => {
-        if (gen === generation) onPlayerId(next);
-      }));
-    } catch {
-    }
-    try {
-      add(await Atoms.root.state.onChangeNow((next) => {
-        if (gen === generation) onRoomState(next);
-      }, sameChat));
-    } catch {
-    }
-  }
-  function startEmoteMirror() {
-    if (running4) return;
-    running4 = true;
-    state5 = initialMirrorState();
-    localId = null;
-    roomId = null;
-    entries = void 0;
-    void subscribe3(++generation).catch(() => {
-    });
-  }
-  var running4, generation, unsubscribers4, state5, pending4, localId, roomId, entries;
-  var init_emoteMirrorWatch = __esm({
-    "src/features/companion/emoteMirrorWatch.ts"() {
-      "use strict";
-      init_atoms();
-      init_companion();
-      init_chat();
-      init_emoteMirror();
-      init_state3();
-      running4 = false;
-      generation = 0;
-      unsubscribers4 = [];
-      state5 = initialMirrorState();
-      pending4 = null;
-      localId = null;
-      roomId = null;
-      entries = void 0;
-    }
-  });
-
-  // src/features/companion/afk.ts
-  function pickOne4(options2, random) {
-    return options2[Math.min(options2.length - 1, Math.floor(random() * options2.length))];
-  }
-  function initialAfkState(now) {
-    return { phase: "active", quietSince: now, phaseSince: now, asked: false, nextSnoreAt: null, lastSnore: null };
-  }
-  function afkActivity(state7, input, random) {
-    const { now, busy: busy4 } = input;
-    if (state7.phase === "active") {
-      return { state: { ...state7, quietSince: now }, effects: [] };
-    }
-    if (state7.phase === "idle") {
-      const effects2 = [];
-      if (state7.asked && !busy4 && random() < RETURN_LINE_CHANCE) effects2.push(say(pickOne4(RETURN_LINES, random), false));
-      return { state: initialAfkState(now), effects: effects2 };
-    }
-    const asleepFor = now - state7.phaseSince;
-    const effects = [];
-    if (!busy4 && asleepFor >= WAKE_LINE_MIN_ASLEEP_MS) {
-      const pool = asleepFor >= SNORE_SLOW_AFTER_MS ? LONG_WAKE_LINES : WAKE_LINES;
-      effects.push(say(pickOne4(pool, random), false));
-    }
-    effects.push({ kind: "release" });
-    return { state: initialAfkState(now), effects };
-  }
-  var AFK_IDLE_AFTER_MS, AFK_ASLEEP_AFTER_MS, SNORE_SLOW_AFTER_MS, SNORE_SLOW_MIN_MS, SNORE_SLOW_MAX_MS, WAKE_LINE_MIN_ASLEEP_MS, RETURN_LINE_CHANCE, IDLE_LINES, RETURN_LINES, WAKE_LINES, LONG_WAKE_LINES, say;
-  var init_afk = __esm({
-    "src/features/companion/afk.ts"() {
-      "use strict";
-      init_emoteTypes();
-      AFK_IDLE_AFTER_MS = 3 * 6e4;
-      AFK_ASLEEP_AFTER_MS = 6 * 6e4;
-      SNORE_SLOW_AFTER_MS = 30 * 6e4;
-      SNORE_SLOW_MIN_MS = 3 * 6e4;
-      SNORE_SLOW_MAX_MS = 6 * 6e4;
-      WAKE_LINE_MIN_ASLEEP_MS = 6e4;
-      RETURN_LINE_CHANCE = 0.3;
-      IDLE_LINES = [
-        { message: "Hello? You still there?", emote: EmoteType.Questioning },
-        { message: "Did you fall asleep on me?", emote: EmoteType.Questioning },
-        { message: "Psst... are you still with me?", emote: EmoteType.Questioning },
-        { message: "It's very quiet all of a sudden...", emote: EmoteType.Questioning }
-      ];
-      RETURN_LINES = [
-        { message: "Oh, there you are!", emote: EmoteType.Laughing },
-        { message: "Welcome back!", emote: EmoteType.Love },
-        { message: "Ah, you're still here. Good.", emote: null }
-      ];
-      WAKE_LINES = [
-        { message: "Huh? I wasn't sleeping!", emote: EmoteType.Questioning },
-        { message: "I'm up! I'm up!", emote: EmoteType.Laughing },
-        { message: "Oh, you're back!", emote: EmoteType.Laughing },
-        { message: "Wha-? Oh, it's you. Hi!", emote: EmoteType.Questioning }
-      ];
-      LONG_WAKE_LINES = [
-        { message: "You were gone forever! I may have napped. A little.", emote: EmoteType.Laughing },
-        { message: "Oh! You're back! I kept the garden safe. Mostly by sleeping.", emote: EmoteType.Laughing },
-        { message: "Huh? What time is it? Welcome back!", emote: EmoteType.Questioning }
-      ];
-      say = (line, approach) => ({
-        kind: "say",
-        message: line.message,
-        emote: line.emote,
-        approach
+        function onInterestReached(tile) {
+          const current3 = pending3;
+          pending3 = null;
+          if (!current3 || !scope.active) return;
+          const { interest, at } = current3;
+          const now = Date.now();
+          if (now - at > PENDING_TTL_MS) return;
+          if (interest.tile.x !== tile.x || interest.tile.y !== tile.y) return;
+          if (companionBusy()) return;
+          const still = gardenFeed.latest()?.[String(interest.dirtTileIdx)];
+          if (!still || typeof still !== "object") return;
+          let reactions = false;
+          try {
+            reactions = loadCompanionSettings().reactions;
+          } catch {
+          }
+          const speak3 = reactions && shouldComment({
+            now,
+            lastCommentAt,
+            distanceToPlayer: CompanionService.distanceToPlayer(),
+            busy: false,
+            random: Math.random
+          });
+          void (async () => {
+            if (speak3) {
+              lastCommentAt = now;
+              await CompanionService.say(interest.line);
+            }
+            await CompanionService.emote(interest.emote);
+          })().catch(() => {
+          });
+        }
+        const refreshSlot = () => {
+          void readMySlotIdx().then((slot) => {
+            slotIdx = slot;
+          }).catch(() => {
+          });
+        };
+        const hooks2 = { pickInterest, onInterestReached };
+        CompanionService.setWanderHooks(hooks2);
+        scope.add(() => {
+          pending3 = null;
+          CompanionService.setWanderHooks(null);
+        });
+        scope.add(gardenFeed.hold());
+        refreshSlot();
+        scope.every(SLOT_REFRESH_MS, refreshSlot);
       });
     }
   });
 
-  // src/features/companion/afkWatch.ts
-  function enabled4() {
-    try {
-      const settings = loadCompanionSettings();
-      return settings.enabled && settings.reactions;
-    } catch {
-      return false;
-    }
+  // src/features/companion/start.ts
+  function startCompanion() {
+    CompanionService.autoStart();
+    feedWatch.start();
+    reactionWatch.start();
+    wanderWatch.start();
+    emoteMirrorWatch.start();
+    afkWatch.start();
   }
-  function isHidden() {
-    try {
-      return typeof document !== "undefined" && document.hidden === true;
-    } catch {
-      return false;
-    }
-  }
-  function chatActive() {
-    try {
-      return CompanionChat.isRunning() || CompanionChat.getProposal() !== null;
-    } catch {
-      return false;
-    }
-  }
-  function othersBusy() {
-    if (!CompanionService.isRunning()) return true;
-    if (chatActive()) return true;
-    if (ownHold) return !CompanionService.isHoldingAttention();
-    return CompanionService.isBusy();
-  }
-  function releaseOwnHold() {
-    if (!ownHold) return;
-    ownHold = false;
-    if (chatActive()) return;
-    if (CompanionService.isHoldingAttention()) CompanionService.releaseAttention();
-  }
-  async function sayLine(effect) {
-    if (!CompanionService.isRunning() || othersBusy() || isHidden()) return;
-    if (effect.approach) {
-      try {
-        await CompanionService.comeToPlayer();
-        if (!running5) return;
-        await CompanionService.say(effect.message, { force: true });
-      } finally {
-        CompanionService.releaseTask();
-      }
-    } else {
-      const distance = CompanionService.distanceToPlayer();
-      if (distance === null || distance > NEAR_DISTANCE) return;
-      await CompanionService.say(effect.message, { force: true });
-    }
-    if (effect.emote !== null) void CompanionService.emote(effect.emote).catch(() => {
-    });
-  }
-  async function perform2(effect, gen) {
-    if (effect.kind === "release") {
-      releaseOwnHold();
-      return;
-    }
-    if (!running5 || gen !== generation2) return;
-    if (effect.kind === "hold") {
-      if (!CompanionService.isRunning()) return;
-      CompanionService.holdAttention();
-      ownHold = true;
-      return;
-    }
-    await sayLine(effect);
-  }
-  function apply(step) {
-    state6 = step.state;
-    const gen = generation2;
-    for (const effect of step.effects) {
-      pending5++;
-      chain = chain.then(() => perform2(effect, gen)).catch(() => {
-      }).finally(() => {
-        pending5--;
-      });
-    }
-  }
-  function noteActivity() {
-    if (!running5) return;
-    const now = Date.now();
-    if (state6.phase === "active" && now - lastNotedAt < ACTIVITY_THROTTLE_MS) return;
-    lastNotedAt = now;
-    if (!enabled4() || !CompanionService.isRunning()) return;
-    apply(afkActivity(state6, { now, busy: othersBusy() }, Math.random));
-  }
-  function onInput(event) {
-    if (!event.isTrusted) return;
-    noteActivity();
-  }
-  function onVisibility() {
-    if (!isHidden()) noteActivity();
-  }
-  function onPosition(next) {
-    const pos = next;
-    const x = Math.round(Number(pos?.x));
-    const y = Math.round(Number(pos?.y));
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-    const prev = lastTile;
-    lastTile = { x, y };
-    if (prev && (prev.x !== x || prev.y !== y)) noteActivity();
-  }
-  async function subscribe4(gen) {
-    try {
-      const unsub = await Atoms.player.position.onChangeNow((next) => onPosition(next));
-      if (gen !== generation2 || !running5) unsub();
-      else unsubscribers5.push(unsub);
-    } catch {
-    }
-  }
-  function startAfkWatch() {
-    if (running5) return;
-    running5 = true;
-    const gen = ++generation2;
-    state6 = initialAfkState(Date.now());
-    lastNotedAt = 0;
-    lastTile = null;
-    try {
-      for (const type of INPUT_EVENTS) window.addEventListener(type, onInput, { capture: true, passive: true });
-      document.addEventListener("visibilitychange", onVisibility);
-      unsubscribers5.push(() => {
-        for (const type of INPUT_EVENTS) window.removeEventListener(type, onInput, { capture: true });
-        document.removeEventListener("visibilitychange", onVisibility);
-      });
-    } catch {
-    }
-    void subscribe4(gen).catch(() => {
-    });
-  }
-  var ACTIVITY_THROTTLE_MS, NEAR_DISTANCE, INPUT_EVENTS, running5, generation2, state6, unsubscribers5, ownHold, pending5, chain, lastNotedAt, lastTile;
-  var init_afkWatch = __esm({
-    "src/features/companion/afkWatch.ts"() {
+  var init_start = __esm({
+    "src/features/companion/start.ts"() {
       "use strict";
-      init_atoms();
       init_companion();
-      init_chat();
-      init_afk();
-      init_state3();
-      ACTIVITY_THROTTLE_MS = 1e3;
-      NEAR_DISTANCE = 8;
-      INPUT_EVENTS = ["keydown", "pointerdown", "pointermove", "wheel", "touchstart"];
-      running5 = false;
-      generation2 = 0;
-      state6 = initialAfkState(0);
-      unsubscribers5 = [];
-      ownHold = false;
-      pending5 = 0;
-      chain = Promise.resolve();
-      lastNotedAt = 0;
-      lastTile = null;
+      init_afkWatch();
+      init_emoteMirrorWatch();
+      init_feedWatch();
+      init_reactionWatch();
+      init_wanderWatch();
     }
   });
 
@@ -50357,14 +50214,14 @@ Restore figures are averages; unlucky streaks do worse.`;
   z-index: ${Z_INDEX};
   width: 430px; max-width: calc(100vw - 24px);
   border-radius: 14px; overflow: hidden;
-  border: 1px solid rgba(94,234,212,0.22);
+  border: 1px solid var(--qmm-accent-border);
   background:
-    radial-gradient(120% 140% at 0% 0%, rgba(94,234,212,0.10), transparent 55%),
-    rgba(15,20,26,0.94);
+    radial-gradient(120% 140% at 0% 0%, var(--qmm-accent-soft), transparent 55%),
+    var(--qmm-gradient-panel);
   backdrop-filter: blur(8px);
-  box-shadow: 0 12px 38px rgba(0,0,0,0.48);
+  box-shadow: var(--qmm-shadow-modal);
   font: 12.5px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  color: ${TEXT2};
+  color: var(--qmm-text);
   animation: mgAskIn 160ms ease-out;
 }
 @keyframes mgAskIn {
@@ -50375,33 +50232,20 @@ Restore figures are averages; unlucky streaks do worse.`;
 #${CARD_ID} .mgask-face {
   width: 46px; height: 46px; flex: 0 0 auto;
   border-radius: 11px; overflow: hidden;
-  border: 1px solid rgba(94,234,212,0.22);
-  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--qmm-accent-border);
+  background: var(--qmm-hover-bg);
   display: grid; place-items: center;
   font-size: 22px; line-height: 1;
 }
 #${CARD_ID} .mgask-right { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
-#${CARD_ID} .mgask-who { font-size: 11px; font-weight: 700; color: ${ACCENT2}; letter-spacing: 0.02em; }
+#${CARD_ID} .mgask-who { font-size: 11px; font-weight: 700; color: var(--qmm-accent); letter-spacing: 0.02em; }
 #${CARD_ID} .mgask-text { display: block; overflow-wrap: anywhere; }
 #${CARD_ID} .mgask-text img, #${CARD_ID} .mgask-text canvas { vertical-align: -3px; }
 #${CARD_ID} .mgask-buttons { display: flex; gap: 8px; }
-#${CARD_ID} button {
-  flex: 0 0 auto; padding: 6px 13px; border-radius: 9px; cursor: pointer;
-  font: 600 12px/1 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  transition: background 120ms ease, border-color 120ms ease;
-}
-#${CARD_ID} button.mgask-yes {
-  border: 1px solid rgba(94,234,212,0.45); background: rgba(94,234,212,0.16); color: ${ACCENT2};
-}
-#${CARD_ID} button.mgask-yes:hover { background: rgba(94,234,212,0.26); }
-#${CARD_ID} button.mgask-no {
-  border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.05); color: ${TEXT_DIM2};
-}
-#${CARD_ID} button.mgask-no:hover { background: rgba(255,255,255,0.10); }
-#${CARD_ID} .mgask-clock { height: 3px; background: rgba(255,255,255,0.07); }
+#${CARD_ID} .mgask-clock { height: 3px; background: var(--qmm-hover-bg); }
 #${CARD_ID} .mgask-clock > i {
   display: block; height: 100%; width: 100%;
-  background: linear-gradient(90deg, ${ACCENT2}, rgba(94,234,212,0.45));
+  background: linear-gradient(90deg, var(--qmm-accent), var(--qmm-accent-border-hover));
 }
 `;
     document.head.appendChild(style);
@@ -50423,45 +50267,36 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function build(proposal) {
     ensureStyle2();
-    const root4 = document.createElement("div");
+    const root4 = h("div");
     root4.id = CARD_ID;
-    const face = document.createElement("div");
-    face.className = "mgask-face";
-    face.textContent = "\u{1F916}";
+    const face = h("div", "mgask-face", "\u{1F916}");
     fillWithPortrait(face, CompanionService.getNpcId());
-    const who = document.createElement("div");
-    who.className = "mgask-who";
-    who.textContent = "Companion";
-    const text2 = document.createElement("div");
-    text2.className = "mgask-text";
+    const text2 = h("div", "mgask-text");
     text2.append(...questionOf(proposal));
-    const yes = document.createElement("button");
-    yes.className = "mgask-yes";
-    yes.textContent = "Yes, go ahead";
-    yes.addEventListener("click", () => {
-      hide();
-      void CompanionChat.confirm(proposal.id).catch(() => {
-      });
+    const yes = button("Yes, go ahead", {
+      size: "sm",
+      variant: "primary",
+      onClick: () => {
+        hide();
+        void CompanionChat.confirm(proposal.id).catch(() => {
+        });
+      }
     });
-    const no = document.createElement("button");
-    no.className = "mgask-no";
-    no.textContent = "Not now";
-    no.addEventListener("click", () => {
-      hide();
-      CompanionChat.decline(proposal.id);
+    const no = button("Not now", {
+      size: "sm",
+      onClick: () => {
+        hide();
+        CompanionChat.decline(proposal.id);
+      }
     });
-    const buttons = document.createElement("div");
-    buttons.className = "mgask-buttons";
+    const buttons = h("div", "mgask-buttons");
     buttons.append(yes, no);
-    const right = document.createElement("div");
-    right.className = "mgask-right";
-    right.append(who, text2, buttons);
-    const body = document.createElement("div");
-    body.className = "mgask-body";
+    const right = h("div", "mgask-right");
+    right.append(h("div", "mgask-who", "Companion"), text2, buttons);
+    const body = h("div", "mgask-body");
     body.append(face, right);
-    const clock = document.createElement("div");
-    clock.className = "mgask-clock";
-    const fill = document.createElement("i");
+    const clock = h("div", "mgask-clock");
+    const fill = h("i");
     clock.append(fill);
     root4.append(body, clock);
     document.body.appendChild(root4);
@@ -50475,7 +50310,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         return;
       }
       if (clockBar) clockBar.style.width = `${left / PROPOSAL_TTL_MS * 100}%`;
-    }, TICK_MS);
+    }, TICK_MS2);
   }
   function sync() {
     const proposal = CompanionChat.getProposal();
@@ -50497,24 +50332,24 @@ Restore figures are averages; unlucky streaks do worse.`;
     unsubscribe = CompanionChat.subscribe(sync);
     sync();
   }
-  var CARD_ID, STYLE_ID5, Z_INDEX, ICON_PX6, TICK_MS, ACCENT2, TEXT2, TEXT_DIM2, card3, clockBar, timer, shownId, unsubscribe;
+  var CARD_ID, STYLE_ID5, Z_INDEX, ICON_PX6, TICK_MS2, card3, clockBar, timer, shownId, unsubscribe;
   var init_askBanner = __esm({
     "src/features/companion/menu/askBanner.ts"() {
       "use strict";
+      init_button();
+      init_dom2();
+      init_theme();
+      init_companion();
       init_chat();
       init_proposals();
-      init_companion();
       init_state3();
       init_chatIcons();
       init_npcAvatar();
       CARD_ID = "mgCompanionAsk";
       STYLE_ID5 = "mgCompanionAskStyle";
-      Z_INDEX = "2000050";
+      Z_INDEX = layer.window + 49;
       ICON_PX6 = 17;
-      TICK_MS = 100;
-      ACCENT2 = "#5eead4";
-      TEXT2 = "#e7eef7";
-      TEXT_DIM2 = "rgba(231,238,247,0.68)";
+      TICK_MS2 = 100;
       card3 = null;
       clockBar = null;
       timer = null;
@@ -50656,8 +50491,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   async function fetchChangelogEntryForVersion(version) {
-    const entries2 = await fetchRepoList("changelog/changelog.json", "entries", "Changelog");
-    for (const raw of entries2) {
+    const entries = await fetchRepoList("changelog/changelog.json", "entries", "Changelog");
+    for (const raw of entries) {
       const entry = parseEntry(raw);
       if (entry?.version === version) return entry;
     }
@@ -50855,11 +50690,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (!Number.isFinite(value)) return 1;
     return Math.max(1, Math.min(6, value));
   }
-  function findPlayersDeep2(state7) {
-    if (!state7 || typeof state7 !== "object") return [];
+  function findPlayersDeep2(state5) {
+    if (!state5 || typeof state5 !== "object") return [];
     const out = [];
     const seen = /* @__PURE__ */ new Set();
-    const stack = [state7];
+    const stack = [state5];
     while (stack.length) {
       const cur = stack.pop();
       if (!cur || typeof cur !== "object" || seen.has(cur)) continue;
@@ -50885,29 +50720,29 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return [...byId.values()];
   }
-  function getPlayersArray(state7) {
-    const direct = state7?.fullState?.data?.players ?? state7?.data?.players ?? state7?.players;
-    return Array.isArray(direct) ? direct : findPlayersDeep2(state7);
+  function getPlayersArray(state5) {
+    const direct = state5?.fullState?.data?.players ?? state5?.data?.players ?? state5?.players;
+    return Array.isArray(direct) ? direct : findPlayersDeep2(state5);
   }
-  function getSlotsArray(state7) {
-    const raw = state7?.child?.data?.userSlots ?? state7?.fullState?.child?.data?.userSlots ?? state7?.data?.userSlots;
+  function getSlotsArray(state5) {
+    const raw = state5?.child?.data?.userSlots ?? state5?.fullState?.child?.data?.userSlots ?? state5?.data?.userSlots;
     if (Array.isArray(raw)) return raw;
     if (raw && typeof raw === "object") {
-      const entries2 = Object.entries(raw);
-      entries2.sort((a, b) => {
+      const entries = Object.entries(raw);
+      entries.sort((a, b) => {
         const ai = Number(a[0]);
         const bi = Number(b[0]);
         if (Number.isFinite(ai) && Number.isFinite(bi)) return ai - bi;
         return a[0].localeCompare(b[0]);
       });
-      return entries2.map(([, value]) => value);
+      return entries.map(([, value]) => value);
     }
     return [];
   }
-  async function getMyAccountId(state7) {
+  async function getMyAccountId(state5) {
     try {
       const me = await player.get();
-      const snapshot2 = state7 ?? await Atoms.root.state.get();
+      const snapshot2 = state5 ?? await Atoms.root.state.get();
       return resolveMyAccountId(me, getPlayersArray(snapshot2));
     } catch {
       return null;
@@ -50933,11 +50768,11 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function buildPlayerStatePayload(options2 = {}) {
     try {
-      const state7 = await Atoms.root.state.get();
-      if (!state7 || typeof state7 !== "object") return null;
-      const players = getPlayersArray(state7);
+      const state5 = await Atoms.root.state.get();
+      if (!state5 || typeof state5 !== "object") return null;
+      const players = getPlayersArray(state5);
       const normalizedPlayers = Array.isArray(players) ? players : [];
-      const slots = getSlotsArray(state7).filter((slot2) => !!slot2);
+      const slots = getSlotsArray(state5).filter((slot2) => !!slot2);
       const coinsById = /* @__PURE__ */ new Map();
       for (const slot2 of slots) {
         const slotData2 = slot2?.data ?? slot2;
@@ -50958,7 +50793,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         };
       });
       if (slots.length === 0) return null;
-      const myAccountId = options2.playerId ?? await getMyAccountId(state7);
+      const myAccountId = options2.playerId ?? await getMyAccountId(state5);
       const slot = selectSlotForAccount(slots, {
         slotIndex: options2.slotIndex,
         accountId: myAccountId
@@ -50975,7 +50810,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       const coinCandidate = slotData?.coinsCount ?? slot?.coinsCount ?? slotData?.coins ?? slot?.coins ?? null;
       const coinValue = Number(coinCandidate);
       const coinsRaw = Number.isFinite(coinValue) ? coinValue : null;
-      const roomId2 = state7?.data?.roomId ?? state7?.fullState?.data?.roomId ?? state7?.roomId ?? null;
+      const roomId = state5?.data?.roomId ?? state5?.fullState?.data?.roomId ?? state5?.roomId ?? null;
       let playersCount = normalizedPlayers.length > 0 ? normalizedPlayers.length : slots.length;
       try {
         const atomValue = await Atoms.server.numPlayers.get();
@@ -50993,7 +50828,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         modVersion,
         coins: coinsRaw,
         room: {
-          id: roomId2,
+          id: roomId,
           isPrivate: options2.roomIsPrivate ?? null,
           playersCount,
           userSlots
@@ -51042,9 +50877,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return false;
   }
-  async function tryInitializeReporting(state7) {
+  async function tryInitializeReporting(state5) {
     if (gameReadyTriggered) return;
-    const snapshot2 = state7 ?? await Atoms.root.state.get();
+    const snapshot2 = state5 ?? await Atoms.root.state.get();
     const players = Array.isArray(snapshot2?.data?.players) ? snapshot2.data.players : [];
     if (players.length === 0) return;
     const myAccountId = await getMyAccountId(snapshot2);
@@ -51182,11 +51017,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_editor();
       init_pointerControls();
       init_companion();
-      init_feedWatch();
-      init_reactionWatch();
-      init_wanderWatch();
-      init_emoteMirrorWatch();
-      init_afkWatch();
+      init_start();
       init_askBanner();
       init_gameVersion();
       init_live();
@@ -51237,12 +51068,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           }
         });
         initWatchers();
-        CompanionService.autoStart();
-        startFeedWatch();
-        startReactionWatch();
-        startWanderWatch();
-        startEmoteMirror();
-        startAfkWatch();
+        startCompanion();
         mountCompanionAsk();
         shareGlobal("Companion", CompanionService);
         showAutoRecoDisabledNoticeOnce();

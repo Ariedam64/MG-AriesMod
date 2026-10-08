@@ -1,64 +1,58 @@
-// src/ui/menus/companion/plant-grid.ts
-// La parcelle, dessinée : deux carrés de dix cases, comme dans l'onglet Garden.
+// The plot, drawn: two squares of ten tiles, as in the Garden tab.
 //
-// C'est la même géométrie que la grille d'auto-plant, à dessein — c'est celle
-// que le joueur a déjà en tête, et l'index d'une case y est déjà le `slot` que
-// le protocole attend. On peint à la souris, bouton droit pour effacer.
+// The same shape as the auto-plant grid, on purpose: it is the one the player
+// already knows, and a tile's index there is already the `slot` the protocol
+// expects. Paint with the mouse, right button to erase.
 //
-// Les cases sont construites une fois et mises à jour en place. Les reconstruire
-// à chaque rafraîchissement, c'est deux cents sprites rechargés toutes les
-// quelques secondes, et le dessin qui clignote sous la main.
+// Tiles are built once and updated in place. Rebuilding them on every refresh
+// would reload two hundred sprites every few seconds, with the drawing
+// flickering under the hand.
 
-import {
-  GARDEN_COLS,
-  GARDEN_ROWS,
-  GARDEN_TILE_COUNT,
-  type PlantAssignment,
-} from "../chat/plant";
-import { BORDER, DANGER, TEAL_BORDER, TEAL_DIM, css } from "../../../ui/kit/panel";
+import { color } from "../../../ui/kit/theme";
+import { GARDEN_COLS, GARDEN_ROWS, GARDEN_TILE_COUNT, type PlantAssignment } from "../chat/plant";
+import { styled } from "./dom";
 
-/** Assez grand pour viser à la souris, assez petit pour que la parcelle tienne. */
+/** Big enough to aim with the mouse, small enough for the plot to fit. */
 const MAX_GRID_HEIGHT_PX = 300;
 const CELL_ICON_PX = 20;
-/** Sépare visuellement les deux moitiés de la parcelle, comme en jeu. */
+/** Sets the plot's two halves apart, as in the game. */
 const HALF_GAP_PX = 12;
 
 type PaintMode = "assign" | "erase";
 
-export type PlantGridOptions = {
-  /** Tuiles que le joueur possède. Les autres restent inertes. */
+type PlantGridOptions = {
+  /** The tiles the player owns. The others stay inert. */
   owned(): Set<number>;
-  /** Tuiles déjà prises : on ne peut rien y poser. */
+  /** The tiles already taken: nothing can go there. */
   occupied(): Set<number>;
   assignmentAt(tileIndex: number): PlantAssignment | null;
   /**
-   * Fabrique la vignette d'une case assignée, à la taille demandée.
+   * Makes a planned tile's thumbnail, at the size asked.
    *
-   * La grille impose la taille plutôt que de redimensionner après coup : le
-   * chargeur de sprites choisit sa résolution à la construction, et le corriger
-   * ensuite en CSS ne ferait qu'étirer une image déjà rendue.
+   * The grid sets the size rather than resizing afterwards: the sprite loader
+   * picks its resolution when built, and correcting it in CSS would only
+   * stretch an image already drawn.
    */
   iconFor(assignment: PlantAssignment, sizePx: number): HTMLElement;
   onPaint(tileIndex: number, mode: PaintMode): void;
 };
 
-export type PlantGrid = {
+type PlantGrid = {
   root: HTMLElement;
-  /** Redessine depuis l'état courant. Sans effet sur les cases inchangées. */
+  /** Redraws from the current state. Unchanged tiles are left alone. */
   update(): void;
-  /** Coupe l'écoute globale de la souris. */
+  /** Stops the global mouse listener. */
   destroy(): void;
 };
 
 type Cell = {
   el: HTMLDivElement;
-  /** Ce que la case montre en ce moment, pour ne redessiner que si ça change. */
+  /** What the tile shows right now, to redraw only when it changes. */
   shown: string | null;
 };
 
 export function plantGrid(options: PlantGridOptions): PlantGrid {
-  const root = document.createElement("div");
-  css(root, {
+  const root = styled("div", {
     display: "grid",
     gridTemplateColumns: `repeat(${GARDEN_COLS / 2}, 1fr) ${HALF_GAP_PX}px repeat(${GARDEN_COLS / 2}, 1fr)`,
     gridTemplateRows: `repeat(${GARDEN_ROWS}, 1fr)`,
@@ -69,12 +63,12 @@ export function plantGrid(options: PlantGridOptions): PlantGrid {
     margin: "0 auto",
     padding: "6px",
     borderRadius: "12px",
-    border: `1px solid ${BORDER}`,
-    background: "rgba(0,0,0,0.28)",
+    border: `1px solid ${color.border}`,
+    background: color.fieldBg,
     boxSizing: "border-box",
     flex: "0 0 auto",
   });
-  // Le bouton droit sert à effacer : son menu n'a rien à faire là.
+  // The right button erases: its menu has no business here.
   root.addEventListener("contextmenu", (event) => event.preventDefault());
 
   const cells = new Map<number, Cell>();
@@ -88,9 +82,7 @@ export function plantGrid(options: PlantGridOptions): PlantGrid {
   window.addEventListener("mouseup", stopPainting);
 
   function buildCell(tileIndex: number): HTMLDivElement {
-    const cell = document.createElement("div");
-    cell.dataset.tile = String(tileIndex);
-    css(cell, {
+    const cell = styled("div", {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -99,6 +91,7 @@ export function plantGrid(options: PlantGridOptions): PlantGrid {
       border: "1px solid transparent",
       transition: "background 90ms ease",
     });
+    cell.dataset.tile = String(tileIndex);
 
     cell.addEventListener("mousedown", (event) => {
       event.preventDefault();
@@ -106,8 +99,8 @@ export function plantGrid(options: PlantGridOptions): PlantGrid {
       mode = event.button === 2 ? "erase" : "assign";
       options.onPaint(tileIndex, mode);
     });
-    // Entrer dans une case en gardant le bouton enfoncé la peint aussi : c'est
-    // ce qui permet de tracer une rangée d'un seul geste.
+    // Entering a tile with the button held paints it too: that is what draws
+    // a whole row in one stroke.
     cell.addEventListener("mouseenter", () => {
       if (painting) options.onPaint(tileIndex, mode);
     });
@@ -115,14 +108,10 @@ export function plantGrid(options: PlantGridOptions): PlantGrid {
     return cell;
   }
 
-  // Deux moitiés de dix colonnes, séparées par une colonne inerte.
+  // Two halves of ten columns, split by an inert column.
   for (let row = 0; row < GARDEN_ROWS; row++) {
     for (let col = 0; col < GARDEN_COLS; col++) {
-      if (col === GARDEN_COLS / 2) {
-        const spacer = document.createElement("div");
-        css(spacer, { pointerEvents: "none" });
-        root.append(spacer);
-      }
+      if (col === GARDEN_COLS / 2) root.append(styled("div", { pointerEvents: "none" }));
       const tileIndex = row * GARDEN_COLS + col;
       const el = buildCell(tileIndex);
       cells.set(tileIndex, { el, shown: null });
@@ -130,7 +119,7 @@ export function plantGrid(options: PlantGridOptions): PlantGrid {
     }
   }
 
-  /** Ce que la case doit montrer, en une chaîne : si elle ne bouge pas, on ne touche à rien. */
+  /** What the tile should show, as a string: when it does not change, nothing is touched. */
   function stateKey(tileIndex: number, owned: Set<number>, occupied: Set<number>): string {
     if (!owned.has(tileIndex)) return "absent";
     if (occupied.has(tileIndex)) return "occupied";
@@ -143,32 +132,28 @@ export function plantGrid(options: PlantGridOptions): PlantGrid {
     cell.el.replaceChildren();
 
     if (key === "absent") {
-      css(cell.el, { background: "transparent", borderColor: "transparent", cursor: "default" });
+      Object.assign(cell.el.style, { background: "transparent", borderColor: "transparent", cursor: "default" });
       cell.el.title = "";
       return;
     }
     if (key === "occupied") {
-      // Rouge, et rien d'autre : la case dit qu'elle est prise, pas par quoi.
-      css(cell.el, {
-        background: "rgba(239,68,68,0.22)",
-        borderColor: DANGER,
-        cursor: "not-allowed",
-      });
+      // Red and nothing else: the tile says it is taken, not by what.
+      Object.assign(cell.el.style, { background: color.dangerHover, borderColor: color.danger, cursor: "not-allowed" });
       cell.el.title = "Something is already growing here";
       return;
     }
     if (key === "free") {
-      css(cell.el, { background: "rgba(255,255,255,0.05)", borderColor: BORDER, cursor: "pointer" });
+      Object.assign(cell.el.style, { background: color.hoverBg, borderColor: color.border, cursor: "pointer" });
       cell.el.title = "";
       return;
     }
 
     const assignment = options.assignmentAt(tileIndex);
-    css(cell.el, { background: TEAL_DIM, borderColor: TEAL_BORDER, cursor: "pointer" });
+    Object.assign(cell.el.style, { background: color.accentSoft, borderColor: color.accentBorder, cursor: "pointer" });
     cell.el.title = assignment?.name ?? "";
     if (assignment) {
       const icon = options.iconFor(assignment, CELL_ICON_PX);
-      css(icon, { pointerEvents: "none" });
+      icon.style.pointerEvents = "none";
       cell.el.append(icon);
     }
   }

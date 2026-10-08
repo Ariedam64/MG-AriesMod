@@ -1,39 +1,38 @@
-// src/services/companion/diagnostics.ts
-// Mesure ce que le JEU consomme réellement comme positions de companion.
+// Measures which companion positions the GAME really consumes.
 //
-// Pourquoi ce fichier existe : notre boucle injecte une tuile à intervalle fixe,
-// mais le rendu ne voit cette valeur que lorsque Jotai recalcule les atomes NPC.
-// Si le recalcul est plus lent que notre pas, le jeu observe un saut de
-// plusieurs tuiles d'un coup et coupe au lieu d'animer la marche
-// (`AvatarView.preDraw` : snap dès que la distance de Manhattan dépasse 1).
+// The loop injects a tile at a fixed rate, but the renderer only sees it when
+// Jotai recomputes the NPC atoms. If that is slower than our step, the game
+// sees a jump of several tiles at once and snaps instead of animating the
+// walk (`AvatarView.preDraw`: snap as soon as the Manhattan distance is over 1).
 //
-// On s'abonne donc au MÊME atom que la couche avatar (`npcQuinoaUsersAtom`) et
-// on enregistre chaque position observée, pour trancher entre deux causes :
-//   - deltas > 1  => cadence de recalcul trop lente (notre faute)
-//   - deltas == 1 => le jeu coupe pour une autre raison (forceSnap)
+// So this follows the SAME atom as the avatar layer (`npcQuinoaUsersAtom`) and
+// records every position seen, to tell two causes apart:
+//   - deltas > 1  => the recompute rate is too slow (our fault)
+//   - deltas == 1 => the game snaps for another reason (forceSnap)
 
+import { sleep } from "../../lib/async";
 import { makeAtom } from "../../game/store/hub";
 
 const DEFAULT_SAMPLE_MS = 6000;
 
 type Observation = { atMs: number; x: number; y: number };
 
-export type DiagnosticReport = {
-  /** Nombre de positions distinctes vues par le jeu pendant la mesure. */
+type DiagnosticReport = {
+  /** Distinct positions the game saw during the sample. */
   observations: number;
-  /** Intervalle médian entre deux positions observées, en ms. */
+  /** Median interval between two positions seen, in ms. */
   medianIntervalMs: number | null;
-  /** Plus grand écart de tuiles entre deux observations consécutives. */
+  /** The largest tile gap between two observations in a row. */
   maxDelta: number;
-  /** Combien de fois le jeu a vu un saut > 1 tuile (donc un snap). */
+  /** How often the game saw a jump of more than one tile, so a snap. */
   snapCount: number;
-  /** Part des transitions qui ont provoqué un snap. */
+  /** The share of transitions that snapped. */
   snapRatio: number;
   verdict: string;
 };
 
 const npcQuinoaUsers = makeAtom<Array<{ playerId: string; position?: { x: number; y: number } | null }>>(
-  "npcQuinoaUsersAtom"
+  "npcQuinoaUsersAtom",
 );
 
 function median(values: number[]): number | null {
@@ -43,14 +42,8 @@ function median(values: number[]): number | null {
   return sorted.length % 2 === 0 ? Math.round((sorted[mid - 1] + sorted[mid]) / 2) : sorted[mid];
 }
 
-/**
- * Échantillonne les positions que le jeu observe pour `npcId`.
- * À lancer pendant que le companion marche.
- */
-export async function diagnoseCompanion(
-  npcId: string,
-  sampleMs = DEFAULT_SAMPLE_MS
-): Promise<DiagnosticReport> {
+/** Samples the positions the game sees for `npcId`. Run it while the companion walks. */
+export async function diagnoseCompanion(npcId: string, sampleMs = DEFAULT_SAMPLE_MS): Promise<DiagnosticReport> {
   const seen: Observation[] = [];
 
   const record = (entries: Array<{ playerId: string; position?: { x: number; y: number } | null }> | null) => {
@@ -72,11 +65,11 @@ export async function diagnoseCompanion(
       maxDelta: 0,
       snapCount: 0,
       snapRatio: 0,
-      verdict: "Impossible de s'abonner à npcQuinoaUsersAtom.",
+      verdict: "Could not subscribe to npcQuinoaUsersAtom.",
     };
   }
 
-  await new Promise<void>((resolve) => setTimeout(resolve, sampleMs));
+  await sleep(sampleMs);
   try {
     unsub?.();
   } catch {}
@@ -108,10 +101,10 @@ export async function diagnoseCompanion(
 
 function buildVerdict(observations: number, snapCount: number, maxDelta: number): string {
   if (observations < 2) {
-    return "Aucune position observée : le companion ne bouge pas, ou l'atom n'est pas relu. Vérifie qu'il marche pendant la mesure.";
+    return "No position seen: the companion is not moving, or the atom is not read again. Make sure he walks during the sample.";
   }
   if (snapCount === 0) {
-    return "Le jeu ne voit que des pas d'une tuile. La cadence n'est pas en cause : le snap vient d'ailleurs (forceSnap).";
+    return "The game only sees one-tile steps. The rate is not the cause: the snap comes from elsewhere (forceSnap).";
   }
-  return `Le jeu observe des sauts jusqu'à ${maxDelta} tuiles : la cadence de recalcul est plus lente que notre pas. C'est la cause du snap.`;
+  return `The game sees jumps of up to ${maxDelta} tiles: the recompute rate is slower than our step. That is the cause of the snap.`;
 }

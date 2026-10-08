@@ -1,26 +1,25 @@
-// src/services/companion/chat/hatch.ts
-// Ce qu'on garde d'une couvée, et ce qui part.
+// What to keep from a hatch, and what goes.
 //
-// Module PUR — aucune lecture du jeu, aucun envoi de commande.
+// No game reads and no commands here.
 //
-// Deux protections ne se discutent pas et ne figurent dans aucun réglage :
-// un favori du joueur et un animal de l'équipe active ne se vendent jamais.
-// Ce sont des consignes posées ailleurs et volontairement, comme le Locker
-// l'est pour la récolte ; des règles de tri n'ont pas à les contredire.
+// Two protections are not up for discussion and appear in no setting: a
+// player's favourite and a pet on the active team are never sold. They are
+// rules set elsewhere, on purpose, the way the Locker is for harvesting, and
+// sorting rules must not contradict them.
 //
-// Et une vente ne se rattrape pas. Tout ce qui suit penche donc du côté de
-// garder : sans critère renseigné, rien ne part.
+// A sale cannot be undone either, so everything below leans towards keeping:
+// with no rule set, nothing goes.
 
-import { listWords } from "./harvest";
 import { EmoteType } from "../emoteTypes";
+import { listWords } from "./harvest";
 
-/** Ce que le joueur veut conserver. Tout le reste est vendable. */
+/** What the player wants to keep. Everything else is for sale. */
 export type KeepRules = {
   species: string[];
   mutations: string[];
-  /** Identifiants de capacités, pas leurs noms affichés. */
+  /** Ability ids, not their display names. */
   abilities: string[];
-  /** Garde au-dessus de cette force maximale. `null` = critère inactif. */
+  /** Keeps from this max strength up. `null` turns the rule off. */
   minMaxStr: number | null;
 };
 
@@ -31,52 +30,49 @@ export const DEFAULT_KEEP_RULES: KeepRules = {
   minMaxStr: null,
 };
 
+/** Why a hatch stopped. It decides the next question. */
+export type HatchStop = "done" | "full" | "cancelled";
+
 /**
- * Au moins un critère est renseigné.
+ * At least one rule is set.
  *
- * Sans critère, « ce qui ne correspond pas » désigne la totalité : proposer
- * une vente dans cet état reviendrait à faire du vide par défaut. On préfère
- * refuser l'action et dire pourquoi.
+ * With none, "what does not match" means everything: offering a sale then
+ * would empty the bag by default. The action is refused and the reason given.
  */
 export function hasAnyRule(rules: KeepRules): boolean {
   return (
-    rules.species.length > 0 ||
-    rules.mutations.length > 0 ||
-    rules.abilities.length > 0 ||
-    rules.minMaxStr !== null
+    rules.species.length > 0 || rules.mutations.length > 0 || rules.abilities.length > 0 || rules.minMaxStr !== null
   );
 }
 
 export type PetRow = {
   petId: string;
-  /** Nom donné par le joueur, ou l'espèce à défaut. */
+  /** The name the player gave it, or its species. */
   name: string;
   species: string;
   mutations: string[];
   abilities: string[];
   maxStrength: number | null;
-  /** Favori du joueur. */
   favorited: boolean;
-  /** Présent dans l'équipe active. */
+  /** On the active team. */
   onTeam: boolean;
   /**
-   * L'objet d'inventaire tel quel, gardé pour le rendu seul.
+   * The inventory object as is, kept for drawing only.
    *
-   * Une bulle peut afficher un animal composé, mutations comprises, mais le tag
-   * du jeu veut l'objet et pas son nom. Opaque à dessein : rien ici ne doit lire
-   * dedans, tout ce qui compte est déjà extrait dans les champs au-dessus.
+   * A bubble can show a composed pet, mutations included, but the game's tag
+   * wants the object, not its name. Opaque on purpose: nothing here reads it.
    */
   item?: unknown;
 };
 
-/** Comparaison de mutations insensible à la casse : les sources divergent. */
+/** Case-insensitive match: the sources disagree on case. */
 function hasAny(present: string[], wanted: string[]): boolean {
   if (wanted.length === 0) return false;
   const set = new Set(present.map((value) => value.toLowerCase()));
   return wanted.some((value) => set.has(value.toLowerCase()));
 }
 
-/** L'animal coche au moins un critère de conservation. */
+/** The pet ticks at least one keep rule. */
 export function matchesKeep(pet: PetRow, rules: KeepRules): boolean {
   if (rules.species.includes(pet.species)) return true;
   if (hasAny(pet.mutations, rules.mutations)) return true;
@@ -86,43 +82,39 @@ export function matchesKeep(pet: PetRow, rules: KeepRules): boolean {
 }
 
 /**
- * Les mutations qu'on fête plus fort que les autres, de la plus rare à la moins.
+ * The mutations cheered louder than the rest, rarest first.
  *
- * Ce n'est pas un catalogue recopié du jeu mais une préférence de notre côté :
- * ces deux-là sont les tirages qui font lever les yeux. Un nom que le jeu
- * n'emploierait plus ne casse rien — la comparaison ne trouve personne, et le
- * companion applaudit au lieu d'adorer.
- *
- * L'ordre décide : une portée qui sort les deux fête le Rainbow.
+ * Not a copy of the game's catalog but a preference of ours: these two are the
+ * rolls that make people look up. A name the game stopped using breaks
+ * nothing: the match finds nobody, and he claps instead of adoring. The order
+ * decides: a hatch that brings both cheers the Rainbow.
  */
 const CHEERED_MUTATIONS = ["Rainbow", "Gold"];
 
 export type HatchCheer = {
   emote: EmoteType;
   /**
-   * L'animal à mettre en vedette. `null` quand rien ne sort du lot.
+   * The pet to feature. `null` when none stands out.
    *
-   * Plusieurs peuvent apparaître entre deux lectures du sac, et le beau n'est
-   * pas toujours le premier : sans ça, on ferait tout un cinéma en montrant le
-   * sprite du Worm sorti juste avant.
+   * Several can appear between two reads of the bag, and the fine one is not
+   * always first: without this he would make a fuss while showing the Worm
+   * that came out just before.
    */
   star: PetRow | null;
-  /** La mutation qui vaut la fête, au nom canonique. `null` = simple correspondance. */
+  /** The mutation worth the fuss, under its canonical name. `null` for a plain match. */
   mutation: string | null;
 };
 
 /**
- * Ce que le companion joue en voyant sortir ces animaux. `null` = rien.
+ * What the companion plays on seeing these pets come out. `null` for nothing.
  *
- * Un animal qui ne coche aucun critère ne mérite pas de célébration : c'est
- * exactement celui qu'on proposera de vendre ensuite, et l'applaudir avant de
- * le jeter serait absurde. Sans critère renseigné, plus rien ne correspond,
- * donc plus rien ne se fête — c'est cohérent avec `hasAnyRule`, qui refuse
- * déjà de trier dans cet état.
+ * A pet that ticks no keep rule deserves no celebration: it is exactly the one
+ * he will offer to sell next, and cheering it first would be absurd. With no
+ * rule set nothing matches, so nothing is cheered, which agrees with
+ * `hasAnyRule` refusing to sort in that state.
  *
- * Le nom rendu est celui de notre liste, pas celui que porte l'animal : les
- * sources écrivent les mutations tantôt en majuscules tantôt non, et c'est ce
- * nom-là qui part dans la phrase.
+ * The name given back is our list's, not the pet's: the sources capitalise
+ * mutations inconsistently, and this is the name that goes in the sentence.
  */
 export function hatchCheer(pets: PetRow[], rules: KeepRules): HatchCheer | null {
   const kept = pets.filter((pet) => matchesKeep(pet, rules));
@@ -135,44 +127,44 @@ export function hatchCheer(pets: PetRow[], rules: KeepRules): HatchCheer | null 
   return { emote: EmoteType.Clapping, star: null, mutation: null };
 }
 
-/** Tout ce qui met un animal à l'abri, critères du joueur compris. */
+/** Everything that keeps a pet safe, the player's rules included. */
 export function isProtected(pet: PetRow, rules: KeepRules): boolean {
   return pet.favorited || pet.onTeam || matchesKeep(pet, rules);
 }
 
 /**
- * Ceux qu'il faut mettre en favori.
+ * The pets to favourite.
  *
- * Seulement ceux qui correspondent sans l'être déjà : refavoriser un favori
- * n'apporte rien et allongerait la liste que le joueur doit relire.
+ * Only those that match without already being favourites: favouriting a
+ * favourite again adds nothing and lengthens the list the player reads.
  */
 export function toFavourite(pets: PetRow[], rules: KeepRules): PetRow[] {
   return pets.filter((pet) => !pet.favorited && matchesKeep(pet, rules));
 }
 
-/** Ceux qui partiraient. Rien sans critère : voir `hasAnyRule`. */
+/** The pets that would go. None without a rule: see `hasAnyRule`. */
 export function toSell(pets: PetRow[], rules: KeepRules): PetRow[] {
   if (!hasAnyRule(rules)) return [];
   return pets.filter((pet) => !isProtected(pet, rules));
 }
 
 /**
- * Signature d'un lot de vente : l'ensemble exact des animaux concernés.
+ * A sale's signature: the exact set of pets concerned.
  *
- * Une vente est irréversible, donc la moindre différence doit invalider la
- * confirmation. Un animal éclos, favorisé à la main ou mis en équipe entre la
- * question et la réponse suffit à faire reposer la question.
+ * A sale cannot be undone, so the slightest difference must void the
+ * confirmation. A pet hatched, favourited by hand or put on the team between
+ * the question and the answer is enough to ask again.
  */
 export function petSignature(pets: PetRow[]): string {
   return pets.map((pet) => pet.petId).sort().join("|");
 }
 
-/** Signature d'une couvée : les cases d'œufs prêtes, triées. */
+/** A hatch's signature: the ready egg tiles, sorted. */
 export function slotSignature(slots: number[]): string {
   return [...slots].sort((a, b) => a - b).join("|");
 }
 
-/** Effectifs par espèce, du plus nombreux au moins, pour un résumé lisible. */
+/** Counts per species, largest first, for a readable summary. */
 function bySpecies(pets: PetRow[]): Array<{ species: string; count: number }> {
   const counts = new Map<string, number>();
   for (const pet of pets) counts.set(pet.species, (counts.get(pet.species) ?? 0) + 1);
@@ -181,7 +173,7 @@ function bySpecies(pets: PetRow[]): Array<{ species: string; count: number }> {
     .sort((a, b) => b.count - a.count || a.species.localeCompare(b.species));
 }
 
-/** Les critères, en toutes lettres, tels qu'ils s'affichent en résumé. */
+/** The keep rules in words, as a summary shows them. */
 export function describeKeep(rules: KeepRules, abilityNames: Map<string, string> = new Map()): string {
   if (!hasAnyRule(rules)) return "Nothing set yet";
   const parts: string[] = [];
@@ -194,22 +186,21 @@ export function describeKeep(rules: KeepRules, abilityNames: Map<string, string>
   return parts.join(", ");
 }
 
-/** Ce que le joueur demande, de son côté du fil. */
+/** What the player asks, on their side of the thread. */
 export function describeHatchRequest(count: number): string {
   return count === 1 ? "Hatch that egg for me" : `Hatch my ${count} eggs`;
 }
 
-/** Ce que le companion annonce avant de demander. Sans point final. */
+/** What the companion announces before asking. No full stop. */
 export function summarizeHatch(slots: number[]): string {
   return `${slots.length} egg${slots.length === 1 ? "" : "s"} ready to hatch`;
 }
 
-
 /**
- * Ce qu'une vente emporte, tel qu'il l'annonce avant de demander.
+ * What a sale takes away, as he announces it before asking.
  *
- * Les espèces sont nommées plutôt que comptées en bloc : « 23 pets » ne se
- * relit pas, et c'est justement le moment où il faut pouvoir se raviser.
+ * Species are named rather than counted in one lump: "23 pets" cannot be
+ * checked, and this is exactly the moment to be able to change your mind.
  */
 export function summarizeSell(pets: PetRow[]): string {
   if (pets.length === 0) return "nothing";
@@ -218,4 +209,25 @@ export function summarizeSell(pets: PetRow[]): string {
   const rest = parts.length > head.length ? ` and ${parts.length - head.length} other kinds` : "";
   if (parts.length === 1) return parts[0];
   return `${pets.length} pets: ${listWords(head)}${rest}`;
+}
+
+/**
+ * What he notes after a hatch, before asking anything. `null` when there is
+ * nothing to say.
+ *
+ * The no-rule case gets its own words: a full bag with no sorting rule is not
+ * a fault but a missing setting, and saying so saves looking elsewhere.
+ */
+export function afterHatchNote(stop: HatchStop, eggsWaiting: number, rules: KeepRules, sellable: number): string | null {
+  const eggs = eggsWaiting > 0 ? ` ${eggsWaiting} egg${eggsWaiting === 1 ? "" : "s"} still waiting.` : "";
+
+  if (stop === "full") {
+    if (sellable > 0) return `Your bag is full.${eggs}`;
+    return hasAnyRule(rules)
+      ? `Your bag is full, nothing in it is up for sale.${eggs}`
+      : `Your bag is full.${eggs} Nothing set to keep, so I am not selling.`;
+  }
+
+  // Hatch finished: the sale is only mentioned when there is something to sell.
+  return sellable > 0 ? "All open. Now the ones you did not want." : null;
 }

@@ -1,47 +1,42 @@
-// src/services/companion/anchors.ts
-// Traduit le mode choisi par l'utilisateur en une ancre + une zone praticable,
-// les deux seules choses que `movement.ts` a besoin de connaître.
+// Turns the mode the player chose into an anchor and an area, the only two
+// things `movement.ts` needs to know.
 //
-// C'est ici que vivent les différences entre modes ; le moteur de déplacement
-// reste identique pour tous. Ajouter un mode revient à ajouter un cas ici, sans
-// toucher au cœur testé.
-//
-// Rien n'est écrit en dur : les tuiles du jardin sont dérivées de `mapAtom`
-// (règle core.md).
+// The differences between modes live here; the movement engine is the same
+// for all of them. Adding a mode means adding a case here, without touching
+// the checked core. Nothing is hardcoded: the garden tiles come from `mapAtom`.
 
 import { makeAtom } from "../../game/store/hub";
+import type { CompanionMap } from "./mapView";
 import type { Anchor, IsWalkable, XY } from "./movement";
-import type { CompanionMap } from "./map";
-
-// Le mode est une donnée de réglage : il vit dans `settingsShape.ts`, qui est
-// pur. On le réexporte ici parce que c'est de ce module que tout le reste le
-// prend déjà, et que le déplacer plus loin ne clarifierait rien.
-export { type CompanionMode } from "./settingsShape";
 import type { CompanionMode } from "./settingsShape";
 
-/** Slot du joueur local dans la salle : indexe ses tuiles de jardin. */
+// The mode is a setting, so it lives in `settingsShape.ts`, which is pure. It
+// is re-exported here because the rest of the code takes it from this module.
+export { type CompanionMode } from "./settingsShape";
+
+/** The local player's slot in the room: it indexes their garden tiles. */
 const myUserSlotIdx = makeAtom<number | null>("myUserSlotIdxAtom");
 
-export type ResolvedAnchor = {
+type ResolvedAnchor = {
   anchor: Anchor;
-  /** Marchabilité brute de la map. La zone du mode vit dans `anchor.zone`. */
+  /** The map's raw walkability. The mode's area lives in `anchor.zone`. */
   isWalkable: IsWalkable;
-  /** Mode réellement appliqué : peut différer du demandé en cas de repli. */
+  /** The mode really applied: may differ from the one asked for when it falls back. */
   effectiveMode: CompanionMode;
 };
 
-export type AnchorRequest = {
+type AnchorRequest = {
   mode: CompanionMode;
   map: CompanionMap;
   player: XY;
 };
 
 /**
- * Résout le mode courant.
+ * Resolves the current mode.
  *
- * Repli assumé : un mode dont les données manquent (jardin introuvable) retombe
- * sur le suivi plutôt que de laisser le companion immobile sans explication. `effectiveMode` dit ce qui a réellement été appliqué,
- * pour que l'UI puisse le signaler.
+ * A mode whose data is missing (no garden found) falls back on following
+ * rather than leaving the companion still with no explanation.
+ * `effectiveMode` says what was really applied, so the menu can show it.
  */
 export async function resolveAnchor(request: AnchorRequest): Promise<ResolvedAnchor> {
   const { mode, map, player } = request;
@@ -62,11 +57,10 @@ function followAnchor(map: CompanionMap, player: XY): ResolvedAnchor {
 }
 
 /**
- * Jardin : la zone est la parcelle du joueur, l'ancre son centre.
+ * Garden: the area is the player's plot, the anchor its centre.
  *
- * Le rayon de flânerie est calculé pour couvrir toute la parcelle — sinon le
- * companion resterait agglutiné au centre d'un jardin plus grand que le rayon
- * par défaut, qui n'a pas le même sens ici.
+ * The wander radius covers the whole plot: otherwise the companion would stay
+ * bunched in the middle of a garden larger than the default radius.
  */
 async function resolveGardenAnchor(map: CompanionMap): Promise<ResolvedAnchor | null> {
   const slot = await readMySlotIdx();
@@ -76,15 +70,15 @@ async function resolveGardenAnchor(map: CompanionMap): Promise<ResolvedAnchor | 
   if (tiles.length === 0) return null;
 
   const allowed = new Set(tiles);
-  // Zone, PAS marchabilité : hors de son jardin le companion doit pouvoir
-  // traverser le reste de la map pour y revenir à pied.
+  // An area, NOT walkability: outside his garden he must be able to cross the
+  // rest of the map to walk back.
   const zone: IsWalkable = (x, y) => allowed.has(map.toIndex(x, y));
 
   const positions = tiles.map((tile) => map.toXY(tile));
   const center = nearestTo(centroid(positions), positions);
   const radius = positions.reduce(
     (max, tile) => Math.max(max, Math.abs(tile.x - center.x), Math.abs(tile.y - center.y)),
-    1
+    1,
   );
 
   return {
@@ -94,7 +88,7 @@ async function resolveGardenAnchor(map: CompanionMap): Promise<ResolvedAnchor | 
   };
 }
 
-/** Slot du joueur dans la salle : c'est lui qui indexe ses tuiles de jardin. */
+/** The player's slot in the room: it indexes their garden tiles. */
 export async function readMySlotIdx(): Promise<number | null> {
   try {
     const slot = Number(await myUserSlotIdx.get());
@@ -114,7 +108,7 @@ function centroid(tiles: XY[]): XY {
   return { x: Math.round(sumX / tiles.length), y: Math.round(sumY / tiles.length) };
 }
 
-/** Le centre géométrique peut tomber hors zone : on prend la tuile réelle la plus proche. */
+/** The geometric centre may fall outside the area: the nearest real tile is taken. */
 function nearestTo(target: XY, tiles: XY[]): XY {
   let best = tiles[0];
   let bestDistance = Number.POSITIVE_INFINITY;

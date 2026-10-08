@@ -1,39 +1,37 @@
 // Vérifie ce que le companion dit de lui-même, et quand.
 //
-// Tout est pur (src/services/companion/reactions.ts) : les abonnements au jeu
+// Tout est pur (src/features/companion/reactions/) : les abonnements au jeu
 // vivent à part, dans reactionWatch.ts, et ne décident de rien.
 
 import {
   FAMILY_COOLDOWN_MS,
   REACTION_GAP_MS,
   REACTION_TTL_MS,
-  SESSION_GAP_MS,
-  abilityReaction,
-  anniversaryReaction,
-  badLuckReactions,
-  clockReaction,
-  holidayOf,
-  timeLines,
-  crossedMilestone,
-  dayPart,
-  dayPartLines,
-  eggsReadyReaction,
-  formatMilestone,
-  greetingReaction,
   initialGateState,
-  newRareCrops,
-  newlyReadyEggs,
   offerReaction,
+  takeReaction,
+  type Reaction,
+} from "../src/features/companion/reactions/gate";
+import { crossedMilestone, formatMilestone, statReactions } from "../src/features/companion/reactions/milestones";
+import {
+  abilityReaction,
+  eggsReadyReaction,
   restockedFollowed,
+  shopReaction,
+  weatherChangeReaction,
+} from "../src/features/companion/reactions/events";
+import { badLuckReactions } from "../src/features/companion/reactions/badLuck";
+import { newRareCrops, newlyReadyEggs } from "../src/features/companion/reactions/garden";
+import {
+  SESSION_GAP_MS,
+  anniversaryReaction,
+  clockReaction,
+  greetingReaction,
   resumeSession,
   sessionHourReaction,
   sessionHours,
-  shopReaction,
-  statReactions,
-  takeReaction,
-  weatherChangeReaction,
-  type Reaction,
-} from "../src/features/companion/reactions";
+} from "../src/features/companion/reactions/session";
+import { dayPart, dayPartLines, holidayOf, timeLines } from "../src/features/companion/dialogueTime";
 import { DEFAULT_CUSTOM_LINES, POKE_WINDOW_MS, lineEmote, pokeLine } from "../src/features/companion/dialogueLines";
 import {
   EmoteType,
