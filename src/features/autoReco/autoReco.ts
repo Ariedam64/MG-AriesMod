@@ -1,8 +1,8 @@
 import { onWebSocketClose } from "../../game/ws/socketHook";
 import { pageWindow } from "../../platform/pageContext";
 import { detectEnvironment } from "../../platform/environment";
-import { MiscService } from "../misc/misc";
 import { createAutoRecoOverlay, type AutoRecoOverlay } from "./overlay";
+import { AUTO_RECO_TEMPORARILY_DISABLED, readAutoRecoDelayMs, readAutoRecoEnabled } from "./settings";
 
 /**
  * What the mod does when the game's socket closes on its own:
@@ -12,7 +12,7 @@ import { createAutoRecoOverlay, type AutoRecoOverlay } from "./overlay";
  * - the session was taken over by another tab or device: if the player turned
  *   auto reconnect on, the room reconnects after their delay, with a countdown
  *   overlay and a button to reconnect at once. This half is switched off for
- *   now (`MiscService.AUTO_RECO_TEMPORARILY_DISABLED`) at the request of the
+ *   now (`AUTO_RECO_TEMPORARILY_DISABLED` in ./settings) at the request of the
  *   game developers; the code stays so it can come back.
  */
 
@@ -90,7 +90,7 @@ function clearReconnectTimer() {
 function reconnectNow() {
   reconnectTimer = null;
   clearOverlayAndCountdown();
-  if (!MiscService.readAutoRecoEnabled(false)) return;
+  if (!readAutoRecoEnabled()) return;
   try {
     const conn = getRoomConnection();
     if (typeof conn?.connect === "function") conn.connect.call(conn);
@@ -103,13 +103,13 @@ function reconnectOnSupersededSession(ev: CloseEvent, ws: WebSocket) {
   if (!isSupersededSessionClose(ev)) return;
   const rcSocket = getRoomConnectionSocket();
   if (rcSocket && ws && ws !== rcSocket) return;
-  if (MiscService.AUTO_RECO_TEMPORARILY_DISABLED) return;
-  if (!MiscService.readAutoRecoEnabled(false)) return;
+  if (AUTO_RECO_TEMPORARILY_DISABLED) return;
+  if (!readAutoRecoEnabled()) return;
 
   clearReconnectTimer();
   clearOverlayAndCountdown();
 
-  const delayMs = MiscService.getAutoRecoDelayMs();
+  const delayMs = readAutoRecoDelayMs();
   if (delayMs > 0) {
     overlay = createAutoRecoOverlay(delayMs, () => {
       clearReconnectTimer();

@@ -1,7 +1,7 @@
 import { interceptOutgoing } from "../../game/ws/outgoing";
 import { Atoms } from "../../game/store/atoms";
 import { readAndFollow } from "../../game/store/hub";
-import { readInventorySlotReserveEnabled } from "./misc";
+import { readStoredFlag, writeStoredFlag } from "./storedFlag";
 
 /**
  * "Keep one inventory slot free": once the inventory holds 99 entries, every
@@ -11,6 +11,12 @@ import { readInventorySlotReserveEnabled } from "./misc";
  */
 
 const BLOCK_AT = 99;
+
+const PATH_KEEP_INVENTORY_SLOT_FREE = "misc.keepInventorySlotFree";
+
+export const readInventorySlotReserveEnabled = (): boolean => readStoredFlag(PATH_KEEP_INVENTORY_SLOT_FREE);
+export const writeInventorySlotReserveEnabled = (on: boolean): void =>
+  writeStoredFlag(PATH_KEEP_INVENTORY_SLOT_FREE, on);
 
 type ShopKind = "seed" | "decor" | "egg" | "tool";
 
@@ -47,7 +53,7 @@ function refreshInventory(raw: any) {
 }
 
 function inventoryFull(): boolean {
-  return readInventorySlotReserveEnabled(false) && inventoryCount >= BLOCK_AT;
+  return readInventorySlotReserveEnabled() && inventoryCount >= BLOCK_AT;
 }
 
 function blockWhenFull(type: string) {

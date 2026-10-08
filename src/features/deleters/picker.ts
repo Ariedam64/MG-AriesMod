@@ -1,29 +1,24 @@
-// src/ui/menus/misc/deleter-picker.ts
+// One popup to pick what the seed or decor deleter should destroy.
 //
-// One popup to pick what the seed/decor deleter should destroy.
+// The list is the mod's own, built from the inventory and the matching
+// storage, so what the player sees is everything the run can reach. The flow
+// it replaced faked the game's inventory panel and read the clicks back off a
+// selection atom, and went silently dead once the game renamed that atom.
 //
-// It replaces the old flow, which faked the game's own inventory panel and
-// read the clicks back off a selection atom. That was long to drive, and went
-// silently dead once the game renamed that atom. Here the list is the mod's
-// own, built from the inventory *and* the matching storage, so what you see is
-// everything the run can reach.
-//
-// The popup only returns a selection; withdrawing and deleting stay in the
-// service.
+// The popup only returns a selection; withdrawing and deleting stay in
+// `run.ts`.
 
-import { attachSpriteIcon } from "../../ui/kit/sprites/iconCache";
-import {
-  BORDER, CARD_BG, css, DANGER, TEAL_BORDER, TEAL_DIM,
-  TEXT, TEXT_DIM, button, textField,
-} from "../../ui/kit/panel";
+import { formatInteger } from "../../lib/format";
+import { button, setButtonEnabled } from "../../ui/kit/button";
+import { h } from "../../ui/kit/dom";
+import { textInput } from "../../ui/kit/fields";
 import { openModal } from "../../ui/kit/modal";
+import { attachSpriteIcon } from "../../ui/kit/sprites/iconCache";
 import type { DeleterEntry } from "./sources";
+import { ensureDeleterStyles } from "./styles";
 
 /** Sprites carry the row: big enough to recognise a seed at a glance. */
 const ROW_SPRITE_PX = 36;
-
-const NF_US = new Intl.NumberFormat("en-US");
-const formatNum = (n: number) => NF_US.format(Math.max(0, Math.floor(n || 0)));
 
 export interface DeleterPickerOptions {
   /** HUD window the call comes from. Drives placement and z-index. */
@@ -46,6 +41,7 @@ export interface DeleterPickerOptions {
 }
 
 export function openDeleterPicker(options: DeleterPickerOptions): void {
+  ensureDeleterStyles();
   const modal = openModal({
     host: options.host,
     title: options.title,
@@ -59,52 +55,49 @@ export function openDeleterPicker(options: DeleterPickerOptions): void {
   let filter = "";
 
   /* ----- Controls ----- */
-  const controls = document.createElement("div");
-  css(controls, { display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", marginBottom: "10px" });
-
-  const search = textField(`Search ${options.unitNoun}…`);
-  css(search, { flex: "1 1 160px", minWidth: "120px" });
+  const search = textInput(`Search ${options.unitNoun}…`, "", { small: true });
+  search.classList.add("qws-del-search");
   search.addEventListener("input", () => {
     filter = search.value.trim().toLowerCase();
     renderRows();
   });
 
-  const setAll = (fn: (entry: DeleterEntry) => number) => {
+  const setAll = (qtyFor: (entry: DeleterEntry) => number) => {
     for (const entry of visibleEntries()) {
-      const qty = fn(entry);
+      const qty = qtyFor(entry);
       if (qty > 0) picked.set(entry.id, qty);
       else picked.delete(entry.id);
     }
     renderRows();
   };
 
+  const controls = h("div", "qws-del-controls");
   controls.append(
     search,
-    button("All", "neutral", () => setAll((e) => e.total)),
-    button("None", "neutral", () => setAll(() => 0)),
+    button("All", { size: "sm", onClick: () => setAll((entry) => entry.total) }),
+    button("None", { size: "sm", onClick: () => setAll(() => 0) }),
   );
 
-  /* ----- List ----- */
-  const list = document.createElement("div");
-  css(list, { display: "flex", flexDirection: "column", gap: "4px" });
-
+  const list = h("div", "qws-del-list");
   modal.body.append(controls, list);
 
   /* ----- Footer ----- */
-  const summary = document.createElement("div");
-  css(summary, { flex: "1", minWidth: "0", fontSize: "12px", color: TEXT_DIM });
-
-  const btnCancel = button("Cancel", "neutral", () => modal.close());
-  const btnConfirm = button("Confirm selection", "accent", () => {
-    const out = new Map<string, number>();
-    for (const [id, qty] of picked) if (qty > 0) out.set(id, qty);
-    // Commit before closing: `onClose` is what callers wait on, so the
-    // selection has to be in place by the time it fires.
-    options.onConfirm(out);
-    modal.close();
+  const summary = h("div", "qws-del-summary");
+  const btnCancel = button("Cancel", { size: "sm", onClick: () => modal.close() });
+  const btnConfirm = button("Confirm selection", {
+    variant: "primary",
+    size: "sm",
+    onClick: () => {
+      const out = new Map<string, number>();
+      for (const [id, qty] of picked) if (qty > 0) out.set(id, qty);
+      // Commit before closing: `onClose` is what callers wait on, so the
+      // selection has to be in place by the time it fires.
+      options.onConfirm(out);
+      modal.close();
+    },
   });
 
-  css(modal.footer, { display: "flex", alignItems: "center", gap: "8px" });
+  modal.footer.classList.add("qws-del-footer");
   modal.footer.append(summary, btnCancel, btnConfirm);
 
   /* ----- Rendering ----- */
@@ -114,13 +107,7 @@ export function openDeleterPicker(options: DeleterPickerOptions): void {
    * resolves and stays put if that id has no sprite.
    */
   function buildIcon(id: string): HTMLElement {
-    const box = document.createElement("span");
-    css(box, {
-      width: `${ROW_SPRITE_PX}px`, height: `${ROW_SPRITE_PX}px`, flex: "0 0 auto",
-      display: "inline-flex", alignItems: "center", justifyContent: "center",
-      fontSize: "22px", lineHeight: "1",
-    });
-    box.textContent = options.fallbackIcon;
+    const box = h("span", "qws-del-row__icon", options.fallbackIcon);
     attachSpriteIcon(box, options.spriteCategories, [id], ROW_SPRITE_PX, "deleter-picker");
     return box;
   }
@@ -143,27 +130,17 @@ export function openDeleterPicker(options: DeleterPickerOptions): void {
       units += qty;
       fromStorage += Math.max(0, qty - entry.invQty);
     }
-    const storagePart = fromStorage > 0 ? ` · ${formatNum(fromStorage)} from the ${options.storageNoun}` : "";
+    const storagePart = fromStorage > 0 ? ` · ${formatInteger(fromStorage)} from the ${options.storageNoun}` : "";
     summary.textContent = groups === 0
       ? "Nothing selected."
-      : `${groups} selected · ${formatNum(units)} ${options.unitNoun}${storagePart}`;
-    btnConfirm.disabled = groups === 0;
-    css(btnConfirm, { opacity: groups === 0 ? "0.45" : "1", cursor: groups === 0 ? "default" : "pointer" });
+      : `${groups} selected · ${formatInteger(units)} ${options.unitNoun}${storagePart}`;
+    setButtonEnabled(btnConfirm, groups > 0);
   }
 
   function buildRow(entry: DeleterEntry): HTMLElement {
     const qty = picked.get(entry.id) ?? 0;
-    const selected = qty > 0;
 
-    const row = document.createElement("div");
-    css(row, {
-      display: "flex", alignItems: "center", gap: "8px",
-      padding: "6px 8px", borderRadius: "10px",
-      border: `1px solid ${selected ? TEAL_BORDER : BORDER}`,
-      background: selected ? TEAL_DIM : CARD_BG,
-      cursor: "pointer",
-    });
-
+    const row = h("div", qty > 0 ? "qws-del-row is-selected" : "qws-del-row");
     // Clicking the row takes the whole stock, or drops it if already picked.
     row.addEventListener("click", () => {
       if ((picked.get(entry.id) ?? 0) > 0) picked.delete(entry.id);
@@ -171,33 +148,25 @@ export function openDeleterPicker(options: DeleterPickerOptions): void {
       renderRows();
     });
 
-    const label = document.createElement("div");
-    css(label, { flex: "1", minWidth: "0", display: "flex", flexDirection: "column", gap: "1px" });
-
-    const name = document.createElement("div");
-    css(name, { fontSize: "12.5px", color: TEXT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" });
-    name.textContent = entry.label;
-
-    const detail = document.createElement("div");
-    css(detail, { fontSize: "10.5px", color: TEXT_DIM });
-    detail.textContent = entry.storeQty > 0
-      ? `${formatNum(entry.total)} · ${formatNum(entry.invQty)} held, ${formatNum(entry.storeQty)} in ${options.storageNoun}`
-      : `${formatNum(entry.total)} held`;
-
-    label.append(name, detail);
+    const text = h("div", "qws-del-row__text");
+    text.append(
+      h("div", "qws-del-row__name", entry.label),
+      h(
+        "div",
+        "qws-del-row__detail",
+        entry.storeQty > 0
+          ? `${formatInteger(entry.total)} · ${formatInteger(entry.invQty)} held, ${formatInteger(entry.storeQty)} in ${options.storageNoun}`
+          : `${formatInteger(entry.total)} held`,
+      ),
+    );
 
     // Partial pick. Editing it must not toggle the row underneath.
-    const amount = document.createElement("input");
+    const amount = h("input", "qmm-input qmm-input--sm qws-del-amount");
     amount.type = "number";
     amount.min = "0";
     amount.max = String(entry.total);
     amount.step = "1";
     amount.value = String(qty);
-    css(amount, {
-      width: "66px", flex: "0 0 auto", padding: "4px 6px", borderRadius: "8px",
-      border: `1px solid ${BORDER}`, background: "rgba(10,14,20,0.9)", color: TEXT,
-      fontSize: "12px", textAlign: "right",
-    });
     amount.addEventListener("click", (event) => event.stopPropagation());
     amount.addEventListener("change", (event) => {
       event.stopPropagation();
@@ -207,22 +176,25 @@ export function openDeleterPicker(options: DeleterPickerOptions): void {
       renderRows();
     });
 
-    row.append(buildIcon(entry.id), label, amount);
+    row.append(buildIcon(entry.id), text, amount);
     return row;
   }
 
   function renderRows(): void {
     if (!modal.isOpen()) return;
-    list.innerHTML = "";
+    list.replaceChildren();
 
     const rows = visibleEntries();
     if (rows.length === 0) {
-      const empty = document.createElement("div");
-      css(empty, { padding: "14px", textAlign: "center", fontSize: "12px", color: TEXT_DIM });
-      empty.textContent = entries.length === 0
-        ? `You have no ${options.unitNoun} to delete, in your inventory or your ${options.storageNoun}.`
-        : "No match.";
-      list.append(empty);
+      list.append(
+        h(
+          "div",
+          "qws-del-note",
+          entries.length === 0
+            ? `You have no ${options.unitNoun} to delete, in your inventory or your ${options.storageNoun}.`
+            : "No match.",
+        ),
+      );
     } else {
       for (const entry of rows) list.append(buildRow(entry));
     }
@@ -230,10 +202,7 @@ export function openDeleterPicker(options: DeleterPickerOptions): void {
   }
 
   /* ----- Load ----- */
-  const loading = document.createElement("div");
-  css(loading, { padding: "14px", textAlign: "center", fontSize: "12px", color: TEXT_DIM });
-  loading.textContent = "Reading inventory…";
-  list.append(loading);
+  list.append(h("div", "qws-del-note", "Reading inventory…"));
   updateSummary();
 
   void options
@@ -253,8 +222,7 @@ export function openDeleterPicker(options: DeleterPickerOptions): void {
       if (!modal.isOpen()) return;
       entries = [];
       renderRows();
-      css(summary, { color: DANGER });
+      summary.classList.add("is-error");
       summary.textContent = "Could not read the inventory.";
     });
 }
-

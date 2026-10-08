@@ -2,6 +2,7 @@
 import "./game/sprites";
 import { installPageWebSocketHook } from "./game/ws/socketHook";
 import { startAutoReco } from "./features/autoReco/autoReco";
+import { startAutoStores } from "./features/autoStore/stores";
 import { installEditorOutgoingRules } from "./features/editor/outgoingRules";
 import { installInventoryReserve } from "./features/misc/inventoryReserve";
 import { installLockerOutgoingRules } from "./features/locker/outgoingRules";
@@ -66,6 +67,7 @@ import { startPlayerStateReportingWhenGameReady } from "./platform/ariesApi/play
   installInventoryReserve();
   installLockerOutgoingRules();
   installStatsCounters();
+  startAutoStores();
   MGData.init();
   shareGlobal("MGData", MGData);
   detectGameVersion();
