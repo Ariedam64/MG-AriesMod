@@ -5,9 +5,7 @@ import { pageWindow } from '../../../platform/pageContext';
 // more aggressively (observed: retry loops silently getting almost no real
 // attempts without DevTools open, even though a 10s wall-clock deadline
 // looked like it should allow plenty).
-const pageWin: any = pageWindow;
-
-export const sleep = (ms: number) => new Promise(resolve => pageWin.setTimeout(resolve, ms));
+export const sleep = (ms: number) => new Promise(resolve => pageWindow.setTimeout(resolve, ms));
 
 export async function waitWithTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   const t0 = performance.now();

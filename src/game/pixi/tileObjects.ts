@@ -167,7 +167,7 @@ function getCanvas(): HTMLCanvasElement | null {
   const renderer = getRenderer();
   // Pixi v8 exposes the canvas at renderer.canvas; .view is the v7 name (sometimes
   // a wrapper with its own .canvas). Check canvas first, same order proven to work
-  // in notificationBellPixi.ts / sellAllPetsPixi.ts against this same game build.
+  // in the notification bell and the Sell All Pets button against this same game build.
   return renderer?.canvas || renderer?.view?.canvas || renderer?.view || app?.view || app?.canvas || null;
 }
 

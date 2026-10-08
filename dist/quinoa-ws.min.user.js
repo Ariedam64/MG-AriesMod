@@ -211,13 +211,12 @@
     }
     throw new Error(`${label2} timeout`);
   }
-  var pageWin2, sleep;
+  var sleep;
   var init_async = __esm({
     "src/game/sprites/utils/async.ts"() {
       "use strict";
       init_pageContext();
-      pageWin2 = pageWindow;
-      sleep = (ms) => new Promise((resolve) => pageWin2.setTimeout(resolve, ms));
+      sleep = (ms) => new Promise((resolve) => pageWindow.setTimeout(resolve, ms));
     }
   });
 
@@ -311,17 +310,17 @@
       }
     };
     tryResolveExisting();
-    const pageWin3 = pageWindow;
+    const pageWin2 = pageWindow;
     let fallbackPolls = 0;
-    const fallbackInterval = pageWin3.setInterval(() => {
+    const fallbackInterval = pageWin2.setInterval(() => {
       if (APP && RDR) {
-        pageWin3.clearInterval(fallbackInterval);
+        pageWin2.clearInterval(fallbackInterval);
         return;
       }
       tryResolveExisting();
       fallbackPolls += 1;
       if (fallbackPolls >= 50) {
-        pageWin3.clearInterval(fallbackInterval);
+        pageWin2.clearInterval(fallbackInterval);
       }
     }, 100);
     return {
@@ -528,7 +527,7 @@
     return renderer?.canvas || renderer?.view?.canvas || renderer?.view || null;
   }
   function watchRendererHealth(state5, hooks3) {
-    const pageWin3 = pageWindow;
+    const pageWin2 = pageWindow;
     let staleStreak = 0;
     let needsCtorsRederive = false;
     const debugState4 = {
@@ -538,8 +537,8 @@
       ctorsRederiveAttempts: 0,
       lastCtorsRederiveError: null
     };
-    pageWin3.__MG_RENDERER_HEALTH_DEBUG__ = debugState4;
-    pageWin3.setInterval(() => {
+    pageWin2.__MG_RENDERER_HEALTH_DEBUG__ = debugState4;
+    pageWin2.setInterval(() => {
       try {
         debugState4.checks += 1;
         if (needsCtorsRederive) {
@@ -55960,10 +55959,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     await reapply();
   }
   function startTimers() {
-    const pageWin3 = globalThis.unsafeWindow || globalThis;
+    const pageWin2 = globalThis.unsafeWindow || globalThis;
     if (watchId === null) {
       lastRenderer = getSpriteState().renderer;
-      watchId = pageWin3.setInterval(() => {
+      watchId = pageWin2.setInterval(() => {
         const current = getSpriteState().renderer;
         if (!current || current === lastRenderer) return;
         lastRenderer = current;
@@ -55974,7 +55973,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }, RENDERER_WATCH_MS);
     }
     if (retryId === null) {
-      retryId = pageWin3.setInterval(() => {
+      retryId = pageWin2.setInterval(() => {
         void retryPending().catch((error) => {
           console.warn("[MG Skins] retry pass failed", error);
         });
