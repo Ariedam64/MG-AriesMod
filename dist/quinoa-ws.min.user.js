@@ -11407,6 +11407,21 @@
     if (!parts.length) return codePretty;
     return parts.join(mac ? "" : " + ");
   }
+  function readSavedTab(menuId) {
+    const path = `menu.activeTabs.${menuId}`;
+    const saved = readAriesPath(path);
+    if (typeof saved === "string" && saved) return saved;
+    const legacyKey = `menu:${menuId}:activeTab`;
+    let legacy = null;
+    try {
+      legacy = localStorage.getItem(legacyKey);
+      if (legacy !== null) localStorage.removeItem(legacyKey);
+    } catch {
+    }
+    if (!legacy) return null;
+    writeAriesPath(path, legacy);
+    return legacy;
+  }
   var activeHotkeyRecorder, HOTKEY_RECORDING_TIMEOUT_MS, Menu, VTabs, _MOD_CODES, CANONICAL_CODES;
   var init_menu = __esm({
     "src/ui/kit/menu.ts"() {
@@ -11448,7 +11463,7 @@
             this._updateAltCursor();
           };
           this.menuId = this.opts.id || "default";
-          this.lsKeyActive = `menu:${this.menuId}:activeTab`;
+          this.wantedId = readSavedTab(this.menuId);
         }
         /** Monte le menu dans un conteneur */
         mount(container) {
@@ -11461,10 +11476,7 @@
           this.root.appendChild(this.tabBar);
           this.root.appendChild(this.views);
           container.appendChild(this.root);
-          if (this.tabs.size) {
-            for (const [id, def] of this.tabs) this.createTabView(id, def);
-            this.restoreActive();
-          }
+          for (const [id, def] of this.tabs) this.createTabView(id, def);
           this.updateTabsBarVisibility();
           this.root.addEventListener("pointerenter", this._onEnter);
           this.root.addEventListener("pointerleave", this._onLeave);
@@ -11611,10 +11623,6 @@
           }
           return document.querySelector(".qws-win");
         }
-        firstTabId() {
-          const it = this.tabs.keys().next();
-          return it.done ? null : it.value ?? null;
-        }
         _updateAltCursor() {
           if (!this.root) return;
           this.root.classList.toggle("qmm-alt-drag", this._altDown && this._hovering);
@@ -11639,10 +11647,14 @@
         }
         /** Active un onglet (id=null => affiche toutes les vues) */
         switchTo(id) {
+          this.wantedId = null;
+          this.show(id);
+          if (id) writeAriesPath(`menu.activeTabs.${this.menuId}`, id);
+        }
+        show(id) {
           this.currentId = id;
           [...this.tabBar.children].forEach((ch) => ch.classList.toggle("active", ch.dataset.id === id || id === null));
           [...this.views.children].forEach((ch) => ch.classList.toggle("active", ch.dataset.id === id || id === null));
-          this.persistActive();
           this.emit("tab:change", id);
         }
         /** Événements */
@@ -12455,32 +12467,12 @@
           } catch (e) {
             view.textContent = String(e);
           }
-          if (!this.currentId) this.switchTo(id);
-        }
-        persistActive() {
-          if (!this.currentId) return;
-          try {
-            writeAriesPath(`menu.activeTabs.${this.menuId}`, this.currentId);
-            try {
-              localStorage.removeItem(this.lsKeyActive);
-            } catch {
-            }
-          } catch {
+          if (id === this.wantedId) {
+            this.wantedId = null;
+            this.show(id);
+          } else if (!this.currentId) {
+            this.show(id);
           }
-        }
-        restoreActive() {
-          let id = null;
-          try {
-            const stored = readAriesPath(`menu.activeTabs.${this.menuId}`);
-            if (typeof stored === "string" && stored) id = stored;
-          } catch {
-          }
-          try {
-            id = localStorage.getItem(this.lsKeyActive);
-          } catch {
-          }
-          if (id && this.tabs.has(id)) this.switchTo(id);
-          else if (this.tabs.size) this.switchTo(this.firstTabId());
         }
         updateTabsBarVisibility() {
           if (!this.tabBar || !this.root) return;

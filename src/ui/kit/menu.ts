@@ -169,12 +169,13 @@ export class Menu {
   private tabs: Map<string, TabDef> = new Map();
   private events: Map<string, Set<Handler>> = new Map();
   private currentId: string | null = null;
-  private lsKeyActive: string;
   private menuId: string;
+  /** The tab to reopen, until it is added or the player picks another. */
+  private wantedId: string | null;
 
   constructor(private opts: MenuOptions = {}) {
     this.menuId = this.opts.id || "default";
-    this.lsKeyActive = `menu:${this.menuId}:activeTab`;
+    this.wantedId = readSavedTab(this.menuId);
   }
 
   /** Monte le menu dans un conteneur */
@@ -192,10 +193,7 @@ export class Menu {
     container.appendChild(this.root);
 
     // créer vues déjà enregistrées
-    if (this.tabs.size) {
-      for (const [id, def] of this.tabs) this.createTabView(id, def);
-      this.restoreActive();
-    }
+    for (const [id, def] of this.tabs) this.createTabView(id, def);
 
     // si aucun onglet => masquer la barre (évite une ligne vide)
     this.updateTabsBarVisibility();
@@ -358,11 +356,6 @@ export class Menu {
     return document.querySelector('.qws-win') as HTMLElement | null;
   }
 
-  private firstTabId(): string | null {
-    const it = this.tabs.keys().next();
-    return it.done ? null : it.value ?? null;
-  }
-
   private _altDown = false;
   private _insertDown = false;
   private _hovering = false;
@@ -421,12 +414,17 @@ export class Menu {
 
   /** Active un onglet (id=null => affiche toutes les vues) */
   switchTo(id: string | null) {
+    this.wantedId = null;
+    this.show(id);
+    if (id) writeAriesPath(`menu.activeTabs.${this.menuId}`, id);
+  }
+
+  private show(id: string | null) {
     this.currentId = id;
     // maj barre
     [...this.tabBar.children].forEach(ch => ch.classList.toggle('active', (ch as HTMLElement).dataset.id === id || id === null));
     // maj vues
     [...this.views.children].forEach(ch => ch.classList.toggle('active', (ch as HTMLElement).dataset.id === id || id === null));
-    this.persistActive();
     this.emit('tab:change', id);
   }
 
@@ -1385,26 +1383,15 @@ inputNumber(min = 0, max = 9999, step = 1, value = 0) {
     // appel render
     try { def.render(view, this); } catch (e) { view.textContent = String(e); }
 
-    // activer par défaut si aucune sélection
-    if (!this.currentId) this.switchTo(id);
-  }
-
-  private persistActive() {
-    if (!this.currentId) return;
-    try {
-      writeAriesPath(`menu.activeTabs.${this.menuId}`, this.currentId);
-      try { localStorage.removeItem(this.lsKeyActive); } catch {}
-    } catch {}
-  }
-  private restoreActive() {
-    let id: string | null = null;
-    try {
-      const stored = readAriesPath<string>(`menu.activeTabs.${this.menuId}`);
-      if (typeof stored === "string" && stored) id = stored;
-    } catch {}
-    try { id = localStorage.getItem(this.lsKeyActive); } catch {}
-    if (id && this.tabs.has(id)) this.switchTo(id);
-    else if (this.tabs.size) this.switchTo(this.firstTabId());
+    // The first tab shows until the remembered one arrives. Neither choice is
+    // saved, or showing the first tab would overwrite the remembered one: only
+    // `switchTo` (a click on a tab, or the menu itself) saves.
+    if (id === this.wantedId) {
+      this.wantedId = null;
+      this.show(id);
+    } else if (!this.currentId) {
+      this.show(id);
+    }
   }
 
   private updateTabsBarVisibility() {
@@ -2588,4 +2575,26 @@ function hotkeyToPretty(h: Hotkey | null): string {
   }
   if (!parts.length) return codePretty;
   return parts.join(mac ? "" : " + ");
+}
+
+/**
+ * The tab a menu should reopen on. Builds before the shared storage kept it
+ * under a raw localStorage key; that key is read once, moved, and dropped.
+ */
+function readSavedTab(menuId: string): string | null {
+  const path = `menu.activeTabs.${menuId}`;
+  const saved = readAriesPath<string>(path);
+  if (typeof saved === "string" && saved) return saved;
+
+  const legacyKey = `menu:${menuId}:activeTab`;
+  let legacy: string | null = null;
+  try {
+    legacy = localStorage.getItem(legacyKey);
+    if (legacy !== null) localStorage.removeItem(legacyKey);
+  } catch {
+    /* storage blocked: nothing to migrate */
+  }
+  if (!legacy) return null;
+  writeAriesPath(path, legacy);
+  return legacy;
 }
