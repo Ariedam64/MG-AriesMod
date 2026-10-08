@@ -15,7 +15,8 @@
 // (cf. `chat/proposals.ts`). Le plan n'est pas conservé d'une ouverture à
 // l'autre — c'est une demande ponctuelle, pas un réglage.
 
-import type { HarvestRequest } from "../chat";
+import type { ChatRequest } from "../chat";
+import { plantRequest } from "../chat/commands/plant";
 import { readPlantScope } from "../chat/plantRead";
 import {
   EMPTY_SCOPE,
@@ -36,7 +37,7 @@ import { openModal } from "../../../ui/kit/modal";
 const REFRESH_MS = 4000;
 const STRIP_ICON_PX = 24;
 
-export function openPlantModal(host: HTMLElement, onAsk: (request: HarvestRequest) => void): void {
+export function openPlantModal(host: HTMLElement, onAsk: (request: ChatRequest) => void): void {
   let scope: PlantScope = EMPTY_SCOPE;
   /**
    * Le plan, indexé par tuile. L'ordre d'insertion est celui du dessin, et il
@@ -134,14 +135,9 @@ export function openPlantModal(host: HTMLElement, onAsk: (request: HarvestReques
 
   const askButton = button("Ask to plant these", "accent", () => {
     const drawn = [...plan.values()];
-    onAsk({
-      kind: "plant",
-      label: describePlan(drawn),
-      // Rappelé à la confirmation : c'est ce qui détecte qu'une case s'est
-      // remplie ou qu'une graine est partie ailleurs entre-temps. Le plan
-      // dessiné ne bouge pas ; c'est le jardin qu'on relit.
-      provider: async () => viablePlan(drawn, await readPlantScope()),
-    });
+    // The drawn plan stays put; the garden is read again at confirmation to
+    // notice a tile that filled up or a seed spent elsewhere.
+    onAsk(plantRequest(describePlan(drawn), async () => viablePlan(drawn, await readPlantScope())));
     modal.close();
   });
   css(askButton, { marginLeft: "auto" });

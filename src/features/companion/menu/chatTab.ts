@@ -114,7 +114,7 @@ export function renderChatTab(view: HTMLElement): void {
 
   const actionsButton = button("Actions", "neutral", () => {
     openActionsModal(host, (request) => {
-      void CompanionChat.proposeHarvest(request).catch(() => {});
+      void CompanionChat.ask(request).catch(() => {});
     });
   });
 

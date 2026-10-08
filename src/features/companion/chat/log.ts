@@ -1,52 +1,51 @@
-// src/services/companion/chat/log.ts
-// Journal de conversation du companion : modèle de message + journal borné.
+// The companion's conversation log: the message shape and a bounded thread.
 //
-// Module PUR : rend toujours un nouveau journal, ne mute jamais l'entrée. Ça
-// permet à l'UI de comparer les références pour savoir si elle doit redessiner.
+// Always returns a new log and never mutates the one given, so the menu can
+// compare references to know whether to redraw.
 
 import type { BubbleTag } from "./bubbleTags";
 
 export type ChatAuthor = "companion" | "you";
 
 /**
- * `command` est le seul type émis par le joueur : il ne tape pas de texte, il
- * déclenche une action, et le fil en garde la trace.
+ * `command` is the only kind the player sends: they do not type, they trigger
+ * an action, and the thread keeps a trace of it.
  */
-export type ChatKind = "alert" | "command" | "reply" | "report" | "system";
+export type ChatKind = "command" | "reply" | "report" | "system";
 
-export type ChatMessage = {
-  id: string;
-  atMs: number;
+type MessageBody = {
   from: ChatAuthor;
   kind: ChatKind;
   text: string;
-  /** Proposition attachée, en attente de confirmation. */
+  atMs: number;
+  /** The proposal attached, waiting for a confirmation. */
   proposalId?: string;
   /**
-   * Vignettes du message, dans le fil.
+   * The message's thumbnails in the thread.
    *
-   * Ce sont les mêmes descriptions que celles des bulles en jeu : une seule
-   * source pour les deux rendus, sinon l'un dirait un jour autre chose que
-   * l'autre. Le fil les dessine avec l'atlas du mod, la bulle avec le
-   * balisage du jeu — deux mécaniques, une intention.
+   * The same descriptions as the in-game bubbles: one source for both
+   * renderings, or one would end up saying something else. The thread draws
+   * them from the mod's atlas, the bubble with the game's markup.
    */
   icons?: BubbleTag[];
   /**
-   * `text` porte le balisage `<0/>`, et chaque icône va à sa place.
+   * `text` carries the `<0/>` markup and each icon goes in its place.
    *
-   * Faux quand les vignettes viennent d'une bulle : elles se regroupent alors
-   * devant le texte, faute de savoir où elles allaient dans une phrase qui
-   * n'est pas la leur.
+   * False when the thumbnails come from a bubble: they then gather in front of
+   * the text, since there is no knowing where they went in a sentence that is
+   * not theirs.
    */
   positioned?: boolean;
 };
 
-/** Au-delà, les plus anciens messages sont oubliés. */
+export type ChatMessage = MessageBody & { id: string };
+
+/** Past this, the oldest messages are forgotten. */
 export const MAX_MESSAGES = 200;
 
 export type ChatLog = {
   messages: ChatMessage[];
-  /** Incrémenté à chaque ajout : donne des identifiants stables et ordonnés. */
+  /** Incremented on every append: gives stable, ordered ids. */
   nextSeq: number;
 };
 
@@ -54,24 +53,7 @@ export function emptyLog(): ChatLog {
   return { messages: [], nextSeq: 1 };
 }
 
-export type NewMessage = {
-  from: ChatAuthor;
-  kind: ChatKind;
-  text: string;
-  atMs: number;
-  proposalId?: string;
-  icons?: BubbleTag[];
-  /**
-   * `text` porte le balisage `<0/>`, et chaque icône va à sa place.
-   *
-   * Faux quand les vignettes viennent d'une bulle : elles se regroupent alors
-   * devant le texte, faute de savoir où elles allaient dans une phrase qui
-   * n'est pas la leur.
-   */
-  positioned?: boolean;
-};
-
-export function append(log: ChatLog, message: NewMessage): ChatLog {
+export function append(log: ChatLog, message: MessageBody): ChatLog {
   const entry: ChatMessage = {
     id: `m${log.nextSeq}`,
     atMs: message.atMs,
@@ -89,22 +71,7 @@ export function append(log: ChatLog, message: NewMessage): ChatLog {
   };
 }
 
-/**
- * Évite qu'une alerte répétée noie le fil.
- *
- * Les sources d'alertes réémettent souvent le même état à chaque
- * rafraîchissement ; sans ce filtre, « 3 pets ont faim » apparaîtrait toutes les
- * dix secondes jusqu'à ce qu'on les nourrisse.
- */
-export function appendAlertOnce(log: ChatLog, message: NewMessage, withinMs: number): ChatLog {
-  const cutoff = message.atMs - withinMs;
-  const duplicate = log.messages.some(
-    (entry) => entry.kind === "alert" && entry.text === message.text && entry.atMs >= cutoff
-  );
-  return duplicate ? log : append(log, message);
-}
-
-/** Retire la proposition attachée à un message, une fois traitée. */
+/** Removes the proposal attached to a message once it is dealt with. */
 export function clearProposal(log: ChatLog, proposalId: string): ChatLog {
   let changed = false;
   const messages = log.messages.map((entry) => {

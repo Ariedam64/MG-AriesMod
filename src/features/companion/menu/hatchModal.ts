@@ -13,8 +13,8 @@
 // La popup n'ouvre rien et ne vend rien. Elle produit une *demande*, que le
 // chat transforme en question à confirmer (cf. `chat/proposals.ts`).
 
-import type { HarvestRequest } from "../chat";
-import { hatchProvider } from "../chat/hatchFlow";
+import type { ChatRequest } from "../chat";
+import { hatchRequest } from "../chat/commands/hatch";
 import {
   DEFAULT_KEEP_RULES,
   describeHatchRequest,
@@ -42,7 +42,7 @@ const MIN_STR = 1;
 const MAX_STR = 100;
 const DEFAULT_STR = 95;
 
-export function openHatchModal(host: HTMLElement, onAsk: (request: HarvestRequest) => void): void {
+export function openHatchModal(host: HTMLElement, onAsk: (request: ChatRequest) => void): void {
   let scope: HatchScope = EMPTY_HATCH_SCOPE;
   let rules: KeepRules = { ...loadCompanionSettings().hatchKeepRules };
   const iconCache = new Map<string, HTMLElement>();
@@ -250,14 +250,7 @@ export function openHatchModal(host: HTMLElement, onAsk: (request: HarvestReques
   const resetButton = button("Reset", "neutral", () => commit({ ...DEFAULT_KEEP_RULES }));
 
   const askButton = button("Ask to hatch", "accent", () => {
-    onAsk({
-      kind: "hatch",
-      label: describeHatchRequest(scope.readySlots.length),
-      // Rappelé à la confirmation : c'est ce qui détecte qu'un œuf a éclos ou
-      // mûri entre-temps.
-      provider: hatchProvider(),
-      rules,
-    });
+    onAsk(hatchRequest(describeHatchRequest(scope.readySlots.length), rules));
     modal.close();
   });
   css(askButton, { marginLeft: "auto" });

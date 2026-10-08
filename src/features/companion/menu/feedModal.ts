@@ -5,8 +5,9 @@
 // de ce qui est récoltable appartient au Locker. Ici on ne fait que montrer ce
 // qui en découle.
 
-import type { HarvestRequest } from "../chat";
+import type { ChatRequest } from "../chat";
 import type { FeedCandidate } from "../chat/feed";
+import { feedRequest } from "../chat/commands/feed";
 import { findFeedable } from "../chat/feedRead";
 import { BORDER, CARD_BG, TEXT, TEXT_DIM, WARN, button, css } from "../../../ui/kit/panel";
 import { speciesIcon } from "./harvestChips";
@@ -17,7 +18,7 @@ import { openFeedSettingsModal } from "./feedSettingsModal";
 const REFRESH_MS = 5000;
 const CROP_ICON_PX = 26;
 
-export function openFeedModal(host: HTMLElement, onAsk: (request: HarvestRequest) => void): void {
+export function openFeedModal(host: HTMLElement, onAsk: (request: ChatRequest) => void): void {
   let picks: FeedCandidate[] = [];
 
   const modal = openModal({
@@ -46,13 +47,7 @@ export function openFeedModal(host: HTMLElement, onAsk: (request: HarvestRequest
   modal.body.append(notice.root, list, empty);
 
   const askButton = button("Ask to feed them", "accent", () => {
-    onAsk({
-      kind: "feed",
-      label: picks.length === 1 ? `Feed ${picks[0].petName}` : "Feed my hungry pets",
-      // Rappelé à la confirmation : c'est ce qui détecte qu'un pet a été nourri
-      // entre-temps, ou que le crop prévu a disparu.
-      provider: () => findFeedable(),
-    });
+    onAsk(feedRequest(picks.length === 1 ? `Feed ${picks[0].petName}` : "Feed my hungry pets", () => findFeedable()));
     modal.close();
   });
   css(askButton, { marginLeft: "auto" });

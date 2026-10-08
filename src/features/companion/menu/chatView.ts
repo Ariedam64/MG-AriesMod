@@ -25,8 +25,6 @@ const OUTGOING_BG = "rgba(94,234,212,0.14)";
 const OUTGOING_BORDER = "rgba(94,234,212,0.22)";
 const OUTGOING_TEXT = "#d1fae5";
 const INCOMING_BG = "rgba(255,255,255,0.06)";
-const ALERT_BG = "rgba(251,191,36,0.10)";
-const ALERT_BORDER = "rgba(251,191,36,0.28)";
 
 /**
  * Le contenu d'un message : ses vignettes et son texte.
@@ -178,7 +176,6 @@ export function messageRow(message: ChatMessage, flags: BubbleFlags, identity: N
   if (isCentered(message)) return systemLine(message.text, message.icons, message.positioned);
 
   const outgoing = message.from === "you";
-  const alerting = message.kind === "alert";
 
   const row = document.createElement("div");
   css(row, {
@@ -208,8 +205,8 @@ export function messageRow(message: ChatMessage, flags: BubbleFlags, identity: N
     lineHeight: "1.5",
     wordBreak: "break-word",
     whiteSpace: "pre-wrap",
-    background: outgoing ? OUTGOING_BG : alerting ? ALERT_BG : INCOMING_BG,
-    border: `1px solid ${outgoing ? OUTGOING_BORDER : alerting ? ALERT_BORDER : BORDER}`,
+    background: outgoing ? OUTGOING_BG : INCOMING_BG,
+    border: `1px solid ${outgoing ? OUTGOING_BORDER : BORDER}`,
     color: outgoing ? OUTGOING_TEXT : TEXT,
   });
   bubble.append(...contentOf(message.text, message.icons, message.positioned, BUBBLE_ICON_PX));

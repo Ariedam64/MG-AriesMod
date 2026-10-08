@@ -13,7 +13,8 @@
 // en question à confirmer : l'automatisation n'est pas autorisée sur le mod
 // (cf. `chat/proposals.ts`).
 
-import type { HarvestRequest } from "../chat";
+import type { ChatRequest } from "../chat";
+import { harvestRequest } from "../chat/commands/harvest";
 import { readHarvestable, type HarvestScope } from "../chat/gardenRead";
 import {
   DEFAULT_FILTERS,
@@ -54,7 +55,7 @@ const MAX_PREVIEW_VARIANTS = 10;
 
 export type HarvestModal = { close(): void };
 
-export function openHarvestModal(host: HTMLElement, onAsk: (request: HarvestRequest) => void): HarvestModal {
+export function openHarvestModal(host: HTMLElement, onAsk: (request: ChatRequest) => void): HarvestModal {
   let scope: HarvestScope = { rows: [], lockedOut: 0 };
   let filters: HarvestFilters = { ...DEFAULT_FILTERS };
   /** Vignettes déjà montées, réutilisées d'une passe à l'autre pour ne pas clignoter. */
@@ -247,17 +248,14 @@ export function openHarvestModal(host: HTMLElement, onAsk: (request: HarvestRequ
   });
 
   const askButton = button("Ask to pick these", "accent", () => {
-    onAsk({
-      kind: "harvest",
-      label: describeFilters(filters),
-      // Le fournisseur est rappelé à la confirmation : c'est ce qui permet de
-      // détecter que le jardin a changé entre-temps. Il refait le même chemin,
-      // protection du Locker comprise, puis applique les critères.
-      provider: async () => {
+    // The provider runs again at confirmation, Locker included, then applies
+    // the filters: that is how a garden that changed meanwhile is noticed.
+    onAsk(
+      harvestRequest(describeFilters(filters), async () => {
         const fresh = await readHarvestable();
         return { rows: filterRows(fresh.rows, filters), lockedOut: fresh.lockedOut };
-      },
-    });
+      })
+    );
     modal.close();
   });
   css(askButton, { marginLeft: "auto" });

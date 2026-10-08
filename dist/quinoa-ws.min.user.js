@@ -221,13 +221,13 @@
   // src/game/sprites/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-    const listeners9 = /* @__PURE__ */ new Set();
+    const listeners8 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
     const tick2 = (now2) => {
       const delta = last ? (now2 - last) / (1e3 / 60) : 1;
       last = now2;
-      for (const fn of listeners9) {
+      for (const fn of listeners8) {
         try {
           fn(delta);
         } catch {
@@ -237,14 +237,14 @@
     };
     const ticker = {
       add(fn) {
-        if (!listeners9.size) {
+        if (!listeners8.size) {
           rafId = requestAnimationFrame(tick2);
         }
-        listeners9.add(fn);
+        listeners8.add(fn);
       },
       remove(fn) {
-        listeners9.delete(fn);
-        if (!listeners9.size) {
+        listeners8.delete(fn);
+        if (!listeners8.size) {
           cancelAnimationFrame(rafId);
         }
       },
@@ -15237,9 +15237,9 @@
     let selectedIdx = null;
     let lastInfo = emptySlotInfo();
     let curSig = gardenObjectSignature(cur);
-    const listeners9 = /* @__PURE__ */ new Set();
+    const listeners8 = /* @__PURE__ */ new Set();
     const notify3 = () => {
-      for (const fn of listeners9) {
+      for (const fn of listeners8) {
         try {
           fn(lastInfo);
         } catch {
@@ -15474,11 +15474,11 @@
         return lastInfo;
       },
       onChange(cb) {
-        listeners9.add(cb);
-        return () => listeners9.delete(cb);
+        listeners8.add(cb);
+        return () => listeners8.delete(cb);
       },
       stop() {
-        listeners9.clear();
+        listeners8.clear();
       },
       recompute() {
         recomputeAndNotify();
@@ -26955,9 +26955,9 @@
     let players = void 0;
     let selectedSlotId = null;
     let lastPrice = null;
-    const listeners9 = /* @__PURE__ */ new Set();
+    const listeners8 = /* @__PURE__ */ new Set();
     const notify3 = () => {
-      for (const fn of listeners9) try {
+      for (const fn of listeners8) try {
         fn();
       } catch {
       }
@@ -27024,11 +27024,11 @@
         return lastPrice;
       },
       onChange(cb) {
-        listeners9.add(cb);
-        return () => listeners9.delete(cb);
+        listeners8.add(cb);
+        return () => listeners8.delete(cb);
       },
       stop() {
-        listeners9.clear();
+        listeners8.clear();
       }
     };
   }
@@ -47630,21 +47630,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       updateSummary2();
     };
     const onPauseState = () => updateControls();
-    const listeners9 = [
+    const listeners8 = [
       [`${config.eventPrefix}:progress`, onProgress],
       [`${config.eventPrefix}:done`, onComplete],
       [`${config.eventPrefix}:error`, onComplete],
       [`${config.eventPrefix}:paused`, onPauseState],
       [`${config.eventPrefix}:resumed`, onPauseState]
     ];
-    for (const [type, handler] of listeners9) window.addEventListener(type, handler);
+    for (const [type, handler] of listeners8) window.addEventListener(type, handler);
     updateSummary2();
     updateControls();
     return {
       root: section2.root,
       cleanup: () => {
         clearSummaryTimer();
-        for (const [type, handler] of listeners9) window.removeEventListener(type, handler);
+        for (const [type, handler] of listeners8) window.removeEventListener(type, handler);
       }
     };
   }
@@ -54681,7 +54681,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/feeds.ts
   function sharedFeed(subscribe) {
-    const changes = new Emitter();
+    const changes2 = new Emitter();
     let source = null;
     let latest;
     const feed = {
@@ -54691,15 +54691,15 @@ Restore figures are averages; unlucky streaks do worse.`;
           source.add(
             subscribe((value) => {
               latest = value;
-              changes.emit(value);
+              changes2.emit(value);
             }).catch(() => void 0)
           );
         }
-        const off = changes.on(listener);
+        const off = changes2.on(listener);
         if (latest !== void 0) listener(latest);
         return () => {
           off();
-          if (changes.size > 0 || !source) return;
+          if (changes2.size > 0 || !source) return;
           source.dispose();
           source = null;
           latest = void 0;
@@ -56030,12 +56030,20 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (parts.length === 1) return parts[0];
     return `${pets.length} pets: ${listWords(head)}${rest2}`;
   }
+  function afterHatchNote(stop2, eggsWaiting, rules2, sellable) {
+    const eggs = eggsWaiting > 0 ? ` ${eggsWaiting} egg${eggsWaiting === 1 ? "" : "s"} still waiting.` : "";
+    if (stop2 === "full") {
+      if (sellable > 0) return `Your bag is full.${eggs}`;
+      return hasAnyRule(rules2) ? `Your bag is full, nothing in it is up for sale.${eggs}` : `Your bag is full.${eggs} Nothing set to keep, so I am not selling.`;
+    }
+    return sellable > 0 ? "All open. Now the ones you did not want." : null;
+  }
   var DEFAULT_KEEP_RULES, CHEERED_MUTATIONS;
   var init_hatch = __esm({
     "src/features/companion/chat/hatch.ts"() {
       "use strict";
-      init_harvest();
       init_emoteTypes();
+      init_harvest();
       DEFAULT_KEEP_RULES = {
         species: [],
         mutations: [],
@@ -57060,6 +57068,211 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/features/companion/chat/log.ts
+  function emptyLog() {
+    return { messages: [], nextSeq: 1 };
+  }
+  function append(log2, message) {
+    const entry = {
+      id: `m${log2.nextSeq}`,
+      atMs: message.atMs,
+      from: message.from,
+      kind: message.kind,
+      text: message.text,
+      ...message.proposalId ? { proposalId: message.proposalId } : {},
+      ...message.icons && message.icons.length > 0 ? { icons: message.icons } : {},
+      ...message.positioned ? { positioned: true } : {}
+    };
+    const messages = [...log2.messages, entry];
+    return {
+      messages: messages.length > MAX_MESSAGES ? messages.slice(messages.length - MAX_MESSAGES) : messages,
+      nextSeq: log2.nextSeq + 1
+    };
+  }
+  function clearProposal(log2, proposalId) {
+    let changed = false;
+    const messages = log2.messages.map((entry) => {
+      if (entry.proposalId !== proposalId) return entry;
+      changed = true;
+      const { proposalId: _dropped, ...rest2 } = entry;
+      return rest2;
+    });
+    return changed ? { ...log2, messages } : log2;
+  }
+  var MAX_MESSAGES;
+  var init_log = __esm({
+    "src/features/companion/chat/log.ts"() {
+      "use strict";
+      MAX_MESSAGES = 200;
+    }
+  });
+
+  // src/features/companion/chat/proposals.ts
+  function isExpired(proposal, nowMs, ttlMs = PROPOSAL_TTL_MS) {
+    return nowMs - proposal.createdAtMs >= ttlMs;
+  }
+  function verdict(proposal, currentSignature, nowMs, ttlMs = PROPOSAL_TTL_MS) {
+    if (!proposal) return { ok: false, reason: "unknown" };
+    if (isExpired(proposal, nowMs, ttlMs)) return { ok: false, reason: "expired" };
+    if (!currentSignature || proposal.size === 0) return { ok: false, reason: "empty" };
+    if (currentSignature !== proposal.signature) return { ok: false, reason: "changed" };
+    return { ok: true };
+  }
+  function explain(reason) {
+    switch (reason) {
+      case "expired":
+        return "That went stale while I waited. Let me have another look.";
+      case "changed":
+        return "Things moved while I was waiting. Here is what I see now.";
+      case "empty":
+        return "There is nothing left to do there.";
+      default:
+        return "I lost track of that one, sorry. Ask me again.";
+    }
+  }
+  function withTeam(signature, teamId2) {
+    return `${signature}#team:${teamId2 ?? ""}`;
+  }
+  function teamPromise(teamName2) {
+    return teamName2 ? ` I would wear ${teamName2}, then give yours back.` : "";
+  }
+  var PROPOSAL_TTL_MS;
+  var init_proposals = __esm({
+    "src/features/companion/chat/proposals.ts"() {
+      "use strict";
+      PROPOSAL_TTL_MS = 3e4;
+    }
+  });
+
+  // src/features/companion/chat/conversation.ts
+  function chatState() {
+    return state2;
+  }
+  function onChatChange(listener) {
+    return changes.on(listener);
+  }
+  function notify2() {
+    changes.emit();
+  }
+  function speak(line, force = false) {
+    const spoken = forGame(line);
+    const message = !spoken.tags && spoken.message.length > MAX_LINE_LENGTH ? `${spoken.message.slice(0, MAX_LINE_LENGTH - 1).trimEnd()}\u2026` : spoken.message;
+    void CompanionService.say(message, { tags: spoken.tags, force }).catch(() => {
+    });
+  }
+  function post(from, kind, text2, proposalId, extra = {}) {
+    const shown = extra.thread ?? extra.bubble;
+    state2 = {
+      ...state2,
+      log: append(state2.log, {
+        from,
+        kind,
+        text: shown?.message ?? text2,
+        atMs: Date.now(),
+        proposalId,
+        icons: shown?.tags ? Object.values(shown.tags) : void 0,
+        // The thread only places an icon where it goes when it has the markup.
+        positioned: shown !== void 0
+      })
+    };
+    const insist = extra.force ?? proposalId !== void 0;
+    if (from === "companion") {
+      speak(extra.bubble ?? { message: text2 }, insist);
+      if (proposalId !== void 0) {
+        void attendToQuestion(proposalId).catch(() => {
+        });
+        void CompanionService.emoteWhenStill(EmoteType.Questioning).catch(() => {
+        });
+      }
+    }
+    notify2();
+  }
+  function ask(command, captured, question) {
+    const proposal = {
+      id: `p${nextProposalSeq++}`,
+      commandId: command.id,
+      summary: question.summary,
+      size: question.size,
+      signature: question.signature,
+      createdAtMs: Date.now()
+    };
+    const held = {
+      command,
+      captured,
+      acceptance: command.acceptance,
+      signature: () => command.signature(captured),
+      repropose: () => command.propose(captured),
+      execute: (run) => command.execute(captured, run)
+    };
+    state2 = { ...state2, proposal, held };
+    post("companion", "reply", question.text, proposal.id, { bubble: question.bubble, thread: question.thread });
+  }
+  function heldFor(command) {
+    return state2.held?.command === command ? state2.held.captured : null;
+  }
+  function closeProposal(proposalId) {
+    if (state2.proposal?.id !== proposalId) return;
+    state2 = { ...state2, proposal: null, held: null, log: clearProposal(state2.log, proposalId) };
+    notify2();
+  }
+  function dropStaleProposal() {
+    const proposal = state2.proposal;
+    if (proposal && isExpired(proposal, Date.now())) closeProposal(proposal.id);
+  }
+  function reporter() {
+    return {
+      say: (kind, text2, spoken, force) => post("companion", kind, text2, void 0, { bubble: spoken, force }),
+      stopped: () => state2.cancelRequested,
+      progress: (done, total) => {
+        state2 = { ...state2, run: { done, total } };
+        notify2();
+      }
+    };
+  }
+  async function runConfirmed(proposalId, held, total) {
+    state2 = {
+      ...state2,
+      proposal: null,
+      held: null,
+      run: { done: 0, total },
+      cancelRequested: false,
+      log: clearProposal(state2.log, proposalId)
+    };
+    await held.execute(async (run) => {
+      let stopped = false;
+      try {
+        await run(reporter());
+      } finally {
+        stopped = state2.cancelRequested;
+        state2 = { ...state2, run: null, cancelRequested: false };
+        notify2();
+      }
+      return stopped;
+    });
+  }
+  function requestStop() {
+    if (!state2.run) return;
+    state2 = { ...state2, cancelRequested: true };
+    notify2();
+  }
+  var state2, changes, nextProposalSeq;
+  var init_conversation = __esm({
+    "src/features/companion/chat/conversation.ts"() {
+      "use strict";
+      init_emitter();
+      init_companion();
+      init_emoteTypes();
+      init_settingsShape();
+      init_attend();
+      init_bubbleTags();
+      init_log();
+      init_proposals();
+      state2 = { log: emptyLog(), proposal: null, held: null, run: null, cancelRequested: false };
+      changes = new Emitter();
+      nextProposalSeq = 1;
+    }
+  });
+
   // src/features/companion/chat/bubbleIcons.ts
   function spriteKeyOf(entry) {
     if (typeof entry?.tileRef === "string" && entry.tileRef) return entry.tileRef;
@@ -57128,49 +57341,77 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
-  // src/features/companion/chat/log.ts
-  function emptyLog() {
-    return { messages: [], nextSeq: 1 };
+  // src/features/companion/chat/feed.ts
+  function feedSignature(candidates) {
+    return candidates.map((candidate) => candidate.petId).sort().join("|");
   }
-  function append(log2, message) {
-    const entry = {
-      id: `m${log2.nextSeq}`,
-      atMs: message.atMs,
-      from: message.from,
-      kind: message.kind,
-      text: message.text,
-      ...message.proposalId ? { proposalId: message.proposalId } : {},
-      ...message.icons && message.icons.length > 0 ? { icons: message.icons } : {},
-      ...message.positioned ? { positioned: true } : {}
-    };
-    const messages = [...log2.messages, entry];
-    return {
-      messages: messages.length > MAX_MESSAGES ? messages.slice(messages.length - MAX_MESSAGES) : messages,
-      nextSeq: log2.nextSeq + 1
-    };
+  function disambiguate(candidates) {
+    const byName = /* @__PURE__ */ new Map();
+    for (const candidate of candidates) {
+      const group2 = byName.get(candidate.petName);
+      if (group2) group2.push(candidate);
+      else byName.set(candidate.petName, [candidate]);
+    }
+    for (const group2 of byName.values()) {
+      if (group2.length < 2) continue;
+      const ordered = [...group2].sort((a, b) => a.petId.localeCompare(b.petId));
+      ordered.forEach((candidate, index) => {
+        candidate.petName = `${candidate.petName} #${index + 1}`;
+      });
+    }
+    return candidates;
   }
-  function appendAlertOnce(log2, message, withinMs) {
-    const cutoff = message.atMs - withinMs;
-    const duplicate = log2.messages.some(
-      (entry) => entry.kind === "alert" && entry.text === message.text && entry.atMs >= cutoff
+  function isSettled(picks, stillFeedable) {
+    return !picks.some((pick2) => stillFeedable.has(pick2.petId));
+  }
+  function describeFeed(candidates) {
+    if (candidates.length === 0) return "nothing";
+    if (candidates.length === 1) {
+      const only = candidates[0];
+      const where = only.source.kind === "garden" ? ", which I would pick first" : "";
+      return `${only.petName} is down to ${only.hungerPct}% and I have ${only.source.species}${where}`;
+    }
+    const names = candidates.map((candidate) => candidate.petName);
+    const head = names.slice(0, 3).join(", ");
+    const rest2 = names.length > 3 ? ` and ${names.length - 3} more` : "";
+    return `${candidates.length} pets are hungry: ${head}${rest2}`;
+  }
+  function petIcon(pick2) {
+    return petThing(pick2.pet, "") ?? petSpeciesIcon(pick2.petSpecies);
+  }
+  function petIcons(picks) {
+    const seen = /* @__PURE__ */ new Set();
+    const icons = [];
+    for (const pick2 of picks) {
+      if (seen.has(pick2.petSpecies) || icons.length >= 2) continue;
+      seen.add(pick2.petSpecies);
+      const icon = petIcon(pick2);
+      if (icon) icons.push(icon);
+    }
+    return icons;
+  }
+  function feedBubble(picks) {
+    const only = picks.length === 1 ? picks[0] : null;
+    if (only) return compose(petIcon(only), ` ${only.petName} is at ${only.hungerPct}%. Feed it?`);
+    return compose(...spaced(petIcons(picks)), ` ${picks.length} pets are hungry. Feed them all?`);
+  }
+  function feedQuestion(picks) {
+    const listed = picks.flatMap((pick2, index) => [
+      index === 0 ? "" : ", ",
+      petIcon(pick2),
+      ` ${pick2.petName} (${pick2.hungerPct}%)`
+    ]);
+    return compose(
+      picks.length === 1 ? "" : `${picks.length} pets are hungry: `,
+      ...listed,
+      picks.length === 1 ? ". Should I feed it?" : ". Should I feed all of them?"
     );
-    return duplicate ? log2 : append(log2, message);
   }
-  function clearProposal(log2, proposalId) {
-    let changed = false;
-    const messages = log2.messages.map((entry) => {
-      if (entry.proposalId !== proposalId) return entry;
-      changed = true;
-      const { proposalId: _dropped, ...rest2 } = entry;
-      return rest2;
-    });
-    return changed ? { ...log2, messages } : log2;
-  }
-  var MAX_MESSAGES;
-  var init_log = __esm({
-    "src/features/companion/chat/log.ts"() {
+  var init_feed = __esm({
+    "src/features/companion/chat/feed.ts"() {
       "use strict";
-      MAX_MESSAGES = 200;
+      init_bubbleTags();
+      init_bubbleIcons();
     }
   });
 
@@ -57376,6 +57617,255 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   });
 
+  // src/features/companion/chat/feedRun.ts
+  async function petPosition(petId) {
+    try {
+      const pets = await PetsService.getPets() ?? [];
+      const found = pets.find((pet) => String(pet?.slot?.id ?? "") === petId);
+      return found?.position ?? null;
+    } catch {
+      return null;
+    }
+  }
+  async function feedOne(candidate, walker, pace) {
+    let cropItemId;
+    if (candidate.source.kind === "inventory") {
+      cropItemId = candidate.source.itemId;
+    } else {
+      await walker.toGardenTile(candidate.source.row.tileIndex);
+      cropItemId = randomClientId();
+      await pace.wait();
+      try {
+        await PlayerService.harvestCrop(candidate.source.row.tileIndex, candidate.source.row.slotId, cropItemId);
+      } catch {
+        return { ok: false, reason: "could not pick it" };
+      } finally {
+        pace.mark();
+      }
+      StatsService.incrementGardenStat("totalHarvested", 1);
+      await sleep2(SETTLE_MS);
+    }
+    await walker.toPosition(await petPosition(candidate.petId));
+    await pace.wait();
+    try {
+      await PlayerService.feedPet(candidate.petId, cropItemId);
+    } catch {
+      return { ok: false, reason: "the feed did not go through" };
+    } finally {
+      pace.mark();
+    }
+    return { ok: true };
+  }
+  async function executeFeedBatch(picks, reporter2) {
+    const opening = picks.length === 1 ? "On it." : `On it. Feeding ${picks.length} of them.`;
+    reporter2.say("reply", opening, compose(...spaced(petIcons(picks)), " ", opening));
+    const fed = [];
+    const failures = [];
+    await runSteps({
+      items: picks,
+      reporter: reporter2,
+      hire: () => hireCrew(reporter2),
+      async step(pick2, walker, pace) {
+        const outcome = await feedOne(pick2, walker, pace);
+        if (outcome.ok) {
+          fed.push(pick2);
+          const fedLine = `${pick2.petName} has been fed.`;
+          reporter2.say("system", fedLine, compose(petIcon(pick2), " ", fedLine));
+        } else {
+          failures.push(`${pick2.petName} (${outcome.reason})`);
+        }
+      }
+    });
+    const cancelled = reporter2.stopped();
+    if (fed.length === 0) {
+      reporter2.say("report", `That did not work: ${failures.join(", ") || "nothing went through"}.`);
+      return;
+    }
+    const tail = failures.length > 0 ? ` I could not manage ${failures.join(", ")}.` : "";
+    const done = `${cancelled ? "Stopped there. " : ""}Fed ${listWords(fed.map((pick2) => pick2.petName))}.${tail}`;
+    reporter2.say("report", done, compose(...spaced(petIcons(fed)), " ", done));
+  }
+  var init_feedRun = __esm({
+    "src/features/companion/chat/feedRun.ts"() {
+      "use strict";
+      init_async2();
+      init_commands();
+      init_player();
+      init_pets();
+      init_stats();
+      init_batch();
+      init_bubbleTags();
+      init_crew();
+      init_feed();
+      init_harvest();
+    }
+  });
+
+  // src/features/companion/chat/commands/feed.ts
+  function feedRequest(label2, provider) {
+    return { label: label2, propose: () => feedCommand.propose({ provider }) };
+  }
+  var feedCommand;
+  var init_feed2 = __esm({
+    "src/features/companion/chat/commands/feed.ts"() {
+      "use strict";
+      init_conversation();
+      init_feed();
+      init_feedRun();
+      feedCommand = {
+        id: "feed",
+        acceptance: "Yes, feed them",
+        async propose({ provider }) {
+          let picks;
+          try {
+            picks = await provider();
+          } catch {
+            post("companion", "system", "Could not check on your pets just now.");
+            return;
+          }
+          if (picks.length === 0) {
+            post("companion", "reply", "Your pets are fine, or I have nothing they eat.");
+            return;
+          }
+          const listed = feedQuestion(picks);
+          ask(feedCommand, { provider, picks }, {
+            summary: describeFeed(picks),
+            size: picks.length,
+            signature: feedSignature(picks),
+            text: listed.message,
+            bubble: feedBubble(picks),
+            thread: listed
+          });
+        },
+        async signature({ provider }) {
+          return feedSignature(await provider());
+        },
+        async execute({ picks }, run) {
+          await run((reporter2) => executeFeedBatch(picks, reporter2));
+        }
+      };
+    }
+  });
+
+  // src/features/companion/chat/index.ts
+  var CompanionChat;
+  var init_chat = __esm({
+    "src/features/companion/chat/index.ts"() {
+      "use strict";
+      init_feed2();
+      init_conversation();
+      init_feed();
+      init_proposals();
+      CompanionChat = {
+        getLog() {
+          return chatState().log;
+        },
+        getProposal() {
+          return chatState().proposal;
+        },
+        getRun() {
+          return chatState().run;
+        },
+        isRunning() {
+          return chatState().run !== null;
+        },
+        subscribe(listener) {
+          return onChatChange(listener);
+        },
+        /** Drops a question it is too late to answer. */
+        dropStaleProposal,
+        /**
+         * Drops the open question without a word.
+         *
+         * For when the companion stops existing: he has no reason to apologise for
+         * taking a question back, he is not there to ask it. `withdrawFeedIfSettled`
+         * comments because the situation changed under the player's eyes; here the
+         * player just switched him off.
+         */
+        withdrawProposal() {
+          const proposal = chatState().proposal;
+          if (proposal) closeProposal(proposal.id);
+        },
+        /**
+         * Drops the feeding question once it has no point left.
+         *
+         * The player fed the pets or changed team: leaving the question open would
+         * keep the companion waiting by the player for a meaningless answer. Only
+         * once NONE of the proposed pets still needs feeding: as long as one does,
+         * the question stands, and the scope check at confirmation covers the rest.
+         */
+        withdrawFeedIfSettled(stillFeedable) {
+          const proposal = chatState().proposal;
+          const held = heldFor(feedCommand);
+          if (!proposal || !held || !isSettled(held.picks, stillFeedable)) return false;
+          closeProposal(proposal.id);
+          post("companion", "system", "Never mind, your pets are sorted.");
+          return true;
+        },
+        /**
+         * A request from the player. Runs nothing: it asks the question.
+         *
+         * The request reads the game again at confirmation, to check the batch did
+         * not change meanwhile.
+         */
+        async ask(request2) {
+          post("you", "command", request2.label);
+          if (chatState().run) {
+            post("companion", "system", "Hold on, still on the last batch.");
+            return;
+          }
+          await request2.propose();
+        },
+        /**
+         * A question from the companion himself, unprompted.
+         *
+         * Asking is not acting: nothing goes until the confirmation is given. He
+         * holds back when a question already waits or a batch runs, since talking
+         * over himself would lose the previous one.
+         */
+        async offerFeed(provider) {
+          dropStaleProposal();
+          if (chatState().run || chatState().proposal) return false;
+          await feedCommand.propose({ provider });
+          return chatState().proposal !== null;
+        },
+        /** Confirms and runs. The only path that triggers an action. */
+        async confirm(proposalId) {
+          const { proposal, held } = chatState();
+          if (!proposal || proposal.id !== proposalId || !held) {
+            post("companion", "system", explain("unknown"));
+            return;
+          }
+          post("you", "command", held.acceptance);
+          const signature = await held.signature().catch(() => null);
+          if (signature === null) {
+            post("companion", "system", "Could not check again, so I am not touching anything.");
+            return;
+          }
+          const decision = verdict(proposal, signature, Date.now());
+          if (!decision.ok) {
+            closeProposal(proposalId);
+            post("companion", "system", explain(decision.reason));
+            if (decision.reason === "changed" || decision.reason === "expired") await held.repropose();
+            return;
+          }
+          await runConfirmed(proposalId, held, proposal.size);
+        },
+        /** Drops the open question without running anything. */
+        decline(proposalId) {
+          if (chatState().proposal?.id !== proposalId) return;
+          closeProposal(proposalId);
+          post("you", "command", "Not now");
+          post("companion", "system", "Alright, leaving them be.");
+        },
+        /** Stops the running batch. */
+        cancelRun() {
+          requestStop();
+        }
+      };
+    }
+  });
+
   // src/features/companion/chat/gardenScan.ts
   function slotCropSize(slot, species) {
     const size = readCropSize({ ...slot, species: slot.species ?? species });
@@ -57578,1203 +58068,6 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_locker();
       init_gardenScan();
       init_harvest();
-    }
-  });
-
-  // src/features/companion/chat/harvestRun.ts
-  function topCrop(rows) {
-    const top = groupVariants(rows)[0];
-    return top ? cropIcon(top.species) : null;
-  }
-  async function report(attempted, cancelled, reporter2) {
-    if (attempted.length === 0) {
-      reporter2.say("report", "Stopped before I picked anything.");
-      return;
-    }
-    await sleep2(SETTLE_MS);
-    let fresh = null;
-    try {
-      fresh = (await readHarvestRows()).filter((row) => row.ready);
-    } catch {
-      fresh = null;
-    }
-    const stopped = cancelled ? " before you stopped me" : "";
-    if (!fresh) {
-      reporter2.say("report", `Sent all ${attempted.length}${stopped}, but I could not check they landed.`);
-      return;
-    }
-    const targeted = new Set(attempted.map(rowKey));
-    const stillRipe = fresh.filter((row) => targeted.has(rowKey(row))).length;
-    const picked = attempted.length - stillRipe;
-    if (picked > 0) StatsService.incrementGardenStat("totalHarvested", picked);
-    if (stillRipe === 0) {
-      const done = cancelled ? `Stopped there. Got ${picked}.` : `All done, ${picked} picked.`;
-      reporter2.say("report", done, compose(topCrop(attempted), " ", done));
-      return;
-    }
-    if (picked === 0) {
-      reporter2.say("report", "None went through. Still ripe, so your bag is probably full.");
-      return;
-    }
-    reporter2.say("report", `Got ${picked} of ${attempted.length}${stopped}. ${stillRipe} still ripe.`);
-  }
-  async function executeHarvestBatch(rows, reporter2) {
-    const opening = `On it. Picking ${rows.length} now.`;
-    reporter2.say("reply", opening, compose(topCrop(rows), " ", opening));
-    const attempted = [];
-    await runSteps({
-      items: rows,
-      reporter: reporter2,
-      // The team goes on before the first crop: some abilities act on harvest.
-      hire: () => hireCrew(reporter2, { teamId: loadCompanionSettings().harvestTeamId }),
-      async step(row, walker, pace) {
-        await walker.toGardenTile(row.tileIndex);
-        await pace.wait();
-        attempted.push(row);
-        await PlayerService.harvestCrop(row.tileIndex, row.slotId);
-        pace.mark();
-      },
-      progressNote: (done, total) => `${done} of ${total} so far...`
-    });
-    await report(attempted, reporter2.stopped(), reporter2);
-  }
-  var init_harvestRun = __esm({
-    "src/features/companion/chat/harvestRun.ts"() {
-      "use strict";
-      init_async2();
-      init_player();
-      init_stats();
-      init_state3();
-      init_batch();
-      init_bubbleIcons();
-      init_bubbleTags();
-      init_crew();
-      init_gardenRead();
-      init_harvest();
-    }
-  });
-
-  // src/features/companion/chat/feed.ts
-  function feedSignature(candidates) {
-    return candidates.map((candidate) => candidate.petId).sort().join("|");
-  }
-  function disambiguate(candidates) {
-    const byName = /* @__PURE__ */ new Map();
-    for (const candidate of candidates) {
-      const group2 = byName.get(candidate.petName);
-      if (group2) group2.push(candidate);
-      else byName.set(candidate.petName, [candidate]);
-    }
-    for (const group2 of byName.values()) {
-      if (group2.length < 2) continue;
-      const ordered = [...group2].sort((a, b) => a.petId.localeCompare(b.petId));
-      ordered.forEach((candidate, index) => {
-        candidate.petName = `${candidate.petName} #${index + 1}`;
-      });
-    }
-    return candidates;
-  }
-  function isSettled(picks, stillFeedable) {
-    return !picks.some((pick2) => stillFeedable.has(pick2.petId));
-  }
-  function describeFeed(candidates) {
-    if (candidates.length === 0) return "nothing";
-    if (candidates.length === 1) {
-      const only = candidates[0];
-      const where = only.source.kind === "garden" ? ", which I would pick first" : "";
-      return `${only.petName} is down to ${only.hungerPct}% and I have ${only.source.species}${where}`;
-    }
-    const names = candidates.map((candidate) => candidate.petName);
-    const head = names.slice(0, 3).join(", ");
-    const rest2 = names.length > 3 ? ` and ${names.length - 3} more` : "";
-    return `${candidates.length} pets are hungry: ${head}${rest2}`;
-  }
-  function petIcon(pick2) {
-    return petThing(pick2.pet, "") ?? petSpeciesIcon(pick2.petSpecies);
-  }
-  function petIcons(picks) {
-    const seen = /* @__PURE__ */ new Set();
-    const icons = [];
-    for (const pick2 of picks) {
-      if (seen.has(pick2.petSpecies) || icons.length >= 2) continue;
-      seen.add(pick2.petSpecies);
-      const icon = petIcon(pick2);
-      if (icon) icons.push(icon);
-    }
-    return icons;
-  }
-  function feedBubble(picks) {
-    const only = picks.length === 1 ? picks[0] : null;
-    if (only) return compose(petIcon(only), ` ${only.petName} is at ${only.hungerPct}%. Feed it?`);
-    return compose(...spaced(petIcons(picks)), ` ${picks.length} pets are hungry. Feed them all?`);
-  }
-  function feedQuestion(picks) {
-    const listed = picks.flatMap((pick2, index) => [
-      index === 0 ? "" : ", ",
-      petIcon(pick2),
-      ` ${pick2.petName} (${pick2.hungerPct}%)`
-    ]);
-    return compose(
-      picks.length === 1 ? "" : `${picks.length} pets are hungry: `,
-      ...listed,
-      picks.length === 1 ? ". Should I feed it?" : ". Should I feed all of them?"
-    );
-  }
-  var init_feed = __esm({
-    "src/features/companion/chat/feed.ts"() {
-      "use strict";
-      init_bubbleTags();
-      init_bubbleIcons();
-    }
-  });
-
-  // src/features/companion/chat/feedRun.ts
-  async function petPosition(petId) {
-    try {
-      const pets = await PetsService.getPets() ?? [];
-      const found = pets.find((pet) => String(pet?.slot?.id ?? "") === petId);
-      return found?.position ?? null;
-    } catch {
-      return null;
-    }
-  }
-  async function feedOne(candidate, walker, pace) {
-    let cropItemId;
-    if (candidate.source.kind === "inventory") {
-      cropItemId = candidate.source.itemId;
-    } else {
-      await walker.toGardenTile(candidate.source.row.tileIndex);
-      cropItemId = randomClientId();
-      await pace.wait();
-      try {
-        await PlayerService.harvestCrop(candidate.source.row.tileIndex, candidate.source.row.slotId, cropItemId);
-      } catch {
-        return { ok: false, reason: "could not pick it" };
-      } finally {
-        pace.mark();
-      }
-      StatsService.incrementGardenStat("totalHarvested", 1);
-      await sleep2(SETTLE_MS);
-    }
-    await walker.toPosition(await petPosition(candidate.petId));
-    await pace.wait();
-    try {
-      await PlayerService.feedPet(candidate.petId, cropItemId);
-    } catch {
-      return { ok: false, reason: "the feed did not go through" };
-    } finally {
-      pace.mark();
-    }
-    return { ok: true };
-  }
-  async function executeFeedBatch(picks, reporter2) {
-    const opening = picks.length === 1 ? "On it." : `On it. Feeding ${picks.length} of them.`;
-    reporter2.say("reply", opening, compose(...spaced(petIcons(picks)), " ", opening));
-    const fed = [];
-    const failures = [];
-    await runSteps({
-      items: picks,
-      reporter: reporter2,
-      hire: () => hireCrew(reporter2),
-      async step(pick2, walker, pace) {
-        const outcome = await feedOne(pick2, walker, pace);
-        if (outcome.ok) {
-          fed.push(pick2);
-          const fedLine = `${pick2.petName} has been fed.`;
-          reporter2.say("system", fedLine, compose(petIcon(pick2), " ", fedLine));
-        } else {
-          failures.push(`${pick2.petName} (${outcome.reason})`);
-        }
-      }
-    });
-    const cancelled = reporter2.stopped();
-    if (fed.length === 0) {
-      reporter2.say("report", `That did not work: ${failures.join(", ") || "nothing went through"}.`);
-      return;
-    }
-    const tail = failures.length > 0 ? ` I could not manage ${failures.join(", ")}.` : "";
-    const done = `${cancelled ? "Stopped there. " : ""}Fed ${listWords(fed.map((pick2) => pick2.petName))}.${tail}`;
-    reporter2.say("report", done, compose(...spaced(petIcons(fed)), " ", done));
-  }
-  var init_feedRun = __esm({
-    "src/features/companion/chat/feedRun.ts"() {
-      "use strict";
-      init_async2();
-      init_commands();
-      init_player();
-      init_pets();
-      init_stats();
-      init_batch();
-      init_bubbleTags();
-      init_crew();
-      init_feed();
-      init_harvest();
-    }
-  });
-
-  // src/features/companion/chat/plantRun.ts
-  function topSeed(plan) {
-    const most = countByItem(plan)[0];
-    return most?.kind === "seed" ? seedIcon(most.id) : null;
-  }
-  async function send(assignment) {
-    if (assignment.kind === "egg") {
-      await PlayerService.plantEgg(assignment.tileIndex, assignment.id);
-      return;
-    }
-    await PlayerService.plantSeed(assignment.tileIndex, assignment.id);
-  }
-  async function countPlanted(attempted) {
-    try {
-      const { occupied } = await readPlantScope();
-      return attempted.filter((assignment) => occupied.has(assignment.tileIndex)).length;
-    } catch {
-      return null;
-    }
-  }
-  async function report2(attempted, cancelled, reporter2) {
-    if (attempted.length === 0) {
-      reporter2.say("report", "Stopped before I planted anything.");
-      return;
-    }
-    await sleep2(SETTLE_MS);
-    const planted = await countPlanted(attempted);
-    const stopped = cancelled ? " before you stopped me" : "";
-    if (planted === null) {
-      reporter2.say("report", `Planted all ${attempted.length}${stopped}, but I could not check.`);
-      return;
-    }
-    if (planted > 0) StatsService.incrementGardenStat("totalPlanted", planted);
-    if (planted === attempted.length) {
-      const done = cancelled ? `Stopped there. ${planted} are in the ground.` : `All done, ${planted} planted.`;
-      reporter2.say("report", done, compose(topSeed(attempted), " ", done));
-      return;
-    }
-    if (planted === 0) {
-      reporter2.say("report", "None took. The tiles are still bare, so the seeds probably ran out.");
-      return;
-    }
-    reporter2.say("report", `Planted ${planted} of ${attempted.length}${stopped}. The rest would not go in.`);
-  }
-  async function executePlantBatch(plan, reporter2) {
-    const what = countByItem(plan);
-    const opening = what.length === 1 ? `On it. Planting ${plan.length} ${what[0].name} now.` : `On it. Planting ${listPlantItems(plan)} now.`;
-    reporter2.say("reply", opening, compose(topSeed(plan), " ", opening));
-    const attempted = [];
-    await runSteps({
-      items: plan,
-      reporter: reporter2,
-      hire: () => hireCrew(reporter2),
-      async step(assignment, walker, pace) {
-        await walker.toGardenTile(assignment.tileIndex);
-        await pace.wait();
-        attempted.push(assignment);
-        await send(assignment);
-        pace.mark();
-      },
-      progressNote: (done, total) => `${done} of ${total} in the ground so far...`
-    });
-    await report2(attempted, reporter2.stopped(), reporter2);
-  }
-  var init_plantRun = __esm({
-    "src/features/companion/chat/plantRun.ts"() {
-      "use strict";
-      init_async2();
-      init_player();
-      init_stats();
-      init_batch();
-      init_bubbleIcons();
-      init_bubbleTags();
-      init_crew();
-      init_plant();
-      init_plantRead();
-    }
-  });
-
-  // src/features/companion/chat/hatchRead.ts
-  function normalizeTs(value) {
-    const raw = typeof value === "number" ? value : Number(value);
-    if (!Number.isFinite(raw) || raw <= 0) return null;
-    return raw < 1e11 ? raw * 1e3 : raw;
-  }
-  function isEggReady(tile, now2) {
-    const readyAt = normalizeTs(tile.maturedAt) ?? normalizeTs(tile.endTime) ?? normalizeTs(tile.readyAt) ?? normalizeTs(tile.hatchTime) ?? null;
-    return readyAt === null || readyAt <= now2;
-  }
-  function asStringArray(value) {
-    return Array.isArray(value) ? value.filter((entry) => typeof entry === "string") : [];
-  }
-  function inventoryItems3(raw) {
-    const source = raw;
-    const list = Array.isArray(raw) ? raw : Array.isArray(source?.items) ? source.items : [];
-    return list.filter((entry) => !!entry && typeof entry === "object");
-  }
-  async function scanEggs() {
-    const scan = { readySlots: [], totalEggs: 0, eggIds: /* @__PURE__ */ new Set() };
-    let tileObjects = null;
-    try {
-      tileObjects = await Atoms.data.gardenTileObjects.get();
-    } catch {
-      return scan;
-    }
-    if (!tileObjects || typeof tileObjects !== "object") return scan;
-    const now2 = Date.now();
-    for (const [key2, raw] of Object.entries(tileObjects)) {
-      if (!raw || typeof raw !== "object") continue;
-      const tile = raw;
-      const objectType = String(tile.objectType ?? tile.type ?? "").toLowerCase();
-      if (objectType !== "egg") continue;
-      const slot = Number(key2);
-      if (!Number.isInteger(slot)) continue;
-      scan.totalEggs++;
-      const eggId = String(tile.eggId ?? tile.id ?? tile.species ?? "");
-      if (eggId) scan.eggIds.add(eggId);
-      if (isEggReady(tile, now2)) scan.readySlots.push(slot);
-    }
-    scan.readySlots.sort((a, b) => a - b);
-    return scan;
-  }
-  function whatCouldHatch(eggIds) {
-    const species = /* @__PURE__ */ new Set();
-    for (const eggId of eggIds) {
-      const egg = eggCatalog2[eggId];
-      for (const name of Object.keys(egg?.faunaSpawnWeights ?? {})) species.add(name);
-    }
-    const abilityIds = /* @__PURE__ */ new Set();
-    for (const name of species) {
-      const pet = petCatalog2[name];
-      for (const id of Object.keys(pet?.innateAbilityWeights ?? {})) abilityIds.add(id);
-    }
-    const abilities = [...abilityIds].map((id) => ({
-      id,
-      name: petAbilities2[id]?.name
-    })).map((entry) => ({ id: entry.id, name: typeof entry.name === "string" && entry.name ? entry.name : entry.id })).sort((a, b) => a.name.localeCompare(b.name));
-    return { species: [...species].sort((a, b) => a.localeCompare(b)), abilities };
-  }
-  async function readPets() {
-    const [inventory, favoriteIds2, activeIds] = await Promise.all([
-      Atoms.inventory.myInventory.get().catch(() => null),
-      Atoms.inventory.favoriteIds.get().catch(() => null),
-      PetsService.getActivePetIds().catch(() => [])
-    ]);
-    const items = inventoryItems3(inventory);
-    const favorites = new Set(asStringArray(favoriteIds2));
-    const onTeam = new Set(activeIds);
-    const pets = [];
-    for (const item of items) {
-      if (item.itemType !== "Pet" || typeof item.id !== "string") continue;
-      const species = String(item.petSpecies ?? "");
-      const info = getPetInfo(item);
-      const maxStrength = typeof info?.maxStrength === "number" && info.maxStrength > 0 ? info.maxStrength : null;
-      pets.push({
-        petId: item.id,
-        name: typeof item.nickname === "string" && item.nickname ? item.nickname : species || item.id,
-        species,
-        mutations: asStringArray(item.mutations),
-        abilities: asStringArray(item.abilities),
-        maxStrength,
-        favorited: favorites.has(item.id),
-        onTeam: onTeam.has(item.id),
-        item
-      });
-    }
-    return { pets, inventoryCount: items.length };
-  }
-  async function readPetRows() {
-    try {
-      return (await readPets()).pets;
-    } catch {
-      return [];
-    }
-  }
-  async function readInventoryCount() {
-    try {
-      return inventoryItems3(await Atoms.inventory.myInventory.get()).length;
-    } catch {
-      return 0;
-    }
-  }
-  function rolledMutations() {
-    try {
-      return Object.entries(mutationCatalog2).filter(([, def]) => Number(def?.baseChance) > 0).map(([name]) => name);
-    } catch {
-      return [];
-    }
-  }
-  async function readHatchScope() {
-    const [eggs, bag] = await Promise.all([scanEggs(), readPets()]);
-    const { species, abilities } = whatCouldHatch(eggs.eggIds);
-    const mutations = new Set(rolledMutations());
-    for (const pet of bag.pets) for (const mutation of pet.mutations) mutations.add(mutation);
-    return {
-      readySlots: eggs.readySlots,
-      totalEggs: eggs.totalEggs,
-      eggIds: [...eggs.eggIds].sort((a, b) => a.localeCompare(b)),
-      possibleSpecies: species,
-      possibleAbilities: abilities,
-      presentMutations: [...mutations].sort((a, b) => a.localeCompare(b)),
-      pets: bag.pets,
-      inventoryCount: bag.inventoryCount,
-      capacity: INVENTORY_CAPACITY
-    };
-  }
-  var INVENTORY_CAPACITY, EMPTY_HATCH_SCOPE;
-  var init_hatchRead = __esm({
-    "src/features/companion/chat/hatchRead.ts"() {
-      "use strict";
-      init_atoms();
-      init_data();
-      init_petValue();
-      init_pets();
-      INVENTORY_CAPACITY = 98;
-      EMPTY_HATCH_SCOPE = {
-        readySlots: [],
-        totalEggs: 0,
-        eggIds: [],
-        possibleSpecies: [],
-        possibleAbilities: [],
-        presentMutations: [],
-        pets: [],
-        inventoryCount: 0,
-        capacity: INVENTORY_CAPACITY
-      };
-    }
-  });
-
-  // src/features/companion/chat/hatchRun.ts
-  async function countHatched(slots) {
-    try {
-      const still = new Set((await readHatchScope()).readySlots);
-      return slots.filter((slot) => !still.has(slot)).length;
-    } catch {
-      return null;
-    }
-  }
-  async function reportHatch(attempted, stop2, reporter2) {
-    if (attempted.length === 0) {
-      reporter2.say(
-        "report",
-        stop2 === "full" ? "Your bag was already full, so I opened none." : "Stopped before I opened any."
-      );
-      return;
-    }
-    await sleep2(SETTLE_MS);
-    const hatched = await countHatched(attempted);
-    if (hatched === null) {
-      reporter2.say("report", `Opened all ${attempted.length}, but I could not check.`);
-      return;
-    }
-    if (hatched === 0) {
-      reporter2.say("report", "None opened. They are all still there.");
-      return;
-    }
-    const tail = stop2 === "full" ? " Your bag is full now." : stop2 === "cancelled" ? " Stopped there." : "";
-    if (hatched === attempted.length) {
-      reporter2.say("report", `${hatched} hatched.${tail}`);
-      return;
-    }
-    reporter2.say("report", `${hatched} of ${attempted.length} hatched.${tail}`);
-  }
-  async function announceHatchling(known, rules2, reporter2) {
-    const pets = await readPetRows();
-    if (pets.length === 0) return;
-    const born = pets.filter((pet) => !known.has(pet.petId));
-    for (const pet of born) known.add(pet.petId);
-    if (born.length === 0) return;
-    const cheer = hatchCheer(born, rules2);
-    const mutation = cheer?.mutation ?? null;
-    const timing = mutation ? CHEER_TIMING[mutation] : void 0;
-    const lines = mutation ? CHEER_LINES[mutation] : void 0;
-    const star = cheer?.star ?? born[0];
-    const others = born.length - 1;
-    const tail = others > 0 ? ` And ${others} more.` : "";
-    const strength = star.maxStrength === null ? "" : `, ${star.maxStrength} STR`;
-    const line = lines ? `A ${mutation} ${star.species}${strength}! ${lines.cheer}${tail}` : `A ${star.species}${strength}.${tail}`;
-    const shown = mutation ? star.mutations.filter((name) => name.toLowerCase() !== mutation.toLowerCase()) : star.mutations;
-    if (cheer) void CompanionService.emote(cheer.emote, timing?.holdMs).catch(() => {
-    });
-    reporter2.say("system", line, compose(petThing(star.item, ""), " ", line, ...spaced(mutationChips(shown))), true);
-    if (!timing || !lines) return;
-    await sleep2(timing.pauseMs);
-    if (!reporter2.stopped()) reporter2.say("system", lines.resume);
-  }
-  async function executeHatchBatch(slots, reporter2) {
-    const kinds = (await readHatchScope().catch(() => null))?.eggIds ?? [];
-    const opening = `On it. Opening ${slots.length} now.`;
-    reporter2.say("reply", opening, compose(kinds.length === 1 ? eggIcon(kinds[0]) : null, " ", opening));
-    const settings = loadCompanionSettings();
-    const attempted = [];
-    let count = 0;
-    let stop2 = "done";
-    const known = /* @__PURE__ */ new Set();
-    const outcome = await runSteps({
-      items: slots,
-      reporter: reporter2,
-      async hire() {
-        const crew = await hireCrew(reporter2, { teamId: settings.hatchTeamId });
-        for (const pet of await readPetRows()) known.add(pet.petId);
-        return crew;
-      },
-      async step(slot, walker, pace) {
-        if (attempted.length % RECOUNT_EVERY === 0 || count >= INVENTORY_CAPACITY - NEAR_CAPACITY) {
-          count = await readInventoryCount();
-        }
-        if (count >= INVENTORY_CAPACITY) {
-          stop2 = "full";
-          return "halt";
-        }
-        await walker.toGardenTile(slot);
-        await pace.wait();
-        await PlayerService.hatchEgg(slot);
-        pace.mark();
-        attempted.push(slot);
-        count++;
-        await announceHatchling(known, settings.hatchKeepRules, reporter2);
-      },
-      progressNote: (done, total) => `${done} of ${total} open so far...`
-    });
-    if (outcome.cancelled) stop2 = "cancelled";
-    await reportHatch(attempted, stop2, reporter2);
-    return stop2;
-  }
-  var RECOUNT_EVERY, NEAR_CAPACITY, CHEER_TIMING, CHEER_LINES;
-  var init_hatchRun = __esm({
-    "src/features/companion/chat/hatchRun.ts"() {
-      "use strict";
-      init_async2();
-      init_player();
-      init_companion();
-      init_state3();
-      init_batch();
-      init_bubbleIcons();
-      init_bubbleTags();
-      init_crew();
-      init_hatch();
-      init_hatchRead();
-      RECOUNT_EVERY = 5;
-      NEAR_CAPACITY = 5;
-      CHEER_TIMING = {
-        Rainbow: { holdMs: 5e3, pauseMs: 4500 },
-        Gold: { holdMs: 2500, pauseMs: 2250 }
-      };
-      CHEER_LINES = {
-        Rainbow: { cheer: "I have never seen one of those.", resume: "Right. Where was I." },
-        Gold: { cheer: "That one is a beauty.", resume: "Okay, back to it." }
-      };
-    }
-  });
-
-  // src/features/companion/chat/sellRun.ts
-  async function goToSellShop(walker, reporter2) {
-    if (!walker.walking) return;
-    const map2 = await readCompanionMap();
-    if (!map2) return;
-    const shop = map2.findBuilding(SELL_BUILDING_WORDS, SELL_BUILDING_ALTERNATIVES);
-    if (!shop) {
-      console.warn("[companion] no pet shop found on the map, selling from here. Buildings:", map2.buildingNames);
-      return;
-    }
-    reporter2.say("system", "Heading to the pet shop.");
-    const arrived = await walker.toBuilding(shop);
-    if (!arrived) reporter2.say("system", "Could not get there, selling from here.");
-  }
-  async function reportSell(attempted, skipped, reporter2) {
-    if (attempted.length === 0) {
-      reporter2.say("report", skipped.length > 0 ? "None of them went through." : "Nothing sold.");
-      return;
-    }
-    await sleep2(SETTLE_MS);
-    let sold = null;
-    try {
-      const left = new Set((await readHatchScope()).pets.map((pet) => pet.petId));
-      sold = attempted.filter((pet) => !left.has(pet.petId)).length;
-    } catch {
-      sold = null;
-    }
-    const tail = skipped.length > 0 ? ` I left ${skipped.length} alone.` : "";
-    if (sold === null) {
-      reporter2.say("report", `Sent all ${attempted.length}, but I could not check.${tail}`);
-      return;
-    }
-    if (sold === 0) {
-      reporter2.say("report", `None of them sold. They are all still in your bag.${tail}`);
-      return;
-    }
-    reporter2.say("report", `${sold} sold.${tail}`);
-  }
-  async function executeSellBatch(plan, reporter2) {
-    const opening = `On it. ${summarizeSell(plan.sell)} going.`;
-    reporter2.say("reply", opening, compose(...spaced(petRowIcons(plan.sell)), " ", opening));
-    for (const pet of plan.favourite) {
-      if (reporter2.stopped()) break;
-      try {
-        await PlayerService.ensureFavoriteItem(pet.petId, true);
-      } catch {
-        reporter2.say("system", `Could not favourite ${pet.name}, leaving it alone.`);
-      }
-    }
-    if (plan.favourite.length > 0) {
-      const best = plan.favourite[0];
-      const strength = best.maxStrength === null ? "" : ` ${best.maxStrength} STR,`;
-      const others = plan.favourite.length - 1;
-      reporter2.say(
-        "system",
-        `${plan.favourite.length} kept and favourited.`,
-        compose(petThing(best.item, ""), `${strength} keeping that one${others > 0 ? ` and ${others} more` : ""}.`)
-      );
-    }
-    const attempted = [];
-    const skipped = [];
-    let onTeam = /* @__PURE__ */ new Set();
-    await runSteps({
-      items: plan.sell,
-      reporter: reporter2,
-      async hire() {
-        const crew = await hireCrew(reporter2, {
-          teamId: plan.teamId,
-          approach: (walker) => goToSellShop(walker, reporter2)
-        });
-        onTeam = new Set(await PetsService.getActivePetIds().catch(() => []));
-        return crew;
-      },
-      async step(pet, _walker, pace) {
-        if (onTeam.has(pet.petId)) {
-          skipped.push(pet);
-          return;
-        }
-        await pace.wait();
-        try {
-          await PlayerService.sellPet(pet.petId);
-          attempted.push(pet);
-        } catch {
-          skipped.push(pet);
-        }
-        pace.mark();
-      }
-    });
-    await reportSell(attempted, skipped, reporter2);
-  }
-  var SELL_BUILDING_WORDS, SELL_BUILDING_ALTERNATIVES;
-  var init_sellRun = __esm({
-    "src/features/companion/chat/sellRun.ts"() {
-      "use strict";
-      init_async2();
-      init_player();
-      init_pets();
-      init_map();
-      init_batch();
-      init_bubbleIcons();
-      init_bubbleTags();
-      init_crew();
-      init_hatch();
-      init_hatchRead();
-      SELL_BUILDING_WORDS = ["pet"];
-      SELL_BUILDING_ALTERNATIVES = ["sell", "shop", "store", "market"];
-    }
-  });
-
-  // src/features/companion/chat/hatchFlow.ts
-  function hatchProvider() {
-    return async () => (await readHatchScope()).readySlots;
-  }
-  function sellProvider(rules2) {
-    return async () => {
-      const scope = await readHatchScope();
-      return {
-        favourite: toFavourite(scope.pets, rules2),
-        sell: toSell(scope.pets, rules2),
-        teamId: loadCompanionSettings().hatchSellTeamId
-      };
-    };
-  }
-  function afterHatch(stop2, scope, rules2, sellable) {
-    const waiting = scope.readySlots.length;
-    const eggs = waiting > 0 ? ` ${waiting} egg${waiting === 1 ? "" : "s"} still waiting.` : "";
-    if (stop2 === "full") {
-      if (sellable.length > 0) return `Your bag is full.${eggs}`;
-      return hasAnyRule(rules2) ? `Your bag is full, nothing in it is up for sale.${eggs}` : `Your bag is full.${eggs} Nothing set to keep, so I am not selling.`;
-    }
-    return sellable.length > 0 ? "All open. Now the ones you did not want." : null;
-  }
-  var init_hatchFlow = __esm({
-    "src/features/companion/chat/hatchFlow.ts"() {
-      "use strict";
-      init_state3();
-      init_hatch();
-      init_hatchRead();
-    }
-  });
-
-  // src/features/companion/chat/proposals.ts
-  function isExpired(proposal, nowMs, ttlMs = PROPOSAL_TTL_MS) {
-    return nowMs - proposal.createdAtMs >= ttlMs;
-  }
-  function verdict(proposal, currentSignature2, nowMs, ttlMs = PROPOSAL_TTL_MS) {
-    if (!proposal) return { ok: false, reason: "unknown" };
-    if (isExpired(proposal, nowMs, ttlMs)) return { ok: false, reason: "expired" };
-    if (!currentSignature2 || proposal.size === 0) return { ok: false, reason: "empty" };
-    if (currentSignature2 !== proposal.signature) return { ok: false, reason: "changed" };
-    return { ok: true };
-  }
-  function explain(reason) {
-    switch (reason) {
-      case "expired":
-        return "That went stale while I waited. Let me have another look.";
-      case "changed":
-        return "Things moved while I was waiting. Here is what I see now.";
-      case "empty":
-        return "There is nothing left to do there.";
-      default:
-        return "I lost track of that one, sorry. Ask me again.";
-    }
-  }
-  var PROPOSAL_TTL_MS;
-  var init_proposals = __esm({
-    "src/features/companion/chat/proposals.ts"() {
-      "use strict";
-      PROPOSAL_TTL_MS = 3e4;
-    }
-  });
-
-  // src/features/companion/chat/index.ts
-  function notify2() {
-    for (const listener of [...listeners8]) {
-      try {
-        listener();
-      } catch {
-      }
-    }
-  }
-  function post(from, kind, text2, proposalId, extra = {}) {
-    const shown = extra.thread ?? extra.bubble;
-    state2 = {
-      ...state2,
-      log: append(state2.log, {
-        from,
-        kind,
-        text: shown?.message ?? text2,
-        atMs: Date.now(),
-        proposalId,
-        icons: shown?.tags ? Object.values(shown.tags) : void 0,
-        // Le fil ne sait afficher une icône à sa place que s'il a le balisage.
-        positioned: shown !== void 0
-      })
-    };
-    const insist = extra.force ?? proposalId !== void 0;
-    if (from === "companion") {
-      speak(extra.bubble ?? { message: text2 }, insist);
-      if (proposalId !== void 0) {
-        void attendToQuestion(proposalId).catch(() => {
-        });
-        void CompanionService.emoteWhenStill(EmoteType.Questioning).catch(() => {
-        });
-      }
-    }
-    notify2();
-  }
-  function speak(line, force = false) {
-    const spoken = forGame(line);
-    const message = !spoken.tags && spoken.message.length > MAX_LINE_LENGTH ? `${spoken.message.slice(0, MAX_LINE_LENGTH - 1).trimEnd()}\u2026` : spoken.message;
-    void CompanionService.say(message, { tags: spoken.tags, force }).catch(() => {
-    });
-  }
-  function dropStaleProposal() {
-    const proposal = state2.proposal;
-    if (!proposal || !isExpired(proposal, Date.now())) return;
-    state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposal.id) };
-    notify2();
-  }
-  function harvestBubble(rows, sentence) {
-    const top = groupVariants(rows)[0];
-    if (!top) return compose(sentence);
-    return compose(...spaced(variantIcons(top.species, top.mutations)), " ", sentence);
-  }
-  async function proposeHarvestScope(provider) {
-    let scope;
-    try {
-      scope = await provider();
-    } catch {
-      post("companion", "system", "Could not see your garden just now.");
-      return;
-    }
-    const rows = scope.rows;
-    if (rows.length === 0) {
-      post(
-        "companion",
-        "reply",
-        scope.lockedOut > 0 ? `Your Locker is holding all ${scope.lockedOut}. Nothing I can pick.` : "Nothing is ripe right now."
-      );
-      return;
-    }
-    const team = loadCompanionSettings().harvestTeamId;
-    const proposal = openProposal(
-      "harvest",
-      describeSelection(rows),
-      rows.length,
-      withTeam(selectionSignature(rows), team)
-    );
-    state2 = { ...state2, proposal, captured: { kind: "harvest", provider, rows } };
-    const held = scope.lockedOut > 0 ? ` I am leaving ${scope.lockedOut} locked one${scope.lockedOut === 1 ? "" : "s"} alone.` : "";
-    const sentence = `I can see ${proposal.summary}.${held}${teamPromise(team)} Want me to pick them?`;
-    post("companion", "reply", sentence, proposal.id, { bubble: harvestBubble(rows, sentence) });
-  }
-  async function proposeFeedScope(provider) {
-    let picks;
-    try {
-      picks = await provider();
-    } catch {
-      post("companion", "system", "Could not check on your pets just now.");
-      return;
-    }
-    if (picks.length === 0) {
-      post("companion", "reply", "Your pets are fine, or I have nothing they eat.");
-      return;
-    }
-    const proposal = openProposal("feed", describeFeed(picks), picks.length, feedSignature(picks));
-    state2 = { ...state2, proposal, captured: { kind: "feed", provider, picks } };
-    const listed = feedQuestion(picks);
-    post("companion", "reply", listed.message, proposal.id, {
-      bubble: feedBubble(picks),
-      thread: listed
-    });
-  }
-  async function proposePlantPlan(provider) {
-    let plan;
-    try {
-      plan = await provider();
-    } catch {
-      post("companion", "system", "Could not see your garden just now.");
-      return;
-    }
-    if (plan.length === 0) {
-      post("companion", "reply", "Nothing left of that plan. Tiles filled up, or seeds ran out.");
-      return;
-    }
-    const proposal = openProposal("plant", summarizePlan(plan), plan.length, plantSignature(plan));
-    state2 = { ...state2, proposal, captured: { kind: "plant", provider, plan } };
-    const most = countByItem(plan)[0];
-    const sentence = `That is ${proposal.summary}. Want me to get started?`;
-    post("companion", "reply", sentence, proposal.id, {
-      bubble: compose(most?.kind === "seed" ? seedIcon(most.id) : null, " ", sentence)
-    });
-  }
-  async function proposeHatchSlots(provider, rules2) {
-    let slots;
-    try {
-      slots = await provider();
-    } catch {
-      post("companion", "system", "Could not see your eggs just now.");
-      return;
-    }
-    if (slots.length === 0) {
-      post("companion", "reply", "Nothing is ready to hatch right now.");
-      return;
-    }
-    const team = loadCompanionSettings().hatchTeamId;
-    const proposal = openProposal("hatch", summarizeHatch(slots), slots.length, withTeam(slotSignature2(slots), team));
-    state2 = { ...state2, proposal, captured: { kind: "hatch", provider, rules: rules2, slots } };
-    const kinds = await readHatchScope().then((scope) => scope.eggIds).catch(() => []);
-    const sentence = `${proposal.summary}.${teamPromise(team)} Want me to open them?`;
-    post("companion", "reply", sentence, proposal.id, {
-      bubble: compose(kinds.length === 1 ? eggIcon(kinds[0]) : null, " ", sentence)
-    });
-  }
-  async function proposeSellPlan(provider, rules2) {
-    let plan;
-    try {
-      plan = await provider();
-    } catch {
-      post("companion", "system", "Could not go through your bag just now.");
-      return;
-    }
-    if (plan.sell.length === 0) {
-      post("companion", "reply", "Nothing in your bag is up for sale.");
-      return;
-    }
-    const signature = withTeam(`${petSignature(plan.sell)}/${petSignature(plan.favourite)}`, plan.teamId);
-    const proposal = openProposal("sell", summarizeSell(plan.sell), plan.sell.length, signature);
-    state2 = { ...state2, proposal, captured: { kind: "sell", provider, rules: rules2, plan } };
-    const keeping = plan.favourite.length > 0 ? ` I would favourite the ${plan.favourite.length} you keep first.` : "";
-    const sentence = `That would be ${proposal.summary}.${keeping}${teamPromise(plan.teamId)} Should I?`;
-    post("companion", "reply", sentence, proposal.id, {
-      bubble: compose(...spaced(petRowIcons(plan.sell)), " ", sentence)
-    });
-  }
-  function reporter() {
-    return {
-      say: (kind, text2, spoken, force) => post("companion", kind, text2, void 0, { bubble: spoken, force }),
-      stopped: () => state2.cancelRequested,
-      progress: (done, total) => {
-        state2 = { ...state2, run: { done, total } };
-        notify2();
-      }
-    };
-  }
-  async function runBatch(run) {
-    let stopped = false;
-    try {
-      await run(reporter());
-    } finally {
-      stopped = state2.cancelRequested;
-      state2 = { ...state2, run: null, cancelRequested: false };
-      notify2();
-    }
-    return stopped;
-  }
-  async function afterHatchBatch(rules2, stop2) {
-    if (stop2 === "cancelled") return;
-    const scope = await readHatchScope().catch(() => null);
-    if (!scope) return;
-    const sellable = toSell(scope.pets, rules2);
-    const note = afterHatch(stop2, scope, rules2, sellable);
-    if (note) post("companion", "system", note);
-    if (sellable.length === 0) return;
-    await proposeSellPlan(sellProvider(rules2), rules2);
-  }
-  async function afterSellBatch(rules2) {
-    const provider = hatchProvider();
-    const slots = await provider().catch(() => []);
-    if (slots.length === 0) return;
-    post("companion", "system", "There is room again.");
-    await proposeHatchSlots(provider, rules2);
-  }
-  function teamPromise(teamId2) {
-    const name = teamName(teamId2);
-    return name ? ` I would wear ${name}, then give yours back.` : "";
-  }
-  function withTeam(signature, teamId2) {
-    return `${signature}#team:${teamId2 ?? ""}`;
-  }
-  function openProposal(commandId, summary, size, signature) {
-    return { id: `p${nextProposalSeq++}`, commandId, summary, size, signature, createdAtMs: Date.now() };
-  }
-  async function currentSignature(captured) {
-    try {
-      const settings = loadCompanionSettings();
-      if (captured.kind === "harvest") {
-        return withTeam(selectionSignature((await captured.provider()).rows), settings.harvestTeamId);
-      }
-      if (captured.kind === "plant") return plantSignature(await captured.provider());
-      if (captured.kind === "hatch") return withTeam(slotSignature2(await captured.provider()), settings.hatchTeamId);
-      if (captured.kind === "sell") {
-        const plan = await captured.provider();
-        return withTeam(`${petSignature(plan.sell)}/${petSignature(plan.favourite)}`, plan.teamId);
-      }
-      return feedSignature(await captured.provider());
-    } catch {
-      return null;
-    }
-  }
-  async function reproposeSame(captured) {
-    if (captured.kind === "harvest") await proposeHarvestScope(captured.provider);
-    else if (captured.kind === "plant") await proposePlantPlan(captured.provider);
-    else if (captured.kind === "hatch") await proposeHatchSlots(captured.provider, captured.rules);
-    else if (captured.kind === "sell") await proposeSellPlan(captured.provider, captured.rules);
-    else await proposeFeedScope(captured.provider);
-  }
-  function capturedSize(captured) {
-    if (captured.kind === "harvest") return captured.rows.length;
-    if (captured.kind === "plant") return captured.plan.length;
-    if (captured.kind === "hatch") return captured.slots.length;
-    if (captured.kind === "sell") return captured.plan.sell.length;
-    return captured.picks.length;
-  }
-  var ALERT_DEDUPE_MS, state2, listeners8, nextProposalSeq, ACCEPTANCE, CompanionChat;
-  var init_chat = __esm({
-    "src/features/companion/chat/index.ts"() {
-      "use strict";
-      init_companion();
-      init_attend();
-      init_emoteTypes();
-      init_state3();
-      init_bubbleTags();
-      init_bubbleIcons();
-      init_log();
-      init_harvest();
-      init_harvestRun();
-      init_feed();
-      init_feedRun();
-      init_plant();
-      init_plantRun();
-      init_hatch();
-      init_hatchRead();
-      init_hatchRun();
-      init_sellRun();
-      init_hatchFlow();
-      init_crew();
-      init_state3();
-      init_proposals();
-      ALERT_DEDUPE_MS = 6e4;
-      state2 = {
-        log: emptyLog(),
-        proposal: null,
-        captured: null,
-        run: null,
-        cancelRequested: false
-      };
-      listeners8 = /* @__PURE__ */ new Set();
-      nextProposalSeq = 1;
-      ACCEPTANCE = {
-        harvest: "Yes, go ahead",
-        feed: "Yes, feed them",
-        plant: "Yes, plant them",
-        hatch: "Yes, open them",
-        // Une vente ne se rattrape pas : la réponse le nomme.
-        sell: "Yes, sell them"
-      };
-      CompanionChat = {
-        getLog() {
-          return state2.log;
-        },
-        /** Retire une question à laquelle il est trop tard pour répondre. */
-        dropStaleProposal() {
-          dropStaleProposal();
-        },
-        /**
-         * Retire la question en attente, sans un mot.
-         *
-         * Pour le cas où le companion cesse d'exister : il n'a plus à s'excuser de
-         * reprendre une question, il n'est plus là pour la poser. `withdrawFeedIfSettled`
-         * commente parce que la situation a changé sous les yeux du joueur ; ici c'est
-         * le joueur lui-même qui vient de le couper.
-         */
-        withdrawProposal() {
-          const proposal = state2.proposal;
-          if (!proposal) return;
-          state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposal.id) };
-          notify2();
-        },
-        /**
-         * Retire la question de nourrissage quand elle n'a plus d'objet.
-         *
-         * Le joueur a nourri les animaux lui-même, ou changé d'équipe : la question
-         * ne veut plus rien dire. La laisser en attente ferait patienter le companion
-         * auprès du joueur pour une réponse sans conséquence.
-         *
-         * On ne se retire que si PLUS AUCUN des animaux proposés n'est concerné :
-         * tant qu'il en reste un, la question garde du sens, et c'est la
-         * vérification de périmètre à la confirmation qui protège du reste.
-         */
-        withdrawFeedIfSettled(stillFeedable) {
-          const proposal = state2.proposal;
-          const captured = state2.captured;
-          if (!proposal || captured?.kind !== "feed") return false;
-          if (!isSettled(captured.picks, stillFeedable)) return false;
-          state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposal.id) };
-          post("companion", "system", "Never mind, your pets are sorted.");
-          return true;
-        },
-        getProposal() {
-          return state2.proposal;
-        },
-        getRun() {
-          return state2.run;
-        },
-        isRunning() {
-          return state2.run !== null;
-        },
-        subscribe(listener) {
-          listeners8.add(listener);
-          return () => listeners8.delete(listener);
-        },
-        /** Alerte poussée par une source ; ignorée si identique et récente. */
-        alert(text2) {
-          state2 = {
-            ...state2,
-            log: appendAlertOnce(state2.log, { from: "companion", kind: "alert", text: text2, atMs: Date.now() }, ALERT_DEDUPE_MS)
-          };
-          notify2();
-        },
-        /**
-         * Demande émise par le joueur. N'exécute rien : pose la question.
-         *
-         * `request.provider` sera rappelé à la confirmation pour vérifier que le
-         * périmètre n'a pas changé entre-temps.
-         */
-        async proposeHarvest(request2) {
-          post("you", "command", request2.label);
-          if (state2.run) {
-            post("companion", "system", "Hold on, still on the last batch.");
-            return;
-          }
-          if (request2.kind === "harvest") await proposeHarvestScope(request2.provider);
-          else if (request2.kind === "plant") await proposePlantPlan(request2.provider);
-          else if (request2.kind === "hatch") await proposeHatchSlots(request2.provider, request2.rules);
-          else await proposeFeedScope(request2.provider);
-        },
-        /**
-         * Proposition venue du companion lui-même, sans demande du joueur.
-         *
-         * Poser une question n'est pas agir : rien ne part tant que la confirmation
-         * n'a pas été donnée. On s'abstient si une question attend déjà une réponse
-         * ou si un lot tourne — se couper la parole ferait perdre la précédente.
-         */
-        async offerFeed(provider) {
-          dropStaleProposal();
-          if (state2.run || state2.proposal) return false;
-          await proposeFeedScope(provider);
-          return state2.proposal !== null;
-        },
-        /** Confirme et exécute. C'est le seul chemin qui déclenche une action. */
-        async confirm(proposalId) {
-          const proposal = state2.proposal;
-          const captured = state2.captured;
-          if (!proposal || proposal.id !== proposalId || !captured) {
-            post("companion", "system", explain("unknown"));
-            return;
-          }
-          post("you", "command", ACCEPTANCE[captured.kind]);
-          const signature = await currentSignature(captured);
-          if (signature === null) {
-            post("companion", "system", "Could not check again, so I am not touching anything.");
-            return;
-          }
-          const decision = verdict(proposal, signature, Date.now());
-          if (!decision.ok) {
-            state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposalId) };
-            post("companion", "system", explain(decision.reason));
-            if (decision.reason === "changed" || decision.reason === "expired") await reproposeSame(captured);
-            return;
-          }
-          state2 = {
-            ...state2,
-            proposal: null,
-            captured: null,
-            run: { done: 0, total: capturedSize(captured) },
-            cancelRequested: false,
-            log: clearProposal(state2.log, proposalId)
-          };
-          if (captured.kind === "harvest") {
-            await runBatch((r) => executeHarvestBatch(captured.rows, r));
-          } else if (captured.kind === "plant") {
-            await runBatch((r) => executePlantBatch(captured.plan, r));
-          } else if (captured.kind === "hatch") {
-            let stop2 = "done";
-            await runBatch(async (r) => {
-              stop2 = await executeHatchBatch(captured.slots, r);
-            });
-            await afterHatchBatch(captured.rules, stop2);
-          } else if (captured.kind === "sell") {
-            const stopped = await runBatch((r) => executeSellBatch(captured.plan, r));
-            if (!stopped) await afterSellBatch(captured.rules);
-          } else {
-            await runBatch((r) => executeFeedBatch(captured.picks, r));
-          }
-        },
-        /** Écarte la proposition en cours sans rien exécuter. */
-        decline(proposalId) {
-          if (state2.proposal?.id !== proposalId) return;
-          state2 = { ...state2, proposal: null, captured: null, log: clearProposal(state2.log, proposalId) };
-          post("you", "command", "Not now");
-          post("companion", "system", "Alright, leaving them be.");
-        },
-        /** Interrompt un lot en cours. */
-        cancelRun() {
-          if (!state2.run) return;
-          state2 = { ...state2, cancelRequested: true };
-          notify2();
-        }
-      };
     }
   });
 
@@ -59486,7 +58779,6 @@ Restore figures are averages; unlucky streaks do worse.`;
   function messageRow(message, flags, identity = null) {
     if (isCentered(message)) return systemLine(message.text, message.icons, message.positioned);
     const outgoing = message.from === "you";
-    const alerting = message.kind === "alert";
     const row = document.createElement("div");
     css(row, {
       display: "flex",
@@ -59512,8 +58804,8 @@ Restore figures are averages; unlucky streaks do worse.`;
       lineHeight: "1.5",
       wordBreak: "break-word",
       whiteSpace: "pre-wrap",
-      background: outgoing ? OUTGOING_BG : alerting ? ALERT_BG : INCOMING_BG,
-      border: `1px solid ${outgoing ? OUTGOING_BORDER : alerting ? ALERT_BORDER : BORDER}`,
+      background: outgoing ? OUTGOING_BG : INCOMING_BG,
+      border: `1px solid ${outgoing ? OUTGOING_BORDER : BORDER}`,
       color: outgoing ? OUTGOING_TEXT : TEXT
     });
     bubble.append(...contentOf(message.text, message.icons, message.positioned, BUBBLE_ICON_PX2));
@@ -59611,7 +58903,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     hint.textContent = text2;
     return hint;
   }
-  var GROUP_WINDOW_MS, AVATAR_PX, BUBBLE_ICON_PX2, SYSTEM_ICON_PX, OUTGOING_BG, OUTGOING_BORDER, OUTGOING_TEXT, INCOMING_BG, ALERT_BG, ALERT_BORDER;
+  var GROUP_WINDOW_MS, AVATAR_PX, BUBBLE_ICON_PX2, SYSTEM_ICON_PX, OUTGOING_BG, OUTGOING_BORDER, OUTGOING_TEXT, INCOMING_BG;
   var init_chatView = __esm({
     "src/features/companion/menu/chatView.ts"() {
       "use strict";
@@ -59626,8 +58918,292 @@ Restore figures are averages; unlucky streaks do worse.`;
       OUTGOING_BORDER = "rgba(94,234,212,0.22)";
       OUTGOING_TEXT = "#d1fae5";
       INCOMING_BG = "rgba(255,255,255,0.06)";
-      ALERT_BG = "rgba(251,191,36,0.10)";
-      ALERT_BORDER = "rgba(251,191,36,0.28)";
+    }
+  });
+
+  // src/features/companion/chat/hatchRead.ts
+  function normalizeTs(value) {
+    const raw = typeof value === "number" ? value : Number(value);
+    if (!Number.isFinite(raw) || raw <= 0) return null;
+    return raw < 1e11 ? raw * 1e3 : raw;
+  }
+  function isEggReady(tile, now2) {
+    const readyAt = normalizeTs(tile.maturedAt) ?? normalizeTs(tile.endTime) ?? normalizeTs(tile.readyAt) ?? normalizeTs(tile.hatchTime) ?? null;
+    return readyAt === null || readyAt <= now2;
+  }
+  function asStringArray(value) {
+    return Array.isArray(value) ? value.filter((entry) => typeof entry === "string") : [];
+  }
+  function inventoryItems3(raw) {
+    const source = raw;
+    const list = Array.isArray(raw) ? raw : Array.isArray(source?.items) ? source.items : [];
+    return list.filter((entry) => !!entry && typeof entry === "object");
+  }
+  async function scanEggs() {
+    const scan = { readySlots: [], totalEggs: 0, eggIds: /* @__PURE__ */ new Set() };
+    let tileObjects = null;
+    try {
+      tileObjects = await Atoms.data.gardenTileObjects.get();
+    } catch {
+      return scan;
+    }
+    if (!tileObjects || typeof tileObjects !== "object") return scan;
+    const now2 = Date.now();
+    for (const [key2, raw] of Object.entries(tileObjects)) {
+      if (!raw || typeof raw !== "object") continue;
+      const tile = raw;
+      const objectType = String(tile.objectType ?? tile.type ?? "").toLowerCase();
+      if (objectType !== "egg") continue;
+      const slot = Number(key2);
+      if (!Number.isInteger(slot)) continue;
+      scan.totalEggs++;
+      const eggId = String(tile.eggId ?? tile.id ?? tile.species ?? "");
+      if (eggId) scan.eggIds.add(eggId);
+      if (isEggReady(tile, now2)) scan.readySlots.push(slot);
+    }
+    scan.readySlots.sort((a, b) => a - b);
+    return scan;
+  }
+  function whatCouldHatch(eggIds) {
+    const species = /* @__PURE__ */ new Set();
+    for (const eggId of eggIds) {
+      const egg = eggCatalog2[eggId];
+      for (const name of Object.keys(egg?.faunaSpawnWeights ?? {})) species.add(name);
+    }
+    const abilityIds = /* @__PURE__ */ new Set();
+    for (const name of species) {
+      const pet = petCatalog2[name];
+      for (const id of Object.keys(pet?.innateAbilityWeights ?? {})) abilityIds.add(id);
+    }
+    const abilities = [...abilityIds].map((id) => ({
+      id,
+      name: petAbilities2[id]?.name
+    })).map((entry) => ({ id: entry.id, name: typeof entry.name === "string" && entry.name ? entry.name : entry.id })).sort((a, b) => a.name.localeCompare(b.name));
+    return { species: [...species].sort((a, b) => a.localeCompare(b)), abilities };
+  }
+  async function readPets() {
+    const [inventory, favoriteIds2, activeIds] = await Promise.all([
+      Atoms.inventory.myInventory.get().catch(() => null),
+      Atoms.inventory.favoriteIds.get().catch(() => null),
+      PetsService.getActivePetIds().catch(() => [])
+    ]);
+    const items = inventoryItems3(inventory);
+    const favorites = new Set(asStringArray(favoriteIds2));
+    const onTeam = new Set(activeIds);
+    const pets = [];
+    for (const item of items) {
+      if (item.itemType !== "Pet" || typeof item.id !== "string") continue;
+      const species = String(item.petSpecies ?? "");
+      const info = getPetInfo(item);
+      const maxStrength = typeof info?.maxStrength === "number" && info.maxStrength > 0 ? info.maxStrength : null;
+      pets.push({
+        petId: item.id,
+        name: typeof item.nickname === "string" && item.nickname ? item.nickname : species || item.id,
+        species,
+        mutations: asStringArray(item.mutations),
+        abilities: asStringArray(item.abilities),
+        maxStrength,
+        favorited: favorites.has(item.id),
+        onTeam: onTeam.has(item.id),
+        item
+      });
+    }
+    return { pets, inventoryCount: items.length };
+  }
+  async function readPetRows() {
+    try {
+      return (await readPets()).pets;
+    } catch {
+      return [];
+    }
+  }
+  async function readInventoryCount() {
+    try {
+      return inventoryItems3(await Atoms.inventory.myInventory.get()).length;
+    } catch {
+      return 0;
+    }
+  }
+  function rolledMutations() {
+    try {
+      return Object.entries(mutationCatalog2).filter(([, def]) => Number(def?.baseChance) > 0).map(([name]) => name);
+    } catch {
+      return [];
+    }
+  }
+  async function readHatchScope() {
+    const [eggs, bag] = await Promise.all([scanEggs(), readPets()]);
+    const { species, abilities } = whatCouldHatch(eggs.eggIds);
+    const mutations = new Set(rolledMutations());
+    for (const pet of bag.pets) for (const mutation of pet.mutations) mutations.add(mutation);
+    return {
+      readySlots: eggs.readySlots,
+      totalEggs: eggs.totalEggs,
+      eggIds: [...eggs.eggIds].sort((a, b) => a.localeCompare(b)),
+      possibleSpecies: species,
+      possibleAbilities: abilities,
+      presentMutations: [...mutations].sort((a, b) => a.localeCompare(b)),
+      pets: bag.pets,
+      inventoryCount: bag.inventoryCount,
+      capacity: INVENTORY_CAPACITY
+    };
+  }
+  var INVENTORY_CAPACITY, EMPTY_HATCH_SCOPE;
+  var init_hatchRead = __esm({
+    "src/features/companion/chat/hatchRead.ts"() {
+      "use strict";
+      init_atoms();
+      init_data();
+      init_petValue();
+      init_pets();
+      INVENTORY_CAPACITY = 98;
+      EMPTY_HATCH_SCOPE = {
+        readySlots: [],
+        totalEggs: 0,
+        eggIds: [],
+        possibleSpecies: [],
+        possibleAbilities: [],
+        presentMutations: [],
+        pets: [],
+        inventoryCount: 0,
+        capacity: INVENTORY_CAPACITY
+      };
+    }
+  });
+
+  // src/features/companion/chat/harvestRun.ts
+  function topCrop(rows) {
+    const top = groupVariants(rows)[0];
+    return top ? cropIcon(top.species) : null;
+  }
+  async function report(attempted, cancelled, reporter2) {
+    if (attempted.length === 0) {
+      reporter2.say("report", "Stopped before I picked anything.");
+      return;
+    }
+    await sleep2(SETTLE_MS);
+    let fresh = null;
+    try {
+      fresh = (await readHarvestRows()).filter((row) => row.ready);
+    } catch {
+      fresh = null;
+    }
+    const stopped = cancelled ? " before you stopped me" : "";
+    if (!fresh) {
+      reporter2.say("report", `Sent all ${attempted.length}${stopped}, but I could not check they landed.`);
+      return;
+    }
+    const targeted = new Set(attempted.map(rowKey));
+    const stillRipe = fresh.filter((row) => targeted.has(rowKey(row))).length;
+    const picked = attempted.length - stillRipe;
+    if (picked > 0) StatsService.incrementGardenStat("totalHarvested", picked);
+    if (stillRipe === 0) {
+      const done = cancelled ? `Stopped there. Got ${picked}.` : `All done, ${picked} picked.`;
+      reporter2.say("report", done, compose(topCrop(attempted), " ", done));
+      return;
+    }
+    if (picked === 0) {
+      reporter2.say("report", "None went through. Still ripe, so your bag is probably full.");
+      return;
+    }
+    reporter2.say("report", `Got ${picked} of ${attempted.length}${stopped}. ${stillRipe} still ripe.`);
+  }
+  async function executeHarvestBatch(rows, reporter2) {
+    const opening = `On it. Picking ${rows.length} now.`;
+    reporter2.say("reply", opening, compose(topCrop(rows), " ", opening));
+    const attempted = [];
+    await runSteps({
+      items: rows,
+      reporter: reporter2,
+      // The team goes on before the first crop: some abilities act on harvest.
+      hire: () => hireCrew(reporter2, { teamId: loadCompanionSettings().harvestTeamId }),
+      async step(row, walker, pace) {
+        await walker.toGardenTile(row.tileIndex);
+        await pace.wait();
+        attempted.push(row);
+        await PlayerService.harvestCrop(row.tileIndex, row.slotId);
+        pace.mark();
+      },
+      progressNote: (done, total) => `${done} of ${total} so far...`
+    });
+    await report(attempted, reporter2.stopped(), reporter2);
+  }
+  var init_harvestRun = __esm({
+    "src/features/companion/chat/harvestRun.ts"() {
+      "use strict";
+      init_async2();
+      init_player();
+      init_stats();
+      init_state3();
+      init_batch();
+      init_bubbleIcons();
+      init_bubbleTags();
+      init_crew();
+      init_gardenRead();
+      init_harvest();
+    }
+  });
+
+  // src/features/companion/chat/commands/harvest.ts
+  function harvestBubble(rows, sentence) {
+    const top = groupVariants(rows)[0];
+    if (!top) return compose(sentence);
+    return compose(...spaced(variantIcons(top.species, top.mutations)), " ", sentence);
+  }
+  function harvestRequest(label2, provider) {
+    return { label: label2, propose: () => harvestCommand.propose({ provider }) };
+  }
+  var harvestCommand;
+  var init_harvest2 = __esm({
+    "src/features/companion/chat/commands/harvest.ts"() {
+      "use strict";
+      init_state3();
+      init_bubbleIcons();
+      init_bubbleTags();
+      init_conversation();
+      init_crew();
+      init_harvest();
+      init_harvestRun();
+      init_proposals();
+      harvestCommand = {
+        id: "harvest",
+        acceptance: "Yes, go ahead",
+        async propose({ provider }) {
+          let scope;
+          try {
+            scope = await provider();
+          } catch {
+            post("companion", "system", "Could not see your garden just now.");
+            return;
+          }
+          const rows = scope.rows;
+          if (rows.length === 0) {
+            post(
+              "companion",
+              "reply",
+              scope.lockedOut > 0 ? `Your Locker is holding all ${scope.lockedOut}. Nothing I can pick.` : "Nothing is ripe right now."
+            );
+            return;
+          }
+          const team = loadCompanionSettings().harvestTeamId;
+          const summary = describeSelection(rows);
+          const held = scope.lockedOut > 0 ? ` I am leaving ${scope.lockedOut} locked one${scope.lockedOut === 1 ? "" : "s"} alone.` : "";
+          const text2 = `I can see ${summary}.${held}${teamPromise(teamName(team))} Want me to pick them?`;
+          ask(harvestCommand, { provider, rows }, {
+            summary,
+            size: rows.length,
+            signature: withTeam(selectionSignature(rows), team),
+            text: text2,
+            bubble: harvestBubble(rows, text2)
+          });
+        },
+        async signature({ provider }) {
+          return withTeam(selectionSignature((await provider()).rows), loadCompanionSettings().harvestTeamId);
+        },
+        async execute({ rows }, run) {
+          await run((reporter2) => executeHarvestBatch(rows, reporter2));
+        }
+      };
     }
   });
 
@@ -60182,17 +59758,12 @@ Restore figures are averages; unlucky streaks do worse.`;
       render();
     });
     const askButton = button2("Ask to pick these", "accent", () => {
-      onAsk({
-        kind: "harvest",
-        label: describeFilters(filters),
-        // Le fournisseur est rappelé à la confirmation : c'est ce qui permet de
-        // détecter que le jardin a changé entre-temps. Il refait le même chemin,
-        // protection du Locker comprise, puis applique les critères.
-        provider: async () => {
+      onAsk(
+        harvestRequest(describeFilters(filters), async () => {
           const fresh = await readHarvestable();
           return { rows: filterRows(fresh.rows, filters), lockedOut: fresh.lockedOut };
-        }
-      });
+        })
+      );
       modal.close();
     });
     css(askButton, { marginLeft: "auto" });
@@ -60255,6 +59826,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_harvestModal = __esm({
     "src/features/companion/menu/harvestModal.ts"() {
       "use strict";
+      init_harvest2();
       init_gardenRead();
       init_harvest();
       init_panel();
@@ -60294,13 +59866,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     );
     modal.body.append(notice.root, list, empty);
     const askButton = button2("Ask to feed them", "accent", () => {
-      onAsk({
-        kind: "feed",
-        label: picks.length === 1 ? `Feed ${picks[0].petName}` : "Feed my hungry pets",
-        // Rappelé à la confirmation : c'est ce qui détecte qu'un pet a été nourri
-        // entre-temps, ou que le crop prévu a disparu.
-        provider: () => findFeedable()
-      });
+      onAsk(feedRequest(picks.length === 1 ? `Feed ${picks[0].petName}` : "Feed my hungry pets", () => findFeedable()));
       modal.close();
     });
     css(askButton, { marginLeft: "auto" });
@@ -60351,6 +59917,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_feedModal = __esm({
     "src/features/companion/menu/feedModal.ts"() {
       "use strict";
+      init_feed2();
       init_feedRead();
       init_panel();
       init_harvestChips();
@@ -60359,6 +59926,141 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_feedSettingsModal();
       REFRESH_MS2 = 5e3;
       CROP_ICON_PX = 26;
+    }
+  });
+
+  // src/features/companion/chat/plantRun.ts
+  function topSeed(plan) {
+    const most = countByItem(plan)[0];
+    return most?.kind === "seed" ? seedIcon(most.id) : null;
+  }
+  async function send(assignment) {
+    if (assignment.kind === "egg") {
+      await PlayerService.plantEgg(assignment.tileIndex, assignment.id);
+      return;
+    }
+    await PlayerService.plantSeed(assignment.tileIndex, assignment.id);
+  }
+  async function countPlanted(attempted) {
+    try {
+      const { occupied } = await readPlantScope();
+      return attempted.filter((assignment) => occupied.has(assignment.tileIndex)).length;
+    } catch {
+      return null;
+    }
+  }
+  async function report2(attempted, cancelled, reporter2) {
+    if (attempted.length === 0) {
+      reporter2.say("report", "Stopped before I planted anything.");
+      return;
+    }
+    await sleep2(SETTLE_MS);
+    const planted = await countPlanted(attempted);
+    const stopped = cancelled ? " before you stopped me" : "";
+    if (planted === null) {
+      reporter2.say("report", `Planted all ${attempted.length}${stopped}, but I could not check.`);
+      return;
+    }
+    if (planted > 0) StatsService.incrementGardenStat("totalPlanted", planted);
+    if (planted === attempted.length) {
+      const done = cancelled ? `Stopped there. ${planted} are in the ground.` : `All done, ${planted} planted.`;
+      reporter2.say("report", done, compose(topSeed(attempted), " ", done));
+      return;
+    }
+    if (planted === 0) {
+      reporter2.say("report", "None took. The tiles are still bare, so the seeds probably ran out.");
+      return;
+    }
+    reporter2.say("report", `Planted ${planted} of ${attempted.length}${stopped}. The rest would not go in.`);
+  }
+  async function executePlantBatch(plan, reporter2) {
+    const what = countByItem(plan);
+    const opening = what.length === 1 ? `On it. Planting ${plan.length} ${what[0].name} now.` : `On it. Planting ${listPlantItems(plan)} now.`;
+    reporter2.say("reply", opening, compose(topSeed(plan), " ", opening));
+    const attempted = [];
+    await runSteps({
+      items: plan,
+      reporter: reporter2,
+      hire: () => hireCrew(reporter2),
+      async step(assignment, walker, pace) {
+        await walker.toGardenTile(assignment.tileIndex);
+        await pace.wait();
+        attempted.push(assignment);
+        await send(assignment);
+        pace.mark();
+      },
+      progressNote: (done, total) => `${done} of ${total} in the ground so far...`
+    });
+    await report2(attempted, reporter2.stopped(), reporter2);
+  }
+  var init_plantRun = __esm({
+    "src/features/companion/chat/plantRun.ts"() {
+      "use strict";
+      init_async2();
+      init_player();
+      init_stats();
+      init_batch();
+      init_bubbleIcons();
+      init_bubbleTags();
+      init_crew();
+      init_plant();
+      init_plantRead();
+    }
+  });
+
+  // src/features/companion/chat/commands/plant.ts
+  function plantRequest(label2, provider) {
+    return { label: label2, propose: () => plantCommand.propose({ provider }) };
+  }
+  var plantCommand;
+  var init_plant2 = __esm({
+    "src/features/companion/chat/commands/plant.ts"() {
+      "use strict";
+      init_bubbleIcons();
+      init_bubbleTags();
+      init_conversation();
+      init_plant();
+      init_plantRun();
+      plantCommand = {
+        id: "plant",
+        acceptance: "Yes, plant them",
+        /**
+         * Asks about the plan, cut down to what still stands.
+         *
+         * The player drew the plan; the provider does not reinvent it, it holds it
+         * against the garden. A plan that became empty means the tiles filled up or
+         * the seeds ran out, and that gets said rather than asking a pointless question.
+         */
+        async propose({ provider }) {
+          let plan;
+          try {
+            plan = await provider();
+          } catch {
+            post("companion", "system", "Could not see your garden just now.");
+            return;
+          }
+          if (plan.length === 0) {
+            post("companion", "reply", "Nothing left of that plan. Tiles filled up, or seeds ran out.");
+            return;
+          }
+          const summary = summarizePlan(plan);
+          const text2 = `That is ${summary}. Want me to get started?`;
+          const most = countByItem(plan)[0];
+          ask(plantCommand, { provider, plan }, {
+            summary,
+            size: plan.length,
+            signature: plantSignature(plan),
+            text: text2,
+            bubble: compose(most?.kind === "seed" ? seedIcon(most.id) : null, " ", text2)
+          });
+        },
+        async signature({ provider }) {
+          return plantSignature(await provider());
+        },
+        async execute({ plan }, run) {
+          await run((reporter2) => executePlantBatch(plan, reporter2));
+        }
+      };
     }
   });
 
@@ -60554,14 +60256,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     const askButton = button2("Ask to plant these", "accent", () => {
       const drawn = [...plan.values()];
-      onAsk({
-        kind: "plant",
-        label: describePlan(drawn),
-        // Rappelé à la confirmation : c'est ce qui détecte qu'une case s'est
-        // remplie ou qu'une graine est partie ailleurs entre-temps. Le plan
-        // dessiné ne bouge pas ; c'est le jardin qu'on relit.
-        provider: async () => viablePlan(drawn, await readPlantScope())
-      });
+      onAsk(plantRequest(describePlan(drawn), async () => viablePlan(drawn, await readPlantScope())));
       modal.close();
     });
     css(askButton, { marginLeft: "auto" });
@@ -60668,6 +60363,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_plantModal = __esm({
     "src/features/companion/menu/plantModal.ts"() {
       "use strict";
+      init_plant2();
       init_plantRead();
       init_plant();
       init_panel();
@@ -60676,6 +60372,375 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_modal();
       REFRESH_MS3 = 4e3;
       STRIP_ICON_PX = 24;
+    }
+  });
+
+  // src/features/companion/chat/hatchRun.ts
+  async function countHatched(slots) {
+    try {
+      const still = new Set((await readHatchScope()).readySlots);
+      return slots.filter((slot) => !still.has(slot)).length;
+    } catch {
+      return null;
+    }
+  }
+  async function reportHatch(attempted, stop2, reporter2) {
+    if (attempted.length === 0) {
+      reporter2.say(
+        "report",
+        stop2 === "full" ? "Your bag was already full, so I opened none." : "Stopped before I opened any."
+      );
+      return;
+    }
+    await sleep2(SETTLE_MS);
+    const hatched = await countHatched(attempted);
+    if (hatched === null) {
+      reporter2.say("report", `Opened all ${attempted.length}, but I could not check.`);
+      return;
+    }
+    if (hatched === 0) {
+      reporter2.say("report", "None opened. They are all still there.");
+      return;
+    }
+    const tail = stop2 === "full" ? " Your bag is full now." : stop2 === "cancelled" ? " Stopped there." : "";
+    if (hatched === attempted.length) {
+      reporter2.say("report", `${hatched} hatched.${tail}`);
+      return;
+    }
+    reporter2.say("report", `${hatched} of ${attempted.length} hatched.${tail}`);
+  }
+  async function announceHatchling(known, rules2, reporter2) {
+    const pets = await readPetRows();
+    if (pets.length === 0) return;
+    const born = pets.filter((pet) => !known.has(pet.petId));
+    for (const pet of born) known.add(pet.petId);
+    if (born.length === 0) return;
+    const cheer = hatchCheer(born, rules2);
+    const mutation = cheer?.mutation ?? null;
+    const timing = mutation ? CHEER_TIMING[mutation] : void 0;
+    const lines = mutation ? CHEER_LINES[mutation] : void 0;
+    const star = cheer?.star ?? born[0];
+    const others = born.length - 1;
+    const tail = others > 0 ? ` And ${others} more.` : "";
+    const strength = star.maxStrength === null ? "" : `, ${star.maxStrength} STR`;
+    const line = lines ? `A ${mutation} ${star.species}${strength}! ${lines.cheer}${tail}` : `A ${star.species}${strength}.${tail}`;
+    const shown = mutation ? star.mutations.filter((name) => name.toLowerCase() !== mutation.toLowerCase()) : star.mutations;
+    if (cheer) void CompanionService.emote(cheer.emote, timing?.holdMs).catch(() => {
+    });
+    reporter2.say("system", line, compose(petThing(star.item, ""), " ", line, ...spaced(mutationChips(shown))), true);
+    if (!timing || !lines) return;
+    await sleep2(timing.pauseMs);
+    if (!reporter2.stopped()) reporter2.say("system", lines.resume);
+  }
+  async function executeHatchBatch(slots, reporter2) {
+    const kinds = (await readHatchScope().catch(() => null))?.eggIds ?? [];
+    const opening = `On it. Opening ${slots.length} now.`;
+    reporter2.say("reply", opening, compose(kinds.length === 1 ? eggIcon(kinds[0]) : null, " ", opening));
+    const settings = loadCompanionSettings();
+    const attempted = [];
+    let count = 0;
+    let stop2 = "done";
+    const known = /* @__PURE__ */ new Set();
+    const outcome = await runSteps({
+      items: slots,
+      reporter: reporter2,
+      async hire() {
+        const crew = await hireCrew(reporter2, { teamId: settings.hatchTeamId });
+        for (const pet of await readPetRows()) known.add(pet.petId);
+        return crew;
+      },
+      async step(slot, walker, pace) {
+        if (attempted.length % RECOUNT_EVERY === 0 || count >= INVENTORY_CAPACITY - NEAR_CAPACITY) {
+          count = await readInventoryCount();
+        }
+        if (count >= INVENTORY_CAPACITY) {
+          stop2 = "full";
+          return "halt";
+        }
+        await walker.toGardenTile(slot);
+        await pace.wait();
+        await PlayerService.hatchEgg(slot);
+        pace.mark();
+        attempted.push(slot);
+        count++;
+        await announceHatchling(known, settings.hatchKeepRules, reporter2);
+      },
+      progressNote: (done, total) => `${done} of ${total} open so far...`
+    });
+    if (outcome.cancelled) stop2 = "cancelled";
+    await reportHatch(attempted, stop2, reporter2);
+    return stop2;
+  }
+  var RECOUNT_EVERY, NEAR_CAPACITY, CHEER_TIMING, CHEER_LINES;
+  var init_hatchRun = __esm({
+    "src/features/companion/chat/hatchRun.ts"() {
+      "use strict";
+      init_async2();
+      init_player();
+      init_companion();
+      init_state3();
+      init_batch();
+      init_bubbleIcons();
+      init_bubbleTags();
+      init_crew();
+      init_hatch();
+      init_hatchRead();
+      RECOUNT_EVERY = 5;
+      NEAR_CAPACITY = 5;
+      CHEER_TIMING = {
+        Rainbow: { holdMs: 5e3, pauseMs: 4500 },
+        Gold: { holdMs: 2500, pauseMs: 2250 }
+      };
+      CHEER_LINES = {
+        Rainbow: { cheer: "I have never seen one of those.", resume: "Right. Where was I." },
+        Gold: { cheer: "That one is a beauty.", resume: "Okay, back to it." }
+      };
+    }
+  });
+
+  // src/features/companion/chat/sellRun.ts
+  async function goToSellShop(walker, reporter2) {
+    if (!walker.walking) return;
+    const map2 = await readCompanionMap();
+    if (!map2) return;
+    const shop = map2.findBuilding(SELL_BUILDING_WORDS, SELL_BUILDING_ALTERNATIVES);
+    if (!shop) {
+      console.warn("[companion] no pet shop found on the map, selling from here. Buildings:", map2.buildingNames);
+      return;
+    }
+    reporter2.say("system", "Heading to the pet shop.");
+    const arrived = await walker.toBuilding(shop);
+    if (!arrived) reporter2.say("system", "Could not get there, selling from here.");
+  }
+  async function reportSell(attempted, skipped, reporter2) {
+    if (attempted.length === 0) {
+      reporter2.say("report", skipped.length > 0 ? "None of them went through." : "Nothing sold.");
+      return;
+    }
+    await sleep2(SETTLE_MS);
+    let sold = null;
+    try {
+      const left = new Set((await readHatchScope()).pets.map((pet) => pet.petId));
+      sold = attempted.filter((pet) => !left.has(pet.petId)).length;
+    } catch {
+      sold = null;
+    }
+    const tail = skipped.length > 0 ? ` I left ${skipped.length} alone.` : "";
+    if (sold === null) {
+      reporter2.say("report", `Sent all ${attempted.length}, but I could not check.${tail}`);
+      return;
+    }
+    if (sold === 0) {
+      reporter2.say("report", `None of them sold. They are all still in your bag.${tail}`);
+      return;
+    }
+    reporter2.say("report", `${sold} sold.${tail}`);
+  }
+  async function executeSellBatch(plan, reporter2) {
+    const opening = `On it. ${summarizeSell(plan.sell)} going.`;
+    reporter2.say("reply", opening, compose(...spaced(petRowIcons(plan.sell)), " ", opening));
+    for (const pet of plan.favourite) {
+      if (reporter2.stopped()) break;
+      try {
+        await PlayerService.ensureFavoriteItem(pet.petId, true);
+      } catch {
+        reporter2.say("system", `Could not favourite ${pet.name}, leaving it alone.`);
+      }
+    }
+    if (plan.favourite.length > 0) {
+      const best = plan.favourite[0];
+      const strength = best.maxStrength === null ? "" : ` ${best.maxStrength} STR,`;
+      const others = plan.favourite.length - 1;
+      reporter2.say(
+        "system",
+        `${plan.favourite.length} kept and favourited.`,
+        compose(petThing(best.item, ""), `${strength} keeping that one${others > 0 ? ` and ${others} more` : ""}.`)
+      );
+    }
+    const attempted = [];
+    const skipped = [];
+    let onTeam = /* @__PURE__ */ new Set();
+    await runSteps({
+      items: plan.sell,
+      reporter: reporter2,
+      async hire() {
+        const crew = await hireCrew(reporter2, {
+          teamId: plan.teamId,
+          approach: (walker) => goToSellShop(walker, reporter2)
+        });
+        onTeam = new Set(await PetsService.getActivePetIds().catch(() => []));
+        return crew;
+      },
+      async step(pet, _walker, pace) {
+        if (onTeam.has(pet.petId)) {
+          skipped.push(pet);
+          return;
+        }
+        await pace.wait();
+        try {
+          await PlayerService.sellPet(pet.petId);
+          attempted.push(pet);
+        } catch {
+          skipped.push(pet);
+        }
+        pace.mark();
+      }
+    });
+    await reportSell(attempted, skipped, reporter2);
+  }
+  var SELL_BUILDING_WORDS, SELL_BUILDING_ALTERNATIVES;
+  var init_sellRun = __esm({
+    "src/features/companion/chat/sellRun.ts"() {
+      "use strict";
+      init_async2();
+      init_player();
+      init_pets();
+      init_map();
+      init_batch();
+      init_bubbleIcons();
+      init_bubbleTags();
+      init_crew();
+      init_hatch();
+      init_hatchRead();
+      SELL_BUILDING_WORDS = ["pet"];
+      SELL_BUILDING_ALTERNATIVES = ["sell", "shop", "store", "market"];
+    }
+  });
+
+  // src/features/companion/chat/commands/hatch.ts
+  function hatchProvider() {
+    return async () => (await readHatchScope()).readySlots;
+  }
+  function sellProvider(rules2) {
+    return async () => {
+      const scope = await readHatchScope();
+      return {
+        favourite: toFavourite(scope.pets, rules2),
+        sell: toSell(scope.pets, rules2),
+        teamId: loadCompanionSettings().hatchSellTeamId
+      };
+    };
+  }
+  async function afterHatch(rules2, stop2) {
+    if (stop2 === "cancelled") return;
+    const scope = await readHatchScope().catch(() => null);
+    if (!scope) return;
+    const sellable = toSell(scope.pets, rules2);
+    const note = afterHatchNote(stop2, scope.readySlots.length, rules2, sellable.length);
+    if (note) post("companion", "system", note);
+    if (sellable.length === 0) return;
+    await sellCommand.propose({ provider: sellProvider(rules2), rules: rules2 });
+  }
+  async function afterSell(rules2) {
+    const provider = hatchProvider();
+    const slots = await provider().catch(() => []);
+    if (slots.length === 0) return;
+    post("companion", "system", "There is room again.");
+    await hatchCommand.propose({ provider, rules: rules2 });
+  }
+  function hatchRequest(label2, rules2) {
+    return { label: label2, propose: () => hatchCommand.propose({ provider: hatchProvider(), rules: rules2 }) };
+  }
+  var sellSignature, hatchCommand, sellCommand;
+  var init_hatch2 = __esm({
+    "src/features/companion/chat/commands/hatch.ts"() {
+      "use strict";
+      init_state3();
+      init_bubbleIcons();
+      init_bubbleTags();
+      init_conversation();
+      init_crew();
+      init_hatch();
+      init_hatchRead();
+      init_hatchRun();
+      init_proposals();
+      init_sellRun();
+      sellSignature = (plan) => withTeam(`${petSignature(plan.sell)}/${petSignature(plan.favourite)}`, plan.teamId);
+      hatchCommand = {
+        id: "hatch",
+        acceptance: "Yes, open them",
+        /**
+         * Asks about the eggs ready now.
+         *
+         * The keep rules play no part here: what is ripe gets opened. They travel
+         * with the request because the sale after it will use them.
+         */
+        async propose({ provider, rules: rules2 }) {
+          let slots;
+          try {
+            slots = await provider();
+          } catch {
+            post("companion", "system", "Could not see your eggs just now.");
+            return;
+          }
+          if (slots.length === 0) {
+            post("companion", "reply", "Nothing is ready to hatch right now.");
+            return;
+          }
+          const team = loadCompanionSettings().hatchTeamId;
+          const summary = summarizeHatch(slots);
+          const kinds = await readHatchScope().then((scope) => scope.eggIds).catch(() => []);
+          const text2 = `${summary}.${teamPromise(teamName(team))} Want me to open them?`;
+          ask(hatchCommand, { provider, rules: rules2, slots }, {
+            summary,
+            size: slots.length,
+            signature: withTeam(slotSignature2(slots), team),
+            text: text2,
+            bubble: compose(kinds.length === 1 ? eggIcon(kinds[0]) : null, " ", text2)
+          });
+        },
+        async signature({ provider }) {
+          return withTeam(slotSignature2(await provider()), loadCompanionSettings().hatchTeamId);
+        },
+        async execute({ slots, rules: rules2 }, run) {
+          let stop2 = "done";
+          await run(async (reporter2) => {
+            stop2 = await executeHatchBatch(slots, reporter2);
+          });
+          await afterHatch(rules2, stop2);
+        }
+      };
+      sellCommand = {
+        id: "sell",
+        // A sale cannot be undone: the answer names it.
+        acceptance: "Yes, sell them",
+        /**
+         * Asks about the sale: who would go, who would be kept safe first.
+         *
+         * The team swap is part of the question when there is one: it touches the
+         * player's team, so it cannot slip into a yes that never mentioned it.
+         */
+        async propose({ provider, rules: rules2 }) {
+          let plan;
+          try {
+            plan = await provider();
+          } catch {
+            post("companion", "system", "Could not go through your bag just now.");
+            return;
+          }
+          if (plan.sell.length === 0) {
+            post("companion", "reply", "Nothing in your bag is up for sale.");
+            return;
+          }
+          const summary = summarizeSell(plan.sell);
+          const keeping = plan.favourite.length > 0 ? ` I would favourite the ${plan.favourite.length} you keep first.` : "";
+          const text2 = `That would be ${summary}.${keeping}${teamPromise(teamName(plan.teamId))} Should I?`;
+          ask(sellCommand, { provider, rules: rules2, plan }, {
+            summary,
+            size: plan.sell.length,
+            signature: sellSignature(plan),
+            text: text2,
+            bubble: compose(...spaced(petRowIcons(plan.sell)), " ", text2)
+          });
+        },
+        async signature({ provider }) {
+          return sellSignature(await provider());
+        },
+        async execute({ plan, rules: rules2 }, run) {
+          const stopped = await run((reporter2) => executeSellBatch(plan, reporter2));
+          if (!stopped) await afterSell(rules2);
+        }
+      };
     }
   });
 
@@ -60866,14 +60931,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     strip.append(ready, note);
     const resetButton = button2("Reset", "neutral", () => commit({ ...DEFAULT_KEEP_RULES }));
     const askButton = button2("Ask to hatch", "accent", () => {
-      onAsk({
-        kind: "hatch",
-        label: describeHatchRequest(scope.readySlots.length),
-        // Rappelé à la confirmation : c'est ce qui détecte qu'un œuf a éclos ou
-        // mûri entre-temps.
-        provider: hatchProvider(),
-        rules: rules2
-      });
+      onAsk(hatchRequest(describeHatchRequest(scope.readySlots.length), rules2));
       modal.close();
     });
     css(askButton, { marginLeft: "auto" });
@@ -60931,7 +60989,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   var init_hatchModal = __esm({
     "src/features/companion/menu/hatchModal.ts"() {
       "use strict";
-      init_hatchFlow();
+      init_hatch2();
       init_hatch();
       init_hatchRead();
       init_state3();
@@ -61108,7 +61166,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     const actionsButton = button2("Actions", "neutral", () => {
       openActionsModal(host, (request2) => {
-        void CompanionChat.proposeHarvest(request2).catch(() => {
+        void CompanionChat.ask(request2).catch(() => {
         });
       });
     });
@@ -61219,7 +61277,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/antiAfk/antiAfk.ts
   function createAntiAfkController(deps) {
     const STOP_EVENTS = ["visibilitychange", "blur", "focus", "focusout", "pagehide", "freeze", "resume"];
-    const listeners9 = [];
+    const listeners8 = [];
     function swallowAll() {
       const add = (target, t) => {
         const h2 = (e) => {
@@ -61227,7 +61285,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           e.preventDefault?.();
         };
         target.addEventListener(t, h2, { capture: true });
-        listeners9.push({ t, h: h2, target });
+        listeners8.push({ t, h: h2, target });
       };
       STOP_EVENTS.forEach((t) => {
         add(document, t);
@@ -61235,11 +61293,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
     }
     function unswallowAll() {
-      for (const { t, h: h2, target } of listeners9) try {
+      for (const { t, h: h2, target } of listeners8) try {
         target.removeEventListener(t, h2, { capture: true });
       } catch {
       }
-      listeners9.length = 0;
+      listeners8.length = 0;
     }
     const docProto = Object.getPrototypeOf(document);
     const saved = {

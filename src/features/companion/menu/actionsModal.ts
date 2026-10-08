@@ -4,7 +4,7 @@
 // Une action indisponible reste visible mais grisée, avec la raison : la faire
 // disparaître laisserait croire qu'elle n'existe pas.
 
-import type { HarvestRequest } from "../chat";
+import type { ChatRequest } from "../chat";
 import { readHarvestable } from "../chat/gardenRead";
 import { reviewFeeding, type FeedReview } from "../chat/feedRead";
 import { readPlantScope } from "../chat/plantRead";
@@ -26,7 +26,7 @@ type ActionRow = {
   run(): void;
 };
 
-export function openActionsModal(host: HTMLElement, onAsk: (request: HarvestRequest) => void): void {
+export function openActionsModal(host: HTMLElement, onAsk: (request: ChatRequest) => void): void {
   const modal = openModal({ host, title: "What can you do?", widthPx: 420 });
 
   const list = document.createElement("div");

@@ -72,3 +72,24 @@ export function explain(reason: Exclude<ProposalVerdict, { ok: true }>["reason"]
       return "I lost track of that one, sorry. Ask me again.";
   }
 }
+
+/**
+ * The work team is part of the confirmed scope.
+ *
+ * Without it in the signature, changing the work team between the question
+ * and the answer would have him wear a team the player never saw named. With
+ * it, the proposal is refused and asked again.
+ */
+export function withTeam(signature: string, teamId: string | null): string {
+  return `${signature}#team:${teamId ?? ""}`;
+}
+
+/**
+ * What he says about the team he would wear, if any.
+ *
+ * A team swap touches what the player built by hand: it cannot slip into a yes
+ * to a question that never mentioned it.
+ */
+export function teamPromise(teamName: string | null): string {
+  return teamName ? ` I would wear ${teamName}, then give yours back.` : "";
+}

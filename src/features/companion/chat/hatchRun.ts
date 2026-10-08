@@ -15,7 +15,7 @@ import { SETTLE_MS, runSteps, type BatchReporter } from "./batch";
 import { eggIcon, mutationChips, petThing } from "./bubbleIcons";
 import { compose, spaced } from "./bubbleTags";
 import { hireCrew } from "./crew";
-import { hatchCheer, type KeepRules } from "./hatch";
+import { hatchCheer, type HatchStop, type KeepRules } from "./hatch";
 import { INVENTORY_CAPACITY, readHatchScope, readInventoryCount, readPetRows } from "./hatchRead";
 
 /** The game lets the bag fill up, then refuses silently: near the cap it is counted often. */
@@ -49,9 +49,6 @@ const CHEER_LINES: Record<string, { cheer: string; resume: string }> = {
   Rainbow: { cheer: "I have never seen one of those.", resume: "Right. Where was I." },
   Gold: { cheer: "That one is a beauty.", resume: "Okay, back to it." },
 };
-
-/** Why the hatch stopped. It decides the next question. */
-export type HatchStop = "done" | "full" | "cancelled";
 
 /** How many targeted tiles no longer hold an egg: the only proof of hatching. */
 async function countHatched(slots: number[]): Promise<number | null> {
