@@ -221,13 +221,13 @@
   // src/game/sprites/pixi/hooks.ts
   function mkSyntheticApp(renderer) {
     const stage = renderer?.lastObjectRendered ?? renderer?.stage ?? null;
-    const listeners9 = /* @__PURE__ */ new Set();
+    const listeners8 = /* @__PURE__ */ new Set();
     let rafId = 0;
     let last = 0;
     const tick3 = (now) => {
       const delta = last ? (now - last) / (1e3 / 60) : 1;
       last = now;
-      for (const fn of listeners9) {
+      for (const fn of listeners8) {
         try {
           fn(delta);
         } catch {
@@ -237,14 +237,14 @@
     };
     const ticker = {
       add(fn) {
-        if (!listeners9.size) {
+        if (!listeners8.size) {
           rafId = requestAnimationFrame(tick3);
         }
-        listeners9.add(fn);
+        listeners8.add(fn);
       },
       remove(fn) {
-        listeners9.delete(fn);
-        if (!listeners9.size) {
+        listeners8.delete(fn);
+        if (!listeners8.size) {
           cancelAnimationFrame(rafId);
         }
       },
@@ -2274,11 +2274,11 @@
     if (list) list.push(handler);
     else map2.set(type, [handler]);
     return () => {
-      const current = map2.get(type);
-      if (!current) return;
-      const index = current.indexOf(handler);
-      if (index !== -1) current.splice(index, 1);
-      if (current.length === 0) map2.delete(type);
+      const current2 = map2.get(type);
+      if (!current2) return;
+      const index = current2.indexOf(handler);
+      if (index !== -1) current2.splice(index, 1);
+      if (current2.length === 0) map2.delete(type);
     };
   }
   function interceptOutgoing(type, rule) {
@@ -2290,22 +2290,22 @@
   function runOutgoing(message) {
     const type = message?.type;
     if (typeof type !== "string" || !type) return message;
-    let current = message;
+    let current2 = message;
     for (const rule of [...rules.get(type) ?? []]) {
       try {
-        const verdict2 = rule(current);
+        const verdict2 = rule(current2);
         if (verdict2 === "drop") return null;
-        if (verdict2 && typeof verdict2 === "object") current = verdict2.replace;
+        if (verdict2 && typeof verdict2 === "object") current2 = verdict2.replace;
       } catch {
       }
     }
     for (const observer2 of [...observers.get(type) ?? []]) {
       try {
-        observer2(current);
+        observer2(current2);
       } catch {
       }
     }
-    return current;
+    return current2;
   }
   var rules, observers;
   var init_outgoing = __esm({
@@ -2329,18 +2329,18 @@
     const original = resolveSendMessage(conn);
     if (!original) return false;
     original.owner.sendMessage = function(message, ...rest2) {
-      let current = message;
+      let current2 = message;
       try {
         const isEnvelope = message?.type === "QuinoaCommand" && message?.command && typeof message.command === "object";
         if (!isEnvelope && message?.type) {
-          current = runOutgoing(message);
-          if (current === null) return;
+          current2 = runOutgoing(message);
+          if (current2 === null) return;
         }
       } catch (error) {
         console.error("[MG-mod] sendMessage hook failed:", error);
-        current = message;
+        current2 = message;
       }
-      return original.fn.call(this, current, ...rest2);
+      return original.fn.call(this, current2, ...rest2);
     };
     status = "installed";
     shareGlobal(INSTALLED_FLAG, true);
@@ -2556,8 +2556,8 @@
     if (existing) return existing.promise;
     const promise = capture().then((store) => {
       if (store.__polyfill) {
-        const current = getBridge();
-        if (current && current.promise === promise) {
+        const current2 = getBridge();
+        if (current2 && current2.promise === promise) {
           delete pageWindow[STORE_BRIDGE_GLOBAL];
         }
       }
@@ -2842,8 +2842,8 @@
       attachedUnsub = unsub;
       if (!immediate) return;
       try {
-        const current = await jGet(atom2);
-        if (!cancelled && current !== void 0) cb(current);
+        const current2 = await jGet(atom2);
+        if (!cancelled && current2 !== void 0) cb(current2);
       } catch {
       }
     };
@@ -3457,8 +3457,8 @@
         },
         /** Locks or unlocks an item to match `shouldBeFavorite`, and returns the state it ends in. */
         async ensureFavoriteItem(itemId, shouldBeFavorite) {
-          const current = (await this.getFavoriteIdSet()).has(itemId);
-          if (current === shouldBeFavorite) return current;
+          const current2 = (await this.getFavoriteIdSet()).has(itemId);
+          if (current2 === shouldBeFavorite) return current2;
           await this.toggleFavoriteItem(itemId);
           return shouldBeFavorite;
         },
@@ -7637,11 +7637,12 @@
     if (abs >= 1e3) return `${fmt2(n / 1e3)}k`;
     return String(n);
   }
-  var INTEGER_FORMAT, spaceWords;
+  var INTEGER_FORMAT, formatInteger, spaceWords;
   var init_format = __esm({
     "src/lib/format.ts"() {
       "use strict";
       INTEGER_FORMAT = new Intl.NumberFormat("en-US");
+      formatInteger = (value, rounding = "floor") => INTEGER_FORMAT.format(Math.max(0, Math[rounding](Number.isFinite(value) ? value : 0)));
       spaceWords = (id) => id.replace(/([a-z])([A-Z])/g, "$1 $2");
     }
   });
@@ -7697,11 +7698,11 @@
     };
   }
   function unwrapNestedSnapshot(raw) {
-    let current = raw;
-    for (let depth = 0; depth < 10 && isRecord(current) && isRecord(current.snapshot); depth++) {
-      current = current.snapshot;
+    let current2 = raw;
+    for (let depth = 0; depth < 10 && isRecord(current2) && isRecord(current2.snapshot); depth++) {
+      current2 = current2.snapshot;
     }
-    return current ?? raw;
+    return current2 ?? raw;
   }
   function normalizeAriesStorage(raw) {
     const out = createDefaultAriesStorage();
@@ -7818,23 +7819,23 @@
     }, FLUSH_DELAY_MS);
   }
   function getValueAtPath(obj, path) {
-    let current = obj;
+    let current2 = obj;
     for (const segment of path) {
-      if (!current || typeof current !== "object") return void 0;
-      current = current[segment];
+      if (!current2 || typeof current2 !== "object") return void 0;
+      current2 = current2[segment];
     }
-    return current;
+    return current2;
   }
   function setValueAtPath(obj, path, value) {
     if (!path.length) return;
-    let current = obj;
+    let current2 = obj;
     for (const key2 of path.slice(0, -1)) {
-      if (!current[key2] || typeof current[key2] !== "object") current[key2] = {};
-      current = current[key2];
+      if (!current2[key2] || typeof current2[key2] !== "object") current2[key2] = {};
+      current2 = current2[key2];
     }
     const last = path[path.length - 1];
-    if (value === void 0) delete current[last];
-    else current[last] = value;
+    if (value === void 0) delete current2[last];
+    else current2[last] = value;
   }
   function getAriesStorage() {
     return load();
@@ -7843,11 +7844,11 @@
     persist(data);
   }
   function updateAriesStorage(mutator) {
-    const current = load();
-    mutator(current);
-    current.version = ARIES_STORAGE_VERSION;
-    persist(current);
-    return current;
+    const current2 = load();
+    mutator(current2);
+    current2.version = ARIES_STORAGE_VERSION;
+    persist(current2);
+    return current2;
   }
   function readAriesPath(path, fallback) {
     const value = getValueAtPath(load(), splitPath(path));
@@ -8399,19 +8400,19 @@
     if (!viewport || !content || !Array.isArray(content.children)) return null;
     return { mask: viewport.mask, content };
   }
-  function logsContentKind(contentChildren) {
+  function logsContentKind(contentChildren2) {
     let kind = "unknown";
-    for (const child of contentChildren) {
+    for (const child of contentChildren2) {
       if (child?.label === STAT_CARD_LABEL) return "stats";
       if (child?.label === LOG_ROW_LABEL) kind = "logs";
     }
     return kind;
   }
-  function planLogRowsShift(contentChildren, toolbarSpace) {
-    const first = contentChildren[0];
+  function planLogRowsShift(contentChildren2, toolbarSpace) {
+    const first = contentChildren2[0];
     const isNote = !!first && first.label !== LOG_ROW_LABEL && (typeof first.textComponent?.text === "string" || typeof first.text === "string" && !(first.children?.length > 0));
     if (!isNote) return { hideFirst: false, shift: toolbarSpace };
-    const next = contentChildren[1];
+    const next = contentChildren2[1];
     const firstY = first.position?.y ?? first.y ?? 0;
     const noteSpace = next ? (next.position?.y ?? next.y ?? firstY) - firstY : first.height ?? 0;
     return { hideFirst: true, shift: toolbarSpace - noteSpace };
@@ -8436,8 +8437,8 @@
   // src/game/fakeModal.ts
   async function openModal(modalId) {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current && current !== modalId) {
+      const current2 = await Atoms.ui.activeModal.get();
+      if (current2 && current2 !== modalId) {
         await Atoms.ui.activeModal.set(null);
         await Atoms.ui.inventoryModalIsActive.set(false);
         await new Promise((r) => requestAnimationFrame(r));
@@ -8450,8 +8451,8 @@
   async function closeModal(modalId) {
     try {
       if (modalId) {
-        const current = await Atoms.ui.activeModal.get();
-        if (current !== modalId) return;
+        const current2 = await Atoms.ui.activeModal.get();
+        if (current2 !== modalId) return;
       }
       await Atoms.ui.activeModal.set(null);
       if (modalId === INVENTORY_MODAL_ID || !modalId) {
@@ -10218,10 +10219,10 @@
         url: `${apiBase}/assets/sprites/${apiCat}/${item.name}.png`
       };
       indexEntries.push(entry);
-      const norm3 = normalizeSpriteName(item.name);
-      const arr = nameIndex.get(norm3) || [];
+      const norm2 = normalizeSpriteName(item.name);
+      const arr = nameIndex.get(norm2) || [];
       arr.push(entry);
-      nameIndex.set(norm3, arr);
+      nameIndex.set(norm2, arr);
     }
   }
   function spriteIndexSize() {
@@ -10294,31 +10295,31 @@
     return null;
   }
   function findSprite(categories, candidateId) {
-    const norm3 = normalizeSpriteName(candidateId);
+    const norm2 = normalizeSpriteName(candidateId);
     const internalCats = expandCategories(categories);
-    const fromCatalog = findCatalogSprite(internalCats, norm3);
+    const fromCatalog = findCatalogSprite(internalCats, norm2);
     if (fromCatalog) return fromCatalog;
-    const entries2 = nameIndex.get(norm3);
+    const entries2 = nameIndex.get(norm2);
     if (!entries2?.length) {
-      return findSpriteFuzzy(categories, norm3);
+      return findSpriteFuzzy(categories, norm2);
     }
     for (const entry of entries2) {
       if (internalCats.has(entry.internalCat)) return entry;
     }
-    return findSpriteFuzzy(categories, norm3);
+    return findSpriteFuzzy(categories, norm2);
   }
   function findSpriteFuzzy(categories, normTarget) {
     if (!normTarget) return null;
     const internalCats = expandCategories(categories);
-    for (const [norm3, entries2] of nameIndex) {
-      if (norm3.includes(normTarget) || normTarget.includes(norm3)) {
+    for (const [norm2, entries2] of nameIndex) {
+      if (norm2.includes(normTarget) || normTarget.includes(norm2)) {
         for (const entry of entries2) {
           if (internalCats.has(entry.internalCat)) return entry;
         }
       }
     }
-    for (const [norm3, entries2] of nameIndex) {
-      if (norm3.includes(normTarget) || normTarget.includes(norm3)) {
+    for (const [norm2, entries2] of nameIndex) {
+      if (norm2.includes(normTarget) || normTarget.includes(norm2)) {
         return entries2[0];
       }
     }
@@ -13407,8 +13408,8 @@
         });
         btnAdd.onclick = () => {
           const state5 = ensureEditorStateForSpecies(selId);
-          const current = state5.slots;
-          if (current.length >= maxSlots) return;
+          const current2 = state5.slots;
+          if (current2.length >= maxSlots) return;
           const defaultScale = computeTargetScaleFromPercent(
             selId,
             DEFAULT_SIZE_PERCENT
@@ -13417,7 +13418,7 @@
             ...state5,
             species: selId,
             slots: [
-              ...current,
+              ...current2,
               {
                 enabled: true,
                 sizePercent: DEFAULT_SIZE_PERCENT,
@@ -13445,12 +13446,12 @@
         });
         btnRemove.onclick = () => {
           const state5 = ensureEditorStateForSpecies(selId);
-          const current = state5.slots;
-          if (current.length <= 1) return;
+          const current2 = state5.slots;
+          if (current2.length <= 1) return;
           editorPlantSlotsState = {
             ...state5,
             species: selId,
-            slots: current.slice(0, current.length - 1)
+            slots: current2.slice(0, current2.length - 1)
           };
           renderSideDetails();
         };
@@ -15189,8 +15190,8 @@
   async function editGameToasts(edit) {
     const atom = getAtomByLabel(TOASTS_ATOM);
     if (!atom) return false;
-    const current = await jGet(atom).catch(() => []);
-    const list = Array.isArray(current) ? current : [];
+    const current2 = await jGet(atom).catch(() => []);
+    const list = Array.isArray(current2) ? current2 : [];
     const next = edit(list.slice());
     const unchanged = next.length === list.length && next.every((toast3, i) => toast3 === list[i]);
     if (!unchanged) await jSet(atom, next);
@@ -15529,14 +15530,14 @@
     let selectedSlotId = null;
     let info = emptySlotInfo();
     let stopped = false;
-    const changes2 = new Emitter();
+    const changes3 = new Emitter();
     const subs = new Subscriptions();
     const recompute = () => {
       if (stopped) return;
       const next = selectedSlotInfo(gardenObject, selectedSlotId);
       if (sameSlotInfo(next, info)) return;
       info = next;
-      changes2.emit(info);
+      changes3.emit(info);
     };
     const recomputeNowAndAfterTick = () => {
       recompute();
@@ -15591,11 +15592,11 @@
     })();
     return {
       get: () => info,
-      onChange: (cb) => changes2.on(cb),
+      onChange: (cb) => changes3.on(cb),
       stop() {
         stopped = true;
         cancelPendingGardenRecompute();
-        changes2.clear();
+        changes3.clear();
         subs.dispose();
       }
     };
@@ -16187,8 +16188,8 @@
     writeAriesPath("stats", snapshot2);
     return snapshot2;
   }
-  function adjustValue(current, delta, integer) {
-    const a = Number(current);
+  function adjustValue(current2, delta, integer) {
+    const a = Number(current2);
     const b = Number(delta);
     const sum = Number.isFinite(a) ? a : 0;
     const next = sum + (Number.isFinite(b) ? b : 0);
@@ -16196,12 +16197,12 @@
     return integer ? Math.floor(clamped) : clamped;
   }
   function updateStats(mutator) {
-    const current = readFromStorage();
-    const before = JSON.stringify(current);
-    const draft = cloneStats(current);
+    const current2 = readFromStorage();
+    const before = JSON.stringify(current2);
+    const draft = cloneStats(current2);
     mutator(draft);
     const after = JSON.stringify(draft);
-    if (before === after) return current;
+    if (before === after) return current2;
     const stored = writeToStorage(draft);
     emitUpdate(stored);
     return stored;
@@ -17415,8 +17416,8 @@
   }
   function writeStored(id, hk) {
     if (typeof window === "undefined") return;
-    updateAriesPath(KEYBINDS_BINDINGS_PATH, (current) => {
-      const base = current && typeof current === "object" ? { ...current } : {};
+    updateAriesPath(KEYBINDS_BINDINGS_PATH, (current2) => {
+      const base = current2 && typeof current2 === "object" ? { ...current2 } : {};
       if (hk) {
         base[id] = hotkeyToString(hk);
       } else {
@@ -17427,8 +17428,8 @@
   }
   function removeStored(id) {
     if (typeof window === "undefined") return;
-    updateAriesPath(KEYBINDS_BINDINGS_PATH, (current) => {
-      const base = current && typeof current === "object" ? { ...current } : {};
+    updateAriesPath(KEYBINDS_BINDINGS_PATH, (current2) => {
+      const base = current2 && typeof current2 === "object" ? { ...current2 } : {};
       delete base[id];
       return base;
     });
@@ -17445,8 +17446,8 @@
   }
   function writeHoldStored(id, enabled5) {
     if (typeof window === "undefined") return;
-    updateAriesPath(KEYBINDS_HOLD_PATH, (current) => {
-      const base = current && typeof current === "object" ? { ...current } : {};
+    updateAriesPath(KEYBINDS_HOLD_PATH, (current2) => {
+      const base = current2 && typeof current2 === "object" ? { ...current2 } : {};
       base[id] = !!enabled5;
       return base;
     });
@@ -17454,14 +17455,14 @@
   function emitHoldChange(id) {
     const set2 = holdListeners.get(id);
     if (!set2 || set2.size === 0) return;
-    const current = getKeybindHoldDetection(id);
-    for (const cb of set2) cb(current);
+    const current2 = getKeybindHoldDetection(id);
+    for (const cb of set2) cb(current2);
   }
   function emitChange(id) {
     const set2 = listeners3.get(id);
     if (!set2 || set2.size === 0) return;
-    const current = cloneHotkey(getKeybind(id));
-    for (const cb of set2) cb(current);
+    const current2 = cloneHotkey(getKeybind(id));
+    for (const cb of set2) cb(current2);
   }
   function ensureCache(id) {
     if (cache.has(id)) {
@@ -17489,8 +17490,8 @@
     return cloneHotkey(defaultMap.get(id) ?? null);
   }
   function setKeybind(id, hk) {
-    const current = getKeybind(id);
-    if (hotkeysEqual(current, hk)) return;
+    const current2 = getKeybind(id);
+    if (hotkeysEqual(current2, hk)) return;
     const next = cloneHotkey(hk);
     if (next) {
       const asString = hotkeyToString(next);
@@ -17518,8 +17519,8 @@
   }
   function setKeybindHoldDetection(id, enabled5) {
     if (!holdDefaultMap.has(id)) return;
-    const current = ensureHoldCache(id);
-    if (current === enabled5) return;
+    const current2 = ensureHoldCache(id);
+    if (current2 === enabled5) return;
     holdCache.set(id, enabled5);
     writeHoldStored(id, enabled5);
     emitHoldChange(id);
@@ -20093,8 +20094,8 @@
   // src/features/shops/purchases.ts
   function isCurrentRestock(entry, shop) {
     if (!("restockId" in entry)) return true;
-    const current = shop?.restockId;
-    return current != null && entry.restockId === current;
+    const current2 = shop?.restockId;
+    return current2 != null && entry.restockId === current2;
   }
   function purchasesForCurrentRestock(shops2, shopPurchases, kindOf) {
     const out = { seed: {}, egg: {}, tool: {}, decor: {} };
@@ -21041,85 +21042,915 @@
     }
   });
 
-  // src/features/sellAllPets/domButton.ts
-  function startInjectSellAllPets(options = {}) {
-    if (!isBrowser()) return noSSRController();
-    const ROOT_SEL = options.rootSelector ?? DEFAULTS.rootSelector;
-    const CHECK_SEL = options.checkSelector ?? DEFAULTS.checkSelector;
-    const BTN_WIDE = options.buttonSelectorWide ?? DEFAULTS.buttonSelectorWide;
-    const BTN_STRICT = options.buttonSelectorStrict ?? DEFAULTS.buttonSelectorStrict;
-    const BTN_TEXT = options.targetText ?? DEFAULTS.targetText;
-    const INJ_TEXT = options.injectText ?? DEFAULTS.injectText;
-    const INJ_CLASS = options.injectedClass ?? DEFAULTS.injectedClass;
-    const THEME = options.theme ?? DEFAULT_THEME;
-    const OBS_HIST = options.observeHistory ?? true;
-    const logger = typeof options.log === "function" ? options.log : options.log ? (...a) => console.debug("[injectSellAllPets]", ...a) : () => {
+  // src/ui/kit/theme.ts
+  function group(prefix, values, unit = "") {
+    return Object.entries(values).map(([key2, value]) => `--qmm-${prefix}${kebab(key2)}:${value}${unit};`);
+  }
+  function themeVariables() {
+    return [
+      ":root{",
+      ...group("", color),
+      ...group("gradient-", gradient),
+      ...group("shadow-", shadow),
+      ...group("radius-", radius, "px"),
+      ...group("space-", space, "px"),
+      ...group("fs-", fontSize, "px"),
+      `--qmm-font-mono:${fontMono};`,
+      // Compatibility names read by feature code that predates the tokens.
+      // Remove each once nothing outside the kit references it.
+      "--qmm-border-2:var(--qmm-border);",
+      "--qws-text:var(--qmm-text);",
+      "--qws-text-dim:var(--qmm-text-soft);",
+      "--qws-border:var(--qmm-border-strong);",
+      "--qws-border-2:var(--qmm-border);",
+      "--qws-panel:var(--qmm-panel-bg);",
+      "--qws-accent:var(--qmm-accent);",
+      "--qws-shadow:var(--qmm-shadow-window);",
+      "--qws-blur:8px;",
+      "}"
+    ].join("\n");
+  }
+  var color, gradient, shadow, radius, space, fontSize, fontMono, layer, kebab;
+  var init_theme = __esm({
+    "src/ui/kit/theme.ts"() {
+      "use strict";
+      color = {
+        accent: "#5eead4",
+        accentSoft: "rgba(94,234,212,0.12)",
+        accentHover: "rgba(94,234,212,0.22)",
+        accentBorder: "rgba(94,234,212,0.3)",
+        accentBorderHover: "rgba(94,234,212,0.55)",
+        text: "#e7eef7",
+        textSoft: "rgba(226,232,240,0.75)",
+        textDim: "rgba(226,232,240,0.45)",
+        border: "rgba(255,255,255,0.08)",
+        borderHover: "rgba(255,255,255,0.16)",
+        borderStrong: "rgba(255,255,255,0.14)",
+        cardBg: "rgba(255,255,255,0.03)",
+        hoverBg: "rgba(255,255,255,0.06)",
+        mutedBg: "rgba(0,0,0,0.18)",
+        fieldBg: "rgba(0,0,0,0.3)",
+        fieldBorder: "rgba(255,255,255,0.12)",
+        track: "rgba(255,255,255,0.1)",
+        sunken: "#080c12",
+        surface: "#101620",
+        panelBg: "rgba(17,24,35,0.8)",
+        scrollbar: "rgba(94,234,212,0.2)",
+        scrim: "rgba(0,0,0,0.55)",
+        danger: "#ef4444",
+        dangerSoft: "rgba(239,68,68,0.12)",
+        dangerHover: "rgba(239,68,68,0.2)",
+        dangerBorder: "rgba(239,68,68,0.3)",
+        dangerBorderHover: "rgba(239,68,68,0.55)",
+        warn: "#fbbf24",
+        warnSoft: "rgba(251,191,36,0.12)",
+        warnBorder: "rgba(251,191,36,0.55)",
+        gold: "#FFC734",
+        rainbow: "#c084fc"
+      };
+      gradient = {
+        panel: "linear-gradient(160deg, rgba(15,20,30,0.95) 0%, rgba(10,14,20,0.95) 60%, rgba(8,12,18,0.96) 100%)",
+        tabBar: "linear-gradient(120deg, rgba(22,28,40,0.9), rgba(12,17,26,0.92))",
+        head: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))"
+      };
+      shadow = {
+        panel: "0 18px 44px rgba(0,0,0,0.45)",
+        window: "0 10px 36px rgba(0,0,0,0.45)",
+        modal: "0 24px 64px rgba(0,0,0,0.55)"
+      };
+      radius = { sm: 6, md: 9, lg: 12, xl: 16, pill: 999 };
+      space = { xs: 4, sm: 6, md: 8, lg: 10, xl: 12 };
+      fontSize = { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 };
+      fontMono = "ui-monospace, SFMono-Regular, Consolas, monospace";
+      layer = { hud: 1000010, window: 2000001 };
+      kebab = (key2) => key2.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+    }
+  });
+
+  // src/ui/kit/styles/chrome.ts
+  var chromeCss;
+  var init_chrome = __esm({
+    "src/ui/kit/styles/chrome.ts"() {
+      "use strict";
+      init_theme();
+      chromeCss = `
+.qmm-scroll, .qws-pnl-scroll, .qmm-views {
+  scrollbar-width: thin; scrollbar-color: var(--qmm-scrollbar) transparent;
+}
+.qmm-scroll::-webkit-scrollbar, .qws-pnl-scroll::-webkit-scrollbar, .qmm-views::-webkit-scrollbar { width: 6px; }
+.qmm-scroll::-webkit-scrollbar-track, .qws-pnl-scroll::-webkit-scrollbar-track, .qmm-views::-webkit-scrollbar-track { background: transparent; }
+.qmm-scroll::-webkit-scrollbar-thumb, .qws-pnl-scroll::-webkit-scrollbar-thumb, .qmm-views::-webkit-scrollbar-thumb {
+  background: var(--qmm-scrollbar); border-radius: 3px;
+}
+.qmm-scroll::-webkit-scrollbar-thumb:hover, .qws-pnl-scroll::-webkit-scrollbar-thumb:hover, .qmm-views::-webkit-scrollbar-thumb:hover {
+  background: var(--qmm-accent-border);
+}
+
+.qmm { display: flex; flex-direction: column; gap: var(--qmm-space-lg); color: var(--qmm-text); }
+.qmm-compact { gap: var(--qmm-space-sm); }
+.qmm.qmm-alt-drag { cursor: grab; }
+.qmm.qmm-alt-drag:active { cursor: grabbing; }
+
+.qmm-tabs {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-xs); padding: 8px 10px;
+  border-bottom: 1px solid var(--qmm-border);
+  border-radius: var(--qmm-radius-xl) var(--qmm-radius-xl) 0 0;
+  background: var(--qmm-gradient-tab-bar);
+}
+.qmm-tab {
+  flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-md);
+  margin: 0; padding: 8px 12px; border: 1px solid transparent; border-radius: var(--qmm-radius-lg);
+  background: transparent; color: var(--qmm-text-soft); font-size: var(--qmm-fs-md); cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.qmm-compact .qmm-tab { padding: 6px 10px; }
+.qmm-tab:hover { background: var(--qmm-hover-bg); color: var(--qmm-text); }
+.qmm-tab:active { transform: translateY(1px); }
+.qmm-tab:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
+.qmm-tab.active { background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); color: var(--qmm-accent); }
+
+.qmm-views {
+  display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; padding: 14px;
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-xl);
+  background: var(--qmm-gradient-panel); backdrop-filter: blur(10px); box-shadow: var(--qmm-shadow-panel);
+}
+.qmm-compact .qmm-views { padding: 8px; }
+.qmm-tabs + .qmm-views { border-top: none; border-top-left-radius: 0; border-top-right-radius: 0; }
+.qmm-view { display: none; min-width: 0; min-height: 0; }
+.qmm-view.active { display: block; }
+
+.qmm-spacer { flex: 1; }
+
+.qws-win {
+  position: fixed; z-index: ${layer.window}; min-width: 260px; max-width: 900px; max-height: 90vh; overflow: auto;
+  color: var(--qmm-text); background: var(--qmm-panel-bg);
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-lg);
+  box-shadow: var(--qmm-shadow-window); backdrop-filter: blur(8px);
+}
+.qws-win.is-hidden { display: none !important; }
+.qws-win .w-head {
+  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 10px 12px; cursor: move;
+  border-bottom: 1px solid var(--qmm-border-strong);
+  border-radius: var(--qmm-radius-lg) var(--qmm-radius-lg) 0 0;
+  background: var(--qmm-gradient-head);
+}
+.qws-win .w-title { font-weight: 700; }
+.qws-win .w-body { padding: 12px; }
+
+/* Bare text and number inputs a feature builds inside a window get the field look too. */
+.qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input) {
+  padding: 8px 10px; border: 1px solid var(--qmm-field-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-field-bg); color: var(--qmm-text);
+}
+.qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input):focus {
+  outline: none; border-color: var(--qmm-accent-border-hover);
+}
+/* Windows give text and number fields one width; an inline width still wins. */
+.qws-win input[type="text"], .qws-win input[type="number"] { width: 120px; }
+
+.qws2 {
+  position: fixed; right: 16px; bottom: 16px; z-index: ${layer.hud};
+  display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 160px; padding: 10px 12px;
+  font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: var(--qmm-text);
+  background: var(--qmm-panel-bg); border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-lg);
+  box-shadow: var(--qmm-shadow-window); backdrop-filter: blur(8px);
+}
+.qws2.hidden { display: none; }
+.qws2 .row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.qws2 .title { font-weight: 700; letter-spacing: .2px; }
+.qws2 .drag { cursor: move; opacity: .9; }
+.qws2 .mini { display: none; }
+.qws2.min .mini { display: inline-flex; }
+.qws2.min .body { display: none; }
+.qws2 .is-link { cursor: pointer; }
+
+.qws-launch { margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--qmm-border-strong); }
+.qws-launch .launch-item { display: flex; align-items: center; gap: var(--qmm-space-md); margin: 4px 0; }
+.qws-launch .launch-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+`;
+    }
+  });
+
+  // src/ui/kit/styles/containers.ts
+  var containersCss;
+  var init_containers = __esm({
+    "src/ui/kit/styles/containers.ts"() {
+      "use strict";
+      containersCss = `
+.qmm-card {
+  display: grid; gap: var(--qmm-space-xl); width: 100%; padding: 14px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
+}
+.qmm-card--plain { display: flex; flex-direction: column; gap: var(--qmm-space-lg); width: auto; min-height: 0; padding: 10px; }
+.qmm-card.is-center { text-align: center; align-items: center; }
+.qmm-card.is-stretch { align-items: stretch; }
+.qmm-card[data-tone="muted"] { background: var(--qmm-muted-bg); }
+.qmm-card[data-tone="accent"] { border-color: var(--qmm-accent-border); }
+.qmm-card__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--qmm-space-lg); }
+.qmm-card__header.is-compact { gap: var(--qmm-space-sm); }
+.qmm-card__icon { font-size: 18px; }
+.qmm-card__title { font-size: var(--qmm-fs-xl); font-weight: 700; letter-spacing: .01em; }
+.qmm-card__subtitle { flex-basis: 100%; font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
+.qmm-card__actions { display: flex; gap: var(--qmm-space-sm); margin-left: auto; }
+.qmm-card__body { display: grid; gap: var(--qmm-space-lg); }
+
+.qmm-section-label {
+  font-size: var(--qmm-fs-xs); font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--qmm-text-dim);
+}
+
+.qmm-collapse { flex-shrink: 0; min-height: auto; }
+.qmm-collapse__head {
+  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 0; border: none; background: none;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.qmm-collapse__titles { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-width: 0; }
+.qmm-collapse__desc { font-size: var(--qmm-fs-sm); line-height: 1.45; color: var(--qmm-text-dim); }
+.qmm-collapse__chevron {
+  flex: 0 0 auto; margin-left: auto; font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim);
+  transition: transform 140ms ease, color 120ms ease;
+}
+.qmm-collapse__head:hover .qmm-collapse__chevron { color: var(--qmm-accent); }
+.qmm-collapse__head[aria-expanded="true"] .qmm-collapse__chevron { transform: rotate(90deg); }
+.qmm-collapse__body { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
+.qmm-collapse.is-collapsed > .qmm-collapse__body { display: none; }
+
+.qmm-setting-row {
+  display: flex; align-items: center; gap: var(--qmm-space-lg); flex-shrink: 0; padding: 8px 10px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md); background: var(--qmm-card-bg);
+}
+.qmm-setting-row__text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.qmm-setting-row__title { font-size: var(--qmm-fs-md); color: var(--qmm-text); }
+.qmm-setting-row__hint { font-size: var(--qmm-fs-xs); line-height: 1.4; color: var(--qmm-text-dim); }
+.qmm-setting-row__controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--qmm-space-md); flex: 0 0 auto; }
+
+.qmm-label { opacity: .9; }
+.qmm-flex { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
+.qmm-form-row { display: grid; align-items: center; width: 100%; }
+.qmm-form-row.is-top { align-items: start; }
+.qmm-form-row__label { justify-self: start; margin: 0; font-weight: 600; }
+.qmm-form-row.is-top .qmm-form-row__label { align-self: start; }
+
+.qmm-error {
+  padding: 10px; border: 1px solid var(--qmm-danger-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-danger-soft); color: #fecaca; font-size: var(--qmm-fs-lg); line-height: 1.4;
+}
+.qmm-error[hidden] { display: none; }
+
+.qmm-pill {
+  display: inline-flex; align-items: center; gap: var(--qmm-space-sm); padding: 4px 9px; white-space: nowrap;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-pill);
+  background: var(--qmm-field-bg); color: var(--qmm-text); font-size: var(--qmm-fs-sm); font-weight: 600;
+}
+.qmm-pill.is-ok { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
+.qmm-pill.is-warn { color: var(--qmm-warn); background: var(--qmm-warn-soft); border-color: var(--qmm-warn-border); }
+.qmm-pill.is-bad { color: var(--qmm-danger); background: var(--qmm-danger-soft); border-color: var(--qmm-danger-border); }
+.qmm-badge {
+  align-self: flex-start; padding: 2px 7px; border-radius: var(--qmm-radius-pill);
+  font-size: var(--qmm-fs-xs); font-weight: 600;
+}
+.qmm-badge.is-ok { color: var(--qmm-accent); background: var(--qmm-accent-soft); }
+.qmm-badge.is-warn { color: var(--qmm-warn); background: var(--qmm-warn-soft); }
+.qmm-meter {
+  position: relative; flex: 1 1 auto; min-width: 60px; height: 5px; overflow: hidden;
+  border-radius: var(--qmm-radius-pill); background: var(--qmm-border);
+}
+.qmm-meter__fill {
+  position: absolute; inset: 0 auto 0 0; width: 0%; border-radius: var(--qmm-radius-pill);
+  background: var(--qmm-accent); transition: width 200ms ease, background 200ms ease;
+}
+.qmm-meter__fill.is-warn { background: var(--qmm-warn); }
+
+.qmm-vtabs { display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 0; }
+.qmm-vtabs .filter input { width: 100%; }
+.qmm-vlist-wrap { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; width: 100%; }
+.qmm-vlist {
+  flex: 0 0 auto; min-width: 0; padding: 6px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
+}
+.qmm-vlist.is-scroll { flex: 1 1 auto; overflow: auto; }
+.qmm-vlist__items { display: flex; flex-direction: column; gap: var(--qmm-space-xs); margin: 0; padding: 0; list-style: none; }
+.qmm-vlist__empty { opacity: .75; }
+.qmm-vtab {
+  display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: var(--qmm-space-lg); width: 100%;
+  padding: 8px 10px; border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-card-bg); color: inherit; text-align: left; cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+.qmm-vtab:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); }
+.qmm-vtab:active { transform: translateY(1px); }
+.qmm-vtab.active { background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
+.qmm-dot { width: 10px; height: 10px; justify-self: center; border-radius: 50%; box-shadow: 0 0 0 1px #0006 inset; }
+.qmm-chip { display: flex; align-items: center; gap: var(--qmm-space-md); min-width: 0; }
+.qmm-chip img { width: 20px; height: 20px; object-fit: cover; border: 1px solid var(--qmm-border); border-radius: 50%; }
+.qmm-chip__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.qmm-chip .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qmm-chip__sub { font-size: var(--qmm-fs-md); opacity: .7; }
+.qmm-tag {
+  padding: 3px 7px; font-size: var(--qmm-fs-sm); line-height: 1;
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-hover-bg);
+}
+
+/* Drag handle for reorderable lists. */
+.qmm-grab {
+  display: grid; grid-template-columns: repeat(2, 3px); grid-template-rows: repeat(3, 3px);
+  align-content: center; justify-content: center; gap: 2px; margin-left: auto; padding: 4px 3px;
+  opacity: .8; cursor: grab; user-select: none;
+}
+.qmm-grab:active { cursor: grabbing; }
+.qmm-grab-dot { width: 3px; height: 3px; border-radius: 999px; background: var(--qmm-text-soft); }
+.qmm-dragging { opacity: .6; }
+
+/* Selectable tile of the skins grid. */
+.qws-pnl-cell {
+  position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 1; cursor: pointer;
+  border: 1px solid var(--qmm-border); border-radius: 10px; background: var(--qmm-card-bg);
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+.qws-pnl-cell:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); transform: translateY(-1px); }
+.qws-pnl-cell.is-active { border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
+.qws-pnl-cell.is-skinned::after {
+  content: ''; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--qmm-accent);
+}
+
+.qmm-icon-box { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.qmm-icon-box > img { max-width: 100%; max-height: 100%; image-rendering: auto; }
+
+.qmm-modal-scrim {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: var(--qmm-scrim); backdrop-filter: blur(4px);
+}
+.qmm-modal {
+  display: flex; flex-direction: column; overflow: hidden; color: var(--qmm-text);
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-xl);
+  background: var(--qmm-surface); box-shadow: var(--qmm-shadow-modal);
+}
+.qmm-modal__head {
+  display: flex; align-items: center; gap: var(--qmm-space-lg); flex: 0 0 auto; padding: 12px 14px;
+  border-bottom: 1px solid var(--qmm-border);
+}
+.qmm-modal__title { flex: 1; min-width: 0; font-size: var(--qmm-fs-xl); font-weight: 600; color: var(--qmm-text); }
+.qmm-modal__close {
+  flex: 0 0 auto; width: 28px; height: 28px; cursor: pointer;
+  border: 1px solid var(--qmm-border); border-radius: 8px; background: var(--qmm-card-bg);
+  color: var(--qmm-text-dim); font-size: var(--qmm-fs-md); line-height: 1;
+}
+.qmm-modal__close:hover { color: var(--qmm-text); border-color: var(--qmm-border-hover); }
+.qmm-modal__body {
+  display: flex; flex-direction: column; gap: var(--qmm-space-lg); flex: 1 1 auto; min-height: 0;
+  padding: 12px 14px; overflow-y: auto;
+}
+.qmm-modal__foot {
+  display: flex; align-items: center; gap: var(--qmm-space-lg); flex: 0 0 auto; padding: 12px 14px;
+  border-top: 1px solid var(--qmm-border);
+}
+.qmm-modal__foot:empty { display: none; }
+
+.qmm-menu-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 11px 12px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
+  font: inherit; text-align: left; cursor: pointer; transition: background 120ms ease, border-color 120ms ease;
+}
+.qmm-menu-card:hover:not(:disabled) { background: var(--qmm-hover-bg); }
+.qmm-menu-card:disabled { opacity: .55; cursor: default; }
+.qmm-menu-card__name { font-size: var(--qmm-fs-lg); font-weight: 600; color: var(--qmm-text); }
+.qmm-menu-card__detail { font-size: 11.5px; line-height: 1.45; color: var(--qmm-text-dim); }
+.qmm-menu-card:disabled .qmm-menu-card__name { color: var(--qmm-text-dim); }
+.qmm-menu-card:disabled .qmm-menu-card__detail { color: var(--qmm-accent); }
+`;
+    }
+  });
+
+  // src/ui/kit/styles/controls.ts
+  var controlsCss;
+  var init_controls = __esm({
+    "src/ui/kit/styles/controls.ts"() {
+      "use strict";
+      controlsCss = `
+.qmm-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-sm); padding: 8px 14px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-card-bg); color: var(--qmm-text);
+  font-size: var(--qmm-fs-lg); font-weight: 600; line-height: 1.2; cursor: pointer; user-select: none;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, opacity 120ms ease, transform 100ms ease;
+}
+.qmm-compact .qmm-btn:where(:not(.qmm-btn--sm, .qmm-btn--xs, .qmm-btn--icon)) { padding: 6px 10px; }
+.qmm-btn:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); }
+.qmm-btn:active { transform: translateY(1px); }
+.qmm-btn:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
+.qmm-btn:disabled, .qmm-btn.is-disabled { opacity: .4; pointer-events: none; }
+.qmm-btn.is-busy { opacity: .6; pointer-events: none; }
+.qmm-btn--sm { padding: 7px 12px; font-size: var(--qmm-fs-sm); white-space: nowrap; }
+.qmm-btn--xs { padding: 4px 8px; font-size: var(--qmm-fs-sm); }
+.qmm-btn--full { width: 100%; }
+.qmm-btn--block { display: flex; }
+.qmm-btn--icon { width: 34px; height: 34px; padding: 6px; gap: 0; border-radius: 50%; }
+.qmm-btn__icon { display: inline-flex; align-items: center; justify-content: center; font-size: 1.1em; }
+.qmm-btn__icon.is-right { order: 2; }
+.qmm-btn--primary { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
+.qmm-btn--primary:hover { background: var(--qmm-accent-hover); border-color: var(--qmm-accent-border-hover); }
+.qmm-btn--danger { color: var(--qmm-danger); background: var(--qmm-danger-soft); border-color: var(--qmm-danger-border); }
+.qmm-btn--danger:hover { background: var(--qmm-danger-hover); border-color: var(--qmm-danger-border-hover); }
+.qmm-btn--ghost { background: transparent; border-color: transparent; }
+.qmm-btn--ghost:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border); }
+.qmm-btn.active { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
+
+.qmm-input, .qws-pnl-input {
+  padding: 8px 10px; border: 1px solid var(--qmm-field-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-field-bg); color: var(--qmm-text); outline: none;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.qmm-input { min-width: 90px; }
+.qws-pnl-input { font-size: var(--qmm-fs-md); }
+.qmm-input::placeholder, .qws-pnl-input::placeholder { color: var(--qmm-text-dim); }
+.qmm-input:focus, .qws-pnl-input:focus { border-color: var(--qmm-accent-border-hover); }
+.qmm-input option, .qws-pnl-input option { background: var(--qmm-surface); color: var(--qmm-text); }
+.qmm-input--sm { min-width: 0; padding: 6px 9px; font-size: 11.5px; }
+.qmm-select { cursor: pointer; }
+
+.qmm-input-number { display: inline-flex; align-items: center; gap: var(--qmm-space-sm); }
+.qmm-input-number-input { width: 70px; text-align: center; }
+.qmm-spin { display: inline-flex; flex-direction: column; gap: 2px; }
+.qmm-step {
+  display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 16px; padding: 0;
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-sm);
+  background: var(--qmm-hover-bg); color: var(--qmm-text); font-size: 11px; line-height: 1;
+  cursor: pointer; user-select: none; transition: border-color 120ms ease, color 120ms ease;
+}
+.qmm-step:hover { border-color: var(--qmm-accent-border); color: var(--qmm-accent); }
+.qmm-step:active { transform: translateY(1px); }
+
+.qmm-radio { transform: scale(1.1); accent-color: var(--qmm-accent); }
+
+.qmm-switch {
+  -webkit-appearance: none; appearance: none; position: relative; flex-shrink: 0;
+  width: 36px; height: 20px; margin: 0; vertical-align: middle; cursor: pointer;
+  border: 1px solid var(--qmm-field-border); border-radius: 10px; background: var(--qmm-track);
+  transition: background 150ms ease, border-color 150ms ease;
+}
+.qmm-switch::before {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--qmm-text-dim); transition: transform 150ms ease, background 150ms ease;
+}
+.qmm-switch:checked { background: var(--qmm-accent-hover); border-color: var(--qmm-accent-border-hover); }
+.qmm-switch:checked::before { transform: translateX(16px); background: var(--qmm-accent); }
+.qmm-switch:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
+.qmm-switch:disabled { opacity: .4; cursor: not-allowed; }
+
+.qmm-chip-toggle {
+  display: inline-flex; align-items: stretch; cursor: pointer;
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-card-bg);
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.qmm-chip-toggle:hover { border-color: var(--qmm-accent-border); }
+.qmm-chip-toggle input { display: none; }
+.qmm-chip-toggle__face { display: flex; align-items: center; gap: var(--qmm-space-md); padding: 6px 12px; border-radius: var(--qmm-radius-pill); }
+.qmm-chip-toggle input:checked + .qmm-chip-toggle__face {
+  color: var(--qmm-accent); background: var(--qmm-accent-soft); box-shadow: inset 0 0 0 1px var(--qmm-accent-border);
+}
+.qmm-chip-toggle__icon { font-size: 14px; }
+.qmm-chip-toggle__label { font-weight: 600; }
+.qmm-chip-toggle__desc { font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
+.qmm-chip-toggle__badge {
+  padding: 2px 6px; font-size: var(--qmm-fs-sm);
+  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-hover-bg);
+}
+
+.qmm-range, .qws-pnl-range {
+  -webkit-appearance: none; appearance: none; height: 16px; margin: 0; padding: 0;
+  border: none; background: transparent; outline: none; cursor: pointer;
+}
+.qmm-range { width: 180px; }
+.qws-pnl-range { width: 100%; }
+.qmm-range::-webkit-slider-runnable-track, .qws-pnl-range::-webkit-slider-runnable-track {
+  height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
+}
+.qmm-range::-moz-range-track, .qws-pnl-range::-moz-range-track {
+  height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
+}
+.qmm-range::-webkit-slider-thumb, .qws-pnl-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 13px; height: 13px; margin-top: -4.5px;
+  border: none; border-radius: 50%; background: var(--qmm-accent); cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.qmm-range::-moz-range-thumb, .qws-pnl-range::-moz-range-thumb {
+  width: 13px; height: 13px; border: none; border-radius: 50%; background: var(--qmm-accent); cursor: pointer;
+}
+.qmm-range:hover::-webkit-slider-thumb, .qws-pnl-range:hover::-webkit-slider-thumb {
+  transform: scale(1.15); box-shadow: 0 0 0 4px var(--qmm-accent-soft);
+}
+.qmm-range:disabled, .qws-pnl-range:disabled { opacity: .4; cursor: not-allowed; }
+.qmm-range:disabled::-webkit-slider-thumb, .qws-pnl-range:disabled::-webkit-slider-thumb { background: var(--qmm-text-dim); }
+.qmm-range:disabled::-moz-range-thumb, .qws-pnl-range:disabled::-moz-range-thumb { background: var(--qmm-text-dim); }
+
+.qmm-range-dual { position: relative; width: 100%; padding: 18px 0 10px; }
+.qmm-range-dual-track {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  height: 6px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
+}
+.qmm-range-dual-fill {
+  position: absolute; top: 50%; transform: translateY(-50%); height: 6px;
+  border-radius: var(--qmm-radius-pill); background: var(--qmm-accent); transition: left .12s ease, right .12s ease;
+}
+.qmm-range-dual-input {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  width: 100%; height: 28px; pointer-events: none;
+}
+.qmm-range-dual-input::-webkit-slider-runnable-track { background: none; }
+.qmm-range-dual-input::-moz-range-track { background: none; }
+.qmm-range-dual-input::-webkit-slider-thumb {
+  pointer-events: auto; width: 16px; height: 16px; margin-top: -6px;
+  background: var(--qmm-accent); border: 2px solid var(--qmm-surface); box-shadow: 0 2px 8px rgba(0,0,0,.35);
+}
+.qmm-range-dual-input::-moz-range-thumb {
+  pointer-events: auto; width: 16px; height: 16px;
+  background: var(--qmm-accent); border: 2px solid var(--qmm-surface); box-shadow: 0 2px 8px rgba(0,0,0,.35);
+}
+.qmm-range-dual-input--min { z-index: 2; }
+.qmm-range-dual-input--max { z-index: 3; }
+
+/* --seg-pad, --seg-fill and --seg-stroke-color let a caller tint one control (the calculator does). */
+.qmm-seg {
+  position: relative; display: inline-flex; align-items: center; gap: var(--qmm-space-sm); overflow: hidden;
+  padding: var(--seg-pad, 8px); border-radius: var(--qmm-radius-pill);
+  background: var(--qmm-bg-soft, var(--qmm-sunken)); background-clip: padding-box;
+  border: 1px solid var(--qmm-border-2, var(--qmm-border));
+}
+.qmm-seg--full { display: flex; width: 100%; }
+.qmm-seg__btn {
+  position: relative; z-index: 1; padding: 8px 14px; border: 0; border-radius: var(--qmm-radius-pill);
+  appearance: none; background: transparent; color: var(--qmm-text-dim);
+  font: inherit; line-height: 1; white-space: nowrap; cursor: pointer;
+  transition: color .15s ease, transform .06s ease;
+}
+.qmm-seg__btn-label { display: inline-flex; align-items: center; justify-content: center; white-space: inherit; }
+.qmm-compact .qmm-seg__btn { padding: 6px 10px; }
+.qmm-seg__btn:hover { color: var(--qmm-text); }
+.qmm-seg__btn.active { color: var(--qmm-text); font-weight: 600; }
+.qmm-seg__btn:active { transform: translateY(1px); }
+.qmm-seg__btn[disabled] { opacity: .5; cursor: not-allowed; }
+.qmm-seg__indicator {
+  position: absolute; top: 0; left: 0; width: 40px; height: 100%; border-radius: inherit; pointer-events: none;
+  background: var(--seg-fill, var(--qmm-accent-soft));
+  outline: 1.2px solid var(--seg-stroke-color, var(--qmm-accent-border-hover)); outline-offset: -1.2px;
+  transform-origin: left center; will-change: transform, width, opacity;
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), width .18s cubic-bezier(.2,.8,.2,1), opacity .18s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .qmm-seg__indicator, .qmm-seg__btn { transition: none; }
+}
+
+.qmm-hotkey {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: var(--qmm-hotkey-w, 180px); min-width: 104px; padding: 7px 12px;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
+  background: var(--qmm-field-bg); color: var(--qmm-text);
+  font-family: inherit; font-size: var(--qmm-fs-sm); font-weight: 600; white-space: nowrap;
+  cursor: pointer; user-select: none; transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+.qmm-hotkey:hover { border-color: var(--qmm-border-hover); }
+.qmm-hotkey:focus-visible { outline: none; }
+.qmm-hotkey.is-assigned { color: var(--qmm-accent); border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
+.qmm-hotkey.is-empty { color: var(--qmm-text-dim); font-weight: 500; }
+.qmm-hotkey.is-recording {
+  color: var(--qmm-warn); border-color: var(--qmm-warn-border); background: var(--qmm-warn-soft);
+  animation: qmm-hotkey-breathe 1.2s ease-in-out infinite;
+}
+@keyframes qmm-hotkey-breathe {
+  0% { box-shadow: 0 0 0 0 rgba(251,191,36,.45); }
+  60% { box-shadow: 0 0 0 10px rgba(251,191,36,0); }
+  100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
+}
+`;
+    }
+  });
+
+  // src/ui/kit/styles/index.ts
+  function ensureKitStyles() {
+    if (injected) return;
+    if (typeof document === "undefined" || typeof document.getElementById !== "function") return;
+    injected = true;
+    if (document.getElementById(STYLE_ID3)) return;
+    const style2 = document.createElement("style");
+    style2.id = STYLE_ID3;
+    style2.textContent = [themeVariables(), chromeCss, controlsCss, containersCss].join("\n");
+    (document.head || document.documentElement).appendChild(style2);
+  }
+  var STYLE_ID3, injected;
+  var init_styles = __esm({
+    "src/ui/kit/styles/index.ts"() {
+      "use strict";
+      init_theme();
+      init_chrome();
+      init_containers();
+      init_controls();
+      STYLE_ID3 = "qmm-kit-css";
+      injected = false;
+    }
+  });
+
+  // src/ui/kit/dom.ts
+  function h(tag, className, text2) {
+    ensureKitStyles();
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text2 != null) el.textContent = text2;
+    return el;
+  }
+  function iconNode(icon, className) {
+    const node = typeof icon === "string" ? h("span", void 0, icon) : icon;
+    node.classList.add(className);
+    return node;
+  }
+  var init_dom = __esm({
+    "src/ui/kit/dom.ts"() {
+      "use strict";
+      init_styles();
+    }
+  });
+
+  // src/ui/kit/badges.ts
+  function pill(text2, tone) {
+    const el = h("span", "qmm-pill", text2);
+    setTone(el, tone);
+    return el;
+  }
+  function setTone(el, tone) {
+    el.classList.remove("is-ok", "is-warn", "is-bad");
+    if (tone) el.classList.add(`is-${tone}`);
+  }
+  function badge(text2, tone) {
+    return h("span", `qmm-badge is-${tone}`, text2);
+  }
+  function meter() {
+    const root = h("div", "qmm-meter");
+    const fill = h("div", "qmm-meter__fill");
+    root.appendChild(fill);
+    return {
+      root,
+      set(ratio, tone = "accent") {
+        fill.style.width = `${clampFinite(ratio, 0, 1, 0) * 100}%`;
+        fill.classList.toggle("is-warn", tone === "warn");
+      }
     };
-    const HANDLE = options.onClick ?? createDefaultClickHandler(logger);
-    ensureStyle2(INJ_CLASS, THEME);
-    let running6 = true;
-    let pending6 = false;
-    const processAll = () => {
-      if (!running6 || pending6) return;
-      pending6 = true;
-      requestAnimationFrame(() => {
+  }
+  var init_badges = __esm({
+    "src/ui/kit/badges.ts"() {
+      "use strict";
+      init_math();
+      init_dom();
+    }
+  });
+
+  // src/ui/kit/button.ts
+  function button(label2, opts = {}) {
+    const btn = h("button", "qmm-btn");
+    btn.type = "button";
+    const text2 = (label2 ?? "").trim();
+    const labelEl = !opts.icon || text2 ? h("span", "label", label2) : null;
+    if (opts.icon) {
+      const icon = iconNode(opts.icon, "qmm-btn__icon");
+      if (opts.iconPosition === "right") icon.classList.add("is-right");
+      if (!text2) btn.classList.add("qmm-btn--icon");
+      btn.append(icon);
+    }
+    if (labelEl) btn.append(labelEl);
+    if (opts.variant && opts.variant !== "default" && opts.variant !== "secondary") {
+      btn.classList.add(`qmm-btn--${opts.variant}`);
+    }
+    if (opts.size && opts.size !== "md") btn.classList.add(`qmm-btn--${opts.size}`);
+    if (opts.fullWidth) btn.classList.add("qmm-btn--full");
+    if (opts.block) btn.classList.add("qmm-btn--block");
+    if (opts.active) btn.classList.add("active");
+    if (opts.tooltip || opts.title) btn.title = opts.tooltip || opts.title || "";
+    if (opts.ariaLabel) btn.setAttribute("aria-label", opts.ariaLabel);
+    const onClick = opts.onClick;
+    if (onClick && opts.lockWhilePending) {
+      btn.addEventListener("click", async () => {
+        if (btn.disabled) return;
+        btn.classList.add("is-busy");
         try {
-          document.querySelectorAll(ROOT_SEL).forEach((root) => processRoot(root));
+          await onClick();
         } finally {
-          pending6 = false;
+          btn.classList.remove("is-busy");
         }
       });
-    };
-    function processRoot(root) {
-      const gate2 = root.querySelector(CHECK_SEL);
-      if (!gate2) {
-        cleanup(root, INJ_CLASS);
-        return;
+    } else if (onClick) {
+      btn.addEventListener("click", () => void onClick());
+    }
+    btn.setEnabled = (enabled5) => setButtonEnabled(btn, enabled5);
+    btn.setActive = (active2) => btn.classList.toggle("active", !!active2);
+    if (opts.disabled) setButtonEnabled(btn, false);
+    return btn;
+  }
+  function setButtonEnabled(btn, enabled5) {
+    btn.disabled = !enabled5;
+    btn.classList.toggle("is-disabled", !enabled5);
+    btn.setAttribute("aria-disabled", String(!enabled5));
+  }
+  var init_button = __esm({
+    "src/ui/kit/button.ts"() {
+      "use strict";
+      init_dom();
+    }
+  });
+
+  // src/ui/kit/modal.ts
+  function menuCard(options) {
+    const card5 = h("button", "qmm-menu-card");
+    card5.type = "button";
+    card5.disabled = options.disabled === true;
+    card5.append(h("div", "qmm-menu-card__name", options.name), h("div", "qmm-menu-card__detail", options.detail));
+    if (!card5.disabled) card5.addEventListener("click", options.onClick);
+    return card5;
+  }
+  function openModal2(options) {
+    let closed = false;
+    const scrim = h("div", "qmm-modal-scrim");
+    const hostZ = Number.parseInt(getComputedStyle(options.host).zIndex, 10);
+    scrim.style.zIndex = String((Number.isFinite(hostZ) ? hostZ : layer.window) + 1);
+    const panel = h("div", "qmm-modal");
+    panel.style.width = `min(${options.widthPx ?? 420}px, 100%)`;
+    panel.style.maxHeight = `min(${options.maxHeightPx ?? 520}px, 88vh)`;
+    panel.addEventListener("click", (event) => event.stopPropagation());
+    const closeButton = h("button", "qmm-modal__close", "\u2715");
+    closeButton.type = "button";
+    closeButton.title = "Close";
+    closeButton.addEventListener("click", () => close());
+    const header = h("div", "qmm-modal__head");
+    header.append(h("div", "qmm-modal__title", options.title), closeButton);
+    const body = h("div", "qmm-modal__body qmm-scroll");
+    const footer = h("div", "qmm-modal__foot");
+    panel.append(header, body, footer);
+    scrim.append(panel);
+    function onKeyDown(event) {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        close();
       }
-      const target = findTargetButton(root, BTN_WIDE, BTN_STRICT, BTN_TEXT);
-      if (!target) {
-        cleanup(root, INJ_CLASS);
-        return;
-      }
-      ensureInjectedNextTo(target, INJ_CLASS, INJ_TEXT, (ev, ctx2) => {
-        safeInvokeClick(HANDLE, ev, ctx2, logger);
+    }
+    function close() {
+      if (closed) return;
+      closed = true;
+      clearInterval(hostWatch);
+      document.removeEventListener("keydown", onKeyDown, true);
+      scrim.remove();
+      options.onClose?.();
+    }
+    const hostWatch = window.setInterval(() => {
+      if (!options.host.isConnected) close();
+    }, 1e3);
+    scrim.addEventListener("click", () => close());
+    document.addEventListener("keydown", onKeyDown, true);
+    (document.documentElement || document.body).appendChild(scrim);
+    return { body, footer, close, isOpen: () => !closed };
+  }
+  var init_modal = __esm({
+    "src/ui/kit/modal.ts"() {
+      "use strict";
+      init_dom();
+      init_theme();
+    }
+  });
+
+  // src/features/sellAllPets/confirmModal.ts
+  function petRow({ pet, reasons, mutations }) {
+    const row = document.createElement("div");
+    Object.assign(row.style, {
+      display: "grid",
+      gridTemplateColumns: `${ICON_PX}px 1fr`,
+      gap: "10px",
+      alignItems: "center",
+      padding: "6px 8px",
+      border: `1px solid ${color.border}`,
+      borderRadius: "10px",
+      background: color.cardBg
+    });
+    const icon = document.createElement("div");
+    Object.assign(icon.style, {
+      width: `${ICON_PX}px`,
+      height: `${ICON_PX}px`,
+      borderRadius: "10px",
+      background: color.hoverBg,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+      fontSize: "12px",
+      fontWeight: "700"
+    });
+    icon.textContent = String(pet.petSpecies || pet.name || "Pet").slice(0, 2).toUpperCase();
+    const species = String(pet.petSpecies || "").trim();
+    if (species) {
+      attachSpriteIcon(icon, ["pet"], [species, pet.name || ""], ICON_PX, "sell-all-pets-confirm", {
+        mutations: mutations.map((m) => m.trim()).filter(Boolean)
       });
     }
-    const mo = new MutationObserver(processAll);
-    mo.observe(document.documentElement, { childList: true, subtree: true });
-    processAll();
-    let unhookHistory = null;
-    if (OBS_HIST) {
-      unhookHistory = hookHistory(processAll);
-    }
-    return {
-      stop() {
-        if (!running6) return;
-        running6 = false;
-        mo.disconnect();
-        unhookHistory?.();
-        logger("stopped");
-      },
-      runOnce() {
-        processAll();
-      },
-      isRunning() {
-        return running6;
-      }
-    };
+    const name = document.createElement("div");
+    name.textContent = pet.name ? `${pet.name} (${pet.petSpecies ?? "Pet"})` : pet.petSpecies ?? "Pet";
+    Object.assign(name.style, { fontWeight: "700", fontSize: "13px" });
+    const chips = document.createElement("div");
+    Object.assign(chips.style, { display: "flex", flexWrap: "wrap", gap: "6px" });
+    chips.append(...reasons.map((reason) => pill(reason)));
+    const info = document.createElement("div");
+    Object.assign(info.style, { display: "grid", gap: "4px" });
+    info.append(name, chips);
+    row.append(icon, info);
+    return row;
   }
-  async function runSellAllPetsFlow(logger = () => {
-  }) {
-    try {
-      logger("sell-all-pets:log-items");
-    } catch {
-    }
-    await PlayerService.logItems();
-    const pets = await runDefaultSellAllPetsAction(logger);
-    if (pets.length === 0) return;
-    await sellPetsFromInventory(pets, logger);
+  function confirmProtectedPetSale(flagged) {
+    current?.close();
+    return new Promise((resolve) => {
+      let settled = false;
+      const settle = (value) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+      const modal = openModal2({
+        host: document.body,
+        title: "Confirm sell all pets",
+        widthPx: 520,
+        onClose: () => {
+          if (current === modal) current = null;
+          settle(false);
+        }
+      });
+      current = modal;
+      const scrim = modal.body.closest(".qmm-modal-scrim");
+      if (scrim) scrim.style.zIndex = ON_TOP;
+      const intro = document.createElement("div");
+      intro.textContent = "The following pets match protected rules:";
+      Object.assign(intro.style, { fontSize: "13px", lineHeight: "1.4", color: color.textSoft });
+      modal.body.append(intro, ...flagged.map(petRow));
+      const spacer2 = document.createElement("div");
+      spacer2.style.flex = "1";
+      const sell = button("Sell", {
+        variant: "primary",
+        onClick: () => {
+          settle(true);
+          modal.close();
+        }
+      });
+      modal.footer.append(spacer2, button("Cancel", { onClick: () => modal.close() }), sell);
+      sell.focus();
+    });
   }
-  async function getUnfavoritedInventoryPets() {
+  var ICON_PX, ON_TOP, current;
+  var init_confirmModal = __esm({
+    "src/features/sellAllPets/confirmModal.ts"() {
+      "use strict";
+      init_badges();
+      init_button();
+      init_modal();
+      init_theme();
+      init_iconCache();
+      ICON_PX = 48;
+      ON_TOP = "2147483647";
+      current = null;
+    }
+  });
+
+  // src/features/sellAllPets/protection.ts
+  function flagProtectedPets(pets) {
+    const rules2 = lockerRestrictionsService.getSellAllPetsRules();
+    if (!rules2.enabled) return [];
+    const protectedColors = /* @__PURE__ */ new Map();
+    if (rules2.protectGold) protectedColors.set("gold", "Gold");
+    if (rules2.protectRainbow) protectedColors.set("rainbow", "Rainbow");
+    const maxStrThreshold = Math.round(clampFinite(rules2.maxStrThreshold, 0, 100, 0));
+    const protectedRarities = new Set(rules2.protectedRarities);
+    const flagged = [];
+    for (const pet of pets) {
+      const mutations = (Array.isArray(pet.mutations) ? pet.mutations : []).filter((m) => typeof m === "string");
+      const colors = new Set(mutations.map((m) => protectedColors.get(m.toLowerCase())).filter((c) => !!c));
+      const maxStrength = getPetInfo(pet)?.maxStrength;
+      const strong = rules2.protectMaxStr && typeof maxStrength === "number" && Number.isFinite(maxStrength) && maxStrength >= maxStrThreshold;
+      const species = String(pet.petSpecies || "").trim();
+      const rarity3 = species ? petCatalog2[species]?.rarity ?? "" : "";
+      const rare = rarity3 !== "" && protectedRarities.has(rarity3);
+      const reasons = [
+        ...Array.from(colors, (color2) => `Mutation: ${color2}`),
+        ...strong ? [`Max STR: ${Math.floor(maxStrength ?? 0)}`] : [],
+        ...rare ? [`Rarity: ${rarity3}`] : []
+      ];
+      if (reasons.length) flagged.push({ pet, reasons, mutations });
+    }
+    return flagged;
+  }
+  var init_protection = __esm({
+    "src/features/sellAllPets/protection.ts"() {
+      "use strict";
+      init_data();
+      init_petValue();
+      init_math();
+      init_restrictions();
+    }
+  });
+
+  // src/features/sellAllPets/flow.ts
+  async function unfavoritedInventoryPets() {
     try {
       await ensureStore();
     } catch {
@@ -21128,582 +21959,69 @@
       Atoms.inventory.myInventory.get().catch(() => null),
       Atoms.inventory.favoriteIds.get().catch(() => [])
     ]);
-    const favSet = new Set(
-      Array.isArray(favoriteIds2) ? favoriteIds2.filter((id) => typeof id === "string") : []
-    );
+    const favorites = new Set(Array.isArray(favoriteIds2) ? favoriteIds2.filter((id) => typeof id === "string") : []);
     const items = Array.isArray(inventory?.items) ? inventory.items : [];
-    const availablePets = [];
-    items.forEach((item, index) => {
-      if (!isInventoryPetItem(item)) return;
-      if (favSet.has(item.id)) return;
-      console.log("[sellAllPets] inventory index", index, item);
-      availablePets.push({ ...item, inventoryIndex: index });
-    });
-    return availablePets;
+    return items.filter(isInventoryPet).filter((pet) => !favorites.has(pet.id));
   }
-  function createDefaultClickHandler(logger) {
-    return async () => {
-      try {
-        logger("sell-all-pets:click");
-      } catch {
-      }
-      await runSellAllPetsFlow(logger);
-    };
-  }
-  async function runDefaultSellAllPetsAction(logger) {
-    const pets = await getUnfavoritedInventoryPets();
-    const detail = { pets, count: pets.length };
-    globalThis.__sellAllPetsCandidates = pets;
-    try {
-      logger("collected-non-favorite-pets", detail);
-    } catch {
+  function totalSellValue(pets) {
+    let total = 0;
+    for (const pet of pets) {
+      const value = computeInventoryItemValue(pet);
+      if (typeof value === "number" && Number.isFinite(value)) total += value;
     }
-    try {
-      globalThis.dispatchEvent?.(
-        new CustomEvent(SELL_ALL_PETS_EVENT, { detail })
-      );
-    } catch {
-    }
-    return pets;
+    return total.toLocaleString("en-US");
   }
-  async function sellPetsFromInventory(pets, logger) {
-    const toSell2 = pets.filter((pet) => typeof pet?.id === "string" && pet.id.trim().length > 0);
-    if (toSell2.length === 0) {
-      try {
-        logger("no-sellable-pets", { requested: pets.length });
-      } catch {
-      }
-      try {
-        globalThis.__sellAllPetsResult = { attempted: 0, sold: 0, failures: [] };
-      } catch {
-      }
+  async function countSaleValue() {
+    try {
+      const value = Number(await Atoms.pets.totalPetSellPrice.get());
+      if (Number.isFinite(value) && value > 0) StatsService.incrementShopStat("petsSoldValue", value);
+    } catch (error) {
+      console.error("[SellPet] Unable to read pet sell price", error);
+    }
+  }
+  async function runSellAllPetsFlow() {
+    await PlayerService.logItems();
+    const pets = await unfavoritedInventoryPets();
+    if (pets.length === 0) return;
+    const flagged = flagProtectedPets(pets);
+    if (flagged.length && !await confirmProtectedPetSale(flagged)) {
+      void toastSimple("Sell all Pets", "Sale cancelled.", "info").catch(() => {
+      });
       return;
     }
-    if (!await confirmHighValuePetSale(toSell2, logger)) {
-      try {
-        logger("sell-pets:cancelled");
-      } catch {
-      }
-      try {
-        toastSimple("Sell all Pets", "Sale cancelled.", "info");
-      } catch {
-      }
-      return;
-    }
-    const failures = [];
+    const totalValue = totalSellValue(pets);
     let sold = 0;
-    const totalValue = computeTotalPetSellValueFromInventory(toSell2);
-    try {
-      logger("sell-pets:total-value", { attempted: toSell2.length, totalValue });
-    } catch {
-    }
-    if (SELL_ALL_PETS_DRY_RUN) {
-      try {
-        logger("sell-pets:dry-run", { attempted: toSell2.length, totalValue });
-      } catch {
-      }
-      try {
-        toastSimple("Sell all Pets", `Dry run: ${toSell2.length} pets detected (no sale).`, "info");
-      } catch {
-      }
-      try {
-        globalThis.__sellAllPetsResult = { attempted: toSell2.length, sold: 0, failures: [] };
-      } catch {
-      }
-      return;
-    }
-    for (const pet of toSell2) {
-      try {
-        logger("sell-pet:start", { id: pet.id, pet });
-      } catch {
-      }
+    let failures = 0;
+    for (const pet of pets) {
       try {
         await PlayerService.sellPet(pet.id);
         sold += 1;
         StatsService.incrementShopStat("petsSoldCount");
-        void (async () => {
-          try {
-            const total = await Atoms.pets.totalPetSellPrice.get();
-            const value = Number(total);
-            if (Number.isFinite(value) && value > 0) {
-              StatsService.incrementShopStat("petsSoldValue", value);
-            }
-          } catch (error) {
-            console.error("[SellPet] Unable to read pet sell price", error);
-          }
-        })();
-        try {
-          logger("sell-pet:success", { id: pet.id, pet });
-        } catch {
-        }
-      } catch (error) {
-        failures.push({ pet, error });
-        try {
-          logger("sell-pet:error", { id: pet.id, error, pet });
-        } catch {
-        }
+        void countSaleValue();
+      } catch {
+        failures += 1;
       }
     }
-    if (failures.length === 0) {
-      toastSimple("Sell all Pets", `${sold} pets have been sold for ${totalValue} coins!`, "success");
-    }
-    try {
-      globalThis.__sellAllPetsResult = { attempted: toSell2.length, sold, failures };
-    } catch {
+    if (failures === 0) {
+      void toastSimple("Sell all Pets", `${sold} pets have been sold for ${totalValue} coins!`, "success").catch(() => {
+      });
     }
     audioPlayer.playSellNotification();
-    try {
-      logger("sell-pets:complete", { attempted: toSell2.length, sold, failures });
-    } catch {
-    }
   }
-  function computeTotalPetSellValueFromInventory(pets) {
-    if (!pets.length) return "";
-    let total = 0;
-    for (const pet of pets) {
-      const value = computeInventoryItemValue(pet);
-      if (typeof value === "number" && Number.isFinite(value)) {
-        total += value;
-      }
-    }
-    return total.toLocaleString("en-US");
-  }
-  async function confirmHighValuePetSale(pets, logger) {
-    const rules2 = lockerRestrictionsService.getSellAllPetsRules();
-    if (!rules2?.enabled) return true;
-    const mutationProtect = /* @__PURE__ */ new Set();
-    if (rules2.protectGold) mutationProtect.add("gold");
-    if (rules2.protectRainbow) mutationProtect.add("rainbow");
-    const maxStrThreshold = Number.isFinite(rules2.maxStrThreshold) ? Math.max(0, Math.min(100, Math.round(rules2.maxStrThreshold))) : 0;
-    const checkMaxStr = !!rules2.protectMaxStr;
-    const protectedRarities = new Set(
-      Array.isArray(rules2.protectedRarities) ? rules2.protectedRarities : []
-    );
-    if (mutationProtect.size === 0 && !checkMaxStr && protectedRarities.size === 0) return true;
-    const flagged = [];
-    for (const pet of pets) {
-      const rawMutations = Array.isArray(pet?.mutations) ? pet.mutations : [];
-      const mutations = rawMutations.filter((m) => typeof m === "string");
-      const foundMutations = mutationProtect.size ? mutations.map((m) => m.toLowerCase()).filter((m) => mutationProtect.has(m)).map((m) => m === "gold" ? "Gold" : "Rainbow") : [];
-      const hasMutation = foundMutations.length > 0;
-      const maxStrength = getPetInfo(pet)?.maxStrength;
-      const strongEnough = checkMaxStr && typeof maxStrength === "number" && Number.isFinite(maxStrength) ? maxStrength >= maxStrThreshold : false;
-      const petSpecies = String(pet.petSpecies || "").trim();
-      const petEntry = petSpecies ? petCatalog2[petSpecies] : null;
-      const petRarity = petEntry?.rarity ?? "";
-      const hasProtectedRarity = protectedRarities.size > 0 && petRarity !== "" && protectedRarities.has(petRarity);
-      if (!hasMutation && !strongEnough && !hasProtectedRarity) continue;
-      const reasons = [];
-      if (hasMutation) {
-        for (const mut of Array.from(new Set(foundMutations))) {
-          reasons.push(`Mutation: ${mut}`);
-        }
-      }
-      if (strongEnough) {
-        reasons.push(`Max STR: ${Math.floor(maxStrength ?? 0)}`);
-      }
-      if (hasProtectedRarity) {
-        reasons.push(`Rarity: ${petRarity}`);
-      }
-      flagged.push({
-        pet,
-        reasons,
-        maxStrength: typeof maxStrength === "number" && Number.isFinite(maxStrength) ? maxStrength : null,
-        mutations
-      });
-    }
-    if (flagged.length === 0) return true;
-    if (!isBrowser()) {
-      try {
-        logger("sell-pets:confirm-unavailable", { flagged: flagged.length });
-      } catch {
-      }
-      return false;
-    }
-    const confirmed = await showSellAllPetsConfirmModal(flagged);
-    if (!confirmed) {
-      try {
-        logger("sell-pets:confirm-cancelled", { flagged: flagged.length });
-      } catch {
-      }
-    }
-    return confirmed;
-  }
-  function showSellAllPetsConfirmModal(flagged) {
-    return new Promise((resolve) => {
-      if (!isBrowser()) {
-        resolve(false);
-        return;
-      }
-      const existing = document.getElementById(SELL_ALL_PETS_CONFIRM_MODAL_ID);
-      if (existing) existing.remove();
-      const overlay2 = document.createElement("div");
-      overlay2.id = SELL_ALL_PETS_CONFIRM_MODAL_ID;
-      overlay2.style.position = "fixed";
-      overlay2.style.inset = "0";
-      overlay2.style.zIndex = "2147483647";
-      overlay2.style.display = "flex";
-      overlay2.style.alignItems = "center";
-      overlay2.style.justifyContent = "center";
-      overlay2.style.background = "rgba(0,0,0,0.6)";
-      const box = document.createElement("div");
-      box.style.minWidth = "320px";
-      box.style.maxWidth = "520px";
-      box.style.background = "#0f1318";
-      box.style.color = "#ffffff";
-      box.style.border = "1px solid rgba(255,255,255,0.15)";
-      box.style.borderRadius = "14px";
-      box.style.boxShadow = "0 12px 40px rgba(0,0,0,0.45)";
-      box.style.padding = "18px 20px";
-      box.style.display = "grid";
-      box.style.gap = "12px";
-      box.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
-      const title = document.createElement("div");
-      title.textContent = "Confirm sell all pets";
-      title.style.fontSize = "18px";
-      title.style.fontWeight = "800";
-      const body = document.createElement("div");
-      body.textContent = "The following pets match protected rules:";
-      body.style.opacity = "0.9";
-      body.style.fontSize = "13px";
-      body.style.lineHeight = "1.4";
-      const list = document.createElement("div");
-      list.style.display = "grid";
-      list.style.gap = "8px";
-      list.style.maxHeight = "260px";
-      list.style.overflow = "auto";
-      list.style.paddingRight = "4px";
-      const buildPetRow = (entry) => {
-        const row = document.createElement("div");
-        row.style.display = "grid";
-        row.style.gridTemplateColumns = "48px 1fr";
-        row.style.gap = "10px";
-        row.style.alignItems = "center";
-        row.style.padding = "6px 8px";
-        row.style.border = "1px solid rgba(255,255,255,0.08)";
-        row.style.borderRadius = "10px";
-        row.style.background = "rgba(255,255,255,0.03)";
-        const imgWrap = document.createElement("div");
-        imgWrap.style.width = "48px";
-        imgWrap.style.height = "48px";
-        imgWrap.style.borderRadius = "10px";
-        imgWrap.style.background = "rgba(255,255,255,0.08)";
-        imgWrap.style.display = "flex";
-        imgWrap.style.alignItems = "center";
-        imgWrap.style.justifyContent = "center";
-        imgWrap.style.overflow = "hidden";
-        const label2 = entry.pet.petSpecies || entry.pet.name || "Pet";
-        const fallback = document.createElement("div");
-        fallback.textContent = String(label2).slice(0, 2).toUpperCase();
-        fallback.style.fontSize = "12px";
-        fallback.style.fontWeight = "700";
-        imgWrap.appendChild(fallback);
-        const species = String(entry.pet.petSpecies || "").trim();
-        const mutations = Array.isArray(entry.mutations) ? entry.mutations.map((m) => String(m ?? "").trim()).filter(Boolean) : [];
-        if (species) {
-          attachSpriteIcon(
-            imgWrap,
-            ["pet"],
-            [species, entry.pet.name || ""],
-            48,
-            "sell-all-pets-confirm",
-            {
-              mutations
-            }
-          );
-        }
-        const info = document.createElement("div");
-        info.style.display = "grid";
-        info.style.gap = "4px";
-        const name = document.createElement("div");
-        name.textContent = entry.pet.name ? `${entry.pet.name} (${entry.pet.petSpecies ?? "Pet"})` : entry.pet.petSpecies ?? "Pet";
-        name.style.fontWeight = "700";
-        name.style.fontSize = "13px";
-        const reasons = document.createElement("div");
-        reasons.style.display = "flex";
-        reasons.style.flexWrap = "wrap";
-        reasons.style.gap = "6px";
-        for (const reason of entry.reasons) {
-          const chip2 = document.createElement("div");
-          chip2.textContent = reason;
-          chip2.style.fontSize = "11px";
-          chip2.style.padding = "2px 6px";
-          chip2.style.borderRadius = "999px";
-          chip2.style.background = "rgba(122,162,255,0.2)";
-          chip2.style.border = "1px solid rgba(122,162,255,0.4)";
-          chip2.style.color = "#dbe7ff";
-          reasons.appendChild(chip2);
-        }
-        info.append(name, reasons);
-        row.append(imgWrap, info);
-        return row;
-      };
-      for (const entry of flagged) {
-        list.appendChild(buildPetRow(entry));
-      }
-      const actions = document.createElement("div");
-      actions.style.display = "flex";
-      actions.style.justifyContent = "flex-end";
-      actions.style.gap = "8px";
-      const btnCancel = document.createElement("button");
-      btnCancel.type = "button";
-      btnCancel.textContent = "Cancel";
-      btnCancel.style.padding = "8px 12px";
-      btnCancel.style.borderRadius = "10px";
-      btnCancel.style.border = "1px solid rgba(255,255,255,0.2)";
-      btnCancel.style.background = "transparent";
-      btnCancel.style.color = "#ffffff";
-      btnCancel.style.cursor = "pointer";
-      const btnConfirm = document.createElement("button");
-      btnConfirm.type = "button";
-      btnConfirm.textContent = "Sell";
-      btnConfirm.style.padding = "8px 14px";
-      btnConfirm.style.borderRadius = "10px";
-      btnConfirm.style.border = "1px solid rgba(122,162,255,0.7)";
-      btnConfirm.style.background = "#1a2644";
-      btnConfirm.style.color = "#ffffff";
-      btnConfirm.style.cursor = "pointer";
-      btnConfirm.style.fontWeight = "700";
-      let settled = false;
-      const close = (value) => {
-        if (settled) return;
-        settled = true;
-        overlay2.remove();
-        document.removeEventListener("keydown", onKeyDown, true);
-        resolve(value);
-      };
-      const onKeyDown = (ev) => {
-        if (ev.key === "Escape") {
-          ev.preventDefault();
-          close(false);
-        }
-      };
-      btnCancel.addEventListener("click", () => close(false));
-      btnConfirm.addEventListener("click", () => close(true));
-      overlay2.addEventListener("click", (ev) => {
-        if (ev.target === overlay2) close(false);
-      });
-      actions.append(btnCancel, btnConfirm);
-      box.append(title, body, list, actions);
-      overlay2.appendChild(box);
-      document.body.appendChild(overlay2);
-      document.addEventListener("keydown", onKeyDown, true);
-      btnConfirm.focus();
-    });
-  }
-  function safeInvokeClick(handler, ev, ctx2, logger) {
-    try {
-      const result = handler(ev, ctx2);
-      if (isPromiseLike(result)) {
-        result.catch((err) => logClickError(err, logger));
-      }
-    } catch (err) {
-      logClickError(err, logger);
-    }
-  }
-  function logClickError(error, logger) {
-    try {
-      logger("sell-all-click-error", error);
-    } catch {
-    }
-  }
-  function isPromiseLike(value) {
-    return !!value && (typeof value === "object" || typeof value === "function") && typeof value.then === "function";
-  }
-  function isInventoryPetItem(item) {
-    return !!item && item.itemType === "Pet" && typeof item.id === "string";
-  }
-  function isBrowser() {
-    return typeof window !== "undefined" && typeof document !== "undefined";
-  }
-  function noSSRController() {
-    return { stop() {
-    }, runOnce() {
-    }, isRunning: () => false };
-  }
-  function norm(s) {
-    return (s ?? "").replace(/\s+/g, " ").trim();
-  }
-  function getLabel(el) {
-    const t = norm(el.textContent);
-    if (t) return t;
-    const a = norm(el.getAttribute("aria-label"));
-    return a;
-  }
-  function getWords(label2) {
-    return label2.trim().split(/\s+/).filter(Boolean);
-  }
-  function isSellTwoWordLabel(label2) {
-    const words = getWords(label2);
-    return words.length === 2 && /^sell$/i.test(words[0]);
-  }
-  function findTargetButton(scope, btnWide, btnStrict, _btnText) {
-    const all = Array.from(/* @__PURE__ */ new Set([
-      ...Array.from(scope.querySelectorAll(btnWide)),
-      ...Array.from(scope.querySelectorAll(btnStrict))
-    ])).filter((b) => b instanceof HTMLButtonElement).filter((b) => !b.classList.contains(DEFAULTS.injectedClass));
-    const target = all.find((b) => {
-      const label2 = getLabel(b);
-      if (/crops/i.test(label2)) return false;
-      if (isSellTwoWordLabel(label2)) return true;
-      if (/^sell$/i.test(label2.trim()) && b.querySelector("canvas")) return true;
-      return false;
-    });
-    return target ?? null;
-  }
-  function ensureInjectedNextTo(targetBtn, injectedClass, injectedText, onClick) {
-    const parent = targetBtn.parentElement || targetBtn.closest(".McFlex, .css-0") || targetBtn.parentNode;
-    if (!parent) return;
-    let injected2 = parent.querySelector(`.${injectedClass}`);
-    if (injected2) {
-      if (targetBtn.nextElementSibling !== injected2) {
-        parent.insertBefore(injected2, targetBtn.nextSibling);
-      }
-      if (injected2.textContent !== injectedText) injected2.textContent = injectedText;
-      return;
-    }
-    injected2 = document.createElement("button");
-    injected2.type = "button";
-    injected2.className = `${injectedClass} chakra-button`;
-    injected2.textContent = injectedText;
-    injected2.setAttribute("aria-label", injectedText);
-    injected2.title = injectedText;
-    injected2.style.marginLeft = "8px";
-    const cs = getComputedStyle(parent);
-    if (cs.display !== "flex") {
-      injected2.style.display = "inline-flex";
-      injected2.style.alignItems = "center";
-    }
-    injected2.addEventListener("click", (ev) => onClick(ev, {
-      host: targetBtn.closest(DEFAULTS.rootSelector),
-      targetBtn,
-      injectedBtn: injected2
-    }));
-    parent.insertBefore(injected2, targetBtn.nextSibling);
-  }
-  function cleanup(root, injectedClass) {
-    root.querySelectorAll(`.${injectedClass}`).forEach((n) => n.remove());
-  }
-  function ensureStyle2(injectedClass, theme) {
-    const STYLE_ID11 = `${injectedClass}-style`;
-    if (document.getElementById(STYLE_ID11)) return;
-    const css4 = `
-.${injectedClass}{
-  font-synthesis: none;
-  -webkit-font-smoothing: antialiased;
-  -webkit-text-size-adjust: 100%;
-  cursor: pointer;
-  display: inline-flex;
-  appearance: none;
-  align-items: center;
-  justify-content: center;
-  user-select: none;
-  white-space: nowrap;
-  vertical-align: middle;
-
-  outline: transparent solid 2px;
-  outline-offset: 2px;
-  line-height: 1.2;
-
-  border-radius: 15px;                        /* aligns with provided design */
-  font-weight: 700;
-  height: auto;
-  min-width: var(--chakra-sizes-10, 2.5rem);
-  box-shadow: rgba(0, 0, 0, 0.3) 0px 4px 12px;
-  transform: translateY(0px);
-  transition: 0.2s;
-
-  border: 2px solid ${theme.border};
-  color: ${theme.text};
-  background: ${theme.bg};
-
-  text-transform: none;
-  overflow: hidden;
-  font-size: 20px;
-  padding-inline-start: var(--chakra-space-4, 1rem);
-  padding-inline-end: var(--chakra-space-4, 1rem);
-  padding-top: var(--chakra-space-3, 0.75rem);
-  padding-bottom: var(--chakra-space-3, 0.75rem);
-
-  -webkit-tap-highlight-color: transparent;
-}
-.${injectedClass}:hover{
-  transform: translateY(-1px);
-  background: ${theme.hoverBg};
-  border-color: ${theme.hoverBorder};
-}
-.${injectedClass}:active{
-  transform: translateY(1px);
-  background: ${theme.activeBg};
-}
-.${injectedClass}:focus-visible{
-  box-shadow: 0 0 0 3px ${theme.ring};
-}
-`.trim();
-    const s = document.createElement("style");
-    s.id = STYLE_ID11;
-    s.textContent = css4;
-    document.head.appendChild(s);
-  }
-  function hookHistory(onNavigate) {
-    const p = history.pushState?.bind(history);
-    const r = history.replaceState?.bind(history);
-    const wrap = (fn) => fn ? function(...args) {
-      const ret = fn.apply(this, args);
-      onNavigate();
-      return ret;
-    } : fn;
-    if (p) history.pushState = wrap(p);
-    if (r) history.replaceState = wrap(r);
-    const onPop = () => onNavigate();
-    window.addEventListener("popstate", onPop);
-    return () => {
-      if (p) history.pushState = p;
-      if (r) history.replaceState = r;
-      window.removeEventListener("popstate", onPop);
-    };
-  }
-  var SELL_ALL_PETS_EVENT, SELL_ALL_PETS_DRY_RUN, SELL_ALL_PETS_CONFIRM_MODAL_ID, DEFAULT_THEME, DEFAULTS;
-  var init_domButton = __esm({
-    "src/features/sellAllPets/domButton.ts"() {
+  var isInventoryPet;
+  var init_flow = __esm({
+    "src/features/sellAllPets/flow.ts"() {
       "use strict";
       init_atoms();
       init_jotai();
       init_player();
-      init_toast();
       init_audioPlayer();
+      init_toast();
       init_stats();
       init_value();
-      init_petValue();
-      init_iconCache();
-      init_restrictions();
-      init_data();
-      SELL_ALL_PETS_EVENT = "sell-all-pets:list";
-      SELL_ALL_PETS_DRY_RUN = false;
-      SELL_ALL_PETS_CONFIRM_MODAL_ID = "tm-sellallpets-confirm";
-      DEFAULT_THEME = {
-        text: "var(--chakra-colors-Neutral-TrueWhite, #FFFFFF)",
-        bg: "var(--chakra-colors-Blue-Magic, #0067B4)",
-        border: "var(--chakra-colors-Blue-Light, #48ADF4)",
-        hoverBg: "var(--chakra-colors-Blue-Light, #48ADF4)",
-        hoverBorder: "var(--chakra-colors-Blue-Baby, #25AAE2)",
-        activeBg: "var(--chakra-colors-Blue-Dark, #264093)",
-        ring: "var(--chakra-ring-color, rgba(66,153,225,0.6))"
-      };
-      DEFAULTS = {
-        // conteneur principal du panel modal pet sell
-        rootSelector: ".McFlex.css-1svwxx0",
-        // gate : bloc qui contient le bouton (hash de classe instable côté Chakra)
-        checkSelector: ".McGrid",
-        // nouveau bouton "Sell Pet"
-        buttonSelectorWide: "button.chakra-button.css-1glc7hj, button.chakra-button, button.css-1glc7hj",
-        buttonSelectorStrict: "button.chakra-button.css-1glc7hj",
-        targetText: "Sell Pet",
-        // Back-compat only
-        injectText: "Sell all Pets",
-        injectedClass: "tm-injected-sell-all",
-        styleId: "tm-injected-sell-all-style"
-      };
+      init_confirmModal();
+      init_protection();
+      isInventoryPet = (item) => !!item && item.itemType === "Pet" && typeof item.id === "string" && item.id.trim().length > 0;
     }
   });
 
@@ -21737,7 +22055,7 @@
       init_player();
       init_keybinds();
       init_keyboard();
-      init_domButton();
+      init_flow();
       sellKeybindsInstalled = false;
     }
   });
@@ -21745,8 +22063,8 @@
   // src/features/keybinds/modalToggles/petHutch.ts
   async function togglePetHutchModal() {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === PET_HUTCH_MODAL_ID) {
+      const current2 = await Atoms.ui.activeModal.get();
+      if (current2 === PET_HUTCH_MODAL_ID) {
         await closeModal(PET_HUTCH_MODAL_ID);
         return;
       }
@@ -21786,8 +22104,8 @@
   // src/features/keybinds/modalToggles/journal.ts
   async function toggleJournalModal() {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === JOURNAL_MODAL_ID) {
+      const current2 = await Atoms.ui.activeModal.get();
+      if (current2 === JOURNAL_MODAL_ID) {
         await closeModal(JOURNAL_MODAL_ID);
         return;
       }
@@ -21826,8 +22144,8 @@
   // src/features/keybinds/modalToggles/decorShed.ts
   async function toggleDecorShedModal() {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === DECOR_SHED_MODAL_ID) {
+      const current2 = await Atoms.ui.activeModal.get();
+      if (current2 === DECOR_SHED_MODAL_ID) {
         await closeModal(DECOR_SHED_MODAL_ID);
         return;
       }
@@ -21867,8 +22185,8 @@
   // src/features/keybinds/modalToggles/toolShack.ts
   async function toggleToolShackModal() {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === TOOL_SHACK_MODAL_ID) {
+      const current2 = await Atoms.ui.activeModal.get();
+      if (current2 === TOOL_SHACK_MODAL_ID) {
         await closeModal(TOOL_SHACK_MODAL_ID);
         return;
       }
@@ -21908,8 +22226,8 @@
   // src/features/keybinds/modalToggles/seedSilo.ts
   async function toggleSeedSiloModal() {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === SEED_SILO_MODAL_ID) {
+      const current2 = await Atoms.ui.activeModal.get();
+      if (current2 === SEED_SILO_MODAL_ID) {
         await closeModal(SEED_SILO_MODAL_ID);
         return;
       }
@@ -21949,8 +22267,8 @@
   // src/features/keybinds/modalToggles/feedingTrough.ts
   async function toggleFeedingTroughModal() {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === FEEDING_TROUGH_MODAL_ID) {
+      const current2 = await Atoms.ui.activeModal.get();
+      if (current2 === FEEDING_TROUGH_MODAL_ID) {
         await closeModal(FEEDING_TROUGH_MODAL_ID);
         return;
       }
@@ -21990,8 +22308,8 @@
   // src/features/keybinds/modalToggles/weatherStation.ts
   async function toggleWeatherStationModal() {
     try {
-      const current = await Atoms.ui.activeModal.get();
-      if (current === WEATHER_STATION_MODAL_ID) {
+      const current2 = await Atoms.ui.activeModal.get();
+      if (current2 === WEATHER_STATION_MODAL_ID) {
         await closeModal(WEATHER_STATION_MODAL_ID);
         return;
       }
@@ -22122,8 +22440,8 @@
             const first = this.library.keys().next();
             return first.done ? null : first.value;
           };
-          const ensureName = (current, prefer) => {
-            if (current && this.library.has(current)) return current;
+          const ensureName = (current2, prefer) => {
+            if (current2 && this.library.has(current2)) return current2;
             if (prefer && this.library.has(prefer)) return prefer;
             return fallback();
           };
@@ -22843,14 +23161,14 @@
             let resolveEnd = null;
             if (awaitEnd) {
               endPromise = new Promise((resolve) => {
-                const cleanup2 = () => {
-                  a.removeEventListener("ended", cleanup2);
-                  a.removeEventListener("error", cleanup2);
+                const cleanup = () => {
+                  a.removeEventListener("ended", cleanup);
+                  a.removeEventListener("error", cleanup);
                   resolve();
                 };
-                resolveEnd = cleanup2;
-                a.addEventListener("ended", cleanup2);
-                a.addEventListener("error", cleanup2);
+                resolveEnd = cleanup;
+                a.addEventListener("ended", cleanup);
+                a.addEventListener("error", cleanup);
               });
             }
             const p = a.play();
@@ -23218,8 +23536,8 @@
       const obj = readAriesPath(PATH_NOTIFIER_RULES);
       if (obj && typeof obj === "object") {
         for (const [id, value] of Object.entries(obj)) {
-          const norm3 = _normalizeRule(value);
-          if (norm3) _rules.set(String(id), norm3);
+          const norm2 = _normalizeRule(value);
+          if (norm2) _rules.set(String(id), norm2);
         }
       }
     } catch {
@@ -23942,7 +24260,7 @@
     _currentWeatherValue = null;
     _started = false;
   }
-  var PATH_NOTIFIER_PREFS, PATH_NOTIFIER_RULES, PATH_NOTIFIER_WEATHER, PATH_NOTIFIER_DEFAULTS, DISPLAY_RARITY, norm2, formatRuleSummary, formatLastSeen, weatherStateSignature, formatWeatherMutation, normalizeNumber, normalizeCycle, normalizeMutations2, mutatorMutations, trimmedString, weatherIndex, _prefs, _weatherPrefs, _weatherPrefsLoaded, _contextDefaults, _contextDefaultsLoaded, _rules, _rulesLoaded, _rulesSubs, _hasOwn, _weatherState, _weatherSig, _weatherSubs, _currentWeatherId, _currentWeatherValue, _unsubWeather, _getPrefBits, _setPrefBits, _rowsById, _lastSig, _state, _unsubShops, _unsubPurchases, _watchGeneration, _subs, _toolInv, _decorInv, _unsubToolInv, _unsubDecorInv, _purchasesSubs, _itemKind, _rawShops, _rawSlot, _viewOf, _sameShopParts, _shopsSubs, BASE_SHOPS_SET, _onDataUpdated, ATOM_WAIT_POLL_MS, ATOM_WAIT_TIMEOUT_MS, STATE_ATOM_LABEL, MY_USER_SLOT_ATOM_LABEL, _started, NotifierService;
+  var PATH_NOTIFIER_PREFS, PATH_NOTIFIER_RULES, PATH_NOTIFIER_WEATHER, PATH_NOTIFIER_DEFAULTS, DISPLAY_RARITY, norm, formatRuleSummary, formatLastSeen, weatherStateSignature, formatWeatherMutation, normalizeNumber, normalizeCycle, normalizeMutations2, mutatorMutations, trimmedString, weatherIndex, _prefs, _weatherPrefs, _weatherPrefsLoaded, _contextDefaults, _contextDefaultsLoaded, _rules, _rulesLoaded, _rulesSubs, _hasOwn, _weatherState, _weatherSig, _weatherSubs, _currentWeatherId, _currentWeatherValue, _unsubWeather, _getPrefBits, _setPrefBits, _rowsById, _lastSig, _state, _unsubShops, _unsubPurchases, _watchGeneration, _subs, _toolInv, _decorInv, _unsubToolInv, _unsubDecorInv, _purchasesSubs, _itemKind, _rawShops, _rawSlot, _viewOf, _sameShopParts, _shopsSubs, BASE_SHOPS_SET, _onDataUpdated, ATOM_WAIT_POLL_MS, ATOM_WAIT_TIMEOUT_MS, STATE_ATOM_LABEL, MY_USER_SLOT_ATOM_LABEL, _started, NotifierService;
   var init_notifier = __esm({
     "src/features/notifier/notifier.ts"() {
       "use strict";
@@ -23969,7 +24287,7 @@
         [rarity2.Divine]: "Divine",
         [rarity2.Celestial]: "Celestial"
       };
-      norm2 = (s) => String(s ?? "").toLowerCase();
+      norm = (s) => String(s ?? "").toLowerCase();
       formatRuleSummary = (rule) => {
         if (!rule) return "";
         const parts = [];
@@ -24287,9 +24605,9 @@
         setContextStopDefaults(context, conf) {
           if (context !== "shops" && context !== "weather") return;
           _ensureContextDefaultsLoaded();
-          const current = _getContextStopDefaultsInternal(context);
+          const current2 = _getContextStopDefaultsInternal(context);
           const loopRaw = Number(conf?.loopIntervalMs);
-          const loopIntervalMs = Number.isFinite(loopRaw) ? Math.max(150, Math.floor(loopRaw)) : current.loopIntervalMs;
+          const loopIntervalMs = Number.isFinite(loopRaw) ? Math.max(150, Math.floor(loopRaw)) : current2.loopIntervalMs;
           const normalizedMode = conf.stopMode === "purchase" ? "purchase" : "manual";
           const normalized = {
             stopMode: context === "weather" ? "manual" : normalizedMode,
@@ -24337,7 +24655,7 @@
           }
           const fr = f.rarity ?? "all";
           if (fr !== "all") {
-            arr = arr.filter((r) => norm2(r.rarity) === fr);
+            arr = arr.filter((r) => norm(r.rarity) === fr);
           }
           return arr;
         },
@@ -26481,51 +26799,36 @@
 
   // src/features/cropPrice/priceWatcher.ts
   function startCropPriceWatcherViaGardenObject() {
-    let cur = null;
+    let gardenObject = null;
     let players = void 0;
     let selectedSlotId = null;
-    let lastPrice = null;
-    const listeners9 = /* @__PURE__ */ new Set();
-    const notify3 = () => {
-      for (const fn of listeners9) try {
-        fn();
-      } catch {
-      }
+    let price = null;
+    const changes3 = new Emitter();
+    const subs = new Subscriptions();
+    const computePrice2 = () => {
+      if (!isPlantObject2(gardenObject)) return null;
+      const slot = resolveGrowSlot(Array.isArray(gardenObject.slots) ? gardenObject.slots : [], selectedSlotId);
+      const slotValue = slot ? positive(valueFromGardenSlot(slot, DefaultPricing, players)) : null;
+      return slotValue ?? positive(valueFromGardenPlant(gardenObject, DefaultPricing, players));
+    };
+    const recompute = () => {
+      const next = computePrice2();
+      if (next === price) return;
+      price = next;
+      changes3.emit();
     };
     let scheduled = false;
-    const scheduleRecomputeAndNotify = () => {
+    const scheduleRecompute = () => {
       if (scheduled) return;
       scheduled = true;
       requestAnimationFrame(() => {
         scheduled = false;
-        recomputeAndNotify();
+        recompute();
       });
     };
-    function computeSelectedSlotPrice() {
-      if (!isPlantObject2(cur)) return null;
-      const slots = Array.isArray(cur.slots) ? cur.slots : [];
-      if (!slots.length) return null;
-      const slot = resolveGrowSlot(slots, selectedSlotId);
-      if (!slot) return null;
-      const val = valueFromGardenSlot(slot, DefaultPricing, players);
-      return Number.isFinite(val) && val > 0 ? val : null;
-    }
-    function computeWholePlantPrice() {
-      if (!isPlantObject2(cur)) return null;
-      const v = valueFromGardenPlant(cur, DefaultPricing, players);
-      return Number.isFinite(v) && v > 0 ? v : null;
-    }
-    function recomputeAndNotify() {
-      const slotVal = computeSelectedSlotPrice();
-      const next = slotVal ?? computeWholePlantPrice() ?? null;
-      if (next !== lastPrice) {
-        lastPrice = next;
-        notify3();
-      }
-    }
-    (async () => {
+    void (async () => {
       try {
-        cur = await myCurrentGardenObject.get();
+        gardenObject = await myCurrentGardenObject.get();
       } catch {
       }
       try {
@@ -26536,40 +26839,40 @@
         selectedSlotId = await myCurrentGrowSlotIndex.get();
       } catch {
       }
-      numPlayers.onChange((n) => {
+      subs.add(numPlayers.onChange((n) => {
         players = n;
-      });
-      myCurrentGardenObject.onChange((v) => {
-        cur = v;
-        scheduleRecomputeAndNotify();
-      });
-      myCurrentGrowSlotIndex.onChange((idx) => {
-        selectedSlotId = Number.isFinite(idx) ? idx : null;
-        scheduleRecomputeAndNotify();
-      });
-      recomputeAndNotify();
+      }));
+      subs.add(myCurrentGardenObject.onChange((next) => {
+        gardenObject = next;
+        scheduleRecompute();
+      }));
+      subs.add(
+        myCurrentGrowSlotIndex.onChange((id) => {
+          selectedSlotId = Number.isFinite(id) ? id : null;
+          scheduleRecompute();
+        })
+      );
+      recompute();
     })();
     return {
-      get() {
-        return lastPrice;
-      },
-      onChange(cb) {
-        listeners9.add(cb);
-        return () => listeners9.delete(cb);
-      },
+      get: () => price,
+      onChange: (cb) => changes3.on(cb),
       stop() {
-        listeners9.clear();
+        changes3.clear();
+        subs.dispose();
       }
     };
   }
-  var isPlantObject2;
+  var isPlantObject2, positive;
   var init_priceWatcher = __esm({
     "src/features/cropPrice/priceWatcher.ts"() {
       "use strict";
       init_atoms();
       init_cropValue();
       init_growSlot();
-      isPlantObject2 = (o) => !!o && o.objectType === "plant";
+      init_emitter();
+      isPlantObject2 = (obj) => !!obj && obj.objectType === "plant";
+      positive = (value) => Number.isFinite(value) && value > 0 ? value : null;
     }
   });
 
@@ -26588,531 +26891,295 @@
       writeAriesPath(PATH_SHOW_CROP_PRICE, next);
     } catch {
     }
-    for (const listener of listeners6) {
-      try {
-        listener(next);
-      } catch {
-      }
-    }
+    changes2.emit(next);
   }
   function onShowCropPriceChange(cb) {
-    listeners6.add(cb);
-    return () => {
-      listeners6.delete(cb);
-    };
+    return changes2.on(cb);
   }
-  var PATH_SHOW_CROP_PRICE, listeners6;
+  var PATH_SHOW_CROP_PRICE, changes2;
   var init_setting = __esm({
     "src/features/cropPrice/setting.ts"() {
       "use strict";
       init_storage();
+      init_emitter();
       PATH_SHOW_CROP_PRICE = "misc.showCropPrice";
-      listeners6 = /* @__PURE__ */ new Set();
+      changes2 = new Emitter();
+    }
+  });
+
+  // src/features/locker/domLockMarks.ts
+  function markLocked(el, look) {
+    const key2 = datasetKey(look.owner);
+    if (el.dataset[key2] === void 0) {
+      const saved = {};
+      for (const prop of [...Object.keys(look.style), "position"]) saved[prop] = el.style.getPropertyValue(prop);
+      el.dataset[key2] = JSON.stringify(saved);
+    }
+    for (const [prop, value] of Object.entries(look.style)) el.style.setProperty(prop, value);
+    if (getComputedStyle(el).position === "static") el.style.setProperty("position", "relative");
+    const cls = glyphClass(look.owner);
+    if (el.querySelector(`span.${cls}`)) return;
+    const glyph = document.createElement("span");
+    glyph.className = cls;
+    glyph.textContent = LOCK_GLYPH;
+    for (const [prop, value] of Object.entries(look.glyph)) glyph.style.setProperty(prop, value);
+    el.appendChild(glyph);
+  }
+  function unmarkLocked(el, owner) {
+    const key2 = datasetKey(owner);
+    const raw = el.dataset[key2];
+    if (raw !== void 0) {
+      let saved = {};
+      try {
+        saved = JSON.parse(raw);
+      } catch {
+      }
+      for (const [prop, value] of Object.entries(saved)) {
+        if (value) el.style.setProperty(prop, value);
+        else el.style.removeProperty(prop);
+      }
+      delete el.dataset[key2];
+    }
+    el.querySelectorAll(`span.${glyphClass(owner)}`).forEach((node) => node.remove());
+  }
+  function startDomLockIndicator(opts) {
+    const subs = new Subscriptions();
+    let running6 = true;
+    const elements = () => Array.from(document.querySelectorAll(opts.selector));
+    const refresh = () => {
+      if (!running6) return;
+      const locked = opts.isLocked();
+      for (const el of elements()) {
+        if (locked && opts.isTarget(el)) markLocked(el, opts.look);
+        else unmarkLocked(el, opts.look.owner);
+      }
+    };
+    const observer2 = new MutationObserver(refresh);
+    observer2.observe(document.documentElement, { childList: true, subtree: true });
+    subs.add(() => observer2.disconnect());
+    refresh();
+    return {
+      refresh,
+      add: (unsubscribe2) => subs.add(unsubscribe2),
+      stop() {
+        running6 = false;
+        subs.dispose();
+        for (const el of elements()) unmarkLocked(el, opts.look.owner);
+      }
+    };
+  }
+  var LOCK_GLYPH, cornerGlyph, datasetKey, glyphClass, datasetAttr, markedElements;
+  var init_domLockMarks = __esm({
+    "src/features/locker/domLockMarks.ts"() {
+      "use strict";
+      init_emitter();
+      LOCK_GLYPH = "\u{1F512}";
+      cornerGlyph = (offsetPx) => ({
+        position: "absolute",
+        top: `-${offsetPx}px`,
+        right: `-${offsetPx}px`,
+        "font-size": "16px",
+        "pointer-events": "none",
+        "user-select": "none",
+        "z-index": "2"
+      });
+      datasetKey = (owner) => `tm${owner.replace(/(^|-)(\w)/g, (_, _dash, c) => c.toUpperCase())}LockStyles`;
+      glyphClass = (owner) => `tm-${owner}-lock`;
+      datasetAttr = (owner) => `tm-${owner}-lock-styles`;
+      markedElements = (owner) => Array.from(document.querySelectorAll(`[data-${datasetAttr(owner)}]`));
     }
   });
 
   // src/features/cropPrice/domTooltip.ts
-  function getQpmGlobal() {
-    return readSharedGlobal("QPM");
-  }
-  function getQpmSizeSpan(inner) {
-    const QPM = getQpmGlobal();
-    if (!QPM) return null;
-    return inner.querySelector("span.qpm-crop-size");
-  }
-  function queryAll(root, sel) {
-    return Array.from(root.querySelectorAll(sel));
-  }
-  function createLogger(option) {
-    if (typeof option === "function") return option;
-    if (option) return (...args) => console.debug("[AppendCropPrice/GO]", ...args);
-    return () => {
-    };
-  }
-  function forEachInner(root, selectors, callback) {
-    queryAll(root, selectors.rootSelector).forEach((rootEl) => {
-      queryAll(rootEl, selectors.innerSelector).forEach(callback);
-    });
-  }
-  function updatePanels(root, selectors, markerClass, text2, locked, showPrice = true) {
-    forEachInner(root, selectors, (inner) => {
-      if (!showPrice || shouldSkipInner(inner, markerClass)) {
-        removeMarker(inner, markerClass);
-        updateLockEmoji(inner, locked);
-        return;
-      }
-      updateLockEmoji(inner, locked);
-      ensureSpanAtEnd(inner, text2, markerClass);
-    });
-  }
-  function getLockerHarvestAllowed() {
-    try {
-      return lockerService.currentHarvestAllowed();
-    } catch {
-      return null;
-    }
-  }
-  function subscribeLocker(handler) {
-    try {
-      return lockerService.onSlotInfoChange(handler);
-    } catch {
-      return null;
-    }
-  }
-  function startCropValuesObserverFromGardenAtom(options = {}) {
-    if (!hasDOM) {
-      return { stop() {
-      }, runOnce() {
-      }, isRunning: () => false };
-    }
-    const selectors = {
-      rootSelector: options.rootSelector ?? DEFAULTS2.rootSelector,
-      innerSelector: options.innerSelector ?? DEFAULTS2.innerSelector
-    };
-    const markerClass = options.markerClass ?? DEFAULTS2.markerClass;
-    const root = options.root ?? document;
-    const logger = createLogger(options.log);
+  function startCropValuesObserverFromGardenAtom() {
     const priceWatcher = startCropPriceWatcherViaGardenObject();
-    const shouldWaitForLocker = lockerService.getState().enabled;
     let running6 = true;
-    let lockerHarvestAllowed = getLockerHarvestAllowed();
-    let lockerReady = !shouldWaitForLocker;
-    let lastRenderedValue = void 0;
-    let lastRenderedLocked = void 0;
-    let lastRenderedShowPrice = void 0;
-    let needsRepositionRender = false;
-    let qpmObserver = null;
+    let harvestAllowed = lockerService.currentHarvestAllowed();
+    let lockerReady = !lockerService.isEnabled();
+    let needsReposition = false;
+    let last = null;
     const render = () => {
-      if (!running6) return;
-      if (!lockerReady) return;
-      cleanupStrayLockedStyles();
-      const value = priceWatcher.get();
-      const locked = lockerHarvestAllowed === false;
-      const showPrice = readShowCropPrice();
-      if (value === lastRenderedValue && locked === lastRenderedLocked && showPrice === lastRenderedShowPrice && !needsRepositionRender) {
+      if (!running6 || !lockerReady) return;
+      unmarkStrayTooltips();
+      const next = { value: priceWatcher.get(), locked: harvestAllowed === false, showPrice: readShowCropPrice() };
+      if (!needsReposition && last && last.value === next.value && last.locked === next.locked && last.showPrice === next.showPrice) {
         return;
       }
-      lastRenderedValue = value;
-      lastRenderedLocked = locked;
-      lastRenderedShowPrice = showPrice;
-      needsRepositionRender = false;
-      updatePanels(root, selectors, markerClass, formatCoins(value), locked, showPrice);
-      logger("render", { value, locked, showPrice });
-    };
-    let lockerReadyTimeout = null;
-    const clearLockerReadyTimeout = () => {
-      if (lockerReadyTimeout == null) return;
-      if (typeof globalThis !== "undefined" && typeof globalThis.clearTimeout === "function") {
-        globalThis.clearTimeout(lockerReadyTimeout);
-      }
-      lockerReadyTimeout = null;
-    };
-    const startLockerReadyTimeout = () => {
-      if (!shouldWaitForLocker || lockerReady || lockerReadyTimeout != null) return;
-      if (typeof globalThis === "undefined" || typeof globalThis.setTimeout !== "function") return;
-      lockerReadyTimeout = globalThis.setTimeout(() => {
-        lockerReadyTimeout = null;
-        if (!lockerReady) {
-          lockerReady = true;
-          render();
+      last = next;
+      needsReposition = false;
+      const text2 = next.value == null ? "-" : formatInteger(next.value, "round");
+      for (const panel of Array.from(document.querySelectorAll(PANEL_SELECTOR))) {
+        for (const block of Array.from(panel.querySelectorAll(BLOCK_SELECTOR))) {
+          if (!(block instanceof HTMLElement)) continue;
+          updateTooltipLock(block, next.locked);
+          if (!next.showPrice || isWrapperBlock(block)) removePriceLine(block);
+          else ensurePriceLine(block, text2);
         }
-      }, 500);
-    };
-    startLockerReadyTimeout();
-    const startQpmObserver = () => {
-      if (qpmObserver) return;
-      if (typeof MutationObserver === "undefined") return;
-      const target = document.body ?? document.documentElement ?? document;
-      if (!target) return;
-      qpmObserver = new MutationObserver((mutations) => {
-        let found = false;
-        for (const mutation of mutations) {
-          for (const node of Array.from(mutation.addedNodes)) {
-            if (!(node instanceof Element)) continue;
-            if (node.classList.contains("qpm-crop-size")) {
-              found = true;
-              break;
-            }
-            if (node.querySelector(".qpm-crop-size")) {
-              found = true;
-              break;
-            }
-          }
-          if (found) break;
-        }
-        if (found) {
-          needsRepositionRender = true;
-          render();
-        }
-      });
-      qpmObserver.observe(target, { childList: true, subtree: true });
-    };
-    const stopQpmObserver = () => {
-      if (!qpmObserver) return;
-      try {
-        qpmObserver.disconnect();
-      } catch {
       }
-      qpmObserver = null;
     };
-    startQpmObserver();
-    const lockerOff = subscribeLocker((event) => {
-      lockerHarvestAllowed = event.harvestAllowed ?? null;
-      clearLockerReadyTimeout();
-      if (!lockerReady && shouldWaitForLocker) {
-        lockerReady = true;
-      }
+    const readyTimer = lockerReady ? null : setTimeout(() => {
+      lockerReady = true;
+      render();
+    }, LOCKER_FIRST_VERDICT_WAIT_MS);
+    const offLocker = lockerService.onSlotInfoChange((event) => {
+      harvestAllowed = event.harvestAllowed;
+      if (readyTimer != null) clearTimeout(readyTimer);
+      lockerReady = true;
       render();
     });
-    if (shouldWaitForLocker && lockerOff == null) {
-      clearLockerReadyTimeout();
-      lockerReady = true;
-    }
+    const qpmObserver = new MutationObserver((mutations) => {
+      const added = mutations.some(
+        (m) => Array.from(m.addedNodes).some(
+          (node) => node instanceof Element && (node.classList.contains("qpm-crop-size") || !!node.querySelector(".qpm-crop-size"))
+        )
+      );
+      if (!added) return;
+      needsReposition = true;
+      render();
+    });
+    qpmObserver.observe(document.body ?? document.documentElement, { childList: true, subtree: true });
     render();
-    const off = priceWatcher.onChange(render);
-    const offShowPrice = onShowCropPriceChange(() => render());
+    const offPrice = priceWatcher.onChange(render);
+    const offShowPrice = onShowCropPriceChange(render);
     return {
       stop() {
         if (!running6) return;
         running6 = false;
-        clearLockerReadyTimeout();
-        stopQpmObserver();
-        off?.();
+        if (readyTimer != null) clearTimeout(readyTimer);
+        qpmObserver.disconnect();
+        offPrice();
         offShowPrice();
-        if (typeof lockerOff === "function") {
-          try {
-            lockerOff();
-          } catch {
-          }
-        }
+        offLocker();
         priceWatcher.stop();
-        logger("stopped");
-      },
-      runOnce() {
-        render();
-      },
-      isRunning() {
-        return running6;
       }
     };
   }
-  function shouldSkipInner(inner, markerClass) {
-    if (!(inner instanceof Element)) return false;
-    if (!inner.matches(OMA_SEL)) return false;
-    const matchedSel = [".McFlex.css-1l3zq7", ".McFlex.css-11dqzw"].find((s) => inner.matches(s));
-    if (matchedSel) {
-      const sameTypeChild = Array.from(inner.children).find((c) => c.matches(matchedSel));
-      if (sameTypeChild && getRealElementChildren(sameTypeChild, markerClass).length > 1) return true;
+  function isWrapperBlock(block) {
+    if (!block.matches(BLOCK_SELECTOR)) return false;
+    const own = BLOCK_SELECTORS.find((selector) => block.matches(selector));
+    if (own) {
+      const inner = Array.from(block.children).find((child) => child.matches(own));
+      if (inner && contentChildren(inner).length > 1) return true;
     }
-    const realChildren = getRealElementChildren(inner, markerClass);
-    return realChildren.length === 1;
+    return contentChildren(block).length === 1;
   }
-  function getRealElementChildren(inner, markerClass) {
-    const children = Array.from(inner.children);
-    return children.filter(
-      (el) => !(el.tagName === "SPAN" && el.classList.contains(markerClass))
-    );
+  function removePriceLine(block) {
+    block.querySelectorAll(`:scope > span.${PRICE_CLASS}`).forEach((line) => line.remove());
   }
-  function removeMarker(inner, markerClass) {
-    const markers = inner.querySelectorAll(`:scope > span.${CSS.escape(markerClass)}`);
-    markers.forEach((m) => m.remove());
+  function ensurePriceLine(block, text2) {
+    const lines = Array.from(block.querySelectorAll(`:scope > span.${PRICE_CLASS}`));
+    lines.slice(1).forEach((extra) => extra.remove());
+    let line = lines[0];
+    if (!line) {
+      line = document.createElement("span");
+      line.className = PRICE_CLASS;
+      Object.assign(line.style, { display: "block", marginTop: "6px", fontWeight: "700", color: "#FFD84D", fontSize: "14px" });
+    }
+    let icon = line.querySelector(`:scope > span.${PRICE_ICON_CLASS}`);
+    if (!icon) {
+      icon = document.createElement("span");
+      icon.className = PRICE_ICON_CLASS;
+      icon.setAttribute("aria-hidden", "true");
+      Object.assign(icon.style, {
+        width: "18px",
+        height: "18px",
+        display: "inline-block",
+        verticalAlign: "middle",
+        marginRight: "6px",
+        userSelect: "none",
+        pointerEvents: "none",
+        backgroundSize: "contain",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center"
+      });
+      line.insertBefore(icon, line.firstChild);
+    }
+    const background = `url("${coin2.img64}")`;
+    if (icon.style.backgroundImage !== background) icon.style.backgroundImage = background;
+    let label2 = line.querySelector(`:scope > span.${PRICE_LABEL_CLASS}`);
+    if (!label2) {
+      label2 = document.createElement("span");
+      label2.className = PRICE_LABEL_CLASS;
+      label2.style.display = "inline";
+      line.appendChild(label2);
+    }
+    if (label2.textContent !== text2) label2.textContent = text2;
+    const qpmSize = readSharedGlobal("QPM") ? block.querySelector("span.qpm-crop-size") : null;
+    if (qpmSize) {
+      if (qpmSize.nextElementSibling !== line) block.insertBefore(line, qpmSize.nextElementSibling);
+    } else if (block.lastElementChild !== line) {
+      block.appendChild(line);
+    }
   }
   function isTooltipRoot(el) {
     if (TOOLTIP_ROOT_CLASSES.some((cls) => el.classList.contains(cls))) return true;
     const children = Array.from(el.children);
-    const grid = children.find((c) => c.classList.contains("McGrid"));
-    if (!grid) return false;
-    const extra = children.filter(
-      (c) => c !== grid && !c.classList.contains(LOCK_ICON_CLASS)
-    );
-    return extra.length === 0;
+    const grid = children.find((child) => child.classList.contains("McGrid"));
+    return !!grid && children.every((child) => child === grid || child.classList.contains(TOOLTIP_GLYPH_CLASS));
   }
-  function cleanupLegacyLockIcons() {
-    if (typeof document === "undefined") return;
-    const all = document.querySelectorAll(`span.${LOCK_ICON_CLASS}`);
-    all.forEach((icon) => {
-      const parent = icon.parentElement;
-      if (!parent || !isTooltipRoot(parent)) icon.remove();
-    });
-  }
-  function cleanupStrayLockedStyles() {
-    if (typeof document === "undefined") return;
-    const all = document.querySelectorAll("[data-tm-locker-original-border]");
-    all.forEach((el) => {
-      if (!isTooltipRoot(el)) {
-        restoreTooltipStyles(el);
-        removeLockIcon(el);
-      }
-    });
-  }
-  function getTooltipRoot(inner) {
+  function tooltipRootOf(block) {
     for (const cls of TOOLTIP_ROOT_CLASSES) {
-      const direct = inner.closest(`.${cls}`);
-      if (direct) return direct;
+      const root2 = block.closest(`.${cls}`);
+      if (root2) return root2;
     }
-    const grid = inner.parentElement;
-    if (!(grid instanceof HTMLElement) || !grid.classList.contains("McGrid")) return null;
-    const parent = grid.parentElement;
-    if (!(parent instanceof HTMLElement)) return null;
-    return isTooltipRoot(parent) ? parent : null;
+    const grid = block.parentElement;
+    if (!grid?.classList.contains("McGrid")) return null;
+    const root = grid.parentElement;
+    return root && isTooltipRoot(root) ? root : null;
   }
-  function updateLockEmoji(inner, locked) {
-    if (!(inner instanceof HTMLElement)) return;
-    inner.querySelectorAll(":scope > span.tm-locker-lock-emoji").forEach((node) => node.remove());
-    cleanupLegacyLockIcons();
-    cleanupStrayLockedStyles();
-    const textTarget = inner.querySelector(LOCK_TEXT_SELECTOR) ?? inner.querySelector(":scope > .chakra-text");
-    const tooltipRoot = getTooltipRoot(inner);
-    const legacyOuter = inner.closest(".css-502lyi");
-    if (legacyOuter && legacyOuter !== tooltipRoot) {
-      restoreTooltipStyles(legacyOuter);
-      removeLockIcon(legacyOuter);
+  function unmarkStrayTooltips() {
+    for (const el of markedElements(TOOLTIP_LOCK_LOOK.owner)) {
+      if (!isTooltipRoot(el)) unmarkLocked(el, TOOLTIP_LOCK_LOOK.owner);
     }
-    if (!locked) {
-      if (textTarget) {
-        restoreTextContent(textTarget);
-        restoreTextStyles(textTarget);
-      }
-      if (tooltipRoot) {
-        restoreTooltipStyles(tooltipRoot);
-        removeLockIcon(tooltipRoot);
-      }
-      return;
-    }
-    if (textTarget) {
-      restoreTextContent(textTarget);
-    }
-    if (tooltipRoot) {
-      storeOriginalTooltipStyles(tooltipRoot);
-      applyLockedTooltipStyles(tooltipRoot);
-      ensureLockIcon(tooltipRoot);
-    }
-  }
-  function restoreTextStyles(textTarget) {
-    restoreStyleFromDataset(textTarget, DATASET_KEY_COLOR, "color");
-    restoreStyleFromDataset(textTarget, DATASET_KEY_DISPLAY, "display");
-    restoreStyleFromDataset(textTarget, DATASET_KEY_ALIGN, "align-items");
-  }
-  function restoreTextContent(textTarget) {
-    const originalHtml = textTarget.dataset[DATASET_KEY_TEXT];
-    if (originalHtml !== void 0) {
-      textTarget.innerHTML = originalHtml;
-      delete textTarget.dataset[DATASET_KEY_TEXT];
-      return;
-    }
-    const currentHtml = textTarget.innerHTML;
-    const sanitizedHtml = stripLockPrefix(currentHtml);
-    if (sanitizedHtml !== currentHtml) {
-      textTarget.innerHTML = sanitizedHtml;
-    }
-  }
-  function restoreStyleFromDataset(el, datasetKey2, cssProperty) {
-    const datasetMap = el.dataset;
-    const originalValue = datasetMap[datasetKey2];
-    if (originalValue === void 0) return;
-    if (originalValue) {
-      el.style.setProperty(cssProperty, originalValue);
-    } else {
-      el.style.removeProperty(cssProperty);
-    }
-    delete datasetMap[datasetKey2];
-  }
-  function storeOriginalTooltipStyles(tooltip) {
-    if (tooltip.dataset[DATASET_KEY_BORDER] === void 0) {
-      tooltip.dataset[DATASET_KEY_BORDER] = tooltip.style.border ?? "";
-    }
-    if (tooltip.dataset[DATASET_KEY_BORDER_RADIUS] === void 0) {
-      tooltip.dataset[DATASET_KEY_BORDER_RADIUS] = tooltip.style.borderRadius ?? "";
-    }
-    if (tooltip.dataset[DATASET_KEY_OVERFLOW] === void 0) {
-      tooltip.dataset[DATASET_KEY_OVERFLOW] = tooltip.style.overflow ?? "";
-    }
-  }
-  function applyLockedTooltipStyles(tooltip) {
-    tooltip.style.border = LOCK_BORDER_STYLE;
-    tooltip.style.borderRadius = LOCK_BORDER_RADIUS;
-    tooltip.style.overflow = "visible";
-    const computedPosition = typeof window !== "undefined" ? window.getComputedStyle(tooltip).position : tooltip.style.position || "static";
-    if (computedPosition === "static") {
-      if (tooltip.dataset[DATASET_KEY_POSITION] === void 0) {
-        tooltip.dataset[DATASET_KEY_POSITION] = tooltip.style.position ?? "";
-      }
-      tooltip.style.position = "relative";
-    }
-  }
-  function restoreTooltipStyles(tooltip) {
-    const originalBorder = tooltip.dataset[DATASET_KEY_BORDER];
-    if (originalBorder !== void 0) {
-      if (originalBorder) {
-        tooltip.style.border = originalBorder;
-      } else {
-        tooltip.style.removeProperty("border");
-      }
-      delete tooltip.dataset[DATASET_KEY_BORDER];
-    } else {
-      tooltip.style.removeProperty("border");
-    }
-    const originalBorderRadius = tooltip.dataset[DATASET_KEY_BORDER_RADIUS];
-    if (originalBorderRadius !== void 0) {
-      if (originalBorderRadius) {
-        tooltip.style.borderRadius = originalBorderRadius;
-      } else {
-        tooltip.style.removeProperty("border-radius");
-      }
-      delete tooltip.dataset[DATASET_KEY_BORDER_RADIUS];
-    } else {
-      tooltip.style.removeProperty("border-radius");
-    }
-    const originalOverflow = tooltip.dataset[DATASET_KEY_OVERFLOW];
-    if (originalOverflow !== void 0) {
-      if (originalOverflow) {
-        tooltip.style.overflow = originalOverflow;
-      } else {
-        tooltip.style.removeProperty("overflow");
-      }
-      delete tooltip.dataset[DATASET_KEY_OVERFLOW];
-    } else {
-      tooltip.style.removeProperty("overflow");
-    }
-    const originalPosition = tooltip.dataset[DATASET_KEY_POSITION];
-    if (originalPosition !== void 0) {
-      if (originalPosition) {
-        tooltip.style.position = originalPosition;
-      } else {
-        tooltip.style.removeProperty("position");
-      }
-      delete tooltip.dataset[DATASET_KEY_POSITION];
-    } else if (tooltip.style.position === "relative") {
-      tooltip.style.removeProperty("position");
-    }
-  }
-  function ensureLockIcon(tooltip) {
-    const icons = tooltip.querySelectorAll(`:scope > span.${LOCK_ICON_CLASS}`);
-    icons.forEach((node, idx) => {
-      if (idx > 0) node.remove();
+    document.querySelectorAll(`span.${TOOLTIP_GLYPH_CLASS}`).forEach((glyph) => {
+      const parent = glyph.parentElement;
+      if (!parent || !isTooltipRoot(parent)) glyph.remove();
     });
-    let icon = icons[0] ?? null;
-    if (!icon) {
-      icon = document.createElement("span");
-      icon.className = LOCK_ICON_CLASS;
-      tooltip.append(icon);
-    }
-    icon.textContent = LOCK_EMOJI;
-    icon.style.position = "absolute";
-    icon.style.top = "0";
-    icon.style.right = "0";
-    icon.style.left = "";
-    icon.style.transform = "translate(50%, -50%)";
-    icon.style.fontSize = "18px";
-    icon.style.padding = "2px 8px";
-    icon.style.borderRadius = "999px";
-    icon.style.border = "none";
-    icon.style.background = "transparent";
-    icon.style.color = "white";
-    icon.style.pointerEvents = "none";
-    icon.style.userSelect = "none";
-    icon.style.zIndex = "1";
   }
-  function removeLockIcon(tooltip) {
-    tooltip.querySelectorAll(`:scope > span.${LOCK_ICON_CLASS}`).forEach((node) => node.remove());
+  function updateTooltipLock(block, locked) {
+    const root = tooltipRootOf(block);
+    if (!root) return;
+    if (locked) markLocked(root, TOOLTIP_LOCK_LOOK);
+    else unmarkLocked(root, TOOLTIP_LOCK_LOOK.owner);
   }
-  function stripLockPrefix(content) {
-    return content.replace(LOCK_PREFIX_REGEX, "");
-  }
-  function ensureSpanAtEnd(inner, text2, markerClass) {
-    const spans = Array.from(
-      inner.querySelectorAll(`:scope > span.${CSS.escape(markerClass)}`)
-    );
-    let span = spans[0] ?? null;
-    for (let i = 1; i < spans.length; i++) spans[i].remove();
-    if (!span) {
-      span = document.createElement("span");
-      span.className = markerClass;
-    }
-    span.style.display = "block";
-    span.style.marginTop = "6px";
-    span.style.fontWeight = "700";
-    span.style.color = "#FFD84D";
-    span.style.fontSize = "14px";
-    let icon = span.querySelector(`:scope > span.${ICON_CLASS}`);
-    if (!icon) {
-      icon = document.createElement("span");
-      icon.className = ICON_CLASS;
-      icon.setAttribute("aria-hidden", "true");
-      icon.style.width = "18px";
-      icon.style.height = "18px";
-      icon.style.display = "inline-block";
-      icon.style.verticalAlign = "middle";
-      icon.style.marginRight = "6px";
-      icon.style.userSelect = "none";
-      icon.style.pointerEvents = "none";
-      icon.style.backgroundSize = "contain";
-      icon.style.backgroundRepeat = "no-repeat";
-      icon.style.backgroundPosition = "center";
-      span.insertBefore(icon, span.firstChild);
-    }
-    const bg = `url("${coin2.img64}")`;
-    if (icon.style.backgroundImage !== bg) {
-      icon.style.backgroundImage = bg;
-    }
-    let label2 = span.querySelector(`:scope > span.${LABEL_CLASS}`);
-    if (!label2) {
-      label2 = document.createElement("span");
-      label2.className = LABEL_CLASS;
-      label2.style.display = "inline";
-      span.appendChild(label2);
-    }
-    if (label2.textContent !== text2) {
-      label2.textContent = text2;
-    }
-    const sizeSpan = getQpmSizeSpan(inner);
-    if (sizeSpan) {
-      const next = sizeSpan.nextElementSibling;
-      if (next !== span) {
-        inner.insertBefore(span, next);
-      }
-      return;
-    }
-    if (inner.lastElementChild !== span) {
-      inner.appendChild(span);
-    }
-  }
-  var DEFAULTS2, OMA_SEL, ICON_CLASS, LABEL_CLASS, LOCK_TEXT_SELECTOR, LOCK_EMOJI, LOCK_BORDER_STYLE, LOCK_BORDER_RADIUS, TOOLTIP_ROOT_CLASSES, LOCK_ICON_CLASS, DATASET_KEY_COLOR, DATASET_KEY_DISPLAY, DATASET_KEY_ALIGN, DATASET_KEY_TEXT, DATASET_KEY_BORDER, DATASET_KEY_BORDER_RADIUS, DATASET_KEY_POSITION, DATASET_KEY_OVERFLOW, LOCK_PREFIX_REGEX, PRICE_FALLBACK, nfUS, formatCoins, hasDOM;
+  var PANEL_SELECTOR, BLOCK_SELECTORS, BLOCK_SELECTOR, PRICE_CLASS, PRICE_ICON_CLASS, PRICE_LABEL_CLASS, TOOLTIP_ROOT_CLASSES, TOOLTIP_LOCK_LOOK, TOOLTIP_GLYPH_CLASS, LOCKER_FIRST_VERDICT_WAIT_MS, contentChildren;
   var init_domTooltip = __esm({
     "src/features/cropPrice/domTooltip.ts"() {
       "use strict";
       init_priceWatcher();
       init_setting();
       init_data();
+      init_format();
       init_locker();
+      init_domLockMarks();
       init_pageContext();
-      DEFAULTS2 = {
-        rootSelector: ".McFlex.css-fsggty, .McFlex.css-6prrn",
-        innerSelector: ".McFlex.css-1l3zq7, .McFlex.css-11dqzw",
-        markerClass: "tm-crop-price"
-      };
-      OMA_SEL = ".McFlex.css-1l3zq7, .McFlex.css-11dqzw";
-      ICON_CLASS = "tm-crop-price-icon";
-      LABEL_CLASS = "tm-crop-price-label";
-      LOCK_TEXT_SELECTOR = ":scope > .chakra-text.css-1jc0opy";
-      LOCK_EMOJI = "\u{1F512}";
-      LOCK_BORDER_STYLE = "2px solid rgb(188, 53, 215)";
-      LOCK_BORDER_RADIUS = "15px";
+      PANEL_SELECTOR = ".McFlex.css-fsggty, .McFlex.css-6prrn";
+      BLOCK_SELECTORS = [".McFlex.css-1l3zq7", ".McFlex.css-11dqzw"];
+      BLOCK_SELECTOR = BLOCK_SELECTORS.join(", ");
+      PRICE_CLASS = "tm-crop-price";
+      PRICE_ICON_CLASS = "tm-crop-price-icon";
+      PRICE_LABEL_CLASS = "tm-crop-price-label";
       TOOLTIP_ROOT_CLASSES = ["css-129757o", "css-7cru8u"];
-      LOCK_ICON_CLASS = "tm-locker-tooltip-lock-icon";
-      DATASET_KEY_COLOR = "tmLockerOriginalColor";
-      DATASET_KEY_DISPLAY = "tmLockerOriginalDisplay";
-      DATASET_KEY_ALIGN = "tmLockerOriginalAlign";
-      DATASET_KEY_TEXT = "tmLockerOriginalHtml";
-      DATASET_KEY_BORDER = "tmLockerOriginalBorder";
-      DATASET_KEY_BORDER_RADIUS = "tmLockerOriginalBorderRadius";
-      DATASET_KEY_POSITION = "tmLockerOriginalPosition";
-      DATASET_KEY_OVERFLOW = "tmLockerOriginalOverflow";
-      LOCK_PREFIX_REGEX = new RegExp(`^${LOCK_EMOJI}(?:\\u00A0|\\s|&nbsp;)*`);
-      PRICE_FALLBACK = "\u2014";
-      nfUS = new Intl.NumberFormat("en-US");
-      formatCoins = (value) => value == null ? PRICE_FALLBACK : nfUS.format(Math.max(0, Math.round(value)));
-      hasDOM = typeof window !== "undefined" && typeof document !== "undefined";
+      TOOLTIP_LOCK_LOOK = {
+        owner: "locker-tooltip",
+        style: { border: "2px solid rgb(188, 53, 215)", "border-radius": "15px", overflow: "visible" },
+        glyph: {
+          position: "absolute",
+          top: "0",
+          right: "0",
+          transform: "translate(50%, -50%)",
+          "font-size": "18px",
+          padding: "2px 8px",
+          "border-radius": "999px",
+          color: "white",
+          "pointer-events": "none",
+          "user-select": "none",
+          "z-index": "1"
+        }
+      };
+      TOOLTIP_GLYPH_CLASS = `tm-${TOOLTIP_LOCK_LOOK.owner}-lock`;
+      LOCKER_FIRST_VERDICT_WAIT_MS = 500;
+      contentChildren = (block) => Array.from(block.children).filter((el) => !(el.tagName === "SPAN" && el.classList.contains(PRICE_CLASS)));
     }
   });
 
@@ -27189,7 +27256,7 @@
     };
     const syncValueNodeUnsafe = () => {
       debugState4.objectType = currentGardenObject2?.objectType ?? null;
-      if (!running6 || !currentCard2 || currentCard2.destroyed || !geometry || !isPlantObject3(currentGardenObject2) || // Coupé depuis le menu Misc : le badge disparaît, la carte reste celle du jeu.
+      if (!running6 || !currentCard2 || currentCard2.destroyed || !geometry || !isPlantObject3(currentGardenObject2) || // Switched off in the Misc menu: the card is left as the game drew it.
       !readShowCropPrice()) {
         detachValueText();
         return;
@@ -27202,7 +27269,7 @@
         detachValueText();
         return;
       }
-      const text2 = formatCoins2(value);
+      const text2 = formatInteger(value, "round");
       if (!valueText) {
         graphicsCtor ?? (graphicsCtor = findGraphicsCtor(getStage(state5)));
         if (graphicsCtor) {
@@ -27260,63 +27327,57 @@
         debugState4.hasCoinTexture = !!coinTexture;
       } catch (error) {
         debugState4.lastError = String(error?.message ?? error);
-        console.warn("[cropValuePixi] syncValueNode failed, clearing overlay", error);
+        console.warn("[cropPrice] badge sync failed, clearing overlay", error);
         try {
           detachValueText();
         } catch {
         }
       }
     };
-    const offCard = watchGardenInfoCard((card5, geom) => {
-      currentCard2 = card5;
-      geometry = geom;
-      hitAreaBaseHeight = card5?.hitArea?.height ?? 0;
-      detachValueText();
-      debugState4.attached = !!card5;
-      if (card5) syncValueNode();
+    const subs = new Subscriptions();
+    subs.add(
+      watchGardenInfoCard((card5, geom) => {
+        currentCard2 = card5;
+        geometry = geom;
+        hitAreaBaseHeight = card5?.hitArea?.height ?? 0;
+        detachValueText();
+        debugState4.attached = !!card5;
+        if (card5) syncValueNode();
+      })
+    );
+    subs.add(priceWatcher.onChange(syncValueNode));
+    subs.add(onShowCropPriceChange(() => syncValueNode()));
+    void Atoms.data.myCurrentGardenObject.get().then((initial) => {
+      currentGardenObject2 = initial;
+      syncValueNode();
+    }).catch(() => {
     });
-    const offPrice = priceWatcher.onChange(syncValueNode);
-    const offShowPrice = onShowCropPriceChange(() => syncValueNode());
-    let unsubGardenObject = null;
-    void (async () => {
-      try {
-        currentGardenObject2 = await Atoms.data.myCurrentGardenObject.get();
-        if (running6) syncValueNode();
-      } catch {
-      }
-      try {
-        const unsub = await Atoms.data.myCurrentGardenObject.onChange((next) => {
-          currentGardenObject2 = next;
-          syncValueNode();
-        });
-        if (typeof unsub === "function") {
-          if (running6) unsubGardenObject = unsub;
-          else unsub();
-        }
-      } catch {
-      }
-    })();
+    subs.add(
+      Atoms.data.myCurrentGardenObject.onChange((next) => {
+        currentGardenObject2 = next;
+        syncValueNode();
+      })
+    );
     return {
       stop() {
         if (!running6) return;
         running6 = false;
-        unsubGardenObject?.();
-        offCard();
-        offPrice?.();
-        offShowPrice();
+        subs.dispose();
         priceWatcher.stop();
         detachValueText();
         currentCard2 = null;
       }
     };
   }
-  var VALUE_TEXT_STYLE, VALUE_BADGE_GAP, VALUE_ICON_SIZE, VALUE_ICON_GAP, BADGE_PADDING_X, BADGE_PADDING_Y, BADGE_RADIUS, BADGE_COLOR, BADGE_ALPHA, PRICE_FALLBACK2, nfUS2, formatCoins2, coinTexture, coinTexturePromise;
+  var VALUE_TEXT_STYLE, VALUE_BADGE_GAP, VALUE_ICON_SIZE, VALUE_ICON_GAP, BADGE_PADDING_X, BADGE_PADDING_Y, BADGE_RADIUS, BADGE_COLOR, BADGE_ALPHA, coinTexture, coinTexturePromise;
   var init_badge = __esm({
     "src/features/cropPrice/badge.ts"() {
       "use strict";
       init_priceWatcher();
       init_setting();
       init_pageContext();
+      init_format();
+      init_emitter();
       init_data();
       init_atoms();
       init_gardenInfoCard();
@@ -27330,9 +27391,6 @@
       BADGE_RADIUS = 6;
       BADGE_COLOR = 0;
       BADGE_ALPHA = 0.55;
-      PRICE_FALLBACK2 = "\u2014";
-      nfUS2 = new Intl.NumberFormat("en-US");
-      formatCoins2 = (value) => value == null ? PRICE_FALLBACK2 : nfUS2.format(Math.max(0, Math.round(value)));
       coinTexture = null;
       coinTexturePromise = null;
     }
@@ -27471,6 +27529,111 @@
       LOCK_ICON_STYLE = { fontSize: 16 };
       LOCK_ICON_X_NUDGE = 4;
       LOCK_ICON_Y_NUDGE = 4;
+    }
+  });
+
+  // src/features/sellAllPets/domButton.ts
+  function findSellPetButton(panel) {
+    for (const btn of Array.from(panel.querySelectorAll(BUTTON_SELECTOR))) {
+      if (!(btn instanceof HTMLButtonElement) || btn.classList.contains(INJECTED_CLASS)) continue;
+      const label2 = labelOf2(btn);
+      if (/crops/i.test(label2)) continue;
+      const words = label2.split(/\s+/).filter(Boolean);
+      if (words.length === 2 && /^sell$/i.test(words[0])) return btn;
+      if (/^sell$/i.test(label2) && btn.querySelector("canvas")) return btn;
+    }
+    return null;
+  }
+  function placeNextTo(target) {
+    const parent = target.parentElement || target.closest(".McFlex, .css-0");
+    if (!parent) return;
+    const existing = parent.querySelector(`.${INJECTED_CLASS}`);
+    if (existing) {
+      if (target.nextElementSibling !== existing) parent.insertBefore(existing, target.nextSibling);
+      if (existing.textContent !== LABEL) existing.textContent = LABEL;
+      return;
+    }
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `${INJECTED_CLASS} chakra-button`;
+    btn.textContent = LABEL;
+    btn.title = LABEL;
+    btn.setAttribute("aria-label", LABEL);
+    btn.style.marginLeft = "8px";
+    if (getComputedStyle(parent).display !== "flex") {
+      btn.style.display = "inline-flex";
+      btn.style.alignItems = "center";
+    }
+    btn.addEventListener("click", () => {
+      void runSellAllPetsFlow().catch(() => {
+      });
+    });
+    parent.insertBefore(btn, target.nextSibling);
+  }
+  function ensureStyle2() {
+    const id = `${INJECTED_CLASS}-style`;
+    if (document.getElementById(id)) return;
+    const style2 = document.createElement("style");
+    style2.id = id;
+    style2.textContent = `
+.${INJECTED_CLASS} {
+  display: inline-flex; align-items: center; justify-content: center; appearance: none; cursor: pointer;
+  user-select: none; white-space: nowrap; vertical-align: middle; text-transform: none; overflow: hidden;
+  -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; font-synthesis: none;
+  outline: transparent solid 2px; outline-offset: 2px; line-height: 1.2; height: auto;
+  min-width: var(--chakra-sizes-10, 2.5rem);
+  padding: var(--chakra-space-3, 0.75rem) var(--chakra-space-4, 1rem);
+  border: 2px solid ${THEME.border}; border-radius: 15px;
+  color: ${THEME.text}; background: ${THEME.bg};
+  font-size: 20px; font-weight: 700;
+  box-shadow: rgba(0, 0, 0, 0.3) 0px 4px 12px; transform: translateY(0px); transition: 0.2s;
+}
+.${INJECTED_CLASS}:hover { transform: translateY(-1px); background: ${THEME.hoverBg}; border-color: ${THEME.hoverBorder}; }
+.${INJECTED_CLASS}:active { transform: translateY(1px); background: ${THEME.activeBg}; }
+.${INJECTED_CLASS}:focus-visible { box-shadow: 0 0 0 3px ${THEME.ring}; }
+`.trim();
+    document.head.appendChild(style2);
+  }
+  function startInjectSellAllPets() {
+    ensureStyle2();
+    let pending6 = false;
+    const processPanels = () => {
+      if (pending6) return;
+      pending6 = true;
+      requestAnimationFrame(() => {
+        pending6 = false;
+        for (const panel of Array.from(document.querySelectorAll(PANEL_SELECTOR2))) {
+          const target = panel.querySelector(PANEL_GATE_SELECTOR) ? findSellPetButton(panel) : null;
+          if (target) placeNextTo(target);
+          else panel.querySelectorAll(`.${INJECTED_CLASS}`).forEach((n) => n.remove());
+        }
+      });
+    };
+    const observer2 = new MutationObserver(processPanels);
+    observer2.observe(document.documentElement, { childList: true, subtree: true });
+    processPanels();
+    return { stop: () => observer2.disconnect() };
+  }
+  var PANEL_SELECTOR2, PANEL_GATE_SELECTOR, BUTTON_SELECTOR, INJECTED_CLASS, LABEL, THEME, labelOf2;
+  var init_domButton = __esm({
+    "src/features/sellAllPets/domButton.ts"() {
+      "use strict";
+      init_flow();
+      PANEL_SELECTOR2 = ".McFlex.css-1svwxx0";
+      PANEL_GATE_SELECTOR = ".McGrid";
+      BUTTON_SELECTOR = "button.chakra-button.css-1glc7hj, button.chakra-button, button.css-1glc7hj";
+      INJECTED_CLASS = "tm-injected-sell-all";
+      LABEL = "Sell all Pets";
+      THEME = {
+        text: "var(--chakra-colors-Neutral-TrueWhite, #FFFFFF)",
+        bg: "var(--chakra-colors-Blue-Magic, #0067B4)",
+        border: "var(--chakra-colors-Blue-Light, #48ADF4)",
+        hoverBg: "var(--chakra-colors-Blue-Light, #48ADF4)",
+        hoverBorder: "var(--chakra-colors-Blue-Baby, #25AAE2)",
+        activeBg: "var(--chakra-colors-Blue-Dark, #264093)",
+        ring: "var(--chakra-ring-color, rgba(66,153,225,0.6))"
+      };
+      labelOf2 = (el) => (el.textContent || "").replace(/\s+/g, " ").trim() || (el.getAttribute("aria-label") ?? "").replace(/\s+/g, " ").trim();
     }
   });
 
@@ -27816,7 +27979,7 @@
       init_gardenInfoCard();
       init_context();
       init_pageContext();
-      init_domButton();
+      init_flow();
       init_atoms();
       ACTION_HUD_LABEL = "ActionHud";
       BUTTON_FACE_LABEL = "McButtonFace";
@@ -27834,86 +27997,6 @@
       HOVER_SCALE = 1.08;
       HOVER_SCALE_EASE = 0.25;
       HOVER_SCALE_SETTLE_EPSILON = 1e-3;
-    }
-  });
-
-  // src/features/locker/domLockMarks.ts
-  function markLocked(el, look) {
-    const key2 = datasetKey(look.owner);
-    if (el.dataset[key2] === void 0) {
-      const saved = {};
-      for (const prop of [...Object.keys(look.style), "position"]) saved[prop] = el.style.getPropertyValue(prop);
-      el.dataset[key2] = JSON.stringify(saved);
-    }
-    for (const [prop, value] of Object.entries(look.style)) el.style.setProperty(prop, value);
-    if (getComputedStyle(el).position === "static") el.style.setProperty("position", "relative");
-    const cls = glyphClass(look.owner);
-    if (el.querySelector(`span.${cls}`)) return;
-    const glyph = document.createElement("span");
-    glyph.className = cls;
-    glyph.textContent = LOCK_GLYPH;
-    Object.assign(glyph.style, {
-      position: "absolute",
-      top: `-${look.glyphOffsetPx}px`,
-      right: `-${look.glyphOffsetPx}px`,
-      fontSize: "16px",
-      pointerEvents: "none",
-      userSelect: "none",
-      zIndex: "2"
-    });
-    el.appendChild(glyph);
-  }
-  function unmarkLocked(el, owner) {
-    const key2 = datasetKey(owner);
-    const raw = el.dataset[key2];
-    if (raw !== void 0) {
-      let saved = {};
-      try {
-        saved = JSON.parse(raw);
-      } catch {
-      }
-      for (const [prop, value] of Object.entries(saved)) {
-        if (value) el.style.setProperty(prop, value);
-        else el.style.removeProperty(prop);
-      }
-      delete el.dataset[key2];
-    }
-    el.querySelectorAll(`span.${glyphClass(owner)}`).forEach((node) => node.remove());
-  }
-  function startDomLockIndicator(opts) {
-    const subs = new Subscriptions();
-    let running6 = true;
-    const elements = () => Array.from(document.querySelectorAll(opts.selector));
-    const refresh = () => {
-      if (!running6) return;
-      const locked = opts.isLocked();
-      for (const el of elements()) {
-        if (locked && opts.isTarget(el)) markLocked(el, opts.look);
-        else unmarkLocked(el, opts.look.owner);
-      }
-    };
-    const observer2 = new MutationObserver(refresh);
-    observer2.observe(document.documentElement, { childList: true, subtree: true });
-    subs.add(() => observer2.disconnect());
-    refresh();
-    return {
-      refresh,
-      add: (unsubscribe2) => subs.add(unsubscribe2),
-      stop() {
-        running6 = false;
-        subs.dispose();
-        for (const el of elements()) unmarkLocked(el, opts.look.owner);
-      }
-    };
-  }
-  var LOCK_GLYPH, datasetKey, glyphClass;
-  var init_domLockMarks = __esm({
-    "src/features/locker/domLockMarks.ts"() {
-      "use strict";
-      init_emitter();
-      LOCK_GLYPH = "\u{1F512}";
-      datasetKey = (owner) => `tm${owner.replace(/(^|-)(\w)/g, (_, _dash, c) => c.toUpperCase())}LockStyles`;
-      glyphClass = (owner) => `tm-${owner}-lock`;
     }
   });
 
@@ -27947,7 +28030,7 @@
           overflow: "",
           "z-index": "1000"
         },
-        glyphOffsetPx: 4
+        glyph: cornerGlyph(4)
       };
       hasSellCropsButton = (container) => /sell\s*crops/i.test((container.querySelector("button")?.textContent || "").trim());
     }
@@ -27957,7 +28040,7 @@
   function startEggHatchLockIndicator() {
     let currentEggId = null;
     const indicator = startDomLockIndicator({
-      look: { owner: "egg", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyphOffsetPx: 8 },
+      look: { owner: "egg", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyph: cornerGlyph(8) },
       selector: ".css-502lyi",
       isTarget: (el) => (el.textContent || "").toLowerCase().includes("egg"),
       isLocked: () => lockerRestrictionsService.isEggLocked(currentEggId)
@@ -27991,7 +28074,7 @@
   }
   function startDecorPickupLockIndicator() {
     const indicator = startDomLockIndicator({
-      look: { owner: "decor", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyphOffsetPx: 8 },
+      look: { owner: "decor", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyph: cornerGlyph(8) },
       selector: ".css-502lyi",
       isTarget: looksLikeDecorTooltip,
       isLocked: () => lockerRestrictionsService.isDecorPickupLocked()
@@ -28705,8 +28788,8 @@
       if (!sets.length) return null;
       let intersection = new Set(sets[0]);
       for (let i = 1; i < sets.length; i++) {
-        const current = sets[i];
-        intersection = new Set([...intersection].filter((value) => current.has(value)));
+        const current2 = sets[i];
+        intersection = new Set([...intersection].filter((value) => current2.has(value)));
       }
       return intersection;
     };
@@ -29132,7 +29215,7 @@
   }
   function attachInventorySorting(userConfig = {}) {
     const cfg = {
-      ...DEFAULTS3,
+      ...DEFAULTS,
       ...userConfig
     };
     const mapExtraByFilter = { ...MAP_EXTRA_BY_FILTER_DEFAULT, ...cfg.mapExtraByFilter || {} };
@@ -29251,9 +29334,9 @@
       if (!hasCurrent && grid) {
         setGrid(null);
       }
-      const current = hasCurrent ? grid : null;
+      const current2 = hasCurrent ? grid : null;
       const next = document.querySelector(cfg.gridSelector);
-      if (next !== current) {
+      if (next !== current2) {
         setGrid(next);
         if (next) {
           update();
@@ -29624,7 +29707,7 @@
     const attachIfPossible = () => {
       if (controller) return controller;
       if (waitForGrid) {
-        const selector = cfg.gridSelector ?? DEFAULTS3.gridSelector;
+        const selector = cfg.gridSelector ?? DEFAULTS.gridSelector;
         const hasGrid = !!document.querySelector(selector);
         const hasHutch = !!document.querySelector(PET_HUTCH_ROOT_SELECTOR);
         if (!hasGrid && !hasHutch) {
@@ -29685,7 +29768,7 @@
       }
     };
   }
-  var DEFAULTS3, INVENTORY_SEARCH_INPUT_SELECTOR, BASE_SORT, ORDER, SORT_KEY_PATH, SORT_KEY_SET, SORT_DIRECTION_PATH, SORT_DIRECTION_SET, DEFAULT_DIRECTION_LABEL, DIRECTION_LABELS_DEFAULT, getPetAbilityDisplayName, INVENTORY_VALUE_VISIBILITY_PATH, resolveVisibilityFromStoredValue, loadPersistedInventoryValueVisibility, persistInventoryValueVisibility, shouldDisplayInventoryValues, setShouldDisplayInventoryValues, getShouldDisplayInventoryValues, DEFAULT_DIRECTION_BY_SORT_KEY, DIRECTION_ORDER, isPersistedSortKey, isPersistedSortDirection, loadPersistedSortKey, persistSortKey, loadPersistedSortDirection, persistSortDirection, MAP_EXTRA_BY_FILTER_DEFAULT, FILTER_CONTEXT_ITEM_TYPES_CACHE, FILTER_CONTEXT_LISTENERS, addFilterContextListener, notifyFilterContextListeners, LABEL_BY_VALUE_DEFAULT, INVENTORY_BASE_INDEX_DATASET_KEY, INVENTORY_ITEM_CARD_SELECTORS, INVENTORY_ITEMS_CONTAINER_SELECTOR, INVENTORY_NOISE_SELECTOR, INVENTORY_STRENGTH_WRAPPER_SELECTOR, INVENTORY_STRENGTH_TEXT_SELECTOR, INVENTORY_FAVORITE_BUTTON_SELECTOR, INVENTORY_ITEM_CARD_SELECTOR, INVENTORY_VALUE_CONTAINER_SELECTOR, INVENTORY_VALUE_ELEMENT_CLASS, INVENTORY_VALUE_TEXT_CLASS, INVENTORY_VALUE_DATASET_KEY, FILTERED_VALUE_LOADING, FILTERED_VALUE_UNKNOWN, VALUE_SUMMARY_ICON_CLASS, VALUE_SUMMARY_TEXT_CLASS, VALUE_SUMMARY_ICON_SRC, VALUE_SUMMARY_ICON_BACKGROUND, debounce, labelIsChecked, normalize, createFilterContextKey, areSetsEqual, getCachedItemTypesForKey, getCachedItemTypesForContext, setCachedItemTypesForKey, getInventorySearchInput, getInventorySearchQuery, getNormalizedInventorySearchQuery, logFilteredInventorySearchResults, RARITY_ORDER, RARITY_RANK, getRarityRank, SPECIES_FIELDS, normalizeSpeciesKey, clampNumber, collectSpeciesCandidates, getInventoryItemSizePercent, collectMutations, getInventoryItemMutations, FILTER_LABEL_TO_ITEM_TYPES, ITEM_TYPE_TO_FILTER_KEYS, getExtrasForFilterKey, getExtrasForItemType, getInventoryCardElement, clearInventoryNoiseText, findAncestorWithDescendant, alignInventoryStrengthText, INVENTORY_COMPACT_VALUE_UNITS, INVENTORY_FULL_VALUE_FORMATTER, formatInventoryItemCompactValue, formatInventoryItemFullValue, getInventoryItemValue, parseStrengthValue, TM_STRENGTH_LABEL_CLASS, TM_STRENGTH_CURRENT_CLASS, TM_STRENGTH_MAX_CLASS, TM_STRENGTH_BADGE_CLASS, TM_STRENGTH_IS_MAX_DATASET_KEY, PET_HUTCH_HEADER_TEXT, PET_INVENTORY_HEADER_TEXT, PET_NAME_SELECTOR, PET_HUTCH_ROOT_SELECTOR, PET_HUTCH_LIST_SELECTOR, PET_HUTCH_INVENTORY_LIST_SELECTOR, PET_HUTCH_VISIBILITY_STYLE, RAINBOW_BADGE_TEXT_GRADIENT, getPetMutationTone, applyStrengthBadgeTone, ensureStrengthBadge, ensureStrengthTextParts, getValueSummaryElement, ensureValueSummaryContent, setValueSummaryText, stringOrEmpty, pickNestedString, pickFirstNestedString, plantCatalogEntry, petCatalogEntry, eggCatalogEntry, toolCatalogEntry, decorCatalogEntry, SEED_NAME_PATHS, SEED_RARITY_PATHS, CROP_NAME_PATHS, CROP_RARITY_PATHS, PLANT_NAME_PATHS, PLANT_RARITY_PATHS, createPlantLookup, CATALOG_LOOKUPS, getCatalogLookup, getInventoryItemName, QUANTITY_ONE_TYPES, getInventoryItemQuantity, getInventoryItemRarity, readNestedValue, readNestedStringField, readNestedNumberField, findSectionContainerByHeaderText, getPetCardName, getPetNameCandidates, isPetItem, applyPetItemsToContainer, setPetHutchContainersHidden, updatePetHutchSections, petStatsBySpecies, lookupPetStats, getPetStrengthInfo, getPetStrength2, compareByNameThenTypeThenId;
+  var DEFAULTS, INVENTORY_SEARCH_INPUT_SELECTOR, BASE_SORT, ORDER, SORT_KEY_PATH, SORT_KEY_SET, SORT_DIRECTION_PATH, SORT_DIRECTION_SET, DEFAULT_DIRECTION_LABEL, DIRECTION_LABELS_DEFAULT, getPetAbilityDisplayName, INVENTORY_VALUE_VISIBILITY_PATH, resolveVisibilityFromStoredValue, loadPersistedInventoryValueVisibility, persistInventoryValueVisibility, shouldDisplayInventoryValues, setShouldDisplayInventoryValues, getShouldDisplayInventoryValues, DEFAULT_DIRECTION_BY_SORT_KEY, DIRECTION_ORDER, isPersistedSortKey, isPersistedSortDirection, loadPersistedSortKey, persistSortKey, loadPersistedSortDirection, persistSortDirection, MAP_EXTRA_BY_FILTER_DEFAULT, FILTER_CONTEXT_ITEM_TYPES_CACHE, FILTER_CONTEXT_LISTENERS, addFilterContextListener, notifyFilterContextListeners, LABEL_BY_VALUE_DEFAULT, INVENTORY_BASE_INDEX_DATASET_KEY, INVENTORY_ITEM_CARD_SELECTORS, INVENTORY_ITEMS_CONTAINER_SELECTOR, INVENTORY_NOISE_SELECTOR, INVENTORY_STRENGTH_WRAPPER_SELECTOR, INVENTORY_STRENGTH_TEXT_SELECTOR, INVENTORY_FAVORITE_BUTTON_SELECTOR, INVENTORY_ITEM_CARD_SELECTOR, INVENTORY_VALUE_CONTAINER_SELECTOR, INVENTORY_VALUE_ELEMENT_CLASS, INVENTORY_VALUE_TEXT_CLASS, INVENTORY_VALUE_DATASET_KEY, FILTERED_VALUE_LOADING, FILTERED_VALUE_UNKNOWN, VALUE_SUMMARY_ICON_CLASS, VALUE_SUMMARY_TEXT_CLASS, VALUE_SUMMARY_ICON_SRC, VALUE_SUMMARY_ICON_BACKGROUND, debounce, labelIsChecked, normalize, createFilterContextKey, areSetsEqual, getCachedItemTypesForKey, getCachedItemTypesForContext, setCachedItemTypesForKey, getInventorySearchInput, getInventorySearchQuery, getNormalizedInventorySearchQuery, logFilteredInventorySearchResults, RARITY_ORDER, RARITY_RANK, getRarityRank, SPECIES_FIELDS, normalizeSpeciesKey, clampNumber, collectSpeciesCandidates, getInventoryItemSizePercent, collectMutations, getInventoryItemMutations, FILTER_LABEL_TO_ITEM_TYPES, ITEM_TYPE_TO_FILTER_KEYS, getExtrasForFilterKey, getExtrasForItemType, getInventoryCardElement, clearInventoryNoiseText, findAncestorWithDescendant, alignInventoryStrengthText, INVENTORY_COMPACT_VALUE_UNITS, INVENTORY_FULL_VALUE_FORMATTER, formatInventoryItemCompactValue, formatInventoryItemFullValue, getInventoryItemValue, parseStrengthValue, TM_STRENGTH_LABEL_CLASS, TM_STRENGTH_CURRENT_CLASS, TM_STRENGTH_MAX_CLASS, TM_STRENGTH_BADGE_CLASS, TM_STRENGTH_IS_MAX_DATASET_KEY, PET_HUTCH_HEADER_TEXT, PET_INVENTORY_HEADER_TEXT, PET_NAME_SELECTOR, PET_HUTCH_ROOT_SELECTOR, PET_HUTCH_LIST_SELECTOR, PET_HUTCH_INVENTORY_LIST_SELECTOR, PET_HUTCH_VISIBILITY_STYLE, RAINBOW_BADGE_TEXT_GRADIENT, getPetMutationTone, applyStrengthBadgeTone, ensureStrengthBadge, ensureStrengthTextParts, getValueSummaryElement, ensureValueSummaryContent, setValueSummaryText, stringOrEmpty, pickNestedString, pickFirstNestedString, plantCatalogEntry, petCatalogEntry, eggCatalogEntry, toolCatalogEntry, decorCatalogEntry, SEED_NAME_PATHS, SEED_RARITY_PATHS, CROP_NAME_PATHS, CROP_RARITY_PATHS, PLANT_NAME_PATHS, PLANT_RARITY_PATHS, createPlantLookup, CATALOG_LOOKUPS, getCatalogLookup, getInventoryItemName, QUANTITY_ONE_TYPES, getInventoryItemQuantity, getInventoryItemRarity, readNestedValue, readNestedStringField, readNestedNumberField, findSectionContainerByHeaderText, getPetCardName, getPetNameCandidates, isPetItem, applyPetItemsToContainer, setPetHutchContainersHidden, updatePetHutchSections, petStatsBySpecies, lookupPetStats, getPetStrengthInfo, getPetStrength2, compareByNameThenTypeThenId;
   var init_sorting = __esm({
     "src/features/inventory/sorting.ts"() {
       "use strict";
@@ -29694,7 +29777,7 @@
       init_value();
       init_cropSize();
       init_storage();
-      DEFAULTS3 = {
+      DEFAULTS = {
         // Updated to new Inventory root grid container (game UI update)
         gridSelector: "div.McGrid.css-1kv58ap",
         filtersBlockSelector: ".McGrid.css-o1vp12",
@@ -30138,10 +30221,10 @@
         }
       };
       findAncestorWithDescendant = (start2, selector) => {
-        let current = start2;
-        while (current) {
-          if (current.querySelector(selector)) return current;
-          current = current.parentElement;
+        let current2 = start2;
+        while (current2) {
+          if (current2.querySelector(selector)) return current2;
+          current2 = current2.parentElement;
         }
         return null;
       };
@@ -30308,19 +30391,19 @@
       };
       ensureStrengthTextParts = (textEl) => {
         let label2 = textEl.querySelector(`.${TM_STRENGTH_LABEL_CLASS}`);
-        let current = textEl.querySelector(`.${TM_STRENGTH_CURRENT_CLASS}`);
+        let current2 = textEl.querySelector(`.${TM_STRENGTH_CURRENT_CLASS}`);
         let max = textEl.querySelector(`.${TM_STRENGTH_MAX_CLASS}`);
-        if (!label2 || !current || !max) {
+        if (!label2 || !current2 || !max) {
           textEl.textContent = "";
           label2 = document.createElement("span");
           label2.className = TM_STRENGTH_LABEL_CLASS;
-          current = document.createElement("span");
-          current.className = TM_STRENGTH_CURRENT_CLASS;
+          current2 = document.createElement("span");
+          current2.className = TM_STRENGTH_CURRENT_CLASS;
           max = document.createElement("span");
           max.className = TM_STRENGTH_MAX_CLASS;
-          textEl.append(label2, current, max);
+          textEl.append(label2, current2, max);
         }
-        return { label: label2, current, max };
+        return { label: label2, current: current2, max };
       };
       getValueSummaryElement = (wrap) => {
         if (!wrap) return null;
@@ -30380,14 +30463,14 @@
       };
       stringOrEmpty = (value) => typeof value === "string" ? value.trim() : "";
       pickNestedString = (source, path) => {
-        let current = source;
+        let current2 = source;
         for (const key2 of path) {
-          if (!current || typeof current !== "object") {
+          if (!current2 || typeof current2 !== "object") {
             return "";
           }
-          current = current[key2];
+          current2 = current2[key2];
         }
-        return stringOrEmpty(current);
+        return stringOrEmpty(current2);
       };
       pickFirstNestedString = (source, paths) => {
         for (const path of paths) {
@@ -30545,13 +30628,13 @@
         const headers = Array.from(document.querySelectorAll("p.chakra-text"));
         const header = headers.find((el) => (el.textContent ?? "").trim() === headerText) ?? null;
         if (!header) return null;
-        let current = header;
-        while (current && current !== document.body) {
-          const next = current.nextElementSibling;
+        let current2 = header;
+        while (current2 && current2 !== document.body) {
+          const next = current2.nextElementSibling;
           if (next && next.querySelector(INVENTORY_ITEM_CARD_SELECTOR)) {
             return next;
           }
-          current = current.parentElement;
+          current2 = current2.parentElement;
         }
         return null;
       };
@@ -30970,8 +31053,8 @@
     const out = [];
     if (!Array.isArray(logs)) return out;
     for (const raw of logs) {
-      const norm3 = normalizeEntry(raw);
-      if (norm3) out.push(norm3);
+      const norm2 = normalizeEntry(raw);
+      if (norm2) out.push(norm2);
     }
     return out;
   }
@@ -31033,8 +31116,8 @@
       if (!Array.isArray(parsed)) return [];
       const out = [];
       for (const item of parsed) {
-        const norm3 = normalizeEntry(item);
-        if (norm3) out.push(norm3);
+        const norm2 = normalizeEntry(item);
+        if (norm2) out.push(norm2);
       }
       return out;
     } catch {
@@ -31075,11 +31158,11 @@
     return { added, updated };
   }
   function syncHistory(prevSnapshot, nextSnapshot) {
-    const history2 = loadHistory();
+    const history = loadHistory();
     const { added, updated } = diffSnapshots(prevSnapshot, nextSnapshot);
-    if (!added.length && !updated.length) return history2;
+    if (!added.length && !updated.length) return history;
     const map2 = /* @__PURE__ */ new Map();
-    for (const h2 of history2) map2.set(entryKey(h2), h2);
+    for (const h2 of history) map2.set(entryKey(h2), h2);
     let changed = false;
     const upsert = (entry) => {
       const key2 = entryKey(entry);
@@ -31091,7 +31174,7 @@
     };
     updated.forEach(upsert);
     added.forEach(upsert);
-    if (!changed) return history2;
+    if (!changed) return history;
     const merged = Array.from(map2.values());
     saveHistory(merged);
     return merged;
@@ -31212,9 +31295,9 @@
     return activeFilter;
   }
   function computeFilteredHistory(filter) {
-    const history2 = getActivityLogHistory();
-    if (filter === "all") return history2;
-    return history2.filter((entry) => classifyEntryAction(entry.action) === filter);
+    const history = getActivityLogHistory();
+    if (filter === "all") return history;
+    return history.filter((entry) => classifyEntryAction(entry.action) === filter);
   }
   function getFilteredHistoryForReopen() {
     return computeFilteredHistory(activeFilter);
@@ -31241,9 +31324,9 @@
       return fallback;
     }
   }
-  function computeActionCounts(history2) {
+  function computeActionCounts(history) {
     const counts = /* @__PURE__ */ new Map();
-    for (const entry of history2) {
+    for (const entry of history) {
       const key2 = classifyEntryAction(entry.action);
       counts.set(key2, (counts.get(key2) ?? 0) + 1);
     }
@@ -31323,9 +31406,9 @@
     toolbarState2.closedButton.caret.text = expanded ? CARET_OPEN : CARET_CLOSED;
   }
   function buildToolbar(graphicsCtor, textCtor, containerCtor, maxWidth) {
-    const history2 = getActivityLogHistory();
-    const counts = computeActionCounts(history2);
-    const total = history2.length;
+    const history = getActivityLogHistory();
+    const counts = computeActionCounts(history);
+    const total = history.length;
     const container = new containerCtor();
     container.label = FILTER_TOOLBAR_LABEL;
     const closedButton = buildClosedButton(graphicsCtor, textCtor, containerCtor, counts, total);
@@ -31499,8 +31582,8 @@
   function startActivityLogFilterPixi() {
     void (async () => {
       try {
-        const current = await Atoms.ui.activeModal.get();
-        modalOpen2 = current === ACTIVITY_LOG_MODAL_ID;
+        const current2 = await Atoms.ui.activeModal.get();
+        modalOpen2 = current2 === ACTIVITY_LOG_MODAL_ID;
       } catch {
       }
       try {
@@ -31800,7 +31883,7 @@
       writeAriesPath(STATE_PATH2, state5);
     } catch {
     }
-    for (const listener of listeners7) {
+    for (const listener of listeners6) {
       try {
         listener(state5);
       } catch {
@@ -31918,10 +32001,10 @@
       state5.trackingStartedAt = Date.now();
       saveState(state5);
     }
-    const current = loadState();
-    if (current.bootstrapped && current.trackingStartedAt <= 0) {
-      current.trackingStartedAt = current.lastHatchAt > 0 ? current.lastHatchAt : Date.now();
-      saveState(current);
+    const current2 = loadState();
+    if (current2.bootstrapped && current2.trackingStartedAt <= 0) {
+      current2.trackingStartedAt = current2.lastHatchAt > 0 ? current2.lastHatchAt : Date.now();
+      saveState(current2);
     }
     let unsubscribe2 = null;
     try {
@@ -31935,7 +32018,7 @@
       }
     };
   }
-  var STATE_PATH2, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, listeners7, cachedState, HatchTracker;
+  var STATE_PATH2, HATCH_ACTION, DOUBLE_HATCH_ACTIONS, SEEN_LIMIT, listeners6, cachedState, HatchTracker;
   var init_tracker = __esm({
     "src/features/hatch/tracker.ts"() {
       "use strict";
@@ -31948,7 +32031,7 @@
       HATCH_ACTION = "hatchEgg";
       DOUBLE_HATCH_ACTIONS = /* @__PURE__ */ new Set(["doublehatch", "doublehatchii"]);
       SEEN_LIMIT = 4e3;
-      listeners7 = /* @__PURE__ */ new Set();
+      listeners6 = /* @__PURE__ */ new Set();
       cachedState = null;
       HatchTracker = {
         getState() {
@@ -31980,726 +32063,12 @@
         // since the server's own never resets except on the outcome itself. Only
         // `setOffset` moves a counter by hand.
         subscribe(listener) {
-          listeners7.add(listener);
+          listeners6.add(listener);
           return () => {
-            listeners7.delete(listener);
+            listeners6.delete(listener);
           };
         }
       };
-    }
-  });
-
-  // src/ui/kit/theme.ts
-  function group(prefix, values, unit = "") {
-    return Object.entries(values).map(([key2, value]) => `--qmm-${prefix}${kebab(key2)}:${value}${unit};`);
-  }
-  function themeVariables() {
-    return [
-      ":root{",
-      ...group("", color),
-      ...group("gradient-", gradient),
-      ...group("shadow-", shadow),
-      ...group("radius-", radius, "px"),
-      ...group("space-", space, "px"),
-      ...group("fs-", fontSize, "px"),
-      `--qmm-font-mono:${fontMono};`,
-      // Compatibility names read by feature code that predates the tokens.
-      // Remove each once nothing outside the kit references it.
-      "--qmm-border-2:var(--qmm-border);",
-      "--qws-text:var(--qmm-text);",
-      "--qws-text-dim:var(--qmm-text-soft);",
-      "--qws-border:var(--qmm-border-strong);",
-      "--qws-border-2:var(--qmm-border);",
-      "--qws-panel:var(--qmm-panel-bg);",
-      "--qws-accent:var(--qmm-accent);",
-      "--qws-shadow:var(--qmm-shadow-window);",
-      "--qws-blur:8px;",
-      "}"
-    ].join("\n");
-  }
-  var color, gradient, shadow, radius, space, fontSize, fontMono, layer, kebab;
-  var init_theme = __esm({
-    "src/ui/kit/theme.ts"() {
-      "use strict";
-      color = {
-        accent: "#5eead4",
-        accentSoft: "rgba(94,234,212,0.12)",
-        accentHover: "rgba(94,234,212,0.22)",
-        accentBorder: "rgba(94,234,212,0.3)",
-        accentBorderHover: "rgba(94,234,212,0.55)",
-        text: "#e7eef7",
-        textSoft: "rgba(226,232,240,0.75)",
-        textDim: "rgba(226,232,240,0.45)",
-        border: "rgba(255,255,255,0.08)",
-        borderHover: "rgba(255,255,255,0.16)",
-        borderStrong: "rgba(255,255,255,0.14)",
-        cardBg: "rgba(255,255,255,0.03)",
-        hoverBg: "rgba(255,255,255,0.06)",
-        mutedBg: "rgba(0,0,0,0.18)",
-        fieldBg: "rgba(0,0,0,0.3)",
-        fieldBorder: "rgba(255,255,255,0.12)",
-        track: "rgba(255,255,255,0.1)",
-        sunken: "#080c12",
-        surface: "#101620",
-        panelBg: "rgba(17,24,35,0.8)",
-        scrollbar: "rgba(94,234,212,0.2)",
-        scrim: "rgba(0,0,0,0.55)",
-        danger: "#ef4444",
-        dangerSoft: "rgba(239,68,68,0.12)",
-        dangerHover: "rgba(239,68,68,0.2)",
-        dangerBorder: "rgba(239,68,68,0.3)",
-        dangerBorderHover: "rgba(239,68,68,0.55)",
-        warn: "#fbbf24",
-        warnSoft: "rgba(251,191,36,0.12)",
-        warnBorder: "rgba(251,191,36,0.55)",
-        gold: "#FFC734",
-        rainbow: "#c084fc"
-      };
-      gradient = {
-        panel: "linear-gradient(160deg, rgba(15,20,30,0.95) 0%, rgba(10,14,20,0.95) 60%, rgba(8,12,18,0.96) 100%)",
-        tabBar: "linear-gradient(120deg, rgba(22,28,40,0.9), rgba(12,17,26,0.92))",
-        head: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))"
-      };
-      shadow = {
-        panel: "0 18px 44px rgba(0,0,0,0.45)",
-        window: "0 10px 36px rgba(0,0,0,0.45)",
-        modal: "0 24px 64px rgba(0,0,0,0.55)"
-      };
-      radius = { sm: 6, md: 9, lg: 12, xl: 16, pill: 999 };
-      space = { xs: 4, sm: 6, md: 8, lg: 10, xl: 12 };
-      fontSize = { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 };
-      fontMono = "ui-monospace, SFMono-Regular, Consolas, monospace";
-      layer = { hud: 1000010, window: 2000001 };
-      kebab = (key2) => key2.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
-    }
-  });
-
-  // src/ui/kit/styles/chrome.ts
-  var chromeCss;
-  var init_chrome = __esm({
-    "src/ui/kit/styles/chrome.ts"() {
-      "use strict";
-      init_theme();
-      chromeCss = `
-.qmm-scroll, .qws-pnl-scroll, .qmm-views {
-  scrollbar-width: thin; scrollbar-color: var(--qmm-scrollbar) transparent;
-}
-.qmm-scroll::-webkit-scrollbar, .qws-pnl-scroll::-webkit-scrollbar, .qmm-views::-webkit-scrollbar { width: 6px; }
-.qmm-scroll::-webkit-scrollbar-track, .qws-pnl-scroll::-webkit-scrollbar-track, .qmm-views::-webkit-scrollbar-track { background: transparent; }
-.qmm-scroll::-webkit-scrollbar-thumb, .qws-pnl-scroll::-webkit-scrollbar-thumb, .qmm-views::-webkit-scrollbar-thumb {
-  background: var(--qmm-scrollbar); border-radius: 3px;
-}
-.qmm-scroll::-webkit-scrollbar-thumb:hover, .qws-pnl-scroll::-webkit-scrollbar-thumb:hover, .qmm-views::-webkit-scrollbar-thumb:hover {
-  background: var(--qmm-accent-border);
-}
-
-.qmm { display: flex; flex-direction: column; gap: var(--qmm-space-lg); color: var(--qmm-text); }
-.qmm-compact { gap: var(--qmm-space-sm); }
-.qmm.qmm-alt-drag { cursor: grab; }
-.qmm.qmm-alt-drag:active { cursor: grabbing; }
-
-.qmm-tabs {
-  display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-xs); padding: 8px 10px;
-  border-bottom: 1px solid var(--qmm-border);
-  border-radius: var(--qmm-radius-xl) var(--qmm-radius-xl) 0 0;
-  background: var(--qmm-gradient-tab-bar);
-}
-.qmm-tab {
-  flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-md);
-  margin: 0; padding: 8px 12px; border: 1px solid transparent; border-radius: var(--qmm-radius-lg);
-  background: transparent; color: var(--qmm-text-soft); font-size: var(--qmm-fs-md); cursor: pointer;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-}
-.qmm-compact .qmm-tab { padding: 6px 10px; }
-.qmm-tab:hover { background: var(--qmm-hover-bg); color: var(--qmm-text); }
-.qmm-tab:active { transform: translateY(1px); }
-.qmm-tab:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
-.qmm-tab.active { background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); color: var(--qmm-accent); }
-
-.qmm-views {
-  display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: auto; padding: 14px;
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-xl);
-  background: var(--qmm-gradient-panel); backdrop-filter: blur(10px); box-shadow: var(--qmm-shadow-panel);
-}
-.qmm-compact .qmm-views { padding: 8px; }
-.qmm-tabs + .qmm-views { border-top: none; border-top-left-radius: 0; border-top-right-radius: 0; }
-.qmm-view { display: none; min-width: 0; min-height: 0; }
-.qmm-view.active { display: block; }
-
-.qmm-spacer { flex: 1; }
-
-.qws-win {
-  position: fixed; z-index: ${layer.window}; min-width: 260px; max-width: 900px; max-height: 90vh; overflow: auto;
-  color: var(--qmm-text); background: var(--qmm-panel-bg);
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-lg);
-  box-shadow: var(--qmm-shadow-window); backdrop-filter: blur(8px);
-}
-.qws-win.is-hidden { display: none !important; }
-.qws-win .w-head {
-  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 10px 12px; cursor: move;
-  border-bottom: 1px solid var(--qmm-border-strong);
-  border-radius: var(--qmm-radius-lg) var(--qmm-radius-lg) 0 0;
-  background: var(--qmm-gradient-head);
-}
-.qws-win .w-title { font-weight: 700; }
-.qws-win .w-body { padding: 12px; }
-
-/* Bare text and number inputs a feature builds inside a window get the field look too. */
-.qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input) {
-  padding: 8px 10px; border: 1px solid var(--qmm-field-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-field-bg); color: var(--qmm-text);
-}
-.qws-win input:is([type="text"], [type="number"]):not(.qmm-input, .qws-pnl-input):focus {
-  outline: none; border-color: var(--qmm-accent-border-hover);
-}
-/* Windows give text and number fields one width; an inline width still wins. */
-.qws-win input[type="text"], .qws-win input[type="number"] { width: 120px; }
-
-.qws2 {
-  position: fixed; right: 16px; bottom: 16px; z-index: ${layer.hud};
-  display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 160px; padding: 10px 12px;
-  font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: var(--qmm-text);
-  background: var(--qmm-panel-bg); border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-lg);
-  box-shadow: var(--qmm-shadow-window); backdrop-filter: blur(8px);
-}
-.qws2.hidden { display: none; }
-.qws2 .row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
-.qws2 .title { font-weight: 700; letter-spacing: .2px; }
-.qws2 .drag { cursor: move; opacity: .9; }
-.qws2 .mini { display: none; }
-.qws2.min .mini { display: inline-flex; }
-.qws2.min .body { display: none; }
-.qws2 .is-link { cursor: pointer; }
-
-.qws-launch { margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--qmm-border-strong); }
-.qws-launch .launch-item { display: flex; align-items: center; gap: var(--qmm-space-md); margin: 4px 0; }
-.qws-launch .launch-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-`;
-    }
-  });
-
-  // src/ui/kit/styles/containers.ts
-  var containersCss;
-  var init_containers = __esm({
-    "src/ui/kit/styles/containers.ts"() {
-      "use strict";
-      containersCss = `
-.qmm-card {
-  display: grid; gap: var(--qmm-space-xl); width: 100%; padding: 14px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
-}
-.qmm-card--plain { display: flex; flex-direction: column; gap: var(--qmm-space-lg); width: auto; min-height: 0; padding: 10px; }
-.qmm-card.is-center { text-align: center; align-items: center; }
-.qmm-card.is-stretch { align-items: stretch; }
-.qmm-card[data-tone="muted"] { background: var(--qmm-muted-bg); }
-.qmm-card[data-tone="accent"] { border-color: var(--qmm-accent-border); }
-.qmm-card__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--qmm-space-lg); }
-.qmm-card__header.is-compact { gap: var(--qmm-space-sm); }
-.qmm-card__icon { font-size: 18px; }
-.qmm-card__title { font-size: var(--qmm-fs-xl); font-weight: 700; letter-spacing: .01em; }
-.qmm-card__subtitle { flex-basis: 100%; font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
-.qmm-card__actions { display: flex; gap: var(--qmm-space-sm); margin-left: auto; }
-.qmm-card__body { display: grid; gap: var(--qmm-space-lg); }
-
-.qmm-section-label {
-  font-size: var(--qmm-fs-xs); font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--qmm-text-dim);
-}
-
-.qmm-collapse { flex-shrink: 0; min-height: auto; }
-.qmm-collapse__head {
-  display: flex; align-items: center; gap: var(--qmm-space-md); padding: 0; border: none; background: none;
-  color: inherit; font: inherit; text-align: left; cursor: pointer;
-}
-.qmm-collapse__titles { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-width: 0; }
-.qmm-collapse__desc { font-size: var(--qmm-fs-sm); line-height: 1.45; color: var(--qmm-text-dim); }
-.qmm-collapse__chevron {
-  flex: 0 0 auto; margin-left: auto; font-size: var(--qmm-fs-xs); color: var(--qmm-text-dim);
-  transition: transform 140ms ease, color 120ms ease;
-}
-.qmm-collapse__head:hover .qmm-collapse__chevron { color: var(--qmm-accent); }
-.qmm-collapse__head[aria-expanded="true"] .qmm-collapse__chevron { transform: rotate(90deg); }
-.qmm-collapse__body { display: flex; flex-direction: column; gap: var(--qmm-space-md); }
-.qmm-collapse.is-collapsed > .qmm-collapse__body { display: none; }
-
-.qmm-setting-row {
-  display: flex; align-items: center; gap: var(--qmm-space-lg); flex-shrink: 0; padding: 8px 10px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md); background: var(--qmm-card-bg);
-}
-.qmm-setting-row__text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
-.qmm-setting-row__title { font-size: var(--qmm-fs-md); color: var(--qmm-text); }
-.qmm-setting-row__hint { font-size: var(--qmm-fs-xs); line-height: 1.4; color: var(--qmm-text-dim); }
-.qmm-setting-row__controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--qmm-space-md); flex: 0 0 auto; }
-
-.qmm-label { opacity: .9; }
-.qmm-flex { display: flex; flex-wrap: wrap; align-items: center; gap: var(--qmm-space-md); }
-.qmm-form-row { display: grid; align-items: center; width: 100%; }
-.qmm-form-row.is-top { align-items: start; }
-.qmm-form-row__label { justify-self: start; margin: 0; font-weight: 600; }
-.qmm-form-row.is-top .qmm-form-row__label { align-self: start; }
-
-.qmm-error {
-  padding: 10px; border: 1px solid var(--qmm-danger-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-danger-soft); color: #fecaca; font-size: var(--qmm-fs-lg); line-height: 1.4;
-}
-.qmm-error[hidden] { display: none; }
-
-.qmm-pill {
-  display: inline-flex; align-items: center; gap: var(--qmm-space-sm); padding: 4px 9px; white-space: nowrap;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-pill);
-  background: var(--qmm-field-bg); color: var(--qmm-text); font-size: var(--qmm-fs-sm); font-weight: 600;
-}
-.qmm-pill.is-ok { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
-.qmm-pill.is-warn { color: var(--qmm-warn); background: var(--qmm-warn-soft); border-color: var(--qmm-warn-border); }
-.qmm-pill.is-bad { color: var(--qmm-danger); background: var(--qmm-danger-soft); border-color: var(--qmm-danger-border); }
-.qmm-badge {
-  align-self: flex-start; padding: 2px 7px; border-radius: var(--qmm-radius-pill);
-  font-size: var(--qmm-fs-xs); font-weight: 600;
-}
-.qmm-badge.is-ok { color: var(--qmm-accent); background: var(--qmm-accent-soft); }
-.qmm-badge.is-warn { color: var(--qmm-warn); background: var(--qmm-warn-soft); }
-.qmm-meter {
-  position: relative; flex: 1 1 auto; min-width: 60px; height: 5px; overflow: hidden;
-  border-radius: var(--qmm-radius-pill); background: var(--qmm-border);
-}
-.qmm-meter__fill {
-  position: absolute; inset: 0 auto 0 0; width: 0%; border-radius: var(--qmm-radius-pill);
-  background: var(--qmm-accent); transition: width 200ms ease, background 200ms ease;
-}
-.qmm-meter__fill.is-warn { background: var(--qmm-warn); }
-
-.qmm-vtabs { display: flex; flex-direction: column; gap: var(--qmm-space-md); min-width: 0; }
-.qmm-vtabs .filter input { width: 100%; }
-.qmm-vlist-wrap { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; width: 100%; }
-.qmm-vlist {
-  flex: 0 0 auto; min-width: 0; padding: 6px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
-}
-.qmm-vlist.is-scroll { flex: 1 1 auto; overflow: auto; }
-.qmm-vlist__items { display: flex; flex-direction: column; gap: var(--qmm-space-xs); margin: 0; padding: 0; list-style: none; }
-.qmm-vlist__empty { opacity: .75; }
-.qmm-vtab {
-  display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: var(--qmm-space-lg); width: 100%;
-  padding: 8px 10px; border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-card-bg); color: inherit; text-align: left; cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
-}
-.qmm-vtab:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); }
-.qmm-vtab:active { transform: translateY(1px); }
-.qmm-vtab.active { background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
-.qmm-dot { width: 10px; height: 10px; justify-self: center; border-radius: 50%; box-shadow: 0 0 0 1px #0006 inset; }
-.qmm-chip { display: flex; align-items: center; gap: var(--qmm-space-md); min-width: 0; }
-.qmm-chip img { width: 20px; height: 20px; object-fit: cover; border: 1px solid var(--qmm-border); border-radius: 50%; }
-.qmm-chip__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.qmm-chip .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.qmm-chip__sub { font-size: var(--qmm-fs-md); opacity: .7; }
-.qmm-tag {
-  padding: 3px 7px; font-size: var(--qmm-fs-sm); line-height: 1;
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-hover-bg);
-}
-
-/* Drag handle for reorderable lists. */
-.qmm-grab {
-  display: grid; grid-template-columns: repeat(2, 3px); grid-template-rows: repeat(3, 3px);
-  align-content: center; justify-content: center; gap: 2px; margin-left: auto; padding: 4px 3px;
-  opacity: .8; cursor: grab; user-select: none;
-}
-.qmm-grab:active { cursor: grabbing; }
-.qmm-grab-dot { width: 3px; height: 3px; border-radius: 999px; background: var(--qmm-text-soft); }
-.qmm-dragging { opacity: .6; }
-
-/* Selectable tile of the skins grid. */
-.qws-pnl-cell {
-  position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 1; cursor: pointer;
-  border: 1px solid var(--qmm-border); border-radius: 10px; background: var(--qmm-card-bg);
-  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
-}
-.qws-pnl-cell:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); transform: translateY(-1px); }
-.qws-pnl-cell.is-active { border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
-.qws-pnl-cell.is-skinned::after {
-  content: ''; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%;
-  background: var(--qmm-accent);
-}
-
-.qmm-icon-box { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
-.qmm-icon-box > img { max-width: 100%; max-height: 100%; image-rendering: auto; }
-
-.qmm-modal-scrim {
-  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px;
-  background: var(--qmm-scrim); backdrop-filter: blur(4px);
-}
-.qmm-modal {
-  display: flex; flex-direction: column; overflow: hidden; color: var(--qmm-text);
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-xl);
-  background: var(--qmm-surface); box-shadow: var(--qmm-shadow-modal);
-}
-.qmm-modal__head {
-  display: flex; align-items: center; gap: var(--qmm-space-lg); flex: 0 0 auto; padding: 12px 14px;
-  border-bottom: 1px solid var(--qmm-border);
-}
-.qmm-modal__title { flex: 1; min-width: 0; font-size: var(--qmm-fs-xl); font-weight: 600; color: var(--qmm-text); }
-.qmm-modal__close {
-  flex: 0 0 auto; width: 28px; height: 28px; cursor: pointer;
-  border: 1px solid var(--qmm-border); border-radius: 8px; background: var(--qmm-card-bg);
-  color: var(--qmm-text-dim); font-size: var(--qmm-fs-md); line-height: 1;
-}
-.qmm-modal__close:hover { color: var(--qmm-text); border-color: var(--qmm-border-hover); }
-.qmm-modal__body {
-  display: flex; flex-direction: column; gap: var(--qmm-space-lg); flex: 1 1 auto; min-height: 0;
-  padding: 12px 14px; overflow-y: auto;
-}
-.qmm-modal__foot {
-  display: flex; align-items: center; gap: var(--qmm-space-lg); flex: 0 0 auto; padding: 12px 14px;
-  border-top: 1px solid var(--qmm-border);
-}
-.qmm-modal__foot:empty { display: none; }
-
-.qmm-menu-card {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 11px 12px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-lg); background: var(--qmm-card-bg);
-  font: inherit; text-align: left; cursor: pointer; transition: background 120ms ease, border-color 120ms ease;
-}
-.qmm-menu-card:hover:not(:disabled) { background: var(--qmm-hover-bg); }
-.qmm-menu-card:disabled { opacity: .55; cursor: default; }
-.qmm-menu-card__name { font-size: var(--qmm-fs-lg); font-weight: 600; color: var(--qmm-text); }
-.qmm-menu-card__detail { font-size: 11.5px; line-height: 1.45; color: var(--qmm-text-dim); }
-.qmm-menu-card:disabled .qmm-menu-card__name { color: var(--qmm-text-dim); }
-.qmm-menu-card:disabled .qmm-menu-card__detail { color: var(--qmm-accent); }
-`;
-    }
-  });
-
-  // src/ui/kit/styles/controls.ts
-  var controlsCss;
-  var init_controls = __esm({
-    "src/ui/kit/styles/controls.ts"() {
-      "use strict";
-      controlsCss = `
-.qmm-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: var(--qmm-space-sm); padding: 8px 14px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-card-bg); color: var(--qmm-text);
-  font-size: var(--qmm-fs-lg); font-weight: 600; line-height: 1.2; cursor: pointer; user-select: none;
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, opacity 120ms ease, transform 100ms ease;
-}
-.qmm-compact .qmm-btn:where(:not(.qmm-btn--sm, .qmm-btn--xs, .qmm-btn--icon)) { padding: 6px 10px; }
-.qmm-btn:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border-hover); }
-.qmm-btn:active { transform: translateY(1px); }
-.qmm-btn:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
-.qmm-btn:disabled, .qmm-btn.is-disabled { opacity: .4; pointer-events: none; }
-.qmm-btn.is-busy { opacity: .6; pointer-events: none; }
-.qmm-btn--sm { padding: 7px 12px; font-size: var(--qmm-fs-sm); white-space: nowrap; }
-.qmm-btn--xs { padding: 4px 8px; font-size: var(--qmm-fs-sm); }
-.qmm-btn--full { width: 100%; }
-.qmm-btn--block { display: flex; }
-.qmm-btn--icon { width: 34px; height: 34px; padding: 6px; gap: 0; border-radius: 50%; }
-.qmm-btn__icon { display: inline-flex; align-items: center; justify-content: center; font-size: 1.1em; }
-.qmm-btn__icon.is-right { order: 2; }
-.qmm-btn--primary { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
-.qmm-btn--primary:hover { background: var(--qmm-accent-hover); border-color: var(--qmm-accent-border-hover); }
-.qmm-btn--danger { color: var(--qmm-danger); background: var(--qmm-danger-soft); border-color: var(--qmm-danger-border); }
-.qmm-btn--danger:hover { background: var(--qmm-danger-hover); border-color: var(--qmm-danger-border-hover); }
-.qmm-btn--ghost { background: transparent; border-color: transparent; }
-.qmm-btn--ghost:hover { background: var(--qmm-hover-bg); border-color: var(--qmm-border); }
-.qmm-btn.active { color: var(--qmm-accent); background: var(--qmm-accent-soft); border-color: var(--qmm-accent-border); }
-
-.qmm-input, .qws-pnl-input {
-  padding: 8px 10px; border: 1px solid var(--qmm-field-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-field-bg); color: var(--qmm-text); outline: none;
-  transition: border-color 120ms ease, background 120ms ease;
-}
-.qmm-input { min-width: 90px; }
-.qws-pnl-input { font-size: var(--qmm-fs-md); }
-.qmm-input::placeholder, .qws-pnl-input::placeholder { color: var(--qmm-text-dim); }
-.qmm-input:focus, .qws-pnl-input:focus { border-color: var(--qmm-accent-border-hover); }
-.qmm-input option, .qws-pnl-input option { background: var(--qmm-surface); color: var(--qmm-text); }
-.qmm-input--sm { min-width: 0; padding: 6px 9px; font-size: 11.5px; }
-.qmm-select { cursor: pointer; }
-
-.qmm-input-number { display: inline-flex; align-items: center; gap: var(--qmm-space-sm); }
-.qmm-input-number-input { width: 70px; text-align: center; }
-.qmm-spin { display: inline-flex; flex-direction: column; gap: 2px; }
-.qmm-step {
-  display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 16px; padding: 0;
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-sm);
-  background: var(--qmm-hover-bg); color: var(--qmm-text); font-size: 11px; line-height: 1;
-  cursor: pointer; user-select: none; transition: border-color 120ms ease, color 120ms ease;
-}
-.qmm-step:hover { border-color: var(--qmm-accent-border); color: var(--qmm-accent); }
-.qmm-step:active { transform: translateY(1px); }
-
-.qmm-radio { transform: scale(1.1); accent-color: var(--qmm-accent); }
-
-.qmm-switch {
-  -webkit-appearance: none; appearance: none; position: relative; flex-shrink: 0;
-  width: 36px; height: 20px; margin: 0; vertical-align: middle; cursor: pointer;
-  border: 1px solid var(--qmm-field-border); border-radius: 10px; background: var(--qmm-track);
-  transition: background 150ms ease, border-color 150ms ease;
-}
-.qmm-switch::before {
-  content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%;
-  background: var(--qmm-text-dim); transition: transform 150ms ease, background 150ms ease;
-}
-.qmm-switch:checked { background: var(--qmm-accent-hover); border-color: var(--qmm-accent-border-hover); }
-.qmm-switch:checked::before { transform: translateX(16px); background: var(--qmm-accent); }
-.qmm-switch:focus-visible { outline: 2px solid var(--qmm-accent); outline-offset: 2px; }
-.qmm-switch:disabled { opacity: .4; cursor: not-allowed; }
-
-.qmm-chip-toggle {
-  display: inline-flex; align-items: stretch; cursor: pointer;
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-card-bg);
-  transition: border-color 120ms ease, background 120ms ease;
-}
-.qmm-chip-toggle:hover { border-color: var(--qmm-accent-border); }
-.qmm-chip-toggle input { display: none; }
-.qmm-chip-toggle__face { display: flex; align-items: center; gap: var(--qmm-space-md); padding: 6px 12px; border-radius: var(--qmm-radius-pill); }
-.qmm-chip-toggle input:checked + .qmm-chip-toggle__face {
-  color: var(--qmm-accent); background: var(--qmm-accent-soft); box-shadow: inset 0 0 0 1px var(--qmm-accent-border);
-}
-.qmm-chip-toggle__icon { font-size: 14px; }
-.qmm-chip-toggle__label { font-weight: 600; }
-.qmm-chip-toggle__desc { font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); }
-.qmm-chip-toggle__badge {
-  padding: 2px 6px; font-size: var(--qmm-fs-sm);
-  border: 1px solid var(--qmm-border-strong); border-radius: var(--qmm-radius-pill); background: var(--qmm-hover-bg);
-}
-
-.qmm-range, .qws-pnl-range {
-  -webkit-appearance: none; appearance: none; height: 16px; margin: 0; padding: 0;
-  border: none; background: transparent; outline: none; cursor: pointer;
-}
-.qmm-range { width: 180px; }
-.qws-pnl-range { width: 100%; }
-.qmm-range::-webkit-slider-runnable-track, .qws-pnl-range::-webkit-slider-runnable-track {
-  height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
-}
-.qmm-range::-moz-range-track, .qws-pnl-range::-moz-range-track {
-  height: 4px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
-}
-.qmm-range::-webkit-slider-thumb, .qws-pnl-range::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none; width: 13px; height: 13px; margin-top: -4.5px;
-  border: none; border-radius: 50%; background: var(--qmm-accent); cursor: pointer;
-  transition: transform 120ms ease, box-shadow 120ms ease;
-}
-.qmm-range::-moz-range-thumb, .qws-pnl-range::-moz-range-thumb {
-  width: 13px; height: 13px; border: none; border-radius: 50%; background: var(--qmm-accent); cursor: pointer;
-}
-.qmm-range:hover::-webkit-slider-thumb, .qws-pnl-range:hover::-webkit-slider-thumb {
-  transform: scale(1.15); box-shadow: 0 0 0 4px var(--qmm-accent-soft);
-}
-.qmm-range:disabled, .qws-pnl-range:disabled { opacity: .4; cursor: not-allowed; }
-.qmm-range:disabled::-webkit-slider-thumb, .qws-pnl-range:disabled::-webkit-slider-thumb { background: var(--qmm-text-dim); }
-.qmm-range:disabled::-moz-range-thumb, .qws-pnl-range:disabled::-moz-range-thumb { background: var(--qmm-text-dim); }
-
-.qmm-range-dual { position: relative; width: 100%; padding: 18px 0 10px; }
-.qmm-range-dual-track {
-  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
-  height: 6px; border-radius: var(--qmm-radius-pill); background: var(--qmm-track);
-}
-.qmm-range-dual-fill {
-  position: absolute; top: 50%; transform: translateY(-50%); height: 6px;
-  border-radius: var(--qmm-radius-pill); background: var(--qmm-accent); transition: left .12s ease, right .12s ease;
-}
-.qmm-range-dual-input {
-  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
-  width: 100%; height: 28px; pointer-events: none;
-}
-.qmm-range-dual-input::-webkit-slider-runnable-track { background: none; }
-.qmm-range-dual-input::-moz-range-track { background: none; }
-.qmm-range-dual-input::-webkit-slider-thumb {
-  pointer-events: auto; width: 16px; height: 16px; margin-top: -6px;
-  background: var(--qmm-accent); border: 2px solid var(--qmm-surface); box-shadow: 0 2px 8px rgba(0,0,0,.35);
-}
-.qmm-range-dual-input::-moz-range-thumb {
-  pointer-events: auto; width: 16px; height: 16px;
-  background: var(--qmm-accent); border: 2px solid var(--qmm-surface); box-shadow: 0 2px 8px rgba(0,0,0,.35);
-}
-.qmm-range-dual-input--min { z-index: 2; }
-.qmm-range-dual-input--max { z-index: 3; }
-
-/* --seg-pad, --seg-fill and --seg-stroke-color let a caller tint one control (the calculator does). */
-.qmm-seg {
-  position: relative; display: inline-flex; align-items: center; gap: var(--qmm-space-sm); overflow: hidden;
-  padding: var(--seg-pad, 8px); border-radius: var(--qmm-radius-pill);
-  background: var(--qmm-bg-soft, var(--qmm-sunken)); background-clip: padding-box;
-  border: 1px solid var(--qmm-border-2, var(--qmm-border));
-}
-.qmm-seg--full { display: flex; width: 100%; }
-.qmm-seg__btn {
-  position: relative; z-index: 1; padding: 8px 14px; border: 0; border-radius: var(--qmm-radius-pill);
-  appearance: none; background: transparent; color: var(--qmm-text-dim);
-  font: inherit; line-height: 1; white-space: nowrap; cursor: pointer;
-  transition: color .15s ease, transform .06s ease;
-}
-.qmm-seg__btn-label { display: inline-flex; align-items: center; justify-content: center; white-space: inherit; }
-.qmm-compact .qmm-seg__btn { padding: 6px 10px; }
-.qmm-seg__btn:hover { color: var(--qmm-text); }
-.qmm-seg__btn.active { color: var(--qmm-text); font-weight: 600; }
-.qmm-seg__btn:active { transform: translateY(1px); }
-.qmm-seg__btn[disabled] { opacity: .5; cursor: not-allowed; }
-.qmm-seg__indicator {
-  position: absolute; top: 0; left: 0; width: 40px; height: 100%; border-radius: inherit; pointer-events: none;
-  background: var(--seg-fill, var(--qmm-accent-soft));
-  outline: 1.2px solid var(--seg-stroke-color, var(--qmm-accent-border-hover)); outline-offset: -1.2px;
-  transform-origin: left center; will-change: transform, width, opacity;
-  transition: transform .18s cubic-bezier(.2,.8,.2,1), width .18s cubic-bezier(.2,.8,.2,1), opacity .18s ease-out;
-}
-@media (prefers-reduced-motion: reduce) {
-  .qmm-seg__indicator, .qmm-seg__btn { transition: none; }
-}
-
-.qmm-hotkey {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: var(--qmm-hotkey-w, 180px); min-width: 104px; padding: 7px 12px;
-  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md);
-  background: var(--qmm-field-bg); color: var(--qmm-text);
-  font-family: inherit; font-size: var(--qmm-fs-sm); font-weight: 600; white-space: nowrap;
-  cursor: pointer; user-select: none; transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
-}
-.qmm-hotkey:hover { border-color: var(--qmm-border-hover); }
-.qmm-hotkey:focus-visible { outline: none; }
-.qmm-hotkey.is-assigned { color: var(--qmm-accent); border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft); }
-.qmm-hotkey.is-empty { color: var(--qmm-text-dim); font-weight: 500; }
-.qmm-hotkey.is-recording {
-  color: var(--qmm-warn); border-color: var(--qmm-warn-border); background: var(--qmm-warn-soft);
-  animation: qmm-hotkey-breathe 1.2s ease-in-out infinite;
-}
-@keyframes qmm-hotkey-breathe {
-  0% { box-shadow: 0 0 0 0 rgba(251,191,36,.45); }
-  60% { box-shadow: 0 0 0 10px rgba(251,191,36,0); }
-  100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
-}
-`;
-    }
-  });
-
-  // src/ui/kit/styles/index.ts
-  function ensureKitStyles() {
-    if (injected) return;
-    if (typeof document === "undefined" || typeof document.getElementById !== "function") return;
-    injected = true;
-    if (document.getElementById(STYLE_ID3)) return;
-    const style2 = document.createElement("style");
-    style2.id = STYLE_ID3;
-    style2.textContent = [themeVariables(), chromeCss, controlsCss, containersCss].join("\n");
-    (document.head || document.documentElement).appendChild(style2);
-  }
-  var STYLE_ID3, injected;
-  var init_styles = __esm({
-    "src/ui/kit/styles/index.ts"() {
-      "use strict";
-      init_theme();
-      init_chrome();
-      init_containers();
-      init_controls();
-      STYLE_ID3 = "qmm-kit-css";
-      injected = false;
-    }
-  });
-
-  // src/ui/kit/dom.ts
-  function h(tag, className, text2) {
-    ensureKitStyles();
-    const el = document.createElement(tag);
-    if (className) el.className = className;
-    if (text2 != null) el.textContent = text2;
-    return el;
-  }
-  function iconNode(icon, className) {
-    const node = typeof icon === "string" ? h("span", void 0, icon) : icon;
-    node.classList.add(className);
-    return node;
-  }
-  var init_dom = __esm({
-    "src/ui/kit/dom.ts"() {
-      "use strict";
-      init_styles();
-    }
-  });
-
-  // src/ui/kit/badges.ts
-  function pill(text2, tone) {
-    const el = h("span", "qmm-pill", text2);
-    setTone(el, tone);
-    return el;
-  }
-  function setTone(el, tone) {
-    el.classList.remove("is-ok", "is-warn", "is-bad");
-    if (tone) el.classList.add(`is-${tone}`);
-  }
-  function badge(text2, tone) {
-    return h("span", `qmm-badge is-${tone}`, text2);
-  }
-  function meter() {
-    const root = h("div", "qmm-meter");
-    const fill = h("div", "qmm-meter__fill");
-    root.appendChild(fill);
-    return {
-      root,
-      set(ratio, tone = "accent") {
-        fill.style.width = `${clampFinite(ratio, 0, 1, 0) * 100}%`;
-        fill.classList.toggle("is-warn", tone === "warn");
-      }
-    };
-  }
-  var init_badges = __esm({
-    "src/ui/kit/badges.ts"() {
-      "use strict";
-      init_math();
-      init_dom();
-    }
-  });
-
-  // src/ui/kit/button.ts
-  function button(label2, opts = {}) {
-    const btn = h("button", "qmm-btn");
-    btn.type = "button";
-    const text2 = (label2 ?? "").trim();
-    const labelEl = !opts.icon || text2 ? h("span", "label", label2) : null;
-    if (opts.icon) {
-      const icon = iconNode(opts.icon, "qmm-btn__icon");
-      if (opts.iconPosition === "right") icon.classList.add("is-right");
-      if (!text2) btn.classList.add("qmm-btn--icon");
-      btn.append(icon);
-    }
-    if (labelEl) btn.append(labelEl);
-    if (opts.variant && opts.variant !== "default" && opts.variant !== "secondary") {
-      btn.classList.add(`qmm-btn--${opts.variant}`);
-    }
-    if (opts.size && opts.size !== "md") btn.classList.add(`qmm-btn--${opts.size}`);
-    if (opts.fullWidth) btn.classList.add("qmm-btn--full");
-    if (opts.block) btn.classList.add("qmm-btn--block");
-    if (opts.active) btn.classList.add("active");
-    if (opts.tooltip || opts.title) btn.title = opts.tooltip || opts.title || "";
-    if (opts.ariaLabel) btn.setAttribute("aria-label", opts.ariaLabel);
-    const onClick = opts.onClick;
-    if (onClick && opts.lockWhilePending) {
-      btn.addEventListener("click", async () => {
-        if (btn.disabled) return;
-        btn.classList.add("is-busy");
-        try {
-          await onClick();
-        } finally {
-          btn.classList.remove("is-busy");
-        }
-      });
-    } else if (onClick) {
-      btn.addEventListener("click", () => void onClick());
-    }
-    btn.setEnabled = (enabled5) => setButtonEnabled(btn, enabled5);
-    btn.setActive = (active2) => btn.classList.toggle("active", !!active2);
-    if (opts.disabled) setButtonEnabled(btn, false);
-    return btn;
-  }
-  function setButtonEnabled(btn, enabled5) {
-    btn.disabled = !enabled5;
-    btn.classList.toggle("is-disabled", !enabled5);
-    btn.setAttribute("aria-disabled", String(!enabled5));
-  }
-  var init_button = __esm({
-    "src/ui/kit/button.ts"() {
-      "use strict";
-      init_dom();
     }
   });
 
@@ -33820,7 +33189,7 @@
     const reduceMotion = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
     const canAnimate = typeof rail.animate === "function";
     if (canAnimate) rail.style.transition = "none";
-    let current = null;
+    let current2 = null;
     let animation = null;
     const apply2 = (left, width) => {
       rail.style.transform = `translate3d(${left}px,0,0)`;
@@ -33856,8 +33225,8 @@
         const dpr = window.devicePixelRatio || 1;
         const snap = (x) => Math.round(x * dpr) / dpr;
         const target = { left: snap(left), width: snap(width) };
-        const previous = current;
-        current = target;
+        const previous = current2;
+        current2 = target;
         animation?.cancel();
         animation = null;
         const shouldAnimate = animate && canAnimate && !reduceMotion?.matches && previous != null && previous.width > 0 && target.width > 0;
@@ -36994,7 +36363,7 @@ next: ${next}`;
     const refreshAllSoundSelects = () => {
       const names = audio.listSounds();
       const applyOptions = (sel, context) => {
-        const current = sel.value;
+        const current2 = sel.value;
         sel.innerHTML = "";
         for (const n of names) {
           const option = document.createElement("option");
@@ -37003,7 +36372,7 @@ next: ${next}`;
           sel.appendChild(option);
         }
         const preferred = audio.getDefaultSoundName(context);
-        if (names.includes(current)) sel.value = current;
+        if (names.includes(current2)) sel.value = current2;
         else if (preferred && names.includes(preferred)) sel.value = preferred;
         else if (names.length) sel.value = names[0];
       };
@@ -38595,7 +37964,7 @@ next: ${next}`;
           stopDrag();
         };
         pop.appendChild(header);
-        const current = NotifierService.getRule(row.id);
+        const current2 = NotifierService.getRule(row.id);
         const defaults = audio.getPlaybackSettings(row.context);
         const contextDefaults = row.context === "shops" || row.context === "weather" ? NotifierService.getContextStopDefaults(row.context) : { stopMode: "manual", stopRepeats: null, loopIntervalMs: defaults.loopIntervalMs };
         const allowPurchase = row.context === "shops";
@@ -38616,7 +37985,7 @@ next: ${next}`;
         soundSelect.className = "qmm-input";
         soundSelect.style.width = "100%";
         const populateSoundOptions = () => {
-          const selected = current?.sound ?? "";
+          const selected = current2?.sound ?? "";
           soundSelect.innerHTML = "";
           const optDefault = document.createElement("option");
           optDefault.value = "";
@@ -38666,7 +38035,7 @@ next: ${next}`;
           volumeRange.value = String(clamped);
           volumeValue.textContent = `${clamped}%`;
         };
-        const initialVolume = current?.volume != null ? current.volume : baseVolume;
+        const initialVolume = current2?.volume != null ? current2.volume : baseVolume;
         applyVolumeDisplay(Math.round(Math.max(0, Math.min(1, initialVolume)) * 100));
         volumeRange.addEventListener("input", () => {
           const raw = Number(volumeRange.value);
@@ -38694,7 +38063,7 @@ next: ${next}`;
           opt.textContent = formatModeLabel(value);
           modeSelect.appendChild(opt);
         });
-        const initialMode = allowPurchase ? current?.playbackMode ?? defaults.mode : "oneshot";
+        const initialMode = allowPurchase ? current2?.playbackMode ?? defaults.mode : "oneshot";
         modeSelect.value = initialMode === "loop" && !allowPurchase ? "oneshot" : initialMode;
         if (!allowPurchase) modeSelect.disabled = true;
         modeField.append(modeLabel, modeSelect);
@@ -38711,7 +38080,7 @@ next: ${next}`;
           stopOption.value = "purchase";
           stopOption.textContent = "Until purchase";
           stopSelect.appendChild(stopOption);
-          const initialStopMode = current?.stopMode ?? contextDefaults.stopMode;
+          const initialStopMode = current2?.stopMode ?? contextDefaults.stopMode;
           stopSelect.value = initialStopMode === "purchase" ? "purchase" : "purchase";
           stopField.append(stopLabel, stopSelect);
           pop.appendChild(stopField);
@@ -38726,7 +38095,7 @@ next: ${next}`;
         intervalInput.min = "150";
         intervalInput.step = "50";
         intervalInput.placeholder = String(defaultIntervalMs);
-        intervalInput.value = current?.loopIntervalMs != null ? String(current.loopIntervalMs) : "";
+        intervalInput.value = current2?.loopIntervalMs != null ? String(current2.loopIntervalMs) : "";
         intervalInput.inputMode = "numeric";
         intervalField.append(intervalLabel, intervalInput);
         if (allowPurchase) pop.appendChild(intervalField);
@@ -38794,7 +38163,7 @@ next: ${next}`;
           NotifierService.clearRule(row.id);
           closeRuleEditor();
         });
-        if (!current) ui.setButtonEnabled(clearBtn, false);
+        if (!current2) ui.setButtonEnabled(clearBtn, false);
         const saveBtn = ui.btn("Save", { variant: "primary", size: "sm" });
         saveBtn.addEventListener("click", (ev) => {
           ev.preventDefault();
@@ -39393,8 +38762,8 @@ next: ${next}`;
     lockModeRow.append(lockModeSegmented, lockModeHint, lockWarning);
     const updateLockModeUI = () => {
       const value = fromLockMode(state5.lockMode);
-      const current = lockModeSegmented.get?.();
-      if (current !== value) {
+      const current2 = lockModeSegmented.get?.();
+      if (current2 !== value) {
         isProgrammaticLockMode = true;
         try {
           lockModeSegmented.set?.(value);
@@ -40360,9 +39729,9 @@ next: ${next}`;
           xBtn.type = "button";
           xBtn.textContent = "\xD7";
           xBtn.addEventListener("click", () => {
-            const current = lockerRestrictionsService.getSellAllPetsRules().protectedRarities ?? [];
+            const current2 = lockerRestrictionsService.getSellAllPetsRules().protectedRarities ?? [];
             lockerRestrictionsService.setSellAllPetsRules({
-              protectedRarities: current.filter((x) => x !== r)
+              protectedRarities: current2.filter((x) => x !== r)
             });
             refreshRarityRow();
           });
@@ -40379,9 +39748,9 @@ next: ${next}`;
           badge2.style.margin = "0";
           badge2.style.cursor = "pointer";
           badge2.addEventListener("click", () => {
-            const current = lockerRestrictionsService.getSellAllPetsRules().protectedRarities ?? [];
+            const current2 = lockerRestrictionsService.getSellAllPetsRules().protectedRarities ?? [];
             lockerRestrictionsService.setSellAllPetsRules({
-              protectedRarities: [...current, r]
+              protectedRarities: [...current2, r]
             });
             refreshRarityRow();
           });
@@ -40842,13 +40211,13 @@ next: ${next}`;
       return target;
     };
     const updateDetailScrollMemory = (key2) => {
-      const current = detailScrollMemory.get(key2) ?? { detail: 0, card: 0 };
-      current.detail = getClampedScrollTop(detail);
+      const current2 = detailScrollMemory.get(key2) ?? { detail: 0, card: 0 };
+      current2.detail = getClampedScrollTop(detail);
       const currentCard2 = detail.querySelector('[data-locker-settings-card="1"]');
       if (currentCard2) {
-        current.card = getClampedScrollTop(currentCard2);
+        current2.card = getClampedScrollTop(currentCard2);
       }
-      detailScrollMemory.set(key2, current);
+      detailScrollMemory.set(key2, current2);
     };
     detail.addEventListener("scroll", () => {
       if (!renderedDetailKey) return;
@@ -41012,9 +40381,9 @@ next: ${next}`;
         const activeKey = selectedKey;
         form.root.addEventListener("scroll", () => {
           if (renderedDetailKey !== activeKey) return;
-          const current = detailScrollMemory.get(activeKey) ?? { detail: getClampedScrollTop(detail), card: 0 };
-          current.card = getClampedScrollTop(form.root);
-          detailScrollMemory.set(activeKey, current);
+          const current2 = detailScrollMemory.get(activeKey) ?? { detail: getClampedScrollTop(detail), card: 0 };
+          current2.card = getClampedScrollTop(form.root);
+          detailScrollMemory.set(activeKey, current2);
         });
         renderedDetailKey = activeKey;
       }
@@ -41062,7 +40431,7 @@ next: ${next}`;
     disposables.push(() => restrictionsTab.destroy());
     disposables.push(() => generalTab.destroy());
     disposables.push(() => overridesTab.destroy());
-    const cleanup2 = () => {
+    const cleanup = () => {
       while (disposables.length) {
         const dispose = disposables.pop();
         try {
@@ -41071,7 +40440,7 @@ next: ${next}`;
         }
       }
     };
-    ui.on("unmounted", cleanup2);
+    ui.on("unmounted", cleanup);
   }
   var NO_WEATHER_TAG2, SEED_EMOJIS, _lockerOptionsCache, _lockerEmojiByKey, _lockerEmojisBySeedName, getLockerSeedOptions, getLockerSeedEmojiForKey, getLockerSeedEmojiForSeedName, weatherMutationLabel, weatherMutations, createNoWeatherIcon, isWeatherMutationAvailable, WEATHER_RECIPE_GROUPS, WEATHER_RECIPE_GROUP_MEMBERS, applyStyles, weatherModeNameSeq, LockerMenuStore;
   var init_menu4 = __esm({
@@ -42818,8 +42187,8 @@ next: ${next}`;
     return getAriesStorage().hatch?.expanded?.[sectionId] !== true;
   }
   function setCollapsed(sectionId, collapsed) {
-    updateAriesStorage((current) => {
-      const hatch = current.hatch ?? (current.hatch = {});
+    updateAriesStorage((current2) => {
+      const hatch = current2.hatch ?? (current2.hatch = {});
       const map2 = hatch.expanded ?? (hatch.expanded = {});
       if (collapsed) delete map2[sectionId];
       else map2[sectionId] = true;
@@ -43001,7 +42370,7 @@ next: ${next}`;
     let rafId = null;
     const schedule2 = () => {
       if (!view.isConnected) {
-        cleanup2();
+        cleanup();
         return;
       }
       if (rafId !== null) return;
@@ -43012,7 +42381,7 @@ next: ${next}`;
     };
     const stopStats = StatsService.subscribe(schedule2);
     const stopTracker = HatchTracker.subscribe(schedule2);
-    function cleanup2() {
+    function cleanup() {
       try {
         stopStats();
       } catch {
@@ -43026,7 +42395,7 @@ next: ${next}`;
         rafId = null;
       }
     }
-    view.__cleanup__ = cleanup2;
+    view.__cleanup__ = cleanup;
     seedFromOwnedPets(StatsService.getSnapshot()).catch((error) => {
       console.error("[PetsHatch] Failed to seed pet stats", error);
     });
@@ -43459,16 +42828,16 @@ next: ${next}`;
   function combinations(items, size) {
     if (size <= 0 || size > items.length) return [];
     const out = [];
-    const current = [];
+    const current2 = [];
     const walk = (start2) => {
-      if (current.length === size) {
-        out.push([...current]);
+      if (current2.length === size) {
+        out.push([...current2]);
         return;
       }
       for (let i = start2; i < items.length; i += 1) {
-        current.push(items[i]);
+        current2.push(items[i]);
         walk(i + 1);
-        current.pop();
+        current2.pop();
       }
     };
     walk(0);
@@ -44305,8 +43674,8 @@ next: ${next}`;
     if (ratio >= 0.75) return "#fbbf24";
     return "#f87171";
   }
-  function mkBar(current, atMax) {
-    const ratio = atMax > 0 ? Math.max(0, Math.min(1, current / atMax)) : 0;
+  function mkBar(current2, atMax) {
+    const ratio = atMax > 0 ? Math.max(0, Math.min(1, current2 / atMax)) : 0;
     const track = document.createElement("div");
     Object.assign(track.style, {
       height: "3px",
@@ -45344,7 +44713,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       return result;
     }
     function rebuildAbilityOptions() {
-      const current = selAbility.value;
+      const current2 = selAbility.value;
       const options = [
         ["", "All abilities"],
         ...PetsService.getSeenAbilityIds().map((id) => [id, id])
@@ -45356,7 +44725,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         option.textContent = label2;
         selAbility.appendChild(option);
       }
-      selAbility.value = options.some(([value]) => value === current) ? current : "";
+      selAbility.value = options.some(([value]) => value === current2) ? current2 : "";
     }
     function repaint() {
       const visible = applyFilters();
@@ -46851,21 +46220,21 @@ Restore figures are averages; unlucky streaks do worse.`;
       updateSummary2();
     };
     const onPauseState = () => updateControls();
-    const listeners9 = [
+    const listeners8 = [
       [`${config.eventPrefix}:progress`, onProgress],
       [`${config.eventPrefix}:done`, onComplete],
       [`${config.eventPrefix}:error`, onComplete],
       [`${config.eventPrefix}:paused`, onPauseState],
       [`${config.eventPrefix}:resumed`, onPauseState]
     ];
-    for (const [type, handler] of listeners9) window.addEventListener(type, handler);
+    for (const [type, handler] of listeners8) window.addEventListener(type, handler);
     updateSummary2();
     updateControls();
     return {
       root: section2.root,
       cleanup: () => {
         clearSummaryTimer();
-        for (const [type, handler] of listeners9) window.removeEventListener(type, handler);
+        for (const [type, handler] of listeners8) window.removeEventListener(type, handler);
       }
     };
   }
@@ -46892,64 +46261,6 @@ Restore figures are averages; unlucky streaks do worse.`;
         return rest2 === 0 ? `${minutes} min` : `${minutes} min ${rest2} s`;
       };
       formatFinishTime = (timestamp) => new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    }
-  });
-
-  // src/ui/kit/modal.ts
-  function menuCard(options) {
-    const card5 = h("button", "qmm-menu-card");
-    card5.type = "button";
-    card5.disabled = options.disabled === true;
-    card5.append(h("div", "qmm-menu-card__name", options.name), h("div", "qmm-menu-card__detail", options.detail));
-    if (!card5.disabled) card5.addEventListener("click", options.onClick);
-    return card5;
-  }
-  function openModal2(options) {
-    let closed = false;
-    const scrim = h("div", "qmm-modal-scrim");
-    const hostZ = Number.parseInt(getComputedStyle(options.host).zIndex, 10);
-    scrim.style.zIndex = String((Number.isFinite(hostZ) ? hostZ : layer.window) + 1);
-    const panel = h("div", "qmm-modal");
-    panel.style.width = `min(${options.widthPx ?? 420}px, 100%)`;
-    panel.style.maxHeight = `min(${options.maxHeightPx ?? 520}px, 88vh)`;
-    panel.addEventListener("click", (event) => event.stopPropagation());
-    const closeButton = h("button", "qmm-modal__close", "\u2715");
-    closeButton.type = "button";
-    closeButton.title = "Close";
-    closeButton.addEventListener("click", () => close());
-    const header = h("div", "qmm-modal__head");
-    header.append(h("div", "qmm-modal__title", options.title), closeButton);
-    const body = h("div", "qmm-modal__body qmm-scroll");
-    const footer = h("div", "qmm-modal__foot");
-    panel.append(header, body, footer);
-    scrim.append(panel);
-    function onKeyDown(event) {
-      if (event.key === "Escape") {
-        event.stopPropagation();
-        close();
-      }
-    }
-    function close() {
-      if (closed) return;
-      closed = true;
-      clearInterval(hostWatch);
-      document.removeEventListener("keydown", onKeyDown, true);
-      scrim.remove();
-      options.onClose?.();
-    }
-    const hostWatch = window.setInterval(() => {
-      if (!options.host.isConnected) close();
-    }, 1e3);
-    scrim.addEventListener("click", () => close());
-    document.addEventListener("keydown", onKeyDown, true);
-    (document.documentElement || document.body).appendChild(scrim);
-    return { body, footer, close, isOpen: () => !closed };
-  }
-  var init_modal = __esm({
-    "src/ui/kit/modal.ts"() {
-      "use strict";
-      init_dom();
-      init_theme();
     }
   });
 
@@ -47620,7 +46931,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const all = [.../* @__PURE__ */ new Set([...candidates, ...bases.map((base) => `${base}Icon`)])];
     if (all.length) attachSpriteIcon(box, ["crop", "tallplant", "plant"], all, sizePx, SPRITE_LOG_TAG2);
   }
-  function speciesIcon(species, sizePx = ICON_PX) {
+  function speciesIcon(species, sizePx = ICON_PX2) {
     const box = iconHolder(sizePx);
     attachAtlasCrop(box, species, sizePx);
     return box;
@@ -47632,7 +46943,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const apiCategory = INTERNAL_TO_API[segment] ?? (isComposableCategory(segment) ? segment : "plants");
     return composedSpriteUrl(apiCategory, spriteBaseName(species), mutations);
   }
-  function variantIcon(species, mutations, sizePx = ICON_PX) {
+  function variantIcon(species, mutations, sizePx = ICON_PX2) {
     if (mutations.length === 0) return speciesIcon(species, sizePx);
     const box = iconHolder(sizePx);
     const url = composedUrl(species, mutations);
@@ -47648,7 +46959,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     box.append(img);
     return box;
   }
-  function mutationIconEl(mutation, sizePx = ICON_PX) {
+  function mutationIconEl(mutation, sizePx = ICON_PX2) {
     const box = iconHolder(sizePx);
     const candidates = spellings(mutation).flatMap((name) => [`Mutation${name}`, name]);
     attachSpriteIcon(box, ["ui", "mutation"], candidates, sizePx, SPRITE_LOG_TAG2);
@@ -47779,7 +47090,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return wrap;
   }
-  var SPRITE_LOG_TAG2, ICON_PX;
+  var SPRITE_LOG_TAG2, ICON_PX2;
   var init_harvestChips = __esm({
     "src/features/companion/menu/harvestChips.ts"() {
       "use strict";
@@ -47790,7 +47101,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_discordCsp();
       init_panel();
       SPRITE_LOG_TAG2 = "companion-harvest";
-      ICON_PX = 26;
+      ICON_PX2 = 26;
     }
   });
 
@@ -47827,7 +47138,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const tileRef = eggCatalog2[eggId]?.tileRef;
     return spellings2(eggId, typeof tileRef === "string" ? tileRef : null, eggCatalogName(eggId), name);
   }
-  function plantItemIcon(item, sizePx = ICON_PX2) {
+  function plantItemIcon(item, sizePx = ICON_PX3) {
     const box = iconHolder2(sizePx);
     const isEgg = item.kind === "egg";
     const candidates = isEgg ? eggCandidates(item.id, item.name) : seedCandidates(item.id, item.name);
@@ -47872,7 +47183,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
   }
-  var SPRITE_LOG_TAG3, ICON_PX2;
+  var SPRITE_LOG_TAG3, ICON_PX3;
   var init_plantChips = __esm({
     "src/features/companion/menu/plantChips.ts"() {
       "use strict";
@@ -47881,7 +47192,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_iconCache();
       init_panel();
       SPRITE_LOG_TAG3 = "companion-plant";
-      ICON_PX2 = 24;
+      ICON_PX3 = 24;
     }
   });
 
@@ -48392,8 +47703,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return getAriesStorage().misc?.collapsed?.[sectionId] === true;
   }
   function setSectionCollapsed(sectionId, collapsed) {
-    updateAriesStorage((current) => {
-      const misc = current.misc ?? (current.misc = {});
+    updateAriesStorage((current2) => {
+      const misc = current2.misc ?? (current2.misc = {});
       const map2 = misc.collapsed ?? (misc.collapsed = {});
       if (collapsed) map2[sectionId] = true;
       else delete map2[sectionId];
@@ -48833,12 +48144,12 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function saveBackup(name) {
     const normalizedName = name.trim() || `Backup ${(/* @__PURE__ */ new Date()).toLocaleString()}`;
-    const current = ensureVersion(getAriesStorage());
+    const current2 = ensureVersion(getAriesStorage());
     const entry = {
       id: generateId(),
       name: normalizedName,
       timestamp: Date.now(),
-      data: current
+      data: current2
     };
     const next = [entry, ...readBackups()].slice(0, MAX_BACKUPS);
     persistBackups(next);
@@ -48868,8 +48179,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return { success: true, message: "Backup deleted." };
   }
   function exportAllSettings() {
-    const current = ensureVersion(getAriesStorage());
-    return JSON.stringify(current, null, 2);
+    const current2 = ensureVersion(getAriesStorage());
+    return JSON.stringify(current2, null, 2);
   }
   function tryDecodePercentEncodedJson(text2) {
     if (!/^%(?:7B|5B)/i.test(text2)) return null;
@@ -51082,8 +50393,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     return getAriesStorage().keybinds?.collapsed?.[sectionId] === true;
   }
   function setSectionCollapsed2(sectionId, collapsed) {
-    updateAriesStorage((current) => {
-      const keybinds = current.keybinds ?? (current.keybinds = {});
+    updateAriesStorage((current2) => {
+      const keybinds = current2.keybinds ?? (current2.keybinds = {});
       const map2 = keybinds.collapsed ?? (keybinds.collapsed = {});
       if (collapsed) map2[sectionId] = true;
       else delete map2[sectionId];
@@ -51180,9 +50491,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     function setEnabled(btn, enabled5) {
       if (btn) setButtonEnabled2(btn, enabled5);
     }
-    function updateButtons2(current) {
-      setEnabled(clearBtn, hotkeyToString(current).length > 0);
-      setEnabled(resetBtn, hotkeyToString(current) !== defaultString);
+    function updateButtons2(current2) {
+      setEnabled(clearBtn, hotkeyToString(current2).length > 0);
+      setEnabled(resetBtn, hotkeyToString(current2) !== defaultString);
     }
     updateButtons2(getKeybind(action2.id));
     const stop2 = onKeybindChange(action2.id, (hk) => {
@@ -53210,8 +52521,8 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   async function setSkinsEnabled(enabled5) {
     snapshot.enabled = enabled5;
-    updateAriesStorage((current) => {
-      current.skins = { ...current.skins || {}, enabled: enabled5 };
+    updateAriesStorage((current2) => {
+      current2.skins = { ...current2.skins || {}, enabled: enabled5 };
     });
     await reapply();
   }
@@ -53324,9 +52635,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (watchId === null) {
       lastRenderer = getSpriteState().renderer;
       watchId = pageWin.setInterval(() => {
-        const current = getSpriteState().renderer;
-        if (!current || current === lastRenderer) return;
-        lastRenderer = current;
+        const current2 = getSpriteState().renderer;
+        if (!current2 || current2 === lastRenderer) return;
+        lastRenderer = current2;
         if (!snapshot.entries.size) return;
         console.info("[MG Skins] renderer recreated, re-applying skins");
         forgetAppliedState();
@@ -55265,9 +54576,9 @@ Restore figures are averages; unlucky streaks do worse.`;
     return !loadCompanionSettings().reviewedSettings.includes(group2);
   }
   function markReviewed(group2) {
-    const current = loadCompanionSettings().reviewedSettings;
-    if (current.includes(group2)) return;
-    patchCompanionSettings({ reviewedSettings: [...current, group2] });
+    const current2 = loadCompanionSettings().reviewedSettings;
+    if (current2.includes(group2)) return;
+    patchCompanionSettings({ reviewedSettings: [...current2, group2] });
   }
   var STORAGE_PATH2;
   var init_state3 = __esm({
@@ -57556,7 +56867,7 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/features/companion/chat/index.ts
   function notify2() {
-    for (const listener of [...listeners8]) {
+    for (const listener of [...listeners7]) {
       try {
         listener();
       } catch {
@@ -57797,7 +57108,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (captured.kind === "sell") return captured.plan.sell.length;
     return captured.picks.length;
   }
-  var ALERT_DEDUPE_MS, state2, listeners8, nextProposalSeq, ACCEPTANCE, CompanionChat;
+  var ALERT_DEDUPE_MS, state2, listeners7, nextProposalSeq, ACCEPTANCE, CompanionChat;
   var init_chat = __esm({
     "src/features/companion/chat/index.ts"() {
       "use strict";
@@ -57830,7 +57141,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         run: null,
         cancelRequested: false
       };
-      listeners8 = /* @__PURE__ */ new Set();
+      listeners7 = /* @__PURE__ */ new Set();
       nextProposalSeq = 1;
       ACCEPTANCE = {
         harvest: "Yes, go ahead",
@@ -57892,8 +57203,8 @@ Restore figures are averages; unlucky streaks do worse.`;
           return state2.run !== null;
         },
         subscribe(listener) {
-          listeners8.add(listener);
-          return () => listeners8.delete(listener);
+          listeners7.add(listener);
+          return () => listeners7.delete(listener);
         },
         /** Alerte poussée par une source ; ignorée si identique et récente. */
         alert(text2) {
@@ -58444,10 +57755,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   function isCentered(message) {
     return message.kind === "system";
   }
-  function isSameGroup(previous, current) {
-    if (isCentered(previous) || isCentered(current)) return false;
-    if (previous.from !== current.from) return false;
-    return current.atMs - previous.atMs < GROUP_WINDOW_MS;
+  function isSameGroup(previous, current2) {
+    if (isCentered(previous) || isCentered(current2)) return false;
+    if (previous.from !== current2.from) return false;
+    return current2.atMs - previous.atMs < GROUP_WINDOW_MS;
   }
   function formatMessageTime(atMs) {
     try {
@@ -58716,8 +58027,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     row.append(text2, control);
     return row;
   }
-  function toggleIn(current, value) {
-    const next = new Set(current ?? []);
+  function toggleIn(current2, value) {
+    const next = new Set(current2 ?? []);
     if (next.has(value)) next.delete(value);
     else next.add(value);
     return next.size === 0 ? null : [...next];
@@ -58871,7 +58182,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/menu/teamSelect.ts
-  function teamSelect(current, onPick) {
+  function teamSelect(current2, onPick) {
     const el = document.createElement("select");
     el.className = "qws-pnl-select";
     css(el, { fontSize: "12px", color: TEXT, minWidth: "150px" });
@@ -58891,7 +58202,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       option.textContent = team.name;
       el.append(option);
     }
-    el.value = current && teams.some((team) => team.id === current) ? current : NO_TEAM;
+    el.value = current2 && teams.some((team) => team.id === current2) ? current2 : NO_TEAM;
     el.addEventListener("change", () => onPick(el.value === NO_TEAM ? null : el.value));
     return { el, empty: teams.length === 0 };
   }
@@ -59625,11 +58936,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
       if (!held) return;
       if (!owned2.has(tileIndex) || scope.occupied.has(tileIndex)) return;
-      const current = plan.get(tileIndex);
-      if (current && itemKey(current) === itemKey(held)) return;
-      if (current) plan.delete(tileIndex);
+      const current2 = plan.get(tileIndex);
+      if (current2 && itemKey(current2) === itemKey(held)) return;
+      if (current2) plan.delete(tileIndex);
       if (remainingFor(held) <= 0) {
-        if (current) plan.set(tileIndex, current);
+        if (current2) plan.set(tileIndex, current2);
         return;
       }
       plan.set(tileIndex, { tileIndex, kind: held.kind, id: held.id, name: held.name });
@@ -59740,7 +59051,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     return box;
   }
-  function petSpeciesIcon2(species, sizePx = ICON_PX3) {
+  function petSpeciesIcon2(species, sizePx = ICON_PX4) {
     const box = iconHolder3(sizePx);
     const candidates = [species, species.replace(/\s+/g, "")].filter(Boolean);
     attachSpriteIcon(box, ["pet"], candidates, sizePx, SPRITE_LOG_TAG5, {
@@ -59751,7 +59062,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     return box;
   }
-  function abilityIcon(abilityId, sizePx = ICON_PX3) {
+  function abilityIcon(abilityId, sizePx = ICON_PX4) {
     const box = iconHolder3(sizePx);
     const square = document.createElement("span");
     const { bg } = getAbilityChipColors(abilityId);
@@ -59766,7 +59077,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     box.append(square);
     return box;
   }
-  var SPRITE_LOG_TAG5, ICON_PX3;
+  var SPRITE_LOG_TAG5, ICON_PX4;
   var init_hatchChips = __esm({
     "src/features/companion/menu/hatchChips.ts"() {
       "use strict";
@@ -59774,7 +59085,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_abilityColorsTab();
       init_panel();
       SPRITE_LOG_TAG5 = "companion-hatch";
-      ICON_PX3 = 26;
+      ICON_PX4 = 26;
     }
   });
 
@@ -60267,7 +59578,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/antiAfk/antiAfk.ts
   function createAntiAfkController(deps) {
     const STOP_EVENTS = ["visibilitychange", "blur", "focus", "focusout", "pagehide", "freeze", "resume"];
-    const listeners9 = [];
+    const listeners8 = [];
     function swallowAll() {
       const add = (target, t) => {
         const h2 = (e) => {
@@ -60275,7 +59586,7 @@ Restore figures are averages; unlucky streaks do worse.`;
           e.preventDefault?.();
         };
         target.addEventListener(t, h2, { capture: true });
-        listeners9.push({ t, h: h2, target });
+        listeners8.push({ t, h: h2, target });
       };
       STOP_EVENTS.forEach((t) => {
         add(document, t);
@@ -60283,11 +59594,11 @@ Restore figures are averages; unlucky streaks do worse.`;
       });
     }
     function unswallowAll() {
-      for (const { t, h: h2, target } of listeners9) try {
+      for (const { t, h: h2, target } of listeners8) try {
         target.removeEventListener(t, h2, { capture: true });
       } catch {
       }
-      listeners9.length = 0;
+      listeners8.length = 0;
     }
     const docProto = Object.getPrototypeOf(document);
     const saved = {
@@ -61044,10 +60355,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     return interest.tile;
   }
   function onInterestReached(tile) {
-    const current = pending3;
+    const current2 = pending3;
     pending3 = null;
-    if (!current || !running3) return;
-    const { interest, at } = current;
+    if (!current2 || !running3) return;
+    const { interest, at } = current2;
     const now = Date.now();
     if (now - at > PENDING_TTL_MS) return;
     if (interest.tile.x !== tile.x || interest.tile.y !== tile.y) return;
@@ -61679,7 +60990,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function questionOf(proposal) {
     const message = CompanionChat.getLog().messages.find((entry) => entry.proposalId === proposal.id);
     if (!message) return [document.createTextNode(proposal.summary)];
-    return message.positioned ? renderTagged(message.text, message.icons, ICON_PX4) : [document.createTextNode(message.text)];
+    return message.positioned ? renderTagged(message.text, message.icons, ICON_PX5) : [document.createTextNode(message.text)];
   }
   function build(proposal) {
     ensureStyle3();
@@ -61757,7 +61068,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     unsubscribe = CompanionChat.subscribe(sync);
     sync();
   }
-  var CARD_ID, STYLE_ID7, Z_INDEX, ICON_PX4, TICK_MS, ACCENT3, TEXT5, TEXT_DIM5, card4, clockBar, timer, shownId, unsubscribe;
+  var CARD_ID, STYLE_ID7, Z_INDEX, ICON_PX5, TICK_MS, ACCENT3, TEXT5, TEXT_DIM5, card4, clockBar, timer, shownId, unsubscribe;
   var init_askBanner = __esm({
     "src/features/companion/menu/askBanner.ts"() {
       "use strict";
@@ -61770,7 +61081,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       CARD_ID = "mgCompanionAsk";
       STYLE_ID7 = "mgCompanionAskStyle";
       Z_INDEX = "2000050";
-      ICON_PX4 = 17;
+      ICON_PX5 = 17;
       TICK_MS = 100;
       ACCENT3 = "#5eead4";
       TEXT5 = "#e7eef7";

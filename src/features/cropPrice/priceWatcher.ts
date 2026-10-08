@@ -1,20 +1,15 @@
-// cropPrice.ts
+// The coin value of the crop the player has selected: the selected fruit's,
+// or the whole plant's when no single fruit resolves.
+
 import {
   myCurrentGardenObject,
   myCurrentGrowSlotIndex,
   numPlayers,
   type CurrentGardenObject,
 } from "../../game/store/atoms";
-import {
-  valueFromGardenSlot,
-  valueFromGardenPlant,
-  DefaultPricing,
-} from "../../data/rules/cropValue";
+import { valueFromGardenSlot, valueFromGardenPlant, DefaultPricing } from "../../data/rules/cropValue";
 import { resolveGrowSlot } from "../../data/rules/growSlot";
-
-type CGO = CurrentGardenObject & { objectType?: string; slots?: any[] };
-const isPlantObject = (o: CGO | null | undefined): o is CGO & { objectType: "plant" } =>
-  !!o && o.objectType === "plant";
+import { Emitter, Subscriptions } from "../../lib/emitter";
 
 export interface CropPriceWatcher {
   get(): number | null;
@@ -22,64 +17,66 @@ export interface CropPriceWatcher {
   stop(): void;
 }
 
-/** Notifie sur: myCurrentGardenObject **et** myCurrentGrowSlotIndex */
+const isPlantObject = (obj: CurrentGardenObject): obj is CurrentGardenObject & { objectType: "plant"; slots?: any[] } =>
+  !!obj && (obj as { objectType?: unknown }).objectType === "plant";
+
+const positive = (value: number): number | null => (Number.isFinite(value) && value > 0 ? value : null);
+
+/** Recomputes on a new garden object or a new selected fruit, at most once a frame. */
 export function startCropPriceWatcherViaGardenObject(): CropPriceWatcher {
-  let cur: CurrentGardenObject = null;
+  let gardenObject: CurrentGardenObject = null;
   let players: number | undefined = undefined;
   let selectedSlotId: number | null = null;
-  let lastPrice: number | null = null;
+  let price: number | null = null;
+  const changes = new Emitter<void>();
+  const subs = new Subscriptions();
 
-  const listeners = new Set<() => void>();
-  const notify = () => { for (const fn of listeners) try { fn(); } catch {} };
-
-  let scheduled = false;
-  const scheduleRecomputeAndNotify = () => {
-    if (scheduled) return;
-    scheduled = true;
-    requestAnimationFrame(() => { scheduled = false; recomputeAndNotify(); });
+  const computePrice = (): number | null => {
+    if (!isPlantObject(gardenObject)) return null;
+    const slot = resolveGrowSlot(Array.isArray(gardenObject.slots) ? gardenObject.slots : [], selectedSlotId);
+    const slotValue = slot ? positive(valueFromGardenSlot(slot, DefaultPricing, players)) : null;
+    return slotValue ?? positive(valueFromGardenPlant(gardenObject as any, DefaultPricing, players));
   };
 
-  function computeSelectedSlotPrice(): number | null {
-    if (!isPlantObject(cur)) return null;
-    const slots = Array.isArray((cur as CGO).slots) ? (cur as CGO).slots! : [];
-    if (!slots.length) return null;
-    const slot = resolveGrowSlot(slots, selectedSlotId);
-    if (!slot) return null;
-    const val = valueFromGardenSlot(slot, DefaultPricing, players);
-    return Number.isFinite(val) && val > 0 ? val : null;
-  }
+  const recompute = () => {
+    const next = computePrice();
+    if (next === price) return;
+    price = next;
+    changes.emit();
+  };
 
-  function computeWholePlantPrice(): number | null {
-    if (!isPlantObject(cur)) return null;
-    const v = valueFromGardenPlant(cur as any, DefaultPricing, players);
-    return Number.isFinite(v) && v > 0 ? v : null;
-  }
+  let scheduled = false;
+  const scheduleRecompute = () => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      recompute();
+    });
+  };
 
-  function recomputeAndNotify() {
-    const slotVal = computeSelectedSlotPrice();
-    const next = (slotVal ?? computeWholePlantPrice()) ?? null;
-    if (next !== lastPrice) { lastPrice = next; notify(); }
-  }
-
-  (async () => {
-    try { cur = await myCurrentGardenObject.get(); } catch {}
+  void (async () => {
+    try { gardenObject = await myCurrentGardenObject.get(); } catch {}
     try { players = await numPlayers.get(); } catch {}
     try { selectedSlotId = await myCurrentGrowSlotIndex.get(); } catch {}
 
-    numPlayers.onChange((n) => { players = n as number; });
-
-    myCurrentGardenObject.onChange((v) => { cur = v; scheduleRecomputeAndNotify(); });
-    myCurrentGrowSlotIndex.onChange((idx) => {
-      selectedSlotId = Number.isFinite(idx as number) ? (idx as number) : null;
-      scheduleRecomputeAndNotify();
-    });
-
-    recomputeAndNotify();
+    subs.add(numPlayers.onChange((n) => { players = n; }));
+    subs.add(myCurrentGardenObject.onChange((next) => { gardenObject = next; scheduleRecompute(); }));
+    subs.add(
+      myCurrentGrowSlotIndex.onChange((id) => {
+        selectedSlotId = Number.isFinite(id as number) ? (id as number) : null;
+        scheduleRecompute();
+      }),
+    );
+    recompute();
   })();
 
   return {
-    get() { return lastPrice; },
-    onChange(cb: () => void) { listeners.add(cb); return () => listeners.delete(cb); },
-    stop() { listeners.clear(); },
+    get: () => price,
+    onChange: (cb) => changes.on(cb),
+    stop() {
+      changes.clear();
+      subs.dispose();
+    },
   };
 }

@@ -1,12 +1,12 @@
 import { Atoms } from "../../game/store/atoms";
-import { startDomLockIndicator, type DomLockIndicator } from "./domLockMarks";
+import { cornerGlyph, startDomLockIndicator, type DomLockIndicator } from "./domLockMarks";
 import { eggIdOf, lockerRestrictionsService } from "./restrictions";
 
 /** Outlines the old DOM egg tooltip while the selected egg's hatching is locked. */
 export function startEggHatchLockIndicator(): DomLockIndicator {
   let currentEggId: string | null = null;
   const indicator = startDomLockIndicator({
-    look: { owner: "egg", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyphOffsetPx: 8 },
+    look: { owner: "egg", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyph: cornerGlyph(8) },
     selector: ".css-502lyi",
     isTarget: (el) => (el.textContent || "").toLowerCase().includes("egg"),
     isLocked: () => lockerRestrictionsService.isEggLocked(currentEggId),

@@ -1,4 +1,4 @@
-import { startDomLockIndicator, type DomLockIndicator, type LockLook } from "./domLockMarks";
+import { cornerGlyph, startDomLockIndicator, type DomLockIndicator, type LockLook } from "./domLockMarks";
 import { currentFriendBonus, onFriendBonusChange } from "./friendBonus";
 import { lockerRestrictionsService } from "./restrictions";
 
@@ -14,7 +14,7 @@ export const SELL_CROPS_LOCK_LOOK: LockLook = {
     overflow: "",
     "z-index": "1000",
   },
-  glyphOffsetPx: 4,
+  glyph: cornerGlyph(4),
 };
 
 const hasSellCropsButton = (container: HTMLElement): boolean =>

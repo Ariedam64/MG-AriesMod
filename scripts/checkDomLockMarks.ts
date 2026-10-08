@@ -10,7 +10,7 @@ import { markLocked, unmarkLocked, type LockLook } from "../src/features/locker/
 import { SELL_CROPS_LOCK_LOOK } from "../src/features/locker/sellCropsLock";
 
 // Just enough of an element to hold inline styles, dataset values and glyphs.
-type FakeChild = { className: string; style: Record<string, string>; textContent: string; remove(): void };
+type FakeChild = { className: string; style: { setProperty(prop: string, value: string): void }; textContent: string; remove(): void };
 
 type FakeElement = {
   dataset: Record<string, string | undefined>;
@@ -53,7 +53,7 @@ function fakeElement(): FakeElement & HTMLElement {
 
 function installFakeDom(): void {
   const g = globalThis as any;
-  g.document = { createElement: () => ({ className: "", style: {}, textContent: "", remove() {} }) };
+  g.document = { createElement: () => ({ className: "", style: { setProperty() {} }, textContent: "", remove() {} }) };
   g.getComputedStyle = (el: FakeElement) => ({ position: el.style.getPropertyValue("position") || "static" });
 }
 
@@ -85,8 +85,8 @@ check("unlocked: the position is the game's again", container.style.getPropertyV
 check("unlocked: the glyph is gone", container.childCount(), 0);
 
 // Two indicators on one element: each puts back only what it saved.
-const egg: LockLook = { owner: "egg", style: { border: "3px solid purple" }, glyphOffsetPx: 8 };
-const decor: LockLook = { owner: "decor", style: { overflow: "visible" }, glyphOffsetPx: 8 };
+const egg: LockLook = { owner: "egg", style: { border: "3px solid purple" }, glyph: {} };
+const decor: LockLook = { owner: "decor", style: { overflow: "visible" }, glyph: {} };
 const card = fakeElement();
 card.style.setProperty("overflow", "hidden");
 markLocked(card, egg);

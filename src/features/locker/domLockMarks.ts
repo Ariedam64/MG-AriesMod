@@ -13,14 +13,26 @@ export type LockLook = {
   owner: string;
   /** Inline styles set while locked, as CSS property names. */
   style: Record<string, string>;
-  /** How far the glyph sits outside the element's top-right corner. */
-  glyphOffsetPx: number;
+  /** Inline styles of the lock glyph, usually `cornerGlyph(...)`. */
+  glyph: Record<string, string>;
 };
 
 const LOCK_GLYPH = "🔒";
 
+/** A 16px lock glyph sitting `offsetPx` outside the element's top-right corner. */
+export const cornerGlyph = (offsetPx: number): Record<string, string> => ({
+  position: "absolute",
+  top: `-${offsetPx}px`,
+  right: `-${offsetPx}px`,
+  "font-size": "16px",
+  "pointer-events": "none",
+  "user-select": "none",
+  "z-index": "2",
+});
+
 const datasetKey = (owner: string) => `tm${owner.replace(/(^|-)(\w)/g, (_, _dash, c: string) => c.toUpperCase())}LockStyles`;
 const glyphClass = (owner: string) => `tm-${owner}-lock`;
+const datasetAttr = (owner: string) => `tm-${owner}-lock-styles`;
 
 export function markLocked(el: HTMLElement, look: LockLook): void {
   const key = datasetKey(look.owner);
@@ -38,15 +50,7 @@ export function markLocked(el: HTMLElement, look: LockLook): void {
   const glyph = document.createElement("span");
   glyph.className = cls;
   glyph.textContent = LOCK_GLYPH;
-  Object.assign(glyph.style, {
-    position: "absolute",
-    top: `-${look.glyphOffsetPx}px`,
-    right: `-${look.glyphOffsetPx}px`,
-    fontSize: "16px",
-    pointerEvents: "none",
-    userSelect: "none",
-    zIndex: "2",
-  });
+  for (const [prop, value] of Object.entries(look.glyph)) glyph.style.setProperty(prop, value);
   el.appendChild(glyph);
 }
 
@@ -66,6 +70,10 @@ export function unmarkLocked(el: HTMLElement, owner: string): void {
   }
   el.querySelectorAll(`span.${glyphClass(owner)}`).forEach((node) => node.remove());
 }
+
+/** Every element `owner` has marked, wherever it now sits. */
+export const markedElements = (owner: string): HTMLElement[] =>
+  Array.from(document.querySelectorAll<HTMLElement>(`[data-${datasetAttr(owner)}]`));
 
 export type DomLockIndicator = {
   /** Marks or unmarks every matching element against the current lock state. */

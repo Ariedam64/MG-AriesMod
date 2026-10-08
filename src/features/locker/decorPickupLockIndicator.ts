@@ -1,5 +1,5 @@
 import { decorCatalog, memoOnCatalogs } from "../../data";
-import { startDomLockIndicator, type DomLockIndicator } from "./domLockMarks";
+import { cornerGlyph, startDomLockIndicator, type DomLockIndicator } from "./domLockMarks";
 import { lockerRestrictionsService } from "./restrictions";
 
 /** Every decor id and name, lowercased, to recognise a decor tooltip by its text. */
@@ -20,7 +20,7 @@ function looksLikeDecorTooltip(el: HTMLElement): boolean {
 /** Outlines the old DOM decor tooltip while decor pickup is locked. */
 export function startDecorPickupLockIndicator(): DomLockIndicator {
   const indicator = startDomLockIndicator({
-    look: { owner: "decor", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyphOffsetPx: 8 },
+    look: { owner: "decor", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyph: cornerGlyph(8) },
     selector: ".css-502lyi",
     isTarget: looksLikeDecorTooltip,
     isLocked: () => lockerRestrictionsService.isDecorPickupLocked(),
