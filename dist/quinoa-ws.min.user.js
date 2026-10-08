@@ -7637,11 +7637,12 @@
     if (abs >= 1e3) return `${fmt2(n / 1e3)}k`;
     return String(n);
   }
-  var INTEGER_FORMAT, spaceWords;
+  var INTEGER_FORMAT, formatInteger, spaceWords;
   var init_format = __esm({
     "src/lib/format.ts"() {
       "use strict";
       INTEGER_FORMAT = new Intl.NumberFormat("en-US");
+      formatInteger = (value, rounding = "floor") => INTEGER_FORMAT.format(Math.max(0, Math[rounding](Number.isFinite(value) ? value : 0)));
       spaceWords = (id) => id.replace(/([a-z])([A-Z])/g, "$1 $2");
     }
   });
@@ -7716,10 +7717,10 @@
       const defaults = out[key2];
       out[key2] = isRecord(defaults) && isRecord(value) ? { ...defaults, ...value } : value;
     }
-    for (const [legacyKey, [section3, field]] of Object.entries(LEGACY_ROOT_KEYS)) {
+    for (const [legacyKey, [section4, field]] of Object.entries(LEGACY_ROOT_KEYS)) {
       if (!(legacyKey in raw)) continue;
-      const target = isRecord(out[section3]) ? out[section3] : {};
-      out[section3] = target;
+      const target = isRecord(out[section4]) ? out[section4] : {};
+      out[section4] = target;
       if (target[field] === void 0) target[field] = raw[legacyKey];
     }
     return out;
@@ -11227,6 +11228,11 @@
     if (maxMultiplier == null || maxMultiplier <= 1) return 1;
     const ratio = (clampCropSize(size) - CROP_SIZE_MIN) / SIZE_SPAN;
     return 1 + (maxMultiplier - 1) * ratio;
+  }
+  function cropWeight(species, size) {
+    const baseWeight = toFinite(findPlantCatalogEntry(species)?.crop?.baseWeight);
+    if (baseWeight == null || baseWeight <= 0) return null;
+    return baseWeight * cropSizeMultiplier(species, size);
   }
   function legacyScaleToCropSize(scale, maxScale) {
     const numeric = toFinite(scale);
@@ -18012,9 +18018,9 @@
     return prettyHotkey(getKeybind(id));
   }
   function getKeybindSections() {
-    return keybindSections.map((section3) => ({
-      ...section3,
-      actions: section3.actions.map((action2) => ({
+    return keybindSections.map((section4) => ({
+      ...section4,
+      actions: section4.actions.map((action2) => ({
         ...action2,
         defaultHotkey: cloneHotkey(action2.defaultHotkey),
         holdDetection: action2.holdDetection ? {
@@ -18235,11 +18241,11 @@
       holdDefaultMap = /* @__PURE__ */ new Map();
       holdCache = /* @__PURE__ */ new Map();
       holdListeners = /* @__PURE__ */ new Map();
-      keybindSections = SECTION_CONFIG.map((section3) => {
-        const actions = section3.actions.map((action2) => {
+      keybindSections = SECTION_CONFIG.map((section4) => {
+        const actions = section4.actions.map((action2) => {
           const normalized = {
             id: action2.id,
-            sectionId: section3.id,
+            sectionId: section4.id,
             label: action2.label,
             icon: action2.icon,
             hint: action2.hint,
@@ -18260,10 +18266,10 @@
           return normalized;
         });
         return {
-          id: section3.id,
-          title: section3.title,
-          description: section3.description,
-          icon: section3.icon,
+          id: section4.id,
+          title: section4.title,
+          description: section4.description,
+          icon: section4.icon,
           actions
         };
       });
@@ -24168,12 +24174,12 @@
         if (!entry || typeof entry !== "object") continue;
         const { base, weathers } = _splitEligibleShops(entry.eligibleShops);
         if (!base && weathers.length === 0) continue;
-        const section3 = base ?? naturalSection;
-        const id = `${section3}:${key2}`;
+        const section4 = base ?? naturalSection;
+        const id = `${section4}:${key2}`;
         const name = typeof entry.name === "string" && entry.name.trim() ? String(entry.name) : key2;
         const rawRarity = typeof entry.rarity === "string" ? entry.rarity : void 0;
         const rarity3 = rawRarity ? DISPLAY_RARITY[rawRarity] ?? rawRarity : void 0;
-        addRow(id, section3, name, rarity3, weathers, !base);
+        addRow(id, section4, name, rarity3, weathers, !base);
       }
     }
     return out;
@@ -37331,7 +37337,7 @@ next: ${next}`;
     view.innerHTML = "";
     void PetAlertService.start().catch(() => {
     });
-    const section3 = (title) => {
+    const section4 = (title) => {
       const card5 = ui.card(title, { tone: "muted" });
       card5.body.style.display = "grid";
       card5.body.style.gap = "10px";
@@ -37367,7 +37373,7 @@ next: ${next}`;
       overflow: "hidden"
     });
     view.appendChild(root);
-    const bellSection = section3("Notification bell");
+    const bellSection = section4("Notification bell");
     root.appendChild(bellSection.root);
     const bellRow = document.createElement("label");
     Object.assign(bellRow.style, {
@@ -37393,7 +37399,7 @@ next: ${next}`;
       lineHeight: "1.4"
     });
     bellSection.body.appendChild(bellHint);
-    const s1 = section3("Audio & Playback");
+    const s1 = section4("Audio & Playback");
     root.appendChild(s1.root);
     const contextControls = {};
     const contextOrder = [
@@ -37525,7 +37531,7 @@ next: ${next}`;
     }
     const s1Err = errorBar2();
     s1.body.appendChild(s1Err.el);
-    const s2 = section3("Sound library");
+    const s2 = section4("Sound library");
     root.appendChild(s2.root);
     const importRow = document.createElement("div");
     Object.assign(importRow.style, {
@@ -38236,8 +38242,8 @@ next: ${next}`;
       icon2.style.fontSize = `${ICON - 10}px`;
       icon2.setAttribute("aria-hidden", "true");
       iconWrap.appendChild(icon2);
-      const spriteCategories = row2.type === "Seed" ? ["seed"] : row2.type === "Egg" ? ["pet"] : row2.type === "Tool" ? ["item"] : row2.type === "Decor" ? ["decor"] : null;
-      if (spriteCategories) {
+      const spriteCategories2 = row2.type === "Seed" ? ["seed"] : row2.type === "Egg" ? ["pet"] : row2.type === "Tool" ? ["item"] : row2.type === "Decor" ? ["decor"] : null;
+      if (spriteCategories2) {
         const baseId = row2.id.split(":")[1] ?? row2.name ?? row2.id;
         const candidatesSet = /* @__PURE__ */ new Set();
         const addCandidate = (value) => {
@@ -38259,7 +38265,7 @@ next: ${next}`;
         addCandidate(row2.name);
         const candidates = Array.from(candidatesSet).filter(Boolean);
         if (candidates.length) {
-          attachSpriteIcon(iconWrap, spriteCategories, candidates, ICON, "alerts");
+          attachSpriteIcon(iconWrap, spriteCategories2, candidates, ICON, "alerts");
         }
       }
       const col = document.createElement("div");
@@ -40066,23 +40072,23 @@ next: ${next}`;
       recipesTitleElement.textContent = `${prefix} when any recipe row matches (OR between rows)`;
     };
     const makeSection = (titleText, content) => {
-      const section3 = document.createElement("div");
-      section3.style.display = "grid";
-      section3.style.justifyItems = "center";
-      section3.style.gap = "8px";
-      section3.style.textAlign = "center";
-      section3.style.border = "1px solid rgba(255,255,255,0.10)";
-      section3.style.borderRadius = "10px";
-      section3.style.padding = "10px";
-      section3.style.background = "rgba(255,255,255,0.04)";
-      section3.style.boxShadow = "none";
-      section3.style.width = "min(720px, 100%)";
+      const section4 = document.createElement("div");
+      section4.style.display = "grid";
+      section4.style.justifyItems = "center";
+      section4.style.gap = "8px";
+      section4.style.textAlign = "center";
+      section4.style.border = "1px solid rgba(255,255,255,0.10)";
+      section4.style.borderRadius = "10px";
+      section4.style.padding = "10px";
+      section4.style.background = "rgba(255,255,255,0.04)";
+      section4.style.boxShadow = "none";
+      section4.style.width = "min(720px, 100%)";
       const heading = document.createElement("div");
       heading.textContent = titleText;
       heading.style.fontWeight = "600";
       heading.style.opacity = "0.95";
-      section3.append(heading, content);
-      return section3;
+      section4.append(heading, content);
+      return section4;
     };
     const centerRow = () => {
       const row2 = document.createElement("div");
@@ -42060,1117 +42066,99 @@ next: ${next}`;
     }
   });
 
-  // src/lib/dom.ts
-  function addStyle(css3) {
-    const style2 = document.createElement("style");
-    style2.textContent = css3;
-    document.head.appendChild(style2);
-    return style2;
+  // src/features/calculator/compute.ts
+  function mutationsOf(state5) {
+    return [state5.color, state5.weather, state5.lighting].filter((label2) => label2 !== "None");
   }
-  var init_dom2 = __esm({
-    "src/lib/dom.ts"() {
-      "use strict";
-    }
-  });
-
-  // src/features/calculator/menu.ts
-  function ensureCropSimulationStyles() {
-    if (cropSimulationStyleEl) return;
-    cropSimulationStyleEl = addStyle(CROP_SIMULATION_CSS);
-  }
-  function extractSpriteNameFromUrl(urlOrPath) {
-    const str = String(urlOrPath || "").trim();
-    if (!str) return null;
-    const filename = str.split("/").pop() || "";
-    return filename.replace(/\.[a-z0-9]+(\?.*)?$/i, "") || null;
-  }
-  function buildSpriteCandidates2(primary, option) {
-    const candidates = /* @__PURE__ */ new Set();
-    const addCandidate = (value) => {
-      if (!value) return;
-      const trimmed = String(value).trim();
-      if (!trimmed) return;
-      candidates.add(trimmed);
-      candidates.add(trimmed.replace(/\W+/g, ""));
-    };
-    if (option?.spriteKey) {
-      const spriteName = extractSpriteNameFromUrl(option.spriteKey);
-      if (spriteName) addCandidate(spriteName);
-    }
-    addCandidate(primary);
-    if (option) {
-      addCandidate(option.cropName);
-      addCandidate(option.seedName);
-    }
-    const baseCandidates = Array.from(candidates).map((value) => value.replace(/icon$/i, "")).filter(Boolean);
-    const expanded = Array.from(
-      /* @__PURE__ */ new Set([
-        ...baseCandidates.map((value) => `${value}Icon`),
-        ...Array.from(candidates)
-      ])
-    ).filter(Boolean);
-    return expanded.length ? expanded : [primary];
-  }
-  function getSpriteCategoriesForKey(key2, ...alts) {
-    const candidates = [key2, ...alts];
-    for (const candidate of candidates) {
-      const normalized = typeof candidate === "string" ? candidate.trim().toLowerCase() : "";
-      if (normalized && PLANT_PRIORITY_IDENTIFIERS.has(normalized)) {
-        return ["plant", "tallplant", "crop"];
-      }
-    }
-    return [...DEFAULT_SPRITE_CATEGORIES];
-  }
-  function ensureCropSpriteLayers(el) {
-    let fallback = el.querySelector(".mg-crop-simulation__sprite-fallback");
-    if (!fallback) {
-      fallback = document.createElement("span");
-      fallback.className = "mg-crop-simulation__sprite-fallback";
-      el.appendChild(fallback);
-    }
-    let layer2 = el.querySelector(".mg-crop-simulation__sprite-layer--base");
-    if (!layer2) {
-      layer2 = document.createElement("span");
-      layer2.className = "mg-crop-simulation__sprite-layer mg-crop-simulation__sprite-layer--base";
-      el.appendChild(layer2);
-    }
-    return { fallback, layer: layer2 };
-  }
-  function syncCropSpriteLoadedState(el, layer2) {
-    if (layer2.childElementCount > 0) {
-      el.dataset.mgHasSprite = "1";
-    } else {
-      delete el.dataset.mgHasSprite;
-    }
-  }
-  function resetCropSimulationSprite(el) {
-    el.innerHTML = "";
-    delete el.dataset.mgHasSprite;
-  }
-  function createSeedSpriteIcon(option, fallback, size, logTag) {
-    const wrap = applyStyles2(document.createElement("span"), {
-      width: `${size}px`,
-      height: `${size}px`,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center"
+  function calculatorPrice(species, state5) {
+    const value = estimateProduceValue(species, state5.size, mutationsOf(state5), {
+      ...DefaultPricing,
+      friendPlayers: clampFriendPlayers(state5.friendPlayers)
     });
-    wrap.textContent = fallback && fallback.trim().length > 0 ? fallback : "??";
-    const candidates = buildSpriteCandidates2(option.key, option);
-    const categories = getSpriteCategoriesForKey(option?.key, option?.seedName, option?.cropName);
-    attachSpriteIcon(wrap, categories, candidates, size, logTag);
-    return wrap;
+    return Number.isFinite(value) && value > 0 ? value : null;
   }
-  function applyCropSimulationSprite(el, speciesKey, options = {}) {
-    const { fallback, layer: layer2 } = ensureCropSpriteLayers(el);
-    const fallbackText = typeof options.fallback === "string" && options.fallback.trim().length > 0 ? options.fallback : "??";
-    fallback.textContent = fallbackText;
-    if (!speciesKey) {
-      layer2.replaceChildren();
-      syncCropSpriteLoadedState(el, layer2);
-      return;
-    }
-    const candidates = options.candidates && options.candidates.length ? options.candidates : buildSpriteCandidates2(speciesKey);
-    const mutations = Array.isArray(options.mutations) && options.mutations.length ? options.mutations : void 0;
-    const categories = options.categories && options.categories.length ? options.categories : getSpriteCategoriesForKey(speciesKey);
-    const updateLoadedState = () => syncCropSpriteLoadedState(el, layer2);
-    updateLoadedState();
-    attachSpriteIcon(
-      layer2,
-      categories,
-      candidates,
-      BASE_SPRITE_SIZE_PX,
-      "calculator",
-      {
-        mutations,
-        onSpriteApplied: updateLoadedState
-      }
-    );
-  }
-  function ensureCalculatorStyles() {
-    ensureCropSimulationStyles();
-    if (calculatorStyleEl) return;
-    calculatorStyleEl = addStyle(`
-    .${ROOT_CLASS}.mg-crop-simulation--calculator {
-      width: 100%;
-      max-width: none;
-      min-width: 0;
-      position: relative;
-    }
-    .${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-simulation__price {
-      justify-content: center;
-      margin: 0 0 12px;
-      font-size: 20px;
-      gap: 10px;
-    }
-    .${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-simulation__price-value {
-      font-size: 20px;
-    }
-    .mg-crop-calculator__placeholder {
-      font-size: 13px;
-      text-align: center;
-      opacity: 0.7;
-      padding: 24px 12px;
-    }
-    .mg-crop-calculator__source-hint {
-      font-size: 11px;
-      color: rgba(226, 232, 240, 0.7);
-      text-align: center;
-      margin-top: 20px;
-      padding-bottom: 4px;
-    }
-    .mg-crop-calculator__source-hint a {
-      color: #5eead4;
-      text-decoration: underline;
-    }
-  `);
-  }
-  function clamp2(value, min, max) {
-    return Math.min(max, Math.max(min, value));
-  }
-  function coerceLabel(label2, allowed) {
-    const normalized = typeof label2 === "string" ? label2.trim().toLowerCase() : "";
-    for (const candidate of allowed) {
-      if (candidate.toLowerCase() === normalized) {
-        return candidate;
-      }
-    }
-    return allowed[0];
-  }
-  function clampFriendPlayers(players) {
-    if (typeof players !== "number" || !Number.isFinite(players)) {
-      return FRIEND_BONUS_MIN_PLAYERS;
-    }
-    const rounded = Math.round(players);
-    return clamp2(rounded, FRIEND_BONUS_MIN_PLAYERS, FRIEND_BONUS_MAX_PLAYERS);
-  }
-  function friendPlayersToLabel(players) {
-    const clamped = clampFriendPlayers(players);
-    return FRIEND_BONUS_LABELS[clamped - 1] ?? FRIEND_BONUS_LABELS[0];
-  }
-  function labelToFriendPlayers(label2) {
-    const coerced = coerceLabel(label2, FRIEND_BONUS_LABELS);
-    const index = FRIEND_BONUS_LABELS.indexOf(coerced);
-    const players = index >= 0 ? index + 1 : FRIEND_BONUS_MIN_PLAYERS;
-    return clamp2(players, FRIEND_BONUS_MIN_PLAYERS, FRIEND_BONUS_MAX_PLAYERS);
-  }
-  function setSpriteScale(el, sizePercent) {
-    const clamped = clamp2(Math.round(sizePercent), SIZE_MIN, SIZE_MAX);
-    const scale = clamped / 100;
-    el.style.setProperty("--mg-crop-simulation-scale", scale.toString());
-  }
-  function applySizePercent(refs, sizePercent, speciesKey, baseWeight) {
-    const clamped = clamp2(Math.round(sizePercent), SIZE_MIN, SIZE_MAX);
-    refs.sizeSlider.value = String(clamped);
-    refs.sizeValue.textContent = String(clamped);
-    setSpriteScale(refs.sprite, clamped);
-    const maxMultiplier = speciesKey ? getMaxSizeMultiplier(speciesKey) : null;
-    if (maxMultiplier != null && maxMultiplier > 1) {
-      refs.sizeSlider.dataset.maxSizeMultiplier = String(maxMultiplier);
-    } else {
-      delete refs.sizeSlider.dataset.maxSizeMultiplier;
-    }
-    refs.sizeWeight.textContent = formatWeight(computeWeight(baseWeight, speciesKey, clamped));
-  }
-  function formatCoinValue(value) {
+  function formatCoins3(value) {
     if (typeof value !== "number" || !Number.isFinite(value)) return "\u2014";
-    const safe = Math.max(0, Math.round(value));
-    return priceFormatter.format(safe);
-  }
-  function computeWeight(baseWeight, speciesKey, size) {
-    const numericWeight = typeof baseWeight === "number" ? baseWeight : Number(baseWeight);
-    if (!Number.isFinite(numericWeight) || numericWeight <= 0) return null;
-    if (!speciesKey) return numericWeight;
-    return numericWeight * cropSizeMultiplier(speciesKey, size);
+    return formatInteger(value, "round");
   }
   function formatWeight(value) {
     if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return "\u2014";
-    const formatted = weightFormatter.format(value).replace(/(\.\d*?[1-9])0+$/u, "$1").replace(/\.0+$/u, "");
-    return `${formatted} kg`;
+    const text2 = WEIGHT_FORMAT.format(value).replace(/(\.\d*?[1-9])0+$/u, "$1").replace(/\.0+$/u, "");
+    return `${text2} kg`;
   }
-  function createSegmentedControl(labels, selectedLabel, interactive, onSelect, ariaLabel) {
-    const coerced = coerceLabel(selectedLabel, labels);
-    const items = labels.map((label2) => ({ value: label2, label: label2, disabled: !interactive }));
-    const segmented3 = segmented(
-      items,
-      coerced,
-      interactive && onSelect ? (value) => onSelect(value) : void 0,
-      { ariaLabel, fullWidth: true }
-    );
-    segmented3.classList.add("mg-crop-simulation__segmented-control");
-    const buttons = segmented3.querySelectorAll(".qmm-seg__btn");
-    buttons.forEach((button3) => {
-      const label2 = button3.dataset.value || button3.textContent?.trim() || "";
-      const spriteName = MUTATION_UI_SPRITE_NAMES[label2];
-      if (!spriteName) return;
-      const labelSpan = button3.querySelector(".qmm-seg__btn-label");
-      if (!labelSpan) return;
-      getSpriteObjectUrlByName(["ui"], spriteName).then((url) => {
-        if (!url) return;
-        const img = document.createElement("img");
-        img.src = url;
-        img.alt = label2;
-        img.title = label2;
-        img.width = 20;
-        img.height = 20;
-        img.style.width = "20px";
-        img.style.height = "20px";
-        img.style.objectFit = "contain";
-        img.style.display = "block";
-        img.draggable = false;
-        labelSpan.textContent = "";
-        labelSpan.appendChild(img);
-      });
-    });
-    return segmented3;
-  }
-  function applySegmentedButtonMetadata(segmented3, metadata) {
-    const buttons = segmented3.querySelectorAll(".qmm-seg__btn");
-    buttons.forEach((button3) => {
-      const label2 = button3.textContent?.trim();
-      if (!label2) return;
-      const meta = metadata[label2];
-      if (!meta) return;
-      Object.entries(meta).forEach(([key2, value]) => {
-        if (!value) return;
-        button3.dataset[key2] = value;
-      });
-    });
-  }
-  function getMutationsForState(state5) {
-    const mutations = [];
-    if (state5.color !== "None") mutations.push(state5.color);
-    if (state5.weatherCondition !== "None") mutations.push(state5.weatherCondition);
-    if (state5.weatherLighting !== "None") mutations.push(state5.weatherLighting);
-    return mutations.map((label2) => normalizeMutationLabelForSprite(label2));
-  }
-  function normalizeMutationLabelForSprite(label2) {
-    const normalized = label2.trim();
-    if (!normalized) return normalized;
-    const overridden = MUTATION_SPRITE_OVERRIDES[normalized.toLowerCase()];
-    return overridden ?? normalized;
-  }
-  function computePrice(speciesKey, state5, size) {
-    const mutations = getMutationsForState(state5);
-    const friendPlayers = clampFriendPlayers(state5.friendPlayers);
-    const pricingOptions = { ...DefaultPricing, friendPlayers };
-    const value = estimateProduceValue(speciesKey, size, mutations, pricingOptions);
-    return Number.isFinite(value) && value > 0 ? value : null;
-  }
-  function getBaseWeightForSpecies(key2) {
-    const entry = plantCatalog2[key2];
-    const candidates = [
-      entry?.produce?.baseWeight,
-      entry?.crop?.baseWeight,
-      entry?.item?.baseWeight,
-      entry?.seed?.baseWeight
-    ];
-    for (const candidate of candidates) {
-      const numeric = typeof candidate === "number" ? candidate : Number(candidate);
-      if (Number.isFinite(numeric) && numeric > 0) {
-        return numeric;
-      }
-    }
-    return null;
-  }
-  async function renderCalculatorMenu(container) {
-    ensureCalculatorStyles();
-    const ui = new Menu({ id: "calculator", compact: true });
-    ui.addTab("crops", "Crops", (root) => {
-      root.innerHTML = "";
-      root.style.padding = "8px";
-      root.style.boxSizing = "border-box";
-      root.style.height = "66vh";
-      root.style.overflow = "auto";
-      root.style.display = "grid";
-      const layout = applyStyles2(document.createElement("div"), {
-        display: "grid",
-        gridTemplateColumns: "minmax(220px, 280px) minmax(0, 1fr)",
-        gap: "10px",
-        alignItems: "stretch",
-        height: "100%",
-        overflow: "hidden"
-      });
-      root.appendChild(layout);
-      const left = applyStyles2(document.createElement("div"), {
-        display: "grid",
-        gridTemplateRows: "minmax(0, 1fr)",
-        minHeight: "0",
-        flex: "0 0 260px",
-        minWidth: "220px",
-        maxWidth: "280px"
-      });
-      layout.appendChild(left);
-      const list = applyStyles2(document.createElement("div"), {
-        display: "grid",
-        gridTemplateColumns: "1fr",
-        overflow: "auto",
-        paddingRight: "2px",
-        border: "1px solid rgba(255,255,255,0.10)",
-        borderRadius: "10px",
-        minHeight: "0",
-        // important
-        height: "100%"
-        // pour que overflow: auto prenne effet
-      });
-      left.appendChild(list);
-      const right = applyStyles2(document.createElement("div"), {
-        display: "flex",
-        flexDirection: "column",
-        minHeight: "0",
-        flex: "1 1 auto"
-      });
-      layout.appendChild(right);
-      const detailScroll = applyStyles2(document.createElement("div"), {
-        flex: "1 1 auto",
-        overflow: "auto",
-        display: "flex",
-        justifyContent: "center"
-      });
-      right.appendChild(detailScroll);
-      const simulationRoot = document.createElement("div");
-      simulationRoot.className = `${ROOT_CLASS} mg-crop-simulation--visible mg-crop-simulation--calculator`;
-      const detailLayout = document.createElement("div");
-      detailLayout.className = "mg-crop-calculator__layout";
-      const createSection = (title, extraClass) => {
-        const section3 = document.createElement("div");
-        section3.className = "mg-crop-calculator__section";
-        if (extraClass) {
-          section3.classList.add(extraClass);
-        }
-        if (title) {
-          const heading = document.createElement("div");
-          heading.className = "mg-crop-calculator__section-heading";
-          heading.textContent = title;
-          section3.appendChild(heading);
-        }
-        return section3;
-      };
-      const previewSection = createSection(null, "mg-crop-calculator__section--preview");
-      const priceRow = document.createElement("div");
-      priceRow.className = "mg-crop-simulation__price";
-      const priceIcon = document.createElement("img");
-      priceIcon.className = "mg-crop-simulation__price-icon";
-      priceIcon.src = coin2.img64;
-      priceIcon.alt = "";
-      priceIcon.decoding = "async";
-      priceIcon.loading = "lazy";
-      priceIcon.setAttribute("aria-hidden", "true");
-      priceIcon.draggable = false;
-      const priceValue = document.createElement("span");
-      priceValue.className = "mg-crop-simulation__price-value";
-      priceValue.textContent = "\u2014";
-      priceRow.append(priceIcon, priceValue);
-      const spriteSection = document.createElement("div");
-      spriteSection.className = "mg-crop-simulation__sprite-section";
-      const spriteBox = document.createElement("div");
-      spriteBox.className = "mg-crop-simulation__sprite-box";
-      const sprite = document.createElement("span");
-      sprite.className = "mg-crop-simulation__sprite";
-      spriteBox.appendChild(sprite);
-      const sliderContainer = document.createElement("div");
-      sliderContainer.className = "mg-crop-simulation__slider-container";
-      const sliderRow = document.createElement("div");
-      sliderRow.className = "mg-crop-simulation__slider-row";
-      const sliderLabel = document.createElement("span");
-      sliderLabel.className = "mg-crop-simulation__slider-label";
-      sliderLabel.textContent = "Size";
-      const slider2 = ui.slider(SIZE_MIN, SIZE_MAX, 1, SIZE_MIN);
-      slider2.classList.add("mg-crop-simulation__slider");
-      slider2.disabled = true;
-      const sliderValue = document.createElement("span");
-      sliderValue.className = "mg-crop-simulation__slider-value";
-      sliderValue.textContent = `${SIZE_MIN}%`;
-      const sliderWeight = document.createElement("span");
-      sliderWeight.className = "mg-crop-simulation__slider-weight";
-      sliderWeight.textContent = "\u2014";
-      sliderRow.append(sliderLabel, slider2, sliderValue);
-      sliderContainer.append(sliderRow, sliderWeight);
-      spriteSection.append(spriteBox, sliderContainer);
-      previewSection.appendChild(spriteSection);
-      const mutationsSection = createSection("Mutations");
-      const colorList = document.createElement("div");
-      colorList.className = "mg-crop-simulation__segmented";
-      mutationsSection.appendChild(colorList);
-      const weatherContainer = document.createElement("div");
-      weatherContainer.className = "mg-crop-calculator__mutations-weather";
-      const weatherConditions = document.createElement("div");
-      weatherConditions.className = "mg-crop-simulation__segmented";
-      const weatherLighting = document.createElement("div");
-      weatherLighting.className = "mg-crop-simulation__segmented";
-      weatherContainer.append(weatherConditions, weatherLighting);
-      mutationsSection.appendChild(weatherContainer);
-      const friendBonusSection = createSection("Friend bonus", "mg-crop-calculator__section--friend-bonus");
-      const friendBonus = document.createElement("div");
-      friendBonus.className = "mg-crop-simulation__segmented";
-      friendBonusSection.appendChild(friendBonus);
-      detailLayout.append(
-        priceRow,
-        previewSection,
-        mutationsSection,
-        friendBonusSection
-      );
-      simulationRoot.appendChild(detailLayout);
-      detailScroll.appendChild(simulationRoot);
-      const sourceHint = document.createElement("div");
-      sourceHint.className = "mg-crop-calculator__source-hint";
-      sourceHint.innerHTML = `
-      Based on
-      <a href="https://daserix.github.io/magic-garden-calculator" target="_blank" rel="noreferrer noopener">
-        Daserix&apos; Magic Garden Calculators
-      </a>
-    `;
-      root.appendChild(sourceHint);
-      const refs = {
-        root: simulationRoot,
-        sprite,
-        sizeSlider: slider2,
-        sizeValue: sliderValue,
-        sizeWeight: sliderWeight,
-        colorMutations: colorList,
-        weatherConditions,
-        weatherLighting,
-        friendBonus,
-        priceValue
-      };
-      const states = /* @__PURE__ */ new Map();
-      const optionByKey = /* @__PURE__ */ new Map();
-      const getStateForKey = (key2) => {
-        const existing = states.get(key2);
-        if (existing) return existing;
-        const state5 = { ...DEFAULT_STATE2 };
-        states.set(key2, state5);
-        return state5;
-      };
-      let selectedKey = null;
-      let currentBaseWeight = null;
-      const listButtons = /* @__PURE__ */ new Map();
-      const refreshListStyles = () => {
-        listButtons.forEach(({ button: button3, dot }, key2) => {
-          const isSelected = selectedKey === key2;
-          button3.style.background = isSelected ? "rgba(94,234,212,0.15)" : "rgba(255,255,255,0.04)";
-          button3.style.borderColor = isSelected ? "rgba(94,234,212,0.35)" : "rgba(255,255,255,0.10)";
-          dot.style.background = isSelected ? "rgba(94,234,212,0.85)" : "rgba(255,255,255,0.20)";
-        });
-      };
-      function renderColorSegment(state5, interactive) {
-        const active2 = state5?.color ?? COLOR_MUTATION_LABELS[0];
-        const segmented3 = createSegmentedControl(
-          COLOR_MUTATION_LABELS,
-          active2,
-          interactive,
-          interactive ? (label2) => {
-            if (!selectedKey) return;
-            const target = getStateForKey(selectedKey);
-            target.color = coerceLabel(label2, COLOR_MUTATION_LABELS);
-            renderColorSegment(target, true);
-            renderWeatherConditions(target, true);
-            renderWeatherLighting(target, true);
-            updateSprite();
-            updateOutputs();
-          } : void 0,
-          "Mutations"
-        );
-        applySegmentedButtonMetadata(segmented3, COLOR_SEGMENT_METADATA);
-        refs.colorMutations.innerHTML = "";
-        refs.colorMutations.appendChild(segmented3);
-      }
-      function renderWeatherConditions(state5, interactive) {
-        const active2 = state5?.weatherCondition ?? WEATHER_CONDITION_LABELS[0];
-        const segmented3 = createSegmentedControl(
-          WEATHER_CONDITION_LABELS,
-          active2,
-          interactive,
-          interactive ? (label2) => {
-            if (!selectedKey) return;
-            const target = getStateForKey(selectedKey);
-            target.weatherCondition = coerceLabel(label2, WEATHER_CONDITION_LABELS);
-            renderWeatherConditions(target, true);
-            updateSprite();
-            updateOutputs();
-          } : void 0,
-          "Weather condition"
-        );
-        applySegmentedButtonMetadata(segmented3, WEATHER_CONDITION_SEGMENT_METADATA);
-        refs.weatherConditions.innerHTML = "";
-        refs.weatherConditions.appendChild(segmented3);
-      }
-      function renderWeatherLighting(state5, interactive) {
-        const active2 = state5?.weatherLighting ?? WEATHER_LIGHTING_LABELS[0];
-        const segmented3 = createSegmentedControl(
-          WEATHER_LIGHTING_LABELS,
-          active2,
-          interactive,
-          interactive ? (label2) => {
-            if (!selectedKey) return;
-            const target = getStateForKey(selectedKey);
-            target.weatherLighting = coerceLabel(label2, WEATHER_LIGHTING_LABELS);
-            renderWeatherLighting(target, true);
-            updateSprite();
-            updateOutputs();
-          } : void 0,
-          "Weather lighting"
-        );
-        applySegmentedButtonMetadata(segmented3, WEATHER_LIGHTING_SEGMENT_METADATA);
-        refs.weatherLighting.innerHTML = "";
-        refs.weatherLighting.appendChild(segmented3);
-      }
-      function renderFriendBonus(state5, interactive) {
-        const active2 = friendPlayersToLabel(state5?.friendPlayers ?? FRIEND_BONUS_MIN_PLAYERS);
-        const segmented3 = createSegmentedControl(
-          FRIEND_BONUS_LABELS,
-          active2,
-          interactive,
-          interactive ? (label2) => {
-            if (!selectedKey) return;
-            const target = getStateForKey(selectedKey);
-            target.friendPlayers = labelToFriendPlayers(label2);
-            renderFriendBonus(target, true);
-            updateOutputs();
-          } : void 0,
-          "Friend bonus"
-        );
-        refs.friendBonus.innerHTML = "";
-        refs.friendBonus.appendChild(segmented3);
-      }
-      function updateOutputs() {
-        const key2 = selectedKey;
-        if (!key2) {
-          refs.priceValue.textContent = "\u2014";
-          return;
-        }
-        const state5 = getStateForKey(key2);
-        refs.priceValue.textContent = formatCoinValue(computePrice(key2, state5, state5.sizePercent));
-      }
-      function updateSprite() {
-        const key2 = selectedKey;
-        if (!key2) {
-          resetCropSimulationSprite(refs.sprite);
-          return;
-        }
-        const state5 = getStateForKey(key2);
-        const option = optionByKey.get(key2);
-        const fallbackEmoji = getLockerSeedEmojiForKey(key2) || (option?.seedName ? getLockerSeedEmojiForSeedName(option.seedName) : void 0) || "\u{1F331}";
-        const mutations = getMutationsForState(state5);
-        const candidates = buildSpriteCandidates2(key2, option);
-        const categories = getSpriteCategoriesForKey(key2, option?.seedName, option?.cropName);
-        applyCropSimulationSprite(refs.sprite, key2, {
-          fallback: fallbackEmoji,
-          candidates,
-          mutations,
-          categories
-        });
-      }
-      function renderDetail() {
-        const key2 = selectedKey;
-        if (!key2) {
-          resetCropSimulationSprite(refs.sprite);
-          refs.sizeSlider.disabled = true;
-          currentBaseWeight = null;
-          applySizePercent(refs, SIZE_MIN, null, currentBaseWeight);
-          renderColorSegment(null, false);
-          renderWeatherConditions(null, false);
-          renderWeatherLighting(null, false);
-          renderFriendBonus(null, false);
-          refs.priceValue.textContent = "\u2014";
-          return;
-        }
-        currentBaseWeight = getBaseWeightForSpecies(key2);
-        const state5 = getStateForKey(key2);
-        refs.sizeSlider.disabled = false;
-        applySizePercent(refs, state5.sizePercent, key2, currentBaseWeight);
-        renderColorSegment(state5, true);
-        renderWeatherConditions(state5, true);
-        renderWeatherLighting(state5, true);
-        renderFriendBonus(state5, true);
-        updateSprite();
-        updateOutputs();
-      }
-      slider2.addEventListener("input", () => {
-        if (!selectedKey) return;
-        const state5 = getStateForKey(selectedKey);
-        const raw = Number(slider2.value);
-        const value = clamp2(Math.round(raw), SIZE_MIN, SIZE_MAX);
-        state5.sizePercent = value;
-        applySizePercent(refs, value, selectedKey, currentBaseWeight);
-        updateOutputs();
-      });
-      function renderList() {
-        const options = getLockerSeedOptions();
-        optionByKey.clear();
-        options.forEach((opt) => optionByKey.set(opt.key, opt));
-        const previous = list.scrollTop;
-        list.innerHTML = "";
-        listButtons.clear();
-        if (!options.length) {
-          const empty = document.createElement("div");
-          empty.className = "mg-crop-calculator__placeholder";
-          empty.textContent = "No crops available.";
-          list.appendChild(empty);
-          selectedKey = null;
-          renderDetail();
-          return;
-        }
-        if (selectedKey && !options.some((opt) => opt.key === selectedKey)) {
-          selectedKey = options[0].key;
-        }
-        if (!selectedKey) {
-          selectedKey = options[0].key;
-        }
-        const fragment = document.createDocumentFragment();
-        options.forEach((opt) => {
-          const button3 = document.createElement("button");
-          button3.className = "qmm-vtab";
-          button3.style.display = "grid";
-          button3.style.gridTemplateColumns = "16px 1fr auto";
-          button3.style.alignItems = "center";
-          button3.style.gap = "8px";
-          button3.style.textAlign = "left";
-          button3.style.padding = "6px 8px";
-          button3.style.marginBottom = "6px";
-          button3.style.borderRadius = "8px";
-          button3.style.border = "1px solid rgba(255,255,255,0.10)";
-          button3.style.background = selectedKey === opt.key ? "rgba(94,234,212,0.15)" : "rgba(255,255,255,0.04)";
-          button3.style.color = "#e7eef7";
-          const dot = document.createElement("span");
-          dot.className = "qmm-dot";
-          dot.style.background = selectedKey === opt.key ? "rgba(94,234,212,0.85)" : "rgba(255,255,255,0.20)";
-          const label2 = document.createElement("span");
-          label2.className = "label";
-          label2.textContent = opt.cropName || opt.key;
-          const fallbackEmoji = getLockerSeedEmojiForKey(opt.key) || getLockerSeedEmojiForSeedName(opt.seedName) || "\u{1F331}";
-          const sprite2 = createSeedSpriteIcon(opt, fallbackEmoji, 24, "calculator-list");
-          button3.append(dot, label2, sprite2);
-          button3.onmouseenter = () => {
-            button3.style.borderColor = "rgba(94,234,212,0.35)";
-            button3.style.background = selectedKey === opt.key ? "rgba(94,234,212,0.18)" : "rgba(255,255,255,0.07)";
-          };
-          button3.onmouseleave = () => {
-            button3.style.borderColor = "rgba(255,255,255,0.10)";
-            button3.style.background = selectedKey === opt.key ? "rgba(94,234,212,0.15)" : "rgba(255,255,255,0.04)";
-          };
-          button3.onclick = () => {
-            if (selectedKey === opt.key) return;
-            selectedKey = opt.key;
-            refreshListStyles();
-            renderDetail();
-            updateOutputs();
-          };
-          listButtons.set(opt.key, { button: button3, dot });
-          fragment.appendChild(button3);
-        });
-        list.appendChild(fragment);
-        list.scrollTop = previous;
-        refreshListStyles();
-        renderDetail();
-      }
-      renderList();
-      const onDataUpdated = (e) => {
-        const key2 = e.detail?.key;
-        if (key2 === "plants") renderList();
-      };
-      window.addEventListener("gemini:data-updated", onDataUpdated);
-    });
-    ui.mount(container);
-  }
-  var ROOT_CLASS, SIZE_MIN, SIZE_MAX, COLOR_MUTATION_LABELS, WEATHER_CONDITION_LABELS, WEATHER_LIGHTING_LABELS, FRIEND_BONUS_LABELS, FRIEND_BONUS_MIN_PLAYERS, FRIEND_BONUS_MAX_PLAYERS, COLOR_SEGMENT_METADATA, WEATHER_CONDITION_SEGMENT_METADATA, WEATHER_LIGHTING_SEGMENT_METADATA, MUTATION_SPRITE_OVERRIDES, priceFormatter, weightFormatter, DEFAULT_STATE2, BASE_SPRITE_SIZE_PX, DEFAULT_SPRITE_CATEGORIES, PLANT_PRIORITY_IDENTIFIERS, CROP_SIMULATION_CSS, cropSimulationStyleEl, applyStyles2, calculatorStyleEl, MUTATION_UI_SPRITE_NAMES;
-  var init_menu5 = __esm({
-    "src/features/calculator/menu.ts"() {
+  var COLOR_LABELS, WEATHER_LABELS, LIGHTING_LABELS, FRIEND_BONUS_LABELS, defaultCalculatorState, clampFriendPlayers, friendPlayersLabel, friendPlayersOf, calculatorWeight, WEIGHT_FORMAT;
+  var init_compute = __esm({
+    "src/features/calculator/compute.ts"() {
       "use strict";
-      init_dom2();
-      init_data();
       init_cropValue();
       init_cropSize();
-      init_menu4();
-      init_menu();
+      init_format();
+      init_math();
+      COLOR_LABELS = ["None", "Gold", "Rainbow"];
+      WEATHER_LABELS = ["None", "Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"];
+      LIGHTING_LABELS = ["None", "Dawnlit", "Dawnbound", "Amberlit", "Amberbound"];
+      FRIEND_BONUS_LABELS = ["+0%", "+10%", "+20%", "+30%", "+40%", "+50%"];
+      defaultCalculatorState = () => ({
+        size: CROP_SIZE_MIN,
+        color: "None",
+        weather: "None",
+        lighting: "None",
+        friendPlayers: 1
+      });
+      clampFriendPlayers = (players) => clampFinite(Math.round(players), 1, FRIEND_BONUS_LABELS.length, 1);
+      friendPlayersLabel = (players) => FRIEND_BONUS_LABELS[clampFriendPlayers(players) - 1];
+      friendPlayersOf = (label2) => Math.max(1, FRIEND_BONUS_LABELS.indexOf(label2) + 1);
+      calculatorWeight = (species, size) => cropWeight(species, size);
+      WEIGHT_FORMAT = new Intl.NumberFormat("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+    }
+  });
+
+  // src/features/calculator/mutationPicker.ts
+  function showIcon(button3, label2) {
+    const iconName = MUTATION_ICON_NAMES[label2];
+    const labelSpan = button3.querySelector(".qmm-seg__btn-label");
+    if (!iconName || !labelSpan) return;
+    void getSpriteObjectUrlByName(["ui"], iconName).then((url) => {
+      if (!url) return;
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = label2;
+      img.title = label2;
+      img.width = ICON_PX;
+      img.height = ICON_PX;
+      Object.assign(img.style, { width: `${ICON_PX}px`, height: `${ICON_PX}px`, objectFit: "contain", display: "block" });
+      img.draggable = false;
+      labelSpan.replaceChildren(img);
+    });
+  }
+  function optionPicker(labels, selected, ariaLabel, onPick) {
+    const control = segmented(
+      labels.map((label2) => ({ value: label2, label: label2, disabled: !onPick })),
+      selected,
+      onPick,
+      { ariaLabel, fullWidth: true }
+    );
+    control.style.setProperty("--seg-pad", "6px");
+    for (const button3 of control.querySelectorAll(".qmm-seg__btn")) {
+      Object.assign(button3.style, {
+        flex: "1 1 0",
+        minWidth: "0",
+        display: "flex",
+        justifyContent: "center",
+        fontSize: "11px",
+        fontWeight: "600"
+      });
+      showIcon(button3, button3.dataset.value ?? "");
+    }
+    return control;
+  }
+  var MUTATION_ICON_NAMES, ICON_PX;
+  var init_mutationPicker = __esm({
+    "src/features/calculator/mutationPicker.ts"() {
+      "use strict";
       init_segmented();
       init_iconCache();
-      ROOT_CLASS = "mg-crop-simulation";
-      SIZE_MIN = CROP_SIZE_MIN;
-      SIZE_MAX = CROP_SIZE_MAX;
-      COLOR_MUTATION_LABELS = ["None", "Gold", "Rainbow"];
-      WEATHER_CONDITION_LABELS = ["None", "Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"];
-      WEATHER_LIGHTING_LABELS = ["None", "Dawnlit", "Dawnbound", "Amberlit", "Amberbound"];
-      FRIEND_BONUS_LABELS = ["+0%", "+10%", "+20%", "+30%", "+40%", "+50%"];
-      FRIEND_BONUS_MIN_PLAYERS = 1;
-      FRIEND_BONUS_MAX_PLAYERS = FRIEND_BONUS_LABELS.length;
-      COLOR_SEGMENT_METADATA = {
-        None: { mgColor: "none" },
-        Gold: { mgColor: "gold" },
-        Rainbow: { mgColor: "rainbow" }
-      };
-      WEATHER_CONDITION_SEGMENT_METADATA = {
-        None: { mgWeather: "none" },
-        Wet: { mgWeather: "wet" },
-        Chilled: { mgWeather: "chilled" },
-        Frozen: { mgWeather: "frozen" },
-        Thunderstruck: { mgWeather: "thunderstruck" },
-        Thundercharged: { mgWeather: "thundercharged" }
-      };
-      WEATHER_LIGHTING_SEGMENT_METADATA = {
-        None: { mgLighting: "none" },
-        Dawnlit: { mgLighting: "dawnlit" },
-        Dawnbound: { mgLighting: "dawnbound" },
-        Amberlit: { mgLighting: "amberlit" },
-        Amberbound: { mgLighting: "amberbound" }
-      };
-      MUTATION_SPRITE_OVERRIDES = {
-        dawnlit: "Dawnlit",
-        dawnbound: "Dawncharged",
-        amberlit: "Ambershine",
-        amberbound: "Ambercharged",
-        thunderstruck: "Thunderstruck",
-        thundercharged: "Thundercharged"
-      };
-      priceFormatter = new Intl.NumberFormat("en-US");
-      weightFormatter = new Intl.NumberFormat("en-US", {
-        minimumFractionDigits: 3,
-        maximumFractionDigits: 3
-      });
-      DEFAULT_STATE2 = {
-        sizePercent: SIZE_MIN,
-        color: "None",
-        weatherCondition: "None",
-        weatherLighting: "None",
-        friendPlayers: FRIEND_BONUS_MIN_PLAYERS
-      };
-      BASE_SPRITE_SIZE_PX = 96;
-      DEFAULT_SPRITE_CATEGORIES = ["tallplant", "plant", "crop"];
-      PLANT_PRIORITY_IDENTIFIERS = /* @__PURE__ */ new Set([
-        "dawncelestial",
-        "mooncelestial",
-        "dawnbinder",
-        "moonbinder",
-        "dawnbinderbulb",
-        "moonbinderbulb",
-        "dawnbinderpod",
-        "moonbinderpod"
-      ]);
-      CROP_SIMULATION_CSS = `
-.${ROOT_CLASS} {
-  display: none;
-  width: min(100%, 500px);
-  padding: 12px 14px;
-  color: #e2e8f0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  position: relative;
-  z-index: 2000;
-  pointer-events: auto;
-}
-.${ROOT_CLASS} .mg-crop-simulation__header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-.${ROOT_CLASS} .mg-crop-simulation__title {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: #f8fafc;
-}
-.${ROOT_CLASS} .mg-crop-simulation__crop-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #5eead4;
-  text-transform: capitalize;
-}
-.${ROOT_CLASS} .mg-crop-simulation__sprite-section {
-  display: flex;
-  flex-direction: column;
-}
-.${ROOT_CLASS} .mg-crop-simulation__sprite-box {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-}
-.${ROOT_CLASS} .mg-crop-simulation__sprite {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: ${BASE_SPRITE_SIZE_PX}px;
-  height: ${BASE_SPRITE_SIZE_PX}px;
-  position: relative;
-  flex-shrink: 0;
-  --mg-crop-simulation-scale: 1;
-  transform-origin: center;
-  transform: scale(var(--mg-crop-simulation-scale));
-}
-.${ROOT_CLASS} .mg-crop-simulation__sprite-layer,
-.${ROOT_CLASS} .mg-crop-simulation__sprite-fallback {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.${ROOT_CLASS} .mg-crop-simulation__sprite-layer img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  image-rendering: pixelated;
-}
-.${ROOT_CLASS} .mg-crop-simulation__sprite-layer--base {
-  z-index: 1;
-}
-.${ROOT_CLASS} .mg-crop-simulation__sprite-layer--overlay {
-  z-index: 2;
-  transform: translateY(-4px);
-}
-.${ROOT_CLASS} .mg-crop-simulation__sprite-layer--overlay-lighting {
-  transform: translateY(-30px);
-}
-.${ROOT_CLASS} .mg-crop-simulation__sprite-fallback {
-  z-index: 0;
-  font-size: 42px;
-}
-.${ROOT_CLASS} .mg-crop-simulation__sprite[data-mg-has-sprite="1"] .mg-crop-simulation__sprite-fallback {
-  opacity: 0;
-}
-.${ROOT_CLASS} .mg-crop-simulation__slider-container {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-}
-.${ROOT_CLASS} .mg-crop-simulation__slider-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.${ROOT_CLASS} .mg-crop-simulation__slider-label {
-  font-size: 12px;
-  color: rgba(226, 232, 240, 0.82);
-  flex: 0 0 auto;
-}
-.${ROOT_CLASS} .mg-crop-simulation__slider-value {
-  margin-left: auto;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  color: #f8fafc;
-  text-align: right;
-  width: 4ch;
-  min-width: 4ch;
-  flex: 0 0 4ch;
-  white-space: nowrap;
-}
-.${ROOT_CLASS} .mg-crop-simulation__slider-weight {
-  font-size: 11px;
-  color: rgba(148, 163, 184, 0.82);
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-  white-space: nowrap;
-}
-.${ROOT_CLASS} .mg-crop-simulation__slider {
-  flex: 1 1 auto;
-  min-width: 0;
-  accent-color: #5eead4;
-}
-.${ROOT_CLASS} .mg-crop-simulation__price {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 700;
-  font-size: 14px;
-  color: #ffd84d;
-  align-self: flex-start;
-  margin-top: auto;
-}
-.${ROOT_CLASS} .mg-crop-simulation__price-icon {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 auto;
-  display: inline-block;
-  user-select: none;
-  pointer-events: none;
-}
-.${ROOT_CLASS} .mg-crop-simulation__price-value {
-  line-height: 1;
-}
-.${ROOT_CLASS} .mg-crop-simulation__section-title {
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: rgba(148, 163, 184, 0.9);
-}
-.${ROOT_CLASS}.mg-crop-simulation--calculator {
-  align-items: center;
-}
-.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__layout {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 12px;
-  width: min(440px, 100%);
-  margin: 0 auto;
-}
-.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__section {
-  display: grid;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.04);
-  box-shadow: none;
-  justify-items: stretch;
-}
-.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__section-heading {
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.82);
-  font-weight: 600;
-  text-align: center;
-}
-.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__section--preview {
-  justify-items: center;
-  text-align: center;
-}
-.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__section--preview .mg-crop-simulation__slider-row {
-  width: 100%;
-}
-.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__mutations-weather {
-  display: grid;
-  gap: 8px;
-}
-.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-calculator__mutations-heading {
-  font-size: 10px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: rgba(148, 163, 184, 0.82);
-  text-align: center;
-}
-.${ROOT_CLASS}.mg-crop-simulation--calculator .mg-crop-simulation__price {
-  margin-top: 0;
-}
-.${ROOT_CLASS} .mg-crop-simulation__segmented {
-  display: flex;
-  width: 100%;
-}
-.${ROOT_CLASS} .mg-crop-simulation__segmented-control {
-  --qmm-bg-soft: rgba(11, 15, 19, 0.8);
-  --qmm-border-2: rgba(148, 163, 184, 0.28);
-  --qmm-text: #e2e8f0;
-  --qmm-text-dim: rgba(148, 163, 184, 0.82);
-  --seg-pad: 6px;
-  --seg-fill: rgba(56, 191, 248, 0.02);
-  --seg-stroke-color: rgba(255, 255, 255, 0.49);
-  flex: 1 1 auto;
-  min-width: 0;
-  width: 100%;
-}
-.${ROOT_CLASS} .mg-crop-simulation__segmented-control .qmm-seg__btn {
-  font-size: 11px;
-  letter-spacing: 0.02em;
-  font-weight: 600;
-  flex: 1 1 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  min-width: 0;
-}
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="none"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="none"].active {
-  color: rgba(148, 163, 184, 0.92);
-}
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="gold"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="gold"].active {
-  color: #facc15;
-  font-weight: 700;
-}
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="gold"] .qmm-seg__btn-label,
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="gold"].active .qmm-seg__btn-label {
-  color: transparent;
-  background-image: linear-gradient(90deg, #fef08a, #facc15, #fef08a);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-}
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="rainbow"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="rainbow"].active {
-  color: #fbbf24;
-  font-weight: 700;
-}
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="rainbow"] .qmm-seg__btn-label,
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-color="rainbow"].active .qmm-seg__btn-label {
-  color: transparent;
-  background-image: linear-gradient(90deg, #f87171, #fbbf24, #34d399, #5eead4, #c084fc);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-}
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="none"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="none"].active,
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="none"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="none"].active {
-  color: rgba(148, 163, 184, 0.92);
-}
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="wet"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="wet"].active {
-  color: #5AF6F5;
-  font-weight: 700;
-}
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="chilled"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="chilled"].active {
-  color: #AFE0F6;
-  font-weight: 700;
-}
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="frozen"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="frozen"].active {
-  color: #AABEFF;
-  font-weight: 700;
-}
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="thunderstruck"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-weather="thunderstruck"].active {
-  color: rgb(16, 141, 163);
-  font-weight: 700;
-}
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="dawnlit"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="dawnlit"].active {
-  color: #7864B4;
-  font-weight: 700;
-}
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="dawnbound"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="dawnbound"].active {
-  color: #9785CB;
-  font-weight: 700;
-}
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="amberlit"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="amberlit"].active {
-  color: #A04632;
-  font-weight: 700;
-}
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="amberbound"],
-.${ROOT_CLASS} .qmm-seg__btn[data-mg-lighting="amberbound"].active {
-  color: #F06E50;
-  font-weight: 700;
-}
-.${ROOT_CLASS} .mg-crop-simulation__mutations-section {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-`;
-      cropSimulationStyleEl = null;
-      applyStyles2 = (el, styles) => {
-        const toKebab = (s) => s.startsWith("--") ? s : s.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
-        for (const [key2, value] of Object.entries(styles)) {
-          el.style.setProperty(toKebab(key2), value);
-        }
-        return el;
-      };
-      calculatorStyleEl = null;
-      MUTATION_UI_SPRITE_NAMES = {
+      MUTATION_ICON_NAMES = {
         Gold: "MutationGold",
         Rainbow: "MutationRainbow",
         Wet: "MutationWet",
@@ -43183,6 +42171,347 @@ next: ${next}`;
         Dawnbound: "MutationDawncharged",
         Amberbound: "MutationAmbercharged"
       };
+      ICON_PX = 20;
+    }
+  });
+
+  // src/features/calculator/sprites.ts
+  function spriteNameFromPath(path) {
+    const file = String(path || "").trim().split("/").pop() || "";
+    return file.replace(/\.[a-z0-9]+(\?.*)?$/i, "") || null;
+  }
+  function spriteCandidates(species, option) {
+    const names = /* @__PURE__ */ new Set();
+    const add = (value) => {
+      const trimmed = String(value ?? "").trim();
+      if (!trimmed) return;
+      names.add(trimmed);
+      names.add(trimmed.replace(/\W+/g, ""));
+    };
+    if (option?.spriteKey) add(spriteNameFromPath(option.spriteKey));
+    add(species);
+    if (option) {
+      add(option.cropName);
+      add(option.seedName);
+    }
+    const iconNames = Array.from(names, (name) => name.replace(/icon$/i, "")).filter(Boolean);
+    const all = Array.from(/* @__PURE__ */ new Set([...iconNames.map((name) => `${name}Icon`), ...names])).filter(Boolean);
+    return all.length ? all : [species];
+  }
+  function spriteCategories(option) {
+    for (const name of [option.key, option.seedName, option.cropName]) {
+      if (PLANT_FIRST_SPECIES.has(String(name ?? "").trim().toLowerCase())) return ["plant", "tallplant", "crop"];
+    }
+    return [...DEFAULT_CATEGORIES];
+  }
+  function cropListIcon(option, emoji, size) {
+    const wrap = h("span", void 0, emoji.trim() ? emoji : "??");
+    Object.assign(wrap.style, {
+      width: `${size}px`,
+      height: `${size}px`,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center"
+    });
+    attachSpriteIcon(wrap, spriteCategories(option), spriteCandidates(option.key, option), size, "calculator-list");
+    return wrap;
+  }
+  function cropPreview() {
+    const root = h("span");
+    Object.assign(root.style, {
+      position: "relative",
+      display: "inline-flex",
+      flexShrink: "0",
+      width: `${PREVIEW_SPRITE_PX}px`,
+      height: `${PREVIEW_SPRITE_PX}px`,
+      transformOrigin: "center"
+    });
+    const fill = { position: "absolute", inset: "0", display: "flex", alignItems: "center", justifyContent: "center" };
+    const fallback = h("span");
+    Object.assign(fallback.style, fill, { zIndex: "0", fontSize: "42px" });
+    const layer2 = h("span");
+    Object.assign(layer2.style, fill, { zIndex: "1" });
+    root.append(fallback, layer2);
+    const syncFallback = () => {
+      fallback.style.opacity = layer2.childElementCount > 0 ? "0" : "";
+    };
+    return {
+      root,
+      show(option, mutations, emoji) {
+        fallback.textContent = emoji.trim() ? emoji : "??";
+        syncFallback();
+        attachSpriteIcon(layer2, spriteCategories(option), spriteCandidates(option.key, option), PREVIEW_SPRITE_PX, "calculator", {
+          mutations: mutations.length ? mutations.map((m) => MUTATION_SPRITE_NAMES[m] ?? m) : void 0,
+          onSpriteApplied: syncFallback
+        });
+      },
+      setSize(size) {
+        root.style.transform = `scale(${size / 100})`;
+      },
+      clear() {
+        fallback.textContent = "";
+        layer2.replaceChildren();
+        syncFallback();
+      }
+    };
+  }
+  var PREVIEW_SPRITE_PX, DEFAULT_CATEGORIES, PLANT_FIRST_SPECIES, MUTATION_SPRITE_NAMES;
+  var init_sprites3 = __esm({
+    "src/features/calculator/sprites.ts"() {
+      "use strict";
+      init_iconCache();
+      init_dom();
+      PREVIEW_SPRITE_PX = 96;
+      DEFAULT_CATEGORIES = ["tallplant", "plant", "crop"];
+      PLANT_FIRST_SPECIES = /* @__PURE__ */ new Set([
+        "dawncelestial",
+        "mooncelestial",
+        "dawnbinder",
+        "moonbinder",
+        "dawnbinderbulb",
+        "moonbinderbulb",
+        "dawnbinderpod",
+        "moonbinderpod"
+      ]);
+      MUTATION_SPRITE_NAMES = {
+        Dawnbound: "Dawncharged",
+        Amberlit: "Ambershine",
+        Amberbound: "Ambercharged"
+      };
+    }
+  });
+
+  // src/features/calculator/menu.ts
+  function seedEmoji(option, key2) {
+    return getLockerSeedEmojiForKey(key2) || (option?.seedName ? getLockerSeedEmojiForSeedName(option.seedName) : void 0) || "\u{1F331}";
+  }
+  function section(title) {
+    const card5 = plainCard();
+    Object.assign(card5.style, { padding: "12px", gap: "10px" });
+    if (title) {
+      const heading = sectionLabel(title);
+      heading.style.textAlign = "center";
+      card5.appendChild(heading);
+    }
+    return card5;
+  }
+  function priceDisplay() {
+    const root = h("div");
+    Object.assign(root.style, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "10px",
+      marginBottom: "12px",
+      fontSize: "20px",
+      fontWeight: "700",
+      color: color.gold
+    });
+    const icon2 = h("img");
+    icon2.src = coin2.img64;
+    icon2.alt = "";
+    icon2.draggable = false;
+    icon2.setAttribute("aria-hidden", "true");
+    Object.assign(icon2.style, { width: "20px", height: "20px", pointerEvents: "none", userSelect: "none" });
+    const value = h("span", void 0, "\u2014");
+    value.style.lineHeight = "1";
+    root.append(icon2, value);
+    return { root, value };
+  }
+  function sourceHint() {
+    const el = h("div");
+    Object.assign(el.style, {
+      fontSize: "11px",
+      color: color.textSoft,
+      textAlign: "center",
+      marginTop: "20px",
+      paddingBottom: "4px"
+    });
+    const link = h("a", void 0, "Daserix' Magic Garden Calculators");
+    link.href = "https://daserix.github.io/magic-garden-calculator";
+    link.target = "_blank";
+    link.rel = "noreferrer noopener";
+    Object.assign(link.style, { color: color.accent, textDecoration: "underline" });
+    el.append("Based on ", link);
+    return el;
+  }
+  function renderCropsTab(root) {
+    root.replaceChildren();
+    Object.assign(root.style, { padding: "8px", boxSizing: "border-box", height: "66vh", overflow: "auto", display: "grid" });
+    const layout = h("div");
+    Object.assign(layout.style, {
+      display: "grid",
+      gridTemplateColumns: "minmax(220px, 280px) minmax(0, 1fr)",
+      gap: "10px",
+      height: "100%",
+      overflow: "hidden"
+    });
+    const listPane = h("div");
+    Object.assign(listPane.style, { display: "flex", flexDirection: "column", minHeight: "0" });
+    const detailScroll = h("div", "qmm-scroll");
+    Object.assign(detailScroll.style, { overflow: "auto", minHeight: "0" });
+    const detail = h("div");
+    Object.assign(detail.style, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "12px",
+      width: "min(440px, 100%)",
+      margin: "0 auto"
+    });
+    detailScroll.appendChild(detail);
+    layout.append(listPane, detailScroll);
+    root.append(layout, sourceHint());
+    const price = priceDisplay();
+    const preview = cropPreview();
+    const spriteBox = h("div");
+    Object.assign(spriteBox.style, { display: "flex", alignItems: "center", justifyContent: "center", padding: "12px" });
+    spriteBox.appendChild(preview.root);
+    const sizeSlider = slider(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, CROP_SIZE_MIN, { fill: true });
+    Object.assign(sizeSlider.style, { flex: "1 1 auto", minWidth: "0" });
+    const sizeLabel = h("span", void 0, "Size");
+    Object.assign(sizeLabel.style, { fontSize: "12px", color: color.textSoft });
+    const sizeValue = h("span", void 0, `${CROP_SIZE_MIN}%`);
+    Object.assign(sizeValue.style, { width: "4ch", fontSize: "12px", textAlign: "right", fontVariantNumeric: "tabular-nums" });
+    const sizeRow = h("div");
+    Object.assign(sizeRow.style, { display: "flex", alignItems: "center", gap: "8px" });
+    sizeRow.append(sizeLabel, sizeSlider, sizeValue);
+    const weight = h("div", void 0, "\u2014");
+    Object.assign(weight.style, { fontSize: "11px", color: color.textDim, textAlign: "center", fontVariantNumeric: "tabular-nums" });
+    const previewCard = section(null);
+    previewCard.append(spriteBox, sizeRow, weight);
+    const colorHost = h("div");
+    const weatherHost = h("div");
+    const lightingHost = h("div");
+    const mutationsCard = section("Mutations");
+    mutationsCard.append(colorHost, weatherHost, lightingHost);
+    const friendHost = h("div");
+    const friendCard = section("Friend bonus");
+    friendCard.appendChild(friendHost);
+    detail.append(price.root, previewCard, mutationsCard, friendCard);
+    const states = /* @__PURE__ */ new Map();
+    const optionByKey = /* @__PURE__ */ new Map();
+    const listIcons = /* @__PURE__ */ new Map();
+    let selectedKey = null;
+    const stateFor = (key2) => {
+      let state5 = states.get(key2);
+      if (!state5) states.set(key2, state5 = defaultCalculatorState());
+      return state5;
+    };
+    function refreshPrice() {
+      price.value.textContent = selectedKey ? formatCoins3(calculatorPrice(selectedKey, stateFor(selectedKey))) : "\u2014";
+    }
+    function refreshSize(size) {
+      sizeSlider.value = String(size);
+      sizeValue.textContent = String(size);
+      preview.setSize(size);
+      weight.textContent = formatWeight(selectedKey ? calculatorWeight(selectedKey, size) : null);
+    }
+    function refreshSprite() {
+      const option = selectedKey ? optionByKey.get(selectedKey) : void 0;
+      if (!selectedKey || !option) {
+        preview.clear();
+        return;
+      }
+      preview.show(option, mutationsOf(stateFor(selectedKey)), seedEmoji(option, selectedKey));
+    }
+    function renderPickers() {
+      const state5 = selectedKey ? stateFor(selectedKey) : defaultCalculatorState();
+      const live = selectedKey != null;
+      const pick2 = (field, spriteChanges) => live ? (value) => {
+        state5[field] = value;
+        if (spriteChanges) refreshSprite();
+        refreshPrice();
+      } : void 0;
+      colorHost.replaceChildren(optionPicker(COLOR_LABELS, state5.color, "Mutations", pick2("color", true)));
+      weatherHost.replaceChildren(optionPicker(WEATHER_LABELS, state5.weather, "Weather condition", pick2("weather", true)));
+      lightingHost.replaceChildren(optionPicker(LIGHTING_LABELS, state5.lighting, "Weather lighting", pick2("lighting", true)));
+      const pickFriends = pick2("friendPlayers", false);
+      friendHost.replaceChildren(
+        optionPicker(
+          FRIEND_BONUS_LABELS,
+          friendPlayersLabel(state5.friendPlayers),
+          "Friend bonus",
+          pickFriends && ((label2) => pickFriends(friendPlayersOf(label2)))
+        )
+      );
+    }
+    function renderDetail() {
+      sizeSlider.disabled = !selectedKey;
+      refreshSize(selectedKey ? stateFor(selectedKey).size : CROP_SIZE_MIN);
+      renderPickers();
+      refreshSprite();
+      refreshPrice();
+    }
+    sizeSlider.addEventListener("input", () => {
+      if (!selectedKey) return;
+      const size = clamp(Math.round(Number(sizeSlider.value)), CROP_SIZE_MIN, CROP_SIZE_MAX);
+      stateFor(selectedKey).size = size;
+      refreshSize(size);
+      refreshPrice();
+    });
+    const tabs = new VTabs({
+      emptyText: "No crops available.",
+      fillAvailableHeight: true,
+      onSelect: (id) => {
+        if (id === selectedKey) return;
+        selectedKey = id;
+        renderDetail();
+      },
+      renderItem: (item, btn) => {
+        let icon2 = listIcons.get(item.id);
+        if (!icon2) {
+          const option = optionByKey.get(item.id);
+          icon2 = option ? cropListIcon(option, seedEmoji(option, option.key), LIST_ICON_PX) : h("span");
+          listIcons.set(item.id, icon2);
+        }
+        const label2 = h("span", void 0, item.title);
+        Object.assign(label2.style, { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
+        btn.append(icon2, label2, h("span"));
+      }
+    });
+    listPane.appendChild(tabs.root);
+    function renderList() {
+      const options = getLockerSeedOptions();
+      optionByKey.clear();
+      listIcons.clear();
+      for (const option of options) optionByKey.set(option.key, option);
+      tabs.setItems(options.map((option) => ({ id: option.key, title: option.cropName || option.key })));
+      const selected = tabs.getSelected()?.id ?? null;
+      if (!selected && options.length) {
+        tabs.select(options[0].key);
+        return;
+      }
+      selectedKey = selected;
+      renderDetail();
+    }
+    renderList();
+    window.addEventListener("gemini:data-updated", (event) => {
+      if (event.detail?.key === "plants") renderList();
+    });
+  }
+  async function renderCalculatorMenu(container) {
+    const ui = new Menu({ id: "calculator", compact: true });
+    ui.addTab("crops", "Crops", renderCropsTab);
+    ui.mount(container);
+  }
+  var LIST_ICON_PX;
+  var init_menu5 = __esm({
+    "src/features/calculator/menu.ts"() {
+      "use strict";
+      init_data();
+      init_cropSize();
+      init_math();
+      init_menu4();
+      init_menu();
+      init_card();
+      init_dom();
+      init_sliders();
+      init_theme();
+      init_vtabs();
+      init_compute();
+      init_mutationPicker();
+      init_sprites3();
+      LIST_ICON_PX = 24;
     }
   });
 
@@ -47404,7 +46733,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     headerDesc.textContent = config.description;
     headerText.append(headerDesc);
     header.append(iconBox(config.headerSprite, 22, "misc"), headerText);
-    const section3 = collapsibleCard({
+    const section4 = collapsibleCard({
       header,
       collapsed: config.collapsed,
       onToggle: config.onToggleCollapsed
@@ -47456,7 +46785,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       updateControls();
     });
     actions.append(btnSelect, btnClear, spacer2, btnDelete, btnPause, btnPlay, btnStop);
-    section3.body.append(stats, chips, estimate, progressWrap, actions);
+    section4.body.append(stats, chips, estimate, progressWrap, actions);
     const progress = { target: "-", done: 0, total: 0 };
     function buildChip(item) {
       const chip2 = document.createElement("div");
@@ -47619,7 +46948,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     updateSummary2();
     updateControls();
     return {
-      root: section3.root,
+      root: section4.root,
       cleanup: () => {
         clearSummaryTimer();
         for (const [type, handler] of listeners9) window.removeEventListener(type, handler);
@@ -48086,7 +47415,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/chat/harvest.ts
-  function mutationsOf(row2) {
+  function mutationsOf2(row2) {
     return row2.mutations;
   }
   function rowKey(row2) {
@@ -48100,7 +47429,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function mutationsPresent(rows) {
     const all = /* @__PURE__ */ new Set();
-    for (const row2 of rows) for (const mutation of mutationsOf(row2)) all.add(mutation);
+    for (const row2 of rows) for (const mutation of mutationsOf2(row2)) all.add(mutation);
     return [...all].sort((a, b) => a.localeCompare(b));
   }
   function tally(rows, of) {
@@ -48114,7 +47443,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function matchesMutations(row2, wanted, mode) {
     if (wanted.length === 0) return true;
-    const present = new Set(mutationsOf(row2));
+    const present = new Set(mutationsOf2(row2));
     switch (mode) {
       case "all":
         return wanted.every((mutation) => present.has(mutation));
@@ -48156,7 +47485,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function groupVariants(rows) {
     const groups = /* @__PURE__ */ new Map();
     for (const row2 of rows) {
-      const mutations = [...mutationsOf(row2)].sort();
+      const mutations = [...mutationsOf2(row2)].sort();
       const key2 = `${row2.species}|${mutations.join(",")}`;
       const known = groups.get(key2);
       if (known) known.count++;
@@ -48377,7 +47706,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const all = [.../* @__PURE__ */ new Set([...candidates, ...bases.map((base) => `${base}Icon`)])];
     if (all.length) attachSpriteIcon(box2, ["crop", "tallplant", "plant"], all, sizePx, SPRITE_LOG_TAG2);
   }
-  function speciesIcon(species, sizePx = ICON_PX) {
+  function speciesIcon(species, sizePx = ICON_PX2) {
     const box2 = iconHolder(sizePx);
     attachAtlasCrop(box2, species, sizePx);
     return box2;
@@ -48389,7 +47718,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const apiCategory = INTERNAL_TO_API[segment] ?? (isComposableCategory(segment) ? segment : "plants");
     return composedSpriteUrl(apiCategory, spriteBaseName(species), mutations);
   }
-  function variantIcon(species, mutations, sizePx = ICON_PX) {
+  function variantIcon(species, mutations, sizePx = ICON_PX2) {
     if (mutations.length === 0) return speciesIcon(species, sizePx);
     const box2 = iconHolder(sizePx);
     const url = composedUrl(species, mutations);
@@ -48405,7 +47734,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     box2.append(img);
     return box2;
   }
-  function mutationIconEl(mutation, sizePx = ICON_PX) {
+  function mutationIconEl(mutation, sizePx = ICON_PX2) {
     const box2 = iconHolder(sizePx);
     const candidates = spellings(mutation).flatMap((name) => [`Mutation${name}`, name]);
     attachSpriteIcon(box2, ["ui", "mutation"], candidates, sizePx, SPRITE_LOG_TAG2);
@@ -48536,7 +47865,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
     return wrap;
   }
-  var SPRITE_LOG_TAG2, ICON_PX;
+  var SPRITE_LOG_TAG2, ICON_PX2;
   var init_harvestChips = __esm({
     "src/features/companion/menu/harvestChips.ts"() {
       "use strict";
@@ -48547,7 +47876,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_discordCsp();
       init_panel();
       SPRITE_LOG_TAG2 = "companion-harvest";
-      ICON_PX = 26;
+      ICON_PX2 = 26;
     }
   });
 
@@ -48584,7 +47913,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const tileRef = eggCatalog2[eggId]?.tileRef;
     return spellings2(eggId, typeof tileRef === "string" ? tileRef : null, eggCatalogName(eggId), name);
   }
-  function plantItemIcon(item, sizePx = ICON_PX2) {
+  function plantItemIcon(item, sizePx = ICON_PX3) {
     const box2 = iconHolder2(sizePx);
     const isEgg = item.kind === "egg";
     const candidates = isEgg ? eggCandidates(item.id, item.name) : seedCandidates(item.id, item.name);
@@ -48629,7 +47958,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       }
     };
   }
-  var SPRITE_LOG_TAG3, ICON_PX2;
+  var SPRITE_LOG_TAG3, ICON_PX3;
   var init_plantChips = __esm({
     "src/features/companion/menu/plantChips.ts"() {
       "use strict";
@@ -48638,7 +47967,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_iconCache();
       init_panel();
       SPRITE_LOG_TAG3 = "companion-plant";
-      ICON_PX2 = 24;
+      ICON_PX3 = 24;
     }
   });
 
@@ -49156,7 +48485,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       else delete map2[sectionId];
     });
   }
-  function section(id, icon2, title, description) {
+  function section2(id, icon2, title, description) {
     return collapsibleCard({
       icon: icon2,
       title,
@@ -49178,7 +48507,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return head;
   }
   function buildAutoRecoSection() {
-    const card5 = section(
+    const card5 = section2(
       "autoReco",
       "\u{1F50C}",
       "Auto reconnect",
@@ -49229,7 +48558,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return card5.root;
   }
   function buildPlayerSection() {
-    const card5 = section(
+    const card5 = section2(
       "player",
       "\u{1F47B}",
       "Player controls",
@@ -49272,7 +48601,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function buildInventoryGuardSection() {
-    const card5 = section(
+    const card5 = section2(
       "inventoryGuard",
       "\u{1F392}",
       "Inventory guard",
@@ -49293,7 +48622,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return card5.root;
   }
   function buildDisplaySection(modalHost) {
-    const card5 = section(
+    const card5 = section2(
       "display",
       "\u{1F4B0}",
       "Display",
@@ -49316,7 +48645,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return card5.root;
   }
   function buildStorageSection() {
-    const card5 = section(
+    const card5 = section2(
       "storage",
       "\u{1F4E6}",
       "Storage auto-store",
@@ -51971,9 +51300,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       overflowY: "auto",
       boxSizing: "border-box"
     });
-    for (const section3 of getKeybindSections()) {
+    for (const section4 of getKeybindSections()) {
       const sectionCard = card2();
-      sectionCard.dataset.section = section3.id;
+      sectionCard.dataset.section = section4.id;
       css(sectionCard, { flexShrink: "0", minHeight: "auto" });
       const head = document.createElement("button");
       head.type = "button";
@@ -52000,22 +51329,22 @@ Restore figures are averages; unlucky streaks do worse.`;
       chevron.textContent = "\u25B6";
       const titles = document.createElement("div");
       css(titles, { display: "flex", flexDirection: "column", gap: "3px", minWidth: "0", flex: "1 1 auto" });
-      titles.appendChild(sectionLabel2(`${section3.icon} ${section3.title}`));
-      if (section3.description) {
+      titles.appendChild(sectionLabel2(`${section4.icon} ${section4.title}`));
+      if (section4.description) {
         const desc = document.createElement("div");
         css(desc, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
-        desc.textContent = section3.description;
+        desc.textContent = section4.description;
         titles.appendChild(desc);
       }
       head.append(titles, chevron);
       sectionCard.appendChild(head);
       const body = document.createElement("div");
       css(body, { display: "flex", flexDirection: "column", gap: "8px" });
-      for (const action2 of section3.actions) {
+      for (const action2 of section4.actions) {
         body.appendChild(createKeybindRow(ui, action2));
       }
       sectionCard.appendChild(body);
-      let collapsed = isSectionCollapsed2(section3.id);
+      let collapsed = isSectionCollapsed2(section4.id);
       const applyCollapsed = () => {
         body.style.display = collapsed ? "none" : "flex";
         chevron.style.transform = collapsed ? "rotate(0deg)" : "rotate(90deg)";
@@ -52025,7 +51354,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       head.addEventListener("click", () => {
         collapsed = !collapsed;
         applyCollapsed();
-        setSectionCollapsed2(section3.id, collapsed);
+        setSectionCollapsed2(section4.id, collapsed);
       });
       root.appendChild(sectionCard);
     }
@@ -52464,7 +51793,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     return el;
   }
-  function section2(title, ...content) {
+  function section3(title, ...content) {
     const el = h("div");
     Object.assign(el.style, { display: "flex", flexDirection: "column", gap: "6px" });
     el.append(sectionLabel(title), ...content);
@@ -52578,11 +51907,11 @@ Restore figures are averages; unlucky streaks do worse.`;
     const garden3 = valueCard("Garden");
     content.append(
       profile,
-      section2("Teleport", teleport),
-      section2("Follow", row(unavailableButton("Follow player", "follow"))),
-      section2("Inspect", inspectGrid),
-      section2("Editor", inspectButton("Save player garden", "save", () => saveGardenWithEditor(player2))),
-      section2("Crop values", row(inventory.card, garden3.card))
+      section3("Teleport", teleport),
+      section3("Follow", row(unavailableButton("Follow player", "follow"))),
+      section3("Inspect", inspectGrid),
+      section3("Editor", inspectButton("Save player garden", "save", () => saveGardenWithEditor(player2))),
+      section3("Crop values", row(inventory.card, garden3.card))
     );
     void (async () => {
       try {
@@ -56794,7 +56123,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         return lockerService.allowsHarvest({
           seedKey: row2.species,
           sizePercent: row2.sizePct,
-          mutations: mutationsOf(row2)
+          mutations: mutationsOf2(row2)
         });
       } catch {
         return false;
@@ -59292,7 +58621,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         ),
         selectionRow({
           values: mutations,
-          counts: tally(available, mutationsOf),
+          counts: tally(available, mutationsOf2),
           selected: filters.mutations.length === 0 ? null : filters.mutations,
           iconFor: (name) => cachedIcon(`mutation:${name}`, () => mutationIconEl(name, TILE_ICON_PX)),
           onPick: (name) => {
@@ -59868,7 +59197,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     return box2;
   }
-  function petSpeciesIcon2(species, sizePx = ICON_PX3) {
+  function petSpeciesIcon2(species, sizePx = ICON_PX4) {
     const box2 = iconHolder3(sizePx);
     const candidates = [species, species.replace(/\s+/g, "")].filter(Boolean);
     attachSpriteIcon(box2, ["pet"], candidates, sizePx, SPRITE_LOG_TAG5, {
@@ -59879,7 +59208,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     });
     return box2;
   }
-  function abilityIcon(abilityId, sizePx = ICON_PX3) {
+  function abilityIcon(abilityId, sizePx = ICON_PX4) {
     const box2 = iconHolder3(sizePx);
     const square = document.createElement("span");
     const { bg } = getAbilityChipColors(abilityId);
@@ -59894,7 +59223,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     box2.append(square);
     return box2;
   }
-  var SPRITE_LOG_TAG5, ICON_PX3;
+  var SPRITE_LOG_TAG5, ICON_PX4;
   var init_hatchChips = __esm({
     "src/features/companion/menu/hatchChips.ts"() {
       "use strict";
@@ -59902,7 +59231,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       init_abilityColorsTab();
       init_panel();
       SPRITE_LOG_TAG5 = "companion-hatch";
-      ICON_PX3 = 26;
+      ICON_PX4 = 26;
     }
   });
 
@@ -61807,7 +61136,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   function questionOf(proposal) {
     const message = CompanionChat.getLog().messages.find((entry) => entry.proposalId === proposal.id);
     if (!message) return [document.createTextNode(proposal.summary)];
-    return message.positioned ? renderTagged(message.text, message.icons, ICON_PX4) : [document.createTextNode(message.text)];
+    return message.positioned ? renderTagged(message.text, message.icons, ICON_PX5) : [document.createTextNode(message.text)];
   }
   function build(proposal) {
     ensureStyle3();
@@ -61885,7 +61214,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     unsubscribe = CompanionChat.subscribe(sync);
     sync();
   }
-  var CARD_ID, STYLE_ID6, Z_INDEX, ICON_PX4, TICK_MS, ACCENT3, TEXT4, TEXT_DIM4, card4, clockBar, timer, shownId, unsubscribe;
+  var CARD_ID, STYLE_ID6, Z_INDEX, ICON_PX5, TICK_MS, ACCENT3, TEXT4, TEXT_DIM4, card4, clockBar, timer, shownId, unsubscribe;
   var init_askBanner = __esm({
     "src/features/companion/menu/askBanner.ts"() {
       "use strict";
@@ -61898,7 +61227,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       CARD_ID = "mgCompanionAsk";
       STYLE_ID6 = "mgCompanionAskStyle";
       Z_INDEX = "2000050";
-      ICON_PX4 = 17;
+      ICON_PX5 = 17;
       TICK_MS = 100;
       ACCENT3 = "#5eead4";
       TEXT4 = "#e7eef7";
