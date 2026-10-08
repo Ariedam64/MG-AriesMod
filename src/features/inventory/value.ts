@@ -79,22 +79,29 @@ export function computeInventoryItemValue(item: any, context: InventoryItemValue
   }
 }
 
-// The player count behind the friend bonus on the inventory's values. It is
-// followed from the first time the inventory shows, so the bonus moves as
-// players join and leave.
+// What the inventory's values depend on, followed from the first time the
+// inventory shows: the player count behind the friend bonus, so the bonus
+// moves as players join and leave, and the items themselves, so the value
+// summary is totalled again when something is sold, harvested or bought.
 let playersInRoom: number | null = null;
 let following: Promise<void> | null = null;
 const playersInRoomChanges = new Emitter<void>();
+const itemsChanges = new Emitter<void>();
 
 export const playersInRoomForValues = (): number | null => playersInRoom;
 
 export const onPlayersInRoomChange = (listener: () => void) => playersInRoomChanges.on(listener);
 
-/** Starts following the room's player count; later calls return the same promise. */
-export function followPlayersInRoomForValues(): Promise<void> {
-  following ??= readAndFollow(Atoms.server.numPlayers, (raw) => {
-    playersInRoom = Number.isFinite(raw) ? raw : null;
-    playersInRoomChanges.emit();
-  });
+export const onInventoryItemsChange = (listener: () => void) => itemsChanges.on(listener);
+
+/** Starts following the player count and the inventory; later calls return the same promise. */
+export function followInventoryValues(): Promise<void> {
+  following ??= Promise.all([
+    readAndFollow(Atoms.server.numPlayers, (raw) => {
+      playersInRoom = Number.isFinite(raw) ? raw : null;
+      playersInRoomChanges.emit();
+    }),
+    Atoms.inventory.myInventory.onChange(() => itemsChanges.emit()).catch(() => {}),
+  ]).then(() => {});
   return following;
 }

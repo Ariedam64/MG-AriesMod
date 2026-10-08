@@ -23,7 +23,7 @@ import { PET_HUTCH_ROOT_SELECTOR, updatePetHutchSections } from "./petHutch";
 import { loadShowValues, loadSortDirection, loadSortKey, saveShowValues, saveSort } from "./settings";
 import { ensureSortBar, renderSortOptions, type SortBar } from "./sortBar";
 import { DEFAULT_DIRECTION, computeSortOptions, isSortDirection, type SortDirection, type SortKey } from "./sortOptions";
-import { followPlayersInRoomForValues, onPlayersInRoomChange } from "./value";
+import { followInventoryValues, onInventoryItemsChange, onPlayersInRoomChange } from "./value";
 
 const GRID_ATTRIBUTES = ["data-checked", "style", "class", "hidden", "aria-hidden"];
 
@@ -133,15 +133,16 @@ function attachInventorySorting(): () => void {
   function update(): void {
     const target = resolveGrid();
     if (!target || !isVisible(target)) return;
-    void followPlayersInRoomForValues();
+    void followInventoryValues();
 
     const current = ensureSortBar(target, handlers);
     if (!current) return;
     bar = current;
     if (!gridListeners) {
-      // The total and the cards follow the friend bonus, the sort options the
-      // item types a filter shows.
+      // The total follows the items and the friend bonus, the cards the
+      // friend bonus, the sort options the item types a filter shows.
       gridListeners = new Subscriptions();
+      gridListeners.add(onInventoryItemsChange(refreshSummary));
       gridListeners.add(
         onPlayersInRoomChange(() => {
           refreshSummary();

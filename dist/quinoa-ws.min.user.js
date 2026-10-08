@@ -17838,14 +17838,19 @@
       }
     }
   }
-  function followPlayersInRoomForValues() {
-    following2 ?? (following2 = readAndFollow(Atoms.server.numPlayers, (raw) => {
-      playersInRoom = Number.isFinite(raw) ? raw : null;
-      playersInRoomChanges.emit();
+  function followInventoryValues() {
+    following2 ?? (following2 = Promise.all([
+      readAndFollow(Atoms.server.numPlayers, (raw) => {
+        playersInRoom = Number.isFinite(raw) ? raw : null;
+        playersInRoomChanges.emit();
+      }),
+      Atoms.inventory.myInventory.onChange(() => itemsChanges.emit()).catch(() => {
+      })
+    ]).then(() => {
     }));
     return following2;
   }
-  var PRICED_BY_QUANTITY, stringMutations, playersInRoom, following2, playersInRoomChanges, playersInRoomForValues, onPlayersInRoomChange;
+  var PRICED_BY_QUANTITY, stringMutations, playersInRoom, following2, playersInRoomChanges, itemsChanges, playersInRoomForValues, onPlayersInRoomChange, onInventoryItemsChange;
   var init_value = __esm({
     "src/features/inventory/value.ts"() {
       "use strict";
@@ -17866,8 +17871,10 @@
       playersInRoom = null;
       following2 = null;
       playersInRoomChanges = new Emitter();
+      itemsChanges = new Emitter();
       playersInRoomForValues = () => playersInRoom;
       onPlayersInRoomChange = (listener) => playersInRoomChanges.on(listener);
+      onInventoryItemsChange = (listener) => itemsChanges.on(listener);
     }
   });
 
@@ -25114,12 +25121,13 @@
     function update() {
       const target = resolveGrid();
       if (!target || !isVisible(target)) return;
-      void followPlayersInRoomForValues();
+      void followInventoryValues();
       const current2 = ensureSortBar(target, handlers);
       if (!current2) return;
       bar = current2;
       if (!gridListeners) {
         gridListeners = new Subscriptions();
+        gridListeners.add(onInventoryItemsChange(refreshSummary));
         gridListeners.add(
           onPlayersInRoomChange(() => {
             refreshSummary();

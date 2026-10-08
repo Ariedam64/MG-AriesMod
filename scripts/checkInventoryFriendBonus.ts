@@ -6,7 +6,7 @@
 
 import { Atoms } from "../src/game/store/atoms";
 import {
-  followPlayersInRoomForValues,
+  followInventoryValues,
   onPlayersInRoomChange,
   playersInRoomForValues,
 } from "../src/features/inventory/value";
@@ -25,6 +25,7 @@ const listeners: Array<(value: number) => void> = [];
   listeners.push(cb);
   return () => {};
 };
+(Atoms.inventory.myInventory as any).onChange = async () => () => {};
 const playersChange = (next: number) => {
   players = next;
   listeners.forEach((cb) => cb(next));
@@ -34,7 +35,7 @@ const playersChange = (next: number) => {
   let notified = 0;
   onPlayersInRoomChange(() => notified++);
 
-  await followPlayersInRoomForValues();
+  await followInventoryValues();
   check("the count is read when the inventory first shows", playersInRoomForValues(), 2);
 
   playersChange(4);
@@ -43,7 +44,7 @@ const playersChange = (next: number) => {
   check("players leaving lower it", playersInRoomForValues(), 1);
   check("the inventory hears every change", notified, 3);
 
-  await followPlayersInRoomForValues();
+  await followInventoryValues();
   check("showing the inventory again does not follow twice", listeners.length, 1);
 
   if (failed) {
