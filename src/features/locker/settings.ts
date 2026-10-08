@@ -4,8 +4,8 @@
 import { CROP_SIZE_MAX, CROP_SIZE_MIN } from "../../data/rules/cropSize";
 import { clamp } from "../../lib/math";
 
-type VisualTag = "Gold" | "Rainbow";
-type WeatherMode = "ANY" | "ALL" | "RECIPES";
+export type VisualTag = "Gold" | "Rainbow";
+export type WeatherMode = "ANY" | "ALL" | "RECIPES";
 export type LockerScaleLockMode = "MINIMUM" | "MAXIMUM" | "RANGE" | "NONE";
 export type LockerLockMode = "LOCK" | "ALLOW";
 
@@ -35,7 +35,7 @@ export type LockerStatePersisted = {
   overrides: Record<string, LockerOverridePersisted>;
 };
 
-function defaultSettings(): LockerSettingsPersisted {
+export function defaultSettings(): LockerSettingsPersisted {
   return {
     minScalePct: CROP_SIZE_MIN,
     maxScalePct: CROP_SIZE_MAX,

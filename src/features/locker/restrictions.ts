@@ -12,7 +12,7 @@ export const FRIEND_BONUS_STEP = 10;
 export const FRIEND_BONUS_MAX = 50;
 const MAX_PLAYERS = 6;
 
-const PET_RARITIES = ["Common", "Uncommon", "Rare", "Legendary", "Mythical", "Divine", "Celestial"] as const;
+export const PET_RARITIES = ["Common", "Uncommon", "Rare", "Legendary", "Mythical", "Divine", "Celestial"] as const;
 
 type SellAllPetsRules = {
   enabled: boolean;

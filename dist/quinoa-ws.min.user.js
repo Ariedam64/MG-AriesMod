@@ -7717,10 +7717,10 @@
       const defaults = out[key2];
       out[key2] = isRecord(defaults) && isRecord(value) ? { ...defaults, ...value } : value;
     }
-    for (const [legacyKey, [section2, field]] of Object.entries(LEGACY_ROOT_KEYS)) {
+    for (const [legacyKey, [section3, field]] of Object.entries(LEGACY_ROOT_KEYS)) {
       if (!(legacyKey in raw)) continue;
-      const target = isRecord(out[section2]) ? out[section2] : {};
-      out[section2] = target;
+      const target = isRecord(out[section3]) ? out[section3] : {};
+      out[section3] = target;
       if (target[field] === void 0) target[field] = raw[legacyKey];
     }
     return out;
@@ -8989,9 +8989,9 @@
   function setStyles(el, styles) {
     Object.assign(el.style, styles);
   }
-  function styleOverlayBox(div, id) {
-    div.id = id;
-    setStyles(div, {
+  function styleOverlayBox(div2, id) {
+    div2.id = id;
+    setStyles(div2, {
       position: "fixed",
       left: "12px",
       top: "12px",
@@ -9013,7 +9013,7 @@
       fontSize: "12px",
       lineHeight: "1.25"
     });
-    div.dataset["qwsSeedDeleter"] = "1";
+    div2.dataset["qwsSeedDeleter"] = "1";
   }
   function makeDraggable(root, handle) {
     let dragging = false;
@@ -14220,12 +14220,12 @@
       if (!slotMatch || !slotMatch.matchSlot) return false;
       const userSlotIdx = slotMatchToIndex(slotMatch);
       friendPreviewGarden = sanitizeGarden(garden3);
-      const installed4 = await installGardenOverlay(
+      const installed5 = await installGardenOverlay(
         "friend",
         userSlotIdx,
         makeGardenTileResolver(() => friendPreviewGarden)
       );
-      if (!installed4) return false;
+      if (!installed5) return false;
       await setOverlayMyDataGarden(friendPreviewGarden);
       friendPreviewUserSlotIdx = userSlotIdx;
       friendPreviewPlayerId = pid;
@@ -17563,9 +17563,9 @@
     return prettyHotkey(getKeybind(id));
   }
   function getKeybindSections() {
-    return keybindSections.map((section2) => ({
-      ...section2,
-      actions: section2.actions.map((action2) => ({
+    return keybindSections.map((section3) => ({
+      ...section3,
+      actions: section3.actions.map((action2) => ({
         ...action2,
         defaultHotkey: cloneHotkey(action2.defaultHotkey),
         holdDetection: action2.holdDetection ? {
@@ -17786,11 +17786,11 @@
       holdDefaultMap = /* @__PURE__ */ new Map();
       holdCache = /* @__PURE__ */ new Map();
       holdListeners = /* @__PURE__ */ new Map();
-      keybindSections = SECTION_CONFIG.map((section2) => {
-        const actions = section2.actions.map((action2) => {
+      keybindSections = SECTION_CONFIG.map((section3) => {
+        const actions = section3.actions.map((action2) => {
           const normalized = {
             id: action2.id,
-            sectionId: section2.id,
+            sectionId: section3.id,
             label: action2.label,
             icon: action2.icon,
             hint: action2.hint,
@@ -17811,10 +17811,10 @@
           return normalized;
         });
         return {
-          id: section2.id,
-          title: section2.title,
-          description: section2.description,
-          icon: section2.icon,
+          id: section3.id,
+          title: section3.title,
+          description: section3.description,
+          icon: section3.icon,
           actions
         };
       });
@@ -24036,12 +24036,12 @@
         if (!entry || typeof entry !== "object") continue;
         const { base, weathers } = _splitEligibleShops(entry.eligibleShops);
         if (!base && weathers.length === 0) continue;
-        const section2 = base ?? naturalSection;
-        const id = `${section2}:${key2}`;
+        const section3 = base ?? naturalSection;
+        const id = `${section3}:${key2}`;
         const name = typeof entry.name === "string" && entry.name.trim() ? String(entry.name) : key2;
         const rawRarity = typeof entry.rarity === "string" ? entry.rarity : void 0;
         const rarity3 = rawRarity ? DISPLAY_RARITY[rawRarity] ?? rawRarity : void 0;
-        addRow(id, section2, name, rarity3, weathers, !base);
+        addRow(id, section3, name, rarity3, weathers, !base);
       }
     }
     return out;
@@ -35881,6 +35881,884 @@ next: ${next}`;
     }
   });
 
+  // src/lib/dom.ts
+  function addStyle(css4) {
+    const style2 = document.createElement("style");
+    style2.textContent = css4;
+    document.head.appendChild(style2);
+    return style2;
+  }
+  var init_dom2 = __esm({
+    "src/lib/dom.ts"() {
+      "use strict";
+    }
+  });
+
+  // src/features/locker/menuStyles.ts
+  function ensureLockerMenuStyles() {
+    if (installed2) return;
+    installed2 = true;
+    addStyle(LOCKER_MENU_CSS);
+  }
+  var LOCKER_MENU_CSS, installed2;
+  var init_menuStyles = __esm({
+    "src/features/locker/menuStyles.ts"() {
+      "use strict";
+      init_dom2();
+      LOCKER_MENU_CSS = `
+.lk-settings [hidden], .lk-restrictions [hidden], .lk-overrides [hidden] { display: none !important; }
+.lk-view { max-height: 54vh; overflow: auto; }
+.lk-column { display: flex; flex-direction: column; align-items: center; gap: var(--qmm-space-xl); width: 100%; }
+.lk-wide { width: min(760px, 100%); }
+.lk-hint { font-size: var(--qmm-fs-md); color: var(--qmm-text-soft); text-align: center; }
+.lk-warning { font-size: var(--qmm-fs-md); font-weight: 600; color: var(--qmm-warn); text-align: center; }
+.lk-empty { font-size: var(--qmm-fs-md); color: var(--qmm-text-dim); text-align: center; }
+.lk-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; line-height: 1; }
+
+.lk-settings { display: flex; flex-direction: column; gap: var(--qmm-space-xl); width: min(760px, 100%); }
+.lk-settings.is-disabled { opacity: .55; }
+.lk-settings .qmm-card { text-align: center; }
+.lk-settings .qmm-card__header { justify-content: center; }
+.lk-settings .qmm-card__body { justify-items: center; }
+.lk-slider { width: min(420px, 100%); }
+.lk-values { display: flex; justify-content: space-between; gap: 16px; width: min(420px, 100%); }
+.lk-value { display: flex; align-items: center; gap: var(--qmm-space-sm); }
+.lk-color { min-width: 92px; }
+.lk-color .label { font-weight: 700; letter-spacing: .3px; }
+.lk-color--gold .label, .lk-color--rainbow .label {
+  background-clip: text; -webkit-background-clip: text; color: transparent; text-shadow: 0 0 6px rgba(0,0,0,.35);
+}
+.lk-color--gold .label { background-image: linear-gradient(120deg, #f5d76e, #c9932b, #f9e9b6); }
+.lk-color--rainbow .label { background-image: linear-gradient(90deg, #ff6b6b, #f7d35c, #3fd3ff, #9b6bff, #ff6b6b); }
+
+.lk-weather-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; width: min(640px, 100%); }
+.lk-weather-grid.is-dense { grid-template-columns: repeat(4, minmax(80px, 1fr)); width: 100%; }
+.lk-weather-grid.is-disabled { opacity: .55; pointer-events: none; }
+.lk-tile {
+  position: relative; display: grid; justify-items: center; align-items: center; gap: 3px; padding: 6px 8px;
+  border: 1px solid var(--qmm-border-strong); border-radius: 10px; background: var(--qmm-card-bg); cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+.lk-tile:hover { border-color: var(--qmm-accent-border); }
+.lk-tile.is-checked {
+  border-color: var(--qmm-accent-border); background: var(--qmm-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--qmm-accent-border), 0 2px 6px rgba(0,0,0,.45);
+}
+.lk-tile input { position: absolute; inset: 0; margin: 0; opacity: 0; pointer-events: none; }
+.lk-tile__icon { display: inline-flex; align-items: center; justify-content: center; filter: drop-shadow(0 1px 1px rgba(0,0,0,.45)); }
+.lk-tile__caption { font-size: 11.5px; font-weight: 600; opacity: .85; text-align: center; }
+.is-dense > .lk-tile { padding: 4px 6px; }
+.is-dense > .lk-tile .lk-tile__caption { font-size: var(--qmm-fs-sm); font-weight: 500; }
+.lk-weather-badge {
+  display: inline-flex; align-items: center; justify-content: center; line-height: 1;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-pill); background: var(--qmm-field-bg); color: var(--qmm-text);
+}
+.lk-no-weather { display: grid; place-items: center; line-height: 1; font-weight: 700; color: var(--qmm-danger); text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+
+.lk-recipes { display: grid; gap: var(--qmm-space-md); width: 100%; }
+.lk-recipes__head { display: flex; align-items: center; justify-content: space-between; gap: var(--qmm-space-md); }
+.lk-recipes__title { font-weight: 600; opacity: .9; }
+.lk-recipes__list { display: grid; gap: var(--qmm-space-md); grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.lk-recipe {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--qmm-space-xl); padding: 10px 12px;
+  border: 1px solid var(--qmm-border); border-radius: 10px; background: var(--qmm-card-bg); text-align: left;
+}
+.lk-recipe.is-editing { flex-direction: column; align-items: stretch; gap: var(--qmm-space-lg); padding: 12px; }
+.lk-recipe__summary { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 auto; min-width: 220px; }
+.lk-recipe__actions { display: flex; gap: 6px; }
+.lk-recipe.is-editing .lk-recipe__actions > * { flex: 1; }
+.lk-tag {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: var(--qmm-fs-md); font-weight: 600;
+  border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-pill); background: var(--qmm-card-bg);
+}
+
+.lk-overrides { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: var(--qmm-space-lg); height: 54vh; }
+.lk-overrides > .qmm-vtabs { min-height: 0; }
+.lk-overrides__detail { display: flex; flex-direction: column; align-items: center; gap: var(--qmm-space-xl); min-height: 0; overflow: auto; }
+.lk-overrides__placeholder { padding: 32px 24px; border: 1px dashed var(--qmm-border-strong); border-radius: 10px; }
+.qmm-vtab.lk-crop-tab { grid-template-columns: 16px 1fr auto; gap: var(--qmm-space-md); padding: 6px 8px; }
+.lk-title { display: flex; align-items: center; gap: var(--qmm-space-lg); }
+
+.lk-restrictions { display: grid; gap: var(--qmm-space-xl); width: 100%; max-width: 1100px; }
+.lk-rarities { display: grid; gap: var(--qmm-space-md); padding: 8px 10px; border: 1px solid var(--qmm-border); border-radius: var(--qmm-radius-md); background: var(--qmm-card-bg); }
+.lk-rarities.is-disabled { opacity: .6; pointer-events: none; }
+.lk-rarities__head { display: flex; align-items: center; justify-content: space-between; }
+.lk-rarities__chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.lk-rarities__picker { padding: 8px; border-radius: 8px; background: var(--qmm-muted-bg); }
+.lk-rarity { display: inline-flex; align-items: center; gap: 3px; }
+.lk-rarity > div { margin: 0 !important; }
+.lk-rarities__picker > div { cursor: pointer; margin: 0 !important; }
+.lk-dim { opacity: .6; }
+`;
+      installed2 = false;
+    }
+  });
+
+  // src/features/locker/seedOptions.ts
+  var SEED_EMOJIS, seedCache, getLockerSeedOptions, getLockerSeedEmojiForKey, getLockerSeedEmojiForSeedName;
+  var init_seedOptions = __esm({
+    "src/features/locker/seedOptions.ts"() {
+      "use strict";
+      init_data();
+      SEED_EMOJIS = [
+        "\u{1F955}",
+        "\u{1F353}",
+        "\u{1F343}",
+        "\u{1F535}",
+        "\u{1F34E}",
+        "\u{1F337}",
+        "\u{1F345}",
+        "\u{1F33C}",
+        "\u{1F33D}",
+        "\u{1F349}",
+        "\u{1F383}",
+        "\u{1F33F}",
+        "\u{1F965}",
+        "\u{1F34C}",
+        "\u{1F338}",
+        "\u{1F7E2}",
+        "\u{1F344}",
+        "\u{1F335}",
+        "\u{1F38D}",
+        "\u{1F347}",
+        "\u{1F336}\uFE0F",
+        "\u{1F34B}",
+        "\u{1F96D}",
+        "\u{1F409}",
+        "\u{1F352}",
+        "\u{1F33B}",
+        "\u2728",
+        "\u{1F506}",
+        "\u{1F52E}"
+      ];
+      seedCache = memoOnCatalogs(() => {
+        const options = Object.entries(plantCatalog2).map(([key2, def]) => ({
+          key: key2,
+          seedName: def?.seed?.name ?? "",
+          cropName: def?.crop?.name ?? "",
+          spriteKey: def?.crop?.sprite ?? def?.plant?.sprite ?? void 0
+        }));
+        const byKey = /* @__PURE__ */ new Map();
+        const bySeedName = /* @__PURE__ */ new Map();
+        options.forEach((option, index) => {
+          const emoji = SEED_EMOJIS[index % SEED_EMOJIS.length];
+          byKey.set(option.key, emoji);
+          if (option.seedName) bySeedName.set(option.seedName, emoji);
+        });
+        return { options, byKey, bySeedName };
+      });
+      getLockerSeedOptions = () => seedCache().options;
+      getLockerSeedEmojiForKey = (key2) => key2 ? seedCache().byKey.get(key2) ?? "\u2022" : void 0;
+      getLockerSeedEmojiForSeedName = (name) => name ? seedCache().bySeedName.get(name) ?? "\u2022" : void 0;
+    }
+  });
+
+  // src/features/locker/weatherTags.ts
+  function weatherMutationLabel(key2) {
+    const label2 = tileRefsMutationLabels2[key2];
+    if (label2) return label2;
+    const spaced2 = spaceWords(key2.replace(/_/g, " ")).replace(/\s+/g, " ").trim();
+    return spaced2 ? spaced2.charAt(0).toUpperCase() + spaced2.slice(1) : key2;
+  }
+  function recipeRivals(tag) {
+    const group2 = recipeGroupOf(tag);
+    return group2 ? RECIPE_GROUP_MEMBERS[group2].filter((other) => other !== tag) : [];
+  }
+  function keepOfferedTags(selection) {
+    for (const tag of selection) if (!isOffered(tag)) selection.delete(tag);
+  }
+  function normalizeRecipe(selection) {
+    keepOfferedTags(selection);
+    const seen = /* @__PURE__ */ new Set();
+    for (const { key: key2 } of weatherMutations()) {
+      if (!selection.has(key2)) continue;
+      const group2 = recipeGroupOf(key2);
+      if (!group2) continue;
+      if (seen.has(group2)) selection.delete(key2);
+      else seen.add(group2);
+    }
+  }
+  var NOT_CROP_MUTATIONS, weatherMutations, isOffered, RECIPE_GROUP_MEMBERS, recipeGroupOf;
+  var init_weatherTags = __esm({
+    "src/features/locker/weatherTags.ts"() {
+      "use strict";
+      init_data();
+      init_format();
+      init_settings2();
+      NOT_CROP_MUTATIONS = /* @__PURE__ */ new Set(["Puddle", "ThunderstruckGround"]);
+      weatherMutations = memoOnCatalogs(() => [
+        { key: NO_WEATHER_TAG, label: "No weather effect" },
+        ...Object.entries(tileRefsMutations2).filter(([key2, ref]) => !NOT_CROP_MUTATIONS.has(key2) && (typeof ref === "number" || typeof ref === "string")).map(([key2]) => ({ key: key2, label: weatherMutationLabel(key2) }))
+      ]);
+      isOffered = (tag) => weatherMutations().some((info) => info.key === tag);
+      RECIPE_GROUP_MEMBERS = {
+        condition: ["Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"],
+        lighting: ["Dawnlit", "Amberlit", "Dawncharged", "Ambercharged"]
+      };
+      recipeGroupOf = (tag) => Object.keys(RECIPE_GROUP_MEMBERS).find((group2) => RECIPE_GROUP_MEMBERS[group2].includes(tag));
+    }
+  });
+
+  // src/features/locker/menuIcons.ts
+  function iconHolder(sizePx, fallback, fontScale) {
+    const holder2 = document.createElement("span");
+    holder2.className = "lk-icon";
+    holder2.style.width = `${sizePx}px`;
+    holder2.style.height = `${sizePx}px`;
+    holder2.style.fontSize = `${Math.round(sizePx * fontScale)}px`;
+    holder2.textContent = fallback;
+    holder2.setAttribute("aria-hidden", "true");
+    return holder2;
+  }
+  function seedIcon(seedKey, sizePx, spriteKey) {
+    const fallback = getLockerSeedEmojiForKey(seedKey) ?? getLockerSeedEmojiForSeedName(seedKey) ?? "\u{1F331}";
+    const holder2 = iconHolder(sizePx, fallback, 0.75);
+    const spriteName = spriteKey?.split("/").pop();
+    attachSpriteIcon(holder2, ["plant", "tallplant", "crop"], spriteName ? [spriteName, seedKey] : seedKey, sizePx, "plant");
+    return holder2;
+  }
+  function eggIcon(eggId, label2, sizePx) {
+    const holder2 = iconHolder(sizePx, "\u{1F95A}", 0.75);
+    const candidates = /* @__PURE__ */ new Set();
+    for (const value of [eggId, label2]) {
+      const trimmed = value?.trim();
+      if (!trimmed) continue;
+      const last = trimmed.split(/[./]/).pop() ?? trimmed;
+      for (const name of [trimmed, last]) {
+        candidates.add(name);
+        candidates.add(name.replace(/\s+/g, ""));
+      }
+    }
+    attachSpriteIcon(holder2, ["pet"], Array.from(candidates), sizePx, "locker-eggs");
+    return holder2;
+  }
+  function weatherIcon(tag, sizePx) {
+    const holder2 = document.createElement("span");
+    holder2.className = "lk-tile__icon";
+    if (tag === NO_WEATHER_TAG) {
+      const cross = iconHolder(Math.max(24, sizePx), "\u2716", 0.65);
+      cross.classList.add("lk-no-weather");
+      holder2.appendChild(cross);
+      return holder2;
+    }
+    const label2 = weatherMutationLabel(tag);
+    const badge2 = iconHolder(Math.max(16, sizePx), label2.charAt(0) || "?", 0.55);
+    badge2.classList.add("lk-weather-badge");
+    badge2.title = label2;
+    badge2.setAttribute("aria-label", label2);
+    holder2.appendChild(badge2);
+    attachWeatherSpriteIcon(holder2, tag, sizePx);
+    return holder2;
+  }
+  var init_menuIcons = __esm({
+    "src/features/locker/menuIcons.ts"() {
+      "use strict";
+      init_iconCache();
+      init_seedOptions();
+      init_settings2();
+      init_weatherTags();
+    }
+  });
+
+  // src/features/locker/weatherPicker.ts
+  function weatherTile(info, dense, onToggle) {
+    const root = document.createElement("label");
+    root.className = "lk-tile";
+    root.title = "Active filters influence harvest conditions";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    const caption = document.createElement("div");
+    caption.className = "lk-tile__caption";
+    caption.textContent = info.label;
+    root.append(input, weatherIcon(info.key, dense ? 40 : 52), caption);
+    const setChecked = (checked) => {
+      input.checked = checked;
+      root.classList.toggle("is-checked", checked);
+    };
+    input.addEventListener("change", () => {
+      root.classList.toggle("is-checked", input.checked);
+      onToggle(input.checked);
+    });
+    return { key: info.key, root, setChecked };
+  }
+  function weatherGrid(dense) {
+    const grid = document.createElement("div");
+    grid.className = dense ? "lk-weather-grid is-dense" : "lk-weather-grid";
+    return grid;
+  }
+  var init_weatherPicker = __esm({
+    "src/features/locker/weatherPicker.ts"() {
+      "use strict";
+      init_menuIcons();
+    }
+  });
+
+  // src/features/locker/weatherRecipes.ts
+  function showSummary(summary, selection) {
+    summary.className = "lk-recipe__summary";
+    summary.replaceChildren();
+    const tags = weatherMutations().filter((info) => selection.has(info.key));
+    for (const { key: key2, label: label2 } of tags) {
+      const tag = document.createElement("div");
+      tag.className = "lk-tag";
+      const text2 = document.createElement("span");
+      text2.textContent = label2;
+      tag.append(weatherIcon(key2, 20), text2);
+      summary.appendChild(tag);
+    }
+    if (!tags.length) {
+      const empty = document.createElement("div");
+      empty.className = "lk-empty";
+      empty.textContent = "No weather mutation selected.";
+      summary.appendChild(empty);
+    }
+    return summary;
+  }
+  function weatherRecipeEditor(state5, onChange) {
+    const root = document.createElement("div");
+    root.className = "lk-recipes";
+    const title = document.createElement("div");
+    title.className = "lk-recipes__title";
+    const addButton = button("+ Recipe", { size: "sm", onClick: () => startEditing(state5.weatherRecipes.length) });
+    const head = document.createElement("div");
+    head.className = "lk-recipes__head";
+    head.append(title, addButton);
+    const list = document.createElement("div");
+    list.className = "lk-recipes__list";
+    root.append(head, list);
+    let editingIndex = null;
+    let draft = /* @__PURE__ */ new Set();
+    const startEditing = (index) => {
+      editingIndex = index;
+      draft = new Set(state5.weatherRecipes[index] ?? []);
+      normalizeRecipe(draft);
+      repaint();
+    };
+    const stopEditing = () => {
+      editingIndex = null;
+      draft = /* @__PURE__ */ new Set();
+      repaint();
+    };
+    const commit = () => {
+      if (editingIndex === null) return;
+      const recipe = new Set(draft);
+      normalizeRecipe(recipe);
+      if (editingIndex === state5.weatherRecipes.length) state5.weatherRecipes.push(recipe);
+      else if (editingIndex >= 0 && editingIndex < state5.weatherRecipes.length) state5.weatherRecipes[editingIndex] = recipe;
+      stopEditing();
+      onChange();
+    };
+    const remove = (index) => {
+      if (index < 0) return;
+      if (index < state5.weatherRecipes.length) state5.weatherRecipes.splice(index, 1);
+      if (editingIndex !== null) {
+        if (index === editingIndex) {
+          editingIndex = null;
+          draft = /* @__PURE__ */ new Set();
+        } else if (index < editingIndex) {
+          editingIndex -= 1;
+        }
+      }
+      repaint();
+      onChange();
+    };
+    function editingRow(index) {
+      const row = document.createElement("div");
+      row.className = "lk-recipe is-editing";
+      const summary = showSummary(document.createElement("div"), draft);
+      const tiles = /* @__PURE__ */ new Map();
+      const grid = weatherGrid(true);
+      for (const info of weatherMutations()) {
+        const tile = weatherTile(info, true, (checked) => {
+          if (checked) {
+            for (const rival of recipeRivals(info.key)) {
+              if (draft.delete(rival)) tiles.get(rival)?.setChecked(false);
+            }
+            draft.add(info.key);
+          } else {
+            draft.delete(info.key);
+          }
+          showSummary(summary, draft);
+        });
+        tile.setChecked(draft.has(info.key));
+        tiles.set(info.key, tile);
+        grid.appendChild(tile.root);
+      }
+      const actions = document.createElement("div");
+      actions.className = "lk-recipe__actions";
+      actions.append(
+        button("\u274C", { size: "sm", tooltip: "Cancel", onClick: stopEditing }),
+        button("\u2714\uFE0F", { size: "sm", tooltip: "Save", onClick: commit })
+      );
+      if (index < state5.weatherRecipes.length) {
+        actions.append(button("\u{1F5D1}\uFE0F", { size: "sm", tooltip: "Delete", ariaLabel: "Delete", onClick: () => remove(index) }));
+      }
+      row.append(summary, grid, actions);
+      return row;
+    }
+    function savedRow(recipe, index) {
+      const row = document.createElement("div");
+      row.className = "lk-recipe";
+      const actions = document.createElement("div");
+      actions.className = "lk-recipe__actions";
+      actions.append(
+        button("\u270F\uFE0F", { size: "xs", tooltip: "Edit", ariaLabel: "Edit", onClick: () => startEditing(index) }),
+        button("\u{1F5D1}\uFE0F", { size: "xs", tooltip: "Delete", ariaLabel: "Delete", onClick: () => remove(index) })
+      );
+      row.append(showSummary(document.createElement("div"), recipe), actions);
+      return row;
+    }
+    function repaint() {
+      title.textContent = `${state5.lockMode === "ALLOW" ? "Allow" : "Lock"} when any recipe row matches (OR between rows)`;
+      addButton.setEnabled(editingIndex === null);
+      list.replaceChildren();
+      state5.weatherRecipes.forEach((recipe, index) => {
+        normalizeRecipe(recipe);
+        list.appendChild(index === editingIndex ? editingRow(index) : savedRow(recipe, index));
+      });
+      if (editingIndex !== null && editingIndex === state5.weatherRecipes.length) {
+        list.appendChild(editingRow(editingIndex));
+      }
+      if (!list.childElementCount) {
+        const empty = document.createElement("div");
+        empty.className = "lk-empty";
+        empty.textContent = "No recipe rows yet.";
+        list.appendChild(empty);
+      }
+    }
+    repaint();
+    return { root, refresh: repaint };
+  }
+  var init_weatherRecipes = __esm({
+    "src/features/locker/weatherRecipes.ts"() {
+      "use strict";
+      init_button();
+      init_menuIcons();
+      init_weatherPicker();
+      init_weatherTags();
+    }
+  });
+
+  // src/features/locker/settingsCard.ts
+  function sliderValue(label2) {
+    const root = div("lk-value");
+    const value = pill("");
+    root.append(div("qmm-label", label2), value);
+    return { root, value };
+  }
+  function lockerSettingsCard(state5, onChange) {
+    const root = div("lk-settings");
+    root.dataset.lockerSettingsCard = "1";
+    const lockModeHint = div("lk-hint");
+    const lockWarning = div("lk-warning");
+    const lockMode = segmented(
+      [
+        { value: "lock", label: "Lock" },
+        { value: "allow", label: "Allow" }
+      ],
+      state5.lockMode === "ALLOW" ? "allow" : "lock",
+      (value) => {
+        const next = value === "allow" ? "ALLOW" : "LOCK";
+        if (next === state5.lockMode) return;
+        state5.lockMode = next;
+        showLockMode();
+        recipes.refresh();
+        onChange();
+      },
+      { ariaLabel: "Harvest mode" }
+    );
+    const locksEverySize = () => {
+      if (state5.lockMode !== "LOCK") return false;
+      switch (state5.scaleLockMode) {
+        case "RANGE":
+          return state5.minScalePct <= CROP_SIZE_MIN && state5.maxScalePct >= CROP_SIZE_MAX;
+        case "MINIMUM":
+          return state5.minScalePct <= CROP_SIZE_MIN;
+        case "MAXIMUM":
+          return state5.maxScalePct >= CROP_SIZE_MAX;
+        default:
+          return false;
+      }
+    };
+    const showLockWarning = () => {
+      const blocked = locksEverySize();
+      lockWarning.hidden = !blocked;
+      lockWarning.textContent = blocked ? "This size filter covers every size, so nothing can be harvested. Pick None to stop filtering by size." : "";
+    };
+    const showLockMode = () => {
+      const value = state5.lockMode === "ALLOW" ? "allow" : "lock";
+      if (lockMode.get() !== value) lockMode.set(value);
+      lockModeHint.textContent = value === "allow" ? "Harvest only when every active filter category matches" : "Harvest is locked whenever any active filter matches";
+      showLockWarning();
+    };
+    const SCALE_MODES2 = {
+      none: "NONE",
+      minimum: "MINIMUM",
+      maximum: "MAXIMUM",
+      ranged: "RANGE"
+    };
+    const scaleValueOf = (mode) => Object.keys(SCALE_MODES2).find((key2) => SCALE_MODES2[key2] === mode) ?? "none";
+    const scaleMode = segmented(
+      [
+        { value: "none", label: "None" },
+        { value: "minimum", label: "Minimum" },
+        { value: "maximum", label: "Maximum" },
+        { value: "ranged", label: "Range" }
+      ],
+      scaleValueOf(state5.scaleLockMode),
+      (value) => {
+        const mode = SCALE_MODES2[value];
+        if (mode === state5.scaleLockMode) return;
+        state5.scaleLockMode = mode;
+        if (mode === "RANGE") {
+          range2.setValues(state5.minScalePct, state5.maxScalePct);
+          readRange(true);
+        }
+        showScale();
+        onChange();
+      },
+      { ariaLabel: "Scale lock mode" }
+    );
+    const minSlider = slider(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state5.minScalePct, { fill: true });
+    const maxSlider = slider(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state5.maxScalePct, { fill: true });
+    const range2 = rangeDual(CROP_SIZE_MIN, CROP_SIZE_MAX, 1, state5.minScalePct, state5.maxScalePct);
+    for (const el of [minSlider, maxSlider, range2.root]) el.classList.add("lk-slider");
+    const minValue = sliderValue("Minimum");
+    const maxValue = sliderValue("Maximum");
+    const rangeMin = sliderValue("Min");
+    const rangeMax = sliderValue("Max");
+    const rangeValues = div("lk-values");
+    rangeValues.append(rangeMin.root, rangeMax.root);
+    const minControls = div("lk-column");
+    minControls.append(minSlider, minValue.root);
+    const maxControls = div("lk-column");
+    maxControls.append(maxSlider, maxValue.root);
+    const rangeControls = div("lk-column");
+    rangeControls.append(range2.root, rangeValues);
+    const readRange = (commit) => {
+      const { min, max } = normalizeScaleRange("RANGE", range2.min.value, range2.max.value);
+      range2.setValues(min, max);
+      rangeMin.value.textContent = String(min);
+      rangeMax.value.textContent = String(max);
+      if (!commit) return;
+      state5.minScalePct = min;
+      state5.maxScalePct = max;
+      showLockWarning();
+    };
+    const readSingle = (input, read, key2, commit) => {
+      const n = Number.parseInt(input.value, 10);
+      const value = Number.isFinite(n) ? n : state5[key2];
+      read.value.textContent = String(value);
+      if (!commit) return;
+      state5[key2] = value;
+      showLockWarning();
+    };
+    minSlider.addEventListener("input", () => readSingle(minSlider, minValue, "minScalePct", false));
+    minSlider.addEventListener("change", () => {
+      readSingle(minSlider, minValue, "minScalePct", true);
+      onChange();
+    });
+    maxSlider.addEventListener("input", () => readSingle(maxSlider, maxValue, "maxScalePct", false));
+    maxSlider.addEventListener("change", () => {
+      readSingle(maxSlider, maxValue, "maxScalePct", true);
+      onChange();
+    });
+    for (const thumb of [range2.min, range2.max]) {
+      thumb.addEventListener("input", () => readRange(false));
+      thumb.addEventListener("change", () => {
+        readRange(true);
+        onChange();
+      });
+    }
+    const showScale = () => {
+      const mode = state5.scaleLockMode;
+      if (scaleMode.get() !== scaleValueOf(mode)) scaleMode.set(scaleValueOf(mode));
+      minControls.hidden = mode !== "MINIMUM";
+      maxControls.hidden = mode !== "MAXIMUM";
+      rangeControls.hidden = mode !== "RANGE";
+      minSlider.value = String(state5.minScalePct);
+      maxSlider.value = String(state5.maxScalePct);
+      minValue.value.textContent = String(state5.minScalePct);
+      maxValue.value.textContent = String(state5.maxScalePct);
+      range2.setValues(state5.minScalePct, state5.maxScalePct);
+      readRange(false);
+      showLockWarning();
+    };
+    const sizeStack = div("lk-column");
+    sizeStack.append(scaleMode, minControls, maxControls, rangeControls);
+    const colorButton = (label2, modifier, isOn, toggle2) => {
+      const btn = button(label2, {
+        size: "sm",
+        tooltip: "Active filters influence harvest conditions",
+        onClick: () => {
+          toggle2();
+          showColors();
+          onChange();
+        }
+      });
+      btn.classList.add("lk-color", `lk-color--${modifier}`);
+      colorButtons.push({ btn, isOn });
+      return btn;
+    };
+    const colorButtons = [];
+    const toggleVisual = (tag) => {
+      if (!state5.visualMutations.delete(tag)) state5.visualMutations.add(tag);
+    };
+    const colors = div("qmm-flex");
+    colors.style.justifyContent = "center";
+    colors.append(
+      colorButton("Normal", "normal", () => state5.avoidNormal, () => state5.avoidNormal = !state5.avoidNormal),
+      colorButton("Gold", "gold", () => state5.visualMutations.has("Gold"), () => toggleVisual("Gold")),
+      colorButton("Rainbow", "rainbow", () => state5.visualMutations.has("Rainbow"), () => toggleVisual("Rainbow"))
+    );
+    const showColors = () => colorButtons.forEach(({ btn, isOn }) => btn.setActive(isOn()));
+    const mainGrid = weatherGrid(false);
+    const mainTiles = weatherMutations().map((info) => {
+      const tile = weatherTile(info, false, (checked) => {
+        if (checked) state5.weatherSelected.add(info.key);
+        else state5.weatherSelected.delete(info.key);
+        onChange();
+      });
+      mainGrid.appendChild(tile.root);
+      return tile;
+    });
+    const modeName = `locker-weather-mode-${++weatherModeGroups}`;
+    const weatherMode = radioGroup(
+      modeName,
+      [
+        { value: "ANY", label: "Any match (OR)" },
+        { value: "ALL", label: "All match (AND)" },
+        { value: "RECIPES", label: "Recipes (match rows)" }
+      ],
+      state5.weatherMode,
+      (value) => {
+        state5.weatherMode = value;
+        showWeatherMode();
+        onChange();
+      }
+    );
+    weatherMode.classList.add("qmm-flex");
+    weatherMode.style.justifyContent = "center";
+    const recipes = weatherRecipeEditor(state5, onChange);
+    const recipesSection = section("Weather recipes", recipes.root);
+    const showWeatherMode = () => {
+      for (const input of Array.from(weatherMode.querySelectorAll("input"))) {
+        input.checked = input.value === state5.weatherMode;
+      }
+      const recipeMode = state5.weatherMode === "RECIPES";
+      mainGrid.classList.toggle("is-disabled", recipeMode);
+      mainGrid.inert = recipeMode;
+      recipesSection.hidden = !recipeMode;
+    };
+    root.append(
+      section("Harvest mode", lockMode, lockModeHint, lockWarning),
+      section("Filter by size", sizeStack),
+      section("Filter by color", colors),
+      section("Filter by weather", mainGrid),
+      section("Weather filter mode", weatherMode),
+      recipesSection
+    );
+    const refresh = () => {
+      showLockMode();
+      showScale();
+      showColors();
+      mainTiles.forEach((tile) => tile.setChecked(state5.weatherSelected.has(tile.key)));
+      showWeatherMode();
+      recipes.refresh();
+    };
+    refresh();
+    return {
+      root,
+      refresh,
+      setDisabled(disabled) {
+        root.classList.toggle("is-disabled", disabled);
+        root.inert = disabled;
+      }
+    };
+  }
+  var div, section, weatherModeGroups;
+  var init_settingsCard = __esm({
+    "src/features/locker/settingsCard.ts"() {
+      "use strict";
+      init_cropSize();
+      init_badges();
+      init_button();
+      init_card();
+      init_fields();
+      init_segmented();
+      init_sliders();
+      init_settings2();
+      init_weatherPicker();
+      init_weatherRecipes();
+      init_weatherTags();
+      div = (className, text2) => {
+        const el = document.createElement("div");
+        el.className = className;
+        if (text2 != null) el.textContent = text2;
+        return el;
+      };
+      section = (title, ...content) => {
+        const { root, body } = card(title, { align: "center" });
+        body.append(...content);
+        return root;
+      };
+      weatherModeGroups = 0;
+    }
+  });
+
+  // src/features/locker/overridesTab.ts
+  function overridesTab(store) {
+    const layout = document.createElement("div");
+    layout.className = "lk-overrides";
+    const detail = document.createElement("div");
+    detail.className = "lk-overrides__detail";
+    const icons = /* @__PURE__ */ new Map();
+    const iconFor = (key2) => {
+      let icon = icons.get(key2);
+      if (!icon) {
+        icon = seedIcon(key2, 24, getLockerSeedOptions().find((opt) => opt.key === key2)?.spriteKey);
+        icons.set(key2, icon);
+      }
+      return icon;
+    };
+    const list = new VTabs({
+      emptyText: "No crops available.",
+      fillAvailableHeight: true,
+      renderItem: (item, btn) => {
+        btn.classList.add("lk-crop-tab");
+        const dot = document.createElement("span");
+        dot.className = "qmm-dot";
+        dot.style.background = item.statusColor ?? OVERRIDE_OFF;
+        const label2 = document.createElement("span");
+        label2.className = "label";
+        label2.textContent = item.title;
+        btn.append(dot, label2, iconFor(item.id));
+      },
+      onSelect: () => renderDetail()
+    });
+    layout.append(list.root, detail);
+    const listItems = () => getLockerSeedOptions().map((opt) => ({
+      id: opt.key,
+      title: opt.cropName || opt.key,
+      statusColor: store.isOverrideEnabled(opt.key) ? OVERRIDE_ON : OVERRIDE_OFF
+    }));
+    const scrollMemory = /* @__PURE__ */ new Map();
+    let shown = null;
+    detail.addEventListener("scroll", () => {
+      if (shown) scrollMemory.set(shown.key, detail.scrollTop);
+    });
+    function renderDetail() {
+      const key2 = list.getSelected()?.id ?? null;
+      if (!key2) {
+        shown = null;
+        const empty = document.createElement("div");
+        empty.className = "lk-empty lk-overrides__placeholder lk-wide";
+        empty.textContent = "Select a crop on the left to customise its locker settings.";
+        detail.replaceChildren(empty);
+        return;
+      }
+      const entry = store.ensureOverride(key2);
+      if (shown && shown.key === key2 && shown.entry === entry) {
+        shown.toggle.setChecked(entry.enabled);
+        shown.form.setDisabled(!entry.enabled);
+        shown.form.refresh();
+        shown.showStatus();
+        return;
+      }
+      const seed = getLockerSeedOptions().find((opt) => opt.key === key2);
+      const toggle2 = switchInput(entry.enabled, (on) => store.setOverrideEnabled(key2, on));
+      const header = card(seed?.cropName || key2, { actions: [toggle2] });
+      header.root.classList.add("lk-wide");
+      header.header.prepend(seedIcon(key2, 32, seed?.spriteKey));
+      header.root.removeChild(header.body);
+      const status2 = document.createElement("div");
+      status2.className = "lk-hint lk-wide";
+      const showStatus2 = () => {
+        status2.textContent = entry.enabled ? "This crop uses its own locker filters." : "Uses the global locker settings.";
+      };
+      const form = lockerSettingsCard(entry.settings, () => store.notifyOverrideSettingsChanged(key2));
+      form.setDisabled(!entry.enabled);
+      showStatus2();
+      detail.replaceChildren(header.root, status2, form.root);
+      detail.scrollTop = scrollMemory.get(key2) ?? 0;
+      shown = { key: key2, entry, form, toggle: toggle2, showStatus: showStatus2 };
+    }
+    const refresh = () => {
+      list.setItems(listItems());
+      renderDetail();
+    };
+    refresh();
+    const offStore = store.subscribe(refresh);
+    const onDataUpdated = (e) => {
+      if (e.detail?.key === "plants") refresh();
+    };
+    window.addEventListener("gemini:data-updated", onDataUpdated);
+    return {
+      render(view) {
+        view.replaceChildren(layout);
+        refresh();
+      },
+      destroy() {
+        offStore();
+        window.removeEventListener("gemini:data-updated", onDataUpdated);
+      }
+    };
+  }
+  var OVERRIDE_ON, OVERRIDE_OFF;
+  var init_overridesTab = __esm({
+    "src/features/locker/overridesTab.ts"() {
+      "use strict";
+      init_card();
+      init_toggles();
+      init_vtabs();
+      init_theme();
+      init_menuIcons();
+      init_settingsCard();
+      init_seedOptions();
+      OVERRIDE_ON = "#2ecc71";
+      OVERRIDE_OFF = color.danger;
+    }
+  });
+
+  // src/features/locker/eggOptions.ts
+  function catalogEggs() {
+    return Object.entries(eggCatalog2).filter(([id]) => !!id).map(([id, raw]) => ({ id, name: typeof raw?.name === "string" && raw.name || id }));
+  }
+  function shopEggs(shop) {
+    const found = /* @__PURE__ */ new Map();
+    const walk = (node) => {
+      if (!node || typeof node !== "object") return;
+      if (Array.isArray(node)) {
+        node.forEach(walk);
+        return;
+      }
+      const id = node.eggId ?? node.id ?? null;
+      if (typeof id === "string" && id && !found.has(id)) {
+        const name = typeof node.name === "string" && node.name || typeof shop?.names?.[id] === "string" && shop.names[id] || id;
+        found.set(id, name);
+      }
+      for (const value of Object.values(node)) if (value && typeof value === "object") walk(value);
+    };
+    walk(shop);
+    return Array.from(found, ([id, name]) => ({ id, name }));
+  }
+  function lockableEggs(shop) {
+    const eggs = catalogEggs();
+    const known = new Set(eggs.map((egg) => egg.id));
+    for (const egg of shopEggs(shop)) {
+      if (known.has(egg.id)) continue;
+      known.add(egg.id);
+      eggs.push(egg);
+    }
+    return eggs;
+  }
+  var init_eggOptions = __esm({
+    "src/features/locker/eggOptions.ts"() {
+      "use strict";
+      init_data();
+    }
+  });
+
   // src/features/notifier/menu.ts
   function rarityBadge(raw) {
     const rarity3 = String(raw || "").trim();
@@ -35949,7 +36827,7 @@ next: ${next}`;
     view.innerHTML = "";
     void PetAlertService.start().catch(() => {
     });
-    const section2 = (title) => {
+    const section3 = (title) => {
       const card5 = ui.card(title, { tone: "muted" });
       card5.body.style.display = "grid";
       card5.body.style.gap = "10px";
@@ -35985,7 +36863,7 @@ next: ${next}`;
       overflow: "hidden"
     });
     view.appendChild(root);
-    const bellSection = section2("Notification bell");
+    const bellSection = section3("Notification bell");
     root.appendChild(bellSection.root);
     const bellRow = document.createElement("label");
     Object.assign(bellRow.style, {
@@ -36011,7 +36889,7 @@ next: ${next}`;
       lineHeight: "1.4"
     });
     bellSection.body.appendChild(bellHint);
-    const s1 = section2("Audio & Playback");
+    const s1 = section3("Audio & Playback");
     root.appendChild(s1.root);
     const contextControls = {};
     const contextOrder = [
@@ -36143,7 +37021,7 @@ next: ${next}`;
     }
     const s1Err = errorBar2();
     s1.body.appendChild(s1Err.el);
-    const s2 = section2("Sound library");
+    const s2 = section3("Sound library");
     root.appendChild(s2.root);
     const importRow = document.createElement("div");
     Object.assign(importRow.style, {
@@ -37378,11 +38256,11 @@ next: ${next}`;
         borderRadius: "8px",
         background: "#101820"
       });
-      const weatherIcon = document.createElement("span");
-      weatherIcon.textContent = row.name.trim().charAt(0) || "\u{1F326}";
-      weatherIcon.style.fontSize = `${ICON - 8}px`;
-      weatherIcon.setAttribute("aria-hidden", "true");
-      iconWrap.appendChild(weatherIcon);
+      const weatherIcon2 = document.createElement("span");
+      weatherIcon2.textContent = row.name.trim().charAt(0) || "\u{1F326}";
+      weatherIcon2.style.fontSize = `${ICON - 8}px`;
+      weatherIcon2.setAttribute("aria-hidden", "true");
+      iconWrap.appendChild(weatherIcon2);
       const weatherCategories = ["ui", "weather", "mutation"];
       const candidateSet = /* @__PURE__ */ new Set();
       const addCandidate = (value) => {
@@ -38248,2440 +39126,499 @@ next: ${next}`;
     }
   });
 
-  // src/features/locker/menu.ts
-  function buildLockerSeedOptions() {
-    return Object.entries(plantCatalog2).map(([key2, def]) => ({
-      key: key2,
-      seedName: def?.seed?.name ?? "",
-      cropName: def?.crop?.name ?? "",
-      spriteKey: def?.crop?.sprite ?? def?.plant?.sprite ?? void 0
-    }));
-  }
-  function buildLockerEmojiMaps(options) {
-    const byKey = /* @__PURE__ */ new Map();
-    const bySeedName = /* @__PURE__ */ new Map();
-    options.forEach((opt, index) => {
-      const emoji = SEED_EMOJIS[index % SEED_EMOJIS.length];
-      byKey.set(opt.key, emoji);
-      if (opt.seedName) bySeedName.set(opt.seedName, emoji);
+  // src/features/locker/sellPetsRulesCard.ts
+  function sellPetsRulesCard() {
+    const { root, body } = card("Sell all pets protections", {
+      align: "stretch",
+      subtitle: "Show a confirmation modal when protected pets are detected."
     });
-    return { byKey, bySeedName };
-  }
-  function getLockerCache() {
-    const options = buildLockerSeedOptions();
-    if (!_lockerOptionsCache || options.length !== _lockerOptionsCache.length) {
-      _lockerOptionsCache = options;
-      const maps = buildLockerEmojiMaps(options);
-      _lockerEmojiByKey = maps.byKey;
-      _lockerEmojisBySeedName = maps.bySeedName;
+    const rules2 = () => lockerRestrictionsService.getSellAllPetsRules();
+    const save = (patch) => {
+      lockerRestrictionsService.setSellAllPetsRules(patch);
+      refresh();
+    };
+    const enabled5 = switchInput(rules2().enabled, (on) => save({ enabled: on }));
+    const gold = switchInput(rules2().protectGold, (on) => save({ protectGold: on }));
+    const rainbow = switchInput(rules2().protectRainbow, (on) => save({ protectRainbow: on }));
+    const maxStr = switchInput(rules2().protectMaxStr, (on) => save({ protectMaxStr: on }));
+    const maxStrValue = numberInput(0, 100, 1, rules2().maxStrThreshold);
+    maxStrValue.addEventListener("change", () => {
+      const n = Number(maxStrValue.value);
+      const next = Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 0;
+      maxStrValue.value = String(next);
+      save({ maxStrThreshold: next });
+    });
+    const maxStrControls = document.createElement("div");
+    maxStrControls.className = "qmm-flex";
+    maxStrControls.append(maxStr, maxStrValue.wrap);
+    const enabledRow = settingRow("Enable protection rules", null, enabled5).row;
+    const goldRow = settingRow("Protect Gold mutation", null, gold).row;
+    const rainbowRow = settingRow("Protect Rainbow mutation", null, rainbow).row;
+    const maxStrRow = settingRow("Protect pets with Max STR", null, maxStrControls).row;
+    const rarities = document.createElement("div");
+    rarities.className = "lk-rarities";
+    const chips = document.createElement("div");
+    chips.className = "lk-rarities__chips";
+    const picker = document.createElement("div");
+    picker.className = "lk-rarities__chips lk-rarities__picker";
+    let pickerOpen = false;
+    const setProtected = (next) => save({ protectedRarities: next });
+    const closeOnOutsideClick = (ev) => {
+      if (rarities.contains(ev.target)) return;
+      setPickerOpen(false);
+    };
+    const setPickerOpen = (open) => {
+      pickerOpen = open;
+      if (open) document.addEventListener("click", closeOnOutsideClick, true);
+      else document.removeEventListener("click", closeOnOutsideClick, true);
+      refresh();
+    };
+    const addButton = button("+", { size: "xs", onClick: () => setPickerOpen(!pickerOpen) });
+    const head = document.createElement("div");
+    head.className = "lk-rarities__head";
+    const title = document.createElement("div");
+    title.className = "qmm-setting-row__title";
+    title.textContent = "Protect by rarity";
+    head.append(title, addButton);
+    rarities.append(head, chips, picker);
+    const showRarities = () => {
+      const selected = rules2().protectedRarities;
+      chips.replaceChildren();
+      if (!selected.length) {
+        const none = document.createElement("span");
+        none.className = "lk-empty";
+        none.textContent = "No rarities protected";
+        chips.appendChild(none);
+      }
+      for (const rarity3 of selected) {
+        const chip2 = document.createElement("div");
+        chip2.className = "lk-rarity";
+        chip2.append(
+          rarityBadge(rarity3),
+          button("\xD7", {
+            size: "xs",
+            variant: "ghost",
+            ariaLabel: `Unprotect ${rarity3}`,
+            onClick: () => setProtected(rules2().protectedRarities.filter((r) => r !== rarity3))
+          })
+        );
+        chips.appendChild(chip2);
+      }
+      const remaining = PET_RARITIES.filter((rarity3) => !selected.includes(rarity3));
+      if (!remaining.length && pickerOpen) {
+        pickerOpen = false;
+        document.removeEventListener("click", closeOnOutsideClick, true);
+      }
+      picker.replaceChildren(
+        ...remaining.map((rarity3) => {
+          const badge2 = rarityBadge(rarity3);
+          badge2.addEventListener("click", () => setProtected([...rules2().protectedRarities, rarity3]));
+          return badge2;
+        })
+      );
+      picker.hidden = !pickerOpen;
+      addButton.querySelector(".label").textContent = pickerOpen ? "\xD7" : "+";
+    };
+    body.append(enabledRow, goldRow, rainbowRow, maxStrRow, rarities);
+    function refresh() {
+      const current2 = rules2();
+      enabled5.setChecked(current2.enabled);
+      gold.setChecked(current2.protectGold);
+      rainbow.setChecked(current2.protectRainbow);
+      maxStr.setChecked(current2.protectMaxStr);
+      maxStrValue.value = String(current2.maxStrThreshold);
+      for (const row of [goldRow, rainbowRow, maxStrRow]) row.classList.toggle("lk-dim", !current2.enabled);
+      gold.disabled = rainbow.disabled = maxStr.disabled = !current2.enabled;
+      const maxStrOff = !current2.enabled || !current2.protectMaxStr;
+      maxStrValue.disabled = maxStrOff;
+      maxStrValue.wrap.classList.toggle("lk-dim", maxStrOff);
+      maxStrValue.wrap.inert = maxStrOff;
+      rarities.classList.toggle("is-disabled", !current2.enabled);
+      showRarities();
     }
-    return { options: _lockerOptionsCache, byKey: _lockerEmojiByKey, bySeedName: _lockerEmojisBySeedName };
+    refresh();
+    return { root, refresh };
   }
-  function formatMutationLabel(key2) {
-    const spaced2 = key2.replace(/_/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/\s+/g, " ").trim();
-    if (!spaced2) return key2;
-    return spaced2.charAt(0).toUpperCase() + spaced2.slice(1);
-  }
-  function normalizeWeatherSelection(selection) {
-    selection.forEach((tag) => {
-      if (!isWeatherMutationAvailable(tag)) {
-        selection.delete(tag);
+  var init_sellPetsRulesCard = __esm({
+    "src/features/locker/sellPetsRulesCard.ts"() {
+      "use strict";
+      init_button();
+      init_card();
+      init_fields();
+      init_layout();
+      init_toggles();
+      init_menu3();
+      init_restrictions();
+    }
+  });
+
+  // src/features/locker/restrictionsTab.ts
+  function friendBonusCard() {
+    let requiredPlayers = lockerRestrictionsService.getState().minRequiredPlayers;
+    const status2 = pill("");
+    const { root, body } = card("Friend bonus locker", { align: "stretch", actions: [status2] });
+    const value = pill("", "warn");
+    const head = document.createElement("div");
+    head.className = "qmm-flex";
+    head.style.justifyContent = "space-between";
+    const title = document.createElement("div");
+    title.className = "qmm-setting-row__title";
+    title.textContent = "Minimum friend bonus required";
+    head.append(title, value);
+    const bonusSlider = slider(0, FRIEND_BONUS_MAX, FRIEND_BONUS_STEP, friendBonusPercentFromPlayers(requiredPlayers) ?? 0, { fill: true });
+    const statusText = document.createElement("div");
+    statusText.className = "qmm-setting-row__hint";
+    statusText.style.fontSize = "12.5px";
+    body.append(head, bonusSlider, statusText);
+    const showStatus2 = () => {
+      const requiredPct = toBonusStep2(friendBonusPercentFromPlayers(requiredPlayers) ?? 0);
+      const currentPct = currentFriendBonus() ?? 0;
+      const currentPlayers = percentToRequiredFriendCount(currentPct);
+      if (requiredPct <= 0) {
+        status2.textContent = "Unlocked";
+        setTone(status2);
+        statusText.textContent = `Current friend bonus: ${currentPct}% (${currentPlayers} players).`;
+        return;
       }
-    });
-  }
-  function normalizeRecipeSelection(selection) {
-    normalizeWeatherSelection(selection);
-    const seen = /* @__PURE__ */ new Set();
-    weatherMutations().forEach((info) => {
-      if (!selection.has(info.key)) return;
-      const group2 = WEATHER_RECIPE_GROUPS[info.key];
-      if (!group2) return;
-      if (seen.has(group2)) {
-        selection.delete(info.key);
-      } else {
-        seen.add(group2);
-      }
-    });
-  }
-  function createEmojiIcon(symbol, size) {
-    const wrap = applyStyles(document.createElement("span"), {
-      width: `${size}px`,
-      height: `${size}px`,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: `${Math.round(size * 0.75)}px`,
-      lineHeight: "1"
-    });
-    wrap.textContent = symbol;
-    wrap.setAttribute("aria-hidden", "true");
-    return wrap;
-  }
-  function createSeedIcon(seedKey, options = {}) {
-    const size = Math.max(12, options.size ?? 24);
-    const fallback = options.fallback ?? getLockerSeedEmojiForKey(seedKey) ?? getLockerSeedEmojiForSeedName(seedKey) ?? "\u{1F331}";
-    const wrap = applyStyles(document.createElement("span"), {
-      width: `${size}px`,
-      height: `${size}px`,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center"
-    });
-    wrap.appendChild(createEmojiIcon(fallback, size));
-    const spriteBaseName2 = options.spriteKey?.split("/").pop();
-    const candidates = spriteBaseName2 ? [spriteBaseName2, seedKey] : seedKey;
-    attachSpriteIcon(wrap, ["plant", "tallplant", "crop"], candidates, size, "plant");
-    return wrap;
-  }
-  function createEggIcon(eggId, label2, size = 32) {
-    const fallback = "\u{1F95A}";
-    const wrap = applyStyles(document.createElement("span"), {
-      width: `${size}px`,
-      height: `${size}px`,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center"
-    });
-    wrap.appendChild(createEmojiIcon(fallback, size));
-    const candidates = /* @__PURE__ */ new Set();
-    const add = (value) => {
-      if (!value) return;
-      const trimmed = value.trim();
-      if (!trimmed) return;
-      candidates.add(trimmed);
-      candidates.add(trimmed.replace(/\s+/g, ""));
-      const last = trimmed.split(/[./]/).pop();
-      if (last && last !== trimmed) {
-        candidates.add(last);
-        candidates.add(last.replace(/\s+/g, ""));
+      const allowed = currentPct + 1e-4 >= requiredPct;
+      status2.textContent = allowed ? "Sale allowed" : "Sale locked";
+      setTone(status2, allowed ? "ok" : "bad");
+      statusText.textContent = allowed ? `Current bonus ${currentPct}% (${currentPlayers} players) meets the requirement (${requiredPct}%).` : `Requires ${requiredPct}% (${requiredPlayers} players) or more`;
+    };
+    const showSlider = (pct) => {
+      bonusSlider.value = String(pct);
+      value.textContent = `+${pct}%`;
+    };
+    const readSlider = (commit) => {
+      const raw = Number(bonusSlider.value);
+      const pct = toBonusStep2(Number.isFinite(raw) ? raw : 0);
+      showSlider(pct);
+      requiredPlayers = percentToRequiredFriendCount(pct);
+      showStatus2();
+      if (commit) lockerRestrictionsService.setMinRequiredPlayers(requiredPlayers);
+    };
+    bonusSlider.addEventListener("input", () => readSlider(false));
+    bonusSlider.addEventListener("change", () => readSlider(true));
+    return {
+      root,
+      showStatus: showStatus2,
+      sync(players) {
+        requiredPlayers = players;
+        showSlider(friendBonusPercentFromPlayers(players) ?? 0);
+        showStatus2();
       }
     };
-    add(eggId);
-    add(label2);
-    if (candidates.size) {
-      attachSpriteIcon(wrap, ["pet"], Array.from(candidates), size, "locker-eggs");
-    }
-    return wrap;
   }
-  function createWeatherBadge(tag, options = {}) {
-    if (tag === NO_WEATHER_TAG2) {
-      return createNoWeatherIcon(options);
-    }
-    const size = Math.max(16, options.size ?? 32);
-    const wrap = applyStyles(document.createElement("span"), {
-      width: `${size}px`,
-      height: `${size}px`,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      borderRadius: "999px",
-      background: "rgba(17,20,24,0.85)",
-      border: "1px solid rgba(255,255,255,0.08)",
-      fontSize: `${Math.round(size * 0.55)}px`,
-      color: "#e7eef7",
-      lineHeight: "1"
-    });
-    const label2 = weatherMutationLabel(tag);
-    const fallback = options.fallback ?? label2.charAt(0);
-    wrap.textContent = fallback || "?";
-    wrap.title = label2;
-    wrap.setAttribute("aria-label", label2);
-    return wrap;
-  }
-  function createDefaultSettings() {
+  function eggLocksCard() {
+    const { root, body } = card("Egg hatch locker", { align: "stretch" });
+    const rows = /* @__PURE__ */ new Map();
+    let eggs = catalogEggs();
+    const rowFor = (egg) => {
+      let entry = rows.get(egg.id);
+      if (!entry) {
+        const toggle2 = switchInput(false, (locked) => lockerRestrictionsService.setEggLock(egg.id, locked));
+        toggle2.title = "Lock hatching";
+        const { row } = settingRow(egg.name, null, toggle2);
+        row.prepend(eggIcon(egg.id, egg.name, 32));
+        entry = { row, title: row.querySelector(".qmm-setting-row__title"), toggle: toggle2 };
+        rows.set(egg.id, entry);
+      }
+      return entry;
+    };
+    const render = () => {
+      if (!eggs.length) {
+        const empty = document.createElement("div");
+        empty.className = "lk-empty";
+        empty.textContent = "No eggs available.";
+        body.replaceChildren(empty);
+        return;
+      }
+      body.replaceChildren(
+        ...eggs.map((egg) => {
+          const entry = rowFor(egg);
+          entry.title.textContent = egg.name || egg.id;
+          entry.toggle.setChecked(lockerRestrictionsService.isEggLocked(egg.id));
+          return entry.row;
+        })
+      );
+    };
     return {
-      minScalePct: 50,
-      maxScalePct: 100,
-      // Matches the service default, and for the same reason: a full 50–100 range
-      // is a filter that matches every crop, so defaulting to it would lock a
-      // species outright the moment it is switched on.
-      scaleLockMode: "NONE",
-      lockMode: "LOCK",
-      minInventory: 91,
-      avoidNormal: false,
+      root,
+      render,
+      setEggs(next) {
+        eggs = next;
+        render();
+      }
+    };
+  }
+  function restrictionsTab() {
+    const layout = document.createElement("div");
+    layout.className = "lk-restrictions";
+    const friendBonus = friendBonusCard();
+    const decorToggle = switchInput(
+      lockerRestrictionsService.isDecorPickupLocked(),
+      (locked) => lockerRestrictionsService.setDecorPickupLocked(locked)
+    );
+    const decor = card("Decor pick locker", {
+      align: "stretch",
+      subtitle: "Prevents placed decors from being picked up",
+      actions: [decorToggle]
+    });
+    const eggLocks = eggLocksCard();
+    const sellPets = sellPetsRulesCard();
+    layout.append(friendBonus.root, decor.root, eggLocks.root, sellPets.root);
+    const syncFromService = () => {
+      const state5 = lockerRestrictionsService.getState();
+      decorToggle.setChecked(state5.decorPickupLocked);
+      friendBonus.sync(state5.minRequiredPlayers);
+      eggLocks.render();
+      sellPets.refresh();
+    };
+    const subs = new Subscriptions();
+    let following2 = false;
+    const follow = () => {
+      if (following2) return;
+      following2 = true;
+      subs.add(onFriendBonusChange(friendBonus.showStatus));
+      subs.add(lockerRestrictionsService.subscribe(syncFromService));
+      void Atoms.shop.eggShop.get().then((shop) => eggLocks.setEggs(lockableEggs(shop))).catch(() => eggLocks.render());
+      subs.add(Atoms.shop.eggShop.onChange((shop) => eggLocks.setEggs(lockableEggs(shop))));
+    };
+    return {
+      render(view) {
+        view.classList.add("lk-view");
+        view.replaceChildren(layout);
+        syncFromService();
+        follow();
+      },
+      destroy: () => subs.dispose()
+    };
+  }
+  var toBonusStep2;
+  var init_restrictionsTab = __esm({
+    "src/features/locker/restrictionsTab.ts"() {
+      "use strict";
+      init_atoms();
+      init_emitter();
+      init_badges();
+      init_card();
+      init_layout();
+      init_sliders();
+      init_toggles();
+      init_eggOptions();
+      init_friendBonus();
+      init_menuIcons();
+      init_restrictions();
+      init_sellPetsRulesCard();
+      toBonusStep2 = (value) => Math.max(0, Math.min(FRIEND_BONUS_MAX, Math.round(value / FRIEND_BONUS_STEP) * FRIEND_BONUS_STEP));
+    }
+  });
+
+  // src/features/locker/settingsDraft.ts
+  function newDraft() {
+    return draftFrom(defaultSettings());
+  }
+  function draftFrom(settings) {
+    const draft = {
+      ...settings,
       visualMutations: /* @__PURE__ */ new Set(),
-      weatherMode: "ANY",
       weatherSelected: /* @__PURE__ */ new Set(),
       weatherRecipes: []
     };
+    readInto(draft, settings);
+    return draft;
   }
-  function copySettings(target, source) {
-    target.minScalePct = source.minScalePct;
-    target.maxScalePct = source.maxScalePct;
-    target.scaleLockMode = source.scaleLockMode;
-    target.lockMode = source.lockMode;
-    target.minInventory = source.minInventory;
-    target.avoidNormal = source.avoidNormal;
-    target.visualMutations.clear();
-    source.visualMutations.forEach((v) => target.visualMutations.add(v));
-    target.weatherMode = source.weatherMode;
-    target.weatherSelected.clear();
-    source.weatherSelected.forEach((v) => target.weatherSelected.add(v));
-    target.weatherRecipes.length = 0;
-    source.weatherRecipes.forEach((set2) => target.weatherRecipes.push(new Set(set2)));
+  function refill(target, values) {
+    target.clear();
+    for (const value of values) target.add(value);
   }
-  function hydrateSettingsFromPersisted(target, persisted) {
-    const src = persisted ?? {};
-    const mode = src.scaleLockMode === "MINIMUM" ? "MINIMUM" : src.scaleLockMode === "MAXIMUM" ? "MAXIMUM" : src.scaleLockMode === "NONE" ? "NONE" : "RANGE";
-    let minScale = Math.max(50, Math.min(100, Math.round(src.minScalePct ?? 50)));
-    let maxScale = Math.max(50, Math.min(100, Math.round(src.maxScalePct ?? 100)));
-    if (mode === "RANGE") {
-      maxScale = Math.max(51, Math.min(100, maxScale));
-      if (maxScale <= minScale) {
-        if (minScale >= 99) {
-          minScale = 99;
-          maxScale = 100;
-        } else {
-          maxScale = Math.min(100, Math.max(51, minScale + 1));
-        }
-      }
-    } else if (mode === "MINIMUM") {
-      minScale = Math.max(50, Math.min(100, minScale));
-    } else if (mode === "MAXIMUM") {
-      maxScale = Math.max(50, Math.min(100, maxScale));
+  function readInto(draft, settings) {
+    draft.minScalePct = settings.minScalePct;
+    draft.maxScalePct = settings.maxScalePct;
+    draft.scaleLockMode = settings.scaleLockMode;
+    draft.lockMode = settings.lockMode;
+    draft.avoidNormal = settings.avoidNormal;
+    refill(draft.visualMutations, settings.visualMutations);
+    draft.weatherMode = settings.weatherMode;
+    refill(draft.weatherSelected, settings.weatherSelected);
+    keepOfferedTags(draft.weatherSelected);
+    draft.weatherRecipes.length = 0;
+    for (const recipe of settings.weatherRecipes) {
+      const set2 = new Set(recipe);
+      keepOfferedTags(set2);
+      draft.weatherRecipes.push(set2);
     }
-    target.minScalePct = minScale;
-    target.maxScalePct = maxScale;
-    target.scaleLockMode = mode;
-    target.lockMode = src.lockMode === "ALLOW" ? "ALLOW" : "LOCK";
-    target.avoidNormal = src.avoidNormal === true;
-    target.visualMutations.clear();
-    (src.visualMutations ?? []).forEach((mut) => {
-      if (mut === "Gold" || mut === "Rainbow") target.visualMutations.add(mut);
-    });
-    target.weatherMode = src.weatherMode === "ALL" || src.weatherMode === "RECIPES" ? src.weatherMode : "ANY";
-    target.weatherSelected.clear();
-    (src.weatherSelected ?? []).forEach((tag) => {
-      const weatherTag = tag;
-      if (isWeatherMutationAvailable(weatherTag)) {
-        target.weatherSelected.add(weatherTag);
-      }
-    });
-    target.weatherRecipes.length = 0;
-    (src.weatherRecipes ?? []).forEach((recipe) => {
-      const set2 = /* @__PURE__ */ new Set();
-      if (Array.isArray(recipe)) {
-        recipe.forEach((tag) => {
-          const weatherTag = tag;
-          if (isWeatherMutationAvailable(weatherTag)) {
-            set2.add(weatherTag);
-          }
-        });
-      }
-      target.weatherRecipes.push(set2);
-    });
   }
-  function serializeSettingsState(state5) {
-    normalizeWeatherSelection(state5.weatherSelected);
-    state5.weatherRecipes.forEach((set2) => normalizeRecipeSelection(set2));
-    const mode = state5.scaleLockMode === "MINIMUM" ? "MINIMUM" : state5.scaleLockMode === "MAXIMUM" ? "MAXIMUM" : state5.scaleLockMode === "NONE" ? "NONE" : "RANGE";
-    let minScale = Math.max(50, Math.min(100, Math.round(state5.minScalePct || 50)));
-    let maxScale = Math.max(50, Math.min(100, Math.round(state5.maxScalePct || 100)));
-    if (mode === "RANGE") {
-      maxScale = Math.max(51, Math.min(100, maxScale));
-      if (maxScale <= minScale) {
-        if (minScale >= 99) {
-          minScale = 99;
-          maxScale = 100;
-        } else {
-          maxScale = Math.min(100, Math.max(51, minScale + 1));
-        }
-      }
-    } else if (mode === "MINIMUM") {
-      minScale = Math.max(50, Math.min(100, minScale));
-    } else if (mode === "MAXIMUM") {
-      maxScale = Math.max(50, Math.min(100, maxScale));
-    }
+  function copyDraft(target, source) {
+    readInto(target, toPersisted(source));
+  }
+  function toPersisted(draft) {
+    keepOfferedTags(draft.weatherSelected);
+    draft.weatherRecipes.forEach(normalizeRecipe);
     return {
-      minScalePct: minScale,
-      maxScalePct: maxScale,
-      scaleLockMode: mode,
-      lockMode: state5.lockMode === "ALLOW" ? "ALLOW" : "LOCK",
-      avoidNormal: !!state5.avoidNormal,
-      visualMutations: Array.from(state5.visualMutations),
-      weatherMode: state5.weatherMode,
-      weatherSelected: Array.from(state5.weatherSelected),
-      weatherRecipes: state5.weatherRecipes.map((set2) => Array.from(set2))
+      minScalePct: draft.minScalePct,
+      maxScalePct: draft.maxScalePct,
+      scaleLockMode: draft.scaleLockMode,
+      lockMode: draft.lockMode,
+      avoidNormal: draft.avoidNormal,
+      visualMutations: Array.from(draft.visualMutations),
+      weatherMode: draft.weatherMode,
+      weatherSelected: Array.from(draft.weatherSelected),
+      weatherRecipes: draft.weatherRecipes.map((set2) => Array.from(set2))
     };
   }
-  function setCheck(input, value) {
-    input.checked = !!value;
-  }
-  function createWeatherMutationToggle({
-    key: key2,
-    label: label2,
-    iconSize,
-    dense,
-    kind = "main",
-    iconFactory
-  }) {
-    const isMain = kind === "main" && !dense;
-    const gap = dense ? "3px" : isMain ? "3px" : "6px";
-    const padding = dense ? "4px 6px" : isMain ? "6px 8px" : "10px 12px";
-    const minWidth = dense ? "80px" : isMain ? "88px" : "120px";
-    const wrapStyles = {
-      position: "relative",
-      display: "grid",
-      justifyItems: "center",
-      alignItems: "center",
-      gap,
-      padding,
-      border: "1px solid rgba(255,255,255,0.10)",
-      borderRadius: "10px",
-      background: "rgba(255,255,255,0.02)",
-      cursor: "pointer",
-      minWidth,
-      transition: "border-color 120ms ease, box-shadow 120ms ease, background 120ms ease",
-      boxShadow: "none"
-    };
-    if (isMain) {
-      wrapStyles.width = "100%";
-    }
-    const wrap = applyStyles(document.createElement("label"), wrapStyles);
-    wrap.title = "Active filters influence harvest conditions";
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    applyStyles(input, {
-      position: "absolute",
-      inset: "0",
-      opacity: "0",
-      pointerEvents: "none",
-      margin: "0"
-    });
-    input.dataset.weatherToggle = kind;
-    wrap.appendChild(input);
-    wrap.dataset.weatherToggle = kind;
-    const computedIconSize = Math.max(24, iconSize ?? (dense ? 36 : isMain ? 52 : 72));
-    const iconWrap = applyStyles(document.createElement("span"), {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center"
-    });
-    const fallbackIcon = iconFactory ? iconFactory({ size: computedIconSize, fallback: label2.charAt(0) || "?" }) : createWeatherBadge(key2, {
-      size: computedIconSize,
-      fallback: label2.charAt(0) || "?"
-    });
-    applyStyles(iconWrap, {
-      filter: "drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45))"
-    });
-    iconWrap.appendChild(fallbackIcon);
-    wrap.appendChild(iconWrap);
-    attachWeatherSpriteIcon(iconWrap, key2, computedIconSize);
-    const caption = applyStyles(document.createElement("div"), {
-      fontSize: dense ? "11px" : "11.5px",
-      fontWeight: dense ? "500" : "600",
-      opacity: "0.85",
-      textAlign: "center"
-    });
-    caption.textContent = label2;
-    wrap.appendChild(caption);
-    const applyDisabledState = () => {
-      if (input.disabled) {
-        wrap.style.cursor = "default";
-        wrap.style.opacity = "0.55";
-        wrap.style.pointerEvents = "none";
-      } else {
-        wrap.style.cursor = "pointer";
-        wrap.style.opacity = "";
-        wrap.style.pointerEvents = "";
-      }
-    };
-    const updateState = () => {
-      if (input.checked) {
-        applyStyles(wrap, {
-          borderColor: "rgba(94,234,212,0.40)",
-          boxShadow: "0 0 0 1px rgba(94,234,212,0.25) inset, 0 2px 6px rgba(0, 0, 0, 0.45)",
-          background: "rgba(94,234,212,0.12)"
-        });
-      } else {
-        applyStyles(wrap, {
-          borderColor: "rgba(255,255,255,0.10)",
-          boxShadow: "none",
-          background: "rgba(255,255,255,0.02)"
-        });
-      }
-      applyDisabledState();
-    };
-    const setChecked = (value) => {
-      setCheck(input, value);
-      updateState();
-    };
-    const setDisabled = (value) => {
-      input.disabled = !!value;
-      updateState();
-    };
-    input.addEventListener("change", updateState);
-    input.addEventListener("mg-weather-toggle-refresh", updateState);
-    updateState();
-    return { key: key2, wrap, input, setChecked, setDisabled };
-  }
-  function styleBtnFullWidth(button3, text2) {
-    button3.textContent = text2;
-    button3.style.flex = "1";
-    button3.style.margin = "0";
-    button3.style.padding = "6px 10px";
-    button3.style.borderRadius = "8px";
-    button3.style.border = "1px solid rgba(255,255,255,0.10)";
-    button3.style.background = "rgba(255,255,255,0.04)";
-    button3.style.color = "#e7eef7";
-    button3.style.fontSize = "13px";
-    button3.style.fontWeight = "600";
-    button3.style.cursor = "pointer";
-    button3.style.justifyContent = "center";
-    button3.onmouseenter = () => {
-      button3.style.borderColor = "rgba(94,234,212,0.35)";
-      button3.style.background = "rgba(94,234,212,0.08)";
-    };
-    button3.onmouseleave = () => {
-      button3.style.borderColor = "rgba(255,255,255,0.10)";
-      button3.style.background = "rgba(255,255,255,0.04)";
-    };
-  }
-  function styleBtnCompact(button3, text2) {
-    button3.textContent = text2;
-    button3.style.margin = "0";
-    button3.style.padding = "4px 8px";
-    button3.style.borderRadius = "8px";
-    button3.style.border = "1px solid rgba(255,255,255,0.10)";
-    button3.style.background = "rgba(255,255,255,0.04)";
-    button3.style.color = "#e7eef7";
-    button3.style.fontSize = "12px";
-    button3.style.fontWeight = "600";
-    button3.style.cursor = "pointer";
-    button3.style.display = "inline-flex";
-    button3.style.alignItems = "center";
-    button3.style.justifyContent = "center";
-    button3.style.minWidth = "36px";
-    button3.onmouseenter = () => {
-      button3.style.borderColor = "rgba(94,234,212,0.35)";
-      button3.style.background = "rgba(94,234,212,0.08)";
-    };
-    button3.onmouseleave = () => {
-      button3.style.borderColor = "rgba(255,255,255,0.10)";
-      button3.style.background = "rgba(255,255,255,0.04)";
-    };
-  }
-  function createLockerSettingsCard(ui, state5, opts = {}) {
-    const card5 = document.createElement("div");
-    card5.dataset.lockerSettingsCard = "1";
-    card5.style.border = "1px solid rgba(255,255,255,0.10)";
-    card5.style.borderRadius = "10px";
-    card5.style.padding = "12px";
-    card5.style.display = "flex";
-    card5.style.flexDirection = "column";
-    card5.style.gap = "12px";
-    card5.style.alignItems = "center";
-    card5.style.overflow = "auto";
-    card5.style.minHeight = "0";
-    card5.style.width = "min(760px, 100%)";
-    let recipesTitleElement = null;
-    const updateRecipeTitleText = () => {
-      if (!recipesTitleElement) return;
-      const prefix = state5.lockMode === "ALLOW" ? "Allow" : "Lock";
-      recipesTitleElement.textContent = `${prefix} when any recipe row matches (OR between rows)`;
-    };
-    const makeSection = (titleText, content) => {
-      const section2 = document.createElement("div");
-      section2.style.display = "grid";
-      section2.style.justifyItems = "center";
-      section2.style.gap = "8px";
-      section2.style.textAlign = "center";
-      section2.style.border = "1px solid rgba(255,255,255,0.10)";
-      section2.style.borderRadius = "10px";
-      section2.style.padding = "10px";
-      section2.style.background = "rgba(255,255,255,0.04)";
-      section2.style.boxShadow = "none";
-      section2.style.width = "min(720px, 100%)";
-      const heading = document.createElement("div");
-      heading.textContent = titleText;
-      heading.style.fontWeight = "600";
-      heading.style.opacity = "0.95";
-      section2.append(heading, content);
-      return section2;
-    };
-    const centerRow = () => {
-      const row = document.createElement("div");
-      row.style.display = "flex";
-      row.style.flexWrap = "wrap";
-      row.style.justifyContent = "center";
-      row.style.alignItems = "center";
-      row.style.gap = "8px";
-      return row;
-    };
-    const toLockMode = (value) => value === "allow" ? "ALLOW" : "LOCK";
-    const fromLockMode = (mode) => mode === "ALLOW" ? "allow" : "lock";
-    const lockModeRow = centerRow();
-    lockModeRow.style.flexDirection = "column";
-    lockModeRow.style.alignItems = "center";
-    lockModeRow.style.gap = "10px";
-    const lockModeHint = document.createElement("div");
-    lockModeHint.style.fontSize = "12px";
-    lockModeHint.style.opacity = "0.8";
-    lockModeHint.style.textAlign = "center";
-    let isProgrammaticLockMode = false;
-    const lockModeSegmented = ui.segmented(
-      [
-        { value: "lock", label: "Lock" },
-        { value: "allow", label: "Allow" }
-      ],
-      fromLockMode(state5.lockMode),
-      (value) => {
-        if (isProgrammaticLockMode) return;
-        state5.lockMode = toLockMode(value);
-        updateLockModeUI();
-        opts.onChange?.();
-      },
-      { ariaLabel: "Harvest mode" }
-    );
-    const lockWarning = document.createElement("div");
-    applyStyles(lockWarning, {
-      fontSize: "12px",
-      textAlign: "center",
-      color: "#fbbf24",
-      fontWeight: "600",
-      display: "none"
-    });
-    const locksEverySize = () => {
-      if ((state5.lockMode ?? "LOCK") !== "LOCK") return false;
-      switch (state5.scaleLockMode) {
-        case "RANGE":
-          return state5.minScalePct <= 50 && state5.maxScalePct >= 100;
-        case "MINIMUM":
-          return state5.minScalePct <= 50;
-        case "MAXIMUM":
-          return state5.maxScalePct >= 100;
-        default:
-          return false;
-      }
-    };
-    const updateLockWarning = () => {
-      const blocked = locksEverySize();
-      lockWarning.style.display = blocked ? "" : "none";
-      lockWarning.textContent = blocked ? "This size filter covers every size, so nothing can be harvested. Pick None to stop filtering by size." : "";
-    };
-    lockModeRow.append(lockModeSegmented, lockModeHint, lockWarning);
-    const updateLockModeUI = () => {
-      const value = fromLockMode(state5.lockMode);
-      const current2 = lockModeSegmented.get?.();
-      if (current2 !== value) {
-        isProgrammaticLockMode = true;
-        try {
-          lockModeSegmented.set?.(value);
-        } finally {
-          isProgrammaticLockMode = false;
-        }
-      }
-      lockModeHint.textContent = value === "allow" ? "Harvest only when every active filter category matches" : "Harvest is locked whenever any active filter matches";
-      updateLockWarning();
-      updateRecipeTitleText();
-    };
-    const scaleRow = centerRow();
-    scaleRow.style.flexDirection = "column";
-    scaleRow.style.alignItems = "center";
-    scaleRow.style.width = "100%";
-    scaleRow.style.gap = "12px";
-    const scaleModeRow = centerRow();
-    scaleModeRow.style.flexWrap = "wrap";
-    scaleModeRow.style.justifyContent = "center";
-    scaleModeRow.style.gap = "12px";
-    const minSlider = ui.slider(50, 100, 1, state5.minScalePct);
-    applyStyles(minSlider, { width: "min(420px, 100%)" });
-    const maxSlider = ui.slider(50, 100, 1, state5.maxScalePct);
-    applyStyles(maxSlider, { width: "min(420px, 100%)" });
-    const toMode = (value) => {
-      switch (value) {
-        case "minimum":
-          return "MINIMUM";
-        case "maximum":
-          return "MAXIMUM";
-        case "ranged":
-          return "RANGE";
-        default:
-          return "NONE";
-      }
-    };
-    const fromMode = (mode) => {
-      switch (mode) {
-        case "MINIMUM":
-          return "minimum";
-        case "MAXIMUM":
-          return "maximum";
-        case "RANGE":
-          return "ranged";
-        default:
-          return "none";
-      }
-    };
-    let isProgrammaticScaleMode = false;
-    const initialScaleMode = fromMode(state5.scaleLockMode);
-    const scaleModeSegmented = ui.segmented(
-      [
-        { value: "none", label: "None" },
-        { value: "minimum", label: "Minimum" },
-        { value: "maximum", label: "Maximum" },
-        { value: "ranged", label: "Range" }
-      ],
-      initialScaleMode,
-      (value) => {
-        if (isProgrammaticScaleMode) return;
-        applyScaleMode(toMode(value), true);
-      },
-      { ariaLabel: "Scale lock mode" }
-    );
-    scaleModeRow.append(scaleModeSegmented);
-    const scaleSlider = ui.rangeDual(50, 100, 1, state5.minScalePct, state5.maxScalePct);
-    applyStyles(scaleSlider.root, {
-      width: "min(420px, 100%)",
-      marginLeft: "auto",
-      marginRight: "auto"
-    });
-    const scaleMinSlider = scaleSlider.min;
-    const scaleMaxSlider = scaleSlider.max;
-    const scaleMinValue = ui.label("50");
-    const scaleMaxValue = ui.label("100");
-    const scaleMinimumValue = ui.label("50");
-    const scaleMaximumValue = ui.label("100");
-    [scaleMinValue, scaleMaxValue, scaleMinimumValue, scaleMaximumValue].forEach((label2) => {
-      label2.style.margin = "0";
-      label2.style.fontWeight = "600";
-    });
-    const makeScaleValue = (labelText, valueLabel) => {
-      const wrap = applyStyles(document.createElement("div"), {
-        display: "flex",
-        alignItems: "center",
-        gap: "6px"
-      });
-      const label2 = ui.label(labelText);
-      label2.style.margin = "0";
-      label2.style.opacity = "0.9";
-      wrap.append(label2, valueLabel);
-      return wrap;
-    };
-    const scaleValues = applyStyles(document.createElement("div"), {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      width: "min(420px, 100%)",
-      gap: "16px"
-    });
-    scaleValues.append(makeScaleValue("Min", scaleMinValue), makeScaleValue("Max", scaleMaxValue));
-    const minControls = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: "12px",
-      width: "100%"
-    });
-    minControls.append(minSlider, makeScaleValue("Minimum", scaleMinimumValue));
-    const maxControls = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: "12px",
-      width: "100%"
-    });
-    maxControls.append(maxSlider, makeScaleValue("Maximum", scaleMaximumValue));
-    const rangeControls = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: "12px",
-      width: "100%"
-    });
-    rangeControls.append(scaleSlider.root, scaleValues);
-    scaleRow.append(scaleModeRow, minControls, maxControls, rangeControls);
-    const applyScaleRange = (commit, notify3 = commit) => {
-      let minValue = parseInt(scaleMinSlider.value, 10);
-      let maxValue = parseInt(scaleMaxSlider.value, 10);
-      if (!Number.isFinite(minValue)) minValue = state5.minScalePct;
-      if (!Number.isFinite(maxValue)) maxValue = state5.maxScalePct;
-      minValue = Math.max(50, Math.min(99, minValue));
-      maxValue = Math.max(51, Math.min(100, maxValue));
-      if (maxValue <= minValue) {
-        if (minValue >= 99) {
-          minValue = 99;
-          maxValue = 100;
-        } else {
-          maxValue = Math.min(100, Math.max(51, minValue + 1));
-        }
-      }
-      scaleSlider.setValues(minValue, maxValue);
-      scaleMinValue.textContent = `${minValue}`;
-      scaleMaxValue.textContent = `${maxValue}`;
-      if (commit) {
-        state5.minScalePct = minValue;
-        state5.maxScalePct = maxValue;
-        updateLockWarning();
-        if (notify3) opts.onChange?.();
-      }
-    };
-    const applyScaleMinimum = (commit, notify3 = commit) => {
-      let minValue = parseInt(minSlider.value, 10);
-      if (!Number.isFinite(minValue)) minValue = state5.minScalePct;
-      minValue = Math.max(50, Math.min(100, minValue));
-      minSlider.value = String(minValue);
-      scaleMinimumValue.textContent = `${minValue}`;
-      if (commit) {
-        state5.minScalePct = minValue;
-        updateLockWarning();
-        if (notify3) opts.onChange?.();
-      }
-    };
-    const applyScaleMaximum = (commit, notify3 = commit) => {
-      let maxValue = parseInt(maxSlider.value, 10);
-      if (!Number.isFinite(maxValue)) maxValue = state5.maxScalePct;
-      maxValue = Math.max(50, Math.min(100, maxValue));
-      maxSlider.value = String(maxValue);
-      scaleMaximumValue.textContent = `${maxValue}`;
-      if (commit) {
-        state5.maxScalePct = maxValue;
-        updateLockWarning();
-        if (notify3) opts.onChange?.();
-      }
-    };
-    const updateScaleModeUI = () => {
-      const isRange = state5.scaleLockMode === "RANGE";
-      const isMin = state5.scaleLockMode === "MINIMUM";
-      const isMax = state5.scaleLockMode === "MAXIMUM";
-      rangeControls.style.display = isRange ? "" : "none";
-      minControls.style.display = isMin ? "" : "none";
-      maxControls.style.display = isMax ? "" : "none";
-      const segValue = fromMode(state5.scaleLockMode);
-      if (scaleModeSegmented.get?.() !== segValue) {
-        isProgrammaticScaleMode = true;
-        try {
-          scaleModeSegmented.set?.(segValue);
-        } finally {
-          isProgrammaticScaleMode = false;
-        }
-      }
-      updateLockWarning();
-    };
-    const applyScaleMode = (mode, notify3) => {
-      const prevMode = state5.scaleLockMode;
-      state5.scaleLockMode = mode;
-      if (mode === "RANGE") {
-        scaleSlider.setValues(state5.minScalePct, state5.maxScalePct);
-        applyScaleRange(prevMode !== mode, false);
-      } else if (mode === "MINIMUM") {
-        minSlider.value = String(state5.minScalePct);
-        applyScaleMinimum(prevMode !== mode, false);
-      } else if (mode === "MAXIMUM") {
-        maxSlider.value = String(state5.maxScalePct);
-        applyScaleMaximum(prevMode !== mode, false);
-      }
-      updateScaleModeUI();
-      if (notify3 && prevMode !== mode) {
-        opts.onChange?.();
-      }
-    };
-    minSlider.addEventListener("input", () => applyScaleMinimum(false));
-    minSlider.addEventListener("change", () => applyScaleMinimum(true));
-    maxSlider.addEventListener("input", () => applyScaleMaximum(false));
-    maxSlider.addEventListener("change", () => applyScaleMaximum(true));
-    scaleMinSlider.addEventListener("input", () => applyScaleRange(false));
-    scaleMaxSlider.addEventListener("input", () => applyScaleRange(false));
-    scaleMinSlider.addEventListener("change", () => applyScaleRange(true));
-    scaleMaxSlider.addEventListener("change", () => applyScaleRange(true));
-    applyScaleRange(false);
-    applyScaleMinimum(false);
-    applyScaleMaximum(false);
-    applyScaleMode(state5.scaleLockMode, false);
-    const colorsRow = centerRow();
-    colorsRow.style.flexWrap = "wrap";
-    colorsRow.style.gap = "8px";
-    const createColorButton = (label2, gradient2) => {
-      const button3 = document.createElement("button");
-      button3.type = "button";
-      button3.title = "Active filters influence harvest conditions";
-      applyStyles(button3, {
-        padding: "6px 12px",
-        borderRadius: "8px",
-        border: "1px solid rgba(255,255,255,0.10)",
-        background: "rgba(255,255,255,0.04)",
-        color: "#e7eef7",
-        fontWeight: "600",
-        letterSpacing: "0.3px",
-        transition: "border-color 120ms ease, box-shadow 120ms ease, background 120ms ease, opacity 120ms ease",
-        boxShadow: "none",
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "6px",
-        minWidth: "92px",
-        cursor: "pointer"
-      });
-      const text2 = document.createElement("span");
-      text2.textContent = label2;
-      if (gradient2) {
-        applyStyles(text2, {
-          backgroundImage: gradient2,
-          backgroundClip: "text",
-          WebkitBackgroundClip: "text",
-          color: "transparent",
-          fontWeight: "700",
-          textShadow: "0 0 6px rgba(0, 0, 0, 0.35)"
-        });
-      }
-      button3.appendChild(text2);
-      button3.addEventListener("mouseenter", () => {
-        if (button3.disabled || button3.dataset.active === "1") return;
-        button3.style.borderColor = "rgba(94,234,212,0.35)";
-      });
-      button3.addEventListener("mouseleave", () => {
-        if (button3.dataset.active === "1") return;
-        button3.style.borderColor = "rgba(255,255,255,0.10)";
-      });
-      return button3;
-    };
-    const btnNormal = createColorButton("Normal");
-    const btnGold = createColorButton(
-      "Gold",
-      "linear-gradient(120deg, #f5d76e, #c9932b, #f9e9b6)"
-    );
-    const btnRainbow = createColorButton(
-      "Rainbow",
-      "linear-gradient(90deg, #ff6b6b, #f7d35c, #3fd3ff, #9b6bff, #ff6b6b)"
-    );
-    const updateColorButtonVisual = (button3, active2) => {
-      button3.dataset.active = active2 ? "1" : "0";
-      button3.style.borderColor = active2 ? "rgba(94,234,212,0.40)" : "rgba(255,255,255,0.10)";
-      button3.style.boxShadow = active2 ? "0 0 0 1px rgba(94,234,212,0.25) inset, 0 2px 6px rgba(0, 0, 0, 0.45)" : "none";
-      button3.style.background = active2 ? "rgba(94,234,212,0.12)" : "rgba(255,255,255,0.04)";
-      button3.style.opacity = button3.disabled ? "0.55" : "";
-      button3.style.cursor = button3.disabled ? "default" : "pointer";
-    };
-    const updateColorButtons = () => {
-      updateColorButtonVisual(btnNormal, state5.avoidNormal);
-      updateColorButtonVisual(btnGold, state5.visualMutations.has("Gold"));
-      updateColorButtonVisual(btnRainbow, state5.visualMutations.has("Rainbow"));
-    };
-    btnNormal.addEventListener("click", () => {
-      state5.avoidNormal = !state5.avoidNormal;
-      updateColorButtons();
-      opts.onChange?.();
-    });
-    btnGold.addEventListener("click", () => {
-      if (state5.visualMutations.has("Gold")) state5.visualMutations.delete("Gold");
-      else state5.visualMutations.add("Gold");
-      updateColorButtons();
-      opts.onChange?.();
-    });
-    btnRainbow.addEventListener("click", () => {
-      if (state5.visualMutations.has("Rainbow")) state5.visualMutations.delete("Rainbow");
-      else state5.visualMutations.add("Rainbow");
-      updateColorButtons();
-      opts.onChange?.();
-    });
-    colorsRow.append(btnNormal, btnGold, btnRainbow);
-    const weatherGrid = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-      columnGap: "6px",
-      rowGap: "6px",
-      justifyItems: "stretch",
-      width: "min(640px, 100%)",
-      marginInline: "auto"
-    });
-    const applyWeatherSelection = (selection) => (tag, checked) => {
-      if (checked) {
-        selection.add(tag);
-      } else {
-        selection.delete(tag);
-      }
-      opts.onChange?.();
-    };
-    const updateMainWeatherSelection = applyWeatherSelection(state5.weatherSelected);
-    const weatherToggles = weatherMutations().map((info) => {
-      const toggle2 = createWeatherMutationToggle({
-        key: info.key,
-        label: info.label,
-        kind: "main",
-        iconFactory: info.iconFactory
-      });
-      toggle2.input.addEventListener(
-        "change",
-        () => updateMainWeatherSelection(info.key, toggle2.input.checked)
-      );
-      weatherGrid.appendChild(toggle2.wrap);
-      return toggle2;
-    });
-    const updateWeatherMutationsDisabled = () => {
-      const disabled = card5.dataset.disabled === "1" || state5.weatherMode === "RECIPES";
-      weatherGrid.style.opacity = disabled ? "0.55" : "";
-      weatherGrid.style.pointerEvents = disabled ? "none" : "";
-      weatherToggles.forEach((toggle2) => toggle2.setDisabled(disabled));
-    };
-    const weatherModeName = `locker-weather-mode-${++weatherModeNameSeq}`;
-    const weatherModeRow = centerRow();
-    const buildRadio = (value, label2) => {
-      const wrap = document.createElement("label");
-      wrap.style.display = "inline-flex";
-      wrap.style.alignItems = "center";
-      wrap.style.gap = "6px";
-      const input = ui.radio(weatherModeName, value);
-      const span = document.createElement("span");
-      span.textContent = label2;
-      wrap.append(input, span);
-      input.addEventListener("change", () => {
-        if (!input.checked) return;
-        state5.weatherMode = value;
-        recipesWrap.style.display = value === "RECIPES" ? "" : "none";
-        updateWeatherMutationsDisabled();
-        opts.onChange?.();
-      });
-      return { wrap, input };
-    };
-    const radioAny = buildRadio("ANY", "Any match (OR)");
-    const radioAll = buildRadio("ALL", "All match (AND)");
-    const radioRecipes = buildRadio("RECIPES", "Recipes (match rows)");
-    weatherModeRow.append(radioAny.wrap, radioAll.wrap, radioRecipes.wrap);
-    const recipesWrap = document.createElement("div");
-    recipesWrap.style.display = "grid";
-    recipesWrap.style.gap = "8px";
-    recipesWrap.style.justifyItems = "center";
-    recipesWrap.style.width = "min(720px, 100%)";
-    const recipesHeader = centerRow();
-    recipesHeader.style.width = "100%";
-    recipesHeader.style.justifyContent = "space-between";
-    const recipesTitle = document.createElement("div");
-    recipesTitleElement = recipesTitle;
-    updateRecipeTitleText();
-    recipesTitle.style.fontWeight = "600";
-    recipesTitle.style.opacity = "0.9";
-    const btnAddRecipe = document.createElement("button");
-    btnAddRecipe.style.maxWidth = "140px";
-    styleBtnFullWidth(btnAddRecipe, "+ Recipe");
-    recipesHeader.append(recipesTitle, btnAddRecipe);
-    const recipesList = document.createElement("div");
-    recipesList.style.display = "grid";
-    recipesList.style.gap = "8px";
-    recipesList.style.gridTemplateColumns = "repeat(auto-fit, minmax(320px, 1fr))";
-    recipesList.style.justifyItems = "stretch";
-    let editingRecipeIndex = null;
-    let editingRecipeDraft = /* @__PURE__ */ new Set();
-    const emptyRecipes = document.createElement("div");
-    emptyRecipes.textContent = "No recipe rows yet.";
-    emptyRecipes.style.fontSize = "12px";
-    emptyRecipes.style.opacity = "0.7";
-    emptyRecipes.style.textAlign = "center";
-    const updateAddRecipeDisabled = () => {
-      const editing = editingRecipeIndex !== null;
-      const cardDisabled = card5.dataset.disabled === "1";
-      btnAddRecipe.disabled = editing || cardDisabled;
-      btnAddRecipe.style.opacity = editing ? "0.7" : "";
-      btnAddRecipe.style.pointerEvents = editing ? "none" : "";
-    };
-    const startEditingRecipe = (index, base) => {
-      editingRecipeIndex = index;
-      editingRecipeDraft = new Set(base ?? []);
-      normalizeRecipeSelection(editingRecipeDraft);
-      repaintRecipes();
-    };
-    const cancelEditingRecipe = () => {
-      editingRecipeIndex = null;
-      editingRecipeDraft = /* @__PURE__ */ new Set();
-      repaintRecipes();
-    };
-    const commitEditingRecipe = () => {
-      if (editingRecipeIndex === null) return;
-      const draft = new Set(editingRecipeDraft);
-      normalizeRecipeSelection(draft);
-      if (editingRecipeIndex === state5.weatherRecipes.length) {
-        state5.weatherRecipes.push(draft);
-      } else if (editingRecipeIndex >= 0 && editingRecipeIndex < state5.weatherRecipes.length) {
-        state5.weatherRecipes[editingRecipeIndex] = draft;
-      }
-      editingRecipeIndex = null;
-      editingRecipeDraft = /* @__PURE__ */ new Set();
-      repaintRecipes();
-      opts.onChange?.();
-    };
-    const deleteRecipeAt = (index) => {
-      if (index < 0) return;
-      if (index < state5.weatherRecipes.length) {
-        state5.weatherRecipes.splice(index, 1);
-      }
-      if (editingRecipeIndex !== null) {
-        if (index === editingRecipeIndex) {
-          editingRecipeIndex = null;
-          editingRecipeDraft = /* @__PURE__ */ new Set();
-        } else if (index < editingRecipeIndex) {
-          editingRecipeIndex -= 1;
-        }
-      }
-      repaintRecipes();
-      opts.onChange?.();
-    };
-    const buildRecipeBadge = (info) => {
-      const { key: tag, label: label2 } = info;
-      const badge2 = document.createElement("div");
-      applyStyles(badge2, {
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "6px",
-        padding: "4px 10px",
-        borderRadius: "999px",
-        border: "1px solid rgba(255,255,255,0.10)",
-        background: "rgba(255,255,255,0.04)",
-        color: "#e7eef7",
-        fontSize: "12px",
-        fontWeight: "600",
-        letterSpacing: "0.2px"
-      });
-      const iconWrap = applyStyles(document.createElement("span"), {
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center"
-      });
-      const fallbackIcon = info.iconFactory ? info.iconFactory({ size: 20, fallback: label2.charAt(0) || "?" }) : createWeatherBadge(tag, {
-        size: 20,
-        fallback: label2.charAt(0) || "?"
-      });
-      applyStyles(iconWrap, {
-        filter: "drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45))"
-      });
-      iconWrap.appendChild(fallbackIcon);
-      attachWeatherSpriteIcon(iconWrap, tag, 20);
-      const text2 = document.createElement("span");
-      text2.textContent = label2;
-      badge2.append(iconWrap, text2);
-      return badge2;
-    };
-    const renderRecipeSummary = (container, selection) => {
-      container.innerHTML = "";
-      const badges = document.createElement("div");
-      applyStyles(badges, {
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "6px",
-        justifyContent: "flex-start"
-      });
-      let count = 0;
-      weatherMutations().forEach((info) => {
-        if (!selection.has(info.key)) return;
-        count += 1;
-        badges.appendChild(buildRecipeBadge(info));
-      });
-      if (count === 0) {
-        const empty = document.createElement("div");
-        empty.textContent = "No weather mutation selected.";
-        empty.style.fontSize = "12px";
-        empty.style.opacity = "0.7";
-        empty.style.textAlign = "left";
-        badges.appendChild(empty);
-      }
-      container.appendChild(badges);
-    };
-    const applyDisabled = () => {
-      const cardDisabled = card5.dataset.disabled === "1";
-      const inputs = card5.querySelectorAll("input,button,select,textarea");
-      inputs.forEach((el) => {
-        if (el.dataset.weatherToggle === "main") {
-          return;
-        }
-        el.disabled = cardDisabled;
-        el.dispatchEvent(new Event("mg-weather-toggle-refresh"));
-      });
-      updateWeatherMutationsDisabled();
-      updateColorButtons();
-      card5.style.opacity = cardDisabled ? "0.55" : "";
-      updateAddRecipeDisabled();
-    };
-    function buildRecipeToggleGrid(selection, onSelectionChange) {
-      const toggleGrid = applyStyles(document.createElement("div"), {
-        display: "grid",
-        gridTemplateColumns: "repeat(4, minmax(80px, 1fr))",
-        columnGap: "6px",
-        rowGap: "6px",
-        justifyItems: "center"
-      });
-      const toggles = /* @__PURE__ */ new Map();
-      weatherMutations().forEach((info) => {
-        const toggle2 = createWeatherMutationToggle({
-          key: info.key,
-          label: info.label,
-          iconSize: 40,
-          dense: true,
-          kind: "recipe",
-          iconFactory: info.iconFactory
-        });
-        toggles.set(info.key, toggle2);
-        toggle2.setChecked(selection.has(toggle2.key));
-        toggle2.input.addEventListener("change", () => {
-          const checked = toggle2.input.checked;
-          const group2 = WEATHER_RECIPE_GROUPS[toggle2.key];
-          if (checked && group2) {
-            WEATHER_RECIPE_GROUP_MEMBERS[group2].forEach((other) => {
-              if (other === toggle2.key) return;
-              if (!selection.has(other)) return;
-              selection.delete(other);
-              toggles.get(other)?.setChecked(false);
-            });
-          }
-          if (checked) {
-            selection.add(toggle2.key);
-          } else {
-            selection.delete(toggle2.key);
-          }
-          onSelectionChange();
-        });
-        toggleGrid.appendChild(toggle2.wrap);
-      });
-      return toggleGrid;
-    }
-    function repaintRecipes() {
-      recipesList.innerHTML = "";
-      const hasDraftNew = editingRecipeIndex !== null && editingRecipeIndex === state5.weatherRecipes.length;
-      const totalRows = state5.weatherRecipes.length + (hasDraftNew ? 1 : 0);
-      if (totalRows === 0) {
-        recipesList.appendChild(emptyRecipes);
-        applyDisabled();
-        return;
-      }
-      state5.weatherRecipes.forEach((set2, index) => {
-        normalizeRecipeSelection(set2);
-        const isEditing2 = editingRecipeIndex === index;
-        const selection = isEditing2 ? editingRecipeDraft : set2;
-        const row = applyStyles(document.createElement("div"), {
-          display: "flex",
-          gap: isEditing2 ? "10px" : "12px",
-          border: "1px solid rgba(255,255,255,0.10)",
-          borderRadius: "10px",
-          padding: isEditing2 ? "12px" : "10px 12px",
-          background: "rgba(255,255,255,0.02)",
-          boxShadow: "none",
-          width: "100%"
-        });
-        if (isEditing2) {
-          row.style.flexDirection = "column";
-        } else {
-          row.style.flexDirection = "row";
-          row.style.alignItems = "center";
-          row.style.justifyContent = "space-between";
-          row.style.flexWrap = "wrap";
-        }
-        const summary = document.createElement("div");
-        renderRecipeSummary(summary, selection);
-        if (!isEditing2) {
-          summary.style.flex = "1 1 auto";
-          summary.style.minWidth = "220px";
-        }
-        row.appendChild(summary);
-        if (isEditing2) {
-          const toggleGrid = buildRecipeToggleGrid(selection, () => renderRecipeSummary(summary, selection));
-          row.appendChild(toggleGrid);
-          const actions = applyStyles(document.createElement("div"), {
-            display: "flex",
-            gap: "8px",
-            width: "100%"
-          });
-          const btnCancel = document.createElement("button");
-          styleBtnFullWidth(btnCancel, "\u274C");
-          btnCancel.onclick = cancelEditingRecipe;
-          const btnValidate = document.createElement("button");
-          styleBtnFullWidth(btnValidate, "\u2714\uFE0F");
-          btnValidate.onclick = commitEditingRecipe;
-          actions.append(btnCancel, btnValidate);
-          if (editingRecipeIndex !== null && editingRecipeIndex < state5.weatherRecipes.length) {
-            const btnDelete = document.createElement("button");
-            styleBtnFullWidth(btnDelete, "\u{1F5D1}\uFE0F");
-            btnDelete.title = "Delete";
-            btnDelete.setAttribute("aria-label", "Delete");
-            btnDelete.onclick = () => deleteRecipeAt(index);
-            actions.append(btnDelete);
-          }
-          row.appendChild(actions);
-        } else {
-          const actions = applyStyles(document.createElement("div"), {
-            display: "flex",
-            gap: "6px",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            flex: "0 0 auto"
-          });
-          actions.style.flexWrap = "nowrap";
-          const btnEdit = document.createElement("button");
-          styleBtnCompact(btnEdit, "\u270F\uFE0F");
-          btnEdit.title = "Edit";
-          btnEdit.setAttribute("aria-label", "Edit");
-          btnEdit.onclick = () => startEditingRecipe(index, set2);
-          const btnDelete = document.createElement("button");
-          styleBtnCompact(btnDelete, "\u{1F5D1}\uFE0F");
-          btnDelete.title = "Delete";
-          btnDelete.setAttribute("aria-label", "Delete");
-          btnDelete.onclick = () => deleteRecipeAt(index);
-          actions.append(btnEdit, btnDelete);
-          row.appendChild(actions);
-        }
-        recipesList.appendChild(row);
-      });
-      if (hasDraftNew && editingRecipeIndex !== null) {
-        const selection = editingRecipeDraft;
-        const row = applyStyles(document.createElement("div"), {
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px",
-          border: "1px solid rgba(255,255,255,0.10)",
-          borderRadius: "10px",
-          padding: "12px",
-          background: "rgba(255,255,255,0.02)",
-          boxShadow: "none",
-          width: "100%"
-        });
-        const summary = document.createElement("div");
-        renderRecipeSummary(summary, selection);
-        row.appendChild(summary);
-        const toggleGrid = buildRecipeToggleGrid(selection, () => renderRecipeSummary(summary, selection));
-        row.appendChild(toggleGrid);
-        const actions = applyStyles(document.createElement("div"), {
-          display: "flex",
-          gap: "8px",
-          width: "100%"
-        });
-        const btnCancel = document.createElement("button");
-        styleBtnFullWidth(btnCancel, "\u274C");
-        btnCancel.onclick = cancelEditingRecipe;
-        const btnValidate = document.createElement("button");
-        styleBtnFullWidth(btnValidate, "\u2714\uFE0F");
-        btnValidate.onclick = commitEditingRecipe;
-        actions.append(btnCancel, btnValidate);
-        row.appendChild(actions);
-        recipesList.appendChild(row);
-      }
-      applyDisabled();
-    }
-    btnAddRecipe.onclick = () => {
-      startEditingRecipe(state5.weatherRecipes.length);
-    };
-    recipesWrap.append(recipesHeader, recipesList);
-    card5.append(
-      makeSection("Harvest mode", lockModeRow),
-      makeSection("Filter by size", scaleRow),
-      makeSection("Filter by color", colorsRow),
-      makeSection("Filter by weather", weatherGrid),
-      makeSection("Weather filter mode", weatherModeRow),
-      makeSection("Weather recipes", recipesWrap)
-    );
-    const refresh = () => {
-      updateLockModeUI();
-      scaleSlider.setValues(state5.minScalePct, state5.maxScalePct);
-      minSlider.value = String(state5.minScalePct);
-      maxSlider.value = String(state5.maxScalePct);
-      applyScaleRange(false);
-      applyScaleMinimum(false);
-      applyScaleMaximum(false);
-      applyScaleMode(state5.scaleLockMode, false);
-      updateColorButtons();
-      weatherToggles.forEach((toggle2) => toggle2.setChecked(state5.weatherSelected.has(toggle2.key)));
-      radioAny.input.checked = state5.weatherMode === "ANY";
-      radioAll.input.checked = state5.weatherMode === "ALL";
-      radioRecipes.input.checked = state5.weatherMode === "RECIPES";
-      recipesWrap.style.display = state5.weatherMode === "RECIPES" ? "" : "none";
-      updateWeatherMutationsDisabled();
-      repaintRecipes();
-    };
-    const setDisabled = (value) => {
-      card5.dataset.disabled = value ? "1" : "0";
-      applyDisabled();
-    };
-    refresh();
-    return { root: card5, refresh, setDisabled };
-  }
-  function createRestrictionsTabRenderer(ui) {
-    let state5 = lockerRestrictionsService.getState();
-    let bonusFromMultiplier = null;
-    let bonusFromPlayers = friendBonusPercentFromPlayers(1);
-    let eggOptions = [];
-    const disposables = [];
-    let subsAttached = false;
-    const clampPercent = (value) => Math.max(0, Math.min(FRIEND_BONUS_MAX, Math.round(value / FRIEND_BONUS_STEP) * FRIEND_BONUS_STEP));
-    const resolveCurrentBonus = () => bonusFromMultiplier ?? bonusFromPlayers ?? 0;
-    const layout = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gap: "12px",
-      justifyItems: "center",
-      width: "100%",
-      maxWidth: "1100px"
-    });
-    const card5 = ui.card("Friend bonus locker", {
-      align: "stretch"
-    });
-    card5.root.style.width = "100%";
-    card5.header.style.display = "flex";
-    card5.header.style.alignItems = "center";
-    card5.header.style.justifyContent = "space-between";
-    const sliderWrap = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gap: "6px"
-    });
-    const sliderHeader = ui.flexRow({ justify: "between", align: "center", fullWidth: true });
-    const sliderTitle = document.createElement("div");
-    sliderTitle.textContent = "Minimum friend bonus required\u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E \u200E ";
-    sliderTitle.style.fontWeight = "600";
-    const sliderValue = applyStyles(document.createElement("div"), {
-      fontWeight: "700",
-      color: "#ff7a1f",
-      textShadow: "0 1px 1px rgba(0, 0, 0, 0.5)"
-    });
-    sliderHeader.append(sliderTitle, sliderValue);
-    const initialRequiredPct = friendBonusPercentFromPlayers(state5.minRequiredPlayers) ?? 0;
-    const slider2 = ui.slider(0, FRIEND_BONUS_MAX, FRIEND_BONUS_STEP, initialRequiredPct);
-    slider2.style.width = "100%";
-    sliderWrap.append(sliderHeader, slider2);
-    const statusBadge = applyStyles(document.createElement("div"), {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "6px",
-      padding: "4px 10px",
-      borderRadius: "999px",
-      fontWeight: "700",
-      fontSize: "12px",
-      letterSpacing: "0.25px"
-    });
-    statusBadge.style.marginLeft = "auto";
-    card5.header.appendChild(statusBadge);
-    const statusText = applyStyles(document.createElement("div"), {
-      fontSize: "12.5px",
-      lineHeight: "1.5",
-      opacity: "0.92"
-    });
-    card5.body.append(sliderWrap, statusText);
-    layout.append(card5.root);
-    const decorCard = ui.card("Decor pick locker", { align: "stretch" });
-    decorCard.root.style.width = "100%";
-    const decorRow = applyStyles(document.createElement("div"), {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "12px"
-    });
-    const decorText = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexDirection: "column",
-      gap: "4px"
-    });
-    const decorSubtitle = document.createElement("div");
-    decorSubtitle.textContent = "Prevents placed decors from being picked up";
-    decorSubtitle.style.fontSize = "12.5px";
-    decorSubtitle.style.opacity = "0.85";
-    decorText.append(decorSubtitle);
-    const decorToggle = ui.switch(state5.decorPickupLocked);
-    decorToggle.addEventListener("change", () => {
-      const locked = !!decorToggle.checked;
-      state5.decorPickupLocked = locked;
-      lockerRestrictionsService.setDecorPickupLocked(locked);
-    });
-    decorRow.append(decorText, decorToggle);
-    decorCard.body.append(decorRow);
-    layout.append(decorCard.root);
-    const eggCard = ui.card("Egg hatch locker", { align: "stretch" });
-    eggCard.root.style.width = "100%";
-    const eggList = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gap: "8px",
-      width: "100%"
-    });
-    eggCard.body.append(eggList);
-    layout.append(eggCard.root);
-    const sellPetsCard = ui.card("Sell all pets protections", { align: "stretch" });
-    sellPetsCard.root.style.width = "100%";
-    const sellPetsIntro = document.createElement("div");
-    sellPetsIntro.textContent = "Show a confirmation modal when protected pets are detected.";
-    sellPetsIntro.style.fontSize = "12.5px";
-    sellPetsIntro.style.opacity = "0.8";
-    const sellPetsGrid = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gap: "10px",
-      marginTop: "6px"
-    });
-    const createRuleRow = (title, subtitle) => {
-      const row = applyStyles(document.createElement("div"), {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "12px",
-        padding: "8px 10px",
-        border: "1px solid rgba(255,255,255,0.10)",
-        borderRadius: "10px",
-        background: "rgba(255,255,255,0.02)"
-      });
-      const text2 = applyStyles(document.createElement("div"), {
-        display: "grid",
-        gap: "2px"
-      });
-      const titleEl = document.createElement("div");
-      titleEl.textContent = title;
-      titleEl.style.fontWeight = "600";
-      titleEl.style.fontSize = "13px";
-      text2.appendChild(titleEl);
-      if (subtitle) {
-        const sub = document.createElement("div");
-        sub.textContent = subtitle;
-        sub.style.fontSize = "12px";
-        sub.style.opacity = "0.75";
-        text2.appendChild(sub);
-      }
-      const controls = applyStyles(document.createElement("div"), {
-        display: "flex",
-        alignItems: "center",
-        gap: "8px"
-      });
-      row.append(text2, controls);
-      return { row, controls };
-    };
-    const sellRulesInitial = lockerRestrictionsService.getSellAllPetsRules();
-    const sellEnableToggle = ui.switch(sellRulesInitial.enabled);
-    const sellEnableRow = createRuleRow("Enable protection rules");
-    sellEnableRow.controls.append(sellEnableToggle);
-    const sellGoldToggle = ui.switch(sellRulesInitial.protectGold);
-    const sellGoldRow = createRuleRow("Protect Gold mutation");
-    sellGoldRow.controls.append(sellGoldToggle);
-    const sellRainbowToggle = ui.switch(sellRulesInitial.protectRainbow);
-    const sellRainbowRow = createRuleRow("Protect Rainbow mutation");
-    sellRainbowRow.controls.append(sellRainbowToggle);
-    const sellMaxStrToggle = ui.switch(sellRulesInitial.protectMaxStr);
-    const sellMaxStrInput = ui.inputNumber(0, 100, 1, sellRulesInitial.maxStrThreshold);
-    const sellMaxStrWrap = sellMaxStrInput.wrap;
-    const sellMaxStrRow = createRuleRow("Protect pets with Max STR");
-    sellMaxStrRow.controls.append(sellMaxStrToggle, sellMaxStrWrap);
-    const SELL_ALL_RARITIES = ["Common", "Uncommon", "Rare", "Legendary", "Mythical", "Divine", "Celestial"];
-    const rarityRow = applyStyles(document.createElement("div"), {
-      padding: "8px 10px",
-      border: "1px solid rgba(255,255,255,0.10)",
-      borderRadius: "10px",
-      background: "rgba(255,255,255,0.02)",
-      display: "grid",
-      gap: "8px"
-    });
-    const rarityRowHeader = applyStyles(document.createElement("div"), {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between"
-    });
-    const rarityRowTitle = applyStyles(document.createElement("div"), {
-      fontWeight: "600",
-      fontSize: "13px"
-    });
-    rarityRowTitle.textContent = "Protect by rarity";
-    const rarityAddBtn = applyStyles(document.createElement("button"), {
-      border: "1px solid rgba(255,255,255,0.25)",
-      borderRadius: "6px",
-      background: "rgba(255,255,255,0.08)",
-      color: "#fff",
-      fontSize: "16px",
-      lineHeight: "1",
-      padding: "2px 8px",
-      cursor: "pointer",
-      fontWeight: "700"
-    });
-    rarityAddBtn.type = "button";
-    rarityAddBtn.textContent = "+";
-    rarityRowHeader.append(rarityRowTitle, rarityAddBtn);
-    const raritySelectedArea = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: "6px",
-      alignItems: "center"
-    });
-    const rarityPickerArea = applyStyles(document.createElement("div"), {
-      display: "none",
-      flexWrap: "wrap",
-      gap: "6px",
-      alignItems: "center",
-      padding: "8px",
-      background: "rgba(0,0,0,0.25)",
-      borderRadius: "8px"
-    });
-    rarityRow.append(rarityRowHeader, raritySelectedArea, rarityPickerArea);
-    let rarityPickerOpen = false;
-    const refreshRarityRow = () => {
-      const rules2 = lockerRestrictionsService.getSellAllPetsRules();
-      const selected = Array.isArray(rules2.protectedRarities) ? rules2.protectedRarities : [];
-      const enabled5 = rules2.enabled !== false;
-      const selectedSet = new Set(selected);
-      raritySelectedArea.innerHTML = "";
-      if (selected.length === 0) {
-        const none = applyStyles(document.createElement("span"), {
-          fontSize: "12px",
-          opacity: "0.5"
-        });
-        none.textContent = "No rarities protected";
-        raritySelectedArea.appendChild(none);
-      } else {
-        for (const r of selected) {
-          const wrap = applyStyles(document.createElement("div"), {
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "3px"
-          });
-          const badge2 = rarityBadge(r);
-          badge2.style.margin = "0";
-          const xBtn = applyStyles(document.createElement("button"), {
-            background: "none",
-            border: "none",
-            color: "rgba(255,255,255,0.6)",
-            fontSize: "14px",
-            cursor: "pointer",
-            padding: "0 2px",
-            lineHeight: "1"
-          });
-          xBtn.type = "button";
-          xBtn.textContent = "\xD7";
-          xBtn.addEventListener("click", () => {
-            const current2 = lockerRestrictionsService.getSellAllPetsRules().protectedRarities ?? [];
-            lockerRestrictionsService.setSellAllPetsRules({
-              protectedRarities: current2.filter((x) => x !== r)
-            });
-            refreshRarityRow();
-          });
-          wrap.append(badge2, xBtn);
-          raritySelectedArea.appendChild(wrap);
-        }
-      }
-      rarityPickerArea.innerHTML = "";
-      const remaining = SELL_ALL_RARITIES.filter((r) => !selectedSet.has(r));
-      if (rarityPickerOpen && remaining.length > 0) {
-        rarityPickerArea.style.display = "flex";
-        for (const r of remaining) {
-          const badge2 = rarityBadge(r);
-          badge2.style.margin = "0";
-          badge2.style.cursor = "pointer";
-          badge2.addEventListener("click", () => {
-            const current2 = lockerRestrictionsService.getSellAllPetsRules().protectedRarities ?? [];
-            lockerRestrictionsService.setSellAllPetsRules({
-              protectedRarities: [...current2, r]
-            });
-            refreshRarityRow();
-          });
-          rarityPickerArea.appendChild(badge2);
-        }
-      } else {
-        rarityPickerArea.style.display = "none";
-        if (remaining.length === 0) rarityPickerOpen = false;
-      }
-      rarityAddBtn.textContent = rarityPickerOpen ? "\xD7" : "+";
-      rarityRow.style.opacity = enabled5 ? "1" : "0.6";
-      rarityRow.style.pointerEvents = enabled5 ? "auto" : "none";
-    };
-    let rarityPickerOutsideHandler = null;
-    rarityAddBtn.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      rarityPickerOpen = !rarityPickerOpen;
-      refreshRarityRow();
-      if (rarityPickerOpen) {
-        rarityPickerOutsideHandler = (ev2) => {
-          if (!rarityRow.contains(ev2.target)) {
-            rarityPickerOpen = false;
-            refreshRarityRow();
-            document.removeEventListener("click", rarityPickerOutsideHandler, true);
-            rarityPickerOutsideHandler = null;
-          }
-        };
-        document.addEventListener("click", rarityPickerOutsideHandler, true);
-      } else if (rarityPickerOutsideHandler) {
-        document.removeEventListener("click", rarityPickerOutsideHandler, true);
-        rarityPickerOutsideHandler = null;
-      }
-    });
-    refreshRarityRow();
-    sellPetsGrid.append(sellEnableRow.row, sellGoldRow.row, sellRainbowRow.row, sellMaxStrRow.row, rarityRow);
-    sellPetsCard.body.append(sellPetsIntro, sellPetsGrid);
-    layout.append(sellPetsCard.root);
-    const LOCKED_ICON = "\u{1F512}";
-    const UNLOCKED_ICON = "\u{1F513}";
-    const eggRowCache = /* @__PURE__ */ new Map();
-    const emptyEggPlaceholder = applyStyles(document.createElement("div"), {
-      opacity: "0.7",
-      fontSize: "12px"
-    });
-    emptyEggPlaceholder.textContent = "No eggs available.";
-    const updateEggToggleAppearance = (toggle2, locked) => {
-      toggle2.textContent = locked ? LOCKED_ICON : UNLOCKED_ICON;
-      toggle2.style.background = locked ? "rgba(239,68,68,0.15)" : "rgba(16,185,129,0.15)";
-      toggle2.style.color = locked ? "#fca5a5" : "#9ef7c3";
-    };
-    let renderEggList;
-    const createEggRow = (opt) => {
-      const row = applyStyles(document.createElement("div"), {
-        display: "grid",
-        gridTemplateColumns: "auto auto 1fr",
-        alignItems: "center",
-        gap: "10px",
-        padding: "8px 10px",
-        border: "1px solid rgba(255,255,255,0.10)",
-        borderRadius: "10px",
-        background: "rgba(255,255,255,0.02)"
-      });
-      const toggle2 = document.createElement("button");
-      toggle2.type = "button";
-      toggle2.style.border = "1px solid rgba(255,255,255,0.10)";
-      toggle2.style.borderRadius = "10px";
-      toggle2.style.padding = "6px 10px";
-      toggle2.style.fontSize = "14px";
-      toggle2.style.fontWeight = "700";
-      toggle2.addEventListener("click", () => {
-        const next = !Boolean(state5.eggLocks?.[opt.id]);
-        state5.eggLocks = { ...state5.eggLocks || {}, [opt.id]: next };
-        lockerRestrictionsService.setEggLock(opt.id, next);
-        renderEggList();
-      });
-      const name = document.createElement("div");
-      name.style.fontWeight = "600";
-      name.style.color = "#e7eef7";
-      const icon = createEggIcon(opt.id, opt.name, 32);
-      row.append(toggle2, icon, name);
-      return { row, toggle: toggle2, name };
-    };
-    renderEggList = () => {
-      eggList.innerHTML = "";
-      if (!eggOptions.length) {
-        eggList.appendChild(emptyEggPlaceholder);
-        return;
-      }
-      const fragment = document.createDocumentFragment();
-      const seen = /* @__PURE__ */ new Set();
-      eggOptions.forEach((opt) => {
-        const id = opt.id;
-        seen.add(id);
-        let entry = eggRowCache.get(id);
-        if (!entry) {
-          entry = createEggRow(opt);
-          eggRowCache.set(id, entry);
-        }
-        entry.name.textContent = opt.name || id;
-        const locked = !!state5.eggLocks?.[id];
-        updateEggToggleAppearance(entry.toggle, locked);
-        fragment.appendChild(entry.row);
-      });
-      for (const id of Array.from(eggRowCache.keys())) {
-        if (seen.has(id)) continue;
-        const entry = eggRowCache.get(id);
-        if (entry) {
-          entry.row.remove();
-        }
-        eggRowCache.delete(id);
-      }
-      eggList.appendChild(fragment);
-    };
-    const updateSliderValue = (pct) => {
-      slider2.value = String(pct);
-      sliderValue.textContent = `+${pct}%`;
-    };
-    const clampMaxStr = (value) => {
-      if (!Number.isFinite(value)) return 0;
-      return Math.max(0, Math.min(100, Math.round(value)));
-    };
-    const setRuleRowDisabled = (row, disabled) => {
-      row.style.opacity = disabled ? "0.6" : "1";
-    };
-    const refreshSellAllPetsControls = () => {
-      const rules2 = lockerRestrictionsService.getSellAllPetsRules();
-      const enabled5 = rules2.enabled !== false;
-      const protectGold = rules2.protectGold !== false;
-      const protectRainbow = rules2.protectRainbow !== false;
-      const protectMaxStr = rules2.protectMaxStr !== false;
-      setCheck(sellEnableToggle, enabled5);
-      setCheck(sellGoldToggle, protectGold);
-      setCheck(sellRainbowToggle, protectRainbow);
-      setCheck(sellMaxStrToggle, protectMaxStr);
-      sellMaxStrInput.value = String(clampMaxStr(rules2.maxStrThreshold));
-      sellGoldToggle.disabled = !enabled5;
-      sellRainbowToggle.disabled = !enabled5;
-      sellMaxStrToggle.disabled = !enabled5;
-      const maxStrDisabled = !enabled5 || !protectMaxStr;
-      sellMaxStrInput.disabled = maxStrDisabled;
-      sellMaxStrWrap.style.opacity = maxStrDisabled ? "0.6" : "1";
-      sellMaxStrWrap.style.pointerEvents = maxStrDisabled ? "none" : "auto";
-      setRuleRowDisabled(sellGoldRow.row, !enabled5);
-      setRuleRowDisabled(sellRainbowRow.row, !enabled5);
-      setRuleRowDisabled(sellMaxStrRow.row, !enabled5);
-      refreshRarityRow();
-    };
-    const setStatusTone = (tone) => {
-      const palette = tone === "success" ? { bg: "rgba(16,185,129,0.15)", border: "rgba(16,185,129,0.35)", color: "#9ef7c3" } : tone === "warn" ? { bg: "rgba(239,68,68,0.15)", border: "rgba(239,68,68,0.35)", color: "#fca5a5" } : { bg: "rgba(59,130,246,0.15)", border: "rgba(59,130,246,0.35)", color: "#a5c7ff" };
-      statusBadge.style.background = palette.bg;
-      statusBadge.style.border = `1px solid ${palette.border}`;
-      statusBadge.style.color = palette.color;
-    };
-    const updateStatus = () => {
-      const requiredPct = clampPercent(friendBonusPercentFromPlayers(state5.minRequiredPlayers) ?? 0);
-      const currentPct = resolveCurrentBonus();
-      const requiredPlayers = state5.minRequiredPlayers;
-      const currentPlayers = currentPct != null ? percentToRequiredFriendCount(currentPct) : null;
-      const allowed = requiredPct <= 0 || currentPct != null && currentPct + 1e-4 >= requiredPct;
-      if (requiredPct <= 0) {
-        statusBadge.textContent = "Unlocked";
-        setStatusTone("info");
-        statusText.textContent = currentPct != null ? `Current friend bonus: ${currentPct}% (${currentPlayers} players).` : "Current friend bonus not detected yet.";
-        return;
-      }
-      statusBadge.textContent = allowed ? "Sale allowed" : "Sale locked";
-      setStatusTone(allowed ? "success" : "warn");
-      statusText.textContent = allowed ? `Current bonus ${currentPct}% (${currentPlayers} players) meets the requirement (${requiredPct}%).` : `Requires ${requiredPct}% (${requiredPlayers} players) or more`;
-    };
-    const handleSliderInput = (commit) => {
-      const raw = Number(slider2.value);
-      const pct = clampPercent(Number.isFinite(raw) ? raw : 0);
-      updateSliderValue(pct);
-      state5.minRequiredPlayers = percentToRequiredFriendCount(pct);
-      updateStatus();
-      if (commit) {
-        lockerRestrictionsService.setMinRequiredPlayers(state5.minRequiredPlayers);
-      }
-    };
-    slider2.addEventListener("input", () => handleSliderInput(false));
-    slider2.addEventListener("change", () => handleSliderInput(true));
-    sellEnableToggle.addEventListener("change", () => {
-      const enabled5 = !!sellEnableToggle.checked;
-      lockerRestrictionsService.setSellAllPetsRules({ enabled: enabled5 });
-      refreshSellAllPetsControls();
-    });
-    sellGoldToggle.addEventListener("change", () => {
-      lockerRestrictionsService.setSellAllPetsRules({ protectGold: !!sellGoldToggle.checked });
-    });
-    sellRainbowToggle.addEventListener("change", () => {
-      lockerRestrictionsService.setSellAllPetsRules({ protectRainbow: !!sellRainbowToggle.checked });
-    });
-    sellMaxStrToggle.addEventListener("change", () => {
-      lockerRestrictionsService.setSellAllPetsRules({ protectMaxStr: !!sellMaxStrToggle.checked });
-      refreshSellAllPetsControls();
-    });
-    sellMaxStrInput.addEventListener("change", () => {
-      const next = clampMaxStr(Number(sellMaxStrInput.value));
-      sellMaxStrInput.value = String(next);
-      lockerRestrictionsService.setSellAllPetsRules({ maxStrThreshold: next });
-    });
-    const syncFromService = (next) => {
-      state5 = { ...next };
-      setCheck(decorToggle, state5.decorPickupLocked);
-      updateSliderValue(friendBonusPercentFromPlayers(state5.minRequiredPlayers) ?? 0);
-      updateStatus();
-      renderEggList();
-      refreshSellAllPetsControls();
-    };
-    const attachSubscriptions = async () => {
-      if (subsAttached) return;
-      subsAttached = true;
-      try {
-        const initialBonus = await Atoms.server.friendBonusMultiplier.get();
-        bonusFromMultiplier = friendBonusPercentFromMultiplier(initialBonus);
-      } catch {
-      }
-      try {
-        const unsub = await Atoms.server.friendBonusMultiplier.onChange((next) => {
-          bonusFromMultiplier = friendBonusPercentFromMultiplier(next);
-          updateStatus();
-        });
-        if (typeof unsub === "function") disposables.push(unsub);
-      } catch {
-      }
-      try {
-        const initialPlayers = await Atoms.server.numPlayers.get();
-        bonusFromPlayers = friendBonusPercentFromPlayers(initialPlayers);
-      } catch {
-      }
-      try {
-        const unsubPlayers = await Atoms.server.numPlayers.onChange((next) => {
-          bonusFromPlayers = friendBonusPercentFromPlayers(next);
-          updateStatus();
-        });
-        if (typeof unsubPlayers === "function") disposables.push(unsubPlayers);
-      } catch {
-      }
-      const unsubService = lockerRestrictionsService.subscribe(syncFromService);
-      disposables.push(unsubService);
-      eggOptions = extractEggOptionsFromCatalog();
-      try {
-        const initialEggShop = await Atoms.shop.eggShop.get();
-        eggOptions = mergeEggOptions(eggOptions, extractEggOptions(initialEggShop));
-      } catch {
-      }
-      renderEggList();
-      try {
-        const unsubEggShop = await Atoms.shop.eggShop.onChange((next) => {
-          eggOptions = mergeEggOptions(extractEggOptionsFromCatalog(), extractEggOptions(next));
-          renderEggList();
-        });
-        if (typeof unsubEggShop === "function") disposables.push(unsubEggShop);
-      } catch {
-      }
-    };
-    const render = (view) => {
-      view.innerHTML = "";
-      view.style.maxHeight = "54vh";
-      view.style.overflow = "auto";
-      view.append(layout);
-      syncFromService(lockerRestrictionsService.getState());
-      updateStatus();
-      void attachSubscriptions();
-    };
-    const destroy = () => {
-      while (disposables.length) {
-        const dispose = disposables.pop();
-        try {
-          dispose?.();
-        } catch {
-        }
-      }
-    };
-    return { render, destroy };
-  }
-  function extractEggOptions(raw) {
-    const seen = /* @__PURE__ */ new Set();
-    const options = [];
-    const add = (id, name) => {
-      if (typeof id !== "string" || !id) return;
-      if (seen.has(id)) return;
-      seen.add(id);
-      const label2 = typeof name === "string" && name || typeof raw?.names?.[id] === "string" && raw.names[id] || id;
-      options.push({ id, name: label2 });
-    };
-    const walk = (node) => {
-      if (!node || typeof node !== "object") return;
-      if (Array.isArray(node)) {
-        node.forEach(walk);
-        return;
-      }
-      const candidate = node.eggId ?? node.id ?? null;
-      add(candidate, node.name);
-      for (const value of Object.values(node)) {
-        if (value && typeof value === "object") walk(value);
-      }
-    };
-    walk(raw);
-    return options;
-  }
-  function extractEggOptionsFromCatalog() {
-    const options = [];
-    const seen = /* @__PURE__ */ new Set();
-    for (const [id, raw] of Object.entries(eggCatalog2)) {
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
-      const name = typeof raw?.name === "string" && raw.name || id;
-      options.push({ id, name });
-    }
-    return options;
-  }
-  function mergeEggOptions(base, extra) {
-    const seen = new Set(base.map((o) => o.id));
-    const result = [...base];
-    for (const opt of extra) {
-      if (seen.has(opt.id)) continue;
-      seen.add(opt.id);
-      result.push(opt);
-    }
-    return result;
-  }
-  function createGeneralTabRenderer(ui, store) {
-    const viewRoot = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-      alignItems: "center",
-      width: "100%"
-    });
-    const layout = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-      alignItems: "center",
-      width: "100%"
-    });
-    const header = applyStyles(document.createElement("div"), {
-      display: "flex",
-      alignItems: "center",
-      gap: "10px",
-      justifyContent: "space-between",
-      border: "1px solid rgba(255,255,255,0.10)",
-      borderRadius: "10px",
-      padding: "12px 16px",
-      background: "rgba(255,255,255,0.04)",
-      boxShadow: "none",
-      width: "min(760px, 100%)"
-    });
-    const textWrap = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexDirection: "column",
-      gap: "4px"
-    });
-    const title = document.createElement("div");
-    title.textContent = "Global locker";
-    title.style.fontWeight = "600";
-    title.style.fontSize = "15px";
-    const subtitle = document.createElement("div");
-    subtitle.textContent = "Set the rules for locking or allowing harvests using the filters below";
-    subtitle.style.opacity = "0.8";
-    subtitle.style.fontSize = "12px";
-    textWrap.append(title, subtitle);
-    const toggleWrap = applyStyles(document.createElement("label"), {
-      display: "flex",
-      alignItems: "center",
-      gap: "8px"
-    });
-    const toggleLabel = ui.label("Enabled");
-    toggleLabel.style.margin = "0";
-    const toggle2 = ui.switch(store.global.enabled);
-    toggleWrap.append(toggleLabel, toggle2);
-    header.append(textWrap, toggleWrap);
-    const form = createLockerSettingsCard(ui, store.global.settings, {
-      onChange: () => store.notifyGlobalSettingsChanged()
-    });
-    layout.append(header, form.root);
-    viewRoot.append(layout);
-    const update = () => {
-      setCheck(toggle2, store.global.enabled);
-      form.setDisabled(!store.global.enabled);
-      form.refresh();
-    };
-    toggle2.addEventListener("change", () => {
-      store.setGlobalEnabled(!!toggle2.checked);
-    });
-    const unsubscribe2 = store.subscribe(() => {
-      update();
-    });
-    update();
-    const render = (view) => {
-      view.innerHTML = "";
-      view.style.maxHeight = "54vh";
-      view.style.overflow = "auto";
-      view.append(viewRoot);
-      update();
-    };
-    return {
-      render,
-      destroy: () => unsubscribe2()
-    };
-  }
-  function createOverridesTabRenderer(ui, store) {
-    const layout = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gridTemplateColumns: "minmax(220px, 280px) minmax(0, 1fr)",
-      gap: "10px",
-      alignItems: "stretch",
-      height: "54vh",
-      overflow: "hidden"
-    });
-    const left = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gridTemplateRows: "1fr",
-      gap: "8px",
-      minHeight: "0"
-    });
-    layout.appendChild(left);
-    const list = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gridTemplateColumns: "1fr",
-      rowGap: "6px",
-      overflow: "auto",
-      paddingRight: "2px",
-      border: "1px solid rgba(255,255,255,0.10)",
-      borderRadius: "10px",
-      padding: "6px"
-    });
-    left.appendChild(list);
-    const right = applyStyles(document.createElement("div"), {
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-      minHeight: "0"
-    });
-    layout.appendChild(right);
-    const detail = applyStyles(document.createElement("div"), {
-      display: "grid",
-      gap: "12px",
-      justifyItems: "center",
-      alignContent: "start",
-      height: "100%",
-      overflow: "auto"
-    });
-    right.appendChild(detail);
-    let selectedKey = null;
-    let renderedDetailKey = null;
-    const detailScrollMemory = /* @__PURE__ */ new Map();
-    const listButtons = /* @__PURE__ */ new Map();
-    const getClampedScrollTop = (element) => {
-      const max = Math.max(0, element.scrollHeight - element.clientHeight);
-      return Math.max(0, Math.min(element.scrollTop, max));
-    };
-    const restoreScrollTop = (element, value) => {
-      const max = Math.max(0, element.scrollHeight - element.clientHeight);
-      const target = Math.max(0, Math.min(value, max));
-      element.scrollTop = target;
-      return target;
-    };
-    const updateDetailScrollMemory = (key2) => {
-      const current2 = detailScrollMemory.get(key2) ?? { detail: 0, card: 0 };
-      current2.detail = getClampedScrollTop(detail);
-      const currentCard2 = detail.querySelector('[data-locker-settings-card="1"]');
-      if (currentCard2) {
-        current2.card = getClampedScrollTop(currentCard2);
-      }
-      detailScrollMemory.set(key2, current2);
-    };
-    detail.addEventListener("scroll", () => {
-      if (!renderedDetailKey) return;
-      const memory = detailScrollMemory.get(renderedDetailKey) ?? { detail: 0, card: 0 };
-      memory.detail = getClampedScrollTop(detail);
-      detailScrollMemory.set(renderedDetailKey, memory);
-    });
-    const refreshListStyles = () => {
-      listButtons.forEach(({ button: button3, dot }, key2) => {
-        const isSelected = selectedKey === key2;
-        button3.style.background = isSelected ? "rgba(94,234,212,0.15)" : "rgba(255,255,255,0.04)";
-        dot.style.background = store.getOverride(key2)?.enabled ? "#2ecc71" : "#e74c3c";
-      });
-    };
-    const renderList = () => {
-      const previousScrollTop = getClampedScrollTop(list);
-      list.innerHTML = "";
-      const seeds = getLockerSeedOptions();
-      if (!seeds.length) {
-        const empty = document.createElement("div");
-        empty.textContent = "No crops available.";
-        empty.style.opacity = "0.7";
-        empty.style.fontSize = "12px";
-        empty.style.textAlign = "center";
-        empty.style.padding = "16px";
-        list.appendChild(empty);
-        restoreScrollTop(list, previousScrollTop);
-        selectedKey = null;
-        return;
-      }
-      if (selectedKey && !seeds.some((opt) => opt.key === selectedKey)) {
-        selectedKey = null;
-      }
-      listButtons.clear();
-      const fragment = document.createDocumentFragment();
-      seeds.forEach((opt) => {
-        const button3 = document.createElement("button");
-        button3.className = "qmm-vtab";
-        button3.style.display = "grid";
-        button3.style.gridTemplateColumns = "16px 1fr auto";
-        button3.style.alignItems = "center";
-        button3.style.gap = "8px";
-        button3.style.textAlign = "left";
-        button3.style.padding = "6px 8px";
-        button3.style.borderRadius = "8px";
-        button3.style.border = "1px solid rgba(255,255,255,0.10)";
-        button3.style.background = selectedKey === opt.key ? "rgba(94,234,212,0.15)" : "rgba(255,255,255,0.04)";
-        button3.style.color = "#e7eef7";
-        const dot = document.createElement("span");
-        dot.className = "qmm-dot";
-        dot.style.background = store.getOverride(opt.key)?.enabled ? "#2ecc71" : "#e74c3c";
-        const label2 = document.createElement("span");
-        label2.className = "label";
-        label2.textContent = opt.cropName || opt.key;
-        const icon = createSeedIcon(opt.key, { size: 24, spriteKey: opt.spriteKey });
-        button3.append(dot, label2, icon);
-        listButtons.set(opt.key, { button: button3, dot });
-        button3.onmouseenter = () => button3.style.borderColor = "rgba(94,234,212,0.35)";
-        button3.onmouseleave = () => button3.style.borderColor = "rgba(255,255,255,0.10)";
-        button3.onclick = () => {
-          if (selectedKey === opt.key) return;
-          selectedKey = opt.key;
-          refreshListStyles();
-          renderDetail();
-        };
-        fragment.appendChild(button3);
-      });
-      list.appendChild(fragment);
-      refreshListStyles();
-      restoreScrollTop(list, previousScrollTop);
-    };
-    const renderDetail = () => {
-      if (renderedDetailKey) {
-        updateDetailScrollMemory(renderedDetailKey);
-      }
-      detail.innerHTML = "";
-      if (!selectedKey) {
-        const empty = document.createElement("div");
-        empty.textContent = "Select a crop on the left to customise its locker settings.";
-        empty.style.opacity = "0.7";
-        empty.style.fontSize = "13px";
-        empty.style.textAlign = "center";
-        empty.style.padding = "32px 24px";
-        empty.style.border = "1px dashed rgba(255,255,255,0.12)";
-        empty.style.borderRadius = "10px";
-        empty.style.width = "min(760px, 100%)";
-        detail.appendChild(empty);
-        renderedDetailKey = null;
-        return;
-      }
-      const seeds = getLockerSeedOptions();
-      const seed = seeds.find((opt) => opt.key === selectedKey);
-      if (!seed) {
-        selectedKey = null;
-        renderedDetailKey = null;
-        renderDetail();
-        return;
-      }
-      const override = store.ensureOverride(selectedKey, { silent: true });
-      const header = ui.flexRow({ justify: "between", align: "center", fullWidth: true });
-      header.style.border = "1px solid rgba(255,255,255,0.10)";
-      header.style.borderRadius = "10px";
-      header.style.padding = "12px 16px";
-      header.style.background = "rgba(255,255,255,0.04)";
-      header.style.boxShadow = "none";
-      header.style.width = "min(760px, 100%)";
-      const titleWrap = ui.flexRow({ gap: 10, align: "center" });
-      titleWrap.style.flexWrap = "nowrap";
-      const title = document.createElement("div");
-      title.textContent = seed.cropName || seed.key;
-      title.style.fontWeight = "600";
-      title.style.fontSize = "15px";
-      const icon = createSeedIcon(seed.key, { size: 32, spriteKey: seed.spriteKey });
-      titleWrap.append(icon, title);
-      const toggleWrap = ui.flexRow({ gap: 8, align: "center" });
-      toggleWrap.style.flexWrap = "nowrap";
-      const toggleLabel = ui.label("Override");
-      toggleLabel.style.margin = "0";
-      const toggle2 = ui.switch(override.enabled);
-      toggleWrap.append(toggleLabel, toggle2);
-      header.append(titleWrap, toggleWrap);
-      const status2 = document.createElement("div");
-      status2.style.fontSize = "12px";
-      status2.style.opacity = "0.75";
-      status2.style.textAlign = "center";
-      status2.style.width = "min(760px, 100%)";
-      const updateStatus = () => {
-        status2.textContent = override.enabled ? "This crop uses its own locker filters." : "Uses the global locker settings.";
-      };
-      const form = createLockerSettingsCard(ui, override.settings, {
-        onChange: () => {
-          if (selectedKey) {
-            store.notifyOverrideSettingsChanged(selectedKey);
-          }
-        }
-      });
-      const applyEnabledState = () => {
-        form.setDisabled(!override.enabled);
-        form.refresh();
-        updateStatus();
-      };
-      toggle2.addEventListener("change", () => {
-        if (!selectedKey) return;
-        const wasEnabled = override.enabled;
-        const nextEnabled = !!toggle2.checked;
-        if (nextEnabled && !wasEnabled && !override.hasPersistedSettings) {
-          copySettings(override.settings, store.global.settings);
-        }
-        if (nextEnabled) {
-          override.hasPersistedSettings = true;
-        }
-        store.setOverrideEnabled(selectedKey, nextEnabled);
-      });
-      applyEnabledState();
-      detail.append(header, status2, form.root);
-      if (selectedKey) {
-        const memory = detailScrollMemory.get(selectedKey) ?? { detail: 0, card: 0 };
-        memory.detail = restoreScrollTop(detail, memory.detail);
-        memory.card = restoreScrollTop(form.root, memory.card);
-        detailScrollMemory.set(selectedKey, memory);
-        const activeKey = selectedKey;
-        form.root.addEventListener("scroll", () => {
-          if (renderedDetailKey !== activeKey) return;
-          const current2 = detailScrollMemory.get(activeKey) ?? { detail: getClampedScrollTop(detail), card: 0 };
-          current2.card = getClampedScrollTop(form.root);
-          detailScrollMemory.set(activeKey, current2);
-        });
-        renderedDetailKey = activeKey;
-      }
-    };
-    renderList();
-    renderDetail();
-    const refresh = () => {
-      refreshListStyles();
-      renderDetail();
-    };
-    const unsubscribe2 = store.subscribe(refresh);
-    const onDataUpdated = (e) => {
-      const key2 = e.detail?.key;
-      if (key2 === "plants") renderList();
-    };
-    window.addEventListener("gemini:data-updated", onDataUpdated);
-    const render = (view) => {
-      view.innerHTML = "";
-      view.append(layout);
-      refresh();
-    };
-    return {
-      render,
-      destroy: () => {
-        unsubscribe2();
-        window.removeEventListener("gemini:data-updated", onDataUpdated);
-      }
-    };
-  }
-  async function renderLockerMenu(container) {
-    const ui = new Menu({ id: "locker", compact: true });
-    ui.mount(container);
-    const store = new LockerMenuStore(lockerService.getState());
-    const restrictionsTab = createRestrictionsTabRenderer(ui);
-    const generalTab = createGeneralTabRenderer(ui, store);
-    const overridesTab = createOverridesTabRenderer(ui, store);
-    ui.addTabs([
-      { id: "locker-general", title: "General", render: (view) => generalTab.render(view) },
-      { id: "locker-overrides", title: "Overrides", render: (view) => overridesTab.render(view) },
-      { id: "locker-restrictions", title: "Restrictions", render: (view) => restrictionsTab.render(view) }
-    ]);
-    ui.switchTo("locker-general");
-    const disposables = [];
-    disposables.push(lockerService.subscribe((state5) => store.syncFromService(state5)));
-    disposables.push(() => restrictionsTab.destroy());
-    disposables.push(() => generalTab.destroy());
-    disposables.push(() => overridesTab.destroy());
-    const cleanup = () => {
-      while (disposables.length) {
-        const dispose = disposables.pop();
-        try {
-          dispose?.();
-        } catch {
-        }
-      }
-    };
-    ui.on("unmounted", cleanup);
-  }
-  var NO_WEATHER_TAG2, SEED_EMOJIS, _lockerOptionsCache, _lockerEmojiByKey, _lockerEmojisBySeedName, getLockerSeedOptions, getLockerSeedEmojiForKey, getLockerSeedEmojiForSeedName, weatherMutationLabel, weatherMutations, createNoWeatherIcon, isWeatherMutationAvailable, WEATHER_RECIPE_GROUPS, WEATHER_RECIPE_GROUP_MEMBERS, applyStyles, weatherModeNameSeq, LockerMenuStore;
-  var init_menu4 = __esm({
-    "src/features/locker/menu.ts"() {
+  var LockerMenuStore;
+  var init_settingsDraft = __esm({
+    "src/features/locker/settingsDraft.ts"() {
       "use strict";
-      init_menu();
-      init_data();
+      init_emitter();
       init_locker();
-      init_restrictions();
-      init_atoms();
-      init_iconCache();
-      init_menu3();
-      NO_WEATHER_TAG2 = "NoWeatherEffect";
-      SEED_EMOJIS = [
-        "\u{1F955}",
-        "\u{1F353}",
-        "\u{1F343}",
-        "\u{1F535}",
-        "\u{1F34E}",
-        "\u{1F337}",
-        "\u{1F345}",
-        "\u{1F33C}",
-        "\u{1F33D}",
-        "\u{1F349}",
-        "\u{1F383}",
-        "\u{1F33F}",
-        "\u{1F965}",
-        "\u{1F34C}",
-        "\u{1F338}",
-        "\u{1F7E2}",
-        "\u{1F344}",
-        "\u{1F335}",
-        "\u{1F38D}",
-        "\u{1F347}",
-        "\u{1F336}\uFE0F",
-        "\u{1F34B}",
-        "\u{1F96D}",
-        "\u{1F409}",
-        "\u{1F352}",
-        "\u{1F33B}",
-        "\u2728",
-        "\u{1F506}",
-        "\u{1F52E}"
-      ];
-      _lockerOptionsCache = null;
-      _lockerEmojiByKey = null;
-      _lockerEmojisBySeedName = null;
-      getLockerSeedOptions = () => getLockerCache().options;
-      getLockerSeedEmojiForKey = (key2) => {
-        if (!key2) return void 0;
-        return getLockerCache().byKey.get(key2) ?? "\u2022";
-      };
-      getLockerSeedEmojiForSeedName = (name) => {
-        if (!name) return void 0;
-        return getLockerCache().bySeedName.get(name) ?? "\u2022";
-      };
-      weatherMutationLabel = (key2) => (tileRefsMutationLabels2 ?? {})[key2] ?? formatMutationLabel(key2);
-      weatherMutations = memoOnCatalogs(() => [
-        {
-          key: NO_WEATHER_TAG2,
-          label: "No weather effect",
-          tileRef: null,
-          iconFactory: createNoWeatherIcon
-        },
-        ...Object.entries(tileRefsMutations2).filter((entry) => {
-          const [key2, value] = entry;
-          if (key2 === "Puddle" || key2 === "ThunderstruckGround") {
-            return false;
-          }
-          return typeof value === "number" || typeof value === "string";
-        }).map(([key2, value]) => ({
-          key: key2,
-          label: weatherMutationLabel(key2),
-          tileRef: value,
-          iconFactory: (options) => createWeatherBadge(key2, options)
-        }))
-      ]);
-      createNoWeatherIcon = (options) => {
-        const size = Math.max(24, options?.size ?? 48);
-        const wrap = applyStyles(document.createElement("div"), {
-          width: `${size}px`,
-          height: `${size}px`,
-          display: "grid",
-          placeItems: "center"
-        });
-        const glyph = applyStyles(document.createElement("span"), {
-          color: "#ff5c5c",
-          fontSize: `${Math.round(size * 0.65)}px`,
-          fontWeight: "700",
-          textShadow: "0 1px 2px rgba(0, 0, 0, 0.6)",
-          lineHeight: "1"
-        });
-        glyph.textContent = "\u2716";
-        wrap.appendChild(glyph);
-        return wrap;
-      };
-      isWeatherMutationAvailable = (tag) => weatherMutations().some((info) => info.key === tag);
-      WEATHER_RECIPE_GROUPS = {
-        Wet: "condition",
-        Chilled: "condition",
-        Frozen: "condition",
-        Thunderstruck: "condition",
-        Thundercharged: "condition",
-        Dawnlit: "lighting",
-        Amberlit: "lighting",
-        Dawncharged: "lighting",
-        Ambercharged: "lighting"
-      };
-      WEATHER_RECIPE_GROUP_MEMBERS = {
-        condition: ["Wet", "Chilled", "Frozen", "Thunderstruck", "Thundercharged"],
-        lighting: ["Dawnlit", "Amberlit", "Dawncharged", "Ambercharged"]
-      };
-      applyStyles = (el, styles) => {
-        Object.entries(styles).forEach(([prop, value]) => {
-          el.style[prop] = value;
-        });
-        return el;
-      };
-      weatherModeNameSeq = 0;
+      init_settings2();
+      init_weatherTags();
       LockerMenuStore = class {
         constructor(initial) {
+          this.global = { enabled: false, settings: newDraft(), hasPersistedSettings: true };
           this.overrides = /* @__PURE__ */ new Map();
-          this.listeners = /* @__PURE__ */ new Set();
+          this.changes = new Emitter();
           this.syncing = false;
-          this.global = { enabled: false, settings: createDefaultSettings(), hasPersistedSettings: true };
           this.syncFromService(initial);
         }
-        applyPersisted(state5) {
-          this.global.enabled = !!state5.enabled;
-          hydrateSettingsFromPersisted(this.global.settings, state5.settings);
-          this.global.hasPersistedSettings = true;
-          const seen = /* @__PURE__ */ new Set();
-          Object.entries(state5.overrides ?? {}).forEach(([key2, value]) => {
-            const entry = this.ensureOverride(key2, { silent: true });
-            entry.enabled = !!value?.enabled;
-            hydrateSettingsFromPersisted(entry.settings, value?.settings);
-            entry.hasPersistedSettings = true;
-            seen.add(key2);
-          });
-          for (const key2 of Array.from(this.overrides.keys())) {
-            if (!seen.has(key2)) {
-              this.overrides.delete(key2);
-            }
-          }
-        }
         subscribe(listener) {
-          this.listeners.add(listener);
-          return () => this.listeners.delete(listener);
+          return this.changes.on(listener);
         }
-        emit() {
-          for (const listener of this.listeners) {
-            try {
-              listener();
-            } catch {
-            }
-          }
-        }
+        /** Reads the saved state back in. Species the service no longer holds are forgotten. */
         syncFromService(state5) {
           this.syncing = true;
-          this.applyPersisted(state5);
-          this.emit();
-          this.syncing = false;
+          try {
+            this.global.enabled = state5.enabled;
+            readInto(this.global.settings, state5.settings);
+            for (const [key2, value] of Object.entries(state5.overrides)) {
+              const entry = this.ensureOverride(key2);
+              entry.enabled = value.enabled;
+              readInto(entry.settings, value.settings);
+              entry.hasPersistedSettings = true;
+            }
+            for (const key2 of Array.from(this.overrides.keys())) {
+              if (!(key2 in state5.overrides)) this.overrides.delete(key2);
+            }
+            this.changes.emit();
+          } finally {
+            this.syncing = false;
+          }
         }
         setGlobalEnabled(enabled5) {
-          this.global.enabled = !!enabled5;
-          this.persistGlobal();
-          this.emit();
+          this.global.enabled = enabled5;
+          this.saveGlobal();
         }
         notifyGlobalSettingsChanged() {
-          this.persistGlobal();
-          this.emit();
+          this.saveGlobal();
         }
-        ensureOverride(key2, opts = {}) {
+        /** The draft for a species, created with the defaults the first time it is opened. */
+        ensureOverride(key2) {
           let entry = this.overrides.get(key2);
           if (!entry) {
-            entry = { enabled: false, settings: createDefaultSettings(), hasPersistedSettings: false };
+            entry = { enabled: false, settings: newDraft(), hasPersistedSettings: false };
             this.overrides.set(key2, entry);
-            if (!opts.silent) {
-              this.emit();
-            }
           }
           return entry;
         }
-        getOverride(key2) {
-          return this.overrides.get(key2);
+        isOverrideEnabled(key2) {
+          return this.overrides.get(key2)?.enabled === true;
         }
         setOverrideEnabled(key2, enabled5) {
-          const entry = this.ensureOverride(key2, { silent: true });
-          entry.enabled = !!enabled5;
-          this.persistOverride(key2);
-          this.emit();
+          const entry = this.ensureOverride(key2);
+          if (enabled5 && !entry.enabled && !entry.hasPersistedSettings) {
+            copyDraft(entry.settings, this.global.settings);
+          }
+          entry.enabled = enabled5;
+          this.saveOverride(key2);
         }
         notifyOverrideSettingsChanged(key2) {
+          if (this.overrides.has(key2)) this.saveOverride(key2);
+        }
+        saveGlobal() {
+          if (this.syncing) return;
+          lockerService.setGlobalState({ enabled: this.global.enabled, settings: toPersisted(this.global.settings) });
+          this.changes.emit();
+        }
+        saveOverride(key2) {
+          if (this.syncing) return;
           const entry = this.overrides.get(key2);
           if (!entry) return;
           entry.hasPersistedSettings = true;
-          this.persistOverride(key2);
-          this.emit();
-        }
-        removeOverride(key2) {
-          if (!this.overrides.has(key2)) return;
-          this.overrides.delete(key2);
-          if (!this.syncing) {
-            lockerService.removeOverride(key2);
-          }
-          this.emit();
-        }
-        persistGlobal() {
-          if (this.syncing) return;
-          lockerService.setGlobalState({
-            enabled: this.global.enabled,
-            settings: serializeSettingsState(this.global.settings)
-          });
-        }
-        persistOverride(key2) {
-          if (this.syncing) return;
-          const entry = this.overrides.get(key2);
-          if (!entry) {
-            lockerService.removeOverride(key2);
-          } else {
-            lockerService.setOverride(key2, {
-              enabled: entry.enabled,
-              settings: serializeSettingsState(entry.settings)
-            });
-            entry.hasPersistedSettings = true;
-          }
+          lockerService.setOverride(key2, { enabled: entry.enabled, settings: toPersisted(entry.settings) });
+          this.changes.emit();
         }
       };
     }
   });
 
-  // src/lib/dom.ts
-  function addStyle(css4) {
-    const style2 = document.createElement("style");
-    style2.textContent = css4;
-    document.head.appendChild(style2);
-    return style2;
+  // src/features/locker/menu.ts
+  function generalTab(store) {
+    const root = document.createElement("div");
+    root.className = "lk-column";
+    const toggle2 = switchInput(store.global.enabled, (on) => store.setGlobalEnabled(on));
+    const enabled5 = document.createElement("label");
+    enabled5.className = "qmm-flex";
+    const enabledText = document.createElement("span");
+    enabledText.className = "qmm-label";
+    enabledText.textContent = "Enabled";
+    enabled5.append(enabledText, toggle2);
+    const header = card("Global locker", {
+      subtitle: "Set the rules for locking or allowing harvests using the filters below",
+      actions: [enabled5]
+    });
+    header.root.classList.add("lk-wide");
+    header.root.removeChild(header.body);
+    const form = lockerSettingsCard(store.global.settings, () => store.notifyGlobalSettingsChanged());
+    root.append(header.root, form.root);
+    const update = () => {
+      toggle2.setChecked(store.global.enabled);
+      form.setDisabled(!store.global.enabled);
+      form.refresh();
+    };
+    const off = store.subscribe(update);
+    update();
+    return {
+      render(view) {
+        view.classList.add("lk-view");
+        view.replaceChildren(root);
+        update();
+      },
+      destroy: off
+    };
   }
-  var init_dom2 = __esm({
-    "src/lib/dom.ts"() {
+  async function renderLockerMenu(container) {
+    ensureLockerMenuStyles();
+    const ui = new Menu({ id: "locker", compact: true });
+    ui.mount(container);
+    const store = new LockerMenuStore(lockerService.getState());
+    const tabs = { general: generalTab(store), overrides: overridesTab(store), restrictions: restrictionsTab() };
+    ui.addTabs([
+      { id: "locker-general", title: "General", render: (view) => tabs.general.render(view) },
+      { id: "locker-overrides", title: "Overrides", render: (view) => tabs.overrides.render(view) },
+      { id: "locker-restrictions", title: "Restrictions", render: (view) => tabs.restrictions.render(view) }
+    ]);
+    ui.switchTo("locker-general");
+    const offService = lockerService.subscribe((state5) => store.syncFromService(state5));
+    ui.on("unmounted", () => {
+      offService();
+      Object.values(tabs).forEach((tab) => tab.destroy());
+    });
+  }
+  var init_menu4 = __esm({
+    "src/features/locker/menu.ts"() {
       "use strict";
+      init_menu();
+      init_card();
+      init_toggles();
+      init_locker();
+      init_menuStyles();
+      init_overridesTab();
+      init_restrictionsTab();
+      init_settingsCard();
+      init_settingsDraft();
+      init_seedOptions();
     }
   });
 
@@ -40760,7 +39697,7 @@ next: ${next}`;
     delete el.dataset.mgHasSprite;
   }
   function createSeedSpriteIcon(option, fallback, size, logTag) {
-    const wrap = applyStyles2(document.createElement("span"), {
+    const wrap = applyStyles(document.createElement("span"), {
       width: `${size}px`,
       height: `${size}px`,
       display: "inline-flex",
@@ -40995,7 +39932,7 @@ next: ${next}`;
       root.style.height = "66vh";
       root.style.overflow = "auto";
       root.style.display = "grid";
-      const layout = applyStyles2(document.createElement("div"), {
+      const layout = applyStyles(document.createElement("div"), {
         display: "grid",
         gridTemplateColumns: "minmax(220px, 280px) minmax(0, 1fr)",
         gap: "10px",
@@ -41004,7 +39941,7 @@ next: ${next}`;
         overflow: "hidden"
       });
       root.appendChild(layout);
-      const left = applyStyles2(document.createElement("div"), {
+      const left = applyStyles(document.createElement("div"), {
         display: "grid",
         gridTemplateRows: "minmax(0, 1fr)",
         minHeight: "0",
@@ -41013,7 +39950,7 @@ next: ${next}`;
         maxWidth: "280px"
       });
       layout.appendChild(left);
-      const list = applyStyles2(document.createElement("div"), {
+      const list = applyStyles(document.createElement("div"), {
         display: "grid",
         gridTemplateColumns: "1fr",
         overflow: "auto",
@@ -41026,14 +39963,14 @@ next: ${next}`;
         // pour que overflow: auto prenne effet
       });
       left.appendChild(list);
-      const right = applyStyles2(document.createElement("div"), {
+      const right = applyStyles(document.createElement("div"), {
         display: "flex",
         flexDirection: "column",
         minHeight: "0",
         flex: "1 1 auto"
       });
       layout.appendChild(right);
-      const detailScroll = applyStyles2(document.createElement("div"), {
+      const detailScroll = applyStyles(document.createElement("div"), {
         flex: "1 1 auto",
         overflow: "auto",
         display: "flex",
@@ -41045,18 +39982,18 @@ next: ${next}`;
       const detailLayout = document.createElement("div");
       detailLayout.className = "mg-crop-calculator__layout";
       const createSection = (title, extraClass) => {
-        const section2 = document.createElement("div");
-        section2.className = "mg-crop-calculator__section";
+        const section3 = document.createElement("div");
+        section3.className = "mg-crop-calculator__section";
         if (extraClass) {
-          section2.classList.add(extraClass);
+          section3.classList.add(extraClass);
         }
         if (title) {
           const heading = document.createElement("div");
           heading.className = "mg-crop-calculator__section-heading";
           heading.textContent = title;
-          section2.appendChild(heading);
+          section3.appendChild(heading);
         }
-        return section2;
+        return section3;
       };
       const previewSection = createSection(null, "mg-crop-calculator__section--preview");
       const priceRow = document.createElement("div");
@@ -41090,13 +40027,13 @@ next: ${next}`;
       const slider2 = ui.slider(SIZE_MIN, SIZE_MAX, 1, SIZE_MIN);
       slider2.classList.add("mg-crop-simulation__slider");
       slider2.disabled = true;
-      const sliderValue = document.createElement("span");
-      sliderValue.className = "mg-crop-simulation__slider-value";
-      sliderValue.textContent = `${SIZE_MIN}%`;
+      const sliderValue2 = document.createElement("span");
+      sliderValue2.className = "mg-crop-simulation__slider-value";
+      sliderValue2.textContent = `${SIZE_MIN}%`;
       const sliderWeight = document.createElement("span");
       sliderWeight.className = "mg-crop-simulation__slider-weight";
       sliderWeight.textContent = "\u2014";
-      sliderRow.append(sliderLabel, slider2, sliderValue);
+      sliderRow.append(sliderLabel, slider2, sliderValue2);
       sliderContainer.append(sliderRow, sliderWeight);
       spriteSection.append(spriteBox, sliderContainer);
       previewSection.appendChild(spriteSection);
@@ -41137,7 +40074,7 @@ next: ${next}`;
         root: simulationRoot,
         sprite,
         sizeSlider: slider2,
-        sizeValue: sliderValue,
+        sizeValue: sliderValue2,
         sizeWeight: sliderWeight,
         colorMutations: colorList,
         weatherConditions,
@@ -41385,7 +40322,7 @@ next: ${next}`;
     });
     ui.mount(container);
   }
-  var ROOT_CLASS, SIZE_MIN, SIZE_MAX, COLOR_MUTATION_LABELS, WEATHER_CONDITION_LABELS, WEATHER_LIGHTING_LABELS, FRIEND_BONUS_LABELS, FRIEND_BONUS_MIN_PLAYERS, FRIEND_BONUS_MAX_PLAYERS, COLOR_SEGMENT_METADATA, WEATHER_CONDITION_SEGMENT_METADATA, WEATHER_LIGHTING_SEGMENT_METADATA, MUTATION_SPRITE_OVERRIDES, priceFormatter, weightFormatter, DEFAULT_STATE, BASE_SPRITE_SIZE_PX, DEFAULT_SPRITE_CATEGORIES, PLANT_PRIORITY_IDENTIFIERS, CROP_SIMULATION_CSS, cropSimulationStyleEl, applyStyles2, calculatorStyleEl, MUTATION_UI_SPRITE_NAMES;
+  var ROOT_CLASS, SIZE_MIN, SIZE_MAX, COLOR_MUTATION_LABELS, WEATHER_CONDITION_LABELS, WEATHER_LIGHTING_LABELS, FRIEND_BONUS_LABELS, FRIEND_BONUS_MIN_PLAYERS, FRIEND_BONUS_MAX_PLAYERS, COLOR_SEGMENT_METADATA, WEATHER_CONDITION_SEGMENT_METADATA, WEATHER_LIGHTING_SEGMENT_METADATA, MUTATION_SPRITE_OVERRIDES, priceFormatter, weightFormatter, DEFAULT_STATE, BASE_SPRITE_SIZE_PX, DEFAULT_SPRITE_CATEGORIES, PLANT_PRIORITY_IDENTIFIERS, CROP_SIMULATION_CSS, cropSimulationStyleEl, applyStyles, calculatorStyleEl, MUTATION_UI_SPRITE_NAMES;
   var init_menu5 = __esm({
     "src/features/calculator/menu.ts"() {
       "use strict";
@@ -41774,7 +40711,7 @@ next: ${next}`;
 }
 `;
       cropSimulationStyleEl = null;
-      applyStyles2 = (el, styles) => {
+      applyStyles = (el, styles) => {
         const toKebab = (s) => s.startsWith("--") ? s : s.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
         for (const [key2, value] of Object.entries(styles)) {
           el.style.setProperty(toKebab(key2), value);
@@ -46016,7 +44953,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     headerDesc.textContent = config.description;
     headerText.append(headerDesc);
     header.append(iconBox(config.headerSprite, 22, "misc"), headerText);
-    const section2 = collapsibleCard({
+    const section3 = collapsibleCard({
       header,
       collapsed: config.collapsed,
       onToggle: config.onToggleCollapsed
@@ -46068,7 +45005,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       updateControls();
     });
     actions.append(btnSelect, btnClear, spacer2, btnDelete, btnPause, btnPlay, btnStop);
-    section2.body.append(stats, chips, estimate, progressWrap, actions);
+    section3.body.append(stats, chips, estimate, progressWrap, actions);
     const progress = { target: "-", done: 0, total: 0 };
     function buildChip(item) {
       const chip2 = document.createElement("div");
@@ -46231,7 +45168,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     updateSummary2();
     updateControls();
     return {
-      root: section2.root,
+      root: section3.root,
       cleanup: () => {
         clearSummaryTimer();
         for (const [type, handler] of listeners8) window.removeEventListener(type, handler);
@@ -46892,7 +45829,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/menu/harvestChips.ts
-  function iconHolder(sizePx) {
+  function iconHolder2(sizePx) {
     const box = document.createElement("div");
     css(box, {
       display: "flex",
@@ -46932,7 +45869,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     if (all.length) attachSpriteIcon(box, ["crop", "tallplant", "plant"], all, sizePx, SPRITE_LOG_TAG2);
   }
   function speciesIcon(species, sizePx = ICON_PX2) {
-    const box = iconHolder(sizePx);
+    const box = iconHolder2(sizePx);
     attachAtlasCrop(box, species, sizePx);
     return box;
   }
@@ -46945,7 +45882,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   }
   function variantIcon(species, mutations, sizePx = ICON_PX2) {
     if (mutations.length === 0) return speciesIcon(species, sizePx);
-    const box = iconHolder(sizePx);
+    const box = iconHolder2(sizePx);
     const url = composedUrl(species, mutations);
     const img = document.createElement("img");
     img.alt = "";
@@ -46960,7 +45897,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return box;
   }
   function mutationIconEl(mutation, sizePx = ICON_PX2) {
-    const box = iconHolder(sizePx);
+    const box = iconHolder2(sizePx);
     const candidates = spellings(mutation).flatMap((name) => [`Mutation${name}`, name]);
     attachSpriteIcon(box, ["ui", "mutation"], candidates, sizePx, SPRITE_LOG_TAG2);
     return box;
@@ -47106,7 +46043,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/menu/plantChips.ts
-  function iconHolder2(sizePx) {
+  function iconHolder3(sizePx) {
     const box = document.createElement("div");
     css(box, {
       display: "flex",
@@ -47139,7 +46076,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return spellings2(eggId, typeof tileRef === "string" ? tileRef : null, eggCatalogName(eggId), name);
   }
   function plantItemIcon(item, sizePx = ICON_PX3) {
-    const box = iconHolder2(sizePx);
+    const box = iconHolder3(sizePx);
     const isEgg = item.kind === "egg";
     const candidates = isEgg ? eggCandidates(item.id, item.name) : seedCandidates(item.id, item.name);
     if (candidates.length) {
@@ -47710,7 +46647,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       else delete map2[sectionId];
     });
   }
-  function section(id, icon, title, description) {
+  function section2(id, icon, title, description) {
     return collapsibleCard({
       icon,
       title,
@@ -47732,7 +46669,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return head;
   }
   function buildAutoRecoSection() {
-    const card5 = section(
+    const card5 = section2(
       "autoReco",
       "\u{1F50C}",
       "Auto reconnect",
@@ -47744,8 +46681,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     css(hint, { fontSize: "10px", color: TEXT_DIM, lineHeight: "1.45", padding: "0 2px" });
     const slider2 = range(0, AUTO_RECO_MAX_SECONDS, AUTO_RECO_STEP_SECONDS, initialSeconds);
     css(slider2, { width: "150px" });
-    const sliderValue = pill2(formatShortDuration(initialSeconds));
-    css(sliderValue, { minWidth: "64px", textAlign: "center" });
+    const sliderValue2 = pill2(formatShortDuration(initialSeconds));
+    css(sliderValue2, { minWidth: "64px", textAlign: "center" });
     const enabledToggle = toggle(featureDisabled ? false : MiscService.readAutoRecoEnabled(false), (on) => {
       MiscService.writeAutoRecoEnabled(on);
       syncEnabled(on);
@@ -47767,14 +46704,14 @@ Restore figures are averages; unlucky streaks do worse.`;
     const applySeconds = (raw, persist3) => {
       const seconds = clampSeconds(raw);
       slider2.value = String(seconds);
-      sliderValue.textContent = formatShortDuration(seconds);
+      sliderValue2.textContent = formatShortDuration(seconds);
       if (persist3) MiscService.setAutoRecoDelayMs(seconds * 1e3);
     };
     slider2.addEventListener("input", () => applySeconds(Number(slider2.value), false));
     slider2.addEventListener("change", () => applySeconds(Number(slider2.value), true));
     const delayControl = document.createElement("div");
     css(delayControl, { display: "flex", alignItems: "center", gap: "10px" });
-    delayControl.append(slider2, sliderValue);
+    delayControl.append(slider2, sliderValue2);
     card5.body.append(
       settingRow("Enabled", "Attempts to log back in after a session conflict.", enabledToggle).row,
       settingRow("Delay", "Wait time before reconnecting.", delayControl).row,
@@ -47783,7 +46720,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return card5.root;
   }
   function buildPlayerSection() {
-    const card5 = section(
+    const card5 = section2(
       "player",
       "\u{1F47B}",
       "Player controls",
@@ -47826,7 +46763,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     };
   }
   function buildInventoryGuardSection() {
-    const card5 = section(
+    const card5 = section2(
       "inventoryGuard",
       "\u{1F392}",
       "Inventory guard",
@@ -47847,7 +46784,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return card5.root;
   }
   function buildDisplaySection(modalHost) {
-    const card5 = section(
+    const card5 = section2(
       "display",
       "\u{1F4B0}",
       "Display",
@@ -47870,7 +46807,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return card5.root;
   }
   function buildStorageSection() {
-    const card5 = section(
+    const card5 = section2(
       "storage",
       "\u{1F4E6}",
       "Storage auto-store",
@@ -48896,9 +47833,9 @@ Restore figures are averages; unlucky streaks do worse.`;
 
   // src/lib/markdown.ts
   function escapeHtml(text2) {
-    const div = document.createElement("div");
-    div.textContent = text2;
-    return div.innerHTML;
+    const div2 = document.createElement("div");
+    div2.textContent = text2;
+    return div2.innerHTML;
   }
   function renderInlineMarkdown(text2) {
     let html = text2;
@@ -50525,9 +49462,9 @@ Restore figures are averages; unlucky streaks do worse.`;
       overflowY: "auto",
       boxSizing: "border-box"
     });
-    for (const section2 of getKeybindSections()) {
+    for (const section3 of getKeybindSections()) {
       const sectionCard = card2();
-      sectionCard.dataset.section = section2.id;
+      sectionCard.dataset.section = section3.id;
       css(sectionCard, { flexShrink: "0", minHeight: "auto" });
       const head = document.createElement("button");
       head.type = "button";
@@ -50554,22 +49491,22 @@ Restore figures are averages; unlucky streaks do worse.`;
       chevron.textContent = "\u25B6";
       const titles = document.createElement("div");
       css(titles, { display: "flex", flexDirection: "column", gap: "3px", minWidth: "0", flex: "1 1 auto" });
-      titles.appendChild(sectionLabel2(`${section2.icon} ${section2.title}`));
-      if (section2.description) {
+      titles.appendChild(sectionLabel2(`${section3.icon} ${section3.title}`));
+      if (section3.description) {
         const desc = document.createElement("div");
         css(desc, { fontSize: "11px", color: TEXT_DIM, lineHeight: "1.45" });
-        desc.textContent = section2.description;
+        desc.textContent = section3.description;
         titles.appendChild(desc);
       }
       head.append(titles, chevron);
       sectionCard.appendChild(head);
       const body = document.createElement("div");
       css(body, { display: "flex", flexDirection: "column", gap: "8px" });
-      for (const action2 of section2.actions) {
+      for (const action2 of section3.actions) {
         body.appendChild(createKeybindRow(ui, action2));
       }
       sectionCard.appendChild(body);
-      let collapsed = isSectionCollapsed2(section2.id);
+      let collapsed = isSectionCollapsed2(section3.id);
       const applyCollapsed = () => {
         body.style.display = collapsed ? "none" : "flex";
         chevron.style.transform = collapsed ? "rotate(0deg)" : "rotate(90deg)";
@@ -50579,7 +49516,7 @@ Restore figures are averages; unlucky streaks do worse.`;
       head.addEventListener("click", () => {
         collapsed = !collapsed;
         applyCollapsed();
-        setSectionCollapsed2(section2.id, collapsed);
+        setSectionCollapsed2(section3.id, collapsed);
       });
       root.appendChild(sectionCard);
     }
@@ -54783,10 +53720,10 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function writeEntries(entries2) {
     const payload = { entries: entries2 };
     try {
-      if (!installed2) {
+      if (!installed3) {
         ensureTickAtom();
         await fakeShow(EMOTE_PATCH, payload);
-        installed2 = true;
+        installed3 = true;
       } else {
         await fakeUpdate(EMOTE_SOURCE_LABEL, payload);
       }
@@ -54797,7 +53734,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     }
   }
   async function rest() {
-    if (!installed2) return;
+    if (!installed3) return;
     await writeEntries([]);
   }
   function cancelPending() {
@@ -54850,15 +53787,15 @@ Restore figures are averages; unlucky streaks do worse.`;
     cancelStart();
     cancelPending();
     posing = null;
-    if (!installed2) return;
+    if (!installed3) return;
     try {
       await fakeHide(EMOTE_SOURCE_LABEL);
       await bumpTick();
     } catch {
     }
-    installed2 = false;
+    installed3 = false;
   }
-  var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed2, releaseTimer, posing, startTimer, lastSpokeAt;
+  var EMOTE_SOURCE_LABEL, EMOTE_PATCH, EMOTE_DURATION_MS, installed3, releaseTimer, posing, startTimer, lastSpokeAt;
   var init_emote = __esm({
     "src/features/companion/emote.ts"() {
       "use strict";
@@ -54875,7 +53812,7 @@ Restore figures are averages; unlucky streaks do worse.`;
         merge: (real, fake) => mergeEmoteSource(real, fake)
       };
       EMOTE_DURATION_MS = 1500;
-      installed2 = false;
+      installed3 = false;
       releaseTimer = null;
       posing = null;
       startTimer = null;
@@ -55534,10 +54471,10 @@ Restore figures are averages; unlucky streaks do worse.`;
     const entry = plantEntry(species);
     return thing(entry?.crop ?? entry?.plant, "");
   }
-  function seedIcon(species) {
+  function seedIcon2(species) {
     return thing(plantEntry(species)?.seed, "");
   }
-  function eggIcon(eggId) {
+  function eggIcon2(eggId) {
     return thing(eggCatalog2[eggId], "");
   }
   function variantIcons(species, mutations) {
@@ -56346,7 +55283,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   // src/features/companion/chat/plantRun.ts
   function topSeed(plan) {
     const most = countByItem(plan)[0];
-    return most?.kind === "seed" ? seedIcon(most.id) : null;
+    return most?.kind === "seed" ? seedIcon2(most.id) : null;
   }
   async function send(assignment) {
     if (assignment.kind === "egg") {
@@ -56640,7 +55577,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   async function executeHatchBatch(slots, reporter2) {
     const kinds = (await readHatchScope().catch(() => null))?.eggIds ?? [];
     const opening = `On it. Opening ${slots.length} now.`;
-    reporter2.say("reply", opening, compose(kinds.length === 1 ? eggIcon(kinds[0]) : null, " ", opening));
+    reporter2.say("reply", opening, compose(kinds.length === 1 ? eggIcon2(kinds[0]) : null, " ", opening));
     const settings = loadCompanionSettings();
     const team = await wearTeam(settings.hatchTeamId, reporter2);
     const walker = await createWalker((message) => reporter2.say("system", message));
@@ -56984,7 +55921,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const most = countByItem(plan)[0];
     const sentence = `That is ${proposal.summary}. Want me to get started?`;
     post("companion", "reply", sentence, proposal.id, {
-      bubble: compose(most?.kind === "seed" ? seedIcon(most.id) : null, " ", sentence)
+      bubble: compose(most?.kind === "seed" ? seedIcon2(most.id) : null, " ", sentence)
     });
   }
   async function proposeHatchSlots(provider, rules2) {
@@ -57005,7 +55942,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     const kinds = await readHatchScope().then((scope) => scope.eggIds).catch(() => []);
     const sentence = `${proposal.summary}.${teamPromise(team)} Want me to open them?`;
     post("companion", "reply", sentence, proposal.id, {
-      bubble: compose(kinds.length === 1 ? eggIcon(kinds[0]) : null, " ", sentence)
+      bubble: compose(kinds.length === 1 ? eggIcon2(kinds[0]) : null, " ", sentence)
     });
   }
   async function proposeSellPlan(provider, rules2) {
@@ -59039,7 +57976,7 @@ Restore figures are averages; unlucky streaks do worse.`;
   });
 
   // src/features/companion/menu/hatchChips.ts
-  function iconHolder3(sizePx) {
+  function iconHolder4(sizePx) {
     const box = document.createElement("div");
     css(box, {
       display: "flex",
@@ -59052,7 +57989,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return box;
   }
   function petSpeciesIcon2(species, sizePx = ICON_PX4) {
-    const box = iconHolder3(sizePx);
+    const box = iconHolder4(sizePx);
     const candidates = [species, species.replace(/\s+/g, "")].filter(Boolean);
     attachSpriteIcon(box, ["pet"], candidates, sizePx, SPRITE_LOG_TAG5, {
       onNoSpriteFound: () => {
@@ -59063,7 +58000,7 @@ Restore figures are averages; unlucky streaks do worse.`;
     return box;
   }
   function abilityIcon(abilityId, sizePx = ICON_PX4) {
-    const box = iconHolder3(sizePx);
+    const box = iconHolder4(sizePx);
     const square = document.createElement("span");
     const { bg } = getAbilityChipColors(abilityId);
     css(square, {
@@ -59806,8 +58743,8 @@ Restore figures are averages; unlucky streaks do worse.`;
     ev.preventDefault();
   }
   function installEditorPointerControls() {
-    if (installed3 || typeof window === "undefined") return;
-    installed3 = true;
+    if (installed4 || typeof window === "undefined") return;
+    installed4 = true;
     window.addEventListener("pointerdown", (ev) => {
       void handlePointerDown(ev);
     }, true);
@@ -59818,13 +58755,13 @@ Restore figures are averages; unlucky streaks do worse.`;
     window.addEventListener("pointercancel", handlePointerUp, true);
     window.addEventListener("contextmenu", handleContextMenu, true);
   }
-  var installed3, dragMode, lastTileKey;
+  var installed4, dragMode, lastTileKey;
   var init_pointerControls = __esm({
     "src/features/editor/pointerControls.ts"() {
       "use strict";
       init_tileObjects();
       init_editor();
-      installed3 = false;
+      installed4 = false;
       dragMode = null;
       lastTileKey = null;
     }
