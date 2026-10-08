@@ -15772,6 +15772,11 @@
       )
     };
   }
+  function eggIdOf(gardenObject) {
+    const obj = gardenObject;
+    if (!obj || typeof obj !== "object" || obj.objectType !== "egg") return null;
+    return typeof obj.eggId === "string" && obj.eggId ? obj.eggId : null;
+  }
   var STORAGE_PATH, FRIEND_BONUS_STEP, FRIEND_BONUS_MAX, MAX_PLAYERS, PET_RARITIES, DEFAULT_SELL_ALL_PETS_RULES, defaultState2, toBonusStep, toPlayerCount, percentFromPlayerCount, requiredPercentFromPlayers, sameRules, LockerRestrictionsService, lockerRestrictionsService;
   var init_restrictions = __esm({
     "src/features/locker/restrictions.ts"() {
@@ -15912,10 +15917,6 @@
   });
 
   // src/features/locker/outgoingRules.ts
-  function eggIdOf(obj) {
-    if (!obj || typeof obj !== "object" || obj.objectType !== "egg") return null;
-    return typeof obj.eggId === "string" && obj.eggId ? obj.eggId : null;
-  }
   function blockedByCurrentSlot() {
     return lockerService.isEnabled() && lockerService.currentHarvestAllowed() === false;
   }
@@ -26905,16 +26906,16 @@
       textTarget.innerHTML = sanitizedHtml;
     }
   }
-  function restoreStyleFromDataset(el, datasetKey, cssProperty) {
+  function restoreStyleFromDataset(el, datasetKey2, cssProperty) {
     const datasetMap = el.dataset;
-    const originalValue = datasetMap[datasetKey];
+    const originalValue = datasetMap[datasetKey2];
     if (originalValue === void 0) return;
     if (originalValue) {
       el.style.setProperty(cssProperty, originalValue);
     } else {
       el.style.removeProperty(cssProperty);
     }
-    delete datasetMap[datasetKey];
+    delete datasetMap[datasetKey2];
   }
   function storeOriginalTooltipStyles(tooltip) {
     if (tooltip.dataset[DATASET_KEY_BORDER] === void 0) {
@@ -27338,11 +27339,6 @@
   });
 
   // src/features/locker/indicator.ts
-  function extractEggId(obj) {
-    if (!obj || typeof obj !== "object" || obj.objectType !== "egg") return null;
-    const eggId = obj.eggId;
-    return typeof eggId === "string" && eggId ? eggId : null;
-  }
   function isDecorObject(obj) {
     return !!obj && typeof obj === "object" && obj.objectType === "decor";
   }
@@ -27357,7 +27353,7 @@
     const debugState4 = { lastError: null, hasBorder: false, objectType: null };
     shareGlobal("__MG_LOCKER_INDICATOR_PIXI_DEBUG__", debugState4);
     const isLocked = () => {
-      const eggId = extractEggId(currentGardenObject2);
+      const eggId = eggIdOf(currentGardenObject2);
       if (eggId) return lockerRestrictionsService.isEggLocked(eggId);
       if (isDecorObject(currentGardenObject2)) return lockerRestrictionsService.isDecorPickupLocked();
       return lockerService.currentHarvestAllowed() === false;
@@ -27417,48 +27413,40 @@
         debugState4.lastError = null;
       } catch (error) {
         debugState4.lastError = String(error?.message ?? error);
-        console.warn("[lockerIndicatorPixi] sync failed, clearing border", error);
+        console.warn("[lockerIndicator] sync failed, clearing border", error);
         try {
           removeBorder();
         } catch {
         }
       }
     };
-    const offCard = watchGardenInfoCard((card5, geom) => {
-      removeBorder();
-      currentCard2 = card5;
-      geometry = geom;
+    const subs = new Subscriptions();
+    subs.add(
+      watchGardenInfoCard((card5, geom) => {
+        removeBorder();
+        currentCard2 = card5;
+        geometry = geom;
+        sync2();
+      })
+    );
+    subs.add(lockerService.onSlotInfoChange(sync2));
+    subs.add(lockerRestrictionsService.subscribe(sync2));
+    void Atoms.data.myCurrentGardenObject.get().then((initial) => {
+      currentGardenObject2 = initial;
       sync2();
+    }).catch(() => {
     });
-    const offSlot = lockerService.onSlotInfoChange(() => sync2());
-    const offRestrictions = lockerRestrictionsService.subscribe(() => sync2());
-    let unsubAtom = null;
-    void (async () => {
-      try {
-        currentGardenObject2 = await Atoms.data.myCurrentGardenObject.get();
-        if (running6) sync2();
-      } catch {
-      }
-      try {
-        const unsub = await Atoms.data.myCurrentGardenObject.onChange((next) => {
-          currentGardenObject2 = next;
-          sync2();
-        });
-        if (typeof unsub === "function") {
-          if (running6) unsubAtom = unsub;
-          else unsub();
-        }
-      } catch {
-      }
-    })();
+    subs.add(
+      Atoms.data.myCurrentGardenObject.onChange((next) => {
+        currentGardenObject2 = next;
+        sync2();
+      })
+    );
     return {
       stop() {
         if (!running6) return;
         running6 = false;
-        offCard();
-        offSlot?.();
-        offRestrictions?.();
-        unsubAtom?.();
+        subs.dispose();
         removeBorder();
         currentCard2 = null;
       }
@@ -27471,6 +27459,7 @@
       init_locker();
       init_restrictions();
       init_atoms();
+      init_emitter();
       init_pageContext();
       init_gardenInfoCard();
       init_context();
@@ -27848,439 +27837,182 @@
     }
   });
 
-  // src/features/locker/sellCropsLock.ts
-  function startSellCropsLockWatcher() {
-    if (typeof window === "undefined" || typeof document === "undefined") {
-      return { stop() {
-      } };
+  // src/features/locker/domLockMarks.ts
+  function markLocked(el, look) {
+    const key2 = datasetKey(look.owner);
+    if (el.dataset[key2] === void 0) {
+      const saved = {};
+      for (const prop of [...Object.keys(look.style), "position"]) saved[prop] = el.style.getPropertyValue(prop);
+      el.dataset[key2] = JSON.stringify(saved);
     }
+    for (const [prop, value] of Object.entries(look.style)) el.style.setProperty(prop, value);
+    if (getComputedStyle(el).position === "static") el.style.setProperty("position", "relative");
+    const cls = glyphClass(look.owner);
+    if (el.querySelector(`span.${cls}`)) return;
+    const glyph = document.createElement("span");
+    glyph.className = cls;
+    glyph.textContent = LOCK_GLYPH;
+    Object.assign(glyph.style, {
+      position: "absolute",
+      top: `-${look.glyphOffsetPx}px`,
+      right: `-${look.glyphOffsetPx}px`,
+      fontSize: "16px",
+      pointerEvents: "none",
+      userSelect: "none",
+      zIndex: "2"
+    });
+    el.appendChild(glyph);
+  }
+  function unmarkLocked(el, owner) {
+    const key2 = datasetKey(owner);
+    const raw = el.dataset[key2];
+    if (raw !== void 0) {
+      let saved = {};
+      try {
+        saved = JSON.parse(raw);
+      } catch {
+      }
+      for (const [prop, value] of Object.entries(saved)) {
+        if (value) el.style.setProperty(prop, value);
+        else el.style.removeProperty(prop);
+      }
+      delete el.dataset[key2];
+    }
+    el.querySelectorAll(`span.${glyphClass(owner)}`).forEach((node) => node.remove());
+  }
+  function startDomLockIndicator(opts) {
+    const subs = new Subscriptions();
     let running6 = true;
-    const disposables = [];
-    const applyLockState = (locked) => {
-      const containers = Array.from(
-        document.querySelectorAll(CONTAINER_SELECTOR)
-      );
-      containers.forEach((wrap) => setContainerLocked(wrap, locked));
-    };
-    const recompute = () => {
+    const elements = () => Array.from(document.querySelectorAll(opts.selector));
+    const refresh = () => {
       if (!running6) return;
-      applyLockState(!lockerRestrictionsService.allowsCropSale(currentFriendBonus() ?? 0));
+      const locked = opts.isLocked();
+      for (const el of elements()) {
+        if (locked && opts.isTarget(el)) markLocked(el, opts.look);
+        else unmarkLocked(el, opts.look.owner);
+      }
     };
-    const observeDom = () => {
-      const mo = new MutationObserver(() => recompute());
-      mo.observe(document.documentElement, { childList: true, subtree: true });
-      disposables.push(() => mo.disconnect());
-    };
-    observeDom();
-    disposables.push(lockerRestrictionsService.subscribe(() => recompute()));
-    disposables.push(onFriendBonusChange(() => recompute()));
-    recompute();
+    const observer2 = new MutationObserver(refresh);
+    observer2.observe(document.documentElement, { childList: true, subtree: true });
+    subs.add(() => observer2.disconnect());
+    refresh();
     return {
+      refresh,
+      add: (unsubscribe2) => subs.add(unsubscribe2),
       stop() {
         running6 = false;
-        disposables.splice(0).forEach((fn) => {
-          try {
-            fn();
-          } catch {
-          }
-        });
-        applyLockState(false);
+        subs.dispose();
+        for (const el of elements()) unmarkLocked(el, opts.look.owner);
       }
     };
   }
-  function setContainerLocked(container, locked) {
-    if (!container) return;
-    const sellButton = findSellButton(container);
-    if (!sellButton) {
-      restoreContainerStyles(container);
-      removeLockIcon2(container);
-      return;
+  var LOCK_GLYPH, datasetKey, glyphClass;
+  var init_domLockMarks = __esm({
+    "src/features/locker/domLockMarks.ts"() {
+      "use strict";
+      init_emitter();
+      LOCK_GLYPH = "\u{1F512}";
+      datasetKey = (owner) => `tm${owner.replace(/(^|-)(\w)/g, (_, _dash, c) => c.toUpperCase())}LockStyles`;
+      glyphClass = (owner) => `tm-${owner}-lock`;
     }
-    if (!locked) {
-      restoreContainerStyles(container);
-      removeLockIcon2(container);
-      return;
-    }
-    storeOriginalStyle(container, DATA_BORDER, "border");
-    storeOriginalStyle(container, DATA_RADIUS, "borderRadius");
-    storeOriginalStyle(container, DATA_POSITION, "position");
-    storeOriginalStyle(container, DATA_PADDING, "padding");
-    storeOriginalStyle(container, DATA_BOX, "boxSizing");
-    storeOriginalStyle(container, DATA_SHADOW, "boxShadow");
-    storeOriginalStyle(container, DATA_OVERFLOW, "overflow");
-    container.style.border = "none";
-    container.style.borderRadius = "";
-    container.style.padding = "";
-    container.style.boxSizing = "";
-    container.style.boxShadow = "none";
-    container.style.overflow = "";
-    const computedPos = window.getComputedStyle(container).position;
-    if (computedPos === "static") {
-      container.style.position = "relative";
-    }
-    container.style.zIndex = "1000";
-    ensureLockIcon2(container);
+  });
+
+  // src/features/locker/sellCropsLock.ts
+  function startSellCropsLockWatcher() {
+    const indicator = startDomLockIndicator({
+      look: SELL_CROPS_LOCK_LOOK,
+      selector: ".css-vmnhaw",
+      isTarget: hasSellCropsButton,
+      isLocked: () => !lockerRestrictionsService.allowsCropSale(currentFriendBonus() ?? 0)
+    });
+    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
+    indicator.add(onFriendBonusChange(indicator.refresh));
+    return indicator;
   }
-  function storeOriginalStyle(el, key2, cssProperty) {
-    const data = el.dataset;
-    if (data[key2] !== void 0) return;
-    data[key2] = el.style[cssProperty];
-  }
-  function restoreContainerStyles(el) {
-    restoreStyle(el, DATA_BORDER, "border");
-    restoreStyle(el, DATA_RADIUS, "borderRadius");
-    restoreStyle(el, DATA_POSITION, "position");
-    restoreStyle(el, DATA_PADDING, "padding");
-    restoreStyle(el, DATA_BOX, "boxSizing");
-    restoreStyle(el, DATA_SHADOW, "boxShadow");
-    restoreStyle(el, DATA_OVERFLOW, "overflow");
-  }
-  function restoreStyle(el, key2, cssProperty) {
-    const data = el.dataset;
-    if (data[key2] === void 0) return;
-    const value = data[key2];
-    if (value) {
-      el.style.setProperty(camelToKebab(cssProperty), value);
-    } else {
-      el.style.removeProperty(camelToKebab(cssProperty));
-    }
-    delete data[key2];
-  }
-  function camelToKebab(str) {
-    return str.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
-  }
-  function ensureLockIcon2(btn) {
-    const existing = btn.querySelector(`span.${LOCK_ICON_CLASS2}`);
-    if (existing) return;
-    const icon = document.createElement("span");
-    icon.className = LOCK_ICON_CLASS2;
-    icon.textContent = "\u{1F512}";
-    icon.style.position = "absolute";
-    icon.style.top = "-4px";
-    icon.style.right = "-4px";
-    icon.style.fontSize = "16px";
-    icon.style.pointerEvents = "none";
-    icon.style.userSelect = "none";
-    icon.style.zIndex = "2";
-    btn.appendChild(icon);
-  }
-  function removeLockIcon2(btn) {
-    btn.querySelectorAll(`span.${LOCK_ICON_CLASS2}`).forEach((node) => node.remove());
-  }
-  function findSellButton(container) {
-    const btn = container.querySelector("button");
-    if (!btn) return null;
-    const text2 = (btn.textContent || "").trim();
-    return /sell\s*crops/i.test(text2) ? btn : null;
-  }
-  var CONTAINER_SELECTOR, LOCK_ICON_CLASS2, DATA_BORDER, DATA_RADIUS, DATA_POSITION, DATA_PADDING, DATA_BOX, DATA_SHADOW, DATA_OVERFLOW;
+  var SELL_CROPS_LOCK_LOOK, hasSellCropsButton;
   var init_sellCropsLock = __esm({
     "src/features/locker/sellCropsLock.ts"() {
       "use strict";
-      init_restrictions();
+      init_domLockMarks();
       init_friendBonus();
-      CONTAINER_SELECTOR = ".css-vmnhaw";
-      LOCK_ICON_CLASS2 = "tm-sell-crops-lock";
-      DATA_BORDER = "tmSellLockBorder";
-      DATA_RADIUS = "tmSellLockRadius";
-      DATA_POSITION = "tmSellLockPosition";
-      DATA_PADDING = "tmSellLockPadding";
-      DATA_BOX = "tmSellLockBox";
-      DATA_SHADOW = "tmSellLockShadow";
-      DATA_OVERFLOW = "tmSellLockOverflow";
+      init_restrictions();
+      SELL_CROPS_LOCK_LOOK = {
+        owner: "sell-crops",
+        style: {
+          border: "none",
+          "border-radius": "",
+          padding: "",
+          "box-sizing": "",
+          "box-shadow": "none",
+          overflow: "",
+          "z-index": "1000"
+        },
+        glyphOffsetPx: 4
+      };
+      hasSellCropsButton = (container) => /sell\s*crops/i.test((container.querySelector("button")?.textContent || "").trim());
     }
   });
 
   // src/features/locker/eggHatchLockIndicator.ts
   function startEggHatchLockIndicator() {
-    if (typeof window === "undefined" || typeof document === "undefined") {
-      return { stop() {
-      } };
-    }
-    let running6 = true;
     let currentEggId = null;
-    const disposables = [];
-    const isEggLocked = () => lockerRestrictionsService.isEggLocked(currentEggId);
-    const applyLockState = () => {
-      if (!running6) return;
-      const locked = isEggLocked();
-      const containers = Array.from(document.querySelectorAll(CONTAINER_SELECTOR2));
-      containers.forEach((el) => {
-        if (!containsEggLabel(el)) {
-          restore(el);
-          return;
-        }
-        setLocked(el, locked);
-      });
-    };
-    const observeDom = () => {
-      const mo = new MutationObserver(() => applyLockState());
-      mo.observe(document.documentElement, { childList: true, subtree: true });
-      disposables.push(() => mo.disconnect());
-    };
-    const subscribeAtoms = async () => {
-      try {
-        const initial = await Atoms.data.myCurrentGardenObject.get();
-        currentEggId = extractEggId2(initial);
-      } catch {
-      }
-      try {
-        const unsub = await Atoms.data.myCurrentGardenObject.onChange((next) => {
-          currentEggId = extractEggId2(next);
-          applyLockState();
-        });
-        if (typeof unsub === "function") disposables.push(unsub);
-      } catch {
-      }
-      const unsubLocker = lockerRestrictionsService.subscribe(() => applyLockState());
-      disposables.push(unsubLocker);
-    };
-    observeDom();
-    void subscribeAtoms();
-    applyLockState();
-    return {
-      stop() {
-        running6 = false;
-        disposables.splice(0).forEach((fn) => {
-          try {
-            fn();
-          } catch {
-          }
-        });
-        const containers = Array.from(document.querySelectorAll(CONTAINER_SELECTOR2));
-        containers.forEach(restore);
-      }
-    };
+    const indicator = startDomLockIndicator({
+      look: { owner: "egg", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyphOffsetPx: 8 },
+      selector: ".css-502lyi",
+      isTarget: (el) => (el.textContent || "").toLowerCase().includes("egg"),
+      isLocked: () => lockerRestrictionsService.isEggLocked(currentEggId)
+    });
+    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
+    void Atoms.data.myCurrentGardenObject.get().then((initial) => {
+      currentEggId = eggIdOf(initial);
+    }).catch(() => {
+    });
+    indicator.add(
+      Atoms.data.myCurrentGardenObject.onChange((next) => {
+        currentEggId = eggIdOf(next);
+        indicator.refresh();
+      })
+    );
+    return indicator;
   }
-  function containsEggLabel(el) {
-    const text2 = (el.textContent || "").toLowerCase();
-    return text2.includes("egg");
-  }
-  function setLocked(el, locked) {
-    if (!locked) {
-      restore(el);
-      return;
-    }
-    storeStyle(el, DATA_BORDER2, "border");
-    storeStyle(el, DATA_RADIUS2, "borderRadius");
-    storeStyle(el, DATA_POSITION2, "position");
-    storeStyle(el, DATA_OVERFLOW2, "overflow");
-    el.style.border = `3px solid ${BORDER_COLOR2}`;
-    el.style.borderRadius = "16px";
-    el.style.overflow = "visible";
-    const pos = window.getComputedStyle(el).position;
-    if (pos === "static") {
-      el.style.position = "relative";
-    }
-    ensureLockIcon3(el);
-  }
-  function restore(el) {
-    restoreStyle2(el, DATA_BORDER2, "border");
-    restoreStyle2(el, DATA_RADIUS2, "borderRadius");
-    restoreStyle2(el, DATA_POSITION2, "position");
-    restoreStyle2(el, DATA_OVERFLOW2, "overflow");
-    removeLockIcon3(el);
-  }
-  function storeStyle(el, key2, cssProperty) {
-    const data = el.dataset;
-    if (data[key2] !== void 0) return;
-    data[key2] = el.style[cssProperty];
-  }
-  function restoreStyle2(el, key2, cssProperty) {
-    const data = el.dataset;
-    if (data[key2] === void 0) return;
-    const value = data[key2];
-    if (value) {
-      el.style.setProperty(camelToKebab2(cssProperty), value);
-    } else {
-      el.style.removeProperty(camelToKebab2(cssProperty));
-    }
-    delete data[key2];
-  }
-  function camelToKebab2(str) {
-    return str.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
-  }
-  function ensureLockIcon3(el) {
-    const existing = el.querySelector(`span.${LOCK_CLASS}`);
-    if (existing) return;
-    const icon = document.createElement("span");
-    icon.className = LOCK_CLASS;
-    icon.textContent = "\u{1F512}";
-    icon.style.position = "absolute";
-    icon.style.top = "-8px";
-    icon.style.right = "-8px";
-    icon.style.fontSize = "16px";
-    icon.style.pointerEvents = "none";
-    icon.style.userSelect = "none";
-    icon.style.zIndex = "2";
-    el.appendChild(icon);
-  }
-  function removeLockIcon3(el) {
-    el.querySelectorAll(`span.${LOCK_CLASS}`).forEach((node) => node.remove());
-  }
-  function extractEggId2(obj) {
-    if (!obj || typeof obj !== "object") return null;
-    if (obj.objectType !== "egg") return null;
-    const eggId = obj.eggId;
-    return typeof eggId === "string" && eggId ? eggId : null;
-  }
-  var CONTAINER_SELECTOR2, LOCK_CLASS, BORDER_COLOR2, DATA_BORDER2, DATA_RADIUS2, DATA_POSITION2, DATA_OVERFLOW2;
   var init_eggHatchLockIndicator = __esm({
     "src/features/locker/eggHatchLockIndicator.ts"() {
       "use strict";
       init_atoms();
+      init_domLockMarks();
       init_restrictions();
-      CONTAINER_SELECTOR2 = ".css-502lyi";
-      LOCK_CLASS = "tm-egg-lock";
-      BORDER_COLOR2 = "rgb(188, 53, 215)";
-      DATA_BORDER2 = "tmEggLockBorder";
-      DATA_RADIUS2 = "tmEggLockRadius";
-      DATA_POSITION2 = "tmEggLockPosition";
-      DATA_OVERFLOW2 = "tmEggLockOverflow";
     }
   });
 
   // src/features/locker/decorPickupLockIndicator.ts
-  function startDecorPickupLockIndicator() {
-    if (typeof window === "undefined" || typeof document === "undefined") {
-      return { stop() {
-      } };
-    }
-    let running6 = true;
-    const disposables = [];
-    const isLocked = () => lockerRestrictionsService.isDecorPickupLocked();
-    const applyLockState = () => {
-      if (!running6) return;
-      const locked = isLocked();
-      const containers = Array.from(document.querySelectorAll(CONTAINER_SELECTOR3));
-      containers.forEach((el) => {
-        if (!looksLikeDecorItem(el)) {
-          restore2(el);
-          return;
-        }
-        setLocked2(el, locked);
-      });
-    };
-    const observeDom = () => {
-      const mo = new MutationObserver(() => applyLockState());
-      mo.observe(document.documentElement, { childList: true, subtree: true });
-      disposables.push(() => mo.disconnect());
-    };
-    const subscribeLocker2 = () => {
-      const unsub = lockerRestrictionsService.subscribe(() => applyLockState());
-      disposables.push(unsub);
-    };
-    observeDom();
-    subscribeLocker2();
-    applyLockState();
-    return {
-      stop() {
-        running6 = false;
-        disposables.splice(0).forEach((fn) => {
-          try {
-            fn();
-          } catch {
-          }
-        });
-        const containers = Array.from(document.querySelectorAll(CONTAINER_SELECTOR3));
-        containers.forEach(restore2);
-      }
-    };
-  }
-  function looksLikeDecorItem(el) {
+  function looksLikeDecorTooltip(el) {
     const text2 = (el.textContent || "").toLowerCase();
-    if (!text2) return false;
-    if (!el.querySelector("canvas")) return false;
-    return decorLabels().some((label2) => label2 && text2.includes(label2));
+    return !!text2 && !!el.querySelector("canvas") && decorLabels().some((label2) => text2.includes(label2));
   }
-  function setLocked2(el, locked) {
-    if (!locked) {
-      restore2(el);
-      return;
-    }
-    storeStyle2(el, DATA_BORDER3, "border");
-    storeStyle2(el, DATA_RADIUS3, "borderRadius");
-    storeStyle2(el, DATA_POSITION3, "position");
-    storeStyle2(el, DATA_OVERFLOW3, "overflow");
-    el.style.border = `3px solid ${BORDER_COLOR3}`;
-    el.style.borderRadius = "16px";
-    el.style.overflow = "visible";
-    const pos = window.getComputedStyle(el).position;
-    if (pos === "static") {
-      el.style.position = "relative";
-    }
-    ensureLockIcon4(el);
+  function startDecorPickupLockIndicator() {
+    const indicator = startDomLockIndicator({
+      look: { owner: "decor", style: { border: "3px solid rgb(188, 53, 215)", "border-radius": "16px", overflow: "visible" }, glyphOffsetPx: 8 },
+      selector: ".css-502lyi",
+      isTarget: looksLikeDecorTooltip,
+      isLocked: () => lockerRestrictionsService.isDecorPickupLocked()
+    });
+    indicator.add(lockerRestrictionsService.subscribe(indicator.refresh));
+    return indicator;
   }
-  function restore2(el) {
-    restoreStyle3(el, DATA_BORDER3, "border");
-    restoreStyle3(el, DATA_RADIUS3, "borderRadius");
-    restoreStyle3(el, DATA_POSITION3, "position");
-    restoreStyle3(el, DATA_OVERFLOW3, "overflow");
-    removeLockIcon4(el);
-  }
-  function storeStyle2(el, key2, cssProperty) {
-    const data = el.dataset;
-    if (data[key2] !== void 0) return;
-    data[key2] = el.style[cssProperty];
-  }
-  function restoreStyle3(el, key2, cssProperty) {
-    const data = el.dataset;
-    if (data[key2] === void 0) return;
-    const value = data[key2];
-    if (value) {
-      el.style.setProperty(camelToKebab3(cssProperty), value);
-    } else {
-      el.style.removeProperty(camelToKebab3(cssProperty));
-    }
-    delete data[key2];
-  }
-  function camelToKebab3(str) {
-    return str.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
-  }
-  function ensureLockIcon4(el) {
-    const existing = el.querySelector(`span.${LOCK_CLASS2}`);
-    if (existing) return;
-    const icon = document.createElement("span");
-    icon.className = LOCK_CLASS2;
-    icon.textContent = "\u{1F512}";
-    icon.style.position = "absolute";
-    icon.style.top = "-8px";
-    icon.style.right = "-8px";
-    icon.style.fontSize = "16px";
-    icon.style.pointerEvents = "none";
-    icon.style.userSelect = "none";
-    icon.style.zIndex = "2";
-    el.appendChild(icon);
-  }
-  function removeLockIcon4(el) {
-    el.querySelectorAll(`span.${LOCK_CLASS2}`).forEach((node) => node.remove());
-  }
-  var CONTAINER_SELECTOR3, LOCK_CLASS2, BORDER_COLOR3, DATA_BORDER3, DATA_RADIUS3, DATA_POSITION3, DATA_OVERFLOW3, decorLabels;
+  var decorLabels;
   var init_decorPickupLockIndicator = __esm({
     "src/features/locker/decorPickupLockIndicator.ts"() {
       "use strict";
       init_data();
+      init_domLockMarks();
       init_restrictions();
-      CONTAINER_SELECTOR3 = ".css-502lyi";
-      LOCK_CLASS2 = "tm-decor-lock";
-      BORDER_COLOR3 = "rgb(188, 53, 215)";
-      DATA_BORDER3 = "tmDecorLockBorder";
-      DATA_RADIUS3 = "tmDecorLockRadius";
-      DATA_POSITION3 = "tmDecorLockPosition";
-      DATA_OVERFLOW3 = "tmDecorLockOverflow";
       decorLabels = memoOnCatalogs(() => {
         const labels = /* @__PURE__ */ new Set();
-        try {
-          Object.entries(decorCatalog2).forEach(([decorId, entry]) => {
-            if (decorId) labels.add(decorId.toLowerCase());
-            const name = entry?.name;
-            if (typeof name === "string" && name) {
-              labels.add(name.toLowerCase());
-            }
-          });
-        } catch {
+        for (const [decorId, entry] of Object.entries(decorCatalog2)) {
+          if (decorId) labels.add(decorId.toLowerCase());
+          if (typeof entry?.name === "string" && entry.name) labels.add(entry.name.toLowerCase());
         }
-        return Array.from(labels).filter(Boolean);
+        return Array.from(labels);
       });
     }
   });

@@ -8,7 +8,7 @@ import { EditorService } from "../editor/editor";
 import { lockerService } from "./locker";
 import { normalizeMutationsList } from "./harvestRules";
 import { extractSeedKey, extractSizePercent } from "./slotWatcher";
-import { lockerRestrictionsService, percentToRequiredFriendCount } from "./restrictions";
+import { eggIdOf, lockerRestrictionsService, percentToRequiredFriendCount } from "./restrictions";
 import { currentFriendBonus, followFriendBonus } from "./friendBonus";
 
 /**
@@ -19,11 +19,6 @@ import { currentFriendBonus, followFriendBonus } from "./friendBonus";
 
 let garden: GardenState | null = null;
 let currentGardenObject: any = null;
-
-function eggIdOf(obj: any): string | null {
-  if (!obj || typeof obj !== "object" || obj.objectType !== "egg") return null;
-  return typeof obj.eggId === "string" && obj.eggId ? obj.eggId : null;
-}
 
 
 /**

@@ -190,3 +190,10 @@ class LockerRestrictionsService {
 }
 
 export const lockerRestrictionsService = new LockerRestrictionsService();
+
+/** The egg a garden object is, which is what egg locks are keyed by. */
+export function eggIdOf(gardenObject: unknown): string | null {
+  const obj = gardenObject as { objectType?: unknown; eggId?: unknown } | null;
+  if (!obj || typeof obj !== "object" || obj.objectType !== "egg") return null;
+  return typeof obj.eggId === "string" && obj.eggId ? obj.eggId : null;
+}
