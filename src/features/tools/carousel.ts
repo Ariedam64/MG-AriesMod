@@ -1,9 +1,9 @@
-// Carousel component for displaying tool images.
-// Styling lives in styles.ts (`.mgt-carousel`, `.mgt-nav`, `.mgt-dot`).
+// Image carousel for a tool's screenshots and the changelog's, with a
+// full-screen zoom on click.
+
+import { h } from "../../ui/kit/dom";
 import { fetchImageBlob } from "./image";
 
-/** Same top-layer value used by the other full-screen overlays (sellAllPets, roomPrivacyNotice). */
-const OVERLAY_Z_INDEX = "2147483647";
 const SWAP_DURATION_MS = 320;
 const SWAP_EASING = "cubic-bezier(.22,.7,.28,1)";
 const SWAP_OFFSET_PX = 40;
@@ -54,25 +54,8 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
   const openImageZoom = (imageUrl: string) => {
     let closed = false;
 
-    const overlay = document.createElement("div");
-    overlay.style.position = "fixed";
-    overlay.style.inset = "0";
-    overlay.style.background = "rgba(0,0,0,0.85)";
-    overlay.style.backdropFilter = "blur(4px)";
-    overlay.style.zIndex = OVERLAY_Z_INDEX;
-    overlay.style.display = "grid";
-    overlay.style.placeItems = "center";
-    overlay.style.padding = "20px";
-
-    const box = document.createElement("div");
-    box.style.position = "relative";
-    box.style.maxWidth = "90vw";
-    box.style.maxHeight = "90vh";
-    box.style.background = "#0a0e14";
-    box.style.border = "1px solid rgba(94,234,212,0.20)";
-    box.style.borderRadius = "14px";
-    box.style.boxShadow = "0 24px 60px rgba(0,0,0,0.55)";
-    box.style.overflow = "hidden";
+    const overlay = h("div", "mgt-zoom");
+    const box = h("div", "mgt-zoom__box");
 
     const dismiss = () => {
       if (closed) return;
@@ -86,33 +69,15 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
     };
     document.addEventListener("keydown", onKeyDown);
 
-    const close = document.createElement("button");
+    const close = h("button", "mgt-nav mgt-zoom__close", "✕");
     close.type = "button";
-    close.className = "mgt-nav";
-    close.textContent = "✕";
     close.title = "Close";
-    close.style.position = "absolute";
-    close.style.top = "10px";
-    close.style.right = "10px";
-    close.style.transform = "none";
-    close.style.fontSize = "14px";
-    close.style.padding = "0";
-    close.style.zIndex = "2";
     close.onclick = dismiss;
 
-    const status = document.createElement("p");
-    status.className = "mgt-state__text";
-    status.textContent = "Loading image...";
-    status.style.padding = "18px 22px";
+    const status = h("p", "mgt-state__text mgt-zoom__status", "Loading image...");
 
-    const zoomImg = document.createElement("img");
+    const zoomImg = h("img", "mgt-zoom__img");
     zoomImg.alt = "Zoomed image";
-    zoomImg.style.maxWidth = "100%";
-    zoomImg.style.maxHeight = "90vh";
-    zoomImg.style.objectFit = "contain";
-    zoomImg.style.transition = "transform 200ms ease";
-    zoomImg.style.cursor = "zoom-in";
-    zoomImg.style.display = "none";
 
     let zoomedState = false;
     zoomImg.onclick = (event) => {
@@ -125,7 +90,7 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
       }
       zoomedState = !zoomedState;
       zoomImg.style.transform = zoomedState ? `scale(${ZOOM_SCALE})` : "scale(1)";
-      zoomImg.style.cursor = zoomedState ? "zoom-out" : "zoom-in";
+      zoomImg.classList.toggle("is-zoomed", zoomedState);
     };
 
     box.append(close, status, zoomImg);
@@ -138,17 +103,17 @@ export function renderCarousel(images: string[]): { root: HTMLElement } {
 
     void (async () => {
       try {
-        // Reuses the carousel's cached blob URL, which the carousel owns — never revoked here.
+        // Reuses the carousel's cached blob URL. The carousel owns it, so it is never revoked here.
         const blobUrl = await resolveImageUrl(imageUrl);
         if (closed) return;
         zoomImg.src = blobUrl;
         status.remove();
-        zoomImg.style.display = "block";
+        zoomImg.classList.add("is-loaded");
       } catch (error) {
         if (closed) return;
         console.warn("[Carousel] Failed to load zoom image:", error);
         status.textContent = "Unable to load image.";
-        status.style.color = "#ffb3b3";
+        status.classList.add("is-error");
       }
     })();
   };

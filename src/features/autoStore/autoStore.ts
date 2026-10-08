@@ -1,14 +1,13 @@
-// src/services/autoStore.ts
-//
-// Auto-store : dès qu'une pile augmente dans l'inventaire ET qu'une pile de la
-// même clé existe déjà dans le stockage, on la renvoie automatiquement dedans.
-// La logique est strictement identique pour chaque stockage (Seed Silo, Decor
-// Shed, Tool Shack) : seuls changent les atoms, la clé d'item et l'id de
-// stockage. D'où la fabrique `createAutoStore`.
+// Auto-store: as soon as a stack grows in the inventory and a stack with the
+// same key already sits in the matching storage, it is sent back there. The
+// logic is the same for every storage (Seed Silo, Decor Shed, Tool Shack);
+// only the atoms, the item key and the storage id change, hence the factory.
 
+import { waitUntil } from "../../lib/async";
 import { PlayerService } from "../../game/player";
-import { Store } from "../../game/store/api";
-import { readAriesPath, writeAriesPath } from "../../platform/storage";
+import { waitForAtom } from "../../game/store/jotai";
+import { writeAriesPath } from "../../platform/storage";
+import { readStoredFlag } from "../misc/storedFlag";
 
 const LOG_PREFIX = "[Misc][AutoStore]";
 const log = (...args: unknown[]) => {
@@ -17,10 +16,10 @@ const log = (...args: unknown[]) => {
 
 const DEBOUNCE_MS = 800;
 const RECENT_REMOVE_MS = 2000;
-const ATOM_POLL_MS = 400;
-const ATOM_TIMEOUT_MS = 10 * 60_000;
+const INVENTORY_POLL_MS = 400;
+const READY_TIMEOUT_MS = 10 * 60_000;
 
-/** Ce que la fabrique attend d'un atom (label + lecture + abonnement). */
+/** What the factory needs from an atom: its label, a read and a subscription. */
 interface AutoStoreAtom {
   label: string;
   get(): Promise<unknown>;
@@ -28,25 +27,25 @@ interface AutoStoreAtom {
 }
 
 export interface AutoStoreConfig {
-  /** Mot utilisé dans les logs, ex. "seed". */
+  /** Word used in the logs, e.g. "seed". */
   logName: string;
-  /** Chemin de persistance sous la racine `aries_mod`, ex. `misc.autoStoreSeedSiloEnabled`. */
+  /** Setting path under `aries_mod`, e.g. `misc.autoStoreSeedSiloEnabled`. */
   storagePath: string;
-  /** Destination (`to`) du `MoveItem`, ex. "SeedSilo". */
+  /** Destination (`to`) of the `MoveItem`, e.g. "SeedSilo". */
   storageId: string;
-  /** Atom listant le contenu du stockage. */
+  /** Atom listing what the storage holds. */
   storageAtom: AutoStoreAtom;
-  /** Atom listant l'inventaire correspondant. */
+  /** Atom listing the matching inventory. */
   inventoryAtom: AutoStoreAtom;
-  /** Extrait la clé d'identité d'un item (species / decorId / toolId). */
+  /** The item's identity key (species, decorId or toolId). */
   keyFromItem: (item: any) => string;
 }
 
 export interface AutoStoreController {
-  isEnabled: (def?: boolean) => boolean;
-  setEnabled: (on: boolean) => void;
-  /** Démarre la surveillance si la préférence persistée est active. */
-  bootIfEnabled: () => void;
+  isEnabled(): boolean;
+  setEnabled(on: boolean): void;
+  /** Starts watching if the saved setting is on. */
+  bootIfEnabled(): void;
 }
 
 const normalizeKey = (value: unknown): string =>
@@ -70,18 +69,8 @@ const buildQtyMap = (raw: unknown, getKey: (item: any) => string): Map<string, n
   return map;
 };
 
-const buildKeySet = (raw: unknown, getKey: (item: any) => string): Set<string> => {
-  const set = new Set<string>();
-  const list = Array.isArray(raw) ? raw : [];
-  for (const item of list) {
-    const key = getKey(item);
-    if (!key) continue;
-    const qty = normalizeQty(item?.quantity);
-    if (qty <= 0) continue;
-    set.add(key);
-  }
-  return set;
-};
+const buildKeySet = (raw: unknown, getKey: (item: any) => string): Set<string> =>
+  new Set(buildQtyMap(raw, getKey).keys());
 
 const diffIncreases = (prev: Map<string, number>, next: Map<string, number>): string[] => {
   const out: string[] = [];
@@ -113,57 +102,45 @@ const summarizeQtyDelta = (prev: Map<string, number>, next: Map<string, number>,
     after: next.get(key) ?? 0,
   }));
 
-const readEnabledFlag = (path: string, def: boolean): boolean => {
-  try {
-    const stored = readAriesPath<unknown>(path);
-    if (typeof stored === "boolean") return stored;
-    if (stored === "1" || stored === 1) return true;
-    if (stored === "0" || stored === 0) return false;
-    return !!stored;
-  } catch {
-    return def;
-  }
-};
-
 /**
- * Attend que les atoms du jeu soient réellement disponibles.
+ * Waits until both atoms exist and the inventory has loaded (is an array).
  *
- * `Store.subscribe` sur un label introuvable renvoie un unsubscribe vide sans
- * jamais s'abonner : démarrer trop tôt (le module est importé au boot du
- * userscript, avant l'enregistrement des atoms du jeu) laisse la feature
- * définitivement muette. On attend donc que les deux atoms existent ET que
- * l'inventaire soit chargé (tableau) avant de poser quoi que ce soit.
+ * Subscribing to a label the game has not registered yet does nothing at all,
+ * so starting at boot, before the game's atoms are there, would leave the
+ * feature silent for the whole session.
  */
-async function waitForAtoms(
+async function waitUntilReady(
   storage: AutoStoreAtom,
   inventory: AutoStoreAtom,
   keepGoing: () => boolean,
 ): Promise<boolean> {
-  const startedAt = Date.now();
-  while (keepGoing() && Date.now() - startedAt < ATOM_TIMEOUT_MS) {
-    try {
-      const ready = (await Store.hasAtom(storage.label)) && (await Store.hasAtom(inventory.label));
-      if (ready && Array.isArray(await inventory.get())) return true;
-    } catch {}
-    await new Promise<void>((resolve) => setTimeout(resolve, ATOM_POLL_MS));
+  const deadline = Date.now() + READY_TIMEOUT_MS;
+  const remainingMs = () => Math.max(1, deadline - Date.now());
+
+  for (const atom of [storage, inventory]) {
+    if (!(await waitForAtom(atom.label, { timeoutMs: remainingMs(), keepGoing }))) return false;
   }
-  return false;
+  const loaded = await waitUntil(
+    async () => !keepGoing() || Array.isArray(await inventory.get()),
+    { timeoutMs: remainingMs(), intervalMs: INVENTORY_POLL_MS },
+  );
+  return !!loaded && keepGoing();
 }
 
 export function createAutoStore(config: AutoStoreConfig): AutoStoreController {
   const { logName, storagePath, storageId, storageAtom, inventoryAtom, keyFromItem } = config;
 
-  let enabled = readEnabledFlag(storagePath, false);
+  let enabled = readStoredFlag(storagePath);
 
   let storedKeys = new Set<string>();
   let inventoryQty = new Map<string, number>();
-  let queue = new Set<string>();
+  const queue = new Set<string>();
   let busy = false;
   let inventoryUnsub: (() => void) | null = null;
   let storageUnsub: (() => void) | null = null;
-  let pendingKeys = new Set<string>();
+  const pendingKeys = new Set<string>();
   let pendingTimer: number | null = null;
-  let removedAtByKey = new Map<string, number>();
+  const removedAtByKey = new Map<string, number>();
   let startGeneration = 0;
 
   function queueStore(keys: string[]) {
@@ -174,6 +151,11 @@ export function createAutoStore(config: AutoStoreConfig): AutoStoreController {
     void flushQueue();
   }
 
+  /**
+   * Waits for the inventory to settle, then queues what grew. A key whose
+   * storage stack has just been emptied is skipped: the player is most likely
+   * taking that item out on purpose.
+   */
   function queueStoreDebounced(keys: string[]) {
     for (const key of keys) if (key) pendingKeys.add(key);
     if (!pendingKeys.size) return;
@@ -233,7 +215,7 @@ export function createAutoStore(config: AutoStoreConfig): AutoStoreController {
     const generation = ++startGeneration;
     const isCurrent = () => enabled && startGeneration === generation;
 
-    const ready = await waitForAtoms(storageAtom, inventoryAtom, isCurrent);
+    const ready = await waitUntilReady(storageAtom, inventoryAtom, isCurrent);
     if (!ready || !isCurrent()) {
       log(`${logName} auto-store aborted`, { ready, enabled });
       return;
@@ -281,8 +263,8 @@ export function createAutoStore(config: AutoStoreConfig): AutoStoreController {
       inventoryUnsub = null;
     }
 
-    // Rattrape ce qui est déjà dans l'inventaire au moment du démarrage :
-    // ces stacks n'augmenteront plus, donc l'abonnement ne les verra jamais.
+    // What is already in the inventory at start will not grow again, so the
+    // subscription would never see it: queue it now.
     const initialKeys = Array.from(inventoryQty.keys()).filter((key) => storedKeys.has(key));
     if (initialKeys.length) {
       log(`${logName} auto-store initial queue`, { keys: initialKeys });
@@ -291,7 +273,7 @@ export function createAutoStore(config: AutoStoreConfig): AutoStoreController {
   }
 
   function stop() {
-    startGeneration++; // annule un démarrage encore en attente des atoms
+    startGeneration++; // cancels a start still waiting for the atoms
     try { inventoryUnsub?.(); } catch {}
     try { storageUnsub?.(); } catch {}
     inventoryUnsub = null;
@@ -310,7 +292,7 @@ export function createAutoStore(config: AutoStoreConfig): AutoStoreController {
   }
 
   return {
-    isEnabled: (def = false) => readEnabledFlag(storagePath, def),
+    isEnabled: () => readStoredFlag(storagePath),
     setEnabled(on: boolean) {
       const next = !!on;
       enabled = next;

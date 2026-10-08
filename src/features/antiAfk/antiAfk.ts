@@ -1,59 +1,80 @@
-// utils.ts
+// Keeps the player from being flagged as away while the tab sits in the
+// background: the page claims to be visible and focused, a silent audio node
+// stops the browser from throttling it, and the player pings its own position
+// now and then.
+
 export type XY = { x: number; y: number };
 
+/** Events the page would use to notice it lost focus or visibility. */
+const SWALLOWED_EVENTS = ["visibilitychange", "blur", "focus", "focusout", "pagehide", "freeze", "resume"];
+
+const HEARTBEAT_MS = 25_000;
+const POSITION_PING_MS = 60_000;
+
+const CAPTURE: AddEventListenerOptions = { capture: true };
+
 export function createAntiAfkController(deps: {
-  getPosition: () => Promise<XY | undefined>,
-  pingPosition: (x: number, y: number) => Promise<any>,
+  getPosition: () => Promise<XY | undefined>;
+  pingPosition: (x: number, y: number) => Promise<unknown>;
 }) {
-  /* ----- Swallow common visibility/focus events ----- */
-  const STOP_EVENTS = ["visibilitychange","blur","focus","focusout","pagehide","freeze","resume"];
-  const listeners: Array<{t: string; h: (e: Event)=>void; target: Document|Window}> = [];
+  /* ----- Swallow visibility and focus events ----- */
+  const swallowed: Array<{ type: string; target: Document | Window }> = [];
+  const swallow = (e: Event) => {
+    e.stopImmediatePropagation();
+    e.preventDefault?.();
+  };
   function swallowAll() {
-    const add = (target: Document|Window, t: string) => {
-      const h = (e: Event) => { e.stopImmediatePropagation(); e.preventDefault?.(); };
-      target.addEventListener(t as any, h, { capture: true });
-      listeners.push({ t, h, target });
-    };
-    STOP_EVENTS.forEach(t => { add(document, t); add(window, t); });
+    for (const type of SWALLOWED_EVENTS) {
+      for (const target of [document, window] as const) {
+        target.addEventListener(type, swallow, CAPTURE);
+        swallowed.push({ type, target });
+      }
+    }
   }
   function unswallowAll() {
-    for (const {t,h,target} of listeners) try { target.removeEventListener(t as any, h, { capture: true } as any); } catch {}
-    listeners.length = 0;
+    for (const { type, target } of swallowed.splice(0)) {
+      try { target.removeEventListener(type, swallow, CAPTURE); } catch {}
+    }
   }
 
-  /* ----- Patch document.hidden / visibilityState / hasFocus ----- */
+  /* ----- Patch document.hidden, visibilityState and hasFocus ----- */
   const docProto = Object.getPrototypeOf(document);
   const saved = {
     hidden: Object.getOwnPropertyDescriptor(docProto, "hidden"),
     visibilityState: Object.getOwnPropertyDescriptor(docProto, "visibilityState"),
-    hasFocus: (document.hasFocus ? document.hasFocus.bind(document) : null) as null | (()=>boolean),
+    hasFocus: document.hasFocus ? document.hasFocus.bind(document) : null,
   };
   function patchProps() {
-    try { Object.defineProperty(docProto, "hidden", { configurable: true, get(){ return false; } }); } catch {}
-    try { Object.defineProperty(docProto, "visibilityState", { configurable: true, get(){ return "visible"; } }); } catch {}
-    try { (document as any).hasFocus = () => true; } catch {}
+    try { Object.defineProperty(docProto, "hidden", { configurable: true, get: () => false }); } catch {}
+    try { Object.defineProperty(docProto, "visibilityState", { configurable: true, get: () => "visible" }); } catch {}
+    try { document.hasFocus = () => true; } catch {}
   }
   function restoreProps() {
     try { if (saved.hidden) Object.defineProperty(docProto, "hidden", saved.hidden); } catch {}
     try { if (saved.visibilityState) Object.defineProperty(docProto, "visibilityState", saved.visibilityState); } catch {}
-    try { if (saved.hasFocus) (document as any).hasFocus = saved.hasFocus; } catch {}
+    try { if (saved.hasFocus) document.hasFocus = saved.hasFocus; } catch {}
   }
 
-  /* ----- Silent Audio keepalive (sub-audible, volume quasi 0) ----- */
+  /* ----- Silent audio keepalive: a 1 Hz tone at near-zero volume ----- */
   let audioCtx: AudioContext | null = null;
   let osc: OscillatorNode | null = null;
   let gain: GainNode | null = null;
-  const resumeIfSuspended = () => { if (audioCtx && audioCtx.state !== "running") audioCtx.resume?.().catch(()=>{}); };
+  const resumeIfSuspended = () => {
+    if (audioCtx && audioCtx.state !== "running") audioCtx.resume?.().catch(() => {});
+  };
 
   function startAudioKeepAlive() {
     try {
-      audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: "interactive" });
-      gain = audioCtx.createGain(); gain.gain.value = 0.00001;
-      osc = audioCtx.createOscillator(); osc.frequency.value = 1;
+      const AudioContextCtor: typeof AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      audioCtx = new AudioContextCtor({ latencyHint: "interactive" });
+      gain = audioCtx.createGain();
+      gain.gain.value = 0.00001;
+      osc = audioCtx.createOscillator();
+      osc.frequency.value = 1;
       osc.connect(gain).connect(audioCtx.destination);
       osc.start();
-      document.addEventListener("visibilitychange", resumeIfSuspended, { capture: true });
-      window.addEventListener("focus", resumeIfSuspended, { capture: true });
+      document.addEventListener("visibilitychange", resumeIfSuspended, CAPTURE);
+      window.addEventListener("focus", resumeIfSuspended, CAPTURE);
     } catch {
       stopAudioKeepAlive();
     }
@@ -61,33 +82,48 @@ export function createAntiAfkController(deps: {
   function stopAudioKeepAlive() {
     try { osc?.stop(); } catch {}
     try { osc?.disconnect(); gain?.disconnect(); } catch {}
-    try { audioCtx?.close?.(); } catch {}
-    document.removeEventListener("visibilitychange", resumeIfSuspended, { capture: true } as any);
-    window.removeEventListener("focus", resumeIfSuspended, { capture: true } as any);
-    osc = null; gain = null; audioCtx = null;
+    try { void audioCtx?.close?.(); } catch {}
+    document.removeEventListener("visibilitychange", resumeIfSuspended, CAPTURE);
+    window.removeEventListener("focus", resumeIfSuspended, CAPTURE);
+    osc = null;
+    gain = null;
+    audioCtx = null;
   }
 
-  /* ----- Heartbeat (synthetic mousemove) ----- */
-  let hb: number | null = null;
+  /* ----- Heartbeat: a synthetic mousemove on the canvas ----- */
+  let heartbeatTimer: number | null = null;
   function startHeartbeat() {
-    const targetEl = (document.querySelector("canvas") as HTMLElement) || document.body || document.documentElement;
-    hb = window.setInterval(() => {
-      try { targetEl.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 1, clientY: 1 })); } catch {}
-    }, 25_000);
+    const target = document.querySelector("canvas") || document.body || document.documentElement;
+    heartbeatTimer = window.setInterval(() => {
+      try { target.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 1, clientY: 1 })); } catch {}
+    }, HEARTBEAT_MS);
   }
-  function stopHeartbeat() { if (hb !== null) { clearInterval(hb); hb = null; } }
+  function stopHeartbeat() {
+    if (heartbeatTimer !== null) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    }
+  }
 
-  /* ----- Position ping (no-op move to current cell) ----- */
+  /* ----- Position ping: a move to the cell the player already stands on ----- */
   let pingTimer: number | null = null;
   async function pingPosition() {
     try {
-      const cur = await deps.getPosition();
-      if (!cur) return;
-      await deps.pingPosition(Math.round(cur.x), Math.round(cur.y));
+      const current = await deps.getPosition();
+      if (!current) return;
+      await deps.pingPosition(Math.round(current.x), Math.round(current.y));
     } catch {}
   }
-  function startPing() { pingTimer = window.setInterval(pingPosition, 60_000); void pingPosition(); }
-  function stopPing() { if (pingTimer !== null) { clearInterval(pingTimer); pingTimer = null; } }
+  function startPing() {
+    pingTimer = window.setInterval(pingPosition, POSITION_PING_MS);
+    void pingPosition();
+  }
+  function stopPing() {
+    if (pingTimer !== null) {
+      clearInterval(pingTimer);
+      pingTimer = null;
+    }
+  }
 
   return {
     start() {

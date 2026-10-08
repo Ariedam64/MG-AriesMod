@@ -1,18 +1,12 @@
-// "Skins" menu — replace the game's sprites with your own images.
+// The Skins menu: replace the game's sprites with your own images.
 
+import { button } from '../../ui/kit/button';
+import { plainCard, sectionLabel } from '../../ui/kit/card';
+import { h } from '../../ui/kit/dom';
+import { select, textInput } from '../../ui/kit/fields';
+import { switchInput } from '../../ui/kit/toggles';
 import { buildDetail } from './detail';
 import { mountThumb } from './thumb';
-import {
-  DANGER,
-  TEXT_DIM,
-  WARN,
-  button,
-  card,
-  css,
-  ensurePanelStyles,
-  sectionLabel,
-  toggle,
-} from '../../ui/kit/panel';
 import {
   areSkinsEnabled,
   getSkinsSnapshot,
@@ -21,6 +15,7 @@ import {
   removeAllSkins,
   setSkinsEnabled,
 } from './index';
+import { ensureSkinsStyles } from './styles';
 import type { SkinnableObject } from './types';
 
 const ALL_CATEGORIES = '__all__';
@@ -45,62 +40,46 @@ function filterObjects(objects: SkinnableObject[]): SkinnableObject[] {
 }
 
 export function renderSkinsMenu(container: HTMLElement): void {
-  ensurePanelStyles();
+  ensureSkinsStyles();
   void initSkins();
 
-  css(container, { padding: '0', overflow: 'hidden' });
-  container.innerHTML = '';
+  container.style.padding = '0';
+  container.style.overflow = 'hidden';
 
-  const root = document.createElement('div');
-  css(root, {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0,1fr) 300px',
-    gap: '12px',
-    padding: '14px',
-    // A *definite* height, not 100%: the HUD window (`.qws-win`) is itself the
-    // scroller (`max-height:90vh; overflow:auto`) and has no fixed height, so
-    // `height:100%` collapses to the content height and the whole menu ends up
-    // scrolling instead of the sprite list.
-    width: '820px',
-    maxWidth: '100%',
-    height: 'min(72vh, 620px)',
-    overflow: 'hidden',
-    boxSizing: 'border-box',
-    background:
-      'linear-gradient(160deg, rgba(15,20,30,0.95) 0%, rgba(10,14,20,0.95) 60%, rgba(8,12,18,0.96) 100%)',
-  });
-  container.appendChild(root);
-
-  // `overflow: hidden` on the cards is what confines scrolling to the two lists
-  // inside them; without it the overflow escapes up to the panel.
-  const browser = card();
-  const detail = card();
-  css(browser, { overflow: 'hidden' });
-  css(detail, { overflow: 'hidden' });
+  // A definite height (in the stylesheet), not 100%: the HUD window
+  // (`.qws-win`) is itself the scroller and has no fixed height, so
+  // `height:100%` would collapse to the content and the whole menu would
+  // scroll instead of the sprite list. The cards clip their overflow so only
+  // the two lists inside them scroll.
+  const root = h('div', 'qws-skins');
+  const browser = plainCard();
+  const detail = plainCard();
   root.append(browser, detail);
+  container.replaceChildren(root);
 
-  // ── Toolbar ───────────────────────────────────────────────────────────────
-  const header = document.createElement('div');
-  css(header, { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' });
-
-  const enableWrap = document.createElement('div');
-  css(enableWrap, { display: 'flex', alignItems: 'center', gap: '8px' });
-  const enableToggle = toggle(areSkinsEnabled(), on => void setSkinsEnabled(on));
+  // Toolbar
+  const enableToggle = switchInput(areSkinsEnabled(), on => void setSkinsEnabled(on));
   enableToggle.title = 'Enable skins';
+  const enableWrap = h('div', 'qws-skins__enable');
   enableWrap.append(sectionLabel('Sprites'), enableToggle);
 
   let confirmTimer: number | null = null;
-  const clearBtn = button('Clear all', 'danger', async () => {
-    // Two-step: this deletes every image the user imported, with no undo.
-    if (clearBtn.dataset.armed !== 'yes') {
-      clearBtn.dataset.armed = 'yes';
-      clearBtn.textContent = 'Delete every skin?';
-      confirmTimer = window.setTimeout(resetClear, CONFIRM_RESET_MS);
-      return;
-    }
-    resetClear();
-    await removeAllSkins();
-    renderAll();
+  const clearBtn = button('Clear all', {
+    variant: 'danger',
+    size: 'sm',
+    lockWhilePending: true,
+    onClick: async () => {
+      // Two steps: this deletes every image the player imported, with no undo.
+      if (clearBtn.dataset.armed !== 'yes') {
+        clearBtn.dataset.armed = 'yes';
+        clearBtn.textContent = 'Delete every skin?';
+        confirmTimer = window.setTimeout(resetClear, CONFIRM_RESET_MS);
+        return;
+      }
+      resetClear();
+      await removeAllSkins();
+      renderAll();
+    },
   });
   function resetClear(): void {
     if (confirmTimer !== null) window.clearTimeout(confirmTimer);
@@ -109,57 +88,35 @@ export function renderSkinsMenu(container: HTMLElement): void {
     clearBtn.textContent = 'Clear all';
   }
 
+  const header = h('div', 'qws-skins__header');
   header.append(enableWrap, clearBtn);
-  browser.appendChild(header);
 
-  const filters = document.createElement('div');
-  css(filters, { display: 'flex', gap: '8px' });
-  const categorySelect = document.createElement('select');
-  categorySelect.className = 'qws-pnl-input';
-  css(categorySelect, { flex: '0 0 auto', maxWidth: '150px' });
-  const search = document.createElement('input');
-  search.className = 'qws-pnl-input';
+  const categorySelect = select({ small: true });
+  categorySelect.classList.add('qws-skins__category');
+  const search = textInput('Search', '', { small: true });
   search.type = 'search';
-  search.placeholder = 'Search';
-  css(search, { flex: '1 1 auto', minWidth: '0' });
+  search.classList.add('qws-skins__search');
+  const filters = h('div', 'qws-skins__filters');
   filters.append(categorySelect, search);
-  browser.appendChild(filters);
 
-  const grid = document.createElement('div');
-  grid.className = 'qws-pnl-scroll';
-  css(grid, {
-    display: 'grid',
-    gap: '8px',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))',
-    overflowY: 'auto',
-    minHeight: '0',
-    flex: '1 1 auto',
-    alignContent: 'start',
-    paddingRight: '2px',
-  });
-  browser.appendChild(grid);
+  const grid = h('div', 'qws-pnl-scroll qws-skins__grid');
+  const status = h('div', 'qws-skins__status');
+  browser.append(header, filters, grid, status);
 
-  const status = document.createElement('div');
-  css(status, { fontSize: '11px', color: TEXT_DIM, minHeight: '15px' });
-  browser.appendChild(status);
-
-  const errorEl = document.createElement('div');
-  css(errorEl, { fontSize: '11px', color: DANGER, display: 'none' });
-  detail.appendChild(errorEl);
-  const detailHost = document.createElement('div');
-  css(detailHost, { display: 'flex', flexDirection: 'column', minHeight: '0', flex: '1 1 auto' });
-  detail.appendChild(detailHost);
+  const errorEl = h('div', 'qws-skins__error');
+  errorEl.hidden = true;
+  const detailHost = h('div', 'qws-skins__detail-host');
+  detail.append(errorEl, detailHost);
 
   const showError = (message: string) => {
     errorEl.textContent = message;
-    errorEl.style.display = 'block';
+    errorEl.hidden = false;
   };
 
-  // ── Rendering ─────────────────────────────────────────────────────────────
   const renderCategories = (objects: SkinnableObject[]) => {
     const previous = menuState.category;
     const categories = [...new Set(objects.map(o => o.category))].sort();
-    categorySelect.innerHTML = '';
+    categorySelect.replaceChildren();
     const all = document.createElement('option');
     all.value = ALL_CATEGORIES;
     all.textContent = 'All';
@@ -184,7 +141,7 @@ export function renderSkinsMenu(container: HTMLElement): void {
         results: snapshot.results,
         onError: showError,
         onChanged: () => {
-          errorEl.style.display = 'none';
+          errorEl.hidden = true;
           renderAll();
         },
       }),
@@ -214,10 +171,7 @@ export function renderSkinsMenu(container: HTMLElement): void {
     }
 
     if (!matches.length) {
-      const empty = document.createElement('div');
-      css(empty, { gridColumn: '1 / -1', fontSize: '12px', color: TEXT_DIM, padding: '24px 0', textAlign: 'center' });
-      empty.textContent = snapshot.ready ? 'No match' : 'Loading…';
-      grid.appendChild(empty);
+      grid.appendChild(h('div', 'qws-skins__empty', snapshot.ready ? 'No match' : 'Loading…'));
     }
   };
 
@@ -227,13 +181,13 @@ export function renderSkinsMenu(container: HTMLElement): void {
 
     clearBtn.style.display = hasSkins ? '' : 'none';
     if (!hasSkins) resetClear();
-    (enableToggle as any).setChecked?.(areSkinsEnabled());
+    enableToggle.setChecked(areSkinsEnabled());
 
     const parts: string[] = [];
     if (snapshot.error) parts.push(`⚠ ${snapshot.error}`);
     if (hasSkins && snapshot.rebaked === null) parts.push('⚠ Mutated plants keep their original look');
     status.textContent = parts.join(' · ');
-    status.style.color = parts.some(p => p.startsWith('⚠')) ? WARN : TEXT_DIM;
+    status.classList.toggle('is-warn', parts.length > 0);
   };
 
   const renderAll = () => {

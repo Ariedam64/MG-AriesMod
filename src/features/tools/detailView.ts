@@ -1,8 +1,10 @@
-// Detail view: back button, hero header, markdown description, carousel, actions.
-// Styling lives in styles.ts (`.mgt-detail`, `.mgt-hero`, `.mgt-md`, ...).
-import type { ExternalTool, ExternalToolCreator } from "./fetchTools";
-import { openLink } from "./fetchTools";
+// Detail view: back button, hero header, markdown description, carousel and
+// the tool's links.
+
 import { renderMarkdown } from "../../lib/markdown";
+import { button } from "../../ui/kit/button";
+import type { ExternalTool, ExternalToolCreator } from "./fetchTools";
+import { openLink } from "./openLink";
 import { renderCarousel } from "./carousel";
 import { createIconTile, loadImageInto } from "./image";
 import { createTagRow } from "./tag";
@@ -89,18 +91,16 @@ function createActions(actions: ExternalTool["actions"]): HTMLElement | null {
   row.className = "mgt-actions";
 
   actions.forEach((action, index) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    // The first action is the primary one; the rest stay secondary.
-    button.className = index === 0 ? "mgt-action is-primary" : "mgt-action";
-    button.textContent = action.label;
-    button.title = `Open ${action.label}`;
-    button.onclick = () => {
-      if (!openLink(action.url)) {
-        console.warn("[Tools] Failed to open link:", action.url);
-      }
-    };
-    row.appendChild(button);
+    row.appendChild(
+      button(action.label, {
+        // The first link is the main one; the rest stay secondary.
+        variant: index === 0 ? "primary" : "default",
+        title: `Open ${action.label}`,
+        onClick: () => {
+          if (!openLink(action.url)) console.warn("[Tools] Failed to open link:", action.url);
+        },
+      }),
+    );
   });
 
   return row;
@@ -113,16 +113,8 @@ export function renderDetailView(
   const root = document.createElement("div");
   root.className = "mgt-detail";
 
-  const back = document.createElement("button");
-  back.type = "button";
-  back.className = "mgt-back";
-  back.onclick = onBack;
-
-  const backArrow = document.createElement("span");
-  backArrow.className = "mgt-back__arrow";
-  backArrow.textContent = "←";
-  backArrow.setAttribute("aria-hidden", "true");
-  back.append(backArrow, document.createTextNode("All tools"));
+  const back = button("All tools", { icon: "←", size: "sm", onClick: onBack });
+  back.classList.add("mgt-back");
   root.appendChild(back);
 
   root.appendChild(createHero(tool));

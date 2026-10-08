@@ -1,16 +1,8 @@
-// Shared tag chip used by both the list cards and the detail hero.
-// Styling lives in styles.ts (`.mgt-tag` / `.mgt-tags`).
+import { h } from "../../ui/kit/dom";
 
-function createTagChip(tag: string): HTMLElement {
-  const chip = document.createElement("span");
-  chip.className = "mgt-tag";
-  chip.textContent = tag;
-  return chip;
-}
-
+/** The tag chips under a tool, on its list card and in its detail header. */
 export function createTagRow(tags: string[]): HTMLElement {
-  const row = document.createElement("div");
-  row.className = "mgt-tags";
-  tags.forEach((tag) => row.appendChild(createTagChip(tag)));
+  const row = h("div", "mgt-tags");
+  for (const tag of tags) row.appendChild(h("span", "mgt-tag", tag));
   return row;
 }

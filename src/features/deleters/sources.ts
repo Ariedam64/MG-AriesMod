@@ -1,5 +1,3 @@
-// src/services/deleterSources.ts
-//
 // What the seed and decor bulk deleters can act on: the inventory stacks plus
 // whatever sits in the matching storage (Seed Silo / Decor Shed).
 //

@@ -1,4 +1,8 @@
-import { Menu } from "../../ui/kit/menu";
+import { button } from "../../ui/kit/button";
+import { card } from "../../ui/kit/card";
+import { radioGroup, select, textInput } from "../../ui/kit/fields";
+import { flexRow } from "../../ui/kit/layout";
+import { toggleChip } from "../../ui/kit/toggles";
 import {
   Frame,
   FrameBuffer,
@@ -8,10 +12,11 @@ import {
   getWSInfos,
   getWSStatusText,
   quinoaWS,
+  wsFrames,
 } from "./wsCapture";
-import { copy } from "./shared";
+import { copy, setBtnLabel } from "./shared";
 
-export function renderWSTab(view: HTMLElement, ui: Menu) {
+export function renderWSTab(view: HTMLElement) {
   if (typeof (view as any).__ws_cleanup__ === "function") {
     try { (view as any).__ws_cleanup__(); } catch {}
   }
@@ -21,7 +26,7 @@ export function renderWSTab(view: HTMLElement, ui: Menu) {
   // ---------- State ----------
   type FrameEx = Frame & { id: number };
   const frames = new FrameBuffer<FrameEx>(2000);
-  const framesMap = new Map<number, FrameEx>();
+  const frameById = (fid: number) => frames.find((f) => f.id === fid);
   let seq = 0;
 
   let paused = false;
@@ -41,29 +46,29 @@ export function renderWSTab(view: HTMLElement, ui: Menu) {
       row.classList.toggle("selected", String(fid || "") === row.dataset.fid);
     });
     if (fid != null) {
-      const f = framesMap.get(fid);
+      const f = frameById(fid);
       if (f) ta.value = f.text;
     }
   };
   const matchesMutes = (text: string) => mutePatterns.some(rx => rx.test(text));
 
   // ---------- Layout containers ----------
-  const statusCard = ui.card("📡 Live traffic", {
+  const statusCard = card("📡 Live traffic", {
     tone: "muted",
     subtitle: "Monitor, filter, and replay WebSocket frames.",
   });
   view.appendChild(statusCard.root);
 
-  const muteCard = ui.card("🙉 Mutes (regex)", {
+  const muteCard = card("🙉 Mutes (regex)", {
     tone: "muted",
     subtitle: "Hide unwanted messages.",
   });
   view.appendChild(muteCard.root);
 
-  const logCard = ui.card("🧾 Frame log", { tone: "muted" });
+  const logCard = card("🧾 Frame log", { tone: "muted" });
   view.appendChild(logCard.root);
 
-  const sendCard = ui.card("📤 Send a frame", {
+  const sendCard = card("📤 Send a frame", {
     tone: "muted",
     subtitle: "Pick or compose a payload and send it.",
   });
@@ -77,31 +82,26 @@ export function renderWSTab(view: HTMLElement, ui: Menu) {
   const lblConn = document.createElement("span");
   lblConn.className = "dd-status-chip";
 
-  const sel = ui.select({ width: "220px" });
+  const sel = select({ width: "220px" });
 
-  const btnPause = ui.btn("Pause", {
+  const btnPause = button("Pause", {
     variant: "secondary",
     onClick: () => {
       paused = !paused;
-      setPauseLabel(paused ? "Resume" : "Pause");
+      setBtnLabel(btnPause, paused ? "Resume" : "Pause");
       btnPause.classList.toggle("active", paused);
       btnPause.title = paused ? "Resume live updates" : "Pause live updates";
     },
   });
-  const setPauseLabel = (text: string) => {
-    const label = btnPause.querySelector<HTMLElement>(".label");
-    if (label) label.textContent = text; else btnPause.textContent = text;
-  };
-  setPauseLabel("Pause");
   btnPause.title = "Suspend live updates";
 
-  const btnClear = ui.btn("Clear", {
+  const btnClear = button("Clear", {
     variant: "ghost",
     icon: "🧹",
-    onClick: () => { frames.clear(); framesMap.clear(); setSelectedRow(null); repaint(true); },
+    onClick: () => { frames.clear(); setSelectedRow(null); repaint(true); },
   });
 
-  const btnCopy = ui.btn("Copy visible", {
+  const btnCopy = button("Copy visible", {
     variant: "ghost",
     icon: "📋",
     onClick: () => copyVisible(),
@@ -113,29 +113,29 @@ export function renderWSTab(view: HTMLElement, ui: Menu) {
   filterToolbar.className = "dd-toolbar dd-toolbar--stretch";
   statusCard.body.appendChild(filterToolbar);
 
-  const inputFilter = ui.inputText("filter text (case-insensitive)", "");
+  const inputFilter = textInput("filter text (case-insensitive)", "");
   inputFilter.classList.add("dd-grow");
   inputFilter.addEventListener("input", () => { filterText = inputFilter.value.trim().toLowerCase(); repaint(true); });
 
-  const inToggle = ui.toggleChip("IN", { checked: true, icon: "←", tooltip: "Show incoming messages" });
+  const inToggle = toggleChip("IN", { checked: true, icon: "←", tooltip: "Show incoming messages" });
   inToggle.input.addEventListener("change", () => { showIn = inToggle.input.checked; repaint(true); });
 
-  const outToggle = ui.toggleChip("OUT", { checked: true, icon: "→", tooltip: "Show outgoing messages" });
+  const outToggle = toggleChip("OUT", { checked: true, icon: "→", tooltip: "Show outgoing messages" });
   outToggle.input.addEventListener("change", () => { showOut = outToggle.input.checked; repaint(true); });
 
-  const currentToggle = ui.toggleChip("Active socket", { checked: false, icon: "🎯", tooltip: "Limit to the selected socket" });
+  const currentToggle = toggleChip("Active socket", { checked: false, icon: "🎯", tooltip: "Limit to the selected socket" });
   currentToggle.input.addEventListener("change", () => { onlyCurrentSocket = currentToggle.input.checked; repaint(true); });
 
-  const autoScrollToggle = ui.toggleChip("Auto-scroll", { checked: true, icon: "📜", tooltip: "Keep the log aligned with the latest frames" });
+  const autoScrollToggle = toggleChip("Auto-scroll", { checked: true, icon: "📜", tooltip: "Keep the log aligned with the latest frames" });
   autoScrollToggle.input.addEventListener("change", () => { autoScroll = autoScrollToggle.input.checked; });
 
   filterToolbar.append(inputFilter, inToggle.root, outToggle.root, currentToggle.root, autoScrollToggle.root);
 
   // ---------- MUTE patterns ----------
-  const muteRow = ui.flexRow({ gap: 10, wrap: true, fullWidth: true });
-  const muteInput = ui.inputText("add regex (e.g. ping|keepalive)", "");
+  const muteRow = flexRow({ gap: 10, wrap: true, fullWidth: true });
+  const muteInput = textInput("add regex (e.g. ping|keepalive)", "");
   muteInput.classList.add("dd-grow");
-  const btnAddMute = ui.btn("Add", {
+  const btnAddMute = button("Add", {
     icon: "➕",
     onClick: () => {
       const raw = muteInput.value.trim();
@@ -158,7 +158,7 @@ export function renderWSTab(view: HTMLElement, ui: Menu) {
   function repaintMutes() {
     mutesWrap.innerHTML = "";
     mutePatterns.forEach((rx, i) => {
-      const chip = ui.btn(`/${rx.source}/i ×`, {
+      const chip = button(`/${rx.source}/i ×`, {
         variant: "ghost",
         size: "sm",
         onClick: () => { mutePatterns.splice(i, 1); repaintMutes(); repaint(true); },
@@ -170,10 +170,6 @@ export function renderWSTab(view: HTMLElement, ui: Menu) {
   // ---------- LOG AREA ----------
   const logWrap = document.createElement("div");
   logWrap.className = "dd-log";
-  logWrap.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
-  logWrap.style.fontSize = "12px";
-  logWrap.style.lineHeight = "1.4";
-  logWrap.style.userSelect = "text";
   const emptyState = document.createElement("div");
   emptyState.className = "dd-log__empty";
   emptyState.textContent = "No frames visible yet.";
@@ -187,16 +183,16 @@ export function renderWSTab(view: HTMLElement, ui: Menu) {
 
   const sendControls = document.createElement("div");
   sendControls.className = "dd-send-controls";
-  const asJson = ui.radioGroup<"text" | "json">(
+  const asJson = radioGroup<"text" | "json">(
     "ws-send-mode",
     [{ value: "text", label: "Text" }, { value: "json", label: "JSON" }],
     "text",
     () => {}
   );
-  const replayToggle = ui.toggleChip("Use source WS", { checked: false, icon: "↩" });
+  const replayToggle = toggleChip("Use source WS", { checked: false, icon: "↩" });
   replayToggle.input.addEventListener("change", () => { replayToSource = replayToggle.input.checked; });
-  const btnSend = ui.btn("Send", { variant: "primary", icon: "📨", onClick: () => doSend() });
-  const btnCopyPayload = ui.btn("Copy payload", { variant: "ghost", icon: "📋", onClick: () => copy(ta.value) });
+  const btnSend = button("Send", { variant: "primary", icon: "📨", onClick: () => doSend() });
+  const btnCopyPayload = button("Copy payload", { variant: "ghost", icon: "📋", onClick: () => copy(ta.value) });
 
   sendControls.append(asJson, replayToggle.root, btnSend, btnCopyPayload);
   sendCard.body.append(ta, sendControls);
@@ -246,18 +242,17 @@ export function renderWSTab(view: HTMLElement, ui: Menu) {
     const acts = document.createElement("div");
     acts.className = "acts";
 
-    const bCopy = document.createElement("button");
-    bCopy.className = "qmm-btn"; bCopy.textContent = "Copy";
-    bCopy.onclick = (e) => { e.stopPropagation(); copy(f.text); };
-
-    const bToEd = document.createElement("button");
-    bToEd.className = "qmm-btn"; bToEd.textContent = "→ Editor";
-    bToEd.onclick = (e) => { e.stopPropagation(); ta.value = f.text; setSelectedRow(fid); };
-
-    const bReplay = document.createElement("button");
-    bReplay.className = "qmm-btn"; bReplay.textContent = "Replay";
-    bReplay.title = "Send right away (to current WS or source WS if enabled)";
-    bReplay.onclick = (e) => { e.stopPropagation(); replayFrame(f); };
+    const action = (label: string, run: () => void, title?: string) =>
+      button(label, {
+        size: "xs",
+        title,
+        onClick: () => run(),
+      });
+    const bCopy = action("Copy", () => copy(f.text));
+    const bToEd = action("→ Editor", () => { ta.value = f.text; setSelectedRow(fid); });
+    const bReplay = action("Replay", () => replayFrame(f), "Send right away (to current WS or source WS if enabled)");
+    // A click on an action must not also select the row underneath.
+    acts.addEventListener("click", (e) => e.stopPropagation());
 
     acts.append(bCopy, bToEd, bReplay);
     return acts;
@@ -273,9 +268,8 @@ export function renderWSTab(view: HTMLElement, ui: Menu) {
     ts.textContent = fmtTime(f.t);
 
     const arrow = document.createElement("div");
-    arrow.className = "arrow";
+    arrow.className = f.dir === "in" ? "arrow is-in" : "arrow is-out";
     arrow.textContent = f.dir === "in" ? "←" : "→";
-    arrow.style.color = f.dir === "in" ? "#4bd17a" : "#8ab4ff";
 
     const body = document.createElement("div");
     body.className = "body";
@@ -328,7 +322,7 @@ export function renderWSTab(view: HTMLElement, ui: Menu) {
 
   function doSend() {
     const ws = currentWS();
-    const wsAlt = (selectedId != null && replayToSource) ? (framesMap.get(selectedId)?.ws ?? null) : null;
+    const wsAlt = (selectedId != null && replayToSource) ? (frameById(selectedId)?.ws ?? null) : null;
     const target = (replayToSource ? wsAlt : ws) || ws;
     if (!target || target.readyState !== WebSocket.OPEN) return;
 
@@ -341,11 +335,11 @@ export function renderWSTab(view: HTMLElement, ui: Menu) {
   }
 
   // ---------- HOOK & STREAM ----------
-  installWSHookIfNeeded((f) => {
+  installWSHookIfNeeded();
+  const stopFrames = wsFrames.on((f) => {
     if (paused) return;
     const ex: FrameEx = { ...f, id: ++seq };
     frames.push(ex);
-    framesMap.set(ex.id, ex);
     updateStatus();
     appendOne(ex);
   });
@@ -353,6 +347,9 @@ export function renderWSTab(view: HTMLElement, ui: Menu) {
   repaint(true);
 
   const pollId = window.setInterval(() => { refreshSocketPicker(); }, 1000);
-  (view as any).__ws_cleanup__ = () => { window.clearInterval(pollId); };
+  (view as any).__ws_cleanup__ = () => {
+    window.clearInterval(pollId);
+    stopFrames();
+  };
 }
 

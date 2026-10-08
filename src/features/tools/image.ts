@@ -1,6 +1,6 @@
-// Shared image helpers for the Tools menu: blob loading (GM first, fetch
-// fallback) and the icon tile, which accepts either an emoji or a remote URL.
-// Styling lives in styles.ts (`.mgt-tile`).
+// Image helpers for the Tools menu: blob loading (GM first, fetch fallback)
+// and the icon tile, which takes either an emoji or a remote URL.
+
 import { getBlob } from "../../platform/http";
 
 export function fetchImageBlob(url: string): Promise<Blob> {

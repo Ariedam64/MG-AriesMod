@@ -1,37 +1,36 @@
-// src/service/debug-data.ts
-// All "debug-data" logic (types, WebSocket hooks, buffer, utils).
+// Frame capture for the debug menu's WebSocket tab.
+//
+// The mod's own socket hook (game/ws/socketHook) tracks every socket in
+// `sockets` but does not report the frames themselves, so this adds a second,
+// lighter layer on top of it the first time the tab opens: the constructor is
+// wrapped again to catch new sockets, each socket gets a message listener, and
+// its `send` is wrapped per instance. Outgoing frames are captured before the
+// mod's outgoing rules run, so a frame a rule drops still shows here.
 
-import {
-  sockets,
-  quinoaWS,
-  setQWS,
-  workerFound,
-  label as wsStateLabel,
-} from "../../game/ws/sockets";
-
-/* ----------------------------- Types & utils ----------------------------- */
-
-type WSDir = "in" | "out";
+import { Emitter } from "../../lib/emitter";
+import { pad2 } from "../../lib/format";
+import { quinoaWS, setQWS, sockets, label as wsStateLabel } from "../../game/ws/sockets";
 
 export type Frame = {
-  t: number;            // ms epoch
-  dir: WSDir;           // "in" | "out"
-  text: string;         // raw payload, no parsing here
+  /** Epoch milliseconds. */
+  t: number;
+  dir: "in" | "out";
+  /** The raw payload, unparsed. */
+  text: string;
   ws?: WebSocket | null;
 };
 
-// format HH:MM:SS.mmm
+/** `HH:MM:SS.mmm` */
 export const fmtTime = (ms: number) => {
   const d = new Date(ms);
-  const pad = (n: number, s = 2) => String(n).padStart(s, "0");
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${String(d.getMilliseconds()).padStart(3,"0")}`;
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}.${String(d.getMilliseconds()).padStart(3, "0")}`;
 };
 
-// Mini-escape (log display)
+/** Escapes the three characters that matter when a payload goes into innerHTML. */
 export const escapeLite = (s: string) =>
-  s.replace(/[<>&]/g, (m) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[m]!));
+  s.replace(/[<>&]/g, (m) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[m]!);
 
-// Simple ring buffer (prevents memory blow-up)
+/** Keeps the last `max` items, so a long capture cannot exhaust memory. */
 export class FrameBuffer<T = Frame> {
   private arr: T[] = [];
   constructor(private max = 2000) {}
@@ -39,130 +38,105 @@ export class FrameBuffer<T = Frame> {
     this.arr.push(f);
     if (this.arr.length > this.max) this.arr.splice(0, this.arr.length - this.max);
   }
-  toArray() { return this.arr.slice(); }
-  clear() { this.arr.length = 0; }
+  toArray() {
+    return this.arr.slice();
+  }
+  find(predicate: (item: T) => boolean): T | undefined {
+    return this.arr.find(predicate);
+  }
+  clear() {
+    this.arr.length = 0;
+  }
 }
 
 /* ------------------------------- Registry -------------------------------- */
 
-export type WSInfo = {
+type WSInfo = {
   ws: WebSocket;
-  id: string;                  // label UI, ex: "WS#1 (OPEN)"
-  sendOrig?: WebSocket["send"];
-  listeners?: Array<() => void>;
+  /** Shown in the socket picker, e.g. "WS#1 (OPEN)". */
+  id: string;
 };
 
-// Local registry of tracked sockets
 const registry = new Map<WebSocket, WSInfo>();
 
-/** Readable snapshot of the registry (for the UI). */
+/** Every socket seen, in the order it was first seen. */
 export function getWSInfos(): WSInfo[] {
   return Array.from(registry.values());
 }
 
-
-/** Small helper status string for the UI. */
 export function getWSStatusText(): string {
   const anyOpen = sockets.some((ws) => ws.readyState === WebSocket.OPEN);
-  const viaW = workerFound ? "worker" : "page/auto";
-  return `status: ${anyOpen ? "OPEN" : "none"} • mode: ${viaW}`;
+  return `status: ${anyOpen ? "OPEN" : "none"}`;
 }
+
+/** Every captured frame, in and out, once `installWSHookIfNeeded` has run. */
+export const wsFrames = new Emitter<Frame>();
 
 /* ----------------------------- Hook WebSocket ---------------------------- */
 
-const HOOKED_CTOR_FLAG = Symbol.for("qmm.wsCtorHooked"); // stable across modules
-const WS_PATCHED_SEND  = Symbol.for("qmm.wsPatchedSend"); // avoid double patching
-let hookedOnce = false;
+// Symbol.for keys stay the same across bundles, so two copies of the mod
+// never wrap the same constructor or socket twice.
+const HOOKED_CTOR_FLAG = Symbol.for("qmm.wsCtorHooked");
+const WS_PATCHED_SEND = Symbol.for("qmm.wsPatchedSend");
 
-/**
- * Install the global hook once and attach sockets that already exist.
- * The UI provides an `onFrame` callback to receive frames (IN/OUT).
- */
-export function installWSHookIfNeeded(onFrame: (f: Frame) => void) {
-  // 1) Always proxy the current constructor (even if already proxied)
-  const Ctor: any = window.WebSocket as any;
+const toText = (data: unknown): string => {
+  try {
+    return typeof data === "string" ? data : JSON.stringify(data);
+  } catch {
+    return String(data);
+  }
+};
+
+/** Wraps the constructor once and starts capturing the sockets already open. */
+export function installWSHookIfNeeded(): void {
+  const Ctor: any = window.WebSocket;
   if (!Ctor[HOOKED_CTOR_FLAG]) {
-    // proxy "as is": whether native, proxied, monkey patched… it doesn't matter
     const ProxyCtor = new Proxy(Ctor, {
       construct(target: any, args: any[], newTarget: any) {
         const ws: WebSocket = Reflect.construct(target, args, newTarget);
-        try {
-          trackSocket(ws, "new", onFrame);
-        } catch (err) {
-        }
+        try { trackSocket(ws, "new"); } catch {}
         return ws;
-      }
+      },
     });
-
-    // tag the new ctor to avoid proxying again
-    (ProxyCtor as any)[HOOKED_CTOR_FLAG] = true;
-    window.WebSocket = ProxyCtor as unknown as typeof WebSocket;
+    ProxyCtor[HOOKED_CTOR_FLAG] = true;
+    window.WebSocket = ProxyCtor;
   }
 
-  // 2) Track sockets already known (if another hook pushed them into `sockets`)
-  sockets.forEach((ws) => {
-    try {
-      trackSocket(ws, "existing", onFrame);
-    } catch (err) {
-    }
-  });
-
-  // 3) Mark the first pass as completed
-  if (!hookedOnce) {
-    hookedOnce = true;
-  } else {
+  for (const ws of sockets) {
+    try { trackSocket(ws, "existing"); } catch {}
   }
 }
 
-function trackSocket(ws: WebSocket, why: string, onFrame: (f: Frame) => void) {
-  if (registry.has(ws)) {
-    return;
-  }
+function trackSocket(ws: WebSocket, why: string) {
+  if (registry.has(ws)) return;
 
-  const id = `WS#${1 + registry.size} (${wsStateLabel(ws.readyState)})`;
-  const info: WSInfo = { ws, id, listeners: [] };
+  const info: WSInfo = { ws, id: `WS#${1 + registry.size} (${wsStateLabel(ws.readyState)})` };
 
   if (!sockets.includes(ws)) sockets.push(ws);
-  setQWS?.(ws, why);
+  setQWS(ws, why);
 
-  // IN: messages
-  const onMsg = (ev: MessageEvent) => {
-    let text = "";
-    try { text = typeof ev.data === "string" ? ev.data : JSON.stringify(ev.data); }
-    catch { text = String(ev.data); }
-    onFrame({ t: Date.now(), dir: "in", text, ws });
+  ws.addEventListener("message", (ev: MessageEvent) => {
+    wsFrames.emit({ t: Date.now(), dir: "in", text: toText(ev.data), ws });
+  });
+
+  const refreshId = () => {
+    info.id = info.id.replace(/\(.*\)/, `(${wsStateLabel(ws.readyState)})`);
   };
-  ws.addEventListener("message", onMsg);
-  info.listeners!.push(() => ws.removeEventListener("message", onMsg));
+  ws.addEventListener("open", refreshId);
+  ws.addEventListener("close", refreshId);
 
-  const onOpen = () => { info.id = info.id.replace(/\(.*\)/, `(${wsStateLabel(ws.readyState)})`); };
-  const onClose = () => { info.id = info.id.replace(/\(.*\)/, `(${wsStateLabel(ws.readyState)})`); };
-  ws.addEventListener("open", onOpen);
-  ws.addEventListener("close", onClose);
-  info.listeners!.push(() => ws.removeEventListener("open", onOpen));
-  info.listeners!.push(() => ws.removeEventListener("close", onClose));
-
-  // OUT: patch send (idempotent & detectable)
-  if (!(ws as any)[WS_PATCHED_SEND]) {
-    const orig = ws.send.bind(ws);
-    (info as any).sendOrig = orig;
-    (ws as any)[WS_PATCHED_SEND] = true;
-
+  const patchable = ws as WebSocket & { [WS_PATCHED_SEND]?: boolean };
+  if (!patchable[WS_PATCHED_SEND]) {
+    const originalSend = ws.send.bind(ws);
+    patchable[WS_PATCHED_SEND] = true;
     ws.send = (data: any) => {
-      try {
-        const text = typeof data === "string" ? data : JSON.stringify(data);
-        onFrame({ t: Date.now(), dir: "out", text, ws });
-      } catch {
-        onFrame({ t: Date.now(), dir: "out", text: String(data), ws });
-      }
-      return orig(data);
+      wsFrames.emit({ t: Date.now(), dir: "out", text: toText(data), ws });
+      return originalSend(data);
     };
-  } else {
   }
 
   registry.set(ws, info);
 }
 
-/* ------------------------------ Re-exports ------------------------------- */
-/** Optional: if the UI wants to tag the current page socket. */
+/** The socket the mod identified as the game's room socket. */
 export { quinoaWS };

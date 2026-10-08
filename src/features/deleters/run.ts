@@ -1,5 +1,3 @@
-// src/services/deleterRun.ts
-//
 // Runs a bulk delete one category at a time: pull out of storage only what the
 // inventory cannot already cover, destroy that category, then move on.
 //
@@ -8,6 +6,9 @@
 // one entry, and only while that category is being emptied, so peak usage is
 // one slot no matter how many categories were picked.
 
+import { sleep } from "../../lib/async";
+import { Emitter } from "../../lib/emitter";
+import { formatInteger } from "../../lib/format";
 import {
   getInventoryEntryCount,
   hasRoomForWithdrawal,
@@ -27,17 +28,21 @@ interface DeleterSelectionEntry {
   fromStorage: number;
 }
 
+/** What a run reports while it goes, for the menu section to follow. */
+export type DeleterEvent =
+  | { type: "progress"; done: number; total: number; label: string }
+  | { type: "paused" }
+  | { type: "resumed" }
+  /** The run is over, whether it completed, failed or was cancelled. */
+  | { type: "finished" };
+
 export interface DeleterKind {
-  /** Progress event namespace, e.g. `qws:seeddeleter`. */
-  eventPrefix: string;
   /** Toast title, e.g. "Seed deleter". */
   toastTitle: string;
   /** Plural unit noun, e.g. "seeds". */
   unitNoun: string;
   /** Storage the withdrawals come from, e.g. "SeedSilo". */
   storageId: string;
-  /** Field the progress events carry the current id under. */
-  targetKey: "species" | "decorId";
   loadEntries(): Promise<DeleterEntry[]>;
   /** Destroys one unit. Throwing aborts the whole run. */
   deleteOne(id: string, delayMs: number): Promise<void>;
@@ -49,6 +54,7 @@ export interface DeleterKind {
 }
 
 export interface DeleterController {
+  readonly events: Emitter<DeleterEvent>;
   getSelection(): DeleterSelectionEntry[];
   setSelection(entries: DeleterSelectionEntry[]): void;
   clearSelection(): void;
@@ -60,11 +66,6 @@ export interface DeleterController {
   cancel(): void;
 }
 
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-const formatNum = (n: number) =>
-  new Intl.NumberFormat("en-US").format(Math.max(0, Math.floor(n || 0)));
-
 export function createDeleterController(kind: DeleterKind): DeleterController {
   const selection = new Map<string, DeleterSelectionEntry>();
 
@@ -73,11 +74,7 @@ export function createDeleterController(kind: DeleterKind): DeleterController {
   let cancelled = false;
   let resumeWaiter: (() => void) | null = null;
 
-  const emit = (suffix: string, detail?: unknown) => {
-    try {
-      window.dispatchEvent(new CustomEvent(`${kind.eventPrefix}:${suffix}`, { detail }));
-    } catch {}
-  };
+  const events = new Emitter<DeleterEvent>();
 
   /** Blocks while paused; throws once cancelled so the run unwinds. */
   async function gate(): Promise<void> {
@@ -151,7 +148,7 @@ export function createDeleterController(kind: DeleterKind): DeleterController {
     try {
       kind.toast(
         kind.toastTitle,
-        `Deleting ${formatNum(total)} ${kind.unitNoun} across ${tasks.length} categories...`,
+        `Deleting ${formatInteger(total)} ${kind.unitNoun} across ${tasks.length} categories...`,
         "info",
       );
 
@@ -176,41 +173,35 @@ export function createDeleterController(kind: DeleterKind): DeleterController {
           await gate();
           await kind.deleteOne(task.entry.id, delayMs);
           done += 1;
-          emit("progress", {
-            done,
-            total,
-            [kind.targetKey]: task.entry.id,
-            label: task.entry.label,
-            remainingForCategory: task.qty - i - 1,
-          });
+          events.emit({ type: "progress", done, total, label: task.entry.label });
           if (delayMs > 0 && i < task.qty - 1) await sleep(delayMs);
         }
       }
 
       selection.clear();
-      emit("done", { total: done, categories: tasks.length });
       kind.toast(
         kind.toastTitle,
         done > 0
-          ? `Deleted ${formatNum(done)} ${kind.unitNoun} (${tasks.length} categories).`
+          ? `Deleted ${formatInteger(done)} ${kind.unitNoun} (${tasks.length} categories).`
           : `No ${kind.unitNoun} were deleted.`,
         done > 0 ? "success" : "info",
       );
     } catch (error) {
       const message = (error as Error)?.message === "cancelled"
-        ? `Cancelled after ${formatNum(done)} ${kind.unitNoun}.`
+        ? `Cancelled after ${formatInteger(done)} ${kind.unitNoun}.`
         : (error as Error)?.message || "Deletion failed.";
-      emit("error", { message });
       kind.toast(kind.toastTitle, message, "error");
     } finally {
       running = false;
       paused = false;
       cancelled = false;
       resumeWaiter = null;
+      events.emit({ type: "finished" });
     }
   }
 
   return {
+    events,
     getSelection: () => Array.from(selection.values()),
     setSelection(entries) {
       selection.clear();
@@ -225,13 +216,13 @@ export function createDeleterController(kind: DeleterKind): DeleterController {
     pause() {
       if (!running || paused) return;
       paused = true;
-      emit("paused");
+      events.emit({ type: "paused" });
     },
     resume() {
       if (!running || !paused) return;
       paused = false;
       resumeWaiter?.();
-      emit("resumed");
+      events.emit({ type: "resumed" });
     },
     cancel() {
       if (!running) return;
